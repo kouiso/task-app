@@ -1,5 +1,5 @@
 {
-  "entryPoints": ["components/*", "pages/*"],
+  "entryPoints": ["src/*"],
   "out": "typedocs-static",
   "excludeExternals": true,
   "tsconfig": "tsconfig.json"

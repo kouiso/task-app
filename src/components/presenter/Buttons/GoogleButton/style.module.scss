@@ -1,0 +1,27 @@
+@charset "utf-8";
+@use 'styles/_variables.scss';
+
+.button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  color: variables.$green-first-color;
+  background-color: variables.$black-second-color;
+  border: 1px solid variables.$green-first-color;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+
+  /* ホバー時のスタイルは暫定 */
+  &:hover {
+    cursor: pointer;
+    opacity: 0.7;
+  }
+}
+
+.caption {
+  margin-left: 5px;
+}

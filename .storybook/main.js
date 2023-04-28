@@ -1,7 +1,7 @@
 const path = require('path')
 
 module.exports = {
-  stories: ['../components/**/*.stories.@(ts|tsx|js|jsx|mdx)'],
+  stories: ['../src/**/*.stories.@(ts|tsx|js|jsx|mdx)'],
   addons: [
     '@storybook/addon-links',
     '@storybook/addon-essentials',
@@ -23,7 +23,7 @@ module.exports = {
         },
         'sass-loader',
       ],
-      include: path.resolve(__dirname, '../'),
+      include: path.resolve(__dirname, '../src/'),
     })
     return config
   },

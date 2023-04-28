@@ -3,6 +3,6 @@ node_modules
 .vscode
 out
 public
-electron
-*.config.ts
+android
+ios
 electron
