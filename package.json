@@ -13,6 +13,7 @@
     "buildnext:ssg": "next export",
     "build:storybook": "build-storybook -o storybook-static --docs",
     "build:typedoc": "typedoc --out typedocs-static",
+    "build:capcopy": "npx cap copy",
     "build:capsync": "npx cap sync",
     "check": "run-p check:*",
     "check:next": "next lint",
@@ -34,7 +35,7 @@
     "open:ios": "npx cap open ios",
     "open:android": "npx cap open android",
     "chromatic": "npx chromatic --build-script-name build:storybook --force-rebuild --exit-zero-on-changes",
-    "postinstall": "typesync || : && husky install",
+    "postinstall": "husky install",
     "analyze": "ANALYZE=true yarn build",
     "amplify": "amplify",
     "gql:mock": "amplify mock api"
@@ -73,6 +74,7 @@
     "@types/prettier": "^2.7.2",
     "@types/react": "18.0.26",
     "@types/react-dom": "18.0.10",
+    "@welldone-software/why-did-you-render": "^7.0.1",
     "@types/testing-library__jest-dom": "^5.14.5",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
     "@typescript-eslint/parser": "^5.36.2",
@@ -101,7 +103,6 @@
     "ts-node": "^10.9.1",
     "typedoc": "^0.23.24",
     "typescript": "4.9.4",
-    "typesync": "^0.10.0",
     "yarn-run-all": "^3.1.1"
   },
   "volta": {

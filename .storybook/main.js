@@ -23,7 +23,7 @@ module.exports = {
         },
         'sass-loader',
       ],
-      include: path.resolve(__dirname, '../src/'),
+      include: path.resolve(__dirname, './src'),
     })
     return config
   },
