@@ -34,7 +34,7 @@
     "open:ios": "npx cap open ios",
     "open:android": "npx cap open android",
     "chromatic": "npx chromatic --build-script-name build:storybook --force-rebuild --exit-zero-on-changes",
-    "postinstall": "typesync || : && husky install",
+    "postinstall": "husky install",
     "analyze": "ANALYZE=true yarn build",
     "amplify": "amplify",
     "gql:mock": "amplify mock api"
@@ -101,7 +101,6 @@
     "ts-node": "^10.9.1",
     "typedoc": "^0.23.24",
     "typescript": "4.9.4",
-    "typesync": "^0.10.0",
     "yarn-run-all": "^3.1.1"
   },
   "volta": {
