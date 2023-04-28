@@ -1,13 +1,22 @@
-name: 'artifacts cleanup'
+name: Java CI with Maven
+
 on:
-  schedule:
-    - cron: '0 20 * * *' # UTC
+  push:
+    branches: [development]
 
 jobs:
-  delete-artifacts:
+  remove-old-artifacts:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
-      - uses: kolpav/purge-artifacts-action@v1
+      - name: Remove old artifacts
+        uses: c-hive/gha-remove-artifacts@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          expire-in: 30 minutes
+          age: '1d'
+          # Optional inputs
+          # skip-tags: true
+          # skip-recent: 5
+
+  build:
+    runs-on: ubuntu-latest
