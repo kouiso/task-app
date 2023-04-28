@@ -28,6 +28,23 @@ jobs:
       - name: Build All
         run: yarn build
 
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      # 権限を与える
+      - name: Grant permission gradlew
+        run: chmod +x ./android/gradlew
+
+      - name: Building APK for Release
+        env:
+          ENV_SIGN_KEYSTORE_BASE64: ${{secrets.ENV_SIGN_KEYSTORE_BASE64}}
+          ENV_SIGN_KEY_ALIAS: ${{secrets.ENV_SIGN_KEY_ALIAS}}
+          ENV_SIGN_KEY_PASSWORD: ${{secrets.ENV_SIGN_KEY_PASSWORD}}
+          ENV_SIGN_STORE_PASSWORD: ${{secrets.ENV_SIGN_STORE_PASSWORD}}
+        run: ./android/gradlew assembleRelease
+
       - name: SSR Artifact
         uses: actions/upload-artifact@v3
         if: always()
@@ -59,13 +76,3 @@ jobs:
           name: typedocs-static
           path: typedocs-static/
           retention-days: 3
-
-      - name: FTP-Deploy-Action
-        uses: SamKirkland/FTP-Deploy-Action@4.2.0 # FTPアップロードアクション（https://github.com/SamKirkland/FTP-Deploy-Action）
-        with:
-          server: ${{ secrets.PROD_SERVER }} # FTPのサーバーアドレス
-          username: ${{ secrets.PROD_USERNAME }} # FTPのユーザー名名
-          password: ${{ secrets.PROD_PASSWORD }} # FTPのパスワード
-          local-dir: ./out/ # アップロードしたいファイルのパス、この場合srcディレクトリ内をアップロード対象としている
-          server-dir: /ritmo.co.jp/public_html/ # アップロード先のリモートパス
-

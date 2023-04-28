@@ -44,6 +44,15 @@ jobs:
       #     - name: Run Variable Test
       #       run: yarn test
 
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+          # 権限を与える
+      - name: Grant permission gradlew
+        run: chmod +x ./android/gradlew
+
       - name: chromatic deploy
         run: yarn chromatic --project-token=${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 
@@ -78,3 +87,10 @@ jobs:
           name: typedocs-static
           path: typedocs-static/
           retention-days: 3
+
+      # - name: Upload apk file
+      #   uses: actions/upload-artifact@v1
+      #   with:
+      #     name: apk
+      #     path: android/app/build/outputs/apk/debug/app-debug.apk
+      #     retention-days: 30
