@@ -1,0 +1,6 @@
+@charset "utf-8";
+@use 'styles/_variables.scss';
+
+.title {
+  color: variables.$white-first-color;
+}
