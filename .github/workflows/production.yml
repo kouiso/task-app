@@ -1,0 +1,71 @@
+name: production
+
+on:
+  push:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: 'package.json'
+
+      - name: node_module install
+        run: yarn install
+
+      - name: SourceMap Don't generate
+        run: touch .env.production && echo "GENERATE_SOURCEMAP=false" >> .env.production
+
+      - name: Build All
+        run: yarn build
+
+      - name: SSR Artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ssr-build
+          path: .next/
+          retention-days: 3
+
+      - name: SSG Artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ssg-build
+          path: out/
+          retention-days: 3
+
+      - name: StoryBook Artifact
+        uses: actions/upload-artifact@v3 #ここ
+        if: always()
+        with:
+          name: storybook-static
+          path: storybook-static/
+          retention-days: 3
+
+      - name: Typedoc Artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: typedocs-static
+          path: typedocs-static/
+          retention-days: 3
+
+      - name: FTP-Deploy-Action
+        uses: SamKirkland/FTP-Deploy-Action@4.2.0 # FTPアップロードアクション（https://github.com/SamKirkland/FTP-Deploy-Action）
+        with:
+          server: ${{ secrets.PROD_SERVER }} # FTPのサーバーアドレス
+          username: ${{ secrets.PROD_USERNAME }} # FTPのユーザー名名
+          password: ${{ secrets.PROD_PASSWORD }} # FTPのパスワード
+          local-dir: ./out/ # アップロードしたいファイルのパス、この場合srcディレクトリ内をアップロード対象としている
+          server-dir: /ritmo.co.jp/public_html/ # アップロード先のリモートパス
+

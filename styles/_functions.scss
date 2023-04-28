@@ -1,0 +1,9 @@
+@use 'sass:math';
+
+@function get_percentage_value($proportion, $rate) {
+  @return math.div($rate, $proportion) * 100%;
+}
+
+@function get_viewport_value($proportion, $rate, $unit) {
+  @return math.div($rate, $proportion) * 100 + $unit;
+}

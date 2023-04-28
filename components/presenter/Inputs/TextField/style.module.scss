@@ -1,0 +1,22 @@
+@charset "utf-8";
+@use '/styles/_variables.scss';
+
+.input {
+  height: 56px;
+  padding-left: 14px;
+  color: variables.$white-first-color;
+  background: variables.$black-second-color;
+  border: 1px solid rgb(255 255 255 / 50%);
+  border-radius: 4px;
+  font-size: 14px;
+
+  &::placeholder {
+    color: variables.$white-first-color;
+    opacity: 0.25;
+  }
+
+  /* ホバー時のスタイルは暫定 */
+  &:hover {
+    border: 1px solid rgb(255 255 255 / 80%);
+  }
+}

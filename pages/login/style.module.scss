@@ -1,0 +1,83 @@
+@charset "utf-8";
+@use '/styles/_variables.scss';
+
+$container-width: 462px;
+
+.container {
+  position: absolute;
+  top: 15%;
+  left: calc(50% - $container-width / 2);
+  width: $container-width;
+}
+
+.title {
+  display: block;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+
+.message {
+  display: block;
+  text-align: center;
+  font-size: 17px;
+  opacity: 0.7;
+}
+
+.googleBtn {
+  width: 100%;
+  margin-top: 45px;
+  margin-bottom: 24px;
+}
+
+.email {
+  width: $container-width - 18px;
+  margin-top: 20px;
+}
+
+.password {
+  width: $container-width - 18px;
+  margin-top: 26px;
+}
+
+.remember {
+  margin-top: 16px;
+}
+
+.loginBtn {
+  width: 100%;
+  margin-top: 34px;
+  margin-bottom: 34px;
+}
+
+.forgot {
+  display: block;
+  text-align: right;
+  color: variables.$green-first-color !important;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: -19px;
+  margin-bottom: 16px;
+  text-decoration: none !important;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.noAccount {
+  padding-top: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.here {
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 1px;
+  opacity: 0.5;
+}

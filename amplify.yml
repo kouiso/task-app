@@ -1,0 +1,16 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - yarn install
+        - yarn fix
+    build:
+      commands:
+        - yarn build:ssr
+  artifacts:
+    files:
+      - '.next/**/*'
+  cache:
+    paths:
+      - node_modules/**/*

@@ -1,0 +1,30 @@
+@charset "utf-8";
+@use './_reset.scss';
+@use './loading';
+@use './_mixin.scss';
+@use './_variables.scss';
+@use './_functions.scss';
+
+/*
+  共通
+*/
+html {
+  background-color: variables.$black-first-color;
+  font-family: variables.$default-font-family;
+}
+
+/* ここからメディアクエリ */
+
+/*
+  max-width: 指定した値以下の幅でcssを読み込む
+*/
+@media screen and (max-width: 375px) {
+  /* 画面サイズが480pxからはここを読み込む */
+}
+
+/*
+  min-width: 指定した値以上の幅でcssを読み込む
+*/
+@media screen and (min-width: 376px) {
+  /* 画面サイズが1024pxからはここを読み込む */
+}

@@ -1,0 +1,6 @@
+{
+  "entryPoints": ["components/*", "pages/*"],
+  "out": "typedocs-static",
+  "excludeExternals": true,
+  "tsconfig": "tsconfig.json"
+}

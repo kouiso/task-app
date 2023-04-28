@@ -1,0 +1,328 @@
+@charset "utf-8";
+@use './_variables.scss';
+@use './_functions.scss';
+
+$sp: 768px;
+
+@mixin sp {
+  @media screen and (max-width: ($sp)) {
+    @content;
+  }
+}
+
+@mixin container {
+  max-width: 126rem;
+  margin: 0 auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  position: relative;
+}
+
+$sp: 768px;
+
+@mixin sp {
+  @media screen and (max-width: ($sp)) {
+    @content;
+  }
+}
+
+@mixin border($width, $height: 1px) {
+  content: '';
+  position: absolute;
+  width: $width;
+  height: $height;
+  background: variables.$main-color;
+}
+
+@mixin pageTitle {
+  background-color: variables.$main-color;
+  width: 71vw;
+  margin-bottom: 6.6rem;
+  color: #fff;
+  font-size: 2rem;
+  padding: 7.216rem 0 7.9rem;
+  font-family: variables.$serif;
+  line-height: 2.9rem;
+
+  .title {
+    font-family: variables.$yeseva;
+    padding-left: 11.1rem;
+    font-size: 7rem;
+    line-height: 8.1rem;
+    width: calc(40vw - 11.1rem);
+    margin-bottom: 2rem;
+    font-weight: 400;
+    display: inline-block;
+  }
+
+  .subTitle {
+    padding-left: 11.1rem;
+    font-weight: 600;
+  }
+  @include sp {
+    margin: 0;
+    padding-top: 2.3rem;
+    font-size: 1.4rem;
+    line-height: 2.012rem;
+    width: 100%;
+
+    .title {
+      font-size: 4rem;
+      padding-left: 2rem;
+      line-height: 4.62rem;
+      width: calc(100% - 2rem);
+      margin-bottom: 0.4rem;
+    }
+
+    .subTitle {
+      padding-left: 2rem;
+    }
+  }
+}
+
+@mixin topicPath {
+  margin-left: 11.1rem;
+  padding-bottom: 3.2rem;
+  color: variables.$main-color;
+  font-family: variables.$sans;
+  font-size: 1.7rem;
+  line-height: 3rem;
+  width: calc(40vw - 11.1rem);
+
+  .topicPathArrow {
+    padding-left: 1.4rem;
+    padding-right: 1rem;
+  }
+
+  .grey {
+    color: #ababab;
+  }
+
+  @include sp {
+    margin-left: 0;
+    padding-left: 2rem;
+    width: calc(100% - 2rem);
+    margin-top: 5.2rem;
+    font-size: 1.4rem;
+    padding-bottom: 0;
+  }
+}
+
+@mixin pageTitleImageWrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+@mixin pageTitleImage {
+  margin-top: 3.2rem;
+  width: 60vw;
+  max-width: calc(100vw - 39.3rem);
+  height: 37.7rem;
+  left: auto;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  @include sp {
+    margin-top: 8rem;
+    width: 72.5vw;
+    height: 13.3rem;
+  }
+}
+
+@mixin contentsTitle {
+  font-family: variables.$serif;
+  font-weight: 700;
+  font-size: 3rem;
+  line-height: 4.3rem;
+  color: variables.$main-color;
+
+  @include sp {
+    font-size: 2rem;
+    line-height: 2.874rem;
+  }
+}
+
+@mixin title {
+  font-family: variables.$serif;
+  font-weight: 600;
+  font-size: 4rem;
+  line-height: 5.748rem;
+  color: variables.$main-color;
+  margin: 0;
+}
+
+@mixin subTitle {
+  font-family: variables.$sans;
+  font-weight: 500;
+  font-size: 1.6rem;
+  line-height: 2.317rem;
+  letter-spacing: 7%;
+  color: #ababab;
+}
+
+@mixin link {
+  font-family: variables.$sans;
+  font-weight: 500;
+  font-size: 1.6rem;
+  line-height: 3rem;
+  color: #073061;
+  text-decoration: none;
+  padding: 1.3rem 11.146rem 1.2rem 2.2rem;
+  margin: 0;
+  border: solid 0.1rem variables.$main-color;
+  display: inline-block;
+
+  @include sp {
+    padding: 1.3rem 10.852rem 1.2rem 2.048rem;
+  }
+}
+
+@mixin linkImg {
+  margin-left: -6rem;
+  margin-bottom: 0.4rem;
+  width: auto;
+}
+
+@mixin sentence {
+  font-family: variables.$sans;
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 3rem;
+  color: #222;
+  margin-top: 0;
+
+  @include sp {
+    font-size: 1.4rem;
+    line-height: 2.4rem;
+  }
+}
+
+@mixin serviceImg {
+  position: relative;
+  width: 100%;
+}
+
+@mixin servicePropertyGroup {
+  margin: 2rem 0 1.7rem;
+}
+
+@mixin serviceProperty {
+  font-family: variables.$serif;
+  font-weight: 700;
+  font-size: 2.2rem;
+  line-height: 3.161rem;
+  color: variables.$main-color;
+  margin-bottom: 1.7rem;
+}
+
+@mixin serviceElement {
+  font-family: variables.$serif;
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 3rem;
+  color: #222;
+}
+
+@mixin font($color: #222222) {
+  font-family: variables.$sans;
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 3rem;
+  color: $color;
+}
+
+@mixin footerlink {
+  border: solid 0.2rem #fff;
+  padding: 3rem 0;
+  max-width: 49.6rem;
+  width: 100%;
+  display: block;
+  margin-left: auto;
+  background-color: transparent;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+}
+
+@mixin footerPropertylink {
+  font-family: variables.$serif;
+  font-weight: 600;
+  font-size: 4rem;
+  line-height: 5.848rem;
+  color: #fff;
+  text-decoration: none;
+  display: inline-block;
+}
+
+@mixin footerLogo {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@mixin footerline {
+  content: '';
+  position: absolute;
+  top: -0.5rem;
+  width: 100%;
+  height: 0.1rem;
+  background: #345e8f;
+  margin: 0 auto;
+}
+
+@mixin footerLogoProperty {
+  font-family: variables.$sans;
+  font-weight: 400;
+  font-size: 1.4rem;
+  line-height: 3rem;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+}
+
+@mixin whiteTags {
+  list-style: none;
+  border: 1px solid variables.$main-color;
+  padding: 0.9rem 1.2rem;
+  color: variables.$main-color;
+  font-size: 1.4rem;
+  font-weight: 600;
+  background-color: #fff;
+}
+
+@mixin imgTagsWrap {
+  position: absolute;
+  display: flex;
+  list-style: none;
+  padding: 0;
+  gap: 1rem;
+  margin-left: 1rem;
+  flex-wrap: wrap;
+  top: 0;
+}
+
+@mixin imgTags {
+  color: #fff;
+  font-weight: 500;
+  font-size: 1.2rem;
+  line-height: 1.7rem;
+  font-family: variables.$sans;
+  padding: 0.7rem 1.3rem;
+  background-color: variables.$main-color;
+  @include sp {
+    font-size: 1rem;
+  }
+}
+
+@mixin subheading {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 5.2rem;
+  color: variables.$main-color;
+  font-family: variables.$serif;
+  background-color: #eff0f7;
+  border-left: 1rem solid variables.$main-color;
+  padding-left: 1.9rem;
+}
