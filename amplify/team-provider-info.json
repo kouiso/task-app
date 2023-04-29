@@ -1,0 +1,15 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-horsemanager-dev-153204-authRole",
+      "UnauthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-dev-153204-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-dev-153204-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-horsemanager-dev-153204-deployment",
+      "UnauthRoleName": "amplify-horsemanager-dev-153204-unauthRole",
+      "StackName": "amplify-horsemanager-dev-153204",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:875307866473:stack/amplify-horsemanager-dev-153204/8eeddd50-e657-11ed-9936-0661aa13e5b1",
+      "AmplifyAppId": "d2h6pobwqhwmjl"
+    }
+  }
+}
