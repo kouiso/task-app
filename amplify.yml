@@ -7,7 +7,7 @@ frontend:
         - yarn fix
     build:
       commands:
-        - yarn build:ssr
+        - yarn build
   artifacts:
     files:
       - '.next/**/*'
