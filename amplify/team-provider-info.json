@@ -11,5 +11,18 @@
       "StackId": "arn:aws:cloudformation:ap-northeast-1:875307866473:stack/amplify-horsemanager-dev-153204/8eeddd50-e657-11ed-9936-0661aa13e5b1",
       "AmplifyAppId": "d2h6pobwqhwmjl"
     }
+  },
+  "staging": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-horsemanager-staging-154803-authRole",
+      "UnauthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-staging-154803-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-staging-154803-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-horsemanager-staging-154803-deployment",
+      "UnauthRoleName": "amplify-horsemanager-staging-154803-unauthRole",
+      "StackName": "amplify-horsemanager-staging-154803",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:875307866473:stack/amplify-horsemanager-staging-154803/ca5ec640-e659-11ed-b193-06a2287a034d",
+      "AmplifyAppId": "d2h6pobwqhwmjl"
+    }
   }
 }
