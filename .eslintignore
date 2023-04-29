@@ -6,7 +6,6 @@ node_modules
 out
 public
 *.config.ts
-electron
 typedoc-static
 storybook-static
 android

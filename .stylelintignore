@@ -3,7 +3,6 @@ node_modules
 .vscode
 out
 public
-electron
 typedoc-static
 storybook-static
 android
