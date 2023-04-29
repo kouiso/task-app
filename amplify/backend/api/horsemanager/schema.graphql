@@ -8,8 +8,8 @@ type HorseVitalSigns @model @auth(rules: [{ allow: public }]) {
   heart_rate: Float
   respiratory_rate: Float
   body_temperature: Float
-  create_dt: AWSTimestamp
-  update_dt: AWSTimestamp
+  create_dt: AWSDateTime
+  update_dt: AWSDateTime
   creater: Users @hasOne
   updater: Users @hasOne
   horse: Horses @hasOne
