@@ -1,8 +1,14 @@
+
+next-env.d.ts
 node_modules
 .next
 .vscode
 out
 public
-electron
 *.config.ts
+electron
+typedoc-static
+storybook-static
+android
+ios
 electron
