@@ -8,7 +8,11 @@ frontend:
     build:
       commands:
         - yarn build
+    postbuild:
+      commands:
+        - yarn chromatic --project-token=${{ secrets.CHROMATIC_PROJECT_TOKEN }}
   artifacts:
+    baseDirectory: /
     files:
       - '.next/**/*'
   cache:
