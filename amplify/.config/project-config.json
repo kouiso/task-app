@@ -1,4 +1,7 @@
 {
+  "providers": [
+    "awscloudformation"
+  ],
   "projectName": "horsemanager",
   "version": "3.1",
   "frontend": "javascript",
@@ -6,12 +9,9 @@
     "framework": "react",
     "config": {
       "SourceDir": "src",
-      "DistributionDir": "out",
+      "DistributionDir": ".next",
       "BuildCommand": "yarn build",
       "StartCommand": "yarn dev:ssr"
     }
-  },
-  "providers": [
-    "awscloudformation"
-  ]
+  }
 }

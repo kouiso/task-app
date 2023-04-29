@@ -1,31 +1,18 @@
 {
-  "dev": {
-    "awscloudformation": {
-      "AuthRoleName": "amplify-horsemanager-dev-153204-authRole",
-      "UnauthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-dev-153204-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-dev-153204-authRole",
-      "Region": "ap-northeast-1",
-      "DeploymentBucketName": "amplify-horsemanager-dev-153204-deployment",
-      "UnauthRoleName": "amplify-horsemanager-dev-153204-unauthRole",
-      "StackName": "amplify-horsemanager-dev-153204",
-      "StackId": "arn:aws:cloudformation:ap-northeast-1:875307866473:stack/amplify-horsemanager-dev-153204/8eeddd50-e657-11ed-9936-0661aa13e5b1",
-      "AmplifyAppId": "d2h6pobwqhwmjl"
-    }
-  },
   "staging": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-horsemanager-staging-154803-authRole",
-      "UnauthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-staging-154803-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::875307866473:role/amplify-horsemanager-staging-154803-authRole",
+      "AuthRoleName": "amplify-amplify57a65f87f3d54-staging-63532-authRole",
+      "UnauthRoleArn": "arn:aws:iam::875307866473:role/amplify-amplify57a65f87f3d54-staging-63532-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::875307866473:role/amplify-amplify57a65f87f3d54-staging-63532-authRole",
       "Region": "ap-northeast-1",
-      "DeploymentBucketName": "amplify-horsemanager-staging-154803-deployment",
-      "UnauthRoleName": "amplify-horsemanager-staging-154803-unauthRole",
-      "StackName": "amplify-horsemanager-staging-154803",
-      "StackId": "arn:aws:cloudformation:ap-northeast-1:875307866473:stack/amplify-horsemanager-staging-154803/ca5ec640-e659-11ed-b193-06a2287a034d",
-      "AmplifyAppId": "d2h6pobwqhwmjl"
+      "DeploymentBucketName": "amplify-amplify57a65f87f3d54-staging-63532-deployment",
+      "UnauthRoleName": "amplify-amplify57a65f87f3d54-staging-63532-unauthRole",
+      "StackName": "amplify-amplify57a65f87f3d54-staging-63532",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:875307866473:stack/amplify-amplify57a65f87f3d54-staging-63532/0a6e1350-e658-11ed-8f25-0e7ffd348a7b",
+      "AmplifyAppId": "d3ii90i8dd2m2n"
     },
     "categories": {
-      "api": {
+      "auth": {
         "horsemanager": {}
       }
     }
