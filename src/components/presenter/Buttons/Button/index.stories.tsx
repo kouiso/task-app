@@ -3,7 +3,7 @@ import { Button } from '.'
 
 export default { component: Button } as ComponentMeta<typeof Button>
 
-export const parts: ComponentStoryObj<typeof Button> = {
+export const Parts: ComponentStoryObj<typeof Button> = {
   args: {
     label: 'Button',
   },
