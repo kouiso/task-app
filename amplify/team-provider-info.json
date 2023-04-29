@@ -23,6 +23,11 @@
       "StackName": "amplify-horsemanager-staging-154803",
       "StackId": "arn:aws:cloudformation:ap-northeast-1:875307866473:stack/amplify-horsemanager-staging-154803/ca5ec640-e659-11ed-b193-06a2287a034d",
       "AmplifyAppId": "d2h6pobwqhwmjl"
+    },
+    "categories": {
+      "api": {
+        "horsemanager": {}
+      }
     }
   }
 }
