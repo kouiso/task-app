@@ -31,6 +31,15 @@ jobs:
         run: yarn build
       - name: permisson
         run: chmod +x ./android/gradlew
+      - name: Run Android Lint
+        working-directory: ./android
+        run: ./gradlew lintDebug
+      - name: Run Unit Test
+        working-directory: ./android
+        run: ./gradlew testDebug
+      - name: Build with Gradle
+        working-directory: ./android
+        run: ./gradlew assembleDebug
       - name: Build with Gradle
         working-directory: ./android
         run: ./gradlew assembleDebug
