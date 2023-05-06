@@ -31,6 +31,6 @@ jobs:
         run: yarn build
       - name: permisson
         run: chmod +x ./android/gradlew
-
       - name: Build with Gradle
-        run: cd ./android && ./gradlew assembleDebug
+        working-directory: ./android
+        run: ./gradlew assembleDebug
