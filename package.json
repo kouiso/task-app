@@ -11,6 +11,8 @@
     "build": "yarn install && run-s build:*",
     "build:ssr": "next build",
     "build:ssg": "next export",
+    "build:sync": "npx cap sync",
+    "build:copy": "npx cap copy",
     "build:storybook": "npx storybook build -o storybook-static --docs",
     "build:typedoc": "typedoc --out typedocs-static",
     "check": "run-p check:*",
