@@ -5,7 +5,7 @@ export default { component: PasswordField } as ComponentMeta<
   typeof PasswordField
 >
 
-export const parts: ComponentStoryObj<typeof PasswordField> = {
+export const Parts: ComponentStoryObj<typeof PasswordField> = {
   args: {
     placeholder: 'パスワードを入力できます',
   },

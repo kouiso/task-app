@@ -3,7 +3,7 @@ import { TextField } from '.'
 
 export default { component: TextField } as ComponentMeta<typeof TextField>
 
-export const parts: ComponentStoryObj<typeof TextField> = {
+export const Parts: ComponentStoryObj<typeof TextField> = {
   args: {
     placeholder: 'テキストを入力できます',
   },

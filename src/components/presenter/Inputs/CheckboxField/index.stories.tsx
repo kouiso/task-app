@@ -5,7 +5,7 @@ export default { component: CheckboxField } as ComponentMeta<
   typeof CheckboxField
 >
 
-export const parts: ComponentStoryObj<typeof CheckboxField> = {
+export const Parts: ComponentStoryObj<typeof CheckboxField> = {
   args: {
     label: 'こちらをチェックできます',
   },
