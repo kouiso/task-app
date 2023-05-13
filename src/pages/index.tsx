@@ -14,7 +14,12 @@ import { Auth } from 'components/container/Auth'
 const Home: React.FC = () => {
   return (
     <Auth>
-      <h1 className={styles.title}>ようこそ、ホーム画面へ</h1>
+      <div className={styles.container}>
+        <div className={styles.left}></div>
+        <div className={styles.right}>
+          <div className={styles.header}></div>
+        </div>
+      </div>
     </Auth>
   )
 }
