@@ -1,0 +1,24 @@
+node_modules
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# Editor directories and files
+*.pem
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# debug
+*.log
+*.map
+
+#cache
+*.cache
