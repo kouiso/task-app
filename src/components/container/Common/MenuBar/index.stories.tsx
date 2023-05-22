@@ -1,8 +1,8 @@
-import { ComponentMeta, ComponentStoryObj } from '@storybook/react'
+import { Meta, StoryObj } from '@storybook/react'
 import { MenuBar } from '.'
 
-export default { component: MenuBar } as ComponentMeta<typeof MenuBar>
+export default { component: MenuBar } as Meta<typeof MenuBar>
 
-export const Parts: ComponentStoryObj<typeof MenuBar> = {
+export const Parts: StoryObj<typeof MenuBar> = {
   args: {},
 }

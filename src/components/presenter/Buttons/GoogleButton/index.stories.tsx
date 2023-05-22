@@ -1,8 +1,8 @@
-import { ComponentMeta, ComponentStoryObj } from '@storybook/react'
+import { Meta, StoryObj } from '@storybook/react'
 import { GoogleButton } from '.'
 
-export default { component: GoogleButton } as ComponentMeta<typeof GoogleButton>
+export default { component: GoogleButton } as Meta<typeof GoogleButton>
 
-export const Parts: ComponentStoryObj<typeof GoogleButton> = {
+export const Parts: StoryObj<typeof GoogleButton> = {
   args: {},
 }

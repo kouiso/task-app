@@ -1,11 +1,9 @@
-import { ComponentMeta, ComponentStoryObj } from '@storybook/react'
+import { Meta, StoryObj } from '@storybook/react'
 import { PasswordField } from '.'
 
-export default { component: PasswordField } as ComponentMeta<
-  typeof PasswordField
->
+export default { component: PasswordField } as Meta<typeof PasswordField>
 
-export const Parts: ComponentStoryObj<typeof PasswordField> = {
+export const Parts: StoryObj<typeof PasswordField> = {
   args: {
     placeholder: 'パスワードを入力できます',
   },
