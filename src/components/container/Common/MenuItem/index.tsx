@@ -14,15 +14,15 @@ const ICON_SIZE = 24
  * @extends {HTMLAttributes<HTMLSpanElement>}
  */
 interface MenuItemProps {
-  id: string // ID
+  id: string // メニューID
   label: string // ラベル
   icon: string // アイコン
   isExpand?: boolean // サブメニューの展開フラグ
+  selectedSubId?: string //選択中のサブメニューID
   // サブメニュー一覧
   subMenus?: {
-    subId: string // サブメニューID
+    id: string // サブメニューID
     title: string // タイトル
-    isSelect?: boolean // 選択中か
   }[]
   onClickMenu?(id: string): void // メニューのクリック
   onClickSubMenu?(id: string): void // サブメニューのクリック
@@ -38,6 +38,7 @@ export const MenuItem: React.FC<MenuItemProps> = (props) => {
     label = '',
     icon = '',
     isExpand = false,
+    selectedSubId,
     subMenus = [],
     onClickMenu,
     onClickSubMenu,
@@ -91,17 +92,17 @@ export const MenuItem: React.FC<MenuItemProps> = (props) => {
       {/* サブメニュー */}
       {isExpand && (
         <div className={styles.subContainer}>
-          {subMenus.map((m, index) => {
+          {subMenus.map((sub, index) => {
             return (
               <div
                 key={index}
                 className={classNames(
                   styles.subMenu,
-                  m.isSelect && styles.subMenu_select,
+                  sub.id === selectedSubId && styles.subMenu_select,
                 )}
-                onClick={() => handleClickSubMenu?.(m.subId)}
+                onClick={() => handleClickSubMenu?.(sub.id)}
               >
-                <label>{m.title}</label>
+                <label>{sub.title}</label>
               </div>
             )
           })}
