@@ -9,8 +9,18 @@
   共通
 */
 html {
+  height: 100%;
   background-color: variables.$black-first-color;
   font-family: variables.$default-font-family;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+
+  div[id='__next'] {
+    height: 100%;
+  }
 }
 
 /* ここからメディアクエリ */
