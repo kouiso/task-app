@@ -1,9 +1,9 @@
-import { ComponentMeta, ComponentStoryObj } from '@storybook/react'
+import { Meta, StoryObj } from '@storybook/react'
 import { TextLink } from '.'
 
-export default { component: TextLink } as ComponentMeta<typeof TextLink>
+export default { component: TextLink } as Meta<typeof TextLink>
 
-export const Parts: ComponentStoryObj<typeof TextLink> = {
+export const Parts: StoryObj<typeof TextLink> = {
   args: {
     label: 'これはリンクです。',
     href: '#',

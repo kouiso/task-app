@@ -8,6 +8,20 @@ const words = {
   forgot: 'パスワードを忘れましたか？',
   noAccount: 'まだアカウントをお持ちでない場合は',
   here: 'こちら',
-}
+  account: 'アカウント',
+  info: '情報',
+  record: '記録',
+  regist: '登録',
+  stable: '厩舎',
+  horse: '馬匹',
+  waterIntakes: '飲水量',
+  feed: '餌',
+  feedIntakes: '給餌量',
+  exercises: '運動量',
+  worker: '従業員',
+  other: 'その他',
+  calendar: 'カレンダー',
+  board: 'ボード',
+} as const
 
 export default words

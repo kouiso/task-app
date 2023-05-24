@@ -7,6 +7,8 @@
 
 import styles from './style.module.scss'
 import { Auth } from 'components/container/Auth'
+import { MenuBar } from 'components/container/Common/MenuBar'
+import { TopBar } from 'components/container/Common/TopBar'
 
 /**
  * Homeの定義
@@ -14,7 +16,16 @@ import { Auth } from 'components/container/Auth'
 const Home: React.FC = () => {
   return (
     <Auth>
-      <h1 className={styles.title}>ようこそ、ホーム画面へ</h1>
+      <div className={styles.container}>
+        <div className={styles.left}>
+          <MenuBar />
+        </div>
+        <div className={styles.right}>
+          <div className={styles.header}>
+            <TopBar />
+          </div>
+        </div>
+      </div>
     </Auth>
   )
 }

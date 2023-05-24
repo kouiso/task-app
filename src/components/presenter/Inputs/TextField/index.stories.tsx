@@ -1,9 +1,9 @@
-import { ComponentMeta, ComponentStoryObj } from '@storybook/react'
+import { Meta, StoryObj } from '@storybook/react'
 import { TextField } from '.'
 
-export default { component: TextField } as ComponentMeta<typeof TextField>
+export default { component: TextField } as Meta<typeof TextField>
 
-export const Parts: ComponentStoryObj<typeof TextField> = {
+export const Parts: StoryObj<typeof TextField> = {
   args: {
     placeholder: 'テキストを入力できます',
   },
