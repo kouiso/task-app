@@ -35,6 +35,7 @@
     "chromatic": "npx chromatic --build-script-name build:storybook --force-rebuild --exit-zero-on-changes",
     "analyze": "ANALYZE=true yarn build",
     "postinstall": "husky install",
+    "preinstall": "npx only-allow yarn",
     "amplify": "amplify",
     "gql:mock": "amplify mock api"
   },
