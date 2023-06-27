@@ -1,0 +1,5 @@
+git fetch origin develop
+if [[ $(git log HEAD..origin/develop --oneline) ]]; then
+  echo ; echo 🚨🚨🚨 Merge the latest develop branch before pushing 🚨🚨🚨 ; echo
+  exit 1
+fi
