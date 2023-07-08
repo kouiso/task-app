@@ -5,6 +5,7 @@ const config: CapacitorConfig = {
   appName: 'horsemanager',
   webDir: 'out',
   bundledWebRuntime: false,
+  loggingBehavior: 'debug',
 }
 
 export default config
