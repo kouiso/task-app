@@ -1,5 +1,5 @@
 /**
- * テキスト形式の入力フィールド
+ * Date形式の入力フィールド
  * @packageDocumentation
  */
 
@@ -8,14 +8,14 @@ import classNames from 'classnames'
 import { InputHTMLAttributes } from 'react'
 
 /**
- * TextFieldのプロパティ
+ * DateFieldのプロパティ
  * @extends {InputHTMLAttributes<HTMLInputElement>}
  */
 interface DateFieldProps extends InputHTMLAttributes<HTMLInputElement> {}
 
 /**
- * TextFieldの定義
- * @param {TextFieldProps} props プロパティ
+ * DateFieldの定義
+ * @param {DateFieldProps} props プロパティ
  */
 export const DateField: React.FC<DateFieldProps> = (props) => {
   const { className } = props
