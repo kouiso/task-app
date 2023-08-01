@@ -11,19 +11,20 @@ import { InputHTMLAttributes } from 'react'
  * TextFieldのプロパティ
  * @extends {InputHTMLAttributes<HTMLInputElement>}
  */
-interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {}
+interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string
+}
 
 /**
  * TextFieldの定義
  * @param {TextFieldProps} props プロパティ
  */
 export const TextField: React.FC<TextFieldProps> = (props) => {
-  const { className } = props
+  const { className, label } = props
   return (
-    <input
-      {...props}
-      type='text'
-      className={classNames(styles.input, className)}
-    />
+    <div className={classNames(styles.input, className)}>
+      <label>{label}</label>
+      <input {...props} type='text' />
+    </div>
   )
 }

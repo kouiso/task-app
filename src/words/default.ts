@@ -22,6 +22,8 @@ const words = {
   other: 'その他',
   calendar: 'カレンダー',
   board: 'ボード',
+  horseName: '*馬名',
+  horseNamePlaceHolder: '馬名を入力してください。',
 } as const
 
 export default words
