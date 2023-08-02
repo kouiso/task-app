@@ -1,13 +1,15 @@
 @charset "utf-8";
 @use 'styles/_variables.scss';
 
-$container-width: 462px;
+$container-width: 747px;
 
 .container {
   position: absolute;
   top: 15%;
-  left: calc(50% - $container-width / 2);
+  left: 456px;
   width: $container-width;
+  background: variables.$black-second-color;
+  margin-top: 20px;
 }
 
 .title {
@@ -19,8 +21,9 @@ $container-width: 462px;
 }
 
 .horseName {
-  width: $container-width - 18px;
+  width: $container-width - 58px;
   margin-top: 20px;
+  margin-left: 20px;
 }
 
 .loginBtn {

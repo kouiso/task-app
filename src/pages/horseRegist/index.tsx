@@ -18,6 +18,13 @@ const HorseRegistPage: React.FC = () => {
       <TextField
         placeholder={words.horseNamePlaceHolder}
         className={styles.horseName}
+        id='horseName1'
+        label={words.horseName}
+      />
+      <TextField
+        placeholder={words.horseNamePlaceHolder}
+        className={styles.horseName}
+        id='horseName2'
         label={words.horseName}
       />
       <Button label={words.login} className={styles.loginBtn} />
