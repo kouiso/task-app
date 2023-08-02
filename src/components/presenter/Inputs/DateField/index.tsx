@@ -11,19 +11,21 @@ import { InputHTMLAttributes } from 'react'
  * DateFieldのプロパティ
  * @extends {InputHTMLAttributes<HTMLInputElement>}
  */
-interface DateFieldProps extends InputHTMLAttributes<HTMLInputElement> {}
+interface DateFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+  id?: string
+  label?: string
+}
 
 /**
  * DateFieldの定義
  * @param {DateFieldProps} props プロパティ
  */
 export const DateField: React.FC<DateFieldProps> = (props) => {
-  const { className } = props
+  const { className, id, label } = props
   return (
-    <input
-      {...props}
-      type='date'
-      className={classNames(styles.input, className)}
-    />
+    <div className={classNames(styles.container, className)}>
+      <label htmlFor={id}>{label}</label>
+      <input id={id} {...props} type='date' className={styles.input} />
+    </div>
   )
 }

@@ -9,6 +9,7 @@ import styles from './style.module.scss'
 import words from 'words/default'
 import { TextField } from 'components/presenter/Inputs/TextField'
 import { Button } from 'components/presenter/Buttons/Button'
+import { DateField } from 'components/presenter/Inputs/DateField'
 /**
  * HorseRegistPageの定義
  */
@@ -21,7 +22,7 @@ const HorseRegistPage: React.FC = () => {
         id='horseName1'
         label={words.horseName}
       />
-      <TextField
+      <DateField
         placeholder={words.horseNamePlaceHolder}
         className={styles.horseName}
         id='horseName2'
