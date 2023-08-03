@@ -24,6 +24,17 @@ const words = {
   board: 'ボード',
   horseName: '＊馬名',
   horseNamePlaceHolder: '馬名を入力してください。',
+  horseWeight: '＊馬体重',
+  horseWeightPlaceHolder: '馬体重を入力してください。(kg)',
+  horseHeight: '馬体高',
+  horseHeightPlaceHolder: '馬体高を入力してください。(cm)',
+  horseHin: '牝馬',
+  horseBo: '牡馬',
+  horseSen: '騙馬',
+  birthdayPlaceHolder: '       /          /',
+  birthday: '生年月日',
+  kindPlaceHolder: '品種を選択してください。',
+  kind: '品種',
 } as const
 
 export default words

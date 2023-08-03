@@ -12,6 +12,8 @@ import { SelectHTMLAttributes } from 'react'
  * @extends {SelectHTMLAttributes<HTMLSelectElement>}
  */
 interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  id?: string
+  label?: string
   options: { value: string; label: string }[]
 }
 
@@ -20,14 +22,17 @@ interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * @param {SelectFieldProps} props プロパティ
  */
 export const SelectField: React.FC<SelectFieldProps> = (props) => {
-  const { className, options } = props
+  const { className, options, id, label } = props
   return (
-    <select {...props} className={classNames(styles.select, className)}>
-      {options.map((option, index) => (
-        <option key={index} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <div className={classNames(styles.container, className)}>
+      <label htmlFor={id}>{label}</label>
+      <select id={id} {...props} className={styles.select}>
+        {options.map((option, index) => (
+          <option key={index} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }

@@ -6,7 +6,7 @@ $container-width: 747px;
 .container {
   position: absolute;
   top: 15%;
-  left: 456px;
+  left: 356px;
   width: $container-width;
   background: variables.$black-second-color;
   margin-top: 20px;
@@ -21,6 +21,42 @@ $container-width: 747px;
 }
 
 .horseName {
+  width: $container-width - 58px;
+  margin-top: 20px;
+  margin-left: 20px;
+}
+
+.containerWeightHeight {
+  display: flex;
+  justify-content: space-between;
+  width: $container-width - 58px;
+  margin-top: 20px;
+  margin-left: 20px;
+}
+
+.horseWeight {
+  width: ($container-width - 58px) / 2 - 20px;
+}
+
+.horseHeight {
+  width: ($container-width - 58px) / 2 - 20px;
+}
+
+.containerKind {
+  display: flex;
+  justify-content: space-between;
+  width: $container-width - 400px;
+  margin-top: 20px;
+  margin-left: 20px;
+}
+
+.birthday {
+  width: $container-width - 58px;
+  margin-top: 20px;
+  margin-left: 20px;
+}
+
+.kind {
   width: $container-width - 58px;
   margin-top: 20px;
   margin-left: 20px;
