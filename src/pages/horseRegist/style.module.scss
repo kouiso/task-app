@@ -4,12 +4,10 @@
 $container-width: 747px;
 
 .container {
-  position: absolute;
-  top: 15%;
-  left: 356px;
   width: $container-width;
   background: variables.$black-second-color;
   margin-top: 20px;
+  margin-left: 20px;
 }
 
 .title {
@@ -32,14 +30,17 @@ $container-width: 747px;
   width: $container-width - 58px;
   margin-top: 20px;
   margin-left: 20px;
+  margin-right: 20px;
 }
 
 .horseWeight {
-  width: ($container-width - 58px) / 2 - 20px;
+  width: 100%;
+  margin-right: 20px;
 }
 
 .horseHeight {
-  width: ($container-width - 58px) / 2 - 20px;
+  width: 100%;
+  margin-left: 20px;
 }
 
 .containerKind {

@@ -12,7 +12,6 @@ import { InputHTMLAttributes } from 'react'
  * @extends {InputHTMLAttributes<HTMLInputElement>}
  */
 interface DateFieldProps extends InputHTMLAttributes<HTMLInputElement> {
-  id?: string
   label?: string
 }
 

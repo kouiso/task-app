@@ -12,7 +12,6 @@ import { SelectHTMLAttributes } from 'react'
  * @extends {SelectHTMLAttributes<HTMLSelectElement>}
  */
 interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  id?: string
   label?: string
   options: { value: string; label: string }[]
 }
