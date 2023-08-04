@@ -6,22 +6,34 @@ $container-width: 100%;
 .container {
   position: absolute;
   top: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: $container-width;
   background: variables.$black-second-color;
 }
 
 .title {
-  display: block;
-  text-align: center;
-  font-size: 30px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  margin-left: 40px;
+  align-self: flex-start;
+}
+
+.horseRegist {
+  font-size: 32px;
   font-weight: 700;
-  margin-bottom: 9px;
+}
+
+.horseRegistCaption {
+  font-size: 18px;
+  font-weight: 400;
 }
 
 .horseName {
   width: $container-width - 10%;
   margin-top: 20px;
-  margin-left: 20px;
 }
 
 .containerWeightHeight {
@@ -29,8 +41,6 @@ $container-width: 100%;
   justify-content: space-between;
   width: $container-width - 10%;
   margin-top: 20px;
-  margin-left: 20px;
-  margin-right: 20px;
 }
 
 .horseWeight {
@@ -48,23 +58,29 @@ $container-width: 100%;
   justify-content: space-between;
   width: $container-width - 60%;
   margin-top: 20px;
-  margin-left: 20px;
+  margin-left: 40px;
+  align-self: flex-start;
 }
 
 .birthday {
   width: $container-width - 10%;
   margin-top: 20px;
-  margin-left: 20px;
 }
 
 .kind {
   width: $container-width - 10%;
   margin-top: 20px;
-  margin-left: 20px;
 }
 
-.loginBtn {
-  width: 100%;
+.hairColor {
+  width: $container-width - 10%;
+  margin-top: 20px;
+}
+
+.btn {
+  display: flex;
+  justify-content: space-between;
+  width: $container-width - 10%;
   margin-top: 34px;
   margin-bottom: 34px;
 }

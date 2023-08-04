@@ -22,6 +22,8 @@ const words = {
   other: 'その他',
   calendar: 'カレンダー',
   board: 'ボード',
+  horseRegist: '馬匹登録',
+  horseRegistCaption: '新たに馬匹情報を登録します。',
   horseName: '＊馬名',
   horseNamePlaceHolder: '馬名を入力してください。',
   horseWeight: '＊馬体重',
@@ -35,6 +37,9 @@ const words = {
   birthday: '生年月日',
   kindPlaceHolder: '品種を選択してください。',
   kind: '品種',
+  hairColorPlaceHolder: '毛色を選択してください。',
+  hairColor: '毛色',
+  cancel: 'キャンセル',
 } as const
 
 export default words

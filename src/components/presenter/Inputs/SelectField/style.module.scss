@@ -24,7 +24,7 @@
     border-radius: 4px;
     font-size: 14px;
 
-    &::placeholder {
+    .placeholder {
       color: variables.$white-first-color;
       opacity: 0.25;
     }
