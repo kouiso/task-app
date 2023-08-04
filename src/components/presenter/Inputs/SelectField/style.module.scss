@@ -14,7 +14,7 @@
     background: variables.$black-second-color;
   }
 
-  .input {
+  .select {
     height: 56px;
     width: 100%;
     padding-left: 14px;
@@ -24,7 +24,7 @@
     border-radius: 4px;
     font-size: 14px;
 
-    &::placeholder {
+    .placeholder {
       color: variables.$white-first-color;
       opacity: 0.25;
     }
