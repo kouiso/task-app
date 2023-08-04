@@ -13,6 +13,7 @@ import { DateField } from 'components/presenter/Inputs/DateField'
 import { SelectField } from 'components/presenter/Inputs/SelectField'
 import { CheckboxField } from 'components/presenter/Inputs/CheckboxField'
 import { TextLabel } from 'components/presenter/Labels/TextLabel'
+import { IconButton } from 'components/presenter/Buttons/IconButton'
 /**
  * HorseRegistPageの定義
  */
@@ -22,12 +23,15 @@ const HorseRegistPage: React.FC = () => {
   ]
   return (
     <div className={styles.container}>
-      <div className={styles.title}>
-        <TextLabel className={styles.horseRegist} label={words.horseRegist} />
-        <TextLabel
-          className={styles.horseRegistCaption}
-          label={words.horseRegistCaption}
-        />
+      <div className={styles.header}>
+        <IconButton src='images/share.svg' size={100} />
+        <div className={styles.title}>
+          <TextLabel className={styles.horseRegist} label={words.horseRegist} />
+          <TextLabel
+            className={styles.horseRegistCaption}
+            label={words.horseRegistCaption}
+          />
+        </div>
       </div>
       <TextField
         placeholder={words.horseNamePlaceHolder}
@@ -74,7 +78,7 @@ const HorseRegistPage: React.FC = () => {
         label={words.hairColor}
         options={options}
       />
-      <div className='styles.btn'>
+      <div className={styles.footerBtn}>
         <Button label={words.cancel} className={styles.cancelBtn} />
         <Button label={words.regist} />
       </div>
