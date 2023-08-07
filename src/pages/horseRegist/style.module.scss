@@ -37,6 +37,7 @@ $container-width: 100%;
   font-size: 18px;
   font-weight: 400;
   margin-top: 10px;
+  opacity: 0.25;
 }
 
 .horseName {
@@ -91,4 +92,9 @@ $container-width: 100%;
   width: $container-width - 10%;
   margin-top: 34px;
   margin-bottom: 34px;
+
+  .cancelBtn {
+    color: variables.$green-first-color;
+    background-color: variables.$black-second-color;
+  }
 }

@@ -24,7 +24,7 @@ const HorseRegistPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <IconButton src='images/share.svg' size={100} />
+        <IconButton src='images/horseRegist.svg' size={100} />
         <div className={styles.title}>
           <TextLabel className={styles.horseRegist} label={words.horseRegist} />
           <TextLabel
