@@ -40,6 +40,9 @@ const words = {
   hairColorPlaceHolder: '毛色を選択してください。',
   hairColor: '毛色',
   cancel: 'キャンセル',
+  feedRegist: '餌登録',
+  feedRegistCaption: '各リストに餌を新規追加します。',
+  list1: 'リスト１',
 } as const
 
 export default words
