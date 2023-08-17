@@ -47,7 +47,7 @@ $container-width: 100%;
 .containerList {
   width: 100%;
   margin-top: 20px;
-  height: 600px;
+  height: 433px;
   color: variables.$white-first-color;
   background: variables.$black-second-color;
   border: 1px solid rgb(255 255 255 / 50%);
@@ -66,11 +66,10 @@ $container-width: 100%;
   }
 }
 
-.listRow {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: 20px;
+.list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 20%;
 }
 
 .footerBtn {

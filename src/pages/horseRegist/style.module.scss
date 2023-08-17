@@ -13,10 +13,14 @@ $container-width: 100%;
   background: variables.$black-second-color;
 }
 
+.contents {
+  margin-left: 10px;
+  width: $container-width - 10%;
+}
+
 .header {
   display: flex;
   margin-top: 20px;
-  margin-left: 40px;
   align-self: flex-start;
 }
 
@@ -41,14 +45,14 @@ $container-width: 100%;
 }
 
 .horseName {
-  width: $container-width - 10%;
+  width: 100%;
   margin-top: 20px;
 }
 
 .containerWeightHeight {
   display: flex;
   justify-content: space-between;
-  width: $container-width - 10%;
+  width: 100%;
   margin-top: 20px;
 }
 
@@ -67,29 +71,28 @@ $container-width: 100%;
   justify-content: space-between;
   width: $container-width - 60%;
   margin-top: 20px;
-  margin-left: 40px;
   align-self: flex-start;
 }
 
 .birthday {
-  width: $container-width - 10%;
+  width: 100%;
   margin-top: 20px;
 }
 
 .kind {
-  width: $container-width - 10%;
+  width: 100%;
   margin-top: 20px;
 }
 
 .hairColor {
-  width: $container-width - 10%;
+  width: 100%;
   margin-top: 20px;
 }
 
 .footerBtn {
   display: flex;
   justify-content: space-between;
-  width: $container-width - 10%;
+  width: 100%;
   margin-top: 34px;
   margin-bottom: 34px;
 

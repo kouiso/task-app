@@ -30,10 +30,22 @@ const FeedRegistPage: React.FC = () => {
         </div>
         <div className={styles.containerList}>
           <label>{words.list1}</label>
-          <div className={styles.listRow}>
-            <CheckboxField label={words.horseHin} id={'hinba'} />
-            <CheckboxField label={words.horseBo} id={'boba'} />
-            <CheckboxField label={words.horseSen} id={'senba'} />
+          <div className={styles.list}>
+            <CheckboxField label={words.p15} id={'p15'} />
+            <CheckboxField label={words.cookedMix} id={'cookedMix'} />
+            <CheckboxField label={words.fu} id={'fu'} />
+            <CheckboxField label={words.wheat} id={'wheat'} />
+            <CheckboxField label={words.appen} id={'appen'} />
+            <CheckboxField label={words.corn} id={'corn'} />
+            <CheckboxField label={words.linseedOil} id={'linseedOil'} />
+            <CheckboxField label={words.vinegar} id={'vinegar'} />
+            <CheckboxField label={words.strako} id={'strako'} />
+            <CheckboxField label={words.pianissimo} id={'pianissimo'} />
+            <CheckboxField label={words.lucerne} id={'lucerne'} />
+            <CheckboxField label={words.timothy} id={'timothy'} />
+            <CheckboxField label={words.italian} id={'italian'} />
+            <CheckboxField label={words.oats} id={'oats'} />
+            <CheckboxField label={words.hayCube} id={'hayCube'} />
           </div>
         </div>
         <div className={styles.footerBtn}>
