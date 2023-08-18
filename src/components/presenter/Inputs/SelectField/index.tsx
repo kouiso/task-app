@@ -24,7 +24,9 @@ export const SelectField: React.FC<SelectFieldProps> = (props) => {
   const { className, options, id, label, placeholder } = props
   return (
     <div className={classNames(styles.container, className)}>
-      <label htmlFor={id}>{label}</label>
+      <label className={styles.label} htmlFor={id}>
+        {label}
+      </label>
       <select id={id} {...props} className={styles.select}>
         <option
           value=''

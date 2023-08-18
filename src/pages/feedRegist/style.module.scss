@@ -55,7 +55,7 @@ $container-width: 100%;
   font-size: 14px;
   position: relative;
 
-  label {
+  .label {
     position: absolute;
     top: -4px; /* ラベルの位置を調整 */
     left: 10px;
@@ -71,6 +71,7 @@ $container-width: 100%;
   grid-template-columns: repeat(5, 1fr);
   width: 100%;
   margin-top: 40px;
+  margin-left: 10px;
 }
 
 .footerBtn {

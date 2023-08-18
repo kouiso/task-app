@@ -29,7 +29,7 @@ const FeedRegistPage: React.FC = () => {
           </div>
         </div>
         <div className={styles.containerList}>
-          <label>{words.list1}</label>
+          <label className={styles.label}>{words.list1}</label>
           <div className={styles.list}>
             <CheckboxField label={words.p15} id={'p15'} />
             <CheckboxField label={words.cookedMix} id={'cookedMix'} />
