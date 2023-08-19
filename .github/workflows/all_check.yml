@@ -11,11 +11,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: install yarn packages
-        uses: './.github/actions/setup-node'
+      - uses: ./.github/actions/setup-node
 
       - name: Run Lint And Prettier
         run: yarn fix
