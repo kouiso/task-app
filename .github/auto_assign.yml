@@ -1,20 +1,2 @@
-name: Auto Assign PR to Creator
-
-on:
-  pull_request:
-    types: [opened, synchronize]
-jobs:
-  assign:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Assign
-        uses: actions/github-script@v5
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            github.rest.issues.addAssignees({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              assignees: [context.payload.pull_request.user.login]
-            })
+# https://github.com/kentaro-m/auto-assign
+addAssignees: author
