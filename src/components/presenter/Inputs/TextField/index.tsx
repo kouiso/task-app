@@ -23,7 +23,9 @@ export const TextField: React.FC<TextFieldProps> = (props) => {
   const { className, id, label } = props
   return (
     <div className={classNames(styles.container, className)}>
-      <label htmlFor={id}>{label}</label>
+      <label className={styles.label} htmlFor={id}>
+        {label}
+      </label>
       <input id={id} {...props} type='text' className={styles.input} />
     </div>
   )

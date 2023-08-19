@@ -32,61 +32,46 @@ $container-width: 100%;
   margin-left: 10px;
 }
 
-.horseRegist {
+.feedRegist {
   font-size: 32px;
   font-weight: 700;
 }
 
-.horseRegistCaption {
+.feedRegistCaption {
   font-size: 18px;
   font-weight: 400;
   margin-top: 10px;
   opacity: 0.25;
 }
 
-.horseName {
+.containerList {
   width: 100%;
   margin-top: 20px;
+  height: 433px;
+  color: variables.$white-first-color;
+  background: variables.$black-second-color;
+  border: 1px solid rgb(255 255 255 / 50%);
+  border-radius: 4px;
+  font-size: 14px;
+  position: relative;
+
+  .label {
+    position: absolute;
+    top: -4px; /* ラベルの位置を調整 */
+    left: 10px;
+    padding-left: 5px;
+    padding-right: 5px;
+    color: variables.$white-first-color;
+    background: variables.$black-second-color;
+  }
 }
 
-.containerWeightHeight {
-  display: flex;
-  justify-content: space-between;
+.list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   width: 100%;
-  margin-top: 20px;
-}
-
-.horseWeight {
-  width: 100%;
-  margin-right: 20px;
-}
-
-.horseHeight {
-  width: 100%;
-  margin-left: 20px;
-}
-
-.containerKind {
-  display: flex;
-  justify-content: space-between;
-  width: $container-width - 60%;
-  margin-top: 20px;
-  align-self: flex-start;
-}
-
-.birthday {
-  width: 100%;
-  margin-top: 20px;
-}
-
-.kind {
-  width: 100%;
-  margin-top: 20px;
-}
-
-.hairColor {
-  width: 100%;
-  margin-top: 20px;
+  margin-top: 40px;
+  margin-left: 10px;
 }
 
 .footerBtn {

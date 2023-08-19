@@ -22,7 +22,7 @@ interface CheckboxFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 export const CheckboxField: React.FC<CheckboxFieldProps> = (props) => {
   const { className, id = 'checkbox', label = '' } = props
   return (
-    <div className={className}>
+    <div className={classNames(styles.container, className)}>
       <input type='checkbox' id={id} className={styles.input} />
       <label htmlFor={id} className={classNames(styles.label, className)}>
         {label}
