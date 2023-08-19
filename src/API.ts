@@ -3,4884 +3,4882 @@
 //  This file was automatically generated and should not be edited.
 
 export type CreateHorseVitalSignsInput = {
-  id?: string | null,
-  heart_rate?: number | null,
-  respiratory_rate?: number | null,
-  body_temperature?: number | null,
-  create_dt?: number | null,
-  update_dt?: number | null,
-  horseVitalSignsCreaterId?: string | null,
-  horseVitalSignsUpdaterId?: string | null,
-  horseVitalSignsHorseId?: string | null,
-};
+  id?: string | null
+  heart_rate?: number | null
+  respiratory_rate?: number | null
+  body_temperature?: number | null
+  create_dt?: number | null
+  update_dt?: number | null
+  horseVitalSignsCreaterId?: string | null
+  horseVitalSignsUpdaterId?: string | null
+  horseVitalSignsHorseId?: string | null
+}
 
 export type ModelHorseVitalSignsConditionInput = {
-  heart_rate?: ModelFloatInput | null,
-  respiratory_rate?: ModelFloatInput | null,
-  body_temperature?: ModelFloatInput | null,
-  create_dt?: ModelIntInput | null,
-  update_dt?: ModelIntInput | null,
-  and?: Array< ModelHorseVitalSignsConditionInput | null > | null,
-  or?: Array< ModelHorseVitalSignsConditionInput | null > | null,
-  not?: ModelHorseVitalSignsConditionInput | null,
-  horseVitalSignsCreaterId?: ModelIDInput | null,
-  horseVitalSignsUpdaterId?: ModelIDInput | null,
-  horseVitalSignsHorseId?: ModelIDInput | null,
-};
+  heart_rate?: ModelFloatInput | null
+  respiratory_rate?: ModelFloatInput | null
+  body_temperature?: ModelFloatInput | null
+  create_dt?: ModelIntInput | null
+  update_dt?: ModelIntInput | null
+  and?: Array<ModelHorseVitalSignsConditionInput | null> | null
+  or?: Array<ModelHorseVitalSignsConditionInput | null> | null
+  not?: ModelHorseVitalSignsConditionInput | null
+  horseVitalSignsCreaterId?: ModelIDInput | null
+  horseVitalSignsUpdaterId?: ModelIDInput | null
+  horseVitalSignsHorseId?: ModelIDInput | null
+}
 
 export type ModelFloatInput = {
-  ne?: number | null,
-  eq?: number | null,
-  le?: number | null,
-  lt?: number | null,
-  ge?: number | null,
-  gt?: number | null,
-  between?: Array< number | null > | null,
-  attributeExists?: boolean | null,
-  attributeType?: ModelAttributeTypes | null,
-};
+  ne?: number | null
+  eq?: number | null
+  le?: number | null
+  lt?: number | null
+  ge?: number | null
+  gt?: number | null
+  between?: Array<number | null> | null
+  attributeExists?: boolean | null
+  attributeType?: ModelAttributeTypes | null
+}
 
 export enum ModelAttributeTypes {
-  binary = "binary",
-  binarySet = "binarySet",
-  bool = "bool",
-  list = "list",
-  map = "map",
-  number = "number",
-  numberSet = "numberSet",
-  string = "string",
-  stringSet = "stringSet",
-  _null = "_null",
+  binary = 'binary',
+  binarySet = 'binarySet',
+  bool = 'bool',
+  list = 'list',
+  map = 'map',
+  number = 'number',
+  numberSet = 'numberSet',
+  string = 'string',
+  stringSet = 'stringSet',
+  _null = '_null',
 }
-
 
 export type ModelIntInput = {
-  ne?: number | null,
-  eq?: number | null,
-  le?: number | null,
-  lt?: number | null,
-  ge?: number | null,
-  gt?: number | null,
-  between?: Array< number | null > | null,
-  attributeExists?: boolean | null,
-  attributeType?: ModelAttributeTypes | null,
-};
-
-export type ModelIDInput = {
-  ne?: string | null,
-  eq?: string | null,
-  le?: string | null,
-  lt?: string | null,
-  ge?: string | null,
-  gt?: string | null,
-  contains?: string | null,
-  notContains?: string | null,
-  between?: Array< string | null > | null,
-  beginsWith?: string | null,
-  attributeExists?: boolean | null,
-  attributeType?: ModelAttributeTypes | null,
-  size?: ModelSizeInput | null,
-};
-
-export type ModelSizeInput = {
-  ne?: number | null,
-  eq?: number | null,
-  le?: number | null,
-  lt?: number | null,
-  ge?: number | null,
-  gt?: number | null,
-  between?: Array< number | null > | null,
-};
-
-export type HorseVitalSigns = {
-  __typename: "HorseVitalSigns",
-  id: string,
-  heart_rate?: number | null,
-  respiratory_rate?: number | null,
-  body_temperature?: number | null,
-  create_dt?: number | null,
-  update_dt?: number | null,
-  creater?: Users | null,
-  updater?: Users | null,
-  horse?: Horses | null,
-  createdAt: string,
-  updatedAt: string,
-  horseVitalSignsCreaterId?: string | null,
-  horseVitalSignsUpdaterId?: string | null,
-  horseVitalSignsHorseId?: string | null,
-};
-
-export type Users = {
-  __typename: "Users",
-  id: string,
-  name?: string | null,
-  kind?: string | null,
-  birthday?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  creater?: string | null,
-  updater?: string | null,
-  age?: number | null,
-  horsesID: string,
-  createdAt: string,
-  updatedAt: string,
-};
-
-export type Horses = {
-  __typename: "Horses",
-  id: string,
-  name: string,
-  sex: string,
-  breed?: boolean | null,
-  weight?: number | null,
-  height?: number | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  birthday?: string | null,
-  color?: string | null,
-  creater?: Users | null,
-  updater?: Users | null,
-  age?: number | null,
-  owner?: ModelUsersConnection | null,
-  createdAt: string,
-  updatedAt: string,
-  horsesCreaterId?: string | null,
-  horsesUpdaterId?: string | null,
-};
-
-export type ModelUsersConnection = {
-  __typename: "ModelUsersConnection",
-  items:  Array<Users | null >,
-  nextToken?: string | null,
-};
-
-export type UpdateHorseVitalSignsInput = {
-  id: string,
-  heart_rate?: number | null,
-  respiratory_rate?: number | null,
-  body_temperature?: number | null,
-  create_dt?: number | null,
-  update_dt?: number | null,
-  horseVitalSignsCreaterId?: string | null,
-  horseVitalSignsUpdaterId?: string | null,
-  horseVitalSignsHorseId?: string | null,
-};
-
-export type DeleteHorseVitalSignsInput = {
-  id: string,
-};
-
-export type CreateHorseExercisesInput = {
-  id?: string | null,
-  exercise_type?: string | null,
-  start_dt?: string | null,
-  end_dt?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  passtime?: number | null,
-  horseExercisesCreaterId?: string | null,
-  horseExercisesUpdaterId?: string | null,
-  horseExercisesRiderId?: string | null,
-};
-
-export type ModelHorseExercisesConditionInput = {
-  exercise_type?: ModelStringInput | null,
-  start_dt?: ModelStringInput | null,
-  end_dt?: ModelStringInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  passtime?: ModelIntInput | null,
-  and?: Array< ModelHorseExercisesConditionInput | null > | null,
-  or?: Array< ModelHorseExercisesConditionInput | null > | null,
-  not?: ModelHorseExercisesConditionInput | null,
-  horseExercisesCreaterId?: ModelIDInput | null,
-  horseExercisesUpdaterId?: ModelIDInput | null,
-  horseExercisesRiderId?: ModelIDInput | null,
-};
-
-export type ModelStringInput = {
-  ne?: string | null,
-  eq?: string | null,
-  le?: string | null,
-  lt?: string | null,
-  ge?: string | null,
-  gt?: string | null,
-  contains?: string | null,
-  notContains?: string | null,
-  between?: Array< string | null > | null,
-  beginsWith?: string | null,
-  attributeExists?: boolean | null,
-  attributeType?: ModelAttributeTypes | null,
-  size?: ModelSizeInput | null,
-};
-
-export type HorseExercises = {
-  __typename: "HorseExercises",
-  id: string,
-  exercise_type?: string | null,
-  start_dt?: string | null,
-  end_dt?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  creater?: Users | null,
-  updater?: Users | null,
-  rider?: Users | null,
-  passtime?: number | null,
-  createdAt: string,
-  updatedAt: string,
-  horseExercisesCreaterId?: string | null,
-  horseExercisesUpdaterId?: string | null,
-  horseExercisesRiderId?: string | null,
-};
-
-export type UpdateHorseExercisesInput = {
-  id: string,
-  exercise_type?: string | null,
-  start_dt?: string | null,
-  end_dt?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  passtime?: number | null,
-  horseExercisesCreaterId?: string | null,
-  horseExercisesUpdaterId?: string | null,
-  horseExercisesRiderId?: string | null,
-};
-
-export type DeleteHorseExercisesInput = {
-  id: string,
-};
-
-export type CreateUsersInput = {
-  id?: string | null,
-  name?: string | null,
-  kind?: string | null,
-  birthday?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  creater?: string | null,
-  updater?: string | null,
-  age?: number | null,
-  horsesID: string,
-};
-
-export type ModelUsersConditionInput = {
-  name?: ModelStringInput | null,
-  kind?: ModelStringInput | null,
-  birthday?: ModelStringInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  creater?: ModelIDInput | null,
-  updater?: ModelIDInput | null,
-  age?: ModelIntInput | null,
-  horsesID?: ModelIDInput | null,
-  and?: Array< ModelUsersConditionInput | null > | null,
-  or?: Array< ModelUsersConditionInput | null > | null,
-  not?: ModelUsersConditionInput | null,
-};
-
-export type UpdateUsersInput = {
-  id: string,
-  name?: string | null,
-  kind?: string | null,
-  birthday?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  creater?: string | null,
-  updater?: string | null,
-  age?: number | null,
-  horsesID?: string | null,
-};
-
-export type DeleteUsersInput = {
-  id: string,
-};
-
-export type CreateHorseFeedIntakesInput = {
-  id?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  amount?: number | null,
-  intakes_dt?: string | null,
-  horseFeedIntakesCreaterId?: string | null,
-  horseFeedIntakesUpdaterId?: string | null,
-  horseFeedIntakesHorseId?: string | null,
-  horseFeedIntakesFeedId?: string | null,
-};
-
-export type ModelHorseFeedIntakesConditionInput = {
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  amount?: ModelFloatInput | null,
-  intakes_dt?: ModelStringInput | null,
-  and?: Array< ModelHorseFeedIntakesConditionInput | null > | null,
-  or?: Array< ModelHorseFeedIntakesConditionInput | null > | null,
-  not?: ModelHorseFeedIntakesConditionInput | null,
-  horseFeedIntakesCreaterId?: ModelIDInput | null,
-  horseFeedIntakesUpdaterId?: ModelIDInput | null,
-  horseFeedIntakesHorseId?: ModelIDInput | null,
-  horseFeedIntakesFeedId?: ModelIDInput | null,
-};
-
-export type HorseFeedIntakes = {
-  __typename: "HorseFeedIntakes",
-  id: string,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  amount?: number | null,
-  creater?: Users | null,
-  updater?: Users | null,
-  horse?: Horses | null,
-  feed?: Feeds | null,
-  intakes_dt?: string | null,
-  createdAt: string,
-  updatedAt: string,
-  horseFeedIntakesCreaterId?: string | null,
-  horseFeedIntakesUpdaterId?: string | null,
-  horseFeedIntakesHorseId?: string | null,
-  horseFeedIntakesFeedId?: string | null,
-};
-
-export type Feeds = {
-  __typename: "Feeds",
-  id: string,
-  name?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  amount?: number | null,
-  feed_type?: string | null,
-  creater?: Users | null,
-  updater?: Users | null,
-  createdAt: string,
-  updatedAt: string,
-  feedsCreaterId?: string | null,
-  feedsUpdaterId?: string | null,
-};
-
-export type UpdateHorseFeedIntakesInput = {
-  id: string,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  amount?: number | null,
-  intakes_dt?: string | null,
-  horseFeedIntakesCreaterId?: string | null,
-  horseFeedIntakesUpdaterId?: string | null,
-  horseFeedIntakesHorseId?: string | null,
-  horseFeedIntakesFeedId?: string | null,
-};
-
-export type DeleteHorseFeedIntakesInput = {
-  id: string,
-};
-
-export type CreateHorseWaterIntakesInput = {
-  id?: string | null,
-  amount?: number | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  intakes_dt?: string | null,
-  horseWaterIntakesCreaterId?: string | null,
-  horseWaterIntakesUpdaterId?: string | null,
-};
-
-export type ModelHorseWaterIntakesConditionInput = {
-  amount?: ModelFloatInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  intakes_dt?: ModelStringInput | null,
-  and?: Array< ModelHorseWaterIntakesConditionInput | null > | null,
-  or?: Array< ModelHorseWaterIntakesConditionInput | null > | null,
-  not?: ModelHorseWaterIntakesConditionInput | null,
-  horseWaterIntakesCreaterId?: ModelIDInput | null,
-  horseWaterIntakesUpdaterId?: ModelIDInput | null,
-};
-
-export type HorseWaterIntakes = {
-  __typename: "HorseWaterIntakes",
-  id: string,
-  amount?: number | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  creater?: Users | null,
-  updater?: Users | null,
-  intakes_dt?: string | null,
-  createdAt: string,
-  updatedAt: string,
-  horseWaterIntakesCreaterId?: string | null,
-  horseWaterIntakesUpdaterId?: string | null,
-};
-
-export type UpdateHorseWaterIntakesInput = {
-  id: string,
-  amount?: number | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  intakes_dt?: string | null,
-  horseWaterIntakesCreaterId?: string | null,
-  horseWaterIntakesUpdaterId?: string | null,
-};
-
-export type DeleteHorseWaterIntakesInput = {
-  id: string,
-};
-
-export type CreateFeedsInput = {
-  id?: string | null,
-  name?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  amount?: number | null,
-  feed_type?: string | null,
-  feedsCreaterId?: string | null,
-  feedsUpdaterId?: string | null,
-};
-
-export type ModelFeedsConditionInput = {
-  name?: ModelStringInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  amount?: ModelFloatInput | null,
-  feed_type?: ModelStringInput | null,
-  and?: Array< ModelFeedsConditionInput | null > | null,
-  or?: Array< ModelFeedsConditionInput | null > | null,
-  not?: ModelFeedsConditionInput | null,
-  feedsCreaterId?: ModelIDInput | null,
-  feedsUpdaterId?: ModelIDInput | null,
-};
-
-export type UpdateFeedsInput = {
-  id: string,
-  name?: string | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  amount?: number | null,
-  feed_type?: string | null,
-  feedsCreaterId?: string | null,
-  feedsUpdaterId?: string | null,
-};
-
-export type DeleteFeedsInput = {
-  id: string,
-};
-
-export type CreateHorsesInput = {
-  id?: string | null,
-  name: string,
-  sex: string,
-  breed?: boolean | null,
-  weight?: number | null,
-  height?: number | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  birthday?: string | null,
-  color?: string | null,
-  age?: number | null,
-  horsesCreaterId?: string | null,
-  horsesUpdaterId?: string | null,
-};
-
-export type ModelHorsesConditionInput = {
-  name?: ModelStringInput | null,
-  sex?: ModelStringInput | null,
-  breed?: ModelBooleanInput | null,
-  weight?: ModelFloatInput | null,
-  height?: ModelFloatInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  birthday?: ModelStringInput | null,
-  color?: ModelStringInput | null,
-  age?: ModelIntInput | null,
-  and?: Array< ModelHorsesConditionInput | null > | null,
-  or?: Array< ModelHorsesConditionInput | null > | null,
-  not?: ModelHorsesConditionInput | null,
-  horsesCreaterId?: ModelIDInput | null,
-  horsesUpdaterId?: ModelIDInput | null,
-};
-
-export type ModelBooleanInput = {
-  ne?: boolean | null,
-  eq?: boolean | null,
-  attributeExists?: boolean | null,
-  attributeType?: ModelAttributeTypes | null,
-};
-
-export type UpdateHorsesInput = {
-  id: string,
-  name?: string | null,
-  sex?: string | null,
-  breed?: boolean | null,
-  weight?: number | null,
-  height?: number | null,
-  create_dt?: string | null,
-  update_dt?: string | null,
-  birthday?: string | null,
-  color?: string | null,
-  age?: number | null,
-  horsesCreaterId?: string | null,
-  horsesUpdaterId?: string | null,
-};
-
-export type DeleteHorsesInput = {
-  id: string,
-};
-
-export type ModelHorseVitalSignsFilterInput = {
-  id?: ModelIDInput | null,
-  heart_rate?: ModelFloatInput | null,
-  respiratory_rate?: ModelFloatInput | null,
-  body_temperature?: ModelFloatInput | null,
-  create_dt?: ModelIntInput | null,
-  update_dt?: ModelIntInput | null,
-  and?: Array< ModelHorseVitalSignsFilterInput | null > | null,
-  or?: Array< ModelHorseVitalSignsFilterInput | null > | null,
-  not?: ModelHorseVitalSignsFilterInput | null,
-  horseVitalSignsCreaterId?: ModelIDInput | null,
-  horseVitalSignsUpdaterId?: ModelIDInput | null,
-  horseVitalSignsHorseId?: ModelIDInput | null,
-};
-
-export type ModelHorseVitalSignsConnection = {
-  __typename: "ModelHorseVitalSignsConnection",
-  items:  Array<HorseVitalSigns | null >,
-  nextToken?: string | null,
-};
-
-export type ModelHorseExercisesFilterInput = {
-  id?: ModelIDInput | null,
-  exercise_type?: ModelStringInput | null,
-  start_dt?: ModelStringInput | null,
-  end_dt?: ModelStringInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  passtime?: ModelIntInput | null,
-  and?: Array< ModelHorseExercisesFilterInput | null > | null,
-  or?: Array< ModelHorseExercisesFilterInput | null > | null,
-  not?: ModelHorseExercisesFilterInput | null,
-  horseExercisesCreaterId?: ModelIDInput | null,
-  horseExercisesUpdaterId?: ModelIDInput | null,
-  horseExercisesRiderId?: ModelIDInput | null,
-};
-
-export type ModelHorseExercisesConnection = {
-  __typename: "ModelHorseExercisesConnection",
-  items:  Array<HorseExercises | null >,
-  nextToken?: string | null,
-};
-
-export type ModelUsersFilterInput = {
-  id?: ModelIDInput | null,
-  name?: ModelStringInput | null,
-  kind?: ModelStringInput | null,
-  birthday?: ModelStringInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  creater?: ModelIDInput | null,
-  updater?: ModelIDInput | null,
-  age?: ModelIntInput | null,
-  horsesID?: ModelIDInput | null,
-  and?: Array< ModelUsersFilterInput | null > | null,
-  or?: Array< ModelUsersFilterInput | null > | null,
-  not?: ModelUsersFilterInput | null,
-};
-
-export type ModelHorseFeedIntakesFilterInput = {
-  id?: ModelIDInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  amount?: ModelFloatInput | null,
-  intakes_dt?: ModelStringInput | null,
-  and?: Array< ModelHorseFeedIntakesFilterInput | null > | null,
-  or?: Array< ModelHorseFeedIntakesFilterInput | null > | null,
-  not?: ModelHorseFeedIntakesFilterInput | null,
-  horseFeedIntakesCreaterId?: ModelIDInput | null,
-  horseFeedIntakesUpdaterId?: ModelIDInput | null,
-  horseFeedIntakesHorseId?: ModelIDInput | null,
-  horseFeedIntakesFeedId?: ModelIDInput | null,
-};
-
-export type ModelHorseFeedIntakesConnection = {
-  __typename: "ModelHorseFeedIntakesConnection",
-  items:  Array<HorseFeedIntakes | null >,
-  nextToken?: string | null,
-};
-
-export type ModelHorseWaterIntakesFilterInput = {
-  id?: ModelIDInput | null,
-  amount?: ModelFloatInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  intakes_dt?: ModelStringInput | null,
-  and?: Array< ModelHorseWaterIntakesFilterInput | null > | null,
-  or?: Array< ModelHorseWaterIntakesFilterInput | null > | null,
-  not?: ModelHorseWaterIntakesFilterInput | null,
-  horseWaterIntakesCreaterId?: ModelIDInput | null,
-  horseWaterIntakesUpdaterId?: ModelIDInput | null,
-};
-
-export type ModelHorseWaterIntakesConnection = {
-  __typename: "ModelHorseWaterIntakesConnection",
-  items:  Array<HorseWaterIntakes | null >,
-  nextToken?: string | null,
-};
-
-export type ModelFeedsFilterInput = {
-  id?: ModelIDInput | null,
-  name?: ModelStringInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  amount?: ModelFloatInput | null,
-  feed_type?: ModelStringInput | null,
-  and?: Array< ModelFeedsFilterInput | null > | null,
-  or?: Array< ModelFeedsFilterInput | null > | null,
-  not?: ModelFeedsFilterInput | null,
-  feedsCreaterId?: ModelIDInput | null,
-  feedsUpdaterId?: ModelIDInput | null,
-};
-
-export type ModelFeedsConnection = {
-  __typename: "ModelFeedsConnection",
-  items:  Array<Feeds | null >,
-  nextToken?: string | null,
-};
-
-export type ModelHorsesFilterInput = {
-  id?: ModelIDInput | null,
-  name?: ModelStringInput | null,
-  sex?: ModelStringInput | null,
-  breed?: ModelBooleanInput | null,
-  weight?: ModelFloatInput | null,
-  height?: ModelFloatInput | null,
-  create_dt?: ModelStringInput | null,
-  update_dt?: ModelStringInput | null,
-  birthday?: ModelStringInput | null,
-  color?: ModelStringInput | null,
-  age?: ModelIntInput | null,
-  and?: Array< ModelHorsesFilterInput | null > | null,
-  or?: Array< ModelHorsesFilterInput | null > | null,
-  not?: ModelHorsesFilterInput | null,
-  horsesCreaterId?: ModelIDInput | null,
-  horsesUpdaterId?: ModelIDInput | null,
-};
-
-export type ModelHorsesConnection = {
-  __typename: "ModelHorsesConnection",
-  items:  Array<Horses | null >,
-  nextToken?: string | null,
-};
-
-export enum ModelSortDirection {
-  ASC = "ASC",
-  DESC = "DESC",
+  ne?: number | null
+  eq?: number | null
+  le?: number | null
+  lt?: number | null
+  ge?: number | null
+  gt?: number | null
+  between?: Array<number | null> | null
+  attributeExists?: boolean | null
+  attributeType?: ModelAttributeTypes | null
 }
 
+export type ModelIDInput = {
+  ne?: string | null
+  eq?: string | null
+  le?: string | null
+  lt?: string | null
+  ge?: string | null
+  gt?: string | null
+  contains?: string | null
+  notContains?: string | null
+  between?: Array<string | null> | null
+  beginsWith?: string | null
+  attributeExists?: boolean | null
+  attributeType?: ModelAttributeTypes | null
+  size?: ModelSizeInput | null
+}
+
+export type ModelSizeInput = {
+  ne?: number | null
+  eq?: number | null
+  le?: number | null
+  lt?: number | null
+  ge?: number | null
+  gt?: number | null
+  between?: Array<number | null> | null
+}
+
+export type HorseVitalSigns = {
+  __typename: 'HorseVitalSigns'
+  id: string
+  heart_rate?: number | null
+  respiratory_rate?: number | null
+  body_temperature?: number | null
+  create_dt?: number | null
+  update_dt?: number | null
+  creater?: Users | null
+  updater?: Users | null
+  horse?: Horses | null
+  createdAt: string
+  updatedAt: string
+  horseVitalSignsCreaterId?: string | null
+  horseVitalSignsUpdaterId?: string | null
+  horseVitalSignsHorseId?: string | null
+}
+
+export type Users = {
+  __typename: 'Users'
+  id: string
+  name?: string | null
+  kind?: string | null
+  birthday?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  creater?: string | null
+  updater?: string | null
+  age?: number | null
+  horsesID: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type Horses = {
+  __typename: 'Horses'
+  id: string
+  name: string
+  sex: string
+  breed?: boolean | null
+  weight?: number | null
+  height?: number | null
+  create_dt?: string | null
+  update_dt?: string | null
+  birthday?: string | null
+  color?: string | null
+  creater?: Users | null
+  updater?: Users | null
+  age?: number | null
+  owner?: ModelUsersConnection | null
+  createdAt: string
+  updatedAt: string
+  horsesCreaterId?: string | null
+  horsesUpdaterId?: string | null
+}
+
+export type ModelUsersConnection = {
+  __typename: 'ModelUsersConnection'
+  items: Array<Users | null>
+  nextToken?: string | null
+}
+
+export type UpdateHorseVitalSignsInput = {
+  id: string
+  heart_rate?: number | null
+  respiratory_rate?: number | null
+  body_temperature?: number | null
+  create_dt?: number | null
+  update_dt?: number | null
+  horseVitalSignsCreaterId?: string | null
+  horseVitalSignsUpdaterId?: string | null
+  horseVitalSignsHorseId?: string | null
+}
+
+export type DeleteHorseVitalSignsInput = {
+  id: string
+}
+
+export type CreateHorseExercisesInput = {
+  id?: string | null
+  exercise_type?: string | null
+  start_dt?: string | null
+  end_dt?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  passtime?: number | null
+  horseExercisesCreaterId?: string | null
+  horseExercisesUpdaterId?: string | null
+  horseExercisesRiderId?: string | null
+}
+
+export type ModelHorseExercisesConditionInput = {
+  exercise_type?: ModelStringInput | null
+  start_dt?: ModelStringInput | null
+  end_dt?: ModelStringInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  passtime?: ModelIntInput | null
+  and?: Array<ModelHorseExercisesConditionInput | null> | null
+  or?: Array<ModelHorseExercisesConditionInput | null> | null
+  not?: ModelHorseExercisesConditionInput | null
+  horseExercisesCreaterId?: ModelIDInput | null
+  horseExercisesUpdaterId?: ModelIDInput | null
+  horseExercisesRiderId?: ModelIDInput | null
+}
+
+export type ModelStringInput = {
+  ne?: string | null
+  eq?: string | null
+  le?: string | null
+  lt?: string | null
+  ge?: string | null
+  gt?: string | null
+  contains?: string | null
+  notContains?: string | null
+  between?: Array<string | null> | null
+  beginsWith?: string | null
+  attributeExists?: boolean | null
+  attributeType?: ModelAttributeTypes | null
+  size?: ModelSizeInput | null
+}
+
+export type HorseExercises = {
+  __typename: 'HorseExercises'
+  id: string
+  exercise_type?: string | null
+  start_dt?: string | null
+  end_dt?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  creater?: Users | null
+  updater?: Users | null
+  rider?: Users | null
+  passtime?: number | null
+  createdAt: string
+  updatedAt: string
+  horseExercisesCreaterId?: string | null
+  horseExercisesUpdaterId?: string | null
+  horseExercisesRiderId?: string | null
+}
+
+export type UpdateHorseExercisesInput = {
+  id: string
+  exercise_type?: string | null
+  start_dt?: string | null
+  end_dt?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  passtime?: number | null
+  horseExercisesCreaterId?: string | null
+  horseExercisesUpdaterId?: string | null
+  horseExercisesRiderId?: string | null
+}
+
+export type DeleteHorseExercisesInput = {
+  id: string
+}
+
+export type CreateUsersInput = {
+  id?: string | null
+  name?: string | null
+  kind?: string | null
+  birthday?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  creater?: string | null
+  updater?: string | null
+  age?: number | null
+  horsesID: string
+}
+
+export type ModelUsersConditionInput = {
+  name?: ModelStringInput | null
+  kind?: ModelStringInput | null
+  birthday?: ModelStringInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  creater?: ModelIDInput | null
+  updater?: ModelIDInput | null
+  age?: ModelIntInput | null
+  horsesID?: ModelIDInput | null
+  and?: Array<ModelUsersConditionInput | null> | null
+  or?: Array<ModelUsersConditionInput | null> | null
+  not?: ModelUsersConditionInput | null
+}
+
+export type UpdateUsersInput = {
+  id: string
+  name?: string | null
+  kind?: string | null
+  birthday?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  creater?: string | null
+  updater?: string | null
+  age?: number | null
+  horsesID?: string | null
+}
+
+export type DeleteUsersInput = {
+  id: string
+}
+
+export type CreateHorseFeedIntakesInput = {
+  id?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  amount?: number | null
+  intakes_dt?: string | null
+  horseFeedIntakesCreaterId?: string | null
+  horseFeedIntakesUpdaterId?: string | null
+  horseFeedIntakesHorseId?: string | null
+  horseFeedIntakesFeedId?: string | null
+}
+
+export type ModelHorseFeedIntakesConditionInput = {
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  amount?: ModelFloatInput | null
+  intakes_dt?: ModelStringInput | null
+  and?: Array<ModelHorseFeedIntakesConditionInput | null> | null
+  or?: Array<ModelHorseFeedIntakesConditionInput | null> | null
+  not?: ModelHorseFeedIntakesConditionInput | null
+  horseFeedIntakesCreaterId?: ModelIDInput | null
+  horseFeedIntakesUpdaterId?: ModelIDInput | null
+  horseFeedIntakesHorseId?: ModelIDInput | null
+  horseFeedIntakesFeedId?: ModelIDInput | null
+}
+
+export type HorseFeedIntakes = {
+  __typename: 'HorseFeedIntakes'
+  id: string
+  create_dt?: string | null
+  update_dt?: string | null
+  amount?: number | null
+  creater?: Users | null
+  updater?: Users | null
+  horse?: Horses | null
+  feed?: Feeds | null
+  intakes_dt?: string | null
+  createdAt: string
+  updatedAt: string
+  horseFeedIntakesCreaterId?: string | null
+  horseFeedIntakesUpdaterId?: string | null
+  horseFeedIntakesHorseId?: string | null
+  horseFeedIntakesFeedId?: string | null
+}
+
+export type Feeds = {
+  __typename: 'Feeds'
+  id: string
+  name?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  amount?: number | null
+  feed_type?: string | null
+  creater?: Users | null
+  updater?: Users | null
+  createdAt: string
+  updatedAt: string
+  feedsCreaterId?: string | null
+  feedsUpdaterId?: string | null
+}
+
+export type UpdateHorseFeedIntakesInput = {
+  id: string
+  create_dt?: string | null
+  update_dt?: string | null
+  amount?: number | null
+  intakes_dt?: string | null
+  horseFeedIntakesCreaterId?: string | null
+  horseFeedIntakesUpdaterId?: string | null
+  horseFeedIntakesHorseId?: string | null
+  horseFeedIntakesFeedId?: string | null
+}
+
+export type DeleteHorseFeedIntakesInput = {
+  id: string
+}
+
+export type CreateHorseWaterIntakesInput = {
+  id?: string | null
+  amount?: number | null
+  create_dt?: string | null
+  update_dt?: string | null
+  intakes_dt?: string | null
+  horseWaterIntakesCreaterId?: string | null
+  horseWaterIntakesUpdaterId?: string | null
+}
+
+export type ModelHorseWaterIntakesConditionInput = {
+  amount?: ModelFloatInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  intakes_dt?: ModelStringInput | null
+  and?: Array<ModelHorseWaterIntakesConditionInput | null> | null
+  or?: Array<ModelHorseWaterIntakesConditionInput | null> | null
+  not?: ModelHorseWaterIntakesConditionInput | null
+  horseWaterIntakesCreaterId?: ModelIDInput | null
+  horseWaterIntakesUpdaterId?: ModelIDInput | null
+}
+
+export type HorseWaterIntakes = {
+  __typename: 'HorseWaterIntakes'
+  id: string
+  amount?: number | null
+  create_dt?: string | null
+  update_dt?: string | null
+  creater?: Users | null
+  updater?: Users | null
+  intakes_dt?: string | null
+  createdAt: string
+  updatedAt: string
+  horseWaterIntakesCreaterId?: string | null
+  horseWaterIntakesUpdaterId?: string | null
+}
+
+export type UpdateHorseWaterIntakesInput = {
+  id: string
+  amount?: number | null
+  create_dt?: string | null
+  update_dt?: string | null
+  intakes_dt?: string | null
+  horseWaterIntakesCreaterId?: string | null
+  horseWaterIntakesUpdaterId?: string | null
+}
+
+export type DeleteHorseWaterIntakesInput = {
+  id: string
+}
+
+export type CreateFeedsInput = {
+  id?: string | null
+  name?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  amount?: number | null
+  feed_type?: string | null
+  feedsCreaterId?: string | null
+  feedsUpdaterId?: string | null
+}
+
+export type ModelFeedsConditionInput = {
+  name?: ModelStringInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  amount?: ModelFloatInput | null
+  feed_type?: ModelStringInput | null
+  and?: Array<ModelFeedsConditionInput | null> | null
+  or?: Array<ModelFeedsConditionInput | null> | null
+  not?: ModelFeedsConditionInput | null
+  feedsCreaterId?: ModelIDInput | null
+  feedsUpdaterId?: ModelIDInput | null
+}
+
+export type UpdateFeedsInput = {
+  id: string
+  name?: string | null
+  create_dt?: string | null
+  update_dt?: string | null
+  amount?: number | null
+  feed_type?: string | null
+  feedsCreaterId?: string | null
+  feedsUpdaterId?: string | null
+}
+
+export type DeleteFeedsInput = {
+  id: string
+}
+
+export type CreateHorsesInput = {
+  id?: string | null
+  name: string
+  sex: string
+  breed?: boolean | null
+  weight?: number | null
+  height?: number | null
+  create_dt?: string | null
+  update_dt?: string | null
+  birthday?: string | null
+  color?: string | null
+  age?: number | null
+  horsesCreaterId?: string | null
+  horsesUpdaterId?: string | null
+}
+
+export type ModelHorsesConditionInput = {
+  name?: ModelStringInput | null
+  sex?: ModelStringInput | null
+  breed?: ModelBooleanInput | null
+  weight?: ModelFloatInput | null
+  height?: ModelFloatInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  birthday?: ModelStringInput | null
+  color?: ModelStringInput | null
+  age?: ModelIntInput | null
+  and?: Array<ModelHorsesConditionInput | null> | null
+  or?: Array<ModelHorsesConditionInput | null> | null
+  not?: ModelHorsesConditionInput | null
+  horsesCreaterId?: ModelIDInput | null
+  horsesUpdaterId?: ModelIDInput | null
+}
+
+export type ModelBooleanInput = {
+  ne?: boolean | null
+  eq?: boolean | null
+  attributeExists?: boolean | null
+  attributeType?: ModelAttributeTypes | null
+}
+
+export type UpdateHorsesInput = {
+  id: string
+  name?: string | null
+  sex?: string | null
+  breed?: boolean | null
+  weight?: number | null
+  height?: number | null
+  create_dt?: string | null
+  update_dt?: string | null
+  birthday?: string | null
+  color?: string | null
+  age?: number | null
+  horsesCreaterId?: string | null
+  horsesUpdaterId?: string | null
+}
+
+export type DeleteHorsesInput = {
+  id: string
+}
+
+export type ModelHorseVitalSignsFilterInput = {
+  id?: ModelIDInput | null
+  heart_rate?: ModelFloatInput | null
+  respiratory_rate?: ModelFloatInput | null
+  body_temperature?: ModelFloatInput | null
+  create_dt?: ModelIntInput | null
+  update_dt?: ModelIntInput | null
+  and?: Array<ModelHorseVitalSignsFilterInput | null> | null
+  or?: Array<ModelHorseVitalSignsFilterInput | null> | null
+  not?: ModelHorseVitalSignsFilterInput | null
+  horseVitalSignsCreaterId?: ModelIDInput | null
+  horseVitalSignsUpdaterId?: ModelIDInput | null
+  horseVitalSignsHorseId?: ModelIDInput | null
+}
+
+export type ModelHorseVitalSignsConnection = {
+  __typename: 'ModelHorseVitalSignsConnection'
+  items: Array<HorseVitalSigns | null>
+  nextToken?: string | null
+}
+
+export type ModelHorseExercisesFilterInput = {
+  id?: ModelIDInput | null
+  exercise_type?: ModelStringInput | null
+  start_dt?: ModelStringInput | null
+  end_dt?: ModelStringInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  passtime?: ModelIntInput | null
+  and?: Array<ModelHorseExercisesFilterInput | null> | null
+  or?: Array<ModelHorseExercisesFilterInput | null> | null
+  not?: ModelHorseExercisesFilterInput | null
+  horseExercisesCreaterId?: ModelIDInput | null
+  horseExercisesUpdaterId?: ModelIDInput | null
+  horseExercisesRiderId?: ModelIDInput | null
+}
+
+export type ModelHorseExercisesConnection = {
+  __typename: 'ModelHorseExercisesConnection'
+  items: Array<HorseExercises | null>
+  nextToken?: string | null
+}
+
+export type ModelUsersFilterInput = {
+  id?: ModelIDInput | null
+  name?: ModelStringInput | null
+  kind?: ModelStringInput | null
+  birthday?: ModelStringInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  creater?: ModelIDInput | null
+  updater?: ModelIDInput | null
+  age?: ModelIntInput | null
+  horsesID?: ModelIDInput | null
+  and?: Array<ModelUsersFilterInput | null> | null
+  or?: Array<ModelUsersFilterInput | null> | null
+  not?: ModelUsersFilterInput | null
+}
+
+export type ModelHorseFeedIntakesFilterInput = {
+  id?: ModelIDInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  amount?: ModelFloatInput | null
+  intakes_dt?: ModelStringInput | null
+  and?: Array<ModelHorseFeedIntakesFilterInput | null> | null
+  or?: Array<ModelHorseFeedIntakesFilterInput | null> | null
+  not?: ModelHorseFeedIntakesFilterInput | null
+  horseFeedIntakesCreaterId?: ModelIDInput | null
+  horseFeedIntakesUpdaterId?: ModelIDInput | null
+  horseFeedIntakesHorseId?: ModelIDInput | null
+  horseFeedIntakesFeedId?: ModelIDInput | null
+}
+
+export type ModelHorseFeedIntakesConnection = {
+  __typename: 'ModelHorseFeedIntakesConnection'
+  items: Array<HorseFeedIntakes | null>
+  nextToken?: string | null
+}
+
+export type ModelHorseWaterIntakesFilterInput = {
+  id?: ModelIDInput | null
+  amount?: ModelFloatInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  intakes_dt?: ModelStringInput | null
+  and?: Array<ModelHorseWaterIntakesFilterInput | null> | null
+  or?: Array<ModelHorseWaterIntakesFilterInput | null> | null
+  not?: ModelHorseWaterIntakesFilterInput | null
+  horseWaterIntakesCreaterId?: ModelIDInput | null
+  horseWaterIntakesUpdaterId?: ModelIDInput | null
+}
+
+export type ModelHorseWaterIntakesConnection = {
+  __typename: 'ModelHorseWaterIntakesConnection'
+  items: Array<HorseWaterIntakes | null>
+  nextToken?: string | null
+}
+
+export type ModelFeedsFilterInput = {
+  id?: ModelIDInput | null
+  name?: ModelStringInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  amount?: ModelFloatInput | null
+  feed_type?: ModelStringInput | null
+  and?: Array<ModelFeedsFilterInput | null> | null
+  or?: Array<ModelFeedsFilterInput | null> | null
+  not?: ModelFeedsFilterInput | null
+  feedsCreaterId?: ModelIDInput | null
+  feedsUpdaterId?: ModelIDInput | null
+}
+
+export type ModelFeedsConnection = {
+  __typename: 'ModelFeedsConnection'
+  items: Array<Feeds | null>
+  nextToken?: string | null
+}
+
+export type ModelHorsesFilterInput = {
+  id?: ModelIDInput | null
+  name?: ModelStringInput | null
+  sex?: ModelStringInput | null
+  breed?: ModelBooleanInput | null
+  weight?: ModelFloatInput | null
+  height?: ModelFloatInput | null
+  create_dt?: ModelStringInput | null
+  update_dt?: ModelStringInput | null
+  birthday?: ModelStringInput | null
+  color?: ModelStringInput | null
+  age?: ModelIntInput | null
+  and?: Array<ModelHorsesFilterInput | null> | null
+  or?: Array<ModelHorsesFilterInput | null> | null
+  not?: ModelHorsesFilterInput | null
+  horsesCreaterId?: ModelIDInput | null
+  horsesUpdaterId?: ModelIDInput | null
+}
+
+export type ModelHorsesConnection = {
+  __typename: 'ModelHorsesConnection'
+  items: Array<Horses | null>
+  nextToken?: string | null
+}
+
+export enum ModelSortDirection {
+  ASC = 'ASC',
+  DESC = 'DESC',
+}
 
 export type ModelSubscriptionHorseVitalSignsFilterInput = {
-  id?: ModelSubscriptionIDInput | null,
-  heart_rate?: ModelSubscriptionFloatInput | null,
-  respiratory_rate?: ModelSubscriptionFloatInput | null,
-  body_temperature?: ModelSubscriptionFloatInput | null,
-  create_dt?: ModelSubscriptionIntInput | null,
-  update_dt?: ModelSubscriptionIntInput | null,
-  and?: Array< ModelSubscriptionHorseVitalSignsFilterInput | null > | null,
-  or?: Array< ModelSubscriptionHorseVitalSignsFilterInput | null > | null,
-};
+  id?: ModelSubscriptionIDInput | null
+  heart_rate?: ModelSubscriptionFloatInput | null
+  respiratory_rate?: ModelSubscriptionFloatInput | null
+  body_temperature?: ModelSubscriptionFloatInput | null
+  create_dt?: ModelSubscriptionIntInput | null
+  update_dt?: ModelSubscriptionIntInput | null
+  and?: Array<ModelSubscriptionHorseVitalSignsFilterInput | null> | null
+  or?: Array<ModelSubscriptionHorseVitalSignsFilterInput | null> | null
+}
 
 export type ModelSubscriptionIDInput = {
-  ne?: string | null,
-  eq?: string | null,
-  le?: string | null,
-  lt?: string | null,
-  ge?: string | null,
-  gt?: string | null,
-  contains?: string | null,
-  notContains?: string | null,
-  between?: Array< string | null > | null,
-  beginsWith?: string | null,
-  in?: Array< string | null > | null,
-  notIn?: Array< string | null > | null,
-};
+  ne?: string | null
+  eq?: string | null
+  le?: string | null
+  lt?: string | null
+  ge?: string | null
+  gt?: string | null
+  contains?: string | null
+  notContains?: string | null
+  between?: Array<string | null> | null
+  beginsWith?: string | null
+  in?: Array<string | null> | null
+  notIn?: Array<string | null> | null
+}
 
 export type ModelSubscriptionFloatInput = {
-  ne?: number | null,
-  eq?: number | null,
-  le?: number | null,
-  lt?: number | null,
-  ge?: number | null,
-  gt?: number | null,
-  between?: Array< number | null > | null,
-  in?: Array< number | null > | null,
-  notIn?: Array< number | null > | null,
-};
+  ne?: number | null
+  eq?: number | null
+  le?: number | null
+  lt?: number | null
+  ge?: number | null
+  gt?: number | null
+  between?: Array<number | null> | null
+  in?: Array<number | null> | null
+  notIn?: Array<number | null> | null
+}
 
 export type ModelSubscriptionIntInput = {
-  ne?: number | null,
-  eq?: number | null,
-  le?: number | null,
-  lt?: number | null,
-  ge?: number | null,
-  gt?: number | null,
-  between?: Array< number | null > | null,
-  in?: Array< number | null > | null,
-  notIn?: Array< number | null > | null,
-};
+  ne?: number | null
+  eq?: number | null
+  le?: number | null
+  lt?: number | null
+  ge?: number | null
+  gt?: number | null
+  between?: Array<number | null> | null
+  in?: Array<number | null> | null
+  notIn?: Array<number | null> | null
+}
 
 export type ModelSubscriptionHorseExercisesFilterInput = {
-  id?: ModelSubscriptionIDInput | null,
-  exercise_type?: ModelSubscriptionStringInput | null,
-  start_dt?: ModelSubscriptionStringInput | null,
-  end_dt?: ModelSubscriptionStringInput | null,
-  create_dt?: ModelSubscriptionStringInput | null,
-  update_dt?: ModelSubscriptionStringInput | null,
-  passtime?: ModelSubscriptionIntInput | null,
-  and?: Array< ModelSubscriptionHorseExercisesFilterInput | null > | null,
-  or?: Array< ModelSubscriptionHorseExercisesFilterInput | null > | null,
-};
+  id?: ModelSubscriptionIDInput | null
+  exercise_type?: ModelSubscriptionStringInput | null
+  start_dt?: ModelSubscriptionStringInput | null
+  end_dt?: ModelSubscriptionStringInput | null
+  create_dt?: ModelSubscriptionStringInput | null
+  update_dt?: ModelSubscriptionStringInput | null
+  passtime?: ModelSubscriptionIntInput | null
+  and?: Array<ModelSubscriptionHorseExercisesFilterInput | null> | null
+  or?: Array<ModelSubscriptionHorseExercisesFilterInput | null> | null
+}
 
 export type ModelSubscriptionStringInput = {
-  ne?: string | null,
-  eq?: string | null,
-  le?: string | null,
-  lt?: string | null,
-  ge?: string | null,
-  gt?: string | null,
-  contains?: string | null,
-  notContains?: string | null,
-  between?: Array< string | null > | null,
-  beginsWith?: string | null,
-  in?: Array< string | null > | null,
-  notIn?: Array< string | null > | null,
-};
+  ne?: string | null
+  eq?: string | null
+  le?: string | null
+  lt?: string | null
+  ge?: string | null
+  gt?: string | null
+  contains?: string | null
+  notContains?: string | null
+  between?: Array<string | null> | null
+  beginsWith?: string | null
+  in?: Array<string | null> | null
+  notIn?: Array<string | null> | null
+}
 
 export type ModelSubscriptionUsersFilterInput = {
-  id?: ModelSubscriptionIDInput | null,
-  name?: ModelSubscriptionStringInput | null,
-  kind?: ModelSubscriptionStringInput | null,
-  birthday?: ModelSubscriptionStringInput | null,
-  create_dt?: ModelSubscriptionStringInput | null,
-  update_dt?: ModelSubscriptionStringInput | null,
-  creater?: ModelSubscriptionIDInput | null,
-  updater?: ModelSubscriptionIDInput | null,
-  age?: ModelSubscriptionIntInput | null,
-  horsesID?: ModelSubscriptionIDInput | null,
-  and?: Array< ModelSubscriptionUsersFilterInput | null > | null,
-  or?: Array< ModelSubscriptionUsersFilterInput | null > | null,
-};
+  id?: ModelSubscriptionIDInput | null
+  name?: ModelSubscriptionStringInput | null
+  kind?: ModelSubscriptionStringInput | null
+  birthday?: ModelSubscriptionStringInput | null
+  create_dt?: ModelSubscriptionStringInput | null
+  update_dt?: ModelSubscriptionStringInput | null
+  creater?: ModelSubscriptionIDInput | null
+  updater?: ModelSubscriptionIDInput | null
+  age?: ModelSubscriptionIntInput | null
+  horsesID?: ModelSubscriptionIDInput | null
+  and?: Array<ModelSubscriptionUsersFilterInput | null> | null
+  or?: Array<ModelSubscriptionUsersFilterInput | null> | null
+}
 
 export type ModelSubscriptionHorseFeedIntakesFilterInput = {
-  id?: ModelSubscriptionIDInput | null,
-  create_dt?: ModelSubscriptionStringInput | null,
-  update_dt?: ModelSubscriptionStringInput | null,
-  amount?: ModelSubscriptionFloatInput | null,
-  intakes_dt?: ModelSubscriptionStringInput | null,
-  and?: Array< ModelSubscriptionHorseFeedIntakesFilterInput | null > | null,
-  or?: Array< ModelSubscriptionHorseFeedIntakesFilterInput | null > | null,
-};
+  id?: ModelSubscriptionIDInput | null
+  create_dt?: ModelSubscriptionStringInput | null
+  update_dt?: ModelSubscriptionStringInput | null
+  amount?: ModelSubscriptionFloatInput | null
+  intakes_dt?: ModelSubscriptionStringInput | null
+  and?: Array<ModelSubscriptionHorseFeedIntakesFilterInput | null> | null
+  or?: Array<ModelSubscriptionHorseFeedIntakesFilterInput | null> | null
+}
 
 export type ModelSubscriptionHorseWaterIntakesFilterInput = {
-  id?: ModelSubscriptionIDInput | null,
-  amount?: ModelSubscriptionFloatInput | null,
-  create_dt?: ModelSubscriptionStringInput | null,
-  update_dt?: ModelSubscriptionStringInput | null,
-  intakes_dt?: ModelSubscriptionStringInput | null,
-  and?: Array< ModelSubscriptionHorseWaterIntakesFilterInput | null > | null,
-  or?: Array< ModelSubscriptionHorseWaterIntakesFilterInput | null > | null,
-};
+  id?: ModelSubscriptionIDInput | null
+  amount?: ModelSubscriptionFloatInput | null
+  create_dt?: ModelSubscriptionStringInput | null
+  update_dt?: ModelSubscriptionStringInput | null
+  intakes_dt?: ModelSubscriptionStringInput | null
+  and?: Array<ModelSubscriptionHorseWaterIntakesFilterInput | null> | null
+  or?: Array<ModelSubscriptionHorseWaterIntakesFilterInput | null> | null
+}
 
 export type ModelSubscriptionFeedsFilterInput = {
-  id?: ModelSubscriptionIDInput | null,
-  name?: ModelSubscriptionStringInput | null,
-  create_dt?: ModelSubscriptionStringInput | null,
-  update_dt?: ModelSubscriptionStringInput | null,
-  amount?: ModelSubscriptionFloatInput | null,
-  feed_type?: ModelSubscriptionStringInput | null,
-  and?: Array< ModelSubscriptionFeedsFilterInput | null > | null,
-  or?: Array< ModelSubscriptionFeedsFilterInput | null > | null,
-};
+  id?: ModelSubscriptionIDInput | null
+  name?: ModelSubscriptionStringInput | null
+  create_dt?: ModelSubscriptionStringInput | null
+  update_dt?: ModelSubscriptionStringInput | null
+  amount?: ModelSubscriptionFloatInput | null
+  feed_type?: ModelSubscriptionStringInput | null
+  and?: Array<ModelSubscriptionFeedsFilterInput | null> | null
+  or?: Array<ModelSubscriptionFeedsFilterInput | null> | null
+}
 
 export type ModelSubscriptionHorsesFilterInput = {
-  id?: ModelSubscriptionIDInput | null,
-  name?: ModelSubscriptionStringInput | null,
-  sex?: ModelSubscriptionStringInput | null,
-  breed?: ModelSubscriptionBooleanInput | null,
-  weight?: ModelSubscriptionFloatInput | null,
-  height?: ModelSubscriptionFloatInput | null,
-  create_dt?: ModelSubscriptionStringInput | null,
-  update_dt?: ModelSubscriptionStringInput | null,
-  birthday?: ModelSubscriptionStringInput | null,
-  color?: ModelSubscriptionStringInput | null,
-  age?: ModelSubscriptionIntInput | null,
-  and?: Array< ModelSubscriptionHorsesFilterInput | null > | null,
-  or?: Array< ModelSubscriptionHorsesFilterInput | null > | null,
-};
+  id?: ModelSubscriptionIDInput | null
+  name?: ModelSubscriptionStringInput | null
+  sex?: ModelSubscriptionStringInput | null
+  breed?: ModelSubscriptionBooleanInput | null
+  weight?: ModelSubscriptionFloatInput | null
+  height?: ModelSubscriptionFloatInput | null
+  create_dt?: ModelSubscriptionStringInput | null
+  update_dt?: ModelSubscriptionStringInput | null
+  birthday?: ModelSubscriptionStringInput | null
+  color?: ModelSubscriptionStringInput | null
+  age?: ModelSubscriptionIntInput | null
+  and?: Array<ModelSubscriptionHorsesFilterInput | null> | null
+  or?: Array<ModelSubscriptionHorsesFilterInput | null> | null
+}
 
 export type ModelSubscriptionBooleanInput = {
-  ne?: boolean | null,
-  eq?: boolean | null,
-};
+  ne?: boolean | null
+  eq?: boolean | null
+}
 
 export type CreateHorseVitalSignsMutationVariables = {
-  input: CreateHorseVitalSignsInput,
-  condition?: ModelHorseVitalSignsConditionInput | null,
-};
+  input: CreateHorseVitalSignsInput
+  condition?: ModelHorseVitalSignsConditionInput | null
+}
 
 export type CreateHorseVitalSignsMutation = {
-  createHorseVitalSigns?:  {
-    __typename: "HorseVitalSigns",
-    id: string,
-    heart_rate?: number | null,
-    respiratory_rate?: number | null,
-    body_temperature?: number | null,
-    create_dt?: number | null,
-    update_dt?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horseVitalSignsCreaterId?: string | null,
-    horseVitalSignsUpdaterId?: string | null,
-    horseVitalSignsHorseId?: string | null,
-  } | null,
-};
+  createHorseVitalSigns?: {
+    __typename: 'HorseVitalSigns'
+    id: string
+    heart_rate?: number | null
+    respiratory_rate?: number | null
+    body_temperature?: number | null
+    create_dt?: number | null
+    update_dt?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horseVitalSignsCreaterId?: string | null
+    horseVitalSignsUpdaterId?: string | null
+    horseVitalSignsHorseId?: string | null
+  } | null
+}
 
 export type UpdateHorseVitalSignsMutationVariables = {
-  input: UpdateHorseVitalSignsInput,
-  condition?: ModelHorseVitalSignsConditionInput | null,
-};
+  input: UpdateHorseVitalSignsInput
+  condition?: ModelHorseVitalSignsConditionInput | null
+}
 
 export type UpdateHorseVitalSignsMutation = {
-  updateHorseVitalSigns?:  {
-    __typename: "HorseVitalSigns",
-    id: string,
-    heart_rate?: number | null,
-    respiratory_rate?: number | null,
-    body_temperature?: number | null,
-    create_dt?: number | null,
-    update_dt?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horseVitalSignsCreaterId?: string | null,
-    horseVitalSignsUpdaterId?: string | null,
-    horseVitalSignsHorseId?: string | null,
-  } | null,
-};
+  updateHorseVitalSigns?: {
+    __typename: 'HorseVitalSigns'
+    id: string
+    heart_rate?: number | null
+    respiratory_rate?: number | null
+    body_temperature?: number | null
+    create_dt?: number | null
+    update_dt?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horseVitalSignsCreaterId?: string | null
+    horseVitalSignsUpdaterId?: string | null
+    horseVitalSignsHorseId?: string | null
+  } | null
+}
 
 export type DeleteHorseVitalSignsMutationVariables = {
-  input: DeleteHorseVitalSignsInput,
-  condition?: ModelHorseVitalSignsConditionInput | null,
-};
+  input: DeleteHorseVitalSignsInput
+  condition?: ModelHorseVitalSignsConditionInput | null
+}
 
 export type DeleteHorseVitalSignsMutation = {
-  deleteHorseVitalSigns?:  {
-    __typename: "HorseVitalSigns",
-    id: string,
-    heart_rate?: number | null,
-    respiratory_rate?: number | null,
-    body_temperature?: number | null,
-    create_dt?: number | null,
-    update_dt?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horseVitalSignsCreaterId?: string | null,
-    horseVitalSignsUpdaterId?: string | null,
-    horseVitalSignsHorseId?: string | null,
-  } | null,
-};
+  deleteHorseVitalSigns?: {
+    __typename: 'HorseVitalSigns'
+    id: string
+    heart_rate?: number | null
+    respiratory_rate?: number | null
+    body_temperature?: number | null
+    create_dt?: number | null
+    update_dt?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horseVitalSignsCreaterId?: string | null
+    horseVitalSignsUpdaterId?: string | null
+    horseVitalSignsHorseId?: string | null
+  } | null
+}
 
 export type CreateHorseExercisesMutationVariables = {
-  input: CreateHorseExercisesInput,
-  condition?: ModelHorseExercisesConditionInput | null,
-};
+  input: CreateHorseExercisesInput
+  condition?: ModelHorseExercisesConditionInput | null
+}
 
 export type CreateHorseExercisesMutation = {
-  createHorseExercises?:  {
-    __typename: "HorseExercises",
-    id: string,
-    exercise_type?: string | null,
-    start_dt?: string | null,
-    end_dt?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    rider?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    passtime?: number | null,
-    createdAt: string,
-    updatedAt: string,
-    horseExercisesCreaterId?: string | null,
-    horseExercisesUpdaterId?: string | null,
-    horseExercisesRiderId?: string | null,
-  } | null,
-};
+  createHorseExercises?: {
+    __typename: 'HorseExercises'
+    id: string
+    exercise_type?: string | null
+    start_dt?: string | null
+    end_dt?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    rider?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    passtime?: number | null
+    createdAt: string
+    updatedAt: string
+    horseExercisesCreaterId?: string | null
+    horseExercisesUpdaterId?: string | null
+    horseExercisesRiderId?: string | null
+  } | null
+}
 
 export type UpdateHorseExercisesMutationVariables = {
-  input: UpdateHorseExercisesInput,
-  condition?: ModelHorseExercisesConditionInput | null,
-};
+  input: UpdateHorseExercisesInput
+  condition?: ModelHorseExercisesConditionInput | null
+}
 
 export type UpdateHorseExercisesMutation = {
-  updateHorseExercises?:  {
-    __typename: "HorseExercises",
-    id: string,
-    exercise_type?: string | null,
-    start_dt?: string | null,
-    end_dt?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    rider?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    passtime?: number | null,
-    createdAt: string,
-    updatedAt: string,
-    horseExercisesCreaterId?: string | null,
-    horseExercisesUpdaterId?: string | null,
-    horseExercisesRiderId?: string | null,
-  } | null,
-};
+  updateHorseExercises?: {
+    __typename: 'HorseExercises'
+    id: string
+    exercise_type?: string | null
+    start_dt?: string | null
+    end_dt?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    rider?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    passtime?: number | null
+    createdAt: string
+    updatedAt: string
+    horseExercisesCreaterId?: string | null
+    horseExercisesUpdaterId?: string | null
+    horseExercisesRiderId?: string | null
+  } | null
+}
 
 export type DeleteHorseExercisesMutationVariables = {
-  input: DeleteHorseExercisesInput,
-  condition?: ModelHorseExercisesConditionInput | null,
-};
+  input: DeleteHorseExercisesInput
+  condition?: ModelHorseExercisesConditionInput | null
+}
 
 export type DeleteHorseExercisesMutation = {
-  deleteHorseExercises?:  {
-    __typename: "HorseExercises",
-    id: string,
-    exercise_type?: string | null,
-    start_dt?: string | null,
-    end_dt?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    rider?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    passtime?: number | null,
-    createdAt: string,
-    updatedAt: string,
-    horseExercisesCreaterId?: string | null,
-    horseExercisesUpdaterId?: string | null,
-    horseExercisesRiderId?: string | null,
-  } | null,
-};
+  deleteHorseExercises?: {
+    __typename: 'HorseExercises'
+    id: string
+    exercise_type?: string | null
+    start_dt?: string | null
+    end_dt?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    rider?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    passtime?: number | null
+    createdAt: string
+    updatedAt: string
+    horseExercisesCreaterId?: string | null
+    horseExercisesUpdaterId?: string | null
+    horseExercisesRiderId?: string | null
+  } | null
+}
 
 export type CreateUsersMutationVariables = {
-  input: CreateUsersInput,
-  condition?: ModelUsersConditionInput | null,
-};
+  input: CreateUsersInput
+  condition?: ModelUsersConditionInput | null
+}
 
 export type CreateUsersMutation = {
-  createUsers?:  {
-    __typename: "Users",
-    id: string,
-    name?: string | null,
-    kind?: string | null,
-    birthday?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?: string | null,
-    updater?: string | null,
-    age?: number | null,
-    horsesID: string,
-    createdAt: string,
-    updatedAt: string,
-  } | null,
-};
+  createUsers?: {
+    __typename: 'Users'
+    id: string
+    name?: string | null
+    kind?: string | null
+    birthday?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: string | null
+    updater?: string | null
+    age?: number | null
+    horsesID: string
+    createdAt: string
+    updatedAt: string
+  } | null
+}
 
 export type UpdateUsersMutationVariables = {
-  input: UpdateUsersInput,
-  condition?: ModelUsersConditionInput | null,
-};
+  input: UpdateUsersInput
+  condition?: ModelUsersConditionInput | null
+}
 
 export type UpdateUsersMutation = {
-  updateUsers?:  {
-    __typename: "Users",
-    id: string,
-    name?: string | null,
-    kind?: string | null,
-    birthday?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?: string | null,
-    updater?: string | null,
-    age?: number | null,
-    horsesID: string,
-    createdAt: string,
-    updatedAt: string,
-  } | null,
-};
+  updateUsers?: {
+    __typename: 'Users'
+    id: string
+    name?: string | null
+    kind?: string | null
+    birthday?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: string | null
+    updater?: string | null
+    age?: number | null
+    horsesID: string
+    createdAt: string
+    updatedAt: string
+  } | null
+}
 
 export type DeleteUsersMutationVariables = {
-  input: DeleteUsersInput,
-  condition?: ModelUsersConditionInput | null,
-};
+  input: DeleteUsersInput
+  condition?: ModelUsersConditionInput | null
+}
 
 export type DeleteUsersMutation = {
-  deleteUsers?:  {
-    __typename: "Users",
-    id: string,
-    name?: string | null,
-    kind?: string | null,
-    birthday?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?: string | null,
-    updater?: string | null,
-    age?: number | null,
-    horsesID: string,
-    createdAt: string,
-    updatedAt: string,
-  } | null,
-};
+  deleteUsers?: {
+    __typename: 'Users'
+    id: string
+    name?: string | null
+    kind?: string | null
+    birthday?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: string | null
+    updater?: string | null
+    age?: number | null
+    horsesID: string
+    createdAt: string
+    updatedAt: string
+  } | null
+}
 
 export type CreateHorseFeedIntakesMutationVariables = {
-  input: CreateHorseFeedIntakesInput,
-  condition?: ModelHorseFeedIntakesConditionInput | null,
-};
+  input: CreateHorseFeedIntakesInput
+  condition?: ModelHorseFeedIntakesConditionInput | null
+}
 
 export type CreateHorseFeedIntakesMutation = {
-  createHorseFeedIntakes?:  {
-    __typename: "HorseFeedIntakes",
-    id: string,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    feed?:  {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseFeedIntakesCreaterId?: string | null,
-    horseFeedIntakesUpdaterId?: string | null,
-    horseFeedIntakesHorseId?: string | null,
-    horseFeedIntakesFeedId?: string | null,
-  } | null,
-};
+  createHorseFeedIntakes?: {
+    __typename: 'HorseFeedIntakes'
+    id: string
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    feed?: {
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseFeedIntakesCreaterId?: string | null
+    horseFeedIntakesUpdaterId?: string | null
+    horseFeedIntakesHorseId?: string | null
+    horseFeedIntakesFeedId?: string | null
+  } | null
+}
 
 export type UpdateHorseFeedIntakesMutationVariables = {
-  input: UpdateHorseFeedIntakesInput,
-  condition?: ModelHorseFeedIntakesConditionInput | null,
-};
+  input: UpdateHorseFeedIntakesInput
+  condition?: ModelHorseFeedIntakesConditionInput | null
+}
 
 export type UpdateHorseFeedIntakesMutation = {
-  updateHorseFeedIntakes?:  {
-    __typename: "HorseFeedIntakes",
-    id: string,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    feed?:  {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseFeedIntakesCreaterId?: string | null,
-    horseFeedIntakesUpdaterId?: string | null,
-    horseFeedIntakesHorseId?: string | null,
-    horseFeedIntakesFeedId?: string | null,
-  } | null,
-};
+  updateHorseFeedIntakes?: {
+    __typename: 'HorseFeedIntakes'
+    id: string
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    feed?: {
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseFeedIntakesCreaterId?: string | null
+    horseFeedIntakesUpdaterId?: string | null
+    horseFeedIntakesHorseId?: string | null
+    horseFeedIntakesFeedId?: string | null
+  } | null
+}
 
 export type DeleteHorseFeedIntakesMutationVariables = {
-  input: DeleteHorseFeedIntakesInput,
-  condition?: ModelHorseFeedIntakesConditionInput | null,
-};
+  input: DeleteHorseFeedIntakesInput
+  condition?: ModelHorseFeedIntakesConditionInput | null
+}
 
 export type DeleteHorseFeedIntakesMutation = {
-  deleteHorseFeedIntakes?:  {
-    __typename: "HorseFeedIntakes",
-    id: string,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    feed?:  {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseFeedIntakesCreaterId?: string | null,
-    horseFeedIntakesUpdaterId?: string | null,
-    horseFeedIntakesHorseId?: string | null,
-    horseFeedIntakesFeedId?: string | null,
-  } | null,
-};
+  deleteHorseFeedIntakes?: {
+    __typename: 'HorseFeedIntakes'
+    id: string
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    feed?: {
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseFeedIntakesCreaterId?: string | null
+    horseFeedIntakesUpdaterId?: string | null
+    horseFeedIntakesHorseId?: string | null
+    horseFeedIntakesFeedId?: string | null
+  } | null
+}
 
 export type CreateHorseWaterIntakesMutationVariables = {
-  input: CreateHorseWaterIntakesInput,
-  condition?: ModelHorseWaterIntakesConditionInput | null,
-};
+  input: CreateHorseWaterIntakesInput
+  condition?: ModelHorseWaterIntakesConditionInput | null
+}
 
 export type CreateHorseWaterIntakesMutation = {
-  createHorseWaterIntakes?:  {
-    __typename: "HorseWaterIntakes",
-    id: string,
-    amount?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseWaterIntakesCreaterId?: string | null,
-    horseWaterIntakesUpdaterId?: string | null,
-  } | null,
-};
+  createHorseWaterIntakes?: {
+    __typename: 'HorseWaterIntakes'
+    id: string
+    amount?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseWaterIntakesCreaterId?: string | null
+    horseWaterIntakesUpdaterId?: string | null
+  } | null
+}
 
 export type UpdateHorseWaterIntakesMutationVariables = {
-  input: UpdateHorseWaterIntakesInput,
-  condition?: ModelHorseWaterIntakesConditionInput | null,
-};
+  input: UpdateHorseWaterIntakesInput
+  condition?: ModelHorseWaterIntakesConditionInput | null
+}
 
 export type UpdateHorseWaterIntakesMutation = {
-  updateHorseWaterIntakes?:  {
-    __typename: "HorseWaterIntakes",
-    id: string,
-    amount?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseWaterIntakesCreaterId?: string | null,
-    horseWaterIntakesUpdaterId?: string | null,
-  } | null,
-};
+  updateHorseWaterIntakes?: {
+    __typename: 'HorseWaterIntakes'
+    id: string
+    amount?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseWaterIntakesCreaterId?: string | null
+    horseWaterIntakesUpdaterId?: string | null
+  } | null
+}
 
 export type DeleteHorseWaterIntakesMutationVariables = {
-  input: DeleteHorseWaterIntakesInput,
-  condition?: ModelHorseWaterIntakesConditionInput | null,
-};
+  input: DeleteHorseWaterIntakesInput
+  condition?: ModelHorseWaterIntakesConditionInput | null
+}
 
 export type DeleteHorseWaterIntakesMutation = {
-  deleteHorseWaterIntakes?:  {
-    __typename: "HorseWaterIntakes",
-    id: string,
-    amount?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseWaterIntakesCreaterId?: string | null,
-    horseWaterIntakesUpdaterId?: string | null,
-  } | null,
-};
+  deleteHorseWaterIntakes?: {
+    __typename: 'HorseWaterIntakes'
+    id: string
+    amount?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseWaterIntakesCreaterId?: string | null
+    horseWaterIntakesUpdaterId?: string | null
+  } | null
+}
 
 export type CreateFeedsMutationVariables = {
-  input: CreateFeedsInput,
-  condition?: ModelFeedsConditionInput | null,
-};
+  input: CreateFeedsInput
+  condition?: ModelFeedsConditionInput | null
+}
 
 export type CreateFeedsMutation = {
-  createFeeds?:  {
-    __typename: "Feeds",
-    id: string,
-    name?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    feed_type?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    feedsCreaterId?: string | null,
-    feedsUpdaterId?: string | null,
-  } | null,
-};
+  createFeeds?: {
+    __typename: 'Feeds'
+    id: string
+    name?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    feed_type?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    createdAt: string
+    updatedAt: string
+    feedsCreaterId?: string | null
+    feedsUpdaterId?: string | null
+  } | null
+}
 
 export type UpdateFeedsMutationVariables = {
-  input: UpdateFeedsInput,
-  condition?: ModelFeedsConditionInput | null,
-};
+  input: UpdateFeedsInput
+  condition?: ModelFeedsConditionInput | null
+}
 
 export type UpdateFeedsMutation = {
-  updateFeeds?:  {
-    __typename: "Feeds",
-    id: string,
-    name?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    feed_type?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    feedsCreaterId?: string | null,
-    feedsUpdaterId?: string | null,
-  } | null,
-};
+  updateFeeds?: {
+    __typename: 'Feeds'
+    id: string
+    name?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    feed_type?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    createdAt: string
+    updatedAt: string
+    feedsCreaterId?: string | null
+    feedsUpdaterId?: string | null
+  } | null
+}
 
 export type DeleteFeedsMutationVariables = {
-  input: DeleteFeedsInput,
-  condition?: ModelFeedsConditionInput | null,
-};
+  input: DeleteFeedsInput
+  condition?: ModelFeedsConditionInput | null
+}
 
 export type DeleteFeedsMutation = {
-  deleteFeeds?:  {
-    __typename: "Feeds",
-    id: string,
-    name?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    feed_type?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    feedsCreaterId?: string | null,
-    feedsUpdaterId?: string | null,
-  } | null,
-};
+  deleteFeeds?: {
+    __typename: 'Feeds'
+    id: string
+    name?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    feed_type?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    createdAt: string
+    updatedAt: string
+    feedsCreaterId?: string | null
+    feedsUpdaterId?: string | null
+  } | null
+}
 
 export type CreateHorsesMutationVariables = {
-  input: CreateHorsesInput,
-  condition?: ModelHorsesConditionInput | null,
-};
+  input: CreateHorsesInput
+  condition?: ModelHorsesConditionInput | null
+}
 
 export type CreateHorsesMutation = {
-  createHorses?:  {
-    __typename: "Horses",
-    id: string,
-    name: string,
-    sex: string,
-    breed?: boolean | null,
-    weight?: number | null,
-    height?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    birthday?: string | null,
-    color?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    age?: number | null,
-    owner?:  {
-      __typename: "ModelUsersConnection",
-      items:  Array< {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null >,
-      nextToken?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horsesCreaterId?: string | null,
-    horsesUpdaterId?: string | null,
-  } | null,
-};
+  createHorses?: {
+    __typename: 'Horses'
+    id: string
+    name: string
+    sex: string
+    breed?: boolean | null
+    weight?: number | null
+    height?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    birthday?: string | null
+    color?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    age?: number | null
+    owner?: {
+      __typename: 'ModelUsersConnection'
+      items: Array<{
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null>
+      nextToken?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horsesCreaterId?: string | null
+    horsesUpdaterId?: string | null
+  } | null
+}
 
 export type UpdateHorsesMutationVariables = {
-  input: UpdateHorsesInput,
-  condition?: ModelHorsesConditionInput | null,
-};
+  input: UpdateHorsesInput
+  condition?: ModelHorsesConditionInput | null
+}
 
 export type UpdateHorsesMutation = {
-  updateHorses?:  {
-    __typename: "Horses",
-    id: string,
-    name: string,
-    sex: string,
-    breed?: boolean | null,
-    weight?: number | null,
-    height?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    birthday?: string | null,
-    color?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    age?: number | null,
-    owner?:  {
-      __typename: "ModelUsersConnection",
-      items:  Array< {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null >,
-      nextToken?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horsesCreaterId?: string | null,
-    horsesUpdaterId?: string | null,
-  } | null,
-};
+  updateHorses?: {
+    __typename: 'Horses'
+    id: string
+    name: string
+    sex: string
+    breed?: boolean | null
+    weight?: number | null
+    height?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    birthday?: string | null
+    color?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    age?: number | null
+    owner?: {
+      __typename: 'ModelUsersConnection'
+      items: Array<{
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null>
+      nextToken?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horsesCreaterId?: string | null
+    horsesUpdaterId?: string | null
+  } | null
+}
 
 export type DeleteHorsesMutationVariables = {
-  input: DeleteHorsesInput,
-  condition?: ModelHorsesConditionInput | null,
-};
+  input: DeleteHorsesInput
+  condition?: ModelHorsesConditionInput | null
+}
 
 export type DeleteHorsesMutation = {
-  deleteHorses?:  {
-    __typename: "Horses",
-    id: string,
-    name: string,
-    sex: string,
-    breed?: boolean | null,
-    weight?: number | null,
-    height?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    birthday?: string | null,
-    color?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    age?: number | null,
-    owner?:  {
-      __typename: "ModelUsersConnection",
-      items:  Array< {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null >,
-      nextToken?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horsesCreaterId?: string | null,
-    horsesUpdaterId?: string | null,
-  } | null,
-};
+  deleteHorses?: {
+    __typename: 'Horses'
+    id: string
+    name: string
+    sex: string
+    breed?: boolean | null
+    weight?: number | null
+    height?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    birthday?: string | null
+    color?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    age?: number | null
+    owner?: {
+      __typename: 'ModelUsersConnection'
+      items: Array<{
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null>
+      nextToken?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horsesCreaterId?: string | null
+    horsesUpdaterId?: string | null
+  } | null
+}
 
 export type GetHorseVitalSignsQueryVariables = {
-  id: string,
-};
+  id: string
+}
 
 export type GetHorseVitalSignsQuery = {
-  getHorseVitalSigns?:  {
-    __typename: "HorseVitalSigns",
-    id: string,
-    heart_rate?: number | null,
-    respiratory_rate?: number | null,
-    body_temperature?: number | null,
-    create_dt?: number | null,
-    update_dt?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horseVitalSignsCreaterId?: string | null,
-    horseVitalSignsUpdaterId?: string | null,
-    horseVitalSignsHorseId?: string | null,
-  } | null,
-};
+  getHorseVitalSigns?: {
+    __typename: 'HorseVitalSigns'
+    id: string
+    heart_rate?: number | null
+    respiratory_rate?: number | null
+    body_temperature?: number | null
+    create_dt?: number | null
+    update_dt?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horseVitalSignsCreaterId?: string | null
+    horseVitalSignsUpdaterId?: string | null
+    horseVitalSignsHorseId?: string | null
+  } | null
+}
 
 export type ListHorseVitalSignsQueryVariables = {
-  filter?: ModelHorseVitalSignsFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  filter?: ModelHorseVitalSignsFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type ListHorseVitalSignsQuery = {
-  listHorseVitalSigns?:  {
-    __typename: "ModelHorseVitalSignsConnection",
-    items:  Array< {
-      __typename: "HorseVitalSigns",
-      id: string,
-      heart_rate?: number | null,
-      respiratory_rate?: number | null,
-      body_temperature?: number | null,
-      create_dt?: number | null,
-      update_dt?: number | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      horse?:  {
-        __typename: "Horses",
-        id: string,
-        name: string,
-        sex: string,
-        breed?: boolean | null,
-        weight?: number | null,
-        height?: number | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        birthday?: string | null,
-        color?: string | null,
-        age?: number | null,
-        createdAt: string,
-        updatedAt: string,
-        horsesCreaterId?: string | null,
-        horsesUpdaterId?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horseVitalSignsCreaterId?: string | null,
-      horseVitalSignsUpdaterId?: string | null,
-      horseVitalSignsHorseId?: string | null,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  listHorseVitalSigns?: {
+    __typename: 'ModelHorseVitalSignsConnection'
+    items: Array<{
+      __typename: 'HorseVitalSigns'
+      id: string
+      heart_rate?: number | null
+      respiratory_rate?: number | null
+      body_temperature?: number | null
+      create_dt?: number | null
+      update_dt?: number | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      horse?: {
+        __typename: 'Horses'
+        id: string
+        name: string
+        sex: string
+        breed?: boolean | null
+        weight?: number | null
+        height?: number | null
+        create_dt?: string | null
+        update_dt?: string | null
+        birthday?: string | null
+        color?: string | null
+        age?: number | null
+        createdAt: string
+        updatedAt: string
+        horsesCreaterId?: string | null
+        horsesUpdaterId?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horseVitalSignsCreaterId?: string | null
+      horseVitalSignsUpdaterId?: string | null
+      horseVitalSignsHorseId?: string | null
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type GetHorseExercisesQueryVariables = {
-  id: string,
-};
+  id: string
+}
 
 export type GetHorseExercisesQuery = {
-  getHorseExercises?:  {
-    __typename: "HorseExercises",
-    id: string,
-    exercise_type?: string | null,
-    start_dt?: string | null,
-    end_dt?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    rider?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    passtime?: number | null,
-    createdAt: string,
-    updatedAt: string,
-    horseExercisesCreaterId?: string | null,
-    horseExercisesUpdaterId?: string | null,
-    horseExercisesRiderId?: string | null,
-  } | null,
-};
+  getHorseExercises?: {
+    __typename: 'HorseExercises'
+    id: string
+    exercise_type?: string | null
+    start_dt?: string | null
+    end_dt?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    rider?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    passtime?: number | null
+    createdAt: string
+    updatedAt: string
+    horseExercisesCreaterId?: string | null
+    horseExercisesUpdaterId?: string | null
+    horseExercisesRiderId?: string | null
+  } | null
+}
 
 export type ListHorseExercisesQueryVariables = {
-  filter?: ModelHorseExercisesFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  filter?: ModelHorseExercisesFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type ListHorseExercisesQuery = {
-  listHorseExercises?:  {
-    __typename: "ModelHorseExercisesConnection",
-    items:  Array< {
-      __typename: "HorseExercises",
-      id: string,
-      exercise_type?: string | null,
-      start_dt?: string | null,
-      end_dt?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      rider?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      passtime?: number | null,
-      createdAt: string,
-      updatedAt: string,
-      horseExercisesCreaterId?: string | null,
-      horseExercisesUpdaterId?: string | null,
-      horseExercisesRiderId?: string | null,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  listHorseExercises?: {
+    __typename: 'ModelHorseExercisesConnection'
+    items: Array<{
+      __typename: 'HorseExercises'
+      id: string
+      exercise_type?: string | null
+      start_dt?: string | null
+      end_dt?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      rider?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      passtime?: number | null
+      createdAt: string
+      updatedAt: string
+      horseExercisesCreaterId?: string | null
+      horseExercisesUpdaterId?: string | null
+      horseExercisesRiderId?: string | null
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type GetUsersQueryVariables = {
-  id: string,
-};
+  id: string
+}
 
 export type GetUsersQuery = {
-  getUsers?:  {
-    __typename: "Users",
-    id: string,
-    name?: string | null,
-    kind?: string | null,
-    birthday?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?: string | null,
-    updater?: string | null,
-    age?: number | null,
-    horsesID: string,
-    createdAt: string,
-    updatedAt: string,
-  } | null,
-};
+  getUsers?: {
+    __typename: 'Users'
+    id: string
+    name?: string | null
+    kind?: string | null
+    birthday?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: string | null
+    updater?: string | null
+    age?: number | null
+    horsesID: string
+    createdAt: string
+    updatedAt: string
+  } | null
+}
 
 export type ListUsersQueryVariables = {
-  filter?: ModelUsersFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  filter?: ModelUsersFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type ListUsersQuery = {
-  listUsers?:  {
-    __typename: "ModelUsersConnection",
-    items:  Array< {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  listUsers?: {
+    __typename: 'ModelUsersConnection'
+    items: Array<{
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type GetHorseFeedIntakesQueryVariables = {
-  id: string,
-};
+  id: string
+}
 
 export type GetHorseFeedIntakesQuery = {
-  getHorseFeedIntakes?:  {
-    __typename: "HorseFeedIntakes",
-    id: string,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    feed?:  {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseFeedIntakesCreaterId?: string | null,
-    horseFeedIntakesUpdaterId?: string | null,
-    horseFeedIntakesHorseId?: string | null,
-    horseFeedIntakesFeedId?: string | null,
-  } | null,
-};
+  getHorseFeedIntakes?: {
+    __typename: 'HorseFeedIntakes'
+    id: string
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    feed?: {
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseFeedIntakesCreaterId?: string | null
+    horseFeedIntakesUpdaterId?: string | null
+    horseFeedIntakesHorseId?: string | null
+    horseFeedIntakesFeedId?: string | null
+  } | null
+}
 
 export type ListHorseFeedIntakesQueryVariables = {
-  filter?: ModelHorseFeedIntakesFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  filter?: ModelHorseFeedIntakesFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type ListHorseFeedIntakesQuery = {
-  listHorseFeedIntakes?:  {
-    __typename: "ModelHorseFeedIntakesConnection",
-    items:  Array< {
-      __typename: "HorseFeedIntakes",
-      id: string,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      horse?:  {
-        __typename: "Horses",
-        id: string,
-        name: string,
-        sex: string,
-        breed?: boolean | null,
-        weight?: number | null,
-        height?: number | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        birthday?: string | null,
-        color?: string | null,
-        age?: number | null,
-        createdAt: string,
-        updatedAt: string,
-        horsesCreaterId?: string | null,
-        horsesUpdaterId?: string | null,
-      } | null,
-      feed?:  {
-        __typename: "Feeds",
-        id: string,
-        name?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        amount?: number | null,
-        feed_type?: string | null,
-        createdAt: string,
-        updatedAt: string,
-        feedsCreaterId?: string | null,
-        feedsUpdaterId?: string | null,
-      } | null,
-      intakes_dt?: string | null,
-      createdAt: string,
-      updatedAt: string,
-      horseFeedIntakesCreaterId?: string | null,
-      horseFeedIntakesUpdaterId?: string | null,
-      horseFeedIntakesHorseId?: string | null,
-      horseFeedIntakesFeedId?: string | null,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  listHorseFeedIntakes?: {
+    __typename: 'ModelHorseFeedIntakesConnection'
+    items: Array<{
+      __typename: 'HorseFeedIntakes'
+      id: string
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      horse?: {
+        __typename: 'Horses'
+        id: string
+        name: string
+        sex: string
+        breed?: boolean | null
+        weight?: number | null
+        height?: number | null
+        create_dt?: string | null
+        update_dt?: string | null
+        birthday?: string | null
+        color?: string | null
+        age?: number | null
+        createdAt: string
+        updatedAt: string
+        horsesCreaterId?: string | null
+        horsesUpdaterId?: string | null
+      } | null
+      feed?: {
+        __typename: 'Feeds'
+        id: string
+        name?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        amount?: number | null
+        feed_type?: string | null
+        createdAt: string
+        updatedAt: string
+        feedsCreaterId?: string | null
+        feedsUpdaterId?: string | null
+      } | null
+      intakes_dt?: string | null
+      createdAt: string
+      updatedAt: string
+      horseFeedIntakesCreaterId?: string | null
+      horseFeedIntakesUpdaterId?: string | null
+      horseFeedIntakesHorseId?: string | null
+      horseFeedIntakesFeedId?: string | null
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type GetHorseWaterIntakesQueryVariables = {
-  id: string,
-};
+  id: string
+}
 
 export type GetHorseWaterIntakesQuery = {
-  getHorseWaterIntakes?:  {
-    __typename: "HorseWaterIntakes",
-    id: string,
-    amount?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseWaterIntakesCreaterId?: string | null,
-    horseWaterIntakesUpdaterId?: string | null,
-  } | null,
-};
+  getHorseWaterIntakes?: {
+    __typename: 'HorseWaterIntakes'
+    id: string
+    amount?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseWaterIntakesCreaterId?: string | null
+    horseWaterIntakesUpdaterId?: string | null
+  } | null
+}
 
 export type ListHorseWaterIntakesQueryVariables = {
-  filter?: ModelHorseWaterIntakesFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  filter?: ModelHorseWaterIntakesFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type ListHorseWaterIntakesQuery = {
-  listHorseWaterIntakes?:  {
-    __typename: "ModelHorseWaterIntakesConnection",
-    items:  Array< {
-      __typename: "HorseWaterIntakes",
-      id: string,
-      amount?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      intakes_dt?: string | null,
-      createdAt: string,
-      updatedAt: string,
-      horseWaterIntakesCreaterId?: string | null,
-      horseWaterIntakesUpdaterId?: string | null,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  listHorseWaterIntakes?: {
+    __typename: 'ModelHorseWaterIntakesConnection'
+    items: Array<{
+      __typename: 'HorseWaterIntakes'
+      id: string
+      amount?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      intakes_dt?: string | null
+      createdAt: string
+      updatedAt: string
+      horseWaterIntakesCreaterId?: string | null
+      horseWaterIntakesUpdaterId?: string | null
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type GetFeedsQueryVariables = {
-  id: string,
-};
+  id: string
+}
 
 export type GetFeedsQuery = {
-  getFeeds?:  {
-    __typename: "Feeds",
-    id: string,
-    name?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    feed_type?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    feedsCreaterId?: string | null,
-    feedsUpdaterId?: string | null,
-  } | null,
-};
+  getFeeds?: {
+    __typename: 'Feeds'
+    id: string
+    name?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    feed_type?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    createdAt: string
+    updatedAt: string
+    feedsCreaterId?: string | null
+    feedsUpdaterId?: string | null
+  } | null
+}
 
 export type ListFeedsQueryVariables = {
-  filter?: ModelFeedsFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  filter?: ModelFeedsFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type ListFeedsQuery = {
-  listFeeds?:  {
-    __typename: "ModelFeedsConnection",
-    items:  Array< {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  listFeeds?: {
+    __typename: 'ModelFeedsConnection'
+    items: Array<{
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type GetHorsesQueryVariables = {
-  id: string,
-};
+  id: string
+}
 
 export type GetHorsesQuery = {
-  getHorses?:  {
-    __typename: "Horses",
-    id: string,
-    name: string,
-    sex: string,
-    breed?: boolean | null,
-    weight?: number | null,
-    height?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    birthday?: string | null,
-    color?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    age?: number | null,
-    owner?:  {
-      __typename: "ModelUsersConnection",
-      items:  Array< {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null >,
-      nextToken?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horsesCreaterId?: string | null,
-    horsesUpdaterId?: string | null,
-  } | null,
-};
+  getHorses?: {
+    __typename: 'Horses'
+    id: string
+    name: string
+    sex: string
+    breed?: boolean | null
+    weight?: number | null
+    height?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    birthday?: string | null
+    color?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    age?: number | null
+    owner?: {
+      __typename: 'ModelUsersConnection'
+      items: Array<{
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null>
+      nextToken?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horsesCreaterId?: string | null
+    horsesUpdaterId?: string | null
+  } | null
+}
 
 export type ListHorsesQueryVariables = {
-  filter?: ModelHorsesFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  filter?: ModelHorsesFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type ListHorsesQuery = {
-  listHorses?:  {
-    __typename: "ModelHorsesConnection",
-    items:  Array< {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  listHorses?: {
+    __typename: 'ModelHorsesConnection'
+    items: Array<{
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type UsersByHorsesIDQueryVariables = {
-  horsesID: string,
-  sortDirection?: ModelSortDirection | null,
-  filter?: ModelUsersFilterInput | null,
-  limit?: number | null,
-  nextToken?: string | null,
-};
+  horsesID: string
+  sortDirection?: ModelSortDirection | null
+  filter?: ModelUsersFilterInput | null
+  limit?: number | null
+  nextToken?: string | null
+}
 
 export type UsersByHorsesIDQuery = {
-  usersByHorsesID?:  {
-    __typename: "ModelUsersConnection",
-    items:  Array< {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null >,
-    nextToken?: string | null,
-  } | null,
-};
+  usersByHorsesID?: {
+    __typename: 'ModelUsersConnection'
+    items: Array<{
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null>
+    nextToken?: string | null
+  } | null
+}
 
 export type OnCreateHorseVitalSignsSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseVitalSignsFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseVitalSignsFilterInput | null
+}
 
 export type OnCreateHorseVitalSignsSubscription = {
-  onCreateHorseVitalSigns?:  {
-    __typename: "HorseVitalSigns",
-    id: string,
-    heart_rate?: number | null,
-    respiratory_rate?: number | null,
-    body_temperature?: number | null,
-    create_dt?: number | null,
-    update_dt?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horseVitalSignsCreaterId?: string | null,
-    horseVitalSignsUpdaterId?: string | null,
-    horseVitalSignsHorseId?: string | null,
-  } | null,
-};
+  onCreateHorseVitalSigns?: {
+    __typename: 'HorseVitalSigns'
+    id: string
+    heart_rate?: number | null
+    respiratory_rate?: number | null
+    body_temperature?: number | null
+    create_dt?: number | null
+    update_dt?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horseVitalSignsCreaterId?: string | null
+    horseVitalSignsUpdaterId?: string | null
+    horseVitalSignsHorseId?: string | null
+  } | null
+}
 
 export type OnUpdateHorseVitalSignsSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseVitalSignsFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseVitalSignsFilterInput | null
+}
 
 export type OnUpdateHorseVitalSignsSubscription = {
-  onUpdateHorseVitalSigns?:  {
-    __typename: "HorseVitalSigns",
-    id: string,
-    heart_rate?: number | null,
-    respiratory_rate?: number | null,
-    body_temperature?: number | null,
-    create_dt?: number | null,
-    update_dt?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horseVitalSignsCreaterId?: string | null,
-    horseVitalSignsUpdaterId?: string | null,
-    horseVitalSignsHorseId?: string | null,
-  } | null,
-};
+  onUpdateHorseVitalSigns?: {
+    __typename: 'HorseVitalSigns'
+    id: string
+    heart_rate?: number | null
+    respiratory_rate?: number | null
+    body_temperature?: number | null
+    create_dt?: number | null
+    update_dt?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horseVitalSignsCreaterId?: string | null
+    horseVitalSignsUpdaterId?: string | null
+    horseVitalSignsHorseId?: string | null
+  } | null
+}
 
 export type OnDeleteHorseVitalSignsSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseVitalSignsFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseVitalSignsFilterInput | null
+}
 
 export type OnDeleteHorseVitalSignsSubscription = {
-  onDeleteHorseVitalSigns?:  {
-    __typename: "HorseVitalSigns",
-    id: string,
-    heart_rate?: number | null,
-    respiratory_rate?: number | null,
-    body_temperature?: number | null,
-    create_dt?: number | null,
-    update_dt?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horseVitalSignsCreaterId?: string | null,
-    horseVitalSignsUpdaterId?: string | null,
-    horseVitalSignsHorseId?: string | null,
-  } | null,
-};
+  onDeleteHorseVitalSigns?: {
+    __typename: 'HorseVitalSigns'
+    id: string
+    heart_rate?: number | null
+    respiratory_rate?: number | null
+    body_temperature?: number | null
+    create_dt?: number | null
+    update_dt?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horseVitalSignsCreaterId?: string | null
+    horseVitalSignsUpdaterId?: string | null
+    horseVitalSignsHorseId?: string | null
+  } | null
+}
 
 export type OnCreateHorseExercisesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseExercisesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseExercisesFilterInput | null
+}
 
 export type OnCreateHorseExercisesSubscription = {
-  onCreateHorseExercises?:  {
-    __typename: "HorseExercises",
-    id: string,
-    exercise_type?: string | null,
-    start_dt?: string | null,
-    end_dt?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    rider?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    passtime?: number | null,
-    createdAt: string,
-    updatedAt: string,
-    horseExercisesCreaterId?: string | null,
-    horseExercisesUpdaterId?: string | null,
-    horseExercisesRiderId?: string | null,
-  } | null,
-};
+  onCreateHorseExercises?: {
+    __typename: 'HorseExercises'
+    id: string
+    exercise_type?: string | null
+    start_dt?: string | null
+    end_dt?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    rider?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    passtime?: number | null
+    createdAt: string
+    updatedAt: string
+    horseExercisesCreaterId?: string | null
+    horseExercisesUpdaterId?: string | null
+    horseExercisesRiderId?: string | null
+  } | null
+}
 
 export type OnUpdateHorseExercisesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseExercisesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseExercisesFilterInput | null
+}
 
 export type OnUpdateHorseExercisesSubscription = {
-  onUpdateHorseExercises?:  {
-    __typename: "HorseExercises",
-    id: string,
-    exercise_type?: string | null,
-    start_dt?: string | null,
-    end_dt?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    rider?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    passtime?: number | null,
-    createdAt: string,
-    updatedAt: string,
-    horseExercisesCreaterId?: string | null,
-    horseExercisesUpdaterId?: string | null,
-    horseExercisesRiderId?: string | null,
-  } | null,
-};
+  onUpdateHorseExercises?: {
+    __typename: 'HorseExercises'
+    id: string
+    exercise_type?: string | null
+    start_dt?: string | null
+    end_dt?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    rider?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    passtime?: number | null
+    createdAt: string
+    updatedAt: string
+    horseExercisesCreaterId?: string | null
+    horseExercisesUpdaterId?: string | null
+    horseExercisesRiderId?: string | null
+  } | null
+}
 
 export type OnDeleteHorseExercisesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseExercisesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseExercisesFilterInput | null
+}
 
 export type OnDeleteHorseExercisesSubscription = {
-  onDeleteHorseExercises?:  {
-    __typename: "HorseExercises",
-    id: string,
-    exercise_type?: string | null,
-    start_dt?: string | null,
-    end_dt?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    rider?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    passtime?: number | null,
-    createdAt: string,
-    updatedAt: string,
-    horseExercisesCreaterId?: string | null,
-    horseExercisesUpdaterId?: string | null,
-    horseExercisesRiderId?: string | null,
-  } | null,
-};
+  onDeleteHorseExercises?: {
+    __typename: 'HorseExercises'
+    id: string
+    exercise_type?: string | null
+    start_dt?: string | null
+    end_dt?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    rider?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    passtime?: number | null
+    createdAt: string
+    updatedAt: string
+    horseExercisesCreaterId?: string | null
+    horseExercisesUpdaterId?: string | null
+    horseExercisesRiderId?: string | null
+  } | null
+}
 
 export type OnCreateUsersSubscriptionVariables = {
-  filter?: ModelSubscriptionUsersFilterInput | null,
-};
+  filter?: ModelSubscriptionUsersFilterInput | null
+}
 
 export type OnCreateUsersSubscription = {
-  onCreateUsers?:  {
-    __typename: "Users",
-    id: string,
-    name?: string | null,
-    kind?: string | null,
-    birthday?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?: string | null,
-    updater?: string | null,
-    age?: number | null,
-    horsesID: string,
-    createdAt: string,
-    updatedAt: string,
-  } | null,
-};
+  onCreateUsers?: {
+    __typename: 'Users'
+    id: string
+    name?: string | null
+    kind?: string | null
+    birthday?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: string | null
+    updater?: string | null
+    age?: number | null
+    horsesID: string
+    createdAt: string
+    updatedAt: string
+  } | null
+}
 
 export type OnUpdateUsersSubscriptionVariables = {
-  filter?: ModelSubscriptionUsersFilterInput | null,
-};
+  filter?: ModelSubscriptionUsersFilterInput | null
+}
 
 export type OnUpdateUsersSubscription = {
-  onUpdateUsers?:  {
-    __typename: "Users",
-    id: string,
-    name?: string | null,
-    kind?: string | null,
-    birthday?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?: string | null,
-    updater?: string | null,
-    age?: number | null,
-    horsesID: string,
-    createdAt: string,
-    updatedAt: string,
-  } | null,
-};
+  onUpdateUsers?: {
+    __typename: 'Users'
+    id: string
+    name?: string | null
+    kind?: string | null
+    birthday?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: string | null
+    updater?: string | null
+    age?: number | null
+    horsesID: string
+    createdAt: string
+    updatedAt: string
+  } | null
+}
 
 export type OnDeleteUsersSubscriptionVariables = {
-  filter?: ModelSubscriptionUsersFilterInput | null,
-};
+  filter?: ModelSubscriptionUsersFilterInput | null
+}
 
 export type OnDeleteUsersSubscription = {
-  onDeleteUsers?:  {
-    __typename: "Users",
-    id: string,
-    name?: string | null,
-    kind?: string | null,
-    birthday?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?: string | null,
-    updater?: string | null,
-    age?: number | null,
-    horsesID: string,
-    createdAt: string,
-    updatedAt: string,
-  } | null,
-};
+  onDeleteUsers?: {
+    __typename: 'Users'
+    id: string
+    name?: string | null
+    kind?: string | null
+    birthday?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: string | null
+    updater?: string | null
+    age?: number | null
+    horsesID: string
+    createdAt: string
+    updatedAt: string
+  } | null
+}
 
 export type OnCreateHorseFeedIntakesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseFeedIntakesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseFeedIntakesFilterInput | null
+}
 
 export type OnCreateHorseFeedIntakesSubscription = {
-  onCreateHorseFeedIntakes?:  {
-    __typename: "HorseFeedIntakes",
-    id: string,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    feed?:  {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseFeedIntakesCreaterId?: string | null,
-    horseFeedIntakesUpdaterId?: string | null,
-    horseFeedIntakesHorseId?: string | null,
-    horseFeedIntakesFeedId?: string | null,
-  } | null,
-};
+  onCreateHorseFeedIntakes?: {
+    __typename: 'HorseFeedIntakes'
+    id: string
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    feed?: {
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseFeedIntakesCreaterId?: string | null
+    horseFeedIntakesUpdaterId?: string | null
+    horseFeedIntakesHorseId?: string | null
+    horseFeedIntakesFeedId?: string | null
+  } | null
+}
 
 export type OnUpdateHorseFeedIntakesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseFeedIntakesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseFeedIntakesFilterInput | null
+}
 
 export type OnUpdateHorseFeedIntakesSubscription = {
-  onUpdateHorseFeedIntakes?:  {
-    __typename: "HorseFeedIntakes",
-    id: string,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    feed?:  {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseFeedIntakesCreaterId?: string | null,
-    horseFeedIntakesUpdaterId?: string | null,
-    horseFeedIntakesHorseId?: string | null,
-    horseFeedIntakesFeedId?: string | null,
-  } | null,
-};
+  onUpdateHorseFeedIntakes?: {
+    __typename: 'HorseFeedIntakes'
+    id: string
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    feed?: {
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseFeedIntakesCreaterId?: string | null
+    horseFeedIntakesUpdaterId?: string | null
+    horseFeedIntakesHorseId?: string | null
+    horseFeedIntakesFeedId?: string | null
+  } | null
+}
 
 export type OnDeleteHorseFeedIntakesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseFeedIntakesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseFeedIntakesFilterInput | null
+}
 
 export type OnDeleteHorseFeedIntakesSubscription = {
-  onDeleteHorseFeedIntakes?:  {
-    __typename: "HorseFeedIntakes",
-    id: string,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    horse?:  {
-      __typename: "Horses",
-      id: string,
-      name: string,
-      sex: string,
-      breed?: boolean | null,
-      weight?: number | null,
-      height?: number | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      birthday?: string | null,
-      color?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      age?: number | null,
-      owner?:  {
-        __typename: "ModelUsersConnection",
-        nextToken?: string | null,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      horsesCreaterId?: string | null,
-      horsesUpdaterId?: string | null,
-    } | null,
-    feed?:  {
-      __typename: "Feeds",
-      id: string,
-      name?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      amount?: number | null,
-      feed_type?: string | null,
-      creater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      updater?:  {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null,
-      createdAt: string,
-      updatedAt: string,
-      feedsCreaterId?: string | null,
-      feedsUpdaterId?: string | null,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseFeedIntakesCreaterId?: string | null,
-    horseFeedIntakesUpdaterId?: string | null,
-    horseFeedIntakesHorseId?: string | null,
-    horseFeedIntakesFeedId?: string | null,
-  } | null,
-};
+  onDeleteHorseFeedIntakes?: {
+    __typename: 'HorseFeedIntakes'
+    id: string
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    horse?: {
+      __typename: 'Horses'
+      id: string
+      name: string
+      sex: string
+      breed?: boolean | null
+      weight?: number | null
+      height?: number | null
+      create_dt?: string | null
+      update_dt?: string | null
+      birthday?: string | null
+      color?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      age?: number | null
+      owner?: {
+        __typename: 'ModelUsersConnection'
+        nextToken?: string | null
+      } | null
+      createdAt: string
+      updatedAt: string
+      horsesCreaterId?: string | null
+      horsesUpdaterId?: string | null
+    } | null
+    feed?: {
+      __typename: 'Feeds'
+      id: string
+      name?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      amount?: number | null
+      feed_type?: string | null
+      creater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      updater?: {
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null
+      createdAt: string
+      updatedAt: string
+      feedsCreaterId?: string | null
+      feedsUpdaterId?: string | null
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseFeedIntakesCreaterId?: string | null
+    horseFeedIntakesUpdaterId?: string | null
+    horseFeedIntakesHorseId?: string | null
+    horseFeedIntakesFeedId?: string | null
+  } | null
+}
 
 export type OnCreateHorseWaterIntakesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseWaterIntakesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseWaterIntakesFilterInput | null
+}
 
 export type OnCreateHorseWaterIntakesSubscription = {
-  onCreateHorseWaterIntakes?:  {
-    __typename: "HorseWaterIntakes",
-    id: string,
-    amount?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseWaterIntakesCreaterId?: string | null,
-    horseWaterIntakesUpdaterId?: string | null,
-  } | null,
-};
+  onCreateHorseWaterIntakes?: {
+    __typename: 'HorseWaterIntakes'
+    id: string
+    amount?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseWaterIntakesCreaterId?: string | null
+    horseWaterIntakesUpdaterId?: string | null
+  } | null
+}
 
 export type OnUpdateHorseWaterIntakesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseWaterIntakesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseWaterIntakesFilterInput | null
+}
 
 export type OnUpdateHorseWaterIntakesSubscription = {
-  onUpdateHorseWaterIntakes?:  {
-    __typename: "HorseWaterIntakes",
-    id: string,
-    amount?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseWaterIntakesCreaterId?: string | null,
-    horseWaterIntakesUpdaterId?: string | null,
-  } | null,
-};
+  onUpdateHorseWaterIntakes?: {
+    __typename: 'HorseWaterIntakes'
+    id: string
+    amount?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseWaterIntakesCreaterId?: string | null
+    horseWaterIntakesUpdaterId?: string | null
+  } | null
+}
 
 export type OnDeleteHorseWaterIntakesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorseWaterIntakesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorseWaterIntakesFilterInput | null
+}
 
 export type OnDeleteHorseWaterIntakesSubscription = {
-  onDeleteHorseWaterIntakes?:  {
-    __typename: "HorseWaterIntakes",
-    id: string,
-    amount?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    intakes_dt?: string | null,
-    createdAt: string,
-    updatedAt: string,
-    horseWaterIntakesCreaterId?: string | null,
-    horseWaterIntakesUpdaterId?: string | null,
-  } | null,
-};
+  onDeleteHorseWaterIntakes?: {
+    __typename: 'HorseWaterIntakes'
+    id: string
+    amount?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    intakes_dt?: string | null
+    createdAt: string
+    updatedAt: string
+    horseWaterIntakesCreaterId?: string | null
+    horseWaterIntakesUpdaterId?: string | null
+  } | null
+}
 
 export type OnCreateFeedsSubscriptionVariables = {
-  filter?: ModelSubscriptionFeedsFilterInput | null,
-};
+  filter?: ModelSubscriptionFeedsFilterInput | null
+}
 
 export type OnCreateFeedsSubscription = {
-  onCreateFeeds?:  {
-    __typename: "Feeds",
-    id: string,
-    name?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    feed_type?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    feedsCreaterId?: string | null,
-    feedsUpdaterId?: string | null,
-  } | null,
-};
+  onCreateFeeds?: {
+    __typename: 'Feeds'
+    id: string
+    name?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    feed_type?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    createdAt: string
+    updatedAt: string
+    feedsCreaterId?: string | null
+    feedsUpdaterId?: string | null
+  } | null
+}
 
 export type OnUpdateFeedsSubscriptionVariables = {
-  filter?: ModelSubscriptionFeedsFilterInput | null,
-};
+  filter?: ModelSubscriptionFeedsFilterInput | null
+}
 
 export type OnUpdateFeedsSubscription = {
-  onUpdateFeeds?:  {
-    __typename: "Feeds",
-    id: string,
-    name?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    feed_type?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    feedsCreaterId?: string | null,
-    feedsUpdaterId?: string | null,
-  } | null,
-};
+  onUpdateFeeds?: {
+    __typename: 'Feeds'
+    id: string
+    name?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    feed_type?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    createdAt: string
+    updatedAt: string
+    feedsCreaterId?: string | null
+    feedsUpdaterId?: string | null
+  } | null
+}
 
 export type OnDeleteFeedsSubscriptionVariables = {
-  filter?: ModelSubscriptionFeedsFilterInput | null,
-};
+  filter?: ModelSubscriptionFeedsFilterInput | null
+}
 
 export type OnDeleteFeedsSubscription = {
-  onDeleteFeeds?:  {
-    __typename: "Feeds",
-    id: string,
-    name?: string | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    amount?: number | null,
-    feed_type?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    feedsCreaterId?: string | null,
-    feedsUpdaterId?: string | null,
-  } | null,
-};
+  onDeleteFeeds?: {
+    __typename: 'Feeds'
+    id: string
+    name?: string | null
+    create_dt?: string | null
+    update_dt?: string | null
+    amount?: number | null
+    feed_type?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    createdAt: string
+    updatedAt: string
+    feedsCreaterId?: string | null
+    feedsUpdaterId?: string | null
+  } | null
+}
 
 export type OnCreateHorsesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorsesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorsesFilterInput | null
+}
 
 export type OnCreateHorsesSubscription = {
-  onCreateHorses?:  {
-    __typename: "Horses",
-    id: string,
-    name: string,
-    sex: string,
-    breed?: boolean | null,
-    weight?: number | null,
-    height?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    birthday?: string | null,
-    color?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    age?: number | null,
-    owner?:  {
-      __typename: "ModelUsersConnection",
-      items:  Array< {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null >,
-      nextToken?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horsesCreaterId?: string | null,
-    horsesUpdaterId?: string | null,
-  } | null,
-};
+  onCreateHorses?: {
+    __typename: 'Horses'
+    id: string
+    name: string
+    sex: string
+    breed?: boolean | null
+    weight?: number | null
+    height?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    birthday?: string | null
+    color?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    age?: number | null
+    owner?: {
+      __typename: 'ModelUsersConnection'
+      items: Array<{
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null>
+      nextToken?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horsesCreaterId?: string | null
+    horsesUpdaterId?: string | null
+  } | null
+}
 
 export type OnUpdateHorsesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorsesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorsesFilterInput | null
+}
 
 export type OnUpdateHorsesSubscription = {
-  onUpdateHorses?:  {
-    __typename: "Horses",
-    id: string,
-    name: string,
-    sex: string,
-    breed?: boolean | null,
-    weight?: number | null,
-    height?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    birthday?: string | null,
-    color?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    age?: number | null,
-    owner?:  {
-      __typename: "ModelUsersConnection",
-      items:  Array< {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null >,
-      nextToken?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horsesCreaterId?: string | null,
-    horsesUpdaterId?: string | null,
-  } | null,
-};
+  onUpdateHorses?: {
+    __typename: 'Horses'
+    id: string
+    name: string
+    sex: string
+    breed?: boolean | null
+    weight?: number | null
+    height?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    birthday?: string | null
+    color?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    age?: number | null
+    owner?: {
+      __typename: 'ModelUsersConnection'
+      items: Array<{
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null>
+      nextToken?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horsesCreaterId?: string | null
+    horsesUpdaterId?: string | null
+  } | null
+}
 
 export type OnDeleteHorsesSubscriptionVariables = {
-  filter?: ModelSubscriptionHorsesFilterInput | null,
-};
+  filter?: ModelSubscriptionHorsesFilterInput | null
+}
 
 export type OnDeleteHorsesSubscription = {
-  onDeleteHorses?:  {
-    __typename: "Horses",
-    id: string,
-    name: string,
-    sex: string,
-    breed?: boolean | null,
-    weight?: number | null,
-    height?: number | null,
-    create_dt?: string | null,
-    update_dt?: string | null,
-    birthday?: string | null,
-    color?: string | null,
-    creater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    updater?:  {
-      __typename: "Users",
-      id: string,
-      name?: string | null,
-      kind?: string | null,
-      birthday?: string | null,
-      create_dt?: string | null,
-      update_dt?: string | null,
-      creater?: string | null,
-      updater?: string | null,
-      age?: number | null,
-      horsesID: string,
-      createdAt: string,
-      updatedAt: string,
-    } | null,
-    age?: number | null,
-    owner?:  {
-      __typename: "ModelUsersConnection",
-      items:  Array< {
-        __typename: "Users",
-        id: string,
-        name?: string | null,
-        kind?: string | null,
-        birthday?: string | null,
-        create_dt?: string | null,
-        update_dt?: string | null,
-        creater?: string | null,
-        updater?: string | null,
-        age?: number | null,
-        horsesID: string,
-        createdAt: string,
-        updatedAt: string,
-      } | null >,
-      nextToken?: string | null,
-    } | null,
-    createdAt: string,
-    updatedAt: string,
-    horsesCreaterId?: string | null,
-    horsesUpdaterId?: string | null,
-  } | null,
-};
+  onDeleteHorses?: {
+    __typename: 'Horses'
+    id: string
+    name: string
+    sex: string
+    breed?: boolean | null
+    weight?: number | null
+    height?: number | null
+    create_dt?: string | null
+    update_dt?: string | null
+    birthday?: string | null
+    color?: string | null
+    creater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    updater?: {
+      __typename: 'Users'
+      id: string
+      name?: string | null
+      kind?: string | null
+      birthday?: string | null
+      create_dt?: string | null
+      update_dt?: string | null
+      creater?: string | null
+      updater?: string | null
+      age?: number | null
+      horsesID: string
+      createdAt: string
+      updatedAt: string
+    } | null
+    age?: number | null
+    owner?: {
+      __typename: 'ModelUsersConnection'
+      items: Array<{
+        __typename: 'Users'
+        id: string
+        name?: string | null
+        kind?: string | null
+        birthday?: string | null
+        create_dt?: string | null
+        update_dt?: string | null
+        creater?: string | null
+        updater?: string | null
+        age?: number | null
+        horsesID: string
+        createdAt: string
+        updatedAt: string
+      } | null>
+      nextToken?: string | null
+    } | null
+    createdAt: string
+    updatedAt: string
+    horsesCreaterId?: string | null
+    horsesUpdaterId?: string | null
+  } | null
+}

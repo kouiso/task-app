@@ -96,7 +96,7 @@ export const onCreateHorseVitalSigns = /* GraphQL */ `
       horseVitalSignsHorseId
     }
   }
-`;
+`
 export const onUpdateHorseVitalSigns = /* GraphQL */ `
   subscription OnUpdateHorseVitalSigns(
     $filter: ModelSubscriptionHorseVitalSignsFilterInput
@@ -191,7 +191,7 @@ export const onUpdateHorseVitalSigns = /* GraphQL */ `
       horseVitalSignsHorseId
     }
   }
-`;
+`
 export const onDeleteHorseVitalSigns = /* GraphQL */ `
   subscription OnDeleteHorseVitalSigns(
     $filter: ModelSubscriptionHorseVitalSignsFilterInput
@@ -286,7 +286,7 @@ export const onDeleteHorseVitalSigns = /* GraphQL */ `
       horseVitalSignsHorseId
     }
   }
-`;
+`
 export const onCreateHorseExercises = /* GraphQL */ `
   subscription OnCreateHorseExercises(
     $filter: ModelSubscriptionHorseExercisesFilterInput
@@ -348,7 +348,7 @@ export const onCreateHorseExercises = /* GraphQL */ `
       horseExercisesRiderId
     }
   }
-`;
+`
 export const onUpdateHorseExercises = /* GraphQL */ `
   subscription OnUpdateHorseExercises(
     $filter: ModelSubscriptionHorseExercisesFilterInput
@@ -410,7 +410,7 @@ export const onUpdateHorseExercises = /* GraphQL */ `
       horseExercisesRiderId
     }
   }
-`;
+`
 export const onDeleteHorseExercises = /* GraphQL */ `
   subscription OnDeleteHorseExercises(
     $filter: ModelSubscriptionHorseExercisesFilterInput
@@ -472,7 +472,7 @@ export const onDeleteHorseExercises = /* GraphQL */ `
       horseExercisesRiderId
     }
   }
-`;
+`
 export const onCreateUsers = /* GraphQL */ `
   subscription OnCreateUsers($filter: ModelSubscriptionUsersFilterInput) {
     onCreateUsers(filter: $filter) {
@@ -490,7 +490,7 @@ export const onCreateUsers = /* GraphQL */ `
       updatedAt
     }
   }
-`;
+`
 export const onUpdateUsers = /* GraphQL */ `
   subscription OnUpdateUsers($filter: ModelSubscriptionUsersFilterInput) {
     onUpdateUsers(filter: $filter) {
@@ -508,7 +508,7 @@ export const onUpdateUsers = /* GraphQL */ `
       updatedAt
     }
   }
-`;
+`
 export const onDeleteUsers = /* GraphQL */ `
   subscription OnDeleteUsers($filter: ModelSubscriptionUsersFilterInput) {
     onDeleteUsers(filter: $filter) {
@@ -526,7 +526,7 @@ export const onDeleteUsers = /* GraphQL */ `
       updatedAt
     }
   }
-`;
+`
 export const onCreateHorseFeedIntakes = /* GraphQL */ `
   subscription OnCreateHorseFeedIntakes(
     $filter: ModelSubscriptionHorseFeedIntakesFilterInput
@@ -661,7 +661,7 @@ export const onCreateHorseFeedIntakes = /* GraphQL */ `
       horseFeedIntakesFeedId
     }
   }
-`;
+`
 export const onUpdateHorseFeedIntakes = /* GraphQL */ `
   subscription OnUpdateHorseFeedIntakes(
     $filter: ModelSubscriptionHorseFeedIntakesFilterInput
@@ -796,7 +796,7 @@ export const onUpdateHorseFeedIntakes = /* GraphQL */ `
       horseFeedIntakesFeedId
     }
   }
-`;
+`
 export const onDeleteHorseFeedIntakes = /* GraphQL */ `
   subscription OnDeleteHorseFeedIntakes(
     $filter: ModelSubscriptionHorseFeedIntakesFilterInput
@@ -931,7 +931,7 @@ export const onDeleteHorseFeedIntakes = /* GraphQL */ `
       horseFeedIntakesFeedId
     }
   }
-`;
+`
 export const onCreateHorseWaterIntakes = /* GraphQL */ `
   subscription OnCreateHorseWaterIntakes(
     $filter: ModelSubscriptionHorseWaterIntakesFilterInput
@@ -976,7 +976,7 @@ export const onCreateHorseWaterIntakes = /* GraphQL */ `
       horseWaterIntakesUpdaterId
     }
   }
-`;
+`
 export const onUpdateHorseWaterIntakes = /* GraphQL */ `
   subscription OnUpdateHorseWaterIntakes(
     $filter: ModelSubscriptionHorseWaterIntakesFilterInput
@@ -1021,7 +1021,7 @@ export const onUpdateHorseWaterIntakes = /* GraphQL */ `
       horseWaterIntakesUpdaterId
     }
   }
-`;
+`
 export const onDeleteHorseWaterIntakes = /* GraphQL */ `
   subscription OnDeleteHorseWaterIntakes(
     $filter: ModelSubscriptionHorseWaterIntakesFilterInput
@@ -1066,7 +1066,7 @@ export const onDeleteHorseWaterIntakes = /* GraphQL */ `
       horseWaterIntakesUpdaterId
     }
   }
-`;
+`
 export const onCreateFeeds = /* GraphQL */ `
   subscription OnCreateFeeds($filter: ModelSubscriptionFeedsFilterInput) {
     onCreateFeeds(filter: $filter) {
@@ -1110,7 +1110,7 @@ export const onCreateFeeds = /* GraphQL */ `
       feedsUpdaterId
     }
   }
-`;
+`
 export const onUpdateFeeds = /* GraphQL */ `
   subscription OnUpdateFeeds($filter: ModelSubscriptionFeedsFilterInput) {
     onUpdateFeeds(filter: $filter) {
@@ -1154,7 +1154,7 @@ export const onUpdateFeeds = /* GraphQL */ `
       feedsUpdaterId
     }
   }
-`;
+`
 export const onDeleteFeeds = /* GraphQL */ `
   subscription OnDeleteFeeds($filter: ModelSubscriptionFeedsFilterInput) {
     onDeleteFeeds(filter: $filter) {
@@ -1198,7 +1198,7 @@ export const onDeleteFeeds = /* GraphQL */ `
       feedsUpdaterId
     }
   }
-`;
+`
 export const onCreateHorses = /* GraphQL */ `
   subscription OnCreateHorses($filter: ModelSubscriptionHorsesFilterInput) {
     onCreateHorses(filter: $filter) {
@@ -1264,7 +1264,7 @@ export const onCreateHorses = /* GraphQL */ `
       horsesUpdaterId
     }
   }
-`;
+`
 export const onUpdateHorses = /* GraphQL */ `
   subscription OnUpdateHorses($filter: ModelSubscriptionHorsesFilterInput) {
     onUpdateHorses(filter: $filter) {
@@ -1330,7 +1330,7 @@ export const onUpdateHorses = /* GraphQL */ `
       horsesUpdaterId
     }
   }
-`;
+`
 export const onDeleteHorses = /* GraphQL */ `
   subscription OnDeleteHorses($filter: ModelSubscriptionHorsesFilterInput) {
     onDeleteHorses(filter: $filter) {
@@ -1396,4 +1396,4 @@ export const onDeleteHorses = /* GraphQL */ `
       horsesUpdaterId
     }
   }
-`;
+`

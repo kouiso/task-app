@@ -5,13 +5,9 @@
     "allowUnauthenticatedIdentities": false,
     "resourceNameTruncated": "horsema608b44d",
     "userPoolName": "horsemanager",
-    "autoVerifiedAttributes": [
-      "email"
-    ],
+    "autoVerifiedAttributes": ["email"],
     "mfaConfiguration": "OFF",
-    "mfaTypes": [
-      "SMS Text Message"
-    ],
+    "mfaTypes": ["SMS Text Message"],
     "smsAuthenticationMessage": "Your authentication code is {####}",
     "smsVerificationMessage": "Your verification code is {####}",
     "emailVerificationSubject": "Verification code: {####}",
@@ -36,9 +32,7 @@
     "resourceName": "horsemanager",
     "authSelections": "identityPoolAndUserPool",
     "serviceName": "Cognito",
-    "usernameAttributes": [
-      "email"
-    ],
+    "usernameAttributes": ["email"],
     "useDefault": "manual",
     "userPoolGroups": false,
     "userPoolGroupList": [],
@@ -47,9 +41,7 @@
     "authProviders": [],
     "hostedUI": true,
     "hostedUIDomainName": "0v6xz6jgb80g",
-    "authProvidersUserPool": [
-      "Google"
-    ],
+    "authProvidersUserPool": ["Google"],
     "hostedUIProviderMeta": "[{\"ProviderName\":\"Google\",\"authorize_scopes\":\"openid profile\",\"AttributeMapping\":{\"username\":\"sub\"}}]",
     "oAuthMetadata": "{\"AllowedOAuthFlows\":[\"code\"],\"AllowedOAuthScopes\":[\"phone\",\"email\",\"openid\",\"profile\",\"aws.cognito.signin.user.admin\"],\"CallbackURLs\":[\"http://localhost:3000\"],\"LogoutURLs\":[\"http://localhost:3000\"]}",
     "usernameCaseSensitive": false,

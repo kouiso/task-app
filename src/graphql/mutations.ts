@@ -97,7 +97,7 @@ export const createHorseVitalSigns = /* GraphQL */ `
       horseVitalSignsHorseId
     }
   }
-`;
+`
 export const updateHorseVitalSigns = /* GraphQL */ `
   mutation UpdateHorseVitalSigns(
     $input: UpdateHorseVitalSignsInput!
@@ -193,7 +193,7 @@ export const updateHorseVitalSigns = /* GraphQL */ `
       horseVitalSignsHorseId
     }
   }
-`;
+`
 export const deleteHorseVitalSigns = /* GraphQL */ `
   mutation DeleteHorseVitalSigns(
     $input: DeleteHorseVitalSignsInput!
@@ -289,7 +289,7 @@ export const deleteHorseVitalSigns = /* GraphQL */ `
       horseVitalSignsHorseId
     }
   }
-`;
+`
 export const createHorseExercises = /* GraphQL */ `
   mutation CreateHorseExercises(
     $input: CreateHorseExercisesInput!
@@ -352,7 +352,7 @@ export const createHorseExercises = /* GraphQL */ `
       horseExercisesRiderId
     }
   }
-`;
+`
 export const updateHorseExercises = /* GraphQL */ `
   mutation UpdateHorseExercises(
     $input: UpdateHorseExercisesInput!
@@ -415,7 +415,7 @@ export const updateHorseExercises = /* GraphQL */ `
       horseExercisesRiderId
     }
   }
-`;
+`
 export const deleteHorseExercises = /* GraphQL */ `
   mutation DeleteHorseExercises(
     $input: DeleteHorseExercisesInput!
@@ -478,7 +478,7 @@ export const deleteHorseExercises = /* GraphQL */ `
       horseExercisesRiderId
     }
   }
-`;
+`
 export const createUsers = /* GraphQL */ `
   mutation CreateUsers(
     $input: CreateUsersInput!
@@ -499,7 +499,7 @@ export const createUsers = /* GraphQL */ `
       updatedAt
     }
   }
-`;
+`
 export const updateUsers = /* GraphQL */ `
   mutation UpdateUsers(
     $input: UpdateUsersInput!
@@ -520,7 +520,7 @@ export const updateUsers = /* GraphQL */ `
       updatedAt
     }
   }
-`;
+`
 export const deleteUsers = /* GraphQL */ `
   mutation DeleteUsers(
     $input: DeleteUsersInput!
@@ -541,7 +541,7 @@ export const deleteUsers = /* GraphQL */ `
       updatedAt
     }
   }
-`;
+`
 export const createHorseFeedIntakes = /* GraphQL */ `
   mutation CreateHorseFeedIntakes(
     $input: CreateHorseFeedIntakesInput!
@@ -677,7 +677,7 @@ export const createHorseFeedIntakes = /* GraphQL */ `
       horseFeedIntakesFeedId
     }
   }
-`;
+`
 export const updateHorseFeedIntakes = /* GraphQL */ `
   mutation UpdateHorseFeedIntakes(
     $input: UpdateHorseFeedIntakesInput!
@@ -813,7 +813,7 @@ export const updateHorseFeedIntakes = /* GraphQL */ `
       horseFeedIntakesFeedId
     }
   }
-`;
+`
 export const deleteHorseFeedIntakes = /* GraphQL */ `
   mutation DeleteHorseFeedIntakes(
     $input: DeleteHorseFeedIntakesInput!
@@ -949,7 +949,7 @@ export const deleteHorseFeedIntakes = /* GraphQL */ `
       horseFeedIntakesFeedId
     }
   }
-`;
+`
 export const createHorseWaterIntakes = /* GraphQL */ `
   mutation CreateHorseWaterIntakes(
     $input: CreateHorseWaterIntakesInput!
@@ -995,7 +995,7 @@ export const createHorseWaterIntakes = /* GraphQL */ `
       horseWaterIntakesUpdaterId
     }
   }
-`;
+`
 export const updateHorseWaterIntakes = /* GraphQL */ `
   mutation UpdateHorseWaterIntakes(
     $input: UpdateHorseWaterIntakesInput!
@@ -1041,7 +1041,7 @@ export const updateHorseWaterIntakes = /* GraphQL */ `
       horseWaterIntakesUpdaterId
     }
   }
-`;
+`
 export const deleteHorseWaterIntakes = /* GraphQL */ `
   mutation DeleteHorseWaterIntakes(
     $input: DeleteHorseWaterIntakesInput!
@@ -1087,7 +1087,7 @@ export const deleteHorseWaterIntakes = /* GraphQL */ `
       horseWaterIntakesUpdaterId
     }
   }
-`;
+`
 export const createFeeds = /* GraphQL */ `
   mutation CreateFeeds(
     $input: CreateFeedsInput!
@@ -1134,7 +1134,7 @@ export const createFeeds = /* GraphQL */ `
       feedsUpdaterId
     }
   }
-`;
+`
 export const updateFeeds = /* GraphQL */ `
   mutation UpdateFeeds(
     $input: UpdateFeedsInput!
@@ -1181,7 +1181,7 @@ export const updateFeeds = /* GraphQL */ `
       feedsUpdaterId
     }
   }
-`;
+`
 export const deleteFeeds = /* GraphQL */ `
   mutation DeleteFeeds(
     $input: DeleteFeedsInput!
@@ -1228,7 +1228,7 @@ export const deleteFeeds = /* GraphQL */ `
       feedsUpdaterId
     }
   }
-`;
+`
 export const createHorses = /* GraphQL */ `
   mutation CreateHorses(
     $input: CreateHorsesInput!
@@ -1297,7 +1297,7 @@ export const createHorses = /* GraphQL */ `
       horsesUpdaterId
     }
   }
-`;
+`
 export const updateHorses = /* GraphQL */ `
   mutation UpdateHorses(
     $input: UpdateHorsesInput!
@@ -1366,7 +1366,7 @@ export const updateHorses = /* GraphQL */ `
       horsesUpdaterId
     }
   }
-`;
+`
 export const deleteHorses = /* GraphQL */ `
   mutation DeleteHorses(
     $input: DeleteHorsesInput!
@@ -1435,4 +1435,4 @@ export const deleteHorses = /* GraphQL */ `
       horsesUpdaterId
     }
   }
-`;
+`

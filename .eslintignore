@@ -1,12 +1,13 @@
 
 next-env.d.ts
 node_modules
+.devcontainer
 .next
 .vscode
 out
 public
 *.config.ts
-typedoc-static
+typedocs-static
 storybook-static
 android
 ios
