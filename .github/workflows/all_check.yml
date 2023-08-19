@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: install yarn packages
-        uses: './.github/setup-install/action'
+        uses: './.github/actions/setup-node'
 
       - name: Run Lint And Prettier
         run: yarn fix
