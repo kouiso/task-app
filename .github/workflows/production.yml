@@ -1,10 +1,9 @@
-name: development
+name: production
 
 on:
-  pull_request:
+  push:
     branches:
-      - develop
-    types: [closed]
+      - 'master'
 
   workflow_dispatch:
 
