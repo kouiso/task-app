@@ -11,12 +11,13 @@ import { MenuBar } from 'components/container/Common/MenuBar'
 import { TopBar } from 'components/container/Common/TopBar'
 import FeedRegistPage from './feedRegist'
 import HorseRegistPage from './horseRegist'
+import WaterRecordPage from './waterRecord'
 
 /**
  * Homeの定義
  */
 const Home: React.FC = () => {
-  const kind: number = 1
+  const kind: number = 3
   return (
     <Auth>
       <div className={styles.container}>
@@ -26,8 +27,9 @@ const Home: React.FC = () => {
         <div className={styles.right}>
           <div className={styles.header}>
             <TopBar />
-            {kind === 2 && <HorseRegistPage />}
-            {kind === 1 && <FeedRegistPage />}
+            {kind === 1 && <HorseRegistPage />}
+            {kind === 2 && <FeedRegistPage />}
+            {kind === 3 && <WaterRecordPage />}
           </div>
         </div>
       </div>
