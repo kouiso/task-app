@@ -58,6 +58,15 @@ const words = {
   italian: 'イタリアン',
   oats: 'オーツ',
   hayCube: 'ヘイキューブ',
+  waterRecord: '飲水量記録',
+  waterRecordCaption: '飲水量を記録します。',
+  horsePlaceHolder: '飲水量を記録する馬を選択してください。',
+  horseWater: '＊馬匹',
+  water: '＊飲水量',
+  waterPlaceHolder: '飲水量を記入してください。(L)',
+  time: '＊飲水量を記録した時間',
+  recorder: '＊記録者の選択',
+  recorderPlaceHolder: '',
 } as const
 
 export default words

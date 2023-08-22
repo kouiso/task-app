@@ -1,0 +1,78 @@
+@charset "utf-8";
+@use 'styles/_variables.scss';
+
+$container-width: 100%;
+
+.container {
+  position: absolute;
+  top: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: $container-width;
+  background: variables.$black-second-color;
+}
+
+.contents {
+  margin-left: 10px;
+  width: $container-width - 10%;
+}
+
+.header {
+  display: flex;
+  margin-top: 20px;
+  align-self: flex-start;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  margin-top: 20px;
+  margin-left: 10px;
+}
+
+.waterRecord {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.waterRecordCaption {
+  font-size: 18px;
+  font-weight: 400;
+  margin-top: 10px;
+  opacity: 0.25;
+}
+
+.horse {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.water {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.time {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.recorder {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.footerBtn {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 34px;
+  margin-bottom: 34px;
+
+  .cancelBtn {
+    color: variables.$green-first-color;
+    background-color: variables.$black-second-color;
+  }
+}
