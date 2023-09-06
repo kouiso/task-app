@@ -1,9 +1,10 @@
 node_modules
 .next
 .vscode
+.devcontainer
 out
 public
-typedoc-static
+typedocs-static
 storybook-static
 android
 ios

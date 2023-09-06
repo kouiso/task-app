@@ -32,59 +32,34 @@ $container-width: 100%;
   margin-left: 10px;
 }
 
-.horseRegist {
+.waterRecord {
   font-size: 32px;
   font-weight: 700;
 }
 
-.horseRegistCaption {
+.waterRecordCaption {
   font-size: 18px;
   font-weight: 400;
   margin-top: 10px;
   opacity: 0.25;
 }
 
-.horseName {
+.horse {
   width: 100%;
   margin-top: 20px;
 }
 
-.containerWeightHeight {
-  display: flex;
-  justify-content: space-between;
+.water {
   width: 100%;
   margin-top: 20px;
 }
 
-.horseWeight {
-  width: 100%;
-  margin-right: 20px;
-}
-
-.horseHeight {
-  width: 100%;
-  margin-left: 20px;
-}
-
-.containerKind {
-  display: flex;
-  justify-content: space-between;
-  width: $container-width - 60%;
-  margin-top: 20px;
-  align-self: flex-start;
-}
-
-.birthday {
+.time {
   width: 100%;
   margin-top: 20px;
 }
 
-.kind {
-  width: 100%;
-  margin-top: 20px;
-}
-
-.hairColor {
+.recorder {
   width: 100%;
   margin-top: 20px;
 }

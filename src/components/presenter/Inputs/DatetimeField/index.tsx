@@ -1,5 +1,5 @@
 /**
- * Date形式の入力フィールド
+ * Datetime形式の入力フィールド
  * @packageDocumentation
  */
 
@@ -8,25 +8,30 @@ import classNames from 'classnames'
 import { InputHTMLAttributes } from 'react'
 
 /**
- * DateFieldのプロパティ
+ * DatetimeFieldのプロパティ
  * @extends {InputHTMLAttributes<HTMLInputElement>}
  */
-interface DateFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+interface DatetimeFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
 }
 
 /**
- * DateFieldの定義
- * @param {DateFieldProps} props プロパティ
+ * DatetimeFieldの定義
+ * @param {DatetimeFieldProps} props プロパティ
  */
-export const DateField: React.FC<DateFieldProps> = (props) => {
+export const DatetimeField: React.FC<DatetimeFieldProps> = (props) => {
   const { className, id, label } = props
   return (
     <div className={classNames(styles.container, className)}>
       <label className={styles.label} htmlFor={id}>
         {label}
       </label>
-      <input id={id} {...props} type='date' className={styles.input} />
+      <input
+        id={id}
+        {...props}
+        type='datetime-local'
+        className={styles.input}
+      />
     </div>
   )
 }

@@ -23,9 +23,7 @@
       "dependsOn": [],
       "frontendAuthConfig": {
         "mfaConfiguration": "OFF",
-        "mfaTypes": [
-          "SMS"
-        ],
+        "mfaTypes": ["SMS"],
         "passwordProtectionSettings": {
           "passwordPolicyCharacters": [
             "REQUIRES_LOWERCASE",
@@ -36,15 +34,9 @@
           "passwordPolicyMinLength": 8
         },
         "signupAttributes": [],
-        "socialProviders": [
-          "GOOGLE"
-        ],
-        "usernameAttributes": [
-          "EMAIL"
-        ],
-        "verificationMechanisms": [
-          "EMAIL"
-        ]
+        "socialProviders": ["GOOGLE"],
+        "usernameAttributes": ["EMAIL"],
+        "verificationMechanisms": ["EMAIL"]
       },
       "providerPlugin": "awscloudformation",
       "service": "Cognito"

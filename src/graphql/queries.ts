@@ -94,7 +94,7 @@ export const getHorseVitalSigns = /* GraphQL */ `
       horseVitalSignsHorseId
     }
   }
-`;
+`
 export const listHorseVitalSigns = /* GraphQL */ `
   query ListHorseVitalSigns(
     $filter: ModelHorseVitalSignsFilterInput
@@ -163,7 +163,7 @@ export const listHorseVitalSigns = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
 export const getHorseExercises = /* GraphQL */ `
   query GetHorseExercises($id: ID!) {
     getHorseExercises(id: $id) {
@@ -223,7 +223,7 @@ export const getHorseExercises = /* GraphQL */ `
       horseExercisesRiderId
     }
   }
-`;
+`
 export const listHorseExercises = /* GraphQL */ `
   query ListHorseExercises(
     $filter: ModelHorseExercisesFilterInput
@@ -290,7 +290,7 @@ export const listHorseExercises = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
 export const getUsers = /* GraphQL */ `
   query GetUsers($id: ID!) {
     getUsers(id: $id) {
@@ -308,7 +308,7 @@ export const getUsers = /* GraphQL */ `
       updatedAt
     }
   }
-`;
+`
 export const listUsers = /* GraphQL */ `
   query ListUsers(
     $filter: ModelUsersFilterInput
@@ -333,7 +333,7 @@ export const listUsers = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
 export const getHorseFeedIntakes = /* GraphQL */ `
   query GetHorseFeedIntakes($id: ID!) {
     getHorseFeedIntakes(id: $id) {
@@ -466,7 +466,7 @@ export const getHorseFeedIntakes = /* GraphQL */ `
       horseFeedIntakesFeedId
     }
   }
-`;
+`
 export const listHorseFeedIntakes = /* GraphQL */ `
   query ListHorseFeedIntakes(
     $filter: ModelHorseFeedIntakesFilterInput
@@ -551,7 +551,7 @@ export const listHorseFeedIntakes = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
 export const getHorseWaterIntakes = /* GraphQL */ `
   query GetHorseWaterIntakes($id: ID!) {
     getHorseWaterIntakes(id: $id) {
@@ -594,7 +594,7 @@ export const getHorseWaterIntakes = /* GraphQL */ `
       horseWaterIntakesUpdaterId
     }
   }
-`;
+`
 export const listHorseWaterIntakes = /* GraphQL */ `
   query ListHorseWaterIntakes(
     $filter: ModelHorseWaterIntakesFilterInput
@@ -648,7 +648,7 @@ export const listHorseWaterIntakes = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
 export const getFeeds = /* GraphQL */ `
   query GetFeeds($id: ID!) {
     getFeeds(id: $id) {
@@ -692,7 +692,7 @@ export const getFeeds = /* GraphQL */ `
       feedsUpdaterId
     }
   }
-`;
+`
 export const listFeeds = /* GraphQL */ `
   query ListFeeds(
     $filter: ModelFeedsFilterInput
@@ -743,7 +743,7 @@ export const listFeeds = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
 export const getHorses = /* GraphQL */ `
   query GetHorses($id: ID!) {
     getHorses(id: $id) {
@@ -809,7 +809,7 @@ export const getHorses = /* GraphQL */ `
       horsesUpdaterId
     }
   }
-`;
+`
 export const listHorses = /* GraphQL */ `
   query ListHorses(
     $filter: ModelHorsesFilterInput
@@ -868,7 +868,7 @@ export const listHorses = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
 export const usersByHorsesID = /* GraphQL */ `
   query UsersByHorsesID(
     $horsesID: ID!
@@ -901,4 +901,4 @@ export const usersByHorsesID = /* GraphQL */ `
       nextToken
     }
   }
-`;
+`
