@@ -11,8 +11,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: install yarn packages
-        uses: './.github/setup-install/action'
+      - run: echo '${{ toJSON(steps.node_modules_cache_id.outputs) }}'
+      - if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
+        run: yarn install
+      - run: yarn list --depth=0
 
       - name: Run Lint And Prettier
         run: yarn fix

@@ -26,10 +26,14 @@ jobs:
         with:
           node-version-file: 'package.json'
 
-      - name: yarn install
+      - run: echo '${{ toJSON(steps.node_modules_cache_id.outputs) }}'
+      - if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
         run: yarn install
-      - name: Build Next.js For SSR & SSG And typedoc & storybook
+      - run: yarn list --depth=0
+
+      - name: volta build
         run: yarn build
+
       - name: permisson
         run: chmod +x ./android/gradlew
       - name: Run Android Lint
