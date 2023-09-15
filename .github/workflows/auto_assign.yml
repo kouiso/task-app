@@ -1,0 +1,128 @@
+name: Auto Assign PR to Creator and Modify Title with Branch Name
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            console.log('Assigning PR...');
+            github.rest.issues.addAssignees({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              assignees: [context.payload.pull_request.user.login]
+            })
+
+  auto-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add label based on branch name
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            console.log(`Branch name: ${branchName}`);
+
+            if (branchName.startsWith('feature/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['feature']
+              });
+            } else if (branchName.startsWith('bugfix/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['bugfix']
+              });
+            } else if (branchName.startsWith('release/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['release']
+              });
+            } else if (branchName.startsWith('hotfix/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['hotfix']
+              });
+            } else if (branchName.startsWith('support/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['support']
+              });
+            }
+
+  pull_request_taking_for_jira:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Axios
+        run: npm install axios
+      - name: Fetch JIRA Task Name and Modify PR Title
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const axios = require('axios');
+
+            const branchName = context.payload.pull_request.head.ref;
+            const formattedBranchName = branchName;
+
+            console.log(`Fetching JIRA task name for branch: ${formattedBranchName}`);
+
+            const jiraIDMatch = context.payload.pull_request.title.match(/[A-Z]+-[0-9]+/);
+            let jiraTaskName = '';
+
+            if (jiraIDMatch) {
+              const jiraID = jiraIDMatch[0];
+              console.log(`JIRA ID found: ${jiraID}`);
+
+              try {
+                const jiraAPIResponse = await axios.get(`${process.env.JIRA_BASE_URL}/rest/api/2/issue/${jiraID}`, {
+                  headers: {
+                    'Authorization': `Basic ${Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64')}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+
+                if (jiraAPIResponse.status === 200) {
+                  jiraTaskName = jiraAPIResponse.data.fields.summary;
+                  console.log(`JIRA Task Name: ${jiraTaskName}`);
+                }
+              } catch (error) {
+                console.error(`Error fetching JIRA task: ${error.message}`);
+              }
+
+            } else {
+              console.log('No JIRA ID found in PR title.');
+            }
+
+            const newTitle = `[${formattedBranchName}] ${jiraTaskName}`;
+            console.log(`Setting PR title to: ${newTitle}`);
+
+            github.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              title: newTitle
+            });
+        env:
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
