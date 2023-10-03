@@ -1,4 +1,4 @@
-name: production
+name: development
 
 on:
   push:
@@ -8,6 +8,51 @@ on:
   workflow_dispatch:
 
 jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: 'package.json'
+
+      - name: node_module Cache
+        uses: actions/cache@v3
+        id: node_modules_cache_id
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+
+      - if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
+        run: yarn install
+        shell: bash
+
+      - name: Build Next.js for SSR
+        run: yarn build
+
+      - name: Install AWS CLI
+        run: |
+          curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region YOUR_REGION_NAME
+
+      - name: Deploy to AWS Amplify
+        run: |
+          # Use the Amplify CLI or the AWS CLI to deploy your application to Amplify.
+          # This example assumes you've already set up an Amplify project and you're using the Amplify CLI.
+          amplify push --y
+
   android-build:
     runs-on: ubuntu-latest
     steps:
@@ -25,10 +70,34 @@ jobs:
         with:
           node-version-file: 'package.json'
 
-      - name: yarn install
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: 'package.json'
+
+      - name: node_module Cache
+        uses: actions/cache@v3
+        id: node_modules_cache_id
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+
+      - run: echo '${{ toJSON(steps.node_modules_cache_id.outputs) }}'
+        shell: bash
+      - if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
         run: yarn install
+        shell: bash
+      - run: yarn list --depth=0
+        shell: bash
+
+      - name: Run Lint And Prettier
+        run: yarn fix
+
       - name: Build Next.js For SSR & SSG And typedoc & storybook
         run: yarn build
+
       - name: permisson
         run: chmod +x ./android/gradlew
       - name: Run Android Lint
@@ -43,3 +112,26 @@ jobs:
       - name: Build with Gradle
         working-directory: ./android
         run: ./gradlew assembleDebug
+
+  ios-build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          # Install any necessary dependencies here.
+          # For instance, using CocoaPods:
+          gem install cocoapods
+          pod install --project-directory=path/to/your/project/
+
+      - name: Build iOS app
+        run: |
+          # Update this with the build command for your iOS project.
+          # Example for an Xcode project:
+          xcodebuild -workspace YourWorkspace.xcworkspace -scheme YourScheme clean build
+
+          # Or if you're using a .xcodeproj:
+          # xcodebuild -project YourProject.xcodeproj -scheme YourScheme clean build
