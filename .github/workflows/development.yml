@@ -54,6 +54,9 @@ jobs:
           # This example assumes you've already set up an Amplify project and you're using the Amplify CLI.
           amplify push --y
 
+      - name: chromatic deploy
+        run: yarn chromatic --project-token=${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+
   android-build:
     runs-on: ubuntu-latest
     steps:
