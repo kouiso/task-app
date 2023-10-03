@@ -1,9 +1,10 @@
 name: development
 
 on:
-  push:
+  pull_request:
     branches:
-      - 'develop'
+      - develop
+    types: [closed]
 
   workflow_dispatch:
 
@@ -70,11 +71,6 @@ jobs:
         with:
           node-version-file: 'package.json'
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: 'package.json'
-
       - name: node_module Cache
         uses: actions/cache@v3
         id: node_modules_cache_id
@@ -119,6 +115,34 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: 'package.json'
+
+      - name: node_module Cache
+        uses: actions/cache@v3
+        id: node_modules_cache_id
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+
+      - run: echo '${{ toJSON(steps.node_modules_cache_id.outputs) }}'
+        shell: bash
+      - if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
+        run: yarn install
+        shell: bash
+      - run: yarn list --depth=0
+        shell: bash
+
+      - name: Run Lint And Prettier
+        run: yarn fix
+
+      - name: Build Next.js For SSR & SSG And typedoc & storybook
+        run: yarn build
 
       - name: Install dependencies
         run: |
