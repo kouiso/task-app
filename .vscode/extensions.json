@@ -1,12 +1,11 @@
 {
   "recommendations": [
-   "EditorConfig.EditorConfig",
+    "EditorConfig.EditorConfig",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "stylelint.vscode-stylelint",
     "donjayamanne.githistory",
     "github.vscode-github-actions",
-    "github.copilot",
     "eamodio.gitlens",
     "figma.figma-vscode-extension",
     "VisualStudioExptTeam.vscodeintellicode",

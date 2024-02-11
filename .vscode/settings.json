@@ -10,8 +10,8 @@
   },
   "eslint.packageManager": "yarn",
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true,
-    "source.fixAll.stylelint": true
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.stylelint": "explicit"
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
@@ -29,7 +29,7 @@
   "[scss]": {
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.fixAll.stylelint": true
+      "source.fixAll.stylelint": "explicit"
     }
   },
   "stylelint.configFile": ".stylelintrc"

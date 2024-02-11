@@ -1,5 +1,5 @@
 /**
- * コンボボックス
+ * コンボボックスコンポーネントを定義します。
  * @packageDocumentation
  */
 
@@ -8,17 +8,24 @@ import classNames from 'classnames'
 import { SelectHTMLAttributes } from 'react'
 
 /**
- * SelectFieldのプロパティ
- * @extends {SelectHTMLAttributes<HTMLSelectElement>}
+ * `SelectField` コンポーネントのプロパティを定義します。
+ *
+ * @extends {SelectHTMLAttributes<HTMLSelectElement>} HTMLSelectElementからの属性を継承します。
+ * @property {string} [label] - セレクトフィールドのラベル。
+ * @property {{ value: string; label: string }[]} options - セレクトフィールドのオプション配列。
+ * @property {string} [placeholder] - セレクトフィールドのプレースホルダー。
  */
 interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
   options: { value: string; label: string }[]
+  placeholder?: string
 }
 
 /**
- * SelectFieldの定義
- * @param {SelectFieldProps} props プロパティ
+ * `SelectField` コンポーネントを定義します。
+ *
+ * @param {SelectFieldProps} props - `SelectField` コンポーネントのプロパティ。
+ * @returns {React.FC<SelectFieldProps>} レンダリングされたセレクトフィールドコンポーネント。
  */
 export const SelectField: React.FC<SelectFieldProps> = (props) => {
   const { className, options, id, label, placeholder } = props
