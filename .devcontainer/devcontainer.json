@@ -1,18 +1,49 @@
 {
-  "name": "RITMO-CORPORATE",
-  // コンテナ起動に使用するDocker Composeファイル
-  "dockerComposeFile": "./docker-compose.yml",
-  // Dev containerとして起動するDocker Composeサービス
-  "service": "app",
-  // ワークスペースディレクトリ
-  "workspaceFolder": "/app",
-  // インストールする拡張機能
+  "name": "ritmo-corporate",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash",
+    "eslint.packageManager": "yarn",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.fixAll.stylelint": "explicit"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnType": true,
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "css.validate": false,
+    "less.validate": false,
+    "scss.validate": false,
+    "stylelint.validate": [
+      "scss"
+    ],
+    "[scss]": {
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.fixAll.stylelint": "explicit"
+      }
+    },
+    "stylelint.configFile": ".stylelintrc"
+  },
   "extensions": [
     "EditorConfig.EditorConfig",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
-    "stylelint.vscode-stylelint"
+    "stylelint.vscode-stylelint",
+    "github.vscode-github-actions",
   ],
-  // コンテナ作成後にGitをインストール
-  "postCreateCommand": "apt-get update && apt-get install -y git"
+  "forwardPorts": [
+    3000
+  ],
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind"
+  ],
+  "postCreateCommand": "yarn install",
+  "remoteUser": "vscode"
 }
