@@ -1,48 +1,54 @@
-#　 horsemanager
 
-## 必要なツール
+# horsemanager
 
-- Volta
-- Node.js v18.16.0
-- Yarn v1.22.18
+## 環境構築手順
 
-### Volta
+前提
+本PJではvscodeであれば、dev-containerの拡張機能を入れてdockerで起動すると共通の環境が立ち上がります。
+つまり、dev-containerを使えば面倒な環境構築が自動です。
 
-Node.js 系は Volta によって管理されています。以下ドキュメントを参考にして Volta を使用してください
+なので以下の設定はdev-containerを使わない立ち上げ方、もしくはこのプロジェクトがどのようにして立ち上げているかを確認するためです。
 
-[Volta Docs](https://volta.sh/)
 
-## エディターについて
+1. brewをinstall
+[Brewのinstall](https://brew.sh/ja/)
 
-エディターは Visual Studio Code を使用してください
+Windowsの場合にはscoopを使用
+[scoopのinstall](https://scoop.sh/)
 
-[Visual Studio Code Download](https://azure.microsoft.com/ja-jp/products/visual-studio-code/)
 
-### VSCode 拡張機能について
+2. voltaを設定する
 
-推奨の拡張機能を`.vscode/extensions.json`に記載していますのでインストールをお願いします
+```bash
+brew install volta
+```
 
-拡張機能の導入についてはこちらを参考にしています
+Windowsの場合
 
-[VSCode の拡張機能・設定を共有](https://qiita.com/otsuky/items/f46f5ee9eb11b3a9a4ba)
+```bash
+scoop bucket add main
+scoop install main/volta
+```
 
-### ESLint & Prettier
 
-ESLint & Prettier & StyleLint によって コード の保守及び整形を行っています
 
-- ファイル内容変更時 → ESLint、StyleLint による構文チェック（`.vscode/settings.json`から設定）
-- ファイル保存時 → Prettier によるコード自動整形を行う（`.vscode/settings.json`から設定）
+### clone後の環境構築手順
+一度設定が終わればcloneした時にはここから始めれば良いはずです。
 
-[ESLint Docs](https://eslint.org/docs/latest/)
 
-[Prettier Docs](https://prettier.io/docs/en/index.html)
+1. .envの編集
+`.env.development.example` をコピーして `.env.development` を作成してください。
 
-## 環境構築
 
-### npm パッケージのインストール
+1. プロジェクトのルートディレクトリで、以下のコマンドを実行して依存関係をインストールします。
+```bash
+yarn install
+```
 
-`yarn install`
+## 実行方法
+1. プロジェクトが正しくセットアップされたら、以下のコマンドで開発サーバーを起動します。
+```bash
+yarn dev
+```
 
-### 開発サーバーの起動
-
-`yarn dev`
+2. ブラウザを開き `http://localhost:3000` にアクセスして、プロジェクトが正しく表示されることを確認します。
