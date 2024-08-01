@@ -1,0 +1,9 @@
+# ignore all
+**
+# except for followings
+!src/**
+!.tool-versions
+!next.config.mjs
+!package.json
+!package-lock.json
+!tsconfig*

@@ -1,0 +1,319 @@
+# ルートディレクトリを設定
+root: true
+# 環境設定
+env:
+  # ブラウザ環境を設定
+  browser: true
+  # ECMAScript 2020を設定
+  es2020: true
+# ESLintの設定を拡張
+extends:
+  # ESLintの推奨設定を適用
+  - eslint:recommended
+  # TypeScript用のESLintプラグインの推奨設定を適用
+  - plugin:@typescript-eslint/recommended
+  # React Hooks用のESLintプラグインの推奨設定を適用
+  - plugin:react-hooks/recommended
+  # AirbnbのJavaScriptスタイルガイドを適用
+  - airbnb
+  # AirbnbのTypeScriptスタイルガイドを適用
+  - airbnb-typescript
+  # Prettierと競合しないESLintの設定を適用
+  - eslint-config-prettier
+  # Next.jsのコアウェブバイタルを適用
+  - next/core-web-vitals
+# チェックから除外するパターン
+ignorePatterns:
+  # distディレクトリを除外
+  - dist
+  # testsディレクトリを除外
+  - tests
+  # .cjsファイルを除外
+  - '*.cjs'
+# パーサーの設定
+parser: '@typescript-eslint/parser'
+# パーサーオプション
+parserOptions:
+  # TypeScriptの設定ファイルを指定
+  project: './tsconfig.json'
+# プラグイン設定
+plugins:
+  # react-refreshプラグインを適用
+  - react-refresh
+  # Prettierプラグインを適用
+  - prettier
+  # TypeScript用のESLintプラグインを適用
+  - '@typescript-eslint'
+  # importプラグインを適用
+  - import
+  # 未使用のimportを検出するプラグインを適用
+  - unused-imports
+  # jsx-a11yプラグインを適用
+  - jsx-a11y
+# ルール設定
+rules:
+  # Prettierのルールをエラーとして扱う
+  prettier/prettier: error
+  # コンポーネントのエクスポートに関するルールを設定
+  react-refresh/only-export-components:
+    # 警告として扱う
+    - warn
+    # 定数エクスポートを許可する
+    - allowConstantExport: true
+  # JSXのスコープ内でのReactの使用を必要としない
+  react/react-in-jsx-scope: off
+  # ラベルが関連するコントロールを持つことを必要としない
+  jsx-a11y/label-has-associated-control: off
+  # prop-typesを必要としない
+  react/prop-types: off
+  # bindをJSX属性内で使用することをエラーとして扱う
+  react/jsx-no-bind: error
+  # デフォルトのpropsを必要としない
+  react/require-default-props: 'off'
+  # import拡張子のルールを設定
+  import/extensions:
+    # エラーとして扱う
+    - error
+    # パッケージを無視する
+    - ignorePackages
+    # 拡張子なしを許可しない
+    - '': never
+      # .jsを許可しない
+      js: never
+      # .jsxを許可しない
+      jsx: never
+      # .tsを許可しない
+      ts: never
+      # .tsxを許可しない
+      tsx: never
+      # .mjsを許可しない
+      mjs: never
+  # 関数コンポーネントの定義に関するルールを設定
+  react/function-component-definition:
+    # エラーレベルを2に設定
+    - 2
+    # 名前付きコンポーネントはアロー関数を使用
+    - namedComponents: arrow-function
+      # 名前なしコンポーネントはアロー関数を使用
+      unnamedComponents: arrow-function
+  # デフォルトエクスポートを優先しない
+  import/prefer-default-export: off
+  # デフォルトエクスポートをエラーとして扱う
+  import/no-default-export: error
+  # consoleの使用を警告として扱う
+  no-console:
+    - warn
+    - allow:
+        - error
+  # 無用なコンストラクタをエラーとして扱う
+  no-useless-constructor: error
+  # TypeScriptの型インポートを一貫して行う
+  '@typescript-eslint/consistent-type-imports': error
+  # 未使用の変数をエラーとして扱う
+  '@typescript-eslint/no-unused-vars':
+    - error
+    - vars: all
+      # 使用後の引数を許可する
+      args: after-used
+      # 残りの兄弟を無視する
+      ignoreRestSiblings: false
+  # 未使用の変数をエラーとして扱う
+  unused-imports/no-unused-vars:
+    - error
+    - vars: all
+      # 変数の無視パターンを設定
+      varsIgnorePattern: '^_'
+      # 使用後の引数を許可する
+      args: after-used
+      # 引数の無視パターンを設定
+      argsIgnorePattern: '^_'
+  # 未使用のimportをエラーとして扱う
+  unused-imports/no-unused-imports: error
+  # import順序のルールを設定
+  import/order:
+    - error
+    - groups:
+        # 組み込みモジュール
+        - builtin
+        # 外部モジュール
+        - external
+        # 内部モジュール
+        - internal
+        # 親ディレクトリ
+        - parent
+        # 兄弟ディレクトリ
+        - sibling
+        # オブジェクト
+        - object
+        # 型
+        - type
+        # インデックス
+        - index
+      # グループ間には常に改行を入れる
+      newlines-between: always
+      # 組み込みタイプのインポートを除外するパスグループ
+      pathGroupsExcludedImportTypes:
+        - builtin
+      # アルファベット順に並べる
+      alphabetize:
+        order: asc
+        # 大文字小文字を区別しない
+        caseInsensitive: true
+      # パスグループを設定
+      pathGroups:
+        # 'react**'パターンのパスグループを設定
+        - pattern: 'react**'
+          # 外部グループに分類
+          group: external
+          # 位置は前
+          position: before
+        # '@/**'パターンのパスグループを設定
+        # 'next**'パターンのパスグループを設定
+        - pattern: 'next**'
+          # 外部グループに分類
+          group: external
+          # 位置は前
+          position: before
+        # '@/**'パターンのパスグループを設定
+        - pattern: '@/**'
+          # 内部グループに分類
+          group: internal
+          # 位置は前
+          position: before
+  # 余分な依存関係をエラーとして扱う
+  import/no-extraneous-dependencies:
+    - error
+    - devDependencies:
+        # テストファイルを許可
+        - '**/*.test.{ts,tsx}'
+        # specファイルを許可
+        - '**/*.spec.{ts,tsx}'
+        # ストーリーファイルを許可
+        - '**/*.stories.{ts,tsx}'
+      # 任意の依存関係を許可しない
+      optionalDependencies: false
+  # 制限されたimportをエラーとして扱う
+  no-restricted-imports:
+    - error
+    - paths:
+        # firebaseの代わりに"@/lib/firebase"を使用するように指示
+        - name: firebase
+          message: 'Use "firebase" from "@/lib/firebase" instead'
+        # 'firebase/app'の代わりに"@/lib/firebase"を使用するように指示
+        - name: 'firebase/app'
+          message: 'Use "firebase/app" from "@/lib/firebase" instead'
+        # 'firebase/firestore'の代わりに"@/lib/firebase"を使用するように指示
+        - name: 'firebase/firestore'
+          message: 'Use "firebase/firestore" from "@/lib/firebase" instead'
+        # 'firebase/auth'の代わりに"@/lib/firebase"を使用するように指示
+        - name: 'firebase/auth'
+          message: 'Use "firebase/auth" from "@/lib/firebase" instead'
+        # 'axios'の代わりに"@/lib/index.ts"を使用するように指示
+        - name: 'axios'
+          message: 'Use "axios" from "@/service/api/index" instead'
+        - name: 'aspida'
+          message: 'Use "aspida" from "@/service/api/index" instead'
+      # パターンを設定
+      patterns:
+        # '@chakra-ui'を開始パターンとする
+        - '^@chakra-ui'
+        # 'react-icons'を開始パターンとする
+        - '^react-icons'
+  # 最大深度をエラーとして扱う
+  max-depth:
+    - error
+    # 最大深度を2に設定
+    - max: 2
+  # 複雑さをエラーとして扱う
+  complexity:
+    - error
+    # 最大複雑さを10に設定
+    - max: 10
+  # 警告コメントを警告として扱う
+  no-warning-comments:
+    - warn
+    # 警告用語を設定
+    - terms:
+        # 'fixme'を警告用語とする
+        - fixme
+      # 位置は開始位置
+      location: start
+  # 魔法の数字をエラーとして扱う
+  no-magic-numbers:
+    - error
+    - ignore:
+        # 0を無視する
+        - 0
+        # 1を無視する
+        - 1
+      # 配列のインデックスを無視する
+      ignoreArrayIndexes: true
+  # アンダースコアで始まる名前をエラーとして扱う
+  no-underscore-dangle:
+    - 'off' # NOTE:aspidaと競合するためoff
+    # thisの後のアンダースコアを許可しない
+    - allowAfterThis: false
+  # パラメータの再割り当てをエラーとして扱う
+  no-param-reassign: error
+  # アラートをエラーとして扱う
+  no-alert: error
+  # アロー関数の本体スタイルを設定
+  arrow-body-style:
+    - error
+    # 必要に応じて
+    - as-needed
+  # インクリメントとデクリメントをエラーとして扱う
+  no-plusplus: error
+  # スプレット構文を許可する(無いとエラーになる)
+  react/jsx-props-no-spreading: off
+  # 関数の括弧の改行をエラーとして扱う
+  function-paren-newline:
+    - error
+    # 一貫性を保つ
+    - consistent
+  # JSXのインデントをエラーとして扱う
+  react/jsx-indent:
+    - error
+    # JSXのインデントサイズを2に設定
+    - 2
+  # JSXの1行あたりの式数をエラーとして扱う
+  react/jsx-one-expression-per-line: error
+  # JSXの中括弧の改行をエラーとして扱う
+  react/jsx-curly-newline: error
+  # 暗黙のアロー改行をエラーとして扱う(prettierと競合するためoff)
+  # implicit-arrow-linebreak: off
+  # 混乱するアローをエラーとして扱う
+  no-confusing-arrow: error
+  # JSXの複数行をラップする
+  react/jsx-wrap-multilines: error
+  # オブジェクトの中括弧の改行をエラーとして扱う
+  object-curly-newline:
+    - error
+    # 一貫性を保つ
+    - consistent: true
+  # 演算子の改行をエラーとして扱う #prettierと競合するため = だけoverrideを加える
+  operator-linebreak:
+    - error
+    - before
+    - overrides:
+        '=': 'after'
+# Firebase関連のファイルに対するルールの上書き
+overrides:
+  - files:
+      - 'src/lib/firebase/*'
+      - 'src/lib/axios/*'
+      - 'src/lib/orval/*'
+    rules:
+      no-restricted-imports: 'off'
+  # 特定のページファイルに対するルールの上書き
+  - files:
+      - 'page.tsx'
+      - 'layout.tsx'
+      - 'src/lib/aspida/*.ts'
+      - 'src/**/icon/*.tsx' # iconディレクトリ内のtsxはlazyするかもなので、エラーにしない
+      - 'src/app/layout.tsx'
+      - 'error.tsx'
+      - 'not-found.tsx'
+      - 'robots.tsx'
+    rules:
+      import/no-default-export: 'off'

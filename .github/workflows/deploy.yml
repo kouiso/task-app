@@ -1,0 +1,72 @@
+name: deploy Next.js to Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+
+env:
+  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  CACHE_IMAGE: asia.gcr.io/${{ vars.GCP_PROJECT_ID }}/horsemanager-web:cache
+  IMAGE: asia.gcr.io/${{ vars.GCP_PROJECT_ID }}/horsemanager-web:${{ github.sha }}
+
+jobs:
+  deploy-nextjs-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: .node-version
+          registry-url: https://npm.pkg.github.com/
+      - uses: actions/cache@v3
+        id: node_modules_cache_id
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-setup-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+      - if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
+        run: npm ci
+        shell: bash
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+      - name: Run build
+        run: npm run build
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+      - name: Configure docker to use the gcloud cli
+        run: gcloud auth configure-docker --quiet
+      - name: Pull the docker image for cache
+        run: |
+          docker pull -q ${{ env.CACHE_IMAGE }} || exit 0 &
+          docker pull -q ${{ env.IMAGE }} || exit 0 &
+          wait
+      - name: Build a docker image
+        run: docker build --cache-from ${{ env.IMAGE }},${{ env.CACHE_IMAGE }} -t ${{ env.IMAGE }} -f ./Dockerfile .
+      - name: Tag a container image
+        run: docker tag $(docker images --filter 'label=build-stage=installer' -q | head -n 1) ${{ env.CACHE_IMAGE }}
+      - name: Push the docker image
+        run: |
+          docker push ${{ env.IMAGE }} &
+          docker push ${{ env.CACHE_IMAGE }} &
+          wait
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v0
+        with:
+          service: frontend-${{ github.ref_name }}
+          image: ${{ env.IMAGE }}
+          region: ${{ env.GCP_REGION }}
+          flags: '--allow-unauthenticated --memory=512Mi --port=4000'

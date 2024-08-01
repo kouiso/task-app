@@ -4,19 +4,30 @@
 /node_modules
 /.pnp
 .pnp.js
+.yarn/install-state.gz
 
 # testing
 /coverage
 
-# next.js
+# debug
+logs
+*.log
+
+# build output
+dist
+dist-ssr
+stats.html
 /.next/
 /out/
-
-# production
+stats.html
 /build
 
+# typescript output
+*.module.scss.d.ts
+*.tsbuildinfo
+next-env.d.ts
+
 # Editor directories and files
-*.pem
 .idea
 .DS_Store
 *.suo
@@ -24,54 +35,22 @@
 *.njsproj
 *.sln
 *.sw?
+*.pem
 
-# debug
-*.log
 
 # local env files
-.env
+
+*.env*
+!.env.example
+secret
+*.local
+*.module.scss.d.ts
+firebase-adminsdk.json
 
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-#storybook
-storybook-static
-
-#typedoc
-typedocs-static
-
-#playwright
-/test-results/
-/playwright-report/
-/playwright/.cache/
-
-#amplify-do-not-edit-begin
-amplify/\#current-cloud-backend
-amplify/.config/local-*
-amplify/logs
-amplify/mock-data
-amplify/mock-api-resources
-amplify/backend/amplify-meta.json
-amplify/backend/.temp
-build/
-dist/
-node_modules/
-aws-exports.js
-awsconfiguration.json
-amplifyconfiguration.json
-amplifyconfiguration.dart
-amplify-build-config.json
-amplify-gradle-config.json
-amplifytools.xcconfig
-.secret-*
-**.sample
-#amplify-do-not-edit-end
-
-
-# yarn
-.pnp.*
-/.yarn
+# temp
+/temp
+.npm
+playground.nnb

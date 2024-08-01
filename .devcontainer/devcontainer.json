@@ -1,49 +1,65 @@
 {
-  "name": "ritmo-corporate",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
-  "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash",
-    "eslint.packageManager": "yarn",
-    "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit",
-      "source.fixAll.stylelint": "explicit"
-    },
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true,
-    "editor.formatOnPaste": true,
-    "editor.formatOnType": true,
-    "[markdown]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "css.validate": false,
-    "less.validate": false,
-    "scss.validate": false,
-    "stylelint.validate": [
-      "scss"
-    ],
-    "[scss]": {
-      "editor.formatOnSave": true,
-      "editor.codeActionsOnSave": {
-        "source.fixAll.stylelint": "explicit"
+  "name": "horsemanager-web-next",
+  "dockerComposeFile": ["../docker-compose.yaml"],
+  "service": "frontend",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mosapride.zenkaku",
+        "EditorConfig.EditorConfig",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "stylelint.vscode-stylelint",
+        "formulahendry.auto-rename-tag",
+        "github.vscode-github-actions",
+        "wayou.vscode-todo-highlight"
+      ],
+      "settings": {
+        "git.path": "/usr/bin",
+        // For markdown: GitHub同様、mdファイルは改行で見た目通り改行する
+        "markdown.preview.breaks": true,
+        // For js/ts
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit",
+          "source.organizeImports": "explicit"
+        },
+        "[json]": {
+          "editor.formatOnSave": true
+        },
+        "[javascript]": {
+          "editor.formatOnSave": true
+        },
+        "[typescript]": {
+          "editor.formatOnSave": true
+        },
+        // For scss
+        "scss.validate": false,
+        "stylelint.configFile": "./.stylelintrc.yml",
+        "stylelint.validate": ["scss"],
+        "[scss]": {
+          "editor.formatOnSave": false,
+          "editor.codeActionsOnSave": {
+            "source.fixAll.stylelint": "explicit"
+          }
+        },
+        // package.jsonにコメントをつけるため、jsonc(コメント付きJSON)として扱う
+        "files.associations": {
+          "package.json": "jsonc"
+        },
+        // for todo tree
+        "todo-tree.highlights.defaultHighlight": {
+          "type": "whole-line",
+          "foreground": "white",
+          "background": "green",
+          "opacity": 50
+        },
+        "todo-tree.general.tags": ["TODO", "FIXME", "BUG", "HACK", "NOTE", "WARNING", "ENHANCE"],
+        "todo-tree.regex.regex": "(//)\\s*($TAGS).*(\\n\\s*//\\s{2,}.*)*"
       }
-    },
-    "stylelint.configFile": ".stylelintrc"
+    }
   },
-  "extensions": [
-    "EditorConfig.EditorConfig",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
-    "stylelint.vscode-stylelint",
-    "github.vscode-github-actions",
-  ],
-  "forwardPorts": [
-    3000
-  ],
-  "mounts": [
-    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind"
-  ],
-  "postCreateCommand": "yarn install",
-  "remoteUser": "vscode"
+  "postCreateCommand": "apt-get update && apt-get install -y curl git && git config --global --add safe.directory /app",
+  "containerUser": "root",
+  "forwardPorts": [4000, 9229]
 }

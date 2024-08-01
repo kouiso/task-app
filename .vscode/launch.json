@@ -2,16 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "pwa-chrome",
-      "request": "launch",
-      "preLaunchTask": "yarn: start",
-      "name": "Launch Chrome against localhost",
-      "url": "http://localhost:3000",
-      "webRoot": "${workspaceFolder}",
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to Next.js Server",
+      "skipFiles": ["<node_internals>/**"],
+      "port": 19229,
+      "address": "localhost",
+      "restart": true,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/app",
       "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "webpack:///./*": "${webRoot}/src/*"
-      }
+      "outFiles": ["${workspaceFolder}/.next/**/*.js", "!**/node_modules/**"]
+    },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Launch Chrome against localhost",
+      "url": "http://localhost:14000",
+      "webRoot": "${workspaceFolder}"
     }
   ]
 }

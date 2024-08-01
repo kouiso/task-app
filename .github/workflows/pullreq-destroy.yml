@@ -1,0 +1,32 @@
+name: destroy nextjs app on cloud run
+
+on:
+  pull_request:
+    types:
+      - closed
+
+env:
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  IMAGE: asia.gcr.io/${{ vars.GCP_PROJECT_ID }}/horsemanager-web
+
+jobs:
+  destroy-nextjs-app:
+    runs-on: ubuntu-latest
+    steps:
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+      - name: check if Cloud Run is deployed
+        id: check
+        run: echo "service=$(gcloud run services list --filter metadata.name=frontend-pr-${{ github.event.pull_request.number }} --format 'value(metadata.name)')" >> $GITHUB_OUTPUT
+      - name: destroy Cloud Run service
+        if: ${{ startsWith(steps.check.outputs.service, 'frontend-pr-') }}
+        run: gcloud run services delete frontend-pr-${{ github.event.pull_request.number }} --region ${{ env.GCP_REGION }} --quiet
+      - name: delete Google Cloud Registry
+        if: ${{ startsWith(steps.check.outputs.service, 'frontend-pr-') }}
+        run: |
+          for d in $(gcloud container images list-tags ${{ env.IMAGE }} --filter='-tags:*' --format="get(digest)"); do
+            gcloud container images delete ${{ env.IMAGE }}@$d --quiet;
+          done
+          gcloud container images delete ${{ env.IMAGE }}:${{ github.head_ref }} --quiet

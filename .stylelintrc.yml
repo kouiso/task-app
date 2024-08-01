@@ -1,0 +1,51 @@
+extends:
+  - stylelint-config-standard
+  - stylelint-config-sass-guidelines
+  - stylelint-config-recommended-scss
+
+plugins:
+  - stylelint-scss
+  - stylelint-order
+
+rules:
+  selector-class-pattern: '^[a-zA-Z_][a-zA-Z0-9_-]+$'
+  at-rule-no-unknown: null
+  scss/at-rule-no-unknown: true
+  color-hex-length: long
+  color-named: never
+  declaration-block-no-duplicate-properties: true
+  declaration-block-no-redundant-longhand-properties: true
+  declaration-block-single-line-max-declarations: 1
+  declaration-no-important: true
+  font-family-no-duplicate-names: true
+  font-weight-notation: numeric
+  function-url-quotes: always
+  max-nesting-depth: 3
+  no-duplicate-selectors: true
+  no-invalid-double-slash-comments: true
+  property-no-unknown: true
+  selector-max-compound-selectors: 3
+  selector-max-id: 0
+  selector-no-qualifying-type: true
+  unit-no-unknown: true
+  order/order:
+    - custom-properties
+    - dollar-variables
+    - declarations
+    - type: at-rule
+      name: include
+    - type: at-rule
+      name: extend
+    - rules
+  order/properties-alphabetical-order: true
+
+overrides:
+  - files: ['src/style/style.scss']
+    rules:
+      selector-max-id: null
+
+ignoreFiles:
+  - '**/*.js'
+  - '**/*.jsx'
+  - '**/*.ts'
+  - '**/*.tsx'

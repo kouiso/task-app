@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # --------------------------------------------------
+  # for development
+  # --------------------------------------------------
+
+  frontend:
+    build:
+      dockerfile: ./.docker/Dockerfile
+      context: ./
+    command: npm run dev:debug
+    volumes:
+      - ./:/app:delegated
+      - frontend-nodemodules-volume:/app/node_modules/
+    env_file:
+      - .env
+    ports:
+      - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND:-14000}:4000 # for nextjs
+      - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND_DEBUG:-19229}:9229 # for debug
+
+volumes:
+  frontend-nodemodules-volume:

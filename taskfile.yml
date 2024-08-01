@@ -1,0 +1,88 @@
+# https://taskfile.dev
+
+version: '3'
+
+dotenv:
+  - .env
+
+tasks:
+  default:
+    cmds:
+      - task -l
+
+  # ----- 初期化関連コマンド
+  init:
+    desc: '環境初期化(何度でも実行可能 - 環境を壊してしまった場合、本コマンドの再実行で修復可能)'
+    cmds:
+      # 依存のインストール
+      - brew install jq
+      # playground.nnbの作成
+      - task: write-playground
+      # 環境をdbボリューム含め消去
+      - task: clear
+      - task: gen-env
+      # コンテナイメージ構築
+      - docker-compose build
+      # ローカルnode_modulesの作成(VSCode用)
+      - npm install
+
+  # ----- 起動コマンド
+
+  up:
+    desc: 'ログ付きで起動。'
+    cmds:
+      - |
+        docker-compose up --build frontend
+
+  gen-env:
+    desc: 'envを生成'
+    cmds:
+      - echo -e "\e[1;33m.envファイルが存在するか確認しています...\e[0m"
+      - cmd: |
+          if [ ! -f .env ]; then
+            cp .env.example .env
+            echo -e "\e[1;32m.envファイルがLinux用に確認され、コピーされました。\e[0m"
+            echo -e "\e[1;31m.envの中に正しい値を入力して下さい。\e[0m"
+            exit 1
+          fi
+
+  # ----- 削除系コマンド
+  clean:
+    internal: true
+    desc: '自動生成されたファイル・フォルダを削除 (Linux開発者が権限エラーになるためsudoをつけている)'
+    cmds:
+      - rm -rf .next node_modules
+
+  docker-clean:
+    desc: 'このリポジトリに関するdockerリソースを全部破棄する'
+    cmds:
+      - echo -e "\e[1;33mDockerリソースを破棄しています...\e[0m"
+      - docker-compose down -v
+      - docker-compose --profile schemaspy down -v
+      - docker-compose --profile hasura down -v
+      - echo -e "\e[1;32mDockerリソースの破棄が完了しました。\e[0m"
+
+  clear:
+    desc: 'すべて破棄のみ実行(再構築はしない)'
+    cmds:
+      - task: clean
+      - task: docker-clean
+
+  # ----- util系コマンド
+  npmi:
+    desc: 'npm installコマンドをコンテナで実行'
+    cmds:
+      - docker-compose run --rm frontend npm install
+
+  # ----- 内部呼び出しコマンド (ユーザーが直叩かない)
+  write-playground:
+    desc: '(内部用) playground.nnbファイルを作成する'
+    internal: true
+    cmds:
+      - |
+        FILE="playground.nnb"
+        if [ ! -f "$FILE" ]; then
+            cat << EOF > "$FILE"
+        {"cells": [{"language": "typescript", "source": ["console.log(JSON.stringify({}))"], "outputs": [{"items": [{"mime": "application/vnd.code.notebook.stdout", "value": ["{}", ""]}]}]}]}
+        EOF
+        fi
