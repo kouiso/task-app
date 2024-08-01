@@ -93,20 +93,6 @@ apiの型定義を手動で作るのは面倒。。。
 - キャッシュが必要ないものに関しては、aspida
 - キャッシュでデータ保持をさせたいものに関しては、orvalを使う
 
-ちなみにorvalでビルド実行時に以下のようなWarningが出ているが、Vite特有のものであり、検証済みなので無視して構わない。
-
-```bash
-▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
-
-    src/lib/firebase/index.ts:21:17:
-      21 │   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-         ╵                  ~~~~~~~~~~~
-
-  You need to set the output format to "esm" for "import.meta" to work correctly.
-
-Your mutator file doesn't have the default exported function
-```
-
 ## その他ライブラリについて
 
 - husky
