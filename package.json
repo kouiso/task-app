@@ -1,8 +1,13 @@
 {
   "name": "horsemanager-web",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "HM Frontend Web",
+  "author": "KosukeIsogai",
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.5.1"
+  },
   "scripts": {
     "start": "next start",
     "dev": "run-s dev:serve",
