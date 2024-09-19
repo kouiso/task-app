@@ -22,6 +22,8 @@ extends:
   - eslint-config-prettier
   # Next.jsのコアウェブバイタルを適用
   - next/core-web-vitals
+  # Next.jsのTypeScript設定を適用
+  - next/typescript
 # チェックから除外するパターン
 ignorePatterns:
   # distディレクトリを除外
