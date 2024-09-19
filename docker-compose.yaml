@@ -16,7 +16,7 @@ services:
     env_file:
       - .env
     ports:
-      - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND:-14000}:4000 # for nextjs
+      - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND:-3000}:13000 # for nextjs
       - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND_DEBUG:-19229}:9229 # for debug
 
 volumes:

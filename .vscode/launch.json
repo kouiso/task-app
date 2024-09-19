@@ -2,24 +2,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
-      "request": "attach",
-      "name": "Attach to Next.js Server",
-      "skipFiles": ["<node_internals>/**"],
-      "port": 19229,
-      "address": "localhost",
-      "restart": true,
-      "localRoot": "${workspaceFolder}",
-      "remoteRoot": "/app",
-      "sourceMaps": true,
-      "outFiles": ["${workspaceFolder}/.next/**/*.js", "!**/node_modules/**"]
+      "name": "Next.js: debug server-side",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev"
     },
     {
+      "name": "Next.js: debug client-side",
       "type": "chrome",
       "request": "launch",
-      "name": "Launch Chrome against localhost",
-      "url": "http://localhost:14000",
-      "webRoot": "${workspaceFolder}"
+      "url": "http://localhost:3000"
+    },
+    {
+      "name": "Next.js: debug full stack",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "serverReadyAction": {
+        "pattern": "started server on .+, url: (https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
+      }
     }
   ]
 }

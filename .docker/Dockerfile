@@ -1,7 +1,8 @@
-FROM node:20.12.2-slim
+FROM node:22.5.1-slim
 
 WORKDIR /app
 
+ARG ENV
 # OS settings
 ENV PATH /app/node_modules/.bin:$PATH
 
@@ -13,11 +14,8 @@ RUN apt-get update -qq \
   --no-install-recommends
 
 # node_module packages
-COPY package*.json ./
-RUN npm install
-
-# app code
 COPY . .
+RUN npm ci
 
 USER node
 

@@ -11,7 +11,7 @@
   "scripts": {
     "start": "next start",
     "dev": "run-s dev:serve",
-    "dev:serve": "next dev -p 4000",
+    "dev:serve": "next dev",
     "dev:debug": "NODE_OPTIONS='--inspect' next dev",
     "devs:scss": "typed-scss-modules src --watch --nameFormat none",
     "build": "run-s build:*",
@@ -29,18 +29,18 @@
     "lint:eslint": "next lint",
     "lint:prettier": "prettier . --check",
     "lint:stylelint": "stylelint 'src/**/*.scss'",
-    "prepare": "husky install",
+    "prepare": "husky",
     "license-check": "license-checker --summary",
     "firebase": "firebase",
     "firebase:emulate": "firebase emulators:start"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json}": [
-      "prettier --write",
-      "eslint --fix"
-    ]
+    "config": "lint-staged.config.js"
   },
   "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "next": "14.2.12",
     "@aspida/axios": "^1.14.0",
     "@hookform/resolvers": "^3.9.0",
     "@stripe/react-stripe-js": "^2.7.3",
@@ -50,12 +50,9 @@
     "aspida": "^1.14.0",
     "axios": "^1.7.2",
     "firebase": "^10.12.4",
-    "next": "^14.2.5",
     "next-auth": "^4.24.7",
     "orval": "^6.31.0",
-    "react": "^18.3.1",
     "react-cookie": "^7.2.0",
-    "react-dom": "^18.3.1",
     "react-hook-form": "^7.52.1",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.25.1",
@@ -64,19 +61,20 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.12",
     "@types/micromatch": "^4.0.9",
-    "@types/node": "^20.14.13",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react-swc": "^3.7.0",
     "@welldone-software/why-did-you-render": "^8.0.3",
     "cspell": "^8.13.0",
-    "eslint": "^8.57.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-airbnb-typescript": "^18.0.0",
-    "eslint-config-next": "^14.2.5",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.29.1",
@@ -102,8 +100,6 @@
     "stylelint-config-standard": "^36.0.1",
     "stylelint-order": "^6.0.4",
     "stylelint-scss": "^6.4.1",
-    "typed-scss-modules": "^8.0.1",
-    "typescript": "^5.5.4",
-    "vite": "^5.3.5"
+    "typed-scss-modules": "^8.0.1"
   }
 }

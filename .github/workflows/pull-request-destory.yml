@@ -1,0 +1,39 @@
+name: destroy-container-image-and-cloudrun
+
+on:
+  pull_request:
+    types: [closed]
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  SERVICE: ${{ vars.GCP_REPOSITORY }}
+  REGION: ${{ vars.GCP_REGION }}
+  IMAGE: asia.gcr.io/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_REPOSITORY }}/app:${{ github.sha }}
+
+jobs:
+  destroy:
+    permissions:
+      contents: "read"
+      id-token: "write"
+      packages: "write"
+      pull-requests: "write"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Delete Docker image
+        run: |
+          gcloud auth configure-docker --quiet
+          docker rmi ${{ env.IMAGE }}
+
+      - name: Delete Cloud Run service
+        run: |
+          gcloud run services delete ${{ env.SERVICE }} --region ${{ env.REGION }} --quiet

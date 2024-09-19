@@ -2,6 +2,7 @@
 **
 # except for followings
 !src/**
+!public/**
 !.tool-versions
 !next.config.mjs
 !package.json
