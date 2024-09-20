@@ -45,7 +45,6 @@ next-env.d.ts
 secret
 *.local
 *.module.scss.d.ts
-firebase-adminsdk.json
 
 # vercel
 .vercel
@@ -54,3 +53,7 @@ firebase-adminsdk.json
 /temp
 .npm
 playground.nnb
+
+#seo
+sitemap*.xml
+robots.txt

@@ -45,6 +45,6 @@ const appearance: Appearance = {
 };
 
 // Stripeの公開可能キーを使用してStripeオブジェクトを初期化
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY);
 
 export { appearance, stripePromise };

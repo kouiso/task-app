@@ -9,7 +9,7 @@ interface CancellablePromise<T> extends Promise<T> {
 }
 
 export const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_APP_API_ENDPOINT,
+  baseURL: process.env.VITE_APP_API_ENDPOINT,
 });
 
 axiosInstance.interceptors.request.use(
