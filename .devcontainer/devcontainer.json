@@ -1,8 +1,9 @@
 {
-  "name": "horsemanager-web-next",
+  "name": "horsemanager-web",
   "dockerComposeFile": ["../docker-compose.yaml"],
   "service": "frontend",
   "workspaceFolder": "/app",
+  "initializeCommand": "/bin/bash .devcontainer/script/initialize.sh",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -13,7 +14,8 @@
         "stylelint.vscode-stylelint",
         "formulahendry.auto-rename-tag",
         "github.vscode-github-actions",
-        "wayou.vscode-todo-highlight"
+        "wayou.vscode-todo-highlight",
+        "formulahendry.auto-rename-tag"
       ],
       "settings": {
         "git.path": "/usr/bin",
@@ -59,7 +61,10 @@
       }
     }
   },
-  "postCreateCommand": "apt-get update && apt-get install -y curl git && git config --global --add safe.directory /app",
+ "containerEnv": {
+    "ENV_FILE": ".devcontainer/.env"
+  },
+  "postCreateCommand": "/bin/bash .devcontainer/script/post-create.sh",
   "containerUser": "root",
-  "forwardPorts": [4000, 9229]
+  "forwardPorts": [13000, 19229]
 }
