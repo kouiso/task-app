@@ -15,7 +15,10 @@
         "formulahendry.auto-rename-tag",
         "github.vscode-github-actions",
         "wayou.vscode-todo-highlight",
-        "formulahendry.auto-rename-tag"
+        "formulahendry.auto-rename-tag",
+        "gruntfuggly.todo-tree",
+        "donjayamanne.typescript-notebook"
+
       ],
       "settings": {
         "git.path": "/usr/bin",
