@@ -2,7 +2,7 @@
   "name": "horsemanager-web",
   "dockerComposeFile": ["../docker-compose.yaml"],
   "service": "frontend",
-  "workspaceFolder": "/app",
+  "workspaceFolder": "/workspaces/${workspaceFolder}",
   "initializeCommand": "/bin/bash .devcontainer/script/initialize.sh",
   "customizations": {
     "vscode": {
