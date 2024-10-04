@@ -57,7 +57,7 @@ tasks:
     desc: 'このリポジトリに関するdockerリソースを全部破棄する'
     cmds:
       - echo -e "\e[1;33mDockerリソースを破棄しています...\e[0m"
-      - docker-compose down -v --rmi all
+      - docker-compose down -v
       - echo -e "\e[1;32mDockerリソースの破棄が完了しました。\e[0m"
 
   clear:
