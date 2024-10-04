@@ -3,7 +3,7 @@
 #   - package-ecosystem: "npm"
 #     directory: "/"
 #     schedule:
-#       interval: "daily"
+#       interval: "weekly"
 #     commit-message:
 #       prefix: "deps"
 #       include: "scope"
