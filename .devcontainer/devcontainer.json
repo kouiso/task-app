@@ -80,6 +80,8 @@
       "version": "latest",
       "nvmVersion": "latest"
     },
-    "ghcr.io/audacioustux/devcontainers/taskfile:1": {}
+    "ghcr.io/audacioustux/devcontainers/taskfile:1": {
+      "version": "latest"
+    }
   }
 }
