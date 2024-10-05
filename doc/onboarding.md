@@ -51,12 +51,12 @@ NEXT_PUBLIC_MEASUREMENT_ID=
 
 ## セットアップ手順
 
-- `npm install` で packageをinstall
+- `npm ci` で packageをinstall
 - `npm run build` で ビルド実行
 - `npm run dev` で packageをinstall
 
 ```bash
-npm install
+npm ci
 npm run build
 npm run dev
 ```
