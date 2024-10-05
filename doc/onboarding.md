@@ -35,12 +35,8 @@ asdf reshim
 ### 環境変数
 
 - dev環境の.envを以下のURLから取得する
-  [yomcomaweb-test](https://drive.google.com/drive/folders/1kozGEwWMSx3e0nlBJRSMv9TqZYSJ7-2n)
+  [develop]()
   localの開発環境もこれで動かします。
-
-- prod環境の.envを以下のURLから取得する
-  [yomcomaweb](https://drive.google.com/drive/folders/1kozGEwWMSx3e0nlBJRSMv9TqZYSJ7-2n)
-  ※デプロイ担当者のみお使い下さい
 
 ```bash
 # firebaseの認証情報
