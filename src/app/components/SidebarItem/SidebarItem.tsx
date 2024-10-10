@@ -44,6 +44,7 @@ const SidebarItem = ({ head, children }: SidebarItemProps) => {
       />
     </p>
   );
+
   const sidebarItemAccordionContent = <ul className={styles.sidebarListChildren}>{children}</ul>;
 
   return (
