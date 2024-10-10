@@ -61,7 +61,7 @@
       }
     }
   },
- "containerEnv": {
+  "containerEnv": {
     "ENV_FILE": ".devcontainer/.env"
   },
   "postCreateCommand": "/bin/bash .devcontainer/script/post-create.sh",

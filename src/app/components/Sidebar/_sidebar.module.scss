@@ -1,0 +1,53 @@
+@use '../../styles/variables' as *;
+
+.sidebar {
+  .sidebarHamburger {
+    display: none;
+
+    @media #{$sp} {
+      align-items: center;
+      aspect-ratio: 1;
+      border-radius: 0.6rem;
+      display: flex;
+      justify-content: center;
+      left: 1.6rem;
+      position: fixed;
+      top: 1.8rem;
+      width: 3rem;
+      z-index: 9999;
+
+      &:hover {
+        background-color: var(--primary);
+      }
+    }
+  }
+
+  .sidebarList {
+    background-color: var(--bg);
+    box-shadow: 0.1rem 0 0 0 #2f3e46;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    height: 100%;
+    padding: 3.2rem;
+    padding-left: 2.4rem;
+    width: 28rem;
+
+    @media #{$sp} {
+      left: 0;
+      max-width: 32rem;
+      padding: 2.4rem 1.6rem;
+      padding-top: calc(var(--sp-header-height) + 0.8rem);
+      position: fixed;
+      top: 0;
+      transform: translateX(-100%);
+      transition: 0.5s;
+      width: min(32rem, 80%);
+      z-index: 9998;
+    }
+
+    &.sidebarList__active {
+      transform: translateX(0%);
+    }
+  }
+}

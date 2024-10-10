@@ -1,0 +1,168 @@
+@use '../../styles/variables' as *;
+
+.header {
+  background-color: var(--bg);
+  padding: 1.2rem;
+  padding-left: 2.4rem;
+
+  @media #{$sp} {
+    padding: 1.6rem 5rem;
+  }
+
+  .headerContent {
+    display: flex;
+    gap: 1.6rem;
+    justify-content: space-between;
+    margin: auto;
+    max-width: 100%;
+
+    @media #{$sp} {
+      justify-content: center;
+    }
+  }
+
+  .headerSearchWrap {
+    max-width: 64rem;
+    min-width: 18rem;
+    padding: 1.6rem 0;
+    width: 100%;
+
+    @media #{$sp} {
+      max-width: 80%;
+      padding: 0;
+    }
+  }
+
+  .headerSearch {
+    align-items: center;
+    border: 0.1rem solid var(--border);
+    border-radius: 0.6rem;
+    color: var(--text);
+    display: flex;
+    padding: 0.4rem;
+    width: 100%;
+
+    &:focus-within {
+      outline: 0.1rem solid var(--primary);
+    }
+  }
+
+  .headerSearchInput {
+    display: inline-block;
+    outline: none;
+    width: 100%;
+  }
+
+  .headerRight {
+    align-items: center;
+    display: flex;
+    max-width: 36rem;
+    width: 100%;
+
+    @media #{$sp} {
+      max-width: 2.4rem;
+      position: fixed;
+      right: 1.6rem;
+      top: 2.2rem;
+      z-index: 9999;
+    }
+  }
+
+  .headerRightIconList {
+    align-items: center;
+    display: flex;
+    gap: 0.8rem;
+    justify-content: space-between;
+    margin-right: 1.6rem;
+    max-width: 16rem;
+    width: 100%;
+
+    @media #{$sp} {
+      margin-right: 0;
+    }
+  }
+
+  .headerRightIconListItem {
+    display: block;
+
+    @media #{$sp} {
+      display: none;
+
+      &.headerRightIconListItem__ringIcon {
+        display: block;
+      }
+    }
+  }
+
+  .headerRightProfile {
+    min-width: 18rem;
+    position: relative;
+  }
+
+  .headerRightProfileFlex {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 0.8rem;
+
+    @media #{$sp} {
+      display: none;
+    }
+  }
+
+  .headerRightProfileFlexDesc {
+    display: flex;
+    flex-direction: column;
+    padding-right: 2.4rem;
+    position: relative;
+  }
+
+  .headerRightProfileFlexArrow {
+    aspect-ratio: 1;
+    display: inline-block;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translate(0%, -50%);
+    transition: 0.5s;
+    width: 2.4rem;
+  }
+
+  .headerRightProfileFlex__active {
+    .headerRightProfileFlexArrow {
+      transform: translate(0%, -50%) rotate(-180deg);
+    }
+  }
+
+  .headerRightProfileFlexDescUserame {
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  .headerRightProfileFlexDescUserrole {
+    font-size: 1.4rem;
+  }
+
+  .headerRightProfileMenu {
+    background-color: var(--bg);
+    display: none;
+    transition: 0.5s;
+
+    &.headerRightProfileLinkList__active {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      right: 0;
+      top: 105%;
+      width: 100%;
+    }
+  }
+
+  .headerRightProfileMenuItem {
+    padding: 0.8rem 1.6rem;
+
+    &:not(:last-child) {
+      border-bottom: 0.1rem solid var(--border);
+    }
+  }
+}
