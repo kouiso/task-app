@@ -16,19 +16,20 @@ npm-run-allで様々なコマンドを一括で動かせるようにしていま
   - // buildだけはaspidaとorvalを吐き出してからbuild:serverをやったほうがいいので、順次実行させるためにnpm-run-allを使っている
 
 - `"compile": "npm run build:compile",`
-  - github actionでは実行しないが、ファイル等を生成させておくために実行するコマンド。github actionのときには、orvalやaspidaを吐き出す必要はないので、このようにしておく。
+  - github actionでは実行しないが、ファイル等を生成させておくために実行するコマンド。github actionのときには、orvalやaspidaを吐き出すことが出来ないので、このようにしておく。
 
 ## パッケージ管理
 
-npm を使用します。
-理由としては、yarnやpnpmはasdfでは使用ができないことと, yarnのバージョンで大きく挙動が異なるため却下した
+npm を使用します。理由としては、
+  - yarnやpnpmはasdfで使用ができないこと
+  - yarnのバージョンで大きく挙動が異なるため却下した
 
 ## Debugger
 
 任意の位置で実行を止めて変数確認やコード実行が可能
 
 1. ブレイククポイントを設定 (任意の行をクリックし、赤丸を付ける)
-1. backend 起動状態で、VSCode の `Attach to NestJS Container`
+1. backend 起動状態で、VSCode の `Next.js: debug full stack`
    を実行するとデバッガーがアタッチされる
 
 ## コーディング規約
@@ -40,11 +41,11 @@ npm を使用します。
   - すべてのディレクトリ・ファイル名は ケバブケース & **単数形** とする
     → 単数形・複数形は議論の余地有りだが、日本語話者にとって可算名詞・不可算名詞の区別は難しいため、すべて単数に統一することで混乱を避ける
 
-  - 本リポジトリでは共通化するためのコンポーネントが多いため、原則ドメインごとにcomponentやpageを分割する。特にsrc/pageに関してはNext.jsのようなURLに対して直感的な構成ではないので注意!
-    → pageのdir構成は議論の余地有りだが、URLはroutes配下を見れば分かるのと、ディレクトリ構成を見直すことはあっても、URL自体を見直す機会はあまり存在しない。ドメインごとに管理することで『あのコンポーネントどこだっけ？』を無くす狙い
-    例: 認証系 【auth】の画面ならば、page/auth/sing-up-page.tsx, URLは/sign-up, component/auth/button/google-auth-button.tsx
-
-  - 実際にそのURLで表示されるpageの概念に相当するファイルの場合には、`page.tsx`と命名する。
+  - 本リポジトリではNext.jsのApp Routerを採用した。
+  - 原則ドメイン/urlごとにcomponentやpageを分割する。
+  - ドメインの垣根を越える場合に初めて、app直下に該当のフォルダを配置することが検討される
+    → dir構成に関しては議論の余地有りだが、ドメイン/url毎に管理することで『あのコンポーネントどこだっけ？』を無くす狙い
+    例: 認証系 【auth】の画面ならば、(auth)/sing-up/page.tsx, URLは/sign-up, (auth)/component/button/google-auth-button.tsx
 
   - スタイルは`scss module`を使って定義する。コンポーネントやページに属するscssのファイル名は`style.module.scss`とする。
 
@@ -59,11 +60,12 @@ npm を使用します。
 
 - eslint系統
 
-  - /icon, /page ディレクトリ配下はlazy importするので、default export を許可してある。それ以外ではdefault exportは禁止とする。
+  - exportが必要な際には、原則そのファイル内で主体とするものをexportしたい場合、export defaultを使用する。つまりexport defaultを使用していないのに、named exportは禁止とする。
 
 - URLや画面遷移の取り扱いについて
 
   - 画面遷移時に, `useNavigate`等を使用して、画面遷移を行うが、これらはroute dir内にある `PAGE_CONSTANT`を使用すること。
+※ Next.jsでdynamic routingのobjectを出力する方法があった気がするのでそれを要調査
 
 ## api型定義自動生成
 
@@ -72,9 +74,9 @@ apiの型定義を手動で作るのは面倒。。。
 
 ### 下準備
 
-- 対象リポジトリ: `nbo-yomcoma-api`
+- 対象リポジトリ: `horsemanager-backend`
 
-  - 本repositoryでは、上記対象repositoryのreader-webを起動していればコマンドを実行するだけで、swagger-jsonを自動で見に行くので、コマンドを実行するだけです。
+  - 本repositoryでは、上記対象repositoryを起動していればコマンドを実行するだけで、swagger-jsonを自動で見に行くので、コマンドを実行するだけです。
 
   下記の両方とも`npm run compile`をやれば、自動生成される。
 
@@ -82,10 +84,10 @@ apiの型定義を手動で作るのは面倒。。。
 
 - aspida
 
-  - キャッシュを使用しない通常のapiでは[aspida](https://github.com/aspida/aspida/blob/main/packages/aspida/docs/ja/README.md)を使用する。
+  - キャッシュを使用しない通常のapiでは[aspidaのREADME](https://github.com/aspida/aspida/blob/main/packages/aspida/docs/ja/README.md)を使用する。
 
 - orval
-  - キャッシュ管理したいものは上記のaspidaに加えて[orval](https://orval.dev/)を使用する
+  - キャッシュ管理したいものは上記のaspidaに加えて[orvalのREADME](https://orval.dev/)を使用する
   - orvalを使用すればaxiosと@tanstack/react-queryを使ってopenapi.ymlを見てソースコードを自動生成してくれる。
 
 上記を踏まえ、本repositoryでは以下のように使い分ける。
@@ -94,9 +96,7 @@ apiの型定義を手動で作るのは面倒。。。
 - キャッシュでデータ保持をさせたいものに関しては、orvalを使う
 
 ## その他ライブラリについて
-
-- husky
-  - .huskyrcを入れておかないと、vscodeでcommitをした際に `command not fount npm`となってしまう。
+特に無し
 
 # SCSS Coding Guidelines
 

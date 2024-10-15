@@ -3,11 +3,11 @@
 #   - package-ecosystem: "npm"
 #     directory: "/"
 #     schedule:
-#       interval: "daily"
+#       interval: "weekly"
 #     commit-message:
 #       prefix: "deps"
 #       include: "scope"
-#     open-pull-requests-limit: 10
+#     open-pull-requests-limit: 5
 #   - package-ecosystem: "github-actions"
 #     directory: "/"
 #     schedule:

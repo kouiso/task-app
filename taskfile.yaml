@@ -29,10 +29,10 @@ tasks:
   # ----- 起動コマンド
 
   up:
-    desc: 'ログ付きで起動。'
-    cmds:
-      - |
-        docker-compose up --build frontend
+    desc: '指定したサービスはログ付きで起動。それ以外はバックグラウンドで起動'
+    cmds: docker-compose up --build frontend
+
+  # ----- 生成系コマンド
 
   gen-env:
     desc: 'envを生成'
@@ -57,7 +57,7 @@ tasks:
     desc: 'このリポジトリに関するdockerリソースを全部破棄する'
     cmds:
       - echo -e "\e[1;33mDockerリソースを破棄しています...\e[0m"
-      - docker-compose down -v --rmi all
+      - docker-compose down -v
       - echo -e "\e[1;32mDockerリソースの破棄が完了しました。\e[0m"
 
   clear:
@@ -68,9 +68,9 @@ tasks:
 
   # ----- util系コマンド
   npmi:
-    desc: 'npm installコマンドをコンテナで実行'
+    desc: 'npm ciコマンドをコンテナで実行'
     cmds:
-      - docker-compose run --rm frontend npm install
+      - docker-compose run --rm frontend npm ci
 
   # ----- 内部呼び出しコマンド (ユーザーが直叩かない)
   write-playground:

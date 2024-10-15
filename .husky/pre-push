@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+git fetch origin main develop
+if [[ $(git log HEAD..origin/main --oneline) ]]; then
+  echo ; echo 🚨🚨🚨 Merge the latest main branch before pushing 🚨🚨🚨 ; echo
+  exit 1
+fi
+
+if [[ $(git log HEAD..origin/develop --oneline) ]]; then
+  echo ; echo 🚨🚨🚨 Merge the latest develop branch before pushing 🚨🚨🚨 ; echo
+  exit 1
+fi

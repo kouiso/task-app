@@ -2,7 +2,7 @@
   "name": "horsemanager-web",
   "dockerComposeFile": ["../docker-compose.yaml"],
   "service": "frontend",
-  "workspaceFolder": "/app",
+  "workspaceFolder": "/workspaces/${workspaceFolder}",
   "initializeCommand": "/bin/bash .devcontainer/script/initialize.sh",
   "customizations": {
     "vscode": {
@@ -15,7 +15,10 @@
         "formulahendry.auto-rename-tag",
         "github.vscode-github-actions",
         "wayou.vscode-todo-highlight",
-        "formulahendry.auto-rename-tag"
+        "formulahendry.auto-rename-tag",
+        "gruntfuggly.todo-tree",
+        "donjayamanne.typescript-notebook"
+
       ],
       "settings": {
         "git.path": "/usr/bin",
@@ -66,5 +69,19 @@
   },
   "postCreateCommand": "/bin/bash .devcontainer/script/post-create.sh",
   "containerUser": "root",
-  "forwardPorts": [13000, 19229]
+  "forwardPorts": [
+    13000,
+    19229
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "nodeGypDependencies": true,
+      "installYarnUsingApt": true,
+      "version": "latest",
+      "nvmVersion": "latest"
+    },
+    "ghcr.io/audacioustux/devcontainers/taskfile:1": {
+      "version": "latest"
+    }
+  }
 }
