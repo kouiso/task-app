@@ -4,13 +4,14 @@ import { useState } from 'react';
 
 import classNames from 'classnames';
 import Image from 'next/image';
+import Link from 'next/link';
 
 import Accordion from '../Accordion/Accordion';
 
 import styles from './_header.module.scss';
 
 const Header = () => {
-  const [isAccordionActive, setIsAccordionActive] = useState(false);
+  const [isAccordionActive, setIsAccordionActive] = useState<boolean>(false);
 
   const handleAccordionToggle = (accordionIsActive: boolean) => {
     setIsAccordionActive(accordionIsActive);
@@ -48,19 +49,19 @@ const Header = () => {
       )}
     >
       <li className={styles.headerRightProfileMenuItem}>
-        <a href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
+        <Link href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
           メニュー1
-        </a>
+        </Link>
       </li>
       <li className={styles.headerRightProfileMenuItem}>
-        <a href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
+        <Link href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
           メニュー2
-        </a>
+        </Link>
       </li>
       <li className={styles.headerRightProfileMenuItem}>
-        <a href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
+        <Link href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
           メニュー3
-        </a>
+        </Link>
       </li>
     </ul>
   );
@@ -80,19 +81,19 @@ const Header = () => {
         <div className={styles.headerRight}>
           <ul className={styles.headerRightIconList}>
             <li className={`${styles.headerRightIconListItem}`}>
-              <a href="__TBD__">
-                <Image src="/images/icon_links_primary_1.svg" alt="外部リンクのアイコン" width={24} height={24} />
-              </a>
+              <button type="button">
+                <Image src="/images/icon_links_primary_1.svg" alt="リンクのアイコン" width={24} height={24} />
+              </button>
             </li>
             <li className={`${styles.headerRightIconListItem} ${styles.headerRightIconListItem__ringIcon}`}>
-              <a href="__TBD__">
+              <button type="button">
                 <Image src="/images/icon_ring_primary_1.svg" alt="ベルのアイコン" width={24} height={24} />
-              </a>
+              </button>
             </li>
             <li className={`${styles.headerRightIconListItem}`}>
-              <a href="__TBD__">
+              <button type="button">
                 <Image src="/images/icon_setting_primary_1.svg" alt="歯車のアイコン" width={24} height={24} />
-              </a>
+              </button>
             </li>
           </ul>
 

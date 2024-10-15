@@ -3,17 +3,65 @@
 import { useState } from 'react';
 
 import Image from 'next/image';
+import Link from 'next/link';
 
 import SidebarItem from '../SidebarItem/SidebarItem';
 
 import styles from './_sidebar.module.scss';
+import AccountBoxIcon from './AccountBox.icon';
+import AddToPhotosIcon from './AddToPhotos.icon';
+import BarChartIcon from './BarChart.icon';
+import EventNoteIcon from './EventNote.icon';
 
 const Sidebar = () => {
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState<boolean>(false);
 
   const handleHamburgerClick = () => {
-    setIsActive(!isActive);
+    setIsActive((prev) => !prev);
   };
+
+  const menus = [
+    {
+      id: 'account',
+      title: 'アカウント',
+      icon: <AccountBoxIcon />,
+      activeIcon: <AccountBoxIcon fillColor="#fff" />,
+      subMenus: [
+        { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
+        { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
+      ],
+    },
+    {
+      id: 'record',
+      title: '記録',
+      icon: <BarChartIcon />,
+      activeIcon: <BarChartIcon fillColor="#fff" />,
+      subMenus: [
+        { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
+        { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
+        { id: 'sub3', href: '/__TBD__', label: 'サブメニュー3' },
+        { id: 'sub4', href: '/__TBD__', label: 'サブメニュー4' },
+      ],
+    },
+    {
+      id: 'register',
+      title: '登録',
+      icon: <AddToPhotosIcon />,
+      activeIcon: <AddToPhotosIcon fillColor="#fff" />,
+      subMenus: [{ id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' }],
+    },
+    {
+      id: 'other',
+      title: 'その他',
+      icon: <EventNoteIcon />,
+      activeIcon: <EventNoteIcon fillColor="#fff" />,
+      subMenus: [
+        { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
+        { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
+        { id: 'sub3', href: '/__TBD__', label: 'サブメニュー3' },
+      ],
+    },
+  ] as const;
 
   return (
     <aside className={styles.sidebar}>
@@ -32,80 +80,22 @@ const Sidebar = () => {
       </button>
 
       <ul className={`${styles.sidebarList} ${isActive ? styles.sidebarList__active : ''}`}>
-        <SidebarItem
-          head={{
-            title: 'アカウント',
-            menuIcon: '/images/icon_account_box_grey_1.svg',
-            activeMenuIcon: '/images/icon_account_box_white_1.svg',
-          }}
-        >
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー1
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー2
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー3
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー4
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー5
-          </a>
-        </SidebarItem>
-
-        <SidebarItem
-          head={{
-            title: '記録',
-            menuIcon: '/images/icon_bar_chart_grey_1.svg',
-            activeMenuIcon: '/images/icon_bar_chart_white_1.svg',
-          }}
-        >
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー1
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー2
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー3
-          </a>
-        </SidebarItem>
-
-        <SidebarItem
-          head={{
-            title: '登録',
-            menuIcon: '/images/icon_add_to_photos_grey_1.svg',
-            activeMenuIcon: '/images/icon_add_to_photos_white_1.svg',
-          }}
-        >
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー1
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー2
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー3
-          </a>
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー4
-          </a>
-        </SidebarItem>
-
-        <SidebarItem
-          head={{
-            title: 'その他',
-            menuIcon: '/images/icon_event_note_grey_1.svg',
-            activeMenuIcon: '/images/icon_event_note_white_1.svg',
-          }}
-        >
-          <a className={styles.sidebarListChildrenItemLink} href="/__TBD__">
-            サブメニュー1
-          </a>
-        </SidebarItem>
+        {menus.map((menu) => (
+          <SidebarItem
+            key={menu.id}
+            head={{
+              title: menu.title,
+              menuIcon: menu.icon,
+              activeMenuIcon: menu.activeIcon,
+            }}
+          >
+            {menu.subMenus.map((subMenu) => (
+              <Link key={subMenu.id} className={styles.sidebarListChildrenItemLink} href={subMenu.href}>
+                {subMenu.label}
+              </Link>
+            ))}
+          </SidebarItem>
+        ))}
       </ul>
     </aside>
   );

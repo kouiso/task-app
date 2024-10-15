@@ -4,6 +4,8 @@ import { useState } from 'react';
 
 import classNames from 'classnames';
 
+import ArrowDownIcon from '@/app/components/ArrowDown.icon';
+
 import Accordion from '../Accordion/Accordion';
 
 import styles from './_sidebarItem.module.scss';
@@ -11,38 +13,34 @@ import styles from './_sidebarItem.module.scss';
 interface SidebarItemProps {
   head: {
     title: string;
-    menuIcon: string;
-    activeMenuIcon: string;
+    menuIcon: JSX.Element;
+    activeMenuIcon: JSX.Element;
   };
-  children: React.ReactNode; // ReactNodeを使用して子要素を定義
+  children: React.ReactNode;
 }
 
 const SidebarItem = ({ head, children }: SidebarItemProps) => {
-  const [isAccordionActive, setIsAccordionActive] = useState(false);
+  const [isAccordionActive, setIsAccordionActive] = useState<boolean>(false);
 
   const handleToggle = (accordionActive: boolean) => {
     setIsAccordionActive(accordionActive);
   };
 
   const sidebarItemAccordionTrigger = (
-    <p
+    <div
       className={classNames(styles.sidebarItemText, {
         [styles.sidebarItemText__active]: isAccordionActive,
       })}
     >
-      <object
-        className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__menu)}
-        type="image/svg+xml"
-        data={isAccordionActive ? head.activeMenuIcon : head.menuIcon}
-      />
+      <figure className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__menu)}>
+        {isAccordionActive ? head.activeMenuIcon : head.menuIcon}
+      </figure>
       {head.title}
 
-      <object
-        className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__arrow)}
-        type="image/svg+xml"
-        data={isAccordionActive ? '/images/icon_arrow_down_white_1.svg' : '/images/icon_arrow_down_grey_1.svg'}
-      />
-    </p>
+      <figure className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__arrow)}>
+        <ArrowDownIcon fillColor={isAccordionActive ? '#fff' : '#495D68'} />
+      </figure>
+    </div>
   );
 
   const sidebarItemAccordionContent = <ul className={styles.sidebarListChildren}>{children}</ul>;

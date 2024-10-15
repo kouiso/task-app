@@ -1,26 +1,29 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 import classNames from 'classnames';
 
 import styles from './accordion.module.scss';
 
-interface AccordionProps {
-  trigger: ReactNode;
-  content: ReactNode;
+type AccordionProps = {
+  trigger: React.ReactNode;
+  content: React.ReactNode;
   onToggle?: (isActive: boolean) => void;
-}
+};
 
 const Accordion = ({ trigger, content, onToggle }: AccordionProps) => {
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState<boolean>(false);
 
   const toggleAccordion = () => {
-    setIsActive(!isActive);
-    if (onToggle) {
-      onToggle(!isActive);
-    }
+    setIsActive((prev) => !prev);
+    onToggle?.(!isActive);
+  };
+
+  const accordionContentActiveStyle = {
+    maxHeight: isActive ? '1000px' : '0px',
+    overflow: 'hidden',
+    transition: 'max-height 0.3s ease',
   };
 
   return (
@@ -37,11 +40,7 @@ const Accordion = ({ trigger, content, onToggle }: AccordionProps) => {
 
       <div
         className={classNames(styles.accordionContent, { [styles.open]: isActive })}
-        style={{
-          maxHeight: isActive ? '1000px' : '0px',
-          overflow: 'hidden',
-          transition: 'max-height 0.3s ease',
-        }}
+        style={accordionContentActiveStyle}
       >
         {content}
       </div>

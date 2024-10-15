@@ -25,4 +25,25 @@ body {
     color: var(--text);
     font-size: 1.6rem;
   }
+
+  * {
+    background-color: transparent;
+  }
+
+  ul,ol {
+    list-style: none;
+    padding: 0;
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  input,button,select {
+    border: 0;
+  }
 }
