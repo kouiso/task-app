@@ -10,7 +10,7 @@ interface LayoutProps {
 }
 
 export const metadata = {
-  title: 'My App',
+  title: 'HorseManager',
 };
 
 const RootLayout = ({ children }: LayoutProps) => (

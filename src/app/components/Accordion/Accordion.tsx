@@ -15,9 +15,9 @@ type AccordionProps = {
 const Accordion = ({ trigger, content, onToggle }: AccordionProps) => {
   const [isActive, setIsActive] = useState<boolean>(false);
 
-  const toggleAccordion = () => {
-    setIsActive((prev) => !prev);
-    onToggle?.(!isActive);
+  const toggleAccordion = (prevState: boolean) => () => {
+    setIsActive(!prevState);
+    onToggle?.(!prevState);
   };
 
   const accordionContentActiveStyle = {
@@ -30,10 +30,10 @@ const Accordion = ({ trigger, content, onToggle }: AccordionProps) => {
     <div className={styles.accordion}>
       <div
         className={classNames(styles.accordionTrigger, { [styles.open]: isActive })}
-        onClick={toggleAccordion}
+        onClick={toggleAccordion(isActive)}
         role="button"
         tabIndex={0}
-        onKeyPress={(e) => e.key === 'Enter' && toggleAccordion()}
+        onKeyPress={(e) => e.key === 'Enter' && toggleAccordion(isActive)}
       >
         {trigger}
       </div>

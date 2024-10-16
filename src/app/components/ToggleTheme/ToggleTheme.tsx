@@ -4,8 +4,11 @@ import { useState } from 'react';
 
 import styles from './_toggleTheme.module.scss';
 
-export const ToggleTheme = () => {
-  const [theme, setTheme] = useState('light');
+const themeIcon = { light: '明るいアイコン', dark: '暗いアイコン' } as const;
+type ThemeIconTypeAlias = keyof typeof themeIcon;
+
+const ToggleTheme = () => {
+  const [theme, setTheme] = useState<ThemeIconTypeAlias>('light');
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -15,7 +18,8 @@ export const ToggleTheme = () => {
 
   return (
     <button type="button" className={styles.toggleThemeButton} onClick={toggleTheme}>
-      {theme === 'light' ? '🌞' : '🌙'}
+      {themeIcon[theme]}
     </button>
   );
 };
+export default ToggleTheme;

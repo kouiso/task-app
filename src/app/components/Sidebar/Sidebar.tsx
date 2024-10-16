@@ -13,55 +13,55 @@ import AddToPhotosIcon from './AddToPhotos.icon';
 import BarChartIcon from './BarChart.icon';
 import EventNoteIcon from './EventNote.icon';
 
+const menus = [
+  {
+    id: 'account',
+    title: 'アカウント',
+    icon: <AccountBoxIcon />,
+    activeIcon: <AccountBoxIcon fillColor="#fff" />,
+    subMenus: [
+      { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
+      { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
+    ],
+  },
+  {
+    id: 'record',
+    title: '記録',
+    icon: <BarChartIcon />,
+    activeIcon: <BarChartIcon fillColor="#fff" />,
+    subMenus: [
+      { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
+      { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
+      { id: 'sub3', href: '/__TBD__', label: 'サブメニュー3' },
+      { id: 'sub4', href: '/__TBD__', label: 'サブメニュー4' },
+    ],
+  },
+  {
+    id: 'register',
+    title: '登録',
+    icon: <AddToPhotosIcon />,
+    activeIcon: <AddToPhotosIcon fillColor="#fff" />,
+    subMenus: [{ id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' }],
+  },
+  {
+    id: 'other',
+    title: 'その他',
+    icon: <EventNoteIcon />,
+    activeIcon: <EventNoteIcon fillColor="#fff" />,
+    subMenus: [
+      { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
+      { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
+      { id: 'sub3', href: '/__TBD__', label: 'サブメニュー3' },
+    ],
+  },
+] as const;
+
 const Sidebar = () => {
   const [isActive, setIsActive] = useState<boolean>(false);
 
   const handleHamburgerClick = () => {
     setIsActive((prev) => !prev);
   };
-
-  const menus = [
-    {
-      id: 'account',
-      title: 'アカウント',
-      icon: <AccountBoxIcon />,
-      activeIcon: <AccountBoxIcon fillColor="#fff" />,
-      subMenus: [
-        { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
-        { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
-      ],
-    },
-    {
-      id: 'record',
-      title: '記録',
-      icon: <BarChartIcon />,
-      activeIcon: <BarChartIcon fillColor="#fff" />,
-      subMenus: [
-        { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
-        { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
-        { id: 'sub3', href: '/__TBD__', label: 'サブメニュー3' },
-        { id: 'sub4', href: '/__TBD__', label: 'サブメニュー4' },
-      ],
-    },
-    {
-      id: 'register',
-      title: '登録',
-      icon: <AddToPhotosIcon />,
-      activeIcon: <AddToPhotosIcon fillColor="#fff" />,
-      subMenus: [{ id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' }],
-    },
-    {
-      id: 'other',
-      title: 'その他',
-      icon: <EventNoteIcon />,
-      activeIcon: <EventNoteIcon fillColor="#fff" />,
-      subMenus: [
-        { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
-        { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
-        { id: 'sub3', href: '/__TBD__', label: 'サブメニュー3' },
-      ],
-    },
-  ] as const;
 
   return (
     <aside className={styles.sidebar}>

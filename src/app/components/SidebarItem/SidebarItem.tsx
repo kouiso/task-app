@@ -19,7 +19,7 @@ interface SidebarItemProps {
   children: React.ReactNode;
 }
 
-const SidebarItem = ({ head, children }: SidebarItemProps) => {
+const SidebarItem: React.FC<SidebarItemProps> = ({ head, children }) => {
   const [isAccordionActive, setIsAccordionActive] = useState<boolean>(false);
 
   const handleToggle = (accordionActive: boolean) => {
