@@ -8,16 +8,16 @@ import ArrowDownIcon from '@/app/components/ArrowDown.icon';
 
 import Accordion from '../Accordion/Accordion';
 
-import styles from './_sidebarItem.module.scss';
+import styles from './sidebarItem.module.scss';
 
-interface SidebarItemProps {
+type SidebarItemProps = {
   head: {
     title: string;
-    menuIcon: JSX.Element;
-    activeMenuIcon: JSX.Element;
+    menuIcon: React.ReactNode;
+    activeMenuIcon: React.ReactNode;
   };
   children: React.ReactNode;
-}
+};
 
 const SidebarItem: React.FC<SidebarItemProps> = ({ head, children }) => {
   const [isAccordionActive, setIsAccordionActive] = useState<boolean>(false);

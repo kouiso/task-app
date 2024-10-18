@@ -9,8 +9,8 @@
  *,
  ::before,
  ::after {
-   box-sizing: border-box; /* 1 */
    background-repeat: no-repeat; /* 2 */
+   box-sizing: border-box; /* 1 */
  }
 
  /**
@@ -36,11 +36,9 @@
  :where(:root) {
    cursor: default; /* 1 */
    line-height: 1.5; /* 2 */
-   overflow-wrap: break-word; /* 3 */
-   -moz-tab-size: 4; /* 4 */
+   overflow-wrap: break-word; /* 3 */ /* 4 */
    tab-size: 4; /* 4 */
-   -webkit-tap-highlight-color: transparent; /* 5 */
-   -webkit-text-size-adjust: 100%; /* 6 */
+   -webkit-tap-highlight-color: transparent; /* 5 */ /* 6 */
    text-size-adjust: 100%; /* 6 */
  }
 
@@ -111,7 +109,7 @@
   */
 
  :where(pre) {
-   font-family: monospace, monospace; /* 1 */
+   font-family: monospace; /* 1 */
    font-size: 1em; /* 2 */
    overflow: auto; /* 3 */
  }
@@ -120,29 +118,12 @@
   * ========================================================================== */
 
  /**
-  * Add the correct text decoration in Safari.
-  */
-
- :where(abbr[title]) {
-   text-decoration: underline;
-   text-decoration: underline dotted;
- }
-
- /**
-  * Add the correct font weight in Chrome, Edge, and Safari.
-  */
-
- :where(b, strong) {
-   font-weight: bolder;
- }
-
- /**
   * 1. Correct the inheritance and scaling of font size in all browsers.
   * 2. Correct the odd `em` font sizing in all browsers.
   */
 
  :where(code, kbd, samp) {
-   font-family: monospace, monospace; /* 1 */
+   font-family: monospace; /* 1 */
    font-size: 1em; /* 2 */
  }
 
@@ -178,7 +159,7 @@
   */
 
  :where(svg:not([fill])) {
-   fill: currentColor;
+   fill: currentcolor;
  }
 
  /* Tabular data
@@ -192,7 +173,7 @@
 
  :where(table) {
    border-collapse: collapse; /* 1 */
-   border-color: currentColor; /* 2 */
+   border-color: currentcolor; /* 2 */
    text-indent: 0; /* 3 */
  }
 
@@ -212,7 +193,7 @@
   */
 
  :where(button, [type="button" i], [type="reset" i], [type="submit" i]) {
-   -webkit-appearance: button;
+   appearance: button;
  }
 
  /**
@@ -247,7 +228,7 @@
   */
 
  :where([type="search" i]) {
-   -webkit-appearance: textfield; /* 1 */
+   appearance: textfield; /* 1 */
    outline-offset: -2px; /* 2 */
  }
 
@@ -261,20 +242,11 @@
  }
 
  /**
-  * Correct the text style of placeholders in Chrome, Edge, and Safari.
-  */
-
- ::-webkit-input-placeholder {
-   color: inherit;
-   opacity: 0.54;
- }
-
- /**
   * Remove the inner padding in Chrome, Edge, and Safari on macOS.
   */
 
  ::-webkit-search-decoration {
-   -webkit-appearance: none;
+   appearance: none;
  }
 
  /**
@@ -283,7 +255,7 @@
   */
 
  ::-webkit-file-upload-button {
-   -webkit-appearance: button; /* 1 */
+   appearance: button; /* 1 */
    font: inherit; /* 2 */
  }
 
@@ -295,17 +267,15 @@
   */
 
  :where(dialog) {
-   background-color: white;
+   background-color: #ffffff;
    border: solid;
-   color: black;
-   height: -moz-fit-content;
+   color: #000000;
    height: fit-content;
    left: 0;
    margin: auto;
    padding: 1em;
    position: absolute;
    right: 0;
-   width: -moz-fit-content;
    width: fit-content;
  }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import styles from './_toggleTheme.module.scss';
+import styles from './toggleTheme.module.scss';
 
 const themeIcon = { light: '明るいアイコン', dark: '暗いアイコン' } as const;
 type ThemeIconTypeAlias = keyof typeof themeIcon;

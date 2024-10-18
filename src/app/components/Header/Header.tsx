@@ -8,8 +8,46 @@ import Link from 'next/link';
 
 import Accordion from '../Accordion/Accordion';
 
-import styles from './_header.module.scss';
+import styles from './header.module.scss';
 
+const headerIconMenus = [
+  {
+    id: 'link',
+    image: '/images/icon_links_primary_1.svg',
+    alt: 'リンクのアイコン',
+    class: '',
+  },
+  {
+    id: 'bell',
+    image: '/images/icon_ring_primary_1.svg',
+    alt: 'ベルのアイコン',
+    class: `${styles.headerRightIconListItem__ringIcon}`,
+  },
+  {
+    id: 'setting',
+    image: '/images/icon_setting_primary_1.svg',
+    alt: '歯車のアイコン',
+    class: '',
+  },
+];
+
+const headerProfMenus = [
+  {
+    id: 'menu1',
+    href: '__TBD__',
+    label: 'メニュー1',
+  },
+  {
+    id: 'menu2',
+    href: '__TBD__',
+    label: 'メニュー2',
+  },
+  {
+    id: 'menu3',
+    href: '__TBD__',
+    label: 'メニュー3',
+  },
+];
 const Header = () => {
   const [isAccordionActive, setIsAccordionActive] = useState<boolean>(false);
 
@@ -48,21 +86,13 @@ const Header = () => {
         isAccordionActive ? styles.headerRightProfileLinkList__active : '',
       )}
     >
-      <li className={styles.headerRightProfileMenuItem}>
-        <Link href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
-          メニュー1
-        </Link>
-      </li>
-      <li className={styles.headerRightProfileMenuItem}>
-        <Link href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
-          メニュー2
-        </Link>
-      </li>
-      <li className={styles.headerRightProfileMenuItem}>
-        <Link href="__TBD__" className={styles.headerRightProfileMenuItemLink}>
-          メニュー3
-        </Link>
-      </li>
+      {headerProfMenus.map((headerProfMenu) => (
+        <li key={headerProfMenu.id} className={styles.headerRightProfileMenuItem}>
+          <Link href={headerProfMenu.href} className={styles.headerRightProfileMenuItemLink}>
+            {headerProfMenu.label}
+          </Link>
+        </li>
+      ))}
     </ul>
   );
 
@@ -80,21 +110,13 @@ const Header = () => {
 
         <div className={styles.headerRight}>
           <ul className={styles.headerRightIconList}>
-            <li className={`${styles.headerRightIconListItem}`}>
-              <button type="button">
-                <Image src="/images/icon_links_primary_1.svg" alt="リンクのアイコン" width={24} height={24} />
-              </button>
-            </li>
-            <li className={`${styles.headerRightIconListItem} ${styles.headerRightIconListItem__ringIcon}`}>
-              <button type="button">
-                <Image src="/images/icon_ring_primary_1.svg" alt="ベルのアイコン" width={24} height={24} />
-              </button>
-            </li>
-            <li className={`${styles.headerRightIconListItem}`}>
-              <button type="button">
-                <Image src="/images/icon_setting_primary_1.svg" alt="歯車のアイコン" width={24} height={24} />
-              </button>
-            </li>
+            {headerIconMenus.map((menu) => (
+              <li key={menu.id} className={`${styles.headerRightIconListItem} ${menu.class}`}>
+                <button type="button">
+                  <Image src={menu.image} alt={menu.alt} width={24} height={24} />
+                </button>
+              </li>
+            ))}
           </ul>
 
           <article className={styles.headerRightProfile}>

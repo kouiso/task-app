@@ -2,16 +2,16 @@
 
 import { useState } from 'react';
 
-import Image from 'next/image';
 import Link from 'next/link';
 
 import SidebarItem from '../SidebarItem/SidebarItem';
 
-import styles from './_sidebar.module.scss';
 import AccountBoxIcon from './AccountBox.icon';
 import AddToPhotosIcon from './AddToPhotos.icon';
 import BarChartIcon from './BarChart.icon';
 import EventNoteIcon from './EventNote.icon';
+import HamburgerIcon from './Hamburger.icon';
+import styles from './sidebar.module.scss';
 
 const menus = [
   {
@@ -71,12 +71,7 @@ const Sidebar = () => {
         onClick={handleHamburgerClick}
         aria-label="Toggle sidebar"
       >
-        <Image
-          src={isActive ? '/images/icon_close_white_1.svg' : '/images/icon_hamburger_white_1.svg'}
-          alt="ハンバーガーメニュー"
-          width={20}
-          height={13}
-        />
+        <HamburgerIcon isHamburgerActive={isActive} />
       </button>
 
       <ul className={`${styles.sidebarList} ${isActive ? styles.sidebarList__active : ''}`}>
