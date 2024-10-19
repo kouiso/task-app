@@ -15,7 +15,7 @@ type AccordionProps = {
 const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
 
-  const toggleAccordion = (currentActiveState: boolean) => {
+  const toggleAccordion = (currentActiveState: boolean) => () => {
     const newActiveState = !currentActiveState;
     setIsActive(newActiveState);
     onToggle?.(newActiveState);
@@ -27,30 +27,19 @@ const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => 
     }
   };
 
-  const accordionContentActiveStyle = {
-    maxHeight: isActive ? '1000px' : '0px',
-    overflow: 'hidden',
-    transition: 'max-height 0.3s ease',
-  };
-
   return (
     <div className={styles.accordion}>
       <div
         className={classNames(styles.accordionTrigger, { [styles.open]: isActive })}
-        onClick={() => toggleAccordion(isActive)}
+        onClick={toggleAccordion(isActive)}
         role="button"
         tabIndex={0}
-        onKeyPress={handleKeyPress}
+        onKeyUp={handleKeyPress}
       >
         {trigger}
       </div>
 
-      <div
-        className={classNames(styles.accordionContent, { [styles.open]: isActive })}
-        style={accordionContentActiveStyle}
-      >
-        {content}
-      </div>
+      <div className={classNames(styles.accordionContent, { [styles.open]: isActive })}>{content}</div>
     </div>
   );
 };

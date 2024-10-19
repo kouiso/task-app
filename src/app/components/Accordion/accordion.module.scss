@@ -9,5 +9,7 @@
 }
 
 .accordionContent.open {
-  max-height: 1000px; // 必要に応じて調整
+  max-height: 1000px;
+  overflow: 'hidden';
+  transition: 'max-height 0.3s ease';
 }
