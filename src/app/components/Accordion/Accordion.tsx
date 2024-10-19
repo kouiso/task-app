@@ -15,13 +15,16 @@ type AccordionProps = {
 const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
 
-  const toggleAccordion = (
-    event: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
-    currentActiveState: boolean,
-  ) => {
+  const toggleAccordion = (currentActiveState: boolean) => {
     const newActiveState = !currentActiveState;
     setIsActive(newActiveState);
     onToggle?.(newActiveState);
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter') {
+      toggleAccordion(isActive);
+    }
   };
 
   const accordionContentActiveStyle = {
@@ -34,10 +37,10 @@ const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => 
     <div className={styles.accordion}>
       <div
         className={classNames(styles.accordionTrigger, { [styles.open]: isActive })}
-        onClick={(e) => toggleAccordion(e, isActive)}
+        onClick={() => toggleAccordion(isActive)}
         role="button"
         tabIndex={0}
-        onKeyPress={(e) => e.key === 'Enter' && toggleAccordion(e, isActive)}
+        onKeyPress={handleKeyPress}
       >
         {trigger}
       </div>
