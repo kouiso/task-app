@@ -21,20 +21,23 @@ const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => 
     onToggle?.(newActiveState);
   };
 
-  const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter') {
-      toggleAccordion(isActive);
-    }
+  const handleClick = () => {
+    toggleAccordion(isActive);
+  };
+
+  const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter') return;
+    toggleAccordion(isActive);
   };
 
   return (
     <div className={styles.accordion}>
       <div
         className={classNames(styles.accordionTrigger, { [styles.open]: isActive })}
-        onClick={toggleAccordion(isActive)}
+        onClick={handleClick}
         role="button"
         tabIndex={0}
-        onKeyUp={handleKeyPress}
+        onKeyUp={handleKeyUp}
       >
         {trigger}
       </div>
