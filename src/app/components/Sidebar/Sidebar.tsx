@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 import SidebarItem from '../SidebarItem/SidebarItem';
+import ToggleTheme from '../ToggleTheme/ToggleTheme';
 
 import AccountBoxIcon from './AccountBox.icon';
 import AddToPhotosIcon from './AddToPhotos.icon';
@@ -91,6 +92,12 @@ const Sidebar = () => {
             ))}
           </SidebarItem>
         ))}
+
+        <li className={styles.sidebarListChildrenLastItem}>
+        <ToggleTheme />
+
+        </li>
+
       </ul>
     </aside>
   );

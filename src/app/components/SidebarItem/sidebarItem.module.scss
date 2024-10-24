@@ -7,7 +7,6 @@
     padding: 0.8rem;
     padding-left: 4rem;
     position: relative;
-    transition: 0.5s;
 
     &::after {
       content: '';
@@ -25,6 +24,8 @@
     }
 
     &.sidebarItemText__active {
+      color: var(--white);
+
       .sidebarItemTextIcon__menu {
         fill: var(--white);
       }

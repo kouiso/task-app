@@ -6,6 +6,7 @@ $const-white: #ffffff;
   // ---------- 共通 ----------
   --white: #ffffff;
   --black: #000000;
+  --header-height-pc: 9.2rem;
 
   // ---------- ダークモード ----------
   --border: #f2f2f2;
@@ -18,9 +19,9 @@ $const-white: #ffffff;
 }
 
 // ---------- ライトモード ----------
-.light-mode {
-  --border: rgba($const-black, 0.5);
-  --bg: #f9f9f9;
+[data-theme='light'] {
+  --border: #2f3e46;
+  --bg: #eeeeee;
   --bg-body: #ffffff;
   --placeholder: #cccccc;
   --text: var(--black);

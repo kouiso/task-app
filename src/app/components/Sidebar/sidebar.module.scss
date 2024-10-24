@@ -24,7 +24,6 @@
 
   .sidebarList {
     background-color: var(--bg);
-    box-shadow: 0.1rem 0 0 0 #2f3e46;
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
@@ -50,5 +49,9 @@
     &.sidebarList__active {
       transform: translateX(0%);
     }
+  }
+
+  .sidebarListChildrenLastItem {
+    margin-top: 2.4rem;
   }
 }

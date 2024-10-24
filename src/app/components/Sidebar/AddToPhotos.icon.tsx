@@ -6,7 +6,7 @@ type IconProps = {
 
 const AddToPhotosIcon: React.FC<IconProps> = ({ fillColor = '#495D68' }) => (
   <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <g clip-path="url(#clip0_6003_283)">
+    <g clipPath="url(#clip0_6003_283)">
       <path
         opacity="0.3"
         d="M20.5 4.5H8.5V16.5H20.5V4.5ZM19.5 11.5H15.5V15.5H13.5V11.5H9.5V9.5H13.5V5.5H15.5V9.5H19.5V11.5Z"

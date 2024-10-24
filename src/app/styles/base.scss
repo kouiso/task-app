@@ -1,11 +1,13 @@
+@use './variables' as *;
 //____________________________
 // ベースのスタイル
 //____________________________
 html,
 body {
   background-color: var(--bg-body);
+  color: var(--text);
   font-size: 62.5%;
-  overflow: hidden;
+  overflow: scroll;
 
   p,
   h1,
@@ -18,6 +20,9 @@ body {
   li,
   span,
   b,
+  input,
+  textarea,
+  label,
   strong,
   em,
   i,
@@ -30,7 +35,8 @@ body {
     background-color: transparent;
   }
 
-  ul,ol {
+  ul,
+  ol {
     list-style: none;
     padding: 0;
   }
@@ -43,7 +49,9 @@ body {
     text-decoration: none;
   }
 
-  input,button,select {
+  input,
+  button,
+  select {
     border: 0;
   }
 }

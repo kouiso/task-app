@@ -15,19 +15,19 @@ type AccordionProps = {
 const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
 
-  const toggleAccordion = (currentActiveState: boolean) => () => {
-    const newActiveState = !currentActiveState;
+  const toggleAccordion = () => {
+    const newActiveState = !isActive;
     setIsActive(newActiveState);
     onToggle?.(newActiveState);
   };
 
   const handleClick = () => {
-    toggleAccordion(isActive);
+    toggleAccordion();
   };
 
   const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter') return;
-    toggleAccordion(isActive);
+    toggleAccordion();
   };
 
   return (

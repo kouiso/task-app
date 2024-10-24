@@ -3,4 +3,5 @@
 //____________________________
 .layout {
   display: flex;
+  height: calc(100% - var(--header-height-pc));
 }
