@@ -17,9 +17,14 @@
   .toggleThemeButtonIcon {
     opacity: .3;
 
-    &.active {
+    &.toggleThemeButtonIcon__active {
       opacity: 1;
+    }
 
+    &.isDark {
+      svg {
+        fill: var(--black);
+      }
     }
   }
 }

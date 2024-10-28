@@ -63,6 +63,7 @@
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.25.1",
     "react-toastify": "^10.0.5",
+    "react-use": "^17.5.1",
     "sanitize.css": "^13.0.0",
     "zod": "^3.23.8"
   },

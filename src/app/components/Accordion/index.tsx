@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import classNames from 'classnames';
 
-import styles from './accordion.module.scss';
+import styles from './style.module.scss';
 
 type AccordionProps = {
   trigger: React.ReactNode;
@@ -25,7 +25,7 @@ const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => 
     toggleAccordion();
   };
 
-  const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyUp: React.KeyboardEventHandler<HTMLDivElement> = (event) => {
     if (event.key !== 'Enter') return;
     toggleAccordion();
   };

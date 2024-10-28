@@ -6,26 +6,31 @@ import classNames from 'classnames';
 import Image from 'next/image';
 import Link from 'next/link';
 
-import Accordion from '../Accordion/Accordion';
+import Accordion from '../Accordion';
 
-import styles from './header.module.scss';
+import ArrowDownWhiteIcon from './Icon/arrow-down-white.icon';
+import LinkPrimaryIcon from './Icon/link-primary.icon';
+import RingPrimaryIcon from './Icon/ring-primary.icon';
+import SearchPrimaryIcon from './Icon/search-primary.icon';
+import SettingPrimaryIcon from './Icon/setting-primary.icon';
+import styles from './style.module.scss';
 
 const headerIconMenus = [
   {
     id: 'link',
-    image: '/images/icon_links_primary_1.svg',
+    image: <LinkPrimaryIcon />,
     alt: 'リンクのアイコン',
     class: '',
   },
   {
     id: 'bell',
-    image: '/images/icon_ring_primary_1.svg',
+    image: <RingPrimaryIcon />,
     alt: 'ベルのアイコン',
     class: `${styles.headerRightIconListItem__ringIcon}`,
   },
   {
     id: 'setting',
-    image: '/images/icon_setting_primary_1.svg',
+    image: <SettingPrimaryIcon />,
     alt: '歯車のアイコン',
     class: '',
   },
@@ -63,19 +68,13 @@ const Header = () => {
       )}
     >
       <figure className={styles.headerRightProfileFlexFigure}>
-        <Image src="/images/test/test_image_profile_icon_1.png" alt="__TBD__" width={44} height={44} />
+        <Image src="/Test/test_image_profile_icon_1.png" alt="__TBD__" width={44} height={44} />
       </figure>
       <div className={styles.headerRightProfileFlexDesc}>
         <p className={styles.headerRightProfileFlexDescUserame}>Kousuke</p>
         <p className={styles.headerRightProfileFlexDescUserrole}>Lead Developer</p>
       </div>
-      <Image
-        className={styles.headerRightProfileFlexArrow}
-        src="/images/icon_arrow_down_white_1.svg"
-        alt="白い下向きの矢印"
-        width={44}
-        height={44}
-      />
+      <ArrowDownWhiteIcon />
     </div>
   );
 
@@ -102,7 +101,7 @@ const Header = () => {
         <article className={styles.headerSearchWrap}>
           <form className={styles.headerSearch}>
             <button type="submit" className={styles.headerSearchButton}>
-              <Image src="/images/icon_search_primary_1.svg" alt="虫眼鏡のアイコン" width={24} height={24} />
+              <SearchPrimaryIcon />
             </button>
             <input className={styles.headerSearchInput} type="text" placeholder="Search..." />
           </form>
@@ -112,9 +111,7 @@ const Header = () => {
           <ul className={styles.headerRightIconList}>
             {headerIconMenus.map((menu) => (
               <li key={menu.id} className={`${styles.headerRightIconListItem} ${menu.class}`}>
-                <button type="button">
-                  <Image src={menu.image} alt={menu.alt} width={24} height={24} />
-                </button>
+                <button type="button">{menu.image}</button>
               </li>
             ))}
           </ul>

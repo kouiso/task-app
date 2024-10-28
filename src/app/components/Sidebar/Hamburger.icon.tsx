@@ -1,7 +1,7 @@
 import React from 'react';
 
 type HamburgerIconProps = {
-  isHamburgerActive: boolean;
+  isHamburgerActive?: boolean;
 };
 
 const hamburgerLines = (

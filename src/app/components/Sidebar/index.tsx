@@ -4,15 +4,15 @@ import { useState } from 'react';
 
 import Link from 'next/link';
 
-import SidebarItem from '../SidebarItem/SidebarItem';
-import ToggleTheme from '../ToggleTheme/ToggleTheme';
+import SidebarItem from '../SidebarItem';
+import ToggleTheme from '../ToggleTheme';
 
 import AccountBoxIcon from './AccountBox.icon';
 import AddToPhotosIcon from './AddToPhotos.icon';
 import BarChartIcon from './BarChart.icon';
 import EventNoteIcon from './EventNote.icon';
 import HamburgerIcon from './Hamburger.icon';
-import styles from './sidebar.module.scss';
+import styles from './style.module.scss';
 
 const menus = [
   {
@@ -94,10 +94,8 @@ const Sidebar = () => {
         ))}
 
         <li className={styles.sidebarListChildrenLastItem}>
-        <ToggleTheme />
-
+          <ToggleTheme />
         </li>
-
       </ul>
     </aside>
   );
