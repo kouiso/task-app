@@ -4,10 +4,9 @@ import { useState } from 'react';
 
 import classNames from 'classnames';
 
-import ArrowDownIcon from '@/app/components/ArrowDown.icon';
-
 import Accordion from '../Accordion';
 
+import ArrowDownIcon from './ArrowDown.icon';
 import styles from './style.module.scss';
 
 type SidebarItemProps = {

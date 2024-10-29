@@ -2,8 +2,8 @@
 
 import { useLocalStorage } from 'react-use';
 
-import DarkModeIcon from './DarkMode.icon';
-import LightModeIcon from './LightMode.icon';
+import DarkModeIcon from './dark-mode.icon';
+import LightModeIcon from './light-mode.icon';
 import styles from './style.module.scss';
 
 const ToggleTheme = () => {
