@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 
+import classNames from 'classnames';
 import Link from 'next/link';
 
+import HamburgerIcon from '../Hamburger/index.icon';
 import SidebarItem from '../SidebarItem';
 import ToggleTheme from '../ToggleTheme';
 
@@ -11,7 +13,6 @@ import AccountBoxIcon from './AccountBox.icon';
 import AddToPhotosIcon from './AddToPhotos.icon';
 import BarChartIcon from './BarChart.icon';
 import EventNoteIcon from './EventNote.icon';
-import HamburgerIcon from './Hamburger.icon';
 import styles from './style.module.scss';
 
 const menus = [
@@ -75,28 +76,28 @@ const Sidebar = () => {
         <HamburgerIcon isHamburgerActive={isActive} />
       </button>
 
-      <ul className={`${styles.sidebarList} ${isActive ? styles.sidebarList__active : ''}`}>
-        {menus.map((menu) => (
-          <SidebarItem
-            key={menu.id}
-            head={{
-              title: menu.title,
-              menuIcon: menu.icon,
-              activeMenuIcon: menu.activeIcon,
-            }}
-          >
-            {menu.subMenus.map((subMenu) => (
-              <Link key={subMenu.id} className={styles.sidebarListChildrenItemLink} href={subMenu.href}>
-                {subMenu.label}
-              </Link>
-            ))}
-          </SidebarItem>
-        ))}
+      <div className={classNames(styles.sidebar_content, isActive ? styles.sidebar_content__active : '')}>
+        <ul className={styles.sidebarList}>
+          {menus.map((menu) => (
+            <SidebarItem
+              key={menu.id}
+              head={{
+                title: menu.title,
+                menuIcon: menu.icon,
+                activeMenuIcon: menu.activeIcon,
+              }}
+            >
+              {menu.subMenus.map((subMenu) => (
+                <Link key={subMenu.id} className={styles.sidebarListChildrenItemLink} href={subMenu.href}>
+                  {subMenu.label}
+                </Link>
+              ))}
+            </SidebarItem>
+          ))}
+        </ul>
 
-        <li className={styles.sidebarListChildrenLastItem}>
-          <ToggleTheme />
-        </li>
-      </ul>
+        <ToggleTheme />
+      </div>
     </aside>
   );
 };

@@ -7,7 +7,8 @@ body {
   background-color: var(--bg-body);
   color: var(--text);
   font-size: 62.5%;
-  overflow: scroll;
+  min-height: 100vh;
+  overflow-y: scroll;
 
   p,
   h1,

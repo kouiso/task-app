@@ -67,7 +67,7 @@
       max-width: 2.4rem;
       position: fixed;
       right: 1.6rem;
-      top: 2.2rem;
+      top: 2rem;
       z-index: 9999;
     }
   }
@@ -82,7 +82,7 @@
     width: 100%;
 
     @media #{$sp} {
-      margin-right: 0;
+      margin: 0;
     }
   }
 

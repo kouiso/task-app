@@ -3,5 +3,5 @@
 //____________________________
 .layout {
   display: flex;
-  height: calc(100% - var(--header-height-pc));
+  height: calc(100vh - var(--header-height-pc));
 }

@@ -1,0 +1,11 @@
+.hamburgerIcon {
+  svg {
+    fill: var(--text);
+  }
+
+  &.hamburgerIcon__active {
+    svg {
+      stroke: var(--text);
+    }
+  }
+}

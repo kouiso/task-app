@@ -18,7 +18,7 @@ const RootLayout = ({ children }: LayoutProps) => (
       <Header />
       <div className={styles.layout}>
         <Sidebar />
-        <main>{children}</main>
+        <div>{children}</div>
       </div>
     </body>
   </html>

@@ -1,6 +1,34 @@
 @use '../../styles/variables' as *;
 
 .sidebar {
+  .sidebar_content {
+    background-color: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: calc(100vh - var(--header-height-pc));
+    overflow-y: scroll;
+    padding: 3.2rem;
+    padding-left: 2.4rem;
+
+    @media #{$sp} {
+      left: 0;
+      max-height: calc(100vh - var(--header-height-sp));
+      max-width: 32rem;
+      padding: 2.4rem 1.6rem;
+      position: fixed;
+      top: var(--header-height-sp);
+      transform: translateX(-100%);
+      transition: 0.5s;
+      width: min(32rem, 80%);
+      z-index: 9998;
+
+      &.sidebar_content__active {
+        transform: translateX(0%);
+      }
+    }
+  }
+
   .sidebarHamburger {
     display: none;
 
@@ -23,35 +51,14 @@
   }
 
   .sidebarList {
-    background-color: var(--bg);
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-    height: 100%;
+    margin-bottom: 8rem;
     margin-top: 0;
-    padding: 3.2rem;
-    padding-left: 2.4rem;
     width: 28rem;
 
-    @media #{$sp} {
-      left: 0;
-      max-width: 32rem;
-      padding: 2.4rem 1.6rem;
-      padding-top: calc(var(--sp-header-height) + 0.8rem);
-      position: fixed;
-      top: 0;
-      transform: translateX(-100%);
-      transition: 0.5s;
-      width: min(32rem, 80%);
-      z-index: 9998;
-    }
 
-    &.sidebarList__active {
-      transform: translateX(0%);
-    }
-  }
 
-  .sidebarListChildrenLastItem {
-    margin-top: 2.4rem;
   }
 }
