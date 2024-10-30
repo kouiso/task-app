@@ -9,10 +9,10 @@ import HamburgerIcon from '../Hamburger/index.icon';
 import SidebarItem from '../SidebarItem';
 import ToggleTheme from '../ToggleTheme';
 
-import AccountBoxIcon from './AccountBox.icon';
-import AddToPhotosIcon from './AddToPhotos.icon';
-import BarChartIcon from './BarChart.icon';
-import EventNoteIcon from './EventNote.icon';
+import AccountBoxIcon from './account-box.icon';
+import AddToPhotosIcon from './add-to-photo.icon';
+import BarChartIcon from './bar-chart.icon';
+import EventNoteIcon from './event-note.icon';
 import styles from './style.module.scss';
 
 const menus = [

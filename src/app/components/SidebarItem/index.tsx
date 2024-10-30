@@ -6,7 +6,7 @@ import classNames from 'classnames';
 
 import Accordion from '../Accordion';
 
-import ArrowDownIcon from './ArrowDown.icon';
+import ArrowDownIcon from './arrow-down.icon';
 import styles from './style.module.scss';
 
 type SidebarItemProps = {
