@@ -8,11 +8,11 @@ import styles from './style.module.scss';
 
 type AccordionProps = {
   trigger: React.ReactNode;
-  content: React.ReactNode;
+  children: React.ReactNode;
   onToggle?: (isActive: boolean) => void;
 };
 
-const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => {
+const Accordion: React.FC<AccordionProps> = ({ trigger, children, onToggle }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
 
   const toggleAccordion = () => {
@@ -42,7 +42,7 @@ const Accordion: React.FC<AccordionProps> = ({ trigger, content, onToggle }) => 
         {trigger}
       </div>
 
-      <div className={classNames(styles.accordionContent, { [styles.open]: isActive })}>{content}</div>
+      <div className={classNames(styles.accordionContent, { [styles.open]: isActive })}>{children}</div>
     </div>
   );
 };

@@ -117,11 +117,9 @@ const Header = () => {
           </ul>
 
           <article className={styles.headerRightProfile}>
-            <Accordion
-              trigger={headerProfileAccordionTrigger}
-              content={headerProfileAccordionContent}
-              onToggle={handleAccordionToggle}
-            />
+            <Accordion trigger={headerProfileAccordionTrigger} onToggle={handleAccordionToggle}>
+              {headerProfileAccordionContent}
+            </Accordion>
           </article>
         </div>
       </div>

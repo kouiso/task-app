@@ -46,7 +46,9 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ head, children }) => {
 
   return (
     <li className={styles.sidebarItem}>
-      <Accordion trigger={sidebarItemAccordionTrigger} content={sidebarItemAccordionContent} onToggle={handleToggle} />
+      <Accordion trigger={sidebarItemAccordionTrigger} onToggle={handleToggle}>
+        {sidebarItemAccordionContent}
+      </Accordion>
     </li>
   );
 };
