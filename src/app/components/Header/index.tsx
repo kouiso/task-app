@@ -62,10 +62,9 @@ const Header = () => {
 
   const headerProfileAccordionTrigger = (
     <div
-      className={classNames(
-        styles.headerRightProfileFlex,
-        isAccordionActive ? styles.headerRightProfileFlex__active : '',
-      )}
+      className={classNames(styles.headerRightProfileFlex, {
+        [styles.headerRightProfileFlex__active]: isAccordionActive,
+      })}
     >
       <figure className={styles.headerRightProfileFlexFigure}>
         <Image src="/Test/test_image_profile_icon_1.png" alt="__TBD__" width={44} height={44} />
