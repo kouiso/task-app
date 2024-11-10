@@ -121,7 +121,7 @@
     position: relative;
   }
 
-  .headerRightProfileFlexDesc svg {
+  .headerRightProfileFlex svg {
     aspect-ratio: 1;
     display: inline-block;
     fill: var(--text);
@@ -129,18 +129,20 @@
     right: 0;
     top: 50%;
     transform: translate(0%, -50%);
+    transform-origin: center;
     transition: 0.5s;
     width: 2.4rem;
 
   }
 
-  .headerRightProfileFlexDesc path {
+  .headerRightProfileFlex path {
     fill: var(--text);
   }
 
   .headerRightProfileFlex__active {
     svg {
       transform: translate(0%, -50%) rotate(-180deg);
+
     }
   }
 
