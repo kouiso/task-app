@@ -70,8 +70,8 @@ const Header = () => {
         <Image src="/Test/test_image_profile_icon_1.png" alt="__TBD__" width={44} height={44} />
       </figure>
       <div className={styles.headerRightProfileFlexDesc}>
-        <p className={styles.headerRightProfileFlexDescUserame}>Kousuke</p>
-        <p className={styles.headerRightProfileFlexDescUserrole}>Lead Developer</p>
+        <p className={styles.headerRightProfileFlexDescUserName}>Kousuke</p>
+        <p className={styles.headerRightProfileFlexDescUserRole}>Lead Developer</p>
       </div>
       <ArrowDownWhiteIcon />
     </div>
