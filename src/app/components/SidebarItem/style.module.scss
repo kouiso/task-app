@@ -32,6 +32,11 @@
 
       .sidebarItemTextIcon__arrow {
         transform: rotate(-180deg);
+
+      }
+
+      path {
+        fill: var(--white);
       }
     }
   }

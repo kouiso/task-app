@@ -20,7 +20,6 @@ const menus = [
     id: 'account',
     title: 'アカウント',
     icon: <AccountBoxIcon />,
-    activeIcon: <AccountBoxIcon fillColor="#fff" />,
     subMenus: [
       { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
       { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
@@ -30,7 +29,6 @@ const menus = [
     id: 'record',
     title: '記録',
     icon: <BarChartIcon />,
-    activeIcon: <BarChartIcon fillColor="#fff" />,
     subMenus: [
       { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
       { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
@@ -42,14 +40,12 @@ const menus = [
     id: 'register',
     title: '登録',
     icon: <AddToPhotosIcon />,
-    activeIcon: <AddToPhotosIcon fillColor="#fff" />,
     subMenus: [{ id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' }],
   },
   {
     id: 'other',
     title: 'その他',
     icon: <EventNoteIcon />,
-    activeIcon: <EventNoteIcon fillColor="#fff" />,
     subMenus: [
       { id: 'sub1', href: '/__TBD__', label: 'サブメニュー1' },
       { id: 'sub2', href: '/__TBD__', label: 'サブメニュー2' },
@@ -84,7 +80,6 @@ const Sidebar = () => {
               head={{
                 title: menu.title,
                 menuIcon: menu.icon,
-                activeMenuIcon: menu.activeIcon,
               }}
             >
               {menu.subMenus.map((subMenu) => (

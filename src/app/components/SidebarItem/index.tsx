@@ -13,7 +13,6 @@ type SidebarItemProps = {
   head: {
     title: string;
     menuIcon: React.ReactNode;
-    activeMenuIcon: React.ReactNode;
   };
   children: React.ReactNode;
 };
@@ -32,12 +31,12 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ head, children }) => {
       })}
     >
       <figure className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__menu)}>
-        {isAccordionActive ? head.activeMenuIcon : head.menuIcon}
+        {head.menuIcon}
       </figure>
       {head.title}
 
       <figure className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__arrow)}>
-        <ArrowDownIcon fillColor={isAccordionActive ? '#fff' : '#495D68'} />
+        <ArrowDownIcon />
       </figure>
     </div>
   );
