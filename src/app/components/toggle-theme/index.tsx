@@ -35,7 +35,7 @@ const ToggleTheme = () => {
 
   const isDark = theme === 'dark';
 
-  const toggleTheme = () => {
+  const reverseTheme = () => {
     const newTheme = isDark ? 'light' : 'dark';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme-mode', newTheme);
@@ -43,15 +43,14 @@ const ToggleTheme = () => {
 
   const lightModeActiveClass = { [styles.toggleThemeButtonIcon__active]: !isDark };
   const darkModeActiveClass = { [styles.toggleThemeButtonIcon__active]: isDark };
-  const iconthemeClass = { [styles.isDark]: isDark };
 
   return (
-    <button type="button" className={styles.toggleThemeButton} onClick={toggleTheme}>
-      <figure className={classNames(styles.toggleThemeButtonIcon, lightModeActiveClass, iconthemeClass)}>
+    <button type="button" className={styles.toggleThemeButton} onClick={reverseTheme}>
+      <figure className={classNames(styles.toggleThemeButtonIcon, lightModeActiveClass)}>
         <LightModeIcon />
       </figure>
       <span>/</span>
-      <figure className={classNames(styles.toggleThemeButtonIcon, darkModeActiveClass, iconthemeClass)}>
+      <figure className={classNames(styles.toggleThemeButtonIcon, darkModeActiveClass)}>
         <DarkModeIcon />
       </figure>
     </button>

@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import classNames from 'classnames';
 
-import Accordion from '../Accordion';
+import Accordion from '../accordion';
 
 import ArrowDownIcon from './arrow-down.icon';
 import styles from './style.module.scss';
