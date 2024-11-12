@@ -1,29 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useLocalStorage } from 'react-use';
 
 import classNames from 'classnames';
+
+import useLocalStorage from '@/lib/use-local-storage/index';
 
 import DarkModeIcon from './dark-mode.icon';
 import LightModeIcon from './light-mode.icon';
 import styles from './style.module.scss';
 
 const ToggleTheme = () => {
-  const [theme, setTheme] = useLocalStorage<string | undefined>('theme', undefined);
+  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(
+    'theme',
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  );
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (theme === undefined) {
-      const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const initialTheme = prefersDarkMode ? 'dark' : 'light';
-      setTheme(initialTheme);
-      document.documentElement.setAttribute('data-theme-mode', initialTheme);
-    } else {
+    if (theme) {
       document.documentElement.setAttribute('data-theme-mode', theme);
     }
     setMounted(true);
-  }, [theme, setTheme]);
+  }, [theme]);
 
   if (theme === undefined) {
     return null;
