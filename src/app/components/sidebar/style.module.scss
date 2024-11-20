@@ -1,0 +1,64 @@
+@use '../../styles/variables' as *;
+
+.sidebar {
+  .sidebar_content {
+    background-color: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: calc(100vh - var(--header-height-pc));
+    overflow-y: scroll;
+    padding: 3.2rem;
+    padding-left: 2.4rem;
+
+    @media #{$sp} {
+      left: 0;
+      max-height: calc(100vh - var(--header-height-sp));
+      max-width: 32rem;
+      padding: 2.4rem 1.6rem;
+      position: fixed;
+      top: var(--header-height-sp);
+      transform: translateX(-100%);
+      transition: 0.5s;
+      width: min(32rem, 80%);
+      z-index: 9998;
+
+      &.sidebar_content__active {
+        transform: translateX(0%);
+      }
+    }
+  }
+
+  .sidebarHamburger {
+    display: none;
+
+    @media #{$sp} {
+      align-items: center;
+      aspect-ratio: 1;
+      border-radius: 0.6rem;
+      display: flex;
+      justify-content: center;
+      left: 1.6rem;
+      position: fixed;
+      top: 1.8rem;
+      width: 3rem;
+      z-index: 9999;
+
+      &:hover {
+        background-color: var(--primary);
+      }
+    }
+  }
+
+  .sidebarList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 8rem;
+    margin-top: 0;
+    width: 28rem;
+
+
+
+  }
+}

@@ -1,0 +1,56 @@
+@use './variables' as *;
+
+html,
+body {
+  background-color: var(--bg-body);
+  color: var(--text);
+  font-size: 62.5%;
+  min-height: 100vh;
+  overflow-y: scroll;
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  a,
+  li,
+  span,
+  b,
+  input,
+  textarea,
+  label,
+  strong,
+  em,
+  i,
+  u {
+    color: var(--text);
+    font-size: 1.6rem;
+  }
+
+  * {
+    background-color: transparent;
+  }
+
+  ul,
+  ol {
+    list-style: none;
+    padding: 0;
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  input,
+  button,
+  select {
+    border: 0;
+  }
+}

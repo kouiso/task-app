@@ -50,6 +50,7 @@
     "@trpc/server": "^11.0.0-rc.502",
     "aspida": "^1.14.0",
     "axios": "^1.7.2",
+    "classnames": "^2.5.1",
     "firebase": "^10.12.4",
     "next": "14.2.13",
     "next-auth": "^4.24.7",
@@ -61,6 +62,7 @@
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.25.1",
     "react-toastify": "^10.0.5",
+    "react-use": "^17.5.1",
     "sanitize.css": "^13.0.0",
     "zod": "^3.23.8"
   },

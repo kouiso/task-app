@@ -13,10 +13,10 @@ env:
 jobs:
   destroy:
     permissions:
-      contents: "read"
-      id-token: "write"
-      packages: "write"
-      pull-requests: "write"
+      contents: 'read'
+      id-token: 'write'
+      packages: 'write'
+      pull-requests: 'write'
 
     runs-on: ubuntu-latest
 

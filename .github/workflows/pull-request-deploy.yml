@@ -16,10 +16,10 @@ env:
 jobs:
   deploy:
     permissions:
-      contents: "read"
-      id-token: "write"
-      packages: "write"
-      pull-requests: "write"
+      contents: 'read'
+      id-token: 'write'
+      packages: 'write'
+      pull-requests: 'write'
 
     runs-on: ubuntu-latest
 
@@ -71,4 +71,4 @@ jobs:
         uses: peter-evans/create-or-update-comment@v4.0.0
         with:
           issue-number: ${{ github.event.pull_request.number }}
-          body: "Deployed application URL: ${{ steps.deploy.outputs.url }}"
+          body: 'Deployed application URL: ${{ steps.deploy.outputs.url }}'

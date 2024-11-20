@@ -99,9 +99,9 @@ rules:
       # 名前なしコンポーネントはアロー関数を使用
       unnamedComponents: arrow-function
   # デフォルトエクスポートを優先しない
-  import/prefer-default-export: off
+  import/prefer-default-export: error
   # デフォルトエクスポートをエラーとして扱う
-  import/no-default-export: error
+  import/no-default-export: off
   # consoleの使用を警告として扱う
   no-console:
     - warn
@@ -307,15 +307,3 @@ overrides:
       - 'src/lib/orval/*'
     rules:
       no-restricted-imports: 'off'
-  # 特定のページファイルに対するルールの上書き
-  - files:
-      - 'page.tsx'
-      - 'layout.tsx'
-      - 'src/lib/aspida/*.ts'
-      - 'src/**/icon/*.tsx' # iconディレクトリ内のtsxはlazyするかもなので、エラーにしない
-      - 'src/app/layout.tsx'
-      - 'error.tsx'
-      - 'not-found.tsx'
-      - 'robots.tsx'
-    rules:
-      import/no-default-export: 'off'

@@ -12,9 +12,9 @@ env:
 jobs:
   deploy:
     permissions:
-      contents: "read"
-      id-token: "write"
-      packages: "write"
+      contents: 'read'
+      id-token: 'write'
+      packages: 'write'
 
     runs-on: ubuntu-latest
 
