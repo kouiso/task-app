@@ -47,4 +47,4 @@ class FirebaseAuth {
   }
 }
 
-export { FirebaseAuth };
+export default FirebaseAuth;

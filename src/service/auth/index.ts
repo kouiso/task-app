@@ -1,6 +1,6 @@
 import { toast } from 'react-toastify';
 
-import { FirebaseAuth as FirebaseUtilAuth } from '@/interface/firebase-auth';
+import FirebaseUtilAuth from '@/interface/firebase-auth';
 
 /**
  * Authクラスは、認証機能を提供します。
@@ -30,4 +30,4 @@ class Auth extends FirebaseUtilAuth {
   }
 }
 
-export { Auth };
+export default Auth;
