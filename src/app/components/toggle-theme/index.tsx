@@ -18,13 +18,19 @@ const ToggleTheme = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (theme) { document.documentElement.setAttribute('data-theme-mode', theme); }
+    if (theme) {
+      document.documentElement.setAttribute('data-theme-mode', theme);
+    }
     setMounted(true);
   }, [theme]);
 
-  if (theme === undefined) { return null; }
+  if (theme === undefined) {
+    return null;
+  }
 
-  if (!mounted) { return null; }
+  if (!mounted) {
+    return null;
+  }
 
   const isDark = theme === 'dark';
 

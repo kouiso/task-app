@@ -1,3 +1,3 @@
 import { axiosInstance as apiService } from './axios';
 
-export { apiService };
+export default apiService;
