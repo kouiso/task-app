@@ -1,0 +1,69 @@
+name: Pr Auto Setting
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  assignAuthor:
+    name: Assign author to PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign author to PR
+        uses: technote-space/assign-author@v1
+
+  auto-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add label based on branch name
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            console.log(`Branch name: ${branchName}`);
+
+            console.log('Adding label based on branch name...');
+            if (branchName.startsWith('feature/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['feature']
+              });
+              console.log('Feature label added.');
+            } else if (branchName.startsWith('bugfix/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['bugfix']
+              });
+              console.log('Bugfix label added.');
+            } else if (branchName.startsWith('release/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['release']
+              });
+              console.log('Release label added.');
+            } else if (branchName.startsWith('hotfix/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['hotfix']
+              });
+              console.log('Hotfix label added.');
+            } else if (branchName.startsWith('support/')) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['support']
+              });
+              console.log('Support label added.');
+            } else {
+              console.log('No matching prefix found for label addition.');
+            }

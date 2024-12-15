@@ -1,6 +1,6 @@
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened]
   issue_comment:
 jobs:
   pr_agent_job:
@@ -20,7 +20,7 @@ jobs:
           AZURE_OPENAI_API_KEY: ${{ secrets.OPENAI_KEY }}
           OPENAI_API_TYPE: "azure"
           OPENAI_API_VERSION: "gpt4o"
-          OPENAI.API_BASE: "https://ritmo-gpt.openai.azure.com"
+          OPENAI.API_BASE: "https://ritmo-japan-east.openai.azure.com/"
           OPENAI.DEPLOYMENT_ID: "ritmo-assistant"
           PR_DESCRIPTION.EXTRA_INSTRUCTIONS: "answer in Japanese"
           PR_REVIEWER.EXTRA_INSTRUCTIONS: "answer in Japanese"
