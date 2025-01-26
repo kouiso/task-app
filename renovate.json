@@ -1,0 +1,42 @@
+{
+  "extends": [
+    "config:base",
+    ":dependencyDashboard"
+  ],
+  "schedule": ["every weekend"],
+  "automerge": true,
+  "automergeType": "pr",
+  "requiredStatusChecks": null,
+  "branchProtection": {
+    "required_status_checks": {
+      "contexts": ["ci"]
+    }
+  },
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "matchUpdateTypes": ["pin", "digest", "patch", "minor", "major"],
+      "matchDepTypes": ["dependencies", "devDependencies"],
+      "matchPackagePatterns": ["*"],
+      "enabled": true
+    },
+    {
+      "matchUpdateTypes": ["security"],
+      "matchVulnerabilitySeverity": ["critical", "high", "moderate"],
+      "automerge": true
+    }
+  ],
+  "npm": {
+    "enabled": true
+  },
+  "github-actions": {
+    "enabled": true
+  }
+}
