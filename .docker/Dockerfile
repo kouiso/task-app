@@ -1,4 +1,4 @@
-FROM node:22.5.1-slim
+FROM node:23.8.0-slim
 
 WORKDIR /app
 
@@ -6,10 +6,10 @@ ARG ENV
 # OS settings
 ENV PATH /app/node_modules/.bin:$PATH
 
-# OS lib 
+# OS lib
 RUN apt-get update -qq \
   && apt-get install -qy  \
-  curl \ 
+  curl \
   procps \
   --no-install-recommends
 
