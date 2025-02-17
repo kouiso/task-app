@@ -1,4 +1,4 @@
-name: 全てのブランチでpushされた時にinstall-build-lintが全て通るかチェックされる
+name: ci
 
 on:
   push:
