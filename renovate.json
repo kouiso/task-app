@@ -3,7 +3,7 @@
     "config:base"
   ],
   "schedule": [
-    "every 2 weeks on saturday"
+    "monthly on saturday"
   ],
   "automerge": true,
   "automergeType": "pr",
@@ -23,10 +23,7 @@
         "patch"
       ],
       "automerge": true,
-      "groupName": "非メジャーアップデート",
-      "schedule": [
-        "every 4 weeks on saturday"
-      ]
+      "groupName": "非メジャーアップデート"
     },
     {
       "matchUpdateTypes": [
@@ -36,9 +33,6 @@
       "labels": [
         "dependencies",
         "major-update"
-      ],
-      "schedule": [
-        "every 3 months on saturday"
       ]
     },
     {
@@ -61,27 +55,13 @@
         "prettier",
         "stylelint"
       ],
-      "groupName": "リンター関連パッケージ",
-      "schedule": [
-        "every 2 months on saturday"
-      ]
+      "groupName": "リンター関連パッケージ"
     },
     {
       "matchPackagePatterns": [
         "^@types/"
       ],
-      "groupName": "型定義パッケージ",
-      "schedule": [
-        "every 2 months on saturday"
-      ]
-    },
-    {
-      "matchDepTypes": [
-        "devDependencies"
-      ],
-      "schedule": [
-        "every 2 months on saturday"
-      ]
+      "groupName": "型定義パッケージ"
     }
   ],
   "npm": {
