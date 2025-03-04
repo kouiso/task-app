@@ -1,5 +1,42 @@
 version: 2
 updates:
+  # セキュリティアップデート（脆弱性チェック）のみに集中
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      # 週に1回のチェックに変更
+      interval: "weekly"
+      # 週末に実行
+      day: "saturday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    labels:
+      - "security"
+    # 脆弱性アラートを有効化
+    insecure-external-code-execution: deny
+    vulnerability-alerts: true
+    # 通常の依存関係更新は無効化し、脆弱性対応のみに集中
+    versioning-strategy: "lockfile-only"
+    allow:
+      # セキュリティ更新のみを許可
+      - dependency-type: "all"
+        update-types: ["security"]
+    
+  # GitHub Actions のセキュリティアップデート（月1回に変更）
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "saturday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 3
+    labels:
+      - "security"
+      - "github-actions"
+    vulnerability-alerts: true
+    
   # npm パッケージの更新
   - package-ecosystem: "npm"
     directory: "/"

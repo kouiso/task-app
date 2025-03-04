@@ -3,14 +3,15 @@
     "config:base"
   ],
   "schedule": [
-    "every weekend"
+    "every 2 weeks on saturday"
   ],
   "automerge": true,
   "automergeType": "pr",
   "requiredStatusChecks": null,
   "prHourlyLimit": 0,
-  "prConcurrentLimit": 0,
+  "prConcurrentLimit": 5,
   "dependencyDashboard": true,
+  "dependencyDashboardAutoclose": true,
   "dependencyDashboardTitle": "📦 依存関係アップデートダッシュボード",
   "labels": [
     "dependencies"
@@ -22,7 +23,10 @@
         "patch"
       ],
       "automerge": true,
-      "groupName": "非メジャーアップデート"
+      "groupName": "非メジャーアップデート",
+      "schedule": [
+        "every 4 weeks on saturday"
+      ]
     },
     {
       "matchUpdateTypes": [
@@ -32,6 +36,9 @@
       "labels": [
         "dependencies",
         "major-update"
+      ],
+      "schedule": [
+        "every 3 months on saturday"
       ]
     },
     {
@@ -43,7 +50,10 @@
         "high"
       ],
       "automerge": true,
-      "prPriority": 1
+      "prPriority": 1,
+      "labels": [
+        "security"
+      ]
     },
     {
       "matchPackagePatterns": [
@@ -51,13 +61,27 @@
         "prettier",
         "stylelint"
       ],
-      "groupName": "リンター関連パッケージ"
+      "groupName": "リンター関連パッケージ",
+      "schedule": [
+        "every 2 months on saturday"
+      ]
     },
     {
       "matchPackagePatterns": [
         "^@types/"
       ],
-      "groupName": "型定義パッケージ"
+      "groupName": "型定義パッケージ",
+      "schedule": [
+        "every 2 months on saturday"
+      ]
+    },
+    {
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "schedule": [
+        "every 2 months on saturday"
+      ]
     }
   ],
   "npm": {
