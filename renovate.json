@@ -1,36 +1,63 @@
 {
   "extends": [
-    "config:base",
-    ":dependencyDashboard"
+    "config:base"
   ],
-  "schedule": ["every weekend"],
+  "schedule": [
+    "every weekend"
+  ],
   "automerge": true,
   "automergeType": "pr",
   "requiredStatusChecks": null,
-  "branchProtection": {
-    "required_status_checks": {
-      "contexts": ["ci"]
-    }
-  },
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "📦 依存関係アップデートダッシュボード",
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true,
+      "groupName": "非メジャーアップデート"
     },
     {
-      "matchUpdateTypes": ["major"],
-      "automerge": false
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "major-update"
+      ]
     },
     {
-      "matchUpdateTypes": ["pin", "digest", "patch", "minor", "major"],
-      "matchDepTypes": ["dependencies", "devDependencies"],
-      "matchPackagePatterns": ["*"],
-      "enabled": true
+      "matchUpdateTypes": [
+        "security"
+      ],
+      "matchVulnerabilitySeverity": [
+        "critical",
+        "high"
+      ],
+      "automerge": true,
+      "prPriority": 1
     },
     {
-      "matchUpdateTypes": ["security"],
-      "matchVulnerabilitySeverity": ["critical", "high", "moderate"],
-      "automerge": true
+      "matchPackagePatterns": [
+        "eslint",
+        "prettier",
+        "stylelint"
+      ],
+      "groupName": "リンター関連パッケージ"
+    },
+    {
+      "matchPackagePatterns": [
+        "^@types/"
+      ],
+      "groupName": "型定義パッケージ"
     }
   ],
   "npm": {
