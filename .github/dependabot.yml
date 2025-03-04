@@ -1,12 +1,11 @@
 version: 2
 updates:
-  # セキュリティアップデート（脆弱性チェック）のみに集中
+  # セキュリティアップデート（脆弱性チェック）
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      # 週に1回のチェックに変更
-      interval: "weekly"
-      # 週末に実行
+      # 月1回に変更
+      interval: "monthly"
       day: "saturday"
       time: "09:00"
       timezone: "Asia/Tokyo"
@@ -23,7 +22,7 @@ updates:
       - dependency-type: "all"
         update-types: ["security"]
     
-  # GitHub Actions のセキュリティアップデート（月1回に変更）
+  # GitHub Actions のセキュリティアップデート
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
