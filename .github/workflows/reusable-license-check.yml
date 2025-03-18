@@ -11,11 +11,6 @@ on:
         type: string
         description: 'Semicolon-separated list of disallowed licenses'
         default: 'GPL;GPL-2.0;GPL-3.0;LGPL;LGPL-3.0;AGPL-3.0;SSPL;EUPL;CDDL-1.0;EPL-1.0;OPL-1.0'
-      skip-if-no-changes:
-        required: false
-        type: boolean
-        description: 'Only run if package.json or package-lock.json has changed'
-        default: false
 
 jobs:
   license-check:
@@ -33,7 +28,6 @@ jobs:
           
       - name: Check if package files have changed
         id: check_changes
-        if: inputs.skip-if-no-changes
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             # PRイベントの場合、ベースブランチと比較
@@ -53,11 +47,11 @@ jobs:
           fi
           
       - name: Install dependencies
-        if: ${{ !inputs.skip-if-no-changes || steps.check_changes.outputs.changes == 'true' }}
+        if: steps.check_changes.outputs.changes == 'true'
         run: npm ci
         
       - name: Check licenses
-        if: ${{ !inputs.skip-if-no-changes || steps.check_changes.outputs.changes == 'true' }}
+        if: steps.check_changes.outputs.changes == 'true'
         run: |
           npm install -g license-checker
 
