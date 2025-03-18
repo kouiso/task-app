@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -33,12 +35,21 @@ jobs:
         id: check_changes
         if: inputs.skip-if-no-changes
         run: |
-          git fetch origin ${{ github.event.pull_request.base.ref || 'HEAD~1' }}
-          CHANGED_FILES=$(git diff --name-only FETCH_HEAD..${{ github.sha }} | grep -E 'package(-lock)?\.json$' || true)
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # PRイベントの場合、ベースブランチと比較
+            git fetch origin ${{ github.event.pull_request.base.ref }}
+            CHANGED_FILES=$(git diff --name-only FETCH_HEAD..${{ github.sha }} | grep -E 'package(-lock)?\.json$' || true)
+          else
+            # Push/workflow_dispatchイベントの場合、1つ前のコミットと比較
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD | grep -E 'package(-lock)?\.json$' || true)
+          fi
+          
           if [[ -n "$CHANGED_FILES" ]]; then
             echo "changes=true" >> $GITHUB_OUTPUT
+            echo "変更が検出されたpackageファイル: $CHANGED_FILES"
           else
             echo "changes=false" >> $GITHUB_OUTPUT
+            echo "packageファイルの変更はありません"
           fi
           
       - name: Install dependencies
