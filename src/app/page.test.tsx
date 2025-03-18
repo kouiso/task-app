@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { render, screen } from '../test/utils';
 
 import HomePage from './page';
+
+// Next/Imageコンポーネントをモック
+vi.mock('next/image', () => ({
+  __esModule: true,
+  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+}));
 
 describe('HomePageコンポーネント', () => {
   it('Next.jsのロゴが表示されること', () => {

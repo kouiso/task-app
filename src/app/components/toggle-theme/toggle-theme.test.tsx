@@ -17,6 +17,8 @@ vi.mock('../../context/ThemeContext', () => ({
     mode: 'light',
     toggleTheme: toggleThemeMock,
   }),
+  CustomThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ThemeContext: { Provider: ({ children }: { children: React.ReactNode }) => <div>{children}</div> },
 }));
 
 // Next.jsのImageコンポーネントのモック

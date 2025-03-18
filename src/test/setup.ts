@@ -55,13 +55,10 @@ type ImageProps = ComponentProps<'img'> & {
 vi.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage(props: ImageProps) {
-    return {
-      type: 'img',
-      props: {
-        ...props,
-        'data-testid': 'mock-image',
-      },
-    };
+    const img = document.createElement('img');
+    Object.assign(img, props);
+    img.setAttribute('data-testid', 'mock-image');
+    return img;
   },
 }));
 
