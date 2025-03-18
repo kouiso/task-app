@@ -11,18 +11,20 @@ import LightModeIcon from './light-mode.icon';
 import styles from './style.module.scss';
 
 const ToggleTheme = () => {
-  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(
-    'theme',
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-  );
+  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    if (!theme && typeof window !== 'undefined') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      setTheme(systemTheme);
+    }
+    
     if (theme) {
       document.documentElement.setAttribute('data-theme-mode', theme);
     }
     setMounted(true);
-  }, [theme]);
+  }, [theme, setTheme]);
 
   if (theme === undefined) {
     return null;
