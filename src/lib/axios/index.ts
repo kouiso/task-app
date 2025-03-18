@@ -18,8 +18,6 @@ axiosInstance.interceptors.request.use(
     if (user) {
       const token = await auth.currentUser?.getIdToken();
       config.headers.set('Authorization', `Bearer ${token}`);
-    } else {
-      console.info('User is not logged in, sending request without token');
     }
     return config;
   },
