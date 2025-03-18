@@ -1,9 +1,12 @@
 name: ci
 
 on:
+  pull_request:
+    types: [opened, reopened, synchronize]
   push:
     branches:
-      - '*'
+      - develop
+  workflow_dispatch:
 
 jobs:
   common-setup:
