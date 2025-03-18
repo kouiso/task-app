@@ -6,29 +6,41 @@
   "dependencyDashboard": false,
   "rebaseWhen": "never",
   "schedule": [
-    "before 3am on Monday"
+    "after 8pm on Friday"
   ],
   "prHourlyLimit": 10,
   "prConcurrentLimit": 10,
-  "minimumReleaseAge": "7 days",
   "labels": [
     "renovate"
   ],
   "rangeStrategy": "bump",
+  "requiredStatusChecks": [
+    "build",
+    "test"
+  ],
   "packageRules": [
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true
+    },
     {
       "groupName": "リンター関連パッケージ",
       "matchPackagePatterns": [
         "eslint",
         "prettier",
         "stylelint"
-      ]
+      ],
+      "automerge": true
     },
     {
       "groupName": "型定義パッケージ",
       "matchPackagePatterns": [
         "^@types/"
-      ]
+      ],
+      "automerge": true
     },
     {
       "managers": [
@@ -42,7 +54,7 @@
       ],
       "groupName": "本番環境依存関係",
       "groupSlug": "production-dependencies",
-      "automerge": false
+      "automerge": true
     },
     {
       "managers": [
@@ -56,7 +68,7 @@
       ],
       "groupName": "開発環境依存関係",
       "groupSlug": "dev-dependencies",
-      "automerge": false
+      "automerge": true
     },
     {
       "matchManagers": [
@@ -66,7 +78,8 @@
       "labels": [
         "renovate",
         "github-actions"
-      ]
+      ],
+      "automerge": true
     }
   ],
   "npm": {
