@@ -53,6 +53,17 @@
         "^@types/"
       ],
       "groupName": "型定義パッケージ"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "automerge": true,
+      "groupName": "GitHub Actions",
+      "labels": [
+        "dependencies",
+        "github-actions"
+      ]
     }
   ],
   "npm": {
