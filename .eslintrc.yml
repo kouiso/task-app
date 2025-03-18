@@ -192,6 +192,10 @@ rules:
         - '**/*.spec.{ts,tsx}'
         # ストーリーファイルを許可
         - '**/*.stories.{ts,tsx}'
+        # セットアップファイルを許可
+        - '**/test/setup.ts'
+        - '**/test/**/*.ts'
+        - '**/test/utils.tsx'
       # 任意の依存関係を許可しない
       optionalDependencies: false
   # 制限されたimportをエラーとして扱う

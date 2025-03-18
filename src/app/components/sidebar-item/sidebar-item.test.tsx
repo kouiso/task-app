@@ -13,6 +13,8 @@ vi.mock('../../context/ThemeContext', () => ({
     mode: 'light',
     toggleTheme: vi.fn(),
   }),
+  CustomThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ThemeContext: { Provider: ({ children }: { children: React.ReactNode }) => <div>{children}</div> },
 }));
 
 describe('SidebarItemコンポーネント', () => {

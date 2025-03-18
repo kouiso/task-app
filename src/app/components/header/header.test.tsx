@@ -11,6 +11,8 @@ vi.mock('../../context/ThemeContext', () => ({
     mode: 'light',
     toggleTheme: vi.fn(),
   }),
+  CustomThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ThemeContext: { Provider: ({ children }: { children: React.ReactNode }) => <div>{children}</div> },
 }));
 
 const TEST_VALUES = {
@@ -67,6 +69,8 @@ describe('Headerコンポーネント', () => {
       onchange: null,
       addListener: vi.fn(),
       removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
     }));
 
     render(<Header />);

@@ -11,6 +11,8 @@ vi.mock('../../context/ThemeContext', () => ({
     mode: 'light',
     toggleTheme: vi.fn(),
   }),
+  CustomThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ThemeContext: { Provider: ({ children }: { children: React.ReactNode }) => <div>{children}</div> },
 }));
 
 // モバイル表示用のmatchMediaモック
@@ -21,6 +23,8 @@ const mockMatchMedia = (matches: boolean) => {
     onchange: null,
     addListener: vi.fn(),
     removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
   }));
 };
 
@@ -48,7 +52,7 @@ vi.mock('./constants', () => ({
     {
       id: 'test',
       title: 'テストメニュー',
-      icon: <div>Icon</div>,
+      icon: 'TestIcon',
       subMenus: [{ id: 'sub1', href: '/test', label: 'サブメニュー' }],
     },
   ],
