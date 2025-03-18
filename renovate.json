@@ -1,67 +1,70 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base"
   ],
+  "dependencyDashboard": false,
+  "rebaseWhen": "never",
   "schedule": [
-    "monthly on saturday"
+    "before 3am on Monday"
   ],
-  "automerge": true,
-  "automergeType": "pr",
-  "requiredStatusChecks": [
-    "build",
-    "test"
-  ],
-  "stabilityDays": 3,
-  "prCreation": "not-pending",
-  "prHourlyLimit": 0,
-  "prConcurrentLimit": 5,
-  "dependencyDashboard": true,
-  "dependencyDashboardAutoclose": true,
-  "dependencyDashboardTitle": "📦 依存関係アップデートダッシュボード",
+  "prHourlyLimit": 10,
+  "prConcurrentLimit": 10,
+  "minimumReleaseAge": "7 days",
   "labels": [
-    "dependencies"
+    "renovate"
   ],
+  "rangeStrategy": "bump",
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "automerge": true,
-      "groupName": "非メジャーアップデート"
-    },
-    {
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "automerge": true,
-      "labels": [
-        "dependencies",
-        "major-update"
-      ]
-    },
-    {
+      "groupName": "リンター関連パッケージ",
       "matchPackagePatterns": [
         "eslint",
         "prettier",
         "stylelint"
-      ],
-      "groupName": "リンター関連パッケージ"
+      ]
     },
     {
+      "groupName": "型定義パッケージ",
       "matchPackagePatterns": [
         "^@types/"
+      ]
+    },
+    {
+      "managers": [
+        "npm"
       ],
-      "groupName": "型定義パッケージ"
+      "matchPackageNames": [
+        "*"
+      ],
+      "matchDepTypes": [
+        "dependencies"
+      ],
+      "groupName": "本番環境依存関係",
+      "groupSlug": "production-dependencies",
+      "automerge": false
+    },
+    {
+      "managers": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "*"
+      ],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "groupName": "開発環境依存関係",
+      "groupSlug": "dev-dependencies",
+      "automerge": false
     },
     {
       "matchManagers": [
         "github-actions"
       ],
-      "automerge": true,
       "groupName": "GitHub Actions",
       "labels": [
-        "dependencies",
+        "renovate",
         "github-actions"
       ]
     }
