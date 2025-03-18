@@ -19,7 +19,6 @@ const ToggleTheme = () => {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       setTheme(systemTheme);
     }
-    
     if (theme) {
       document.documentElement.setAttribute('data-theme-mode', theme);
     }

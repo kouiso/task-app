@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  common-setup:
+  ci:
     uses: ./.github/workflows/reusable-ci.yml
     with:
       node-version-file: .tool-versions

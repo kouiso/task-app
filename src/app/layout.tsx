@@ -7,10 +7,6 @@ type LayoutProps = {
   children: React.ReactNode;
 };
 
-export const metadata = {
-  title: 'HorseManager',
-};
-
 const RootLayout = ({ children }: LayoutProps) => (
   <html lang="ja">
     <head />
