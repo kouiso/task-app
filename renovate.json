@@ -15,8 +15,7 @@
   ],
   "rangeStrategy": "bump",
   "requiredStatusChecks": [
-    "build",
-    "test"
+    "ci"
   ],
   "packageRules": [
     {
