@@ -1,0 +1,73 @@
+name: 'Common Setup'
+on:
+  workflow_call:
+    inputs:
+      node-version-file:
+        description: 'Path to the Node.js version file'
+        required: true
+        type: string
+    secrets:
+      firebase-api-key:
+        description: 'Firebase API Key'
+        required: true
+      firebase-auth-domain:
+        description: 'Firebase Auth Domain'
+        required: true
+      firebase-project-id:
+        description: 'Firebase Project ID'
+        required: true
+      firebase-storage-bucket:
+        description: 'Firebase Storage Bucket'
+        required: true
+      firebase-messaging-sender-id:
+        description: 'Firebase Messaging Sender ID'
+        required: true
+      firebase-app-id:
+        description: 'Firebase App ID'
+        required: true
+      firebase-measurement-id:
+        description: 'Firebase Measurement ID'
+        required: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        id: cache-node
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set Firebase Environment Variables
+        run: |
+          echo "NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.firebase-api-key }}" >> .env
+          echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.firebase-auth-domain }}" >> .env
+          echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.firebase-project-id }}" >> .env
+          echo "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.firebase-storage-bucket }}" >> .env
+          echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.firebase-messaging-sender-id }}" >> .env
+          echo "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.firebase-app-id }}" >> .env
+          echo "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${{ secrets.firebase-measurement-id }}" >> .env
+
+      - name: Npm Build
+        run: npm run build
+
+      - name: Npm Lint
+        run: |
+          npm run lint || exit_code=$?
+          if [ $exit_code -ne 0 ] && [ $exit_code -ne 1 ]; then
+            exit $exit_code
+          fi 
