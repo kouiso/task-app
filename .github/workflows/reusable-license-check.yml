@@ -1,0 +1,64 @@
+name: License Check
+on:
+  workflow_call:
+    inputs:
+      node-version-file:
+        required: true
+        type: string
+        description: 'Path to the Node.js version file'
+      disallow-licenses:
+        required: false
+        type: string
+        description: 'Semicolon-separated list of disallowed licenses'
+        default: 'GPL;GPL-2.0;GPL-3.0;LGPL;LGPL-3.0;AGPL-3.0;SSPL;EUPL;CDDL-1.0;EPL-1.0;OPL-1.0'
+      skip-if-no-changes:
+        required: false
+        type: boolean
+        description: 'Only run if package.json or package-lock.json has changed'
+        default: false
+
+jobs:
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+          
+      - name: Check if package files have changed
+        id: check_changes
+        if: inputs.skip-if-no-changes
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref || 'HEAD~1' }}
+          CHANGED_FILES=$(git diff --name-only FETCH_HEAD..${{ github.sha }} | grep -E 'package(-lock)?\.json$' || true)
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Install dependencies
+        if: ${{ !inputs.skip-if-no-changes || steps.check_changes.outputs.changes == 'true' }}
+        run: npm ci
+        
+      - name: Check licenses
+        if: ${{ !inputs.skip-if-no-changes || steps.check_changes.outputs.changes == 'true' }}
+        run: |
+          npm install -g license-checker
+
+          DISALLOWED_LICENSES="${{ inputs.disallow-licenses }}"
+          IFS=';' read -ra LICENSES <<< "$DISALLOWED_LICENSES"
+          
+          DISALLOW_ARGS=""
+          for license in "${LICENSES[@]}"; do
+            DISALLOW_ARGS+="--failOn \"$license\" "
+          done
+          
+          echo "Checking for disallowed licenses: $DISALLOWED_LICENSES"
+          eval "license-checker --production --json $DISALLOW_ARGS"
+          
+          echo "No disallowed licenses found. License check passed." 

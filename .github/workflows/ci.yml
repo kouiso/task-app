@@ -6,32 +6,21 @@ on:
       - '*'
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  common-setup:
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      node-version-file: .tool-versions
+    secrets:
+      firebase-api-key: ${{ secrets.FIREBASE_DEV_API_KEY }}
+      firebase-auth-domain: ${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+      firebase-project-id: ${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+      firebase-storage-bucket: ${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+      firebase-messaging-sender-id: ${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+      firebase-app-id: ${{ secrets.FIREBASE_DEV_APP_ID }}
+      firebase-measurement-id: ${{ secrets.FIREBASE_DEV_MEASUREMENT_ID }}
 
-      - name: Run common steps
-        uses: ./.github/actions/common-steps
-        with:
-          node-version-file: .tool-versions
-          firebase-api-key: ${{ secrets.FIREBASE_DEV_API_KEY }}
-          firebase-auth-domain: ${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
-          firebase-project-id: ${{ secrets.FIREBASE_DEV_PROJECT_ID }}
-          firebase-storage-bucket: ${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
-          firebase-messaging-sender-id: ${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
-          firebase-app-id: ${{ secrets.FIREBASE_DEV_APP_ID }}
-          firebase-measurement-id: ${{ secrets.FIREBASE_DEV_MEASUREMENT_ID }}
-      - name: License Check
-        run: |
-          DISALLOW_LICENSES="GPL;GPL-2.0;GPL-3.0;LGPL;LGPL-3.0;AGPL-3.0;SSPL;EUPL;CDDL-1.0;EPL-1.0;OPL-1.0"
-          if git diff --name-only HEAD~1 | grep --quiet --word-regexp -E 'package(-lock)?\.json|package-lock\.json'
-          then
-              result=0
-              npm run license-checker --failOn "$DISALLOW_LICENSES" >/dev/null || result=$?
-              if [[ ! "$result" = "0" ]]; then
-                  npm license-checker --csv
-                  exit 1
-              fi
-          fi
+  license-check:
+    uses: ./.github/workflows/reusable-license-check.yml
+    with:
+      node-version-file: .tool-versions
+      skip-if-no-changes: true
