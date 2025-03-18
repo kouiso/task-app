@@ -26,4 +26,3 @@ jobs:
     uses: ./.github/workflows/reusable-license-check.yml
     with:
       node-version-file: .tool-versions
-      skip-if-no-changes: true
