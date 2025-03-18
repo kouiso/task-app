@@ -4,7 +4,6 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      # 月1回に変更
       interval: "monthly"
       day: "saturday"
       time: "09:00"
@@ -35,42 +34,8 @@ updates:
       - "security"
       - "github-actions"
     vulnerability-alerts: true
-    
-  # npm パッケージの更新
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      day: "saturday"
-      time: "09:00"
-      timezone: "Asia/Tokyo"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-    ignore:
-      # 開発用依存関係のマイナーとパッチ更新は無視
-      - dependency-name: "*"
-        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
-        dependency-type: "development"
-    groups:
-      types:
-        patterns:
-          - "@types/*"
-      linters:
-        patterns:
-          - "eslint*"
-          - "prettier*"
-          - "stylelint*"
-        
-  # GitHub Actions の更新
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      day: "saturday"
-      time: "09:00"
-      timezone: "Asia/Tokyo"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "github-actions" 
+    # 通常の更新は無効化し、セキュリティ更新のみに集中
+    allow:
+      # セキュリティ更新のみを許可
+      - dependency-type: "all"
+        update-types: ["security"] 
