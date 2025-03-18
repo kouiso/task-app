@@ -2,12 +2,8 @@
 
 import { useState } from 'react';
 
-import classNames from 'classnames';
-
-import Accordion from '../accordion';
-
-import ArrowDownIcon from './arrow-down.icon';
-import styles from './style.module.scss';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Accordion, AccordionDetails, AccordionSummary, Box, List, Typography } from '@mui/material';
 
 type SidebarItemProps = {
   head: {
@@ -18,37 +14,102 @@ type SidebarItemProps = {
 };
 
 const SidebarItem: React.FC<SidebarItemProps> = ({ head, children }) => {
-  const [isAccordionActive, setIsAccordionActive] = useState<boolean>(false);
+  const [expanded, setExpanded] = useState<boolean>(false);
 
-  const handleToggle = (accordionActive: boolean) => {
-    setIsAccordionActive(accordionActive);
+  const handleChange = (event: React.SyntheticEvent, isExpanded: boolean) => {
+    setExpanded(isExpanded);
   };
 
-  const sidebarItemAccordionTrigger = (
-    <div
-      className={classNames(styles.sidebarItemText, {
-        [styles.sidebarItemText__active]: isAccordionActive,
-      })}
-    >
-      <figure className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__menu)}>
-        {head.menuIcon}
-      </figure>
-      {head.title}
-
-      <figure className={classNames(styles.sidebarItemTextIcon, styles.sidebarItemTextIcon__arrow)}>
-        <ArrowDownIcon />
-      </figure>
-    </div>
-  );
-
-  const sidebarItemAccordionContent = <ul className={styles.sidebarListChildren}>{children}</ul>;
-
   return (
-    <li className={styles.sidebarItem}>
-      <Accordion trigger={sidebarItemAccordionTrigger} onToggle={handleToggle}>
-        {sidebarItemAccordionContent}
+    <Box component="li" sx={{ listStyle: 'none' }}>
+      <Accordion
+        expanded={expanded}
+        onChange={handleChange}
+        disableGutters
+        elevation={0}
+        sx={{
+          bgcolor: 'transparent',
+          '&:before': {
+            display: 'none',
+          },
+        }}
+      >
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          sx={{
+            p: 0,
+            minHeight: 'auto',
+            '& .MuiAccordionSummary-content': {
+              m: 0,
+            },
+            '&.Mui-expanded': {
+              minHeight: 'auto',
+            },
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.8,
+              borderRadius: '6px',
+              p: 0.8,
+              pl: 5,
+              position: 'relative',
+              width: '100%',
+              bgcolor: expanded ? 'primary.main' : 'transparent',
+              color: expanded ? 'common.white' : 'inherit',
+              '&:hover': {
+                bgcolor: 'primary.main',
+                color: 'common.white',
+                cursor: 'pointer',
+                '& svg': {
+                  fill: 'white',
+                },
+              },
+              '& svg': {
+                fill: expanded ? 'white' : 'inherit',
+              },
+            }}
+          >
+            <Box
+              sx={{
+                position: 'absolute',
+                left: '8px',
+                top: '8px',
+                width: '24px',
+                height: '24px',
+              }}
+            >
+              {head.menuIcon}
+            </Box>
+            <Typography>{head.title}</Typography>
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails sx={{ p: 0 }}>
+          <List
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.2,
+              mt: 0.8,
+              p: 0.8,
+              pl: 5,
+              '& a': {
+                textDecoration: 'none',
+                color: 'inherit',
+                '&:hover': {
+                  color: 'primary.main',
+                  fontWeight: 600,
+                },
+              },
+            }}
+          >
+            {children}
+          </List>
+        </AccordionDetails>
       </Accordion>
-    </li>
+    </Box>
   );
 };
 

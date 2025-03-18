@@ -6,6 +6,7 @@ import styles from './style.module.scss';
 
 type HamburgerIconProps = {
   isHamburgerActive?: boolean;
+  onHamburgerClick?: () => void;
 };
 
 const hamburgerLines = (
@@ -21,13 +22,18 @@ const hamburgerClose = (
   </svg>
 );
 
-const HamburgerIcon: React.FC<HamburgerIconProps> = ({ isHamburgerActive = false }) => {
+const HamburgerIcon: React.FC<HamburgerIconProps> = ({ isHamburgerActive = false, onHamburgerClick }) => {
   const hamburgerIcon = !isHamburgerActive ? hamburgerLines : hamburgerClose;
 
   return (
-    <figure className={classNames(styles.hamburgerIcon, { [styles.hamburgerIcon__active]: isHamburgerActive })}>
+    <button
+      type="button"
+      className={classNames(styles.hamburgerIcon, { [styles.hamburgerIcon__active]: isHamburgerActive })}
+      onClick={onHamburgerClick}
+      aria-label="メニュー"
+    >
       {hamburgerIcon}
-    </figure>
+    </button>
   );
 };
 

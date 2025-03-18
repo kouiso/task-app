@@ -6,11 +6,7 @@ import classNames from 'classnames';
 
 import styles from './style.module.scss';
 
-type AccordionProps = {
-  trigger: React.ReactNode;
-  children: React.ReactNode;
-  onToggle?: (isActive: boolean) => void;
-};
+import type { AccordionProps } from './types';
 
 const Accordion: React.FC<AccordionProps> = ({ trigger, children, onToggle }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
@@ -41,9 +37,9 @@ const Accordion: React.FC<AccordionProps> = ({ trigger, children, onToggle }) =>
       >
         {trigger}
       </div>
-
       <div className={classNames(styles.accordionContent, { [styles.open]: isActive })}>{children}</div>
     </div>
   );
 };
+
 export default Accordion;
