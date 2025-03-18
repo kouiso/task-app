@@ -7,7 +7,12 @@
   ],
   "automerge": true,
   "automergeType": "pr",
-  "requiredStatusChecks": null,
+  "requiredStatusChecks": [
+    "build",
+    "test"
+  ],
+  "stabilityDays": 3,
+  "prCreation": "not-pending",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 5,
   "dependencyDashboard": true,
@@ -29,24 +34,10 @@
       "matchUpdateTypes": [
         "major"
       ],
-      "automerge": false,
+      "automerge": true,
       "labels": [
         "dependencies",
         "major-update"
-      ]
-    },
-    {
-      "matchUpdateTypes": [
-        "security"
-      ],
-      "matchVulnerabilitySeverity": [
-        "critical",
-        "high"
-      ],
-      "automerge": true,
-      "prPriority": 1,
-      "labels": [
-        "security"
       ]
     },
     {
