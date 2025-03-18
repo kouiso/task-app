@@ -1,59 +1,61 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import { Box, IconButton } from '@mui/material';
 
-import classNames from 'classnames';
+import useThemeContext from '../../context/hooks';
 
-import useLocalStorage from '@/lib/use-local-storage/index';
+const OPACITY = {
+  ACTIVE: 1,
+  INACTIVE: 0.5,
+} as const;
 
-import DarkModeIcon from './dark-mode.icon';
-import LightModeIcon from './light-mode.icon';
-import styles from './style.module.scss';
+const SPACING = {
+  SMALL: 0.5,
+  MEDIUM: 1,
+} as const;
 
 const ToggleTheme = () => {
-  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (!theme && typeof window !== 'undefined') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      setTheme(systemTheme);
-    }
-    if (theme) {
-      document.documentElement.setAttribute('data-theme-mode', theme);
-    }
-    setMounted(true);
-  }, [theme, setTheme]);
-
-  if (theme === undefined) {
-    return null;
-  }
-
-  if (!mounted) {
-    return null;
-  }
-
-  const isDark = theme === 'dark';
-
-  const reverseTheme = () => {
-    const newTheme = isDark ? 'light' : 'dark';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme-mode', newTheme);
-  };
-
-  const lightModeActiveClass = { [styles.toggleThemeButtonIcon__active]: !isDark };
-  const darkModeActiveClass = { [styles.toggleThemeButtonIcon__active]: isDark };
+  const { mode, toggleTheme } = useThemeContext();
+  const isDark = mode === 'dark';
 
   return (
-    <button type="button" className={styles.toggleThemeButton} onClick={reverseTheme}>
-      <figure className={classNames(styles.toggleThemeButtonIcon, lightModeActiveClass)}>
-        <LightModeIcon />
-      </figure>
-      <span>/</span>
-      <figure className={classNames(styles.toggleThemeButtonIcon, darkModeActiveClass)}>
-        <DarkModeIcon />
-      </figure>
-    </button>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 1,
+        p: SPACING.MEDIUM,
+      }}
+    >
+      <IconButton
+        sx={{
+          mr: SPACING.MEDIUM,
+          opacity: isDark ? OPACITY.INACTIVE : OPACITY.ACTIVE,
+          transition: 'opacity 0.3s',
+        }}
+        color="inherit"
+        aria-label="ライトモードに切り替え"
+        onClick={isDark ? toggleTheme : undefined}
+      >
+        <Brightness7Icon />
+      </IconButton>
+      <Box sx={{ mx: SPACING.SMALL, userSelect: 'none' }}>/</Box>
+      <IconButton
+        sx={{
+          ml: SPACING.MEDIUM,
+          opacity: isDark ? OPACITY.ACTIVE : OPACITY.INACTIVE,
+          transition: 'opacity 0.3s',
+        }}
+        color="inherit"
+        aria-label="ダークモードに切り替え"
+        onClick={!isDark ? toggleTheme : undefined}
+      >
+        <Brightness4Icon />
+      </IconButton>
+    </Box>
   );
 };
 

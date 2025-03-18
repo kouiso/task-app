@@ -21,8 +21,9 @@ npm-run-allで様々なコマンドを一括で動かせるようにしていま
 ## パッケージ管理
 
 npm を使用します。理由としては、
-  - yarnやpnpmはasdfで使用ができないこと
-  - yarnのバージョンで大きく挙動が異なるため却下した
+
+- yarnやpnpmはasdfで使用ができないこと
+- yarnのバージョンで大きく挙動が異なるため却下した
 
 ## Debugger
 
@@ -65,7 +66,7 @@ npm を使用します。理由としては、
 - URLや画面遷移の取り扱いについて
 
   - 画面遷移時に, `useNavigate`等を使用して、画面遷移を行うが、これらはroute dir内にある `PAGE_CONSTANT`を使用すること。
-※ Next.jsでdynamic routingのobjectを出力する方法があった気がするのでそれを要調査
+    ※ Next.jsでdynamic routingのobjectを出力する方法があった気がするのでそれを要調査
 
 ## api型定義自動生成
 
@@ -96,6 +97,7 @@ apiの型定義を手動で作るのは面倒。。。
 - キャッシュでデータ保持をさせたいものに関しては、orvalを使う
 
 ## その他ライブラリについて
+
 特に無し
 
 # SCSS Coding Guidelines

@@ -7,7 +7,6 @@ on:
     branches:
       - develop
 
-
 env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   SERVICE: ${{ vars.GCP_REPOSITORY }}

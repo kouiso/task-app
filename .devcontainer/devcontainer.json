@@ -18,7 +18,6 @@
         "formulahendry.auto-rename-tag",
         "gruntfuggly.todo-tree",
         "donjayamanne.typescript-notebook"
-
       ],
       "settings": {
         "git.path": "/usr/bin",
@@ -69,10 +68,7 @@
   },
   "postCreateCommand": "/bin/bash .devcontainer/script/post-create.sh",
   "containerUser": "root",
-  "forwardPorts": [
-    13000,
-    19229
-  ],
+  "forwardPorts": [13000, 19229],
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "nodeGypDependencies": true,

@@ -18,10 +18,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_OPENAI_API_KEY: ${{ secrets.OPENAI_KEY }}
-          OPENAI_API_TYPE: "azure"
-          OPENAI_API_VERSION: "gpt4o"
-          OPENAI.API_BASE: "https://ritmo-japan-east.openai.azure.com/"
-          OPENAI.DEPLOYMENT_ID: "ritmo-assistant"
-          PR_DESCRIPTION.EXTRA_INSTRUCTIONS: "answer in Japanese"
-          PR_REVIEWER.EXTRA_INSTRUCTIONS: "answer in Japanese"
-          PR_CODE_SUGGESTIONS.EXTRA_INSTRUCTIONS: "answer in Japanese"
+          OPENAI_API_TYPE: 'azure'
+          OPENAI_API_VERSION: 'gpt4o'
+          OPENAI.API_BASE: 'https://ritmo-japan-east.openai.azure.com/'
+          OPENAI.DEPLOYMENT_ID: 'ritmo-assistant'
+          PR_DESCRIPTION.EXTRA_INSTRUCTIONS: 'answer in Japanese'
+          PR_REVIEWER.EXTRA_INSTRUCTIONS: 'answer in Japanese'
+          PR_CODE_SUGGESTIONS.EXTRA_INSTRUCTIONS: 'answer in Japanese'
