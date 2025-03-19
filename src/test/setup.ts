@@ -1,5 +1,5 @@
+import * as React from 'react';
 import '@testing-library/jest-dom';
-import type React from 'react';
 import type { ComponentProps } from 'react';
 
 import { cleanup } from '@testing-library/react';
@@ -55,10 +55,13 @@ type ImageProps = ComponentProps<'img'> & {
 vi.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage(props: ImageProps) {
-    const img = document.createElement('img');
-    Object.assign(img, props);
-    img.setAttribute('data-testid', 'mock-image');
-    return img;
+    return {
+      type: 'img',
+      props: {
+        ...props,
+        'data-testid': 'mock-image',
+      },
+    };
   },
 }));
 
@@ -70,14 +73,7 @@ type LinkProps = ComponentProps<'a'> & {
 vi.mock('next/link', () => ({
   __esModule: true,
   default: function MockLink({ href, children, ...props }: LinkProps) {
-    return {
-      type: 'a',
-      props: {
-        href,
-        ...props,
-        children,
-      },
-    };
+    return React.createElement('a', { href, ...props }, children);
   },
 }));
 

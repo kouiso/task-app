@@ -34,6 +34,7 @@ vi.mock('../sidebar-item', () => ({
   default: vi.fn().mockImplementation(({ head, children }) => (
     <li data-testid="sidebar-item">
       <span>{head.title}</span>
+      <span data-testid="menu-icon">{head.menuIcon ? 'アイコン' : null}</span>
       <div>{children}</div>
     </li>
   )),
