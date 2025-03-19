@@ -2,44 +2,39 @@
 
 import { useState } from 'react';
 
-import classNames from 'classnames';
-
-import styles from './style.module.scss';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Box } from '@mui/material';
+import MuiAccordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 
 import type { AccordionProps } from './types';
 
-const Accordion: React.FC<AccordionProps> = ({ trigger, children, onToggle }) => {
+const CustomAccordion: React.FC<AccordionProps> = ({ trigger, children, onToggle }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
 
-  const toggleAccordion = () => {
-    const newActiveState = !isActive;
-    setIsActive(newActiveState);
-    onToggle?.(newActiveState);
-  };
-
-  const handleClick = () => {
-    toggleAccordion();
-  };
-
-  const handleKeyUp: React.KeyboardEventHandler<HTMLDivElement> = (event) => {
-    if (event.key !== 'Enter') return;
-    toggleAccordion();
+  const handleChange = (_event: React.SyntheticEvent, expanded: boolean) => {
+    setIsActive(expanded);
+    onToggle?.(expanded);
   };
 
   return (
-    <div className={styles.accordion}>
-      <div
-        className={classNames(styles.accordionTrigger, { [styles.open]: isActive })}
-        onClick={handleClick}
-        role="button"
-        tabIndex={0}
-        onKeyUp={handleKeyUp}
-      >
-        {trigger}
-      </div>
-      <div className={classNames(styles.accordionContent, { [styles.open]: isActive })}>{children}</div>
-    </div>
+    <Box sx={{ width: '100%' }}>
+      <MuiAccordion expanded={isActive} onChange={handleChange}>
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          aria-controls="accordion-content"
+          id="accordion-header"
+          sx={{
+            borderBottom: isActive ? '1px solid rgba(0, 0, 0, 0.12)' : 'none',
+          }}
+        >
+          {trigger}
+        </AccordionSummary>
+        <AccordionDetails>{children}</AccordionDetails>
+      </MuiAccordion>
+    </Box>
   );
 };
 
-export default Accordion;
+export default CustomAccordion;

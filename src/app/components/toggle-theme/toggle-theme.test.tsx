@@ -11,12 +11,18 @@ import ToggleTheme from './index';
 // モック関数の作成
 const toggleThemeMock = vi.fn();
 
-// ThemeContextのモック
-vi.mock('../../context/ThemeContext', () => ({
-  useThemeContext: () => ({
+// ThemeContextのモック - hooksファイルをモック
+vi.mock('../../context/hooks', () => ({
+  __esModule: true,
+  default: () => ({
     mode: 'light',
     toggleTheme: toggleThemeMock,
   }),
+}));
+
+// CustomThemeProviderをモック
+vi.mock('../../context/ThemeContext', () => ({
+  __esModule: true,
   CustomThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   ThemeContext: { Provider: ({ children }: { children: React.ReactNode }) => <div>{children}</div> },
 }));
