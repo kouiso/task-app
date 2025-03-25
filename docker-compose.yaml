@@ -18,6 +18,7 @@ services:
     ports:
       - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND:-13020}:3000 # for nextjs
       - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND_DEBUG:-19229}:9229 # for debug
+      - ${_DOCKER_COMPOSE_HOST_PORT_FRONTEND_SECOND_DEBUG:-19230}:9230 # for debug port
 
 volumes:
   frontend-nodemodules-volume:
