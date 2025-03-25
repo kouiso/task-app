@@ -48,7 +48,7 @@ npm を使用します。理由としては、
     → dir構成に関しては議論の余地有りだが、ドメイン/url毎に管理することで『あのコンポーネントどこだっけ？』を無くす狙い
     例: 認証系 【auth】の画面ならば、(auth)/sing-up/page.tsx, URLは/sign-up, (auth)/component/button/google-auth-button.tsx
 
-  - スタイルは`scss module`を使って定義する。コンポーネントやページに属するscssのファイル名は`style.module.scss`とする。
+  - スタイルは`scss module`以前まで使用していたが、MUIに全切り替えする。sass が 残っていたら気付いたらMUIへの移行をお願いしたい
 
 - 環境変数
 
