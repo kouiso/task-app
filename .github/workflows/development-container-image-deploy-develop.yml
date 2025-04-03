@@ -64,7 +64,6 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE }}
           project_id: ${{ env.PROJECT_ID }}
-          flags: '--allow-unauthenticated'
 
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
