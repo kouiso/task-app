@@ -63,8 +63,8 @@ jobs:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE }}
-          flags: '--service-account=compute-service-account@horsemanager-2d136.iam.gserviceaccount.com --allow-unauthenticated'
           project_id: ${{ env.PROJECT_ID }}
+          flags: '--allow-unauthenticated'
 
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
