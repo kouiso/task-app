@@ -15,6 +15,7 @@ env:
 
 jobs:
   deploy:
+    #NOTE: pushしたときには実行されないようにしたいので、pull_requestの条件を追加
     if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: 'read'
