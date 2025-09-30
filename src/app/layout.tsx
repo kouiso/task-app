@@ -1,67 +1,27 @@
-'use client';
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import { Providers } from './providers'
+import './globals.css'
 
-import { useEffect, useState } from 'react';
+const inter = Inter({ subsets: ['latin'] })
 
-import Box from '@mui/material/Box';
-import CssBaseline from '@mui/material/CssBaseline';
+export const metadata: Metadata = {
+  title: 'AI Chat Hub - マルチAIチャットクライアント',
+  description: '複数のAIモデル（ChatGPT, Claude, Gemini等）と同時に会話できるマルチAIチャットクライアント',
+}
 
-import Header from './components/header';
-import Sidebar from './components/sidebar';
-import { CustomThemeProvider } from './context/ThemeContext';
-
-type LayoutProps = {
-  children: React.ReactNode;
-};
-
-const RootLayout = ({ children }: LayoutProps) => {
-  const [mounted, setMounted] = useState(false);
-
-  // クライアントサイドでのみ実行されるように
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // SSRでのハイドレーションミスマッチを防ぐ
-  if (!mounted) {
-    return (
-      <html lang="ja">
-        <body />
-      </html>
-    );
-  }
-
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="ja">
-      <head />
-      <body>
-        <CustomThemeProvider>
-          <CssBaseline />
-          <Header />
-          <Box
-            sx={{
-              display: 'flex',
-              height: {
-                xs: 'calc(100vh - var(--header-height-sp))',
-                sm: 'calc(100vh - var(--header-height-pc))',
-              },
-            }}
-          >
-            <Sidebar />
-            <Box
-              component="main"
-              sx={{
-                flexGrow: 1,
-                p: 3,
-                overflow: 'auto',
-              }}
-            >
-              {children}
-            </Box>
-          </Box>
-        </CustomThemeProvider>
+      <body className={inter.className}>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
-  );
-};
-
-export default RootLayout;
+  )
+}

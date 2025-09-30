@@ -23,7 +23,9 @@ export const CustomThemeProvider = ({ children }: ThemeProviderProps) => {
 
   useEffect(() => {
     if (!mode && typeof window !== 'undefined') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
       setMode(systemTheme);
     }
     if (mode) {
@@ -46,7 +48,10 @@ export const CustomThemeProvider = ({ children }: ThemeProviderProps) => {
     [mode, toggleTheme],
   );
 
-  const theme = useMemo(() => createTheme(getDesignTokens(mode === 'dark' ? 'dark' : 'light')), [mode]);
+  const theme = useMemo(
+    () => createTheme(getDesignTokens(mode === 'dark' ? 'dark' : 'light')),
+    [mode],
+  );
 
   if (!mounted) {
     return null;

@@ -20,7 +20,7 @@ export default function useLocalStorage<T>(
         return item ? deserializer(item) : initialValue;
       }
       return initialValue;
-    } catch (error) {
+    } catch (_error) {
       return initialValue;
     }
   });
@@ -37,7 +37,8 @@ export default function useLocalStorage<T>(
 
   const setStoredValue = (valOrFunc: T | ((val: T) => T)) => {
     setState((prevState) => {
-      const newState = typeof valOrFunc === 'function' ? (valOrFunc as (val: T) => T)(prevState) : valOrFunc;
+      const newState =
+        typeof valOrFunc === 'function' ? (valOrFunc as (val: T) => T)(prevState) : valOrFunc;
       try {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(key, serializer(newState));

@@ -1,36 +1,32 @@
-const path = require('path');
+const _path = require('node:path');
 const micromatch = require('micromatch');
-
-const buildEslintCommand = (filenames) =>
-  `next lint --fix --file ${filenames.map((f) => path.relative(process.cwd(), f)).join(' --file ')}`;
-
-const buildStylelintCommand = (filenames) => `stylelint --fix ${filenames.join(' ')}`;
 
 module.exports = {
   '*': (allFiles) => {
-    console.log('Checking files...', allFiles);
-    const eslintFiles = micromatch(allFiles, ['**/*.ts', '**/*.tsx']);
-    const prettierFiles = micromatch(allFiles, ['**/*.(js|json|ts|tsx)']);
+    // Biomeが対応するファイル (.js, .jsx, .ts, .tsx, .json)
+    const biomeFiles = micromatch(allFiles, [
+      '**/*.js',
+      '**/*.jsx',
+      '**/*.ts',
+      '**/*.tsx',
+      '**/*.json',
+    ]);
+
     const stylelintFiles = micromatch(allFiles, ['**/*.(css|scss)']);
 
     const commands = [];
 
-    // Add TypeScript compilation check
+    // TypeScript compilation check
     commands.push('tsc --noEmit');
 
-    // Add ESLint command if there are ESLint files
-    if (eslintFiles.length) {
-      commands.push(buildEslintCommand(eslintFiles));
+    // Biome check (lint + format)
+    if (biomeFiles.length) {
+      commands.push(`biome check --write ${biomeFiles.join(' ')}`);
     }
 
-    // Add Prettier command if there are Prettier files
-    if (prettierFiles.length) {
-      commands.push(`prettier --write ${prettierFiles.join(' ')}`);
-    }
-
-    // Add Stylelint command if there are Stylelint files
+    // Stylelint for CSS files (Biomeは現在CSSに対応していない)
     if (stylelintFiles.length) {
-      commands.push(buildStylelintCommand(stylelintFiles));
+      commands.push(`stylelint --fix ${stylelintFiles.join(' ')}`);
     }
 
     return commands;
