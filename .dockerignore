@@ -3,6 +3,7 @@
 # except for followings
 !src/**
 !public/**
+!prisma/**
 !.tool-versions
 !next.config.mjs
 !package.json

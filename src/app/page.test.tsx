@@ -1,27 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { render, screen } from '../test/utils';
 
 import HomePage from './page';
 
-// Next/Imageコンポーネントをモック
-vi.mock('next/image', () => ({
-  __esModule: true,
-  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
-}));
-
 describe('HomePageコンポーネント', () => {
-  it('Next.jsのロゴが表示されること', () => {
+  it('Hello Worldが表示されること', () => {
     render(<HomePage />);
 
-    // Next.jsのロゴの代替テキストが表示されていることを確認
-    expect(screen.getByRole('img')).toHaveAttribute('alt', 'Next.js logo');
+    expect(screen.getByText('Hello World')).toBeInTheDocument();
   });
 
-  it('ロゴが正しいURLを参照していること', () => {
+  it('説明文が表示されること', () => {
     render(<HomePage />);
 
-    // ロゴのURLが正しいことを確認
-    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://nextjs.org/icons/next.svg');
+    expect(screen.getByText('Material-UI × Next.js × TypeScript')).toBeInTheDocument();
+  });
+
+  it('Get Startedボタンが表示されること', () => {
+    render(<HomePage />);
+
+    expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument();
   });
 });

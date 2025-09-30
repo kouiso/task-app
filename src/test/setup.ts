@@ -25,7 +25,8 @@ export interface CustomMatchers<R = unknown> {
 expect.extend({
   toHaveBeenCalledOnceWith(received: ReturnType<typeof vi.fn>, ...expectedArgs: unknown[]) {
     const pass =
-      received.mock.calls.length === 1 && JSON.stringify(received.mock.calls[0]) === JSON.stringify(expectedArgs);
+      received.mock.calls.length === 1 &&
+      JSON.stringify(received.mock.calls[0]) === JSON.stringify(expectedArgs);
 
     return {
       message: () => `expected ${received} to have been called once with ${expectedArgs}`,
