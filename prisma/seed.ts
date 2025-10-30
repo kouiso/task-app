@@ -4,9 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 シードデータの投入を開始します...');
-
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  const _hashedPassword = await bcrypt.hash('password123', 10);
 
   const user1 = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
@@ -40,8 +38,6 @@ async function main() {
       isActive: true,
     },
   });
-
-  console.log('✅ ユーザーを作成しました:', { user1, user2, user3 });
 
   const project1 = await prisma.project.upsert({
     where: { id: 'project1' },
@@ -96,8 +92,6 @@ async function main() {
       },
     },
   });
-
-  console.log('✅ プロジェクトを作成しました:', { project1, project2 });
 
   const tasks = await Promise.all([
     prisma.task.create({
@@ -176,9 +170,7 @@ async function main() {
     }),
   ]);
 
-  console.log(`✅ ${tasks.length}個のタスクを作成しました`);
-
-  const comment1 = await prisma.comment.create({
+  const _comment1 = await prisma.comment.create({
     data: {
       content: 'デザインの方向性について確認したいことがあります。',
       taskId: tasks[0].id,
@@ -186,17 +178,13 @@ async function main() {
     },
   });
 
-  const comment2 = await prisma.comment.create({
+  const _comment2 = await prisma.comment.create({
     data: {
       content: 'データベース設計完了しました。レビューをお願いします。',
       taskId: tasks[1].id,
       userId: user2.id,
     },
   });
-
-  console.log('✅ コメントを作成しました:', { comment1, comment2 });
-
-  console.log('🎉 シードデータの投入が完了しました！');
 }
 
 main()

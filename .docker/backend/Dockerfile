@@ -14,19 +14,12 @@ RUN apt-get update -qq \
   procps \
   --no-install-recommends
 
-# commands
-
-RUN npm i -g prisma@4.16.2
-
 # node_module packages
 COPY package*.json ./
-COPY prisma ./prisma/
 RUN npm ci
 
 # app code
 COPY . .
-
-RUN prisma generate
 
 USER node
 

@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-
   // TypeScript設定
   typescript: {
     // ビルド時の型チェック
@@ -41,7 +40,7 @@ const nextConfig = {
           },
         ],
       },
-    ]
+    ];
   },
 };
 

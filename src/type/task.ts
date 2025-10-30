@@ -68,6 +68,6 @@ export function formatMinutesToTime(minutes: number): FormattedTime {
     hours,
     minutes: remainingMinutes,
     formatted,
-    display
+    display,
   };
 }
