@@ -1,87 +1,75 @@
-'use client'
+'use client';
 
-import { useEffect, useRef } from 'react'
-import {
-  Box,
-  Typography,
-  Paper,
-  Avatar,
-  CircularProgress,
-  Chip,
-} from '@mui/material'
-import { AIProvider } from '@/types/chat'
-import SmartToyIcon from '@mui/icons-material/SmartToy'
-import PersonIcon from '@mui/icons-material/Person'
+import type { AIProvider } from '@/types/chat';
+import PersonIcon from '@mui/icons-material/Person';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import { Avatar, Box, Chip, CircularProgress, Paper, Typography } from '@mui/material';
+import { useEffect, useRef } from 'react';
 
 interface ChatWindowProps {
-  provider: AIProvider
+  provider: AIProvider;
   messages: Array<{
-    role: 'user' | 'assistant'
-    content: string
-    loading?: boolean
-  }>
+    role: 'user' | 'assistant';
+    content: string;
+    loading?: boolean;
+  }>;
 }
 
 export default function ChatWindow({ provider, messages }: ChatWindowProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages])
+  }, [messages]);
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <Box 
-        sx={{ 
-          p: 2, 
-          borderBottom: 1, 
+      <Box
+        sx={{
+          p: 2,
+          borderBottom: 1,
           borderColor: 'divider',
           bgcolor: 'background.paper',
           display: 'flex',
           alignItems: 'center',
-          gap: 1
+          gap: 1,
         }}
       >
-        <Box 
-          sx={{ 
-            width: 8, 
-            height: 8, 
-            borderRadius: '50%', 
+        <Box
+          sx={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
             bgcolor: provider.color,
-            flexShrink: 0
-          }} 
+            flexShrink: 0,
+          }}
         />
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
           {provider.name}
         </Typography>
-        <Chip 
-          label={provider.model} 
-          size="small" 
-          variant="outlined"
-          sx={{ ml: 'auto' }}
-        />
+        <Chip label={provider.model} size="small" variant="outlined" sx={{ ml: 'auto' }} />
       </Box>
 
       {/* Messages */}
-      <Box 
+      <Box
         ref={scrollRef}
-        sx={{ 
-          flexGrow: 1, 
+        sx={{
+          flexGrow: 1,
           overflow: 'auto',
           p: 2,
-          bgcolor: 'grey.50'
+          bgcolor: 'grey.50',
         }}
       >
         {messages.length === 0 ? (
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               height: '100%',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
             }}
           >
             <Typography variant="body2" color="text.secondary">
@@ -106,7 +94,11 @@ export default function ChatWindow({ provider, messages }: ChatWindowProps) {
                     bgcolor: message.role === 'user' ? 'primary.main' : provider.color,
                   }}
                 >
-                  {message.role === 'user' ? <PersonIcon fontSize="small" /> : <SmartToyIcon fontSize="small" />}
+                  {message.role === 'user' ? (
+                    <PersonIcon fontSize="small" />
+                  ) : (
+                    <SmartToyIcon fontSize="small" />
+                  )}
                 </Avatar>
                 <Paper
                   sx={{
@@ -135,5 +127,5 @@ export default function ChatWindow({ provider, messages }: ChatWindowProps) {
         )}
       </Box>
     </Box>
-  )
+  );
 }

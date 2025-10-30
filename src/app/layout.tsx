@@ -1,27 +1,26 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import { Providers } from './providers'
-import './globals.css'
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { Providers } from './providers';
+import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'AI Chat Hub - マルチAIチャットクライアント',
-  description: '複数のAIモデル（ChatGPT, Claude, Gemini等）と同時に会話できるマルチAIチャットクライアント',
-}
+  description:
+    '複数のAIモデル（ChatGPT, Claude, Gemini等）と同時に会話できるマルチAIチャットクライアント',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="ja">
       <body className={inter.className}>
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }

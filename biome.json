@@ -15,7 +15,9 @@
       "complexity": {
         "noBannedTypes": "error",
         "noUselessConstructor": "error",
-        "useArrowFunction": "error"
+        "useArrowFunction": "error",
+        "noStaticOnlyClass": "warn",
+        "noForEach": "warn"
       },
       "correctness": {
         "noUnusedVariables": "error",
@@ -28,7 +30,8 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noConsoleLog": "warn"
+        "noConsoleLog": "warn",
+        "noArrayIndexKey": "warn"
       }
     },
     "ignore": ["**/node_modules", "**/dist", "**/.next", "**/prisma/migrations"]
