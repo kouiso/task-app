@@ -3,14 +3,14 @@ import { z } from 'zod';
 import { createTRPCRouter, publicProcedure } from '../trpc';
 
 const commentCreateSchema = z.object({
-  content: z.string().min(1, 'Comment content is required'),
+  content: z.string().trim().min(1, 'Comment content is required'),
   taskId: z.string().cuid(),
   userId: z.string().cuid(),
 });
 
 const commentUpdateSchema = z.object({
   id: z.string().cuid(),
-  content: z.string().min(1, 'Comment content is required'),
+  content: z.string().trim().min(1, 'Comment content is required'),
 });
 
 export const commentRouter = createTRPCRouter({
