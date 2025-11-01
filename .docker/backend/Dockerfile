@@ -16,6 +16,8 @@ RUN apt-get update -qq \
 
 # node_module packages
 COPY package*.json ./
+COPY prisma ./prisma/
+
 RUN npm ci
 
 # app code

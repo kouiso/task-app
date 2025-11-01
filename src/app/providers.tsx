@@ -3,6 +3,7 @@
 import { TRPCReactProvider } from '@/trpc/react';
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { SessionProvider } from 'next-auth/react';
 import { Toaster } from 'react-hot-toast';
 
 const theme = createTheme({
@@ -19,12 +20,14 @@ const theme = createTheme({
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <TRPCReactProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-        <Toaster />
-      </ThemeProvider>
-    </TRPCReactProvider>
+    <SessionProvider>
+      <TRPCReactProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          {children}
+          <Toaster />
+        </ThemeProvider>
+      </TRPCReactProvider>
+    </SessionProvider>
   );
 }

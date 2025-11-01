@@ -24,7 +24,7 @@ services:
 
   db:
     image: mysql:8.0.32
-    platform: linux/x86_64
+    platform: linux/amd64
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: app
