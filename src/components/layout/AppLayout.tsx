@@ -4,10 +4,13 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderIcon from '@mui/icons-material/Folder';
+import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import {
   AppBar,
+  Avatar,
   Box,
+  Button,
   CssBaseline,
   Divider,
   Drawer,
@@ -21,7 +24,8 @@ import {
   Typography,
 } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '~/trpc/react';
 
 const drawerWidth = 240;
 
@@ -42,6 +46,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, isLoading } = api.auth.getSession.useQuery();
+
+  useEffect(() => {
+    if (!isLoading && !session) {
+      router.push('/login');
+    }
+  }, [isLoading, session, router]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -51,6 +62,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     router.push(path);
     setMobileOpen(false);
   };
+
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: () => {
+      router.push('/login');
+      router.refresh();
+    },
+  });
+
+  const handleLogout = async () => {
+    logoutMutation.mutate();
+  };
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!session?.user) {
+    return null;
+  }
 
   const drawer = (
     <div>
@@ -96,9 +126,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Task Management
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar
+              alt={session.user.name || ''}
+              src={session.user.avatar || ''}
+              sx={{ width: 32, height: 32 }}
+            />
+            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              {session.user.name || session.user.email}
+            </Typography>
+            <Button
+              color="inherit"
+              onClick={handleLogout}
+              startIcon={<LogoutIcon />}
+              sx={{ ml: 1 }}
+            >
+              ログアウト
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
       <Box

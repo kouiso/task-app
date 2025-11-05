@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure } from '../trpc';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -40,7 +40,7 @@ const taskTimeUpdateSchema = z.object({
 });
 
 export const taskRouter = createTRPCRouter({
-  getAll: publicProcedure
+  getAll: protectedProcedure
     .input(
       z
         .object({
@@ -82,36 +82,38 @@ export const taskRouter = createTRPCRouter({
       });
     }),
 
-  getById: publicProcedure.input(z.object({ id: z.string().cuid() })).query(async ({ input }) => {
-    const task = await prisma.task.findUnique({
-      where: { id: input.id },
-      include: {
-        project: true,
-        createdBy: {
-          select: { id: true, name: true, email: true, avatar: true },
-        },
-        assignee: {
-          select: { id: true, name: true, email: true, avatar: true },
-        },
-        comments: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true, avatar: true },
-            },
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: true,
+          createdBy: {
+            select: { id: true, name: true, email: true, avatar: true },
           },
-          orderBy: { createdAt: 'desc' },
+          assignee: {
+            select: { id: true, name: true, email: true, avatar: true },
+          },
+          comments: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, avatar: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
         },
-      },
-    });
+      });
 
-    if (!task) {
-      throw new Error('Task not found');
-    }
+      if (!task) {
+        throw new Error('Task not found');
+      }
 
-    return task;
-  }),
+      return task;
+    }),
 
-  create: publicProcedure.input(taskCreateSchema).mutation(async ({ input }) => {
+  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ input }) => {
     const maxPosition = await prisma.task.findFirst({
       where: { projectId: input.projectId },
       orderBy: { position: 'desc' },
@@ -136,7 +138,7 @@ export const taskRouter = createTRPCRouter({
     });
   }),
 
-  update: publicProcedure.input(taskUpdateSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ input }) => {
     const { id, ...data } = input;
 
     const updateData: any = { ...data };
@@ -162,14 +164,16 @@ export const taskRouter = createTRPCRouter({
     });
   }),
 
-  delete: publicProcedure.input(z.object({ id: z.string().cuid() })).mutation(async ({ input }) => {
-    await prisma.task.delete({
-      where: { id: input.id },
-    });
-    return { success: true };
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ input }) => {
+      await prisma.task.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
 
-  updateTimer: publicProcedure.input(taskTimerSchema).mutation(async ({ input }) => {
+  updateTimer: protectedProcedure.input(taskTimerSchema).mutation(async ({ input }) => {
     const task = await prisma.task.findUnique({
       where: { id: input.id },
     });
@@ -207,7 +211,7 @@ export const taskRouter = createTRPCRouter({
     });
   }),
 
-  addTime: publicProcedure.input(taskTimeUpdateSchema).mutation(async ({ input }) => {
+  addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ input }) => {
     return await prisma.task.update({
       where: { id: input.id },
       data: {

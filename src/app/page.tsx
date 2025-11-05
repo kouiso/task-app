@@ -1,12 +1,21 @@
 'use client';
 
-import ChatInterface from '@/components/chat/ChatInterface';
-import { Box } from '@mui/material';
+import { redirect } from 'next/navigation';
+import { useEffect } from 'react';
+import { api } from '~/trpc/react';
 
 export default function HomePage() {
-  return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <ChatInterface />
-    </Box>
-  );
+  const { data: session, isLoading } = api.auth.getSession.useQuery();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!session) {
+        redirect('/login');
+      } else {
+        redirect('/dashboard');
+      }
+    }
+  }, [session, isLoading]);
+
+  return null;
 }

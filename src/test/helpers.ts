@@ -1,0 +1,144 @@
+import bcrypt from 'bcryptjs';
+import { prisma } from '../lib/prisma';
+import { type SessionPayload, encrypt } from '../lib/session';
+import { appRouter } from '../server/api/root';
+import { createCallerFactory, createTRPCContext } from '../server/api/trpc';
+
+export async function createTestUser(
+  overrides: {
+    email?: string;
+    name?: string;
+    password?: string;
+    role?: 'USER' | 'ADMIN';
+    isActive?: boolean;
+  } = {},
+) {
+  const hashedPassword = await bcrypt.hash(overrides.password || 'password123', 10);
+
+  return await prisma.user.create({
+    data: {
+      email: overrides.email || `test${Date.now()}@example.com`,
+      name: overrides.name || 'Test User',
+      password: hashedPassword,
+      role: overrides.role || 'USER',
+      isActive: overrides.isActive !== undefined ? overrides.isActive : true,
+    },
+  });
+}
+
+export async function createTestProject(
+  ownerId: string,
+  overrides: {
+    name?: string;
+    description?: string;
+    color?: string;
+    isArchived?: boolean;
+    startDate?: Date;
+    endDate?: Date;
+  } = {},
+) {
+  return await prisma.project.create({
+    data: {
+      name: overrides.name || `Test Project ${Date.now()}`,
+      description: overrides.description || 'Test project description',
+      color: overrides.color || '#1976d2',
+      isArchived: overrides.isArchived || false,
+      startDate: overrides.startDate || null,
+      endDate: overrides.endDate || null,
+      members: {
+        create: {
+          userId: ownerId,
+          role: 'OWNER',
+        },
+      },
+    },
+    include: {
+      members: {
+        include: {
+          user: true,
+        },
+      },
+    },
+  });
+}
+
+export async function createTestTask(
+  projectId: string,
+  createdById: string,
+  overrides: {
+    title?: string;
+    description?: string;
+    status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+    dueDate?: Date;
+    estimatedHours?: number;
+    assigneeId?: string;
+    position?: number;
+  } = {},
+) {
+  return await prisma.task.create({
+    data: {
+      title: overrides.title || `Test Task ${Date.now()}`,
+      description: overrides.description || 'Test task description',
+      status: overrides.status || 'TODO',
+      priority: overrides.priority || 'MEDIUM',
+      dueDate: overrides.dueDate || null,
+      estimatedHours: overrides.estimatedHours || null,
+      assigneeId: overrides.assigneeId || null,
+      position: overrides.position !== undefined ? overrides.position : 0,
+      projectId,
+      createdById,
+    },
+    include: {
+      project: true,
+      createdBy: true,
+      assignee: true,
+    },
+  });
+}
+
+export async function createTestComment(
+  taskId: string,
+  userId: string,
+  overrides: {
+    content?: string;
+  } = {},
+) {
+  return await prisma.comment.create({
+    data: {
+      content: overrides.content || `Test comment ${Date.now()}`,
+      taskId,
+      userId,
+    },
+    include: {
+      user: true,
+    },
+  });
+}
+
+export function createMockSession(userId: string, email: string, role: string): SessionPayload {
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+  return {
+    userId,
+    email,
+    role,
+    exp: expiresAt,
+  };
+}
+
+export async function createTestCaller(session?: SessionPayload | null) {
+  const createCaller = createCallerFactory(appRouter);
+  const context = await createTRPCContext({
+    headers: new Headers(),
+  });
+
+  return createCaller({
+    ...context,
+    session: session || null,
+  });
+}
+
+export async function createAuthenticatedCaller(userId: string, email: string, role: string) {
+  const session = createMockSession(userId, email, role);
+  return await createTestCaller(session);
+}

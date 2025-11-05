@@ -1,9 +1,22 @@
 'use client';
 
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import { Avatar, Box, Card, CardContent, Chip, IconButton, Typography } from '@mui/material';
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  IconButton,
+  Typography,
+} from '@mui/material';
 import type { TaskPriority, TaskStatus } from '@prisma/client';
+import { useState } from 'react';
+import { TaskTimer } from './TaskTimer';
+import { TimeLogDialog } from './TimeLogDialog';
 
 interface TaskCardProps {
   id: string;
@@ -17,9 +30,13 @@ interface TaskCardProps {
     email: string;
     avatar: string | null;
   } | null;
+  isTimerActive?: boolean;
+  timerStartedAt?: Date | null;
+  timeSpentMinutes?: number;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
+  onTimerUpdate?: () => void;
 }
 
 const statusColors: Record<TaskStatus, 'default' | 'primary' | 'success' | 'error' | 'warning'> = {
@@ -46,10 +63,16 @@ export function TaskCard({
   priority,
   dueDate,
   assignee,
+  isTimerActive = false,
+  timerStartedAt = null,
+  timeSpentMinutes = 0,
   onEdit,
   onDelete,
   onClick,
+  onTimerUpdate,
 }: TaskCardProps) {
+  const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
+
   const handleCardClick = () => {
     if (onClick) {
       onClick(id);
@@ -64,6 +87,11 @@ export function TaskCard({
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(id);
+  };
+
+  const handleOpenTimeLog = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTimeLogDialogOpen(true);
   };
 
   return (
@@ -100,7 +128,7 @@ export function TaskCard({
           <Chip label={priority} color={priorityColors[priority]} size="small" />
         </Box>
 
-        <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           {assignee && (
             <Box display="flex" alignItems="center" gap={1}>
               <Avatar
@@ -122,7 +150,32 @@ export function TaskCard({
             </Typography>
           )}
         </Box>
+
+        <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
+          <TaskTimer
+            taskId={id}
+            isTimerActive={isTimerActive}
+            timerStartedAt={timerStartedAt}
+            timeSpentMinutes={timeSpentMinutes}
+            onTimerUpdate={onTimerUpdate}
+          />
+          <Button
+            size="small"
+            startIcon={<AccessTimeIcon />}
+            onClick={handleOpenTimeLog}
+            sx={{ mt: 1 }}
+          >
+            Log Time Manually
+          </Button>
+        </Box>
       </CardContent>
+
+      <TimeLogDialog
+        open={timeLogDialogOpen}
+        onClose={() => setTimeLogDialogOpen(false)}
+        taskId={id}
+        onSuccess={onTimerUpdate}
+      />
     </Card>
   );
 }

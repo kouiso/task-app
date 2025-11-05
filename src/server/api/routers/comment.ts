@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure } from '../trpc';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const commentCreateSchema = z.object({
   content: z.string().trim().min(1, 'Comment content is required'),
@@ -14,7 +14,7 @@ const commentUpdateSchema = z.object({
 });
 
 export const commentRouter = createTRPCRouter({
-  getByTaskId: publicProcedure
+  getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))
     .query(async ({ input }) => {
       return await prisma.comment.findMany({
@@ -28,7 +28,7 @@ export const commentRouter = createTRPCRouter({
       });
     }),
 
-  create: publicProcedure.input(commentCreateSchema).mutation(async ({ input }) => {
+  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ input }) => {
     return await prisma.comment.create({
       data: input,
       include: {
@@ -39,7 +39,7 @@ export const commentRouter = createTRPCRouter({
     });
   }),
 
-  update: publicProcedure.input(commentUpdateSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(commentUpdateSchema).mutation(async ({ input }) => {
     const { id, ...data } = input;
 
     return await prisma.comment.update({
@@ -53,10 +53,12 @@ export const commentRouter = createTRPCRouter({
     });
   }),
 
-  delete: publicProcedure.input(z.object({ id: z.string().cuid() })).mutation(async ({ input }) => {
-    await prisma.comment.delete({
-      where: { id: input.id },
-    });
-    return { success: true };
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ input }) => {
+      await prisma.comment.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
 });
