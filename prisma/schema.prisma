@@ -1,4 +1,4 @@
-// Prisma Schema for MySQL (Docker)
+// Prisma Schema for PostgreSQL (Vercel Postgres)
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

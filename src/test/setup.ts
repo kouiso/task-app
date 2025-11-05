@@ -39,11 +39,9 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  // Disable foreign key constraints temporarily for cleanup
-  await prisma.$executeRawUnsafe('PRAGMA foreign_keys = OFF;');
-
   // Use the actual database table names (from @@map), not model names
   // Delete in reverse dependency order to respect foreign keys
+  // PostgreSQL handles cascade deletes automatically with onDelete: Cascade
   const tables = [
     'comments',
     'tasks',
@@ -55,11 +53,8 @@ afterEach(async () => {
   ];
 
   for (const table of tables) {
-    await prisma.$executeRawUnsafe(`DELETE FROM ${table}`);
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
   }
-
-  // Re-enable foreign key constraints
-  await prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON;');
 });
 
 afterAll(async () => {

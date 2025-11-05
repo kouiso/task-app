@@ -33,9 +33,9 @@ material/
 
 ### バックエンド
 - **Next.js API Routes** - サーバーサイドAPI
-- **Prisma 5.22.0** - TypeScript ORM
-- **NextAuth.js 4.24.10** - 認証システム
-- **SQLite** - 開発用データベース
+- **Prisma 6.16.2** - TypeScript ORM
+- **tRPC JWT Authentication** - 認証システム (NextAuth削除)
+- **PostgreSQL** - データベース (Vercel Postgres対応)
 
 ### 開発ツール
 - **Biome 1.9.4** - リンター・フォーマッター
@@ -47,6 +47,7 @@ material/
 ### 前提条件
 - Node.js 22.0.0以上
 - npm または yarn
+- Docker Desktop (ローカル開発用PostgreSQL)
 
 ### インストール
 
@@ -58,9 +59,15 @@ cd task-app
 # 依存関係をインストール
 npm install
 
+# PostgreSQLをDockerで起動
+docker-compose up -d
+
 # 環境変数を設定
 cp .env.example .env
-# .envファイルを編集して必要な設定を入力
+# .envファイルを編集 (デフォルト設定でローカル開発可能)
+
+# Prismaクライアントを生成
+npm run db:generate
 
 # データベースを初期化
 npm run db:push
@@ -68,6 +75,23 @@ npm run db:seed
 
 # 開発サーバーを起動
 npm run dev
+```
+
+ブラウザで http://localhost:3000 を開く
+
+### 本番環境 (Vercel)
+
+```bash
+# Vercel Postgresを作成
+# https://vercel.com/docs/storage/vercel-postgres
+
+# 環境変数を設定
+# Vercelダッシュボード > Settings > Environment Variables
+# DATABASE_URL: Vercel Postgresの接続文字列
+# JWT_SECRET: ランダムな文字列 (32文字以上推奨)
+
+# デプロイ
+vercel deploy
 ```
 
 ### 利用可能なコマンド
