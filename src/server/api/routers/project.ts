@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure } from '../trpc';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const projectCreateSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
@@ -34,7 +34,7 @@ const projectMemberSchema = z.object({
 });
 
 export const projectRouter = createTRPCRouter({
-  getAll: publicProcedure
+  getAll: protectedProcedure
     .input(
       z
         .object({
@@ -77,36 +77,38 @@ export const projectRouter = createTRPCRouter({
       });
     }),
 
-  getById: publicProcedure.input(z.object({ id: z.string().cuid() })).query(async ({ input }) => {
-    const project = await prisma.project.findUnique({
-      where: { id: input.id },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true, avatar: true, role: true },
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, avatar: true, role: true },
+              },
             },
           },
-        },
-        tasks: {
-          include: {
-            assignee: {
-              select: { id: true, name: true, email: true, avatar: true },
+          tasks: {
+            include: {
+              assignee: {
+                select: { id: true, name: true, email: true, avatar: true },
+              },
             },
+            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
           },
-          orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
         },
-      },
-    });
+      });
 
-    if (!project) {
-      throw new Error('Project not found');
-    }
+      if (!project) {
+        throw new Error('Project not found');
+      }
 
-    return project;
-  }),
+      return project;
+    }),
 
-  create: publicProcedure.input(projectCreateSchema).mutation(async ({ input }) => {
+  create: protectedProcedure.input(projectCreateSchema).mutation(async ({ input }) => {
     const { ownerId, ...projectData } = input;
 
     return await prisma.project.create({
@@ -133,7 +135,7 @@ export const projectRouter = createTRPCRouter({
     });
   }),
 
-  update: publicProcedure.input(projectUpdateSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ input }) => {
     const { id, ...data } = input;
 
     const updateData: any = { ...data };
@@ -159,14 +161,16 @@ export const projectRouter = createTRPCRouter({
     });
   }),
 
-  delete: publicProcedure.input(z.object({ id: z.string().cuid() })).mutation(async ({ input }) => {
-    await prisma.project.delete({
-      where: { id: input.id },
-    });
-    return { success: true };
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ input }) => {
+      await prisma.project.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
 
-  addMember: publicProcedure.input(projectMemberSchema).mutation(async ({ input }) => {
+  addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ input }) => {
     const existing = await prisma.projectMember.findUnique({
       where: {
         userId_projectId: {
@@ -190,7 +194,7 @@ export const projectRouter = createTRPCRouter({
     });
   }),
 
-  removeMember: publicProcedure
+  removeMember: protectedProcedure
     .input(
       z.object({
         projectId: z.string().cuid(),
@@ -236,7 +240,7 @@ export const projectRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  updateMemberRole: publicProcedure
+  updateMemberRole: protectedProcedure
     .input(
       z.object({
         projectId: z.string().cuid(),

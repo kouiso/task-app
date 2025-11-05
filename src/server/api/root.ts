@@ -1,3 +1,4 @@
+import { authRouter } from './routers/auth';
 import { chatRouter } from './routers/chat';
 import { commentRouter } from './routers/comment';
 import { projectRouter } from './routers/project';
@@ -6,6 +7,7 @@ import { userRouter } from './routers/user';
 import { createCallerFactory, createTRPCRouter } from './trpc';
 
 export const appRouter = createTRPCRouter({
+  auth: authRouter,
   chat: chatRouter,
   task: taskRouter,
   project: projectRouter,

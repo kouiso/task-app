@@ -18,7 +18,7 @@ async function main() {
     },
   });
 
-  console.log('Test user created:', testUser.email);
+  console.info('Test user created:', testUser.email);
 
   const regularUser = await prisma.user.upsert({
     where: { email: 'user@example.com' },
@@ -32,7 +32,7 @@ async function main() {
     },
   });
 
-  console.log('Regular user created:', regularUser.email);
+  console.info('Regular user created:', regularUser.email);
 }
 
 main()

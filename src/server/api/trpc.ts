@@ -1,12 +1,15 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
+import { type SessionPayload, getSession } from '~/lib/session';
 
 export const createTRPCContext = async (opts: {
   headers: Headers;
 }) => {
+  const session = await getSession();
+
   return {
-    session: null as any,
+    session: session as SessionPayload | null,
     ...opts,
   };
 };
@@ -27,17 +30,16 @@ const t = initTRPC.context<Context>().create({
 });
 
 const isAuthenticated = t.middleware(async ({ ctx, next }) => {
-  if (!ctx.session?.user) {
+  if (!ctx.session?.userId) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: 'You must be logged in to access this resource',
+      message: 'ログインが必要です',
     });
   }
 
   return next({
     ctx: {
       session: ctx.session,
-      user: ctx.session.user,
     },
   });
 });
