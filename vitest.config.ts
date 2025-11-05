@@ -23,7 +23,7 @@ export default defineConfig({
       },
     },
     env: {
-      DATABASE_URL: 'file:./test.db',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public',
       JWT_SECRET: 'test-secret-key-for-testing-only',
       NODE_ENV: 'test',
     },

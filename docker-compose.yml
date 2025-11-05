@@ -1,66 +1,22 @@
 version: '3.8'
 
 services:
-  # --------------------------------------------------
-  # for development
-  # --------------------------------------------------
-
-  backend:
-    build:
-      dockerfile: ./.docker/backend/Dockerfile
-      context: ./
-    command: npm run dev
-    volumes:
-      - ./:/app:delegated
-      - backend-nodemodules-volume:/app/node_modules/
-    env_file:
-      - .env
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - ${_DOCKER_COMPOSE_HOST_PORT_BACKEND:-13000}:3000 # for Next.js
-      - ${_DOCKER_COMPOSE_HOST_PORT_BACKEND_DEBUG:-19229}:9229 # for debug
-
-  db:
-    image: mysql:8.0.32
-    platform: linux/amd64
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskapp-postgres
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: app
-      MYSQL_USER: user
-      MYSQL_PASSWORD: user
-    command: --sql-mode=NO_ENGINE_SUBSTITUTION
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: taskapp
     ports:
-      - '${_DOCKER_COMPOSE_HOST_PORT_DB:-13306}:3306'
+      - "5432:5432"
     volumes:
-      - ./.docker/db/initdb.d:/docker-entrypoint-initdb.d
-      - ./.docker/db/my.cnf:/etc/mysql/conf.d/my.cnf
-      - db-volume:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
-      interval: 10s
-      retries: 10
-      timeout: 100s
-
-  # --------------------------------------------------
-  # commands
-  # --------------------------------------------------
-
-  schemaspy:
-    image: schemaspy/schemaspy:6.2.4
-    platform: linux/x86_64
-    user: root
-    volumes:
-      - ./.docker/schemaspy/schemaspy.properties:/schemaspy.properties # SchemaSpy Properties File
-      - ./doc/definition/db:/output # SchemaSpy Output dir
-    depends_on:
-      - db
-    environment:
-      SCHEMASPY_OUTPUT: /output
-    profiles:
-      - schemaspy
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  db-volume:
-  backend-nodemodules-volume:
+  postgres-data:

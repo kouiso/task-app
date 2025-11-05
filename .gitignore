@@ -56,4 +56,5 @@ playground.nnb
 
 #seo
 sitemap*.xml
-robots.txt
+robots.txt*.db
+*.db-*
