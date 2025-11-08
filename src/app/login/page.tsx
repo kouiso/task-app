@@ -1,5 +1,6 @@
 'use client';
 
+import { api } from '@/trpc/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { Alert, Avatar, Box, Button, Container, Link, TextField, Typography } from '@mui/material';
@@ -8,7 +9,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { api } from '~/trpc/react';
 
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),

@@ -14,7 +14,8 @@ vi.mock('next/headers', () => ({
 
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public';
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public';
   }
   if (!process.env.JWT_SECRET) {
     process.env.JWT_SECRET = 'test-secret-key-for-testing-only';
@@ -26,7 +27,9 @@ beforeAll(async () => {
       stdio: 'pipe',
       env: {
         ...process.env,
-        DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public',
+        DATABASE_URL:
+          process.env.DATABASE_URL ||
+          'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public',
       },
       cwd: process.cwd(),
     });

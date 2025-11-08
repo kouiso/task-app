@@ -5,8 +5,10 @@ import { ProjectCard } from '@/components/project/ProjectCard';
 import { ProjectDialog, type ProjectFormData } from '@/components/project/ProjectDialog';
 import { api } from '@/trpc/react';
 import AddIcon from '@mui/icons-material/Add';
+import ArchiveIcon from '@mui/icons-material/Archive';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import UnarchiveIcon from '@mui/icons-material/Unarchive';
 import {
   Avatar,
   Box,
@@ -17,6 +19,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   IconButton,
   List,
@@ -24,6 +27,7 @@ import {
   ListItemAvatar,
   ListItemText,
   MenuItem,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material';
@@ -38,10 +42,13 @@ export default function ProjectPage() {
   const [editingProject, setEditingProject] = useState<ProjectFormData | undefined>(undefined);
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>('MEMBER');
+  const [showArchived, setShowArchived] = useState(false);
 
   const utils = api.useUtils();
 
-  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
+  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
+    isArchived: showArchived,
+  });
   const { data: users } = api.user.getAll.useQuery();
   const { data: projectDetail } = api.project.getById.useQuery(
     { id: selectedProject ?? '' },
@@ -88,6 +95,20 @@ export default function ProjectPage() {
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
       }
+    },
+  });
+
+  const archiveMutation = api.project.archive.useMutation({
+    onSuccess: () => {
+      utils.project.getAll.invalidate();
+      setDetailOpen(false);
+    },
+  });
+
+  const unarchiveMutation = api.project.unarchive.useMutation({
+    onSuccess: () => {
+      utils.project.getAll.invalidate();
+      setDetailOpen(false);
     },
   });
 
@@ -172,6 +193,11 @@ export default function ProjectPage() {
     }
   };
 
+  const handleArchive = (projectId: string, isArchived: boolean) => {
+    const mutation = isArchived ? unarchiveMutation : archiveMutation;
+    mutation.mutate({ id: projectId });
+  };
+
   if (projectsLoading) {
     return (
       <AppLayout>
@@ -187,9 +213,20 @@ export default function ProjectPage() {
       <Box>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4">Projects</Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
-            New Project
-          </Button>
+          <Box display="flex" gap={2} alignItems="center">
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                />
+              }
+              label="Show Archived"
+            />
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+              New Project
+            </Button>
+          </Box>
         </Box>
 
         <Grid container spacing={3}>
@@ -210,6 +247,7 @@ export default function ProjectPage() {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onClick={handleProjectClick}
+                    isArchived={project.isArchived}
                   />
                 </Grid>
               );
@@ -316,6 +354,16 @@ export default function ProjectPage() {
             )}
           </DialogContent>
           <DialogActions>
+            <Box sx={{ flex: 1 }}>
+              <Button
+                startIcon={projectDetail?.isArchived ? <UnarchiveIcon /> : <ArchiveIcon />}
+                onClick={() =>
+                  projectDetail && handleArchive(projectDetail.id, projectDetail.isArchived)
+                }
+              >
+                {projectDetail?.isArchived ? 'Unarchive' : 'Archive'}
+              </Button>
+            </Box>
             <Button onClick={handleDetailClose}>Close</Button>
           </DialogActions>
         </Dialog>

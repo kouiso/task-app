@@ -108,10 +108,20 @@ export function TaskCard({
             {title}
           </Typography>
           <Box>
-            <IconButton size="small" onClick={handleEdit}>
+            <IconButton
+              size="small"
+              onClick={handleEdit}
+              aria-label="Edit task"
+              data-testid="edit-task-button"
+            >
               <EditIcon fontSize="small" />
             </IconButton>
-            <IconButton size="small" onClick={handleDelete}>
+            <IconButton
+              size="small"
+              onClick={handleDelete}
+              aria-label="Delete task"
+              data-testid="delete-task-button"
+            >
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Box>
@@ -164,6 +174,8 @@ export function TaskCard({
             startIcon={<AccessTimeIcon />}
             onClick={handleOpenTimeLog}
             sx={{ mt: 1 }}
+            aria-label="Log time manually"
+            data-testid="log-time-button"
           >
             Log Time Manually
           </Button>

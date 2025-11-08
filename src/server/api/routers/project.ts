@@ -266,4 +266,22 @@ export const projectRouter = createTRPCRouter({
         },
       });
     }),
+
+  archive: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ input }) => {
+      return await prisma.project.update({
+        where: { id: input.id },
+        data: { isArchived: true },
+      });
+    }),
+
+  unarchive: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ input }) => {
+      return await prisma.project.update({
+        where: { id: input.id },
+        data: { isArchived: false },
+      });
+    }),
 });

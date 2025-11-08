@@ -6,9 +6,9 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AI Chat Hub - マルチAIチャットクライアント',
+  title: 'TaskApp - プロジェクト・タスク管理',
   description:
-    '複数のAIモデル（ChatGPT, Claude, Gemini等）と同時に会話できるマルチAIチャットクライアント',
+    'チームで使えるプロジェクト・タスク管理アプリケーション。プロジェクト管理、タスクトラッキング、進捗レポート機能を提供します。',
 };
 
 export default function RootLayout({

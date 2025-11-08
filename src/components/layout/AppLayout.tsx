@@ -1,11 +1,13 @@
 'use client';
 
+import { api } from '@/trpc/react';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderIcon from '@mui/icons-material/Folder';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   AppBar,
   Avatar,
@@ -25,7 +27,7 @@ import {
 } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { api } from '~/trpc/react';
+import { QuickSearch } from './QuickSearch';
 
 const drawerWidth = 240;
 
@@ -40,6 +42,7 @@ const menuItems: MenuItem[] = [
   { text: 'Tasks', icon: <AssignmentIcon />, path: '/task' },
   { text: 'Projects', icon: <FolderIcon />, path: '/project' },
   { text: 'Reports', icon: <BarChartIcon />, path: '/report' },
+  { text: 'Search', icon: <SearchIcon />, path: '/search' },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -126,9 +129,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div">
             Task Management
           </Typography>
+          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, ml: 4 }}>
+            <QuickSearch />
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               alt={session.user.name || ''}
