@@ -1,9 +1,9 @@
 'use client';
 
+import { api } from '@/trpc/react';
 import { PlayArrow, Stop } from '@mui/icons-material';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { api } from '~/trpc/react';
 
 interface TaskTimerProps {
   taskId: string;
@@ -97,6 +97,8 @@ export function TaskTimer({
           }
           onClick={handleStartStop}
           disabled={updateTimerMutation.isPending}
+          aria-label={isTimerActive ? 'Stop timer' : 'Start timer'}
+          data-testid={isTimerActive ? 'stop-timer-button' : 'start-timer-button'}
         >
           {isTimerActive ? 'Stop Timer' : 'Start Timer'}
         </Button>

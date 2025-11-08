@@ -5,9 +5,12 @@ import { TaskCard } from '@/components/task/TaskCard';
 import { TaskDialog, type TaskFormData } from '@/components/task/TaskDialog';
 import { api } from '@/trpc/react';
 import AddIcon from '@mui/icons-material/Add';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -18,6 +21,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  Menu,
   MenuItem,
   TextField,
   Typography,
@@ -32,9 +36,13 @@ export default function TaskPage() {
   const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
   const [filterProject, setFilterProject] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | ''>('');
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
+  const [commentContent, setCommentContent] = useState('');
 
   const utils = api.useUtils();
 
+  const { data: session } = api.auth.getSession.useQuery();
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery(
     {
       projectId: filterProject || undefined,
@@ -70,6 +78,37 @@ export default function TaskPage() {
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
+    },
+  });
+
+  const bulkCompleteMutation = api.task.bulkComplete.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+      setSelectedTasks(new Set());
+    },
+  });
+
+  const bulkDeleteMutation = api.task.bulkDelete.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+      setSelectedTasks(new Set());
+    },
+  });
+
+  const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+      setSelectedTasks(new Set());
+      setBulkMenuAnchor(null);
+    },
+  });
+
+  const createCommentMutation = api.comment.create.useMutation({
+    onSuccess: () => {
+      if (selectedTask) {
+        utils.task.getById.invalidate({ id: selectedTask });
+      }
+      setCommentContent('');
     },
   });
 
@@ -115,6 +154,10 @@ export default function TaskPage() {
         assigneeId: data.assigneeId || null,
       });
     } else {
+      if (!session?.user?.id) {
+        console.error('No user session found');
+        return;
+      }
       createMutation.mutate({
         title: data.title,
         description: data.description,
@@ -123,8 +166,8 @@ export default function TaskPage() {
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
         estimatedHours: data.estimatedHours,
         projectId: data.projectId,
-        createdById: users?.[0]?.id || '',
-        assigneeId: data.assigneeId,
+        createdById: session.user.id,
+        assigneeId: data.assigneeId || undefined,
       });
     }
   };
@@ -137,6 +180,47 @@ export default function TaskPage() {
   const handleDetailClose = () => {
     setDetailOpen(false);
     setSelectedTask(null);
+    setCommentContent('');
+  };
+
+  const handleCommentSubmit = () => {
+    if (!commentContent.trim() || !selectedTask || !session?.user?.id) return;
+
+    createCommentMutation.mutate({
+      content: commentContent.trim(),
+      taskId: selectedTask,
+      userId: session.user.id,
+    });
+  };
+
+  const handleTaskSelect = (taskId: string, checked: boolean) => {
+    setSelectedTasks((prev) => {
+      const next = new Set(prev);
+      checked ? next.add(taskId) : next.delete(taskId);
+      return next;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedTasks(checked ? new Set(tasks?.map((t) => t.id) || []) : new Set());
+  };
+
+  const handleBulkComplete = () => {
+    if (selectedTasks.size > 0) {
+      bulkCompleteMutation.mutate({ ids: Array.from(selectedTasks) });
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedTasks.size > 0 && confirm(`Delete ${selectedTasks.size} tasks?`)) {
+      bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
+    }
+  };
+
+  const handleBulkUpdateStatus = (status: TaskStatus) => {
+    if (selectedTasks.size > 0) {
+      bulkUpdateStatusMutation.mutate({ ids: Array.from(selectedTasks), status });
+    }
   };
 
   if (tasksLoading) {
@@ -153,13 +237,49 @@ export default function TaskPage() {
     <AppLayout>
       <Box>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4">Tasks</Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
-            New Task
-          </Button>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Typography variant="h4">Tasks</Typography>
+            {selectedTasks.size > 0 && (
+              <Typography variant="body2" color="text.secondary">
+                ({selectedTasks.size} selected)
+              </Typography>
+            )}
+          </Box>
+          <Box display="flex" gap={1}>
+            {selectedTasks.size > 0 && (
+              <>
+                <Button
+                  variant="outlined"
+                  startIcon={<CheckBoxIcon />}
+                  onClick={handleBulkComplete}
+                >
+                  Complete
+                </Button>
+                <Button variant="outlined" onClick={(e) => setBulkMenuAnchor(e.currentTarget)}>
+                  Change Status
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={handleBulkDelete}
+                >
+                  Delete
+                </Button>
+              </>
+            )}
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+              New Task
+            </Button>
+          </Box>
         </Box>
 
-        <Box display="flex" gap={2} mb={3}>
+        <Box display="flex" gap={2} mb={3} alignItems="center">
+          <Checkbox
+            checked={tasks && tasks.length > 0 && selectedTasks.size === tasks.length}
+            indeterminate={tasks && selectedTasks.size > 0 && selectedTasks.size < tasks.length}
+            onChange={(e) => handleSelectAll(e.target.checked)}
+          />
           <TextField
             select
             label="Filter by Project"
@@ -198,18 +318,27 @@ export default function TaskPage() {
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
               <Grid item xs={12} sm={6} md={4} key={task.id}>
-                <TaskCard
-                  id={task.id}
-                  title={task.title}
-                  description={task.description}
-                  status={task.status}
-                  priority={task.priority}
-                  dueDate={task.dueDate}
-                  assignee={task.assignee}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onClick={handleTaskClick}
-                />
+                <Box display="flex" alignItems="flex-start" gap={1}>
+                  <Checkbox
+                    checked={selectedTasks.has(task.id)}
+                    onChange={(e) => handleTaskSelect(task.id, e.target.checked)}
+                    sx={{ mt: 1 }}
+                  />
+                  <Box flex={1}>
+                    <TaskCard
+                      id={task.id}
+                      title={task.title}
+                      description={task.description}
+                      status={task.status}
+                      priority={task.priority}
+                      dueDate={task.dueDate}
+                      assignee={task.assignee}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onClick={handleTaskClick}
+                    />
+                  </Box>
+                </Box>
               </Grid>
             ))
           ) : (
@@ -221,6 +350,19 @@ export default function TaskPage() {
           )}
         </Grid>
 
+        <Menu
+          anchorEl={bulkMenuAnchor}
+          open={Boolean(bulkMenuAnchor)}
+          onClose={() => setBulkMenuAnchor(null)}
+        >
+          <MenuItem onClick={() => handleBulkUpdateStatus('TODO')}>TODO</MenuItem>
+          <MenuItem onClick={() => handleBulkUpdateStatus('IN_PROGRESS')}>In Progress</MenuItem>
+          <MenuItem onClick={() => handleBulkUpdateStatus('IN_REVIEW')}>In Review</MenuItem>
+          <MenuItem onClick={() => handleBulkUpdateStatus('DONE')}>Done</MenuItem>
+          <MenuItem onClick={() => handleBulkUpdateStatus('CANCELLED')}>Cancelled</MenuItem>
+          <MenuItem onClick={() => handleBulkUpdateStatus('BLOCKED')}>Blocked</MenuItem>
+        </Menu>
+
         <TaskDialog
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
@@ -228,7 +370,7 @@ export default function TaskPage() {
           initialData={editingTask}
           projects={projects || []}
           users={users || []}
-          currentUserId={users?.[0]?.id || ''}
+          currentUserId={session?.user?.id || ''}
         />
 
         <Dialog open={detailOpen} onClose={handleDetailClose} maxWidth="md" fullWidth>
@@ -292,6 +434,27 @@ export default function TaskPage() {
                     </ListItem>
                   ))}
                 </List>
+                <Box sx={{ mt: 2 }}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    variant="outlined"
+                    placeholder="Add a comment..."
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.target.value)}
+                    disabled={createCommentMutation.isPending}
+                  />
+                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="contained"
+                      onClick={handleCommentSubmit}
+                      disabled={!commentContent.trim() || createCommentMutation.isPending}
+                    >
+                      {createCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
+                    </Button>
+                  </Box>
+                </Box>
               </Box>
             )}
           </DialogContent>

@@ -1,5 +1,6 @@
 'use client';
 
+import { api } from '@/trpc/react';
 import {
   Box,
   Button,
@@ -10,7 +11,6 @@ import {
   TextField,
 } from '@mui/material';
 import { useState } from 'react';
-import { api } from '~/trpc/react';
 
 interface TimeLogDialogProps {
   open: boolean;

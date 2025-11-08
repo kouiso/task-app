@@ -1,7 +1,7 @@
+import { type SessionPayload, getSession } from '@/lib/session';
 import { TRPCError, initTRPC } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
-import { type SessionPayload, getSession } from '~/lib/session';
 
 export const createTRPCContext = async (opts: {
   headers: Headers;

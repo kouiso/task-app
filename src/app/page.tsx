@@ -1,8 +1,8 @@
 'use client';
 
+import { api } from '@/trpc/react';
 import { redirect } from 'next/navigation';
 import { useEffect } from 'react';
-import { api } from '~/trpc/react';
 
 export default function HomePage() {
   const { data: session, isLoading } = api.auth.getSession.useQuery();

@@ -1,5 +1,6 @@
 'use client';
 
+import { api } from '@/trpc/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import { Alert, Avatar, Box, Button, Container, Link, TextField, Typography } from '@mui/material';
@@ -8,7 +9,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { api } from '~/trpc/react';
 
 const registerSchema = z
   .object({

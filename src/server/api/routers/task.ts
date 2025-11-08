@@ -221,4 +221,46 @@ export const taskRouter = createTRPCRouter({
       },
     });
   }),
+
+  bulkComplete: protectedProcedure
+    .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
+    .mutation(async ({ input }) => {
+      const completedAt = new Date();
+      return await prisma.task.updateMany({
+        where: { id: { in: input.ids } },
+        data: { status: 'DONE', completedAt },
+      });
+    }),
+
+  bulkDelete: protectedProcedure
+    .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
+    .mutation(async ({ input }) => {
+      return await prisma.task.deleteMany({
+        where: { id: { in: input.ids } },
+      });
+    }),
+
+  bulkUpdateStatus: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string().cuid()).min(1),
+        status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED']),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const data: { status: typeof input.status; completedAt?: Date | null } = {
+        status: input.status,
+      };
+
+      if (input.status === 'DONE') {
+        data.completedAt = new Date();
+      } else {
+        data.completedAt = null;
+      }
+
+      return await prisma.task.updateMany({
+        where: { id: { in: input.ids } },
+        data,
+      });
+    }),
 });

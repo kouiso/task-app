@@ -26,6 +26,7 @@ interface ProjectCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
+  isArchived?: boolean;
 }
 
 export function ProjectCard({
@@ -38,6 +39,7 @@ export function ProjectCard({
   onEdit,
   onDelete,
   onClick,
+  isArchived,
 }: ProjectCardProps) {
   const progress = taskStats.total > 0 ? (taskStats.done / taskStats.total) * 100 : 0;
 
@@ -68,9 +70,12 @@ export function ProjectCard({
     >
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-          <Typography variant="h6" component="div">
-            {name}
-          </Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography variant="h6" component="div">
+              {name}
+            </Typography>
+            {isArchived && <Chip label="Archived" size="small" color="default" />}
+          </Box>
           <Box>
             <IconButton size="small" onClick={handleEdit}>
               <EditIcon fontSize="small" />
