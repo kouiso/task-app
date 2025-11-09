@@ -25,7 +25,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "vercel:setup": "node setup-vercel-db.mjs",
+    "vercel:env": "vercel env pull .env.production.local",
+    "vercel:seed": "vercel env pull .env.production.local && npx prisma db seed"
   },
   "lint-staged": {
     "config": "lint-staged.config.js"
