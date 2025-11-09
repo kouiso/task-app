@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "vercel-build": "prisma generate && prisma db push --accept-data-loss && next build",
     "start": "next start",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
