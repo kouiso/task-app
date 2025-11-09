@@ -380,22 +380,44 @@ task-app/
 
 ## デプロイ
 
-### Vercelへのデプロイ
+### Vercelへのデプロイ（推奨）
+
+**🚀 自動セットアップ（1コマンドで完了）**
+
+```bash
+npm run vercel:setup
+```
+
+このコマンドで以下が自動実行されます：
+- ✅ Vercel Postgresデータベースの作成
+- ✅ プロジェクトへのデータベース接続
+- ✅ 環境変数の自動設定（NODE_ENV, JWT_SECRET, DATABASE_URL）
+- ✅ 本番環境へのデプロイ
+
+詳細な手順は [VERCEL_SETUP.md](./VERCEL_SETUP.md) を参照してください。
+
+**手動セットアップ**
 
 ```bash
 # 1. Vercel CLIをインストール
 npm install -g vercel
 
-# 2. Vercel Postgresを作成
+# 2. プロジェクトをリンク
+vercel link
+
+# 3. Vercel Postgresを作成（ダッシュボード）
 # https://vercel.com/docs/storage/vercel-postgres
 
-# 3. 環境変数を設定（Vercelダッシュボード）
-# - DATABASE_URL: Vercel Postgresの接続文字列
-# - NEXTAUTH_SECRET: ランダムな文字列（32文字以上）
-# - NEXTAUTH_URL: https://your-app.vercel.app
+# 4. 環境変数を設定（Vercelダッシュボード）
+# - DATABASE_URL: ${POSTGRES_PRISMA_URL}
+# - JWT_SECRET: ランダムな文字列（32文字以上）
+# - NODE_ENV: production
 
-# 4. デプロイ
-vercel deploy --prod
+# 5. デプロイ
+vercel --prod
+
+# 6. データベースシード
+npm run vercel:seed
 ```
 
 ### Docker運用
