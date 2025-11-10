@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 
 async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function manualFullTest() {
@@ -9,7 +9,7 @@ async function manualFullTest() {
 
   const browser = await chromium.launch({
     headless: false,
-    slowMo: 500  // 操作をゆっくり実行して確認しやすくする
+    slowMo: 500, // 操作をゆっくり実行して確認しやすくする
   });
   const page = await browser.newPage();
 
@@ -75,7 +75,9 @@ async function manualFullTest() {
       await page.screenshot({ path: 'manual-test-06-task-detail.png', fullPage: true });
 
       // コメント入力欄を探す
-      const commentInput = await page.$('textarea[placeholder*="comment"], textarea[placeholder*="コメント"]');
+      const commentInput = await page.$(
+        'textarea[placeholder*="comment"], textarea[placeholder*="コメント"]',
+      );
       if (commentInput) {
         console.log('   ✅ コメント入力欄が見つかりました');
         await commentInput.fill('手動テストコメント - ' + new Date().toLocaleTimeString());
@@ -118,7 +120,9 @@ async function manualFullTest() {
         await page.screenshot({ path: 'manual-test-10-edit-modified.png', fullPage: true });
 
         // 保存ボタンを探してクリック
-        const saveButton = await page.$('div[role="dialog"] button:has-text("保存"), div[role="dialog"] button:has-text("Save")');
+        const saveButton = await page.$(
+          'div[role="dialog"] button:has-text("保存"), div[role="dialog"] button:has-text("Save")',
+        );
         if (saveButton) {
           await saveButton.click();
           await sleep(2000);
@@ -126,7 +130,9 @@ async function manualFullTest() {
         }
 
         // ダイアログが残っている場合は閉じる
-        const closeButton2 = await page.$('div[role="dialog"] button:has-text("CLOSE"), div[role="dialog"] button:has-text("閉じる")');
+        const closeButton2 = await page.$(
+          'div[role="dialog"] button:has-text("CLOSE"), div[role="dialog"] button:has-text("閉じる")',
+        );
         if (closeButton2) {
           await closeButton2.click();
           await sleep(1000);
@@ -205,7 +211,6 @@ async function manualFullTest() {
     // ブラウザを10秒間開いたままにして、確認できるようにする
     console.log('\n⏳ 10秒後にブラウザを閉じます...');
     await sleep(10000);
-
   } catch (error) {
     console.error('❌ エラー:', error.message);
     await page.screenshot({ path: 'manual-test-error.png', fullPage: true });

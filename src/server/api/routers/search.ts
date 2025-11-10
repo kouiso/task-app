@@ -260,6 +260,7 @@ export const searchRouter = createTRPCRouter({
     const userId = ctx.session.userId;
 
     // ユーザーが関わるプロジェクトのメンバーを取得
+    // distinct: ['userId'] を使用して、データベースレベルで重複を排除
     const projectMembers = await prisma.projectMember.findMany({
       where: {
         project: {
@@ -270,7 +271,7 @@ export const searchRouter = createTRPCRouter({
           },
         },
       },
-      include: {
+      select: {
         user: {
           select: { id: true, name: true, email: true, avatar: true },
         },
@@ -283,11 +284,7 @@ export const searchRouter = createTRPCRouter({
       },
     });
 
-    // 重複を除いたユーザーリストを返す
-    const uniqueUsers = projectMembers
-      .map((member) => member.user)
-      .filter((user, index, self) => index === self.findIndex((u) => u.id === user.id));
-
-    return uniqueUsers;
+    // データベースのdistinctで既に重複除去されているため、そのままユーザー情報を返す
+    return projectMembers.map((member) => member.user);
   }),
 });

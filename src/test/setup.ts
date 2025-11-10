@@ -13,12 +13,18 @@ vi.mock('next/headers', () => ({
 }));
 
 beforeAll(async () => {
-  if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL =
+  if (!process.env['DATABASE_URL']) {
+    process.env['DATABASE_URL'] =
       'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public';
   }
-  if (!process.env.JWT_SECRET) {
-    process.env.JWT_SECRET = 'test-secret-key-for-testing-only';
+  if (!process.env['JWT_SECRET']) {
+    process.env['JWT_SECRET'] = 'test-secret-key-for-testing-only-32-chars-min';
+  }
+  if (!process.env['NEXTAUTH_SECRET']) {
+    process.env['NEXTAUTH_SECRET'] = 'test-nextauth-secret-key-for-testing-only';
+  }
+  if (!process.env['NEXTAUTH_URL']) {
+    process.env['NEXTAUTH_URL'] = 'http://localhost:3000';
   }
 
   // Skip database initialization for jsdom environment (component tests)
@@ -31,7 +37,7 @@ beforeAll(async () => {
         env: {
           ...process.env,
           DATABASE_URL:
-            process.env.DATABASE_URL ||
+            process.env['DATABASE_URL'] ||
             'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public',
         },
         cwd: process.cwd(),

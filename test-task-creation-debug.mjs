@@ -83,7 +83,9 @@ async function test() {
     const formState = await page.evaluate(() => {
       // Reactの内部状態は直接取得できないので、DOM要素の値を確認
       const titleInput = document.querySelector('div[role="dialog"] input[type="text"]');
-      const projectInput = document.querySelector('div[role="dialog"] label:has-text("Project") ~ div input');
+      const projectInput = document.querySelector(
+        'div[role="dialog"] label:has-text("Project") ~ div input',
+      );
 
       return {
         title: titleInput?.value || 'not found',
@@ -94,7 +96,7 @@ async function test() {
 
     // Createボタンの状態を確認
     const createButton = await page.$('button:has-text("Create")');
-    const isDisabled = await createButton.evaluate(btn => btn.disabled);
+    const isDisabled = await createButton.evaluate((btn) => btn.disabled);
     console.log(`   Createボタン: ${isDisabled ? '無効' : '有効'}\n`);
 
     if (!isDisabled) {
@@ -115,7 +117,6 @@ async function test() {
 
     await page.screenshot({ path: 'debug-task-creation.png', fullPage: true });
     console.log('\n📸 スクリーンショット: debug-task-creation.png');
-
   } catch (error) {
     console.error('❌ エラー:', error.message);
     await page.screenshot({ path: 'debug-error.png' });

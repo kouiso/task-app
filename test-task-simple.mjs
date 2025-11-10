@@ -8,7 +8,7 @@ async function test() {
   // コンソールメッセージを監視
   const consoleErrors = [];
   const consoleLogs = [];
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     if (msg.type() === 'error') {
       consoleErrors.push(msg.text());
     } else if (msg.type() === 'log') {
@@ -52,18 +52,20 @@ async function test() {
     console.log('5️⃣  プロジェクト選択');
 
     // Method 1: すべてのselectフィールドを探す
-    const selects = await page.$$eval('div[role="dialog"] .MuiSelect-select', elements =>
+    const selects = await page.$$eval('div[role="dialog"] .MuiSelect-select', (elements) =>
       elements.map((el, idx) => ({
         index: idx,
         text: el.textContent,
         ariaLabel: el.getAttribute('aria-label'),
-      }))
+      })),
     );
     console.log('   利用可能なselectフィールド:', selects);
 
     // Projectフィールドを探す（Statusの後、Priorityの前）
     // Grid構造: Status, Priority, Project, Assignee の順
-    const projectSelectDiv = await page.$('div[role="dialog"] .MuiGrid-item:nth-child(5) .MuiSelect-select');
+    const projectSelectDiv = await page.$(
+      'div[role="dialog"] .MuiGrid-item:nth-child(5) .MuiSelect-select',
+    );
 
     if (projectSelectDiv) {
       console.log('   ✅ プロジェクト選択フィールド発見');
@@ -105,7 +107,7 @@ async function test() {
     // Createボタンの状態を確認
     console.log('6️⃣  Createボタン確認');
     const createButton = await page.locator('button:has-text("Create")');
-    const isDisabled = await createButton.evaluate(btn => btn.disabled);
+    const isDisabled = await createButton.evaluate((btn) => btn.disabled);
     console.log(`   Createボタン: ${isDisabled ? '無効' : '有効'}\n`);
 
     if (!isDisabled) {
@@ -125,13 +127,15 @@ async function test() {
       // ログチェック
       if (consoleLogs.length > 0) {
         console.log('\n📋 コンソールログ (task creation関連のみ):');
-        consoleLogs.filter(log => log.includes('🔍') || log.includes('📝')).forEach(log => console.log(`   ${log}`));
+        consoleLogs
+          .filter((log) => log.includes('🔍') || log.includes('📝'))
+          .forEach((log) => console.log(`   ${log}`));
       }
 
       // エラーチェック
       if (consoleErrors.length > 0) {
         console.log('\n⚠️  コンソールエラー:');
-        consoleErrors.forEach(err => console.log(`   - ${err.substring(0, 300)}`));
+        consoleErrors.forEach((err) => console.log(`   - ${err.substring(0, 300)}`));
       } else {
         console.log('\n✅ コンソールエラーなし');
       }
@@ -142,7 +146,6 @@ async function test() {
 
     await page.screenshot({ path: 'test-simple-task.png', fullPage: true });
     console.log('\n📸 スクリーンショット: test-simple-task.png');
-
   } catch (error) {
     console.error('❌ エラー:', error.message);
     await page.screenshot({ path: 'test-simple-error.png' });

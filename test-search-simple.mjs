@@ -18,7 +18,7 @@ async function test() {
     // 検索ページへ（キーワード付きURLで直接アクセス）
     console.log('2️⃣  検索ページへ移動（キーワード: デザイン）');
     await page.goto('http://localhost:3000/search?keyword=%E3%83%87%E3%82%B6%E3%82%A4%E3%83%B3', {
-      waitUntil: 'networkidle'
+      waitUntil: 'networkidle',
     });
     await page.waitForTimeout(3000);
 
@@ -40,7 +40,6 @@ async function test() {
 
     await page.screenshot({ path: 'test-search-design.png', fullPage: true });
     console.log('\n📸 スクリーンショット: test-search-design.png');
-
   } catch (error) {
     console.error('❌ エラー:', error.message);
     await page.screenshot({ path: 'test-search-error.png' });

@@ -96,7 +96,7 @@ export default function UsersPage() {
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Avatar
-                      src={user.avatar || undefined}
+                      {...(user.avatar && { src: user.avatar })}
                       alt={user.name || ''}
                       sx={{ width: 40, height: 40 }}
                     >

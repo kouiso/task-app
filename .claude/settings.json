@@ -1,15 +1,11 @@
 {
   "permissions": {
-    "allow": [
-      "*"
-    ],
+    "allow": ["*"],
     "deny": [],
     "ask": []
   },
   "mcpServers": {},
   "allowDangerousBashOptions": true,
-  "allowedDirectories": [
-    "."
-  ],
+  "allowedDirectories": ["."],
   "dangerouslyDisableSandbox": false
 }

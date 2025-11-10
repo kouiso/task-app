@@ -7,7 +7,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FolderIcon from '@mui/icons-material/Folder';
 import PendingIcon from '@mui/icons-material/Pending';
 import { Box, Card, CardContent, CircularProgress, Grid, Paper, Typography } from '@mui/material';
-import { TaskStatus } from '@prisma/client';
 
 export default function DashboardPage() {
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();

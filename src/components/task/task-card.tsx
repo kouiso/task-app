@@ -142,14 +142,14 @@ export function TaskCard({
           {assignee && (
             <Box display="flex" alignItems="center" gap={1}>
               <Avatar
-                src={assignee.avatar || undefined}
+                {...(assignee.avatar && { src: assignee.avatar })}
                 alt={assignee.name || assignee.email}
                 sx={{ width: 24, height: 24 }}
               >
-                {(assignee.name || assignee.email)[0].toUpperCase()}
+                {(assignee.name || assignee.email || '?')[0]?.toUpperCase() || '?'}
               </Avatar>
               <Typography variant="caption" color="text.secondary">
-                {assignee.name || assignee.email}
+                {assignee.name || assignee.email || 'Unknown'}
               </Typography>
             </Box>
           )}

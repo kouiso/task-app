@@ -7,13 +7,13 @@ async function testFullFunctionality() {
 
   const errors = [];
 
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     if (msg.type() === 'error') {
       errors.push(`Console Error: ${msg.text()}`);
     }
   });
 
-  page.on('pageerror', error => {
+  page.on('pageerror', (error) => {
     errors.push(`Page Error: ${error.message}`);
   });
 
@@ -39,7 +39,13 @@ async function testFullFunctionality() {
     let createButtonFound = false;
     for (const button of createButtons) {
       const text = await button.textContent();
-      if (text && (text.includes('新規') || text.includes('作成') || text.includes('追加') || text.includes('Create'))) {
+      if (
+        text &&
+        (text.includes('新規') ||
+          text.includes('作成') ||
+          text.includes('追加') ||
+          text.includes('Create'))
+      ) {
         console.log(`   📝 作成ボタン発見: "${text}"`);
         await button.click();
         createButtonFound = true;
@@ -56,7 +62,9 @@ async function testFullFunctionality() {
     } else {
       // フォームが表示されているか確認
       await page.waitForTimeout(1000);
-      const formInputs = await page.$$('input[type="text"], input[name*="name"], input[placeholder*="プロジェクト"]');
+      const formInputs = await page.$$(
+        'input[type="text"], input[name*="name"], input[placeholder*="プロジェクト"]',
+      );
       console.log(`   📋 入力フォーム数: ${formInputs.length}`);
 
       if (formInputs.length > 0) {
@@ -70,7 +78,13 @@ async function testFullFunctionality() {
         const saveButtons = await page.$$('button');
         for (const button of saveButtons) {
           const text = await button.textContent();
-          if (text && (text.includes('作成') || text.includes('保存') || text.includes('Create') || text.includes('Save'))) {
+          if (
+            text &&
+            (text.includes('作成') ||
+              text.includes('保存') ||
+              text.includes('Create') ||
+              text.includes('Save'))
+          ) {
             console.log(`   💾 保存ボタンクリック: "${text}"`);
             await button.click();
             await page.waitForTimeout(2000);
@@ -92,7 +106,13 @@ async function testFullFunctionality() {
     let taskButtonFound = false;
     for (const button of taskCreateButtons) {
       const text = await button.textContent();
-      if (text && (text.includes('新規') || text.includes('作成') || text.includes('追加') || text.includes('Create'))) {
+      if (
+        text &&
+        (text.includes('新規') ||
+          text.includes('作成') ||
+          text.includes('追加') ||
+          text.includes('Create'))
+      ) {
         console.log(`   📝 タスク作成ボタン発見: "${text}"`);
         await button.click();
         taskButtonFound = true;
@@ -119,7 +139,13 @@ async function testFullFunctionality() {
         const saveBtns = await page.$$('button');
         for (const button of saveBtns) {
           const text = await button.textContent();
-          if (text && (text.includes('作成') || text.includes('保存') || text.includes('Create') || text.includes('Save'))) {
+          if (
+            text &&
+            (text.includes('作成') ||
+              text.includes('保存') ||
+              text.includes('Create') ||
+              text.includes('Save'))
+          ) {
             console.log(`   💾 保存ボタンクリック: "${text}"`);
             await button.click();
             await page.waitForTimeout(2000);
@@ -135,7 +161,9 @@ async function testFullFunctionality() {
     await page.goto('http://localhost:3000/search', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1000);
 
-    const searchInputs = await page.$$('input[type="text"], input[type="search"], input[placeholder*="検索"]');
+    const searchInputs = await page.$$(
+      'input[type="text"], input[type="search"], input[placeholder*="検索"]',
+    );
     console.log(`   🔍 検索入力欄数: ${searchInputs.length}`);
 
     if (searchInputs.length > 0) {
@@ -173,7 +201,8 @@ async function testFullFunctionality() {
     await page.waitForTimeout(1000);
 
     const content = await page.content();
-    const hasStats = content.includes('Total') || content.includes('プロジェクト') || content.includes('タスク');
+    const hasStats =
+      content.includes('Total') || content.includes('プロジェクト') || content.includes('タスク');
     console.log(`   📊 統計情報表示: ${hasStats ? 'あり' : 'なし'}`);
 
     if (hasStats) {
@@ -188,7 +217,10 @@ async function testFullFunctionality() {
     await page.waitForTimeout(1000);
 
     const reportContent = await page.content();
-    const hasReport = reportContent.includes('週次') || reportContent.includes('Weekly') || reportContent.includes('レポート');
+    const hasReport =
+      reportContent.includes('週次') ||
+      reportContent.includes('Weekly') ||
+      reportContent.includes('レポート');
     console.log(`   📈 レポート表示: ${hasReport ? 'あり' : 'なし'}`);
 
     if (hasReport) {
@@ -201,7 +233,10 @@ async function testFullFunctionality() {
     await page.waitForTimeout(1000);
 
     const usersContent = await page.content();
-    const hasUsers = usersContent.includes('admin@example.com') || usersContent.includes('管理者') || usersContent.includes('user1@example.com');
+    const hasUsers =
+      usersContent.includes('admin@example.com') ||
+      usersContent.includes('管理者') ||
+      usersContent.includes('user1@example.com');
     console.log(`   👥 ユーザー一覧表示: ${hasUsers ? 'あり' : 'なし'}`);
 
     if (hasUsers) {
@@ -221,13 +256,12 @@ async function testFullFunctionality() {
     // エラーサマリー
     if (errors.length > 0) {
       console.log('❌ エラーが発生しました:');
-      errors.forEach(err => console.log(`   - ${err}`));
+      errors.forEach((err) => console.log(`   - ${err}`));
     } else {
       console.log('✅ JavaScriptエラーなし');
     }
 
     console.log('\n🎉 完全な機能テスト完了！');
-
   } catch (error) {
     console.error('❌ テスト中にエラーが発生:', error.message);
     await page.screenshot({ path: 'test-error.png' });

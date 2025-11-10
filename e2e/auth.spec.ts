@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
@@ -36,7 +36,10 @@ test.describe('Authentication', () => {
     await page.waitForTimeout(2000);
 
     // Should still be on login page or show error
-    const errorVisible = await page.locator('text=/エラー|error|ログインに失敗/i').isVisible().catch(() => false);
+    const errorVisible = await page
+      .locator('text=/エラー|error|ログインに失敗/i')
+      .isVisible()
+      .catch(() => false);
     expect(errorVisible || page.url().includes('/login')).toBeTruthy();
   });
 

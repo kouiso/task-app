@@ -23,7 +23,9 @@ async function test() {
 
     // 検索入力欄を確認
     console.log('3️⃣  検索フォームの確認');
-    const searchInput = await page.$('input[type="search"], input[placeholder*="検索"], input[label*="キーワード"]');
+    const searchInput = await page.$(
+      'input[type="search"], input[placeholder*="検索"], input[label*="キーワード"]',
+    );
 
     if (searchInput) {
       const placeholder = await searchInput.getAttribute('placeholder');
@@ -74,7 +76,10 @@ async function test() {
         console.log('   ⚠️  "デザイン"が見つかりません');
 
         // デバッグ: "No results" や "結果なし" のようなメッセージがあるか確認
-        const hasNoResults = bodyText.includes('No results') || bodyText.includes('結果') || bodyText.includes('見つかりません');
+        const hasNoResults =
+          bodyText.includes('No results') ||
+          bodyText.includes('結果') ||
+          bodyText.includes('見つかりません');
         if (hasNoResults) {
           console.log('   ⚠️  "結果なし"メッセージが表示されている可能性');
         }
@@ -95,7 +100,6 @@ async function test() {
 
       await page.screenshot({ path: 'test-search-debug.png', fullPage: true });
       console.log('\n📸 スクリーンショット: test-search-debug.png');
-
     } else {
       console.log('   ❌ 検索入力欄が見つかりません');
 
@@ -108,7 +112,6 @@ async function test() {
         console.log(`   Input ${i}: type="${type}", placeholder="${placeholder}"`);
       }
     }
-
   } catch (error) {
     console.error('\n❌ エラー:', error.message);
     await page.screenshot({ path: 'test-search-error.png' });
