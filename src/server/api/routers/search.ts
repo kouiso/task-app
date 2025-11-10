@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -33,11 +34,11 @@ const quickSearchInputSchema = z.object({
  */
 type FilterConfig = {
   key: string;
-  value: any;
-  transform?: (value: any) => any;
+  value: unknown;
+  transform?: (value: unknown) => unknown;
 };
 
-const buildDynamicWhere = (filters: FilterConfig[]): Record<string, any> => {
+const buildDynamicWhere = (filters: FilterConfig[]): Record<string, unknown> => {
   return filters
     .filter((f) => f.value !== undefined && f.value !== null && f.value !== 'all')
     .reduce(
@@ -91,7 +92,7 @@ export const searchRouter = createTRPCRouter({
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
     // タスク検索条件を動的に構築
-    const taskWhere: any = {
+    const taskWhere: Prisma.TaskWhereInput = {
       // 自分が関わるタスクのみ（作成者または担当者）
       OR: [{ createdById: userId }, { assigneeId: userId }],
       // 動的フィルター適用

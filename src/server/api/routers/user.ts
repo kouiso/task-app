@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
@@ -76,7 +77,7 @@ export const userRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ input }) => {
-      const where: any = {};
+      const where: Prisma.UserWhereInput = {};
 
       if (input?.isActive !== undefined) {
         where.isActive = input.isActive;

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -53,7 +54,7 @@ export const taskRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ input }) => {
-      const where: any = {};
+      const where: Prisma.TaskWhereInput = {};
 
       if (input?.projectId) where.projectId = input.projectId;
       if (input?.status) where.status = input.status;
