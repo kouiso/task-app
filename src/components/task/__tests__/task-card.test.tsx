@@ -11,9 +11,17 @@ import { TaskCard } from '../task-card';
 
 // Mock the TaskTimer and TimeLogDialog components to avoid tRPC calls
 vi.mock('../task-timer', () => ({
-  TaskTimer: ({ taskId, isTimerActive, onTimerUpdate }: any) => (
+  TaskTimer: ({
+    isTimerActive,
+    onTimerUpdate,
+  }: {
+    taskId: string;
+    isTimerActive: boolean;
+    onTimerUpdate?: () => void;
+  }) => (
     <div data-testid="task-timer">
       <button
+        type="button"
         data-testid={isTimerActive ? 'stop-timer-button' : 'start-timer-button'}
         onClick={() => onTimerUpdate?.()}
         aria-label={isTimerActive ? 'Stop timer' : 'Start timer'}
@@ -25,10 +33,23 @@ vi.mock('../task-timer', () => ({
 }));
 
 vi.mock('../time-log-dialog', () => ({
-  TimeLogDialog: ({ open, onClose, taskId, onSuccess }: any) => (
+  TimeLogDialog: ({
+    open,
+    onClose,
+    onSuccess,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    taskId: string;
+    onSuccess: () => void;
+  }) => (
     <div data-testid="time-log-dialog" style={{ display: open ? 'block' : 'none' }}>
-      <button onClick={onClose}>Close</button>
-      <button onClick={onSuccess}>Add Time</button>
+      <button type="button" onClick={onClose}>
+        Close
+      </button>
+      <button type="button" onClick={onSuccess}>
+        Add Time
+      </button>
     </div>
   ),
 }));
@@ -145,7 +166,7 @@ describe('TaskCard', () => {
   it('should render different status chips correctly', () => {
     const statuses = ['TODO', 'IN_PROGRESS', 'DONE'] as const;
 
-    statuses.forEach((status) => {
+    for (const status of statuses) {
       const Wrapper = createWrapper();
       const { unmount } = render(<TaskCard {...defaultProps} status={status} />, {
         wrapper: Wrapper,
@@ -153,6 +174,6 @@ describe('TaskCard', () => {
       // Status is displayed as is (with underscores), not replaced with spaces
       expect(screen.getByText(status)).toBeInTheDocument();
       unmount();
-    });
+    }
   });
 });

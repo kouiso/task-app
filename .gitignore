@@ -68,3 +68,14 @@ test-results/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Test files and screenshots
+test-*.mjs
+*-test.mjs
+test-*.png
+manual-test-*.png
+*-screenshot.png
+*-error.png
+debug-*.mjs
+setup-*.mjs
+inspect-*.mjs

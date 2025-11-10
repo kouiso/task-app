@@ -85,10 +85,10 @@ function SearchPageContent() {
       { key: 'dateTo', setter: setDateTo },
     ];
 
-    paramSetters.forEach(({ key, setter }) => {
+    for (const { key, setter } of paramSetters) {
       const value = searchParams.get(key);
       if (value) setter(value);
-    });
+    }
   }, [searchParams]);
 
   // 検索実行（条件分岐を配列メソッドで削減）
@@ -104,9 +104,12 @@ function SearchPageContent() {
     ];
 
     const params = new URLSearchParams();
-    searchParamList
-      .filter((param) => param.value && param.value !== param.exclude)
-      .forEach((param) => params.set(param.key, param.value));
+    const filteredParams = searchParamList.filter(
+      (param) => param.value && param.value !== param.exclude,
+    );
+    for (const param of filteredParams) {
+      params.set(param.key, param.value);
+    }
 
     router.push(`/search?${params.toString()}`);
   };
@@ -132,11 +135,9 @@ function SearchPageContent() {
     router.push(`/task?taskId=${taskId}&edit=true`);
   };
 
-  const handleTaskDelete = (taskId: string) => {
+  const handleTaskDelete = (_taskId: string) => {
     // タスク削除処理（実装済みのtask.delete mutationを使用）
     if (confirm('このタスクを削除してもよろしいですか？')) {
-      // 削除処理は親コンポーネントで実装する必要がある
-      console.log('Delete task:', taskId);
     }
   };
 

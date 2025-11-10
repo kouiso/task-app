@@ -17,7 +17,8 @@
         "noUselessConstructor": "error",
         "useArrowFunction": "error",
         "noStaticOnlyClass": "warn",
-        "noForEach": "warn"
+        "noForEach": "warn",
+        "useLiteralKeys": "off"
       },
       "correctness": {
         "noUnusedVariables": "error",

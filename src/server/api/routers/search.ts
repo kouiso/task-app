@@ -39,28 +39,26 @@ type FilterConfig = {
 };
 
 const buildDynamicWhere = (filters: FilterConfig[]): Record<string, unknown> => {
-  return filters
-    .filter((f) => f.value !== undefined && f.value !== null && f.value !== 'all')
-    .reduce(
-      (acc, f) => ({
-        ...acc,
-        [f.key]: f.transform ? f.transform(f.value) : f.value,
-      }),
-      {},
-    );
+  const result: Record<string, unknown> = {};
+  for (const f of filters) {
+    if (f.value !== undefined && f.value !== null && f.value !== 'all') {
+      result[f.key] = f.transform ? f.transform(f.value) : f.value;
+    }
+  }
+  return result;
 };
 
 /**
  * 日付範囲フィルターを構築
  */
 const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
-  const dateFilter = [
-    { hasValue: !!dateFrom, filter: { gte: new Date(dateFrom!) } },
-    { hasValue: !!dateTo, filter: { lte: new Date(dateTo!) } },
-  ]
-    .filter((d) => d.hasValue)
-    .reduce((acc, d) => ({ ...acc, ...d.filter }), {});
-
+  const dateFilter: Record<string, Date> = {};
+  if (dateFrom) {
+    dateFilter['gte'] = new Date(dateFrom);
+  }
+  if (dateTo) {
+    dateFilter['lte'] = new Date(dateTo);
+  }
   return Object.keys(dateFilter).length > 0 ? dateFilter : undefined;
 };
 
