@@ -45,7 +45,10 @@ beforeAll(async () => {
     } catch (error) {
       console.error('Failed to initialize test database:', error);
       if (error instanceof Error && 'stderr' in error) {
-        console.error('stderr:', (error as any).stderr?.toString());
+        console.error(
+          'stderr:',
+          (error as Error & { stderr?: { toString: () => string } }).stderr?.toString(),
+        );
       }
     }
   }

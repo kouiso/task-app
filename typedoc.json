@@ -1,6 +1,0 @@
-{
-  "entryPoints": ["src/*"],
-  "out": "./doc/definition/typedoc",
-  "excludeExternals": true,
-  "tsconfig": "tsconfig.json"
-}
