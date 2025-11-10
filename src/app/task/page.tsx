@@ -1,8 +1,8 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
-import { TaskCard } from '@/components/task/TaskCard';
-import { TaskDialog, type TaskFormData } from '@/components/task/TaskDialog';
+import { AppLayout } from '@/components/layout/app-layout';
+import { TaskCard } from '@/components/task/task-card';
+import { TaskDialog, type TaskFormData } from '@/components/task/task-dialog';
 import { api } from '@/trpc/react';
 import AddIcon from '@mui/icons-material/Add';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';

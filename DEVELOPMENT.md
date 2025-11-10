@@ -332,7 +332,7 @@ describe('Task API', () => {
 ```typescript
 // src/components/task/__tests__/TaskCard.test.tsx
 import { render, screen } from '@testing-library/react';
-import { TaskCard } from '../TaskCard';
+import { TaskCard } from '../task-card';
 
 describe('TaskCard', () => {
   it('タスク情報を表示する', () => {

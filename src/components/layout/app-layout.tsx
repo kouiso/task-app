@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { QuickSearch } from './QuickSearch';
+import { QuickSearch } from './quick-search';
 
 const drawerWidth = 240;
 

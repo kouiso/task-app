@@ -1,8 +1,8 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
-import { ProjectCard } from '@/components/project/ProjectCard';
-import { ProjectDialog, type ProjectFormData } from '@/components/project/ProjectDialog';
+import { AppLayout } from '@/components/layout/app-layout';
+import { ProjectCard } from '@/components/project/project-card';
+import { ProjectDialog, type ProjectFormData } from '@/components/project/project-dialog';
 import { api } from '@/trpc/react';
 import AddIcon from '@mui/icons-material/Add';
 import ArchiveIcon from '@mui/icons-material/Archive';
