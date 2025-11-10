@@ -72,11 +72,14 @@ function SearchPageContent() {
 
   // URLパラメータから初期値を設定（条件分岐を配列メソッドで削減）
   useEffect(() => {
-    const paramSetters = [
+    const paramSetters: Array<{
+      key: string;
+      setter: (value: string) => void;
+    }> = [
       { key: 'keyword', setter: setKeyword },
       { key: 'projectId', setter: setProjectId },
-      { key: 'status', setter: setStatus },
-      { key: 'priority', setter: setPriority },
+      { key: 'status', setter: (value: string) => setStatus(value as 'all' | TaskStatus) },
+      { key: 'priority', setter: (value: string) => setPriority(value as 'all' | TaskPriority) },
       { key: 'assignedTo', setter: setAssignedTo },
       { key: 'dateFrom', setter: setDateFrom },
       { key: 'dateTo', setter: setDateTo },
@@ -84,7 +87,7 @@ function SearchPageContent() {
 
     paramSetters.forEach(({ key, setter }) => {
       const value = searchParams.get(key);
-      if (value) setter(value as any);
+      if (value) setter(value);
     });
   }, [searchParams]);
 
@@ -111,17 +114,13 @@ function SearchPageContent() {
 
   // クリア（初期値を配列で管理）
   const handleClear = () => {
-    const clearActions = [
-      { setter: setKeyword, value: '' },
-      { setter: setProjectId, value: '' },
-      { setter: setStatus, value: 'all' as const },
-      { setter: setPriority, value: 'all' as const },
-      { setter: setAssignedTo, value: '' },
-      { setter: setDateFrom, value: '' },
-      { setter: setDateTo, value: '' },
-    ];
-
-    clearActions.forEach(({ setter, value }) => setter(value as any));
+    setKeyword('');
+    setProjectId('');
+    setStatus('all');
+    setPriority('all');
+    setAssignedTo('');
+    setDateFrom('');
+    setDateTo('');
     router.push('/search');
   };
 

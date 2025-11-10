@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -44,7 +45,7 @@ export const projectRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ input }) => {
-      const where: any = {};
+      const where: Prisma.ProjectWhereInput = {};
 
       if (input?.userId) {
         where.members = {
@@ -138,7 +139,7 @@ export const projectRouter = createTRPCRouter({
   update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ input }) => {
     const { id, ...data } = input;
 
-    const updateData: any = { ...data };
+    const updateData: Prisma.ProjectUpdateInput = { ...data };
     if (data.startDate !== undefined) {
       updateData.startDate = data.startDate ? new Date(data.startDate) : null;
     }
