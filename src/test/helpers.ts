@@ -1,6 +1,11 @@
 import bcrypt from 'bcryptjs';
+import { QueryClient } from '@tanstack/react-query';
+import { httpBatchLink } from '@trpc/client';
+import { createTRPCReact } from '@trpc/react-query';
+import superjson from 'superjson';
 import { prisma } from '../lib/prisma';
-import { type SessionPayload, encrypt } from '../lib/session';
+import { type SessionPayload } from '../lib/session';
+import type { AppRouter } from '../server/api/root';
 import { appRouter } from '../server/api/root';
 import { createCallerFactory, createTRPCContext } from '../server/api/trpc';
 
@@ -141,4 +146,31 @@ export async function createTestCaller(session?: SessionPayload | null) {
 export async function createAuthenticatedCaller(userId: string, email: string, role: string) {
   const session = createMockSession(userId, email, role);
   return await createTestCaller(session);
+}
+
+// Create tRPC test utilities for React component testing
+export function createTRPCTestUtils() {
+  const trpcReact = createTRPCReact<AppRouter>();
+
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+
+  const trpcClient = trpcReact.createClient({
+    links: [
+      httpBatchLink({
+        url: 'http://localhost:3000/api/trpc',
+        transformer: superjson,
+      }),
+    ],
+  });
+
+  return { trpcReact, queryClient, trpcClient };
 }
