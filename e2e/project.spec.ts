@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('Project Management', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test
-    await page.goto('/');
-    await page.getByLabel(/メールアドレス|email/i).fill('admin@example.com');
-    await page.getByLabel(/パスワード|password/i).fill('password123');
+    await page.goto('/login');
+    await page.fill('#email', 'admin@example.com');
+    await page.fill('#password', 'password123');
     await page.getByRole('button', { name: /ログイン|login/i }).click();
     await page.waitForURL('/dashboard', { timeout: 10000 });
   });

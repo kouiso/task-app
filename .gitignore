@@ -61,3 +61,7 @@ robots.txt
 # database files
 *.db
 *.db-*
+
+# Playwright test results
+playwright-report/
+test-results/
