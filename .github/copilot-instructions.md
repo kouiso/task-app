@@ -658,7 +658,7 @@ import { Box, Card } from '@mui/material';
 
 // 3. 内部モジュール（絶対パス）
 import { api } from '@/lib/api';
-import { TaskCard } from '@/components/task/TaskCard';
+import { TaskCard } from '@/components/task/task-card';
 
 // 4. 型定義
 import type { Task } from '@/types/task';

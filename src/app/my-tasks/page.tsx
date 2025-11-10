@@ -1,7 +1,7 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
-import { TaskCard } from '@/components/task/TaskCard';
+import { AppLayout } from '@/components/layout/app-layout';
+import { TaskCard } from '@/components/task/task-card';
 import { api } from '@/trpc/react';
 import {
   Box,

@@ -15,8 +15,8 @@ import {
 } from '@mui/material';
 import type { TaskPriority, TaskStatus } from '@prisma/client';
 import { useState } from 'react';
-import { TaskTimer } from './TaskTimer';
-import { TimeLogDialog } from './TimeLogDialog';
+import { TaskTimer } from './task-timer';
+import { TimeLogDialog } from './time-log-dialog';
 
 interface TaskCardProps {
   id: string;

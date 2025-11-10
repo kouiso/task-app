@@ -1,6 +1,6 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AppLayout } from '@/components/layout/app-layout';
 import { api } from '@/trpc/react';
 import { Box, Card, CardContent, CircularProgress, Grid, Paper, Typography } from '@mui/material';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
