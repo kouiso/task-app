@@ -6,7 +6,7 @@ async function testCRUDOperations() {
   const page = await browser.newPage();
 
   const errors = [];
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     if (msg.type() === 'error') {
       errors.push(`Console Error: ${msg.text()}`);
     }
@@ -116,7 +116,10 @@ async function testCRUDOperations() {
     await page.waitForTimeout(500);
 
     // Createボタンが有効になるのを待つ
-    await page.waitForSelector('button:has-text("Create"):not([disabled]), button:has-text("Save"):not([disabled])', { timeout: 10000 });
+    await page.waitForSelector(
+      'button:has-text("Create"):not([disabled]), button:has-text("Save"):not([disabled])',
+      { timeout: 10000 },
+    );
     await page.click('button:has-text("Create"), button:has-text("Save")');
     console.log('   💾 保存ボタンクリック');
     await page.waitForTimeout(3000);
@@ -173,14 +176,18 @@ async function testCRUDOperations() {
       await page.waitForTimeout(2000);
 
       // コメント入力欄を探す
-      const commentInput = await page.$('textarea, input[placeholder*="コメント"], input[placeholder*="comment"]');
+      const commentInput = await page.$(
+        'textarea, input[placeholder*="コメント"], input[placeholder*="comment"]',
+      );
       if (commentInput) {
         await commentInput.fill('これはPlaywrightからの自動テストコメントです');
         console.log('   💬 コメント入力');
         await page.waitForTimeout(500);
 
         // 送信ボタン
-        const submitBtn = await page.$('button:has-text("送信"), button:has-text("Submit"), button:has-text("Post"), button:has-text("投稿")');
+        const submitBtn = await page.$(
+          'button:has-text("送信"), button:has-text("Submit"), button:has-text("Post"), button:has-text("投稿")',
+        );
         if (submitBtn) {
           await submitBtn.click();
           console.log('   📤 コメント送信');
@@ -209,7 +216,9 @@ async function testCRUDOperations() {
       await page.waitForTimeout(2000);
 
       // メンバー追加機能テスト
-      const addMemberBtn = await page.$('button:has-text("Add Member"), button:has-text("メンバー追加")');
+      const addMemberBtn = await page.$(
+        'button:has-text("Add Member"), button:has-text("メンバー追加")',
+      );
       if (addMemberBtn) {
         await addMemberBtn.click();
         console.log('   👥 メンバー追加ダイアログを開く');
@@ -245,14 +254,13 @@ async function testCRUDOperations() {
     // エラーサマリー
     if (errors.length > 0) {
       console.log('⚠️  JavaScriptエラー:');
-      errors.forEach(err => console.log(`   - ${err}`));
+      errors.forEach((err) => console.log(`   - ${err}`));
       console.log('');
     } else {
       console.log('✅ JavaScriptエラーなし\n');
     }
 
     console.log('🎉 すべてのCRUD操作テスト完了！');
-
   } catch (error) {
     console.error('❌ テスト失敗:', error.message);
     await page.screenshot({ path: 'crud-test-error.png' });

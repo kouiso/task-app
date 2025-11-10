@@ -1,10 +1,10 @@
-import bcrypt from 'bcryptjs';
 import { QueryClient } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
+import bcrypt from 'bcryptjs';
 import superjson from 'superjson';
 import { prisma } from '../lib/prisma';
-import { type SessionPayload } from '../lib/session';
+import type { SessionPayload } from '../lib/session';
 import type { AppRouter } from '../server/api/root';
 import { appRouter } from '../server/api/root';
 import { createCallerFactory, createTRPCContext } from '../server/api/trpc';

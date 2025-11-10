@@ -16,7 +16,7 @@ interface ProjectDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: ProjectFormData) => void;
-  initialData?: ProjectFormData;
+  initialData?: ProjectFormData | undefined;
 }
 
 export interface ProjectFormData {

@@ -68,7 +68,9 @@ async function test() {
         for (let i = 0; i < Math.min(allButtons.length, 10); i++) {
           const ariaLabel = await allButtons[i].getAttribute('aria-label');
           const text = await allButtons[i].textContent();
-          console.log(`   Button ${i}: aria-label="${ariaLabel}", text="${text?.substring(0, 20)}"`);
+          console.log(
+            `   Button ${i}: aria-label="${ariaLabel}", text="${text?.substring(0, 20)}"`,
+          );
         }
       }
     } else {
@@ -126,7 +128,9 @@ async function test() {
       await page.waitForTimeout(1000);
 
       // コメント入力欄を探す
-      const commentInput = await page.$('div[role="dialog"] textarea[placeholder*="comment"], div[role="dialog"] textarea[placeholder*="コメント"]');
+      const commentInput = await page.$(
+        'div[role="dialog"] textarea[placeholder*="comment"], div[role="dialog"] textarea[placeholder*="コメント"]',
+      );
 
       if (commentInput) {
         console.log('   ✅ コメント入力欄発見');
@@ -166,7 +170,6 @@ async function test() {
 
     await page.screenshot({ path: 'test-edit-search-comment.png', fullPage: true });
     console.log('📸 スクリーンショット: test-edit-search-comment.png\n');
-
   } catch (error) {
     console.error('❌ エラー:', error.message);
     await page.screenshot({ path: 'test-error.png' });
@@ -177,8 +180,8 @@ async function test() {
     console.log(`   検索機能: ${results.search ? '✅' : '❌'}`);
     console.log(`   コメント機能: ${results.comment ? '✅' : '❌'}`);
 
-    const successCount = Object.values(results).filter(r => r === true).length;
-    console.log(`\n✅ 成功: ${successCount}/3 (${Math.round(successCount/3*100)}%)\n`);
+    const successCount = Object.values(results).filter((r) => r === true).length;
+    console.log(`\n✅ 成功: ${successCount}/3 (${Math.round((successCount / 3) * 100)}%)\n`);
 
     await browser.close();
   }

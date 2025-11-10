@@ -147,7 +147,9 @@ describe('TaskCard', () => {
 
     statuses.forEach((status) => {
       const Wrapper = createWrapper();
-      const { unmount } = render(<TaskCard {...defaultProps} status={status} />, { wrapper: Wrapper });
+      const { unmount } = render(<TaskCard {...defaultProps} status={status} />, {
+        wrapper: Wrapper,
+      });
       // Status is displayed as is (with underscores), not replaced with spaces
       expect(screen.getByText(status)).toBeInTheDocument();
       unmount();

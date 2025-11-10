@@ -120,17 +120,20 @@ export default function ProjectPage() {
   const handleEdit = (projectId: string) => {
     const project = projects?.find((p) => p.id === projectId);
     if (project) {
+      const startDate = project.startDate
+        ? new Date(project.startDate).toISOString().split('T')[0]
+        : undefined;
+      const endDate = project.endDate
+        ? new Date(project.endDate).toISOString().split('T')[0]
+        : undefined;
+
       setEditingProject({
         id: project.id,
         name: project.name,
         description: project.description || '',
         color: project.color,
-        startDate: project.startDate
-          ? new Date(project.startDate).toISOString().split('T')[0]
-          : undefined,
-        endDate: project.endDate
-          ? new Date(project.endDate).toISOString().split('T')[0]
-          : undefined,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
       });
       setDialogOpen(true);
     }
@@ -317,12 +320,13 @@ export default function ProjectPage() {
                         }
                       >
                         <ListItemAvatar>
-                          <Avatar src={member.user.avatar || undefined}>
-                            {(member.user.name || member.user.email)[0].toUpperCase()}
+                          <Avatar {...(member.user?.avatar && { src: member.user?.avatar })}>
+                            {(member.user?.name || member.user?.email || '?')[0]?.toUpperCase() ||
+                              '?'}
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary={member.user.name || member.user.email}
+                          primary={member.user?.name || member.user?.email || 'Unknown'}
                           secondary={<Chip label={member.role} size="small" variant="outlined" />}
                         />
                       </ListItem>

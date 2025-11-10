@@ -72,7 +72,9 @@ async function test() {
     }
 
     // プロジェクト選択
-    const projectSelectDiv = await page.$('div[role="dialog"] .MuiGrid-item:nth-child(5) .MuiSelect-select');
+    const projectSelectDiv = await page.$(
+      'div[role="dialog"] .MuiGrid-item:nth-child(5) .MuiSelect-select',
+    );
     if (projectSelectDiv) {
       await projectSelectDiv.click();
       await page.waitForSelector('[role="listbox"]', { timeout: 5000 });
@@ -125,7 +127,10 @@ async function test() {
       const currentTitle = await editTitleInput.inputValue();
       await editTitleInput.fill(currentTitle + ' (編集済み)');
 
-      await page.waitForSelector('button:has-text("Update"):not([disabled]), button:has-text("Save"):not([disabled])', { timeout: 5000 });
+      await page.waitForSelector(
+        'button:has-text("Update"):not([disabled]), button:has-text("Save"):not([disabled])',
+        { timeout: 5000 },
+      );
       const updateButton = await page.$('button:has-text("Update"), button:has-text("Save")');
       if (updateButton) {
         await updateButton.click();
@@ -170,8 +175,10 @@ async function test() {
     await page.waitForTimeout(1000);
 
     const dashboardContent = await page.textContent('body');
-    const hasProjectStats = dashboardContent.includes('Total Projects') || dashboardContent.includes('プロジェクト');
-    const hasTaskStats = dashboardContent.includes('Total Tasks') || dashboardContent.includes('タスク');
+    const hasProjectStats =
+      dashboardContent.includes('Total Projects') || dashboardContent.includes('プロジェクト');
+    const hasTaskStats =
+      dashboardContent.includes('Total Tasks') || dashboardContent.includes('タスク');
 
     if (hasProjectStats && hasTaskStats) {
       results.dashboard = true;
@@ -183,7 +190,6 @@ async function test() {
     // スクリーンショット
     await page.screenshot({ path: 'test-comprehensive-result.png', fullPage: true });
     console.log('📸 スクリーンショット: test-comprehensive-result.png\n');
-
   } catch (error) {
     console.error('❌ エラー:', error.message);
     await page.screenshot({ path: 'test-comprehensive-error.png' });
@@ -198,9 +204,11 @@ async function test() {
     console.log(`   検索機能: ${results.search ? '✅' : '❌'}`);
     console.log(`   ダッシュボード: ${results.dashboard ? '✅' : '❌'}`);
 
-    const successCount = Object.values(results).filter(r => r === true).length;
+    const successCount = Object.values(results).filter((r) => r === true).length;
     const totalCount = Object.keys(results).length;
-    console.log(`\n✅ 成功: ${successCount}/${totalCount} (${Math.round(successCount/totalCount*100)}%)\n`);
+    console.log(
+      `\n✅ 成功: ${successCount}/${totalCount} (${Math.round((successCount / totalCount) * 100)}%)\n`,
+    );
 
     await browser.close();
   }

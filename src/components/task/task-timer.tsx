@@ -10,7 +10,7 @@ interface TaskTimerProps {
   isTimerActive: boolean;
   timerStartedAt: Date | null;
   timeSpentMinutes: number;
-  onTimerUpdate?: () => void;
+  onTimerUpdate?: (() => void) | undefined;
 }
 
 export function TaskTimer({

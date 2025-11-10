@@ -52,7 +52,7 @@ export default function ProfilePage() {
           {/* ヘッダー部分 */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <Avatar
-              src={currentUser.avatar || undefined}
+              {...(currentUser.avatar && { src: currentUser.avatar })}
               alt={currentUser.name || ''}
               sx={{ width: 80, height: 80, mr: 3 }}
             >

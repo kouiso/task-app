@@ -12,12 +12,12 @@
  */
 
 import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import readline from 'readline';
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
@@ -102,14 +102,14 @@ async function main() {
   const createResponse = await fetch('https://api.vercel.com/v1/storage/stores', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       name: dbName,
       type: 'postgres',
-      region: region
-    })
+      region: region,
+    }),
   });
 
   const createData = await createResponse.json();
@@ -121,7 +121,7 @@ async function main() {
     console.log('Fetching existing databases...\n');
 
     const listResponse = await fetch('https://api.vercel.com/v1/storage/stores', {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     const listData = await listResponse.json();
@@ -133,8 +133,8 @@ async function main() {
       });
 
       const selection = await question('\nSelect database number (or Enter to create new): ');
-      if (selection && listData.stores[parseInt(selection) - 1]) {
-        storeId = listData.stores[parseInt(selection) - 1].id;
+      if (selection && listData.stores[Number.parseInt(selection) - 1]) {
+        storeId = listData.stores[Number.parseInt(selection) - 1].id;
       }
     }
   }
@@ -150,16 +150,19 @@ async function main() {
   // Step 5: Connect database to project
   console.log('\n🔌 Step 5: Connect Database to Project');
 
-  const connectResponse = await fetch(`https://api.vercel.com/v1/storage/stores/${storeId}/connect`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+  const connectResponse = await fetch(
+    `https://api.vercel.com/v1/storage/stores/${storeId}/connect`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        projectId: projectId,
+      }),
     },
-    body: JSON.stringify({
-      projectId: projectId
-    })
-  });
+  );
 
   const connectData = await connectResponse.json();
 
@@ -186,7 +189,11 @@ async function main() {
   const envVars = [
     { key: 'NODE_ENV', value: 'production', target: ['production'] },
     { key: 'JWT_SECRET', value: jwtSecret, target: ['production', 'preview', 'development'] },
-    { key: 'DATABASE_URL', value: '${POSTGRES_PRISMA_URL}', target: ['production', 'preview', 'development'] }
+    {
+      key: 'DATABASE_URL',
+      value: '${POSTGRES_PRISMA_URL}',
+      target: ['production', 'preview', 'development'],
+    },
   ];
 
   for (const envVar of envVars) {
@@ -195,15 +202,15 @@ async function main() {
     const envResponse = await fetch(`https://api.vercel.com/v9/projects/${projectId}/env`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         key: envVar.key,
         value: envVar.value,
         type: 'encrypted',
-        target: envVar.target
-      })
+        target: envVar.target,
+      }),
     });
 
     if (envResponse.ok) {

@@ -16,7 +16,7 @@ interface TimeLogDialogProps {
   open: boolean;
   onClose: () => void;
   taskId: string;
-  onSuccess?: () => void;
+  onSuccess?: (() => void) | undefined;
 }
 
 export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialogProps) {

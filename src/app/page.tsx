@@ -1,21 +1,22 @@
 'use client';
 
 import { api } from '@/trpc/react';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function HomePage() {
   const { data: session, isLoading } = api.auth.getSession.useQuery();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isLoading) {
       if (!session) {
-        redirect('/login');
+        router.push('/login');
       } else {
-        redirect('/dashboard');
+        router.push('/dashboard');
       }
     }
-  }, [session, isLoading]);
+  }, [session, isLoading, router]);
 
   return null;
 }

@@ -52,12 +52,15 @@ async function test() {
       console.log(`✅ ダッシュボードタイトル: ${dashboardTitle}`);
 
       // スクリーンショット取得
-      await page.screenshot({ path: '/home/kouiso/develop/volta/intern/task/task-app/dashboard-screenshot.png', fullPage: true });
+      await page.screenshot({
+        path: '/home/kouiso/develop/volta/intern/task/task-app/dashboard-screenshot.png',
+        fullPage: true,
+      });
       console.log('✅ スクリーンショット保存: dashboard-screenshot.png');
 
       // コンソールエラーチェック
       const consoleErrors = [];
-      page.on('console', msg => {
+      page.on('console', (msg) => {
         if (msg.type() === 'error') {
           consoleErrors.push(msg.text());
         }
@@ -80,7 +83,7 @@ async function test() {
 
       if (consoleErrors.length > 0) {
         console.log('\n⚠️  コンソールエラー:');
-        consoleErrors.forEach(err => console.log(`  - ${err}`));
+        consoleErrors.forEach((err) => console.log(`  - ${err}`));
       } else {
         console.log('\n✅ コンソールエラーなし');
       }
@@ -89,10 +92,11 @@ async function test() {
     } else {
       console.log(`❌ 予期しないリダイレクト: ${url}`);
     }
-
   } catch (error) {
     console.error('❌ エラーが発生しました:', error.message);
-    await page.screenshot({ path: '/home/kouiso/develop/volta/intern/task/task-app/error-screenshot.png' });
+    await page.screenshot({
+      path: '/home/kouiso/develop/volta/intern/task/task-app/error-screenshot.png',
+    });
     console.log('エラー時のスクリーンショット: error-screenshot.png');
     throw error;
   } finally {

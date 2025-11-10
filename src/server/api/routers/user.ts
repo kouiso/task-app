@@ -147,7 +147,10 @@ export const userRouter = createTRPCRouter({
       });
 
       if (!user) {
-        throw new Error('User not found');
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found',
+        });
       }
 
       return user;
@@ -169,7 +172,10 @@ export const userRouter = createTRPCRouter({
       });
 
       if (!user) {
-        throw new Error('User not found');
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found',
+        });
       }
 
       return user;
@@ -181,11 +187,25 @@ export const userRouter = createTRPCRouter({
     });
 
     if (existing) {
-      throw new Error('User with this email already exists');
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'User with this email already exists',
+      });
+    }
+
+    const createData: Prisma.UserCreateInput = {
+      email: input.email,
+      role: input.role,
+    };
+    if (input.name) {
+      createData.name = input.name;
+    }
+    if (input.avatar) {
+      createData.avatar = input.avatar;
     }
 
     return await prisma.user.create({
-      data: input,
+      data: createData,
       select: {
         id: true,
         email: true,
@@ -201,9 +221,23 @@ export const userRouter = createTRPCRouter({
   update: protectedProcedure.input(userUpdateSchema).mutation(async ({ input }) => {
     const { id, ...data } = input;
 
+    const updateData: Prisma.UserUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.avatar !== undefined) {
+      updateData.avatar = data.avatar;
+    }
+    if (data.role !== undefined) {
+      updateData.role = data.role;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+
     return await prisma.user.update({
       where: { id },
-      data,
+      data: updateData,
       select: {
         id: true,
         email: true,
@@ -280,13 +314,17 @@ export const userRouter = createTRPCRouter({
       }
     }
 
+    const updateData: Prisma.UserUpdateInput = {
+      name: input.name,
+      email: input.email,
+    };
+    if (input.avatar !== undefined) {
+      updateData.avatar = input.avatar;
+    }
+
     return await prisma.user.update({
       where: { id: userId },
-      data: {
-        name: input.name,
-        email: input.email,
-        avatar: input.avatar,
-      },
+      data: updateData,
       select: {
         id: true,
         email: true,
@@ -355,9 +393,23 @@ export const userRouter = createTRPCRouter({
 
     const { id, ...data } = input;
 
+    const updateData: Prisma.UserUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.avatar !== undefined) {
+      updateData.avatar = data.avatar;
+    }
+    if (data.role !== undefined) {
+      updateData.role = data.role;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+
     return await prisma.user.update({
       where: { id },
-      data,
+      data: updateData,
       select: {
         id: true,
         email: true,

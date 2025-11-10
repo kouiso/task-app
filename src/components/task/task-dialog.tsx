@@ -18,7 +18,7 @@ interface TaskDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: TaskFormData) => void;
-  initialData?: TaskFormData;
+  initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string | null; email: string }>;
   currentUserId: string;
