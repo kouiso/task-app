@@ -67,6 +67,7 @@
     "ENV_FILE": ".devcontainer/.env"
   },
   "postCreateCommand": "/bin/bash .devcontainer/script/post-create.sh",
+  "postStartCommand": "mkdir -p /root/.claude && echo '{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}' > /root/.claude/settings.local.json",
   "containerUser": "root",
   "forwardPorts": [13000, 19229],
   "features": {
