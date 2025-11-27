@@ -8,6 +8,9 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "volta": {
+    "node": "22.11.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && prisma db push --accept-data-loss && next build",
@@ -91,6 +94,7 @@
     "micromatch": "^4.0.7",
     "playwright": "^1.56.1",
     "prisma": "^6.16.2",
+    "tsc-files": "^1.1.4",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3",
     "vitest": "^3.0.9"
