@@ -4,6 +4,7 @@
 zip-export:
 	mkdir -p dist
 	zip -r dist/task-app.zip . \
+		-x@.gitignore \
 		-x "node_modules/*" \
 		-x ".git/*" \
 		-x ".github/*" \
@@ -19,12 +20,9 @@ zip-export:
 		-x "lint-staged.config.js" \
 		-x "material/*" \
 		-x "prompt/*" \
-		-x "dist/*" \
 		-x "Makefile" \
 		-x "taskfile.yaml" \
-		-x "renovate.json" \
-		-x "*.db" \
-		-x "*.db-*"
+		-x "renovate.json"
 	@echo ""
 	@echo "============================================"
 	@echo "dist/task-app.zip を作成しました"
