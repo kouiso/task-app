@@ -23,6 +23,7 @@ zip-export:
 		-x "Makefile" \
 		-x "taskfile.yaml" \
 		-x "renovate.json"
+	zip -u dist/task-app.zip .env.example
 	@echo ""
 	@echo "============================================"
 	@echo "dist/task-app.zip を作成しました"
