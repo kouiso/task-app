@@ -164,39 +164,3 @@ tasks:
           echo {"cells": [{"language": "typescript", "source": ["console.log(JSON.stringify({}))"], "outputs": [{"items": [{"mime": "application/vnd.code.notebook.stdout", "value": ["{}", ""]}]}]}]} > playground.nnb
         )
 
-  # ----- ZIP化コマンド（プレゼント用）
-  zip-export:
-    desc: "プレゼント用ZIPファイルを作成（.gitignore + 追加除外）"
-    cmds:
-      - mkdir -p dist
-      # taskfile.yamlのバックアップと加工（配布用に不要なタスクを削除）
-      - cp taskfile.yaml taskfile.yaml.bak
-      - sed -i '/# ----- ZIP化コマンド（プレゼント用）/,$d' taskfile.yaml
-      - |
-        zip -r dist/task-app.zip . \
-          -x@.gitignore \
-          -x ".git/*" \
-          -x ".github/*" \
-          -x ".claude/*" \
-          -x ".devcontainer/*" \
-          -x ".env" \
-          -x ".env.production" \
-          -x "prompt/*" \
-          -x "CLAUDE.md" \
-          -x "material/*" \
-          -x ".husky/*" \
-          -x ".huskyrc" \
-          -x "lint-staged.config.js" \
-          -x "e2e/*" \
-          -x "playwright.config.ts" \
-          -x ".dockerignore" \
-          -x "dist/*" \
-          -x "taskfile.yaml.bak"
-      # taskfile.yamlの復元
-      - mv taskfile.yaml.bak taskfile.yaml
-      - echo "✅ dist/task-app.zip を作成しました"
-
-  zip-list:
-    desc: "ZIPファイルの内容を確認"
-    cmds:
-      - unzip -l dist/task-app.zip 2>/dev/null || echo "task-app.zip が見つかりません"
