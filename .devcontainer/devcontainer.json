@@ -1,5 +1,5 @@
 {
-  "name": "task-app Dev Container",
+  "name": "task-app",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
@@ -54,8 +54,6 @@
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
   },
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
-  "workspaceFolder": "/workspace",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh && mkdir -p /home/node/.claude && if [ -n \"$DEVCONTAINER\" ]; then echo '{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}' > /home/node/.claude/settings.local.json; fi",
   "waitFor": "postStartCommand"
 }
