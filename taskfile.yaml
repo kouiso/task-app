@@ -165,10 +165,13 @@ tasks:
         )
 
   # ----- ZIP化コマンド（プレゼント用）
-  zip:export:
+  zip-export:
     desc: "プレゼント用ZIPファイルを作成（.gitignore + 追加除外）"
     cmds:
       - mkdir -p dist
+      # taskfile.yamlのバックアップと加工（配布用に不要なタスクを削除）
+      - cp taskfile.yaml taskfile.yaml.bak
+      - sed -i '/# ----- ZIP化コマンド（プレゼント用）/,$d' taskfile.yaml
       - |
         zip -r dist/task-app.zip . \
           -x@.gitignore \
@@ -181,20 +184,19 @@ tasks:
           -x "prompt/*" \
           -x "CLAUDE.md" \
           -x "material/*" \
-          -x "taskfile.yaml" \
           -x ".husky/*" \
           -x ".huskyrc" \
           -x "lint-staged.config.js" \
           -x "e2e/*" \
           -x "playwright.config.ts" \
-          -x ".docker/*" \
-          -x "docker/*" \
-          -x "docker-compose.yml" \
           -x ".dockerignore" \
-          -x "dist/*"
+          -x "dist/*" \
+          -x "taskfile.yaml.bak"
+      # taskfile.yamlの復元
+      - mv taskfile.yaml.bak taskfile.yaml
       - echo "✅ dist/task-app.zip を作成しました"
 
-  zip:list:
+  zip-list:
     desc: "ZIPファイルの内容を確認"
     cmds:
       - unzip -l dist/task-app.zip 2>/dev/null || echo "task-app.zip が見つかりません"
