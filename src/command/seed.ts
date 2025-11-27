@@ -72,13 +72,13 @@ class Seed {
   async createProjects() {
     console.log('📁 プロジェクトを作成中...');
 
-    const user1 = await this.prisma.user.findUnique({
+    const user1 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'admin@example.com' },
     });
-    const user2 = await this.prisma.user.findUnique({
+    const user2 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'user1@example.com' },
     });
-    const user3 = await this.prisma.user.findUnique({
+    const user3 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'user2@example.com' },
     });
 
@@ -142,13 +142,13 @@ class Seed {
   async createTasks() {
     console.log('📝 タスクを作成中...');
 
-    const user1 = await this.prisma.user.findUnique({
+    const user1 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'admin@example.com' },
     });
-    const user2 = await this.prisma.user.findUnique({
+    const user2 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'user1@example.com' },
     });
-    const user3 = await this.prisma.user.findUnique({
+    const user3 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'user2@example.com' },
     });
 
@@ -235,10 +235,10 @@ class Seed {
   async createComments() {
     console.log('💬 コメントを作成中...');
 
-    const user1 = await this.prisma.user.findUnique({
+    const user1 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'admin@example.com' },
     });
-    const user2 = await this.prisma.user.findUnique({
+    const user2 = await this.prisma.user.findUniqueOrThrow({
       where: { email: 'user1@example.com' },
     });
 
