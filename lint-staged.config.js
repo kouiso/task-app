@@ -1,23 +1,28 @@
-const _path = require('node:path');
+const path = require('node:path');
 const micromatch = require('micromatch');
+
+const filterFilesByPattern = (files, patterns) => micromatch(files, patterns);
+
+const getTypeScriptFiles = (files) => filterFilesByPattern(files, ['**/*.ts', '**/*.tsx']);
+const getBiomeFiles = (files) =>
+  filterFilesByPattern(files, ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', '**/*.json']);
+const getStylelintFiles = (files) => filterFilesByPattern(files, ['**/*.(css|scss)']);
+
+const createTypeCheckCommand = (files) =>
+  `npx tsc-files --noEmit ${files.map((f) => path.relative(process.cwd(), f)).join(' ')}`;
 
 module.exports = {
   '*': (allFiles) => {
-    // Biomeが対応するファイル (.js, .jsx, .ts, .tsx, .json)
-    const biomeFiles = micromatch(allFiles, [
-      '**/*.js',
-      '**/*.jsx',
-      '**/*.ts',
-      '**/*.tsx',
-      '**/*.json',
-    ]);
-
-    const stylelintFiles = micromatch(allFiles, ['**/*.(css|scss)']);
-
     const commands = [];
 
-    // TypeScript compilation check
-    commands.push('tsc --noEmit');
+    const typeScriptFiles = getTypeScriptFiles(allFiles);
+    const biomeFiles = getBiomeFiles(allFiles);
+    const stylelintFiles = getStylelintFiles(allFiles);
+
+    // TypeScript compilation check (変更ファイルのみ - 高速化)
+    if (typeScriptFiles.length) {
+      commands.push(createTypeCheckCommand(typeScriptFiles));
+    }
 
     // Biome check (lint + format)
     if (biomeFiles.length) {

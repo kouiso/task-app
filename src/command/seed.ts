@@ -18,24 +18,29 @@ class Seed {
   async seed(): Promise<void> {
     console.log('🌱 シードデータの投入を開始します');
 
-    await this.createUsers();
-    await this.createProjects();
-    await this.createTasks();
-    await this.createComments();
+    const developerEmail = process.env._DEVELOPER_EMAIL || 'admin@example.com';
+    const developerName = (process.env._DEVELOPER_LASTNAME && process.env._DEVELOPER_FIRSTNAME)
+      ? `${process.env._DEVELOPER_LASTNAME} ${process.env._DEVELOPER_FIRSTNAME}`
+      : '管理者';
+
+    await this.createUsers(developerEmail, developerName);
+    await this.createProjects(developerEmail);
+    await this.createTasks(developerEmail);
+    await this.createComments(developerEmail);
 
     console.log('✅ シードデータの投入が完了しました');
   }
 
-  async createUsers() {
+  async createUsers(developerEmail: string, developerName: string) {
     console.log('👤 ユーザーを作成中...');
     const hashedPassword = await bcrypt.hash('password123', 10);
 
     await this.prisma.user.upsert({
-      where: { email: 'admin@example.com' },
+      where: { email: developerEmail },
       update: {},
       create: {
-        email: 'admin@example.com',
-        name: '管理者',
+        email: developerEmail,
+        name: developerName,
         password: hashedPassword,
         role: 'ADMIN',
         isActive: true,
@@ -69,16 +74,16 @@ class Seed {
     console.log('✓ ユーザー作成完了');
   }
 
-  async createProjects() {
+  async createProjects(developerEmail: string) {
     console.log('📁 プロジェクトを作成中...');
 
-    const user1 = await this.prisma.user.findUniqueOrThrow({
-      where: { email: 'admin@example.com' },
+    const user1 = await this.prisma.user.findUnique({
+      where: { email: developerEmail },
     });
-    const user2 = await this.prisma.user.findUniqueOrThrow({
+    const user2 = await this.prisma.user.findUnique({
       where: { email: 'user1@example.com' },
     });
-    const user3 = await this.prisma.user.findUniqueOrThrow({
+    const user3 = await this.prisma.user.findUnique({
       where: { email: 'user2@example.com' },
     });
 
@@ -139,16 +144,16 @@ class Seed {
     console.log('✓ プロジェクト作成完了');
   }
 
-  async createTasks() {
+  async createTasks(developerEmail: string) {
     console.log('📝 タスクを作成中...');
 
-    const user1 = await this.prisma.user.findUniqueOrThrow({
-      where: { email: 'admin@example.com' },
+    const user1 = await this.prisma.user.findUnique({
+      where: { email: developerEmail },
     });
-    const user2 = await this.prisma.user.findUniqueOrThrow({
+    const user2 = await this.prisma.user.findUnique({
       where: { email: 'user1@example.com' },
     });
-    const user3 = await this.prisma.user.findUniqueOrThrow({
+    const user3 = await this.prisma.user.findUnique({
       where: { email: 'user2@example.com' },
     });
 
@@ -232,13 +237,13 @@ class Seed {
     console.log('✓ タスク作成完了');
   }
 
-  async createComments() {
+  async createComments(developerEmail: string) {
     console.log('💬 コメントを作成中...');
 
-    const user1 = await this.prisma.user.findUniqueOrThrow({
-      where: { email: 'admin@example.com' },
+    const user1 = await this.prisma.user.findUnique({
+      where: { email: developerEmail },
     });
-    const user2 = await this.prisma.user.findUniqueOrThrow({
+    const user2 = await this.prisma.user.findUnique({
       where: { email: 'user1@example.com' },
     });
 

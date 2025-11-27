@@ -4,18 +4,16 @@
 zip-export:
 	mkdir -p dist
 	zip -r dist/task-app.zip . \
-		-x@.gitignore \
+		-x "node_modules/*" \
 		-x ".git/*" \
 		-x ".github/*" \
 		-x ".claude/*" \
 		-x "CLAUDE.md" \
 		-x ".devcontainer/*" \
-		-x ".docker/*" \
+		-x ".docker/schemaspy/*" \
 		-x ".husky/*" \
 		-x ".huskyrc" \
-		-x ".dockerignore" \
-		-x "docker/*" \
-		-x "docker-compose.yml" \
+		-x ".vscode/*" \
 		-x "e2e/*" \
 		-x "playwright.config.ts" \
 		-x "lint-staged.config.js" \
@@ -23,7 +21,10 @@ zip-export:
 		-x "prompt/*" \
 		-x "dist/*" \
 		-x "Makefile" \
-		-x "taskfile.yaml"
+		-x "taskfile.yaml" \
+		-x "renovate.json" \
+		-x "*.db" \
+		-x "*.db-*"
 	@echo ""
 	@echo "============================================"
 	@echo "dist/task-app.zip を作成しました"
