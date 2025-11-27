@@ -10,99 +10,29 @@ tasks:
     cmds:
       - task -l
 
-  # ----- 初期化関連コマンド
   init:
     desc: "環境初期化(何度でも実行可能 - 環境を壊してしまった場合、本コマンドの再実行で修復可能)"
-    platforms: [linux, darwin]
     cmds:
-      # 依存のインストール
-      - brew install jq
-      # playground.nnbの作成
-      - task: write-playground
-      # クリーン
+      - cmd: brew install jq
+        platforms: [linux, darwin]
+      - cmd: scoop install jq
+        platforms: [windows]
+      - cmd: task write-playground
+        platforms: [linux, darwin]
+      - cmd: task write-playground-windows
+        platforms: [windows]
       - task: clean
-      # 環境をdbボリューム含め消去
       - docker compose down -v
       - docker compose --profile schemaspy down -v
-      # seed可能になるまで時間がかかるのでdbを先にwarmup
       - docker compose up -d db
-      # コンテナイメージ構築
       - docker compose build
-      # ローカルnode_modulesの作成(VSCode用)
       - npm ci
-      # seed
       - echo waiting for db to be ready...
-      - sleep 40
+      - cmd: sleep 40
+        platforms: [linux, darwin]
+      - cmd: timeout /t 40
+        platforms: [windows]
       - task: seed
-
-  init:
-    desc: "環境初期化(何度でも実行可能 - 環境を壊してしまった場合、本コマンドの再実行で修復可能)"
-    platforms: [windows]
-    cmds:
-      # 依存のインストール
-      - scoop install jq
-      # playground.nnbの作成
-      - task: write-playground-windows
-      # クリーン
-      - task: clean
-      # 環境をdbボリューム含め消去
-      - docker compose down -v
-      - docker compose --profile schemaspy down -v
-      # seed可能になるまで時間がかかるのでdbを先にwarmup
-      - docker compose up -d db
-      # コンテナイメージ構築
-      - docker compose build
-      # ローカルnode_modulesの作成(VSCode用)
-      - npm ci
-      # seed
-      - echo waiting for db to be ready...
-      - timeout /t 40
-      - task: seed
-
-  seed:
-    desc: "DBリセット・シードデータ投入"
-    platforms: [linux, darwin]
-    cmds:
-      # HACK: seed可能になるまでリトライ
-      - |
-        until docker compose run --rm backend prisma migrate reset --skip-seed --force; do
-          echo "Command failed, retrying in 10 seconds..."
-          sleep 10
-        done
-      - task: db-apply
-      - docker compose run --rm -e EMAIL_SILENT=true backend prisma db seed
-
-  seed:
-    desc: "DBリセット・シードデータ投入"
-    platforms: [windows]
-    cmds:
-      # HACK: seed可能になるまでリトライ
-      - |
-        :retry
-        docker compose run --rm backend prisma migrate reset --skip-seed --force
-        if errorlevel 1 (
-          echo Command failed, retrying in 10 seconds...
-          timeout /t 10
-          goto retry
-        )
-      - task: db-apply
-      - docker compose run --rm -e EMAIL_SILENT=true backend prisma db seed
-
-  clean:
-    desc: "自動生成されたファイル・フォルダを削除 (Linux開発者が権限エラーになるためsudoをつけている)"
-    platforms: [linux, darwin]
-    cmds:
-      - rm -rf dist node_modules prisma/client
-
-  clean:
-    desc: "自動生成されたファイル・フォルダを削除"
-    platforms: [windows]
-    cmds:
-      - if exist dist rd /s /q dist
-      - if exist node_modules rd /s /q node_modules
-      - if exist prisma\client rd /s /q prisma\client
-
-  # ----- 起動コマンド
 
   up:
     desc: "バックエンドサーバーを起動"
@@ -110,39 +40,54 @@ tasks:
       - task: db-apply
       - docker compose up --build backend
 
-  # ----- DB関連コマンド
+  healthcheck:
+    desc: "環境健全性チェック"
+    cmds:
+      - docker compose ps
+      - npm run type-check
+      - echo "✅ Health check passed"
+
+  # ----- 内部タスク (Internal) -----
+
+  seed:
+    internal: true
+    cmds:
+      - cmd: |
+          until docker compose run --rm backend prisma migrate reset --skip-seed --force; do
+            echo "Command failed, retrying in 10 seconds..."
+            sleep 10
+          done
+        platforms: [linux, darwin]
+      - cmd: |
+          :retry
+          docker compose run --rm backend prisma migrate reset --skip-seed --force
+          if errorlevel 1 (
+            echo Command failed, retrying in 10 seconds...
+            timeout /t 10
+            goto retry
+          )
+        platforms: [windows]
+      - task: db-apply
+      - docker compose run --rm -e EMAIL_SILENT=true backend prisma db seed
+
+  clean:
+    internal: true
+    cmds:
+      - cmd: rm -rf dist node_modules prisma/client
+        platforms: [linux, darwin]
+      - cmd: if exist dist rd /s /q dist
+        platforms: [windows]
+      - cmd: if exist node_modules rd /s /q node_modules
+        platforms: [windows]
+      - cmd: if exist prisma\client rd /s /q prisma\client
+        platforms: [windows]
 
   db-apply:
-    desc: "prismaスキーマからコード生成&状態をDBに反映: 開発効率重視のため、本番環境への初回リリースまではこちらのコマンドのみを使用する"
+    internal: true
     cmds:
       - docker compose run --rm backend prisma db push
 
-  #
-  # db-migrate-gen:
-  #   desc: "prismaスキーマからマイグレーションを作成&反映"
-  #   cmds:
-  #     - docker compose run --rm backend prisma generate
-  #     - docker compose run --rm backend prisma migrate dev --name init
-
-  # ----- 生成系コマンド
-
-  gen-db-schema:
-    desc: "schemaspyでDBスキーマを生成"
-    cmds:
-      - docker compose up schemaspy
-
-
-  # ----- util系コマンド
-  npmi:
-    desc: "npm ciコマンドをコンテナで実行"
-    cmds:
-      - docker compose run --rm backend npm ci
-
-
-  # ----- 内部呼び出しコマンド (ユーザーが直叩かない)
-
   write-playground:
-    desc: "(内部用) playground.nnbファイルを作成する"
     internal: true
     platforms: [linux, darwin]
     cmds:
@@ -155,7 +100,6 @@ tasks:
         fi
 
   write-playground-windows:
-    desc: "(内部用) playground.nnbファイルを作成する (Windows)"
     internal: true
     platforms: [windows]
     cmds:
