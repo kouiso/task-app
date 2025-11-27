@@ -66,6 +66,20 @@ export function TaskDialog({
       setFormData({ ...formData, [field]: e.target.value });
     };
 
+  const handleNumberChange =
+    (field: 'estimatedHours') => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      if (value === '') {
+        const { [field]: _, ...rest } = formData;
+        setFormData(rest as TaskFormData);
+      } else {
+        setFormData({
+          ...formData,
+          [field]: Number(value),
+        });
+      }
+    };
+
   const handleSubmit = () => {
     onSubmit(formData);
     onClose();
@@ -173,8 +187,8 @@ export function TaskDialog({
                 fullWidth
                 label="Estimated Hours"
                 type="number"
-                value={formData.estimatedHours || ''}
-                onChange={handleChange('estimatedHours')}
+                value={formData.estimatedHours ?? ''}
+                onChange={handleNumberChange('estimatedHours')}
                 inputProps={{ min: 0, step: 0.5 }}
               />
             </Grid>

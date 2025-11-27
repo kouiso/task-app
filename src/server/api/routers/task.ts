@@ -360,7 +360,36 @@ export const taskRouter = createTRPCRouter({
 
   bulkComplete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Verify user has access to all tasks
+      const tasks = await prisma.task.findMany({
+        where: { id: { in: input.ids } },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+        },
+      });
+
+      if (tasks.length !== input.ids.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'One or more tasks not found',
+        });
+      }
+
+      const unauthorizedTask = tasks.find((task) => task.project.members.length === 0);
+      if (unauthorizedTask) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to one or more tasks',
+        });
+      }
+
       const completedAt = new Date();
       return await prisma.task.updateMany({
         where: { id: { in: input.ids } },
@@ -370,7 +399,36 @@ export const taskRouter = createTRPCRouter({
 
   bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Verify user has access to all tasks
+      const tasks = await prisma.task.findMany({
+        where: { id: { in: input.ids } },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+        },
+      });
+
+      if (tasks.length !== input.ids.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'One or more tasks not found',
+        });
+      }
+
+      const unauthorizedTask = tasks.find((task) => task.project.members.length === 0);
+      if (unauthorizedTask) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to one or more tasks',
+        });
+      }
+
       return await prisma.task.deleteMany({
         where: { id: { in: input.ids } },
       });
@@ -383,7 +441,36 @@ export const taskRouter = createTRPCRouter({
         status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED']),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Verify user has access to all tasks
+      const tasks = await prisma.task.findMany({
+        where: { id: { in: input.ids } },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+        },
+      });
+
+      if (tasks.length !== input.ids.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'One or more tasks not found',
+        });
+      }
+
+      const unauthorizedTask = tasks.find((task) => task.project.members.length === 0);
+      if (unauthorizedTask) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to one or more tasks',
+        });
+      }
+
       const data: { status: typeof input.status; completedAt?: Date | null } = {
         status: input.status,
       };
