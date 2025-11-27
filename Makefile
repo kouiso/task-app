@@ -1,5 +1,6 @@
-.PHONY: zip-export zip-list
+.PHONY: zip-export zip-list zip-clean
 
+# プレゼント配布用ZIP作成
 zip-export:
 	mkdir -p dist
 	zip -r dist/task-app.zip . \
@@ -7,21 +8,37 @@ zip-export:
 		-x ".git/*" \
 		-x ".github/*" \
 		-x ".claude/*" \
-		-x ".devcontainer/*" \
-		-x ".env" \
-		-x ".env.production" \
-		-x "prompt/*" \
 		-x "CLAUDE.md" \
-		-x "material/*" \
+		-x ".devcontainer/*" \
+		-x ".docker/*" \
 		-x ".husky/*" \
 		-x ".huskyrc" \
-		-x "lint-staged.config.js" \
+		-x ".dockerignore" \
+		-x "docker/*" \
+		-x "docker-compose.yml" \
 		-x "e2e/*" \
 		-x "playwright.config.ts" \
-		-x ".dockerignore" \
+		-x "lint-staged.config.js" \
+		-x "material/*" \
+		-x "prompt/*" \
 		-x "dist/*" \
-		-x "Makefile"
-	@echo "✅ dist/task-app.zip を作成しました"
+		-x "Makefile" \
+		-x "taskfile.yaml"
+	@echo ""
+	@echo "============================================"
+	@echo "dist/task-app.zip を作成しました"
+	@echo "============================================"
 
+# ZIP内容の確認
 zip-list:
-	unzip -l dist/task-app.zip 2>/dev/null || echo "task-app.zip が見つかりません"
+	@if [ -f dist/task-app.zip ]; then \
+		unzip -l dist/task-app.zip; \
+	else \
+		echo "dist/task-app.zip が見つかりません"; \
+		echo "make zip-export を実行してください"; \
+	fi
+
+# ZIP削除
+zip-clean:
+	rm -f dist/task-app.zip
+	@echo "dist/task-app.zip を削除しました"
