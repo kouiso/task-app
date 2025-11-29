@@ -15,11 +15,15 @@ zip-export:
 		-x ".husky/*" \
 		-x ".huskyrc" \
 		-x ".vscode/*" \
+		-x ".next/*" \
+		-x "dist/*" \
 		-x "e2e/*" \
 		-x "playwright.config.ts" \
 		-x "lint-staged.config.js" \
 		-x "material/*" \
 		-x "prompt/*" \
+		-x "playwright-report/*" \
+		-x "test-results/*" \
 		-x "Makefile" \
 		-x "taskfile.yaml" \
 		-x "renovate.json"
