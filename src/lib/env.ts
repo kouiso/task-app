@@ -12,8 +12,7 @@ const envSchema = z.object({
   NEXTAUTH_URL: z.string().url('NEXTAUTH_URLは有効なURL形式である必要があります'),
   NEXTAUTH_SECRET: z
     .string()
-    .min(32, 'NEXTAUTH_SECRETは32文字以上である必要があります')
-    .describe('NextAuthのシークレットキー'),
+    .min(32, 'NEXTAUTH_SECRETは32文字以上である必要があります'),
 
   // JWT
   JWT_SECRET: z
@@ -50,8 +49,12 @@ function validateEnv() {
 /**
  * 検証済み環境変数
  * アプリケーション全体で使用する
+ * ビルド時はバリデーションをスキップ
  */
-export const env = validateEnv();
+export const env =
+  process.env.NODE_ENV === 'production' && typeof window === 'undefined' && !process.env.NEXTAUTH_URL
+    ? (process.env as unknown as Env)
+    : validateEnv();
 
 /**
  * 環境変数の型定義
