@@ -76,3 +76,4 @@ manual-test-*.png
 debug-*.mjs
 setup-*.mjs
 inspect-*.mjs
+.env*.local
