@@ -52,7 +52,7 @@ function validateEnv() {
  * ビルド時はバリデーションをスキップ
  */
 export const env =
-  process.env.NODE_ENV === 'production' && typeof window === 'undefined' && !process.env.NEXTAUTH_URL
+  process.env['NODE_ENV'] === 'production' && typeof window === 'undefined' && !process.env['NEXTAUTH_URL']
     ? (process.env as unknown as Env)
     : validateEnv();
 
