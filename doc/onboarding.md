@@ -7,14 +7,35 @@
 セットアップとその後の開発に必要な依存をインストール
 
 - Machine: MacOS or Windows WSL2
-- NodeJS: v24.11.1
+- [Task](https://taskfile.dev/installation/) (タスクランナー)
 - Docker Desktop
 - Git
 
 <details>
-<summary>複数のnodeバージョン管理</summary>
+<summary>Taskのインストール方法</summary>
 
-※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
+Task は各種セットアップや開発コマンドを簡単に実行できるタスクランナーです。
+
+```bash
+# macOS (Homebrew)
+brew install go-task
+
+# Windows (Scoop)
+scoop install task
+
+# Windows (Chocolatey)
+choco install go-task
+
+# Linux (各種パッケージマネージャー)
+# https://taskfile.dev/installation/ を参照
+```
+
+</details>
+
+<details>
+<summary>複数のnodeバージョン管理 (オプション)</summary>
+
+※ 複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
 まだ未導入であれば[Volta](https://volta.sh/)がおすすめ
 
 ```bash
@@ -29,70 +50,56 @@ volta install node@24.11.1
 ```
 
 このプロジェクトでは `package.json` に Volta の設定が含まれているため、
-プロジェクトディレクトリで自動的に正しいバージョンが使用されます。
+プロジェクトディレクトリで自動的に正しいバージョン (24.11.1) が使用されます。
 
 </details>
 
-## 初回設定
-
-### 環境変数
-
-- `.env.example` から `.env` を生成し、必要な情報を追加
-
-  ```bash
-  cp .env.example .env
-  ```
-
-  以下の環境変数を設定してください:
-
-  ```bash
-  # データベース接続
-  DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
-
-  # NextAuth設定
-  NEXTAUTH_SECRET=your_nextauth_secret_here
-  NEXTAUTH_URL=http://localhost:3000
-
-  # JWT設定
-  JWT_SECRET=your_jwt_secret_here
-  ```
-
 ## セットアップ手順
 
-1. **依存パッケージのインストール**
+### 1. 環境変数の設定
 
-   ```bash
-   npm install
-   ```
+`.env.example` から `.env` を生成し、必要な情報を追加
 
-   ※ pnpm は使用しないでください
+```bash
+cp .env.example .env
+```
 
-2. **PostgreSQL の起動 (Docker)**
+以下の環境変数を設定してください:
 
-   ```bash
-   docker-compose up -d
-   ```
+```bash
+# データベース接続
+DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
 
-3. **データベースのセットアップ**
+# NextAuth設定
+NEXTAUTH_SECRET=your_nextauth_secret_here
+NEXTAUTH_URL=http://localhost:3000
 
-   ```bash
-   # Prismaクライアント生成
-   npm run db:generate
+# JWT設定
+JWT_SECRET=your_jwt_secret_here
+```
 
-   # スキーマをDBに反映
-   npm run db:push
+### 2. 環境初期化
 
-   # サンプルデータ投入
-   npm run db:seed
-   ```
+以下のコマンド1つで環境を初期化できます:
 
-4. **開発サーバーの起動**
+```bash
+task init
+```
 
-   ```bash
-   npm run dev
-   ```
+このコマンドは以下を自動的に実行します:
+- 依存パッケージのインストール
+- Docker コンテナの構築と起動
+- データベースのセットアップとシードデータ投入
 
-   - ブラウザで `http://localhost:3000` にアクセス
+**注意**: 初回実行時は Docker イメージのダウンロードとビルドのため、数分かかる場合があります。
+
+### 3. 開発サーバーの起動
+
+```bash
+task up-backend
+```
+
+- ブラウザで `http://localhost:3000` にアクセス
 
 ### デフォルトユーザー
 
@@ -101,13 +108,18 @@ volta install node@24.11.1
 | 管理者   | admin@example.com   | Password123!   |
 | ユーザー | user1@example.com   | Password123!   |
 
-## テスト
+## よく使うコマンド
 
 ```bash
-npm test              # テスト実行
-npm run test:ui       # テストUIで実行
-npm run test:coverage # カバレッジ確認
+task                    # 利用可能なコマンド一覧を表示
+task init               # 環境初期化（何度でも実行可能）
+task up-backend         # バックエンドサーバーを起動
+task seed               # DBリセット・シードデータ投入
+task db-apply           # Prismaスキーマから状態をDBに反映
+task clean              # 自動生成されたファイル・フォルダを削除
 ```
+
+詳細は `task -l` または [taskfile.yaml](../taskfile.yaml) を参照してください。
 
 ## トラブルシューティング
 
@@ -118,28 +130,19 @@ npm run test:coverage # カバレッジ確認
 
 ### データベース接続エラー
 
-1. Docker コンテナが起動しているか確認
+環境を再初期化してください:
 
-   ```bash
-   docker-compose ps
-   ```
+```bash
+task init
+```
 
-2. データベースをリセット
-   ```bash
-   docker-compose down -v
-   docker-compose up -d
-   npm run db:push
-   npm run db:seed
-   ```
+### 環境が壊れてしまった場合
 
-### npm install エラー
+`task init` は何度でも実行可能です。環境をクリーンな状態にリセットできます:
 
-- Node.js のバージョンを確認
-- `node_modules` を削除して再インストール
-  ```bash
-  rm -rf node_modules package-lock.json
-  npm install
-  ```
+```bash
+task init
+```
 
 ## 技術スタック
 
