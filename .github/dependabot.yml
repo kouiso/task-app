@@ -1,7 +1,32 @@
 version: 2
 updates:
-  # セキュリティアップデート（脆弱性チェック）
+  # npm依存関係の更新
   - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+      day: 'saturday'
+      time: '09:00'
+      timezone: 'Asia/Tokyo'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'dependabot'
+    # セキュリティ設定
+    insecure-external-code-execution: deny
+    # グループ化して複数の依存関係を1つのPRにまとめる
+    groups:
+      production-dependencies:
+        patterns:
+          - '*'
+        dependency-type: 'production'
+      development-dependencies:
+        patterns:
+          - '*'
+        dependency-type: 'development'
+
+  # GitHub Actionsの更新
+  - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'monthly'
@@ -10,32 +35,6 @@ updates:
       timezone: 'Asia/Tokyo'
     open-pull-requests-limit: 5
     labels:
-      - 'security'
-    # 脆弱性アラートを有効化
-    insecure-external-code-execution: deny
-    vulnerability-alerts: true
-    # 通常の依存関係更新は無効化し、脆弱性対応のみに集中
-    versioning-strategy: 'lockfile-only'
-    allow:
-      # セキュリティ更新のみを許可
-      - dependency-type: 'all'
-        update-types: ['security']
-
-  # GitHub Actions のセキュリティアップデート
-  - package-ecosystem: 'github-actions'
-    directory: '/'
-    schedule:
-      interval: 'monthly'
-      day: 'saturday'
-      time: '09:00'
-      timezone: 'Asia/Tokyo'
-    open-pull-requests-limit: 3
-    labels:
-      - 'security'
+      - 'dependencies'
+      - 'dependabot'
       - 'github-actions'
-    vulnerability-alerts: true
-    # 通常の更新は無効化し、セキュリティ更新のみに集中
-    allow:
-      # セキュリティ更新のみを許可
-      - dependency-type: 'all'
-        update-types: ['security']
