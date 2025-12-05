@@ -30,7 +30,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const prNumber = context.payload.pull_request?.number || ${{ inputs.pr_number }};
+            const prNumber = context.payload.pull_request?.number || ${{ inputs.pr_number || 'null' }};
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -60,38 +60,82 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          # Get PR details from previous step - already JSON stringified
           PR_DETAILS='${{ steps.pr.outputs.result }}'
           
-          # Create the prompt
-          cat > prompt.txt << 'EOF'
+          # Create a temporary file for the API request to avoid shell injection
+          cat > /tmp/api_request.json << 'EOFAPI'
+          {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 4096,
+            "messages": [{
+              "role": "user",
+              "content": ""
+            }]
+          }
+          EOFAPI
+          
+          # Build the prompt content safely
+          cat > /tmp/prompt.txt << 'EOFPROMPT'
           以下のプルリクエストをレビューしてください。
           
-          EOF
+          以下の観点でレビューを行ってください:
+          1. コードの品質（可読性、保守性）
+          2. TypeScriptの型安全性
+          3. Next.js App Routerのベストプラクティスに従っているか
+          4. セキュリティ上の懸念
+          5. パフォーマンス上の問題
+          6. テストの必要性
+          7. ドキュメントの更新が必要か
+          
+          レビュー結果を日本語で、以下の形式で出力してください:
+          
+          ## 📊 総合評価
+          [承認/要修正/要議論]
+          
+          ## ✅ 良い点
+          - 
+          
+          ## ⚠️ 改善提案
+          - 
+          
+          ## 🐛 重大な問題
+          - 
+          
+          ## 💡 その他のコメント
+          - 
+          EOFPROMPT
+          
+          PROMPT_CONTENT=$(cat /tmp/prompt.txt)
+          
+          # Combine prompt with PR details using jq to ensure proper escaping
+          FULL_PROMPT=$(jq -n \
+            --arg prompt "$PROMPT_CONTENT" \
+            --argjson pr "$PR_DETAILS" \
+            '$prompt + "\n\nPR情報:\n" + ($pr | tostring)')
+          
+          # Update the request with the prompt
+          jq --arg content "$FULL_PROMPT" '.messages[0].content = $content' /tmp/api_request.json > /tmp/api_request_final.json
           
           # Call Claude API
           RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
             -H "content-type: application/json" \
-            -d @- << EOF
-          {
-            "model": "claude-3-5-sonnet-20241022",
-            "max_tokens": 4096,
-            "messages": [{
-              "role": "user",
-              "content": "以下のプルリクエストをレビューしてください。\n\nPR情報:\n${PR_DETAILS}\n\n以下の観点でレビューを行ってください:\n1. コードの品質（可読性、保守性）\n2. TypeScriptの型安全性\n3. Next.js App Routerのベストプラクティスに従っているか\n4. セキュリティ上の懸念\n5. パフォーマンス上の問題\n6. テストの必要性\n7. ドキュメントの更新が必要か\n\nレビュー結果を日本語で、以下の形式で出力してください:\n\n## 📊 総合評価\n[承認/要修正/要議論]\n\n## ✅ 良い点\n- \n\n## ⚠️ 改善提案\n- \n\n## 🐛 重大な問題\n- \n\n## 💡 その他のコメント\n- "
-            }]
-          }
-          EOF
-          )
+            -d @/tmp/api_request_final.json)
           
           # Extract the review text
-          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // "レビューの生成に失敗しました。"')
           
           # Save to output
-          echo "result<<EOF" >> $GITHUB_OUTPUT
-          echo "$REVIEW_TEXT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "result<<EOFREVIEW"
+            echo "$REVIEW_TEXT"
+            echo "EOFREVIEW"
+          } >> $GITHUB_OUTPUT
+          
+          # Cleanup
+          rm -f /tmp/api_request.json /tmp/api_request_final.json /tmp/prompt.txt
 
       - name: Post review comment
         uses: actions/github-script@v7
