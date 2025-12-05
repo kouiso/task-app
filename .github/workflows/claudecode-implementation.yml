@@ -110,22 +110,26 @@ jobs:
             const plan = JSON.parse(`${{ steps.plan.outputs.result }}`);
             const issue = JSON.parse(`${{ steps.issue.outputs.result }}`);
             
-            const comment = `## 🤖 Claudecode 実装プラン
-
-### 📋 実装計画
-${plan.implementation_plan}
-
-### 📝 変更予定ファイル
-${plan.files_to_change.map(f => `- **${f.action}**: \`${f.path}\`\n  ${f.description}`).join('\n')}
-
-### 🧪 テスト計画
-${plan.test_plan}
-
-### 📌 実装ブランチ
-\`${plan.branch_name}\`
-
----
-*この実装プランは Claude AI によって自動生成されました。実装を承認する場合は、このIssueに "approve implementation" とコメントしてください。*`;
+            const commentParts = [
+              '## 🤖 Claudecode 実装プラン',
+              '',
+              '### 📋 実装計画',
+              plan.implementation_plan,
+              '',
+              '### 📝 変更予定ファイル',
+              plan.files_to_change.map(f => `- **${f.action}**: \`${f.path}\`\n  ${f.description}`).join('\n'),
+              '',
+              '### 🧪 テスト計画',
+              plan.test_plan,
+              '',
+              '### 📌 実装ブランチ',
+              `\`${plan.branch_name}\``,
+              '',
+              '---',
+              '*この実装プランは Claude AI によって自動生成されました。実装を承認する場合は、このIssueに "approve implementation" とコメントしてください。*'
+            ];
+            
+            const comment = commentParts.join('\n');
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
