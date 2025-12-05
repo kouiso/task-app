@@ -17,9 +17,9 @@ updates:
     # グループ化して複数の依存関係を1つのPRにまとめる
     groups:
       production-dependencies:
-        dependency-type: 'production'
+        dependency-type: 'direct:production'
       development-dependencies:
-        dependency-type: 'development'
+        dependency-type: 'direct:development'
 
   # GitHub Actionsの更新
   - package-ecosystem: 'github-actions'
