@@ -18,12 +18,8 @@ updates:
     groups:
       production-dependencies:
         dependency-type: 'direct:production'
-        patterns:
-          - '*'
       development-dependencies:
         dependency-type: 'direct:development'
-        patterns:
-          - '*'
 
   # GitHub Actionsの更新
   - package-ecosystem: 'github-actions'
