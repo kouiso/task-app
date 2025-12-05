@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: .tool-versions
+          node-version: '22.11.0'
           cache: 'npm'
 
       - name: Get issue details
@@ -35,10 +35,12 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issueNumber = context.payload.issue?.number || parseInt('${{ inputs.issue_number }}') || null;
+            // Get issue number from event or input
+            const issueNumberStr = '${{ inputs.issue_number || '' }}';
+            const issueNumber = context.payload.issue?.number || (issueNumberStr ? parseInt(issueNumberStr, 10) : null);
             
-            if (!issueNumber) {
-              throw new Error('Issue number is required');
+            if (!issueNumber || isNaN(issueNumber)) {
+              throw new Error('Valid issue number is required');
             }
             
             const { data: issue } = await github.rest.issues.get({
