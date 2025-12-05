@@ -1,0 +1,140 @@
+name: Claudecode Implementation
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to implement'
+        required: true
+        type: number
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event.label.name == 'claudecode' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: 'npm'
+
+      - name: Get issue details
+        id: issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue?.number || ${{ inputs.issue_number }};
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            return {
+              number: issue.number,
+              title: issue.title,
+              body: issue.body,
+              labels: issue.labels.map(l => l.name)
+            };
+
+      - name: Generate implementation plan with Claude
+        id: plan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ISSUE_DATA='${{ steps.issue.outputs.result }}'
+          
+          # Read project context files
+          README_CONTENT=$(cat README.md)
+          CLAUDE_CONTENT=$(cat CLAUDE.md)
+          DEV_GUIDE_CONTENT=$(cat doc/dev-guide.md)
+          
+          # Call Claude API
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d @- << 'EOFCURL'
+          {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 8192,
+            "messages": [{
+              "role": "user",
+              "content": "あなたは経験豊富なNext.js開発者です。以下のIssueの実装を行ってください。\n\n# Issue情報\n'"$ISSUE_DATA"'\n\n# プロジェクト情報\n'"${CLAUDE_CONTENT}"'\n\n# 開発ガイド\n'"${DEV_GUIDE_CONTENT}"'\n\n# タスク\n1. このIssueを実装するための具体的な変更計画を立ててください\n2. 必要なファイルの変更内容を具体的に示してください\n3. 実装の手順を明確にしてください\n\n# 出力形式\n以下のJSON形式で出力してください:\n```json\n{\n  \"branch_name\": \"feature/issue-番号-brief-description\",\n  \"implementation_plan\": \"実装計画の詳細な説明\",\n  \"files_to_change\": [\n    {\n      \"path\": \"ファイルパス\",\n      \"action\": \"create/modify/delete\",\n      \"description\": \"変更内容の説明\"\n    }\n  ],\n  \"test_plan\": \"テスト計画\",\n  \"pr_description\": \"プルリクエストの説明文\"\n}\n```"
+            }]
+          }
+          EOFCURL
+          )
+          
+          # Extract and parse the plan
+          PLAN_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          echo "$PLAN_TEXT" > plan_raw.txt
+          
+          # Extract JSON from markdown code block if present
+          if echo "$PLAN_TEXT" | grep -q '```json'; then
+            PLAN_JSON=$(echo "$PLAN_TEXT" | sed -n '/```json/,/```/p' | sed '1d;$d')
+          else
+            PLAN_JSON="$PLAN_TEXT"
+          fi
+          
+          # Save to output
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$PLAN_JSON" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create implementation branch
+        id: branch
+        run: |
+          BRANCH_NAME=$(echo '${{ steps.plan.outputs.result }}' | jq -r '.branch_name')
+          echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Comment implementation plan on issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const plan = JSON.parse(`${{ steps.plan.outputs.result }}`);
+            const issue = JSON.parse(`${{ steps.issue.outputs.result }}`);
+            
+            const comment = `## 🤖 Claudecode 実装プラン
+
+### 📋 実装計画
+${plan.implementation_plan}
+
+### 📝 変更予定ファイル
+${plan.files_to_change.map(f => `- **${f.action}**: \`${f.path}\`\n  ${f.description}`).join('\n')}
+
+### 🧪 テスト計画
+${plan.test_plan}
+
+### 📌 実装ブランチ
+\`${plan.branch_name}\`
+
+---
+*この実装プランは Claude AI によって自動生成されました。実装を承認する場合は、このIssueに "approve implementation" とコメントしてください。*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: comment
+            });
+
+      - name: Save implementation plan
+        run: |
+          echo '${{ steps.plan.outputs.result }}' > /tmp/implementation-plan.json
+          cat /tmp/implementation-plan.json
