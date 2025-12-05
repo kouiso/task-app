@@ -1,0 +1,109 @@
+name: Claudecode Review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request number to review'
+        required: true
+        type: number
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number || ${{ inputs.pr_number }};
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            return {
+              title: pr.title,
+              body: pr.body,
+              files: files.map(f => ({
+                filename: f.filename,
+                status: f.status,
+                additions: f.additions,
+                deletions: f.deletions,
+                patch: f.patch
+              }))
+            };
+
+      - name: Review with Claude
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          PR_DETAILS='${{ steps.pr.outputs.result }}'
+          
+          # Create the prompt
+          cat > prompt.txt << 'EOF'
+          以下のプルリクエストをレビューしてください。
+          
+          EOF
+          
+          # Call Claude API
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d @- << EOF
+          {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 4096,
+            "messages": [{
+              "role": "user",
+              "content": "以下のプルリクエストをレビューしてください。\n\nPR情報:\n${PR_DETAILS}\n\n以下の観点でレビューを行ってください:\n1. コードの品質（可読性、保守性）\n2. TypeScriptの型安全性\n3. Next.js App Routerのベストプラクティスに従っているか\n4. セキュリティ上の懸念\n5. パフォーマンス上の問題\n6. テストの必要性\n7. ドキュメントの更新が必要か\n\nレビュー結果を日本語で、以下の形式で出力してください:\n\n## 📊 総合評価\n[承認/要修正/要議論]\n\n## ✅ 良い点\n- \n\n## ⚠️ 改善提案\n- \n\n## 🐛 重大な問題\n- \n\n## 💡 その他のコメント\n- "
+            }]
+          }
+          EOF
+          )
+          
+          # Extract the review text
+          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          
+          # Save to output
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW_TEXT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const review = `${{ steps.review.outputs.result }}`;
+            
+            const prNumber = context.payload.pull_request?.number || ${{ inputs.pr_number || 'null' }};
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🤖 Claudecode レビュー結果\n\n${review}\n\n---\n*このレビューは Claude AI によって自動生成されました*`
+            });
