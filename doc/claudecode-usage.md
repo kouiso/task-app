@@ -2,6 +2,31 @@
 
 このリポジトリには、Claude AI を活用した2つの GitHub Actions ワークフローが含まれています。
 
+## 🚀 クイックスタート
+
+### 必要なもの
+1. Anthropic Claude API キー（[こちら](https://console.anthropic.com/)から取得）
+2. GitHub リポジトリへの管理者アクセス
+
+### セットアップ手順（5分）
+
+1. **API キーを GitHub Secrets に追加**
+   - リポジトリの Settings → Secrets and variables → Actions
+   - "New repository secret" をクリック
+   - Name: `ANTHROPIC_API_KEY`
+   - Secret: あなたの Claude API キー
+   - "Add secret" をクリック
+
+2. **ワークフロー権限を有効化**
+   - Settings → Actions → General → Workflow permissions
+   - "Read and write permissions" を選択
+   - "Allow GitHub Actions to create and approve pull requests" にチェック
+   - "Save" をクリック
+
+3. **完了！**
+   - 次のPRから自動レビューが有効になります
+   - Issueに `claudecode` ラベルを付けると実装プランが生成されます
+
 ## 📋 目次
 
 - [前提条件](#前提条件)
