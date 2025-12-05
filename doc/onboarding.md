@@ -7,7 +7,7 @@
 セットアップとその後の開発に必要な依存をインストール
 
 - Machine: MacOS or Windows WSL2
-- NodeJS: v22.0.0 以上
+- NodeJS: v24.11.1
 - Docker Desktop
 - Git
 
@@ -15,19 +15,21 @@
 <summary>複数のnodeバージョン管理</summary>
 
 ※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればプラグイン式で全言語の環境管理ができる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)がおすすめ
+まだ未導入であれば[Volta](https://volta.sh/)がおすすめ
 
 ```bash
-# リンク先の手順に従って手動インストール後、以下を実行
+# Voltaのインストール (macOS/Linux)
+curl https://get.volta.sh | bash
 
-# バージョン管理
-asdf plugin-add nodejs
-asdf install nodejs 22.0.0
-# (プロジェクトディレクトリ直下で実行)
-asdf local nodejs 22.0.0
-# Globalに適用したい場合は以下
-# asdf global nodejs 22.0.0
+# Voltaのインストール (Windows)
+# https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
+
+# Node.jsのインストール
+volta install node@24.11.1
 ```
+
+このプロジェクトでは `package.json` に Volta の設定が含まれているため、
+プロジェクトディレクトリで自動的に正しいバージョンが使用されます。
 
 </details>
 

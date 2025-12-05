@@ -25,7 +25,6 @@ zip-export:
 		-x "playwright-report/*" \
 		-x "test-results/*" \
 		-x "Makefile" \
-		-x "taskfile.yaml" \
 		-x "renovate.json"
 	zip -u dist/task-app.zip .env.example
 	@echo ""
