@@ -17,12 +17,8 @@ updates:
     # グループ化して複数の依存関係を1つのPRにまとめる
     groups:
       production-dependencies:
-        patterns:
-          - '*'
         dependency-type: 'production'
       development-dependencies:
-        patterns:
-          - '*'
         dependency-type: 'development'
 
   # GitHub Actionsの更新
@@ -38,3 +34,5 @@ updates:
       - 'dependencies'
       - 'dependabot'
       - 'github-actions'
+    # セキュリティ設定
+    insecure-external-code-execution: deny
