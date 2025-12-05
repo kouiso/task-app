@@ -1,0 +1,103 @@
+# GitHub Labeler Configuration
+# This file defines rules for automatically labeling pull requests based on changed files
+
+# Documentation changes
+documentation:
+  - changed-files:
+    - any-glob-to-any-file: 
+      - 'doc/**/*'
+      - '*.md'
+      - 'README.md'
+      - 'CLAUDE.md'
+      - '.github/copilot-instructions.md'
+      - '.github/pull_request_template.md'
+
+# Frontend / UI changes
+frontend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/app/**/*'
+      - 'src/components/**/*'
+      - 'src/styles/**/*'
+      - 'src/hooks/**/*'
+      - '*.css'
+      - 'globals.css'
+
+# Backend / API changes
+backend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/server/**/*'
+      - 'src/trpc/**/*'
+
+# Database changes
+database:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'prisma/**/*'
+      - 'src/lib/prisma.ts'
+      - 'src/command/seed.ts'
+
+# Test changes
+test:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/**/__tests__/**/*'
+      - 'src/test/**/*'
+      - 'e2e/**/*'
+      - '*.test.ts'
+      - '*.test.tsx'
+      - '*.spec.ts'
+      - '*.spec.tsx'
+      - 'vitest.config.ts'
+      - 'playwright.config.ts'
+
+# CI/CD changes
+ci/cd:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/**/*'
+      - '.github/dependabot.yml'
+      - '.github/labeler.yml'
+
+# Infrastructure / DevOps
+infrastructure:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docker-compose.yml'
+      - 'Dockerfile'
+      - '.docker/**/*'
+      - '.devcontainer/**/*'
+      - 'taskfile.yaml'
+      - 'Makefile'
+
+# Dependencies
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'renovate.json'
+
+# Configuration
+configuration:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'next.config.mjs'
+      - 'tsconfig.json'
+      - 'biome.json'
+      - '.editorconfig'
+      - '.env.example'
+      - '.gitignore'
+      - '.dockerignore'
+      - '.npmrc'
+      - 'lint-staged.config.js'
+      - '.huskyrc'
+
+# TypeScript types
+types:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/types/**/*'
+      - 'src/type/**/*'
+      - '*.d.ts'
