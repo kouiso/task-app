@@ -8,7 +8,7 @@
 
 - Machine: MacOS or Windows WSL2
 - Homebrew
-- NodeJS: v25.2.1 (package.jsonのvoltaセクション参照)
+- NodeJS: v24.11.1 (package.jsonのvoltaセクション参照)
 
 <details>
 <summary>複数のnodeバージョン管理</summary>
@@ -29,7 +29,7 @@ curl https://get.volta.sh | bash
 # プロジェクトディレクトリに移動すると、package.jsonに記載されたNodeバージョンが自動で使用されます
 cd task-app
 volta install node
-# package.jsonのvoltaセクションに定義されたNode 25.2.1が自動的にインストール・使用されます
+# package.jsonのvoltaセクションに定義されたNode 24.11.1が自動的にインストール・使用されます
 ```
 
 </details>
