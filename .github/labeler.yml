@@ -63,7 +63,7 @@ infrastructure:
   - changed-files:
       - any-glob-to-any-file:
           - 'docker-compose.yml'
-          - 'Dockerfile'
+          - '.docker/Dockerfile'
           - '.docker/**/*'
           - '.devcontainer/**/*'
           - 'taskfile.yaml'
