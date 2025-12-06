@@ -58,24 +58,10 @@ volta install node@25.2.1
 
 ### 1. 環境変数の設定
 
-`.env.example` から `.env` を生成し、必要な情報を追加
+`.env.example` から `.env` を生成し、必要に応じて値を編集
 
 ```bash
 cp .env.example .env
-```
-
-以下の環境変数を設定してください:
-
-```bash
-# データベース接続
-DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
-
-# NextAuth設定
-NEXTAUTH_SECRET=your_nextauth_secret_here
-NEXTAUTH_URL=http://localhost:3000
-
-# JWT設定
-JWT_SECRET=your_jwt_secret_here
 ```
 
 ### 2. 環境初期化
@@ -105,8 +91,8 @@ task up-backend
 
 | ロール   | メールアドレス      | パスワード     |
 | -------- | ------------------- | -------------- |
-| 管理者   | admin@example.com   | Password123!   |
-| ユーザー | user1@example.com   | Password123!   |
+| 管理者   | admin@example.com   | password123   |
+| ユーザー | user1@example.com   | password123   |
 
 ## よく使うコマンド
 
