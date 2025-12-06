@@ -20,8 +20,6 @@ frontend:
           - 'src/components/**/*'
           - 'src/styles/**/*'
           - 'src/hooks/**/*'
-          - '*.css'
-          - 'globals.css'
 
 # Backend / API changes
 backend:
