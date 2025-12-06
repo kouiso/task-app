@@ -8,24 +8,25 @@
 
 - Machine: MacOS or Windows WSL2
 - Homebrew
-- NodeJS: バージョンは.tool-versionsファイル参照
+- NodeJS: v22.11.0 (package.jsonのvoltaセクション参照)
 
 <details>
 <summary>複数のnodeバージョン管理</summary>
 
 ※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればプラグイン式で全言語の環境管理ができる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)がおすすめ
+このプロジェクトでは [Volta](https://volta.sh/) を推奨しています
 
 ```bash
-# brewを手動インストール後、以下を実行
+# Voltaのインストール (macOS/Linux)
+curl https://get.volta.sh | bash
 
-※ asdfはinstall後パスを繋げて下さい。
-$HOME/.asdf/shims/
-# バージョン管理
-brew install jq asdf
+# Voltaのインストール (Windows)
+# https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
 
-asdf install
-asdf reshim
+# プロジェクトディレクトリに移動すると、package.jsonに記載されたNodeバージョンが自動で使用されます
+cd task-app
+volta install node
+# package.jsonのvoltaセクションに定義されたNode 22.11.0が自動的にインストール・使用されます
 ```
 
 </details>

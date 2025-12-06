@@ -6,7 +6,7 @@
   "author": "KosukeIsogai",
   "license": "UNLICENSED",
   "engines": {
-    "node": "24.x"
+    "node": ">=22.11.0"
   },
   "volta": {
     "node": "22.11.0"
