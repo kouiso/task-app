@@ -32,3 +32,4 @@ jobs:
         uses: grll/claude-code-action@v1.0.0
         with:
           use_oauth: true
+          instructions_file: CLAUDE.md
