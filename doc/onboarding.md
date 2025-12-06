@@ -7,7 +7,7 @@
 セットアップとその後の開発に必要な依存をインストール
 
 - Machine: MacOS or Windows WSL2
-- NodeJS: v22.11.0 (Volta推奨)
+- NodeJS: v25.2.1 (Volta推奨)
 - Docker Desktop
 - Git
 
@@ -30,7 +30,7 @@ curl https://get.volta.sh | bash
 # プロジェクトディレクトリに移動すると、package.jsonに記載されたNodeバージョンが自動で使用されます
 cd task-app
 volta install node
-# package.jsonのvoltaセクションに定義されたNode 22.11.0が自動的にインストール・使用されます
+# package.jsonのvoltaセクションに定義されたNode 25.2.1が自動的にインストール・使用されます
 ```
 
 </details>
