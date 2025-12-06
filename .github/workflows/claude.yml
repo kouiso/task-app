@@ -24,6 +24,6 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@v1
+        uses: grll/claude-code-action@oauth
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          use_oauth: true
