@@ -29,6 +29,6 @@ jobs:
           fetch-depth: 0  # 完全な履歴を取得
       
       - name: Run Claude Code
-        uses: grll/claude-code-action@oauth
+        uses: grll/claude-code-action@v1.0.0
         with:
           use_oauth: true
