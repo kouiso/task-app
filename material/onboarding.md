@@ -17,7 +17,10 @@
 このプロジェクトでは [Volta](https://volta.sh/) を推奨しています
 
 ```bash
-# Voltaのインストール (macOS/Linux)
+# Voltaのインストール (macOS - Homebrew推奨)
+brew install volta
+
+# Voltaのインストール (macOS/Linux - 公式インストーラー)
 curl https://get.volta.sh | bash
 
 # Voltaのインストール (Windows)
