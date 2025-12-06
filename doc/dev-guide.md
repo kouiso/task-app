@@ -2,41 +2,30 @@
 
 ## コマンド
 
-### 開発
+### Taskfile コマンド
 
-- `npm run dev` - 開発サーバー起動
-- `npm run build` - プロダクションビルド
-- `npm run start` - プロダクションサーバー起動
+このプロジェクトでは [Task](https://taskfile.dev/) を使用してよく使うコマンドを管理しています。
 
-### コード品質
+```bash
+task                    # 利用可能なコマンド一覧を表示
+task -l                 # コマンド一覧（詳細版）
+```
 
-- `npm run lint` - Biome リント実行
-- `npm run lint:fix` - リント問題を自動修正
-- `npm run format` - コードフォーマット
-- `npm run type-check` - TypeScript 型チェック
-- `npm run lint:ci` - CI 用リント実行
+#### 環境管理
 
-### データベース
+- `task init` - 環境初期化（何度でも実行可能 - 環境を壊してしまった場合、本コマンドの再実行で修復可能）
+- `task clean` - 自動生成されたファイル・フォルダを削除
+- `task npmi` - npm ci コマンドをコンテナで実行
 
-- `npm run db:generate` - Prisma クライアント生成
-- `npm run db:push` - スキーマを DB に反映
-- `npm run db:migrate` - マイグレーション実行
-- `npm run db:studio` - Prisma Studio 起動 (DB GUI)
-- `npm run db:seed` - シードデータ投入
+#### 開発・起動
 
-### テスト
+- `task up-backend` - バックエンドサーバーを起動
 
-- `npm test` - ユニットテスト実行
-- `npm run test:ui` - テスト UI で実行
-- `npm run test:e2e` - E2E テスト実行
-- `npm run test:e2e:ui` - E2E テスト UI で実行
-- `npm run test:e2e:headed` - ブラウザ表示で E2E テスト実行
+#### データベース
 
-### Vercel デプロイ
-
-- `npm run vercel:setup` - Vercel の自動セットアップ
-- `npm run vercel:env` - Vercel 環境変数を取得
-- `npm run vercel:seed` - Vercel DB にシード投入
+- `task db-apply` - Prismaスキーマからコード生成&状態をDBに反映
+- `task seed` - DBリセット・シードデータ投入
+- `task gen-db-schema` - SchemaSpy で DB スキーマを生成
 
 ## プロジェクト構成
 
@@ -100,22 +89,22 @@ npm run db:studio
 - ブラウザでデータベースの内容を確認・編集可能
 - `http://localhost:5555` でアクセス
 
-### マイグレーション
+### データベース操作
+
+開発環境では Task コマンドを使用:
 
 ```bash
-# 開発環境
-npm run db:push
+# Prismaスキーマから状態をDBに反映
+task db-apply
 
-# 本番環境
-npm run db:migrate
+# DBリセット・シードデータ投入
+task seed
 ```
 
 ### スキーマ更新手順
 
 1. `prisma/schema.prisma` を編集
-2. `npm run db:generate` でクライアント生成
-3. `npm run db:push` で DB に反映
-4. 必要に応じて `npm run db:seed` でデータ再投入
+2. `task db-apply` で DB に反映とクライアント生成を実行
 
 ## デバッグ
 
@@ -168,22 +157,23 @@ npm run build
 
 2. 依存関係を再インストール
    ```bash
-   rm -rf node_modules package-lock.json
-   npm install
+   task clean
+   task npmi
    ```
 
-### Prisma エラー
+### データベースエラー / 環境が壊れた場合
+
+環境を再初期化してください（何度でも実行可能）:
 
 ```bash
-# Prismaクライアントを再生成
-npm run db:generate
-
-# データベースをリセット
-docker-compose down -v
-docker-compose up -d
-npm run db:push
-npm run db:seed
+task init
 ```
+
+このコマンドは以下を自動的に実行します:
+- クリーンアップ
+- Docker コンテナの再構築
+- 依存関係の再インストール
+- データベースのリセットとシード投入
 
 ### テストエラー
 

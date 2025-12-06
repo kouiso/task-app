@@ -7,105 +7,105 @@
 セットアップとその後の開発に必要な依存をインストール
 
 - Machine: MacOS or Windows WSL2
-- NodeJS: v22.0.0 以上
+- [Task](https://taskfile.dev/installation/) (タスクランナー)
 - Docker Desktop
 - Git
 
 <details>
-<summary>複数のnodeバージョン管理</summary>
+<summary>Taskのインストール方法</summary>
 
-※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればプラグイン式で全言語の環境管理ができる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)がおすすめ
+Task は各種セットアップや開発コマンドを簡単に実行できるタスクランナーです。
 
 ```bash
-# リンク先の手順に従って手動インストール後、以下を実行
+# macOS (Homebrew)
+brew install go-task
 
-# バージョン管理
-asdf plugin-add nodejs
-asdf install nodejs 22.0.0
-# (プロジェクトディレクトリ直下で実行)
-asdf local nodejs 22.0.0
-# Globalに適用したい場合は以下
-# asdf global nodejs 22.0.0
+# Windows (Scoop)
+scoop install task
+
+# Windows (Chocolatey)
+choco install go-task
+
+# Linux (各種パッケージマネージャー)
+# https://taskfile.dev/installation/ を参照
 ```
 
 </details>
 
-## 初回設定
+<details>
+<summary>複数のnodeバージョン管理 (オプション)</summary>
 
-### 環境変数
+※ 複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
+まだ未導入であれば[Volta](https://volta.sh/)がおすすめ
 
-- `.env.example` から `.env` を生成し、必要な情報を追加
+```bash
+# Voltaのインストール (macOS/Linux)
+curl https://get.volta.sh | bash
 
-  ```bash
-  cp .env.example .env
-  ```
+# Voltaのインストール (Windows)
+# https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
 
-  以下の環境変数を設定してください:
+# Node.jsのインストール
+volta install node@25.2.1
+```
 
-  ```bash
-  # データベース接続
-  DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
+このプロジェクトでは `package.json` に Volta の設定が含まれているため、
+プロジェクトディレクトリで自動的に正しいバージョン (25.2.1) が使用されます。
 
-  # NextAuth設定
-  NEXTAUTH_SECRET=your_nextauth_secret_here
-  NEXTAUTH_URL=http://localhost:3000
-
-  # JWT設定
-  JWT_SECRET=your_jwt_secret_here
-  ```
+</details>
 
 ## セットアップ手順
 
-1. **依存パッケージのインストール**
+### 1. 環境変数の設定
 
-   ```bash
-   npm install
-   ```
+`.env.example` から `.env` を生成し、必要に応じて値を編集
 
-   ※ pnpm は使用しないでください
+```bash
+cp .env.example .env
+```
 
-2. **PostgreSQL の起動 (Docker)**
+### 2. 環境初期化
 
-   ```bash
-   docker-compose up -d
-   ```
+以下のコマンド1つで環境を初期化できます:
 
-3. **データベースのセットアップ**
+```bash
+task init
+```
 
-   ```bash
-   # Prismaクライアント生成
-   npm run db:generate
+このコマンドは以下を自動的に実行します:
+- 依存パッケージのインストール
+- Docker コンテナの構築と起動
+- データベースのセットアップとシードデータ投入
 
-   # スキーマをDBに反映
-   npm run db:push
+**注意**: 初回実行時は Docker イメージのダウンロードとビルドのため、数分かかる場合があります。
 
-   # サンプルデータ投入
-   npm run db:seed
-   ```
+### 3. 開発サーバーの起動
 
-4. **開発サーバーの起動**
+```bash
+task up-backend
+```
 
-   ```bash
-   npm run dev
-   ```
-
-   - ブラウザで `http://localhost:3000` にアクセス
+- ブラウザで `http://localhost:3000` にアクセス
 
 ### デフォルトユーザー
 
 | ロール   | メールアドレス      | パスワード     |
 | -------- | ------------------- | -------------- |
-| 管理者   | admin@example.com   | Password123!   |
-| ユーザー | user1@example.com   | Password123!   |
+| 管理者   | admin@example.com   | password123   |
+| ユーザー | user1@example.com   | password123   |
 
-## テスト
+## よく使うコマンド
 
 ```bash
-npm test              # テスト実行
-npm run test:ui       # テストUIで実行
-npm run test:coverage # カバレッジ確認
+task                    # 利用可能なコマンド一覧を表示
+task init               # 環境初期化（何度でも実行可能）
+task up-backend         # バックエンドサーバーを起動
+task seed               # DBリセット・シードデータ投入
+task db-apply           # Prismaスキーマから状態をDBに反映
+task clean              # 自動生成されたファイル・フォルダを削除
 ```
+
+詳細は `task -l` または [taskfile.yaml](../taskfile.yaml) を参照してください。
 
 ## トラブルシューティング
 
@@ -116,28 +116,19 @@ npm run test:coverage # カバレッジ確認
 
 ### データベース接続エラー
 
-1. Docker コンテナが起動しているか確認
+環境を再初期化してください:
 
-   ```bash
-   docker-compose ps
-   ```
+```bash
+task init
+```
 
-2. データベースをリセット
-   ```bash
-   docker-compose down -v
-   docker-compose up -d
-   npm run db:push
-   npm run db:seed
-   ```
+### 環境が壊れてしまった場合
 
-### npm install エラー
+`task init` は何度でも実行可能です。環境をクリーンな状態にリセットできます:
 
-- Node.js のバージョンを確認
-- `node_modules` を削除して再インストール
-  ```bash
-  rm -rf node_modules package-lock.json
-  npm install
-  ```
+```bash
+task init
+```
 
 ## 技術スタック
 
