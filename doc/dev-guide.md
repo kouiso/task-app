@@ -27,46 +27,6 @@ task -l                 # コマンド一覧（詳細版）
 - `task seed` - DBリセット・シードデータ投入
 - `task gen-db-schema` - SchemaSpy で DB スキーマを生成
 
-### npm コマンド
-
-以下のコマンドは npm scripts として定義されています:
-
-#### 開発
-
-- `npm run dev` - 開発サーバー起動
-- `npm run build` - プロダクションビルド
-- `npm run start` - プロダクションサーバー起動
-
-#### コード品質
-
-- `npm run lint` - Biome リント実行
-- `npm run lint:fix` - リント問題を自動修正
-- `npm run format` - コードフォーマット
-- `npm run type-check` - TypeScript 型チェック
-- `npm run lint:ci` - CI 用リント実行
-
-#### データベース
-
-- `npm run db:generate` - Prisma クライアント生成
-- `npm run db:push` - スキーマを DB に反映
-- `npm run db:migrate` - マイグレーション実行
-- `npm run db:studio` - Prisma Studio 起動 (DB GUI)
-- `npm run db:seed` - シードデータ投入
-
-#### テスト
-
-- `npm test` - ユニットテスト実行
-- `npm run test:ui` - テスト UI で実行
-- `npm run test:e2e` - E2E テスト実行
-- `npm run test:e2e:ui` - E2E テスト UI で実行
-- `npm run test:e2e:headed` - ブラウザ表示で E2E テスト実行
-
-#### Vercel デプロイ
-
-- `npm run vercel:setup` - Vercel の自動セットアップ
-- `npm run vercel:env` - Vercel 環境変数を取得
-- `npm run vercel:seed` - Vercel DB にシード投入
-
 ## プロジェクト構成
 
 ```
