@@ -1,13 +1,13 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/.pnp
+node_modules
+.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # testing
-/coverage
+coverage
 
 # debug
 logs
@@ -17,10 +17,9 @@ logs
 dist
 dist-ssr
 stats.html
-/.next/
-/out/
-stats.html
-/build
+.next/
+out/
+build
 
 # typescript output
 *.module.scss.d.ts
@@ -36,21 +35,19 @@ next-env.d.ts
 *.sln
 *.sw?
 *.pem
-
+.serena/
 
 # local env files
-
 *.env*
 !.env.example
 secret
 *.local
-*.module.scss.d.ts
 
 # vercel
 .vercel
 
 # temp
-/temp
+temp
 .npm
 playground.nnb
 
@@ -61,3 +58,22 @@ robots.txt
 # database files
 *.db
 *.db-*
+
+# Playwright test results
+playwright-report/
+test-results/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Test files and screenshots
+test-*.mjs
+*-test.mjs
+test-*.png
+manual-test-*.png
+*-screenshot.png
+*-error.png
+debug-*.mjs
+setup-*.mjs
+inspect-*.mjs
+.env*.local

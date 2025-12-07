@@ -26,7 +26,7 @@ import toast from 'react-hot-toast';
 export default function UserEditPage() {
   const router = useRouter();
   const params = useParams();
-  const userId = params.id as string;
+  const userId = params['id'] as string;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -72,7 +72,11 @@ export default function UserEditPage() {
     });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
+  const handleChange = (
+    e:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | { target: { name: string; value: string } },
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -146,7 +150,7 @@ export default function UserEditPage() {
             {/* アバタープレビュー */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
               <Avatar
-                src={formData.avatar || undefined}
+                {...(formData.avatar && { src: formData.avatar })}
                 alt={formData.name}
                 sx={{ width: 100, height: 100 }}
               >

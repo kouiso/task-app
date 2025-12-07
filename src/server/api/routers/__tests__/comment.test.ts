@@ -58,9 +58,9 @@ describe('commentRouter', () => {
       const project = await createTestProject(user.id);
       const task = await createTestTask(project.id, user.id);
 
-      const comment1 = await createTestComment(task.id, user.id, { content: 'First Comment' });
+      const _comment1 = await createTestComment(task.id, user.id, { content: 'First Comment' });
       await new Promise((resolve) => setTimeout(resolve, 10));
-      const comment2 = await createTestComment(task.id, user.id, { content: 'Second Comment' });
+      const _comment2 = await createTestComment(task.id, user.id, { content: 'Second Comment' });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 

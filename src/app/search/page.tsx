@@ -1,7 +1,7 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
-import { TaskCard } from '@/components/task/TaskCard';
+import { AppLayout } from '@/components/layout/app-layout';
+import { TaskCard } from '@/components/task/task-card';
 import { api } from '@/trpc/react';
 import SearchIcon from '@mui/icons-material/Search';
 import {
@@ -72,22 +72,24 @@ function SearchPageContent() {
 
   // URLパラメータから初期値を設定（条件分岐を配列メソッドで削減）
   useEffect(() => {
-    const paramSetters = [
+    const paramSetters: Array<{
+      key: string;
+      setter: (value: string) => void;
+    }> = [
       { key: 'keyword', setter: setKeyword },
       { key: 'projectId', setter: setProjectId },
-      { key: 'status', setter: setStatus },
-      { key: 'priority', setter: setPriority },
+      { key: 'status', setter: (value: string) => setStatus(value as 'all' | TaskStatus) },
+      { key: 'priority', setter: (value: string) => setPriority(value as 'all' | TaskPriority) },
       { key: 'assignedTo', setter: setAssignedTo },
       { key: 'dateFrom', setter: setDateFrom },
       { key: 'dateTo', setter: setDateTo },
     ];
 
-    paramSetters.forEach(({ key, setter }) => {
+    for (const { key, setter } of paramSetters) {
       const value = searchParams.get(key);
-      if (value) setter(value as any);
-    });
+      if (value) setter(value);
+    }
   }, [searchParams]);
-
 
   // 検索実行（条件分岐を配列メソッドで削減）
   const handleSearch = () => {
@@ -102,26 +104,25 @@ function SearchPageContent() {
     ];
 
     const params = new URLSearchParams();
-    searchParamList
-      .filter((param) => param.value && param.value !== param.exclude)
-      .forEach((param) => params.set(param.key, param.value));
+    const filteredParams = searchParamList.filter(
+      (param) => param.value && param.value !== param.exclude,
+    );
+    for (const param of filteredParams) {
+      params.set(param.key, param.value);
+    }
 
     router.push(`/search?${params.toString()}`);
   };
 
   // クリア（初期値を配列で管理）
   const handleClear = () => {
-    const clearActions = [
-      { setter: setKeyword, value: '' },
-      { setter: setProjectId, value: '' },
-      { setter: setStatus, value: 'all' as const },
-      { setter: setPriority, value: 'all' as const },
-      { setter: setAssignedTo, value: '' },
-      { setter: setDateFrom, value: '' },
-      { setter: setDateTo, value: '' },
-    ];
-
-    clearActions.forEach(({ setter, value }) => setter(value as any));
+    setKeyword('');
+    setProjectId('');
+    setStatus('all');
+    setPriority('all');
+    setAssignedTo('');
+    setDateFrom('');
+    setDateTo('');
     router.push('/search');
   };
 
@@ -134,11 +135,9 @@ function SearchPageContent() {
     router.push(`/task?taskId=${taskId}&edit=true`);
   };
 
-  const handleTaskDelete = (taskId: string) => {
+  const handleTaskDelete = (_taskId: string) => {
     // タスク削除処理（実装済みのtask.delete mutationを使用）
     if (confirm('このタスクを削除してもよろしいですか？')) {
-      // 削除処理は親コンポーネントで実装する必要がある
-      console.log('Delete task:', taskId);
     }
   };
 

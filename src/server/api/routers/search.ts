@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -33,33 +34,31 @@ const quickSearchInputSchema = z.object({
  */
 type FilterConfig = {
   key: string;
-  value: any;
-  transform?: (value: any) => any;
+  value: unknown;
+  transform?: (value: unknown) => unknown;
 };
 
-const buildDynamicWhere = (filters: FilterConfig[]): Record<string, any> => {
-  return filters
-    .filter((f) => f.value !== undefined && f.value !== null && f.value !== 'all')
-    .reduce(
-      (acc, f) => ({
-        ...acc,
-        [f.key]: f.transform ? f.transform(f.value) : f.value,
-      }),
-      {},
-    );
+const buildDynamicWhere = (filters: FilterConfig[]): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+  for (const f of filters) {
+    if (f.value !== undefined && f.value !== null && f.value !== 'all') {
+      result[f.key] = f.transform ? f.transform(f.value) : f.value;
+    }
+  }
+  return result;
 };
 
 /**
  * 日付範囲フィルターを構築
  */
 const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
-  const dateFilter = [
-    { hasValue: !!dateFrom, filter: { gte: new Date(dateFrom!) } },
-    { hasValue: !!dateTo, filter: { lte: new Date(dateTo!) } },
-  ]
-    .filter((d) => d.hasValue)
-    .reduce((acc, d) => ({ ...acc, ...d.filter }), {});
-
+  const dateFilter: Record<string, Date> = {};
+  if (dateFrom) {
+    dateFilter['gte'] = new Date(dateFrom);
+  }
+  if (dateTo) {
+    dateFilter['lte'] = new Date(dateTo);
+  }
   return Object.keys(dateFilter).length > 0 ? dateFilter : undefined;
 };
 
@@ -91,7 +90,7 @@ export const searchRouter = createTRPCRouter({
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
     // タスク検索条件を動的に構築
-    const taskWhere: any = {
+    const taskWhere: Prisma.TaskWhereInput = {
       // 自分が関わるタスクのみ（作成者または担当者）
       OR: [{ createdById: userId }, { assigneeId: userId }],
       // 動的フィルター適用
@@ -259,6 +258,7 @@ export const searchRouter = createTRPCRouter({
     const userId = ctx.session.userId;
 
     // ユーザーが関わるプロジェクトのメンバーを取得
+    // distinct: ['userId'] を使用して、データベースレベルで重複を排除
     const projectMembers = await prisma.projectMember.findMany({
       where: {
         project: {
@@ -269,7 +269,7 @@ export const searchRouter = createTRPCRouter({
           },
         },
       },
-      include: {
+      select: {
         user: {
           select: { id: true, name: true, email: true, avatar: true },
         },
@@ -282,11 +282,7 @@ export const searchRouter = createTRPCRouter({
       },
     });
 
-    // 重複を除いたユーザーリストを返す
-    const uniqueUsers = projectMembers
-      .map((member) => member.user)
-      .filter((user, index, self) => index === self.findIndex((u) => u.id === user.id));
-
-    return uniqueUsers;
+    // データベースのdistinctで既に重複除去されているため、そのままユーザー情報を返す
+    return projectMembers.map((member) => member.user);
   }),
 });

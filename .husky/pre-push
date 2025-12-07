@@ -1,13 +1,22 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# 現在のブランチ名を取得
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# develop/mainブランチの場合はチェックを除外（Git Flow対応）
+if [ "$current_branch" = "develop" ] || [ "$current_branch" = "main" ]; then
+  echo "Info: Special branch '$current_branch' - skipping sync check"
+  exit 0
+fi
+
 git fetch origin main develop
-if [[ $(git log HEAD..origin/main --oneline) ]]; then
-  echo ; echo 🚨🚨🚨 Merge the latest main branch before pushing 🚨🚨🚨 ; echo
+if [ -n "$(git log HEAD..origin/main --oneline)" ]; then
+  echo ; echo "🚨🚨🚨 Merge the latest main branch before pushing 🚨🚨🚨" ; echo
   exit 1
 fi
 
-if [[ $(git log HEAD..origin/develop --oneline) ]]; then
-  echo ; echo 🚨🚨🚨 Merge the latest develop branch before pushing 🚨🚨🚨 ; echo
+if [ -n "$(git log HEAD..origin/develop --oneline)" ]; then
+  echo ; echo "🚨🚨🚨 Merge the latest develop branch before pushing 🚨🚨🚨" ; echo
   exit 1
 fi

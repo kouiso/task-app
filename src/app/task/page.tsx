@@ -1,8 +1,8 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
-import { TaskCard } from '@/components/task/TaskCard';
-import { TaskDialog, type TaskFormData } from '@/components/task/TaskDialog';
+import { AppLayout } from '@/components/layout/app-layout';
+import { TaskCard } from '@/components/task/task-card';
+import { TaskDialog, type TaskFormData } from '@/components/task/task-dialog';
 import { api } from '@/trpc/react';
 import AddIcon from '@mui/icons-material/Add';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
@@ -26,7 +26,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { TaskPriority, type TaskStatus } from '@prisma/client';
+import type { TaskStatus } from '@prisma/client';
 import { useState } from 'react';
 
 export default function TaskPage() {
@@ -120,16 +120,18 @@ export default function TaskPage() {
   const handleEdit = (taskId: string) => {
     const task = tasks?.find((t) => t.id === taskId);
     if (task) {
+      const dueDate = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined;
+
       setEditingTask({
         id: task.id,
         title: task.title,
         description: task.description || '',
         status: task.status,
         priority: task.priority,
-        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined,
-        estimatedHours: task.estimatedHours || undefined,
         projectId: task.projectId,
-        assigneeId: task.assigneeId || undefined,
+        ...(dueDate && { dueDate }),
+        ...(task.estimatedHours && { estimatedHours: task.estimatedHours }),
+        ...(task.assigneeId && { assigneeId: task.assigneeId }),
       });
       setDialogOpen(true);
     }
@@ -276,8 +278,8 @@ export default function TaskPage() {
 
         <Box display="flex" gap={2} mb={3} alignItems="center">
           <Checkbox
-            checked={tasks && tasks.length > 0 && selectedTasks.size === tasks.length}
-            indeterminate={tasks && selectedTasks.size > 0 && selectedTasks.size < tasks.length}
+            checked={!!(tasks && tasks.length > 0 && selectedTasks.size === tasks.length)}
+            indeterminate={!!(tasks && selectedTasks.size > 0 && selectedTasks.size < tasks.length)}
             onChange={(e) => handleSelectAll(e.target.checked)}
           />
           <TextField
