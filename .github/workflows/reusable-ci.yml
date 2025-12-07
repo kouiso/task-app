@@ -61,9 +61,12 @@ jobs:
           echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.firebase-messaging-sender-id }}" >> .env
           echo "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.firebase-app-id }}" >> .env
           echo "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${{ secrets.firebase-measurement-id }}" >> .env
+          echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" >> .env
+          echo "NEXTAUTH_SECRET=dummy-secret-for-ci" >> .env
+          echo "NEXTAUTH_URL=http://localhost:3000" >> .env
 
       - name: Npm Build
-        run: npm run build
+        run: npm run build:ci
 
       - name: Npm Lint
         run: |

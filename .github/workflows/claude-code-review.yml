@@ -7,9 +7,11 @@ on:
 jobs:
   claude-review:
     # 保護ブランチ（main, develop）へのPRのみレビュー
+    # シークレットが設定されていない場合はスキップ
     if: |
-      github.event.pull_request.base.ref == 'main' ||
-      github.event.pull_request.base.ref == 'develop'
+      (github.event.pull_request.base.ref == 'main' ||
+      github.event.pull_request.base.ref == 'develop') &&
+      vars.CLAUDE_CODE_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

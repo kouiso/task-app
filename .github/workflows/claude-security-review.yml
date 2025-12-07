@@ -14,6 +14,8 @@ on:
 
 jobs:
   security-review:
+    # シークレットが設定されていない場合はスキップ
+    if: vars.CLAUDE_CODE_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
