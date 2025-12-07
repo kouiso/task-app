@@ -24,7 +24,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: ${{ inputs.node-version-file }}
+          node-version: '24'
 
       - name: Check if package files have changed
         id: check_changes
