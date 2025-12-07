@@ -20,6 +20,12 @@
 # Voltaのインストール
 curl https://get.volta.sh | bash
 
+# シェルを再起動するか、設定を再読み込み
+# bashの場合:
+source ~/.bashrc
+# zshの場合:
+source ~/.zshrc
+
 # プロジェクトディレクトリでNode.jsが自動的にインストール・使用される
 cd /path/to/task-app
 # voltaがpackage.jsonのvoltaセクションからバージョンを読み取り、自動でインストール
