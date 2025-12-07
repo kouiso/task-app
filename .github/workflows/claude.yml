@@ -22,14 +22,34 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 完全な履歴を取得
-      
+          fetch-depth: 0
+
       - name: Run Claude Code
-        uses: grll/claude-code-action@v1.0.0
+        uses: anthropics/claude-code-action@beta
         with:
-          use_oauth: true
-          instructions_file: CLAUDE.md
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # 保護ブランチへの直接pushを禁止するプロンプト
+          custom_instructions: |
+            ## ブランチ保護ルール（絶対遵守）
+
+            以下のブランチへの直接的なpushは**絶対に禁止**です：
+            - main
+            - master
+            - develop
+
+            これらのブランチに変更を加える場合は、必ず以下の手順に従ってください：
+            1. 新しいfeatureブランチを作成する（例：feature/xxx, fix/xxx）
+            2. featureブランチで変更をコミットする
+            3. Pull Requestを作成する
+
+            **直接pushしようとした場合は、即座に処理を中止し、ユーザーに警告してください。**
+
+            ## その他の指示
+            - CLAUDE.mdファイルがある場合は必ず読んで従ってください
+            - コメントは日本語で記述してください

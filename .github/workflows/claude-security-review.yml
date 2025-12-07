@@ -1,0 +1,49 @@
+name: Claude Security Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    # セキュリティ関連ファイルの変更時に自動実行
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/**/*.js'
+      - 'prisma/**/*'
+      - 'package*.json'
+      - '.env*'
+
+jobs:
+  security-review:
+    # シークレットが設定されていない場合はスキップ
+    if: vars.CLAUDE_CODE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Security Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          direct_prompt: |
+            このPRのセキュリティレビューを実施してください。
+
+            以下の観点で変更内容を確認してください：
+            - SQLインジェクション、XSS等の脆弱性
+            - 認証・認可の不備
+            - 機密情報の漏洩リスク
+            - 入力値のバリデーション
+            - エラーハンドリングの適切性
+            - 依存パッケージの脆弱性
+
+            問題を発見した場合は、重大度と修正方法を具体的に提示してください。
+
+            **IMPORTANT: レビューコメントは日本語で記述してください。**
