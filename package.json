@@ -6,12 +6,16 @@
   "author": "KosukeIsogai",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22.0.0"
+    "node": "24.x"
+  },
+  "volta": {
+    "node": "24.11.1"
   },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && prisma db push --accept-data-loss && next build",
-    "vercel-build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build:ci": "prisma generate && next build",
+    "vercel-build": "prisma generate && next build",
     "start": "next start",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -28,7 +32,8 @@
     "postinstall": "prisma generate",
     "vercel:setup": "node setup-vercel-db.mjs",
     "vercel:env": "vercel env pull .env.production.local",
-    "vercel:seed": "vercel env pull .env.production.local && npx prisma db seed"
+    "vercel:seed": "vercel env pull .env.production.local && npx prisma db seed",
+    "check:unused-deps": "depcheck --json"
   },
   "lint-staged": {
     "config": "lint-staged.config.js"
@@ -88,6 +93,7 @@
     "prisma": "^6.16.2",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3",
-    "vitest": "^3.0.9"
+    "vitest": "^3.0.9",
+    "depcheck": "^1.4.7"
   }
 }
