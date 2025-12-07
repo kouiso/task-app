@@ -49,12 +49,17 @@ function validateEnv() {
 /**
  * 検証済み環境変数
  * アプリケーション全体で使用する
- * ビルド時はバリデーションをスキップ
+ * ビルド時はバリデーションをスキップ（CI環境やVercelプレビューデプロイ時）
  */
-export const env =
-  process.env['NODE_ENV'] === 'production' && typeof window === 'undefined' && !process.env['NEXTAUTH_URL']
-    ? (process.env as unknown as Env)
-    : validateEnv();
+const shouldSkipValidation =
+  process.env['SKIP_ENV_VALIDATION'] === 'true' ||
+  (process.env['NODE_ENV'] === 'production' &&
+    typeof window === 'undefined' &&
+    !process.env['DATABASE_URL']);
+
+export const env = shouldSkipValidation
+  ? (process.env as unknown as Env)
+  : validateEnv();
 
 /**
  * 環境変数の型定義
