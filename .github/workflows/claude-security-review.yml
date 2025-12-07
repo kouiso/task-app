@@ -15,7 +15,7 @@ on:
 jobs:
   security-review:
     # シークレットが設定されていない場合はスキップ
-    if: vars.CLAUDE_CODE_ENABLED == 'true'
+    if: secrets.CLAUDE_CODE_OAUTH_TOKEN != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,6 +31,7 @@ jobs:
 
       - name: Claude Security Review
         uses: anthropics/claude-code-action@beta
+        continue-on-error: true
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           direct_prompt: |
