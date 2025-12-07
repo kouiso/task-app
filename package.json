@@ -6,15 +6,16 @@
   "author": "KosukeIsogai",
   "license": "UNLICENSED",
   "engines": {
-    "node": "25.x"
+    "node": "24.x"
   },
   "volta": {
-    "node": "25.2.1"
+    "node": "24.11.1"
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
-    "vercel-build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && next build",
+    "build:local": "prisma generate && prisma db push --accept-data-loss && next build",
+    "vercel-build": "prisma generate && next build",
     "start": "next start",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
