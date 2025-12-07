@@ -21,9 +21,10 @@
 # Scoopを使用してVoltaをインストール
 scoop install volta
 
-# プロジェクトディレクトリでNode.jsが自動的にインストール・使用される
+# プロジェクトディレクトリに移動すると、voltaが自動的にNode.jsをインストール
 cd /path/to/task-app
-# voltaがpackage.jsonの"volta"フィールドからバージョンを読み取り、自動でインストール
+# 初回はNode.jsのダウンロード・インストールが実行される
+# 2回目以降は自動的に正しいバージョンに切り替わる
 ```
 
 **macOS/Linuxの場合:**
@@ -31,9 +32,10 @@ cd /path/to/task-app
 # Homebrewを使用してVoltaをインストール
 brew install volta
 
-# プロジェクトディレクトリでNode.jsが自動的にインストール・使用される
+# プロジェクトディレクトリに移動すると、voltaが自動的にNode.jsをインストール
 cd /path/to/task-app
-# voltaがpackage.jsonの"volta"フィールドからバージョンを読み取り、自動でインストール
+# 初回はNode.jsのダウンロード・インストールが実行される
+# 2回目以降は自動的に正しいバージョンに切り替わる
 ```
 
 </details>
