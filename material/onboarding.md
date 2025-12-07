@@ -7,7 +7,9 @@
 セットアップとその後の開発に必要な依存をインストール
 
 - Machine: MacOS or Windows WSL2
-- Homebrew
+- Package Manager:
+  - Windows: [Scoop](https://scoop.sh/)
+  - macOS/Linux: [Homebrew](https://brew.sh/)
 - NodeJS: バージョンはpackage.jsonの"volta"フィールド参照
 
 <details>
