@@ -28,7 +28,8 @@
     "postinstall": "prisma generate",
     "vercel:setup": "node setup-vercel-db.mjs",
     "vercel:env": "vercel env pull .env.production.local",
-    "vercel:seed": "vercel env pull .env.production.local && npx prisma db seed"
+    "vercel:seed": "vercel env pull .env.production.local && npx prisma db seed",
+    "check:unused-deps": "depcheck --json"
   },
   "lint-staged": {
     "config": "lint-staged.config.js"
@@ -88,6 +89,7 @@
     "prisma": "^6.16.2",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3",
-    "vitest": "^3.0.9"
+    "vitest": "^3.0.9",
+    "depcheck": "^1.4.7"
   }
 }
