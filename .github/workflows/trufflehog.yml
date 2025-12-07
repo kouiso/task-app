@@ -12,12 +12,12 @@ jobs:
     name: TruffleHog シークレットスキャン
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: TruffleHog OSS
+      - name: TruffleHog OSS を実行
         uses: trufflesecurity/trufflehog@main
         with:
           base: ${{ github.event.pull_request.base.sha }}

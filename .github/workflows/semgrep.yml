@@ -1,4 +1,4 @@
-name: Semgrep Code Scan
+name: Semgrep コードスキャン
 'on':
   pull_request:
     branches: [main, develop]
@@ -15,9 +15,9 @@ jobs:
       image: semgrep/semgrep
     if: (github.actor != 'dependabot[bot]')
     steps:
-      - name: Checkout Repository
+      - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
 
-      - name: Run Semgrep
+      - name: Semgrep を実行
         run: semgrep scan --config auto
         continue-on-error: true

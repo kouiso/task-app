@@ -1,4 +1,4 @@
-name: destroy-container-image-and-cloudrun
+name: コンテナイメージ・Cloud Run 削除
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Google Auth
+      - name: Google 認証
         id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -29,11 +29,11 @@ jobs:
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
           token_format: access_token
 
-      - name: Delete Docker image
+      - name: Docker イメージを削除
         run: |
           gcloud auth configure-docker --quiet
           docker rmi ${{ env.IMAGE }}
 
-      - name: Delete Cloud Run service
+      - name: Cloud Run サービスを削除
         run: |
           gcloud run services delete ${{ env.SERVICE }} --region ${{ env.REGION }} --quiet

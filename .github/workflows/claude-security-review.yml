@@ -1,4 +1,4 @@
-name: Claude Security Review
+name: Claude セキュリティレビュー
 
 on:
   pull_request:
@@ -24,12 +24,12 @@ jobs:
       id-token: write
 
     steps:
-      - name: Checkout code
+      - name: コードをチェックアウト
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Claude Security Review
+      - name: Claude セキュリティレビューを実行
         uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

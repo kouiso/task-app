@@ -1,4 +1,4 @@
-name: Unused Packages Check
+name: 未使用パッケージチェック
 
 on:
   pull_request:
@@ -8,19 +8,19 @@ jobs:
   check-unused-packages:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: コードをチェックアウト
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Node.js をセットアップ
         uses: actions/setup-node@v4
         with:
           node-version-file: 'package.json'   
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: 依存関係をインストール
         run: npm ci
 
-      - name: Check unused dependencies
+      - name: 未使用の依存関係をチェック
         id: check-unused-deps
         run: |
           # 未使用パッケージを取得（エラーが発生しても続行）
@@ -61,7 +61,7 @@ jobs:
           # このステップは常に成功として終了
           exit 0
 
-      - name: Add or Update PR comment
+      - name: PR コメントを追加または更新
         if: always()
         uses: actions/github-script@v7
         with:

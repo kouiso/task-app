@@ -1,4 +1,4 @@
-name: development-container-image-deploy
+name: 開発環境コンテナイメージデプロイ (develop)
 
 on:
   workflow_dispatch:
@@ -25,10 +25,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: チェックアウト
         uses: actions/checkout@v4
 
-      - name: Google Auth
+      - name: Google 認証
         id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -36,13 +36,13 @@ jobs:
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
           token_format: access_token
 
-      - name: Set up Docker Buildx
+      - name: Docker Buildx をセットアップ
         uses: docker/setup-buildx-action@v3
 
-      - name: Configure Docker for gcloud
+      - name: gcloud 用に Docker を設定
         run: gcloud auth configure-docker --quiet
 
-      - name: Build and Push Docker image
+      - name: Docker イメージをビルドしてプッシュ
         run: |
           docker build -t ${{ env.IMAGE }} -f ./.docker/Dockerfile.prod . \
             --build-arg NEXT_PUBLIC_API_ENDPOINT=${{ secrets.NEXT_PUBLIC_API_ENDPOINT_DEV }} \
@@ -56,7 +56,7 @@ jobs:
             --build-arg NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID_DEV }}
           docker push ${{ env.IMAGE }}
 
-      - name: Deploy to Cloud Run
+      - name: Cloud Run にデプロイ
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
@@ -65,5 +65,5 @@ jobs:
           image: ${{ env.IMAGE }}
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Show Output
+      - name: 出力を表示
         run: echo ${{ steps.deploy.outputs.url }}

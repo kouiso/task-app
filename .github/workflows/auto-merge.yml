@@ -1,4 +1,4 @@
-name: Auto Merge PR
+name: PR 自動マージ
 
 on:
   pull_request_target:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
     steps:
-      - name: Auto Merge PR
+      - name: PR 自動マージ
         uses: pascalgn/automerge-action@v0.15.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -24,12 +24,12 @@ jobs:
       issues: write
       id-token: write
     steps:
-      - name: Checkout repository
+      - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Run Claude Code
+      - name: Claude Code を実行
         uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

@@ -1,4 +1,4 @@
-name: Pr Auto Setting
+name: PR 自動設定
 
 on:
   pull_request:
@@ -6,17 +6,17 @@ on:
 
 jobs:
   assignAuthor:
-    name: Assign author to PR
+    name: PR 作成者を自動割り当て
     runs-on: ubuntu-latest
     steps:
-      - name: Assign author to PR
+      - name: PR 作成者を自動割り当て
         uses: technote-space/assign-author@v1
 
   auto-label-branch:
     name: Label based on branch name
     runs-on: ubuntu-latest
     steps:
-      - name: Add label based on branch name
+      - name: ブランチ名に基づくラベル追加
         uses: actions/github-script@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
