@@ -82,8 +82,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.tool-versions'
+          node-version-file: './extracted/.tool-versions'
           cache: 'npm'
+          cache-dependency-path: './extracted/package-lock.json'
 
       - name: Setup environment file
         working-directory: ./extracted
