@@ -46,11 +46,11 @@ curl https://get.volta.sh | bash
 # https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
 
 # Node.jsのインストール
-volta install node@25.2.1
+volta install node@24.11.1
 ```
 
 このプロジェクトでは `package.json` に Volta の設定が含まれているため、
-プロジェクトディレクトリで自動的に正しいバージョン (25.2.1) が使用されます。
+プロジェクトディレクトリで自動的に正しいバージョン (24.11.1) が使用されます。
 
 </details>
 
