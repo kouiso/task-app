@@ -1,4 +1,4 @@
-name: ZIP Export & Environment Setup CI
+name: ZIP エクスポート・環境構築 CI
 
 on:
   pull_request:
@@ -11,16 +11,16 @@ on:
 
 jobs:
   zip-export:
-    name: ZIP Export Test
+    name: ZIP エクスポートテスト
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: チェックアウト
         uses: actions/checkout@v4
 
-      - name: Create ZIP
+      - name: ZIP を作成
         run: make zip-export
 
-      - name: Verify ZIP exists
+      - name: ZIP の存在を確認
         run: |
           if [ ! -f dist/task-app.zip ]; then
             echo "❌ ZIP file not created"
@@ -29,7 +29,7 @@ jobs:
           echo "✅ ZIP file created successfully"
           ls -lh dist/task-app.zip
 
-      - name: Verify ZIP contents
+      - name: ZIP の内容を検証
         run: |
           echo "=== ZIP Contents ==="
           unzip -l dist/task-app.zip
@@ -55,7 +55,7 @@ jobs:
           fi
           echo "✅ Excluded files properly excluded"
 
-      - name: Upload ZIP artifact
+      - name: ZIP をアーティファクトにアップロード
         uses: actions/upload-artifact@v4
         with:
           name: task-app-zip
@@ -63,28 +63,28 @@ jobs:
           retention-days: 1
 
   environment-setup:
-    name: Environment Setup Test
+    name: 環境構築テスト
     runs-on: ubuntu-latest
     needs: zip-export
     steps:
-      - name: Download ZIP artifact
+      - name: ZIP をダウンロード
         uses: actions/download-artifact@v4
         with:
           name: task-app-zip
           path: ./
 
-      - name: Extract ZIP
+      - name: ZIP を展開
         run: |
           mkdir -p extracted
           unzip task-app.zip -d extracted
           echo "✅ ZIP extracted successfully"
 
-      - name: Setup Node.js
+      - name: Node.js をセットアップ
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version-file: 'package.json'
 
-      - name: Setup environment file
+      - name: 環境ファイルをセットアップ
         working-directory: ./extracted
         run: |
           if [ -f .env.example ]; then
@@ -95,24 +95,24 @@ jobs:
             exit 1
           fi
 
-      - name: Install dependencies
+      - name: 依存関係をインストール
         working-directory: ./extracted
         run: |
           npm ci
           echo "✅ Dependencies installed successfully"
 
-      - name: Generate Prisma Client
+      - name: Prisma クライアントを生成
         working-directory: ./extracted
         run: |
           npx prisma generate
           echo "✅ Prisma client generated successfully"
 
-      - name: Type check
+      - name: 型チェック
         working-directory: ./extracted
         run: |
           npm run type-check || echo "⚠️ Type check had issues (may be expected without DB)"
 
-      - name: Build check
+      - name: ビルドチェック
         working-directory: ./extracted
         run: |
           # ビルドは環境変数が必要なためスキップするが、コマンドの存在確認
@@ -122,7 +122,7 @@ jobs:
             echo "⚠️ Build script not found"
           fi
 
-      - name: Summary
+      - name: サマリー
         run: |
           echo ""
           echo "============================================"
