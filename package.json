@@ -6,10 +6,10 @@
   "author": "KosukeIsogai",
   "license": "UNLICENSED",
   "engines": {
-    "node": "24.x"
+    "node": "22.x"
   },
   "volta": {
-    "node": "24.11.1"
+    "node": "22.11.0"
   },
   "scripts": {
     "dev": "next dev",
