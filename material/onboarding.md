@@ -8,13 +8,13 @@
 
 - Machine: MacOS or Windows WSL2
 - Homebrew
-- NodeJS: バージョンはpackage.jsonのvoltaセクション参照
+- NodeJS: バージョンはpackage.jsonの"volta"フィールド参照
 
 <details>
 <summary>複数のnodeバージョン管理</summary>
 
 ※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればpackage.jsonのvoltaセクションからバージョンを自動検出できる[volta](https://volta.sh/)がおすすめ
+まだ未導入であればpackage.jsonの"volta"フィールドからバージョンを自動検出できる[volta](https://volta.sh/)がおすすめ
 
 ```bash
 # Voltaのインストール
@@ -28,7 +28,7 @@ source ~/.zshrc
 
 # プロジェクトディレクトリでNode.jsが自動的にインストール・使用される
 cd /path/to/task-app
-# voltaがpackage.jsonのvoltaセクションからバージョンを読み取り、自動でインストール
+# voltaがpackage.jsonの"volta"フィールドからバージョンを読み取り、自動でインストール
 ```
 
 </details>
