@@ -16,15 +16,20 @@
 ※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
 まだ未導入であればpackage.jsonの"volta"フィールドからバージョンを自動検出できる[volta](https://volta.sh/)がおすすめ
 
-```bash
-# Voltaのインストール
-curl https://get.volta.sh | bash
+**Windowsの場合:**
+```powershell
+# Scoopを使用してVoltaをインストール
+scoop install volta
 
-# シェルを再起動するか、設定を再読み込み
-# bashの場合:
-source ~/.bashrc
-# zshの場合:
-source ~/.zshrc
+# プロジェクトディレクトリでNode.jsが自動的にインストール・使用される
+cd /path/to/task-app
+# voltaがpackage.jsonの"volta"フィールドからバージョンを読み取り、自動でインストール
+```
+
+**macOS/Linuxの場合:**
+```bash
+# Homebrewを使用してVoltaをインストール
+brew install volta
 
 # プロジェクトディレクトリでNode.jsが自動的にインストール・使用される
 cd /path/to/task-app
