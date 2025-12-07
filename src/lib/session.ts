@@ -1,8 +1,9 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import { env } from './env';
 
 function getKey(): Uint8Array {
-  const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key-change-this';
+  const SECRET_KEY = env.JWT_SECRET;
   const encoded = new TextEncoder().encode(SECRET_KEY);
   // In jsdom test environment, TextEncoder.encode returns an object that looks like
   // Uint8Array but isn't. Convert it to a real Uint8Array.
@@ -25,8 +26,34 @@ export interface SessionUser {
 const COOKIE_NAME = 'session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
 
+/**
+ * SessionPayloadの型ガード
+ */
+function isSessionPayload(payload: unknown): payload is SessionPayload {
+  if (typeof payload !== 'object' || payload === null) {
+    return false;
+  }
+
+  const p = payload as Record<string, unknown>;
+
+  return (
+    typeof p['userId'] === 'string' &&
+    typeof p['email'] === 'string' &&
+    typeof p['role'] === 'string' &&
+    typeof p['exp'] === 'number'
+  );
+}
+
 export async function encrypt(payload: SessionPayload): Promise<string> {
-  return await new SignJWT(payload as unknown as Record<string, unknown>)
+  // SessionPayloadをRecord<string, unknown>に変換（型安全な方法）
+  const jwtPayload: Record<string, unknown> = {
+    userId: payload.userId,
+    email: payload.email,
+    role: payload.role,
+    exp: payload.exp,
+  };
+
+  return await new SignJWT(jwtPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
@@ -38,7 +65,14 @@ export async function decrypt(token: string): Promise<SessionPayload | null> {
     const { payload } = await jwtVerify(token, getKey(), {
       algorithms: ['HS256'],
     });
-    return payload as unknown as SessionPayload;
+
+    // 型ガードを使用して安全に変換
+    if (!isSessionPayload(payload)) {
+      console.error('Invalid session payload structure:', payload);
+      return null;
+    }
+
+    return payload;
   } catch (error) {
     console.error('Failed to decrypt token:', error);
     return null;
@@ -60,7 +94,7 @@ export async function createSession(user: SessionUser): Promise<string> {
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   });

@@ -1,6 +1,6 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AppLayout } from '@/components/layout/app-layout';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Accordion,

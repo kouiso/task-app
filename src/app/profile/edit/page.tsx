@@ -82,7 +82,7 @@ export default function ProfileEditPage() {
             {/* アバタープレビュー */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
               <Avatar
-                src={formData.avatar || undefined}
+                {...(formData.avatar && { src: formData.avatar })}
                 alt={formData.name}
                 sx={{ width: 100, height: 100 }}
               >

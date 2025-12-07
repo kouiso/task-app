@@ -39,7 +39,7 @@ import toast from 'react-hot-toast';
 export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const userId = params.id as string;
+  const userId = params['id'] as string;
 
   // 現在のユーザー情報を取得
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
@@ -96,7 +96,7 @@ export default function UserDetailPage() {
               {/* プロフィール */}
               <Box sx={{ textAlign: 'center', mb: 3 }}>
                 <Avatar
-                  src={user.avatar || undefined}
+                  {...(user.avatar && { src: user.avatar })}
                   alt={user.name || ''}
                   sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
                 >

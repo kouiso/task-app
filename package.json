@@ -13,7 +13,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && next build",
+    "build:local": "prisma generate && prisma db push --accept-data-loss && next build",
     "build:ci": "prisma generate && next build",
     "vercel-build": "prisma generate && next build",
     "start": "next start",
@@ -26,9 +27,12 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx src/command/seed.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "postinstall": "prisma generate",
     "vercel:setup": "node setup-vercel-db.mjs",
     "vercel:env": "vercel env pull .env.production.local",
@@ -39,7 +43,7 @@
     "config": "lint-staged.config.js"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx src/command/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
@@ -76,6 +80,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
@@ -90,7 +95,9 @@
     "jsdom": "^26.0.0",
     "lint-staged": "^15.2.7",
     "micromatch": "^4.0.7",
+    "playwright": "^1.56.1",
     "prisma": "^6.16.2",
+    "tsc-files": "^1.1.4",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3",
     "vitest": "^3.0.9",

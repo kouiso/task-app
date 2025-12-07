@@ -9,21 +9,21 @@ export function isTask(value: unknown): value is Task {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.id === 'string' &&
-    typeof obj.title === 'string' &&
-    (obj.description === undefined ||
-      obj.description === null ||
-      typeof obj.description === 'string') &&
-    typeof obj.status === 'string' &&
-    typeof obj.priority === 'string' &&
-    typeof obj.projectId === 'string' &&
-    typeof obj.createdById === 'string' &&
-    (obj.assigneeId === undefined ||
-      obj.assigneeId === null ||
-      typeof obj.assigneeId === 'string') &&
-    (obj.dueDate === undefined || obj.dueDate === null || obj.dueDate instanceof Date) &&
-    obj.createdAt instanceof Date &&
-    obj.updatedAt instanceof Date
+    typeof obj['id'] === 'string' &&
+    typeof obj['title'] === 'string' &&
+    (obj['description'] === undefined ||
+      obj['description'] === null ||
+      typeof obj['description'] === 'string') &&
+    typeof obj['status'] === 'string' &&
+    typeof obj['priority'] === 'string' &&
+    typeof obj['projectId'] === 'string' &&
+    typeof obj['createdById'] === 'string' &&
+    (obj['assigneeId'] === undefined ||
+      obj['assigneeId'] === null ||
+      typeof obj['assigneeId'] === 'string') &&
+    (obj['dueDate'] === undefined || obj['dueDate'] === null || obj['dueDate'] instanceof Date) &&
+    obj['createdAt'] instanceof Date &&
+    obj['updatedAt'] instanceof Date
   );
 }
 
@@ -33,18 +33,20 @@ export function isProject(value: unknown): value is Project {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.id === 'string' &&
-    typeof obj.name === 'string' &&
-    (obj.description === undefined ||
-      obj.description === null ||
-      typeof obj.description === 'string') &&
-    typeof obj.color === 'string' &&
-    typeof obj.isArchived === 'boolean' &&
-    (obj.startDate === undefined || obj.startDate === null || obj.startDate instanceof Date) &&
-    (obj.endDate === undefined || obj.endDate === null || obj.endDate instanceof Date) &&
-    obj.createdAt instanceof Date &&
-    obj.updatedAt instanceof Date &&
-    Array.isArray(obj.members)
+    typeof obj['id'] === 'string' &&
+    typeof obj['name'] === 'string' &&
+    (obj['description'] === undefined ||
+      obj['description'] === null ||
+      typeof obj['description'] === 'string') &&
+    typeof obj['color'] === 'string' &&
+    typeof obj['isArchived'] === 'boolean' &&
+    (obj['startDate'] === undefined ||
+      obj['startDate'] === null ||
+      obj['startDate'] instanceof Date) &&
+    (obj['endDate'] === undefined || obj['endDate'] === null || obj['endDate'] instanceof Date) &&
+    obj['createdAt'] instanceof Date &&
+    obj['updatedAt'] instanceof Date &&
+    Array.isArray(obj['members'])
   );
 }
 
@@ -54,13 +56,13 @@ export function isProjectMember(value: unknown): value is ProjectMember {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.id === 'string' &&
-    typeof obj.role === 'string' &&
-    typeof obj.userId === 'string' &&
-    typeof obj.projectId === 'string' &&
-    obj.joinedAt instanceof Date &&
-    obj.user !== undefined &&
-    obj.user !== null
+    typeof obj['id'] === 'string' &&
+    typeof obj['role'] === 'string' &&
+    typeof obj['userId'] === 'string' &&
+    typeof obj['projectId'] === 'string' &&
+    obj['joinedAt'] instanceof Date &&
+    obj['user'] !== undefined &&
+    obj['user'] !== null
   );
 }
 
@@ -70,14 +72,14 @@ export function isComment(value: unknown): value is Comment {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.id === 'string' &&
-    typeof obj.content === 'string' &&
-    typeof obj.taskId === 'string' &&
-    typeof obj.userId === 'string' &&
-    obj.createdAt instanceof Date &&
-    obj.updatedAt instanceof Date &&
-    obj.user !== undefined &&
-    obj.user !== null
+    typeof obj['id'] === 'string' &&
+    typeof obj['content'] === 'string' &&
+    typeof obj['taskId'] === 'string' &&
+    typeof obj['userId'] === 'string' &&
+    obj['createdAt'] instanceof Date &&
+    obj['updatedAt'] instanceof Date &&
+    obj['user'] !== undefined &&
+    obj['user'] !== null
   );
 }
 
@@ -87,14 +89,14 @@ export function isUser(value: unknown): value is User {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.id === 'string' &&
-    typeof obj.email === 'string' &&
-    (obj.name === undefined || obj.name === null || typeof obj.name === 'string') &&
-    (obj.avatar === undefined || obj.avatar === null || typeof obj.avatar === 'string') &&
-    typeof obj.role === 'string' &&
-    typeof obj.isActive === 'boolean' &&
-    obj.createdAt instanceof Date &&
-    obj.updatedAt instanceof Date
+    typeof obj['id'] === 'string' &&
+    typeof obj['email'] === 'string' &&
+    (obj['name'] === undefined || obj['name'] === null || typeof obj['name'] === 'string') &&
+    (obj['avatar'] === undefined || obj['avatar'] === null || typeof obj['avatar'] === 'string') &&
+    typeof obj['role'] === 'string' &&
+    typeof obj['isActive'] === 'boolean' &&
+    obj['createdAt'] instanceof Date &&
+    obj['updatedAt'] instanceof Date
   );
 }
 

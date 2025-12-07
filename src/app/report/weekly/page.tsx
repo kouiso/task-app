@@ -1,6 +1,6 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AppLayout } from '@/components/layout/app-layout';
 import { api } from '@/trpc/react';
 import {
   Box,
@@ -46,15 +46,15 @@ export default function WeeklyReportPage() {
   const chartData = reportData?.weeklyData.map((week) => ({
     name: week.week,
     completed: week.totalCompleted,
-    high: week.byPriority.HIGH || 0,
-    urgent: week.byPriority.URGENT || 0,
+    high: week.byPriority['HIGH'] || 0,
+    urgent: week.byPriority['URGENT'] || 0,
   }));
 
   const statusData = reportData?.weeklyData.map((week) => ({
     name: week.week,
-    done: week.byStatus.DONE || 0,
-    inProgress: week.byStatus.IN_PROGRESS || 0,
-    inReview: week.byStatus.IN_REVIEW || 0,
+    done: week.byStatus['DONE'] || 0,
+    inProgress: week.byStatus['IN_PROGRESS'] || 0,
+    inReview: week.byStatus['IN_REVIEW'] || 0,
   }));
 
   return (
@@ -123,7 +123,7 @@ export default function WeeklyReportPage() {
                   Completed Tasks by Week
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData}>
+                  <LineChart data={chartData || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
@@ -148,7 +148,7 @@ export default function WeeklyReportPage() {
                   Priority Distribution
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData}>
+                  <BarChart data={chartData || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
@@ -169,7 +169,7 @@ export default function WeeklyReportPage() {
                   Status Breakdown
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={statusData}>
+                  <BarChart data={statusData || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />

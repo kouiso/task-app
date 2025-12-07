@@ -1,13 +1,12 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AppLayout } from '@/components/layout/app-layout';
 import { api } from '@/trpc/react';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FolderIcon from '@mui/icons-material/Folder';
 import PendingIcon from '@mui/icons-material/Pending';
 import { Box, Card, CardContent, CircularProgress, Grid, Paper, Typography } from '@mui/material';
-import { TaskStatus } from '@prisma/client';
 
 export default function DashboardPage() {
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();

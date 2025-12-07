@@ -1,69 +1,142 @@
 # ONBOARDING
 
-チームにジョインしてフロントエンドを立ち上げるところまで
+チームにジョインしてアプリケーションを立ち上げるところまで
 
 ## prerequisite
 
 セットアップとその後の開発に必要な依存をインストール
 
 - Machine: MacOS or Windows WSL2
-- Homebrew
-- NodeJS: バージョンは.tool-versionsファイル参照
+- [Task](https://taskfile.dev/installation/) (タスクランナー)
+- Docker Desktop
+- Git
 
 <details>
-<summary>複数のnodeバージョン管理</summary>
+<summary>Taskのインストール方法</summary>
 
-※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればプラグイン式で全言語の環境管理ができる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)がおすすめ
+Task は各種セットアップや開発コマンドを簡単に実行できるタスクランナーです。
 
 ```bash
-# brewを手動インストール後、以下を実行
+# macOS (Homebrew)
+brew install go-task
 
-※ asdfはinstall後パスを繋げて下さい。
-$HOME/.asdf/shims/
-# バージョン管理
-brew install jq asdf
+# Windows (Scoop)
+scoop install task
 
-asdf install
-asdf reshim
+# Windows (Chocolatey)
+choco install go-task
+
+# Linux (各種パッケージマネージャー)
+# https://taskfile.dev/installation/ を参照
 ```
 
 </details>
 
-## 初回設定
+<details>
+<summary>複数のnodeバージョン管理 (オプション)</summary>
 
-### 環境変数
-
-- dev環境の.envを以下のURLから取得する
-  [develop]()
-  localの開発環境もこれで動かします。
+※ 複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
+まだ未導入であれば[Volta](https://volta.sh/)がおすすめ
 
 ```bash
-# firebaseの認証情報
-NEXT_PUBLIC_API_KEY=
-NEXT_PUBLIC_AUTH_DOMAIN=
-NEXT_PUBLIC_PROJECT_ID=
-NEXT_PUBLIC_STORAGE_BUCKET=
-NEXT_PUBLIC_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_APP_ID=
-NEXT_PUBLIC_MEASUREMENT_ID=
+# Voltaのインストール (macOS/Linux)
+curl https://get.volta.sh | bash
+
+# Voltaのインストール (Windows)
+# https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
+
+# Node.jsのインストール
+volta install node@24.11.1
 ```
+
+このプロジェクトでは `package.json` に Volta の設定が含まれているため、
+プロジェクトディレクトリで自動的に正しいバージョン (24.11.1) が使用されます。
+
+</details>
 
 ## セットアップ手順
 
-- `npm ci` で packageをinstall
-- `npm run build` で ビルド実行
-- `npm run dev` で packageをinstall
+### 1. 環境変数の設定
+
+`.env.example` から `.env` を生成し、必要に応じて値を編集
 
 ```bash
-npm ci
-npm run build
-npm run dev
+cp .env.example .env
 ```
 
-(知っておくと便利)
+### 2. 環境初期化
 
-- `npm run lint`
-  - 実行するとprettier, eslint, stylelintのコードチェックが順次に走る
-- `npm run fix`
-  - 実行するとprettier, eslint, stylelintのコードチェックが順次に走る
+以下のコマンド1つで環境を初期化できます:
+
+```bash
+task init
+```
+
+このコマンドは以下を自動的に実行します:
+- 依存パッケージのインストール
+- Docker コンテナの構築と起動
+- データベースのセットアップとシードデータ投入
+
+**注意**: 初回実行時は Docker イメージのダウンロードとビルドのため、数分かかる場合があります。
+
+### 3. 開発サーバーの起動
+
+```bash
+task up-backend
+```
+
+- ブラウザで `http://localhost:3000` にアクセス
+
+### デフォルトユーザー
+
+| ロール   | メールアドレス      | パスワード     |
+| -------- | ------------------- | -------------- |
+| 管理者   | admin@example.com   | password123   |
+| ユーザー | user1@example.com   | password123   |
+
+## よく使うコマンド
+
+```bash
+task                    # 利用可能なコマンド一覧を表示
+task init               # 環境初期化（何度でも実行可能）
+task up-backend         # バックエンドサーバーを起動
+task seed               # DBリセット・シードデータ投入
+task db-apply           # Prismaスキーマから状態をDBに反映
+task clean              # 自動生成されたファイル・フォルダを削除
+```
+
+詳細は `task -l` または [taskfile.yaml](../taskfile.yaml) を参照してください。
+
+## トラブルシューティング
+
+### Docker が起動しない
+
+- Docker Desktop が起動しているか確認
+- ポート 5432 が使用されていないか確認
+
+### データベース接続エラー
+
+環境を再初期化してください:
+
+```bash
+task init
+```
+
+### 環境が壊れてしまった場合
+
+`task init` は何度でも実行可能です。環境をクリーンな状態にリセットできます:
+
+```bash
+task init
+```
+
+## 技術スタック
+
+- **フレームワーク**: Next.js 15 (App Router)
+- **言語**: TypeScript 5.6
+- **UI**: Material-UI 6.4
+- **API**: tRPC 11.6
+- **ORM**: Prisma 6.16
+- **データベース**: PostgreSQL
+- **認証**: NextAuth.js 4.24
+- **テスト**: Vitest 3.0

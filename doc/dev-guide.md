@@ -2,118 +2,194 @@
 
 ## コマンド
 
-package.jsonのscriptの箇所を参照
-npm-run-allで様々なコマンドを一括で動かせるようにしています。
+### Taskfile コマンド
 
-以下のコマンドはpackage.jsonにはコメントを書くとエラーを起こすので、ここで説明が必要なものは記載していく。
+このプロジェクトでは [Task](https://taskfile.dev/) を使用してよく使うコマンドを管理しています。
 
-- `devs:scss`など複数形になっているもの。
+```bash
+task                    # 利用可能なコマンド一覧を表示
+task -l                 # コマンド一覧（詳細版）
+```
 
-  - 何らかの理由で、npm run allによって自動起動したくないものを複数形にした。打ち間違えではない。いずれ解決したいもの。
+#### 環境管理
 
-- `"build": "run-s build:*",`
+- `task init` - 環境初期化（何度でも実行可能 - 環境を壊してしまった場合、本コマンドの再実行で修復可能）
+- `task clean` - 自動生成されたファイル・フォルダを削除
+- `task npmi` - npm ci コマンドをコンテナで実行
 
-  - // buildだけはaspidaとorvalを吐き出してからbuild:serverをやったほうがいいので、順次実行させるためにnpm-run-allを使っている
+#### 開発・起動
 
-- `"compile": "npm run build:compile",`
-  - github actionでは実行しないが、ファイル等を生成させておくために実行するコマンド。github actionのときには、orvalやaspidaを吐き出すことが出来ないので、このようにしておく。
+- `task up-backend` - バックエンドサーバーを起動
 
-## パッケージ管理
+#### データベース
 
-npm を使用します。理由としては、
+- `task db-apply` - Prismaスキーマからコード生成&状態をDBに反映
+- `task seed` - DBリセット・シードデータ投入
+- `task gen-db-schema` - SchemaSpy で DB スキーマを生成
 
-- yarnやpnpmはasdfで使用ができないこと
-- yarnのバージョンで大きく挙動が異なるため却下した
+## プロジェクト構成
 
-## Debugger
-
-任意の位置で実行を止めて変数確認やコード実行が可能
-
-1. ブレイククポイントを設定 (任意の行をクリックし、赤丸を付ける)
-1. backend 起動状態で、VSCode の `Next.js: debug full stack`
-   を実行するとデバッガーがアタッチされる
+```
+task-app/
+├── src/
+│   ├── app/              # Next.js App Router
+│   │   ├── (auth)/      # 認証グループ
+│   │   ├── api/         # API Routes
+│   │   ├── dashboard/   # ダッシュボード
+│   │   ├── project/     # プロジェクト
+│   │   └── task/        # タスク
+│   ├── components/      # React コンポーネント
+│   ├── server/          # サーバーサイド
+│   │   ├── api/        # tRPC ルーター
+│   │   ├── auth.ts     # NextAuth 設定
+│   │   └── db.ts       # Prisma 設定
+│   ├── lib/            # ユーティリティ
+│   ├── types/          # 型定義
+│   └── hooks/          # カスタムフック
+├── prisma/
+│   ├── schema.prisma   # データベーススキーマ
+│   └── seed.ts         # シードデータ
+└── docker/             # Docker 設定
+```
 
 ## コーディング規約
 
-- ディレクトリ・ファイル
+### ファイル・ディレクトリ
 
-  - 超基本的なことだが、全てのコンポーネント関数はパスカルケースで定義する。カスタムフックはキャメルケースで定義する。
+- コンポーネントファイルは PascalCase で命名
+- ユーティリティファイルは camelCase で命名
+- ディレクトリは kebab-case で命名
 
-  - すべてのディレクトリ・ファイル名は ケバブケース & **単数形** とする
-    → 単数形・複数形は議論の余地有りだが、日本語話者にとって可算名詞・不可算名詞の区別は難しいため、すべて単数に統一することで混乱を避ける
+### TypeScript
 
-  - 本リポジトリではNext.jsのApp Routerを採用した。
-  - 原則ドメイン/urlごとにcomponentやpageを分割する。
-  - ドメインの垣根を越える場合に初めて、app直下に該当のフォルダを配置することが検討される
-    → dir構成に関しては議論の余地有りだが、ドメイン/url毎に管理することで『あのコンポーネントどこだっけ？』を無くす狙い
-    例: 認証系 【auth】の画面ならば、(auth)/sing-up/page.tsx, URLは/sign-up, (auth)/component/button/google-auth-button.tsx
+- `as` による型アサーションは必要最小限に留める
+- 明示的な型定義を推奨
+- strictモードを使用
 
-  - スタイルは`scss module`以前まで使用していたが、MUIに全切り替えする。sass が 残っていたら気付いたらMUIへの移行をお願いしたい
+### React
 
-- 環境変数
+- 関数コンポーネントを使用
+- Server Components と Client Components を適切に使い分け
+- カスタムフックを活用してロジックを分離
 
-  - ローカルにのみ影響を及ぼす環境変数は `_` prefix をつける
+### tRPC
 
-- 文法
+- API の型安全性を維持
+- `input` に Zod スキーマを使用
+- エラーハンドリングを適切に行う
 
-  - `as` による型推論上書きは外部からの入力を受ける場合以外は使用しない
-    - 例: `const foo = bar as string` // NG
+## データベース
 
-- eslint系統
+### Prisma Studio
 
-  - exportが必要な際には、原則そのファイル内で主体とするものをexportしたい場合、export defaultを使用する。つまりexport defaultを使用していないのに、named exportは禁止とする。
+```bash
+npm run db:studio
+```
 
-- URLや画面遷移の取り扱いについて
+- ブラウザでデータベースの内容を確認・編集可能
+- `http://localhost:5555` でアクセス
 
-  - 画面遷移時に, `useNavigate`等を使用して、画面遷移を行うが、これらはroute dir内にある `PAGE_CONSTANT`を使用すること。
-    ※ Next.jsでdynamic routingのobjectを出力する方法があった気がするのでそれを要調査
+### データベース操作
 
-## api型定義自動生成
+開発環境では Task コマンドを使用:
 
-apiの型定義を手動で作るのは面倒。。。
-そう思い、ここではopenapi.ymlを使った型定義の自動生成を積極的に取り入れています。
+```bash
+# Prismaスキーマから状態をDBに反映
+task db-apply
 
-### 下準備
+# DBリセット・シードデータ投入
+task seed
+```
 
-- 対象リポジトリ: `horsemanager-backend`
+### スキーマ更新手順
 
-  - 本repositoryでは、上記対象repositoryを起動していればコマンドを実行するだけで、swagger-jsonを自動で見に行くので、コマンドを実行するだけです。
+1. `prisma/schema.prisma` を編集
+2. `task db-apply` で DB に反映とクライアント生成を実行
 
-  下記の両方とも`npm run compile`をやれば、自動生成される。
+## デバッグ
 
-#### apiクライアント
+### Next.js デバッガー
 
-- aspida
+VS Code で以下の設定を使用:
 
-  - キャッシュを使用しない通常のapiでは[aspidaのREADME](https://github.com/aspida/aspida/blob/main/packages/aspida/docs/ja/README.md)を使用する。
+```json
+{
+  "type": "node",
+  "request": "launch",
+  "name": "Next.js: debug server-side",
+  "runtimeExecutable": "npm",
+  "runtimeArgs": ["run", "dev"],
+  "port": 9229,
+  "console": "integratedTerminal"
+}
+```
 
-- orval
-  - キャッシュ管理したいものは上記のaspidaに加えて[orvalのREADME](https://orval.dev/)を使用する
-  - orvalを使用すればaxiosと@tanstack/react-queryを使ってopenapi.ymlを見てソースコードを自動生成してくれる。
+### tRPC デバッグ
 
-上記を踏まえ、本repositoryでは以下のように使い分ける。
+- React Query Devtools を使用してクエリ状態を確認
+- 開発環境では自動で有効化
 
-- キャッシュが必要ないものに関しては、aspida
-- キャッシュでデータ保持をさせたいものに関しては、orvalを使う
+## パフォーマンス
 
-## その他ライブラリについて
+### ビルド最適化
 
-特に無し
+- 不要な依存関係を削除
+- 動的インポートを活用
+- 画像は Next.js Image コンポーネントを使用
 
-# SCSS Coding Guidelines
+### バンドルサイズ確認
 
-このプロジェクトでは、SCSSのクラス命名規則としてBEM（Block Element Modifier）を使用します。以下のガイドラインに従ってください。
+```bash
+npm run build
+# .next/analyze/ でバンドルサイズを確認
+```
 
-## 基本ルール
+## トラブルシューティング
 
-1. **Block**: コンポーネントのルートクラス。PascalCaseで命名します。
-2. **Element**: Blockの一部である要素。Block名の後にアンダースコア（\_）を付けてPascalCaseで命名します。
-3. **Modifier**: BlockまたはElementのバリエーション。アンダースコア（\_）を付けてcamelCaseで命名します。
+### ビルドエラー
 
-## 注意点
+1. キャッシュをクリア
 
-- **Block**はPascalCaseで命名します。
-- **Element**はBlock名の後にアンダースコア（\_）を付けてPascalCaseで命名します。
-- **Modifier**はアンダースコア（\_）を付けてcamelCaseで命名します。
-- **Element**はBlockの中にネストして記述します。
-- **Modifier**は対応するBlockまたはElementの中にネストして記述します。
+   ```bash
+   rm -rf .next
+   npm run build
+   ```
+
+2. 依存関係を再インストール
+   ```bash
+   task clean
+   task npmi
+   ```
+
+### データベースエラー / 環境が壊れた場合
+
+環境を再初期化してください（何度でも実行可能）:
+
+```bash
+task init
+```
+
+このコマンドは以下を自動的に実行します:
+- クリーンアップ
+- Docker コンテナの再構築
+- 依存関係の再インストール
+- データベースのリセットとシード投入
+
+### テストエラー
+
+- `npm run test:ui` で詳細を確認
+- テストデータベースの状態を確認
+
+## Git フック
+
+Husky を使用して以下のフックを実行:
+
+- **pre-commit**: リント・フォーマット自動実行
+- **commit-msg**: コミットメッセージ検証
+
+## CI/CD
+
+GitHub Actions でテスト・ビルドを自動実行
+
+- プルリクエスト作成時
+- main ブランチへのプッシュ時

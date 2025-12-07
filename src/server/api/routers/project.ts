@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -44,7 +46,7 @@ export const projectRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ input }) => {
-      const where: any = {};
+      const where: Prisma.ProjectWhereInput = {};
 
       if (input?.userId) {
         where.members = {
@@ -79,7 +81,7 @@ export const projectRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const project = await prisma.project.findUnique({
         where: { id: input.id },
         include: {
@@ -102,7 +104,19 @@ export const projectRouter = createTRPCRouter({
       });
 
       if (!project) {
-        throw new Error('Project not found');
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Project not found',
+        });
+      }
+
+      // Check if user is a member of the project
+      const isMember = project.members.some((member) => member.userId === ctx.session.userId);
+      if (!isMember) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to this project',
+        });
       }
 
       return project;
@@ -111,18 +125,24 @@ export const projectRouter = createTRPCRouter({
   create: protectedProcedure.input(projectCreateSchema).mutation(async ({ input }) => {
     const { ownerId, ...projectData } = input;
 
-    return await prisma.project.create({
-      data: {
-        ...projectData,
-        startDate: projectData.startDate ? new Date(projectData.startDate) : null,
-        endDate: projectData.endDate ? new Date(projectData.endDate) : null,
-        members: {
-          create: {
-            userId: ownerId,
-            role: 'OWNER',
-          },
+    const createData: Prisma.ProjectCreateInput = {
+      name: projectData.name,
+      color: projectData.color,
+      startDate: projectData.startDate ? new Date(projectData.startDate) : null,
+      endDate: projectData.endDate ? new Date(projectData.endDate) : null,
+      members: {
+        create: {
+          userId: ownerId,
+          role: 'OWNER',
         },
       },
+    };
+    if (projectData.description) {
+      createData.description = projectData.description;
+    }
+
+    return await prisma.project.create({
+      data: createData,
       include: {
         members: {
           include: {
@@ -135,10 +155,47 @@ export const projectRouter = createTRPCRouter({
     });
   }),
 
-  update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    const updateData: any = { ...data };
+    // Check if project exists and user has admin access
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Project not found',
+      });
+    }
+
+    const userMember = project.members[0];
+    if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only project owners and admins can update the project',
+      });
+    }
+
+    const updateData: Prisma.ProjectUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    if (data.color !== undefined) {
+      updateData.color = data.color;
+    }
+    if (data.isArchived !== undefined) {
+      updateData.isArchived = data.isArchived;
+    }
     if (data.startDate !== undefined) {
       updateData.startDate = data.startDate ? new Date(data.startDate) : null;
     }
@@ -163,7 +220,32 @@ export const projectRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Check if project exists and user is the owner
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            where: { userId: ctx.session.userId },
+          },
+        },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Project not found',
+        });
+      }
+
+      const userMember = project.members[0];
+      if (!userMember || userMember.role !== 'OWNER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only project owners can delete the project',
+        });
+      }
+
       await prisma.project.delete({
         where: { id: input.id },
       });
@@ -181,7 +263,10 @@ export const projectRouter = createTRPCRouter({
     });
 
     if (existing) {
-      throw new Error('User is already a member of this project');
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'User is already a member of this project',
+      });
     }
 
     return await prisma.projectMember.create({
@@ -212,7 +297,10 @@ export const projectRouter = createTRPCRouter({
       });
 
       if (!member) {
-        throw new Error('Member not found');
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Member not found',
+        });
       }
 
       if (member.role === 'OWNER') {
@@ -224,7 +312,10 @@ export const projectRouter = createTRPCRouter({
         });
 
         if (ownerCount === 1) {
-          throw new Error('Cannot remove the only owner of the project');
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Cannot remove the only owner of the project',
+          });
         }
       }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AppLayout } from '@/components/layout/app-layout';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import GroupIcon from '@mui/icons-material/Group';
