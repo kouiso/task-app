@@ -1,4 +1,4 @@
-name: Dependency Review
+name: 依存関係レビュー
 'on': [pull_request]
 
 permissions:
