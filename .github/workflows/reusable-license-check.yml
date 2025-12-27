@@ -21,10 +21,10 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup tools with mise
+        uses: jdx/mise-action@v2
         with:
-          node-version: '24'
+          install: true
 
       - name: Check if package files have changed
         id: check_changes
