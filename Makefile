@@ -10,6 +10,7 @@ zip-export:
 		-x ".github/*" \
 		-x ".claude/*" \
 		-x "CLAUDE.md" \
+		-x ".gemini/*" \
 		-x ".devcontainer/*" \
 		-x ".docker/schemaspy/*" \
 		-x ".husky/*" \
