@@ -2,10 +2,6 @@ name: License Check
 on:
   workflow_call:
     inputs:
-      node-version-file:
-        required: true
-        type: string
-        description: 'Path to the Node.js version file'
       disallow-licenses:
         required: false
         type: string

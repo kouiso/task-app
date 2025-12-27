@@ -11,8 +11,6 @@ on:
 jobs:
   ci:
     uses: ./.github/workflows/reusable-ci.yml
-    with:
-      node-version-file: package.json
     secrets:
       firebase-api-key: ${{ secrets.FIREBASE_DEV_API_KEY }}
       firebase-auth-domain: ${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
@@ -24,5 +22,3 @@ jobs:
 
   license-check:
     uses: ./.github/workflows/reusable-license-check.yml
-    with:
-      node-version-file: package.json

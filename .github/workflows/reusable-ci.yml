@@ -1,11 +1,6 @@
 name: 'Common Setup'
 on:
   workflow_call:
-    inputs:
-      node-version-file:
-        description: 'Path to the Node.js version file'
-        required: true
-        type: string
     secrets:
       firebase-api-key:
         description: 'Firebase API Key'
