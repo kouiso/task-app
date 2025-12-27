@@ -36,7 +36,29 @@ choco install go-task
 <summary>複数のnodeバージョン管理 (オプション)</summary>
 
 ※ 複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であれば[Volta](https://volta.sh/)がおすすめ
+
+#### 推奨: mise（CI環境と同じツール）
+
+このプロジェクトのCI環境では [mise](https://mise.jdx.dev/) を使用しています。
+ローカル環境でも mise を使用することで、CI と完全に同じバージョン管理が可能です。
+
+```bash
+# miseのインストール (macOS/Linux)
+curl https://mise.jdx.dev/install.sh | sh
+
+# miseのインストール (Windows)
+# https://mise.jdx.dev/getting-started.html を参照
+
+# プロジェクトのツールを自動インストール
+mise install
+```
+
+このプロジェクトでは `.tool-versions` ファイルで Node.js のバージョンを管理しているため、
+`mise install` を実行するだけで正しいバージョン (24.11.1) がインストールされます。
+
+#### 代替: Volta
+
+[Volta](https://volta.sh/) も利用可能です。
 
 ```bash
 # Voltaのインストール (macOS/Linux)
