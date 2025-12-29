@@ -202,5 +202,5 @@ chmod +x .github/skills/fix-lint-errors/script.sh
 
 ## 関連ドキュメント
 
-- [.github/skills/README.md](./.github/skills/README.md) - スキルの使用方法
+- [.github/skills/README.md](./README.md) - スキルの使用方法
 - [GitHub Copilot Agent Skills Documentation](https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-agent-skills)
