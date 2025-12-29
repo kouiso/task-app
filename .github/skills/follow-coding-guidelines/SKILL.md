@@ -23,7 +23,7 @@ description: TaskAppプロジェクトのコーディング規約とスタイル
 ### 技術スタック（変更禁止）
 
 #### フロントエンド
-- **Next.js 15.0.0** - App Router必須（Pages Router禁止）
+- **Next.js 15.3.6** - App Router必須（Pages Router禁止）
 - **React 18.3.1** - UIライブラリ
 - **TypeScript 5.6.3** - 厳格モード完全対応
 - **Material-UI v6.4.8** - UIコンポーネントライブラリ
