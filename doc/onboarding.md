@@ -37,8 +37,6 @@ choco install go-task
 
 ※ 複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
 
-#### 推奨: mise（CI環境と同じツール）
-
 このプロジェクトのCI環境では [mise](https://mise.jdx.dev/) を使用しています。
 ローカル環境でも mise を使用することで、CI と完全に同じバージョン管理が可能です。
 
@@ -55,24 +53,6 @@ mise install
 
 このプロジェクトでは `.tool-versions` ファイルで Node.js のバージョンを管理しているため、
 `mise install` を実行するだけで正しいバージョン (24.11.1) がインストールされます。
-
-#### 代替: Volta
-
-[Volta](https://volta.sh/) も利用可能です。
-
-```bash
-# Voltaのインストール (macOS/Linux)
-curl https://get.volta.sh | bash
-
-# Voltaのインストール (Windows)
-# https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
-
-# Node.jsのインストール
-volta install node@24.11.1
-```
-
-このプロジェクトでは `package.json` に Volta の設定が含まれているため、
-プロジェクトディレクトリで自動的に正しいバージョン (24.11.1) が使用されます。
 
 </details>
 
