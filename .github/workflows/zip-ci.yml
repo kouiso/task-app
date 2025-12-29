@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: チェックアウト
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: ZIP を作成
         run: make zip-export
