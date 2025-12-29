@@ -14,18 +14,15 @@
 <summary>複数のnodeバージョン管理</summary>
 
 ※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればプラグイン式で全言語の環境管理ができる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)がおすすめ
+まだ未導入であればプラグイン式で全言語の環境管理ができる[mise](https://mise.jdx.dev/)がおすすめ
 
 ```bash
 # brewを手動インストール後、以下を実行
 
-※ asdfはinstall後パスを繋げて下さい。
-$HOME/.asdf/shims/
 # バージョン管理
-brew install jq asdf
+brew install mise
 
-asdf install
-asdf reshim
+mise install
 ```
 
 </details>
