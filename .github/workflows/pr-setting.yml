@@ -2,7 +2,7 @@ name: Pr Auto Setting
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review, synchronize]
 
 jobs:
   assignAuthor:
@@ -12,7 +12,8 @@ jobs:
       - name: Assign author to PR
         uses: technote-space/assign-author@v1
 
-  auto-label:
+  auto-label-branch:
+    name: Label based on branch name
     runs-on: ubuntu-latest
     steps:
       - name: Add label based on branch name
@@ -67,3 +68,14 @@ jobs:
             } else {
               console.log('No matching prefix found for label addition.');
             }
+
+  auto-label-files:
+    name: Label based on changed files
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          configuration-path: '.github/labeler.yml'

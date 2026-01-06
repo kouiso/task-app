@@ -1,0 +1,11 @@
+# Gemini Code Assist 設定ファイル
+code_review:
+  comment_severity: LOW
+  ignore_drafts: true
+  summary:
+    enabled: true
+  help_message:
+    enabled: true
+
+styleguide:
+  path: .github/gemini/styleguide.md
