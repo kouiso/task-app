@@ -79,10 +79,10 @@ jobs:
           unzip task-app.zip -d extracted
           echo "✅ ZIP extracted successfully"
 
-      - name: Node.js をセットアップ
-        uses: actions/setup-node@v4
+      - name: Setup tools with mise
+        uses: jdx/mise-action@v2
         with:
-          node-version-file: 'package.json'
+          install: true
 
       - name: 環境ファイルをセットアップ
         working-directory: ./extracted
