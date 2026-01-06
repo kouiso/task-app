@@ -5,7 +5,7 @@
 ### 基本方針
 - TypeScript を使用
 - 型安全性を重視
-- ESLint, Prettier に従う
+- Biome に従う
 
 ### 言語
 - コメントは日本語で記述
