@@ -13,7 +13,7 @@
 ### Phase 1: 開発の土台作り
 - [x] Day 1: 環境構築基礎 ✅
 - [x] Day 2: Hello World ✅
-- [ ] Day 3: データベース基礎
+- [x] Day 3: データベース基礎 ✅
 - [ ] Day 4: TypeScript基礎
 - [ ] Day 5: Next.js基礎構造
 
