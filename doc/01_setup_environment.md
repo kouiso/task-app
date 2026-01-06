@@ -288,6 +288,8 @@ npm run dev
   - 解決: 他のアプリケーションがポート3000を使用しています。`npm run dev -- -p 3001`で別のポートを使用できます
 - エラー: 画面が真っ白
   - 解決: ブラウザのコンソール(F12)でエラーを確認してください
+- エラー: `P1001: Can't reach database server`
+  - 解決: PostgreSQL が起動しているか確認し、`docker-compose up -d db` を再実行してください。`DATABASE_URL` のホスト名が合っているかも確認します。
 
 ---
 
