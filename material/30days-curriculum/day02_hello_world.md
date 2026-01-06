@@ -188,6 +188,7 @@ git --version
    ```
    ```bash
    mkdir projects
+   # （※「ディレクトリは既に存在します」と言われたら、そのままでOKです！）
    ```
    ```bash
    cd projects
@@ -767,7 +768,10 @@ abc123def456   postgres:16   ...   Up 2 minutes   0.0.0.0:5432->5432/tcp   task-
 
 **答え**: 開発サーバーが動いているターミナルで、`Ctrl + C`（WindowsもMacも同じ）を押します。
 
-これで、サーバーが停止します。再度起動したい場合は、また`task up-backend`を実行します。
+これで、Next.jsのサーバーが停止します。
+（※データベースのDockerコンテナも停止したい場合は、続けて`task down`コマンドを実行します）
+
+再度起動したい場合は、また`task up-backend`を実行します。
 
 </details>
 
