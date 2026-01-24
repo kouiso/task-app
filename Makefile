@@ -4,31 +4,15 @@
 # PDF生成
 # ============================================
 
-# 単一MarkdownをPDF化（使用例: make pdf-single FILE=material/30days-curriculum/day01_開発環境を整える.md）
+# 単一MarkdownをPDF化
+# 使用例: make pdf-single FILE=material/30days-curriculum/day01_開発環境を整える.md
+# PDF自動で開く: make pdf-single FILE=... OPEN=1
 pdf-single:
-	@if [ -z "$(FILE)" ]; then \
-		echo "使用例: make pdf-single FILE=material/30days-curriculum/day01_開発環境を整える.md"; \
-		exit 1; \
-	fi
-	@mkdir -p material/pdf
-	@BASENAME=$$(basename "$(FILE)" .md); \
-	echo "📄 変換中: $(FILE)"; \
-	npx md-mermaid-to-pdf "$(FILE)" "material/pdf/$$BASENAME.pdf" \
-		--stylesheet material/styles/tutorial.css; \
-	echo "✅ 完了: material/pdf/$$BASENAME.pdf"
+	@bash scripts/generate-pdf.sh single "$(FILE)" "$(OPEN)"
 
-# 全DayをPDF化
+# 全DayをPDF化（OPEN=1で最後のファイルを開く）
 pdf-all:
-	@mkdir -p material/pdf
-	@for file in material/30days-curriculum/day*.md; do \
-		if [ -f "$$file" ]; then \
-			echo "📄 変換中: $$file"; \
-			npx md-mermaid-to-pdf "$$file" "material/pdf/$$(basename $$file .md).pdf" \
-				--stylesheet material/styles/tutorial.css; \
-		fi; \
-	done
-	@echo "✅ 全PDF生成完了: material/pdf/"
-	@ls -lh material/pdf/
+	@bash scripts/generate-pdf.sh all "$(OPEN)"
 
 # PDF削除
 pdf-clean:
