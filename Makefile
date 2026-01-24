@@ -26,7 +26,10 @@ zip-export:
 		-x "playwright-report/*" \
 		-x "test-results/*" \
 		-x "Makefile" \
-		-x "renovate.json"
+		-x "renovate.json" \
+		-x "edu-creator/*" \
+		-x "edu-config.yaml" \
+		-x "talk.md"
 	zip -u dist/task-app.zip .env.example
 	@echo ""
 	@echo "============================================"
