@@ -8,9 +8,6 @@
   "engines": {
     "node": "24.x"
   },
-  "volta": {
-    "node": "24.11.1"
-  },
   "script": {
     "dev": "next dev",
     "build": "prisma generate && prisma db push --accept-data-loss && next build",

@@ -1,4 +1,43 @@
-.PHONY: zip-export zip-list zip-clean
+.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean
+
+# ============================================
+# PDF生成
+# ============================================
+
+# 単一MarkdownをPDF化（使用例: make pdf-single FILE=material/30days-curriculum/day01_開発環境を整える.md）
+pdf-single:
+	@if [ -z "$(FILE)" ]; then \
+		echo "使用例: make pdf-single FILE=material/30days-curriculum/day01_開発環境を整える.md"; \
+		exit 1; \
+	fi
+	@mkdir -p material/pdf
+	@BASENAME=$$(basename "$(FILE)" .md); \
+	echo "📄 変換中: $(FILE)"; \
+	npx md-mermaid-to-pdf "$(FILE)" "material/pdf/$$BASENAME.pdf" \
+		--stylesheet material/styles/tutorial.css; \
+	echo "✅ 完了: material/pdf/$$BASENAME.pdf"
+
+# 全DayをPDF化
+pdf-all:
+	@mkdir -p material/pdf
+	@for file in material/30days-curriculum/day*.md; do \
+		if [ -f "$$file" ]; then \
+			echo "📄 変換中: $$file"; \
+			npx md-mermaid-to-pdf "$$file" "material/pdf/$$(basename $$file .md).pdf" \
+				--stylesheet material/styles/tutorial.css; \
+		fi; \
+	done
+	@echo "✅ 全PDF生成完了: material/pdf/"
+	@ls -lh material/pdf/
+
+# PDF削除
+pdf-clean:
+	rm -rf material/pdf/
+	@echo "✅ PDF削除完了"
+
+# ============================================
+# ZIP配布
+# ============================================
 
 # プレゼント配布用ZIP作成
 zip-export:
