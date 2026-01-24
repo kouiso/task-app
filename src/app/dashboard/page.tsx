@@ -1,13 +1,16 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Badge } from '@/component/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { Skeleton } from '@/component/ui/skeleton';
 import { api } from '@/trpc/react';
 import { CheckCircle, ClipboardList, Clock, FolderOpen } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+
 export default function DashboardPage() {
+  const router = useRouter();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
 
@@ -121,7 +124,11 @@ export default function DashboardPage() {
                     const progress = taskCount > 0 ? (doneCount / taskCount) * 100 : 0;
 
                     return (
-                      <div key={project.id} className="pb-4 border-b last:border-0 last:pb-0">
+                      <div
+                        key={project.id}
+                        className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                        onClick={() => router.push(`/project?projectId=${project.id}`)}
+                      >
                         <div className="flex items-center gap-2 mb-1">
                           <div
                             className="w-2 h-2 rounded-full"
@@ -151,7 +158,11 @@ export default function DashboardPage() {
               {recentTasks.length > 0 ? (
                 <div className="space-y-4">
                   {recentTasks.map((task) => (
-                    <div key={task.id} className="pb-4 border-b last:border-0 last:pb-0">
+                    <div
+                      key={task.id}
+                      className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                      onClick={() => router.push(`/task?taskId=${task.id}`)}
+                    >
                       <span className="font-medium">{task.title}</span>
                       <div className="flex gap-2 mt-1">
                         <Badge variant={getStatusBadgeVariant(task.status)}>{task.status}</Badge>

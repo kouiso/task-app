@@ -1,19 +1,19 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { TaskCard } from '@/components/task/task-card';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent } from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+} from '@/component/ui/select';
+import { Separator } from '@/component/ui/separator';
 import { api } from '@/trpc/react';
 import type { TaskPriority, TaskStatus } from '@prisma/client';
 import { Loader2, Search } from 'lucide-react';

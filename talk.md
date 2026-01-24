@@ -432,7 +432,7 @@ scripts/generate_html.sh
 scripts/generate_pdf.sh
 Bash Get generate_pdf.sh content from PR
 IN
-gh api repos/ritmo-inc/redmine-clone/pulls/107/files --jq '.[] | select(.filename == "scripts/generate_pdf.sh") | .patch'
+gh api repos/ritmo-inc/redmine-clone/pulls/107/files --jq '.[] | select(.filename == "script/generate_pdf.sh") | .patch'
 
 Bash Get TUTORIAL_SYSTEM.md content from PR
 IN
@@ -440,7 +440,7 @@ gh api repos/ritmo-inc/redmine-clone/pulls/107/files --jq '.[] | select(.filenam
 
 Bash Get generate_html.sh content from PR
 IN
-gh api repos/ritmo-inc/redmine-clone/pulls/107/files --jq '.[] | select(.filename == "scripts/generate_html.sh") | .patch'
+gh api repos/ritmo-inc/redmine-clone/pulls/107/files --jq '.[] | select(.filename == "script/generate_html.sh") | .patch'
 
 OUT
 @@ -0,0 +1,153 @@
@@ -1155,7 +1155,7 @@ Day 4〜30の全ファイルをテンプレート骨格で作成:
 ### Step 4: PDF生成・確認
 
 ```bash
-./scripts/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
+./script/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
 ```
 
 ---
@@ -1192,7 +1192,7 @@ Day 4〜30の全ファイルをテンプレート骨格で作成:
 1. **品質チェック**: `python3 scripts/check_visualization.py dayXX.md`
 2. **行数チェック**: `python3 scripts/check_step_length.py dayXX.md`
 3. **連続性チェック**: `python3 scripts/check_no_skip.py dayXX.md`
-4. **PDF生成**: `./scripts/generate_pdf.sh dayXX.md` → PDF確認
+4. **PDF生成**: `./script/generate_pdf.sh dayXX.md` → PDF確認
 5. **コード動作**: コードブロックをコピペ → `task dev` で動作確認
 
 ### 全体完成後のチェック
@@ -1455,7 +1455,7 @@ Step 3: Phase単位で中身を埋める
 反スキップ監査
 Step 4: PDF生成・確認
 
-./scripts/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
+./script/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
 Part 8: 修正対象ファイル一覧
 新規作成
 パス	内容
@@ -1477,7 +1477,7 @@ Part 9: 検証方法
 品質チェック: python3 scripts/check_visualization.py dayXX.md
 行数チェック: python3 scripts/check_step_length.py dayXX.md
 連続性チェック: python3 scripts/check_no_skip.py dayXX.md
-PDF生成: ./scripts/generate_pdf.sh dayXX.md → PDF確認
+PDF生成: ./script/generate_pdf.sh dayXX.md → PDF確認
 コード動作: コードブロックをコピペ → task dev で動作確認
 全体完成後のチェック
 Day 1から30まで通しで確認（コードが積み上げ式で矛盾なし）
@@ -1539,7 +1539,7 @@ Mermaid図もリアルタイム描画
 ② HTML生成 + Live Server（PDF出力と完全一致）
 
 # ファイル保存を監視 → HTML自動生成 → ブラウザ自動リロード
-npx chokidar-cli "material/**/*.md" -c "./scripts/generate_html.sh {path} output/preview.html" &
+npx chokidar-cli "material/**/*.md" -c "./script/generate_html.sh {path} output/preview.html" &
 npx live-server output/
 これならPDFと全く同じCSSで描画された結果がブラウザでホットリロードされる。
 

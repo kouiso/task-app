@@ -1,12 +1,12 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { TaskCard } from '@/components/task/task-card';
-import { TaskDialog, type TaskFormData } from '@/components/task/task-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Checkbox } from '@/component/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -14,29 +14,30 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/component/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
+} from '@/component/ui/dropdown-menu';
+import { Label } from '@/component/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/component/ui/select';
+import { Separator } from '@/component/ui/separator';
+import { Textarea } from '@/component/ui/textarea';
 import { api } from '@/trpc/react';
 import type { TaskStatus } from '@prisma/client';
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
-export default function TaskPage() {
+function TaskPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
@@ -45,6 +46,16 @@ export default function TaskPage() {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [commentContent, setCommentContent] = useState('');
+
+  const searchParams = useSearchParams();
+  const taskIdParam = searchParams.get('taskId');
+
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [taskIdParam]);
 
   const utils = api.useUtils();
 
@@ -513,5 +524,21 @@ export default function TaskPage() {
         </Dialog>
       </div>
     </AppLayout>
+  );
+}
+
+export default function TaskPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppLayout>
+          <div className="flex h-[60vh] items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        </AppLayout>
+      }
+    >
+      <TaskPageContent />
+    </Suspense>
   );
 }

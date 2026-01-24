@@ -42,8 +42,8 @@
 
 ```typescript
 // filepath: src/app/dashboard/layout.tsx
-import { AppLayout } from '@/components/layout/app-layout';
-import { DashboardNav } from '@/components/layout/dashboard-nav';
+import { AppLayout } from '@/component/layout/app-layout';
+import { DashboardNav } from '@/component/layout/dashboard-nav';
 import { Box } from '@mui/material';
 
 export default function DashboardLayout({

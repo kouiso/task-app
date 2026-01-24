@@ -1,7 +1,7 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import {
   Table,
   TableBody,
@@ -9,7 +9,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/component/ui/table';
 import { api } from '@/trpc/react';
 import { Loader2 } from 'lucide-react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';

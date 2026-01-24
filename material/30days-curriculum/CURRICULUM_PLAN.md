@@ -186,7 +186,7 @@ Day 1-3           Day 4          Day 5-28          Day 29-30
 編集中にリアルタイムでプレビュー確認:
 ```bash
 # HTML + Live Server
-npx chokidar-cli "material/**/*.md" -c "./scripts/generate_html.sh {path}" &
+npx chokidar-cli "material/**/*.md" -c "./script/generate_html.sh {path}" &
 npx live-server output/
 ```
 
@@ -368,7 +368,7 @@ scripts/
 
 ### Step 4: PDF生成・確認
 ```bash
-./scripts/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
+./script/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
 ```
 
 ---

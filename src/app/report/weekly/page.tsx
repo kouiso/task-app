@@ -1,14 +1,14 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/component/ui/select';
 import { api } from '@/trpc/react';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';

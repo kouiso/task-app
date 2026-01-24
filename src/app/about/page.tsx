@@ -1,7 +1,7 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { BarChart3, ClipboardList, Lock, Users } from 'lucide-react';
 
 const features = [

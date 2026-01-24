@@ -1,9 +1,9 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent } from '@/component/ui/card';
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/component/ui/table';
 import { api } from '@/trpc/react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';

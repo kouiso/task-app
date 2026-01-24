@@ -1,7 +1,7 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +9,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+} from '@/component/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/component/ui/sheet';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 import { BarChart, ClipboardList, FolderOpen, LayoutDashboard, Menu, Search } from 'lucide-react';
