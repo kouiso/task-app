@@ -2,237 +2,193 @@
 
 🤔 はじめに
 
-「インストールしたはずなのに、なぜか動かない…」
+プログラミングを始めるのはワクワクしますが、最初の環境設定でつまずく人も多いのではないでしょうか？
+必要なツールをインストールしたり、設定ファイルを編集したりするのは、まるで複雑な料理のレシピを理解するかのようです。
+でも、ご安心ください！　この章では、Taskfileという便利なツールを使って、**たった5分**で開発環境を整える方法を解説します。
+Taskfileを使えば、まるで魔法のように、複雑な設定を意識せずにプログラミングを始めることができます。
 
-プログラミングを始めたばかりの頃、このような経験はありませんか？ Node.js（ノードジェイエス）のバージョンが違っていたり、データベース（データベース）の設定がうまくいかなかったり、覚えるコマンド（コマンド）が多すぎて混乱したり…。
+🏗️ アーキテクチャ図とメタファー
 
-この章では、スムーズにプログラミング（料理）ができるように、信頼できる「開発環境（かいはつかんきょう）＝キッチン」を準備します。誰でも同じようにアプリを起動できるようにすることを目指します。
+プログラミングの開発環境は、料理をするキッチンに例えられます。
 
-💡 解決策
+*   **Node.js**：コンロや調理台です。プログラムを動かすための土台となります。
+*   **Docker**：調理器具セットが入った箱です。必要なツールをまとめて管理します。
+*   **PostgreSQL**：冷蔵庫です。データを保存しておく場所です。
+*   **Taskfile**：レシピカードです。料理の手順（開発環境のセットアップ手順）が書かれています。
 
-開発環境は、料理をするための「キッチン」のようなものです。
-
-- アプリのコード（ソースコード）＝ 食材
-- Node.jsやDocker（ドッカー）などのツール ＝ コンロや包丁
-- データベース ＝ 冷蔵庫（食材を安全に保管）
-- コマンド ＝ レシピ
-
-Node.js（ノードジェイエス：JavaScriptを実行するための環境）は、「コンロ」です。コンロがなければ、食材を加熱できません。Node.jsのバージョンが重要なのは、コンロの種類によって火力が違うからです。`package.json` ファイルの `engines.node` で必要なコンロ（Node.jsのバージョン）を指定します。
-
-npm scripts（エヌピーエムスクリプト）は、「レシピカード」です。複雑な手順を覚える代わりに、名前の付いたレシピ（`dev`, `build`, `start`など）を実行します。
-
-Docker Compose（ドッカーコンポーズ）は、「キッチンセット」です。データベースとバックエンド（バックエンド：ユーザーが見えない裏側のサーバーやデータベース）をまとめて起動し、必要な接続も自動で行います。
-
-環境変数（かんきょうへんすう）は、「コンテナ（アプリを動かすための箱）に貼られたラベル」です。同じ食材でも、ラベルが違えば使い方が変わります（例：`DATABASE_URL`）。
-
-volumes（ボリューム）は、「収納棚」です。コンテナを捨てても、データは安全に保管されます。
-
-Task runner（タスクランナー）は、「キッチン準備のチェックリスト」です。手順を忘れることを防ぎ、キッチンを修理するために再実行できます。
-
-👨‍💻 実際のコード
-
-3.1 package.jsonの「レシピカード」を読もう
-
-まずは、`package.json` ファイルを見てみましょう。このファイルには、プロジェクト（開発対象のアプリ）に必要な情報や、実行できるコマンド（レシピ）が書かれています。
-
-```json
-  "engines": {
-    "node": "24.x"
-  },
-  "script": {
-    "dev": "next dev",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
-    "start": "next start",
-    "lint": "biome check ."
-  },
+```mermaid
+graph LR
+    A[Taskfile] --> B(Docker);
+    A --> C(Node.js);
+    B --> D(PostgreSQL);
+    C --> E(ブラウザ);
+    D --> C;
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#ccf,stroke:#333,stroke-width:2px
+    style C fill:#ccf,stroke:#333,stroke-width:2px
+    style D fill:#ccf,stroke:#333,stroke-width:2px
 ```
 
-- 2行目の `engines.node: "24.x"` は、このプロジェクトがNode.jsの24系バージョンを必要としていることを意味します。つまり、「このキッチンでは24.xという型のコンロを使ってください」という指示です。
-- 5行目の `"dev": "next dev"` は、`dev` というレシピカードには `next dev` というコマンドが書かれていることを意味します。`next dev` は、開発（development）モードでNext.js（ネクストジェイエス：Reactをベースとしたフレームワーク）を起動するためのコマンドです。開発中は、コードを修正するとすぐに画面に反映されるので、味見をしながら料理をするように開発を進められます。
-- 6行目の `"build": "prisma generate && prisma db push --accept-data-loss && next build"` は、`build` というレシピカードには、複数のコマンドが書かれていることを意味します。`build` は、アプリを公開（本番環境）するために必要な準備をするためのコマンドです。 Prisma（プリズマ：データベースを扱いやすくするツール）を使ってデータベースを生成し、データを投入し、Next.jsでアプリをビルドします。これは、お客様に出す料理を盛り付ける準備をするようなものです。
-- 7行目の `"start": "next start"` は、`start` というレシピカードには `next start` というコマンドが書かれていることを意味します。`next start` は、ビルドされたアプリを起動するためのコマンドです。これは、盛り付けられた料理をお客様に提供するようなものです。
-- 8行目の `"lint": "biome check ."` は、`lint` というレシピカードには `biome check .` というコマンドが書かれていることを意味します。`lint` は、コードの品質をチェックするためのコマンドです。
+この図は、開発環境の全体像を表しています。Taskfileを中心に、Docker、Node.js、PostgreSQLが連携して動きます。
 
-このリポジトリ（プロジェクトのコードが保管されている場所）では、`"scripts"` ではなく `"script"` というキー（項目名）を使っていることに注意してください。もし `npm run dev` が動かない場合は、`package.json` の `"script"` を `"scripts"` に修正する必要があるかもしれません（ただし、まずは動作確認をしてください）。
+| コンポーネント    | 役割                                 | Task Command                      |
+| :---------------- | :----------------------------------- | :-------------------------------- |
+| Node.js（ノード・ジェイエス） | アプリケーションの実行環境                 | `task init` (npm install)         |
+| Docker（ドッカー）    | コンテナによる環境構築と管理                 | `task init` (docker compose up)   |
+| PostgreSQL（ポストグレスキューエル） | データベース                             | `task seed` (データ投入)          |
+| Taskfile（タスクファイル）    | 開発作業を自動化するレシピ                 | `task init`, `task dev`, `task seed` |
 
-3.2 docker-compose.ymlの「キッチンキット」を理解しよう
+💡 Taskfileの使い方
 
-次に、`docker-compose.yml` ファイルを見てみましょう。このファイルには、データベースやバックエンドなどの必要なものがまとめて定義されています。
-
-```yaml
-  db:
-    image: postgres:16-alpine
-    container_name: taskapp-postgres
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: taskapp
-    ports:
-      - "${_DOCKER_COMPOSE_HOST_PORT_DB:-5432}:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  backend:
-    build:
-      context: .
-      dockerfile: .docker/backend/Dockerfile
-    container_name: taskapp-backend
-    ports:
-      - "${_DOCKER_COMPOSE_HOST_PORT_BACKEND:-3000}:3000"
-      - "${_DOCKER_COMPOSE_HOST_PORT_BACKEND_DEBUG:-9229}:9229"
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://user:password@db:5432/taskapp?schema=public
-    depends_on:
-      db:
-        condition: service_healthy
-    command: npm run dev
-```
-
-- `db` サービス（冷蔵庫）:
-  - 2行目の `image: postgres:16-alpine` は、PostgreSQL（ポストグレスキューエル：オープンソースのデータベース）の16-alpineバージョンを使うことを意味します。
-  - 4-6行目の `environment` は、データベースのユーザー名、パスワード、データベース名を定義しています。これらは、冷蔵庫に貼られたラベルのようなものです。
-  - 8行目の `ports: "${_DOCKER_COMPOSE_HOST_PORT_DB:-5432}:5432"` は、データベースにアクセスするための「ドア番号」を指定しています。`${_DOCKER_COMPOSE_HOST_PORT_DB:-5432}` が設定されていなければ、5432番ポート（ポート：アプリが外界と通信するための「出入口」）を使います。
-  - 10行目の `volumes: postgres-data:/var/lib/postgresql/data` は、データベースのデータを保存する場所を指定しています。これは、冷蔵庫の中の収納棚のようなものです。コンテナを削除しても、データは `postgres-data` というボリューム（データの保存場所）に保存されます。
-  - 12-15行目の `healthcheck` は、データベースが正常に起動しているかどうかを確認するためのものです。`pg_isready -U user` コマンドを使って、データベースに接続できるかどうかをチェックします。これは、冷蔵庫がちゃんと冷えているかを確認するようなものです。
-
-- `backend` サービス（コンロ）:
-  - 18-19行目の `build` は、バックエンドのコードをビルド（コンパイル）するための設定です。`context: .` は、現在のディレクトリ（フォルダ）をビルドの起点とすることを意味します。`dockerfile: .docker/backend/Dockerfile` は、`.docker/backend/Dockerfile` というファイルを使ってビルドすることを意味します。
-  - 21-22行目の `ports` は、バックエンドにアクセスするためのドア番号を指定しています。3000番ポートは、Webブラウザ（ウェブブラウザ）からアクセスするためのポートです。9229番ポートは、デバッグ（プログラムの誤りを修正すること）するためのポートです。
-  - 23行目の `env_file: - .env` は、`.env` ファイルから環境変数を読み込むことを意味します。
-  - 25行目の `environment: DATABASE_URL: postgresql://user:password@db:5432/taskapp?schema=public` は、データベースの接続先URL（アドレス）を指定しています。`DATABASE_URL` は、バックエンドが冷蔵庫（データベース）の場所を知るための「住所ラベル」です。
-  - 27-28行目の `depends_on` は、バックエンドがデータベースに依存していることを意味します。`condition: service_healthy` は、データベースが正常に起動してからバックエンドを起動することを意味します。「冷蔵庫が冷えてから料理を始める」というイメージです。
-  - 29行目の `command: npm run dev` は、バックエンドを起動するためのコマンドを指定しています。`npm run dev` は、`package.json` に定義された `dev` スクリプトを実行するためのコマンドです。
-
-Docker（ドッカー：アプリを箱詰めして動かす仕組み）を使うことで、開発環境をどのマシン（パソコン）でも同じように再現できます。
-
-3.3 Taskfileを「ワンボタンチェックリスト」として使おう
-
-最後に、`taskfile.yaml` ファイルを見てみましょう。このファイルには、複数のコマンドをまとめて実行するためのタスク（作業）が定義されています。
+Taskfile（タスクファイル）は、開発に必要な様々なコマンドをまとめて実行できる便利なツールです。
+まるで料理のレシピのように、必要な手順が順番に記述されています。
 
 ```yaml
-version: "3"
-
-dotenv:
-  - .env
-
+# Taskfile.yaml (例)
+version: '3'
 tasks:
-  default:
-    cmds:
-      - task -l
-
-  # ----- 初期化関連コマンド
   init:
-    desc: "環境初期化(何度でも実行可能 - 環境を壊してしまった場合、本コマンドの再実行で修復可能)"
     cmds:
-      # 依存のインストール
-      - cmd: brew install jq
-        platforms: [linux, darwin]
-      - cmd: scoop install jq
+      - docker compose down --volumes --remove-orphans
+      - npm ci --legacy-peer-deps
+      - npx prisma migrate deploy
+      - npm run seed
+  dev:
+    cmds:
+      - docker compose up -d
+      - npm run dev
+  seed:
+    cmds:
+      - npx prisma db seed
 ```
 
-Task runner（タスクランナー：複数のコマンドをまとめて実行するツール）は、「マクロボタン」のようなものです。複数のコマンドを安全に実行できます。
+上記の例では、`init`、`dev`、`seed`という3つのタスクが定義されています。
+`task init`コマンドを実行すると、上記の`init`タスクに記述されたコマンドが順番に実行されます。
 
-Taskfileを使うことで、以下のメリットがあります。
+ターミナル（terminal）で`task --list`コマンドを実行すると、利用可能なタスクの一覧が表示されます。
 
-- コマンドの打ち間違いを減らせる
-- 決まった順番でコマンドを実行できる
-- 環境が壊れても、再実行することで修復できる
+```
+$ task --list
+init      Dockerとnpmをセットアップします
+dev       開発サーバーを起動します
+seed      データベースに初期データを投入します
+```
 
-✅ 動かしてみよう
+このように、複雑なコマンドが`task`コマンド1つにまとまっているため、簡単に開発環境を操作できます。
+この章では、主に以下の3つのコマンドを使用します。
 
-4.1 前提チェック
+*   `task init`：開発環境の初期設定を行います。
+*   `task dev`：開発サーバーを起動します。
+*   `task seed`：データベースに初期データを投入します。
 
-まず、必要なものがインストールされているか確認しましょう。
+👨‍💻 セットアップステップバイステップ
 
-1. Node.jsのバージョンを確認します。
+開発環境を構築する手順をステップごとに解説します。
 
-   ```
-   $ node -v
-   v24.11.1
-   ```
+**ステップ1：前提条件の確認**
 
-   `v24.11.1` のように表示されれば成功です。もし `v20.xx.xx` のように表示された場合は、Node.jsのバージョンを24系に切り替える必要があります。
+まず、Node.js（ノード・ジェイエス）、npm（エヌピーエム）、Docker（ドッカー）がインストールされているか確認します。
+それぞれのバージョンを確認するために、以下のコマンドをターミナルで実行してください。
 
-2. npm（エヌピーエム：Node.jsのパッケージ管理ツール）のバージョンを確認します。
+```
+$ node -v
+v24.11.1
 
-   ```
-   $ npm -v
-   10.2.4
-   ```
+$ npm -v
+10.9.0
 
-   `10.2.4` のように表示されれば成功です。
+$ docker --version
+Docker version 27.0.0, build abcdef1
+```
 
-3. Dockerのバージョンを確認します。
+*   **Node.js**：JavaScriptを実行するための環境です。
+*   **npm**：Node.jsのパッケージを管理するツールです。
+*   **Docker**：アプリケーションをコンテナという「箱」に入れて、どこでも同じように動かすための技術です。
 
-   ```
-   $ docker --version
-   Docker version 26.1.0, build daa60c5
-   ```
+| ツール      | バージョン                               |
+| :---------- | :------------------------------------- |
+| Node.js   | v20.0.0 以上                           |
+| npm       | 最新版                                 |
+| Docker    | 最新版                                 |
 
-   `Docker version 26.1.0, build daa60c5` のように表示されれば成功です。
+**ステップ2：`task init`コマンドの実行**
 
-4.2 Step-by-step verification
+次に、`task init`コマンドを実行して、開発環境の初期設定を行います。
+このコマンドを実行すると、必要なパッケージのインストールやデータベースの初期化などが自動的に行われます。
 
-1. データベースコンテナ（コンテナ：アプリを動かすための隔離された環境）を起動します。
+```
+$ task init
+task: [init] docker compose down --volumes --remove-orphans
+task: [init] npm ci --legacy-peer-deps
+task: [init] npx prisma migrate deploy
+task: [init] npm run seed
+✓ Setup complete!
+```
 
-   ```
-   $ docker compose up -d db
-   ```
+1行目の`docker compose down --volumes --remove-orphans`は、以前の環境を削除するコマンドです。
+2行目の`npm ci --legacy-peer-deps`は、必要なNode.jsのパッケージをインストールするコマンドです。
+3行目の`npx prisma migrate deploy`は、データベースのスキーマを最新の状態に更新するコマンドです。
+4行目の`npm run seed`は、データベースに初期データを投入するコマンドです。
 
-2. データベースが正常に起動しているか確認します。
+**ステップ3：`task dev`コマンドの実行**
 
-   ```
-   $ docker compose ps
+`task dev`コマンドを実行して、開発サーバーを起動します。
 
-   NAME                IMAGE               COMMAND                  SERVICE             CREATED             STATUS              PORTS
-   taskapp-postgres    postgres:16-alpine   "docker-entrypoint.s…"   db                  2 minutes ago       healthy             5432/tcp
-   ```
+```
+$ task dev
+task: [dev] docker compose up -d && npm run dev
+...waiting for healthcheck...
+> next-app@0.1.0 dev
+> next dev
+▲ Next.js 15.1.6
+▲ Local:   http://localhost:3000
+```
 
-   `STATUS` が `healthy` と表示されれば成功です。【スクリーンショット】Docker Desktopで「taskapp-postgres」コンテナが「healthy」状態になっていることを確認
+`localhost:3000`というメッセージが表示されたら、開発サーバーが正常に起動しています。
 
-3. バックエンドを起動します。
+✅ 動作確認
 
-   ```
-   $ docker compose up --build backend
-   ```
+開発環境が正しく設定されているか確認しましょう。
 
-   バックエンドのログ（記録）に `localhost:3000 ready` と表示されれば成功です。【スクリーンショット】ターミナルで `docker compose up` 実行中ログで、backend が `localhost:3000 ready` となっている部分
+a) Docker Desktopの確認
 
-4. Webブラウザで `http://localhost:3000` にアクセスして、アプリが表示されることを確認します。【スクリーンショット】Webブラウザで `http://localhost:3000` にアクセスしてアプリが表示されている画面
+Docker Desktopを開くと、`postgres-db`と`backend`という2つのコンテナが緑色の「Running」状態で表示されます。
 
-5. （オプション）Taskfileを使って「ワンボタン」で起動します。
+```mermaid
+graph LR
+    A[postgres-db (Running)] --> B(backend (Running));
+    style A fill:#afa,stroke:#333,stroke-width:2px
+    style B fill:#afa,stroke:#333,stroke-width:2px
+```
 
-   ```
-   $ task init
-   $ task up-backend
-   ```
+b) ブラウザでの確認
 
-4.3 Visual confirmation checklist
+ブラウザで`http://localhost:3000`にアクセスすると、Next.jsの初期画面が表示されます。
 
-- 【スクリーンショット】Docker Desktopで「taskapp-postgres」と「taskapp-backend」の2つのコンテナが「Running」状態になっていることを確認
-- 【スクリーンショット】ターミナルで `node -v` を実行した結果、v24.xx.x のように表示されている画面
-- 【スクリーンショット】ターミナルで `docker compose up` 実行中ログで、db が「healthy」と表示され、backend が `localhost:3000 ready` となっている部分
+c) データベースの確認
 
-4.4 Troubleshooting tips
+`task status`コマンドを実行するか、データベース管理ツールでPostgreSQLに接続して、データが正しく投入されているか確認します。
 
-- もしポート（ポート：アプリが外界と通信するための「出入口」）が既に使用されている場合は、以下のコマンドでプロセス（実行中のプログラム）を特定して停止します。
+📈 アーキテクチャフロー図
 
-  ```
-  $ lsof -i :3000
-  $ kill -9 <プロセスID>
-  ```
+```mermaid
+graph LR
+    A[ユーザー: task init] --> B{Taskfile};
+    B --> C(docker compose up);
+    B --> D(npm install);
+    C --> E[PostgreSQL起動];
+    C --> F[Node.jsサービス起動];
+    D --> G[Prismaマイグレーション];
+    D --> H[初期データ投入];
+    E --> H;
+    F --> H;
+    H --> I[開発準備完了];
+    style I fill:#afa,stroke:#333,stroke-width:2px
+```
 
-- もしNode.jsのバージョンが違う場合は、`nvm` などのツールを使ってバージョンを切り替えます。
-
-- もしDockerが起動していない場合は、Docker Desktopを起動してください。
+この図は、`task init`コマンドが実行された際に、内部でどのような処理が行われているかを示しています。
 
 🎯 まとめ
 
-安定した開発環境は、きちんと準備されたキッチンです。ツール、冷蔵庫、レシピが揃えば、落ち着いて再現性のあるコーディング（料理）ができます。
+Taskfileを使えば、複雑な開発環境のセットアップも、たった1つのコマンドで完了します。
+次のチャプターでは、Taskfileの仕組みを詳しく解説します。
