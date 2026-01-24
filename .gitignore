@@ -13,6 +13,16 @@ coverage
 logs
 *.log
 
+# Python & type checking
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
 # build output
 dist
 dist-ssr
