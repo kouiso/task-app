@@ -1,15 +1,17 @@
 'use client';
 
-import { api } from '@/trpc/react';
+import { Button } from '@/components/ui/button';
 import {
-  Box,
-  Button,
   Dialog,
-  DialogActions,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
-  TextField,
-} from '@mui/material';
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { api } from '@/trpc/react';
 import { useState } from 'react';
 
 interface TimeLogDialogProps {
@@ -71,44 +73,53 @@ export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialo
   const isValid = Number.parseInt(hours || '0', 10) * 60 + Number.parseInt(minutes || '0', 10) > 0;
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Add Time Log</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-          <TextField
-            label="Hours"
-            value={hours}
-            onChange={handleHoursChange}
-            type="text"
-            inputMode="numeric"
-            fullWidth
-            placeholder="0"
-            helperText="Enter hours worked"
-          />
-          <TextField
-            label="Minutes"
-            value={minutes}
-            onChange={handleMinutesChange}
-            type="text"
-            inputMode="numeric"
-            fullWidth
-            placeholder="0"
-            helperText="Enter minutes (0-59)"
-          />
-        </Box>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogHeader>
+        <DialogTitle>Add Time Log</DialogTitle>
+        <DialogDescription>タスクに作業時間を記録します</DialogDescription>
+      </DialogHeader>
+      <DialogContent className="space-y-4">
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <Label htmlFor="hours" className="text-sm font-medium mb-2 block">
+              Hours
+            </Label>
+            <Input
+              id="hours"
+              value={hours}
+              onChange={handleHoursChange}
+              type="text"
+              inputMode="numeric"
+              placeholder="0"
+              disabled={addTimeMutation.isPending}
+            />
+            <p className="text-xs text-muted-foreground mt-1">作業時間（時）</p>
+          </div>
+          <div className="flex-1">
+            <Label htmlFor="minutes" className="text-sm font-medium mb-2 block">
+              Minutes
+            </Label>
+            <Input
+              id="minutes"
+              value={minutes}
+              onChange={handleMinutesChange}
+              type="text"
+              inputMode="numeric"
+              placeholder="0"
+              disabled={addTimeMutation.isPending}
+            />
+            <p className="text-xs text-muted-foreground mt-1">作業時間（分、0-59）</p>
+          </div>
+        </div>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={addTimeMutation.isPending}>
-          Cancel
+      <DialogFooter>
+        <Button variant="outline" onClick={handleClose} disabled={addTimeMutation.isPending}>
+          キャンセル
         </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={!isValid || addTimeMutation.isPending}
-        >
-          {addTimeMutation.isPending ? 'Adding...' : 'Add Time'}
+        <Button onClick={handleSubmit} disabled={!isValid || addTimeMutation.isPending}>
+          {addTimeMutation.isPending ? '追加中...' : '時間を追加'}
         </Button>
-      </DialogActions>
+      </DialogFooter>
     </Dialog>
   );
 }

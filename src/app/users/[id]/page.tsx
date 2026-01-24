@@ -1,38 +1,22 @@
 'use client';
 
-import { api } from '@/trpc/react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
-  AdminPanelSettings as AdminIcon,
-  ArrowBack as ArrowBackIcon,
-  CalendarToday as CalendarIcon,
-  Edit as EditIcon,
-  Email as EmailIcon,
-  Person as PersonIcon,
-} from '@mui/icons-material';
-import {
-  Avatar,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Divider,
-  Grid,
-  List,
-  ListItem,
-  ListItemText,
-  Paper,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Typography,
-} from '@mui/material';
+} from '@/components/ui/table';
+import { api } from '@/trpc/react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { ArrowLeft, Calendar, Mail, Pencil, Shield, User } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -41,10 +25,8 @@ export default function UserDetailPage() {
   const params = useParams();
   const userId = params['id'] as string;
 
-  // 現在のユーザー情報を取得
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
 
-  // ユーザー詳細を取得
   const {
     data: user,
     isLoading,
@@ -53,28 +35,27 @@ export default function UserDetailPage() {
     id: userId,
   });
 
-  // エラーハンドリング
   if (error) {
     toast.error(error.message || 'ユーザー情報の取得に失敗しました');
   }
 
   if (isLoading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Typography>読み込み中...</Typography>
-      </Container>
+      <div className="container mx-auto max-w-6xl mt-8 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
     );
   }
 
   if (!user) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <div className="container mx-auto max-w-6xl mt-8">
         <Card>
-          <CardContent>
-            <Typography>ユーザーが見つかりません</Typography>
+          <CardContent className="pt-6">
+            <p>ユーザーが見つかりません</p>
           </CardContent>
         </Card>
-      </Container>
+      </div>
     );
   }
 
@@ -82,201 +63,184 @@ export default function UserDetailPage() {
   const isOwnProfile = currentUser?.id === user.id;
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* 戻るボタン */}
-      <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/users')} sx={{ mb: 2 }}>
+    <div className="container mx-auto max-w-6xl py-8">
+      <Button
+        variant="ghost"
+        className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
+        onClick={() => router.push('/users')}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
         ユーザー一覧に戻る
       </Button>
 
-      <Grid container spacing={3}>
-        {/* ユーザー情報カード */}
-        <Grid item xs={12} md={4}>
+      <div className="grid gap-6 md:grid-cols-12">
+        {/* User Info Card */}
+        <div className="md:col-span-4 space-y-6">
           <Card>
-            <CardContent>
-              {/* プロフィール */}
-              <Box sx={{ textAlign: 'center', mb: 3 }}>
-                <Avatar
-                  {...(user.avatar && { src: user.avatar })}
-                  alt={user.name || ''}
-                  sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
-                >
-                  {user.name?.[0]?.toUpperCase()}
+            <CardContent className="pt-6">
+              <div className="text-center mb-6">
+                <Avatar className="w-24 h-24 mx-auto mb-4">
+                  <AvatarImage src={user.avatar || ''} alt={user.name || ''} />
+                  <AvatarFallback className="text-3xl">
+                    {user.name?.[0]?.toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
-                <Typography variant="h5" gutterBottom>
-                  {user.name}
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-                  <Chip
-                    icon={user.role === 'ADMIN' ? <AdminIcon /> : <PersonIcon />}
-                    label={user.role === 'ADMIN' ? '管理者' : 'ユーザー'}
-                    color={user.role === 'ADMIN' ? 'secondary' : 'default'}
-                    size="small"
-                  />
-                  <Chip
-                    label={user.isActive ? 'アクティブ' : '無効'}
-                    color={user.isActive ? 'success' : 'default'}
-                    size="small"
-                  />
-                </Box>
-              </Box>
+                <h2 className="text-xl font-bold mb-2">{user.name}</h2>
+                <div className="flex justify-center gap-2 mb-4">
+                  {user.role === 'ADMIN' ? (
+                    <Badge variant="secondary" className="gap-1">
+                      <Shield className="h-3 w-3" /> 管理者
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="gap-1">
+                      <User className="h-3 w-3" /> ユーザー
+                    </Badge>
+                  )}
+                  {user.isActive ? (
+                    <Badge
+                      variant="outline"
+                      className="bg-green-500/10 text-green-700 border-green-200"
+                    >
+                      アクティブ
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-500/10 text-gray-700 border-gray-200"
+                    >
+                      無効
+                    </Badge>
+                  )}
+                </div>
+              </div>
 
-              <Divider sx={{ my: 2 }} />
+              <Separator className="my-4" />
 
-              {/* 詳細情報 */}
-              <List dense>
-                <ListItem>
-                  <EmailIcon sx={{ mr: 2, color: 'text.secondary' }} />
-                  <ListItemText primary="メールアドレス" secondary={user.email} />
-                </ListItem>
-                <ListItem>
-                  <CalendarIcon sx={{ mr: 2, color: 'text.secondary' }} />
-                  <ListItemText
-                    primary="登録日"
-                    secondary={
-                      user.createdAt
+              <div className="space-y-4 text-sm">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-muted-foreground text-xs">メールアドレス</p>
+                    <p>{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-muted-foreground text-xs">登録日</p>
+                    <p>
+                      {user.createdAt
                         ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
                             locale: ja,
                           })
-                        : '-'
-                    }
-                  />
-                </ListItem>
-                <ListItem>
-                  <CalendarIcon sx={{ mr: 2, color: 'text.secondary' }} />
-                  <ListItemText
-                    primary="最終更新日"
-                    secondary={
-                      user.updatedAt
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-muted-foreground text-xs">最終更新日</p>
+                    <p>
+                      {user.updatedAt
                         ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
                             locale: ja,
                           })
-                        : '-'
-                    }
-                  />
-                </ListItem>
-              </List>
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-              {/* 編集ボタン */}
               {(isAdmin || isOwnProfile) && (
                 <>
-                  <Divider sx={{ my: 2 }} />
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<EditIcon />}
-                    onClick={() => router.push(`/users/${user.id}/edit`)}
-                  >
-                    編集
+                  <Separator className="my-4" />
+                  <Button className="w-full" onClick={() => router.push(`/users/${user.id}/edit`)}>
+                    <Pencil className="mr-2 h-4 w-4" /> 編集
                   </Button>
                 </>
               )}
             </CardContent>
           </Card>
-        </Grid>
+        </div>
 
-        {/* プロジェクトとタスク */}
-        <Grid item xs={12} md={8}>
-          {/* 参加プロジェクト */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                参加プロジェクト
-              </Typography>
-              {user.projects && user.projects.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {user.projects.map((member) => (
-                    <Chip
-                      key={member.id}
-                      label={member.project.name}
-                      onClick={() => router.push(`/project/${member.project.id}`)}
-                      sx={{
-                        bgcolor: member.project.color,
-                        color: 'white',
-                        '&:hover': {
-                          bgcolor: member.project.color,
-                          opacity: 0.8,
-                        },
-                      }}
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Typography color="text.secondary">参加しているプロジェクトはありません</Typography>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 担当タスク */}
+        {/* Projects and Tasks */}
+        <div className="md:col-span-8 space-y-6">
+          {/* Projects */}
           <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">参加プロジェクト</CardTitle>
+            </CardHeader>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                担当中のタスク
-              </Typography>
-              {user.assignedTasks && user.assignedTasks.length > 0 ? (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>タイトル</TableCell>
-                        <TableCell>ステータス</TableCell>
-                        <TableCell>優先度</TableCell>
-                        <TableCell>期限</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {user.assignedTasks.map((task) => (
-                        <TableRow
-                          key={task.id}
-                          hover
-                          sx={{ cursor: 'pointer' }}
-                          onClick={() => router.push(`/task/${task.id}`)}
-                        >
-                          <TableCell>{task.title}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={task.status}
-                              size="small"
-                              color={
-                                task.status === 'DONE'
-                                  ? 'success'
-                                  : task.status === 'IN_PROGRESS'
-                                    ? 'primary'
-                                    : 'default'
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={task.priority}
-                              size="small"
-                              color={
-                                task.priority === 'URGENT'
-                                  ? 'error'
-                                  : task.priority === 'HIGH'
-                                    ? 'warning'
-                                    : 'default'
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {task.dueDate
-                              ? format(new Date(task.dueDate), 'yyyy/MM/dd', {
-                                  locale: ja,
-                                })
-                              : '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+              {user.projects && user.projects.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {user.projects.map((member) => (
+                    <Badge
+                      key={member.id}
+                      className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
+                      style={{ backgroundColor: member.project.color }}
+                      onClick={() => router.push(`/project/${member.project.id}`)}
+                    >
+                      {member.project.name}
+                    </Badge>
+                  ))}
+                </div>
               ) : (
-                <Typography color="text.secondary">担当中のタスクはありません</Typography>
+                <p className="text-muted-foreground text-sm">
+                  参加しているプロジェクトはありません
+                </p>
               )}
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
-    </Container>
+
+          {/* Tasks */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">担当中のタスク</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {user.assignedTasks && user.assignedTasks.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>タイトル</TableHead>
+                      <TableHead>ステータス</TableHead>
+                      <TableHead>優先度</TableHead>
+                      <TableHead>期限</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {user.assignedTasks.map((task) => (
+                      <TableRow
+                        key={task.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => router.push(`/task/${task.id}`)}
+                      >
+                        <TableCell className="font-medium">{task.title}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{task.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{task.priority}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {task.dueDate
+                            ? format(new Date(task.dueDate), 'yyyy/MM/dd', {
+                                locale: ja,
+                              })
+                            : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="p-6 text-muted-foreground text-sm">担当中のタスクはありません</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

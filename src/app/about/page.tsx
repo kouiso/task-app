@@ -1,105 +1,103 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/app-layout';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import GroupIcon from '@mui/icons-material/Group';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import { Box, Card, CardContent, Grid, Typography } from '@mui/material';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart3, ClipboardList, Lock, Users } from 'lucide-react';
 
 const features = [
   {
-    icon: <AssignmentIcon sx={{ fontSize: 48 }} color="primary" />,
+    icon: <ClipboardList className="w-12 h-12 text-primary" />,
     title: 'Task Management',
     description:
       'Create, assign, and track tasks with multiple status options, priorities, and due dates.',
   },
   {
-    icon: <DashboardIcon sx={{ fontSize: 48 }} color="secondary" />,
-    title: 'Project Organization',
+    icon: <Users className="w-12 h-12 text-primary" />,
+    title: 'Team Collaboration',
     description: 'Organize your work into projects with team members and custom workflows.',
   },
   {
-    icon: <TimelineIcon sx={{ fontSize: 48 }} color="success" />,
+    icon: <BarChart3 className="w-12 h-12 text-primary" />,
     title: 'Progress Tracking',
     description:
       'Monitor progress with visual indicators, time tracking, and completion statistics.',
   },
   {
-    icon: <GroupIcon sx={{ fontSize: 48 }} color="warning" />,
-    title: 'Team Collaboration',
+    icon: <Lock className="w-12 h-12 text-primary" />,
+    title: 'Project Organization',
     description: 'Collaborate with your team through comments, mentions, and real-time updates.',
+  },
+];
+
+const techStack = [
+  {
+    category: 'Frontend',
+    items: [
+      '• Next.js 15 - React framework',
+      '• Tailwind CSS - Utility-first CSS',
+      '• Shadcn/ui - Component library',
+      '• tRPC - Type-safe API layer',
+    ],
+  },
+  {
+    category: 'Backend',
+    items: [
+      '• Prisma - Database ORM',
+      '• PostgreSQL - Database',
+      '• NextAuth.js - Authentication',
+      '• Vercel - Hosting',
+    ],
   },
 ];
 
 export default function AboutPage() {
   return (
     <AppLayout>
-      <Box>
-        <Box mb={6} textAlign="center">
-          <Typography variant="h3" gutterBottom>
-            About Task App
-          </Typography>
-          <Typography variant="h6" color="text.secondary" maxWidth={800} mx="auto">
+      <div className="space-y-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">About Task App</h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             A modern task management application built with Next.js, tRPC, and Prisma. Designed for
             teams who want to stay organized and productive.
-          </Typography>
-        </Box>
+          </p>
+        </div>
 
-        <Grid container spacing={4} mb={6}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {features.map((feature) => (
-            <Grid item xs={12} md={6} key={feature.title}>
-              <Card sx={{ height: '100%', textAlign: 'center' }}>
-                <CardContent>
-                  <Box mb={2}>{feature.icon}</Box>
-                  <Typography variant="h5" gutterBottom>
-                    {feature.title}
-                  </Typography>
-                  <Typography color="text.secondary">{feature.description}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+            <Card key={feature.title}>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div>{feature.icon}</div>
+                  <h3 className="text-xl font-bold">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
+        </div>
 
         <Card>
+          <CardHeader>
+            <CardTitle>Technology Stack</CardTitle>
+          </CardHeader>
           <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Technology Stack
-            </Typography>
-            <Grid container spacing={2} mt={2}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  Frontend
-                </Typography>
-                <Typography component="div" color="text.secondary">
-                  • Next.js 15 - React framework
-                </Typography>
-                <Typography component="div" color="text.secondary">
-                  • Material-UI - UI component library
-                </Typography>
-                <Typography component="div" color="text.secondary">
-                  • tRPC - Type-safe API layer
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  Backend
-                </Typography>
-                <Typography component="div" color="text.secondary">
-                  • Prisma - Database ORM
-                </Typography>
-                <Typography component="div" color="text.secondary">
-                  • PostgreSQL - Database
-                </Typography>
-                <Typography component="div" color="text.secondary">
-                  • NextAuth.js - Authentication
-                </Typography>
-              </Grid>
-            </Grid>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {techStack.map((section) => (
+                <div key={section.category}>
+                  <h3 className="font-bold text-lg mb-3">{section.category}</h3>
+                  <ul className="space-y-2">
+                    {section.items.map((item) => (
+                      <li key={item} className="text-sm text-muted-foreground">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
-      </Box>
+      </div>
     </AppLayout>
   );
 }

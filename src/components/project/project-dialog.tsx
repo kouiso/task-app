@@ -1,15 +1,17 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import {
-  Box,
-  Button,
   Dialog,
-  DialogActions,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
-  Grid,
-  TextField,
-} from '@mui/material';
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useEffect, useState } from 'react';
 
 interface ProjectDialogProps {
@@ -39,6 +41,12 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
   useEffect(() => {
     if (initialData) {
       setFormData({ ...initialData });
+    } else {
+      setFormData({
+        name: '',
+        description: '',
+        color: '#1976d2',
+      });
     }
   }, [initialData]);
 
@@ -48,74 +56,86 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
       setFormData({ ...formData, [field]: e.target.value });
     };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     onSubmit(formData);
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{initialData?.id ? 'Edit Project' : 'Create Project'}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ mt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Project Name"
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>{initialData?.id ? 'Edit Project' : 'Create Project'}</DialogTitle>
+          <DialogDescription>
+            {initialData?.id
+              ? 'Update your project details.'
+              : 'Add a new project to your workspace.'}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Project Name</Label>
+              <Input
+                id="name"
                 value={formData.name}
                 onChange={handleChange('name')}
+                placeholder="Enter project name"
                 required
               />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
                 value={formData.description || ''}
                 onChange={handleChange('description')}
-                multiline
+                placeholder="Describe your project..."
                 rows={4}
               />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Color"
-                type="color"
-                value={formData.color}
-                onChange={handleChange('color')}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Start Date"
-                type="date"
-                value={formData.startDate || ''}
-                onChange={handleChange('startDate')}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="End Date"
-                type="date"
-                value={formData.endDate || ''}
-                onChange={handleChange('endDate')}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-          </Grid>
-        </Box>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="color">Color</Label>
+                <Input
+                  id="color"
+                  type="color"
+                  value={formData.color}
+                  onChange={handleChange('color')}
+                  className="h-10"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate || ''}
+                  onChange={handleChange('startDate')}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={formData.endDate || ''}
+                  onChange={handleChange('endDate')}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!formData.name}>
+              {initialData?.id ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={!formData.name}>
-          {initialData?.id ? 'Update' : 'Create'}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }
