@@ -10,6 +10,14 @@
   },
   "linter": {
     "enabled": true,
+    "ignore": [
+      "**/node_modules",
+      "**/dist",
+      "**/.next",
+      "**/.mypy_cache",
+      "**/.ruff_cache",
+      "**/__pycache__"
+    ],
     "rules": {
       "recommended": true,
       "complexity": {
@@ -35,7 +43,12 @@
         "noArrayIndexKey": "warn"
       }
     },
-    "ignore": ["**/node_modules", "**/dist", "**/.next", "**/prisma/migrations"]
+    "ignore": [
+      "**/node_modules",
+      "**/dist",
+      "**/.next",
+      "**/prisma/migrations"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -45,7 +58,14 @@
     "lineEnding": "lf",
     "lineWidth": 100,
     "attributePosition": "auto",
-    "ignore": ["**/node_modules", "**/dist", "**/.next"]
+    "ignore": [
+      "**/node_modules",
+      "**/dist",
+      "**/.next",
+      "**/.mypy_cache",
+      "**/.ruff_cache",
+      "**/__pycache__"
+    ]
   },
   "javascript": {
     "formatter": {
