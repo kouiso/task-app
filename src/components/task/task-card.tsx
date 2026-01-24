@@ -1,19 +1,12 @@
 'use client';
 
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import {
-  Avatar,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  Typography,
-} from '@mui/material';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { TaskPriority, TaskStatus } from '@prisma/client';
+import { CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { TaskTimer } from './task-timer';
 import { TimeLogDialog } from './time-log-dialog';
@@ -38,22 +31,6 @@ interface TaskCardProps {
   onClick?: (id: string) => void;
   onTimerUpdate?: () => void;
 }
-
-const statusColors: Record<TaskStatus, 'default' | 'primary' | 'success' | 'error' | 'warning'> = {
-  TODO: 'default',
-  IN_PROGRESS: 'primary',
-  IN_REVIEW: 'warning',
-  DONE: 'success',
-  CANCELLED: 'error',
-  BLOCKED: 'error',
-};
-
-const priorityColors: Record<TaskPriority, 'default' | 'primary' | 'warning' | 'error'> = {
-  LOW: 'default',
-  MEDIUM: 'primary',
-  HIGH: 'warning',
-  URGENT: 'error',
-};
 
 export function TaskCard({
   id,
@@ -94,92 +71,121 @@ export function TaskCard({
     setTimeLogDialogOpen(true);
   };
 
+  const getStatusBadgeVariant = (status: TaskStatus) => {
+    switch (status) {
+      case 'DONE':
+        return 'secondary'; // Using secondary for DONE/Success
+      case 'IN_PROGRESS':
+        return 'default'; // Primary for In Progress
+      case 'IN_REVIEW':
+        return 'outline'; // Warning equivalent
+      case 'CANCELLED':
+      case 'BLOCKED':
+        return 'destructive'; // Error equivalent
+      default:
+        return 'outline';
+    }
+  };
+
+  const getPriorityBadgeVariant = (priority: TaskPriority) => {
+    switch (priority) {
+      case 'URGENT':
+        return 'destructive';
+      case 'HIGH':
+        return 'default'; // Warning equivalent often mapped to default or specific class
+      case 'MEDIUM':
+        return 'secondary'; // Primary equivalent
+      default:
+        return 'outline';
+    }
+  };
+
   return (
     <Card
-      sx={{
-        cursor: onClick ? 'pointer' : 'default',
-        '&:hover': onClick ? { boxShadow: 3 } : {},
-      }}
+      className={cn(
+        'transition-all h-full flex flex-col',
+        onClick && 'cursor-pointer hover:shadow-md',
+      )}
       onClick={handleCardClick}
     >
-      <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-          <Typography variant="h6" component="div">
-            {title}
-          </Typography>
-          <Box>
-            <IconButton
-              size="small"
-              onClick={handleEdit}
-              aria-label="Edit task"
-              data-testid="edit-task-button"
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={handleDelete}
-              aria-label="Delete task"
-              data-testid="delete-task-button"
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        </Box>
-
-        {description && (
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            {description}
-          </Typography>
-        )}
-
-        <Box display="flex" gap={1} mb={2} flexWrap="wrap">
-          <Chip label={status} color={statusColors[status]} size="small" />
-          <Chip label={priority} color={priorityColors[priority]} size="small" />
-        </Box>
-
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          {assignee && (
-            <Box display="flex" alignItems="center" gap={1}>
-              <Avatar
-                {...(assignee.avatar && { src: assignee.avatar })}
-                alt={assignee.name || assignee.email}
-                sx={{ width: 24, height: 24 }}
-              >
-                {(assignee.name || assignee.email || '?')[0]?.toUpperCase() || '?'}
-              </Avatar>
-              <Typography variant="caption" color="text.secondary">
-                {assignee.name || assignee.email || 'Unknown'}
-              </Typography>
-            </Box>
-          )}
-
-          {dueDate && (
-            <Typography variant="caption" color="text.secondary">
-              Due: {new Date(dueDate).toLocaleDateString()}
-            </Typography>
-          )}
-        </Box>
-
-        <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
-          <TaskTimer
-            taskId={id}
-            isTimerActive={isTimerActive}
-            timerStartedAt={timerStartedAt}
-            timeSpentMinutes={timeSpentMinutes}
-            onTimerUpdate={onTimerUpdate}
-          />
-          <Button
-            size="small"
-            startIcon={<AccessTimeIcon />}
-            onClick={handleOpenTimeLog}
-            sx={{ mt: 1 }}
-            aria-label="Log time manually"
-            data-testid="log-time-button"
-          >
-            Log Time Manually
+      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+        <CardTitle
+          className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
+          title={title}
+        >
+          {title}
+        </CardTitle>
+        <div className="flex gap-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEdit}>
+            <Pencil className="h-4 w-4" />
           </Button>
-        </Box>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col gap-3">
+        {description && <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>}
+
+        <div className="flex gap-2 flex-wrap">
+          <Badge variant={getStatusBadgeVariant(status)} className="capitalize">
+            {status.replace('_', ' ')}
+          </Badge>
+          <Badge variant={getPriorityBadgeVariant(priority)} className="capitalize">
+            {priority}
+          </Badge>
+        </div>
+
+        <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
+          <div className="flex justify-between items-center">
+            {assignee ? (
+              <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={assignee.avatar || ''} />
+                  <AvatarFallback className="text-[10px]">
+                    {(assignee.name || assignee.email || '?')[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                  {assignee.name || assignee.email}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">Unassigned</span>
+            )}
+
+            {dueDate && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarDays className="h-3 w-3" />
+                <span>{new Date(dueDate).toLocaleDateString()}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <TaskTimer
+              taskId={id}
+              isTimerActive={isTimerActive}
+              timerStartedAt={timerStartedAt}
+              timeSpentMinutes={timeSpentMinutes}
+              onTimerUpdate={onTimerUpdate}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-8"
+              onClick={handleOpenTimeLog}
+            >
+              <Clock className="mr-2 h-3 w-3" />
+              Log Time
+            </Button>
+          </div>
+        </div>
       </CardContent>
 
       <TimeLogDialog

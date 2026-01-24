@@ -1,31 +1,14 @@
 'use client';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { api } from '@/trpc/react';
-import {
-  AdminPanelSettings as AdminIcon,
-  CalendarToday as CalendarIcon,
-  Edit as EditIcon,
-  Email as EmailIcon,
-  Lock as LockIcon,
-  Person as PersonIcon,
-} from '@mui/icons-material';
-import {
-  Avatar,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Divider,
-  Grid,
-  List,
-  ListItem,
-  ListItemText,
-  Typography,
-} from '@mui/material';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { Edit, Lock, Shield, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
@@ -34,9 +17,9 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Typography>読み込み中...</Typography>
-      </Container>
+      <div className="container mx-auto max-w-2xl mt-8 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
     );
   }
 
@@ -46,114 +29,122 @@ export default function ProfilePage() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+    <div className="container mx-auto max-w-2xl space-y-6 py-8">
       <Card>
-        <CardContent>
-          {/* ヘッダー部分 */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <Avatar
-              {...(currentUser.avatar && { src: currentUser.avatar })}
-              alt={currentUser.name || ''}
-              sx={{ width: 80, height: 80, mr: 3 }}
-            >
-              {currentUser.name?.[0]?.toUpperCase()}
+        <CardHeader>
+          <CardTitle>プロフィール</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Header */}
+          <div className="flex gap-4">
+            <Avatar className="w-20 h-20 rounded-lg">
+              <AvatarImage src={currentUser.avatar || ''} className="object-cover" />
+              <AvatarFallback className="rounded-lg bg-primary/10">
+                <User className="w-10 h-10 text-primary" />
+              </AvatarFallback>
             </Avatar>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h5" component="h1" gutterBottom>
-                {currentUser.name}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Chip
-                  icon={currentUser.role === 'ADMIN' ? <AdminIcon /> : <PersonIcon />}
-                  label={currentUser.role === 'ADMIN' ? '管理者' : 'ユーザー'}
-                  color={currentUser.role === 'ADMIN' ? 'secondary' : 'default'}
-                  size="small"
-                />
-                <Chip
-                  label={currentUser.isActive ? 'アクティブ' : '無効'}
-                  color={currentUser.isActive ? 'success' : 'default'}
-                  size="small"
-                />
-              </Box>
-            </Box>
-          </Box>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold">{currentUser.name}</h1>
+              <div className="flex gap-2 mt-2">
+                {currentUser.role === 'ADMIN' && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Shield className="w-3 h-3" />
+                    管理者
+                  </Badge>
+                )}
+                {currentUser.isActive ? (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 bg-green-500/10 text-green-700 border-green-200"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    アクティブ
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 bg-gray-500/10 text-gray-700 border-gray-200"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-gray-500" />
+                    無効
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
 
-          <Divider sx={{ my: 3 }} />
+          <Separator />
 
-          {/* プロフィール情報 */}
-          <List>
-            <ListItem>
-              <EmailIcon sx={{ mr: 2, color: 'text.secondary' }} />
-              <ListItemText primary="メールアドレス" secondary={currentUser.email} />
-            </ListItem>
-            <ListItem>
-              <CalendarIcon sx={{ mr: 2, color: 'text.secondary' }} />
-              <ListItemText
-                primary="登録日"
-                secondary={
-                  currentUser.createdAt
+          {/* Profile Info */}
+          <div className="space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">メールアドレス</p>
+                <p className="text-base">{currentUser.email}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">登録日</p>
+                <p className="text-base">
+                  {currentUser.createdAt
                     ? format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
                         locale: ja,
                       })
-                    : '-'
-                }
-              />
-            </ListItem>
-            <ListItem>
-              <CalendarIcon sx={{ mr: 2, color: 'text.secondary' }} />
-              <ListItemText
-                primary="最終更新日"
-                secondary={
-                  currentUser.updatedAt
+                    : '-'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">最終更新日</p>
+                <p className="text-base">
+                  {currentUser.updatedAt
                     ? format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
                         locale: ja,
                       })
-                    : '-'
-                }
-              />
-            </ListItem>
-          </List>
+                    : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
 
-          <Divider sx={{ my: 3 }} />
+          <Separator />
 
-          {/* アクションボタン */}
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<EditIcon />}
-                onClick={() => router.push('/profile/edit')}
-              >
-                プロフィール編集
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<LockIcon />}
-                onClick={() => router.push('/profile/change-password')}
-              >
-                パスワード変更
-              </Button>
-            </Grid>
+          {/* Actions */}
+          <div className="flex flex-col gap-3">
+            <Button className="w-full" onClick={() => router.push('/profile/edit')}>
+              <Edit className="w-4 h-4 mr-2" />
+              プロフィール編集
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => router.push('/profile/change-password')}
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              パスワード変更
+            </Button>
             {currentUser.role === 'ADMIN' && (
-              <Grid item xs={12}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  color="secondary"
-                  startIcon={<AdminIcon />}
-                  onClick={() => router.push('/users')}
-                >
-                  ユーザー管理
-                </Button>
-              </Grid>
+              <Button variant="outline" className="w-full" onClick={() => router.push('/users')}>
+                <Shield className="w-4 h-4 mr-2" />
+                ユーザー管理
+              </Button>
             )}
-          </Grid>
+          </div>
         </CardContent>
       </Card>
-    </Container>
+    </div>
   );
 }

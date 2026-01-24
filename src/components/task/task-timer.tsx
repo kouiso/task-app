@@ -1,8 +1,8 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
-import { PlayArrow, Stop } from '@mui/icons-material';
-import { Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Loader2, PauseIcon, PlayIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface TaskTimerProps {
@@ -81,38 +81,36 @@ export function TaskTimer({
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
         <Button
-          variant={isTimerActive ? 'contained' : 'outlined'}
-          color={isTimerActive ? 'error' : 'primary'}
-          startIcon={
-            updateTimerMutation.isPending ? (
-              <CircularProgress size={20} />
-            ) : isTimerActive ? (
-              <Stop />
-            ) : (
-              <PlayArrow />
-            )
-          }
+          variant={isTimerActive ? 'destructive' : 'default'}
+          size="sm"
           onClick={handleStartStop}
           disabled={updateTimerMutation.isPending}
           aria-label={isTimerActive ? 'Stop timer' : 'Start timer'}
           data-testid={isTimerActive ? 'stop-timer-button' : 'start-timer-button'}
         >
+          {updateTimerMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : isTimerActive ? (
+            <PauseIcon className="w-4 h-4 mr-2" />
+          ) : (
+            <PlayIcon className="w-4 h-4 mr-2" />
+          )}
           {isTimerActive ? 'Stop Timer' : 'Start Timer'}
         </Button>
 
         {isTimerActive && (
-          <Typography variant="h6" color="primary" sx={{ fontFamily: 'monospace' }}>
+          <span className="text-lg font-bold font-mono text-primary">
             {formatTime(elapsedSeconds)}
-          </Typography>
+          </span>
         )}
-      </Box>
+      </div>
 
-      <Typography variant="body2" color="text.secondary">
+      <p className="text-sm text-muted-foreground">
         Total time spent: {formatMinutes(timeSpentMinutes)}
-      </Typography>
-    </Box>
+      </p>
+    </div>
   );
 }

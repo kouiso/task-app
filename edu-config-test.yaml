@@ -1,0 +1,206 @@
+# edu-config-test.yaml
+# テスト用設定（Phase 1: Day 1-4 のみ）
+
+# 安全設定
+safety:
+  max_iterations: 3
+  max_retries: 3
+  max_rpm: 10
+  timeout_seconds: 1800
+  cost_confirmation_threshold_usd: 1.0
+
+# 除外設定
+exclusions:
+  directories:
+    - node_modules
+    - .next
+    - dist
+    - build
+    - coverage
+    - .git
+    - .vercel
+    - playwright-report
+    - test-results
+    - .idea
+    - __pycache__
+    - .pnp
+    - out
+    - edu-creator
+    - e2e
+    - prompt
+  patterns:
+    - "*.log"
+    - "*.env*"
+    - "*.db"
+    - "*.db-*"
+    - "*.local"
+    - "*.pem"
+    - "*.py"
+    - "*.txt"
+
+# LLM設定（.envから読み込み、ここで上書き可能）
+llm:
+  commander_model: "gpt-5.2"
+  worker_model: "gemini-2.0-flash"
+  commander_temperature: 0.2
+  worker_temperature: 0.4
+
+# パス設定
+paths:
+  src_dir: "src"
+  output_dir: "material/30days-curriculum"
+
+# =============================================================================
+# 教育メソッド（AI自由発想 + ガイドライン）
+# =============================================================================
+teaching:
+  metaphor_policy: "flexible"  # AIが文脈に合わせて自由に考える
+
+  guidelines:
+    - "日常生活で誰でも知っているものに例える（料理、学校、ゲームなど）"
+    - "1つの概念に1つの比喩（混ぜると混乱する）"
+    - "読者が「なるほど！」と思える身近な例を選ぶ"
+    - "専門用語を使う場合は必ず直後に（）で日本語説明を入れる"
+    - "略語は初出時にフルスペル＋日本語説明を必須とする"
+
+  # 専門用語ルール
+  terminology_rules:
+    - "初出の専門用語は必ず「用語（読み方・日本語での意味）」形式で説明"
+    - "例: API（エーピーアイ：アプリ同士が会話するための窓口）"
+    - "例: Docker（ドッカー：アプリを箱詰めして持ち運べるようにするツール）"
+    - "例: npm（エヌピーエム：Node.jsのパッケージ管理ツール）"
+    - "2回目以降は説明なしでOK"
+
+  # 比喩の参考例（強制ではない、AIが参考にする程度）
+  metaphor_examples:
+    - "変数 → 箱、入れ物、ラベル付き容器など"
+    - "関数 → 自動販売機、料理のレシピ、魔法の呪文など"
+    - "配列 → ロッカー、本棚、電車の座席など"
+    - "API → レストランの注文、受付窓口、通訳者など"
+    - "データベース → 図書館、電話帳、巨大なExcelなど"
+
+# =============================================================================
+# 品質ルール（CURRICULUM_PLAN.md準拠）
+# =============================================================================
+quality_rules:
+  max_code_lines: 25          # コードブロック上限
+  max_paragraph_sentences: 3  # 段落の文上限
+  require_filepath: true      # ファイルパスコメント必須
+  require_verification: true  # 確認ポイント必須
+  require_metaphor: true      # 新概念に例え話必須
+  forbidden_words:            # 禁止語
+    - "同様に"
+    - "残りも"
+    - "以下略"
+    - "簡単です"
+    - "同じように"
+  min_tables_per_day: 4       # 1日あたり最低テーブル数
+  min_screenshots: 3          # 1日あたり最低スクショ位置
+
+# =============================================================================
+# テスト用チャプター（Phase 1: Day 1-4 のみ）
+# =============================================================================
+chapters:
+  # Phase 1: 環境構築 → 即公開
+  - id: "day01"
+    title: "開発環境を整える"
+    subtitle: "〜プログラミングの「キッチン」を準備しよう〜"
+    goal: "Node.js、Docker、VS Codeをインストールして、開発を始められる状態にする"
+    estimated_time: "3〜4時間"
+    topics:
+      - "Node.jsとは何か"
+      - "Dockerとは何か"
+      - "VS Codeのインストールと設定"
+      - "Taskランナーの使い方"
+    target_dirs:
+      - "package.json"
+      - "docker-compose.yml"
+      - "taskfile.yaml"
+    new_concepts:
+      - name: "Node.js"
+        metaphor: "JavaScriptを動かすエンジン（ブラウザの外でも動く）"
+      - name: "Docker"
+        metaphor: "お弁当箱（環境ごとパッケージして持ち運べる）"
+      - name: "Terminal"
+        metaphor: "魔法の呪文を唱える場所（コマンドで操作）"
+    success_criteria:
+      - "`node -v` でバージョンが表示される"
+      - "`docker -v` でバージョンが表示される"
+      - "VS Codeでフォルダが開ける"
+
+  - id: "day02"
+    title: "アプリを動かす"
+    subtitle: "〜ついに動く！最初の感動〜"
+    goal: "Git clone、Docker起動、task initでアプリが動く状態にする"
+    estimated_time: "2〜3時間"
+    topics:
+      - "Git cloneとは"
+      - "Docker Composeの起動"
+      - "task initで初期化"
+      - "ブラウザで動作確認"
+    target_dirs:
+      - ".git"
+      - "docker-compose.yml"
+      - "taskfile.yaml"
+      - "src/app/page.tsx"
+    new_concepts:
+      - name: "Git"
+        metaphor: "タイムマシン付きバックアップ（いつでも戻れる）"
+      - name: "Clone"
+        metaphor: "コピー機（リポジトリを丸ごとコピー）"
+    success_criteria:
+      - "`git status` でリポジトリ状態が見える"
+      - "`docker compose ps` でコンテナが起動している"
+      - "http://localhost:3000 でアプリが見える"
+
+  - id: "day03"
+    title: "GitHubに保存する"
+    subtitle: "〜クラウドにバックアップ〜"
+    goal: "変更をコミットしてGitHubにpushできるようになる"
+    estimated_time: "2〜3時間"
+    topics:
+      - "Git add/commit/pushの流れ"
+      - "GitHubアカウント作成"
+      - "SSHキーの設定"
+      - "プッシュとプルリクエスト"
+    target_dirs:
+      - ".git"
+      - ".gitignore"
+    new_concepts:
+      - name: "Commit"
+        metaphor: "セーブポイント（ゲームのセーブと同じ）"
+      - name: "Push"
+        metaphor: "クラウドに送信（Googleドライブに保存するイメージ）"
+      - name: "GitHub"
+        metaphor: "プログラマーのSNS＋クラウドストレージ"
+    success_criteria:
+      - "`git log` でコミット履歴が見える"
+      - "GitHubのリポジトリページで変更が反映されている"
+
+  - id: "day04"
+    title: "🚀 ネットに公開"
+    subtitle: "〜世界デビュー！自分のアプリがURLで見れる〜"
+    goal: "Renderにデプロイして、インターネット上でアプリを公開する"
+    estimated_time: "3〜4時間"
+    topics:
+      - "デプロイとは何か"
+      - "Renderアカウント作成"
+      - "GitHub連携"
+      - "自動デプロイの設定"
+    target_dirs:
+      - "docker-compose.yml"
+      - "package.json"
+    new_concepts:
+      - name: "Deploy"
+        metaphor: "お店をオープンする（開発したものを世界に公開）"
+      - name: "Render"
+        metaphor: "無料のレンタルサーバー（アプリを置く場所）"
+      - name: "CI/CD"
+        metaphor: "自動配達システム（pushしたら自動で更新）"
+    mermaid_required: true
+    mermaid_type: "flowchart"
+    mermaid_description: "デプロイの流れ（push→自動反映）"
+    success_criteria:
+      - "Renderのダッシュボードでデプロイ成功"
+      - "公開URLでアプリにアクセスできる"
+      - "GitHubにpushしたら自動で更新される"

@@ -1,16 +1,24 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import {
-  Box,
-  Button,
   Dialog,
-  DialogActions,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
-  Grid,
-  MenuItem,
-  TextField,
-} from '@mui/material';
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import type { TaskPriority, TaskStatus } from '@prisma/client';
 import { useEffect, useState } from 'react';
 
@@ -57,8 +65,17 @@ export function TaskDialog({
   useEffect(() => {
     if (initialData) {
       setFormData({ ...initialData });
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        status: 'TODO',
+        priority: 'MEDIUM',
+        projectId: projects[0]?.id || '',
+        assigneeId: '',
+      });
     }
-  }, [initialData]);
+  }, [initialData, projects]);
 
   const handleChange =
     (field: keyof TaskFormData) =>
@@ -80,131 +97,154 @@ export function TaskDialog({
       }
     };
 
-  const handleSubmit = () => {
+  const handleSelectChange = (field: keyof TaskFormData) => (value: string) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     onSubmit(formData);
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{initialData?.id ? 'Edit Task' : 'Create Task'}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ mt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Title"
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle>{initialData?.id ? 'Edit Task' : 'Create Task'}</DialogTitle>
+          <DialogDescription>
+            {initialData?.id ? 'Update task details.' : 'Add a new task to your project.'}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
                 value={formData.title}
                 onChange={handleChange('title')}
+                placeholder="Enter task title"
                 required
               />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
                 value={formData.description || ''}
                 onChange={handleChange('description')}
-                multiline
+                placeholder="Describe the task..."
                 rows={4}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Status"
-                value={formData.status}
-                onChange={handleChange('status')}
-              >
-                <MenuItem value="TODO">TODO</MenuItem>
-                <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
-                <MenuItem value="IN_REVIEW">In Review</MenuItem>
-                <MenuItem value="DONE">Done</MenuItem>
-                <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                <MenuItem value="BLOCKED">Blocked</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Priority"
-                value={formData.priority}
-                onChange={handleChange('priority')}
-              >
-                <MenuItem value="LOW">Low</MenuItem>
-                <MenuItem value="MEDIUM">Medium</MenuItem>
-                <MenuItem value="HIGH">High</MenuItem>
-                <MenuItem value="URGENT">Urgent</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Project"
-                value={formData.projectId}
-                onChange={handleChange('projectId')}
-                required
-              >
-                {projects.map((project) => (
-                  <MenuItem key={project.id} value={project.id}>
-                    {project.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Assignee"
-                value={formData.assigneeId || ''}
-                onChange={handleChange('assigneeId')}
-              >
-                <MenuItem value="">Unassigned</MenuItem>
-                {users.map((user) => (
-                  <MenuItem key={user.id} value={user.id}>
-                    {user.name || user.email}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Due Date"
-                type="date"
-                value={formData.dueDate || ''}
-                onChange={handleChange('dueDate')}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Estimated Hours"
-                type="number"
-                value={formData.estimatedHours ?? ''}
-                onChange={handleNumberChange('estimatedHours')}
-                inputProps={{ min: 0, step: 0.5 }}
-              />
-            </Grid>
-          </Grid>
-        </Box>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={handleSelectChange('status')}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TODO">To Do</SelectItem>
+                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                    <SelectItem value="IN_REVIEW">In Review</SelectItem>
+                    <SelectItem value="DONE">Done</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    <SelectItem value="BLOCKED">Blocked</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="priority">Priority</Label>
+                <Select value={formData.priority} onValueChange={handleSelectChange('priority')}>
+                  <SelectTrigger id="priority">
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LOW">Low</SelectItem>
+                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="URGENT">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="project">Project</Label>
+                <Select
+                  value={formData.projectId}
+                  onValueChange={handleSelectChange('projectId')}
+                  disabled={!projects.length}
+                >
+                  <SelectTrigger id="project">
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="assignee">Assignee</Label>
+                <Select
+                  value={formData.assigneeId || 'unassigned'}
+                  onValueChange={(value) =>
+                    handleSelectChange('assigneeId')(value === 'unassigned' ? '' : value)
+                  }
+                >
+                  <SelectTrigger id="assignee">
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={formData.dueDate || ''}
+                  onChange={handleChange('dueDate')}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                <Input
+                  id="estimatedHours"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.estimatedHours ?? ''}
+                  onChange={handleNumberChange('estimatedHours')}
+                  placeholder="0.0"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!formData.title || !formData.projectId}>
+              {initialData?.id ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={!formData.title || !formData.projectId}
-        >
-          {initialData?.id ? 'Update' : 'Create'}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }

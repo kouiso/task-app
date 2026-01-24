@@ -1,8 +1,17 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/app-layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { api } from '@/trpc/react';
-import { Box, Card, CardContent, CircularProgress, Grid, Paper, Typography } from '@mui/material';
+import { Loader2 } from 'lucide-react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -28,9 +37,9 @@ export default function ReportPage() {
   if (tasksLoading || projectsLoading) {
     return (
       <AppLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress />
-        </Box>
+        <div className="flex justify-center items-center h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
       </AppLayout>
     );
   }
@@ -74,231 +83,142 @@ export default function ReportPage() {
     };
   });
 
+  const completionRate =
+    tasks && tasks.length > 0
+      ? ((tasks.filter((t) => t.status === 'DONE').length / tasks.length) * 100).toFixed(1)
+      : '0';
+
   return (
     <AppLayout>
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          Reports & Statistics
-        </Typography>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Reports & Statistics</h1>
+          <p className="text-muted-foreground">Overview of project progress and task status.</p>
+        </div>
 
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" variant="body2" gutterBottom>
-                  Total Tasks
-                </Typography>
-                <Typography variant="h4">{tasks?.length || 0}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground mb-1">Total Tasks</p>
+              <p className="text-3xl font-bold">{tasks?.length || 0}</p>
+            </CardContent>
+          </Card>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" variant="body2" gutterBottom>
-                  Completion Rate
-                </Typography>
-                <Typography variant="h4">
-                  {tasks && tasks.length > 0
-                    ? (
-                        (tasks.filter((t) => t.status === 'DONE').length / tasks.length) *
-                        100
-                      ).toFixed(1)
-                    : 0}
-                  %
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground mb-1">Completion Rate</p>
+              <p className="text-3xl font-bold">{completionRate}%</p>
+            </CardContent>
+          </Card>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" variant="body2" gutterBottom>
-                  Total Time Spent
-                </Typography>
-                <Typography variant="h4">{(totalTimeSpent / 60).toFixed(1)}h</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground mb-1">Total Time Spent</p>
+              <p className="text-3xl font-bold">{(totalTimeSpent / 60).toFixed(1)}h</p>
+            </CardContent>
+          </Card>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" variant="body2" gutterBottom>
-                  Avg Time Per Task
-                </Typography>
-                <Typography variant="h4">{(averageTimePerTask / 60).toFixed(1)}h</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground mb-1">Avg Time Per Task</p>
+              <p className="text-3xl font-bold">{(averageTimePerTask / 60).toFixed(1)}h</p>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Tasks by Status
-              </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label
-                  >
-                    {statusData.map((entry) => (
-                      <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
+        {/* Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tasks by Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+                      {statusData.map((entry) => (
+                        <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
 
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Tasks by Priority
-              </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={priorityData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label
-                  >
-                    {priorityData.map((entry) => (
-                      <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
-        </Grid>
+          <Card>
+            <CardHeader>
+              <CardTitle>Tasks by Priority</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={priorityData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+                      {priorityData.map((entry) => (
+                        <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Project Statistics
-              </Typography>
-              <Box sx={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th
-                        style={{
-                          textAlign: 'left',
-                          padding: '12px',
-                          borderBottom: '2px solid #ddd',
-                        }}
-                      >
-                        Project
-                      </th>
-                      <th
-                        style={{
-                          textAlign: 'right',
-                          padding: '12px',
-                          borderBottom: '2px solid #ddd',
-                        }}
-                      >
-                        Total Tasks
-                      </th>
-                      <th
-                        style={{
-                          textAlign: 'right',
-                          padding: '12px',
-                          borderBottom: '2px solid #ddd',
-                        }}
-                      >
-                        Completed
-                      </th>
-                      <th
-                        style={{
-                          textAlign: 'right',
-                          padding: '12px',
-                          borderBottom: '2px solid #ddd',
-                        }}
-                      >
-                        Progress
-                      </th>
-                      <th
-                        style={{
-                          textAlign: 'right',
-                          padding: '12px',
-                          borderBottom: '2px solid #ddd',
-                        }}
-                      >
-                        Time Spent
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {projectStats?.map((stat) => (
-                      <tr key={stat.name}>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>
-                          {stat.name}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            padding: '12px',
-                            borderBottom: '1px solid #ddd',
-                          }}
-                        >
-                          {stat.totalTasks}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            padding: '12px',
-                            borderBottom: '1px solid #ddd',
-                          }}
-                        >
-                          {stat.completedTasks}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            padding: '12px',
-                            borderBottom: '1px solid #ddd',
-                          }}
-                        >
-                          {stat.progress}%
-                        </td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            padding: '12px',
-                            borderBottom: '1px solid #ddd',
-                          }}
-                        >
-                          {stat.totalTimeHours}h
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
+        {/* Project Statistics Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Statistics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Project</TableHead>
+                  <TableHead className="text-right">Total Tasks</TableHead>
+                  <TableHead className="text-right">Completed</TableHead>
+                  <TableHead className="text-right">Progress</TableHead>
+                  <TableHead className="text-right">Time Spent</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projectStats?.map((stat) => (
+                  <TableRow key={stat.name}>
+                    <TableCell className="font-medium">{stat.name}</TableCell>
+                    <TableCell className="text-right">{stat.totalTasks}</TableCell>
+                    <TableCell className="text-right">{stat.completedTasks}</TableCell>
+                    <TableCell className="text-right">{stat.progress}%</TableCell>
+                    <TableCell className="text-right">{stat.totalTimeHours}h</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </AppLayout>
   );
 }

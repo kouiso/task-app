@@ -10,9 +10,7 @@ const envSchema = z.object({
 
   // NextAuth
   NEXTAUTH_URL: z.string().url('NEXTAUTH_URLは有効なURL形式である必要があります'),
-  NEXTAUTH_SECRET: z
-    .string()
-    .min(32, 'NEXTAUTH_SECRETは32文字以上である必要があります'),
+  NEXTAUTH_SECRET: z.string().min(32, 'NEXTAUTH_SECRETは32文字以上である必要があります'),
 
   // JWT
   JWT_SECRET: z
@@ -57,9 +55,7 @@ const shouldSkipValidation =
     typeof window === 'undefined' &&
     !process.env['DATABASE_URL']);
 
-export const env = shouldSkipValidation
-  ? (process.env as unknown as Env)
-  : validateEnv();
+export const env = shouldSkipValidation ? (process.env as unknown as Env) : validateEnv();
 
 /**
  * 環境変数の型定義

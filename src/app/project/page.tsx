@@ -3,35 +3,29 @@
 import { AppLayout } from '@/components/layout/app-layout';
 import { ProjectCard } from '@/components/project/project-card';
 import { ProjectDialog, type ProjectFormData } from '@/components/project/project-dialog';
-import { api } from '@/trpc/react';
-import AddIcon from '@mui/icons-material/Add';
-import ArchiveIcon from '@mui/icons-material/Archive';
-import DeleteIcon from '@mui/icons-material/Delete';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import UnarchiveIcon from '@mui/icons-material/Unarchive';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  Avatar,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
   Dialog,
-  DialogActions,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
-  FormControlLabel,
-  Grid,
-  IconButton,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  MenuItem,
-  Switch,
-  TextField,
-  Typography,
-} from '@mui/material';
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { api } from '@/trpc/react';
 import type { ProjectMemberRole } from '@prisma/client';
+import { Archive, ArchiveRestore, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
 export default function ProjectPage() {
@@ -204,65 +198,58 @@ export default function ProjectPage() {
   if (projectsLoading) {
     return (
       <AppLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress />
-        </Box>
+        <div className="flex h-[60vh] items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
       </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4">Projects</Typography>
-          <Box display="flex" gap={2} alignItems="center">
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={showArchived}
-                  onChange={(e) => setShowArchived(e.target.checked)}
-                />
-              }
-              label="Show Archived"
-            />
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
-              New Project
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+              <Label htmlFor="show-archived">Show Archived</Label>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" /> New Project
             </Button>
-          </Box>
-        </Box>
+          </div>
+        </div>
 
-        <Grid container spacing={3}>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
               const taskCount = project.tasks?.length || 0;
               const doneCount = project.tasks?.filter((t) => t.status === 'DONE').length || 0;
 
               return (
-                <Grid item xs={12} sm={6} md={4} key={project.id}>
-                  <ProjectCard
-                    id={project.id}
-                    name={project.name}
-                    description={project.description}
-                    color={project.color}
-                    memberCount={project.members?.length || 0}
-                    taskStats={{ total: taskCount, done: doneCount }}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onClick={handleProjectClick}
-                    isArchived={project.isArchived}
-                  />
-                </Grid>
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={project.description}
+                  color={project.color}
+                  memberCount={project.members?.length || 0}
+                  taskStats={{ total: taskCount, done: doneCount }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={handleProjectClick}
+                  isArchived={project.isArchived}
+                />
               );
             })
           ) : (
-            <Grid item xs={12}>
-              <Typography color="text.secondary" align="center">
-                No projects found. Create your first project!
-              </Typography>
-            </Grid>
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>No projects found.</p>
+              <p>Create your first project to get started!</p>
+            </div>
           )}
-        </Grid>
+        </div>
 
         <ProjectDialog
           open={dialogOpen}
@@ -271,161 +258,168 @@ export default function ProjectPage() {
           initialData={editingProject}
         />
 
-        <Dialog open={detailOpen} onClose={handleDetailClose} maxWidth="md" fullWidth>
-          <DialogTitle>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  backgroundColor: projectDetail?.color,
-                }}
-              />
-              {projectDetail?.name}
-            </Box>
-          </DialogTitle>
-          <DialogContent>
+        <Dialog open={detailOpen} onOpenChange={(isOpen) => !isOpen && handleDetailClose()}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: projectDetail?.color }}
+                />
+                {projectDetail?.name}
+              </DialogTitle>
+              <DialogDescription>
+                {projectDetail?.description || 'No description'}
+              </DialogDescription>
+            </DialogHeader>
+
             {projectDetail && (
-              <Box>
-                <Typography variant="body1" paragraph>
-                  {projectDetail.description || 'No description'}
-                </Typography>
-
-                <Box mb={3}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Typography variant="h6">
+              <div className="space-y-6">
+                {/* Members Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">
                       Members ({projectDetail.members?.length || 0})
-                    </Typography>
-                    <Button
-                      size="small"
-                      startIcon={<PersonAddIcon />}
-                      onClick={() => setMemberDialogOpen(true)}
-                    >
-                      Add Member
+                    </h3>
+                    <Button variant="outline" size="sm" onClick={() => setMemberDialogOpen(true)}>
+                      <UserPlus className="mr-2 h-4 w-4" /> Add Member
                     </Button>
-                  </Box>
-                  <List>
+                  </div>
+                  <div className="grid gap-2">
                     {projectDetail.members?.map((member) => (
-                      <ListItem
+                      <div
                         key={member.id}
-                        secondaryAction={
-                          <IconButton
-                            edge="end"
-                            onClick={() => handleRemoveMember(member.userId)}
-                            disabled={member.role === 'OWNER'}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        }
+                        className="flex items-center justify-between p-2 rounded-lg border bg-card"
                       >
-                        <ListItemAvatar>
-                          <Avatar {...(member.user?.avatar && { src: member.user?.avatar })}>
-                            {(member.user?.name || member.user?.email || '?')[0]?.toUpperCase() ||
-                              '?'}
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={member.user?.avatar || ''} />
+                            <AvatarFallback>
+                              {(member.user?.name || member.user?.email || '?')[0]?.toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={member.user?.name || member.user?.email || 'Unknown'}
-                          secondary={<Chip label={member.role} size="small" variant="outlined" />}
-                        />
-                      </ListItem>
+                          <div>
+                            <p className="font-medium">
+                              {member.user?.name || member.user?.email || 'Unknown'}
+                            </p>
+                            <Badge variant="outline">{member.role}</Badge>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveMember(member.userId)}
+                          disabled={member.role === 'OWNER'}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     ))}
-                  </List>
-                </Box>
+                  </div>
+                </div>
 
-                <Box>
-                  <Typography variant="h6" gutterBottom>
+                {/* Tasks Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">
                     Tasks ({projectDetail.tasks?.length || 0})
-                  </Typography>
-                  <List>
+                  </h3>
+                  <div className="grid gap-2">
                     {projectDetail.tasks?.map((task) => (
-                      <ListItem key={task.id}>
-                        <ListItemText
-                          primary={task.title}
-                          secondary={
-                            <Box display="flex" gap={1} mt={0.5}>
-                              <Chip label={task.status} size="small" />
-                              <Chip label={task.priority} size="small" />
-                            </Box>
-                          }
-                        />
-                      </ListItem>
+                      <div
+                        key={task.id}
+                        className="flex flex-col gap-1 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      >
+                        <p className="font-medium">{task.title}</p>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary">{task.status}</Badge>
+                          <Badge variant="outline">{task.priority}</Badge>
+                        </div>
+                      </div>
                     ))}
-                  </List>
-                </Box>
-              </Box>
+                  </div>
+                </div>
+              </div>
             )}
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <div className="flex-1 flex justify-start">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    projectDetail && handleArchive(projectDetail.id, projectDetail.isArchived)
+                  }
+                >
+                  {projectDetail?.isArchived ? (
+                    <>
+                      <ArchiveRestore className="mr-2 h-4 w-4" /> Unarchive
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="mr-2 h-4 w-4" /> Archive
+                    </>
+                  )}
+                </Button>
+              </div>
+              <Button onClick={handleDetailClose}>Close</Button>
+            </DialogFooter>
           </DialogContent>
-          <DialogActions>
-            <Box sx={{ flex: 1 }}>
-              <Button
-                startIcon={projectDetail?.isArchived ? <UnarchiveIcon /> : <ArchiveIcon />}
-                onClick={() =>
-                  projectDetail && handleArchive(projectDetail.id, projectDetail.isArchived)
-                }
-              >
-                {projectDetail?.isArchived ? 'Unarchive' : 'Archive'}
-              </Button>
-            </Box>
-            <Button onClick={handleDetailClose}>Close</Button>
-          </DialogActions>
         </Dialog>
 
-        <Dialog
-          open={memberDialogOpen}
-          onClose={() => setMemberDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Add Member</DialogTitle>
-          <DialogContent>
-            <Box sx={{ mt: 2 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="User"
-                    value={newMemberUserId}
-                    onChange={(e) => setNewMemberUserId(e.target.value)}
-                  >
+        <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Member</DialogTitle>
+              <DialogDescription>Add a new member to this project.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="user">User</Label>
+                <Select value={newMemberUserId} onValueChange={setNewMemberUserId}>
+                  <SelectTrigger id="user">
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {users
                       ?.filter(
                         (user) =>
                           !projectDetail?.members?.some((member) => member.userId === user.id),
                       )
                       .map((user) => (
-                        <MenuItem key={user.id} value={user.id}>
+                        <SelectItem key={user.id} value={user.id}>
                           {user.name || user.email}
-                        </MenuItem>
+                        </SelectItem>
                       ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Role"
-                    value={newMemberRole}
-                    onChange={(e) => setNewMemberRole(e.target.value as ProjectMemberRole)}
-                  >
-                    <MenuItem value="MEMBER">Member</MenuItem>
-                    <MenuItem value="ADMIN">Admin</MenuItem>
-                    <MenuItem value="VIEWER">Viewer</MenuItem>
-                  </TextField>
-                </Grid>
-              </Grid>
-            </Box>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="role">Role</Label>
+                <Select
+                  value={newMemberRole}
+                  onValueChange={(value) => setNewMemberRole(value as ProjectMemberRole)}
+                >
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MEMBER">Member</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+                Add Member
+              </Button>
+            </DialogFooter>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setMemberDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddMember} variant="contained" disabled={!newMemberUserId}>
-              Add
-            </Button>
-          </DialogActions>
         </Dialog>
-      </Box>
+      </div>
     </AppLayout>
   );
 }

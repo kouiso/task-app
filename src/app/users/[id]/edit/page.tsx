@@ -1,24 +1,21 @@
 'use client';
 
-import { api } from '@/trpc/react';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Checkbox,
-  Container,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
   Select,
-  TextField,
-  Typography,
-} from '@mui/material';
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { api } from '@/trpc/react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -35,13 +32,9 @@ export default function UserEditPage() {
     isActive: true,
   });
 
-  // 現在のユーザー情報を取得
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
-
-  // 対象ユーザー情報を取得
   const { data: user, isLoading } = api.user.getById.useQuery({ id: userId });
 
-  // ユーザー更新mutation
   const updateUser = api.user.updateUser.useMutation({
     onSuccess: () => {
       toast.success('ユーザー情報を更新しました');
@@ -52,7 +45,6 @@ export default function UserEditPage() {
     },
   });
 
-  // ユーザー情報を取得したらフォームにセット
   useEffect(() => {
     if (user) {
       setFormData({
@@ -72,11 +64,7 @@ export default function UserEditPage() {
     });
   };
 
-  const handleChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { name: string; value: string } },
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -84,167 +72,155 @@ export default function UserEditPage() {
     }));
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: checked,
-    }));
-  };
-
   if (isLoading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Typography>読み込み中...</Typography>
-      </Container>
+      <div className="container mx-auto max-w-md mt-8 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
     );
   }
 
   if (!user) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
+      <div className="container mx-auto max-w-md mt-8">
         <Card>
-          <CardContent>
-            <Typography>ユーザーが見つかりません</Typography>
+          <CardContent className="pt-6">
+            <p>ユーザーが見つかりません</p>
           </CardContent>
         </Card>
-      </Container>
+      </div>
     );
   }
 
-  // 権限チェック：管理者のみ編集可能
   const isAdmin = currentUser?.role === 'ADMIN';
   if (!isAdmin) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
+      <div className="container mx-auto max-w-md mt-8">
         <Card>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              アクセス権限がありません
-            </Typography>
-            <Typography color="text.secondary">管理者のみユーザー編集が可能です</Typography>
+          <CardContent className="pt-6">
+            <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
+            <p className="text-muted-foreground">管理者のみユーザー編集が可能です</p>
           </CardContent>
         </Card>
-      </Container>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      {/* 戻るボタン */}
+    <div className="container mx-auto max-w-md mt-8 mb-8">
       <Button
-        startIcon={<ArrowBackIcon />}
+        variant="ghost"
+        className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
         onClick={() => router.push(`/users/${userId}`)}
-        sx={{ mb: 2 }}
       >
+        <ArrowLeft className="mr-2 h-4 w-4" />
         戻る
       </Button>
 
       <Card>
+        <CardHeader>
+          <CardTitle>ユーザー編集</CardTitle>
+        </CardHeader>
         <CardContent>
-          <Typography variant="h5" component="h1" gutterBottom>
-            ユーザー編集
-          </Typography>
-
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }} noValidate>
-            {/* アバタープレビュー */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-              <Avatar
-                {...(formData.avatar && { src: formData.avatar })}
-                alt={formData.name}
-                sx={{ width: 100, height: 100 }}
-              >
-                {formData.name?.[0]?.toUpperCase()}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex justify-center mb-6">
+              <Avatar className="w-24 h-24">
+                <AvatarImage src={formData.avatar} />
+                <AvatarFallback className="text-2xl">
+                  {formData.name?.[0]?.toUpperCase()}
+                </AvatarFallback>
               </Avatar>
-            </Box>
+            </div>
 
-            {/* 名前 */}
-            <TextField
-              fullWidth
-              label="名前"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              margin="normal"
-              disabled={updateUser.isPending}
-            />
-
-            {/* メールアドレス（編集不可） */}
-            <TextField
-              fullWidth
-              label="メールアドレス"
-              value={user.email}
-              disabled
-              margin="normal"
-              helperText="メールアドレスは変更できません"
-            />
-
-            {/* アバターURL */}
-            <TextField
-              fullWidth
-              label="アバターURL（任意）"
-              name="avatar"
-              type="url"
-              value={formData.avatar}
-              onChange={handleChange}
-              margin="normal"
-              disabled={updateUser.isPending}
-              helperText="画像のURLを入力してください"
-            />
-
-            {/* ロール選択 */}
-            <FormControl fullWidth margin="normal">
-              <InputLabel>ロール</InputLabel>
-              <Select
-                name="role"
-                value={formData.role}
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                名前 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
-                label="ロール"
+                required
+                disabled={updateUser.isPending}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">メールアドレス</Label>
+              <Input id="email" value={user.email} disabled />
+              <p className="text-xs text-muted-foreground">メールアドレスは変更できません</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="avatar">アバターURL（任意）</Label>
+              <Input
+                id="avatar"
+                name="avatar"
+                type="url"
+                value={formData.avatar}
+                onChange={handleChange}
+                disabled={updateUser.isPending}
+                placeholder="https://example.com/avatar.png"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">ロール</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, role: value as 'USER' | 'ADMIN' }))
+                }
                 disabled={updateUser.isPending}
               >
-                <MenuItem value="USER">ユーザー</MenuItem>
-                <MenuItem value="ADMIN">管理者</MenuItem>
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">ユーザー</SelectItem>
+                  <SelectItem value="ADMIN">管理者</SelectItem>
+                </SelectContent>
               </Select>
-            </FormControl>
+            </div>
 
-            {/* アクティブ状態 */}
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleCheckboxChange}
-                  disabled={updateUser.isPending}
-                />
-              }
-              label="アクティブ"
-            />
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isActive"
+                checked={formData.isActive}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, isActive: checked as boolean }))
+                }
+                disabled={updateUser.isPending}
+              />
+              <Label htmlFor="isActive">アクティブ</Label>
+            </div>
 
-            {/* エラーメッセージ */}
             {updateUser.error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {updateUser.error.message}
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{updateUser.error.message}</AlertDescription>
               </Alert>
             )}
 
-            {/* ボタン */}
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-              <Button type="submit" variant="contained" disabled={updateUser.isPending} fullWidth>
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" className="w-full" disabled={updateUser.isPending}>
                 {updateUser.isPending ? '更新中...' : '更新'}
               </Button>
               <Button
-                variant="outlined"
+                type="button"
+                variant="outline"
+                className="w-full"
                 onClick={() => router.push(`/users/${userId}`)}
                 disabled={updateUser.isPending}
-                fullWidth
               >
                 キャンセル
               </Button>
-            </Box>
-          </Box>
+            </div>
+          </form>
         </CardContent>
       </Card>
-    </Container>
+    </div>
   );
 }

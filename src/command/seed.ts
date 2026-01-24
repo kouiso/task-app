@@ -16,8 +16,6 @@ class Seed {
   }
 
   async seed(): Promise<void> {
-    console.log('🌱 シードデータの投入を開始します');
-
     const developerEmail = process.env['_DEVELOPER_EMAIL'] || 'admin@example.com';
     const developerName =
       process.env['_DEVELOPER_LASTNAME'] && process.env['_DEVELOPER_FIRSTNAME']
@@ -28,12 +26,9 @@ class Seed {
     await this.createProjects(developerEmail);
     await this.createTasks(developerEmail);
     await this.createComments(developerEmail);
-
-    console.log('✅ シードデータの投入が完了しました');
   }
 
   async createUsers(developerEmail: string, developerName: string) {
-    console.log('👤 ユーザーを作成中...');
     const hashedPassword = await bcrypt.hash('password123', 10);
 
     await this.prisma.user.upsert({
@@ -71,13 +66,9 @@ class Seed {
         isActive: true,
       },
     });
-
-    console.log('✓ ユーザー作成完了');
   }
 
   async createProjects(developerEmail: string) {
-    console.log('📁 プロジェクトを作成中...');
-
     const user1 = await this.prisma.user.findUniqueOrThrow({
       where: { email: developerEmail },
     });
@@ -141,13 +132,9 @@ class Seed {
         },
       },
     });
-
-    console.log('✓ プロジェクト作成完了');
   }
 
   async createTasks(developerEmail: string) {
-    console.log('📝 タスクを作成中...');
-
     const user1 = await this.prisma.user.findUniqueOrThrow({
       where: { email: developerEmail },
     });
@@ -234,13 +221,9 @@ class Seed {
         },
       }),
     ]);
-
-    console.log('✓ タスク作成完了');
   }
 
   async createComments(developerEmail: string) {
-    console.log('💬 コメントを作成中...');
-
     const user1 = await this.prisma.user.findUniqueOrThrow({
       where: { email: developerEmail },
     });
@@ -257,7 +240,6 @@ class Seed {
     const task2 = tasks[1];
 
     if (!task1 || !task2) {
-      console.log('⚠ タスクが不足しているためコメント作成をスキップ');
       return;
     }
 
@@ -276,8 +258,6 @@ class Seed {
         userId: user2.id,
       },
     });
-
-    console.log('✓ コメント作成完了');
   }
 }
 

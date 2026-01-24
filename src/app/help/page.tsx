@@ -1,17 +1,13 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/app-layout';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Card,
-  CardContent,
-  Divider,
-  Typography,
-} from '@mui/material';
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const faqs = [
   {
@@ -59,67 +55,76 @@ const faqs = [
 export default function HelpPage() {
   return (
     <AppLayout>
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          Help & Documentation
-        </Typography>
-        <Typography variant="body1" color="text.secondary" mb={4}>
-          Find answers to common questions and learn how to use Task App effectively.
-        </Typography>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Help & Documentation</h1>
+          <p className="text-muted-foreground">
+            Find answers to common questions and learn how to use Task App effectively.
+          </p>
+        </div>
 
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Getting Started
-            </Typography>
-            <Divider sx={{ my: 2 }} />
-            <Typography paragraph>
-              <strong>1. Create a Project:</strong> Start by creating a project to organize your
-              tasks. Each project can have its own team members and settings.
-            </Typography>
-            <Typography paragraph>
-              <strong>2. Add Team Members:</strong> Invite your team by adding them as project
-              members. Assign appropriate roles based on their responsibilities.
-            </Typography>
-            <Typography paragraph>
-              <strong>3. Create Tasks:</strong> Break down your work into tasks. Assign tasks to
-              team members, set due dates, and track progress.
-            </Typography>
-            <Typography paragraph>
-              <strong>4. Track Progress:</strong> Use the dashboard to monitor overall progress,
-              view weekly reports, and check your personal task list.
-            </Typography>
+        <Card>
+          <CardHeader>
+            <CardTitle>Getting Started</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="font-semibold">1. Create a Project:</p>
+              <p className="text-sm text-muted-foreground">
+                Start by creating a project to organize your tasks. Each project can have its own
+                team members and settings.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold">2. Add Team Members:</p>
+              <p className="text-sm text-muted-foreground">
+                Invite your team by adding them as project members. Assign appropriate roles based
+                on their responsibilities.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold">3. Create Tasks:</p>
+              <p className="text-sm text-muted-foreground">
+                Break down your work into tasks. Assign tasks to team members, set due dates, and
+                track progress.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold">4. Track Progress:</p>
+              <p className="text-sm text-muted-foreground">
+                Use the dashboard to monitor overall progress, view weekly reports, and check your
+                personal task list.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Typography variant="h5" gutterBottom>
-          Frequently Asked Questions
-        </Typography>
-        <Box>
-          {faqs.map((faq) => (
-            <Accordion key={faq.question}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight="medium">{faq.question}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography color="text.secondary">{faq.answer}</Typography>
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </Box>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+          <Accordion type="single" collapsible className="w-full space-y-2">
+            {faqs.map((faq) => (
+              <AccordionItem key={faq.question} value={faq.question}>
+                <AccordionTrigger className="font-medium">{faq.question}</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
 
-        <Card sx={{ mt: 4 }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Need More Help?</CardTitle>
+          </CardHeader>
           <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Need More Help?
-            </Typography>
-            <Typography color="text.secondary">
+            <p className="text-sm text-muted-foreground">
               If you cannot find the answer to your question, please contact support at{' '}
-              <a href="mailto:support@taskapp.com">support@taskapp.com</a>
-            </Typography>
+              <a href="mailto:support@taskapp.com" className="text-primary hover:underline">
+                support@taskapp.com
+              </a>
+            </p>
           </CardContent>
         </Card>
-      </Box>
+      </div>
     </AppLayout>
   );
 }
