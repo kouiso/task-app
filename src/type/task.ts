@@ -1,73 +1,93 @@
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export type Status = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+import type { Prisma } from '@prisma/client';
 
-export interface TaskWithRelations {
-  id: string;
+export type Task = Prisma.TaskGetPayload<{
+  include: {
+    project: true;
+    createdBy: {
+      select: {
+        id: true;
+        name: true;
+        email: true;
+        avatar: true;
+      };
+    };
+    assignee: {
+      select: {
+        id: true;
+        name: true;
+        email: true;
+        avatar: true;
+      };
+    };
+    comments: {
+      include: {
+        user: {
+          select: {
+            id: true;
+            name: true;
+            email: true;
+            avatar: true;
+          };
+        };
+      };
+    };
+  };
+}>;
+
+export type TaskWithoutRelations = Prisma.TaskGetPayload<Record<string, never>>;
+
+export type TaskCreateInput = {
   title: string;
   description?: string;
-  priority: Priority;
-  status: Status;
-  assigneeId?: string;
+  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  dueDate?: string;
+  estimatedHours?: number;
+  projectId: string;
   createdById: string;
+  assigneeId?: string;
+};
+
+export type TaskUpdateInput = {
+  id: string;
+  title?: string;
+  description?: string | null;
+  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  dueDate?: string | null;
+  completedAt?: string | null;
+  estimatedHours?: number | null;
+  actualHours?: number;
+  assigneeId?: string | null;
+};
+
+export type TaskFilterInput = {
   projectId?: string;
-  dueDate?: Date;
-  estimatedTime?: number;
-  actualTime?: number;
-  timeSpentMinutes?: number;
-  isTimerActive?: boolean;
-  timerStartedAt?: Date;
-  completedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  assignee?: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  createdBy: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  project?: {
-    id: string;
-    name: string;
-  };
-  timeEntries: {
-    id: string;
-    minutes: number;
-    description?: string;
-    createdAt: Date;
-  }[];
-  comments: {
-    id: string;
-    content: string;
-    createdAt: Date;
-    user: {
-      id: string;
-      name: string;
-      email: string;
-    };
-  }[];
-}
+  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+  assigneeId?: string;
+};
 
-export interface FormattedTime {
-  hours: number;
-  minutes: number;
-  formatted: string;
-  display: string;
-}
+export type TaskTimerAction = {
+  id: string;
+  action: 'start' | 'stop';
+};
 
-export function formatMinutesToTime(minutes: number): FormattedTime {
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  const formatted = `${hours}:${remainingMinutes.toString().padStart(2, '0')}`;
-  const display = formatted;
+export type TaskTimeUpdateInput = {
+  id: string;
+  minutesToAdd: number;
+};
 
-  return {
-    hours,
-    minutes: remainingMinutes,
-    formatted,
-    display,
-  };
-}
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+export const TASK_STATUSES = [
+  'TODO',
+  'IN_PROGRESS',
+  'IN_REVIEW',
+  'DONE',
+  'CANCELLED',
+  'BLOCKED',
+] as const;
+
+export const TASK_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const;

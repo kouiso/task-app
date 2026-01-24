@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/component/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,10 +8,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/component/ui/dialog';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { Textarea } from '@/component/ui/textarea';
 import { useEffect, useState } from 'react';
 
 interface ProjectDialogProps {

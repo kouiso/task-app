@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/component/ui/button';
 import { api } from '@/trpc/react';
 import { Loader2, PauseIcon, PlayIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';

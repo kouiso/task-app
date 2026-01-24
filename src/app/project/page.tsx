@@ -1,11 +1,11 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { ProjectCard } from '@/components/project/project-card';
-import { ProjectDialog, type ProjectFormData } from '@/components/project/project-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { AppLayout } from '@/component/layout/app-layout';
+import { ProjectCard } from '@/component/project/project-card';
+import { ProjectDialog, type ProjectFormData } from '@/component/project/project-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,22 +13,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+} from '@/component/ui/dialog';
+import { Label } from '@/component/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+} from '@/component/ui/select';
+import { Switch } from '@/component/ui/switch';
 import { api } from '@/trpc/react';
 import type { ProjectMemberRole } from '@prisma/client';
 import { Archive, ArchiveRestore, Plus, Trash2, UserPlus } from 'lucide-react';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
-export default function ProjectPage() {
+function ProjectPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
@@ -37,6 +38,16 @@ export default function ProjectPage() {
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>('MEMBER');
   const [showArchived, setShowArchived] = useState(false);
+
+  const searchParams = useSearchParams();
+  const projectIdParam = searchParams.get('projectId');
+
+  useEffect(() => {
+    if (projectIdParam) {
+      setSelectedProject(projectIdParam);
+      setDetailOpen(true);
+    }
+  }, [projectIdParam]);
 
   const utils = api.useUtils();
 
@@ -421,5 +432,21 @@ export default function ProjectPage() {
         </Dialog>
       </div>
     </AppLayout>
+  );
+}
+
+export default function ProjectPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppLayout>
+          <div className="flex h-[60vh] items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        </AppLayout>
+      }
+    >
+      <ProjectPageContent />
+    </Suspense>
   );
 }

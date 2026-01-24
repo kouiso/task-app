@@ -1,13 +1,13 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
+import { AppLayout } from '@/component/layout/app-layout';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+} from '@/component/ui/accordion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 
 const faqs = [
   {

@@ -78,7 +78,7 @@ process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/task_app_test'
 
 ```json
 {
-  "scripts": {
+  "script": {
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
@@ -441,7 +441,7 @@ jobs:
 
 ```json
 {
-  "scripts": {
+  "script": {
     "test": "vitest",
     "test:e2e": "playwright test",
     "lint": "eslint .",

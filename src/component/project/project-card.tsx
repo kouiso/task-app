@@ -1,8 +1,8 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { cn } from '@/lib/utils';
 import { Pencil, Trash2, Users } from 'lucide-react';
 

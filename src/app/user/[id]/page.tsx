@@ -1,10 +1,10 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { Separator } from '@/component/ui/separator';
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/component/ui/table';
 import { api } from '@/trpc/react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -179,7 +179,7 @@ export default function UserDetailPage() {
                       key={member.id}
                       className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
                       style={{ backgroundColor: member.project.color }}
-                      onClick={() => router.push(`/project/${member.project.id}`)}
+                      onClick={() => router.push(`/project?projectId=${member.project.id}`)}
                     >
                       {member.project.name}
                     </Badge>
@@ -214,7 +214,7 @@ export default function UserDetailPage() {
                       <TableRow
                         key={task.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => router.push(`/task/${task.id}`)}
+                        onClick={() => router.push(`/task?taskId=${task.id}`)}
                       >
                         <TableCell className="font-medium">{task.title}</TableCell>
                         <TableCell>

@@ -1,15 +1,15 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { TaskCard } from '@/components/task/task-card';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/component/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
 import { api } from '@/trpc/react';
 import type { TaskStatus } from '@prisma/client';
 import { useState } from 'react';
