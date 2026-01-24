@@ -1155,7 +1155,7 @@ Day 4〜30の全ファイルをテンプレート骨格で作成:
 ### Step 4: PDF生成・確認
 
 ```bash
-./script/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
+./scripts/generate_pdf.sh single material/30days-curriculum/dayXX_xxx.md
 ```
 
 ---
