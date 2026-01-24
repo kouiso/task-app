@@ -24,22 +24,22 @@ jobs:
         run: |
           # 未使用パッケージを取得（エラーが発生しても続行）
           UNUSED_DEPS=$(npm run check:unused-deps --silent || echo '{"dependencies":{},"devDependencies":{}}')
-          
+
           # 結果をファイルに保存
           echo "$UNUSED_DEPS" > unused_deps.json
-          
+
           # デバッグ用に内容を表示
           echo "Unused dependencies JSON:"
           cat unused_deps.json
-          
+
           # 未使用の依存関係を抽出（jqを使用して直接配列として取得）
           UNUSED_DEPENDENCIES=$(jq -r '.dependencies | keys | join(", ")' unused_deps.json 2>/dev/null || echo "")
           UNUSED_DEV_DEPENDENCIES=$(jq -r '.devDependencies | keys | join(", ")' unused_deps.json 2>/dev/null || echo "")
-          
+
           # デバッグ用に出力
           echo "Extracted dependencies: $UNUSED_DEPENDENCIES"
           echo "Extracted dev dependencies: $UNUSED_DEV_DEPENDENCIES"
-          
+
           # 出力用の変数を設定
           if [ -n "$UNUSED_DEPENDENCIES" ] && [ "$UNUSED_DEPENDENCIES" != "" ]; then
             echo "has_unused_deps=true" >> $GITHUB_OUTPUT
@@ -48,7 +48,7 @@ jobs:
             echo "has_unused_deps=false" >> $GITHUB_OUTPUT
             echo "unused_dependencies=none" >> $GITHUB_OUTPUT
           fi
-          
+
           if [ -n "$UNUSED_DEV_DEPENDENCIES" ] && [ "$UNUSED_DEV_DEPENDENCIES" != "" ]; then
             echo "has_unused_dev_deps=true" >> $GITHUB_OUTPUT
             echo "unused_dev_dependencies=$UNUSED_DEV_DEPENDENCIES" >> $GITHUB_OUTPUT
@@ -56,7 +56,7 @@ jobs:
             echo "has_unused_dev_deps=false" >> $GITHUB_OUTPUT
             echo "unused_dev_dependencies=none" >> $GITHUB_OUTPUT
           fi
-          
+
           # このステップは常に成功として終了
           exit 0
 
@@ -69,20 +69,20 @@ jobs:
             // NOTE: デバッグ用に出力を追加
             console.log('Unused dependencies:', '${{ steps.check-unused-deps.outputs.unused_dependencies }}');
             console.log('Unused dev dependencies:', '${{ steps.check-unused-deps.outputs.unused_dev_dependencies }}');
-            
+
             // 未使用パッケージの情報を取得
             const unusedDeps = '${{ steps.check-unused-deps.outputs.unused_dependencies }}' || 'none';
             const unusedDevDeps = '${{ steps.check-unused-deps.outputs.unused_dev_dependencies }}' || 'none';
             const hasUnusedDeps = '${{ steps.check-unused-deps.outputs.has_unused_deps }}' === 'true';
             const hasUnusedDevDeps = '${{ steps.check-unused-deps.outputs.has_unused_dev_deps }}' === 'true';
-            
+
             // コメント本文の作成
             let commentBody = '## 📦 未使用パッケージの検出\n\n';
-            
+
             // 依存関係の処理
             if (hasUnusedDeps && unusedDeps !== 'none') {
               commentBody += '### 未使用の依存関係\n\n';
-              
+
               // 数字のみの場合は「なし」と表示
               if (/^[\d\s,]+$/.test(unusedDeps)) {
                 commentBody += '未使用の依存関係は検出されませんでした。\n\n';
@@ -92,7 +92,7 @@ jobs:
                   // 数字のみの項目をフィルタリング
                   return dep.trim() !== '' && !/^\d+$/.test(dep.trim());
                 });
-                
+
                 if (depsArray.length > 0) {
                   commentBody += depsArray.map(dep => `- \`${dep.trim()}\``).join('\n');
                   commentBody += '\n\n';
@@ -104,11 +104,11 @@ jobs:
               commentBody += '### 未使用の依存関係\n\n';
               commentBody += '未使用の依存関係は検出されませんでした。\n\n';
             }
-            
+
             // 開発依存関係の処理
             if (hasUnusedDevDeps && unusedDevDeps !== 'none') {
               commentBody += '### 未使用の開発依存関係\n\n';
-              
+
               // 数字のみの場合は「なし」と表示
               if (/^[\d\s,]+$/.test(unusedDevDeps)) {
                 commentBody += '未使用の開発依存関係は検出されませんでした。\n\n';
@@ -118,7 +118,7 @@ jobs:
                   // 数字のみの項目をフィルタリング
                   return dep.trim() !== '' && !/^\d+$/.test(dep.trim());
                 });
-                
+
                 if (devDepsArray.length > 0) {
                   commentBody += devDepsArray.map(dep => `- \`${dep.trim()}\``).join('\n');
                   commentBody += '\n\n';
@@ -130,22 +130,22 @@ jobs:
               commentBody += '### 未使用の開発依存関係\n\n';
               commentBody += '未使用の開発依存関係は検出されませんでした。\n\n';
             }
-            
+
             commentBody += '> 注意: これらのパッケージはコード内で直接参照されていないことが検出されました。ただし、間接的に使用されている可能性もあります。不要なパッケージは削除を検討してください。';
-            
+
             // コメント識別子
             const commentIdentifier = '<!-- unused-packages-check -->';
             commentBody = commentIdentifier + '\n' + commentBody;
-            
+
             // 既存のコメントを検索
             const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo
             });
-            
+
             const existingComment = comments.find(comment => comment.body.includes(commentIdentifier));
-            
+
             if (existingComment) {
               // 既存のコメントを更新
               await github.rest.issues.updateComment({
@@ -162,4 +162,4 @@ jobs:
                 repo: context.repo.repo,
                 body: commentBody
               });
-            }                
+            }

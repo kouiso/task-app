@@ -1,0 +1,258 @@
+# edu-config.yaml for task-app
+# 教材生成ツールの設定ファイル
+
+# 安全設定
+safety:
+  max_iterations: 3          # タスクごとの最大リトライ回数
+  max_retries: 3             # エージェントごとの再試行回数
+  max_rpm: 10                # レート制限（毎分10リクエスト）
+  timeout_seconds: 1800      # 30分でタイムアウト
+  cost_confirmation_threshold_usd: 1.0  # $1以上で確認ダイアログ
+
+# 除外設定
+exclusions:
+  directories:
+    - node_modules
+    - .next
+    - dist
+    - build
+    - coverage
+    - .git
+    - .vercel
+    - playwright-report
+    - test-results
+    - .idea
+    - __pycache__
+    - .pnp
+    - out
+    - edu-generator
+    - e2e
+    - prompt
+  patterns:
+    - "*.log"
+    - "*.env*"
+    - "*.db"
+    - "*.db-*"
+    - "*.local"
+    - "*.pem"
+    - "*.py"
+    - "*.txt"
+
+# LLM設定
+llm:
+  commander_model: "gpt-4.1"           # PM用（有料・最小限使用）
+  worker_model: "gemini-1.5-flash"     # 作業員用（無料）
+  commander_temperature: 0.2           # 判断は低めで一貫性重視
+  worker_temperature: 0.4              # 執筆は少し創造性を
+
+# パス設定
+paths:
+  src_dir: "src"
+  output_dir: "material/30days-curriculum"
+
+# 教育メソッド（比喩辞典）
+teaching:
+  metaphors:
+    Variable: "名前のついたお弁当箱"
+    Function: "魔法のレンジ（材料を入れると料理が出る）"
+    Array: "学校のロッカー（番号で管理）"
+    Object: "プロフィールカード"
+    Class: "ロボットの設計図"
+    Promise: "ピザの引換券（後で届く）"
+    API: "レストランの注文システム"
+    Database: "超巨大な電話帳"
+    Component: "レゴブロック"
+    Props: "レゴの接続部分"
+    State: "ゲームのセーブデータ"
+    Hook: "便利な道具箱"
+    TypeScript: "料理のレシピに材料リストを書く"
+    Interface: "契約書（約束事を書いたもの）"
+    Async/Await: "宅配便の追跡（届くまで待つ）"
+
+# 30日間カリキュラム
+chapters:
+  # Week 1: 基礎固め
+  - id: "day01"
+    title: "環境構築の第一歩"
+    subtitle: "〜プログラミングの「キッチン」を準備しよう〜"
+    topics: ["Node.js", "npm", "VS Code", "ターミナル基礎"]
+    target_dirs: ["package.json", "tsconfig.json"]
+
+  - id: "day02"
+    title: "TypeScriptの基礎"
+    subtitle: "〜お弁当箱に名前をつけよう〜"
+    topics: ["変数", "型", "const/let", "基本的な型"]
+    target_dirs: ["src/lib/", "src/types/"]
+
+  - id: "day03"
+    title: "Reactコンポーネント入門"
+    subtitle: "〜レゴブロックでページを組み立てよう〜"
+    topics: ["コンポーネント", "JSX", "props", "children"]
+    target_dirs: ["src/components/", "src/app/"]
+
+  - id: "day04"
+    title: "Reactの状態管理"
+    subtitle: "〜ゲームのセーブデータを作ろう〜"
+    topics: ["useState", "state", "イベントハンドラ"]
+    target_dirs: ["src/components/", "src/hooks/"]
+
+  - id: "day05"
+    title: "Hooksの世界"
+    subtitle: "〜便利な道具箱を開けてみよう〜"
+    topics: ["useEffect", "useCallback", "useMemo", "カスタムHooks"]
+    target_dirs: ["src/hooks/", "src/components/"]
+
+  # Week 2: データとAPI
+  - id: "day06"
+    title: "データベース入門"
+    subtitle: "〜超巨大な電話帳を作ろう〜"
+    topics: ["Prisma", "スキーマ", "モデル", "リレーション"]
+    target_dirs: ["prisma/", "src/lib/prisma.ts"]
+
+  - id: "day07"
+    title: "API設計の基礎"
+    subtitle: "〜レストランの注文システムを作ろう〜"
+    topics: ["tRPC", "ルーター", "プロシージャ"]
+    target_dirs: ["src/server/", "src/trpc/"]
+
+  - id: "day08"
+    title: "認証システム"
+    subtitle: "〜アプリに鍵をかけよう〜"
+    topics: ["NextAuth", "セッション", "ログイン"]
+    target_dirs: ["src/lib/session.ts", "src/app/login/"]
+
+  - id: "day09"
+    title: "フォームとバリデーション"
+    subtitle: "〜入力チェックの門番を作ろう〜"
+    topics: ["フォーム", "バリデーション", "エラーハンドリング"]
+    target_dirs: ["src/components/", "src/app/register/"]
+
+  - id: "day10"
+    title: "スタイリング入門"
+    subtitle: "〜アプリにおしゃれな服を着せよう〜"
+    topics: ["Material UI", "テーマ", "レスポンシブ"]
+    target_dirs: ["src/styles/", "src/lib/theme.ts"]
+
+  # Week 3: 機能実装
+  - id: "day11"
+    title: "タスク管理機能"
+    subtitle: "〜TODOリストを作ろう〜"
+    topics: ["CRUD", "タスク作成", "タスク編集"]
+    target_dirs: ["src/components/task/", "src/server/"]
+
+  - id: "day12"
+    title: "プロジェクト管理機能"
+    subtitle: "〜タスクをフォルダ分けしよう〜"
+    topics: ["プロジェクト", "グループ化", "フィルタリング"]
+    target_dirs: ["src/components/project/", "src/app/project/"]
+
+  - id: "day13"
+    title: "検索機能の実装"
+    subtitle: "〜探し物を見つけよう〜"
+    topics: ["検索", "フィルター", "ソート"]
+    target_dirs: ["src/app/search/", "src/components/"]
+
+  - id: "day14"
+    title: "ダッシュボード"
+    subtitle: "〜情報を一目で見よう〜"
+    topics: ["ダッシュボード", "集計", "グラフ"]
+    target_dirs: ["src/app/dashboard/", "src/components/"]
+
+  - id: "day15"
+    title: "レポート機能"
+    subtitle: "〜進捗を報告しよう〜"
+    topics: ["レポート", "週次", "統計"]
+    target_dirs: ["src/app/report/", "src/components/"]
+
+  # Week 4: 高度な機能
+  - id: "day16"
+    title: "タイマー機能"
+    subtitle: "〜作業時間を計ろう〜"
+    topics: ["タイマー", "時間計測", "ログ"]
+    target_dirs: ["src/components/task/task-timer.tsx"]
+
+  - id: "day17"
+    title: "ユーザー管理"
+    subtitle: "〜仲間を管理しよう〜"
+    topics: ["ユーザー一覧", "プロフィール", "権限"]
+    target_dirs: ["src/app/users/", "src/app/profile/"]
+
+  - id: "day18"
+    title: "レイアウトとナビゲーション"
+    subtitle: "〜迷わないアプリを作ろう〜"
+    topics: ["レイアウト", "ナビゲーション", "メニュー"]
+    target_dirs: ["src/components/layout/", "src/app/layout.tsx"]
+
+  - id: "day19"
+    title: "カスタムHooksの作成"
+    subtitle: "〜自分だけの道具を作ろう〜"
+    topics: ["カスタムHooks", "再利用", "抽象化"]
+    target_dirs: ["src/hooks/"]
+
+  - id: "day20"
+    title: "エラーハンドリング"
+    subtitle: "〜トラブルに備えよう〜"
+    topics: ["エラー処理", "try-catch", "ユーザー通知"]
+    target_dirs: ["src/lib/", "src/components/"]
+
+  # Week 5: テストと品質
+  - id: "day21"
+    title: "テストの基礎"
+    subtitle: "〜動作確認を自動化しよう〜"
+    topics: ["Jest", "Vitest", "ユニットテスト"]
+    target_dirs: ["src/test/", "vitest.config.ts"]
+
+  - id: "day22"
+    title: "E2Eテスト"
+    subtitle: "〜ユーザー目線でテストしよう〜"
+    topics: ["Playwright", "E2E", "シナリオテスト"]
+    target_dirs: ["e2e/", "playwright.config.ts"]
+
+  - id: "day23"
+    title: "コード品質"
+    subtitle: "〜きれいなコードを書こう〜"
+    topics: ["ESLint", "Prettier", "リンター"]
+    target_dirs: ["biome.json", "lint-staged.config.js"]
+
+  - id: "day24"
+    title: "パフォーマンス最適化"
+    subtitle: "〜サクサク動くアプリを作ろう〜"
+    topics: ["最適化", "メモ化", "遅延読込"]
+    target_dirs: ["src/components/", "next.config.mjs"]
+
+  - id: "day25"
+    title: "アクセシビリティ"
+    subtitle: "〜誰でも使えるアプリを作ろう〜"
+    topics: ["a11y", "ARIA", "キーボード操作"]
+    target_dirs: ["src/components/"]
+
+  # Week 6: デプロイと運用
+  - id: "day26"
+    title: "環境変数と設定"
+    subtitle: "〜秘密を守ろう〜"
+    topics: ["環境変数", ".env", "設定管理"]
+    target_dirs: ["src/lib/env.ts", ".env.example"]
+
+  - id: "day27"
+    title: "Dockerの基礎"
+    subtitle: "〜どこでも動く環境を作ろう〜"
+    topics: ["Docker", "コンテナ", "docker-compose"]
+    target_dirs: ["docker-compose.yml"]
+
+  - id: "day28"
+    title: "CI/CDパイプライン"
+    subtitle: "〜自動でテスト・デプロイしよう〜"
+    topics: ["GitHub Actions", "CI", "CD"]
+    target_dirs: [".github/workflows/"]
+
+  - id: "day29"
+    title: "Vercelへのデプロイ"
+    subtitle: "〜世界に公開しよう〜"
+    topics: ["Vercel", "デプロイ", "ドメイン"]
+    target_dirs: ["vercel.json", "next.config.mjs"]
+
+  - id: "day30"
+    title: "総復習とNext Steps"
+    subtitle: "〜ここからが本当のスタート〜"
+    topics: ["振り返り", "ベストプラクティス", "継続学習"]
+    target_dirs: ["src/"]

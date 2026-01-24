@@ -1,0 +1,3 @@
+[submodule "edu-creator"]
+	path = edu-creator
+	url = https://github.com/kouiso/edu-creator.git
