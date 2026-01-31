@@ -186,7 +186,7 @@ Day 1-3           Day 4          Day 5-28          Day 29-30
 編集中にリアルタイムでプレビュー確認:
 ```bash
 # HTML + Live Server
-npx chokidar-cli "material/**/*.md" -c "./script/generate_html.sh {path}" &
+npx chokidar-cli "material/**/*.md" -c "./scripts/generate_html.sh {path}" &
 npx live-server output/
 ```
 
@@ -339,10 +339,13 @@ material/30days-curriculum/
 material/30days-curriculum/styles/
 └── tutorial.css                # PDF用カスタムCSS
 
-scripts/
+edu-creator/script/
+├── check_quality.sh            # 品質チェック（全チェック実行）
 ├── check_visualization.py      # 視覚化チェック
 ├── check_step_length.py        # 25行ルールチェック
-├── check_no_skip.py            # ステップ連続性チェック
+└── check_no_skip.py            # ステップ連続性チェック
+
+script/
 └── generate_pdf.sh             # PDF一括生成
 ```
 
@@ -368,7 +371,7 @@ scripts/
 
 ### Step 4: PDF生成・確認
 ```bash
-./script/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
+./scripts/generate_pdf.sh material/30days-curriculum/dayXX_xxx.md
 ```
 
 ---
