@@ -8,7 +8,7 @@
   "engines": {
     "node": "24.x"
   },
-  "script": {
+  "scripts": {
     "dev": "next dev",
     "build": "prisma generate && prisma db push --accept-data-loss && next build",
     "build:ci": "prisma generate && next build",

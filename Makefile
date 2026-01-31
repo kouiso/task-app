@@ -8,11 +8,11 @@
 # 使用例: make pdf-single FILE=material/30days-curriculum/day01_開発環境を整える.md
 # PDF自動で開く: make pdf-single FILE=... OPEN=1
 pdf-single:
-	@bash scripts/generate_pdf.sh single "$(FILE)" "$(OPEN)"
+	@bash script/generate_pdf.sh single "$(FILE)" "$(OPEN)"
 
 # 全DayをPDF化（OPEN=1で最後のファイルを開く）
 pdf-all:
-	@bash scripts/generate_pdf.sh all "$(OPEN)"
+	@bash script/generate_pdf.sh all "$(OPEN)"
 
 # PDF削除
 pdf-clean:

@@ -3,11 +3,11 @@
 
 # 安全設定
 safety:
-  max_iterations: 3          # タスクごとの最大リトライ回数
-  max_retries: 3             # エージェントごとの再試行回数
-  max_rpm: 10                # レート制限（毎分10リクエスト）
-  timeout_seconds: 1800      # 30分でタイムアウト
-  cost_confirmation_threshold_usd: 1.0  # $1以上で確認ダイアログ
+  max_iterations: 3
+  max_retries: 3
+  max_rpm: 10
+  timeout_seconds: 1800
+  cost_confirmation_threshold_usd: 1.0
 
 # 除外設定
 exclusions:
@@ -25,7 +25,7 @@ exclusions:
     - __pycache__
     - .pnp
     - out
-    - edu-generator
+    - edu-creator
     - e2e
     - prompt
   patterns:
@@ -38,221 +38,277 @@ exclusions:
     - "*.py"
     - "*.txt"
 
-# LLM設定
+# LLM設定（.envから読み込み、ここで上書き可能）
 llm:
-  commander_model: "gpt-4.1"           # PM用（有料・最小限使用）
-  worker_model: "gemini-1.5-flash"     # 作業員用（無料）
-  commander_temperature: 0.2           # 判断は低めで一貫性重視
-  worker_temperature: 0.4              # 執筆は少し創造性を
+  commander_model: "gpt-5.2"
+  worker_model: "gemini-2.0-flash"
+  commander_temperature: 0.2
+  worker_temperature: 0.4
+
+# =============================================================================
+# 教育メソッド（AI自由発想 + ガイドライン）
+# =============================================================================
+teaching:
+  philosophy: |
+    YOU decide the best metaphor for each concept.
+    Guidelines are suggestions, not rules.
+    Prioritize: clarity > consistency > guidelines
+
+  guidelines:
+    - "日常生活で誰でも知っているものに例える（料理、学校、ゲームなど）"
+    - "1つの概念に1つの比喩（混ぜると混乱する）"
+    - "読者が「なるほど！」と思える身近な例を選ぶ"
+    - "専門用語を使う場合は必ず直後に（）で日本語説明を入れる"
+    - "略語は初出時にフルスペル＋日本語説明を必須とする"
+
+  # 専門用語ルール
+  terminology_rules:
+    - "初出の専門用語は必ず「用語（読み方・日本語での意味）」形式で説明"
+    - "例: API（エーピーアイ：アプリ同士が会話するための窓口）"
+    - "例: Docker（ドッカー：アプリを箱詰めして持ち運べるようにするツール）"
+    - "例: npm（エヌピーエム：Node.jsのパッケージ管理ツール）"
+    - "2回目以降は説明なしでOK"
+
+# =============================================================================
+# 品質ルール（CURRICULUM_PLAN.md準拠）
+# =============================================================================
+quality_rules:
+  max_code_lines: 25
+  max_paragraph_sentences: 3
+  require_filepath: true
+  require_verification: true
+  require_metaphor: true
+  forbidden_words:
+    - "同様に"
+    - "残りも"
+    - "以下略"
+    - "簡単です"
+    - "同じように"
+  min_tables_per_day: 4
+  min_screenshots: 3
+
+# スクリーンショット撮影設定（必要に応じて有効化）
+screenshots:
+  enabled: false
+  output_dir: material/screenshot
+  app_startup:
+    command: "npm run dev"
+    port: 3000
+    wait_time_seconds: 20
+    ready_pattern: ""
+  headless: true
+  captures: []
 
 # パス設定
 paths:
   src_dir: "src"
   output_dir: "material/30days-curriculum"
 
-# 教育メソッド（比喩辞典）
-teaching:
-  metaphors:
-    Variable: "名前のついたお弁当箱"
-    Function: "魔法のレンジ（材料を入れると料理が出る）"
-    Array: "学校のロッカー（番号で管理）"
-    Object: "プロフィールカード"
-    Class: "ロボットの設計図"
-    Promise: "ピザの引換券（後で届く）"
-    API: "レストランの注文システム"
-    Database: "超巨大な電話帳"
-    Component: "レゴブロック"
-    Props: "レゴの接続部分"
-    State: "ゲームのセーブデータ"
-    Hook: "便利な道具箱"
-    TypeScript: "料理のレシピに材料リストを書く"
-    Interface: "契約書（約束事を書いたもの）"
-    Async/Await: "宅配便の追跡（届くまで待つ）"
-
 # 30日間カリキュラム
 chapters:
-  # Week 1: 基礎固め
+  # Week 1: 最初の一歩を踏み出そう
   - id: "day01"
-    title: "環境構築の第一歩"
-    subtitle: "〜プログラミングの「キッチン」を準備しよう〜"
-    topics: ["Node.js", "npm", "VS Code", "ターミナル基礎"]
-    target_dirs: ["package.json", "tsconfig.json"]
+    title: "開発環境を整えて、初めてのアプリを動かそう"
+    subtitle: "〜プログラミングの「キッチン」を準備する〜"
+    what_you_will_make: "Docker環境でNext.jsアプリを起動して、ブラウザで表示"
+    what_you_will_learn: "Docker、Node.js、npm、VS Code、ターミナルの基本"
+    topics: ["環境構築", "Docker", "docker-compose", "Node.js", "npm", "VS Code"]
 
   - id: "day02"
-    title: "TypeScriptの基礎"
-    subtitle: "〜お弁当箱に名前をつけよう〜"
+    title: "データに名札をつけて管理しよう"
+    subtitle: "〜お弁当箱に「サンドイッチ」と書くように〜"
+    what_you_will_make: "ユーザー名や年齢を保存できる変数を作る"
+    what_you_will_learn: "TypeScriptの変数と型の基本"
     topics: ["変数", "型", "const/let", "基本的な型"]
-    target_dirs: ["src/lib/", "src/types/"]
 
   - id: "day03"
-    title: "Reactコンポーネント入門"
-    subtitle: "〜レゴブロックでページを組み立てよう〜"
-    topics: ["コンポーネント", "JSX", "props", "children"]
-    target_dirs: ["src/components/", "src/app/"]
+    title: "再利用できるUI部品を作ろう"
+    subtitle: "〜ボタンやカードを1回作れば何度でも使える〜"
+    what_you_will_make: "自分専用のボタンコンポーネント、カードコンポーネント"
+    what_you_will_learn: "Reactコンポーネントの作り方と再利用方法"
+    topics: ["Reactコンポーネント", "JSX", "props", "children"]
 
   - id: "day04"
-    title: "Reactの状態管理"
-    subtitle: "〜ゲームのセーブデータを作ろう〜"
+    title: "ボタンを押したら数字が増えるカウンターを作ろう"
+    subtitle: "〜ゲームのスコアみたいに状態を保存する〜"
+    what_you_will_make: "クリックするたびに数字が増えるカウンターアプリ"
+    what_you_will_learn: "状態管理の基本（useState）とイベント処理"
     topics: ["useState", "state", "イベントハンドラ"]
-    target_dirs: ["src/components/", "src/hooks/"]
 
   - id: "day05"
-    title: "Hooksの世界"
-    subtitle: "〜便利な道具箱を開けてみよう〜"
+    title: "ページが開いたら自動で動く仕組みを作ろう"
+    subtitle: "〜タイマーや自動通知の基礎〜"
+    what_you_will_make: "ページを開くと自動で時刻を表示する時計アプリ"
+    what_you_will_learn: "副作用（useEffect）と便利なHooks"
     topics: ["useEffect", "useCallback", "useMemo", "カスタムHooks"]
-    target_dirs: ["src/hooks/", "src/components/"]
 
-  # Week 2: データとAPI
+  # Week 2: データを保存して、取り出せるようにしよう
   - id: "day06"
-    title: "データベース入門"
-    subtitle: "〜超巨大な電話帳を作ろう〜"
-    topics: ["Prisma", "スキーマ", "モデル", "リレーション"]
-    target_dirs: ["prisma/", "src/lib/prisma.ts"]
+    title: "データベースにユーザー情報を保存しよう"
+    subtitle: "〜アプリを閉じても消えないデータ保管庫を作る〜"
+    what_you_will_make: "ユーザー情報を保存・取得できるデータベース"
+    what_you_will_learn: "Prismaを使ったデータベース操作の基本"
+    topics: ["Prisma", "スキーマ", "モデル", "データベース"]
 
   - id: "day07"
-    title: "API設計の基礎"
-    subtitle: "〜レストランの注文システムを作ろう〜"
-    topics: ["tRPC", "ルーター", "プロシージャ"]
-    target_dirs: ["src/server/", "src/trpc/"]
+    title: "ボタンを押したらデータが取れる仕組みを作ろう"
+    subtitle: "〜フロントエンドとバックエンドをつなぐ〜"
+    what_you_will_make: "データを取得・作成・更新・削除できるAPI"
+    what_you_will_learn: "tRPCを使った型安全なAPI設計"
+    topics: ["tRPC", "API", "ルーター", "プロシージャ"]
 
   - id: "day08"
-    title: "認証システム"
-    subtitle: "〜アプリに鍵をかけよう〜"
-    topics: ["NextAuth", "セッション", "ログイン"]
-    target_dirs: ["src/lib/session.ts", "src/app/login/"]
+    title: "ログイン機能を作ろう"
+    subtitle: "〜自分だけがアクセスできるページを作る〜"
+    what_you_will_make: "メールとパスワードでログインできる認証システム"
+    what_you_will_learn: "NextAuthを使った認証の実装"
+    topics: ["NextAuth", "認証", "セッション", "ログイン"]
 
   - id: "day09"
-    title: "フォームとバリデーション"
-    subtitle: "〜入力チェックの門番を作ろう〜"
+    title: "入力ミスを防ぐフォームを作ろう"
+    subtitle: "〜空欄や不正な入力をチェックする門番〜"
+    what_you_will_make: "バリデーション付きのユーザー登録フォーム"
+    what_you_will_learn: "react-hook-formとzodを使ったフォーム管理"
     topics: ["フォーム", "バリデーション", "エラーハンドリング"]
-    target_dirs: ["src/components/", "src/app/register/"]
 
   - id: "day10"
-    title: "スタイリング入門"
-    subtitle: "〜アプリにおしゃれな服を着せよう〜"
-    topics: ["Material UI", "テーマ", "レスポンシブ"]
-    target_dirs: ["src/styles/", "src/lib/theme.ts"]
+    title: "アプリを綺麗にデザインしよう"
+    subtitle: "〜スマホでもPCでも見やすいデザインに〜"
+    what_you_will_make: "Tailwind CSSで装飾した美しいUIコンポーネント"
+    what_you_will_learn: "Tailwind CSSとshadcn/uiを使ったスタイリング"
+    topics: ["Tailwind CSS", "shadcn/ui", "レスポンシブ", "ダークモード"]
 
-  # Week 3: 機能実装
+  # Week 3: 実用的なTODOアプリを作ろう
   - id: "day11"
-    title: "タスク管理機能"
-    subtitle: "〜TODOリストを作ろう〜"
-    topics: ["CRUD", "タスク作成", "タスク編集"]
-    target_dirs: ["src/components/task/", "src/server/"]
+    title: "TODOを追加・編集・削除できるようにしよう"
+    subtitle: "〜自分専用のタスク管理アプリを作る〜"
+    what_you_will_make: "タスクの作成・編集・削除・完了ができるTODOアプリ"
+    what_you_will_learn: "CRUDの基本（データの作成・読取・更新・削除）"
+    topics: ["CRUD", "タスク管理", "データ操作"]
 
   - id: "day12"
-    title: "プロジェクト管理機能"
-    subtitle: "〜タスクをフォルダ分けしよう〜"
-    topics: ["プロジェクト", "グループ化", "フィルタリング"]
-    target_dirs: ["src/components/project/", "src/app/project/"]
+    title: "プロジェクトでタスクを分類しよう"
+    subtitle: "〜仕事用・プライベート用でタスクを分ける〜"
+    what_you_will_make: "プロジェクト別にタスクを整理できる機能"
+    what_you_will_learn: "データのグループ化とフィルタリング"
+    topics: ["プロジェクト管理", "グループ化", "フィルタリング"]
 
   - id: "day13"
-    title: "検索機能の実装"
-    subtitle: "〜探し物を見つけよう〜"
+    title: "キーワードでタスクを検索できるようにしよう"
+    subtitle: "〜大量のタスクから目的のものをすぐ見つける〜"
+    what_you_will_make: "タスクを検索・並び替えできる検索機能"
+    what_you_will_learn: "全文検索とソート機能の実装"
     topics: ["検索", "フィルター", "ソート"]
-    target_dirs: ["src/app/search/", "src/components/"]
 
   - id: "day14"
-    title: "ダッシュボード"
-    subtitle: "〜情報を一目で見よう〜"
-    topics: ["ダッシュボード", "集計", "グラフ"]
-    target_dirs: ["src/app/dashboard/", "src/components/"]
+    title: "進捗状況を一目で分かるダッシュボードを作ろう"
+    subtitle: "〜完了率や未完了タスク数をグラフで表示〜"
+    what_you_will_make: "タスクの統計情報を表示するダッシュボード"
+    what_you_will_learn: "データ集計とグラフ表示（Recharts）"
+    topics: ["ダッシュボード", "データ集計", "グラフ表示"]
 
   - id: "day15"
-    title: "レポート機能"
-    subtitle: "〜進捗を報告しよう〜"
-    topics: ["レポート", "週次", "統計"]
-    target_dirs: ["src/app/report/", "src/components/"]
+    title: "週次レポートを自動生成しよう"
+    subtitle: "〜今週何をやったか自動でまとめる〜"
+    what_you_will_make: "週ごとのタスク完了状況レポート"
+    what_you_will_learn: "データの集計と期間フィルタリング"
+    topics: ["レポート", "週次集計", "統計"]
 
-  # Week 4: 高度な機能
+  # Week 4: アプリをもっと便利にしよう
   - id: "day16"
-    title: "タイマー機能"
-    subtitle: "〜作業時間を計ろう〜"
-    topics: ["タイマー", "時間計測", "ログ"]
-    target_dirs: ["src/components/task/task-timer.tsx"]
+    title: "作業時間を計測できるタイマーを作ろう"
+    subtitle: "〜どのタスクに何時間使ったか記録する〜"
+    what_you_will_make: "開始・停止ボタンで作業時間を記録できるタイマー機能"
+    what_you_will_learn: "時間計測とログ記録の実装"
+    topics: ["タイマー", "時間計測", "作業ログ"]
 
   - id: "day17"
-    title: "ユーザー管理"
-    subtitle: "〜仲間を管理しよう〜"
-    topics: ["ユーザー一覧", "プロフィール", "権限"]
-    target_dirs: ["src/app/users/", "src/app/profile/"]
+    title: "チームメンバーを管理できるようにしよう"
+    subtitle: "〜複数人でタスクを共有する〜"
+    what_you_will_make: "ユーザーの追加・編集・権限管理ができる機能"
+    what_you_will_learn: "ユーザー管理とロール制御"
+    topics: ["ユーザー管理", "権限管理", "プロフィール編集"]
 
   - id: "day18"
-    title: "レイアウトとナビゲーション"
-    subtitle: "〜迷わないアプリを作ろう〜"
+    title: "使いやすいメニューとナビゲーションを作ろう"
+    subtitle: "〜どのページにもすぐ移動できるように〜"
+    what_you_will_make: "サイドバーメニューとページ遷移"
+    what_you_will_learn: "Next.js App Routerのレイアウトとナビゲーション"
     topics: ["レイアウト", "ナビゲーション", "メニュー"]
-    target_dirs: ["src/components/layout/", "src/app/layout.tsx"]
 
   - id: "day19"
-    title: "カスタムHooksの作成"
-    subtitle: "〜自分だけの道具を作ろう〜"
-    topics: ["カスタムHooks", "再利用", "抽象化"]
-    target_dirs: ["src/hooks/"]
+    title: "よく使うロジックを再利用できるようにしよう"
+    subtitle: "〜自分だけの便利な道具箱を作る〜"
+    what_you_will_make: "フォーム管理やAPI呼び出しを簡単にするカスタムHooks"
+    what_you_will_learn: "カスタムHooksの作り方と再利用方法"
+    topics: ["カスタムHooks", "ロジックの抽象化", "コード再利用"]
 
   - id: "day20"
-    title: "エラーハンドリング"
-    subtitle: "〜トラブルに備えよう〜"
-    topics: ["エラー処理", "try-catch", "ユーザー通知"]
-    target_dirs: ["src/lib/", "src/components/"]
+    title: "エラーが起きても壊れないアプリにしよう"
+    subtitle: "〜問題が起きたらユーザーに優しく伝える〜"
+    what_you_will_make: "エラー発生時に適切なメッセージを表示する仕組み"
+    what_you_will_learn: "エラーハンドリングとユーザー通知"
+    topics: ["エラー処理", "try-catch", "トースト通知"]
 
-  # Week 5: テストと品質
+  # Week 5: 作ったアプリを世界中に公開しよう！
   - id: "day21"
-    title: "テストの基礎"
-    subtitle: "〜動作確認を自動化しよう〜"
-    topics: ["Jest", "Vitest", "ユニットテスト"]
-    target_dirs: ["src/test/", "vitest.config.ts"]
+    title: "作ったアプリを世界中に公開しよう"
+    subtitle: "〜URLで誰でもアクセスできるように〜"
+    what_you_will_make: "Vercelで公開された本番環境のアプリ"
+    what_you_will_learn: "Vercelへのデプロイとドメイン設定"
+    topics: ["Vercel", "デプロイ", "本番環境", "公開"]
 
   - id: "day22"
-    title: "E2Eテスト"
-    subtitle: "〜ユーザー目線でテストしよう〜"
-    topics: ["Playwright", "E2E", "シナリオテスト"]
-    target_dirs: ["e2e/", "playwright.config.ts"]
+    title: "パスワードやAPIキーを安全に管理しよう"
+    subtitle: "〜秘密情報をGitHubに載せない〜"
+    what_you_will_make: "環境変数を使った安全な設定管理"
+    what_you_will_learn: ".envファイルと環境変数の使い方"
+    topics: ["環境変数", ".env", "セキュリティ"]
 
   - id: "day23"
-    title: "コード品質"
-    subtitle: "〜きれいなコードを書こう〜"
-    topics: ["ESLint", "Prettier", "リンター"]
-    target_dirs: ["biome.json", "lint-staged.config.js"]
+    title: "独自ドメインを設定してプロっぽくしよう"
+    subtitle: "〜your-app.vercel.app → your-app.com に〜"
+    what_you_will_make: "独自ドメインで公開されたアプリ"
+    what_you_will_learn: "ドメインの取得と設定方法"
+    topics: ["独自ドメイン", "DNS設定", "本番運用"]
 
   - id: "day24"
-    title: "パフォーマンス最適化"
-    subtitle: "〜サクサク動くアプリを作ろう〜"
-    topics: ["最適化", "メモ化", "遅延読込"]
-    target_dirs: ["src/components/", "next.config.mjs"]
+    title: "タスクにコメント機能を追加しよう"
+    subtitle: "〜メモや進捗報告を記録できるように〜"
+    what_you_will_make: "タスクにコメントを投稿・編集・削除できる機能"
+    what_you_will_learn: "コメントシステムの実装"
+    topics: ["コメント機能", "リアルタイム更新", "CRUD"]
 
   - id: "day25"
-    title: "アクセシビリティ"
-    subtitle: "〜誰でも使えるアプリを作ろう〜"
-    topics: ["a11y", "ARIA", "キーボード操作"]
-    target_dirs: ["src/components/"]
+    title: "30日間の学びを振り返ろう"
+    subtitle: "〜次のステップへ進むために〜"
+    what_you_will_make: "学んだことの総まとめと今後の学習計画"
+    what_you_will_learn: "ベストプラクティスと継続学習のコツ"
+    topics: ["振り返り", "ポートフォリオ", "次のステップ"]
 
-  # Week 6: デプロイと運用
-  - id: "day26"
-    title: "環境変数と設定"
-    subtitle: "〜秘密を守ろう〜"
-    topics: ["環境変数", ".env", "設定管理"]
-    target_dirs: ["src/lib/env.ts", ".env.example"]
-
-  - id: "day27"
-    title: "Dockerの基礎"
-    subtitle: "〜どこでも動く環境を作ろう〜"
-    topics: ["Docker", "コンテナ", "docker-compose"]
-    target_dirs: ["docker-compose.yml"]
-
-  - id: "day28"
-    title: "CI/CDパイプライン"
-    subtitle: "〜自動でテスト・デプロイしよう〜"
-    topics: ["GitHub Actions", "CI", "CD"]
-    target_dirs: [".github/workflows/"]
-
-  - id: "day29"
-    title: "Vercelへのデプロイ"
-    subtitle: "〜世界に公開しよう〜"
-    topics: ["Vercel", "デプロイ", "ドメイン"]
-    target_dirs: ["vercel.json", "next.config.mjs"]
-
-  - id: "day30"
-    title: "総復習とNext Steps"
-    subtitle: "〜ここからが本当のスタート〜"
-    topics: ["振り返り", "ベストプラクティス", "継続学習"]
-    target_dirs: ["src/"]
+# =============================================================================
+# 📚 上級者向け・別コラム（オプション）
+# =============================================================================
+# 以下の内容は、初心者の興味を引く本編には含めず、
+# 開発体験向上（DX）を学びたい人向けの別教材として提供します。
+#
+# advanced_topics:
+#   testing:
+#     - title: "バグを自動で見つけるテストを書こう"
+#       topics: ["Vitest", "ユニットテスト"]
+#     - title: "ユーザー操作をシミュレートするE2Eテスト"
+#       topics: ["Playwright", "自動テスト"]
+#
+#   code_quality:
+#     - title: "コードを自動整形して読みやすくしよう"
+#       topics: ["Biome", "フォーマット", "リント"]
+#     - title: "アプリの表示速度を速くしよう"
+#       topics: ["パフォーマンス最適化", "メモ化"]
+#
+#   devops:
+#     - title: "Dockerで環境を統一しよう"
+#       topics: ["Docker", "コンテナ"]
+#     - title: "GitHub Actionsで自動デプロイ"
+#       topics: ["CI/CD", "GitHub Actions"]
+#
+# =============================================================================

@@ -23,6 +23,10 @@ RUN npm ci
 # app code
 COPY . .
 
+# named volume 初回作成時にイメージの /app/node_modules がコピーされる。
+# ここがroot所有のままだと、実行ユーザー(node)がPrisma Client再生成時に unlink できずEACCESになる。
+RUN chown -R node:node /app/node_modules
+
 USER node
 
 CMD [ "npm", "run", "dev"]
