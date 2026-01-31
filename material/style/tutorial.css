@@ -1,0 +1,306 @@
+/* ============================================
+   task-app 30日間カリキュラム用PDF スタイルシート
+   ============================================ */
+
+/* ============================================
+   基本スタイル
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo UI", sans-serif;
+  line-height: 1.8;
+  font-size: 16px;
+  color: #333;
+  background-color: #ffffff;
+}
+
+article {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+/* ============================================
+   見出し
+   ============================================ */
+
+h1 {
+  color: #2c3e50;
+  font-size: 28px;
+  margin: 40px 0 20px 0;
+  padding-bottom: 15px;
+  border-bottom: 4px solid #3498db;
+}
+
+h2 {
+  color: #34495e;
+  font-size: 24px;
+  margin: 35px 0 15px 0;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #ecf0f1;
+}
+
+h3 {
+  color: #7f8c8d;
+  font-size: 18px;
+  margin: 25px 0 12px 0;
+}
+
+h4 {
+  color: #95a5a6;
+  font-size: 16px;
+  margin: 20px 0 10px 0;
+}
+
+/* ============================================
+   段落・テキスト
+   ============================================ */
+
+p {
+  margin: 15px 0;
+  line-height: 1.9;
+}
+
+/* ============================================
+   リスト
+   ============================================ */
+
+ul,
+ol {
+  margin: 15px 0 15px 30px;
+}
+
+li {
+  margin: 8px 0;
+}
+
+/* ============================================
+   コードブロック
+   ============================================ */
+
+code {
+  background-color: #282c34;
+  color: #abb2bf;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", "Courier New", "SFMono", monospace;
+  font-size: 14px;
+}
+
+pre {
+  background-color: #282c34;
+  color: #abb2bf;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  line-height: 1.5;
+  margin: 20px 0;
+  border-left: 4px solid #3498db;
+}
+
+pre code {
+  background-color: transparent;
+  color: #abb2bf;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* ============================================
+   表
+   ============================================ */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 14px;
+  table-layout: fixed;
+  word-wrap: break-word;
+}
+
+table thead {
+  background-color: #1e4d7b;
+  color: white;
+}
+
+table th {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid #1e4d7b;
+}
+
+table td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+table tbody tr:hover {
+  background-color: #f0f5ff;
+}
+
+/* ============================================
+   引用・ボックス
+   ============================================ */
+
+blockquote {
+  border-left: 4px solid #3498db;
+  padding: 15px 20px;
+  margin: 20px 0;
+  background-color: #ecf0f1;
+  color: #555;
+  border-radius: 4px;
+}
+
+/* ============================================
+   画像
+   ============================================ */
+
+img {
+  max-width: 100%;
+  height: auto;
+  margin: 20px 0;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+/* ============================================
+   リンク
+   ============================================ */
+
+a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================   Mermaid図の調整
+   ============================================ */
+
+.mermaid {
+  display: flex;
+  justify-content: center;
+  background-color: white;
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+.mermaid svg {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  /* 小さすぎる場合に備えて最小幅を確保（PDF幅に収まるよう調整） */
+  min-width: 400px;
+}
+
+/* ============================================   特殊なブロック（Markdown記法）
+   ============================================ */
+
+/* 警告・注意のブロック */
+.warning {
+  border-left: 4px solid #e74c3c;
+  padding: 15px 20px;
+  margin: 20px 0;
+  background-color: #fff5f5;
+  border-radius: 4px;
+}
+
+.info {
+  border-left: 4px solid #3498db;
+  padding: 15px 20px;
+  margin: 20px 0;
+  background-color: #ecf0f1;
+  border-radius: 4px;
+}
+
+.success {
+  border-left: 4px solid #27ae60;
+  padding: 15px 20px;
+  margin: 20px 0;
+  background-color: #f0fff4;
+  border-radius: 4px;
+}
+
+/* ============================================
+   ページ分割・レイアウト
+   ============================================ */
+
+/* ページ分割ルール - 見出し直後の改ページを防止 */
+h1, h2, h3, h4 {
+  page-break-after: avoid !important;
+  break-after: avoid !important;
+}
+
+h2 {
+  page-break-before: auto;
+}
+
+/* 見出しとその直後の内容を一緒に保持 */
+h1 + *, h2 + *, h3 + *, h4 + * {
+  page-break-before: avoid !important;
+  break-before: avoid !important;
+}
+
+pre {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
+table {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
+/* Mermaid図の改ページ禁止 */
+.mermaid {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
+/* リストの改ページ制御 */
+ul, ol {
+  page-break-inside: avoid;
+}
+
+li {
+  page-break-inside: avoid;
+}
+
+/* ============================================
+   印刷用スタイル
+   ============================================ */
+
+@media print {
+  body {
+    background-color: white;
+  }
+
+  a {
+    color: #0066cc;
+    text-decoration: underline;
+  }
+
+  pre {
+    border: 1px solid #ccc;
+  }
+
+  table {
+    border: 1px solid #ccc;
+  }
+}
