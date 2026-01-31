@@ -14,9 +14,12 @@
       "**/node_modules",
       "**/dist",
       "**/.next",
+      "**/.venv",
+      "**/.venv/**",
       "**/.mypy_cache",
       "**/.ruff_cache",
-      "**/__pycache__"
+      "**/__pycache__",
+      "**/prisma/migrations"
     ],
     "rules": {
       "recommended": true,
@@ -42,13 +45,7 @@
         "noConsoleLog": "warn",
         "noArrayIndexKey": "warn"
       }
-    },
-    "ignore": [
-      "**/node_modules",
-      "**/dist",
-      "**/.next",
-      "**/prisma/migrations"
-    ]
+    }
   },
   "formatter": {
     "enabled": true,
@@ -62,6 +59,8 @@
       "**/node_modules",
       "**/dist",
       "**/.next",
+      "**/.venv",
+      "**/.venv/**",
       "**/.mypy_cache",
       "**/.ruff_cache",
       "**/__pycache__"
