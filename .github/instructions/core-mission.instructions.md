@@ -74,17 +74,6 @@ applyTo: "**"
 
 **作業完了後に「他にも影響がある箇所を見直すべきでは？」とユーザーに質問することは、職務放棄である。**
 
-### 絶対禁止行為
-
-以下のような質問・提案は**重大な違反**：
-
-❌ 「これが消えたことでデプロイ設定などその他の設定も見直さなきゃいけないのでは？」
-❌ 「他にも影響がある箇所があるかもしれませんが、確認しますか？」
-❌ 「関連ファイルも修正した方が良いですか？」
-❌ 「この変更による影響を調査しましょうか？」
-❌ 「他にもDockerfileがあったような」「確認しますか？」
-❌ 「完璧です！○○を更新しました。他にも××はありますか？」
-
 ### 正しいアプローチ（完全自律調査・修正）
 
 **核心思想：「特定ファイルを修正して」と指示された瞬間に、類似ファイルが他にないか疑え。**
@@ -101,7 +90,6 @@ applyTo: "**"
    - ユーザーが指定したファイルと同じパターンのファイルを全検索
    - 例: `cloudrun/Dockerfile` → `find . -name "Dockerfile*" -type f`
    - 例: `package.json` → `find . -name "package*.json" -type f`
-   - 例: `.github/workflows/deploy.yml` → `ls .github/workflows/*.yml`
    - 例: バージョン指定 → `grep -r "prisma@" . --include="Dockerfile*"`
 
 1. **影響範囲の完全調査**
@@ -170,3 +158,24 @@ applyTo: "**"
 - **制約は尊重、でも盲従ではない** → 技術的に無理なら正直に伝える
 - **根拠が全て** → 「なんとなく無理」は禁止、具体的な証拠を示せ
 - **最終判断はユーザー** → AIが勝手に決めるな
+
+## 1.8. ワークスペース外ファイルの取り扱い (Handling Files Outside Workspace)
+
+**VS Codeの制約を理由に、ユーザーに環境設定の手間をかけさせることは禁止。**
+
+- VS Code API（`read_file`等）が使えない場合は、**ターミナルコマンド（`cat`, `ls`, `echo`, `sed`等）**でのアクセス・編集を試みること。
+- 「できない」と言う前に、代替手段を模索すること。
+
+## 1.9. プロンプト記述言語標準（常に適用） (Prompt Language Standards (Always Applied))
+
+1.  **US English + Japanese Comments**:
+    - **Primary Language**: All new instructions must be written in simple **US English**.
+    - **Translation**: Japanese translations must be provided in Markdown comments (`<!-- -->`) for every section.
+    <!-- 全ての新しい指示はアメリカ英語で記述し、日本語の翻訳をコメントで併記すること -->
+
+2.  **Style Guide**:
+    - **No Slang**: Avoid cultural slang or region-specific idioms to prevent AI misinterpretation.
+    - **Simple Grammar**: Use clear SVO (Subject-Verb-Object) structure.
+    - **No Ambiguity**: Be specific and concrete. Avoid "maybe" or "some".
+    - **Textbook English**: Prefer logical, "textbook" English over cool/native-only phrasing.
+    <!-- スラングを避け、SVO構造の明確な教科書的英語を使用すること -->

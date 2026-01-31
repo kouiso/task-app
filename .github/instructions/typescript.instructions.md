@@ -6,6 +6,13 @@ applyTo: "**/*.ts,**/*.tsx"
 
 **ルール違反は即時タスク失敗。例外一切認めず。**
 
+## Props型命名規約
+
+- **Props型は必ずコンポーネント名+Propsで命名すること**
+  - 例: `type ThemedButtonProps = { ... }`
+  - 例: `type IdentificationAlertBannerProps = { ... }`
+- `type Props = { ... }` のような汎用名は禁止（既存も発見次第リネーム）
+
 ## 型安全性
 
 - **as const推奨**: READONLY型保証、型安全性向上
