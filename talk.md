@@ -424,12 +424,12 @@ TUTORIAL_SYSTEM.md
 material/sample/Python基礎知識ガイド.md
 package.json
 prompt/prompt.md
-scripts/check_no_skip.py
-scripts/check_quality.sh
-scripts/check_step_length.py
-scripts/check_visualization.py
+edu-creator/script/check_no_skip.py
+edu-creator/script/check_quality.sh
+edu-creator/script/check_step_length.py
+edu-creator/script/check_visualization.py
 scripts/generate_html.sh
-scripts/generate_pdf.sh
+script/generate_pdf.sh
 Bash Get generate_pdf.sh content from PR
 IN
 gh api repos/ritmo-inc/redmine-clone/pulls/107/files --jq '.[] | select(.filename == "script/generate_pdf.sh") | .patch'
@@ -923,10 +923,10 @@ blockquote { border-left: 4px solid #3498db; padding-left: 16px; color: #555; }
 
 ### 品質チェックスクリプト（PR #107から移植＋改良）
 
-- `scripts/check_visualization.py` - 全ステップに視覚要素があるか
-- `scripts/check_step_length.py` - コードブロック25行ルール
-- `scripts/check_no_skip.py` - ステップ連続性チェック
-- `scripts/generate_pdf.sh` - md-mermaid-to-pdf でPDF生成
+- `edu-creator/script/check_visualization.py` - 全ステップに視覚要素があるか
+- `edu-creator/script/check_step_length.py` - コードブロック25行ルール
+- `edu-creator/script/check_no_skip.py` - ステップ連続性チェック
+- `script/generate_pdf.sh` - md-mermaid-to-pdf でPDF生成
 
 ---
 
@@ -1126,15 +1126,15 @@ blockquote { border-left: 4px solid #3498db; padding-left: 16px; color: #555; }
 # task-app/に追加
 npm install --save-dev md-mermaid-to-pdf
 # カスタムCSS作成
-# scripts/ に品質チェックスクリプト配置
+# script/ に品質チェックスクリプト配置
 ```
 
 作成ファイル:
 - `material/30days-curriculum/styles/tutorial.css` - カスタムCSS
-- `scripts/check_visualization.py` - 視覚化チェック
-- `scripts/check_step_length.py` - 25行ルールチェック
-- `scripts/check_no_skip.py` - ステップ連続性チェック
-- `scripts/generate_pdf.sh` - PDF一括生成
+- `edu-creator/script/check_visualization.py` - 視覚化チェック
+- `edu-creator/script/check_step_length.py` - 25行ルールチェック
+- `edu-creator/script/check_no_skip.py` - ステップ連続性チェック
+- `script/generate_pdf.sh` - PDF一括生成
 
 ### Step 2: 全Day骨格ファイル作成（27ファイル）
 
@@ -1155,7 +1155,7 @@ Day 4〜30の全ファイルをテンプレート骨格で作成:
 ### Step 4: PDF生成・確認
 
 ```bash
-./scripts/generate_pdf.sh single material/30days-curriculum/dayXX_xxx.md
+./script/generate_pdf.sh single material/30days-curriculum/dayXX_xxx.md
 ```
 
 ---
@@ -1171,10 +1171,10 @@ Day 4〜30の全ファイルをテンプレート骨格で作成:
 | `material/30days-curriculum/day06_認証の仕組み.md` | Day 6教材 |
 | ... | Day 7〜30（同様に27ファイル） |
 | `material/30days-curriculum/styles/tutorial.css` | PDF用カスタムCSS |
-| `scripts/check_visualization.py` | 視覚化チェック |
-| `scripts/check_step_length.py` | 行数チェック |
-| `scripts/check_no_skip.py` | ステップ連続性チェック |
-| `scripts/generate_pdf.sh` | PDF生成スクリプト |
+| `edu-creator/script/check_visualization.py` | 視覚化チェック |
+| `edu-creator/script/check_step_length.py` | 行数チェック |
+| `edu-creator/script/check_no_skip.py` | ステップ連続性チェック |
+| `script/generate_pdf.sh` | PDF生成スクリプト |
 
 ### 既存ファイル確認
 
@@ -1189,9 +1189,9 @@ Day 4〜30の全ファイルをテンプレート骨格で作成:
 
 ### 各Day完成後のチェック
 
-1. **品質チェック**: `python3 scripts/check_visualization.py dayXX.md`
-2. **行数チェック**: `python3 scripts/check_step_length.py dayXX.md`
-3. **連続性チェック**: `python3 scripts/check_no_skip.py dayXX.md`
+1. **品質チェック**: `python3 edu-creator/script/check_visualization.py dayXX.md`
+2. **行数チェック**: `python3 edu-creator/script/check_step_length.py dayXX.md`
+3. **連続性チェック**: `python3 edu-creator/script/check_no_skip.py dayXX.md`
 4. **PDF生成**: `./script/generate_pdf.sh dayXX.md` → PDF確認
 5. **コード動作**: コードブロックをコピペ → `task dev` で動作確認
 
@@ -1247,10 +1247,10 @@ pre { background-color: #282c34; color: #abb2bf; border-radius: 6px; padding: 16
 code { background-color: #282c34; color: #abb2bf; padding: 2px 6px; border-radius: 3px; }
 blockquote { border-left: 4px solid #3498db; padding-left: 16px; color: #555; }
 品質チェックスクリプト（PR #107から移植＋改良）
-scripts/check_visualization.py - 全ステップに視覚要素があるか
-scripts/check_step_length.py - コードブロック25行ルール
-scripts/check_no_skip.py - ステップ連続性チェック
-scripts/generate_pdf.sh - md-mermaid-to-pdf でPDF生成
+edu-creator/script/check_visualization.py - 全ステップに視覚要素があるか
+edu-creator/script/check_step_length.py - コードブロック25行ルール
+edu-creator/script/check_no_skip.py - ステップ連続性チェック
+script/generate_pdf.sh - md-mermaid-to-pdf でPDF生成
 Part 2: redmine-clone の反省点と対策
 問題	原因	今回の対策
 ステップ飛ばし	AIが「同様に」で省略	1ステップ1ファイル変更、全コード明示
@@ -1431,14 +1431,14 @@ keyword	説明	日常の例え
 # task-app/に追加
 npm install --save-dev md-mermaid-to-pdf
 # カスタムCSS作成
-# scripts/ に品質チェックスクリプト配置
+# script/ に品質チェックスクリプト配置
 作成ファイル:
 
 material/30days-curriculum/styles/tutorial.css - カスタムCSS
-scripts/check_visualization.py - 視覚化チェック
-scripts/check_step_length.py - 25行ルールチェック
-scripts/check_no_skip.py - ステップ連続性チェック
-scripts/generate_pdf.sh - PDF一括生成
+edu-creator/script/check_visualization.py - 視覚化チェック
+edu-creator/script/check_step_length.py - 25行ルールチェック
+edu-creator/script/check_no_skip.py - ステップ連続性チェック
+script/generate_pdf.sh - PDF一括生成
 Step 2: 全Day骨格ファイル作成（27ファイル）
 Day 4〜30の全ファイルをテンプレート骨格で作成:
 
@@ -1464,19 +1464,19 @@ material/30days-curriculum/day05_nextjs基礎構造.md	Day 5教材
 material/30days-curriculum/day06_認証の仕組み.md	Day 6教材
 ...	Day 7〜30（同様に27ファイル）
 material/30days-curriculum/styles/tutorial.css	PDF用カスタムCSS
-scripts/check_visualization.py	視覚化チェック
-scripts/check_step_length.py	行数チェック
-scripts/check_no_skip.py	ステップ連続性チェック
-scripts/generate_pdf.sh	PDF生成スクリプト
+edu-creator/script/check_visualization.py	視覚化チェック
+edu-creator/script/check_step_length.py	行数チェック
+edu-creator/script/check_no_skip.py	ステップ連続性チェック
+script/generate_pdf.sh	PDF生成スクリプト
 既存ファイル確認
 パス	確認内容
 material/30days-curriculum/00_カリキュラム目次.md	リンク整合性
 package.json	devDependencies追加
 Part 9: 検証方法
 各Day完成後のチェック
-品質チェック: python3 scripts/check_visualization.py dayXX.md
-行数チェック: python3 scripts/check_step_length.py dayXX.md
-連続性チェック: python3 scripts/check_no_skip.py dayXX.md
+品質チェック: python3 edu-creator/script/check_visualization.py dayXX.md
+行数チェック: python3 edu-creator/script/check_step_length.py dayXX.md
+連続性チェック: python3 edu-creator/script/check_no_skip.py dayXX.md
 PDF生成: ./script/generate_pdf.sh dayXX.md → PDF確認
 コード動作: コードブロックをコピペ → task dev で動作確認
 全体完成後のチェック

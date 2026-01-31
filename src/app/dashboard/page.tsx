@@ -124,9 +124,10 @@ export default function DashboardPage() {
                     const progress = taskCount > 0 ? (doneCount / taskCount) * 100 : 0;
 
                     return (
-                      <div
+                      <button
                         key={project.id}
-                        className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                        type="button"
+                        className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors w-full text-left"
                         onClick={() => router.push(`/project?projectId=${project.id}`)}
                       >
                         <div className="flex items-center gap-2 mb-1">
@@ -139,7 +140,7 @@ export default function DashboardPage() {
                         <p className="text-sm text-muted-foreground">
                           {doneCount} / {taskCount} tasks completed ({progress.toFixed(0)}%)
                         </p>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -158,9 +159,10 @@ export default function DashboardPage() {
               {recentTasks.length > 0 ? (
                 <div className="space-y-4">
                   {recentTasks.map((task) => (
-                    <div
+                    <button
                       key={task.id}
-                      className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                      type="button"
+                      className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors w-full text-left"
                       onClick={() => router.push(`/task?taskId=${task.id}`)}
                     >
                       <span className="font-medium">{task.title}</span>
@@ -170,7 +172,7 @@ export default function DashboardPage() {
                           {task.priority}
                         </Badge>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
