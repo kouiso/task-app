@@ -40,29 +40,29 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 
 このドキュメントはGitHub CopilotとClaude両対応のAI指示システムです。
 
-詳細な指示内容は`.github/instructions/`配下のinstructionsファイルに分割されています。
+詳細な指示内容は`prompt/instructions/`配下のinstructionsファイルに分割されています。
 **全てのAI（Copilot, Claude）は同じプロンプトを読みます。**
 
 ### 常時読み込み（すべての作業で適用）
 
 | ファイル名 | 説明 |
 |-----------|------|
-| [autonomous-execution.instructions.md](.github/instructions/autonomous-execution.instructions.md) | 自律実行プロトコル、エージェントファースト設計、MCP活用 |
-| [core-mission.instructions.md](.github/instructions/core-mission.instructions.md) | AIの最重要任務、究極目標、作業量に関する絶対原則、影響範囲調査義務 |
-| [persona.instructions.md](.github/instructions/persona.instructions.md) | 内田祐貴の人格設定、磯貝光佑のプロフィール、コミュニケーションスタイル、**Think in English, Respond in Japanese** |
-| [workflow.instructions.md](.github/instructions/workflow.instructions.md) | 自律的情報収集、AI完全自律実行、Deep Analysis & Planning、実装、品質保証、ショートカットエイリアス |
-| [quality.instructions.md](.github/instructions/quality.instructions.md) | 実装ルール、絶対禁止事項、ESLint規約、品質基準、リポジトリヘルスチェック、TDD |
-| [git.instructions.md](.github/instructions/git.instructions.md) | Gitブランチ運用、Commit Fix、PRルール、Issue管理、プロジェクトナレッジベース |
-| [trial-and-error.instructions.md](.github/instructions/trial-and-error.instructions.md) | ユーザー負担ゼロ原則、完全自律検証、エラー隠蔽禁止、冪等性担保 |
+| [autonomous-execution.instructions.md](instructions/autonomous-execution.instructions.md) | 自律実行プロトコル、エージェントファースト設計、MCP活用 |
+| [core-mission.instructions.md](instructions/core-mission.instructions.md) | AIの最重要任務、究極目標、作業量に関する絶対原則、影響範囲調査義務 |
+| [persona.instructions.md](instructions/persona.instructions.md) | 内田祐貴の人格設定、磯貝光佑のプロフィール、コミュニケーションスタイル、**Think in English, Respond in Japanese** |
+| [workflow.instructions.md](instructions/workflow.instructions.md) | 自律的情報収集、AI完全自律実行、Deep Analysis & Planning、実装、品質保証、ショートカットエイリアス |
+| [quality.instructions.md](instructions/quality.instructions.md) | 実装ルール、絶対禁止事項、ESLint規約、品質基準、リポジトリヘルスチェック、TDD |
+| [git.instructions.md](instructions/git.instructions.md) | Gitブランチ運用、Commit Fix、PRルール、Issue管理、プロジェクトナレッジベース |
+| [trial-and-error.instructions.md](instructions/trial-and-error.instructions.md) | ユーザー負担ゼロ原則、完全自律検証、エラー隠蔽禁止、冪等性担保 |
 
 ### 条件付きルール（該当ファイル編集時のみ自動適用）
 
 | ファイル名 | 対象 | 説明 |
 |-----------|------|------|
-| [typescript.instructions.md](.github/instructions/typescript.instructions.md) | `**/*.ts, **/*.tsx` | TypeScript型安全性規約、any/as禁止、型ユーティリティ活用義務 |
-| [prisma.instructions.md](.github/instructions/prisma.instructions.md) | `**/*.prisma, **/prisma/**/*` | Prismaインポート・型定義・クエリ規約 |
-| [python.instructions.md](.github/instructions/python.instructions.md) | `**/*.py` | Python規約（edu-creator専用） |
-| [edu-creator.instructions.md](.github/instructions/edu-creator.instructions.md) | `**/edu-creator/**` | edu-creator開発ガイド |
+| [typescript.instructions.md](instructions/typescript.instructions.md) | `**/*.ts, **/*.tsx` | TypeScript型安全性規約、any/as禁止、型ユーティリティ活用義務 |
+| [prisma.instructions.md](instructions/prisma.instructions.md) | `**/*.prisma, **/prisma/**/*` | Prismaインポート・型定義・クエリ規約 |
+| [python.instructions.md](instructions/python.instructions.md) | `**/*.py` | Python規約（edu-creator専用） |
+| [edu-creator.instructions.md](instructions/edu-creator.instructions.md) | `**/edu-creator/**` | edu-creator開発ガイド |
 
 ---
 
