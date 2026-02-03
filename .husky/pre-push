@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # 現在のブランチ名を取得
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 
