@@ -44,6 +44,37 @@ llm:
   worker_model: "gemini-2.0-flash"
   commander_temperature: 0.2
   worker_temperature: 0.4
+  
+  # エージェント個別設定
+  agent_models:
+    # ==========================================================================
+    # PM層（レビューAI）- 文章レビューはGPT-5.2、正確性レビューはGemini 3.0 Pro
+    # ==========================================================================
+    product_owner:
+      model: "gpt-5.2"  # 最終承認 - 文章品質重視
+      temperature: 0.2
+    content_pm:
+      model: "gpt-5.2"  # 構造・フロー検証 - 文章品質重視
+      temperature: 0.2
+    quality_pm:
+      model: "gemini-3.0-pro"  # コード品質・正確性検証 - 技術精度重視
+      temperature: 0.3
+    beginner_advocate:
+      model: "gpt-5.2"  # 初心者視点検証 - 文章分かりやすさ重視
+      temperature: 0.3
+
+    # ==========================================================================
+    # Worker層（作業AI）- Gemini 2.0 Flash（高速・低コスト）
+    # ==========================================================================
+    scout:
+      model: "gemini-2.0-flash"  # リサーチ - 高速検索
+      temperature: 0.4
+    scribe:
+      model: "gemini-2.0-flash"  # 執筆 - 大量テキスト生成
+      temperature: 0.4
+    validator:
+      model: "gemini-3.0-pro"  # コマンド・コード検証 - 正確性重視
+      temperature: 0.3
 
 # =============================================================================
 # 教育メソッド（AI自由発想 + ガイドライン）

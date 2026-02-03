@@ -35,22 +35,11 @@
 // filepath: src/app/register/page.tsx
 'use client';
 
-import { Box, Typography } from '@mui/material';
-
 export default function RegisterPage() {
   return (
-    <Box
-      sx={{
-        maxWidth: 400,
-        mx: 'auto',
-        mt: 8,
-        p: 3,
-      }}
-    >
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        新規登録
-      </Typography>
-    </Box>
+    <div className="max-w-md mx-auto mt-16 p-6">
+      <h1 className="text-2xl font-bold mb-6">新規登録</h1>
+    </div>
   );
 }
 ```
@@ -69,11 +58,13 @@ export default function RegisterPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/register/page.tsx（パート1/3）
+// filepath: src/app/register/page.tsx
 'use client';
 
 import { useState } from 'react';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import { Input } from '@/component/ui/input';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -87,55 +78,51 @@ export default function RegisterPage() {
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: 'auto', mt: 8, p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        新規登録
-      </Typography>
-      <form onSubmit={handleSubmit}>
-        <TextField
-```
-
-```typescript
-// filepath: src/app/register/page.tsx（パート2/3）
-          fullWidth
-          sx={{ mb: 2 }}
-          label="名前"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <TextField
-          fullWidth
-          sx={{ mb: 2 }}
-          label="メールアドレス"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <TextField
-          fullWidth
-          sx={{ mb: 2 }}
-          label="パスワード"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <TextField
-```
-
-```typescript
-// filepath: src/app/register/page.tsx（パート3/3）
-          fullWidth
-          sx={{ mb: 2 }}
-          label="パスワード（確認）"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
-        <Button fullWidth type="submit" variant="contained">
-          登録
-        </Button>
+    <div className="max-w-md mx-auto mt-16 p-6">
+      <h1 className="text-2xl font-bold mb-6">新規登録</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">名前</Label>
+          <Input
+            id="name"
+            className="w-full"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">メールアドレス</Label>
+          <Input
+            id="email"
+            type="email"
+            className="w-full"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">パスワード</Label>
+          <Input
+            id="password"
+            type="password"
+            className="w-full"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">パスワード（確認）</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            className="w-full"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </div>
+        <Button type="submit" className="w-full">登録</Button>
       </form>
-    </Box>
+    </div>
   );
 }
 ```
@@ -153,8 +140,10 @@ export default function RegisterPage() {
 
 💻 **実装**:
 
+バリデーション関数を追加します。
+
 ```typescript
-// filepath: src/app/register/page.tsx (バリデーション部分のみ)（パート1/2）
+// filepath: src/app/register/page.tsx（バリデーション部分）
 const [errors, setErrors] = useState({
   name: '',
   email: '',
@@ -173,19 +162,15 @@ const validate = () => {
   if (!name) {
     newErrors.name = '名前を入力してください';
   }
-  
+
   if (!email || !/\S+@\S+\.\S+/.test(email)) {
     newErrors.email = 'メールアドレスの形式が正しくありません';
   }
-  
-```
 
-```typescript
-// filepath: src/app/register/page.tsx (バリデーション部分のみ)（パート2/2）
   if (!password || password.length < 8) {
     newErrors.password = 'パスワードは8文字以上で入力してください';
   }
-  
+
   if (password !== confirmPassword) {
     newErrors.confirmPassword = 'パスワードが一致しません';
   }
@@ -238,7 +223,7 @@ export default function RegisterPage() {
   };
 
   return (
-    // ...フォームは同じ
+    // フォームは同じ構造
   );
 }
 ```

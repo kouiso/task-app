@@ -86,13 +86,11 @@ erDiagram
 // filepath: src/app/projects/page.tsx
 'use client';
 
-import { Box, Typography } from '@mui/material';
-
 export default function ProjectsPage() {
   return (
-    <Box>
-      <Typography variant="h4">プロジェクト一覧</Typography>
-    </Box>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">プロジェクト一覧</h1>
+    </div>
   );
 }
 ```
@@ -109,22 +107,29 @@ export default function ProjectsPage() {
 
 ```typescript
 // filepath: src/app/projects/page.tsx
+'use client';
+
 import { api } from '@/trpc/react';
+import { Loader2 } from 'lucide-react';
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = api.project.getAll.useQuery();
 
   if (isLoading) {
-    return <Typography>読み込み中...</Typography>;
+    return (
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <Box>
-      <Typography variant="h4">プロジェクト一覧</Typography>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">プロジェクト一覧</h1>
       {projects?.map((project) => (
         <div key={project.id}>{project.name}</div>
       ))}
-    </Box>
+    </div>
   );
 }
 ```
@@ -141,25 +146,40 @@ export default function ProjectsPage() {
 
 ```typescript
 // filepath: src/app/projects/page.tsx
-import { Card, CardContent, CardActionArea } from '@mui/material';
+'use client';
+
+import { api } from '@/trpc/react';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/component/ui/card';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProjectsPage() {
+  const { data: projects, isLoading } = api.project.getAll.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <Box>
-      {projects?.map((project) => (
-        <Card key={project.id} sx={{ mb: 2 }}>
-          <CardActionArea component={Link} href={`/projects/${project.id}`}>
-            <CardContent>
-              <Typography variant="h6">{project.name}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {project.description}
-              </Typography>
-            </CardContent>
-          </CardActionArea>
-        </Card>
-      ))}
-    </Box>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">プロジェクト一覧</h1>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {projects?.map((project) => (
+          <Link key={project.id} href={`/projects/${project.id}`}>
+            <Card className="hover:bg-accent transition-colors cursor-pointer">
+              <CardHeader>
+                <CardTitle>{project.name}</CardTitle>
+                <CardDescription>{project.description}</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 ```

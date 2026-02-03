@@ -57,7 +57,7 @@ sequenceDiagram
 💻 **実装**:
 
 ```typescript
-// filepath: src/server/auth.ts（パート1/2）
+// filepath: src/server/auth.ts
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -81,16 +81,15 @@ export const authOptions: NextAuthOptions = {
         const user = await db.user.findUnique({
           where: { email: credentials.email }
         });
-```
-
-```typescript
-// filepath: src/server/auth.ts（パート2/2）
 
         if (!user || !user.password) {
           return null;
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
 
         if (!isValid) {
           return null;
@@ -162,7 +161,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（パート1/2）
+// filepath: src/app/login/page.tsx（ログイン処理部分）
 'use client';
 
 import { signIn } from 'next-auth/react';
@@ -173,7 +172,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const result = await signIn('credentials', {
       email,
       password,
@@ -186,12 +185,8 @@ export default function LoginPage() {
       setErrors({ ...errors, password: 'ログインに失敗しました' });
     }
   };
-```
 
-```typescript
-// filepath: src/app/login/page.tsx（パート2/2）
-
-  // ...残りは同じ
+  // UIはDay 05で作成したものを使用
 }
 ```
 
@@ -213,20 +208,20 @@ export default function LoginPage() {
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { Button, Typography } from '@mui/material';
+import { Button } from '@/component/ui/button';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
 
   if (!session) {
-    return <Typography>ログインしてください</Typography>;
+    return <p className="text-muted-foreground">ログインしてください</p>;
   }
 
   return (
     <div>
-      <Typography variant="h4">
+      <h1 className="text-2xl font-bold">
         ようこそ、{session.user?.name}さん！
-      </Typography>
+      </h1>
       <Button onClick={() => signOut()}>
         ログアウト
       </Button>

@@ -293,11 +293,9 @@ export const userRouter = createTRPCRouter({
     });
   }),
 
-  // プロフィール更新（自分のみ）
   updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.userId;
 
-    // メールアドレスの重複チェック（自分以外）
     if (input.email) {
       const existingUser = await prisma.user.findFirst({
         where: {
@@ -337,7 +335,6 @@ export const userRouter = createTRPCRouter({
     });
   }),
 
-  // パスワード変更
   changePassword: protectedProcedure
     .input(changePasswordSchema)
     .mutation(async ({ ctx, input }) => {
@@ -355,7 +352,6 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      // 現在のパスワードの確認
       const isPasswordValid = await bcrypt.compare(input.currentPassword, user.password);
 
       if (!isPasswordValid) {
@@ -365,7 +361,6 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      // 新しいパスワードをハッシュ化
       const hashedPassword = await bcrypt.hash(input.newPassword, 10);
 
       await prisma.user.update({
@@ -376,9 +371,7 @@ export const userRouter = createTRPCRouter({
       return { success: true, message: 'パスワードを変更しました' };
     }),
 
-  // 管理者用：ユーザー更新
   updateUser: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
-    // 管理者権限チェック
     const currentUser = await prisma.user.findUnique({
       where: { id: ctx.session.userId },
       select: { role: true },
