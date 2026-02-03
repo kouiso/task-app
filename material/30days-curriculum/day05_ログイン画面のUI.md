@@ -2,13 +2,13 @@
 
 ## 🎯 今日のゴール
 
-Material-UI（MUI）を使って、美しいログイン画面を作ります。メールアドレスとパスワードの入力欄、ログインボタンを配置して、プロフェッショナルなUIを実装します。
+shadcn/uiとTailwind CSSを使って、美しいログイン画面を作ります。メールアドレスとパスワードの入力欄、ログインボタンを配置して、プロフェッショナルなUIを実装します。
 
 【スクリーンショット: 完成したログイン画面】
 
 ## 🤔 なぜこれを作るのか？
 
-ログイン機能は、ほとんどのWebアプリに必要な基本機能です。まずはUIを作ることで、Reactのコンポーネントやイベントハンドリングを実践的に学べます。また、MUIを使うことで、デザインの知識がなくても美しいUIを作れます。
+ログイン機能は、ほとんどのWebアプリに必要な基本機能です。まずはUIを作ることで、Reactのコンポーネントやイベントハンドリングを実践的に学べます。また、shadcn/uiを使うことで、デザインの知識がなくても美しいUIを作れます。
 
 > 💡 **例え話**: お店の入り口が汚かったら、中に入りたくなくなりますよね。ログイン画面は、アプリの「玄関」です。第一印象が大事なので、見た目にもこだわります。
 
@@ -68,18 +68,20 @@ export default function LoginPage() {
 
 ### Step 2: フォームコンポーネントを作成（15分）
 
-🎯 **ゴール**: MUIのTextField、Buttonを使って、ログインフォームを作成します。
+🎯 **ゴール**: shadcn/uiのInput、Buttonを使って、ログインフォームを作成します。
 
-🔰 **初心者向け解説**: `TextField`は入力欄、`Button`はボタンを表すMUIのコンポーネントです。これらを組み合わせることで、美しいフォームを簡単に作れます。`useState`を使って、入力内容を管理します。
+🔰 **初心者向け解説**: `Input`は入力欄、`Button`はボタンを表すshadcn/uiのコンポーネントです。これらを組み合わせることで、美しいフォームを簡単に作れます。`useState`を使って、入力内容を管理します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（パート1/2）
+// filepath: src/app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import { Input } from '@/component/ui/input';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -92,30 +94,30 @@ export default function LoginPage() {
   };
 
   return (
-    <Box>
-      <Typography variant="h4">ログイン</Typography>
-      <form onSubmit={handleSubmit}>
-        <TextField
-          label="メールアドレス"
-          type="email"
-          value={email}
-```
-
-```typescript
-// filepath: src/app/login/page.tsx（パート2/2）
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <TextField
-          label="パスワード"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <Button type="submit" variant="contained">
-          ログイン
-        </Button>
+    <div>
+      <h1 className="text-2xl font-bold">ログイン</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">メールアドレス</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">パスワード</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <Button type="submit">ログイン</Button>
       </form>
-    </Box>
+    </div>
   );
 }
 ```
@@ -126,8 +128,10 @@ export default function LoginPage() {
 |--------|------|------|
 | `'use client'` | クライアントコンポーネント宣言 | 「このページは動的です」と宣言 |
 | `useState` | 状態管理フック | ゲームのセーブデータ |
-| `TextField` | 入力欄 | お店の注文用紙 |
+| `Input` | 入力欄 | お店の注文用紙 |
 | `Button` | ボタン | お店のレジのボタン |
+| `Label` | ラベル | 入力欄の説明文 |
+| `space-y-4` | 縦方向の余白 | 要素間のスペース |
 
 ✅ **確認ポイント**:
 
@@ -139,7 +143,7 @@ export default function LoginPage() {
 
 【スクリーンショット: ログインフォームの画面】
 
-📝 **学んだこと**: MUIのコンポーネントを使って、入力フォームを作成できるようになりました。
+📝 **学んだこと**: shadcn/uiのコンポーネントを使って、入力フォームを作成できるようになりました。
 
 ---
 
@@ -152,11 +156,13 @@ export default function LoginPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（パート1/3）
+// filepath: src/app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import { Input } from '@/component/ui/input';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -165,21 +171,17 @@ export default function LoginPage() {
 
   const validate = () => {
     const newErrors = { email: '', password: '' };
-    
+
     if (!email) {
       newErrors.email = 'メールアドレスを入力してください';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'メールアドレスの形式が正しくありません';
     }
-    
+
     if (!password) {
       newErrors.password = 'パスワードを入力してください';
     }
-    
-```
 
-```typescript
-// filepath: src/app/login/page.tsx（パート2/3）
     setErrors(newErrors);
     return !newErrors.email && !newErrors.password;
   };
@@ -192,34 +194,38 @@ export default function LoginPage() {
   };
 
   return (
-    <Box>
-      <Typography variant="h4">ログイン</Typography>
-      <form onSubmit={handleSubmit}>
-        <TextField
-          label="メールアドレス"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={Boolean(errors.email)}
-          helperText={errors.email}
-        />
-```
-
-```typescript
-// filepath: src/app/login/page.tsx（パート3/3）
-        <TextField
-          label="パスワード"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={Boolean(errors.password)}
-          helperText={errors.password}
-        />
-        <Button type="submit" variant="contained">
-          ログイン
-        </Button>
+    <div>
+      <h1 className="text-2xl font-bold">ログイン</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">メールアドレス</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={errors.email ? 'border-destructive' : ''}
+          />
+          {errors.email && (
+            <p className="text-sm text-destructive">{errors.email}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">パスワード</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={errors.password ? 'border-destructive' : ''}
+          />
+          {errors.password && (
+            <p className="text-sm text-destructive">{errors.password}</p>
+          )}
+        </div>
+        <Button type="submit">ログイン</Button>
       </form>
-    </Box>
+    </div>
   );
 }
 ```
@@ -229,8 +235,8 @@ export default function LoginPage() {
 | コード | 意味 | 例え |
 |--------|------|------|
 | `validate()` | バリデーション関数 | 注文内容をチェック |
-| `error={Boolean(errors.email)}` | エラー状態を設定 | 赤いランプをつける |
-| `helperText={errors.email}` | エラーメッセージ表示 | 「ここが間違ってます」と教える |
+| `border-destructive` | エラー時の赤い枠線 | 赤いランプをつける |
+| `text-destructive` | エラーメッセージの赤い文字 | 「ここが間違ってます」と教える |
 
 ✅ **確認ポイント**:
 
@@ -250,63 +256,92 @@ export default function LoginPage() {
 
 🎯 **ゴール**: レイアウトを調整して、見栄えを良くします。
 
-🔰 **初心者向け解説**: MUIの`Box`コンポーネントを使って、余白や中央揃えを設定します。`sx`プロパティを使うことで、インラインでスタイルを指定できます。
+🔰 **初心者向け解説**: Tailwind CSSのユーティリティクラスを使って、余白や中央揃えを設定します。`className`に直接クラスを書くことで、スタイルを指定できます。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx (一部抜粋)（パート1/2）
-<Box
-  sx={{
-    maxWidth: 400,
-    mx: 'auto',
-    mt: 8,
-    p: 3,
-  }}
->
-  <Typography variant="h4" sx={{ mb: 3 }}>
-    ログイン
-  </Typography>
-  <form onSubmit={handleSubmit}>
-    <TextField
-      fullWidth
-      sx={{ mb: 2 }}
-      label="メールアドレス"
-      type="email"
-      value={email}
-      onChange={(e) => setEmail(e.target.value)}
-      error={Boolean(errors.email)}
-      helperText={errors.email}
-    />
-    <TextField
-```
+// filepath: src/app/login/page.tsx
+'use client';
 
-```typescript
-// filepath: src/app/login/page.tsx (一部抜粋)（パート2/2）
-      fullWidth
-      sx={{ mb: 2 }}
-      label="パスワード"
-      type="password"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      error={Boolean(errors.password)}
-      helperText={errors.password}
-    />
-    <Button fullWidth type="submit" variant="contained">
-      ログイン
-    </Button>
-  </form>
-</Box>
+import { useState } from 'react';
+import { Input } from '@/component/ui/input';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({ email: '', password: '' });
+
+  const validate = () => {
+    const newErrors = { email: '', password: '' };
+    if (!email) {
+      newErrors.email = 'メールアドレスを入力してください';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'メールアドレスの形式が正しくありません';
+    }
+    if (!password) {
+      newErrors.password = 'パスワードを入力してください';
+    }
+    setErrors(newErrors);
+    return !newErrors.email && !newErrors.password;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validate()) {
+      console.log('ログイン成功:', { email, password });
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-16 p-6">
+      <h1 className="text-2xl font-bold mb-6">ログイン</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">メールアドレス</Label>
+          <Input
+            id="email"
+            type="email"
+            className={`w-full ${errors.email ? 'border-destructive' : ''}`}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          {errors.email && (
+            <p className="text-sm text-destructive">{errors.email}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">パスワード</Label>
+          <Input
+            id="password"
+            type="password"
+            className={`w-full ${errors.password ? 'border-destructive' : ''}`}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {errors.password && (
+            <p className="text-sm text-destructive">{errors.password}</p>
+          )}
+        </div>
+        <Button type="submit" className="w-full">ログイン</Button>
+      </form>
+    </div>
+  );
+}
 ```
 
 🔍 **スタイル解説**:
 
-| プロパティ | 意味 | 値の例 |
-|-----------|------|--------|
-| `maxWidth` | 最大幅 | 400px |
-| `mx: 'auto'` | 左右の余白を自動（中央揃え） | - |
-| `mt: 8` | 上の余白 | 8 × 8px = 64px |
-| `p: 3` | 内側の余白 | 3 × 8px = 24px |
+| クラス | 意味 | 値の例 |
+|--------|------|--------|
+| `max-w-md` | 最大幅 | 448px |
+| `mx-auto` | 左右の余白を自動（中央揃え） | - |
+| `mt-16` | 上の余白 | 64px |
+| `p-6` | 内側の余白 | 24px |
+| `space-y-4` | 子要素間の縦余白 | 16px |
+| `w-full` | 幅を100%に | - |
 
 ✅ **確認ポイント**:
 
@@ -318,26 +353,26 @@ export default function LoginPage() {
 
 【スクリーンショット: デザイン調整後のログイン画面】
 
-📝 **学んだこと**: MUIの`sx`プロパティを使って、レイアウトを調整できるようになりました。
+📝 **学んだこと**: Tailwind CSSのユーティリティクラスを使って、レイアウトを調整できるようになりました。
 
 ---
 
 ## 📋 今日のまとめ
 
 - [ ] ログインページを作成できた
-- [ ] MUIのTextField、Buttonを使えた
+- [ ] shadcn/uiのInput、Buttonを使えた
 - [ ] useState で入力内容を管理できた
 - [ ] バリデーションを実装できた
-- [ ] デザインを調整できた
+- [ ] Tailwind CSSでデザインを調整できた
 
 ## ⚠️ つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
 | `'use client'`エラー | クライアントコンポーネント宣言が必要 | ファイル先頭に`'use client'`を追加 |
-| MUIコンポーネントが表示されない | インポートが間違っている | `@mui/material`からインポート |
+| shadcn/uiコンポーネントが表示されない | インポートが間違っている | `@/component/ui/*`からインポート |
 | バリデーションが動かない | `validate()`が呼ばれていない | `handleSubmit`内で`validate()`を呼ぶ |
 
 ## 🔗 次回予告
 
-Day 6では、ユーザー登録画面を作ります。ログイン画面と同じように、MUIを使って美しいUIを実装します。
+Day 6では、ユーザー登録画面を作ります。ログイン画面と同じように、shadcn/uiを使って美しいUIを実装します。

@@ -24,17 +24,20 @@
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/layout/Header.tsx
+// filepath: src/component/layout/Header.tsx
 import { signOut, useSession } from 'next-auth/react';
-import { Button } from '@mui/material';
+import { Button } from '@/component/ui/button';
 
 export function Header() {
   const { data: session } = useSession();
 
   return (
-    <header>
+    <header className="flex items-center justify-between p-4 border-b">
       {session && (
-        <Button onClick={() => signOut({ callbackUrl: '/login' })}>
+        <Button
+          variant="outline"
+          onClick={() => signOut({ callbackUrl: '/login' })}
+        >
           ログアウト
         </Button>
       )}
@@ -79,7 +82,7 @@ export const config = {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx
+// filepath: src/app/login/page.tsx（リダイレクト処理部分）
 import { useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
@@ -95,7 +98,7 @@ export default function LoginPage() {
     });
   };
 
-  // ...
+  // UIはDay 05で作成したものを使用
 }
 ```
 

@@ -27,13 +27,11 @@
 // filepath: src/app/projects/new/page.tsx
 'use client';
 
-import { Box, Typography } from '@mui/material';
-
 export default function NewProjectPage() {
   return (
-    <Box>
-      <Typography variant="h4">新規プロジェクト作成</Typography>
-    </Box>
+    <div className="max-w-md mx-auto mt-16 p-6">
+      <h1 className="text-2xl font-bold mb-6">新規プロジェクト作成</h1>
+    </div>
   );
 }
 ```
@@ -49,9 +47,14 @@ export default function NewProjectPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/new/page.tsx（パート1/2）
+// filepath: src/app/projects/new/page.tsx
+'use client';
+
 import { useState } from 'react';
-import { TextField, Button } from '@mui/material';
+import { Input } from '@/component/ui/input';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
+import { Textarea } from '@/component/ui/textarea';
 
 export default function NewProjectPage() {
   const [name, setName] = useState('');
@@ -63,34 +66,31 @@ export default function NewProjectPage() {
   };
 
   return (
-    <Box>
-      <Typography variant="h4">新規プロジェクト作成</Typography>
-      <form onSubmit={handleSubmit}>
-        <TextField
-          fullWidth
-          label="プロジェクト名"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-```
-
-```typescript
-// filepath: src/app/projects/new/page.tsx（パート2/2）
-        <TextField
-          fullWidth
-          multiline
-          rows={4}
-          label="説明"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-        <Button type="submit" variant="contained">
-          作成
-        </Button>
+    <div className="max-w-md mx-auto mt-16 p-6">
+      <h1 className="text-2xl font-bold mb-6">新規プロジェクト作成</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">プロジェクト名</Label>
+          <Input
+            id="name"
+            className="w-full"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="description">説明</Label>
+          <Textarea
+            id="description"
+            className="w-full"
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <Button type="submit" className="w-full">作成</Button>
       </form>
-    </Box>
+    </div>
   );
 }
 ```
@@ -106,7 +106,7 @@ export default function NewProjectPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/new/page.tsx
+// filepath: src/app/projects/new/page.tsx（API連携部分）
 import { api } from '@/trpc/react';
 import { useRouter } from 'next/navigation';
 
@@ -123,7 +123,7 @@ export default function NewProjectPage() {
     createMutation.mutate({ name, description });
   };
 
-  // ...
+  // UIは同じ構造
 }
 ```
 
