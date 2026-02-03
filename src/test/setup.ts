@@ -30,7 +30,6 @@ beforeAll(async () => {
   // Skip database initialization for jsdom environment (component tests)
   // Only initialize for node environment (API tests)
   if (typeof window === 'undefined') {
-    // Initialize test database with Prisma schema
     try {
       execSync('npx prisma db push --skip-generate', {
         stdio: 'pipe',
@@ -58,9 +57,6 @@ afterEach(async () => {
   // Skip database cleanup for jsdom environment (component tests)
   // Only cleanup for node environment (API tests)
   if (typeof window === 'undefined') {
-    // Use the actual database table names (from @@map), not model names
-    // Delete in reverse dependency order to respect foreign keys
-    // PostgreSQL handles cascade deletes automatically with onDelete: Cascade
     const tables = [
       'comments',
       'tasks',
@@ -78,7 +74,6 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  // Only disconnect for node environment (API tests)
   if (typeof window === 'undefined') {
     await prisma.$disconnect();
   }

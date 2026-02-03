@@ -32,16 +32,15 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { Box, Typography } from '@mui/material';
 
 export default function EditTaskPage() {
   const params = useParams();
   const taskId = params.taskId as string;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4">タスク編集</Typography>
-    </Box>
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">タスク編集</h1>
+    </div>
   );
 }
 ```
@@ -57,18 +56,15 @@ export default function EditTaskPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（パート1/3）
+// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx
+'use client';
+
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { api } from '@/trpc/react';
-import {
-  TextField,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  CircularProgress,
-} from '@mui/material';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { Loader2 } from 'lucide-react';
 
 export default function EditTaskPage() {
   const params = useParams();
@@ -81,10 +77,6 @@ export default function EditTaskPage() {
   const [priority, setPriority] = useState('MEDIUM');
   const [dueDate, setDueDate] = useState('');
 
-```
-
-```typescript
-// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（パート2/3）
   useEffect(() => {
     if (task) {
       setTitle(task.title);
@@ -99,26 +91,30 @@ export default function EditTaskPage() {
   }, [task]);
 
   if (isLoading) {
-    return <CircularProgress />;
+    return (
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>タスク編集</Typography>
-      <TextField
-        fullWidth
-        required
-```
-
-```typescript
-// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（パート3/3）
-        label="タイトル"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      {/* 他のフィールドも同様 */}
-    </Box>
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">タスク編集</h1>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="title">タイトル *</Label>
+          <Input
+            id="title"
+            required
+            className="w-full"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        {/* 他のフィールドも同様 */}
+      </div>
+    </div>
   );
 }
 ```
@@ -134,8 +130,9 @@ export default function EditTaskPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（パート1/2）
+// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（更新処理部分）
 import { useRouter } from 'next/navigation';
+import { Button } from '@/component/ui/button';
 
 export default function EditTaskPage() {
   const params = useParams();
@@ -158,26 +155,21 @@ export default function EditTaskPage() {
       priority,
       dueDate: dueDate ? new Date(dueDate) : undefined,
     });
-```
-
-```typescript
-// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（パート2/2）
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600 }}>
-      <form onSubmit={handleSubmit}>
+    <div className="max-w-xl mx-auto p-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* フィールド */}
         <Button
           type="submit"
-          variant="contained"
-          fullWidth
+          className="w-full"
           disabled={updateMutation.isPending}
         >
           {updateMutation.isPending ? '更新中...' : '更新'}
         </Button>
       </form>
-    </Box>
+    </div>
   );
 }
 ```
@@ -193,7 +185,7 @@ export default function EditTaskPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（パート1/2）
+// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（削除処理部分）
 export default function EditTaskPage() {
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
@@ -208,35 +200,30 @@ export default function EditTaskPage() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600 }}>
-      <form onSubmit={handleSubmit}>
+    <div className="max-w-xl mx-auto p-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* フィールド */}
 
-        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+        <div className="flex gap-4">
           <Button
             type="submit"
-            variant="contained"
-            fullWidth
-```
-
-```typescript
-// filepath: src/app/projects/[projectId]/tasks/[taskId]/edit/page.tsx（パート2/2）
+            className="flex-1"
             disabled={updateMutation.isPending}
           >
             更新
           </Button>
           <Button
-            variant="outlined"
-            color="error"
-            fullWidth
+            type="button"
+            variant="destructive"
+            className="flex-1"
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
           >
             削除
           </Button>
-        </Box>
+        </div>
       </form>
-    </Box>
+    </div>
   );
 }
 ```
@@ -252,8 +239,8 @@ export default function EditTaskPage() {
 - **useEffect**: データ取得後にstateを初期化するタイミング制御
 - **日付のフォーマット**: ISOString から YYYY-MM-DD 形式への変換
 - **confirm関数**: ブラウザ標準の確認ダイアログ
-- **ボタン配置**: display: flex と gap で横並びレイアウト
-- **color="error"**: MUIの赤色ボタン（削除操作に適した色）
+- **flex レイアウト**: gap と flex-1 で横並びボタン
+- **variant="destructive"**: 赤色ボタン（削除操作に適した色）
 
 ## 📋 今日のまとめ
 

@@ -126,7 +126,6 @@ function SearchPageContent() {
 
   const handleTaskDelete = (_taskId: string) => {
     if (confirm('このタスクを削除してもよろしいですか？')) {
-      // Deletion logic would go here
     }
   };
 

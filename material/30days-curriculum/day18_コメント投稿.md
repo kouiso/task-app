@@ -28,11 +28,13 @@
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx（パート1/2）
+// filepath: src/component/task/TaskComments.tsx
 'use client';
 
-import { Box, Typography, Avatar, Paper } from '@mui/material';
 import { api } from '@/trpc/react';
+import { Avatar, AvatarFallback } from '@/component/ui/avatar';
+import { Card, CardContent } from '@/component/ui/card';
+import { Loader2 } from 'lucide-react';
 
 interface TaskCommentsProps {
   taskId: string;
@@ -44,33 +46,33 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
   });
 
   if (isLoading) {
-    return <Typography>読み込み中...</Typography>;
+    return (
+      <div className="flex justify-center p-4">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <Box sx={{ mt: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>コメント</Typography>
+    <div className="mt-6">
+      <h3 className="text-lg font-semibold mb-4">コメント</h3>
       {comments?.map((comment) => (
-        <Paper key={comment.id} sx={{ p: 2, mb: 2 }}>
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート2/2）
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
-              {comment.user.name?.[0]}
-            </Avatar>
-            <Typography variant="body2" fontWeight="bold">
-              {comment.user.name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-              {new Date(comment.createdAt).toLocaleString('ja-JP')}
-            </Typography>
-          </Box>
-          <Typography variant="body2">{comment.content}</Typography>
-        </Paper>
+        <Card key={comment.id} className="mb-3">
+          <CardContent className="p-4">
+            <div className="flex items-center mb-2">
+              <Avatar className="h-8 w-8 mr-2">
+                <AvatarFallback>{comment.user.name?.[0]}</AvatarFallback>
+              </Avatar>
+              <span className="font-medium text-sm">{comment.user.name}</span>
+              <span className="text-xs text-muted-foreground ml-2">
+                {new Date(comment.createdAt).toLocaleString('ja-JP')}
+              </span>
+            </div>
+            <p className="text-sm">{comment.content}</p>
+          </CardContent>
+        </Card>
       ))}
-    </Box>
+    </div>
   );
 }
 ```
@@ -86,9 +88,10 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx（パート1/3）
+// filepath: src/component/task/TaskComments.tsx（フォーム追加）
 import { useState } from 'react';
-import { TextField, Button } from '@mui/material';
+import { Button } from '@/component/ui/button';
+import { Textarea } from '@/component/ui/textarea';
 
 export function TaskComments({ taskId }: TaskCommentsProps) {
   const [content, setContent] = useState('');
@@ -100,47 +103,35 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
   };
 
   return (
-    <Box sx={{ mt: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>コメント</Typography>
+    <div className="mt-6">
+      <h3 className="text-lg font-semibold mb-4">コメント</h3>
 
       {/* コメント一覧 */}
       {comments?.map((comment) => (
-        <Paper key={comment.id} sx={{ p: 2, mb: 2 }}>
+        <Card key={comment.id} className="mb-3">
           {/* 既存のコメント表示 */}
-        </Paper>
+        </Card>
       ))}
 
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート2/3）
       {/* 投稿フォーム */}
-      <Paper sx={{ p: 2, mt: 2 }}>
-        <form onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            placeholder="コメントを入力..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={!content.trim()}
-          >
-            投稿
-          </Button>
-        </form>
-      </Paper>
-    </Box>
+      <Card className="mt-4">
+        <CardContent className="p-4">
+          <form onSubmit={handleSubmit}>
+            <Textarea
+              placeholder="コメントを入力..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={3}
+              className="mb-3"
+            />
+            <Button type="submit" disabled={!content.trim()}>
+              投稿
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート3/3）
 }
 ```
 
@@ -155,7 +146,7 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx（パート1/2）
+// filepath: src/component/task/TaskComments.tsx（API連携部分）
 export function TaskComments({ taskId }: TaskCommentsProps) {
   const [content, setContent] = useState('');
 
@@ -179,11 +170,6 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
     // UI は同じ
     <Button
       type="submit"
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート2/2）
-      variant="contained"
       disabled={!content.trim() || createCommentMutation.isPending}
     >
       {createCommentMutation.isPending ? '投稿中...' : '投稿'}
@@ -203,7 +189,7 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx
+// filepath: src/component/task/TaskComments.tsx（キャッシュ更新部分）
 export function TaskComments({ taskId }: TaskCommentsProps) {
   const utils = api.useUtils();
 
@@ -231,7 +217,7 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 ## 📝 学んだこと
 
 - **Avatar コンポーネント**: ユーザーアイコン表示（イニシャル表示）
-- **Paper コンポーネント**: カード風の背景
+- **Card コンポーネント**: カード風の背景
 - **toLocaleString**: 日時を日本語フォーマットで表示
 - **trim()**: 前後の空白を削除してバリデーション
 - **invalidate()**: tRPCキャッシュを無効化して再取得

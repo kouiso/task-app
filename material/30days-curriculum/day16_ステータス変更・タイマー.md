@@ -53,8 +53,8 @@ stateDiagram-v2
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[projectId]/tasks/page.tsx（パート1/2）
-import { Button, ButtonGroup } from '@mui/material';
+// filepath: src/app/projects/[projectId]/tasks/page.tsx（ステータスボタン部分）
+import { Button } from '@/component/ui/button';
 
 const statusOptions = [
   { value: 'TODO', label: 'TODO' },
@@ -64,31 +64,26 @@ const statusOptions = [
 ];
 
 export default function ProjectTasksPage() {
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
-
   return (
     <TableBody>
       {tasks?.map((task) => (
         <TableRow key={task.id}>
           <TableCell>{task.title}</TableCell>
           <TableCell>
-            <ButtonGroup size="small">
+            <div className="flex gap-1">
               {statusOptions.map((option) => (
                 <Button
                   key={option.value}
+                  size="sm"
                   variant={
-```
-
-```typescript
-// filepath: src/app/projects/[projectId]/tasks/page.tsx（パート2/2）
-                    task.status === option.value ? 'contained' : 'outlined'
+                    task.status === option.value ? 'default' : 'outline'
                   }
                   onClick={() => handleStatusChange(task.id, option.value)}
                 >
                   {option.label}
                 </Button>
               ))}
-            </ButtonGroup>
+            </div>
           </TableCell>
         </TableRow>
       ))}
@@ -144,12 +139,11 @@ export default function ProjectTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskTimer.tsx（パート1/2）
+// filepath: src/component/task/TaskTimer.tsx
 'use client';
 
-import { Box, Button, Typography } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
+import { Button } from '@/component/ui/button';
+import { Play, Pause } from 'lucide-react';
 
 interface TaskTimerProps {
   taskId: string;
@@ -168,22 +162,21 @@ export function TaskTimer({
     return `${hours}時間${mins}分`;
   };
 
-```
-
-```typescript
-// filepath: src/components/task/TaskTimer.tsx（パート2/2）
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography variant="body2">{formatTime(timeSpentMinutes)}</Typography>
+    <div className="flex items-center gap-2">
+      <span className="text-sm">{formatTime(timeSpentMinutes)}</span>
       <Button
-        size="small"
-        variant={isTimerActive ? 'contained' : 'outlined'}
-        color={isTimerActive ? 'error' : 'primary'}
-        startIcon={isTimerActive ? <PauseIcon /> : <PlayArrowIcon />}
+        size="sm"
+        variant={isTimerActive ? 'destructive' : 'outline'}
       >
+        {isTimerActive ? (
+          <Pause className="h-4 w-4 mr-1" />
+        ) : (
+          <Play className="h-4 w-4 mr-1" />
+        )}
         {isTimerActive ? '停止' : '開始'}
       </Button>
-    </Box>
+    </div>
   );
 }
 ```
@@ -199,9 +192,19 @@ export function TaskTimer({
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskTimer.tsx（パート1/2）
+// filepath: src/component/task/TaskTimer.tsx（完全版）
+'use client';
+
 import { useState, useEffect } from 'react';
 import { api } from '@/trpc/react';
+import { Button } from '@/component/ui/button';
+import { Play, Pause } from 'lucide-react';
+
+interface TaskTimerProps {
+  taskId: string;
+  isTimerActive: boolean;
+  timeSpentMinutes: number;
+}
 
 export function TaskTimer({
   taskId,
@@ -223,28 +226,33 @@ export function TaskTimer({
     return () => clearInterval(interval);
   }, [isActive]);
 
-```
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.floor(minutes % 60);
+    return `${hours}時間${mins}分`;
+  };
 
-```typescript
-// filepath: src/components/task/TaskTimer.tsx（パート2/2）
   const handleToggle = () => {
     toggleTimerMutation.mutate({ id: taskId });
     setIsActive(!isActive);
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography variant="body2">{formatTime(timeSpent)}</Typography>
+    <div className="flex items-center gap-2">
+      <span className="text-sm">{formatTime(timeSpent)}</span>
       <Button
-        size="small"
-        variant={isActive ? 'contained' : 'outlined'}
-        color={isActive ? 'error' : 'primary'}
-        startIcon={isActive ? <PauseIcon /> : <PlayArrowIcon />}
+        size="sm"
+        variant={isActive ? 'destructive' : 'outline'}
         onClick={handleToggle}
       >
+        {isActive ? (
+          <Pause className="h-4 w-4 mr-1" />
+        ) : (
+          <Play className="h-4 w-4 mr-1" />
+        )}
         {isActive ? '停止' : '開始'}
       </Button>
-    </Box>
+    </div>
   );
 }
 ```
@@ -257,8 +265,8 @@ export function TaskTimer({
 
 ## 📝 学んだこと
 
-- **ButtonGroup**: 複数のボタンをグループ化してUIを統一
-- **MUI Icons**: PlayArrowIcon, PauseIcon などのアイコン使用
+- **Buttonグループ**: flex gap-1 で複数のボタンをグループ化
+- **Lucide Icons**: Play, Pause などのアイコン使用
 - **setInterval**: 定期的に処理を実行するタイマー
 - **useEffect cleanup**: returnでclearIntervalを実行して停止
 - **api.useUtils()**: tRPCのキャッシュを無効化して再取得
