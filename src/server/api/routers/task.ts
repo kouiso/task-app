@@ -127,7 +127,6 @@ export const taskRouter = createTRPCRouter({
         });
       }
 
-      // Check if user is a member of the project
       if (task.project.members.length === 0) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -187,7 +186,6 @@ export const taskRouter = createTRPCRouter({
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    // Check if task exists and user has access to the project
     const task = await prisma.task.findUnique({
       where: { id },
       include: {
@@ -266,7 +264,6 @@ export const taskRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      // Check if task exists and user has access to the project
       const task = await prisma.task.findUnique({
         where: { id: input.id },
         include: {
@@ -361,7 +358,6 @@ export const taskRouter = createTRPCRouter({
   bulkComplete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user has access to all tasks
       const tasks = await prisma.task.findMany({
         where: { id: { in: input.ids } },
         include: {
@@ -400,7 +396,6 @@ export const taskRouter = createTRPCRouter({
   bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user has access to all tasks
       const tasks = await prisma.task.findMany({
         where: { id: { in: input.ids } },
         include: {
@@ -442,7 +437,6 @@ export const taskRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user has access to all tasks
       const tasks = await prisma.task.findMany({
         where: { id: { in: input.ids } },
         include: {

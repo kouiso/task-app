@@ -5,9 +5,12 @@
 safety:
   max_iterations: 3
   max_retries: 3
-  max_rpm: 10
+  max_rpm: 5  # クォータ枯渇防止のため低めに設定
   timeout_seconds: 1800
   cost_confirmation_threshold_usd: 1.0
+  # フォールバック設定: Geminiがエラーの場合GPTにフォールバック
+  fallback_enabled: true
+  fallback_model: "gpt-5.2"
 
 # 除外設定
 exclusions:
@@ -57,7 +60,7 @@ llm:
       model: "gpt-5.2"  # 構造・フロー検証 - 文章品質重視
       temperature: 0.2
     quality_pm:
-      model: "gemini-3.0-pro"  # コード品質・正確性検証 - 技術精度重視
+      model: "gemini-2.0-flash"  # コード品質・正確性検証 - 技術精度重視
       temperature: 0.3
     beginner_advocate:
       model: "gpt-5.2"  # 初心者視点検証 - 文章分かりやすさ重視
@@ -73,7 +76,7 @@ llm:
       model: "gemini-2.0-flash"  # 執筆 - 大量テキスト生成
       temperature: 0.4
     validator:
-      model: "gemini-3.0-pro"  # コマンド・コード検証 - 正確性重視
+      model: "gemini-2.0-flash"  # コマンド・コード検証 - 正確性重視
       temperature: 0.3
 
 # =============================================================================

@@ -111,7 +111,6 @@ export const searchRouter = createTRPCRouter({
       ];
     }
 
-    // タスク検索実行
     const tasks = await prisma.task.findMany({
       where: taskWhere,
       include: {
@@ -184,7 +183,6 @@ export const searchRouter = createTRPCRouter({
 
     // タスク・プロジェクト検索を並行実行（Promise.all）
     const [tasks, projects] = await Promise.all([
-      // タスク検索
       prisma.task.findMany({
         where: {
           OR: [{ createdById: userId }, { assigneeId: userId }],
@@ -200,7 +198,6 @@ export const searchRouter = createTRPCRouter({
         orderBy: { updatedAt: 'desc' },
         take: 20,
       }),
-      // プロジェクト検索
       prisma.project.findMany({
         where: {
           members: { some: { userId } },

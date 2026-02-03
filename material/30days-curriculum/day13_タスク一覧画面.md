@@ -18,8 +18,8 @@ graph TD
     A --> C[TaskTable]
 
     C --> D[TaskRow]
-    D --> E[StatusChip]
-    D --> F[PriorityChip]
+    D --> E[StatusBadge]
+    D --> F[PriorityBadge]
     D --> G[AssigneeAvatar]
 
     B --> H[StatusSelect]
@@ -55,16 +55,15 @@ graph TD
 'use client';
 
 import { useParams } from 'next/navigation';
-import { Box, Typography } from '@mui/material';
 
 export default function ProjectTasksPage() {
   const params = useParams();
   const projectId = params.id as string;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4">タスク一覧</Typography>
-    </Box>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">タスク一覧</h1>
+    </div>
   );
 }
 ```
@@ -80,9 +79,12 @@ export default function ProjectTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx（パート1/2）
+// filepath: src/app/projects/[id]/tasks/page.tsx
+'use client';
+
+import { useParams } from 'next/navigation';
 import { api } from '@/trpc/react';
-import { CircularProgress } from '@mui/material';
+import { Loader2 } from 'lucide-react';
 
 export default function ProjectTasksPage() {
   const params = useParams();
@@ -94,21 +96,17 @@ export default function ProjectTasksPage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4">タスク一覧</Typography>
-      <Typography>タスク数: {tasks?.length}</Typography>
-```
-
-```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx（パート2/2）
-    </Box>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">タスク一覧</h1>
+      <p className="text-muted-foreground">タスク数: {tasks?.length}</p>
+    </div>
   );
 }
 ```
@@ -124,61 +122,68 @@ export default function ProjectTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx（パート1/3）
+// filepath: src/app/projects/[id]/tasks/page.tsx
+'use client';
+
+import { useParams } from 'next/navigation';
+import { api } from '@/trpc/react';
+import { Loader2 } from 'lucide-react';
+import { Badge } from '@/component/ui/badge';
 import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  Chip,
-} from '@mui/material';
+} from '@/component/ui/table';
 
-const statusColors = {
-  TODO: 'default',
-  IN_PROGRESS: 'primary',
-  IN_REVIEW: 'warning',
-  DONE: 'success',
+const statusColors: Record<string, string> = {
+  TODO: 'bg-gray-500',
+  IN_PROGRESS: 'bg-blue-500',
+  IN_REVIEW: 'bg-yellow-500',
+  DONE: 'bg-green-500',
 };
 
 export default function ProjectTasksPage() {
-  // ...取得処理
+  const params = useParams();
+  const projectId = params.id as string;
+
+  const { data: tasks, isLoading } = api.task.getByProject.useQuery({
+    projectId,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <Box sx={{ p: 3 }}>
-```
-
-```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx（パート2/3）
-      <Typography variant="h4" sx={{ mb: 3 }}>タスク一覧</Typography>
-      <TableContainer component={Paper}>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">タスク一覧</h1>
+      <div className="rounded-md border">
         <Table>
-          <TableHead>
+          <TableHeader>
             <TableRow>
-              <TableCell>タイトル</TableCell>
-              <TableCell>ステータス</TableCell>
-              <TableCell>優先度</TableCell>
-              <TableCell>担当者</TableCell>
-              <TableCell>期限</TableCell>
+              <TableHead>タイトル</TableHead>
+              <TableHead>ステータス</TableHead>
+              <TableHead>優先度</TableHead>
+              <TableHead>担当者</TableHead>
+              <TableHead>期限</TableHead>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {tasks?.map((task) => (
               <TableRow key={task.id}>
                 <TableCell>{task.title}</TableCell>
                 <TableCell>
-                  <Chip
-                    label={task.status}
-                    color={statusColors[task.status]}
-                    size="small"
-                  />
+                  <Badge className={statusColors[task.status]}>
+                    {task.status}
+                  </Badge>
                 </TableCell>
-```
-
-```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx（パート3/3）
                 <TableCell>{task.priority}</TableCell>
                 <TableCell>{task.assignee?.name || '未割当'}</TableCell>
                 <TableCell>
@@ -190,8 +195,8 @@ export default function ProjectTasksPage() {
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
-    </Box>
+      </div>
+    </div>
   );
 }
 ```
@@ -207,9 +212,16 @@ export default function ProjectTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx（パート1/2）
+// filepath: src/app/projects/[id]/tasks/page.tsx（フィルタ部分を追加）
 import { useState } from 'react';
-import { ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Button } from '@/component/ui/button';
+
+const statusOptions = [
+  { value: null, label: 'すべて' },
+  { value: 'TODO', label: 'TODO' },
+  { value: 'IN_PROGRESS', label: '進行中' },
+  { value: 'DONE', label: '完了' },
+];
 
 export default function ProjectTasksPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -219,29 +231,26 @@ export default function ProjectTasksPage() {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>タスク一覧</Typography>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">タスク一覧</h1>
 
-      <ToggleButtonGroup
-        value={statusFilter}
-        exclusive
-        onChange={(e, value) => setStatusFilter(value)}
-        sx={{ mb: 2 }}
-      >
-        <ToggleButton value={null}>すべて</ToggleButton>
-        <ToggleButton value="TODO">TODO</ToggleButton>
-        <ToggleButton value="IN_PROGRESS">進行中</ToggleButton>
-```
+      <div className="flex gap-2 mb-4">
+        {statusOptions.map((option) => (
+          <Button
+            key={option.value ?? 'all'}
+            variant={statusFilter === option.value ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
 
-```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx（パート2/2）
-        <ToggleButton value="DONE">完了</ToggleButton>
-      </ToggleButtonGroup>
-
-      <TableContainer component={Paper}>
+      <div className="rounded-md border">
         {/* テーブル内容は同じ、filteredTasksを使用 */}
-      </TableContainer>
-    </Box>
+      </div>
+    </div>
   );
 }
 ```
@@ -254,11 +263,11 @@ export default function ProjectTasksPage() {
 
 ## 📝 学んだこと
 
-- **MUI Table**: テーブル表示の基本構造（TableContainer, Table, TableHead, TableBody）
-- **Chip コンポーネント**: ステータス表示に適したUIパーツ
+- **shadcn/ui Table**: テーブル表示の基本構造（Table, TableHeader, TableBody）
+- **Badge コンポーネント**: ステータス表示に適したUIパーツ
 - **配列フィルタリング**: filter()で条件に合うデータを絞り込む
 - **日付フォーマット**: toLocaleDateString()で日本語表示
-- **ToggleButtonGroup**: 複数の選択肢から1つを選ぶUI
+- **Button variant**: variant で選択状態を視覚的に表現
 
 ## 📋 今日のまとめ
 

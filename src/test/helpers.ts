@@ -148,7 +148,6 @@ export async function createAuthenticatedCaller(userId: string, email: string, r
   return await createTestCaller(session);
 }
 
-// Create tRPC test utilities for React component testing
 export function createTRPCTestUtils() {
   const trpcReact = createTRPCReact<AppRouter>();
 

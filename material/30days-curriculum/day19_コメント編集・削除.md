@@ -28,49 +28,53 @@
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx（パート1/2）
+// filepath: src/component/task/TaskComments.tsx
+'use client';
+
 import { useSession } from 'next-auth/react';
-import { IconButton } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { api } from '@/trpc/react';
+import { Button } from '@/component/ui/button';
+import { Avatar, AvatarFallback } from '@/component/ui/avatar';
+import { Card, CardContent } from '@/component/ui/card';
+import { Pencil, Trash2 } from 'lucide-react';
 
 export function TaskComments({ taskId }: TaskCommentsProps) {
   const { data: session } = useSession();
   const { data: comments } = api.comment.getByTask.useQuery({ taskId });
 
   return (
-    <Box sx={{ mt: 3 }}>
+    <div className="mt-6">
       {comments?.map((comment) => (
-        <Paper key={comment.id} sx={{ p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
-                {comment.user.name?.[0]}
-              </Avatar>
-              <Typography variant="body2" fontWeight="bold">
-                {comment.user.name}
-              </Typography>
-            </Box>
+        <Card key={comment.id} className="mb-3">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center mb-2">
+                <Avatar className="h-8 w-8 mr-2">
+                  <AvatarFallback>{comment.user.name?.[0]}</AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-sm">{comment.user.name}</span>
+              </div>
 
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート2/2）
-            {session?.user?.id === comment.userId && (
-              <Box>
-                <IconButton size="small">
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" color="error">
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            )}
-          </Box>
-          <Typography variant="body2">{comment.content}</Typography>
-        </Paper>
+              {session?.user?.id === comment.userId && (
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            <p className="text-sm">{comment.content}</p>
+          </CardContent>
+        </Card>
       ))}
-    </Box>
+    </div>
   );
 }
 ```
@@ -86,9 +90,9 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx（パート1/4）
+// filepath: src/component/task/TaskComments.tsx（編集モード部分）
 import { useState } from 'react';
-import { TextField, Button } from '@mui/material';
+import { Textarea } from '@/component/ui/textarea';
 
 export function TaskComments({ taskId }: TaskCommentsProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -105,69 +109,50 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
   };
 
   return (
-    <Box sx={{ mt: 3 }}>
+    <div className="mt-6">
       {comments?.map((comment) => (
-        <Paper key={comment.id} sx={{ p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-```
+        <Card key={comment.id} className="mb-3">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start">
+              {/* ヘッダー部分 */}
 
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート2/4）
-              <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
-                {comment.user.name?.[0]}
-              </Avatar>
-              <Typography variant="body2" fontWeight="bold">
-                {comment.user.name}
-              </Typography>
-            </Box>
+              {session?.user?.id === comment.userId && !editingId && (
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleStartEdit(comment.id, comment.content)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
 
-            {session?.user?.id === comment.userId && !editingId && (
-              <Box>
-                <IconButton
-                  size="small"
-                  onClick={() => handleStartEdit(comment.id, comment.content)}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Box>
+            {editingId === comment.id ? (
+              <div>
+                <Textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={3}
+                  className="mb-2"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm">保存</Button>
+                  <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                    キャンセル
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm">{comment.content}</p>
             )}
-          </Box>
-
-          {editingId === comment.id ? (
-            <Box>
-              <TextField
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート3/4）
-                fullWidth
-                multiline
-                rows={3}
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                sx={{ mb: 1 }}
-              />
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button size="small" variant="contained">
-                  保存
-                </Button>
-                <Button size="small" onClick={handleCancelEdit}>
-                  キャンセル
-                </Button>
-              </Box>
-            </Box>
-          ) : (
-            <Typography variant="body2">{comment.content}</Typography>
-          )}
-        </Paper>
+          </CardContent>
+        </Card>
       ))}
-    </Box>
+    </div>
   );
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート4/4）
 }
 ```
 
@@ -182,7 +167,7 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx（パート1/2）
+// filepath: src/component/task/TaskComments.tsx（編集API部分）
 export function TaskComments({ taskId }: TaskCommentsProps) {
   const utils = api.useUtils();
 
@@ -206,12 +191,7 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
   return (
     // UI は同じ
     <Button
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート2/2）
-      size="small"
-      variant="contained"
+      size="sm"
       onClick={() => handleSaveEdit(comment.id)}
       disabled={updateCommentMutation.isPending}
     >
@@ -232,7 +212,7 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/task/TaskComments.tsx（パート1/2）
+// filepath: src/component/task/TaskComments.tsx（削除API部分）
 export function TaskComments({ taskId }: TaskCommentsProps) {
   const deleteCommentMutation = api.comment.delete.useMutation({
     onSuccess: () => {
@@ -247,33 +227,34 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
   };
 
   return (
-    <Box sx={{ mt: 3 }}>
+    <div className="mt-6">
       {comments?.map((comment) => (
-        <Paper key={comment.id} sx={{ p: 2, mb: 2 }}>
-          {session?.user?.id === comment.userId && !editingId && (
-            <Box>
-              <IconButton
-                size="small"
-                onClick={() => handleStartEdit(comment.id, comment.content)}
-              >
-```
-
-```typescript
-// filepath: src/components/task/TaskComments.tsx（パート2/2）
-                <EditIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                color="error"
-                onClick={() => handleDelete(comment.id)}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          )}
-        </Paper>
+        <Card key={comment.id} className="mb-3">
+          <CardContent className="p-4">
+            {session?.user?.id === comment.userId && !editingId && (
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleStartEdit(comment.id, comment.content)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive"
+                  onClick={() => handleDelete(comment.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       ))}
-    </Box>
+    </div>
   );
 }
 ```
@@ -286,7 +267,7 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 
 ## 📝 学んだこと
 
-- **IconButton**: アイコンだけのボタン（省スペース）
+- **Button variant="ghost" size="icon"**: アイコンだけのボタン（省スペース）
 - **条件付きレンダリング**: 三項演算子で編集モードと表示モードを切り替え
 - **権限チェック**: session.user.id === comment.userId で本人確認
 - **状態管理**: editingId で「どのコメントを編集中か」を管理

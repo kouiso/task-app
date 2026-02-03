@@ -31,13 +31,11 @@
 // filepath: src/app/search/page.tsx
 'use client';
 
-import { Box, Typography } from '@mui/material';
-
 export default function SearchPage() {
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4">タスク検索</Typography>
-    </Box>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">タスク検索</h1>
+    </div>
   );
 }
 ```
@@ -53,10 +51,13 @@ export default function SearchPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（パート1/2）
+// filepath: src/app/search/page.tsx
+'use client';
+
 import { useState } from 'react';
-import { TextField, Button, InputAdornment } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+import { Input } from '@/component/ui/input';
+import { Button } from '@/component/ui/button';
+import { Search } from 'lucide-react';
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
@@ -67,38 +68,26 @@ export default function SearchPage() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>タスク検索</Typography>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">タスク検索</h1>
 
       <form onSubmit={handleSearch}>
-        <Box sx={{ display: 'flex', gap: 2, maxWidth: 600 }}>
-          <TextField
-            fullWidth
-            placeholder="タスクを検索..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-```
-
-```typescript
-// filepath: src/app/search/page.tsx（パート2/2）
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={!query.trim()}
-          >
+        <div className="flex gap-4 max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="タスクを検索..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button type="submit" disabled={!query.trim()}>
             検索
           </Button>
-        </Box>
+        </div>
       </form>
-    </Box>
+    </div>
   );
 }
 ```
@@ -114,9 +103,9 @@ export default function SearchPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（パート1/2）
+// filepath: src/app/search/page.tsx（API連携部分）
 import { api } from '@/trpc/react';
-import { CircularProgress } from '@mui/material';
+import { Loader2 } from 'lucide-react';
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
@@ -135,29 +124,25 @@ export default function SearchPage() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>タスク検索</Typography>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">タスク検索</h1>
 
-```
-
-```typescript
-// filepath: src/app/search/page.tsx（パート2/2）
       <form onSubmit={handleSearch}>
         {/* フォーム内容は同じ */}
       </form>
 
       {isLoading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <CircularProgress />
-        </Box>
+        <div className="flex justify-center mt-6">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
       )}
 
       {results && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+        <p className="text-sm text-muted-foreground mt-4">
           {results.length}件の結果
-        </Typography>
+        </p>
       )}
-    </Box>
+    </div>
   );
 }
 ```
@@ -173,79 +158,54 @@ export default function SearchPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（パート1/3）
-import {
-  Card,
-  CardContent,
-  CardActionArea,
-  Chip,
-  Box,
-} from '@mui/material';
+// filepath: src/app/search/page.tsx（検索結果部分）
+import { Card, CardHeader, CardTitle, CardDescription } from '@/component/ui/card';
+import { Badge } from '@/component/ui/badge';
 import Link from 'next/link';
 
 export default function SearchPage() {
   return (
-    <Box sx={{ p: 3 }}>
+    <div className="p-6">
       {/* フォーム部分 */}
 
       {results && results.length > 0 && (
-        <Box sx={{ mt: 3 }}>
+        <div className="mt-6 space-y-3">
           {results.map((task) => (
-            <Card key={task.id} sx={{ mb: 2 }}>
-              <CardActionArea
-                component={Link}
-                href={`/projects/${task.projectId}/tasks`}
-              >
-                <CardContent>
-```
-
-```typescript
-// filepath: src/app/search/page.tsx（パート2/3）
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                    <Chip
-                      label={task.project.name}
-                      size="small"
-                      sx={{
-                        bgcolor: task.project.color,
-                        color: 'white',
-                      }}
-                    />
-                    <Chip label={task.status} size="small" />
-                    <Chip label={task.priority} size="small" />
-                  </Box>
-                  <Typography variant="h6">{task.title}</Typography>
-                  {task.description && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-```
-
-```typescript
-// filepath: src/app/search/page.tsx（パート3/3）
-                      }}
+            <Link
+              key={task.id}
+              href={`/projects/${task.projectId}/tasks`}
+            >
+              <Card className="hover:bg-accent transition-colors cursor-pointer">
+                <CardHeader>
+                  <div className="flex gap-2 mb-2">
+                    <Badge
+                      style={{ backgroundColor: task.project.color }}
+                      className="text-white"
                     >
+                      {task.project.name}
+                    </Badge>
+                    <Badge variant="outline">{task.status}</Badge>
+                    <Badge variant="outline">{task.priority}</Badge>
+                  </div>
+                  <CardTitle className="text-lg">{task.title}</CardTitle>
+                  {task.description && (
+                    <CardDescription className="line-clamp-2">
                       {task.description}
-                    </Typography>
+                    </CardDescription>
                   )}
-                </CardContent>
-              </CardActionArea>
-            </Card>
+                </CardHeader>
+              </Card>
+            </Link>
           ))}
-        </Box>
+        </div>
       )}
 
       {results && results.length === 0 && (
-        <Typography variant="body1" sx={{ mt: 3, textAlign: 'center' }}>
+        <p className="text-center mt-6">
           検索結果が見つかりませんでした
-        </Typography>
+        </p>
       )}
-    </Box>
+    </div>
   );
 }
 ```
@@ -258,11 +218,11 @@ export default function SearchPage() {
 
 ## 📝 学んだこと
 
-- **InputAdornment**: テキストフィールドにアイコンを追加
+- **relative/absolute配置**: テキストフィールドにアイコンを追加
 - **enabled オプション**: 条件が満たされたときだけクエリを実行
 - **2つのstate**: query（入力中）と searchQuery（確定後）を分離
-- **WebkitLineClamp**: 複数行テキストの省略表示
-- **textOverflow: 'ellipsis'**: 長いテキストを「...」で省略
+- **line-clamp-2**: 複数行テキストを2行で省略（Tailwind CSS）
+- **hover:bg-accent**: ホバー時の背景色変更
 
 ## 📋 今日のまとめ
 
@@ -277,7 +237,7 @@ export default function SearchPage() {
 |------|------|--------|
 | 文字入力のたびにAPIが呼ばれる | onChange で直接 searchQuery を更新 | submit 時だけ searchQuery を更新 |
 | 結果が0件でもメッセージが出ない | results が undefined のケースを考慮していない | results && results.length === 0 で判定 |
-| 説明文が長すぎる | 省略処理がない | WebkitLineClamp で行数制限 |
+| 説明文が長すぎる | 省略処理がない | line-clamp-2 で行数制限 |
 
 ## 🔗 次回予告
 

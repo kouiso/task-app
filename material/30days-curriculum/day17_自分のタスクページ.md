@@ -31,13 +31,11 @@
 // filepath: src/app/my-tasks/page.tsx
 'use client';
 
-import { Box, Typography } from '@mui/material';
-
 export default function MyTasksPage() {
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4">マイタスク</Typography>
-    </Box>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">マイタスク</h1>
+    </div>
   );
 }
 ```
@@ -53,40 +51,38 @@ export default function MyTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/my-tasks/page.tsx（パート1/2）
+// filepath: src/app/my-tasks/page.tsx
+'use client';
+
 import { useSession } from 'next-auth/react';
-import { CircularProgress } from '@mui/material';
+import { Loader2 } from 'lucide-react';
 
 export default function MyTasksPage() {
   const { data: session, status } = useSession();
 
   if (status === 'loading') {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
 
   if (!session?.user?.id) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Typography>ログインしてください</Typography>
-      </Box>
+      <div className="p-6">
+        <p className="text-muted-foreground">ログインしてください</p>
+      </div>
     );
   }
 
   return (
-```
-
-```typescript
-// filepath: src/app/my-tasks/page.tsx（パート2/2）
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4">マイタスク</Typography>
-      <Typography variant="body2" color="text.secondary">
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">マイタスク</h1>
+      <p className="text-sm text-muted-foreground">
         {session.user.name} さんのタスク
-      </Typography>
-    </Box>
+      </p>
+    </div>
   );
 }
 ```
@@ -102,18 +98,21 @@ export default function MyTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/my-tasks/page.tsx（パート1/3）
+// filepath: src/app/my-tasks/page.tsx
+'use client';
+
+import { useSession } from 'next-auth/react';
 import { api } from '@/trpc/react';
+import { Loader2 } from 'lucide-react';
+import { Badge } from '@/component/ui/badge';
 import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  Chip,
-} from '@mui/material';
+} from '@/component/ui/table';
 
 export default function MyTasksPage() {
   const { data: session } = useSession();
@@ -124,39 +123,35 @@ export default function MyTasksPage() {
   );
 
   if (isLoading) {
-    return <CircularProgress />;
+    return (
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
-```
-
-```typescript
-// filepath: src/app/my-tasks/page.tsx（パート2/3）
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>マイタスク</Typography>
-      <TableContainer component={Paper}>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">マイタスク</h1>
+      <div className="rounded-md border">
         <Table>
-          <TableHead>
+          <TableHeader>
             <TableRow>
-              <TableCell>タイトル</TableCell>
-              <TableCell>ステータス</TableCell>
-              <TableCell>優先度</TableCell>
-              <TableCell>期限</TableCell>
+              <TableHead>タイトル</TableHead>
+              <TableHead>ステータス</TableHead>
+              <TableHead>優先度</TableHead>
+              <TableHead>期限</TableHead>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {tasks?.map((task) => (
               <TableRow key={task.id}>
                 <TableCell>{task.title}</TableCell>
                 <TableCell>
-                  <Chip label={task.status} size="small" />
+                  <Badge>{task.status}</Badge>
                 </TableCell>
                 <TableCell>{task.priority}</TableCell>
                 <TableCell>
-```
-
-```typescript
-// filepath: src/app/my-tasks/page.tsx（パート3/3）
                   {task.dueDate
                     ? new Date(task.dueDate).toLocaleDateString('ja-JP')
                     : '-'}
@@ -165,8 +160,8 @@ export default function MyTasksPage() {
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
-    </Box>
+      </div>
+    </div>
   );
 }
 ```
@@ -182,37 +177,34 @@ export default function MyTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/my-tasks/page.tsx（パート1/2）
+// filepath: src/app/my-tasks/page.tsx（プロジェクト名追加）
 export default function MyTasksPage() {
   return (
-    <TableContainer component={Paper}>
+    <div className="rounded-md border">
       <Table>
-        <TableHead>
+        <TableHeader>
           <TableRow>
-            <TableCell>プロジェクト</TableCell>
-            <TableCell>タイトル</TableCell>
-            <TableCell>ステータス</TableCell>
-            <TableCell>優先度</TableCell>
-            <TableCell>期限</TableCell>
+            <TableHead>プロジェクト</TableHead>
+            <TableHead>タイトル</TableHead>
+            <TableHead>ステータス</TableHead>
+            <TableHead>優先度</TableHead>
+            <TableHead>期限</TableHead>
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
           {tasks?.map((task) => (
             <TableRow key={task.id}>
               <TableCell>
-                <Chip
-                  label={task.project.name}
-                  size="small"
-                  sx={{ bgcolor: task.project.color, color: 'white' }}
-                />
+                <Badge
+                  style={{ backgroundColor: task.project.color }}
+                  className="text-white"
+                >
+                  {task.project.name}
+                </Badge>
               </TableCell>
-```
-
-```typescript
-// filepath: src/app/my-tasks/page.tsx（パート2/2）
               <TableCell>{task.title}</TableCell>
               <TableCell>
-                <Chip label={task.status} size="small" />
+                <Badge>{task.status}</Badge>
               </TableCell>
               <TableCell>{task.priority}</TableCell>
               <TableCell>
@@ -224,7 +216,7 @@ export default function MyTasksPage() {
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }
 ```
@@ -240,7 +232,7 @@ export default function MyTasksPage() {
 - **useSession**: NextAuthでログイン情報を取得
 - **enabled オプション**: tRPCクエリの実行タイミングを制御
 - **リレーションデータ**: task.project.name のようにネストしたデータにアクセス
-- **sx prop でスタイル**: bgcolor と color で動的に色を設定
+- **style prop**: 動的な色をインラインスタイルで設定
 - **条件付きレンダリング**: session の有無で表示を切り替え
 
 ## 📋 今日のまとめ

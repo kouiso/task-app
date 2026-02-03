@@ -110,7 +110,6 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
-      // Check if user is a member of the project
       const isMember = project.members.some((member) => member.userId === ctx.session.userId);
       if (!isMember) {
         throw new TRPCError({
@@ -158,7 +157,6 @@ export const projectRouter = createTRPCRouter({
   update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    // Check if project exists and user has admin access
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
@@ -221,7 +219,6 @@ export const projectRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      // Check if project exists and user is the owner
       const project = await prisma.project.findUnique({
         where: { id: input.id },
         include: {

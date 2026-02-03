@@ -97,6 +97,22 @@ else
   echo "⏭️ Step 5 SKIP (スクリプトなし)"
 fi
 
+# 6. コード完全性チェック（filepath:コメント、省略禁止）
+echo ""
+echo "=========================================="
+echo "📝 Step 6: コード完全性チェック"
+echo "=========================================="
+if [ -f "$SCRIPT_DIR/check_code_completeness.py" ]; then
+  if python3 "$SCRIPT_DIR/check_code_completeness.py" "$TARGET_FILE"; then
+    echo "✅ Step 6 PASS"
+  else
+    echo "❌ Step 6 FAIL"
+    FAILED=1
+  fi
+else
+  echo "⏭️ Step 6 SKIP (スクリプトなし)"
+fi
+
 # 最終結果
 echo ""
 echo "=========================================="
