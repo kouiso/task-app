@@ -40,6 +40,8 @@ export default function NewProjectPage() {
 
 ✅ **確認ポイント**: /projects/newにアクセスできる
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 2: フォームを実装（15分）
@@ -47,7 +49,7 @@ export default function NewProjectPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/new/page.tsx
+// filepath: src/app/projects/new/page.tsx（パート1/2）
 import { useState } from 'react';
 import { TextField, Button } from '@mui/material';
 
@@ -71,6 +73,10 @@ export default function NewProjectPage() {
           onChange={(e) => setName(e.target.value)}
           sx={{ mb: 2 }}
         />
+```
+
+```typescript
+// filepath: src/app/projects/new/page.tsx（パート2/2）
         <TextField
           fullWidth
           multiline
@@ -90,6 +96,8 @@ export default function NewProjectPage() {
 ```
 
 ✅ **確認ポイント**: フォームが表示される
+
+【スクリーンショット: 確認画面】
 
 ---
 
@@ -120,6 +128,8 @@ export default function NewProjectPage() {
 ```
 
 ✅ **確認ポイント**: プロジェクトが作成され、詳細ページに遷移する
+
+【スクリーンショット: 確認画面】
 
 ---
 

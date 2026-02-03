@@ -40,6 +40,8 @@ return (
 
 ✅ **確認ポイント**: メンバー一覧が表示される
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 2: メンバー追加フォーム（15分）
@@ -47,6 +49,7 @@ return (
 💻 **実装**:
 
 ```typescript
+// filepath: src/app/projects/[id]/members/page.tsx（メンバー追加部分）
 const { data: users } = api.user.getAll.useQuery();
 const addMemberMutation = api.project.addMember.useMutation();
 
@@ -60,6 +63,8 @@ const handleAdd = () => {
 ```
 
 ✅ **確認ポイント**: メンバーが追加される
+
+【スクリーンショット: 確認画面】
 
 ---
 
