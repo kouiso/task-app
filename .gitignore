@@ -13,6 +13,14 @@ coverage
 logs
 *.log
 
+# backup files
+*.backup
+*.bak
+*.old
+*_backup
+*_temp
+*_copy
+
 # Python & type checking
 .venv/
 **/.venv/
@@ -46,6 +54,9 @@ next-env.d.ts
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+*~
 *.pem
 .serena/
 
