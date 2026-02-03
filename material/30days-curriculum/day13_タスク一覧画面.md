@@ -10,6 +10,29 @@
 
 タスク管理アプリの核となる機能です。**タスク一覧は図書館の本棚のようなもの**。本棚があれば、どこに何の本があるか一目でわかり、探している本をすぐに見つけられます。同様に、タスク一覧があれば、プロジェクトの全タスクを俯瞰でき、今何をすべきかが明確になります。
 
+### 📐 コンポーネント階層図
+
+```mermaid
+graph TD
+    A[ProjectTasksPage] --> B[TaskFilter]
+    A --> C[TaskTable]
+
+    C --> D[TaskRow]
+    D --> E[StatusChip]
+    D --> F[PriorityChip]
+    D --> G[AssigneeAvatar]
+
+    B --> H[StatusSelect]
+    B --> I[PrioritySelect]
+
+    style A fill:#e3f2fd
+    style C fill:#fff3e0
+    style D fill:#e8f5e9
+    style B fill:#f3e5f5
+```
+
+この図は、タスク一覧画面のコンポーネント構成を示しています。ページ（ProjectTasksPage）がフィルター（TaskFilter）とテーブル（TaskTable）を含み、テーブルが個々のタスク行（TaskRow）を含む階層構造になっています。
+
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
@@ -48,6 +71,8 @@ export default function ProjectTasksPage() {
 
 ✅ **確認ポイント**: /projects/[id]/tasksにアクセスして「タスク一覧」が表示される
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 2: tRPCでタスク取得（15分）
@@ -55,7 +80,7 @@ export default function ProjectTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx
+// filepath: src/app/projects/[id]/tasks/page.tsx（パート1/2）
 import { api } from '@/trpc/react';
 import { CircularProgress } from '@mui/material';
 
@@ -79,12 +104,18 @@ export default function ProjectTasksPage() {
     <Box sx={{ p: 3 }}>
       <Typography variant="h4">タスク一覧</Typography>
       <Typography>タスク数: {tasks?.length}</Typography>
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/page.tsx（パート2/2）
     </Box>
   );
 }
 ```
 
 ✅ **確認ポイント**: タスク数が表示される
+
+【スクリーンショット: 確認画面】
 
 ---
 
@@ -93,7 +124,7 @@ export default function ProjectTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx
+// filepath: src/app/projects/[id]/tasks/page.tsx（パート1/3）
 import {
   Table,
   TableBody,
@@ -117,6 +148,10 @@ export default function ProjectTasksPage() {
 
   return (
     <Box sx={{ p: 3 }}>
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/page.tsx（パート2/3）
       <Typography variant="h4" sx={{ mb: 3 }}>タスク一覧</Typography>
       <TableContainer component={Paper}>
         <Table>
@@ -140,6 +175,10 @@ export default function ProjectTasksPage() {
                     size="small"
                   />
                 </TableCell>
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/page.tsx（パート3/3）
                 <TableCell>{task.priority}</TableCell>
                 <TableCell>{task.assignee?.name || '未割当'}</TableCell>
                 <TableCell>
@@ -159,6 +198,8 @@ export default function ProjectTasksPage() {
 
 ✅ **確認ポイント**: タスクがテーブル形式で表示される
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 4: ステータスフィルタ（15分）
@@ -166,7 +207,7 @@ export default function ProjectTasksPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/page.tsx
+// filepath: src/app/projects/[id]/tasks/page.tsx（パート1/2）
 import { useState } from 'react';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
@@ -190,6 +231,10 @@ export default function ProjectTasksPage() {
         <ToggleButton value={null}>すべて</ToggleButton>
         <ToggleButton value="TODO">TODO</ToggleButton>
         <ToggleButton value="IN_PROGRESS">進行中</ToggleButton>
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/page.tsx（パート2/2）
         <ToggleButton value="DONE">完了</ToggleButton>
       </ToggleButtonGroup>
 
@@ -202,6 +247,8 @@ export default function ProjectTasksPage() {
 ```
 
 ✅ **確認ポイント**: フィルタボタンでタスクが絞り込まれる
+
+【スクリーンショット: 確認画面】
 
 ---
 

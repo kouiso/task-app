@@ -46,6 +46,8 @@ export default function EditProjectPage() {
 
 ✅ **確認ポイント**: /projects/[id]/editでプロジェクト情報が表示される
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 2: 編集処理を実装（15分）
@@ -53,6 +55,7 @@ export default function EditProjectPage() {
 💻 **実装**:
 
 ```typescript
+// filepath: src/app/projects/[id]/edit/page.tsx（編集処理部分）
 const updateMutation = api.project.update.useMutation({
   onSuccess: () => {
     router.push(`/projects/${id}`);
@@ -67,6 +70,8 @@ const handleSubmit = (e: React.FormEvent) => {
 
 ✅ **確認ポイント**: プロジェクトが更新される
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 3: 削除処理を実装（10分）
@@ -74,6 +79,7 @@ const handleSubmit = (e: React.FormEvent) => {
 💻 **実装**:
 
 ```typescript
+// filepath: src/app/projects/[id]/edit/page.tsx（削除処理部分）
 const deleteMutation = api.project.delete.useMutation({
   onSuccess: () => {
     router.push('/projects');
@@ -88,6 +94,8 @@ const handleDelete = () => {
 ```
 
 ✅ **確認ポイント**: プロジェクトが削除される
+
+【スクリーンショット: 確認画面】
 
 ---
 

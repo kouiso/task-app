@@ -6,6 +6,65 @@
 
 【スクリーンショット: プロジェクト一覧画面】
 
+## 🤔 なぜこれを作るのか？
+
+タスク管理アプリの基本となるプロジェクト一覧画面です。複数のプロジェクトを視覚的に整理して表示することで、ユーザーは自分が関わっているプロジェクトを一目で把握できます。
+
+> 💡 **例え話**: プロジェクト一覧は本棚のようなものです。本棚に本が整理されていれば、読みたい本をすぐに見つけられます。同様に、プロジェクトが一覧で表示されていれば、作業したいプロジェクトにすぐアクセスできます。
+
+### 📐 データベース構造図（ER図）
+
+```mermaid
+erDiagram
+    User ||--o{ Task : "作成"
+    User ||--o{ Task : "担当"
+    User ||--o{ ProjectMember : "所属"
+    User ||--o{ Comment : "投稿"
+
+    Project ||--o{ Task : "含む"
+    Project ||--o{ ProjectMember : "メンバー"
+
+    Task ||--o{ Comment : "コメント"
+
+    User {
+        string id PK
+        string email
+        string name
+        string role
+        boolean isActive
+    }
+
+    Project {
+        string id PK
+        string name
+        string description
+        string color
+        boolean isArchived
+    }
+
+    Task {
+        string id PK
+        string title
+        string status
+        string priority
+        date dueDate
+    }
+
+    ProjectMember {
+        string id PK
+        string role
+        date joinedAt
+    }
+
+    Comment {
+        string id PK
+        string content
+        date createdAt
+    }
+```
+
+この図は、User（ユーザー）、Project（プロジェクト）、Task（タスク）、Comment（コメント）の関係を示しています。
+
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
@@ -40,6 +99,8 @@ export default function ProjectsPage() {
 
 ✅ **確認ポイント**: /projectsにアクセスして「プロジェクト一覧」が表示される
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 2: tRPC APIで取得（15分）
@@ -69,6 +130,8 @@ export default function ProjectsPage() {
 ```
 
 ✅ **確認ポイント**: プロジェクト名が一覧表示される
+
+【スクリーンショット: 確認画面】
 
 ---
 
@@ -102,6 +165,8 @@ export default function ProjectsPage() {
 ```
 
 ✅ **確認ポイント**: プロジェクトがカード形式で表示される
+
+【スクリーンショット: 確認画面】
 
 ---
 

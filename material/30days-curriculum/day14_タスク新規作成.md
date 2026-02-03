@@ -48,6 +48,8 @@ export default function NewTaskPage() {
 
 ✅ **確認ポイント**: /projects/[id]/tasks/newにアクセスできる
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 2: フォーム実装（20分）
@@ -55,7 +57,7 @@ export default function NewTaskPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/new/page.tsx
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート1/4）
 import { useState } from 'react';
 import {
   TextField,
@@ -79,6 +81,10 @@ export default function NewTaskPage() {
 
   return (
     <Box sx={{ p: 3, maxWidth: 600 }}>
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート2/4）
       <Typography variant="h4" sx={{ mb: 3 }}>新規タスク作成</Typography>
       <form onSubmit={handleSubmit}>
         <TextField
@@ -102,6 +108,10 @@ export default function NewTaskPage() {
           <InputLabel>優先度</InputLabel>
           <Select
             value={priority}
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート3/4）
             label="優先度"
             onChange={(e) => setPriority(e.target.value)}
           >
@@ -125,11 +135,17 @@ export default function NewTaskPage() {
         </Button>
       </form>
     </Box>
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート4/4）
   );
 }
 ```
 
 ✅ **確認ポイント**: フォームが表示され、入力できる
+
+【スクリーンショット: 確認画面】
 
 ---
 
@@ -138,7 +154,7 @@ export default function NewTaskPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/new/page.tsx
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート1/2）
 import { api } from '@/trpc/react';
 import { useRouter } from 'next/navigation';
 
@@ -162,6 +178,10 @@ export default function NewTaskPage() {
       priority,
       dueDate: dueDate ? new Date(dueDate) : undefined,
     });
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート2/2）
   };
 
   return (
@@ -182,6 +202,8 @@ export default function NewTaskPage() {
 
 ✅ **確認ポイント**: タスクが作成され、一覧ページに戻る
 
+【スクリーンショット: 確認画面】
+
 ---
 
 ### Step 4: 担当者選択（15分）
@@ -189,7 +211,7 @@ export default function NewTaskPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/projects/[id]/tasks/new/page.tsx
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート1/2）
 export default function NewTaskPage() {
   const [assigneeId, setAssigneeId] = useState('');
 
@@ -213,6 +235,10 @@ export default function NewTaskPage() {
               <MenuItem key={member.userId} value={member.userId}>
                 {member.user.name}
               </MenuItem>
+```
+
+```typescript
+// filepath: src/app/projects/[id]/tasks/new/page.tsx（パート2/2）
             ))}
           </Select>
         </FormControl>
@@ -227,6 +253,8 @@ export default function NewTaskPage() {
 ```
 
 ✅ **確認ポイント**: プロジェクトメンバーから担当者を選択できる
+
+【スクリーンショット: 確認画面】
 
 ---
 
