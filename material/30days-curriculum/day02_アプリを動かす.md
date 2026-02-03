@@ -50,6 +50,8 @@ $ cd task-app
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. ターミナルで`ls`と入力してEnterを押す
 2. `src`, `prisma`, `package.json`などのフォルダやファイルが表示される
 3. これでコードのダウンロードが完了です
@@ -82,6 +84,8 @@ $ docker compose up -d
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. ターミナルに`Creating taskapp-postgres ... done`のようなメッセージが表示される
 2. Docker Desktopを開くと、`taskapp-postgres`が緑色（Running）で表示される
 3. これでデータベースが起動しました
@@ -113,6 +117,8 @@ $ npm install
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. ターミナルに`added XXX packages`のようなメッセージが表示される
 2. `node_modules`フォルダが作成される
 3. これで必要なライブラリがすべてインストールされました
@@ -143,6 +149,8 @@ $ npm run dev
 | `npm run dev` | 開発サーバーを起動 | コンロに火をつける |
 
 ✅ **確認ポイント**:
+
+【スクリーンショット: 確認画面】
 
 1. ターミナルに`Local: http://localhost:3000`と表示される
 2. ブラウザで`http://localhost:3000`にアクセスする

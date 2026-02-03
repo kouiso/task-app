@@ -56,6 +56,7 @@ export default function RegisterPage() {
 ```
 
 ✅ **確認ポイント**: `/register`にアクセスして「新規登録」が表示される
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: Day 5と同じパターンで、新しいページを作成できた
 
@@ -68,7 +69,7 @@ export default function RegisterPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/register/page.tsx
+// filepath: src/app/register/page.tsx（パート1/3）
 'use client';
 
 import { useState } from 'react';
@@ -92,6 +93,10 @@ export default function RegisterPage() {
       </Typography>
       <form onSubmit={handleSubmit}>
         <TextField
+```
+
+```typescript
+// filepath: src/app/register/page.tsx（パート2/3）
           fullWidth
           sx={{ mb: 2 }}
           label="名前"
@@ -115,6 +120,10 @@ export default function RegisterPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         <TextField
+```
+
+```typescript
+// filepath: src/app/register/page.tsx（パート3/3）
           fullWidth
           sx={{ mb: 2 }}
           label="パスワード（確認）"
@@ -132,6 +141,7 @@ export default function RegisterPage() {
 ```
 
 ✅ **確認ポイント**: 4つの入力欄が表示される
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: 複数のuseStateを使って、複数の入力欄を管理できた
 
@@ -144,7 +154,7 @@ export default function RegisterPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/register/page.tsx (バリデーション部分のみ)
+// filepath: src/app/register/page.tsx (バリデーション部分のみ)（パート1/2）
 const [errors, setErrors] = useState({
   name: '',
   email: '',
@@ -168,6 +178,10 @@ const validate = () => {
     newErrors.email = 'メールアドレスの形式が正しくありません';
   }
   
+```
+
+```typescript
+// filepath: src/app/register/page.tsx (バリデーション部分のみ)（パート2/2）
   if (!password || password.length < 8) {
     newErrors.password = 'パスワードは8文字以上で入力してください';
   }
@@ -191,6 +205,7 @@ const validate = () => {
 | パスワード確認 | パスワードと一致 |
 
 ✅ **確認ポイント**: パスワードが一致しないとエラーが表示される
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: 複数の条件を組み合わせたバリデーションを実装できた
 
@@ -229,6 +244,7 @@ export default function RegisterPage() {
 ```
 
 ✅ **確認ポイント**: 登録後に/loginにリダイレクトされる
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: tRPCのmutationを使って、APIを呼び出せるようになった
 

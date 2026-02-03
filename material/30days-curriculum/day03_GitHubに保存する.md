@@ -52,6 +52,8 @@ $ git config --list
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. `git config --list`で設定を確認
 2. `user.name`と`user.email`が表示される
 3. これでGitの初期設定が完了です
@@ -68,7 +70,7 @@ $ git config --list
 
 🔰 **初心者向け解説**: リポジトリは、コードを保存する「プロジェクトフォルダ」のようなものです。GitHubのWebサイトから、新しいリポジトリを作成できます。リポジトリ名は、プロジェクトの内容がわかりやすい名前にしましょう。
 
-💻 **実装**:
+📝 **手順**:
 
 1. ブラウザで`https://github.com`にアクセス
 2. 右上の「+」ボタンをクリック
@@ -86,6 +88,8 @@ $ git config --list
 | Initialize this repository | チェックしない | 既存のコードを使う |
 
 ✅ **確認ポイント**:
+
+【スクリーンショット: 確認画面】
 
 1. GitHubに新しいリポジトリが作成される
 2. リポジトリのURLが表示される（`https://github.com/your-username/task-app`）
@@ -121,6 +125,8 @@ $ git commit -m "Initial commit: setup task-app"
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. `git status`で状態を確認
 2. `nothing to commit, working tree clean`と表示される
 3. これで変更がコミットされました
@@ -155,6 +161,8 @@ $ git push -u origin main
 | `git push -u origin main` | GitHubにアップロード | クラウドに保存 |
 
 ✅ **確認ポイント**:
+
+【スクリーンショット: 確認画面】
 
 1. ターミナルに`Branch 'main' set up to track remote branch 'main' from 'origin'`と表示される
 2. GitHubのリポジトリページをリロードすると、コードが表示される

@@ -12,6 +12,31 @@ NextAuthを使って、実際のログイン処理を実装します。メール
 
 > 💡 **例え話**: カードキーを作っただけでは、ドアは開きません。カードリーダーに通して初めて、ドアが開きます。NextAuthは、そのカードリーダーの役割を果たします。
 
+### 📐 認証フロー図
+
+```mermaid
+sequenceDiagram
+    participant U as ユーザー
+    participant B as ブラウザ
+    participant N as NextAuth
+    participant D as データベース
+
+    U->>B: メール・パスワード入力
+    B->>N: ログインリクエスト
+    N->>D: ユーザー情報取得
+    D-->>N: ユーザーデータ
+    N->>N: パスワード検証
+    alt パスワード正しい
+        N-->>B: JWT トークン発行
+        B-->>U: ログイン成功
+    else パスワード間違い
+        N-->>B: エラー
+        B-->>U: ログイン失敗
+    end
+```
+
+この図は、ユーザーがログインしてから認証が完了するまでの処理の流れを示しています。
+
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
@@ -32,7 +57,7 @@ NextAuthを使って、実際のログイン処理を実装します。メール
 💻 **実装**:
 
 ```typescript
-// filepath: src/server/auth.ts
+// filepath: src/server/auth.ts（パート1/2）
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -56,6 +81,10 @@ export const authOptions: NextAuthOptions = {
         const user = await db.user.findUnique({
           where: { email: credentials.email }
         });
+```
+
+```typescript
+// filepath: src/server/auth.ts（パート2/2）
 
         if (!user || !user.password) {
           return null;
@@ -81,6 +110,7 @@ export const authOptions: NextAuthOptions = {
 ```
 
 ✅ **確認ポイント**: `src/server/auth.ts`が作成される
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: NextAuthの設定ファイルを作成できた
 
@@ -119,6 +149,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ```
 
 ✅ **確認ポイント**: アプリ全体でセッションが使えるようになる
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: SessionProviderでアプリをラップできた
 
@@ -131,7 +162,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx
+// filepath: src/app/login/page.tsx（パート1/2）
 'use client';
 
 import { signIn } from 'next-auth/react';
@@ -155,12 +186,17 @@ export default function LoginPage() {
       setErrors({ ...errors, password: 'ログインに失敗しました' });
     }
   };
+```
+
+```typescript
+// filepath: src/app/login/page.tsx（パート2/2）
 
   // ...残りは同じ
 }
 ```
 
 ✅ **確認ポイント**: ログイン成功後にダッシュボードに遷移する
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: signIn関数でログイン処理を実装できた
 
@@ -200,6 +236,7 @@ export default function DashboardPage() {
 ```
 
 ✅ **確認ポイント**: ログイン後にユーザー名が表示される
+【スクリーンショット: 確認画面】
 
 📝 **学んだこと**: useSessionでセッション情報を取得できた
 

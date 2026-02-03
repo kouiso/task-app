@@ -54,6 +54,8 @@ export default function LoginPage() {
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. ブラウザで`http://localhost:3000/login`にアクセス
 2. 「ログイン」という見出しが表示される
 3. これでログインページの作成が完了です
@@ -73,7 +75,7 @@ export default function LoginPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx
+// filepath: src/app/login/page.tsx（パート1/2）
 'use client';
 
 import { useState } from 'react';
@@ -97,6 +99,10 @@ export default function LoginPage() {
           label="メールアドレス"
           type="email"
           value={email}
+```
+
+```typescript
+// filepath: src/app/login/page.tsx（パート2/2）
           onChange={(e) => setEmail(e.target.value)}
         />
         <TextField
@@ -125,6 +131,8 @@ export default function LoginPage() {
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. メールアドレスとパスワードの入力欄が表示される
 2. 入力すると、コンソールにログが表示される
 3. これでフォームの作成が完了です
@@ -144,7 +152,7 @@ export default function LoginPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx
+// filepath: src/app/login/page.tsx（パート1/3）
 'use client';
 
 import { useState } from 'react';
@@ -168,6 +176,10 @@ export default function LoginPage() {
       newErrors.password = 'パスワードを入力してください';
     }
     
+```
+
+```typescript
+// filepath: src/app/login/page.tsx（パート2/3）
     setErrors(newErrors);
     return !newErrors.email && !newErrors.password;
   };
@@ -191,6 +203,10 @@ export default function LoginPage() {
           error={Boolean(errors.email)}
           helperText={errors.email}
         />
+```
+
+```typescript
+// filepath: src/app/login/page.tsx（パート3/3）
         <TextField
           label="パスワード"
           type="password"
@@ -218,6 +234,8 @@ export default function LoginPage() {
 
 ✅ **確認ポイント**:
 
+【スクリーンショット: 確認画面】
+
 1. 空欄でログインボタンを押すと、エラーメッセージが表示される
 2. 正しい形式で入力すると、エラーが消える
 3. これでバリデーションの追加が完了です
@@ -237,7 +255,7 @@ export default function LoginPage() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/login/page.tsx (一部抜粋)
+// filepath: src/app/login/page.tsx (一部抜粋)（パート1/2）
 <Box
   sx={{
     maxWidth: 400,
@@ -261,6 +279,10 @@ export default function LoginPage() {
       helperText={errors.email}
     />
     <TextField
+```
+
+```typescript
+// filepath: src/app/login/page.tsx (一部抜粋)（パート2/2）
       fullWidth
       sx={{ mb: 2 }}
       label="パスワード"
@@ -287,6 +309,8 @@ export default function LoginPage() {
 | `p: 3` | 内側の余白 | 3 × 8px = 24px |
 
 ✅ **確認ポイント**:
+
+【スクリーンショット: 確認画面】
 
 1. ログインフォームが画面中央に表示される
 2. 余白が適切に設定されている
