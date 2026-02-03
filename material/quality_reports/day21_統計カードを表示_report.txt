@@ -1,0 +1,9 @@
+🔍 品質チェック開始: material/30days-curriculum/day21_統計カードを表示.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 9
+スクショ位置: 5
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+❌ Day 21にはMermaid図が必須

@@ -1,0 +1,43 @@
+🔍 品質チェック開始: material/30days-curriculum/day24_ユーザー一覧（管理者用）.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 9
+スクショ位置: 5
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+✅ 視覚化チェックPASS
+
+📏 [2/4] コードブロック長さチェック...
+
+コードブロック#2 (75行):
+// filepath: src/app/users/page.tsx
+import { api } from '@/trpc/react';
+import {
+...
+    </Box>
+  );
+}
+
+コードブロック#3 (51行):
+// filepath: src/app/users/page.tsx
+import { Select, MenuItem } from '@mui/material';
+
+...
+    </TableBody>
+  );
+}
+
+コードブロック#4 (46行):
+// filepath: src/app/users/page.tsx
+import { Switch } from '@mui/material';
+
+...
+    </TableBody>
+  );
+}
+
+合計3個のコードブロックが制限超過
+❌ コードブロック#2: 75行（上限25行）
+❌ コードブロック#3: 51行（上限25行）
+❌ コードブロック#4: 46行（上限25行）
