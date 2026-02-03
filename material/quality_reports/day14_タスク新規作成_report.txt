@@ -1,0 +1,43 @@
+🔍 品質チェック開始: material/30days-curriculum/day14_タスク新規作成.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 9
+スクショ位置: 5
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+✅ 視覚化チェックPASS
+
+📏 [2/4] コードブロック長さチェック...
+
+コードブロック#2 (72行):
+// filepath: src/app/projects/[id]/tasks/new/page.tsx
+import { useState } from 'react';
+import {
+...
+    </Box>
+  );
+}
+
+コードブロック#3 (40行):
+// filepath: src/app/projects/[id]/tasks/new/page.tsx
+import { api } from '@/trpc/react';
+import { useRouter } from 'next/navigation';
+...
+    </Box>
+  );
+}
+
+コードブロック#4 (35行):
+// filepath: src/app/projects/[id]/tasks/new/page.tsx
+export default function NewTaskPage() {
+  const [assigneeId, setAssigneeId] = useState('');
+...
+    </Box>
+  );
+}
+
+合計3個のコードブロックが制限超過
+❌ コードブロック#2: 72行（上限25行）
+❌ コードブロック#3: 40行（上限25行）
+❌ コードブロック#4: 35行（上限25行）

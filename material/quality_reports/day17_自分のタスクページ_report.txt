@@ -1,0 +1,43 @@
+🔍 品質チェック開始: material/30days-curriculum/day17_自分のタスクページ.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 9
+スクショ位置: 5
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+✅ 視覚化チェックPASS
+
+📏 [2/4] コードブロック長さチェック...
+
+コードブロック#2 (32行):
+// filepath: src/app/my-tasks/page.tsx
+import { useSession } from 'next-auth/react';
+import { CircularProgress } from '@mui/material';
+...
+    </Box>
+  );
+}
+
+コードブロック#3 (59行):
+// filepath: src/app/my-tasks/page.tsx
+import { api } from '@/trpc/react';
+import {
+...
+    </Box>
+  );
+}
+
+コードブロック#4 (41行):
+// filepath: src/app/my-tasks/page.tsx
+export default function MyTasksPage() {
+  return (
+...
+    </TableContainer>
+  );
+}
+
+合計3個のコードブロックが制限超過
+❌ コードブロック#2: 32行（上限25行）
+❌ コードブロック#3: 59行（上限25行）
+❌ コードブロック#4: 41行（上限25行）

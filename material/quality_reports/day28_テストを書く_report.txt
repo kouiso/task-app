@@ -1,0 +1,43 @@
+🔍 品質チェック開始: material/30days-curriculum/day28_テストを書く.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 13
+スクショ位置: 5
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+✅ 視覚化チェックPASS
+
+📏 [2/4] コードブロック長さチェック...
+
+コードブロック#3 (70行):
+// filepath: src/server/api/routers/__tests__/task.test.ts
+import { describe, it, expect, beforeEach } from 'vitest';
+import { appRouter } from '@/server/api/root';
+...
+    expect(result?.title).toBe('テストタスク');
+  });
+});
+
+コードブロック#4 (35行):
+// filepath: src/components/dashboard/__tests__/StatsCard.test.tsx
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+...
+    expect(screen.getByText('75%')).toBeInTheDocument();
+  });
+});
+
+コードブロック#5 (47行):
+// filepath: src/components/task/__tests__/TaskTimer.test.tsx
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+...
+    expect(button).toBeInTheDocument();
+  });
+});
+
+合計3個のコードブロックが制限超過
+❌ コードブロック#3: 70行（上限25行）
+❌ コードブロック#4: 35行（上限25行）
+❌ コードブロック#5: 47行（上限25行）

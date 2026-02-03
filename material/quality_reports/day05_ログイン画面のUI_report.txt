@@ -1,0 +1,43 @@
+🔍 品質チェック開始: material/30days-curriculum/day05_ログイン画面のUI.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 27
+スクショ位置: 9
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+✅ 視覚化チェックPASS
+
+📏 [2/4] コードブロック長さチェック...
+
+コードブロック#2 (39行):
+// filepath: src/app/login/page.tsx
+'use client';
+
+...
+    </Box>
+  );
+}
+
+コードブロック#3 (62行):
+// filepath: src/app/login/page.tsx
+'use client';
+
+...
+    </Box>
+  );
+}
+
+コードブロック#4 (38行):
+// filepath: src/app/login/page.tsx (一部抜粋)
+<Box
+  sx={{
+...
+    </Button>
+  </form>
+</Box>
+
+合計3個のコードブロックが制限超過
+❌ コードブロック#2: 39行（上限25行）
+❌ コードブロック#3: 62行（上限25行）
+❌ コードブロック#4: 38行（上限25行）

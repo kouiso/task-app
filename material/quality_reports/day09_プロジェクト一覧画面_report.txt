@@ -1,0 +1,9 @@
+🔍 品質チェック開始: material/30days-curriculum/day09_プロジェクト一覧画面.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 5
+スクショ位置: 4
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+❌ Day 9にはMermaid図が必須
