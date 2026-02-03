@@ -87,22 +87,47 @@ quality_rules:
   min_tables_per_day: 4
   min_screenshots: 3
 
-# スクリーンショット撮影設定（必要に応じて有効化）
+# スクリーンショット撮影設定
 screenshots:
-  enabled: false
-  output_dir: material/screenshot
+  enabled: true
+  output_dir: material/screenshots
   app_startup:
     command: "npm run dev"
     port: 3000
-    wait_time_seconds: 20
-    ready_pattern: ""
+    wait_time_seconds: 30
+    ready_pattern: "Ready in"
   headless: true
-  captures: []
+  filename_pattern: "{chapter_id}_{step_id}_{label}.png"
+  metadata_file: "metadata.json"
+  captures:
+    # Day01用スクリーンショット（例）
+    - id: "day01_step1"
+      label: "localhost_top"
+      url: "/"
+      wait_for_selector: "body"
+      viewport_width: 1280
+      viewport_height: 720
 
 # パス設定
 paths:
   src_dir: "src"
   output_dir: "material/30days-curriculum"
+
+# =============================================================================
+# カリキュラム全体の方針
+# =============================================================================
+curriculum_approach:
+  method: "教材だけで完結する自己完結型チュートリアル"
+  principle: |
+    学習者は教材を読み、指示通りにコードを入力するだけで
+    アプリを完成させることができる。
+    既存のコード（ZIP、clone、ダウンロード）は一切不要。
+  important_rules:
+    - "git clone、ZIP配布、テンプレート配布は一切しない"
+    - "npx create-next-app から始めて、全て自分で書く"
+    - "教材に書いてあるコードを入力すれば動く"
+    - "外部リソース（配布物）への参照は禁止"
+    - "各Dayで必要なコードは全て教材内に記載する"
 
 # 30日間カリキュラム
 chapters:
@@ -110,9 +135,13 @@ chapters:
   - id: "day01"
     title: "開発環境を整えて、初めてのアプリを動かそう"
     subtitle: "〜プログラミングの「キッチン」を準備する〜"
-    what_you_will_make: "Docker環境でNext.jsアプリを起動して、ブラウザで表示"
+    what_you_will_make: "npx create-next-appで新規プロジェクトを作成し、ブラウザで表示"
     what_you_will_learn: "Docker、Node.js、npm、VS Code、ターミナルの基本"
-    topics: ["環境構築", "Docker", "docker-compose", "Node.js", "npm", "VS Code"]
+    topics: ["環境構築", "Docker", "docker-compose", "Node.js", "npm", "VS Code", "create-next-app"]
+    special_notes:
+      - "npx create-next-app でゼロから新規プロジェクトを作成"
+      - "git clone や ZIP配布は使用しない"
+      - "教材の指示通りにコードを入力すれば動く"
 
   - id: "day02"
     title: "データに名札をつけて管理しよう"
@@ -182,45 +211,45 @@ chapters:
   - id: "day11"
     title: "TODOを追加・編集・削除できるようにしよう"
     subtitle: "〜自分専用のタスク管理アプリを作る〜"
-    what_you_will_make: "タスクの作成・編集・削除・完了ができるTODOアプリ"
-    what_you_will_learn: "CRUDの基本（データの作成・読取・更新・削除）"
-    topics: ["CRUD", "タスク管理", "データ操作"]
+    what_you_will_make: "タスクの作成・編集・削除・完了ができるTODOアプリ（ステータス6段階、優先度4段階、期限設定付き）"
+    what_you_will_learn: "CRUDの基本、ステータス管理（TODO/進行中/レビュー中/完了/キャンセル/ブロック）、優先度設定（低/中/高/緊急）"
+    topics: ["CRUD", "タスク管理", "ステータス管理", "優先度", "期限設定", "dueDate"]
 
   - id: "day12"
-    title: "プロジェクトでタスクを分類しよう"
-    subtitle: "〜仕事用・プライベート用でタスクを分ける〜"
-    what_you_will_make: "プロジェクト別にタスクを整理できる機能"
-    what_you_will_learn: "データのグループ化とフィルタリング"
-    topics: ["プロジェクト管理", "グループ化", "フィルタリング"]
+    title: "タスクを誰かに割り当てて、自分のタスクを見よう"
+    subtitle: "〜チームで作業を分担する〜"
+    what_you_will_make: "タスクをメンバーにアサインする機能と、自分のタスク一覧（My Tasks）"
+    what_you_will_learn: "タスクアサイン、ユーザーフィルタリング、My Tasksビューの実装"
+    topics: ["タスクアサイン", "assignee", "My Tasks", "個人ビュー", "フィルタリング"]
 
   - id: "day13"
+    title: "プロジェクトを作ってタスクを整理しよう"
+    subtitle: "〜仕事用・プライベート用でタスクを分ける〜"
+    what_you_will_make: "プロジェクト作成・編集・削除機能（色設定、期間設定、アーカイブ機能付き）"
+    what_you_will_learn: "プロジェクト管理、カラー設定、期間設定（startDate/endDate）、アーカイブ機能"
+    topics: ["プロジェクト管理", "プロジェクトカラー", "期間設定", "アーカイブ", "データグループ化"]
+
+  - id: "day14"
+    title: "チームメンバーを招待してプロジェクトを共有しよう"
+    subtitle: "〜オーナー・管理者・メンバー・閲覧者の役割分担〜"
+    what_you_will_make: "プロジェクトメンバー管理（ロール：OWNER/ADMIN/MEMBER/VIEWER）"
+    what_you_will_learn: "メンバーロール管理、権限ベースのアクセス制御、ProjectMemberの実装"
+    topics: ["メンバー管理", "ロール管理", "権限制御", "OWNER", "ADMIN", "MEMBER", "VIEWER"]
+
+  - id: "day15"
+    title: "タスクをドラッグ&ドロップで並び替えよう"
+    subtitle: "〜優先順位を直感的に変更する〜"
+    what_you_will_make: "ドラッグ&ドロップでタスクの並び順を変更できる機能"
+    what_you_will_learn: "ドラッグ&ドロップUI、position管理、並び順の永続化"
+    topics: ["ドラッグ&ドロップ", "並び替え", "position", "UI/UX", "react-beautiful-dnd"]
+
+  # Week 4: アプリをもっと便利にしよう
+  - id: "day16"
     title: "キーワードでタスクを検索できるようにしよう"
     subtitle: "〜大量のタスクから目的のものをすぐ見つける〜"
     what_you_will_make: "タスクを検索・並び替えできる検索機能"
     what_you_will_learn: "全文検索とソート機能の実装"
-    topics: ["検索", "フィルター", "ソート"]
-
-  - id: "day14"
-    title: "進捗状況を一目で分かるダッシュボードを作ろう"
-    subtitle: "〜完了率や未完了タスク数をグラフで表示〜"
-    what_you_will_make: "タスクの統計情報を表示するダッシュボード"
-    what_you_will_learn: "データ集計とグラフ表示（Recharts）"
-    topics: ["ダッシュボード", "データ集計", "グラフ表示"]
-
-  - id: "day15"
-    title: "週次レポートを自動生成しよう"
-    subtitle: "〜今週何をやったか自動でまとめる〜"
-    what_you_will_make: "週ごとのタスク完了状況レポート"
-    what_you_will_learn: "データの集計と期間フィルタリング"
-    topics: ["レポート", "週次集計", "統計"]
-
-  # Week 4: アプリをもっと便利にしよう
-  - id: "day16"
-    title: "作業時間を計測できるタイマーを作ろう"
-    subtitle: "〜どのタスクに何時間使ったか記録する〜"
-    what_you_will_make: "開始・停止ボタンで作業時間を記録できるタイマー機能"
-    what_you_will_learn: "時間計測とログ記録の実装"
-    topics: ["タイマー", "時間計測", "作業ログ"]
+    topics: ["検索", "フィルター", "ソート", "全文検索"]
 
   - id: "day17"
     title: "チームメンバーを管理できるようにしよう"
@@ -237,18 +266,18 @@ chapters:
     topics: ["レイアウト", "ナビゲーション", "メニュー"]
 
   - id: "day19"
-    title: "よく使うロジックを再利用できるようにしよう"
-    subtitle: "〜自分だけの便利な道具箱を作る〜"
-    what_you_will_make: "フォーム管理やAPI呼び出しを簡単にするカスタムHooks"
-    what_you_will_learn: "カスタムHooksの作り方と再利用方法"
-    topics: ["カスタムHooks", "ロジックの抽象化", "コード再利用"]
+    title: "タスクにかかった時間を記録しよう"
+    subtitle: "〜見積時間と実績時間を管理する〜"
+    what_you_will_make: "見積時間・実績時間の入力と、タイマー機能（開始・停止・記録）"
+    what_you_will_learn: "時間管理（estimatedHours/actualHours）、タイマー実装（timeSpentMinutes/isTimerActive/timerStartedAt）"
+    topics: ["時間管理", "見積時間", "実績時間", "タイマー", "作業時間計測"]
 
   - id: "day20"
-    title: "エラーが起きても壊れないアプリにしよう"
-    subtitle: "〜問題が起きたらユーザーに優しく伝える〜"
-    what_you_will_make: "エラー発生時に適切なメッセージを表示する仕組み"
-    what_you_will_learn: "エラーハンドリングとユーザー通知"
-    topics: ["エラー処理", "try-catch", "トースト通知"]
+    title: "進捗状況を一目で分かるダッシュボードを作ろう"
+    subtitle: "〜完了率や未完了タスク数をグラフで表示〜"
+    what_you_will_make: "タスクの統計情報を表示するダッシュボード（時間集計レポート付き）"
+    what_you_will_learn: "データ集計とグラフ表示（Recharts）、週次レポート"
+    topics: ["ダッシュボード", "データ集計", "グラフ表示", "Recharts", "週次レポート"]
 
   # Week 5: 作ったアプリを世界中に公開しよう！
   - id: "day21"
@@ -280,6 +309,42 @@ chapters:
     topics: ["コメント機能", "リアルタイム更新", "CRUD"]
 
   - id: "day25"
+    title: "よく使うロジックを再利用できるようにしよう"
+    subtitle: "〜自分だけの便利な道具箱を作る〜"
+    what_you_will_make: "フォーム管理やAPI呼び出しを簡単にするカスタムHooks"
+    what_you_will_learn: "カスタムHooksの作り方と再利用方法"
+    topics: ["カスタムHooks", "ロジックの抽象化", "コード再利用"]
+
+  # Week 6: アプリを完成させよう
+  - id: "day26"
+    title: "エラーが起きても壊れないアプリにしよう"
+    subtitle: "〜問題が起きたらユーザーに優しく伝える〜"
+    what_you_will_make: "エラー発生時に適切なメッセージを表示する仕組み"
+    what_you_will_learn: "エラーハンドリングとユーザー通知"
+    topics: ["エラー処理", "try-catch", "トースト通知"]
+
+  - id: "day27"
+    title: "レスポンシブデザインでスマホ対応しよう"
+    subtitle: "〜PCでもスマホでも見やすく〜"
+    what_you_will_make: "モバイル・タブレット・デスクトップ対応のレスポンシブUI"
+    what_you_will_learn: "Tailwind CSSのブレークポイントとレスポンシブデザイン"
+    topics: ["レスポンシブデザイン", "モバイル対応", "Tailwind CSS", "ブレークポイント"]
+
+  - id: "day28"
+    title: "パフォーマンスを最適化しよう"
+    subtitle: "〜アプリの表示速度を速くする〜"
+    what_you_will_make: "メモ化や遅延読み込みで高速化されたアプリ"
+    what_you_will_learn: "useMemo/useCallback、React.memo、Lazy Loading"
+    topics: ["パフォーマンス最適化", "メモ化", "Lazy Loading", "最適化"]
+
+  - id: "day29"
+    title: "アクセシビリティを向上させよう"
+    subtitle: "〜誰でも使いやすいアプリに〜"
+    what_you_will_make: "キーボード操作とスクリーンリーダー対応"
+    what_you_will_learn: "WAI-ARIA、セマンティックHTML、アクセシビリティ"
+    topics: ["アクセシビリティ", "a11y", "ARIA", "キーボード操作"]
+
+  - id: "day30"
     title: "30日間の学びを振り返ろう"
     subtitle: "〜次のステップへ進むために〜"
     what_you_will_make: "学んだことの総まとめと今後の学習計画"
