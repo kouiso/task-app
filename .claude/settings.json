@@ -1,11 +1,44 @@
 {
   "permissions": {
-    "allow": ["*"],
-    "deny": [],
-    "ask": []
+    "allow": [
+      "Bash(npm run lint*)",
+      "Bash(npm run format*)",
+      "Bash(npm run build*)",
+      "Bash(npm run dev*)",
+      "Bash(npm run test*)",
+      "Bash(npm run db:*)",
+      "Bash(task *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(gh pr *)",
+      "Bash(gh issue *)",
+      "Bash(gh run *)",
+      "Bash(docker compose *)",
+      "Bash(npx prisma *)"
+    ]
   },
-  "mcpServers": {},
-  "allowDangerousBashOptions": true,
-  "allowedDirectories": ["."],
-  "dangerouslyDisableSandbox": false
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/plan-memory-reminder.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/plan-memory-reminder.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
