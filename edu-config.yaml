@@ -44,14 +44,14 @@ exclusions:
 # LLM設定（.envから読み込み、ここで上書き可能）
 llm:
   commander_model: "gpt-5.2"
-  worker_model: "gemini-2.0-flash"
+  worker_model: "gpt-5.2"  # Geminiクォータ枯渇のため全てGPT-5.2に統一
   commander_temperature: 0.2
   worker_temperature: 0.4
-  
-  # エージェント個別設定
+
+  # エージェント個別設定（全てGPT-5.2に統一 - Geminiクォータ枯渇対策）
   agent_models:
     # ==========================================================================
-    # PM層（レビューAI）- 文章レビューはGPT-5.2、正確性レビューはGemini 3.0 Pro
+    # PM層（レビューAI）
     # ==========================================================================
     product_owner:
       model: "gpt-5.2"  # 最終承認 - 文章品質重視
@@ -60,23 +60,23 @@ llm:
       model: "gpt-5.2"  # 構造・フロー検証 - 文章品質重視
       temperature: 0.2
     quality_pm:
-      model: "gemini-2.0-flash"  # コード品質・正確性検証 - 技術精度重視
+      model: "gpt-5.2"  # コード品質・正確性検証
       temperature: 0.3
     beginner_advocate:
       model: "gpt-5.2"  # 初心者視点検証 - 文章分かりやすさ重視
       temperature: 0.3
 
     # ==========================================================================
-    # Worker層（作業AI）- Gemini 2.0 Flash（高速・低コスト）
+    # Worker層（作業AI）
     # ==========================================================================
     scout:
-      model: "gemini-2.0-flash"  # リサーチ - 高速検索
+      model: "gpt-5.2"  # リサーチ
       temperature: 0.4
     scribe:
-      model: "gemini-2.0-flash"  # 執筆 - 大量テキスト生成
+      model: "gpt-5.2"  # 執筆 - 大量テキスト生成
       temperature: 0.4
     validator:
-      model: "gemini-2.0-flash"  # コマンド・コード検証 - 正確性重視
+      model: "gpt-5.2"  # コマンド・コード検証 - 正確性重視
       temperature: 0.3
 
 # =============================================================================
@@ -165,13 +165,13 @@ curriculum_approach:
 
 # 30日間カリキュラム
 chapters:
-  # Week 1: 最初の一歩を踏み出そう
+  # Week 1: 環境構築・基礎
   - id: "day01"
     title: "開発環境を整えて、初めてのアプリを動かそう"
     subtitle: "〜プログラミングの「キッチン」を準備する〜"
     what_you_will_make: "npx create-next-appで新規プロジェクトを作成し、ブラウザで表示"
-    what_you_will_learn: "Docker、Node.js、npm、VS Code、ターミナルの基本"
-    topics: ["環境構築", "Docker", "docker-compose", "Node.js", "npm", "VS Code", "create-next-app"]
+    what_you_will_learn: "Docker、Node.js、npm、VS Code、Prisma、Next.js開発サーバーの基本"
+    topics: ["環境構築", "Docker", "Node.js", "npm", "VS Code", "Prisma", "create-next-app", "Next.js dev server"]
     special_notes:
       - "npx create-next-app でゼロから新規プロジェクトを作成"
       - "git clone や ZIP配布は使用しない"
@@ -180,210 +180,212 @@ chapters:
   - id: "day02"
     title: "データに名札をつけて管理しよう"
     subtitle: "〜お弁当箱に「サンドイッチ」と書くように〜"
-    what_you_will_make: "ユーザー名や年齢を保存できる変数を作る"
-    what_you_will_learn: "TypeScriptの変数と型の基本"
-    topics: ["変数", "型", "const/let", "基本的な型"]
+    what_you_will_make: "TypeScriptで変数や型を使ったデータ管理の練習"
+    what_you_will_learn: "TypeScriptの変数宣言（const/let）と基本的な型の使い方"
+    topics: ["TypeScript", "変数", "型", "const", "let", "基本的な型"]
 
   - id: "day03"
-    title: "再利用できるUI部品を作ろう"
-    subtitle: "〜ボタンやカードを1回作れば何度でも使える〜"
-    what_you_will_make: "自分専用のボタンコンポーネント、カードコンポーネント"
-    what_you_will_learn: "Reactコンポーネントの作り方と再利用方法"
-    topics: ["Reactコンポーネント", "JSX", "props", "children"]
+    title: "GitHubに保存しよう"
+    subtitle: "〜コードのタイムマシンを手に入れる〜"
+    what_you_will_make: "GitHubリポジトリにプロジェクトをpush"
+    what_you_will_learn: "Gitの基本操作とGitHubへのpush方法"
+    topics: ["Git", "GitHub", "push", "バージョン管理"]
 
   - id: "day04"
-    title: "ボタンを押したら数字が増えるカウンターを作ろう"
-    subtitle: "〜ゲームのスコアみたいに状態を保存する〜"
-    what_you_will_make: "クリックするたびに数字が増えるカウンターアプリ"
-    what_you_will_learn: "状態管理の基本（useState）とイベント処理"
-    topics: ["useState", "state", "イベントハンドラ"]
+    title: "ネットに公開しよう"
+    subtitle: "〜作ったアプリを世界中に見せる〜"
+    what_you_will_make: "Vercelにデプロイして公開されたアプリ"
+    what_you_will_learn: "Vercelへのデプロイと環境変数の設定"
+    topics: ["Vercel", "デプロイ", "環境変数", "本番公開"]
 
+  # Week 2: ログイン・認証
   - id: "day05"
-    title: "ページが開いたら自動で動く仕組みを作ろう"
-    subtitle: "〜タイマーや自動通知の基礎〜"
-    what_you_will_make: "ページを開くと自動で時刻を表示する時計アプリ"
-    what_you_will_learn: "副作用（useEffect）と便利なHooks"
-    topics: ["useEffect", "useCallback", "useMemo", "カスタムHooks"]
+    title: "ログイン画面のUIを作ろう"
+    subtitle: "〜ユーザーが最初に出会う画面をデザインする〜"
+    what_you_will_make: "react-hook-formとzodでバリデーション付きのログインフォーム"
+    what_you_will_learn: "shadcn/uiフォームコンポーネント、react-hook-form、zodバリデーション"
+    topics: ["react-hook-form", "zod", "shadcn/ui", "フォーム", "バリデーション", "ログイン画面"]
 
-  # Week 2: データを保存して、取り出せるようにしよう
   - id: "day06"
-    title: "データベースにユーザー情報を保存しよう"
-    subtitle: "〜アプリを閉じても消えないデータ保管庫を作る〜"
-    what_you_will_make: "ユーザー情報を保存・取得できるデータベース"
-    what_you_will_learn: "Prismaを使ったデータベース操作の基本"
-    topics: ["Prisma", "スキーマ", "モデル", "データベース"]
+    title: "ユーザー登録画面を作ろう"
+    subtitle: "〜新しいユーザーを迎え入れる〜"
+    what_you_will_make: "バリデーション付きのユーザー登録フォーム"
+    what_you_will_learn: "登録フォームの実装、パスワード確認、zodスキーマの応用"
+    topics: ["react-hook-form", "zod", "shadcn/ui", "ユーザー登録", "フォームバリデーション"]
 
   - id: "day07"
-    title: "ボタンを押したらデータが取れる仕組みを作ろう"
-    subtitle: "〜フロントエンドとバックエンドをつなぐ〜"
-    what_you_will_make: "データを取得・作成・更新・削除できるAPI"
-    what_you_will_learn: "tRPCを使った型安全なAPI設計"
-    topics: ["tRPC", "API", "ルーター", "プロシージャ"]
+    title: "ログイン処理の仕組みを理解しよう"
+    subtitle: "〜パスワードを安全に扱う裏側の仕組み〜"
+    what_you_will_make: "カスタムJWT認証によるログイン処理（api.auth）"
+    what_you_will_learn: "カスタムJWT認証の仕組み、jose、bcryptによるパスワードハッシュ化、tRPCのauthルーター"
+    topics: ["カスタムJWT認証", "tRPC", "api.auth", "jose", "bcrypt", "パスワードハッシュ"]
 
   - id: "day08"
-    title: "ログイン機能を作ろう"
-    subtitle: "〜自分だけがアクセスできるページを作る〜"
-    what_you_will_make: "メールとパスワードでログインできる認証システム"
-    what_you_will_learn: "NextAuthを使った認証の実装"
-    topics: ["NextAuth", "認証", "セッション", "ログイン"]
+    title: "ログアウトとページ保護を実装しよう"
+    subtitle: "〜ログインしてない人はここから先は通しまへんで〜"
+    what_you_will_make: "ログアウト機能と認証ガードで保護されたページ"
+    what_you_will_learn: "ログアウト処理、AppLayoutによる認証ガード、ページ保護の実装"
+    topics: ["ログアウト", "ページ保護", "AppLayout", "認証ガード"]
 
+  # Week 3: プロジェクト管理
   - id: "day09"
-    title: "入力ミスを防ぐフォームを作ろう"
-    subtitle: "〜空欄や不正な入力をチェックする門番〜"
-    what_you_will_make: "バリデーション付きのユーザー登録フォーム"
-    what_you_will_learn: "react-hook-formとzodを使ったフォーム管理"
-    topics: ["フォーム", "バリデーション", "エラーハンドリング"]
+    title: "プロジェクト一覧画面を作ろう"
+    subtitle: "〜タスクを整理するための箱を並べる〜"
+    what_you_will_make: "プロジェクト一覧を表示する画面"
+    what_you_will_learn: "tRPCでのデータ取得、Prismaクエリ、一覧表示の実装"
+    topics: ["プロジェクト一覧", "tRPC", "Prisma", "データ取得", "一覧表示"]
 
   - id: "day10"
-    title: "アプリを綺麗にデザインしよう"
-    subtitle: "〜スマホでもPCでも見やすいデザインに〜"
-    what_you_will_make: "Tailwind CSSで装飾した美しいUIコンポーネント"
-    what_you_will_learn: "Tailwind CSSとshadcn/uiを使ったスタイリング"
-    topics: ["Tailwind CSS", "shadcn/ui", "レスポンシブ", "ダークモード"]
+    title: "プロジェクト新規作成を実装しよう"
+    subtitle: "〜新しいプロジェクトを立ち上げる〜"
+    what_you_will_make: "プロジェクト新規作成フォームと作成処理"
+    what_you_will_learn: "tRPCのmutation、Prismaでのデータ作成、フォーム送信処理"
+    topics: ["プロジェクト作成", "tRPC mutation", "Prisma create", "フォーム"]
 
-  # Week 3: 実用的なTODOアプリを作ろう
   - id: "day11"
-    title: "TODOを追加・編集・削除できるようにしよう"
-    subtitle: "〜自分専用のタスク管理アプリを作る〜"
-    what_you_will_make: "タスクの作成・編集・削除・完了ができるTODOアプリ（ステータス6段階、優先度4段階、期限設定付き）"
-    what_you_will_learn: "CRUDの基本、ステータス管理（TODO/進行中/レビュー中/完了/キャンセル/ブロック）、優先度設定（低/中/高/緊急）"
-    topics: ["CRUD", "タスク管理", "ステータス管理", "優先度", "期限設定", "dueDate"]
+    title: "プロジェクト編集・削除を実装しよう"
+    subtitle: "〜プロジェクトを更新したり片付けたり〜"
+    what_you_will_make: "プロジェクトの編集フォームと削除機能"
+    what_you_will_learn: "Prismaのupdate/delete操作、確認ダイアログ、CRUD完成"
+    topics: ["プロジェクト編集", "プロジェクト削除", "Prisma update", "Prisma delete", "CRUD"]
 
   - id: "day12"
-    title: "タスクを誰かに割り当てて、自分のタスクを見よう"
-    subtitle: "〜チームで作業を分担する〜"
-    what_you_will_make: "タスクをメンバーにアサインする機能と、自分のタスク一覧（My Tasks）"
-    what_you_will_learn: "タスクアサイン、ユーザーフィルタリング、My Tasksビューの実装"
-    topics: ["タスクアサイン", "assignee", "My Tasks", "個人ビュー", "フィルタリング"]
+    title: "メンバー追加を実装しよう"
+    subtitle: "〜チームで一緒にプロジェクトを進める〜"
+    what_you_will_make: "プロジェクトにメンバーを追加・管理する機能"
+    what_you_will_learn: "メンバー管理、ロール制御、ProjectMemberの実装"
+    topics: ["メンバー管理", "メンバー追加", "ロール管理", "ProjectMember"]
 
+  # Week 4: タスク管理
   - id: "day13"
-    title: "プロジェクトを作ってタスクを整理しよう"
-    subtitle: "〜仕事用・プライベート用でタスクを分ける〜"
-    what_you_will_make: "プロジェクト作成・編集・削除機能（色設定、期間設定、アーカイブ機能付き）"
-    what_you_will_learn: "プロジェクト管理、カラー設定、期間設定（startDate/endDate）、アーカイブ機能"
-    topics: ["プロジェクト管理", "プロジェクトカラー", "期間設定", "アーカイブ", "データグループ化"]
+    title: "タスク一覧画面を作ろう"
+    subtitle: "〜やることリストを一目で見渡す〜"
+    what_you_will_make: "プロジェクト内のタスク一覧表示画面"
+    what_you_will_learn: "タスクデータの取得と一覧表示、ステータス別の表示"
+    topics: ["タスク一覧", "tRPC", "Prisma", "タスク表示"]
 
   - id: "day14"
-    title: "チームメンバーを招待してプロジェクトを共有しよう"
-    subtitle: "〜オーナー・管理者・メンバー・閲覧者の役割分担〜"
-    what_you_will_make: "プロジェクトメンバー管理（ロール：OWNER/ADMIN/MEMBER/VIEWER）"
-    what_you_will_learn: "メンバーロール管理、権限ベースのアクセス制御、ProjectMemberの実装"
-    topics: ["メンバー管理", "ロール管理", "権限制御", "OWNER", "ADMIN", "MEMBER", "VIEWER"]
+    title: "タスク新規作成を実装しよう"
+    subtitle: "〜やることを登録する〜"
+    what_you_will_make: "TaskDialogを使ったタスク新規作成機能"
+    what_you_will_learn: "タスク作成フォーム、TaskDialog、tRPC mutation"
+    topics: ["タスク作成", "TaskDialog", "tRPC mutation", "フォーム"]
 
   - id: "day15"
-    title: "タスクをドラッグ&ドロップで並び替えよう"
-    subtitle: "〜優先順位を直感的に変更する〜"
-    what_you_will_make: "ドラッグ&ドロップでタスクの並び順を変更できる機能"
-    what_you_will_learn: "ドラッグ&ドロップUI、position管理、並び順の永続化"
-    topics: ["ドラッグ&ドロップ", "並び替え", "position", "UI/UX", "react-beautiful-dnd"]
+    title: "タスク編集・削除を実装しよう"
+    subtitle: "〜タスクの内容を更新したり完了にしたり〜"
+    what_you_will_make: "タスクの編集フォームと削除機能"
+    what_you_will_learn: "タスクのupdate/delete操作、CRUD完成"
+    topics: ["タスク編集", "タスク削除", "CRUD", "Prisma update", "Prisma delete"]
 
-  # Week 4: アプリをもっと便利にしよう
   - id: "day16"
-    title: "キーワードでタスクを検索できるようにしよう"
-    subtitle: "〜大量のタスクから目的のものをすぐ見つける〜"
-    what_you_will_make: "タスクを検索・並び替えできる検索機能"
-    what_you_will_learn: "全文検索とソート機能の実装"
-    topics: ["検索", "フィルター", "ソート", "全文検索"]
+    title: "ステータス変更・タイマーを実装しよう"
+    subtitle: "〜タスクの進み具合を管理する〜"
+    what_you_will_make: "ステータス変更機能と作業時間を計測するタイマー"
+    what_you_will_learn: "ステータス管理、タイマー実装、作業時間の記録"
+    topics: ["ステータス変更", "タイマー", "作業時間計測", "状態管理"]
 
   - id: "day17"
-    title: "チームメンバーを管理できるようにしよう"
-    subtitle: "〜複数人でタスクを共有する〜"
-    what_you_will_make: "ユーザーの追加・編集・権限管理ができる機能"
-    what_you_will_learn: "ユーザー管理とロール制御"
-    topics: ["ユーザー管理", "権限管理", "プロフィール編集"]
+    title: "自分のタスクページを作ろう"
+    subtitle: "〜自分に割り当てられたタスクだけを見る〜"
+    what_you_will_make: "ログインユーザーのタスクだけを表示するマイタスクページ"
+    what_you_will_learn: "ユーザーフィルタリング、マイタスクビューの実装"
+    topics: ["マイタスク", "フィルタリング", "個人ビュー", "assignee"]
 
+  # Week 5: コメント・検索
   - id: "day18"
-    title: "使いやすいメニューとナビゲーションを作ろう"
-    subtitle: "〜どのページにもすぐ移動できるように〜"
-    what_you_will_make: "サイドバーメニューとページ遷移"
-    what_you_will_learn: "Next.js App Routerのレイアウトとナビゲーション"
-    topics: ["レイアウト", "ナビゲーション", "メニュー"]
+    title: "コメント投稿を実装しよう"
+    subtitle: "〜タスクにメモや進捗報告を残す〜"
+    what_you_will_make: "タスクにコメントを投稿できる機能"
+    what_you_will_learn: "コメント投稿機能、tRPCでのコメントAPI実装"
+    topics: ["コメント投稿", "コメント機能", "tRPC", "CRUD"]
 
   - id: "day19"
-    title: "タスクにかかった時間を記録しよう"
-    subtitle: "〜見積時間と実績時間を管理する〜"
-    what_you_will_make: "見積時間・実績時間の入力と、タイマー機能（開始・停止・記録）"
-    what_you_will_learn: "時間管理（estimatedHours/actualHours）、タイマー実装（timeSpentMinutes/isTimerActive/timerStartedAt）"
-    topics: ["時間管理", "見積時間", "実績時間", "タイマー", "作業時間計測"]
+    title: "コメント編集・削除を実装しよう"
+    subtitle: "〜自分のコメントを修正・取り消しする〜"
+    what_you_will_make: "コメントの編集・削除機能（権限チェック付き）"
+    what_you_will_learn: "コメントの編集・削除処理、権限チェックの実装"
+    topics: ["コメント編集", "コメント削除", "権限チェック", "CRUD"]
 
   - id: "day20"
-    title: "進捗状況を一目で分かるダッシュボードを作ろう"
-    subtitle: "〜完了率や未完了タスク数をグラフで表示〜"
-    what_you_will_make: "タスクの統計情報を表示するダッシュボード（時間集計レポート付き）"
-    what_you_will_learn: "データ集計とグラフ表示（Recharts）、週次レポート"
-    topics: ["ダッシュボード", "データ集計", "グラフ表示", "Recharts", "週次レポート"]
+    title: "タスク検索機能を実装しよう"
+    subtitle: "〜大量のタスクから目的のものをすぐ見つける〜"
+    what_you_will_make: "キーワードやフィルターでタスクを検索できる機能"
+    what_you_will_learn: "検索機能、フィルタリングの実装"
+    topics: ["検索機能", "フィルタリング", "タスク検索"]
 
-  # Week 5: 作ったアプリを世界中に公開しよう！
+  # Week 6: レポート・ダッシュボード
   - id: "day21"
-    title: "作ったアプリを世界中に公開しよう"
-    subtitle: "〜URLで誰でもアクセスできるように〜"
-    what_you_will_make: "Vercelで公開された本番環境のアプリ"
-    what_you_will_learn: "Vercelへのデプロイとドメイン設定"
-    topics: ["Vercel", "デプロイ", "本番環境", "公開"]
+    title: "統計カードを表示しよう"
+    subtitle: "〜数字でプロジェクトの全体像を把握する〜"
+    what_you_will_make: "タスク数や完了率などの統計カードコンポーネント"
+    what_you_will_learn: "ローカル集計によるデータ統計、統計カードUIの実装"
+    topics: ["統計カード", "データ集計", "ローカル集計", "ダッシュボード"]
 
   - id: "day22"
-    title: "パスワードやAPIキーを安全に管理しよう"
-    subtitle: "〜秘密情報をGitHubに載せない〜"
-    what_you_will_make: "環境変数を使った安全な設定管理"
-    what_you_will_learn: ".envファイルと環境変数の使い方"
-    topics: ["環境変数", ".env", "セキュリティ"]
+    title: "グラフを表示しよう"
+    subtitle: "〜データを視覚的に分かりやすくする〜"
+    what_you_will_make: "Rechartsを使ったタスク統計グラフ"
+    what_you_will_learn: "Rechartsの使い方、棒グラフ・円グラフの実装"
+    topics: ["Recharts", "グラフ表示", "棒グラフ", "円グラフ", "データ可視化"]
 
   - id: "day23"
-    title: "独自ドメインを設定してプロっぽくしよう"
-    subtitle: "〜your-app.vercel.app → your-app.com に〜"
-    what_you_will_make: "独自ドメインで公開されたアプリ"
-    what_you_will_learn: "ドメインの取得と設定方法"
-    topics: ["独自ドメイン", "DNS設定", "本番運用"]
+    title: "週次レポートを表示しよう"
+    subtitle: "〜1週間の成果をまとめて振り返る〜"
+    what_you_will_make: "週次レポート画面（api.report.getWeeklyReport）"
+    what_you_will_learn: "週次レポートAPI、期間集計、レポート表示の実装"
+    topics: ["週次レポート", "api.report.getWeeklyReport", "期間集計", "レポート"]
 
+  # Week 7: ユーザー管理
   - id: "day24"
-    title: "タスクにコメント機能を追加しよう"
-    subtitle: "〜メモや進捗報告を記録できるように〜"
-    what_you_will_make: "タスクにコメントを投稿・編集・削除できる機能"
-    what_you_will_learn: "コメントシステムの実装"
-    topics: ["コメント機能", "リアルタイム更新", "CRUD"]
+    title: "ユーザー一覧（管理者用）を作ろう"
+    subtitle: "〜管理者だけが見れるユーザー管理画面〜"
+    what_you_will_make: "管理者権限で閲覧できるユーザー一覧画面"
+    what_you_will_learn: "管理者権限の判定、api.userルーター、ユーザー管理UIの実装"
+    topics: ["ユーザー管理", "管理者権限", "api.user", "ユーザー一覧"]
 
   - id: "day25"
-    title: "よく使うロジックを再利用できるようにしよう"
-    subtitle: "〜自分だけの便利な道具箱を作る〜"
-    what_you_will_make: "フォーム管理やAPI呼び出しを簡単にするカスタムHooks"
-    what_you_will_learn: "カスタムHooksの作り方と再利用方法"
-    topics: ["カスタムHooks", "ロジックの抽象化", "コード再利用"]
+    title: "プロフィール編集を実装しよう"
+    subtitle: "〜自分の情報を更新する〜"
+    what_you_will_make: "プロフィール編集画面とパスワード変更機能"
+    what_you_will_learn: "プロフィール更新処理、パスワード変更の実装"
+    topics: ["プロフィール編集", "パスワード変更", "ユーザー情報更新"]
 
-  # Week 6: アプリを完成させよう
+  # Week 8: 仕上げ・公開
   - id: "day26"
-    title: "エラーが起きても壊れないアプリにしよう"
-    subtitle: "〜問題が起きたらユーザーに優しく伝える〜"
-    what_you_will_make: "エラー発生時に適切なメッセージを表示する仕組み"
-    what_you_will_learn: "エラーハンドリングとユーザー通知"
-    topics: ["エラー処理", "try-catch", "トースト通知"]
+    title: "エラー対策・デバッグを学ぼう"
+    subtitle: "〜バグを見つけて直す技術を身につける〜"
+    what_you_will_make: "エラーハンドリングが実装されたアプリ"
+    what_you_will_learn: "TRPCError、エラーハンドリング、デバッグ手法"
+    topics: ["エラーハンドリング", "TRPCError", "デバッグ", "エラー対策"]
 
   - id: "day27"
-    title: "レスポンシブデザインでスマホ対応しよう"
-    subtitle: "〜PCでもスマホでも見やすく〜"
-    what_you_will_make: "モバイル・タブレット・デスクトップ対応のレスポンシブUI"
-    what_you_will_learn: "Tailwind CSSのブレークポイントとレスポンシブデザイン"
-    topics: ["レスポンシブデザイン", "モバイル対応", "Tailwind CSS", "ブレークポイント"]
+    title: "セキュリティ対策を学ぼう"
+    subtitle: "〜アプリを安全に守る〜"
+    what_you_will_make: "セキュリティが強化されたアプリ"
+    what_you_will_learn: "JWT認証、HttpOnly Cookie、protectedProcedure、bcryptの仕組み"
+    topics: ["セキュリティ", "JWT", "HttpOnly Cookie", "protectedProcedure", "bcrypt"]
 
   - id: "day28"
-    title: "パフォーマンスを最適化しよう"
-    subtitle: "〜アプリの表示速度を速くする〜"
-    what_you_will_make: "メモ化や遅延読み込みで高速化されたアプリ"
-    what_you_will_learn: "useMemo/useCallback、React.memo、Lazy Loading"
-    topics: ["パフォーマンス最適化", "メモ化", "Lazy Loading", "最適化"]
+    title: "テストを書こう"
+    subtitle: "〜コードが正しく動くことを自動で確認する〜"
+    what_you_will_make: "VitestとTesting Libraryで書いた自動テスト"
+    what_you_will_learn: "Vitestの使い方、Testing Library、テストの書き方"
+    topics: ["Vitest", "Testing Library", "テスト", "自動テスト"]
 
   - id: "day29"
-    title: "アクセシビリティを向上させよう"
-    subtitle: "〜誰でも使いやすいアプリに〜"
-    what_you_will_make: "キーボード操作とスクリーンリーダー対応"
-    what_you_will_learn: "WAI-ARIA、セマンティックHTML、アクセシビリティ"
-    topics: ["アクセシビリティ", "a11y", "ARIA", "キーボード操作"]
+    title: "最終調整・動作確認をしよう"
+    subtitle: "〜公開前の最終チェックリスト〜"
+    what_you_will_make: "型チェック・Lintを通した完成間近のアプリ"
+    what_you_will_learn: "型チェック、Lint、最終調整の進め方"
+    topics: ["型チェック", "Lint", "最終調整", "動作確認"]
 
   - id: "day30"
-    title: "30日間の学びを振り返ろう"
-    subtitle: "〜次のステップへ進むために〜"
-    what_you_will_make: "学んだことの総まとめと今後の学習計画"
-    what_you_will_learn: "ベストプラクティスと継続学習のコツ"
-    topics: ["振り返り", "ポートフォリオ", "次のステップ"]
+    title: "完成版を公開！卒業！"
+    subtitle: "〜30日間の集大成を世界に届ける〜"
+    what_you_will_make: "Vercelにデプロイされた完成版アプリ"
+    what_you_will_learn: "最終デプロイ、30日間の振り返り、次のステップ"
+    topics: ["Vercelデプロイ", "振り返り", "卒業", "次のステップ"]
 
 # =============================================================================
 # 📚 上級者向け・別コラム（オプション）
