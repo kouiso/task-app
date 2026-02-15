@@ -53,7 +53,10 @@ export default function ReportPage() {
     () => tasks?.reduce((acc, task) => acc + task.timeSpentMinutes, 0) || 0,
     [tasks],
   );
-  const averageTimePerTask = tasks && tasks.length > 0 ? totalTimeSpent / tasks.length : 0;
+  const averageTimePerTask = useMemo(
+    () => (tasks && tasks.length > 0 ? totalTimeSpent / tasks.length : 0),
+    [tasks, totalTimeSpent],
+  );
 
   const projectStats = useMemo(
     () =>
@@ -75,10 +78,13 @@ export default function ReportPage() {
     [projects, tasks],
   );
 
-  const completionRate =
-    tasks && tasks.length > 0
-      ? ((tasks.filter((t) => t.status === 'DONE').length / tasks.length) * 100).toFixed(1)
-      : '0';
+  const completionRate = useMemo(
+    () =>
+      tasks && tasks.length > 0
+        ? ((tasks.filter((t) => t.status === 'DONE').length / tasks.length) * 100).toFixed(1)
+        : '0',
+    [tasks],
+  );
 
   if (tasksLoading || projectsLoading) {
     return (

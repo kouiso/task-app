@@ -1,6 +1,3 @@
-/**
- * @vitest-environment jsdom
- */
 import { QueryClientProvider } from '@tanstack/react-query';
 import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/react';
@@ -13,6 +10,7 @@ import { TaskCard } from '../task-card';
 // Mock the TaskTimer and TimeLogDialog components to avoid tRPC calls
 vi.mock('../task-timer', () => ({
   TaskTimer: ({
+    taskId,
     isTimerActive,
     onTimerUpdate,
   }: {
@@ -20,7 +18,7 @@ vi.mock('../task-timer', () => ({
     isTimerActive: boolean;
     onTimerUpdate?: () => void;
   }) => (
-    <div data-testid="task-timer">
+    <div data-testid="task-timer" data-task-id={taskId}>
       <button
         type="button"
         data-testid={isTimerActive ? 'stop-timer-button' : 'start-timer-button'}
@@ -37,6 +35,7 @@ vi.mock('../time-log-dialog', () => ({
   TimeLogDialog: ({
     open,
     onClose,
+    taskId,
     onSuccess,
   }: {
     open: boolean;
@@ -44,7 +43,11 @@ vi.mock('../time-log-dialog', () => ({
     taskId: string;
     onSuccess: () => void;
   }) => (
-    <div data-testid="time-log-dialog" style={{ display: open ? 'block' : 'none' }}>
+    <div
+      data-testid="time-log-dialog"
+      data-task-id={taskId}
+      style={{ display: open ? 'block' : 'none' }}
+    >
       <button type="button" onClick={onClose}>
         Close
       </button>
@@ -174,5 +177,35 @@ describe('TaskCard', () => {
       expect(screen.getByText(status.replace('_', ' '))).toBeInTheDocument();
       unmount();
     }
+  });
+
+  it('should handle keyboard navigation on title button', async () => {
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
+
+    const titleButton = screen.getByRole('button', { name: /test task/i });
+    titleButton.focus();
+    await user.keyboard('{Enter}');
+    expect(mockOnClick).toHaveBeenCalledWith('task-1');
+  });
+
+  it('should not render title as button when onClick is not provided', () => {
+    const Wrapper = createWrapper();
+    render(
+      <TaskCard
+        id="task-1"
+        title="Test Task"
+        description="Test Description"
+        status="TODO"
+        priority="HIGH"
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByText('Test Task')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /test task/i })).not.toBeInTheDocument();
   });
 });
