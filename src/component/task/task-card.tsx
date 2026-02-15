@@ -200,6 +200,7 @@ export function TaskCard({
               size="sm"
               className="w-full text-xs h-8"
               onClick={handleOpenTimeLog}
+              aria-label={`Log time for ${title}`}
             >
               <Clock className="mr-2 h-3 w-3" />
               Log Time
