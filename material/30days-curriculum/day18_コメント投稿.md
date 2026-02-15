@@ -2,241 +2,391 @@
 
 ## 🎯 今日のゴール
 
-タスクに対してコメントを投稿できる機能を実装します。コメント履歴を表示し、新しいコメントを追加できるようにします。
+タスクの詳細ダイアログにコメント機能を追加します。
+コメント一覧を表示し、新しいコメントを投稿
+できるようにします。
 
-【スクリーンショット: コメントセクション】
+【スクリーンショット: コメント付きタスク詳細】
 
-## 🤔 なぜこれを作るのか?
+## 🤔 なぜこれを作るのか？
 
-タスクの進捗や課題を共有するコミュニケーション機能です。**コメントは付箋のようなもの**。ノートに付箋を貼って補足情報を書き足すように、タスクにコメントを追加することで、背景情報や議論の履歴を残せます。後から見返したときに「なぜこうなったか」が分かります。
+チームでタスクに取り組む時、進捗報告や質問を
+タスクに紐づけて記録する必要があります。
+
+> 💡 **例え話**: コメントは「付箋に貼るメモ」
+> です。タスクカードの横にチームメイトが
+> メモを貼り、誰がいつ何を書いたかが
+> 時系列で残ります。
+
+### 📐 コメント機能の構成
+
+```mermaid
+graph TD
+    A[タスク詳細ダイアログ] --> B[コメント一覧]
+    A --> C[コメント投稿フォーム]
+    B --> D[api.comment.getByTaskId]
+    C --> E[api.comment.create]
+    E --> F[キャッシュ更新 invalidate]
+    F --> B
+
+    style A fill:#e3f2fd
+    style D fill:#e8f5e9
+    style E fill:#fff3e0
+```
+
+### やること / やらないこと
+
+| やること | やらないこと |
+|---------|-------------|
+| コメント一覧表示 | コメントへの返信（スレッド） |
+| コメント投稿 | ファイル添付 |
+| ユーザーアバター表示 | リアルタイム通知 |
+| 時刻表示 | コメント検索 |
+
+### 🆕 新しく学ぶ概念
+
+| 概念 | 読み方 | 役割 | 例え |
+|------|--------|------|------|
+| comment.getByTaskId | — | タスクのコメント取得 | 付箋のメモを全部読む |
+| comment.create | — | コメント投稿 | 付箋にメモを貼る |
+| commentContent | — | 入力中のコメント文 | 書きかけのメモ |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | コメント一覧表示 | 15分 |
-| Step 2 | コメント投稿フォーム | 15分 |
-| Step 3 | コメント投稿API呼び出し | 10分 |
-| Step 4 | リアルタイム更新 | 10分 |
+| Step 1 | コメントAPIを理解する | 3分 |
+| Step 2 | タスク詳細でコメントを取得 | 5分 |
+| Step 3 | コメント一覧を表示する | 7分 |
+| Step 4 | コメント投稿フォームを作る | 5分 |
+| Step 5 | 投稿処理を実装する | 5分 |
+| Step 6 | 投稿後のキャッシュ更新 | 3分 |
+| Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約50分
+**合計時間**: 約31分
 
 ---
 
-### Step 1: コメント一覧表示（15分）
+### Step 1: コメントAPIを理解する（3分）
+
+🎯 **ゴール**: コメントルーターのAPIを把握します。
+
+#### comment ルーターの全メソッド
+
+| メソッド | 種別 | 説明 |
+|---------|------|------|
+| `getByTaskId` | query | タスクのコメント一覧取得 |
+| `create` | mutation | コメント投稿 |
+| `update` | mutation | コメント編集（Day 19） |
+| `delete` | mutation | コメント削除（Day 19） |
+
+#### comment.create の入力パラメータ
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `content` | string | ○ | コメント本文 |
+| `taskId` | string | ○ | タスクID |
+| `userId` | string | ○ | 投稿者ID |
+
+> 💡 コメントはタスクに紐づきます。
+> `taskId` で「どのタスクへのコメントか」を
+> 指定します。
+
+✅ **確認ポイント**:
+- 4つのメソッドを把握した
+
+---
+
+### Step 2: タスク詳細でコメントを取得（5分）
+
+🎯 **ゴール**: タスク詳細ダイアログ内でコメント
+データを取得します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx
-'use client';
-
-import { api } from '@/trpc/react';
-import { Avatar, AvatarFallback } from '@/component/ui/avatar';
-import { Card, CardContent } from '@/component/ui/card';
-import { Loader2 } from 'lucide-react';
-
-interface TaskCommentsProps {
-  taskId: string;
-}
-
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const { data: comments, isLoading } = api.comment.getByTask.useQuery({
-    taskId,
-  });
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center p-4">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-6">
-      <h3 className="text-lg font-semibold mb-4">コメント</h3>
-      {comments?.map((comment) => (
-        <Card key={comment.id} className="mb-3">
-          <CardContent className="p-4">
-            <div className="flex items-center mb-2">
-              <Avatar className="h-8 w-8 mr-2">
-                <AvatarFallback>{comment.user.name?.[0]}</AvatarFallback>
-              </Avatar>
-              <span className="font-medium text-sm">{comment.user.name}</span>
-              <span className="text-xs text-muted-foreground ml-2">
-                {new Date(comment.createdAt).toLocaleString('ja-JP')}
-              </span>
-            </div>
-            <p className="text-sm">{comment.content}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+// filepath: src/app/task/page.tsx
+// タスク詳細データ取得（既存）
+const { data: taskDetail } =
+  api.task.getById.useQuery(
+    { id: selectedTask ?? '' },
+    { enabled: !!selectedTask },
   );
-}
 ```
 
-✅ **確認ポイント**: コメント一覧が表示される
+> 💡 `api.task.getById` のレスポンスには
+> `comments` が含まれています。Prismaの
+> `include: { comments: true }` で
+> コメントも一緒に取得されます。
 
-【スクリーンショット: 確認画面】
+#### taskDetail.comments の構造
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string | コメントID |
+| `content` | string | コメント本文 |
+| `createdAt` | Date | 投稿日時 |
+| `user.name` | string | 投稿者名 |
+| `user.avatar` | string? | アバターURL |
+
+✅ **確認ポイント**:
+- `taskDetail?.comments` でデータ取得
 
 ---
 
-### Step 2: コメント投稿フォーム（15分）
+### Step 3: コメント一覧を表示する（7分）
+
+🎯 **ゴール**: コメントをアバター付きのリストで
+表示します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx（フォーム追加）
-import { useState } from 'react';
-import { Button } from '@/component/ui/button';
+// filepath: src/app/task/page.tsx
+import {
+  Avatar, AvatarFallback, AvatarImage,
+} from '@/component/ui/avatar';
+import { Separator } from '@/component/ui/separator';
+```
+
+```typescript
+// filepath: src/app/task/page.tsx
+// コメントセクションのヘッダーとリスト構造
+<Separator />
+<h3 className="font-semibold">
+  Comments
+</h3>
+<div className="space-y-3 max-h-60
+  overflow-y-auto">
+  {taskDetail?.comments?.map(
+    (comment) => (
+      <div key={comment.id}
+        className="flex gap-3">
+```
+
+続けて、各コメントのアバター表示と投稿者名を配置します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// コメント: アバターとユーザー名
+        <Avatar className="h-8 w-8">
+          <AvatarImage
+            src={comment.user.avatar
+              || ''} />
+          <AvatarFallback>
+            {comment.user.name?.[0]}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex gap-2
+            items-center">
+            <span className="font-medium
+              text-sm">
+              {comment.user.name}
+            </span>
+          </div>
+```
+
+最後に、コメント本文の表示とリストの閉じタグです。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// コメント本文と閉じタグ
+          <p className="text-sm mt-1">
+            {comment.content}
+          </p>
+        </div>
+      </div>
+    )
+  )}
+</div>
+```
+
+> 💡 `max-h-60 overflow-y-auto` で
+> コメントが多い場合にスクロール可能にします。
+> `AvatarFallback` はアバター画像がない場合に
+> 名前の頭文字を表示します。
+
+✅ **確認ポイント**:
+- コメントがリスト表示される
+- アバターと名前が表示される
+
+【スクリーンショット: コメント一覧の表示】
+
+---
+
+### Step 4: コメント投稿フォームを作る（5分）
+
+🎯 **ゴール**: テキストエリアと送信ボタンを追加
+します。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/app/task/page.tsx
 import { Textarea } from '@/component/ui/textarea';
 
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const [content, setContent] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('コメント投稿:', content);
-    setContent('');
-  };
-
-  return (
-    <div className="mt-6">
-      <h3 className="text-lg font-semibold mb-4">コメント</h3>
-
-      {/* コメント一覧 */}
-      {comments?.map((comment) => (
-        <Card key={comment.id} className="mb-3">
-          {/* 既存のコメント表示 */}
-        </Card>
-      ))}
-
-      {/* 投稿フォーム */}
-      <Card className="mt-4">
-        <CardContent className="p-4">
-          <form onSubmit={handleSubmit}>
-            <Textarea
-              placeholder="コメントを入力..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={3}
-              className="mb-3"
-            />
-            <Button type="submit" disabled={!content.trim()}>
-              投稿
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+// TaskPageContent内にstate追加
+const [commentContent, setCommentContent]
+  = useState('');
 ```
 
-✅ **確認ポイント**: コメント入力フォームが表示される
+```typescript
+// filepath: src/app/task/page.tsx
+// コメント投稿フォーム
+<div className="flex gap-2">
+  <Textarea
+    value={commentContent}
+    onChange={(e) =>
+      setCommentContent(e.target.value)}
+    placeholder="Add a comment..."
+    rows={2}
+    className="flex-1"
+  />
+  <Button
+    size="sm"
+    onClick={handleCommentSubmit}
+    disabled={!commentContent.trim()}>
+    Post
+  </Button>
+</div>
+```
 
-【スクリーンショット: 確認画面】
+> 💡 `disabled={!commentContent.trim()}` で
+> 空白だけのコメントを送信できないようにします。
+> `trim()` は前後の空白を除去します。
+
+✅ **確認ポイント**:
+- テキストエリアが表示される
+- 空の状態でボタンが無効になる
 
 ---
 
-### Step 3: コメント投稿API呼び出し（10分）
+### Step 5: 投稿処理を実装する（5分）
+
+🎯 **ゴール**: コメントをサーバーに保存します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx（API連携部分）
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const [content, setContent] = useState('');
-
-  const createCommentMutation = api.comment.create.useMutation({
+// filepath: src/app/task/page.tsx
+const createCommentMutation =
+  api.comment.create.useMutation({
     onSuccess: () => {
-      setContent('');
+      if (selectedTask) {
+        utils.task.getById.invalidate(
+          { id: selectedTask }
+        );
+      }
+      setCommentContent('');
     },
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim()) return;
-
-    createCommentMutation.mutate({
-      taskId,
-      content: content.trim(),
-    });
-  };
-
-  return (
-    // UI は同じ
-    <Button
-      type="submit"
-      disabled={!content.trim() || createCommentMutation.isPending}
-    >
-      {createCommentMutation.isPending ? '投稿中...' : '投稿'}
-    </Button>
-  );
-}
 ```
 
-✅ **確認ポイント**: コメントが投稿される
+```typescript
+// filepath: src/app/task/page.tsx
+const handleCommentSubmit = () => {
+  if (!commentContent.trim()
+    || !selectedTask
+    || !session?.user?.id) return;
+  createCommentMutation.mutate({
+    content: commentContent,
+    taskId: selectedTask,
+    userId: session.user.id,
+  });
+};
+```
 
-【スクリーンショット: 確認画面】
+> 💡 投稿成功後に `setCommentContent('')` で
+> フォームをクリアし、`invalidate` で
+> コメント一覧を自動更新します。
+
+✅ **確認ポイント**:
+- コメントが投稿される
+- フォームがクリアされる
 
 ---
 
-### Step 4: リアルタイム更新（10分）
+### Step 6: 投稿後のキャッシュ更新（3分）
+
+🎯 **ゴール**: コメント投稿後にタスク詳細を
+再取得して一覧を更新します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx（キャッシュ更新部分）
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const utils = api.useUtils();
-
-  const { data: comments } = api.comment.getByTask.useQuery({ taskId });
-
-  const createCommentMutation = api.comment.create.useMutation({
-    onSuccess: () => {
-      setContent('');
-      utils.comment.getByTask.invalidate({ taskId });
-    },
-  });
-
-  return (
-    // UI は同じ
-  );
-}
+// filepath: src/app/task/page.tsx
+// invalidateの動作
+utils.task.getById.invalidate(
+  { id: selectedTask }
+);
 ```
 
-✅ **確認ポイント**: 投稿後すぐに新しいコメントが表示される
+#### キャッシュ更新の仕組み
 
-【スクリーンショット: 確認画面】
+| 操作 | invalidate対象 | 効果 |
+|------|--------------|------|
+| コメント投稿 | `task.getById` | コメント一覧更新 |
+| タスク更新 | `task.getAll` + `getById` | 一覧と詳細を更新 |
+| タスク削除 | `task.getAll` | 一覧から削除 |
+
+> 💡 `getById` を invalidate すると、
+> タスク詳細（コメント含む）が再取得されます。
+> コメント専用のクエリを用意しなくても、
+> タスク詳細に含まれるコメントが更新されます。
+
+✅ **確認ポイント**:
+- 投稿後に新しいコメントが表示される
 
 ---
 
-## 📝 学んだこと
+### Step 7: 動作確認（3分）
 
-- **Avatar コンポーネント**: ユーザーアイコン表示（イニシャル表示）
-- **Card コンポーネント**: カード風の背景
-- **toLocaleString**: 日時を日本語フォーマットで表示
-- **trim()**: 前後の空白を削除してバリデーション
-- **invalidate()**: tRPCキャッシュを無効化して再取得
+🎯 **ゴール**: コメント機能の全体を確認します。
+
+1. タスクカードをクリックして詳細を開く
+2. コメント一覧が表示される
+3. テキストエリアにコメントを入力
+4. 「Post」ボタンをクリック
+5. コメントが一覧に追加される
+6. テキストエリアがクリアされる
+
+✅ **確認ポイント**:
+- コメントが正しく投稿される
+- 投稿者のアバターと名前が表示される
+- 空コメントは送信できない
+
+【スクリーンショット: コメント投稿後の画面】
+
+---
 
 ## 📋 今日のまとめ
 
-- [ ] コメント一覧を表示できた
-- [ ] コメント投稿フォームを実装できた
-- [ ] コメント投稿APIを呼び出せた
-- [ ] リアルタイムで更新されるようにした
+- [ ] タスク詳細にコメント一覧を表示できた
+- [ ] `api.comment.create` でコメント投稿できた
+- [ ] 投稿後にキャッシュを更新できた
+- [ ] 空コメントのバリデーションを実装できた
 
 ## ⚠️ つまずきポイント
 
-| 問題 | 原因 | 解決策 |
-|------|------|--------|
-| コメントが空でも投稿できる | trim() でチェックしていない | !content.trim() で無効化 |
-| 投稿後にリストが更新されない | キャッシュが残っている | invalidate() でキャッシュクリア |
-| 日時がUTC表示になる | toLocaleString のロケール未指定 | 'ja-JP' を引数に渡す |
+| エラー / 問題 | 原因 | 解決方法 |
+|--------------|------|---------|
+| コメントが表示されない | commentsがincludeされてない | getByIdのinclude確認 |
+| 投稿後に更新されない | invalidate忘れ | onSuccessに追加 |
+| userIdエラー | session未取得 | getSession確認 |
+| 空白で投稿される | trim()未使用 | disabled条件を追加 |
+
+## 📝 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| comment.create | コメントを投稿するAPI |
+| AvatarFallback | アバター画像がない時の代替表示 |
+| trim() | 文字列の前後の空白を除去 |
+| overflow-y-auto | 縦方向にスクロール可能にする |
 
 ## 🔗 次回予告
 
-Day 19では、コメントの編集・削除機能を実装します。
+Day 19 では、投稿したコメントの編集・削除機能を
+実装します。自分のコメントだけを操作できるように
+権限チェックも行います。

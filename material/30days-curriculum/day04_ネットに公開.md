@@ -129,8 +129,7 @@ graph LR
 
 ```
 DATABASE_URL=postgresql://user:password@host:5432/taskapp
-NEXTAUTH_URL=https://your-app.vercel.app
-NEXTAUTH_SECRET=your-secret-key-here
+JWT_SECRET=your-secret-key-here
 ```
 
 🔍 **環境変数**:
@@ -138,14 +137,13 @@ NEXTAUTH_SECRET=your-secret-key-here
 | 変数名 | 値 | 意味 |
 |--------|-----|------|
 | `DATABASE_URL` | PostgreSQL接続文字列 | データベースの場所 |
-| `NEXTAUTH_URL` | VercelのURL | アプリのURL |
-| `NEXTAUTH_SECRET` | ランダムな文字列 | 認証用の秘密鍵 |
+| `JWT_SECRET` | ランダムな文字列 | 認証用の秘密鍵 |
 
 ✅ **確認ポイント**:
 
 【スクリーンショット: 確認画面】
 
-1. 3つの環境変数が追加される
+1. 2つの環境変数が追加される
 2. 「Save」ボタンをクリック
 3. これで環境変数の設定が完了です
 
@@ -204,8 +202,8 @@ NEXTAUTH_SECRET=your-secret-key-here
 |------------|------|---------|
 | ビルドが失敗する | 環境変数が設定されていない | Environment Variablesを確認してください |
 | デプロイ後にエラーが出る | データベースに接続できない | DATABASE_URLが正しいか確認してください |
-| `NEXTAUTH_SECRET`エラー | シークレットキーが設定されていない | ランダムな文字列を生成して設定してください |
+| `JWT_SECRET`エラー | シークレットキーが設定されていない | ランダムな文字列を生成して設定してください |
 
 ## 🔗 次回予告
 
-Day 5では、ログイン画面のUIを作ります。MUIのTextField、Buttonコンポーネントを使って、美しいログイン画面を実装します。
+Day 5では、ログイン画面のUIを作ります。shadcn/uiのInput、Buttonコンポーネントを使って、美しいログイン画面を実装します。
