@@ -1,5 +1,9 @@
 'use client';
 
+import type { TaskPriority, TaskStatus } from '@prisma/client';
+import { Loader2, Search } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { Button } from '@/component/ui/button';
@@ -15,10 +19,6 @@ import {
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
 import { api } from '@/trpc/react';
-import type { TaskPriority, TaskStatus } from '@prisma/client';
-import { Loader2, Search } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
 
 function SearchPageContent() {
   const router = useRouter();
@@ -301,7 +301,7 @@ function SearchPageContent() {
             {searchResults.tasks.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <h3 className="tex-lg font-semibold">タスク ({searchResults.tasks.length})</h3>
+                  <h3 className="text-lg font-semibold">タスク ({searchResults.tasks.length})</h3>
                   <Separator className="flex-1" />
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -327,7 +327,7 @@ function SearchPageContent() {
             {searchResults.projects.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <h3 className="tex-lg font-semibold">
+                  <h3 className="text-lg font-semibold">
                     プロジェクト ({searchResults.projects.length})
                   </h3>
                   <Separator className="flex-1" />

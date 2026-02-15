@@ -1,5 +1,9 @@
 'use client';
 
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Calendar, Edit, Lock, Mail, Shield, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
@@ -7,10 +11,6 @@ import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Separator } from '@/component/ui/separator';
 import { api } from '@/trpc/react';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import { Edit, Lock, Shield, User } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                  <User className="w-5 h-5 text-primary" />
+                  <Mail className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">メールアドレス</p>
@@ -93,7 +93,7 @@ export default function ProfilePage() {
 
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                  <User className="w-5 h-5 text-primary" />
+                  <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">登録日</p>
@@ -109,7 +109,7 @@ export default function ProfilePage() {
 
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                  <User className="w-5 h-5 text-primary" />
+                  <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">最終更新日</p>

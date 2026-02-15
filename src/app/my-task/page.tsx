@@ -1,5 +1,7 @@
 'use client';
 
+import type { TaskStatus } from '@prisma/client';
+import { useMemo, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
@@ -12,8 +14,6 @@ import {
 } from '@/component/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
 import { api } from '@/trpc/react';
-import type { TaskStatus } from '@prisma/client';
-import { useState } from 'react';
 
 const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -97,24 +97,32 @@ export default function MyTasksPage() {
     }
   };
 
-  const groupedTasks = {
-    overdue: tasks?.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()) || [],
-    today:
-      tasks?.filter((t) => {
-        if (!t.dueDate) return false;
-        const today = new Date();
+  const groupedTasks = useMemo(() => {
+    const overdue: typeof tasks = [];
+    const today: typeof tasks = [];
+    const upcoming: typeof tasks = [];
+    const noDueDate: typeof tasks = [];
+    const now = new Date();
+    const todayStr = now.toDateString();
+
+    for (const t of tasks ?? []) {
+      if (!t.dueDate) {
+        noDueDate.push(t);
+      } else {
         const dueDate = new Date(t.dueDate);
-        return dueDate.toDateString() === today.toDateString();
-      }) || [],
-    upcoming:
-      tasks?.filter((t) => {
-        if (!t.dueDate) return false;
-        const today = new Date();
-        const dueDate = new Date(t.dueDate);
-        return dueDate > today && dueDate.toDateString() !== today.toDateString();
-      }) || [],
-    noDueDate: tasks?.filter((t) => !t.dueDate) || [],
-  };
+        const dueDateStr = dueDate.toDateString();
+        if (dueDateStr === todayStr) {
+          today.push(t);
+        } else if (dueDate < now) {
+          overdue.push(t);
+        } else {
+          upcoming.push(t);
+        }
+      }
+    }
+
+    return { overdue, today, upcoming, noDueDate };
+  }, [tasks]);
 
   if (isLoading) {
     return (

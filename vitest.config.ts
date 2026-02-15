@@ -25,7 +25,7 @@ export default defineConfig({
     },
     env: {
       DATABASE_URL: 'postgresql://user:password@localhost:5433/taskapp_test?schema=public',
-      JWT_SECRET: 'test-secret-key-for-testing-only',
+      JWT_SECRET: 'test-secret-key-for-testing-only-32-chars-min',
       NODE_ENV: 'test',
     },
     coverage: {
@@ -39,8 +39,5 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
       '~': resolve(__dirname, './src'),
     },
-  },
-  esbuild: {
-    jsxInject: `import React from 'react'`,
   },
 });
