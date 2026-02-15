@@ -1,5 +1,4 @@
-import { TRPCError } from '@trpc/server';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
@@ -12,7 +11,7 @@ describe('authRouter', () => {
     it('should login successfully with correct credentials', async () => {
       const testUser = await createTestUser({
         email: 'login-test@example.com',
-        password: 'password123',
+        password: 'Password123!',
         name: 'Login Test User',
       });
 
@@ -20,7 +19,7 @@ describe('authRouter', () => {
 
       const result = await caller.auth.login({
         email: 'login-test@example.com',
-        password: 'password123',
+        password: 'Password123!',
       });
 
       expect(result.user.id).toBe(testUser.id);
@@ -50,7 +49,7 @@ describe('authRouter', () => {
       await expect(
         caller.auth.login({
           email: 'nonexistent@example.com',
-          password: 'password123',
+          password: 'Password123!',
         }),
       ).rejects.toThrow('メールアドレスまたはパスワードが正しくありません');
     });
@@ -58,7 +57,7 @@ describe('authRouter', () => {
     it('should fail login when account is deactivated', async () => {
       await createTestUser({
         email: 'deactivated@example.com',
-        password: 'password123',
+        password: 'Password123!',
         isActive: false,
       });
 
@@ -67,7 +66,7 @@ describe('authRouter', () => {
       await expect(
         caller.auth.login({
           email: 'deactivated@example.com',
-          password: 'password123',
+          password: 'Password123!',
         }),
       ).rejects.toThrow('このアカウントは無効化されています');
     });
@@ -78,7 +77,7 @@ describe('authRouter', () => {
       await expect(
         caller.auth.login({
           email: 'invalid-email',
-          password: 'password123',
+          password: 'Password123!',
         }),
       ).rejects.toThrow();
     });
@@ -102,7 +101,7 @@ describe('authRouter', () => {
       const result = await caller.auth.register({
         email: 'newuser@example.com',
         name: 'New User',
-        password: 'password123',
+        password: 'Password123!',
       });
 
       expect(result.user.email).toBe('newuser@example.com');
@@ -114,7 +113,7 @@ describe('authRouter', () => {
       });
 
       expect(userInDb).not.toBeNull();
-      expect(userInDb?.password).not.toBe('password123');
+      expect(userInDb?.password).not.toBe('Password123!');
     });
 
     it('should fail registration with duplicate email', async () => {
@@ -126,7 +125,7 @@ describe('authRouter', () => {
         caller.auth.register({
           email: 'duplicate@example.com',
           name: 'Duplicate User',
-          password: 'password123',
+          password: 'Password123!',
         }),
       ).rejects.toThrow('このメールアドレスは既に登録されています');
     });
@@ -138,7 +137,7 @@ describe('authRouter', () => {
         caller.auth.register({
           email: 'invalid-email',
           name: 'Invalid Email User',
-          password: 'password123',
+          password: 'Password123!',
         }),
       ).rejects.toThrow();
     });
@@ -162,7 +161,7 @@ describe('authRouter', () => {
         caller.auth.register({
           email: 'noname@example.com',
           name: '',
-          password: 'password123',
+          password: 'Password123!',
         }),
       ).rejects.toThrow();
     });
@@ -173,7 +172,7 @@ describe('authRouter', () => {
       const result = await caller.auth.register({
         email: 'defaultrole@example.com',
         name: 'Default Role User',
-        password: 'password123',
+        password: 'Password123!',
       });
 
       expect(result.user.role).toBe('USER');
@@ -185,7 +184,7 @@ describe('authRouter', () => {
       await caller.auth.register({
         email: 'defaultactive@example.com',
         name: 'Default Active User',
-        password: 'password123',
+        password: 'Password123!',
       });
 
       const user = await prisma.user.findUnique({

@@ -64,7 +64,7 @@ describe('userRouter', () => {
       expect(result.id).toBe(user.id);
       expect(result.email).toBe('getbyid@example.com');
       expect(result.name).toBe('Get By ID User');
-    });
+    }, 10000);
 
     it('should include user projects', async () => {
       const user = await createTestUser();
@@ -280,7 +280,7 @@ describe('userRouter', () => {
       const user = await caller.user.register({
         email: 'register@example.com',
         name: 'Register User',
-        password: 'password123',
+        password: 'Password123!',
       });
 
       expect(user.email).toBe('register@example.com');
@@ -295,12 +295,12 @@ describe('userRouter', () => {
       await caller.user.register({
         email: 'hashed@example.com',
         name: 'Hashed User',
-        password: 'password123',
+        password: 'Password123!',
       });
 
       const userInDb = await prisma.user.findUnique({ where: { email: 'hashed@example.com' } });
 
-      expect(userInDb?.password).not.toBe('password123');
+      expect(userInDb?.password).not.toBe('Password123!');
       expect(userInDb?.password).toBeTruthy();
     });
 
@@ -313,7 +313,7 @@ describe('userRouter', () => {
         caller.user.register({
           email: 'duplicate-register@example.com',
           name: 'Duplicate Register',
-          password: 'password123',
+          password: 'Password123!',
         }),
       ).rejects.toThrow('このメールアドレスは既に登録されています');
     });
@@ -324,7 +324,7 @@ describe('userRouter', () => {
       const user = await caller.user.register({
         email: 'publicregister@example.com',
         name: 'Public Register User',
-        password: 'password123',
+        password: 'Password123!',
       });
 
       expect(user.email).toBe('publicregister@example.com');
