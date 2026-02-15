@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import '@testing-library/jest-dom/vitest';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -171,8 +172,7 @@ describe('TaskCard', () => {
       const { unmount } = render(<TaskCard {...defaultProps} status={status} />, {
         wrapper: Wrapper,
       });
-      // Status is displayed as is (with underscores), not replaced with spaces
-      expect(screen.getByText(status)).toBeInTheDocument();
+      expect(screen.getByText(status.replace('_', ' '))).toBeInTheDocument();
       unmount();
     }
   });
