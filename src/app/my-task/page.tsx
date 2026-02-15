@@ -2,6 +2,7 @@
 
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
+import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
 import {
   Select,
   SelectContent,
@@ -25,9 +26,12 @@ const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
 export default function MyTasksPage() {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [filterProject, setFilterProject] = useState<string>('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
 
   const { data: currentUser } = api.user.getCurrentUser.useQuery();
   const { data: projects } = api.project.getAll.useQuery();
+  const { data: users } = api.user.getAll.useQuery();
   const { data: tasks, isLoading } = api.task.getAll.useQuery(
     {
       assigneeId: currentUser?.id,
@@ -36,6 +40,62 @@ export default function MyTasksPage() {
     },
     { enabled: !!currentUser },
   );
+
+  const utils = api.useUtils();
+
+  const updateMutation = api.task.update.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+      setDialogOpen(false);
+    },
+  });
+
+  const deleteMutation = api.task.delete.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+    },
+  });
+
+  const handleEdit = (taskId: string) => {
+    const task = tasks?.find((t) => t.id === taskId);
+    if (task) {
+      const dueDate = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined;
+
+      setEditingTask({
+        id: task.id,
+        title: task.title,
+        description: task.description || '',
+        status: task.status,
+        priority: task.priority,
+        projectId: task.projectId,
+        ...(dueDate && { dueDate }),
+        ...(task.estimatedHours && { estimatedHours: task.estimatedHours }),
+        ...(task.assigneeId && { assigneeId: task.assigneeId }),
+      });
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    if (confirm('このタスクを削除してもよろしいですか？')) {
+      deleteMutation.mutate({ id: taskId });
+    }
+  };
+
+  const handleSubmit = (data: TaskFormData) => {
+    if (data.id) {
+      updateMutation.mutate({
+        id: data.id,
+        title: data.title,
+        description: data.description || null,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+        estimatedHours: data.estimatedHours || null,
+        assigneeId: data.assigneeId || null,
+      });
+    }
+  };
 
   const groupedTasks = {
     overdue: tasks?.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()) || [],
@@ -115,8 +175,8 @@ export default function MyTasksPage() {
                   priority={task.priority}
                   dueDate={task.dueDate}
                   assignee={task.assignee}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -139,8 +199,8 @@ export default function MyTasksPage() {
                   priority={task.priority}
                   dueDate={task.dueDate}
                   assignee={task.assignee}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -163,8 +223,8 @@ export default function MyTasksPage() {
                   priority={task.priority}
                   dueDate={task.dueDate}
                   assignee={task.assignee}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -187,8 +247,8 @@ export default function MyTasksPage() {
                   priority={task.priority}
                   dueDate={task.dueDate}
                   assignee={task.assignee}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -200,6 +260,16 @@ export default function MyTasksPage() {
             <p>No tasks assigned to you</p>
           </div>
         )}
+
+        <TaskDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+          initialData={editingTask}
+          projects={projects || []}
+          users={users || []}
+          currentUserId={currentUser?.id || ''}
+        />
       </div>
     </AppLayout>
   );

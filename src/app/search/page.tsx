@@ -23,6 +23,7 @@ import { Suspense, useEffect, useState } from 'react';
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const utils = api.useUtils();
 
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [projectId, setProjectId] = useState(searchParams.get('projectId') || '');
@@ -124,8 +125,15 @@ function SearchPageContent() {
     router.push(`/task?taskId=${taskId}&edit=true`);
   };
 
-  const handleTaskDelete = (_taskId: string) => {
+  const deleteMutation = api.task.delete.useMutation({
+    onSuccess: () => {
+      utils.search.search.invalidate();
+    },
+  });
+
+  const handleTaskDelete = (taskId: string) => {
     if (confirm('このタスクを削除してもよろしいですか？')) {
+      deleteMutation.mutate({ id: taskId });
     }
   };
 

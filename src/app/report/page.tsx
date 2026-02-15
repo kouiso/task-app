@@ -10,25 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/component/ui/table';
+import { TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
+import { TASK_STATUS_COLORS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 import { Loader2 } from 'lucide-react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-
-const STATUS_COLORS: Record<string, string> = {
-  TODO: '#9e9e9e',
-  IN_PROGRESS: '#2196f3',
-  IN_REVIEW: '#ff9800',
-  DONE: '#4caf50',
-  CANCELLED: '#f44336',
-  BLOCKED: '#e91e63',
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-  LOW: '#9e9e9e',
-  MEDIUM: '#2196f3',
-  HIGH: '#ff9800',
-  URGENT: '#f44336',
-};
 
 export default function ReportPage() {
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
@@ -147,7 +133,13 @@ export default function ReportPage() {
                       label
                     >
                       {statusData.map((entry) => (
-                        <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
+                        <Cell
+                          key={entry.name}
+                          fill={
+                            TASK_STATUS_COLORS[entry.name as keyof typeof TASK_STATUS_COLORS] ??
+                            '#9e9e9e'
+                          }
+                        />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -176,7 +168,13 @@ export default function ReportPage() {
                       label
                     >
                       {priorityData.map((entry) => (
-                        <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
+                        <Cell
+                          key={entry.name}
+                          fill={
+                            TASK_PRIORITY_COLORS[entry.name as keyof typeof TASK_PRIORITY_COLORS] ??
+                            '#9e9e9e'
+                          }
+                        />
                       ))}
                     </Pie>
                     <Tooltip />

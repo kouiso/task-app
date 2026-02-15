@@ -1,5 +1,6 @@
 'use client';
 
+import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
@@ -66,129 +67,135 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-md mt-8 mb-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>パスワード変更</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">
-                現在のパスワード <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="currentPassword"
-                  name="currentPassword"
-                  type={showPassword.current ? 'text' : 'password'}
-                  value={formData.currentPassword}
-                  onChange={handleChange}
-                  required
-                  disabled={changePassword.isPending}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => toggleShowPassword('current')}
-                >
-                  {showPassword.current ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
+    <AppLayout>
+      <div className="container mx-auto max-w-md mt-8 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>パスワード変更</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">
+                  現在のパスワード <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    name="currentPassword"
+                    type={showPassword.current ? 'text' : 'password'}
+                    value={formData.currentPassword}
+                    onChange={handleChange}
+                    required
+                    disabled={changePassword.isPending}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => toggleShowPassword('current')}
+                  >
+                    {showPassword.current ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">
+                  新しいパスワード <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    name="newPassword"
+                    type={showPassword.new ? 'text' : 'password'}
+                    value={formData.newPassword}
+                    onChange={handleChange}
+                    required
+                    disabled={changePassword.isPending}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => toggleShowPassword('new')}
+                  >
+                    {showPassword.new ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">8文字以上で入力してください</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  新しいパスワード（確認） <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showPassword.confirm ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    disabled={changePassword.isPending}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => toggleShowPassword('confirm')}
+                  >
+                    {showPassword.confirm ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {formData.confirmPassword !== '' &&
+                  formData.newPassword !== formData.confirmPassword && (
+                    <p className="text-sm text-destructive">パスワードが一致しません</p>
                   )}
-                </Button>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">
-                新しいパスワード <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="newPassword"
-                  name="newPassword"
-                  type={showPassword.new ? 'text' : 'password'}
-                  value={formData.newPassword}
-                  onChange={handleChange}
-                  required
-                  disabled={changePassword.isPending}
-                />
+              {changePassword.error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{changePassword.error.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="w-full" disabled={changePassword.isPending}>
+                  {changePassword.isPending ? '変更中...' : '変更'}
+                </Button>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => toggleShowPassword('new')}
-                >
-                  {showPassword.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">8文字以上で入力してください</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">
-                新しいパスワード（確認） <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showPassword.confirm ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push('/profile')}
                   disabled={changePassword.isPending}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => toggleShowPassword('confirm')}
                 >
-                  {showPassword.confirm ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  キャンセル
                 </Button>
               </div>
-              {formData.confirmPassword !== '' &&
-                formData.newPassword !== formData.confirmPassword && (
-                  <p className="text-sm text-destructive">パスワードが一致しません</p>
-                )}
-            </div>
-
-            {changePassword.error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{changePassword.error.message}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" className="w-full" disabled={changePassword.isPending}>
-                {changePassword.isPending ? '変更中...' : '変更'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => router.push('/profile')}
-                disabled={changePassword.isPending}
-              >
-                キャンセル
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
   );
 }
