@@ -107,14 +107,24 @@ describe('TaskCard', () => {
     expect(screen.getByText('Test Description')).toBeInTheDocument();
   });
 
-  it('should call onClick when card is clicked', async () => {
+  it('should call onClick when title button is clicked', async () => {
     const Wrapper = createWrapper();
     const user = userEvent.setup();
     render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
 
-    const card = screen.getByRole('button', { name: /test task/i });
-    expect(card).toBeInTheDocument();
-    await user.click(card);
+    const titleButton = screen.getByRole('button', { name: /^Test Task$/ });
+    expect(titleButton).toBeInTheDocument();
+    await user.click(titleButton);
+    expect(mockOnClick).toHaveBeenCalledWith('task-1');
+  });
+
+  it('should call onClick when card surface is clicked', async () => {
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
+
+    const description = screen.getByText('Test Description');
+    await user.click(description);
     expect(mockOnClick).toHaveBeenCalledWith('task-1');
   });
 
@@ -179,14 +189,25 @@ describe('TaskCard', () => {
     }
   });
 
-  it('should handle keyboard navigation on title button', async () => {
+  it('should handle keyboard navigation with Enter on title button', async () => {
     const Wrapper = createWrapper();
     const user = userEvent.setup();
     render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
 
-    const titleButton = screen.getByRole('button', { name: /test task/i });
+    const titleButton = screen.getByRole('button', { name: /^Test Task$/ });
     titleButton.focus();
     await user.keyboard('{Enter}');
+    expect(mockOnClick).toHaveBeenCalledWith('task-1');
+  });
+
+  it('should handle keyboard navigation with Space on title button', async () => {
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
+
+    const titleButton = screen.getByRole('button', { name: /^Test Task$/ });
+    titleButton.focus();
+    await user.keyboard(' ');
     expect(mockOnClick).toHaveBeenCalledWith('task-1');
   });
 
@@ -206,6 +227,6 @@ describe('TaskCard', () => {
     );
 
     expect(screen.getByText('Test Task')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /test task/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Test Task$/ })).not.toBeInTheDocument();
   });
 });
