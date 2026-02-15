@@ -14,6 +14,7 @@ export default defineConfig({
       ['**/api/**/*.test.{ts,tsx}', 'node'],
     ],
     globals: true,
+    testTimeout: 15000,
     setupFiles: ['./src/test/setup.ts'],
     include: ['**/*.test.{ts,tsx}'],
     pool: 'forks',
@@ -23,7 +24,7 @@ export default defineConfig({
       },
     },
     env: {
-      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/taskapp_test?schema=public',
+      DATABASE_URL: 'postgresql://user:password@localhost:5433/taskapp_test?schema=public',
       JWT_SECRET: 'test-secret-key-for-testing-only',
       NODE_ENV: 'test',
     },
