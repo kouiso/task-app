@@ -42,7 +42,8 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noConsoleLog": "warn",
+        "noConsoleLog": "error",
+        "noDebugger": "error",
         "noArrayIndexKey": "warn"
       }
     }
