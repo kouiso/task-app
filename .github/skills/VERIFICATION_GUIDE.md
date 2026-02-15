@@ -51,7 +51,7 @@
 ```
 
 **期待される動作**:
-- Next.js 15, TypeScript, tRPC, Prisma, Material-UI などを含む
+- Next.js 15, TypeScript, tRPC, Prisma, shadcn/ui などを含む
 - バージョン情報も含まれている
 
 #### 2.2. follow-coding-guidelines スキル

@@ -1,18 +1,5 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
-import { Button } from '@/component/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/component/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTrigger } from '@/component/ui/sheet';
-import { cn } from '@/lib/utils';
-import { api } from '@/trpc/react';
 import {
   BarChart,
   ClipboardList,
@@ -26,6 +13,19 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/component/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/component/ui/sheet';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
 import { QuickSearch } from './quick-search';
 
 interface MenuItem {

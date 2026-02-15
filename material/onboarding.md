@@ -8,7 +8,7 @@
 
 - Machine: MacOS or Windows WSL2
 - Homebrew
-- NodeJS: バージョンは.tool-versionsファイル参照
+- NodeJS: バージョンは package.json の engines.node を参照
 
 <details>
 <summary>複数のnodeバージョン管理</summary>
@@ -64,6 +64,6 @@ npm run dev
 (知っておくと便利)
 
 - `npm run lint`
-  - 実行するとprettier, eslint, stylelintのコードチェックが順次に走る
+  - 実行するとBiomeのコードチェックが走る
 - `npm run fix`
-  - 実行するとprettier, eslint, stylelintのコードチェックが順次に走る
+  - 実行するとBiomeの自動修正が走る

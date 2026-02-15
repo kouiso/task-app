@@ -1,5 +1,9 @@
 'use client';
 
+import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -16,10 +20,6 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { api } from '@/trpc/react';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
 
 export default function UserEditPage() {
   const router = useRouter();

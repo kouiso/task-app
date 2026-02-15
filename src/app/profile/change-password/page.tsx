@@ -1,5 +1,9 @@
 'use client';
 
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
@@ -7,10 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 import { api } from '@/trpc/react';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import toast from 'react-hot-toast';
 
 export default function ChangePasswordPage() {
   const router = useRouter();

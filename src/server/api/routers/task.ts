@@ -1,7 +1,7 @@
-import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const taskCreateSchema = z.object({

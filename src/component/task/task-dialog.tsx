@@ -1,5 +1,7 @@
 'use client';
 
+import type { TaskPriority, TaskStatus } from '@prisma/client';
+import { useEffect, useState } from 'react';
 import { Button } from '@/component/ui/button';
 import {
   Dialog,
@@ -19,8 +21,6 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Textarea } from '@/component/ui/textarea';
-import type { TaskPriority, TaskStatus } from '@prisma/client';
-import { useEffect, useState } from 'react';
 
 interface TaskDialogProps {
   open: boolean;

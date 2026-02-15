@@ -390,9 +390,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '25.6.1'
           cache: 'npm'
 
       - name: Install dependencies
@@ -430,7 +430,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
+      - name: Run Biome
         run: npm run lint
 
       - name: Check TypeScript
@@ -444,7 +444,7 @@ jobs:
   "script": {
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint .",
+    "lint": "biome check .",
     "type-check": "tsc --noEmit"
   }
 }

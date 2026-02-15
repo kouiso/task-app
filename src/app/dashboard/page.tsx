@@ -1,13 +1,12 @@
 'use client';
 
+import { CheckCircle, ClipboardList, Clock, FolderOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Badge } from '@/component/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Skeleton } from '@/component/ui/skeleton';
 import { api } from '@/trpc/react';
-import { CheckCircle, ClipboardList, Clock, FolderOpen } from 'lucide-react';
-
-import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();

@@ -48,7 +48,7 @@ npm を使用します。理由としては、
     → dir構成に関しては議論の余地有りだが、ドメイン/url毎に管理することで『あのコンポーネントどこだっけ？』を無くす狙い
     例: 認証系 【auth】の画面ならば、(auth)/sing-up/page.tsx, URLは/sign-up, (auth)/component/button/google-auth-button.tsx
 
-  - スタイルは`scss module`以前まで使用していたが、MUIに全切り替えする。sass が 残っていたら気付いたらMUIへの移行をお願いしたい
+  - スタイルは`scss module`以前まで使用していたが、shadcn/ui + Tailwind CSSに全切り替えする。sass が 残っていたら気付いたらshadcn/uiへの移行をお願いしたい
 
 - 環境変数
 
@@ -59,7 +59,7 @@ npm を使用します。理由としては、
   - `as` による型推論上書きは外部からの入力を受ける場合以外は使用しない
     - 例: `const foo = bar as string` // NG
 
-- eslint系統
+- biome系統
 
   - exportが必要な際には、原則そのファイル内で主体とするものをexportしたい場合、export defaultを使用する。つまりexport defaultを使用していないのに、named exportは禁止とする。
 

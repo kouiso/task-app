@@ -1,8 +1,8 @@
-import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 
 const userCreateSchema = z.object({
