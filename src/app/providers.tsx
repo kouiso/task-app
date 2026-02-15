@@ -1,7 +1,7 @@
 'use client';
 
-import { TRPCReactProvider } from '@/trpc/react';
 import { Toaster } from 'react-hot-toast';
+import { TRPCReactProvider } from '@/trpc/react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

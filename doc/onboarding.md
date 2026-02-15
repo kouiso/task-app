@@ -46,11 +46,11 @@ curl https://get.volta.sh | bash
 # https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
 
 # Node.jsのインストール
-volta install node@24.11.1
+volta install node@25.6.1
 ```
 
 このプロジェクトでは `package.json` に Volta の設定が含まれているため、
-プロジェクトディレクトリで自動的に正しいバージョン (24.11.1) が使用されます。
+プロジェクトディレクトリで自動的に正しいバージョン (25.6.1) が使用されます。
 
 </details>
 
@@ -134,7 +134,7 @@ task init
 
 - **フレームワーク**: Next.js 15 (App Router)
 - **言語**: TypeScript 5.6
-- **UI**: Material-UI 6.4
+- **UI**: shadcn/ui (Radix UI + Tailwind CSS)
 - **API**: tRPC 11.6
 - **ORM**: Prisma 6.16
 - **データベース**: PostgreSQL

@@ -1,5 +1,9 @@
 'use client';
 
+import type { TaskStatus } from '@prisma/client';
+import { CheckSquare, Plus, Trash2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
@@ -32,10 +36,6 @@ import {
 import { Separator } from '@/component/ui/separator';
 import { Textarea } from '@/component/ui/textarea';
 import { api } from '@/trpc/react';
-import type { TaskStatus } from '@prisma/client';
-import { CheckSquare, Plus, Trash2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
 
 function TaskPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);

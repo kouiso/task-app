@@ -1,5 +1,9 @@
 'use client';
 
+import { AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -8,10 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 import { api } from '@/trpc/react';
-import { AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
 
 export default function ProfileEditPage() {
   const router = useRouter();

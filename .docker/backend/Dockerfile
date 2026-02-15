@@ -1,18 +1,15 @@
-FROM node:24.11.1-slim
+FROM node:25.6.1-slim
 
 WORKDIR /app
 
 # OS settings
 ENV PATH /app/node_modules/.bin:$PATH
 
-# OS lib
-# ps... used for hot-reloading development
-# curl... potentially used for self-healthchecking on ECS
+# Prismaが必要とするOpenSSLをインストール
 RUN apt-get update -qq \
-  && apt-get install -qy  \
-  curl \
-  procps \
-  --no-install-recommends
+  && apt-get install -qy --no-install-recommends \
+  openssl \
+  && rm -rf /var/lib/apt/lists/*
 
 # node_module packages
 COPY package*.json ./

@@ -1,5 +1,9 @@
 'use client';
 
+import type { ProjectMemberRole } from '@prisma/client';
+import { Archive, ArchiveRestore, Plus, Trash2, UserPlus } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
 import { ProjectDialog, type ProjectFormData } from '@/component/project/project-dialog';
@@ -24,10 +28,6 @@ import {
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
 import { api } from '@/trpc/react';
-import type { ProjectMemberRole } from '@prisma/client';
-import { Archive, ArchiveRestore, Plus, Trash2, UserPlus } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
 
 function ProjectPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);

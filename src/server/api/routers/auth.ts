@@ -1,8 +1,8 @@
-import { prisma } from '@/lib/prisma';
-import { type SessionUser, createSession, deleteSession } from '@/lib/session';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { createSession, deleteSession, type SessionUser } from '@/lib/session';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 
 const loginSchema = z.object({

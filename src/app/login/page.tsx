@@ -1,6 +1,5 @@
 'use client';
 
-import { api } from '@/trpc/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -8,11 +7,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { api } from '@/trpc/react';
 
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),

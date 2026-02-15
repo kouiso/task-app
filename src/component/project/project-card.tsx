@@ -1,10 +1,10 @@
 'use client';
 
+import { Pencil, Trash2, Users } from 'lucide-react';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { cn } from '@/lib/utils';
-import { Pencil, Trash2, Users } from 'lucide-react';
 
 interface ProjectCardProps {
   id: string;

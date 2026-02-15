@@ -1,6 +1,6 @@
-import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 /**

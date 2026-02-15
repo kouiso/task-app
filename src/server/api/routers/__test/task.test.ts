@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
@@ -21,7 +21,7 @@ describe('taskRouter', () => {
       const tasks = await caller.task.getAll();
 
       expect(tasks).toHaveLength(2);
-      expect(tasks[0].title).toBeTruthy();
+      expect(tasks[0]?.title).toBeTruthy();
     });
 
     it('should filter tasks by projectId', async () => {
@@ -36,7 +36,7 @@ describe('taskRouter', () => {
       const tasks = await caller.task.getAll({ projectId: project1.id });
 
       expect(tasks).toHaveLength(1);
-      expect(tasks[0].projectId).toBe(project1.id);
+      expect(tasks[0]?.projectId).toBe(project1.id);
     });
 
     it('should filter tasks by status', async () => {
@@ -51,7 +51,7 @@ describe('taskRouter', () => {
       const tasks = await caller.task.getAll({ status: 'TODO' });
 
       expect(tasks).toHaveLength(1);
-      expect(tasks[0].status).toBe('TODO');
+      expect(tasks[0]?.status).toBe('TODO');
     });
 
     it('should filter tasks by assigneeId', async () => {
@@ -66,7 +66,7 @@ describe('taskRouter', () => {
       const tasks = await caller.task.getAll({ assigneeId: user1.id });
 
       expect(tasks).toHaveLength(1);
-      expect(tasks[0].assigneeId).toBe(user1.id);
+      expect(tasks[0]?.assigneeId).toBe(user1.id);
     });
 
     it('should require authentication', async () => {

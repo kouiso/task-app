@@ -84,10 +84,10 @@ jobs:
         with:
           install: false
 
-      - name: Setup Node.js (via mise .tool-versions if available, else setup-node fallback)
+      - name: Setup Node.js (from package.json)
         uses: actions/setup-node@v4
         with:
-          node-version-file: './extracted/.tool-versions'
+          node-version-file: './extracted/package.json'
 
       - name: 環境ファイルをセットアップ
         working-directory: ./extracted

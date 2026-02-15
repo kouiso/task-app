@@ -1,9 +1,9 @@
 'use client';
 
-import { Input } from '@/component/ui/input';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
+import { Input } from '@/component/ui/input';
 
 interface QuickSearchProps {
   placeholder?: string;
