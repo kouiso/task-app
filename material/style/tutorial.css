@@ -17,7 +17,7 @@ body {
   line-height: 1.8;
   font-size: 16px;
   color: #333;
-  background-color: #ffffff;
+  background-color: #fff;
 }
 
 article {
@@ -33,29 +33,38 @@ article {
 h1 {
   color: #2c3e50;
   font-size: 28px;
-  margin: 40px 0 20px 0;
+  margin: 40px 0 20px;
   padding-bottom: 15px;
   border-bottom: 4px solid #3498db;
+  page-break-after: avoid !important;
+  break-after: avoid !important;
 }
 
 h2 {
   color: #34495e;
   font-size: 24px;
-  margin: 35px 0 15px 0;
+  margin: 35px 0 15px;
   padding-bottom: 10px;
   border-bottom: 3px solid #ecf0f1;
+  page-break-after: avoid !important;
+  break-after: avoid !important;
+  page-break-before: auto;
 }
 
 h3 {
   color: #7f8c8d;
   font-size: 18px;
-  margin: 25px 0 12px 0;
+  margin: 25px 0 12px;
+  page-break-after: avoid !important;
+  break-after: avoid !important;
 }
 
 h4 {
   color: #95a5a6;
   font-size: 16px;
-  margin: 20px 0 10px 0;
+  margin: 20px 0 10px;
+  page-break-after: avoid !important;
+  break-after: avoid !important;
 }
 
 /* ============================================
@@ -74,10 +83,12 @@ p {
 ul,
 ol {
   margin: 15px 0 15px 30px;
+  page-break-inside: avoid;
 }
 
 li {
   margin: 8px 0;
+  page-break-inside: avoid;
 }
 
 /* ============================================
@@ -89,7 +100,7 @@ code {
   color: #abb2bf;
   padding: 2px 6px;
   border-radius: 3px;
-  font-family: "Consolas", "Monaco", "Courier New", "SFMono", monospace;
+  font-family: Consolas, Monaco, "Courier New", SFMono, monospace;
   font-size: 14px;
 }
 
@@ -102,6 +113,8 @@ pre {
   line-height: 1.5;
   margin: 20px 0;
   border-left: 4px solid #3498db;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 
 pre code {
@@ -122,6 +135,8 @@ table {
   font-size: 14px;
   table-layout: fixed;
   word-wrap: break-word;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 
 table thead {
@@ -199,12 +214,15 @@ a:hover {
   margin: 20px 0;
   padding: 15px;
   border-radius: 4px;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 
 .mermaid svg {
   max-width: 100% !important;
   width: auto !important;
   height: auto !important;
+
   /* 小さすぎる場合に備えて最小幅を確保（PDF幅に収まるよう調整） */
   min-width: 400px;
 }
@@ -241,45 +259,13 @@ a:hover {
    ページ分割・レイアウト
    ============================================ */
 
-/* ページ分割ルール - 見出し直後の改ページを防止 */
-h1, h2, h3, h4 {
-  page-break-after: avoid !important;
-  break-after: avoid !important;
-}
-
-h2 {
-  page-break-before: auto;
-}
-
 /* 見出しとその直後の内容を一緒に保持 */
-h1 + *, h2 + *, h3 + *, h4 + * {
+h1 + *,
+h2 + *,
+h3 + *,
+h4 + * {
   page-break-before: avoid !important;
   break-before: avoid !important;
-}
-
-pre {
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
-}
-
-table {
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
-}
-
-/* Mermaid図の改ページ禁止 */
-.mermaid {
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
-}
-
-/* リストの改ページ制御 */
-ul, ol {
-  page-break-inside: avoid;
-}
-
-li {
-  page-break-inside: avoid;
 }
 
 /* ============================================
@@ -292,7 +278,7 @@ li {
   }
 
   a {
-    color: #0066cc;
+    color: #06c;
     text-decoration: underline;
   }
 
