@@ -1,13 +1,13 @@
 'use client';
 
+import type { TaskPriority, TaskStatus } from '@prisma/client';
+import { CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { cn } from '@/lib/utils';
-import type { TaskPriority, TaskStatus } from '@prisma/client';
-import { CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 import { TaskTimer } from './task-timer';
 import { TimeLogDialog } from './time-log-dialog';
 
@@ -107,6 +107,16 @@ export function TaskCard({
         onClick && 'cursor-pointer hover:shadow-md',
       )}
       onClick={handleCardClick}
+      {...(onClick && {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleCardClick();
+          }
+        },
+      })}
     >
       <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
         <CardTitle

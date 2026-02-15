@@ -1,5 +1,8 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import {
@@ -13,12 +16,69 @@ import {
 import { TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
 import { TASK_STATUS_COLORS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
-import { Loader2 } from 'lucide-react';
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 export default function ReportPage() {
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
+
+  const statusData = useMemo(
+    () =>
+      Object.entries(
+        tasks?.reduce(
+          (acc, task) => {
+            acc[task.status] = (acc[task.status] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        ) || {},
+      ).map(([name, value]) => ({ name, value })),
+    [tasks],
+  );
+
+  const priorityData = useMemo(
+    () =>
+      Object.entries(
+        tasks?.reduce(
+          (acc, task) => {
+            acc[task.priority] = (acc[task.priority] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        ) || {},
+      ).map(([name, value]) => ({ name, value })),
+    [tasks],
+  );
+
+  const totalTimeSpent = useMemo(
+    () => tasks?.reduce((acc, task) => acc + task.timeSpentMinutes, 0) || 0,
+    [tasks],
+  );
+  const averageTimePerTask = tasks && tasks.length > 0 ? totalTimeSpent / tasks.length : 0;
+
+  const projectStats = useMemo(
+    () =>
+      projects?.map((project) => {
+        const projectTasks = tasks?.filter((t) => t.projectId === project.id) || [];
+        const completedTasks = projectTasks.filter((t) => t.status === 'DONE');
+        const totalTime = projectTasks.reduce((acc, t) => acc + t.timeSpentMinutes, 0);
+        const progress =
+          projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
+
+        return {
+          name: project.name,
+          totalTasks: projectTasks.length,
+          completedTasks: completedTasks.length,
+          progress: progress.toFixed(1),
+          totalTimeHours: (totalTime / 60).toFixed(1),
+        };
+      }),
+    [projects, tasks],
+  );
+
+  const completionRate =
+    tasks && tasks.length > 0
+      ? ((tasks.filter((t) => t.status === 'DONE').length / tasks.length) * 100).toFixed(1)
+      : '0';
 
   if (tasksLoading || projectsLoading) {
     return (
@@ -29,50 +89,6 @@ export default function ReportPage() {
       </AppLayout>
     );
   }
-
-  const statusData = Object.entries(
-    tasks?.reduce(
-      (acc, task) => {
-        acc[task.status] = (acc[task.status] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    ) || {},
-  ).map(([name, value]) => ({ name, value }));
-
-  const priorityData = Object.entries(
-    tasks?.reduce(
-      (acc, task) => {
-        acc[task.priority] = (acc[task.priority] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    ) || {},
-  ).map(([name, value]) => ({ name, value }));
-
-  const totalTimeSpent = tasks?.reduce((acc, task) => acc + task.timeSpentMinutes, 0) || 0;
-  const averageTimePerTask = tasks && tasks.length > 0 ? totalTimeSpent / tasks.length : 0;
-
-  const projectStats = projects?.map((project) => {
-    const projectTasks = tasks?.filter((t) => t.projectId === project.id) || [];
-    const completedTasks = projectTasks.filter((t) => t.status === 'DONE');
-    const totalTime = projectTasks.reduce((acc, t) => acc + t.timeSpentMinutes, 0);
-    const progress =
-      projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
-
-    return {
-      name: project.name,
-      totalTasks: projectTasks.length,
-      completedTasks: completedTasks.length,
-      progress: progress.toFixed(1),
-      totalTimeHours: (totalTime / 60).toFixed(1),
-    };
-  });
-
-  const completionRate =
-    tasks && tasks.length > 0
-      ? ((tasks.filter((t) => t.status === 'DONE').length / tasks.length) * 100).toFixed(1)
-      : '0';
 
   return (
     <AppLayout>

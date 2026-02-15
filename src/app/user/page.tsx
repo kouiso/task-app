@@ -1,5 +1,11 @@
 'use client';
 
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Eye, Pencil, Shield, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
@@ -14,11 +20,6 @@ import {
   TableRow,
 } from '@/component/ui/table';
 import { api } from '@/trpc/react';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import { Eye, Pencil, Shield, User } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -27,12 +28,14 @@ export default function UsersPage() {
 
   const { data: users, isLoading, error } = api.user.getAll.useQuery();
 
-  if (error) {
-    toast.error(error.message || 'ユーザー一覧の取得に失敗しました');
-    if (error.message.includes('管理者権限')) {
-      router.push('/dashboard');
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message || 'ユーザー一覧の取得に失敗しました');
+      if (error.message.includes('管理者権限')) {
+        router.push('/dashboard');
+      }
     }
-  }
+  }, [error, router]);
 
   if (isLoading) {
     return (

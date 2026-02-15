@@ -109,11 +109,10 @@ describe('TaskCard', () => {
     const user = userEvent.setup();
     render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
 
-    const card = screen.getByText('Test Task').closest('[role="button"]');
-    if (card) {
-      await user.click(card);
-      expect(mockOnClick).toHaveBeenCalledWith('task-1');
-    }
+    const card = screen.getByRole('button', { name: /test task/i });
+    expect(card).toBeInTheDocument();
+    await user.click(card);
+    expect(mockOnClick).toHaveBeenCalledWith('task-1');
   });
 
   it('should call onEdit when edit button is clicked', async () => {

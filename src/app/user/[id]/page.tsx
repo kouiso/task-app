@@ -1,5 +1,11 @@
 'use client';
 
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { ArrowLeft, Calendar, Mail, Pencil, Shield, User } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
@@ -15,11 +21,6 @@ import {
   TableRow,
 } from '@/component/ui/table';
 import { api } from '@/trpc/react';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import { ArrowLeft, Calendar, Mail, Pencil, Shield, User } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 
 export default function UserDetailPage() {
   const router = useRouter();
@@ -36,9 +37,11 @@ export default function UserDetailPage() {
     id: userId,
   });
 
-  if (error) {
-    toast.error(error.message || 'ユーザー情報の取得に失敗しました');
-  }
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message || 'ユーザー情報の取得に失敗しました');
+    }
+  }, [error]);
 
   if (isLoading) {
     return (
