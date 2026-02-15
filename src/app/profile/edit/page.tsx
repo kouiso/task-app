@@ -1,5 +1,6 @@
 'use client';
 
+import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Button } from '@/component/ui/button';
@@ -57,97 +58,101 @@ export default function ProfileEditPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-md mt-8 flex justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
+      <AppLayout>
+        <div className="container mx-auto max-w-md mt-8 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-md mt-8 mb-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>プロフィール編集</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex justify-center mb-6">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={formData.avatar} />
-                <AvatarFallback className="text-2xl">
-                  {formData.name?.[0]?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </div>
+    <AppLayout>
+      <div className="container mx-auto max-w-md mt-8 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>プロフィール編集</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="flex justify-center mb-6">
+                <Avatar className="w-24 h-24">
+                  <AvatarImage src={formData.avatar} />
+                  <AvatarFallback className="text-2xl">
+                    {formData.name?.[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                名前 <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                disabled={updateProfile.isPending}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  名前 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  disabled={updateProfile.isPending}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">
-                メールアドレス <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={updateProfile.isPending}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  メールアドレス <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={updateProfile.isPending}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="avatar">アバターURL（任意）</Label>
-              <Input
-                id="avatar"
-                name="avatar"
-                type="url"
-                value={formData.avatar}
-                onChange={handleChange}
-                disabled={updateProfile.isPending}
-                placeholder="https://example.com/avatar.png"
-              />
-              <p className="text-sm text-muted-foreground">画像のURLを入力してください</p>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="avatar">アバターURL（任意）</Label>
+                <Input
+                  id="avatar"
+                  name="avatar"
+                  type="url"
+                  value={formData.avatar}
+                  onChange={handleChange}
+                  disabled={updateProfile.isPending}
+                  placeholder="https://example.com/avatar.png"
+                />
+                <p className="text-sm text-muted-foreground">画像のURLを入力してください</p>
+              </div>
 
-            {updateProfile.error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{updateProfile.error.message}</AlertDescription>
-              </Alert>
-            )}
+              {updateProfile.error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{updateProfile.error.message}</AlertDescription>
+                </Alert>
+              )}
 
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" className="w-full" disabled={updateProfile.isPending}>
-                {updateProfile.isPending ? '更新中...' : '更新'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => router.push('/profile')}
-                disabled={updateProfile.isPending}
-              >
-                キャンセル
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="w-full" disabled={updateProfile.isPending}>
+                  {updateProfile.isPending ? '更新中...' : '更新'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push('/profile')}
+                  disabled={updateProfile.isPending}
+                >
+                  キャンセル
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
   );
 }

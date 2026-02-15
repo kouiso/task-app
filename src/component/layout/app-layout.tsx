@@ -13,7 +13,16 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/component/ui/sheet';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import { BarChart, ClipboardList, FolderOpen, LayoutDashboard, Menu, Search } from 'lucide-react';
+import {
+  BarChart,
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  Menu,
+  Search,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -25,9 +34,10 @@ interface MenuItem {
   path: string;
 }
 
-const menuItems: MenuItem[] = [
+const baseMenuItems: MenuItem[] = [
   { text: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, path: '/dashboard' },
   { text: 'Tasks', icon: <ClipboardList className="h-5 w-5" />, path: '/task' },
+  { text: 'My Tasks', icon: <ListTodo className="h-5 w-5" />, path: '/my-task' },
   { text: 'Projects', icon: <FolderOpen className="h-5 w-5" />, path: '/project' },
   { text: 'Reports', icon: <BarChart className="h-5 w-5" />, path: '/report' },
   { text: 'Search', icon: <Search className="h-5 w-5" />, path: '/search' },
@@ -55,6 +65,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     logoutMutation.mutate();
   };
+
+  const menuItems: MenuItem[] = [
+    ...baseMenuItems,
+    ...(session?.user?.role === 'ADMIN'
+      ? [{ text: 'Users', icon: <Users className="h-5 w-5" />, path: '/user' }]
+      : []),
+  ];
 
   if (isLoading) {
     return null; // Or a loading spinner
