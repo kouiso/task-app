@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Calendar, Edit, Lock, Mail, Shield, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
@@ -16,6 +17,12 @@ export default function ProfilePage() {
   const router = useRouter();
   const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
 
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, isLoading, router]);
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -27,7 +34,6 @@ export default function ProfilePage() {
   }
 
   if (!currentUser) {
-    router.push('/login');
     return null;
   }
 

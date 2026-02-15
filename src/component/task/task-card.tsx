@@ -107,23 +107,26 @@ export function TaskCard({
         onClick && 'cursor-pointer hover:shadow-md',
       )}
       onClick={handleCardClick}
-      {...(onClick && {
-        role: 'button',
-        tabIndex: 0,
-        onKeyDown: (e: React.KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleCardClick();
-          }
-        },
-      })}
     >
       <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
         <CardTitle
           className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
           title={title}
         >
-          {title}
+          {onClick ? (
+            <button
+              type="button"
+              className="w-full text-left truncate cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardClick();
+              }}
+            >
+              {title}
+            </button>
+          ) : (
+            title
+          )}
         </CardTitle>
         <div className="flex gap-0">
           <Button
