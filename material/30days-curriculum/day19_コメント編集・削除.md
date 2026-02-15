@@ -2,292 +2,395 @@
 
 ## 🎯 今日のゴール
 
-投稿したコメントを編集・削除できる機能を実装します。自分のコメントだけに編集・削除ボタンを表示します。
+投稿済みのコメントを編集・削除できるようにします。
+自分が書いたコメントだけを操作できるように、
+権限チェックも実装します。
 
 【スクリーンショット: コメント編集モード】
 
-## 🤔 なぜこれを作るのか?
+## 🤔 なぜこれを作るのか？
 
-誤字や情報の変更に対応するための機能です。**コメント編集は消しゴムと修正ペンのようなもの**。ノートに書いた文章を消したり書き直したりできるように、一度投稿したコメントも後から修正できると便利です。
+誤字の修正や情報の更新に必要な機能です。
+
+> 💡 **例え話**: コメント編集は「ノートの修正」
+> です。鉛筆で書いたメモは消しゴムで消して
+> 書き直せますが、他人のノートは書き換え不可で
+> 「自分のものだけ」という制限が大切です。
+
+### 📐 編集・削除のフロー
+
+```mermaid
+graph TD
+    A[コメント一覧] --> B{自分のコメント?}
+    B -->|Yes| C[編集・削除ボタン表示]
+    B -->|No| D[ボタン非表示]
+    C --> E[編集ボタン]
+    C --> F[削除ボタン]
+    E --> G[テキストエリアに切替]
+    G --> H[api.comment.update]
+    F --> I[confirm確認]
+    I --> J[api.comment.delete]
+    H --> K[キャッシュ更新]
+    J --> K
+
+    style B fill:#fff3e0
+    style H fill:#e8f5e9
+    style J fill:#ffebee
+```
+
+### やること / やらないこと
+
+| やること | やらないこと |
+|---------|-------------|
+| コメント編集 | コメントへの返信 |
+| コメント削除 | 一括削除 |
+| 本人チェック | 管理者による編集 |
+| 確認ダイアログ | 編集履歴 |
+
+### 🆕 新しく学ぶ概念
+
+| 概念 | 読み方 | 役割 | 例え |
+|------|--------|------|------|
+| editingId | — | 編集中のコメントID | 開いているノートのページ番号 |
+| comment.update | — | コメントを更新 | ノートの書き直し |
+| comment.delete | — | コメントを削除 | ノートのページを破る |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | 編集・削除ボタン表示 | 10分 |
-| Step 2 | 編集モード切り替え | 15分 |
-| Step 3 | 編集API呼び出し | 10分 |
-| Step 4 | 削除API呼び出し | 10分 |
+| Step 1 | 編集・削除APIを理解する | 3分 |
+| Step 2 | 編集用stateを追加する | 3分 |
+| Step 3 | 本人チェックでボタンを表示 | 5分 |
+| Step 4 | 編集モードに切り替える | 5分 |
+| Step 5 | 編集APIを呼び出す | 5分 |
+| Step 6 | 削除処理を実装する | 5分 |
+| Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約45分
+**合計時間**: 約29分
 
 ---
 
-### Step 1: 編集・削除ボタン表示（10分）
+### Step 1: 編集・削除APIを理解する（3分）
+
+🎯 **ゴール**: comment ルーターの
+update/delete メソッドを把握します。
+
+#### comment.update の入力パラメータ
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `id` | string | ○ | コメントID |
+| `content` | string | ○ | 新しいコメント本文 |
+
+#### comment.delete の入力パラメータ
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `id` | string | ○ | コメントID |
+
+> 💡 `update` は `id` と新しい `content` だけ
+> 渡します。サーバー側で `trim()` と
+> `min(1)` のバリデーションが行われます。
+
+✅ **確認ポイント**:
+- update と delete のパラメータを把握した
+
+---
+
+### Step 2: 編集用stateを追加する（3分）
+
+🎯 **ゴール**: 「どのコメントを編集中か」を
+管理する state を追加します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx
-'use client';
+// filepath: src/app/task/page.tsx
+// TaskPageContent内に追加
+const [editingCommentId, setEditingCommentId]
+  = useState<string | null>(null);
+const [editCommentContent, setEditCommentContent]
+  = useState('');
+```
 
-import { useSession } from 'next-auth/react';
-import { api } from '@/trpc/react';
-import { Button } from '@/component/ui/button';
-import { Avatar, AvatarFallback } from '@/component/ui/avatar';
-import { Card, CardContent } from '@/component/ui/card';
+> 💡 `editingCommentId` が `null` なら
+> 通常表示、値があれば編集モードです。
+> Day 15 で学んだ「モード切替」パターンと
+> 同じ考え方です。
+
+#### state の役割
+
+| state | 型 | 役割 |
+|-------|-----|------|
+| `editingCommentId` | string/null | 編集中のコメントID |
+| `editCommentContent` | string | 編集中のテキスト |
+
+✅ **確認ポイント**:
+- 2つの state が追加された
+
+---
+
+### Step 3: 本人チェックでボタンを表示（5分）
+
+🎯 **ゴール**: 自分のコメントにだけ
+編集・削除ボタンを表示します。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// コメント一覧内のアバター横に追加
 import { Pencil, Trash2 } from 'lucide-react';
-
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const { data: session } = useSession();
-  const { data: comments } = api.comment.getByTask.useQuery({ taskId });
-
-  return (
-    <div className="mt-6">
-      {comments?.map((comment) => (
-        <Card key={comment.id} className="mb-3">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center mb-2">
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarFallback>{comment.user.name?.[0]}</AvatarFallback>
-                </Avatar>
-                <span className="font-medium text-sm">{comment.user.name}</span>
-              </div>
-
-              {session?.user?.id === comment.userId && (
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-            <p className="text-sm">{comment.content}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
 ```
 
-✅ **確認ポイント**: 自分のコメントにのみ編集・削除ボタンが表示される
+```typescript
+// filepath: src/app/task/page.tsx
+// コメント一覧の各コメントに権限チェック追加
+{session?.user?.id
+  === comment.userId && (
+  <div className="flex gap-1 ml-auto">
+    <Button variant="ghost"
+      size="icon" className="h-7 w-7"
+      onClick={() =>
+        handleStartEdit(comment)}>
+      <Pencil className="h-3 w-3" />
+    </Button>
+    <Button variant="ghost"
+      size="icon"
+      className="h-7 w-7
+        text-destructive"
+      onClick={() =>
+        handleDeleteComment(
+          comment.id)}>
+      <Trash2 className="h-3 w-3" />
+    </Button>
+  </div>
+)}
+```
 
-【スクリーンショット: 確認画面】
+> 💡 `session?.user?.id === comment.userId`
+> で「自分が書いたコメントか」を判定します。
+> 他人のコメントにはボタンが表示されません。
+
+✅ **確認ポイント**:
+- 自分のコメントにのみボタンが表示される
+- 他人のコメントにはボタンがない
+
+【スクリーンショット: 本人コメントのボタン】
 
 ---
 
-### Step 2: 編集モード切り替え（15分）
+### Step 4: 編集モードに切り替える（5分）
+
+🎯 **ゴール**: 編集ボタンクリックで
+テキストエリアに切り替えます。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx（編集モード部分）
-import { useState } from 'react';
-import { Textarea } from '@/component/ui/textarea';
+// filepath: src/app/task/page.tsx
+// 編集開始ハンドラー
+const handleStartEdit = (comment: {
+  id: string; content: string;
+}) => {
+  setEditingCommentId(comment.id);
+  setEditCommentContent(comment.content);
+};
 
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
-
-  const handleStartEdit = (commentId: string, content: string) => {
-    setEditingId(commentId);
-    setEditContent(content);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditContent('');
-  };
-
-  return (
-    <div className="mt-6">
-      {comments?.map((comment) => (
-        <Card key={comment.id} className="mb-3">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              {/* ヘッダー部分 */}
-
-              {session?.user?.id === comment.userId && !editingId && (
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleStartEdit(comment.id, comment.content)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {editingId === comment.id ? (
-              <div>
-                <Textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  rows={3}
-                  className="mb-2"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm">保存</Button>
-                  <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                    キャンセル
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm">{comment.content}</p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
+const handleCancelEdit = () => {
+  setEditingCommentId(null);
+  setEditCommentContent('');
+};
 ```
 
-✅ **確認ポイント**: 編集ボタンで編集モードに切り替わる
+```typescript
+// filepath: src/app/task/page.tsx
+// 編集中: テキストエリアとSave/Cancelボタン
+{editingCommentId === comment.id ? (
+  <div className="space-y-2">
+    <Textarea
+      value={editCommentContent}
+      onChange={(e) =>
+        setEditCommentContent(
+          e.target.value)}
+      rows={2} />
+    <div className="flex gap-2">
+      <Button size="sm"
+        onClick={() =>
+          handleSaveEdit(comment.id)}>
+        Save
+      </Button>
+```
 
-【スクリーンショット: 確認画面】
+編集中でなければ、通常のコメント本文を表示します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 編集中のCancel + 通常表示モード
+      <Button size="sm"
+        variant="outline"
+        onClick={handleCancelEdit}>
+        Cancel
+      </Button>
+    </div>
+  </div>
+) : (
+  <p className="text-sm mt-1">
+    {comment.content}
+  </p>
+)}
+```
+
+> 💡 三項演算子 `? :` で、編集中のコメントだけ
+> テキストエリアに切り替えます。
+> Day 15 の編集モードと同じパターンです。
+
+✅ **確認ポイント**:
+- 編集ボタンでテキストエリアに変わる
+- Cancel で元に戻る
+
+【スクリーンショット: 編集モードのテキストエリア】
 
 ---
 
-### Step 3: 編集API呼び出し（10分）
+### Step 5: 編集APIを呼び出す（5分）
+
+🎯 **ゴール**: コメントの内容を
+サーバーに保存します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx（編集API部分）
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const utils = api.useUtils();
-
-  const updateCommentMutation = api.comment.update.useMutation({
+// filepath: src/app/task/page.tsx
+// 編集mutationを追加
+const updateCommentMutation =
+  api.comment.update.useMutation({
     onSuccess: () => {
-      setEditingId(null);
-      setEditContent('');
-      utils.comment.getByTask.invalidate({ taskId });
+      if (selectedTask) {
+        utils.task.getById.invalidate(
+          { id: selectedTask });
+      }
+      setEditingCommentId(null);
+      setEditCommentContent('');
     },
   });
+```
 
-  const handleSaveEdit = (commentId: string) => {
-    if (!editContent.trim()) return;
-
+```typescript
+// filepath: src/app/task/page.tsx
+// 保存ハンドラー
+const handleSaveEdit =
+  (commentId: string) => {
+    if (!editCommentContent.trim()) return;
     updateCommentMutation.mutate({
       id: commentId,
-      content: editContent.trim(),
+      content: editCommentContent,
     });
   };
-
-  return (
-    // UI は同じ
-    <Button
-      size="sm"
-      onClick={() => handleSaveEdit(comment.id)}
-      disabled={updateCommentMutation.isPending}
-    >
-      {updateCommentMutation.isPending ? '保存中...' : '保存'}
-    </Button>
-  );
-}
 ```
 
-✅ **確認ポイント**: コメントが更新される
+> 💡 Day 18 と同じく `task.getById` を
+> invalidate します。タスク詳細に含まれる
+> コメントが再取得されて表示が更新されます。
 
-【スクリーンショット: 確認画面】
+✅ **確認ポイント**:
+- 編集内容が保存される
+- テキストエリアが閉じる
 
 ---
 
-### Step 4: 削除API呼び出し（10分）
+### Step 6: 削除処理を実装する（5分）
+
+🎯 **ゴール**: 確認後にコメントを削除します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/component/task/TaskComments.tsx（削除API部分）
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const deleteCommentMutation = api.comment.delete.useMutation({
+// filepath: src/app/task/page.tsx
+// 削除mutationを追加
+const deleteCommentMutation =
+  api.comment.delete.useMutation({
     onSuccess: () => {
-      utils.comment.getByTask.invalidate({ taskId });
+      if (selectedTask) {
+        utils.task.getById.invalidate(
+          { id: selectedTask });
+      }
     },
   });
-
-  const handleDelete = (commentId: string) => {
-    if (!confirm('このコメントを削除しますか?')) return;
-
-    deleteCommentMutation.mutate({ id: commentId });
-  };
-
-  return (
-    <div className="mt-6">
-      {comments?.map((comment) => (
-        <Card key={comment.id} className="mb-3">
-          <CardContent className="p-4">
-            {session?.user?.id === comment.userId && !editingId && (
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleStartEdit(comment.id, comment.content)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive"
-                  onClick={() => handleDelete(comment.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
 ```
 
-✅ **確認ポイント**: 確認ダイアログが表示され、コメントが削除される
+```typescript
+// filepath: src/app/task/page.tsx
+// 削除ハンドラー
+const handleDeleteComment =
+  (commentId: string) => {
+    if (confirm(
+      'このコメントを削除しますか？')) {
+      deleteCommentMutation.mutate(
+        { id: commentId });
+    }
+  };
+```
 
-【スクリーンショット: 確認画面】
+> 💡 Day 15 で学んだ `confirm()` パターンを
+> 再利用しています。取り消せない操作には
+> 必ず確認ダイアログを入れましょう。
+
+✅ **確認ポイント**:
+- 確認ダイアログが表示される
+- OKでコメントが削除される
+
+【スクリーンショット: 削除確認ダイアログ】
 
 ---
 
-## 📝 学んだこと
+### Step 7: 動作確認（3分）
 
-- **Button variant="ghost" size="icon"**: アイコンだけのボタン（省スペース）
-- **条件付きレンダリング**: 三項演算子で編集モードと表示モードを切り替え
-- **権限チェック**: session.user.id === comment.userId で本人確認
-- **状態管理**: editingId で「どのコメントを編集中か」を管理
-- **confirm関数**: 削除前の確認ダイアログ
+🎯 **ゴール**: 編集・削除の全体を確認します。
+
+1. タスク詳細を開く
+2. 自分のコメントに編集・削除ボタンがある
+3. 他人のコメントにはボタンがない
+4. 編集ボタンでテキストエリア表示
+5. 内容を変更して「Save」
+6. 更新されたコメントが表示される
+7. 削除ボタンで確認→削除される
+
+✅ **確認ポイント**:
+- 自分のコメントだけ操作できる
+- 編集後に内容が更新される
+- 削除後にコメントが消える
+
+---
 
 ## 📋 今日のまとめ
 
-- [ ] 編集・削除ボタンを表示できた
-- [ ] 編集モードに切り替えられるようにした
-- [ ] 編集APIを呼び出してコメントを更新できた
-- [ ] 削除APIを呼び出してコメントを削除できた
+- [ ] 本人チェックで操作を制限できた
+- [ ] `api.comment.update` で編集できた
+- [ ] `api.comment.delete` で削除できた
+- [ ] 確認ダイアログを表示できた
 
 ## ⚠️ つまずきポイント
 
-| 問題 | 原因 | 解決策 |
-|------|------|--------|
-| 他人のコメントも編集できる | 権限チェックがない | session.user.id === comment.userId で判定 |
-| 編集中に削除ボタンが表示される | 条件式に editingId を含めていない | !editingId を追加 |
-| キャンセル後に内容が残る | state をクリアしていない | setEditContent('') を実行 |
+| エラー / 問題 | 原因 | 解決方法 |
+|--------------|------|---------|
+| 他人のコメントも編集できる | userId比較の漏れ | session.user.id確認 |
+| 編集後に更新されない | invalidate忘れ | task.getById.invalidate |
+| Cancel後に文字が残る | stateクリア漏れ | handleCancelEditで空に |
+| 空白で保存できる | trim()チェック漏れ | if (!content.trim()) |
+
+## 📝 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| editingCommentId | 編集中のコメントを特定するstate |
+| comment.update | コメント内容を更新するAPI |
+| comment.delete | コメントを削除するAPI |
+| 三項演算子 | 条件で表示を切り替える構文 |
 
 ## 🔗 次回予告
 
-Day 20では、タスクの検索機能を実装します。
+Day 20 では、タスクの検索機能を実装します。
+キーワードや複数の条件でタスクを素早く
+見つけられるようになります。

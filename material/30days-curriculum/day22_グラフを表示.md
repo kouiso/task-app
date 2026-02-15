@@ -2,246 +2,398 @@
 
 ## 🎯 今日のゴール
 
-Rechartsライブラリを使って、タスクの統計をグラフで可視化します。円グラフと棒グラフを実装します。
+Recharts ライブラリを使って、レポートページに
+円グラフを追加します。ステータス別・優先度別の
+タスク分布を可視化します。
 
-【スクリーンショット: 円グラフと棒グラフ】
+【スクリーンショット: 円グラフ2つ】
 
-## 🤔 なぜこれを作るのか?
+## 🤔 なぜこれを作るのか？
 
-数字だけでは分かりにくい情報を視覚化する機能です。**グラフは天気予報の図のようなもの**。「降水確率60%」と文字で見るより、青い雨雲のマークを見た方が直感的に理解できます。それと同じく、グラフで見ることで、プロジェクトの状態を瞬時に把握できます。
+数字だけでは直感的に理解しにくい情報を
+グラフで可視化します。
+
+> 💡 **例え話**: グラフは「天気予報の図」です。
+> 「降水確率60%」と聞くより、雨雲の図を
+> 見た方が直感的にわかります。
+> グラフを見れば、タスクの偏りが一目瞭然です。
+
+### 📐 グラフ表示のデータフロー
+
+```mermaid
+graph LR
+    A[tasks配列] --> B[reduce で集計]
+    B --> C[statusData 配列]
+    B --> D[priorityData 配列]
+    C --> E[PieChart ステータス]
+    D --> F[PieChart 優先度]
+    E --> G[Cell で色分け]
+    F --> G
+    G --> H[グラフ表示]
+
+    style A fill:#e3f2fd
+    style B fill:#fff3e0
+    style H fill:#e8f5e9
+```
+
+### やること / やらないこと
+
+| やること | やらないこと |
+|---------|-------------|
+| ステータス別円グラフ | 棒グラフ |
+| 優先度別円グラフ | 折れ線グラフ |
+| 色分け表示 | アニメーション |
+| レスポンシブ対応 | ドリルダウン |
+
+### 🆕 新しく学ぶ概念
+
+| 概念 | 読み方 | 役割 | 例え |
+|------|--------|------|------|
+| PieChart | パイチャート | 円グラフ | ピザの切り分け |
+| Cell | セル | 各セクションの色 | ピザの具材ごとの色 |
+| ResponsiveContainer | — | サイズ自動調整 | 額縁に合わせる |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | Rechartsインストール | 5分 |
-| Step 2 | 円グラフ実装 | 20分 |
-| Step 3 | 棒グラフ実装 | 20分 |
-| Step 4 | レスポンシブ対応 | 10分 |
+| Step 1 | Rechartsを確認する | 2分 |
+| Step 2 | ステータス集計データを作る | 5分 |
+| Step 3 | 色定数をインポートする | 3分 |
+| Step 4 | ステータス円グラフを表示 | 5分 |
+| Step 5 | 優先度円グラフを追加 | 5分 |
+| Step 6 | レスポンシブグリッドに配置 | 3分 |
+| Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約55分
+**合計時間**: 約26分
 
 ---
 
-### Step 1: Rechartsインストール（5分）
+### Step 1: Rechartsを確認する（2分）
 
-💻 **実装**:
+🎯 **ゴール**: Recharts が既に
+インストール済みであることを確認します。
+
+💻 **確認**:
 
 ```bash
-# filepath: ターミナル（コマンドラインで実行）
-$ npm install recharts
+# filepath: ターミナル（確認のみ）
+npm list recharts
+# recharts@3.x.x が表示される
 ```
 
-✅ **確認ポイント**: package.jsonにrechartsが追加される
+> 💡 Recharts は React 専用のグラフ
+> ライブラリです。このプロジェクトでは
+> 既にインストール済みです。
 
-【スクリーンショット: 確認画面】
+✅ **確認ポイント**:
+- recharts がpackage.jsonにある
 
 ---
 
-### Step 2: 円グラフ実装（20分）
+### Step 2: ステータス集計データを作る（5分）
+
+🎯 **ゴール**: タスクデータから
+ステータス別の件数を集計します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/dashboard/TaskStatusChart.tsx（パート1/3）
-'use client';
+// filepath: src/app/report/page.tsx
+// ステータス別に集計
+const statusData = Object.entries(
+  tasks?.reduce(
+    (acc, task) => {
+      acc[task.status] =
+        (acc[task.status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  ) || {},
+).map(([name, value]) =>
+  ({ name, value }));
+```
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
-import { Paper, Typography, Box } from '@mui/material';
+#### 集計の仕組み
 
-interface TaskStatusChartProps {
-  data: {
-    name: string;
-    value: number;
-  }[];
-}
+| ステップ | 処理 | 結果例 |
+|---------|------|--------|
+| 1. reduce | ステータスごとにカウント | `{TODO: 3, DONE: 5}` |
+| 2. Object.entries | キーと値のペアに変換 | `[['TODO', 3], ...]` |
+| 3. map | グラフ用の形に変換 | `[{name: 'TODO', value: 3}]` |
 
-const COLORS = {
-  TODO: '#9e9e9e',
-  IN_PROGRESS: '#2196f3',
-  IN_REVIEW: '#ff9800',
-  DONE: '#4caf50',
-};
+> 💡 `reduce` で `{TODO: 3, IN_PROGRESS: 2}`
+> のようなオブジェクトを作り、
+> `Object.entries` + `map` で Recharts が
+> 期待する形式に変換します。
 
-export function TaskStatusChart({ data }: TaskStatusChartProps) {
-  return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
+✅ **確認ポイント**:
+- statusData にデータが入る
+
+---
+
+### Step 3: 色定数をインポートする（3分）
+
+🎯 **ゴール**: ステータスと優先度の
+色定数を使います。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+import {
+  TASK_STATUS_COLORS,
+} from '@/lib/constant/status';
+import {
+  TASK_PRIORITY_COLORS,
+} from '@/lib/constant/priority';
+```
+
+#### ステータスの色一覧
+
+| ステータス | 色 |
+|-----------|-----|
+| TODO | グレー |
+| IN_PROGRESS | ブルー |
+| IN_REVIEW | オレンジ |
+| DONE | グリーン |
+| CANCELLED | レッド |
+| BLOCKED | パープル |
+
+> 💡 `@/lib/constant/` に定義済みの
+> 色定数を使います。アプリ全体で同じ色を
+> 使うことで統一感が出ます。
+
+✅ **確認ポイント**:
+- 色定数がインポートできた
+
+---
+
+### Step 4: ステータス円グラフを表示（5分）
+
+🎯 **ゴール**: PieChart でステータス別の
+円グラフを表示します。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
 ```
 
 ```typescript
-// filepath: src/components/dashboard/TaskStatusChart.tsx（パート2/3）
-        ステータス別タスク数
-      </Typography>
-      <ResponsiveContainer width="100%" height={300}>
+// filepath: src/app/report/page.tsx
+// ステータス円グラフ: Card構造とPie定義
+<Card>
+  <CardHeader>
+    <CardTitle>Tasks by Status</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[300px]">
+      <ResponsiveContainer
+        width="100%" height="100%">
         <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) =>
-              `${name} ${(percent * 100).toFixed(0)}%`
-            }
-            outerRadius={80}
-            fill="#8884d8"
+          <Pie data={statusData}
             dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[entry.name as keyof typeof COLORS]}
-              />
+            nameKey="name"
+            cx="50%" cy="50%"
+            outerRadius={80} label>
+```
+
+続けて、各ステータスに色を付ける `Cell` と凡例・ツールチップを追加します。
+
+```typescript
+// filepath: src/app/report/page.tsx
+// ステータス円グラフ: Cellの色分けと閉じタグ
+            {statusData.map((entry) => (
+              <Cell key={entry.name}
+                fill={
+                  TASK_STATUS_COLORS[
+                    entry.name as
+                    keyof typeof
+                    TASK_STATUS_COLORS
+                  ] ?? '#9e9e9e'
+                } />
             ))}
           </Pie>
-```
-
-```typescript
-// filepath: src/components/dashboard/TaskStatusChart.tsx（パート3/3）
+          <Tooltip />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
-    </Paper>
-  );
-}
+    </div>
+  </CardContent>
+</Card>
 ```
 
-✅ **確認ポイント**: 円グラフが表示される
+> 💡 `ResponsiveContainer` は親要素の
+> サイズに合わせてグラフを自動調整します。
+> `h-[300px]` で高さを固定しています。
 
-【スクリーンショット: 確認画面】
+✅ **確認ポイント**:
+- 円グラフが表示される
+- ステータスごとに色分けされる
+
+【スクリーンショット: ステータス円グラフ】
 
 ---
 
-### Step 3: 棒グラフ実装（20分）
+### Step 5: 優先度円グラフを追加（5分）
+
+🎯 **ゴール**: 優先度別の円グラフも追加します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/components/dashboard/ProjectTasksChart.tsx（パート1/2）
-'use client';
-
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
-import { Paper, Typography } from '@mui/material';
-
-interface ProjectTasksChartProps {
-  data: {
-    projectName: string;
-    total: number;
-    completed: number;
-  }[];
-}
-
-export function ProjectTasksChart({ data }: ProjectTasksChartProps) {
+// filepath: src/app/report/page.tsx
+// 優先度別に集計
+const priorityData = Object.entries(
+  tasks?.reduce(
+    (acc, task) => {
+      acc[task.priority] =
+        (acc[task.priority] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  ) || {},
+).map(([name, value]) =>
+  ({ name, value }));
 ```
 
 ```typescript
-// filepath: src/components/dashboard/ProjectTasksChart.tsx（パート2/2）
-  return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        プロジェクト別タスク数
-      </Typography>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="projectName" />
-          <YAxis />
+// filepath: src/app/report/page.tsx
+// 優先度円グラフ: Card構造とPie定義
+<Card>
+  <CardHeader>
+    <CardTitle>
+      Tasks by Priority
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[300px]">
+      <ResponsiveContainer
+        width="100%" height="100%">
+        <PieChart>
+          <Pie data={priorityData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%" cy="50%"
+            outerRadius={80} label>
+```
+
+続けて、各優先度に色を付ける `Cell` と凡例・ツールチップを追加します。
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 優先度円グラフ: Cellの色分けと閉じタグ
+            {priorityData.map((entry) => (
+              <Cell key={entry.name}
+                fill={
+                  TASK_PRIORITY_COLORS[
+                    entry.name as
+                    keyof typeof
+                    TASK_PRIORITY_COLORS
+                  ] ?? '#9e9e9e'
+                } />
+            ))}
+          </Pie>
           <Tooltip />
           <Legend />
-          <Bar dataKey="total" fill="#8884d8" name="総タスク数" />
-          <Bar dataKey="completed" fill="#82ca9d" name="完了タスク数" />
-        </BarChart>
+        </PieChart>
       </ResponsiveContainer>
-    </Paper>
-  );
-}
+    </div>
+  </CardContent>
+</Card>
 ```
 
-✅ **確認ポイント**: 棒グラフが表示される
+> 💡 ステータスと同じ構造です。
+> `TASK_PRIORITY_COLORS` で色を変えるだけで
+> 優先度のグラフも作れます。
 
-【スクリーンショット: 確認画面】
+✅ **確認ポイント**:
+- 2つの円グラフが表示される
+
+【スクリーンショット: 2つの円グラフ】
 
 ---
 
-### Step 4: レスポンシブ対応（10分）
+### Step 6: レスポンシブグリッドに配置（3分）
+
+🎯 **ゴール**: 2つのグラフを横並びに
+配置します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/dashboard/page.tsx（パート1/2）
-import { TaskStatusChart } from '@/components/dashboard/TaskStatusChart';
-import { ProjectTasksChart } from '@/components/dashboard/ProjectTasksChart';
-
-export default function DashboardPage() {
-  const { data: stats } = api.report.getStats.useQuery();
-  const { data: chartData } = api.report.getChartData.useQuery();
-
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>ダッシュボード</Typography>
-
-      {/* 統計カード (Day 21) */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* カード4枚 */}
-      </Grid>
-
-      {/* グラフ */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <TaskStatusChart data={chartData?.statusData ?? []} />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <ProjectTasksChart data={chartData?.projectData ?? []} />
+// filepath: src/app/report/page.tsx
+// グラフの親要素
+<div className="grid grid-cols-1
+  md:grid-cols-2 gap-6">
+  {/* ステータス円グラフ */}
+  {/* 優先度円グラフ */}
+</div>
 ```
 
-```typescript
-// filepath: src/app/dashboard/page.tsx（パート2/2）
-        </Grid>
-      </Grid>
-    </Box>
-  );
-}
-```
+#### グラフのブレークポイント
 
-✅ **確認ポイント**: モバイルでは縦並び、PCでは横並びで表示される
+| 画面サイズ | クラス | 配置 |
+|-----------|--------|------|
+| モバイル | `grid-cols-1` | 縦並び |
+| PC | `md:grid-cols-2` | 横並び |
 
-【スクリーンショット: 確認画面】
+✅ **確認ポイント**:
+- PCでは横並び、モバイルでは縦並び
 
 ---
 
-## 📝 学んだこと
+### Step 7: 動作確認（3分）
 
-- **Recharts**: React用のグラフライブラリ
-- **ResponsiveContainer**: 親要素に合わせてサイズ調整
-- **PieChart**: 円グラフコンポーネント
-- **BarChart**: 棒グラフコンポーネント
-- **Cell**: 円グラフの各セクションに色を設定
-- **label プロパティ**: グラフ上にラベルを表示
+🎯 **ゴール**: グラフ表示の全体を確認します。
+
+1. `/report` にアクセス
+2. 統計カード（Day 21）の下にグラフ
+3. ステータス別の円グラフが表示される
+4. 優先度別の円グラフが表示される
+5. 凡例（Legend）で各項目が確認できる
+6. マウスオーバーでTooltip表示
+
+✅ **確認ポイント**:
+- 色がステータス/優先度に対応している
+- Tooltipで件数が確認できる
+
+【スクリーンショット: 完成したグラフセクション】
+
+---
 
 ## 📋 今日のまとめ
 
-- [ ] Rechartsをインストールできた
-- [ ] 円グラフを実装できた
-- [ ] 棒グラフを実装できた
-- [ ] レスポンシブ対応できた
+- [ ] Recharts でグラフを表示できた
+- [ ] `reduce` でグラフ用データを集計した
+- [ ] 色定数で円グラフを色分けした
+- [ ] レスポンシブに2列配置できた
 
 ## ⚠️ つまずきポイント
 
-| 問題 | 原因 | 解決策 |
-|------|------|--------|
-| グラフが表示されない | ResponsiveContainer の height 未指定 | height={300} を追加 |
-| 色が全部同じ | Cell で色を指定していない | map で各データに色を設定 |
-| モバイルで横スクロール | width="100%" が効いていない | ResponsiveContainer を使用 |
+| エラー / 問題 | 原因 | 解決方法 |
+|--------------|------|---------|
+| グラフが表示されない | height未指定 | h-[300px]を親に設定 |
+| 全部同じ色になる | Cell未使用 | mapでCellに色を設定 |
+| 凡例が表示されない | Legend未追加 | PieChart内にLegend追加 |
+| サイズが固定される | ResponsiveContainer未使用 | width/height 100%設定 |
+
+## 📝 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| PieChart | 円グラフのコンポーネント |
+| Cell | 円グラフの各セクション |
+| ResponsiveContainer | サイズ自動調整コンテナ |
+| Object.entries | オブジェクトを配列に変換 |
 
 ## 🔗 次回予告
 
-Day 23では、週次レポート機能を実装します。
+Day 23 では、プロジェクト別の統計テーブルと
+週次レポート機能を実装します。
+プロジェクトごとの進捗を表形式で確認できます。

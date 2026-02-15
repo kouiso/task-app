@@ -1,29 +1,335 @@
-# Day 23: 週次レポートを実装しよう
+# Day 23: 週次レポートを表示しよう
 
 ## 🎯 今日のゴール
 
-週ごとのタスク完了数や作業時間を集計して表示する週次レポート機能を実装します。
+レポートページにプロジェクト別統計テーブルと
+週次レポート機能を追加します。テーブルで進捗を
+一覧表示し、APIで週次データを取得します。
 
-【スクリーンショット: 週次レポート画面】
+【スクリーンショット: プロジェクト統計テーブル】
 
-## 🤔 なぜこれを作るのか?
+## 🤔 なぜこれを作るのか？
 
-チームの生産性を定期的に振り返る機能です。**週次レポートは家計簿のようなもの**。毎週の収支を記録することで、お金の使い方が見えてきます。それと同じく、週ごとのタスク完了数を記録することで、チームの働き方やペースが見えてきます。
+プロジェクトごとの進捗を比較し、
+チーム全体の生産性を週単位で把握します。
+
+> 💡 **例え話**: プロジェクト統計は
+> 「学校の通信簿」です。
+> 各教科（プロジェクト）ごとに成績（進捗率）
+> や勉強時間（作業時間）が書かれています。
+> 通信簿を見れば、どの教科が順調で
+> どこを頑張るべきかが一目でわかります。
+
+### 📐 プロジェクト統計の計算フロー
+
+```mermaid
+graph TD
+    A[api.task.getAll] --> B[tasks 配列]
+    C[api.project.getAll] --> D[projects 配列]
+    B --> E[projectId でフィルタ]
+    D --> E
+    E --> F[完了タスク数を計算]
+    E --> G[進捗率を計算]
+    E --> H[合計作業時間を計算]
+    F --> I[projectStats 配列]
+    G --> I
+    H --> I
+    I --> J[Table で一覧表示]
+
+    style A fill:#e3f2fd
+    style C fill:#e3f2fd
+    style E fill:#fff3e0
+    style J fill:#e8f5e9
+```
+
+### やること / やらないこと
+
+| やること | やらないこと |
+|---------|-------------|
+| プロジェクト別統計テーブル | 専用の統計API作成 |
+| 週次レポートAPI呼び出し | グラフの追加（Day 22済） |
+| 週次データの表示 | ユーザー別フィルタUI |
+| Table コンポーネント活用 | カスタムテーブル作成 |
+
+### 🆕 新しく学ぶ概念
+
+| 概念 | 読み方 | 役割 | 例え |
+|------|--------|------|------|
+| projectStats | — | プロジェクト別集計 | 通信簿の各教科 |
+| Table | テーブル | 表形式の表示 | Excel の表 |
+| getWeeklyReport | — | 週次データ取得API | 週間天気予報 |
+| filter + reduce | — | 条件付き集計 | 特定科目の平均点 |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | 週次レポートページ作成 | 10分 |
-| Step 2 | 週選択コンポーネント | 15分 |
-| Step 3 | 週次データ取得API | 15分 |
-| Step 4 | 折れ線グラフで表示 | 15分 |
+| Step 1 | プロジェクト統計の考え方 | 3分 |
+| Step 2 | プロジェクト別統計を計算 | 5分 |
+| Step 3 | 統計テーブルを表示 | 5分 |
+| Step 4 | 週次レポートAPIの概要 | 3分 |
+| Step 5 | 週次レポートAPIを呼び出す | 5分 |
+| Step 6 | 週次データを表示する | 5分 |
+| Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約55分
+**合計時間**: 約29分
 
 ---
 
-### Step 1: 週次レポートページ作成（10分）
+### Step 1: プロジェクト統計の考え方（3分）
+
+🎯 **ゴール**: プロジェクトごとの
+統計値をどう計算するか理解します。
+
+#### 統計テーブルに表示する項目
+
+| 項目 | 計算方法 | 意味 |
+|------|---------|------|
+| Project | project.name | プロジェクト名 |
+| Total Tasks | filter結果の長さ | タスク総数 |
+| Completed | DONE の件数 | 完了タスク数 |
+| Progress | 完了数 / 総数 × 100 | 進捗率（%） |
+| Time Spent | reduce で合算 / 60 | 作業時間（h） |
+
+#### 計算の流れ
+
+| 手順 | 処理 | 例 |
+|------|------|-----|
+| 1 | projectId でタスクを絞る | Aのタスクだけ |
+| 2 | status が DONE のものを数える | 完了タスクは3件 |
+| 3 | 完了数 / 全数 × 100 | 3/10 × 100 = 30% |
+| 4 | timeSpentMinutes を合算 | 480分 = 8.0h |
+
+> 💡 Day 21 で学んだ `reduce` と
+> Day 22 で学んだ `filter` を
+> 組み合わせて、プロジェクト単位で
+> 集計します。
+
+✅ **確認ポイント**:
+- 4つの統計値の計算方法を理解した
+
+---
+
+### Step 2: プロジェクト別統計を計算（5分）
+
+🎯 **ゴール**: projects.map で
+各プロジェクトの統計値を計算します。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// プロジェクトのタスクを取得して集計
+const projectStats = projects?.map(
+  (project) => {
+    const projectTasks =
+      tasks?.filter(
+        (t) => t.projectId === project.id
+      ) || [];
+    const completedTasks =
+      projectTasks.filter(
+        (t) => t.status === 'DONE'
+      );
+    const totalTime =
+      projectTasks.reduce(
+        (acc, t) =>
+          acc + t.timeSpentMinutes, 0
+      );
+    return { project, completedTasks,
+      projectTasks, totalTime };
+  }
+);
+```
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 進捗率を計算する
+    const progress =
+      projectTasks.length > 0
+        ? (completedTasks.length
+            / projectTasks.length) * 100
+        : 0;
+```
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 戻り値を整形する
+    return {
+      name: project.name,
+      totalTasks: projectTasks.length,
+      completedTasks:
+        completedTasks.length,
+      progress: progress.toFixed(1),
+      totalTimeHours:
+        (totalTime / 60).toFixed(1),
+    };
+  }
+);
+```
+
+> 💡 `projects?.map` で各プロジェクトを
+> ループし、`tasks?.filter` でそのプロジェクト
+> のタスクだけを取り出します。
+> 最後に `toFixed(1)` で小数1桁に丸めます。
+
+✅ **確認ポイント**:
+- projectStats に配列が入る
+- 各要素に5つのプロパティがある
+
+---
+
+### Step 3: 統計テーブルを表示（5分）
+
+🎯 **ゴール**: Table コンポーネントで
+プロジェクト統計を表形式で表示します。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// Table 関連のインポートを追加
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+```
+
+```typescript
+// filepath: src/app/report/page.tsx
+// Card とテーブルの外枠
+<Card>
+  <CardHeader>
+    <CardTitle>
+      Project Statistics
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {/* 次のブロックでヘッダー定義 */}
+        </TableRow>
+      </TableHeader>
+    </Table>
+  </CardContent>
+</Card>
+```
+
+```typescript
+// filepath: src/app/report/page.tsx
+// TableHead の定義
+<TableHead className="w-[200px]">
+  Project
+</TableHead>
+<TableHead className="text-right">
+  Total Tasks
+</TableHead>
+<TableHead className="text-right">
+  Completed
+</TableHead>
+<TableHead className="text-right">
+  Progress
+</TableHead>
+<TableHead className="text-right">
+  Time Spent
+</TableHead>
+```
+
+```typescript
+// filepath: src/app/report/page.tsx
+// テーブルの本体（TableBody）
+<TableBody>
+  {projectStats?.map((stat) => (
+    <TableRow key={stat.name}>
+      <TableCell className="font-medium">
+        {stat.name}
+      </TableCell>
+      <TableCell className="text-right">
+        {stat.totalTasks}
+      </TableCell>
+      <TableCell className="text-right">
+        {stat.completedTasks}
+      </TableCell>
+      <TableCell className="text-right">
+        {stat.progress}%
+      </TableCell>
+      <TableCell className="text-right">
+        {stat.totalTimeHours}h
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
+```
+
+#### Table コンポーネントの構造
+
+| コンポーネント | 役割 | HTML相当 |
+|--------------|------|---------|
+| Table | テーブル全体 | `<table>` |
+| TableHeader | ヘッダー領域 | `<thead>` |
+| TableHead | 見出しセル | `<th>` |
+| TableBody | データ領域 | `<tbody>` |
+| TableRow | 行 | `<tr>` |
+| TableCell | データセル | `<td>` |
+
+> 💡 shadcn/ui の Table はHTML の
+> テーブル要素をラップしたものです。
+> `text-right` で数値を右寄せにすると
+> 表が見やすくなります。
+
+✅ **確認ポイント**:
+- テーブルにプロジェクト名が並ぶ
+- 数値が右寄せで表示される
+
+【スクリーンショット: プロジェクト統計テーブル完成】
+
+---
+
+### Step 4: 週次レポートAPIの概要（3分）
+
+🎯 **ゴール**: `api.report.getWeeklyReport`
+の仕組みを理解します。
+
+#### APIのパラメータ
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| weeks | number | はい | 取得する週数（1〜12） |
+| userId | string | いいえ | 特定ユーザーに絞る |
+
+#### APIのレスポンス
+
+| プロパティ | 型 | 説明 |
+|-----------|-----|------|
+| weeks | number | 指定した週数 |
+| startDate | string | 集計開始日 |
+| endDate | string | 集計終了日 |
+| weeklyData | array | 週ごとのデータ配列 |
+| totalCompleted | number | 期間内の完了総数 |
+
+#### weeklyData の各要素
+
+| プロパティ | 型 | 説明 |
+|-----------|-----|------|
+| week | string | "Week 1" 等のラベル |
+| weekStart | string | その週の開始日 |
+| totalCompleted | number | その週の完了数 |
+| byStatus | object | ステータス別の件数 |
+| byPriority | object | 優先度別の件数 |
+
+> 💡 サーバー側で Prisma を使って
+> `completedAt` の日付範囲でタスクを
+> フィルタし、週ごとに集計しています。
+
+✅ **確認ポイント**:
+- APIのパラメータとレスポンスを理解した
+
+---
+
+### Step 5: 週次レポートAPIを呼び出す（5分）
+
+🎯 **ゴール**: 週次レポートページで
+APIを呼び出してデータを取得します。
 
 💻 **実装**:
 
@@ -31,245 +337,223 @@
 // filepath: src/app/report/weekly/page.tsx
 'use client';
 
-import { Box, Typography } from '@mui/material';
-
-export default function WeeklyReportPage() {
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4">週次レポート</Typography>
-    </Box>
-  );
-}
-```
-
-✅ **確認ポイント**: /report/weeklyにアクセスして「週次レポート」が表示される
-
-【スクリーンショット: 確認画面】
-
----
-
-### Step 2: 週選択コンポーネント（15分）
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/report/weekly/page.tsx（パート1/3）
-import { useState } from 'react';
-import { Button, ButtonGroup } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-
-export default function WeeklyReportPage() {
-  const [weekOffset, setWeekOffset] = useState(0);
-
-  const getWeekRange = (offset: number) => {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + offset * 7);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-    return {
-      start: startOfWeek,
-      end: endOfWeek,
-    };
-  };
-
-  const weekRange = getWeekRange(weekOffset);
-```
-
-```typescript
-// filepath: src/app/report/weekly/page.tsx（パート2/3）
-
-  return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">週次レポート</Typography>
-
-        <ButtonGroup>
-          <Button onClick={() => setWeekOffset(weekOffset - 1)}>
-            <ArrowBackIcon />
-          </Button>
-          <Button disabled>
-            {weekRange.start.toLocaleDateString('ja-JP')} -{' '}
-            {weekRange.end.toLocaleDateString('ja-JP')}
-          </Button>
-          <Button
-            onClick={() => setWeekOffset(weekOffset + 1)}
-            disabled={weekOffset >= 0}
-          >
-            <ArrowForwardIcon />
-          </Button>
-        </ButtonGroup>
-      </Box>
-    </Box>
-```
-
-```typescript
-// filepath: src/app/report/weekly/page.tsx（パート3/3）
-  );
-}
-```
-
-✅ **確認ポイント**: 週を前後に切り替えられる
-
-【スクリーンショット: 確認画面】
-
----
-
-### Step 3: 週次データ取得API（15分）
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/report/weekly/page.tsx（パート1/2）
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import {
+  Select, SelectContent,
+  SelectItem, SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
 import { api } from '@/trpc/react';
-import { CircularProgress } from '@mui/material';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+```
 
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// APIの呼び出しとローディング処理
 export default function WeeklyReportPage() {
-  const [weekOffset, setWeekOffset] = useState(0);
-  const weekRange = getWeekRange(weekOffset);
+  const [weeks, setWeeks] = useState('4');
 
-  const { data: weeklyData, isLoading } = api.report.getWeeklyReport.useQuery({
-    startDate: weekRange.start,
-    endDate: weekRange.end,
+  const {
+    data: reportData,
+    isLoading,
+  } = api.report.getWeeklyReport.useQuery({
+    weeks: Number.parseInt(weeks, 10),
   });
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <CircularProgress />
-      </Box>
+      <AppLayout>
+        <div className="flex justify-center
+          items-center min-h-[60vh]">
+          <Loader2 className="h-12 w-12
+            animate-spin text-primary" />
+        </div>
+      </AppLayout>
     );
   }
-
-  return (
-    <Box sx={{ p: 3 }}>
-      {/* 週選択UI */}
 ```
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（パート2/2）
-
-      <Typography>完了タスク数: {weeklyData?.completedTasks}</Typography>
-      <Typography>作業時間: {weeklyData?.totalHours}時間</Typography>
-    </Box>
-  );
-}
+// filepath: src/app/report/weekly/page.tsx
+// 週数の選択UI
+<div className="w-[150px]">
+  <Select
+    value={weeks}
+    onValueChange={setWeeks}>
+    <SelectTrigger>
+      <SelectValue placeholder="Period" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="4">
+        4 Weeks
+      </SelectItem>
+      <SelectItem value="8">
+        8 Weeks
+      </SelectItem>
+      <SelectItem value="12">
+        12 Weeks
+      </SelectItem>
+    </SelectContent>
+  </Select>
+</div>
 ```
 
-✅ **確認ポイント**: 選択した週のデータが表示される
+> 💡 `useState` で週数を管理します。
+> ユーザーが週数を変更すると、
+> `useQuery` が自動的に再取得します。
 
-【スクリーンショット: 確認画面】
+✅ **確認ポイント**:
+- reportData にデータが入る
+- ローディング中にスピナーが表示される
+
+【スクリーンショット: ローディング状態】
 
 ---
 
-### Step 4: 折れ線グラフで表示（15分）
+### Step 6: 週次データを表示する（5分）
+
+🎯 **ゴール**: 取得した週次データを
+カードで表示します。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（パート1/3）
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
-import { Paper } from '@mui/material';
-
-export default function WeeklyReportPage() {
-  const { data: weeklyData } = api.report.getWeeklyReport.useQuery({
-    startDate: weekRange.start,
-    endDate: weekRange.end,
-  });
-
-  return (
-    <Box sx={{ p: 3 }}>
-      {/* 週選択UI */}
-
-      <Paper sx={{ p: 3, mt: 3 }}>
+// filepath: src/app/report/weekly/page.tsx
+// 完了タスク数カード
+<div className="grid grid-cols-1
+  md:grid-cols-3 gap-4">
+  <Card>
+    <CardContent className="pt-6">
+      <p className="text-sm
+        text-muted-foreground mb-1">
+        Total Completed
+      </p>
+      <p className="text-3xl font-bold">
+        {reportData?.totalCompleted || 0}
+      </p>
+    </CardContent>
+  </Card>
 ```
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（パート2/3）
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          日別タスク完了数
-        </Typography>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={weeklyData?.dailyStats ?? []}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="completed"
-              stroke="#8884d8"
-              name="完了タスク"
-            />
-            <Line
-              type="monotone"
-              dataKey="created"
-              stroke="#82ca9d"
-              name="新規タスク"
-            />
-          </LineChart>
+// filepath: src/app/report/weekly/page.tsx
+// 平均完了数カード
+  <Card>
+    <CardContent className="pt-6">
+      <p className="text-sm
+        text-muted-foreground mb-1">
+        Average per Week
+      </p>
+      <p className="text-3xl font-bold">
+        {reportData?.totalCompleted
+          ? Math.round(
+              reportData.totalCompleted
+              / Number.parseInt(weeks, 10)
+            )
+          : 0}
+      </p>
+    </CardContent>
+  </Card>
 ```
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（パート3/3）
-        </ResponsiveContainer>
-      </Paper>
-
-      <Paper sx={{ p: 3, mt: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          サマリー
-        </Typography>
-        <Typography>完了タスク数: {weeklyData?.completedTasks}</Typography>
-        <Typography>新規タスク数: {weeklyData?.createdTasks}</Typography>
-        <Typography>合計作業時間: {weeklyData?.totalHours}時間</Typography>
-      </Paper>
-    </Box>
-  );
-}
+// filepath: src/app/report/weekly/page.tsx
+// 期間表示カード
+  <Card>
+    <CardContent className="pt-6">
+      <p className="text-sm
+        text-muted-foreground mb-1">
+        Period
+      </p>
+      <p className="text-lg font-semibold">
+        {reportData?.startDate
+          && reportData?.endDate
+          ? `${new Date(
+              reportData.startDate
+            ).toLocaleDateString()}
+            - ${new Date(
+              reportData.endDate
+            ).toLocaleDateString()}`
+          : '-'}
+      </p>
+    </CardContent>
+  </Card>
+</div>
 ```
 
-✅ **確認ポイント**: 折れ線グラフと統計が表示される
+#### 週次レポートの表示項目
 
-【スクリーンショット: 確認画面】
+| カード | 表示内容 | 計算方法 |
+|-------|---------|---------|
+| Total Completed | 期間内の完了数 | API が返す値 |
+| Average per Week | 週あたり平均 | 完了数 / 週数 |
+| Period | 集計期間 | 開始日 - 終了日 |
+
+> 💡 `Math.round` で小数を丸めます。
+> `toLocaleDateString()` でブラウザの
+> ロケールに応じた日付形式になります。
+
+✅ **確認ポイント**:
+- 3枚のカードが表示される
+- 完了数と平均が正しく計算される
+
+【スクリーンショット: 週次レポート完成】
 
 ---
 
-## 📝 学んだこと
+### Step 7: 動作確認（3分）
 
-- **Date操作**: getDay(), setDate()で日付計算
-- **週の開始日**: 日曜日を0として計算
-- **LineChart**: 折れ線グラフコンポーネント
-- **type="monotone"**: 滑らかな曲線
-- **ButtonGroup**: ボタンをグループ化して見た目を統一
+🎯 **ゴール**: 全体の表示を確認します。
+
+1. `/report` にアクセス
+2. 統計カード（Day 21）が表示される
+3. 円グラフ（Day 22）が表示される
+4. プロジェクト統計テーブルが表示される
+5. 各プロジェクトの進捗率が正しい
+6. `/report/weekly` にアクセス
+7. 週次レポートのカードが表示される
+
+✅ **確認ポイント**:
+- テーブルの数値がシードデータと一致
+- 週次レポートにデータが表示される
+
+【スクリーンショット: レポートページ全体】
+
+---
 
 ## 📋 今日のまとめ
 
-- [ ] 週次レポートページを作成できた
-- [ ] 週選択コンポーネントを実装できた
-- [ ] 週次データ取得APIを呼び出せた
-- [ ] 折れ線グラフで表示できた
+- [ ] プロジェクト別統計を計算できた
+- [ ] Table コンポーネントで一覧表示した
+- [ ] 週次レポートAPIを呼び出せた
+- [ ] 週次データをカードで表示した
 
 ## ⚠️ つまずきポイント
 
-| 問題 | 原因 | 解決策 |
-|------|------|--------|
-| 週の計算がずれる | getDay()の仕様を誤解 | 日曜=0, 月曜=1, ... 土曜=6 |
-| 未来の週を選択できる | disabled の条件が間違い | weekOffset >= 0 で無効化 |
-| グラフが表示されない | data が undefined | weeklyData?.dailyStats ?? [] でフォールバック |
+| エラー / 問題 | 原因 | 解決方法 |
+|--------------|------|---------|
+| テーブルが空 | projectStats が undefined | projects?.map で安全に処理 |
+| 進捗率が NaN | タスク0件で割り算 | length > 0 チェック追加 |
+| 週次データが空 | completedAt 未設定 | シードデータを確認 |
+| 型エラーが出る | weeks が string | Number.parseInt で変換 |
+
+## 📝 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| projectStats | プロジェクト別の集計結果配列 |
+| Table / TableRow | shadcn/ui のテーブル部品 |
+| getWeeklyReport | 週次レポート取得API |
+| Number.parseInt | 文字列を整数に変換する関数 |
 
 ## 🔗 次回予告
 
-Day 24では、ユーザー一覧画面（管理者用）を実装します。
+Day 24 では、管理者専用のユーザー一覧ページを
+実装します。権限チェックでアクセスを制限し、
+ユーザー情報をテーブルで管理できるようにします。
