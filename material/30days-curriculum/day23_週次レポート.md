@@ -6,7 +6,7 @@
 週次レポート機能を追加します。テーブルで進捗を
 一覧表示し、APIで週次データを取得します。
 
-【スクリーンショット: プロジェクト統計テーブル】
+![プロジェクト統計テーブル](./screenshots/report.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -281,7 +281,7 @@ import {
 - テーブルにプロジェクト名が並ぶ
 - 数値が右寄せで表示される
 
-【スクリーンショット: プロジェクト統計テーブル完成】
+![プロジェクト統計テーブル完成](./screenshots/report.png)
 
 ---
 
@@ -412,7 +412,7 @@ export default function WeeklyReportPage() {
 - reportData にデータが入る
 - ローディング中にスピナーが表示される
 
-【スクリーンショット: ローディング状態】
+> 📸 ここでデータ読み込み中のスピナー（ぐるぐるアニメーション）が画面中央に表示されることを確認してください。
 
 ---
 
@@ -503,7 +503,7 @@ export default function WeeklyReportPage() {
 - 3枚のカードが表示される
 - 完了数と平均が正しく計算される
 
-【スクリーンショット: 週次レポート完成】
+![週次レポート完成](./screenshots/report-weekly.png)
 
 ---
 
@@ -523,7 +523,7 @@ export default function WeeklyReportPage() {
 - テーブルの数値がシードデータと一致
 - 週次レポートにデータが表示される
 
-【スクリーンショット: レポートページ全体】
+![レポートページ全体](./screenshots/report.png)
 
 ---
 
@@ -552,7 +552,7 @@ export default function WeeklyReportPage() {
 | getWeeklyReport | 週次レポート取得API |
 | Number.parseInt | 文字列を整数に変換する関数 |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 24 では、管理者専用のユーザー一覧ページを
 実装します。権限チェックでアクセスを制限し、

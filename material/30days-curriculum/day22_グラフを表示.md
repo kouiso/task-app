@@ -6,7 +6,7 @@ Recharts ライブラリを使って、レポートページに
 円グラフを追加します。ステータス別・優先度別の
 タスク分布を可視化します。
 
-【スクリーンショット: 円グラフ2つ】
+![円グラフ2つ](./screenshots/report.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -236,7 +236,7 @@ import {
 - 円グラフが表示される
 - ステータスごとに色分けされる
 
-【スクリーンショット: ステータス円グラフ】
+![ステータス円グラフ](./screenshots/report.png)
 
 ---
 
@@ -315,7 +315,7 @@ const priorityData = Object.entries(
 ✅ **確認ポイント**:
 - 2つの円グラフが表示される
 
-【スクリーンショット: 2つの円グラフ】
+![2つの円グラフ](./screenshots/report.png)
 
 ---
 
@@ -363,7 +363,7 @@ const priorityData = Object.entries(
 - 色がステータス/優先度に対応している
 - Tooltipで件数が確認できる
 
-【スクリーンショット: 完成したグラフセクション】
+![完成したグラフセクション](./screenshots/report.png)
 
 ---
 
@@ -392,7 +392,7 @@ const priorityData = Object.entries(
 | ResponsiveContainer | サイズ自動調整コンテナ |
 | Object.entries | オブジェクトを配列に変換 |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 23 では、プロジェクト別の統計テーブルと
 週次レポート機能を実装します。

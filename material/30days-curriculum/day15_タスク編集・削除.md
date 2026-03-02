@@ -7,7 +7,7 @@ Day 14 で作った TaskDialog を「編集モード」で
 1つのコンポーネントで作成と編集の両方に対応する
 パターンを学びます。
 
-【スクリーンショット: タスク編集ダイアログ】
+![タスク編集ダイアログ](./screenshots/task-detail-dialog.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -176,7 +176,7 @@ const handleEdit = (taskId: string) => {
 - 編集ボタンでダイアログが開く
 - 既存データがフォームに表示される
 
-【スクリーンショット: 編集モードのダイアログ】
+![編集モードのダイアログ](./screenshots/task-detail-dialog.png)
 
 ---
 
@@ -369,7 +369,7 @@ const handleCreate = () => {
 - カードの編集ボタンで編集モードが開く
 - カードの削除ボタンで確認→削除される
 
-【スクリーンショット: 編集後のタスク一覧】
+![編集後のタスク一覧](./screenshots/task-list.png)
 
 ---
 
@@ -417,7 +417,7 @@ const handleCreate = () => {
 | null vs undefined | nullは「クリア」、undefinedは「変更なし」 |
 | toISOString() | 日付をISO 8601形式の文字列に変換 |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 16 では、タスクのステータス変更とタイマー
 機能を実装します。作業時間の計測で、プロジェクト

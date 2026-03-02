@@ -6,7 +6,7 @@
 インターネットに公開します。30日間の学習を
 振り返り、次のステップを考えます。
 
-【スクリーンショット: Vercel デプロイ成功画面】
+> 📸 ここで Vercel ダッシュボードにアクセスし、デプロイが「Ready」ステータスになっていることを確認してください。
 
 ## 🤔 なぜこれをやるのか？
 
@@ -96,7 +96,7 @@ graph LR
 |--------|--------|------|
 | DATABASE_URL | `postgresql://user:pass@host:5432/db` | DB 接続 |
 | JWT_SECRET | ランダム32文字以上 | JWT 署名鍵 |
-| NEXT_PUBLIC_APP_URL | `https://your-app.vercel.app` | アプリの公開 URL |
+| NEXT_PUBLIC_APP_URL | `https://<あなたのアプリ名>.vercel.app` | アプリの公開 URL |
 
 💻 **JWT_SECRET の生成**:
 
@@ -194,7 +194,7 @@ npm run db:push
 ✅ **確認ポイント**:
 - `docker compose ps` で db が Running
 
-【スクリーンショット: Docker Desktop の DB 起動確認】
+> 📸 ここでターミナルに `docker compose ps` を実行し、`taskapp-postgres` コンテナが `running (healthy)` 状態になっていることを確認してください。
 
 ---
 
@@ -253,7 +253,7 @@ git push origin main
 - Vercel のビルドログでエラーがない
 - デプロイ URL が発行された
 
-【スクリーンショット: Vercel デプロイ進捗画面】
+> 📸 ここで Vercel ダッシュボードの「Deployments」タブを開き、ビルドログが流れてデプロイが完了するまで確認してください。
 
 ---
 
@@ -295,7 +295,7 @@ git push origin main
 ✅ **確認ポイント**:
 - 全機能が本番環境で正常動作する
 
-【スクリーンショット: 本番環境のダッシュボード画面】
+![本番環境のダッシュボード画面](./screenshots/dashboard.png)
 
 ---
 
@@ -431,7 +431,7 @@ git push origin main
 ✅ **確認ポイント**:
 - 次の学習目標を決められた
 
-【スクリーンショット: 完成したアプリの全画面】
+![完成したアプリの全画面](./screenshots/dashboard.png)
 
 ---
 
@@ -471,19 +471,50 @@ git push origin main
 
 **Task-App 30日間ハンズオンカリキュラム修了**
 
-30日間で身につけたスキル:
+### 卒業チェックリスト
 
-- Next.js 15 によるモダン Web 開発
-- TypeScript による型安全な開発
-- tRPC による End-to-End 型安全 API
-- Prisma によるデータベース設計・操作
-- shadcn/ui + Tailwind CSS による UI 開発
-- カスタム JWT 認証（jose + bcrypt）
-- Biome による品質管理
-- Vitest によるテスト自動化
-- Vercel による本番デプロイ
+以下の項目を確認して、30 日間の学びを振り返りましょう。
 
-30日間、一歩ずつ積み重ねてきた知識と経験は
+| # | カテゴリ | できるようになったこと | 学んだ Day |
+|---|---------|---------------------|-----------|
+| 1 | 環境構築 | `npm run dev` でアプリを起動できる | Day 1 |
+| 2 | TypeScript | `const` / `let` / 型アノテーションを使える | Day 2 |
+| 3 | Git | コミット・プッシュ・プルができる | Day 3 |
+| 4 | DB | Prisma でテーブルを定義・操作できる | Day 4-5 |
+| 5 | UI | shadcn/ui コンポーネントを使える | Day 5-6 |
+| 6 | 認証 | JWT + Cookie の仕組みを説明できる | Day 7-8 |
+| 7 | API | tRPC でサーバー・クライアント通信ができる | Day 9-10 |
+| 8 | CRUD | タスクの作成・表示・編集・削除ができる | Day 11-18 |
+| 9 | 機能拡張 | コメント・検索・レポートを実装できる | Day 19-25 |
+| 10 | 品質管理 | エラー処理・セキュリティ対策を説明できる | Day 26-27 |
+| 11 | テスト | テストを書いて実行できる | Day 28 |
+| 12 | リリース | 4 コマンド全グリーンにできる | Day 29 |
+| 13 | デプロイ | Vercel にデプロイして公開できる | Day 30 |
+
+### 30 日間で身につけた技術スタック
+
+| カテゴリ | 技術 | 役割 |
+|---------|------|------|
+| フレームワーク | Next.js 15 (App Router) | フルスタック Web フレームワーク |
+| 言語 | TypeScript | 型安全な JavaScript |
+| API | tRPC v11 | End-to-End 型安全 API |
+| DB | Prisma + PostgreSQL | ORM + リレーショナル DB |
+| 認証 | jose + bcryptjs | JWT + パスワードハッシュ化 |
+| UI | shadcn/ui + Tailwind CSS v4 | コンポーネントライブラリ + CSS |
+| 品質 | Biome + Vitest | Lint + テスト |
+| デプロイ | Vercel | ホスティング + CI/CD |
+
+### 次のステップ
+
+| やりたいこと | おすすめの学習 |
+|------------|-------------|
+| もっと機能を追加したい | 通知機能、ファイル添付、ガントチャート |
+| チーム開発を学びたい | Git ブランチ戦略、コードレビュー、PR 運用 |
+| バックエンドを深めたい | REST API 設計、GraphQL、マイクロサービス |
+| フロントエンドを深めたい | React Server Components、アニメーション、アクセシビリティ |
+| インフラを学びたい | Docker、AWS/GCP、Terraform |
+
+30 日間、一歩ずつ積み重ねてきた知識と経験は
 あなたのエンジニアキャリアの土台になります。
 学び続けること、作り続けることが大切です。
 次のプロジェクトでも、ここで学んだスキルを
