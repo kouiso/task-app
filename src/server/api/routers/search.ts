@@ -33,19 +33,19 @@ const quickSearchInputSchema = z.object({
  * 条件分岐を減らすためにオブジェクトマッピングを使用
  */
 type FilterConfig = {
-  key: string;
+  key: keyof Prisma.TaskWhereInput;
   value: unknown;
   transform?: (value: unknown) => unknown;
 };
 
-const buildDynamicWhere = (filters: FilterConfig[]): Record<string, unknown> => {
+const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInput> => {
   const result: Record<string, unknown> = {};
   for (const f of filters) {
     if (f.value !== undefined && f.value !== null && f.value !== 'all') {
       result[f.key] = f.transform ? f.transform(f.value) : f.value;
     }
   }
-  return result;
+  return result as Partial<Prisma.TaskWhereInput>;
 };
 
 /**

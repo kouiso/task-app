@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -10,10 +11,9 @@ const projectCreateSchema = z.object({
   color: z
     .string()
     .regex(/^#[0-9A-F]{6}$/i)
-    .default('#1976d2'),
+    .default(DEFAULT_PROJECT_COLOR),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
-  ownerId: z.string().cuid(),
 });
 
 const projectUpdateSchema = z.object({
@@ -45,10 +45,29 @@ export const projectRouter = createTRPCRouter({
         })
         .optional(),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const where: Prisma.ProjectWhereInput = {};
 
-      if (input?.userId) {
+      if (input?.userId && input.userId !== ctx.session.userId) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: ctx.session.userId },
+          select: { role: true },
+        });
+
+        if (currentUser?.role !== 'ADMIN') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+
+      // ユーザーが参加してるプロジェクトのみを対象（userId指定されてない場合）
+      if (!input?.userId) {
+        where.members = {
+          some: { userId: ctx.session.userId },
+        };
+      } else if (input.userId) {
         where.members = {
           some: { userId: input.userId },
         };
@@ -121,8 +140,46 @@ export const projectRouter = createTRPCRouter({
       return project;
     }),
 
-  create: protectedProcedure.input(projectCreateSchema).mutation(async ({ input }) => {
-    const { ownerId, ...projectData } = input;
+  getAvailableUsers: protectedProcedure
+    .input(z.object({ projectId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only project owners or admins can view available users',
+        });
+      }
+
+      return await prisma.user.findMany({
+        where: {
+          isActive: true,
+          projects: {
+            none: {
+              projectId: input.projectId,
+            },
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatar: true,
+        },
+        orderBy: { name: 'asc' },
+      });
+    }),
+
+  create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
+    const projectData = input;
 
     const createData: Prisma.ProjectCreateInput = {
       name: projectData.name,
@@ -131,7 +188,7 @@ export const projectRouter = createTRPCRouter({
       endDate: projectData.endDate ? new Date(projectData.endDate) : null,
       members: {
         create: {
-          userId: ownerId,
+          userId: ctx.session.userId,
           role: 'OWNER',
         },
       },
@@ -249,7 +306,24 @@ export const projectRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ input }) => {
+  addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ ctx, input }) => {
+    // OWNERまたはADMIN権限を確認
+    const userMember = await prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          userId: ctx.session.userId,
+          projectId: input.projectId,
+        },
+      },
+    });
+
+    if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only project owners or admins can add members',
+      });
+    }
+
     const existing = await prisma.projectMember.findUnique({
       where: {
         userId_projectId: {
@@ -283,7 +357,24 @@ export const projectRouter = createTRPCRouter({
         userId: z.string().cuid(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // OWNERまたはADMIN権限を確認
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only project owners or admins can remove members',
+        });
+      }
+
       const member = await prisma.projectMember.findUnique({
         where: {
           userId_projectId: {
@@ -336,7 +427,24 @@ export const projectRouter = createTRPCRouter({
         role: z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // OWNERまたはADMIN権限を確認
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only project owners or admins can update member roles',
+        });
+      }
+
       return await prisma.projectMember.update({
         where: {
           userId_projectId: {
@@ -357,7 +465,24 @@ export const projectRouter = createTRPCRouter({
 
   archive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // OWNERまたはADMIN権限を確認
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.id,
+          },
+        },
+      });
+
+      if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only project owners or admins can archive projects',
+        });
+      }
+
       return await prisma.project.update({
         where: { id: input.id },
         data: { isArchived: true },
@@ -366,7 +491,24 @@ export const projectRouter = createTRPCRouter({
 
   unarchive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // OWNERまたはADMIN権限を確認
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.id,
+          },
+        },
+      });
+
+      if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only project owners or admins can unarchive projects',
+        });
+      }
+
       return await prisma.project.update({
         where: { id: input.id },
         data: { isArchived: false },
