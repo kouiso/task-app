@@ -6,8 +6,8 @@ export const USER_ROLE = {
 export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  USER: 'User',
-  ADMIN: 'Admin',
+  USER: 'ユーザー',
+  ADMIN: '管理者',
 };
 
 export function isUserRole(value: unknown): value is UserRole {
@@ -24,10 +24,10 @@ export const PROJECT_MEMBER_ROLE = {
 export type ProjectMemberRole = (typeof PROJECT_MEMBER_ROLE)[keyof typeof PROJECT_MEMBER_ROLE];
 
 export const PROJECT_MEMBER_ROLE_LABELS: Record<ProjectMemberRole, string> = {
-  OWNER: 'Owner',
-  ADMIN: 'Admin',
-  MEMBER: 'Member',
-  VIEWER: 'Viewer',
+  OWNER: 'オーナー',
+  ADMIN: '管理者',
+  MEMBER: 'メンバー',
+  VIEWER: '閲覧者',
 };
 
 export const PROJECT_MEMBER_ROLE_PERMISSIONS: Record<

@@ -10,12 +10,12 @@ export const TASK_STATUS = {
 export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS];
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: 'To Do',
-  IN_PROGRESS: 'In Progress',
-  IN_REVIEW: 'In Review',
-  DONE: 'Done',
-  CANCELLED: 'Cancelled',
-  BLOCKED: 'Blocked',
+  TODO: '未対応',
+  IN_PROGRESS: '進行中',
+  IN_REVIEW: 'レビュー中',
+  DONE: '完了',
+  CANCELLED: 'キャンセル',
+  BLOCKED: 'ブロック',
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {

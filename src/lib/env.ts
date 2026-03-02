@@ -7,9 +7,6 @@ import { z } from 'zod';
 const envSchema = z.object({
   DATABASE_URL: z.string().url('DATABASE_URLは有効なURL形式である必要があります'),
 
-  NEXTAUTH_URL: z.string().url('NEXTAUTH_URLは有効なURL形式である必要があります'),
-  NEXTAUTH_SECRET: z.string().min(32, 'NEXTAUTH_SECRETは32文字以上である必要があります'),
-
   JWT_SECRET: z
     .string()
     .min(32, 'JWT_SECRETは32文字以上である必要があります')
@@ -45,11 +42,7 @@ function validateEnv() {
  * アプリケーション全体で使用する
  * ビルド時はバリデーションをスキップ（CI環境やVercelプレビューデプロイ時）
  */
-const shouldSkipValidation =
-  process.env['SKIP_ENV_VALIDATION'] === 'true' ||
-  (process.env['NODE_ENV'] === 'production' &&
-    typeof window === 'undefined' &&
-    !process.env['DATABASE_URL']);
+const shouldSkipValidation = process.env['SKIP_ENV_VALIDATION'] === 'true';
 
 export const env = shouldSkipValidation ? (process.env as unknown as Env) : validateEnv();
 
