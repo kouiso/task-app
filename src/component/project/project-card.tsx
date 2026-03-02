@@ -62,7 +62,7 @@ export function ProjectCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <CardTitle className="text-lg">{name}</CardTitle>
-            {isArchived && <Badge variant="secondary">Archived</Badge>}
+            {isArchived && <Badge variant="secondary">アーカイブ</Badge>}
           </div>
           <div className="flex gap-1">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEdit}>
@@ -79,9 +79,9 @@ export function ProjectCard({
 
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Progress</span>
+            <span>進捗</span>
             <span>
-              {taskStats.done} / {taskStats.total} tasks
+              {taskStats.done} / {taskStats.total} タスク
             </span>
           </div>
           <div className="w-full bg-secondary rounded-full h-2">
@@ -94,7 +94,7 @@ export function ProjectCard({
 
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <Badge variant="outline">{memberCount} members</Badge>
+          <Badge variant="outline">{memberCount} メンバー</Badge>
         </div>
       </CardContent>
     </Card>
