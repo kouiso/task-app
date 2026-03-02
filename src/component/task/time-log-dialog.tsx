@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Button } from '@/component/ui/button';
 import {
   Dialog,
@@ -51,8 +52,8 @@ export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialo
         id: taskId,
         minutesToAdd: totalMinutes,
       });
-    } catch (error) {
-      console.error('Failed to add time:', error);
+    } catch (_error) {
+      toast.error('作業時間の追加に失敗しました');
     }
   };
 
@@ -74,15 +75,15 @@ export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogHeader>
-        <DialogTitle>Add Time Log</DialogTitle>
-        <DialogDescription>タスクに作業時間を記録します</DialogDescription>
-      </DialogHeader>
       <DialogContent className="space-y-4">
+        <DialogHeader>
+          <DialogTitle>作業時間の記録</DialogTitle>
+          <DialogDescription>タスクに作業時間を記録します</DialogDescription>
+        </DialogHeader>
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours" className="text-sm font-medium mb-2 block">
-              Hours
+              時間
             </Label>
             <Input
               id="hours"
@@ -97,7 +98,7 @@ export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialo
           </div>
           <div className="flex-1">
             <Label htmlFor="minutes" className="text-sm font-medium mb-2 block">
-              Minutes
+              分
             </Label>
             <Input
               id="minutes"
@@ -111,15 +112,15 @@ export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialo
             <p className="text-xs text-muted-foreground mt-1">作業時間（分、0-59）</p>
           </div>
         </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={addTimeMutation.isPending}>
+            キャンセル
+          </Button>
+          <Button onClick={handleSubmit} disabled={!isValid || addTimeMutation.isPending}>
+            {addTimeMutation.isPending ? '追加中...' : '時間を追加'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogFooter>
-        <Button variant="outline" onClick={handleClose} disabled={addTimeMutation.isPending}>
-          キャンセル
-        </Button>
-        <Button onClick={handleSubmit} disabled={!isValid || addTimeMutation.isPending}>
-          {addTimeMutation.isPending ? '追加中...' : '時間を追加'}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 }

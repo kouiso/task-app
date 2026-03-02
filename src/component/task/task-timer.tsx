@@ -2,6 +2,7 @@
 
 import { Loader2, PauseIcon, PlayIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Button } from '@/component/ui/button';
 import { api } from '@/trpc/react';
 
@@ -62,8 +63,8 @@ export function TaskTimer({
           action: 'start',
         });
       }
-    } catch (error) {
-      console.error('Timer update failed:', error);
+    } catch (_error) {
+      toast.error('タイマーの更新に失敗しました');
     }
   };
 
@@ -88,7 +89,7 @@ export function TaskTimer({
           size="sm"
           onClick={handleStartStop}
           disabled={updateTimerMutation.isPending}
-          aria-label={isTimerActive ? 'Stop timer' : 'Start timer'}
+          aria-label={isTimerActive ? 'タイマー停止' : 'タイマー開始'}
           data-testid={isTimerActive ? 'stop-timer-button' : 'start-timer-button'}
         >
           {updateTimerMutation.isPending ? (
@@ -98,7 +99,7 @@ export function TaskTimer({
           ) : (
             <PlayIcon className="w-4 h-4 mr-2" />
           )}
-          {isTimerActive ? 'Stop Timer' : 'Start Timer'}
+          {isTimerActive ? 'タイマー停止' : 'タイマー開始'}
         </Button>
 
         {isTimerActive && (
@@ -109,7 +110,7 @@ export function TaskTimer({
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Total time spent: {formatMinutes(timeSpentMinutes)}
+        合計作業時間: {formatMinutes(timeSpentMinutes)}
       </p>
     </div>
   );

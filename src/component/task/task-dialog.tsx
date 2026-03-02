@@ -29,7 +29,6 @@ interface TaskDialogProps {
   initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string | null; email: string }>;
-  currentUserId: string;
 }
 
 export interface TaskFormData {
@@ -104,82 +103,83 @@ export function TaskDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>{initialData?.id ? 'Edit Task' : 'Create Task'}</DialogTitle>
+          <DialogTitle>{initialData?.id ? 'タスク編集' : 'タスク作成'}</DialogTitle>
           <DialogDescription>
-            {initialData?.id ? 'Update task details.' : 'Add a new task to your project.'}
+            {initialData?.id
+              ? 'タスクの詳細を更新します。'
+              : 'プロジェクトに新しいタスクを追加します。'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">タイトル</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={handleChange('title')}
-                placeholder="Enter task title"
+                placeholder="タスクのタイトルを入力"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">説明</Label>
               <Textarea
                 id="description"
                 value={formData.description || ''}
                 onChange={handleChange('description')}
-                placeholder="Describe the task..."
+                placeholder="タスクの説明..."
                 rows={4}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">ステータス</Label>
                 <Select value={formData.status} onValueChange={handleSelectChange('status')}>
                   <SelectTrigger id="status">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="ステータスを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TODO">To Do</SelectItem>
-                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                    <SelectItem value="IN_REVIEW">In Review</SelectItem>
-                    <SelectItem value="DONE">Done</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                    <SelectItem value="BLOCKED">Blocked</SelectItem>
+                    <SelectItem value="TODO">未対応</SelectItem>
+                    <SelectItem value="IN_PROGRESS">進行中</SelectItem>
+                    <SelectItem value="IN_REVIEW">レビュー中</SelectItem>
+                    <SelectItem value="DONE">完了</SelectItem>
+                    <SelectItem value="CANCELLED">キャンセル</SelectItem>
+                    <SelectItem value="BLOCKED">ブロック</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="priority">Priority</Label>
+                <Label htmlFor="priority">優先度</Label>
                 <Select value={formData.priority} onValueChange={handleSelectChange('priority')}>
                   <SelectTrigger id="priority">
-                    <SelectValue placeholder="Select priority" />
+                    <SelectValue placeholder="優先度を選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="LOW">Low</SelectItem>
-                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                    <SelectItem value="HIGH">High</SelectItem>
-                    <SelectItem value="URGENT">Urgent</SelectItem>
+                    <SelectItem value="LOW">低</SelectItem>
+                    <SelectItem value="MEDIUM">中</SelectItem>
+                    <SelectItem value="HIGH">高</SelectItem>
+                    <SelectItem value="URGENT">緊急</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="project">Project</Label>
+                <Label htmlFor="project">プロジェクト</Label>
                 <Select
                   value={formData.projectId}
                   onValueChange={handleSelectChange('projectId')}
                   disabled={!projects.length}
                 >
                   <SelectTrigger id="project">
-                    <SelectValue placeholder="Select project" />
+                    <SelectValue placeholder="プロジェクトを選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {projects.map((project) => (
@@ -191,7 +191,7 @@ export function TaskDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="assignee">Assignee</Label>
+                <Label htmlFor="assignee">担当者</Label>
                 <Select
                   value={formData.assigneeId || 'unassigned'}
                   onValueChange={(value) =>
@@ -199,10 +199,10 @@ export function TaskDialog({
                   }
                 >
                   <SelectTrigger id="assignee">
-                    <SelectValue placeholder="Select assignee" />
+                    <SelectValue placeholder="担当者を選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">未割当</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name || user.email}
@@ -213,7 +213,7 @@ export function TaskDialog({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="dueDate">Due Date</Label>
+                <Label htmlFor="dueDate">期限</Label>
                 <Input
                   id="dueDate"
                   type="date"
@@ -222,7 +222,7 @@ export function TaskDialog({
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                <Label htmlFor="estimatedHours">見積時間</Label>
                 <Input
                   id="estimatedHours"
                   type="number"
@@ -237,10 +237,10 @@ export function TaskDialog({
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              キャンセル
             </Button>
             <Button type="submit" disabled={!formData.title || !formData.projectId}>
-              {initialData?.id ? 'Update' : 'Create'}
+              {initialData?.id ? '更新' : '作成'}
             </Button>
           </DialogFooter>
         </form>

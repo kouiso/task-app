@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { createTRPCTestUtils } from '../../../test/helpers';
 import { TaskCard } from '../task-card';
 
@@ -133,7 +134,7 @@ describe('TaskCard', () => {
     const user = userEvent.setup();
     render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
 
-    const editButton = screen.getByLabelText(/edit/i);
+    const editButton = screen.getByLabelText(/編集/);
     await user.click(editButton);
     expect(mockOnEdit).toHaveBeenCalledWith('task-1');
   });
@@ -143,7 +144,7 @@ describe('TaskCard', () => {
     const user = userEvent.setup();
     render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
 
-    const deleteButton = screen.getByLabelText(/delete/i);
+    const deleteButton = screen.getByLabelText(/削除/);
     await user.click(deleteButton);
     expect(mockOnDelete).toHaveBeenCalledWith('task-1');
   });
@@ -184,7 +185,7 @@ describe('TaskCard', () => {
       const { unmount } = render(<TaskCard {...defaultProps} status={status} />, {
         wrapper: Wrapper,
       });
-      expect(screen.getByText(status.replace('_', ' '))).toBeInTheDocument();
+      expect(screen.getByText(TASK_STATUS_LABELS[status])).toBeInTheDocument();
       unmount();
     }
   });

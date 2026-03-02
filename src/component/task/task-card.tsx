@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { cn } from '@/lib/utils';
 import { TaskTimer } from './task-timer';
 import { TimeLogDialog } from './time-log-dialog';
@@ -134,7 +136,7 @@ export function TaskCard({
             size="icon"
             className="h-8 w-8"
             onClick={handleEdit}
-            aria-label="Edit task"
+            aria-label="タスクを編集"
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -143,7 +145,7 @@ export function TaskCard({
             size="icon"
             className="h-8 w-8 text-destructive hover:text-destructive"
             onClick={handleDelete}
-            aria-label="Delete task"
+            aria-label="タスクを削除"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -153,11 +155,9 @@ export function TaskCard({
         {description && <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>}
 
         <div className="flex gap-2 flex-wrap">
-          <Badge variant={getStatusBadgeVariant(status)} className="capitalize">
-            {status.replace('_', ' ')}
-          </Badge>
-          <Badge variant={getPriorityBadgeVariant(priority)} className="capitalize">
-            {priority}
+          <Badge variant={getStatusBadgeVariant(status)}>{TASK_STATUS_LABELS[status]}</Badge>
+          <Badge variant={getPriorityBadgeVariant(priority)}>
+            {TASK_PRIORITY_LABELS[priority]}
           </Badge>
         </div>
 
@@ -176,7 +176,7 @@ export function TaskCard({
                 </span>
               </div>
             ) : (
-              <span className="text-xs text-muted-foreground">Unassigned</span>
+              <span className="text-xs text-muted-foreground">未割当</span>
             )}
 
             {dueDate && (
@@ -200,10 +200,10 @@ export function TaskCard({
               size="sm"
               className="w-full text-xs h-8"
               onClick={handleOpenTimeLog}
-              aria-label={`Log time for ${title}`}
+              aria-label={`${title}の時間を記録`}
             >
               <Clock className="mr-2 h-3 w-3" />
-              Log Time
+              時間記録
             </Button>
           </div>
         </div>
