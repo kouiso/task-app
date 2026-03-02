@@ -54,6 +54,7 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 | [quality.instructions.md](instructions/quality.instructions.md) | 実装ルール、絶対禁止事項、Biome規約、品質基準、リポジトリヘルスチェック、TDD |
 | [git.instructions.md](instructions/git.instructions.md) | Gitブランチ運用、Commit Fix、PRルール、Issue管理、プロジェクトナレッジベース |
 | [trial-and-error.instructions.md](instructions/trial-and-error.instructions.md) | ユーザー負担ゼロ原則、完全自律検証、エラー隠蔽禁止、冪等性担保 |
+| [data-driven-execution.instructions.md](instructions/data-driven-execution.instructions.md) | データサイエンス思考: 重み付きトリアージ、パイプライン探索、仮説駆動デバッグ、自己採点 |
 
 ### 条件付きルール（該当ファイル編集時のみ自動適用）
 
