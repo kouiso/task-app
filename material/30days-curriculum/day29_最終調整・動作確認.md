@@ -192,10 +192,10 @@ npm run lint:fix
 | noUnusedVariables | error | 未使用変数は禁止 |
 | useConst | error | 再代入なしなら const |
 | noExplicitAny | warn | any 型は警告 |
-| noConsoleLog | warn | console.log は警告 |
+| noConsole | error | console.log はエラー（warn/errorは許可） |
 
-> 💡 このプロジェクトでは ESLint / Prettier
-> ではなく Biome を使っています。
+> 💡 このプロジェクトでは基本はBiomeを使い、
+> 足りないルールがある場合のみESLintを使います。
 > `biome.json` にルールが定義されています。
 
 ```bash
@@ -424,45 +424,39 @@ if (!data || data.length === 0) {
 'use client';
 
 import { useEffect } from 'react';
-import { Button } from '@/component/ui/button';
-import {
-  Alert, AlertDescription, AlertTitle,
-} from '@/component/ui/alert';
-import { AlertCircle } from 'lucide-react';
-
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
-  useEffect(() => {
-    console.error('エラー発生:', error);
-  }, [error]);
+import { Button }
+  from '@/component/ui/button';
 ```
-
-コンポーネントの return 部分では、エラーメッセージと再試行ボタンを表示します。
 
 ```typescript
 // filepath: src/app/error.tsx（続き）
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
   return (
-    <div className="flex items-center
-      justify-center min-h-[50vh] p-6">
-      <div className="max-w-md w-full">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>
-            エラーが発生しました
-          </AlertTitle>
-          <AlertDescription>
-            {error.message}
-          </AlertDescription>
-        </Alert>
-        <Button
-          onClick={reset}
-          className="mt-4 w-full">
-          再試行
+    <div className="flex min-h-screen
+      items-center justify-center">
+      <div className=
+        "text-center space-y-4">
+        <h2 className="text-2xl
+          font-bold">
+          エラーが発生しました
+        </h2>
+        <p className=
+          "text-muted-foreground">
+          予期しないエラーが発生しました。
+          もう一度お試しください。
+        </p>
+        <Button onClick={reset}>
+          もう一度試す
         </Button>
       </div>
     </div>

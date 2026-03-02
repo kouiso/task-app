@@ -99,7 +99,14 @@ function ProjectPageContent() {
 export default function ProjectPage() {
   return (
     <AppLayout>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={
+        <div className="flex h-[60vh]
+          items-center justify-center">
+          <div className="animate-spin
+            rounded-full h-8 w-8
+            border-b-2 border-primary" />
+        </div>
+      }>
         <ProjectPageContent />
       </Suspense>
     </AppLayout>
@@ -158,16 +165,17 @@ const {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-import { Loader2 } from 'lucide-react';
-
 // ProjectPageContent内のreturnの前に追加
 if (isLoading) {
   return (
-    <div className="flex justify-center
-      items-center h-[60vh]">
-      <Loader2 className="w-8 h-8
-        animate-spin text-primary" />
-    </div>
+    <AppLayout>
+      <div className="flex h-[60vh]
+        items-center justify-center">
+        <div className="animate-spin
+          rounded-full h-8 w-8
+          border-b-2 border-primary" />
+      </div>
+    </AppLayout>
   );
 }
 ```
@@ -200,16 +208,19 @@ import {
     name={project.name}
     description={project.description}
     color={project.color}
-    memberCount={project.members.length}
+    memberCount={
+      project.members?.length || 0}
     taskStats={{
-      total: project.tasks.length,
-      done: project.tasks.filter(
-        (t) => t.status === 'DONE'
-      ).length,
+      total:
+        project.tasks?.length || 0,
+      done:
+        project.tasks?.filter(
+          (t) => t.status === 'DONE'
+        ).length || 0,
     }}
-    onEdit={() => handleEdit(project.id)}
-    onDelete={() => handleDelete(project.id)}
-    onClick={() => handleDetail(project.id)}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+    onClick={handleProjectClick}
   />
 ))}
 ```
@@ -243,8 +254,7 @@ import {
 ```typescript
 // filepath: src/app/project/page.tsx
 // カードの親要素にグリッドを適用
-<div className="grid gap-4
-  grid-cols-1
+<div className="grid gap-6
   sm:grid-cols-2
   lg:grid-cols-3
   xl:grid-cols-4">
@@ -281,15 +291,18 @@ import {
 ```typescript
 // filepath: src/app/project/page.tsx
 // グリッドの前に条件分岐を追加
-{projects && projects.length === 0 ? (
-  <div className="text-center py-10
-    text-muted-foreground">
-    プロジェクトがありません。
-    「新規作成」ボタンから作成してください。
+{projects && projects.length > 0 ? (
+  <div className="grid gap-6 ...">
+    {/* カード表示 */}
   </div>
 ) : (
-  <div className="grid gap-4 ...">
-    {/* カード表示 */}
+  <div className="col-span-full flex
+    flex-col items-center justify-center
+    py-12 text-center
+    text-muted-foreground">
+    <p>プロジェクトが見つかりません。</p>
+    <p>最初のプロジェクトを
+      作成しましょう！</p>
   </div>
 )}
 ```
@@ -323,9 +336,9 @@ const [dialogOpen, setDialogOpen] =
     tracking-tight">
     プロジェクト
   </h1>
-  <Button onClick={() => setDialogOpen(true)}>
+  <Button onClick={handleCreate}>
     <Plus className="mr-2 h-4 w-4" />
-    新規作成
+    新規プロジェクト
   </Button>
 </div>
 ```
