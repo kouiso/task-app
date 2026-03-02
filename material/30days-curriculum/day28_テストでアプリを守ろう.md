@@ -62,8 +62,9 @@ graph TB
 | 4 | Green: テストを通す | 5分 |
 | 5 | ルーターテストを読む | 5分 |
 | 6 | 自分でテストを 1 本書く | 7分 |
+| 7 | 全テストを実行して最終確認 | 3分 |
 
-**合計**: 約 30 分
+**合計**: 約 33 分
 
 ---
 
@@ -177,6 +178,8 @@ npm test
 > ⚠️ DB に接続できないテストは `skip` 扱いに
 > なることがあります。Docker で PostgreSQL が
 > 起動していない場合は気にしなくて OK です。
+
+> 📸 ターミナルに緑の ✓ マークが並んでいる npm test の実行結果を確認しましょう。
 > 大事なのは「赤い × がない」ことです。
 
 ✅ **確認ポイント**:
@@ -235,6 +238,8 @@ npm test -- src/lib/utils/__test/math.test.ts
 > テストが赤くなるのは正常です。
 > 「こうなってほしい」をテストで先に書き、
 > 次のステップで実装して緑にします。
+
+> 📸 ターミナルに赤い × マークが表示されている「Red」状態の画面を確認しましょう。
 
 ✅ **確認ポイント**:
 - 赤い × が表示された
@@ -295,6 +300,8 @@ npm test -- src/lib/utils/__test/math.test.ts
  Tests  3 passed
 ```
 
+> 📸 ターミナルに緑の ✓ が 3 つ並んでいる「Green」状態の画面を確認しましょう。
+
 > 💡 **これが「Green」です！**
 > Red → Green のサイクルを 1 周しました。
 > 実務ではこの後「リファクタリング」で
@@ -323,7 +330,7 @@ npm test -- src/lib/utils/__test/math.test.ts
 ### 5-1. 認証テストを読む
 
 ```typescript
-// filepath: src/server/api/routers/__test/auth.test.ts
+// filepath: src/server/api/routers/__test/auth.test.ts（前半）
 import {
   describe, expect, it,
 } from 'vitest';
@@ -331,7 +338,12 @@ import {
   createTestCaller,
   createTestUser,
 } from '../../../../test/helpers';
+```
 
+テスト本体の構造を見ましょう。
+
+```typescript
+// filepath: src/server/api/routers/__test/auth.test.ts（後半）
 describe('authRouter', () => {
   describe('login', () => {
     it('正しい情報でログインできる',
@@ -340,14 +352,11 @@ describe('authRouter', () => {
           email: 'login-test@example.com',
           password: 'Password123!',
         });
-
         const caller = await createTestCaller();
-
         const result = await caller.auth.login({
           email: 'login-test@example.com',
           password: 'Password123!',
         });
-
         expect(result.user.id)
           .toBe(testUser.id);
       }
@@ -481,6 +490,38 @@ npm test -- src/lib/utils/__test/math.test.ts
 
 ---
 
+## Step 7: 全テストを実行して最終確認（3分）
+
+🎯 **ゴール**: プロジェクト全体のテストを実行して、
+自分の変更が他のテストを壊していないことを確認します。
+
+### 7-1. 全テスト実行
+
+```bash
+# filepath: ターミナル
+npm test
+```
+
+### 7-2. 確認すべきポイント
+
+| 確認項目 | 期待する結果 |
+|---------|------------|
+| 自分で書いた `math.test.ts` | ✓ 5 件すべて成功 |
+| 既存の `type-guards.test.ts` | ✓ 成功（壊れていない） |
+| 既存の `auth.test.ts` | ✓ 成功（壊れていない） |
+| 全体 | `Tests XX passed`（赤い × がゼロ） |
+
+> 💡 新しいコードやテストを追加した後は、
+> 必ず **全テスト** を実行しましょう。
+> 自分の変更が既存の機能を壊していないか
+> 確認する習慣が、プロのエンジニアの基本です。
+
+✅ **確認ポイント**:
+- 全テストがグリーンで通った
+- 自分のテストも既存テストも成功している
+
+---
+
 ## 📋 今日のまとめ
 
 ### 学んだこと
@@ -493,6 +534,7 @@ npm test -- src/lib/utils/__test/math.test.ts
 | Green: 実装してテストを通した | Red → Green サイクルを体験 |
 | ルーターテストを読んだ | AAA パターンと正常系/異常系を理解 |
 | 自分でテストを書いた | エッジケースと `toBeCloseTo` を学んだ |
+| 全テストを最終確認した | 既存テストを壊していないことを確認 |
 
 ### チェックリスト
 

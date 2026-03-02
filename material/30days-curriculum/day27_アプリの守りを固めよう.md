@@ -65,9 +65,10 @@ graph TB
 | 3 | セキュリティ 4 層構造をコードで確認 | 7分 |
 | 4 | CSP ヘッダーを DevTools で確認 | 5分 |
 | 5 | 環境変数の安全管理を確認 | 5分 |
-| 6 | セキュリティチェックリストを完走 | 3分 |
+| 6 | Cookie の HttpOnly 属性を DevTools で確認 | 3分 |
+| 7 | セキュリティチェックリストを完走 | 3分 |
 
-**合計**: 約 30 分
+**合計**: 約 33 分
 
 ---
 
@@ -294,7 +295,7 @@ const taskCreateSchema = z.object({
 ### 4-1. ヘッダーの設定コード
 
 ```javascript
-// filepath: next.config.mjs
+// filepath: next.config.mjs（前半: 基本ヘッダー）
 // セキュリティヘッダー
 async headers() {
   return [{
@@ -312,6 +313,12 @@ async headers() {
         key: 'Referrer-Policy',
         value: 'origin-when-cross-origin',
       },
+```
+
+CSP ヘッダーは別途設定されています。
+
+```javascript
+// filepath: next.config.mjs（後半: CSP ヘッダー）
       {
         key: 'Content-Security-Policy',
         value: "default-src 'self'; "
@@ -334,7 +341,7 @@ async headers() {
 | `X-Frame-Options` | `DENY` | クリックジャッキング（iframe 埋め込み禁止） |
 | `X-Content-Type-Options` | `nosniff` | MIME スニッフィング |
 | `Referrer-Policy` | `origin-when-cross-origin` | リファラー情報漏洩 |
-| `Content-Security-Policy` | `default-src 'self'` 等 | XSS の追加防御（外部スクリプト禁止） |
+| `Content-Security-Policy` | `default-src 'self'` + 追加ルール | XSS の追加防御（外部スクリプト禁止） |
 
 ### 4-3. DevTools で確認する手順
 
@@ -358,6 +365,8 @@ referrer-policy: origin-when-cross-origin
 > 以外からの読み込みを禁止」という意味です。
 > 攻撃者が外部の悪意あるスクリプトを読み込もうと
 > しても、ブラウザが拒否してくれます。
+
+> 📸 DevTools の Network → Headers タブで Response Headers にセキュリティヘッダーが表示されていることを確認しましょう。
 
 ✅ **確認ポイント**:
 - DevTools の Network タブで 4 つのヘッダーを確認した
@@ -422,7 +431,38 @@ JWT_SECRET="your-jwt-secret-key-32-chars
 
 ---
 
-## Step 6: セキュリティチェックリスト完走（3分）
+## Step 6: Cookie の HttpOnly 属性を確認（3分）
+
+🎯 **ゴール**: ブラウザの DevTools で Cookie を確認し、
+HttpOnly 属性が有効であることを確かめます。
+
+### 6-1. DevTools で Cookie を確認する手順
+
+1. ブラウザで `/dashboard` を開く（ログイン済みの状態）
+2. **F12** で DevTools を開く
+3. **Application** タブをクリック
+4. 左メニューの **Cookies** → `http://localhost:3000` を選択
+5. `session-token` という Cookie を探す
+
+### 6-2. 確認すべき項目
+
+| 属性 | 期待する値 | 理由 |
+|------|-----------|------|
+| `HttpOnly` | ✓（チェックあり） | JavaScript から Cookie を読めなくする |
+| `Path` | `/` | 全ページで有効 |
+| `SameSite` | `Lax` | CSRF 攻撃の防御 |
+
+> 💡 HttpOnly が有効な Cookie は、
+> `document.cookie` で読み取れません。
+> XSS 攻撃でセッションを盗むのが困難になります。
+
+✅ **確認ポイント**:
+- Application タブで `session-token` Cookie を見つけた
+- HttpOnly にチェックが入っていることを確認した
+
+---
+
+## Step 7: セキュリティチェックリスト完走（3分）
 
 🎯 **ゴール**: このアプリのセキュリティ対策を
 一覧で最終確認します。

@@ -42,6 +42,17 @@ graph TD
 | 削除前の確認ダイアログ | 確認なしの即時削除 |
 | キャッシュ無効化で一覧更新 | 手動リロード |
 
+## 🆕 新しく学ぶ概念
+
+| 概念 | 説明 |
+|------|------|
+| 編集モード（Edit Mode） | 1つのフォームコンポーネントを新規作成と更新の両方に使い回す設計パターン |
+| initialData | コンポーネントに既存データを渡して初期値として表示する props |
+| 楽観的更新（Optimistic Update） | サーバーの応答を待たず先に UI を更新し、失敗したらロールバックする手法 |
+| 削除確認ダイアログ | 誤操作を防ぐために削除前にユーザーの意思を確認するUXパターン |
+| アーカイブ | データを物理削除せず `isArchived` フラグで非表示にすることで復元を可能にする手法 |
+| キャッシュ無効化（invalidate） | 更新・削除後に tRPC のキャッシュを破棄して最新データを再取得させる処理 |
+
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
@@ -72,7 +83,7 @@ const [editingProject, setEditingProject] =
     undefined
   );
 
-// 編集ハンドラー
+// 編集ハンドラー: 対象プロジェクトを一覧から検索する
 const handleEdit = (projectId: string) => {
   const project = projects?.find(
     (p) => p.id === projectId
@@ -86,6 +97,11 @@ const handleEdit = (projectId: string) => {
       ? new Date(project.endDate)
           .toISOString().split('T')[0]
       : undefined;
+```
+
+日付変換が終わったら、取得した値を `editingProject` にまとめてセットしてダイアログを開きます。
+
+```typescript
     setEditingProject({
       id: project.id,
       name: project.name,
@@ -174,12 +190,12 @@ const updateMutation =
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 統合された送信ハンドラー
+// 統合された送信ハンドラー: data.idの有無で分岐
 const handleSubmit = (
   data: ProjectFormData
 ) => {
   if (data.id) {
-    // 更新
+    // 更新: idがある場合はupdateMutationを呼ぶ
     updateMutation.mutate({
       id: data.id,
       name: data.name,
@@ -195,6 +211,11 @@ const handleSubmit = (
             .toISOString()
         : null,
     });
+```
+
+`data.id` がない場合（新規作成）は Day 10 で実装済みの `createMutation` を呼びます。
+
+```typescript
   } else {
     // 新規作成（Day 10で実装済み）
     createMutation.mutate({
@@ -362,6 +383,6 @@ archive: protectedProcedure
 | window.confirm | ブラウザ標準の確認ダイアログ |
 | アーカイブ | データを削除せずに非表示にすること |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 12 では、プロジェクトにメンバーを追加・管理する機能を実装します。複数のユーザーが同じプロジェクトで共同作業できるようにします。

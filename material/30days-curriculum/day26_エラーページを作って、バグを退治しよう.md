@@ -106,7 +106,7 @@ VS Codeで`src/app/error.tsx`を開いてください。
 💻 **確認するコード**:
 
 ```typescript
-// filepath: src/app/error.tsx
+// filepath: src/app/error.tsx（前半: インポートとhook）
 'use client';
 
 import { useEffect } from 'react';
@@ -122,7 +122,12 @@ export default function ErrorPage({
   useEffect(() => {
     console.error(error);
   }, [error]);
+```
 
+続いて、JSX の `return` 部分です。
+
+```typescript
+// filepath: src/app/error.tsx（後半: JSX部分）
   return (
     <div className="flex min-h-screen
       items-center justify-center">
@@ -368,6 +373,8 @@ npx biome check src/app/dashboard/page.tsx
 ✅ **確認ポイント**:
 1. 3つのタブの使い分けが理解できた
 2. 症状に応じてどのタブを見るか判断できる
+
+> 📸 DevTools の Console タブでエラーメッセージが表示されている画面を確認しましょう。
 
 📝 **学んだこと**: DevToolsは「症状に合った道具を選ぶ」のが大事です。Console→Network→Elementsの順でチェックするのが基本です。
 
