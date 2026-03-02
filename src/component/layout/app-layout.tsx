@@ -6,6 +6,7 @@ import {
   FolderOpen,
   LayoutDashboard,
   ListTodo,
+  LogOut,
   Menu,
   Search,
   Users,
@@ -13,7 +14,19 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import {
   DropdownMenu,
@@ -35,12 +48,12 @@ interface MenuItem {
 }
 
 const baseMenuItems: MenuItem[] = [
-  { text: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, path: '/dashboard' },
-  { text: 'Tasks', icon: <ClipboardList className="h-5 w-5" />, path: '/task' },
-  { text: 'My Tasks', icon: <ListTodo className="h-5 w-5" />, path: '/my-task' },
-  { text: 'Projects', icon: <FolderOpen className="h-5 w-5" />, path: '/project' },
-  { text: 'Reports', icon: <BarChart className="h-5 w-5" />, path: '/report' },
-  { text: 'Search', icon: <Search className="h-5 w-5" />, path: '/search' },
+  { text: 'ダッシュボード', icon: <LayoutDashboard className="h-5 w-5" />, path: '/dashboard' },
+  { text: 'タスク', icon: <ClipboardList className="h-5 w-5" />, path: '/task' },
+  { text: 'マイタスク', icon: <ListTodo className="h-5 w-5" />, path: '/my-task' },
+  { text: 'プロジェクト', icon: <FolderOpen className="h-5 w-5" />, path: '/project' },
+  { text: 'レポート', icon: <BarChart className="h-5 w-5" />, path: '/report' },
+  { text: '検索', icon: <Search className="h-5 w-5" />, path: '/search' },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -69,12 +82,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const menuItems: MenuItem[] = [
     ...baseMenuItems,
     ...(session?.user?.role === 'ADMIN'
-      ? [{ text: 'Users', icon: <Users className="h-5 w-5" />, path: '/user' }]
+      ? [{ text: 'ユーザー管理', icon: <Users className="h-5 w-5" />, path: '/user' }]
       : []),
   ];
 
   if (isLoading) {
-    return null; // Or a loading spinner
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
   }
 
   if (!session?.user) {
@@ -108,6 +125,44 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
           </div>
+          {/* ユーザー情報ウィジェット */}
+          <div className="border-t p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={session.user.avatar || ''} alt={session.user.name || ''} />
+                <AvatarFallback>{session.user.name?.[0] || 'U'}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium truncate">{session.user.name}</span>
+                <Badge
+                  variant={session.user.role === 'ADMIN' ? 'default' : 'secondary'}
+                  className="w-fit text-xs"
+                >
+                  {session.user.role === 'ADMIN' ? '管理者' : 'メンバー'}
+                </Badge>
+              </div>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full gap-2">
+                  <LogOut className="h-4 w-4" />
+                  ログアウト
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>ログアウトしますか？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    ログアウトすると、再度ログインが必要になります。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleLogout}>ログアウト</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </div>
 
@@ -119,7 +174,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="shrink-0 md:hidden">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
+                <span className="sr-only">ナビゲーションメニューを切り替え</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
@@ -154,15 +209,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <AvatarImage src={session.user.avatar || ''} alt={session.user.name || ''} />
                   <AvatarFallback>{session.user.name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
-                <span className="sr-only">Toggle user menu</span>
+                <span className="sr-only">ユーザーメニューを切り替え</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>マイアカウント</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/profile')}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/profile')}>
+                プロフィール
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>ログアウト</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
