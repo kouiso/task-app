@@ -27,27 +27,21 @@ graph LR
     subgraph "Week 1: 基礎"
         A[Day 1-4<br/>環境構築<br/>初回デプロイ]
     end
-
     subgraph "Week 2: 認証・プロジェクト"
         B[Day 5-10<br/>ログイン・登録<br/>プロジェクト管理]
     end
-
     subgraph "Week 3: タスク管理"
         C[Day 11-16<br/>タスク CRUD<br/>コメント・タイマー]
     end
-
     subgraph "Week 4: 検索・管理"
         D[Day 17-20<br/>検索・フィルタ<br/>マイタスク]
     end
-
     subgraph "Week 5: レポート"
         E[Day 21-24<br/>統計・グラフ<br/>ユーザー管理]
     end
-
     subgraph "Week 6: 仕上げ"
         F[Day 25-30<br/>プロフィール<br/>テスト・デプロイ]
     end
-
     A --> B --> C --> D --> E --> F
 ```
 
@@ -187,7 +181,7 @@ npm run db:push
 ```
 
 > 💡 本番環境では Vercel Postgres や
-> Supabase などのマネージド DB を
+> Supabase のようなマネージド DB を
 > 使うのが一般的です。ローカル開発では
 > Docker の PostgreSQL を使います。
 

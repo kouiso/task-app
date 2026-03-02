@@ -199,7 +199,11 @@ if (isLoading) {
 import {
   ProjectCard,
 } from '@/component/project/project-card';
+```
 
+次に、`ProjectPageContent` 内の `return` にプロジェクトをカード一覧として描画する処理を追加します。
+
+```typescript
 // ProjectPageContent内のreturnに追加
 {projects?.map((project) => (
   <ProjectCard
@@ -230,7 +234,7 @@ import {
 | prop | 型 | 説明 |
 |------|-----|------|
 | `name` | string | プロジェクト名 |
-| `color` | string | カラーコード（`#1976d2` など） |
+| `color` | string | カラーコード（例: `#1976d2`） |
 | `memberCount` | number | メンバー数 |
 | `taskStats` | `{total, done}` | タスク進捗 |
 | `onEdit` | function | 編集ボタンクリック時 |

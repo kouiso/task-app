@@ -36,7 +36,7 @@ graph TD
 | やること | やらないこと |
 |---------|-------------|
 | ProjectDialog コンポーネントを作る | 別ページでフォームを作る |
-| useState でフォーム状態を管理 | 外部ライブラリ（react-hook-form 等） |
+| useState でフォーム状態を管理 | 外部ライブラリ（react-hook-form） |
 | useMutation でサーバーに保存 | fetch を手書きする |
 | キャッシュ無効化で一覧を自動更新 | 手動でページリロード |
 
@@ -348,6 +348,11 @@ return (
                 }
               />
             </div>
+```
+
+続いて、終了日フィールドとフォーム全体の閉じタグを追加します。
+
+```typescript
             <div className="grid gap-2">
               <Label htmlFor="endDate">
                 終了日

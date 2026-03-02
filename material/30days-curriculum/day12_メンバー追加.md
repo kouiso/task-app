@@ -179,6 +179,11 @@ import { PROJECT_MEMBER_ROLE_LABELS }
                   || '?')[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
+```
+
+アバターの右側に名前とロールBadgeを並べます。
+
+```typescript
             <div>
               <p className="font-medium">
                 {member.user?.name
@@ -192,6 +197,11 @@ import { PROJECT_MEMBER_ROLE_LABELS }
               </Badge>
             </div>
           </div>
+```
+
+最後に削除ボタンを配置し、OWNERの場合は無効化します。
+
+```typescript
           <Button variant="ghost"
             size="icon"
             onClick={() =>
@@ -288,6 +298,11 @@ const [newMemberRole, setNewMemberRole] =
               placeholder=
                 "ユーザーを選択" />
           </SelectTrigger>
+```
+
+SelectContent内で追加可能なユーザー一覧を選択肢として展開します。
+
+```typescript
           <SelectContent>
             {availableUsers?.map(
               (user) => (
@@ -319,6 +334,11 @@ const [newMemberRole, setNewMemberRole] =
               placeholder=
                 "ロールを選択" />
           </SelectTrigger>
+```
+
+SelectContent内にMEMBER・ADMIN・VIEWERの3つの選択肢を日本語で並べます。
+
+```typescript
           <SelectContent>
             <SelectItem value="MEMBER">
               メンバー
@@ -385,7 +405,11 @@ const addMemberMutation =
       setNewMemberRole('MEMBER');
     },
   });
+```
 
+成功時のキャッシュ更新が終わったら、追加ボタンから呼び出すハンドラーを定義します。
+
+```typescript
 // 追加ハンドラー
 const handleAddMember = () => {
   if (selectedProject
@@ -426,7 +450,11 @@ const removeMemberMutation =
       }
     },
   });
+```
 
+削除成功後のキャッシュ更新が終わったら、削除ボタンから呼び出すハンドラーを定義します。
+
+```typescript
 // 削除ハンドラー
 const handleRemoveMember = (
   userId: string

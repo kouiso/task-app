@@ -311,7 +311,7 @@ import {
 
 | プロパティ | 型 | 説明 |
 |-----------|-----|------|
-| week | string | "Week 1" 等のラベル |
+| week | string | "Week 1" のような週ラベル |
 | weekStart | string | その週の開始日 |
 | totalCompleted | number | その週の完了数 |
 | byStatus | object | ステータス別の件数 |

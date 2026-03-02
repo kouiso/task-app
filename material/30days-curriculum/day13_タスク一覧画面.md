@@ -202,6 +202,11 @@ const [filterStatus, setFilterStatus] =
           </SelectItem>
         ))}
       </SelectContent>
+```
+
+SelectContentの閉じタグまでがプロジェクト一覧の定義です。続けてSelectの閉じタグと外側のdivを記述します。
+
+```typescript
     </Select>
   </div>
 </div>
@@ -275,8 +280,8 @@ import {
 
 | prop | 型 | 説明 |
 |------|-----|------|
-| `status` | TaskStatus | ステータス（TODO等） |
-| `priority` | TaskPriority | 優先度（LOW等） |
+| `status` | TaskStatus | ステータス（TODO, IN_PROGRESS, DONE...） |
+| `priority` | TaskPriority | 優先度（LOW, MEDIUM, HIGH, URGENT） |
 | `assignee` | object? | 担当者情報 |
 | `dueDate` | Date? | 期限日 |
 | `onEdit` | function | 編集ボタンのコールバック |

@@ -207,6 +207,6 @@ $ git push -u origin main
 | `Permission denied`エラー | SSH鍵が設定されていない | HTTPSでリポジトリURLを設定してください |
 | `fatal: remote origin already exists` | リモートが既に登録されている | `git remote rm origin`で削除してから再登録してください |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
-Day 4では、今日GitHubに保存したアプリを、インターネット上に公開する方法を学びます。Vercelというサービスを使うことで、無料で簡単にアプリを公開できます。
+Day 4では、今日GitHubに保存したアプリを、インターネット上に公開する方法を学びます。Vercelというサービスを使えば、無料でアプリを公開できます。
