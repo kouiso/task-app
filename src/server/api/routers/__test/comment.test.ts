@@ -49,8 +49,10 @@ describe('commentRouter', () => {
 
       const comments = await caller.comment.getByTaskId({ taskId: task.id });
 
-      expect(comments[0].user).toBeDefined();
-      expect(comments[0].user.name).toBe('Comment Author');
+      expect(comments?.at(0)).toBeDefined();
+      if (comments?.at(0)) {
+        expect(comments.at(0)?.user?.name).toBe('Comment Author');
+      }
     });
 
     it('should order comments by createdAt desc', async () => {
@@ -58,16 +60,16 @@ describe('commentRouter', () => {
       const project = await createTestProject(user.id);
       const task = await createTestTask(project.id, user.id);
 
-      const _comment1 = await createTestComment(task.id, user.id, { content: 'First Comment' });
+      await createTestComment(task.id, user.id, { content: 'First Comment' });
       await new Promise((resolve) => setTimeout(resolve, 10));
-      const _comment2 = await createTestComment(task.id, user.id, { content: 'Second Comment' });
+      await createTestComment(task.id, user.id, { content: 'Second Comment' });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
       const comments = await caller.comment.getByTaskId({ taskId: task.id });
 
-      expect(comments[0].content).toBe('Second Comment');
-      expect(comments[1].content).toBe('First Comment');
+      expect(comments?.at(0)?.content).toBe('Second Comment');
+      expect(comments?.at(1)?.content).toBe('First Comment');
     });
 
     it('should require authentication', async () => {
@@ -90,7 +92,6 @@ describe('commentRouter', () => {
       const comment = await caller.comment.create({
         content: 'New Comment',
         taskId: task.id,
-        userId: user.id,
       });
 
       expect(comment.content).toBe('New Comment');
@@ -108,7 +109,6 @@ describe('commentRouter', () => {
       const comment = await caller.comment.create({
         content: '  Trimmed Content  ',
         taskId: task.id,
-        userId: user.id,
       });
 
       expect(comment.content).toBe('Trimmed Content');
@@ -125,7 +125,6 @@ describe('commentRouter', () => {
         caller.comment.create({
           content: '',
           taskId: task.id,
-          userId: user.id,
         }),
       ).rejects.toThrow();
     });
@@ -141,7 +140,6 @@ describe('commentRouter', () => {
         caller.comment.create({
           content: '   ',
           taskId: task.id,
-          userId: user.id,
         }),
       ).rejects.toThrow();
     });
@@ -156,11 +154,26 @@ describe('commentRouter', () => {
       const comment = await caller.comment.create({
         content: 'Test Comment',
         taskId: task.id,
-        userId: user.id,
       });
 
       expect(comment.user).toBeDefined();
       expect(comment.user.name).toBe('Comment Creator');
+    });
+
+    it('should reject non-member comment creation', async () => {
+      const owner = await createTestUser();
+      const nonMember = await createTestUser({ email: 'nonmember@example.com' });
+      const project = await createTestProject(owner.id);
+      const task = await createTestTask(project.id, owner.id);
+
+      const caller = await createAuthenticatedCaller(nonMember.id, nonMember.email, nonMember.role);
+
+      await expect(
+        caller.comment.create({
+          content: 'Non-member comment',
+          taskId: task.id,
+        }),
+      ).rejects.toThrow('You do not have access to this task');
     });
 
     it('should require authentication', async () => {
@@ -170,7 +183,6 @@ describe('commentRouter', () => {
         caller.comment.create({
           content: 'Unauthorized Comment',
           taskId: 'clsometask',
-          userId: 'clsomeuser',
         }),
       ).rejects.toThrow('ログインが必要です');
     });
