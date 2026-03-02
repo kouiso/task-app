@@ -8,10 +8,10 @@ export const TASK_PRIORITY = {
 export type TaskPriority = (typeof TASK_PRIORITY)[keyof typeof TASK_PRIORITY];
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
-  HIGH: 'High',
-  URGENT: 'Urgent',
+  LOW: '低',
+  MEDIUM: '中',
+  HIGH: '高',
+  URGENT: '緊急',
 };
 
 export const TASK_PRIORITY_COLORS: Record<TaskPriority, string> = {
