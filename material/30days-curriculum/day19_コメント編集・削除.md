@@ -6,7 +6,7 @@
 自分が書いたコメントだけを操作できるように、
 権限チェックも実装します。
 
-【スクリーンショット: コメント編集モード】
+![コメント編集モード](./screenshots/task-comment-edit.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -177,7 +177,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 - 自分のコメントにのみボタンが表示される
 - 他人のコメントにはボタンがない
 
-【スクリーンショット: 本人コメントのボタン】
+![本人コメントのボタン](./screenshots/task-comment-edit.png)
 
 ---
 
@@ -250,7 +250,7 @@ const handleCancelEdit = () => {
 - 編集ボタンでテキストエリアに変わる
 - Cancel で元に戻る
 
-【スクリーンショット: 編集モードのテキストエリア】
+![編集モードのテキストエリア](./screenshots/task-comment-edit.png)
 
 ---
 
@@ -341,7 +341,7 @@ const handleDeleteComment =
 - 確認ダイアログが表示される
 - OKでコメントが削除される
 
-【スクリーンショット: 削除確認ダイアログ】
+![削除後のコメント一覧](./screenshots/task-detail-dialog.png)
 
 ---
 

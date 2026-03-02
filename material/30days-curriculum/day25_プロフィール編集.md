@@ -6,7 +6,7 @@
 実装します。自分の情報を確認し、
 パスワードを安全に変更できるようにします。
 
-【スクリーンショット: プロフィールページ全体】
+![プロフィールページ全体](./screenshots/profile.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -339,7 +339,7 @@ export default function ProfilePage() {
 - アバターと名前が表示される
 - バッジが正しく色分けされる
 
-【スクリーンショット: プロフィール情報表示】
+![プロフィール情報表示](./screenshots/profile.png)
 
 ---
 
@@ -403,7 +403,7 @@ export default function ProfilePage() {
 - 3つのボタンが縦に並ぶ
 - 管理者にだけユーザー管理ボタンが出る
 
-【スクリーンショット: ナビゲーションボタン】
+![ナビゲーションボタン](./screenshots/profile.png)
 
 ---
 
@@ -569,7 +569,7 @@ const handleChange = (
 - フォームに入力できる
 - 入力値が formData に反映される
 
-【スクリーンショット: パスワード変更フォーム】
+![パスワード変更フォーム](./screenshots/change-password.png)
 
 ---
 
@@ -691,7 +691,7 @@ const handleSubmit = async (
 - プロフィール情報が正しく表示される
 - パスワード変更のフローが完了する
 
-【スクリーンショット: パスワード変更成功】
+![パスワード変更成功](./screenshots/change-password.png)
 
 ---
 
@@ -720,7 +720,7 @@ const handleSubmit = async (
 | Separator | セクション間の区切り線 |
 | isPending | API通信中かどうかのフラグ |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 26 では、エラー対策とデバッグ方法を
 学びます。Chrome DevTools の使い方や

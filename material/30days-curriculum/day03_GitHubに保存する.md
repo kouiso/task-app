@@ -4,7 +4,7 @@
 
 あなたが書いたコードをGitHubに保存できるようになります。GitHubに保存することで、コードのバックアップを取ったり、他の人と共有したりできます。
 
-【スクリーンショット: GitHubのリポジトリにpushした画面】
+> 📸 GitHub のリポジトリページ（`https://github.com/<ユーザー名>/task-app`）を開き、コードがアップロードされていることをブラウザで確認してください。
 
 ## 🤔 なぜこれを作るのか？
 
@@ -45,8 +45,8 @@ graph LR
 
 ```bash
 # filepath: ターミナル
-$ git config --global user.name "Your Name"
-$ git config --global user.email "your.email@example.com"
+$ git config --global user.name "<あなたの名前>"
+$ git config --global user.email "<あなたのメールアドレス>"
 
 # 確認
 $ git config --list
@@ -62,13 +62,11 @@ $ git config --list
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
 1. `git config --list`で設定を確認
 2. `user.name`と`user.email`が表示される
 3. これでGitの初期設定が完了です
 
-【スクリーンショット: git config --listの実行結果】
+> 📸 ターミナルで `git config --list` を実行し、`user.name` と `user.email` が正しく表示されていることを確認してください。
 
 📝 **学んだこと**: `git config`コマンドで、Gitに自分の情報を登録できるようになりました。
 
@@ -99,13 +97,11 @@ $ git config --list
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
 1. GitHubに新しいリポジトリが作成される
-2. リポジトリのURLが表示される（`https://github.com/your-username/task-app`）
+2. リポジトリのURLが表示される（`https://github.com/<あなたのユーザー名>/task-app`）
 3. これでリポジトリの作成が完了です
 
-【スクリーンショット: GitHubでリポジトリを作成した画面】
+> 📸 GitHub のリポジトリページが表示され、`https://github.com/<ユーザー名>/task-app` の URL が確認できることをブラウザで確認してください。
 
 📝 **学んだこと**: GitHubのWebサイトから、新しいリポジトリを作成できるようになりました。
 
@@ -130,18 +126,31 @@ $ git commit -m "Initial commit: setup task-app"
 | コマンド | 意味 | 例え |
 |--------|------|------|
 | `git add .` | 全ての変更をステージングエリアに追加 | セーブしたいファイルを選ぶ |
+
+> ⚠️ `git add .` は **全ファイル** をまとめて追加します。
+> `.env`（秘密情報）のようなファイルが含まれないよう、
+> `.gitignore` に除外設定があることを確認しましょう。
+> このプロジェクトでは `.gitignore` に `.env` が
+> 設定済みなので安全です。
 | `git commit -m "メッセージ"` | 変更を記録 | セーブボタンを押す |
 | `-m` | コミットメッセージを指定 | セーブに名前をつける |
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
 1. `git status`で状態を確認
 2. `nothing to commit, working tree clean`と表示される
 3. これで変更がコミットされました
 
-【スクリーンショット: git statusの実行結果】
+> 📸 ターミナルで `git status` を実行し、`nothing to commit, working tree clean` と表示されていることを確認してください。
+
+💡 **コミット履歴を確認するコマンド**:
+
+```bash
+# filepath: ターミナル
+$ git log --oneline
+```
+
+1 行に 1 コミットが表示されます。コミットが増えていく様子を確認できます。
 
 📝 **学んだこと**: `git add`と`git commit`で、変更をGitに記録できるようになりました。
 
@@ -157,7 +166,7 @@ $ git commit -m "Initial commit: setup task-app"
 
 ```bash
 # filepath: ターミナル（task-appフォルダ内で実行）
-$ git remote add origin https://github.com/your-username/task-app.git
+$ git remote add origin https://github.com/<あなたのユーザー名>/task-app.git
 $ git branch -M main
 $ git push -u origin main
 ```
@@ -172,13 +181,11 @@ $ git push -u origin main
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
 1. ターミナルに`Branch 'main' set up to track remote branch 'main' from 'origin'`と表示される
 2. GitHubのリポジトリページをリロードすると、コードが表示される
 3. これでGitHubにプッシュが完了です
 
-【スクリーンショット: GitHubにpushした後のリポジトリ画面】
+> 📸 GitHub のリポジトリページ（`https://github.com/<ユーザー名>/task-app`）をリロードし、ソースコードの一覧が表示されていることをブラウザで確認してください。
 
 📝 **学んだこと**: `git push`コマンドで、ローカルのコミットをGitHubにアップロードできるようになりました。
 

@@ -6,7 +6,7 @@
 検索できるページを作ります。検索条件は
 URLパラメータに保存し、共有可能にします。
 
-【スクリーンショット: 検索画面と結果】
+![検索画面と結果](./screenshots/search-results.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -221,7 +221,7 @@ const [priority, setPriority] =
 - キーワード入力欄が表示される
 - Select でフィルターが選べる
 
-【スクリーンショット: フィルターフォーム】
+![フィルターフォーム](./screenshots/search.png)
 
 ---
 
@@ -366,7 +366,7 @@ const handleTaskClick =
 - 検索結果がカード表示される
 - カードクリックでタスク詳細に遷移
 
-【スクリーンショット: 検索結果の表示】
+![検索結果の表示](./screenshots/search-results.png)
 
 ---
 
@@ -387,7 +387,7 @@ const handleTaskClick =
 - URLをコピーして共有できる
 - カードクリックで詳細に遷移
 
-【スクリーンショット: 検索結果一覧】
+![検索結果一覧](./screenshots/search-results.png)
 
 ---
 
@@ -416,7 +416,7 @@ const handleTaskClick =
 | enabled | useQueryの実行条件制御 |
 | refetchOnWindowFocus | ウィンドウ復帰時の再取得設定 |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 21 では、レポートページに統計カードを
 表示します。タスクデータをローカルで集計して

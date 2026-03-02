@@ -4,7 +4,7 @@
 
 あなたが作ったアプリを、インターネット上に公開します。公開することで、世界中の誰でもあなたのアプリにアクセスできるようになります。
 
-【スクリーンショット: Vercelにデプロイされたアプリの画面】
+> 📸 デプロイ完了後、Vercel が発行した `https://<アプリ名>.vercel.app` にアクセスしてアプリが表示されることをブラウザで確認してください。
 
 ## 🤔 なぜこれを作るのか？
 
@@ -68,13 +68,11 @@ graph LR
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
 1. Vercelのダッシュボードが表示される
 2. 右上にGitHubのアイコンとユーザー名が表示される
 3. これでVercelアカウントの作成が完了です
 
-【スクリーンショット: Vercelダッシュボードの初期画面】
+> 📸 Vercel ダッシュボード（`https://vercel.com/dashboard`）が表示され、右上に GitHub のアイコンとユーザー名が確認できることをブラウザで確認してください。
 
 📝 **学んだこと**: Vercelにサインアップして、GitHubアカウントと連携できるようになりました。
 
@@ -104,13 +102,11 @@ graph LR
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
 1. 「Configure Project」画面が表示される
 2. Framework Presetが「Next.js」になっている
 3. これでリポジトリの連携が完了です
 
-【スクリーンショット: Vercelでリポジトリをインポートした画面】
+> 📸 Vercel の「Configure Project」画面が表示され、Framework Preset が「Next.js」に自動設定されていることを確認してください。
 
 📝 **学んだこと**: Vercelにリポジトリをインポートして、自動デプロイの準備ができるようになりました。
 
@@ -127,10 +123,19 @@ graph LR
 1. 「Configure Project」画面で「Environment Variables」をクリック
 2. 以下の環境変数を追加
 
+```bash
+# filepath: Vercel 環境変数設定
+DATABASE_URL=postgresql://<ユーザー名>:<パスワード>@<ホスト>:5432/taskapp
+JWT_SECRET=<32文字以上のランダムな文字列>
 ```
-DATABASE_URL=postgresql://user:password@host:5432/taskapp
-JWT_SECRET=your-secret-key-here
-```
+
+> ⚠️ **`DATABASE_URL` はどこから取得する？**
+> ローカルの Docker DB は本番（Vercel）から
+> 接続できません。本番用には外部の DB サービス
+>（Supabase, Neon, Railway 等）を利用します。
+> 詳しい手順は Day 30 で説明します。
+> まだ DB サービスを用意していない場合は、
+> この Day をスキップして Day 5 に進んで OK です。
 
 🔍 **環境変数**:
 
@@ -141,13 +146,11 @@ JWT_SECRET=your-secret-key-here
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
 1. 2つの環境変数が追加される
 2. 「Save」ボタンをクリック
 3. これで環境変数の設定が完了です
 
-【スクリーンショット: Vercelで環境変数を設定した画面】
+> 📸 Vercel の Environment Variables セクションに `DATABASE_URL` と `JWT_SECRET` が追加されていることを確認してください。
 
 📝 **学んだこと**: Vercelに環境変数を設定して、アプリの設定情報を安全に管理できるようになりました。
 
@@ -176,13 +179,11 @@ JWT_SECRET=your-secret-key-here
 
 ✅ **確認ポイント**:
 
-【スクリーンショット: 確認画面】
-
-1. ブラウザで`https://your-app.vercel.app`にアクセス
+1. ブラウザで `https://<あなたのアプリ名>.vercel.app` にアクセス
 2. task-appの初期画面が表示される
 3. これでデプロイが完了です
 
-【スクリーンショット: Vercelにデプロイされたアプリの画面】
+![デプロイされたアプリのログイン画面](./screenshots/login.png)
 
 📝 **学んだこと**: Vercelでアプリをデプロイして、インターネット上に公開できるようになりました。
 

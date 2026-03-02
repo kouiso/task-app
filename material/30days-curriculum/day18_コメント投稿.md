@@ -6,7 +6,7 @@
 コメント一覧を表示し、新しいコメントを投稿
 できるようにします。
 
-【スクリーンショット: コメント付きタスク詳細】
+![コメント付きタスク詳細](./screenshots/task-comment-edit.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -211,7 +211,7 @@ import { Separator } from '@/component/ui/separator';
 - コメントがリスト表示される
 - アバターと名前が表示される
 
-【スクリーンショット: コメント一覧の表示】
+![コメント一覧の表示](./screenshots/task-comment-edit.png)
 
 ---
 
@@ -356,7 +356,7 @@ utils.task.getById.invalidate(
 - 投稿者のアバターと名前が表示される
 - 空コメントは送信できない
 
-【スクリーンショット: コメント投稿後の画面】
+![コメント投稿後の画面](./screenshots/task-comment-edit.png)
 
 ---
 
@@ -385,7 +385,7 @@ utils.task.getById.invalidate(
 | trim() | 文字列の前後の空白を除去 |
 | overflow-y-auto | 縦方向にスクロール可能にする |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 19 では、投稿したコメントの編集・削除機能を
 実装します。自分のコメントだけを操作できるように

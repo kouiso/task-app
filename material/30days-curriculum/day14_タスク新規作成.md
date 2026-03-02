@@ -6,7 +6,7 @@ TaskDialogコンポーネントで、新しいタスクを作成
 できるようにします。Day 10 で学んだダイアログ
 パターンをタスク版に応用します。
 
-【スクリーンショット: タスク作成ダイアログ】
+![タスク作成ダイアログ](./screenshots/task-create-dialog.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -253,7 +253,7 @@ const handleChange =
 - タイトルと説明の入力欄が表示される
 - 入力値が反映される
 
-【スクリーンショット: タイトル・説明の入力欄】
+![タイトル・説明の入力欄](./screenshots/task-create-dialog.png)
 
 ---
 
@@ -416,7 +416,7 @@ const handleSelectChange =
 - プロジェクト一覧が表示される
 - 担当者一覧に「未割当」がある
 
-【スクリーンショット: プロジェクト・担当者選択】
+![プロジェクト・担当者選択](./screenshots/task-create-dialog.png)
 
 ---
 
@@ -613,7 +613,7 @@ const handleSubmit =
 - フォーム送信でタスクが作成される
 - 一覧に新しいタスクが表示される
 
-【スクリーンショット: 作成後のタスク一覧】
+![作成後のタスク一覧](./screenshots/task-list.png)
 
 ---
 
@@ -660,7 +660,7 @@ const handleSubmit =
 | カリー化 | 引数を部分適用する関数パターン |
 | createdById | タスク作成者のユーザーID |
 
-## 🔗 次回予告
+## 🔜 次回予告
 
 Day 15 では、タスクの編集・削除機能を実装します。
 Day 14 で作った TaskDialog を「編集モード」で
