@@ -11,7 +11,7 @@ import {
 describe('userRouter', () => {
   describe('getAll', () => {
     it('should return all users', async () => {
-      const user1 = await createTestUser({ email: 'user1@example.com' });
+      const user1 = await createTestUser({ email: 'user1@example.com', role: 'ADMIN' });
       await createTestUser({ email: 'user2@example.com' });
       await createTestUser({ email: 'user3@example.com' });
 
@@ -23,7 +23,7 @@ describe('userRouter', () => {
     });
 
     it('should filter users by isActive', async () => {
-      const user = await createTestUser();
+      const user = await createTestUser({ role: 'ADMIN' });
       await createTestUser({ email: 'active@example.com', isActive: true });
       await createTestUser({ email: 'inactive@example.com', isActive: false });
 
@@ -107,9 +107,10 @@ describe('userRouter', () => {
 
   describe('getByEmail', () => {
     it('should return user by email', async () => {
+      const admin = await createTestUser({ role: 'ADMIN' });
       await createTestUser({ email: 'findme@example.com', name: 'Find Me User' });
 
-      const caller = await createTestCaller();
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       const result = await caller.user.getByEmail({ email: 'findme@example.com' });
 
@@ -118,27 +119,28 @@ describe('userRouter', () => {
     });
 
     it('should fail when user not found', async () => {
-      const caller = await createTestCaller();
+      const admin = await createTestUser({ role: 'ADMIN' });
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       await expect(caller.user.getByEmail({ email: 'notfound@example.com' })).rejects.toThrow(
         'User not found',
       );
     });
 
-    it('should be publicly accessible', async () => {
-      await createTestUser({ email: 'public@example.com' });
+    it('should require admin role', async () => {
+      const user = await createTestUser({ email: 'public@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
-      const caller = await createTestCaller();
-
-      const result = await caller.user.getByEmail({ email: 'public@example.com' });
-
-      expect(result.email).toBe('public@example.com');
+      await expect(caller.user.getByEmail({ email: 'public@example.com' })).rejects.toThrow(
+        '管理者権限が必要です',
+      );
     });
   });
 
   describe('create', () => {
     it('should create a new user', async () => {
-      const caller = await createTestCaller();
+      const admin = await createTestUser({ role: 'ADMIN' });
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       const user = await caller.user.create({
         email: 'newuser@example.com',
@@ -152,7 +154,8 @@ describe('userRouter', () => {
     });
 
     it('should create user with default role', async () => {
-      const caller = await createTestCaller();
+      const admin = await createTestUser({ role: 'ADMIN' });
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       const user = await caller.user.create({
         email: 'defaultrole@example.com',
@@ -164,7 +167,8 @@ describe('userRouter', () => {
     it('should fail when creating user with duplicate email', async () => {
       await createTestUser({ email: 'duplicate@example.com' });
 
-      const caller = await createTestCaller();
+      const admin = await createTestUser({ role: 'ADMIN' });
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       await expect(
         caller.user.create({
@@ -174,15 +178,16 @@ describe('userRouter', () => {
       ).rejects.toThrow('User with this email already exists');
     });
 
-    it('should be publicly accessible', async () => {
-      const caller = await createTestCaller();
+    it('should require admin role', async () => {
+      const user = await createTestUser();
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
-      const user = await caller.user.create({
-        email: 'publiccreate@example.com',
-        name: 'Public Create User',
-      });
-
-      expect(user.email).toBe('publiccreate@example.com');
+      await expect(
+        caller.user.create({
+          email: 'publiccreate@example.com',
+          name: 'Public Create User',
+        }),
+      ).rejects.toThrow('管理者権限が必要です');
     });
   });
 
@@ -214,9 +219,10 @@ describe('userRouter', () => {
     });
 
     it('should update user role', async () => {
+      const admin = await createTestUser({ role: 'ADMIN' });
       const user = await createTestUser({ role: 'USER' });
 
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       const updated = await caller.user.update({
         id: user.id,
@@ -227,9 +233,10 @@ describe('userRouter', () => {
     });
 
     it('should update user active status', async () => {
+      const admin = await createTestUser({ role: 'ADMIN' });
       const user = await createTestUser({ isActive: true });
 
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       const updated = await caller.user.update({
         id: user.id,
@@ -253,9 +260,10 @@ describe('userRouter', () => {
 
   describe('delete', () => {
     it('should soft delete user by setting isActive to false', async () => {
+      const admin = await createTestUser({ role: 'ADMIN' });
       const user = await createTestUser({ isActive: true });
 
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       const result = await caller.user.delete({ id: user.id });
 
@@ -273,26 +281,25 @@ describe('userRouter', () => {
     });
   });
 
-  describe('register', () => {
+  describe('register (via auth.register)', () => {
     it('should register a new user', async () => {
       const caller = await createTestCaller();
 
-      const user = await caller.user.register({
+      const result = await caller.auth.register({
         email: 'register@example.com',
         name: 'Register User',
         password: 'Password123!',
       });
 
-      expect(user.email).toBe('register@example.com');
-      expect(user.name).toBe('Register User');
-      expect(user.role).toBe('USER');
-      expect(user.isActive).toBe(true);
+      expect(result.user.email).toBe('register@example.com');
+      expect(result.user.name).toBe('Register User');
+      expect(result.user.role).toBe('USER');
     });
 
     it('should hash password', async () => {
       const caller = await createTestCaller();
 
-      await caller.user.register({
+      await caller.auth.register({
         email: 'hashed@example.com',
         name: 'Hashed User',
         password: 'Password123!',
@@ -310,7 +317,7 @@ describe('userRouter', () => {
       const caller = await createTestCaller();
 
       await expect(
-        caller.user.register({
+        caller.auth.register({
           email: 'duplicate-register@example.com',
           name: 'Duplicate Register',
           password: 'Password123!',
@@ -321,13 +328,13 @@ describe('userRouter', () => {
     it('should be publicly accessible', async () => {
       const caller = await createTestCaller();
 
-      const user = await caller.user.register({
+      const result = await caller.auth.register({
         email: 'publicregister@example.com',
         name: 'Public Register User',
         password: 'Password123!',
       });
 
-      expect(user.email).toBe('publicregister@example.com');
+      expect(result.user.email).toBe('publicregister@example.com');
     });
   });
 });

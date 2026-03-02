@@ -21,7 +21,7 @@ describe('taskRouter', () => {
       const tasks = await caller.task.getAll();
 
       expect(tasks).toHaveLength(2);
-      expect(tasks[0]?.title).toBeTruthy();
+      expect(tasks.map((task) => task.title)).toEqual(['Task 2', 'Task 1']);
     });
 
     it('should filter tasks by projectId', async () => {
@@ -117,7 +117,6 @@ describe('taskRouter', () => {
         status: 'TODO',
         priority: 'HIGH',
         projectId: project.id,
-        createdById: user.id,
       });
 
       expect(task.title).toBe('New Task');
@@ -136,7 +135,6 @@ describe('taskRouter', () => {
       const task = await caller.task.create({
         title: 'Default Status Task',
         projectId: project.id,
-        createdById: user.id,
       });
 
       expect(task.status).toBe('TODO');
@@ -151,7 +149,6 @@ describe('taskRouter', () => {
       const task = await caller.task.create({
         title: 'Default Priority Task',
         projectId: project.id,
-        createdById: user.id,
       });
 
       expect(task.priority).toBe('MEDIUM');
@@ -167,7 +164,6 @@ describe('taskRouter', () => {
       const task = await caller.task.create({
         title: 'Assigned Task',
         projectId: project.id,
-        createdById: user.id,
         assigneeId: assignee.id,
       });
 
@@ -183,13 +179,11 @@ describe('taskRouter', () => {
       const task1 = await caller.task.create({
         title: 'Task 1',
         projectId: project.id,
-        createdById: user.id,
       });
 
       const task2 = await caller.task.create({
         title: 'Task 2',
         projectId: project.id,
-        createdById: user.id,
       });
 
       expect(task1.position).toBe(0);
@@ -203,7 +197,6 @@ describe('taskRouter', () => {
         caller.task.create({
           title: 'Unauthorized Task',
           projectId: 'clsomeproject',
-          createdById: 'clsomeuser',
         }),
       ).rejects.toThrow('ログインが必要です');
     });

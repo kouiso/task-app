@@ -20,12 +20,6 @@ beforeAll(async () => {
   if (!process.env['JWT_SECRET']) {
     process.env['JWT_SECRET'] = 'test-secret-key-for-testing-only-32-chars-min';
   }
-  if (!process.env['NEXTAUTH_SECRET']) {
-    process.env['NEXTAUTH_SECRET'] = 'test-nextauth-secret-key-for-testing-only';
-  }
-  if (!process.env['NEXTAUTH_URL']) {
-    process.env['NEXTAUTH_URL'] = 'http://localhost:3000';
-  }
 
   // Skip database initialization for jsdom environment (component tests)
   // Only initialize for node environment (API tests)
