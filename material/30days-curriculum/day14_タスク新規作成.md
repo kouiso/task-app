@@ -166,8 +166,8 @@ export function TaskDialog({
         <DialogHeader>
           <DialogTitle>
             {initialData?.id
-              ? 'Edit Task'
-              : 'Create Task'}
+              ? 'タスク編集'
+              : 'タスク作成'}
           </DialogTitle>
         </DialogHeader>
       </DialogContent>
@@ -228,7 +228,7 @@ const handleChange =
 // filepath: src/component/task/task-dialog.tsx
 // フォーム内にタイトル・説明を追加
 <div className="grid gap-2">
-  <Label htmlFor="title">Title</Label>
+  <Label htmlFor="title">タイトル</Label>
   <Input
     id="title"
     value={formData.title}
@@ -238,7 +238,7 @@ const handleChange =
 </div>
 <div className="grid gap-2">
   <Label htmlFor="description">
-    Description
+    説明
   </Label>
   <Textarea
     id="description"
@@ -282,7 +282,7 @@ const handleSelectChange =
 // ステータス選択のSelect構造
 <div className="grid grid-cols-2 gap-4">
   <div className="grid gap-2">
-    <Label>Status</Label>
+    <Label>ステータス</Label>
     <Select value={formData.status}
       onValueChange={
         handleSelectChange('status')}>
@@ -298,16 +298,16 @@ const handleSelectChange =
 // ステータスの選択肢
       <SelectContent>
         <SelectItem value="TODO">
-          To Do
+          未対応
         </SelectItem>
         <SelectItem value="IN_PROGRESS">
-          In Progress
+          進行中
         </SelectItem>
         <SelectItem value="IN_REVIEW">
-          In Review
+          レビュー中
         </SelectItem>
         <SelectItem value="DONE">
-          Done
+          完了
         </SelectItem>
       </SelectContent>
     </Select>
@@ -319,19 +319,19 @@ const handleSelectChange =
 
 | ステータス | 表示名 | 意味 |
 |-----------|-------|------|
-| `TODO` | To Do | 未着手 |
-| `IN_PROGRESS` | In Progress | 作業中 |
-| `IN_REVIEW` | In Review | レビュー待ち |
-| `DONE` | Done | 完了 |
-| `CANCELLED` | Cancelled | キャンセル |
-| `BLOCKED` | Blocked | ブロック中 |
+| `TODO` | 未対応 | 未着手 |
+| `IN_PROGRESS` | 進行中 | 作業中 |
+| `IN_REVIEW` | レビュー中 | レビュー待ち |
+| `DONE` | 完了 | 完了 |
+| `CANCELLED` | キャンセル | キャンセル |
+| `BLOCKED` | ブロック | ブロック中 |
 
 | 優先度 | 表示名 | 意味 |
 |-------|-------|------|
-| `LOW` | Low | 低い |
-| `MEDIUM` | Medium | 普通 |
-| `HIGH` | High | 高い |
-| `URGENT` | Urgent | 緊急 |
+| `LOW` | 低 | 低い |
+| `MEDIUM` | 中 | 普通 |
+| `HIGH` | 高 | 高い |
+| `URGENT` | 緊急 | 緊急 |
 
 ✅ **確認ポイント**:
 - ステータスと優先度が選択できる
@@ -350,7 +350,7 @@ const handleSelectChange =
 // filepath: src/component/task/task-dialog.tsx
 // プロジェクト選択
 <div className="grid gap-2">
-  <Label>Project</Label>
+  <Label>プロジェクト</Label>
   <Select
     value={formData.projectId}
     onValueChange={
@@ -358,7 +358,7 @@ const handleSelectChange =
     }>
     <SelectTrigger>
       <SelectValue
-        placeholder="Select project" />
+        placeholder="プロジェクトを選択" />
     </SelectTrigger>
     <SelectContent>
       {projects.map((p) => (
@@ -375,7 +375,7 @@ const handleSelectChange =
 // filepath: src/component/task/task-dialog.tsx
 // 担当者選択: Select構造
 <div className="grid gap-2">
-  <Label>Assignee</Label>
+  <Label>担当者</Label>
   <Select
     value={formData.assigneeId || 'unassigned'}
     onValueChange={(value) =>
@@ -395,7 +395,7 @@ const handleSelectChange =
 // 担当者の選択肢とSelect閉じタグ
     <SelectContent>
       <SelectItem value="unassigned">
-        Unassigned
+        未割当
       </SelectItem>
       {users.map((u) => (
         <SelectItem key={u.id} value={u.id}>
@@ -414,7 +414,7 @@ const handleSelectChange =
 
 ✅ **確認ポイント**:
 - プロジェクト一覧が表示される
-- 担当者一覧に「Unassigned」がある
+- 担当者一覧に「未割当」がある
 
 【スクリーンショット: プロジェクト・担当者選択】
 
@@ -451,7 +451,7 @@ const handleNumberChange =
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
 <div className="grid gap-2">
-  <Label htmlFor="dueDate">Due Date</Label>
+  <Label htmlFor="dueDate">期限</Label>
   <Input
     id="dueDate"
     type="date"
@@ -461,7 +461,7 @@ const handleNumberChange =
 </div>
 <div className="grid gap-2">
   <Label htmlFor="estimatedHours">
-    Estimated Hours
+    見積時間（時間）
   </Label>
   <Input
     id="estimatedHours"
@@ -504,14 +504,14 @@ const handleSubmit =
 <DialogFooter>
   <Button type="button" variant="outline"
     onClick={onClose}>
-    Cancel
+    キャンセル
   </Button>
   <Button type="submit"
     disabled={
       !formData.title
       || !formData.projectId
     }>
-    {initialData?.id ? 'Update' : 'Create'}
+    {initialData?.id ? '更新' : '作成'}
   </Button>
 </DialogFooter>
 ```
@@ -521,7 +521,7 @@ const handleSubmit =
 > 必須項目をUIレベルで制御しています。
 
 ✅ **確認ポイント**:
-- Createボタンが表示される
+- 作成ボタンが表示される
 - タイトル未入力でボタンが無効になる
 
 ---
@@ -591,7 +591,7 @@ const handleSubmit =
 // JSX内にDialogとボタンを追加
 <Button onClick={() => setDialogOpen(true)}>
   <Plus className="h-4 w-4 mr-2" />
-  New Task
+  新規タスク
 </Button>
 
 <TaskDialog
@@ -609,7 +609,7 @@ const handleSubmit =
 > から `session.user.id` を使います。
 
 ✅ **確認ポイント**:
-- 「New Task」ボタンでダイアログが開く
+- 「新規タスク」ボタンでダイアログが開く
 - フォーム送信でタスクが作成される
 - 一覧に新しいタスクが表示される
 
@@ -622,10 +622,10 @@ const handleSubmit =
 🎯 **ゴール**: タスク作成の全体フローを確認
 します。
 
-1. 「New Task」ボタンをクリック
+1. 「新規タスク」ボタンをクリック
 2. タイトルを入力し、プロジェクトを選択
 3. 優先度・ステータス・担当者を設定
-4. 「Create」ボタンをクリック
+4. 「作成」ボタンをクリック
 5. ダイアログが閉じ、一覧に新タスクが表示される
 
 ✅ **確認ポイント**:

@@ -99,7 +99,9 @@ export function AppLayout({
   // ここに認証ガードが入る（Step 2で解説）
 
   return (
-    <div className="flex min-h-screen">
+    <div className="grid min-h-screen w-full
+      md:grid-cols-[220px_1fr]
+      lg:grid-cols-[280px_1fr]">
       {/* サイドバー（Step 4で解説） */}
       <main>{children}</main>
     </div>
@@ -139,8 +141,16 @@ useEffect(() => {
   }
 }, [isLoading, session, router]);
 
-// ローディング中は何も表示しない
-if (isLoading) return null;
+// ローディング中はスピナーを表示
+if (isLoading) {
+  return (
+    <div className="flex min-h-screen
+      items-center justify-center">
+      <div className="animate-spin rounded-full
+        h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
 // セッションなしでも何も表示しない
 if (!session?.user) return null;
 ```
@@ -221,8 +231,9 @@ async function deleteSession()
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 import {
-  BarChart3, FolderKanban, Home,
-  ListTodo, Search, Users,
+  BarChart, ClipboardList, FolderOpen,
+  LayoutDashboard, ListTodo,
+  Menu, Search, Users,
 } from 'lucide-react';
 
 // メニュー項目の型定義
@@ -231,15 +242,32 @@ interface MenuItem {
   icon: React.ReactNode;
   path: string;
 }
+```
 
-// 基本メニュー項目
+続いて、6つの基本メニュー項目を定義します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 基本メニュー項目（全6項目）
 const baseMenuItems: MenuItem[] = [
-  { text: 'Dashboard',
-    icon: <Home className="h-5 w-5" />,
+  { text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
     path: '/dashboard' },
-  { text: 'Projects',
-    icon: <FolderKanban className="h-5 w-5" />,
+  { text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task' },
+  { text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task' },
+  { text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
     path: '/project' },
+  { text: 'レポート',
+    icon: <BarChart className="h-5 w-5" />,
+    path: '/report' },
+  { text: '検索',
+    icon: <Search className="h-5 w-5" />,
+    path: '/search' },
 ];
 ```
 
@@ -262,10 +290,10 @@ const baseMenuItems: MenuItem[] = [
 // ロールに応じたメニュー構築
 const menuItems: MenuItem[] = [
   ...baseMenuItems,
-  // ADMINロールの場合のみUsersを追加
+  // ADMINロールの場合のみ追加
   ...(session?.user?.role === 'ADMIN'
     ? [{
-        text: 'Users',
+        text: 'ユーザー管理',
         icon: <Users className="h-5 w-5" />,
         path: '/user',
       }]
@@ -277,60 +305,74 @@ const menuItems: MenuItem[] = [
 
 | メニュー | USER | ADMIN |
 |---------|------|-------|
-| Dashboard | ✅ | ✅ |
-| Projects | ✅ | ✅ |
-| Tasks | ✅ | ✅ |
-| My Tasks | ✅ | ✅ |
-| Search | ✅ | ✅ |
-| Reports | ✅ | ✅ |
-| Users | ❌ | ✅ |
+| ダッシュボード | ✅ | ✅ |
+| タスク | ✅ | ✅ |
+| マイタスク | ✅ | ✅ |
+| プロジェクト | ✅ | ✅ |
+| レポート | ✅ | ✅ |
+| 検索 | ✅ | ✅ |
+| ユーザー管理 | ❌ | ✅ |
 
 > 💡 スプレッド演算子 `...` と三項演算子 `? :` を組み合わせて、条件付きで配列に要素を追加しています。ADMIN でなければ空配列 `[]` が展開されるので、何も追加されません。
 
 ✅ **確認ポイント**:
-- ADMIN のみ Users メニューが表示されることを理解した
-- 一般ユーザーには Users メニューが見えないことを確認した
+- ADMIN のみ「ユーザー管理」メニューが表示されることを理解した
+- 一般ユーザーには「ユーザー管理」メニューが見えないことを確認した
 
 ---
 
-### Step 6: ログアウトボタンを理解する（5分）
+### Step 6: ヘッダーのユーザーメニューを理解する（5分）
 
-🎯 **ゴール**: サイドバー下部のログアウトボタンの実装を理解します。
+🎯 **ゴール**: ヘッダー右上の DropdownMenu によるログアウトの仕組みを理解します。
 
 💻 **コードを読む**:
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// サイドバー下部のユーザー情報＋ログアウト
-<div className="border-t p-4">
-  <div className="flex items-center gap-3">
-    <Avatar className="h-8 w-8">
-      <AvatarImage
-        src={session.user.avatar || ''} />
-      <AvatarFallback>
-        {session.user.name?.[0]?.toUpperCase()}
-      </AvatarFallback>
-    </Avatar>
-    <div className="flex-1 min-w-0">
-      <p className="text-sm font-medium
-        truncate">
-        {session.user.name}
-      </p>
-    </div>
-    <Button
-      variant="ghost" size="icon"
-      onClick={() => logoutMutation.mutate()}>
-      <LogOut className="h-4 w-4" />
+// ヘッダー右上のユーザーメニュー
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="secondary" size="icon"
+      className="rounded-full">
+      <Avatar className="h-8 w-8">
+        <AvatarImage
+          src={session.user.avatar || ''}
+          alt={session.user.name || ''} />
+        <AvatarFallback>
+          {session.user.name?.[0] || 'U'}
+        </AvatarFallback>
+      </Avatar>
     </Button>
-  </div>
-</div>
+  </DropdownMenuTrigger>
 ```
 
-> 💡 `logoutMutation.mutate()` を呼ぶだけで、Step 3 で見た一連のログアウト処理（Cookie削除→リダイレクト→画面更新）が実行されます。
+続いて、メニュー内容を定義します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+  <DropdownMenuContent align="end">
+    <DropdownMenuLabel>
+      マイアカウント
+    </DropdownMenuLabel>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem
+      onClick={() => router.push('/profile')}>
+      プロフィール
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem
+      onClick={handleLogout}>
+      ログアウト
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+> 💡 `logoutMutation.mutate()` を呼ぶだけで、Step 3 で見た一連のログアウト処理（Cookie削除→リダイレクト→画面更新）が実行されます。DropdownMenu はヘッダー右上のアバターをクリックすると開きます。
 
 ✅ **確認ポイント**:
-- ログアウトボタンがサイドバー下部にあることを確認した
-- アバターとユーザー名が表示されていることを確認した
+- ヘッダー右上にアバターアイコンがあることを確認した
+- クリックでプロフィールとログアウトの選択肢が表示されることを確認した
 
 ---
 
@@ -351,8 +393,8 @@ import {
 
 // ハンバーガーメニューボタン
 <SheetTrigger asChild>
-  <Button variant="ghost" size="icon"
-    className="md:hidden">
+  <Button variant="outline" size="icon"
+    className="shrink-0 md:hidden">
     <Menu className="h-5 w-5" />
   </Button>
 </SheetTrigger>
@@ -381,10 +423,11 @@ import {
 
 1. ログイン状態で `/dashboard` にアクセスする
 2. サイドバーが表示され、各メニューをクリックしてページ遷移できることを確認する
-3. サイドバー下部のログアウトボタン（ドアアイコン）をクリックする
-4. ログイン画面にリダイレクトされることを確認する
-5. ログアウト後に `/dashboard` に直接アクセスする
-6. ログイン画面にリダイレクトされること（認証ガード）を確認する
+3. ヘッダー右上のアバターアイコンをクリックして、DropdownMenu を開く
+4. 「ログアウト」をクリックする
+5. ログイン画面にリダイレクトされることを確認する
+6. ログアウト後に `/dashboard` に直接アクセスする
+7. ログイン画面にリダイレクトされること（認証ガード）を確認する
 
 【スクリーンショット: ログアウト後にログイン画面にリダイレクトされる様子】
 

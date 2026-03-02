@@ -285,8 +285,8 @@ const handleStartStop = async () => {
 > エラーが発生した場合は `catch` で処理します。
 
 ✅ **確認ポイント**:
-- 「Start Timer」で開始される
-- 「Stop Timer」で停止される
+- 「タイマー開始」で開始される
+- 「タイマー停止」で停止される
 
 ---
 
@@ -337,8 +337,8 @@ return (
           ? <PauseIcon className="w-4 h-4" />
           : <PlayIcon className="w-4 h-4" />}
         {isTimerActive
-          ? 'Stop Timer'
-          : 'Start Timer'}
+          ? 'タイマー停止'
+          : 'タイマー開始'}
       </Button>
 ```
 
@@ -354,7 +354,7 @@ return (
     </div>
     <p className="text-sm
       text-muted-foreground">
-      Total:
+      合計作業時間:
       {formatMinutes(timeSpentMinutes)}
     </p>
   </div>
@@ -440,13 +440,13 @@ export function TimeLogDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Add Time Log
+            作業時間の記録
           </DialogTitle>
         </DialogHeader>
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours">
-              Hours
+              時間
             </Label>
             <Input id="hours"
               value={hours}
@@ -461,7 +461,7 @@ export function TimeLogDialog({
 // TimeLogDialog: 分の入力と閉じタグ
           <div className="flex-1">
             <Label htmlFor="minutes">
-              Minutes
+              分
             </Label>
             <Input id="minutes"
               value={minutes}
@@ -557,11 +557,11 @@ const handleSubmit = async () => {
 を確認します。
 
 1. タスクのステータスを変更する
-2. 「Start Timer」でタイマーを開始
+2. 「タイマー開始」でタイマーを開始
 3. 経過時間が `00:00:XX` と表示される
-4. 「Stop Timer」で停止
+4. 「タイマー停止」で停止
 5. 累計時間に加算される
-6. 「Add Time Log」で手動時間を追加
+6. 「作業時間の記録」で手動時間を追加
 7. 累計時間がさらに加算される
 
 ✅ **確認ポイント**:

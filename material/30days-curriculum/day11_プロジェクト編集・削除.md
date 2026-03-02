@@ -48,7 +48,7 @@ graph TD
 |---------|---------|---------|
 | Step 1 | 編集ボタンのハンドラーを作る | 5分 |
 | Step 2 | 編集データをDialogに渡す | 5分 |
-| Step 3 | 更新のmutationを実装する | 7分 |
+| Step 3 | 送信ハンドラーで作成・更新を分岐する | 7分 |
 | Step 4 | 削除のmutationを実装する | 5分 |
 | Step 5 | 確認ダイアログを追加する | 5分 |
 | Step 6 | アーカイブ機能を理解する | 5分 |
@@ -68,29 +68,43 @@ graph TD
 // filepath: src/app/project/page.tsx
 // ProjectPageContent内にstateを追加
 const [editingProject, setEditingProject] =
-  useState<ProjectFormData | undefined>();
+  useState<ProjectFormData | undefined>(
+    undefined
+  );
 
 // 編集ハンドラー
 const handleEdit = (projectId: string) => {
   const project = projects?.find(
     (p) => p.id === projectId
   );
-  if (!project) return;
-  setEditingProject({
-    id: project.id,
-    name: project.name,
-    description: project.description || '',
-    color: project.color,
-  });
-  setDialogOpen(true);
+  if (project) {
+    const startDate = project.startDate
+      ? new Date(project.startDate)
+          .toISOString().split('T')[0]
+      : undefined;
+    const endDate = project.endDate
+      ? new Date(project.endDate)
+          .toISOString().split('T')[0]
+      : undefined;
+    setEditingProject({
+      id: project.id,
+      name: project.name,
+      description:
+        project.description || '',
+      color: project.color,
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+    });
+    setDialogOpen(true);
+  }
 };
 ```
 
-> 💡 `find` で対象プロジェクトを見つけ、`setEditingProject` に渡します。このデータがダイアログの初期値になります。
+> 💡 日付は `toISOString().split('T')[0]` で `"2024-12-31"` 形式に変換します。`<input type="date">` はこの形式の文字列を期待しているためです。`...(startDate && { startDate })` は「startDate が存在する場合のみオブジェクトに追加」する書き方です。
 
 ✅ **確認ポイント**:
 - 編集ボタンをクリックすると `editingProject` が設定される
-- ダイアログが開く
+- 日付データが正しく変換される
 
 ---
 
@@ -102,19 +116,17 @@ const handleEdit = (projectId: string) => {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectDialogの呼び出しを更新
+// 新規作成ハンドラー
+const handleCreate = () => {
+  setEditingProject(undefined);
+  setDialogOpen(true);
+};
+
+// JSX内: ProjectDialogの呼び出し
 <ProjectDialog
   open={dialogOpen}
-  onOpenChange={(open) => {
-    setDialogOpen(open);
-    // ダイアログを閉じたら編集状態をリセット
-    if (!open) setEditingProject(undefined);
-  }}
-  onSubmit={
-    editingProject
-      ? handleUpdate
-      : handleCreate
-  }
+  onClose={() => setDialogOpen(false)}
+  onSubmit={handleSubmit}
   initialData={editingProject}
 />
 ```
@@ -125,8 +137,9 @@ const handleEdit = (projectId: string) => {
 |------|---------|------|
 | `initialData` | undefined | 既存データ |
 | タイトル | 「プロジェクト作成」 | 「プロジェクト編集」 |
-| 送信ハンドラー | `handleCreate` | `handleUpdate` |
 | ボタン文言 | 「作成」 | 「更新」 |
+
+> 💡 `handleCreate` で `setEditingProject(undefined)` を呼ぶことで、フォームが空の状態（新規作成モード）になります。`onClose` には `setDialogOpen(false)` を渡して、ダイアログを閉じます。
 
 ✅ **確認ポイント**:
 - 編集ボタンでダイアログを開くと既存の名前が入っている
@@ -134,9 +147,9 @@ const handleEdit = (projectId: string) => {
 
 ---
 
-### Step 3: 更新のmutationを実装する（7分）
+### Step 3: 送信ハンドラーで作成・更新を分岐する（7分）
 
-🎯 **ゴール**: フォームの送信でプロジェクトを更新します。
+🎯 **ゴール**: 1つの `handleSubmit` で新規作成と更新を分岐します。
 
 💻 **実装**:
 
@@ -147,26 +160,61 @@ const updateMutation =
   api.project.update.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      if (selectedProject) {
+        utils.project.getById.invalidate(
+          { id: selectedProject }
+        );
+      }
       setDialogOpen(false);
-      setEditingProject(undefined);
     },
   });
+```
 
-// 更新ハンドラー
-const handleUpdate = (
+送信ハンドラーで `data.id` の有無で作成と更新を分岐します。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 統合された送信ハンドラー
+const handleSubmit = (
   data: ProjectFormData
 ) => {
-  if (!editingProject?.id) return;
-  updateMutation.mutate({
-    id: editingProject.id,
-    name: data.name,
-    description: data.description,
-    color: data.color,
-  });
+  if (data.id) {
+    // 更新
+    updateMutation.mutate({
+      id: data.id,
+      name: data.name,
+      description:
+        data.description || null,
+      color: data.color,
+      startDate: data.startDate
+        ? new Date(data.startDate)
+            .toISOString()
+        : null,
+      endDate: data.endDate
+        ? new Date(data.endDate)
+            .toISOString()
+        : null,
+    });
+  } else {
+    // 新規作成（Day 10で実装済み）
+    createMutation.mutate({
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate
+        ? new Date(data.startDate)
+            .toISOString()
+        : undefined,
+      endDate: data.endDate
+        ? new Date(data.endDate)
+            .toISOString()
+        : undefined,
+    });
+  }
 };
 ```
 
-> 💡 更新成功時にも `invalidate()` を呼ぶことで、一覧のカードが最新の情報に自動更新されます。
+> 💡 `data.id` がある場合は編集、ない場合は新規作成です。日付文字列は `new Date(...).toISOString()` で ISO 形式に変換してからサーバーに送ります。
 
 ✅ **確認ポイント**:
 - プロジェクト名を変更して保存できる
@@ -184,28 +232,21 @@ const handleUpdate = (
 
 ```typescript
 // filepath: src/app/project/page.tsx
-import toast from 'react-hot-toast';
-
 // 削除用のmutation
 const deleteMutation =
   api.project.delete.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      toast.success('プロジェクトを削除しました');
-    },
-    onError: (err) => {
-      toast.error(
-        err.message || '削除に失敗しました'
-      );
+      setDetailOpen(false);
     },
   });
 ```
 
-> 💡 `react-hot-toast` でユーザーに成功・失敗を通知します。削除はやり直せない操作なので、フィードバックが重要です。
+> 💡 削除成功時に `setDetailOpen(false)` を呼んで、詳細ダイアログが開いている場合は閉じます。
 
 ✅ **確認ポイント**:
-- 削除後にトースト通知が表示される
-- 一覧からプロジェクトが消える
+- 削除後に一覧が自動更新される
+- 詳細ダイアログが閉じる
 
 ---
 
@@ -218,23 +259,19 @@ const deleteMutation =
 ```typescript
 // filepath: src/app/project/page.tsx
 // 削除ハンドラー
-const handleDelete = (projectId: string) => {
-  const project = projects?.find(
-    (p) => p.id === projectId
-  );
-  if (!project) return;
-  // 確認ダイアログ
-  const confirmed = window.confirm(
-    `「${project.name}」を削除しますか？`
-    + '\nこの操作は取り消せません。'
-  );
-  if (confirmed) {
-    deleteMutation.mutate({ id: projectId });
-  }
-};
+const handleDelete =
+  (projectId: string) => {
+    if (confirm(
+      'このプロジェクトを削除してもよろしいですか？'
+    )) {
+      deleteMutation.mutate({
+        id: projectId,
+      });
+    }
+  };
 ```
 
-> 💡 `window.confirm` はブラウザ標準の確認ダイアログです。「OK」を押した場合のみ `true` が返ります。
+> 💡 `confirm` はブラウザ標準の確認ダイアログです。「OK」を押した場合のみ `true` が返ります。
 
 ✅ **確認ポイント**:
 - 削除ボタンで確認ダイアログが出る
@@ -311,10 +348,10 @@ archive: protectedProcedure
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 編集ダイアログに古いデータが残る | `reset` が呼ばれていない | `useEffect` で `reset(initialData)` を追加 |
+| 編集ダイアログに古いデータが残る | useEffect で formData がリセットされていない | `initialData` の変更を確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `invalidate()` を呼ぶ |
 | 「権限がありません」エラー | OWNER/ADMIN 以外で操作 | プロジェクトの OWNER アカウントで操作する |
-| 削除後にエラーが残る | 詳細ダイアログが開いたまま | 削除時に詳細ダイアログも閉じる |
+| 削除後にエラーが残る | 詳細ダイアログが開いたまま | 削除時に `setDetailOpen(false)` も呼ぶ |
 
 ## 📝 今日学んだ用語
 

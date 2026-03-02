@@ -103,7 +103,14 @@ function TaskPageContent() {
 export default function TaskPage() {
   return (
     <AppLayout>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={
+        <div className="flex h-[60vh]
+          items-center justify-center">
+          <div className="animate-spin
+            rounded-full h-8 w-8
+            border-b-2 border-primary" />
+        </div>
+      }>
         <TaskPageContent />
       </Suspense>
     </AppLayout>
@@ -165,30 +172,38 @@ import {
 } from '@/component/ui/select';
 
 // フィルター用のstate
-const [projectFilter, setProjectFilter] =
+const [filterProject, setFilterProject] =
   useState<string>('all');
-const [statusFilter, setStatusFilter] =
+const [filterStatus, setFilterStatus] =
   useState<string>('all');
 ```
 
 ```typescript
 // filepath: src/app/task/page.tsx
 // フィルターUI
-<div className="flex gap-4">
-  <Select value={projectFilter}
-    onValueChange={setProjectFilter}>
-    <SelectTrigger className="w-48">
-      <SelectValue placeholder="プロジェクト" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="all">全て</SelectItem>
-      {projects?.map((p) => (
-        <SelectItem key={p.id} value={p.id}>
-          {p.name}
+<div className="flex gap-2 w-full
+  sm:w-auto ml-auto">
+  <div className="w-[200px]">
+    <Select value={filterProject}
+      onValueChange={setFilterProject}>
+      <SelectTrigger>
+        <SelectValue
+          placeholder=
+            "すべてのプロジェクト" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">
+          すべてのプロジェクト
         </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
+        {projects?.map((p) => (
+          <SelectItem key={p.id}
+            value={p.id}>
+            {p.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
 </div>
 ```
 
@@ -209,10 +224,10 @@ const [statusFilter, setStatusFilter] =
 // useQueryのパラメータにフィルターを追加
 const { data: tasks, isLoading } =
   api.task.getAll.useQuery({
-    ...(projectFilter !== 'all'
-      && { projectId: projectFilter }),
-    ...(statusFilter !== 'all'
-      && { status: statusFilter }),
+    projectId: filterProject === 'all'
+      ? undefined : filterProject,
+    status: filterStatus === 'all'
+      ? undefined : filterStatus,
   });
 ```
 
@@ -249,11 +264,9 @@ import {
     priority={task.priority}
     dueDate={task.dueDate}
     assignee={task.assignee}
-    isTimerActive={task.isTimerActive}
-    timeSpentMinutes={task.timeSpentMinutes}
-    onEdit={() => handleEdit(task.id)}
-    onDelete={() => handleDelete(task.id)}
-    onClick={() => handleDetail(task.id)}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+    onClick={handleDetail}
   />
 ))}
 ```
@@ -284,8 +297,7 @@ import {
 ```typescript
 // filepath: src/app/task/page.tsx
 // カードの親要素にグリッドクラスを追加
-<div className="grid gap-4
-  grid-cols-1
+<div className="grid gap-6
   sm:grid-cols-2
   lg:grid-cols-3
   xl:grid-cols-4">

@@ -217,6 +217,7 @@ LoginForm の return 内を以下に書き換えます。
       type="email"
       placeholder="your@email.com"
       autoComplete="email"
+      autoFocus
       {...register('email')}
     />
     {errors.email && (

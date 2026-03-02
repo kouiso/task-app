@@ -419,9 +419,9 @@ const isAuthenticated =
 // filepath: src/app/error.tsx
 'use client';
 
+import { useEffect } from 'react';
 import { Button }
   from '@/component/ui/button';
-import { useEffect } from 'react';
 ```
 
 ```typescript
@@ -431,13 +431,11 @@ export default function ErrorPage({
   error,
   reset,
 }: {
-  error: Error;
+  error: Error & { digest?: string };
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(
-      'エラー発生:', error
-    );
+    console.error(error);
   }, [error]);
 ```
 
@@ -445,20 +443,23 @@ export default function ErrorPage({
 // filepath: src/app/error.tsx
 // エラー画面のJSX
   return (
-    <div className="flex flex-col
-      items-center justify-center
-      min-h-screen p-6">
-      <h1 className="text-2xl
-        font-bold mb-4">
-        エラーが発生しました
-      </h1>
-      <p className=
-        "text-muted-foreground mb-6">
-        {error.message}
-      </p>
-      <Button onClick={reset}>
-        再試行
-      </Button>
+    <div className="flex min-h-screen
+      items-center justify-center">
+      <div className=
+        "text-center space-y-4">
+        <h2 className="text-2xl
+          font-bold">
+          エラーが発生しました
+        </h2>
+        <p className=
+          "text-muted-foreground">
+          予期しないエラーが発生しました。
+          もう一度お試しください。
+        </p>
+        <Button onClick={reset}>
+          もう一度試す
+        </Button>
+      </div>
     </div>
   );
 }
