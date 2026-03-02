@@ -36,7 +36,7 @@ export default function UserEditPage() {
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
   const { data: user, isLoading } = api.user.getById.useQuery({ id: userId });
 
-  const updateUser = api.user.updateUser.useMutation({
+  const updateUser = api.user.update.useMutation({
     onSuccess: () => {
       toast.success('ユーザー情報を更新しました');
       router.push(`/user/${userId}`);

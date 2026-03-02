@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/component/ui/card';
@@ -20,10 +21,30 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+/**
+ * Open Redirect対策：URL が相対パスで同一オリジンであることを検証
+ */
+function isValidRedirectUrl(url: string): boolean {
+  if (!url) return false;
+
+  // プロトコル相対URL（//example.com）は許可しない
+  if (url.startsWith('//')) return false;
+
+  // 外部URLは許可しない
+  if (url.startsWith('http://') || url.startsWith('https://')) return false;
+
+  // 相対パスのみを許可
+  return url.startsWith('/');
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
+
+  // callbackUrl の検証：相対パスのみを許可
+  const rawCallbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
+  const callbackUrl = isValidRedirectUrl(rawCallbackUrl) ? rawCallbackUrl : '/dashboard';
+
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -35,7 +56,8 @@ function LoginForm() {
   });
 
   const loginMutation = api.auth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast.success(`おかえりなさい、${data.user.name}さん`);
       router.push(callbackUrl);
       router.refresh();
     },
@@ -111,7 +133,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense
-      fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}
+      fallback={<div className="flex min-h-screen items-center justify-center">読み込み中...</div>}
     >
       <LoginForm />
     </Suspense>

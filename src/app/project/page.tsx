@@ -27,6 +27,9 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { PROJECT_MEMBER_ROLE_LABELS } from '@/lib/constant/roles';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function ProjectPageContent() {
@@ -51,10 +54,14 @@ function ProjectPageContent() {
 
   const utils = api.useUtils();
 
+  const { data: currentUser } = api.user.getCurrentUser.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
     isArchived: showArchived,
   });
-  const { data: users } = api.user.getAll.useQuery();
+  const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
+    { projectId: selectedProject ?? '' },
+    { enabled: !!selectedProject },
+  );
   const { data: projectDetail } = api.project.getById.useQuery(
     { id: selectedProject ?? '' },
     { enabled: !!selectedProject },
@@ -145,7 +152,7 @@ function ProjectPageContent() {
   };
 
   const handleDelete = (projectId: string) => {
-    if (confirm('Are you sure you want to delete this project?')) {
+    if (confirm('このプロジェクトを削除してもよろしいですか？')) {
       deleteMutation.mutate({ id: projectId });
     }
   };
@@ -161,13 +168,16 @@ function ProjectPageContent() {
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
       });
     } else {
+      if (!currentUser?.id) {
+        console.error('Current user not loaded');
+        return;
+      }
       createMutation.mutate({
         name: data.name,
         description: data.description,
         color: data.color,
         startDate: data.startDate ? new Date(data.startDate).toISOString() : undefined,
         endDate: data.endDate ? new Date(data.endDate).toISOString() : undefined,
-        ownerId: users?.[0]?.id || '',
       });
     }
   };
@@ -193,7 +203,7 @@ function ProjectPageContent() {
   };
 
   const handleRemoveMember = (userId: string) => {
-    if (selectedProject && confirm('Are you sure you want to remove this member?')) {
+    if (selectedProject && confirm('このメンバーを削除してもよろしいですか？')) {
       removeMemberMutation.mutate({
         projectId: selectedProject,
         userId,
@@ -220,14 +230,14 @@ function ProjectPageContent() {
     <AppLayout>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          <h1 className="text-3xl font-bold tracking-tight">プロジェクト</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-              <Label htmlFor="show-archived">Show Archived</Label>
+              <Label htmlFor="show-archived">アーカイブ表示</Label>
             </div>
             <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" /> New Project
+              <Plus className="mr-2 h-4 w-4" /> 新規プロジェクト
             </Button>
           </div>
         </div>
@@ -256,8 +266,8 @@ function ProjectPageContent() {
             })
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>No projects found.</p>
-              <p>Create your first project to get started!</p>
+              <p>プロジェクトが見つかりません。</p>
+              <p>最初のプロジェクトを作成しましょう！</p>
             </div>
           )}
         </div>
@@ -279,9 +289,7 @@ function ProjectPageContent() {
                 />
                 {projectDetail?.name}
               </DialogTitle>
-              <DialogDescription>
-                {projectDetail?.description || 'No description'}
-              </DialogDescription>
+              <DialogDescription>{projectDetail?.description || '説明なし'}</DialogDescription>
             </DialogHeader>
 
             {projectDetail && (
@@ -290,10 +298,10 @@ function ProjectPageContent() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">
-                      Members ({projectDetail.members?.length || 0})
+                      メンバー ({projectDetail.members?.length || 0})
                     </h3>
                     <Button variant="outline" size="sm" onClick={() => setMemberDialogOpen(true)}>
-                      <UserPlus className="mr-2 h-4 w-4" /> Add Member
+                      <UserPlus className="mr-2 h-4 w-4" /> メンバー追加
                     </Button>
                   </div>
                   <div className="grid gap-2">
@@ -311,9 +319,13 @@ function ProjectPageContent() {
                           </Avatar>
                           <div>
                             <p className="font-medium">
-                              {member.user?.name || member.user?.email || 'Unknown'}
+                              {member.user?.name || member.user?.email || '不明'}
                             </p>
-                            <Badge variant="outline">{member.role}</Badge>
+                            <Badge variant="outline">
+                              {PROJECT_MEMBER_ROLE_LABELS[
+                                member.role as keyof typeof PROJECT_MEMBER_ROLE_LABELS
+                              ] ?? member.role}
+                            </Badge>
                           </div>
                         </div>
                         <Button
@@ -332,7 +344,7 @@ function ProjectPageContent() {
                 {/* Tasks Section */}
                 <div>
                   <h3 className="text-lg font-semibold mb-4">
-                    Tasks ({projectDetail.tasks?.length || 0})
+                    タスク ({projectDetail.tasks?.length || 0})
                   </h3>
                   <div className="grid gap-2">
                     {projectDetail.tasks?.map((task) => (
@@ -342,8 +354,15 @@ function ProjectPageContent() {
                       >
                         <p className="font-medium">{task.title}</p>
                         <div className="flex gap-2">
-                          <Badge variant="secondary">{task.status}</Badge>
-                          <Badge variant="outline">{task.priority}</Badge>
+                          <Badge variant="secondary">
+                            {TASK_STATUS_LABELS[task.status as keyof typeof TASK_STATUS_LABELS] ??
+                              task.status}
+                          </Badge>
+                          <Badge variant="outline">
+                            {TASK_PRIORITY_LABELS[
+                              task.priority as keyof typeof TASK_PRIORITY_LABELS
+                            ] ?? task.priority}
+                          </Badge>
                         </div>
                       </div>
                     ))}
@@ -362,16 +381,16 @@ function ProjectPageContent() {
                 >
                   {projectDetail?.isArchived ? (
                     <>
-                      <ArchiveRestore className="mr-2 h-4 w-4" /> Unarchive
+                      <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
                     </>
                   ) : (
                     <>
-                      <Archive className="mr-2 h-4 w-4" /> Archive
+                      <Archive className="mr-2 h-4 w-4" /> アーカイブ
                     </>
                   )}
                 </Button>
               </div>
-              <Button onClick={handleDetailClose}>Close</Button>
+              <Button onClick={handleDetailClose}>閉じる</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -379,53 +398,48 @@ function ProjectPageContent() {
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add Member</DialogTitle>
-              <DialogDescription>Add a new member to this project.</DialogDescription>
+              <DialogTitle>メンバー追加</DialogTitle>
+              <DialogDescription>このプロジェクトに新しいメンバーを追加します。</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="user">User</Label>
+                <Label htmlFor="user">ユーザー</Label>
                 <Select value={newMemberUserId} onValueChange={setNewMemberUserId}>
                   <SelectTrigger id="user">
-                    <SelectValue placeholder="Select user" />
+                    <SelectValue placeholder="ユーザーを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users
-                      ?.filter(
-                        (user) =>
-                          !projectDetail?.members?.some((member) => member.userId === user.id),
-                      )
-                      .map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.email}
-                        </SelectItem>
-                      ))}
+                    {availableUsers?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">ロール</Label>
                 <Select
                   value={newMemberRole}
                   onValueChange={(value) => setNewMemberRole(value as ProjectMemberRole)}
                 >
                   <SelectTrigger id="role">
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder="ロールを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MEMBER">Member</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                    <SelectItem value="MEMBER">メンバー</SelectItem>
+                    <SelectItem value="ADMIN">管理者</SelectItem>
+                    <SelectItem value="VIEWER">閲覧者</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
-                Cancel
+                キャンセル
               </Button>
               <Button onClick={handleAddMember} disabled={!newMemberUserId}>
-                Add Member
+                メンバー追加
               </Button>
             </DialogFooter>
           </DialogContent>

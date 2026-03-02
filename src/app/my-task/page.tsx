@@ -16,11 +16,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
 import { api } from '@/trpc/react';
 
 const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'To Do', value: 'TODO' },
-  { label: 'In Progress', value: 'IN_PROGRESS' },
-  { label: 'In Review', value: 'IN_REVIEW' },
-  { label: 'Done', value: 'DONE' },
+  { label: 'すべて', value: 'all' },
+  { label: '未対応', value: 'TODO' },
+  { label: '進行中', value: 'IN_PROGRESS' },
+  { label: 'レビュー中', value: 'IN_REVIEW' },
+  { label: '完了', value: 'DONE' },
 ];
 
 export default function MyTasksPage() {
@@ -31,7 +31,7 @@ export default function MyTasksPage() {
 
   const { data: currentUser } = api.user.getCurrentUser.useQuery();
   const { data: projects } = api.project.getAll.useQuery();
-  const { data: users } = api.user.getAll.useQuery();
+  const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: tasks, isLoading } = api.task.getAll.useQuery(
     {
       assigneeId: currentUser?.id,
@@ -91,7 +91,7 @@ export default function MyTasksPage() {
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-        estimatedHours: data.estimatedHours || null,
+        estimatedHours: data.estimatedHours ?? null,
         assigneeId: data.assigneeId || null,
       });
     }
@@ -137,7 +137,7 @@ export default function MyTasksPage() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="text-3xl font-bold tracking-tight">My Tasks</h1>
+        <h1 className="text-3xl font-bold tracking-tight">マイタスク</h1>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
@@ -153,10 +153,10 @@ export default function MyTasksPage() {
           <div className="ml-auto w-full sm:w-[200px]">
             <Select value={filterProject} onValueChange={setFilterProject}>
               <SelectTrigger>
-                <SelectValue placeholder="All Projects" />
+                <SelectValue placeholder="すべてのプロジェクト" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
+                <SelectItem value="all">すべてのプロジェクト</SelectItem>
                 {projects?.map((project) => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.name}
@@ -170,7 +170,7 @@ export default function MyTasksPage() {
         {groupedTasks.overdue.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-destructive flex items-center gap-2">
-              Overdue ({groupedTasks.overdue.length})
+              期限切れ ({groupedTasks.overdue.length})
             </h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {groupedTasks.overdue.map((task) => (
@@ -194,7 +194,7 @@ export default function MyTasksPage() {
         {groupedTasks.today.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-orange-500 flex items-center gap-2">
-              Due Today ({groupedTasks.today.length})
+              今日が期限 ({groupedTasks.today.length})
             </h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {groupedTasks.today.map((task) => (
@@ -218,7 +218,7 @@ export default function MyTasksPage() {
         {groupedTasks.upcoming.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              Upcoming ({groupedTasks.upcoming.length})
+              今後の予定 ({groupedTasks.upcoming.length})
             </h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {groupedTasks.upcoming.map((task) => (
@@ -242,7 +242,7 @@ export default function MyTasksPage() {
         {groupedTasks.noDueDate.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              No Due Date ({groupedTasks.noDueDate.length})
+              期限なし ({groupedTasks.noDueDate.length})
             </h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {groupedTasks.noDueDate.map((task) => (
@@ -265,7 +265,7 @@ export default function MyTasksPage() {
 
         {tasks && tasks.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-            <p>No tasks assigned to you</p>
+            <p>あなたに割り当てられたタスクはありません</p>
           </div>
         )}
 
@@ -276,7 +276,6 @@ export default function MyTasksPage() {
           initialData={editingTask}
           projects={projects || []}
           users={users || []}
-          currentUserId={currentUser?.id || ''}
         />
       </div>
     </AppLayout>

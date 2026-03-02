@@ -26,23 +26,23 @@ function SearchPageContent() {
   const utils = api.useUtils();
 
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
-  const [projectId, setProjectId] = useState(searchParams.get('projectId') || '');
+  const [projectId, setProjectId] = useState(searchParams.get('projectId') || 'all');
   const [status, setStatus] = useState<'all' | TaskStatus>(
     (searchParams.get('status') as 'all' | TaskStatus) || 'all',
   );
   const [priority, setPriority] = useState<'all' | TaskPriority>(
     (searchParams.get('priority') as 'all' | TaskPriority) || 'all',
   );
-  const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') || '');
+  const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') || 'all');
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
 
   const shouldSearch =
     !!keyword ||
-    !!projectId ||
+    projectId !== 'all' ||
     status !== 'all' ||
     priority !== 'all' ||
-    !!assignedTo ||
+    assignedTo !== 'all' ||
     !!dateFrom ||
     !!dateTo;
 
@@ -51,10 +51,10 @@ function SearchPageContent() {
   const { data: searchResults, isLoading } = api.search.search.useQuery(
     {
       keyword: keyword || undefined,
-      projectId: projectId || undefined,
+      projectId: projectId !== 'all' ? projectId : undefined,
       status: status,
       priority: priority,
-      assignedTo: assignedTo || undefined,
+      assignedTo: assignedTo !== 'all' ? assignedTo : undefined,
       dateFrom: dateFrom ? new Date(dateFrom).toISOString() : undefined,
       dateTo: dateTo ? new Date(dateTo).toISOString() : undefined,
     },
@@ -87,10 +87,10 @@ function SearchPageContent() {
   const handleSearch = () => {
     const searchParamList = [
       { key: 'keyword', value: keyword },
-      { key: 'projectId', value: projectId },
+      { key: 'projectId', value: projectId, exclude: 'all' },
       { key: 'status', value: status, exclude: 'all' },
       { key: 'priority', value: priority, exclude: 'all' },
-      { key: 'assignedTo', value: assignedTo },
+      { key: 'assignedTo', value: assignedTo, exclude: 'all' },
       { key: 'dateFrom', value: dateFrom },
       { key: 'dateTo', value: dateTo },
     ];
@@ -108,10 +108,10 @@ function SearchPageContent() {
 
   const handleClear = () => {
     setKeyword('');
-    setProjectId('');
+    setProjectId('all');
     setStatus('all');
     setPriority('all');
-    setAssignedTo('');
+    setAssignedTo('all');
     setDateFrom('');
     setDateTo('');
     router.push('/search');
