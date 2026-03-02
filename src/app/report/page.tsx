@@ -1,6 +1,7 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import { useMemo } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -50,7 +51,7 @@ export default function ReportPage() {
   );
 
   const totalTimeSpent = useMemo(
-    () => tasks?.reduce((acc, task) => acc + task.timeSpentMinutes, 0) || 0,
+    () => tasks?.reduce((acc, task) => acc + (task.timeSpentMinutes ?? 0), 0) || 0,
     [tasks],
   );
   const averageTimePerTask = useMemo(
@@ -63,7 +64,7 @@ export default function ReportPage() {
       projects?.map((project) => {
         const projectTasks = tasks?.filter((t) => t.projectId === project.id) || [];
         const completedTasks = projectTasks.filter((t) => t.status === 'DONE');
-        const totalTime = projectTasks.reduce((acc, t) => acc + t.timeSpentMinutes, 0);
+        const totalTime = projectTasks.reduce((acc, t) => acc + (t.timeSpentMinutes ?? 0), 0);
         const progress =
           projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
 
@@ -99,37 +100,48 @@ export default function ReportPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports & Statistics</h1>
-          <p className="text-muted-foreground">Overview of project progress and task status.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">レポート・統計</h1>
+            <p className="text-muted-foreground">
+              プロジェクトの進捗とタスクの状況を確認できます。
+            </p>
+          </div>
+          <Link
+            href="/report/weekly"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+          >
+            週次レポートを見る
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground mb-1">Total Tasks</p>
+              <p className="text-sm text-muted-foreground mb-1">タスク数</p>
               <p className="text-3xl font-bold">{tasks?.length || 0}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground mb-1">Completion Rate</p>
+              <p className="text-sm text-muted-foreground mb-1">完了率</p>
               <p className="text-3xl font-bold">{completionRate}%</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground mb-1">Total Time Spent</p>
+              <p className="text-sm text-muted-foreground mb-1">合計作業時間</p>
               <p className="text-3xl font-bold">{(totalTimeSpent / 60).toFixed(1)}h</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground mb-1">Avg Time Per Task</p>
+              <p className="text-sm text-muted-foreground mb-1">平均作業時間/タスク</p>
               <p className="text-3xl font-bold">{(averageTimePerTask / 60).toFixed(1)}h</p>
             </CardContent>
           </Card>
@@ -139,7 +151,7 @@ export default function ReportPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Tasks by Status</CardTitle>
+              <CardTitle>ステータス別タスク</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -174,7 +186,7 @@ export default function ReportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Tasks by Priority</CardTitle>
+              <CardTitle>優先度別タスク</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -211,17 +223,17 @@ export default function ReportPage() {
         {/* Project Statistics Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Project Statistics</CardTitle>
+            <CardTitle>プロジェクト統計</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">Project</TableHead>
-                  <TableHead className="text-right">Total Tasks</TableHead>
-                  <TableHead className="text-right">Completed</TableHead>
-                  <TableHead className="text-right">Progress</TableHead>
-                  <TableHead className="text-right">Time Spent</TableHead>
+                  <TableHead className="w-[200px]">プロジェクト</TableHead>
+                  <TableHead className="text-right">タスク数</TableHead>
+                  <TableHead className="text-right">完了</TableHead>
+                  <TableHead className="text-right">進捗</TableHead>
+                  <TableHead className="text-right">作業時間</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

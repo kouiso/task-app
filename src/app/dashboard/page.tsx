@@ -6,6 +6,8 @@ import { AppLayout } from '@/component/layout/app-layout';
 import { Badge } from '@/component/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Skeleton } from '@/component/ui/skeleton';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
@@ -33,25 +35,25 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      title: 'Total Projects',
+      title: 'プロジェクト数',
       value: totalProjects,
       icon: FolderOpen,
       color: 'text-blue-500',
     },
     {
-      title: 'Total Tasks',
+      title: 'タスク数',
       value: totalTasks,
       icon: ClipboardList,
       color: 'text-purple-500',
     },
     {
-      title: 'Completed Tasks',
+      title: '完了タスク',
       value: completedTasks,
       icon: CheckCircle,
       color: 'text-green-500',
     },
     {
-      title: 'In Progress',
+      title: '進行中',
       value: inProgressTasks,
       icon: Clock,
       color: 'text-orange-500',
@@ -85,7 +87,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">ダッシュボード</h1>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -112,7 +114,7 @@ export default function DashboardPage() {
           {/* Recent Projects */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Projects</CardTitle>
+              <CardTitle>最近のプロジェクト</CardTitle>
             </CardHeader>
             <CardContent>
               {projects && projects.length > 0 ? (
@@ -137,14 +139,14 @@ export default function DashboardPage() {
                           <span className="font-medium">{project.name}</span>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {doneCount} / {taskCount} tasks completed ({progress.toFixed(0)}%)
+                          {doneCount} / {taskCount} タスク完了 ({progress.toFixed(0)}%)
                         </p>
                       </button>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No projects yet</p>
+                <p className="text-muted-foreground">プロジェクトがありません</p>
               )}
             </CardContent>
           </Card>
@@ -152,7 +154,7 @@ export default function DashboardPage() {
           {/* Recent Tasks */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Tasks</CardTitle>
+              <CardTitle>最近のタスク</CardTitle>
             </CardHeader>
             <CardContent>
               {recentTasks.length > 0 ? (
@@ -166,16 +168,18 @@ export default function DashboardPage() {
                     >
                       <span className="font-medium">{task.title}</span>
                       <div className="flex gap-2 mt-1">
-                        <Badge variant={getStatusBadgeVariant(task.status)}>{task.status}</Badge>
+                        <Badge variant={getStatusBadgeVariant(task.status)}>
+                          {TASK_STATUS_LABELS[task.status] ?? task.status}
+                        </Badge>
                         <Badge variant={getPriorityBadgeVariant(task.priority)}>
-                          {task.priority}
+                          {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
                         </Badge>
                       </div>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No tasks yet</p>
+                <p className="text-muted-foreground">タスクがありません</p>
               )}
             </CardContent>
           </Card>

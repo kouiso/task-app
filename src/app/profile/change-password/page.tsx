@@ -48,7 +48,10 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    changePassword.mutate(formData);
+    changePassword.mutate({
+      currentPassword: formData.currentPassword,
+      newPassword: formData.newPassword,
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

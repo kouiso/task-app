@@ -61,34 +61,34 @@ export default function WeeklyReportPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Weekly Report</h1>
-            <p className="text-muted-foreground">Detailed weekly breakdown of task progress.</p>
+            <h1 className="text-3xl font-bold tracking-tight">週次レポート</h1>
+            <p className="text-muted-foreground">週ごとのタスク進捗の詳細レポートです。</p>
           </div>
           <div className="w-[150px]">
             <Select value={weeks} onValueChange={setWeeks}>
               <SelectTrigger>
-                <SelectValue placeholder="Period" />
+                <SelectValue placeholder="期間" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="4">4 Weeks</SelectItem>
-                <SelectItem value="8">8 Weeks</SelectItem>
-                <SelectItem value="12">12 Weeks</SelectItem>
+                <SelectItem value="4">4週間</SelectItem>
+                <SelectItem value="8">8週間</SelectItem>
+                <SelectItem value="12">12週間</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Overview Stats */}
+        {/* 概要統計 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground mb-1">Total Completed</p>
+              <p className="text-sm text-muted-foreground mb-1">完了タスク合計</p>
               <p className="text-3xl font-bold">{reportData?.totalCompleted || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground mb-1">Average per Week</p>
+              <p className="text-sm text-muted-foreground mb-1">週平均</p>
               <p className="text-3xl font-bold">
                 {reportData?.totalCompleted
                   ? Math.round(reportData.totalCompleted / Number.parseInt(weeks, 10))
@@ -98,7 +98,7 @@ export default function WeeklyReportPage() {
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground mb-1">Period</p>
+              <p className="text-sm text-muted-foreground mb-1">対象期間</p>
               <p className="text-lg font-semibold">
                 {reportData?.startDate && reportData?.endDate
                   ? `${new Date(reportData.startDate).toLocaleDateString()} - ${new Date(reportData.endDate).toLocaleDateString()}`
@@ -111,7 +111,7 @@ export default function WeeklyReportPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="col-span-1 lg:col-span-2">
             <CardHeader>
-              <CardTitle>Completed Tasks by Week</CardTitle>
+              <CardTitle>週別完了タスク数</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -126,7 +126,7 @@ export default function WeeklyReportPage() {
                       type="monotone"
                       dataKey="completed"
                       stroke="#8884d8"
-                      name="Total Completed"
+                      name="完了数"
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -137,7 +137,7 @@ export default function WeeklyReportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Priority Distribution</CardTitle>
+              <CardTitle>優先度別分布</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -148,8 +148,8 @@ export default function WeeklyReportPage() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="urgent" fill="#f44336" name="Urgent" />
-                    <Bar dataKey="high" fill="#ff9800" name="High" />
+                    <Bar dataKey="urgent" fill="#f44336" name="緊急" />
+                    <Bar dataKey="high" fill="#ff9800" name="高" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -158,7 +158,7 @@ export default function WeeklyReportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Status Breakdown</CardTitle>
+              <CardTitle>ステータス別内訳</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -169,9 +169,9 @@ export default function WeeklyReportPage() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="done" fill="#4caf50" name="Done" stackId="status" />
-                    <Bar dataKey="inProgress" fill="#2196f3" name="In Progress" stackId="status" />
-                    <Bar dataKey="inReview" fill="#ff9800" name="In Review" stackId="status" />
+                    <Bar dataKey="done" fill="#4caf50" name="完了" stackId="status" />
+                    <Bar dataKey="inProgress" fill="#2196f3" name="進行中" stackId="status" />
+                    <Bar dataKey="inReview" fill="#ff9800" name="レビュー中" stackId="status" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

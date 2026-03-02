@@ -7,45 +7,47 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 const features = [
   {
     icon: <ClipboardList className="w-12 h-12 text-primary" />,
-    title: 'Task Management',
+    title: 'タスク管理',
     description:
-      'Create, assign, and track tasks with multiple status options, priorities, and due dates.',
+      'タスクの作成・担当者割り当て・進捗管理が可能。ステータス、優先度、期限を柔軟に設定できます。',
   },
   {
     icon: <Users className="w-12 h-12 text-primary" />,
-    title: 'Team Collaboration',
-    description: 'Organize your work into projects with team members and custom workflows.',
+    title: 'チームコラボレーション',
+    description:
+      'プロジェクト単位でチームメンバーを管理。コメント機能でタスクごとのコミュニケーションが行えます。',
   },
   {
     icon: <BarChart3 className="w-12 h-12 text-primary" />,
-    title: 'Progress Tracking',
+    title: '進捗トラッキング',
     description:
-      'Monitor progress with visual indicators, time tracking, and completion statistics.',
+      'ダッシュボードと週次レポートで進捗を可視化。タイマー機能で作業時間も記録できます。',
   },
   {
     icon: <Lock className="w-12 h-12 text-primary" />,
-    title: 'Project Organization',
-    description: 'Collaborate with your team through comments, mentions, and real-time updates.',
+    title: 'プロジェクト管理',
+    description:
+      'プロジェクトをカラーで色分け、アーカイブ機能で整理。ロールベースの権限管理で安全に運用できます。',
   },
 ];
 
 const techStack = [
   {
-    category: 'Frontend',
+    category: 'フロントエンド',
     items: [
-      '• Next.js 15 - React framework',
-      '• Tailwind CSS - Utility-first CSS',
-      '• Shadcn/ui - Component library',
-      '• tRPC - Type-safe API layer',
+      '• Next.js 15 - Reactフレームワーク',
+      '• Tailwind CSS - ユーティリティファーストCSS',
+      '• shadcn/ui - コンポーネントライブラリ',
+      '• tRPC - 型安全APIレイヤー',
     ],
   },
   {
-    category: 'Backend',
+    category: 'バックエンド',
     items: [
-      '• Prisma - Database ORM',
-      '• PostgreSQL - Database',
-      '• NextAuth.js - Authentication',
-      '• Vercel - Hosting',
+      '• Prisma - データベースORM',
+      '• PostgreSQL - データベース',
+      '• jose + bcryptjs - JWT認証',
+      '• Vercel - ホスティング',
     ],
   },
 ];
@@ -55,10 +57,10 @@ export default function AboutPage() {
     <AppLayout>
       <div className="space-y-8">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">About Task App</h1>
+          <h1 className="text-4xl font-bold mb-4">Task Appについて</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            A modern task management application built with Next.js, tRPC, and Prisma. Designed for
-            teams who want to stay organized and productive.
+            Next.js、tRPC、Prismaで構築されたモダンなタスク管理アプリケーションです。
+            チームの生産性向上を目的に設計されています。
           </p>
         </div>
 
@@ -78,7 +80,7 @@ export default function AboutPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Technology Stack</CardTitle>
+            <CardTitle>技術スタック</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

@@ -1,7 +1,7 @@
 'use client';
 
 import type { TaskStatus } from '@prisma/client';
-import { CheckSquare, Plus, Trash2 } from 'lucide-react';
+import { CheckSquare, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -35,6 +35,8 @@ import {
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
 import { Textarea } from '@/component/ui/textarea';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function TaskPageContent() {
@@ -46,6 +48,8 @@ function TaskPageContent() {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [commentContent, setCommentContent] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
 
   const searchParams = useSearchParams();
   const taskIdParam = searchParams.get('taskId');
@@ -69,7 +73,7 @@ function TaskPageContent() {
   );
 
   const { data: projects } = api.project.getAll.useQuery();
-  const { data: users } = api.user.getAll.useQuery();
+  const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: taskDetail } = api.task.getById.useQuery(
     { id: selectedTask ?? '' },
     { enabled: !!selectedTask },
@@ -128,6 +132,24 @@ function TaskPageContent() {
     },
   });
 
+  const updateCommentMutation = api.comment.update.useMutation({
+    onSuccess: () => {
+      if (selectedTask) {
+        utils.task.getById.invalidate({ id: selectedTask });
+      }
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+    },
+  });
+
+  const deleteCommentMutation = api.comment.delete.useMutation({
+    onSuccess: () => {
+      if (selectedTask) {
+        utils.task.getById.invalidate({ id: selectedTask });
+      }
+    },
+  });
+
   const handleCreate = () => {
     setEditingTask(undefined);
     setDialogOpen(true);
@@ -154,7 +176,7 @@ function TaskPageContent() {
   };
 
   const handleDelete = (taskId: string) => {
-    if (confirm('Are you sure you want to delete this task?')) {
+    if (confirm('このタスクを削除してもよろしいですか？')) {
       deleteMutation.mutate({ id: taskId });
     }
   };
@@ -168,12 +190,11 @@ function TaskPageContent() {
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-        estimatedHours: data.estimatedHours || null,
+        estimatedHours: data.estimatedHours ?? null,
         assigneeId: data.assigneeId || null,
       });
     } else {
       if (!session?.user?.id) {
-        console.error('No user session found');
         return;
       }
       createMutation.mutate({
@@ -184,7 +205,6 @@ function TaskPageContent() {
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
         estimatedHours: data.estimatedHours,
         projectId: data.projectId,
-        createdById: session.user.id,
         assigneeId: data.assigneeId || undefined,
       });
     }
@@ -202,12 +222,11 @@ function TaskPageContent() {
   };
 
   const handleCommentSubmit = () => {
-    if (!commentContent.trim() || !selectedTask || !session?.user?.id) return;
+    if (!commentContent.trim() || !selectedTask) return;
 
     createCommentMutation.mutate({
       content: commentContent.trim(),
       taskId: selectedTask,
-      userId: session.user.id,
     });
   };
 
@@ -223,6 +242,10 @@ function TaskPageContent() {
     setSelectedTasks(checked ? new Set(tasks?.map((t) => t.id) || []) : new Set());
   };
 
+  useEffect(() => {
+    setSelectedTasks(new Set());
+  }, []);
+
   const handleBulkComplete = () => {
     if (selectedTasks.size > 0) {
       bulkCompleteMutation.mutate({ ids: Array.from(selectedTasks) });
@@ -230,7 +253,7 @@ function TaskPageContent() {
   };
 
   const handleBulkDelete = () => {
-    if (selectedTasks.size > 0 && confirm(`Delete ${selectedTasks.size} tasks?`)) {
+    if (selectedTasks.size > 0 && confirm(`${selectedTasks.size}件のタスクを削除しますか？`)) {
       bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
     }
   };
@@ -240,6 +263,15 @@ function TaskPageContent() {
       bulkUpdateStatusMutation.mutate({ ids: Array.from(selectedTasks), status });
     }
   };
+
+  const selectAllState =
+    tasks && tasks.length > 0
+      ? selectedTasks.size === 0
+        ? false
+        : selectedTasks.size === tasks.length
+          ? true
+          : 'indeterminate'
+      : false;
 
   if (tasksLoading) {
     return (
@@ -256,41 +288,41 @@ function TaskPageContent() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
+            <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
             {selectedTasks.size > 0 && (
-              <span className="text-sm text-muted-foreground">({selectedTasks.size} selected)</span>
+              <span className="text-sm text-muted-foreground">({selectedTasks.size}件選択中)</span>
             )}
           </div>
           <div className="flex items-center gap-2">
             {selectedTasks.size > 0 && (
               <>
                 <Button variant="outline" size="sm" onClick={handleBulkComplete}>
-                  <CheckSquare className="mr-2 h-4 w-4" /> Complete
+                  <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      Change Status
+                      ステータス変更
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onClick={() => handleBulkUpdateStatus('TODO')}>
-                      To Do
+                      未対応
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBulkUpdateStatus('IN_PROGRESS')}>
-                      In Progress
+                      進行中
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBulkUpdateStatus('IN_REVIEW')}>
-                      In Review
+                      レビュー中
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBulkUpdateStatus('DONE')}>
-                      Done
+                      完了
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBulkUpdateStatus('CANCELLED')}>
-                      Cancelled
+                      キャンセル
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBulkUpdateStatus('BLOCKED')}>
-                      Blocked
+                      ブロック
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -300,12 +332,12 @@ function TaskPageContent() {
                   className="text-destructive hover:text-destructive"
                   onClick={handleBulkDelete}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  <Trash2 className="mr-2 h-4 w-4" /> 削除
                 </Button>
               </>
             )}
             <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" /> New Task
+              <Plus className="mr-2 h-4 w-4" /> 新規タスク
             </Button>
           </div>
         </div>
@@ -314,20 +346,20 @@ function TaskPageContent() {
           <div className="flex items-center space-x-2">
             <Checkbox
               id="select-all"
-              checked={!!(tasks && tasks.length > 0 && selectedTasks.size === tasks.length)}
+              checked={selectAllState}
               onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
             />
-            <Label htmlFor="select-all">Select All</Label>
+            <Label htmlFor="select-all">すべて選択</Label>
           </div>
 
           <div className="flex gap-2 w-full sm:w-auto ml-auto">
             <div className="w-[200px]">
               <Select value={filterProject} onValueChange={setFilterProject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Projects" />
+                  <SelectValue placeholder="すべてのプロジェクト" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
+                  <SelectItem value="all">すべてのプロジェクト</SelectItem>
                   {projects?.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
@@ -342,16 +374,16 @@ function TaskPageContent() {
                 onValueChange={(value) => setFilterStatus(value as TaskStatus | 'all')}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder="すべてのステータス" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="TODO">To Do</SelectItem>
-                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                  <SelectItem value="IN_REVIEW">In Review</SelectItem>
-                  <SelectItem value="DONE">Done</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  <SelectItem value="BLOCKED">Blocked</SelectItem>
+                  <SelectItem value="all">すべてのステータス</SelectItem>
+                  <SelectItem value="TODO">未対応</SelectItem>
+                  <SelectItem value="IN_PROGRESS">進行中</SelectItem>
+                  <SelectItem value="IN_REVIEW">レビュー中</SelectItem>
+                  <SelectItem value="DONE">完了</SelectItem>
+                  <SelectItem value="CANCELLED">キャンセル</SelectItem>
+                  <SelectItem value="BLOCKED">ブロック</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -385,8 +417,8 @@ function TaskPageContent() {
             ))
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>No tasks found.</p>
-              <p>Create your first task to get started!</p>
+              <p>タスクが見つかりません。</p>
+              <p>最初のタスクを作成しましょう！</p>
             </div>
           )}
         </div>
@@ -398,7 +430,6 @@ function TaskPageContent() {
           initialData={editingTask}
           projects={projects || []}
           users={users || []}
-          currentUserId={session?.user?.id || ''}
         />
 
         <Dialog open={detailOpen} onOpenChange={(isOpen) => !isOpen && handleDetailClose()}>
@@ -406,7 +437,7 @@ function TaskPageContent() {
             <DialogHeader>
               <DialogTitle className="text-xl">{taskDetail?.title}</DialogTitle>
               <DialogDescription>
-                In Project:{' '}
+                プロジェクト:{' '}
                 <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
               </DialogDescription>
             </DialogHeader>
@@ -415,7 +446,7 @@ function TaskPageContent() {
               <div className="space-y-6">
                 <div>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {taskDetail.description || 'No description provided.'}
+                    {taskDetail.description || '説明はありません。'}
                   </p>
                 </div>
 
@@ -423,15 +454,19 @@ function TaskPageContent() {
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-muted-foreground block mb-1">Status</span>
-                    <Badge variant="outline">{taskDetail.status}</Badge>
+                    <span className="text-muted-foreground block mb-1">ステータス</span>
+                    <Badge variant="outline">
+                      {TASK_STATUS_LABELS[taskDetail.status] ?? taskDetail.status}
+                    </Badge>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block mb-1">Priority</span>
-                    <Badge variant="outline">{taskDetail.priority}</Badge>
+                    <span className="text-muted-foreground block mb-1">優先度</span>
+                    <Badge variant="outline">
+                      {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
+                    </Badge>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block mb-1">Assignee</span>
+                    <span className="text-muted-foreground block mb-1">担当者</span>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={taskDetail.assignee?.avatar || ''} />
@@ -442,16 +477,16 @@ function TaskPageContent() {
                         </AvatarFallback>
                       </Avatar>
                       <span>
-                        {taskDetail.assignee?.name || taskDetail.assignee?.email || 'Unassigned'}
+                        {taskDetail.assignee?.name || taskDetail.assignee?.email || '未割当'}
                       </span>
                     </div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block mb-1">Due Date</span>
+                    <span className="text-muted-foreground block mb-1">期限</span>
                     <span>
                       {taskDetail.dueDate
                         ? new Date(taskDetail.dueDate).toLocaleDateString()
-                        : 'No due date'}
+                        : '期限なし'}
                     </span>
                   </div>
                 </div>
@@ -460,7 +495,7 @@ function TaskPageContent() {
 
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <h3 className="font-semibold">Comments</h3>
+                    <h3 className="font-semibold">コメント</h3>
                     <Badge variant="secondary" className="rounded-full px-2">
                       {taskDetail.comments?.length || 0}
                     </Badge>
@@ -469,7 +504,7 @@ function TaskPageContent() {
                   <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
                     {taskDetail.comments?.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-2">
-                        No comments yet.
+                        コメントはまだありません。
                       </p>
                     )}
                     {taskDetail.comments?.map((comment) => (
@@ -485,11 +520,79 @@ function TaskPageContent() {
                             <span className="font-medium">
                               {comment.user.name || comment.user.email}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(comment.createdAt).toLocaleString()}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(comment.createdAt).toLocaleString()}
+                              </span>
+                              {comment.userId === session?.user?.id && (
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => {
+                                      setEditingCommentId(comment.id);
+                                      setEditingCommentContent(comment.content);
+                                    }}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      if (confirm('このコメントを削除しますか？')) {
+                                        deleteCommentMutation.mutate({ id: comment.id });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-muted-foreground">{comment.content}</p>
+                          {editingCommentId === comment.id ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editingCommentContent}
+                                onChange={(e) => setEditingCommentContent(e.target.value)}
+                                className="resize-none"
+                                rows={2}
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingCommentId(null);
+                                    setEditingCommentContent('');
+                                  }}
+                                >
+                                  キャンセル
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    if (editingCommentContent.trim()) {
+                                      updateCommentMutation.mutate({
+                                        id: comment.id,
+                                        content: editingCommentContent.trim(),
+                                      });
+                                    }
+                                  }}
+                                  disabled={
+                                    !editingCommentContent.trim() || updateCommentMutation.isPending
+                                  }
+                                >
+                                  {updateCommentMutation.isPending ? '更新中...' : '更新'}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground">{comment.content}</p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -497,7 +600,7 @@ function TaskPageContent() {
 
                   <div className="space-y-2">
                     <Textarea
-                      placeholder="Add a comment..."
+                      placeholder="コメントを追加..."
                       value={commentContent}
                       onChange={(e) => setCommentContent(e.target.value)}
                       className="resize-none"
@@ -509,7 +612,7 @@ function TaskPageContent() {
                         onClick={handleCommentSubmit}
                         disabled={!commentContent.trim() || createCommentMutation.isPending}
                       >
-                        {createCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
+                        {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
                       </Button>
                     </div>
                   </div>
@@ -518,7 +621,7 @@ function TaskPageContent() {
             )}
 
             <DialogFooter>
-              <Button onClick={handleDetailClose}>Close</Button>
+              <Button onClick={handleDetailClose}>閉じる</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
