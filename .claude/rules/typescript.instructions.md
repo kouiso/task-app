@@ -1,0 +1,1 @@
+../../prompt/instructions/typescript.instructions.md
