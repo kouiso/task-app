@@ -256,7 +256,7 @@ if (currentUser?.role !== 'ADMIN') {
 - 一般ユーザーでアクセスすると拒否される
 - 管理者でアクセスすると一覧が見える
 
-![権限エラー画面](./screenshots/user-list.png)
+![ユーザー管理ページ（管理者がアクセスした画面）](./screenshots/user-list.png)
 
 #### 権限チェックの判定ロジック
 
@@ -274,7 +274,7 @@ if (currentUser?.role !== 'ADMIN') {
 - 一般ユーザーでアクセスすると拒否される
 - 管理者でアクセスすると一覧が見える
 
-![権限エラー画面](./screenshots/user-list.png)
+![ユーザー管理ページ（管理者がアクセスした画面）](./screenshots/user-list.png)
 
 ---
 

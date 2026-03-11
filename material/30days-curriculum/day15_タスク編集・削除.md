@@ -198,9 +198,9 @@ const updateMutation =
   api.task.update.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-      if (selectedTaskId) {
+      if (selectedTask) {
         utils.task.getById.invalidate(
-          { id: selectedTaskId }
+          { id: selectedTask }
         );
       }
       setDialogOpen(false);

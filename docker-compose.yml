@@ -61,6 +61,21 @@ services:
     ports:
       - "${_DOCKER_COMPOSE_HOST_PORT_SCHEMASPY:-8080}:8080"
 
+  test-db:
+    image: postgres:16-alpine
+    container_name: taskapp-test-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: taskapp_test
+    ports:
+      - "${_DOCKER_COMPOSE_HOST_PORT_TEST_DB:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres-data:
   backend-nodemodules-volume:

@@ -230,6 +230,30 @@ function TaskPageContent() {
     });
   };
 
+  const handleStartEdit = (comment: { id: string; content: string }) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentContent(comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  };
+
+  const handleSaveEdit = (commentId: string) => {
+    if (!editingCommentContent.trim()) return;
+    updateCommentMutation.mutate({
+      id: commentId,
+      content: editingCommentContent.trim(),
+    });
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    if (confirm('このコメントを削除しますか？')) {
+      deleteCommentMutation.mutate({ id: commentId });
+    }
+  };
+
   const handleTaskSelect = (taskId: string, checked: boolean) => {
     setSelectedTasks((prev) => {
       const next = new Set(prev);
@@ -530,10 +554,7 @@ function TaskPageContent() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6"
-                                    onClick={() => {
-                                      setEditingCommentId(comment.id);
-                                      setEditingCommentContent(comment.content);
-                                    }}
+                                    onClick={() => handleStartEdit(comment)}
                                   >
                                     <Pencil className="h-3 w-3" />
                                   </Button>
@@ -541,11 +562,7 @@ function TaskPageContent() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6 text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                      if (confirm('このコメントを削除しますか？')) {
-                                        deleteCommentMutation.mutate({ id: comment.id });
-                                      }
-                                    }}
+                                    onClick={() => handleDeleteComment(comment.id)}
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
@@ -562,26 +579,12 @@ function TaskPageContent() {
                                 rows={2}
                               />
                               <div className="flex gap-2 justify-end">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingCommentId(null);
-                                    setEditingCommentContent('');
-                                  }}
-                                >
+                                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
                                   キャンセル
                                 </Button>
                                 <Button
                                   size="sm"
-                                  onClick={() => {
-                                    if (editingCommentContent.trim()) {
-                                      updateCommentMutation.mutate({
-                                        id: comment.id,
-                                        content: editingCommentContent.trim(),
-                                      });
-                                    }
-                                  }}
+                                  onClick={() => handleSaveEdit(comment.id)}
                                   disabled={
                                     !editingCommentContent.trim() || updateCommentMutation.isPending
                                   }

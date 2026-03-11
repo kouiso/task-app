@@ -83,9 +83,9 @@ test.describe('Curriculum Screenshots', () => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000);
-      const nav = page.locator('nav, [role="navigation"], aside').first();
-      await expect(nav).toBeVisible();
-      await screenshot(page, 'sidebar.png');
+      const sidebar = page.locator('div.hidden.border-r').first();
+      await expect(sidebar).toBeVisible();
+      await sidebar.screenshot({ path: `${SCREENSHOT_DIR}/sidebar.png` });
     });
 
     // --- プロジェクト ---

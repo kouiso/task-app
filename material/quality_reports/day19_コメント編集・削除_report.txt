@@ -1,53 +1,51 @@
 🔍 品質チェック開始: material/30days-curriculum/day19_コメント編集・削除.md
 
-📊 [1/4] 視覚化チェック...
-表の数: 9
-スクショ位置: 5
-Mermaid図: 0
+==========================================
+📊 Step 1: 視覚化チェック
+==========================================
+表の数: 35
+スクショ位置: 4
+Mermaid図: 1
 ✅ 表の数OK
 ✅ スクショ位置OK
 ✅ 視覚化チェックPASS
+✅ Step 1 PASS
 
-📏 [2/4] コードブロック長さチェック...
+==========================================
+📏 Step 2: コードブロック長さチェック
+==========================================
+✅ 全13個のコードブロックが25行以下
+✅ Step 2 PASS
 
-コードブロック#1 (41行):
-// filepath: src/components/task/TaskComments.tsx
-import { useSession } from 'next-auth/react';
-import { IconButton } from '@mui/material';
-...
-    </Box>
-  );
-}
+==========================================
+🔗 Step 3: ステップ連続性チェック
+==========================================
+検出されたステップ数: 7
+✅ 全7ステップが完全
+✅ Step 3 PASS
 
-コードブロック#2 (71行):
-// filepath: src/components/task/TaskComments.tsx
-import { useState } from 'react';
-import { TextField, Button } from '@mui/material';
-...
-    </Box>
-  );
-}
+==========================================
+🚫 Step 4: 禁止ワードチェック
+==========================================
+✅ 禁止ワードなし
+✅ Step 4 PASS
 
-コードブロック#3 (33行):
-// filepath: src/components/task/TaskComments.tsx
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const utils = api.useUtils();
-...
-    </Button>
-  );
-}
+==========================================
+🛠️ Step 5: 技術スタックチェック
+==========================================
+✅ shadcn/ui パターン検出
+✅ 技術スタックチェックPASS
+✅ Step 5 PASS
 
-コードブロック#4 (40行):
-// filepath: src/components/task/TaskComments.tsx
-export function TaskComments({ taskId }: TaskCommentsProps) {
-  const deleteCommentMutation = api.comment.delete.useMutation({
-...
-    </Box>
-  );
-}
+==========================================
+📝 Step 6: コード完全性チェック
+==========================================
+コードブロック数: 13
+filepath:コメント付き: 10
+✅ コード完全性チェックPASS
+✅ Step 6 PASS
 
-合計4個のコードブロックが制限超過
-❌ コードブロック#1: 41行（上限25行）
-❌ コードブロック#2: 71行（上限25行）
-❌ コードブロック#3: 33行（上限25行）
-❌ コードブロック#4: 40行（上限25行）
+==========================================
+📋 品質チェック結果
+==========================================
+✅ ALL CHECKS PASS

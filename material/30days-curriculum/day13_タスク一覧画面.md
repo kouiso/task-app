@@ -352,14 +352,14 @@ const handleDelete = () => {};
 ```typescript
 // filepath: src/app/task/page.tsx
 // 詳細表示用のstate
-const [selectedTaskId, setSelectedTaskId] =
+const [selectedTask, setSelectedTask] =
   useState<string | null>(null);
 const [detailOpen, setDetailOpen] =
   useState(false);
 
 // Step 5 のプレースホルダーを本実装に差し替え
 const handleDetail = (taskId: string) => {
-  setSelectedTaskId(taskId);
+  setSelectedTask(taskId);
   setDetailOpen(true);
 };
 ```
@@ -369,12 +369,12 @@ const handleDetail = (taskId: string) => {
 // 選択タスクの詳細データを取得
 const { data: taskDetail } =
   api.task.getById.useQuery(
-    { id: selectedTaskId || '' },
-    { enabled: !!selectedTaskId },
+    { id: selectedTask || '' },
+    { enabled: !!selectedTask },
   );
 ```
 
-> 💡 `enabled: !!selectedTaskId` で、タスクが選択されている時だけAPIを呼びます。Day 12 で学んだパターンと同じです。
+> 💡 `enabled: !!selectedTask` で、タスクが選択されている時だけAPIを呼びます。Day 12 で学んだパターンと同じです。
 
 ✅ **確認ポイント**:
 - カードクリックで詳細ダイアログが開く
@@ -420,7 +420,7 @@ npm run dev
 | タスクが表示されない | フィルタ条件が厳しすぎる | 「全て」を選択してデータがあるか確認 |
 | カードが表示されない | TaskCard の import ミス | `@/component/task/task-card` を確認 |
 | フィルタが効かない | useQuery のパラメータが渡っていない | スプレッド演算子の構文を確認 |
-| 詳細が取得できない | `enabled` 条件が間違っている | `!!selectedTaskId` を確認 |
+| 詳細が取得できない | `enabled` 条件が間違っている | `!!selectedTask` を確認 |
 
 ## 📝 今日学んだ用語
 

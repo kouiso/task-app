@@ -7,7 +7,7 @@
 さらに、手動で作業時間を記録するダイアログも
 作ります。
 
-![タイマー動作中のタスク](./screenshots/task-timer.png)
+![手動時間記録ダイアログ](./screenshots/task-timer.png)
 
 ## 🤔 なぜこれを作るのか？
 
@@ -235,7 +235,7 @@ export function TaskTimer({
 - タイマー動作中は1秒ごとに値が変わる
 - 停止中は0にリセットされる
 
-![カウントアップ中のタイマー](./screenshots/task-timer.png)
+![手動時間記録ダイアログ](./screenshots/task-timer.png)
 
 ---
 
