@@ -11,10 +11,10 @@ async function login(page: Page) {
   await page.waitForURL('/dashboard', { timeout: 15000 });
 }
 
-async function screenshot(page: Page, name: string) {
+async function screenshot(page: Page, name: string, fullPage = true) {
   await page.screenshot({
     path: `${SCREENSHOT_DIR}/${name}`,
-    fullPage: true,
+    fullPage,
   });
 }
 
@@ -106,43 +106,57 @@ test.describe('Curriculum Screenshots', () => {
         await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
         await page.waitForTimeout(500);
       }
-      await screenshot(page, 'project-create-dialog.png');
+      await screenshot(page, 'project-create-dialog.png', false);
     });
 
     test('project detail dialog (edit mode)', async ({ page }) => {
       await page.goto('/project');
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1500);
-      // カード内のPencilアイコンボタン（variant="ghost" size="icon"）をクリック
-      const pencilBtn = page.locator('main button[class*="ghost"]').first();
-      if (await pencilBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await pencilBtn.click();
+      // border-leftスタイル付きカード内の最初のbutton = Pencil(編集)ボタン
+      const card = page.locator('[style*="border-left"]').first();
+      if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
+        const editBtn = card.locator('button').first();
+        await editBtn.click();
         await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
         await page.waitForTimeout(500);
       }
-      await screenshot(page, 'project-detail-dialog.png');
+      await screenshot(page, 'project-detail-dialog.png', false);
     });
 
     test('project add member', async ({ page }) => {
       await page.goto('/project');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(1500);
-      // カード本体をクリックして詳細ダイアログを開く
-      const projectCard = page.locator('main').getByText('Webサイトリニューアル').first();
-      if (await projectCard.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await projectCard.click();
-        await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
-        await page.waitForTimeout(500);
-        // 詳細ダイアログ内の「メンバー追加」ボタンをクリック
-        const memberBtn = page
-          .locator('[role="dialog"]')
-          .getByRole('button', { name: /メンバー追加/ });
-        if (await memberBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await memberBtn.click();
-          await page.waitForTimeout(500);
+      await page.waitForTimeout(2000);
+      // プロジェクトカードをクリックして詳細ダイアログを開く
+      const card = page.locator('[style*="border-left"]').first();
+      await card.click();
+      // tRPCデータ取得完了を待つ（メンバー追加ボタンが表示されるまで）
+      const memberBtn = page
+        .locator('[role="dialog"]')
+        .getByRole('button', { name: /メンバー追加/ });
+      await memberBtn.waitFor({ timeout: 15000 });
+      await page.waitForTimeout(500);
+      // メンバー追加ボタンクリック → 別ダイアログが開く
+      await memberBtn.click();
+      // メンバー追加ダイアログが開くのを待つ（説明テキストで判定）
+      await page
+        .getByText('このプロジェクトに新しいメンバーを追加します')
+        .waitFor({ timeout: 5000 });
+      await page.waitForTimeout(500);
+      // 2重オーバーレイで画面が暗くなるため、最初のダイアログを非表示にする
+      await page.evaluate(() => {
+        const overlays = document.querySelectorAll('[data-state="open"][class*="bg-black"]');
+        if (overlays.length >= 2) {
+          (overlays[0] as HTMLElement).style.display = 'none';
         }
-      }
-      await screenshot(page, 'project-add-member.png');
+        const dialogs = document.querySelectorAll('[role="dialog"]');
+        if (dialogs.length >= 2) {
+          (dialogs[0] as HTMLElement).style.display = 'none';
+        }
+      });
+      await page.waitForTimeout(300);
+      await screenshot(page, 'project-add-member.png', false);
     });
 
     // --- タスク ---
@@ -164,7 +178,7 @@ test.describe('Curriculum Screenshots', () => {
         await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
         await page.waitForTimeout(500);
       }
-      await screenshot(page, 'task-create-dialog.png');
+      await screenshot(page, 'task-create-dialog.png', false);
     });
 
     test('task detail dialog', async ({ page }) => {
@@ -176,43 +190,60 @@ test.describe('Curriculum Screenshots', () => {
       if (await taskTitle.isVisible({ timeout: 3000 }).catch(() => false)) {
         await taskTitle.click();
         await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
-        await page.waitForTimeout(1000);
+        // tRPCデータ取得完了を待つ（コメントセクションが表示されるまで）
+        await page
+          .locator('[role="dialog"]')
+          .getByText(/コメント/)
+          .first()
+          .waitFor({ timeout: 10000 })
+          .catch(() => null);
+        await page.waitForTimeout(500);
       }
-      await screenshot(page, 'task-detail-dialog.png');
+      await screenshot(page, 'task-detail-dialog.png', false);
     });
 
     test('task comment edit UI', async ({ page }) => {
       await page.goto('/task');
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1500);
-      // タスクカードのタイトルボタンをクリック
-      const taskTitle = page.locator('button[type="button"].w-full.text-left').first();
-      if (await taskTitle.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await taskTitle.click();
-        await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
-        await page.waitForTimeout(1000);
-        // ダイアログ内の編集ボタンをクリック
-        const editBtn = page
-          .locator('[role="dialog"]')
-          .getByRole('button', { name: /編集/i })
-          .first();
-        if (await editBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await editBtn.click();
-          await page.waitForTimeout(500);
+      // 「デザインモックアップ作成」タスクを開く（adminのコメントがある）
+      const targetTask = page.getByRole('button', { name: /デザインモックアップ/ }).first();
+      if (await targetTask.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await targetTask.click();
+      } else {
+        // フォールバック：最初のタスクを開く
+        const taskTitle = page.locator('button[type="button"].w-full.text-left').first();
+        if (await taskTitle.isVisible({ timeout: 3000 }).catch(() => false)) {
+          await taskTitle.click();
         }
       }
-      await screenshot(page, 'task-comment-edit.png');
+      await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
+      // tRPCデータ取得完了を待つ
+      await page
+        .locator('[role="dialog"]')
+        .getByText(/コメント/)
+        .first()
+        .waitFor({ timeout: 10000 })
+        .catch(() => null);
+      await page.waitForTimeout(1000);
+      // コメント横のPencilアイコンボタンをクリック（SVGクラス lucide-pencil）
+      const commentEditBtn = page.locator('[role="dialog"] button:has(svg.lucide-pencil)').first();
+      if (await commentEditBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await commentEditBtn.click();
+        await page.waitForTimeout(500);
+      }
+      await screenshot(page, 'task-comment-edit.png', false);
     });
 
     test('task timer', async ({ page }) => {
       await page.goto('/task');
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1500);
-      // タスクカードのタイトルボタンをクリック
-      const taskTitle = page.locator('button[type="button"].w-full.text-left').first();
-      if (await taskTitle.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await taskTitle.click();
-        await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
+      // タイマーはタスクカード上にあり、詳細ダイアログにはない
+      // カード上の「時間記録」ボタンをクリックしてタイマーUIを表示
+      const timerBtn = page.getByRole('button', { name: /時間を記録/ }).first();
+      if (await timerBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await timerBtn.click();
         await page.waitForTimeout(1000);
       }
       await screenshot(page, 'task-timer.png');

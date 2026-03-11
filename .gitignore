@@ -96,7 +96,8 @@ test-*.mjs
 test-*.png
 manual-test-*.png
 *-screenshot.png
-*-error.png
+# *-error.png はルートのみ（教材用 login-error.png を除外しないため）
+/*-error.png
 debug-*.mjs
 setup-*.mjs
 inspect-*.mjs
