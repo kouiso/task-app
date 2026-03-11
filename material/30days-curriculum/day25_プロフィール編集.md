@@ -601,6 +601,15 @@ const handleChange = (
     [name]: value,
   }));
 };
+
+// パスワード表示切替
+const toggleShowPassword = (
+  field: keyof typeof showPassword
+) => {
+  setShowPassword((prev) => ({
+    ...prev, [field]: !prev[field],
+  }));
+};
 ```
 
 ```typescript
@@ -827,15 +836,6 @@ const handleSubmit = async (
       formData.currentPassword,
     newPassword: formData.newPassword,
   });
-};
-
-const toggleShowPassword = (
-  field: keyof typeof showPassword
-) => {
-  setShowPassword((prev) => ({
-    ...prev,
-    [field]: !prev[field],
-  }));
 };
 ```
 

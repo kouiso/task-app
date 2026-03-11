@@ -129,18 +129,10 @@ import {
 } from '@/component/ui/card';
 ```
 
-続いて、テーブルと定数のインポートを追加します。
+続いて、APIクライアントのインポートを追加します。
 
 ```typescript
 // filepath: src/app/report/page.tsx
-import {
-  Table, TableBody, TableCell,
-  TableHead, TableHeader, TableRow,
-} from '@/component/ui/table';
-import { TASK_PRIORITY_COLORS }
-  from '@/lib/constant/priority';
-import { TASK_STATUS_COLORS }
-  from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 export default function ReportPage() {

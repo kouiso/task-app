@@ -136,10 +136,7 @@ useEffect(() => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// ユーザー一覧を取得（担当者選択用）
-const { data: users } =
-  api.search.getProjectMembers.useQuery();
-
+// users は Day 14 Step 8 で取得済み
 const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>();
 
@@ -201,9 +198,9 @@ const updateMutation =
   api.task.update.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-      if (selectedTask) {
+      if (selectedTaskId) {
         utils.task.getById.invalidate(
-          { id: selectedTask }
+          { id: selectedTaskId }
         );
       }
       setDialogOpen(false);
@@ -347,7 +344,7 @@ const handleCreate = () => {
   onEdit={handleEdit}
   onDelete={handleDelete}
   onClick={() =>
-    handleTaskClick(task.id)
+    handleDetail(task.id)
   }
 />
 ```

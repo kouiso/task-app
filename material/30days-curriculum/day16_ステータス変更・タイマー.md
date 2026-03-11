@@ -448,6 +448,29 @@ export function TimeLogDialog({
     setMinutes('');
     onClose();
   };
+
+  // 入力バリデーション: 数字のみ許可
+  const handleHoursChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value = e.target.value;
+    if (value === '' || /^\d+$/.test(value))
+      setHours(value);
+  };
+```
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+  // 分は0-59の範囲に制限
+  const handleMinutesChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value = e.target.value;
+    if (value === ''
+      || (/^\d+$/.test(value)
+        && Number.parseInt(value, 10) < 60))
+      setMinutes(value);
+  };
 ```
 
 ```typescript
@@ -523,47 +546,20 @@ const addTimeMutation =
   });
 ```
 
-続けて、入力値のバリデーション関数を定義します。
-数字以外の入力を防ぎ、分は0〜59の範囲に制限します。
+続けて、送信ボタンの有効/無効を制御する`isValid`を定義します。
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 入力バリデーション: 時間
-const handleHoursChange = (
-  e: React.ChangeEvent<HTMLInputElement>,
-) => {
-  const value = e.target.value;
-  if (value === '' || /^\d+$/.test(value)) {
-    setHours(value);
-  }
-};
-```
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 入力バリデーション: 分（0-59）
-const handleMinutesChange = (
-  e: React.ChangeEvent<HTMLInputElement>,
-) => {
-  const value = e.target.value;
-  if (
-    value === ''
-    || (/^\d+$/.test(value)
-      && Number.parseInt(value, 10) < 60)
-  ) {
-    setMinutes(value);
-  }
-};
-
+// 合計0分の場合は送信不可
 const isValid =
   Number.parseInt(hours || '0', 10) * 60
   + Number.parseInt(minutes || '0', 10)
   > 0;
 ```
 
-> 💡 `handleHoursChange` と `handleMinutesChange`
-> は正規表現 `/^\d+$/` で数字のみを受け付けます。
-> 分は60未満に制限します。`isValid` は合計が
+> 💡 Step 5 で定義した `handleHoursChange` と
+> `handleMinutesChange` は正規表現 `/^\d+$/` で
+> 数字のみを受け付けます。`isValid` は合計が
 > 0より大きい場合のみ送信ボタンを有効にします。
 
 ✅ **確認ポイント**:
@@ -658,6 +654,7 @@ import します。
 import { TaskTimer } from './task-timer';
 import { TimeLogDialog }
   from './time-log-dialog';
+import { Clock } from 'lucide-react';
 ```
 
 次に、`TaskCardProps` にタイマー関連のpropsを
@@ -673,6 +670,17 @@ interface TaskCardProps {
   timeSpentMinutes?: number;
   onTimerUpdate?: () => void;
 }
+```
+
+手動記録ダイアログの開閉state とハンドラーを追加します。
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// TaskCard 関数内に追加
+const [timeLogDialogOpen,
+  setTimeLogDialogOpen] = useState(false);
+const handleOpenTimeLog = () =>
+  setTimeLogDialogOpen(true);
 ```
 
 カード内のJSXに `TaskTimer` と「時間を記録」

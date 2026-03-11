@@ -117,8 +117,8 @@ cat src/server/api/routers/comment.ts | head -50
 // タスク詳細データ取得（既存）
 const { data: taskDetail } =
   api.task.getById.useQuery(
-    { id: selectedTask ?? '' },
-    { enabled: !!selectedTask },
+    { id: selectedTaskId ?? '' },
+    { enabled: !!selectedTaskId },
   );
 ```
 
@@ -284,9 +284,9 @@ const [commentContent, setCommentContent]
 const createCommentMutation =
   api.comment.create.useMutation({
     onSuccess: () => {
-      if (selectedTask) {
+      if (selectedTaskId) {
         utils.task.getById.invalidate(
-          { id: selectedTask }
+          { id: selectedTaskId }
         );
       }
       setCommentContent('');
@@ -298,10 +298,10 @@ const createCommentMutation =
 // filepath: src/app/task/page.tsx
 const handleCommentSubmit = () => {
   if (!commentContent.trim()
-    || !selectedTask) return;
+    || !selectedTaskId) return;
   createCommentMutation.mutate({
     content: commentContent,
-    taskId: selectedTask,
+    taskId: selectedTaskId,
   });
 };
 ```
@@ -327,7 +327,7 @@ const handleCommentSubmit = () => {
 // filepath: src/app/task/page.tsx
 // invalidateの動作
 utils.task.getById.invalidate(
-  { id: selectedTask }
+  { id: selectedTaskId }
 );
 ```
 
@@ -391,7 +391,7 @@ npm run dev
 |--------------|------|---------|
 | コメントが表示されない | commentsがincludeされてない | getByIdのinclude確認 |
 | 投稿後に更新されない | invalidate忘れ | onSuccessに追加 |
-| 投稿できない | selectedTaskが未設定 | タスクを開いてから投稿 |
+| 投稿できない | selectedTaskIdが未設定 | タスクを開いてから投稿 |
 | 空白で投稿される | trim()未使用 | disabled条件を追加 |
 
 ## 📝 今日学んだ用語

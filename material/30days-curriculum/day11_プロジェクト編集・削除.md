@@ -75,9 +75,11 @@ graph TD
 
 💻 **実装**:
 
+Day 09 Step 7 で仮置きした `editingProject`（`Record<string, unknown>`型）を、正式な `ProjectFormData` 型に差し替えます。
+
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectPageContent内にstateを追加
+// Day 09のプレースホルダーを差し替え
 const [editingProject, setEditingProject] =
   useState<ProjectFormData | undefined>(
     undefined

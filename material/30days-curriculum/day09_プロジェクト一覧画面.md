@@ -133,8 +133,12 @@ export default function ProjectPage() {
 ```typescript
 // filepath: src/app/project/page.tsx
 import { api } from '@/trpc/react';
+import { useState } from 'react';
 
 // ProjectPageContent内に追加
+const [showArchived, setShowArchived] =
+  useState(false);
+
 const {
   data: projects,           // プロジェクト配列
   isLoading: projectsLoading, // 読み込み中フラグ
@@ -206,6 +210,17 @@ if (projectsLoading) {
 import {
   ProjectCard,
 } from '@/component/project/project-card';
+```
+
+イベントハンドラーを準備します。Day 11-12 で本実装に差し替えます。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// ProjectPageContent内に追加
+// Day 11-12 で本実装に差し替え
+const handleEdit = () => {};
+const handleDelete = () => {};
+const handleProjectClick = () => {};
 ```
 
 次に、`ProjectPageContent` 内の `return` にプロジェクトをカード一覧として描画する処理を追加します。
@@ -345,13 +360,14 @@ import {
 // filepath: src/app/project/page.tsx
 import { Button } from '@/component/ui/button';
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
 
 // ProjectPageContent内にstateを追加
 const [dialogOpen, setDialogOpen] =
   useState(false);
 const [editingProject, setEditingProject] =
-  useState<ProjectFormData | undefined>(undefined);
+  useState<Record<string, unknown> | undefined>(
+    undefined
+  );
 
 // 新規作成モードでダイアログを開く
 const handleCreate = () => {
@@ -378,7 +394,7 @@ const handleCreate = () => {
 </div>
 ```
 
-> 💡 Day 10 で `ProjectDialog` コンポーネントを追加して、このボタンと連携させます。
+> 💡 Day 10 で `ProjectDialog` コンポーネントを作成し、このボタンと連携させます。その際、`editingProject` の型も `ProjectFormData` に置き換えます。
 
 ✅ **確認ポイント**:
 - 「新規作成」ボタンが右上に表示されている
@@ -396,12 +412,24 @@ const handleCreate = () => {
 // filepath: src/app/project/page.tsx
 import { useSearchParams } from
   'next/navigation';
+import { useEffect } from 'react';
 
 // ProjectPageContent内に追加
+// Day 12 で詳細機能と連携させる
+const [selectedProject, setSelectedProject] =
+  useState<string | null>(null);
+const [detailOpen, setDetailOpen] =
+  useState(false);
+
 const searchParams = useSearchParams();
 const projectIdParam =
   searchParams.get('projectId');
+```
 
+URLにprojectIdがあれば詳細を開くuseEffectを追加します。
+
+```typescript
+// filepath: src/app/project/page.tsx
 // URLにprojectIdがあれば詳細を開く
 useEffect(() => {
   if (projectIdParam) {
