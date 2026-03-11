@@ -2,10 +2,6 @@ name: License Check
 on:
   workflow_call:
     inputs:
-      node-version-file:
-        required: true
-        type: string
-        description: 'Path to the Node.js version file'
       disallow-licenses:
         required: false
         type: string
@@ -21,10 +17,10 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup tools with mise
+        uses: jdx/mise-action@v2
         with:
-          node-version-file: ${{ inputs.node-version-file }}
+          install: true
 
       - name: Check if package files have changed
         id: check_changes
@@ -52,10 +48,11 @@ jobs:
 
       - name: Check licenses
         if: steps.check_changes.outputs.changes == 'true'
+        env:
+          DISALLOWED_LICENSES: ${{ inputs.disallow-licenses }}
         run: |
           npm install -g license-checker
 
-          DISALLOWED_LICENSES="${{ inputs.disallow-licenses }}"
           IFS=';' read -ra LICENSES <<< "$DISALLOWED_LICENSES"
 
           DISALLOW_ARGS=""
