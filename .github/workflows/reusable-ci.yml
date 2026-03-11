@@ -60,6 +60,8 @@ jobs:
           echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" >> .env
           echo "NEXTAUTH_SECRET=dummy-secret-for-ci" >> .env
           echo "NEXTAUTH_URL=http://localhost:3000" >> .env
+          echo "JWT_SECRET=dummy-jwt-secret-for-ci-32-chars-min" >> .env
+          echo "SKIP_ENV_VALIDATION=true" >> .env
 
       - name: Npm Build
         run: npm run build:ci
