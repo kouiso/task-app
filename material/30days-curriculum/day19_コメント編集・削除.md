@@ -278,9 +278,9 @@ const handleCancelEdit = () => {
 const updateCommentMutation =
   api.comment.update.useMutation({
     onSuccess: () => {
-      if (selectedTaskId) {
+      if (selectedTask) {
         utils.task.getById.invalidate(
-          { id: selectedTaskId });
+          { id: selectedTask });
       }
       setEditingCommentId(null);
       setEditingCommentContent('');
@@ -323,9 +323,9 @@ const handleSaveEdit =
 const deleteCommentMutation =
   api.comment.delete.useMutation({
     onSuccess: () => {
-      if (selectedTaskId) {
+      if (selectedTask) {
         utils.task.getById.invalidate(
-          { id: selectedTaskId });
+          { id: selectedTask });
       }
     },
   });
@@ -352,7 +352,7 @@ const handleDeleteComment =
 - 確認ダイアログが表示される
 - OKでコメントが削除される
 
-![削除後のコメント一覧](./screenshots/task-detail-dialog.png)
+![タスク詳細ダイアログのコメントセクション](./screenshots/task-detail-dialog.png)
 
 ---
 

@@ -355,7 +355,7 @@ CardContent の中に form を追加します。
 - パスワード確認欄が表示されている
 - 異なるパスワードで送信すると「パスワードが一致しません」エラーが出る
 
-![ユーザー登録画面（パスワード不一致エラー）](./screenshots/register.png)
+![完成したユーザー登録フォーム](./screenshots/register.png)
 
 ---
 
