@@ -278,9 +278,9 @@ const handleCancelEdit = () => {
 const updateCommentMutation =
   api.comment.update.useMutation({
     onSuccess: () => {
-      if (selectedTask) {
+      if (selectedTaskId) {
         utils.task.getById.invalidate(
-          { id: selectedTask });
+          { id: selectedTaskId });
       }
       setEditingCommentId(null);
       setEditingCommentContent('');
@@ -323,9 +323,9 @@ const handleSaveEdit =
 const deleteCommentMutation =
   api.comment.delete.useMutation({
     onSuccess: () => {
-      if (selectedTask) {
+      if (selectedTaskId) {
         utils.task.getById.invalidate(
-          { id: selectedTask });
+          { id: selectedTaskId });
       }
     },
   });
