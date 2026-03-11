@@ -521,7 +521,6 @@ const handleSubmit =
   (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    onClose();
   };
 ```
 
@@ -569,10 +568,23 @@ import { Plus } from 'lucide-react';
 // TaskPageContent内に追加
 const [dialogOpen, setDialogOpen] =
   useState(false);
+const [editingTask, setEditingTask] =
+  useState<TaskFormData | undefined>();
 const utils = api.useUtils();
 const { data: session } =
   api.auth.getSession.useQuery();
 
+// 新規作成ボタンのハンドラー
+const handleCreate = () => {
+  setEditingTask(undefined);
+  setDialogOpen(true);
+};
+```
+
+続けて、ユーザー一覧の取得とcreate mutationを追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx
 // ユーザー一覧を取得（担当者選択用）
 const { data: users } =
   api.search.getProjectMembers.useQuery();
@@ -627,7 +639,7 @@ const handleSubmit =
 ```typescript
 // filepath: src/app/task/page.tsx
 // JSX内にDialogとボタンを追加
-<Button onClick={() => setDialogOpen(true)}>
+<Button onClick={handleCreate}>
   <Plus className="h-4 w-4 mr-2" />
   新規タスク
 </Button>
@@ -636,6 +648,7 @@ const handleSubmit =
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
   onSubmit={handleSubmit}
+  initialData={editingTask}
   projects={projects || []}
   users={users || []}
 />
