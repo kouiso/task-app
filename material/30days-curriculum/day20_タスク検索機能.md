@@ -82,7 +82,7 @@ graph TD
 ```bash
 # filepath: ターミナル
 # search ルーターのAPIを確認する
-cat src/server/router/search.ts | head -50
+cat src/server/api/routers/search.ts | head -50
 ```
 
 ✅ **確認ポイント**:

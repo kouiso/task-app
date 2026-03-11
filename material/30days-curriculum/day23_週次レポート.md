@@ -306,7 +306,7 @@ import {
 ```bash
 # filepath: ターミナル
 # 週次レポートAPIを確認
-cat src/server/router/report.ts | head -50
+cat src/server/api/routers/report.ts | head -50
 ```
 
 ✅ **確認ポイント**:

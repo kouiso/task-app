@@ -121,10 +121,6 @@ import { ArrowRight, Loader2 }
   from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import {
-  Cell, Legend, Pie, PieChart,
-  ResponsiveContainer, Tooltip,
-} from 'recharts';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import {

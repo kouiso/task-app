@@ -74,7 +74,7 @@ graph TD
 ```bash
 # filepath: ターミナル
 # comment ルーターのAPIを確認する
-cat src/server/router/comment.ts | head -50
+cat src/server/api/routers/comment.ts | head -50
 ```
 
 ✅ **確認ポイント**:

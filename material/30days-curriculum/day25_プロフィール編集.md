@@ -474,7 +474,7 @@ export default function ProfilePage() {
 ```bash
 # filepath: ターミナル
 # パスワード変更ページの構成を確認
-ls src/app/profile/password/
+ls src/app/profile/change-password/
 ```
 
 ✅ **確認ポイント**:
