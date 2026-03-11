@@ -442,7 +442,7 @@ HttpOnly 属性が有効であることを確かめます。
 2. **F12** で DevTools を開く
 3. **Application** タブをクリック
 4. 左メニューの **Cookies** → `http://localhost:3000` を選択
-5. `session-token` という Cookie を探す
+5. `session` という Cookie を探す
 
 ### 6-2. 確認すべき項目
 
@@ -450,14 +450,14 @@ HttpOnly 属性が有効であることを確かめます。
 |------|-----------|------|
 | `HttpOnly` | ✓（チェックあり） | JavaScript から Cookie を読めなくする |
 | `Path` | `/` | 全ページで有効 |
-| `SameSite` | `Lax` | CSRF 攻撃の防御 |
+| `SameSite` | `Strict` | CSRF 攻撃の防御 |
 
 > 💡 HttpOnly が有効な Cookie は、
 > `document.cookie` で読み取れません。
 > XSS 攻撃でセッションを盗むのが困難になります。
 
 ✅ **確認ポイント**:
-- Application タブで `session-token` Cookie を見つけた
+- Application タブで `session` Cookie を見つけた
 - HttpOnly にチェックが入っていることを確認した
 
 ---

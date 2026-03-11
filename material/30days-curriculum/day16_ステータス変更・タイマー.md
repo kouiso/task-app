@@ -71,9 +71,10 @@ stateDiagram-v2
 | Step 5 | 時間のフォーマット表示 | 5分 |
 | Step 6 | TimeLogDialogを作る | 7分 |
 | Step 7 | 手動時間記録のAPI呼び出し | 5分 |
-| Step 8 | 動作確認 | 3分 |
+| Step 8 | TaskCardにタイマーを組み込む | 5分 |
+| Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約40分
+**合計時間**: 約45分
 
 ---
 
@@ -134,12 +135,13 @@ const handleStatusChange = (
 // filepath: src/component/task/task-timer.tsx
 'use client';
 
-import { Button } from '@/component/ui/button';
-import { api } from '@/trpc/react';
 import {
   Loader2, PauseIcon, PlayIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { Button } from '@/component/ui/button';
+import { api } from '@/trpc/react';
 ```
 
 ```typescript
@@ -273,9 +275,9 @@ const handleStartStop = async () => {
         action: 'start',
       });
     }
-  } catch (error) {
-    console.error(
-      'Timer update failed:', error,
+  } catch (_error) {
+    toast.error(
+      'タイマーの更新に失敗しました',
     );
   }
 };
@@ -405,16 +407,17 @@ return (
 // filepath: src/component/task/time-log-dialog.tsx
 'use client';
 
+import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Button } from '@/component/ui/button';
 import {
   Dialog, DialogContent,
-  DialogFooter, DialogHeader,
-  DialogTitle,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
 } from '@/component/ui/dialog';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 import { api } from '@/trpc/react';
-import { useState } from 'react';
 ```
 
 ```typescript
@@ -453,11 +456,14 @@ export function TimeLogDialog({
   return (
     <Dialog open={open}
       onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent className="space-y-4">
         <DialogHeader>
           <DialogTitle>
             作業時間の記録
           </DialogTitle>
+          <DialogDescription>
+            タスクに作業時間を記録します
+          </DialogDescription>
         </DialogHeader>
         <div className="flex gap-4">
           <div className="flex-1">
@@ -466,8 +472,7 @@ export function TimeLogDialog({
             </Label>
             <Input id="hours"
               value={hours}
-              onChange={(e) =>
-                setHours(e.target.value)}
+              onChange={handleHoursChange}
               inputMode="numeric" />
           </div>
 ```
@@ -481,8 +486,7 @@ export function TimeLogDialog({
             </Label>
             <Input id="minutes"
               value={minutes}
-              onChange={(e) =>
-                setMinutes(e.target.value)}
+              onChange={handleMinutesChange}
               inputMode="numeric" />
           </div>
         </div>
@@ -509,7 +513,7 @@ export function TimeLogDialog({
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// TimeLogDialog内に追加
+// TimeLogDialog内に追加: mutation定義
 const addTimeMutation =
   api.task.addTime.useMutation({
     onSuccess: () => {
@@ -517,22 +521,88 @@ const addTimeMutation =
       handleClose();
     },
   });
+```
 
+続けて、入力値のバリデーション関数を定義します。
+数字以外の入力を防ぎ、分は0〜59の範囲に制限します。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 入力バリデーション: 時間
+const handleHoursChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+) => {
+  const value = e.target.value;
+  if (value === '' || /^\d+$/.test(value)) {
+    setHours(value);
+  }
+};
+```
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 入力バリデーション: 分（0-59）
+const handleMinutesChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+) => {
+  const value = e.target.value;
+  if (
+    value === ''
+    || (/^\d+$/.test(value)
+      && Number.parseInt(value, 10) < 60)
+  ) {
+    setMinutes(value);
+  }
+};
+
+const isValid =
+  Number.parseInt(hours || '0', 10) * 60
+  + Number.parseInt(minutes || '0', 10)
+  > 0;
+```
+
+> 💡 `handleHoursChange` と `handleMinutesChange`
+> は正規表現 `/^\d+$/` で数字のみを受け付けます。
+> 分は60未満に制限します。`isValid` は合計が
+> 0より大きい場合のみ送信ボタンを有効にします。
+
+✅ **確認ポイント**:
+- `npm run dev` でエラーが出ていない
+- 入力欄に文字を打っても数字以外は入らない
+
+#### バリデーション関数の役割
+
+| 関数 | 制限 | 理由 |
+|------|------|------|
+| `handleHoursChange` | 数字のみ | 不正入力の防止 |
+| `handleMinutesChange` | 数字のみ＋60未満 | 時間形式の制限 |
+| `isValid` | 合計 > 0 | 0分の記録を防止 |
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 送信ハンドラー
 const handleSubmit = async () => {
   const totalMinutes =
     Number.parseInt(hours || '0', 10) * 60
     + Number.parseInt(minutes || '0', 10);
   if (totalMinutes <= 0) return;
-  await addTimeMutation.mutateAsync({
-    id: taskId,
-    minutesToAdd: totalMinutes,
-  });
+  try {
+    await addTimeMutation.mutateAsync({
+      id: taskId,
+      minutesToAdd: totalMinutes,
+    });
+  } catch (_error) {
+    toast.error(
+      '作業時間の追加に失敗しました',
+    );
+  }
 };
 ```
 
 ✅ **確認ポイント**:
 - 「1時間30分」を入力して追加できる
 - 累計時間に加算される
+- 数字以外は入力できない
 
 #### addTime APIのパラメータ
 
@@ -571,7 +641,99 @@ const handleSubmit = async () => {
 
 ---
 
-### Step 8: 動作確認（3分）
+### Step 8: TaskCardにタイマーを組み込む（5分）
+
+🎯 **ゴール**: 作成した `TaskTimer` と
+`TimeLogDialog` を `TaskCard` に組み込んで
+タスクカード上でタイマーを使えるようにします。
+
+💻 **実装**:
+
+まず、`task-card.tsx` に2つのコンポーネントを
+import します。
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// TaskTimerとTimeLogDialogのインポート
+import { TaskTimer } from './task-timer';
+import { TimeLogDialog }
+  from './time-log-dialog';
+```
+
+次に、`TaskCardProps` にタイマー関連のpropsを
+追加します。
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// TaskCardPropsにタイマー用プロパティ追加
+interface TaskCardProps {
+  // ...既存のprops
+  isTimerActive?: boolean;
+  timerStartedAt?: Date | null;
+  timeSpentMinutes?: number;
+  onTimerUpdate?: () => void;
+}
+```
+
+カード内のJSXに `TaskTimer` と「時間を記録」
+ボタンを追加します。
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// CardContent内にTaskTimerを追加
+<TaskTimer
+  taskId={id}
+  isTimerActive={isTimerActive ?? false}
+  timerStartedAt={timerStartedAt ?? null}
+  timeSpentMinutes={
+    timeSpentMinutes ?? 0}
+  onTimerUpdate={onTimerUpdate}
+/>
+<Button
+  variant="ghost"
+  size="sm"
+  onClick={handleOpenTimeLog}>
+  <Clock className="w-4 h-4 mr-1" />
+  時間を記録
+</Button>
+```
+
+最後にカードの閉じタグの前に `TimeLogDialog` を
+配置します。
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// TimeLogDialogの配置
+<TimeLogDialog
+  open={timeLogDialogOpen}
+  onClose={() =>
+    setTimeLogDialogOpen(false)}
+  taskId={id}
+  onSuccess={onTimerUpdate}
+/>
+```
+
+✅ **確認ポイント**:
+- タスクカード内にタイマーボタンが表示される
+- 「時間を記録」ボタンが表示される
+
+#### TaskCard に追加したprops
+
+| prop | デフォルト値 | 説明 |
+|------|------------|------|
+| `isTimerActive` | `false` | タイマー動作中か |
+| `timerStartedAt` | `null` | タイマー開始時刻 |
+| `timeSpentMinutes` | `0` | 累計作業時間（分） |
+| `onTimerUpdate` | - | 更新後のコールバック |
+
+> 💡 既存の `TaskCard` に新しいコンポーネントを
+> 組み込むパターンは、React開発で頻繁に使います。
+> 小さなコンポーネントを作り、親コンポーネントに
+> 配置する「コンポジション」の考え方です。
+
+---
+
+### Step 9: 動作確認（3分）
 
 🎯 **ゴール**: ステータス変更・タイマーの全機能
 を確認します。

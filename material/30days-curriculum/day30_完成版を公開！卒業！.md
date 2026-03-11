@@ -244,7 +244,6 @@ git push origin main
 {
   "scripts": {
     "build": "prisma generate
-      && prisma db push --accept-data-loss
       && next build",
     "vercel-build": "prisma generate
       && next build"
