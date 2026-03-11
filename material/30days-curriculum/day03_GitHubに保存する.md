@@ -95,6 +95,14 @@ $ git config --list
 | Public/Private | Public | 誰でも見られる |
 | Initialize this repository | チェックしない | 既存のコードを使う |
 
+
+```bash
+# filepath: ブラウザ（GitHubで操作）
+# https://github.com/new にアクセスして
+# リポジトリ名: task-app
+# Public を選択して「Create repository」をクリック
+```
+
 ✅ **確認ポイント**:
 
 1. GitHubに新しいリポジトリが作成される

@@ -71,6 +71,14 @@ graph TD
 
 🎯 **ゴール**: コメントルーターのAPIを把握します。
 
+```bash
+# filepath: ターミナル
+# comment ルーターのAPIを確認する
+cat src/server/router/comment.ts | head -50
+```
+
+✅ **確認ポイント**:
+- 4つのメソッドを把握した
 #### comment ルーターの全メソッド
 
 | メソッド | 種別 | 説明 |
@@ -86,11 +94,11 @@ graph TD
 |-----------|-----|------|------|
 | `content` | string | ○ | コメント本文 |
 | `taskId` | string | ○ | タスクID |
-| `userId` | string | ○ | 投稿者ID |
 
 > 💡 コメントはタスクに紐づきます。
 > `taskId` で「どのタスクへのコメントか」を
-> 指定します。
+> 指定します。投稿者IDはサーバー側で
+> セッションから自動取得されます。
 
 ✅ **確認ポイント**:
 - 4つのメソッドを把握した
@@ -113,6 +121,9 @@ const { data: taskDetail } =
     { enabled: !!selectedTask },
   );
 ```
+
+✅ **確認ポイント**:
+- `taskDetail?.comments` でデータ取得
 
 > 💡 `api.task.getById` のレスポンスには
 > `comments` が含まれています。Prismaの
@@ -154,7 +165,7 @@ import { Separator } from '@/component/ui/separator';
 // コメントセクションのヘッダーとリスト構造
 <Separator />
 <h3 className="font-semibold">
-  Comments
+  コメント
 </h3>
 <div className="space-y-3 max-h-60
   overflow-y-auto">
@@ -239,7 +250,7 @@ const [commentContent, setCommentContent]
     value={commentContent}
     onChange={(e) =>
       setCommentContent(e.target.value)}
-    placeholder="Add a comment..."
+    placeholder="コメントを追加..."
     rows={2}
     className="flex-1"
   />
@@ -247,7 +258,7 @@ const [commentContent, setCommentContent]
     size="sm"
     onClick={handleCommentSubmit}
     disabled={!commentContent.trim()}>
-    Post
+    コメント投稿
   </Button>
 </div>
 ```
@@ -287,12 +298,10 @@ const createCommentMutation =
 // filepath: src/app/task/page.tsx
 const handleCommentSubmit = () => {
   if (!commentContent.trim()
-    || !selectedTask
-    || !session?.user?.id) return;
+    || !selectedTask) return;
   createCommentMutation.mutate({
     content: commentContent,
     taskId: selectedTask,
-    userId: session.user.id,
   });
 };
 ```
@@ -322,6 +331,9 @@ utils.task.getById.invalidate(
 );
 ```
 
+✅ **確認ポイント**:
+- 投稿後に新しいコメントが表示される
+
 #### キャッシュ更新の仕組み
 
 | 操作 | invalidate対象 | 効果 |
@@ -347,7 +359,7 @@ utils.task.getById.invalidate(
 1. タスクカードをクリックして詳細を開く
 2. コメント一覧が表示される
 3. テキストエリアにコメントを入力
-4. 「Post」ボタンをクリック
+4. 「コメント投稿」ボタンをクリック
 5. コメントが一覧に追加される
 6. テキストエリアがクリアされる
 
@@ -359,6 +371,12 @@ utils.task.getById.invalidate(
 ![コメント投稿後の画面](./screenshots/task-comment-edit.png)
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 
@@ -373,7 +391,7 @@ utils.task.getById.invalidate(
 |--------------|------|---------|
 | コメントが表示されない | commentsがincludeされてない | getByIdのinclude確認 |
 | 投稿後に更新されない | invalidate忘れ | onSuccessに追加 |
-| userIdエラー | session未取得 | getSession確認 |
+| 投稿できない | selectedTaskが未設定 | タスクを開いてから投稿 |
 | 空白で投稿される | trim()未使用 | disabled条件を追加 |
 
 ## 📝 今日学んだ用語

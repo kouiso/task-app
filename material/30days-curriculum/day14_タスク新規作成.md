@@ -99,6 +99,10 @@ export interface TaskFormData {
 }
 ```
 
+✅ **確認ポイント**:
+- `TaskFormData` をエクスポートした
+- `npm run dev` でエラーが出ていない
+
 #### TaskFormData の各フィールド
 
 | フィールド | 型 | 必須 | 説明 |
@@ -144,7 +148,6 @@ interface TaskDialogProps {
     name: string | null;
     email: string;
   }>;
-  currentUserId: string;
 }
 ```
 
@@ -314,6 +317,10 @@ const handleSelectChange =
   </div>
 </div>
 ```
+
+✅ **確認ポイント**:
+- ステータスと優先度が選択できる
+- 2列グリッドで横並びになっている
 
 #### ステータスとPriorityの選択肢
 
@@ -543,6 +550,10 @@ import {
 const { data: session } =
   api.auth.getSession.useQuery();
 
+// ユーザー一覧を取得（担当者選択用）
+const { data: users } =
+  api.search.getProjectMembers.useQuery();
+
 const createMutation =
   api.task.create.useMutation({
     onSuccess: () => {
@@ -557,7 +568,6 @@ const createMutation =
 // 送信ハンドラー
 const handleSubmit =
   (data: TaskFormData) => {
-    if (!session?.user?.id) return;
     createMutation.mutate({
       title: data.title,
       description: data.description,
@@ -568,11 +578,17 @@ const handleSubmit =
         : undefined,
       estimatedHours: data.estimatedHours,
       projectId: data.projectId,
-      createdById: session.user.id,
       assigneeId: data.assigneeId || undefined,
     });
   };
 ```
+
+✅ **確認ポイント**:
+- 「新規タスク」ボタンでダイアログが開く
+- フォーム送信でタスクが作成される
+- 一覧に新しいタスクが表示される
+
+![作成後のタスク一覧](./screenshots/task-list.png)
 
 #### createMutationに渡すパラメータ
 
@@ -580,7 +596,6 @@ const handleSubmit =
 |-----------|------|------|
 | `title` | ○ | タスク名 |
 | `projectId` | ○ | 所属プロジェクト |
-| `createdById` | ○ | 作成者のID |
 | `status` | × | デフォルト: TODO |
 | `priority` | × | デフォルト: MEDIUM |
 | `dueDate` | × | ISO 8601文字列 |
@@ -600,13 +615,12 @@ const handleSubmit =
   onSubmit={handleSubmit}
   projects={projects || []}
   users={users || []}
-  currentUserId={session?.user?.id || ''}
 />
 ```
 
-> 💡 `createdById` はログイン中のユーザーIDです。
-> `api.auth.getSession` で取得したセッション
-> から `session.user.id` を使います。
+> 💡 `createdById`（作成者ID）はサーバー側で
+> セッションから自動的に取得されます。
+> フロントエンドから渡す必要はありません。
 
 ✅ **確認ポイント**:
 - 「新規タスク」ボタンでダイアログが開く
@@ -635,6 +649,12 @@ const handleSubmit =
 
 ---
 
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
+
 ## 📋 今日のまとめ
 
 - [ ] `TaskFormData` 型でフォームを定義できた
@@ -648,7 +668,7 @@ const handleSubmit =
 |--------------|------|---------|
 | ダイアログが開かない | `open` propが渡されてない | `open={dialogOpen}` を確認 |
 | 作成後に一覧が更新されない | invalidate忘れ | `onSuccess` に追加 |
-| createdByIdエラー | session未取得 | `getSession` の戻り値確認 |
+| 担当者一覧が空 | users未取得 | `getProjectMembers` の戻り値確認 |
 | プロジェクト一覧が空 | `projects` propが空 | `projects || []` を確認 |
 
 ## 📝 今日学んだ用語
@@ -658,7 +678,7 @@ const handleSubmit =
 | TaskDialog | タスクCRUD用のダイアログ |
 | TaskFormData | フォームデータの型定義 |
 | カリー化 | 引数を部分適用する関数パターン |
-| createdById | タスク作成者のユーザーID |
+| getProjectMembers | プロジェクトメンバー一覧を取得するAPI |
 
 ## 🔜 次回予告
 

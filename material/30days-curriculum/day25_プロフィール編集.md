@@ -60,6 +60,9 @@ graph TD
 | toast | トースト | 通知メッセージ | ポップアップ通知 |
 | Separator | セパレーター | 区切り線 | 書類の仕切り線 |
 | formData | フォームデータ | 入力値の管理 | 申請書の記入欄 |
+| showPassword | — | パスワード表示状態 | 目隠しの開閉 |
+| Eye / EyeOff | アイ | パスワード可視トグル | 目のアイコン |
+| Alert | アラート | エラー表示 | 赤い警告ボックス |
 
 ## 📊 実装ステップ一覧
 
@@ -83,6 +86,14 @@ graph TD
 🎯 **ゴール**: プロフィールページに
 表示する情報を理解します。
 
+```bash
+# filepath: ターミナル
+# プロフィールページの構成を確認
+ls src/app/profile/
+```
+
+✅ **確認ポイント**:
+- 表示する項目とボタンを理解した
 #### 表示する情報一覧
 
 | 項目 | プロパティ | 表示形式 |
@@ -124,11 +135,26 @@ graph TD
 // filepath: src/app/profile/page.tsx
 'use client';
 
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import {
+  Calendar, Edit, Lock, Mail,
+  Shield, User,
+} from 'lucide-react';
+import { useRouter }
+  from 'next/navigation';
+import { useEffect } from 'react';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import {
   Avatar, AvatarFallback, AvatarImage,
 } from '@/component/ui/avatar';
+```
+
+残りのコンポーネントをインポートします。
+
+```typescript
+// filepath: src/app/profile/page.tsx
 import { Badge }
   from '@/component/ui/badge';
 import { Button }
@@ -139,19 +165,7 @@ import {
 } from '@/component/ui/card';
 import { Separator }
   from '@/component/ui/separator';
-```
-
-```typescript
-// filepath: src/app/profile/page.tsx
-// 追加のインポート
 import { api } from '@/trpc/react';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import {
-  Edit, Lock, Shield, User,
-} from 'lucide-react';
-import { useRouter }
-  from 'next/navigation';
 ```
 
 ```typescript
@@ -164,6 +178,17 @@ export default function ProfilePage() {
     isLoading,
   } = api.auth.getCurrentUser.useQuery();
 
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, isLoading, router]);
+```
+
+ローディング中はスピナーを表示します。
+
+```typescript
+// filepath: src/app/profile/page.tsx
   if (isLoading) {
     return (
       <AppLayout>
@@ -183,14 +208,15 @@ export default function ProfilePage() {
 // filepath: src/app/profile/page.tsx
 // 未ログインチェック
   if (!currentUser) {
-    router.push('/login');
     return null;
   }
 ```
 
-> 💡 `currentUser` が null の場合は
-> ログインページにリダイレクトします。
-> `return null` で何も表示しません。
+> 💡 `useEffect` でローディング完了後に
+> `currentUser` が null だったら
+> ログインページへリダイレクトします。
+> ローディング中は `return null` にせず、
+> スピナーを表示するようにします。
 
 ✅ **確認ポイント**:
 - currentUser にデータが入る
@@ -290,7 +316,7 @@ export default function ProfilePage() {
     <div className="flex items-center
       justify-center w-10 h-10
       rounded-lg bg-primary/10">
-      <User className="w-5 h-5
+      <Mail className="w-5 h-5
         text-primary" />
     </div>
     <div className="flex-1">
@@ -313,7 +339,7 @@ export default function ProfilePage() {
   <div className="flex items-center
     justify-center w-10 h-10
     rounded-lg bg-primary/10">
-    <User className="w-5 h-5
+    <Calendar className="w-5 h-5
       text-primary" />
   </div>
   <div className="flex-1">
@@ -323,6 +349,33 @@ export default function ProfilePage() {
       {currentUser.createdAt
         ? format(
             new Date(currentUser.createdAt),
+            'yyyy年MM月dd日',
+            { locale: ja })
+        : '-'}
+    </p>
+  </div>
+</div>
+```
+
+```typescript
+// filepath: src/app/profile/page.tsx
+// 最終更新日の表示
+<div className="flex items-start gap-4">
+  <div className="flex items-center
+    justify-center w-10 h-10
+    rounded-lg bg-primary/10">
+    <Calendar className="w-5 h-5
+      text-primary" />
+  </div>
+  <div className="flex-1">
+    <p className="text-sm font-medium
+      text-muted-foreground">
+      最終更新日
+    </p>
+    <p className="text-base">
+      {currentUser.updatedAt
+        ? format(
+            new Date(currentUser.updatedAt),
             'yyyy年MM月dd日',
             { locale: ja })
         : '-'}
@@ -386,6 +439,12 @@ export default function ProfilePage() {
 </div>
 ```
 
+✅ **確認ポイント**:
+- 3つのボタンが縦に並ぶ
+- 管理者にだけユーザー管理ボタンが出る
+
+![ナビゲーションボタン](./screenshots/profile.png)
+
 #### ボタンのスタイル使い分け
 
 | ボタン | variant | 理由 |
@@ -412,6 +471,15 @@ export default function ProfilePage() {
 🎯 **ゴール**: パスワード変更ページの
 構成とAPIを理解します。
 
+```bash
+# filepath: ターミナル
+# パスワード変更ページの構成を確認
+ls src/app/profile/password/
+```
+
+✅ **確認ポイント**:
+- 3つの入力項目を理解した
+- changePassword APIの役割を理解した
 #### パスワード変更の入力項目
 
 | 項目 | name属性 | バリデーション |
@@ -447,8 +515,25 @@ export default function ProfilePage() {
 // filepath: src/app/profile/change-password/page.tsx
 'use client';
 
+import {
+  AlertCircle, Eye, EyeOff,
+} from 'lucide-react';
+import { useRouter }
+  from 'next/navigation';
+import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout }
   from '@/component/layout/app-layout';
+import {
+  Alert, AlertDescription,
+  AlertTitle,
+} from '@/component/ui/alert';
+```
+
+フォーム用のコンポーネントをインポートします。
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
 import { Button }
   from '@/component/ui/button';
 import {
@@ -460,10 +545,6 @@ import { Input }
 import { Label }
   from '@/component/ui/label';
 import { api } from '@/trpc/react';
-import { useRouter }
-  from 'next/navigation';
-import { useState } from 'react';
-import toast from 'react-hot-toast';
 ```
 
 ```typescript
@@ -477,6 +558,13 @@ export default function
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
+    });
+
+  const [showPassword, setShowPassword] =
+    useState({
+      current: false,
+      new: false,
+      confirm: false,
     });
 ```
 
@@ -540,7 +628,7 @@ const handleChange = (
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 現在のパスワード入力フィールド
+// 現在のパスワード入力フィールド（Eye/EyeOff付き）
 <div className="space-y-2">
   <Label htmlFor="currentPassword">
     現在のパスワード
@@ -548,25 +636,152 @@ const handleChange = (
       *
     </span>
   </Label>
-  <Input
-    id="currentPassword"
-    name="currentPassword"
-    type="password"
-    value={formData.currentPassword}
-    onChange={handleChange}
-    required
-    disabled={
-      changePassword.isPending} />
+  <div className="relative">
+    <Input
+      id="currentPassword"
+      name="currentPassword"
+      type={
+        showPassword.current
+          ? 'text' : 'password'
+      }
+      value={formData.currentPassword}
+      onChange={handleChange}
+      required
+      disabled={changePassword.isPending}
+    />
+```
+
+目のアイコンボタンでパスワードの表示/非表示を切り替えます。
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="absolute right-0 top-0
+        h-full px-3 py-2
+        hover:bg-transparent"
+      onClick={() =>
+        toggleShowPassword('current')
+      }>
+      {showPassword.current
+        ? <EyeOff className="h-4 w-4" />
+        : <Eye className="h-4 w-4" />}
+    </Button>
+  </div>
 </div>
 ```
 
-> 💡 `useState` のオブジェクト形式で
-> 3つの入力値をまとめて管理します。
-> `handleChange` では `[name]: value` で
-> 動的にプロパティを更新します。
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// 新しいパスワード入力フィールド（Eye/EyeOff付き）
+<div className="space-y-2">
+  <Label htmlFor="newPassword">
+    新しいパスワード
+    <span className="text-destructive">
+      *
+    </span>
+  </Label>
+  <div className="relative">
+    <Input
+      id="newPassword"
+      name="newPassword"
+      type={
+        showPassword.new
+          ? 'text' : 'password'
+      }
+      value={formData.newPassword}
+      onChange={handleChange}
+      required
+      disabled={changePassword.isPending}
+    />
+```
+
+目のアイコンボタンとヒントテキストを追加します。
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="absolute right-0 top-0
+        h-full px-3 py-2
+        hover:bg-transparent"
+      onClick={() =>
+        toggleShowPassword('new')
+      }>
+      {showPassword.new
+        ? <EyeOff className="h-4 w-4" />
+        : <Eye className="h-4 w-4" />}
+    </Button>
+  </div>
+  <p className="text-sm
+    text-muted-foreground">
+    8文字以上で入力してください
+  </p>
+</div>
+```
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// 確認用パスワード入力フィールド（Eye/EyeOff付き）
+<div className="space-y-2">
+  <Label htmlFor="confirmPassword">
+    新しいパスワード（確認）
+    <span className="text-destructive">
+      *
+    </span>
+  </Label>
+  <div className="relative">
+    <Input
+      id="confirmPassword"
+      name="confirmPassword"
+      type={
+        showPassword.confirm
+          ? 'text' : 'password'
+      }
+      value={formData.confirmPassword}
+      onChange={handleChange}
+      required
+      disabled={changePassword.isPending}
+    />
+```
+
+目のアイコンボタンでパスワードを表示/非表示にします。
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="absolute right-0 top-0
+        h-full px-3 py-2
+        hover:bg-transparent"
+      onClick={() =>
+        toggleShowPassword('confirm')
+      }>
+      {showPassword.confirm
+        ? <EyeOff className="h-4 w-4" />
+        : <Eye className="h-4 w-4" />}
+    </Button>
+  </div>
+</div>
+```
+
+> 💡 `showPassword` state で各フィールドの
+> 表示/非表示を個別に管理します。
+> `toggleShowPassword` でボタンを押すと
+> `type="password"` と `type="text"` が
+> 切り替わります。
+> 入力値 `formData` は `useState` の
+> オブジェクト形式でまとめて管理します。
 
 ✅ **確認ポイント**:
 - フォームに入力できる
+- 目のアイコンでパスワードの表示/非表示が切り替わる
 - 入力値が formData に反映される
 
 ![パスワード変更フォーム](./screenshots/change-password.png)
@@ -598,26 +813,43 @@ const handleSubmit = async (
 
   if (formData.newPassword
       !== formData.confirmPassword) {
-    toast.error(
-      'パスワードが一致しません'
-    );
+    toast.error('パスワードが一致しません');
     return;
   }
+```
 
-  changePassword.mutate(formData);
+バリデーション通過後はAPIを呼び出します。
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+  changePassword.mutate({
+    currentPassword:
+      formData.currentPassword,
+    newPassword: formData.newPassword,
+  });
+};
+
+const toggleShowPassword = (
+  field: keyof typeof showPassword
+) => {
+  setShowPassword((prev) => ({
+    ...prev,
+    [field]: !prev[field],
+  }));
 };
 ```
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// リアルタイム不一致表示
-{formData.confirmPassword !== ''
-  && formData.newPassword
-    !== formData.confirmPassword && (
-  <p className="text-sm
-    text-destructive">
-    パスワードが一致しません
-  </p>
+// APIエラーのAlert表示
+{changePassword.error && (
+  <Alert variant="destructive">
+    <AlertCircle className="h-4 w-4" />
+    <AlertTitle>Error</AlertTitle>
+    <AlertDescription>
+      {changePassword.error.message}
+    </AlertDescription>
+  </Alert>
 )}
 ```
 
@@ -646,6 +878,11 @@ const handleSubmit = async (
   </Button>
 </div>
 ```
+
+✅ **確認ポイント**:
+- 8文字未満でエラーが出る
+- 不一致でエラーが出る
+- 成功時に /profile へ戻る
 
 #### バリデーションルール
 
@@ -694,6 +931,12 @@ const handleSubmit = async (
 ![パスワード変更成功](./screenshots/change-password.png)
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

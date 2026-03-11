@@ -26,10 +26,10 @@ graph TD
     A[マイタスクページ] --> B[ステータスTabs]
     A --> C[プロジェクトフィルター]
     A --> D[期限別グループ]
-    D --> E[🔴 Overdue 期限切れ]
-    D --> F[🟡 Due Today 今日]
-    D --> G[📅 Upcoming 今後]
-    D --> H[📋 No Due Date 未設定]
+    D --> E[🔴 期限切れ]
+    D --> F[🟡 今日が期限]
+    D --> G[📅 今後の予定]
+    D --> H[📋 期限なし]
 
     B --> I[api.task.getAll assigneeId]
     C --> I
@@ -109,7 +109,7 @@ export default function MyTasksPage() {
       <div className="flex flex-col gap-6">
         <h1 className="text-3xl font-bold
           tracking-tight">
-          My Tasks
+          マイタスク
         </h1>
       </div>
     </AppLayout>
@@ -122,7 +122,7 @@ export default function MyTasksPage() {
 > 自動的に適用されます。
 
 ✅ **確認ポイント**:
-- `/my-task` にアクセスして「My Tasks」と表示
+- `/my-task` にアクセスして「マイタスク」と表示
 - サイドバーが表示されている
 
 ---
@@ -139,7 +139,15 @@ export default function MyTasksPage() {
 // MyTasksPage内に追加
 const { data: currentUser } =
   api.user.getCurrentUser.useQuery();
+
+// ユーザー一覧を取得（担当者選択用）
+const { data: users } =
+  api.search.getProjectMembers.useQuery();
 ```
+
+✅ **確認ポイント**:
+- `console.log(currentUser)` でユーザー情報取得
+- `npm run dev` でエラーなし
 
 #### 認証情報の取得方法
 
@@ -147,7 +155,7 @@ const { data: currentUser } =
 |------|-----|------|
 | セッション確認 | `api.auth.getSession` | ログイン状態チェック |
 | 現在のユーザー | `api.user.getCurrentUser` | ユーザー詳細情報 |
-| 全ユーザー | `api.user.getAll` | 管理者用一覧 |
+| メンバー取得 | `api.search.getProjectMembers` | 担当者選択用 |
 
 > 💡 `api.user.getCurrentUser` はログイン中の
 > ユーザーのIDや名前を返します。
@@ -176,6 +184,10 @@ const { data: tasks, isLoading } =
     { enabled: !!currentUser },
   );
 ```
+
+✅ **確認ポイント**:
+- 自分に割り当てられたタスクだけが返る
+- 他の人のタスクは含まれない
 
 > 💡 `enabled: !!currentUser` は
 > 「currentUserが取得できてからAPIを呼ぶ」
@@ -215,13 +227,13 @@ const STATUS_TABS: {
   label: string;
   value: TaskStatus | 'all';
 }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'To Do', value: 'TODO' },
-  { label: 'In Progress',
+  { label: 'すべて', value: 'all' },
+  { label: '未対応', value: 'TODO' },
+  { label: '進行中',
     value: 'IN_PROGRESS' },
-  { label: 'In Review',
+  { label: 'レビュー中',
     value: 'IN_REVIEW' },
-  { label: 'Done', value: 'DONE' },
+  { label: '完了', value: 'DONE' },
 ];
 ```
 
@@ -353,40 +365,56 @@ const { data: tasks } =
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-const groupedTasks = {
-  overdue: tasks?.filter((t) =>
-    t.dueDate
-    && new Date(t.dueDate) < new Date()
-  ) || [],
-  today: tasks?.filter((t) => {
-    if (!t.dueDate) return false;
-    const today = new Date();
-    const dueDate = new Date(t.dueDate);
-    return dueDate.toDateString()
-      === today.toDateString();
-  }) || [],
-  upcoming: tasks?.filter((t) => {
-    if (!t.dueDate) return false;
-    const today = new Date();
-    const dueDate = new Date(t.dueDate);
-    return dueDate > today
-      && dueDate.toDateString()
-        !== today.toDateString();
-  }) || [],
-  noDueDate: tasks?.filter(
-    (t) => !t.dueDate
-  ) || [],
-};
+import { useMemo, useState } from 'react';
+
+// タスクを期限別にグループ化（useMemoで不要な再計算を防ぐ）
+const groupedTasks = useMemo(() => {
+  const today = new Date();
+  return {
+    overdue: tasks?.filter((t) =>
+      t.dueDate
+      && new Date(t.dueDate) < today
+      && new Date(t.dueDate).toDateString()
+        !== today.toDateString()
+    ) || [],
+    today: tasks?.filter((t) => {
+      if (!t.dueDate) return false;
+      const dueDate = new Date(t.dueDate);
+      return dueDate.toDateString()
+        === today.toDateString();
+    }) || [],
 ```
+
+次に、今後の予定と期限なしのグループを定義します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+    upcoming: tasks?.filter((t) => {
+      if (!t.dueDate) return false;
+      const dueDate = new Date(t.dueDate);
+      return dueDate > today
+        && dueDate.toDateString()
+          !== today.toDateString();
+    }) || [],
+    noDueDate: tasks?.filter(
+      (t) => !t.dueDate
+    ) || [],
+  };
+}, [tasks]);
+```
+
+✅ **確認ポイント**:
+- 期限切れのタスクが赤いグループに入る
+- 今日のタスクがオレンジのグループに入る
 
 #### 4つのグループ
 
 | グループ | 条件 | 色 | 意味 |
 |---------|------|-----|------|
-| Overdue | 期限 < 今日 | 赤 | 期限切れ！急いで！ |
-| Due Today | 期限 = 今日 | オレンジ | 今日中にやること |
-| Upcoming | 期限 > 今日 | 通常 | 今後の予定 |
-| No Due Date | 期限なし | 通常 | 期限未設定 |
+| 期限切れ | 期限 < 今日 | 赤 | 期限切れ！急いで！ |
+| 今日が期限 | 期限 = 今日 | オレンジ | 今日中にやること |
+| 今後の予定 | 期限 > 今日 | 通常 | 今後の予定 |
+| 期限なし | 期限なし | 通常 | 期限未設定 |
 
 > 💡 `toDateString()` は日付を
 > `"Fri Feb 14 2025"` のような文字列に変換
@@ -408,12 +436,12 @@ const groupedTasks = {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// Overdueグループのヘッダー
+// 期限切れグループのヘッダー
 {groupedTasks.overdue.length > 0 && (
   <div className="space-y-4">
     <h2 className="text-xl font-semibold
       text-destructive">
-      Overdue
+      期限切れ
       ({groupedTasks.overdue.length})
     </h2>
     <div className="grid gap-6
@@ -423,7 +451,7 @@ const groupedTasks = {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// Overdueグループ: TaskCard表示
+// 期限切れグループ: TaskCard表示
       {groupedTasks.overdue.map((task) => (
         <TaskCard
           key={task.id}
@@ -454,7 +482,7 @@ const groupedTasks = {
   <div className="flex flex-col
     items-center justify-center py-12
     text-center text-muted-foreground">
-    <p>No tasks assigned to you</p>
+    <p>あなたに割り当てられたタスクはありません</p>
   </div>
 )}
 ```
@@ -481,8 +509,6 @@ const [dialogOpen, setDialogOpen] =
   useState(false);
 const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>();
-const { data: users } =
-  api.user.getAll.useQuery();
 const utils = api.useUtils();
 
 const updateMutation =
@@ -537,7 +563,6 @@ const handleDelete = (taskId: string) => {
   initialData={editingTask}
   projects={projects || []}
   users={users || []}
-  currentUserId={currentUser?.id || ''}
 />
 ```
 
@@ -571,6 +596,12 @@ const handleDelete = (taskId: string) => {
 - 期限別グループが正しく分類される
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

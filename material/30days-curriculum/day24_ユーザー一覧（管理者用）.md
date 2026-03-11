@@ -79,6 +79,14 @@ graph TD
 🎯 **ゴール**: ユーザー管理に使う2つの
 APIを理解します。
 
+```bash
+# filepath: ターミナル
+# ユーザー管理用APIを確認
+cat src/server/router/user.ts | head -30
+```
+
+✅ **確認ポイント**:
+- 2つのAPIの役割を理解した
 #### 使用するAPI一覧
 
 | API | 用途 | 戻り値 |
@@ -115,8 +123,30 @@ APIを理解します。
 // filepath: src/app/user/page.tsx
 'use client';
 
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import {
+  Eye, Pencil, Shield, User,
+} from 'lucide-react';
+import { useRouter }
+  from 'next/navigation';
+import { useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout }
   from '@/component/layout/app-layout';
+import {
+  Avatar, AvatarFallback, AvatarImage,
+} from '@/component/ui/avatar';
+```
+
+残りのコンポーネントをインポートします。
+
+```typescript
+// filepath: src/app/user/page.tsx
+import { Badge }
+  from '@/component/ui/badge';
+import { Button }
+  from '@/component/ui/button';
 import {
   Card, CardContent,
 } from '@/component/ui/card';
@@ -125,8 +155,6 @@ import {
   TableHead, TableHeader, TableRow,
 } from '@/component/ui/table';
 import { api } from '@/trpc/react';
-import { useRouter }
-  from 'next/navigation';
 ```
 
 ```typescript
@@ -143,6 +171,24 @@ export default function UsersPage() {
     isLoading,
     error,
   } = api.user.getAll.useQuery();
+```
+
+エラー時のリダイレクト処理を追加します。
+
+```typescript
+// filepath: src/app/user/page.tsx
+  useEffect(() => {
+    if (error) {
+      toast.error(
+        error.message
+        || 'ユーザー一覧の取得に失敗しました'
+      );
+      if (error.message
+          .includes('管理者権限')) {
+        router.push('/dashboard');
+      }
+    }
+  }, [error, router]);
 ```
 
 ```typescript
@@ -205,6 +251,12 @@ if (currentUser?.role !== 'ADMIN') {
   );
 }
 ```
+
+✅ **確認ポイント**:
+- 一般ユーザーでアクセスすると拒否される
+- 管理者でアクセスすると一覧が見える
+
+![権限エラー画面](./screenshots/user-list.png)
 
 #### 権限チェックの判定ロジック
 
@@ -320,20 +372,6 @@ if (currentUser?.role !== 'ADMIN') {
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 追加のインポート
-import {
-  Avatar, AvatarFallback, AvatarImage,
-} from '@/component/ui/avatar';
-import { Badge } from '@/component/ui/badge';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import {
-  Eye, Pencil, Shield, User,
-} from 'lucide-react';
-```
-
-```typescript
-// filepath: src/app/user/page.tsx
 // アバター付きユーザー名セル
 <TableCell>
   <div className="flex
@@ -395,6 +433,12 @@ import {
 </TableCell>
 ```
 
+✅ **確認ポイント**:
+- アバターが表示される
+- ロールとステータスのバッジが色分けされる
+
+![アバターとバッジ](./screenshots/user-list.png)
+
 #### バッジのバリエーション
 
 | ロール | variant | アイコン | 表示テキスト |
@@ -425,14 +469,6 @@ import {
 ボタンを追加します。
 
 💻 **実装**:
-
-```typescript
-// filepath: src/app/user/page.tsx
-// ボタンのインポート
-import { Button }
-  from '@/component/ui/button';
-import toast from 'react-hot-toast';
-```
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -467,6 +503,10 @@ import toast from 'react-hot-toast';
 </TableCell>
 ```
 
+✅ **確認ポイント**:
+- 各行に2つのボタンが表示される
+- ホバーで背景色が変わる
+
 #### アクションボタンの仕様
 
 | ボタン | アイコン | 遷移先 | 用途 |
@@ -490,6 +530,15 @@ import toast from 'react-hot-toast';
 🎯 **ゴール**: ボタンクリックで
 正しいページに遷移することを確認します。
 
+```bash
+# filepath: ターミナル
+# ユーザー詳細ページへの遷移を確認
+npm run dev
+```
+
+✅ **確認ポイント**:
+- 詳細ボタンで /user/{id} に遷移する
+- 編集ボタンで /user/{id}/edit に遷移する
 #### 遷移先のURL構造
 
 | ボタン | URL パターン | 例 |
@@ -528,6 +577,12 @@ import toast from 'react-hot-toast';
 ![完成したユーザー管理ページ](./screenshots/user-list.png)
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

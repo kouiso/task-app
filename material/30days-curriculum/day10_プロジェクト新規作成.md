@@ -91,6 +91,8 @@ import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 import { Textarea }
   from '@/component/ui/textarea';
+import { DEFAULT_PROJECT_COLOR }
+  from '@/lib/constant/project';
 ```
 
 続いて、Props の型定義を行います。
@@ -140,7 +142,7 @@ export function ProjectDialog({
     useState<ProjectFormData>({
       name: '',
       description: '',
-      color: '#1976d2',
+      color: DEFAULT_PROJECT_COLOR,
       ...initialData,
     });
 ```
@@ -159,6 +161,10 @@ export function ProjectDialog({
       });
     };
 ```
+
+✅ **確認ポイント**:
+- `useState` でフォーム状態を初期化した
+- `handleChange` で任意のフィールドを更新できる仕組みを理解した
 
 #### handleChange の仕組み
 
@@ -192,11 +198,15 @@ useEffect(() => {
     setFormData({
       name: '',
       description: '',
-      color: '#1976d2',
+      color: DEFAULT_PROJECT_COLOR,
     });
   }
 }, [initialData]);
 ```
+
+✅ **確認ポイント**:
+- 新規作成時はフォームが空になる
+- 編集時は既存データが入る
 
 > 💡 `useEffect` の依存配列に `[initialData]` を指定しています。「編集モード」では既存データがセットされ、「新規作成モード」では空の状態にリセットされます。
 
@@ -204,7 +214,7 @@ useEffect(() => {
 
 | モード | initialData | フォームの状態 |
 |--------|------------|--------------|
-| 新規作成 | undefined | 空（name: '', color: '#1976d2'） |
+| 新規作成 | undefined | 空（name: '', color: DEFAULT_PROJECT_COLOR） |
 | 編集 | `{id:'...', name:'既存プロジェクト', ...}` | 既存データで埋まる |
 
 ✅ **確認ポイント**:
@@ -353,6 +363,7 @@ return (
 続いて、終了日フィールドとフォーム全体の閉じタグを追加します。
 
 ```typescript
+// filepath: src/component/project/project-dialog.tsx
             <div className="grid gap-2">
               <Label htmlFor="endDate">
                 終了日
@@ -408,6 +419,11 @@ return (
 );
 ```
 
+✅ **確認ポイント**:
+- 作成ボタンとキャンセルボタンが表示される
+- プロジェクト名が空だと作成ボタンが無効になる
+- キャンセルでダイアログが閉じる
+
 > 💡 `type="button"` を指定しないと、キャンセルボタンでもフォーム送信が実行されてしまいます。`disabled={!formData.name}` でプロジェクト名が空のときは送信ボタンを無効にしています。
 
 #### ボタンの役割
@@ -446,6 +462,11 @@ import type {
 // filepath: src/app/project/page.tsx
 // ProjectPageContent内に追加
 const utils = api.useUtils();
+
+// ログイン中のユーザー情報を取得
+const { data: currentUser } =
+  api.user.getCurrentUser.useQuery();
+
 const createMutation =
   api.project.create.useMutation({
     onSuccess: () => {
@@ -468,6 +489,12 @@ const handleSubmit = (
     name: data.name,
     description: data.description,
     color: data.color,
+    startDate: data.startDate
+      ? new Date(data.startDate).toISOString()
+      : undefined,
+    endDate: data.endDate
+      ? new Date(data.endDate).toISOString()
+      : undefined,
   });
 };
 ```
@@ -510,6 +537,12 @@ JSX 内にダイアログを追加します。
 - カードに選んだ色が反映されている
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

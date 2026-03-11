@@ -136,6 +136,11 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 ```
 
+✅ **確認ポイント**:
+- import文を3行追加した
+- `loginSchema` と `LoginFormData` を定義した
+- `npm run dev` でエラーが出ていない
+
 #### zodスキーマのコード解説
 
 | コード | 意味 | 例え |
@@ -179,6 +184,10 @@ const onSubmit = (data: LoginFormData) => {
   console.log('送信データ:', data);
 };
 ```
+
+✅ **確認ポイント**:
+- `useForm` の設定を LoginForm 内に追加した
+- `npm run dev` でエラーが出ていない
 
 #### useFormの返り値の解説
 
@@ -365,6 +374,7 @@ import {
   useSearchParams,
 } from 'next/navigation';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 ```
 
 LoginForm 内の先頭に以下を追加します。
@@ -374,10 +384,18 @@ LoginForm 内の先頭に以下を追加します。
 // LoginFormコンポーネント内の先頭に追加
 const router = useRouter();
 const searchParams = useSearchParams();
+
+// Open Redirect対策: 相対パスのみを許可
+function isValidRedirectUrl(url: string): boolean {
+  if (!url) return false;
+  if (url.startsWith('//')) return false;
+  if (url.startsWith('http://') || url.startsWith('https://')) return false;
+  return url.startsWith('/');
+}
+
 // ログイン後の遷移先（未指定ならダッシュボード）
-const callbackUrl =
-  searchParams?.get('callbackUrl')
-  || '/dashboard';
+const rawCallbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
+const callbackUrl = isValidRedirectUrl(rawCallbackUrl) ? rawCallbackUrl : '/dashboard';
 // サーバーエラーの状態管理
 const [error, setError] =
   useState<string | null>(null);
@@ -390,7 +408,10 @@ tRPCのログインAPI呼び出しを定義します。
 // tRPCのログインAPI呼び出し
 const loginMutation =
   api.auth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast.success(
+        `おかえりなさい、${data.user.name}さん`
+      );
       router.push(callbackUrl);
       router.refresh();
     },
@@ -413,6 +434,11 @@ const onSubmit = (data: LoginFormData) => {
   loginMutation.mutate(data); // API呼び出し
 };
 ```
+
+✅ **確認ポイント**:
+- `api` の import を追加した
+- `loginMutation` を定義した
+- `onSubmit` で `loginMutation.mutate` を呼んでいる
 
 #### tRPC ミューテーションの解説
 
@@ -515,7 +541,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="flex min-h-screen
         items-center justify-center">
-        Loading...
+        読み込み中...
       </div>
     }>
       <LoginForm />
@@ -524,7 +550,7 @@ export default function LoginPage() {
 }
 ```
 
-> 💡 `Suspense` は、`useSearchParams` を使うコンポーネントに必要なラッパーです。読み込み中に「Loading...」を表示してくれます。
+> 💡 `Suspense` は、`useSearchParams` を使うコンポーネントに必要なラッパーです。読み込み中に「読み込み中...」を表示してくれます。
 
 ✅ **確認ポイント**:
 - 「こちら」リンクが表示されている

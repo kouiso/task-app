@@ -143,6 +143,10 @@ const { data: projects } =
   api.project.getAll.useQuery();
 ```
 
+✅ **確認ポイント**:
+- `npm run dev` でエラーが出ていない
+- `console.log(tasks)` でデータが取得できている
+
 #### task.getAll のパラメータ
 
 | パラメータ | 型 | 説明 |
@@ -207,6 +211,7 @@ const [filterStatus, setFilterStatus] =
 SelectContentの閉じタグまでがプロジェクト一覧の定義です。続けてSelectの閉じタグと外側のdivを記述します。
 
 ```typescript
+// filepath: src/app/task/page.tsx
     </Select>
   </div>
 </div>
@@ -275,6 +280,10 @@ import {
   />
 ))}
 ```
+
+✅ **確認ポイント**:
+- タスクがカード形式で表示されている
+- ステータス・優先度がBadgeで表示される
 
 #### TaskCardに渡す主なprops
 
@@ -376,6 +385,12 @@ const { data: taskDetail } =
 - 詳細ダイアログが開閉する
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 
