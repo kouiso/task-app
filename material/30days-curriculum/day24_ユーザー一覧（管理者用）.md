@@ -82,7 +82,7 @@ APIを理解します。
 ```bash
 # filepath: ターミナル
 # ユーザー管理用APIを確認
-cat src/server/router/user.ts | head -30
+cat src/server/api/routers/user.ts | head -30
 ```
 
 ✅ **確認ポイント**:

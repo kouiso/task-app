@@ -469,6 +469,6 @@ const isAuthenticated = t.middleware(
 | jwt.ioでデコードできない | 値のコピーが不完全 | Cookie値を全選択してからコピーする |
 | トーストが表示されない | `react-hot-toast`のインポート漏れ | `import toast from 'react-hot-toast'`を確認 |
 
-## 🔜 次回の予告
+## 🔜 次回予告
 
 Day 08では、サイドバーにユーザー情報ウィジェットを追加し、ログアウト確認ダイアログを実装します。ログアウトとページ保護の仕組みを、自分の手で作りながら学びましょう。

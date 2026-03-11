@@ -79,7 +79,7 @@ update/delete メソッドを把握します。
 ```bash
 # filepath: ターミナル
 # comment ルーターのupdate/deleteを確認する
-cat src/server/router/comment.ts | grep -A5 "update\|delete"
+cat src/server/api/routers/comment.ts | grep -A5 "update\|delete"
 ```
 
 ✅ **確認ポイント**:

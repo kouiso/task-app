@@ -99,7 +99,7 @@ openssl rand -base64 32
 |--------|--------|------|
 | DATABASE_URL | `postgresql://user:pass@host:5432/db` | DB 接続 |
 | JWT_SECRET | ランダム32文字以上 | JWT 署名鍵 |
-| NEXT_PUBLIC_APP_URL | `https://<あなたのアプリ名>.vercel.app` | アプリの公開 URL |
+| NODE_ENV | `production` | 実行環境の区分 |
 
 💻 **JWT_SECRET の生成**:
 

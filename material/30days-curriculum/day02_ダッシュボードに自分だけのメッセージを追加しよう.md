@@ -464,6 +464,6 @@ export const TASK_PRIORITY_LABELS:
 | 保存してもブラウザに反映されない | Hot Reloadが止まっている | ターミナルでCtrl+Cして`npm run dev`を再実行 |
 | `import`に赤い波線が出る | ファイルパスが間違っている | `@/component/ui/card`のように`@/`始まりか確認 |
 
-## 🔜 次回の予告
+## 🔜 次回予告
 
 明日はGitHubにコードを保存する方法を学びます。今日追加したウェルカムバナーの変更を、Gitで記録して、GitHubにアップロードしましょう。
