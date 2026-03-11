@@ -9,20 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Setup tools with mise
-        uses: jdx/mise-action@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          install: true
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          node-version-file: 'package.json'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci

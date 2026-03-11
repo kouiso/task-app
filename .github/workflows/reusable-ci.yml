@@ -1,6 +1,11 @@
 name: 'Common Setup'
 on:
   workflow_call:
+    inputs:
+      node-version-file:
+        description: 'Path to the Node.js version file'
+        required: true
+        type: string
     secrets:
       firebase-api-key:
         description: 'Firebase API Key'
@@ -29,12 +34,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Setup tools with mise
-        uses: jdx/mise-action@v2
+      - uses: actions/setup-node@v4
         with:
-          install: true
+          node-version-file: 'package.json'
 
       - name: Cache dependencies
         uses: actions/cache@v4
