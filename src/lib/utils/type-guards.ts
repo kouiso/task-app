@@ -1,7 +1,7 @@
-import type { Comment } from '@/types/comment';
-import type { Project, ProjectMember } from '@/types/project';
-import type { Task } from '@/types/task';
-import type { User } from '@/types/user';
+import type { Comment } from '@/type/comment';
+import type { Project, ProjectMember } from '@/type/project';
+import type { Task } from '@/type/task';
+import type { User } from '@/type/user';
 
 export function isTask(value: unknown): value is Task {
   if (!value || typeof value !== 'object') return false;

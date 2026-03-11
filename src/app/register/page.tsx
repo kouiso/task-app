@@ -1,14 +1,17 @@
 'use client';
 
-import { api } from '@/trpc/react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
-import { Alert, Avatar, Box, Button, Container, Link, TextField, Typography } from '@mui/material';
-import NextLink from 'next/link';
+import { UserPlus } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { api } from '@/trpc/react';
 
 const registerSchema = z
   .object({
@@ -56,90 +59,83 @@ export default function RegisterPage() {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-          <PersonAddOutlinedIcon />
-        </Avatar>
-        <Typography component="h1" variant="h5">
-          新規登録
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="name"
-            label="名前"
-            autoComplete="name"
-            autoFocus
-            error={!!errors.name}
-            helperText={errors.name?.message}
-            {...register('name')}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="メールアドレス"
-            autoComplete="email"
-            error={!!errors.email}
-            helperText={errors.email?.message}
-            {...register('email')}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="パスワード"
-            type="password"
-            id="password"
-            autoComplete="new-password"
-            error={!!errors.password}
-            helperText={errors.password?.message}
-            {...register('password')}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="パスワード(確認)"
-            type="password"
-            id="confirmPassword"
-            autoComplete="new-password"
-            error={!!errors.confirmPassword}
-            helperText={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-            disabled={registerMutation.isPending}
-          >
-            {registerMutation.isPending ? '登録中...' : '登録'}
-          </Button>
-          <Box sx={{ textAlign: 'center' }}>
-            <Link component={NextLink} href="/login" variant="body2">
-              すでにアカウントをお持ちの方はこちら
-            </Link>
-          </Box>
-        </Box>
-      </Box>
-    </Container>
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="rounded-full bg-secondary p-2">
+              <UserPlus className="h-6 w-6 text-secondary-foreground" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl">新規登録</CardTitle>
+          <CardDescription>新しいアカウントを作成してください</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="name">名前</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="山田 太郎"
+                autoComplete="name"
+                autoFocus
+                {...register('name')}
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">メールアドレス</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                autoComplete="email"
+                {...register('email')}
+              />
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">パスワード</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">パスワード(確認)</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                {...register('confirmPassword')}
+              />
+              {errors.confirmPassword && (
+                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+            <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+              {registerMutation.isPending ? '登録中...' : '登録'}
+            </Button>
+            <div className="text-center text-sm">
+              すでにアカウントをお持ちの方は{' '}
+              <Link href="/login" className="underline underline-offset-4 hover:text-primary">
+                こちら
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

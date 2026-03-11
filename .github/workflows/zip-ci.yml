@@ -79,11 +79,16 @@ jobs:
           unzip task-app.zip -d extracted
           echo "✅ ZIP extracted successfully"
 
-      - name: Setup Node.js
+      - name: Setup tools with mise
+        uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      - name: Setup Node.js (from package.json)
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'extracted/package.json'
-          cache: 'npm'
+          node-version-file: './extracted/package.json'
+
       - name: Setup environment file
         working-directory: ./extracted
         run: |

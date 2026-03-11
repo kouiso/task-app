@@ -1,19 +1,6 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { api } from '@/trpc/react';
-import {
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Select,
-  Typography,
-} from '@mui/material';
+import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import {
   Bar,
@@ -27,18 +14,30 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { api } from '@/trpc/react';
 
 export default function WeeklyReportPage() {
-  const [weeks, setWeeks] = useState(4);
+  const [weeks, setWeeks] = useState('4');
 
-  const { data: reportData, isLoading } = api.report.getWeeklyReport.useQuery({ weeks });
+  const { data: reportData, isLoading } = api.report.getWeeklyReport.useQuery({
+    weeks: Number.parseInt(weeks, 10),
+  });
 
   if (isLoading) {
     return (
       <AppLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress />
-        </Box>
+        <div className="flex justify-center items-center min-h-[60vh]">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
       </AppLayout>
     );
   }
@@ -59,70 +58,64 @@ export default function WeeklyReportPage() {
 
   return (
     <AppLayout>
-      <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4">Weekly Report</Typography>
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>Period</InputLabel>
-            <Select
-              value={weeks}
-              label="Period"
-              onChange={(e) => setWeeks(e.target.value as number)}
-            >
-              <MenuItem value={4}>4 Weeks</MenuItem>
-              <MenuItem value={8}>8 Weeks</MenuItem>
-              <MenuItem value={12}>12 Weeks</MenuItem>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">週次レポート</h1>
+            <p className="text-muted-foreground">週ごとのタスク進捗の詳細レポートです。</p>
+          </div>
+          <div className="w-[150px]">
+            <Select value={weeks} onValueChange={setWeeks}>
+              <SelectTrigger>
+                <SelectValue placeholder="期間" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="4">4週間</SelectItem>
+                <SelectItem value="8">8週間</SelectItem>
+                <SelectItem value="12">12週間</SelectItem>
+              </SelectContent>
             </Select>
-          </FormControl>
-        </Box>
+          </div>
+        </div>
 
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  Total Completed
-                </Typography>
-                <Typography variant="h3">{reportData?.totalCompleted || 0}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  Average per Week
-                </Typography>
-                <Typography variant="h3">
-                  {reportData?.totalCompleted ? Math.round(reportData.totalCompleted / weeks) : 0}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  Period
-                </Typography>
-                <Typography variant="h5">
-                  {reportData?.startDate && reportData?.endDate
-                    ? `${new Date(reportData.startDate).toLocaleDateString()} - ${new Date(reportData.endDate).toLocaleDateString()}`
-                    : '-'}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+        {/* 概要統計 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground mb-1">完了タスク合計</p>
+              <p className="text-3xl font-bold">{reportData?.totalCompleted || 0}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground mb-1">週平均</p>
+              <p className="text-3xl font-bold">
+                {reportData?.totalCompleted
+                  ? Math.round(reportData.totalCompleted / Number.parseInt(weeks, 10))
+                  : 0}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground mb-1">対象期間</p>
+              <p className="text-lg font-semibold">
+                {reportData?.startDate && reportData?.endDate
+                  ? `${new Date(reportData.startDate).toLocaleDateString()} - ${new Date(reportData.endDate).toLocaleDateString()}`
+                  : '-'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" mb={2}>
-                  Completed Tasks by Week
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="col-span-1 lg:col-span-2">
+            <CardHeader>
+              <CardTitle>週別完了タスク数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
@@ -133,58 +126,59 @@ export default function WeeklyReportPage() {
                       type="monotone"
                       dataKey="completed"
                       stroke="#8884d8"
-                      name="Total Completed"
+                      name="完了数"
+                      strokeWidth={2}
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
+              </div>
+            </CardContent>
+          </Card>
 
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" mb={2}>
-                  Priority Distribution
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
+          <Card>
+            <CardHeader>
+              <CardTitle>優先度別分布</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="urgent" fill="#f44336" name="Urgent" />
-                    <Bar dataKey="high" fill="#ff9800" name="High" />
+                    <Bar dataKey="urgent" fill="#f44336" name="緊急" />
+                    <Bar dataKey="high" fill="#ff9800" name="高" />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
+              </div>
+            </CardContent>
+          </Card>
 
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" mb={2}>
-                  Status Breakdown
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
+          <Card>
+            <CardHeader>
+              <CardTitle>ステータス別内訳</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={statusData || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="done" fill="#4caf50" name="Done" stackId="status" />
-                    <Bar dataKey="inProgress" fill="#2196f3" name="In Progress" stackId="status" />
-                    <Bar dataKey="inReview" fill="#ff9800" name="In Review" stackId="status" />
+                    <Bar dataKey="done" fill="#4caf50" name="完了" stackId="status" />
+                    <Bar dataKey="inProgress" fill="#2196f3" name="進行中" stackId="status" />
+                    <Bar dataKey="inReview" fill="#ff9800" name="レビュー中" stackId="status" />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </AppLayout>
   );
 }

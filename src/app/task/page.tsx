@@ -1,58 +1,79 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { TaskCard } from '@/components/task/task-card';
-import { TaskDialog, type TaskFormData } from '@/components/task/task-dialog';
-import { api } from '@/trpc/react';
-import AddIcon from '@mui/icons-material/Add';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import DeleteIcon from '@mui/icons-material/Delete';
-import {
-  Box,
-  Button,
-  Checkbox,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  Grid,
-  List,
-  ListItem,
-  ListItemText,
-  Menu,
-  MenuItem,
-  TextField,
-  Typography,
-} from '@mui/material';
 import type { TaskStatus } from '@prisma/client';
-import { useState } from 'react';
+import { CheckSquare, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Checkbox } from '@/component/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/component/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/component/ui/dropdown-menu';
+import { Label } from '@/component/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { Separator } from '@/component/ui/separator';
+import { Textarea } from '@/component/ui/textarea';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
 
-export default function TaskPage() {
+function TaskPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
-  const [filterProject, setFilterProject] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<TaskStatus | ''>('');
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
-  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
   const [commentContent, setCommentContent] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+
+  const searchParams = useSearchParams();
+  const taskIdParam = searchParams.get('taskId');
+
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [taskIdParam]);
 
   const utils = api.useUtils();
 
   const { data: session } = api.auth.getSession.useQuery();
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery(
     {
-      projectId: filterProject || undefined,
-      status: filterStatus || undefined,
+      projectId: filterProject === 'all' ? undefined : filterProject,
+      status: filterStatus === 'all' ? undefined : filterStatus,
     },
     { refetchOnWindowFocus: false },
   );
 
   const { data: projects } = api.project.getAll.useQuery();
-  const { data: users } = api.user.getAll.useQuery();
+  const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: taskDetail } = api.task.getById.useQuery(
     { id: selectedTask ?? '' },
     { enabled: !!selectedTask },
@@ -99,7 +120,6 @@ export default function TaskPage() {
     onSuccess: () => {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
-      setBulkMenuAnchor(null);
     },
   });
 
@@ -109,6 +129,24 @@ export default function TaskPage() {
         utils.task.getById.invalidate({ id: selectedTask });
       }
       setCommentContent('');
+    },
+  });
+
+  const updateCommentMutation = api.comment.update.useMutation({
+    onSuccess: () => {
+      if (selectedTask) {
+        utils.task.getById.invalidate({ id: selectedTask });
+      }
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+    },
+  });
+
+  const deleteCommentMutation = api.comment.delete.useMutation({
+    onSuccess: () => {
+      if (selectedTask) {
+        utils.task.getById.invalidate({ id: selectedTask });
+      }
     },
   });
 
@@ -138,7 +176,7 @@ export default function TaskPage() {
   };
 
   const handleDelete = (taskId: string) => {
-    if (confirm('Are you sure you want to delete this task?')) {
+    if (confirm('このタスクを削除してもよろしいですか？')) {
       deleteMutation.mutate({ id: taskId });
     }
   };
@@ -152,12 +190,11 @@ export default function TaskPage() {
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-        estimatedHours: data.estimatedHours || null,
+        estimatedHours: data.estimatedHours ?? null,
         assigneeId: data.assigneeId || null,
       });
     } else {
       if (!session?.user?.id) {
-        console.error('No user session found');
         return;
       }
       createMutation.mutate({
@@ -168,7 +205,6 @@ export default function TaskPage() {
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
         estimatedHours: data.estimatedHours,
         projectId: data.projectId,
-        createdById: session.user.id,
         assigneeId: data.assigneeId || undefined,
       });
     }
@@ -186,12 +222,11 @@ export default function TaskPage() {
   };
 
   const handleCommentSubmit = () => {
-    if (!commentContent.trim() || !selectedTask || !session?.user?.id) return;
+    if (!commentContent.trim() || !selectedTask) return;
 
     createCommentMutation.mutate({
       content: commentContent.trim(),
       taskId: selectedTask,
-      userId: session.user.id,
     });
   };
 
@@ -207,6 +242,10 @@ export default function TaskPage() {
     setSelectedTasks(checked ? new Set(tasks?.map((t) => t.id) || []) : new Set());
   };
 
+  useEffect(() => {
+    setSelectedTasks(new Set());
+  }, []);
+
   const handleBulkComplete = () => {
     if (selectedTasks.size > 0) {
       bulkCompleteMutation.mutate({ ids: Array.from(selectedTasks) });
@@ -214,7 +253,7 @@ export default function TaskPage() {
   };
 
   const handleBulkDelete = () => {
-    if (selectedTasks.size > 0 && confirm(`Delete ${selectedTasks.size} tasks?`)) {
+    if (selectedTasks.size > 0 && confirm(`${selectedTasks.size}件のタスクを削除しますか？`)) {
       bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
     }
   };
@@ -225,145 +264,164 @@ export default function TaskPage() {
     }
   };
 
+  const selectAllState =
+    tasks && tasks.length > 0
+      ? selectedTasks.size === 0
+        ? false
+        : selectedTasks.size === tasks.length
+          ? true
+          : 'indeterminate'
+      : false;
+
   if (tasksLoading) {
     return (
       <AppLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress />
-        </Box>
+        <div className="flex h-[60vh] items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
       </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography variant="h4">Tasks</Typography>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
             {selectedTasks.size > 0 && (
-              <Typography variant="body2" color="text.secondary">
-                ({selectedTasks.size} selected)
-              </Typography>
+              <span className="text-sm text-muted-foreground">({selectedTasks.size}件選択中)</span>
             )}
-          </Box>
-          <Box display="flex" gap={1}>
+          </div>
+          <div className="flex items-center gap-2">
             {selectedTasks.size > 0 && (
               <>
-                <Button
-                  variant="outlined"
-                  startIcon={<CheckBoxIcon />}
-                  onClick={handleBulkComplete}
-                >
-                  Complete
+                <Button variant="outline" size="sm" onClick={handleBulkComplete}>
+                  <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
                 </Button>
-                <Button variant="outlined" onClick={(e) => setBulkMenuAnchor(e.currentTarget)}>
-                  Change Status
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      ステータス変更
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleBulkUpdateStatus('TODO')}>
+                      未対応
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkUpdateStatus('IN_PROGRESS')}>
+                      進行中
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkUpdateStatus('IN_REVIEW')}>
+                      レビュー中
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkUpdateStatus('DONE')}>
+                      完了
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkUpdateStatus('CANCELLED')}>
+                      キャンセル
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkUpdateStatus('BLOCKED')}>
+                      ブロック
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon />}
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
                   onClick={handleBulkDelete}
                 >
-                  Delete
+                  <Trash2 className="mr-2 h-4 w-4" /> 削除
                 </Button>
               </>
             )}
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
-              New Task
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" /> 新規タスク
             </Button>
-          </Box>
-        </Box>
+          </div>
+        </div>
 
-        <Box display="flex" gap={2} mb={3} alignItems="center">
-          <Checkbox
-            checked={!!(tasks && tasks.length > 0 && selectedTasks.size === tasks.length)}
-            indeterminate={!!(tasks && selectedTasks.size > 0 && selectedTasks.size < tasks.length)}
-            onChange={(e) => handleSelectAll(e.target.checked)}
-          />
-          <TextField
-            select
-            label="Filter by Project"
-            value={filterProject}
-            onChange={(e) => setFilterProject(e.target.value)}
-            sx={{ minWidth: 200 }}
-            size="small"
-          >
-            <MenuItem value="">All Projects</MenuItem>
-            {projects?.map((project) => (
-              <MenuItem key={project.id} value={project.id}>
-                {project.name}
-              </MenuItem>
-            ))}
-          </TextField>
+        <div className="flex flex-col sm:flex-row gap-4 items-center mb-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="select-all"
+              checked={selectAllState}
+              onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+            />
+            <Label htmlFor="select-all">すべて選択</Label>
+          </div>
 
-          <TextField
-            select
-            label="Filter by Status"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as TaskStatus | '')}
-            sx={{ minWidth: 200 }}
-            size="small"
-          >
-            <MenuItem value="">All Status</MenuItem>
-            <MenuItem value="TODO">TODO</MenuItem>
-            <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
-            <MenuItem value="IN_REVIEW">In Review</MenuItem>
-            <MenuItem value="DONE">Done</MenuItem>
-            <MenuItem value="CANCELLED">Cancelled</MenuItem>
-            <MenuItem value="BLOCKED">Blocked</MenuItem>
-          </TextField>
-        </Box>
+          <div className="flex gap-2 w-full sm:w-auto ml-auto">
+            <div className="w-[200px]">
+              <Select value={filterProject} onValueChange={setFilterProject}>
+                <SelectTrigger>
+                  <SelectValue placeholder="すべてのプロジェクト" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                  {projects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-[200px]">
+              <Select
+                value={filterStatus}
+                onValueChange={(value) => setFilterStatus(value as TaskStatus | 'all')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="すべてのステータス" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべてのステータス</SelectItem>
+                  <SelectItem value="TODO">未対応</SelectItem>
+                  <SelectItem value="IN_PROGRESS">進行中</SelectItem>
+                  <SelectItem value="IN_REVIEW">レビュー中</SelectItem>
+                  <SelectItem value="DONE">完了</SelectItem>
+                  <SelectItem value="CANCELLED">キャンセル</SelectItem>
+                  <SelectItem value="BLOCKED">ブロック</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
 
-        <Grid container spacing={3}>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
-              <Grid item xs={12} sm={6} md={4} key={task.id}>
-                <Box display="flex" alignItems="flex-start" gap={1}>
-                  <Checkbox
-                    checked={selectedTasks.has(task.id)}
-                    onChange={(e) => handleTaskSelect(task.id, e.target.checked)}
-                    sx={{ mt: 1 }}
+              <div key={task.id} className="flex gap-2 items-start h-full">
+                <Checkbox
+                  checked={selectedTasks.has(task.id)}
+                  onCheckedChange={(checked) => handleTaskSelect(task.id, checked as boolean)}
+                  className="mt-4"
+                />
+                <div className="flex-1 min-w-0 h-full">
+                  <TaskCard
+                    id={task.id}
+                    title={task.title}
+                    description={task.description}
+                    status={task.status}
+                    priority={task.priority}
+                    dueDate={task.dueDate}
+                    assignee={task.assignee}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onClick={handleTaskClick}
                   />
-                  <Box flex={1}>
-                    <TaskCard
-                      id={task.id}
-                      title={task.title}
-                      description={task.description}
-                      status={task.status}
-                      priority={task.priority}
-                      dueDate={task.dueDate}
-                      assignee={task.assignee}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onClick={handleTaskClick}
-                    />
-                  </Box>
-                </Box>
-              </Grid>
+                </div>
+              </div>
             ))
           ) : (
-            <Grid item xs={12}>
-              <Typography color="text.secondary" align="center">
-                No tasks found. Create your first task!
-              </Typography>
-            </Grid>
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              <p>最初のタスクを作成しましょう！</p>
+            </div>
           )}
-        </Grid>
-
-        <Menu
-          anchorEl={bulkMenuAnchor}
-          open={Boolean(bulkMenuAnchor)}
-          onClose={() => setBulkMenuAnchor(null)}
-        >
-          <MenuItem onClick={() => handleBulkUpdateStatus('TODO')}>TODO</MenuItem>
-          <MenuItem onClick={() => handleBulkUpdateStatus('IN_PROGRESS')}>In Progress</MenuItem>
-          <MenuItem onClick={() => handleBulkUpdateStatus('IN_REVIEW')}>In Review</MenuItem>
-          <MenuItem onClick={() => handleBulkUpdateStatus('DONE')}>Done</MenuItem>
-          <MenuItem onClick={() => handleBulkUpdateStatus('CANCELLED')}>Cancelled</MenuItem>
-          <MenuItem onClick={() => handleBulkUpdateStatus('BLOCKED')}>Blocked</MenuItem>
-        </Menu>
+        </div>
 
         <TaskDialog
           open={dialogOpen}
@@ -372,99 +430,218 @@ export default function TaskPage() {
           initialData={editingTask}
           projects={projects || []}
           users={users || []}
-          currentUserId={session?.user?.id || ''}
         />
 
-        <Dialog open={detailOpen} onClose={handleDetailClose} maxWidth="md" fullWidth>
-          <DialogTitle>{taskDetail?.title}</DialogTitle>
-          <DialogContent>
+        <Dialog open={detailOpen} onOpenChange={(isOpen) => !isOpen && handleDetailClose()}>
+          <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">{taskDetail?.title}</DialogTitle>
+              <DialogDescription>
+                プロジェクト:{' '}
+                <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
+              </DialogDescription>
+            </DialogHeader>
+
             {taskDetail && (
-              <Box>
-                <Typography variant="body1" paragraph>
-                  {taskDetail.description || 'No description'}
-                </Typography>
-                <Divider sx={{ my: 2 }} />
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Status
-                    </Typography>
-                    <Typography variant="body1">{taskDetail.status}</Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Priority
-                    </Typography>
-                    <Typography variant="body1">{taskDetail.priority}</Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Project
-                    </Typography>
-                    <Typography variant="body1">{taskDetail.project.name}</Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Assignee
-                    </Typography>
-                    <Typography variant="body1">
-                      {taskDetail.assignee?.name || taskDetail.assignee?.email || 'Unassigned'}
-                    </Typography>
-                  </Grid>
-                </Grid>
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  Comments ({taskDetail.comments?.length || 0})
-                </Typography>
-                <List>
-                  {taskDetail.comments?.map((comment) => (
-                    <ListItem key={comment.id} alignItems="flex-start">
-                      <ListItemText
-                        primary={comment.user.name || comment.user.email}
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2">
-                              {comment.content}
-                            </Typography>
-                            <br />
-                            <Typography component="span" variant="caption" color="text.secondary">
-                              {new Date(comment.createdAt).toLocaleString()}
-                            </Typography>
-                          </>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-                <Box sx={{ mt: 2 }}>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    variant="outlined"
-                    placeholder="Add a comment..."
-                    value={commentContent}
-                    onChange={(e) => setCommentContent(e.target.value)}
-                    disabled={createCommentMutation.isPending}
-                  />
-                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                      variant="contained"
-                      onClick={handleCommentSubmit}
-                      disabled={!commentContent.trim() || createCommentMutation.isPending}
-                    >
-                      {createCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
-                    </Button>
-                  </Box>
-                </Box>
-              </Box>
+              <div className="space-y-6">
+                <div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {taskDetail.description || '説明はありません。'}
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground block mb-1">ステータス</span>
+                    <Badge variant="outline">
+                      {TASK_STATUS_LABELS[taskDetail.status] ?? taskDetail.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-1">優先度</span>
+                    <Badge variant="outline">
+                      {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-1">担当者</span>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={taskDetail.assignee?.avatar || ''} />
+                        <AvatarFallback className="text-[10px]">
+                          {(taskDetail.assignee?.name ||
+                            taskDetail.assignee?.email ||
+                            '?')[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>
+                        {taskDetail.assignee?.name || taskDetail.assignee?.email || '未割当'}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-1">期限</span>
+                    <span>
+                      {taskDetail.dueDate
+                        ? new Date(taskDetail.dueDate).toLocaleDateString()
+                        : '期限なし'}
+                    </span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <h3 className="font-semibold">コメント</h3>
+                    <Badge variant="secondary" className="rounded-full px-2">
+                      {taskDetail.comments?.length || 0}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
+                    {taskDetail.comments?.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        コメントはまだありません。
+                      </p>
+                    )}
+                    {taskDetail.comments?.map((comment) => (
+                      <div key={comment.id} className="flex gap-3 text-sm">
+                        <Avatar className="h-8 w-8 mt-1">
+                          <AvatarImage src={comment.user.avatar || ''} />
+                          <AvatarFallback>
+                            {(comment.user.name || comment.user.email || '?')[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">
+                              {comment.user.name || comment.user.email}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(comment.createdAt).toLocaleString()}
+                              </span>
+                              {comment.userId === session?.user?.id && (
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => {
+                                      setEditingCommentId(comment.id);
+                                      setEditingCommentContent(comment.content);
+                                    }}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      if (confirm('このコメントを削除しますか？')) {
+                                        deleteCommentMutation.mutate({ id: comment.id });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {editingCommentId === comment.id ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editingCommentContent}
+                                onChange={(e) => setEditingCommentContent(e.target.value)}
+                                className="resize-none"
+                                rows={2}
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingCommentId(null);
+                                    setEditingCommentContent('');
+                                  }}
+                                >
+                                  キャンセル
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    if (editingCommentContent.trim()) {
+                                      updateCommentMutation.mutate({
+                                        id: comment.id,
+                                        content: editingCommentContent.trim(),
+                                      });
+                                    }
+                                  }}
+                                  disabled={
+                                    !editingCommentContent.trim() || updateCommentMutation.isPending
+                                  }
+                                >
+                                  {updateCommentMutation.isPending ? '更新中...' : '更新'}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground">{comment.content}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Textarea
+                      placeholder="コメントを追加..."
+                      value={commentContent}
+                      onChange={(e) => setCommentContent(e.target.value)}
+                      className="resize-none"
+                      rows={2}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleCommentSubmit}
+                        disabled={!commentContent.trim() || createCommentMutation.isPending}
+                      >
+                        {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
+
+            <DialogFooter>
+              <Button onClick={handleDetailClose}>閉じる</Button>
+            </DialogFooter>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleDetailClose}>Close</Button>
-          </DialogActions>
         </Dialog>
-      </Box>
+      </div>
     </AppLayout>
+  );
+}
+
+export default function TaskPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppLayout>
+          <div className="flex h-[60vh] items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        </AppLayout>
+      }
+    >
+      <TaskPageContent />
+    </Suspense>
   );
 }

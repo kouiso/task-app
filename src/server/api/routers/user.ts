@@ -1,21 +1,15 @@
-import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const userCreateSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   name: z.string().min(1, '名前を入力してください').optional(),
   avatar: z.string().url().optional(),
   role: z.enum(['USER', 'ADMIN']).default('USER'),
-});
-
-const userRegisterSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  name: z.string().min(1, '名前を入力してください'),
-  password: z.string().min(8, 'パスワードは8文字以上で入力してください'),
 });
 
 const userUpdateSchema = z.object({
@@ -32,16 +26,16 @@ const profileUpdateSchema = z.object({
   avatar: z.string().url().optional().nullable(),
 });
 
-const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
-    newPassword: z.string().min(8, '新しいパスワードは8文字以上で入力してください'),
-    confirmPassword: z.string().min(1, '確認用パスワードを入力してください'),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'パスワードが一致しません',
-    path: ['confirmPassword'],
-  });
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+  newPassword: z
+    .string()
+    .min(8, '新しいパスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
 
 export const userRouter = createTRPCRouter({
   getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
@@ -76,7 +70,20 @@ export const userRouter = createTRPCRouter({
         })
         .optional(),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // ADMIN権限チェック
+      const currentUser = await prisma.user.findUnique({
+        where: { id: ctx.session.userId },
+        select: { role: true },
+      });
+
+      if (currentUser?.role !== 'ADMIN') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: '管理者権限が必要です',
+        });
+      }
+
       const where: Prisma.UserWhereInput = {};
 
       if (input?.isActive !== undefined) {
@@ -156,9 +163,21 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  getByEmail: publicProcedure
+  getByEmail: protectedProcedure
     .input(z.object({ email: z.string().email() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: ctx.session.userId },
+        select: { role: true },
+      });
+
+      if (currentUser?.role !== 'ADMIN') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: '管理者権限が必要です',
+        });
+      }
+
       const user = await prisma.user.findUnique({
         where: { email: input.email },
         select: {
@@ -181,7 +200,20 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  create: publicProcedure.input(userCreateSchema).mutation(async ({ input }) => {
+  create: protectedProcedure.input(userCreateSchema).mutation(async ({ ctx, input }) => {
+    // ADMIN権限チェック
+    const currentUser = await prisma.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: { role: true },
+    });
+
+    if (currentUser?.role !== 'ADMIN') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: '管理者権限が必要です',
+      });
+    }
+
     const existing = await prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -218,8 +250,31 @@ export const userRouter = createTRPCRouter({
     });
   }),
 
-  update: protectedProcedure.input(userUpdateSchema).mutation(async ({ input }) => {
+  update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
+
+    // 自分以外のユーザーを更新する場合、ADMIN権限が必要
+    if (id !== ctx.session.userId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: ctx.session.userId },
+        select: { role: true },
+      });
+
+      if (currentUser?.role !== 'ADMIN') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: '管理者権限が必要です',
+        });
+      }
+    } else {
+      // 自分のプロフィール更新の場合、roleとisActiveは変更不可
+      if (data.role !== undefined || data.isActive !== undefined) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'roleとisActiveは変更できません',
+        });
+      }
+    }
 
     const updateData: Prisma.UserUpdateInput = {};
     if (data.name !== undefined) {
@@ -252,7 +307,20 @@ export const userRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // ADMIN権限チェック
+      const currentUser = await prisma.user.findUnique({
+        where: { id: ctx.session.userId },
+        select: { role: true },
+      });
+
+      if (currentUser?.role !== 'ADMIN') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: '管理者権限が必要です',
+        });
+      }
+
       await prisma.user.update({
         where: { id: input.id },
         data: { isActive: false },
@@ -260,44 +328,9 @@ export const userRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  register: publicProcedure.input(userRegisterSchema).mutation(async ({ input }) => {
-    const existing = await prisma.user.findUnique({
-      where: { email: input.email },
-    });
-
-    if (existing) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'このメールアドレスは既に登録されています',
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(input.password, 10);
-
-    return await prisma.user.create({
-      data: {
-        email: input.email,
-        name: input.name,
-        password: hashedPassword,
-        role: 'USER',
-        isActive: true,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
-  }),
-
-  // プロフィール更新（自分のみ）
   updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.userId;
 
-    // メールアドレスの重複チェック（自分以外）
     if (input.email) {
       const existingUser = await prisma.user.findFirst({
         where: {
@@ -337,7 +370,6 @@ export const userRouter = createTRPCRouter({
     });
   }),
 
-  // パスワード変更
   changePassword: protectedProcedure
     .input(changePasswordSchema)
     .mutation(async ({ ctx, input }) => {
@@ -355,7 +387,6 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      // 現在のパスワードの確認
       const isPasswordValid = await bcrypt.compare(input.currentPassword, user.password);
 
       if (!isPasswordValid) {
@@ -365,7 +396,6 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      // 新しいパスワードをハッシュ化
       const hashedPassword = await bcrypt.hash(input.newPassword, 10);
 
       await prisma.user.update({
@@ -375,50 +405,4 @@ export const userRouter = createTRPCRouter({
 
       return { success: true, message: 'パスワードを変更しました' };
     }),
-
-  // 管理者用：ユーザー更新
-  updateUser: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
-    // 管理者権限チェック
-    const currentUser = await prisma.user.findUnique({
-      where: { id: ctx.session.userId },
-      select: { role: true },
-    });
-
-    if (currentUser?.role !== 'ADMIN') {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: '管理者権限が必要です',
-      });
-    }
-
-    const { id, ...data } = input;
-
-    const updateData: Prisma.UserUpdateInput = {};
-    if (data.name !== undefined) {
-      updateData.name = data.name;
-    }
-    if (data.avatar !== undefined) {
-      updateData.avatar = data.avatar;
-    }
-    if (data.role !== undefined) {
-      updateData.role = data.role;
-    }
-    if (data.isActive !== undefined) {
-      updateData.isActive = data.isActive;
-    }
-
-    return await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-        updatedAt: true,
-      },
-    });
-  }),
 });

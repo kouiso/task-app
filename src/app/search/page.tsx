@@ -1,66 +1,60 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
-import { TaskCard } from '@/components/task/task-card';
-import { api } from '@/trpc/react';
-import SearchIcon from '@mui/icons-material/Search';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Divider,
-  Grid,
-  MenuItem,
-  TextField,
-  Typography,
-} from '@mui/material';
 import type { TaskPriority, TaskStatus } from '@prisma/client';
+import { Loader2, Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent } from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { Separator } from '@/component/ui/separator';
+import { api } from '@/trpc/react';
 
-/**
- * 検索ページコンポーネント
- * redmine-cloneの検索機能を完全に再現
- */
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const utils = api.useUtils();
 
-  // 検索条件の状態
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
-  const [projectId, setProjectId] = useState(searchParams.get('projectId') || '');
+  const [projectId, setProjectId] = useState(searchParams.get('projectId') || 'all');
   const [status, setStatus] = useState<'all' | TaskStatus>(
     (searchParams.get('status') as 'all' | TaskStatus) || 'all',
   );
   const [priority, setPriority] = useState<'all' | TaskPriority>(
     (searchParams.get('priority') as 'all' | TaskPriority) || 'all',
   );
-  const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') || '');
+  const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') || 'all');
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
 
-  // 検索を実行するかどうか
   const shouldSearch =
     !!keyword ||
-    !!projectId ||
+    projectId !== 'all' ||
     status !== 'all' ||
     priority !== 'all' ||
-    !!assignedTo ||
+    assignedTo !== 'all' ||
     !!dateFrom ||
     !!dateTo;
 
-  // データ取得
   const { data: projects } = api.search.getUserProjects.useQuery();
   const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: searchResults, isLoading } = api.search.search.useQuery(
     {
       keyword: keyword || undefined,
-      projectId: projectId || undefined,
+      projectId: projectId !== 'all' ? projectId : undefined,
       status: status,
       priority: priority,
-      assignedTo: assignedTo || undefined,
+      assignedTo: assignedTo !== 'all' ? assignedTo : undefined,
       dateFrom: dateFrom ? new Date(dateFrom).toISOString() : undefined,
       dateTo: dateTo ? new Date(dateTo).toISOString() : undefined,
     },
@@ -70,7 +64,6 @@ function SearchPageContent() {
     },
   );
 
-  // URLパラメータから初期値を設定（条件分岐を配列メソッドで削減）
   useEffect(() => {
     const paramSetters: Array<{
       key: string;
@@ -91,14 +84,13 @@ function SearchPageContent() {
     }
   }, [searchParams]);
 
-  // 検索実行（条件分岐を配列メソッドで削減）
   const handleSearch = () => {
     const searchParamList = [
       { key: 'keyword', value: keyword },
-      { key: 'projectId', value: projectId },
+      { key: 'projectId', value: projectId, exclude: 'all' },
       { key: 'status', value: status, exclude: 'all' },
       { key: 'priority', value: priority, exclude: 'all' },
-      { key: 'assignedTo', value: assignedTo },
+      { key: 'assignedTo', value: assignedTo, exclude: 'all' },
       { key: 'dateFrom', value: dateFrom },
       { key: 'dateTo', value: dateTo },
     ];
@@ -114,19 +106,17 @@ function SearchPageContent() {
     router.push(`/search?${params.toString()}`);
   };
 
-  // クリア（初期値を配列で管理）
   const handleClear = () => {
     setKeyword('');
-    setProjectId('');
+    setProjectId('all');
     setStatus('all');
     setPriority('all');
-    setAssignedTo('');
+    setAssignedTo('all');
     setDateFrom('');
     setDateTo('');
     router.push('/search');
   };
 
-  // タスクカードのハンドラー
   const handleTaskClick = (taskId: string) => {
     router.push(`/task?taskId=${taskId}`);
   };
@@ -135,296 +125,262 @@ function SearchPageContent() {
     router.push(`/task?taskId=${taskId}&edit=true`);
   };
 
-  const handleTaskDelete = (_taskId: string) => {
-    // タスク削除処理（実装済みのtask.delete mutationを使用）
+  const deleteMutation = api.task.delete.useMutation({
+    onSuccess: () => {
+      utils.search.search.invalidate();
+    },
+  });
+
+  const handleTaskDelete = (taskId: string) => {
     if (confirm('このタスクを削除してもよろしいですか？')) {
+      deleteMutation.mutate({ id: taskId });
     }
   };
 
-  // プロジェクトカードクリック
   const handleProjectClick = (projectId: string) => {
     router.push(`/project?projectId=${projectId}`);
   };
 
   return (
     <AppLayout>
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          検索
-        </Typography>
-        <Typography variant="body2" color="text.secondary" paragraph>
-          タスクやプロジェクトを検索します
-        </Typography>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">検索</h1>
+          <p className="text-muted-foreground">タスクやプロジェクトを検索します</p>
+        </div>
 
-        {/* 検索フォーム */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Grid container spacing={2}>
-              {/* キーワード検索 */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  type="search"
-                  label="キーワード"
-                  placeholder="タスク名、説明で検索..."
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSearch();
-                    }
-                  }}
-                />
-              </Grid>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="keyword">キーワード</Label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="keyword"
+                    placeholder="タスク名、説明で検索..."
+                    className="pl-8"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
 
-              {/* プロジェクトフィルター */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  select
-                  fullWidth
-                  label="プロジェクト"
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                >
-                  <MenuItem value="">すべてのプロジェクト</MenuItem>
-                  {projects?.map((project) => (
-                    <MenuItem key={project.id} value={project.id}>
-                      {project.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="project">プロジェクト</Label>
+                  <Select value={projectId} onValueChange={setProjectId}>
+                    <SelectTrigger id="project">
+                      <SelectValue placeholder="すべてのプロジェクト" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                      {projects?.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* ステータスフィルター */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  select
-                  fullWidth
-                  label="ステータス"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as 'all' | TaskStatus)}
-                >
-                  <MenuItem value="all">すべて</MenuItem>
-                  <MenuItem value="TODO">📋 未対応</MenuItem>
-                  <MenuItem value="IN_PROGRESS">🔄 進行中</MenuItem>
-                  <MenuItem value="IN_REVIEW">👀 レビュー中</MenuItem>
-                  <MenuItem value="DONE">✅ 完了</MenuItem>
-                  <MenuItem value="CANCELLED">❌ キャンセル</MenuItem>
-                  <MenuItem value="BLOCKED">🚫 ブロック</MenuItem>
-                </TextField>
-              </Grid>
+                <div className="grid gap-2">
+                  <Label htmlFor="status">ステータス</Label>
+                  <Select
+                    value={status}
+                    onValueChange={(value) => setStatus(value as 'all' | TaskStatus)}
+                  >
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="すべて" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべて</SelectItem>
+                      <SelectItem value="TODO">📋 未対応</SelectItem>
+                      <SelectItem value="IN_PROGRESS">🔄 進行中</SelectItem>
+                      <SelectItem value="IN_REVIEW">👀 レビュー中</SelectItem>
+                      <SelectItem value="DONE">✅ 完了</SelectItem>
+                      <SelectItem value="CANCELLED">❌ キャンセル</SelectItem>
+                      <SelectItem value="BLOCKED">🚫 ブロック</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* 優先度フィルター */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  select
-                  fullWidth
-                  label="優先度"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as 'all' | TaskPriority)}
-                >
-                  <MenuItem value="all">すべて</MenuItem>
-                  <MenuItem value="URGENT">🔴 緊急</MenuItem>
-                  <MenuItem value="HIGH">🟠 高い</MenuItem>
-                  <MenuItem value="MEDIUM">🟡 普通</MenuItem>
-                  <MenuItem value="LOW">🟢 低い</MenuItem>
-                </TextField>
-              </Grid>
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">優先度</Label>
+                  <Select
+                    value={priority}
+                    onValueChange={(value) => setPriority(value as 'all' | TaskPriority)}
+                  >
+                    <SelectTrigger id="priority">
+                      <SelectValue placeholder="すべて" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべて</SelectItem>
+                      <SelectItem value="URGENT">🔴 緊急</SelectItem>
+                      <SelectItem value="HIGH">🟠 高い</SelectItem>
+                      <SelectItem value="MEDIUM">🟡 普通</SelectItem>
+                      <SelectItem value="LOW">🟢 低い</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* 担当者フィルター */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  select
-                  fullWidth
-                  label="担当者"
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                >
-                  <MenuItem value="">すべての担当者</MenuItem>
-                  {users?.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.name || user.email}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
+                <div className="grid gap-2">
+                  <Label htmlFor="assignedTo">担当者</Label>
+                  <Select value={assignedTo} onValueChange={setAssignedTo}>
+                    <SelectTrigger id="assignedTo">
+                      <SelectValue placeholder="すべての担当者" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべての担当者</SelectItem>
+                      {users?.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* 期限フィルター（開始日） */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="期限：開始日"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+                <div className="grid gap-2">
+                  <Label htmlFor="dateFrom">期限：開始日</Label>
+                  <Input
+                    id="dateFrom"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
 
-              {/* 期限フィルター（終了日） */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="期限：終了日"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+                <div className="grid gap-2">
+                  <Label htmlFor="dateTo">期限：終了日</Label>
+                  <Input
+                    id="dateTo"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+              </div>
 
-              {/* アクションボタン */}
-              <Grid item xs={12}>
-                <Box display="flex" gap={2} justifyContent="flex-end">
-                  <Button variant="outlined" onClick={handleClear}>
-                    クリア
-                  </Button>
-                  <Button variant="contained" startIcon={<SearchIcon />} onClick={handleSearch}>
-                    検索
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={handleClear}>
+                  クリア
+                </Button>
+                <Button onClick={handleSearch}>
+                  <Search className="mr-2 h-4 w-4" />
+                  検索
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* 検索結果 */}
         {isLoading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
-            <CircularProgress />
-          </Box>
+          <div className="flex justify-center items-center h-40">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         ) : shouldSearch && searchResults ? (
-          <Box>
-            {/* 検索結果サマリー */}
-            <Box mb={3}>
-              <Typography variant="h6">
-                検索結果: {searchResults.totalCount}件
-                {searchResults.tasks.length > 0 && (
-                  <Typography component="span" variant="body2" color="text.secondary" ml={2}>
-                    （タスク: {searchResults.tasks.length}件
-                    {searchResults.projects.length > 0 &&
-                      `, プロジェクト: ${searchResults.projects.length}件`}
-                    ）
-                  </Typography>
-                )}
-              </Typography>
-            </Box>
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              検索結果: {searchResults.totalCount}件
+              {searchResults.tasks.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  （タスク: {searchResults.tasks.length}件
+                  {searchResults.projects.length > 0 &&
+                    `, プロジェクト: ${searchResults.projects.length}件`}
+                  ）
+                </span>
+              )}
+            </h2>
 
-            {/* タスク結果 */}
             {searchResults.tasks.length > 0 && (
-              <Box mb={4}>
-                <Typography variant="h6" gutterBottom>
-                  タスク ({searchResults.tasks.length})
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Grid container spacing={3}>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">タスク ({searchResults.tasks.length})</h3>
+                  <Separator className="flex-1" />
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {searchResults.tasks.map((task) => (
-                    <Grid item xs={12} sm={6} md={4} key={task.id}>
-                      <TaskCard
-                        id={task.id}
-                        title={task.title}
-                        description={task.description}
-                        status={task.status}
-                        priority={task.priority}
-                        dueDate={task.dueDate}
-                        assignee={task.assignee}
-                        onEdit={handleTaskEdit}
-                        onDelete={handleTaskDelete}
-                        onClick={handleTaskClick}
-                      />
-                    </Grid>
+                    <TaskCard
+                      key={task.id}
+                      id={task.id}
+                      title={task.title}
+                      description={task.description}
+                      status={task.status}
+                      priority={task.priority}
+                      dueDate={task.dueDate}
+                      assignee={task.assignee}
+                      onEdit={handleTaskEdit}
+                      onDelete={handleTaskDelete}
+                      onClick={handleTaskClick}
+                    />
                   ))}
-                </Grid>
-              </Box>
+                </div>
+              </div>
             )}
 
-            {/* プロジェクト結果 */}
             {searchResults.projects.length > 0 && (
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  プロジェクト ({searchResults.projects.length})
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Grid container spacing={3}>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">
+                    プロジェクト ({searchResults.projects.length})
+                  </h3>
+                  <Separator className="flex-1" />
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {searchResults.projects.map((project) => (
-                    <Grid item xs={12} sm={6} md={4} key={project.id}>
-                      <Card
-                        sx={{
-                          cursor: 'pointer',
-                          '&:hover': { boxShadow: 3 },
-                        }}
-                        onClick={() => handleProjectClick(project.id)}
-                      >
-                        <CardContent>
-                          <Typography variant="h6" gutterBottom noWrap>
-                            {project.name}
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              minHeight: '40px',
-                            }}
-                          >
-                            {project.description || '説明なし'}
-                          </Typography>
-                          <Box mt={2} display="flex" justifyContent="space-between">
-                            <Typography variant="caption" color="text.secondary">
-                              タスク: {project._count.tasks}件
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              メンバー: {project.members.length}人
-                            </Typography>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
+                    <Card
+                      key={project.id}
+                      className="cursor-pointer hover:shadow-md transition-all"
+                      onClick={() => handleProjectClick(project.id)}
+                    >
+                      <CardContent className="pt-6">
+                        <h4 className="font-semibold truncate mb-2">{project.name}</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px] mb-4">
+                          {project.description || '説明なし'}
+                        </p>
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span>タスク: {project._count.tasks}件</span>
+                          <span>メンバー: {project.members.length}人</span>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
-                </Grid>
-              </Box>
+                </div>
+              </div>
             )}
 
-            {/* 検索結果なし */}
             {searchResults.totalCount === 0 && (
-              <Box textAlign="center" py={6}>
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  検索結果が見つかりませんでした
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  検索条件を変更して再度お試しください
-                </Typography>
-              </Box>
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-lg font-medium">検索結果が見つかりませんでした</p>
+                <p>検索条件を変更して再度お試しください</p>
+              </div>
             )}
-          </Box>
+          </div>
         ) : (
-          <Box textAlign="center" py={6}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              検索条件を入力して検索してください
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              キーワード、プロジェクト、ステータスなどで絞り込めます
-            </Typography>
-          </Box>
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-lg font-medium">検索条件を入力して検索してください</p>
+            <p>キーワード、プロジェクト、ステータスなどで絞り込めます</p>
+          </div>
         )}
-      </Box>
+      </div>
     </AppLayout>
   );
 }
 
-// Suspense境界でラップ
 export default function SearchPage() {
   return (
     <Suspense
       fallback={
         <AppLayout>
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-            <CircularProgress />
-          </Box>
+          <div className="flex justify-center items-center h-[60vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         </AppLayout>
       }
     >

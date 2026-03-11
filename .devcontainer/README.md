@@ -48,7 +48,7 @@ claude --dangerously-skip-permissions
 
 ### devcontainer.json
 - Claude Code拡張機能を自動インストール
-- ESLint、Prettier、GitLensも含む
+- Biome、GitLensも含む
 - コマンド履歴を永続化
 - **ホストの`~/.claude`フォルダをマウント**（認証情報を共有）
 - **ホストの`~/.claude.json`をマウント**（MCP設定を共有）
@@ -56,7 +56,7 @@ claude --dangerously-skip-permissions
 - **ホストの`~/.gitconfig`と`~/.ssh`をマウント**（コンテナ内でもgit操作可能）
 
 ### Dockerfile
-- Node.js 20ベース
+- Node.js 25.6.1ベース
 - 必要な開発ツールをインストール
 - ZSH + Powerline10kテーマ
 - Claude Code CLIをグローバルインストール

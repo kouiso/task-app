@@ -1,14 +1,18 @@
 'use client';
 
-import { api } from '@/trpc/react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { Alert, Avatar, Box, Button, Container, Link, TextField, Typography } from '@mui/material';
-import NextLink from 'next/link';
+import { Lock } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { api } from '@/trpc/react';
 
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -17,10 +21,30 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+/**
+ * Open Redirect対策：URL が相対パスで同一オリジンであることを検証
+ */
+function isValidRedirectUrl(url: string): boolean {
+  if (!url) return false;
+
+  // プロトコル相対URL（//example.com）は許可しない
+  if (url.startsWith('//')) return false;
+
+  // 外部URLは許可しない
+  if (url.startsWith('http://') || url.startsWith('https://')) return false;
+
+  // 相対パスのみを許可
+  return url.startsWith('/');
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
+
+  // callbackUrl の検証：相対パスのみを許可
+  const rawCallbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
+  const callbackUrl = isValidRedirectUrl(rawCallbackUrl) ? rawCallbackUrl : '/dashboard';
+
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -32,7 +56,8 @@ function LoginForm() {
   });
 
   const loginMutation = api.auth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast.success(`おかえりなさい、${data.user.name}さん`);
       router.push(callbackUrl);
       router.refresh();
     },
@@ -47,74 +72,69 @@ function LoginForm() {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-          <LockOutlinedIcon />
-        </Avatar>
-        <Typography component="h1" variant="h5">
-          ログイン
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="メールアドレス"
-            autoComplete="email"
-            autoFocus
-            error={!!errors.email}
-            helperText={errors.email?.message}
-            {...register('email')}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="パスワード"
-            type="password"
-            id="password"
-            autoComplete="current-password"
-            error={!!errors.password}
-            helperText={errors.password?.message}
-            {...register('password')}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-            disabled={loginMutation.isPending}
-          >
-            {loginMutation.isPending ? 'ログイン中...' : 'ログイン'}
-          </Button>
-          <Box sx={{ textAlign: 'center' }}>
-            <Link component={NextLink} href="/register" variant="body2">
-              アカウントをお持ちでない方はこちら
-            </Link>
-          </Box>
-        </Box>
-      </Box>
-    </Container>
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="rounded-full bg-primary p-2">
+              <Lock className="h-6 w-6 text-primary-foreground" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl">ログイン</CardTitle>
+          <CardDescription>アカウントにログインしてください</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">メールアドレス</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                autoComplete="email"
+                autoFocus
+                {...register('email')}
+              />
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">パスワード</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+            <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+              {loginMutation.isPending ? 'ログイン中...' : 'ログイン'}
+            </Button>
+            <div className="text-center text-sm">
+              アカウントをお持ちでない方は{' '}
+              <Link href="/register" className="underline underline-offset-4 hover:text-primary">
+                こちら
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={<div className="flex min-h-screen items-center justify-center">読み込み中...</div>}
+    >
       <LoginForm />
     </Suspense>
   );

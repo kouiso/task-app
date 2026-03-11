@@ -1,20 +1,17 @@
 'use client';
 
-import { api } from '@/trpc/react';
-import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Container,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { api } from '@/trpc/react';
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -24,10 +21,8 @@ export default function ProfileEditPage() {
     avatar: '',
   });
 
-  // 現在のユーザー情報を取得
   const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
 
-  // プロフィール更新mutation
   const updateProfile = api.user.updateProfile.useMutation({
     onSuccess: () => {
       toast.success('プロフィールを更新しました');
@@ -38,7 +33,6 @@ export default function ProfileEditPage() {
     },
   });
 
-  // ユーザー情報を取得したらフォームにセット
   useEffect(() => {
     if (currentUser) {
       setFormData({
@@ -64,99 +58,101 @@ export default function ProfileEditPage() {
 
   if (isLoading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Typography>読み込み中...</Typography>
-      </Container>
+      <AppLayout>
+        <div className="container mx-auto max-w-md mt-8 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Card>
-        <CardContent>
-          <Typography variant="h5" component="h1" gutterBottom>
-            プロフィール編集
-          </Typography>
+    <AppLayout>
+      <div className="container mx-auto max-w-md mt-8 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>プロフィール編集</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="flex justify-center mb-6">
+                <Avatar className="w-24 h-24">
+                  <AvatarImage src={formData.avatar} />
+                  <AvatarFallback className="text-2xl">
+                    {formData.name?.[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }} noValidate>
-            {/* アバタープレビュー */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-              <Avatar
-                {...(formData.avatar && { src: formData.avatar })}
-                alt={formData.name}
-                sx={{ width: 100, height: 100 }}
-              >
-                {formData.name?.[0]?.toUpperCase()}
-              </Avatar>
-            </Box>
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  名前 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  disabled={updateProfile.isPending}
+                />
+              </div>
 
-            {/* 名前 */}
-            <TextField
-              fullWidth
-              label="名前"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              margin="normal"
-              disabled={updateProfile.isPending}
-            />
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  メールアドレス <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={updateProfile.isPending}
+                />
+              </div>
 
-            {/* メールアドレス */}
-            <TextField
-              fullWidth
-              label="メールアドレス"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              margin="normal"
-              disabled={updateProfile.isPending}
-            />
+              <div className="space-y-2">
+                <Label htmlFor="avatar">アバターURL（任意）</Label>
+                <Input
+                  id="avatar"
+                  name="avatar"
+                  type="url"
+                  value={formData.avatar}
+                  onChange={handleChange}
+                  disabled={updateProfile.isPending}
+                  placeholder="https://example.com/avatar.png"
+                />
+                <p className="text-sm text-muted-foreground">画像のURLを入力してください</p>
+              </div>
 
-            {/* アバターURL */}
-            <TextField
-              fullWidth
-              label="アバターURL（任意）"
-              name="avatar"
-              type="url"
-              value={formData.avatar}
-              onChange={handleChange}
-              margin="normal"
-              disabled={updateProfile.isPending}
-              helperText="画像のURLを入力してください"
-            />
+              {updateProfile.error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{updateProfile.error.message}</AlertDescription>
+                </Alert>
+              )}
 
-            {/* エラーメッセージ */}
-            {updateProfile.error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {updateProfile.error.message}
-              </Alert>
-            )}
-
-            {/* ボタン */}
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={updateProfile.isPending}
-                fullWidth
-              >
-                {updateProfile.isPending ? '更新中...' : '更新'}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => router.push('/profile')}
-                disabled={updateProfile.isPending}
-                fullWidth
-              >
-                キャンセル
-              </Button>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-    </Container>
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="w-full" disabled={updateProfile.isPending}>
+                  {updateProfile.isPending ? '更新中...' : '更新'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push('/profile')}
+                  disabled={updateProfile.isPending}
+                >
+                  キャンセル
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
   );
 }

@@ -7,37 +7,25 @@
 セットアップとその後の開発に必要な依存をインストール
 
 - Machine: MacOS or Windows WSL2
-- Package Manager:
-  - Windows: [Scoop](https://scoop.sh/)
-  - macOS/Linux: [Homebrew](https://brew.sh/)
-- NodeJS: バージョンはpackage.jsonの"volta"フィールド参照
+- Homebrew
+- NodeJS: バージョンは package.json の engines.node を参照
 
 <details>
 <summary>複数のnodeバージョン管理</summary>
 
 ※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればpackage.jsonの"volta"フィールドからバージョンを自動検出できる[volta](https://volta.sh/)がおすすめ
+まだ未導入であればプラグイン式で全言語の環境管理ができる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)がおすすめ
 
-**Windowsの場合:**
-```powershell
-# Scoopを使用してVoltaをインストール
-scoop install volta
-
-# プロジェクトディレクトリに移動すると、voltaが自動的にNode.jsをインストール
-cd /path/to/task-app
-# 初回はNode.jsのダウンロード・インストールが実行される
-# 2回目以降は自動的に正しいバージョンに切り替わる
-```
-
-**macOS/Linuxの場合:**
 ```bash
-# Homebrewを使用してVoltaをインストール
-brew install volta
+# brewを手動インストール後、以下を実行
 
-# プロジェクトディレクトリに移動すると、voltaが自動的にNode.jsをインストール
-cd /path/to/task-app
-# 初回はNode.jsのダウンロード・インストールが実行される
-# 2回目以降は自動的に正しいバージョンに切り替わる
+※ asdfはinstall後パスを繋げて下さい。
+$HOME/.asdf/shims/
+# バージョン管理
+brew install jq asdf
+
+asdf install
+asdf reshim
 ```
 
 </details>
@@ -76,6 +64,6 @@ npm run dev
 (知っておくと便利)
 
 - `npm run lint`
-  - 実行するとprettier, eslint, stylelintのコードチェックが順次に走る
+  - 実行するとBiomeのコードチェックが走る
 - `npm run fix`
-  - 実行するとprettier, eslint, stylelintのコードチェックが順次に走る
+  - 実行するとBiomeの自動修正が走る

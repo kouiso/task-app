@@ -1,5 +1,6 @@
-import { prisma } from '@/lib/prisma';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 export const reportRouter = createTRPCRouter({
@@ -10,14 +11,30 @@ export const reportRouter = createTRPCRouter({
         userId: z.string().cuid().optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      if (input.userId && input.userId !== ctx.session.userId) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: ctx.session.userId },
+          select: { role: true },
+        });
+
+        if (currentUser?.role !== 'ADMIN') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+
+      const targetUserId = input.userId ?? ctx.session.userId;
       const now = new Date();
       const startDate = new Date(now);
       startDate.setDate(startDate.getDate() - input.weeks * 7);
+      startDate.setHours(0, 0, 0, 0);
 
       const where = {
         completedAt: { gte: startDate, lte: now },
-        ...(input.userId && { assigneeId: input.userId }),
+        assigneeId: targetUserId,
       };
 
       const tasks = await prisma.task.findMany({
@@ -34,6 +51,7 @@ export const reportRouter = createTRPCRouter({
       const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
         const weekStart = new Date(now);
         weekStart.setDate(weekStart.getDate() - (input.weeks - i - 1) * 7);
+        weekStart.setHours(0, 0, 0, 0);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 7);
 

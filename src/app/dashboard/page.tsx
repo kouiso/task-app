@@ -1,23 +1,29 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
+import { CheckCircle, ClipboardList, Clock, FolderOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Badge } from '@/component/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { Skeleton } from '@/component/ui/skeleton';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import FolderIcon from '@mui/icons-material/Folder';
-import PendingIcon from '@mui/icons-material/Pending';
-import { Box, Card, CardContent, CircularProgress, Grid, Paper, Typography } from '@mui/material';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
 
   if (projectsLoading || tasksLoading) {
     return (
       <AppLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress />
-        </Box>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+        </div>
       </AppLayout>
     );
   }
@@ -29,174 +35,156 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      title: 'Total Projects',
+      title: 'プロジェクト数',
       value: totalProjects,
-      icon: <FolderIcon sx={{ fontSize: 40 }} color="primary" />,
-      color: '#1976d2',
+      icon: FolderOpen,
+      color: 'text-blue-500',
     },
     {
-      title: 'Total Tasks',
+      title: 'タスク数',
       value: totalTasks,
-      icon: <AssignmentIcon sx={{ fontSize: 40 }} color="secondary" />,
-      color: '#9c27b0',
+      icon: ClipboardList,
+      color: 'text-purple-500',
     },
     {
-      title: 'Completed Tasks',
+      title: '完了タスク',
       value: completedTasks,
-      icon: <CheckCircleIcon sx={{ fontSize: 40 }} color="success" />,
-      color: '#2e7d32',
+      icon: CheckCircle,
+      color: 'text-green-500',
     },
     {
-      title: 'In Progress',
+      title: '進行中',
       value: inProgressTasks,
-      icon: <PendingIcon sx={{ fontSize: 40 }} color="warning" />,
-      color: '#ed6c02',
+      icon: Clock,
+      color: 'text-orange-500',
     },
   ];
 
   const recentTasks = tasks?.slice(0, 5) || [];
 
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'DONE':
+        return 'default';
+      case 'IN_PROGRESS':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
+
+  const getPriorityBadgeVariant = (priority: string) => {
+    switch (priority) {
+      case 'URGENT':
+        return 'destructive';
+      case 'HIGH':
+        return 'default';
+      default:
+        return 'outline';
+    }
+  };
+
   return (
     <AppLayout>
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          Dashboard
-        </Typography>
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold tracking-tight">ダッシュボード</h1>
 
-        <Grid container spacing={3} mb={4}>
-          {stats.map((stat) => (
-            <Grid item xs={12} sm={6} md={3} key={stat.title}>
-              <Card>
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={stat.title}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className={`h-5 w-5 ${stat.color}`} />
+                </CardHeader>
                 <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="text.secondary" variant="body2" gutterBottom>
-                        {stat.title}
-                      </Typography>
-                      <Typography variant="h4">{stat.value}</Typography>
-                    </Box>
-                    {stat.icon}
-                  </Box>
+                  <div className="text-3xl font-bold">{stat.value}</div>
                 </CardContent>
               </Card>
-            </Grid>
-          ))}
-        </Grid>
+            );
+          })}
+        </div>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Recent Projects
-              </Typography>
+        {/* Recent Projects and Tasks */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Recent Projects */}
+          <Card>
+            <CardHeader>
+              <CardTitle>最近のプロジェクト</CardTitle>
+            </CardHeader>
+            <CardContent>
               {projects && projects.length > 0 ? (
-                <Box>
+                <div className="space-y-4">
                   {projects.slice(0, 5).map((project) => {
                     const taskCount = project.tasks?.length || 0;
                     const doneCount = project.tasks?.filter((t) => t.status === 'DONE').length || 0;
                     const progress = taskCount > 0 ? (doneCount / taskCount) * 100 : 0;
 
                     return (
-                      <Box
+                      <button
                         key={project.id}
-                        sx={{
-                          mb: 2,
-                          pb: 2,
-                          borderBottom: '1px solid',
-                          borderColor: 'divider',
-                          '&:last-child': { borderBottom: 'none' },
-                        }}
+                        type="button"
+                        className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors w-full text-left"
+                        onClick={() => router.push(`/project?projectId=${project.id}`)}
                       >
-                        <Box display="flex" alignItems="center" mb={1}>
-                          <Box
-                            sx={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: project.color,
-                              mr: 1,
-                            }}
+                        <div className="flex items-center gap-2 mb-1">
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: project.color }}
                           />
-                          <Typography variant="subtitle1">{project.name}</Typography>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {doneCount} / {taskCount} tasks completed ({progress.toFixed(0)}%)
-                        </Typography>
-                      </Box>
+                          <span className="font-medium">{project.name}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {doneCount} / {taskCount} タスク完了 ({progress.toFixed(0)}%)
+                        </p>
+                      </button>
                     );
                   })}
-                </Box>
+                </div>
               ) : (
-                <Typography color="text.secondary">No projects yet</Typography>
+                <p className="text-muted-foreground">プロジェクトがありません</p>
               )}
-            </Paper>
-          </Grid>
+            </CardContent>
+          </Card>
 
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Recent Tasks
-              </Typography>
+          {/* Recent Tasks */}
+          <Card>
+            <CardHeader>
+              <CardTitle>最近のタスク</CardTitle>
+            </CardHeader>
+            <CardContent>
               {recentTasks.length > 0 ? (
-                <Box>
+                <div className="space-y-4">
                   {recentTasks.map((task) => (
-                    <Box
+                    <button
                       key={task.id}
-                      sx={{
-                        mb: 2,
-                        pb: 2,
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                        '&:last-child': { borderBottom: 'none' },
-                      }}
+                      type="button"
+                      className="pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors w-full text-left"
+                      onClick={() => router.push(`/task?taskId=${task.id}`)}
                     >
-                      <Typography variant="subtitle1">{task.title}</Typography>
-                      <Box display="flex" gap={1} mt={0.5}>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            backgroundColor:
-                              task.status === 'DONE'
-                                ? 'success.main'
-                                : task.status === 'IN_PROGRESS'
-                                  ? 'primary.main'
-                                  : 'grey.300',
-                            color: 'white',
-                          }}
-                        >
-                          {task.status}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            backgroundColor:
-                              task.priority === 'URGENT'
-                                ? 'error.main'
-                                : task.priority === 'HIGH'
-                                  ? 'warning.main'
-                                  : 'grey.300',
-                            color: 'white',
-                          }}
-                        >
-                          {task.priority}
-                        </Typography>
-                      </Box>
-                    </Box>
+                      <span className="font-medium">{task.title}</span>
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant={getStatusBadgeVariant(task.status)}>
+                          {TASK_STATUS_LABELS[task.status] ?? task.status}
+                        </Badge>
+                        <Badge variant={getPriorityBadgeVariant(task.priority)}>
+                          {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
+                        </Badge>
+                      </div>
+                    </button>
                   ))}
-                </Box>
+                </div>
               ) : (
-                <Typography color="text.secondary">No tasks yet</Typography>
+                <p className="text-muted-foreground">タスクがありません</p>
               )}
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </AppLayout>
   );
 }

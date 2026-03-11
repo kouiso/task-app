@@ -13,6 +13,26 @@ coverage
 logs
 *.log
 
+# backup files
+*.backup
+*.bak
+*.old
+*_backup
+*_temp
+*_copy
+
+# Python & type checking
+.venv/
+**/.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
 # build output
 dist
 dist-ssr
@@ -34,6 +54,9 @@ next-env.d.ts
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+*~
 *.pem
 .serena/
 
@@ -65,6 +88,7 @@ test-results/
 
 # Claude Code local settings
 .claude/settings.local.json
+.claude/mcp.json
 
 # Test files and screenshots
 test-*.mjs
@@ -72,7 +96,8 @@ test-*.mjs
 test-*.png
 manual-test-*.png
 *-screenshot.png
-*-error.png
+# *-error.png はルートのみ（教材用 login-error.png を除外しないため）
+/*-error.png
 debug-*.mjs
 setup-*.mjs
 inspect-*.mjs

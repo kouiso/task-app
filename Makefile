@@ -1,4 +1,27 @@
-.PHONY: zip-export zip-list zip-clean
+.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean
+
+# ============================================
+# PDF生成
+# ============================================
+
+# 単一MarkdownをPDF化
+# 使用例: make pdf-single FILE=material/30days-curriculum/day01_開発環境を整える.md
+# PDF自動で開く: make pdf-single FILE=... OPEN=1
+pdf-single:
+	@bash script/generate_pdf.sh single "$(FILE)" "$(OPEN)"
+
+# 全DayをPDF化（OPEN=1で最後のファイルを開く）
+pdf-all:
+	@bash script/generate_pdf.sh all "$(OPEN)"
+
+# PDF削除
+pdf-clean:
+	rm -rf material/pdf/
+	@echo "✅ PDF削除完了"
+
+# ============================================
+# ZIP配布
+# ============================================
 
 # プレゼント配布用ZIP作成
 zip-export:
@@ -26,7 +49,10 @@ zip-export:
 		-x "playwright-report/*" \
 		-x "test-results/*" \
 		-x "Makefile" \
-		-x "renovate.json"
+		-x "renovate.json" \
+		-x "edu-creator/*" \
+		-x "edu-config.yaml" \
+		-x "talk.md"
 	zip -u dist/task-app.zip .env.example
 	@echo ""
 	@echo "============================================"

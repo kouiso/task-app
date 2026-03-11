@@ -36,25 +36,21 @@ choco install go-task
 <summary>複数のnodeバージョン管理 (オプション)</summary>
 
 ※ 複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-
-#### mise を使用したバージョン管理
-
-このプロジェクトのCI環境では [mise](https://mise.jdx.dev/) を使用しています。
-ローカル環境でも mise を使用することで、CI と完全に同じバージョン管理が可能です。
+まだ未導入であれば[Volta](https://volta.sh/)がおすすめ
 
 ```bash
-# miseのインストール (macOS/Linux)
-curl https://mise.jdx.dev/install.sh | sh
+# Voltaのインストール (macOS/Linux)
+curl https://get.volta.sh | bash
 
-# miseのインストール (Windows)
-# https://mise.jdx.dev/getting-started.html を参照
+# Voltaのインストール (Windows)
+# https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
 
-# プロジェクトのツールを自動インストール
-mise install
+# Node.jsのインストール
+volta install node@25.6.1
 ```
 
-このプロジェクトでは `.tool-versions` ファイルで Node.js のバージョンを管理しているため、
-`mise install` を実行するだけで正しいバージョン (24.11.1) がインストールされます。
+このプロジェクトでは `package.json` に Volta の設定が含まれているため、
+プロジェクトディレクトリで自動的に正しいバージョン (25.6.1) が使用されます。
 
 </details>
 
@@ -138,7 +134,7 @@ task init
 
 - **フレームワーク**: Next.js 15 (App Router)
 - **言語**: TypeScript 5.6
-- **UI**: Material-UI 6.4
+- **UI**: shadcn/ui (Radix UI + Tailwind CSS)
 - **API**: tRPC 11.6
 - **ORM**: Prisma 6.16
 - **データベース**: PostgreSQL

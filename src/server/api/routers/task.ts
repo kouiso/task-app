@@ -1,7 +1,7 @@
-import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const taskCreateSchema = z.object({
@@ -14,7 +14,6 @@ const taskCreateSchema = z.object({
   dueDate: z.string().datetime().optional(),
   estimatedHours: z.number().min(0).optional(),
   projectId: z.string().cuid(),
-  createdById: z.string().cuid(),
   assigneeId: z.string().cuid().optional(),
 });
 
@@ -56,12 +55,29 @@ export const taskRouter = createTRPCRouter({
         })
         .optional(),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const where: Prisma.TaskWhereInput = {};
       const limit = input?.limit ?? 100;
       const offset = input?.offset ?? 0;
 
-      if (input?.projectId) where.projectId = input.projectId;
+      // ユーザーが参加してるプロジェクトのみを対象
+      const userProjects = await prisma.projectMember.findMany({
+        where: { userId: ctx.session.userId },
+        select: { projectId: true },
+      });
+      const projectIds = userProjects.map((p) => p.projectId);
+
+      where.projectId = { in: projectIds };
+
+      if (input?.projectId) {
+        if (!projectIds.includes(input.projectId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not have access to this project',
+          });
+        }
+        where.projectId = input.projectId;
+      }
       if (input?.status) where.status = input.status;
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
 
@@ -127,7 +143,6 @@ export const taskRouter = createTRPCRouter({
         });
       }
 
-      // Check if user is a member of the project
       if (task.project.members.length === 0) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -138,7 +153,31 @@ export const taskRouter = createTRPCRouter({
       return task;
     }),
 
-  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ input }) => {
+  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
+    // プロジェクトメンバーシップの確認
+    const project = await prisma.project.findUnique({
+      where: { id: input.projectId },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Project not found',
+      });
+    }
+
+    if (project.members.length === 0) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You do not have access to this project',
+      });
+    }
+
     const maxPosition = await prisma.task.findFirst({
       where: { projectId: input.projectId },
       orderBy: { position: 'desc' },
@@ -155,13 +194,13 @@ export const taskRouter = createTRPCRouter({
         connect: { id: input.projectId },
       },
       createdBy: {
-        connect: { id: input.createdById },
+        connect: { id: ctx.session.userId },
       },
     };
-    if (input.description) {
+    if (input.description !== undefined) {
       createData.description = input.description;
     }
-    if (input.estimatedHours) {
+    if (input.estimatedHours !== undefined) {
       createData.estimatedHours = input.estimatedHours;
     }
     if (input.assigneeId) {
@@ -187,7 +226,6 @@ export const taskRouter = createTRPCRouter({
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    // Check if task exists and user has access to the project
     const task = await prisma.task.findUnique({
       where: { id },
       include: {
@@ -266,7 +304,6 @@ export const taskRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      // Check if task exists and user has access to the project
       const task = await prisma.task.findUnique({
         where: { id: input.id },
         include: {
@@ -300,15 +337,31 @@ export const taskRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  updateTimer: protectedProcedure.input(taskTimerSchema).mutation(async ({ input }) => {
+  updateTimer: protectedProcedure.input(taskTimerSchema).mutation(async ({ ctx, input }) => {
     const task = await prisma.task.findUnique({
       where: { id: input.id },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: { userId: ctx.session.userId },
+            },
+          },
+        },
+      },
     });
 
     if (!task) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Task not found',
+      });
+    }
+
+    if (task.project.members.length === 0) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You do not have access to this task',
       });
     }
 
@@ -347,7 +400,34 @@ export const taskRouter = createTRPCRouter({
     });
   }),
 
-  addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ input }) => {
+  addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
+    const task = await prisma.task.findUnique({
+      where: { id: input.id },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: { userId: ctx.session.userId },
+            },
+          },
+        },
+      },
+    });
+
+    if (!task) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Task not found',
+      });
+    }
+
+    if (task.project.members.length === 0) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You do not have access to this task',
+      });
+    }
+
     return await prisma.task.update({
       where: { id: input.id },
       data: {
@@ -361,7 +441,6 @@ export const taskRouter = createTRPCRouter({
   bulkComplete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user has access to all tasks
       const tasks = await prisma.task.findMany({
         where: { id: { in: input.ids } },
         include: {
@@ -400,7 +479,6 @@ export const taskRouter = createTRPCRouter({
   bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user has access to all tasks
       const tasks = await prisma.task.findMany({
         where: { id: { in: input.ids } },
         include: {
@@ -442,7 +520,6 @@ export const taskRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user has access to all tasks
       const tasks = await prisma.task.findMany({
         where: { id: { in: input.ids } },
         include: {

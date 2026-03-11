@@ -1,0 +1,43 @@
+🔍 品質チェック開始: material/30days-curriculum/day22_グラフを表示.md
+
+📊 [1/4] 視覚化チェック...
+表の数: 9
+スクショ位置: 5
+Mermaid図: 0
+✅ 表の数OK
+✅ スクショ位置OK
+✅ 視覚化チェックPASS
+
+📏 [2/4] コードブロック長さチェック...
+
+コードブロック#2 (53行):
+// filepath: src/components/dashboard/TaskStatusChart.tsx
+'use client';
+
+...
+    </Paper>
+  );
+}
+
+コードブロック#3 (43行):
+// filepath: src/components/dashboard/ProjectTasksChart.tsx
+'use client';
+
+...
+    </Paper>
+  );
+}
+
+コードブロック#4 (29行):
+// filepath: src/app/dashboard/page.tsx
+import { TaskStatusChart } from '@/components/dashboard/TaskStatusChart';
+import { ProjectTasksChart } from '@/components/dashboard/ProjectTasksChart';
+...
+    </Box>
+  );
+}
+
+合計3個のコードブロックが制限超過
+❌ コードブロック#2: 53行（上限25行）
+❌ コードブロック#3: 43行（上限25行）
+❌ コードブロック#4: 29行（上限25行）

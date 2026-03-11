@@ -18,8 +18,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "~/*": ["./src/*"]
+      "@/*": ["./src/*"]
     },
     "target": "ES2017",
     "noUnusedLocals": true,
@@ -40,6 +39,7 @@
     "*.mjs",
     "**/__tests__/**/*",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "edu-creator/**/*"
   ]
 }

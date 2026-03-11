@@ -1,6 +1,6 @@
-import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 /**
@@ -33,19 +33,19 @@ const quickSearchInputSchema = z.object({
  * 条件分岐を減らすためにオブジェクトマッピングを使用
  */
 type FilterConfig = {
-  key: string;
+  key: keyof Prisma.TaskWhereInput;
   value: unknown;
   transform?: (value: unknown) => unknown;
 };
 
-const buildDynamicWhere = (filters: FilterConfig[]): Record<string, unknown> => {
+const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInput> => {
   const result: Record<string, unknown> = {};
   for (const f of filters) {
     if (f.value !== undefined && f.value !== null && f.value !== 'all') {
       result[f.key] = f.transform ? f.transform(f.value) : f.value;
     }
   }
-  return result;
+  return result as Partial<Prisma.TaskWhereInput>;
 };
 
 /**
@@ -111,7 +111,6 @@ export const searchRouter = createTRPCRouter({
       ];
     }
 
-    // タスク検索実行
     const tasks = await prisma.task.findMany({
       where: taskWhere,
       include: {
@@ -184,7 +183,6 @@ export const searchRouter = createTRPCRouter({
 
     // タスク・プロジェクト検索を並行実行（Promise.all）
     const [tasks, projects] = await Promise.all([
-      // タスク検索
       prisma.task.findMany({
         where: {
           OR: [{ createdById: userId }, { assigneeId: userId }],
@@ -200,7 +198,6 @@ export const searchRouter = createTRPCRouter({
         orderBy: { updatedAt: 'desc' },
         take: 20,
       }),
-      // プロジェクト検索
       prisma.project.findMany({
         where: {
           members: { some: { userId } },

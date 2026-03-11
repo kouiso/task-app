@@ -26,8 +26,8 @@ description: TaskAppプロジェクトのコーディング規約とスタイル
 - **Next.js 15.3.6** - App Router必須（Pages Router禁止）
 - **React 18.3.1** - UIライブラリ
 - **TypeScript 5.6.3** - 厳格モード完全対応
-- **Material-UI v6.4.8** - UIコンポーネントライブラリ
-- **@emotion/react + @emotion/styled** - CSS-in-JS
+- **shadcn/ui** - Radix UIベースのコンポーネントライブラリ
+- **Tailwind CSS v4** - ユーティリティファーストCSS
 
 #### バックエンド
 - **tRPC v11.6.0** - End-to-End型安全API
@@ -37,7 +37,7 @@ description: TaskAppプロジェクトのコーディング規約とスタイル
 - **bcryptjs** - パスワードハッシュ化
 
 #### 開発ツール
-- **Biome 1.9.4** - リンター・フォーマッター（ESLint/Prettier禁止）
+- **Biome 2.3.15** - リンター・フォーマッター（基本はBiome、足りない場合のみESLint）
 - **Vitest 3.0.9** - テストフレームワーク
 - **Husky + lint-staged** - Git hooks
 - **Turbopack** - 高速バンドラー（Next.js内蔵）
@@ -82,7 +82,7 @@ description: TaskAppプロジェクトのコーディング規約とスタイル
 
 #### プロジェクト固有の禁止事項
 - **Pages Routerの使用**（必ずApp Routerを使用）
-- **ESLintやPrettierの追加**（Biomeを使用）
+- **ESLintの常用**（原則Biome、足りない場合のみESLint）
 - **過度な抽象化**（シンプルさを優先）
 - **複雑な設計パターン**（初心者が理解できる範囲で）
 

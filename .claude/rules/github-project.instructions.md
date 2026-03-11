@@ -1,0 +1,1 @@
+../../prompt/instructions/github-project.instructions.md

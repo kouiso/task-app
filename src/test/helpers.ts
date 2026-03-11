@@ -3,6 +3,7 @@ import { httpBatchLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import bcrypt from 'bcryptjs';
 import superjson from 'superjson';
+import { DEFAULT_PROJECT_COLOR } from '../lib/constant/project';
 import { prisma } from '../lib/prisma';
 import type { SessionPayload } from '../lib/session';
 import type { AppRouter } from '../server/api/root';
@@ -46,7 +47,7 @@ export async function createTestProject(
     data: {
       name: overrides.name || `Test Project ${Date.now()}`,
       description: overrides.description || 'Test project description',
-      color: overrides.color || '#1976d2',
+      color: overrides.color || DEFAULT_PROJECT_COLOR,
       isArchived: overrides.isArchived || false,
       startDate: overrides.startDate || null,
       endDate: overrides.endDate || null,
@@ -148,7 +149,6 @@ export async function createAuthenticatedCaller(userId: string, email: string, r
   return await createTestCaller(session);
 }
 
-// Create tRPC test utilities for React component testing
 export function createTRPCTestUtils() {
   const trpcReact = createTRPCReact<AppRouter>();
 
