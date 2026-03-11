@@ -81,6 +81,14 @@ graph TD
 🎯 **ゴール**: なぜ専用APIを使わず
 ローカルで計算するのかを理解します。
 
+```bash
+# filepath: ターミナル
+# プロジェクトデータを取得して確認
+npm run dev
+```
+
+✅ **確認ポイント**:
+- ローカル集計の仕組みを理解した
 #### 2つの集計方法の比較
 
 | 方法 | 仕組み | メリット | デメリット |
@@ -109,13 +117,35 @@ graph TD
 // filepath: src/app/report/page.tsx
 'use client';
 
+import { ArrowRight, Loader2 }
+  from 'lucide-react';
+import Link from 'next/link';
+import { useMemo } from 'react';
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import {
   Card, CardContent,
+  CardHeader, CardTitle,
 } from '@/component/ui/card';
+```
+
+続いて、テーブルと定数のインポートを追加します。
+
+```typescript
+// filepath: src/app/report/page.tsx
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+import { TASK_PRIORITY_COLORS }
+  from '@/lib/constant/priority';
+import { TASK_STATUS_COLORS }
+  from '@/lib/constant/status';
 import { api } from '@/trpc/react';
-import { Loader2 } from 'lucide-react';
 
 export default function ReportPage() {
   return (
@@ -123,7 +153,7 @@ export default function ReportPage() {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold
           tracking-tight">
-          Reports & Statistics
+          レポート・統計
         </h1>
       </div>
     </AppLayout>
@@ -187,30 +217,43 @@ JavaScript で計算します。
 ```typescript
 // filepath: src/app/report/page.tsx
 // 合計作業時間（分）
-const totalTimeSpent =
-  tasks?.reduce(
-    (acc, task) =>
-      acc + task.timeSpentMinutes, 0
-  ) || 0;
+const totalTimeSpent = useMemo(
+  () =>
+    tasks?.reduce(
+      (acc, task) =>
+        acc + (task.timeSpentMinutes ?? 0),
+      0
+    ) || 0,
+  [tasks],
+);
 
 // タスクあたり平均時間（分）
-const averageTimePerTask =
-  tasks && tasks.length > 0
-    ? totalTimeSpent / tasks.length
-    : 0;
+const averageTimePerTask = useMemo(
+  () =>
+    tasks && tasks.length > 0
+      ? totalTimeSpent / tasks.length
+      : 0,
+  [tasks, totalTimeSpent],
+);
 ```
 
 ```typescript
 // filepath: src/app/report/page.tsx
 // 完了率を計算
-const completionRate =
-  tasks && tasks.length > 0
-    ? ((tasks.filter(
-        (t) => t.status === 'DONE'
-      ).length / tasks.length) * 100
-    ).toFixed(1)
-    : '0';
+const completionRate = useMemo(
+  () =>
+    tasks && tasks.length > 0
+      ? ((tasks.filter(
+          (t) => t.status === 'DONE'
+        ).length / tasks.length) * 100
+      ).toFixed(1)
+      : '0',
+  [tasks],
+);
 ```
+
+✅ **確認ポイント**:
+- 4つの統計値が計算される
 
 #### 各統計値の計算ロジック
 
@@ -224,6 +267,10 @@ const completionRate =
 > 💡 `reduce` は配列の全要素を1つの値に
 > まとめる関数です。`acc`（累積値）に
 > 各要素の値を足していきます。
+> `?? 0` は `timeSpentMinutes` が
+> `null` の場合に `0` として計算します。
+> `useMemo` は依存する値が変わるまで
+> 計算結果をキャッシュします。
 
 ✅ **確認ポイント**:
 - 4つの統計値が計算される
@@ -246,7 +293,7 @@ const completionRate =
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        Total Tasks
+        タスク数
       </p>
       <p className="text-3xl font-bold">
         {tasks?.length || 0}
@@ -262,7 +309,7 @@ const completionRate =
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        Completion Rate
+        完了率
       </p>
       <p className="text-3xl font-bold">
         {completionRate}%
@@ -280,7 +327,7 @@ const completionRate =
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        Total Time Spent
+        合計作業時間
       </p>
       <p className="text-3xl font-bold">
         {(totalTimeSpent / 60)
@@ -290,10 +337,31 @@ const completionRate =
   </Card>
 ```
 
+4枚目の平均作業時間カードを追加してグリッドを閉じます。
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 4枚目: 平均作業時間カード
+  <Card>
+    <CardContent className="pt-6">
+      <p className="text-sm
+        text-muted-foreground mb-1">
+        平均作業時間/タスク
+      </p>
+      <p className="text-3xl font-bold">
+        {(averageTimePerTask / 60)
+          .toFixed(1)}h
+      </p>
+    </CardContent>
+  </Card>
+</div>
+```
+
 > 💡 専用の StatsCard コンポーネントは
 > 作りません。shadcn/ui の `Card` を
 > そのまま使うシンプルな構成です。
 > `toFixed(1)` で小数点1桁に丸めます。
+> ラベルはすべて日本語で表示します。
 
 ✅ **確認ポイント**:
 - 4枚のカードが表示される
@@ -308,6 +376,14 @@ const completionRate =
 🎯 **ゴール**: 画面幅に応じてカードの
 列数を自動調整します。
 
+```bash
+# filepath: ターミナル
+# ブラウザでレスポンシブ表示を確認（DevTools: Ctrl+Shift+M）
+npm run dev
+```
+
+✅ **確認ポイント**:
+- ブラウザ幅を変えると列数が変わる
 #### グリッドのブレークポイント
 
 | 画面サイズ | クラス | 列数 |
@@ -343,6 +419,12 @@ const completionRate =
 ![レスポンシブ表示](./screenshots/report.png)
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

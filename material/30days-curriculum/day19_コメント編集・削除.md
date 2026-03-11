@@ -76,6 +76,14 @@ graph TD
 🎯 **ゴール**: comment ルーターの
 update/delete メソッドを把握します。
 
+```bash
+# filepath: ターミナル
+# comment ルーターのupdate/deleteを確認する
+cat src/server/router/comment.ts | grep -A5 "update\|delete"
+```
+
+✅ **確認ポイント**:
+- update と delete のパラメータを把握した
 #### comment.update の入力パラメータ
 
 | パラメータ | 型 | 必須 | 説明 |
@@ -110,9 +118,12 @@ update/delete メソッドを把握します。
 // TaskPageContent内に追加
 const [editingCommentId, setEditingCommentId]
   = useState<string | null>(null);
-const [editCommentContent, setEditCommentContent]
+const [editingCommentContent, setEditingCommentContent]
   = useState('');
 ```
+
+✅ **確認ポイント**:
+- 2つの state が追加された
 
 > 💡 `editingCommentId` が `null` なら
 > 通常表示、値があれば編集モードです。
@@ -124,7 +135,7 @@ const [editCommentContent, setEditCommentContent]
 | state | 型 | 役割 |
 |-------|-----|------|
 | `editingCommentId` | string/null | 編集中のコメントID |
-| `editCommentContent` | string | 編集中のテキスト |
+| `editingCommentContent` | string | 編集中のテキスト |
 
 ✅ **確認ポイント**:
 - 2つの state が追加された
@@ -195,31 +206,31 @@ const handleStartEdit = (comment: {
   id: string; content: string;
 }) => {
   setEditingCommentId(comment.id);
-  setEditCommentContent(comment.content);
+  setEditingCommentContent(comment.content);
 };
 
 const handleCancelEdit = () => {
   setEditingCommentId(null);
-  setEditCommentContent('');
+  setEditingCommentContent('');
 };
 ```
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 編集中: テキストエリアとSave/Cancelボタン
+// 編集中: テキストエリアと更新/キャンセルボタン
 {editingCommentId === comment.id ? (
   <div className="space-y-2">
     <Textarea
-      value={editCommentContent}
+      value={editingCommentContent}
       onChange={(e) =>
-        setEditCommentContent(
+        setEditingCommentContent(
           e.target.value)}
       rows={2} />
     <div className="flex gap-2">
       <Button size="sm"
         onClick={() =>
           handleSaveEdit(comment.id)}>
-        Save
+        更新
       </Button>
 ```
 
@@ -227,11 +238,11 @@ const handleCancelEdit = () => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 編集中のCancel + 通常表示モード
+// 編集中のキャンセル + 通常表示モード
       <Button size="sm"
         variant="outline"
         onClick={handleCancelEdit}>
-        Cancel
+        キャンセル
       </Button>
     </div>
   </div>
@@ -272,7 +283,7 @@ const updateCommentMutation =
           { id: selectedTask });
       }
       setEditingCommentId(null);
-      setEditCommentContent('');
+      setEditingCommentContent('');
     },
   });
 ```
@@ -282,10 +293,10 @@ const updateCommentMutation =
 // 保存ハンドラー
 const handleSaveEdit =
   (commentId: string) => {
-    if (!editCommentContent.trim()) return;
+    if (!editingCommentContent.trim()) return;
     updateCommentMutation.mutate({
       id: commentId,
-      content: editCommentContent,
+      content: editingCommentContent,
     });
   };
 ```
@@ -364,6 +375,12 @@ const handleDeleteComment =
 
 ---
 
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
+
 ## 📋 今日のまとめ
 
 - [ ] 本人チェックで操作を制限できた
@@ -377,7 +394,7 @@ const handleDeleteComment =
 |--------------|------|---------|
 | 他人のコメントも編集できる | userId比較の漏れ | session.user.id確認 |
 | 編集後に更新されない | invalidate忘れ | task.getById.invalidate |
-| Cancel後に文字が残る | stateクリア漏れ | handleCancelEditで空に |
+| キャンセル後に文字が残る | stateクリア漏れ | handleCancelEditで空に |
 | 空白で保存できる | trim()チェック漏れ | if (!content.trim()) |
 
 ## 📝 今日学んだ用語

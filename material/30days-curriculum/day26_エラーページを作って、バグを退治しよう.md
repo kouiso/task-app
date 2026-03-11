@@ -380,6 +380,12 @@ npx biome check src/app/dashboard/page.tsx
 
 ---
 
+```bash
+# filepath: ターミナル（ブラウザのDevToolsを開く）
+# F12 キーを押してDevToolsを開く
+# または右クリック → 検証（Inspect）
+```
+
 ### Step 7: Biome lintで全体チェック（4分）
 
 🎯 **ゴール**: プロジェクト全体のコード品質をBiome lintで確認します。

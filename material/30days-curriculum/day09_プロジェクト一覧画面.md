@@ -78,43 +78,45 @@ import { AppLayout } from
   '@/component/layout/app-layout';
 import { Suspense } from 'react';
 
-// メインコンテンツ
+// メインコンテンツ（AppLayoutを内包する）
 function ProjectPageContent() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold
-        tracking-tight">
-        プロジェクト
-      </h1>
-    </div>
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold
+          tracking-tight">
+          プロジェクト
+        </h1>
+      </div>
+    </AppLayout>
   );
 }
 ```
 
-続いて、ページ本体をAppLayoutとSuspenseでラップして定義します。
+続いて、ページ本体をSuspenseでラップして定義します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // ページ本体
 export default function ProjectPage() {
   return (
-    <AppLayout>
-      <Suspense fallback={
+    <Suspense fallback={
+      <AppLayout>
         <div className="flex h-[60vh]
           items-center justify-center">
           <div className="animate-spin
             rounded-full h-8 w-8
             border-b-2 border-primary" />
         </div>
-      }>
-        <ProjectPageContent />
-      </Suspense>
-    </AppLayout>
+      </AppLayout>
+    }>
+      <ProjectPageContent />
+    </Suspense>
   );
 }
 ```
 
-> 💡 `AppLayout` で包むことで、サイドバーと認証ガードが自動で適用されます。Day 08 で学んだ仕組みですね。
+> 💡 `AppLayout` で包むことで、サイドバーと認証ガードが自動で適用されます。Day 08 で学んだ仕組みですね。`ProjectPageContent` の中に `AppLayout` を配置する点に注意してください。
 
 ✅ **確認ポイント**:
 - ブラウザで `/project` にアクセスできる
@@ -134,11 +136,16 @@ import { api } from '@/trpc/react';
 
 // ProjectPageContent内に追加
 const {
-  data: projects,  // プロジェクト配列
-  isLoading,       // 読み込み中フラグ
-  error,           // エラー情報
-} = api.project.getAll.useQuery();
+  data: projects,           // プロジェクト配列
+  isLoading: projectsLoading, // 読み込み中フラグ
+} = api.project.getAll.useQuery({
+  isArchived: showArchived,   // アーカイブ表示フラグ
+});
 ```
+
+✅ **確認ポイント**:
+- `npm run dev` でエラーが出ていない
+- ブラウザのコンソールにデータが表示される（`console.log(projects)` で確認）
 
 #### useQueryの返り値
 
@@ -166,7 +173,7 @@ const {
 ```typescript
 // filepath: src/app/project/page.tsx
 // ProjectPageContent内のreturnの前に追加
-if (isLoading) {
+if (projectsLoading) {
   return (
     <AppLayout>
       <div className="flex h-[60vh]
@@ -204,6 +211,7 @@ import {
 次に、`ProjectPageContent` 内の `return` にプロジェクトをカード一覧として描画する処理を追加します。
 
 ```typescript
+// filepath: src/app/project/page.tsx
 // ProjectPageContent内のreturnに追加
 {projects?.map((project) => (
   <ProjectCard
@@ -228,6 +236,12 @@ import {
   />
 ))}
 ```
+
+✅ **確認ポイント**:
+- プロジェクトがカード形式で表示されている
+- カードに色帯・メンバー数・進捗が表示されている
+
+![プロジェクトカードの表示](./screenshots/project-list.png)
 
 #### ProjectCardのprops
 
@@ -270,6 +284,10 @@ import {
   ))}
 </div>
 ```
+
+✅ **確認ポイント**:
+- ブラウザ幅を変えるとカードの列数が変わる
+- カード間に適切な余白がある
 
 #### グリッドの画面幅別列数
 
@@ -332,10 +350,23 @@ import { useState } from 'react';
 // ProjectPageContent内にstateを追加
 const [dialogOpen, setDialogOpen] =
   useState(false);
+const [editingProject, setEditingProject] =
+  useState<ProjectFormData | undefined>(undefined);
 
+// 新規作成モードでダイアログを開く
+const handleCreate = () => {
+  setEditingProject(undefined);
+  setDialogOpen(true);
+};
+```
+
+次に、ヘッダーにボタンを配置します。
+
+```typescript
+// filepath: src/app/project/page.tsx
 // ヘッダー部分に追加
-<div className="flex justify-between
-  items-center">
+<div className="flex items-center
+  justify-between">
   <h1 className="text-3xl font-bold
     tracking-tight">
     プロジェクト
@@ -407,6 +438,12 @@ useEffect(() => {
 - レスポンシブに列数が変わる
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

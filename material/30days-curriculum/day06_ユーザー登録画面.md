@@ -157,6 +157,11 @@ type RegisterFormData =
   z.infer<typeof registerSchema>;
 ```
 
+✅ **確認ポイント**:
+- `registerSchema` に `.refine()` が含まれている
+- `RegisterFormData` 型が定義されている
+- `npm run dev` でエラーが出ていない
+
 #### バリデーションルール一覧
 
 | フィールド | ルール | エラーメッセージ |

@@ -104,6 +104,10 @@ useEffect(() => {
 }, [initialData, projects]);
 ```
 
+✅ **確認ポイント**:
+- 作成時はフォームが空になる
+- 編集時は既存データが表示される
+
 > 💡 `initialData` がある場合は編集モード、
 > ない場合は作成モードです。Day 10 の
 > ProjectDialog で学んだパターンと同じです。
@@ -114,7 +118,7 @@ useEffect(() => {
 |------|----------|----------|
 | initialData | `undefined` | 既存タスクデータ |
 | タイトル | 空の初期値 | 既存のタイトル |
-| ボタン表示 | 「Create」 | 「Update」 |
+| ボタン表示 | 「作成」 | 「更新」 |
 | API呼び出し | `task.create` | `task.update` |
 
 ✅ **確認ポイント**:
@@ -132,6 +136,10 @@ useEffect(() => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
+// ユーザー一覧を取得（担当者選択用）
+const { data: users } =
+  api.search.getProjectMembers.useQuery();
+
 const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>();
 
@@ -247,6 +255,10 @@ const handleSubmit =
   };
 ```
 
+✅ **確認ポイント**:
+- 既存タスクを編集して更新できる
+- 一覧が自動で更新される
+
 #### 作成 vs 更新のAPIパラメータ比較
 
 | パラメータ | create | update |
@@ -254,7 +266,6 @@ const handleSubmit =
 | `id` | なし | **必須** |
 | `title` | **必須** | 任意 |
 | `projectId` | **必須** | なし |
-| `createdById` | **必須** | なし |
 | `description` | 任意 | 任意（null可） |
 | `dueDate` | 任意 | 任意（null可） |
 
@@ -286,8 +297,7 @@ const deleteMutation =
 
 const handleDelete = (taskId: string) => {
   if (confirm(
-    'Are you sure you want to'
-    + ' delete this task?'
+    'このタスクを削除してもよろしいですか？'
   )) {
     deleteMutation.mutate({ id: taskId });
   }
@@ -354,7 +364,6 @@ const handleCreate = () => {
   initialData={editingTask}
   projects={projects || []}
   users={users || []}
-  currentUserId={session?.user?.id || ''}
 />
 ```
 
@@ -390,6 +399,12 @@ const handleCreate = () => {
 - 「新規タスク」で空のフォームが開く
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

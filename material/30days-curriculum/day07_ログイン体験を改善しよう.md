@@ -224,12 +224,13 @@ export async function createSession(
 ): Promise<string> {
   const expiresAt =
     Math.floor(Date.now() / 1000) + COOKIE_MAX_AGE;
-  const token = await encrypt({
+  const payload: SessionPayload = {
     userId: user.id,
     email: user.email,
     role: user.role,
     exp: expiresAt,
-  });
+  };
+  const token = await encrypt(payload);
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
@@ -386,6 +387,7 @@ const loginMutation =
 4. 自動的に`/login`にリダイレクトされることを確認
 
 ```mermaid
+# filepath: 図解（実行可能なコードではありません）
 flowchart LR
     A[/dashboardにアクセス] --> B{Cookieあり？}
     B -->|あり| C[ダッシュボード表示]

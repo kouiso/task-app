@@ -98,6 +98,10 @@ const handleStatusChange = (
 };
 ```
 
+✅ **確認ポイント**:
+- ステータスを変更するとBadgeが変わる
+- 一覧が自動で更新される
+
 > 💡 専用の `updateStatus` APIはありません。
 > `api.task.update` に `id` と `status` だけ
 > 渡すことで、ステータスだけを変更できます。
@@ -148,6 +152,10 @@ interface TaskTimerProps {
   onTimerUpdate?: () => void;
 }
 ```
+
+✅ **確認ポイント**:
+- `npm run dev` でエラーが出ていない
+- interfaceが定義できた
 
 #### TaskTimerのprops
 
@@ -273,6 +281,10 @@ const handleStartStop = async () => {
 };
 ```
 
+✅ **確認ポイント**:
+- 「タイマー開始」で開始される
+- 「タイマー停止」で停止される
+
 #### updateTimer APIのアクション
 
 | action | 動作 | サーバー側の処理 |
@@ -360,6 +372,10 @@ return (
   </div>
 );
 ```
+
+✅ **確認ポイント**:
+- 動作中は `00:00:00` 形式で表示
+- 累計時間が `2h 30m` 形式で表示
 
 #### 2つのフォーマット関数
 
@@ -514,6 +530,10 @@ const handleSubmit = async () => {
 };
 ```
 
+✅ **確認ポイント**:
+- 「1時間30分」を入力して追加できる
+- 累計時間に加算される
+
 #### addTime APIのパラメータ
 
 | パラメータ | 型 | 説明 |
@@ -571,6 +591,12 @@ const handleSubmit = async () => {
 - 手動記録が累計時間に反映される
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

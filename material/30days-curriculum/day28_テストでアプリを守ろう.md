@@ -106,19 +106,31 @@ import { isNonNullable } from '../type-guards';
 
 describe('Type Guards', () => {
   describe('isNonNullable', () => {
-    it('non-null/undefined なら true', () => {
-      expect(isNonNullable('string'))
-        .toBe(true);
-      expect(isNonNullable(0)).toBe(true);
-      expect(isNonNullable(false)).toBe(true);
-    });
+    it('should return true for non-null/undefined values',
+      () => {
+        expect(isNonNullable('string'))
+          .toBe(true);
+        expect(isNonNullable(0)).toBe(true);
+        expect(isNonNullable(false))
+          .toBe(true);
+        expect(isNonNullable([])).toBe(true);
+        expect(isNonNullable({})).toBe(true);
+      }
+    );
+```
 
-    it('null/undefined なら false', () => {
-      expect(isNonNullable(null))
-        .toBe(false);
-      expect(isNonNullable(undefined))
-        .toBe(false);
-    });
+null と undefined は false になることを検証します。
+
+```typescript
+// filepath: src/lib/utils/__test/type-guards.test.ts
+    it('should return false for null/undefined',
+      () => {
+        expect(isNonNullable(null))
+          .toBe(false);
+        expect(isNonNullable(undefined))
+          .toBe(false);
+      }
+    );
   });
 });
 ```
@@ -346,11 +358,12 @@ import {
 // filepath: src/server/api/routers/__test/auth.test.ts（後半）
 describe('authRouter', () => {
   describe('login', () => {
-    it('正しい情報でログインできる',
+    it('should login successfully with correct credentials',
       async () => {
         const testUser = await createTestUser({
           email: 'login-test@example.com',
           password: 'Password123!',
+          name: 'Login Test User',
         });
         const caller = await createTestCaller();
         const result = await caller.auth.login({
@@ -359,6 +372,10 @@ describe('authRouter', () => {
         });
         expect(result.user.id)
           .toBe(testUser.id);
+        expect(result.user.email)
+          .toBe(testUser.email);
+        expect(result.user.name)
+          .toBe(testUser.name);
       }
     );
   });
@@ -379,10 +396,10 @@ describe('authRouter', () => {
 
 ```typescript
 // filepath: src/server/api/routers/__test/auth.test.ts
-it('間違ったパスワードではログインできない',
+it('should fail login with incorrect password',
   async () => {
     await createTestUser({
-      email: 'wrong-pw@example.com',
+      email: 'wrong-password@example.com',
       password: 'correctpassword',
     });
 
@@ -390,7 +407,7 @@ it('間違ったパスワードではログインできない',
 
     await expect(
       caller.auth.login({
-        email: 'wrong-pw@example.com',
+        email: 'wrong-password@example.com',
         password: 'wrongpassword',
       })
     ).rejects.toThrow(

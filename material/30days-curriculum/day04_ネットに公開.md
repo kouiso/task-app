@@ -66,6 +66,13 @@ graph LR
 | サインアップ方法 | Continue with GitHub | GitHubアカウントで登録 |
 | アクセス許可 | 許可する | Vercelがリポジトリにアクセス可能に |
 
+
+```bash
+# filepath: ブラウザ（Vercelで操作）
+# https://vercel.com にアクセスして
+# 「Sign Up」→「Continue with GitHub」でアカウント作成
+```
+
 ✅ **確認ポイント**:
 
 1. Vercelのダッシュボードが表示される
@@ -99,6 +106,13 @@ graph LR
 | Project Name | task-app | プロジェクト名 |
 | Framework Preset | Next.js | フレームワークを自動検出 |
 | Root Directory | `./` | プロジェクトのルート |
+
+
+```bash
+# filepath: ブラウザ（Vercelで操作）
+# Vercel ダッシュボードで「Add New...」→「Project」
+# task-app リポジトリを選択して「Import」
+```
 
 ✅ **確認ポイント**:
 
@@ -176,6 +190,13 @@ JWT_SECRET=<32文字以上のランダムな文字列>
 | Building | コードをビルド | 1-2分 |
 | Deploying | サーバーに配置 | 30秒 |
 | Ready | 公開完了 | - |
+
+
+```bash
+# filepath: ブラウザ（Vercelで操作）
+# 「Deploy」ボタンをクリックしてデプロイ開始
+# 完了後に発行された URL にアクセスして動作確認
+```
 
 ✅ **確認ポイント**:
 

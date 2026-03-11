@@ -79,6 +79,14 @@ graph TD
 🎯 **ゴール**: search ルーターの構成を
 把握します。
 
+```bash
+# filepath: ターミナル
+# search ルーターのAPIを確認する
+cat src/server/router/search.ts | head -50
+```
+
+✅ **確認ポイント**:
+- 7つのフィルターを把握した
 #### search ルーターの全メソッド
 
 | メソッド | 種別 | 説明 |
@@ -87,6 +95,15 @@ graph TD
 | `quickSearch` | query | クイック検索 |
 | `getUserProjects` | query | ユーザーのプロジェクト |
 | `getProjectMembers` | query | プロジェクトメンバー |
+
+#### search ルーターの全メソッド
+
+| メソッド | 種別 | 説明 |
+|---------|------|------|
+| `search` | query | 検索実行（メイン） |
+| `quickSearch` | query | クイック検索 |
+| `getUserProjects` | query | ユーザーのプロジェクト取得 |
+| `getProjectMembers` | query | プロジェクトメンバー取得 |
 
 #### search メソッドのパラメータ
 
@@ -119,14 +136,22 @@ graph TD
 // filepath: src/app/search/page.tsx
 'use client';
 
+import type { TaskPriority, TaskStatus }
+  from '@prisma/client';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import { api } from '@/trpc/react';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState }
+  from 'react';
 import {
   useRouter, useSearchParams,
 } from 'next/navigation';
+```
 
+続いて、コンポーネント本体を定義します。
+
+```typescript
+// filepath: src/app/search/page.tsx
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -169,23 +194,51 @@ import {
   SelectTrigger, SelectValue,
 } from '@/component/ui/select';
 import { Search } from 'lucide-react';
+import { Card, CardContent }
+  from '@/component/ui/card';
 ```
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// SearchPageContent内のstate
+// SearchPageContent内のstate（テキスト系）
 const [keyword, setKeyword] =
   useState(searchParams.get('keyword')
     || '');
 const [projectId, setProjectId] =
   useState(searchParams.get('projectId')
-    || '');
+    || 'all');
 const [status, setStatus] =
-  useState(searchParams.get('status')
-    || 'all');
+  useState<'all' | TaskStatus>(
+    (searchParams.get('status')
+      as 'all' | TaskStatus) || 'all');
 const [priority, setPriority] =
-  useState(searchParams.get('priority')
+  useState<'all' | TaskPriority>(
+    (searchParams.get('priority')
+      as 'all' | TaskPriority) || 'all');
+```
+
+残りの state と API 呼び出しを追加します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// SearchPageContent内のstate（担当者・日付）
+const [assignedTo, setAssignedTo] =
+  useState(searchParams.get('assignedTo')
     || 'all');
+const [dateFrom, setDateFrom] =
+  useState(searchParams.get('dateFrom')
+    || '');
+const [dateTo, setDateTo] =
+  useState(searchParams.get('dateTo')
+    || '');
+
+// プロジェクト一覧（検索ページ専用API）
+const { data: projects } =
+  api.search.getUserProjects.useQuery();
+
+// ユーザー一覧（担当者フィルター用）
+const { data: users } =
+  api.search.getProjectMembers.useQuery();
 ```
 
 ```typescript
@@ -213,6 +266,59 @@ const [priority, setPriority] =
 </div>
 ```
 
+担当者フィルターと期限範囲フィルターも追加します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 担当者フィルター
+<div className="grid gap-2">
+  <Label htmlFor="assignedTo">
+    担当者
+  </Label>
+  <Select value={assignedTo}
+    onValueChange={setAssignedTo}>
+    <SelectTrigger id="assignedTo">
+      <SelectValue
+        placeholder="すべての担当者" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">
+        すべての担当者
+      </SelectItem>
+      {users?.map((user) => (
+        <SelectItem
+          key={user.id} value={user.id}>
+          {user.name || user.email}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+```
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 期限範囲フィルター（開始日・終了日）
+<div className="grid gap-2">
+  <Label htmlFor="dateFrom">
+    期限：開始日
+  </Label>
+  <Input id="dateFrom" type="date"
+    value={dateFrom}
+    onChange={(e) =>
+      setDateFrom(e.target.value)} />
+</div>
+<div className="grid gap-2">
+  <Label htmlFor="dateTo">
+    期限：終了日
+  </Label>
+  <Input id="dateTo" type="date"
+    value={dateTo}
+    onChange={(e) =>
+      setDateTo(e.target.value)} />
+</div>
+```
+
 > 💡 `onKeyDown` で Enter キーを検知し、
 > 検索を実行します。Search アイコンは
 > `absolute` で入力欄の左に配置します。
@@ -220,6 +326,7 @@ const [priority, setPriority] =
 ✅ **確認ポイント**:
 - キーワード入力欄が表示される
 - Select でフィルターが選べる
+- 担当者・期限でも絞り込みできる
 
 ![フィルターフォーム](./screenshots/search.png)
 
@@ -234,17 +341,49 @@ const [priority, setPriority] =
 
 ```typescript
 // filepath: src/app/search/page.tsx
+// URLパラメータが変わった時にstateを同期する
+useEffect(() => {
+  const sync = [
+    { key: 'keyword',
+      setter: setKeyword },
+    { key: 'projectId',
+      setter: setProjectId },
+    { key: 'assignedTo',
+      setter: setAssignedTo },
+    { key: 'dateFrom',
+      setter: setDateFrom },
+    { key: 'dateTo',
+      setter: setDateTo },
+  ];
+  for (const { key, setter } of sync) {
+    const value = searchParams.get(key);
+    if (value) setter(value);
+  }
+}, [searchParams]);
+```
+
+```typescript
+// filepath: src/app/search/page.tsx
 // 検索実行ハンドラー
 const handleSearch = () => {
+  const paramList = [
+    { key: 'keyword', value: keyword },
+    { key: 'projectId',
+      value: projectId, exclude: 'all' },
+    { key: 'status',
+      value: status, exclude: 'all' },
+    { key: 'priority',
+      value: priority, exclude: 'all' },
+    { key: 'assignedTo',
+      value: assignedTo, exclude: 'all' },
+    { key: 'dateFrom', value: dateFrom },
+    { key: 'dateTo', value: dateTo },
+  ];
   const params = new URLSearchParams();
-  if (keyword)
-    params.set('keyword', keyword);
-  if (projectId)
-    params.set('projectId', projectId);
-  if (status !== 'all')
-    params.set('status', status);
-  if (priority !== 'all')
-    params.set('priority', priority);
+  for (const p of paramList) {
+    if (p.value && p.value !== p.exclude)
+      params.set(p.key, p.value);
+  }
   router.push(
     `/search?${params.toString()}`);
 };
@@ -255,9 +394,12 @@ const handleSearch = () => {
 // クリアハンドラー
 const handleClear = () => {
   setKeyword('');
-  setProjectId('');
+  setProjectId('all');
   setStatus('all');
   setPriority('all');
+  setAssignedTo('all');
+  setDateFrom('');
+  setDateTo('');
   router.push('/search');
 };
 ```
@@ -284,9 +426,13 @@ const handleClear = () => {
 // filepath: src/app/search/page.tsx
 // 検索条件が1つでもあるかチェック
 const shouldSearch =
-  !!keyword || !!projectId
+  !!keyword
+  || projectId !== 'all'
   || status !== 'all'
-  || priority !== 'all';
+  || priority !== 'all'
+  || assignedTo !== 'all'
+  || !!dateFrom
+  || !!dateTo;
 ```
 
 ```typescript
@@ -296,9 +442,18 @@ const { data: searchResults, isLoading }
   = api.search.search.useQuery(
   {
     keyword: keyword || undefined,
-    projectId: projectId || undefined,
+    projectId: projectId !== 'all'
+      ? projectId : undefined,
     status: status,
     priority: priority,
+    assignedTo: assignedTo !== 'all'
+      ? assignedTo : undefined,
+    dateFrom: dateFrom
+      ? new Date(dateFrom).toISOString()
+      : undefined,
+    dateTo: dateTo
+      ? new Date(dateTo).toISOString()
+      : undefined,
   },
   {
     enabled: shouldSearch,
@@ -333,26 +488,67 @@ const handleTaskClick =
   (taskId: string) => {
     router.push(`/task?taskId=${taskId}`);
   };
+
+const handleTaskEdit =
+  (taskId: string) => {
+    router.push(
+      `/task?taskId=${taskId}&edit=true`);
+  };
+```
+
+削除のミューテーションとハンドラーを追加します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+const deleteMutation =
+  api.task.delete.useMutation({
+    onSuccess: () => {
+      utils.search.search.invalidate();
+    },
+  });
+
+const handleTaskDelete =
+  (taskId: string) => {
+    if (confirm(
+      'このタスクを削除してもよろしいですか？'
+    )) {
+      deleteMutation.mutate({ id: taskId });
+    }
+  };
 ```
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 検索結果の表示
+// 検索結果の表示（タスク）
 {searchResults
   && searchResults.tasks.length > 0 && (
-  <div className="grid gap-6
-    sm:grid-cols-2 lg:grid-cols-3">
-    {searchResults.tasks.map((task) => (
-      <TaskCard key={task.id}
-        id={task.id}
-        title={task.title}
-        description={task.description}
-        status={task.status}
-        priority={task.priority}
-        dueDate={task.dueDate}
-        assignee={task.assignee}
-        onClick={handleTaskClick} />
-    ))}
+  <div className="space-y-4">
+    <h3 className="text-lg font-semibold">
+      タスク ({searchResults.tasks.length})
+    </h3>
+    <div className="grid gap-6
+      sm:grid-cols-2 lg:grid-cols-3
+      xl:grid-cols-4">
+```
+
+各タスクをカードで表示します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+      {searchResults.tasks.map((task) => (
+        <TaskCard key={task.id}
+          id={task.id}
+          title={task.title}
+          description={task.description}
+          status={task.status}
+          priority={task.priority}
+          dueDate={task.dueDate}
+          assignee={task.assignee}
+          onEdit={handleTaskEdit}
+          onDelete={handleTaskDelete}
+          onClick={handleTaskClick} />
+      ))}
+    </div>
   </div>
 )}
 ```
@@ -391,6 +587,12 @@ const handleTaskClick =
 
 ---
 
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
+
 ## 📋 今日のまとめ
 
 - [ ] 検索フォームを作成できた
@@ -404,17 +606,20 @@ const handleTaskClick =
 |--------------|------|---------|
 | 毎回APIが呼ばれる | enabled条件が不適切 | shouldSearchでガード |
 | URLが更新されない | router.push忘れ | handleSearchに追加 |
-| 結果が0件表示 | パラメータ形式が違う | undefined vs 空文字 |
-| Enter検索が効かない | onKeyDown未設定 | Enterでhandlesearch |
+| 結果が0件表示 | projectId初期値が間違い | `'all'`で初期化する |
+| Enter検索が効かない | onKeyDown未設定 | EnterでhandleSearch |
+| フィルタがリセットされない | handleClearに項目漏れ | 全stateを'all'/''に |
 
 ## 📝 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
 | URLSearchParams | URLのクエリパラメータ操作API |
-| shouldSearch | 検索実行の判定フラグ |
+| shouldSearch | 検索実行の判定フラグ（全条件をORで評価） |
 | enabled | useQueryの実行条件制御 |
 | refetchOnWindowFocus | ウィンドウ復帰時の再取得設定 |
+| getUserProjects | ユーザーが参加するプロジェクト取得API |
+| getProjectMembers | プロジェクトメンバー一覧取得API |
 
 ## 🔜 次回予告
 

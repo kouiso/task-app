@@ -81,15 +81,23 @@ graph TD
 🎯 **ゴール**: プロジェクトごとの
 統計値をどう計算するか理解します。
 
+```bash
+# filepath: ターミナル
+# 統計用データの取得を確認
+npm run dev
+```
+
+✅ **確認ポイント**:
+- 4つの統計値の計算方法を理解した
 #### 統計テーブルに表示する項目
 
 | 項目 | 計算方法 | 意味 |
 |------|---------|------|
-| Project | project.name | プロジェクト名 |
-| Total Tasks | filter結果の長さ | タスク総数 |
-| Completed | DONE の件数 | 完了タスク数 |
-| Progress | 完了数 / 総数 × 100 | 進捗率（%） |
-| Time Spent | reduce で合算 / 60 | 作業時間（h） |
+| プロジェクト | project.name | プロジェクト名 |
+| タスク数 | filter結果の長さ | タスク総数 |
+| 完了 | DONE の件数 | 完了タスク数 |
+| 進捗 | 完了数 / 総数 × 100 | 進捗率（%） |
+| 作業時間 | reduce で合算 / 60 | 作業時間（h） |
 
 #### 計算の流れ
 
@@ -120,25 +128,23 @@ graph TD
 ```typescript
 // filepath: src/app/report/page.tsx
 // プロジェクトのタスクを取得して集計
-const projectStats = projects?.map(
-  (project) => {
-    const projectTasks =
-      tasks?.filter(
-        (t) => t.projectId === project.id
-      ) || [];
-    const completedTasks =
-      projectTasks.filter(
-        (t) => t.status === 'DONE'
-      );
-    const totalTime =
-      projectTasks.reduce(
-        (acc, t) =>
-          acc + t.timeSpentMinutes, 0
-      );
-    return { project, completedTasks,
-      projectTasks, totalTime };
-  }
-);
+const projectStats = useMemo(
+  () =>
+    projects?.map((project) => {
+      const projectTasks =
+        tasks?.filter(
+          (t) => t.projectId === project.id
+        ) || [];
+      const completedTasks =
+        projectTasks.filter(
+          (t) => t.status === 'DONE'
+        );
+      const totalTime =
+        projectTasks.reduce(
+          (acc, t) =>
+            acc + (t.timeSpentMinutes ?? 0),
+          0
+        );
 ```
 
 ```typescript
@@ -154,16 +160,17 @@ const projectStats = projects?.map(
 ```typescript
 // filepath: src/app/report/page.tsx
 // 戻り値を整形する
-    return {
-      name: project.name,
-      totalTasks: projectTasks.length,
-      completedTasks:
-        completedTasks.length,
-      progress: progress.toFixed(1),
-      totalTimeHours:
-        (totalTime / 60).toFixed(1),
-    };
-  }
+      return {
+        name: project.name,
+        totalTasks: projectTasks.length,
+        completedTasks:
+          completedTasks.length,
+        progress: progress.toFixed(1),
+        totalTimeHours:
+          (totalTime / 60).toFixed(1),
+      };
+    }),
+  [projects, tasks],
 );
 ```
 
@@ -200,7 +207,7 @@ import {
 <Card>
   <CardHeader>
     <CardTitle>
-      Project Statistics
+      プロジェクト統計
     </CardTitle>
   </CardHeader>
   <CardContent>
@@ -219,19 +226,19 @@ import {
 // filepath: src/app/report/page.tsx
 // TableHead の定義
 <TableHead className="w-[200px]">
-  Project
+  プロジェクト
 </TableHead>
 <TableHead className="text-right">
-  Total Tasks
+  タスク数
 </TableHead>
 <TableHead className="text-right">
-  Completed
+  完了
 </TableHead>
 <TableHead className="text-right">
-  Progress
+  進捗
 </TableHead>
 <TableHead className="text-right">
-  Time Spent
+  作業時間
 </TableHead>
 ```
 
@@ -260,6 +267,12 @@ import {
   ))}
 </TableBody>
 ```
+
+✅ **確認ポイント**:
+- テーブルにプロジェクト名が並ぶ
+- 数値が右寄せで表示される
+
+![プロジェクト統計テーブル完成](./screenshots/report.png)
 
 #### Table コンポーネントの構造
 
@@ -290,6 +303,14 @@ import {
 🎯 **ゴール**: `api.report.getWeeklyReport`
 の仕組みを理解します。
 
+```bash
+# filepath: ターミナル
+# 週次レポートAPIを確認
+cat src/server/router/report.ts | head -50
+```
+
+✅ **確認ポイント**:
+- APIのパラメータとレスポンスを理解した
 #### APIのパラメータ
 
 | パラメータ | 型 | 必須 | 説明 |
@@ -387,17 +408,17 @@ export default function WeeklyReportPage() {
     value={weeks}
     onValueChange={setWeeks}>
     <SelectTrigger>
-      <SelectValue placeholder="Period" />
+      <SelectValue placeholder="期間" />
     </SelectTrigger>
     <SelectContent>
       <SelectItem value="4">
-        4 Weeks
+        4週間
       </SelectItem>
       <SelectItem value="8">
-        8 Weeks
+        8週間
       </SelectItem>
       <SelectItem value="12">
-        12 Weeks
+        12週間
       </SelectItem>
     </SelectContent>
   </Select>
@@ -432,7 +453,7 @@ export default function WeeklyReportPage() {
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        Total Completed
+        完了タスク合計
       </p>
       <p className="text-3xl font-bold">
         {reportData?.totalCompleted || 0}
@@ -448,7 +469,7 @@ export default function WeeklyReportPage() {
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        Average per Week
+        週平均
       </p>
       <p className="text-3xl font-bold">
         {reportData?.totalCompleted
@@ -469,7 +490,7 @@ export default function WeeklyReportPage() {
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        Period
+        対象期間
       </p>
       <p className="text-lg font-semibold">
         {reportData?.startDate
@@ -487,13 +508,19 @@ export default function WeeklyReportPage() {
 </div>
 ```
 
+✅ **確認ポイント**:
+- 3枚のカードが表示される
+- 完了数と平均が正しく計算される
+
+![週次レポート完成](./screenshots/report-weekly.png)
+
 #### 週次レポートの表示項目
 
 | カード | 表示内容 | 計算方法 |
 |-------|---------|---------|
-| Total Completed | 期間内の完了数 | API が返す値 |
-| Average per Week | 週あたり平均 | 完了数 / 週数 |
-| Period | 集計期間 | 開始日 - 終了日 |
+| 完了タスク合計 | 期間内の完了数 | API が返す値 |
+| 週平均 | 週あたり平均 | 完了数 / 週数 |
+| 対象期間 | 集計期間 | 開始日 - 終了日 |
 
 > 💡 `Math.round` で小数を丸めます。
 > `toLocaleDateString()` でブラウザの
@@ -526,6 +553,12 @@ export default function WeeklyReportPage() {
 ![レポートページ全体](./screenshots/report.png)
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

@@ -101,18 +101,25 @@ npm list recharts
 ```typescript
 // filepath: src/app/report/page.tsx
 // ステータス別に集計
-const statusData = Object.entries(
-  tasks?.reduce(
-    (acc, task) => {
-      acc[task.status] =
-        (acc[task.status] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  ) || {},
-).map(([name, value]) =>
-  ({ name, value }));
+const statusData = useMemo(
+  () =>
+    Object.entries(
+      tasks?.reduce(
+        (acc, task) => {
+          acc[task.status] =
+            (acc[task.status] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ) || {},
+    ).map(([name, value]) =>
+      ({ name, value })),
+  [tasks],
+);
 ```
+
+✅ **確認ポイント**:
+- statusData にデータが入る
 
 #### 集計の仕組み
 
@@ -148,6 +155,9 @@ import {
   TASK_PRIORITY_COLORS,
 } from '@/lib/constant/priority';
 ```
+
+✅ **確認ポイント**:
+- 色定数がインポートできた
 
 #### ステータスの色一覧
 
@@ -189,7 +199,7 @@ import {
 // ステータス円グラフ: Card構造とPie定義
 <Card>
   <CardHeader>
-    <CardTitle>Tasks by Status</CardTitle>
+    <CardTitle>ステータス別タスク</CardTitle>
   </CardHeader>
   <CardContent>
     <div className="h-[300px]">
@@ -249,17 +259,21 @@ import {
 ```typescript
 // filepath: src/app/report/page.tsx
 // 優先度別に集計
-const priorityData = Object.entries(
-  tasks?.reduce(
-    (acc, task) => {
-      acc[task.priority] =
-        (acc[task.priority] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  ) || {},
-).map(([name, value]) =>
-  ({ name, value }));
+const priorityData = useMemo(
+  () =>
+    Object.entries(
+      tasks?.reduce(
+        (acc, task) => {
+          acc[task.priority] =
+            (acc[task.priority] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ) || {},
+    ).map(([name, value]) =>
+      ({ name, value })),
+  [tasks],
+);
 ```
 
 ```typescript
@@ -268,7 +282,7 @@ const priorityData = Object.entries(
 <Card>
   <CardHeader>
     <CardTitle>
-      Tasks by Priority
+      優先度別タスク
     </CardTitle>
   </CardHeader>
   <CardContent>
@@ -336,6 +350,9 @@ const priorityData = Object.entries(
 </div>
 ```
 
+✅ **確認ポイント**:
+- PCでは横並び、モバイルでは縦並び
+
 #### グラフのブレークポイント
 
 | 画面サイズ | クラス | 配置 |
@@ -366,6 +383,12 @@ const priorityData = Object.entries(
 ![完成したグラフセクション](./screenshots/report.png)
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 

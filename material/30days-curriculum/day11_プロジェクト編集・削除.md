@@ -102,6 +102,7 @@ const handleEdit = (projectId: string) => {
 日付変換が終わったら、取得した値を `editingProject` にまとめてセットしてダイアログを開きます。
 
 ```typescript
+// filepath: src/app/project/page.tsx
     setEditingProject({
       id: project.id,
       name: project.name,
@@ -146,6 +147,10 @@ const handleCreate = () => {
   initialData={editingProject}
 />
 ```
+
+✅ **確認ポイント**:
+- 編集ボタンでダイアログを開くと既存の名前が入っている
+- タイトルが「プロジェクト編集」になっている
 
 #### 新規作成 vs 編集の違い
 
@@ -216,6 +221,7 @@ const handleSubmit = (
 `data.id` がない場合（新規作成）は Day 10 で実装済みの `createMutation` を呼びます。
 
 ```typescript
+// filepath: src/app/project/page.tsx
   } else {
     // 新規作成（Day 10で実装済み）
     createMutation.mutate({
@@ -323,6 +329,10 @@ archive: protectedProcedure
   }),
 ```
 
+✅ **確認ポイント**:
+- アーカイブは `isArchived` フラグで管理されていることを理解した
+- 削除とアーカイブの違いを理解した
+
 #### 削除 vs アーカイブ
 
 | 操作 | データ | 復元 | 用途 |
@@ -356,6 +366,12 @@ archive: protectedProcedure
 - 削除前に確認が表示される
 
 ---
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 ## 📋 今日のまとめ
 
