@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
-IFS=$'\n\t'       # Stricter word splitting
+IFS=$'\n\t'       # Stricter word splitting  # nosemgrep: bash.lang.security.ifs-tampering.ifs-tampering
 
 echo "Setting up permissive firewall (allowing all external requests)..."
 

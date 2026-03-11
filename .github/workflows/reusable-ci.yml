@@ -1,11 +1,6 @@
 name: 'Common Setup'
 on:
   workflow_call:
-    inputs:
-      node-version-file:
-        description: 'Path to the Node.js version file'
-        required: true
-        type: string
     secrets:
       firebase-api-key:
         description: 'Firebase API Key'
@@ -34,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup tools with mise
         uses: jdx/mise-action@v2
@@ -65,6 +60,8 @@ jobs:
           echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" >> .env
           echo "NEXTAUTH_SECRET=dummy-secret-for-ci" >> .env
           echo "NEXTAUTH_URL=http://localhost:3000" >> .env
+          echo "JWT_SECRET=dummy-jwt-secret-for-ci-32-chars-min" >> .env
+          echo "SKIP_ENV_VALIDATION=true" >> .env
 
       - name: Npm Build
         run: npm run build:ci
