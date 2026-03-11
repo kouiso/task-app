@@ -231,7 +231,7 @@ git push origin main
 |--------|------|
 | DATABASE_URL | Production |
 | JWT_SECRET | Production |
-| NEXT_PUBLIC_APP_URL | Production |
+| NODE_ENV | Production |
 
 > 💡 Vercel は GitHub と連携しているため
 > `git push` するだけで自動的にビルドと

@@ -174,10 +174,10 @@ ls src/component/ui/alert-dialog.tsx
 | `AlertDialogCancel` | キャンセルボタン |
 
 ✅ **確認ポイント**:
-1. コマンドが正常に完了した
-2. `src/component/ui/alert-dialog.tsx`が生成された
+1. `src/component/ui/alert-dialog.tsx`が存在する
+2. ファイルの中に`AlertDialog`関連のコンポーネントが定義されている
 
-📝 **学んだこと**: shadcn/uiは`npx shadcn@latest add [コンポーネント名]`で必要なコンポーネントだけを追加できます。
+📝 **学んだこと**: shadcn/uiのコンポーネントは`src/component/ui/`にソースコードとして配置されるため、カスタマイズが自由にできます。
 
 ---
 
