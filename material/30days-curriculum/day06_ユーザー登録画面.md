@@ -390,10 +390,10 @@ const registerMutation =
       router.push('/dashboard');
       router.refresh();
     },
-    onError: (err) => {
+    onError: (error) => {
       setError(
-        err.message
-        || '登録中にエラーが発生しました'
+        error.message
+        || 'ユーザー登録中にエラーが発生しました'
       );
     },
   });

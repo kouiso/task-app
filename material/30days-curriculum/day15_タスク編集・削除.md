@@ -242,7 +242,7 @@ const handleSubmit =
               .toISOString()
           : null,
         estimatedHours:
-          data.estimatedHours || null,
+          data.estimatedHours ?? null,
         assigneeId:
           data.assigneeId || null,
       });
@@ -343,9 +343,7 @@ const handleCreate = () => {
   assignee={task.assignee}
   onEdit={handleEdit}
   onDelete={handleDelete}
-  onClick={() =>
-    handleDetail(task.id)
-  }
+  onClick={handleTaskClick}
 />
 ```
 

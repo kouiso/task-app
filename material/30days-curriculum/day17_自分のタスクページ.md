@@ -366,38 +366,41 @@ const { data: tasks } =
 ```typescript
 // filepath: src/app/my-task/page.tsx
 // useMemoはStep 1でインポート済み
-// タスクを期限別にグループ化（useMemoで不要な再計算を防ぐ）
+// タスクを期限別にグループ化
 const groupedTasks = useMemo(() => {
-  const today = new Date();
-  return {
-    overdue: tasks?.filter((t) =>
-      t.dueDate
-      && new Date(t.dueDate) < today
-      && new Date(t.dueDate).toDateString()
-        !== today.toDateString()
-    ) || [],
-    today: tasks?.filter((t) => {
-      if (!t.dueDate) return false;
+  const overdue: typeof tasks = [];
+  const today: typeof tasks = [];
+  const upcoming: typeof tasks = [];
+  const noDueDate: typeof tasks = [];
+  const now = new Date();
+  const todayStr = now.toDateString();
+
+  for (const t of tasks ?? []) {
+    if (!t.dueDate) {
+      noDueDate.push(t);
+    } else {
       const dueDate = new Date(t.dueDate);
-      return dueDate.toDateString()
-        === today.toDateString();
-    }) || [],
+      const dueDateStr =
+        dueDate.toDateString();
 ```
 
-次に、今後の予定と期限なしのグループを定義します。
+続けて、各グループへの振り分けロジックです。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-    upcoming: tasks?.filter((t) => {
-      if (!t.dueDate) return false;
-      const dueDate = new Date(t.dueDate);
-      return dueDate > today
-        && dueDate.toDateString()
-          !== today.toDateString();
-    }) || [],
-    noDueDate: tasks?.filter(
-      (t) => !t.dueDate
-    ) || [],
+// groupedTasks 続き: 条件分岐で分類
+      if (dueDateStr === todayStr) {
+        today.push(t);
+      } else if (dueDate < now) {
+        overdue.push(t);
+      } else {
+        upcoming.push(t);
+      }
+    }
+  }
+
+  return {
+    overdue, today, upcoming, noDueDate,
   };
 }, [tasks]);
 ```

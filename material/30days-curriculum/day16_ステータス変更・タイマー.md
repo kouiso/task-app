@@ -88,15 +88,12 @@ stateDiagram-v2
 ```typescript
 // filepath: src/app/task/page.tsx
 // ステータス変更は api.task.update を使う
-const handleStatusChange = (
-  taskId: string,
-  newStatus: TaskStatus,
-) => {
-  updateMutation.mutate({
-    id: taskId,
-    status: newStatus,
-  });
-};
+// updateMutation は Day 15 で定義済み
+// status だけ渡せばステータスのみを変更できる
+updateMutation.mutate({
+  id: taskId,
+  status: newStatus,
+});
 ```
 
 ✅ **確認ポイント**:
