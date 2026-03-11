@@ -23,8 +23,8 @@ class Seed {
         : '管理者';
 
     await this.createUsers(developerEmail, developerName);
-    await this.createProjects(developerEmail);
-    await this.createTasks(developerEmail);
+    const projectIds = await this.createProjects(developerEmail);
+    await this.createTasks(developerEmail, projectIds.project1Id, projectIds.project2Id);
     await this.createComments(developerEmail);
   }
 
@@ -79,11 +79,8 @@ class Seed {
       where: { email: 'user2@example.com' },
     });
 
-    await this.prisma.project.upsert({
-      where: { id: 'project1' },
-      update: {},
-      create: {
-        id: 'project1',
+    const project1 = await this.prisma.project.create({
+      data: {
         name: 'Webサイトリニューアル',
         description: '企業サイトの全面リニューアルプロジェクト',
         color: '#1976d2',
@@ -108,11 +105,8 @@ class Seed {
       },
     });
 
-    await this.prisma.project.upsert({
-      where: { id: 'project2' },
-      update: {},
-      create: {
-        id: 'project2',
+    const project2 = await this.prisma.project.create({
+      data: {
         name: 'モバイルアプリ開発',
         description: 'iOS/Android向けアプリ開発',
         color: '#4caf50',
@@ -132,9 +126,11 @@ class Seed {
         },
       },
     });
+
+    return { project1Id: project1.id, project2Id: project2.id };
   }
 
-  async createTasks(developerEmail: string) {
+  async createTasks(developerEmail: string, project1Id: string, project2Id: string) {
     const user1 = await this.prisma.user.findUniqueOrThrow({
       where: { email: developerEmail },
     });
@@ -145,82 +141,82 @@ class Seed {
       where: { email: 'user2@example.com' },
     });
 
-    await Promise.all([
-      this.prisma.task.create({
-        data: {
-          title: 'デザインモックアップ作成',
-          description: '新デザインのモックアップをFigmaで作成する',
-          status: 'IN_PROGRESS',
-          priority: 'HIGH',
-          dueDate: new Date('2025-02-15'),
-          estimatedHours: 40,
-          actualHours: 12,
-          timeSpentMinutes: 720,
-          position: 1,
-          projectId: 'project1',
-          createdById: user1.id,
-          assigneeId: user3.id,
-        },
-      }),
-      this.prisma.task.create({
-        data: {
-          title: 'データベース設計',
-          description: 'ER図の作成とテーブル定義',
-          status: 'DONE',
-          priority: 'HIGH',
-          dueDate: new Date('2025-01-31'),
-          completedAt: new Date('2025-01-28'),
-          estimatedHours: 24,
-          actualHours: 20,
-          timeSpentMinutes: 1200,
-          position: 2,
-          projectId: 'project1',
-          createdById: user1.id,
-          assigneeId: user2.id,
-        },
-      }),
-      this.prisma.task.create({
-        data: {
-          title: 'API仕様書作成',
-          description: 'RESTful APIの仕様書を作成',
-          status: 'TODO',
-          priority: 'MEDIUM',
-          dueDate: new Date('2025-02-28'),
-          estimatedHours: 16,
-          position: 3,
-          projectId: 'project1',
-          createdById: user1.id,
-          assigneeId: user2.id,
-        },
-      }),
-      this.prisma.task.create({
-        data: {
-          title: 'プロトタイプ開発',
-          description: '基本機能のプロトタイプを実装',
-          status: 'TODO',
-          priority: 'HIGH',
-          dueDate: new Date('2025-03-15'),
-          estimatedHours: 80,
-          position: 1,
-          projectId: 'project2',
-          createdById: user2.id,
-          assigneeId: user3.id,
-        },
-      }),
-      this.prisma.task.create({
-        data: {
-          title: 'ユーザーテスト実施',
-          description: 'ターゲットユーザーでのテスト',
-          status: 'TODO',
-          priority: 'MEDIUM',
-          dueDate: new Date('2025-04-30'),
-          estimatedHours: 24,
-          position: 2,
-          projectId: 'project2',
-          createdById: user2.id,
-        },
-      }),
-    ]);
+    // createdAtの順序を確定させるため順次実行（コメント紐付けに影響）
+    await this.prisma.task.create({
+      data: {
+        title: 'デザインモックアップ作成',
+        description: '新デザインのモックアップをFigmaで作成する',
+        status: 'IN_PROGRESS',
+        priority: 'HIGH',
+        dueDate: new Date('2025-02-15'),
+        estimatedHours: 40,
+        actualHours: 12,
+        timeSpentMinutes: 720,
+        position: 1,
+        projectId: project1Id,
+        createdById: user1.id,
+        assigneeId: user1.id,
+      },
+    });
+    await this.prisma.task.create({
+      data: {
+        title: 'データベース設計',
+        description: 'ER図の作成とテーブル定義',
+        status: 'DONE',
+        priority: 'HIGH',
+        dueDate: new Date('2025-01-31'),
+        completedAt: new Date('2025-01-28'),
+        estimatedHours: 24,
+        actualHours: 20,
+        timeSpentMinutes: 1200,
+        position: 2,
+        projectId: project1Id,
+        createdById: user1.id,
+        assigneeId: user2.id,
+      },
+    });
+    await this.prisma.task.create({
+      data: {
+        title: 'API仕様書作成',
+        description: 'RESTful APIの仕様書を作成',
+        status: 'TODO',
+        priority: 'MEDIUM',
+        dueDate: new Date('2025-02-28'),
+        estimatedHours: 16,
+        position: 3,
+        projectId: project1Id,
+        createdById: user1.id,
+        assigneeId: user2.id,
+      },
+    });
+    await this.prisma.task.create({
+      data: {
+        title: 'プロトタイプ開発',
+        description: '基本機能のプロトタイプを実装',
+        status: 'TODO',
+        priority: 'HIGH',
+        dueDate: new Date('2025-03-15'),
+        estimatedHours: 80,
+        position: 1,
+        projectId: project2Id,
+        createdById: user2.id,
+        assigneeId: user3.id,
+      },
+    });
+    await this.prisma.task.create({
+      data: {
+        title: 'ユーザーテスト実施',
+        description: 'ターゲットユーザーでのテスト',
+        status: 'TODO',
+        priority: 'MEDIUM',
+        dueDate: new Date('2025-04-30'),
+        estimatedHours: 24,
+        position: 2,
+        projectId: project2Id,
+        createdById: user2.id,
+        assigneeId: user1.id,
+      },
+    });
   }
 
   async createComments(developerEmail: string) {

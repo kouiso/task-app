@@ -18,10 +18,25 @@ def check_visualization(filepath):
     tables = re.findall(table_pattern, content)
     table_count = len([t for t in tables if '---' not in t])  # ヘッダー行を除く
 
-    # スクショ位置をカウント（全角括弧【】を使用）
-    screenshot_pattern = r'【スクリーンショット:.*?】'
-    screenshots = re.findall(screenshot_pattern, content)
-    screenshot_count = len(screenshots)
+    # スクショ位置をカウント（複数パターンに対応）
+    # 1. 旧形式: 【スクリーンショット:...】
+    # 2. 絵文字マーカー: 📸
+    # 3. Markdown画像リンク: ![...](./screenshots/...)
+    screenshot_patterns = [
+        r'【スクリーンショット:.*?】',
+        r'📸',
+        r'!\[.*?\]\(.*?\.png\)',
+        r'!\[.*?\]\(.*?\.jpg\)',
+        r'!\[.*?\]\(.*?screenshot.*?\)',
+    ]
+    # 重複を防ぐため行ベースでカウント（1行に複数パターンがマッチしても1件と数える）
+    lines_with_screenshots = set()
+    for i, line in enumerate(content.splitlines()):
+        for pattern in screenshot_patterns:
+            if re.search(pattern, line):
+                lines_with_screenshots.add(i)
+                break
+    screenshot_count = len(lines_with_screenshots)
 
     # Mermaid図をカウント
     mermaid_pattern = r'```mermaid'
