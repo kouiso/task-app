@@ -54,7 +54,17 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 | [quality.instructions.md](instructions/quality.instructions.md) | 実装ルール、絶対禁止事項、Biome規約、品質基準、リポジトリヘルスチェック、TDD |
 | [git.instructions.md](instructions/git.instructions.md) | Gitブランチ運用、Commit Fix、PRルール、Issue管理、プロジェクトナレッジベース |
 | [trial-and-error.instructions.md](instructions/trial-and-error.instructions.md) | ユーザー負担ゼロ原則、完全自律検証、エラー隠蔽禁止、冪等性担保 |
+| [code-review.instructions.md](instructions/code-review.instructions.md) | コードレビューガイドライン、PRレビューポリシー |
+| [essential-thinking.md](instructions/essential-thinking.md) | 本質的思考プロトコル |
+| [intentional-execution.md](instructions/intentional-execution.md) | 意図的実行プロトコル |
+| [no-obvious-comments.md](instructions/no-obvious-comments.md) | 自明なコメント禁止 |
+| [planning-dual-proposal.instructions.md](instructions/planning-dual-proposal.instructions.md) | デュアル提案プロトコル |
+| [performance.instructions.md](instructions/performance.instructions.md) | コンテキストウィンドウ最適化 |
+| [prohibitions.instructions.md](instructions/prohibitions.instructions.md) | 絶対禁止事項 |
+| [testing.instructions.md](instructions/testing.instructions.md) | TDDルール、テスト規約 |
+| [session-resilience.instructions.md](instructions/session-resilience.instructions.md) | セッション安定性、復旧 |
 | [data-driven-execution.instructions.md](instructions/data-driven-execution.instructions.md) | データサイエンス思考: 重み付きトリアージ、パイプライン探索、仮説駆動デバッグ、自己採点 |
+| [verification-mandate.instructions.md](instructions/verification-mandate.instructions.md) | Playwright拒否禁止、架空完了報告禁止、ブラウザ動作確認義務 |
 
 ### 条件付きルール（該当ファイル編集時のみ自動適用）
 
