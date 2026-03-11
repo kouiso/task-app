@@ -98,7 +98,7 @@ import {
   TaskDialog, type TaskFormData,
 } from '@/component/task/task-dialog';
 import { api } from '@/trpc/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 ```
 
 ```typescript
@@ -365,8 +365,7 @@ const { data: tasks } =
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-import { useMemo, useState } from 'react';
-
+// useMemoはStep 1でインポート済み
 // タスクを期限別にグループ化（useMemoで不要な再計算を防ぐ）
 const groupedTasks = useMemo(() => {
   const today = new Date();
@@ -549,6 +548,19 @@ const handleDelete = (taskId: string) => {
     'このタスクを削除してもよろしいですか？'
   )) {
     deleteMutation.mutate({ id: taskId });
+  }
+};
+```
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// フォーム送信ハンドラー
+const handleSubmit = (
+  data: TaskFormData,
+) => {
+  if (data.id) {
+    updateMutation.mutate({
+      id: data.id, ...data });
   }
 };
 ```

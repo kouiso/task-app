@@ -75,22 +75,17 @@ graph LR
 
 💻 **実装**:
 
+`detailOpen`/`selectedProject` は Day 09 Step 8 で宣言済みです。Day 09 のプレースホルダーハンドラーを本実装に差し替えます。
+
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectPageContent内にstateを追加
-const [detailOpen, setDetailOpen] =
-  useState(false);
-const [selectedProject, setSelectedProject]
-  = useState<string | null>(null);
-
-// 詳細表示ハンドラー
+// Day 09 のプレースホルダーを本実装に差し替え
 const handleProjectClick =
   (projectId: string) => {
     setSelectedProject(projectId);
     setDetailOpen(true);
   };
 
-// 詳細ダイアログを閉じるハンドラー
 const handleDetailClose = () => {
   setDetailOpen(false);
   setSelectedProject(null);
@@ -244,6 +239,10 @@ import { PROJECT_MEMBER_ROLE_LABELS }
 import type { ProjectMemberRole }
   from '@prisma/client';
 import { UserPlus } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
 
 // 追加可能なユーザーを取得
 const { data: availableUsers } =

@@ -81,11 +81,30 @@ graph TD
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
 import type {
   TaskPriority,
   TaskStatus,
 } from '@prisma/client';
+import {
+  Dialog, DialogContent, DialogHeader,
+  DialogTitle, DialogFooter,
+} from '@/component/ui/dialog';
+import { Button } from '@/component/ui/button';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { Textarea }
+  from '@/component/ui/textarea';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+```
 
+```typescript
+// filepath: src/component/task/task-dialog.tsx
 export interface TaskFormData {
   id?: string;
   title: string;
@@ -545,8 +564,12 @@ const handleSubmit =
 import {
   TaskDialog, type TaskFormData,
 } from '@/component/task/task-dialog';
+import { Plus } from 'lucide-react';
 
 // TaskPageContent内に追加
+const [dialogOpen, setDialogOpen] =
+  useState(false);
+const utils = api.useUtils();
 const { data: session } =
   api.auth.getSession.useQuery();
 
