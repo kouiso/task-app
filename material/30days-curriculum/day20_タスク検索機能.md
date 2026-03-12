@@ -93,15 +93,6 @@ cat src/server/api/routers/search.ts | head -50
 |---------|------|------|
 | `search` | query | 検索実行（メイン） |
 | `quickSearch` | query | クイック検索 |
-| `getUserProjects` | query | ユーザーのプロジェクト |
-| `getProjectMembers` | query | プロジェクトメンバー |
-
-#### search ルーターの全メソッド
-
-| メソッド | 種別 | 説明 |
-|---------|------|------|
-| `search` | query | 検索実行（メイン） |
-| `quickSearch` | query | クイック検索 |
 | `getUserProjects` | query | ユーザーのプロジェクト取得 |
 | `getProjectMembers` | query | プロジェクトメンバー取得 |
 
@@ -563,6 +554,36 @@ const handleTaskDelete =
 - カードクリックでタスク詳細に遷移
 
 ![検索結果の表示](./screenshots/search-results.png)
+
+最後に、ページのエクスポートを追加します。
+`useSearchParams` は Suspense 境界が必要です。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// Suspenseでラップしてexport
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppLayout>
+          <div className="flex justify-center
+            items-center h-[60vh]">
+            <Loader2
+              className="h-8 w-8
+                animate-spin text-primary" />
+          </div>
+        </AppLayout>
+      }>
+      <SearchPageContent />
+    </Suspense>
+  );
+}
+```
+
+> 💡 Next.js App Router では `useSearchParams`
+> を使うコンポーネントは `Suspense` で囲む
+> 必要があります。ビルド時にエラーになるため
+> 忘れずに追加しましょう。
 
 ---
 

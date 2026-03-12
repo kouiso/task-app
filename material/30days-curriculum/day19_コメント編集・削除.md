@@ -158,8 +158,8 @@ import { Pencil, Trash2 } from 'lucide-react';
 ```typescript
 // filepath: src/app/task/page.tsx
 // コメント一覧の各コメントに権限チェック追加
-{session?.user?.id
-  === comment.userId && (
+{comment.userId
+  === session?.user?.id && (
   <div className="flex gap-1 ml-auto">
     <Button variant="ghost"
       size="icon" className="h-7 w-7"
@@ -180,7 +180,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 )}
 ```
 
-> 💡 `session?.user?.id === comment.userId`
+> 💡 `comment.userId === session?.user?.id`
 > で「自分が書いたコメントか」を判定します。
 > 他人のコメントにはボタンが表示されません。
 
@@ -364,7 +364,7 @@ const handleDeleteComment =
 2. 自分のコメントに編集・削除ボタンがある
 3. 他人のコメントにはボタンがない
 4. 編集ボタンでテキストエリア表示
-5. 内容を変更して「Save」
+5. 内容を変更して「更新」
 6. 更新されたコメントが表示される
 7. 削除ボタンで確認→削除される
 
