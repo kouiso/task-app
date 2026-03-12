@@ -322,7 +322,7 @@ const handleDelete =
 // アーカイブ処理
 archive: protectedProcedure
   .input(z.object({ id: z.string().cuid() }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ ctx, input }) => {
     return prisma.project.update({
       where: { id: input.id },
       // isArchivedフラグを立てるだけ

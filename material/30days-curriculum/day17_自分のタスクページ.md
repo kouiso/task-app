@@ -534,18 +534,42 @@ const deleteMutation =
 const handleEdit = (taskId: string) => {
   const task =
     tasks?.find((t) => t.id === taskId);
-  if (!task) return;
-  setEditingTask({
-    id: task.id,
-    title: task.title,
-    description: task.description || '',
-    status: task.status,
-    priority: task.priority,
-    projectId: task.projectId,
-  });
-  setDialogOpen(true);
-};
+  if (task) {
+    const dueDate = task.dueDate
+      ? new Date(task.dueDate)
+          .toISOString()
+          .split('T')[0]
+      : undefined;
+```
 
+続けて `setEditingTask` の呼び出し部分です:
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// handleEdit 続き — 編集フォームに値をセット
+    setEditingTask({
+      id: task.id,
+      title: task.title,
+      description: task.description || '',
+      status: task.status,
+      priority: task.priority,
+      projectId: task.projectId,
+      ...(dueDate && { dueDate }),
+      ...(task.estimatedHours
+        && { estimatedHours:
+          task.estimatedHours }),
+      ...(task.assigneeId
+        && { assigneeId:
+          task.assigneeId }),
+    });
+    setDialogOpen(true);
+  }
+};
+```
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 削除ハンドラー
 const handleDelete = (taskId: string) => {
   if (confirm(
     'このタスクを削除してもよろしいですか？'
@@ -563,7 +587,21 @@ const handleSubmit = (
 ) => {
   if (data.id) {
     updateMutation.mutate({
-      id: data.id, ...data });
+      id: data.id,
+      title: data.title,
+      description:
+        data.description || null,
+      status: data.status,
+      priority: data.priority,
+      dueDate: data.dueDate
+        ? new Date(data.dueDate)
+            .toISOString()
+        : null,
+      estimatedHours:
+        data.estimatedHours ?? null,
+      assigneeId:
+        data.assigneeId || null,
+    });
   }
 };
 ```

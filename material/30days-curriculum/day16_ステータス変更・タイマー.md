@@ -554,7 +554,7 @@ const isValid =
   > 0;
 ```
 
-> 💡 Step 5 で定義した `handleHoursChange` と
+> 💡 Step 6 で定義した `handleHoursChange` と
 > `handleMinutesChange` は正規表現 `/^\d+$/` で
 > 数字のみを受け付けます。`isValid` は合計が
 > 0より大きい場合のみ送信ボタンを有効にします。
@@ -676,11 +676,14 @@ interface TaskCardProps {
 // TaskCard 関数内に追加
 const [timeLogDialogOpen,
   setTimeLogDialogOpen] = useState(false);
-const handleOpenTimeLog = () =>
-  setTimeLogDialogOpen(true);
+const handleOpenTimeLog =
+  (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTimeLogDialogOpen(true);
+  };
 ```
 
-カード内のJSXに `TaskTimer` と「時間を記録」
+カード内のJSXに `TaskTimer` と「時間記録」
 ボタンを追加します。
 
 ```typescript
@@ -695,11 +698,13 @@ const handleOpenTimeLog = () =>
   onTimerUpdate={onTimerUpdate}
 />
 <Button
-  variant="ghost"
+  variant="outline"
   size="sm"
-  onClick={handleOpenTimeLog}>
-  <Clock className="w-4 h-4 mr-1" />
-  時間を記録
+  className="w-full text-xs h-8"
+  onClick={handleOpenTimeLog}
+  aria-label={`${title}の時間を記録`}>
+  <Clock className="mr-2 h-3 w-3" />
+  時間記録
 </Button>
 ```
 
@@ -720,7 +725,7 @@ const handleOpenTimeLog = () =>
 
 ✅ **確認ポイント**:
 - タスクカード内にタイマーボタンが表示される
-- 「時間を記録」ボタンが表示される
+- 「時間記録」ボタンが表示される
 
 #### TaskCard に追加したprops
 

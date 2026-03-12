@@ -24,7 +24,7 @@
 graph TD
     A[タスク詳細ダイアログ] --> B[コメント一覧]
     A --> C[コメント投稿フォーム]
-    B --> D[api.comment.getByTaskId]
+    B --> D[api.task.getById で取得]
     C --> E[api.comment.create]
     E --> F[キャッシュ更新 invalidate]
     F --> B
@@ -300,7 +300,7 @@ const handleCommentSubmit = () => {
   if (!commentContent.trim()
     || !selectedTask) return;
   createCommentMutation.mutate({
-    content: commentContent,
+    content: commentContent.trim(),
     taskId: selectedTask,
   });
 };

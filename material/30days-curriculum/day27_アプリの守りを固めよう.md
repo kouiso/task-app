@@ -264,7 +264,12 @@ const taskCreateSchema = z.object({
   priority: z
     .enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
     .default('MEDIUM'),
+  dueDate: z.string().datetime().optional(),
+  estimatedHours:
+    z.number().min(0).optional(),
   projectId: z.string().cuid(),
+  assigneeId:
+    z.string().cuid().optional(),
 });
 ```
 
@@ -467,7 +472,7 @@ HttpOnly 属性が有効であることを確かめます。
 🎯 **ゴール**: このアプリのセキュリティ対策を
 一覧で最終確認します。
 
-### 6-1. 総合チェックリスト
+### 7-1. 総合チェックリスト
 
 | # | カテゴリ | 確認項目 | 対策技術 | ファイル |
 |---|---------|---------|---------|---------|
