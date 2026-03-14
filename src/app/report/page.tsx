@@ -1,11 +1,12 @@
 'use client';
 
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Table,
   TableBody,
@@ -88,13 +89,7 @@ export default function ReportPage() {
   );
 
   if (tasksLoading || projectsLoading) {
-    return (
-      <AppLayout>
-        <div className="flex justify-center items-center h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   return (
