@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 import {
   Dialog,
@@ -14,6 +16,17 @@ import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 import { Textarea } from '@/component/ui/textarea';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
+
+const projectFormSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z.string(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
 interface ProjectDialogProps {
   open: boolean;
@@ -32,38 +45,42 @@ export interface ProjectFormData {
 }
 
 export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectDialogProps) {
-  const [formData, setFormData] = useState<ProjectFormData>({
-    name: '',
-    description: '',
-    color: DEFAULT_PROJECT_COLOR,
-    ...initialData,
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ProjectFormValues>({
+    resolver: zodResolver(projectFormSchema),
+    values: {
+      id: initialData?.id,
+      name: initialData?.name ?? '',
+      description: initialData?.description ?? '',
+      color: initialData?.color ?? DEFAULT_PROJECT_COLOR,
+      startDate: initialData?.startDate ?? '',
+      endDate: initialData?.endDate ?? '',
+    },
   });
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData({ ...initialData });
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        color: DEFAULT_PROJECT_COLOR,
-      });
-    }
-  }, [initialData]);
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
 
-  const handleChange =
-    (field: keyof ProjectFormData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setFormData({ ...formData, [field]: e.target.value });
+  const handleFormSubmit = (data: ProjectFormValues) => {
+    const submitData: ProjectFormData = {
+      ...(data.id !== undefined && { id: data.id }),
+      name: data.name,
+      color: data.color,
+      ...(data.description && { description: data.description }),
+      ...(data.startDate && { startDate: data.startDate }),
+      ...(data.endDate && { endDate: data.endDate }),
     };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
+    onSubmit(submitData);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{initialData?.id ? 'プロジェクト編集' : 'プロジェクト作成'}</DialogTitle>
@@ -73,66 +90,42 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
               : '新しいプロジェクトを作成します。'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">プロジェクト名</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={handleChange('name')}
-                placeholder="プロジェクト名を入力"
-                required
-              />
+              <Input id="name" placeholder="プロジェクト名を入力" {...register('name')} />
+              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">説明</Label>
               <Textarea
                 id="description"
-                value={formData.description || ''}
-                onChange={handleChange('description')}
                 placeholder="プロジェクトの説明..."
                 rows={4}
+                {...register('description')}
               />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="color">カラー</Label>
-                <Input
-                  id="color"
-                  type="color"
-                  value={formData.color}
-                  onChange={handleChange('color')}
-                  className="h-10"
-                />
+                <Input id="color" type="color" className="h-10" {...register('color')} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="startDate">開始日</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate || ''}
-                  onChange={handleChange('startDate')}
-                />
+                <Input id="startDate" type="date" {...register('startDate')} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="endDate">終了日</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate || ''}
-                  onChange={handleChange('endDate')}
-                />
+                <Input id="endDate" type="date" {...register('endDate')} />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="submit" disabled={!formData.name}>
-              {initialData?.id ? '更新' : '作成'}
-            </Button>
+            <Button type="submit">{initialData?.id ? '更新' : '作成'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

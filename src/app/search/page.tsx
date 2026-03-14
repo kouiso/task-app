@@ -4,8 +4,19 @@ import type { TaskPriority, TaskStatus } from '@prisma/client';
 import { Loader2, Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/component/ui/alert-dialog';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
@@ -18,6 +29,8 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
+import { isTaskPriority } from '@/lib/constant/priority';
+import { isTaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function SearchPageContent() {
@@ -27,11 +40,13 @@ function SearchPageContent() {
 
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [projectId, setProjectId] = useState(searchParams.get('projectId') || 'all');
+  const initialStatus = searchParams.get('status') ?? 'all';
   const [status, setStatus] = useState<'all' | TaskStatus>(
-    (searchParams.get('status') as 'all' | TaskStatus) || 'all',
+    isTaskStatus(initialStatus) ? initialStatus : 'all',
   );
+  const initialPriority = searchParams.get('priority') ?? 'all';
   const [priority, setPriority] = useState<'all' | TaskPriority>(
-    (searchParams.get('priority') as 'all' | TaskPriority) || 'all',
+    isTaskPriority(initialPriority) ? initialPriority : 'all',
   );
   const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') || 'all');
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
@@ -71,8 +86,26 @@ function SearchPageContent() {
     }> = [
       { key: 'keyword', setter: setKeyword },
       { key: 'projectId', setter: setProjectId },
-      { key: 'status', setter: (value: string) => setStatus(value as 'all' | TaskStatus) },
-      { key: 'priority', setter: (value: string) => setPriority(value as 'all' | TaskPriority) },
+      {
+        key: 'status',
+        setter: (value: string) => {
+          if (isTaskStatus(value)) {
+            setStatus(value);
+          } else if (value === 'all') {
+            setStatus('all');
+          }
+        },
+      },
+      {
+        key: 'priority',
+        setter: (value: string) => {
+          if (isTaskPriority(value)) {
+            setPriority(value);
+          } else if (value === 'all') {
+            setPriority('all');
+          }
+        },
+      },
       { key: 'assignedTo', setter: setAssignedTo },
       { key: 'dateFrom', setter: setDateFrom },
       { key: 'dateTo', setter: setDateTo },
@@ -125,16 +158,22 @@ function SearchPageContent() {
     router.push(`/task?taskId=${taskId}&edit=true`);
   };
 
+  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
+    open: boolean;
+    taskId: string | null;
+  }>({ open: false, taskId: null });
+
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.search.search.invalidate();
     },
+    onError: (error) => {
+      toast.error(error.message ?? 'タスクの削除に失敗しました');
+    },
   });
 
   const handleTaskDelete = (taskId: string) => {
-    if (confirm('このタスクを削除してもよろしいですか？')) {
-      deleteMutation.mutate({ id: taskId });
-    }
+    setDeleteTaskConfirm({ open: true, taskId });
   };
 
   const handleProjectClick = (projectId: string) => {
@@ -193,7 +232,13 @@ function SearchPageContent() {
                   <Label htmlFor="status">ステータス</Label>
                   <Select
                     value={status}
-                    onValueChange={(value) => setStatus(value as 'all' | TaskStatus)}
+                    onValueChange={(value) => {
+                      if (isTaskStatus(value)) {
+                        setStatus(value);
+                      } else if (value === 'all') {
+                        setStatus('all');
+                      }
+                    }}
                   >
                     <SelectTrigger id="status">
                       <SelectValue placeholder="すべて" />
@@ -214,7 +259,13 @@ function SearchPageContent() {
                   <Label htmlFor="priority">優先度</Label>
                   <Select
                     value={priority}
-                    onValueChange={(value) => setPriority(value as 'all' | TaskPriority)}
+                    onValueChange={(value) => {
+                      if (isTaskPriority(value)) {
+                        setPriority(value);
+                      } else if (value === 'all') {
+                        setPriority('all');
+                      }
+                    }}
                   >
                     <SelectTrigger id="priority">
                       <SelectValue placeholder="すべて" />
@@ -368,6 +419,33 @@ function SearchPageContent() {
             <p>キーワード、プロジェクト、ステータスなどで絞り込めます</p>
           </div>
         )}
+
+        <AlertDialog
+          open={deleteTaskConfirm.open}
+          onOpenChange={(open) => !open && setDeleteTaskConfirm({ open: false, taskId: null })}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>タスクを削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                この操作は取り消せません。タスクを完全に削除します。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteTaskConfirm.taskId) {
+                    deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
+                    setDeleteTaskConfirm({ open: false, taskId: null });
+                  }
+                }}
+              >
+                削除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );

@@ -19,17 +19,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
+import { isUserRole, type UserRole } from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 
 export default function UserEditPage() {
   const router = useRouter();
   const params = useParams();
-  const userId = params['id'] as string;
+  const rawId = params['id'];
+  const userId = typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? (rawId[0] ?? '') : '';
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    avatar: string;
+    role: UserRole;
+    isActive: boolean;
+  }>({
     name: '',
     avatar: '',
-    role: 'USER' as 'USER' | 'ADMIN',
+    role: 'USER',
     isActive: true,
   });
 
@@ -177,13 +184,15 @@ export default function UserEditPage() {
                 <Label htmlFor="role">ロール</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, role: value as 'USER' | 'ADMIN' }))
-                  }
+                  onValueChange={(value) => {
+                    if (isUserRole(value)) {
+                      setFormData((prev) => ({ ...prev, role: value }));
+                    }
+                  }}
                   disabled={updateUser.isPending}
                 >
                   <SelectTrigger id="role">
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder="ロールを選択" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USER">ユーザー</SelectItem>
@@ -197,7 +206,7 @@ export default function UserEditPage() {
                   id="isActive"
                   checked={formData.isActive}
                   onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isActive: checked as boolean }))
+                    setFormData((prev) => ({ ...prev, isActive: checked === true }))
                   }
                   disabled={updateUser.isPending}
                 />

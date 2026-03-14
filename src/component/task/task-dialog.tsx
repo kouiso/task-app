@@ -1,7 +1,8 @@
 'use client';
 
-import type { TaskPriority, TaskStatus } from '@prisma/client';
-import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 import {
   Dialog,
@@ -21,6 +22,22 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Textarea } from '@/component/ui/textarea';
+import { TASK_PRIORITY, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
+import { TASK_STATUS, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+
+const taskFormSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: z.nativeEnum(TASK_STATUS),
+  priority: z.nativeEnum(TASK_PRIORITY),
+  dueDate: z.string().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().min(1, 'プロジェクトは必須です'),
+  assigneeId: z.string().optional(),
+});
+
+type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 interface TaskDialogProps {
   open: boolean;
@@ -51,62 +68,49 @@ export function TaskDialog({
   projects,
   users,
 }: TaskDialogProps) {
-  const [formData, setFormData] = useState<TaskFormData>({
-    title: '',
-    description: '',
-    status: 'TODO',
-    priority: 'MEDIUM',
-    projectId: '',
-    assigneeId: '',
-    ...initialData,
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<TaskFormValues>({
+    resolver: zodResolver(taskFormSchema),
+    values: {
+      id: initialData?.id,
+      title: initialData?.title ?? '',
+      description: initialData?.description ?? '',
+      status: initialData?.status ?? 'TODO',
+      priority: initialData?.priority ?? 'MEDIUM',
+      dueDate: initialData?.dueDate ?? '',
+      estimatedHours: initialData?.estimatedHours,
+      projectId: initialData?.projectId ?? (projects[0]?.id || ''),
+      assigneeId: initialData?.assigneeId ?? '',
+    },
   });
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData({ ...initialData });
-    } else {
-      setFormData({
-        title: '',
-        description: '',
-        status: 'TODO',
-        priority: 'MEDIUM',
-        projectId: projects[0]?.id || '',
-        assigneeId: '',
-      });
-    }
-  }, [initialData, projects]);
-
-  const handleChange =
-    (field: keyof TaskFormData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setFormData({ ...formData, [field]: e.target.value });
-    };
-
-  const handleNumberChange =
-    (field: 'estimatedHours') => (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      if (value === '') {
-        const { [field]: _, ...rest } = formData;
-        setFormData(rest as TaskFormData);
-      } else {
-        setFormData({
-          ...formData,
-          [field]: Number(value),
-        });
-      }
-    };
-
-  const handleSelectChange = (field: keyof TaskFormData) => (value: string) => {
-    setFormData({ ...formData, [field]: value });
+  const handleClose = () => {
+    reset();
+    onClose();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
+  const handleFormSubmit = (data: TaskFormValues) => {
+    const submitData: TaskFormData = {
+      ...(data.id !== undefined && { id: data.id }),
+      title: data.title,
+      status: data.status,
+      priority: data.priority,
+      projectId: data.projectId,
+      ...(data.description && { description: data.description }),
+      ...(data.dueDate && { dueDate: data.dueDate }),
+      ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
+      ...(data.assigneeId && { assigneeId: data.assigneeId }),
+    };
+    onSubmit(submitData);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>{initialData?.id ? 'タスク編集' : 'タスク作成'}</DialogTitle>
@@ -116,110 +120,124 @@ export function TaskDialog({
               : 'プロジェクトに新しいタスクを追加します。'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="title">タイトル</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={handleChange('title')}
-                placeholder="タスクのタイトルを入力"
-                required
-              />
+              <Input id="title" placeholder="タスクのタイトルを入力" {...register('title')} />
+              {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">説明</Label>
               <Textarea
                 id="description"
-                value={formData.description || ''}
-                onChange={handleChange('description')}
                 placeholder="タスクの説明..."
                 rows={4}
+                {...register('description')}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="status">ステータス</Label>
-                <Select value={formData.status} onValueChange={handleSelectChange('status')}>
-                  <SelectTrigger id="status">
-                    <SelectValue placeholder="ステータスを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="TODO">未対応</SelectItem>
-                    <SelectItem value="IN_PROGRESS">進行中</SelectItem>
-                    <SelectItem value="IN_REVIEW">レビュー中</SelectItem>
-                    <SelectItem value="DONE">完了</SelectItem>
-                    <SelectItem value="CANCELLED">キャンセル</SelectItem>
-                    <SelectItem value="BLOCKED">ブロック</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="status" aria-label="ステータスを選択">
+                        <SelectValue placeholder="ステータスを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="priority">優先度</Label>
-                <Select value={formData.priority} onValueChange={handleSelectChange('priority')}>
-                  <SelectTrigger id="priority">
-                    <SelectValue placeholder="優先度を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LOW">低</SelectItem>
-                    <SelectItem value="MEDIUM">中</SelectItem>
-                    <SelectItem value="HIGH">高</SelectItem>
-                    <SelectItem value="URGENT">緊急</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="priority"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="priority" aria-label="優先度を選択">
+                        <SelectValue placeholder="優先度を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="project">プロジェクト</Label>
-                <Select
-                  value={formData.projectId}
-                  onValueChange={handleSelectChange('projectId')}
-                  disabled={!projects.length}
-                >
-                  <SelectTrigger id="project">
-                    <SelectValue placeholder="プロジェクトを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="projectId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!projects.length}
+                    >
+                      <SelectTrigger id="project" aria-label="プロジェクトを選択">
+                        <SelectValue placeholder="プロジェクトを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.projectId && (
+                  <p className="text-sm text-destructive">{errors.projectId.message}</p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="assignee">担当者</Label>
-                <Select
-                  value={formData.assigneeId || 'unassigned'}
-                  onValueChange={(value) =>
-                    handleSelectChange('assigneeId')(value === 'unassigned' ? '' : value)
-                  }
-                >
-                  <SelectTrigger id="assignee">
-                    <SelectValue placeholder="担当者を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">未割当</SelectItem>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="assigneeId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || 'unassigned'}
+                      onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)}
+                    >
+                      <SelectTrigger id="assignee" aria-label="担当者を選択">
+                        <SelectValue placeholder="担当者を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">未割当</SelectItem>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name || user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="dueDate">期限</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={formData.dueDate || ''}
-                  onChange={handleChange('dueDate')}
-                />
+                <Input id="dueDate" type="date" {...register('dueDate')} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="estimatedHours">見積時間</Label>
@@ -228,20 +246,19 @@ export function TaskDialog({
                   type="number"
                   min="0"
                   step="0.5"
-                  value={formData.estimatedHours ?? ''}
-                  onChange={handleNumberChange('estimatedHours')}
                   placeholder="0.0"
+                  {...register('estimatedHours', {
+                    setValueAs: (v: string) => (v === '' ? undefined : Number(v)),
+                  })}
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="submit" disabled={!formData.title || !formData.projectId}>
-              {initialData?.id ? '更新' : '作成'}
-            </Button>
+            <Button type="submit">{initialData?.id ? '更新' : '作成'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

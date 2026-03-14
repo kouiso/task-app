@@ -20,7 +20,8 @@ export default function useLocalStorage<T>(
         return item ? deserializer(item) : initialValue;
       }
       return initialValue;
-    } catch (_error) {
+    } catch (error) {
+      console.error('localStorageの読み込みに失敗しました:', error);
       return initialValue;
     }
   });
@@ -31,12 +32,14 @@ export default function useLocalStorage<T>(
         window.localStorage.setItem(key, serializer(state));
       }
     } catch (error) {
-      console.error(error);
+      console.error('localStorageへの書き込みに失敗しました:', error);
     }
   }, [key, state, serializer]);
 
   const setStoredValue = (valOrFunc: T | ((val: T) => T)) => {
     setState((prevState) => {
+      // typeof チェック後も TypeScript が関数型に絞り込めないため、
+      // やむを得ず型アサーションを使用。Generics + 関数型の推論限界による。
       const newState =
         typeof valOrFunc === 'function' ? (valOrFunc as (val: T) => T)(prevState) : valOrFunc;
       try {
@@ -44,7 +47,7 @@ export default function useLocalStorage<T>(
           window.localStorage.setItem(key, serializer(newState));
         }
       } catch (error) {
-        console.error(error);
+        console.error('localStorageへの書き込みに失敗しました:', error);
       }
       return newState;
     });

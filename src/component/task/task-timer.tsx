@@ -63,7 +63,8 @@ export function TaskTimer({
           action: 'start',
         });
       }
-    } catch (_error) {
+    } catch (error) {
+      console.error('タイマー操作に失敗しました:', error);
       toast.error('タイマーの更新に失敗しました');
     }
   };
