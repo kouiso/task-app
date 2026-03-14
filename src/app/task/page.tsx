@@ -4,9 +4,20 @@ import type { TaskStatus } from '@prisma/client';
 import { CheckSquare, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/component/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
@@ -36,7 +47,7 @@ import {
 import { Separator } from '@/component/ui/separator';
 import { Textarea } from '@/component/ui/textarea';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function TaskPageContent() {
@@ -50,6 +61,15 @@ function TaskPageContent() {
   const [commentContent, setCommentContent] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
+    open: boolean;
+    taskId: string | null;
+  }>({ open: false, taskId: null });
+  const [deleteCommentConfirm, setDeleteCommentConfirm] = useState<{
+    open: boolean;
+    commentId: string | null;
+  }>({ open: false, commentId: null });
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   const searchParams = useSearchParams();
   const taskIdParam = searchParams.get('taskId');
@@ -84,6 +104,9 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setDialogOpen(false);
     },
+    onError: (error) => {
+      toast.error(error.message ?? 'タスクの作成に失敗しました');
+    },
   });
 
   const updateMutation = api.task.update.useMutation({
@@ -94,11 +117,17 @@ function TaskPageContent() {
       }
       setDialogOpen(false);
     },
+    onError: (error) => {
+      toast.error(error.message ?? 'タスクの更新に失敗しました');
+    },
   });
 
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message ?? 'タスクの削除に失敗しました');
     },
   });
 
@@ -107,6 +136,9 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
+    onError: (error) => {
+      toast.error(error.message ?? '一括完了に失敗しました');
+    },
   });
 
   const bulkDeleteMutation = api.task.bulkDelete.useMutation({
@@ -114,12 +146,18 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
+    onError: (error) => {
+      toast.error(error.message ?? '一括削除に失敗しました');
+    },
   });
 
   const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
+    },
+    onError: (error) => {
+      toast.error(error.message ?? 'ステータスの一括更新に失敗しました');
     },
   });
 
@@ -129,6 +167,9 @@ function TaskPageContent() {
         utils.task.getById.invalidate({ id: selectedTask });
       }
       setCommentContent('');
+    },
+    onError: (error) => {
+      toast.error(error.message ?? 'コメントの投稿に失敗しました');
     },
   });
 
@@ -140,6 +181,9 @@ function TaskPageContent() {
       setEditingCommentId(null);
       setEditingCommentContent('');
     },
+    onError: (error) => {
+      toast.error(error.message ?? 'コメントの更新に失敗しました');
+    },
   });
 
   const deleteCommentMutation = api.comment.delete.useMutation({
@@ -147,6 +191,9 @@ function TaskPageContent() {
       if (selectedTask) {
         utils.task.getById.invalidate({ id: selectedTask });
       }
+    },
+    onError: (error) => {
+      toast.error(error.message ?? 'コメントの削除に失敗しました');
     },
   });
 
@@ -176,9 +223,7 @@ function TaskPageContent() {
   };
 
   const handleDelete = (taskId: string) => {
-    if (confirm('このタスクを削除してもよろしいですか？')) {
-      deleteMutation.mutate({ id: taskId });
-    }
+    setDeleteTaskConfirm({ open: true, taskId });
   };
 
   const handleSubmit = (data: TaskFormData) => {
@@ -249,9 +294,7 @@ function TaskPageContent() {
   };
 
   const handleDeleteComment = (commentId: string) => {
-    if (confirm('このコメントを削除しますか？')) {
-      deleteCommentMutation.mutate({ id: commentId });
-    }
+    setDeleteCommentConfirm({ open: true, commentId });
   };
 
   const handleTaskSelect = (taskId: string, checked: boolean) => {
@@ -277,8 +320,8 @@ function TaskPageContent() {
   };
 
   const handleBulkDelete = () => {
-    if (selectedTasks.size > 0 && confirm(`${selectedTasks.size}件のタスクを削除しますか？`)) {
-      bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
+    if (selectedTasks.size > 0) {
+      setBulkDeleteConfirm(true);
     }
   };
 
@@ -371,7 +414,7 @@ function TaskPageContent() {
             <Checkbox
               id="select-all"
               checked={selectAllState}
-              onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+              onCheckedChange={(checked) => handleSelectAll(checked === true)}
             />
             <Label htmlFor="select-all">すべて選択</Label>
           </div>
@@ -379,7 +422,7 @@ function TaskPageContent() {
           <div className="flex gap-2 w-full sm:w-auto ml-auto">
             <div className="w-[200px]">
               <Select value={filterProject} onValueChange={setFilterProject}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="プロジェクトでフィルター">
                   <SelectValue placeholder="すべてのプロジェクト" />
                 </SelectTrigger>
                 <SelectContent>
@@ -395,9 +438,15 @@ function TaskPageContent() {
             <div className="w-[200px]">
               <Select
                 value={filterStatus}
-                onValueChange={(value) => setFilterStatus(value as TaskStatus | 'all')}
+                onValueChange={(value) => {
+                  if (isTaskStatus(value)) {
+                    setFilterStatus(value);
+                  } else if (value === 'all') {
+                    setFilterStatus('all');
+                  }
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="ステータスでフィルター">
                   <SelectValue placeholder="すべてのステータス" />
                 </SelectTrigger>
                 <SelectContent>
@@ -420,7 +469,7 @@ function TaskPageContent() {
               <div key={task.id} className="flex gap-2 items-start h-full">
                 <Checkbox
                   checked={selectedTasks.has(task.id)}
-                  onCheckedChange={(checked) => handleTaskSelect(task.id, checked as boolean)}
+                  onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}
                   className="mt-4"
                 />
                 <div className="flex-1 min-w-0 h-full">
@@ -455,6 +504,84 @@ function TaskPageContent() {
           projects={projects || []}
           users={users || []}
         />
+
+        <AlertDialog
+          open={deleteTaskConfirm.open}
+          onOpenChange={(open) => !open && setDeleteTaskConfirm({ open: false, taskId: null })}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>タスクを削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                この操作は取り消せません。タスクを完全に削除します。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteTaskConfirm.taskId) {
+                    deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
+                    setDeleteTaskConfirm({ open: false, taskId: null });
+                  }
+                }}
+              >
+                削除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={deleteCommentConfirm.open}
+          onOpenChange={(open) =>
+            !open && setDeleteCommentConfirm({ open: false, commentId: null })
+          }
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>コメントを削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                この操作は取り消せません。コメントを完全に削除します。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteCommentConfirm.commentId) {
+                    deleteCommentMutation.mutate({ id: deleteCommentConfirm.commentId });
+                    setDeleteCommentConfirm({ open: false, commentId: null });
+                  }
+                }}
+              >
+                削除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{selectedTasks.size}件のタスクを削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                この操作は取り消せません。選択したタスクを全て完全に削除します。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
+                  setBulkDeleteConfirm(false);
+                }}
+              >
+                削除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <Dialog open={detailOpen} onOpenChange={(isOpen) => !isOpen && handleDetailClose()}>
           <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">

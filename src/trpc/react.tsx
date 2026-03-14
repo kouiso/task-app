@@ -6,6 +6,7 @@ import { createTRPCReact } from '@trpc/react-query';
 import { useState } from 'react';
 import superjson from 'superjson';
 import type { AppRouter } from '@/server/api/root';
+import { STALE_TIME_MS } from './query-constants';
 
 export const api = createTRPCReact<AppRouter>();
 
@@ -15,7 +16,7 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 5,
+            staleTime: STALE_TIME_MS,
           },
         },
       }),
