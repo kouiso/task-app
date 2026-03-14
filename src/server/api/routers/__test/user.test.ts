@@ -95,7 +95,9 @@ describe('userRouter', () => {
       const user = await createTestUser();
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
-      await expect(caller.user.getById({ id: 'clnonexistent' })).rejects.toThrow('User not found');
+      await expect(caller.user.getById({ id: 'clnonexistent' })).rejects.toThrow(
+        'ユーザーが見つかりません',
+      );
     });
 
     it('should require authentication', async () => {
@@ -123,7 +125,7 @@ describe('userRouter', () => {
       const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       await expect(caller.user.getByEmail({ email: 'notfound@example.com' })).rejects.toThrow(
-        'User not found',
+        'ユーザーが見つかりません',
       );
     });
 
@@ -175,7 +177,7 @@ describe('userRouter', () => {
           email: 'duplicate@example.com',
           name: 'Duplicate User',
         }),
-      ).rejects.toThrow('User with this email already exists');
+      ).rejects.toThrow('このメールアドレスは既に使用されています');
     });
 
     it('should require admin role', async () => {

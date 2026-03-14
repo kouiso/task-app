@@ -13,15 +13,17 @@ function getKey(): Uint8Array {
 export interface SessionPayload {
   userId: string;
   email: string;
-  role: string;
+  role: UserRole;
   exp: number;
 }
 
 export interface SessionUser {
   id: string;
   email: string;
-  role: string;
+  role: UserRole;
 }
+
+type UserRole = 'USER' | 'ADMIN';
 
 const COOKIE_NAME = 'session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間

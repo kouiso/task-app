@@ -32,6 +32,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // tRPCエンドポイントはミドルウェアによるリダイレクトをスキップする。
+  // publicProcedure（login/register/getSession等）はJWT不在でも動作させる必要があり、
+  // protectedProcedure・adminProcedureによりtRPC層で認証・認可を担保しているため。
+  if (pathname.startsWith('/api/trpc')) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
   // トークンがない場合はログインにリダイレクト
@@ -57,5 +64,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/trpc).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

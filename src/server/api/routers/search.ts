@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { QUERY_LIMITS } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -25,7 +26,7 @@ const searchInputSchema = z.object({
 
 // クイック検索入力スキーマ
 const quickSearchInputSchema = z.object({
-  keyword: z.string().min(1, 'Keyword is required'),
+  keyword: z.string().min(1, '検索キーワードは必須です'),
 });
 
 /**
@@ -123,7 +124,7 @@ export const searchRouter = createTRPCRouter({
         },
       },
       orderBy: { updatedAt: 'desc' },
-      take: 100,
+      take: QUERY_LIMITS.DEFAULT,
     });
 
     // プロジェクト検索（キーワードがある場合のみ早期リターンで処理）
@@ -152,7 +153,7 @@ export const searchRouter = createTRPCRouter({
             },
           },
           orderBy: { updatedAt: 'desc' },
-          take: 20,
+          take: QUERY_LIMITS.SEARCH_DEFAULT,
         });
 
     return {
@@ -196,7 +197,7 @@ export const searchRouter = createTRPCRouter({
           assignee: { select: userSelectFields },
         },
         orderBy: { updatedAt: 'desc' },
-        take: 20,
+        take: QUERY_LIMITS.SEARCH_DEFAULT,
       }),
       prisma.project.findMany({
         where: {
@@ -210,7 +211,7 @@ export const searchRouter = createTRPCRouter({
           _count: { select: { tasks: true } },
         },
         orderBy: { updatedAt: 'desc' },
-        take: 10,
+        take: QUERY_LIMITS.SEARCH_ASSIGNEES,
       }),
     ]);
 

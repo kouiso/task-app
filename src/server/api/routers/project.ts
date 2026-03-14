@@ -2,11 +2,12 @@ import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
+import { QUERY_LIMITS } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const projectCreateSchema = z.object({
-  name: z.string().min(1, 'Project name is required'),
+  name: z.string().min(1, 'プロジェクト名は必須です'),
   description: z.string().optional(),
   color: z
     .string()
@@ -118,6 +119,8 @@ export const projectRouter = createTRPCRouter({
               },
             },
             orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+            // 無制限取得によるパフォーマンス劣化を防ぐ
+            take: QUERY_LIMITS.DEFAULT,
           },
         },
       });
@@ -125,7 +128,7 @@ export const projectRouter = createTRPCRouter({
       if (!project) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Project not found',
+          message: 'プロジェクトが見つかりません',
         });
       }
 
@@ -133,7 +136,7 @@ export const projectRouter = createTRPCRouter({
       if (!isMember) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You do not have access to this project',
+          message: 'このプロジェクトへのアクセス権限がありません',
         });
       }
 
@@ -155,7 +158,7 @@ export const projectRouter = createTRPCRouter({
       if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only project owners or admins can view available users',
+          message: 'プロジェクトのオーナーまたは管理者のみがユーザーを表示できます',
         });
       }
 
@@ -226,7 +229,7 @@ export const projectRouter = createTRPCRouter({
     if (!project) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Project not found',
+        message: 'プロジェクトが見つかりません',
       });
     }
 
@@ -234,7 +237,7 @@ export const projectRouter = createTRPCRouter({
     if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'Only project owners and admins can update the project',
+        message: 'プロジェクトのオーナーまたは管理者のみが更新できます',
       });
     }
 
@@ -288,7 +291,7 @@ export const projectRouter = createTRPCRouter({
       if (!project) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Project not found',
+          message: 'プロジェクトが見つかりません',
         });
       }
 
@@ -296,7 +299,7 @@ export const projectRouter = createTRPCRouter({
       if (!userMember || userMember.role !== 'OWNER') {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only project owners can delete the project',
+          message: 'プロジェクトのオーナーのみが削除できます',
         });
       }
 
@@ -320,7 +323,7 @@ export const projectRouter = createTRPCRouter({
     if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'Only project owners or admins can add members',
+        message: 'プロジェクトのオーナーまたは管理者のみがメンバーを追加できます',
       });
     }
 
@@ -336,7 +339,7 @@ export const projectRouter = createTRPCRouter({
     if (existing) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'User is already a member of this project',
+        message: 'このユーザーは既にプロジェクトのメンバーです',
       });
     }
 
@@ -371,7 +374,7 @@ export const projectRouter = createTRPCRouter({
       if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only project owners or admins can remove members',
+          message: 'プロジェクトのオーナーまたは管理者のみがメンバーを削除できます',
         });
       }
 
@@ -387,7 +390,7 @@ export const projectRouter = createTRPCRouter({
       if (!member) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Member not found',
+          message: 'メンバーが見つかりません',
         });
       }
 
@@ -402,7 +405,7 @@ export const projectRouter = createTRPCRouter({
         if (ownerCount === 1) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Cannot remove the only owner of the project',
+            message: 'プロジェクト唯一のオーナーは削除できません',
           });
         }
       }
@@ -441,7 +444,7 @@ export const projectRouter = createTRPCRouter({
       if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only project owners or admins can update member roles',
+          message: 'プロジェクトのオーナーまたは管理者のみがロールを変更できます',
         });
       }
 
@@ -479,7 +482,7 @@ export const projectRouter = createTRPCRouter({
       if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only project owners or admins can archive projects',
+          message: 'プロジェクトのオーナーまたは管理者のみがアーカイブできます',
         });
       }
 
@@ -505,7 +508,7 @@ export const projectRouter = createTRPCRouter({
       if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only project owners or admins can unarchive projects',
+          message: 'プロジェクトのオーナーまたは管理者のみがアーカイブを解除できます',
         });
       }
 

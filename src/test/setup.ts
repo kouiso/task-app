@@ -62,6 +62,8 @@ afterEach(async () => {
     ];
 
     for (const table of tables) {
+      // テスト環境専用: $executeRawUnsafeは直接SQL実行のため本番コードでは使用禁止
+      // テーブル名は上記の内部定数から取得するためSQLインジェクションリスクはない
       await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
     }
   }

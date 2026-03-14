@@ -122,7 +122,11 @@ export async function createTestComment(
   });
 }
 
-export function createMockSession(userId: string, email: string, role: string): SessionPayload {
+export function createMockSession(
+  userId: string,
+  email: string,
+  role: SessionPayload['role'],
+): SessionPayload {
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
   return {
     userId,
@@ -144,7 +148,11 @@ export async function createTestCaller(session?: SessionPayload | null) {
   });
 }
 
-export async function createAuthenticatedCaller(userId: string, email: string, role: string) {
+export async function createAuthenticatedCaller(
+  userId: string,
+  email: string,
+  role: SessionPayload['role'],
+) {
   const session = createMockSession(userId, email, role);
   return await createTestCaller(session);
 }

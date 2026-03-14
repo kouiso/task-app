@@ -94,7 +94,9 @@ describe('taskRouter', () => {
       const user = await createTestUser();
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
-      await expect(caller.task.getById({ id: 'clnonexistent' })).rejects.toThrow('Task not found');
+      await expect(caller.task.getById({ id: 'clnonexistent' })).rejects.toThrow(
+        'タスクが見つかりません',
+      );
     });
 
     it('should require authentication', async () => {
@@ -346,7 +348,7 @@ describe('taskRouter', () => {
       await caller.task.updateTimer({ id: task.id, action: 'start' });
 
       await expect(caller.task.updateTimer({ id: task.id, action: 'start' })).rejects.toThrow(
-        'Timer is already running',
+        'タイマーは既に実行中です',
       );
     });
 
@@ -358,7 +360,7 @@ describe('taskRouter', () => {
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
       await expect(caller.task.updateTimer({ id: task.id, action: 'stop' })).rejects.toThrow(
-        'Timer is not running',
+        'タイマーは実行されていません',
       );
     });
 
