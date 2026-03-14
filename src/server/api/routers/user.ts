@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 
 const userCreateSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -54,14 +54,15 @@ export const userRouter = createTRPCRouter({
     if (!user) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'User not found',
+        message: 'ユーザーが見つかりません',
       });
     }
 
     return user;
   }),
 
-  getAll: protectedProcedure
+  // adminProcedureによりセッションのroleを参照してADMIN判定するためDBクエリ不要
+  getAll: adminProcedure
     .input(
       z
         .object({
@@ -70,20 +71,7 @@ export const userRouter = createTRPCRouter({
         })
         .optional(),
     )
-    .query(async ({ ctx, input }) => {
-      // ADMIN権限チェック
-      const currentUser = await prisma.user.findUnique({
-        where: { id: ctx.session.userId },
-        select: { role: true },
-      });
-
-      if (currentUser?.role !== 'ADMIN') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: '管理者権限が必要です',
-        });
-      }
-
+    .query(async ({ input }) => {
       const where: Prisma.UserWhereInput = {};
 
       if (input?.isActive !== undefined) {
@@ -156,28 +144,17 @@ export const userRouter = createTRPCRouter({
       if (!user) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'User not found',
+          message: 'ユーザーが見つかりません',
         });
       }
 
       return user;
     }),
 
-  getByEmail: protectedProcedure
+  // adminProcedureによりADMIN判定
+  getByEmail: adminProcedure
     .input(z.object({ email: z.string().email() }))
-    .query(async ({ ctx, input }) => {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: ctx.session.userId },
-        select: { role: true },
-      });
-
-      if (currentUser?.role !== 'ADMIN') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: '管理者権限が必要です',
-        });
-      }
-
+    .query(async ({ input }) => {
       const user = await prisma.user.findUnique({
         where: { email: input.email },
         select: {
@@ -193,27 +170,15 @@ export const userRouter = createTRPCRouter({
       if (!user) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'User not found',
+          message: 'ユーザーが見つかりません',
         });
       }
 
       return user;
     }),
 
-  create: protectedProcedure.input(userCreateSchema).mutation(async ({ ctx, input }) => {
-    // ADMIN権限チェック
-    const currentUser = await prisma.user.findUnique({
-      where: { id: ctx.session.userId },
-      select: { role: true },
-    });
-
-    if (currentUser?.role !== 'ADMIN') {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: '管理者権限が必要です',
-      });
-    }
-
+  // adminProcedureによりADMIN判定
+  create: adminProcedure.input(userCreateSchema).mutation(async ({ input }) => {
     const existing = await prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -221,7 +186,7 @@ export const userRouter = createTRPCRouter({
     if (existing) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'User with this email already exists',
+        message: 'このメールアドレスは既に使用されています',
       });
     }
 
@@ -253,14 +218,9 @@ export const userRouter = createTRPCRouter({
   update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    // 自分以外のユーザーを更新する場合、ADMIN権限が必要
     if (id !== ctx.session.userId) {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: ctx.session.userId },
-        select: { role: true },
-      });
-
-      if (currentUser?.role !== 'ADMIN') {
+      // 他ユーザーを更新する場合はセッションのroleでADMIN判定
+      if (ctx.session.role !== 'ADMIN') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: '管理者権限が必要です',
@@ -305,28 +265,14 @@ export const userRouter = createTRPCRouter({
     });
   }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ ctx, input }) => {
-      // ADMIN権限チェック
-      const currentUser = await prisma.user.findUnique({
-        where: { id: ctx.session.userId },
-        select: { role: true },
-      });
-
-      if (currentUser?.role !== 'ADMIN') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: '管理者権限が必要です',
-        });
-      }
-
-      await prisma.user.update({
-        where: { id: input.id },
-        data: { isActive: false },
-      });
-      return { success: true };
-    }),
+  // adminProcedureによりADMIN判定
+  delete: adminProcedure.input(z.object({ id: z.string().cuid() })).mutation(async ({ input }) => {
+    await prisma.user.update({
+      where: { id: input.id },
+      data: { isActive: false },
+    });
+    return { success: true };
+  }),
 
   updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.userId;

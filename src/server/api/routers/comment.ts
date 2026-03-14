@@ -1,23 +1,23 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const commentCreateSchema = z.object({
-  content: z.string().trim().min(1, 'Comment content is required'),
+  content: z.string().trim().min(1, 'コメント内容は必須です'),
   taskId: z.string().cuid(),
 });
 
 const commentUpdateSchema = z.object({
   id: z.string().cuid(),
-  content: z.string().trim().min(1, 'Comment content is required'),
+  content: z.string().trim().min(1, 'コメント内容は必須です'),
 });
 
 export const commentRouter = createTRPCRouter({
   getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
-      // タスクのプロジェクトメンバーシップ確認
       const task = await prisma.task.findUnique({
         where: { id: input.taskId },
         include: {
@@ -32,14 +32,14 @@ export const commentRouter = createTRPCRouter({
       if (!task) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Task not found',
+          message: 'タスクが見つかりません',
         });
       }
 
       if (task.project.members.length === 0) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You do not have access to this task',
+          message: 'このタスクへのアクセス権限がありません',
         });
       }
 
@@ -55,7 +55,6 @@ export const commentRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
-    // タスクのプロジェクトメンバーシップ確認
     const task = await prisma.task.findUnique({
       where: { id: input.taskId },
       include: {
@@ -70,14 +69,30 @@ export const commentRouter = createTRPCRouter({
     if (!task) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Task not found',
+        message: 'タスクが見つかりません',
       });
     }
 
     if (task.project.members.length === 0) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'You do not have access to this task',
+        message: 'このタスクへのアクセス権限がありません',
+      });
+    }
+
+    const member = task.project.members[0];
+    if (!member || !isProjectMemberRole(member.role)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
+      });
+    }
+    const memberRole: ProjectMemberRole = member.role;
+    // VIEWERはコメント投稿不可（canEditで一括判定）
+    if (!hasPermission(memberRole, 'canEdit')) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
       });
     }
 
@@ -98,7 +113,6 @@ export const commentRouter = createTRPCRouter({
   update: protectedProcedure.input(commentUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    // コメント所有者確認
     const comment = await prisma.comment.findUnique({
       where: { id },
       select: { userId: true },
@@ -107,14 +121,14 @@ export const commentRouter = createTRPCRouter({
     if (!comment) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Comment not found',
+        message: 'コメントが見つかりません',
       });
     }
 
     if (comment.userId !== ctx.session.userId) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'You can only edit your own comments',
+        message: '自分のコメントのみ編集できます',
       });
     }
 
@@ -132,7 +146,6 @@ export const commentRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      // コメント所有者確認
       const comment = await prisma.comment.findUnique({
         where: { id: input.id },
         select: { userId: true },
@@ -141,14 +154,14 @@ export const commentRouter = createTRPCRouter({
       if (!comment) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Comment not found',
+          message: 'コメントが見つかりません',
         });
       }
 
       if (comment.userId !== ctx.session.userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You can only delete your own comments',
+          message: '自分のコメントのみ削除できます',
         });
       }
 

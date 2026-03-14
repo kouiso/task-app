@@ -44,6 +44,8 @@ function validateEnv() {
  */
 const shouldSkipValidation = process.env['SKIP_ENV_VALIDATION'] === 'true';
 
+// スキップ時は process.env をそのまま渡すが、実行時に環境変数が揃っている前提のため
+// Env型として扱う。SKIP_ENV_VALIDATIONはCI/CDビルド専用フラグなので許容されるworkaround。
 export const env = shouldSkipValidation ? (process.env as unknown as Env) : validateEnv();
 
 /**

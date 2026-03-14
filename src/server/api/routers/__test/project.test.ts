@@ -67,7 +67,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(nonMember.id, nonMember.email, nonMember.role);
 
       await expect(caller.project.getById({ id: project.id })).rejects.toThrow(
-        'You do not have access to this project',
+        'このプロジェクトへのアクセス権限がありません',
       );
     });
 
@@ -76,7 +76,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
       await expect(caller.project.getById({ id: 'cm000000000000000000000000' })).rejects.toThrow(
-        'Project not found',
+        'プロジェクトが見つかりません',
       );
     });
 
@@ -171,7 +171,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(member.id, member.email, member.role);
 
       await expect(caller.project.update({ id: project.id, name: 'Rejected' })).rejects.toThrow(
-        'Only project owners and admins can update the project',
+        'プロジェクトのオーナーまたは管理者のみが更新できます',
       );
     });
 
@@ -211,7 +211,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       await expect(caller.project.delete({ id: project.id })).rejects.toThrow(
-        'Only project owners can delete the project',
+        'プロジェクトのオーナーのみが削除できます',
       );
     });
 
@@ -280,7 +280,7 @@ describe('projectRouter', () => {
           userId: existingMember.id,
           role: 'MEMBER',
         }),
-      ).rejects.toThrow('User is already a member of this project');
+      ).rejects.toThrow('このユーザーは既にプロジェクトのメンバーです');
     });
 
     it('should reject MEMBER from adding members', async () => {
@@ -301,7 +301,7 @@ describe('projectRouter', () => {
           userId: newUser.id,
           role: 'MEMBER',
         }),
-      ).rejects.toThrow('Only project owners or admins can add members');
+      ).rejects.toThrow('プロジェクトのオーナーまたは管理者のみがメンバーを追加できます');
     });
 
     it('should reject VIEWER from adding members', async () => {
@@ -322,7 +322,7 @@ describe('projectRouter', () => {
           userId: newUser.id,
           role: 'MEMBER',
         }),
-      ).rejects.toThrow('Only project owners or admins can add members');
+      ).rejects.toThrow('プロジェクトのオーナーまたは管理者のみがメンバーを追加できます');
     });
 
     it('should require authentication', async () => {
@@ -374,7 +374,7 @@ describe('projectRouter', () => {
           projectId: project.id,
           userId: owner.id,
         }),
-      ).rejects.toThrow('Cannot remove the only owner of the project');
+      ).rejects.toThrow('プロジェクト唯一のオーナーは削除できません');
     });
 
     it('should require authentication', async () => {
@@ -429,7 +429,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(viewer.id, viewer.email, viewer.role);
 
       await expect(caller.project.archive({ id: project.id })).rejects.toThrow(
-        'Only project owners or admins can archive projects',
+        'プロジェクトのオーナーまたは管理者のみがアーカイブできます',
       );
     });
 
@@ -466,7 +466,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(viewer.id, viewer.email, viewer.role);
 
       await expect(caller.project.unarchive({ id: project.id })).rejects.toThrow(
-        'Only project owners or admins can unarchive projects',
+        'プロジェクトのオーナーまたは管理者のみがアーカイブを解除できます',
       );
     });
 

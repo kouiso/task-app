@@ -1,11 +1,13 @@
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { MILLISECONDS_PER_MINUTE, QUERY_LIMITS } from '@/lib/constant/query';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 const taskCreateSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+  title: z.string().min(1, 'タイトルは必須です'),
   description: z.string().optional(),
   status: z
     .enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED'])
@@ -50,14 +52,14 @@ export const taskRouter = createTRPCRouter({
             .enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED'])
             .optional(),
           assigneeId: z.string().cuid().optional(),
-          limit: z.number().min(1).max(1000).default(100),
+          limit: z.number().min(1).max(QUERY_LIMITS.MAX).default(QUERY_LIMITS.DEFAULT),
           offset: z.number().min(0).default(0),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
       const where: Prisma.TaskWhereInput = {};
-      const limit = input?.limit ?? 100;
+      const limit = input?.limit ?? QUERY_LIMITS.DEFAULT;
       const offset = input?.offset ?? 0;
 
       // ユーザーが参加してるプロジェクトのみを対象
@@ -73,7 +75,7 @@ export const taskRouter = createTRPCRouter({
         if (!projectIds.includes(input.projectId)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'You do not have access to this project',
+            message: 'このプロジェクトへのアクセス権限がありません',
           });
         }
         where.projectId = input.projectId;
@@ -91,13 +93,9 @@ export const taskRouter = createTRPCRouter({
           assignee: {
             select: { id: true, name: true, email: true, avatar: true },
           },
-          comments: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true, avatar: true },
-              },
-            },
-            orderBy: { createdAt: 'desc' },
+          // 一覧取得ではコメント全件ではなく件数のみ取得してパフォーマンスを最適化
+          _count: {
+            select: { comments: true },
           },
         },
         orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
@@ -139,14 +137,14 @@ export const taskRouter = createTRPCRouter({
       if (!task) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Task not found',
+          message: 'タスクが見つかりません',
         });
       }
 
       if (task.project.members.length === 0) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You do not have access to this task',
+          message: 'このタスクへのアクセス権限がありません',
         });
       }
 
@@ -154,7 +152,6 @@ export const taskRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
-    // プロジェクトメンバーシップの確認
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },
       include: {
@@ -167,14 +164,29 @@ export const taskRouter = createTRPCRouter({
     if (!project) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Project not found',
+        message: 'プロジェクトが見つかりません',
       });
     }
 
     if (project.members.length === 0) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'You do not have access to this project',
+        message: 'このプロジェクトへのアクセス権限がありません',
+      });
+    }
+
+    const member = project.members[0];
+    if (!member || !isProjectMemberRole(member.role)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
+      });
+    }
+    const memberRole: ProjectMemberRole = member.role;
+    if (!hasPermission(memberRole, 'canEdit')) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
       });
     }
 
@@ -242,14 +254,29 @@ export const taskRouter = createTRPCRouter({
     if (!task) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Task not found',
+        message: 'タスクが見つかりません',
       });
     }
 
     if (task.project.members.length === 0) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'You do not have access to this task',
+        message: 'このタスクへのアクセス権限がありません',
+      });
+    }
+
+    const member = task.project.members[0];
+    if (!member || !isProjectMemberRole(member.role)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
+      });
+    }
+    const memberRole: ProjectMemberRole = member.role;
+    if (!hasPermission(memberRole, 'canEdit')) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
       });
     }
 
@@ -320,14 +347,29 @@ export const taskRouter = createTRPCRouter({
       if (!task) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Task not found',
+          message: 'タスクが見つかりません',
         });
       }
 
       if (task.project.members.length === 0) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You do not have access to this task',
+          message: 'このタスクへのアクセス権限がありません',
+        });
+      }
+
+      const member = task.project.members[0];
+      if (!member || !isProjectMemberRole(member.role)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を実行する権限がありません',
+        });
+      }
+      const memberRole: ProjectMemberRole = member.role;
+      if (!hasPermission(memberRole, 'canDelete')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を実行する権限がありません',
         });
       }
 
@@ -354,14 +396,29 @@ export const taskRouter = createTRPCRouter({
     if (!task) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Task not found',
+        message: 'タスクが見つかりません',
       });
     }
 
     if (task.project.members.length === 0) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'You do not have access to this task',
+        message: 'このタスクへのアクセス権限がありません',
+      });
+    }
+
+    const member = task.project.members[0];
+    if (!member || !isProjectMemberRole(member.role)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
+      });
+    }
+    const memberRole: ProjectMemberRole = member.role;
+    if (!hasPermission(memberRole, 'canEdit')) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
       });
     }
 
@@ -369,7 +426,7 @@ export const taskRouter = createTRPCRouter({
       if (task.isTimerActive) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Timer is already running',
+          message: 'タイマーは既に実行中です',
         });
       }
 
@@ -384,11 +441,13 @@ export const taskRouter = createTRPCRouter({
     if (!task.isTimerActive || !task.timerStartedAt) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Timer is not running',
+        message: 'タイマーは実行されていません',
       });
     }
 
-    const elapsedMinutes = Math.floor((Date.now() - task.timerStartedAt.getTime()) / 60000);
+    const elapsedMinutes = Math.floor(
+      (Date.now() - task.timerStartedAt.getTime()) / MILLISECONDS_PER_MINUTE,
+    );
 
     return await prisma.task.update({
       where: { id: input.id },
@@ -417,14 +476,29 @@ export const taskRouter = createTRPCRouter({
     if (!task) {
       throw new TRPCError({
         code: 'NOT_FOUND',
-        message: 'Task not found',
+        message: 'タスクが見つかりません',
       });
     }
 
     if (task.project.members.length === 0) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'You do not have access to this task',
+        message: 'このタスクへのアクセス権限がありません',
+      });
+    }
+
+    const member = task.project.members[0];
+    if (!member || !isProjectMemberRole(member.role)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
+      });
+    }
+    const memberRole: ProjectMemberRole = member.role;
+    if (!hasPermission(memberRole, 'canEdit')) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'この操作を実行する権限がありません',
       });
     }
 
@@ -457,7 +531,7 @@ export const taskRouter = createTRPCRouter({
       if (tasks.length !== input.ids.length) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'One or more tasks not found',
+          message: '一部のタスクが見つかりません',
         });
       }
 
@@ -465,7 +539,20 @@ export const taskRouter = createTRPCRouter({
       if (unauthorizedTask) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You do not have access to one or more tasks',
+          message: '一部のタスクへのアクセス権限がありません',
+        });
+      }
+
+      // VIEWERはタスクを完了できない
+      const forbiddenTask = tasks.find((task) => {
+        const m = task.project.members[0];
+        if (!m || !isProjectMemberRole(m.role)) return true;
+        return !hasPermission(m.role, 'canEdit');
+      });
+      if (forbiddenTask) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を実行する権限がありません',
         });
       }
 
@@ -495,7 +582,7 @@ export const taskRouter = createTRPCRouter({
       if (tasks.length !== input.ids.length) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'One or more tasks not found',
+          message: '一部のタスクが見つかりません',
         });
       }
 
@@ -503,7 +590,20 @@ export const taskRouter = createTRPCRouter({
       if (unauthorizedTask) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You do not have access to one or more tasks',
+          message: '一部のタスクへのアクセス権限がありません',
+        });
+      }
+
+      // MEMBERはタスクを一括削除できない（canDeleteがfalseのロールを弾く）
+      const forbiddenTask = tasks.find((task) => {
+        const m = task.project.members[0];
+        if (!m || !isProjectMemberRole(m.role)) return true;
+        return !hasPermission(m.role, 'canDelete');
+      });
+      if (forbiddenTask) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を実行する権限がありません',
         });
       }
 
@@ -536,7 +636,7 @@ export const taskRouter = createTRPCRouter({
       if (tasks.length !== input.ids.length) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'One or more tasks not found',
+          message: '一部のタスクが見つかりません',
         });
       }
 
@@ -544,7 +644,20 @@ export const taskRouter = createTRPCRouter({
       if (unauthorizedTask) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You do not have access to one or more tasks',
+          message: '一部のタスクへのアクセス権限がありません',
+        });
+      }
+
+      // VIEWERはステータス変更できない
+      const forbiddenTask = tasks.find((task) => {
+        const m = task.project.members[0];
+        if (!m || !isProjectMemberRole(m.role)) return true;
+        return !hasPermission(m.role, 'canEdit');
+      });
+      if (forbiddenTask) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を実行する権限がありません',
         });
       }
 
