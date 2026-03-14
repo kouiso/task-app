@@ -186,3 +186,22 @@ NEVER start implementing (editing files, creating new files, running build comma
 - 「レビュー」「自己レビュー」「確認して」「チェックして」「評価して」「採点して」「百点になるまで繰り返して」「どう思う？」
 
 **When in doubt**: If the instruction could mean either review or implement, treat it as review-only and end with: "修正も進めますか？"
+
+### Surface Metrics Are Not Quality Verification
+
+NEVER report a task as complete based solely on surface-level metrics (lint pass, build success, test pass, import correctness) WHEN the deliverable has a content layer (educational materials, documentation, user-facing copy, UI text) BECAUSE "code runs correctly" ≠ "deliverable meets its purpose."
+
+```
+❌ Plan covers: fix imports → run check_quality.sh → npm run lint + test + build → "完了"
+   (교材の中身を一切読んでいない)
+
+✅ Plan covers: fix imports → read EACH file's actual content → verify content meets 
+   the stated requirements → THEN run lint/test/build → report
+```
+
+**For task-app teaching materials specifically**:
+- Fixing import paths = code correctness (necessary but not sufficient)
+- Reading each `material/30days-curriculum/dayXX_*.md` content = content correctness (also required)
+- Verification = BOTH code checks AND content review pass
+
+**General rule**: IF the task involves files that humans will read/use (教材, docs, UI text, prompts) THEN the verification plan MUST include actually reading those files and confirming the content is correct, not just that the code compiles.
