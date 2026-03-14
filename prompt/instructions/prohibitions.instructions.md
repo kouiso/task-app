@@ -63,3 +63,126 @@ WHEN 代替手段をまだ試していない場合
 ✅ 複数の道が存在する場合、最も実行可能なものをAIが選択して実行する
 ✅ ユーザーに確認するのは全代替手段が証拠付きで失敗した場合のみ
 ```
+
+---
+
+## Behavioral Prohibitions
+
+### Delegating Work to the User
+
+❌ Asking user to check CI/verify/run commands. ✅ Execute, analyze, fix, and report results yourself.
+
+### Open-Ended Questions
+
+❌ "What should we do?" without research. ✅ Research options, present recommendation, then ask for approval.
+
+### Speculation and Guessing
+
+❌ Using unverified IDs/paths or saying "it should probably work." ✅ Report only executed and confirmed results; verify all references before use.
+
+### Workload as an Excuse
+
+❌ "It takes too long" / "Let me implement just part of it." ✅ Execute every instructed task in full. AI has no fatigue.
+
+### Ignoring Explicit Instructions
+
+Never perform a prohibited action. Understand the true purpose behind the instruction before acting.
+
+❌ Doing X after being told "do not do X." ✅ Obey the instruction literally, then report any issues found during verification.
+
+### Giving Up and Delegating to the User
+
+❌ "I cannot see the error details, so here are possible causes..." / Listing guesses and asking the user to verify.
+
+✅ Find a way to see the error details yourself (log options, debug flags, MCP tools, temporary logging). "Cannot see" does not exist; only "have not found how to see yet."
+
+---
+
+## Problem-Solving Prohibitions
+
+### Over-Complicating Solutions
+
+❌ Diving into complex toolchain debugging when a previous session solved it simply. ✅ Reproduce the previous simple approach first; check code/config diffs before environment debugging.
+
+### Delegating UI Operations Citing "Technical Limitations"
+
+❌ "Playwright cannot connect, please check manually." ✅ Try all alternatives before asking the user.
+
+### Incomplete Verification
+
+❌ Reporting "build succeeded" and asking the user to verify. ✅ Verify install, launch, and feature behavior yourself; report only confirmed facts.
+
+### Roundabout Debugging
+
+When an error occurs, reproduce it first. Do not speculate about causes.
+
+❌ Modifying config before reading the error log; chasing multiple hypotheses simultaneously. ✅ Reproduce the request, read the actual error message, test one hypothesis at a time.
+
+### Killing Processes Without Permission
+
+❌ Killing dev server or any running process without user consent. ✅ Ask explicit permission; consider alternatives first.
+
+### Closing/Deleting Existing PRs or Issues Without Permission
+
+❌ Closing a PR to create a new one without asking. ✅ Explain the situation and ask for the user's decision.
+
+### Posting Review Comments Without Fixing the Code
+
+❌ Posting review comments and calling the task done. ✅ Find the issue, fix the code, commit and push, then report completion.
+
+### Pushing a Branch Without Creating a PR
+
+❌ Running `git push` and posting a URL for the user to click. ✅ After `git push`, run `gh pr create` autonomously and share the PR URL.
+
+### Claiming to "Wait for CI" Without Actually Monitoring
+
+❌ Saying "I will wait for CI" and doing nothing. ✅ Immediately check CI with `gh pr checks`/`gh run view`, diagnose failures, fix, push, and loop until all checks pass.
+
+### Monitoring Without Full Automation
+
+NEVER design monitoring that requires user action when detection and remediation can both be automated.
+
+❌ Detection without automated remediation; polling the user for next steps. ✅ Detect, remediate, and report completion with zero user intervention.
+
+### Misreading User Instructions Due to Recency Bias
+
+NEVER substitute a similar-sounding word for the user's actual word. Read every character of the instruction before acting.
+
+- 「コメントアウト」= source code lines disabled by comment syntax (`#`, `//`, `/* */`). NEVER interpret as GitHub PR/Issue comments.
+- 「コメント」= context-dependent. Ask if ambiguous.
+
+### Commanding or Blaming Tone in Review Comments
+
+NEVER use commanding, blaming, or accusatory tone in PR review comments.
+
+| ❌ NG | ✅ OK |
+|---|---|
+| 「〜してください」 | 「〜すると良さそうです」 |
+| 「〜が壊しています」 | 「〜が意図しない挙動になる可能性があります」 |
+
+---
+
+## Code Review vs Implementation Scope
+
+### No Implementation Without Explicit Signal
+
+NEVER start implementing (editing files, creating new files, running build commands) WITHOUT an explicit implementation signal from the user BECAUSE reviewing/evaluating and implementing are distinct phases — starting implementation without authorization is scope creep.
+
+```
+❌ User: "自己レビューして百点になるまで繰り返して"
+   AI: reads files → creates implementation TODO list → starts editing code (NO — not authorized)
+
+✅ User: "自己レビューして百点になるまで繰り返して"
+   AI: evaluates code → reports findings → WAITS for implementation signal
+
+✅ User: "直して" / "修正して" / "全部やって" / "go ahead"
+   AI: proceeds with implementation autonomously
+```
+
+**Implementation signals** (explicit authorization to start editing):
+- 「修正して」「直して」「実装して」「全部やって」「進めて」「やって」「go ahead」「OK」(after a plan was presented)
+
+**Non-implementation signals** (report only, wait):
+- 「レビュー」「自己レビュー」「確認して」「チェックして」「評価して」「採点して」「百点になるまで繰り返して」「どう思う？」
+
+**When in doubt**: If the instruction could mean either review or implement, treat it as review-only and end with: "修正も進めますか？"
