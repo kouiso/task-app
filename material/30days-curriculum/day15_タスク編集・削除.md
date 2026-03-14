@@ -347,6 +347,8 @@ const handleCreate = () => {
 />
 ```
 
+> 💡 `TaskCard`にはタイマー関連のoptional props（`isTimerActive`, `timerStartedAt`, `timeSpentMinutes`, `onTimerUpdate`）もあります。これらはDay 16で実装します。
+
 続けて、ダイアログに `editingTask` を渡して編集モードを有効にします。
 
 ```typescript

@@ -549,6 +549,8 @@ const handleTaskDelete =
 > 含まれます。Day 13 の TaskCard を
 > そのまま再利用できます。
 
+> 💡 `TaskCard`にはタイマー関連のoptional props（`isTimerActive`, `timerStartedAt`, `timeSpentMinutes`, `onTimerUpdate`）もあります。これらはDay 16で実装します。
+
 ✅ **確認ポイント**:
 - 検索結果がカード表示される
 - カードクリックでタスク詳細に遷移
