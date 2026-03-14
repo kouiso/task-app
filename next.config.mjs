@@ -40,8 +40,10 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
+            // unsafe-evalはNext.js devモードが自動付与するため手動設定不要。
+            // 本番環境での任意コード実行リスクを排除するためここでは指定しない。
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'",
+              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'",
           },
         ],
       },
