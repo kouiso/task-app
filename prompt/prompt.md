@@ -56,7 +56,7 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 | [trial-and-error.instructions.md](instructions/trial-and-error.instructions.md) | ユーザー負担ゼロ原則、完全自律検証、エラー隠蔽禁止、冪等性担保 |
 | [code-review.instructions.md](instructions/code-review.instructions.md) | コードレビューガイドライン、PRレビューポリシー |
 | [essential-thinking.md](instructions/essential-thinking.md) | 本質的思考プロトコル |
-| [intentional-execution.md](instructions/intentional-execution.md) | 意図的実行プロトコル |
+| [intentional-execution.instructions.md](instructions/intentional-execution.instructions.md) | 意図的実行プロトコル |
 | [no-obvious-comments.md](instructions/no-obvious-comments.md) | 自明なコメント禁止 |
 | [planning-dual-proposal.instructions.md](instructions/planning-dual-proposal.instructions.md) | デュアル提案プロトコル |
 | [performance.instructions.md](instructions/performance.instructions.md) | コンテキストウィンドウ最適化 |
@@ -74,6 +74,8 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 | [prisma.instructions.md](instructions/prisma.instructions.md) | `**/*.prisma, **/prisma/**/*` | Prismaインポート・型定義・クエリ規約 |
 | [python.instructions.md](instructions/python.instructions.md) | `**/*.py` | Python規約（edu-creator専用） |
 | [edu-creator.instructions.md](instructions/edu-creator.instructions.md) | `**/edu-creator/**` | edu-creator開発ガイド |
+| [curriculum-quality-gate.instructions.md](instructions/curriculum-quality-gate.instructions.md) | `material/**` | 教材品質ゲート、教材ファイルの品質基準 |
+| [github-project.instructions.md](instructions/github-project.instructions.md) | `**` | GitHub Projectフィールド設定ルール、Issue/PRメタデータ管理 |
 
 ---
 
