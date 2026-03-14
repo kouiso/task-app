@@ -1,26 +1,17 @@
 'use client';
 
-import type { TaskPriority, TaskStatus } from '@prisma/client';
 import { Loader2, Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/component/ui/alert-dialog';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent } from '@/component/ui/card';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Select,
   SelectContent,
@@ -29,8 +20,8 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
-import { isTaskPriority } from '@/lib/constant/priority';
-import { isTaskStatus } from '@/lib/constant/status';
+import { isTaskPriority, type TaskPriority } from '@/lib/constant/priority';
+import { isTaskStatus, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function SearchPageContent() {
@@ -420,32 +411,17 @@ function SearchPageContent() {
           </div>
         )}
 
-        <AlertDialog
+        <DeleteConfirmDialog
           open={deleteTaskConfirm.open}
           onOpenChange={(open) => !open && setDeleteTaskConfirm({ open: false, taskId: null })}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>タスクを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。タスクを完全に削除します。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (deleteTaskConfirm.taskId) {
-                    deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
-                    setDeleteTaskConfirm({ open: false, taskId: null });
-                  }
-                }}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          onConfirm={() => {
+            if (deleteTaskConfirm.taskId) {
+              deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
+              setDeleteTaskConfirm({ open: false, taskId: null });
+            }
+          }}
+          isPending={deleteMutation.isPending}
+        />
       </div>
     </AppLayout>
   );
@@ -453,15 +429,7 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense
-      fallback={
-        <AppLayout>
-          <div className="flex justify-center items-center h-[60vh]">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        </AppLayout>
-      }
-    >
+    <Suspense fallback={<PageLoadingSpinner />}>
       <SearchPageContent />
     </Suspense>
   );

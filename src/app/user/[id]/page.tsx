@@ -20,15 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/component/ui/table';
-import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const rawId = params['id'];
-  const userId = typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? (rawId[0] ?? '') : '';
+  const userId = String(params['id'] ?? '');
 
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
 
@@ -36,9 +33,7 @@ export default function UserDetailPage() {
     data: user,
     isLoading,
     error,
-  } = api.user.getById.useQuery({
-    id: userId,
-  });
+  } = api.user.getById.useQuery({ id: userId }, { enabled: !!userId });
 
   useEffect(() => {
     if (error) {
@@ -230,14 +225,10 @@ export default function UserDetailPage() {
                         >
                           <TableCell className="font-medium">{task.title}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">
-                              {TASK_STATUS_LABELS[task.status] ?? task.status}
-                            </Badge>
+                            <Badge variant="outline">{task.status}</Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">
-                              {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
-                            </Badge>
+                            <Badge variant="outline">{task.priority}</Badge>
                           </TableCell>
                           <TableCell>
                             {task.dueDate

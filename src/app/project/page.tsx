@@ -1,26 +1,15 @@
 'use client';
 
-import type { ProjectMemberRole } from '@prisma/client';
 import { Archive, ArchiveRestore, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
 import { ProjectDialog, type ProjectFormData } from '@/component/project/project-dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/component/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +19,7 @@ import {
   DialogTitle,
 } from '@/component/ui/dialog';
 import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Select,
   SelectContent,
@@ -39,7 +29,11 @@ import {
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
 import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { isProjectMemberRole, PROJECT_MEMBER_ROLE_LABELS } from '@/lib/constant/roles';
+import {
+  isProjectMemberRole,
+  PROJECT_MEMBER_ROLE_LABELS,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
@@ -52,14 +46,10 @@ function ProjectPageContent() {
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>('MEMBER');
   const [showArchived, setShowArchived] = useState(false);
-  const [deleteProjectConfirm, setDeleteProjectConfirm] = useState<{
-    open: boolean;
-    projectId: string | null;
-  }>({ open: false, projectId: null });
-  const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{
-    open: boolean;
-    userId: string | null;
-  }>({ open: false, userId: null });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false);
+  const [removeMemberTargetId, setRemoveMemberTargetId] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
@@ -91,9 +81,6 @@ function ProjectPageContent() {
       utils.project.getAll.invalidate();
       setDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'プロジェクトの作成に失敗しました');
-    },
   });
 
   const updateMutation = api.project.update.useMutation({
@@ -104,18 +91,12 @@ function ProjectPageContent() {
       }
       setDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'プロジェクトの更新に失敗しました');
-    },
   });
 
   const deleteMutation = api.project.delete.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
       setDetailOpen(false);
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'プロジェクトの削除に失敗しました');
     },
   });
 
@@ -128,9 +109,6 @@ function ProjectPageContent() {
       setNewMemberUserId('');
       setNewMemberRole('MEMBER');
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'メンバーの追加に失敗しました');
-    },
   });
 
   const removeMemberMutation = api.project.removeMember.useMutation({
@@ -139,9 +117,6 @@ function ProjectPageContent() {
         utils.project.getById.invalidate({ id: selectedProject });
       }
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'メンバーの削除に失敗しました');
-    },
   });
 
   const archiveMutation = api.project.archive.useMutation({
@@ -149,18 +124,12 @@ function ProjectPageContent() {
       utils.project.getAll.invalidate();
       setDetailOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'アーカイブに失敗しました');
-    },
   });
 
   const unarchiveMutation = api.project.unarchive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
       setDetailOpen(false);
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'アーカイブ解除に失敗しました');
     },
   });
 
@@ -192,7 +161,8 @@ function ProjectPageContent() {
   };
 
   const handleDelete = (projectId: string) => {
-    setDeleteProjectConfirm({ open: true, projectId });
+    setDeleteTargetId(projectId);
+    setDeleteDialogOpen(true);
   };
 
   const handleSubmit = (data: ProjectFormData) => {
@@ -207,7 +177,6 @@ function ProjectPageContent() {
       });
     } else {
       if (!currentUser?.id) {
-        console.error('Current user not loaded');
         return;
       }
       createMutation.mutate({
@@ -241,7 +210,8 @@ function ProjectPageContent() {
   };
 
   const handleRemoveMember = (userId: string) => {
-    setRemoveMemberConfirm({ open: true, userId });
+    setRemoveMemberTargetId(userId);
+    setRemoveMemberDialogOpen(true);
   };
 
   const handleArchive = (projectId: string, isArchived: boolean) => {
@@ -250,13 +220,7 @@ function ProjectPageContent() {
   };
 
   if (projectsLoading) {
-    return (
-      <AppLayout>
-        <div className="flex h-[60vh] items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   return (
@@ -312,65 +276,6 @@ function ProjectPageContent() {
           initialData={editingProject}
         />
 
-        <AlertDialog
-          open={deleteProjectConfirm.open}
-          onOpenChange={(open) =>
-            !open && setDeleteProjectConfirm({ open: false, projectId: null })
-          }
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>プロジェクトを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。プロジェクトを完全に削除します。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (deleteProjectConfirm.projectId) {
-                    deleteMutation.mutate({ id: deleteProjectConfirm.projectId });
-                    setDeleteProjectConfirm({ open: false, projectId: null });
-                  }
-                }}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog
-          open={removeMemberConfirm.open}
-          onOpenChange={(open) => !open && setRemoveMemberConfirm({ open: false, userId: null })}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>メンバーを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                このメンバーをプロジェクトから削除します。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (selectedProject && removeMemberConfirm.userId) {
-                    removeMemberMutation.mutate({
-                      projectId: selectedProject,
-                      userId: removeMemberConfirm.userId,
-                    });
-                    setRemoveMemberConfirm({ open: false, userId: null });
-                  }
-                }}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
         <Dialog open={detailOpen} onOpenChange={(isOpen) => !isOpen && handleDetailClose()}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -386,7 +291,6 @@ function ProjectPageContent() {
 
             {projectDetail && (
               <div className="space-y-6">
-                {/* Members Section */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">
@@ -433,7 +337,6 @@ function ProjectPageContent() {
                   </div>
                 </div>
 
-                {/* Tasks Section */}
                 <div>
                   <h3 className="text-lg font-semibold mb-4">
                     タスク ({projectDetail.tasks?.length || 0})
@@ -515,9 +418,7 @@ function ProjectPageContent() {
                 <Select
                   value={newMemberRole}
                   onValueChange={(value) => {
-                    if (isProjectMemberRole(value)) {
-                      setNewMemberRole(value);
-                    }
+                    if (isProjectMemberRole(value)) setNewMemberRole(value);
                   }}
                 >
                   <SelectTrigger id="role">
@@ -542,21 +443,40 @@ function ProjectPageContent() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            deleteMutation.mutate({ id: deleteTargetId });
+          }
+        }}
+        isPending={deleteMutation.isPending}
+        title="プロジェクトを削除しますか？"
+      />
+
+      <DeleteConfirmDialog
+        open={removeMemberDialogOpen}
+        onOpenChange={setRemoveMemberDialogOpen}
+        onConfirm={() => {
+          if (selectedProject && removeMemberTargetId) {
+            removeMemberMutation.mutate({
+              projectId: selectedProject,
+              userId: removeMemberTargetId,
+            });
+          }
+        }}
+        isPending={removeMemberMutation.isPending}
+        title="このメンバーを削除しますか？"
+      />
     </AppLayout>
   );
 }
 
 export default function ProjectPage() {
   return (
-    <Suspense
-      fallback={
-        <AppLayout>
-          <div className="flex h-[60vh] items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        </AppLayout>
-      }
-    >
+    <Suspense fallback={<PageLoadingSpinner />}>
       <ProjectPageContent />
     </Suspense>
   );

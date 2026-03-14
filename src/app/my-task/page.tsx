@@ -1,21 +1,11 @@
 'use client';
 
-import type { TaskStatus } from '@prisma/client';
 import { useMemo, useState } from 'react';
-import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/component/ui/alert-dialog';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Select,
   SelectContent,
@@ -24,7 +14,7 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
-import { isTaskStatus } from '@/lib/constant/status';
+import { isTaskStatus, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
@@ -36,14 +26,12 @@ const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
 ];
 
 export default function MyTasksPage() {
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<TaskStatus | 'all'>('all');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
-  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
-    open: boolean;
-    taskId: string | null;
-  }>({ open: false, taskId: null });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const { data: currentUser } = api.user.getCurrentUser.useQuery();
   const { data: projects } = api.project.getAll.useQuery();
@@ -51,7 +39,7 @@ export default function MyTasksPage() {
   const { data: tasks, isLoading } = api.task.getAll.useQuery(
     {
       assigneeId: currentUser?.id,
-      status: isTaskStatus(activeTab) ? activeTab : undefined,
+      status: activeTab === 'all' ? undefined : activeTab,
       projectId: filterProject === 'all' ? undefined : filterProject,
     },
     { enabled: !!currentUser },
@@ -64,17 +52,11 @@ export default function MyTasksPage() {
       utils.task.getAll.invalidate();
       setDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'タスクの更新に失敗しました');
-    },
   });
 
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'タスクの削除に失敗しました');
     },
   });
 
@@ -99,7 +81,8 @@ export default function MyTasksPage() {
   };
 
   const handleDelete = (taskId: string) => {
-    setDeleteTaskConfirm({ open: true, taskId });
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
   };
 
   const handleSubmit = (data: TaskFormData) => {
@@ -145,13 +128,7 @@ export default function MyTasksPage() {
   }, [tasks]);
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex h-[60vh] items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   return (
@@ -160,7 +137,13 @@ export default function MyTasksPage() {
         <h1 className="text-3xl font-bold tracking-tight">マイタスク</h1>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              if (v === 'all' || isTaskStatus(v)) setActiveTab(v);
+            }}
+            className="w-full sm:w-auto"
+          >
             <TabsList>
               {STATUS_TABS.map((tab) => (
                 <TabsTrigger key={tab.label} value={tab.value}>
@@ -297,34 +280,18 @@ export default function MyTasksPage() {
           projects={projects || []}
           users={users || []}
         />
-
-        <AlertDialog
-          open={deleteTaskConfirm.open}
-          onOpenChange={(open) => !open && setDeleteTaskConfirm({ open: false, taskId: null })}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>タスクを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。タスクを完全に削除します。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (deleteTaskConfirm.taskId) {
-                    deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
-                    setDeleteTaskConfirm({ open: false, taskId: null });
-                  }
-                }}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            deleteMutation.mutate({ id: deleteTargetId });
+          }
+        }}
+        isPending={deleteMutation.isPending}
+      />
     </AppLayout>
   );
 }
