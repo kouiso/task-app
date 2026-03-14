@@ -1,27 +1,16 @@
 'use client';
 
-import type { TaskStatus } from '@prisma/client';
 import { CheckSquare, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/component/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Checkbox } from '@/component/ui/checkbox';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/component/ui/dropdown-menu';
 import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Select,
   SelectContent,
@@ -47,7 +37,7 @@ import {
 import { Separator } from '@/component/ui/separator';
 import { Textarea } from '@/component/ui/textarea';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function TaskPageContent() {
@@ -61,15 +51,11 @@ function TaskPageContent() {
   const [commentContent, setCommentContent] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
-  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
-    open: boolean;
-    taskId: string | null;
-  }>({ open: false, taskId: null });
-  const [deleteCommentConfirm, setDeleteCommentConfirm] = useState<{
-    open: boolean;
-    commentId: string | null;
-  }>({ open: false, commentId: null });
-  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteCommentDialogOpen, setDeleteCommentDialogOpen] = useState(false);
+  const [deleteCommentTargetId, setDeleteCommentTargetId] = useState<string | null>(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   const searchParams = useSearchParams();
   const taskIdParam = searchParams.get('taskId');
@@ -104,9 +90,6 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'タスクの作成に失敗しました');
-    },
   });
 
   const updateMutation = api.task.update.useMutation({
@@ -117,17 +100,11 @@ function TaskPageContent() {
       }
       setDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'タスクの更新に失敗しました');
-    },
   });
 
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'タスクの削除に失敗しました');
     },
   });
 
@@ -136,9 +113,6 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
-    onError: (error) => {
-      toast.error(error.message ?? '一括完了に失敗しました');
-    },
   });
 
   const bulkDeleteMutation = api.task.bulkDelete.useMutation({
@@ -146,18 +120,12 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
-    onError: (error) => {
-      toast.error(error.message ?? '一括削除に失敗しました');
-    },
   });
 
   const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'ステータスの一括更新に失敗しました');
     },
   });
 
@@ -167,9 +135,6 @@ function TaskPageContent() {
         utils.task.getById.invalidate({ id: selectedTask });
       }
       setCommentContent('');
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'コメントの投稿に失敗しました');
     },
   });
 
@@ -181,9 +146,6 @@ function TaskPageContent() {
       setEditingCommentId(null);
       setEditingCommentContent('');
     },
-    onError: (error) => {
-      toast.error(error.message ?? 'コメントの更新に失敗しました');
-    },
   });
 
   const deleteCommentMutation = api.comment.delete.useMutation({
@@ -191,9 +153,6 @@ function TaskPageContent() {
       if (selectedTask) {
         utils.task.getById.invalidate({ id: selectedTask });
       }
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'コメントの削除に失敗しました');
     },
   });
 
@@ -223,7 +182,8 @@ function TaskPageContent() {
   };
 
   const handleDelete = (taskId: string) => {
-    setDeleteTaskConfirm({ open: true, taskId });
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
   };
 
   const handleSubmit = (data: TaskFormData) => {
@@ -294,7 +254,8 @@ function TaskPageContent() {
   };
 
   const handleDeleteComment = (commentId: string) => {
-    setDeleteCommentConfirm({ open: true, commentId });
+    setDeleteCommentTargetId(commentId);
+    setDeleteCommentDialogOpen(true);
   };
 
   const handleTaskSelect = (taskId: string, checked: boolean) => {
@@ -309,10 +270,6 @@ function TaskPageContent() {
     setSelectedTasks(checked ? new Set(tasks?.map((t) => t.id) || []) : new Set());
   };
 
-  useEffect(() => {
-    setSelectedTasks(new Set());
-  }, []);
-
   const handleBulkComplete = () => {
     if (selectedTasks.size > 0) {
       bulkCompleteMutation.mutate({ ids: Array.from(selectedTasks) });
@@ -321,7 +278,7 @@ function TaskPageContent() {
 
   const handleBulkDelete = () => {
     if (selectedTasks.size > 0) {
-      setBulkDeleteConfirm(true);
+      setBulkDeleteDialogOpen(true);
     }
   };
 
@@ -341,13 +298,7 @@ function TaskPageContent() {
       : false;
 
   if (tasksLoading) {
-    return (
-      <AppLayout>
-        <div className="flex h-[60vh] items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   return (
@@ -422,7 +373,7 @@ function TaskPageContent() {
           <div className="flex gap-2 w-full sm:w-auto ml-auto">
             <div className="w-[200px]">
               <Select value={filterProject} onValueChange={setFilterProject}>
-                <SelectTrigger aria-label="プロジェクトでフィルター">
+                <SelectTrigger>
                   <SelectValue placeholder="すべてのプロジェクト" />
                 </SelectTrigger>
                 <SelectContent>
@@ -439,14 +390,10 @@ function TaskPageContent() {
               <Select
                 value={filterStatus}
                 onValueChange={(value) => {
-                  if (isTaskStatus(value)) {
-                    setFilterStatus(value);
-                  } else if (value === 'all') {
-                    setFilterStatus('all');
-                  }
+                  if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
                 }}
               >
-                <SelectTrigger aria-label="ステータスでフィルター">
+                <SelectTrigger>
                   <SelectValue placeholder="すべてのステータス" />
                 </SelectTrigger>
                 <SelectContent>
@@ -504,84 +451,6 @@ function TaskPageContent() {
           projects={projects || []}
           users={users || []}
         />
-
-        <AlertDialog
-          open={deleteTaskConfirm.open}
-          onOpenChange={(open) => !open && setDeleteTaskConfirm({ open: false, taskId: null })}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>タスクを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。タスクを完全に削除します。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (deleteTaskConfirm.taskId) {
-                    deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
-                    setDeleteTaskConfirm({ open: false, taskId: null });
-                  }
-                }}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog
-          open={deleteCommentConfirm.open}
-          onOpenChange={(open) =>
-            !open && setDeleteCommentConfirm({ open: false, commentId: null })
-          }
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>コメントを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。コメントを完全に削除します。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (deleteCommentConfirm.commentId) {
-                    deleteCommentMutation.mutate({ id: deleteCommentConfirm.commentId });
-                    setDeleteCommentConfirm({ open: false, commentId: null });
-                  }
-                }}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{selectedTasks.size}件のタスクを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。選択したタスクを全て完全に削除します。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
-                  setBulkDeleteConfirm(false);
-                }}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
 
         <Dialog open={detailOpen} onOpenChange={(isOpen) => !isOpen && handleDetailClose()}>
           <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
@@ -756,21 +625,46 @@ function TaskPageContent() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            deleteMutation.mutate({ id: deleteTargetId });
+          }
+        }}
+        isPending={deleteMutation.isPending}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteCommentDialogOpen}
+        onOpenChange={setDeleteCommentDialogOpen}
+        onConfirm={() => {
+          if (deleteCommentTargetId) {
+            deleteCommentMutation.mutate({ id: deleteCommentTargetId });
+          }
+        }}
+        isPending={deleteCommentMutation.isPending}
+        title="コメントを削除しますか？"
+      />
+
+      <DeleteConfirmDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        onConfirm={() => {
+          bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
+        }}
+        isPending={bulkDeleteMutation.isPending}
+        title={`${selectedTasks.size}件のタスクを削除しますか？`}
+      />
     </AppLayout>
   );
 }
 
 export default function TaskPage() {
   return (
-    <Suspense
-      fallback={
-        <AppLayout>
-          <div className="flex h-[60vh] items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        </AppLayout>
-      }
-    >
+    <Suspense fallback={<PageLoadingSpinner />}>
       <TaskPageContent />
     </Suspense>
   );

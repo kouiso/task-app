@@ -25,8 +25,7 @@ import { api } from '@/trpc/react';
 export default function UserEditPage() {
   const router = useRouter();
   const params = useParams();
-  const rawId = params['id'];
-  const userId = typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? (rawId[0] ?? '') : '';
+  const userId = String(params['id'] ?? '');
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -41,7 +40,10 @@ export default function UserEditPage() {
   });
 
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
-  const { data: user, isLoading } = api.user.getById.useQuery({ id: userId });
+  const { data: user, isLoading } = api.user.getById.useQuery(
+    { id: userId },
+    { enabled: !!userId },
+  );
 
   const updateUser = api.user.update.useMutation({
     onSuccess: () => {
@@ -216,7 +218,7 @@ export default function UserEditPage() {
               {updateUser.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
+                  <AlertTitle>エラー</AlertTitle>
                   <AlertDescription>{updateUser.error.message}</AlertDescription>
                 </Alert>
               )}
