@@ -2,7 +2,7 @@
 
 ## 🎯 今日のゴール
 
-ダイアログ（モーダル）形式のフォームで、新しいプロジェクトを作成できるようにします。useState でフォーム状態を管理し、tRPC の `useMutation` でサーバーに保存します。
+ダイアログ（モーダル）形式のフォームで、新しいプロジェクトを作成できるようにします。react-hook-form と zod でフォームのバリデーションと状態管理を行い、tRPC の `useMutation` でサーバーに保存します。
 
 ![プロジェクト作成ダイアログ](./screenshots/project-create-dialog.png)
 
@@ -18,9 +18,9 @@
 graph TD
     A[新規作成ボタンをクリック] --> B[ProjectDialogが開く]
     B --> C[フォームに入力]
-    C --> D{必須項目チェック}
+    C --> D{zodバリデーション}
     D -->|OK| E[api.project.create.mutate]
-    D -->|NG| F[ボタンが無効のまま]
+    D -->|NG| F[エラーメッセージ表示]
     E --> G[キャッシュ更新]
     G --> H[ダイアログを閉じる]
     H --> I[一覧に新プロジェクト表示]
@@ -36,7 +36,7 @@ graph TD
 | やること | やらないこと |
 |---------|-------------|
 | ProjectDialog コンポーネントを作る | 別ページでフォームを作る |
-| useState でフォーム状態を管理 | 外部ライブラリ（react-hook-form） |
+| react-hook-form + zod でフォーム管理 | useState で手動管理 |
 | useMutation でサーバーに保存 | fetch を手書きする |
 | キャッシュ無効化で一覧を自動更新 | 手動でページリロード |
 
@@ -45,16 +45,17 @@ graph TD
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | Dialog | ダイアログ | 画面上に重なるモーダル | 付箋。今の画面の上に貼って書き込む |
+| zodResolver | ゾッド・リゾルバー | zod スキーマで入力値を自動検証する仕組み | 記入用紙のチェック係。書き漏れがあれば教えてくれる |
+| register | レジスター | 入力欄を react-hook-form に登録する関数 | 記入欄に名札を付けて、どの欄かを管理する |
 | キャッシュ無効化 | — | データ変更後に一覧を自動で再取得 | 掲示板の更新ボタン。新しい投稿を反映する |
-| handleChange | ハンドル・チェンジ | 入力欄の値を state に反映する関数 | メモ用紙に書いた文字を記録する係 |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
 | Step 1 | ProjectDialogの骨格を作る | 5分 |
-| Step 2 | フォームの状態管理を設定する | 5分 |
-| Step 3 | useEffectでフォームリセットを実装する | 5分 |
+| Step 2 | zodスキーマとフォーム設定を作る | 5分 |
+| Step 3 | values propで初期値を自動同期する | 5分 |
 | Step 4 | 名前・説明の入力欄を作る | 7分 |
 | Step 5 | カラーピッカーと日付欄を作る | 7分 |
 | Step 6 | 送信処理を実装する | 5分 |
@@ -77,18 +78,21 @@ graph TD
 // filepath: src/component/project/project-dialog.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/component/ui/button';
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Button }
+  from '@/component/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
 } from '@/component/ui/dialog';
-import { Input } from '@/component/ui/input';
-import { Label } from '@/component/ui/label';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
 import { Textarea }
   from '@/component/ui/textarea';
 import { DEFAULT_PROJECT_COLOR }
@@ -104,7 +108,8 @@ interface ProjectDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: ProjectFormData) => void;
-  initialData?: ProjectFormData | undefined;
+  initialData?:
+    ProjectFormData | undefined;
 }
 
 // フォームデータの型
@@ -126,9 +131,54 @@ export interface ProjectFormData {
 
 ---
 
-### Step 2: フォームの状態管理を設定する（5分）
+### Step 2: zodスキーマとフォーム設定を作る（5分）
 
-🎯 **ゴール**: useState を使ってフォームの各入力値を管理します。
+🎯 **ゴール**: zod でバリデーションルールを定義し、react-hook-form で入力管理します。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// zodスキーマでバリデーションルールを定義
+const projectFormSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1,
+    'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z.string(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+// スキーマから型を自動生成
+type ProjectFormValues =
+  z.infer<typeof projectFormSchema>;
+```
+
+✅ **確認ポイント**:
+- `projectFormSchema` を定義した
+- `name` フィールドに `min(1)` バリデーションが設定されている
+
+#### zodスキーマの各フィールド
+
+| フィールド | バリデーション | 意味 |
+|-----------|-------------|------|
+| `name` | `z.string().min(1, ...)` | 1文字以上必須 |
+| `description` | `z.string().optional()` | 入力は任意 |
+| `color` | `z.string()` | 色コード（必須） |
+| `startDate` | `z.string().optional()` | 開始日（任意） |
+
+> 💡 `z.infer<typeof projectFormSchema>` は、zod スキーマから TypeScript の型を自動生成する機能です。スキーマと型が常に一致するので、ズレが起きません。
+
+✅ **確認ポイント**:
+- `projectFormSchema` を定義した
+- `ProjectFormValues` が自動生成されている
+
+---
+
+### Step 3: values propで初期値を自動同期する（5分）
+
+🎯 **ゴール**: `useForm` の `values` prop を使って、ダイアログが開くたびにフォームの初期値を自動で設定します。
 
 💻 **実装**:
 
@@ -138,88 +188,47 @@ export interface ProjectFormData {
 export function ProjectDialog({
   open, onClose, onSubmit, initialData,
 }: ProjectDialogProps) {
-  const [formData, setFormData] =
-    useState<ProjectFormData>({
-      name: '',
-      description: '',
-      color: DEFAULT_PROJECT_COLOR,
-      ...initialData,
-    });
-```
-
-```typescript
-// filepath: src/component/project/project-dialog.tsx
-  // 汎用の変更ハンドラー
-  const handleChange =
-    (field: keyof ProjectFormData) =>
-    (e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement
-    >) => {
-      setFormData({
-        ...formData,
-        [field]: e.target.value,
-      });
-    };
+  const {
+    register, handleSubmit, reset,
+    formState: { errors },
+  } = useForm<ProjectFormValues>({
+    resolver: zodResolver(
+      projectFormSchema),
+    values: {
+      id: initialData?.id,
+      name: initialData?.name ?? '',
+      description:
+        initialData?.description ?? '',
+      color: initialData?.color
+        ?? DEFAULT_PROJECT_COLOR,
+      startDate:
+        initialData?.startDate ?? '',
+      endDate:
+        initialData?.endDate ?? '',
+    },
+  });
 ```
 
 ✅ **確認ポイント**:
-- `useState` でフォーム状態を初期化した
-- `handleChange` で任意のフィールドを更新できる仕組みを理解した
+- `useForm` に `resolver` と `values` が設定されている
+- `register`, `handleSubmit`, `reset`, `errors` を取得している
 
-#### handleChange の仕組み
+#### useForm の設定
 
-| 式 | 意味 |
-|-----|------|
-| `(field: keyof ProjectFormData)` | どのフィールドを更新するか |
-| `(e: React.ChangeEvent<...>)` | 入力イベントの情報 |
-| `{ ...formData, [field]: e.target.value }` | 既存データをコピーし、該当フィールドだけ上書き |
+| 設定 | 役割 |
+|------|------|
+| `resolver: zodResolver(...)` | zodスキーマでバリデーションを実行 |
+| `values: {...}` | `initialData` が変わるたびにフォームの値を自動同期 |
+| `register` | 各入力欄をフォームに登録する関数 |
+| `handleSubmit` | バリデーション通過後に送信する関数 |
+| `reset` | フォームの値をリセットする関数 |
+| `errors` | バリデーションエラーの情報 |
 
-> 💡 これは**カリー化**というパターンです。`handleChange('name')` と呼ぶと、「name フィールドを更新する関数」が返ります。これを `onChange` に渡すことで、入力のたびに state が更新されます。
-
-✅ **確認ポイント**:
-- `useState` でフォーム状態を初期化した
-- `handleChange` で任意のフィールドを更新できる仕組みを理解した
-
----
-
-### Step 3: useEffectでフォームリセットを実装する（5分）
-
-🎯 **ゴール**: ダイアログが開くたびに、フォームの値を適切にリセットします。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/component/project/project-dialog.tsx
-// initialDataが変わったらフォームをリセット
-useEffect(() => {
-  if (initialData) {
-    setFormData({ ...initialData });
-  } else {
-    setFormData({
-      name: '',
-      description: '',
-      color: DEFAULT_PROJECT_COLOR,
-    });
-  }
-}, [initialData]);
-```
+> 💡 `values` prop を使うと、`initialData` が変わるたびにフォームの値が自動で更新されます。`useEffect` + `setState` のパターンが不要になり、コードがシンプルになります。
 
 ✅ **確認ポイント**:
-- 新規作成時はフォームが空になる
-- 編集時は既存データが入る
-
-> 💡 `useEffect` の依存配列に `[initialData]` を指定しています。「編集モード」では既存データがセットされ、「新規作成モード」では空の状態にリセットされます。
-
-#### フォームリセットの動作
-
-| モード | initialData | フォームの状態 |
-|--------|------------|--------------|
-| 新規作成 | undefined | 空（name: '', color: DEFAULT_PROJECT_COLOR） |
-| 編集 | `{id:'...', name:'既存プロジェクト', ...}` | 既存データで埋まる |
-
-✅ **確認ポイント**:
-- 新規作成時はフォームが空になる
-- 編集時は既存データが入る
+- `values` prop で `initialData` の値がフォームに自動反映されている
+- `DEFAULT_PROJECT_COLOR` がカラーの初期値として設定されている
 
 ---
 
@@ -229,15 +238,34 @@ useEffect(() => {
 
 💻 **実装**:
 
-まず、フォーム送信ハンドラーを作ります。
+まず、ダイアログを閉じるハンドラーと送信ハンドラーを作ります。
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// フォーム送信ハンドラー
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  onSubmit(formData);
+// ダイアログを閉じるハンドラー
+const handleClose = () => {
+  reset();
+  onClose();
 };
+
+// フォーム送信ハンドラー
+const handleFormSubmit =
+  (data: ProjectFormValues) => {
+    const submitData: ProjectFormData = {
+      ...(data.id !== undefined
+        && { id: data.id }),
+      name: data.name,
+      color: data.color,
+      ...(data.description
+        && { description:
+          data.description }),
+      ...(data.startDate
+        && { startDate: data.startDate }),
+      ...(data.endDate
+        && { endDate: data.endDate }),
+    };
+    onSubmit(submitData);
+  };
 ```
 
 続いて、JSX を返します。Dialog の中にフォームを配置します。
@@ -247,7 +275,7 @@ const handleSubmit = (e: React.FormEvent) => {
 return (
   <Dialog open={open}
     onOpenChange={(isOpen) =>
-      !isOpen && onClose()}>
+      !isOpen && handleClose()}>
     <DialogContent
       className="sm:max-w-[600px]">
       <DialogHeader>
@@ -264,21 +292,27 @@ return (
       </DialogHeader>
 ```
 
+プロジェクト名の入力欄です。`{...register('name')}` でフォームに登録します。
+
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={
+        handleSubmit(handleFormSubmit)}>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="name">
               プロジェクト名
             </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={handleChange('name')}
-              placeholder="プロジェクト名を入力"
-              required
-            />
+            <Input id="name"
+              placeholder=
+                "プロジェクト名を入力"
+              {...register('name')} />
+            {errors.name && (
+              <p className=
+                "text-sm text-destructive">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 ```
 
@@ -292,23 +326,19 @@ return (
             </Label>
             <Textarea
               id="description"
-              value={
-                formData.description || ''
-              }
-              onChange={
-                handleChange('description')
-              }
               placeholder=
                 "プロジェクトの説明..."
               rows={4}
+              {...register('description')}
             />
           </div>
 ```
 
-> 💡 `value` と `onChange` の組み合わせが「制御コンポーネント」です。React が入力値を管理するので、いつでも `formData.name` で最新の値を取得できます。`required` 属性を付けると、ブラウザが空欄チェックをしてくれます。
+> 💡 `{...register('name')}` は、入力欄に `name`, `onChange`, `onBlur`, `ref` をまとめて設定するスプレッド構文です。`value` と `onChange` を手動で書く必要がなくなります。
 
 ✅ **確認ポイント**:
 - プロジェクト名の入力欄が表示される
+- 名前が空のまま送信するとエラーメッセージが表示される
 - DialogDescription でモードに応じた説明文が表示される
 
 ---
@@ -329,15 +359,10 @@ return (
               <Label htmlFor="color">
                 カラー
               </Label>
-              <Input
-                id="color"
+              <Input id="color"
                 type="color"
-                value={formData.color}
-                onChange={
-                  handleChange('color')
-                }
                 className="h-10"
-              />
+                {...register('color')} />
             </div>
 ```
 
@@ -347,15 +372,9 @@ return (
               <Label htmlFor="startDate">
                 開始日
               </Label>
-              <Input
-                id="startDate"
+              <Input id="startDate"
                 type="date"
-                value={
-                  formData.startDate || ''
-                }
-                onChange={
-                  handleChange('startDate')
-                }
+                {...register('startDate')}
               />
             </div>
 ```
@@ -368,22 +387,16 @@ return (
               <Label htmlFor="endDate">
                 終了日
               </Label>
-              <Input
-                id="endDate"
+              <Input id="endDate"
                 type="date"
-                value={
-                  formData.endDate || ''
-                }
-                onChange={
-                  handleChange('endDate')
-                }
+                {...register('endDate')}
               />
             </div>
           </div>
         </div>
 ```
 
-> 💡 `type="color"` を指定すると、ブラウザ標準のカラーピッカーが表示されます。`className="h-10"` で他の入力欄と高さを揃えています。
+> 💡 `type="color"` を指定すると、ブラウザ標準のカラーピッカーが表示されます。`className="h-10"` で他の入力欄と高さを揃えています。`{...register('color')}` で、選んだ色が自動的にフォームの値として管理されます。
 
 ✅ **確認ポイント**:
 - カラーピッカーで色を選べる
@@ -404,11 +417,10 @@ return (
         <DialogFooter>
           <Button type="button"
             variant="outline"
-            onClick={onClose}>
+            onClick={handleClose}>
             キャンセル
           </Button>
-          <Button type="submit"
-            disabled={!formData.name}>
+          <Button type="submit">
             {initialData?.id
               ? '更新' : '作成'}
           </Button>
@@ -421,22 +433,21 @@ return (
 
 ✅ **確認ポイント**:
 - 作成ボタンとキャンセルボタンが表示される
-- プロジェクト名が空だと作成ボタンが無効になる
-- キャンセルでダイアログが閉じる
-
-> 💡 `type="button"` を指定しないと、キャンセルボタンでもフォーム送信が実行されてしまいます。`disabled={!formData.name}` でプロジェクト名が空のときは送信ボタンを無効にしています。
+- プロジェクト名が空のまま送信するとzodのエラーメッセージが表示される
+- キャンセルでダイアログが閉じ、フォームがリセットされる
 
 #### ボタンの役割
 
 | ボタン | type | 動作 |
 |--------|------|------|
-| キャンセル | `button` | ダイアログを閉じる（`onClose` を呼ぶ） |
-| 作成 / 更新 | `submit` | フォーム送信（`handleSubmit` → `onSubmit`） |
+| キャンセル | `button` | `handleClose` でフォームをリセットし、ダイアログを閉じる |
+| 作成 / 更新 | `submit` | `handleSubmit` → zodバリデーション → `handleFormSubmit` |
+
+> 💡 `type="button"` を指定しないと、キャンセルボタンでもフォーム送信が実行されてしまいます。キャンセル時は `handleClose` で `reset()` を呼び、フォームの入力内容をクリアしてから閉じます。
 
 ✅ **確認ポイント**:
-- 作成ボタンとキャンセルボタンが表示される
-- プロジェクト名が空だと作成ボタンが無効になる
-- キャンセルでダイアログが閉じる
+- キャンセル後にダイアログを再度開くと、前回の入力内容がクリアされている
+- `initialData?.id` の有無でボタン表示が「作成」と「更新」に切り替わる
 
 ---
 
@@ -490,10 +501,12 @@ const handleSubmit = (
     description: data.description,
     color: data.color,
     startDate: data.startDate
-      ? new Date(data.startDate).toISOString()
+      ? new Date(data.startDate)
+          .toISOString()
       : undefined,
     endDate: data.endDate
-      ? new Date(data.endDate).toISOString()
+      ? new Date(data.endDate)
+          .toISOString()
       : undefined,
   });
 };
@@ -547,7 +560,8 @@ npm run dev
 ## 📋 今日のまとめ
 
 - [ ] Dialog コンポーネントでモーダルフォームを作れた
-- [ ] useState + handleChange でフォーム状態を管理できた
+- [ ] react-hook-form + zodResolver でフォームのバリデーションを実装できた
+- [ ] `register` で入力欄をフォームに登録できた
 - [ ] `useMutation` でサーバーにデータを保存できた
 - [ ] `invalidate()` でキャッシュを自動更新できた
 
@@ -557,8 +571,8 @@ npm run dev
 |--------------|------|---------|
 | ダイアログが開かない | `open` prop が渡されていない | `open={dialogOpen}` を確認 |
 | 作成後に一覧が更新されない | キャッシュ無効化の呼び忘れ | `utils.project.getAll.invalidate()` を追加 |
-| カラーが保存されない | `handleChange('color')` の接続漏れ | Input に value と onChange を設定 |
-| 入力しても値が変わらない | handleChange が正しく呼ばれていない | `onChange={handleChange('name')}` の形式を確認 |
+| バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(projectFormSchema)` を確認 |
+| 入力しても値が反映されない | `register` の接続漏れ | `{...register('name')}` のスプレッド構文を確認 |
 
 ## 📝 今日学んだ用語
 
@@ -568,7 +582,8 @@ npm run dev
 | useMutation | データの作成・更新・削除に使う tRPC フック |
 | invalidate | キャッシュを無効にして再取得させる操作 |
 | useUtils | tRPC のキャッシュ操作ユーティリティ |
-| カリー化 | 引数を段階的に受け取る関数パターン |
+| zodResolver | zod スキーマを react-hook-form に接続するアダプター |
+| register | 入力欄を react-hook-form に登録する関数 |
 
 ## 🔜 次回予告
 

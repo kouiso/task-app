@@ -4,7 +4,8 @@
 
 TaskDialogコンポーネントで、新しいタスクを作成
 できるようにします。Day 10 で学んだダイアログ
-パターンをタスク版に応用します。
+パターンとreact-hook-form + zodをタスク版に
+応用します。
 
 ![タスク作成ダイアログ](./screenshots/task-create-dialog.png)
 
@@ -25,9 +26,9 @@ TaskDialogコンポーネントで、新しいタスクを作成
 graph TD
     A[新規作成ボタンをクリック] --> B[TaskDialogが開く]
     B --> C[フォームに入力]
-    C --> D{入力チェック}
-    D -->|タイトルあり| E[api.task.create.mutate]
-    D -->|タイトル空| F[送信ボタン無効]
+    C --> D{zodバリデーション}
+    D -->|OK| E[api.task.create.mutate]
+    D -->|NG| F[エラーメッセージ表示]
     E --> G[キャッシュ更新 invalidate]
     G --> H[ダイアログを閉じる]
     H --> I[一覧に新タスク表示]
@@ -43,7 +44,7 @@ graph TD
 | やること | やらないこと |
 |---------|-------------|
 | TaskDialog を作る | 別ページでフォーム作成 |
-| useState でフォーム状態管理 | ドラッグ＆ドロップ |
+| react-hook-form + zod でフォーム管理 | useState で手動管理 |
 | useMutation でサーバーに保存 | タスクの編集（Day 15） |
 | キャッシュ無効化で一覧更新 | タイマー機能（Day 16） |
 
@@ -52,30 +53,32 @@ graph TD
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | TaskDialog | タスク・ダイアログ | タスクCRUD用のモーダル | レシピカードの記入用紙 |
-| TaskFormData | タスク・フォーム・データ | フォームの型定義 | 記入項目の一覧表 |
-| handleChange | ハンドル・チェンジ | 入力値の更新関数 | 書き込むたびにメモする係 |
+| Controller | コントローラー | Select をreact-hook-formで制御する | ドロップダウンの管理係 |
+| TASK_STATUS_LABELS | ― | ステータスの表示名を定義した定数 | 選択肢の翻訳表 |
+| nativeEnum | ネイティブ・イーナム | zodで既存の定数オブジェクトを検証する | 記入用紙の「選択肢チェック」 |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | TaskFormData型を定義する | 3分 |
+| Step 1 | zodスキーマと型を定義する | 5分 |
 | Step 2 | TaskDialogの骨格を作る | 5分 |
-| Step 3 | タイトル・説明の入力欄を作る | 5分 |
-| Step 4 | ステータス・優先度の選択欄を作る | 5分 |
-| Step 5 | プロジェクト・担当者の選択欄を作る | 5分 |
-| Step 6 | 期限・見積時間の入力欄を作る | 5分 |
-| Step 7 | 送信・キャンセルボタンを作る | 3分 |
+| Step 3 | useFormでフォームを設定する | 5分 |
+| Step 4 | タイトル・説明の入力欄を作る | 5分 |
+| Step 5 | ステータス・優先度のSelectを作る | 7分 |
+| Step 6 | プロジェクト・担当者のSelectを作る | 5分 |
+| Step 7 | 期限・見積時間・ボタンを作る | 5分 |
 | Step 8 | ページにDialogを組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約41分
+**合計時間**: 約47分
 
 ---
 
-### Step 1: TaskFormData型を定義する（3分）
+### Step 1: zodスキーマと型を定義する（5分）
 
-🎯 **ゴール**: フォームデータの型を定義します。
+🎯 **ゴール**: zodスキーマでバリデーションルールを
+定義し、フォームデータの型を作ります。
 
 💻 **実装**:
 
@@ -83,28 +86,98 @@ graph TD
 // filepath: src/component/task/task-dialog.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import type {
-  TaskPriority,
-  TaskStatus,
-} from '@prisma/client';
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { Controller, useForm }
+  from 'react-hook-form';
+import { z } from 'zod';
+import { Button }
+  from '@/component/ui/button';
 import {
-  Dialog, DialogContent, DialogHeader,
-  DialogTitle, DialogFooter,
+  Dialog, DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
 } from '@/component/ui/dialog';
-import { Button } from '@/component/ui/button';
-import { Input } from '@/component/ui/input';
-import { Label } from '@/component/ui/label';
-import { Textarea }
-  from '@/component/ui/textarea';
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
-} from '@/component/ui/select';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
 ```
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import { Textarea }
+  from '@/component/ui/textarea';
+import {
+  TASK_PRIORITY, TASK_PRIORITY_LABELS,
+  type TaskPriority,
+} from '@/lib/constant/priority';
+import {
+  TASK_STATUS, TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+```
+
+zodスキーマを定義します。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// zodスキーマでバリデーションルール定義
+const taskFormSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1,
+    'タイトルは必須です'),
+  description: z.string().optional(),
+  status: z.nativeEnum(TASK_STATUS),
+  priority: z.nativeEnum(TASK_PRIORITY),
+  dueDate: z.string().optional(),
+  estimatedHours:
+    z.number().min(0).optional(),
+  projectId: z.string().min(1,
+    'プロジェクトは必須です'),
+  assigneeId: z.string().optional(),
+});
+
+type TaskFormValues =
+  z.infer<typeof taskFormSchema>;
+```
+
+✅ **確認ポイント**:
+- `taskFormSchema` を定義した
+- `title` と `projectId` に必須バリデーションが設定されている
+
+#### zodスキーマの各フィールド
+
+| フィールド | バリデーション | 意味 |
+|-----------|-------------|------|
+| `title` | `z.string().min(1, ...)` | 1文字以上必須 |
+| `status` | `z.nativeEnum(TASK_STATUS)` | 定数オブジェクトの値のみ許可 |
+| `priority` | `z.nativeEnum(TASK_PRIORITY)` | 定数オブジェクトの値のみ許可 |
+| `projectId` | `z.string().min(1, ...)` | プロジェクト選択必須 |
+| `estimatedHours` | `z.number().min(0).optional()` | 0以上の数値（任意） |
+
+> 💡 `z.nativeEnum(TASK_STATUS)` は、`TASK_STATUS` オブジェクトの値（`'TODO'`, `'IN_PROGRESS'` ）だけを許可するバリデーションです。不正な値が入力されると自動でエラーになります。
+
+✅ **確認ポイント**:
+- `taskFormSchema` を定義した
+- `TaskFormValues` が自動生成されている
+
+---
+
+### Step 2: TaskDialogの骨格を作る（5分）
+
+🎯 **ゴール**: コンポーネントのProps型とフォーム
+データの型を定義します。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// フォームデータの型（外部公開用）
 export interface TaskFormData {
   id?: string;
   title: string;
@@ -118,9 +191,34 @@ export interface TaskFormData {
 }
 ```
 
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// Props の型定義
+interface TaskDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: TaskFormData) => void;
+  initialData?:
+    TaskFormData | undefined;
+  projects: Array<{
+    id: string; name: string;
+  }>;
+  users: Array<{
+    id: string;
+    name: string | null;
+    email: string;
+  }>;
+}
+```
+
+> 💡 `TaskFormValues`（zod推論型）はコンポーネント
+> 内部で使い、`TaskFormData`（インターフェース）は
+> 外部に公開します。2つの型を使い分けることで、
+> 内部のバリデーションと外部のAPIを分離できます。
+
 ✅ **確認ポイント**:
 - `TaskFormData` をエクスポートした
-- `npm run dev` でエラーが出ていない
+- `TaskDialogProps` に `projects` と `users` がある
 
 #### TaskFormData の各フィールド
 
@@ -136,43 +234,18 @@ export interface TaskFormData {
 | `projectId` | string | ○ | 所属プロジェクト |
 | `assigneeId` | string? | × | 担当者 |
 
-> 💡 `id` がある場合は「編集モード」、ない場合は
-> 「作成モード」です。Day 10 のProjectDialogの
-> `initialData` パターンと同じ考え方です。
-
 ✅ **確認ポイント**:
 - `TaskFormData` をエクスポートした
 - `npm run dev` でエラーが出ていない
 
 ---
 
-### Step 2: TaskDialogの骨格を作る（5分）
+### Step 3: useFormでフォームを設定する（5分）
 
-🎯 **ゴール**: ダイアログの基本構造を作ります。
+🎯 **ゴール**: `useForm` と `zodResolver` で
+フォームの状態管理とバリデーションを設定します。
 
 💻 **実装**:
-
-```typescript
-// filepath: src/component/task/task-dialog.tsx
-interface TaskDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: TaskFormData) => void;
-  initialData?: TaskFormData;
-  projects: Array<{
-    id: string; name: string;
-  }>;
-  users: Array<{
-    id: string;
-    name: string | null;
-    email: string;
-  }>;
-}
-```
-
-> 💡 `projects` と `users` を外から渡すのは、
-> ダイアログの中でAPIを呼ばないためです。
-> 親コンポーネントが一括取得して渡します。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -180,168 +253,298 @@ export function TaskDialog({
   open, onClose, onSubmit,
   initialData, projects, users,
 }: TaskDialogProps) {
-  return (
-    <Dialog open={open}
-      onOpenChange={(isOpen) =>
-        !isOpen && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {initialData?.id
-              ? 'タスク編集'
-              : 'タスク作成'}
-          </DialogTitle>
-        </DialogHeader>
-      </DialogContent>
-    </Dialog>
-  );
-}
+  const {
+    register, handleSubmit, control,
+    reset,
+    formState: { errors },
+  } = useForm<TaskFormValues>({
+    resolver: zodResolver(
+      taskFormSchema),
+    values: {
+      id: initialData?.id,
+      title: initialData?.title ?? '',
+      description:
+        initialData?.description ?? '',
+      status:
+        initialData?.status ?? 'TODO',
+      priority:
+        initialData?.priority
+          ?? 'MEDIUM',
+      dueDate:
+        initialData?.dueDate ?? '',
 ```
 
-✅ **確認ポイント**:
-- `npm run dev` でエラーが出ていない
-- TaskDialogコンポーネントが定義できた
-
----
-
-### Step 3: タイトル・説明の入力欄を作る（5分）
-
-🎯 **ゴール**: フォームの状態管理と入力欄を追加
-します。
-
-💻 **実装**:
+`values` の続きです。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// TaskDialog内にstate追加
-const [formData, setFormData] =
-  useState<TaskFormData>({
-    title: '',
-    description: '',
-    status: 'TODO',
-    priority: 'MEDIUM',
-    projectId: '',
-    assigneeId: '',
-    ...initialData,
+      estimatedHours:
+        initialData?.estimatedHours,
+      projectId: initialData?.projectId
+        ?? (projects[0]?.id || ''),
+      assigneeId:
+        initialData?.assigneeId ?? '',
+    },
   });
 ```
 
-入力値の更新用ヘルパー関数を作ります。
+> 💡 Day 10 の ProjectDialog と同じパターンです。
+> `values` prop で `initialData` が変わるたびに
+> フォームの値が自動同期されます。`control` は
+> Step 5 で `Controller` コンポーネントに渡します。
+
+✅ **確認ポイント**:
+- `useForm` に `resolver` と `values` が設定されている
+- `control` を取得している（Selectで使う）
+
+#### useFormから取得するもの
+
+| 名前 | 役割 |
+|------|------|
+| `register` | Input/Textareaをフォームに登録 |
+| `handleSubmit` | バリデーション後に送信 |
+| `control` | Controllerに渡してSelectを制御 |
+| `reset` | フォームの値をリセット |
+| `errors` | バリデーションエラー情報 |
+
+✅ **確認ポイント**:
+- `register` と `control` の違いを理解した
+- `npm run dev` でエラーが出ていない
+
+---
+
+### Step 4: タイトル・説明の入力欄を作る（5分）
+
+🎯 **ゴール**: タイトルと説明の入力欄を追加します。
+
+💻 **実装**:
+
+まず、ダイアログを閉じるハンドラーと送信ハンドラーを作ります。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-const handleChange =
-  (field: keyof TaskFormData) =>
-  (e: React.ChangeEvent<
-    HTMLInputElement | HTMLTextAreaElement
-  >) => {
-    setFormData({
-      ...formData,
-      [field]: e.target.value,
-    });
+// ダイアログを閉じる時にフォームをリセット
+const handleClose = () => {
+  reset();
+  onClose();
+};
+```
+
+送信ハンドラーでは、未入力のフィールドを除外してから `onSubmit` に渡します。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// バリデーション通過後の送信処理
+const handleFormSubmit =
+  (data: TaskFormValues) => {
+    const submitData: TaskFormData = {
+      ...(data.id !== undefined
+        && { id: data.id }),
+      title: data.title,
+      status: data.status,
+      priority: data.priority,
+      projectId: data.projectId,
+      ...(data.description
+        && { description:
+          data.description }),
+      ...(data.dueDate
+        && { dueDate: data.dueDate }),
+      ...(data.estimatedHours !==
+        undefined && { estimatedHours:
+          data.estimatedHours }),
+      ...(data.assigneeId
+        && { assigneeId:
+          data.assigneeId }),
+    };
+    onSubmit(submitData);
   };
 ```
 
-> 💡 `handleChange('title')` のように呼ぶと、
-> `title` フィールド専用の更新関数が返ります。
-> これは **カリー化** というテクニックです。
+JSXのダイアログ構造とタイトル入力欄を書きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// フォーム内にタイトル・説明を追加
-<div className="grid gap-2">
-  <Label htmlFor="title">タイトル</Label>
-  <Input
-    id="title"
-    value={formData.title}
-    onChange={handleChange('title')}
-    required
-  />
-</div>
-<div className="grid gap-2">
-  <Label htmlFor="description">
-    説明
-  </Label>
-  <Textarea
-    id="description"
-    value={formData.description || ''}
-    onChange={handleChange('description')}
-    rows={4}
-  />
-</div>
+return (
+  <Dialog open={open}
+    onOpenChange={(isOpen) =>
+      !isOpen && handleClose()}>
+    <DialogContent
+      className="sm:max-w-[800px]">
+      <DialogHeader>
+        <DialogTitle>
+          {initialData?.id
+            ? 'タスク編集' : 'タスク作成'}
+        </DialogTitle>
+        <DialogDescription>
+          {initialData?.id
+            ? 'タスクの詳細を更新します。'
+            : 'プロジェクトに新しいタスクを追加します。'}
+        </DialogDescription>
+      </DialogHeader>
 ```
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+      <form onSubmit={
+        handleSubmit(handleFormSubmit)}>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="title">
+              タイトル
+            </Label>
+            <Input id="title"
+              placeholder=
+                "タスクのタイトルを入力"
+              {...register('title')} />
+            {errors.title && (
+              <p className=
+                "text-sm text-destructive">
+                {errors.title.message}
+              </p>
+            )}
+          </div>
+```
+
+説明欄を追加します。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+          <div className="grid gap-2">
+            <Label htmlFor="description">
+              説明
+            </Label>
+            <Textarea
+              id="description"
+              placeholder="タスクの説明..."
+              rows={4}
+              {...register('description')}
+            />
+          </div>
+```
+
+> 💡 `{...register('title')}` は Day 10 で学んだ
+> パターンです。入力欄をフォームに登録し、値の
+> 追跡・バリデーションを自動化します。
+> `errors.title` でバリデーションエラーを表示します。
 
 ✅ **確認ポイント**:
 - タイトルと説明の入力欄が表示される
-- 入力値が反映される
+- タイトルが空のまま送信するとエラーメッセージが表示される
 
 ![タイトル・説明の入力欄](./screenshots/task-create-dialog.png)
 
 ---
 
-### Step 4: ステータス・優先度の選択欄を作る（5分）
+### Step 5: ステータス・優先度のSelectを作る（7分）
 
-🎯 **ゴール**: ドロップダウンで選択するUI を追加
-します。
+🎯 **ゴール**: `Controller` で Select コンポーネント
+をreact-hook-formに接続します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// Select用のヘルパー関数
-const handleSelectChange =
-  (field: keyof TaskFormData) =>
-  (value: string) => {
-    setFormData({
-      ...formData,
-      [field]: value,
-    });
-  };
-```
-
-```typescript
-// filepath: src/component/task/task-dialog.tsx
-// ステータス選択のSelect構造
+// ステータスSelect（Controller使用）
 <div className="grid grid-cols-2 gap-4">
   <div className="grid gap-2">
-    <Label>ステータス</Label>
-    <Select value={formData.status}
-      onValueChange={
-        handleSelectChange('status')}>
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
+    <Label htmlFor="status">
+      ステータス
+    </Label>
+    <Controller
+      name="status"
+      control={control}
+      render={({ field }) => (
+        <Select
+          value={field.value}
+          onValueChange={field.onChange}>
+          <SelectTrigger id="status">
+            <SelectValue
+              placeholder=
+                "ステータスを選択" />
+          </SelectTrigger>
 ```
 
-続けて、Selectの選択肢（SelectItem）を定義します。
+続けて、ステータスの選択肢を `TASK_STATUS_LABELS` から生成します。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// ステータスの選択肢
-      <SelectContent>
-        <SelectItem value="TODO">
-          未対応
-        </SelectItem>
-        <SelectItem value="IN_PROGRESS">
-          進行中
-        </SelectItem>
-        <SelectItem value="IN_REVIEW">
-          レビュー中
-        </SelectItem>
-        <SelectItem value="DONE">
-          完了
-        </SelectItem>
-      </SelectContent>
-    </Select>
+          <SelectContent>
+            {Object.entries(
+              TASK_STATUS_LABELS
+            ).map(([value, label]) => (
+              <SelectItem
+                key={value}
+                value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )} />
   </div>
-</div>
 ```
+
+優先度Selectも同じパターンで作ります。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// 優先度Select（Controllerで同じパターン）
+  <div className="grid gap-2">
+    <Label htmlFor="priority">
+      優先度
+    </Label>
+    <Controller
+      name="priority"
+      control={control}
+      render={({ field }) => (
+        <Select
+          value={field.value}
+          onValueChange={field.onChange}>
+          <SelectTrigger id="priority">
+            <SelectValue
+              placeholder=
+                "優先度を選択" />
+          </SelectTrigger>
+```
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+          <SelectContent>
+            {Object.entries(
+              TASK_PRIORITY_LABELS
+            ).map(([value, label]) => (
+              <SelectItem
+                key={value}
+                value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )} />
+  </div>
+```
+
+> 💡 `Controller` は、`register` が使えない
+> コンポーネント（Select）をreact-hook-formに
+> 接続します。`field.value` で現在の値を取得し、
+> `field.onChange` で値を更新します。
+> `Object.entries(TASK_STATUS_LABELS)` で定数から
+> 選択肢を自動生成するので、追加・変更に強い
+> 構造になります。
 
 ✅ **確認ポイント**:
 - ステータスと優先度が選択できる
-- 2列グリッドで横並びになっている
+- 選択肢が日本語で表示される
 
-#### ステータスとPriorityの選択肢
+#### register vs Controller の使い分け
+
+| 対象 | 使う関数 | 理由 |
+|------|---------|------|
+| Input, Textarea | `register` | `ref` を直接渡せるため |
+| Select (shadcn/ui) | `Controller` | 独自の `onValueChange` を使うため |
+
+#### ステータスと優先度の選択肢
 
 | ステータス | 表示名 | 意味 |
 |-----------|-------|------|
@@ -349,15 +552,15 @@ const handleSelectChange =
 | `IN_PROGRESS` | 進行中 | 作業中 |
 | `IN_REVIEW` | レビュー中 | レビュー待ち |
 | `DONE` | 完了 | 完了 |
-| `CANCELLED` | キャンセル | キャンセル |
+| `CANCELLED` | キャンセル | 取り消し |
 | `BLOCKED` | ブロック | ブロック中 |
 
-| 優先度 | 表示名 | 意味 |
-|-------|-------|------|
-| `LOW` | 低 | 低い |
-| `MEDIUM` | 中 | 普通 |
-| `HIGH` | 高 | 高い |
-| `URGENT` | 緊急 | 緊急 |
+| 優先度 | 表示名 |
+|-------|-------|
+| `LOW` | 低 |
+| `MEDIUM` | 中 |
+| `HIGH` | 高 |
+| `URGENT` | 緊急 |
 
 ✅ **確認ポイント**:
 - ステータスと優先度が選択できる
@@ -365,7 +568,7 @@ const handleSelectChange =
 
 ---
 
-### Step 5: プロジェクト・担当者の選択欄（5分）
+### Step 6: プロジェクト・担当者のSelectを作る（5分）
 
 🎯 **ゴール**: 外から渡されたデータで選択肢を
 表示します。
@@ -374,69 +577,99 @@ const handleSelectChange =
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// プロジェクト選択
-<div className="grid gap-2">
-  <Label>プロジェクト</Label>
-  <Select
-    value={formData.projectId}
-    onValueChange={
-      handleSelectChange('projectId')
-    }>
-    <SelectTrigger>
-      <SelectValue
-        placeholder="プロジェクトを選択" />
-    </SelectTrigger>
-    <SelectContent>
-      {projects.map((p) => (
-        <SelectItem key={p.id} value={p.id}>
-          {p.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+// プロジェクトSelect
+  <div className="grid gap-2">
+    <Label htmlFor="project">
+      プロジェクト
+    </Label>
+    <Controller
+      name="projectId"
+      control={control}
+      render={({ field }) => (
+        <Select
+          value={field.value}
+          onValueChange={field.onChange}
+          disabled={!projects.length}>
+          <SelectTrigger id="project">
+            <SelectValue placeholder=
+              "プロジェクトを選択" />
+          </SelectTrigger>
+```
+
+プロジェクトの選択肢とエラー表示です。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+          <SelectContent>
+            {projects.map((project) => (
+              <SelectItem
+                key={project.id}
+                value={project.id}>
+                {project.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )} />
+    {errors.projectId && (
+      <p className=
+        "text-sm text-destructive">
+        {errors.projectId.message}
+      </p>
+    )}
+  </div>
 ```
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// 担当者選択: Select構造
-<div className="grid gap-2">
-  <Label>担当者</Label>
-  <Select
-    value={formData.assigneeId || 'unassigned'}
-    onValueChange={(value) =>
-      handleSelectChange('assigneeId')(
-        value === 'unassigned' ? '' : value
-      )
-    }>
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
+// 担当者Select
+  <div className="grid gap-2">
+    <Label htmlFor="assignee">
+      担当者
+    </Label>
+    <Controller
+      name="assigneeId"
+      control={control}
+      render={({ field }) => (
+        <Select
+          value={
+            field.value || 'unassigned'}
+          onValueChange={(value) =>
+            field.onChange(
+              value === 'unassigned'
+                ? '' : value)}>
+          <SelectTrigger id="assignee">
+            <SelectValue placeholder=
+              "担当者を選択" />
+          </SelectTrigger>
 ```
 
-続けて、担当者の選択肢を定義します。`'unassigned'` は未割当を表す特別な値です。
+担当者の選択肢です。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// 担当者の選択肢とSelect閉じタグ
-    <SelectContent>
-      <SelectItem value="unassigned">
-        未割当
-      </SelectItem>
-      {users.map((u) => (
-        <SelectItem key={u.id} value={u.id}>
-          {u.name || u.email}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+          <SelectContent>
+            <SelectItem
+              value="unassigned">
+              未割当
+            </SelectItem>
+            {users.map((user) => (
+              <SelectItem
+                key={user.id}
+                value={user.id}>
+                {user.name || user.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )} />
+  </div>
 ```
 
 > 💡 「未割当」を選んだ時は空文字にしたいので、
-> `'unassigned'` を特別な値として扱い、
-> 変換しています。Selectは空文字を値にできない
-> ため、このテクニックが必要です。
+> `'unassigned'` を特別な値として扱い、変換して
+> います。Selectは空文字を値にできないため、
+> このテクニックが必要です。
 
 ✅ **確認ポイント**:
 - プロジェクト一覧が表示される
@@ -446,108 +679,76 @@ const handleSelectChange =
 
 ---
 
-### Step 6: 期限・見積時間の入力欄を作る（5分）
+### Step 7: 期限・見積時間・ボタンを作る（5分）
 
-🎯 **ゴール**: 日付入力と数値入力を追加します。
+🎯 **ゴール**: 日付入力、数値入力、送信ボタンを
+追加します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// 数値入力用のヘルパー
-const handleNumberChange =
-  (field: 'estimatedHours') =>
-  (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '') {
-      const { [field]: _, ...rest } = formData;
-      setFormData(rest as TaskFormData);
-    } else {
-      setFormData({
-        ...formData,
-        [field]: Number(value),
-      });
-    }
-  };
+// 期限と見積時間
+  <div className="grid gap-2">
+    <Label htmlFor="dueDate">期限</Label>
+    <Input id="dueDate" type="date"
+      {...register('dueDate')} />
+  </div>
+  <div className="grid gap-2">
+    <Label htmlFor="estimatedHours">
+      見積時間
+    </Label>
+    <Input id="estimatedHours"
+      type="number" min="0" step="0.5"
+      placeholder="0.0"
+      {...register('estimatedHours', {
+        setValueAs: (v: string) =>
+          v === '' ? undefined : Number(v),
+      })} />
+  </div>
+        </div>
 ```
 
-> 💡 空文字の場合はフィールドを削除します。
-> 未入力＝`undefined` にするためです。
+> 💡 `setValueAs` は入力値を変換する関数です。
+> 空文字を `undefined` に、それ以外を `Number` に
+> 変換します。`type="number"` でも HTML の入力値は
+> 文字列なので、この変換が必要です。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-<div className="grid gap-2">
-  <Label htmlFor="dueDate">期限</Label>
-  <Input
-    id="dueDate"
-    type="date"
-    value={formData.dueDate || ''}
-    onChange={handleChange('dueDate')}
-  />
-</div>
-<div className="grid gap-2">
-  <Label htmlFor="estimatedHours">
-    見積時間（時間）
-  </Label>
-  <Input
-    id="estimatedHours"
-    type="number"
-    min="0"
-    step="0.5"
-    value={formData.estimatedHours ?? ''}
-    onChange={
-      handleNumberChange('estimatedHours')
-    }
-  />
-</div>
+// 送信・キャンセルボタン
+        <DialogFooter>
+          <Button type="button"
+            variant="outline"
+            onClick={handleClose}>
+            キャンセル
+          </Button>
+          <Button type="submit">
+            {initialData?.id
+              ? '更新' : '作成'}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+);
 ```
 
 ✅ **確認ポイント**:
 - 日付ピッカーで期限を選べる
 - 見積時間に0.5刻みで入力できる
+- 作成ボタンが表示される
 
----
+#### ボタンの役割
 
-### Step 7: 送信・キャンセルボタンを作る（3分）
-
-🎯 **ゴール**: フォーム送信とキャンセルを実装
-します。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/component/task/task-dialog.tsx
-const handleSubmit =
-  (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-```
-
-```typescript
-// filepath: src/component/task/task-dialog.tsx
-<DialogFooter>
-  <Button type="button" variant="outline"
-    onClick={onClose}>
-    キャンセル
-  </Button>
-  <Button type="submit"
-    disabled={
-      !formData.title
-      || !formData.projectId
-    }>
-    {initialData?.id ? '更新' : '作成'}
-  </Button>
-</DialogFooter>
-```
-
-> 💡 `disabled` でタイトルとプロジェクトが
-> 未入力の場合はボタンを無効化します。
-> 必須項目をUIレベルで制御しています。
+| ボタン | type | 動作 |
+|--------|------|------|
+| キャンセル | `button` | `handleClose` でリセットして閉じる |
+| 作成 / 更新 | `submit` | zodバリデーション → `handleFormSubmit` |
 
 ✅ **確認ポイント**:
-- 作成ボタンが表示される
-- タイトル未入力でボタンが無効になる
+- キャンセルでフォームがリセットされる
+- タイトル未入力で送信するとエラーが表示される
 
 ---
 
@@ -571,8 +772,6 @@ const [dialogOpen, setDialogOpen] =
 const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>();
 const utils = api.useUtils();
-const { data: session } =
-  api.auth.getSession.useQuery();
 
 // 新規作成ボタンのハンドラー
 const handleCreate = () => {
@@ -609,11 +808,14 @@ const handleSubmit =
       status: data.status,
       priority: data.priority,
       dueDate: data.dueDate
-        ? new Date(data.dueDate).toISOString()
+        ? new Date(data.dueDate)
+            .toISOString()
         : undefined,
-      estimatedHours: data.estimatedHours,
+      estimatedHours:
+        data.estimatedHours,
       projectId: data.projectId,
-      assigneeId: data.assigneeId || undefined,
+      assigneeId:
+        data.assigneeId || undefined,
     });
   };
 ```
@@ -659,11 +861,8 @@ const handleSubmit =
 > フロントエンドから渡す必要はありません。
 
 ✅ **確認ポイント**:
-- 「新規タスク」ボタンでダイアログが開く
-- フォーム送信でタスクが作成される
-- 一覧に新しいタスクが表示される
-
-![作成後のタスク一覧](./screenshots/task-list.png)
+- TaskDialogに `initialData` と `projects` が渡されている
+- `createdById` をフロントから渡していない
 
 ---
 
@@ -681,7 +880,7 @@ const handleSubmit =
 ✅ **確認ポイント**:
 - タスクが作成できる
 - 一覧が自動で更新される
-- 必須項目が空だと送信できない
+- タイトル未入力で送信するとエラーが表示される
 
 ---
 
@@ -693,8 +892,10 @@ npm run dev
 
 ## 📋 今日のまとめ
 
-- [ ] `TaskFormData` 型でフォームを定義できた
-- [ ] TaskDialog でモーダルフォームを作れた
+- [ ] zodスキーマでフォームのバリデーションを定義できた
+- [ ] `register` で入力欄をフォームに登録できた
+- [ ] `Controller` でSelectをreact-hook-formに接続できた
+- [ ] `TASK_STATUS_LABELS` から選択肢を自動生成できた
 - [ ] `useMutation` でタスクを保存できた
 - [ ] `invalidate()` でキャッシュを自動更新できた
 
@@ -704,16 +905,19 @@ npm run dev
 |--------------|------|---------|
 | ダイアログが開かない | `open` propが渡されてない | `open={dialogOpen}` を確認 |
 | 作成後に一覧が更新されない | invalidate忘れ | `onSuccess` に追加 |
+| Selectの値が更新されない | `Controller` 未使用 | `register` ではなく `Controller` を使う |
 | 担当者一覧が空 | users未取得 | `getProjectMembers` の戻り値確認 |
-| プロジェクト一覧が空 | `projects` propが空 | `projects || []` を確認 |
+| バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(taskFormSchema)` を確認 |
 
 ## 📝 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
 | TaskDialog | タスクCRUD用のダイアログ |
-| TaskFormData | フォームデータの型定義 |
-| カリー化 | 引数を部分適用する関数パターン |
+| Controller | Selectをreact-hook-formで制御するコンポーネント |
+| nativeEnum | zodで既存の定数オブジェクトを検証するメソッド |
+| TASK_STATUS_LABELS | ステータス値と日本語表示名の対応表 |
+| setValueAs | register のオプションで入力値を型変換する関数 |
 | getProjectMembers | プロジェクトメンバー一覧を取得するAPI |
 
 ## 🔜 次回予告

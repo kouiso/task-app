@@ -32,8 +32,8 @@ graph TD
     F --> G[キャッシュ更新]
 
     H[タスクカードの削除ボタン] --> I{handleDelete}
-    I --> J[確認ダイアログ]
-    J -->|OK| K[api.task.delete.mutate]
+    I --> J[DeleteConfirmDialog を開く]
+    J -->|確認| K[api.task.delete.mutate]
     J -->|キャンセル| L[何もしない]
     K --> G
 
@@ -57,14 +57,14 @@ graph TD
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | initialData | イニシャル・データ | 編集時の初期値 | 書き直す前の付箋の内容 |
-| confirm | コンファーム | 確認ダイアログ | 「本当に捨てますか？」の確認 |
+| DeleteConfirmDialog | デリート・コンファーム・ダイアログ | 削除確認ダイアログ | 「本当に捨てますか？」の確認 |
 | update mutation | アップデート・ミューテーション | 更新APIの呼び出し | 付箋を書き直してボードに貼る |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | useEffectでフォームリセット | 5分 |
+| Step 1 | values propによる自動同期を理解する | 5分 |
 | Step 2 | 編集ハンドラーを実装する | 5分 |
 | Step 3 | update mutationを実装する | 5分 |
 | Step 4 | 送信ハンドラーで分岐する | 5分 |
@@ -76,43 +76,51 @@ graph TD
 
 ---
 
-### Step 1: useEffectでフォームリセット（5分）
+### Step 1: values propによる自動同期を理解する（5分）
 
-🎯 **ゴール**: ダイアログが開くたびにフォームの
-初期値をセットします。
+🎯 **ゴール**: `useForm` の `values` prop が
+どのように編集モードを実現するかを理解します。
 
 💻 **実装**:
 
+Day 14 の Step 3 で、TaskDialog に以下の設定を
+書きました。
+
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-import { useEffect, useState } from 'react';
-
-// TaskDialog内に追加
-useEffect(() => {
-  if (initialData) {
-    setFormData({ ...initialData });
-  } else {
-    setFormData({
-      title: '',
-      description: '',
-      status: 'TODO',
-      priority: 'MEDIUM',
-      projectId: projects[0]?.id || '',
-      assigneeId: '',
-    });
-  }
-}, [initialData, projects]);
+// useFormのvalues prop（Day 14で実装済み）
+const { register, handleSubmit, control,
+  reset, formState: { errors },
+} = useForm<TaskFormValues>({
+  resolver: zodResolver(taskFormSchema),
+  values: {
+    id: initialData?.id,
+    title: initialData?.title ?? '',
+    description:
+      initialData?.description ?? '',
+    status:
+      initialData?.status ?? 'TODO',
+    priority:
+      initialData?.priority ?? 'MEDIUM',
+    dueDate:
+      initialData?.dueDate ?? '',
+    estimatedHours:
+      initialData?.estimatedHours,
+    projectId: initialData?.projectId
+      ?? (projects[0]?.id || ''),
+    assigneeId:
+      initialData?.assigneeId ?? '',
+  },
+});
 ```
 
-✅ **確認ポイント**:
-- 作成時はフォームが空になる
-- 編集時は既存データが表示される
+> 💡 `values` prop は `initialData` が変わる
+> たびにフォームの値を自動で更新します。
+> `useEffect` + `setState` が不要になり、
+> コードがシンプルになります。Day 10 の
+> ProjectDialog と同じパターンです。
 
-> 💡 `initialData` がある場合は編集モード、
-> ない場合は作成モードです。Day 10 の
-> ProjectDialog で学んだパターンと同じです。
-
-#### 作成モード vs 編集モードの比較
+**作成モード vs 編集モードの比較**
 
 | 項目 | 作成モード | 編集モード |
 |------|----------|----------|
@@ -271,8 +279,8 @@ const handleSubmit =
 > `undefined` は「変更しない」を意味します。
 
 ✅ **確認ポイント**:
-- 既存タスクを編集して更新できる
-- 一覧が自動で更新される
+- `data.id` の有無で処理が分岐している
+- `null` と `undefined` の使い分けを理解した
 
 ---
 
@@ -285,31 +293,58 @@ const handleSubmit =
 
 ```typescript
 // filepath: src/app/task/page.tsx
+// 削除用のstateとmutation
+const [deleteDialogOpen, setDeleteDialogOpen]
+  = useState(false);
+const [deleteTargetId, setDeleteTargetId]
+  = useState<string | null>(null);
+
 const deleteMutation =
   api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
     },
   });
+```
 
+```typescript
+// filepath: src/app/task/page.tsx
+// 削除ボタンのハンドラー
 const handleDelete = (taskId: string) => {
-  if (confirm(
-    'このタスクを削除してもよろしいですか？'
-  )) {
-    deleteMutation.mutate({ id: taskId });
-  }
+  setDeleteTargetId(taskId);
+  setDeleteDialogOpen(true);
 };
 ```
 
-> 💡 `confirm()` はブラウザ標準の確認ダイアログ
-> です。ユーザーが「OK」を押すと `true` が
-> 返ります。削除のような取り消せない操作には
-> 必ず確認を入れましょう。
+> 💡 `handleDelete` は `confirm()` ではなく
+> `DeleteConfirmDialog` コンポーネントを使います。
+> state で対象IDとダイアログの開閉を管理し、
+> ユーザーが確認ボタンを押した時だけ削除を実行
+> します。
+
+続いて、JSXに `DeleteConfirmDialog` を配置します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 確認ダイアログの配置
+<DeleteConfirmDialog
+  open={deleteDialogOpen}
+  onOpenChange={setDeleteDialogOpen}
+  onConfirm={() => {
+    if (deleteTargetId) {
+      deleteMutation.mutate(
+        { id: deleteTargetId }
+      );
+    }
+  }}
+  isPending={deleteMutation.isPending}
+/>
+```
 
 ✅ **確認ポイント**:
 - 削除ボタンで確認ダイアログが出る
-- 「OK」でタスクが削除される
-- 「キャンセル」で何も起こらない
+- 確認ボタンでタスクが削除される
+- キャンセルで何も起こらない
 
 ---
 
@@ -409,7 +444,7 @@ npm run dev
 - [ ] `initialData` で既存データを渡せた
 - [ ] `api.task.update` でタスクを更新できた
 - [ ] `api.task.delete` で削除できた
-- [ ] `confirm()` で確認ダイアログを表示できた
+- [ ] `DeleteConfirmDialog` で確認ダイアログを表示できた
 
 ## ⚠️ つまずきポイント
 
@@ -417,15 +452,15 @@ npm run dev
 |--------------|------|---------|
 | 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
 | 日付がずれる | Date変換ミス | `split('T')[0]`で日付部分取得 |
-| 削除が即実行される | confirm未使用 | `if (confirm(...))` を追加 |
-| 前回の値が残る | useEffectリセット漏れ | 依存配列に `initialData` |
+| 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
+| 前回の値が残る | `values` prop未設定 | `useForm` の `values` に `initialData` を渡す |
 
 ## 📝 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
 | initialData | ダイアログの初期値。編集モードの鍵 |
-| confirm() | ブラウザ標準の確認ダイアログ |
+| DeleteConfirmDialog | 削除前の確認ダイアログコンポーネント |
 | null vs undefined | nullは「クリア」、undefinedは「変更なし」 |
 | toISOString() | 日付をISO 8601形式の文字列に変換 |
 
