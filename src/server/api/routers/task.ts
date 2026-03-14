@@ -1,18 +1,20 @@
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { MILLISECONDS_PER_MINUTE, QUERY_LIMITS } from '@/lib/constant/query';
-import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
+import {
+  assertMemberPermission,
+  findTasksWithPermission,
+  findTaskWithPermission,
+} from './_helpers/permission';
 
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です'),
   description: z.string().optional(),
-  status: z
-    .enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED'])
-    .default('TODO'),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
+  status: taskStatusSchema.default('TODO'),
+  priority: taskPrioritySchema.default('MEDIUM'),
   dueDate: z.string().datetime().optional(),
   estimatedHours: z.number().min(0).optional(),
   projectId: z.string().cuid(),
@@ -23,8 +25,8 @@ const taskUpdateSchema = z.object({
   id: z.string().cuid(),
   title: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
-  status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED']).optional(),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
+  status: taskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
   dueDate: z.string().datetime().optional().nullable(),
   completedAt: z.string().datetime().optional().nullable(),
   estimatedHours: z.number().min(0).optional().nullable(),
@@ -48,21 +50,18 @@ export const taskRouter = createTRPCRouter({
       z
         .object({
           projectId: z.string().cuid().optional(),
-          status: z
-            .enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED'])
-            .optional(),
+          status: taskStatusSchema.optional(),
           assigneeId: z.string().cuid().optional(),
-          limit: z.number().min(1).max(QUERY_LIMITS.MAX).default(QUERY_LIMITS.DEFAULT),
+          limit: z.number().min(1).max(1000).default(100),
           offset: z.number().min(0).default(0),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
       const where: Prisma.TaskWhereInput = {};
-      const limit = input?.limit ?? QUERY_LIMITS.DEFAULT;
+      const limit = input?.limit ?? 100;
       const offset = input?.offset ?? 0;
 
-      // ユーザーが参加してるプロジェクトのみを対象
       const userProjects = await prisma.projectMember.findMany({
         where: { userId: ctx.session.userId },
         select: { projectId: true },
@@ -93,9 +92,13 @@ export const taskRouter = createTRPCRouter({
           assignee: {
             select: { id: true, name: true, email: true, avatar: true },
           },
-          // 一覧取得ではコメント全件ではなく件数のみ取得してパフォーマンスを最適化
-          _count: {
-            select: { comments: true },
+          comments: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, avatar: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
           },
         },
         orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
@@ -141,12 +144,7 @@ export const taskRouter = createTRPCRouter({
         });
       }
 
-      if (task.project.members.length === 0) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'このタスクへのアクセス権限がありません',
-        });
-      }
+      assertMemberPermission(task.project.members);
 
       return task;
     }),
@@ -168,27 +166,7 @@ export const taskRouter = createTRPCRouter({
       });
     }
 
-    if (project.members.length === 0) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このプロジェクトへのアクセス権限がありません',
-      });
-    }
-
-    const member = project.members[0];
-    if (!member || !isProjectMemberRole(member.role)) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
-    const memberRole: ProjectMemberRole = member.role;
-    if (!hasPermission(memberRole, 'canEdit')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
+    assertMemberPermission(project.members);
 
     const maxPosition = await prisma.task.findFirst({
       where: { projectId: input.projectId },
@@ -238,47 +216,7 @@ export const taskRouter = createTRPCRouter({
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    const task = await prisma.task.findUnique({
-      where: { id },
-      include: {
-        project: {
-          include: {
-            members: {
-              where: { userId: ctx.session.userId },
-            },
-          },
-        },
-      },
-    });
-
-    if (!task) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'タスクが見つかりません',
-      });
-    }
-
-    if (task.project.members.length === 0) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このタスクへのアクセス権限がありません',
-      });
-    }
-
-    const member = task.project.members[0];
-    if (!member || !isProjectMemberRole(member.role)) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
-    const memberRole: ProjectMemberRole = member.role;
-    if (!hasPermission(memberRole, 'canEdit')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
+    await findTaskWithPermission(id, ctx.session.userId);
 
     const updateData: Prisma.TaskUpdateInput = {};
     if (data.title !== undefined) {
@@ -331,47 +269,7 @@ export const taskRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      const task = await prisma.task.findUnique({
-        where: { id: input.id },
-        include: {
-          project: {
-            include: {
-              members: {
-                where: { userId: ctx.session.userId },
-              },
-            },
-          },
-        },
-      });
-
-      if (!task) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'タスクが見つかりません',
-        });
-      }
-
-      if (task.project.members.length === 0) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'このタスクへのアクセス権限がありません',
-        });
-      }
-
-      const member = task.project.members[0];
-      if (!member || !isProjectMemberRole(member.role)) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
-      const memberRole: ProjectMemberRole = member.role;
-      if (!hasPermission(memberRole, 'canDelete')) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
+      await findTaskWithPermission(input.id, ctx.session.userId);
 
       await prisma.task.delete({
         where: { id: input.id },
@@ -380,47 +278,7 @@ export const taskRouter = createTRPCRouter({
     }),
 
   updateTimer: protectedProcedure.input(taskTimerSchema).mutation(async ({ ctx, input }) => {
-    const task = await prisma.task.findUnique({
-      where: { id: input.id },
-      include: {
-        project: {
-          include: {
-            members: {
-              where: { userId: ctx.session.userId },
-            },
-          },
-        },
-      },
-    });
-
-    if (!task) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'タスクが見つかりません',
-      });
-    }
-
-    if (task.project.members.length === 0) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このタスクへのアクセス権限がありません',
-      });
-    }
-
-    const member = task.project.members[0];
-    if (!member || !isProjectMemberRole(member.role)) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
-    const memberRole: ProjectMemberRole = member.role;
-    if (!hasPermission(memberRole, 'canEdit')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
+    const task = await findTaskWithPermission(input.id, ctx.session.userId);
 
     if (input.action === 'start') {
       if (task.isTimerActive) {
@@ -445,9 +303,7 @@ export const taskRouter = createTRPCRouter({
       });
     }
 
-    const elapsedMinutes = Math.floor(
-      (Date.now() - task.timerStartedAt.getTime()) / MILLISECONDS_PER_MINUTE,
-    );
+    const elapsedMinutes = Math.floor((Date.now() - task.timerStartedAt.getTime()) / 60000);
 
     return await prisma.task.update({
       where: { id: input.id },
@@ -460,47 +316,7 @@ export const taskRouter = createTRPCRouter({
   }),
 
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
-    const task = await prisma.task.findUnique({
-      where: { id: input.id },
-      include: {
-        project: {
-          include: {
-            members: {
-              where: { userId: ctx.session.userId },
-            },
-          },
-        },
-      },
-    });
-
-    if (!task) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'タスクが見つかりません',
-      });
-    }
-
-    if (task.project.members.length === 0) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このタスクへのアクセス権限がありません',
-      });
-    }
-
-    const member = task.project.members[0];
-    if (!member || !isProjectMemberRole(member.role)) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
-    const memberRole: ProjectMemberRole = member.role;
-    if (!hasPermission(memberRole, 'canEdit')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
+    await findTaskWithPermission(input.id, ctx.session.userId);
 
     return await prisma.task.update({
       where: { id: input.id },
@@ -515,46 +331,7 @@ export const taskRouter = createTRPCRouter({
   bulkComplete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const tasks = await prisma.task.findMany({
-        where: { id: { in: input.ids } },
-        include: {
-          project: {
-            include: {
-              members: {
-                where: { userId: ctx.session.userId },
-              },
-            },
-          },
-        },
-      });
-
-      if (tasks.length !== input.ids.length) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: '一部のタスクが見つかりません',
-        });
-      }
-
-      const unauthorizedTask = tasks.find((task) => task.project.members.length === 0);
-      if (unauthorizedTask) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: '一部のタスクへのアクセス権限がありません',
-        });
-      }
-
-      // VIEWERはタスクを完了できない
-      const forbiddenTask = tasks.find((task) => {
-        const m = task.project.members[0];
-        if (!m || !isProjectMemberRole(m.role)) return true;
-        return !hasPermission(m.role, 'canEdit');
-      });
-      if (forbiddenTask) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
+      await findTasksWithPermission(input.ids, ctx.session.userId);
 
       const completedAt = new Date();
       return await prisma.task.updateMany({
@@ -566,46 +343,7 @@ export const taskRouter = createTRPCRouter({
   bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const tasks = await prisma.task.findMany({
-        where: { id: { in: input.ids } },
-        include: {
-          project: {
-            include: {
-              members: {
-                where: { userId: ctx.session.userId },
-              },
-            },
-          },
-        },
-      });
-
-      if (tasks.length !== input.ids.length) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: '一部のタスクが見つかりません',
-        });
-      }
-
-      const unauthorizedTask = tasks.find((task) => task.project.members.length === 0);
-      if (unauthorizedTask) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: '一部のタスクへのアクセス権限がありません',
-        });
-      }
-
-      // MEMBERはタスクを一括削除できない（canDeleteがfalseのロールを弾く）
-      const forbiddenTask = tasks.find((task) => {
-        const m = task.project.members[0];
-        if (!m || !isProjectMemberRole(m.role)) return true;
-        return !hasPermission(m.role, 'canDelete');
-      });
-      if (forbiddenTask) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
+      await findTasksWithPermission(input.ids, ctx.session.userId);
 
       return await prisma.task.deleteMany({
         where: { id: { in: input.ids } },
@@ -616,52 +354,13 @@ export const taskRouter = createTRPCRouter({
     .input(
       z.object({
         ids: z.array(z.string().cuid()).min(1),
-        status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED']),
+        status: taskStatusSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const tasks = await prisma.task.findMany({
-        where: { id: { in: input.ids } },
-        include: {
-          project: {
-            include: {
-              members: {
-                where: { userId: ctx.session.userId },
-              },
-            },
-          },
-        },
-      });
+      await findTasksWithPermission(input.ids, ctx.session.userId);
 
-      if (tasks.length !== input.ids.length) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: '一部のタスクが見つかりません',
-        });
-      }
-
-      const unauthorizedTask = tasks.find((task) => task.project.members.length === 0);
-      if (unauthorizedTask) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: '一部のタスクへのアクセス権限がありません',
-        });
-      }
-
-      // VIEWERはステータス変更できない
-      const forbiddenTask = tasks.find((task) => {
-        const m = task.project.members[0];
-        if (!m || !isProjectMemberRole(m.role)) return true;
-        return !hasPermission(m.role, 'canEdit');
-      });
-      if (forbiddenTask) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
-
-      const data: { status: typeof input.status; completedAt?: Date | null } = {
+      const data: Prisma.TaskUpdateManyMutationInput = {
         status: input.status,
       };
 

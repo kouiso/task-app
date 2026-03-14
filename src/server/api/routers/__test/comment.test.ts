@@ -173,7 +173,7 @@ describe('commentRouter', () => {
           content: 'Non-member comment',
           taskId: task.id,
         }),
-      ).rejects.toThrow('このタスクへのアクセス権限がありません');
+      ).rejects.toThrow('この操作を実行する権限がありません');
     });
 
     it('should require authentication', async () => {

@@ -1,38 +1,29 @@
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { QUERY_LIMITS } from '@/lib/constant/query';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
-/**
- * 検索機能のルーター
- * redmine-cloneの検索機能を完全に再現
- * 条件分岐を最小限に抑えたスマートな実装
- */
-
-// 検索入力スキーマ
 const searchInputSchema = z.object({
   keyword: z.string().optional(),
   projectId: z.string().cuid().optional(),
   status: z
-    .enum(['all', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED'])
+    .union([z.literal('all'), taskStatusSchema])
     .optional()
     .default('all'),
-  priority: z.enum(['all', 'LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional().default('all'),
+  priority: z
+    .union([z.literal('all'), taskPrioritySchema])
+    .optional()
+    .default('all'),
   assignedTo: z.string().cuid().optional(),
   dateFrom: z.string().datetime().optional(),
   dateTo: z.string().datetime().optional(),
 });
 
-// クイック検索入力スキーマ
 const quickSearchInputSchema = z.object({
-  keyword: z.string().min(1, '検索キーワードは必須です'),
+  keyword: z.string().min(1, 'キーワードは必須です'),
 });
 
-/**
- * 検索フィルターを動的に構築するヘルパー関数
- * 条件分岐を減らすためにオブジェクトマッピングを使用
- */
 type FilterConfig = {
   key: keyof Prisma.TaskWhereInput;
   value: unknown;
@@ -40,18 +31,15 @@ type FilterConfig = {
 };
 
 const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInput> => {
-  const result: Record<string, unknown> = {};
+  const result: Partial<Prisma.TaskWhereInput> = {};
   for (const f of filters) {
     if (f.value !== undefined && f.value !== null && f.value !== 'all') {
-      result[f.key] = f.transform ? f.transform(f.value) : f.value;
+      Object.assign(result, { [f.key]: f.transform ? f.transform(f.value) : f.value });
     }
   }
-  return result as Partial<Prisma.TaskWhereInput>;
+  return result;
 };
 
-/**
- * 日付範囲フィルターを構築
- */
 const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
   const dateFilter: Record<string, Date> = {};
   if (dateFrom) {
@@ -64,22 +52,10 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 };
 
 export const searchRouter = createTRPCRouter({
-  /**
-   * メイン検索機能
-   * - キーワード検索（タイトル・説明）
-   * - プロジェクトフィルター
-   * - ステータスフィルター
-   * - 優先度フィルター
-   * - 担当者フィルター
-   * - 期限フィルター（日付範囲）
-   *
-   * 条件分岐を最小限にした宣言的な実装
-   */
   search: protectedProcedure.input(searchInputSchema).query(async ({ input, ctx }) => {
     const userId = ctx.session.userId;
     const keyword = input.keyword?.trim();
 
-    // 基本的なフィルター条件を配列で定義（宣言的）
     const baseFilters: FilterConfig[] = [
       { key: 'projectId', value: input.projectId },
       { key: 'status', value: input.status },
@@ -87,20 +63,14 @@ export const searchRouter = createTRPCRouter({
       { key: 'assigneeId', value: input.assignedTo },
     ];
 
-    // 日付フィルターを構築
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
-    // タスク検索条件を動的に構築
     const taskWhere: Prisma.TaskWhereInput = {
-      // 自分が関わるタスクのみ（作成者または担当者）
       OR: [{ createdById: userId }, { assigneeId: userId }],
-      // 動的フィルター適用
       ...buildDynamicWhere(baseFilters),
-      // 日付範囲フィルター（存在する場合のみ）
       ...(dueDateFilter && { dueDate: dueDateFilter }),
     };
 
-    // キーワード検索（存在する場合のみ、ANDで追加）
     if (keyword) {
       taskWhere.AND = [
         {
@@ -124,10 +94,9 @@ export const searchRouter = createTRPCRouter({
         },
       },
       orderBy: { updatedAt: 'desc' },
-      take: QUERY_LIMITS.DEFAULT,
+      take: 100,
     });
 
-    // プロジェクト検索（キーワードがある場合のみ早期リターンで処理）
     const projects = !keyword
       ? []
       : await prisma.project.findMany({
@@ -153,7 +122,7 @@ export const searchRouter = createTRPCRouter({
             },
           },
           orderBy: { updatedAt: 'desc' },
-          take: QUERY_LIMITS.SEARCH_DEFAULT,
+          take: 20,
         });
 
     return {
@@ -163,26 +132,15 @@ export const searchRouter = createTRPCRouter({
     };
   }),
 
-  /**
-   * クイック検索機能（ナビゲーションバーから）
-   * - 簡易キーワード検索
-   * - 自分が関わるタスク・プロジェクトのみ
-   * - 最大20件のタスク、10件のプロジェクトを返す
-   *
-   * 条件分岐を最小限にした宣言的な実装
-   */
   quickSearch: protectedProcedure.input(quickSearchInputSchema).query(async ({ input, ctx }) => {
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
 
-    // 共通のキーワード検索条件を定義
     const keywordSearchCondition = (fields: string[]) =>
       fields.map((field) => ({ [field]: { contains: keyword, mode: 'insensitive' as const } }));
 
-    // 共通のinclude設定を定義
     const userSelectFields = { id: true, name: true, email: true, avatar: true };
 
-    // タスク・プロジェクト検索を並行実行（Promise.all）
     const [tasks, projects] = await Promise.all([
       prisma.task.findMany({
         where: {
@@ -197,7 +155,7 @@ export const searchRouter = createTRPCRouter({
           assignee: { select: userSelectFields },
         },
         orderBy: { updatedAt: 'desc' },
-        take: QUERY_LIMITS.SEARCH_DEFAULT,
+        take: 20,
       }),
       prisma.project.findMany({
         where: {
@@ -211,7 +169,7 @@ export const searchRouter = createTRPCRouter({
           _count: { select: { tasks: true } },
         },
         orderBy: { updatedAt: 'desc' },
-        take: QUERY_LIMITS.SEARCH_ASSIGNEES,
+        take: 10,
       }),
     ]);
 
@@ -222,10 +180,6 @@ export const searchRouter = createTRPCRouter({
     };
   }),
 
-  /**
-   * ユーザーが関わるプロジェクト一覧を取得
-   * （検索フォームのプロジェクトフィルター用）
-   */
   getUserProjects: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.userId;
 
@@ -248,15 +202,9 @@ export const searchRouter = createTRPCRouter({
     return projects;
   }),
 
-  /**
-   * プロジェクトメンバー一覧を取得
-   * （検索フォームの担当者フィルター用）
-   */
   getProjectMembers: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.userId;
 
-    // ユーザーが関わるプロジェクトのメンバーを取得
-    // distinct: ['userId'] を使用して、データベースレベルで重複を排除
     const projectMembers = await prisma.projectMember.findMany({
       where: {
         project: {
@@ -280,7 +228,6 @@ export const searchRouter = createTRPCRouter({
       },
     });
 
-    // データベースのdistinctで既に重複除去されているため、そのままユーザー情報を返す
     return projectMembers.map((member) => member.user);
   }),
 });
