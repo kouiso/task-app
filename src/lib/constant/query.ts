@@ -1,9 +1,6 @@
-export const QUERY_LIMITS = {
-  DEFAULT: 50,
-  MAX: 200,
-  SEARCH_DEFAULT: 20,
-  SEARCH_ASSIGNEES: 10,
-} as const;
+import { TaskPriority, TaskStatus } from '@prisma/client';
+import { z } from 'zod';
 
-// タイマー計算でミリ秒→分変換に使用
-export const MILLISECONDS_PER_MINUTE = 60000;
+export const taskStatusSchema = z.nativeEnum(TaskStatus);
+
+export const taskPrioritySchema = z.nativeEnum(TaskPriority);

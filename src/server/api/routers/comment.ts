@@ -1,8 +1,8 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { assertMemberPermission } from './_helpers/permission';
 
 const commentCreateSchema = z.object({
   content: z.string().trim().min(1, 'コメント内容は必須です'),
@@ -36,12 +36,7 @@ export const commentRouter = createTRPCRouter({
         });
       }
 
-      if (task.project.members.length === 0) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'このタスクへのアクセス権限がありません',
-        });
-      }
+      assertMemberPermission(task.project.members);
 
       return await prisma.comment.findMany({
         where: { taskId: input.taskId },
@@ -73,28 +68,7 @@ export const commentRouter = createTRPCRouter({
       });
     }
 
-    if (task.project.members.length === 0) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このタスクへのアクセス権限がありません',
-      });
-    }
-
-    const member = task.project.members[0];
-    if (!member || !isProjectMemberRole(member.role)) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
-    const memberRole: ProjectMemberRole = member.role;
-    // VIEWERはコメント投稿不可（canEditで一括判定）
-    if (!hasPermission(memberRole, 'canEdit')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
+    assertMemberPermission(task.project.members);
 
     return await prisma.comment.create({
       data: {
@@ -115,7 +89,18 @@ export const commentRouter = createTRPCRouter({
 
     const comment = await prisma.comment.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        task: {
+          include: {
+            project: {
+              include: {
+                members: { where: { userId: ctx.session.userId } },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!comment) {
@@ -124,6 +109,8 @@ export const commentRouter = createTRPCRouter({
         message: 'コメントが見つかりません',
       });
     }
+
+    assertMemberPermission(comment.task.project.members);
 
     if (comment.userId !== ctx.session.userId) {
       throw new TRPCError({
@@ -148,7 +135,18 @@ export const commentRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const comment = await prisma.comment.findUnique({
         where: { id: input.id },
-        select: { userId: true },
+        select: {
+          userId: true,
+          task: {
+            include: {
+              project: {
+                include: {
+                  members: { where: { userId: ctx.session.userId } },
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!comment) {
@@ -157,6 +155,8 @@ export const commentRouter = createTRPCRouter({
           message: 'コメントが見つかりません',
         });
       }
+
+      assertMemberPermission(comment.task.project.members);
 
       if (comment.userId !== ctx.session.userId) {
         throw new TRPCError({

@@ -301,7 +301,7 @@ describe('projectRouter', () => {
           userId: newUser.id,
           role: 'MEMBER',
         }),
-      ).rejects.toThrow('プロジェクトのオーナーまたは管理者のみがメンバーを追加できます');
+      ).rejects.toThrow('この操作を実行する権限がありません');
     });
 
     it('should reject VIEWER from adding members', async () => {
@@ -322,7 +322,7 @@ describe('projectRouter', () => {
           userId: newUser.id,
           role: 'MEMBER',
         }),
-      ).rejects.toThrow('プロジェクトのオーナーまたは管理者のみがメンバーを追加できます');
+      ).rejects.toThrow('この操作を実行する権限がありません');
     });
 
     it('should require authentication', async () => {
@@ -401,7 +401,7 @@ describe('projectRouter', () => {
       expect(result.isArchived).toBe(true);
     });
 
-    it('should allow ADMIN to archive project', async () => {
+    it('should reject ADMIN from archiving project', async () => {
       const owner = await createTestUser();
       const admin = await createTestUser({ email: 'admin@example.com' });
       const project = await createTestProject(owner.id);
@@ -412,9 +412,9 @@ describe('projectRouter', () => {
 
       const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
-      const result = await caller.project.archive({ id: project.id });
-
-      expect(result.isArchived).toBe(true);
+      await expect(caller.project.archive({ id: project.id })).rejects.toThrow(
+        'この操作を実行する権限がありません',
+      );
     });
 
     it('should reject VIEWER from archiving project', async () => {
@@ -429,7 +429,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(viewer.id, viewer.email, viewer.role);
 
       await expect(caller.project.archive({ id: project.id })).rejects.toThrow(
-        'プロジェクトのオーナーまたは管理者のみがアーカイブできます',
+        'この操作を実行する権限がありません',
       );
     });
 
@@ -466,7 +466,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(viewer.id, viewer.email, viewer.role);
 
       await expect(caller.project.unarchive({ id: project.id })).rejects.toThrow(
-        'プロジェクトのオーナーまたは管理者のみがアーカイブを解除できます',
+        'この操作を実行する権限がありません',
       );
     });
 

@@ -74,9 +74,8 @@ export function isProjectMemberRole(value: unknown): value is ProjectMemberRole 
   return typeof value === 'string' && value in PROJECT_MEMBER_ROLE;
 }
 
-export function hasPermission(
-  role: ProjectMemberRole,
-  permission: keyof (typeof PROJECT_MEMBER_ROLE_PERMISSIONS)[ProjectMemberRole],
-): boolean {
+export type PermissionKey = keyof (typeof PROJECT_MEMBER_ROLE_PERMISSIONS)[ProjectMemberRole];
+
+export function hasPermission(role: ProjectMemberRole, permission: PermissionKey): boolean {
   return PROJECT_MEMBER_ROLE_PERMISSIONS[role][permission];
 }
