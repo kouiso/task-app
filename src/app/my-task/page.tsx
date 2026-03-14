@@ -1,5 +1,6 @@
 'use client';
 
+import type { TaskPriority } from '@prisma/client';
 import { useMemo, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
@@ -14,16 +15,69 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
-import { isTaskStatus, type TaskStatus } from '@/lib/constant/status';
+import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { taskToFormData } from '@/lib/task-form';
 import { api } from '@/trpc/react';
 
+// 自分のタスクページでは完了済み以外のアクティブなステータスのみ表示
+const ACTIVE_STATUSES: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
   { label: 'すべて', value: 'all' },
-  { label: '未対応', value: 'TODO' },
-  { label: '進行中', value: 'IN_PROGRESS' },
-  { label: 'レビュー中', value: 'IN_REVIEW' },
-  { label: '完了', value: 'DONE' },
+  ...ACTIVE_STATUSES.map((status) => ({
+    label: TASK_STATUS_LABELS[status],
+    value: status,
+  })),
 ];
+
+interface TaskGroupSectionProps {
+  title: string;
+  titleClassName?: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: Date | null;
+    assignee: { name: string | null; email: string; avatar: string | null } | null;
+  }>;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+const TaskGroupSection = ({
+  title,
+  titleClassName,
+  tasks,
+  onEdit,
+  onDelete,
+}: TaskGroupSectionProps) => {
+  if (tasks.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <h2 className={`text-xl font-semibold flex items-center gap-2 ${titleClassName ?? ''}`}>
+        {title} ({tasks.length})
+      </h2>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            id={task.id}
+            title={task.title}
+            description={task.description}
+            status={task.status}
+            priority={task.priority}
+            dueDate={task.dueDate}
+            assignee={task.assignee}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function MyTasksPage() {
   const [activeTab, setActiveTab] = useState<TaskStatus | 'all'>('all');
@@ -63,19 +117,7 @@ export default function MyTasksPage() {
   const handleEdit = (taskId: string) => {
     const task = tasks?.find((t) => t.id === taskId);
     if (task) {
-      const dueDate = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined;
-
-      setEditingTask({
-        id: task.id,
-        title: task.title,
-        description: task.description || '',
-        status: task.status,
-        priority: task.priority,
-        projectId: task.projectId,
-        ...(dueDate && { dueDate }),
-        ...(task.estimatedHours && { estimatedHours: task.estimatedHours }),
-        ...(task.assigneeId && { assigneeId: task.assigneeId }),
-      });
+      setEditingTask(taskToFormData(task));
       setDialogOpen(true);
     }
   };
@@ -170,101 +212,35 @@ export default function MyTasksPage() {
           </div>
         </div>
 
-        {groupedTasks.overdue.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-destructive flex items-center gap-2">
-              期限切れ ({groupedTasks.overdue.length})
-            </h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {groupedTasks.overdue.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  description={task.description}
-                  status={task.status}
-                  priority={task.priority}
-                  dueDate={task.dueDate}
-                  assignee={task.assignee}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <TaskGroupSection
+          title="期限切れ"
+          titleClassName="text-destructive"
+          tasks={groupedTasks.overdue ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
-        {groupedTasks.today.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-orange-500 flex items-center gap-2">
-              今日が期限 ({groupedTasks.today.length})
-            </h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {groupedTasks.today.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  description={task.description}
-                  status={task.status}
-                  priority={task.priority}
-                  dueDate={task.dueDate}
-                  assignee={task.assignee}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <TaskGroupSection
+          title="今日が期限"
+          titleClassName="text-orange-500"
+          tasks={groupedTasks.today ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
-        {groupedTasks.upcoming.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              今後の予定 ({groupedTasks.upcoming.length})
-            </h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {groupedTasks.upcoming.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  description={task.description}
-                  status={task.status}
-                  priority={task.priority}
-                  dueDate={task.dueDate}
-                  assignee={task.assignee}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <TaskGroupSection
+          title="今後の予定"
+          tasks={groupedTasks.upcoming ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
-        {groupedTasks.noDueDate.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              期限なし ({groupedTasks.noDueDate.length})
-            </h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {groupedTasks.noDueDate.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  description={task.description}
-                  status={task.status}
-                  priority={task.priority}
-                  dueDate={task.dueDate}
-                  assignee={task.assignee}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <TaskGroupSection
+          title="期限なし"
+          tasks={groupedTasks.noDueDate ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
         {tasks && tasks.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">

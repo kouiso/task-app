@@ -9,6 +9,7 @@ import {
   findTasksWithPermission,
   findTaskWithPermission,
 } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
 
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です'),
@@ -87,15 +88,15 @@ export const taskRouter = createTRPCRouter({
         include: {
           project: true,
           createdBy: {
-            select: { id: true, name: true, email: true, avatar: true },
+            select: USER_SELECT,
           },
           assignee: {
-            select: { id: true, name: true, email: true, avatar: true },
+            select: USER_SELECT,
           },
           comments: {
             include: {
               user: {
-                select: { id: true, name: true, email: true, avatar: true },
+                select: USER_SELECT,
               },
             },
             orderBy: { createdAt: 'desc' },
@@ -121,15 +122,15 @@ export const taskRouter = createTRPCRouter({
             },
           },
           createdBy: {
-            select: { id: true, name: true, email: true, avatar: true },
+            select: USER_SELECT,
           },
           assignee: {
-            select: { id: true, name: true, email: true, avatar: true },
+            select: USER_SELECT,
           },
           comments: {
             include: {
               user: {
-                select: { id: true, name: true, email: true, avatar: true },
+                select: USER_SELECT,
               },
             },
             orderBy: { createdAt: 'desc' },
@@ -204,10 +205,10 @@ export const taskRouter = createTRPCRouter({
       include: {
         project: true,
         createdBy: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
         assignee: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
       },
     });
@@ -257,10 +258,10 @@ export const taskRouter = createTRPCRouter({
       include: {
         project: true,
         createdBy: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
         assignee: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
       },
     });

@@ -15,41 +15,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/component/ui/table';
-import { TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
-import { TASK_STATUS_COLORS } from '@/lib/constant/status';
+import { isTaskPriority, TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
+import { isTaskStatus, TASK_STATUS_COLORS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 export default function ReportPage() {
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
 
-  const statusData = useMemo(
-    () =>
-      Object.entries(
-        tasks?.reduce(
-          (acc, task) => {
-            acc[task.status] = (acc[task.status] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ) || {},
-      ).map(([name, value]) => ({ name, value })),
-    [tasks],
-  );
+  const statusData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const task of tasks ?? []) {
+      counts[task.status] = (counts[task.status] || 0) + 1;
+    }
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [tasks]);
 
-  const priorityData = useMemo(
-    () =>
-      Object.entries(
-        tasks?.reduce(
-          (acc, task) => {
-            acc[task.priority] = (acc[task.priority] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ) || {},
-      ).map(([name, value]) => ({ name, value })),
-    [tasks],
-  );
+  const priorityData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const task of tasks ?? []) {
+      counts[task.priority] = (counts[task.priority] || 0) + 1;
+    }
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [tasks]);
 
   const totalTimeSpent = useMemo(
     () => tasks?.reduce((acc, task) => acc + (task.timeSpentMinutes ?? 0), 0) || 0,
@@ -70,6 +58,7 @@ export default function ReportPage() {
           projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
 
         return {
+          id: project.id,
           name: project.name,
           totalTasks: projectTasks.length,
           completedTasks: completedTasks.length,
@@ -111,7 +100,6 @@ export default function ReportPage() {
           </Link>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
@@ -142,7 +130,6 @@ export default function ReportPage() {
           </Card>
         </div>
 
-        {/* Charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -165,8 +152,7 @@ export default function ReportPage() {
                         <Cell
                           key={entry.name}
                           fill={
-                            TASK_STATUS_COLORS[entry.name as keyof typeof TASK_STATUS_COLORS] ??
-                            '#9e9e9e'
+                            isTaskStatus(entry.name) ? TASK_STATUS_COLORS[entry.name] : '#9e9e9e'
                           }
                         />
                       ))}
@@ -200,8 +186,9 @@ export default function ReportPage() {
                         <Cell
                           key={entry.name}
                           fill={
-                            TASK_PRIORITY_COLORS[entry.name as keyof typeof TASK_PRIORITY_COLORS] ??
-                            '#9e9e9e'
+                            isTaskPriority(entry.name)
+                              ? TASK_PRIORITY_COLORS[entry.name]
+                              : '#9e9e9e'
                           }
                         />
                       ))}
@@ -215,7 +202,6 @@ export default function ReportPage() {
           </Card>
         </div>
 
-        {/* Project Statistics Table */}
         <Card>
           <CardHeader>
             <CardTitle>プロジェクト統計</CardTitle>
@@ -233,7 +219,7 @@ export default function ReportPage() {
               </TableHeader>
               <TableBody>
                 {projectStats?.map((stat) => (
-                  <TableRow key={stat.name}>
+                  <TableRow key={stat.id}>
                     <TableCell className="font-medium">{stat.name}</TableCell>
                     <TableCell className="text-right">{stat.totalTasks}</TableCell>
                     <TableCell className="text-right">{stat.completedTasks}</TableCell>

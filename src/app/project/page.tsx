@@ -1,13 +1,12 @@
 'use client';
 
-import { Archive, ArchiveRestore, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
+import { ProjectDetailDialog } from '@/component/project/project-detail-dialog';
 import { ProjectDialog, type ProjectFormData } from '@/component/project/project-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
-import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
 import {
@@ -28,13 +27,11 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
-import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import {
   isProjectMemberRole,
   PROJECT_MEMBER_ROLE_LABELS,
   type ProjectMemberRole,
 } from '@/lib/constant/roles';
-import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function ProjectPageContent() {
@@ -276,120 +273,13 @@ function ProjectPageContent() {
           initialData={editingProject}
         />
 
-        <Dialog open={detailOpen} onOpenChange={(isOpen) => !isOpen && handleDetailClose()}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <div
-                  className="h-3 w-3 rounded-full"
-                  style={{ backgroundColor: projectDetail?.color }}
-                />
-                {projectDetail?.name}
-              </DialogTitle>
-              <DialogDescription>{projectDetail?.description || '説明なし'}</DialogDescription>
-            </DialogHeader>
-
-            {projectDetail && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">
-                      メンバー ({projectDetail.members?.length || 0})
-                    </h3>
-                    <Button variant="outline" size="sm" onClick={() => setMemberDialogOpen(true)}>
-                      <UserPlus className="mr-2 h-4 w-4" /> メンバー追加
-                    </Button>
-                  </div>
-                  <div className="grid gap-2">
-                    {projectDetail.members?.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center justify-between p-2 rounded-lg border bg-card"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={member.user?.avatar || ''} />
-                            <AvatarFallback>
-                              {(member.user?.name || member.user?.email || '?')[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">
-                              {member.user?.name || member.user?.email || '不明'}
-                            </p>
-                            <Badge variant="outline">
-                              {isProjectMemberRole(member.role)
-                                ? PROJECT_MEMBER_ROLE_LABELS[member.role]
-                                : member.role}
-                            </Badge>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveMember(member.userId)}
-                          disabled={member.role === 'OWNER'}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    タスク ({projectDetail.tasks?.length || 0})
-                  </h3>
-                  <div className="grid gap-2">
-                    {projectDetail.tasks?.map((task) => (
-                      <div
-                        key={task.id}
-                        className="flex flex-col gap-1 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                      >
-                        <p className="font-medium">{task.title}</p>
-                        <div className="flex gap-2">
-                          <Badge variant="secondary">
-                            {isTaskStatus(task.status)
-                              ? TASK_STATUS_LABELS[task.status]
-                              : task.status}
-                          </Badge>
-                          <Badge variant="outline">
-                            {isTaskPriority(task.priority)
-                              ? TASK_PRIORITY_LABELS[task.priority]
-                              : task.priority}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <div className="flex-1 flex justify-start">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    projectDetail && handleArchive(projectDetail.id, projectDetail.isArchived)
-                  }
-                >
-                  {projectDetail?.isArchived ? (
-                    <>
-                      <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
-                    </>
-                  ) : (
-                    <>
-                      <Archive className="mr-2 h-4 w-4" /> アーカイブ
-                    </>
-                  )}
-                </Button>
-              </div>
-              <Button onClick={handleDetailClose}>閉じる</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ProjectDetailDialog
+          projectDetail={detailOpen ? projectDetail : null}
+          onClose={handleDetailClose}
+          onAddMemberClick={() => setMemberDialogOpen(true)}
+          onRemoveMember={handleRemoveMember}
+          onArchive={handleArchive}
+        />
 
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
@@ -425,9 +315,13 @@ function ProjectPageContent() {
                     <SelectValue placeholder="ロールを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MEMBER">メンバー</SelectItem>
-                    <SelectItem value="ADMIN">管理者</SelectItem>
-                    <SelectItem value="VIEWER">閲覧者</SelectItem>
+                    {Object.entries(PROJECT_MEMBER_ROLE_LABELS)
+                      .filter(([value]) => value !== 'OWNER')
+                      .map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

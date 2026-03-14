@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Checkbox } from '@/component/ui/checkbox';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Select,
   SelectContent,
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
-import { isUserRole, type UserRole } from '@/lib/constant/roles';
+import { isUserRole, USER_ROLE_LABELS, type UserRole } from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 
 export default function UserEditPage() {
@@ -83,13 +84,7 @@ export default function UserEditPage() {
   };
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto max-w-md mt-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   if (!user) {
@@ -197,8 +192,11 @@ export default function UserEditPage() {
                     <SelectValue placeholder="ロールを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USER">ユーザー</SelectItem>
-                    <SelectItem value="ADMIN">管理者</SelectItem>
+                    {Object.entries(USER_ROLE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
 
 const commentCreateSchema = z.object({
   content: z.string().trim().min(1, 'コメント内容は必須です'),
@@ -14,35 +15,84 @@ const commentUpdateSchema = z.object({
   content: z.string().trim().min(1, 'コメント内容は必須です'),
 });
 
+/**
+ * getByTaskId/createの両方で同一のタスク存在確認+メンバー権限検証が必要なため集約。
+ * findTaskWithPermission（_helpers）はtask routerに特化しているためcomment独自で定義。
+ */
+const findTaskAndAssertMembership = async (taskId: string, userId: string) => {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      project: {
+        include: {
+          members: { where: { userId } },
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'タスクが見つかりません',
+    });
+  }
+
+  assertMemberPermission(task.project.members);
+
+  return task;
+};
+
+/**
+ * update/deleteの両方で同一の「コメント取得→メンバー確認→作者確認」パターンが必要なため集約。
+ */
+const findCommentAndAssertOwnership = async (commentId: string, userId: string) => {
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: {
+      userId: true,
+      task: {
+        include: {
+          project: {
+            include: {
+              members: { where: { userId } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!comment) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'コメントが見つかりません',
+    });
+  }
+
+  assertMemberPermission(comment.task.project.members);
+
+  if (comment.userId !== userId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '自分のコメントのみ編集・削除できます',
+    });
+  }
+
+  return comment;
+};
+
 export const commentRouter = createTRPCRouter({
   getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
-      const task = await prisma.task.findUnique({
-        where: { id: input.taskId },
-        include: {
-          project: {
-            include: {
-              members: { where: { userId: ctx.session.userId } },
-            },
-          },
-        },
-      });
-
-      if (!task) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'タスクが見つかりません',
-        });
-      }
-
-      assertMemberPermission(task.project.members);
+      await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
 
       return await prisma.comment.findMany({
         where: { taskId: input.taskId },
         include: {
           user: {
-            select: { id: true, name: true, email: true, avatar: true },
+            select: USER_SELECT,
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -50,25 +100,7 @@ export const commentRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
-    const task = await prisma.task.findUnique({
-      where: { id: input.taskId },
-      include: {
-        project: {
-          include: {
-            members: { where: { userId: ctx.session.userId } },
-          },
-        },
-      },
-    });
-
-    if (!task) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'タスクが見つかりません',
-      });
-    }
-
-    assertMemberPermission(task.project.members);
+    await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
 
     return await prisma.comment.create({
       data: {
@@ -78,7 +110,7 @@ export const commentRouter = createTRPCRouter({
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
       },
     });
@@ -86,45 +118,14 @@ export const commentRouter = createTRPCRouter({
 
   update: protectedProcedure.input(commentUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
-
-    const comment = await prisma.comment.findUnique({
-      where: { id },
-      select: {
-        userId: true,
-        task: {
-          include: {
-            project: {
-              include: {
-                members: { where: { userId: ctx.session.userId } },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!comment) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'コメントが見つかりません',
-      });
-    }
-
-    assertMemberPermission(comment.task.project.members);
-
-    if (comment.userId !== ctx.session.userId) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: '自分のコメントのみ編集できます',
-      });
-    }
+    await findCommentAndAssertOwnership(id, ctx.session.userId);
 
     return await prisma.comment.update({
       where: { id },
       data,
       include: {
         user: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
       },
     });
@@ -133,37 +134,7 @@ export const commentRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      const comment = await prisma.comment.findUnique({
-        where: { id: input.id },
-        select: {
-          userId: true,
-          task: {
-            include: {
-              project: {
-                include: {
-                  members: { where: { userId: ctx.session.userId } },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!comment) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'コメントが見つかりません',
-        });
-      }
-
-      assertMemberPermission(comment.task.project.members);
-
-      if (comment.userId !== ctx.session.userId) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: '自分のコメントのみ削除できます',
-        });
-      }
+      await findCommentAndAssertOwnership(input.id, ctx.session.userId);
 
       await prisma.comment.delete({
         where: { id: input.id },

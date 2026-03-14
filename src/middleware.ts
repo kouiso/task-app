@@ -9,7 +9,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 const COOKIE_NAME = 'session';
 
-/** 認証不要の公開パス */
 const PUBLIC_PATHS = ['/login', '/register'];
 
 function isPublicPath(pathname: string): boolean {
@@ -27,7 +26,6 @@ function getJwtSecret(): Uint8Array {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 公開パスはスキップ
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
@@ -41,14 +39,12 @@ export async function middleware(request: NextRequest) {
 
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
-  // トークンがない場合はログインにリダイレクト
   if (!token) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // JWT検証
   try {
     await jwtVerify(token, getJwtSecret(), {
       algorithms: ['HS256'],

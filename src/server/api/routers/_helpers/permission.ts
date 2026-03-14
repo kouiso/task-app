@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { hasPermission, isProjectMemberRole, type PermissionKey } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 
+// Prismaの生成型（$Enums.ProjectMemberRole）と自前定義型の両方を受け入れるためstringで統一
 export const assertMemberPermission = (
   members: { role: string }[],
   permission?: PermissionKey,

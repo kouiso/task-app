@@ -20,7 +20,8 @@ export default function useLocalStorage<T>(
         return item ? deserializer(item) : initialValue;
       }
       return initialValue;
-    } catch (_error) {
+    } catch (error) {
+      console.error(`localStorage読み込みエラー (key: ${key}):`, error);
       return initialValue;
     }
   });
@@ -31,7 +32,7 @@ export default function useLocalStorage<T>(
         window.localStorage.setItem(key, serializer(state));
       }
     } catch (error) {
-      console.error(error);
+      console.error(`localStorage書き込みエラー (key: ${key}):`, error);
     }
   }, [key, state, serializer]);
 
@@ -45,7 +46,7 @@ export default function useLocalStorage<T>(
           window.localStorage.setItem(key, serializer(newState));
         }
       } catch (error) {
-        console.error(error);
+        console.error(`localStorage書き込みエラー (key: ${key}):`, error);
       }
       return newState;
     });

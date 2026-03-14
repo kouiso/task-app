@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { cn } from '@/lib/utils';
@@ -71,35 +72,6 @@ export function TaskCard({
   const handleOpenTimeLog = (e: React.MouseEvent) => {
     e.stopPropagation();
     setTimeLogDialogOpen(true);
-  };
-
-  const getStatusBadgeVariant = (status: TaskStatus) => {
-    switch (status) {
-      case 'DONE':
-        return 'secondary'; // Using secondary for DONE/Success
-      case 'IN_PROGRESS':
-        return 'default'; // Primary for In Progress
-      case 'IN_REVIEW':
-        return 'outline'; // Warning equivalent
-      case 'CANCELLED':
-      case 'BLOCKED':
-        return 'destructive'; // Error equivalent
-      default:
-        return 'outline';
-    }
-  };
-
-  const getPriorityBadgeVariant = (priority: TaskPriority) => {
-    switch (priority) {
-      case 'URGENT':
-        return 'destructive';
-      case 'HIGH':
-        return 'default'; // Warning equivalent often mapped to default or specific class
-      case 'MEDIUM':
-        return 'secondary'; // Primary equivalent
-      default:
-        return 'outline';
-    }
   };
 
   return (

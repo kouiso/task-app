@@ -20,8 +20,8 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
-import { isTaskPriority, type TaskPriority } from '@/lib/constant/priority';
-import { isTaskStatus, type TaskStatus } from '@/lib/constant/status';
+import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
+import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function SearchPageContent() {
@@ -236,12 +236,11 @@ function SearchPageContent() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">すべて</SelectItem>
-                      <SelectItem value="TODO">📋 未対応</SelectItem>
-                      <SelectItem value="IN_PROGRESS">🔄 進行中</SelectItem>
-                      <SelectItem value="IN_REVIEW">👀 レビュー中</SelectItem>
-                      <SelectItem value="DONE">✅ 完了</SelectItem>
-                      <SelectItem value="CANCELLED">❌ キャンセル</SelectItem>
-                      <SelectItem value="BLOCKED">🚫 ブロック</SelectItem>
+                      {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -263,10 +262,11 @@ function SearchPageContent() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">すべて</SelectItem>
-                      <SelectItem value="URGENT">🔴 緊急</SelectItem>
-                      <SelectItem value="HIGH">🟠 高い</SelectItem>
-                      <SelectItem value="MEDIUM">🟡 普通</SelectItem>
-                      <SelectItem value="LOW">🟢 低い</SelectItem>
+                      {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
