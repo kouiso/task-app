@@ -100,7 +100,15 @@ export const userRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // 本人またはADMINのみ他ユーザーの詳細情報にアクセス可能
+      if (ctx.session.userId !== input.id && ctx.session.role !== 'ADMIN') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を行う権限がありません',
+        });
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: input.id },
         select: {

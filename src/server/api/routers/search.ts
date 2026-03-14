@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_SELECT } from './_helpers/select';
 
 const searchInputSchema = z.object({
   keyword: z.string().optional(),
@@ -26,27 +27,30 @@ const quickSearchInputSchema = z.object({
 
 type FilterConfig = {
   key: keyof Prisma.TaskWhereInput;
-  value: unknown;
-  transform?: (value: unknown) => unknown;
+  value: string | undefined;
+  transform?: (value: string) => Prisma.TaskWhereInput[keyof Prisma.TaskWhereInput];
 };
 
 const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInput> => {
   const result: Partial<Prisma.TaskWhereInput> = {};
   for (const f of filters) {
-    if (f.value !== undefined && f.value !== null && f.value !== 'all') {
+    if (f.value !== undefined && f.value !== 'all') {
       Object.assign(result, { [f.key]: f.transform ? f.transform(f.value) : f.value });
     }
   }
   return result;
 };
 
+const buildKeywordFilter = (keyword: string, fields: string[]) =>
+  fields.map((field) => ({ [field]: { contains: keyword, mode: 'insensitive' as const } }));
+
 const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
-  const dateFilter: Record<string, Date> = {};
+  const dateFilter: Partial<{ gte: Date; lte: Date }> = {};
   if (dateFrom) {
-    dateFilter['gte'] = new Date(dateFrom);
+    dateFilter.gte = new Date(dateFrom);
   }
   if (dateTo) {
-    dateFilter['lte'] = new Date(dateTo);
+    dateFilter.lte = new Date(dateTo);
   }
   return Object.keys(dateFilter).length > 0 ? dateFilter : undefined;
 };
@@ -65,8 +69,15 @@ export const searchRouter = createTRPCRouter({
 
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
+    // task.getAllと同様にメンバーシップで絞り込み、除外済みプロジェクトのタスクリークを防止
+    const userProjects = await prisma.projectMember.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    const projectIds = userProjects.map((p) => p.projectId);
+
     const taskWhere: Prisma.TaskWhereInput = {
-      OR: [{ createdById: userId }, { assigneeId: userId }],
+      projectId: { in: projectIds },
       ...buildDynamicWhere(baseFilters),
       ...(dueDateFilter && { dueDate: dueDateFilter }),
     };
@@ -74,10 +85,7 @@ export const searchRouter = createTRPCRouter({
     if (keyword) {
       taskWhere.AND = [
         {
-          OR: [
-            { title: { contains: keyword, mode: 'insensitive' as const } },
-            { description: { contains: keyword, mode: 'insensitive' as const } },
-          ],
+          OR: buildKeywordFilter(keyword, ['title', 'description']),
         },
       ];
     }
@@ -87,10 +95,10 @@ export const searchRouter = createTRPCRouter({
       include: {
         project: true,
         createdBy: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
         assignee: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -104,16 +112,13 @@ export const searchRouter = createTRPCRouter({
             members: {
               some: { userId },
             },
-            OR: [
-              { name: { contains: keyword, mode: 'insensitive' } },
-              { description: { contains: keyword, mode: 'insensitive' } },
-            ],
+            OR: buildKeywordFilter(keyword, ['name', 'description']),
           },
           include: {
             members: {
               include: {
                 user: {
-                  select: { id: true, name: true, email: true, avatar: true },
+                  select: USER_SELECT,
                 },
               },
             },
@@ -136,23 +141,18 @@ export const searchRouter = createTRPCRouter({
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
 
-    const keywordSearchCondition = (fields: string[]) =>
-      fields.map((field) => ({ [field]: { contains: keyword, mode: 'insensitive' as const } }));
-
-    const userSelectFields = { id: true, name: true, email: true, avatar: true };
-
     const [tasks, projects] = await Promise.all([
       prisma.task.findMany({
         where: {
           OR: [{ createdById: userId }, { assigneeId: userId }],
           AND: {
-            OR: keywordSearchCondition(['title', 'description']),
+            OR: buildKeywordFilter(keyword, ['title', 'description']),
           },
         },
         include: {
           project: true,
-          createdBy: { select: userSelectFields },
-          assignee: { select: userSelectFields },
+          createdBy: { select: USER_SELECT },
+          assignee: { select: USER_SELECT },
         },
         orderBy: { updatedAt: 'desc' },
         take: 20,
@@ -160,11 +160,11 @@ export const searchRouter = createTRPCRouter({
       prisma.project.findMany({
         where: {
           members: { some: { userId } },
-          OR: keywordSearchCondition(['name', 'description']),
+          OR: buildKeywordFilter(keyword, ['name', 'description']),
         },
         include: {
           members: {
-            include: { user: { select: userSelectFields } },
+            include: { user: { select: USER_SELECT } },
           },
           _count: { select: { tasks: true } },
         },
@@ -217,7 +217,7 @@ export const searchRouter = createTRPCRouter({
       },
       select: {
         user: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
       },
       distinct: ['userId'],

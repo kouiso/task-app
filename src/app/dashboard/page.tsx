@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Badge } from '@/component/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
-import { Skeleton } from '@/component/ui/skeleton';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
@@ -16,16 +17,7 @@ export default function DashboardPage() {
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
 
   if (projectsLoading || tasksLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="flex flex-col items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <Skeleton className="h-4 w-[200px]" />
-          </div>
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   const totalProjects = projects?.length || 0;
@@ -62,34 +54,11 @@ export default function DashboardPage() {
 
   const recentTasks = tasks?.slice(0, 5) || [];
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'DONE':
-        return 'default';
-      case 'IN_PROGRESS':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
-
-  const getPriorityBadgeVariant = (priority: string) => {
-    switch (priority) {
-      case 'URGENT':
-        return 'destructive';
-      case 'HIGH':
-        return 'default';
-      default:
-        return 'outline';
-    }
-  };
-
   return (
     <AppLayout>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold tracking-tight">ダッシュボード</h1>
 
-        {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => {
             const Icon = stat.icon;
@@ -109,9 +78,7 @@ export default function DashboardPage() {
           })}
         </div>
 
-        {/* Recent Projects and Tasks */}
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Recent Projects */}
           <Card>
             <CardHeader>
               <CardTitle>最近のプロジェクト</CardTitle>
@@ -151,7 +118,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Tasks */}
           <Card>
             <CardHeader>
               <CardTitle>最近のタスク</CardTitle>

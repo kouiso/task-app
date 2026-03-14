@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { Separator } from '@/component/ui/separator';
 import {
   Table,
@@ -20,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/component/ui/table';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 export default function UserDetailPage() {
@@ -42,13 +45,7 @@ export default function UserDetailPage() {
   }, [error]);
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto max-w-6xl mt-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   if (!user) {
@@ -81,7 +78,6 @@ export default function UserDetailPage() {
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
-          {/* User Info Card */}
           <div className="md:col-span-4 space-y-6">
             <Card>
               <CardContent className="pt-6">
@@ -171,9 +167,7 @@ export default function UserDetailPage() {
             </Card>
           </div>
 
-          {/* Projects and Tasks */}
           <div className="md:col-span-8 space-y-6">
-            {/* Projects */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">参加プロジェクト</CardTitle>
@@ -200,7 +194,6 @@ export default function UserDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Tasks */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">担当中のタスク</CardTitle>
@@ -225,10 +218,10 @@ export default function UserDetailPage() {
                         >
                           <TableCell className="font-medium">{task.title}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">{task.status}</Badge>
+                            <Badge variant="outline">{TASK_STATUS_LABELS[task.status]}</Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{task.priority}</Badge>
+                            <Badge variant="outline">{TASK_PRIORITY_LABELS[task.priority]}</Badge>
                           </TableCell>
                           <TableCell>
                             {task.dueDate

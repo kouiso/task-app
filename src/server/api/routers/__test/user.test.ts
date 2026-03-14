@@ -92,8 +92,8 @@ describe('userRouter', () => {
     });
 
     it('should fail when user not found', async () => {
-      const user = await createTestUser();
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const admin = await createTestUser({ email: 'admin-notfound@example.com', role: 'ADMIN' });
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       await expect(caller.user.getById({ id: 'clnonexistent' })).rejects.toThrow(
         'ユーザーが見つかりません',
@@ -104,6 +104,25 @@ describe('userRouter', () => {
       const caller = await createTestCaller();
 
       await expect(caller.user.getById({ id: 'clsomeid' })).rejects.toThrow('ログインが必要です');
+    });
+
+    it('should deny non-admin access to other users', async () => {
+      const user = await createTestUser({ email: 'viewer@example.com' });
+      const otherUser = await createTestUser({ email: 'other@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await expect(caller.user.getById({ id: otherUser.id })).rejects.toThrow(
+        'この操作を行う権限がありません',
+      );
+    });
+
+    it('should allow admin to access other users', async () => {
+      const admin = await createTestUser({ email: 'admin-viewer@example.com', role: 'ADMIN' });
+      const otherUser = await createTestUser({ email: 'other-target@example.com' });
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
+
+      const result = await caller.user.getById({ id: otherUser.id });
+      expect(result.id).toBe(otherUser.id);
     });
   });
 

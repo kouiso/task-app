@@ -11,6 +11,7 @@ import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { api } from '@/trpc/react';
 
 export default function ProfileEditPage() {
@@ -57,13 +58,7 @@ export default function ProfileEditPage() {
   };
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto max-w-md mt-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   return (
@@ -130,7 +125,7 @@ export default function ProfileEditPage() {
               {updateProfile.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
+                  <AlertTitle>エラー</AlertTitle>
                   <AlertDescription>{updateProfile.error.message}</AlertDescription>
                 </Alert>
               )}

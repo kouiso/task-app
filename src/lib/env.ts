@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-/**
- * 環境変数のスキーマ定義
- * zodを使用して型安全に環境変数をバリデーション
- */
 const envSchema = z.object({
   DATABASE_URL: z.string().url('DATABASE_URLは有効なURL形式である必要があります'),
 
@@ -15,10 +11,6 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
-/**
- * 環境変数を検証して取得
- * 検証に失敗した場合はエラーをthrow
- */
 function validateEnv() {
   try {
     return envSchema.parse(process.env);
@@ -37,11 +29,7 @@ function validateEnv() {
   }
 }
 
-/**
- * 検証済み環境変数
- * アプリケーション全体で使用する
- * ビルド時はバリデーションをスキップ（CI環境やVercelプレビューデプロイ時）
- */
+// CI環境やVercelプレビューデプロイ時はバリデーションをスキップ
 const shouldSkipValidation = process.env['SKIP_ENV_VALIDATION'] === 'true';
 
 const buildFallbackEnv = (): Env => {
@@ -62,7 +50,4 @@ const buildFallbackEnv = (): Env => {
 
 export const env: Env = shouldSkipValidation ? buildFallbackEnv() : validateEnv();
 
-/**
- * 環境変数の型定義
- */
 export type Env = z.infer<typeof envSchema>;

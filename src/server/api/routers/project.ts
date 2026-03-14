@@ -2,10 +2,10 @@ import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
-import { hasPermission, isProjectMemberRole } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
+import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
 
 const projectCreateSchema = z.object({
   name: z.string().min(1, 'プロジェクト名は必須です'),
@@ -34,8 +34,23 @@ const projectUpdateSchema = z.object({
 const projectMemberSchema = z.object({
   projectId: z.string().cuid(),
   userId: z.string().cuid(),
-  role: z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']).default('MEMBER'),
+  role: projectMemberRoleSchema.default('MEMBER'),
 });
+
+const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
+  const userMember = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: { userId, projectId },
+    },
+  });
+
+  assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
+
+  return await prisma.project.update({
+    where: { id: projectId },
+    data: { isArchived },
+  });
+};
 
 export const projectRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -84,7 +99,7 @@ export const projectRouter = createTRPCRouter({
           members: {
             include: {
               user: {
-                select: { id: true, name: true, email: true, avatar: true },
+                select: USER_SELECT,
               },
             },
           },
@@ -108,14 +123,14 @@ export const projectRouter = createTRPCRouter({
           members: {
             include: {
               user: {
-                select: { id: true, name: true, email: true, avatar: true, role: true },
+                select: { ...USER_SELECT, role: true },
               },
             },
           },
           tasks: {
             include: {
               assignee: {
-                select: { id: true, name: true, email: true, avatar: true },
+                select: USER_SELECT,
               },
             },
             orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
@@ -130,13 +145,10 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
-      const isMember = project.members.some((member) => member.userId === ctx.session.userId);
-      if (!isMember) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'このプロジェクトへのアクセス権限がありません',
-        });
-      }
+      assertMemberPermission(
+        project.members.filter((m) => m.userId === ctx.session.userId),
+        'canView',
+      );
 
       return project;
     }),
@@ -153,16 +165,7 @@ export const projectRouter = createTRPCRouter({
         },
       });
 
-      if (
-        !userMember ||
-        !isProjectMemberRole(userMember.role) ||
-        !hasPermission(userMember.role, 'canManageMembers')
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
+      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 
       return await prisma.user.findMany({
         where: {
@@ -173,12 +176,7 @@ export const projectRouter = createTRPCRouter({
             },
           },
         },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-        },
+        select: USER_SELECT,
         orderBy: { name: 'asc' },
       });
     }),
@@ -206,7 +204,7 @@ export const projectRouter = createTRPCRouter({
         members: {
           include: {
             user: {
-              select: { id: true, name: true, email: true, avatar: true },
+              select: USER_SELECT,
             },
           },
         },
@@ -233,13 +231,7 @@ export const projectRouter = createTRPCRouter({
       });
     }
 
-    const userMember = project.members[0];
-    if (!userMember || (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'プロジェクトのオーナーまたは管理者のみが更新できます',
-      });
-    }
+    assertMemberPermission(project.members, 'canManageMembers');
 
     const updateData: Prisma.ProjectUpdateInput = {};
     if (data.name !== undefined) {
@@ -268,7 +260,7 @@ export const projectRouter = createTRPCRouter({
         members: {
           include: {
             user: {
-              select: { id: true, name: true, email: true, avatar: true },
+              select: USER_SELECT,
             },
           },
         },
@@ -295,11 +287,12 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
+      // canDeleteはタスク削除の権限でADMINにも付与されているため、プロジェクト削除はOWNER限定で明示チェック
       const userMember = project.members[0];
       if (!userMember || userMember.role !== 'OWNER') {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'プロジェクトのオーナーのみが削除できます',
+          message: 'この操作を実行する権限がありません',
         });
       }
 
@@ -310,7 +303,6 @@ export const projectRouter = createTRPCRouter({
     }),
 
   addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ ctx, input }) => {
-    // OWNERまたはADMIN権限を確認
     const userMember = await prisma.projectMember.findUnique({
       where: {
         userId_projectId: {
@@ -320,16 +312,7 @@ export const projectRouter = createTRPCRouter({
       },
     });
 
-    if (
-      !userMember ||
-      !isProjectMemberRole(userMember.role) ||
-      !hasPermission(userMember.role, 'canManageMembers')
-    ) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'この操作を実行する権限がありません',
-      });
-    }
+    assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 
     const existing = await prisma.projectMember.findUnique({
       where: {
@@ -351,7 +334,7 @@ export const projectRouter = createTRPCRouter({
       data: input,
       include: {
         user: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: USER_SELECT,
         },
       },
     });
@@ -374,16 +357,7 @@ export const projectRouter = createTRPCRouter({
         },
       });
 
-      if (
-        !userMember ||
-        !isProjectMemberRole(userMember.role) ||
-        !hasPermission(userMember.role, 'canManageMembers')
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
+      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 
       const member = await prisma.projectMember.findUnique({
         where: {
@@ -434,7 +408,7 @@ export const projectRouter = createTRPCRouter({
       z.object({
         projectId: z.string().cuid(),
         userId: z.string().cuid(),
-        role: z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']),
+        role: projectMemberRoleSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -447,16 +421,7 @@ export const projectRouter = createTRPCRouter({
         },
       });
 
-      if (
-        !userMember ||
-        !isProjectMemberRole(userMember.role) ||
-        !hasPermission(userMember.role, 'canManageMembers')
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
-      }
+      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 
       return await prisma.projectMember.update({
         where: {
@@ -470,7 +435,7 @@ export const projectRouter = createTRPCRouter({
         },
         include: {
           user: {
-            select: { id: true, name: true, email: true, avatar: true },
+            select: USER_SELECT,
           },
         },
       });
@@ -479,40 +444,12 @@ export const projectRouter = createTRPCRouter({
   archive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.id,
-          },
-        },
-      });
-
-      assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
-
-      return await prisma.project.update({
-        where: { id: input.id },
-        data: { isArchived: true },
-      });
+      return await setArchiveStatus(ctx.session.userId, input.id, true);
     }),
 
   unarchive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.id,
-          },
-        },
-      });
-
-      assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
-
-      return await prisma.project.update({
-        where: { id: input.id },
-        data: { isArchived: false },
-      });
+      return await setArchiveStatus(ctx.session.userId, input.id, false);
     }),
 });

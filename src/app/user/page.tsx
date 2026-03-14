@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Table,
   TableBody,
@@ -38,13 +39,7 @@ export default function UsersPage() {
   }, [error, router]);
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto max-w-6xl mt-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   if (currentUser?.role !== 'ADMIN') {

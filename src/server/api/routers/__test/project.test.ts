@@ -67,7 +67,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(nonMember.id, nonMember.email, nonMember.role);
 
       await expect(caller.project.getById({ id: project.id })).rejects.toThrow(
-        'このプロジェクトへのアクセス権限がありません',
+        'この操作を実行する権限がありません',
       );
     });
 
@@ -171,7 +171,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(member.id, member.email, member.role);
 
       await expect(caller.project.update({ id: project.id, name: 'Rejected' })).rejects.toThrow(
-        'プロジェクトのオーナーまたは管理者のみが更新できます',
+        'この操作を実行する権限がありません',
       );
     });
 
@@ -211,7 +211,7 @@ describe('projectRouter', () => {
       const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
 
       await expect(caller.project.delete({ id: project.id })).rejects.toThrow(
-        'プロジェクトのオーナーのみが削除できます',
+        'この操作を実行する権限がありません',
       );
     });
 

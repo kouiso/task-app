@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { Separator } from '@/component/ui/separator';
 import { api } from '@/trpc/react';
 
@@ -24,13 +25,7 @@ export default function ProfilePage() {
   }, [currentUser, isLoading, router]);
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto max-w-2xl mt-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   if (!currentUser) {
@@ -45,7 +40,6 @@ export default function ProfilePage() {
             <CardTitle>プロフィール</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Header */}
             <div className="flex gap-4">
               <Avatar className="w-20 h-20 rounded-lg">
                 <AvatarImage src={currentUser.avatar || ''} className="object-cover" />
@@ -85,7 +79,6 @@ export default function ProfilePage() {
 
             <Separator />
 
-            {/* Profile Info */}
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
@@ -132,7 +125,6 @@ export default function ProfilePage() {
 
             <Separator />
 
-            {/* Actions */}
             <div className="flex flex-col gap-3">
               <Button className="w-full" onClick={() => router.push('/profile/edit')}>
                 <Edit className="w-4 h-4 mr-2" />
