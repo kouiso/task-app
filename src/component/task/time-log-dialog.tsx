@@ -52,8 +52,7 @@ export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialo
         id: taskId,
         minutesToAdd: totalMinutes,
       });
-    } catch (error) {
-      console.error('作業時間の追加に失敗しました:', error);
+    } catch {
       toast.error('作業時間の追加に失敗しました');
     }
   };

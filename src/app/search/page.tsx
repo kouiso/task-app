@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -323,9 +323,7 @@ function SearchPageContent() {
         </Card>
 
         {isLoading ? (
-          <div className="flex justify-center items-center h-40">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <PageLoadingSpinner />
         ) : shouldSearch && searchResults ? (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold flex items-center gap-2">

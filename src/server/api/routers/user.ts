@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
 
 const userCreateSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -41,14 +42,7 @@ export const userRouter = createTRPCRouter({
   getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
     const user = await prisma.user.findUnique({
       where: { id: ctx.session.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-      },
+      select: USER_DETAIL_SELECT,
     });
 
     if (!user) {
@@ -85,12 +79,7 @@ export const userRouter = createTRPCRouter({
       return await prisma.user.findMany({
         where,
         select: {
-          id: true,
-          email: true,
-          name: true,
-          avatar: true,
-          role: true,
-          isActive: true,
+          ...USER_DETAIL_SELECT,
           createdAt: true,
           updatedAt: true,
         },
@@ -112,12 +101,7 @@ export const userRouter = createTRPCRouter({
       const user = await prisma.user.findUnique({
         where: { id: input.id },
         select: {
-          id: true,
-          email: true,
-          name: true,
-          avatar: true,
-          role: true,
-          isActive: true,
+          ...USER_DETAIL_SELECT,
           createdAt: true,
           updatedAt: true,
           projects: {
@@ -165,14 +149,7 @@ export const userRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const user = await prisma.user.findUnique({
         where: { email: input.email },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          avatar: true,
-          role: true,
-          isActive: true,
-        },
+        select: USER_DETAIL_SELECT,
       });
 
       if (!user) {
@@ -212,12 +189,7 @@ export const userRouter = createTRPCRouter({
     return await prisma.user.create({
       data: createData,
       select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        role: true,
-        isActive: true,
+        ...USER_DETAIL_SELECT,
         createdAt: true,
       },
     });
@@ -262,12 +234,7 @@ export const userRouter = createTRPCRouter({
       where: { id },
       data: updateData,
       select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        role: true,
-        isActive: true,
+        ...USER_DETAIL_SELECT,
         updatedAt: true,
       },
     });
@@ -313,12 +280,7 @@ export const userRouter = createTRPCRouter({
       where: { id: userId },
       data: updateData,
       select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        role: true,
-        isActive: true,
+        ...USER_DETAIL_SELECT,
         updatedAt: true,
       },
     });

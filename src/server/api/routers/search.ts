@@ -141,13 +141,18 @@ export const searchRouter = createTRPCRouter({
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
 
+    // searchエンドポイントと同様にメンバーシップで絞り込み、除外済みプロジェクトのタスクリークを防止
+    const userProjects = await prisma.projectMember.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    const projectIds = userProjects.map((p) => p.projectId);
+
     const [tasks, projects] = await Promise.all([
       prisma.task.findMany({
         where: {
-          OR: [{ createdById: userId }, { assigneeId: userId }],
-          AND: {
-            OR: buildKeywordFilter(keyword, ['title', 'description']),
-          },
+          projectId: { in: projectIds },
+          OR: buildKeywordFilter(keyword, ['title', 'description']),
         },
         include: {
           project: true,

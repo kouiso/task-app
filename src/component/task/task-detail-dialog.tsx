@@ -1,5 +1,7 @@
 'use client';
 
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -159,7 +161,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                   <span className="text-muted-foreground block mb-1">期限</span>
                   <span>
                     {taskDetail.dueDate
-                      ? new Date(taskDetail.dueDate).toLocaleDateString()
+                      ? format(new Date(taskDetail.dueDate), 'yyyy/MM/dd', { locale: ja })
                       : '期限なし'}
                   </span>
                 </div>
@@ -196,7 +198,9 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">
-                              {new Date(comment.createdAt).toLocaleString()}
+                              {format(new Date(comment.createdAt), 'yyyy/MM/dd HH:mm', {
+                                locale: ja,
+                              })}
                             </span>
                             {comment.userId === session?.user?.id && (
                               <div className="flex gap-1">
