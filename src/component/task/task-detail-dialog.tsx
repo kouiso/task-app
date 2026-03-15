@@ -18,6 +18,7 @@ import {
 } from '@/component/ui/dialog';
 import { Separator } from '@/component/ui/separator';
 import { Textarea } from '@/component/ui/textarea';
+import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
@@ -72,6 +73,10 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
 
   const handleClose = () => {
     setCommentContent('');
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+    setDeleteCommentDialogOpen(false);
+    setDeleteCommentTargetId(null);
     onClose();
   };
 
@@ -131,13 +136,13 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground block mb-1">ステータス</span>
-                  <Badge variant="outline">
+                  <Badge variant={getStatusBadgeVariant(taskDetail.status)}>
                     {TASK_STATUS_LABELS[taskDetail.status] ?? taskDetail.status}
                   </Badge>
                 </div>
                 <div>
                   <span className="text-muted-foreground block mb-1">優先度</span>
-                  <Badge variant="outline">
+                  <Badge variant={getPriorityBadgeVariant(taskDetail.priority)}>
                     {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
                   </Badge>
                 </div>
@@ -173,7 +178,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="font-semibold">コメント</h3>
                   <Badge variant="secondary" className="rounded-full px-2">
-                    {taskDetail.comments?.length || 0}
+                    {taskDetail.comments?.length ?? 0}
                   </Badge>
                 </div>
 
