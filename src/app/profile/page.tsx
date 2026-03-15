@@ -7,11 +7,12 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
-import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { Separator } from '@/component/ui/separator';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 
 export default function ProfilePage() {
@@ -50,29 +51,10 @@ export default function ProfilePage() {
               <div className="flex-1">
                 <h1 className="text-2xl font-bold">{currentUser.name}</h1>
                 <div className="flex gap-2 mt-2">
-                  {currentUser.role === 'ADMIN' && (
-                    <Badge variant="secondary" className="gap-1">
-                      <Shield className="w-3 h-3" />
-                      管理者
-                    </Badge>
+                  {currentUser.role === USER_ROLE.ADMIN && (
+                    <UserRoleBadge role={currentUser.role} />
                   )}
-                  {currentUser.isActive ? (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 bg-green-500/10 text-green-700 border-green-200"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      アクティブ
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 bg-gray-500/10 text-gray-700 border-gray-200"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-gray-500" />
-                      無効
-                    </Badge>
-                  )}
+                  <ActiveStatusBadge isActive={currentUser.isActive} />
                 </div>
               </div>
             </div>
@@ -138,7 +120,7 @@ export default function ProfilePage() {
                 <Lock className="w-4 h-4 mr-2" />
                 パスワード変更
               </Button>
-              {currentUser.role === 'ADMIN' && (
+              {currentUser.role === USER_ROLE.ADMIN && (
                 <Button variant="outline" className="w-full" onClick={() => router.push('/user')}>
                   <Shield className="w-4 h-4 mr-2" />
                   ユーザー管理

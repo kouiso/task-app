@@ -29,9 +29,11 @@ import {
 import { Switch } from '@/component/ui/switch';
 import {
   isProjectMemberRole,
+  PROJECT_MEMBER_ROLE,
   PROJECT_MEMBER_ROLE_LABELS,
   type ProjectMemberRole,
 } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 function ProjectPageContent() {
@@ -41,7 +43,7 @@ function ProjectPageContent() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectFormData | undefined>(undefined);
   const [newMemberUserId, setNewMemberUserId] = useState('');
-  const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>('MEMBER');
+  const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>(PROJECT_MEMBER_ROLE.MEMBER);
   const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -60,7 +62,7 @@ function ProjectPageContent() {
 
   const utils = api.useUtils();
 
-  const { data: currentUser } = api.user.getCurrentUser.useQuery();
+  const { data: currentUser } = api.auth.getCurrentUser.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
     isArchived: showArchived,
   });
@@ -104,7 +106,7 @@ function ProjectPageContent() {
       }
       setMemberDialogOpen(false);
       setNewMemberUserId('');
-      setNewMemberRole('MEMBER');
+      setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
     },
   });
 
@@ -217,7 +219,11 @@ function ProjectPageContent() {
   };
 
   if (projectsLoading) {
-    return <PageLoadingSpinner />;
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 
   return (
@@ -239,8 +245,9 @@ function ProjectPageContent() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
-              const taskCount = project.tasks?.length || 0;
-              const doneCount = project.tasks?.filter((t) => t.status === 'DONE').length || 0;
+              const taskCount = project.tasks?.length ?? 0;
+              const doneCount =
+                project.tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
 
               return (
                 <ProjectCard
@@ -249,7 +256,7 @@ function ProjectPageContent() {
                   name={project.name}
                   description={project.description}
                   color={project.color}
-                  memberCount={project.members?.length || 0}
+                  memberCount={project.members?.length ?? 0}
                   taskStats={{ total: taskCount, done: doneCount }}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
@@ -316,7 +323,7 @@ function ProjectPageContent() {
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(PROJECT_MEMBER_ROLE_LABELS)
-                      .filter(([value]) => value !== 'OWNER')
+                      .filter(([value]) => value !== PROJECT_MEMBER_ROLE.OWNER)
                       .map(([value, label]) => (
                         <SelectItem key={value} value={value}>
                           {label}

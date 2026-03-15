@@ -29,8 +29,8 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const utils = api.useUtils();
 
-  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
-  const [projectId, setProjectId] = useState(searchParams.get('projectId') || 'all');
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '');
+  const [projectId, setProjectId] = useState(searchParams.get('projectId') ?? 'all');
   const initialStatus = searchParams.get('status') ?? 'all';
   const [status, setStatus] = useState<'all' | TaskStatus>(
     isTaskStatus(initialStatus) ? initialStatus : 'all',
@@ -39,9 +39,9 @@ function SearchPageContent() {
   const [priority, setPriority] = useState<'all' | TaskPriority>(
     isTaskPriority(initialPriority) ? initialPriority : 'all',
   );
-  const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') || 'all');
-  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
-  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
+  const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') ?? 'all');
+  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') ?? '');
+  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') ?? '');
 
   const shouldSearch =
     !!keyword ||

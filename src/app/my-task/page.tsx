@@ -1,6 +1,6 @@
 'use client';
 
-import type { TaskPriority } from '@prisma/client';
+import { isSameDay } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
@@ -15,11 +15,23 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
-import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import type { TaskPriority } from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
 import { taskToFormData } from '@/lib/task-form';
+import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 
-const ACTIVE_STATUSES: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+const ACTIVE_STATUSES: TaskStatus[] = [
+  TASK_STATUS.TODO,
+  TASK_STATUS.IN_PROGRESS,
+  TASK_STATUS.IN_REVIEW,
+  TASK_STATUS.DONE,
+];
 const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
   { label: 'すべて', value: 'all' },
   ...ACTIVE_STATUSES.map((status) => ({
@@ -55,7 +67,7 @@ const TaskGroupSection = ({
 
   return (
     <div className="space-y-4">
-      <h2 className={`text-xl font-semibold flex items-center gap-2 ${titleClassName ?? ''}`}>
+      <h2 className={cn('text-xl font-semibold flex items-center gap-2', titleClassName)}>
         {title} ({tasks.length})
       </h2>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -86,7 +98,7 @@ export default function MyTasksPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const { data: currentUser } = api.user.getCurrentUser.useQuery();
+  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
   const { data: projects } = api.project.getAll.useQuery();
   const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: tasks, isLoading } = api.task.getAll.useQuery(
@@ -147,15 +159,13 @@ export default function MyTasksPage() {
     const upcoming: typeof tasks = [];
     const noDueDate: typeof tasks = [];
     const now = new Date();
-    const todayStr = now.toDateString();
 
     for (const t of tasks ?? []) {
       if (!t.dueDate) {
         noDueDate.push(t);
       } else {
         const dueDate = new Date(t.dueDate);
-        const dueDateStr = dueDate.toDateString();
-        if (dueDateStr === todayStr) {
+        if (isSameDay(dueDate, now)) {
           today.push(t);
         } else if (dueDate < now) {
           overdue.push(t);
@@ -168,8 +178,12 @@ export default function MyTasksPage() {
     return { overdue, today, upcoming, noDueDate };
   }, [tasks]);
 
-  if (isLoading) {
-    return <PageLoadingSpinner />;
+  if (isCurrentUserLoading || isLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 
   return (
@@ -252,8 +266,8 @@ export default function MyTasksPage() {
           onClose={() => setDialogOpen(false)}
           onSubmit={handleSubmit}
           initialData={editingTask}
-          projects={projects || []}
-          users={users || []}
+          projects={projects ?? []}
+          users={users ?? []}
         />
       </div>
 

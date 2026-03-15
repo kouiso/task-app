@@ -13,9 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/component/ui/dialog';
-import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { isProjectMemberRole, PROJECT_MEMBER_ROLE_LABELS } from '@/lib/constant/roles';
-import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import {
+  isProjectMemberRole,
+  PROJECT_MEMBER_ROLE,
+  PROJECT_MEMBER_ROLE_LABELS,
+} from '@/lib/constant/roles';
+import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import type { AppRouter } from '@/server/api/root';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -55,7 +60,7 @@ export function ProjectDetailDialog({
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">
-                  メンバー ({projectDetail.members?.length || 0})
+                  メンバー ({projectDetail.members?.length ?? 0})
                 </h3>
                 <Button variant="outline" size="sm" onClick={onAddMemberClick}>
                   <UserPlus className="mr-2 h-4 w-4" /> メンバー追加
@@ -89,7 +94,7 @@ export function ProjectDetailDialog({
                       variant="ghost"
                       size="icon"
                       onClick={() => onRemoveMember(member.userId)}
-                      disabled={member.role === 'OWNER'}
+                      disabled={member.role === PROJECT_MEMBER_ROLE.OWNER}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -100,7 +105,7 @@ export function ProjectDetailDialog({
 
             <div>
               <h3 className="text-lg font-semibold mb-4">
-                タスク ({projectDetail.tasks?.length || 0})
+                タスク ({projectDetail.tasks?.length ?? 0})
               </h3>
               <div className="grid gap-2">
                 {projectDetail.tasks?.map((task) => (
@@ -110,13 +115,11 @@ export function ProjectDetailDialog({
                   >
                     <p className="font-medium">{task.title}</p>
                     <div className="flex gap-2">
-                      <Badge variant="secondary">
-                        {isTaskStatus(task.status) ? TASK_STATUS_LABELS[task.status] : task.status}
+                      <Badge variant={getStatusBadgeVariant(task.status)}>
+                        {TASK_STATUS_LABELS[task.status] ?? task.status}
                       </Badge>
-                      <Badge variant="outline">
-                        {isTaskPriority(task.priority)
-                          ? TASK_PRIORITY_LABELS[task.priority]
-                          : task.priority}
+                      <Badge variant={getPriorityBadgeVariant(task.priority)}>
+                        {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
                       </Badge>
                     </div>
                   </div>

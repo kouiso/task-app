@@ -1,6 +1,7 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
 import { useState } from 'react';
 import {
   Bar,
@@ -16,6 +17,7 @@ import {
 } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Select,
   SelectContent,
@@ -23,7 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
+import { TASK_PRIORITY, TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
+import { TASK_STATUS, TASK_STATUS_COLORS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
+
+const CHART_PRIMARY_COLOR = '#8884d8';
 
 export default function WeeklyReportPage() {
   const [weeks, setWeeks] = useState('4');
@@ -33,27 +39,21 @@ export default function WeeklyReportPage() {
   });
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 
   const chartData = reportData?.weeklyData.map((week) => ({
     name: week.week,
     completed: week.totalCompleted,
-    high: week.byPriority['HIGH'] || 0,
-    urgent: week.byPriority['URGENT'] || 0,
+    high: week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+    urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
   }));
 
   const statusData = reportData?.weeklyData.map((week) => ({
     name: week.week,
-    done: week.byStatus['DONE'] || 0,
-    inProgress: week.byStatus['IN_PROGRESS'] || 0,
-    inReview: week.byStatus['IN_REVIEW'] || 0,
+    done: week.byStatus[TASK_STATUS.DONE] ?? 0,
+    inProgress: week.byStatus[TASK_STATUS.IN_PROGRESS] ?? 0,
+    inReview: week.byStatus[TASK_STATUS.IN_REVIEW] ?? 0,
   }));
 
   return (
@@ -78,12 +78,11 @@ export default function WeeklyReportPage() {
           </div>
         </div>
 
-        {/* 概要統計 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-1">完了タスク合計</p>
-              <p className="text-3xl font-bold">{reportData?.totalCompleted || 0}</p>
+              <p className="text-3xl font-bold">{reportData?.totalCompleted ?? 0}</p>
             </CardContent>
           </Card>
           <Card>
@@ -101,7 +100,7 @@ export default function WeeklyReportPage() {
               <p className="text-sm text-muted-foreground mb-1">対象期間</p>
               <p className="text-lg font-semibold">
                 {reportData?.startDate && reportData?.endDate
-                  ? `${new Date(reportData.startDate).toLocaleDateString()} - ${new Date(reportData.endDate).toLocaleDateString()}`
+                  ? `${format(new Date(reportData.startDate), 'yyyy/MM/dd', { locale: ja })} - ${format(new Date(reportData.endDate), 'yyyy/MM/dd', { locale: ja })}`
                   : '-'}
               </p>
             </CardContent>
@@ -116,7 +115,7 @@ export default function WeeklyReportPage() {
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData || []}>
+                  <LineChart data={chartData ?? []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
@@ -125,7 +124,7 @@ export default function WeeklyReportPage() {
                     <Line
                       type="monotone"
                       dataKey="completed"
-                      stroke="#8884d8"
+                      stroke={CHART_PRIMARY_COLOR}
                       name="完了数"
                       strokeWidth={2}
                     />
@@ -142,14 +141,14 @@ export default function WeeklyReportPage() {
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData || []}>
+                  <BarChart data={chartData ?? []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="urgent" fill="#f44336" name="緊急" />
-                    <Bar dataKey="high" fill="#ff9800" name="高" />
+                    <Bar dataKey="urgent" fill={TASK_PRIORITY_COLORS.URGENT} name="緊急" />
+                    <Bar dataKey="high" fill={TASK_PRIORITY_COLORS.HIGH} name="高" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -163,15 +162,30 @@ export default function WeeklyReportPage() {
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statusData || []}>
+                  <BarChart data={statusData ?? []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="done" fill="#4caf50" name="完了" stackId="status" />
-                    <Bar dataKey="inProgress" fill="#2196f3" name="進行中" stackId="status" />
-                    <Bar dataKey="inReview" fill="#ff9800" name="レビュー中" stackId="status" />
+                    <Bar
+                      dataKey="done"
+                      fill={TASK_STATUS_COLORS.DONE}
+                      name="完了"
+                      stackId="status"
+                    />
+                    <Bar
+                      dataKey="inProgress"
+                      fill={TASK_STATUS_COLORS.IN_PROGRESS}
+                      name="進行中"
+                      stackId="status"
+                    />
+                    <Bar
+                      dataKey="inReview"
+                      fill={TASK_STATUS_COLORS.IN_REVIEW}
+                      name="レビュー中"
+                      stackId="status"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

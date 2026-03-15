@@ -26,7 +26,6 @@ import {
   AlertDialogTrigger,
 } from '@/component/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
-import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import {
   DropdownMenu,
@@ -36,8 +35,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/component/ui/dropdown-menu';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { Sheet, SheetContent, SheetTrigger } from '@/component/ui/sheet';
-import { isUserRole, USER_ROLE_LABELS } from '@/lib/constant/roles';
+import { UserRoleBadge } from '@/component/ui/user-badges';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 import { QuickSearch } from './quick-search';
@@ -82,17 +83,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const menuItems: MenuItem[] = [
     ...baseMenuItems,
-    ...(session?.user?.role === 'ADMIN'
+    ...(session?.user?.role === USER_ROLE.ADMIN
       ? [{ text: 'ユーザー管理', icon: <Users className="h-5 w-5" />, path: '/user' }]
       : []),
   ];
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <PageLoadingSpinner />;
   }
 
   if (!session?.user) {
@@ -133,14 +130,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Avatar>
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-medium truncate">{session.user.name}</span>
-                <Badge
-                  variant={session.user.role === 'ADMIN' ? 'default' : 'secondary'}
-                  className="w-fit text-xs"
-                >
-                  {isUserRole(session.user.role)
-                    ? USER_ROLE_LABELS[session.user.role]
-                    : session.user.role}
-                </Badge>
+                <UserRoleBadge role={session.user.role} />
               </div>
             </div>
             <AlertDialog>

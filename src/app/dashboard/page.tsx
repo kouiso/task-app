@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { TASK_STATUS, TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
@@ -17,13 +18,17 @@ export default function DashboardPage() {
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
 
   if (projectsLoading || tasksLoading) {
-    return <PageLoadingSpinner />;
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 
-  const totalProjects = projects?.length || 0;
-  const totalTasks = tasks?.length || 0;
-  const completedTasks = tasks?.filter((t) => t.status === 'DONE').length || 0;
-  const inProgressTasks = tasks?.filter((t) => t.status === 'IN_PROGRESS').length || 0;
+  const totalProjects = projects?.length ?? 0;
+  const totalTasks = tasks?.length ?? 0;
+  const completedTasks = tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
+  const inProgressTasks = tasks?.filter((t) => t.status === TASK_STATUS.IN_PROGRESS).length ?? 0;
 
   const stats = [
     {
@@ -52,7 +57,7 @@ export default function DashboardPage() {
     },
   ];
 
-  const recentTasks = tasks?.slice(0, 5) || [];
+  const recentTasks = tasks?.slice(0, 5) ?? [];
 
   return (
     <AppLayout>
@@ -68,7 +73,7 @@ export default function DashboardPage() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {stat.title}
                   </CardTitle>
-                  <Icon className={`h-5 w-5 ${stat.color}`} />
+                  <Icon className={cn('h-5 w-5', stat.color)} />
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{stat.value}</div>
@@ -87,8 +92,9 @@ export default function DashboardPage() {
               {projects && projects.length > 0 ? (
                 <div className="space-y-4">
                   {projects.slice(0, 5).map((project) => {
-                    const taskCount = project.tasks?.length || 0;
-                    const doneCount = project.tasks?.filter((t) => t.status === 'DONE').length || 0;
+                    const taskCount = project.tasks?.length ?? 0;
+                    const doneCount =
+                      project.tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
                     const progress = taskCount > 0 ? (doneCount / taskCount) * 100 : 0;
 
                     return (
