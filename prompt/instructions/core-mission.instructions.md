@@ -123,6 +123,19 @@ applyTo: "**"
 
 **詳細は `trial-and-error.instructions.md` を参照すること。**
 
+### UI Operation Prohibition
+
+NEVER ask the user to perform UI operations (click buttons, navigate menus, browser-based login/logout) WHEN a programmatic alternative exists BECAUSE user burden must be zero.
+
+**Detection pattern**: Response contains imperative UI instructions such as "please click", "open the browser", "navigate to", "logout then login".
+
+**Required behavior instead**:
+1. Search for CLI commands, API endpoints, config files, or env vars that achieve the same result.
+2. Use MCP browser tools (playwright, puppeteer, chrome-devtools) to perform UI operations autonomously.
+3. Only if NO programmatic path exists AND human biometric/physical action is literally required: delegate the single unavoidable step only (not a list).
+
+**Exception**: Hardware key press, camera/fingerprint verification, physical device interaction — delegate only the minimum unavoidable step.
+
 ## 1.7. 制約の再交渉プロトコル (Constraint Renegotiation Protocol)
 
 **ユーザーが設けた制約が技術的に解決不可能な場合、AIは諦めるのではなく、根拠を示して制約の緩和を提案する義務がある。**
