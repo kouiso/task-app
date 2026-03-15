@@ -63,8 +63,8 @@ export function TaskTimer({
           action: 'start',
         });
       }
-    } catch {
-      toast.error('タイマーの更新に失敗しました');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'タイマーの更新に失敗しました');
     }
   };
 

@@ -175,7 +175,7 @@ function TaskPageContent() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedTasks(checked ? new Set(tasks?.map((t) => t.id) || []) : new Set());
+    setSelectedTasks(checked ? new Set(tasks?.map((t) => t.id) ?? []) : new Set());
   };
 
   const handleBulkComplete = () => {
@@ -206,7 +206,11 @@ function TaskPageContent() {
       : false;
 
   if (tasksLoading) {
-    return <PageLoadingSpinner />;
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 
   return (
@@ -347,8 +351,8 @@ function TaskPageContent() {
           onClose={() => setDialogOpen(false)}
           onSubmit={handleSubmit}
           initialData={editingTask}
-          projects={projects || []}
-          users={users || []}
+          projects={projects ?? []}
+          users={users ?? []}
         />
 
         <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />

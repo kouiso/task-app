@@ -15,32 +15,51 @@ import {
   TableHeader,
   TableRow,
 } from '@/component/ui/table';
-import { isTaskPriority, TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
-import { isTaskStatus, TASK_STATUS_COLORS } from '@/lib/constant/status';
+import {
+  isTaskPriority,
+  TASK_PRIORITY_COLORS,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+} from '@/lib/constant/status';
 import { api } from '@/trpc/react';
+
+const CHART_FALLBACK_COLOR = '#9e9e9e';
 
 export default function ReportPage() {
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
 
   const statusData = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const counts = new Map<string, number>();
     for (const task of tasks ?? []) {
-      counts[task.status] = (counts[task.status] || 0) + 1;
+      counts.set(task.status, (counts.get(task.status) ?? 0) + 1);
     }
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return [...counts.entries()].map(([key, value]) => ({
+      key,
+      name: isTaskStatus(key) ? TASK_STATUS_LABELS[key] : key,
+      value,
+    }));
   }, [tasks]);
 
   const priorityData = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const counts = new Map<string, number>();
     for (const task of tasks ?? []) {
-      counts[task.priority] = (counts[task.priority] || 0) + 1;
+      counts.set(task.priority, (counts.get(task.priority) ?? 0) + 1);
     }
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return [...counts.entries()].map(([key, value]) => ({
+      key,
+      name: isTaskPriority(key) ? TASK_PRIORITY_LABELS[key] : key,
+      value,
+    }));
   }, [tasks]);
 
   const totalTimeSpent = useMemo(
-    () => tasks?.reduce((acc, task) => acc + (task.timeSpentMinutes ?? 0), 0) || 0,
+    () => tasks?.reduce((acc, task) => acc + (task.timeSpentMinutes ?? 0), 0) ?? 0,
     [tasks],
   );
   const averageTimePerTask = useMemo(
@@ -51,8 +70,8 @@ export default function ReportPage() {
   const projectStats = useMemo(
     () =>
       projects?.map((project) => {
-        const projectTasks = tasks?.filter((t) => t.projectId === project.id) || [];
-        const completedTasks = projectTasks.filter((t) => t.status === 'DONE');
+        const projectTasks = tasks?.filter((t) => t.projectId === project.id) ?? [];
+        const completedTasks = projectTasks.filter((t) => t.status === TASK_STATUS.DONE);
         const totalTime = projectTasks.reduce((acc, t) => acc + (t.timeSpentMinutes ?? 0), 0);
         const progress =
           projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
@@ -72,7 +91,10 @@ export default function ReportPage() {
   const completionRate = useMemo(
     () =>
       tasks && tasks.length > 0
-        ? ((tasks.filter((t) => t.status === 'DONE').length / tasks.length) * 100).toFixed(1)
+        ? (
+            (tasks.filter((t) => t.status === TASK_STATUS.DONE).length / tasks.length) *
+            100
+          ).toFixed(1)
         : '0',
     [tasks],
   );
@@ -104,7 +126,7 @@ export default function ReportPage() {
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-1">タスク数</p>
-              <p className="text-3xl font-bold">{tasks?.length || 0}</p>
+              <p className="text-3xl font-bold">{tasks?.length ?? 0}</p>
             </CardContent>
           </Card>
 
@@ -150,9 +172,11 @@ export default function ReportPage() {
                     >
                       {statusData.map((entry) => (
                         <Cell
-                          key={entry.name}
+                          key={entry.key}
                           fill={
-                            isTaskStatus(entry.name) ? TASK_STATUS_COLORS[entry.name] : '#9e9e9e'
+                            isTaskStatus(entry.key)
+                              ? TASK_STATUS_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
                           }
                         />
                       ))}
@@ -184,11 +208,11 @@ export default function ReportPage() {
                     >
                       {priorityData.map((entry) => (
                         <Cell
-                          key={entry.name}
+                          key={entry.key}
                           fill={
-                            isTaskPriority(entry.name)
-                              ? TASK_PRIORITY_COLORS[entry.name]
-                              : '#9e9e9e'
+                            isTaskPriority(entry.key)
+                              ? TASK_PRIORITY_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
                           }
                         />
                       ))}

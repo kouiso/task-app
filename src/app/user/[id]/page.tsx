@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ArrowLeft, Calendar, Mail, Pencil, Shield, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
@@ -21,7 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/component/ui/table';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
@@ -45,7 +48,11 @@ export default function UserDetailPage() {
   }, [error]);
 
   if (isLoading) {
-    return <PageLoadingSpinner />;
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 
   if (!user) {
@@ -62,7 +69,7 @@ export default function UserDetailPage() {
     );
   }
 
-  const isAdmin = currentUser?.role === 'ADMIN';
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
   const isOwnProfile = currentUser?.id === user.id;
 
   return (
@@ -90,30 +97,8 @@ export default function UserDetailPage() {
                   </Avatar>
                   <h2 className="text-xl font-bold mb-2">{user.name}</h2>
                   <div className="flex justify-center gap-2 mb-4">
-                    {user.role === 'ADMIN' ? (
-                      <Badge variant="secondary" className="gap-1">
-                        <Shield className="h-3 w-3" /> 管理者
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="gap-1">
-                        <User className="h-3 w-3" /> ユーザー
-                      </Badge>
-                    )}
-                    {user.isActive ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-green-500/10 text-green-700 border-green-200"
-                      >
-                        アクティブ
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="bg-gray-500/10 text-gray-700 border-gray-200"
-                      >
-                        無効
-                      </Badge>
-                    )}
+                    <UserRoleBadge role={user.role} />
+                    <ActiveStatusBadge isActive={user.isActive} />
                   </div>
                 </div>
 
@@ -218,10 +203,14 @@ export default function UserDetailPage() {
                         >
                           <TableCell className="font-medium">{task.title}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">{TASK_STATUS_LABELS[task.status]}</Badge>
+                            <Badge variant={getStatusBadgeVariant(task.status)}>
+                              {TASK_STATUS_LABELS[task.status]}
+                            </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{TASK_PRIORITY_LABELS[task.priority]}</Badge>
+                            <Badge variant={getPriorityBadgeVariant(task.priority)}>
+                              {TASK_PRIORITY_LABELS[task.priority]}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             {task.dueDate

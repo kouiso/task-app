@@ -2,13 +2,12 @@
 
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { Eye, Pencil, Shield, User } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
-import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent } from '@/component/ui/card';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
@@ -20,6 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/component/ui/table';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 
 export default function UsersPage() {
@@ -42,7 +43,7 @@ export default function UsersPage() {
     return <PageLoadingSpinner />;
   }
 
-  if (currentUser?.role !== 'ADMIN') {
+  if (currentUser?.role !== USER_ROLE.ADMIN) {
     return (
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
@@ -91,32 +92,10 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      {user.role === 'ADMIN' ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <Shield className="h-3 w-3" /> 管理者
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="gap-1">
-                          <User className="h-3 w-3" /> ユーザー
-                        </Badge>
-                      )}
+                      <UserRoleBadge role={user.role} />
                     </TableCell>
                     <TableCell>
-                      {user.isActive ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-green-500/10 text-green-700 border-green-200"
-                        >
-                          アクティブ
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-gray-500/10 text-gray-700 border-gray-200"
-                        >
-                          無効
-                        </Badge>
-                      )}
+                      <ActiveStatusBadge isActive={user.isActive} />
                     </TableCell>
                     <TableCell>
                       {user.createdAt
