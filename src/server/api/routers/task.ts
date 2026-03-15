@@ -1,21 +1,24 @@
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import {
   assertMemberPermission,
   findTasksWithPermission,
   findTaskWithPermission,
+  getUserProjectIds,
 } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です'),
   description: z.string().optional(),
-  status: taskStatusSchema.default('TODO'),
-  priority: taskPrioritySchema.default('MEDIUM'),
+  status: taskStatusSchema.default(TASK_STATUS.TODO),
+  priority: taskPrioritySchema.default(TASK_PRIORITY.MEDIUM),
   dueDate: z.string().datetime().optional(),
   estimatedHours: z.number().min(0).optional(),
   projectId: z.string().cuid(),
@@ -53,7 +56,7 @@ export const taskRouter = createTRPCRouter({
           projectId: z.string().cuid().optional(),
           status: taskStatusSchema.optional(),
           assigneeId: z.string().cuid().optional(),
-          limit: z.number().min(1).max(1000).default(100),
+          limit: z.number().min(1).max(100).default(100),
           offset: z.number().min(0).default(0),
         })
         .optional(),
@@ -63,11 +66,7 @@ export const taskRouter = createTRPCRouter({
       const limit = input?.limit ?? 100;
       const offset = input?.offset ?? 0;
 
-      const userProjects = await prisma.projectMember.findMany({
-        where: { userId: ctx.session.userId },
-        select: { projectId: true },
-      });
-      const projectIds = userProjects.map((p) => p.projectId);
+      const projectIds = await getUserProjectIds(ctx.session.userId);
 
       where.projectId = { in: projectIds };
 
@@ -270,7 +269,8 @@ export const taskRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      await findTaskWithPermission(input.id, ctx.session.userId);
+      const task = await findTaskWithPermission(input.id, ctx.session.userId);
+      assertMemberPermission(task.project.members, 'canDelete');
 
       await prisma.task.delete({
         where: { id: input.id },
@@ -304,7 +304,8 @@ export const taskRouter = createTRPCRouter({
       });
     }
 
-    const elapsedMinutes = Math.floor((Date.now() - task.timerStartedAt.getTime()) / 60000);
+    const MS_PER_MINUTE = 60_000;
+    const elapsedMinutes = Math.floor((Date.now() - task.timerStartedAt.getTime()) / MS_PER_MINUTE);
 
     return await prisma.task.update({
       where: { id: input.id },
@@ -337,14 +338,17 @@ export const taskRouter = createTRPCRouter({
       const completedAt = new Date();
       return await prisma.task.updateMany({
         where: { id: { in: input.ids } },
-        data: { status: 'DONE', completedAt },
+        data: { status: TASK_STATUS.DONE, completedAt },
       });
     }),
 
   bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await findTasksWithPermission(input.ids, ctx.session.userId);
+      const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
+      for (const task of tasks) {
+        assertMemberPermission(task.project.members, 'canDelete');
+      }
 
       return await prisma.task.deleteMany({
         where: { id: { in: input.ids } },
@@ -365,7 +369,7 @@ export const taskRouter = createTRPCRouter({
         status: input.status,
       };
 
-      if (input.status === 'DONE') {
+      if (input.status === TASK_STATUS.DONE) {
         data.completedAt = new Date();
       } else {
         data.completedAt = null;

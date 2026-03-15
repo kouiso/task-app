@@ -20,8 +20,8 @@ export default function useLocalStorage<T>(
         return item ? deserializer(item) : initialValue;
       }
       return initialValue;
-    } catch (error) {
-      console.error(`localStorage読み込みエラー (key: ${key}):`, error);
+    } catch (err) {
+      console.warn('localStorage読み込み失敗:', err);
       return initialValue;
     }
   });
@@ -31,8 +31,9 @@ export default function useLocalStorage<T>(
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, serializer(state));
       }
-    } catch (error) {
-      console.error(`localStorage書き込みエラー (key: ${key}):`, error);
+    } catch (err) {
+      // localStorage容量超過等の書き込み失敗時はReact stateのみで動作を継続
+      console.warn('localStorage書き込み失敗:', err);
     }
   }, [key, state, serializer]);
 

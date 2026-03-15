@@ -133,10 +133,10 @@ describe('reportRouter', () => {
 
       const report = await caller.report.getWeeklyReport({ weeks: 4 });
 
-      expect(report.weeklyData.at(0)?.week).toBe('Week 1');
-      expect(report.weeklyData.at(1)?.week).toBe('Week 2');
-      expect(report.weeklyData.at(2)?.week).toBe('Week 3');
-      expect(report.weeklyData.at(3)?.week).toBe('Week 4');
+      expect(report.weeklyData.at(0)?.week).toBe('1週目');
+      expect(report.weeklyData.at(1)?.week).toBe('2週目');
+      expect(report.weeklyData.at(2)?.week).toBe('3週目');
+      expect(report.weeklyData.at(3)?.week).toBe('4週目');
     });
 
     it('should require authentication', async () => {

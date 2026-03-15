@@ -1,10 +1,6 @@
 import { z } from 'zod';
-import type { ProjectMemberRole } from '@/lib/constant/roles';
+import { PROJECT_MEMBER_ROLE } from '@/lib/constant/roles';
 
-/**
- * Prismaのuser selectで繰り返し使われる4フィールドを集約し、
- * 変更時に全ルーターを個別修正する必要をなくす。
- */
 export const USER_SELECT = {
   id: true,
   name: true,
@@ -12,7 +8,6 @@ export const USER_SELECT = {
   avatar: true,
 } as const;
 
-// user.tsのCRUD操作で共通して返すフィールド
 export const USER_DETAIL_SELECT = {
   id: true,
   email: true,
@@ -22,7 +17,4 @@ export const USER_DETAIL_SELECT = {
   isActive: true,
 } as const;
 
-export const projectMemberRoleSchema = z.enum<
-  ProjectMemberRole,
-  [ProjectMemberRole, ...ProjectMemberRole[]]
->(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']);
+export const projectMemberRoleSchema = z.nativeEnum(PROJECT_MEMBER_ROLE);
