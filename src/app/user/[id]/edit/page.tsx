@@ -43,7 +43,7 @@ export default function UserEditPage() {
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
   const { data: user, isLoading } = api.user.getById.useQuery(
     { id: userId },
-    { enabled: !!userId },
+    { enabled: userId.length > 0 },
   );
 
   const updateUser = api.user.update.useMutation({

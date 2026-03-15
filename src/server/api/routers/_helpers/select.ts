@@ -12,6 +12,16 @@ export const USER_SELECT = {
   avatar: true,
 } as const;
 
+// user.tsのCRUD操作で共通して返すフィールド
+export const USER_DETAIL_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  avatar: true,
+  role: true,
+  isActive: true,
+} as const;
+
 export const projectMemberRoleSchema = z.enum<
   ProjectMemberRole,
   [ProjectMemberRole, ...ProjectMemberRole[]]

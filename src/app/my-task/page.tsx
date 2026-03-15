@@ -19,7 +19,6 @@ import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constan
 import { taskToFormData } from '@/lib/task-form';
 import { api } from '@/trpc/react';
 
-// 自分のタスクページでは完了済み以外のアクティブなステータスのみ表示
 const ACTIVE_STATUSES: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
   { label: 'すべて', value: 'all' },

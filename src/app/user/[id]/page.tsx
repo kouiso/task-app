@@ -36,7 +36,7 @@ export default function UserDetailPage() {
     data: user,
     isLoading,
     error,
-  } = api.user.getById.useQuery({ id: userId }, { enabled: !!userId });
+  } = api.user.getById.useQuery({ id: userId }, { enabled: userId.length > 0 });
 
   useEffect(() => {
     if (error) {

@@ -40,15 +40,7 @@ export default function useLocalStorage<T>(
 
   const setStoredValue = (valOrFunc: T | ((val: T) => T)) => {
     setState((prevState) => {
-      const newState = isFunction(valOrFunc) ? valOrFunc(prevState) : valOrFunc;
-      try {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(key, serializer(newState));
-        }
-      } catch (error) {
-        console.error(`localStorage書き込みエラー (key: ${key}):`, error);
-      }
-      return newState;
+      return isFunction(valOrFunc) ? valOrFunc(prevState) : valOrFunc;
     });
   };
 

@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from '@/component/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/component/ui/sheet';
+import { isUserRole, USER_ROLE_LABELS } from '@/lib/constant/roles';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 import { QuickSearch } from './quick-search';
@@ -136,7 +137,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   variant={session.user.role === 'ADMIN' ? 'default' : 'secondary'}
                   className="w-fit text-xs"
                 >
-                  {session.user.role === 'ADMIN' ? '管理者' : 'メンバー'}
+                  {isUserRole(session.user.role)
+                    ? USER_ROLE_LABELS[session.user.role]
+                    : session.user.role}
                 </Badge>
               </div>
             </div>
