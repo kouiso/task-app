@@ -3,7 +3,13 @@ import { z } from 'zod';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
+
+const SEARCH_TASK_LIMIT = 100;
+const SEARCH_PROJECT_LIMIT = 20;
+const QUICK_SEARCH_TASK_LIMIT = 20;
+const QUICK_SEARCH_PROJECT_LIMIT = 10;
 
 const searchInputSchema = z.object({
   keyword: z.string().optional(),
@@ -42,7 +48,9 @@ const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInp
 };
 
 const buildKeywordFilter = (keyword: string, fields: string[]) =>
-  fields.map((field) => ({ [field]: { contains: keyword, mode: 'insensitive' as const } }));
+  fields.map((field) => ({
+    [field]: { contains: keyword, mode: 'insensitive' satisfies Prisma.QueryMode },
+  }));
 
 const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
   const dateFilter: Partial<{ gte: Date; lte: Date }> = {};
@@ -69,12 +77,7 @@ export const searchRouter = createTRPCRouter({
 
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
-    // task.getAllと同様にメンバーシップで絞り込み、除外済みプロジェクトのタスクリークを防止
-    const userProjects = await prisma.projectMember.findMany({
-      where: { userId },
-      select: { projectId: true },
-    });
-    const projectIds = userProjects.map((p) => p.projectId);
+    const projectIds = await getUserProjectIds(userId);
 
     const taskWhere: Prisma.TaskWhereInput = {
       projectId: { in: projectIds },
@@ -102,7 +105,7 @@ export const searchRouter = createTRPCRouter({
         },
       },
       orderBy: { updatedAt: 'desc' },
-      take: 100,
+      take: SEARCH_TASK_LIMIT,
     });
 
     const projects = !keyword
@@ -127,7 +130,7 @@ export const searchRouter = createTRPCRouter({
             },
           },
           orderBy: { updatedAt: 'desc' },
-          take: 20,
+          take: SEARCH_PROJECT_LIMIT,
         });
 
     return {
@@ -141,12 +144,7 @@ export const searchRouter = createTRPCRouter({
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
 
-    // searchエンドポイントと同様にメンバーシップで絞り込み、除外済みプロジェクトのタスクリークを防止
-    const userProjects = await prisma.projectMember.findMany({
-      where: { userId },
-      select: { projectId: true },
-    });
-    const projectIds = userProjects.map((p) => p.projectId);
+    const projectIds = await getUserProjectIds(userId);
 
     const [tasks, projects] = await Promise.all([
       prisma.task.findMany({
@@ -160,7 +158,7 @@ export const searchRouter = createTRPCRouter({
           assignee: { select: USER_SELECT },
         },
         orderBy: { updatedAt: 'desc' },
-        take: 20,
+        take: QUICK_SEARCH_TASK_LIMIT,
       }),
       prisma.project.findMany({
         where: {
@@ -174,7 +172,7 @@ export const searchRouter = createTRPCRouter({
           _count: { select: { tasks: true } },
         },
         orderBy: { updatedAt: 'desc' },
-        take: 10,
+        take: QUICK_SEARCH_PROJECT_LIMIT,
       }),
     ]);
 
@@ -192,7 +190,7 @@ export const searchRouter = createTRPCRouter({
       where: {
         members: {
           some: {
-            userId: userId,
+            userId,
           },
         },
       },
@@ -215,7 +213,7 @@ export const searchRouter = createTRPCRouter({
         project: {
           members: {
             some: {
-              userId: userId,
+              userId,
             },
           },
         },

@@ -2,7 +2,15 @@ import { TRPCError } from '@trpc/server';
 import { hasPermission, isProjectMemberRole, type PermissionKey } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 
-// Prismaの生成型（$Enums.ProjectMemberRole）と自前定義型の両方を受け入れるためstringで統一
+export const getUserProjectIds = async (userId: string): Promise<string[]> => {
+  const userProjects = await prisma.projectMember.findMany({
+    where: { userId },
+    select: { projectId: true },
+  });
+  return userProjects.map((p) => p.projectId);
+};
+
+// Prisma生成型と自前定義型の両方を受け入れるためstringで統一し、isProjectMemberRole型ガードで検証
 export const assertMemberPermission = (
   members: { role: string }[],
   permission?: PermissionKey,
@@ -44,10 +52,6 @@ const taskWithPermissionInclude = (userId: string) =>
     },
   }) as const;
 
-/**
- * タスク取得 + 存在確認 + メンバー権限確認をまとめて実行し、検証済みタスクを返す。
- * 同一パターンが update/delete/updateTimer/addTime で重複するためここに集約。
- */
 export const findTaskWithPermission = async (taskId: string, userId: string) => {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
@@ -66,10 +70,6 @@ export const findTaskWithPermission = async (taskId: string, userId: string) => 
   return task;
 };
 
-/**
- * 複数タスク取得 + 件数確認 + 全タスクのメンバー権限確認をまとめて実行し、検証済みタスク配列を返す。
- * bulkComplete/bulkDelete/bulkUpdateStatus で重複するパターンをここに集約。
- */
 export const findTasksWithPermission = async (ids: string[], userId: string) => {
   const tasks = await prisma.task.findMany({
     where: { id: { in: ids } },

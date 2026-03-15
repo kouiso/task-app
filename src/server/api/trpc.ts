@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { getSession } from '@/lib/session';
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
@@ -42,9 +43,9 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
   });
 });
 
-// isAuthenticatedと組み合わせて使う前提のミドルウェア（単独使用禁止）
+// 単独使用するとctx.sessionがnullのまま通過してしまうため、isAuthenticated経由で使用する
 const isAdmin = t.middleware(async ({ ctx, next }) => {
-  if (ctx.session?.role !== 'ADMIN') {
+  if (ctx.session?.role !== USER_ROLE.ADMIN) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: '管理者権限が必要です',

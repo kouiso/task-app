@@ -1,12 +1,12 @@
-import { jwtVerify, SignJWT } from 'jose';
+import { type JWTPayload, jwtVerify, SignJWT } from 'jose';
 import { cookies } from 'next/headers';
+import type { UserRole } from './constant/roles';
 import { env } from './env';
 
 function getKey(): Uint8Array {
   const SECRET_KEY = env.JWT_SECRET;
   const encoded = new TextEncoder().encode(SECRET_KEY);
-  // In jsdom test environment, TextEncoder.encode returns an object that looks like
-  // Uint8Array but isn't. Convert it to a real Uint8Array.
+  // jsdomテスト環境ではTextEncoder.encodeがUint8Arrayに見えるが実際には異なるオブジェクトを返すため、明示的に変換
   return new Uint8Array(encoded);
 }
 
@@ -23,31 +23,23 @@ export interface SessionUser {
   role: UserRole;
 }
 
-type UserRole = 'USER' | 'ADMIN';
-
 const COOKIE_NAME = 'session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
 
 /**
  * SessionPayloadの型ガード
  */
-function isSessionPayload(payload: unknown): payload is SessionPayload {
-  if (typeof payload !== 'object' || payload === null) {
-    return false;
-  }
-
-  const p = payload as Record<string, unknown>;
-
+function isSessionPayload(payload: JWTPayload): payload is JWTPayload & SessionPayload {
   return (
-    typeof p['userId'] === 'string' &&
-    typeof p['email'] === 'string' &&
-    typeof p['role'] === 'string' &&
-    typeof p['exp'] === 'number'
+    typeof payload['userId'] === 'string' &&
+    typeof payload['email'] === 'string' &&
+    typeof payload['role'] === 'string' &&
+    typeof payload['exp'] === 'number'
   );
 }
 
 export async function encrypt(payload: SessionPayload): Promise<string> {
-  // SessionPayloadをRecord<string, unknown>に変換（型安全な方法）
+  // SignJWTのコンストラクタがRecord<string, unknown>を要求するため明示的に変換
   const jwtPayload: Record<string, unknown> = {
     userId: payload.userId,
     email: payload.email,
@@ -68,7 +60,6 @@ export async function decrypt(token: string): Promise<SessionPayload | null> {
       algorithms: ['HS256'],
     });
 
-    // 型ガードを使用して安全に変換
     if (!isSessionPayload(payload)) {
       console.error('Invalid session payload structure:', payload);
       return null;

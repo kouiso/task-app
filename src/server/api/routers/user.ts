@@ -2,6 +2,8 @@ import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
@@ -10,14 +12,14 @@ const userCreateSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   name: z.string().min(1, '名前を入力してください').optional(),
   avatar: z.string().url().optional(),
-  role: z.enum(['USER', 'ADMIN']).default('USER'),
+  role: z.nativeEnum(USER_ROLE).default(USER_ROLE.USER),
 });
 
 const userUpdateSchema = z.object({
   id: z.string().cuid(),
   name: z.string().min(1, '名前を入力してください').optional(),
   avatar: z.string().url().optional().nullable(),
-  role: z.enum(['USER', 'ADMIN']).optional(),
+  role: z.nativeEnum(USER_ROLE).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -39,29 +41,13 @@ const changePasswordSchema = z.object({
 });
 
 export const userRouter = createTRPCRouter({
-  getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
-    const user = await prisma.user.findUnique({
-      where: { id: ctx.session.userId },
-      select: USER_DETAIL_SELECT,
-    });
-
-    if (!user) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'ユーザーが見つかりません',
-      });
-    }
-
-    return user;
-  }),
-
   // adminProcedureによりセッションのroleを参照してADMIN判定するためDBクエリ不要
   getAll: adminProcedure
     .input(
       z
         .object({
           isActive: z.boolean().optional(),
-          role: z.enum(['USER', 'ADMIN']).optional(),
+          role: z.nativeEnum(USER_ROLE).optional(),
         })
         .optional(),
     )
@@ -91,7 +77,7 @@ export const userRouter = createTRPCRouter({
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
       // 本人またはADMINのみ他ユーザーの詳細情報にアクセス可能
-      if (ctx.session.userId !== input.id && ctx.session.role !== 'ADMIN') {
+      if (ctx.session.userId !== input.id && ctx.session.role !== USER_ROLE.ADMIN) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'この操作を行う権限がありません',
@@ -125,7 +111,7 @@ export const userRouter = createTRPCRouter({
             },
             where: {
               status: {
-                notIn: ['DONE', 'CANCELLED'],
+                notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
             },
             orderBy: { dueDate: 'asc' },
@@ -143,7 +129,6 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  // adminProcedureによりADMIN判定
   getByEmail: adminProcedure
     .input(z.object({ email: z.string().email() }))
     .query(async ({ input }) => {
@@ -162,7 +147,6 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  // adminProcedureによりADMIN判定
   create: adminProcedure.input(userCreateSchema).mutation(async ({ input }) => {
     const existing = await prisma.user.findUnique({
       where: { email: input.email },
@@ -200,7 +184,7 @@ export const userRouter = createTRPCRouter({
 
     if (id !== ctx.session.userId) {
       // 他ユーザーを更新する場合はセッションのroleでADMIN判定
-      if (ctx.session.role !== 'ADMIN') {
+      if (ctx.session.role !== USER_ROLE.ADMIN) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: '管理者権限が必要です',
@@ -240,7 +224,6 @@ export const userRouter = createTRPCRouter({
     });
   }),
 
-  // adminProcedureによりADMIN判定
   delete: adminProcedure.input(z.object({ id: z.string().cuid() })).mutation(async ({ input }) => {
     await prisma.user.update({
       where: { id: input.id },
@@ -293,13 +276,20 @@ export const userRouter = createTRPCRouter({
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { password: true },
+        select: { password: true, isActive: true },
       });
 
       if (!user || !user.password) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'ユーザーが見つかりません',
+        });
+      }
+
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
         });
       }
 

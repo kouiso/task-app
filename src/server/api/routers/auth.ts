@@ -1,9 +1,11 @@
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import { createSession, deleteSession, type SessionUser } from '@/lib/session';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
 
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -35,19 +37,19 @@ export const authRouter = createTRPCRouter({
       });
     }
 
+    if (!user.isActive) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'このアカウントは無効化されています',
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(input.password, user.password);
 
     if (!isPasswordValid) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'メールアドレスまたはパスワードが正しくありません',
-      });
-    }
-
-    if (!user.isActive) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このアカウントは無効化されています',
       });
     }
 
@@ -89,7 +91,7 @@ export const authRouter = createTRPCRouter({
         email: input.email,
         name: input.name,
         password: hashedPassword,
-        role: 'USER',
+        role: USER_ROLE.USER,
         isActive: true,
       },
     });
@@ -125,14 +127,7 @@ export const authRouter = createTRPCRouter({
 
     const user = await prisma.user.findUnique({
       where: { id: ctx.session.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-      },
+      select: USER_DETAIL_SELECT,
     });
 
     if (!user || !user.isActive) {
@@ -148,12 +143,7 @@ export const authRouter = createTRPCRouter({
     const user = await prisma.user.findUnique({
       where: { id: ctx.session.userId },
       select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        role: true,
-        isActive: true,
+        ...USER_DETAIL_SELECT,
         createdAt: true,
         updatedAt: true,
       },
@@ -163,6 +153,13 @@ export const authRouter = createTRPCRouter({
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'ユーザーが見つかりません',
+      });
+    }
+
+    if (!user.isActive) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'このアカウントは無効化されています',
       });
     }
 

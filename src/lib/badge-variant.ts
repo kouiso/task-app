@@ -1,18 +1,18 @@
-import type { TaskPriority } from '@/lib/constant/priority';
-import type { TaskStatus } from '@/lib/constant/status';
+import { TASK_PRIORITY, type TaskPriority } from '@/lib/constant/priority';
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
 export const getStatusBadgeVariant = (status: TaskStatus): BadgeVariant => {
   switch (status) {
-    case 'DONE':
+    case TASK_STATUS.DONE:
       return 'secondary';
-    case 'IN_PROGRESS':
+    case TASK_STATUS.IN_PROGRESS:
       return 'default';
-    case 'IN_REVIEW':
+    case TASK_STATUS.IN_REVIEW:
       return 'outline';
-    case 'CANCELLED':
-    case 'BLOCKED':
+    case TASK_STATUS.CANCELLED:
+    case TASK_STATUS.BLOCKED:
       return 'destructive';
     default:
       return 'outline';
@@ -21,11 +21,11 @@ export const getStatusBadgeVariant = (status: TaskStatus): BadgeVariant => {
 
 export const getPriorityBadgeVariant = (priority: TaskPriority): BadgeVariant => {
   switch (priority) {
-    case 'URGENT':
+    case TASK_PRIORITY.URGENT:
       return 'destructive';
-    case 'HIGH':
+    case TASK_PRIORITY.HIGH:
       return 'default';
-    case 'MEDIUM':
+    case TASK_PRIORITY.MEDIUM:
       return 'secondary';
     default:
       return 'outline';

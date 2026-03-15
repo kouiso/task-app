@@ -1,5 +1,8 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 
@@ -13,12 +16,7 @@ export const reportRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       if (input.userId && input.userId !== ctx.session.userId) {
-        const currentUser = await prisma.user.findUnique({
-          where: { id: ctx.session.userId },
-          select: { role: true },
-        });
-
-        if (currentUser?.role !== 'ADMIN') {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: '管理者権限が必要です',
@@ -60,17 +58,17 @@ export const reportRouter = createTRPCRouter({
         );
 
         return {
-          week: `Week ${i + 1}`,
+          week: `${i + 1}週目`,
           weekStart: weekStart.toISOString().split('T')[0],
           totalCompleted: weekTasks.length,
           byStatus: Object.fromEntries(
-            ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED'].map((status) => [
+            Object.values(TASK_STATUS).map((status) => [
               status,
               weekTasks.filter((t) => t.status === status).length,
             ]),
           ),
           byPriority: Object.fromEntries(
-            ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((priority) => [
+            Object.values(TASK_PRIORITY).map((priority) => [
               priority,
               weekTasks.filter((t) => t.priority === priority).length,
             ]),

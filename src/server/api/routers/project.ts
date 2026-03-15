@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
+import { PROJECT_MEMBER_ROLE, USER_ROLE } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
@@ -34,7 +35,7 @@ const projectUpdateSchema = z.object({
 const projectMemberSchema = z.object({
   projectId: z.string().cuid(),
   userId: z.string().cuid(),
-  role: projectMemberRoleSchema.default('MEMBER'),
+  role: projectMemberRoleSchema.default(PROJECT_MEMBER_ROLE.MEMBER),
 });
 
 const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
@@ -66,12 +67,7 @@ export const projectRouter = createTRPCRouter({
       const where: Prisma.ProjectWhereInput = {};
 
       if (input?.userId && input.userId !== ctx.session.userId) {
-        const currentUser = await prisma.user.findUnique({
-          where: { id: ctx.session.userId },
-          select: { role: true },
-        });
-
-        if (currentUser?.role !== 'ADMIN') {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: '管理者権限が必要です',
@@ -83,7 +79,7 @@ export const projectRouter = createTRPCRouter({
         where.members = {
           some: { userId: ctx.session.userId },
         };
-      } else if (input.userId) {
+      } else {
         where.members = {
           some: { userId: input.userId },
         };
@@ -190,7 +186,7 @@ export const projectRouter = createTRPCRouter({
       members: {
         create: {
           userId: ctx.session.userId,
-          role: 'OWNER',
+          role: PROJECT_MEMBER_ROLE.OWNER,
         },
       },
     };
@@ -289,7 +285,7 @@ export const projectRouter = createTRPCRouter({
 
       // canDeleteはタスク削除の権限でADMINにも付与されているため、プロジェクト削除はOWNER限定で明示チェック
       const userMember = project.members[0];
-      if (!userMember || userMember.role !== 'OWNER') {
+      if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'この操作を実行する権限がありません',
@@ -375,11 +371,11 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
-      if (member.role === 'OWNER') {
+      if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
         const ownerCount = await prisma.projectMember.count({
           where: {
             projectId: input.projectId,
-            role: 'OWNER',
+            role: PROJECT_MEMBER_ROLE.OWNER,
           },
         });
 
