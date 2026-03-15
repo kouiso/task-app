@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
-import { isUserRole, USER_ROLE_LABELS, type UserRole } from '@/lib/constant/roles';
+import { isUserRole, USER_ROLE, USER_ROLE_LABELS, type UserRole } from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 
 export default function UserEditPage() {
@@ -36,7 +36,7 @@ export default function UserEditPage() {
   }>({
     name: '',
     avatar: '',
-    role: 'USER',
+    role: USER_ROLE.USER,
     isActive: true,
   });
 
@@ -67,7 +67,7 @@ export default function UserEditPage() {
     }
   }, [user]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateUser.mutate({
       id: userId,
@@ -84,7 +84,11 @@ export default function UserEditPage() {
   };
 
   if (isLoading) {
-    return <PageLoadingSpinner />;
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 
   if (!user) {
@@ -101,15 +105,16 @@ export default function UserEditPage() {
     );
   }
 
-  const isAdmin = currentUser?.role === 'ADMIN';
-  if (!isAdmin) {
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile = currentUser?.id === userId;
+  if (!isAdmin && !isOwnProfile) {
     return (
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
             <CardContent className="pt-6">
               <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
-              <p className="text-muted-foreground">管理者のみユーザー編集が可能です</p>
+              <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
             </CardContent>
           </Card>
         </div>
