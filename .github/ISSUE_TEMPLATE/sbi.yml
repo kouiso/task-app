@@ -1,0 +1,27 @@
+name: SBI（Sprint Backlog Item）
+description: スプリントバックログアイテムの作成
+labels: []
+body:
+  - type: input
+    id: parent-pbi
+    attributes:
+      label: 親PBI
+      description: "関連する PBI の Issue 番号（例: #995）"
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: タスク概要
+      description: "何をするか、なぜ必要かを簡潔に記載"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 受け入れ基準
+      description: "完了条件をチェックリスト形式で記載"
+      value: |
+        - [ ]
+    validations:
+      required: true

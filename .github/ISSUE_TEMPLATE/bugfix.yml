@@ -1,0 +1,101 @@
+name: "バグ修正 (PBI)"
+description: "既存機能のバグ修正用のIssueテンプレート"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: "(Why?)なぜ、このタスクをやるのか？"
+      description: "理由がはっきりすれば質が上がる。エンジニアレベルの説明はHow To?に記載し、ここは原則ビジネス粒度で記載しましょう。"
+      value: |
+        > [!TIP]
+        > 理由がはっきりすれば質が上がる。エンジニアレベルの説明はHow To?に記載し、ここは原則ビジネス粒度で記載しましょう。
+
+        ### 発生した事象の説明
+        - 期待される挙動：
+        - 実際の挙動：
+
+        ### スクリーンショット/GIF/動画
+
+        ### 再現手順
+        1.
+    validations:
+      required: true
+  - type: input
+    id: page-url
+    attributes:
+      label: 画面URL
+      description: "該当ページのURLを記載してください"
+      placeholder: "https://..."
+    validations:
+      required: false
+  - type: input
+    id: figma-url
+    attributes:
+      label: FigmaデザインURL
+      description: "該当するFigmaのデザインURLを貼り付けてください"
+      placeholder: "https://www.figma.com/design/..."
+    validations:
+      required: false
+  - type: textarea
+    id: how-to
+    attributes:
+      label: "(How To ?) やり方の指定があるか？"
+      description: "作業時に必要なことを書いて下さい"
+      value: |
+        > [!TIP]
+        > 作業時に必要なことを書いて下さい
+
+        - 該当ファイルパス： 🔗
+
+        <details>
+        <summary>📝 記入例（クリックして展開）</summary>
+
+        **良い例:**
+
+        1. `next/image`コンポーネントに変更する
+        2. AVIF/WebP形式を有効化する
+        3. `loading="lazy"`を設定する
+        4. 画像サイズを自動最適化する設定を追加
+
+        **該当ファイルパス:**
+        - `src/components/Hero.tsx` (L45-L60)
+        - `next.config.js` (画像最適化設定)
+
+        </details>
+    validations:
+      required: false
+  - type: textarea
+    id: done-definition
+    attributes:
+      label: "(Complete!) 完成の定義(箇条書き)"
+      description: "ゴールをはっきり決めておけば認識の違いを防げます"
+      value: |
+        > [!TIP]
+        > ゴールをはっきり決めておけば認識の違いを防げます
+
+        - [ ]
+
+        <details>
+        <summary>📝 記入例（クリックして展開）</summary>
+
+        **良い例:**
+
+        - [ ] 問題が発生していた画面で、正しく表示されるようになっている
+        - [ ] 修正前に起きていたエラーが再現しなくなっている
+        - [ ] 他の画面や機能に影響が出ていない（デザイン崩れ等がない）
+        - [ ] スマホ・PCどちらでも正常に動作する
+
+        </details>
+    validations:
+      required: true
+  - type: textarea
+    id: else
+    attributes:
+      label: "(Else) その他共有事項"
+      description: "共有しておけばおくほど、コミュニケーションコストを抑えられる"
+      value: |
+        > [!TIP]
+        > 共有しておけばおくほど、コミュニケーションコストを抑えられる
+    validations:
+      required: false
