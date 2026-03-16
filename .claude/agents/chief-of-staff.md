@@ -1,0 +1,1 @@
+../../prompt/agents/chief-of-staff.md

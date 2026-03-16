@@ -1,0 +1,1 @@
+../../prompt/instructions/ecc-common-hooks.md
