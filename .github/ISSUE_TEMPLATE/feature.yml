@@ -1,0 +1,92 @@
+name: "新規開発・機能改修 (PBI)"
+description: "新規機能開発や既存機能の改修用のIssueテンプレート"
+labels: ["feature"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: "(Why?)なぜ、このタスクをやるのか？"
+      description: "理由がはっきりすれば質が上がる。エンジニアレベルの説明はHow To?に記載し、ここは原則ビジネス粒度で記載しましょう。"
+      value: |
+        > [!TIP]
+        > 理由がはっきりすれば質が上がる。エンジニアレベルの説明はHow To?に記載し、ここは原則ビジネス粒度で記載しましょう。
+
+        ### 背景・目的
+
+        ### スクリーンショット/GIF/動画
+    validations:
+      required: true
+  - type: input
+    id: figma-url
+    attributes:
+      label: FigmaデザインURL
+      description: "該当するFigmaのデザインURLを貼り付けてください"
+      placeholder: "https://www.figma.com/design/..."
+    validations:
+      required: false
+  - type: textarea
+    id: how-to
+    attributes:
+      label: "(How To ?) やり方の指定があるか？"
+      description: "作業時に必要なことを書いて下さい"
+      value: |
+        > [!TIP]
+        > 作業時に必要なことを書いて下さい
+
+        - 画面URL： 🔗
+        - 該当ファイルパス： 🔗
+
+        <details>
+        <summary>📝 記入例（クリックして展開）</summary>
+
+        **良い例:**
+
+        1. 商品比較ページのコンポーネントを作成
+        2. 最大4商品まで比較可能にする
+        3. スペック項目ごとに並べて表示
+        4. 「カートに追加」ボタンを各商品に配置
+
+        **該当ファイルパス:**
+        - `src/pages/compare.tsx` (新規作成)
+        - `src/components/CompareTable.tsx` (新規作成)
+
+        **画面URL:**
+        - 参考サイト: https://example.com/compare
+
+        </details>
+    validations:
+      required: false
+  - type: textarea
+    id: done-definition
+    attributes:
+      label: "(Complete!) 完成の定義(箇条書き)"
+      description: "ゴールをはっきり決めておけば認識の違いを防げます"
+      value: |
+        > [!TIP]
+        > ゴールをはっきり決めておけば認識の違いを防げます
+
+        - [ ]
+
+        <details>
+        <summary>📝 記入例（クリックして展開）</summary>
+
+        **良い例:**
+
+        - [ ] ユーザーが〇〇の画面で△△の操作ができるようになっている
+        - [ ] 表示内容がデザイン（Figma等）と一致している
+        - [ ] スマホ・PCどちらでも正常に動作する
+        - [ ] 既存の機能に影響が出ていない（デザイン崩れ等がない）
+
+        </details>
+    validations:
+      required: true
+  - type: textarea
+    id: else
+    attributes:
+      label: "(Else) その他共有事項"
+      description: "共有しておけばおくほど、コミュニケーションコストを抑えられる"
+      value: |
+        > [!TIP]
+        > 共有しておけばおくほど、コミュニケーションコストを抑えられる
+    validations:
+      required: false
