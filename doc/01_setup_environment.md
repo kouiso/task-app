@@ -192,10 +192,10 @@ cp .env.example .env
 # filepath: .env
 # データベース接続URL
 # Docker使用時
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/taskapp?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
 
-# 認証用のシークレットキー(32文字以上のランダムな文字列)
-AUTH_SECRET="your-super-secret-key-change-this-in-production"
+# JWT認証用のシークレットキー(32文字以上のランダムな文字列)
+JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 ```
 
 **確認方法**:
