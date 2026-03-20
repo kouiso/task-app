@@ -131,6 +131,14 @@ echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
+> ⚠️ **bashを使っている場合**（WSL2など）は、`~/.zshrc` の代わりに `~/.bashrc` に書いてください:
+>
+> ```bash
+> # filepath: ターミナル（bash / WSL2）
+> echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
+> source ~/.bashrc
+> ```
+
 #### miseのインストール（Windows）
 
 PowerShellを**管理者として**開き、以下を実行してください。
