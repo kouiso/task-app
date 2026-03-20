@@ -138,7 +138,7 @@ export default function MyTasksPage() {
 // filepath: src/app/my-task/page.tsx
 // MyTasksPage内に追加
 const { data: currentUser } =
-  api.user.getCurrentUser.useQuery();
+  api.auth.getCurrentUser.useQuery();
 
 // ユーザー一覧を取得（担当者選択用）
 const { data: users } =
@@ -154,10 +154,10 @@ const { data: users } =
 | 方法 | API | 用途 |
 |------|-----|------|
 | セッション確認 | `api.auth.getSession` | ログイン状態チェック |
-| 現在のユーザー | `api.user.getCurrentUser` | ユーザー詳細情報 |
+| 現在のユーザー | `api.auth.getCurrentUser` | ユーザー詳細情報 |
 | メンバー取得 | `api.search.getProjectMembers` | 担当者選択用 |
 
-> 💡 `api.user.getCurrentUser` はログイン中の
+> 💡 `api.auth.getCurrentUser` はログイン中の
 > ユーザーのIDや名前を返します。
 > このIDを使って「自分のタスク」を絞り込みます。
 
