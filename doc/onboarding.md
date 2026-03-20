@@ -33,24 +33,27 @@ choco install go-task
 </details>
 
 <details>
-<summary>複数のnodeバージョン管理 (オプション)</summary>
+<summary>Node.jsバージョン管理（mise）</summary>
 
-※ 複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であれば[Volta](https://volta.sh/)がおすすめ
+このプロジェクトは [mise](https://mise.jdx.dev/) でNode.jsのバージョンを管理しています。
+`.mise.toml` に `node = "25.6.1"` が定義されており、プロジェクトディレクトリで自動的に正しいバージョンが使用されます。
 
 ```bash
-# Voltaのインストール (macOS/Linux)
-curl https://get.volta.sh | bash
+# miseのインストール (macOS/Linux)
+curl https://mise.run | sh
 
-# Voltaのインストール (Windows)
-# https://docs.volta.sh/guide/getting-started からインストーラーをダウンロード
+# miseのインストール (Windows)
+winget install jdx.mise
 
-# Node.jsのインストール
-volta install node@25.6.1
+# シェルへの有効化 (macOS/zsh)
+echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
+source ~/.zshrc
+
+# Node.jsのインストール（プロジェクトディレクトリで実行）
+mise install
 ```
 
-このプロジェクトでは `package.json` に Volta の設定が含まれているため、
-プロジェクトディレクトリで自動的に正しいバージョン (25.6.1) が使用されます。
+`package.json` の `engines` フィールドで `node: "25.x"` を要求し、`.npmrc` で `engine-strict=true` が設定されているため、正しいバージョンでないと `npm install` が失敗します。
 
 </details>
 
