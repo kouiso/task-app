@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Security Guidelines
 
 ## Mandatory Security Checks

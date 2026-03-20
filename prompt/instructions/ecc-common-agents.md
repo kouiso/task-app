@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Agent Orchestration
 
 ## Available Agents

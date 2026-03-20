@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Performance Optimization
 
 ## Model Selection Strategy
