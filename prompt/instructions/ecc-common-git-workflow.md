@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Git Workflow
 
 ## Commit Message Format

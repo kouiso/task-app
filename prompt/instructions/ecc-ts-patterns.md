@@ -1,9 +1,5 @@
 ---
-paths:
-  - "**/*.ts"
-  - "**/*.tsx"
-  - "**/*.js"
-  - "**/*.jsx"
+applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx"
 ---
 # TypeScript/JavaScript Patterns
 

@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Coding Style
 
 ## Immutability (CRITICAL)

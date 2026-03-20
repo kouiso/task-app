@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Hooks System
 
 ## Hook Types
