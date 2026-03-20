@@ -476,7 +476,7 @@ const utils = api.useUtils();
 
 // ログイン中のユーザー情報を取得
 const { data: currentUser } =
-  api.user.getCurrentUser.useQuery();
+  api.auth.getCurrentUser.useQuery();
 
 const createMutation =
   api.project.create.useMutation({
