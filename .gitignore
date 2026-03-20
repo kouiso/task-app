@@ -102,3 +102,6 @@ debug-*.mjs
 setup-*.mjs
 inspect-*.mjs
 .env*.local
+
+# Node.js compile cache
+node-compile-cache/

@@ -132,20 +132,16 @@ vercel logs
 ```bash
 # 開発環境の環境変数(.env.local)
 cat .env.local
-# DATABASE_URL=postgresql://user:password@localhost:5432/task_app_dev
-# NEXTAUTH_SECRET=dev-secret-key-only-local
-# NEXTAUTH_URL=http://localhost:3000
-# CLOUDINARY_API_KEY=xxxxx
-# CLOUDINARY_API_SECRET=xxxxx
+# DATABASE_URL=postgresql://user:password@localhost:5432/taskapp
+# JWT_SECRET=your-jwt-secret-key-32-chars-minimum-please-change
 
 # 本番環境には絶対に .env.local を使わない!
 # Vercel ダッシュボードで設定:
 # 1. https://vercel.com/dashboard/[project-name]
 # 2. Settings → Environment Variables
 # 3. 各環境変数を入力:
-#    DATABASE_URL = "postgresql://user:password@prod-db:5432/task_app"
-#    NEXTAUTH_SECRET = "secure-random-key-for-production"
-#    NEXTAUTH_URL = "https://task-app.vercel.app"
+#    DATABASE_URL = "postgresql://user:password@prod-db:5432/taskapp"
+#    JWT_SECRET = "secure-random-key-for-production-32chars-min"
 #    NODE_ENV = "production"
 ```
 
@@ -156,17 +152,13 @@ cat .env.local
 vercel env add DATABASE_URL
 # → "prod-db接続文字列" を入力
 
-vercel env add NEXTAUTH_SECRET
-# → "本番用シークレットキー" を入力
-
-vercel env add CLOUDINARY_API_KEY
-# → "クラウディナリAPI キー" を入力
+vercel env add JWT_SECRET
+# → "本番用シークレットキー（32文字以上）" を入力
 
 # 設定確認
 vercel env list
 # DATABASE_URL (Encrypted)
-# NEXTAUTH_SECRET (Encrypted)
-# CLOUDINARY_API_KEY (Encrypted)
+# JWT_SECRET (Encrypted)
 ```
 
 ---
@@ -324,8 +316,8 @@ vercel --prod
 # → Vercel Postgres が起動していない可能性
 # → Vercel: Storage → Postgres の状態確認
 
-# ❌ NEXTAUTH_SECRET not found
-# → NEXTAUTH_SECRET 環境変数が設定されていない
+# ❌ JWT_SECRET not found
+# → JWT_SECRET 環境変数が設定されていない（32文字以上必須）
 # → Vercel: Settings → Environment Variables で確認・追加
 
 # デプロイログ確認
