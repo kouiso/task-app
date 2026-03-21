@@ -41,6 +41,17 @@ exclusions:
     - "*.py"
     - "*.txt"
 
+# Claude Code CLI設定（main_pm.py パイプライン用 — API課金ゼロ）
+claude_code:
+  lead_model: "claude-opus-4-6"
+  worker_model: "claude-sonnet-4-6"
+
+# レビュー層バックエンド設定（API課金ゼロ — 全てClaude Code）
+reviewer:
+  technical_backend: "claude_code"
+  ux_backend: "claude_code"
+  po_backend: "claude_code"
+
 # LLM設定（.envから読み込み、ここで上書き可能）
 llm:
   commander_model: "gpt-5.2"
