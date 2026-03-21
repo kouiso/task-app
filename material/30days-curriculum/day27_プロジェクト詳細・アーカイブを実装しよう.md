@@ -595,6 +595,16 @@ const handleArchive = (
 
 ![完成したダイアログの動作確認](./screenshots/project-detail-archive-action.png)
 
+## ⚠️ つまずきポイント
+
+| エラー/問題 | 原因 | 解決方法 |
+|------------|------|---------|
+| `inferRouterOutputs`の型が`any`になる | `AppRouter`のインポートパスが間違っている | `@/server/api/root`からインポートしているか確認する |
+| ダイアログが開かない | `DialogTrigger`で`asChild`を忘れている | `<DialogTrigger asChild>`を追加する |
+| アーカイブ後に一覧が更新されない | `invalidate()`の呼び出しが`onSuccess`にない | `onSuccess`コールバック内で`utils.project.getAll.invalidate()`を呼ぶ |
+| `Property 'isArchived' does not exist` | Prismaスキーマの変更後に型生成をしていない | `npx prisma generate`を実行してから`npm run dev`を再起動する |
+| ダイアログを閉じてもURLが変わる | `Link`コンポーネントでカード全体を囲んでいる | カードのクリックハンドラとダイアログの`onClick`でイベント伝播を止める（`e.stopPropagation()`） |
+
 ---
 
 ## 🎉 Day 27 完了！

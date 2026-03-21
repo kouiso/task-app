@@ -4,20 +4,44 @@ applyTo: "**"
 
 # Prohibitions
 
-## Plagiarizing Other Reviewers' Output as Own Review
+## Review Integrity Obligation
 
-NEVER report a PR review based solely on other reviewers' findings (Devin, CodeRabbit, human reviewers, etc.) WHEN performing a code review BECAUSE it is intellectual dishonesty — the user requested YOUR analysis, not a summary of someone else's work.
+NEVER report a review, verification, or evaluation based solely on other entities' findings (subagents, Devin, CodeRabbit, GPT, human reviewers, etc.) without reading the target files yourself first WHEN the task requires you to review, verify, audit, or evaluate any content (code, educational materials, documentation, prompts, etc.) BECAUSE aggregating others' outputs without firsthand verification is transcription, not review — the user requested YOUR analysis built on YOUR reading of the actual files.
 
-**Required behavior for every PR review:**
-1. Read the actual source code yourself — use local repo, `git show`, or `gh api` for file contents
-2. IF `gh pr diff` fails due to size → use `git diff <base>...<head>` locally or read changed files directly from the filesystem
-3. Other reviewers' comments are supplementary input, not a substitute for your own analysis
-4. Your review MUST contain findings from YOUR code reading, clearly separated from other reviewers' findings
+### Required Workflow for All Review Tasks
 
-❌ Summarizing Devin/CodeRabbit comments and reporting it as "review result"
-❌ Skipping code reading because diff was unavailable
-✅ Reading changed files directly from local repo and reporting YOUR own findings
-✅ Labeling other reviewers' findings explicitly: "Devin指摘の追認: ..." separated from your own analysis
+1. **Read target files yourself first** — use Read tool, find_symbol, `git show`, `gh api`, or filesystem access. Subagent delegation does NOT count as "you read it."
+2. **Form your own judgment** before consulting any external review output.
+3. **Subagents are supplementary, not primary** — you may delegate parallel reading to subagents, but you MUST also read the files yourself and cross-check subagent findings against what you read.
+4. **Separate your findings from others'** — clearly label which findings are yours and which are from subagents/other reviewers.
+
+### Violation Detection Criterion (boolean)
+
+`target_files_read_by_self == 0 AND (subagents_delegated > 0 OR external_reviews_cited > 0)` = VIOLATION
+
+### Examples
+
+```
+❌ Delegate all 30 教材 files to GPT-5.4 + Sonnet subagents → summarize their outputs → report as "review complete"
+   (自分では1ファイルも読んでいない = レビューではなく転記)
+
+❌ Read Devin/CodeRabbit PR comments → reformat as own review → report
+   (他者の出力をリフォーマットしただけ)
+
+✅ Read all target files yourself → identify issues → optionally use subagents for parallel coverage → cross-check → report YOUR findings
+✅ Read files yourself → compare against subagent findings → report with clear attribution
+```
+
+### Scope
+
+This rule applies to ALL review types, not just PR code review:
+- Code review (PR diff, file changes)
+- Educational material review (教材, curriculum content)
+- Documentation review
+- Prompt/instruction file review
+- Any task where "review," "verify," "check," "evaluate," or "audit" is requested
+
+**Confidence**: High
 
 ## Playwright / ブラウザ動作確認の禁止事項
 
@@ -186,6 +210,27 @@ NEVER start implementing (editing files, creating new files, running build comma
 - 「レビュー」「自己レビュー」「確認して」「チェックして」「評価して」「採点して」「百点になるまで繰り返して」「どう思う？」
 
 **When in doubt**: If the instruction could mean either review or implement, treat it as review-only and end with: "修正も進めますか？"
+
+### Plan Mode Self-Review Obligation
+
+NEVER call ExitPlanMode or present a plan for user approval WHEN self-review has not scored 100/100 on every check item BECAUSE presenting an incomplete plan shifts quality assurance burden onto the user and wastes their review time on known defects.
+
+```
+❌ Self-review: 85/100 → "このプランで進めてええかな？" (user becomes the quality checker)
+❌ Self-review: 92/100 → ExitPlanMode (known issues shipped to user)
+
+✅ Self-review: 85/100 → fix all issues → re-review → 95/100 → fix remaining → 100/100 → ExitPlanMode
+```
+
+**Self-review checklist** (minimum, before ExitPlanMode):
+1. Re-read the entire plan file
+2. Cross-reference every edit against actual file contents (exact line numbers, exact text)
+3. Check for cascading impacts (e.g., changing a count affects multiple locations)
+4. Verify format consistency with existing file conventions
+5. Grep for stale references that should have been updated
+6. Confirm all new file content is complete (not just section headers)
+
+**Confidence**: High
 
 ### Surface Metrics Are Not Quality Verification
 

@@ -1,6 +1,6 @@
 # Day 28: タスク一括操作を実装しよう
 
-## 前回の振り返り
+## 🔙 前回の振り返り
 
 Day 27 では、プロジェクト詳細ページとアーカイブ機能を実装しました。動的ルート `[id]` でプロジェクトごとの専用ページを作り、`isArchived` フラグで論理削除を実現しましたね。今日はそこで学んだ「状態管理」の応用として、タスク一覧での **一括操作** に挑戦します。
 
@@ -75,14 +75,15 @@ flowchart TD
 | Step 1 | tRPC ルーターを読んで理解する | 5 分 | `task.ts`（読むだけ） | 3 つの bulk API が説明できる |
 | Step 2 | 選択状態を管理する state を作る | 7 分 | `src/app/task/page.tsx` | state が正しく動作する |
 | Step 3 | チェックボックス付きタスクカードを作る | 8 分 | `src/app/task/page.tsx` | 各カードにチェックボックスが表示される |
-| Step 4 | 3 状態チェックボックスで全選択を実装する | 6 分 | `src/app/task/page.tsx` | 全選択・部分選択・全解除が切り替わる |
+| Step 4 | まず「全選択 / 全解除」チェックボックスを作る | 4 分 | `src/app/task/page.tsx` | 全選択・全解除が切り替わる |
+| Step 4.5 | 部分選択を `indeterminate` で表現する | 4 分 | `src/app/task/page.tsx` | 全選択・部分選択・全解除が切り替わる |
 | Step 5 | ヘッダーに一括操作ボタンを追加する | 7 分 | `src/app/task/page.tsx` | 選択時にボタンが現れる |
 | Step 6 | 一括完了を実装する | 5 分 | `src/app/task/page.tsx` | まとめて完了できる |
 | Step 7 | 確認ダイアログ付き一括削除を実装する | 7 分 | `src/app/task/page.tsx` | 確認後にまとめて削除できる |
 | Step 8 | DropdownMenu でステータス一括変更を実装する | 7 分 | `src/app/task/page.tsx` | ステータス変更が動作する |
 | Step 9 | 動作確認と仕上げ | 4 分 | — | 一括操作が完全に動く |
 
-**合計時間**: 約 56 分
+**合計時間**: 約 58 分
 
 ---
 
@@ -316,32 +317,24 @@ import { TaskCard } from '@/component/task/task-card';
 
 ---
 
-### Step 4: 3 状態チェックボックスで全選択を実装する（6 分）
+### Step 4: まず「全選択 / 全解除」チェックボックスを作る（4 分）
 
-🎯 **ゴール**: 「全選択 / 部分選択 / 全解除」の 3 状態を 1 つのチェックボックスで表現する。
+🎯 **ゴール**: ヘッダーにチェックボックスを追加し、シンプルな全選択・全解除を実装する。
 
 ![全選択チェックボックス（3 状態）](./screenshots/select-all-checkbox.png)
 
-チェックボックスには 3 つの状態があります。
-
-| `selectAllState` の値 | 表示 | 意味 |
-|---------------------|------|------|
-| `false` | □（未チェック） | 1 件も選択されていない |
-| `'indeterminate'` | ▪（部分チェック） | 一部のタスクだけ選択されている |
-| `true` | ✓（全チェック） | 全タスクが選択されている |
+いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なので、まずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// selectAllState を計算する（JSX の外、コンポーネント内で定義）
-const selectAllState =
-  tasks && tasks.length > 0
-    ? selectedTasks.size === 0
-      ? false
-      : selectedTasks.size === tasks.length
-        ? true
-        : 'indeterminate'
-    : false;
+// まずシンプルに boolean で管理する
+const isAllSelected =
+  tasks !== undefined
+  && tasks.length > 0
+  && selectedTasks.size === tasks.length;
 ```
+
+`isAllSelected` は「タスクが存在し、全タスクの ID が `selectedTasks` に入っているか」を判定するだけのシンプルな `boolean` です。
 
 この値をチェックボックスに渡します。
 
@@ -353,13 +346,71 @@ import { Label } from '@/component/ui/label';
 <div className="flex items-center space-x-2">
   <Checkbox
     id="select-all"
-    checked={selectAllState}
+    checked={isAllSelected}
     onCheckedChange={(checked) =>
       handleSelectAll(checked === true)
     }
   />
   <Label htmlFor="select-all">すべて選択</Label>
 </div>
+```
+
+**この段階での動き**
+
+| 操作 | 結果 |
+|------|------|
+| チェックボックスをクリック | 全タスクが選択される（全選択） |
+| もう一度クリック | 全タスクの選択が解除される（全解除） |
+| 一部だけ手動で選択 | ヘッダーは未チェック（□）のまま |
+
+3 行目の「一部だけ手動で選択」のとき、ヘッダーのチェックボックスが未チェックのままなのは不親切ですよね。次の Step でこれを改善します。
+
+✅ **確認ポイント**:
+- ヘッダーのチェックボックスをクリックすると全タスクが選択される
+- もう一度クリックすると全選択が解除される
+- `npm run dev` でエラーが出ない
+
+---
+
+### Step 4.5: 部分選択を `indeterminate` で表現する（4 分）
+
+🎯 **ゴール**: 一部だけ選択されているとき、ヘッダーのチェックボックスに「▪（部分チェック）」を表示する。
+
+Step 4 では 2 状態（全選択 / 全解除）しかないため、一部選択のときヘッダーが未チェック（□）のままでした。チェックボックスには実は **3 つ目の状態** があります。
+
+| 状態の値 | 表示 | 意味 |
+|---------|------|------|
+| `false` | □（未チェック） | 1 件も選択されていない |
+| `'indeterminate'` | ▪（部分チェック） | 一部のタスクだけ選択されている |
+| `true` | ✓（全チェック） | 全タスクが選択されている |
+
+先ほどの `isAllSelected`（boolean）を、3 状態を返す `selectAllState` に置き換えます。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// isAllSelected を削除して、以下に置き換える
+const selectAllState =
+  tasks && tasks.length > 0
+    ? selectedTasks.size === 0
+      ? false
+      : selectedTasks.size === tasks.length
+        ? true
+        : 'indeterminate'
+    : false;
+```
+
+JSX 側の `checked` に渡す値を差し替えます。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// Step 4 で書いた Checkbox の checked を差し替える
+<Checkbox
+  id="select-all"
+  checked={selectAllState}
+  onCheckedChange={(checked) =>
+    handleSelectAll(checked === true)
+  }
+/>
 ```
 
 **`indeterminate` が重要な理由**
@@ -707,6 +758,16 @@ npm run lint
 - 上記のテスト項目がすべてパスする
 - `npm run lint` でエラーが出ない
 - `npm run dev` でブラウザにエラーが出ない
+
+## ⚠️ つまずきポイント
+
+| エラー/問題 | 原因 | 解決方法 |
+|------------|------|---------|
+| チェックボックスをクリックしても反応しない | `onChange`ハンドラで`Set`を正しく更新していない | `new Set(prev)`でコピーを作ってから`add`/`delete`する（直接mutateしない） |
+| `indeterminate`状態が表示されない | `checked`propに`true`/`false`しか渡していない | shadcn/uiの`Checkbox`は`checked`に文字列`'indeterminate'`を渡すと部分選択状態になる |
+| 一括操作後にチェックが残る | 操作成功後に`selectedTasks`をクリアしていない | `onSuccess`内で`setSelectedTasks(new Set())`を呼ぶ |
+| `updateMany`で型エラーが出る | `status`に文字列をそのまま渡している | `isTaskStatus`型ガードで検証してから渡す |
+| 全選択チェックボックスが常にON | `selectedTasks.size === tasks.length`の比較で`tasks`が`undefined`になる場合がある | `tasks?.length ?? 0`でnullチェックする |
 
 ---
 

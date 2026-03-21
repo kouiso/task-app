@@ -1,5 +1,11 @@
 # Day 07: ログイン体験を改善しよう
 
+## 🔙 前回の振り返り
+
+Day 06 では react-hook-form と zod を使ったユーザー登録画面を実装しました。パスワード確認チェックなど高度なバリデーションができるようになったので、今日はログイン後のユーザー体験を改善するトースト通知と、JWT認証の仕組みに取り組みます。
+
+---
+
 ## 🎯 今日のゴール
 
 ログイン成功時に「おかえりなさい」トーストを表示する機能を追加します。その過程で、JWT認証・bcryptパスワード検証・HttpOnly Cookieの仕組みを体験的に学びます。
@@ -209,6 +215,19 @@ export async function encrypt(
 
 📝 **学んだこと**: JWTトークンには「誰が」「いつまで」「どの権限で」ログインしているかが記録されます。
 
+💪 **チャレンジ**: `src/lib/session.ts`の`setExpirationTime('7d')`を`'1d'`に変更して、セッションの有効期限を1日に短縮してみましょう。変更したら元に戻すのを忘れずに！
+
+```typescript
+// filepath: src/lib/session.ts（有効期限を変更）
+  return await new SignJWT(jwtPayload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('1d')
+    .sign(getKey());
+```
+
+✅ **確認ポイント**: ファイルを保存してログインし直し、jwt.ioで`exp`の値が約1日後になっていればOKです。確認したら`'7d'`に戻しましょう。
+
 ---
 
 ### Step 4: Cookie保存の仕組みを読む（5分）
@@ -257,6 +276,21 @@ export async function createSession(
 2. 複数のセキュリティ設定が組み合わさっていることを理解した
 
 📝 **学んだこと**: Cookieは単なるデータ保存ではなく、`httpOnly`や`secure`でセキュリティを強化できます。
+
+💪 **チャレンジ**: `src/lib/session.ts`の`sameSite`を`'strict'`から`'lax'`に変更してみましょう。DevToolsのApplication → Cookiesで`SameSite`列の値が変わることを確認してください。確認したら`'strict'`に戻しましょう。
+
+```typescript
+// filepath: src/lib/session.ts（sameSiteを変更）
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env['NODE_ENV'] === 'production',
+    sameSite: 'lax',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+```
+
+✅ **確認ポイント**: ログインし直してDevToolsのCookies一覧で`SameSite`が`Lax`に変わっていればOKです。確認したら`'strict'`に戻しましょう。
 
 ---
 
@@ -446,6 +480,27 @@ const isAuthenticated = t.middleware(
 2. ミドルウェアがリクエストごとにセッションをチェックする仕組みが理解できた
 
 📝 **学んだこと**: `protectedProcedure`は内部でセッションチェックを行い、未ログインユーザーを自動的に弾きます。
+
+💪 **チャレンジ**: `src/server/api/trpc.ts`のミドルウェアで、認証エラーメッセージを`'ログインが必要です'`から`'この操作にはログインが必要です'`に変更してみましょう。
+
+```typescript
+// filepath: src/server/api/trpc.ts（エラーメッセージを変更）
+const isAuthenticated = t.middleware(
+  async ({ ctx, next }) => {
+    if (!ctx.session?.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'この操作にはログインが必要です',
+      });
+    }
+    return next({
+      ctx: { session: ctx.session },
+    });
+  }
+);
+```
+
+✅ **確認ポイント**: Cookieを削除した状態でダッシュボードから何かタスク操作を試み、エラーメッセージが変わっていればOKです。
 
 ---
 

@@ -1,5 +1,11 @@
 # Day 03: GitHubに保存しよう
 
+## 🔙 前回の振り返り
+
+Day 02 ではダッシュボードにウェルカムバナーを追加しながら、`const`・`let` による変数宣言と `string`・`number`・`boolean` の型の基本を学びました。コードを編集してアプリに反映できるようになったので、今日はそのコードを GitHub に保存する方法を学びます。
+
+---
+
 ## 🎯 今日のゴール
 
 あなたが書いたコードをGitHubに保存できるようになります。GitHubに保存することで、コードのバックアップを取ったり、他の人と共有したりできます。
@@ -29,9 +35,11 @@ graph LR
 | Step 1 | Gitの初期設定 | 5分 |
 | Step 2 | リポジトリを作成 | 5分 |
 | Step 3 | 変更をコミット | 10分 |
-| Step 4 | GitHubにプッシュ | 10分 |
+| Step 4 | GitHub認証を設定する | 10分 |
+| Step 5 | GitHubにプッシュ | 5分 |
+| Step 6 | Gitの便利コマンドを体験 | 10分 |
 
-**合計時間**: 約30分
+**合計時間**: 約45分
 
 ---
 
@@ -164,7 +172,72 @@ $ git log --oneline
 
 ---
 
-### Step 4: GitHubにプッシュ（10分）
+### Step 4: GitHub認証を設定する（10分）
+
+🎯 **ゴール**: GitHubにコードをアップロードするための認証を設定します。
+
+🔰 **初心者向け解説**: GitHubにプッシュするには、「自分が本当にこのアカウントの持ち主だ」とGitHubに証明する必要があります。パスワードだけでは認証できないため、**Personal Access Token（PAT）**という「特別なパスワード」を作成します。
+
+> 💡 **例え話**: 会社のビルに入るとき、社員証（ID＋パスワード）に加えてセキュリティカードが必要なのと同じです。PATがそのセキュリティカードに当たります。
+
+#### 4-1. Personal Access Tokenを作成する
+
+📝 **手順**:
+
+1. ブラウザで`https://github.com/settings/tokens`にアクセス
+2. 「Generate new token」→「Generate new token (classic)」をクリック
+3. 以下の項目を入力：
+
+| 項目 | 設定値 | 説明 |
+|------|--------|------|
+| Note | `task-app-token` | トークンの用途メモ |
+| Expiration | `90 days` | 有効期限（90日後に再作成） |
+| Select scopes | `repo`にチェック | リポジトリの読み書き権限 |
+
+4. 「Generate token」をクリック
+5. **表示されたトークンをコピーしてメモ帳に保存する**
+
+> ⚠️ **重要**: トークンは**一度しか表示されません**。ページを閉じると二度と見られないので、必ずコピーして安全な場所に保存してください。
+
+#### 4-2. 認証情報を保存する（毎回入力しなくて済むように）
+
+```bash
+# filepath: ターミナル
+# 認証情報をキャッシュに保存する設定
+# （macOSの場合）
+$ git config --global credential.helper osxkeychain
+
+# （Windowsの場合）
+$ git config --global credential.helper manager
+
+# （Linuxの場合）
+$ git config --global credential.helper store
+```
+
+🔍 **コード解説**:
+
+| コマンド | 意味 | 例え |
+|--------|------|------|
+| `credential.helper` | 認証情報の保存方法を設定 | パスワードマネージャーを選ぶ |
+| `osxkeychain` | macOSのキーチェーンに保存 | macの鍵束に保存 |
+| `manager` | Windowsの資格情報マネージャーに保存 | Windowsの金庫に保存 |
+| `store` | Linuxでファイルに保存 | ファイルに書き出す |
+
+> 💡 この設定により、次のStep 5でプッシュするときにユーザー名とトークンを入力すると、2回目以降は自動で認証されます。
+
+✅ **確認ポイント**:
+
+1. Personal Access Tokenが作成できた
+2. トークンをコピーして安全な場所に保存した
+3. `credential.helper`の設定ができた
+
+> 📸 GitHub の Settings > Developer settings > Personal access tokens ページでトークンが作成されていることを確認してください。
+
+📝 **学んだこと**: GitHubへのプッシュには認証が必要で、Personal Access Token（PAT）を使って安全に認証できるようになりました。
+
+---
+
+### Step 5: GitHubにプッシュ（5分）
 
 🎯 **ゴール**: ローカルのコミットをGitHubにアップロードします。
 
@@ -178,6 +251,8 @@ $ git remote add origin https://github.com/<あなたのユーザー名>/task-ap
 $ git branch -M main
 $ git push -u origin main
 ```
+
+> 💡 初回プッシュ時に「Username」と「Password」を聞かれたら、**Username**にはGitHubのユーザー名、**Password**にはStep 4で作成した**Personal Access Token**を入力してください（GitHubのパスワードではありません）。
 
 🔍 **コード解説**:
 
@@ -199,21 +274,107 @@ $ git push -u origin main
 
 ---
 
+### Step 6: Gitの便利コマンドを体験（10分）
+
+🎯 **ゴール**: `git log`、`git diff`、`git status`を使って、Gitの状態を確認する方法を学びます。
+
+🔰 **初心者向け解説**: Gitはコードの履歴を管理するツールです。「今どんな状態？」「前とどこが変わった？」「これまでの記録は？」を確認するコマンドを覚えておくと、安心して開発を進められます。
+
+#### 6-1. `git status`で現在の状態を確認
+
+```bash
+# filepath: ターミナル
+$ git status
+```
+
+🔍 **出力の読み方**:
+
+| 出力メッセージ | 意味 |
+|--------------|------|
+| `nothing to commit, working tree clean` | 変更なし。すべて保存済み |
+| `Changes not staged for commit` | 変更があるがまだ`git add`していない |
+| `Untracked files` | Gitが追跡していない新しいファイルがある |
+
+#### 6-2. ファイルを変更して差分を確認
+
+試しに小さな変更を加えて、`git diff`で差分を確認してみましょう。
+
+```bash
+# filepath: ターミナル
+# README.mdの末尾に1行追加する
+$ echo "" >> README.md
+$ echo "## 学習記録" >> README.md
+$ echo "- Day 01: 環境構築完了" >> README.md
+$ echo "- Day 02: ダッシュボードにバナー追加" >> README.md
+$ echo "- Day 03: GitHubに保存" >> README.md
+```
+
+```bash
+# filepath: ターミナル
+# 変更の差分を確認する
+$ git diff
+```
+
+> 💡 `git diff`は、**まだ`git add`していない変更**を表示します。`+`で始まる行が「追加された行」、`-`で始まる行が「削除された行」です。
+
+#### 6-3. `git log`でコミット履歴を確認
+
+```bash
+# filepath: ターミナル
+# コミット履歴を見やすく表示
+$ git log --oneline
+```
+
+🔍 **出力の読み方**:
+
+| 表示 | 意味 |
+|------|------|
+| `abc1234` | コミットID（短縮版） |
+| `Initial commit: setup task-app` | コミットメッセージ |
+
+#### 6-4. 変更をコミットしてプッシュ
+
+```bash
+# filepath: ターミナル
+$ git add README.md
+$ git commit -m "docs: 学習記録セクションを追加"
+$ git push
+```
+
+> 💡 2回目以降のプッシュは `git push` だけでOKです。`-u origin main`は初回のみ必要です。
+
+✅ **確認ポイント**:
+
+1. `git status`で変更の有無を確認できた
+2. `git diff`で変更箇所が表示された
+3. `git log --oneline`でコミット履歴が表示された
+4. 2回目のプッシュが成功した
+
+> 📸 `git log --oneline` を実行して、2つのコミットが表示されていることを確認してください。
+
+📝 **学んだこと**: `git status`で現在の状態、`git diff`で変更内容、`git log`で履歴を確認できるようになりました。
+
+---
+
 ## 📋 今日のまとめ
 
 - [ ] `git config`でGitの初期設定ができた
 - [ ] GitHubで新しいリポジトリを作成できた
 - [ ] `git add`と`git commit`で変更を記録できた
+- [ ] Personal Access Tokenを作成して認証を設定できた
 - [ ] `git push`でGitHubにアップロードできた
+- [ ] `git status`、`git diff`、`git log`で状態を確認できた
 - [ ] GitHubのリポジトリページでコードを確認できた
 
 ## ⚠️ つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| `git push`が失敗する | 認証情報が設定されていない | GitHub Personal Access Tokenを設定してください |
-| `Permission denied`エラー | SSH鍵が設定されていない | HTTPSでリポジトリURLを設定してください |
-| `fatal: remote origin already exists` | リモートが既に登録されている | `git remote rm origin`で削除してから再登録してください |
+| `git push`で`Authentication failed` | Personal Access Tokenが間違っている | Step 4に戻ってトークンを再作成し、正しくコピーする |
+| `git push`で`Permission denied` | SSH鍵を使おうとしているがHTTPSで設定した | `git remote set-url origin https://github.com/<ユーザー名>/task-app.git`でHTTPSに変更する |
+| `fatal: remote origin already exists` | リモートが既に登録されている | `git remote rm origin`で削除してから再登録する |
+| `Password`にGitHubのパスワードを入力してしまった | GitHubはパスワード認証を廃止済み | 「Password」にはStep 4で作成した**Personal Access Token**を入力する |
+| `git diff`で何も表示されない | 変更がないか、既に`git add`済み | `git diff --cached`でステージング済みの差分を確認する |
 
 ## 🔜 次回予告
 
