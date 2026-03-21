@@ -46,11 +46,12 @@ claude_code:
   lead_model: "claude-opus-4-6"
   worker_model: "claude-sonnet-4-6"
 
-# レビュー層バックエンド設定（API課金ゼロ — 全てClaude Code）
+# レビュー層バックエンド設定（異ファミリーアンサンブル — PO=ChatGPT）
 reviewer:
   technical_backend: "claude_code"
   ux_backend: "claude_code"
-  po_backend: "claude_code"
+  po_backend: "chatgpt"
+  po_model: "gpt-5.4"
 
 # LLM設定（.envから読み込み、ここで上書き可能）
 llm:
@@ -181,8 +182,8 @@ chapters:
     title: "開発環境を整えて、初めてのアプリを動かそう"
     subtitle: "〜プログラミングの「キッチン」を準備する〜"
     what_you_will_make: "npx create-next-appで新規プロジェクトを作成し、ブラウザで表示"
-    what_you_will_learn: "Docker、Node.js、npm、VS Code、Prisma、Next.js開発サーバーの基本"
-    topics: ["環境構築", "Docker", "Node.js", "npm", "VS Code", "Prisma", "create-next-app", "Next.js dev server"]
+    what_you_will_learn: "Node.js、npm、VS Code、Next.js、Tailwind CSS、開発サーバーの基本"
+    topics: ["環境構築", "Node.js", "npm", "VS Code", "create-next-app", "Next.js dev server", "Tailwind CSS"]
     special_notes:
       - "npx create-next-app でゼロから新規プロジェクトを作成"
       - "git clone や ZIP配布は使用しない"
