@@ -5,10 +5,11 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  fullyParallel: false,
+  workers: 1,
+  timeout: 120000,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 2 : 0,
-  ...(process.env['CI'] && { workers: 1 }),
   reporter: 'html',
   use: {
     baseURL: process.env['PLAYWRIGHT_BASE_URL'] ?? 'http://localhost:3002',
@@ -19,14 +20,22 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          // tRPC v11 + React QueryのuseQueryフックが深いコンポーネントツリーで
+          // スタックオーバーフローするのを防止するため、V8のスタックサイズを増加
+          args: ['--js-flags=--stack_size=8192'],
+        },
+      },
     },
   ],
 
   webServer: {
-    command: 'PORT=3002 npm run dev',
+    command:
+      'PLAYWRIGHT_TEST=1 PORT=3002 node --stack-size=4096 ./node_modules/.bin/next dev --port 3002',
     url: 'http://localhost:3002',
     reuseExistingServer: !process.env['CI'],
-    timeout: 120000,
+    timeout: 180000,
   },
 });

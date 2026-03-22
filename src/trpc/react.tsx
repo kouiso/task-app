@@ -6,6 +6,7 @@ import { createTRPCReact } from '@trpc/react-query';
 import { useState } from 'react';
 import superjson from 'superjson';
 import type { AppRouter } from '@/server/api/root';
+import { safeQueryKeyHashFn } from './query-client';
 import { STALE_TIME_MS } from './query-constants';
 
 export const api = createTRPCReact<AppRouter>();
@@ -17,6 +18,10 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: STALE_TIME_MS,
+            queryKeyHashFn: safeQueryKeyHashFn,
+            // SSR中のuseQueryを無効化してstack overflowを防止
+            // middleware.tsがSSR時の認証・ルーティングを担当する
+            enabled: typeof window !== 'undefined',
           },
         },
       }),
