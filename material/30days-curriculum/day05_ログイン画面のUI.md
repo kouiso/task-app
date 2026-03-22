@@ -464,7 +464,7 @@ const callbackUrl =
   isValidRedirectUrl(rawCallbackUrl)
     ? rawCallbackUrl : '/dashboard';
 // サーバーエラーの状態管理
-const [serverError, setServerError] =
+const [error, setError] =
   useState<string | null>(null);
 ```
 
@@ -483,7 +483,7 @@ const loginMutation =
       router.refresh();
     },
     onError: (error) => {
-      setServerError(
+      setError(
         error.message
         || 'ログイン中にエラーが発生しました'
       );
@@ -499,7 +499,7 @@ onSubmit 関数を更新します。
 const onSubmit = async (
   data: LoginFormData
 ) => {
-  setServerError(null);
+  setError(null);
   loginMutation.mutate(data);
 };
 ```
@@ -537,11 +537,11 @@ const onSubmit = async (
 ```typescript
 // filepath: src/app/login/page.tsx
 // <form>開始タグの直後に追加
-{serverError && (
+{error && (
   <div className="rounded-md
     bg-destructive/15 p-3
     text-sm text-destructive">
-    {serverError}
+    {error}
   </div>
 )}
 ```

@@ -428,8 +428,7 @@ const registerMutation =
     },
     onError: (error) => {
       setError(
-        error.message
-        ?? 'ユーザー登録中にエラーが発生しました'
+        error.message || 'ユーザー登録中にエラーが発生しました'
       );
     },
   });
@@ -845,4 +844,4 @@ export default function RegisterPage() {
 
 ## 🔜 次回予告
 
-Day 07 では、今日作った登録画面と Day 05 のログイン画面が実際にどう動いているのか、裏側の仕組みを学びます。NextAuth を使った認証の流れと、サーバー側でのセッション管理を理解しましょう。
+Day 07 では、今日作った登録画面と Day 05 のログイン画面が実際にどう動いているのか、裏側の仕組みを学びます。jose（JWT HS256）と HTTP-only Cookie を使った認証の流れと、サーバー側でのセッション管理を理解しましょう。
