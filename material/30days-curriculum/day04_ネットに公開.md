@@ -267,6 +267,8 @@ DATABASE_URL="postgresql://neondb_owner:abc@ep-xxx.neon.tech/taskapp?sslmode=req
 ```
 
 > ⚠️ 上記は例です。`neondb_owner:abc@ep-xxx` の部分を自分の接続文字列に置き換えてください。
+>
+> ⚠️ **セキュリティ注意**: このコマンドはシェル履歴（`~/.bash_history` 等）にパスワードが残ります。実行後、`history -d $(history 1 | awk '{print $1}')` で該当行を削除するか、コマンドの先頭にスペースを入れて実行してください（多くのシェルでは履歴に残りません）。
 
 ✅ **確認ポイント**:
 - `Your database is now in sync with your Prisma schema.` と表示される

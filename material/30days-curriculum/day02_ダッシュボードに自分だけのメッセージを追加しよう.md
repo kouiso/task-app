@@ -111,6 +111,8 @@ import {
 | `import ... from` | 他のファイルから部品を持ってくる | 工具箱から道具を取り出す |
 | `@/component/ui/card` | Cardコンポーネントの場所 | 「棚のUI引き出しからCardを取る」 |
 
+> 💡 **ポイント**: 実際のファイルにはここで示した以外にも `PageLoadingSpinner`、`getPriorityBadgeVariant` など多くの import 文があります。今は全部を理解する必要はありません。今日使う部品だけに注目しましょう。
+
 ✅ **確認ポイント**:
 - VS Codeで`src/app/dashboard/page.tsx`が開けた
 - `import`文でCardやBadgeを読み込んでいることが確認できた
