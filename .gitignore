@@ -73,6 +73,8 @@ secret
 temp
 .npm
 playground.nnb
+/tmp*.md
+/*.dcm
 
 #seo
 sitemap*.xml
@@ -105,3 +107,12 @@ inspect-*.mjs
 
 # Node.js compile cache
 node-compile-cache/
+
+# Playwright cache & MCP
+playwright-transform-cache-*/
+playwright-artifacts-*/
+playwright_chromiumdev_profile-*/
+.playwright-mcp/
+
+# pytest
+pytest-of-*/
