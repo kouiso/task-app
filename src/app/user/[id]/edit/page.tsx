@@ -1,9 +1,12 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { z } from 'zod';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -20,24 +23,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
-import { isUserRole, USER_ROLE, USER_ROLE_LABELS, type UserRole } from '@/lib/constant/roles';
+import { isUserRole, USER_ROLE, USER_ROLE_LABELS } from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
+
+const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
+
+const userEditSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
+  role: z.enum(USER_ROLE_VALUES),
+  isActive: z.boolean(),
+});
+type UserEditFormValues = z.infer<typeof userEditSchema>;
 
 export default function UserEditPage() {
   const router = useRouter();
   const params = useParams();
   const userId = String(params['id'] ?? '');
 
-  const [formData, setFormData] = useState<{
-    name: string;
-    avatar: string;
-    role: UserRole;
-    isActive: boolean;
-  }>({
-    name: '',
-    avatar: '',
-    role: USER_ROLE.USER,
-    isActive: true,
+  const form = useForm<UserEditFormValues>({
+    resolver: zodResolver(userEditSchema),
+    defaultValues: {
+      name: '',
+      avatar: '',
+      role: USER_ROLE.USER,
+      isActive: true,
+    },
   });
 
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
@@ -52,35 +63,26 @@ export default function UserEditPage() {
       router.push(`/user/${userId}`);
     },
     onError: (error) => {
-      toast.error(error.message || 'ユーザー情報の更新に失敗しました');
+      toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
     },
   });
 
   useEffect(() => {
     if (user) {
-      setFormData({
-        name: user.name || '',
-        avatar: user.avatar || '',
+      form.reset({
+        name: user.name ?? '',
+        avatar: user.avatar ?? '',
         role: user.role,
         isActive: user.isActive,
       });
     }
-  }, [user]);
+  }, [user, form]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (values: UserEditFormValues) => {
     updateUser.mutate({
       id: userId,
-      ...formData,
+      ...values,
     });
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
   };
 
   if (isLoading) {
@@ -139,12 +141,12 @@ export default function UserEditPage() {
             <CardTitle>ユーザー編集</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="flex justify-center mb-6">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={formData.avatar} />
+                  <AvatarImage src={form.watch('avatar')} />
                   <AvatarFallback className="text-2xl">
-                    {formData.name?.[0]?.toUpperCase()}
+                    {form.watch('name')?.[0]?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </div>
@@ -153,14 +155,10 @@ export default function UserEditPage() {
                 <Label htmlFor="name">
                   名前 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  disabled={updateUser.isPending}
-                />
+                <Input id="name" {...form.register('name')} disabled={updateUser.isPending} />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -173,10 +171,8 @@ export default function UserEditPage() {
                 <Label htmlFor="avatar">アバターURL（任意）</Label>
                 <Input
                   id="avatar"
-                  name="avatar"
                   type="url"
-                  value={formData.avatar}
-                  onChange={handleChange}
+                  {...form.register('avatar')}
                   disabled={updateUser.isPending}
                   placeholder="https://example.com/avatar.png"
                 />
@@ -185,10 +181,10 @@ export default function UserEditPage() {
               <div className="space-y-2">
                 <Label htmlFor="role">ロール</Label>
                 <Select
-                  value={formData.role}
+                  value={form.watch('role')}
                   onValueChange={(value) => {
                     if (isUserRole(value)) {
-                      setFormData((prev) => ({ ...prev, role: value }));
+                      form.setValue('role', value);
                     }
                   }}
                   disabled={updateUser.isPending}
@@ -209,10 +205,8 @@ export default function UserEditPage() {
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isActive: checked === true }))
-                  }
+                  checked={form.watch('isActive')}
+                  onCheckedChange={(checked) => form.setValue('isActive', checked === true)}
                   disabled={updateUser.isPending}
                 />
                 <Label htmlFor="isActive">アクティブ</Label>

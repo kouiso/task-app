@@ -1,9 +1,11 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { z } from 'zod';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
@@ -12,12 +14,28 @@ import { Label } from '@/component/ui/label';
 import { PasswordInput } from '@/component/ui/password-input';
 import { api } from '@/trpc/react';
 
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+    newPassword: z.string().min(8, '新しいパスワードは8文字以上で入力してください'),
+    confirmPassword: z.string().min(1, '確認用パスワードを入力してください'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'パスワードが一致しません',
+    path: ['confirmPassword'],
+  });
+type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+
 export default function ChangePasswordPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+
+  const form = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
   });
 
   const changePassword = api.user.changePassword.useMutation({
@@ -26,35 +44,15 @@ export default function ChangePasswordPage() {
       router.push('/profile');
     },
     onError: (error) => {
-      toast.error(error.message || 'パスワードの変更に失敗しました');
+      toast.error(error.message ?? 'パスワードの変更に失敗しました');
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (formData.newPassword.length < 8) {
-      toast.error('新しいパスワードは8文字以上で入力してください');
-      return;
-    }
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      toast.error('パスワードが一致しません');
-      return;
-    }
-
+  const handleSubmit = (values: ChangePasswordFormValues) => {
     changePassword.mutate({
-      currentPassword: formData.currentPassword,
-      newPassword: formData.newPassword,
+      currentPassword: values.currentPassword,
+      newPassword: values.newPassword,
     });
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
   };
 
   return (
@@ -65,19 +63,21 @@ export default function ChangePasswordPage() {
             <CardTitle>パスワード変更</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">
                   現在のパスワード <span className="text-destructive">*</span>
                 </Label>
                 <PasswordInput
                   id="currentPassword"
-                  name="currentPassword"
-                  value={formData.currentPassword}
-                  onChange={handleChange}
-                  required
+                  {...form.register('currentPassword')}
                   disabled={changePassword.isPending}
                 />
+                {form.formState.errors.currentPassword && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.currentPassword.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -86,13 +86,15 @@ export default function ChangePasswordPage() {
                 </Label>
                 <PasswordInput
                   id="newPassword"
-                  name="newPassword"
-                  value={formData.newPassword}
-                  onChange={handleChange}
-                  required
+                  {...form.register('newPassword')}
                   disabled={changePassword.isPending}
                 />
                 <p className="text-sm text-muted-foreground">8文字以上で入力してください</p>
+                {form.formState.errors.newPassword && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.newPassword.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -101,16 +103,14 @@ export default function ChangePasswordPage() {
                 </Label>
                 <PasswordInput
                   id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
+                  {...form.register('confirmPassword')}
                   disabled={changePassword.isPending}
                 />
-                {formData.confirmPassword !== '' &&
-                  formData.newPassword !== formData.confirmPassword && (
-                    <p className="text-sm text-destructive">パスワードが一致しません</p>
-                  )}
+                {form.formState.errors.confirmPassword && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.confirmPassword.message}
+                  </p>
+                )}
               </div>
 
               {changePassword.error && (

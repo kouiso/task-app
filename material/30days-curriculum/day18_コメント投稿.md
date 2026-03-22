@@ -64,6 +64,7 @@ flowchart TD
 | TaskDetailDialog | タスク・ディテール・ダイアログ | タスク詳細＋コメント機能を内包 | 付箋の裏面にメモ欄がある |
 | comment.create | コメント・クリエイト | コメント投稿 API | 付箋にメモを貼る |
 | invalidate | インバリデート | キャッシュを再取得させる | 棚卸しして最新に更新 |
+| useForm + zodResolver | ユーズフォーム＋ゾッドリゾルバー | フォーム状態管理＋バリデーション（Day 14 復習） | 記入欄のルールを自動チェック |
 
 ## 📊 実装ステップ一覧
 
@@ -291,23 +292,43 @@ const { data: taskDetail } =
 
 ### Step 4: コメント投稿フォームを確認する（5分）
 
-🎯 **ゴール**: テキストエリアと送信ボタンの
-仕組みを読み解きます。
+🎯 **ゴール**: react-hook-form + zod で管理された
+コメント投稿フォームの仕組みを読み解きます。
 
-コメント入力の state を確認しましょう。
-`useState` で入力中のテキストを管理しています。
+Day 14 で学んだ `useForm + zodResolver` パターンが
+コメントフォームにも使われています。
+まず zod スキーマとフォーム初期化を確認しましょう。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// コメント入力の state（既存コード）
-const [commentContent, setCommentContent]
-  = useState('');
+// コメント用 zod スキーマ定義
+const commentSchema = z.object({
+  content: z.string()
+    .min(1, 'コメントを入力してください')
+    .trim(),
+});
+type CommentFormValues =
+  z.infer<typeof commentSchema>;
 ```
 
 ✅ **確認ポイント**:
-- state が TaskDetailDialog 内に定義されている
+- `min(1)` で空コメントを防止している
+- `z.infer` で型を自動生成している
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// useForm でフォームを初期化
+const commentForm =
+  useForm<CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: '' },
+  });
+```
+
+✅ **確認ポイント**:
+- Day 14 と同じ `zodResolver` パターンを使っている
 
 コメント一覧の下にテキストエリアと投稿ボタンが
 縦並びで配置されています。
@@ -315,45 +336,49 @@ const [commentContent, setCommentContent]
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// コメント投稿フォーム
-<div className="space-y-2">
-  <Textarea
-    placeholder="コメントを追加..."
-    value={commentContent}
-    onChange={(e) =>
-      setCommentContent(e.target.value)}
-    className="resize-none"
-    rows={2} />
-  <div className="flex justify-end">
-    <Button size="sm"
-      onClick={handleCommentSubmit}
-      disabled={!commentContent.trim()
-        || createCommentMutation.isPending}>
-      {createCommentMutation.isPending
-        ? '投稿中...' : 'コメント投稿'}
-    </Button>
+// コメント投稿フォーム（useForm管理）
+<form onSubmit={commentForm.handleSubmit(
+  handleCommentSubmit)}>
+  <div className="space-y-2">
+    <Textarea
+      placeholder="コメントを追加..."
+      {...commentForm.register('content')}
+      className="resize-none"
+      rows={2} />
+    <div className="flex justify-end">
+      <Button type="submit" size="sm"
+        disabled={
+          !commentForm.formState.isDirty
+          || createCommentMutation
+            .isPending}>
+        {createCommentMutation.isPending
+          ? '投稿中...' : 'コメント投稿'}
+      </Button>
+    </div>
   </div>
-</div>
+</form>
 ```
 
 ✅ **確認ポイント**:
-- テキストエリアが表示される
-- 空の状態でボタンが無効になる
+- `register('content')` でテキストエリアを管理
+- `handleSubmit` でバリデーション後に送信
 - 投稿中は「投稿中...」と表示される
 
 📸 スクリーンショット: テキストエリアと投稿ボタンが表示されている画面
 
-> 💡 `disabled` に `isPending` を含めることで、
-> 二重投稿を防止しています。
-> `resize-none` でテキストエリアのサイズ変更を
-> 無効にし、レイアウトの崩れを防ぎます。
+> 💡 `useState` ではなく `useForm` で管理する
+> メリットは、バリデーションが zod スキーマに
+> 集約されることです。Day 14 と同じパターンなので
+> プロジェクト全体で統一的にフォームを扱えます。
 
-#### 投稿ボタンの disabled 条件
+#### useState と useForm の比較
 
-| 条件 | 意味 |
-|------|------|
-| `!commentContent.trim()` | 空白のみは送信不可 |
-| `createCommentMutation.isPending` | 送信中は連打不可 |
+| 項目 | useState パターン | useForm パターン |
+|------|-----------------|-----------------|
+| バリデーション | 手動で条件分岐 | zod スキーマに集約 |
+| エラー表示 | 自前で管理 | `formState.errors` で自動管理 |
+| リセット | `setState('')` | `form.reset()` |
+| 型安全性 | 手動で型定義 | `z.infer` で自動生成 |
 
 ---
 
@@ -388,45 +413,48 @@ const createCommentMutation =
           { id: taskId },
         );
       }
-      setCommentContent('');
+      commentForm.reset();
     },
   });
 ```
 
 ✅ **確認ポイント**:
 - mutation が定義されている
-- `onSuccess` で invalidate とフォームクリアを実行
+- `onSuccess` で invalidate とフォームリセットを実行
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// コメント投稿ハンドラー
-const handleCommentSubmit = () => {
-  if (!commentContent.trim() || !taskId)
-    return;
-  createCommentMutation.mutate({
-    content: commentContent.trim(),
-    taskId,
-  });
-};
+// コメント投稿ハンドラー（useForm版）
+const handleCommentSubmit =
+  (values: CommentFormValues) => {
+    if (!taskId) return;
+    createCommentMutation.mutate({
+      content: values.content,
+      taskId,
+    });
+  };
 ```
 
 ✅ **確認ポイント**:
-- コメントが投稿できる
-- フォームがクリアされる
+- `values` は zod でバリデーション済み
+- フォームがリセットされる
 
-> 💡 投稿成功後に `setCommentContent('')` で
+> 💡 投稿成功後に `commentForm.reset()` で
 > フォームをクリアし、`invalidate` で
 > コメント一覧を自動更新します。
+> `handleSubmit` がバリデーションを実行するので
+> ハンドラー内での空チェックは不要です。
 
 #### mutation の処理フロー
 
 | 順番 | 処理 | 目的 |
 |------|------|------|
-| 1 | `mutate()` 呼び出し | サーバーへ送信 |
-| 2 | サーバーで `trim().min(1)` 検証 | 空投稿を防止 |
-| 3 | DB に保存 | コメントを永続化 |
-| 4 | `onSuccess` → `invalidate` | 一覧を再取得 |
-| 5 | `setCommentContent('')` | フォームをクリア |
+| 1 | `handleSubmit` でバリデーション | zod スキーマで検証 |
+| 2 | `mutate()` 呼び出し | サーバーへ送信 |
+| 3 | サーバーで `trim().min(1)` 検証 | 二重チェック |
+| 4 | DB に保存 | コメントを永続化 |
+| 5 | `onSuccess` → `invalidate` | 一覧を再取得 |
+| 6 | `commentForm.reset()` | フォームをクリア |
 
 ---
 

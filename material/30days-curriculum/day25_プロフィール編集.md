@@ -66,6 +66,8 @@ flowchart TD
 | changePassword | — | パスワード変更API | 暗証番号の変更 |
 | updateProfile | — | プロフィール更新API | 名前やメールの編集を保存 |
 | toast | トースト | 通知メッセージ（復習） | ポップアップ通知 |
+| useForm + zod（復習） | — | フォーム管理とバリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
+| refine | リファイン | zod のカスタムバリデーション | 2つのフィールドを比較するチェック |
 
 ## 📊 実装ステップ一覧
 
@@ -521,8 +523,8 @@ ls src/app/profile/change-password/
 
 ### Step 6: パスワード変更フォーム（5分）
 
-🎯 **ゴール**: useState でフォームの
-状態を管理し、APIを呼び出します。
+🎯 **ゴール**: useForm + zod でフォームの
+状態管理とバリデーションを実装します。
 
 💻 **実装**:
 
@@ -530,12 +532,15 @@ ls src/app/profile/change-password/
 // filepath: src/app/profile/change-password/page.tsx
 'use client';
 
-// アイコンとルーティング
+// react-hook-form + zod
+import { zodResolver }
+  from '@hookform/resolvers/zod';
 import { AlertCircle } from 'lucide-react';
 import { useRouter }
   from 'next/navigation';
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { z } from 'zod';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import {
@@ -545,7 +550,7 @@ import {
 ```
 
 ✅ **確認ポイント**:
-- インポートパスが正しい
+- `useForm`, `zodResolver`, `z` がインポートされている
 
 フォーム用のコンポーネントをインポートします。
 
@@ -569,17 +574,50 @@ import { api } from '@/trpc/react';
 > トグル（Eye/EyeOff）を内蔵したコンポーネントです。
 > ページ側で `showPassword` を管理する必要がありません。
 
+zod スキーマでバリデーションを定義します。
+`refine` で2つのフィールドの一致をチェックします。
+
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// useState でフォーム状態を管理
+// パスワード変更用の zodスキーマ
+const passwordSchema = z.object({
+  currentPassword: z.string()
+    .min(1, '現在のパスワードは必須です'),
+  newPassword: z.string()
+    .min(8, '8文字以上で入力してください'),
+  confirmPassword: z.string()
+    .min(1, '確認用パスワードは必須です'),
+}).refine(
+  (data) => data.newPassword
+    === data.confirmPassword,
+  {
+    message: 'パスワードが一致しません',
+    path: ['confirmPassword'],
+  },
+);
+type PasswordFormValues =
+  z.infer<typeof passwordSchema>;
+```
+
+✅ **確認ポイント**:
+- `refine` で一致チェックしている
+- エラーが `confirmPassword` に表示される
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// useForm でフォームを初期化
 export default function
   ChangePasswordPage() {
   const router = useRouter();
-  const [formData, setFormData] =
-    useState({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+  const form =
+    useForm<PasswordFormValues>({
+      resolver:
+        zodResolver(passwordSchema),
+      defaultValues: {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      },
     });
 ```
 
@@ -597,25 +635,11 @@ export default function
       onError: (error) => {
         toast.error(
           error.message
-          || 'パスワードの変更に'
+          ?? 'パスワードの変更に'
           + '失敗しました'
         );
       },
     });
-```
-
-```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// handleChange で入力値を更新
-const handleChange = (
-  e: React.ChangeEvent<HTMLInputElement>
-) => {
-  const { name, value } = e.target;
-  setFormData((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
-};
 ```
 
 ```typescript
@@ -631,19 +655,21 @@ const handleChange = (
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}
+        <form onSubmit={
+          form.handleSubmit(onSubmit)}
           className="space-y-6">
 ```
 
 ✅ **確認ポイント**:
-- ページの外枠を書いた
+- `form.handleSubmit` でバリデーション後に送信
 
 `<form>` タグの中に、以下の入力フィールドを
 順番に配置していきます。
+`register` で各入力をフォームに登録します。
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 現在のパスワード入力
+// 現在のパスワード入力（register版）
 <div className="space-y-2">
   <Label htmlFor="currentPassword">
     現在のパスワード
@@ -653,17 +679,24 @@ const handleChange = (
   </Label>
   <PasswordInput
     id="currentPassword"
-    name="currentPassword"
-    value={formData.currentPassword}
-    onChange={handleChange}
-    required
+    {...form.register(
+      'currentPassword')}
     disabled={changePassword.isPending}
   />
+  {form.formState.errors
+    .currentPassword && (
+    <p className="text-sm
+      text-destructive">
+      {form.formState.errors
+        .currentPassword.message}
+    </p>
+  )}
 </div>
 ```
 
 ✅ **確認ポイント**:
-- 目のアイコンで表示/非表示が切り替わる
+- `register` でフォームに登録している
+- エラーが自動表示される
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -677,16 +710,26 @@ const handleChange = (
   </Label>
   <PasswordInput
     id="newPassword"
-    name="newPassword"
-    value={formData.newPassword}
-    onChange={handleChange}
-    required
+    {...form.register('newPassword')}
     disabled={changePassword.isPending}
   />
   <p className="text-sm
     text-muted-foreground">
     8文字以上で入力してください
   </p>
+```
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// 新しいパスワードのエラー表示
+  {form.formState.errors
+    .newPassword && (
+    <p className="text-sm
+      text-destructive">
+      {form.formState.errors
+        .newPassword.message}
+    </p>
+  )}
 </div>
 ```
 
@@ -705,43 +748,30 @@ const handleChange = (
   </Label>
   <PasswordInput
     id="confirmPassword"
-    name="confirmPassword"
-    value={formData.confirmPassword}
-    onChange={handleChange}
-    required
+    {...form.register(
+      'confirmPassword')}
     disabled={changePassword.isPending}
   />
-```
-
-✅ **確認ポイント**:
-- 3つの入力欄が表示される
-
-確認パスワードの不一致をリアルタイムで表示します。
-
-```typescript
-// filepath: src/app/profile/change-password/page.tsx
-  {/* リアルタイム不一致表示 */}
-  {formData.confirmPassword !== '' &&
-    formData.newPassword
-      !== formData.confirmPassword && (
-      <p className="text-sm
-        text-destructive">
-        パスワードが一致しません
-      </p>
-    )}
+  {form.formState.errors
+    .confirmPassword && (
+    <p className="text-sm
+      text-destructive">
+      {form.formState.errors
+        .confirmPassword.message}
+    </p>
+  )}
 </div>
 ```
 
-> 💡 `PasswordInput` コンポーネントが
-> Eye/EyeOff アイコンを内蔵しているため、
-> ページ側で表示切替ロジックを書く必要が
-> ありません。再利用可能なコンポーネントの
-> メリットです。
+> 💡 `refine` でパスワード一致チェックを
+> 定義したので、`formState.errors` に
+> 自動でエラーが入ります。手動の
+> `if (a !== b)` チェックが不要になりました。
 
 ✅ **確認ポイント**:
 - フォームに入力できる
 - 目のアイコンでパスワードの表示/非表示が切り替わる
-- 確認パスワードが不一致の時に赤いテキストが出る
+- 不一致の時に zod がエラーを表示する
 
 📸 スクリーンショット: パスワード変更フォームの表示を確認してください。
 
@@ -749,45 +779,28 @@ const handleChange = (
 
 ### Step 7: バリデーションとエラー処理（5分）
 
-🎯 **ゴール**: パスワードのバリデーションと
-エラー時のフィードバックを実装します。
+🎯 **ゴール**: zod バリデーションと
+APIエラーのフィードバックを確認します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// handleSubmit でバリデーション
-const handleSubmit = async (
-  e: React.FormEvent
-) => {
-  e.preventDefault();
-
-  if (formData.newPassword.length < 8) {
-    toast.error(
-      '新しいパスワードは'
-      + '8文字以上で入力してください'
-    );
-    return;
-  }
-
-  if (formData.newPassword
-      !== formData.confirmPassword) {
-    toast.error('パスワードが一致しません');
-    return;
-  }
+// onSubmit（zodバリデーション済みの値を受け取る）
+const onSubmit =
+  (values: PasswordFormValues) => {
+    changePassword.mutate({
+      currentPassword:
+        values.currentPassword,
+      newPassword: values.newPassword,
+    });
+  };
 ```
 
-バリデーション通過後はAPIを呼び出します。
-
-```typescript
-// filepath: src/app/profile/change-password/page.tsx
-  changePassword.mutate({
-    currentPassword:
-      formData.currentPassword,
-    newPassword: formData.newPassword,
-  });
-};
-```
+> 💡 `form.handleSubmit(onSubmit)` が zod
+> スキーマでバリデーションを実行してから
+> `onSubmit` を呼びます。手動の `if` チェックが
+> 不要になり、コードがシンプルになります。
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -834,12 +847,13 @@ const handleSubmit = async (
 - 不一致でエラーが出る
 - 成功時に /profile へ戻る
 
-#### バリデーションルール
+#### バリデーションルール（zodスキーマで定義済み）
 
-| チェック | 条件 | メッセージ |
-|---------|------|-----------|
-| 文字数 | newPassword.length < 8 | 8文字以上で入力 |
-| 一致確認 | newPassword !== confirmPassword | パスワードが一致しません |
+| チェック | zod メソッド | メッセージ |
+|---------|-------------|-----------|
+| 文字数 | `z.string().min(8)` | 8文字以上で入力してください |
+| 一致確認 | `.refine()` | パスワードが一致しません |
+| 必須チェック | `z.string().min(1)` | 各フィールドの空チェック |
 
 #### toast の使い分け
 
@@ -908,11 +922,12 @@ ls src/app/profile/edit/
 ```mermaid
 flowchart LR
     A[getCurrentUser] --> B[useEffect]
-    B --> C[formData に初期値セット]
-    C --> D[フォーム入力]
-    D --> E[updateProfile.mutate]
-    E --> F[toast で結果通知]
-    F --> G[/profile に戻る]
+    B --> C[form.reset で初期値セット]
+    C --> D[フォーム入力 register]
+    D --> E[form.handleSubmit]
+    E --> F[updateProfile.mutate]
+    F --> G[toast で結果通知]
+    G --> H[/profile に戻る]
 ```
 
 #### フォーム項目一覧
@@ -935,23 +950,23 @@ flowchart LR
 | Alert | エラーメッセージの表示 |
 | PageLoadingSpinner | ローディング表示 |
 
-#### useEffect の役割
+#### useForm + useEffect の役割
 
 | 処理 | タイミング | 目的 |
 |------|-----------|------|
 | getCurrentUser でデータ取得 | ページ表示時 | サーバーから最新情報を取得 |
-| useEffect で formData にセット | データ取得完了時 | フォームに既存値を表示 |
-| handleChange で formData 更新 | 入力変更時 | ユーザーの入力を反映 |
-| updateProfile.mutate で送信 | フォーム送信時 | サーバーに更新を依頼 |
+| useEffect で `form.reset()` | データ取得完了時 | フォームに既存値をセット |
+| `register` で入力を管理 | 入力変更時 | ユーザーの入力を反映 |
+| `form.handleSubmit` で送信 | フォーム送信時 | zod バリデーション後に送信 |
 
-> 💡 `useEffect` はサーバーから取得した
-> データでフォームの初期値をセットする
-> ために使います。これがないと
-> フォームが空の状態で表示されます。
+> 💡 `useEffect` + `form.reset()` で
+> サーバーデータをフォームにセットします。
+> Day 14 の `values` prop と同じく、
+> データ到着時にフォームが自動で埋まります。
 
 ✅ **確認ポイント**:
 - 編集ページのデータフローを理解した
-- useEffect が初期値セットに使われることを理解した
+- useEffect + form.reset が初期値セットに使われることを理解した
 
 ---
 
@@ -968,13 +983,16 @@ flowchart LR
 // filepath: src/app/profile/edit/page.tsx
 'use client';
 
+import { zodResolver }
+  from '@hookform/resolvers/zod';
 import { AlertCircle }
   from 'lucide-react';
 import { useRouter }
   from 'next/navigation';
-import { useEffect, useState }
-  from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { z } from 'zod';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import {
@@ -984,7 +1002,7 @@ import {
 ```
 
 ✅ **確認ポイント**:
-- 外部ライブラリのインポートを書いた
+- `useForm`, `zodResolver`, `z` がインポートされている
 
 残りの UI コンポーネントをインポートします。
 
@@ -1012,34 +1030,56 @@ import { api } from '@/trpc/react';
 
 ✅ **確認ポイント**:
 - shadcn/ui のコンポーネントをインポートしている
-- tRPC の api をインポートしている
 
-コンポーネントの定義とフォームの状態管理です。
+プロフィール編集用の zod スキーマを定義します。
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// コンポーネント定義と状態管理
-export default function ProfileEditPage() {
-  const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    avatar: '',
-  });
+// プロフィール編集用の zodスキーマ
+const profileSchema = z.object({
+  name: z.string()
+    .min(1, '名前は必須です'),
+  email: z.string()
+    .email('メールアドレスの形式が'
+      + '正しくありません'),
+  avatar: z.string().url().or(
+    z.literal('')),
+});
+type ProfileFormValues =
+  z.infer<typeof profileSchema>;
 ```
 
 ✅ **確認ポイント**:
-- formData に3つのフィールドがある
+- `email()` でメール形式を検証している
+- アバターは空文字またはURL形式を許可
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// useForm でフォームを初期化
+export default function ProfileEditPage() {
+  const router = useRouter();
+  const form =
+    useForm<ProfileFormValues>({
+      resolver:
+        zodResolver(profileSchema),
+      defaultValues: {
+        name: '',
+        email: '',
+        avatar: '',
+      },
+    });
+```
+
+✅ **確認ポイント**:
+- useForm に zodResolver を設定している
 
 データ取得と更新APIの設定です。
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-  // サーバーからユーザー情報を取得
   const { data: currentUser, isLoading } =
     api.auth.getCurrentUser.useQuery();
 
-  // プロフィール更新APIの設定
   const updateProfile =
     api.user.updateProfile.useMutation({
       onSuccess: () => {
@@ -1050,8 +1090,9 @@ export default function ProfileEditPage() {
       },
       onError: (error) => {
         toast.error(
-          error.message ||
-            'プロフィールの更新に失敗しました'
+          error.message
+          ?? 'プロフィールの更新に'
+          + '失敗しました'
         );
       },
     });
@@ -1065,46 +1106,35 @@ export default function ProfileEditPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-  // サーバーデータでフォームを初期化
+  // form.reset でサーバーデータをセット
   useEffect(() => {
     if (currentUser) {
-      setFormData({
-        name: currentUser.name || '',
-        email: currentUser.email || '',
-        avatar: currentUser.avatar || '',
+      form.reset({
+        name: currentUser.name ?? '',
+        email: currentUser.email ?? '',
+        avatar: currentUser.avatar ?? '',
       });
     }
-  }, [currentUser]);
+  }, [currentUser, form]);
 ```
 
 ✅ **確認ポイント**:
-- useEffect でフォーム初期値をセットしている
+- `form.reset` でフォーム初期値をセットしている
 
-フォーム送信と入力変更のハンドラーです。
+フォーム送信のハンドラーです。
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-  // フォーム送信処理
-  const handleSubmit =
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      updateProfile.mutate(formData);
-    };
-
-  // 入力変更時の処理
-  const handleChange =
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+  // zodバリデーション済みの値で送信
+  const onSubmit =
+    (values: ProfileFormValues) => {
+      updateProfile.mutate(values);
     };
 ```
 
 ✅ **確認ポイント**:
-- handleSubmit で mutate を呼んでいる
-- handleChange で動的にフィールドを更新している
+- `onSubmit` は zod でバリデーション済みの値を受け取る
+- `handleChange` が不要になりコードがシンプル
 
 ローディング表示とJSXの開始部分です。
 
@@ -1135,33 +1165,34 @@ export default function ProfileEditPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// フォームとアバタープレビュー
-            <form onSubmit={handleSubmit}
+// フォームとアバタープレビュー（useForm版）
+            <form onSubmit={
+              form.handleSubmit(onSubmit)}
               className="space-y-6">
-              {/* アバターのプレビュー表示 */}
               <div className=
                 "flex justify-center mb-6">
                 <Avatar
                   className="w-24 h-24">
                   <AvatarImage
-                    src={formData.avatar} />
+                    src={form.watch(
+                      'avatar')} />
                   <AvatarFallback
                     className="text-2xl">
-                    {formData.name?.[0]
-                      ?.toUpperCase()}
+                    {form.watch('name')
+                      ?.[0]?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </div>
 ```
 
 ✅ **確認ポイント**:
-- Avatar でアバター画像を表示している
+- `form.watch` でリアルタイムにプレビュー更新
 
-名前の入力欄です。
+名前の入力欄です。`register` で管理します。
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 名前の入力欄（必須）
+// 名前の入力欄（register版）
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前
@@ -1172,25 +1203,30 @@ export default function ProfileEditPage() {
                 </Label>
                 <Input
                   id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
+                  {...form.register('name')}
                   disabled={
                     updateProfile.isPending}
                 />
+                {form.formState.errors
+                  .name && (
+                  <p className="text-sm
+                    text-destructive">
+                    {form.formState.errors
+                      .name.message}
+                  </p>
+                )}
               </div>
 ```
 
 ✅ **確認ポイント**:
-- required で必須入力にしている
-- isPending 中は入力を無効化している
+- `register` でフォームに登録している
+- zod のエラーが自動表示される
 
 メールアドレスの入力欄です。
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// メールアドレスの入力欄（必須）
+// メールアドレスの入力欄（register版）
               <div className="space-y-2">
                 <Label htmlFor="email">
                   メールアドレス
@@ -1201,35 +1237,44 @@ export default function ProfileEditPage() {
                 </Label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
+                  {...form.register('email')}
                   disabled={
                     updateProfile.isPending}
                 />
+```
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// メールアドレスのエラー表示
+                {form.formState.errors
+                  .email && (
+                  <p className="text-sm
+                    text-destructive">
+                    {form.formState.errors
+                      .email.message}
+                  </p>
+                )}
               </div>
 ```
 
 ✅ **確認ポイント**:
-- type="email" でメール形式を検証している
+- zod の `email()` でメール形式を検証している
 
 アバターURLの入力欄です。
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// アバターURLの入力欄（任意）
+// アバターURLの入力欄（register版）
               <div className="space-y-2">
                 <Label htmlFor="avatar">
                   アバターURL（任意）
                 </Label>
                 <Input
                   id="avatar"
-                  name="avatar"
                   type="url"
-                  value={formData.avatar}
-                  onChange={handleChange}
+                  {...form.register(
+                    'avatar')}
                   disabled={
                     updateProfile.isPending}
                   placeholder=
@@ -1244,7 +1289,7 @@ export default function ProfileEditPage() {
 ```
 
 ✅ **確認ポイント**:
-- アバターは任意なので required がない
+- アバターは任意なので空文字も許可されている
 - placeholder でURLの例を表示している
 
 エラー表示の部分です。

@@ -65,6 +65,8 @@ flowchart TD
 | search.search | — | 検索API | 図書館の蔵書検索 |
 | URLSearchParams | — | URL条件管理 | 検索条件の付箋 |
 | shouldSearch | — | 検索実行フラグ | 検索ボタンを押したか |
+| useForm（復習） | ユーズフォーム | フォーム状態管理（Day 14 参照） | 検索条件の管理係 |
+| watch | ウォッチ | フォームの値をリアクティブに監視 | 入力が変わるたびに条件を更新 |
 
 ## 📊 実装ステップ一覧
 
@@ -157,18 +159,22 @@ const searchInputSchema = z.object({
 // filepath: src/app/search/page.tsx
 'use client';
 
-import { Suspense, useEffect, useState }
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { Suspense, useEffect }
   from 'react';
+import { useForm } from 'react-hook-form';
 import {
   useRouter, useSearchParams,
 } from 'next/navigation';
+import { z } from 'zod';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import { api } from '@/trpc/react';
 ```
 
 ✅ **確認ポイント**:
-- インポートが追加された
+- `useForm`, `zodResolver`, `z` がインポートされている
 
 続いて、コンポーネント本体を定義します。
 `utils` は検索結果の再取得（削除後）に使います。
@@ -195,7 +201,8 @@ function SearchPageContent() {
 ```
 
 > 💡 `useSearchParams` でURLの検索条件を
-> 読み取ります。`useRouter` で条件変更時に
+> 読み取ります。`useForm` でフォーム状態を
+> 一括管理し、`useRouter` で条件変更時に
 > URLを更新します。
 
 ✅ **確認ポイント**:
@@ -203,10 +210,10 @@ function SearchPageContent() {
 
 ---
 
-### Step 3: フィルターのインポートとstateを追加する（4分）
+### Step 3: zodスキーマとuseFormを追加する（4分）
 
-🎯 **ゴール**: 7つのフィルター条件に必要な
-インポートとstateを追加します。
+🎯 **ゴール**: 7つのフィルター条件を
+zod スキーマと useForm で一括管理します。
 
 💻 **実装**:
 
@@ -247,58 +254,79 @@ import {
 ✅ **確認ポイント**:
 - `isTaskStatus` / `isTaskPriority` が追加された
 
-stateの初期値をURLパラメータから型安全に設定します。
+検索フォーム用の zod スキーマを定義します。
+全フィールドをひとつのオブジェクトで管理します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// SearchPageContent内: テキスト系state
-const [keyword, setKeyword] =
-  useState(
-    searchParams.get('keyword') ?? '');
-const [projectId, setProjectId] =
-  useState(
-    searchParams.get('projectId') ?? 'all');
+// 検索フォームの zodスキーマ
+const searchFormSchema = z.object({
+  keyword: z.string(),
+  projectId: z.string(),
+  status: z.string(),
+  priority: z.string(),
+  assignedTo: z.string(),
+  dateFrom: z.string(),
+  dateTo: z.string(),
+});
+type SearchFormValues =
+  z.infer<typeof searchFormSchema>;
 ```
 
 ✅ **確認ポイント**:
-- `??` で初期値を設定している
+- 7つのフィールドが1つのスキーマに集約された
+
+URLパラメータから初期値を型安全に設定し、
+`useForm` で管理します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// SearchPageContent内: 型ガード付きstate
-const initialStatus =
+// SearchPageContent内: useFormで一括管理
+const initStatus =
   searchParams.get('status') ?? 'all';
-const [status, setStatus] =
-  useState<'all' | TaskStatus>(
-    isTaskStatus(initialStatus)
-      ? initialStatus : 'all');
-
-const initialPriority =
+const initPriority =
   searchParams.get('priority') ?? 'all';
-const [priority, setPriority] =
-  useState<'all' | TaskPriority>(
-    isTaskPriority(initialPriority)
-      ? initialPriority : 'all');
+
+const form = useForm<SearchFormValues>({
+  resolver: zodResolver(searchFormSchema),
+  defaultValues: {
+    keyword:
+      searchParams.get('keyword') ?? '',
+    projectId:
+      searchParams.get('projectId')
+        ?? 'all',
+    status: isTaskStatus(initStatus)
+      ? initStatus : 'all',
 ```
-
-✅ **確認ポイント**:
-- `isTaskStatus` で型安全に初期化している
-
-残りのstateとAPI呼び出しを追加します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// SearchPageContent内: 担当者・日付state
-const [assignedTo, setAssignedTo] =
-  useState(
-    searchParams.get('assignedTo')
-      ?? 'all');
-const [dateFrom, setDateFrom] =
-  useState(
-    searchParams.get('dateFrom') ?? '');
-const [dateTo, setDateTo] =
-  useState(
-    searchParams.get('dateTo') ?? '');
+// defaultValues の続き
+    priority:
+      isTaskPriority(initPriority)
+        ? initPriority : 'all',
+    assignedTo:
+      searchParams.get('assignedTo')
+        ?? 'all',
+    dateFrom:
+      searchParams.get('dateFrom') ?? '',
+    dateTo:
+      searchParams.get('dateTo') ?? '',
+  },
+});
+```
+
+✅ **確認ポイント**:
+- `useForm` で7つのフィールドを一括管理している
+- URLパラメータから `??` で初期値を設定している
+
+`watch` でフォームの現在値を取得し、
+API呼び出し用データを用意します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// フォームの現在値を監視
+const formValues = form.watch();
 
 const { data: projects } =
   api.search.getUserProjects.useQuery();
@@ -307,7 +335,12 @@ const { data: users } =
 ```
 
 ✅ **確認ポイント**:
-- 7つのstateが全て定義された
+- `watch()` でフォームの値をリアクティブに取得
+
+> 💡 Day 14 では `register` と `Controller` で
+> 各入力を管理しました。検索フォームでは
+> `setValue` と `watch` の組み合わせで
+> Select コンポーネントの値も管理できます。
 
 ---
 
@@ -339,9 +372,7 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
           <Input id="keyword"
             placeholder="タスク名で検索..."
             className="pl-8"
-            value={keyword}
-            onChange={(e) =>
-              setKeyword(e.target.value)}
+            {...form.register('keyword')}
             onKeyDown={(e) => {
               if (e.key === 'Enter')
                 handleSearch();
@@ -351,21 +382,27 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- キーワード入力欄が表示される
+- `register('keyword')` でフォームに登録している
 
 6つのフィルターをgridで配置します。
 プロジェクト・ステータス・優先度です。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 6列グリッド + プロジェクトSelect
+// 6列グリッドの開始
 <div className="grid grid-cols-1
   md:grid-cols-2 lg:grid-cols-3
   gap-4">
+```
+
+```typescript
+// filepath: src/app/search/page.tsx
+// プロジェクトSelect
   <div className="grid gap-2">
     <Label>プロジェクト</Label>
-    <Select value={projectId}
-      onValueChange={setProjectId}>
+    <Select value={formValues.projectId}
+      onValueChange={(v) =>
+        form.setValue('projectId', v)}>
       <SelectTrigger>
         <SelectValue
           placeholder="すべて" />
@@ -385,19 +422,18 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- プロジェクトのSelectが表示される
+- `form.setValue` でSelect値をフォームに反映
 
 ```typescript
 // filepath: src/app/search/page.tsx
 // ステータスフィルター（型ガード付き）
   <div className="grid gap-2">
     <Label>ステータス</Label>
-    <Select value={status}
+    <Select value={formValues.status}
       onValueChange={(v) => {
-        if (isTaskStatus(v))
-          setStatus(v);
-        else if (v === 'all')
-          setStatus('all');
+        if (isTaskStatus(v)
+          || v === 'all')
+          form.setValue('status', v);
       }}>
       <SelectTrigger>
         <SelectValue /></SelectTrigger>
@@ -416,7 +452,7 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- ステータスのSelectが型ガード付きで動作する
+- 型ガード付きで `form.setValue` している
 
 優先度もステータスと同じパターンです。
 
@@ -425,12 +461,11 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 // 優先度フィルター（型ガード付き）
   <div className="grid gap-2">
     <Label>優先度</Label>
-    <Select value={priority}
+    <Select value={formValues.priority}
       onValueChange={(v) => {
-        if (isTaskPriority(v))
-          setPriority(v);
-        else if (v === 'all')
-          setPriority('all');
+        if (isTaskPriority(v)
+          || v === 'all')
+          form.setValue('priority', v);
       }}>
       <SelectTrigger>
         <SelectValue /></SelectTrigger>
@@ -449,7 +484,7 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- 優先度のSelectが型ガード付きで動作する
+- 優先度もステータスと同じパターンで動作する
 
 担当者と期限フィルターを追加します。
 
@@ -460,8 +495,9 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
     <Label htmlFor="assignedTo">
       担当者
     </Label>
-    <Select value={assignedTo}
-      onValueChange={setAssignedTo}>
+    <Select value={formValues.assignedTo}
+      onValueChange={(v) =>
+        form.setValue('assignedTo', v)}>
       <SelectTrigger id="assignedTo">
         <SelectValue
           placeholder="すべての担当者" />
@@ -470,6 +506,11 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
         <SelectItem value="all">
           すべての担当者
         </SelectItem>
+```
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 担当者リスト（SelectContent続き）
         {users?.map((user) => (
           <SelectItem key={user.id}
             value={user.id}>
@@ -482,7 +523,7 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- 担当者のSelectが表示される
+- 担当者も `form.setValue` で管理している
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -492,18 +533,14 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
       期限：開始日
     </Label>
     <Input id="dateFrom" type="date"
-      value={dateFrom}
-      onChange={(e) =>
-        setDateFrom(e.target.value)} />
+      {...form.register('dateFrom')} />
   </div>
   <div className="grid gap-2">
     <Label htmlFor="dateTo">
       期限：終了日
     </Label>
     <Input id="dateTo" type="date"
-      value={dateTo}
-      onChange={(e) =>
-        setDateTo(e.target.value)} />
+      {...form.register('dateTo')} />
   </div>
 </div>{/* grid終了 */}
 ```
@@ -552,72 +589,60 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 
 💻 **実装**:
 
-`status` と `priority` は型ガード付きで
-同期する必要があります。
-
-まず同期用の配列を定義します。
-`status` と `priority` は型ガード付きです。
+URLパラメータが変わったときに
+`useForm` の値を同期します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// URL→state同期の配列定義
-const paramSyncs: Array<{
-  key: string;
-  setter: (v: string) => void;
-}> = [
-  { key: 'keyword', setter: setKeyword },
-  { key: 'projectId',
-    setter: setProjectId },
-  { key: 'status', setter: (v) => {
-    if (isTaskStatus(v)) setStatus(v);
-    else if (v === 'all')
-      setStatus('all');
-  }},
-  { key: 'priority', setter: (v) => {
-    if (isTaskPriority(v))
-      setPriority(v);
-    else if (v === 'all')
-      setPriority('all');
-  }},
-  { key: 'assignedTo',
-    setter: setAssignedTo },
-  { key: 'dateFrom', setter: setDateFrom },
-  { key: 'dateTo', setter: setDateTo },
-];
+// URL→form 同期（useEffect）
+const SEARCH_FIELDS = [
+  'keyword', 'projectId', 'status',
+  'priority', 'assignedTo',
+  'dateFrom', 'dateTo',
+] as const;
+
+useEffect(() => {
+  for (const key of SEARCH_FIELDS) {
+    const value =
+      searchParams.get(key);
+    if (value)
+      form.setValue(key, value);
+  }
+}, [searchParams, form]);
 ```
 
 ✅ **確認ポイント**:
-- 7つ全てのパラメータが含まれている
+- `form.setValue` で URL→フォームに同期している
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// useEffectでURLパラメータからstateに同期
-useEffect(() => {
-  for (const { key, setter }
-    of paramSyncs) {
-    const value =
-      searchParams.get(key);
-    if (value) setter(value);
-  }
-}, [searchParams]);
+// 検索実行ハンドラー（useForm版）
+const handleSearch = () => {
+  const values = form.getValues();
+  const paramList = [
+    { key: 'keyword',
+      value: values.keyword },
+    { key: 'projectId',
+      value: values.projectId,
+      exclude: 'all' },
+    { key: 'status',
+      value: values.status,
+      exclude: 'all' },
+    { key: 'priority',
+      value: values.priority,
+      exclude: 'all' },
 ```
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 検索実行ハンドラー
-const handleSearch = () => {
-  const paramList = [
-    { key: 'keyword', value: keyword },
-    { key: 'projectId',
-      value: projectId, exclude: 'all' },
-    { key: 'status',
-      value: status, exclude: 'all' },
-    { key: 'priority',
-      value: priority, exclude: 'all' },
+// paramList 続き + URL更新
     { key: 'assignedTo',
-      value: assignedTo, exclude: 'all' },
-    { key: 'dateFrom', value: dateFrom },
-    { key: 'dateTo', value: dateTo },
+      value: values.assignedTo,
+      exclude: 'all' },
+    { key: 'dateFrom',
+      value: values.dateFrom },
+    { key: 'dateTo',
+      value: values.dateTo },
   ];
   const params = new URLSearchParams();
   for (const p of paramList) {
@@ -631,23 +656,24 @@ const handleSearch = () => {
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// クリアハンドラー
+// クリアハンドラー（form.reset版）
 const handleClear = () => {
-  setKeyword('');
-  setProjectId('all');
-  setStatus('all');
-  setPriority('all');
-  setAssignedTo('all');
-  setDateFrom('');
-  setDateTo('');
+  form.reset({
+    keyword: '',
+    projectId: 'all',
+    status: 'all',
+    priority: 'all',
+    assignedTo: 'all',
+    dateFrom: '',
+    dateTo: '',
+  });
   router.push('/search');
 };
 ```
 
-> 💡 `URLSearchParams` はURLの `?key=value`
-> 部分を手軽に操作できるブラウザ標準APIです。
-> 検索条件がURLに残るので、ページを
-> リロードしても条件が維持されます。
+> 💡 `form.getValues()` で全フィールドの値を
+> 一括取得し、`form.reset()` で一括クリアできます。
+> `useState` を7個並べるより管理しやすくなります。
 
 ✅ **確認ポイント**:
 - 検索後にURLが `?keyword=xxx` になる
@@ -666,33 +692,45 @@ const handleClear = () => {
 // filepath: src/app/search/page.tsx
 // 検索条件が1つでもあるかチェック
 const shouldSearch =
-  !!keyword
-  || projectId !== 'all'
-  || status !== 'all'
-  || priority !== 'all'
-  || assignedTo !== 'all'
-  || !!dateFrom
-  || !!dateTo;
+  !!formValues.keyword
+  || formValues.projectId !== 'all'
+  || formValues.status !== 'all'
+  || formValues.priority !== 'all'
+  || formValues.assignedTo !== 'all'
+  || !!formValues.dateFrom
+  || !!formValues.dateTo;
 ```
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 検索API呼び出し
+// 検索API呼び出し（formValues を使用）
 const { data: searchResults, isLoading }
   = api.search.search.useQuery(
   {
-    keyword: keyword || undefined,
-    projectId: projectId !== 'all'
-      ? projectId : undefined,
-    status: status,
-    priority: priority,
-    assignedTo: assignedTo !== 'all'
-      ? assignedTo : undefined,
-    dateFrom: dateFrom
-      ? new Date(dateFrom).toISOString()
+    keyword:
+      formValues.keyword || undefined,
+    projectId:
+      formValues.projectId !== 'all'
+        ? formValues.projectId
+        : undefined,
+    status: formValues.status,
+    priority: formValues.priority,
+```
+
+```typescript
+// filepath: src/app/search/page.tsx
+// useQuery パラメータ続き
+    assignedTo:
+      formValues.assignedTo !== 'all'
+        ? formValues.assignedTo
+        : undefined,
+    dateFrom: formValues.dateFrom
+      ? new Date(formValues.dateFrom)
+        .toISOString()
       : undefined,
-    dateTo: dateTo
-      ? new Date(dateTo).toISOString()
+    dateTo: formValues.dateTo
+      ? new Date(formValues.dateTo)
+        .toISOString()
       : undefined,
   },
   {
@@ -1063,8 +1101,9 @@ npm run dev
 | shouldSearch | 検索実行の判定フラグ（全条件をORで評価） |
 | enabled | useQueryの実行条件制御 |
 | refetchOnWindowFocus | ウィンドウ復帰時の再取得設定 |
-| getUserProjects | ユーザーが参加するプロジェクト取得API |
-| getProjectMembers | プロジェクトメンバー一覧取得API |
+| form.watch() | フォームの値をリアクティブに監視する関数 |
+| form.setValue() | フォームの値をプログラムから更新する関数 |
+| form.getValues() | フォームの全フィールドの値を一括取得する関数 |
 
 ## 🔜 次回予告
 

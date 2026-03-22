@@ -60,15 +60,22 @@ const baseMenuItems: MenuItem[] = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // ハイドレーションミスマッチを防止するため、useState+useEffectで
+  // 初回レンダリングはSSRと一致させ、マウント後にクライアントモードに切り替える
+  const [hasMounted, setHasMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isLoading } = api.auth.getSession.useQuery();
 
   useEffect(() => {
-    if (!isLoading && !session) {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && !isLoading && !session) {
       router.push('/login');
     }
-  }, [isLoading, session, router]);
+  }, [hasMounted, isLoading, session, router]);
 
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: () => {
@@ -88,11 +95,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       : []),
   ];
 
-  if (isLoading) {
+  // マウント後（クライアント）のみローディング・未認証チェックを実行
+  // SSR時・初回ハイドレーション時はmiddleware.tsが認証チェック済みのため、レイアウトを描画する
+  if (hasMounted && isLoading) {
     return <PageLoadingSpinner />;
   }
 
-  if (!session?.user) {
+  if (hasMounted && !session?.user) {
     return null;
   }
 
@@ -125,12 +134,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="border-t p-4">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={session.user.avatar || ''} alt={session.user.name || ''} />
-                <AvatarFallback>{session.user.name?.[0] || 'U'}</AvatarFallback>
+                <AvatarImage src={session?.user?.avatar || ''} alt={session?.user?.name || ''} />
+                <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate">{session.user.name}</span>
-                <UserRoleBadge role={session.user.role} />
+                <span className="text-sm font-medium truncate">{session?.user?.name}</span>
+                {session?.user?.role && <UserRoleBadge role={session.user.role} />}
               </div>
             </div>
             <AlertDialog>
@@ -195,8 +204,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={session.user.avatar || ''} alt={session.user.name || ''} />
-                  <AvatarFallback>{session.user.name?.[0] || 'U'}</AvatarFallback>
+                  <AvatarImage src={session?.user?.avatar || ''} alt={session?.user?.name || ''} />
+                  <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
                 <span className="sr-only">ユーザーメニューを切り替え</span>
               </Button>

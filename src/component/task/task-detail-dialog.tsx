@@ -1,9 +1,12 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
@@ -29,12 +32,30 @@ type TaskDetailDialogProps = {
   onClose: () => void;
 };
 
+const commentSchema = z.object({
+  content: z.string().min(1, 'コメントを入力してください').trim(),
+});
+type CommentFormValues = z.infer<typeof commentSchema>;
+
+const editCommentSchema = z.object({
+  content: z.string().min(1, 'コメントを入力してください').trim(),
+});
+type EditCommentFormValues = z.infer<typeof editCommentSchema>;
+
 export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProps) {
-  const [commentContent, setCommentContent] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingCommentContent, setEditingCommentContent] = useState('');
   const [deleteCommentDialogOpen, setDeleteCommentDialogOpen] = useState(false);
   const [deleteCommentTargetId, setDeleteCommentTargetId] = useState<string | null>(null);
+
+  const commentForm = useForm<CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: '' },
+  });
+
+  const editCommentForm = useForm<EditCommentFormValues>({
+    resolver: zodResolver(editCommentSchema),
+    defaultValues: { content: '' },
+  });
 
   const utils = api.useUtils();
 
@@ -49,7 +70,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       if (taskId) {
         utils.task.getById.invalidate({ id: taskId });
       }
-      setCommentContent('');
+      commentForm.reset();
     },
   });
 
@@ -59,7 +80,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
         utils.task.getById.invalidate({ id: taskId });
       }
       setEditingCommentId(null);
-      setEditingCommentContent('');
+      editCommentForm.reset();
     },
   });
 
@@ -72,37 +93,38 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
   });
 
   const handleClose = () => {
-    setCommentContent('');
+    commentForm.reset();
+    editCommentForm.reset();
     setEditingCommentId(null);
-    setEditingCommentContent('');
     setDeleteCommentDialogOpen(false);
     setDeleteCommentTargetId(null);
     onClose();
   };
 
-  const handleCommentSubmit = () => {
-    if (!commentContent.trim() || !taskId) return;
+  const handleCommentSubmit = (values: CommentFormValues) => {
+    if (!taskId) return;
     createCommentMutation.mutate({
-      content: commentContent.trim(),
+      content: values.content,
       taskId,
     });
   };
 
   const handleStartEdit = (comment: { id: string; content: string }) => {
     setEditingCommentId(comment.id);
-    setEditingCommentContent(comment.content);
+    editCommentForm.setValue('content', comment.content);
   };
 
   const handleCancelEdit = () => {
     setEditingCommentId(null);
-    setEditingCommentContent('');
+    editCommentForm.reset();
   };
 
   const handleSaveEdit = (commentId: string) => {
-    if (!editingCommentContent.trim()) return;
+    const content = editCommentForm.getValues('content').trim();
+    if (!content) return;
     updateCommentMutation.mutate({
       id: commentId,
-      content: editingCommentContent.trim(),
+      content,
     });
   };
 
@@ -232,8 +254,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                         {editingCommentId === comment.id ? (
                           <div className="space-y-2">
                             <Textarea
-                              value={editingCommentContent}
-                              onChange={(e) => setEditingCommentContent(e.target.value)}
+                              {...editCommentForm.register('content')}
                               className="resize-none"
                               rows={2}
                             />
@@ -245,7 +266,8 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                                 size="sm"
                                 onClick={() => handleSaveEdit(comment.id)}
                                 disabled={
-                                  !editingCommentContent.trim() || updateCommentMutation.isPending
+                                  !editCommentForm.watch('content').trim() ||
+                                  updateCommentMutation.isPending
                                 }
                               >
                                 {updateCommentMutation.isPending ? '更新中...' : '更新'}
@@ -260,24 +282,28 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                   ))}
                 </div>
 
-                <div className="space-y-2">
+                <form
+                  onSubmit={commentForm.handleSubmit(handleCommentSubmit)}
+                  className="space-y-2"
+                >
                   <Textarea
                     placeholder="コメントを追加..."
-                    value={commentContent}
-                    onChange={(e) => setCommentContent(e.target.value)}
+                    {...commentForm.register('content')}
                     className="resize-none"
                     rows={2}
                   />
                   <div className="flex justify-end">
                     <Button
+                      type="submit"
                       size="sm"
-                      onClick={handleCommentSubmit}
-                      disabled={!commentContent.trim() || createCommentMutation.isPending}
+                      disabled={
+                        !commentForm.watch('content').trim() || createCommentMutation.isPending
+                      }
                     >
                       {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
                     </Button>
                   </div>
-                </div>
+                </form>
               </div>
             </div>
           )}
