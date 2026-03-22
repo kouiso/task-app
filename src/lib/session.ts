@@ -86,7 +86,7 @@ export async function createSession(user: SessionUser): Promise<string> {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env['NODE_ENV'] === 'production',
+    secure: process.env['NODE_ENV'] === 'production' && process.env['PLAYWRIGHT_TEST'] !== '1',
     sameSite: 'strict',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
