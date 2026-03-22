@@ -12,7 +12,7 @@ Day 24 では管理者専用のユーザー一覧ページを実装し、`api.au
 実装します。自分の情報を確認し、
 パスワードを安全に変更できるようにします。
 
-![プロフィールページ全体](./screenshots/profile.png)
+📸 スクリーンショット: プロフィールページ全体の表示を確認してください。
 
 ## 🤔 なぜこれを作るのか？
 
@@ -20,17 +20,16 @@ Day 24 では管理者専用のユーザー一覧ページを実装し、`api.au
 パスワードを管理するための画面です。
 
 > 💡 **例え話**: プロフィールページは
-> 「免許証の裏面」です。
-> 表面（プロフィール表示）で自分の名前や
-> 写真を確認し、裏面（パスワード変更）で
-> 住所変更のように情報を更新できます。
-> 免許証は本人しか変更できないのと同じく、
-> プロフィールも本人だけが操作できます。
+> 「SNSのマイページ」です。
+> 自分の名前やアイコンを確認（表示）し、
+> 設定画面で情報を更新（編集）できます。
+> パスワード変更は、銀行のATMで
+> 暗証番号を変えるイメージです。
 
 ### 📐 プロフィール関連ページの構造
 
 ```mermaid
-graph TD
+flowchart TD
     A[/profile] --> B[プロフィール表示]
     B --> C[プロフィール編集ボタン]
     B --> D[パスワード変更ボタン]
@@ -54,21 +53,19 @@ graph TD
 | やること | やらないこと |
 |---------|-------------|
 | プロフィール表示 | アバター画像のアップロード |
-| パスワード変更フォーム | メールアドレス変更 |
-| バリデーション実装 | 二段階認証の設定 |
-| toast でフィードバック | alert() の使用 |
+| プロフィール編集（名前・メール・アバターURL） | 二段階認証の設定 |
+| パスワード変更フォーム | alert() の使用 |
+| バリデーション実装 | |
+| toast でフィードバック | |
 
 ### 🆕 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
+| PasswordInput | パスワードインプット | パスワード入力の再利用コンポーネント | 目のアイコンで表示切替できる入力欄 |
 | changePassword | — | パスワード変更API | 暗証番号の変更 |
-| toast | トースト | 通知メッセージ | ポップアップ通知 |
-| Separator | セパレーター | 区切り線 | 書類の仕切り線 |
-| formData | フォームデータ | 入力値の管理 | 申請書の記入欄 |
-| showPassword | — | パスワード表示状態 | 目隠しの開閉 |
-| Eye / EyeOff | アイ | パスワード可視トグル | 目のアイコン |
-| Alert | アラート | エラー表示 | 赤い警告ボックス |
+| updateProfile | — | プロフィール更新API | 名前やメールの編集を保存 |
+| toast | トースト | 通知メッセージ（復習） | ポップアップ通知 |
 
 ## 📊 実装ステップ一覧
 
@@ -82,8 +79,11 @@ graph TD
 | Step 6 | パスワード変更フォーム | 5分 |
 | Step 7 | バリデーションとエラー処理 | 5分 |
 | Step 8 | 動作確認 | 3分 |
+| Step 9 | 編集ページの設計を理解 | 3分 |
+| Step 10 | 編集フォームを実装 | 7分 |
+| Step 11 | 編集の動作確認 | 3分 |
 
-**合計時間**: 約32分
+**合計時間**: 約45分
 
 ---
 
@@ -92,6 +92,17 @@ graph TD
 🎯 **ゴール**: プロフィールページに
 表示する情報を理解します。
 
+#### ディレクトリ構造
+
+```
+src/app/profile/
+├── page.tsx            （プロフィール表示）
+├── edit/
+│   └── page.tsx        （プロフィール編集）
+└── change-password/
+    └── page.tsx        （パスワード変更）
+```
+
 ```bash
 # filepath: ターミナル
 # プロフィールページの構成を確認
@@ -99,7 +110,7 @@ ls src/app/profile/
 ```
 
 ✅ **確認ポイント**:
-- 表示する項目とボタンを理解した
+- `ls` の結果に `page.tsx`、`edit/`、`change-password/` が表示された
 #### 表示する情報一覧
 
 | 項目 | プロパティ | 表示形式 |
@@ -125,8 +136,6 @@ ls src/app/profile/
 > useSession ではなく tRPC のAPIを
 > 使うのがこのアプリの設計です。
 
-✅ **確認ポイント**:
-- 表示する項目とボタンを理解した
 
 ---
 
@@ -161,18 +170,29 @@ import {
 
 ```typescript
 // filepath: src/app/profile/page.tsx
-import { Badge }
-  from '@/component/ui/badge';
+// UI コンポーネントと定数のインポート
 import { Button }
   from '@/component/ui/button';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
 } from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
 import { Separator }
   from '@/component/ui/separator';
+import {
+  ActiveStatusBadge, UserRoleBadge,
+} from '@/component/ui/user-badges';
+import { USER_ROLE }
+  from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 ```
+
+> 💡 `UserRoleBadge` と `ActiveStatusBadge` は
+> 再利用可能なバッジコンポーネントです。
+> 定数 `USER_ROLE` を使うと、文字列リテラルの
+> タイポを防げます。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -191,24 +211,18 @@ export default function ProfilePage() {
   }, [currentUser, isLoading, router]);
 ```
 
-ローディング中はスピナーを表示します。
+ローディング中は共通スピナーを表示します。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
+  // PageLoadingSpinner で統一的に表示
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto
-          max-w-2xl mt-8
-          flex justify-center">
-          <div className="animate-spin
-            rounded-full h-8 w-8
-            border-b-2 border-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 ```
+
+> 💡 `PageLoadingSpinner` は共通コンポーネントで、
+> 各ページのローディング表示を統一します。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -235,22 +249,42 @@ export default function ProfilePage() {
 🎯 **ゴール**: アバター、名前、バッジ、
 詳細情報をCard内に表示します。
 
+Step 2 で書いた `if (!currentUser)` の後に
+`return` 文を書きます。
+全体は `AppLayout > div > Card` の構造です。
+
 💻 **実装**:
+
+まず `return` 文とページの骨格です。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
-// Card の外枠
-<Card>
-  <CardHeader>
-    <CardTitle>プロフィール</CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-6">
-    <div className="flex gap-4">
-      {/* アバターと名前 */}
+// ページ全体のreturn文
+return (
+  <AppLayout>
+    <div className="container mx-auto
+      max-w-2xl space-y-6 py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            プロフィール
+          </CardTitle>
+        </CardHeader>
+        <CardContent
+          className="space-y-6">
+          {/* 以降のStepでここに追加 */}
+        </CardContent>
+      </Card>
     </div>
-  </CardContent>
-</Card>
+  </AppLayout>
+);
 ```
+
+✅ **確認ポイント**:
+- return 文の骨格を書いた
+
+上の `CardContent` の中に、以下のアバター・
+名前ブロックを配置します。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -276,41 +310,25 @@ export default function ProfilePage() {
 
 ```typescript
 // filepath: src/app/profile/page.tsx
-// ロールバッジ
+// 管理者のみロールバッジを表示
 <div className="flex gap-2 mt-2">
-  {currentUser.role === 'ADMIN' && (
-    <Badge variant="secondary"
-      className="gap-1">
-      <Shield className="w-3 h-3" />
-      管理者
-    </Badge>
+  {currentUser.role
+    === USER_ROLE.ADMIN && (
+    <UserRoleBadge
+      role={currentUser.role} />
   )}
-```
-
-```typescript
-// filepath: src/app/profile/page.tsx
-// ステータスバッジ
-  {currentUser.isActive ? (
-    <Badge variant="outline"
-      className="gap-1
-        bg-green-500/10 text-green-700
-        border-green-200">
-      <div className="w-2 h-2
-        rounded-full bg-green-500" />
-      アクティブ
-    </Badge>
-  ) : (
-    <Badge variant="outline"
-      className="gap-1
-        bg-gray-500/10 text-gray-700
-        border-gray-200">
-      <div className="w-2 h-2
-        rounded-full bg-gray-500" />
-      無効
-    </Badge>
-  )}
+  <ActiveStatusBadge
+    isActive={currentUser.isActive} />
 </div>
 ```
+
+> 💡 `UserRoleBadge` は管理者のみ表示します。
+> `USER_ROLE.ADMIN` と比較して条件付き
+> レンダリングします。
+
+✅ **確認ポイント**:
+- ロールバッジが表示される
+- ステータスバッジが表示される
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -398,7 +416,7 @@ export default function ProfilePage() {
 - アバターと名前が表示される
 - バッジが正しく色分けされる
 
-![プロフィール情報表示](./screenshots/profile.png)
+📸 スクリーンショット: プロフィール情報表示の表示を確認してください。
 
 ---
 
@@ -432,7 +450,7 @@ export default function ProfilePage() {
 ```typescript
 // filepath: src/app/profile/page.tsx
 // 管理者用ユーザー管理ボタン
-  {currentUser.role === 'ADMIN' && (
+  {currentUser.role === USER_ROLE.ADMIN && (
     <Button variant="outline"
       className="w-full"
       onClick={() =>
@@ -449,7 +467,7 @@ export default function ProfilePage() {
 - 3つのボタンが縦に並ぶ
 - 管理者にだけユーザー管理ボタンが出る
 
-![ナビゲーションボタン](./screenshots/profile.png)
+📸 スクリーンショット: ナビゲーションボタンの表示を確認してください。
 
 #### ボタンのスタイル使い分け
 
@@ -459,16 +477,10 @@ export default function ProfilePage() {
 | パスワード変更 | outline（枠線） | サブアクション |
 | ユーザー管理 | outline（枠線） | サブアクション |
 
-> 💡 `currentUser.role === 'ADMIN'` で
+> 💡 `currentUser.role === USER_ROLE.ADMIN` で
 > 条件付きレンダリングをしています。
 > 管理者にだけ「ユーザー管理」ボタンが
 > 表示されます。
-
-✅ **確認ポイント**:
-- 3つのボタンが縦に並ぶ
-- 管理者にだけユーザー管理ボタンが出る
-
-![ナビゲーションボタン](./screenshots/profile.png)
 
 ---
 
@@ -484,8 +496,8 @@ ls src/app/profile/change-password/
 ```
 
 ✅ **確認ポイント**:
-- 3つの入力項目を理解した
-- changePassword APIの役割を理解した
+- `ls` で `page.tsx` が存在する
+- 入力項目が3つあることを確認した
 #### パスワード変更の入力項目
 
 | 項目 | name属性 | バリデーション |
@@ -504,9 +516,6 @@ ls src/app/profile/change-password/
 > 現在のパスワードの照合と新パスワードの
 > ハッシュ化を行います。
 
-✅ **確認ポイント**:
-- 3つの入力項目を理解した
-- changePassword APIの役割を理解した
 
 ---
 
@@ -521,9 +530,8 @@ ls src/app/profile/change-password/
 // filepath: src/app/profile/change-password/page.tsx
 'use client';
 
-import {
-  AlertCircle, Eye, EyeOff,
-} from 'lucide-react';
+// アイコンとルーティング
+import { AlertCircle } from 'lucide-react';
 import { useRouter }
   from 'next/navigation';
 import { useState } from 'react';
@@ -536,22 +544,30 @@ import {
 } from '@/component/ui/alert';
 ```
 
+✅ **確認ポイント**:
+- インポートパスが正しい
+
 フォーム用のコンポーネントをインポートします。
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
+// フォーム部品と PasswordInput
 import { Button }
   from '@/component/ui/button';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
 } from '@/component/ui/card';
-import { Input }
-  from '@/component/ui/input';
 import { Label }
   from '@/component/ui/label';
+import { PasswordInput }
+  from '@/component/ui/password-input';
 import { api } from '@/trpc/react';
 ```
+
+> 💡 `PasswordInput` はパスワードの表示/非表示
+> トグル（Eye/EyeOff）を内蔵したコンポーネントです。
+> ページ側で `showPassword` を管理する必要がありません。
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -564,13 +580,6 @@ export default function
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
-    });
-
-  const [showPassword, setShowPassword] =
-    useState({
-      current: false,
-      new: false,
-      confirm: false,
     });
 ```
 
@@ -607,15 +616,6 @@ const handleChange = (
     [name]: value,
   }));
 };
-
-// パスワード表示切替
-const toggleShowPassword = (
-  field: keyof typeof showPassword
-) => {
-  setShowPassword((prev) => ({
-    ...prev, [field]: !prev[field],
-  }));
-};
 ```
 
 ```typescript
@@ -633,17 +633,17 @@ const toggleShowPassword = (
       <CardContent>
         <form onSubmit={handleSubmit}
           className="space-y-6">
-          {/* 入力フィールドをここに */}
-        </form>
-      </CardContent>
-    </Card>
-  </div>
-</AppLayout>
 ```
+
+✅ **確認ポイント**:
+- ページの外枠を書いた
+
+`<form>` タグの中に、以下の入力フィールドを
+順番に配置していきます。
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 現在のパスワード入力フィールド（Eye/EyeOff付き）
+// 現在のパスワード入力
 <div className="space-y-2">
   <Label htmlFor="currentPassword">
     現在のパスワード
@@ -651,46 +651,23 @@ const toggleShowPassword = (
       *
     </span>
   </Label>
-  <div className="relative">
-    <Input
-      id="currentPassword"
-      name="currentPassword"
-      type={
-        showPassword.current
-          ? 'text' : 'password'
-      }
-      value={formData.currentPassword}
-      onChange={handleChange}
-      required
-      disabled={changePassword.isPending}
-    />
-```
-
-目のアイコンボタンでパスワードの表示/非表示を切り替えます。
-
-```typescript
-// filepath: src/app/profile/change-password/page.tsx
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="absolute right-0 top-0
-        h-full px-3 py-2
-        hover:bg-transparent"
-      onClick={() =>
-        toggleShowPassword('current')
-      }>
-      {showPassword.current
-        ? <EyeOff className="h-4 w-4" />
-        : <Eye className="h-4 w-4" />}
-    </Button>
-  </div>
+  <PasswordInput
+    id="currentPassword"
+    name="currentPassword"
+    value={formData.currentPassword}
+    onChange={handleChange}
+    required
+    disabled={changePassword.isPending}
+  />
 </div>
 ```
 
+✅ **確認ポイント**:
+- 目のアイコンで表示/非表示が切り替わる
+
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 新しいパスワード入力フィールド（Eye/EyeOff付き）
+// 新しいパスワード入力
 <div className="space-y-2">
   <Label htmlFor="newPassword">
     新しいパスワード
@@ -698,40 +675,14 @@ const toggleShowPassword = (
       *
     </span>
   </Label>
-  <div className="relative">
-    <Input
-      id="newPassword"
-      name="newPassword"
-      type={
-        showPassword.new
-          ? 'text' : 'password'
-      }
-      value={formData.newPassword}
-      onChange={handleChange}
-      required
-      disabled={changePassword.isPending}
-    />
-```
-
-目のアイコンボタンとヒントテキストを追加します。
-
-```typescript
-// filepath: src/app/profile/change-password/page.tsx
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="absolute right-0 top-0
-        h-full px-3 py-2
-        hover:bg-transparent"
-      onClick={() =>
-        toggleShowPassword('new')
-      }>
-      {showPassword.new
-        ? <EyeOff className="h-4 w-4" />
-        : <Eye className="h-4 w-4" />}
-    </Button>
-  </div>
+  <PasswordInput
+    id="newPassword"
+    name="newPassword"
+    value={formData.newPassword}
+    onChange={handleChange}
+    required
+    disabled={changePassword.isPending}
+  />
   <p className="text-sm
     text-muted-foreground">
     8文字以上で入力してください
@@ -739,9 +690,12 @@ const toggleShowPassword = (
 </div>
 ```
 
+✅ **確認ポイント**:
+- ヒントテキストが表示される
+
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 確認用パスワード入力フィールド（Eye/EyeOff付き）
+// 確認用パスワード入力
 <div className="space-y-2">
   <Label htmlFor="confirmPassword">
     新しいパスワード（確認）
@@ -749,57 +703,47 @@ const toggleShowPassword = (
       *
     </span>
   </Label>
-  <div className="relative">
-    <Input
-      id="confirmPassword"
-      name="confirmPassword"
-      type={
-        showPassword.confirm
-          ? 'text' : 'password'
-      }
-      value={formData.confirmPassword}
-      onChange={handleChange}
-      required
-      disabled={changePassword.isPending}
-    />
+  <PasswordInput
+    id="confirmPassword"
+    name="confirmPassword"
+    value={formData.confirmPassword}
+    onChange={handleChange}
+    required
+    disabled={changePassword.isPending}
+  />
 ```
 
-目のアイコンボタンでパスワードを表示/非表示にします。
+✅ **確認ポイント**:
+- 3つの入力欄が表示される
+
+確認パスワードの不一致をリアルタイムで表示します。
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="absolute right-0 top-0
-        h-full px-3 py-2
-        hover:bg-transparent"
-      onClick={() =>
-        toggleShowPassword('confirm')
-      }>
-      {showPassword.confirm
-        ? <EyeOff className="h-4 w-4" />
-        : <Eye className="h-4 w-4" />}
-    </Button>
-  </div>
+  {/* リアルタイム不一致表示 */}
+  {formData.confirmPassword !== '' &&
+    formData.newPassword
+      !== formData.confirmPassword && (
+      <p className="text-sm
+        text-destructive">
+        パスワードが一致しません
+      </p>
+    )}
 </div>
 ```
 
-> 💡 `showPassword` state で各フィールドの
-> 表示/非表示を個別に管理します。
-> `toggleShowPassword` でボタンを押すと
-> `type="password"` と `type="text"` が
-> 切り替わります。
-> 入力値 `formData` は `useState` の
-> オブジェクト形式でまとめて管理します。
+> 💡 `PasswordInput` コンポーネントが
+> Eye/EyeOff アイコンを内蔵しているため、
+> ページ側で表示切替ロジックを書く必要が
+> ありません。再利用可能なコンポーネントの
+> メリットです。
 
 ✅ **確認ポイント**:
 - フォームに入力できる
 - 目のアイコンでパスワードの表示/非表示が切り替わる
-- 入力値が formData に反映される
+- 確認パスワードが不一致の時に赤いテキストが出る
 
-![パスワード変更フォーム](./screenshots/change-password.png)
+📸 スクリーンショット: パスワード変更フォームの表示を確認してください。
 
 ---
 
@@ -851,7 +795,7 @@ const handleSubmit = async (
 {changePassword.error && (
   <Alert variant="destructive">
     <AlertCircle className="h-4 w-4" />
-    <AlertTitle>Error</AlertTitle>
+    <AlertTitle>エラー</AlertTitle>
     <AlertDescription>
       {changePassword.error.message}
     </AlertDescription>
@@ -909,10 +853,6 @@ const handleSubmit = async (
 > `alert()` と違い、ユーザーの操作を
 > ブロックしません。
 
-✅ **確認ポイント**:
-- 8文字未満でエラーが出る
-- 不一致でエラーが出る
-- 成功時に /profile へ戻る
 
 ---
 
@@ -920,6 +860,12 @@ const handleSubmit = async (
 
 🎯 **ゴール**: プロフィールページと
 パスワード変更の全体を確認します。
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して動作確認
+npm run dev
+```
 
 1. `/profile` にアクセス
 2. アバターと名前が表示される
@@ -934,9 +880,451 @@ const handleSubmit = async (
 - プロフィール情報が正しく表示される
 - パスワード変更のフローが完了する
 
-![パスワード変更成功](./screenshots/change-password.png)
+📸 スクリーンショット: パスワード変更成功の表示を確認してください。
+
+> 🎉 ここまでで、プロフィール表示と
+> パスワード変更の2ページが完成しました！
+> 残りはプロフィール編集ページだけです。
+> あと少しで今日のゴールに到達します。
 
 ---
+
+### Step 9: 編集ページの設計を理解しよう（3分）
+
+🎯 **ゴール**: プロフィール編集ページの
+データフローと使用コンポーネントを理解します。
+
+パスワード変更ページより入力項目が多いので、
+まず全体像を把握してから実装に入りましょう。
+
+```bash
+# filepath: ターミナル
+# 編集ページのファイルを確認
+ls src/app/profile/edit/
+```
+
+#### 編集ページのデータフロー
+
+```mermaid
+flowchart LR
+    A[getCurrentUser] --> B[useEffect]
+    B --> C[formData に初期値セット]
+    C --> D[フォーム入力]
+    D --> E[updateProfile.mutate]
+    E --> F[toast で結果通知]
+    F --> G[/profile に戻る]
+```
+
+#### フォーム項目一覧
+
+| フィールド | 必須 | 説明 |
+|-----------|------|------|
+| 名前 | ✅ | 表示名 |
+| メールアドレス | ✅ | ログイン用。重複チェックあり |
+| アバターURL | - | 画像URL（任意） |
+
+#### 使用する shadcn/ui コンポーネント
+
+| コンポーネント | 用途 |
+|--------------|------|
+| Card | フォーム全体を囲む枠 |
+| Input | テキスト入力欄 |
+| Label | 入力欄のラベル |
+| Avatar | アバター画像の表示 |
+| Button | 送信・キャンセルボタン |
+| Alert | エラーメッセージの表示 |
+| PageLoadingSpinner | ローディング表示 |
+
+#### useEffect の役割
+
+| 処理 | タイミング | 目的 |
+|------|-----------|------|
+| getCurrentUser でデータ取得 | ページ表示時 | サーバーから最新情報を取得 |
+| useEffect で formData にセット | データ取得完了時 | フォームに既存値を表示 |
+| handleChange で formData 更新 | 入力変更時 | ユーザーの入力を反映 |
+| updateProfile.mutate で送信 | フォーム送信時 | サーバーに更新を依頼 |
+
+> 💡 `useEffect` はサーバーから取得した
+> データでフォームの初期値をセットする
+> ために使います。これがないと
+> フォームが空の状態で表示されます。
+
+✅ **確認ポイント**:
+- 編集ページのデータフローを理解した
+- useEffect が初期値セットに使われることを理解した
+
+---
+
+### Step 10: 編集フォームを実装しよう（7分）
+
+🎯 **ゴール**: プロフィール編集ページの
+全コードを実装します。
+
+💻 **実装**:
+
+まず、ファイルの先頭部分を書きます。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+'use client';
+
+import { AlertCircle }
+  from 'lucide-react';
+import { useRouter }
+  from 'next/navigation';
+import { useEffect, useState }
+  from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Alert, AlertDescription,
+  AlertTitle,
+} from '@/component/ui/alert';
+```
+
+✅ **確認ポイント**:
+- 外部ライブラリのインポートを書いた
+
+残りの UI コンポーネントをインポートします。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// UIコンポーネントのインポート
+import {
+  Avatar, AvatarFallback,
+  AvatarImage,
+} from '@/component/ui/avatar';
+import { Button }
+  from '@/component/ui/button';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import { api } from '@/trpc/react';
+```
+
+✅ **確認ポイント**:
+- shadcn/ui のコンポーネントをインポートしている
+- tRPC の api をインポートしている
+
+コンポーネントの定義とフォームの状態管理です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// コンポーネント定義と状態管理
+export default function ProfileEditPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    avatar: '',
+  });
+```
+
+✅ **確認ポイント**:
+- formData に3つのフィールドがある
+
+データ取得と更新APIの設定です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+  // サーバーからユーザー情報を取得
+  const { data: currentUser, isLoading } =
+    api.auth.getCurrentUser.useQuery();
+
+  // プロフィール更新APIの設定
+  const updateProfile =
+    api.user.updateProfile.useMutation({
+      onSuccess: () => {
+        toast.success(
+          'プロフィールを更新しました'
+        );
+        router.push('/profile');
+      },
+      onError: (error) => {
+        toast.error(
+          error.message ||
+            'プロフィールの更新に失敗しました'
+        );
+      },
+    });
+```
+
+✅ **確認ポイント**:
+- useQuery でデータを取得している
+- useMutation で更新APIを設定している
+
+サーバーデータでフォームを初期化します。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+  // サーバーデータでフォームを初期化
+  useEffect(() => {
+    if (currentUser) {
+      setFormData({
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+        avatar: currentUser.avatar || '',
+      });
+    }
+  }, [currentUser]);
+```
+
+✅ **確認ポイント**:
+- useEffect でフォーム初期値をセットしている
+
+フォーム送信と入力変更のハンドラーです。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+  // フォーム送信処理
+  const handleSubmit =
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      updateProfile.mutate(formData);
+    };
+
+  // 入力変更時の処理
+  const handleChange =
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    };
+```
+
+✅ **確認ポイント**:
+- handleSubmit で mutate を呼んでいる
+- handleChange で動的にフィールドを更新している
+
+ローディング表示とJSXの開始部分です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+  // ローディング中の表示
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto
+        max-w-md mt-8 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              プロフィール編集
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+```
+
+✅ **確認ポイント**:
+- ローディング中は PageLoadingSpinner を表示
+
+フォームとアバター表示の部分です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// フォームとアバタープレビュー
+            <form onSubmit={handleSubmit}
+              className="space-y-6">
+              {/* アバターのプレビュー表示 */}
+              <div className=
+                "flex justify-center mb-6">
+                <Avatar
+                  className="w-24 h-24">
+                  <AvatarImage
+                    src={formData.avatar} />
+                  <AvatarFallback
+                    className="text-2xl">
+                    {formData.name?.[0]
+                      ?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+```
+
+✅ **確認ポイント**:
+- Avatar でアバター画像を表示している
+
+名前の入力欄です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// 名前の入力欄（必須）
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  名前
+                  <span
+                    className="text-destructive">
+                    *
+                  </span>
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  disabled={
+                    updateProfile.isPending}
+                />
+              </div>
+```
+
+✅ **確認ポイント**:
+- required で必須入力にしている
+- isPending 中は入力を無効化している
+
+メールアドレスの入力欄です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// メールアドレスの入力欄（必須）
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  メールアドレス
+                  <span
+                    className="text-destructive">
+                    *
+                  </span>
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={
+                    updateProfile.isPending}
+                />
+              </div>
+```
+
+✅ **確認ポイント**:
+- type="email" でメール形式を検証している
+
+アバターURLの入力欄です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// アバターURLの入力欄（任意）
+              <div className="space-y-2">
+                <Label htmlFor="avatar">
+                  アバターURL（任意）
+                </Label>
+                <Input
+                  id="avatar"
+                  name="avatar"
+                  type="url"
+                  value={formData.avatar}
+                  onChange={handleChange}
+                  disabled={
+                    updateProfile.isPending}
+                  placeholder=
+                    "https://example.com/
+                      avatar.png"
+                />
+                <p className="text-sm
+                  text-muted-foreground">
+                  画像のURLを入力してください
+                </p>
+              </div>
+```
+
+✅ **確認ポイント**:
+- アバターは任意なので required がない
+- placeholder でURLの例を表示している
+
+エラー表示の部分です。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// APIエラーの表示
+              {updateProfile.error && (
+                <Alert
+                  variant="destructive">
+                  <AlertCircle
+                    className="h-4 w-4" />
+                  <AlertTitle>
+                    エラー
+                  </AlertTitle>
+                  <AlertDescription>
+                    {updateProfile
+                      .error.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+```
+
+✅ **確認ポイント**:
+- エラー時に Alert が表示される
+
+送信・キャンセルボタンです。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// 送信・キャンセルボタン
+              <div className=
+                "flex gap-2 pt-2">
+                <Button type="submit"
+                  className="w-full"
+                  disabled={
+                    updateProfile.isPending}>
+                  {updateProfile.isPending
+                    ? '更新中...' : '更新'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() =>
+                    router.push('/profile')}
+                  disabled={
+                    updateProfile.isPending
+                  }>
+                  キャンセル
+                </Button>
+              </div>
+```
+
+✅ **確認ポイント**:
+- isPending 中はボタンが無効化される
+
+最後に閉じタグです。
+
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+✅ **確認ポイント**:
+- ファイルを保存した
+- `npm run dev` でエラーが出ていない
+
+---
+
+### Step 11: 編集の動作確認（3分）
+
+🎯 **ゴール**: プロフィール編集が
+正しく動作することを確認します。
 
 ```bash
 # filepath: ターミナル
@@ -944,12 +1332,37 @@ const handleSubmit = async (
 npm run dev
 ```
 
+1. `/profile` にアクセス
+2. 「プロフィール編集」ボタンをクリック
+3. `/profile/edit` に遷移する
+4. 名前を変更して「更新」をクリック
+5. toast で「プロフィールを更新しました」と表示される
+6. `/profile` に戻り、変更が反映されている
+
+📸 スクリーンショット: プロフィール編集フォームの表示を確認してください。
+
+#### エラーシナリオ
+
+| エラー | 原因 | 対処法 |
+|--------|------|--------|
+| 名前が空で更新できない | required 属性 | 名前を入力する |
+| メール重複エラー | 既に使われているメール | 別のアドレスを入力 |
+| アバターが表示されない | URLが不正 | https:// で始まるURLを入力 |
+| サーバーエラー | API通信失敗 | 開発サーバーの起動を確認 |
+
+✅ **確認ポイント**:
+- 名前の変更が保存される
+- toast でフィードバックが表示される
+- 更新後に /profile に戻る
+
 ## 📋 今日のまとめ
 
 - [ ] api.auth.getCurrentUser でデータを取得した
 - [ ] プロフィール情報をCard内に表示した
 - [ ] パスワード変更フォームを実装した
 - [ ] バリデーションと toast を実装した
+- [ ] プロフィール編集フォームを実装した
+- [ ] updateProfile で名前・メール・アバターを更新した
 
 ## ⚠️ つまずきポイント
 
@@ -959,6 +1372,9 @@ npm run dev
 | 日付がInvalid Date | Date変換の引数不正 | new Date() で変換 |
 | toast が表示されない | react-hot-toast 未設定 | Toaster コンポーネント確認 |
 | 変更後に戻らない | router.push 忘れ | onSuccess 内に追加 |
+| 編集が反映されない | useEffectの依存配列 | [currentUser] を指定 |
+| メール重複エラー | 既に使われているメール | 別のアドレスを入力 |
+| アバターが表示されない | URLが不正 | https:// で始まるURLを入力 |
 
 ## 📝 今日学んだ用語
 
@@ -968,9 +1384,10 @@ npm run dev
 | toast.success | 成功通知を表示する関数 |
 | Separator | セクション間の区切り線 |
 | isPending | API通信中かどうかのフラグ |
+| updateProfile | プロフィール更新API |
 
 ## 🔜 次回予告
 
-Day 26 では、エラー対策とデバッグ方法を
-学びます。Chrome DevTools の使い方や
-よくあるエラーの解決方法を習得します。
+Day 26 では、エラーページ（error.tsx）の
+仕組みを確認し、意図的にバグを仕込んで
+DevTools で自力修正するデバッグ演習を行います。

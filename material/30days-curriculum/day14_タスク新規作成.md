@@ -13,7 +13,7 @@ TaskDialogコンポーネントで、新しいタスクを作成
 パターンとreact-hook-form + zodをタスク版に
 応用します。
 
-![タスク作成ダイアログ](./screenshots/task-create-dialog.png)
+📸 スクリーンショット: タスク作成ダイアログの完成画面
 
 ## 🤔 なぜこれを作るのか？
 
@@ -83,13 +83,15 @@ graph TD
 
 ### Step 1: zodスキーマと型を定義する（5分）
 
-🎯 **ゴール**: zodスキーマでバリデーションルールを
-定義し、フォームデータの型を作ります。
+🎯 **ゴール**: zodスキーマでバリデーションルールを定義し、フォームデータの型を作ります。
 
 💻 **実装**:
 
+`src/component/task/task-dialog.tsx` を新規作成します。以下の3つのコードブロックは全て **同じファイルに上から順に** 書いてください。表示の都合でブロックを分けていますが、1つのファイルです。
+
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
+// フォームライブラリとUIコンポーネントのimport
 'use client';
 
 import { zodResolver }
@@ -110,8 +112,12 @@ import { Label }
   from '@/component/ui/label';
 ```
 
+✅ **確認ポイント**:
+- `zodResolver`, `useForm`, `Controller` がインポートされている
+
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
+// Select系UIと定数のimport
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
@@ -151,10 +157,6 @@ const taskFormSchema = z.object({
 type TaskFormValues =
   z.infer<typeof taskFormSchema>;
 ```
-
-✅ **確認ポイント**:
-- `taskFormSchema` を定義した
-- `title` と `projectId` に必須バリデーションが設定されている
 
 #### zodスキーマの各フィールド
 
@@ -242,7 +244,7 @@ interface TaskDialogProps {
 
 ✅ **確認ポイント**:
 - `TaskFormData` をエクスポートした
-- `npm run dev` でエラーが出ていない
+- `TaskDialogProps` に `projects` と `users` がある
 
 ---
 
@@ -255,49 +257,53 @@ interface TaskDialogProps {
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
+// react-hook-form + zod でフォームを初期化
 export function TaskDialog({
   open, onClose, onSubmit,
   initialData, projects, users,
 }: TaskDialogProps) {
   const {
     register, handleSubmit, control,
-    reset,
-    formState: { errors },
+    reset, formState: { errors },
   } = useForm<TaskFormValues>({
-    resolver: zodResolver(
-      taskFormSchema),
+    resolver: zodResolver(taskFormSchema),
     values: {
       id: initialData?.id,
       title: initialData?.title ?? '',
       description:
         initialData?.description ?? '',
-      status:
-        initialData?.status ?? 'TODO',
-      priority:
-        initialData?.priority
-          ?? 'MEDIUM',
-      dueDate:
-        initialData?.dueDate ?? '',
+      status: initialData?.status
+        ?? TASK_STATUS.TODO,
+      priority: initialData?.priority
+        ?? TASK_PRIORITY.MEDIUM,
 ```
 
-`values` の続きです。
+✅ **確認ポイント**:
+- `useForm` に `resolver` と `values` が設定されている
+- 基本フィールドのデフォルト値が定義できた
+
+`values` の続きです。残りのフィールドを追加します。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
+// values の続き（同じオブジェクト内）
+      dueDate:
+        initialData?.dueDate ?? '',
       estimatedHours:
         initialData?.estimatedHours,
       projectId: initialData?.projectId
-        ?? (projects[0]?.id || ''),
+        || projects[0]?.id || '',
       assigneeId:
         initialData?.assigneeId ?? '',
     },
   });
 ```
 
-> 💡 Day 10 の ProjectDialog と同じパターンです。
-> `values` prop で `initialData` が変わるたびに
-> フォームの値が自動同期されます。`control` は
-> Step 5 で `Controller` コンポーネントに渡します。
+✅ **確認ポイント**:
+- `values` に全フィールドが含まれている
+- `projectId` は `||` で空文字もフォールバックする
+
+> 💡 Day 10 の ProjectDialog と同じパターンです。`values` prop で `initialData` が変わるたびにフォームの値が自動同期されます。`id` や `dueDate` も含めることで、Day 15 の編集モードでも正しく初期化されます。**この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 
 ✅ **確認ポイント**:
 - `useForm` に `resolver` と `values` が設定されている
@@ -336,11 +342,11 @@ const handleClose = () => {
 };
 ```
 
-送信ハンドラーでは、未入力のフィールドを除外してから `onSubmit` に渡します。
+送信ハンドラーでは、未入力のフィールドを除外してから `onSubmit` に渡します。以下のコードは `useForm` の直後、`TaskDialog` 関数の中に追加します。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// バリデーション通過後の送信処理
+// useFormの直後に追加: 送信処理
 const handleFormSubmit =
   (data: TaskFormValues) => {
     const submitData: TaskFormData = {
@@ -365,6 +371,16 @@ const handleFormSubmit =
     onSubmit(submitData);
   };
 ```
+
+#### 条件付きスプレッド構文の解説
+
+| コード | 条件が真の場合 | 条件が偽の場合 |
+|--------|-------------|-------------|
+| `...(data.id !== undefined && { id: data.id })` | `{ id: "xxx" }` を追加 | 何も追加しない |
+| `...(data.description && { description: ... })` | 説明を追加 | 何も追加しない |
+| `...(data.dueDate && { dueDate: ... })` | 期限を追加 | 何も追加しない |
+
+> 💡 Day 11 の `handleEdit` と同じパターンです。値がある場合だけプロパティを含め、空の場合はプロパティ自体を含めません。
 
 JSXのダイアログ構造とタイトル入力欄を書きます。
 
@@ -437,7 +453,7 @@ return (
 - タイトルと説明の入力欄が表示される
 - タイトルが空のまま送信するとエラーメッセージが表示される
 
-![タイトル・説明の入力欄](./screenshots/task-create-dialog.png)
+📸 スクリーンショット: タイトルと説明の入力欄が表示されている画面
 
 ---
 
@@ -463,7 +479,8 @@ return (
         <Select
           value={field.value}
           onValueChange={field.onChange}>
-          <SelectTrigger id="status">
+          <SelectTrigger id="status"
+            aria-label="ステータスを選択">
             <SelectValue
               placeholder=
                 "ステータスを選択" />
@@ -506,7 +523,8 @@ return (
         <Select
           value={field.value}
           onValueChange={field.onChange}>
-          <SelectTrigger id="priority">
+          <SelectTrigger id="priority"
+            aria-label="優先度を選択">
             <SelectValue
               placeholder=
                 "優先度を選択" />
@@ -596,7 +614,8 @@ return (
           value={field.value}
           onValueChange={field.onChange}
           disabled={!projects.length}>
-          <SelectTrigger id="project">
+          <SelectTrigger id="project"
+            aria-label="プロジェクトを選択">
             <SelectValue placeholder=
               "プロジェクトを選択" />
           </SelectTrigger>
@@ -644,7 +663,8 @@ return (
             field.onChange(
               value === 'unassigned'
                 ? '' : value)}>
-          <SelectTrigger id="assignee">
+          <SelectTrigger id="assignee"
+            aria-label="担当者を選択">
             <SelectValue placeholder=
               "担当者を選択" />
           </SelectTrigger>
@@ -672,16 +692,13 @@ return (
   </div>
 ```
 
-> 💡 「未割当」を選んだ時は空文字にしたいので、
-> `'unassigned'` を特別な値として扱い、変換して
-> います。Selectは空文字を値にできないため、
-> このテクニックが必要です。
+> 💡 「未割当」を選んだ時は空文字にしたいのですが、shadcn/ui の `Select` は空文字 `''` を有効な値として扱えません（値が空だと選択状態にならず、`placeholder` が表示されてしまいます）。そのため `'unassigned'` を特別な値として使い、送信時に空文字に変換するテクニックが必要です。
 
 ✅ **確認ポイント**:
 - プロジェクト一覧が表示される
 - 担当者一覧に「未割当」がある
 
-![プロジェクト・担当者選択](./screenshots/task-create-dialog.png)
+📸 スクリーンショット: プロジェクト・担当者のSelect欄が表示されている画面
 
 ---
 
@@ -786,14 +803,35 @@ const handleCreate = () => {
 };
 ```
 
-続けて、ユーザー一覧の取得とcreate mutationを追加します。
+続けて、既存の `useQuery` 群の末尾にユーザー一覧とセッション取得を追加します。
+
+#### 追加するAPI
+
+| API | 戻り値 | 用途 |
+|-----|-------|------|
+| `api.search.getProjectMembers` | ユーザー一覧 | 担当者Selectの候補 |
+| `api.auth.getSession` | ログイン中のセッション | 作成者IDの確認 |
+
+これらは既に実装済みのAPIです。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// ユーザー一覧を取得（担当者選択用）
+// 既存のuseQuery群の末尾に追加
 const { data: users } =
   api.search.getProjectMembers.useQuery();
+const { data: session } =
+  api.auth.getSession.useQuery();
+const utils = api.useUtils();
+```
 
+✅ **確認ポイント**:
+- `users` と `session` のデータ取得が追加できた
+
+create mutationを `utils` の下に追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// utilsの下に追加
 const createMutation =
   api.task.create.useMutation({
     onSuccess: () => {
@@ -805,9 +843,12 @@ const createMutation =
 
 ```typescript
 // filepath: src/app/task/page.tsx
+// createMutationの下に追加
+
 // 送信ハンドラー
 const handleSubmit =
   (data: TaskFormData) => {
+    if (!session?.user?.id) { return; }
     createMutation.mutate({
       title: data.title,
       description: data.description,
@@ -831,18 +872,20 @@ const handleSubmit =
 - フォーム送信でタスクが作成される
 - 一覧に新しいタスクが表示される
 
-![作成後のタスク一覧](./screenshots/task-list.png)
+📸 スクリーンショット: タスク作成後に一覧画面に新しいタスクが表示されている
 
 #### createMutationに渡すパラメータ
 
-| パラメータ | 必須 | 説明 |
-|-----------|------|------|
-| `title` | ○ | タスク名 |
-| `projectId` | ○ | 所属プロジェクト |
-| `status` | × | デフォルト: TODO |
-| `priority` | × | デフォルト: MEDIUM |
-| `dueDate` | × | ISO 8601文字列 |
-| `assigneeId` | × | 担当者ID |
+| パラメータ | フロントから送信 | 説明 |
+|-----------|---------------|------|
+| `title` | 常に送信 | タスク名 |
+| `projectId` | 常に送信 | 所属プロジェクト |
+| `status` | 常に送信 | ステータス（フォームで選択） |
+| `priority` | 常に送信 | 優先度（フォームで選択） |
+| `dueDate` | 任意 | ISO 8601文字列 |
+| `assigneeId` | 任意 | 担当者ID |
+
+> 💡 サーバー側のスキーマでは `status` と `priority` にデフォルト値（TODO / MEDIUM）が設定されていますが、フロントエンドからは常にフォームの選択値を送信します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -857,8 +900,8 @@ const handleSubmit =
   onClose={() => setDialogOpen(false)}
   onSubmit={handleSubmit}
   initialData={editingTask}
-  projects={projects || []}
-  users={users || []}
+  projects={projects ?? []}
+  users={users ?? []}
 />
 ```
 

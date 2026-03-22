@@ -31,9 +31,11 @@
 | `mise` コマンドが見つからない | Step 1 | miseのインストールを確認 |
 | `node` コマンドが見つからない | Step 1 | `mise install` を再実行 |
 | `git clone` できない | Step 4 | Gitのインストール状態を確認 |
-| `npm install` でエラーが出る | Step 5 | `node -v` でv25か確認、違えば `mise install` |
-| データベースに接続できない | Step 7 | Docker Desktopが起動しているか確認 |
-| `npm run dev` でエラーが出る | Step 8 | `.env` ファイルの内容を確認 |
+| `npm install` でエラーが出る | Step 6 | `node -v` でv25か確認、違えば `mise install` |
+| データベースに接続できない | Step 9 | Docker Desktopが起動しているか確認 |
+| `npm run dev` で `.env` 関連エラー | Step 7 | `.env` ファイルの内容を確認 |
+| `npm run dev` で `MODULE_NOT_FOUND` | Step 8 | `npm install` を再実行 |
+| `npm run dev` で `P1001` エラー | Step 9 | Docker が起動しているか確認 |
 
 ---
 
@@ -47,8 +49,8 @@
 | 4 | プロジェクトをクローンする | 5分 | なし | `task-app` フォルダが作成される |
 | 5 | VS Codeでプロジェクトを開く | 3分 | なし | VS Codeにファイル一覧が表示される |
 | 6 | Node.jsをセットアップする | 7分 | なし | `node -v` で `v25.6.1` が表示される |
-| 7 | 依存関係をインストールする | 5分 | なし | `node_modules` フォルダが作成される |
-| 8 | 環境変数を設定する | 5分 | .env | `.env` ファイルが作成される |
+| 7 | 環境変数を設定する | 5分 | .env | `.env` ファイルが作成される |
+| 8 | 依存関係をインストールする | 5分 | なし | `node_modules` フォルダが作成される |
 | 9 | データベースを起動する | 5分 | なし | PostgreSQLコンテナが起動する |
 | 10 | データベースをセットアップする | 5分 | なし | テーブルとサンプルデータが作成される |
 | 11 | 開発サーバーを起動する | 5分 | なし | ターミナルに「Ready」と表示される |
@@ -99,8 +101,6 @@ flowchart TB
 
 > 💡 **例え話**: **mise**は「レシピに合った道具を自動で揃えてくれるアシスタント」です。プロジェクトフォルダに入るだけで、正しいバージョンのNode.jsを自動的に使ってくれます。
 
-<!-- quality-exception: Node.jsのインストールはStep 6へ分離。このStepではmise自体のインストールに集中。 -->
-
 #### miseとは
 
 | 項目 | 内容 |
@@ -147,17 +147,18 @@ source ~/.zshrc
 
 PowerShellを**管理者として**開き、以下を実行してください。
 
-```bash
+```powershell
 # filepath: PowerShell（Windows・管理者）
 winget install jdx.mise
 ```
 
 インストール後、miseの有効化設定をPowerShellプロファイルに追加します。
 
-```bash
+```powershell
 # filepath: PowerShell（Windows）
 # PowerShellプロファイルにmiseの有効化を追記
-Add-Content -Path $PROFILE -Value 'mise activate powershell | Out-String | Invoke-Expression'
+$cmd = 'mise activate powershell | Out-String | Invoke-Expression'
+Add-Content -Path $PROFILE -Value $cmd
 ```
 
 設定後、PowerShellを一度閉じて開き直してください。
@@ -186,21 +187,6 @@ mise --version
 
 > ⚠️ `mise: command not found` と表示される場合は、ターミナルを一度閉じて開き直してください。
 
-#### Node.jsとは
-
-| 項目 | 内容 |
-|------|------|
-| 正式名称 | Node.js |
-| 役割 | JavaScriptをブラウザの外で動かす |
-| 含まれるもの | `node`（実行環境）と `npm`（パッケージ管理） |
-| 必要バージョン | v25.6.1（`.mise.toml` で指定済み） |
-
-#### Node.jsのインストール
-
-miseを使うと、プロジェクトが指定したバージョンのNode.jsを自動でインストールできます。Step 4でプロジェクトをクローンした後に実行しますが、先にmise自体のセットアップを完了させておきましょう。
-
-> 💡 **ポイント**: Step 4でプロジェクトをクローンした後、`task-app` フォルダ内で `mise install` を実行すると、`.mise.toml` に書かれた Node.js v25.6.1 が自動的にインストールされます。今はmiseのインストールだけでOKです。
-
 📝 **学んだこと**: miseを使うと、プロジェクトごとに正しいバージョンのNode.jsが自動で使われます。チーム全員が同じ環境で開発できるので、「自分のパソコンでは動くのに…」という問題がなくなります。
 
 ---
@@ -228,26 +214,32 @@ miseを使うと、プロジェクトが指定したバージョンのNode.jsを
 
 VS Codeを起動し、左側のサイドバーにある四角いアイコン（拡張機能）をクリックします。検索窓に拡張機能名を入力して、「Install」ボタンを押してください。
 
+> 💡 まとめてインストールしたい場合は、ターミナルで以下のコマンドを実行する方法もあります。
+
 💻 **実装**:
 
 ```bash
 # filepath: ターミナル
+code --install-extension EditorConfig.EditorConfig
 code --install-extension biomejs.biome
-code --install-extension Prisma.prisma
-code --install-extension bradlc.vscode-tailwindcss
+code --install-extension stylelint.vscode-stylelint
+code --install-extension wayou.vscode-todo-highlight
 ```
 
 🔍 **コード解説**:
 
 | 拡張機能 | 役割 | なぜ必要か |
 |---------|------|----------|
+| EditorConfig | エディター設定の統一 | チーム全員のインデントや改行コードを揃える |
 | Biome | コードの品質チェック | 書き方のミスを自動で指摘してくれる |
-| Prisma | データベース定義の色分け | `.prisma` ファイルが読みやすくなる |
-| Tailwind CSS IntelliSense | CSSクラスの自動補完 | スタイル指定が楽になる |
+| Stylelint | CSSの品質チェック | スタイルの書き方を統一する |
+| TODO Highlight | TODOコメントの強調表示 | コード内の「あとで直す」メモを見逃さない |
+
+> 💡 **ポイント**: このプロジェクトでは `.vscode/extensions.json` に推奨拡張機能が定義されています。VS Codeでプロジェクトを開くと「推奨拡張機能をインストールしますか？」と表示されるので、そこからまとめてインストールすることもできます。
 
 ✅ **確認ポイント**:
 - VS Codeが起動する
-- 拡張機能一覧に上記の3つが表示されている
+- 拡張機能一覧に上記の4つが表示されている
 
 📝 **学んだこと**: VS Codeは拡張機能を入れることで、プロジェクトに合った開発環境にカスタマイズできます。
 
@@ -270,7 +262,14 @@ code --install-extension bradlc.vscode-tailwindcss
 
 #### インストール手順
 
-公式サイトからDocker Desktopをダウンロードし、インストーラーを実行してください。インストール完了後、Docker Desktopアプリを起動します。
+1. 公式サイト（ https://www.docker.com/products/docker-desktop/ ）にアクセスします
+2. 自分のOS（Windows / Mac）に合ったインストーラーをダウンロードします
+3. ダウンロードしたファイルを実行してインストールします
+4. インストール完了後、Docker Desktopアプリを起動します
+
+> ⚠️ **初回起動時**: 利用規約への同意画面が表示されます。「Accept」をクリックしてください。
+
+> WindowsではWSL2のインストールを求められることがあります。画面の指示に従ってください。
 
 #### バージョン確認
 
@@ -310,14 +309,52 @@ docker --version
 | GitHub | Gitのリポジトリをオンラインに保管するサービス |
 | clone | リポジトリを自分のパソコンにコピーする操作 |
 
+#### Gitのインストール確認
+
+まず、Gitがインストールされているか確認します。
+
+```bash
+# filepath: ターミナル
+# Gitのバージョンを確認する
+git --version
+```
+
+✅ **確認ポイント**:
+- `git version 2.x.x` のようにバージョンが表示されればOK
+
+> ⚠️ `git: command not found` と表示される場合は、Gitのインストールが必要です。
+> - **Mac**: ターミナルで `xcode-select --install` を実行してください（コマンドラインツールに含まれています）。
+> - **Windows**: https://git-scm.com/ から Git for Windows をダウンロードしてインストールしてください。
+
 #### クローン手順
 
 💻 **実装**:
 
+まず、プロジェクトを保存する場所に移動します。デスクトップでなくても構いません。
+
 ```bash
 # filepath: ターミナル
+# 任意の作業フォルダに移動（例: デスクトップ）
 cd ~/Desktop
-git clone https://github.com/<あなたのユーザー名>/task-app.git
+```
+
+✅ **確認ポイント**:
+- エラーなく移動できた
+
+```bash
+# filepath: ターミナル
+# GitHubからプロジェクトをコピーする
+git clone https://github.com/kouiso/task-app.git
+```
+
+✅ **確認ポイント**:
+- `Cloning into 'task-app'...` と表示されてダウンロードが進む
+
+クローンが完了したら、プロジェクトフォルダに移動します。
+
+```bash
+# filepath: ターミナル
+# プロジェクトフォルダに移動する
 cd task-app
 ```
 
@@ -325,12 +362,12 @@ cd task-app
 
 | コマンド | 意味 | 例え |
 |---------|------|------|
-| `cd ~/Desktop` | デスクトップに移動 | 作業場所に向かう |
+| `cd ~/Desktop` | 作業フォルダに移動（例） | 作業場所に向かう |
 | `git clone <URL>` | リポジトリをコピー | 設計図を取り寄せる |
 | `cd task-app` | プロジェクトフォルダに移動 | 作業場所に入る |
 
 ✅ **確認ポイント**:
-- デスクトップ（または任意の場所）に `task-app` フォルダが作成されている
+- 選択した場所に `task-app` フォルダが作成されている
 - フォルダの中に `package.json` ファイルがある
 
 📝 **学んだこと**: `git clone` でGitHubからプロジェクトのソースコード一式を取得できます。これでソースコードが自分のパソコンにコピーされました。
@@ -373,6 +410,15 @@ code .
 🎯 **ゴール**: `node -v` で `v25.6.1`、`npm -v` でバージョン番号が表示される。
 
 > 💡 **例え話**: Step 1でインストールしたmise（アシスタント）に、「このプロジェクトに必要な道具を揃えて」とお願いする操作です。`.mise.toml` というメモを読んで、Node.js v25.6.1を自動でインストールしてくれます。
+
+#### Node.jsとは
+
+| 項目 | 内容 |
+|------|------|
+| 正式名称 | Node.js |
+| 役割 | JavaScriptをブラウザの外で動かす |
+| 含まれるもの | `node`（実行環境）と `npm`（パッケージ管理） |
+| 必要バージョン | v25.6.1（`.mise.toml` で指定済み） |
 
 #### miseでNode.jsをインストールする
 
@@ -417,52 +463,7 @@ npm -v
 
 ---
 
-### Step 7: 依存関係をインストールする（5分）
-
-🎯 **ゴール**: `node_modules` フォルダが作成される。
-
-> 💡 **例え話**: `npm install` は「食材の買い出し」です。レシピ（`package.json`）に書かれた材料（ライブラリ）を、スーパー（npmレジストリ）からまとめて買ってくる操作です。
-
-#### package.jsonとは
-
-プロジェクトに必要なライブラリの一覧が書かれたファイルです。`npm install` はこのファイルを読み取り、必要なライブラリをすべてダウンロードします。
-
-| 用語 | 意味 | 例え |
-|------|------|------|
-| package.json | 必要なライブラリの一覧表 | 買い物リスト |
-| node_modules | ダウンロードされたライブラリの保管場所 | 冷蔵庫・食材棚 |
-| npm install | ライブラリを一括ダウンロード | まとめ買い |
-
-#### インストール実行
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-npm install
-```
-
-この処理には1〜3分ほどかかります。
-
-🔍 **コード解説**:
-
-| 出力 | 意味 |
-|------|------|
-| `added XXX packages` | XXX個のライブラリがインストールされた |
-| `found 0 vulnerabilities` | セキュリティ上の問題が0件 |
-
-✅ **確認ポイント**:
-- ターミナルにエラーが表示されていない
-- `node_modules` フォルダが作成されている
-- `added` と表示されてインストールが完了している
-
-> 📸 ターミナルに `added XXX packages` と表示され、エラーがないことを確認してください。
-
-📝 **学んだこと**: `npm install` で `package.json` に記載されたライブラリを一括ダウンロードできます。
-
----
-
-### Step 8: 環境変数を設定する（5分）
+### Step 7: 環境変数を設定する（5分）
 
 🎯 **ゴール**: `.env` ファイルが作成され、正しい設定値が入っている。
 
@@ -485,6 +486,7 @@ npm install
 
 ```bash
 # filepath: ターミナル（task-appフォルダ内で実行）
+# テンプレートから環境変数ファイルを作成する
 cp .env.example .env
 ```
 
@@ -499,32 +501,94 @@ cp .env.example .env
 ✅ **確認ポイント**:
 - `task-app` フォルダ直下に `.env` ファイルが作成されている
 
-#### `.env` ファイルの中身を確認する
+#### `.env` ファイルを編集する
 
-VS Codeで `.env` ファイルを開いてください。以下の内容が入っています。
+VS Codeの左サイドバー（エクスプローラー）で `.env` ファイルをクリックして開いてください。ドット（`.`）で始まるファイルは通常のファイルマネージャーでは非表示ですが、VS Codeでは表示されます。
+
+変更が必要なのは開発者情報の3行だけです。`DATABASE_URL` は `${_DOCKER_COMPOSE_HOST_PORT_DB}` という変数参照を含んでいますが、同じファイル内で `_DOCKER_COMPOSE_HOST_PORT_DB=5432` と定義されているため、自動的に `5432` に解決されます。手動変更は不要です。
 
 ```bash
-# filepath: .env
-DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
-
-JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
-
-NODE_ENV="development"
+# filepath: .env（変更する行のみ）
+# 開発者情報（シードデータの管理者アカウントに使用）
+_DEVELOPER_EMAIL=admin@example.com
+_DEVELOPER_FIRSTNAME=Admin
+_DEVELOPER_LASTNAME=User
 ```
+
+✅ **確認ポイント**:
+- 3つの開発者情報に値が入力されている
+
+> 💡 **他の変数はそのままでOK**: `DATABASE_URL`、`JWT_SECRET`、`NODE_ENV` などはテンプレートの値のままで問題ありません。
 
 🔍 **コード解説**:
 
-| 変数名 | 役割 | 例え |
+| 変数名 | 役割 | 変更 |
 |--------|------|------|
-| `DATABASE_URL` | データベースの住所とパスワード | 冷蔵庫の鍵 |
-| `JWT_SECRET` | 認証トークンの暗号鍵 | 社員証の偽造防止コード |
-| `NODE_ENV` | 実行環境の区分 | 「練習用/本番用」の札 |
+| `_DEVELOPER_EMAIL` | 管理者のメールアドレス | 要入力 |
+| `_DEVELOPER_FIRSTNAME` | 管理者の名前 | 要入力 |
+| `_DEVELOPER_LASTNAME` | 管理者の姓 | 要入力 |
+| `DATABASE_URL` | DBの接続先（自動解決） | 不要 |
+| `JWT_SECRET` | 認証トークンの暗号鍵 | 不要 |
+| `NODE_ENV` | 実行環境の区分 | 不要 |
+
+> 💡 **JWT_SECRETとは**: JWT（JSON Web Token）はログイン状態を管理する仕組みです。`JWT_SECRET` はトークンの署名に使う秘密鍵で、この値を知らない人はトークンを偽造できません。本番環境では必ずランダムな長い文字列に変更してください。
 
 ✅ **確認ポイント**:
 - `.env` ファイルが `task-app` フォルダ直下に存在する
-- ファイルの中身に `DATABASE_URL` が含まれている
+- `_DEVELOPER_EMAIL` に値が入っている
+- `DATABASE_URL` はテンプレートのまま（変更不要）
 
-📝 **学んだこと**: 秘密情報は `.env` ファイルで管理し、コードに直接書かないのがセキュリティの基本です。
+> 💡 **セキュリティ**: `.gitignore` に `*.env*` というパターンが設定されているため、`.env` ファイルは Git に追跡されません。秘密情報がGitHubに公開される心配はありません。
+
+📝 **学んだこと**: 秘密情報は `.env` ファイルで管理し、コードに直接書かないのがセキュリティの基本です。`.gitignore` で `.env` をGitの管理対象外にすることで、うっかり公開してしまう事故を防げます。
+
+---
+
+### Step 8: 依存関係をインストールする（5分）
+
+🎯 **ゴール**: `node_modules` フォルダが作成される。
+
+> 💡 **例え話**: `npm install` は「食材の買い出し」です。レシピ（`package.json`）に書かれた材料（ライブラリ）を、スーパー（npmレジストリ）からまとめて買ってくる操作です。
+
+#### package.jsonとは
+
+プロジェクトに必要なライブラリの一覧が書かれたファイルです。`npm install` はこのファイルを読み取り、必要なライブラリをすべてダウンロードします。
+
+| 用語 | 意味 | 例え |
+|------|------|------|
+| package.json | 必要なライブラリの一覧表 | 買い物リスト |
+| node_modules | ダウンロードされたライブラリの保管場所 | 冷蔵庫・食材棚 |
+| npm install | ライブラリを一括ダウンロード | まとめ買い |
+
+> 💡 **ポイント**: Step 7で `.env` を先に設定したのは、`npm install` の完了時に `prisma generate` が自動実行されるためです。`.env` の `DATABASE_URL` が設定されていないと、このステップでエラーになります。
+
+#### インストール実行
+
+💻 **実装**:
+
+```bash
+# filepath: ターミナル（task-appフォルダ内で実行）
+# ライブラリを一括インストールする
+npm install
+```
+
+この処理には1〜3分ほどかかります。
+
+🔍 **コード解説**:
+
+| 出力 | 意味 |
+|------|------|
+| `added XXX packages` | XXX個のライブラリがインストールされた |
+| `found 0 vulnerabilities` | セキュリティ上の問題が0件 |
+
+✅ **確認ポイント**:
+- ターミナルにエラーが表示されていない
+- `node_modules` フォルダが作成されている
+- `added` と表示されてインストールが完了している
+
+> 📸 ターミナルに `added XXX packages` と表示され、エラーがないことを確認してください。
+
+📝 **学んだこと**: `npm install` で `package.json` に記載されたライブラリを一括ダウンロードできます。
 
 ---
 
@@ -563,7 +627,7 @@ docker compose up -d db
 #### 起動確認
 
 ```bash
-# filepath: ターミナル
+# filepath: ターミナル（task-appフォルダ内で実行）
 docker compose ps
 ```
 
@@ -635,8 +699,9 @@ npm run db:seed
 | `npm run db:seed` | サンプルデータを投入 | 食材を冷蔵庫に入れる |
 
 ✅ **確認ポイント**:
-- エラーが表示されず正常に完了する
-- 「Seed completed」のようなメッセージが表示される
+- エラーが表示されず正常に完了する（エラーなしでコマンドが終了すれば成功です）
+
+> 💡 **ポイント**: このシードスクリプトは成功時にメッセージを表示しません。エラーが出ずにコマンドが終了すれば、サンプルデータの投入は成功しています。
 
 📝 **学んだこと**: Prismaを使うと、`schema.prisma` に書いたテーブル定義をコマンド一つでデータベースに反映できます。
 
@@ -700,10 +765,7 @@ npm run dev
 
 ブラウザ（Chrome推奨）を開き、アドレスバーに以下のURLを入力してEnterキーを押してください。
 
-```bash
-# filepath: ブラウザのアドレスバー
-http://localhost:3000
-```
+`http://localhost:3000`
 
 🔍 **コード解説**:
 
@@ -720,21 +782,18 @@ http://localhost:3000
 
 > 📸 ブラウザにログイン画面が表示されていることを確認してください。
 
-![ログイン画面](./screenshots/login.png)
+📸 スクリーンショット: ブラウザにログイン画面（メールアドレスとパスワードの入力欄）が表示されている状態
 
 #### ログインを試す
 
-シードデータで作成されたテスト用アカウントでログインしてみてください。
+シードデータで作成されたテスト用アカウントでログインしてみてください。管理者アカウントのメールアドレスは、Step 7で `.env` の `_DEVELOPER_EMAIL` に設定した値です。
 
 | 項目 | 値 |
 |------|-----|
-| メールアドレス | `admin@example.com` |
+| メールアドレス | `.env` の `_DEVELOPER_EMAIL` で設定した値 |
 | パスワード | `password123` |
 
-> 💡 このアカウントは `npm run db:seed` で
-> 作成されたテスト用の管理者アカウントです。
-> 他にも `user1@example.com`（パスワード同じ）
-> といったテストユーザーがいます。
+> 💡 このアカウントは `npm run db:seed` で作成されたテスト用の管理者アカウントです。他にも `user1@example.com`（パスワード: `password123`）といったテストユーザーがいます。
 
 ✅ **確認ポイント**:
 - ログイン後、ダッシュボード画面が表示される
@@ -763,9 +822,9 @@ flowchart LR
 
     subgraph 実行したコマンド
         G[git clone] --> G2[mise install]
-        G2 --> H[npm install]
-        H --> I[cp .env.example .env]
-        I --> J[docker compose up -d db]
+        G2 --> I[cp .env.example .env]
+        I --> H[npm install]
+        H --> J[docker compose up -d db]
         J --> K[npx prisma db push]
         K --> L[npm run db:seed]
         L --> M[npm run dev]
@@ -778,8 +837,8 @@ flowchart LR
 |---------|------|
 | `mise install` | プロジェクトが必要なツールを自動インストール |
 | `node -v` | Node.jsのバージョン確認 |
-| `npm install` | ライブラリの一括インストール |
 | `cp .env.example .env` | 環境変数ファイルの作成 |
+| `npm install` | ライブラリの一括インストール |
 | `docker compose up -d db` | データベースの起動 |
 | `npx prisma db push` | テーブルの作成 |
 | `npm run db:seed` | サンプルデータの投入 |
@@ -803,7 +862,36 @@ flowchart LR
 | `docker: command not found` | Docker Desktopが起動していない | Docker Desktopアプリを起動してから再実行 |
 | `port 5432 already in use` | 5432ポートが他のアプリに使われている | 既存のPostgreSQLを停止するか、`.env` のポート番号を変更 |
 | `P1001: Can't reach database` | データベースが起動していない | `docker compose up -d db` を実行してから再試行 |
-| `npm run dev` でエラー | `.env` ファイルがない、または内容が不正 | Step 8に戻って `.env` を再設定 |
+| `npm run dev` で `.env` 関連エラー | `.env` ファイルがないか内容が不正 | Step 7に戻って `.env` を再確認 |
+| `npm run dev` で `MODULE_NOT_FOUND` | `npm install` が未完了 | Step 8に戻って `npm install` を再実行 |
+| `npm run dev` で `P1001` エラー | データベースが起動していない | Step 9に戻って `docker compose up -d db` を実行 |
+
+---
+
+## 🔄 次回プロジェクトを再開するとき
+
+パソコンを再起動した後や、Day 02に進む際は以下の手順でプロジェクトを再開できます。
+
+```bash
+# filepath: ターミナル（task-appフォルダ内で実行）
+# 1. Docker Desktopアプリを起動する（手動）
+# 2. データベースを起動する
+docker compose up -d db
+```
+
+✅ **確認ポイント**:
+- `taskapp-postgres` コンテナが `running` 状態
+
+```bash
+# filepath: ターミナル（task-appフォルダ内で実行）
+# 3. 開発サーバーを起動する
+npm run dev
+```
+
+✅ **確認ポイント**:
+- ブラウザで http://localhost:3000 にアクセスして画面が表示される
+
+> 💡 たった3ステップで再開できます。Docker Desktopの起動 → `docker compose up -d db` → `npm run dev` の順番を覚えておきましょう。
 
 ---
 

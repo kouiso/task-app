@@ -2,18 +2,23 @@
 
 ## 🔙 前回の振り返り
 
-Day 14 では TaskDialog を使ったタスク新規作成機能を実装しました。react-hook-form + zod によるバリデーションや `Controller` を使った Select 連携、`useMutation` による保存処理を学んだので、今日は同じダイアログを編集モードで再利用してタスクの編集・削除に取り組みます。
+Day 14 で学んだこと:
+- TaskDialog で react-hook-form + zod のバリデーション
+- `Controller` による Select 連携
+- `useMutation` による保存処理
+
+今日は同じダイアログを**編集モード**で再利用して、タスクの編集・削除に取り組みます。
 
 ---
 
 ## 🎯 今日のゴール
 
-Day 14 で作った TaskDialog を「編集モード」で
-再利用し、タスクの編集・削除ができるようにします。
+これで CRUD の「U（更新）」と「D（削除）」が
+揃い、タスク管理の基本操作が完成します！
 1つのコンポーネントで作成と編集の両方に対応する
 パターンを学びます。
 
-![タスク編集ダイアログ](./screenshots/task-detail-dialog.png)
+📸 スクリーンショット: タスク編集ダイアログの画面
 
 ## 🤔 なぜこれを作るのか？
 
@@ -29,7 +34,7 @@ Day 14 で作った TaskDialog を「編集モード」で
 ### 📐 編集・削除の流れ
 
 ```mermaid
-graph TD
+flowchart TD
     A[タスクカードの編集ボタン] --> B{handleEdit}
     B --> C[タスクデータを取得]
     C --> D[TaskFormDataに変換]
@@ -56,7 +61,7 @@ graph TD
 | TaskDialog を編集モードで再利用 | 新しい編集専用コンポーネント |
 | initialData で既存データを渡す | 別ページで編集画面 |
 | `api.task.update` で更新 | ステータス変更（Day 16） |
-| `api.task.delete` で削除 | 一括削除 |
+| `api.task.delete` で削除 | 一括削除（Day 28） |
 
 ### 🆕 新しく学ぶ概念
 
@@ -73,12 +78,16 @@ graph TD
 | Step 1 | values propによる自動同期を理解する | 5分 |
 | Step 2 | 編集ハンドラーを実装する | 5分 |
 | Step 3 | update mutationを実装する | 5分 |
-| Step 4 | 送信ハンドラーで分岐する | 5分 |
-| Step 5 | 削除ハンドラーを実装する | 5分 |
-| Step 6 | TaskCardに編集・削除を接続 | 5分 |
-| Step 7 | 動作確認 | 3分 |
+| Step 4 | update用の送信ハンドラー | 5分 |
+| Step 5 | create用の送信ハンドラー | 5分 |
+| Step 6 | 削除用のstateとmutationを定義する | 5分 |
+| Step 7 | 削除ハンドラーとダイアログを配置する | 5分 |
+| Step 8 | 新規作成ハンドラーを実装する | 3分 |
+| Step 9 | TaskCardにハンドラーを接続する | 5分 |
+| Step 10 | TaskDialogにeditingTaskを渡す | 3分 |
+| Step 11 | 動作確認 | 3分 |
 
-**合計時間**: 約33分
+**合計時間**: 約49分
 
 ---
 
@@ -104,12 +113,11 @@ const { register, handleSubmit, control,
     title: initialData?.title ?? '',
     description:
       initialData?.description ?? '',
-    status:
-      initialData?.status ?? 'TODO',
-    priority:
-      initialData?.priority ?? 'MEDIUM',
-    dueDate:
-      initialData?.dueDate ?? '',
+    status: initialData?.status
+      ?? TASK_STATUS.TODO,
+    priority: initialData?.priority
+      ?? TASK_PRIORITY.MEDIUM,
+    dueDate: initialData?.dueDate ?? '',
     estimatedHours:
       initialData?.estimatedHours,
     projectId: initialData?.projectId
@@ -123,7 +131,7 @@ const { register, handleSubmit, control,
 > 💡 `values` prop は `initialData` が変わる
 > たびにフォームの値を自動で更新します。
 > `useEffect` + `setState` が不要になり、
-> コードがシンプルになります。Day 10 の
+> コードがシンプルになります。Day 11 の
 > ProjectDialog と同じパターンです。
 
 **作成モード vs 編集モードの比較**
@@ -136,8 +144,8 @@ const { register, handleSubmit, control,
 | API呼び出し | `task.create` | `task.update` |
 
 ✅ **確認ポイント**:
-- 作成時はフォームが空になる
-- 編集時は既存データが表示される
+- `values` に `initialData` を渡す仕組みを理解した
+- 作成モードと編集モードの違いを理解した
 
 ---
 
@@ -150,52 +158,37 @@ const { register, handleSubmit, control,
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// users は Day 14 Step 8 で取得済み
-const [editingTask, setEditingTask] =
-  useState<TaskFormData | undefined>();
-
-const handleEdit = (taskId: string) => {
-  const task =
-    tasks?.find((t) => t.id === taskId);
-  if (!task) return;
-  const dueDate = task.dueDate
-    ? new Date(task.dueDate)
-        .toISOString()
-        .split('T')[0]
-    : undefined;
+// taskToFormDataのインポートを追加
+import { taskToFormData } from
+  '@/lib/task-form';
 ```
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// handleEdit 続き: TaskFormDataに変換
-  setEditingTask({
-    id: task.id,
-    title: task.title,
-    description: task.description || '',
-    status: task.status,
-    priority: task.priority,
-    projectId: task.projectId,
-    ...(dueDate && { dueDate }),
-    ...(task.estimatedHours
-      && { estimatedHours:
-        task.estimatedHours }),
-    ...(task.assigneeId
-      && { assigneeId: task.assigneeId }),
-  });
-  setDialogOpen(true);
+// editingTask は Day 14 で定義済み
+const handleEdit = (taskId: string) => {
+  const task =
+    tasks?.find((t) => t.id === taskId);
+  if (task) {
+    // タスクをフォーム用のデータに変換
+    setEditingTask(taskToFormData(task));
+    setDialogOpen(true);
+  }
 };
 ```
 
-> 💡 `dueDate` は `Date` オブジェクトをISO文字列
-> に変換し、`T` 以前の部分（YYYY-MM-DD）だけ
-> 取り出します。`<input type="date">` が
-> この形式を期待するためです。
+> 💡 `taskToFormData` はタスクデータを
+> `TaskFormData` 形式に変換するユーティリティ
+> 関数です（`src/lib/task-form.ts`）。
+> 日付の `YYYY-MM-DD` 変換などを共通化して
+> いるため、各ページで手動変換する必要が
+> ありません。
 
 ✅ **確認ポイント**:
-- 編集ボタンでダイアログが開く
-- 既存データがフォームに表示される
+- `taskToFormData` のインポートを追加できた
+- `handleEdit` 関数が定義できた
 
-![編集モードのダイアログ](./screenshots/task-detail-dialog.png)
+📸 スクリーンショット: 編集モードのタスクダイアログ（既存データが入っている）
 
 ---
 
@@ -208,10 +201,13 @@ const handleEdit = (taskId: string) => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
+// タスク更新用のmutation
 const updateMutation =
   api.task.update.useMutation({
     onSuccess: () => {
+      // 一覧のキャッシュを更新
       utils.task.getAll.invalidate();
+      // 詳細画面が開いている場合のみ更新
       if (selectedTask) {
         utils.task.getById.invalidate(
           { id: selectedTask }
@@ -222,9 +218,17 @@ const updateMutation =
   });
 ```
 
-> 💡 `getAll` と `getById` の両方を
-> `invalidate` しています。一覧と詳細の
-> 両方に最新データを反映するためです。
+> 💡 `invalidate` は「キャッシュを無効化して
+> 再取得する」命令です。一覧（`getAll`）を必ず
+> 更新し、詳細画面（`getById`）は
+> `selectedTask` がある場合のみ更新します。
+
+#### invalidate の動作
+
+| メソッド | 効果 | タイミング |
+|---------|------|----------|
+| `utils.task.getAll.invalidate()` | 一覧を再取得 | 常に実行 |
+| `utils.task.getById.invalidate()` | 詳細を再取得 | 詳細表示中のみ |
 
 ✅ **確認ポイント**:
 - `npm run dev` でエラーが出ていない
@@ -232,15 +236,18 @@ const updateMutation =
 
 ---
 
-### Step 4: 送信ハンドラーで分岐する（5分）
+### Step 4: update用の送信ハンドラー（5分）
 
-🎯 **ゴール**: 作成と編集を1つのハンドラーで
-処理します。
+🎯 **ゴール**: 既存タスクの更新処理を実装します。
 
 💻 **実装**:
 
+`data.id` があれば編集モードと判断し、
+`updateMutation` を呼びます。
+
 ```typescript
 // filepath: src/app/task/page.tsx
+// 送信ハンドラー: data.idで作成/更新を分岐
 const handleSubmit =
   (data: TaskFormData) => {
     if (data.id) {
@@ -260,42 +267,93 @@ const handleSubmit =
         assigneeId:
           data.assigneeId || null,
       });
-    } else {
-      // 作成処理（Day 14で実装済み）
+      return;
     }
-  };
 ```
 
+> 💡 `data.id` の有無で作成か編集かを判断します。
+> 編集モードでは `initialData` に既存データが
+> 入っているので `data.id` が存在します。
+
+#### null と undefined の使い分け
+
+| 値 | 意味 | 使い方 |
+|----|------|--------|
+| `null` | 「値をクリアしたい」 | `description: null` → 説明を空にする |
+| `undefined` | 「この項目は変更しない」 | 送信しないフィールドはそのまま |
+
+> 💡 たとえば、タスクの説明を空にしたいときは
+> `null` を渡します。一方、説明を変更しない
+> ときは `undefined`（=送信しない）にします。
+> 更新APIは「送られたフィールドだけ更新」する
+> 部分更新方式です。
+
 ✅ **確認ポイント**:
-- 既存タスクを編集して更新できる
-- 一覧が自動で更新される
+- `data.id` がある場合に `updateMutation.mutate` を呼んでいる
+- `null` と `undefined` の違いを理解した
+
+---
+
+### Step 5: create用の送信ハンドラー（5分）
+
+🎯 **ゴール**: 新規作成の分岐を追加して
+`handleSubmit` を完成させます。
+
+💻 **実装**:
+
+`data.id` がない場合は新規作成です。
+Day 14 で実装した `createMutation` を使います。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// handleSubmitの続き: 新規作成分岐
+    if (!session?.user?.id) return;
+    createMutation.mutate({
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      priority: data.priority,
+      projectId: data.projectId,
+      dueDate: data.dueDate
+        ? new Date(data.dueDate)
+            .toISOString()
+        : undefined,
+      estimatedHours:
+        data.estimatedHours ?? undefined,
+      assigneeId:
+        data.assigneeId || undefined,
+    });
+  };
+```
 
 #### 作成 vs 更新のAPIパラメータ比較
 
 | パラメータ | create | update |
 |-----------|--------|--------|
 | `id` | なし | **必須** |
-| `title` | **必須** | 任意 |
-| `projectId` | **必須** | なし |
+| `title` | **必須** | 常に送信 |
+| `projectId` | **必須** | 変更対象外 |
 | `description` | 任意 | 任意（null可） |
 | `dueDate` | 任意 | 任意（null可） |
 
-> 💡 `data.id` の有無で作成か編集かを判断します。
-> `null` を渡すと値をクリアできます。
-> `undefined` は「変更しない」を意味します。
-
 ✅ **確認ポイント**:
-- `data.id` の有無で処理が分岐している
-- `null` と `undefined` の使い分けを理解した
+- 既存タスクを編集して更新できる
+- 一覧が自動で更新される
 
 ---
 
-### Step 5: 削除ハンドラーを実装する（5分）
+### Step 6: 削除用のstateとmutationを定義する（5分）
 
-🎯 **ゴール**: 確認ダイアログ付きの削除処理を
-実装します。
+🎯 **ゴール**: 削除確認に使うstateと削除APIの
+mutationを定義します。
 
 💻 **実装**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+import { DeleteConfirmDialog } from
+  '@/component/ui/delete-confirm-dialog';
+```
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -308,10 +366,30 @@ const [deleteTargetId, setDeleteTargetId]
 const deleteMutation =
   api.task.delete.useMutation({
     onSuccess: () => {
+      // 一覧のキャッシュを更新
       utils.task.getAll.invalidate();
     },
   });
 ```
+
+> 💡 `window.confirm()` ではなく
+> `DeleteConfirmDialog` コンポーネントを使います。
+> (1) アプリ全体のUIに統一感が出る
+> (2) ボタンのテキストをカスタマイズできる
+> (3) `isPending` 中の二重クリックを防止できる
+
+✅ **確認ポイント**:
+- `DeleteConfirmDialog` のインポートを追加できた
+- stateとmutationが定義できた
+
+---
+
+### Step 7: 削除ハンドラーとダイアログを配置する（5分）
+
+🎯 **ゴール**: 削除ボタンのハンドラーと確認
+ダイアログをJSXに配置します。
+
+💻 **実装**:
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -322,13 +400,8 @@ const handleDelete = (taskId: string) => {
 };
 ```
 
-> 💡 `handleDelete` は `confirm()` ではなく
-> `DeleteConfirmDialog` コンポーネントを使います。
-> state で対象IDとダイアログの開閉を管理し、
-> ユーザーが確認ボタンを押した時だけ削除を実行
-> します。
-
-続いて、JSXに `DeleteConfirmDialog` を配置します。
+続いて、JSXの閉じタグ付近に
+`DeleteConfirmDialog` を配置します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -352,23 +425,44 @@ const handleDelete = (taskId: string) => {
 - 確認ボタンでタスクが削除される
 - キャンセルで何も起こらない
 
+📸 スクリーンショット: 削除確認ダイアログの画面
+
 ---
 
-### Step 6: TaskCardに編集・削除を接続（5分）
+### Step 8: 新規作成ハンドラーを実装する（3分）
 
-🎯 **ゴール**: Day 13 で配置した TaskCard に
-ハンドラーを接続します。
+🎯 **ゴール**: 「新規タスク」ボタンのハンドラーを
+実装します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 新規作成ボタンのハンドラー
+// editingTaskをundefinedにして作成モードで開く
 const handleCreate = () => {
   setEditingTask(undefined);
   setDialogOpen(true);
 };
 ```
+
+> 💡 `handleCreate` は `editingTask` を
+> `undefined` にしてから開きます。
+> これで「作成モード」になります。
+> `handleEdit` は既存データをセットしてから
+> 開くので「編集モード」になります。
+
+✅ **確認ポイント**:
+- `handleCreate` で `editingTask` を `undefined` にしている
+- 作成モードと編集モードの切り替えを理解した
+
+---
+
+### Step 9: TaskCardにハンドラーを接続する（5分）
+
+🎯 **ゴール**: Day 13 で配置した TaskCard に
+ハンドラーを接続します。
+
+💻 **実装**:
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -388,9 +482,23 @@ const handleCreate = () => {
 />
 ```
 
-> 💡 `TaskCard`にはタイマー関連のoptional props（`isTimerActive`, `timerStartedAt`, `timeSpentMinutes`, `onTimerUpdate`）もあります。これらはDay 16で実装します。
+> 💡 `TaskCard` にはタイマー関連の optional
+> props（`isTimerActive`, `timerStartedAt`,
+> `timeSpentMinutes`, `onTimerUpdate`）も
+> あります。これらは Day 16 で実装します。
 
-続けて、ダイアログに `editingTask` を渡して編集モードを有効にします。
+✅ **確認ポイント**:
+- `onEdit` に `handleEdit` を渡している
+- `onDelete` に `handleDelete` を渡している
+
+---
+
+### Step 10: TaskDialogにeditingTaskを渡す（3分）
+
+🎯 **ゴール**: ダイアログに `editingTask` を渡して
+編集モードを有効にします。
+
+💻 **実装**:
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -400,27 +508,21 @@ const handleCreate = () => {
   onClose={() => setDialogOpen(false)}
   onSubmit={handleSubmit}
   initialData={editingTask}
-  projects={projects || []}
-  users={users || []}
+  projects={projects ?? []}
+  users={users ?? []}
 />
 ```
-
-> 💡 `handleCreate` は `editingTask` を
-> `undefined` にしてから開きます。
-> これで「作成モード」になります。
-> `handleEdit` は既存データをセットしてから
-> 開くので「編集モード」になります。
 
 ✅ **確認ポイント**:
 - 「新規タスク」で作成モードが開く
 - カードの編集ボタンで編集モードが開く
 - カードの削除ボタンで確認→削除される
 
-![編集後のタスク一覧](./screenshots/task-list.png)
+📸 スクリーンショット: 編集後のタスク一覧画面
 
 ---
 
-### Step 7: 動作確認（3分）
+### Step 11: 動作確認（3分）
 
 🎯 **ゴール**: 編集・削除の全機能を確認します。
 
@@ -457,7 +559,7 @@ npm run dev
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
 | 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | Date変換ミス | `split('T')[0]`で日付部分取得 |
+| 日付がずれる | Date変換ミス | `toISOString()` で ISO 形式に変換 |
 | 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
 | 前回の値が残る | `values` prop未設定 | `useForm` の `values` に `initialData` を渡す |
 
@@ -469,6 +571,7 @@ npm run dev
 | DeleteConfirmDialog | 削除前の確認ダイアログコンポーネント |
 | null vs undefined | nullは「クリア」、undefinedは「変更なし」 |
 | toISOString() | 日付をISO 8601形式の文字列に変換 |
+| invalidate | キャッシュを無効化して最新データを再取得 |
 
 ## 🔜 次回予告
 

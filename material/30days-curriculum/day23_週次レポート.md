@@ -2,7 +2,7 @@
 
 ## 🔙 前回の振り返り
 
-Day 22 では Recharts ライブラリを使って、ステータス別・優先度別の円グラフを実装しました。`reduce` によるグラフ用データ集計や `ResponsiveContainer` でのレスポンシブ対応も学んだので、今日はプロジェクト別統計テーブルと週次レポート機能に取り組みます。
+Day 22 では Recharts ライブラリを使って、ステータス別・優先度別の円グラフを実装しました。`Map` によるグラフ用データ集計や `ResponsiveContainer` でのレスポンシブ対応も学んだので、今日はプロジェクト別統計テーブルと週次レポート機能に取り組みます。
 
 ---
 
@@ -12,7 +12,7 @@ Day 22 では Recharts ライブラリを使って、ステータス別・優先
 週次レポート機能を追加します。テーブルで進捗を
 一覧表示し、APIで週次データを取得します。
 
-![プロジェクト統計テーブル](./screenshots/report.png)
+📸 スクリーンショット: プロジェクト統計テーブルの表示を確認してください。
 
 ## 🤔 なぜこれを作るのか？
 
@@ -29,7 +29,7 @@ Day 22 では Recharts ライブラリを使って、ステータス別・優先
 ### 📐 プロジェクト統計の計算フロー
 
 ```mermaid
-graph TD
+flowchart TD
     A[api.task.getAll] --> B[tasks 配列]
     C[api.project.getAll] --> D[projects 配列]
     B --> E[projectId でフィルタ]
@@ -87,14 +87,6 @@ graph TD
 🎯 **ゴール**: プロジェクトごとの
 統計値をどう計算するか理解します。
 
-```bash
-# filepath: ターミナル
-# 統計用データの取得を確認
-npm run dev
-```
-
-✅ **確認ポイント**:
-- 4つの統計値の計算方法を理解した
 #### 統計テーブルに表示する項目
 
 | 項目 | 計算方法 | 意味 |
@@ -114,13 +106,19 @@ npm run dev
 | 3 | 完了数 / 全数 × 100 | 3/10 × 100 = 30% |
 | 4 | timeSpentMinutes を合算 | 480分 = 8.0h |
 
+```typescript
+// filepath: src/app/report/page.tsx
+// useMemo のインポートを確認
+import { useMemo } from 'react';
+```
+
 > 💡 Day 21 で学んだ `reduce` と
-> Day 22 で学んだ `filter` を
+> JavaScript の `filter` メソッドを
 > 組み合わせて、プロジェクト単位で
 > 集計します。
 
 ✅ **確認ポイント**:
-- 4つの統計値の計算方法を理解した
+- 表の4項目（タスク数・完了・進捗・作業時間）の計算式を自分の言葉で説明できる
 
 ---
 
@@ -133,17 +131,17 @@ npm run dev
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// プロジェクトのタスクを取得して集計
+// プロジェクト別の統計値を計算（前半）
 const projectStats = useMemo(
   () =>
     projects?.map((project) => {
       const projectTasks =
         tasks?.filter(
           (t) => t.projectId === project.id
-        ) || [];
+        ) ?? [];
       const completedTasks =
         projectTasks.filter(
-          (t) => t.status === 'DONE'
+          (t) => t.status === TASK_STATUS.DONE
         );
       const totalTime =
         projectTasks.reduce(
@@ -153,20 +151,19 @@ const projectStats = useMemo(
         );
 ```
 
-```typescript
-// filepath: src/app/report/page.tsx
-// 進捗率を計算する
-    const progress =
-      projectTasks.length > 0
-        ? (completedTasks.length
-            / projectTasks.length) * 100
-        : 0;
-```
+上のコードに続けて、同じ `useMemo` の中に
+以下を追加します。
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 戻り値を整形する
+// 進捗率の計算と戻り値（後半）
+      const progress =
+        projectTasks.length > 0
+          ? (completedTasks.length
+              / projectTasks.length) * 100
+          : 0;
       return {
+        id: project.id,
         name: project.name,
         totalTasks: projectTasks.length,
         completedTasks:
@@ -180,10 +177,15 @@ const projectStats = useMemo(
 );
 ```
 
-> 💡 `projects?.map` で各プロジェクトを
-> ループし、`tasks?.filter` でそのプロジェクト
-> のタスクだけを取り出します。
-> 最後に `toFixed(1)` で小数1桁に丸めます。
+> 💡 `TASK_STATUS.DONE` は Day 21 で
+> インポート済みの定数です。`projects?.map`
+> で各プロジェクトをループし、
+> `tasks?.filter` でそのプロジェクトの
+> タスクだけを取り出します。
+>
+> **豆知識**: `?? []` は `null`/`undefined` のみ
+> 空配列に変換します。`|| []` とは異なり
+> `0` や空文字を誤判定しません。
 
 ✅ **確認ポイント**:
 - projectStats に配列が入る
@@ -209,18 +211,25 @@ import {
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// Card とテーブルの外枠
+// プロジェクト統計テーブルのヘッダー
 <Card>
   <CardHeader>
-    <CardTitle>
-      プロジェクト統計
-    </CardTitle>
+    <CardTitle>プロジェクト統計</CardTitle>
   </CardHeader>
   <CardContent>
     <Table>
       <TableHeader>
         <TableRow>
-          {/* 次のブロックでヘッダー定義 */}
+          <TableHead className="w-[200px]">
+            プロジェクト</TableHead>
+          <TableHead className="text-right">
+            タスク数</TableHead>
+          <TableHead className="text-right">
+            完了</TableHead>
+          <TableHead className="text-right">
+            進捗</TableHead>
+          <TableHead className="text-right">
+            作業時間</TableHead>
         </TableRow>
       </TableHeader>
     </Table>
@@ -228,32 +237,17 @@ import {
 </Card>
 ```
 
-```typescript
-// filepath: src/app/report/page.tsx
-// TableHead の定義
-<TableHead className="w-[200px]">
-  プロジェクト
-</TableHead>
-<TableHead className="text-right">
-  タスク数
-</TableHead>
-<TableHead className="text-right">
-  完了
-</TableHead>
-<TableHead className="text-right">
-  進捗
-</TableHead>
-<TableHead className="text-right">
-  作業時間
-</TableHead>
-```
+✅ **確認ポイント**:
+- テーブルのヘッダー5列を定義した
+
+上のコードの `</Table>` の直前に、以下のテーブル本体を追加します。
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// テーブルの本体（TableBody）
+// テーブルの本体（mapで各行を生成）
 <TableBody>
   {projectStats?.map((stat) => (
-    <TableRow key={stat.name}>
+    <TableRow key={stat.id}>
       <TableCell className="font-medium">
         {stat.name}
       </TableCell>
@@ -278,8 +272,6 @@ import {
 - テーブルにプロジェクト名が並ぶ
 - 数値が右寄せで表示される
 
-![プロジェクト統計テーブル完成](./screenshots/report.png)
-
 #### Table コンポーネントの構造
 
 | コンポーネント | 役割 | HTML相当 |
@@ -296,32 +288,32 @@ import {
 > `text-right` で数値を右寄せにすると
 > 表が見やすくなります。
 
-✅ **確認ポイント**:
-- テーブルにプロジェクト名が並ぶ
-- 数値が右寄せで表示される
 
-![プロジェクト統計テーブル完成](./screenshots/report.png)
+📸 スクリーンショット: プロジェクト統計テーブル完成の表示を確認してください。
 
 ---
 
 ### Step 4: 週次レポートAPIの概要（3分）
 
-🎯 **ゴール**: `api.report.getWeeklyReport`
-の仕組みを理解します。
+🎯 **ゴール**: いよいよ週次レポートです!
+まずはAPIがどんなデータを返してくれるか
+覗いてみましょう。
 
-```bash
-# filepath: ターミナル
-# 週次レポートAPIを確認
-cat src/server/api/routers/report.ts | head -50
+```typescript
+// filepath: src/server/api/routers/report.ts
+// APIの入力バリデーション定義
+z.object({
+  weeks: z.number()
+    .min(1).max(12).default(4),
+  userId: z.string().cuid().optional(),
+})
 ```
 
-✅ **確認ポイント**:
-- APIのパラメータとレスポンスを理解した
 #### APIのパラメータ
 
 | パラメータ | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
-| weeks | number | はい | 取得する週数（1〜12） |
+| weeks | number | いいえ（デフォルト: 4） | 取得する週数（1〜12） |
 | userId | string | いいえ | 特定ユーザーに絞る |
 
 #### APIのレスポンス
@@ -338,7 +330,7 @@ cat src/server/api/routers/report.ts | head -50
 
 | プロパティ | 型 | 説明 |
 |-----------|-----|------|
-| week | string | "Week 1" のような週ラベル |
+| week | string | `1週目` のような週ラベル |
 | weekStart | string | その週の開始日 |
 | totalCompleted | number | その週の完了数 |
 | byStatus | object | ステータス別の件数 |
@@ -349,7 +341,8 @@ cat src/server/api/routers/report.ts | head -50
 > フィルタし、週ごとに集計しています。
 
 ✅ **確認ポイント**:
-- APIのパラメータとレスポンスを理解した
+- APIのパラメータとレスポンスの構造を理解した
+- `weeklyData` が週ごとのデータ配列であることを把握した
 
 ---
 
@@ -363,21 +356,27 @@ APIを呼び出してデータを取得します。
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
 'use client';
-
+// 日付処理ライブラリ
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+// React フック
+import { useState } from 'react';
+// レイアウト・UIコンポーネント
 import { AppLayout }
   from '@/component/layout/app-layout';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
 } from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
 import {
   Select, SelectContent,
   SelectItem, SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
+// APIクライアント
 import { api } from '@/trpc/react';
-import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
 ```
 
 ```typescript
@@ -394,15 +393,7 @@ export default function WeeklyReportPage() {
   });
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex justify-center
-          items-center min-h-[60vh]">
-          <Loader2 className="h-12 w-12
-            animate-spin text-primary" />
-        </div>
-      </AppLayout>
-    );
+    return <PageLoadingSpinner />;
   }
 ```
 
@@ -435,11 +426,22 @@ export default function WeeklyReportPage() {
 > ユーザーが週数を変更すると、
 > `useQuery` が自動的に再取得します。
 
-✅ **確認ポイント**:
-- reportData にデータが入る
-- ローディング中にスピナーが表示される
+#### ページ全体のJSX構造
 
-> 📸 ここでデータ読み込み中のスピナー（ぐるぐるアニメーション）が画面中央に表示されることを確認してください。
+return文は以下のツリー構造で組み立てます。
+
+| 階層 | 要素 | 役割 |
+|------|------|------|
+| 1 | `<AppLayout>` | 共通レイアウト |
+| 2 | `<div className="space-y-6">` | 縦方向の余白 |
+| 3 | ヘッダー（h1 + Select） | タイトルと期間選択 |
+| 3 | `grid grid-cols-3` | 3枚のカード（Step 6） |
+
+✅ **確認ポイント**:
+- ファイルを保存してエラーがないことを確認した
+- `<AppLayout>` でページ全体をラップしている
+
+📸 スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
 
 ---
 
@@ -447,6 +449,9 @@ export default function WeeklyReportPage() {
 
 🎯 **ゴール**: 取得した週次データを
 カードで表示します。
+
+チームリーダーが毎週確認したい数字は何でしょう?
+「合計・平均・期間」の3つをカードで表示します。
 
 💻 **実装**:
 
@@ -462,11 +467,14 @@ export default function WeeklyReportPage() {
         完了タスク合計
       </p>
       <p className="text-3xl font-bold">
-        {reportData?.totalCompleted || 0}
+        {reportData?.totalCompleted ?? 0}
       </p>
     </CardContent>
   </Card>
 ```
+
+✅ **確認ポイント**:
+- 完了タスク合計の数値が表示される
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
@@ -489,24 +497,27 @@ export default function WeeklyReportPage() {
   </Card>
 ```
 
+✅ **確認ポイント**:
+- 週平均の数値が表示される
+
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// 期間表示カード
+// 期間表示カード（date-fns で整形）
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        対象期間
-      </p>
+        対象期間</p>
       <p className="text-lg font-semibold">
         {reportData?.startDate
           && reportData?.endDate
-          ? `${new Date(
-              reportData.startDate
-            ).toLocaleDateString()}
-            - ${new Date(
-              reportData.endDate
-            ).toLocaleDateString()}`
+          ? `${format(
+              new Date(reportData.startDate),
+              'yyyy/MM/dd', { locale: ja }
+            )} - ${format(
+              new Date(reportData.endDate),
+              'yyyy/MM/dd', { locale: ja }
+            )}`
           : '-'}
       </p>
     </CardContent>
@@ -514,11 +525,13 @@ export default function WeeklyReportPage() {
 </div>
 ```
 
-✅ **確認ポイント**:
-- 3枚のカードが表示される
-- 完了数と平均が正しく計算される
+> 💡 `format` と `ja` ロケールで
+> 日付を `yyyy/MM/dd` 形式に変換します。
+> データがないときは `'-'` を表示します。
 
-![週次レポート完成](./screenshots/report-weekly.png)
+✅ **確認ポイント**:
+- 3枚のカードが横並びで表示される
+- 完了数と平均が正しく計算される
 
 #### 週次レポートの表示項目
 
@@ -529,20 +542,24 @@ export default function WeeklyReportPage() {
 | 対象期間 | 集計期間 | 開始日 - 終了日 |
 
 > 💡 `Math.round` で小数を丸めます。
-> `toLocaleDateString()` でブラウザの
-> ロケールに応じた日付形式になります。
+> 対象期間は `reportData?.startDate` と
+> `reportData?.endDate` の両方をチェック
+> してから表示しています。
 
-✅ **確認ポイント**:
-- 3枚のカードが表示される
-- 完了数と平均が正しく計算される
 
-![週次レポート完成](./screenshots/report-weekly.png)
+📸 スクリーンショット: 週次レポート完成の表示を確認してください。
 
 ---
 
 ### Step 7: 動作確認（3分）
 
 🎯 **ゴール**: 全体の表示を確認します。
+
+```bash
+# filepath: ターミナル
+# 開発サーバーを起動して確認
+npm run dev
+```
 
 1. `/report` にアクセス
 2. 統計カード（Day 21）が表示される
@@ -556,15 +573,8 @@ export default function WeeklyReportPage() {
 - テーブルの数値がシードデータと一致
 - 週次レポートにデータが表示される
 
-![レポートページ全体](./screenshots/report.png)
+📸 スクリーンショット: レポートページ全体の表示を確認してください。
 
----
-
-```bash
-# filepath: ターミナル
-# 開発サーバーを起動して動作確認
-npm run dev
-```
 
 ## 📋 今日のまとめ
 

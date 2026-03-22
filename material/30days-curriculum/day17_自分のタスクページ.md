@@ -8,27 +8,20 @@ Day 16 ではタスクのステータス変更機能と `useEffect` + `setInterv
 
 ## 🎯 今日のゴール
 
-ログイン中のユーザーに割り当てられたタスクだけを
-表示する「マイタスク」ページを実装します。期限別
-のグループ表示とステータスタブで、今やるべきこと
-が一目でわかるようにします。
+ログイン中のユーザーに割り当てられたタスクだけを表示する「マイタスク」ページを実装します。期限別のグループ表示とステータスタブで、今やるべきことが一目でわかるようにします。
 
-![マイタスクページ全体](./screenshots/my-task.png)
+📸 スクリーンショット: マイタスクページの完成画面
 
 ## 🤔 なぜこれを作るのか？
 
-複数のプロジェクトに参加していると、自分が何を
-すべきか分からなくなります。
+複数のプロジェクトに参加していると、自分が何をすべきか分からなくなります。
 
-> 💡 **例え話**: マイタスクは「個人の受信トレイ」
-> です。自分が担当するタスクだけが表示され、
-> 優先度別に分かれているので
-> 何から手をつけるべきかが一目瞭然です。
+> 💡 **例え話**: マイタスクは「個人の受信トレイ」です。3つのプロジェクトに参加していて合計20個のタスクがある場合、マイタスクページを開くだけで今日やるべき3つのタスクがすぐに分かります。
 
 ### 📐 マイタスクページの構成
 
 ```mermaid
-graph TD
+flowchart TD
     A[マイタスクページ] --> B[ステータスTabs]
     A --> C[プロジェクトフィルター]
     A --> D[期限別グループ]
@@ -37,7 +30,7 @@ graph TD
     D --> G[📅 今後の予定]
     D --> H[📋 期限なし]
 
-    B --> I[api.task.getAll assigneeId]
+    B --> I["api.task.getAll({ assigneeId })"]
     C --> I
     I --> J[TaskCard表示]
 
@@ -63,30 +56,33 @@ graph TD
 |------|--------|------|------|
 | Tabs | タブ | コンテンツの切り替えUI | ファイルのタブ仕切り |
 | グループ表示 | — | データを条件で分類 | 手紙を「緊急・普通・後回し」に分ける |
-| toDateString() | トゥ・デイト・ストリング | 日付を比較用文字列に変換 | カレンダーの同じ日付 |
+| `isSameDay` | イズ・セイム・デイ | 2つの日付が同じ日かを判定する `date-fns` の関数 | カレンダーの同じ日付かチェック |
+| `useMemo` | ユーズ・メモ | 計算結果をキャッシュして再利用 | メモ帳に書いておいて、変わった時だけ書き直す |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | ページの土台を作る | 3分 |
-| Step 2 | 自分のIDを取得する | 5分 |
+| Step 1 | ページの最小構造を作る | 3分 |
+| Step 2 | 自分のIDを取得してローディング処理 | 5分 |
 | Step 3 | 自分のタスクを取得する | 5分 |
 | Step 4 | ステータスTabsを作る | 5分 |
 | Step 5 | プロジェクトフィルターを追加 | 5分 |
-| Step 6 | 期限別グループに分類する | 7分 |
-| Step 7 | グループごとにカード表示 | 7分 |
-| Step 8 | 編集・削除ハンドラーを接続 | 5分 |
-| Step 9 | 動作確認 | 3分 |
+| Step 6 | TaskGroupSectionコンポーネントを作る | 7分 |
+| Step 7 | 期限別グループに分類する | 7分 |
+| Step 8 | グループごとにカード表示 | 5分 |
+| Step 9 | 編集ハンドラーを実装する | 5分 |
+| Step 10 | 削除ハンドラーを実装する | 5分 |
+| Step 11 | ダイアログを配置する | 3分 |
+| Step 12 | 動作確認 | 3分 |
 
-**合計時間**: 約45分
+**合計時間**: 約58分
 
 ---
 
-### Step 1: ページの土台を作る（3分）
+### Step 1 🧭: ページの最小構造を作る（3分）
 
-🎯 **ゴール**: マイタスクページの基本構造を作り
-ます。
+🎯 **ゴール**: マイタスクページの最小完成版を作ります。このファイルに以降のステップでコードを追加していきます。
 
 💻 **実装**:
 
@@ -94,27 +90,16 @@ graph TD
 // filepath: src/app/my-task/page.tsx
 'use client';
 
-import {
-  AppLayout,
-} from '@/component/layout/app-layout';
-import {
-  TaskCard,
-} from '@/component/task/task-card';
-import {
-  TaskDialog, type TaskFormData,
-} from '@/component/task/task-dialog';
-import { api } from '@/trpc/react';
 import { useMemo, useState } from 'react';
-```
+import { AppLayout } from '@/component/layout/app-layout';
+import { api } from '@/trpc/react';
 
-```typescript
-// filepath: src/app/my-task/page.tsx
+// マイタスクページのコンポーネント
 export default function MyTasksPage() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="text-3xl font-bold
-          tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight">
           マイタスク
         </h1>
       </div>
@@ -123,37 +108,67 @@ export default function MyTasksPage() {
 }
 ```
 
-> 💡 Day 08 で学んだ `AppLayout` でページを
-> ラップします。サイドバーと認証ガードが
-> 自動的に適用されます。
+> 💡 Day 08 で学んだ `AppLayout` でページをラップします。サイドバーと認証ガードが自動的に適用されます。
 
 ✅ **確認ポイント**:
-- `/my-task` にアクセスして「マイタスク」と表示
+- ファイルを保存した
+- `/my-task` にアクセスして「マイタスク」と表示される
 - サイドバーが表示されている
 
 ---
 
-### Step 2: 自分のIDを取得する（5分）
+### Step 2 🧭: 自分のIDを取得してローディング処理（5分）
 
-🎯 **ゴール**: ログイン中のユーザー情報を
-取得します。
+🎯 **ゴール**: ログイン中のユーザー情報を取得し、ローディング中はスピナーを表示します。
 
 💻 **実装**:
 
+まずインポートを追加します。Step 1 のインポート部分を以下に**置き換えて**ください。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// MyTasksPage内に追加
-const { data: currentUser } =
+'use client';
+
+import { useMemo, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import {
+  PageLoadingSpinner,
+} from '@/component/ui/loading-spinner';
+import { api } from '@/trpc/react';
+```
+
+次に、`MyTasksPage` の `return` の**前に**以下を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// MyTasksPage内の先頭に追加
+// ログイン中のユーザー情報を取得
+const { data: currentUser, isLoading: isCurrentUserLoading } =
   api.auth.getCurrentUser.useQuery();
 
-// ユーザー一覧を取得（担当者選択用）
+// 担当者選択用のユーザー一覧を取得
 const { data: users } =
   api.search.getProjectMembers.useQuery();
 ```
 
+ローディング中はスピナーを表示します。`return` の**前に**以下を追加してください。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// ローディング中はスピナーを表示
+if (isCurrentUserLoading) {
+  return (
+    <AppLayout>
+      <PageLoadingSpinner />
+    </AppLayout>
+  );
+}
+```
+
 ✅ **確認ポイント**:
-- `console.log(currentUser)` でユーザー情報取得
-- `npm run dev` でエラーなし
+- ファイルを保存した
+- ページアクセス時に一瞬スピナーが表示された後、「マイタスク」が表示される
+- `npm run dev` でエラーが出ていない
 
 #### 認証情報の取得方法
 
@@ -163,43 +178,48 @@ const { data: users } =
 | 現在のユーザー | `api.auth.getCurrentUser` | ユーザー詳細情報 |
 | メンバー取得 | `api.search.getProjectMembers` | 担当者選択用 |
 
-> 💡 `api.auth.getCurrentUser` はログイン中の
-> ユーザーのIDや名前を返します。
-> このIDを使って「自分のタスク」を絞り込みます。
-
-✅ **確認ポイント**:
-- `console.log(currentUser)` でユーザー情報取得
-- `npm run dev` でエラーなし
+> 💡 `api.auth.getCurrentUser` はログイン中のユーザーのIDや名前を返します。このIDを使って「自分のタスク」を絞り込みます。
 
 ---
 
-### Step 3: 自分のタスクを取得する（5分）
+### Step 3 🧭: 自分のタスクを取得する（5分）
 
-🎯 **ゴール**: `assigneeId` でフィルタして自分の
-タスクだけを取得します。
+🎯 **ゴール**: `assigneeId` でフィルタして自分のタスクだけを取得します。
 
 💻 **実装**:
 
+Step 2 で追加した `users` の取得の**下に**以下を追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
+// 自分に割り当てられたタスクだけを取得
 const { data: tasks, isLoading } =
   api.task.getAll.useQuery(
-    {
-      assigneeId: currentUser?.id,
-    },
+    { assigneeId: currentUser?.id },
     { enabled: !!currentUser },
   );
+```
+
+ローディングの条件も更新します。Step 2 で追加した `if (isCurrentUserLoading)` を以下に**置き換えて**ください。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 両方のローディングが完了するまでスピナー表示
+if (isCurrentUserLoading || isLoading) {
+  return (
+    <AppLayout>
+      <PageLoadingSpinner />
+    </AppLayout>
+  );
+}
 ```
 
 ✅ **確認ポイント**:
 - 自分に割り当てられたタスクだけが返る
 - 他の人のタスクは含まれない
+- `npm run dev` でエラーが出ていない
 
-> 💡 `enabled: !!currentUser` は
-> 「currentUserが取得できてからAPIを呼ぶ」
-> という設定です。Day 12 で学んだパターンです。
-> currentUser未取得のまま呼ぶと、全タスクが
-> 返ってしまいます。
+> 💡 `enabled: !!currentUser` は「currentUserが取得できてからAPIを呼ぶ」という設定です。Day 12 で学んだパターンです。currentUser未取得のまま呼ぶと、全タスクが返ってしまいます。
 
 #### getAll パラメータの活用
 
@@ -209,285 +229,437 @@ const { data: tasks, isLoading } =
 | `status` | `'TODO'` | TODOのみ取得 |
 | `projectId` | プロジェクトID | 特定プロジェクトだけ |
 
-✅ **確認ポイント**:
-- 自分に割り当てられたタスクだけが返る
-- 他の人のタスクは含まれない
-
 ---
 
-### Step 4: ステータスTabsを作る（5分）
+### Step 4 🧭: ステータスTabsを作る（5分）
 
-🎯 **ゴール**: ステータスで絞り込むタブUIを
-追加します。
+🎯 **ゴール**: ステータスで絞り込むタブUIを追加します。
 
 💻 **実装**:
 
+まずインポートを追加します。ファイル先頭のインポート部分に以下を**追加**してください。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
+// インポートに追加
 import {
   Tabs, TabsList, TabsTrigger,
 } from '@/component/ui/tabs';
-import type { TaskStatus } from '@prisma/client';
+import {
+  isTaskStatus, TASK_STATUS,
+  TASK_STATUS_LABELS, type TaskStatus,
+} from '@/lib/constant/status';
+```
 
-const STATUS_TABS: {
-  label: string;
-  value: TaskStatus | 'all';
-}[] = [
-  { label: 'すべて', value: 'all' },
-  { label: '未対応', value: 'TODO' },
-  { label: '進行中',
-    value: 'IN_PROGRESS' },
-  { label: 'レビュー中',
-    value: 'IN_REVIEW' },
-  { label: '完了', value: 'DONE' },
+次に、`MyTasksPage` の**外側**（関数の前）に定数を定義します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// コンポーネントの外側に定数を定義
+const ACTIVE_STATUSES: TaskStatus[] = [
+  TASK_STATUS.TODO,
+  TASK_STATUS.IN_PROGRESS,
+  TASK_STATUS.IN_REVIEW,
+  TASK_STATUS.DONE,
 ];
 ```
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-const [activeTab, setActiveTab] =
-  useState<string>('all');
+// ステータス定数からタブを動的に生成
+const STATUS_TABS: {
+  label: string;
+  value: TaskStatus | 'all';
+}[] = [
+  { label: 'すべて', value: 'all' },
+  ...ACTIVE_STATUSES.map((status) => ({
+    label: TASK_STATUS_LABELS[status],
+    value: status,
+  })),
+];
+```
 
-// useQueryにステータスフィルター追加
-const { data: tasks } =
+`MyTasksPage` 内の `currentUser` 取得の**前に**stateを追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// タブの選択状態を管理
+const [activeTab, setActiveTab] =
+  useState<TaskStatus | 'all'>('all');
+```
+
+Step 3 の `useQuery` を以下に**置き換えて**ください。ステータスフィルターを追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// ステータスフィルターを追加した版
+const { data: tasks, isLoading } =
   api.task.getAll.useQuery(
     {
       assigneeId: currentUser?.id,
       status: activeTab === 'all'
-        ? undefined
-        : (activeTab as TaskStatus),
+        ? undefined : activeTab,
     },
     { enabled: !!currentUser },
   );
 ```
 
+JSXの `<h1>` タグの**下に**タブUIを追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// Tabs UIの表示
-<Tabs value={activeTab}
-  onValueChange={setActiveTab}>
-  <TabsList>
-    {STATUS_TABS.map((tab) => (
-      <TabsTrigger
-        key={tab.label}
-        value={tab.value}>
-        {tab.label}
-      </TabsTrigger>
-    ))}
-  </TabsList>
-</Tabs>
+// フィルターエリアのコンテナ
+<div className="flex flex-col sm:flex-row gap-4 items-center">
+  <Tabs
+    value={activeTab}
+    onValueChange={(v) => {
+      if (v === 'all' || isTaskStatus(v))
+        setActiveTab(v);
+    }}
+    className="w-full sm:w-auto"
+  >
+    <TabsList>
+      {STATUS_TABS.map((tab) => (
+        <TabsTrigger
+          key={tab.label}
+          value={tab.value}>
+          {tab.label}
+        </TabsTrigger>
+      ))}
+    </TabsList>
+  </Tabs>
+</div>
 ```
 
-> 💡 shadcn/ui の `Tabs` コンポーネントは
-> クリックで値が切り替わるUIです。
-> `onValueChange` で選択値を state に保存し、
-> それをAPIパラメータに渡して絞り込みます。
+> 💡 `onValueChange` は `string` を返すので、`isTaskStatus(v)` 型ガードで `TaskStatus` 型かを判定してから `setActiveTab` に渡します。`as TaskStatus` のような型アサーションは使わず、実行時に値を検証します。
 
 ✅ **確認ポイント**:
 - タブが横並びで表示される
 - タブ切り替えでタスクが絞り込まれる
+- `npm run dev` でエラーが出ていない
 
-![ステータスTabsの表示](./screenshots/my-task.png)
+📸 スクリーンショット: ステータスTabsが表示されている画面
 
 ---
 
-### Step 5: プロジェクトフィルターを追加（5分）
+### Step 5 🧭: プロジェクトフィルターを追加（5分）
 
-🎯 **ゴール**: プロジェクトでも絞り込めるように
-します。
+🎯 **ゴール**: プロジェクトでも絞り込めるようにします。
 
 💻 **実装**:
 
+インポートを追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
+// インポートに追加
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from '@/component/ui/select';
+```
 
+`MyTasksPage` 内にstateとクエリを追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// プロジェクトフィルターの状態管理
 const [filterProject, setFilterProject] =
   useState<string>('all');
+// プロジェクト一覧を取得
 const { data: projects } =
   api.project.getAll.useQuery();
 ```
 
+Step 4 の `useQuery` を以下に**置き換えて**ください。プロジェクトフィルターを追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// useQueryにプロジェクトフィルター追加
-const { data: tasks } =
+// プロジェクトフィルターも追加した最終版
+const { data: tasks, isLoading } =
   api.task.getAll.useQuery(
     {
       assigneeId: currentUser?.id,
       status: activeTab === 'all'
-        ? undefined
-        : (activeTab as TaskStatus),
+        ? undefined : activeTab,
       projectId: filterProject === 'all'
-        ? undefined
-        : filterProject,
+        ? undefined : filterProject,
     },
     { enabled: !!currentUser },
   );
 ```
 
+Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// Select UIの表示
-<Select value={filterProject}
-  onValueChange={setFilterProject}>
-  <SelectTrigger className="w-[200px]">
-    <SelectValue
-      placeholder="All Projects" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="all">
-      All Projects
-    </SelectItem>
-    {projects?.map((p) => (
-      <SelectItem key={p.id} value={p.id}>
-        {p.name}
+// プロジェクトフィルターのSelect UI
+<div className="ml-auto w-full sm:w-[200px]">
+  <Select
+    value={filterProject}
+    onValueChange={setFilterProject}>
+    <SelectTrigger>
+      <SelectValue
+        placeholder="すべてのプロジェクト" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">
+        すべてのプロジェクト
       </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+      {projects?.map((p) => (
+        <SelectItem key={p.id} value={p.id}>
+          {p.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
 ```
 
-> 💡 Day 13 のタスク一覧と同じフィルター
-> パターンです。Tabs（ステータス）と
-> Select（プロジェクト）を組み合わせて、
-> 複数条件で絞り込みます。
+> 💡 Day 13 のタスク一覧と同じフィルターパターンです。Tabs（ステータス）と Select（プロジェクト）を組み合わせて、複数条件で絞り込みます。
 
 ✅ **確認ポイント**:
-- プロジェクト選択ドロップダウンが表示
+- プロジェクト選択ドロップダウンがタブの右側に表示される
 - 選択するとタスクが絞り込まれる
+- `npm run dev` でエラーが出ていない
 
 ---
 
-### Step 6: 期限別グループに分類する（7分）
+### Step 6 🧭: TaskGroupSectionコンポーネントを作る（7分）
 
-🎯 **ゴール**: タスクを期限で4つのグループに
-分類します。
+🎯 **ゴール**: タスクをグループごとに表示する共通コンポーネントを作ります。このコンポーネントは同じファイル内に定義します。
 
 💻 **実装**:
 
+まずインポートを追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// useMemoはStep 1でインポート済み
-// タスクを期限別にグループ化
+// インポートに追加
+import { TaskCard } from '@/component/task/task-card';
+import type { TaskPriority }
+  from '@/lib/constant/priority';
+import { cn } from '@/lib/utils';
+```
+
+`MyTasksPage` の**外側**（`STATUS_TABS` 定数の下）にProps型を定義します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// グループセクションのProps型定義
+interface TaskGroupSectionProps {
+  title: string;
+  titleClassName?: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: Date | null;
+    assignee: {
+      name: string | null;
+      email: string;
+      avatar: string | null;
+    } | null;
+  }>;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+```
+
+#### TaskGroupSectionProps の解説
+
+| プロパティ | 型 | 役割 |
+|-----------|-----|------|
+| `title` | `string` | グループのタイトル（「期限切れ」等） |
+| `titleClassName` | `string?` | タイトルの色クラス（赤・オレンジ等） |
+| `tasks` | `Array<...>` | 表示するタスクの配列 |
+| `onEdit` | `(id: string) => void` | 編集ボタン押下時のコールバック |
+| `onDelete` | `(id: string) => void` | 削除ボタン押下時のコールバック |
+
+Props型の**下に**コンポーネント本体を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// タスクが0件なら何も表示しない
+const TaskGroupSection = ({
+  title, titleClassName,
+  tasks, onEdit, onDelete,
+}: TaskGroupSectionProps) => {
+  if (tasks.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <h2 className={cn(
+        'text-xl font-semibold flex items-center gap-2',
+        titleClassName,
+      )}>
+        {title} ({tasks.length})
+      </h2>
+```
+
+続けて、タスクカードのグリッド表示部分です。上のコードブロックの `</h2>` の**直後に**追加してください。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// TaskGroupSection のグリッド表示部分
+      <div className="grid gap-6 sm:grid-cols-2
+        lg:grid-cols-3 xl:grid-cols-4">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            id={task.id}
+            title={task.title}
+            description={task.description}
+            status={task.status}
+            priority={task.priority}
+            dueDate={task.dueDate}
+            assignee={task.assignee}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+> 💡 `cn()` は `clsx` + `tailwind-merge` のユーティリティです。条件付きでクラス名を結合できます。`titleClassName` に `"text-destructive"` を渡すとタイトルが赤色になります。
+
+✅ **確認ポイント**:
+- ファイルを保存した
+- `npm run dev` でエラーが出ていない
+- まだ画面に変化はありません（次のStepで使います）
+
+---
+
+### Step 7 🧭: 期限別グループに分類する（7分）
+
+🎯 **ゴール**: タスクを期限で4つのグループに分類します。`date-fns` の `isSameDay` を使い、時刻を無視して正確に日付を比較します。
+
+💻 **実装**:
+
+インポートを追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// インポートに追加（date-fnsの日付比較関数）
+import { isSameDay } from 'date-fns';
+```
+
+`MyTasksPage` 内の `useQuery` の**下に**以下を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// タスクを期限別に4グループに分類
 const groupedTasks = useMemo(() => {
   const overdue: typeof tasks = [];
   const today: typeof tasks = [];
   const upcoming: typeof tasks = [];
   const noDueDate: typeof tasks = [];
   const now = new Date();
-  const todayStr = now.toDateString();
 
   for (const t of tasks ?? []) {
     if (!t.dueDate) {
       noDueDate.push(t);
+      continue;
+    }
+    const dueDate = new Date(t.dueDate);
+    if (isSameDay(dueDate, now)) {
+      today.push(t);
+    } else if (dueDate < now) {
+      overdue.push(t);
     } else {
-      const dueDate = new Date(t.dueDate);
-      const dueDateStr =
-        dueDate.toDateString();
-```
-
-続けて、各グループへの振り分けロジックです。
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// groupedTasks 続き: 条件分岐で分類
-      if (dueDateStr === todayStr) {
-        today.push(t);
-      } else if (dueDate < now) {
-        overdue.push(t);
-      } else {
-        upcoming.push(t);
-      }
+      upcoming.push(t);
     }
   }
-
-  return {
-    overdue, today, upcoming, noDueDate,
-  };
+  return { overdue, today, upcoming, noDueDate };
 }, [tasks]);
 ```
 
 ✅ **確認ポイント**:
-- 期限切れのタスクが赤いグループに入る
-- 今日のタスクがオレンジのグループに入る
+- ファイルを保存した
+- `npm run dev` でエラーが出ていない
+- ブラウザのDevTools（F12キー → Consoleタブ）で `console.log(groupedTasks)` を一時的に追加して、4つの配列にタスクが振り分けられていることを確認できる
+
+#### なぜ `isSameDay` を使うのか
+
+| 方法 | 問題点 | 推奨度 |
+|------|--------|--------|
+| `dueDate === now` | 時刻まで完全一致が必要で、ほぼ一致しない | ❌ |
+| `toDateString()` 比較 | ブラウザのロケール設定に依存する可能性がある | △ |
+| `isSameDay(dueDate, now)` | 時刻を無視して日付だけを正確に比較できる | ✅ |
+
+> 💡 `isSameDay` は `date-fns` ライブラリの関数です。時刻部分を無視して「同じ日かどうか」だけを判定します。ロケールに依存しないため、どの環境でも同じ結果になります。
 
 #### 4つのグループ
 
 | グループ | 条件 | 色 | 意味 |
 |---------|------|-----|------|
 | 期限切れ | 期限 < 今日 | 赤 | 期限切れ！急いで！ |
-| 今日が期限 | 期限 = 今日 | オレンジ | 今日中にやること |
+| 今日が期限 | `isSameDay(期限, 今日)` | オレンジ | 今日中にやること |
 | 今後の予定 | 期限 > 今日 | 通常 | 今後の予定 |
 | 期限なし | 期限なし | 通常 | 期限未設定 |
 
-> 💡 `toDateString()` は日付を
-> `"Fri Feb 14 2025"` のような文字列に変換
-> します。時刻を無視して「同じ日かどうか」を
-> 比較するのに便利です。
-
-✅ **確認ポイント**:
-- 期限切れのタスクが赤いグループに入る
-- 今日のタスクがオレンジのグループに入る
-
 ---
 
-### Step 7: グループごとにカード表示（7分）
+### Step 8 🧭: グループごとにカード表示（5分）
 
-🎯 **ゴール**: 各グループのタスクをTaskCardで
-表示します。
+🎯 **ゴール**: Step 6 で作った `TaskGroupSection` を使い、各グループのタスクを表示します。
 
 💻 **実装**:
 
+Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つのグループを順番に追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 期限切れグループのヘッダー
-{groupedTasks.overdue.length > 0 && (
-  <div className="space-y-4">
-    <h2 className="text-xl font-semibold
-      text-destructive">
-      期限切れ
-      ({groupedTasks.overdue.length})
-    </h2>
-    <div className="grid gap-6
-      sm:grid-cols-2 lg:grid-cols-3
-      xl:grid-cols-4">
+// 期限切れグループ（赤色タイトル）
+<TaskGroupSection
+  title="期限切れ"
+  titleClassName="text-destructive"
+  tasks={groupedTasks.overdue ?? []}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+/>
+
+// 今日が期限のグループ（オレンジ色タイトル）
+<TaskGroupSection
+  title="今日が期限"
+  titleClassName="text-orange-500"
+  tasks={groupedTasks.today ?? []}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+/>
 ```
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 期限切れグループ: TaskCard表示
-      {groupedTasks.overdue.map((task) => (
-        <TaskCard
-          key={task.id}
-          id={task.id}
-          title={task.title}
-          description={task.description}
-          status={task.status}
-          priority={task.priority}
-          dueDate={task.dueDate}
-          assignee={task.assignee}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      ))}
-    </div>
-  </div>
-)}
+// 今後の予定グループ
+<TaskGroupSection
+  title="今後の予定"
+  tasks={groupedTasks.upcoming ?? []}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+/>
+
+// 期限なしグループ
+<TaskGroupSection
+  title="期限なし"
+  tasks={groupedTasks.noDueDate ?? []}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+/>
 ```
 
-> 💡 `length > 0` でタスクがある時だけ
-> グループを表示します。空のグループは
-> 非表示にしてUIをすっきりさせます。
+タスクが0件の場合のメッセージも追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// タスクが0件の場合
+// タスクが0件の場合のメッセージ表示
 {tasks && tasks.length === 0 && (
-  <div className="flex flex-col
+  <div className="col-span-full flex flex-col
     items-center justify-center py-12
     text-center text-muted-foreground">
     <p>あなたに割り当てられたタスクはありません</p>
@@ -495,30 +667,51 @@ const groupedTasks = useMemo(() => {
 )}
 ```
 
+> 💡 `TaskGroupSection` はタスク配列が空なら `null` を返すので、空のグループは自動的に非表示になります。全グループが空の場合だけ「タスクはありません」メッセージが表示されます。
+
 ✅ **確認ポイント**:
 - 各グループにタスクカードが表示される
-- 空のグループは非表示
-- 0件の場合はメッセージ表示
+- 空のグループは非表示になっている
+- タスクが0件の場合は「あなたに割り当てられたタスクはありません」と表示される
 
-![グループ別タスク表示](./screenshots/my-task.png)
+📸 スクリーンショット: グループ別タスク表示（期限切れ・今日・今後・期限なし）
 
 ---
 
-### Step 8: 編集・削除ハンドラーを接続（5分）
+### Step 9 🧭: 編集ハンドラーを実装する（5分）
 
-🎯 **ゴール**: Day 15 で学んだ編集・削除パターン
-をマイタスクページにも適用します。
+🎯 **ゴール**: タスクカードの編集ボタンでダイアログを開く機能を実装します。Day 15 で学んだ編集パターンと同じです。
 
 💻 **実装**:
 
+インポートを追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
+// インポートに追加
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+import { taskToFormData }
+  from '@/lib/task-form';
+```
+
+`MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 編集ダイアログの状態管理
 const [dialogOpen, setDialogOpen] =
   useState(false);
 const [editingTask, setEditingTask] =
-  useState<TaskFormData | undefined>();
+  useState<TaskFormData | undefined>(undefined);
+// tRPCのキャッシュ操作用
 const utils = api.useUtils();
+```
 
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 更新ミューテーション（成功時にキャッシュ更新）
 const updateMutation =
   api.task.update.useMutation({
     onSuccess: () => {
@@ -526,6 +719,59 @@ const updateMutation =
       setDialogOpen(false);
     },
   });
+```
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 編集ハンドラー（taskToFormDataで変換）
+const handleEdit = (taskId: string) => {
+  const task =
+    tasks?.find((t) => t.id === taskId);
+  if (task) {
+    setEditingTask(taskToFormData(task));
+    setDialogOpen(true);
+  }
+};
+```
+
+> 💡 `taskToFormData` はDay 15で学んだユーティリティ関数です。日付のフォーマット変換などを共通化しているため、各ページで手動変換する必要がありません。
+
+✅ **確認ポイント**:
+- ファイルを保存した
+- `npm run dev` でエラーが出ていない
+- まだダイアログは配置していないので、Step 11で動作確認します
+
+---
+
+### Step 10 🧭: 削除ハンドラーを実装する（5分）
+
+🎯 **ゴール**: タスクカードの削除ボタンで確認ダイアログを表示し、削除する機能を実装します。
+
+💻 **実装**:
+
+インポートを追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// インポートに追加
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+```
+
+`MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 削除ダイアログの状態管理
+const [deleteDialogOpen, setDeleteDialogOpen] =
+  useState(false);
+const [deleteTargetId, setDeleteTargetId] =
+  useState<string | null>(null);
+```
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 削除ミューテーション（成功時にキャッシュ更新）
 const deleteMutation =
   api.task.delete.useMutation({
     onSuccess: () => {
@@ -536,125 +782,98 @@ const deleteMutation =
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// handleEdit（Day 15と同じパターン）
-const handleEdit = (taskId: string) => {
-  const task =
-    tasks?.find((t) => t.id === taskId);
-  if (task) {
-    const dueDate = task.dueDate
-      ? new Date(task.dueDate)
-          .toISOString()
-          .split('T')[0]
-      : undefined;
-```
-
-続けて `setEditingTask` の呼び出し部分です:
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// handleEdit 続き — 編集フォームに値をセット
-    setEditingTask({
-      id: task.id,
-      title: task.title,
-      description: task.description || '',
-      status: task.status,
-      priority: task.priority,
-      projectId: task.projectId,
-      ...(dueDate && { dueDate }),
-      ...(task.estimatedHours
-        && { estimatedHours:
-          task.estimatedHours }),
-      ...(task.assigneeId
-        && { assigneeId:
-          task.assigneeId }),
-    });
-    setDialogOpen(true);
-  }
-};
-```
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// 削除ハンドラー
+// 削除ハンドラー（確認ダイアログを表示）
 const handleDelete = (taskId: string) => {
-  if (confirm(
-    'このタスクを削除してもよろしいですか？'
-  )) {
-    deleteMutation.mutate({ id: taskId });
-  }
+  setDeleteTargetId(taskId);
+  setDeleteDialogOpen(true);
 };
 ```
 
+> 💡 `window.confirm()` ではなく `DeleteConfirmDialog` コンポーネントを使います。Day 15 と同じパターンで、UIの統一性と `isPending` 中の二重クリック防止を実現します。
+
+✅ **確認ポイント**:
+- ファイルを保存した
+- `npm run dev` でエラーが出ていない
+
+---
+
+### Step 11 🧭: ダイアログを配置する（3分）
+
+🎯 **ゴール**: 編集ダイアログと削除確認ダイアログをJSXに配置します。
+
+💻 **実装**:
+
+まずフォーム送信ハンドラーを追加します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// フォーム送信ハンドラー
-const handleSubmit = (
-  data: TaskFormData,
-) => {
+// フォーム送信ハンドラー（編集の保存処理）
+const handleSubmit = (data: TaskFormData) => {
   if (data.id) {
     updateMutation.mutate({
       id: data.id,
       title: data.title,
-      description:
-        data.description || null,
+      description: data.description ?? null,
       status: data.status,
       priority: data.priority,
       dueDate: data.dueDate
-        ? new Date(data.dueDate)
-            .toISOString()
+        ? new Date(data.dueDate).toISOString()
         : null,
       estimatedHours:
         data.estimatedHours ?? null,
-      assigneeId:
-        data.assigneeId || null,
+      assigneeId: data.assigneeId ?? null,
     });
   }
 };
 ```
 
+JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskDialog` を配置します。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// TaskDialogを配置
+// 編集ダイアログの配置
 <TaskDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
   onSubmit={handleSubmit}
   initialData={editingTask}
-  projects={projects || []}
-  users={users || []}
+  projects={projects ?? []}
+  users={users ?? []}
 />
 ```
 
-> 💡 タスク一覧ページ（Day 15）と全く同じ
-> パターンです。TaskDialog を再利用することで、
-> どのページからでも同じUIで編集・削除できます。
+`TaskDialog` の**下に** `DeleteConfirmDialog` を配置します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 削除確認ダイアログの配置
+<DeleteConfirmDialog
+  open={deleteDialogOpen}
+  onOpenChange={setDeleteDialogOpen}
+  onConfirm={() => {
+    if (deleteTargetId) {
+      deleteMutation.mutate({
+        id: deleteTargetId,
+      });
+    }
+  }}
+  isPending={deleteMutation.isPending}
+/>
+```
+
+> 💡 タスク一覧ページ（Day 15）と全く同じパターンです。`TaskDialog` と `DeleteConfirmDialog` を再利用することで、どのページからでも同じUIで編集・削除できます。
 
 ✅ **確認ポイント**:
-- 編集ボタンでダイアログが開く
-- 削除ボタンで確認→削除される
-- 一覧が自動で更新される
+- 編集ボタンをクリックするとダイアログが開く
+- 削除ボタンをクリックすると確認ダイアログが表示される
+- 編集を保存すると一覧が自動で更新される
+- 削除を確認すると一覧が自動で更新される
 
 ---
 
-### Step 9: 動作確認（3分）
+### Step 12 🧭: 動作確認（3分）
 
-🎯 **ゴール**: マイタスクページの全機能を確認
-します。
-
-1. `/my-task` にアクセス
-2. 自分のタスクだけが表示される
-3. ステータスタブで絞り込みできる
-4. プロジェクトフィルターで絞り込みできる
-5. 期限切れタスクが赤いグループに表示される
-6. 編集ボタンでダイアログが開く
-7. 削除ボタンで確認→削除される
-
-✅ **確認ポイント**:
-- 他の人のタスクは表示されない
-- フィルタリングが正しく動作する
-- 期限別グループが正しく分類される
-
----
+🎯 **ゴール**: マイタスクページの全機能を確認します。
 
 ```bash
 # filepath: ターミナル
@@ -662,34 +881,59 @@ const handleSubmit = (
 npm run dev
 ```
 
+以下の項目を順番に確認してください。
+
+1. `/my-task` にアクセスする
+2. ローディングスピナーが一瞬表示された後、タスクが表示される
+3. 自分のタスクだけが表示される
+4. ステータスタブで絞り込みできる
+5. プロジェクトフィルターで絞り込みできる
+6. 期限切れタスクが赤いグループに表示される
+7. 編集ボタンでダイアログが開く
+8. 削除ボタンで確認→削除される
+
+✅ **確認ポイント**:
+- 他の人のタスクは表示されない
+- フィルタリングが正しく動作する
+- 期限別グループが正しく分類される
+- 編集・削除が正常に動作する
+
+📸 スクリーンショット: 動作確認完了後のマイタスクページ
+
+---
+
 ## 📋 今日のまとめ
+
+Day 17 おつかれさまでした！これで自分専用のタスクダッシュボードが完成しました。プロジェクトマネージャーが使うような機能を自分で作れるようになりましたね。
 
 - [ ] `getCurrentUser` で自分のIDを取得できた
 - [ ] `getAll({ assigneeId })` で自分のタスク取得
+- [ ] `PageLoadingSpinner` でローディング表示を実装した
 - [ ] Tabs でステータスフィルタを実装できた
-- [ ] 期限別グループ表示を実装できた
+- [ ] `isSameDay` で期限別グループ表示を実装できた
 - [ ] TaskDialog を使って編集・削除できた
 
 ## ⚠️ つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 全タスクが表示される | assigneeId未設定 | currentUser?.id を渡す |
-| タスクが表示されない | enabled未設定 | `!!currentUser` で制御 |
-| 今日のタスクが表示されない | 時刻で比較している | toDateString()で日付だけ比較 |
-| 編集が動かない | handleEdit未実装 | Day 15パターンをコピー |
+| 全タスクが表示される | `assigneeId` 未設定 | `currentUser?.id` を渡す |
+| タスクが表示されない | `enabled` 未設定 | `{ enabled: !!currentUser }` で制御 |
+| 今日のタスクが正しく判定されない | 時刻まで比較している | `isSameDay()` で日付だけ比較 |
+| 編集が動かない | `handleEdit` 未実装 | Day 15 パターンをコピー |
+| ローディングが終わらない | `isCurrentUserLoading` 未チェック | `isCurrentUserLoading \|\| isLoading` の両方を確認 |
 
 ## 📝 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
-| getCurrentUser | ログイン中のユーザー情報を取得 |
-| Tabs | コンテンツを切り替えるUIコンポーネント |
-| toDateString() | 日付の日付部分だけを文字列化 |
-| グループ表示 | データを条件で分類して表示 |
+| `getCurrentUser` | ログイン中のユーザー情報を取得 |
+| `Tabs` | コンテンツを切り替えるUIコンポーネント |
+| `isSameDay` | 2つの日付が同じ日かを判定する `date-fns` の関数 |
+| `useMemo` | 計算結果をキャッシュして再利用するフック |
+| `TaskGroupSection` | タスクをグループごとに表示する共通コンポーネント |
+| `cn()` | 条件付きでCSSクラス名を結合するユーティリティ |
 
 ## 🔜 次回予告
 
-Day 18 では、タスクにコメントを投稿する機能を
-実装します。チームメンバーとタスクについて
-コミュニケーションを取れるようになります。
+Day 18 では、タスクにコメントを投稿する機能を実装します。チームメンバーとタスクについてコミュニケーションを取れるようになります。

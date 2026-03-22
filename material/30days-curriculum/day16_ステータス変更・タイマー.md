@@ -2,7 +2,13 @@
 
 ## 🔙 前回の振り返り
 
-Day 15 ではタスクの編集・削除機能を実装しました。TaskDialog を `initialData` で編集モードに切り替えるパターンや、`DeleteConfirmDialog` による削除確認を学んだので、今日はステータスのワンクリック変更と作業時間を計測するタイマー機能に取り組みます。
+Day 15 で学んだこと:
+- TaskDialog を `initialData` で編集モードに切り替え
+- `DeleteConfirmDialog` で削除前の確認
+- `null` と `undefined` の使い分け
+
+今日はステータスのワンクリック変更と、
+作業時間を計測するタイマー機能を作ります。
 
 ---
 
@@ -13,7 +19,7 @@ Day 15 ではタスクの編集・削除機能を実装しました。TaskDialog
 さらに、手動で作業時間を記録するダイアログも
 作ります。
 
-![手動時間記録ダイアログ](./screenshots/task-timer.png)
+📸 スクリーンショット: ステータス変更のドロップダウンの画面
 
 ## 🤔 なぜこれを作るのか？
 
@@ -26,6 +32,8 @@ Day 15 ではタスクの編集・削除機能を実装しました。TaskDialog
 > スタート/ストップで作業時間を記録します。
 
 ### 📐 タスクステータス遷移図
+
+この図は主要な遷移のみを示しています。
 
 ```mermaid
 stateDiagram-v2
@@ -70,47 +78,47 @@ stateDiagram-v2
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | ステータス変更を実装する | 5分 |
+| Step 1 | ステータス変更ハンドラーを実装する | 5分 |
 | Step 2 | TaskTimerの骨格を作る | 5分 |
 | Step 3 | タイマーのカウントアップ | 5分 |
 | Step 4 | 開始/停止のAPI呼び出し | 5分 |
-| Step 5 | 時間のフォーマット表示 | 5分 |
-| Step 6 | TimeLogDialogを作る | 7分 |
-| Step 7 | 手動時間記録のAPI呼び出し | 5分 |
+| Step 5 | 時間のフォーマット関数を作る | 3分 |
+| Step 6 | タイマーのJSXを完成させる | 5分 |
+| Step 7 | TimeLogDialogを作る | 7分 |
 | Step 8 | TaskCardにタイマーを組み込む | 5分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約45分
+**合計時間**: 約43分
 
 ---
 
-### Step 1: ステータス変更を実装する（5分）
+### Step 1: ステータス変更ハンドラーを実装する（5分）
 
-🎯 **ゴール**: タスクのステータスを変更する処理
-を実装します。
+🎯 **ゴール**: タスクのステータスを変更する
+イベントハンドラーを実装します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// ステータス変更は api.task.update を使う
+// ステータス変更のハンドラー
 // updateMutation は Day 15 で定義済み
-// status だけ渡せばステータスのみを変更できる
-updateMutation.mutate({
-  id: taskId,
-  status: newStatus,
-});
+const handleStatusChange = (
+  taskId: string,
+  newStatus: TaskStatus,
+) => {
+  updateMutation.mutate({
+    id: taskId,
+    status: newStatus,
+  });
+};
 ```
-
-✅ **確認ポイント**:
-- ステータスを変更するとBadgeが変わる
-- 一覧が自動で更新される
 
 > 💡 専用の `updateStatus` APIはありません。
 > `api.task.update` に `id` と `status` だけ
 > 渡すことで、ステータスだけを変更できます。
 > 他のフィールドは `undefined` のままなので
-> 変更されません。
+> 変更されません（Day 15 で学んだ部分更新）。
 
 #### api.task.update の柔軟性
 
@@ -122,8 +130,8 @@ updateMutation.mutate({
 | `{ id, assigneeId: null }` | 担当者をクリア |
 
 ✅ **確認ポイント**:
+- `handleStatusChange` が定義できた
 - ステータスを変更するとBadgeが変わる
-- 一覧が自動で更新される
 
 ---
 
@@ -149,6 +157,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
+// Propsの型定義
 interface TaskTimerProps {
   taskId: string;
   isTimerActive: boolean;
@@ -158,17 +167,13 @@ interface TaskTimerProps {
 }
 ```
 
-✅ **確認ポイント**:
-- `npm run dev` でエラーが出ていない
-- interfaceが定義できた
-
 #### TaskTimerのprops
 
 | prop | 型 | 説明 |
 |------|-----|------|
 | `taskId` | string | タスクのID |
 | `isTimerActive` | boolean | タイマーが動作中か |
-| `timerStartedAt` | Date? | 開始時刻 |
+| `timerStartedAt` | Date \| null | 開始時刻 |
 | `timeSpentMinutes` | number | 累計作業時間（分） |
 | `onTimerUpdate` | function? | 更新後のコールバック |
 
@@ -177,7 +182,7 @@ interface TaskTimerProps {
 > 正確な経過時間を計算できます。
 
 ✅ **確認ポイント**:
-- `npm run dev` でエラーが出ていない
+- ファイルを作成してインポートを書けた
 - interfaceが定義できた
 
 ---
@@ -197,17 +202,21 @@ export function TaskTimer({
   timerStartedAt, timeSpentMinutes,
   onTimerUpdate,
 }: TaskTimerProps) {
+  // 表示用の経過秒（タイマーUIの更新に使用）
   const [elapsedSeconds, setElapsedSeconds]
     = useState(0);
 ```
 
-続けて、`useEffect` でタイマーが動作中の間1秒ごとに経過時間を更新します。
+続けて、`useEffect` でタイマーが動作中の間
+1秒ごとに経過時間を更新します。
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
 // useEffectでカウントアップ処理
   useEffect(() => {
     if (!isTimerActive || !timerStartedAt) {
+      // 停止中は表示を0にリセット
+      // 累計時間はサーバー側で保存済み
       setElapsedSeconds(0);
       return;
     }
@@ -224,6 +233,7 @@ export function TaskTimer({
 
     const interval =
       setInterval(updateElapsed, 1000);
+    // クリーンアップ: 停止時にintervalを解除
     return () => clearInterval(interval);
   }, [isTimerActive, timerStartedAt]);
 ```
@@ -234,11 +244,14 @@ export function TaskTimer({
 > 時に定期実行を停止します。これが
 > **useEffect のクリーンアップ** です。
 
+> 💡 `elapsedSeconds` は表示用の値で、停止時は
+> 0にリセットされます。累計作業時間は
+> `timeSpentMinutes` としてサーバーに保存済み
+> なので、データは失われません。
+
 ✅ **確認ポイント**:
 - タイマー動作中は1秒ごとに値が変わる
 - 停止中は0にリセットされる
-
-![手動時間記録ダイアログ](./screenshots/task-timer.png)
 
 ---
 
@@ -255,12 +268,14 @@ export function TaskTimer({
 const updateTimerMutation =
   api.task.updateTimer.useMutation({
     onSuccess: () => {
+      // 親コンポーネントにタイマー更新を通知
       onTimerUpdate?.();
     },
   });
 ```
 
-続けて、開始/停止を切り替えるハンドラーを実装します。`mutateAsync` で完了を待ちます。
+続けて、開始/停止を切り替えるハンドラーを
+実装します。
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
@@ -278,17 +293,15 @@ const handleStartStop = async () => {
         action: 'start',
       });
     }
-  } catch (_error) {
+  } catch (err) {
     toast.error(
-      'タイマーの更新に失敗しました',
+      err instanceof Error
+        ? err.message
+        : 'タイマーの更新に失敗しました',
     );
   }
 };
 ```
-
-✅ **確認ポイント**:
-- 「タイマー開始」で開始される
-- 「タイマー停止」で停止される
 
 #### updateTimer APIのアクション
 
@@ -299,23 +312,28 @@ const handleStartStop = async () => {
 
 > 💡 `mutateAsync` は `mutate` の非同期版です。
 > `await` で完了を待ってからUIを更新します。
-> エラーが発生した場合は `catch` で処理します。
+> `catch (err)` でエラーを受け取り、
+> `err instanceof Error` で型を判定して
+> メッセージを取得します。
 
 ✅ **確認ポイント**:
 - 「タイマー開始」で開始される
 - 「タイマー停止」で停止される
 
+📸 スクリーンショット: タイマー動作中の画面
+
 ---
 
-### Step 5: 時間のフォーマット表示（5分）
+### Step 5: 時間のフォーマット関数を作る（3分）
 
 🎯 **ゴール**: 経過時間と累計時間を見やすく
-表示します。
+表示するフォーマット関数を作ります。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
+// 秒数をHH:MM:SS形式に変換
 const formatTime = (seconds: number) => {
   const hours =
     Math.floor(seconds / 3600);
@@ -326,7 +344,11 @@ const formatTime = (seconds: number) => {
     + `:${minutes.toString().padStart(2, '0')}`
     + `:${secs.toString().padStart(2, '0')}`;
 };
+```
 
+```typescript
+// filepath: src/component/task/task-timer.tsx
+// 分数をXh Ym形式に変換
 const formatMinutes =
   (minutes: number) => {
     const hours = Math.floor(minutes / 60);
@@ -337,9 +359,33 @@ const formatMinutes =
   };
 ```
 
+#### 2つのフォーマット関数
+
+| 関数 | 用途 | 表示例 |
+|------|------|--------|
+| `formatTime` | 経過秒をHH:MM:SSで表示 | `01:23:45` |
+| `formatMinutes` | 累計分をh m形式で表示 | `2h 30m` |
+
+> 💡 `padStart(2, '0')` は「2桁になるまで
+> 先頭にゼロを埋める」メソッドです。
+> `5` → `"05"` のようにゼロ埋めされます。
+
+✅ **確認ポイント**:
+- `formatTime(90)` は `"00:01:30"` になる
+- `formatMinutes(150)` は `"2h 30m"` になる
+
+---
+
+### Step 6: タイマーのJSXを完成させる（5分）
+
+🎯 **ゴール**: タイマーの表示部分を完成させて
+コンポーネントを閉じます。
+
+💻 **実装**:
+
 ```typescript
 // filepath: src/component/task/task-timer.tsx
-// JSXの表示部分: ボタン
+// タイマーボタンの表示
 return (
   <div className="flex flex-col gap-2">
     <div className="flex items-center gap-2">
@@ -349,10 +395,25 @@ return (
         size="sm"
         onClick={handleStartStop}
         disabled={
-          updateTimerMutation.isPending}>
-        {isTimerActive
-          ? <PauseIcon className="w-4 h-4" />
-          : <PlayIcon className="w-4 h-4" />}
+          updateTimerMutation.isPending}
+        aria-label={isTimerActive
+          ? 'タイマー停止'
+          : 'タイマー開始'}>
+```
+
+```typescript
+// filepath: src/component/task/task-timer.tsx
+// ボタン内のアイコンとラベル
+        {updateTimerMutation.isPending ? (
+          <Loader2 className=
+            "w-4 h-4 mr-2 animate-spin" />
+        ) : isTimerActive ? (
+          <PauseIcon className=
+            "w-4 h-4 mr-2" />
+        ) : (
+          <PlayIcon className=
+            "w-4 h-4 mr-2" />
+        )}
         {isTimerActive
           ? 'タイマー停止'
           : 'タイマー開始'}
@@ -361,7 +422,7 @@ return (
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
-// JSXの表示部分: 経過時間と累計
+// 経過時間・累計時間の表示とコンポーネント終了
       {isTimerActive && (
         <span className="text-lg font-bold
           font-mono text-primary">
@@ -376,33 +437,25 @@ return (
     </p>
   </div>
 );
+}
 ```
 
-✅ **確認ポイント**:
-- 動作中は `00:00:00` 形式で表示
-- 累計時間が `2h 30m` 形式で表示
-
-#### 2つのフォーマット関数
-
-| 関数 | 用途 | 表示例 |
-|------|------|--------|
-| `formatTime` | 経過秒をHH:MM:SSで表示 | `01:23:45` |
-| `formatMinutes` | 累計分をh m形式で表示 | `2h 30m` |
-
-> 💡 `padStart(2, '0')` は「2桁になるまで
-> 先頭にゼロを埋める」メソッドです。
-> `5` → `"05"` のようにゼロ埋めされます。
+> 💡 `isPending` 中は `Loader2` のスピナーを
+> 表示して処理中であることを伝えます。
+> `animate-spin` は Tailwind CSS のクラスで
+> 回転アニメーションを付けます。
 
 ✅ **確認ポイント**:
-- 動作中は `00:00:00` 形式で表示
-- 累計時間が `2h 30m` 形式で表示
+- 動作中は `00:00:00` 形式で経過時間が表示
+- 累計時間が `2h 30m` 形式で常に表示
+- コンポーネントの関数が `}` で閉じている
 
 ---
 
-### Step 6: TimeLogDialogを作る（7分）
+### Step 7: TimeLogDialogを作る（7分）
 
 🎯 **ゴール**: 手動で作業時間を記録する
-ダイアログを作ります。
+ダイアログを1ファイルで完成させます。
 
 💻 **実装**:
 
@@ -425,34 +478,46 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
+// Props定義とコンポーネント宣言
 interface TimeLogDialogProps {
   open: boolean;
   onClose: () => void;
   taskId: string;
   onSuccess?: () => void;
 }
-```
 
-> 💡 タイマーは自動で時間を計測しますが、
-> 手動記録は「昨日2時間作業した」のように
-> 後から記録する場合に使います。
-> タイムシートの手書き版のようなものです。
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
 export function TimeLogDialog({
   open, onClose, taskId, onSuccess,
 }: TimeLogDialogProps) {
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
+```
+
+> 💡 タイマーは自動で時間を計測しますが、
+> 手動記録は「昨日2時間作業した」のように
+> 後から記録する場合に使います。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// mutation・ハンドラー・バリデーション
+  const addTimeMutation =
+    api.task.addTime.useMutation({
+      onSuccess: () => {
+        onSuccess?.();
+        handleClose();
+      },
+    });
 
   const handleClose = () => {
     setHours('');
     setMinutes('');
     onClose();
   };
+```
 
-  // 入力バリデーション: 数字のみ許可
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 入力バリデーション: 数字のみ許可
   const handleHoursChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -460,11 +525,7 @@ export function TimeLogDialog({
     if (value === '' || /^\d+$/.test(value))
       setHours(value);
   };
-```
 
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-  // 分は0-59の範囲に制限
   const handleMinutesChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -476,9 +537,52 @@ export function TimeLogDialog({
   };
 ```
 
+#### バリデーション関数の役割
+
+| 関数 | 制限 | 理由 |
+|------|------|------|
+| `handleHoursChange` | 数字のみ | 不正入力の防止 |
+| `handleMinutesChange` | 数字のみ＋60未満 | 時間形式の制限 |
+| `isValid` | 合計 > 0 | 0分の記録を防止 |
+
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// TimeLogDialog: Dialog構造
+// 送信ハンドラーとバリデーション
+  const isValid =
+    Number.parseInt(hours || '0', 10) * 60
+    + Number.parseInt(minutes || '0', 10)
+    > 0;
+
+  const handleSubmit = async () => {
+    const totalMinutes =
+      Number.parseInt(hours || '0', 10) * 60
+      + Number.parseInt(minutes || '0', 10);
+    if (totalMinutes <= 0) return;
+    try {
+      await addTimeMutation.mutateAsync({
+        id: taskId,
+        minutesToAdd: totalMinutes,
+      });
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : '作業時間の追加に失敗しました',
+      );
+    }
+  };
+```
+
+#### addTime APIのパラメータ
+
+| パラメータ | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string | タスクID |
+| `minutesToAdd` | number | 追加する分数 |
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// Dialog UI全体
   return (
     <Dialog open={open}
       onOpenChange={handleClose}>
@@ -505,7 +609,7 @@ export function TimeLogDialog({
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// TimeLogDialog: 分の入力と閉じタグ
+// 分の入力フィールド
           <div className="flex-1">
             <Label htmlFor="minutes">
               分
@@ -516,6 +620,26 @@ export function TimeLogDialog({
               inputMode="numeric" />
           </div>
         </div>
+```
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// フッターボタンとダイアログ終了
+        <DialogFooter>
+          <Button variant="outline"
+            onClick={handleClose}>
+            キャンセル
+          </Button>
+          <Button onClick={handleSubmit}
+            disabled={
+              !isValid
+              || addTimeMutation.isPending
+            }>
+            {addTimeMutation.isPending
+              ? '追加中...'
+              : '時間を追加'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -525,131 +649,20 @@ export function TimeLogDialog({
 ✅ **確認ポイント**:
 - ダイアログが開閉できる
 - 時間と分の入力欄がある
-
-![手動時間記録ダイアログ](./screenshots/task-timer.png)
-
----
-
-### Step 7: 手動時間記録のAPI呼び出し（5分）
-
-🎯 **ゴール**: 入力した時間をサーバーに保存
-します。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// TimeLogDialog内に追加: mutation定義
-const addTimeMutation =
-  api.task.addTime.useMutation({
-    onSuccess: () => {
-      onSuccess?.();
-      handleClose();
-    },
-  });
-```
-
-続けて、送信ボタンの有効/無効を制御する`isValid`を定義します。
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 合計0分の場合は送信不可
-const isValid =
-  Number.parseInt(hours || '0', 10) * 60
-  + Number.parseInt(minutes || '0', 10)
-  > 0;
-```
-
-> 💡 Step 6 で定義した `handleHoursChange` と
-> `handleMinutesChange` は正規表現 `/^\d+$/` で
-> 数字のみを受け付けます。`isValid` は合計が
-> 0より大きい場合のみ送信ボタンを有効にします。
-
-✅ **確認ポイント**:
-- `npm run dev` でエラーが出ていない
-- 入力欄に文字を打っても数字以外は入らない
-
-#### バリデーション関数の役割
-
-| 関数 | 制限 | 理由 |
-|------|------|------|
-| `handleHoursChange` | 数字のみ | 不正入力の防止 |
-| `handleMinutesChange` | 数字のみ＋60未満 | 時間形式の制限 |
-| `isValid` | 合計 > 0 | 0分の記録を防止 |
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 送信ハンドラー
-const handleSubmit = async () => {
-  const totalMinutes =
-    Number.parseInt(hours || '0', 10) * 60
-    + Number.parseInt(minutes || '0', 10);
-  if (totalMinutes <= 0) return;
-  try {
-    await addTimeMutation.mutateAsync({
-      id: taskId,
-      minutesToAdd: totalMinutes,
-    });
-  } catch (_error) {
-    toast.error(
-      '作業時間の追加に失敗しました',
-    );
-  }
-};
-```
-
-✅ **確認ポイント**:
 - 「1時間30分」を入力して追加できる
-- 累計時間に加算される
-- 数字以外は入力できない
 
-#### addTime APIのパラメータ
-
-| パラメータ | 型 | 説明 |
-|-----------|-----|------|
-| `id` | string | タスクID |
-| `minutesToAdd` | number | 追加する分数 |
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// DialogFooter内のボタン
-<DialogFooter>
-  <Button variant="outline"
-    onClick={handleClose}>
-    キャンセル
-  </Button>
-  <Button onClick={handleSubmit}
-    disabled={
-      !isValid
-      || addTimeMutation.isPending
-    }>
-    {addTimeMutation.isPending
-      ? '追加中...'
-      : '時間を追加'}
-  </Button>
-</DialogFooter>
-```
-
-> 💡 `Number.parseInt(hours || '0', 10)` は
-> 空文字の場合に `0` として計算します。
-> 時間×60＋分で合計分数を算出します。
-
-✅ **確認ポイント**:
-- 「1時間30分」を入力して追加できる
-- 累計時間に加算される
+📸 スクリーンショット: 手動時間記録ダイアログの画面
 
 ---
 
 ### Step 8: TaskCardにタイマーを組み込む（5分）
 
-🎯 **ゴール**: 作成した `TaskTimer` と
-`TimeLogDialog` を `TaskCard` に組み込んで
-タスクカード上でタイマーを使えるようにします。
+🎯 **ゴール**: `TaskTimer` と `TimeLogDialog` を
+`TaskCard` に組み込みます。
 
 💻 **実装**:
 
-まず、`task-card.tsx` に2つのコンポーネントを
-import します。
+まず、`task-card.tsx` にインポートを追加します。
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
@@ -660,22 +673,19 @@ import { TimeLogDialog }
 import { Clock } from 'lucide-react';
 ```
 
-次に、`TaskCardProps` にタイマー関連のpropsを
-追加します。
+次に、既存の `TaskCardProps` インターフェースに
+タイマー用のpropsを **追記** します。
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// TaskCardPropsにタイマー用プロパティ追加
-interface TaskCardProps {
-  // ...既存のprops
+// 既存のTaskCardPropsに以下を追記
   isTimerActive?: boolean;
   timerStartedAt?: Date | null;
   timeSpentMinutes?: number;
   onTimerUpdate?: () => void;
-}
 ```
 
-手動記録ダイアログの開閉state とハンドラーを追加します。
+手動記録ダイアログの開閉stateを追加します。
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
@@ -684,6 +694,7 @@ const [timeLogDialogOpen,
   setTimeLogDialogOpen] = useState(false);
 const handleOpenTimeLog =
   (e: React.MouseEvent) => {
+    // カード全体のクリックイベントを止める
     e.stopPropagation();
     setTimeLogDialogOpen(true);
   };
@@ -694,7 +705,7 @@ const handleOpenTimeLog =
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// CardContent内にTaskTimerを追加
+// CardContent内にTaskTimerを配置
 <TaskTimer
   taskId={id}
   isTimerActive={isTimerActive ?? false}
@@ -729,10 +740,6 @@ const handleOpenTimeLog =
 />
 ```
 
-✅ **確認ポイント**:
-- タスクカード内にタイマーボタンが表示される
-- 「時間記録」ボタンが表示される
-
 #### TaskCard に追加したprops
 
 | prop | デフォルト値 | 説明 |
@@ -747,6 +754,10 @@ const handleOpenTimeLog =
 > 小さなコンポーネントを作り、親コンポーネントに
 > 配置する「コンポジション」の考え方です。
 
+✅ **確認ポイント**:
+- タスクカード内にタイマーボタンが表示される
+- 「時間記録」ボタンが表示される
+
 ---
 
 ### Step 9: 動作確認（3分）
@@ -759,14 +770,20 @@ const handleOpenTimeLog =
 3. 経過時間が `00:00:XX` と表示される
 4. 「タイマー停止」で停止
 5. 累計時間に加算される
-6. 「作業時間の記録」で手動時間を追加
+6. 「時間記録」ボタンで手動時間を追加
 7. 累計時間がさらに加算される
+
+おめでとうございます！ステータス管理とタイマーが
+動くようになり、本格的なタスク管理ツールに
+近づきました。
 
 ✅ **確認ポイント**:
 - ステータス変更が反映される
 - タイマーが1秒ごとにカウントアップする
 - 停止後に累計時間が更新される
 - 手動記録が累計時間に反映される
+
+📸 スクリーンショット: タイマー停止後の累計時間表示
 
 ---
 

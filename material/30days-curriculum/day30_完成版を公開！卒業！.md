@@ -2,7 +2,9 @@
 
 ## 🔙 前回の振り返り
 
-Day 29 では**ユーザー詳細・編集ページ**を実装しました。管理者がユーザー情報を閲覧・編集できる画面を作り、権限チェックやフォームバリデーションも組み込みましたね。今日はいよいよ最終日。完成したアプリをインターネットに公開して、30日間の集大成を形にします。
+Day 29 では**ユーザー詳細・編集ページ**を実装しました。管理者がユーザー情報を閲覧・編集できる画面を作り、権限チェックやフォームバリデーションも組み込みましたね。
+
+今日はいよいよ最終日。完成したアプリをインターネットに公開して、30日間の集大成を形にします。
 
 ---
 
@@ -12,42 +14,26 @@ Day 29 では**ユーザー詳細・編集ページ**を実装しました。管
 インターネットに公開します。30日間の学習を
 振り返り、次のステップを考えます。
 
-> 📸 ここで Vercel ダッシュボードにアクセスし、デプロイが「Ready」ステータスになっていることを確認してください。
-
 ## 🤔 なぜこれをやるのか？
 
 自分のパソコンでしか動かないアプリは
 まだ「作品」ではありません。公開して初めて
 世界中の人に使ってもらえるプロダクトになります。
 
-> 💡 **例え話**: デプロイは「料理を
-> お店に並べる」ことです。30日間かけて
-> 腕を磨き、レシピを覚え、食材を選び、
-> ようやく完成した一皿をテーブルに出します。
-> お客さんの反応を見る瞬間が一番の醍醐味です。
+> 💡 **例え話**: デプロイは「料理をお店に並べる」ことです。30日間かけて腕を磨き、レシピを覚え、食材を選びました。
+>
+> ようやく完成した一皿をテーブルに出す瞬間が一番の醍醐味です。
 
 ### 📐 30日間のジャーニー
 
 ```mermaid
-graph LR
-    subgraph "Week 1: 基礎"
-        A[Day 1-4<br/>環境構築<br/>初回デプロイ]
-    end
-    subgraph "Week 2: 認証・プロジェクト"
-        B[Day 5-10<br/>ログイン・登録<br/>プロジェクト管理]
-    end
-    subgraph "Week 3: タスク管理"
-        C[Day 11-16<br/>タスク CRUD<br/>コメント・タイマー]
-    end
-    subgraph "Week 4: 検索・管理"
-        D[Day 17-20<br/>検索・フィルタ<br/>マイタスク]
-    end
-    subgraph "Week 5: レポート"
-        E[Day 21-24<br/>統計・グラフ<br/>ユーザー管理]
-    end
-    subgraph "Week 6: 仕上げ"
-        F[Day 25-30<br/>プロフィール<br/>詳細・一括操作<br/>デプロイ]
-    end
+flowchart TD
+    A[第1週: Day 1-4\n環境構築・初回デプロイ]
+    B[第2週: Day 5-10\n認証・プロジェクト管理]
+    C[第3週: Day 11-16\nタスク CRUD・タイマー]
+    D[第4週: Day 17-20\n検索・マイタスク]
+    E[第5週: Day 21-24\n統計・グラフ・管理]
+    F[第6週: Day 25-30\n仕上げ・デプロイ]
     A --> B --> C --> D --> E --> F
 ```
 
@@ -56,9 +42,15 @@ graph LR
 | やること | やらないこと |
 |---------|-------------|
 | 環境変数を Vercel に設定 | 独自サーバー構築 |
-| Docker で DB を準備 | AWS/GCP のセットアップ |
+| ローカル開発用 DB を Docker で確認 | AWS/GCP のセットアップ |
 | Vercel にデプロイ | ドメイン購入 |
 | 本番動作確認 | 負荷テスト |
+
+> ⚠️ **ローカル DB と本番 DB の違い**:
+> Docker の PostgreSQL はローカル開発専用です。
+> 本番では Vercel Postgres や Supabase などの
+> マネージド DB を使います。Vercel に設定する
+> `DATABASE_URL` は本番 DB の接続文字列です。
 
 ### 🆕 新しく学ぶ概念
 
@@ -74,14 +66,15 @@ graph LR
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
 | Step 1 | 本番用の環境変数を準備 | 5分 |
-| Step 2 | Docker でデータベース準備 | 5分 |
-| Step 3 | Vercel にデプロイ | 10分 |
-| Step 4 | 本番環境の動作確認 | 10分 |
-| Step 5 | 30日間の学習サマリー | 10分 |
-| Step 6 | 技術スタックの振り返り | 5分 |
-| Step 7 | 次のステップとリソース | 5分 |
+| Step 2 | 本番前のローカル最終確認 | 5分 |
+| Step 3 | Git にプッシュ | 3分 |
+| Step 4 | Vercel にデプロイ | 7分 |
+| Step 5 | 本番環境の動作確認 | 7分 |
+| Step 6 | 30日間の学習サマリー | 7分 |
+| Step 7 | 技術スタックの振り返り | 5分 |
+| Step 8 | 次のステップとリソース | 5分 |
 
-**合計時間**: 約50分
+**合計時間**: 約44分
 
 ---
 
@@ -94,9 +87,18 @@ graph LR
 
 | 変数名 | 値の例 | 用途 |
 |--------|--------|------|
-| DATABASE_URL | `postgresql://user:pass@host:5432/db` | DB 接続 |
-| JWT_SECRET | ランダム32文字以上 | JWT 署名鍵 |
-| NODE_ENV | `production` | 実行環境の区分 |
+| DATABASE_URL | `postgresql://user:pass@host:5432/db` | DB 接続（本番用） |
+| JWT_SECRET | 32文字以上のランダムな秘密鍵 | JWT の HMAC 署名鍵 |
+
+> 💡 `NODE_ENV` は Vercel が自動で
+> `production` に設定するため、
+> 手動設定は不要です。
+
+> 💡 本番用の `DATABASE_URL` は Vercel
+> Postgres や Supabase 等のクラウド DB
+> サービスで取得できます。Day 4 で
+> 初回デプロイ時に設定済みの場合は
+> その接続文字列をそのまま使います。
 
 💻 **シークレットキーの生成**:
 
@@ -107,19 +109,32 @@ openssl rand -base64 32
 # 出力例: K7x3mP9q...（これをコピー）
 ```
 
-> 💡 `JWT_SECRET` は JWT トークンの署名に
-> 使う秘密鍵です。推測されにくい
-> ランダムな文字列を生成して使います。
+✅ **確認ポイント**:
+- 44文字程度のランダム文字列が表示された
+- コピーして安全な場所にメモした
 
-💻 **.env.example の確認**:
+> 💡 `JWT_SECRET` は JWT トークンの
+> HMAC 署名に使う秘密鍵です。
+> `openssl rand -base64 32` は32バイト
+> （Base64で44文字）の鍵を生成します。
+
+💻 **.env.example の確認（ローカル参考）**:
 
 ```bash
 # filepath: .env.example
-DATABASE_URL="postgresql://user:password
-  @localhost:5432/taskapp?schema=public"
-JWT_SECRET="your-jwt-secret-key-32-chars
-  -minimum-please-change"
+# DB接続文字列（ローカル開発用）
+DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
+# JWT署名用の秘密鍵（本番では必ず変更）
+JWT_SECRET="your-jwt-secret-key-32-chars-minimum"
 ```
+
+✅ **確認ポイント**:
+- `.env.example` の内容を確認できた
+- `DATABASE_URL` の構造を理解した
+
+> `.env.example` にはローカル開発用の設定が
+> 書かれています。`${_DOCKER_COMPOSE_HOST_PORT_DB}`
+> は Docker 用のポート切替変数です。
 
 > 💡 本番では `.env` ファイルは使いません。
 > Vercel のダッシュボードで環境変数を
@@ -127,45 +142,46 @@ JWT_SECRET="your-jwt-secret-key-32-chars
 > 含めないのがセキュリティの基本です。
 
 ✅ **確認ポイント**:
-- 3つの環境変数の値を準備できた
+- 2つの環境変数の値を準備できた
 
 ---
 
-### Step 2: Docker でデータベース準備（5分）
+### Step 2: 本番前のローカル最終確認（5分）
 
-🎯 **ゴール**: docker-compose.yml の構成を
-理解し、DB を起動します。
+🎯 **ゴール**: 本番デプロイ前に、ローカルで
+アプリが正常に動くことを最終確認します。
+docker-compose.yml の構成も把握しましょう。
 
-💻 **docker-compose.yml の確認**:
+💻 **docker-compose.yml の確認（db サービス部分のみ抜粋）**:
+
+> 実際のファイルには backend や schemaspy
+> などのサービスも定義されていますが、
+> ここでは DB サービスだけを確認します。
 
 ```yaml
 # filepath: docker-compose.yml
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine  # 軽量版PostgreSQL
     container_name: taskapp-postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: taskapp
+      POSTGRES_USER: user       # DBユーザー名
+      POSTGRES_PASSWORD: password  # DBパスワード
+      POSTGRES_DB: taskapp      # データベース名
     ports:
-      - "${_DOCKER_COMPOSE_HOST_PORT_DB
-        :-5432}:5432"
+      - "${_DOCKER_COMPOSE_HOST_PORT_DB:-5432}:5432"
     volumes:
-      - postgres-data:
-        /var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL",
-        "pg_isready -U user"]
+      test: ["CMD-SHELL", "pg_isready -U user"]
       interval: 5s
       timeout: 5s
       retries: 5
 ```
 
 ✅ **確認ポイント**:
-- `docker compose ps` で db が Running
-
-> 📸 ここでターミナルに `docker compose ps` を実行し、`taskapp-postgres` コンテナが `running (healthy)` 状態になっていることを確認してください。
+- YAML のインデントがスペース2個で統一されている
+- `ports` や `volumes` の値が1行で書かれている
 
 #### docker-compose の主要設定
 
@@ -191,62 +207,103 @@ docker compose ps
 npm run db:push
 ```
 
-> 💡 本番環境では Vercel Postgres や
-> Supabase のようなマネージド DB を
-> 使うのが一般的です。ローカル開発では
-> Docker の PostgreSQL を使います。
-
 ✅ **確認ポイント**:
-- `docker compose ps` で db が Running
+- `docker compose ps` で db が Running (healthy)
+- `npm run db:push` が成功した
 
-> 📸 ここでターミナルに `docker compose ps` を実行し、`taskapp-postgres` コンテナが `running (healthy)` 状態になっていることを確認してください。
+📸 スクリーンショット: `docker compose ps` で `taskapp-postgres` が `running (healthy)` の画面
+
+> 💡 `npm run db:push` はローカル確認用です。
+> 本番では `prisma migrate deploy` を使うのが
+> 一般的です。Vercel のビルド時に
+> `prisma generate` が自動実行されます。
 
 ---
 
-### Step 3: Vercel にデプロイ（10分）
+### Step 3: Git にプッシュ（3分）
 
-🎯 **ゴール**: Vercel にアプリを
-デプロイして公開します。
-
-💻 **Git にプッシュ**:
+🎯 **ゴール**: 最新のコードを GitHub に
+プッシュします。
 
 ```bash
 # filepath: ターミナル
+# まず変更ファイルを確認
+git status
+```
+
+✅ **確認ポイント**:
+- `.env` ファイルが含まれていない
+- `.gitignore` で秘密情報が除外されている
+
+```bash
+# filepath: ターミナル
+# 変更をステージングしてプッシュ
 git add .
 git commit -m "feat: 30日間の完成版"
 git push origin main
 ```
 
+✅ **確認ポイント**:
+- `git push` が成功した
+- GitHub のリポジトリで最新コミットが見える
+
+---
+
+### Step 4: Vercel にデプロイ（7分）
+
+🎯 **ゴール**: Vercel にアプリを
+デプロイして公開します。
+
+#### デプロイの流れ
+
+```mermaid
+flowchart TD
+    A[git push] --> B[GitHub リポジトリ]
+    B --> C[Vercel が自動検知]
+    C --> D[prisma generate]
+    D --> E[next build]
+    E --> F[デプロイ完了]
+    F --> G[公開 URL 発行]
+```
+
+#### 前提条件
+
+Day 4 で Vercel 連携済みの場合は、
+既存プロジェクトを開いてください。
+未連携の場合は以下の手順で準備します。
+
+| 準備 | 手順 |
+|------|------|
+| Vercel アカウント | [vercel.com](https://vercel.com) で GitHub 登録 |
+| プロジェクト Import | 「Add New → Project」→ リポジトリ選択 |
+
 💻 **Vercel で環境変数を設定**:
 
 1. Vercel ダッシュボードにログイン
-2. プロジェクトの Settings を開く
-3. Environment Variables をクリック
-4. 以下を追加する
+2. プロジェクトの Settings → Environment Variables
+3. 以下を追加する
 
-| 変数名 | 環境 |
-|--------|------|
-| DATABASE_URL | Production |
-| JWT_SECRET | Production |
-| NODE_ENV | Production |
+| 変数名 | 値 | 環境 |
+|--------|-----|------|
+| DATABASE_URL | 本番DBの接続文字列 | Production |
+| JWT_SECRET | Step 1 で生成した値 | Production |
+
+✅ **確認ポイント**:
+- 2つの環境変数を Vercel に追加できた
+- 各変数の「Environment」が Production になっている
 
 > 💡 Vercel は GitHub と連携しているため
 > `git push` するだけで自動的にビルドと
-> デプロイが実行されます。
+> デプロイが実行されます。これが CI/CD です。
 
 💻 **ビルドスクリプトの確認**:
 
-```json
-// filepath: package.json（該当部分）
-{
-  "scripts": {
-    "build": "prisma generate
-      && next build",
-    "vercel-build": "prisma generate
-      && next build"
-  }
-}
-```
+package.json の `scripts` を確認しましょう。
+
+| スクリプト名 | コマンド | 用途 |
+|-------------|---------|------|
+| `build` | `prisma generate && next build` | 通常ビルド |
+| `vercel-build` | `prisma generate && next build` | Vercel 用ビルド |
 
 > 💡 Vercel では `vercel-build` が優先的に
 > 実行されます。`prisma generate` で
@@ -254,51 +311,53 @@ git push origin main
 > `next build` を実行します。
 
 ✅ **確認ポイント**:
+- ビルドスクリプトの内容を理解できた
 - Vercel のビルドログでエラーがない
 - デプロイ URL が発行された
 
-> 📸 ここで Vercel ダッシュボードの「Deployments」タブを開き、ビルドログが流れてデプロイが完了するまで確認してください。
+📸 スクリーンショット: Vercel ダッシュボードの「Deployments」タブでビルドが完了した画面
 
 ---
 
-### Step 4: 本番環境の動作確認（10分）
+### Step 5: 本番環境の動作確認（7分）
 
 🎯 **ゴール**: 公開された URL で
 全機能が動作することを確認します。
 
 ```bash
 # filepath: ターミナル
-# 公開URLにアクセスして動作確認
-# ブラウザで https://<アプリ名>.vercel.app を開いてください
-echo "公開URLで動作確認してください"
+# デプロイURLをブラウザで開く（macOS）
+open https://your-app-name.vercel.app
 ```
 
 ✅ **確認ポイント**:
-- 全機能が本番環境で正常動作する
+- ブラウザでデプロイ URL が開けた
+- ログインページが表示される
 
-![本番環境のダッシュボード画面](./screenshots/dashboard.png)
+📸 スクリーンショット: 本番環境のログイン画面
+
 #### 本番環境チェックリスト
 
 | 機能 | 確認内容 | 結果 |
 |------|---------|------|
-| ユーザー登録 | 新規登録できる | |
-| ログイン | 認証が通る | |
-| プロジェクト | 作成・一覧表示 | |
-| タスク | 作成・ステータス変更 | |
-| レポート | 統計カード・グラフ | |
-| 検索 | キーワード検索 | |
-| プロフィール | 情報更新 | |
-| レスポンシブ | モバイルで表示 | |
+| ユーザー登録 | `/register` で登録できる | ☐ |
+| ログイン | `/login` で認証が通る | ☐ |
+| ダッシュボード | `/dashboard` が表示される | ☐ |
+| プロジェクト | `/project` で作成・一覧表示 | ☐ |
+| タスク | `/task` で作成・ステータス変更 | ☐ |
+| レポート | `/report` で統計確認 | ☐ |
+| 検索 | `/search` でキーワード検索 | ☐ |
+| プロフィール | `/profile` で情報更新 | ☐ |
 
 💻 **確認手順**:
 
 1. デプロイ URL にアクセス
 2. `/register` で新規ユーザー作成
 3. `/login` でログイン
-4. `/project` でプロジェクト作成
-5. `/task` でタスク作成
-6. `/report` で統計確認
-7. スマートフォンでもアクセス
+4. `/dashboard` でダッシュボード確認
+5. `/project` でプロジェクト作成
+6. `/task` でタスク作成
+7. `/report` で統計確認
 8. ログアウト → 再ログイン
 
 > 💡 ブラウザの DevTools を開き、
@@ -307,77 +366,61 @@ echo "公開URLで動作確認してください"
 > API レスポンスが 200 であることも
 > チェックします。
 
-✅ **確認ポイント**:
-- 全機能が本番環境で正常動作する
-
-![本番環境のダッシュボード画面](./screenshots/dashboard.png)
+📸 スクリーンショット: 本番環境のダッシュボード画面
 
 ---
 
-### Step 5: 30日間の学習サマリー（10分）
+### Step 6: 30日間の学習サマリー（7分）
 
 🎯 **ゴール**: 30日間で身につけたスキルを
 振り返ります。
 
 ```bash
 # filepath: ターミナル
-# 学習サマリーの確認完了
-echo "30日間の学習お疲れ様でした！"
+# これまでのコミット数を確認
+git log --oneline | wc -l
+# 作成したページ数を確認
+find src/app -name "page.tsx" | wc -l
 ```
 
 ✅ **確認ポイント**:
-- 自分の成長を実感できた
+- コミット数が 30 以上あれば毎日コミットできた証拠
+- ページ数が 12 以上あれば充実したアプリ
+
 #### 週ごとの学習内容
 
-| 週 | 期間 | 学習テーマ | 主な成果 |
-|---|------|----------|---------|
-| 1 | Day 1-4 | 環境構築と基礎 | Docker, Git, 初回デプロイ |
-| 2 | Day 5-10 | 認証とプロジェクト | JWT ログイン, CRUD |
-| 3 | Day 11-16 | タスク管理 | タスク CRUD, コメント, タイマー |
-| 4 | Day 17-20 | 検索と管理 | 検索, フィルタ, マイタスク |
-| 5 | Day 21-24 | レポートと管理 | 統計, グラフ, ユーザー管理 |
-| 6 | Day 25-30 | 仕上げ | プロフィール, 詳細・一括操作, デプロイ |
+| 週 | Day | 学んだこと |
+|----|-----|----------|
+| 第1週 | 1-4 | 環境構築・初回デプロイ |
+| 第2週 | 5-8 | 認証 UI・JWT・サイドバー |
+| 第3週 | 9-12 | プロジェクト CRUD・メンバー追加 |
+| 第4週 | 13-16 | タスク CRUD・ステータス・タイマー |
+| 第5週 | 17-22 | マイタスク・検索・統計・グラフ |
+| 第6週 | 23-30 | レポート・管理・詳細・デプロイ |
 
-#### 作成したページ一覧
-
-| ルート | 機能 |
-|--------|------|
-| /login | ログイン画面 |
-| /register | ユーザー登録画面 |
-| /dashboard | ダッシュボード |
-| /project | プロジェクト管理 |
-| /task | タスク管理 |
-| /my-task | マイタスク |
-| /report | レポート・統計 |
-| /report/weekly | 週次レポート |
-| /search | 検索 |
-| /user | ユーザー管理（管理者） |
-| /profile | プロフィール編集 |
-
-> 💡 30日間で12ページ以上のアプリを
+> 💡 30日間で17ページ以上のアプリを
 > ゼロから構築しました。
 > フロントエンドからバックエンド、
 > データベース設計からデプロイまで
 > 一貫して経験できました。
 
-✅ **確認ポイント**:
-- 自分の成長を実感できた
-
 ---
 
-### Step 6: 技術スタックの振り返り（5分）
+### Step 7: 技術スタックの振り返り（5分）
 
 🎯 **ゴール**: このアプリで使った
 技術スタックを総復習します。
 
 ```bash
 # filepath: ターミナル
-# 技術スタックの確認
-cat package.json | grep -E "next|react|prisma|trpc"
+# 主要パッケージのバージョンを確認
+npm ls next react typescript prisma
 ```
 
 ✅ **確認ポイント**:
+- 各パッケージのバージョンが表示された
 - 各技術の役割を説明できる
+
 #### フロントエンド技術
 
 | 技術 | バージョン | 役割 |
@@ -412,26 +455,25 @@ cat package.json | grep -E "next|react|prisma|trpc"
 > モダン Web 開発で広く使われています。
 > ここで学んだ知識は実務でも活かせます。
 
-✅ **確認ポイント**:
-- 各技術の役割を説明できる
 
 ---
 
-### Step 7: 次のステップとリソース（5分）
+### Step 8: 次のステップとリソース（5分）
 
 🎯 **ゴール**: 今後の学習の方向性と
 参考リソースを確認します。
 
 ```bash
 # filepath: ターミナル
-# 今後の学習リソースをブックマーク
-echo "次のステップに進みましょう！"
+# プロジェクトのコード行数を確認
+find src \( -name "*.ts" -o -name "*.tsx" \) \
+  | xargs wc -l | tail -1
 ```
 
 ✅ **確認ポイント**:
+- 自分が書いたコードの総行数を把握できた
 - 次の学習目標を決められた
 
-![完成したアプリの全画面](./screenshots/dashboard.png)
 #### 次に挑戦できること
 
 | カテゴリ | 内容 | 難易度 |
@@ -469,17 +511,13 @@ echo "次のステップに進みましょう！"
 > 最新の情報源です。困ったときは
 > まず公式ドキュメントを読みましょう。
 
-✅ **確認ポイント**:
-- 次の学習目標を決められた
-
-![完成したアプリの全画面](./screenshots/dashboard.png)
-
 ---
 
 ## 📋 今日のまとめ
 
 - [ ] 環境変数を Vercel に設定した
 - [ ] Docker で DB を起動できた
+- [ ] Git にプッシュした
 - [ ] Vercel にデプロイできた
 - [ ] 本番環境で全機能が動作した
 - [ ] 30日間の学習を振り返った
@@ -519,47 +557,33 @@ echo "次のステップに進みましょう！"
 | # | カテゴリ | できるようになったこと | 学んだ Day |
 |---|---------|---------------------|-----------|
 | 1 | 環境構築 | `npm run dev` でアプリを起動できる | Day 1 |
-| 2 | TypeScript | `const` / `let` / 型アノテーションを使える | Day 2 |
-| 3 | Git | コミット・プッシュ・プルができる | Day 3 |
-| 4 | DB | Prisma でテーブルを定義・操作できる | Day 4-5 |
-| 5 | UI | shadcn/ui コンポーネントを使える | Day 5-6 |
-| 6 | 認証 | JWT + Cookie の仕組みを説明できる | Day 7-8 |
+| 2 | UI基礎 | ダッシュボードにメッセージを追加できる | Day 2 |
+| 3 | Git | コミット・プッシュができる | Day 3 |
+| 4 | デプロイ基礎 | ネットに公開できる | Day 4 |
+| 5 | 認証UI | ログイン・登録画面を作れる | Day 5-6 |
+| 6 | 認証機能 | JWT + Cookie の仕組みを説明できる | Day 7-8 |
 | 7 | API | tRPC でサーバー・クライアント通信ができる | Day 9-10 |
-| 8 | CRUD | タスクの作成・表示・編集・削除ができる | Day 11-18 |
-| 9 | 機能拡張 | コメント・検索・レポートを実装できる | Day 19-25 |
-| 10 | 品質管理 | エラー処理・デバッグができる | Day 26 |
-| 11 | ダイアログ | プロジェクト詳細表示・アーカイブができる | Day 27 |
-| 12 | 一括操作 | タスクの一括完了・削除ができる | Day 28 |
-| 13 | ユーザー管理 | ユーザー詳細・編集ページを作れる | Day 29 |
-| 14 | デプロイ | Vercel にデプロイして公開できる | Day 30 |
+| 8 | CRUD | プロジェクト・タスクの作成・編集・削除ができる | Day 11-16 |
+| 9 | 機能拡張 | マイタスク・コメント・検索を実装できる | Day 17-20 |
+| 10 | レポート | 統計・グラフ・週次レポートを表示できる | Day 21-23 |
+| 11 | 管理機能 | ユーザー一覧・プロフィール編集ができる | Day 24-25 |
+| 12 | 品質管理 | エラーページ・デバッグができる | Day 26 |
+| 13 | 詳細・一括 | プロジェクト詳細・タスク一括操作ができる | Day 27-28 |
+| 14 | 仕上げ | ユーザー詳細・編集・本番デプロイができる | Day 29-30 |
 
-### 30 日間で身につけた技術スタック
+### あなたの成長
 
-| カテゴリ | 技術 | 役割 |
-|---------|------|------|
-| フレームワーク | Next.js 15 (App Router) | フルスタック Web フレームワーク |
-| 言語 | TypeScript | 型安全な JavaScript |
-| API | tRPC v11 | End-to-End 型安全 API |
-| DB | Prisma + PostgreSQL | ORM + リレーショナル DB |
-| 認証 | jose + bcryptjs | JWT + パスワードハッシュ化 |
-| UI | shadcn/ui + Tailwind CSS v4 | コンポーネントライブラリ + CSS |
-| 品質 | Biome + Vitest | Lint + テスト |
-| デプロイ | Vercel | ホスティング + CI/CD |
+30日前のあなたは `npm` って何？の状態でした。今のあなたは、フルスタック Web アプリをゼロから構築し、世界に公開できるエンジニアです。
+
+この 30 日間で身につけた知識と経験は、あなたのエンジニアキャリアの確かな土台になります。
 
 ### 次のステップ
 
-| やりたいこと | おすすめの学習 |
-|------------|-------------|
-| もっと機能を追加したい | 通知機能、ファイル添付、ガントチャート |
-| チーム開発を学びたい | Git ブランチ戦略、コードレビュー、PR 運用 |
-| バックエンドを深めたい | REST API 設計、GraphQL、マイクロサービス |
-| フロントエンドを深めたい | React Server Components、アニメーション、アクセシビリティ |
-| インフラを学びたい | Docker、AWS/GCP、Terraform |
-
-30 日間、一歩ずつ積み重ねてきた知識と経験は
-あなたのエンジニアキャリアの土台になります。
+技術スタックの詳細は Step 7、次に挑戦できることの
+一覧は Step 8 を参照してください。
 学び続けること、作り続けることが大切です。
+
 次のプロジェクトでも、ここで学んだスキルを
 活かして、さらに成長していってください。
 
-**Happy Coding!**
+**Happy Coding!** 🎉
