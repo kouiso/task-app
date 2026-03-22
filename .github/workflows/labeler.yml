@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   labeler:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Run Labeler
         uses: actions/labeler@v5
