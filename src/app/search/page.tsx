@@ -1,9 +1,12 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { z } from 'zod';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { Button } from '@/component/ui/button';
@@ -20,49 +23,74 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
-import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
-import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
+
+const TASK_STATUS_VALUES = [
+  'TODO',
+  'IN_PROGRESS',
+  'IN_REVIEW',
+  'DONE',
+  'CANCELLED',
+  'BLOCKED',
+] as const;
+const TASK_PRIORITY_VALUES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const;
+
+const searchFormSchema = z.object({
+  keyword: z.string().default(''),
+  projectId: z.string().default('all'),
+  status: z.enum(['all', ...TASK_STATUS_VALUES]).default('all'),
+  priority: z.enum(['all', ...TASK_PRIORITY_VALUES]).default('all'),
+  assignedTo: z.string().default('all'),
+  dateFrom: z.string().default(''),
+  dateTo: z.string().default(''),
+});
+type SearchFormValues = z.infer<typeof searchFormSchema>;
 
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const utils = api.useUtils();
 
-  const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '');
-  const [projectId, setProjectId] = useState(searchParams.get('projectId') ?? 'all');
   const initialStatus = searchParams.get('status') ?? 'all';
-  const [status, setStatus] = useState<'all' | TaskStatus>(
-    isTaskStatus(initialStatus) ? initialStatus : 'all',
-  );
   const initialPriority = searchParams.get('priority') ?? 'all';
-  const [priority, setPriority] = useState<'all' | TaskPriority>(
-    isTaskPriority(initialPriority) ? initialPriority : 'all',
-  );
-  const [assignedTo, setAssignedTo] = useState(searchParams.get('assignedTo') ?? 'all');
-  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') ?? '');
-  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') ?? '');
+
+  const form = useForm<SearchFormValues>({
+    resolver: zodResolver(searchFormSchema),
+    defaultValues: {
+      keyword: searchParams.get('keyword') ?? '',
+      projectId: searchParams.get('projectId') ?? 'all',
+      status: isTaskStatus(initialStatus) ? initialStatus : 'all',
+      priority: isTaskPriority(initialPriority) ? initialPriority : 'all',
+      assignedTo: searchParams.get('assignedTo') ?? 'all',
+      dateFrom: searchParams.get('dateFrom') ?? '',
+      dateTo: searchParams.get('dateTo') ?? '',
+    },
+  });
+
+  const formValues = form.watch();
 
   const shouldSearch =
-    !!keyword ||
-    projectId !== 'all' ||
-    status !== 'all' ||
-    priority !== 'all' ||
-    assignedTo !== 'all' ||
-    !!dateFrom ||
-    !!dateTo;
+    !!formValues.keyword ||
+    formValues.projectId !== 'all' ||
+    formValues.status !== 'all' ||
+    formValues.priority !== 'all' ||
+    formValues.assignedTo !== 'all' ||
+    !!formValues.dateFrom ||
+    !!formValues.dateTo;
 
   const { data: projects } = api.search.getUserProjects.useQuery();
   const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: searchResults, isLoading } = api.search.search.useQuery(
     {
-      keyword: keyword || undefined,
-      projectId: projectId !== 'all' ? projectId : undefined,
-      status: status,
-      priority: priority,
-      assignedTo: assignedTo !== 'all' ? assignedTo : undefined,
-      dateFrom: dateFrom ? new Date(dateFrom).toISOString() : undefined,
-      dateTo: dateTo ? new Date(dateTo).toISOString() : undefined,
+      keyword: formValues.keyword || undefined,
+      projectId: formValues.projectId !== 'all' ? formValues.projectId : undefined,
+      status: formValues.status,
+      priority: formValues.priority,
+      assignedTo: formValues.assignedTo !== 'all' ? formValues.assignedTo : undefined,
+      dateFrom: formValues.dateFrom ? new Date(formValues.dateFrom).toISOString() : undefined,
+      dateTo: formValues.dateTo ? new Date(formValues.dateTo).toISOString() : undefined,
     },
     {
       enabled: shouldSearch,
@@ -71,52 +99,43 @@ function SearchPageContent() {
   );
 
   useEffect(() => {
-    const paramSetters: Array<{
-      key: string;
-      setter: (value: string) => void;
-    }> = [
-      { key: 'keyword', setter: setKeyword },
-      { key: 'projectId', setter: setProjectId },
+    const paramMap: Array<{ key: keyof SearchFormValues; transform?: (v: string) => string }> = [
+      { key: 'keyword' },
+      { key: 'projectId' },
       {
         key: 'status',
-        setter: (value: string) => {
-          if (isTaskStatus(value)) {
-            setStatus(value);
-          } else if (value === 'all') {
-            setStatus('all');
-          }
-        },
+        transform: (v: string) =>
+          isTaskStatus(v) ? v : v === 'all' ? 'all' : form.getValues('status'),
       },
       {
         key: 'priority',
-        setter: (value: string) => {
-          if (isTaskPriority(value)) {
-            setPriority(value);
-          } else if (value === 'all') {
-            setPriority('all');
-          }
-        },
+        transform: (v: string) =>
+          isTaskPriority(v) ? v : v === 'all' ? 'all' : form.getValues('priority'),
       },
-      { key: 'assignedTo', setter: setAssignedTo },
-      { key: 'dateFrom', setter: setDateFrom },
-      { key: 'dateTo', setter: setDateTo },
+      { key: 'assignedTo' },
+      { key: 'dateFrom' },
+      { key: 'dateTo' },
     ];
 
-    for (const { key, setter } of paramSetters) {
+    for (const { key, transform } of paramMap) {
       const value = searchParams.get(key);
-      if (value) setter(value);
+      if (value) {
+        const transformed = transform ? transform(value) : value;
+        form.setValue(key, transformed);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, form]);
 
   const handleSearch = () => {
+    const values = form.getValues();
     const searchParamList = [
-      { key: 'keyword', value: keyword },
-      { key: 'projectId', value: projectId, exclude: 'all' },
-      { key: 'status', value: status, exclude: 'all' },
-      { key: 'priority', value: priority, exclude: 'all' },
-      { key: 'assignedTo', value: assignedTo, exclude: 'all' },
-      { key: 'dateFrom', value: dateFrom },
-      { key: 'dateTo', value: dateTo },
+      { key: 'keyword', value: values.keyword },
+      { key: 'projectId', value: values.projectId, exclude: 'all' },
+      { key: 'status', value: values.status, exclude: 'all' },
+      { key: 'priority', value: values.priority, exclude: 'all' },
+      { key: 'assignedTo', value: values.assignedTo, exclude: 'all' },
+      { key: 'dateFrom', value: values.dateFrom },
+      { key: 'dateTo', value: values.dateTo },
     ];
 
     const params = new URLSearchParams();
@@ -131,13 +150,15 @@ function SearchPageContent() {
   };
 
   const handleClear = () => {
-    setKeyword('');
-    setProjectId('all');
-    setStatus('all');
-    setPriority('all');
-    setAssignedTo('all');
-    setDateFrom('');
-    setDateTo('');
+    form.reset({
+      keyword: '',
+      projectId: 'all',
+      status: 'all',
+      priority: 'all',
+      assignedTo: 'all',
+      dateFrom: '',
+      dateTo: '',
+    });
     router.push('/search');
   };
 
@@ -190,8 +211,7 @@ function SearchPageContent() {
                     id="keyword"
                     placeholder="タスク名、説明で検索..."
                     className="pl-8"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
+                    {...form.register('keyword')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         handleSearch();
@@ -204,7 +224,10 @@ function SearchPageContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="project">プロジェクト</Label>
-                  <Select value={projectId} onValueChange={setProjectId}>
+                  <Select
+                    value={formValues.projectId}
+                    onValueChange={(v) => form.setValue('projectId', v)}
+                  >
                     <SelectTrigger id="project">
                       <SelectValue placeholder="すべてのプロジェクト" />
                     </SelectTrigger>
@@ -222,12 +245,12 @@ function SearchPageContent() {
                 <div className="grid gap-2">
                   <Label htmlFor="status">ステータス</Label>
                   <Select
-                    value={status}
+                    value={formValues.status}
                     onValueChange={(value) => {
                       if (isTaskStatus(value)) {
-                        setStatus(value);
+                        form.setValue('status', value);
                       } else if (value === 'all') {
-                        setStatus('all');
+                        form.setValue('status', 'all');
                       }
                     }}
                   >
@@ -248,12 +271,12 @@ function SearchPageContent() {
                 <div className="grid gap-2">
                   <Label htmlFor="priority">優先度</Label>
                   <Select
-                    value={priority}
+                    value={formValues.priority}
                     onValueChange={(value) => {
                       if (isTaskPriority(value)) {
-                        setPriority(value);
+                        form.setValue('priority', value);
                       } else if (value === 'all') {
-                        setPriority('all');
+                        form.setValue('priority', 'all');
                       }
                     }}
                   >
@@ -273,7 +296,10 @@ function SearchPageContent() {
 
                 <div className="grid gap-2">
                   <Label htmlFor="assignedTo">担当者</Label>
-                  <Select value={assignedTo} onValueChange={setAssignedTo}>
+                  <Select
+                    value={formValues.assignedTo}
+                    onValueChange={(v) => form.setValue('assignedTo', v)}
+                  >
                     <SelectTrigger id="assignedTo">
                       <SelectValue placeholder="すべての担当者" />
                     </SelectTrigger>
@@ -290,22 +316,12 @@ function SearchPageContent() {
 
                 <div className="grid gap-2">
                   <Label htmlFor="dateFrom">期限：開始日</Label>
-                  <Input
-                    id="dateFrom"
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                  />
+                  <Input id="dateFrom" type="date" {...form.register('dateFrom')} />
                 </div>
 
                 <div className="grid gap-2">
                   <Label htmlFor="dateTo">期限：終了日</Label>
-                  <Input
-                    id="dateTo"
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                  />
+                  <Input id="dateTo" type="date" {...form.register('dateTo')} />
                 </div>
               </div>
 

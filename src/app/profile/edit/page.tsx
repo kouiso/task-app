@@ -1,9 +1,12 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { z } from 'zod';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -14,12 +17,23 @@ import { Label } from '@/component/ui/label';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { api } from '@/trpc/react';
 
+const profileEditSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
+});
+type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
+
 export default function ProfileEditPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    avatar: '',
+
+  const form = useForm<ProfileEditFormValues>({
+    resolver: zodResolver(profileEditSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      avatar: '',
+    },
   });
 
   const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
@@ -30,31 +44,22 @@ export default function ProfileEditPage() {
       router.push('/profile');
     },
     onError: (error) => {
-      toast.error(error.message || 'プロフィールの更新に失敗しました');
+      toast.error(error.message ?? 'プロフィールの更新に失敗しました');
     },
   });
 
   useEffect(() => {
     if (currentUser) {
-      setFormData({
-        name: currentUser.name || '',
-        email: currentUser.email || '',
-        avatar: currentUser.avatar || '',
+      form.reset({
+        name: currentUser.name ?? '',
+        email: currentUser.email ?? '',
+        avatar: currentUser.avatar ?? '',
       });
     }
-  }, [currentUser]);
+  }, [currentUser, form]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile.mutate(formData);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleSubmit = (values: ProfileEditFormValues) => {
+    updateProfile.mutate(values);
   };
 
   if (isLoading) {
@@ -69,12 +74,12 @@ export default function ProfileEditPage() {
             <CardTitle>プロフィール編集</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="flex justify-center mb-6">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={formData.avatar} />
+                  <AvatarImage src={form.watch('avatar')} />
                   <AvatarFallback className="text-2xl">
-                    {formData.name?.[0]?.toUpperCase()}
+                    {form.watch('name')?.[0]?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </div>
@@ -83,14 +88,10 @@ export default function ProfileEditPage() {
                 <Label htmlFor="name">
                   名前 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  disabled={updateProfile.isPending}
-                />
+                <Input id="name" {...form.register('name')} disabled={updateProfile.isPending} />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -99,23 +100,21 @@ export default function ProfileEditPage() {
                 </Label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
+                  {...form.register('email')}
                   disabled={updateProfile.isPending}
                 />
+                {form.formState.errors.email && (
+                  <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="avatar">アバターURL（任意）</Label>
                 <Input
                   id="avatar"
-                  name="avatar"
                   type="url"
-                  value={formData.avatar}
-                  onChange={handleChange}
+                  {...form.register('avatar')}
                   disabled={updateProfile.isPending}
                   placeholder="https://example.com/avatar.png"
                 />
