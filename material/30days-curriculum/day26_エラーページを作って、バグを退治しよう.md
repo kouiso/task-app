@@ -2,26 +2,44 @@
 
 ## 🔙 前回の振り返り
 
-Day 25 ではプロフィール表示ページとパスワード変更フォームを実装し、`react-hook-form` によるバリデーションや `toast` によるフィードバック表示を学びました。ユーザー向け機能が一通り揃ったので、今日はエラーハンドリングとDevToolsを使ったデバッグ演習に取り組みます。
+Day 25 ではプロフィール表示ページと
+パスワード変更フォームを実装し、
+`useState` によるフォーム管理や
+`toast` によるフィードバック表示を学びました。
+ユーザー向け機能が一通り揃ったので、
+今日はエラーハンドリングと DevTools を使った
+デバッグ演習に取り組みます。
 
 ---
 
 ## 🎯 今日のゴール
 
-エラーページ（error.tsx）の動作を確認し、意図的に3つのバグを仕込んで自力で修正するデバッグ演習を行います。DevToolsのConsole・Network・Elementsタブの使い分けも身につけます。
+エラーページ（error.tsx）の動作を確認し、
+3つのバグパターンを学びます。
+そのうち1つは実際にコードを書いて修正します。
+DevTools の Console・Network・Elements タブの
+使い分けも身につけます。
 
-![エラーページ画面](./screenshots/error-page.png)
+📸 スクリーンショット: エラーページ画面の表示を確認してください。
 
 ## 🤔 なぜこれを作るのか？
 
-バグのないアプリはありません。大事なのは「バグを怖がらない」こと。バグを意図的に作って、DevToolsで発見し、自分で直す経験を積みましょう。
+Day 25 まで完走して、アプリの主要機能が一通り
+揃いました。残り5日です！
+今日からはプロの開発者が日常的に使う
+デバッグスキルを身につけましょう。
+
+バグのないアプリはありません。
+大事なのは「バグを怖がらない」こと。
+バグを意図的に作って、DevTools で発見し、
+自分で直す経験を積みましょう。
 
 > 💡 **例え話**: DevToolsは「お医者さんの道具セット」です。Console（聴診器）で症状を聞き、Network（レントゲン）で内部の通信を見て、Elements（解剖図）でページの構造を調べます。
 
 ### 📐 デバッグの流れ
 
 ```mermaid
-graph TD
+flowchart TD
     A[バグ発生！] --> B[症状を確認する]
     B --> C{どのタブを使う？}
     C -->|JSエラー| D[Console タブ]
@@ -45,7 +63,7 @@ graph TD
 | やること | やらないこと |
 |---------|-------------|
 | error.tsxの動作を確認する | エラーハンドリングの理論を暗記する |
-| 3つのバグを仕込んで自力で修正する | バグを見つけてもらうだけ |
+| 3つのバグパターンを学び、1つは実際に修正する | バグを見つけてもらうだけ |
 | DevTools 3タブの使い分けを学ぶ | DevToolsの全機能を網羅する |
 | Biome lintでコード品質をチェックする | ESLintの設定を書く |
 
@@ -81,23 +99,31 @@ graph TD
 
 💻 **操作手順**:
 
-1. ブラウザで`/this-page-does-not-exist`にアクセス
-2. 「404 ページが見つかりません」が表示されることを確認
+1. ブラウザのアドレスバーに `http://localhost:3000/this-page-does-not-exist` と入力して Enter を押す
+2. 「404」と「ページが見つかりません」が表示されることを確認
 3. 次に、ダッシュボードのコードに一時的にエラーを仕込む
 
 ```typescript
 // filepath: src/app/dashboard/page.tsx（一時的に追加）
-// ↓ returnの直前にこの1行を追加
-throw new Error('テストエラー: これは練習です');
+// DashboardPage関数の先頭に追加する
+// error.tsx の動作を確認するためのテストエラー
+throw new Error(
+  'テストエラー: これは練習です'
+);
 ```
+
+> ⚠️ 開発モード（`npm run dev`）では
+> Next.js のエラーオーバーレイが先に
+> 表示されます。右上の × ボタンで閉じると、
+> error.tsx のフォールバック UI が確認できます。
 
 ✅ **確認ポイント**:
 1. `/this-page-does-not-exist`で404ページが表示された
-2. エラーを仕込むと「エラーが発生しました」画面が表示される
+2. エラーオーバーレイを閉じると「エラーが発生しました」画面が表示される
 3. 「もう一度試す」ボタンが機能する
 4. **追加した`throw`行を必ず削除する**
 
-![error.tsxのエラーページ画面](./screenshots/error-page.png)
+📸 スクリーンショット: error.tsxのエラーページ画面の表示を確認してください。
 
 📝 **学んだこと**: error.tsxは予期しないエラーが発生した時に「白い画面」の代わりにフォールバックUIを表示します。
 
@@ -112,11 +138,13 @@ VS Codeで`src/app/error.tsx`を開いてください。
 💻 **確認するコード**:
 
 ```typescript
-// filepath: src/app/error.tsx（前半: インポートとhook）
+// filepath: src/app/error.tsx（前半）
+// インポートとhook
 'use client';
 
 import { useEffect } from 'react';
-import { Button } from '@/component/ui/button';
+import { Button }
+  from '@/component/ui/button';
 
 export default function ErrorPage({
   error,
@@ -130,18 +158,26 @@ export default function ErrorPage({
   }, [error]);
 ```
 
+✅ **確認ポイント**:
+- `'use client'` が先頭にあることを確認した
+- `console.error` は Biome 設定で許可されている（`allow: ['warn', 'error']`）ため lint エラーにならない
+
 続いて、JSX の `return` 部分です。
 
 ```typescript
-// filepath: src/app/error.tsx（後半: JSX部分）
+// filepath: src/app/error.tsx（後半）
+// フォールバックUI
   return (
     <div className="flex min-h-screen
       items-center justify-center">
-      <div className="text-center space-y-4">
-        <h2 className="text-2xl font-bold">
+      <div className="text-center
+        space-y-4">
+        <h2 className="text-2xl
+          font-bold">
           エラーが発生しました
         </h2>
-        <p className="text-muted-foreground">
+        <p className=
+          "text-muted-foreground">
           予期しないエラーが発生しました。
           もう一度お試しください。
         </p>
@@ -154,6 +190,10 @@ export default function ErrorPage({
 }
 ```
 
+✅ **確認ポイント**:
+- `reset` 関数が「もう一度試す」ボタンに紐づいている
+- `error.tsx` が `error` と `reset` の2つの props を受け取ることがわかった
+
 🔍 **コード解説**:
 
 | コード | 意味 | 例え |
@@ -162,10 +202,6 @@ export default function ErrorPage({
 | `reset` | エラーをリセットして再描画する関数 | 「もう一度試す」ボタンの処理 |
 | `'use client'` | クライアントコンポーネント必須 | Error Boundaryはブラウザ側で動く |
 | `console.error(error)` | エラー詳細をConsoleに出力 | カルテをログに記録 |
-
-✅ **確認ポイント**:
-1. `error.tsx`が`error`と`reset`の2つのpropsを受け取ることがわかった
-2. `'use client'`が必須であることがわかった
 
 📝 **学んだこと**: Next.js App Routerでは、`error.tsx`を配置するだけでError Boundaryが自動的に機能します。
 
@@ -177,43 +213,72 @@ export default function ErrorPage({
 
 以下のバグコードを**教材内で確認**してください。実際のアプリでは`?.`が正しく使われていますが、もし`?.`を外すとどうなるかを理解しましょう。
 
+以下の演習では学習用の型を使います。
+
+```typescript
+// filepath: 教材内の演習コード（型定義）
+// 演習用の型定義（実行不要）
+type Task = {
+  assignee: {
+    name: string;
+  } | null;
+};
+```
+
+✅ **確認ポイント**:
+- assignee が `null` になり得ることを確認した
+
 💻 **バグのあるコード**:
 
 ```typescript
-// filepath: 演習用コード（読んで理解する）
+// filepath: 教材内の演習コード（実行不要）
 // ❌ バグ: assigneeがnullの場合にクラッシュ
-function TaskCard({ task }) {
+function TaskCard(
+  { task }: { task: Task }
+) {
   return (
     <div>
-      <p>担当者: {task.assignee.name}</p>
+      <p>担当者:
+        {task.assignee.name}</p>
     </div>
   );
 }
 ```
 
+✅ **確認ポイント**:
+- `.name` にアクセスする前に null チェックがないことがわかった
+
 **エラーメッセージ（Console）**:
 
-```bash
-# filepath: DevTools Console で表示されるエラー
-# TypeError: Cannot read properties of null
-#   (reading 'name')
-# at TaskCard (task-card.tsx:5:38)
+```text
+TypeError: Cannot read properties
+  of null (reading 'name')
+  at TaskCard (task-card.tsx:5:38)
 ```
+
+✅ **確認ポイント**:
+- `reading 'name'` が問題のプロパティだとわかった
 
 💻 **修正後のコード**:
 
 ```typescript
-// filepath: 演習用コード（修正版）
-// ✅ 修正: ?.でnullチェック
-function TaskCard({ task }) {
+// filepath: 教材内の演習コード（修正版）
+// ✅ 修正: ?.でnullチェック + ??で代替値
+function TaskCard(
+  { task }: { task: Task }
+) {
   return (
     <div>
-      <p>担当者: {task.assignee?.name
-        ?? '未割り当て'}</p>
+      <p>担当者:
+        {task.assignee?.name
+          ?? '未割り当て'}</p>
     </div>
   );
 }
 ```
+
+✅ **確認ポイント**:
+- `?.` と `??` の組み合わせで安全にアクセスしている
 
 🔍 **修正前後の比較**:
 
@@ -236,45 +301,64 @@ function TaskCard({ task }) {
 
 🎯 **ゴール**: useEffectの依存配列を間違えると無限リクエストが発生することを理解し、修正方法を学びます。
 
+> ⚠️ task-app では tRPC の `useQuery` が
+> 自動管理してくれるため、このパターンは
+> 発生しません。しかし、個人開発や他の
+> プロジェクトで必ず遭遇するバグパターン
+> なので理解しておきましょう。
+
 💻 **バグのあるコード**:
 
 ```typescript
-// filepath: 演習用コード（読んで理解する）
+// filepath: 教材内の演習コード（実行不要）
 // ❌ バグ: 依存配列に毎回新しいオブジェクトが入る
 function TaskList() {
   const [tasks, setTasks] = useState([]);
   const filter = { status: 'TODO' };
 
   useEffect(() => {
-    fetchTasks(filter).then(setTasks);
-  }, [filter]); // ← 毎レンダリングで新オブジェクト
+    fetchTasks(filter)
+      .then(setTasks);
+  }, [filter]);
+  // ↑ 毎レンダリングで新しいオブジェクト
 }
 ```
 
-**症状**: DevTools Networkタブに同じリクエストが無限に流れ続けます。
+✅ **確認ポイント**:
+- `filter` が関数の中で毎回作られることを確認した
 
-```bash
-# filepath: DevTools Network タブ
-# GET /api/trpc/task.getAll ← 何百回も繰り返し
-# GET /api/trpc/task.getAll
-# GET /api/trpc/task.getAll
-# ...（止まらない）
+**症状**: DevTools Network タブに同じリクエストが
+無限に流れ続けます。
+
+```text
+GET /api/tasks ← 何百回も繰り返し
+GET /api/tasks
+GET /api/tasks
+...（止まらない）
 ```
+
+✅ **確認ポイント**:
+- Network タブで同じリクエストの繰り返しが無限ループの兆候だとわかった
 
 💻 **修正後のコード**:
 
 ```typescript
-// filepath: 演習用コード（修正版）
-// ✅ 修正: filterをuseStateかuseMemoで管理
+// filepath: 教材内の演習コード（修正版）
+// ✅ 修正: プリミティブ値を依存配列に使う
 function TaskList() {
   const [tasks, setTasks] = useState([]);
   const [status] = useState('TODO');
 
   useEffect(() => {
-    fetchTasks({ status }).then(setTasks);
-  }, [status]); // ← stringは参照が変わらない
+    fetchTasks({ status })
+      .then(setTasks);
+  }, [status]);
+  // ↑ stringは参照が変わらない
 }
 ```
+
+✅ **確認ポイント**:
+- string 型は毎回同じ参照なので再実行されない
 
 🔍 **なぜ無限ループが起きるのか**:
 
@@ -306,27 +390,40 @@ function TaskList() {
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/dashboard/page.tsx（一時的に追加）
-// returnの直前に追加
-console.log('DEBUG: tasks =', tasks);
-console.log('DEBUG: projects =', projects);
+// filepath: src/app/dashboard/page.tsx
+// recentTasks の直後に一時的に追加する
+console.log(
+  'DEBUG: tasks =', tasks
+);
+console.log(
+  'DEBUG: projects =', projects
+);
 ```
 
+✅ **確認ポイント**:
+- 2行の `console.log` を追加した
+- ファイルを保存した
+
 次に、Biome lintを実行します。
+`npm run lint` はプロジェクト全体をチェックしますが、
+ここでは変更したファイルだけを確認します。
 
 ```bash
 # filepath: ターミナル
 # Biome lintチェック（該当ファイルのみ）
-npx biome check src/app/dashboard/page.tsx
+npx biome check \
+  src/app/dashboard/page.tsx
 ```
 
-Biomeが以下のような警告を出します。
+✅ **確認ポイント**:
+- `noConsole` エラーが検出された
 
-```bash
-# filepath: Biome lint の出力例
-# src/app/dashboard/page.tsx:XX:3
-#   lint/suspicious/noConsole
-#   Don't use console.log
+Biome が以下のようなエラーを出します。
+
+```text
+src/app/dashboard/page.tsx:XX:3
+  lint/suspicious/noConsole
+  Unexpected console object method call.
 ```
 
 💻 **修正**: 追加した2行の`console.log`を削除してください。
@@ -334,9 +431,21 @@ Biomeが以下のような警告を出します。
 ```bash
 # filepath: ターミナル
 # 修正後に再チェック
-npx biome check src/app/dashboard/page.tsx
+npx biome check \
+  src/app/dashboard/page.tsx
 # → 問題なし
 ```
+
+✅ **確認ポイント**:
+- エラーが0件になった
+
+📸 スクリーンショット: Biome lint のエラー出力画面を確認してください。
+
+> 💡 `npx biome check ファイルパス` は
+> Biome を1ファイルだけに実行するコマンドです。
+> Step 7 の `npm run lint` は内部的に
+> `biome check .`（プロジェクト全体）を
+> 実行します。
 
 🔍 **console.logを残すべきでない理由**:
 
@@ -347,8 +456,8 @@ npx biome check src/app/dashboard/page.tsx
 | コードの品質低下 | デバッグ用のコードが散乱する |
 
 ✅ **確認ポイント**:
-1. `console.log`を追加してBiome lintが警告を出した
-2. `console.log`を削除してBiomeの警告が消えた
+1. `console.log`を追加してBiome lintがエラーを出した
+2. `console.log`を削除してBiomeのエラーが消えた
 3. **追加した`console.log`を必ず削除した**
 
 📝 **学んだこと**: Biome lintは`console.log`の残りを自動検出してくれます。本番コードには`console.log`を残さないようにしましょう。
@@ -357,7 +466,21 @@ npx biome check src/app/dashboard/page.tsx
 
 ### Step 6: DevTools 3タブの使い分け（5分）
 
-🎯 **ゴール**: 症状に応じてDevToolsのどのタブを見るべきか整理します。
+🎯 **ゴール**: 症状に応じて DevTools の
+どのタブを見るべきか整理します。
+
+ブラウザで DevTools を開いてみましょう。
+
+```bash
+# filepath: ターミナル
+# 開発サーバーが起動中か確認
+npm run dev
+# ブラウザで http://localhost:3000 を開き
+# F12（Macは Cmd+Option+I）でDevToolsを開く
+```
+
+✅ **確認ポイント**:
+- DevTools が表示された
 
 | 症状 | 使うタブ | 確認するもの |
 |------|---------|------------|
@@ -380,17 +503,15 @@ npx biome check src/app/dashboard/page.tsx
 1. 3つのタブの使い分けが理解できた
 2. 症状に応じてどのタブを見るか判断できる
 
-> 📸 DevTools の Console タブでエラーメッセージが表示されている画面を確認しましょう。
+📸 スクリーンショット: DevTools Consoleタブの表示を確認してください。
+
+📸 スクリーンショット: DevTools Networkタブの表示を確認してください。
+
+📸 スクリーンショット: DevTools Elementsタブの表示を確認してください。
 
 📝 **学んだこと**: DevToolsは「症状に合った道具を選ぶ」のが大事です。Console→Network→Elementsの順でチェックするのが基本です。
 
 ---
-
-```bash
-# filepath: ターミナル（ブラウザのDevToolsを開く）
-# F12 キーを押してDevToolsを開く
-# または右クリック → 検証（Inspect）
-```
 
 ### Step 7: Biome lintで全体チェック（4分）
 
@@ -404,10 +525,8 @@ npx biome check src/app/dashboard/page.tsx
 npm run lint
 ```
 
-```bash
-# filepath: 期待される出力
-# Checked 121 files in XXms. No fixes applied.
-```
+✅ **確認ポイント**:
+- lintチェックが完了した
 
 もし警告やエラーがあった場合は、以下で自動修正できます。
 
@@ -421,10 +540,10 @@ npm run lint:fix
 
 | ルール | 検出するもの | 深刻度 |
 |--------|------------|--------|
-| `noConsole` | `console.log`の残り | 警告 |
+| `noConsole` | `console.log`の残り | エラー |
 | `noUnusedVariables` | 使われていない変数 | エラー |
-| `noExplicitAny` | `any`型の使用 | エラー |
-| `useConst` | `let`で再代入していない変数 | 警告 |
+| `noExplicitAny` | `any`型の使用 | 警告 |
+| `useConst` | `let`で再代入していない変数 | エラー |
 
 ✅ **確認ポイント**:
 1. `npm run lint`が0エラーで通過した

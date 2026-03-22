@@ -2,7 +2,7 @@
 
 ## 🔙 前回の振り返り
 
-Day 21 では `reduce` を使ったデータ集計と、4枚の統計カード（総タスク数・完了率・作業時間・期限超過）の表示を実装しました。数値データをカードで見せる基盤ができたので、今日はその数値をグラフで可視化する機能に取り組みます。
+Day 21 では `reduce` を使ったデータ集計と、4枚の統計カード（タスク数・完了率・合計作業時間・平均作業時間）の表示を実装しました。数値データをカードで見せる基盤ができたので、今日はその数値をグラフで可視化する機能に取り組みます。
 
 ---
 
@@ -12,7 +12,7 @@ Recharts ライブラリを使って、レポートページに
 円グラフを追加します。ステータス別・優先度別の
 タスク分布を可視化します。
 
-![円グラフ2つ](./screenshots/report.png)
+📸 スクリーンショット: レポートページにステータス別・優先度別の円グラフが並んだ完成イメージです。
 
 ## 🤔 なぜこれを作るのか？
 
@@ -27,8 +27,8 @@ Recharts ライブラリを使って、レポートページに
 ### 📐 グラフ表示のデータフロー
 
 ```mermaid
-graph LR
-    A[tasks配列] --> B[reduce で集計]
+flowchart TD
+    A[tasks配列] --> B[Map で集計]
     B --> C[statusData 配列]
     B --> D[priorityData 配列]
     C --> E[PieChart ステータス]
@@ -64,10 +64,10 @@ graph LR
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
 | Step 1 | Rechartsを確認する | 2分 |
-| Step 2 | ステータス集計データを作る | 5分 |
-| Step 3 | 色定数をインポートする | 3分 |
+| Step 2 | インポートと色定数を準備する | 3分 |
+| Step 3 | ステータス集計データを作る | 5分 |
 | Step 4 | ステータス円グラフを表示 | 5分 |
-| Step 5 | 優先度円グラフを追加 | 5分 |
+| Step 5 | 優先度集計と円グラフ追加 | 5分 |
 | Step 6 | レスポンシブグリッドに配置 | 3分 |
 | Step 7 | 動作確認 | 3分 |
 
@@ -75,24 +75,20 @@ graph LR
 
 ---
 
-### 🧩 予備知識: Recharts のコンポーネント早見表
-
-今日使う Recharts のコンポーネントを先に一覧で確認しておきましょう。
+### 🧩 予備知識: 今日使う Recharts コンポーネント
 
 | コンポーネント | 役割 | 例え |
 |--------------|------|------|
-| `ResponsiveContainer` | グラフを親要素の幅に合わせて伸縮させる | 写真フレーム——中身に合わせてサイズが変わる |
-| `BarChart` | 棒グラフ全体の枠組み | キャンバス——棒を描く土台 |
-| `Bar` | 実際の棒（データ 1 系列分） | キャンバス上の 1 本ずつの棒 |
-| `LineChart` | 折れ線グラフ全体の枠組み | キャンバス——折れ線を描く土台 |
-| `Line` | 実際の折れ線（データ 1 系列分） | キャンバス上の 1 本の線 |
-| `PieChart` | 円グラフ全体の枠組み | キャンバス——パイを描く土台 |
-| `Pie` + `Cell` | 実際の円（各スライスの色を `Cell` で設定） | パイの各ピース |
-| `XAxis` / `YAxis` | 横軸（カテゴリ名など）と縦軸（数値） | グラフの目盛り |
-| `Tooltip` | マウスホバーで数値を吹き出し表示 | 虫眼鏡——ポイントを拡大表示 |
-| `CartesianGrid` | 背景のグリッド線 | グラフ用紙のマス目 |
+| `PieChart` | 円グラフ全体の枠組み | パイを描く土台 |
+| `Pie` + `Cell` | 各スライスの色を `Cell` で設定 | パイの各ピース |
+| `ResponsiveContainer` | グラフを親要素の幅に合わせる | 額縁に合わせるサイズ調整 |
+| `Tooltip` | マウスホバーで数値を表示 | ポイントの拡大表示 |
+| `Legend` | 凡例（色と名前の対応表） | 地図の凡例 |
 
-> 💡 Recharts は「`XXXChart`（枠組み）+ `XXX`（中身）+ 軸やツールチップ」の組み合わせで 1 つのグラフが完成します。構造が分かれば、新しいグラフも同じパターンで作れます。
+> 💡 Recharts は「`XXXChart`（枠組み）+
+> `XXX`（中身）+ ツールチップ」の組み合わせ
+> で 1 つのグラフが完成します。Day 23 では
+> `BarChart` や `LineChart` も登場します。
 
 ---
 
@@ -118,91 +114,131 @@ npm list recharts
 
 ---
 
-### Step 2: ステータス集計データを作る（5分）
+### Step 2: インポートと色定数を準備する（3分）
 
-🎯 **ゴール**: タスクデータから
-ステータス別の件数を集計します。
+🎯 **ゴール**: Recharts のコンポーネントと
+色定数をインポートします。
+
+> 💡 Day 21 の `src/app/report/page.tsx` に
+> 追記していきます。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// ステータス別に集計
-const statusData = useMemo(
-  () =>
-    Object.entries(
-      tasks?.reduce(
-        (acc, task) => {
-          acc[task.status] =
-            (acc[task.status] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>,
-      ) || {},
-    ).map(([name, value]) =>
-      ({ name, value })),
-  [tasks],
-);
+// Rechartsのグラフコンポーネント
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
 ```
 
 ✅ **確認ポイント**:
-- statusData にデータが入る
+- Recharts のインポートが追加された
+
+```typescript
+// filepath: src/app/report/page.tsx
+// ステータスの色定数と型ガード
+import {
+  isTaskStatus,
+  TASK_STATUS_LABELS,
+  TASK_STATUS_COLORS,
+} from '@/lib/constant/status';
+// 優先度の色定数と型ガード
+import {
+  isTaskPriority,
+  TASK_PRIORITY_COLORS,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+```
+
+✅ **確認ポイント**:
+- 型ガード関数とラベル・色定数をインポートした
+
+```typescript
+// filepath: src/app/report/page.tsx
+// グラフのCardにはCardHeaderとCardTitleを使用
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+
+// 該当する色がないときの代替色
+const CHART_FALLBACK_COLOR = '#9e9e9e';
+```
+
+> 💡 Day 21 では `Card` と `CardContent`
+> だけをインポートしましたが、グラフには
+> タイトル付きカードが必要なので
+> `CardHeader` と `CardTitle` も追加します。
+
+✅ **確認ポイント**:
+- `CardHeader` と `CardTitle` を追加した
+- `CHART_FALLBACK_COLOR` を定義した
+
+#### ステータスの色一覧
+
+| ステータス | 色 | HEXコード |
+|-----------|-----|----------|
+| TODO | グレー | `#9e9e9e` |
+| IN_PROGRESS | ブルー | `#2196f3` |
+| IN_REVIEW | オレンジ | `#ff9800` |
+| DONE | グリーン | `#4caf50` |
+| CANCELLED | レッド | `#f44336` |
+| BLOCKED | パープル | `#9c27b0` |
+
+---
+
+### Step 3: ステータス集計データを作る（5分）
+
+🎯 **ゴール**: タスクデータから
+ステータス別の件数を集計します。
+
+> 💡 Day 21 で作った `tasks` データ
+> （`api.task.getAll.useQuery()`）を
+> そのまま使います。`useMemo` は Day 21 で
+> 学んだ計算結果のキャッシュです。
+> Day 21 の `useMemo` と同じ場所
+> （`return` 文の前）に追加してください。
+
+💻 **実装**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// ステータス別に集計（Map で安全にカウント）
+const statusData = useMemo(() => {
+  const counts = new Map<string, number>();
+  for (const task of tasks ?? []) {
+    counts.set(
+      task.status,
+      (counts.get(task.status) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(
+    ([key, value]) => ({
+      key,
+      name: isTaskStatus(key)
+        ? TASK_STATUS_LABELS[key] : key,
+      value,
+    }));
+}, [tasks]);
+```
+
+✅ **確認ポイント**:
+- `Map` で集計している
+- `isTaskStatus` でラベルに変換している
 
 #### 集計の仕組み
 
 | ステップ | 処理 | 結果例 |
 |---------|------|--------|
-| 1. reduce | ステータスごとにカウント | `{TODO: 3, DONE: 5}` |
-| 2. Object.entries | キーと値のペアに変換 | `[['TODO', 3], ...]` |
-| 3. map | グラフ用の形に変換 | `[{name: 'TODO', value: 3}]` |
+| 1. Map | ステータスごとにカウント | `TODO: 3, DONE: 5` |
+| 2. entries | キーと値のペアに変換 | `[['TODO', 3], ...]` |
+| 3. map | グラフ用の形に変換 | `[{key:'TODO', name:'未着手', value:3}]` |
 
-> 💡 `reduce` で `{TODO: 3, IN_PROGRESS: 2}`
-> のようなオブジェクトを作り、
-> `Object.entries` + `map` で Recharts が
-> 期待する形式に変換します。
+> 💡 `Map` でカウントし、`isTaskStatus` で
+> 型ガードをかけてから `TASK_STATUS_LABELS`
+> で日本語ラベルに変換します。
 
-✅ **確認ポイント**:
-- statusData にデータが入る
-
----
-
-### Step 3: 色定数をインポートする（3分）
-
-🎯 **ゴール**: ステータスと優先度の
-色定数を使います。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/report/page.tsx
-import {
-  TASK_STATUS_COLORS,
-} from '@/lib/constant/status';
-import {
-  TASK_PRIORITY_COLORS,
-} from '@/lib/constant/priority';
-```
-
-✅ **確認ポイント**:
-- 色定数がインポートできた
-
-#### ステータスの色一覧
-
-| ステータス | 色 |
-|-----------|-----|
-| TODO | グレー |
-| IN_PROGRESS | ブルー |
-| IN_REVIEW | オレンジ |
-| DONE | グリーン |
-| CANCELLED | レッド |
-| BLOCKED | パープル |
-
-> 💡 `@/lib/constant/` に定義済みの
-> 色定数を使います。アプリ全体で同じ色を
-> 使うことで統一感が出ます。
-
-✅ **確認ポイント**:
-- 色定数がインポートできた
 
 ---
 
@@ -211,22 +247,20 @@ import {
 🎯 **ゴール**: PieChart でステータス別の
 円グラフを表示します。
 
+> 💡 以下のJSXは `return` 文の中、
+> Day 21 の統計カード `</div>` の下に
+> 追加します。
+
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/report/page.tsx
-import {
-  Cell, Legend, Pie, PieChart,
-  ResponsiveContainer, Tooltip,
-} from 'recharts';
-```
-
-```typescript
-// filepath: src/app/report/page.tsx
-// ステータス円グラフ: Card構造とPie定義
+// ステータス円グラフ: Card枠とPie定義
 <Card>
   <CardHeader>
-    <CardTitle>ステータス別タスク</CardTitle>
+    <CardTitle>
+      ステータス別タスク
+    </CardTitle>
   </CardHeader>
   <CardContent>
     <div className="h-[300px]">
@@ -240,19 +274,19 @@ import {
             outerRadius={80} label>
 ```
 
-続けて、各ステータスに色を付ける `Cell` と凡例・ツールチップを追加します。
+続けて、各ステータスに色を付ける `Cell` と
+凡例・ツールチップを追加して閉じます。
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// ステータス円グラフ: Cellの色分けと閉じタグ
+// ステータス円グラフ: Cell色分けと閉じタグ
             {statusData.map((entry) => (
-              <Cell key={entry.name}
+              <Cell key={entry.key}
                 fill={
-                  TASK_STATUS_COLORS[
-                    entry.name as
-                    keyof typeof
-                    TASK_STATUS_COLORS
-                  ] ?? '#9e9e9e'
+                  isTaskStatus(entry.key)
+                    ? TASK_STATUS_COLORS[
+                        entry.key]
+                    : CHART_FALLBACK_COLOR
                 } />
             ))}
           </Pie>
@@ -265,47 +299,52 @@ import {
 </Card>
 ```
 
+✅ **確認ポイント**:
+- `isTaskStatus` 型ガードで色を決定している
+- `as` 型アサーションを使っていない
+- 円グラフが表示される
+
 > 💡 `ResponsiveContainer` は親要素の
 > サイズに合わせてグラフを自動調整します。
 > `h-[300px]` で高さを固定しています。
 
-✅ **確認ポイント**:
-- 円グラフが表示される
-- ステータスごとに色分けされる
-
-![ステータス円グラフ](./screenshots/report.png)
+📸 スクリーンショット: ステータス別の円グラフが色分けされて表示されることを確認してください。
 
 ---
 
-### Step 5: 優先度円グラフを追加（5分）
+### Step 5: 優先度集計と円グラフ追加（5分）
 
-🎯 **ゴール**: 優先度別の円グラフも追加します。
+🎯 **ゴール**: 優先度別の集計データを作り、
+円グラフも追加します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 優先度別に集計
-const priorityData = useMemo(
-  () =>
-    Object.entries(
-      tasks?.reduce(
-        (acc, task) => {
-          acc[task.priority] =
-            (acc[task.priority] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>,
-      ) || {},
-    ).map(([name, value]) =>
-      ({ name, value })),
-  [tasks],
-);
+// 優先度別に集計（return文の前に追加）
+const priorityData = useMemo(() => {
+  const counts = new Map<string, number>();
+  for (const task of tasks ?? []) {
+    counts.set(
+      task.priority,
+      (counts.get(task.priority) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(
+    ([key, value]) => ({
+      key,
+      name: isTaskPriority(key)
+        ? TASK_PRIORITY_LABELS[key] : key,
+      value,
+    }));
+}, [tasks]);
 ```
+
+✅ **確認ポイント**:
+- ステータスと共通のパターンで集計している
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 優先度円グラフ: Card構造とPie定義
+// 優先度円グラフ: Card枠とPie定義
 <Card>
   <CardHeader>
     <CardTitle>
@@ -324,19 +363,19 @@ const priorityData = useMemo(
             outerRadius={80} label>
 ```
 
-続けて、各優先度に色を付ける `Cell` と凡例・ツールチップを追加します。
+続けて、各優先度に色を付ける `Cell` と
+凡例・ツールチップを追加して閉じます。
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 優先度円グラフ: Cellの色分けと閉じタグ
+// 優先度円グラフ: Cell色分けと閉じタグ
             {priorityData.map((entry) => (
-              <Cell key={entry.name}
+              <Cell key={entry.key}
                 fill={
-                  TASK_PRIORITY_COLORS[
-                    entry.name as
-                    keyof typeof
-                    TASK_PRIORITY_COLORS
-                  ] ?? '#9e9e9e'
+                  isTaskPriority(entry.key)
+                    ? TASK_PRIORITY_COLORS[
+                        entry.key]
+                    : CHART_FALLBACK_COLOR
                 } />
             ))}
           </Pie>
@@ -349,14 +388,15 @@ const priorityData = useMemo(
 </Card>
 ```
 
-> 💡 ステータスと同じ構造です。
-> `TASK_PRIORITY_COLORS` で色を変えるだけで
-> 優先度のグラフも作れます。
-
 ✅ **確認ポイント**:
+- `isTaskPriority` 型ガードで色を決定している
 - 2つの円グラフが表示される
 
-![2つの円グラフ](./screenshots/report.png)
+> 💡 ステータスと共通の構造です。
+> `TASK_PRIORITY_COLORS` で色を変えるだけで
+> 優先度のグラフが完成します。
+
+📸 スクリーンショット: ステータスと優先度の2つの円グラフが表示されることを確認してください。
 
 ---
 
@@ -369,13 +409,16 @@ const priorityData = useMemo(
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// グラフの親要素
+// Step 4・5のCard2つをこのgridで囲む
 <div className="grid grid-cols-1
   md:grid-cols-2 gap-6">
-  {/* ステータス円グラフ */}
-  {/* 優先度円グラフ */}
+  {/* Step 4 のステータス円グラフCard */}
+  {/* Step 5 の優先度円グラフCard */}
 </div>
 ```
+
+> 💡 Step 4・5 で書いた `<Card>` を
+> この `<div>` の中に移動してください。
 
 ✅ **確認ポイント**:
 - PCでは横並び、モバイルでは縦並び
@@ -387,14 +430,18 @@ const priorityData = useMemo(
 | モバイル | `grid-cols-1` | 縦並び |
 | PC | `md:grid-cols-2` | 横並び |
 
-✅ **確認ポイント**:
-- PCでは横並び、モバイルでは縦並び
 
 ---
 
 ### Step 7: 動作確認（3分）
 
 🎯 **ゴール**: グラフ表示の全体を確認します。
+
+```bash
+# filepath: ターミナル（確認用）
+npm run dev
+# http://localhost:3000/report にアクセス
+```
 
 1. `/report` にアクセス
 2. 統計カード（Day 21）の下にグラフ
@@ -407,20 +454,12 @@ const priorityData = useMemo(
 - 色がステータス/優先度に対応している
 - Tooltipで件数が確認できる
 
-![完成したグラフセクション](./screenshots/report.png)
-
----
-
-```bash
-# filepath: ターミナル
-# 開発サーバーを起動して動作確認
-npm run dev
-```
+📸 スクリーンショット: 統計カード4枚の下に円グラフ2つがグリッド配置された完成画面を確認してください。
 
 ## 📋 今日のまとめ
 
 - [ ] Recharts でグラフを表示できた
-- [ ] `reduce` でグラフ用データを集計した
+- [ ] `Map` でグラフ用データを集計した
 - [ ] 色定数で円グラフを色分けした
 - [ ] レスポンシブに2列配置できた
 
@@ -440,7 +479,7 @@ npm run dev
 | PieChart | 円グラフのコンポーネント |
 | Cell | 円グラフの各セクション |
 | ResponsiveContainer | サイズ自動調整コンテナ |
-| Object.entries | オブジェクトを配列に変換 |
+| Map.entries | Mapのキー・値ペアを配列に変換 |
 
 ## 🔜 次回予告
 

@@ -2,7 +2,18 @@
 
 ## 🔙 前回の振り返り
 
-Day 01 では開発環境のセットアップを行い、mise・Node.js・Docker Desktop・VS Code をインストールして、タスク管理アプリを `npm run dev` で起動するところまで完了しました。ローカルでアプリが動く状態になったので、今日は実際にコードを編集してダッシュボードを改造していきます。
+Day 01 では開発環境のセットアップを行い、タスク管理アプリを `npm run dev` で起動するところまで完了しました。今日は実際にコードを編集してダッシュボードを改造していきます。
+
+### 🔧 事前準備
+
+作業を始める前に、以下が完了していることを確認してください。
+
+| 確認項目 | コマンド/操作 | OK状態 |
+|---------|-------------|--------|
+| Docker Desktop起動 | アプリを開く | クジラアイコンが表示 |
+| DB起動 | `docker compose up -d db` | `running` 状態 |
+| 開発サーバー起動 | `npm run dev` | `✓ Ready` と表示 |
+| ログイン | http://localhost:3000 | ダッシュボードが見える |
 
 ---
 
@@ -10,7 +21,7 @@ Day 01 では開発環境のセットアップを行い、mise・Node.js・Docke
 
 ダッシュボードにウェルカムバナー（歓迎メッセージのカード）を追加します。この作業を通じて、変数（`const`/`let`）と型（`string`/`number`/`boolean`）の基本を体験します。
 
-![ダッシュボード画面](./screenshots/dashboard.png)
+📸 スクリーンショット: ダッシュボード画面にウェルカムバナーが表示されている完成イメージ
 
 ## 🤔 なぜこれを作るのか？
 
@@ -21,7 +32,7 @@ Day 01 では開発環境のセットアップを行い、mise・Node.js・Docke
 ### 📐 今日の作業の流れ
 
 ```mermaid
-graph TD
+flowchart TD
     A[ダッシュボードのコードを読む] --> B[ウェルカムバナーを追加]
     B --> C[constとletの違いを体験]
     C --> D[型エラーをわざと起こす]
@@ -101,8 +112,9 @@ import {
 | `@/component/ui/card` | Cardコンポーネントの場所 | 「棚のUI引き出しからCardを取る」 |
 
 ✅ **確認ポイント**:
-1. VS Codeで`src/app/dashboard/page.tsx`が開けた
-2. `import`文でCardやBadgeを読み込んでいることが確認できた
+- VS Codeで`src/app/dashboard/page.tsx`が開けた
+- `import`文でCardやBadgeを読み込んでいることが確認できた
+- import文の中で知っている単語（Card、Badgeなど）を1つ見つけた
 
 📝 **学んだこと**: Reactのページは`import`で必要な部品を集めてから、画面を組み立てます。
 
@@ -112,33 +124,33 @@ import {
 
 🎯 **ゴール**: `const`を使って変数を作り、画面に表示します。
 
-`src/app/dashboard/page.tsx`を開いて、`return`文の中（`<h1>`の直前）にウェルカムメッセージを追加します。
+`src/app/dashboard/page.tsx`を開いて、ウェルカムメッセージを追加します。具体的には、`const recentTasks = tasks?.slice(0, 5) ?? [];` の行の下、`return (` の行の直前に変数を宣言します。
+
+> ⚠️ **前提**: ダッシュボードを表示するにはログインが必要です。ブラウザで `http://localhost:3000` を開き、メールアドレス `admin@example.com`、パスワード `password123` でログインしてからアクセスしてください。
 
 💻 **実装**:
 
+`return`文の**前**に変数を宣言します。関数コンポーネント内の`return`より上に追加してください。
+
 ```typescript
-// filepath: src/app/dashboard/page.tsx（return内を変更）
-// ↓ この3行をreturnの<div>の先頭に追加
-const greeting: string = "こんにちは！";
-const userName: string = "開発者";
-const message: string = `${greeting}${userName}さん`;
+// filepath: src/app/dashboard/page.tsx（returnの直前に追加）
+  // ウェルカムメッセージ用の変数
+  const greeting: string = "こんにちは！";
+  const userName: string = "開発者";
+  const message: string = `${greeting}${userName}さん`;
 ```
 
-具体的には、`return`文の`<AppLayout>`の中を以下のように変更してください。
+次に、`return`文の`<h1>ダッシュボード</h1>`の直後に表示用の要素を追加します。
 
 ```typescript
-// filepath: src/app/dashboard/page.tsx（return文の変更箇所）
-  return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* ↓ ウェルカムメッセージを追加 */}
+// filepath: src/app/dashboard/page.tsx（<h1>タグの直後に追加）
+        {/* ウェルカムメッセージを追加 */}
         <p className="text-lg text-muted-foreground">
-          {`こんにちは！開発者さん`}
+          {message}
         </p>
-        <h1 className="text-3xl font-bold tracking-tight">
-          ダッシュボード
-        </h1>
 ```
+
+> 💡 **ポイント**: 変数の宣言は必ず`return`文の**前**に書きます。`return`の中はJSX（画面の構造）を書く場所で、変数の宣言はできません。
 
 🔍 **コード解説**:
 
@@ -153,7 +165,7 @@ const message: string = `${greeting}${userName}さん`;
 2. ブラウザで`http://localhost:3000/dashboard`を確認
 3. 「こんにちは！開発者さん」と表示されている
 
-![ウェルカムメッセージが表示されたダッシュボード](./screenshots/dashboard.png)
+📸 スクリーンショット: ダッシュボードのタイトル下に「こんにちは！開発者さん」というメッセージが表示されている状態
 
 📝 **学んだこと**: `const`で変数を宣言し、`{変数名}`でJSXに表示できます。
 
@@ -173,7 +185,7 @@ Step 2で追加した`<p>`タグを、`Card`コンポーネントに置き換え
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">
-              こんにちは！開発者さん 👋
+              {message} 👋
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -198,7 +210,7 @@ Step 2で追加した`<p>`タグを、`Card`コンポーネントに置き換え
 2. ウェルカムメッセージがカードの中に表示されている
 3. 薄い背景色がついている
 
-![Cardコンポーネントで囲まれたウェルカムバナー](./screenshots/dashboard.png)
+📸 スクリーンショット: ウェルカムメッセージがCardコンポーネントで囲まれ、薄い背景色がついた状態
 
 📝 **学んだこと**: shadcn/uiの`Card`コンポーネントで、見た目を整えられます。
 
@@ -242,6 +254,10 @@ CardTitleの中身を変数で管理してみましょう。`return`の前に以
 ### Step 5: 型エラーをわざと起こす（5分）
 
 🎯 **ゴール**: 型が合わないコードを書いて、TypeScriptのエラーメッセージを読む練習をします。
+
+> 💡 **安心してください**: エラーを起こしてもアプリが壊れることはありません。VS Codeが赤い波線で教えてくれるだけです。いつでも元に戻せるので、安心して実験してください。
+
+📸 スクリーンショット: VS Codeで赤い波線とエラーメッセージが表示されている画面
 
 Step 4のコードの下に、わざと間違ったコードを追加してください。
 
@@ -302,27 +318,34 @@ VS Codeで`"たくさん"`の部分に赤い波線が表示されるはずです
 
 📝 **学んだこと**: 型注釈は`変数名: 型 = 値`の形式で書きます。正しい型の値を入れないとエラーになります。
 
+> ⚠️ **後片付け**: Step 7に進む前に、以下の実験用コードを**削除してください**。残しておくと未使用変数のエラーが出ます。
+>
+> **削除する変数**: `welcomeText`、`dynamicText`、`taskCount`、`projectName`、`isCompleted`（Step 4〜6で追加した行すべて）
+>
+> **残すもの**: `greeting`、`userName`、`message`（Step 2）とCardコンポーネント（Step 3）
+
 ---
 
 ### Step 7: バナーに統計情報を型付きで追加する（7分）
 
 🎯 **ゴール**: ウェルカムバナーに「今日の統計」を追加し、型付き変数を実践的に使います。
 
-既存のstats配列のすぐ下で、バナー用の統計情報を作ります。
+`const recentTasks = tasks?.slice(0, 5) ?? [];` の下に、バナー用の統計情報を追加します。
+
+> 💡 **`totalTasks` と `completedTasks` はどこから来る？**: ダッシュボードのコードを上にたどると、`api.task.getAll.useQuery()` でタスク一覧をサーバーから取得し、そこから `totalTasks`（全タスク数）や `completedTasks`（完了タスク数）を計算しています。今は「すでに用意されている変数」として使えばOKです。
 
 💻 **実装**:
 
 ```typescript
-// filepath: src/app/dashboard/page.tsx（stats配列の下に追加）
-  // バナー用の統計サマリー
-  const completionRate: number =
-    totalTasks > 0
-      ? Math.round((completedTasks / totalTasks) * 100)
-      : 0;
-  const statusText: string =
-    completionRate >= 80
-      ? "素晴らしい進捗です！"
-      : "コツコツ進めていきましょう！";
+// filepath: src/app/dashboard/page.tsx（recentTasksの下に追加）
+  // 完了率を計算（小数を四捨五入）
+  const completionRate: number = totalTasks > 0
+    ? Math.round((completedTasks / totalTasks) * 100)
+    : 0;
+  // 80%以上なら褒める、未満なら励ます
+  const statusText: string = completionRate >= 80
+    ? "素晴らしい進捗です！"
+    : "コツコツ進めていきましょう！";
 ```
 
 次に、CardContentの中身を更新します。
@@ -350,7 +373,7 @@ VS Codeで`"たくさん"`の部分に赤い波線が表示されるはずです
 2. バナーに「タスク完了率: XX% — メッセージ」が表示されている
 3. 完了率に応じてメッセージが変わることを理解できた
 
-![統計情報付きウェルカムバナー](./screenshots/dashboard.png)
+📸 スクリーンショット: バナーに「タスク完了率: XX% — メッセージ」が表示されている状態
 
 📝 **学んだこと**: 型付き変数と三項演算子を組み合わせて、動的なメッセージを作れます。
 
@@ -383,7 +406,7 @@ export type TaskStatus =
 
 | コード | 意味 | 例え |
 |--------|------|------|
-| `as const` | オブジェクトの値を「固定」する | 金庫に入れて鍵をかける |
+| `as const` | オブジェクトの値を「刻印」する | セメントに文字を刻み込む（変更不可） |
 | `typeof TASK_STATUS` | オブジェクトの型を取得 | 金庫の中身リストを取り出す |
 | `keyof` | オブジェクトのキー一覧を取得 | リストの「見出し」だけ取り出す |
 | `export` | 他ファイルから使えるようにする | 書類を共有フォルダに入れる |
@@ -399,6 +422,8 @@ export type TaskStatus =
 1. `src/lib/constant/status.ts`を開けた
 2. `as const`が値を固定する仕組みがわかった
 3. `TASK_STATUS`が6種類のステータスを定義していることを確認した
+
+> 💡 **このファイルには他にも定義があります**: `TASK_STATUS_LABELS`（ステータスの日本語ラベル）や `TASK_STATUS_COLORS`（ステータスの色）も同じファイルに定義されています。ダッシュボードの `import` 文で見た `TASK_STATUS_LABELS` もここから来ています。
 
 📝 **学んだこと**: `as const`を使うと、オブジェクトの値が「変更不可の固定値」として扱われます。
 
@@ -429,6 +454,8 @@ export const TASK_PRIORITY_LABELS:
 |--------|------|------|
 | `Record<A, B>` | 「キーがA型、値がB型」の対応表 | 辞書。見出し語（A）と意味（B）のペア |
 | `Record<TaskPriority, string>` | 優先度→日本語ラベルの対応表 | 「LOW→低、HIGH→高」の辞書 |
+
+> 💡 **Step 8と同じパターンです**: `TASK_PRIORITY` オブジェクトと `TaskPriority` 型がファイルの上部に定義されています。`TASK_PRIORITY_LABELS` はその型を使って「優先度→日本語ラベル」の対応表を作っています。
 
 ✅ **確認ポイント**:
 1. `src/lib/constant/priority.ts`を開けた
