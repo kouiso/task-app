@@ -60,8 +60,6 @@ const baseMenuItems: MenuItem[] = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  // ハイドレーションミスマッチを防止するため、useState+useEffectで
-  // 初回レンダリングはSSRと一致させ、マウント後にクライアントモードに切り替える
   const [hasMounted, setHasMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -95,8 +93,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       : []),
   ];
 
-  // マウント後（クライアント）のみローディング・未認証チェックを実行
-  // SSR時・初回ハイドレーション時はmiddleware.tsが認証チェック済みのため、レイアウトを描画する
+  // SSR時はqueryが無効(enabled:false)のため isLoading=false, session=undefined
+  // ハイドレーション不一致を防ぐため、マウント後にのみ認証チェックを実行
   if (hasMounted && isLoading) {
     return <PageLoadingSpinner />;
   }
