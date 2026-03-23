@@ -70,7 +70,7 @@ sequenceDiagram
 | Step 7 | Cookieを消して認証ガードを体感する | 4分 | なし | リダイレクトされる |
 | Step 8 | publicとprotectedの違いを理解する | 5分 | なし（読むのみ） | 使い分けがわかる |
 
-**合計時間**: 約43分
+**合計時間**: 約43分（チャレンジセクションを含めると約55〜60分）
 
 ---
 
@@ -78,7 +78,7 @@ sequenceDiagram
 
 🎯 **ゴール**: ログイン時にブラウザとサーバーの間で何が起きているか、DevToolsで確認します。
 
-まずブラウザのDevToolsを開いてください。
+まず `npm run dev` で開発サーバーが起動していることを確認してから、ブラウザのDevToolsを開いてください。
 
 | OS | ショートカット |
 |------|---------------|
@@ -91,11 +91,7 @@ sequenceDiagram
 
 💻 **操作手順**:
 
-```bash
-# filepath: ターミナル
-# ブラウザでログインページを開く
-open http://localhost:3000/login
-```
+ブラウザで `http://localhost:3000/login` を開いてください。
 
 1. `/login`ページを開く
 2. DevToolsのNetworkタブを開く
@@ -115,14 +111,14 @@ DevToolsのNetworkタブで以下の内容を確認してください。
 | Request Body | `{"email":"...","password":"..."}` | 入力したデータがJSON形式で送られる |
 | Response | `{"error":{"message":"..."}}` | サーバーからのエラーレスポンス |
 
-> 💡 実際のレスポンスはtRPCの内部フォーマット（配列ラップ、codeフィールド等）のためもう少し複雑ですが、重要なのは`error.message`の部分です。
+> 💡 tRPCでは通常のREST APIと異なり、エラーでもHTTPステータスは `200` の場合があります。エラー情報はレスポンスボディ内の `error` オブジェクトに含まれます。重要なのは`error.message`の部分です。
 
 #### DevTools Networkタブの見方
 
 | 列名 | 見るべきポイント |
 |------|-----------------|
 | Name | `auth.login` を含むリクエストを探す |
-| Status | 成功は `200`、失敗は `400` や `401` |
+| Status | tRPCでは成功・失敗ともに `200` が返ることが多い（エラー情報はボディ内） |
 | Type | `fetch` と表示される |
 | Size | リクエストとレスポンスのデータ量 |
 
@@ -146,6 +142,7 @@ VS Codeで`src/server/api/routers/auth.ts`を開いてください。
 ```typescript
 // filepath: src/server/api/routers/auth.ts
 // ログイン処理の前半: ユーザー検索と存在チェック
+// ※ 読みやすさのために改行しています
 login: publicProcedure
   .input(loginSchema)
   .mutation(async ({ input }) => {
@@ -240,7 +237,7 @@ export async function encrypt(
 ```
 
 ✅ **確認ポイント**:
-- ファイルを保存した（読むだけなので変更は不要）
+- VS Codeで該当ファイルを開けた
 - JWTにユーザーID・メール・権限・有効期限が含まれることがわかった
 - `jose`ライブラリで署名していることを確認した
 
@@ -253,7 +250,7 @@ export async function encrypt(
 | `setExpirationTime('7d')` | 7日間有効（実際の有効期限を決定） | リストバンドの有効期限シール |
 | `sign(getKey())` | 秘密鍵で署名 | 店長のハンコで正式認定 |
 
-> 💡 **`payload.exp` と `setExpirationTime('7d')` の関係**: コードでは `payload.exp` にも有効期限を入れていますが、jose ライブラリでは `setExpirationTime('7d')` のほうが最終的な JWT の有効期限を決定します。つまり `setExpirationTime` が優先されます。
+> 💡 **`payload.exp` と `setExpirationTime('7d')` の関係**: `setExpirationTime('7d')` はペイロードの `exp` クレームを上書きします。このコードでは `payload.exp` も `createSession` 内で7日間として計算しているため結果は同じですが、最終的なトークンの有効期限は `setExpirationTime` の値で決まります。
 
 📝 **学んだこと**: JWTトークンには「誰が」「いつまで」「どの権限で」ログインしているかが記録されます。
 
@@ -271,7 +268,7 @@ export async function encrypt(
 - ログインし直してjwt.ioで`exp`の値が約1日後になっていればOK
 - 確認したら`'7d'`に戻しましょう
 
-> ⚠️ `setExpirationTime('1d')` に変更すると JWT は1日で期限切れになりますが、Cookie の `maxAge` は7日間のままです。Cookie はブラウザに残っていても、中身の JWT が期限切れなのでセッションは無効になります。
+> ⚠️ `setExpirationTime('1d')` に変更すると JWT は1日で期限切れになりますが、Cookie の `maxAge` は7日間のままです。Cookie はブラウザに残っていても、中身の JWT が期限切れなのでセッションは無効になります。なお `createSession` で計算される `payload.exp` は7日間のままですが、`setExpirationTime('1d')` がJWTの最終的な `exp` を1日後に上書きします。
 
 ---
 
@@ -300,7 +297,7 @@ export async function createSession(
 ```
 
 ✅ **確認ポイント**:
-- ファイルを保存した（読むだけなので変更は不要）
+- VS Codeで該当ファイルを開けた
 - ペイロードにユーザー情報と有効期限が含まれていることがわかった
 
 ```typescript
@@ -321,7 +318,7 @@ export async function createSession(
 ```
 
 ✅ **確認ポイント**:
-- ファイルを保存した（読むだけなので変更は不要）
+- VS Codeで該当ファイルを開けた
 - `httpOnly: true`がJavaScriptからのアクセスを防ぐことがわかった
 - 複数のセキュリティ設定が組み合わさっていることを理解した
 
@@ -349,7 +346,7 @@ export async function createSession(
 ✅ **確認ポイント**:
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
-- ログインし直してDevToolsのCookies一覧で`SameSite`が`Lax`に変わっていればOK
+- ログインし直してDevToolsのApplication → Cookies → `http://localhost:3000` → `session` Cookieの `SameSite` 列が `Lax` に変わっていればOK
 - 確認したら`'strict'`に戻しましょう
 
 > ⚠️ `sameSite: 'strict'`は最も安全な設定です。`'lax'`にするとリンクからの遷移時にCookieが送られるようになり、CSRF攻撃のリスクがわずかに上がります。学習用の変更なので、確認が終わったら必ず`'strict'`に戻してください。
@@ -379,7 +376,7 @@ const loginMutation =
     onError: (error) => {
       setError(
         error.message
-        ?? 'ログイン中にエラーが発生しました'
+        || 'ログイン中にエラーが発生しました'
       );
     },
   });
@@ -418,7 +415,7 @@ const loginMutation =
 | `toast.success()` | 成功メッセージを表示 | 緑色のポップアップ通知 |
 | `data.user.name` | APIレスポンスからユーザー名を取得 | 「○○さん」の名前部分 |
 | `{ duration: 4000 }` | 4秒間表示 | メッセージの表示時間 |
-| `callbackUrl` | ログイン前にアクセスしようとしていたURL | 元々行こうとしていた場所に案内する |
+| `callbackUrl` | ログイン前にアクセスしようとしていたURL（`?callbackUrl=/dashboard`のようにURLパラメータから取得） | 元々行こうとしていた場所に案内する |
 
 ![ログイン成功後のダッシュボード（トースト表示）](./screenshots/dashboard.png)
 
@@ -436,11 +433,7 @@ const loginMutation =
 
 💻 **操作手順**:
 
-```bash
-# filepath: ターミナル
-# jwt.ioをブラウザで開く
-open https://jwt.io
-```
+ブラウザで `https://jwt.io` を開いてください。
 
 1. DevToolsを開く（`F12` または `Cmd+Option+I`）
 2. **Application**タブ → 左メニューの **Cookies** → `http://localhost:3000` を選択
@@ -543,7 +536,7 @@ const isAuthenticated = t.middleware(
 ```
 
 ✅ **確認ポイント**:
-- ファイルを保存した（読むだけなので変更は不要）
+- VS Codeで該当ファイルを開けた
 - `npm run dev` でエラーが出ていない
 
 🔍 **2種類のプロシージャ**:
@@ -568,7 +561,7 @@ const isAuthenticated = t.middleware(
 ✅ **確認ポイント**:
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
-- Cookieを削除した状態でダッシュボードからタスク操作を試み、エラーメッセージが変わっていればOK
+- ログイン状態でダッシュボードを開き、DevToolsのApplication → Cookiesで`session`を削除してからタスク操作を試み、エラーメッセージが変わっていればOK
 - 確認後は元のメッセージに戻しましょう
 
 ---
