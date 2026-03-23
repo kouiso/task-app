@@ -257,7 +257,7 @@ interface TaskDialogProps {
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// react-hook-form + zod でフォームを初期化
+// 関数定義とuseForm初期化（前半）
 export function TaskDialog({
   open, onClose, onSubmit,
   initialData, projects, users,
@@ -280,19 +280,16 @@ export function TaskDialog({
 
 ✅ **確認ポイント**:
 - `useForm` に `resolver` と `values` が設定されている
-- 基本フィールドのデフォルト値が定義できた
-
-`values` の続きです。残りのフィールドを追加します。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// values の続き（同じオブジェクト内）
+// useForm初期化（後半: 残りのvalues）
       dueDate:
         initialData?.dueDate ?? '',
       estimatedHours:
         initialData?.estimatedHours,
       projectId: initialData?.projectId
-        || projects[0]?.id || '',
+        ?? projects[0]?.id ?? '',
       assigneeId:
         initialData?.assigneeId ?? '',
     },
@@ -301,13 +298,8 @@ export function TaskDialog({
 
 ✅ **確認ポイント**:
 - `values` に全フィールドが含まれている
-- `projectId` は `||` で空文字もフォールバックする
 
 > 💡 Day 10 の ProjectDialog と同じパターンです。`values` prop で `initialData` が変わるたびにフォームの値が自動同期されます。`id` や `dueDate` も含めることで、Day 15 の編集モードでも正しく初期化されます。**この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
-
-✅ **確認ポイント**:
-- `useForm` に `resolver` と `values` が設定されている
-- `control` を取得している（Selectで使う）
 
 #### useFormから取得するもの
 
@@ -821,7 +813,7 @@ const { data: users } =
   api.search.getProjectMembers.useQuery();
 const { data: session } =
   api.auth.getSession.useQuery();
-const utils = api.useUtils();
+// utils は上で定義済み
 ```
 
 ✅ **確認ポイント**:

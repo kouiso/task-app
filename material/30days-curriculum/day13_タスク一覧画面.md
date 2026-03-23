@@ -107,7 +107,7 @@ src/
 
 💻 **実装**:
 
-`src/app/task/page.tsx` を新規作成します。まずインポートとメインコンテンツの骨格です。
+`src/app/task/page.tsx` を作成します（既にファイルが存在する場合は内容を置き換えます）。まずインポートとメインコンテンツの骨格です。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -173,14 +173,22 @@ export default function TaskPage() {
 
 💻 **実装**:
 
-`TaskPageContent` 関数の先頭に以下を追加します。`api` はStep 3でインポートするので、ここではまだエラーが出ます。
+まず import 群に以下を追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// import群に追加
+import { api } from '@/trpc/react';
+```
+
+✅ **確認ポイント**:
+- `api` のインポートが追加できた
+
+次に `TaskPageContent` 関数の先頭に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
 // TaskPageContent関数の先頭に追加
-import { api } from '@/trpc/react';
-
-// TaskPageContent内
 const { data: tasks,
   isLoading: tasksLoading,
 } = api.task.getAll.useQuery(
@@ -455,25 +463,26 @@ const handleDelete =
         onClick={handleTaskClick}
       />
     ))
+  ) : (
 ```
 
 ✅ **確認ポイント**:
 - タスクがカード形式で表示されている
 - ステータス・優先度がBadgeで表示される
 
-タスクがない場合のメッセージも追加します。
+続けて、空状態のメッセージとグリッドの閉じタグを追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// タスクがない場合のメッセージ
-  ) : (
+// 上のコードの続き（空状態〜閉じ）
     <div className="col-span-full flex
       flex-col items-center
       justify-center py-12
       text-center
       text-muted-foreground">
       <p>タスクが見つかりません。</p>
-      <p>最初のタスクを作成しましょう！</p>
+      <p>最初のタスクを
+        作成しましょう！</p>
     </div>
   )}
 </div>
