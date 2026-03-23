@@ -99,6 +99,18 @@ stateDiagram-v2
 
 💻 **実装**:
 
+まず、`TaskStatus` 型をインポートします。import 群に以下を追加してください。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// import群に追加
+import type { TaskStatus }
+  from '@/lib/constant/status';
+```
+
+✅ **確認ポイント**:
+- `TaskStatus` のインポートが追加できた
+
 ```typescript
 // filepath: src/app/task/page.tsx
 // ステータス変更のハンドラー

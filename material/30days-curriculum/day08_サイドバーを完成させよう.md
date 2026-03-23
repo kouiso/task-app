@@ -1,4 +1,4 @@
-# Day 08: サイドバーを完成させよう
+# Day 08: サイドバーの仕組みを読み解こう
 
 ## 🔙 前回の振り返り
 
@@ -56,7 +56,7 @@ flowchart TD
 |------|--------|------|------|
 | useEffect | ユース・エフェクト | コンポーネント表示後に実行される処理 | ページを開いた直後の自動チェック |
 | AlertDialog | アラート・ダイアログ | 確認が必要な操作の前に表示するモーダル | 「本当に退出しますか？」のポップアップ |
-| 条件付きレンダリング（条件に応じて見せる内容を変える表示方法） | — | 条件によって表示内容を切り替える | 映画館で年齢制限のある映画のように、条件を満たす人だけにコンテンツを表示する仕組み |
+| 条件付き配列結合（スプレッド + 三項演算子） | — | 条件によって配列の要素を動的に追加する | 映画館で年齢制限のある映画のように、条件を満たす人だけにコンテンツを表示する仕組み。Reactの条件付きレンダリング（`{condition && <Component />}`）とは少し異なるJSテクニック |
 
 ## 📊 実装ステップ一覧
 
@@ -71,7 +71,7 @@ flowchart TD
 | Step 7 | モバイル表示を確認する | 3分 | なし | Sheet動作を確認 |
 | Step 8 | ログアウトの動作確認 | 3分 | なし | ログアウトが正常動作 |
 
-**合計時間**: 約37分
+**合計時間**: 約37分（ミニ演習を含めると約50〜55分）
 
 ---
 
@@ -135,7 +135,13 @@ export function AppLayout(
 💻 **操作手順**:
 
 1. ログインした状態で`/dashboard`が表示されることを確認
-2. DevToolsを開く（`F12` → **Application**タブ → 左メニュー **Cookies** → `localhost:3000` → `session`を右クリック → **Delete**）
+2. Cookie を削除する（以下の手順で操作）
+   1. `F12` でDevToolsを開く
+   2. **Application** タブをクリック
+   3. 左メニューの **Cookies** を展開
+   4. `localhost:3000` をクリック
+   5. `session` を右クリック
+   6. **Delete** をクリック
 3. ブラウザで`/dashboard`にアクセス
 4. 自動的に`/login`にリダイレクトされることを確認
 5. 再度ログインする（`admin@example.com` / `password123`）
@@ -180,7 +186,7 @@ ls src/component/ui/alert-dialog.tsx
 
 > 💡 通常は既にプロジェクトに含まれていますが、もし見つからない場合は `npx shadcn@latest add alert-dialog` で追加できます。
 
-このファイルには、以下のコンポーネントが含まれます。
+VS Codeで `src/component/ui/alert-dialog.tsx` を開いてみましょう。以下のコンポーネントがエクスポートされていることが確認できます。
 
 | コンポーネント | 役割 |
 |--------------|------|
@@ -327,7 +333,7 @@ import { USER_ROLE }
 ```
 
 ✅ **確認ポイント**:
-- `AlertDialogTrigger`の`asChild`は、子要素（Button）をそのままトリガーにするプロパティ
+- `AlertDialogTrigger`の`asChild`プロパティ: `asChild`なしだとAlertDialogTrigger自体がボタンになり、`asChild`ありだと中のButtonコンポーネントがトリガーになるため、デザインを自由にカスタマイズできる
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
@@ -463,11 +469,7 @@ npm run dev
 
 🎯 **ゴール**: ログアウト機能が正しく動作することを確認します。
 
-```bash
-# filepath: ターミナル
-# ブラウザでダッシュボードを開く
-open http://localhost:3000/dashboard
-```
+ブラウザで `http://localhost:3000/dashboard` を開いてください。
 
 ✅ **確認ポイント**:
 - ダッシュボード画面が表示されている

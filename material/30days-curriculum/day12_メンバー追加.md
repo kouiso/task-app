@@ -177,7 +177,22 @@ const { data: projectDetail } =
 - 5つのpropsが定義されている
 - `onRemoveMember` は `userId` を引数に取る
 
-JSX の `ProjectDialog` の直下に `ProjectDetailDialog` を配置します。`handleRemoveMember` はまだ作っていないので、Step 6 で実装します。ここでは先に配置だけ行います。
+まず `handleRemoveMember` の仮実装を追加します。Step 6 で本実装に差し替えます。TypeScript のエラーを防ぐため、先にプレースホルダーを定義しておきます。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 仮実装（Step 6で本実装に差し替え）
+const handleRemoveMember = (
+  userId: string
+) => {
+  console.log('remove:', userId);
+};
+```
+
+✅ **確認ポイント**:
+- TypeScript のエラーが出ていない
+
+次に、JSX の `ProjectDialog` の直下に `ProjectDetailDialog` を配置します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -477,7 +492,7 @@ const handleAddMember = () => {
 - `selectedProject` と `newMemberUserId` の両方を確認している
 - `role` に `newMemberRole` state の値をそのまま渡している
 
-ここまでで、メンバー追加・削除の両方ができました。プロジェクトにメンバーを追加して、一覧に反映されることを確認してみましょう。
+ここまでで、メンバー追加ができました。メンバー削除は Step 6 で実装します。まずはプロジェクトにメンバーを追加して、一覧に反映されることを確認してみましょう。
 
 ---
 

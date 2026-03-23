@@ -611,6 +611,22 @@ const groupedTasks = useMemo(() => {
 
 💻 **実装**:
 
+まず、Step 9-10 で本実装に差し替えるハンドラーの仮実装を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 仮実装（Step 9-10で差し替え）
+const handleEdit = (taskId: string) => {
+  console.log('edit:', taskId);
+};
+const handleDelete = (taskId: string) => {
+  console.log('delete:', taskId);
+};
+```
+
+✅ **確認ポイント**:
+- TypeScript のエラーが出ていない
+
 Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つのグループを順番に追加します。
 
 ```typescript

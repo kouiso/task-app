@@ -144,11 +144,9 @@ const commentUpdateSchema = z.object({
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// 編集・削除用の state（既存コード）
+// 編集・削除用の state と useForm
 const [editingCommentId, setEditingCommentId]
   = useState<string | null>(null);
-const [editingCommentContent,
-  setEditingCommentContent] = useState('');
 const [deleteCommentDialogOpen,
   setDeleteCommentDialogOpen]
   = useState(false);
@@ -157,8 +155,18 @@ const [deleteCommentTargetId,
   = useState<string | null>(null);
 ```
 
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// コメント編集用の react-hook-form
+const editCommentForm =
+  useForm<EditCommentFormValues>({
+    resolver:
+      zodResolver(editCommentSchema),
+  });
+```
+
 ✅ **確認ポイント**:
-- 4 つの state が TaskDetailDialog 内に定義されている
+- 3つの state + editCommentForm が定義されている
 - ファイルを開いて該当箇所を見つけた
 
 > 💡 `editingCommentId` が `null` なら
@@ -171,7 +179,7 @@ const [deleteCommentTargetId,
 | state | 型 | 役割 |
 |-------|-----|------|
 | `editingCommentId` | string \| null | 編集中のコメント ID |
-| `editingCommentContent` | string | 編集中のテキスト |
+| `editCommentForm` | useForm | 編集中テキストの管理（react-hook-form） |
 | `deleteCommentDialogOpen` | boolean | 削除ダイアログの表示 |
 | `deleteCommentTargetId` | string \| null | 削除対象の ID |
 
@@ -250,12 +258,14 @@ const handleStartEdit = (comment: {
   id: string; content: string;
 }) => {
   setEditingCommentId(comment.id);
-  setEditingCommentContent(comment.content);
+  editCommentForm.setValue(
+    'content', comment.content
+  );
 };
 
 const handleCancelEdit = () => {
   setEditingCommentId(null);
-  setEditingCommentContent('');
+  editCommentForm.reset();
 };
 ```
 
@@ -273,10 +283,9 @@ const handleCancelEdit = () => {
 {editingCommentId === comment.id ? (
   <div className="space-y-2">
     <Textarea
-      value={editingCommentContent}
-      onChange={(e) =>
-        setEditingCommentContent(
-          e.target.value)}
+      {...editCommentForm.register(
+        'content'
+      )}
       className="resize-none" rows={2} />
     <div className="flex gap-2 justify-end">
       <Button variant="outline" size="sm"
@@ -295,7 +304,8 @@ const handleCancelEdit = () => {
         onClick={() =>
           handleSaveEdit(comment.id)}
         disabled={
-          !editingCommentContent.trim()
+          !editCommentForm.watch('content')
+            .trim()
           || updateCommentMutation.isPending}>
         {updateCommentMutation.isPending
           ? '更新中...' : '更新'}
@@ -340,7 +350,7 @@ const updateCommentMutation =
         );
       }
       setEditingCommentId(null);
-      setEditingCommentContent('');
+      editCommentForm.reset();
     },
   });
 ```
@@ -354,12 +364,11 @@ const updateCommentMutation =
 // 保存ハンドラー
 const handleSaveEdit =
   (commentId: string) => {
-    if (!editingCommentContent.trim())
-      return;
+    const content = editCommentForm
+      .getValues('content').trim();
+    if (!content) return;
     updateCommentMutation.mutate({
-      id: commentId,
-      content:
-        editingCommentContent.trim(),
+      id: commentId, content,
     });
   };
 ```

@@ -161,8 +161,9 @@ const searchInputSchema = z.object({
 
 import { zodResolver }
   from '@hookform/resolvers/zod';
-import { Suspense, useEffect }
-  from 'react';
+import {
+  Suspense, useEffect, useState,
+} from 'react';
 import { useForm } from 'react-hook-form';
 import {
   useRouter, useSearchParams,
