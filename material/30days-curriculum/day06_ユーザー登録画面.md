@@ -169,11 +169,14 @@ const registerSchema = z.object({
   email: z.string()
     .email('有効なメールアドレスを入力してください'),
   password: z.string()
-    .min(8, 'パスワードは8文字以上で入力してください'),
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
   confirmPassword: z.string()
     .min(1, 'パスワード(確認)を入力してください'),
 }).refine(
-  // 申込書の暗証番号を見比べるチェック
   (data) => data.password === data.confirmPassword,
   {
     message: 'パスワードが一致しません',
@@ -207,8 +210,10 @@ type RegisterFormData =
 |-----------|--------|----------------|
 | 名前 | 必須（1文字以上） | 名前を入力してください |
 | メール | 必須 + メール形式 | 有効なメールアドレスを入力してください |
-| パスワード | 必須 + 8文字以上 | パスワードは8文字以上で入力してください |
+| パスワード | 必須 + 8文字以上 + 大文字・小文字・数字・特殊文字を含む | 各要件ごとのエラーメッセージ |
 | パスワード確認 | 必須 + パスワードと一致 | パスワードが一致しません |
+
+> 💡 **パスワード強度要件**: サーバー側のバリデーションと同じ要件をクライアント側でも設定しています。入力時に即座にエラーを表示し、不正なリクエストをサーバーに送らない設計です。
 
 #### `.refine()` のコード解説
 
@@ -223,7 +228,7 @@ type RegisterFormData =
 
 ### Step 3: react-hook-formを設定する（5分）
 
-🎯 **ゴール**: Day 05 と同じパターンで useForm を設定します。
+🎯 **ゴール**: `useForm` と `zodResolver` を組み合わせて、Zod スキーマによる自動バリデーションをフォームに接続します。
 
 💻 **実装**:
 
@@ -254,7 +259,7 @@ const onSubmit = async (
 - ブラウザで `/register` にアクセスしてエラーが出ていない
 - この時点ではまだフォーム欄は表示されません。Step 4 で入力欄を作ります
 
-> 💡 Day 05 で学んだ `useForm` + `zodResolver` のパターンと全く同じ構造です。react-hook-form の良いところは、フォームの項目が増えてもコードの構造が変わらないことです。
+> 💡 `useForm<RegisterFormData>` の型引数に Zod スキーマから推論した型を渡すことで、入力値の型が保証されます。`zodResolver(registerSchema)` が送信前に自動でバリデーションを実行し、エラーは `formState.errors` に格納されます。フォームの項目が増えても `useForm` の呼び出し自体は変わりません。
 
 ---
 
@@ -326,7 +331,7 @@ const onSubmit = async (
 
 📸 スクリーンショット: 名前とメールアドレスの入力欄が表示された状態
 
-![名前とメールアドレスの入力欄が表示された状態](./screenshots/register.png)
+![名前とメールアドレスの入力欄が表示された状態](./screenshots/register_step4.png)
 ---
 
 ### Step 5: パスワード入力欄を作る（5分）
@@ -403,7 +408,7 @@ const onSubmit = async (
 
 📸 スクリーンショット: 名前・メール・パスワード・パスワード確認の4つの入力欄が揃ったフォーム
 
-![名前・メール・パスワード・パスワード確認の4つの入力欄が揃っ](./screenshots/register.png)
+![名前・メール・パスワード・パスワード確認の4つの入力欄が揃っ](./screenshots/register_step6.png)
 ---
 
 ### Step 7: tRPCで登録APIを呼ぶ（7分）
@@ -412,11 +417,11 @@ const onSubmit = async (
 
 💻 **実装**:
 
-`RegisterPage()` の中で、`useForm` の設定の後に以下を追加します（Step 3 で書いた `onSubmit` は削除してください）。
+`RegisterPage()` の中で、`useForm` の設定の**前**（関数の先頭）に以下を追加します。
 
 ```typescript
 // filepath: src/app/register/page.tsx
-// RegisterPage内、useFormの設定の後に追加
+// RegisterPage内、useFormの設定の前に追加
 const router = useRouter();
 const [error, setError] =
   useState<string | null>(null);
@@ -430,7 +435,7 @@ const registerMutation =
     },
     onError: (error) => {
       setError(
-        error.message || 'ユーザー登録中にエラーが発生しました'
+        error.message ?? 'ユーザー登録中にエラーが発生しました'
       );
     },
   });
@@ -440,7 +445,15 @@ const registerMutation =
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
 
-続いて、Step 3 で書いた仮の `onSubmit` を以下に書き換えます。
+続いて、Step 3 で書いた仮の `onSubmit` を削除します。具体的には以下のコードを全て削除してください：
+
+```typescript
+const onSubmit = async (data: RegisterFormData) => {
+  console.log('登録データ:', data);
+};
+```
+
+削除したら、以下の新しい `onSubmit` を追加します。
 
 ```typescript
 // filepath: src/app/register/page.tsx
@@ -579,7 +592,7 @@ const onSubmit = async (
 
 📸 スクリーンショット: デザインが整った登録画面の完成形
 
-![デザインが整った登録画面の完成形](./screenshots/register.png)
+![デザインが整った登録画面の完成形](./screenshots/register_complete.png)
 ---
 
 ## 🏁 完成コード全体
@@ -626,7 +639,11 @@ const registerSchema = z.object({
   email: z.string()
     .email('有効なメールアドレスを入力してください'),
   password: z.string()
-    .min(8, 'パスワードは8文字以上で入力してください'),
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
   confirmPassword: z.string()
     .min(1, 'パスワード(確認)を入力してください'),
 }).refine(

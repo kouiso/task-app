@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.py,**/*.dart"
 ---
 
 # Pre-Mortem Analysis (プレモーテム分析) — プロジェクトの目的から逆算する思考

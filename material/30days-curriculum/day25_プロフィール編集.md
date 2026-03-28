@@ -295,7 +295,7 @@ return (
 <Avatar className="w-20 h-20
   rounded-lg">
   <AvatarImage
-    src={currentUser.avatar || ''}
+    src={currentUser.avatar ?? ''}
     className="object-cover" />
   <AvatarFallback
     className="rounded-lg

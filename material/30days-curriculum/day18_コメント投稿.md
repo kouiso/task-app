@@ -231,7 +231,7 @@ const { data: taskDetail } =
     className="flex gap-3 text-sm">
     <Avatar className="h-8 w-8 mt-1">
       <AvatarImage
-        src={comment.user.avatar || ''} />
+        src={comment.user.avatar ?? ''} />
       <AvatarFallback>
         {(comment.user.name
           || comment.user.email
@@ -350,7 +350,7 @@ const commentForm =
     <div className="flex justify-end">
       <Button type="submit" size="sm"
         disabled={
-          !commentForm.formState.isDirty
+          !commentForm.watch('content').trim()
           || createCommentMutation
             .isPending}>
         {createCommentMutation.isPending

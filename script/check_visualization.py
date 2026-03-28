@@ -23,7 +23,7 @@ def check_visualization(filepath):
     # 2. 絵文字マーカー: 📸
     # 3. Markdown画像リンク: ![...](./screenshots/...)
     screenshot_patterns = [
-        r'【スクリーンショット:.*?】',
+        r'【スクリーンショット[^】]*】',  # 旧形式: コロンあり・なし両対応
         r'📸',
         r'!\[.*?\]\(.*?\.png\)',
         r'!\[.*?\]\(.*?\.jpg\)',

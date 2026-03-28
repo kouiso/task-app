@@ -52,7 +52,7 @@ sequenceDiagram
 src/
 ├── app/
 │   └── project/
-│       └── page.tsx          ← メイン（今日作る）
+│       └── page.tsx          ← メイン（既存ファイルを編集）
 ├── component/
 │   ├── project/
 │   │   └── project-card.tsx  ← 既存（読み取り専用）
@@ -65,7 +65,7 @@ src/
         └── status.ts         ← 既存（利用する）
 ```
 
-> 💡 今日新しく作成するのは `src/app/project/page.tsx` の1ファイルだけです。他のファイルはすでに用意されているので、importして使います。
+> 💡 今日編集するのは `src/app/project/page.tsx` の1ファイルだけです。他のファイルはすでに用意されているので、importして使います。
 
 ### 🆕 新しく学ぶ概念
 
@@ -98,19 +98,30 @@ src/
 
 💻 **実装**:
 
-`src/app/project/page.tsx` を新規作成し、以下のコードを書いてください。
+> ⚠️ **注意**: `src/app/project/page.tsx` は既にプロジェクトに存在しています。上書きしないよう注意してください。既存のコードは削除せず、指示された部分のみ追加・修正してください。
+
+`src/app/project/page.tsx` を既存ファイルとして開き、ファイル先頭のimport一式と基本構造を確認してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// クライアントコンポーネント宣言とimport
+// Step 1で確認するimport一式（ファイル先頭部分）
 'use client';
 
-import { AppLayout } from
-  '@/component/layout/app-layout';
-import { PageLoadingSpinner } from
-  '@/component/ui/loading-spinner';
+import { Suspense } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+```
 
-// メインコンテンツ（AppLayoutを内包する）
+✅ **確認ポイント**:
+- ファイルを保存した
+- `'use client'` がファイル先頭にある
+- `Suspense`、`AppLayout`、`PageLoadingSpinner` の3つがimportされている
+
+`ProjectPageContent` と `ProjectPage` の基本構造を確認します。ページ本体は `Suspense` でラップされ、ローディング中に `PageLoadingSpinner` が表示されます。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// ProjectPageContentとProjectPageの基本構造
 function ProjectPageContent() {
   return (
     <AppLayout>
@@ -123,23 +134,10 @@ function ProjectPageContent() {
     </AppLayout>
   );
 }
-```
-
-✅ **確認ポイント**:
-- ファイルを保存した
-- `ProjectPageContent` の中に `AppLayout` を配置している
-
-続いて、ページ本体を `Suspense` でラップして定義します。`PageLoadingSpinner` は内部に `AppLayout` を含んでいるため、別途ラップする必要はありません。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// Suspenseのimportとページ本体
-import { Suspense } from 'react';
 
 export default function ProjectPage() {
   return (
-    <Suspense
-      fallback={<PageLoadingSpinner />}>
+    <Suspense fallback={<PageLoadingSpinner />}>
       <ProjectPageContent />
     </Suspense>
   );
@@ -267,16 +265,15 @@ import { TASK_STATUS }
 // filepath: src/app/project/page.tsx
 // ProjectPageContent内、returnの前に追加
 // Day 10-11 で本実装に差し替え（仮実装）
-// ※ console.logは開発中の動作確認用です
-//   本番コードでは使用禁止です
-const handleEdit = (id: string) => {
-  console.log('edit:', id);
+const handleEdit = (_id: string) => {
+  // TODO: Day 10 でプロジェクト編集ダイアログを開く
 };
-const handleDelete = (id: string) => {
-  console.log('delete:', id);
+const handleDelete = (_id: string) => {
+  // TODO: Day 11 で削除確認ダイアログを開く
 };
 const handleProjectClick = (id: string) => {
-  console.log('click:', id);
+  // TODO: Day 12 でプロジェクト詳細画面に遷移する
+  void id;
 };
 ```
 
@@ -308,11 +305,12 @@ const handleProjectClick = (id: string) => {
 
 💻 **実装**:
 
-`ProjectPageContent` の `return` 内にある `<h1>` の後に、グリッドレイアウトとカード一覧を追加します。
+`ProjectPageContent` の `return` 内にある `<h1>` の後に、グリッドコンテナとmap処理を追加します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// <h1>の後に追加（グリッド開始〜map）
+// ProjectPageContent の return 内、<h1> の直後に追加
+// グリッドコンテナとプロジェクトのmap処理
 <div className="grid gap-6
   sm:grid-cols-2 lg:grid-cols-3
   xl:grid-cols-4">
@@ -322,8 +320,7 @@ const handleProjectClick = (id: string) => {
         project.tasks?.length ?? 0;
       const doneCount =
         project.tasks?.filter(
-          (t) => t.status
-            === TASK_STATUS.DONE
+          (t) => t.status === TASK_STATUS.DONE
         ).length ?? 0;
 ```
 
@@ -331,11 +328,11 @@ const handleProjectClick = (id: string) => {
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
 
-続けて、`ProjectCard` コンポーネントの呼び出しと空状態を追加します。上のコードブロックの直後に配置してください。
+map の内側で `ProjectCard` コンポーネントを返します。**上のコードブロックの `length ?? 0;` の直後に続けて追加してください。**
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 上のコードの続き（カード〜空状態）
+// 前のコードブロックの続き（map内のreturn）
       return (
         <ProjectCard
           key={project.id}
@@ -343,11 +340,11 @@ const handleProjectClick = (id: string) => {
           name={project.name}
           description={project.description}
           color={project.color}
-          memberCount={
-            project.members?.length ?? 0}
+          memberCount={project.members?.length ?? 0}
           taskStats={{
             total: taskCount,
-            done: doneCount }}
+            done: doneCount,
+          }}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onClick={handleProjectClick}
@@ -373,20 +370,19 @@ const handleProjectClick = (id: string) => {
 
 💻 **実装**:
 
-Step 5 の `})` の直後に、空状態の表示と閉じタグを追加します。
+Step 5 の `projects.map(...)` の直後に、空状態の表示と `<div>` の閉じタグを追加します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// Step 5の続き（空状態〜閉じタグ）
+// 前のコードブロックの続き（<h1>後のgrid divの内側）
+// projects.map(...) の直後に続けて追加
   ) : (
     <div className="col-span-full flex
       flex-col items-center justify-center
       py-12 text-center
       text-muted-foreground">
-      <p>プロジェクトが
-        見つかりません。</p>
-      <p>最初のプロジェクトを
-        作成しましょう！</p>
+      <p>プロジェクトが見つかりません。</p>
+      <p>最初のプロジェクトを作成しましょう！</p>
     </div>
   )}
 </div>

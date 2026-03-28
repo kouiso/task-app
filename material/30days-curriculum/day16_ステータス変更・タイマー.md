@@ -477,8 +477,10 @@ return (
 // filepath: src/component/task/time-log-dialog.tsx
 'use client';
 
-import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 import {
   Dialog, DialogContent,
@@ -488,6 +490,20 @@ import {
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 import { api } from '@/trpc/react';
+```
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// バリデーションスキーマ定義
+const timeLogSchema = z.object({
+  hours: z.number().int().min(0),
+  minutes: z.number().int().min(0).max(59),
+}).refine(
+  (data) => data.hours * 60 + data.minutes > 0,
+  { message: '1分以上入力してください',
+    path: ['minutes'] },
+);
+type TimeLogFormData = z.infer<typeof timeLogSchema>;
 ```
 
 ```typescript
@@ -503,75 +519,50 @@ interface TimeLogDialogProps {
 export function TimeLogDialog({
   open, onClose, taskId, onSuccess,
 }: TimeLogDialogProps) {
-  const [hours, setHours] = useState('');
-  const [minutes, setMinutes] = useState('');
+  const {
+    register, handleSubmit, reset,
+    formState: { errors },
+  } = useForm<TimeLogFormData>({
+    resolver: zodResolver(timeLogSchema),
+    defaultValues: { hours: 0, minutes: 0 },
+  });
 ```
 
 > 💡 タイマーは自動で時間を計測しますが、
 > 手動記録は「昨日2時間作業した」のように
 > 後から記録する場合に使います。
+> `useState` ではなく `react-hook-form + zod` を使うことで、
+> バリデーションロジックをスキーマに集約できます。
+
+#### Zod スキーマのルール
+
+| フィールド | 制約 | エラーになる例 |
+|-----------|------|--------------|
+| `hours` | 0以上の整数 | `-1`、`1.5` |
+| `minutes` | 0〜59の整数 | `60`、`-5` |
+| `refine` | 合計 > 0分 | 両方0のまま送信 |
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// mutation・ハンドラー・バリデーション
+// mutation: 成功時にフォームをリセットしてダイアログを閉じる
   const addTimeMutation =
     api.task.addTime.useMutation({
       onSuccess: () => {
         onSuccess?.();
-        handleClose();
+        reset();
+        onClose();
       },
     });
-
-  const handleClose = () => {
-    setHours('');
-    setMinutes('');
-    onClose();
-  };
 ```
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 入力バリデーション: 数字のみ許可
-  const handleHoursChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
+// 送信ハンドラー: 時間と分を分数に変換してAPIを呼ぶ
+  const onSubmit = async (
+    data: TimeLogFormData,
   ) => {
-    const value = e.target.value;
-    if (value === '' || /^\d+$/.test(value))
-      setHours(value);
-  };
-
-  const handleMinutesChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const value = e.target.value;
-    if (value === ''
-      || (/^\d+$/.test(value)
-        && Number.parseInt(value, 10) < 60))
-      setMinutes(value);
-  };
-```
-
-#### バリデーション関数の役割
-
-| 関数 | 制限 | 理由 |
-|------|------|------|
-| `handleHoursChange` | 数字のみ | 不正入力の防止 |
-| `handleMinutesChange` | 数字のみ＋60未満 | 時間形式の制限 |
-| `isValid` | 合計 > 0 | 0分の記録を防止 |
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 送信ハンドラーとバリデーション
-  const isValid =
-    Number.parseInt(hours || '0', 10) * 60
-    + Number.parseInt(minutes || '0', 10)
-    > 0;
-
-  const handleSubmit = async () => {
     const totalMinutes =
-      Number.parseInt(hours || '0', 10) * 60
-      + Number.parseInt(minutes || '0', 10);
-    if (totalMinutes <= 0) return;
+      data.hours * 60 + data.minutes;
     try {
       await addTimeMutation.mutateAsync({
         id: taskId,
@@ -599,7 +590,7 @@ export function TimeLogDialog({
 // Dialog UI全体
   return (
     <Dialog open={open}
-      onOpenChange={handleClose}>
+      onOpenChange={onClose}>
       <DialogContent className="space-y-4">
         <DialogHeader>
           <DialogTitle>
@@ -611,27 +602,28 @@ export function TimeLogDialog({
         </DialogHeader>
         <div className="flex gap-4">
           <div className="flex-1">
-            <Label htmlFor="hours">
-              時間
-            </Label>
+            <Label htmlFor="hours">時間</Label>
             <Input id="hours"
-              value={hours}
-              onChange={handleHoursChange}
-              inputMode="numeric" />
+              inputMode="numeric"
+              {...register('hours',
+                { valueAsNumber: true })} />
           </div>
 ```
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 分の入力フィールド
+// 分の入力フィールド（バリデーションエラー表示付き）
           <div className="flex-1">
-            <Label htmlFor="minutes">
-              分
-            </Label>
+            <Label htmlFor="minutes">分</Label>
             <Input id="minutes"
-              value={minutes}
-              onChange={handleMinutesChange}
-              inputMode="numeric" />
+              inputMode="numeric"
+              {...register('minutes',
+                { valueAsNumber: true })} />
+            {errors.minutes && (
+              <p className="text-sm text-destructive">
+                {errors.minutes.message}
+              </p>
+            )}
           </div>
         </div>
 ```
@@ -641,17 +633,14 @@ export function TimeLogDialog({
 // フッターボタンとダイアログ終了
         <DialogFooter>
           <Button variant="outline"
-            onClick={handleClose}>
+            onClick={onClose}>
             キャンセル
           </Button>
-          <Button onClick={handleSubmit}
-            disabled={
-              !isValid
-              || addTimeMutation.isPending
-            }>
+          <Button
+            onClick={handleSubmit(onSubmit)}
+            disabled={addTimeMutation.isPending}>
             {addTimeMutation.isPending
-              ? '追加中...'
-              : '時間を追加'}
+              ? '追加中...' : '時間を追加'}
           </Button>
         </DialogFooter>
       </DialogContent>

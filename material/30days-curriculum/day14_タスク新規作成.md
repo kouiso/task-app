@@ -258,7 +258,7 @@ interface TaskDialogProps {
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// 関数定義とuseForm初期化（前半）
+// 関数定義とuseForm初期化（全体）
 export function TaskDialog({
   open, onClose, onSubmit,
   initialData, projects, users,
@@ -271,36 +271,24 @@ export function TaskDialog({
     values: {
       id: initialData?.id,
       title: initialData?.title ?? '',
-      description:
-        initialData?.description ?? '',
-      status: initialData?.status
-        ?? TASK_STATUS.TODO,
-      priority: initialData?.priority
-        ?? TASK_PRIORITY.MEDIUM,
-```
-
-✅ **確認ポイント**:
-- `useForm` に `resolver` と `values` が設定されている
-
-```typescript
-// filepath: src/component/task/task-dialog.tsx
-// useForm初期化（後半: 残りのvalues）
-      dueDate:
-        initialData?.dueDate ?? '',
-      estimatedHours:
-        initialData?.estimatedHours,
-      projectId: initialData?.projectId
-        ?? projects[0]?.id ?? '',
-      assigneeId:
-        initialData?.assigneeId ?? '',
+      description: initialData?.description ?? '',
+      status: initialData?.status ?? TASK_STATUS.TODO,
+      priority: initialData?.priority ?? TASK_PRIORITY.MEDIUM,
+      dueDate: initialData?.dueDate ?? '',
+      estimatedHours: initialData?.estimatedHours,
+      projectId: initialData?.projectId ?? projects[0]?.id ?? '',
+      assigneeId: initialData?.assigneeId ?? '',
     },
   });
 ```
 
 ✅ **確認ポイント**:
-- `values` に全フィールドが含まれている
+- `useForm` に `resolver` と `values` が設定されている
+- `values` に全フィールドが含まれている（このブロックをそのままコピーすれば動く）
 
-> 💡 Day 10 の ProjectDialog と同じパターンです。`values` prop で `initialData` が変わるたびにフォームの値が自動同期されます。`id` や `dueDate` も含めることで、Day 15 の編集モードでも正しく初期化されます。**この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
+> 💡 Day 10 の ProjectDialog と同じパターンです。`values` prop で `initialData` が変わるたびにフォームの値が自動同期されます。`id` や `dueDate` も含めることで、Day 15 の編集モードでも正しく初期化されます。
+
+> ⚠️ **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 
 #### useFormから取得するもの
 
@@ -652,7 +640,7 @@ return (
       render={({ field }) => (
         <Select
           value={
-            field.value || 'unassigned'}
+            field.value ?? 'unassigned'}
           onValueChange={(value) =>
             field.onChange(
               value === 'unassigned'
@@ -677,7 +665,7 @@ return (
               <SelectItem
                 key={user.id}
                 value={user.id}>
-                {user.name || user.email}
+                {user.name ?? user.email}
               </SelectItem>
             ))}
           </SelectContent>
@@ -857,7 +845,7 @@ const handleSubmit =
         data.estimatedHours,
       projectId: data.projectId,
       assigneeId:
-        data.assigneeId || undefined,
+        data.assigneeId ?? undefined,
     });
   };
 ```

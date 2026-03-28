@@ -62,7 +62,7 @@ function LoginForm() {
       router.refresh();
     },
     onError: (error) => {
-      setError(error.message || 'ログイン中にエラーが発生しました');
+      setError(error.message ?? 'ログイン中にエラーが発生しました');
     },
   });
 

@@ -243,6 +243,10 @@ import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 ```
 
+✅ **確認ポイント**:
+- `Input` と `Label` の import 文を追加した
+- `npm run dev` でエラーが出ていない
+
 LoginForm の return 内を以下に書き換えます。
 
 ```typescript
@@ -376,27 +380,80 @@ return (
       </CardHeader>
 ```
 
-続いて、CardContent部分でフォームを配置し、Cardタグを閉じます。
+✅ **確認ポイント**:
+- Card/CardHeader の import を追加した
+- `npm run dev` でエラーが出ていない
+
+続いて、CardContentの開始とメールアドレス入力欄を追加します。
 
 ```typescript
 // filepath: src/app/login/page.tsx
-// CardContent + Cardの閉じタグ
+// CardContentとメールアドレス入力欄
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)}
           className="space-y-4">
-          {/* メール・パスワード・ボタン */}
+          {/* メールアドレス入力欄 */}
+          <div className="space-y-2">
+            <Label htmlFor="email">
+              メールアドレス
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              autoComplete="email"
+              autoFocus
+              {...register('email')}
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive">
+                {errors.email.message}
+              </p>
+            )}
+          </div>
+```
+
+次に、パスワード入力欄を追加します。
+
+```typescript
+// filepath: src/app/login/page.tsx
+// パスワード入力欄
+          {/* パスワード入力欄 */}
+          <div className="space-y-2">
+            <Label htmlFor="password">
+              パスワード
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              {...register('password')}
+            />
+            {errors.password && (
+              <p className="text-sm text-destructive">
+                {errors.password.message}
+              </p>
+            )}
+          </div>
+```
+
+最後に、送信ボタンとCardの閉じタグを追加して完成させます。
+
+```typescript
+// filepath: src/app/login/page.tsx
+// 送信ボタン・CardContent・Cardの閉じタグ
+          {/* 送信ボタン */}
+          <Button
+            type="submit"
+            className="w-full">
+            ログイン
+          </Button>
         </form>
       </CardContent>
     </Card>
   </div>
 );
 ```
-
-具体的な手順は以下の通りです。
-
-1. Step 4-5で作った `<form>...</form>` タグ全体をカット（Ctrl+X）
-2. 上記コードの `<CardContent>` と `</CardContent>` の間にペースト
-3. Step 1で書いた元の `<div>` ラッパーを削除
 
 ✅ **確認ポイント**:
 - カード型のデザインで表示されている
@@ -428,6 +485,10 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 ```
 
+✅ **確認ポイント**:
+- `api`, `useRouter`, `useSearchParams`, `useState`, `toast` の import を追加した
+- `npm run dev` でエラーが出ていない
+
 > 💡 `react-hot-toast` はログイン成功時に「おかえりなさい」のような通知メッセージを画面に表示するライブラリです。Day 01の初期セットアップでインストール済みなので、import するだけで使えます。
 >
 > ⚠️ `useSearchParams` を使うコンポーネントには `Suspense` ラッパーが必要です。Step 9で追加するので、このステップではエラーが出る場合があります。
@@ -441,13 +502,21 @@ import toast from 'react-hot-toast';
 function isValidRedirectUrl(
   url: string
 ): boolean {
+  // URLが空ならfalseを返す
   if (!url) return false;
+  // プロトコル相対URL（//example.com）を禁止
   if (url.startsWith('//')) return false;
+  // 外部URLを禁止
   if (url.startsWith('http://')
     || url.startsWith('https://')) return false;
+  // 相対パスのみを許可
   return url.startsWith('/');
 }
 ```
+
+✅ **確認ポイント**:
+- `isValidRedirectUrl` 関数を LoginForm コンポーネントの外側に定義した
+- `npm run dev` でエラーが出ていない
 
 > 💡 `isValidRedirectUrl` を LoginForm の外に置くのがポイントです。この関数はコンポーネントの状態に依存しないため、モジュールスコープ（ファイルの直下）に定義します。再レンダリングのたびに関数が再生成されるのを防げます。
 
@@ -460,9 +529,10 @@ const router = useRouter();
 const searchParams = useSearchParams();
 
 // ログイン後の遷移先（未指定ならダッシュボード）
+// nullish coalescing演算子(??)でnull/undefinedのみをフォールバック
 const rawCallbackUrl =
   searchParams?.get('callbackUrl')
-  || '/dashboard';
+  ?? '/dashboard';
 const callbackUrl =
   isValidRedirectUrl(rawCallbackUrl)
     ? rawCallbackUrl : '/dashboard';
@@ -470,6 +540,10 @@ const callbackUrl =
 const [error, setError] =
   useState<string | null>(null);
 ```
+
+✅ **確認ポイント**:
+- `router`, `searchParams`, `callbackUrl`, `error` を LoginForm 内に追加した
+- `npm run dev` でエラーが出ていない
 
 tRPCのログインAPI呼び出しを定義します。
 
@@ -486,13 +560,19 @@ const loginMutation =
       router.refresh();
     },
     onError: (error) => {
+      // エラーメッセージがなければデフォルト文言を使用
       setError(
         error.message
-        || 'ログイン中にエラーが発生しました'
+        ?? 'ログイン中にエラーが発生しました'
       );
     },
   });
 ```
+
+✅ **確認ポイント**:
+- `loginMutation` を LoginForm 内に定義した
+- `onSuccess` と `onError` のコールバックを設定した
+- `npm run dev` でエラーが出ていない
 
 onSubmit 関数を更新します。
 
@@ -586,11 +666,15 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 ```
 
+✅ **確認ポイント**:
+- `Link` と `Suspense` の import を追加した
+- `npm run dev` でエラーが出ていない
+
 ボタンの下にリンクを追加します。
 
 ```typescript
 // filepath: src/app/login/page.tsx
-// Buttonの下に追加
+// Buttonの下に追加（新規登録ページへのリンク）
 <div className="text-center text-sm">
   アカウントをお持ちでない方は{' '}
   <Link
@@ -602,6 +686,10 @@ import { Suspense } from 'react';
   </Link>
 </div>
 ```
+
+✅ **確認ポイント**:
+- 「こちら」リンクがボタンの下に表示されている
+- `npm run dev` でエラーが出ていない
 
 最後に、LoginPage を Suspense でラップします。
 
