@@ -89,6 +89,7 @@ sequenceDiagram
 
 📸 スクリーンショット: DevToolsのNetworkタブを開いた状態
 
+![DevToolsのNetworkタブを開いた状態](./screenshots/dashboard.png)
 💻 **操作手順**:
 
 ブラウザで `http://localhost:3000/login` を開いてください。
@@ -471,6 +472,7 @@ jwt.io で以下の情報が確認できます。
 
 📸 スクリーンショット: DevToolsのApplication → Cookiesで`session`Cookieを選択した状態
 
+![DevToolsのApplication → Cookies](./screenshots/dashboard.png)
 📝 **学んだこと**: JWTトークンは暗号化ではなく「署名」です。中身は誰でもデコードできますが、改ざんすると署名が合わなくなります。
 
 ---
@@ -503,7 +505,6 @@ flowchart LR
 
 📸 スクリーンショット: Cookie削除後に`/login`にリダイレクトされた画面
 
-![ログイン画面（リダイレクト後）](./screenshots/login.png)
 
 📝 **学んだこと**: 認証ガードは「Cookieにセッションがあるか」をチェックし、なければログイン画面に強制遷移させます。
 

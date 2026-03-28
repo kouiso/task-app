@@ -22,6 +22,7 @@ DevTools の Console・Network・Elements タブの
 
 📸 スクリーンショット: エラーページ画面の表示を確認してください。
 
+![エラーページ画面の表示を確認してください。](./screenshots/error-page.png)
 ## 🤔 なぜこれを作るのか？
 
 Day 25 まで完走して、アプリの主要機能が一通り
@@ -125,6 +126,7 @@ throw new Error(
 
 📸 スクリーンショット: error.tsxのエラーページ画面の表示を確認してください。
 
+![error.tsxのエラーページ画面の表示を確認してください](./screenshots/error-page.png)
 📝 **学んだこと**: error.tsxは予期しないエラーが発生した時に「白い画面」の代わりにフォールバックUIを表示します。
 
 ---
@@ -441,6 +443,7 @@ npx biome check \
 
 📸 スクリーンショット: Biome lint のエラー出力画面を確認してください。
 
+![Biome lint のエラー出力画面を確認してください。](./screenshots/error-page.png)
 > 💡 `npx biome check ファイルパス` は
 > Biome を1ファイルだけに実行するコマンドです。
 > Step 7 の `npm run lint` は内部的に
@@ -505,10 +508,13 @@ npm run dev
 
 📸 スクリーンショット: DevTools Consoleタブの表示を確認してください。
 
+![DevTools Consoleタブの表示を確認してください](./screenshots/dashboard.png)
 📸 スクリーンショット: DevTools Networkタブの表示を確認してください。
 
+![DevTools Networkタブの表示を確認してください](./screenshots/dashboard.png)
 📸 スクリーンショット: DevTools Elementsタブの表示を確認してください。
 
+![DevTools Elementsタブの表示を確認してくださ](./screenshots/dashboard.png)
 📝 **学んだこと**: DevToolsは「症状に合った道具を選ぶ」のが大事です。Console→Network→Elementsの順でチェックするのが基本です。
 
 ---

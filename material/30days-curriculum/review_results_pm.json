@@ -1,1 +1,558 @@
-[]
+[
+  {
+    "chapter_id": "day01",
+    "file": "day01_開発環境を整えて、初めてのアプリを動かそう.md",
+    "technical_review": {
+      "approval": false,
+      "review_comment": "全体的に非常によくできた初日カリキュラムやけど、コードベースの実態と合わへん技術的な不正確さがいくつかある。特にStep 11のwebpack記述、VS Code拡張機能の不足、Step 12のログイン案内の不明確さが要修正。品質ルール面では概ね基準を満たしてるけど、スクリーンショット位置指定の表記が不統一なのも直したほうがええ。",
+      "issues": [
+        {
+          "severity": "major",
+          "category": "技術的不正確",
+          "description": "Step 11の開発サーバー説明テーブルに「webpack | Next.jsのデフォルトバンドラー」とあるが、実際のプロジェクトはTurbopackを使用しておらず、Next.js 15のデフォルトdevバンドラーはwebpackではない。さらにCLAUDE.mdの技術スタックには「Turbopack - 高速バンドラー（Next.js内蔵）」と記載されている。next.config.mjsにもTurbopack/webpack固有設定はなく、SWCコンパイラのみ使用。初学者に誤った知識を植え付ける。",
+          "suggestion": "webpackの行を削除するか、「バンドラー | コードをまとめて配信する仕組み（Next.jsが内部で処理）」のように抽象化する。Turbopackに言及するなら実態と合わせて正確に記述する。Day01でバンドラーの詳細に触れる必要性自体が低い。"
+        },
+        {
+          "severity": "major",
+          "category": "コードベースとの不一致",
+          "description": "Step 2で推奨拡張機能を3つ（EditorConfig, Biome, TODO Highlight）インストールしているが、.vscode/extensions.jsonには4つ定義されている: EditorConfig, Biome, stylelint, TODO Highlight。stylelint.vscode-stylelintが欠落している。",
+          "suggestion": "stylelintの拡張機能もインストールコマンドに追加する: `code --install-extension stylelint.vscode-stylelint`。拡張機能テーブルにも行を追加する。"
+        },
+        {
+          "severity": "major",
+          "category": "論理フロー",
+          "description": "Step 12で「管理者アカウントのメールアドレスは、Step 7で.envの_DEVELOPER_EMAILに設定した値です」とあるが、Step 7の例では `_DEVELOPER_EMAIL=admin@example.com` と記載している。初学者がこの例をそのまま使った場合、メールアドレスは `admin@example.com` になる。しかしseed.tsのコードを見ると、_DEVELOPER_EMAILが空の場合も `admin@example.com` がフォールバック値として使われる。つまり「設定した値」という表現が曖昧で、そのまま例通りに設定した人には冗長な説明になっている。",
+          "suggestion": "Step 7の例示値 `admin@example.com` をそのまま使ったケースを前提に、Step 12のログイン情報テーブルを `admin@example.com` / `password123` と明示する。その上で「Step 7で別の値に変更した方はその値を使ってください」と補足する方が初学者に親切。"
+        },
+        {
+          "severity": "minor",
+          "category": "技術的不正確",
+          "description": "Step 7の説明で「DATABASE_URLは${_DOCKER_COMPOSE_HOST_PORT_DB}という変数参照を含んでいますが、同じファイル内で_DOCKER_COMPOSE_HOST_PORT_DB=5432と定義されているため、自動的に5432に解決されます」とあるが、.envファイル内の変数展開はアプリケーション側（dotenvなど）の実装に依存する。dotenvの標準的な実装では.env内の変数参照はサポートされるが、全てのdotenv実装でサポートされるわけではない。このプロジェクトではNext.jsの.env読み込み機能を使っているが、Next.jsの.envパーサーは変数展開をサポートしている。説明自体は間違いではないが「自動的に解決されます」は少し楽観的。",
+          "suggestion": "「Next.jsの環境変数読み込み機能が、同じファイル内の変数参照を自動的に展開してくれます」のように、何が解決してくれるのかを明示する。"
+        },
+        {
+          "severity": "minor",
+          "category": "品質ルール違反",
+          "description": "スクリーンショット位置指定の表記が不統一。一部は「> 📸 〜を確認してください。」形式、一部は「📸 スクリーンショット: 〜」形式、一部は「【スクリーンショット】」形式。品質ルールでは「【スクリーンショット】」形式を推奨している。",
+          "suggestion": "全て「【スクリーンショット】」形式に統一する。例: 「【スクリーンショット】ターミナルに `v25.6.1` が表示された画面」"
+        },
+        {
+          "severity": "minor",
+          "category": "コマンドの安全性",
+          "description": "Step 1のmiseインストールで `curl https://mise.run | sh` を使っているが、HTTPSとはいえ外部スクリプトをパイプで直接shに渡すのはセキュリティ上のベストプラクティスに反する。教材として初学者に教える場合、この慣行を無条件に推奨するのは適切でない。",
+          "suggestion": "コマンドの直前に「💡 このコマンドはmise公式のインストールスクリプトをダウンロードして実行します。信頼できるソース（mise.run）からのみ実行してください」のような注釈を追加する。"
+        },
+        {
+          "severity": "minor",
+          "category": "論理フロー",
+          "description": "Step 4のWindowsユーザー向け注釈で `cd ~/Desktop` → `cd $HOME\\Desktop` と案内しているが、PowerShellでは `~` は `$HOME` に展開されるので `cd ~/Desktop` もPowerShellで動作する。不要な分岐で初学者を混乱させる可能性がある。",
+          "suggestion": "Windowsユーザー向けの代替コマンドを削除するか、「PowerShellでも `cd ~/Desktop` で動作しますが、うまくいかない場合は `cd $HOME\\Desktop` を試してください」に変更する。"
+        },
+        {
+          "severity": "minor",
+          "category": "概念の一貫性",
+          "description": "Step 8のpostinstall/prisma generateに関する説明で「npm installの完了時にprisma generateが自動実行されるため」と述べているが、package.jsonのpostinstallスクリプトの存在を確認していない。存在しない場合、この説明は不正確。",
+          "suggestion": "package.jsonにpostinstallスクリプトがあるか確認し、ない場合はこの説明を削除する。あるいは「一部のライブラリはインストール時に初期化処理を実行するため」のように一般化する。"
+        },
+        {
+          "severity": "minor",
+          "category": "品質ルール",
+          "description": "Step 1の「なぜバージョン管理が大切なのか」セクション直後の段落が4文になっている: (1)このプロジェクトは〜要求しています。(2)違うバージョンだと〜エラーになります。(3)miseを使えば〜防げます。→ 3文なので実はOKだが、直前の段落と合わせて読むと流れが冗長。",
+          "suggestion": "問題なし（3文以内に収まっている）。指摘取り下げ。"
+        }
+      ]
+    },
+    "ux_review": {
+      "approval": false,
+      "review_comment": "Day 01の全体構成・トーン・学習体験設計は非常に優れています。料理の例え話を一貫して使った概念説明、OS別の手順分岐、トラブルシューティング表の冒頭配置など、初心者への配慮が行き届いています。ただし、品質ルールへの違反が複数あり、修正が必要です。特に冒頭段落の4文超過、コードブロック内の日本語コメント欠落（約15箇所）、一部コードブロック直後の確認ポイント欠落、およびステップ時間上限超過（4ステップが10分）が主な問題です。",
+      "issues": [
+        {
+          "severity": "critical",
+          "category": "段落長ルール違反",
+          "description": "冒頭段落が4文で構成されている：「ようこそ！〜」「今日は〜」「最初の〜」「今日の終わりには〜」。絶対ルール「段落上限: 3文」に違反。",
+          "suggestion": "2段落に分割する。例：「ようこそ！ 30日間カリキュラムの第1日目です。今日はこれから30日間で作り上げていくタスク管理アプリを、あなたのパソコンで実際に動かすところまで進めます。最初のセットアップは少し手順が多く感じるかもしれませんが、ひとつずつ進めれば大丈夫です。\\n\\n今日の終わりには、ブラウザに自分だけのアプリが表示される達成感を味わえます。」"
+        },
+        {
+          "severity": "major",
+          "category": "日本語コメント欠落",
+          "description": "約15箇所のコードブロックにコード内の日本語コメントがない。例：`curl https://mise.run | sh`、`echo 'eval...' >> ~/.zshrc` + `source ~/.zshrc`、`winget install jdx.mise`、`mise --version`、VS Code拡張機能インストール3行、`docker --version`、`code .`、`mise install`、`node -v`、`npm -v`、`docker compose up -d db`、`docker compose ps`、`npx prisma db push`、`npm run db:seed`、`npm run dev`。",
+          "suggestion": "全コードブロックに日本語コメントを追加する。例：`# filepath: ターミナル（Mac）\\n# miseのインストールスクリプトを実行する\\ncurl https://mise.run | sh`、`# filepath: ターミナル\\n# miseのバージョンを確認する\\nmise --version`、`# filepath: ターミナル（task-appフォルダ内で実行）\\n# データベースをバックグラウンドで起動する\\ndocker compose up -d db` など。"
+        },
+        {
+          "severity": "major",
+          "category": "確認ポイント欠落",
+          "description": "一部コードブロックの直後に確認ポイントがない。Step 1の `curl https://mise.run | sh`、`echo ... >> ~/.zshrc` + `source ~/.zshrc`、bashの代替版、`winget install jdx.mise`、PowerShellプロファイル作成・追記の各ブロック直後に確認ポイントがない。",
+          "suggestion": "各コードブロック直後に簡潔な確認ポイントを追加する。例：curlの後に「✅ 確認ポイント:\\n- エラーなくインストールが完了した\\n- `mise is installed!` のようなメッセージが表示された」、shell設定追記後に「✅ 確認ポイント:\\n- コマンドがエラーなく実行できた」"
+        },
+        {
+          "severity": "major",
+          "category": "ステップ時間超過",
+          "description": "Step 1（10分）、Step 2（10分）、Step 3（10分）、Step 12（10分）が「1ステップ = 3〜7分」の絶対ルールに違反している。",
+          "suggestion": "10分のステップを分割する。例：Step 1を「Step 1a: miseをインストールする（5分）」と「Step 1b: miseの動作を確認する（3分）」に分割。Step 2を「VS Codeインストール（5分）」と「拡張機能インストール（5分）」に分割。Step 3を「Docker Desktopインストール（7分）」と「Docker動作確認（3分）」に分割。Step 12を「アプリにアクセスする（5分）」と「ログインを試す（5分）」に分割。ただし、分割するとステップ数が12を超える可能性があるため、quality-exceptionコメントで「インストール系ステップはダウンロード待ち時間を含むため7分以内に収まらない」と理由を記載する方法も検討。"
+        },
+        {
+          "severity": "minor",
+          "category": "学習者UX",
+          "description": "Step 4でWindows PowerShell向けの `cd` コマンドの注意書きが⚠️ブロック内にあるが、Macの `cd ~/Desktop` コマンドの直後に配置されているため、Windows初心者が見落とす可能性がある。",
+          "suggestion": "Mac/Windows両方のコマンドを並列で明示するか、OS別のタブ形式（Mac / Windows）で整理すると視認性が向上する。"
+        },
+        {
+          "severity": "minor",
+          "category": "学習者UX",
+          "description": "Step 7の `.env` 編集で「`${_DOCKER_COMPOSE_HOST_PORT_DB}` という変数参照を含んでいますが、同じファイル内で `_DOCKER_COMPOSE_HOST_PORT_DB=5432` と定義されているため、自動的に `5432` に解決されます」という説明は、完全初心者には唐突に感じる可能性がある。",
+          "suggestion": "この変数展開の仕組みについて、もう少しかみ砕いた説明を追加するか、あるいは「この部分は気にしなくてOKです。次のDayで詳しく学びます」のように学習段階に合わせて情報量を調整する。"
+        },
+        {
+          "severity": "minor",
+          "category": "コンテンツ正確性",
+          "description": "Step 11の表で「webpack」がNext.jsのデフォルトバンドラーと記載されているが、このプロジェクトのCLAUDE.mdでは「Turbopack - 高速バンドラー（Next.js内蔵）」と記載されている。Next.js 15ではTurbopackがデフォルト（`--turbopack` フラグ）の可能性がある。",
+          "suggestion": "実際の `package.json` の `dev` スクリプトを確認し、Turbopackが使用されている場合は「Turbopack（Next.js 15の高速バンドラー）」に修正する。不明な場合は「バンドラー（コードをまとめて配信する仕組み）」とだけ記載し、具体名を避ける。"
+        },
+        {
+          "severity": "minor",
+          "category": "トーン・モチベーション",
+          "description": "Step 10の `npm run db:seed` の説明で「このシードスクリプトは成功時にメッセージを表示しません」とあるが、初心者にとって「何も表示されない＝成功」は不安になりやすいパターン。",
+          "suggestion": "「何も表示されずにコマンドが終了すれば成功です。プログラミングの世界では『沈黙は成功のサイン（No news is good news）』ということがよくあります。エラーがあれば必ず赤い文字で教えてくれるので安心してください。」のように、初心者の不安を先回りして解消する表現にする。"
+        }
+      ]
+    },
+    "po_decision": {
+      "final_decision": "revise",
+      "decision_reason": "両レビューとも不承認であり、実際に原稿を見ると、技術的な不正確さと品質ルール違反の両方が残っています。特に、Step 11のwebpack記述、Step 2の推奨拡張機能不足、Step 12のログイン案内の曖昧さは、初学者に誤学習を与えるため修正必須です。加えて、段落3文以内・全コードブロック直後の確認ポイント・全コードブロック内の日本語コメント・ステップ時間3〜7分という絶対ルールに未達の箇所が複数あります。私はUXレビューの「約15箇所すべてに日本語コメント欠落」という指摘は概ね妥当と判断しますが、すべてを機械的に増やすだけでは読みにくくなるため、各コードブロックに最低1つは目的が分かる日本語コメントを入れる方針で統一すべきです。一方で、Technicalレビューの一部minor指摘（PowerShellのcd代替や.env変数展開の厳密性）は致命ではありませんが、初学者向け教材としては表現をより正確にしておく価値があります。さらに、レビューで十分に強調されていない点として、Step 7の`.env（変更する行のみ）`提示は『完全なコードであること』の原則とやや緊張関係があり、少なくとも「このステップでは既存ファイルの3行だけを書き換える」ことを明示して、全文掲載しない設計理由を補う必要があります。",
+      "revision_instructions": "以下の順で修正してください。1) 品質ルールの絶対違反を先に解消する。冒頭4文段落を分割し、Step 1/2/3/12 の10分表記は3〜7分に収まるよう再設計する。ステップ数が12を超える場合は、統合ではなく quality-exception を最小限使うより、Stepの粒度を見直して7〜12内に再編することを優先する。2) すべてのコードブロックに filepath コメントと日本語コメントを入れ、各コードブロック直後に必ず『確認ポイント』を追加する。特に Step 1 の mise インストール各ブロック、Step 2 の拡張機能インストール、Step 3 の docker --version、Step 5 の code .、Step 6 の mise install / node -v / npm -v、Step 9 の docker compose ps、Step 10 の db seed、Step 11 の npm run dev を重点修正する。3) 技術的不正確さを修正する。Step 11 の『webpack』は削除し、『バンドラー（コードをまとめて配信する仕組み）』のように抽象化する。Step 2 に stylelint.vscode-stylelint を追加し、拡張機能一覧も4件に合わせる。Step 12 のログイン情報は `admin@example.com` / `password123` を明示し、『Step 7で別のメールアドレスに変更した場合はその値を使う』と補足する。4) Step 7 の環境変数説明を初心者向けに調整する。`${_DOCKER_COMPOSE_HOST_PORT_DB}` の説明は『Next.jsの環境変数読み込みで展開されるので、Day 01ではこの部分は変更不要』程度に簡潔化する。`.env` のコード提示は『変更する3行のみ』であることを明記し、全文を載せない理由を説明するか、必要なら quality-exception を付ける。5) スクリーンショット表記をすべて `【スクリーンショット】...` に統一する。現在の `> 📸` や `📸 スクリーンショット:` は置換する。6) セキュリティと安心感を補強する。Step 1 の `curl ... | sh` の前に公式スクリプト実行である旨の注意を追加し、Step 10 の seed 成功時無出力については『何も表示されず終了すれば成功、エラー時は赤字で表示される』と不安を和らげる文にする。7) package.json を確認し、postinstall/prisma generate の説明が事実と一致するか検証する。一致しないなら一般化するか削除する。8) 最後に、品質チェックスクリプト前提で体裁を整える。表4個以上・Mermaid 1個以上は満たしているが、段落長・確認ポイント・コードコメント・ステップ時間でFAILしない状態まで修正すること。",
+      "priority_issues": [
+        {
+          "source": "UX",
+          "severity": "critical",
+          "category": "段落長ルール違反",
+          "description": "冒頭段落が4文で、絶対ルールの『段落上限3文』に違反している。",
+          "suggestion": "冒頭を2段落に分割し、各段落を3文以内に収める。"
+        },
+        {
+          "source": "UX",
+          "severity": "major",
+          "category": "ステップ時間超過",
+          "description": "Step 1、2、3、12 が10分で、絶対ルールの『1ステップ3〜7分』に違反している。",
+          "suggestion": "ステップを再分割または再編成し、各Stepを3〜7分に収める。必要なら全体のStep構成を見直す。"
+        },
+        {
+          "source": "UX",
+          "severity": "major",
+          "category": "日本語コメント欠落",
+          "description": "多数のコードブロックで、日本語コメント必須ルールを満たしていない。",
+          "suggestion": "全コードブロックに、実行目的が分かる日本語コメントを最低1行追加する。"
+        },
+        {
+          "source": "UX",
+          "severity": "major",
+          "category": "確認ポイント欠落",
+          "description": "複数のコードブロック直後に『確認ポイント』がない。",
+          "suggestion": "すべてのコードブロック直後に、実行結果を確認できる箇条書きの『確認ポイント』を追加する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "major",
+          "category": "技術的不正確",
+          "description": "Step 11で『webpack | Next.jsのデフォルトバンドラー』と説明しており、プロジェクト実態と整合していない。",
+          "suggestion": "webpack表記を削除し、『バンドラー（コードをまとめて配信する仕組み）』のように抽象化する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "major",
+          "category": "コードベースとの不一致",
+          "description": "Step 2の推奨拡張機能に stylelint.vscode-stylelint が含まれておらず、.vscode/extensions.json と不一致。",
+          "suggestion": "インストールコマンドと拡張機能一覧に stylelint を追加し、4件で統一する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "major",
+          "category": "論理フロー",
+          "description": "Step 12のログイン案内が曖昧で、Step 7の例示値との関係が初心者に分かりにくい。",
+          "suggestion": "ログイン情報を `admin@example.com` / `password123` と明示し、変更した人向けの補足を添える。"
+        },
+        {
+          "source": "Technical",
+          "severity": "minor",
+          "category": "品質ルール違反",
+          "description": "スクリーンショット位置指定の表記が `> 📸`、`📸 スクリーンショット:`、`【スクリーンショット】` で混在している。",
+          "suggestion": "全て `【スクリーンショット】...` 形式に統一する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "minor",
+          "category": "コマンドの安全性",
+          "description": "Step 1で `curl https://mise.run | sh` を無注釈で案内しており、教材としては安全性への配慮が弱い。",
+          "suggestion": "公式インストールスクリプトを実行するコマンドであること、信頼できるソースのみ実行することを注記する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "minor",
+          "category": "概念の一貫性",
+          "description": "Step 8の『npm install完了時にprisma generateが自動実行される』説明が、package.jsonの実態確認なしでは不正確な可能性がある。",
+          "suggestion": "package.jsonを確認し、事実なら根拠に沿って説明し、違うなら一般化または削除する。"
+        },
+        {
+          "source": "PO",
+          "severity": "major",
+          "category": "教材設計の明確性",
+          "description": "Step 7の `.env（変更する行のみ）` 提示は初心者には有用だが、『コードは完全でなければならない』方針と緊張関係がある。現状はその設計意図が説明されていない。",
+          "suggestion": "『既存テンプレートからコピー済みのため、このステップでは3行だけ変更する』と明記する。必要なら quality-exception コメントで全文掲載しない理由を補足する。"
+        },
+        {
+          "source": "PO",
+          "severity": "minor",
+          "category": "初心者の不安軽減",
+          "description": "Step 10のseed実行後に無出力で成功する挙動は、初心者にとって不安になりやすい。",
+          "suggestion": "『何も表示されず終了すれば成功。エラー時は赤字で表示される』と安心材料を加える。"
+        }
+      ]
+    }
+  },
+  {
+    "chapter_id": "day02",
+    "file": "day02_ダッシュボードに自分だけのメッセージを追加しよう.md",
+    "technical_review": {
+      "approval": true,
+      "review_comment": "技術的に正確で、コードベースとの整合性が高い教材です。実際のdashboard/page.tsxの構造、status.ts/priority.tsの定義、インポートパス（@/component/ 単数形）すべてが実コードと一致しています。論理的な流れも適切で、読む→書く→壊す→直す→実践→既存コード理解という段階的な構成は初心者に効果的です。以下のminor issueを修正すれば品質がさらに向上します。",
+      "issues": [
+        {
+          "severity": "minor",
+          "category": "技術的正確性",
+          "description": "Step 2で「`<h1>ダッシュボード</h1>`の直後に追加」と記述しているが、実際のコードは `<h1 className=\"text-3xl font-bold tracking-tight\">ダッシュボード</h1>` とクラス名付き。初心者がVS Codeで検索する際に正確な一致が見つからず混乱する可能性がある。",
+          "suggestion": "「`<h1 className=\"...\">ダッシュボード</h1>` という行の直後に追加」または「ダッシュボードと書かれた`<h1>`タグを探し、その直後に追加」のように、クラス名がある旨を明記する。"
+        },
+        {
+          "severity": "minor",
+          "category": "禁止ワード",
+          "description": "Step 9のTIPで「Step 8と同じパターンです」と記述。品質ルールの禁止ワード「おなじ」「一緒」に該当する可能性がある。後続の説明で具体的に記述されてはいるが、導入部分が禁止ワードに抵触する。",
+          "suggestion": "「`TASK_PRIORITY` オブジェクトと `TaskPriority` 型がファイルの上部に定義されています。Step 8で見た `TASK_STATUS` の構造と対比すると理解しやすいです。」のように具体的に書き直す。"
+        },
+        {
+          "severity": "minor",
+          "category": "コード品質ルール",
+          "description": "Step 1、Step 8、Step 9の「読むのみ」コードブロックにコード内日本語コメントがない。品質ルール「全コードブロックに日本語コメント必須」に厳密には抵触するが、既存コードをそのまま表示しているため、存在しないコメントを追加すると実際のファイルと乖離する。",
+          "suggestion": "各コードブロックの冒頭に `// filepath: ...（読むのみ・実際のファイル内容）` と明記し、説明コメントはコードブロック外のテーブルで提供する現在のアプローチを明示的に例外宣言する。例: `<!-- quality-exception: 既存コードの正確な表示のため、実ファイルに存在しないコメントは追加しない -->`"
+        },
+        {
+          "severity": "minor",
+          "category": "教材の完全性",
+          "description": "Step 6の後片付け指示で「削除する変数: welcomeText、dynamicText、taskCount、projectName、isCompleted」と列挙しているが、Step 4のコメント行 `// welcomeText = \"別のテキスト\";` の削除や、`const`/`let`の宣言行の具体的な行範囲が示されていない。初心者はどこからどこまで消すべきか迷う可能性がある。",
+          "suggestion": "「Step 4で追加した2つの変数（`welcomeText`と`dynamicText`のブロック）とStep 5-6で追加した3つの変数（`taskCount`、`projectName`、`isCompleted`のブロック）をすべて削除してください。具体的には `const welcomeText = ...` から `const isCompleted: boolean = false;` までの行をすべて削除します。」のように範囲を明確にする。"
+        },
+        {
+          "severity": "minor",
+          "category": "概念の正確性",
+          "description": "Step 8のas constの例え「セメントに文字を刻み込む」は直感的だが、`as const`が行うのは「readonlyかつリテラル型への絞り込み」であり、「変更不可」だけでなく「型の精度向上」も重要な効果。例え話がreadonlyの側面しかカバーしていない。",
+          "suggestion": "例え話の後に1文追加: 「さらに、TypeScriptが値を正確に覚えてくれるため、`string`ではなく`'TODO'`や`'DONE'`といった具体的な値として型チェックできるようになります。」"
+        }
+      ]
+    },
+    "ux_review": {
+      "approval": true,
+      "review_comment": "全体的に非常によくできた教材です。初心者が「変数と型」を実際に手を動かしながら学べる構成で、メタファー（ラベル付きの箱、鍵付きの金庫など）も直感的です。Mermaid図・表・スクリーンショット位置指定も十分で、ビジュアル面の品質基準を満たしています。プロジェクト固有規約（@/component/ 単数形、定数の使い方）も正しく教えています。以下、学習者目線で改善すべき点を挙げます。",
+      "issues": [
+        {
+          "severity": "major",
+          "category": "確認ポイント欠落",
+          "description": "Step 2とStep 7で、1ステップ内に2つのコードブロックがあるが、最初のコードブロック直後に確認ポイントがない。品質ルール「全コードブロック直後に確認ポイント」に違反している。初心者は最初のコードブロックを書いた時点で「ここまで合ってる？」と不安になるため、中間確認が必要。",
+          "suggestion": "Step 2: 変数宣言のコードブロック直後に「確認ポイント: ファイルを保存した / ターミナルにエラーが出ていない / まだブラウザには変化なし（次のコードで表示します）」を追加。Step 7も同様に、completionRate計算のコードブロック直後に中間確認ポイントを追加する。"
+        },
+        {
+          "severity": "major",
+          "category": "初心者への指示の曖昧さ",
+          "description": "Step 6の「後片付け」で、5つの変数を削除しつつ3つを残すよう指示している。初心者にとって「どの行を消してどの行を残すか」の判断は非常に難しく、間違えてアプリが壊れるリスクが高い。",
+          "suggestion": "削除後の状態を完全なコードブロックで示す。例：「returnの直前は以下の状態になっているはずです」として、greeting/userName/messageの3行だけが残った状態のコードを提示する。初心者は「あるべき姿」と見比べる方が安全。"
+        },
+        {
+          "severity": "major",
+          "category": "禁止ワード",
+          "description": "Step 9の💡ポイントに「Step 8と同じパターンです」という表現がある。品質ルールで「同じ」は禁止ワードに該当する。内容をスキップしているわけではないが、ルール上は具体的に書くべき。",
+          "suggestion": "「Step 8で学んだ `as const` + `typeof` + `keyof` のパターンがここでも使われています。`TASK_PRIORITY` オブジェクトを `as const` で固定し、`TaskPriority` 型を導出しています。」のように具体的に記述する。"
+        },
+        {
+          "severity": "minor",
+          "category": "コード内日本語コメント不足",
+          "description": "Step 2の2つ目のコードブロック（JSX部分）で、{/* ウェルカムメッセージを追加 */}はあるが、className等の説明コメントがない。Step 3のCardコンポーネントのコードブロックも、各行に日本語コメントがない。品質ルール「日本語コメント必須」の趣旨からすると、初心者が各行の意味を理解できるようコメントを増やすべき。",
+          "suggestion": "Step 3のコードブロック例：\n```\n{/* カード全体の枠（薄い背景色付き） */}\n<Card className=\"bg-primary/5 border-primary/20\">\n  {/* カード上部（タイトル表示エリア） */}\n  <CardHeader className=\"pb-2\">\n```\nのように、初心者が読んで意味がわかるコメントを追加する。"
+        },
+        {
+          "severity": "minor",
+          "category": "学習者の不安解消",
+          "description": "Step 7で `totalTasks` と `completedTasks` を使うが、「すでに用意されている変数として使えばOK」という説明だけでは、初心者が「本当にこの変数名で合ってる？エラーにならない？」と不安になる可能性がある。",
+          "suggestion": "VS Codeで `totalTasks` にマウスを置くと型情報が表示されることを伝え、「もし赤い波線が出たら、変数名のスペルを確認してください」のようなトラブルシュート情報を追加すると安心感が増す。"
+        },
+        {
+          "severity": "minor",
+          "category": "コード行長",
+          "description": "Step 8のコードブロックで `export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS];` は65文字を超えている可能性がある（読むのみのコードだが、PDF互換性ルールに抵触）。",
+          "suggestion": "複数行に分割する：\n```\nexport type TaskStatus =\n  (typeof TASK_STATUS)[keyof typeof TASK_STATUS];\n```\n（既に分割されているが、実際のファイルと一致するか確認が必要）"
+        },
+        {
+          "severity": "minor",
+          "category": "モチベーション維持",
+          "description": "Step 4〜6は「実験→エラー→修正→削除」の流れで、最終的にコードを全部消す。初心者にとって「せっかく書いたのに消すの？」という心理的抵抗がある。",
+          "suggestion": "Step 6の後片付け指示の前に「ここまでの実験で const/let/型の違いを体で覚えました。実験用コードは役目を終えたので片付けましょう。プロの開発者も、実験したコードを整理するのは日常的な作業です。」のような励ましを追加する。"
+        }
+      ]
+    },
+    "po_decision": {
+      "final_decision": "revise",
+      "decision_reason": "両レビューは承認寄りですが、私はREVISEと判断します。理由は、品質ルールに対する明確な未達が複数あり、特に「全コードブロック直後に確認ポイント」の欠落は自動チェック観点でも見逃せません。また、Step 6の後片付けは初心者にとって誤操作リスクが高く、学習体験を損ねる可能性があります。加えて、私は独自に、Step 4〜6で追加するコードが実際のUIに接続されておらず“何を確認すればよいか”が弱い点、Step 1/8/9の読むのみコードブロックが品質ルール上グレーではなく実質違反である点を重く見ます。技術内容そのものは概ね正確で、プロジェクト規約違反も致命的にはありませんが、現状のままでは『スクリプト100%PASSを前提とする教材』として完成扱いにはできません。",
+      "revision_instructions": "以下を優先順に修正してください。1) Step 2とStep 7の各コードブロック直後に、それぞれ個別の「確認ポイント」を追加してください。1ステップ内に複数コードブロックがある場合、最後だけでなく各ブロック直後に必要です。Step 2の1つ目では「保存した／エラーなし／まだ画面変化なし」を明記し、Step 7の1つ目では「completionRateとstatusTextに赤い波線がない／totalTasksとcompletedTasksのスペル確認」を明記してください。2) Step 6の後片付けは、削除指示だけでなく『削除後の完成状態』を25行以内の完全なコードブロックで提示してください。少なくとも return 直前に greeting / userName / message だけが残る状態を示し、どこからどこまで消すかを明確化してください。3) Step 9の「Step 8と同じパターンです」を禁止ワード回避かつ具体化した表現に書き換えてください。4) Step 2の `<h1>ダッシュボード</h1>` 参照は、実コードに合わせて className 付きの h1 であること、または『ダッシュボードと書かれた h1 タグ』を探すことを明記してください。5) Step 1・8・9の読むのみコードブロックについて、品質ルールとの整合を取ってください。実ファイルを正確に見せる方針なら、各該当箇所の直前に `<!-- quality-exception: 既存コードを実ファイルどおり表示するため、存在しない日本語コメントは追加しない -->` を入れ、コードブロック自体には filepath コメントを維持してください。可能ならコードブロック外の表で各行の意味を補強してください。6) Step 3のCardコード、Step 2のJSXコードに日本語コメントを増やし、初心者が各要素の役割を追えるようにしてください。7) Step 7には軽いトラブルシュートを追加してください。`totalTasks` や `completedTasks` にマウスを置くと型情報が見えること、赤い波線が出たらスペル確認をすることを明記してください。8) Step 8の as const 説明に『readonly化』だけでなく『リテラル型に絞り込まれる』効果を1文追加してください。9) Step 4〜6は実験コードがUIに未接続で確認が抽象的なので、少なくとも“VS Code上で確認するステップ”であることを明示し、ブラウザ確認を求めないよう文言を調整してください。10) 可能であれば最終提出前に、品質チェック観点でコードブロックごとの確認ポイント、禁止ワード、例外コメントの有無を再点検してください。",
+      "priority_issues": [
+        {
+          "source": "UX",
+          "severity": "major",
+          "category": "確認ポイント欠落",
+          "description": "Step 2とStep 7で、1ステップ内の最初のコードブロック直後に確認ポイントがない。品質ルール『全コードブロック直後に確認ポイント』に違反している。",
+          "suggestion": "各コードブロックの直後に個別の確認ポイントを追加する。Step 2の変数宣言後、Step 7のcompletionRate計算後に中間確認を入れる。"
+        },
+        {
+          "source": "UX",
+          "severity": "major",
+          "category": "初心者への指示の曖昧さ",
+          "description": "Step 6の後片付けで、削除対象と残す対象の判別が難しい。初心者が必要なコードまで消すリスクが高い。",
+          "suggestion": "削除後の正しい状態を完全なコードブロックで示し、『return直前はこの形』と見比べられるようにする。"
+        },
+        {
+          "source": "PO",
+          "severity": "major",
+          "category": "品質ルール適合性",
+          "description": "Step 1・8・9の読むのみコードブロックは、filepathコメントはあるが、日本語コメント必須ルールと厳密には衝突している。現状は例外宣言もなく、品質基準上あいまいなまま。",
+          "suggestion": "quality-exceptionコメントを明示し、『実ファイルの正確な表示を優先する』設計判断を記録する。併せてコードブロック外の解説表を維持・補強する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "minor",
+          "category": "禁止ワード",
+          "description": "Step 9の『Step 8と同じパターンです』は品質ルールの禁止ワードに抵触する可能性が高い。",
+          "suggestion": "as const、typeof、keyof、Recordのどの構造がどう使われているかを具体的に書く。"
+        },
+        {
+          "source": "Technical",
+          "severity": "minor",
+          "category": "技術的正確性",
+          "description": "Step 2で『<h1>ダッシュボード</h1>の直後』と書いているが、実コードはclassName付きのh1であり、検索時に混乱を招く。",
+          "suggestion": "『ダッシュボードと書かれたh1タグの直後』またはclassName付きの実コード断片を示して場所を特定する。"
+        },
+        {
+          "source": "PO",
+          "severity": "minor",
+          "category": "学習体験の整合性",
+          "description": "Step 4〜6で追加する実験用変数がUIに使われておらず、確認ポイントがVS Code上の赤い波線中心なのに、その前提が十分に明示されていない。",
+          "suggestion": "各ステップ冒頭に『このステップはブラウザではなくVS Codeの表示で確認します』と明記し、確認ポイントもエディタ中心に統一する。"
+        },
+        {
+          "source": "UX",
+          "severity": "minor",
+          "category": "コード内日本語コメント不足",
+          "description": "Step 3のCardコンポーネントなど、初心者向け教材としてはコード内コメントが少なく、各行の役割が追いにくい。",
+          "suggestion": "Card、CardHeader、CardContent、pタグなどに短い日本語コメントを追加する。"
+        },
+        {
+          "source": "UX",
+          "severity": "minor",
+          "category": "学習者の不安解消",
+          "description": "Step 7で totalTasks / completedTasks を既存変数として使う説明はあるが、初心者がスペルや存在確認で不安になりやすい。",
+          "suggestion": "ホバーで型情報を確認できること、赤い波線が出たらスペル確認することを追記する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "minor",
+          "category": "概念の正確性",
+          "description": "Step 8の as const の説明が『変更不可』に寄りすぎており、リテラル型への絞り込みという重要な効果が弱い。",
+          "suggestion": "『stringではなく具体的な値として型チェックできる』という説明を1文追加する。"
+        }
+      ]
+    }
+  },
+  {
+    "chapter_id": "day03",
+    "file": "day03_GitHubに保存する.md",
+    "technical_review": {
+      "approval": false,
+      "review_comment": "Day 03は全体的によく構成されており、Git/GitHub初心者向けの教材として論理的な流れを持っています。しかし、技術的正確性・既存Day教材との整合性・品質ルール準拠の観点でいくつかの問題があります。特に、Step 1のGit初期設定は既にDay 01のgit clone前に完了しているはずである点、git logの出力例に実在しないコミットメッセージを使っている点、credential.helper storeのセキュリティリスク説明不足、Step 6のechoによるREADME.md編集が教材として不適切な点が主要な指摘です。",
+      "issues": [
+        {
+          "severity": "major",
+          "category": "論理的整合性",
+          "description": "Step 1「Gitの初期設定」はDay 01のStep 4でgit cloneを実行している時点で既にGitが使える状態のはず。git configのuser.name/user.emailが未設定でもgit cloneは成功するが、コミット時には必要。Day 01でgit configを済ませていたかどうかを確認し、Day 01と矛盾しないよう整合を取る必要がある。Day 01にgit configの記述がない場合は問題ないが、「Day 01でgit cloneした」という前提と「Step 1で初めてgitの設定をする」の関係を初心者に説明すべき。",
+          "suggestion": "Step 1の冒頭に「Day 01ではgit cloneでコードを取得しましたが、コミット（変更の記録）にはあなたの名前とメールアドレスの設定が必要です」のように、なぜ今設定するのかを明確にする。"
+        },
+        {
+          "severity": "major",
+          "category": "技術的正確性",
+          "description": "Step 3のgit log出力例で「Initial commit: setup task-app」というコミットメッセージが使われているが、実際のリポジトリの最初のコミットは「first commit」。git cloneした教材リポジトリの履歴がそのまま含まれるため、学習者が実際に見る出力と教材の例が異なり混乱する。",
+          "suggestion": "git logの出力例を削除するか、「実際の出力はリポジトリによって異なります」と注記する。または出力の読み方テーブルのコミットメッセージ例を汎用的なものに変更する。"
+        },
+        {
+          "severity": "major",
+          "category": "技術的正確性",
+          "description": "Step 2で「Initialize this repository」にチェックを入れない理由として「ローカルの既存履歴と異なる履歴（unrelated histories）になるためpushが拒否される」と説明しているが、これは正確。ただし表の中に理由が詰め込まれており、初心者には読みにくい。また「チェックするとREADME.md等を含む初期コミットがリモートに作られ」の一文が長く、3文ルールとは別に表セル内のテキストとしても密度が高い。",
+          "suggestion": "表の「意味」列は簡潔に「空のリポジトリを作るため」程度にし、詳細な理由は表の下に別途ブロック引用や注釈として書く。"
+        },
+        {
+          "severity": "major",
+          "category": "セキュリティ",
+          "description": "Step 4-2でLinuxのcredential.helper storeについて「ファイルに書き出す」と表に書いているが、これは平文でトークンがファイルに保存されるセキュリティリスクがある。表内に「⚠️ 平文保存」の注記があるが目立たない。共有マシンで使うと他のユーザーにトークンが見える危険性を明確に警告すべき。",
+          "suggestion": "表の外に⚠️警告ブロックを追加：「Linuxの`store`は認証情報を`~/.git-credentials`に平文保存します。共有PCでは使わないでください。`libsecret`ベースのcredential helperの使用を検討してください。」"
+        },
+        {
+          "severity": "minor",
+          "category": "教材設計",
+          "description": "Step 6-2でechoコマンドを使ってREADME.mdに追記しているが、この方法だと既存のREADME.mdの内容を確認せずに追記することになる。また、echo ''は空行を追加するだけだが、既にREADME.mdの末尾に改行がある場合は不要な空行が入る。教材として「ファイルを直接エディタで編集する」方が学習者にとって自然。",
+          "suggestion": "VS Codeでファイルを開いて編集する手順に変更するか、echoアプローチを使う場合は「ターミナルから直接ファイルに追記する方法です」と明示し、通常はエディタで編集することを補足する。"
+        },
+        {
+          "severity": "minor",
+          "category": "論理的整合性",
+          "description": "Step 5で「Day 01でgit cloneしたプロジェクトには、既にoriginリモートが設定されています」と正しく説明しているが、その後のgit remote set-urlで教材リポジトリ（kouiso/task-app）のURLを学習者の自分のリポジトリURLに変更する流れ。この操作の意味（教材のoriginを自分のリポジトリに付け替える）をもう少し明確に説明すべき。初心者は「なぜURLを変更する必要があるのか」が分からない可能性がある。",
+          "suggestion": "set-urlの前に「clone元は教材リポジトリ（kouiso/task-app）なので、プッシュ先を自分のリポジトリに変更する必要があります」のような1文を追加する。"
+        },
+        {
+          "severity": "minor",
+          "category": "技術的正確性",
+          "description": "Step 5の「知っておきたいこと」で「これはフォークに近い操作です」と書いているが、GitHubのForkはリポジトリ間のリンクを保持する機能であり、clone + remote変更はForkとは異なる。初心者にForkという概念を正しく理解させるためには、この比較は誤解を招く可能性がある。",
+          "suggestion": "「フォークに近い操作です」を「教材のコードをそのまま自分のリポジトリにコピーする操作です」に変更し、Forkという用語は使わない。"
+        },
+        {
+          "severity": "minor",
+          "category": "品質ルール",
+          "description": "Step 3でgit statusの確認ポイントとgit add/commitのコードブロックの間にある説明文が、ステップの流れとして「確認→次のコード」の接続が弱い。「変更を確認できたら、ステージング（コミット前の準備場所に追加）してコミット（記録）します。」は良いが、確認ポイントがgit statusの後に来てからすぐ次のコードブロックに移るため、1ステップ内で2つのコードブロック+2つの確認ポイントがあり情報量が多い。",
+          "suggestion": "Step 3を「Step 3: 変更状態を確認する」と「Step 4: 変更をコミットする」に分割し、各ステップの情報量を減らす（1ファイル=1ステップルールには合致する、同じターミナル操作のため）。"
+        },
+        {
+          "severity": "minor",
+          "category": "品質ルール",
+          "description": "Step 4のPAT作成手順で「Fine-grained token推奨」と書いているが、Fine-grained tokenのUIと設定項目の説明がGitHubの実際のUIと一致するか要確認。特にPermissionsの設定項目は「Repository permissions > Contents > Read and write」のように階層的に記述すべき。",
+          "suggestion": "表の「Permissions > Contents」を「Repository permissions > Contents」に修正し、Fine-grained tokenのUI階層を正確に反映する。"
+        },
+        {
+          "severity": "minor",
+          "category": "技術的正確性",
+          "description": "Step 3のコミットメッセージが「feat: ウェルカムバナーを追加」でConventional Commits形式を使っているが、Day 03の段階でConventional Commitsの説明がない。初心者は「feat:」の意味が分からない可能性がある。",
+          "suggestion": "コミットメッセージの説明に「`feat:` は『新機能（feature）の追加』を意味するプレフィックスで、チーム開発でコミットの種類を一目で分かるようにする慣習です」のような1文を追加する。"
+        },
+        {
+          "severity": "minor",
+          "category": "品質ルール",
+          "description": "Step 6-4のコードブロックで git add, git commit, git push の3コマンドが1ブロックに含まれているが、これは3つの異なる操作。Step 3で個別に説明済みとはいえ、初心者向け教材としてはコメントを充実させるべき。",
+          "suggestion": "各コマンドに日本語コメントを追加：「# README.mdの変更をステージング」「# コミットする」「# GitHubにアップロード」"
+        }
+      ]
+    },
+    "ux_review": {
+      "approval": true,
+      "review_comment": "Day 03はGit/GitHub入門として非常によく構成されています。Mermaid図によるadd→commit→pushの流れの可視化、ゲームのセーブポイントや引っ越しリストといった例え話が効果的で、初心者が概念を掴みやすい内容です。ステップの粒度も適切で、各ステップに確認ポイントとスクリーンショット指示があり、学習者が迷子にならない設計になっています。コード例についても、このDayはGitコマンド中心でTypeScript実装がないため、プロジェクト固有規約（インポートパス、react-hook-form等）の違反はありません。以下、改善するとさらに良くなるポイントを挙げます。",
+      "issues": [
+        {
+          "severity": "minor",
+          "category": "初心者への配慮",
+          "description": "Step 3で `git add .` を使っていますが、注意書きはあるものの、初心者が最初に覚えるコマンドとして `git add .`（全ファイル追加）を教えるのは、後々の事故につながりやすい。Day 02で変更したファイルが1つなら、具体的なファイル名で `git add` する例を先に見せた方が安全な習慣が身につく。",
+          "suggestion": "`git add src/app/dashboard/page.tsx` を先に示し、「特定のファイルだけを追加できる」ことを教えた上で、「全ファイルまとめて追加したい場合は `git add .` も使えます」と補足する構成に変更する。"
+        },
+        {
+          "severity": "minor",
+          "category": "学習者のモチベーション",
+          "description": "Step 4（GitHub認証設定）は手順が多く、PAT作成→保存→credential.helper設定と、初心者にとって最も挫折しやすいポイント。途中の励ましコメント（「あと少しです！」）は良いが、もう少し「なぜこの面倒な手順が必要か」のモチベーション維持があると良い。",
+          "suggestion": "Step 4冒頭の例え話の後に、「この設定は最初の1回だけです。一度設定すれば、今後は `git push` するだけでGitHubにアップロードできるようになります」のような「一度きりの苦労」であることを強調する一文を追加する。"
+        },
+        {
+          "severity": "minor",
+          "category": "構造・情報設計",
+          "description": "Step 5でリモートURL変更のコードブロックが3つに分かれているが、確認ポイントがそれぞれ短く、最後の大きな確認ポイントに集約されている。中間の確認ポイント（`git remote -v`の結果確認）がやや薄い。",
+          "suggestion": "`git remote -v` の確認ポイントに、期待される出力例（`origin  https://github.com/<ユーザー名>/task-app.git (fetch)` のような形式）を追加すると、初心者が「正しく変更できた」と判断しやすくなる。"
+        },
+        {
+          "severity": "minor",
+          "category": "概念の明確さ",
+          "description": "Step 3のコード解説表で `git add .` の説明が「引っ越しリストに荷物を書き込む」だが、Step 7の.gitignoreの例え話では「引っ越しで持っていかないものリスト」と別の引っ越し比喩が出てくる。関連性があるので統一的に使えるとより効果的。",
+          "suggestion": "Step 7の.gitignore例え話で「Step 3で『引っ越しリストに荷物を書き込む』と学びましたが、.gitignoreは『この荷物は運ばないでリスト』です」のように、Step 3の比喩と明示的に接続すると、学習者の理解が深まる。"
+        },
+        {
+          "severity": "minor",
+          "category": "トラブルシューティング",
+          "description": "つまずきポイント表に `fatal: remote origin already exists` のエラーと解決策（`git remote rm origin`）が記載されているが、このDayの手順では `git remote set-url` を使っているので、このエラーは通常発生しない。むしろ `git push` 時に `rejected - non-fast-forward` や認証プロンプトでの入力ミスの方が起こりやすい。",
+          "suggestion": "`fatal: remote origin already exists` を削除し、代わりに「`git push`で`rejected`エラーが出る → Step 2でInitialize this repositoryにチェックを入れてしまった可能性 → GitHubでリポジトリを削除して再作成するか、`git push --force`で上書き（初回のみ安全）」を追加する。"
+        }
+      ]
+    },
+    "po_decision": {
+      "final_decision": "revise",
+      "decision_reason": "Technical Review の major 指摘が複数あり、現状のままでは技術的正確性と既存Dayとの整合性に不安があります。UX面の構成は良く、教材としての流れや比喩も有効ですが、初心者向け教材ほど『実際に見える出力と一致すること』『危険な操作や誤解を招く表現を避けること』が重要です。特に、Day 01とのつながり説明不足、git log の不正確な例、Linux の credential.helper store の警告不足、Fork に近いという表現、README.md 追記方法の不自然さは修正必須です。加えて、私は PO として、Step 4-2 の OS 別コマンド提示が1つのコードブロックに混在しており、学習者が『全部実行するのか』と誤解しやすい点、Step 6 の確認ポイント不足、つまずきポイントの実態とのズレも見逃せないと判断します。",
+      "revision_instructions": "以下の方針で Day 03 を修正してください。\n\n1. Step 1 の位置づけを明確化してください。\n- Day 01 で git clone はできたが、commit には user.name / user.email が必要であることを冒頭で説明してください。\n- 『今ここで設定する理由』を1段落で明示してください。\n\n2. Step 2 の GitHub リポジトリ作成説明を簡潔化してください。\n- 『Initialize this repository』の表セル説明を短くしてください。\n- 詳しい理由は表の外に注記として分離してください。\n- 初心者が読む順番で理解できるようにしてください。\n\n3. Step 3 を分割して、状態確認とコミットを別ステップにしてください。\n- 例: Step 3 = git status で変更確認、Step 4 = git add / git commit。\n- `git add .` を最初の例にせず、まず `git add src/app/dashboard/page.tsx` を提示してください。\n- その後に『複数ファイルをまとめて追加したいときは git add . も使える』と補足してください。\n- `feat:` の意味を1文で説明してください。\n\n4. git log の例を実リポジトリ依存にしないでください。\n- `Initial commit: setup task-app` のような固定メッセージ例は削除してください。\n- 代わりに『コミットメッセージ部分はリポジトリによって異なります』と明記してください。\n\n5. Step 4 の認証設定を安全かつ誤解なく書き直してください。\n- Fine-grained token の UI 表記を GitHub の実際の階層に合わせて `Repository permissions > Contents` に修正してください。\n- Step 4 冒頭に『この設定は最初の1回だけ』という励ましを追加してください。\n- OS 別 credential helper は1つのコードブロックに混在させず、表で選ばせた上で、実行するコマンドは自分のOSの1つだけだと明記してください。\n- Linux の `store` については表内注記だけでなく、表の外に警告ブロックを追加してください。`~/.git-credentials` に平文保存されること、共有PCでは使わないことを明記してください。\n\n6. Step 5 の remote 変更理由を初心者向けに補強してください。\n- clone 元が教材リポジトリなので、push 先を自分のリポジトリに付け替える必要があると明示してください。\n- `git remote -v` の期待出力例を追加してください。\n- 『フォークに近い操作』という表現は削除し、『教材の履歴を含んだ状態で自分のリポジトリにコピーする操作』などの正確な表現に置き換えてください。\n\n7. Step 6 の README.md 編集方法を見直してください。\n- `echo` 連打で追記する方法はメイン手順から外してください。\n- VS Code で README.md を開いて追記する手順に変更してください。\n- もしターミナル追記例を残すなら補足扱いにし、『通常はエディタ編集を推奨』と明記してください。\n- `git add` / `git commit` / `git push` の各コマンドには日本語コメントを付けてください。\n- 各コードブロック直後に確認ポイントを必ず追加してください。\n\n8. つまずきポイントを実態に合わせて更新してください。\n- `fatal: remote origin already exists` は今回の手順では起きにくいため削除候補です。\n- 代わりに `rejected` / `non-fast-forward` を追加してください。\n- 原因として『Initialize this repository にチェックを入れた可能性』を説明してください。\n- 解決策は、初心者向けに安全な順で提示してください。安易な `git push --force` は推奨せず、まず GitHub 側リポジトリの作り直しを案内してください。\n\n9. 品質ルール準拠を再確認してください。\n- 全コードブロック直後に確認ポイントを入れてください。\n- 段落は3文以内に収めてください。\n- Step 数は 7〜12 に収めつつ、分割後も1ステップ3〜7分の粒度を守ってください。\n- 既存の表4個以上、Mermaid 1個以上、スクリーンショット指示3箇所以上は維持してください。\n\n10. PO追加観点として、OS別手順の誤実行防止を強化してください。\n- macOS / Windows / Linux のどれを実行するかを表で明示してください。\n- 『自分のOSの行だけ実行してください』という注意書きをコード直前に入れてください。",
+      "priority_issues": [
+        {
+          "source": "Technical",
+          "severity": "major",
+          "category": "論理的整合性",
+          "description": "Step 1 の Git 初期設定が Day 01 の git clone 済み前提とどうつながるかの説明が不足している。",
+          "suggestion": "『clone はできるが commit には user.name / user.email が必要』と明記し、今設定する理由を説明する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "major",
+          "category": "技術的正確性",
+          "description": "git log の出力例に実際の教材リポジトリと一致しないコミットメッセージが使われている。",
+          "suggestion": "固定のコミットメッセージ例を削除し、読み方だけを説明する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "major",
+          "category": "セキュリティ",
+          "description": "Linux の `credential.helper store` が平文保存である危険性の説明が弱い。",
+          "suggestion": "表の外に警告ブロックを追加し、共有PCでは使わないことと保存先を明記する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "major",
+          "category": "技術的正確性",
+          "description": "『フォークに近い操作』という説明は GitHub Fork の概念理解を誤らせる。",
+          "suggestion": "Fork という用語を使わず、教材リポジトリの履歴を含んだコピーであると説明する。"
+        },
+        {
+          "source": "Technical",
+          "severity": "minor",
+          "category": "教材設計",
+          "description": "README.md への追記を `echo` で行う手順は初心者にとって不自然で、既存内容を見ずに編集させる。",
+          "suggestion": "VS Code で README.md を開いて編集する手順に変更する。"
+        },
+        {
+          "source": "UX",
+          "severity": "minor",
+          "category": "初心者への配慮",
+          "description": "最初に `git add .` を教えると、不要ファイルまで追加する習慣につながりやすい。",
+          "suggestion": "まず具体的なファイル名で `git add src/app/dashboard/page.tsx` を示し、その後に `git add .` を補足する。"
+        },
+        {
+          "source": "UX",
+          "severity": "minor",
+          "category": "トラブルシューティング",
+          "description": "つまずきポイントに `remote origin already exists` があるが、今回の手順では発生しにくい。",
+          "suggestion": "`non-fast-forward` など実際に起きやすいエラーへ差し替える。"
+        },
+        {
+          "source": "PO",
+          "severity": "major",
+          "category": "情報設計",
+          "description": "Step 4-2 の OS 別 credential helper コマンドが1つのコードブロックに並んでおり、初心者が全部実行すべきだと誤解しやすい。",
+          "suggestion": "OS別の選択表を置き、『自分のOSのコマンドだけ実行』と明記したうえで1つだけ実行させる構成にする。"
+        },
+        {
+          "source": "PO",
+          "severity": "major",
+          "category": "品質ルール",
+          "description": "Step 6 の一部コードブロック直後に確認ポイントがなく、品質ルールの『全コードブロック直後に確認ポイント』を満たしていない。",
+          "suggestion": "Step 6-2、6-3、6-4 を含め、全コードブロック直後に確認ポイントを追加する。"
+        },
+        {
+          "source": "PO",
+          "severity": "minor",
+          "category": "学習導線",
+          "description": "Step 5 の `git remote -v` に期待出力例がなく、初心者が成功判定しづらい。",
+          "suggestion": "`origin https://github.com/<ユーザー名>/task-app.git (fetch/push)` の形式例を追加する。"
+        }
+      ]
+    }
+  }
+]

@@ -21,6 +21,7 @@ Day 15 で学んだこと:
 
 📸 スクリーンショット: ステータス変更のドロップダウンの画面
 
+![ステータス変更のドロップダウンの画面](./screenshots/task-detail-dialog.png)
 ## 🤔 なぜこれを作るのか？
 
 タスクの進捗を可視化し、作業時間を正確に記録
@@ -334,6 +335,7 @@ const handleStartStop = async () => {
 
 📸 スクリーンショット: タイマー動作中の画面
 
+![タイマー動作中の画面](./screenshots/task-timer.png)
 ---
 
 ### Step 5: 時間のフォーマット関数を作る（3分）
@@ -665,6 +667,7 @@ export function TimeLogDialog({
 
 📸 スクリーンショット: 手動時間記録ダイアログの画面
 
+![手動時間記録ダイアログの画面](./screenshots/task-timer.png)
 ---
 
 ### Step 8: TaskCardにタイマーを組み込む（5分）
@@ -797,6 +800,7 @@ const handleOpenTimeLog =
 
 📸 スクリーンショット: タイマー停止後の累計時間表示
 
+![タイマー停止後の累計時間表示](./screenshots/task-timer.png)
 ---
 
 ```bash
