@@ -207,9 +207,9 @@ const { data: session } =
 ✅ **確認ポイント**:
 - session からユーザー ID を取得できる
 
-コメント一覧の各コメントで、`comment.userId` と
-`session?.user?.id` を比較しています。
-一致した場合だけボタンが表示されます。
+取得した `session?.user?.id` を使って、
+各コメントの作者と一致するときだけ
+編集・削除ボタンを表示します。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
@@ -275,39 +275,26 @@ const handleCancelEdit = () => {
 - 編集開始時に既存テキストがセットされる
 - キャンセルで state がクリアされる
 
-三項演算子で編集中とそうでない場合を切り替えます。
-編集中はテキストエリアと更新・キャンセルボタン、
-通常時はコメント本文が表示されます。
+三項演算子で「編集中のコメントか」を判定し、
+編集中はテキストエリアとボタン、通常時はテキストを
+表示します。`? (` から `)}` までが 1 つの式です。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// 編集中: テキストエリアと操作ボタン
 {editingCommentId === comment.id ? (
   <div className="space-y-2">
     <Textarea
-      {...editCommentForm.register(
-        'content'
-      )}
+      {...editCommentForm.register('content')}
       className="resize-none" rows={2} />
     <div className="flex gap-2 justify-end">
       <Button variant="outline" size="sm"
         onClick={handleCancelEdit}>
         キャンセル
       </Button>
-```
-
-✅ **確認ポイント**:
-- 編集ボタンでテキストエリアに変わる
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// 更新ボタンと通常表示モード
       <Button size="sm"
-        onClick={() =>
-          handleSaveEdit(comment.id)}
+        onClick={() => handleSaveEdit(comment.id)}
         disabled={
-          !editCommentForm.watch('content')
-            .trim()
+          !editCommentForm.watch('content').trim()
           || updateCommentMutation.isPending}>
         {updateCommentMutation.isPending
           ? '更新中...' : '更新'}
@@ -316,8 +303,7 @@ const handleCancelEdit = () => {
   </div>
 ) : (
   <p className="text-muted-foreground">
-    {comment.content}
-  </p>
+    {comment.content}</p>
 )}
 ```
 

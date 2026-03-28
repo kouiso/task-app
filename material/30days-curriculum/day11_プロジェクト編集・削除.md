@@ -135,40 +135,35 @@ const [editingProject, setEditingProject] =
 - `editingProject` の型が `ProjectFormData | undefined` になっている
 - 保存時にエラーが出ていない
 
-次に編集ハンドラーを追加します。`handleCreate` 関数のすぐ下に `handleEdit` を追加してください。日付は `toISOString().split('T')[0]` で `"2024-12-31"` 形式に変換します。`<input type="date">` はこの形式を期待するためです。
+次に編集ハンドラーを追加します。`handleCreate` 関数のすぐ下に `handleEdit` を追加してください。
+
+日付は `toISOString().split('T')[0]` で `"2024-12-31"` 形式に変換します。`<input type="date">` はこの形式を期待するためです。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// handleCreateの下に追加（前半）
+// handleCreateの下に追加: 編集ボタンのハンドラー
 const handleEdit = (projectId: string) => {
   const project = projects?.find(
     (p) => p.id === projectId
   );
-  if (project) {
-    const startDate = project.startDate
-      ? new Date(project.startDate)
-          .toISOString().split('T')[0]
-      : undefined;
-    const endDate = project.endDate
-      ? new Date(project.endDate)
-          .toISOString().split('T')[0]
-      : undefined;
-```
-
-```typescript
-// filepath: src/app/project/page.tsx
-// handleEdit続き（後半）
-    setEditingProject({
-      id: project.id,
-      name: project.name,
-      description:
-        project.description || '',
-      color: project.color,
-      ...(startDate && { startDate }),
-      ...(endDate && { endDate }),
-    });
-    setDialogOpen(true);
-  }
+  if (!project) return;
+  const startDate = project.startDate
+    ? new Date(project.startDate)
+        .toISOString().split('T')[0]
+    : undefined;
+  const endDate = project.endDate
+    ? new Date(project.endDate)
+        .toISOString().split('T')[0]
+    : undefined;
+  setEditingProject({
+    id: project.id,
+    name: project.name,
+    description: project.description ?? '',
+    color: project.color,
+    ...(startDate && { startDate }),
+    ...(endDate && { endDate }),
+  });
+  setDialogOpen(true);
 };
 ```
 
@@ -201,11 +196,13 @@ const handleEdit = (projectId: string) => {
 
 💻 **実装**:
 
-`handleEdit` の直上に `handleCreate` を配置します。このハンドラーは `editingProject` を `undefined` にリセットすることで「新規作成モード」にします。
+> 📝 **注意**: `handleCreate` は Day 10 で既に実装済みです。ここでは確認のみで、変更は不要です。
+
+`handleEdit` の直上（`handleEdit` の前）に `handleCreate` が定義されていることを確認してください。このハンドラーは `editingProject` を `undefined` にリセットすることで「新規作成モード」にします。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// handleEditの直上に配置する
+// Day 10で実装済み（確認のみ）
 const handleCreate = () => {
   setEditingProject(undefined);
   setDialogOpen(true);
@@ -274,11 +271,13 @@ const updateMutation =
 - `updateMutation` が定義できた
 - `onSuccess` で `invalidate()` を呼んでいる
 
-次に送信ハンドラーを作ります。`data.id` の有無で更新と新規作成を `if/else` で分岐します。`handleEdit` の下に追加してください。
+次に送信ハンドラーを作ります。`data.id` の有無で更新と新規作成を `if/else` で分岐します。
+
+> 📝 **配置の注意**: 以下のコードは Step 4 で追加する `handleDelete` の上に配置します。コードを書く順序として、`updateMutation` の直下に `handleSubmit` を追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// handleEditの下に追加: 送信ハンドラー
+// updateMutationの直下に追加: 送信ハンドラー
 const handleSubmit = (
   data: ProjectFormData
 ) => {
@@ -287,7 +286,7 @@ const handleSubmit = (
       id: data.id,
       name: data.name,
       description:
-        data.description || null,
+        data.description ?? null,
       color: data.color,
       startDate: data.startDate
         ? new Date(data.startDate)
@@ -410,11 +409,11 @@ const handleDelete = (projectId: string) => {
 
 💻 **実装**:
 
-JSX の `</AppLayout>` の直前（`AppLayout` 内の一番最後）に `DeleteConfirmDialog` を配置します。
+JSX 内のコンテンツ `<div>` の閉じタグ直後、`</AppLayout>` の直前（`AppLayout` 内の一番最後）に `DeleteConfirmDialog` を配置します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// </AppLayout>の直前に配置
+// </div>閉じタグの後、</AppLayout>の直前に配置
 <DeleteConfirmDialog
   open={deleteDialogOpen}
   onOpenChange={setDeleteDialogOpen}

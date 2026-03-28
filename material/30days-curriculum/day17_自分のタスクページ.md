@@ -201,11 +201,20 @@ const { data: tasks, isLoading } =
   );
 ```
 
+タスクキャッシュ操作用のユーティリティを追加します。tasks の取得の**下に**以下を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// tRPCキャッシュ操作用ユーティリティ
+// ⚠️ hooks はすべて early return より前に置く
+const utils = api.useUtils();
+```
+
 ローディングの条件も更新します。Step 2 で追加した `if (isCurrentUserLoading)` を以下に**置き換えて**ください。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 両方のローディングが完了するまでスピナー表示
+// 全 hooks 定義後にローディング判定（hooks の後に early return）
 if (isCurrentUserLoading || isLoading) {
   return (
     <AppLayout>
@@ -617,7 +626,8 @@ const groupedTasks = useMemo(() => {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 仮実装（Step 9-10で差し替え）
+// 仮実装（Step 9-10で必ず置き換える）
+// ⚠️ この const は Step 9・10 で削除して置き換えます
 const handleEdit = (taskId: string) => {
   console.log('edit:', taskId);
 };
@@ -625,6 +635,8 @@ const handleDelete = (taskId: string) => {
   console.log('delete:', taskId);
 };
 ```
+
+> ⚠️ `const` は同一スコープで再宣言できません。Step 9 で `handleEdit`、Step 10 で `handleDelete` を本実装に**置き換える**（仮実装を削除してから書く）ことを忘れないでください。
 
 ✅ **確認ポイント**:
 - TypeScript のエラーが出ていない
@@ -719,18 +731,16 @@ import { taskToFormData }
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 編集ダイアログの状態管理
+// 編集ダイアログの状態管理（early return より前のhook定義ブロックに追加）
 const [dialogOpen, setDialogOpen] =
   useState(false);
 const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>(undefined);
-// tRPCのキャッシュ操作用
-const utils = api.useUtils();
 ```
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 更新ミューテーション（成功時にキャッシュ更新）
+// 更新ミューテーション（utils は Step 3 で追加済み）
 const updateMutation =
   api.task.update.useMutation({
     onSuccess: () => {
@@ -739,6 +749,8 @@ const updateMutation =
     },
   });
 ```
+
+Step 8 の `const handleEdit = (taskId: string) => { console.log(...) }` を**削除して**、以下で**置き換えて**ください。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -781,7 +793,7 @@ import { DeleteConfirmDialog }
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 削除ダイアログの状態管理
+// 削除ダイアログの状態管理（early return より前に追加）
 const [deleteDialogOpen, setDeleteDialogOpen] =
   useState(false);
 const [deleteTargetId, setDeleteTargetId] =
@@ -790,7 +802,7 @@ const [deleteTargetId, setDeleteTargetId] =
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 削除ミューテーション（成功時にキャッシュ更新）
+// 削除ミューテーション（utils は Step 3 で追加済み）
 const deleteMutation =
   api.task.delete.useMutation({
     onSuccess: () => {
@@ -798,6 +810,8 @@ const deleteMutation =
     },
   });
 ```
+
+Step 8 の `const handleDelete = (taskId: string) => { console.log(...) }` を**削除して**、以下で**置き換えて**ください。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx

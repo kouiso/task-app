@@ -355,6 +355,7 @@ JSXを配置します。
 
 Step 2で `{/* Step 3: フィルターフォーム */}`
 と書いた場所を以下に置き換えます。
+`handleSearch`・`handleClear` は Step 5 で定義します。
 まずキーワード入力です。
 
 ```typescript
@@ -551,6 +552,7 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 - 日付入力欄が表示される
 
 検索ボタンとクリアボタンを追加します。
+`handleSearch` と `handleClear` は Step 5 で定義します。
 
 ```typescript
 // filepath: src/app/search/page.tsx

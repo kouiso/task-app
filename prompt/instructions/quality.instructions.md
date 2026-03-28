@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.py,**/*.dart"
 ---
 
 # Quality & Implementation Rules (品質・実装・作業ルール)

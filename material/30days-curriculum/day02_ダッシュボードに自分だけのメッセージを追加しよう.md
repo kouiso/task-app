@@ -91,6 +91,7 @@ VS Codeで`src/app/dashboard/page.tsx`を開いてください。先頭部分を
 
 ```typescript
 // filepath: src/app/dashboard/page.tsx（先頭部分・読むのみ）
+// ダッシュボードページの冒頭に書かれているimport文の一覧
 'use client';
 
 import {
@@ -143,6 +144,10 @@ import {
   const message: string = `${greeting}${userName}さん`;
 ```
 
+✅ **確認ポイント**:
+- ファイルを保存した（Ctrl+S / Cmd+S）
+- エラーが表示されていない
+
 次に、`return`文の`<h1>ダッシュボード</h1>`の直後に表示用の要素を追加します。
 
 ```typescript
@@ -152,6 +157,10 @@ import {
           {message}
         </p>
 ```
+
+✅ **確認ポイント**:
+- ファイルを保存した（Ctrl+S / Cmd+S）
+- エラーが表示されていない
 
 > 💡 **ポイント**: 変数の宣言は必ず`return`文の**前**に書きます。`return`の中はJSX（画面の構造）を書く場所で、変数の宣言はできません。
 
@@ -354,6 +363,10 @@ VS Codeで`"たくさん"`の部分に赤い波線が表示されるはずです
     : "コツコツ進めていきましょう！";
 ```
 
+✅ **確認ポイント**:
+- ファイルを保存した（Ctrl+S / Cmd+S）
+- エラーが表示されていない
+
 次に、CardContentの中身を更新します。
 
 ```typescript
@@ -396,6 +409,7 @@ VS Codeで`src/lib/constant/status.ts`を開いてください。
 
 ```typescript
 // filepath: src/lib/constant/status.ts（読むのみ）
+// タスクのステータス定数と型を定義しているファイル
 export const TASK_STATUS = {
   TODO: 'TODO',
   IN_PROGRESS: 'IN_PROGRESS',
@@ -446,6 +460,7 @@ VS Codeで`src/lib/constant/priority.ts`を開いてください。
 
 ```typescript
 // filepath: src/lib/constant/priority.ts（読むのみ）
+// タスクの優先度定数とラベル対応表を定義しているファイル
 export const TASK_PRIORITY_LABELS:
   Record<TaskPriority, string> = {
   LOW: '低',
@@ -462,7 +477,7 @@ export const TASK_PRIORITY_LABELS:
 | `Record<A, B>` | 「キーがA型、値がB型」の対応表 | 辞書。見出し語（A）と意味（B）のペア |
 | `Record<TaskPriority, string>` | 優先度→日本語ラベルの対応表 | 「LOW→低、HIGH→高」の辞書 |
 
-> 💡 **Step 8と同じパターンです**: `TASK_PRIORITY` オブジェクトと `TaskPriority` 型がファイルの上部に定義されています。`TASK_PRIORITY_LABELS` はその型を使って「優先度→日本語ラベル」の対応表を作っています。
+> 💡 **ポイント**: ファイルの上部に `export const TASK_PRIORITY` オブジェクトと `export type TaskPriority` 型が定義されています。`TASK_PRIORITY_LABELS` はその `TaskPriority` 型を `Record` のキーとして利用し、「優先度→日本語ラベル」の対応表を作っています。`as const` によって `TASK_PRIORITY` の値が固定されているため、`TaskPriority` 型は `'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'` の4種類に絞り込まれます。
 
 ✅ **確認ポイント**:
 1. `src/lib/constant/priority.ts`を開けた

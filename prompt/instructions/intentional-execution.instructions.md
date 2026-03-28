@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.py,**/*.dart"
 ---
 
 # 意図的実行（Intentional Execution）— 脳死実行の禁止

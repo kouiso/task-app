@@ -186,6 +186,8 @@ postgresql://neondb_owner:xxxx@ep-xxx.ap-southeast-1.aws.neon.tech/taskapp?sslmo
 | Root Directory | `./` | プロジェクトのルート |
 
 
+> ⚠️ **「Deploy」ボタンはまだ押さないでください**。この後のStep 5で環境変数を設定してからデプロイします。先にデプロイするとビルドが失敗します。
+
 ✅ **確認ポイント**:
 
 - 「Configure Project」画面が表示される
@@ -217,7 +219,9 @@ postgresql://neondb_owner:xxxx@ep-xxx.ap-southeast-1.aws.neon.tech/taskapp?sslmo
 openssl rand -base64 32
 ```
 
-表示された文字列をコピーしておいてください。opensslコマンドで生成すれば、自動的に32文字以上の条件を満たします。
+> 💡 このコマンドは43〜44文字のランダムな文字列を生成します（末尾の `=` を含む）。JWT_SECRETには32文字以上が必要で、このコマンドは常にその条件を満たします。
+
+表示された文字列をコピーしておいてください。
 
 > ⚠️ **Windows環境**: `openssl` が使えない場合は、Day 01でインストールしたGit Bashから実行してください。
 
@@ -256,33 +260,56 @@ openssl rand -base64 32
 
 #### 6-1. Neon DBにテーブルを作成する
 
-Neonの接続文字列を使って、クラウドDBにテーブルを作成します。
+Neonの接続文字列を使って、クラウドDBにテーブルを作成します。`.env` ファイルを一時的に書き換えることで、パスワードがシェル履歴に残らない安全な方法で実行します。
 
-山括弧（`<...>`）の部分を、Step 3でコピーした自分の接続文字列に置き換えてください。
+**手順:**
+
+1. VS Codeで `.env` ファイルを開く
+2. `DATABASE_URL=` の行を、Step 3でコピーした自分のNeon接続文字列に貼り替える
+
+```
+# filepath: .env（VS Codeで編集）
+# 変更前（ローカルのDocker用）
+DATABASE_URL="postgresql://postgres:password@localhost:5432/taskapp"
+
+# 変更後（Neonの接続文字列に貼り替える）
+DATABASE_URL="postgresql://neondb_owner:xxxx@ep-xxx.ap-southeast-1.aws.neon.tech/taskapp?sslmode=require"
+```
+
+3. `.env` を保存してから、以下のコマンドを実行する
 
 ```bash
 # filepath: ターミナル（task-appフォルダ内で実行）
-# Neonの接続文字列を一時的に使用してテーブル作成
-DATABASE_URL="postgresql://neondb_owner:abc@ep-xxx.neon.tech/taskapp?sslmode=require" npx prisma db push
+# .envのDATABASE_URLをNeon接続文字列に変更してから実行する
+npx prisma db push
 ```
-
-> ⚠️ 上記は例です。`neondb_owner:abc@ep-xxx` の部分を自分の接続文字列に置き換えてください。
->
-> ⚠️ **セキュリティ注意**: このコマンドはシェル履歴（`~/.bash_history` 等）にパスワードが残ります。実行後、`history -d $(history 1 | awk '{print $1}')` で該当行を削除するか、コマンドの先頭にスペースを入れて実行してください（多くのシェルでは履歴に残りません）。
 
 ✅ **確認ポイント**:
 - `Your database is now in sync with your Prisma schema.` と表示される
 
 ```bash
 # filepath: ターミナル（task-appフォルダ内で実行）
-# サンプルデータを投入（接続文字列は同じものを使用）
-DATABASE_URL="自分の接続文字列" npm run db:seed
+# シードデータを投入する
+npm run db:seed
 ```
 
 > 💡 この手順は初回セットアップ用です。今後スキーマを変更した場合は、再度 `prisma db push` の実行が必要です。
 
 ✅ **確認ポイント**:
 - エラーが表示されず正常に完了する
+
+> 💡 **seedで作成されるアカウント**: メールアドレス `admin@example.com`、パスワード `password123` でログインできます。Step 7で動作確認するときに使います。
+
+4. `.env` の `DATABASE_URL` をローカル用に戻す
+
+```
+# filepath: .env（VS Codeで編集）
+# ローカルの値に戻す
+DATABASE_URL="postgresql://postgres:password@localhost:5432/taskapp"
+```
+
+✅ **確認ポイント**:
+- `.env` の `DATABASE_URL` がローカル用（`localhost:5432`）に戻っていることを確認した
 
 #### 6-2. Vercelでデプロイする
 

@@ -53,16 +53,18 @@ flowchart TD
 src/
 ├── app/
 │   └── project/
-│       └── page.tsx              ← 変更（ダイアログ組み込み）
+│       └── page.tsx              ← 確認（Day 09 で実装済み）
 ├── component/
 │   └── project/
-│       └── project-dialog.tsx    ← 新規作成（今日作る）
+│       └── project-dialog.tsx    ← 既存（今日内容を理解する）
 └── lib/
     └── constant/
         └── project.ts            ← 既存（定数を利用する）
 ```
 
-> 💡 今日は `project-dialog.tsx` を新規作成し、Day 09 で作った `page.tsx` にダイアログを組み込みます。
+> ⚠️ **重要**: `project-dialog.tsx` も `page.tsx` も、既にリポジトリに存在する実装済みファイルです。今日の作業は「新規作成」ではなく「既存コードの理解」が中心です。指示された場所以外は変更しないよう注意してください。
+
+> 💡 今日は `project-dialog.tsx` の実装を読み解き、Day 09 で組み込み済みの `page.tsx` との連携を理解します。コードを一から書くのではなく、どのように動いているかを確認するのが主な学習内容です。
 
 ### 🆕 新しく学ぶ概念
 
@@ -127,10 +129,10 @@ import { DEFAULT_PROJECT_COLOR }
 ```
 
 ✅ **確認ポイント**:
-- ファイルを作成した
-- 全てのimportが追加できた
+- コードの内容を確認した
+- 全てのimportが確認できた
 
-続いて、Props の型定義を行います。
+続いて、Props の型定義を確認します。
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -157,8 +159,8 @@ export interface ProjectFormData {
 > 💡 `onClose` は「ダイアログを閉じる」ためのコールバックです。親コンポーネントが `setDialogOpen(false)` を渡します。
 
 ✅ **確認ポイント**:
-- `src/component/project/project-dialog.tsx` を作成した
-- `ProjectDialogProps` と `ProjectFormData` を定義した
+- `src/component/project/project-dialog.tsx` の内容を確認した
+- `ProjectDialogProps` と `ProjectFormData` の定義を理解した
 
 ---
 
@@ -294,7 +296,7 @@ const handleFormSubmit =
 
 ✅ **確認ポイント**:
 - `handleClose` でフォームのリセットとダイアログの閉じが両方行われる
-- `handleFormSubmit` でスプレッド構文を使って空文字を除外している
+- `...(data.description && { description: data.description })` は「description が入力されている場合だけプロパティを含める」条件付きスプレッド。`&&` はここでは null/undefined フォールバックではなく、「真なら含める」という意味で使っている。`??` とは用途が異なる
 
 続いて、JSX を返します。Dialog の中にフォームを配置します。
 
@@ -494,17 +496,19 @@ return (
 
 ---
 
-### Step 7: ページにDialogを組み込む（7分）
+### Step 7: ページにDialogが組み込まれている仕組みを確認する（7分）
 
-🎯 **ゴール**: プロジェクト一覧ページにダイアログを組み込み、作成処理を実装します。
+🎯 **ゴール**: プロジェクト一覧ページにダイアログがどのように組み込まれているかを確認し、作成・更新処理の仕組みを理解します。
 
-Day 09 の Step 7 で `dialogOpen` / `setDialogOpen` の state と `editingProject` の state は既に宣言済みです。ここでは import の追加と mutation の実装を行います。
+Day 09 で作成した `page.tsx` には既にプロジェクト作成の実装が含まれています。ここでは、実装されたコードの各部分を確認して理解を深めましょう。
 
-💻 **実装**:
+> **注意**: 以下のコードはDay 09の `page.tsx` に既に実装されています。新たに追加する必要はありません。
+
+💻 **確認**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectDialogとProjectFormData型のimport
+// ProjectDialogとProjectFormData型のimport（確認）
 import {
   ProjectDialog,
   type ProjectFormData,
@@ -513,11 +517,11 @@ import {
 ```
 
 ✅ **確認ポイント**:
-- importが追加できた
+- importが `page.tsx` に存在することを確認した
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectPageContent内に追加
+// ProjectPageContent内の実装（確認）
 // tRPCのキャッシュ操作ユーティリティ
 const utils = api.useUtils();
 
@@ -537,46 +541,76 @@ const createMutation =
 ```
 
 ✅ **確認ポイント**:
-- `useUtils` でキャッシュ操作ユーティリティを取得している
-- `onSuccess` でキャッシュ無効化とダイアログ閉じを行っている
+- `useUtils` でキャッシュ操作ユーティリティを取得していることを確認した
+- `onSuccess` でキャッシュ無効化とダイアログ閉じを行っていることを確認した
 
-送信ハンドラーを作ります。`currentUser?.id` が存在しない場合は処理を中断します。
+`handleSubmit` は `data.id` の有無で「更新」と「作成」を自動で切り替えます。`data.id` がある場合は既存プロジェクトの更新です。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 送信ハンドラー
+// 送信ハンドラー（更新ケース・確認）
 const handleSubmit = (
   data: ProjectFormData
 ) => {
-  // ログインチェック
-  if (!currentUser?.id) {
-    return;
-  }
-  createMutation.mutate({
-    name: data.name,
-    description: data.description,
-    color: data.color,
-    startDate: data.startDate
-      ? new Date(data.startDate)
-          .toISOString()
-      : undefined,
-    endDate: data.endDate
-      ? new Date(data.endDate)
-          .toISOString()
-      : undefined,
-  });
+  if (data.id) {
+    // 既存プロジェクトの更新
+    updateMutation.mutate({
+      id: data.id,
+      name: data.name,
+      description:
+        data.description
+          ? data.description : null,
+      color: data.color,
+      startDate: data.startDate
+        ? new Date(data.startDate)
+            .toISOString()
+        : null,
+      endDate: data.endDate
+        ? new Date(data.endDate)
+            .toISOString()
+        : null,
+    });
+  } else { /* 新規作成ケースへ続く */ }
 };
 ```
 
 ✅ **確認ポイント**:
-- `currentUser?.id` のガードが入っている
-- 日付は `toISOString()` でISO形式に変換している
+- `data.id` がある場合に `updateMutation` を呼ぶことを確認した
+- 更新時の日付未入力は `null` で渡すことを確認した
 
-JSX 内（`</AppLayout>` の前）にダイアログを追加します。
+`data.id` がない場合は新規プロジェクトの作成です。`currentUser?.id` のガードで未ログイン時を弾きます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// JSX内（AppLayoutの閉じタグの前）に追加
+// 送信ハンドラー（作成ケース・確認）
+  } else {
+    // 新規プロジェクトの作成
+    if (!currentUser?.id) return;
+    createMutation.mutate({
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate
+        ? new Date(data.startDate)
+            .toISOString()
+        : undefined,
+      endDate: data.endDate
+        ? new Date(data.endDate)
+            .toISOString()
+        : undefined,
+    });
+  }
+```
+
+✅ **確認ポイント**:
+- `data.id` がない場合に `createMutation` を呼ぶことを確認した
+- 作成時の日付未入力は `undefined` で渡すことを確認した
+
+JSX 内に `ProjectDialog` が組み込まれていることを確認します。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// JSX内（AppLayoutの閉じタグの前）
 <ProjectDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
@@ -585,7 +619,7 @@ JSX 内（`</AppLayout>` の前）にダイアログを追加します。
 />
 ```
 
-> 💡 `utils.project.getAll.invalidate()` はキャッシュ無効化です。これにより、作成後に一覧が自動で再取得され、新しいプロジェクトが表示されます。`initialData` に `editingProject` を渡すことで、Day 11 での編集機能にも対応できます。
+> 💡 `utils.project.getAll.invalidate()` はキャッシュ無効化です。これにより、作成後に一覧が自動で再取得され、新しいプロジェクトが表示されます。`initialData` に `editingProject` を渡すことで、Day 11 での編集機能でも同じダイアログを再利用できます。
 
 ✅ **確認ポイント**:
 - 新規作成ボタンでダイアログが開く

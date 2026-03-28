@@ -397,8 +397,8 @@ if (currentUser?.role !== USER_ROLE.ADMIN) {
     items-center gap-3">
     <Avatar className="h-9 w-9">
       <AvatarImage
-        src={user.avatar || ''}
-        alt={user.name || ''} />
+        src={user.avatar ?? ''}
+        alt={user.name ?? ''} />
       <AvatarFallback>
         {user.name?.[0]?.toUpperCase()}
       </AvatarFallback>

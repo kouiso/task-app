@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.py,**/*.dart"
 ---
 
 # 本質追求（Essential Thinking）— 我思うがゆえに我在り

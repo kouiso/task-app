@@ -90,6 +90,9 @@ sequenceDiagram
 📸 スクリーンショット: DevToolsのNetworkタブを開いた状態
 
 ![DevToolsのNetworkタブを開いた状態](./screenshots/dashboard.png)
+
+> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
+
 💻 **操作手順**:
 
 ブラウザで `http://localhost:3000/login` を開いてください。
@@ -113,6 +116,8 @@ DevToolsのNetworkタブで以下の内容を確認してください。
 | Response | `{"error":{"message":"..."}}` | サーバーからのエラーレスポンス |
 
 > 💡 tRPCでは通常のREST APIと異なり、エラーでもHTTPステータスは `200` の場合があります。エラー情報はレスポンスボディ内の `error` オブジェクトに含まれます。重要なのは`error.message`の部分です。
+
+> 📝 **実際の Network タブの表示はバージョンによって異なります**。Response タブを開いて `error.message` というフィールドを探してください。JSONの構造がここで示した例と多少異なっていても問題ありません。
 
 #### DevTools Networkタブの見方
 
@@ -377,11 +382,13 @@ const loginMutation =
     onError: (error) => {
       setError(
         error.message
-        || 'ログイン中にエラーが発生しました'
+        ?? 'ログイン中にエラーが発生しました'
       );
     },
   });
 ```
+
+> 📝 **`??` と `||` の違いについて**: 実際のソースファイルでは `||` が使われていますが、このプロジェクトの規約では `??`（Nullish Coalescing演算子）を推奨しています。`||` は `0` や空文字列 `""` も「偽」と判定しますが、`??` は `null` と `undefined` のみを置き換えます。エラーメッセージが空文字列のケースも正しく扱うために `??` が適切です。
 
 ✅ **確認ポイント**:
 - ファイルを保存した（まだ変更不要）
@@ -420,6 +427,8 @@ const loginMutation =
 
 ![ログイン成功後のダッシュボード（トースト表示）](./screenshots/dashboard.png)
 
+> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
+
 📝 **学んだこと**: `react-hot-toast`で、APIレスポンスのデータを使った動的なメッセージを表示できます。
 
 ---
@@ -444,6 +453,8 @@ const loginMutation =
 6. 「Encoded」欄にコピーした値を貼り付ける
 
 ✅ **確認ポイント**:
+- DevToolsのApplication → Cookiesで`session`Cookieが確認できた
+- Cookie値をコピーした
 - jwt.ioのページが開けた
 
 jwt.io で以下の情報が確認できます。
@@ -456,6 +467,10 @@ jwt.io で以下の情報が確認できます。
 | Payload | `role` | `"ADMIN"` | 権限 |
 | Payload | `iat` | `1234567890` | トークン発行日時（UNIX時間） |
 | Payload | `exp` | `1235172690` | 有効期限（UNIX時間、約7日後） |
+
+> 💡 **UNIX時間とは？** `exp` の値は UNIX 時間（1970年1月1日からの秒数）です。`new Date(exp * 1000)` でJSのDateオブジェクトに変換できます。
+
+> ブラウザのコンソールで `new Date(1235172690 * 1000)` と入力すると、人間が読める日時形式で表示されます。
 
 🔍 **JWTトークンの3部構成**:
 
@@ -473,6 +488,9 @@ jwt.io で以下の情報が確認できます。
 📸 スクリーンショット: DevToolsのApplication → Cookiesで`session`Cookieを選択した状態
 
 ![DevToolsのApplication → Cookies](./screenshots/dashboard.png)
+
+> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
+
 📝 **学んだこと**: JWTトークンは暗号化ではなく「署名」です。中身は誰でもデコードできますが、改ざんすると署名が合わなくなります。
 
 ---

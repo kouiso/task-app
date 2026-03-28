@@ -211,27 +211,41 @@ git log --oneline
 
 #### 4-2. 認証情報を保存する（毎回入力しなくて済むように）
 
+**自分のOSに合うコマンドを1つだけ実行してください。**
+
+**macOS の場合:**
+
 ```bash
 # filepath: ターミナル
-# 認証情報をキャッシュに保存する設定
-# （macOSの場合）
+# macOSのキーチェーンにトークンを安全に保存する
 git config --global credential.helper osxkeychain
+```
 
-# （Windowsの場合）
+**Windows の場合:**
+
+```bash
+# filepath: ターミナル（Git Bash）
+# Windowsの資格情報マネージャーにトークンを安全に保存する
 git config --global credential.helper manager
+```
 
-# （Linuxの場合）
+**Linux の場合（個人PCのみ）:**
+
+```bash
+# filepath: ターミナル
+# トークンをファイルに保存する（個人PCのみ）
 git config --global credential.helper store
 ```
 
+> ⚠️ **Linux の `store` は個人PCのみ**: トークンが `~/.git-credentials` に**暗号化なし**で保存されます。共有サーバーや複数ユーザーがいる環境では**絶対に使わないこと**（他のユーザーにトークンが丸見えになります）。
+
 🔍 **コード解説**:
 
-| コマンド | 意味 | 例え |
-|--------|------|------|
-| `credential.helper` | 認証情報の保存方法を設定 | パスワードマネージャーを選ぶ |
-| `osxkeychain` | macOSのキーチェーンに保存 | macの鍵束に保存 |
-| `manager` | Windowsの資格情報マネージャーに保存 | Windowsの金庫に保存 |
-| `store` | Linuxでファイルに保存 | ファイルに書き出す（⚠️ 平文保存。共有PCでは使わないこと） |
+| OS | 方式 | 保存場所 | 安全性 |
+|-----|------|---------|------|
+| macOS | `osxkeychain` | macのキーチェーン（暗号化） | ✅ 安全 |
+| Windows | `manager` | 資格情報マネージャー（暗号化） | ✅ 安全 |
+| Linux（個人） | `store` | `~/.git-credentials`（平文） | ⚠️ 個人PCのみ可 |
 
 > 💡 この設定により、次のStep 5でプッシュするときにユーザー名とトークンを入力すると、2回目以降は自動で認証されます。
 
@@ -277,7 +291,7 @@ git remote -v
 
 > 💡 **origin**（オリジン）はGitHubのリポジトリを指す「ニックネーム」です。clone した教材リポジトリの URL を、自分のリポジトリに変更しました。
 
-> 💡 **知っておきたいこと**: `git clone` でコピーしたリポジトリには、教材リポジトリの全コミット履歴が含まれています。push すると、この履歴もすべて自分のリポジトリにアップロードされます。これは「フォーク」に近い操作です。自分が追加したコミットだけでなく、元の履歴もすべて含まれることを覚えておいてください。
+> 💡 **知っておきたいこと**: `git clone` でコピーしたリポジトリには、教材リポジトリの全コミット履歴が含まれています。push すると、この履歴もすべて自分のリポジトリにアップロードされます。自分が追加したコミットだけでなく、元の履歴もすべて含まれることを覚えておいてください。
 
 ```bash
 # filepath: ターミナル（task-appフォルダ内で実行）
@@ -335,15 +349,19 @@ git status
 
 試しに小さな変更を加えて、`git diff`で差分を確認してみましょう。
 
-```bash
-# filepath: ターミナル
-# README.mdの末尾に1行追加する
-echo "" >> README.md
-echo "## 学習記録" >> README.md
-echo "- Day 01: 環境構築完了" >> README.md
-echo "- Day 02: ダッシュボードにバナー追加" >> README.md
-echo "- Day 03: GitHubに保存" >> README.md
+VS Codeで `README.md` を開き、ファイルの末尾に以下の内容を追記して保存してください。
+
+```markdown
+# filepath: README.md（末尾に追記する内容）
+### 学習記録
+- Day 01: 環境構築完了
+- Day 02: ダッシュボードにバナー追加
+- Day 03: GitHubに保存
 ```
+
+✅ **確認ポイント**:
+- ファイルを保存した（Ctrl+S / Cmd+S）
+- VS Codeのエクスプローラーで README.md に「M」（Modified）マークが付いている
 
 ```bash
 # filepath: ターミナル
@@ -366,7 +384,7 @@ git log --oneline
 | 表示 | 意味 |
 |------|------|
 | `abc1234` | コミットID（短縮版） |
-| `Initial commit: setup task-app` | コミットメッセージ |
+| `first commit` | コミットメッセージ（教材リポジトリの初期コミット） |
 
 #### 6-4. 変更をコミットしてプッシュ
 

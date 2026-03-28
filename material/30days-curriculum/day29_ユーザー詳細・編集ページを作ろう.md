@@ -351,8 +351,8 @@ import { ActiveStatusBadge, UserRoleBadge }
                   {/* アバター画像（未設定時は名前の頭文字を表示） */}
                   <Avatar className="w-24 h-24 mx-auto mb-4">
                     <AvatarImage
-                      src={user.avatar || ''}
-                      alt={user.name || ''}
+                      src={user.avatar ?? ''}
+                      alt={user.name ?? ''}
                     />
                     <AvatarFallback className="text-3xl">
                       {user.name?.[0]?.toUpperCase()}

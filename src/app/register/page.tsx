@@ -45,7 +45,7 @@ export default function RegisterPage() {
       router.refresh();
     },
     onError: (error) => {
-      setError(error.message || 'ユーザー登録中にエラーが発生しました');
+      setError(error.message ?? 'ユーザー登録中にエラーが発生しました');
     },
   });
 

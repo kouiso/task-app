@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.py,**/*.dart"
 ---
 
 # Prohibitions
@@ -87,6 +87,22 @@ WHEN 代替手段をまだ試していない場合
 ✅ 複数の道が存在する場合、最も実行可能なものをAIが選択して実行する
 ✅ ユーザーに確認するのは全代替手段が証拠付きで失敗した場合のみ
 ```
+
+---
+
+## GitHub Operation Prohibitions
+
+### Resolving Review Threads Without Reading
+
+NEVER resolve a review thread without first reading and evaluating the full comment body.
+
+❌ GraphQL resolveReviewThread のIDだけ取得して一括resolve。
+❌ 「Info/Self-reviewだろう」と推測してbodyを読まずにresolve。
+❌ 問題を見つけた後「次はちゃんとやる」と先送り。
+
+✅ 必ずコメント本文を全文取得・読解してから resolve の可否を判断する。
+✅ BUG/Flag/有効な指摘が含まれている場合は、対応完了後にresolveする。
+✅ 問題を発見したら即座に是正行動を取る。「次から」は禁止、「今すぐ」が原則。
 
 ---
 

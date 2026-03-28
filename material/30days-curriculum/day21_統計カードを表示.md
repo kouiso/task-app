@@ -149,8 +149,10 @@ import { useMemo } from 'react';
 import { AppLayout }
   from '@/component/layout/app-layout';
 // shadcn/ui のカード部品
-import { Card, CardContent }
-  from '@/component/ui/card';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
 // ローディング表示
 import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
@@ -171,6 +173,18 @@ import { api } from '@/trpc/react';
 
 ✅ **確認ポイント**:
 - `TASK_STATUS` と `api` をインポートした
+
+```typescript
+// filepath: src/app/report/page.tsx
+// テーブル部品（プロジェクト統計表示用）
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+```
+
+✅ **確認ポイント**:
+- テーブル関連の部品をインポートした
 
 ```typescript
 // filepath: src/app/report/page.tsx
@@ -285,6 +299,38 @@ const completionRate = useMemo(
 > `??` は `null`/`undefined` のときだけ
 > 右辺を返します。`||` は `0` や空文字でも
 > 右辺を返すため注意が必要です。
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 続けて追加: プロジェクト別統計
+const projectStats = useMemo(
+  () => projects?.map((project) => {
+    const pts = tasks?.filter(
+      (t) => t.projectId === project.id
+    ) ?? [];
+    const done = pts.filter(
+      (t) => t.status === TASK_STATUS.DONE
+    );
+    const time = pts.reduce(
+      (acc, t) =>
+        acc + (t.timeSpentMinutes ?? 0), 0
+    );
+    const pct = pts.length > 0
+      ? (done.length / pts.length) * 100 : 0;
+    return {
+      id: project.id,
+      name: project.name,
+      totalTasks: pts.length,
+      completedTasks: done.length,
+      progress: pct.toFixed(1),
+      totalTimeHours: (time / 60).toFixed(1),
+    };
+  }), [projects, tasks]);
+```
+
+✅ **確認ポイント**:
+- `projects` を `map` してプロジェクト別統計を計算した
+- 保存してエラーが出ないこと
 
 #### 各統計値の計算ロジック
 
@@ -408,6 +454,65 @@ if (tasksLoading || projectsLoading) {
 - 4枚のカードが表示される
 - 正しい数値が表示される
 
+4枚のカードの下に、プロジェクト別の統計テーブルを追加します。先ほどの `</div>` の直後に続けて書きます。
+
+```typescript
+// filepath: src/app/report/page.tsx
+// プロジェクト統計テーブル（ヘッダー）
+<Card>
+  <CardHeader>
+    <CardTitle>プロジェクト統計</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[200px]">
+            プロジェクト</TableHead>
+          <TableHead className="text-right">
+            タスク数</TableHead>
+          <TableHead className="text-right">
+            完了</TableHead>
+          <TableHead className="text-right">
+            進捗</TableHead>
+          <TableHead className="text-right">
+            作業時間</TableHead>
+        </TableRow>
+      </TableHeader>
+```
+
+✅ **確認ポイント**:
+- `<Card>` から `<TableHeader>` の閉じタグまで書いた
+- 次のブロックで `<TableBody>` と閉じタグを追加する
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 続き: 行データと閉じタグ
+      <TableBody>
+        {projectStats?.map((stat) => (
+          <TableRow key={stat.id}>
+            <TableCell className="font-medium">
+              {stat.name}</TableCell>
+            <TableCell className="text-right">
+              {stat.totalTasks}</TableCell>
+            <TableCell className="text-right">
+              {stat.completedTasks}</TableCell>
+            <TableCell className="text-right">
+              {stat.progress}%</TableCell>
+            <TableCell className="text-right">
+              {stat.totalTimeHours}h</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </CardContent>
+</Card>
+```
+
+✅ **確認ポイント**:
+- プロジェクト統計テーブルが表示される
+- プロジェクト名・タスク数・完了数・進捗・作業時間が並ぶ
+
 📸 スクリーンショット: 4枚の統計カードがグリッドで並んで表示されることを確認してください。
 
 ![4枚の統計カードがグリッドで並んで表示されることを確認してく](./screenshots/report.png)
@@ -461,6 +566,7 @@ npm run dev
 - [ ] ローカル集計の仕組みを理解した
 - [ ] `reduce` でデータを集計できた
 - [ ] 4枚の統計カードを表示できた
+- [ ] プロジェクト統計テーブルを表示できた
 - [ ] レスポンシブグリッドを適用できた
 
 ## ⚠️ つまずきポイント
