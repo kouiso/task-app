@@ -20,6 +20,7 @@ Day 14 で学んだこと:
 
 📸 スクリーンショット: タスク編集ダイアログの画面
 
+![タスク編集ダイアログの画面](./screenshots/task-detail-dialog.png)
 ## 🤔 なぜこれを作るのか？
 
 タスクの内容は常に変化します。優先度が上がったり、
@@ -190,6 +191,7 @@ const handleEdit = (taskId: string) => {
 
 📸 スクリーンショット: 編集モードのタスクダイアログ（既存データが入っている）
 
+![編集モードのタスクダイアログ（既存データが入っている）](./screenshots/task-detail-dialog.png)
 ---
 
 ### Step 3: update mutationを実装する（5分）
@@ -429,6 +431,7 @@ const handleDelete = (taskId: string) => {
 
 📸 スクリーンショット: 削除確認ダイアログの画面
 
+![削除確認ダイアログの画面](./screenshots/project-delete-confirm.png)
 ---
 
 ### Step 8: 新規作成ハンドラーを実装する（3分）
@@ -522,6 +525,7 @@ const handleCreate = () => {
 
 📸 スクリーンショット: 編集後のタスク一覧画面
 
+![編集後のタスク一覧画面](./screenshots/task-list.png)
 ---
 
 ### Step 11: 動作確認（3分）
