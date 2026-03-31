@@ -771,13 +771,17 @@ import {
   TaskDialog, type TaskFormData,
 } from '@/component/task/task-dialog';
 import { Plus } from 'lucide-react';
+```
 
-// TaskPageContent内に追加
+既存の `useState` 群の末尾（`const utils = api.useUtils()` の直前）に追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 既存のuseState群の末尾に追加
 const [dialogOpen, setDialogOpen] =
   useState(false);
 const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>();
-const utils = api.useUtils();
 
 // 新規作成ボタンのハンドラー
 const handleCreate = () => {

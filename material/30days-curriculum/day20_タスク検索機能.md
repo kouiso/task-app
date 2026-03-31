@@ -2,29 +2,23 @@
 
 ## 🔙 前回の振り返り
 
-Day 19 ではコメントの編集・削除機能を実装し、自分が書いたコメントだけを操作できる権限チェックも加えました。タスクのコミュニケーション機能が完成したので、今日はキーワードとフィルターでタスクを検索する機能に取り組みます。
+Day 19 ではコメントの編集・削除機能を実装し、自分が書いたコメントだけを操作できる権限チェックも加えました。今日はキーワードとフィルターでタスクを検索する機能に取り組みます。
 
 ---
 
 ## 🎯 今日のゴール
 
-キーワードや複数のフィルター条件でタスクを
-検索できるページを作ります。検索条件は
-URLパラメータに保存し、共有可能にします。
+キーワードや複数のフィルター条件でタスクを検索できるページを作ります。検索条件はURLパラメータに保存し、共有可能にします。
 
 📸 スクリーンショット: 検索画面とフィルタリングされた結果
 
 ![検索画面とフィルタリングされた結果](./screenshots/search-results.png)
+
 ## 🤔 なぜこれを作るのか？
 
-タスクが増えると目的のものが見つけにくくなります。
-たとえばプロジェクトに50件のタスクがあるとき、
-「優先度：高」で絞り込むと数件だけ表示されます。
+タスクが増えると目的のものが見つけにくくなります。たとえばプロジェクトに50件のタスクがあるとき、「優先度：高」で絞り込むと数件だけ表示されます。
 
-> 💡 **例え話**: 検索機能は「図書館の検索端末」
-> です。タイトル、ジャンル、著者といった
-> 複数の条件を組み合わせて、膨大な蔵書から
-> 目的の本をすぐに見つけられます。
+> 💡 **例え話**: 検索機能は「図書館の検索端末」です。タイトル・ジャンル・著者といった複数の条件を組み合わせて、膨大な蔵書から目的の本をすぐに見つけられます。
 
 ### 📐 検索機能の構成
 
@@ -59,13 +53,20 @@ flowchart TD
 | TaskCard で結果表示 | ページネーション |
 | プロジェクト結果表示 | 検索履歴 |
 
+### 🗂️ 今日作成・編集するファイル
+
+| ファイル | 役割 |
+|---------|------|
+| `src/app/search/page.tsx` | 検索ページ本体（新規作成） |
+| `src/app/search/loading.tsx` | ローディング画面（既存） |
+
 ### 🆕 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | search.search | — | 検索API | 図書館の蔵書検索 |
-| URLSearchParams | — | URL条件管理 | 検索条件の付箋 |
-| shouldSearch | — | 検索実行フラグ | 検索ボタンを押したか |
+| URLSearchParams | ユーアールエルサーチパラムズ | URLの検索条件を操作するブラウザ標準API | 検索条件の付箋 |
+| shouldSearch | シュッドサーチ | 1つでも条件があるか判定するフラグ | 検索ボタンを押す前の確認 |
 | useForm（復習） | ユーズフォーム | フォーム状態管理（Day 14 参照） | 検索条件の管理係 |
 | watch | ウォッチ | フォームの値をリアクティブに監視 | 入力が変わるたびに条件を更新 |
 
@@ -74,25 +75,25 @@ flowchart TD
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
 | Step 1 | 検索APIを理解する | 3分 |
-| Step 2 | ページの土台を作る | 3分 |
-| Step 3 | フィルターのインポートとstate | 4分 |
-| Step 4 | フィルターUIを配置する | 7分 |
-| Step 5 | URLパラメータと連動させる | 5分 |
-| Step 6 | 検索APIを呼び出す | 5分 |
-| Step 7 | 検索結果を表示する | 7分 |
-| Step 8 | 動作確認 | 3分 |
+| Step 2 | ページの土台を作る | 5分 |
+| Step 3 | zodスキーマとuseFormを設定する | 5分 |
+| Step 4 | キーワード入力とプロジェクトフィルター | 5分 |
+| Step 5 | ステータス・優先度・担当者・期限フィルター | 7分 |
+| Step 6 | handleSearchとhandleClearを定義する | 5分 |
+| Step 7 | URL同期と検索API呼び出し | 5分 |
+| Step 8 | タスク検索結果を表示する | 5分 |
+| Step 9 | プロジェクト結果と削除機能を追加する | 5分 |
+| Step 10 | 動作確認 | 3分 |
 
-**合計時間**: 約37分
+**合計時間**: 約48分
 
 ---
 
 ### Step 1: 検索APIを理解する（3分）
 
-🎯 **ゴール**: search ルーターの構成を
-把握します。
+🎯 **ゴール**: search ルーターの構成を把握します。
 
-VS Code で `src/server/api/routers/search.ts` を開いて、検索APIの構造を確認しましょう。
-`Ctrl+F` で `searchInputSchema` を検索します。
+VS Code で `src/server/api/routers/search.ts` を開いて、検索APIの構造を確認しましょう。`Ctrl+F` で `searchInputSchema` を検索します。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
@@ -142,19 +143,15 @@ const searchInputSchema = z.object({
 | `dateFrom` | string (ISO日付)? | — | 期限開始 |
 | `dateTo` | string (ISO日付)? | — | 期限終了 |
 
-> 💡 全てのパラメータが任意です。
-> `status` と `priority` は `'all'` を渡すと
-> 絞り込みなしとしてサーバー側で処理されます。
-
+> 💡 全てのパラメータが任意です。`status` と `priority` は `'all'` を渡すと絞り込みなしとしてサーバー側で処理されます。
 
 ---
 
-### Step 2: ページの土台を作る（3分）
+### Step 2: ページの土台を作る（5分）
 
-🎯 **ゴール**: 検索ページの基本構造を
-作ります。
+🎯 **ゴール**: 検索ページの基本構造と export default を完成させます。
 
-💻 **実装**:
+`src/app/search/page.tsx` を新規作成します。まずインポートを記述します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -162,27 +159,75 @@ const searchInputSchema = z.object({
 
 import { zodResolver }
   from '@hookform/resolvers/zod';
+import { Search } from 'lucide-react';
+import {
+  useRouter, useSearchParams,
+} from 'next/navigation';
 import {
   Suspense, useEffect, useState,
 } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  useRouter, useSearchParams,
-} from 'next/navigation';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
-import { AppLayout }
-  from '@/component/layout/app-layout';
-import { api } from '@/trpc/react';
 ```
 
 ✅ **確認ポイント**:
 - `useForm`, `zodResolver`, `z` がインポートされている
 
-続いて、コンポーネント本体を定義します。
-`utils` は検索結果の再取得（削除後）に使います。
+続いてローカルモジュールのインポートです。
 
 ```typescript
 // filepath: src/app/search/page.tsx
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { Button }
+  from '@/component/ui/button';
+import {
+  Card, CardContent,
+} from '@/component/ui/card';
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
+```
+
+✅ **確認ポイント**:
+- レイアウト・UIコンポーネントが揃っている
+
+```typescript
+// filepath: src/app/search/page.tsx
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import { Separator }
+  from '@/component/ui/separator';
+import {
+  isTaskPriority,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS_LABELS,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+```
+
+✅ **確認ポイント**:
+- `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner`
+- 型ガード `isTaskStatus` / `isTaskPriority` がインポートされている
+
+`SearchPageContent` の外枠と `export default` を書きます。`useSearchParams` は Suspense 境界が必要です。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// コンポーネント本体の外枠
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -191,102 +236,101 @@ function SearchPageContent() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold
-          tracking-tight">検索</h1>
-        {/* Step 3: フィルターフォーム */}
-        {/* Step 6: 検索結果 */}
-        {/* Step 6: 削除ダイアログ */}
+        <div>
+          <h1 className="text-3xl font-bold
+            tracking-tight">検索</h1>
+          <p className="text-muted-foreground">
+            タスクやプロジェクトを検索します
+          </p>
+        </div>
+        {/* Step 4-5: フィルターフォーム */}
+        {/* Step 8-9: 検索結果 */}
       </div>
     </AppLayout>
   );
 }
 ```
 
-> 💡 `useSearchParams` でURLの検索条件を
-> 読み取ります。`useForm` でフォーム状態を
-> 一括管理し、`useRouter` で条件変更時に
-> URLを更新します。
+✅ **確認ポイント**:
+- `utils` は検索結果の再取得（削除後）に使う
+- コメントでフォームと結果の挿入位置を示している
+
+> 💡 `useSearchParams` はURL のクエリ文字列を読み取る Next.js のフックです。`useRouter` はプログラムからURL遷移するために使います。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// Suspenseでラップしてexport
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <SearchPageContent />
+    </Suspense>
+  );
+}
+```
 
 ✅ **確認ポイント**:
-- `/search` にアクセスして表示される
+- `/search` にアクセスして画面が表示される
+- `PageLoadingSpinner` で読み込み中が表示される
+
+> 💡 Next.js App Router では `useSearchParams` を使うコンポーネントを `Suspense` で囲む必要があります。囲まないとビルド時にエラーになります。
 
 ---
 
-### Step 3: zodスキーマとuseFormを追加する（4分）
+### Step 3: zodスキーマとuseFormを設定する（5分）
 
-🎯 **ゴール**: 7つのフィルター条件を
-zod スキーマと useForm で一括管理します。
+🎯 **ゴール**: 7つのフィルター条件を zod スキーマと useForm で一括管理します。
 
-💻 **実装**:
-
-```typescript
-// filepath: src/app/search/page.tsx
-import { Search } from 'lucide-react';
-import { Button } from '@/component/ui/button';
-import {
-  Card, CardContent,
-} from '@/component/ui/card';
-import { Input } from '@/component/ui/input';
-import { Label } from '@/component/ui/label';
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
-} from '@/component/ui/select';
-```
-
-✅ **確認ポイント**:
-- UIコンポーネントのインポートが追加された
-
-型ガード関数とラベル定数もインポートします。
+`SearchPageContent` の外側（関数の上）にスキーマを定義します。サーバー側の `searchInputSchema` と型を合わせます。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-import {
-  isTaskPriority,
-  TASK_PRIORITY_LABELS,
-  type TaskPriority,
-} from '@/lib/constant/priority';
-import {
-  isTaskStatus,
-  TASK_STATUS_LABELS,
-  type TaskStatus,
-} from '@/lib/constant/status';
+// ステータス・優先度の値定義
+const TASK_STATUS_VALUES = [
+  'TODO', 'IN_PROGRESS', 'IN_REVIEW',
+  'DONE', 'CANCELLED', 'BLOCKED',
+] as const;
+const TASK_PRIORITY_VALUES = [
+  'LOW', 'MEDIUM', 'HIGH', 'URGENT',
+] as const;
 ```
 
 ✅ **確認ポイント**:
-- `isTaskStatus` / `isTaskPriority` が追加された
-
-検索フォーム用の zod スキーマを定義します。
-全フィールドをひとつのオブジェクトで管理します。
+- サーバー側の `taskStatusSchema` / `taskPrioritySchema` と値が一致している
 
 ```typescript
 // filepath: src/app/search/page.tsx
 // 検索フォームの zodスキーマ
 const searchFormSchema = z.object({
-  keyword: z.string(),
-  projectId: z.string(),
-  status: z.string(),
-  priority: z.string(),
-  assignedTo: z.string(),
-  dateFrom: z.string(),
-  dateTo: z.string(),
+  keyword: z.string().default(''),
+  projectId: z.string().default('all'),
+  status: z.enum([
+    'all', ...TASK_STATUS_VALUES,
+  ]).default('all'),
+  priority: z.enum([
+    'all', ...TASK_PRIORITY_VALUES,
+  ]).default('all'),
+  assignedTo: z.string().default('all'),
+  dateFrom: z.string().default(''),
+  dateTo: z.string().default(''),
 });
 type SearchFormValues =
   z.infer<typeof searchFormSchema>;
 ```
 
 ✅ **確認ポイント**:
-- 7つのフィールドが1つのスキーマに集約された
+- `status` / `priority` が `'all'` + 実際の値の union になっている
+- サーバー側と型が合っている（`z.string()` ではなく `z.enum`）
 
-URLパラメータから初期値を型安全に設定し、
-`useForm` で管理します。
+`SearchPageContent` 内に `useForm` を追加します。URLパラメータから初期値を型安全に設定します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// SearchPageContent内: useFormで一括管理
-const initStatus =
+// SearchPageContent内: 初期値の準備
+const initialStatus =
   searchParams.get('status') ?? 'all';
-const initPriority =
+const initialPriority =
   searchParams.get('priority') ?? 'all';
 
 const form = useForm<SearchFormValues>({
@@ -297,16 +341,19 @@ const form = useForm<SearchFormValues>({
     projectId:
       searchParams.get('projectId')
         ?? 'all',
-    status: isTaskStatus(initStatus)
-      ? initStatus : 'all',
+    status: isTaskStatus(initialStatus)
+      ? initialStatus : 'all',
 ```
+
+✅ **確認ポイント**:
+- `??` を使って初期値を設定している（`||` ではない）
 
 ```typescript
 // filepath: src/app/search/page.tsx
 // defaultValues の続き
     priority:
-      isTaskPriority(initPriority)
-        ? initPriority : 'all',
+      isTaskPriority(initialPriority)
+        ? initialPriority : 'all',
     assignedTo:
       searchParams.get('assignedTo')
         ?? 'all',
@@ -319,11 +366,10 @@ const form = useForm<SearchFormValues>({
 ```
 
 ✅ **確認ポイント**:
-- `useForm` で7つのフィールドを一括管理している
-- URLパラメータから `??` で初期値を設定している
+- `isTaskStatus` / `isTaskPriority` で型安全にバリデーションしている
+- 7つのフィールドが1つの `useForm` で管理されている
 
-`watch` でフォームの現在値を取得し、
-API呼び出し用データを用意します。
+`watch` でフォームの現在値を取得し、プルダウン用データを取得します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -337,30 +383,21 @@ const { data: users } =
 ```
 
 ✅ **確認ポイント**:
-- `watch()` でフォームの値をリアクティブに取得
+- `watch()` でフォームの値をリアクティブに取得している
 
-> 💡 Day 14 では `register` と `Controller` で
-> 各入力を管理しました。検索フォームでは
-> `setValue` と `watch` の組み合わせで
-> Select コンポーネントの値も管理できます。
+> 💡 Day 14 では `register` と `Controller` で各入力を管理しました。検索フォームでは `setValue` と `watch` の組み合わせで Select コンポーネントの値も管理できます。
 
 ---
 
-### Step 4: フィルターUIを配置する（7分）
+### Step 4: キーワード入力とプロジェクトフィルター（5分）
 
-🎯 **ゴール**: Card内にフィルターフォームの
-JSXを配置します。
+🎯 **ゴール**: Card 内にキーワード入力とプロジェクトSelectを配置します。
 
-💻 **実装**:
-
-Step 2で `{/* Step 3: フィルターフォーム */}`
-と書いた場所を以下に置き換えます。
-`handleSearch`・`handleClear` は Step 5 で定義します。
-まずキーワード入力です。
+Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコードに置き換えます。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// Card > CardContent > grid の中
+// フィルターフォーム開始
 <Card>
   <CardContent className="pt-6">
     <div className="grid gap-4">
@@ -373,7 +410,8 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
             left-2 top-3 h-4 w-4
             text-muted-foreground" />
           <Input id="keyword"
-            placeholder="タスク名で検索..."
+            placeholder=
+              "タスク名、説明で検索..."
             className="pl-8"
             {...form.register('keyword')}
             onKeyDown={(e) => {
@@ -386,30 +424,35 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 
 ✅ **確認ポイント**:
 - `register('keyword')` でフォームに登録している
+- Enter キーで検索が実行される
 
-6つのフィルターをgridで配置します。
-プロジェクト・ステータス・優先度です。
+> 💡 `Search` アイコンを `absolute` で左に配置し、Input の `pl-8` で左パディングを確保します。これでアイコン付き入力欄になります。
+
+6つのフィルターを Grid レイアウトで配置します。まずプロジェクトです。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 6列グリッドの開始
+// 6列グリッド開始 + プロジェクトSelect
 <div className="grid grid-cols-1
-  md:grid-cols-2 lg:grid-cols-3
-  gap-4">
-```
-
-```typescript
-// filepath: src/app/search/page.tsx
-// プロジェクトSelect
+  md:grid-cols-2 lg:grid-cols-3 gap-4">
   <div className="grid gap-2">
     <Label>プロジェクト</Label>
-    <Select value={formValues.projectId}
+    <Select
+      value={formValues.projectId}
       onValueChange={(v) =>
         form.setValue('projectId', v)}>
       <SelectTrigger>
         <SelectValue
           placeholder="すべて" />
       </SelectTrigger>
+```
+
+✅ **確認ポイント**:
+- `form.setValue` で Select の値をフォームに反映している
+
+```typescript
+// filepath: src/app/search/page.tsx
+// プロジェクト SelectContent
       <SelectContent>
         <SelectItem value="all">
           すべてのプロジェクト
@@ -425,7 +468,15 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- `form.setValue` でSelect値をフォームに反映
+- `value="all"` が初期選択肢になっている
+
+---
+
+### Step 5: ステータス・優先度・担当者・期限フィルター（7分）
+
+🎯 **ゴール**: 残り5つのフィルターを Grid 内に追加します。
+
+ステータスフィルターです。型ガードで不正な値を防ぎます。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -455,7 +506,8 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- 型ガード付きで `form.setValue` している
+- `isTaskStatus(v)` で値をバリデーションしている
+- `TASK_STATUS_LABELS` から日本語ラベルを取得している
 
 優先度もステータスと同じパターンです。
 
@@ -489,7 +541,7 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ✅ **確認ポイント**:
 - 優先度もステータスと同じパターンで動作する
 
-担当者と期限フィルターを追加します。
+担当者フィルターを追加します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -498,31 +550,14 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
     <Label htmlFor="assignedTo">
       担当者
     </Label>
-    <Select value={formValues.assignedTo}
+    <Select
+      value={formValues.assignedTo}
       onValueChange={(v) =>
         form.setValue('assignedTo', v)}>
       <SelectTrigger id="assignedTo">
         <SelectValue
           placeholder="すべての担当者" />
       </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">
-          すべての担当者
-        </SelectItem>
-```
-
-```typescript
-// filepath: src/app/search/page.tsx
-// 担当者リスト（SelectContent続き）
-        {users?.map((user) => (
-          <SelectItem key={user.id}
-            value={user.id}>
-            {user.name ?? user.email}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
 ```
 
 ✅ **確認ポイント**:
@@ -530,18 +565,38 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 期限範囲フィルター
+// 担当者 SelectContent
+      <SelectContent>
+        <SelectItem value="all">
+          すべての担当者
+        </SelectItem>
+        {users?.map((user) => (
+          <SelectItem key={user.id}
+            value={user.id}>
+            {user.name ?? user.email}
+          </SelectItem>))}
+      </SelectContent>
+    </Select>
+  </div>
+```
+
+✅ **確認ポイント**:
+- `user.name ?? user.email` で名前がない場合はメールを表示
+
+期限範囲フィルターと検索ボタンを追加します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 期限範囲 + 検索ボタン
   <div className="grid gap-2">
     <Label htmlFor="dateFrom">
-      期限：開始日
-    </Label>
+      期限：開始日</Label>
     <Input id="dateFrom" type="date"
       {...form.register('dateFrom')} />
   </div>
   <div className="grid gap-2">
     <Label htmlFor="dateTo">
-      期限：終了日
-    </Label>
+      期限：終了日</Label>
     <Input id="dateTo" type="date"
       {...form.register('dateTo')} />
   </div>
@@ -549,10 +604,7 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 ```
 
 ✅ **確認ポイント**:
-- 日付入力欄が表示される
-
-検索ボタンとクリアボタンを追加します。
-`handleSearch` と `handleClear` は Step 5 で定義します。
+- 日付入力欄が `type="date"` で表示される
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -574,54 +626,25 @@ Step 2で `{/* Step 3: フィルターフォーム */}`
 </Card>
 ```
 
-> 💡 `onKeyDown` で Enter キーを検知し、
-> 検索を実行します。Search アイコンは
-> `absolute` で入力欄の左に配置します。
-
 ✅ **確認ポイント**:
 - 検索ボタンとクリアボタンが表示される
-- フォーム全体がCard内にまとまっている
+- フォーム全体が Card 内にまとまっている
 
 📸 スクリーンショット: フィルターフォームの全体像
 
 ![フィルターフォームの全体像](./screenshots/search.png)
+
 ---
 
-### Step 5: URLパラメータと連動させる（5分）
+### Step 6: handleSearch と handleClear を定義する（5分）
 
-🎯 **ゴール**: 検索条件をURLに保存し、
-ブラウザの「戻る」や共有に対応します。
+🎯 **ゴール**: 検索実行とクリアのハンドラーを定義します。フォームの値をURLパラメータに変換します。
 
-💻 **実装**:
-
-URLパラメータが変わったときに
-`useForm` の値を同期します。
+`SearchPageContent` 内、return 文より前に追加します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// URL→form 同期（useEffect）
-const SEARCH_FIELDS = [
-  'keyword', 'projectId', 'status',
-  'priority', 'assignedTo',
-  'dateFrom', 'dateTo',
-] as const;
-
-useEffect(() => {
-  for (const key of SEARCH_FIELDS) {
-    const value =
-      searchParams.get(key);
-    if (value)
-      form.setValue(key, value);
-  }
-}, [searchParams, form]);
-```
-
-✅ **確認ポイント**:
-- `form.setValue` で URL→フォームに同期している
-
-```typescript
-// filepath: src/app/search/page.tsx
-// 検索実行ハンドラー（useForm版）
+// 検索実行ハンドラー
 const handleSearch = () => {
   const values = form.getValues();
   const paramList = [
@@ -636,11 +659,6 @@ const handleSearch = () => {
     { key: 'priority',
       value: values.priority,
       exclude: 'all' },
-```
-
-```typescript
-// filepath: src/app/search/page.tsx
-// paramList 続き + URL更新
     { key: 'assignedTo',
       value: values.assignedTo,
       exclude: 'all' },
@@ -649,15 +667,33 @@ const handleSearch = () => {
     { key: 'dateTo',
       value: values.dateTo },
   ];
+```
+
+✅ **確認ポイント**:
+- `form.getValues()` で全フィールドの値を一括取得している
+- `exclude: 'all'` で「すべて」選択時はURLに含めない
+
+```typescript
+// filepath: src/app/search/page.tsx
+// URLパラメータを構築して遷移
   const params = new URLSearchParams();
-  for (const p of paramList) {
-    if (p.value && p.value !== p.exclude)
-      params.set(p.key, p.value);
+  const filtered = paramList.filter(
+    (p) =>
+      p.value && p.value !== p.exclude,
+  );
+  for (const p of filtered) {
+    params.set(p.key, p.value);
   }
   router.push(
     `/search?${params.toString()}`);
 };
 ```
+
+✅ **確認ポイント**:
+- `URLSearchParams` で条件をURL文字列に変換している
+- `router.push` でURLを更新している
+
+> 💡 `URLSearchParams` はブラウザ標準のAPIです。`params.set('key', 'value')` でキーと値を追加し、`params.toString()` で `key=value&key2=value2` 形式の文字列を生成します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -676,26 +712,74 @@ const handleClear = () => {
 };
 ```
 
-> 💡 `form.getValues()` で全フィールドの値を
-> 一括取得し、`form.reset()` で一括クリアできます。
-> `useState` を7個並べるより管理しやすくなります。
-
 ✅ **確認ポイント**:
-- 検索後にURLが `?keyword=xxx` になる
-- クリアでURLが `/search` に戻る
+- `form.reset()` で7つのフィールドを一括クリアしている
+- `router.push('/search')` でURLもリセットしている
+
+> 💡 `form.getValues()` で全フィールドの値を一括取得し、`form.reset()` で一括クリアできます。`useState` を7個並べるより管理しやすくなります。
 
 ---
 
-### Step 6: 検索APIを呼び出す（5分）
+### Step 7: URL同期と検索API呼び出し（5分）
 
-🎯 **ゴール**: フィルター条件で
-`api.search.search` を呼びます。
+🎯 **ゴール**: URLパラメータの変更をフォームに同期し、条件付きで検索APIを呼びます。
 
-💻 **実装**:
+ブラウザの「戻る」ボタンや共有リンクに対応するため、URLパラメータが変わったときにフォームの値を同期します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 検索条件が1つでもあるかチェック
+// URL→form 同期（useEffect）
+useEffect(() => {
+  const paramMap: Array<{
+    key: keyof SearchFormValues;
+    transform?: (v: string) => string;
+  }> = [
+    { key: 'keyword' },
+    { key: 'projectId' },
+    { key: 'status',
+      transform: (v) =>
+        isTaskStatus(v) ? v
+        : v === 'all' ? 'all'
+        : form.getValues('status') },
+    { key: 'priority',
+      transform: (v) =>
+        isTaskPriority(v) ? v
+        : v === 'all' ? 'all'
+        : form.getValues('priority') },
+    { key: 'assignedTo' },
+    { key: 'dateFrom' },
+    { key: 'dateTo' },
+  ];
+```
+
+✅ **確認ポイント**:
+- `status` / `priority` は型ガードで不正な値を防いでいる
+
+```typescript
+// filepath: src/app/search/page.tsx
+// paramMap ループ処理
+  for (const { key, transform }
+    of paramMap) {
+    const value =
+      searchParams.get(key);
+    if (value) {
+      const transformed = transform
+        ? transform(value) : value;
+      form.setValue(key, transformed);
+    }
+  }
+}, [searchParams, form]);
+```
+
+✅ **確認ポイント**:
+- 依存配列に `searchParams` と `form` を指定している
+- URLのパラメータをループでフォームに反映している
+
+検索条件が1つでもあるか判定するフラグを定義します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 検索実行フラグ
 const shouldSearch =
   !!formValues.keyword
   || formValues.projectId !== 'all'
@@ -706,11 +790,19 @@ const shouldSearch =
   || !!formValues.dateTo;
 ```
 
+✅ **確認ポイント**:
+- すべてのフィルター条件を OR で評価している
+- 条件が1つもなければ API を呼ばない
+
+検索APIを呼び出します。`enabled: shouldSearch` で条件が空のときはリクエストを送りません。
+
 ```typescript
 // filepath: src/app/search/page.tsx
-// 検索API呼び出し（formValues を使用）
-const { data: searchResults, isLoading }
-  = api.search.search.useQuery(
+// 検索API呼び出し
+const {
+  data: searchResults,
+  isLoading,
+} = api.search.search.useQuery(
   {
     keyword:
       formValues.keyword || undefined,
@@ -720,15 +812,18 @@ const { data: searchResults, isLoading }
         : undefined,
     status: formValues.status,
     priority: formValues.priority,
-```
-
-```typescript
-// filepath: src/app/search/page.tsx
-// useQuery パラメータ続き
     assignedTo:
       formValues.assignedTo !== 'all'
         ? formValues.assignedTo
         : undefined,
+```
+
+✅ **確認ポイント**:
+- `formValues.keyword || undefined` で空文字を undefined に変換している
+
+```typescript
+// filepath: src/app/search/page.tsx
+// useQuery パラメータ続き
     dateFrom: formValues.dateFrom
       ? new Date(formValues.dateFrom)
         .toISOString()
@@ -745,51 +840,27 @@ const { data: searchResults, isLoading }
 );
 ```
 
-> 💡 `enabled: shouldSearch` で条件が
-> 空のときはAPIを呼びません。
-> Day 12 で学んだ `enabled` 制御と
-> 共通するパターンです。
-
 ✅ **確認ポイント**:
-- 条件を入力すると検索結果が返る
+- `enabled: shouldSearch` で条件なしのときはAPIを呼ばない
+- 日付を ISO 文字列に変換している
+
+> 💡 `enabled: shouldSearch` は Day 12 で学んだ `enabled` 制御と同じパターンです。条件が揃うまで API リクエストを送りません。
 
 ---
 
-### Step 7: 検索結果を表示する（7分）
+### Step 8: タスク検索結果を表示する（5分）
 
-🎯 **ゴール**: 検索結果をTaskCardと
-プロジェクトCardで表示します。
-検索結果から直接タスクを操作できると便利なので、
-削除処理も追加します。
+🎯 **ゴール**: 検索結果を TaskCard で表示し、タスクの操作（クリック・編集・削除）に対応します。
 
-💻 **実装**:
-
-```typescript
-// filepath: src/app/search/page.tsx
-import toast from 'react-hot-toast';
-import { TaskCard }
-  from '@/component/task/task-card';
-import {
-  DeleteConfirmDialog,
-} from
-  '@/component/ui/delete-confirm-dialog';
-import { PageLoadingSpinner }
-  from '@/component/ui/loading-spinner';
-import { Separator }
-  from '@/component/ui/separator';
-```
-
-✅ **確認ポイント**:
-- 結果表示に必要なインポートが追加された
-
-ナビゲーションと削除のハンドラーを追加します。
+ナビゲーションのハンドラーを追加します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
 // ナビゲーションハンドラー
 const handleTaskClick =
   (taskId: string) => {
-    router.push(`/task?taskId=${taskId}`);
+    router.push(
+      `/task?taskId=${taskId}`);
   };
 const handleTaskEdit =
   (taskId: string) => {
@@ -804,63 +875,48 @@ const handleProjectClick =
 ```
 
 ✅ **確認ポイント**:
-- クリック時の遷移先が正しい
+- タスククリックで詳細画面に遷移する
+- 編集ボタンで編集モードで開く
+
+Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ローディング表示と結果件数です。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 削除確認state（1つのオブジェクトで管理）
-const [deleteTaskConfirm,
-  setDeleteTaskConfirm] = useState<{
-    open: boolean;
-    taskId: string | null;
-  }>({ open: false, taskId: null });
-
-const deleteMutation =
-  api.task.delete.useMutation({
-    onSuccess: () => {
-      utils.search.search.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message
-        ?? 'タスクの削除に失敗しました');
-    },
-  });
-
-const handleTaskDelete =
-  (taskId: string) => {
-    setDeleteTaskConfirm(
-      { open: true, taskId });
-  };
-```
-
-✅ **確認ポイント**:
-- 削除stateがオブジェクト1つで管理されている
-- エラー時にtoastで通知される
-
-タスク検索結果の表示JSXです。
-Step 2の `{/* Step 6: 検索結果 */}` を
-以下に置き換えます。
-
-```typescript
-// filepath: src/app/search/page.tsx
-// 検索結果の表示部分
+// ローディング・結果件数・タスク見出し
 {isLoading ? (
   <PageLoadingSpinner />
 ) : shouldSearch && searchResults ? (
   <div className="space-y-6">
-    <h2 className="text-xl font-semibold">
+    <h2 className="text-xl font-semibold
+      flex items-center gap-2">
       検索結果:
       {searchResults.totalCount}件
+      {searchResults.tasks.length > 0
+        && (
+        <span className="text-sm
+          font-normal
+          text-muted-foreground">
+          （タスク:
+          {searchResults.tasks.length}件
+          {searchResults.projects
+            .length > 0
+            && `, プロジェクト: ${
+              searchResults.projects
+                .length}件`}）
+        </span>)}
     </h2>
 ```
 
 ✅ **確認ポイント**:
-- 件数が表示される
+- 件数がタスクとプロジェクト別に表示される
+
+タスク結果をカード形式で表示します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// タスク結果セクション（見出し部分）
-    {searchResults.tasks.length > 0 && (
+// タスク結果セクション
+    {searchResults.tasks.length > 0
+      && (
       <div className="space-y-4">
         <div className="flex
           items-center gap-2">
@@ -875,11 +931,11 @@ Step 2の `{/* Step 6: 検索結果 */}` を
 ```
 
 ✅ **確認ポイント**:
-- セクション見出しが表示される
+- セクション見出しに件数が表示される
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// タスク結果セクション（カード部分）
+// タスクカード一覧
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -905,14 +961,24 @@ Step 2の `{/* Step 6: 検索結果 */}` を
 ```
 
 ✅ **確認ポイント**:
-- タスクがカード形式で表示される
+- Day 13 で作った `TaskCard` をそのまま再利用している
+- カードクリック・編集・削除の3操作が使える
 
-プロジェクト検索結果も表示します。
-キーワード検索時にプロジェクト名もヒットします。
+📸 スクリーンショット: 検索結果がカード形式で表示されている画面
+
+![検索結果がカード形式で表示されている画面](./screenshots/search-results.png)
+
+---
+
+### Step 9: プロジェクト結果と削除機能を追加する（5分）
+
+🎯 **ゴール**: プロジェクト検索結果の表示と、タスク削除機能を完成させます。
+
+プロジェクト検索結果を表示します。キーワード検索時にプロジェクト名もヒットします。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// プロジェクト結果（見出し部分）
+// プロジェクト結果セクション
     {searchResults.projects.length
       > 0 && (
       <div className="space-y-4">
@@ -930,11 +996,11 @@ Step 2の `{/* Step 6: 検索結果 */}` を
 ```
 
 ✅ **確認ポイント**:
-- プロジェクト見出しが表示される
+- プロジェクト件数が見出しに表示される
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// プロジェクト結果（カード部分）
+// プロジェクトカード一覧（グリッド）
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -946,7 +1012,16 @@ Step 2の `{/* Step 6: 検索結果 */}` を
               onClick={() =>
                 handleProjectClick(
                   project.id)}>
-              <CardContent className="pt-6">
+```
+
+✅ **確認ポイント**:
+- カードクリックで `handleProjectClick` が呼ばれる
+
+```typescript
+// filepath: src/app/search/page.tsx
+// プロジェクトカード内容
+              <CardContent
+                className="pt-6">
                 <h4 className=
                   "font-semibold mb-2">
                   {project.name}</h4>
@@ -962,9 +1037,9 @@ Step 2の `{/* Step 6: 検索結果 */}` を
 
 ✅ **確認ポイント**:
 - プロジェクトもカード形式で表示される
+- クリックでプロジェクト詳細に遷移する
 
-結果が0件のときのメッセージと条件未入力時の案内、
-削除ダイアログを追加します。
+結果0件と条件未入力時の表示を追加します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -973,8 +1048,7 @@ Step 2の `{/* Step 6: 検索結果 */}` を
       <div className="text-center py-12
         text-muted-foreground">
         <p>検索結果が見つかりません</p>
-      </div>
-    )}
+      </div>)}
   </div>
 ) : (
   <div className="text-center py-12
@@ -985,10 +1059,42 @@ Step 2の `{/* Step 6: 検索結果 */}` を
 ```
 
 ✅ **確認ポイント**:
-- 結果0件時にメッセージが表示される
+- 結果0件時と未入力時で異なるメッセージが表示される
 
-Step 2の `{/* Step 6: 削除ダイアログ */}` を
-以下に置き換えます。
+タスク削除機能を追加します。削除確認ダイアログの state と mutation を定義します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 削除確認state
+const [deleteTaskConfirm,
+  setDeleteTaskConfirm] = useState<{
+    open: boolean;
+    taskId: string | null;
+  }>({ open: false, taskId: null });
+
+const deleteMutation =
+  api.task.delete.useMutation({
+    onSuccess: () => {
+      utils.search.search.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message
+        ?? 'タスクの削除に失敗しました');
+    },
+  });
+
+const handleTaskDelete =
+  (taskId: string) => {
+    setDeleteTaskConfirm(
+      { open: true, taskId });
+  };
+```
+
+✅ **確認ポイント**:
+- 削除成功時に検索結果を再取得する（`invalidate`）
+- エラー時に `toast.error` で通知される
+
+削除確認ダイアログのJSXです。検索結果の下に配置します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -1011,67 +1117,15 @@ Step 2の `{/* Step 6: 削除ダイアログ */}` を
     deleteMutation.isPending} />
 ```
 
-> 💡 `searchResults.tasks` にタスク、
-> `searchResults.projects` にプロジェクトが
-> 含まれます。Day 13 の TaskCard を
-> そのまま再利用できます。
-
 ✅ **確認ポイント**:
-- 検索結果がカード表示される
-- カードクリックでタスク詳細に遷移
 - 削除ボタンで確認ダイアログが表示される
-
-📸 スクリーンショット: 検索結果がカード形式で表示されている画面
-
-![検索結果がカード形式で表示されている画面](./screenshots/search-results.png)
-最後に、ページのエクスポートを追加します。
-`useSearchParams` は Suspense 境界が必要です。
-
-```typescript
-// filepath: src/app/search/page.tsx
-// Suspenseでラップしてexport
-export default function SearchPage() {
-  return (
-    <Suspense
-      fallback={<PageLoadingSpinner />}>
-      <SearchPageContent />
-    </Suspense>
-  );
-}
-```
-
-✅ **確認ポイント**:
-- `PageLoadingSpinner` で読み込み中表示される
-- ファイルを保存してエラーがない
-
-> 💡 Next.js App Router では `useSearchParams`
-> を使うコンポーネントは `Suspense` で囲む
-> 必要があります。ビルド時にエラーになるため
-> 忘れずに追加しましょう。
+- 確認後にAPIで削除が実行される
 
 ---
 
-### Step 8: 動作確認（3分）
+### Step 10: 動作確認（3分）
 
 🎯 **ゴール**: 検索機能の全体を確認します。
-
-1. `/search` にアクセス
-2. キーワードを入力して検索
-3. プロジェクトで絞り込み
-4. ステータスで絞り込み
-5. 「クリア」で条件リセット
-6. 検索結果のカードをクリック
-7. URLに検索条件が含まれる
-
-✅ **確認ポイント**:
-- 複数の条件で絞り込める
-- URLをコピーして共有できる
-- カードクリックで詳細に遷移
-
-📸 スクリーンショット: 検索結果一覧の完成画面
-
-![検索結果一覧の完成画面](./screenshots/search-results.png)
----
 
 ```bash
 # filepath: ターミナル
@@ -1081,7 +1135,29 @@ npm run dev
 
 ✅ **確認ポイント**:
 - `http://localhost:3000/search` でアプリが表示される
-- 検索フォームと結果表示が動作する
+
+以下の操作を順に試します。
+
+| 操作 | 期待する動作 |
+|------|-------------|
+| `/search` にアクセス | フォームが表示される |
+| キーワードを入力して検索 | 結果がカードで表示される |
+| プロジェクトで絞り込み | 対象プロジェクトのタスクだけ表示 |
+| ステータスで絞り込み | 選択したステータスだけ表示 |
+| 「クリア」ボタン | 条件リセット・URLが `/search` に戻る |
+| カードをクリック | タスク詳細に遷移 |
+| URLに検索条件が含まれる | ブラウザの戻るで復元される |
+
+✅ **確認ポイント**:
+- 複数の条件で絞り込める
+- URLをコピーして共有できる
+- カードクリックで詳細に遷移する
+
+📸 スクリーンショット: 検索結果一覧の完成画面
+
+![検索結果一覧の完成画面](./screenshots/search-results.png)
+
+---
 
 ## 📋 今日のまとめ
 
@@ -1104,7 +1180,7 @@ npm run dev
 
 | 用語 | 意味 |
 |------|------|
-| URLSearchParams | URLのクエリパラメータ操作API |
+| URLSearchParams | URLのクエリパラメータを操作するブラウザ標準API |
 | shouldSearch | 検索実行の判定フラグ（全条件をORで評価） |
 | enabled | useQueryの実行条件制御 |
 | refetchOnWindowFocus | ウィンドウ復帰時の再取得設定 |
@@ -1114,6 +1190,4 @@ npm run dev
 
 ## 🔜 次回予告
 
-Day 21 では、レポートページに統計カードを
-表示します。タスクデータをローカルで集計して
-ダッシュボードを作ります。
+Day 21 では、レポートページに統計カードを表示します。タスクデータをローカルで集計してダッシュボードを作ります。

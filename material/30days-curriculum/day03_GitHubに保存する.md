@@ -106,8 +106,9 @@ git config --list
 |------|--------|------|
 | Repository name | `task-app` | リポジトリの名前 |
 | Public/Private | Public | 誰でも見られる |
-| Initialize this repository | チェックしない | チェックするとREADME.md等を含む初期コミットがリモートに作られ、ローカルの既存履歴と異なる履歴（unrelated histories）になるためpushが拒否される |
+| Initialize this repository | **チェックしない** | 空のリポジトリとして作成する |
 
+> ⚠️ **「Initialize this repository」には絶対にチェックしないこと**: Day 01 で `git clone` した時点で、ローカルには既存のGit履歴が存在しています。GitHub側でREADME.mdや.gitignoreを追加して初期化すると、リモートとローカルの履歴が別々に作られた状態（unrelated histories）になり、`git push`が拒否されます。
 
 ✅ **確認ポイント**:
 
@@ -207,11 +208,25 @@ git log --oneline
 4. 「Generate token」をクリック
 5. **表示されたトークンをパスワードマネージャーなどの安全な場所に保存する**
 
-> ⚠️ **重要**: トークンは**一度しか表示されません**。ページを閉じると二度と見られないので、必ずコピーしてください。保存先にはパスワードマネージャー（1Password、Bitwarden等）の利用を推奨します。メモ帳での平文保存は避けてください。やむを得ず一時的にメモ帳に保存する場合は、使い終わったら必ず削除してください。
+> ⚠️ **重要**: トークンは**一度しか表示されません**。ページを閉じると二度と見られないので、必ずコピーしてください。保存先には1Password・Bitwarden等のパスワードマネージャーを推奨します。
 
 #### 4-2. 認証情報を保存する（毎回入力しなくて済むように）
 
-**自分のOSに合うコマンドを1つだけ実行してください。**
+**最も簡単な方法は `gh auth login` です。**まずこちらを試してください。OSネイティブの方法は、ghコマンドが使えない場合の代替です。
+
+**方法1（推奨）: gh コマンドで認証する**
+
+```bash
+# filepath: ターミナル
+# GitHub CLIでブラウザ経由の認証を行う（最も安全・簡単）
+gh auth login
+```
+
+> 💡 ブラウザが開いてGitHubへのログインが求められます。画面の指示に従って認証を完了してください。この方法ではトークンを手動でコピーする必要がありません。
+
+**方法2: OSネイティブの credential helper を使う（ghコマンドがない場合）**
+
+自分のOSに合うコマンドを1つだけ実行してください。
 
 **macOS の場合:**
 
@@ -229,23 +244,26 @@ git config --global credential.helper osxkeychain
 git config --global credential.helper manager
 ```
 
-**Linux の場合（個人PCのみ）:**
+**Linux の場合（最終手段）:**
 
 ```bash
 # filepath: ターミナル
-# トークンをファイルに保存する（個人PCのみ）
+# トークンをファイルに保存する
 git config --global credential.helper store
 ```
 
-> ⚠️ **Linux の `store` は個人PCのみ**: トークンが `~/.git-credentials` に**暗号化なし**で保存されます。共有サーバーや複数ユーザーがいる環境では**絶対に使わないこと**（他のユーザーにトークンが丸見えになります）。
+> ⚠️ **`store` はパスワードを平文保存します。** トークンが `~/.git-credentials` に暗号化なしで書き込まれるため、共有サーバーや複数ユーザーがいる環境では使用を避けてください。
+>
+> より安全に保存したい場合は `git-credential-libsecret` 等の暗号化対応ヘルパーを検討してください。
 
 🔍 **コード解説**:
 
-| OS | 方式 | 保存場所 | 安全性 |
-|-----|------|---------|------|
-| macOS | `osxkeychain` | macのキーチェーン（暗号化） | ✅ 安全 |
-| Windows | `manager` | 資格情報マネージャー（暗号化） | ✅ 安全 |
-| Linux（個人） | `store` | `~/.git-credentials`（平文） | ⚠️ 個人PCのみ可 |
+| 方法 | 対応OS | 保存場所 | 安全性 |
+|-----|--------|---------|------|
+| `gh auth login` | 全OS | GitHub CLIが管理 | ✅ 最も安全（推奨） |
+| `osxkeychain` | macOS | macのキーチェーン（暗号化） | ✅ 安全 |
+| `manager` | Windows | 資格情報マネージャー（暗号化） | ✅ 安全 |
+| `store` | Linux（最終手段） | `~/.git-credentials`（平文） | ⚠️ 個人PCのみ可 |
 
 > 💡 この設定により、次のStep 5でプッシュするときにユーザー名とトークンを入力すると、2回目以降は自動で認証されます。
 

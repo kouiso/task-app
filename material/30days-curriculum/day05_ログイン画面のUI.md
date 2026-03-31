@@ -489,8 +489,8 @@ import toast from 'react-hot-toast';
 - `api`, `useRouter`, `useSearchParams`, `useState`, `toast` の import を追加した
 - `npm run dev` でエラーが出ていない
 
-> 💡 `react-hot-toast` はログイン成功時に「おかえりなさい」のような通知メッセージを画面に表示するライブラリです。Day 01の初期セットアップでインストール済みなので、import するだけで使えます。
->
+> 💡 `react-hot-toast` はログイン成功時に通知メッセージを表示するライブラリです。Day 01の初期セットアップでインストール済みなので、import するだけで使えます。
+
 > ⚠️ `useSearchParams` を使うコンポーネントには `Suspense` ラッパーが必要です。Step 9で追加するので、このステップではエラーが出る場合があります。
 
 まず、LoginForm の**外側**（コンポーネントの上）にセキュリティ関数を定義します。

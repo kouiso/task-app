@@ -8,13 +8,14 @@ Day 22 では Recharts ライブラリを使って、ステータス別・優先
 
 ## 🎯 今日のゴール
 
-レポートページにプロジェクト別統計テーブルと
-週次レポート機能を追加します。テーブルで進捗を
-一覧表示し、APIで週次データを取得します。
+レポートページにプロジェクト別統計テーブルを追加し、
+週次レポートページでグラフ付きの詳細レポートを表示します。
+テーブルで進捗を一覧表示し、折れ線グラフ・棒グラフで推移を可視化します。
 
-📸 スクリーンショット: プロジェクト統計テーブルの表示を確認してください。
+📸 スクリーンショット: レポートページの全体像を確認してください。
 
-![プロジェクト統計テーブルの表示を確認してください。](./screenshots/report-weekly.png)
+![レポートページの全体像を確認してください。](./screenshots/report.png)
+
 ## 🤔 なぜこれを作るのか？
 
 プロジェクトごとの進捗を比較し、
@@ -27,26 +28,24 @@ Day 22 では Recharts ライブラリを使って、ステータス別・優先
 > 通信簿を見れば、どの教科が順調で
 > どこを頑張るべきかが一目でわかります。
 
-### 📐 プロジェクト統計の計算フロー
+### 📐 週次レポートの全体フロー
 
 ```mermaid
 flowchart TD
-    A[api.task.getAll] --> B[tasks 配列]
-    C[api.project.getAll] --> D[projects 配列]
-    B --> E[projectId でフィルタ]
-    D --> E
-    E --> F[完了タスク数を計算]
-    E --> G[進捗率を計算]
-    E --> H[合計作業時間を計算]
-    F --> I[projectStats 配列]
-    G --> I
-    H --> I
-    I --> J[Table で一覧表示]
+    A["/report ページ"] --> B[プロジェクト統計テーブル]
+    A --> C["/report/weekly へのリンク"]
+    C --> D[週次レポートページ]
+    D --> E[サマリーカード 3枚]
+    D --> F[週別完了タスク折れ線グラフ]
+    D --> G[優先度別棒グラフ]
+    D --> H[ステータス別積み上げ棒グラフ]
 
     style A fill:#e3f2fd
-    style C fill:#e3f2fd
-    style E fill:#fff3e0
-    style J fill:#e8f5e9
+    style B fill:#fff3e0
+    style D fill:#e3f2fd
+    style F fill:#e8f5e9
+    style G fill:#e8f5e9
+    style H fill:#e8f5e9
 ```
 
 ### やること / やらないこと
@@ -54,9 +53,9 @@ flowchart TD
 | やること | やらないこと |
 |---------|-------------|
 | プロジェクト別統計テーブル | 専用の統計API作成 |
-| 週次レポートAPI呼び出し | グラフの追加（Day 22済） |
-| 週次データの表示 | ユーザー別フィルタUI |
-| Table コンポーネント活用 | カスタムテーブル作成 |
+| 週次レポートAPI呼び出し | ユーザー別フィルタUI |
+| 折れ線グラフで完了推移表示 | カスタムテーブル作成 |
+| 棒グラフで優先度・ステータス表示 | 新規グラフライブラリ導入 |
 
 ### 🆕 新しく学ぶ概念
 
@@ -65,28 +64,28 @@ flowchart TD
 | projectStats | — | プロジェクト別集計 | 通信簿の各教科 |
 | Table | テーブル | 表形式の表示 | Excel の表 |
 | getWeeklyReport | — | 週次データ取得API | 週間天気予報 |
-| filter + reduce | — | 条件付き集計 | 特定科目の平均点 |
+| LineChart | ラインチャート | 折れ線グラフ | 気温の推移グラフ |
 
 ## 📊 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | プロジェクト統計の考え方 | 3分 |
-| Step 2 | プロジェクト別統計を計算 | 5分 |
-| Step 3 | 統計テーブルを表示 | 5分 |
-| Step 4 | 週次レポートAPIの概要 | 3分 |
-| Step 5 | 週次レポートAPIを呼び出す | 5分 |
-| Step 6 | 週次データを表示する | 5分 |
+| Step 1 | プロジェクト統計の集計ロジック | 5分 |
+| Step 2 | 統計テーブルを表示 | 5分 |
+| Step 3 | 週次レポートAPIの概要 | 3分 |
+| Step 4 | 週次レポートページの基本構造 | 5分 |
+| Step 5 | サマリーカードを表示 | 5分 |
+| Step 6 | グラフを表示する | 5分 |
 | Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約29分
+**合計時間**: 約31分
 
 ---
 
-### Step 1: プロジェクト統計の考え方（3分）
+### Step 1: プロジェクト統計の集計ロジック（5分）
 
-🎯 **ゴール**: プロジェクトごとの
-統計値をどう計算するか理解します。
+🎯 **ゴール**: レポートページ（`/report`）に
+プロジェクト別の統計集計ロジックを追加します。
 
 #### 統計テーブルに表示する項目
 
@@ -109,30 +108,20 @@ flowchart TD
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// useMemo のインポートを確認
+// インポート（useMemo と TASK_STATUS）
 import { useMemo } from 'react';
+import {
+  TASK_STATUS,
+} from '@/lib/constant/status';
 ```
 
-> 💡 Day 21 で学んだ `reduce` と
-> JavaScript の `filter` メソッドを
-> 組み合わせて、プロジェクト単位で
-> 集計します。
-
 ✅ **確認ポイント**:
-- 表の4項目（タスク数・完了・進捗・作業時間）の計算式を自分の言葉で説明できる
-
----
-
-### Step 2: プロジェクト別統計を計算（5分）
-
-🎯 **ゴール**: projects.map で
-各プロジェクトの統計値を計算します。
-
-💻 **実装**:
+- `useMemo` と `TASK_STATUS` がインポートされている
+- 表の4項目（タスク数・完了・進捗・作業時間）の計算式を理解した
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// プロジェクト別の統計値を計算（前半）
+// projectStats 集計（projects.map）
 const projectStats = useMemo(
   () =>
     projects?.map((project) => {
@@ -144,62 +133,65 @@ const projectStats = useMemo(
         projectTasks.filter(
           (t) => t.status === TASK_STATUS.DONE
         );
-      const totalTime =
-        projectTasks.reduce(
-          (acc, t) =>
-            acc + (t.timeSpentMinutes ?? 0),
-          0
-        );
-```
-
-上のコードに続けて、同じ `useMemo` の中に
-以下を追加します。
-
-```typescript
-// filepath: src/app/report/page.tsx
-// 進捗率の計算と戻り値（後半）
-      const progress =
-        projectTasks.length > 0
-          ? (completedTasks.length
-              / projectTasks.length) * 100
-          : 0;
-      return {
-        id: project.id,
-        name: project.name,
-        totalTasks: projectTasks.length,
-        completedTasks:
-          completedTasks.length,
-        progress: progress.toFixed(1),
-        totalTimeHours:
-          (totalTime / 60).toFixed(1),
-      };
+      return { project, projectTasks,
+        completedTasks };
     }),
   [projects, tasks],
 );
 ```
 
-> 💡 `TASK_STATUS.DONE` は Day 21 で
-> インポート済みの定数です。`projects?.map`
-> で各プロジェクトをループし、
-> `tasks?.filter` でそのプロジェクトの
-> タスクだけを取り出します。
->
-> **豆知識**: `?? []` は `null`/`undefined` のみ
-> 空配列に変換します。`|| []` とは異なり
-> `0` や空文字を誤判定しません。
+✅ **確認ポイント**:
+- `projects?.map` でプロジェクトごとにループしている
+- `tasks?.filter` で該当プロジェクトのタスクだけを抽出している
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 作業時間の合算と進捗率の計算
+const totalTime = projectTasks.reduce(
+  (acc, t) =>
+    acc + (t.timeSpentMinutes ?? 0),
+  0
+);
+const progress =
+  projectTasks.length > 0
+    ? (completedTasks.length
+        / projectTasks.length) * 100
+    : 0;
+```
 
 ✅ **確認ポイント**:
-- projectStats に配列が入る
-- 各要素に5つのプロパティがある
+- `reduce` で作業時間を合算している
+- ゼロ除算を `length > 0` で防いでいる
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 戻り値オブジェクトの定義
+return {
+  id: project.id,
+  name: project.name,
+  totalTasks: projectTasks.length,
+  completedTasks: completedTasks.length,
+  progress: progress.toFixed(1),
+  totalTimeHours:
+    (totalTime / 60).toFixed(1),
+};
+```
+
+✅ **確認ポイント**:
+- 6つのプロパティを持つオブジェクトを返している
+- `toFixed(1)` で小数第1位まで表示する
+
+> 💡 `TASK_STATUS.DONE` は Day 21 で
+> インポート済みの定数です。
+> `?? []` は `null`/`undefined` のみ
+> 空配列に変換します。
 
 ---
 
-### Step 3: 統計テーブルを表示（5分）
+### Step 2: 統計テーブルを表示（5分）
 
 🎯 **ゴール**: Table コンポーネントで
 プロジェクト統計を表形式で表示します。
-
-💻 **実装**:
 
 ```typescript
 // filepath: src/app/report/page.tsx
@@ -210,9 +202,23 @@ import {
 } from '@/component/ui/table';
 ```
 
+✅ **確認ポイント**:
+- Table 関連の6つのコンポーネントをインポートした
+
+#### Table コンポーネントの構造
+
+| コンポーネント | 役割 | HTML相当 |
+|--------------|------|---------|
+| Table | テーブル全体 | `<table>` |
+| TableHeader | ヘッダー領域 | `<thead>` |
+| TableHead | 見出しセル | `<th>` |
+| TableBody | データ領域 | `<tbody>` |
+| TableRow | 行 | `<tr>` |
+| TableCell | データセル | `<td>` |
+
 ```typescript
 // filepath: src/app/report/page.tsx
-// プロジェクト統計テーブルのヘッダー
+// テーブルのヘッダー定義
 <Card>
   <CardHeader>
     <CardTitle>プロジェクト統計</CardTitle>
@@ -233,37 +239,28 @@ import {
             作業時間</TableHead>
         </TableRow>
       </TableHeader>
-    </Table>
-  </CardContent>
-</Card>
 ```
 
 ✅ **確認ポイント**:
-- テーブルのヘッダー5列を定義した
-
-上のコードの `</Table>` の直前に、以下のテーブル本体を追加します。
+- `TableHeader` の中に `TableRow` と `TableHead` がある
+- ヘッダー5列を定義した
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// テーブルの本体（mapで各行を生成）
+// テーブル本体（mapで各行を生成）
 <TableBody>
   {projectStats?.map((stat) => (
     <TableRow key={stat.id}>
       <TableCell className="font-medium">
-        {stat.name}
-      </TableCell>
+        {stat.name}</TableCell>
       <TableCell className="text-right">
-        {stat.totalTasks}
-      </TableCell>
+        {stat.totalTasks}</TableCell>
       <TableCell className="text-right">
-        {stat.completedTasks}
-      </TableCell>
+        {stat.completedTasks}</TableCell>
       <TableCell className="text-right">
-        {stat.progress}%
-      </TableCell>
+        {stat.progress}%</TableCell>
       <TableCell className="text-right">
-        {stat.totalTimeHours}h
-      </TableCell>
+        {stat.totalTimeHours}h</TableCell>
     </TableRow>
   ))}
 </TableBody>
@@ -271,45 +268,24 @@ import {
 
 ✅ **確認ポイント**:
 - テーブルにプロジェクト名が並ぶ
-- 数値が右寄せで表示される
-
-#### Table コンポーネントの構造
-
-| コンポーネント | 役割 | HTML相当 |
-|--------------|------|---------|
-| Table | テーブル全体 | `<table>` |
-| TableHeader | ヘッダー領域 | `<thead>` |
-| TableHead | 見出しセル | `<th>` |
-| TableBody | データ領域 | `<tbody>` |
-| TableRow | 行 | `<tr>` |
-| TableCell | データセル | `<td>` |
+- 数値が `text-right` で右寄せ表示される
 
 > 💡 shadcn/ui の Table はHTML の
 > テーブル要素をラップしたものです。
 > `text-right` で数値を右寄せにすると
 > 表が見やすくなります。
 
+📸 スクリーンショット: プロジェクト統計テーブルの表示を確認してください。
 
-📸 スクリーンショット: プロジェクト統計テーブル完成の表示を確認してください。
+![プロジェクト統計テーブルの表示を確認してください。](./screenshots/report.png)
 
-![プロジェクト統計テーブル完成の表示を確認してください。](./screenshots/report-weekly.png)
 ---
 
-### Step 4: 週次レポートAPIの概要（3分）
+### Step 3: 週次レポートAPIの概要（3分）
 
-🎯 **ゴール**: いよいよ週次レポートです!
-まずはAPIがどんなデータを返してくれるか
-覗いてみましょう。
-
-```typescript
-// filepath: src/server/api/routers/report.ts
-// APIの入力バリデーション定義
-z.object({
-  weeks: z.number()
-    .min(1).max(12).default(4),
-  userId: z.string().cuid().optional(),
-})
-```
+🎯 **ゴール**: 週次レポートAPIの
+パラメータとレスポンス構造を理解します。
+このステップはコードを読んで理解するだけです。
 
 #### APIのパラメータ
 
@@ -345,25 +321,22 @@ z.object({
 ✅ **確認ポイント**:
 - APIのパラメータとレスポンスの構造を理解した
 - `weeklyData` が週ごとのデータ配列であることを把握した
+- `byStatus` と `byPriority` でグラフ用データが取れることを理解した
 
 ---
 
-### Step 5: 週次レポートAPIを呼び出す（5分）
+### Step 4: 週次レポートページの基本構造（5分）
 
-🎯 **ゴール**: 週次レポートページで
-APIを呼び出してデータを取得します。
-
-💻 **実装**:
+🎯 **ゴール**: `/report/weekly` ページを作成し、
+API呼び出しと週数選択UIを実装します。
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
+// インポート（日付・React・UIコンポーネント）
 'use client';
-// 日付処理ライブラリ
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-// React フック
 import { useState } from 'react';
-// レイアウト・UIコンポーネント
 import { AppLayout }
   from '@/component/layout/app-layout';
 import {
@@ -372,18 +345,44 @@ import {
 } from '@/component/ui/card';
 import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
+```
+
+✅ **確認ポイント**:
+- `date-fns` と `ja` ロケールをインポートした
+- `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` である
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// インポート（Select・Recharts・定数）
 import {
   Select, SelectContent,
   SelectItem, SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
-// APIクライアント
+import {
+  Bar, BarChart, CartesianGrid,
+  Legend, Line, LineChart,
+  ResponsiveContainer,
+  Tooltip, XAxis, YAxis,
+} from 'recharts';
+import {
+  TASK_PRIORITY, TASK_PRIORITY_COLORS,
+} from '@/lib/constant/priority';
+import {
+  TASK_STATUS, TASK_STATUS_COLORS,
+} from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 ```
 
+✅ **確認ポイント**:
+- Recharts の6種類のコンポーネントをインポートした
+- `TASK_PRIORITY_COLORS` と `TASK_STATUS_COLORS` をインポートした
+
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// APIの呼び出しとローディング処理
+// API呼び出しとローディング処理
+const CHART_PRIMARY_COLOR = '#8884d8';
+
 export default function WeeklyReportPage() {
   const [weeks, setWeeks] = useState('4');
 
@@ -399,9 +398,13 @@ export default function WeeklyReportPage() {
   }
 ```
 
+✅ **確認ポイント**:
+- `useState('4')` で初期値4週間を設定している
+- `isLoading` のときスピナーを表示している
+
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// 週数の選択UI
+// 週数選択のSelectコンポーネント
 <div className="w-[150px]">
   <Select
     value={weeks}
@@ -424,43 +427,38 @@ export default function WeeklyReportPage() {
 </div>
 ```
 
+✅ **確認ポイント**:
+- 4・8・12週間の選択肢がある
+- `onValueChange` で `setWeeks` を呼んでいる
+
 > 💡 `useState` で週数を管理します。
 > ユーザーが週数を変更すると、
 > `useQuery` が自動的に再取得します。
 
 #### ページ全体のJSX構造
 
-return文は以下のツリー構造で組み立てます。
-
 | 階層 | 要素 | 役割 |
 |------|------|------|
 | 1 | `<AppLayout>` | 共通レイアウト |
 | 2 | `<div className="space-y-6">` | 縦方向の余白 |
 | 3 | ヘッダー（h1 + Select） | タイトルと期間選択 |
-| 3 | `grid grid-cols-3` | 3枚のカード（Step 6） |
-
-✅ **確認ポイント**:
-- ファイルを保存してエラーがないことを確認した
-- `<AppLayout>` でページ全体をラップしている
+| 3 | `grid grid-cols-3` | 3枚のサマリーカード |
+| 3 | `grid grid-cols-2` | グラフ4枚 |
 
 📸 スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
 
 ![ローディング中にスピナーが表示されることを確認してください。](./screenshots/report-weekly.png)
+
 ---
 
-### Step 6: 週次データを表示する（5分）
+### Step 5: サマリーカードを表示（5分）
 
-🎯 **ゴール**: 取得した週次データを
-カードで表示します。
-
-チームリーダーが毎週確認したい数字は何でしょう?
-「合計・平均・期間」の3つをカードで表示します。
-
-💻 **実装**:
+🎯 **ゴール**: 完了タスク合計・週平均・
+対象期間の3枚のカードを表示します。
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// 完了タスク数カード
+// 完了タスク合計カード
 <div className="grid grid-cols-1
   md:grid-cols-3 gap-4">
   <Card>
@@ -477,11 +475,12 @@ return文は以下のツリー構造で組み立てます。
 ```
 
 ✅ **確認ポイント**:
+- `grid-cols-3` で3列レイアウトになっている
 - 完了タスク合計の数値が表示される
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// 平均完了数カード
+// 週平均カード
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -501,11 +500,12 @@ return文は以下のツリー構造で組み立てます。
 ```
 
 ✅ **確認ポイント**:
-- 週平均の数値が表示される
+- `Math.round` で小数を丸めている
+- `Number.parseInt` で文字列の `weeks` を数値に変換している
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// 期間表示カード（date-fns で整形）
+// 対象期間カード（date-fns で整形）
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -528,13 +528,9 @@ return文は以下のツリー構造で組み立てます。
 </div>
 ```
 
-> 💡 `format` と `ja` ロケールで
-> 日付を `yyyy/MM/dd` 形式に変換します。
-> データがないときは `'-'` を表示します。
-
 ✅ **確認ポイント**:
-- 3枚のカードが横並びで表示される
-- 完了数と平均が正しく計算される
+- `format` と `ja` ロケールで日付を整形している
+- データがないときは `'-'` を表示している
 
 #### 週次レポートの表示項目
 
@@ -544,15 +540,159 @@ return文は以下のツリー構造で組み立てます。
 | 週平均 | 週あたり平均 | 完了数 / 週数 |
 | 対象期間 | 集計期間 | 開始日 - 終了日 |
 
-> 💡 `Math.round` で小数を丸めます。
-> 対象期間は `reportData?.startDate` と
-> `reportData?.endDate` の両方をチェック
-> してから表示しています。
+---
 
+### Step 6: グラフを表示する（5分）
 
-📸 スクリーンショット: 週次レポート完成の表示を確認してください。
+🎯 **ゴール**: Recharts で折れ線グラフと
+棒グラフを表示して、週次推移を可視化します。
 
-![週次レポート完成の表示を確認してください。](./screenshots/report-weekly.png)
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// グラフ用データの変換処理
+const chartData =
+  reportData?.weeklyData.map((week) => ({
+    name: week.week,
+    completed: week.totalCompleted,
+    high:
+      week.byPriority[TASK_PRIORITY.HIGH]
+      ?? 0,
+    urgent:
+      week.byPriority[TASK_PRIORITY.URGENT]
+      ?? 0,
+  }));
+
+const statusData =
+  reportData?.weeklyData.map((week) => ({
+    name: week.week,
+    done:
+      week.byStatus[TASK_STATUS.DONE] ?? 0,
+    inProgress:
+      week.byStatus[TASK_STATUS.IN_PROGRESS]
+      ?? 0,
+    inReview:
+      week.byStatus[TASK_STATUS.IN_REVIEW]
+      ?? 0,
+  }));
+```
+
+✅ **確認ポイント**:
+- `chartData` は完了数と優先度データを持つ
+- `statusData` はステータス別データを持つ
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// 週別完了タスク数の折れ線グラフ
+<Card className="col-span-1 lg:col-span-2">
+  <CardHeader>
+    <CardTitle>週別完了タスク数</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[300px]">
+      <ResponsiveContainer width="100%"
+        height="100%">
+        <LineChart data={chartData ?? []}>
+          <CartesianGrid
+            strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis /><Tooltip /><Legend />
+          <Line type="monotone"
+            dataKey="completed"
+            stroke={CHART_PRIMARY_COLOR}
+            name="完了数" strokeWidth={2} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
+```
+
+✅ **確認ポイント**:
+- `LineChart` で折れ線グラフを描画している
+- `col-span-2` で横幅いっぱいに表示される
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// 優先度別分布の棒グラフ
+<Card>
+  <CardHeader>
+    <CardTitle>優先度別分布</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[300px]">
+      <ResponsiveContainer width="100%"
+        height="100%">
+        <BarChart data={chartData ?? []}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis /><Tooltip /><Legend />
+          <Bar dataKey="urgent" name="緊急"
+            fill={TASK_PRIORITY_COLORS.URGENT} />
+          <Bar dataKey="high" name="高"
+            fill={TASK_PRIORITY_COLORS.HIGH} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
+```
+
+✅ **確認ポイント**:
+- `BarChart` で棒グラフを描画している
+- `TASK_PRIORITY_COLORS` で色分けしている
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// ステータス別積み上げ棒グラフのCard部分
+<Card>
+  <CardHeader>
+    <CardTitle>ステータス別内訳</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[300px]">
+      <ResponsiveContainer width="100%"
+        height="100%">
+        <BarChart data={statusData ?? []}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis /><Tooltip /><Legend />
+```
+
+✅ **確認ポイント**:
+- `statusData` を `BarChart` に渡している
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// 3つのBarで積み上げ表示
+          <Bar dataKey="done"
+            stackId="status" name="完了"
+            fill={TASK_STATUS_COLORS.DONE} />
+          <Bar dataKey="inProgress"
+            stackId="status" name="進行中"
+            fill={TASK_STATUS_COLORS.IN_PROGRESS} />
+          <Bar dataKey="inReview"
+            stackId="status" name="レビュー中"
+            fill={TASK_STATUS_COLORS.IN_REVIEW} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
+```
+
+✅ **確認ポイント**:
+- `stackId="status"` で積み上げ棒グラフになっている
+- 3つのステータスが色分けで表示される
+
+> 💡 Day 22 で学んだ Recharts を
+> 週次レポートでも活用しています。
+> `LineChart` は推移の把握に、
+> `BarChart` は比較に適しています。
+
+📸 スクリーンショット: 週次レポートのグラフ表示を確認してください。
+
+![週次レポートのグラフ表示を確認してください。](./screenshots/report-weekly.png)
+
 ---
 
 ### Step 7: 動作確認（3分）
@@ -565,28 +705,31 @@ return文は以下のツリー構造で組み立てます。
 npm run dev
 ```
 
+✅ **確認ポイント**:
+- 開発サーバーが正常に起動した
+
 1. `/report` にアクセス
 2. 統計カード（Day 21）が表示される
 3. 円グラフ（Day 22）が表示される
 4. プロジェクト統計テーブルが表示される
 5. 各プロジェクトの進捗率が正しい
 6. `/report/weekly` にアクセス
-7. 週次レポートのカードが表示される
+7. 3枚のサマリーカードが表示される
+8. 折れ線グラフが表示される
+9. 優先度別・ステータス別棒グラフが表示される
 
-✅ **確認ポイント**:
-- テーブルの数値がシードデータと一致
-- 週次レポートにデータが表示される
+📸 スクリーンショット: 週次レポートページ全体の表示を確認してください。
 
-📸 スクリーンショット: レポートページ全体の表示を確認してください。
-
-![レポートページ全体の表示を確認してください。](./screenshots/report-weekly.png)
+![週次レポートページ全体の表示を確認してください。](./screenshots/report-weekly.png)
 
 ## 📋 今日のまとめ
 
 - [ ] プロジェクト別統計を計算できた
 - [ ] Table コンポーネントで一覧表示した
 - [ ] 週次レポートAPIを呼び出せた
-- [ ] 週次データをカードで表示した
+- [ ] サマリーカードを表示した
+- [ ] 折れ線グラフで完了推移を表示した
+- [ ] 棒グラフで優先度・ステータス別分布を表示した
 
 ## ⚠️ つまずきポイント
 
@@ -596,6 +739,7 @@ npm run dev
 | 進捗率が NaN | タスク0件で割り算 | length > 0 チェック追加 |
 | 週次データが空 | completedAt 未設定 | シードデータを確認 |
 | 型エラーが出る | weeks が string | Number.parseInt で変換 |
+| グラフが表示されない | recharts 未インストール | Day 22 で導入済みか確認 |
 
 ## 📝 今日学んだ用語
 
@@ -604,7 +748,9 @@ npm run dev
 | projectStats | プロジェクト別の集計結果配列 |
 | Table / TableRow | shadcn/ui のテーブル部品 |
 | getWeeklyReport | 週次レポート取得API |
-| Number.parseInt | 文字列を整数に変換する関数 |
+| LineChart | Recharts の折れ線グラフ |
+| BarChart | Recharts の棒グラフ |
+| stackId | 積み上げグラフにするための識別子 |
 
 ## 🔜 次回予告
 

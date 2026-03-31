@@ -1,25 +1,24 @@
 # Day 13: タスク一覧画面を作ろう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
 Day 12 ではプロジェクトへのメンバー追加・削除機能を実装しました。`addMember` / `removeMember` のtRPCルーターや権限チェックの仕組みを学んだので、今日はアプリの核となるタスク一覧画面の構築に取り組みます。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
 タスクをカード形式で一覧表示し、プロジェクトやステータスでフィルタリングできるページを作ります。アプリの核となる機能です。
 
-📸 スクリーンショット: タスク一覧画面（カードがグリッドで並んでいる）
-
 ![タスク一覧画面（カードがグリッドで並んでいる）](./screenshots/task-list.png)
-## 🤔 なぜこれを作るのか？
+
+## なぜこれを作るのか？
 
 タスク管理はこのアプリの中心機能です。全タスクを見渡し、絞り込みで目的のタスクを素早く見つけられるようにします。
 
-> 💡 **例え話**: タスク一覧は「To-Doリストのホワイトボード」です。付箋（タスク）が貼ってあり、色（優先度）や列（ステータス）で整理されています。フィルターは「この列の付箋だけ見せて」というフィルタリング機能です。
+> 例え話: タスク一覧は「To-Doリストのホワイトボード」です。付箋（タスク）が貼ってあり、色（優先度）や列（ステータス）で整理されています。フィルターは「この列の付箋だけ見せて」というフィルタリング機能です。
 
-### 📐 タスク一覧の構成
+### タスク一覧の構成
 
 ```mermaid
 flowchart TD
@@ -61,31 +60,41 @@ flowchart TD
 | TaskCard でカード表示 | タスク詳細ページ |
 | レスポンシブなグリッドレイアウト | タイマー機能（Day 16） |
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| フィルタリング | — | データを条件で絞り込む | ホワイトボードの特定の列だけ見る |
+| フィルタリング | --- | データを条件で絞り込む | ホワイトボードの特定の列だけ見る |
 | TaskCard | タスク・カード | タスク1件分の表示コンポーネント | 1枚の付箋 |
 | 三項演算子 | さんこうえんざんし | `条件 ? 真の値 : 偽の値` の書き方 | 「もし雨なら傘、晴れなら帽子」 |
 | Suspense | サスペンス | データ読み込み中のフォールバック表示 | 「ただいま準備中」の看板 |
 
-### 📁 今日の作業ファイル
+### 今日の作業ファイル
 
 ```
 src/
-├── app/task/
-│   └── page.tsx              ← タスク一覧ページ（新規作成）
-├── component/task/
-│   ├── task-card.tsx          ← タスクカード（既存）
-│   └── task-detail-dialog.tsx ← タスク詳細ダイアログ（既存）
-├── component/ui/
-│   └── loading-spinner.tsx    ← ローディング表示（既存）
-└── lib/constant/
-    └── status.ts             ← ステータス定義・型ガード（既存）
+  app/task/
+    page.tsx              ... タスク一覧ページ（新規作成）
+  component/task/
+    task-card.tsx          ... タスクカード（既存）
+    task-detail-dialog.tsx ... タスク詳細ダイアログ（既存）
+  component/ui/
+    loading-spinner.tsx    ... ローディング表示（既存）
+  lib/constant/
+    status.ts             ... ステータス定義・型ガード（既存）
 ```
 
-## 📊 実装ステップ一覧
+### 完成ファイルの全体像
+
+最終的に `src/app/task/page.tsx` は以下の構造になります。Step 1〜7 で少しずつ組み立てていきます。
+
+| セクション | 内容 | 対応Step |
+|-----------|------|---------|
+| import群 | コンポーネント・ライブラリの読み込み | Step 1, 2, 3, 6, 7 |
+| `TaskPageContent` 関数 | state定義・データ取得・ハンドラー・JSX | Step 1〜7 |
+| `TaskPage` 関数（default export） | Suspenseでラップして公開 | Step 1 |
+
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -104,11 +113,11 @@ src/
 
 ### Step 1: ページの土台を作る（5分）
 
-🎯 **ゴール**: タスク一覧ページの基本構造を作ります。
+**ゴール**: タスク一覧ページの基本構造を作ります。
 
-💻 **実装**:
+**実装**:
 
-`src/app/task/page.tsx` を作成します（既にファイルが存在する場合は内容を置き換えます）。まずインポートとメインコンテンツの骨格です。
+`src/app/task/page.tsx` を新規作成します。まずインポートとメインコンテンツの骨格です。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -122,15 +131,15 @@ import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - ファイルが `src/app/task/page.tsx` に作成された
 - `'use client'` が先頭にある
 
-続いて、ページの骨格を定義します。`Suspense`（サスペンス）は、中のコンポーネントがデータを読み込んでいる間、`fallback` に指定した内容を表示します。「ただいま準備中」の看板のようなものです。
+続いて、ページの骨格を定義します。`TaskPageContent` がメインコンテンツ、`TaskPage` がページのエントリーポイントです。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// メインコンテンツ
+// メインコンテンツの骨格
 function TaskPageContent() {
   return (
     <AppLayout>
@@ -145,9 +154,11 @@ function TaskPageContent() {
 }
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `TaskPageContent` 関数が定義できた
 - `AppLayout` でラップしている
+
+`TaskPage` は `Suspense` で `TaskPageContent` をラップします。`useSearchParams`（Step 7で追加）はApp Routerのクライアントコンポーネントで使う場合、`Suspense` 境界が必要です。読み込み中は `PageLoadingSpinner` を表示します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -162,7 +173,7 @@ export default function TaskPage() {
 }
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `/task` にアクセスして「タスク」と表示される
 - サイドバーが表示されている
 
@@ -170,11 +181,11 @@ export default function TaskPage() {
 
 ### Step 2: タスクデータを取得する（5分）
 
-🎯 **ゴール**: `useQuery` でタスク一覧を取得します。
+**ゴール**: `useQuery` でタスク一覧を取得します。
 
-💻 **実装**:
+**実装**:
 
-まず import 群に以下を追加します。
+ファイル先頭のimport群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -182,10 +193,10 @@ export default function TaskPage() {
 import { api } from '@/trpc/react';
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `api` のインポートが追加できた
 
-次に `TaskPageContent` 関数の先頭に以下を追加します。
+次に `TaskPageContent` 関数の先頭（`return` の前）に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -198,23 +209,41 @@ const { data: tasks,
 );
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `api` をインポートしてエラーが出ていない
 - `useQuery` に空オブジェクト `{}` を渡している
 
-> 💡 `useQuery({})` の `{}` は「条件なしで全件取得」という意味です。後のステップでここにフィルター条件を入れます。`refetchOnWindowFocus: false` は、ブラウザタブを切り替えても再取得しない設定です。
+> `useQuery({})` の `{}` は「条件なしで全件取得」という意味です。後のステップでここにフィルター条件を入れます。`refetchOnWindowFocus: false` は、ブラウザタブを切り替えても再取得しない設定です。
 
 プロジェクト一覧も取得します（フィルター用）。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// TaskPageContent内: プロジェクト一覧
+// TaskPageContent内に追加
 const { data: projects } =
   api.project.getAll.useQuery();
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `projects` のデータ取得が追加できた
+
+ローディング中はスピナーを表示します。`return` 文の直前に追加してください。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// return文の直前に追加
+if (tasksLoading) {
+  return (
+    <AppLayout>
+      <PageLoadingSpinner />
+    </AppLayout>
+  );
+}
+```
+
+確認ポイント:
+- データ取得中にスピナーが表示される
+- 取得完了後にページ内容に切り替わる
 
 #### task.getAll のパラメータ
 
@@ -230,13 +259,15 @@ const { data: projects } =
 
 ### Step 3: フィルター用のstateとimportを追加する（5分）
 
-🎯 **ゴール**: フィルターUIに必要なインポートとstateを準備します。
+**ゴール**: フィルターUIに必要なインポートとstateを準備します。
 
-💻 **実装**:
+**実装**:
+
+ファイル先頭のimport群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// フィルター用のimportを追加
+// import群に追加（フィルター用）
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
@@ -248,7 +279,7 @@ import {
 } from '@/lib/constant/status';
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `isTaskStatus` 型ガードもインポートしている
 - インポート元が `@/lib/constant/status`（`@prisma/client` ではない）
 
@@ -263,7 +294,7 @@ const [filterStatus, setFilterStatus] =
   useState<TaskStatus | 'all'>('all');
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `filterProject` と `filterStatus` の state が追加された
 - 初期値はどちらも `'all'`（全件表示）
 
@@ -271,15 +302,15 @@ const [filterStatus, setFilterStatus] =
 
 ### Step 4: フィルターUIを作る（7分）
 
-🎯 **ゴール**: プロジェクトとステータスの選択UIを作ります。
+**ゴール**: プロジェクトとステータスの選択UIを作ります。
 
-💻 **実装**:
+**実装**:
 
 `<h1>` タグの直下に追加します。プロジェクト選択のドロップダウンです。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// h1タグの直下に追加: フィルター
+// h1タグの直下に追加: フィルター外枠
 <div className="flex gap-2 w-full
   sm:w-auto ml-auto">
   <div className="w-[200px]">
@@ -289,95 +320,91 @@ const [filterStatus, setFilterStatus] =
         <SelectValue placeholder=
           "すべてのプロジェクト" />
       </SelectTrigger>
-```
-
-✅ **確認ポイント**:
-- `Select` の `value` に `filterProject` state を渡している
-
-プロジェクト選択の候補リストです。
-
-```typescript
-// filepath: src/app/task/page.tsx
-// プロジェクト選択の候補
-      <SelectContent>
-        <SelectItem value="all">
-          すべてのプロジェクト
-        </SelectItem>
-        {projects?.map((p) => (
-          <SelectItem
-            key={p.id}
-            value={p.id}>
-            {p.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-```
-
-✅ **確認ポイント**:
-- 「すべてのプロジェクト」が先頭にある
-- プロジェクト名が動的に表示される
-
-続いてステータス選択です。`isTaskStatus` 型ガードを使って安全に値を設定します。
-
-```typescript
-// filepath: src/app/task/page.tsx
-// ステータス選択
-  <div className="w-[200px]">
-    <Select value={filterStatus}
-      onValueChange={(value) => {
-        if (value === 'all'
-          || isTaskStatus(value))
-          setFilterStatus(value);
-      }}>
-      <SelectTrigger>
-        <SelectValue placeholder=
-          "すべてのステータス" />
-      </SelectTrigger>
-```
-
-✅ **確認ポイント**:
-- `as` キャストではなく `isTaskStatus()` 型ガードで安全に判定している
-- `'all'` も許可している
-
-ステータスの選択肢です。
-
-```typescript
-// filepath: src/app/task/page.tsx
-// ステータス選択の候補
-      <SelectContent>
-        <SelectItem value="all">
-          すべてのステータス
-        </SelectItem>
-        {Object.entries(
-          TASK_STATUS_LABELS
-        ).map(([value, label]) => (
-          <SelectItem
-            key={value}
-            value={value}>
-            {label}
-          </SelectItem>
-        ))}
-      </SelectContent>
     </Select>
   </div>
 </div>
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
+- `Select` の `value` に `filterProject` state を渡している
+- JSXが閉じタグまで完結している
+
+プロジェクト選択の `SelectContent` を `SelectTrigger` の直後に追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// SelectTriggerの直後に追加
+<SelectContent>
+  <SelectItem value="all">
+    すべてのプロジェクト
+  </SelectItem>
+  {projects?.map((p) => (
+    <SelectItem key={p.id} value={p.id}>
+      {p.name}
+    </SelectItem>
+  ))}
+</SelectContent>
+```
+
+確認ポイント:
+- 「すべてのプロジェクト」が先頭にある
+- プロジェクト名が動的に表示される
+
+続いてステータス選択です。プロジェクト選択の `</div>` の直後に2つ目の `<div>` を追加します。`isTaskStatus` 型ガードを使って安全に値を設定します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// ステータス選択
+<div className="w-[200px]">
+  <Select value={filterStatus}
+    onValueChange={(value) => {
+      if (value === 'all'
+        || isTaskStatus(value))
+        setFilterStatus(value);
+    }}>
+    <SelectTrigger>
+      <SelectValue placeholder=
+        "すべてのステータス" />
+    </SelectTrigger>
+  </Select>
+</div>
+```
+
+確認ポイント:
+- `as` キャストではなく `isTaskStatus()` 型ガードで安全に判定している
+- `'all'` も許可している
+
+ステータスの `SelectContent` を `SelectTrigger` の直後に追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// ステータスSelectTriggerの直後に追加
+<SelectContent>
+  <SelectItem value="all">
+    すべてのステータス
+  </SelectItem>
+  {Object.entries(
+    TASK_STATUS_LABELS
+  ).map(([value, label]) => (
+    <SelectItem key={value} value={value}>
+      {label}
+    </SelectItem>
+  ))}
+</SelectContent>
+```
+
+確認ポイント:
 - プロジェクトとステータスの2つのドロップダウンが並んで表示される
 
-📸 スクリーンショット: フィルターUIが2つ並んで表示されている画面
-
 ![フィルターUIが2つ並んで表示されている画面](./screenshots/task-list.png)
+
 ---
 
 ### Step 5: フィルタ条件をAPIに渡す（5分）
 
-🎯 **ゴール**: 選択したフィルターでAPIリクエストを変更します。
+**ゴール**: 選択したフィルターでAPIリクエストを変更します。
 
-💻 **実装**:
+**実装**:
 
 Step 2で追加した `useQuery` を、フィルター付きに書き換えます。三項演算子（さんこうえんざんし）は `条件 ? 真の値 : 偽の値` という書き方です。「もし `'all'` なら `undefined`、それ以外なら値をそのまま」という意味です。
 
@@ -398,38 +425,39 @@ const {
 );
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - プロジェクトを選択すると表示が絞り込まれる
 - 「すべて」を選ぶと全タスクが表示される
 
-> 💡 `'all'` の場合に `undefined` を渡すと「この条件は使わない」という意味になり、サーバーは全件を返します。フィルターの選択が変わるたびにReactが `useQuery` を再実行し、画面が自動更新されます。
-
-📸 スクリーンショット: フィルタリング後のタスク一覧
+> `'all'` の場合に `undefined` を渡すと「この条件は使わない」という意味になり、サーバーは全件を返します。フィルターの選択が変わるたびにReactが `useQuery` を再実行し、画面が自動更新されます。
 
 ![フィルタリング後のタスク一覧](./screenshots/task-list.png)
+
 ---
 
 ### Step 6: TaskCardでタスクを表示する（7分）
 
-🎯 **ゴール**: 各タスクをカード形式でグリッド表示します。
+**ゴール**: 各タスクをカード形式でグリッド表示します。
 
-💻 **実装**:
+**実装**:
+
+ファイル先頭のimport群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// TaskCardのインポートを追加
+// import群に追加（TaskCard用）
 import { TaskCard }
   from '@/component/task/task-card';
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `TaskCard` のインポートが追加できた
 
-ハンドラーを仮実装します。クリック・編集・削除は後のDayで本実装に差し替えます。
+ハンドラーを仮実装します。`TaskPageContent` 関数内、`return` 文の前に追加してください。クリック・編集・削除は後のDayで本実装に差し替えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// ハンドラーの仮実装
+// TaskPageContent内に仮ハンドラーを追加
 const handleTaskClick =
   (taskId: string) => {};
 const handleEdit =
@@ -438,15 +466,17 @@ const handleDelete =
   (taskId: string) => {};
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - 3つのハンドラーが定義できた
 - Step 7 で `handleTaskClick` を本実装に差し替えます
 
-フィルターUIの直下にグリッドとカード表示を追加します。タスクがない場合のメッセージも含めます。
+> TaskCardは `isTimerActive`・`timerStartedAt`・`timeSpentMinutes` というタイマー関連のpropsも受け取れますが、タイマー機能はDay 16で実装するので今日は渡しません。
+
+フィルターUIの直下にグリッドを追加します。タスクがある場合のカード表示です。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// フィルターUIの直下に追加: グリッド
+// フィルターUIの直下: タスクグリッド
 <div className="grid gap-6
   sm:grid-cols-2 lg:grid-cols-3
   xl:grid-cols-4">
@@ -467,31 +497,31 @@ const handleDelete =
       />
     ))
   ) : (
-```
-
-✅ **確認ポイント**:
-- タスクがカード形式で表示されている
-- ステータス・優先度がBadgeで表示される
-
-続けて、空状態のメッセージとグリッドの閉じタグを追加します。
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 上のコードの続き（空状態〜閉じ）
-    <div className="col-span-full flex
-      flex-col items-center
-      justify-center py-12
-      text-center
-      text-muted-foreground">
-      <p>タスクが見つかりません。</p>
-      <p>最初のタスクを
-        作成しましょう！</p>
-    </div>
+    <div />
   )}
 </div>
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
+- タスクがカード形式で表示されている
+- ステータス・優先度がBadgeで表示される
+
+タスクがない場合の空状態メッセージです。上のコードの `<div />` を以下に差し替えてください。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 空状態のメッセージ（<div /> を差し替え）
+<div className="col-span-full flex
+  flex-col items-center
+  justify-center py-12
+  text-center
+  text-muted-foreground">
+  <p>タスクが見つかりません。</p>
+  <p>最初のタスクを作成しましょう!</p>
+</div>
+```
+
+確認ポイント:
 - タスクがない時にメッセージが表示される
 - カードがレスポンシブなグリッドで並んでいる
 
@@ -499,24 +529,29 @@ const handleDelete =
 
 | prop | 型 | 説明 |
 |------|-----|------|
+| `id` | `string` | タスクID |
+| `title` | `string` | タスク名 |
 | `status` | `TaskStatus` | ステータス（TODO, IN_PROGRESS等） |
 | `priority` | `TaskPriority` | 優先度（LOW, MEDIUM, HIGH, URGENT） |
 | `assignee` | `object?` | 担当者情報 |
 | `dueDate` | `Date?` | 期限日 |
 | `onEdit` | `(id: string) => void` | 編集ボタンのコールバック |
 | `onDelete` | `(id: string) => void` | 削除ボタンのコールバック |
+| `onClick` | `(id: string) => void` | カードクリックのコールバック |
 
 ---
 
 ### Step 7: タスク詳細ダイアログを追加する（7分）
 
-🎯 **ゴール**: カードクリックでタスクの詳細を表示します。URLパラメータにも対応します。
+**ゴール**: カードクリックでタスクの詳細を表示します。URLパラメータにも対応します。
 
-💻 **実装**:
+**実装**:
+
+ファイル先頭のimport群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 詳細ダイアログのimport
+// import群に追加（詳細ダイアログ用）
 import { TaskDetailDialog }
   from '@/component/task/task-detail-dialog';
 import { useSearchParams }
@@ -524,10 +559,11 @@ import { useSearchParams }
 import { useEffect } from 'react';
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `TaskDetailDialog` と `useSearchParams` がインポートできた
+- `useEffect` も `react` からインポートしている
 
-詳細表示用のstateとURLパラメータ対応を追加します。`useSearchParams` で URL の `?taskId=xxx` を読み取り、そのタスクの詳細を自動で開きます。Day 17 の「自分のタスク」ページからのリンク遷移で使います。
+詳細表示用のstateとURLパラメータ対応を追加します。`TaskPageContent` 関数の先頭（他のstateの近く）に追加してください。`useSearchParams` で URL の `?taskId=xxx` を読み取り、そのタスクの詳細を自動で開きます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -543,7 +579,7 @@ const taskIdParam =
   searchParams.get('taskId');
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `selectedTask` と `detailOpen` の state が追加された
 - `searchParams` から `taskId` を取得している
 
@@ -560,14 +596,14 @@ useEffect(() => {
 }, [taskIdParam]);
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - `taskIdParam` が変わると `useEffect` が実行される
 
-Step 6 の仮実装ハンドラーを本実装に差し替えます。
+Step 6 の `handleTaskClick` の仮実装（空の関数）を以下の本実装に差し替えます。`handleDetailClose` も追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// Step 6の仮実装を差し替え
+// handleTaskClickを本実装に差し替え
 const handleTaskClick =
   (taskId: string) => {
     setSelectedTask(taskId);
@@ -579,7 +615,7 @@ const handleDetailClose = () => {
 };
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - カードクリックで `selectedTask` が設定される
 - `handleDetailClose` で state がリセットされる
 
@@ -595,18 +631,17 @@ JSX のグリッド `</div>` の直下に詳細ダイアログを追加します
 />
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - カードクリックで詳細ダイアログが開く
 - タスクの説明・担当者・期限が表示される
 
-📸 スクリーンショット: タスク詳細ダイアログが表示されている画面
-
 ![タスク詳細ダイアログが表示されている画面](./screenshots/task-detail-dialog.png)
+
 ---
 
 ### Step 8: 動作確認（4分）
 
-🎯 **ゴール**: タスク一覧の全機能を確認します。
+**ゴール**: タスク一覧の全機能を確認します。
 
 ```bash
 # filepath: ターミナル
@@ -614,7 +649,7 @@ JSX のグリッド `</div>` の直下に詳細ダイアログを追加します
 npm run dev
 ```
 
-✅ **確認ポイント**:
+確認ポイント:
 - 開発サーバーが起動した
 
 #### 確認項目
@@ -628,14 +663,22 @@ npm run dev
 | ブラウザ幅を変更 | カードの列数が変わる |
 | `/task?taskId=xxx` でアクセス | 自動で詳細ダイアログが開く |
 
-✅ **確認ポイント**:
+#### ローディング表示の確認
+
+| 状態 | 表示内容 |
+|------|---------|
+| データ取得中（`tasksLoading` が `true`） | `PageLoadingSpinner` が表示される |
+| データ取得完了 | タスクカードのグリッドが表示される |
+| タスクが0件 | 「タスクが見つかりません」メッセージ |
+
+確認ポイント:
 - フィルタリングが正しく動作する
 - カードにステータス・優先度のBadgeがある
 - 詳細ダイアログが開閉する
 
 ---
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] `api.task.getAll` でタスク一覧を取得できた
 - [ ] フィルター条件をAPIパラメータに反映できた
@@ -644,7 +687,7 @@ npm run dev
 - [ ] レスポンシブなグリッドレイアウトを実装できた
 - [ ] URLパラメータからタスク詳細を自動オープンできた
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -654,7 +697,7 @@ npm run dev
 | 詳細が取得できない | `enabled` 条件が間違っている | `!!selectedTask` を確認 |
 | ステータスフィルタで型エラー | `as` キャストを使っている | `isTaskStatus()` 型ガードを使う |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -664,6 +707,6 @@ npm run dev
 | Suspense | データ読込中にフォールバック表示するReactの仕組み |
 | useSearchParams | URLの `?key=value` を読み取るNext.jsのフック |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 14 では、新しいタスクを作成する機能を実装します。Day 10 で学んだダイアログパターンをタスク版に応用します。

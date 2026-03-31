@@ -296,7 +296,9 @@ const handleSelectAll = (checked: boolean) => {
 📸 スクリーンショット: チェックボックス付きタスクカードの表示を確認してください。
 
 ![チェックボックス付きタスクカードの表示を確認してください。](./screenshots/task-row-with-checkbox.png)
-実際のコードでは `TaskCard` コンポーネントをグリッドで並べています。`TaskCard`・`handleEdit`・`handleDelete`・`handleTaskClick`・`handleCreate` は過去の Day で作成済みです。チェックボックスはカードの左側に配置します。
+実際のコードでは `TaskCard` コンポーネントをグリッドで並べています。`TaskCard`・`handleEdit`・`handleDelete`・`handleTaskClick`・`handleCreate` は過去の Day で作成済みです。
+
+チェックボックスはカードの左側に配置します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
