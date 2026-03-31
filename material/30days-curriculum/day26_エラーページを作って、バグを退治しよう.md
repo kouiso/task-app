@@ -140,8 +140,8 @@ VS Codeで`src/app/error.tsx`を開いてください。
 💻 **確認するコード**:
 
 ```typescript
-// filepath: src/app/error.tsx（前半）
-// インポートとhook
+// filepath: src/app/error.tsx
+// コンポーネント定義とエラーログ
 'use client';
 
 import { useEffect } from 'react';
@@ -149,8 +149,7 @@ import { Button }
   from '@/component/ui/button';
 
 export default function ErrorPage({
-  error,
-  reset,
+  error, reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
@@ -160,26 +159,19 @@ export default function ErrorPage({
   }, [error]);
 ```
 
-✅ **確認ポイント**:
-- `'use client'` が先頭にあることを確認した
-- `console.error` は Biome 設定で許可されている（`allow: ['warn', 'error']`）ため lint エラーにならない
-
-続いて、JSX の `return` 部分です。
+続けて、描画する JSX を確認します。
 
 ```typescript
-// filepath: src/app/error.tsx（後半）
-// フォールバックUI
+// filepath: src/app/error.tsx
+// フォールバックUI（returnの中身）
   return (
     <div className="flex min-h-screen
       items-center justify-center">
-      <div className="text-center
-        space-y-4">
-        <h2 className="text-2xl
-          font-bold">
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl font-bold">
           エラーが発生しました
         </h2>
-        <p className=
-          "text-muted-foreground">
+        <p className="text-muted-foreground">
           予期しないエラーが発生しました。
           もう一度お試しください。
         </p>
