@@ -205,19 +205,10 @@ const setArchiveStatus = async (
 
 通常、APIからデータを受け取ると「これは何の型なんだろう？」と型を手書きで定義しなければなりません。しかしtRPCでは、**サーバーの定義から自動的に型を取得できます**。
 
-```
-手書き型定義（昔のやり方）:
-  type Project = {
-    id: string;
-    name: string;
-    isArchived: boolean;
-    // ...何十行も書く
-  }
-
-inferRouterOutputs（tRPCのやり方）:
-  type RouterOutputs = inferRouterOutputs<AppRouter>
-  // project.getById の戻り値の型が自動でわかる！
-```
+| やり方 | コード例 | 手間 |
+|-------|---------|------|
+| 手書き型定義（昔） | `type Project = { id: string; name: string; isArchived: boolean; }` を全プロパティ分書く | 多い（数十行） |
+| `inferRouterOutputs`（tRPC） | `type RouterOutputs = inferRouterOutputs<AppRouter>` の1行で全型が自動取得 | ほぼゼロ |
 
 これは「レシートを見るだけで商品の型が全部わかる」ようなものです。サーバー側で型を変えると、クライアント側でも自動的に反映されます。
 

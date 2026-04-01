@@ -758,10 +758,23 @@ props が定義されています。
 // filepath: src/component/task/task-card.tsx
 // 既存の TaskCardProps（確認用）
 interface TaskCardProps {
-  // ...既存のprops（id, title, status等）
+  id: string;
+  title: string;
+  description?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: Date | null;
+  assignee?: {
+    name: string | null;
+    email: string;
+    avatar: string | null;
+  } | null;
   isTimerActive?: boolean;
   timerStartedAt?: Date | null;
   timeSpentMinutes?: number;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onClick?: (id: string) => void;
   onTimerUpdate?: () => void;
 }
 ```
