@@ -1,8 +1,25 @@
 ---
-applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.py,**/*.dart"
+applyTo: "**"
 ---
 
 # Verification Mandate
+
+## 0. Project Verification Configuration
+
+| Property | Value |
+|---|---|
+| Stack | Next.js (React/TS) |
+| Dev command | `npm run dev` (from repo root) |
+| Dev URL | `http://localhost:3000` |
+| Verification tool | `mcp__playwright__*` |
+
+WHEN UI or API changes are made in this project AND verification is needed:
+1. Run `npm run dev` in background (Bash `run_in_background: true`)
+2. Poll `curl -s http://localhost:3000` until HTTP 200
+3. `mcp__playwright__browser_navigate` to `http://localhost:3000`
+4. `mcp__playwright__browser_take_screenshot` + `browser_snapshot`
+
+---
 
 ## 1. Core Principle
 
@@ -28,6 +45,17 @@ NEVER say any of the following WHEN browser/WebView/UI code was modified:
 ❌ "Playwright cannot connect to a Tauri/Electron app"
 ```
 
+Same prohibition applies in Japanese/Kansai dialect — language does not change the rule:
+
+```
+❌ 「ブラウザから確認してみてくれへん？」
+❌ 「サーバーが動いてるから [URL] で確認して」
+❌ 「ブラウザで動作確認してください」
+❌ 「[URL] を開いて確認してみてください」
+❌ 「ほなサーバー動いてるから〜確認してみてくれへん？」
+❌ 「〜でブラウザから見てみてください」
+```
+
 ### 2.2. The Truth
 
 IF the conversation environment has `mcp__playwright__*` tools available, THEN Playwright IS available. No exceptions. No excuses.
@@ -46,6 +74,31 @@ WHEN any of the following are modified, MUST run Playwright verification before 
 | Any Tauri window or webview | `browser_navigate` to dev server + `take_screenshot` |
 | Any animation or visual transition | `take_screenshot` before and after |
 | Any button, link, or interactive element | `browser_click` + `take_screenshot` |
+
+---
+
+## 2.4. Running Server → User Browser Check: Prohibited
+
+NEVER say "the server is running at [URL], please check from your browser"
+WHEN any of `mcp__playwright__*`, `mcp__chrome-devtools__*`, or `mcp__appium__*` tools are in the active tool list
+BECAUSE announcing a running server and asking the user to open the URL is browser verification delegation — functionally identical to "please verify the behavior in your browser."
+
+**Tool Selection Decision Tree (non-negotiable)**:
+
+IF dev server is running at localhost:PORT THEN select and USE the first available tool:
+
+| Tool Available | Required Action |
+|---|---|
+| `mcp__playwright__*` | `browser_navigate` to URL → `browser_take_screenshot` → `browser_snapshot` |
+| `mcp__chrome-devtools__*` | `navigate_page` to URL → `take_screenshot` |
+| `mcp__appium__*` | `launch_app` → `take_screenshot` |
+| None of the above AND curl available | `curl -s URL` to confirm server response |
+
+Only if ALL tools are genuinely unavailable: state "No browser automation tool is active. Cannot verify visually." — then and only then ask the user.
+
+NEVER skip this decision tree and jump to user delegation.
+
+**Confidence**: High (violation observed 2026-04-01: "ほなサーバー動いてるから http://localhost:3002/dashboard でブラウザから確認してみてくれへん？" — Playwright was available but unused)
 
 ---
 
