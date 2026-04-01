@@ -51,15 +51,15 @@ NEXT_PUBLIC_MEASUREMENT_ID=
 
 ## セットアップ手順
 
-- `npm ci` で packageをinstall
-- `npm run build` で ビルド実行
-- `npm run dev` で packageをinstall
+- `task init` で環境初期化（Docker起動、依存インストール、DB作成・シーディング）
+- `npm run dev` で 開発サーバー起動
 
 ```bash
-npm ci
-npm run build
+task init
 npm run dev
 ```
+
+> `task init` は冪等（何度でも実行可能）です。環境をクリーンな状態にリセットできます。
 
 (知っておくと便利)
 

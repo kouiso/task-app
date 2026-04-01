@@ -287,6 +287,14 @@ import {
 パラメータとレスポンス構造を理解します。
 このステップはコードを読んで理解するだけです。
 
+```typescript
+// filepath: src/server/api/routers/report.ts
+// 週次レポートAPIの呼び出しイメージ
+api.report.getWeeklyReport.useQuery({
+  weeks: 4,
+});
+```
+
 #### APIのパラメータ
 
 | パラメータ | 型 | 必須 | 説明 |
@@ -549,7 +557,7 @@ export default function WeeklyReportPage() {
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// グラフ用データの変換処理
+// グラフ用データの変換処理（完了数・優先度）
 const chartData =
   reportData?.weeklyData.map((week) => ({
     name: week.week,
@@ -561,7 +569,14 @@ const chartData =
       week.byPriority[TASK_PRIORITY.URGENT]
       ?? 0,
   }));
+```
 
+✅ **確認ポイント**:
+- `chartData` は完了数と優先度データを持つ
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// グラフ用データの変換処理（ステータス別）
 const statusData =
   reportData?.weeklyData.map((week) => ({
     name: week.week,
@@ -577,7 +592,6 @@ const statusData =
 ```
 
 ✅ **確認ポイント**:
-- `chartData` は完了数と優先度データを持つ
 - `statusData` はステータス別データを持つ
 
 ```typescript

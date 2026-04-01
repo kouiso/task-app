@@ -14,7 +14,7 @@ def check_step_completeness(filepath):
         content = f.read()
 
     # ステップセクションを抽出
-    step_pattern = r'### Step \d+:.*?(?=\n### Step \d+:|\n## [^#]|\Z)'
+    step_pattern = r'### Step \d+[^:\n]*:.*?(?=\n### Step \d+[^:\n]*:|\n## [^#]|\Z)'
     steps = re.findall(step_pattern, content, re.DOTALL)
 
     print(f"検出されたステップ数: {len(steps)}")
