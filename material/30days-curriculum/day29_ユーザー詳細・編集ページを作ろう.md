@@ -1174,7 +1174,7 @@ import { Alert, AlertDescription, AlertTitle }
 |------------|------|---------|
 | ページが404になる | `[id]`フォルダ名のブラケットが全角になっている | 半角の`[id]`でフォルダを作り直す |
 | `useParams()`が`undefined`を返す | App Routerの動的ルートでファイル配置が間違っている | `src/app/user/[id]/page.tsx`のパス構造を確認する |
-| フォームの初期値が空になる | `useEffect` の依存配列に `user` を入れ忘れている | `useEffect([user])` でデータ到着時に `setFormData` が実行されることを確認する |
+| フォームの初期値が空になる | `useForm` の `values` に `user` データを渡していない | `useForm({ values: { name: user.name, ... } })` でデータ到着時にフォームが自動更新されることを確認する |
 | 権限チェックが効かない | `currentUser?.role` の比較で定数を使っていない | `USER_ROLE.ADMIN` を使って比較しているか確認する |
 | 更新後に古いデータが表示される | `onSuccess` でページ遷移していない | `onSuccess` 内で `router.push(\`/user/\${userId}\`)` により詳細ページに戻る（再取得される） |
 | `FORBIDDEN`エラーが表示される | 一般ユーザーが `role`・`isActive` を送信している | `handleSubmit` で `isAdmin` 判定を行い、非管理者のときは `role`・`isActive` を送信データから除外する |

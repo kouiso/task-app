@@ -118,10 +118,10 @@ openssl rand -base64 32
 > `openssl rand -base64 32` は32バイト
 > （Base64で44文字）の鍵を生成します。
 
-💻 **.env.example の確認（ローカル参考）**:
+💻 **.env.example の主要変数（ローカル参考）**:
 
 ```bash
-# filepath: .env.example
+# filepath: .env.example（主要部分の抜粋）
 # DB接続文字列（ローカル開発用）
 DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
 # JWT署名用の秘密鍵（本番では必ず変更）
@@ -129,7 +129,7 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum"
 ```
 
 ✅ **確認ポイント**:
-- `.env.example` の内容を確認できた
+- `.env.example` の主要変数を確認できた
 - `DATABASE_URL` の構造を理解した
 
 > `.env.example` にはローカル開発用の設定が
