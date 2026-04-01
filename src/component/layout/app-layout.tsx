@@ -132,7 +132,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="border-t p-4">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={session?.user?.avatar || ''} alt={session?.user?.name || ''} />
+                {session?.user?.avatar && (
+                  <AvatarImage src={session.user.avatar} alt={session.user.name || ''} />
+                )}
                 <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
@@ -202,7 +204,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={session?.user?.avatar || ''} alt={session?.user?.name || ''} />
+                  {session?.user?.avatar && (
+                    <AvatarImage src={session.user.avatar} alt={session.user.name || ''} />
+                  )}
                   <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
                 <span className="sr-only">ユーザーメニューを切り替え</span>

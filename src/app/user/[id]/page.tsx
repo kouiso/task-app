@@ -90,7 +90,7 @@ export default function UserDetailPage() {
               <CardContent className="pt-6">
                 <div className="text-center mb-6">
                   <Avatar className="w-24 h-24 mx-auto mb-4">
-                    <AvatarImage src={user.avatar || ''} alt={user.name || ''} />
+                    {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
                     <AvatarFallback className="text-3xl">
                       {user.name?.[0]?.toUpperCase()}
                     </AvatarFallback>
