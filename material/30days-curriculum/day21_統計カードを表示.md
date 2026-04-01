@@ -133,6 +133,15 @@ flowchart TD
 データが変わっていないのに毎回計算し直すのは
 無駄なので、結果をキャッシュして再利用します。
 
+```typescript
+// filepath: src/app/report/page.tsx
+// reduce で合計を求める例
+const total = tasks.reduce(
+  (acc, task) => acc + task.timeSpentMinutes,
+  0
+);
+```
+
 ✅ **確認ポイント**:
 - ローカル集計の仕組みを理解した
 - `reduce` の動きをイメージできた
