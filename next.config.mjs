@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // @radix-ui/react-presence v1.1.5 + React 18 strict mode の二重マウントで
+  // useLayoutEffect が無限ループになるバグを回避するため strict mode を無効化
+  reactStrictMode: false,
+
   // TypeScript設定
   typescript: {
     // ビルド時の型チェック

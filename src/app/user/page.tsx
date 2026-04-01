@@ -84,7 +84,7 @@ export default function UsersPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
-                          <AvatarImage src={user.avatar || ''} alt={user.name || ''} />
+                          {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
                           <AvatarFallback>{user.name?.[0]?.toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
