@@ -105,11 +105,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:block">
+      <div className="hidden border-r border-slate-700 bg-slate-900 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+          <div className="flex h-14 items-center border-b border-slate-700 px-4 lg:h-[60px] lg:px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold">
-              <span className="">Task App</span>
+              <span className="text-white font-bold text-lg">Task App</span>
             </Link>
           </div>
           <div className="flex-1">
@@ -119,8 +119,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   key={item.text}
                   href={item.path}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary',
-                    pathname === item.path ? 'bg-muted text-primary' : 'text-muted-foreground',
+                    'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+                    pathname === item.path
+                      ? 'bg-blue-600/20 text-blue-400'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800',
                   )}
                 >
                   {item.icon}
@@ -129,7 +131,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
           </div>
-          <div className="border-t p-4">
+          <div className="border-t border-slate-700 p-4">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-9 w-9">
                 {session?.user?.avatar && (
@@ -138,13 +140,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate">{session?.user?.name}</span>
+                <span className="text-sm font-medium truncate text-white">
+                  {session?.user?.name}
+                </span>
                 {session?.user?.role && <UserRoleBadge role={session.user.role} />}
               </div>
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
                   <LogOut className="h-4 w-4" />
                   ログアウト
                 </Button>
@@ -175,9 +183,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <span className="sr-only">ナビゲーションメニューを切り替え</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
+            <SheetContent side="left" className="flex flex-col bg-slate-900 border-slate-700">
               <nav className="grid gap-2 text-lg font-medium">
-                <Link href="#" className="flex items-center gap-2 text-lg font-semibold mb-4">
+                <Link
+                  href="#"
+                  className="flex items-center gap-2 text-lg font-semibold mb-4 text-white"
+                >
                   Task App
                 </Link>
                 {menuItems.map((item) => (
@@ -186,8 +197,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     href={item.path}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      'mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 hover:text-foreground',
-                      pathname === item.path ? 'bg-muted text-foreground' : 'text-muted-foreground',
+                      'mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2',
+                      pathname === item.path
+                        ? 'bg-blue-600/20 text-blue-400'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800',
                     )}
                   >
                     {item.icon}
