@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { isUserRole, USER_ROLE, USER_ROLE_LABELS } from '@/lib/constant/roles';
+import { normalizeAvatarValue } from '@/lib/utils';
 import { api } from '@/trpc/react';
 
 const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
@@ -82,6 +83,7 @@ export default function UserEditPage() {
     updateUser.mutate({
       id: userId,
       ...values,
+      avatar: normalizeAvatarValue(values.avatar),
     });
   };
 
