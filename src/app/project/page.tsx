@@ -1,11 +1,11 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
-import { ProjectDetailDialog } from '@/component/project/project-detail-dialog';
+import { ProjectDetailView } from '@/component/project/project-detail-view';
 import { ProjectDialog, type ProjectFormData } from '@/component/project/project-dialog';
 import { Button } from '@/component/ui/button';
 import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
@@ -38,7 +38,6 @@ import { api } from '@/trpc/react';
 
 function ProjectPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectFormData | undefined>(undefined);
@@ -52,11 +51,13 @@ function ProjectPageContent() {
 
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
+  const router = useRouter();
 
   useEffect(() => {
     if (projectIdParam) {
       setSelectedProject(projectIdParam);
-      setDetailOpen(true);
+    } else {
+      setSelectedProject(null);
     }
   }, [projectIdParam]);
 
@@ -95,7 +96,7 @@ function ProjectPageContent() {
   const deleteMutation = api.project.delete.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      setDetailOpen(false);
+      router.push('/project');
     },
   });
 
@@ -121,14 +122,14 @@ function ProjectPageContent() {
   const archiveMutation = api.project.archive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      setDetailOpen(false);
+      router.push('/project');
     },
   });
 
   const unarchiveMutation = api.project.unarchive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      setDetailOpen(false);
+      router.push('/project');
     },
   });
 
@@ -189,13 +190,11 @@ function ProjectPageContent() {
   };
 
   const handleProjectClick = (projectId: string) => {
-    setSelectedProject(projectId);
-    setDetailOpen(true);
+    router.push(`/project?projectId=${projectId}`);
   };
 
   const handleDetailClose = () => {
-    setDetailOpen(false);
-    setSelectedProject(null);
+    router.push('/project');
   };
 
   const handleAddMember = () => {
@@ -222,6 +221,92 @@ function ProjectPageContent() {
     return (
       <AppLayout>
         <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
+  if (projectIdParam && selectedProject) {
+    return (
+      <AppLayout>
+        <ProjectDetailView
+          projectDetail={projectDetail}
+          onBack={handleDetailClose}
+          onAddMemberClick={() => setMemberDialogOpen(true)}
+          onRemoveMember={handleRemoveMember}
+          onArchive={handleArchive}
+        />
+
+        <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>メンバー追加</DialogTitle>
+              <DialogDescription>このプロジェクトに新しいメンバーを追加します。</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="user">ユーザー</Label>
+                <Select value={newMemberUserId} onValueChange={setNewMemberUserId}>
+                  <SelectTrigger id="user">
+                    <SelectValue placeholder="ユーザーを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="role">ロール</Label>
+                <Select
+                  value={newMemberRole}
+                  onValueChange={(value) => {
+                    if (isProjectMemberRole(value)) setNewMemberRole(value);
+                  }}
+                >
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="ロールを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PROJECT_MEMBER_ROLE_LABELS)
+                      .filter(([value]) => value !== PROJECT_MEMBER_ROLE.OWNER)
+                      .map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
+                キャンセル
+              </Button>
+              <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+                メンバー追加
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <DeleteConfirmDialog
+          open={removeMemberDialogOpen}
+          onOpenChange={setRemoveMemberDialogOpen}
+          onConfirm={() => {
+            if (selectedProject && removeMemberTargetId) {
+              removeMemberMutation.mutate({
+                projectId: selectedProject,
+                userId: removeMemberTargetId,
+              });
+            }
+          }}
+          isPending={removeMemberMutation.isPending}
+          title="このメンバーを削除しますか？"
+        />
       </AppLayout>
     );
   }
@@ -278,14 +363,6 @@ function ProjectPageContent() {
           onClose={() => setDialogOpen(false)}
           onSubmit={handleSubmit}
           initialData={editingProject}
-        />
-
-        <ProjectDetailDialog
-          projectDetail={detailOpen ? projectDetail : null}
-          onClose={handleDetailClose}
-          onAddMemberClick={() => setMemberDialogOpen(true)}
-          onRemoveMember={handleRemoveMember}
-          onArchive={handleArchive}
         />
 
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
