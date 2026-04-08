@@ -205,158 +205,156 @@ function TaskPageContent() {
           : 'indeterminate'
       : false;
 
-  if (tasksLoading) {
-    return (
-      <AppLayout>
-        <PageLoadingSpinner />
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
-            {selectedTasks.size > 0 && (
-              <span className="text-sm text-muted-foreground">({selectedTasks.size}件選択中)</span>
-            )}
+      {tasksLoading ? (
+        <PageLoadingSpinner />
+      ) : (
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
+              {selectedTasks.size > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  ({selectedTasks.size}件選択中)
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedTasks.size > 0 && (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleBulkComplete}>
+                    <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        ステータス変更
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                        <DropdownMenuItem
+                          key={value}
+                          onClick={() => {
+                            if (isTaskStatus(value)) handleBulkUpdateStatus(value);
+                          }}
+                        >
+                          {label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleBulkDelete}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> 削除
+                  </Button>
+                </>
+              )}
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" /> 新規タスク
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {selectedTasks.size > 0 && (
-              <>
-                <Button variant="outline" size="sm" onClick={handleBulkComplete}>
-                  <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      ステータス変更
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
-                      <DropdownMenuItem
-                        key={value}
-                        onClick={() => {
-                          if (isTaskStatus(value)) handleBulkUpdateStatus(value);
-                        }}
-                      >
-                        {label}
-                      </DropdownMenuItem>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-center mb-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="select-all"
+                checked={selectAllState}
+                onCheckedChange={(checked) => handleSelectAll(checked === true)}
+              />
+              <Label htmlFor="select-all">すべて選択</Label>
+            </div>
+
+            <div className="flex gap-2 w-full sm:w-auto ml-auto">
+              <div className="w-[200px]">
+                <Select value={filterProject} onValueChange={setFilterProject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="すべてのプロジェクト" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                    {projects?.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
                     ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={handleBulkDelete}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" /> 削除
-                </Button>
-              </>
-            )}
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" /> 新規タスク
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 items-center mb-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="select-all"
-              checked={selectAllState}
-              onCheckedChange={(checked) => handleSelectAll(checked === true)}
-            />
-            <Label htmlFor="select-all">すべて選択</Label>
-          </div>
-
-          <div className="flex gap-2 w-full sm:w-auto ml-auto">
-            <div className="w-[200px]">
-              <Select value={filterProject} onValueChange={setFilterProject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="すべてのプロジェクト" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">すべてのプロジェクト</SelectItem>
-                  {projects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-[200px]">
-              <Select
-                value={filterStatus}
-                onValueChange={(value) => {
-                  if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="すべてのステータス" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">すべてのステータス</SelectItem>
-                  {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {tasks && tasks.length > 0 ? (
-            tasks.map((task) => (
-              <div key={task.id} className="flex gap-2 items-start h-full">
-                <Checkbox
-                  checked={selectedTasks.has(task.id)}
-                  onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}
-                  className="mt-4"
-                />
-                <div className="flex-1 min-w-0 h-full">
-                  <TaskCard
-                    id={task.id}
-                    title={task.title}
-                    description={task.description}
-                    status={task.status}
-                    priority={task.priority}
-                    dueDate={task.dueDate}
-                    assignee={task.assignee}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onClick={handleTaskClick}
-                  />
-                </div>
+                  </SelectContent>
+                </Select>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>タスクが見つかりません。</p>
-              <p>最初のタスクを作成しましょう！</p>
+              <div className="w-[200px]">
+                <Select
+                  value={filterStatus}
+                  onValueChange={(value) => {
+                    if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="すべてのステータス" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべてのステータス</SelectItem>
+                    {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {tasks && tasks.length > 0 ? (
+              tasks.map((task) => (
+                <div key={task.id} className="flex gap-2 items-start h-full">
+                  <Checkbox
+                    checked={selectedTasks.has(task.id)}
+                    onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}
+                    className="mt-4"
+                  />
+                  <div className="flex-1 min-w-0 h-full">
+                    <TaskCard
+                      id={task.id}
+                      title={task.title}
+                      description={task.description}
+                      status={task.status}
+                      priority={task.priority}
+                      dueDate={task.dueDate}
+                      assignee={task.assignee}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onClick={handleTaskClick}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <p>タスクが見つかりません。</p>
+                <p>最初のタスクを作成しましょう！</p>
+              </div>
+            )}
+          </div>
+
+          <TaskDialog
+            open={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            onSubmit={handleSubmit}
+            initialData={editingTask}
+            projects={projects ?? []}
+            users={users ?? []}
+          />
+
+          <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
         </div>
-
-        <TaskDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSubmit={handleSubmit}
-          initialData={editingTask}
-          projects={projects ?? []}
-          users={users ?? []}
-        />
-
-        <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
-      </div>
+      )}
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
