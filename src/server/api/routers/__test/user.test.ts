@@ -239,6 +239,24 @@ describe('userRouter', () => {
       expect(updated.avatar).toBe('https://example.com/avatar.jpg');
     });
 
+    it('should clear user avatar when passing null', async () => {
+      const user = await createTestUser();
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await caller.user.update({
+        id: user.id,
+        avatar: 'https://example.com/avatar.jpg',
+      });
+
+      const cleared = await caller.user.update({
+        id: user.id,
+        avatar: null,
+      });
+
+      expect(cleared.avatar).toBeNull();
+    });
+
     it('should update user role', async () => {
       const admin = await createTestUser({ role: 'ADMIN' });
       const user = await createTestUser({ role: 'USER' });

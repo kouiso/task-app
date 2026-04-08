@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { normalizeAvatarValue } from '@/lib/utils';
 import { api } from '@/trpc/react';
 
 const profileEditSchema = z.object({
@@ -59,7 +60,10 @@ export default function ProfileEditPage() {
   }, [currentUser, form]);
 
   const handleSubmit = (values: ProfileEditFormValues) => {
-    updateProfile.mutate(values);
+    updateProfile.mutate({
+      ...values,
+      avatar: normalizeAvatarValue(values.avatar),
+    });
   };
 
   if (isLoading) {
