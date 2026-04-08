@@ -15,7 +15,7 @@ RUN apt-get update -qq \
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci
+RUN PUPPETEER_SKIP_DOWNLOAD=true npm ci
 
 # app code
 COPY . .
