@@ -178,16 +178,11 @@ export default function MyTasksPage() {
     return { overdue, today, upcoming, noDueDate };
   }, [tasks]);
 
-  if (isCurrentUserLoading || isLoading) {
-    return (
-      <AppLayout>
-        <PageLoadingSpinner />
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout>
+      {isCurrentUserLoading || isLoading ? (
+        <PageLoadingSpinner />
+      ) : (
       <div className="flex flex-col gap-6">
         <h1 className="text-3xl font-bold tracking-tight">マイタスク</h1>
 
@@ -270,6 +265,7 @@ export default function MyTasksPage() {
           users={users ?? []}
         />
       </div>
+      )}
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
