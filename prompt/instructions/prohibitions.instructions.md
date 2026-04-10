@@ -266,3 +266,66 @@ NEVER report a task as complete based solely on surface-level metrics (lint pass
 - Verification = BOTH code checks AND content review pass
 
 **General rule**: IF the task involves files that humans will read/use (教材, docs, UI text, prompts) THEN the verification plan MUST include actually reading those files and confirming the content is correct, not just that the code compiles.
+
+---
+
+## Scope and Quality Prohibitions
+
+### Switching Task/PR Scope Without Explicit User Instruction
+
+NEVER switch to a different PR, Issue, or task scope WHEN the current conversation has established a specific target BECAUSE unauthorized scope switching corrupts work already in progress and produces changes on unintended targets.
+
+**Detection**: Working on PR-A AND starting to read/edit/create changes targeting PR-B without user saying "switch to PR-B" or equivalent = violation.
+
+**Required**: Continue working on the currently established scope. If confusion exists about which PR/task is active, ask "今はどのPR/タスクを対象に作業しますか？" before any action.
+
+```
+❌ Conversation is about PR #200 → AI autonomously switches to PR #195 and starts editing
+✅ User says "PR #195も直して" → AI switches scope explicitly per user instruction
+```
+
+### Silencing Quality Issues Found During Verification
+
+NEVER report "完了" or "実装しました" WITHOUT proactively surfacing quality issues found during verification BECAUSE the user should not need to ask "質は？" to receive an honest assessment — if the AI evaluated quality, the result belongs in the completion report.
+
+**Detection**: Verification performed AND quality issues found (subjective defects, character inconsistency, content gaps, etc.) AND completion report omits those issues = violation.
+
+**Required**: Every completion report must include:
+1. Execution evidence (what was run/tested)
+2. Honest quality assessment — including known shortcomings even if the task "passes" mechanically
+3. If subjective quality is below expectation: state it upfront, not when asked
+
+```
+❌ Quality score 60/100 found during verification → report "実装完了です"
+✅ Quality score 60/100 found → report "実装完了。品質評価: 内容完成度65/100・教材精度55/100。根本原因: [X]。改善案: [Y]"
+```
+
+### Reporting Partial Completion as Full Completion
+
+NEVER report a task as complete WHEN any assigned sub-task or verification step remains unexecuted BECAUSE partial completion reported as completion causes the user to stop the session believing work is done when it is not.
+
+**Detection**: Task has N assigned steps AND "完了" reported AND fewer than N steps executed = violation.
+
+**Required**:
+- Report "完了" ONLY when ALL assigned steps are verified done
+- If a step is blocked: state "X完了、Y未着手（理由: Z）。Zを先に解消してから続行します" then execute
+- Intermediate status = intermediate report format "X/N完了" not "完了"
+
+```
+❌ Steps 1-3 done, step 4 not started → "完了しました"
+✅ Steps 1-3 done, step 4 not started → "3/4完了。ステップ4を続けます" → execute → "完了"
+```
+
+---
+
+## Stitch MCP Model Selection Rule
+
+NEVER use `GEMINI_3_FLASH` or `MODEL_ID_UNSPECIFIED` for `mcp__stitch__generate_screen_from_text`, `mcp__stitch__edit_screens`, or `mcp__stitch__generate_variants`
+WHEN generating or editing design screens
+BECAUSE Flash produces significantly lower quality designs that fail to meet educational material standards. The cost/speed savings are worthless if the output needs to be regenerated.
+
+- **Required**: Always specify `modelId: "GEMINI_3_1_PRO"`
+- **Prohibited**: Downgrading to Flash for cost savings or speed
+- **Violation Detection**: Stitch MCP call where `modelId` is not `GEMINI_3_1_PRO` = VIOLATION
+
+**Origin Incident (2026-04-06)**: 9 screens generated, 5 used Flash → quality too low for educational material → full rework required. Root cause: prioritizing speed over quality.
