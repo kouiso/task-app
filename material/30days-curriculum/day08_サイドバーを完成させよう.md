@@ -241,7 +241,7 @@ VS Codeで `src/component/ui/alert-dialog.tsx` を開いてみましょう。以
 
 🎯 **ゴール**: サイドバー下部に表示されているユーザー名とロールバッジの仕組みを理解します。
 
-`src/component/layout/app-layout.tsx`を開いてください。VS Codeの検索で `border-t p-4` を検索するとユーザー情報ウィジェットが見つかります。
+`src/component/layout/app-layout.tsx`を開いてください。VS Codeの検索で `border-sidebar-border p-4` を検索するとユーザー情報ウィジェットが見つかります。
 
 💻 **確認するコード（import部分）**:
 
@@ -268,12 +268,12 @@ import { USER_ROLE }
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // サイドバー下部のユーザー情報ウィジェット
-<div className="border-t p-4">
+<div className="border-t
+  border-sidebar-border p-4">
   <div className="flex items-center
     gap-3 mb-3">
     <Avatar className="h-9 w-9">
-      <AvatarImage
-        src={session?.user?.avatar || ''}
+      <AvatarImage src={session?.user?.avatar || ''}
         alt={session?.user?.name || ''} />
       <AvatarFallback>
         {session?.user?.name?.[0] || 'U'}
@@ -281,7 +281,7 @@ import { USER_ROLE }
     </Avatar>
     <div className="flex flex-col min-w-0">
       <span className="text-sm font-medium
-        truncate">
+        truncate text-sidebar-foreground">
         {session?.user?.name}
       </span>
       {session?.user?.role && (
@@ -308,6 +308,8 @@ import { USER_ROLE }
 | `AvatarFallback` | 画像がない時の代替表示 | 名前の頭文字を表示 |
 | `session?.user?.name` | ログイン中のユーザー名 | 名札に書かれた名前 |
 | `UserRoleBadge` | ロール表示の専用コンポーネント | 管理者はShieldアイコン付き |
+| `border-sidebar-border` | サイドバー用の境界線色 | 濃紺テーマに合う枠線 |
+| `text-sidebar-foreground` | サイドバー用の文字色 | 暗い背景の上で読みやすい色 |
 
 ✅ **確認ポイント**:
 - ブラウザのサイドバー下部にユーザー名が表示されている
@@ -361,7 +363,11 @@ import { USER_ROLE }
 <AlertDialog>
   <AlertDialogTrigger asChild>
     <Button variant="outline" size="sm"
-      className="w-full gap-2">
+      className="w-full gap-2
+        border-sidebar-border
+        text-sidebar-foreground/80
+        hover:bg-sidebar-accent
+        hover:text-sidebar-foreground">
       <LogOut className="h-4 w-4" />
       ログアウト
     </Button>
@@ -411,6 +417,8 @@ import { USER_ROLE }
 | `asChild` | 子要素をそのままトリガーにする | Buttonをそのまま使う |
 | `AlertDialogAction` | 確定ボタン | 「はい、退出します」ボタン |
 | `AlertDialogCancel` | キャンセルボタン | 「やっぱりやめます」ボタン |
+| `border-sidebar-border` | サイドバーテーマに合わせた枠線色 | 濃紺背景に馴染むボーダー |
+| `hover:bg-sidebar-accent` | ホバー時のアクセントカラー | マウスを乗せた時の視覚フィードバック |
 
 📸 スクリーンショット: ログアウト確認ダイアログ
 
