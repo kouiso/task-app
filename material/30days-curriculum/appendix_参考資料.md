@@ -2,6 +2,12 @@
 
 このカリキュラムで使用している技術の公式ドキュメントと、学習に役立つリソースをまとめました。
 
+![完成後のダッシュボード(本カリキュラムで作る画面)](./screenshots/dashboard.png)
+
+![Next.js + shadcn/uiで作るプロジェクト一覧画面](./screenshots/project-list.png)
+
+![tRPCで実装するレポート画面](./screenshots/report.png)
+
 ---
 
 ## 公式ドキュメント
