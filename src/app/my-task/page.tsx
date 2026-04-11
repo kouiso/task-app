@@ -183,88 +183,88 @@ export default function MyTasksPage() {
       {isCurrentUserLoading || isLoading ? (
         <PageLoadingSpinner />
       ) : (
-      <div className="flex flex-col gap-6">
-        <h1 className="text-3xl font-bold tracking-tight">マイタスク</h1>
+        <div className="flex flex-col gap-6">
+          <h1 className="text-3xl font-bold tracking-tight">マイタスク</h1>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => {
-              if (v === 'all' || isTaskStatus(v)) setActiveTab(v);
-            }}
-            className="w-full sm:w-auto"
-          >
-            <TabsList>
-              {STATUS_TABS.map((tab) => (
-                <TabsTrigger key={tab.label} value={tab.value}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-
-          <div className="ml-auto w-full sm:w-[200px]">
-            <Select value={filterProject} onValueChange={setFilterProject}>
-              <SelectTrigger>
-                <SelectValue placeholder="すべてのプロジェクト" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべてのプロジェクト</SelectItem>
-                {projects?.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => {
+                if (v === 'all' || isTaskStatus(v)) setActiveTab(v);
+              }}
+              className="w-full sm:w-auto"
+            >
+              <TabsList>
+                {STATUS_TABS.map((tab) => (
+                  <TabsTrigger key={tab.label} value={tab.value}>
+                    {tab.label}
+                  </TabsTrigger>
                 ))}
-              </SelectContent>
-            </Select>
+              </TabsList>
+            </Tabs>
+
+            <div className="ml-auto w-full sm:w-[200px]">
+              <Select value={filterProject} onValueChange={setFilterProject}>
+                <SelectTrigger>
+                  <SelectValue placeholder="すべてのプロジェクト" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                  {projects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          <TaskGroupSection
+            title="期限切れ"
+            titleClassName="text-destructive"
+            tasks={groupedTasks.overdue ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+
+          <TaskGroupSection
+            title="今日が期限"
+            titleClassName="text-orange-500"
+            tasks={groupedTasks.today ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+
+          <TaskGroupSection
+            title="今後の予定"
+            tasks={groupedTasks.upcoming ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+
+          <TaskGroupSection
+            title="期限なし"
+            tasks={groupedTasks.noDueDate ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+
+          {tasks && tasks.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>あなたに割り当てられたタスクはありません</p>
+            </div>
+          )}
+
+          <TaskDialog
+            open={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            onSubmit={handleSubmit}
+            initialData={editingTask}
+            projects={projects ?? []}
+            users={users ?? []}
+          />
         </div>
-
-        <TaskGroupSection
-          title="期限切れ"
-          titleClassName="text-destructive"
-          tasks={groupedTasks.overdue ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-
-        <TaskGroupSection
-          title="今日が期限"
-          titleClassName="text-orange-500"
-          tasks={groupedTasks.today ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-
-        <TaskGroupSection
-          title="今後の予定"
-          tasks={groupedTasks.upcoming ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-
-        <TaskGroupSection
-          title="期限なし"
-          tasks={groupedTasks.noDueDate ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-
-        {tasks && tasks.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-            <p>あなたに割り当てられたタスクはありません</p>
-          </div>
-        )}
-
-        <TaskDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSubmit={handleSubmit}
-          initialData={editingTask}
-          projects={projects ?? []}
-          users={users ?? []}
-        />
-      </div>
       )}
 
       <DeleteConfirmDialog

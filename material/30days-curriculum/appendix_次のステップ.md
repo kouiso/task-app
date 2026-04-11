@@ -2,6 +2,12 @@
 
 30日間のカリキュラムお疲れさまでした！ここからは、あなたのスキルをさらに伸ばすための次のステップを紹介します。
 
+![あなたが作り上げたTask-Appのダッシュボード](./screenshots/dashboard.png)
+
+![プロジェクト一覧 - 今後さらに機能を追加できる基盤](./screenshots/project-list.png)
+
+![レポート画面 - データ分析機能の拡張候補](./screenshots/report.png)
+
 ---
 
 ## レベル1: Task-Appを拡張する

@@ -2,6 +2,12 @@
 
 開発中に遭遇しやすいエラーと、その解決方法をまとめました。
 
+![正常起動時のログイン画面](./screenshots/login.png)
+
+![正常起動時のダッシュボード画面](./screenshots/dashboard.png)
+
+![正常起動時のタスク一覧画面](./screenshots/task-list.png)
+
 ---
 
 ## Day別よくあるエラー
