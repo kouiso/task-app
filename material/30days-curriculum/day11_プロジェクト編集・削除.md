@@ -93,7 +93,7 @@ src/
 | Step 6 | 削除 vs アーカイブの違いを理解する | 5分 |
 | Step 7 | アーカイブ mutation を定義する | 5分 |
 | Step 8 | アーカイブハンドラーを作る | 3分 |
-| Step 9 | ProjectDetailDialog にアーカイブを渡す | 4分 |
+| Step 9 | ProjectDetailView にアーカイブを渡す | 4分 |
 | Step 10 | 動作確認 | 7分 |
 
 **合計時間**: 約53分
@@ -162,7 +162,7 @@ const handleEdit = (projectId: string) => {
   setEditingProject({
     id: project.id,
     name: project.name,
-    description: project.description ?? '',
+    description: project.description || '',
     color: project.color,
     ...(startDate && { startDate }),
     ...(endDate && { endDate }),
@@ -173,7 +173,7 @@ const handleEdit = (projectId: string) => {
 
 ✅ **確認ポイント**:
 - `handleEdit` が `handleCreate` の直下に配置されている
-- `description` に `??` を使って null を空文字に変換している
+- `description` に `||` を使って null を空文字に変換している
 - 日付変換のロジックが正しく書けた
 
 #### 条件付きスプレッド構文
@@ -221,14 +221,14 @@ const deleteMutation =
   api.project.delete.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      setDetailOpen(false);
+      router.push('/project');
     },
   });
 ```
 
 ✅ **確認ポイント**:
 - `deleteMutation` が `updateMutation` の直下に定義できた
-- 成功時に `invalidate()` で一覧を更新している
+- 成功時に `invalidate()` で一覧を更新し、`router.push` で一覧画面に戻る
 
 `handleDelete` は **state を設定するだけ** で、削除の実行は確認ダイアログ内で行います。`handleEdit` の直下に追加してください。実際のコードでは `handleCreate` → `handleEdit` → `handleDelete` の順番です。
 
@@ -295,7 +295,7 @@ const handleSubmit = (
       id: data.id,
       name: data.name,
       description:
-        data.description ?? null,
+        data.description || null,
       color: data.color,
       startDate: data.startDate
         ? new Date(data.startDate)
@@ -310,7 +310,7 @@ const handleSubmit = (
 
 ✅ **確認ポイント**:
 - `data.id` がある場合に `updateMutation.mutate` を呼んでいる
-- `description` に `??` を使って `undefined` を `null` に変換している
+- `description` に `||` を使って空文字列や `undefined` を `null` に変換している
 
 同じ `handleSubmit` 関数の `else` 分岐です。`data.id` がない場合（新規作成）は Day 10 の `createMutation` を呼びます。
 
@@ -424,7 +424,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 
 💻 **実装**:
 
-`DeleteConfirmDialog` は `</AppLayout>` の直前に配置します。`ProjectDialog` や `ProjectDetailDialog` よりも後ろの位置です。
+`DeleteConfirmDialog` は `</AppLayout>` の直前に配置します。`ProjectDialog` よりも後ろの位置です。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -556,14 +556,14 @@ const archiveMutation =
   api.project.archive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      setDetailOpen(false);
+      router.push('/project');
     },
   });
 ```
 
 ✅ **確認ポイント**:
 - `archiveMutation` が定義できた
-- 成功時に `invalidate()` と `setDetailOpen(false)` を呼んでいる
+- 成功時に `invalidate()` と `router.push('/project')` で一覧画面に戻る
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -572,14 +572,14 @@ const unarchiveMutation =
   api.project.unarchive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      setDetailOpen(false);
+      router.push('/project');
     },
   });
 ```
 
 ✅ **確認ポイント**:
 - `unarchiveMutation` が定義できた
-- `archiveMutation` と同じく `invalidate()` を呼んでいる
+- `archiveMutation` と同じく `invalidate()` と `router.push` を呼んでいる
 
 ---
 
@@ -613,40 +613,45 @@ const handleArchive = (
 
 ---
 
-### Step 9: ProjectDetailDialog にアーカイブを渡す（4分）
+### Step 9: ProjectDetailView にアーカイブを渡す（4分）
 
-🎯 **ゴール**: `ProjectDetailDialog` に `onArchive` props を渡して、アーカイブ機能を有効にします。
+🎯 **ゴール**: `ProjectDetailView` に `onArchive` props を渡して、アーカイブ機能を有効にします。
 
 💻 **実装**:
 
-JSX 内で、`ProjectDialog` の直下に `ProjectDetailDialog` を配置します。Day 10 で既に基本的な props は渡していますが、ここで `onArchive` を追加します。
+プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`projectIdParam && selectedProject` が `true` のとき、カード一覧の代わりに `ProjectDetailView` を表示する分岐が使われます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectDialogの直下に配置
-<ProjectDetailDialog
-  projectDetail={
-    detailOpen ? projectDetail : null
-  }
-  onClose={handleDetailClose}
-  onAddMemberClick={
-    () => setMemberDialogOpen(true)
-  }
-  onRemoveMember={handleRemoveMember}
-  onArchive={handleArchive}
-/>
+// projectIdParam が存在する場合の表示
+if (projectIdParam && selectedProject) {
+  return (
+    <AppLayout>
+      <ProjectDetailView
+        projectDetail={projectDetail}
+        onBack={handleDetailClose}
+        onAddMemberClick={
+          () => setMemberDialogOpen(true)
+        }
+        onRemoveMember={handleRemoveMember}
+        onArchive={handleArchive}
+      />
+    </AppLayout>
+  );
+}
 ```
 
 ✅ **確認ポイント**:
 - `onArchive={handleArchive}` が渡されている
-- `projectDetail` は `detailOpen` が `true` のときだけ渡している
+- `ProjectDetailView` はダイアログではなくページ内にインライン表示される
+- `onBack` で一覧画面に戻る
 
-#### ProjectDetailDialog に渡している props
+#### ProjectDetailView に渡している props
 
 | prop | 由来 | 説明 |
 |------|------|------|
 | `projectDetail` | `api.project.getById.useQuery` | プロジェクト詳細データ |
-| `onClose` | `handleDetailClose` | ダイアログを閉じる |
+| `onBack` | `handleDetailClose` | 一覧画面に戻る（`router.push('/project')`） |
 | `onAddMemberClick` | `setMemberDialogOpen(true)` | メンバー追加ダイアログを開く |
 | `onRemoveMember` | `handleRemoveMember` | メンバー削除（Day 12 で詳しく実装） |
 | `onArchive` | `handleArchive` | アーカイブ切替 |
@@ -727,13 +732,13 @@ npm run dev
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 編集ダイアログに古いデータが残る | `useForm` の `values` が `initialData` と連動していない | `ProjectDialog` 側で `values` プロパティに `initialData` を渡しているか確認 |
+| 編集ダイアログに古いデータが残る | `useForm` の `values` プロパティが `initialData` と連動していない | `ProjectDialog` 側で `values`（`defaultValues` ではない）に `initialData` の値を渡しているか確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `utils.project.getAll.invalidate()` を呼ぶ |
 | 「権限がありません」エラー（削除） | OWNER/ADMIN 以外で削除操作 | OWNER か ADMIN アカウントで操作する（`canDelete` 権限が必要） |
 | 「権限がありません」エラー（アーカイブ） | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する（`canArchive` 権限が必要） |
-| 削除後にエラーが残る | 詳細ダイアログが開いたまま | 削除の `onSuccess` で `setDetailOpen(false)` も呼ぶ |
+| 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
-| アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailDialog` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
+| アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailView` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
 
 ## 📝 今日学んだ用語
 

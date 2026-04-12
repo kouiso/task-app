@@ -69,7 +69,7 @@ flowchart TD
 |---------|---------|---------|-------------|---------|
 | Step 1 | ダッシュボードのコードを読む | 5分 | なし（読むのみ） | コードの構造がわかる |
 | Step 2 | ウェルカムメッセージの変数を作る | 5分 | dashboard/page.tsx | 変数が表示される |
-| Step 3 | Cardコンポーネントでバナーにする | 5分 | dashboard/page.tsx | バナーが表示される |
+| Step 3 | カード風デザインでバナーにする | 5分 | dashboard/page.tsx | バナーが表示される |
 | Step 4 | letに変えて違いを体験する | 4分 | dashboard/page.tsx | constが推奨な理由がわかる |
 | Step 5 | 型エラーをわざと起こす | 5分 | dashboard/page.tsx | エラーメッセージが読める |
 | Step 6 | 型エラーを修正する | 4分 | dashboard/page.tsx | エラーが消える |
@@ -95,14 +95,12 @@ VS Codeで`src/app/dashboard/page.tsx`を開いてください。先頭部分を
 'use client';
 
 import {
-  CheckCircle, ClipboardList, Clock, FolderOpen
+  ArrowUpRight, CheckCircle2, FolderKanban,
+  ListChecks, Timer
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
-import { Badge } from '@/component/ui/badge';
-import {
-  Card, CardContent, CardHeader, CardTitle
-} from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 ```
 
 🔍 **コード解説**:
@@ -111,14 +109,14 @@ import {
 |--------|------|------|
 | `'use client'` | このファイルはブラウザで動く | 「この書類は現場用」の印 |
 | `import ... from` | 他のファイルから部品を持ってくる | 工具箱から道具を取り出す |
-| `@/component/ui/card` | Cardコンポーネントの場所 | 「棚のUI引き出しからCardを取る」 |
+| `lucide-react` | アイコンライブラリ | 「アイコン棚からアイコンを取る」 |
 
-> 💡 **ポイント**: 実際のファイルにはここで示した以外にも `PageLoadingSpinner`、`getPriorityBadgeVariant` など多くの import 文があります。今は全部を理解する必要はありません。今日使う部品だけに注目しましょう。
+> 💡 **ポイント**: 実際のファイルにはここで示した以外にも `TASK_STATUS_COLORS`、`TASK_PRIORITY_LABELS` など多くの import 文があります。今は全部を理解する必要はありません。今日使う部品だけに注目しましょう。
 
 ✅ **確認ポイント**:
 - VS Codeで`src/app/dashboard/page.tsx`が開けた
-- `import`文でCardやBadgeを読み込んでいることが確認できた
-- import文の中で知っている単語（Card、Badgeなど）を1つ見つけた
+- `import`文でアイコンやレイアウト部品を読み込んでいることが確認できた
+- import文の中で知っている単語（AppLayout、Timerなど）を1つ見つけた
 
 📝 **学んだこと**: Reactのページは`import`で必要な部品を集めてから、画面を組み立てます。
 
@@ -151,13 +149,13 @@ import {
 - ファイルを保存した（Ctrl+S / Cmd+S）
 - エラーが表示されていない
 
-次に、JSXの中の`<h1>ダッシュボード</h1>`の直後に表示用の要素を追加します。
+次に、JSXの中の`<div className="space-y-10">`の直後に表示用の要素を追加します。
 
-> 💡 **挿入位置の見つけ方**: `Cmd+F`（Mac）または `Ctrl+F`（Windows）で `ダッシュボード` と検索し、`</h1>` の**次の行**に追加してください。
+> 💡 **挿入位置の見つけ方**: `Cmd+F`（Mac）または `Ctrl+F`（Windows）で `space-y-10` と検索し、その`<div>`タグの**次の行**に追加してください。
 
 ```typescript
 // filepath: src/app/dashboard/page.tsx
-        {/* <h1>タグの直後に追加 */}
+        {/* space-y-10のdiv直後に追加 */}
         {/* ウェルカムメッセージを追加 */}
         <p className="text-lg text-muted-foreground">
           {message}
@@ -190,49 +188,46 @@ import {
 
 ---
 
-### Step 3: Cardコンポーネントでバナーにする（5分）
+### Step 3: カード風のデザインでバナーにする（5分）
 
-🎯 **ゴール**: メッセージをCardコンポーネントで囲んで、見た目を整えます。
+🎯 **ゴール**: メッセージをカード風のdivで囲んで、見た目を整えます。
 
-Step 2で追加した`<p>`タグを、`Card`コンポーネントに置き換えます。
+Step 2で追加した`<p>`タグを、カード風の`<div>`に置き換えます。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/dashboard/page.tsx
-        {/* return文の変更箇所: Step 2のpタグをCardに置き換え */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">
-              {message} 👋
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              今日もタスク管理を頑張りましょう！
-            </p>
-          </CardContent>
-        </Card>
+        {/* Step 2のpタグをdivカードに置き換え */}
+        <div className="rounded-xl border border-border/50
+          bg-card p-6">
+          <h2 className="text-lg font-semibold mb-2">
+            {message} 👋
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            今日もタスク管理を頑張りましょう！
+          </p>
+        </div>
 ```
 
 🔍 **コード解説**:
 
 | コード | 意味 | 例え |
 |--------|------|------|
-| `<Card>` | カードの外枠 | 名刺のフレーム |
-| `<CardHeader>` | カードの上部 | 名刺のタイトル行 |
-| `<CardContent>` | カードの本文 | 名刺の本文エリア |
-| `bg-primary/5` | 薄い背景色（5%の濃さ） | うっすら色がついた紙 |
+| `rounded-xl` | 角丸の枠 | 名刺の丸い角 |
+| `border border-border/50` | 半透明の枠線 | うっすら見えるフレーム |
+| `bg-card` | カード背景色 | カードっぽい色の紙 |
+| `p-6` | 内側の余白 | 額縁の内側の余白 |
 
 ✅ **確認ポイント**:
 1. ブラウザでダッシュボードを確認
-2. ウェルカムメッセージがカードの中に表示されている
-3. 薄い背景色がついている
+2. ウェルカムメッセージがカード風のデザインで表示されている
+3. 角丸と枠線がついている
 
-📸 スクリーンショット: ウェルカムメッセージがCardコンポーネントで囲まれ、薄い背景色がついた状態
+📸 スクリーンショット: ウェルカムメッセージがカード風のdivで囲まれた状態
 
-![ウェルカムメッセージがCardコンポーネントで囲まれ、薄い背景色のカードとして表示されている画面](./screenshots/day02-step3-card.png)
-📝 **学んだこと**: shadcn/uiの`Card`コンポーネントで、見た目を整えられます。
+![ウェルカムメッセージがカード風のdivで囲まれて表示されている画面](./screenshots/day02-step3-card.png)
+📝 **学んだこと**: Tailwind CSSのユーティリティクラスで、カード風の見た目を作れます。
 
 ---
 
@@ -372,16 +367,12 @@ const isCompleted: boolean = false;
 
 `const recentTasks = tasks?.slice(0, 5) ?? [];` の下に、バナー用の統計情報を追加します。
 
-> 💡 **`totalTasks` と `completedTasks` はどこから来る？**: ダッシュボードのコードを上にたどると、`api.task.getAll.useQuery()` でタスク一覧をサーバーから取得し、そこから `totalTasks`（全タスク数）や `completedTasks`（完了タスク数）を計算しています。今は「すでに用意されている変数」として使えばOKです。
+> 💡 **`completionRate` はどこから来る？**: ダッシュボードのコードを上にたどると、`api.task.getAll.useQuery()` でタスク一覧をサーバーから取得し、`totalTasks`（全タスク数）や `completedTasks`（完了タスク数）を計算しています。`completionRate` もすでに計算済みの変数です。ここでは新たに `statusText` だけを追加します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/dashboard/page.tsx（recentTasksの下に追加）
-  // 完了率を計算（小数を四捨五入）
-  const completionRate: number = totalTasks > 0
-    ? Math.round((completedTasks / totalTasks) * 100)
-    : 0;
   // 80%以上なら褒める、未満なら励ます
   const statusText: string = completionRate >= 80
     ? "素晴らしい進捗です！"
@@ -392,23 +383,21 @@ const isCompleted: boolean = false;
 - ファイルを保存した（Ctrl+S / Cmd+S）
 - エラーが表示されていない
 
-次に、CardContentの中身を更新します。
+次に、Step 3で作ったdiv内のメッセージを更新します。
 
 ```typescript
-// filepath: src/app/dashboard/page.tsx（CardContent内を変更）
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              タスク完了率: {completionRate}%
-              — {statusText}
-            </p>
-          </CardContent>
+// filepath: src/app/dashboard/page.tsx（Step 3のdiv内を変更）
+          <p className="text-sm text-muted-foreground">
+            タスク完了率: {completionRate}%
+            — {statusText}
+          </p>
 ```
 
 🔍 **コード解説**:
 
 | コード | 意味 | 例え |
 |--------|------|------|
-| `Math.round(...)` | 小数を四捨五入 | 「23.7% → 24%」に丸める |
+| `completionRate` | 既存の完了率変数（上部で計算済み） | ダッシュボードが自動計算した達成度 |
 | `条件 ? A : B` | 三項演算子（条件分岐） | 「80%以上なら褒める、未満なら励ます」 |
 | `completionRate >= 80` | 80以上か判定 | テストで80点以上かチェック |
 

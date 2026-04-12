@@ -8,11 +8,11 @@ Day 11 ではプロジェクトの編集・削除機能を実装しました。`
 
 ## 🎯 今日のゴール
 
-プロジェクトにメンバーを追加・削除できる機能を実装します。独立コンポーネント `ProjectDetailDialog` でメンバー管理UIを構築し、`page.tsx` からprops経由で操作を制御します。
+プロジェクトにメンバーを追加・削除できる機能を実装します。`ProjectDetailView` コンポーネントでメンバー一覧を表示し、`page.tsx` からprops経由で操作を制御します。
 
-📸 スクリーンショット: メンバー管理画面（プロジェクト詳細ダイアログ内）
+📸 スクリーンショット: メンバー管理画面（プロジェクト詳細ページ内）
 
-![メンバー管理画面（プロジェクト詳細ダイアログ内）](./screenshots/project-detail-members.png)
+![メンバー管理画面（プロジェクト詳細ページ内）](./screenshots/project-detail-members.png)
 ## 🤔 なぜこれを作るのか？
 
 チーム開発では、複数のメンバーが1つのプロジェクトで作業します。「誰がどんな役割で参加しているか」を管理する機能は、実務のタスク管理ツールに必須です。
@@ -23,7 +23,7 @@ Day 11 ではプロジェクトの編集・削除機能を実装しました。`
 
 ```mermaid
 flowchart TD
-    A[page.tsx] -->|props| B[ProjectDetailDialog]
+    A[page.tsx] -->|props| B[ProjectDetailView]
     B --> C[メンバー一覧表示]
     B --> D[メンバー追加ボタン]
     D -->|onAddMemberClick| A
@@ -64,7 +64,7 @@ src/
 ├── app/project/
 │   └── page.tsx              ← メンバー追加ダイアログ・state管理
 ├── component/project/
-│   └── project-detail-dialog.tsx  ← メンバー一覧表示（独立コンポーネント）
+│   └── project-detail-view.tsx  ← メンバー一覧表示（独立コンポーネント）
 └── lib/constant/
     └── roles.ts              ← ロール定義・権限・型ガード
 ```
@@ -96,8 +96,8 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | プロジェクト詳細ダイアログを接続する | 6分 |
-| Step 2 | ProjectDetailDialogのpropsを確認する | 4分 |
+| Step 1 | プロジェクト詳細ビューを接続する | 6分 |
+| Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
 | Step 3 | ロール関連のインポートとフォームを準備する | 6分 |
 | Step 4 | メンバー追加ダイアログのUIを作る | 7分 |
 | Step 5 | メンバー追加APIを呼ぶ | 5分 |
@@ -109,25 +109,25 @@ src/
 
 ---
 
-### Step 1: プロジェクト詳細ダイアログを接続する（6分）
+### Step 1: プロジェクト詳細ビューを接続する（6分）
 
-🎯 **ゴール**: `page.tsx` から `ProjectDetailDialog` コンポーネントを呼び出し、プロジェクト詳細を表示します。
+🎯 **ゴール**: `page.tsx` から `ProjectDetailView` コンポーネントを呼び出し、プロジェクト詳細を表示します。
 
 💻 **実装**:
 
-`ProjectDetailDialog` コンポーネントのインポートを追加します。
+`ProjectDetailView` コンポーネントのインポートを追加します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectDetailDialogのインポートを追加
-import { ProjectDetailDialog } from
-  '@/component/project/project-detail-dialog';
+// ProjectDetailViewのインポートを追加
+import { ProjectDetailView } from
+  '@/component/project/project-detail-view';
 ```
 
 ✅ **確認ポイント**:
-- `@/component/project/project-detail-dialog` からインポートしている
+- `@/component/project/project-detail-view` からインポートしている
 
-> 💡 `detailOpen` / `selectedProject` は Day 09 で宣言済みです。ここではハンドラーだけ追加します。
+> 💡 プロジェクト詳細はダイアログではなく、URLパラメータ（`?projectId=xxx`）によるページ内表示です。`useSearchParams` で URLから選択IDを取得します。
 
 ハンドラーを `handleArchive` の下に追加してください。
 
@@ -137,43 +137,46 @@ import { ProjectDetailDialog } from
 const handleProjectClick = (
   projectId: string
 ) => {
-  setSelectedProject(projectId);
-  setDetailOpen(true);
+  router.push(
+    `/project?projectId=${projectId}`
+  );
 };
 const handleDetailClose = () => {
-  setDetailOpen(false);
-  setSelectedProject(null);
+  router.push('/project');
 };
 ```
 
 ✅ **確認ポイント**:
-- `handleProjectClick` と `handleDetailClose` が定義できた
-- ファイルを保存してエラーが出ていない
+- `handleProjectClick` は `router.push` でURL遷移する
+- `handleDetailClose` は `/project` に戻る（URLパラメータなし）
 
-プロジェクトカードの `onClick` に `handleProjectClick` を接続します。カード側の `onClick` を確認してください（Day 09 実装済みですが念のため確認）。
+プロジェクトカードの `onClick` に `handleProjectClick` を接続します。`ProjectCard` は個別のpropsでデータを受け取ります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// プロジェクトカードのonClickを確認（Day 09実装済み）
+// プロジェクトカードの配置（Day 09実装済み）
 <ProjectCard
   key={project.id}
-  project={project}
-  onClick={() =>
-    handleProjectClick(project.id)
+  id={project.id}
+  name={project.name}
+  description={project.description}
+  color={project.color}
+  memberCount={
+    project.members?.length ?? 0
   }
-  onEdit={() =>
-    handleEditProject(project.id)
-  }
-  onArchive={() =>
-    handleArchive(project.id,
-      project.isArchived)
-  }
+  taskStats={{
+    total: taskCount, done: doneCount,
+  }}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+  onClick={handleProjectClick}
+  isArchived={project.isArchived}
 />
 ```
 
 ✅ **確認ポイント**:
-- `ProjectCard` の `onClick` で `handleProjectClick` を呼んでいる
-- Day 09 で接続済みの場合はここで確認のみ
+- `ProjectCard` に個別のprops（`id`, `name`, `color` 等）を渡している
+- `onClick` で `handleProjectClick` を渡している
 
 選択中のプロジェクトデータを取得するクエリを追加します。既存の `useQuery` 群の末尾に追加してください。
 
@@ -193,23 +196,23 @@ const { data: projectDetail } =
 
 > 💡 `enabled: !!selectedProject` は「`selectedProject` がある場合だけAPIを呼ぶ」という設定です。未選択時に不要なリクエストを防ぎます。
 
-プロジェクトカードをクリックして詳細ダイアログが開くことを確認しましょう。
+プロジェクトカードをクリックして詳細ページが表示されることを確認しましょう。
 
-📸 スクリーンショット: プロジェクト詳細ダイアログが表示されている画面
+📸 スクリーンショット: プロジェクト詳細ページが表示されている画面
 
-![プロジェクト詳細ダイアログが表示されている画面](./screenshots/project-detail-dialog.png)
+![プロジェクト詳細ページが表示されている画面](./screenshots/project-detail-dialog.png)
 ---
 
-### Step 2: ProjectDetailDialogのpropsを確認する（4分）
+### Step 2: ProjectDetailViewのpropsを確認する（4分）
 
-🎯 **ゴール**: `ProjectDetailDialog` がどのようなpropsを受け取るか確認します。
+🎯 **ゴール**: `ProjectDetailView` がどのようなpropsを受け取るか確認します。
 
-`ProjectDetailDialog` は独立コンポーネントとして既に実装されています。propsの型定義を確認しましょう。
+`ProjectDetailView` は独立コンポーネントとして既に実装されています。propsの型定義を確認しましょう。
 
 | props | 型 | 役割 |
 |-------|-----|------|
 | `projectDetail` | `ProjectDetail \| null \| undefined` | 表示するプロジェクトデータ |
-| `onClose` | `() => void` | ダイアログを閉じる |
+| `onBack` | `() => void` | 一覧画面に戻る |
 | `onAddMemberClick` | `() => void` | メンバー追加ダイアログを開く |
 | `onRemoveMember` | `(userId: string) => void` | メンバー削除処理を実行 |
 | `onArchive` | `(projectId: string, isArchived: boolean) => void` | アーカイブ切り替え |
@@ -236,18 +239,16 @@ const handleRemoveMember = (
 - TypeScript のエラーが出ていない
 - これは仮実装であり、Step 6 で削除することを覚えておく
 
-次に、JSX の `ProjectDialog` の直下に `ProjectDetailDialog` を配置します。
+`ProjectDetailView` は Day 11 の Step 9 で URL ルーティングの分岐内に既に配置されています。`projectIdParam && selectedProject` が `true` のとき表示される構造を確認してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectDialogの直下に配置
-<ProjectDetailDialog
-  projectDetail={
-    detailOpen ? projectDetail : null
-  }
-  onClose={handleDetailClose}
-  onAddMemberClick={() =>
-    setMemberDialogOpen(true)
+// Day 11 Step 9 で配置済み（確認のみ）
+<ProjectDetailView
+  projectDetail={projectDetail}
+  onBack={handleDetailClose}
+  onAddMemberClick={
+    () => setMemberDialogOpen(true)
   }
   onRemoveMember={handleRemoveMember}
   onArchive={handleArchive}
@@ -255,14 +256,14 @@ const handleRemoveMember = (
 ```
 
 ✅ **確認ポイント**:
-- `ProjectDetailDialog` に5つのpropsを渡している
-- `detailOpen` が `false` のとき `null` を渡してダイアログを閉じている
+- `ProjectDetailView` に5つのpropsを渡している
+- URLパラメータがある場合のみ表示される
 
-> 💡 メンバー一覧の表示は `ProjectDetailDialog` の内部で行われます。`page.tsx` はデータ取得とイベントハンドラーの定義だけを担当し、UIの詳細は独立コンポーネントに任せます。
+> 💡 メンバー一覧の表示は `ProjectDetailView` の内部で行われます。`page.tsx` はデータ取得とイベントハンドラーの定義だけを担当し、UIの詳細は独立コンポーネントに任せます。
 
 ---
 
-### Step 3: ロール関連のインポートとフォームを準備する（6分）
+### Step 3: ロール関連のインポートとstateを準備する（6分）
 
 🎯 **ゴール**: ロール定数・型ガードのインポートとメンバー追加用のstateを準備します。
 
@@ -272,6 +273,7 @@ const handleRemoveMember = (
 // filepath: src/app/project/page.tsx
 // ロール関連のインポート
 import {
+  isProjectMemberRole,
   PROJECT_MEMBER_ROLE,
   PROJECT_MEMBER_ROLE_LABELS,
   type ProjectMemberRole,
@@ -280,66 +282,31 @@ import {
 
 ✅ **確認ポイント**:
 - インポート元が `@/lib/constant/roles` になっている（`@prisma/client` ではない）
+- `isProjectMemberRole` 型ガード関数もインポートしている
 
 > ⚠️ `@prisma/client` からインポートすると、Prisma内部の型定義に依存してしまいます。`@/lib/constant/roles` に定義された定数・型を使うのが正しい方法です。
 
-react-hook-form と zod のインポートを追加します。既存のインポート群の末尾に追加してください。
+メンバー追加フォームのstateを定義します。`ProjectPageContent` 関数の先頭にある state 一覧に追加してください。`useState` でシンプルにフォームの値を管理します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// react-hook-form + zod のインポート追加
-import { Controller, useForm } from
-  'react-hook-form';
-import { zodResolver } from
-  '@hookform/resolvers/zod';
-import { z } from 'zod';
-```
-
-✅ **確認ポイント**:
-- `react-hook-form` と `@hookform/resolvers/zod` の両方をインポートしている
-
-メンバー追加フォームのバリデーションスキーマを定義します。コンポーネント関数の外（import の直下）に追加してください。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// メンバー追加フォームのスキーマ定義
-const memberSchema = z.object({
-  userId: z.string().min(
-    1, 'ユーザーを選択してください'
-  ),
-  role: z.enum([
-    PROJECT_MEMBER_ROLE.ADMIN,
-    PROJECT_MEMBER_ROLE.MEMBER,
-    PROJECT_MEMBER_ROLE.VIEWER,
-  ] as const),
-});
-type MemberFormData =
-  z.infer<typeof memberSchema>;
-```
-
-✅ **確認ポイント**:
-- OWNER は `z.enum` に含まれていない（追加不可）
-- `type MemberFormData` でフォームの型が自動生成されている
-
-ダイアログ開閉の state と `useForm` を初期化します。`ProjectPageContent` 関数の先頭にある state 一覧に追加してください。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// ダイアログ開閉のstateとuseForm初期化
+// メンバー追加用のstate
 const [memberDialogOpen,
   setMemberDialogOpen] = useState(false);
-const memberForm = useForm<MemberFormData>({
-  resolver: zodResolver(memberSchema),
-  defaultValues: {
-    userId: '',
-    role: PROJECT_MEMBER_ROLE.MEMBER,
-  },
-});
+const [newMemberUserId,
+  setNewMemberUserId] = useState('');
+const [newMemberRole, setNewMemberRole] =
+  useState<ProjectMemberRole>(
+    PROJECT_MEMBER_ROLE.MEMBER
+  );
 ```
 
 ✅ **確認ポイント**:
-- `memberDialogOpen` はダイアログ開閉専用の state（フォームデータは `useForm` が管理）
-- `zodResolver` がバリデーションを担当している
+- `memberDialogOpen` はダイアログ開閉用
+- `newMemberUserId` と `newMemberRole` でフォームの値を管理
+- `newMemberRole` の型が `ProjectMemberRole` になっている
+
+> 💡 メンバー追加フォームはフィールドが2つだけなので、`react-hook-form` を使わずシンプルな `useState` で管理します。フォームが複雑になったら Day 10 で学んだ `react-hook-form + zod` パターンに移行できます。
 
 追加可能なユーザー一覧を取得します。既存の `useQuery` 群の末尾に追加してください。
 
@@ -392,11 +359,11 @@ import {
 - `@/component/ui/dialog` から Dialog 系コンポーネントを一括インポートしている
 - `Label` と `Select` 系も同じく `@/component/ui/` から取得している
 
-メンバー追加ダイアログは `ProjectDetailDialog` の直下に配置します。まずダイアログのヘッダー部分です。
+メンバー追加ダイアログは `ProjectDetailView` の分岐内に配置します。まずダイアログのヘッダー部分です。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectDetailDialogの直下に配置
+// ProjectDetailViewの直後に配置
 <Dialog open={memberDialogOpen}
   onOpenChange={setMemberDialogOpen}>
   <DialogContent
@@ -415,7 +382,7 @@ import {
 ✅ **確認ポイント**:
 - `Dialog` の `open` / `onOpenChange` でダイアログ開閉を制御している
 
-ユーザー選択のドロップダウンを追加します。
+ユーザー選択のドロップダウンを追加します。`useState` の `newMemberUserId` で値を直接管理します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -425,43 +392,39 @@ import {
         <Label htmlFor="user">
           ユーザー
         </Label>
-        <Controller
-          control={memberForm.control}
-          name="userId"
-          render={({ field }) => (
-            <Select
-              value={field.value}
-              onValueChange={field.onChange}>
-              <SelectTrigger id="user">
-                <SelectValue
-                  placeholder="ユーザーを選択"
-                />
-              </SelectTrigger>
+        <Select
+          value={newMemberUserId}
+          onValueChange={
+            setNewMemberUserId
+          }>
+          <SelectTrigger id="user">
+            <SelectValue
+              placeholder="ユーザーを選択"
+            />
+          </SelectTrigger>
 ```
 
 ✅ **確認ポイント**:
-- `Controller` で `Select` を react-hook-form に接続している
-- `field.value` / `field.onChange` でフォーム状態を管理している
+- `Select` の `value` / `onValueChange` で `useState` と直接接続している
+- `Controller` ラッパーは不要（シンプルなstateで十分）
 
 SelectContent 内にユーザー候補を表示します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // ユーザー選択の候補リスト
-              <SelectContent>
-                {availableUsers?.map(
-                  (user) => (
-                    <SelectItem
-                      key={user.id}
-                      value={user.id}>
-                      {user.name || user.email}
-                    </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-          )}
-        />
+          <SelectContent>
+            {availableUsers?.map(
+              (user) => (
+                <SelectItem
+                  key={user.id}
+                  value={user.id}>
+                  {user.name || user.email}
+                </SelectItem>
+              )
+            )}
+          </SelectContent>
+        </Select>
       </div>
 ```
 
@@ -469,55 +432,52 @@ SelectContent 内にユーザー候補を表示します。
 - 名前がない場合はメールアドレスを表示する
 - `availableUsers` はプロジェクト未参加ユーザーのみ
 
-ロール選択の `Select` も `Controller` でラップします。
+ロール選択も `useState` の `newMemberRole` で管理します。`isProjectMemberRole` 型ガードで値を安全に検証してからstateに設定します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ロール選択UI: Controller + Select
+// ロール選択UI: Select + useState
       <div className="grid gap-2">
         <Label htmlFor="role">ロール</Label>
-        <Controller
-          control={memberForm.control}
-          name="role"
-          render={({ field }) => (
-            <Select
-              value={field.value}
-              onValueChange={field.onChange}>
-              <SelectTrigger id="role">
-                <SelectValue
-                  placeholder="ロールを選択"
-                />
-              </SelectTrigger>
+        <Select
+          value={newMemberRole}
+          onValueChange={(value) => {
+            if (isProjectMemberRole(value))
+              setNewMemberRole(value);
+          }}>
+          <SelectTrigger id="role">
+            <SelectValue
+              placeholder="ロールを選択"
+            />
+          </SelectTrigger>
 ```
 
 ✅ **確認ポイント**:
-- `Controller` でロールの Select も react-hook-form に接続している
-- zod の `z.enum` がバリデーションを担当するため、`isProjectMemberRole()` は不要
+- `isProjectMemberRole` 型ガードで安全にロールを検証している
+- 不正な値が `setNewMemberRole` に渡されることを防いでいる
 
 ロール選択肢はOWNERを除外して生成します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // ロール選択の候補リスト
-              <SelectContent>
-                {Object.entries(
-                  PROJECT_MEMBER_ROLE_LABELS
-                )
-                  .filter(([value]) =>
-                    value !==
-                    PROJECT_MEMBER_ROLE.OWNER
-                  )
-                  .map(([value, label]) => (
-                    <SelectItem
-                      key={value}
-                      value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
+          <SelectContent>
+            {Object.entries(
+              PROJECT_MEMBER_ROLE_LABELS
+            )
+              .filter(([value]) =>
+                value !==
+                PROJECT_MEMBER_ROLE.OWNER
+              )
+              .map(([value, label]) => (
+                <SelectItem
+                  key={value}
+                  value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
 ```
@@ -526,7 +486,7 @@ SelectContent 内にユーザー候補を表示します。
 - OWNER が選択肢から除外されている
 - `PROJECT_MEMBER_ROLE_LABELS` から動的に選択肢を生成している
 
-> 💡 `z.enum` にOWNERを含めていないため、フォーム送信時にzodが自動的にOWNERを弾きます。UI での除外とバリデーションで二重に保護しています。
+> 💡 OWNERはUIの選択肢から除外しています。さらにサーバー側でも権限チェックがあるため、二重に保護されています。
 
 フッターボタンを追加してダイアログを完成させます。
 
@@ -541,9 +501,7 @@ SelectContent 内にユーザー候補を表示します。
       </Button>
       <Button
         onClick={handleAddMember}
-        disabled={
-          !memberForm.watch('userId')
-        }>
+        disabled={!newMemberUserId}>
         メンバー追加
       </Button>
     </DialogFooter>
@@ -581,35 +539,38 @@ const addMemberMutation =
           );
       }
       setMemberDialogOpen(false);
-      memberForm.reset();
+      setNewMemberUserId('');
+      setNewMemberRole(
+        PROJECT_MEMBER_ROLE.MEMBER
+      );
     },
   });
 ```
 
 ✅ **確認ポイント**:
 - 成功時に `getById` のキャッシュを更新している
-- `memberForm.reset()` でフォームを初期値に戻している
+- `setNewMemberUserId('')` と `setNewMemberRole()` でフォームを初期値に戻している
 
 ハンドラーを追加します。`handleArchive` の下に追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // handleArchiveの下に追加
-const handleAddMember =
-  memberForm.handleSubmit((data) => {
-    if (selectedProject) {
-      addMemberMutation.mutate({
-        projectId: selectedProject,
-        userId: data.userId,
-        role: data.role,
-      });
-    }
-  });
+const handleAddMember = () => {
+  if (selectedProject
+    && newMemberUserId) {
+    addMemberMutation.mutate({
+      projectId: selectedProject,
+      userId: newMemberUserId,
+      role: newMemberRole,
+    });
+  }
+};
 ```
 
 ✅ **確認ポイント**:
-- `handleSubmit` がフォームバリデーションを自動で行う
-- バリデーション通過後に `data.userId` / `data.role` を mutation に渡している
+- `selectedProject` と `newMemberUserId` の両方を確認してから送信
+- state の値をそのまま mutation に渡している
 
 ここまでで、メンバー追加ができました。メンバー削除は Step 6 で実装します。まずはプロジェクトにメンバーを追加して、一覧に反映されることを確認してみましょう。
 
@@ -754,7 +715,7 @@ addMember: protectedProcedure
 | 観点 | フロントエンド | バックエンド |
 |------|-------------|------------|
 | 目的 | UX向上（不要なボタンを隠す） | セキュリティ（不正リクエスト防止） |
-| 実装箇所 | `ProjectDetailDialog` | `project.ts` の各mutation |
+| 実装箇所 | `ProjectDetailView` | `project.ts` の各mutation |
 | 回避方法 | 開発者ツールで回避可能 | 回避不可能 |
 | 必須度 | 推奨 | **必須** |
 
@@ -785,10 +746,10 @@ npm run dev
 
 | 手順 | 操作 | 期待結果 |
 |------|------|---------|
-| 1 | プロジェクトカードをクリック | 詳細ダイアログが開く |
+| 1 | プロジェクトカードをクリック | 詳細ページが表示される |
 | 2 | 「メンバー追加」ボタンをクリック | メンバー追加ダイアログが開く |
 | 3 | ユーザーを選択、ロールを選択 | ドロップダウンが正常に動作 |
-| 4 | 「メンバー追加」をクリック | ダイアログが閉じ、メンバー一覧に追加される |
+| 4 | 「メンバー追加」をクリック | ダイアログが閉じ、詳細ページのメンバー一覧に追加される |
 
 #### テストシナリオ 2: メンバー削除
 
@@ -811,10 +772,10 @@ npm run dev
 
 ## 📋 今日のまとめ
 
-- [ ] `ProjectDetailDialog` コンポーネントでメンバー一覧を表示できた
+- [ ] `ProjectDetailView` コンポーネントでメンバー一覧を表示できた
 - [ ] `addMember` でメンバーを追加できた
 - [ ] `DeleteConfirmDialog` 経由で `removeMember` を実行できた
-- [ ] `isProjectMemberRole` 型ガードの使い方を理解した
+- [ ] `isProjectMemberRole` 型ガードでロール値を安全に検証する方法を理解した
 - [ ] 権限チェックの仕組み（フロントエンド + バックエンド）を理解した
 
 ## ⚠️ つまずきポイント

@@ -350,7 +350,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/component/ui/card';
-import { Lock } from 'lucide-react';
+import { AlertCircle, Lock } from 'lucide-react';
+import {
+  Alert, AlertDescription, AlertTitle,
+} from '@/component/ui/alert';
 ```
 
 次に、LoginForm の return を書き換えます。
@@ -366,9 +369,10 @@ return (
         className="space-y-1 text-center">
         <div className="flex justify-center mb-2">
           <div className="rounded-full
-            bg-primary p-2">
+            bg-gradient-to-r from-blue-500
+            to-indigo-500 p-3 shadow-lg">
             <Lock className="h-6 w-6
-              text-primary-foreground" />
+              text-white" />
           </div>
         </div>
         <CardTitle className="text-2xl">
@@ -621,11 +625,13 @@ const onSubmit = async (
 // filepath: src/app/login/page.tsx
 // <form>開始タグの直後に追加
 {error && (
-  <div className="rounded-md
-    bg-destructive/15 p-3
-    text-sm text-destructive">
-    {error}
-  </div>
+  <Alert variant="destructive">
+    <AlertCircle className="h-4 w-4" />
+    <AlertTitle>エラー</AlertTitle>
+    <AlertDescription>
+      {error}
+    </AlertDescription>
+  </Alert>
 )}
 ```
 
@@ -636,7 +642,10 @@ const onSubmit = async (
 // Buttonを以下に書き換え
 <Button
   type="submit"
-  className="w-full"
+  className="w-full bg-gradient-to-r
+    from-blue-600 to-indigo-600
+    hover:from-blue-700
+    hover:to-indigo-700 shadow-md"
   disabled={loginMutation.isPending}>
   {loginMutation.isPending
     ? 'ログイン中...'
@@ -675,13 +684,14 @@ import { Suspense } from 'react';
 ```typescript
 // filepath: src/app/login/page.tsx
 // Buttonの下に追加（新規登録ページへのリンク）
-<div className="text-center text-sm">
+<div className="text-center text-sm
+  text-muted-foreground">
   アカウントをお持ちでない方は{' '}
   <Link
     href="/register"
-    className="underline
+    className="text-blue-600 underline
       underline-offset-4
-      hover:text-primary">
+      hover:text-blue-800">
     こちら
   </Link>
 </div>
