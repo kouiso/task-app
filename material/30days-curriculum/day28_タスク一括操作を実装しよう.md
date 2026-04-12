@@ -139,7 +139,7 @@ bulkComplete: protectedProcedure
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 一括ステータス変更API（読むだけ）
+// 一括ステータス変更API
 bulkUpdateStatus: protectedProcedure
   .input(z.object({
     ids: z.array(z.string().cuid()).min(1),
@@ -322,7 +322,7 @@ import { TaskCard } from '@/component/task/task-card';
         />
 ```
 
-各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
+上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 
 ```typescript
 // filepath: src/app/task/page.tsx

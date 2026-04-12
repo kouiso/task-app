@@ -312,6 +312,8 @@ return (
   </Avatar>
 ```
 
+> 💡 ここで `<div className="flex gap-4">` はまだ閉じていません。次のコードブロックで `</div>` を追加して閉じます。
+
 ✅ **確認ポイント**:
 - `<div className="flex gap-4">` で囲んでいる
 - `avatar ?? ''` で null 安全にしている
@@ -371,6 +373,8 @@ return (
 </div>
 ```
 
+✅ **確認ポイント**: ブラウザでプロフィールページを開き、メールアドレスが表示されていることを確認しましょう。
+
 ```typescript
 // filepath: src/app/profile/page.tsx
 // 登録日の表示
@@ -395,6 +399,8 @@ return (
   </div>
 </div>
 ```
+
+✅ **確認ポイント**: 登録日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -422,6 +428,8 @@ return (
   </div>
 </div>
 ```
+
+✅ **確認ポイント**: 最終更新日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
 
 > 💡 `Separator` は区切り線を表示する
 > shadcn/ui のコンポーネントです。

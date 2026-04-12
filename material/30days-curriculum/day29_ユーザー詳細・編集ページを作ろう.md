@@ -688,7 +688,12 @@ import { z } from 'zod';
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
-import { AppLayout } from '@/component/layout/app-layout';
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { AppLayout }
+  from '@/component/layout/app-layout';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle }
   from '@/component/ui/card';

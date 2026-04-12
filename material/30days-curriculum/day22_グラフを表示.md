@@ -277,7 +277,7 @@ const statusData = useMemo(() => {
 |---------|------|--------|
 | 1. Map に蓄積 | ステータスごとにカウント | `TODO → 3, DONE → 5` |
 | 2. entries で変換 | キーと値のペアに変換 | `[['TODO', 3], ...]` |
-| 3. map で整形 | グラフ用の形に変換 | `[{key:'TODO', name:'未着手', value:3}]` |
+| 3. map で整形 | グラフ用の形に変換 | `[{key:'TODO', name:'未対応', value:3}]` |
 
 > 💡 `Map` はキーの重複を自動で防ぎます。
 > `counts.get(task.status) ?? 0` で「まだ
