@@ -739,6 +739,7 @@ return (
     </DialogContent>
   </Dialog>
 );
+}
 ```
 
 ✅ **確認ポイント**:
