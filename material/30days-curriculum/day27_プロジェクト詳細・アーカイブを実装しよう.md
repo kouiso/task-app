@@ -459,7 +459,7 @@ export function ProjectDetailDialog({
           >
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarImage src={member.user?.avatar ?? ''} />
+                {member.user?.avatar && <AvatarImage src={member.user.avatar} />}
                 <AvatarFallback>
                   {(member.user?.name || member.user?.email || '?')[0]?.toUpperCase()}
                 </AvatarFallback>

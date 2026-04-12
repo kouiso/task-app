@@ -300,9 +300,11 @@ return (
 <div className="flex gap-4">
   <Avatar className="w-20 h-20
     rounded-lg">
-    <AvatarImage
-      src={currentUser.avatar ?? ''}
-      className="object-cover" />
+    {currentUser.avatar && (
+      <AvatarImage
+        src={currentUser.avatar}
+        className="object-cover" />
+    )}
     <AvatarFallback
       className="rounded-lg
         bg-primary/10">

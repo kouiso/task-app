@@ -350,10 +350,9 @@ import { ActiveStatusBadge, UserRoleBadge }
                 <div className="text-center mb-6">
                   {/* アバター画像（未設定時は名前の頭文字を表示） */}
                   <Avatar className="w-24 h-24 mx-auto mb-4">
-                    <AvatarImage
-                      src={user.avatar ?? ''}
-                      alt={user.name ?? ''}
-                    />
+                    {user.avatar && <AvatarImage
+                      src={user.avatar}
+                      alt={user.name || ''} />}
                     <AvatarFallback className="text-3xl">
                       {user.name?.[0]?.toUpperCase()}
                     </AvatarFallback>
@@ -893,8 +892,10 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
               <div className="flex
                 justify-center mb-6">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage
-                    src={form.watch('avatar')} />
+                  {form.watch('avatar') && (
+                    <AvatarImage
+                      src={form.watch('avatar')} />
+                  )}
                   <AvatarFallback
                     className="text-2xl">
                     {form.watch('name')
