@@ -674,17 +674,28 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 // filepath: src/app/user/[id]/edit/page.tsx
 'use client';
 
+import { zodResolver }
+  from '@hookform/resolvers/zod';
 import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { z } from 'zod';
+```
+
+✅ **確認ポイント**: `zodResolver`, `useForm`, `z` のインポートが含まれていることを確認してください。
+
+```tsx
+// filepath: src/app/user/[id]/edit/page.tsx
 import { AppLayout } from '@/component/layout/app-layout';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle }
   from '@/component/ui/card';
 import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
-import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
+import { USER_ROLE, type UserRole }
+  from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 ```
 
@@ -812,18 +823,7 @@ export default function UserEditPage() {
 
 🎯 **ゴール**: react-hook-form + zod でフォームを管理し、サーバーデータを自動入力する。
 
-まず zod スキーマを定義し、`useForm` のインポートを追加します。
-
-```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
-import { zodResolver }
-  from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-```
-
-✅ **確認ポイント**: `useForm`, `zodResolver`, `z` がインポートされている。
+zod スキーマを定義します（Step 7 で `zodResolver`, `useForm`, `z` はインポート済み）。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx

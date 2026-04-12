@@ -64,7 +64,8 @@ flowchart TD
 | Avatar | アバター | ユーザーアイコン | プロフィール写真 |
 | UserRoleBadge | — | ロール表示バッジ | 名札のシール |
 | ActiveStatusBadge | — | 状態表示バッジ | 在席ランプ |
-| ?? (Null合体演算子) | ヌリッシュコアレッシング | null/undefined時の代替値 | 保険のようなもの |
+| \|\| (OR演算子) | オア | falsy時の代替値 | 保険のようなもの |
+| && (条件付きレンダリング) | アンド | 条件を満たすとき表示 | 在庫ありの商品だけ並べる |
 
 ### ページ構造の全体像
 
@@ -250,9 +251,9 @@ export default function UsersPage() {
 - `getCurrentUser` と `getAll` の2つのAPIを呼んでいる
 - `isLoading` と `error` を取得している
 
-#### `??` と `||` の違い
+#### `||` 演算子によるフォールバック
 
-ここで重要な演算子の使い分けを学びましょう。
+エラーメッセージが空のとき、代わりのメッセージを表示します。
 
 | 演算子 | 名前 | falsy扱いする値 |
 |--------|------|----------------|
@@ -265,25 +266,23 @@ export default function UsersPage() {
     if (error) {
       toast.error(
         error.message
-        ?? 'ユーザー一覧の取得に失敗しました'
+        || 'ユーザー一覧の取得に失敗しました'
       );
       if (error.message
-          ?.includes('管理者権限')) {
+          .includes('管理者権限')) {
         router.push('/dashboard');
       }
     }
   }, [error, router]);
 ```
 
-> 💡 `??` は `null` と `undefined` のときだけ
-> 右辺の値を使います。空文字 `""` は
-> そのまま返すので、`||` より安全です。
-> `?.includes` はオプショナルチェーンで、
-> message が undefined でもエラーになりません。
+> 💡 `||` は falsy な値のとき右辺を使います。
+> `if (error)` の中なので error オブジェクトの
+> 存在は保証されています。
+> `error.message.includes` で管理者権限エラーを
+> 検知し、ダッシュボードへリダイレクトします。
 
 ✅ **確認ポイント**:
-- `||` ではなく `??` を使っている
-- `error.message.includes` ではなく `error.message?.includes` を使っている
 - エラー時にトーストが表示される
 - 権限エラー時にダッシュボードへリダイレクトする
 
@@ -449,21 +448,22 @@ export default function UsersPage() {
                         items-center gap-3">
                         <Avatar
                           className="h-9 w-9">
-                          <AvatarImage
-                            src={
-                              user.avatar
-                              ?? ''}
-                            alt={
-                              user.name
-                              ?? ''} />
+                          {user.avatar && (
+                            <AvatarImage
+                              src={user.avatar}
+                              alt={
+                                user.name
+                                || ''} />
+                          )}
 ```
 
-> 💡 `user.avatar ?? ''` で画像URLが
-> null/undefinedのとき空文字を返します。
-> `||` ではなく `??` を使うのがポイントです。
+> 💡 `{user.avatar && ...}` で画像URLが
+> 存在するときだけ `AvatarImage` を表示します。
+> avatar が null/undefined のときは
+> AvatarFallback が自動的に表示されます。
 
 ✅ **確認ポイント**:
-- `??` を使っている（`||` ではない）
+- 条件付きレンダリングを使っている
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -710,7 +710,8 @@ npm run dev
 |------|------|
 | getCurrentUser | ログイン中ユーザーの情報取得 |
 | USER_ROLE.ADMIN | 管理者ロールを表す定数 |
-| ?? (Null合体演算子) | null/undefinedのときだけ代替値を使う演算子 |
+| \|\| (OR演算子) | falsy値のとき代替値を使う演算子 |
+| && (条件付きレンダリング) | 条件がtrueのときだけ要素を表示するパターン |
 | ?. (オプショナルチェーン) | プロパティがnull/undefinedでもエラーにならない |
 | UserRoleBadge | ロール表示用の専用バッジコンポーネント |
 | variant="ghost" | 背景なしの控えめなボタンスタイル |
