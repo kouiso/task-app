@@ -823,10 +823,8 @@ export default function RegisterPage() {
 // filepath: src/app/register/page.tsx
 // 完成版: ボタン・リンク・閉じタグ
             <Button type="submit"
-              className="w-full bg-gradient-to-r
-                from-blue-600 to-indigo-600
-                hover:from-blue-700
-                hover:to-indigo-700 shadow-md"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600
+                hover:from-blue-700 hover:to-indigo-700 shadow-md"
               disabled={registerMutation.isPending}>
               {registerMutation.isPending
                 ? '登録中...' : '登録'}
@@ -836,8 +834,7 @@ export default function RegisterPage() {
               すでにアカウントをお持ちの方は{' '}
               <Link href="/login"
                 className="text-blue-600 underline
-                  underline-offset-4
-                  hover:text-blue-800">
+                  underline-offset-4 hover:text-blue-800">
                 こちら</Link>
             </div>
           </form>
