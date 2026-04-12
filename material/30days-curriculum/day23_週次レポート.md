@@ -115,6 +115,8 @@ import {
 } from '@/lib/constant/status';
 ```
 
+> 📝 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
+
 ✅ **確認ポイント**:
 - `useMemo` と `TASK_STATUS` がインポートされている
 - 表の4項目（タスク数・完了・進捗・作業時間）の計算式を理解した
@@ -180,6 +182,19 @@ return {
 ✅ **確認ポイント**:
 - 6つのプロパティを持つオブジェクトを返している
 - `toFixed(1)` で小数第1位まで表示する
+
+> ⚠️ **組み立てガイド**: 上記の3つのコードブロック（`projects?.map` のループ、`totalTime`/`progress` の計算、`return { ... }`）は、すべて **1つの `useMemo`** の中に組み合わせます。`totalTime` の計算と `return` 文は `projects?.map` のコールバック内に配置してください。完成形は以下のとおりです:
+>
+> ```
+> const projectStats = useMemo(
+>   () => projects?.map((project) => {
+>     // ① タスク抽出・完了フィルタ（1つ目のブロック）
+>     // ② totalTime / progress 計算（2つ目のブロック）
+>     // ③ return { id, name, ... }（3つ目のブロック）
+>   }),
+>   [projects, tasks],
+> );
+> ```
 
 > 💡 `TASK_STATUS.DONE` は Day 21 で
 > インポート済みの定数です。

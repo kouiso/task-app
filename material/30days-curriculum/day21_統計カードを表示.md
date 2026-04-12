@@ -537,50 +537,53 @@ if (tasksLoading || projectsLoading) {
 // Step 5 の useMemo の後に追加
 // プロジェクト別統計
 const projectStats = useMemo(
-  () => projects?.map((project) => {
-    const pts = tasks?.filter(
-      (t) => t.projectId === project.id
-    ) ?? [];
-    const done = pts.filter(
-      (t) => t.status === TASK_STATUS.DONE
-    );
-    return { project, pts, done };
-  }),
+  () =>
+    projects?.map((project) => {
+      const projectTasks = tasks?.filter(
+        (t) => t.projectId === project.id
+      ) ?? [];
+      const completedTasks =
+        projectTasks.filter(
+          (t) =>
+            t.status === TASK_STATUS.DONE
+        );
+      const totalTime =
+        projectTasks.reduce(
+          (acc, t) =>
+            acc +
+            (t.timeSpentMinutes ?? 0),
+          0
+        );
+```
+
+各プロジェクトの完了タスク数と作業時間を算出しています。続けて進捗率の計算と戻り値を追加します：
+
+```typescript
+// filepath: src/app/report/page.tsx
+// projectStats useMemo の続き
+      const progress =
+        projectTasks.length > 0
+          ? (completedTasks.length
+              / projectTasks.length)
+            * 100
+          : 0;
+      return {
+        id: project.id,
+        name: project.name,
+        totalTasks: projectTasks.length,
+        completedTasks:
+          completedTasks.length,
+        progress: progress.toFixed(1),
+        totalTimeHours:
+          (totalTime / 60).toFixed(1),
+      };
+    }),
   [projects, tasks],
 );
 ```
 
 ✅ **確認ポイント**:
 - `projects` を `map` して統計を計算している
-- 保存してエラーが出ないこと
-
-```typescript
-// filepath: src/app/report/page.tsx
-// projectStats の useMemo 続き
-// 各プロジェクトの表示用データを整形
-const projectRows = useMemo(
-  () => projectStats?.map((s) => {
-    const time = s.pts.reduce(
-      (acc, t) =>
-        acc + (t.timeSpentMinutes ?? 0), 0
-    );
-    const pct = s.pts.length > 0
-      ? (s.done.length / s.pts.length)
-        * 100 : 0;
-    return {
-      id: s.project.id,
-      name: s.project.name,
-      total: s.pts.length,
-      completed: s.done.length,
-      progress: pct.toFixed(1),
-      hours: (time / 60).toFixed(1),
-    };
-  }),
-  [projectStats],
-);
-```
-
-✅ **確認ポイント**:
 - 進捗と作業時間を計算している
 - `toFixed(1)` で小数1桁に丸めている
 
@@ -630,17 +633,18 @@ const projectRows = useMemo(
 // filepath: src/app/report/page.tsx
 // テーブル: 行データと閉じタグ
       <TableBody>
-        {projectRows?.map((row) => (
-          <TableRow key={row.id}>
+        {projectStats?.map((stat) => (
+          <TableRow key={stat.id}>
             <TableCell
               className="font-medium">
-              {row.name}</TableCell>
+              {stat.name}</TableCell>
             <TableCell
               className="text-right">
-              {row.total}</TableCell>
+              {stat.totalTasks}</TableCell>
             <TableCell
               className="text-right">
-              {row.completed}</TableCell>
+              {stat.completedTasks}
+            </TableCell>
 ```
 
 ✅ **確認ポイント**:
@@ -652,10 +656,11 @@ const projectRows = useMemo(
 // テーブル: 残り列と全閉じタグ
             <TableCell
               className="text-right">
-              {row.progress}%</TableCell>
+              {stat.progress}%</TableCell>
             <TableCell
               className="text-right">
-              {row.hours}h</TableCell>
+              {stat.totalTimeHours}h
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

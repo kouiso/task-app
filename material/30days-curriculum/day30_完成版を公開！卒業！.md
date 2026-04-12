@@ -213,7 +213,7 @@ npm run db:push
 
 📸 スクリーンショット: `docker compose ps` で `taskapp-postgres` が `running (healthy)` の画面
 
-![`docker compose ps` で `taskapp](./screenshots/dashboard.png)
+![docker compose ps で taskapp-postgres が running (healthy) と表示された画面](./screenshots/dashboard.png)
 > 💡 `npm run db:push` はローカル確認用です。
 > 本番では `prisma migrate deploy` を使うのが
 > 一般的です。Vercel のビルド時に
@@ -319,6 +319,7 @@ package.json の `scripts` を確認しましょう。
 📸 スクリーンショット: Vercel ダッシュボードの「Deployments」タブでビルドが完了した画面
 
 ![Vercel ダッシュボードの「Deployments」タブ](./screenshots/login.png)
+
 ---
 
 ### Step 5: 本番環境の動作確認（7分）
