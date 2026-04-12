@@ -834,7 +834,8 @@ const createMutation =
 // filepath: src/app/task/page.tsx
 // createMutationの下に追加
 
-// 送信ハンドラー
+// 送信ハンドラー（新規作成のみ）
+// Day 15で編集モード（data.id分岐）を追加します
 const handleSubmit =
   (data: TaskFormData) => {
     if (!session?.user?.id) { return; }
@@ -851,7 +852,7 @@ const handleSubmit =
         data.estimatedHours,
       projectId: data.projectId,
       assigneeId:
-        data.assigneeId ?? undefined,
+        data.assigneeId || undefined,
     });
   };
 ```
@@ -881,7 +882,7 @@ const handleSubmit =
 // filepath: src/app/task/page.tsx
 // JSX内にDialogとボタンを追加
 <Button onClick={handleCreate}>
-  <Plus className="h-4 w-4 mr-2" />
+  <Plus className="mr-2 h-4 w-4" />
   新規タスク
 </Button>
 
