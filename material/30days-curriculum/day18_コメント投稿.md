@@ -257,8 +257,10 @@ import { Badge }
   <div key={comment.id}
     className="flex gap-3 text-sm">
     <Avatar className="h-8 w-8 mt-1">
-      <AvatarImage
-        src={comment.user.avatar ?? ''} />
+      {comment.user.avatar && (
+        <AvatarImage
+          src={comment.user.avatar} />
+      )}
       <AvatarFallback>
         {(comment.user.name
           ?? comment.user.email
@@ -268,7 +270,7 @@ import { Badge }
 ```
 
 ✅ **確認ポイント**:
-- `AvatarImage` の `src` に `??` を使い、avatar が `null`/`undefined` の場合に空文字を返す
+- `AvatarImage` は `{comment.user.avatar && ...}` で条件付きレンダリング（画像URLがある場合のみ表示）
 - `AvatarFallback` の名前取得にも `??` を使い、name がなければ email、両方なければ `'?'` を使う
 - AvatarFallback で頭文字（先頭 1 文字を大文字化）を表示する
 
