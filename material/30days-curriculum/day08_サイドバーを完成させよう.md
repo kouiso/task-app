@@ -268,10 +268,8 @@ import { USER_ROLE }
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // サイドバー下部のユーザー情報ウィジェット
-<div className="border-t
-  border-sidebar-border p-4">
-  <div className="flex items-center
-    gap-3 mb-3">
+<div className="border-t border-sidebar-border p-4">
+  <div className="flex items-center gap-3 mb-3">
     <Avatar className="h-9 w-9">
       {session?.user?.avatar && (
         <AvatarImage
@@ -283,13 +281,12 @@ import { USER_ROLE }
       </AvatarFallback>
     </Avatar>
     <div className="flex flex-col min-w-0">
-      <span className="text-sm font-medium
-        truncate text-sidebar-foreground">
+      <span className="text-sm font-medium truncate
+        text-sidebar-foreground">
         {session?.user?.name}
       </span>
       {session?.user?.role && (
-        <UserRoleBadge
-          role={session.user.role} />
+        <UserRoleBadge role={session.user.role} />
       )}
     </div>
   </div>
