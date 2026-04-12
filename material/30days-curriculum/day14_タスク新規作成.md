@@ -276,7 +276,7 @@ export function TaskDialog({
       priority: initialData?.priority ?? TASK_PRIORITY.MEDIUM,
       dueDate: initialData?.dueDate ?? '',
       estimatedHours: initialData?.estimatedHours,
-      projectId: initialData?.projectId ?? projects[0]?.id ?? '',
+      projectId: initialData?.projectId ?? (projects[0]?.id || ''),
       assigneeId: initialData?.assigneeId ?? '',
     },
   });
@@ -640,7 +640,7 @@ return (
       render={({ field }) => (
         <Select
           value={
-            field.value ?? 'unassigned'}
+            field.value || 'unassigned'}
           onValueChange={(value) =>
             field.onChange(
               value === 'unassigned'
@@ -665,7 +665,7 @@ return (
               <SelectItem
                 key={user.id}
                 value={user.id}>
-                {user.name ?? user.email}
+                {user.name || user.email}
               </SelectItem>
             ))}
           </SelectContent>
@@ -712,6 +712,7 @@ return (
           v === '' ? undefined : Number(v),
       })} />
   </div>
+          </div>
         </div>
 ```
 

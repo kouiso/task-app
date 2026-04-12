@@ -405,8 +405,7 @@ const loginMutation =
 // filepath: src/app/login/page.tsx
 // toast.success()の引数を変更する
       toast.success(
-        `おかえりなさい、${data.user.name}さん！`,
-        { duration: 4000 }
+        `おかえりなさい、${data.user.name}さん`
       );
 ```
 
@@ -423,7 +422,6 @@ const loginMutation =
 |--------|------|------|
 | `toast.success()` | 成功メッセージを表示 | 緑色のポップアップ通知 |
 | `data.user.name` | APIレスポンスからユーザー名を取得 | 「○○さん」の名前部分 |
-| `{ duration: 4000 }` | 4秒間表示 | メッセージの表示時間 |
 | `callbackUrl` | ログイン前にアクセスしようとしていたURL（`?callbackUrl=/dashboard`のようにURLパラメータから取得） | 元々行こうとしていた場所に案内する |
 
 ![ログイン成功後のダッシュボード（トースト表示）](./screenshots/dashboard.png)
