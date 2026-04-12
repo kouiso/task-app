@@ -273,8 +273,11 @@ import { USER_ROLE }
   <div className="flex items-center
     gap-3 mb-3">
     <Avatar className="h-9 w-9">
-      <AvatarImage src={session?.user?.avatar || ''}
-        alt={session?.user?.name || ''} />
+      {session?.user?.avatar && (
+        <AvatarImage
+          src={session.user.avatar}
+          alt={session.user.name || ''} />
+      )}
       <AvatarFallback>
         {session?.user?.name?.[0] || 'U'}
       </AvatarFallback>
@@ -293,10 +296,9 @@ import { USER_ROLE }
 </div>
 ```
 
-> 📝 この既存コードは `||` を使っています。プロジェクト規約では `??` 推奨ですが、実装に合わせています。後続のリファクタリング回で改善対象として扱います。
-
 ✅ **確認ポイント**:
-- `Avatar`の中に`AvatarImage`（プロフィール画像）と`AvatarFallback`（名前の1文字目）の両方がある
+- `AvatarImage`は`session?.user?.avatar &&`で条件付きレンダリングされている（アバター画像がある場合のみ表示）
+- `AvatarFallback`は常に存在し、画像がない場合に名前の1文字目を表示する
 - `UserRoleBadge`は`session?.user?.role`が存在する場合のみ表示される（条件付きレンダリング）
 - `session.user.role`（`?`なし）を渡しているのは、直前の`session?.user?.role &&`チェックで`role`が存在すると確定しているため
 
