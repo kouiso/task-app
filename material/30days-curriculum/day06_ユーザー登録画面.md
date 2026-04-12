@@ -91,7 +91,7 @@ flowchart TD
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus } from 'lucide-react';
+import { AlertCircle, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -108,6 +108,9 @@ import { z } from 'zod';
 ```typescript
 // filepath: src/app/register/page.tsx
 // 上の import の続きに追加
+import {
+  Alert, AlertDescription, AlertTitle,
+} from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
 import {
   Card, CardContent,
@@ -169,11 +172,7 @@ const registerSchema = z.object({
   email: z.string()
     .email('有効なメールアドレスを入力してください'),
   password: z.string()
-    .min(8, 'パスワードは8文字以上で入力してください')
-    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
-    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
-    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
-    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+    .min(8, 'パスワードは8文字以上で入力してください'),
   confirmPassword: z.string()
     .min(1, 'パスワード(確認)を入力してください'),
 }).refine(
@@ -507,9 +506,10 @@ const onSubmit = async (
   className="space-y-1 text-center">
   <div className="flex justify-center mb-2">
     <div className="rounded-full
-      bg-secondary p-2">
+      bg-gradient-to-r from-blue-500
+      to-indigo-500 p-3 shadow-lg">
       <UserPlus className="h-6 w-6
-        text-secondary-foreground" />
+        text-white" />
     </div>
   </div>
   <CardTitle className="text-2xl">
@@ -525,7 +525,7 @@ const onSubmit = async (
 - 人型アイコンが表示されている
 - 「新しいアカウントを作成してください」と表示されている
 
-> 💡 ログイン画面では `bg-primary`（メインカラー）を使いましたが、登録画面では `bg-secondary`（サブカラー）を使っています。ページごとに色を変えることで、ユーザーが「今どのページにいるか」を直感的に判断できます。
+> 💡 ログイン画面と同じグラデーション（`bg-gradient-to-r from-blue-500 to-indigo-500`）をアイコン背景に使っています。認証系ページで統一感のあるデザインを実現しています。
 
 ---
 
@@ -541,11 +541,13 @@ const onSubmit = async (
 // filepath: src/app/register/page.tsx
 // <form ...> の直後、名前入力欄の前に追加
 {error && (
-  <div className="rounded-md
-    bg-destructive/15 p-3
-    text-sm text-destructive">
-    {error}
-  </div>
+  <Alert variant="destructive">
+    <AlertCircle className="h-4 w-4" />
+    <AlertTitle>エラー</AlertTitle>
+    <AlertDescription>
+      {error}
+    </AlertDescription>
+  </Alert>
 )}
 ```
 
@@ -560,7 +562,10 @@ const onSubmit = async (
 // パスワード確認欄の後、</form> の前に追加
 <Button
   type="submit"
-  className="w-full"
+  className="w-full bg-gradient-to-r
+    from-blue-600 to-indigo-600
+    hover:from-blue-700
+    hover:to-indigo-700 shadow-md"
   disabled={registerMutation.isPending}>
   {registerMutation.isPending
     ? '登録中...'
@@ -585,13 +590,14 @@ const onSubmit = async (
 ```typescript
 // filepath: src/app/register/page.tsx
 // Buttonの後、</form> の前に追加
-<div className="text-center text-sm">
+<div className="text-center text-sm
+  text-muted-foreground">
   すでにアカウントをお持ちの方は{' '}
   <Link
     href="/login"
-    className="underline
+    className="text-blue-600 underline
       underline-offset-4
-      hover:text-primary">
+      hover:text-blue-800">
     こちら
   </Link>
 </div>
@@ -619,7 +625,7 @@ const onSubmit = async (
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus } from 'lucide-react';
+import { AlertCircle, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -630,6 +636,9 @@ import { z } from 'zod';
 ```typescript
 // filepath: src/app/register/page.tsx
 // 完成版: shadcn/ui と tRPC の import
+import {
+  Alert, AlertDescription, AlertTitle,
+} from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
 import {
   Card, CardContent,
@@ -651,11 +660,7 @@ const registerSchema = z.object({
   email: z.string()
     .email('有効なメールアドレスを入力してください'),
   password: z.string()
-    .min(8, 'パスワードは8文字以上で入力してください')
-    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
-    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
-    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
-    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+    .min(8, 'パスワードは8文字以上で入力してください'),
   confirmPassword: z.string()
     .min(1, 'パスワード(確認)を入力してください'),
 }).refine(
@@ -728,9 +733,10 @@ export default function RegisterPage() {
           className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
             <div className="rounded-full
-              bg-secondary p-2">
+              bg-gradient-to-r from-blue-500
+              to-indigo-500 p-3 shadow-lg">
               <UserPlus className="h-6 w-6
-                text-secondary-foreground" />
+                text-white" />
             </div>
           </div>
           <CardTitle className="text-2xl">
@@ -750,11 +756,13 @@ export default function RegisterPage() {
             onSubmit={handleSubmit(onSubmit)}
             className="space-y-4">
             {error && (
-              <div className="rounded-md
-                bg-destructive/15 p-3
-                text-sm text-destructive">
-                {error}
-              </div>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>エラー</AlertTitle>
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
             )}
             <div className="space-y-2">
               <Label htmlFor="name">名前</Label>
@@ -814,17 +822,22 @@ export default function RegisterPage() {
 ```typescript
 // filepath: src/app/register/page.tsx
 // 完成版: ボタン・リンク・閉じタグ
-            <Button type="submit" className="w-full"
+            <Button type="submit"
+              className="w-full bg-gradient-to-r
+                from-blue-600 to-indigo-600
+                hover:from-blue-700
+                hover:to-indigo-700 shadow-md"
               disabled={registerMutation.isPending}>
               {registerMutation.isPending
                 ? '登録中...' : '登録'}
             </Button>
-            <div className="text-center text-sm">
+            <div className="text-center text-sm
+              text-muted-foreground">
               すでにアカウントをお持ちの方は{' '}
               <Link href="/login"
-                className="underline
+                className="text-blue-600 underline
                   underline-offset-4
-                  hover:text-primary">
+                  hover:text-blue-800">
                 こちら</Link>
             </div>
           </form>
@@ -842,7 +855,7 @@ export default function RegisterPage() {
 | 項目 | Day 05 ログイン | Day 06 登録 |
 |------|----------------|-------------|
 | アイコン | `Lock`（鍵） | `UserPlus`（人型+） |
-| アイコン背景色 | `bg-primary` | `bg-secondary` |
+| アイコン背景色 | グラデーション（blue→indigo） | グラデーション（blue→indigo） |
 | フィールド数 | 2つ（email, password） | 4つ（name, email, password, confirmPassword） |
 | バリデーション | 基本チェックのみ | `.refine()` でクロスチェック |
 | トースト通知 | `react-hot-toast` で成功通知 | なし（登録後はそのままダッシュボードへ遷移する設計のため省略） |
@@ -864,7 +877,7 @@ export default function RegisterPage() {
 | 登録後にページが変わらない | `router.refresh()` の呼び忘れ | `onSuccess` で `router.refresh()` を呼ぶ |
 | 「このメールは登録済み」エラー | 同じメールで二度登録 | 別のメールアドレスで試す |
 | 型エラーが出る | `confirmPassword` をAPIに送っている | `mutate` で必要なフィールドだけ指定 |
-| クライアントでは通るのにサーバーエラーになる | クライアント側のzodスキーマとサーバー側の要件が不一致 | サーバー側（`auth.ts`）は8文字以上・大文字・小文字・数字・特殊文字の5要件すべて必須。クライアント側も同じregexを設定することで防げる |
+| クライアントでは通るのにサーバーエラーになる | クライアント側は `.min(8)` のみだがサーバー側は追加要件あり | サーバー側（`auth.ts`）は大文字・小文字・数字・特殊文字の regex も必須。クライアント側にも同じ regex を追加することで事前に防げる |
 
 ## 📝 今日学んだ用語
 
