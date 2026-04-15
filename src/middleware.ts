@@ -15,6 +15,12 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
+function isValidCallbackPath(path: string): boolean {
+  return (
+    path.startsWith('/') && !path.startsWith('//') && !path.includes('://') && !path.includes('\\')
+  );
+}
+
 function getJwtSecret(): Uint8Array {
   const secret = process.env['JWT_SECRET'];
   if (!secret) {
@@ -41,7 +47,10 @@ export async function middleware(request: NextRequest) {
 
   if (!token) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    loginUrl.searchParams.set(
+      'callbackUrl',
+      isValidCallbackPath(pathname) ? pathname : '/dashboard',
+    );
     return NextResponse.redirect(loginUrl);
   }
 
