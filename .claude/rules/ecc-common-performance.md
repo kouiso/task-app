@@ -1,1 +1,0 @@
-../../prompt/instructions/ecc-common-performance.md

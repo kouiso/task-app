@@ -1,1 +1,0 @@
-../../prompt/instructions/ecc-ts-testing.md

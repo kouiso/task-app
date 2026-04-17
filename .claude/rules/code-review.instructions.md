@@ -1,1 +1,0 @@
-../../prompt/instructions/code-review.instructions.md
