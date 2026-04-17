@@ -1,1 +1,0 @@
-../../prompt/instructions/ecc-common-security.md

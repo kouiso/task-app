@@ -1,1 +1,0 @@
-../../prompt/instructions/edu-creator.instructions.md
