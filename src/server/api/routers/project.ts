@@ -419,21 +419,58 @@ export const projectRouter = createTRPCRouter({
 
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 
-      return await prisma.projectMember.update({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
+      return await prisma.$transaction(async (tx) => {
+        const targetMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
           },
-        },
-        data: {
-          role: input.role,
-        },
-        include: {
-          user: {
-            select: USER_SELECT,
+        });
+
+        if (!targetMember) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'メンバーが見つかりません',
+          });
+        }
+
+        if (
+          targetMember.role === PROJECT_MEMBER_ROLE.OWNER &&
+          input.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          const ownerCount = await tx.projectMember.count({
+            where: {
+              projectId: input.projectId,
+              role: PROJECT_MEMBER_ROLE.OWNER,
+            },
+          });
+
+          if (ownerCount === 1) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'プロジェクト唯一のオーナーの権限は変更できません',
+            });
+          }
+        }
+
+        return await tx.projectMember.update({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
           },
-        },
+          data: {
+            role: input.role,
+          },
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        });
       });
     }),
 

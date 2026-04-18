@@ -25,6 +25,7 @@ import {
 import { Separator } from '@/component/ui/separator';
 import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
 import { api } from '@/trpc/react';
 
 const TASK_STATUS_VALUES = [
@@ -89,8 +90,8 @@ function SearchPageContent() {
       status: formValues.status,
       priority: formValues.priority,
       assignedTo: formValues.assignedTo !== 'all' ? formValues.assignedTo : undefined,
-      dateFrom: formValues.dateFrom ? new Date(formValues.dateFrom).toISOString() : undefined,
-      dateTo: formValues.dateTo ? new Date(formValues.dateTo).toISOString() : undefined,
+      dateFrom: formValues.dateFrom ? dateOnlyToUtcStartIso(formValues.dateFrom) : undefined,
+      dateTo: formValues.dateTo ? dateOnlyToUtcEndIso(formValues.dateTo) : undefined,
     },
     {
       enabled: shouldSearch,

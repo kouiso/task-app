@@ -389,6 +389,41 @@ describe('projectRouter', () => {
     });
   });
 
+  describe('updateMemberRole', () => {
+    it('should update member role', async () => {
+      const owner = await createTestUser();
+      const member = await createTestUser({ email: 'role-member@example.com' });
+      const project = await createTestProject(owner.id);
+
+      await prisma.projectMember.create({
+        data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+      });
+
+      const caller = await createAuthenticatedCaller(owner.id, owner.email, owner.role);
+      const updated = await caller.project.updateMemberRole({
+        projectId: project.id,
+        userId: member.id,
+        role: 'ADMIN',
+      });
+
+      expect(updated.role).toBe('ADMIN');
+    });
+
+    it('should reject demoting the last OWNER', async () => {
+      const owner = await createTestUser({ email: 'sole-owner@example.com' });
+      const project = await createTestProject(owner.id);
+      const caller = await createAuthenticatedCaller(owner.id, owner.email, owner.role);
+
+      await expect(
+        caller.project.updateMemberRole({
+          projectId: project.id,
+          userId: owner.id,
+          role: 'ADMIN',
+        }),
+      ).rejects.toThrow('プロジェクト唯一のオーナーの権限は変更できません');
+    });
+  });
+
   describe('archive', () => {
     it('should allow OWNER to archive project', async () => {
       const user = await createTestUser();

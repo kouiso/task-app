@@ -34,6 +34,7 @@ import {
   type ProjectMemberRole,
 } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
+import { dateOnlyFromValue, dateOnlyToUtcStartIso } from '@/lib/date';
 import { api } from '@/trpc/react';
 
 function ProjectPageContent() {
@@ -141,12 +142,8 @@ function ProjectPageContent() {
   const handleEdit = (projectId: string) => {
     const project = projects?.find((p) => p.id === projectId);
     if (project) {
-      const startDate = project.startDate
-        ? new Date(project.startDate).toISOString().split('T')[0]
-        : undefined;
-      const endDate = project.endDate
-        ? new Date(project.endDate).toISOString().split('T')[0]
-        : undefined;
+      const startDate = project.startDate ? dateOnlyFromValue(project.startDate) : undefined;
+      const endDate = project.endDate ? dateOnlyFromValue(project.endDate) : undefined;
 
       setEditingProject({
         id: project.id,
@@ -172,8 +169,8 @@ function ProjectPageContent() {
         name: data.name,
         description: data.description || null,
         color: data.color,
-        startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
-        endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
+        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : null,
+        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : null,
       });
     } else {
       if (!currentUser?.id) {
@@ -183,8 +180,8 @@ function ProjectPageContent() {
         name: data.name,
         description: data.description,
         color: data.color,
-        startDate: data.startDate ? new Date(data.startDate).toISOString() : undefined,
-        endDate: data.endDate ? new Date(data.endDate).toISOString() : undefined,
+        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : undefined,
+        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : undefined,
       });
     }
   };
