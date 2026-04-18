@@ -2,7 +2,6 @@
 
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
@@ -20,86 +19,27 @@ import {
   TASK_PRIORITY_COLORS,
   TASK_PRIORITY_LABELS,
 } from '@/lib/constant/priority';
-import {
-  isTaskStatus,
-  TASK_STATUS,
-  TASK_STATUS_COLORS,
-  TASK_STATUS_LABELS,
-} from '@/lib/constant/status';
+import { isTaskStatus, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 const CHART_FALLBACK_COLOR = '#9e9e9e';
 
 export default function ReportPage() {
-  const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
-  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
+  const { data: overview, isLoading } = api.report.getOverview.useQuery();
 
-  const statusData = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const task of tasks ?? []) {
-      counts.set(task.status, (counts.get(task.status) ?? 0) + 1);
-    }
-    return [...counts.entries()].map(([key, value]) => ({
-      key,
-      name: isTaskStatus(key) ? TASK_STATUS_LABELS[key] : key,
-      value,
-    }));
-  }, [tasks]);
+  const statusData =
+    overview?.statusData.map((entry) => ({
+      ...entry,
+      name: isTaskStatus(entry.key) ? TASK_STATUS_LABELS[entry.key] : entry.key,
+    })) ?? [];
 
-  const priorityData = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const task of tasks ?? []) {
-      counts.set(task.priority, (counts.get(task.priority) ?? 0) + 1);
-    }
-    return [...counts.entries()].map(([key, value]) => ({
-      key,
-      name: isTaskPriority(key) ? TASK_PRIORITY_LABELS[key] : key,
-      value,
-    }));
-  }, [tasks]);
+  const priorityData =
+    overview?.priorityData.map((entry) => ({
+      ...entry,
+      name: isTaskPriority(entry.key) ? TASK_PRIORITY_LABELS[entry.key] : entry.key,
+    })) ?? [];
 
-  const totalTimeSpent = useMemo(
-    () => tasks?.reduce((acc, task) => acc + (task.timeSpentMinutes ?? 0), 0) ?? 0,
-    [tasks],
-  );
-  const averageTimePerTask = useMemo(
-    () => (tasks && tasks.length > 0 ? totalTimeSpent / tasks.length : 0),
-    [tasks, totalTimeSpent],
-  );
-
-  const projectStats = useMemo(
-    () =>
-      projects?.map((project) => {
-        const projectTasks = tasks?.filter((t) => t.projectId === project.id) ?? [];
-        const completedTasks = projectTasks.filter((t) => t.status === TASK_STATUS.DONE);
-        const totalTime = projectTasks.reduce((acc, t) => acc + (t.timeSpentMinutes ?? 0), 0);
-        const progress =
-          projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
-
-        return {
-          id: project.id,
-          name: project.name,
-          totalTasks: projectTasks.length,
-          completedTasks: completedTasks.length,
-          progress: progress.toFixed(1),
-          totalTimeHours: (totalTime / 60).toFixed(1),
-        };
-      }),
-    [projects, tasks],
-  );
-
-  const completionRate = useMemo(
-    () =>
-      tasks && tasks.length > 0
-        ? (
-            (tasks.filter((t) => t.status === TASK_STATUS.DONE).length / tasks.length) *
-            100
-          ).toFixed(1)
-        : '0',
-    [tasks],
-  );
-
-  if (tasksLoading || projectsLoading) {
+  if (isLoading) {
     return <PageLoadingSpinner />;
   }
 
@@ -126,28 +66,32 @@ export default function ReportPage() {
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-1">タスク数</p>
-              <p className="text-3xl font-bold">{tasks?.length ?? 0}</p>
+              <p className="text-3xl font-bold">{overview?.totalTasks ?? 0}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-1">完了率</p>
-              <p className="text-3xl font-bold">{completionRate}%</p>
+              <p className="text-3xl font-bold">{overview?.completionRate ?? 0}%</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-1">合計作業時間</p>
-              <p className="text-3xl font-bold">{(totalTimeSpent / 60).toFixed(1)}h</p>
+              <p className="text-3xl font-bold">
+                {((overview?.totalTimeSpent ?? 0) / 60).toFixed(1)}h
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground mb-1">平均作業時間/タスク</p>
-              <p className="text-3xl font-bold">{(averageTimePerTask / 60).toFixed(1)}h</p>
+              <p className="text-3xl font-bold">
+                {((overview?.averageTimePerTask ?? 0) / 60).toFixed(1)}h
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -242,13 +186,13 @@ export default function ReportPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {projectStats?.map((stat) => (
+                {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
                     <TableCell className="font-medium">{stat.name}</TableCell>
                     <TableCell className="text-right">{stat.totalTasks}</TableCell>
                     <TableCell className="text-right">{stat.completedTasks}</TableCell>
-                    <TableCell className="text-right">{stat.progress}%</TableCell>
-                    <TableCell className="text-right">{stat.totalTimeHours}h</TableCell>
+                    <TableCell className="text-right">{stat.progress.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">{stat.totalTimeHours.toFixed(1)}h</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
