@@ -58,17 +58,3 @@
 2. `day05` `day06` `day12` `day17` `day26` の `console.log` に「一時確認用・確認後に削除」を明記する。
 3. `day20` `day27` は `||` を残す箇所と `??` に寄せる箇所を表で整理し、「空文字も未入力扱いにしたいので `||`」のように意図を書く。
 4. 上記修正後に、`curriculum-src-alignment-2026-04-14.md` の結論を更新するか、4/17 版を正式な差し替えとして扱う。
-
-## 2026-04-18 追加リフレッシュ (A-3)
-
-- Day 06: OK（`src/server/api/routers/auth.ts#register` を確認。重複メール検知、強いパスワード要件、登録後セッション作成の流れは教材と整合）
-- Day 17: Fixed（期限別グループ分けのコード断片に `isSameDay` の旧案が残っていたため、`dateOnlyFromValue()` / `localDateOnly()` ベースへ修正）
-- Day 20: OK（現行は `src/server/api/routers/search.ts` + `src/app/search/page.tsx` 基準。教材も `api.search.search` と date-only helper 方針に整合。`task.ts` には現状 search エンドポイントなし）
-- Day 21: Fixed（`src/server/api/routers/report.ts#getOverview` に対し、教材 Step 内の client-side 再集計説明が残っていたため、server 集計済み `overview` / `projectStats` を描画する形へ修正）
-- Day 23: Fixed（`src/app/report/page.tsx` の projectStats 表示説明が旧 `useMemo` 再集計のままだったため、`getOverview` 由来の server-side aggregation 説明へ更新）
-- Day 27: OK（`src/server/api/routers/project.ts` の `setArchiveStatus` / `archive` / `unarchive` を確認。教材の archive 仕様説明は現行実装と一致）
-- Day 29: Fixed（`src/app/user/[id]/page.tsx` / `edit/page.tsx` が server wrapper + route-level 404 構成に変わっていたため、教材の代表コードと filepath を `user-detail-client.tsx` / `user-edit-client.tsx` ベースへ更新）
-
-### Known residual drift
-
-- 対象範囲内の追加残差分は今回の確認ではなし

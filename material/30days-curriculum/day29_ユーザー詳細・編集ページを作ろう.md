@@ -57,7 +57,7 @@ flowchart TD
 | 動的ルーティング `[id]` | どうてきルーティング | URLのID部分を変数として受け取る | 「社員番号001の名簿ページ」→ URLの001が変数 |
 | `notFound()` | ノットファウンド | そのIDが存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
 | server wrapper | — | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
-| `params` | パラムズ | App Router が route parameter を渡す値 | 受付で受け取る整理番号 |
+| `useParams()` | ユーズパラムズ | URLのパラメータ（変数）を読み取るフック | 住所から「番地」だけを取り出す |
 | `useEffect` | ユーズエフェクト | コンポーネント外部の変化に反応して副作用を実行するフック | 荷物が届いたら自動で棚に並べる係 |
 | useForm + zod（復習） | — | フォーム管理＋バリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
 | 権限チェック | けんげんチェック | ユーザーの役割によって表示を変える | 社員証の種類によって入れる部屋を変える |
@@ -67,15 +67,15 @@ flowchart TD
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
 | Step 1 | 動的ルーティングの仕組みを理解する | 5分 | 概念説明のみ | 仕組みが頭に入る |
-| Step 2 | ユーザー詳細ページの wrapper を作成 | 5分 | `src/app/user/[id]/page.tsx` | route-level 404 が動く |
-| Step 3 | client component でデータを取得 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | ユーザー名が表示される |
-| Step 4 | グリッドレイアウトで詳細情報を表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | 2カラムレイアウトで表示 |
-| Step 5 | プロジェクト一覧とタスクテーブルを表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | バッジとテーブルが表示される |
-| Step 6 | 権限チェックで編集ボタンを出し分ける | 5分 | `src/app/user/[id]/user-detail-client.tsx` | 管理者・本人のみ編集ボタンが見える |
-| Step 7 | 編集ページの wrapper と client を作成 | 5分 | `src/app/user/[id]/edit/page.tsx`, `src/app/user/[id]/edit/user-edit-client.tsx` | route-level 404 とフォームが動く |
-| Step 8 | フォーム状態管理とuseEffectでデータ同期 | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | フォームにデータが入る |
-| Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | ドロップダウンとチェックボックスが動く |
-| Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/user-edit-client.tsx` | 保存ボタンでDBが更新される |
+| Step 2 | ユーザー詳細ページのファイルを作成 | 5分 | `src/app/user/[id]/page.tsx` | ファイルが存在する |
+| Step 3 | URLからユーザーIDを取得してデータを取得 | 7分 | `src/app/user/[id]/page.tsx` | ユーザー名が表示される |
+| Step 4 | グリッドレイアウトで詳細情報を表示 | 7分 | `src/app/user/[id]/page.tsx` | 2カラムレイアウトで表示 |
+| Step 5 | プロジェクト一覧とタスクテーブルを表示 | 7分 | `src/app/user/[id]/page.tsx` | バッジとテーブルが表示される |
+| Step 6 | 権限チェックで編集ボタンを出し分ける | 5分 | `src/app/user/[id]/page.tsx` | 管理者・本人のみ編集ボタンが見える |
+| Step 7 | 編集ページのファイルを作成 | 5分 | `src/app/user/[id]/edit/page.tsx` | ファイルが存在する |
+| Step 8 | フォーム状態管理とuseEffectでデータ同期 | 7分 | `src/app/user/[id]/edit/page.tsx` | フォームにデータが入る |
+| Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/page.tsx` | ドロップダウンとチェックボックスが動く |
+| Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/page.tsx` | 保存ボタンでDBが更新される |
 
 **合計時間**: 約60分
 
@@ -111,7 +111,7 @@ src/app/user/[id]/page.tsx
 // このファイルは /user/なんでも という全てのURLに対応する
 // URLの「なんでも」部分が params['id'] として受け取れる
 export default function UserDetailPage() {
-  // 次のステップで wrapper + client component に分ける
+  // 次のステップでここに useParams() を書く
   return <div>ユーザー詳細ページ</div>;
 }
 ```
@@ -171,7 +171,7 @@ npm run dev
 📸 スクリーンショット: ユーザー詳細ページの骨組みの表示を確認してください。
 
 ![ユーザー詳細ページの骨組みの表示を確認してください。](./screenshots/user-detail-skeleton.png)
-存在するIDなら次のステップで `user-detail-client.tsx` が描画され、存在しないIDなら `notFound()` で 404 になります。
+どんなIDを入れても同じページが表示されるはずです。次のステップでURLからIDを読み取ります。
 
 ✅ **確認ポイント**:
 - `src/app/user/[id]/page.tsx` ファイルが作成できた
@@ -739,7 +739,6 @@ import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
 import { USER_ROLE }
   from '@/lib/constant/roles';
-import { normalizeAvatarValue } from '@/lib/utils';
 import { api } from '@/trpc/react';
 ```
 
@@ -1148,9 +1147,8 @@ import { Alert, AlertDescription, AlertTitle }
       updateUser.mutate({
         id: userId,
         name: values.name,
-        avatar: normalizeAvatarValue(
-          values.avatar,
-        ),
+        avatar: values.avatar
+          || undefined,
         ...(isAdmin
           ? { role: values.role,
               isActive: values.isActive }
@@ -1161,7 +1159,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 ✅ **確認ポイント**: ファイルを保存してエラーが出ないことを確認してください。`onSubmit` と `updateUser` が定義されたことで、Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が動作するようになりました。
 
-サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`isAdmin` で分岐し、管理者のときだけこれらを送信することで問題を防いでいます。完成版 source では `normalizeAvatarValue()` を使い、空文字のアバターURLを `null` 相当の扱いにそろえています。
+サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`isAdmin` で分岐し、管理者のときだけこれらを送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `undefined` に変換しています。
 
 エラー表示ブロックをチェックボックスの下に追加します。
 
@@ -1219,8 +1217,8 @@ import { Alert, AlertDescription, AlertTitle }
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
 | ページが404になる | `[id]`フォルダ名のブラケットが全角になっている | 半角の`[id]`でフォルダを作り直す |
-| 存在しないIDで画面が出ない | wrapper 側で `notFound()` している | `src/app/user/[id]/page.tsx` / `src/app/user/[id]/edit/page.tsx` の存在確認ロジックを確認する |
-| フォームの初期値が空になる | `form.reset` が走っていない | `useEffect(() => { if (user) form.reset(...) }, [user, form])` を確認する |
+| `useParams()`が`undefined`を返す | App Routerの動的ルートでファイル配置が間違っている | `src/app/user/[id]/page.tsx`のパス構造を確認する |
+| フォームの初期値が空になる | `useForm` の `values` に `user` データを渡していない | `useForm({ values: { name: user.name, ... } })` でデータ到着時にフォームが自動更新されることを確認する |
 | 権限チェックが効かない | `currentUser?.role` の比較で定数を使っていない | `USER_ROLE.ADMIN` を使って比較しているか確認する |
 | 更新後に古いデータが表示される | `onSuccess` でページ遷移していない | `onSuccess` 内で `router.push(\`/user/\${userId}\`)` により詳細ページに戻る（再取得される） |
 | `FORBIDDEN`エラーが表示される | 一般ユーザーが `role`・`isActive` を送信している | `handleSubmit` で `isAdmin` 判定を行い、非管理者のときは `role`・`isActive` を送信データから除外する |
@@ -1238,7 +1236,7 @@ import { Alert, AlertDescription, AlertTitle }
 | 概念 | 意味 | 使い場面 |
 |------|------|---------|
 | 動的ルーティング `[id]` | フォルダ名を変数にして任意のURLに対応 | ユーザー詳細、記事詳細など |
-| `params` | route parameter を server component で受け取る | wrapper で存在確認する |
+| `useParams()` | URLのパラメータを読み取るオブジェクトを返す | 動的ルーティングとセットで使う |
 | `useEffect` + 依存配列 | 指定した値が変わったときに処理を実行 | サーバーデータをフォームに反映 |
 | 制御コンポーネント | Reactが入力値を管理するフォーム（初期値は空文字） | すべてのフォーム入力 |
 | `handleChange` 共通ハンドラ | `name` 属性を使って対象フィールドを動的に更新 | テキスト入力フォーム全般 |
@@ -1257,9 +1255,7 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     URL->>Comp: /user/abc123/edit にアクセス
-    Comp->>DB: findUnique({ id: "abc123" })
-    DB-->>Comp: ユーザーの存在有無
-    Comp->>Comp: notFound() or <UserEditClient userId="abc123" />
+    Comp->>Comp: useParams() → id = "abc123"
     Comp->>tRPC: getById({ id: "abc123" })
     tRPC->>DB: SELECT * FROM users WHERE id = 'abc123'
     DB-->>tRPC: ユーザーデータ

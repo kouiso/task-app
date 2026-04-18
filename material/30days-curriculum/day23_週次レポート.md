@@ -217,7 +217,7 @@ import {
 // filepath: src/app/report/page.tsx
 // テーブル本体（mapで各行を生成）
 <TableBody>
-  {projectStats.map((stat) => (
+  {projectStats?.map((stat) => (
     <TableRow key={stat.id}>
       <TableCell className="font-medium">
         {stat.name}</TableCell>
@@ -226,7 +226,7 @@ import {
       <TableCell className="text-right">
         {stat.completedTasks}</TableCell>
       <TableCell className="text-right">
-        {stat.progress.toFixed(1)}%</TableCell>
+        {stat.progress}%</TableCell>
       <TableCell className="text-right">
         {stat.totalTimeHours}h</TableCell>
     </TableRow>
