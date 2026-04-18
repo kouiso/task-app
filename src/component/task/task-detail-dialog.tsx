@@ -24,6 +24,7 @@ import { Textarea } from '@/component/ui/textarea';
 import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { formatDateOnly } from '@/lib/date';
 import { api } from '@/trpc/react';
 
 type TaskDetailDialogProps = {
@@ -189,9 +190,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                 <div>
                   <span className="text-muted-foreground block mb-1">期限</span>
                   <span>
-                    {taskDetail.dueDate
-                      ? format(new Date(taskDetail.dueDate), 'yyyy/MM/dd', { locale: ja })
-                      : '期限なし'}
+                    {taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}
                   </span>
                 </div>
               </div>

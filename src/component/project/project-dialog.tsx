@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
@@ -44,6 +45,17 @@ export interface ProjectFormData {
   endDate?: string;
 }
 
+function buildProjectFormValues(initialData: ProjectFormData | undefined): ProjectFormValues {
+  return {
+    id: initialData?.id,
+    name: initialData?.name ?? '',
+    description: initialData?.description ?? '',
+    color: initialData?.color ?? DEFAULT_PROJECT_COLOR,
+    startDate: initialData?.startDate ?? '',
+    endDate: initialData?.endDate ?? '',
+  };
+}
+
 export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectDialogProps) {
   const {
     register,
@@ -52,18 +64,19 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
     formState: { errors },
   } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
-    values: {
-      id: initialData?.id,
-      name: initialData?.name ?? '',
-      description: initialData?.description ?? '',
-      color: initialData?.color ?? DEFAULT_PROJECT_COLOR,
-      startDate: initialData?.startDate ?? '',
-      endDate: initialData?.endDate ?? '',
-    },
+    defaultValues: buildProjectFormValues(initialData),
   });
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    reset(buildProjectFormValues(initialData));
+  }, [initialData, open, reset]);
+
   const handleClose = () => {
-    reset();
+    reset(buildProjectFormValues(undefined));
     onClose();
   };
 
