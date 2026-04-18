@@ -8,6 +8,29 @@ import {
   createTestUser,
 } from '../../../../test/helpers';
 
+async function createProjectCallerWithRole(role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER') {
+  const owner = await createTestUser({ email: `task-owner-${Date.now()}@example.com` });
+  const actor = await createTestUser({
+    email: `task-${role.toLowerCase()}-${Date.now()}@example.com`,
+  });
+  const project = await createTestProject(owner.id);
+
+  if (role !== 'OWNER') {
+    await prisma.projectMember.create({
+      data: {
+        userId: actor.id,
+        projectId: project.id,
+        role,
+      },
+    });
+  }
+
+  const callerUser = role === 'OWNER' ? owner : actor;
+  const caller = await createAuthenticatedCaller(callerUser.id, callerUser.email, callerUser.role);
+
+  return { caller, owner, actor: callerUser, project };
+}
+
 describe('taskRouter', () => {
   describe('getAll', () => {
     it('should return all tasks', async () => {
@@ -332,6 +355,42 @@ describe('taskRouter', () => {
         }),
       ).rejects.toThrow('ログインが必要です');
     });
+
+    it('should reject VIEWER from updating task', async () => {
+      const { caller, owner, project } = await createProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, owner.id, { title: 'Viewer Update Target' });
+
+      await expect(
+        caller.task.update({
+          id: task.id,
+          title: 'Blocked Update',
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('should allow OWNER and MEMBER to update task', async () => {
+      const ownerContext = await createProjectCallerWithRole('OWNER');
+      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id, {
+        title: 'Owner Task',
+      });
+      const ownerUpdated = await ownerContext.caller.task.update({
+        id: ownerTask.id,
+        title: 'Owner Updated',
+      });
+
+      expect(ownerUpdated.title).toBe('Owner Updated');
+
+      const memberContext = await createProjectCallerWithRole('MEMBER');
+      const memberTask = await createTestTask(memberContext.project.id, memberContext.owner.id, {
+        title: 'Member Task',
+      });
+      const memberUpdated = await memberContext.caller.task.update({
+        id: memberTask.id,
+        title: 'Member Updated',
+      });
+
+      expect(memberUpdated.title).toBe('Member Updated');
+    });
   });
 
   describe('delete', () => {
@@ -427,6 +486,35 @@ describe('taskRouter', () => {
         'ログインが必要です',
       );
     });
+
+    it('should reject VIEWER from updating timer', async () => {
+      const { caller, owner, project } = await createProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, owner.id);
+
+      await expect(caller.task.updateTimer({ id: task.id, action: 'start' })).rejects.toMatchObject(
+        {
+          code: 'FORBIDDEN',
+        },
+      );
+    });
+
+    it('should allow OWNER and MEMBER to update timer', async () => {
+      const ownerContext = await createProjectCallerWithRole('OWNER');
+      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
+      const ownerStarted = await ownerContext.caller.task.updateTimer({
+        id: ownerTask.id,
+        action: 'start',
+      });
+      expect(ownerStarted.isTimerActive).toBe(true);
+
+      const memberContext = await createProjectCallerWithRole('MEMBER');
+      const memberTask = await createTestTask(memberContext.project.id, memberContext.owner.id);
+      const memberStarted = await memberContext.caller.task.updateTimer({
+        id: memberTask.id,
+        action: 'start',
+      });
+      expect(memberStarted.isTimerActive).toBe(true);
+    });
   });
 
   describe('addTime', () => {
@@ -464,6 +552,33 @@ describe('taskRouter', () => {
       await expect(caller.task.addTime({ id: 'clsomeid', minutesToAdd: 60 })).rejects.toThrow(
         'ログインが必要です',
       );
+    });
+
+    it('should reject VIEWER from adding time', async () => {
+      const { caller, owner, project } = await createProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, owner.id);
+
+      await expect(caller.task.addTime({ id: task.id, minutesToAdd: 15 })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    });
+
+    it('should allow OWNER and MEMBER to add time', async () => {
+      const ownerContext = await createProjectCallerWithRole('OWNER');
+      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
+      const ownerResult = await ownerContext.caller.task.addTime({
+        id: ownerTask.id,
+        minutesToAdd: 20,
+      });
+      expect(ownerResult.timeSpentMinutes).toBe(20);
+
+      const memberContext = await createProjectCallerWithRole('MEMBER');
+      const memberTask = await createTestTask(memberContext.project.id, memberContext.owner.id);
+      const memberResult = await memberContext.caller.task.addTime({
+        id: memberTask.id,
+        minutesToAdd: 25,
+      });
+      expect(memberResult.timeSpentMinutes).toBe(25);
     });
   });
 });

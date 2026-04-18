@@ -52,7 +52,11 @@ const taskWithPermissionInclude = (userId: string) =>
     },
   }) as const;
 
-export const findTaskWithPermission = async (taskId: string, userId: string) => {
+export const findTaskWithPermission = async (
+  taskId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: taskWithPermissionInclude(userId),
@@ -65,7 +69,7 @@ export const findTaskWithPermission = async (taskId: string, userId: string) => 
     });
   }
 
-  assertMemberPermission(task.project.members);
+  assertMemberPermission(task.project.members, permission);
 
   return task;
 };
