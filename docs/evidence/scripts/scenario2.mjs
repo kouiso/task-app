@@ -1,5 +1,5 @@
+import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
-import { mkdirSync } from 'fs';
 
 const SCREENSHOT_DIR = '/Users/kouiso/ghq/kouiso/task-app/docs/evidence/screenshots';
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -34,8 +34,6 @@ async function screenshot(page, name) {
   page.on('console', (msg) => consoleMessages.push({ type: msg.type(), text: msg.text() }));
 
   try {
-    // Step 1: ユーザー登録
-    console.log('Step 1: ユーザー登録');
     await page.goto(`${BASE}/register`, { waitUntil: 'networkidle' });
     await page.fill('#name', USER_NAME);
     await page.fill('#email', EMAIL);
@@ -47,9 +45,6 @@ async function screenshot(page, name) {
     await page.waitForURL('**/dashboard', { timeout: 15000 });
     await screenshot(page, '02-dashboard-after-register');
     record('ユーザー登録', 'OK', `${EMAIL} で登録、ダッシュボードにリダイレクト成功`);
-
-    // Step 2: プロジェクト作成
-    console.log('Step 2: プロジェクト作成');
     await page.goto(`${BASE}/project`, { waitUntil: 'networkidle' });
     await page.click('button:has-text("新規プロジェクト")');
     await page.waitForSelector('[role="dialog"]', { timeout: 5000 });
@@ -65,28 +60,25 @@ async function screenshot(page, name) {
     const projectCard = page.locator(`text=${PROJECT_NAME}`);
     await projectCard.waitFor({ timeout: 5000 });
     record('プロジェクト作成', 'OK', `「${PROJECT_NAME}」が一覧に表示`);
-
-    // Step 3: タスク作成
-    console.log('Step 3: タスク作成');
     await page.goto(`${BASE}/task`, { waitUntil: 'networkidle' });
     await page.click('button:has-text("新規タスク")');
     await page.waitForSelector('[role="dialog"]', { timeout: 5000 });
     await page.fill('#title', TASK_TITLE);
 
     try {
-      const projectSelect = page.locator('[role="dialog"]').locator('button[aria-label="プロジェクトを選択"]');
-      if (await projectSelect.count() > 0) {
+      const projectSelect = page
+        .locator('[role="dialog"]')
+        .locator('button[aria-label="プロジェクトを選択"]');
+      if ((await projectSelect.count()) > 0) {
         await projectSelect.click();
         await page.waitForTimeout(500);
         const projectOption = page.locator(`[role="option"]:has-text("${PROJECT_NAME}")`);
-        if (await projectOption.count() > 0) {
+        if ((await projectOption.count()) > 0) {
           await projectOption.click();
           await page.waitForTimeout(300);
         }
       }
-    } catch (e) {
-      console.log('プロジェクト選択スキップ:', e.message);
-    }
+    } catch (_e) {}
 
     await screenshot(page, '05-task-dialog-filled');
 
@@ -99,9 +91,6 @@ async function screenshot(page, name) {
     const taskCard = page.locator(`text=${TASK_TITLE}`);
     await taskCard.waitFor({ timeout: 5000 });
     record('タスク作成', 'OK', `「${TASK_TITLE}」が一覧に表示`);
-
-    // Step 4: タスク詳細を開いてコメント投稿
-    console.log('Step 4: コメント投稿');
 
     // タスクカードをクリックして詳細ダイアログを開く
     const taskCardElement = page.locator(`text=${TASK_TITLE}`).first();
@@ -131,16 +120,15 @@ async function screenshot(page, name) {
     await closeBtn.click();
     await page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 5000 });
     await page.waitForTimeout(500);
-
-    // Step 5: タスクステータスを完了に変更
-    console.log('Step 5: タスクステータス変更');
     const editBtn = page.locator('button[aria-label="タスクを編集"]').first();
     await editBtn.waitFor({ timeout: 5000 });
     await editBtn.click();
     await page.waitForSelector('[role="dialog"]', { timeout: 5000 });
     await screenshot(page, '10-task-edit-dialog');
 
-    const statusTrigger = page.locator('[role="dialog"]').locator('button[aria-label="ステータスを選択"]');
+    const statusTrigger = page
+      .locator('[role="dialog"]')
+      .locator('button[aria-label="ステータスを選択"]');
     await statusTrigger.click();
     await page.waitForTimeout(500);
 
@@ -155,13 +143,9 @@ async function screenshot(page, name) {
     await page.waitForTimeout(1000);
     await screenshot(page, '12-task-updated');
     record('ステータス変更（完了）', 'OK', 'タスクを完了ステータスに変更');
-
-    // Step 6: ダッシュボード確認
-    console.log('Step 6: ダッシュボード確認');
     await page.goto(`${BASE}/dashboard`, { waitUntil: 'networkidle' });
     await screenshot(page, '13-dashboard-final');
     record('ダッシュボード確認', 'OK', '完了タスクがダッシュボードに反映');
-
   } catch (err) {
     console.error('テスト失敗:', err.message);
     await screenshot(page, 'error');
@@ -169,20 +153,15 @@ async function screenshot(page, name) {
   } finally {
     await browser.close();
   }
-
-  console.log('\n=== シナリオ2 結果 ===');
-  for (const r of results) {
-    console.log(`[${r.status}] ${r.step}: ${r.note}`);
+  for (const _r of results) {
   }
 
-  const errors = consoleMessages.filter(m => m.type === 'error');
-  console.log(`\nコンソールエラー数: ${errors.length}`);
+  const errors = consoleMessages.filter((m) => m.type === 'error');
   if (errors.length > 0) {
-    for (const e of errors) {
-      console.log(`  ERROR: ${e.text.substring(0, 200)}`);
+    for (const _e of errors) {
     }
   }
 
-  const resultData = { results, consoleErrors: errors.map(e => e.text.substring(0, 300)) };
-  process.stdout.write('\n---JSON---\n' + JSON.stringify(resultData, null, 2));
+  const resultData = { results, consoleErrors: errors.map((e) => e.text.substring(0, 300)) };
+  process.stdout.write(`\n---JSON---\n${JSON.stringify(resultData, null, 2)}`);
 })();

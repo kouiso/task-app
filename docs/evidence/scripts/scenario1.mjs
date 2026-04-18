@@ -1,5 +1,5 @@
+import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
-import { mkdirSync } from 'fs';
 
 const SCREENSHOT_DIR = '/Users/kouiso/ghq/kouiso/task-app/docs/evidence/screenshots';
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -33,8 +33,6 @@ async function screenshot(page, name) {
   page.on('console', (msg) => consoleMessages.push({ type: msg.type(), text: msg.text() }));
 
   try {
-    // Step 1: ユーザー登録
-    console.log('Step 1: ユーザー登録');
     await page.goto(`${BASE}/register`, { waitUntil: 'networkidle' });
     await screenshot(page, '01-register-page');
 
@@ -48,9 +46,6 @@ async function screenshot(page, name) {
     await page.waitForURL('**/dashboard', { timeout: 15000 });
     await screenshot(page, '03-dashboard-after-register');
     record('ユーザー登録', 'OK', `${EMAIL} で登録、ダッシュボードにリダイレクト成功`);
-
-    // Step 2: プロジェクト作成
-    console.log('Step 2: プロジェクト作成');
     await page.goto(`${BASE}/project`, { waitUntil: 'networkidle' });
     await screenshot(page, '04-project-page');
 
@@ -75,9 +70,6 @@ async function screenshot(page, name) {
     const projectCard = page.locator(`text=${PROJECT_NAME}`);
     await projectCard.waitFor({ timeout: 5000 });
     record('プロジェクト作成', 'OK', `「${PROJECT_NAME}」が一覧に表示`);
-
-    // Step 3: タスク作成
-    console.log('Step 3: タスク作成');
     await page.goto(`${BASE}/task`, { waitUntil: 'networkidle' });
     await screenshot(page, '08-task-page');
 
@@ -89,19 +81,19 @@ async function screenshot(page, name) {
 
     // プロジェクトを選択（作成したプロジェクトを選ぶ）
     try {
-      const projectSelect = page.locator('[role="dialog"]').locator('button[aria-label="プロジェクトを選択"]');
-      if (await projectSelect.count() > 0) {
+      const projectSelect = page
+        .locator('[role="dialog"]')
+        .locator('button[aria-label="プロジェクトを選択"]');
+      if ((await projectSelect.count()) > 0) {
         await projectSelect.click();
         await page.waitForTimeout(500);
         const projectOption = page.locator(`[role="option"]:has-text("${PROJECT_NAME}")`);
-        if (await projectOption.count() > 0) {
+        if ((await projectOption.count()) > 0) {
           await projectOption.click();
           await page.waitForTimeout(300);
         }
       }
-    } catch (e) {
-      console.log('プロジェクト選択スキップ:', e.message);
-    }
+    } catch (_e) {}
 
     await screenshot(page, '10-task-dialog-filled');
 
@@ -116,9 +108,6 @@ async function screenshot(page, name) {
     await taskCard.waitFor({ timeout: 5000 });
     record('タスク作成', 'OK', `「${TASK_TITLE}」が一覧に表示`);
 
-    // Step 4: タスクを編集してステータスを完了に変更
-    console.log('Step 4: タスクステータス変更');
-
     // TaskCardは直接アイコンボタン（aria-label="タスクを編集"）を持つ
     const editBtn = page.locator('button[aria-label="タスクを編集"]').first();
     await editBtn.waitFor({ timeout: 5000 });
@@ -129,7 +118,9 @@ async function screenshot(page, name) {
     await screenshot(page, '13-task-edit-dialog');
 
     // ステータスSelectを見つけてクリック
-    const statusTrigger = page.locator('[role="dialog"]').locator('button[aria-label="ステータスを選択"]');
+    const statusTrigger = page
+      .locator('[role="dialog"]')
+      .locator('button[aria-label="ステータスを選択"]');
     await statusTrigger.click();
     await page.waitForTimeout(500);
     await screenshot(page, '14-status-select-open');
@@ -148,13 +139,9 @@ async function screenshot(page, name) {
     await page.waitForTimeout(1000);
     await screenshot(page, '16-task-updated');
     record('ステータス変更（完了）', 'OK', 'タスクを完了ステータスに変更');
-
-    // Step 5: 完了後のダッシュボード確認
-    console.log('Step 5: ダッシュボード確認');
     await page.goto(`${BASE}/dashboard`, { waitUntil: 'networkidle' });
     await screenshot(page, '17-dashboard-final');
     record('ダッシュボード確認', 'OK', '完了タスクがダッシュボードに反映');
-
   } catch (err) {
     console.error('テスト失敗:', err.message);
     await screenshot(page, 'error');
@@ -162,22 +149,16 @@ async function screenshot(page, name) {
   } finally {
     await browser.close();
   }
-
-  // 結果出力
-  console.log('\n=== シナリオ1 結果 ===');
-  for (const r of results) {
-    console.log(`[${r.status}] ${r.step}: ${r.note}`);
+  for (const _r of results) {
   }
 
-  const errors = consoleMessages.filter(m => m.type === 'error');
-  console.log(`\nコンソールエラー数: ${errors.length}`);
+  const errors = consoleMessages.filter((m) => m.type === 'error');
   if (errors.length > 0) {
-    for (const e of errors) {
-      console.log(`  ERROR: ${e.text.substring(0, 200)}`);
+    for (const _e of errors) {
     }
   }
 
   // JSON結果をファイルに出力
-  const resultData = { results, consoleErrors: errors.map(e => e.text.substring(0, 300)) };
-  process.stdout.write('\n---JSON---\n' + JSON.stringify(resultData, null, 2));
+  const resultData = { results, consoleErrors: errors.map((e) => e.text.substring(0, 300)) };
+  process.stdout.write(`\n---JSON---\n${JSON.stringify(resultData, null, 2)}`);
 })();
