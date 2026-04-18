@@ -76,7 +76,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | values propによる自動同期を理解する | 5分 |
+| Step 1 | `defaultValues` + `useEffect(reset)` を理解する | 5分 |
 | Step 2 | 編集ハンドラーを実装する | 5分 |
 | Step 3 | update mutationを実装する | 5分 |
 | Step 4 | update用の送信ハンドラー | 5分 |
@@ -92,10 +92,11 @@ flowchart TD
 
 ---
 
-### Step 1: values propによる自動同期を理解する（5分）
+### Step 1: `defaultValues` + `useEffect(reset)` を理解する（5分）
 
-🎯 **ゴール**: `useForm` の `values` prop が
-どのように編集モードを実現するかを理解します。
+🎯 **ゴール**: `useForm` の `defaultValues` と
+`useEffect(reset(...))` がどのように編集モードを
+実現するかを理解します。
 
 💻 **実装**:
 
@@ -104,12 +105,14 @@ Day 14 の Step 3 で、TaskDialog に以下の設定を
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// useFormのvalues prop（Day 14で実装済み）
-const { register, handleSubmit, control,
-  reset, formState: { errors },
-} = useForm<TaskFormValues>({
-  resolver: zodResolver(taskFormSchema),
-  values: {
+// useFormの初期値と同期処理
+function buildTaskFormValues(
+  initialData: TaskFormData | undefined,
+  projects: Array<{
+    id: string; name: string;
+  }>,
+) {
+  return {
     id: initialData?.id,
     title: initialData?.title ?? '',
     description:
@@ -125,15 +128,34 @@ const { register, handleSubmit, control,
       ?? (projects[0]?.id || ''),
     assigneeId:
       initialData?.assigneeId ?? '',
-  },
+  };
+}
+
+const { register, handleSubmit, control,
+  reset, formState: { errors },
+} = useForm<TaskFormValues>({
+  resolver: zodResolver(taskFormSchema),
+  defaultValues:
+    buildTaskFormValues(
+      initialData,
+      projects
+    ),
 });
+
+useEffect(() => {
+  if (!open) return;
+  reset(buildTaskFormValues(
+    initialData,
+    projects
+  ));
+}, [initialData, open, projects, reset]);
 ```
 
-> 💡 `values` prop は `initialData` が変わる
-> たびにフォームの値を自動で更新します。
-> `useEffect` + `setState` が不要になり、
-> コードがシンプルになります。Day 11 の
-> ProjectDialog と同じパターンです。
+> 💡 現在の `TaskDialog` は `useForm({ defaultValues })`
+> で初期値を作り、`initialData` や `projects` が
+> 変わった時だけ `useEffect(reset(...))` で
+> フォームを同期します。`useForm({ values })` は
+> 使っていません。
 
 **作成モード vs 編集モードの比較**
 
@@ -145,8 +167,8 @@ const { register, handleSubmit, control,
 | API呼び出し | `task.create` | `task.update` |
 
 ✅ **確認ポイント**:
-- `values` に `initialData` を渡す仕組みを理解した
-- 作成モードと編集モードの違いを理解した
+- `defaultValues` で初期値を作る仕組みを理解した
+- `useEffect(reset(...))` で編集データを同期する流れを理解した
 
 ---
 
@@ -249,6 +271,9 @@ const updateMutation =
 
 ```typescript
 // filepath: src/app/task/page.tsx
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
+
 // 送信ハンドラー: data.idで作成/更新を分岐
 const handleSubmit =
   (data: TaskFormData) => {
@@ -261,8 +286,9 @@ const handleSubmit =
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate
-          ? new Date(data.dueDate)
-              .toISOString()
+          ? dateOnlyToUtcStartIso(
+              data.dueDate
+            )
           : null,
         estimatedHours:
           data.estimatedHours ?? null,
@@ -319,8 +345,9 @@ Day 14 で実装した `createMutation` を使います。
       priority: data.priority,
       projectId: data.projectId,
       dueDate: data.dueDate
-        ? new Date(data.dueDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.dueDate
+          )
         : undefined,
       estimatedHours:
         data.estimatedHours ?? undefined,
@@ -565,9 +592,9 @@ npm run dev
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
 | 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | Date変換ミス | `toISOString()` で ISO 形式に変換 |
+| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC の開始時刻にそろえる |
 | 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
-| 前回の値が残る | `values` prop未設定 | `useForm` の `values` に `initialData` を渡す |
+| 前回の値が残る | フォーム同期不足 | `defaultValues` と `useEffect(reset(...))` を確認 |
 
 ## 📝 今日学んだ用語
 
@@ -576,7 +603,7 @@ npm run dev
 | initialData | ダイアログの初期値。編集モードの鍵 |
 | DeleteConfirmDialog | 削除前の確認ダイアログコンポーネント |
 | null vs undefined | nullは「クリア」、undefinedは「変更なし」 |
-| toISOString() | 日付をISO 8601形式の文字列に変換 |
+| dateOnlyToUtcStartIso() | `YYYY-MM-DD` を UTC の 00:00:00.000Z に変換 |
 | invalidate | キャッシュを無効化して最新データを再取得 |
 
 ## 🔜 次回予告

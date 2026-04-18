@@ -590,8 +590,12 @@ const TaskGroupSection = ({
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// インポートに追加（日付を date-only 文字列へそろえる helper）
-import { dateOnlyFromValue, localDateOnly } from '@/lib/date';
+// インポートに追加（日付 helper）
+import {
+  dateOnlyFromValue,
+  dateOnlyToUtcStartIso,
+  localDateOnly,
+} from '@/lib/date';
 ```
 
 `MyTasksPage` 内の `useQuery` の**下に**以下を追加します。
@@ -899,7 +903,9 @@ const handleSubmit = (data: TaskFormData) => {
       status: data.status,
       priority: data.priority,
       dueDate: data.dueDate
-        ? new Date(data.dueDate).toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.dueDate
+          )
         : null,
       estimatedHours:
         data.estimatedHours ?? null,

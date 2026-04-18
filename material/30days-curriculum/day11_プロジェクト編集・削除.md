@@ -115,6 +115,10 @@ import {
   ProjectDialog,
   type ProjectFormData,
 } from '@/component/project/project-dialog';
+import {
+  dateOnlyFromValue,
+  dateOnlyToUtcStartIso,
+} from '@/lib/date';
 // 削除確認ダイアログ（shadcn/uiベース）
 import { DeleteConfirmDialog }
   from '@/component/ui/delete-confirm-dialog';
@@ -141,7 +145,7 @@ const [editingProject, setEditingProject] =
 
 次に、Day 10 で定義済みの `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
 
-日付は `toISOString().split('T')[0]` で `"2024-12-31"` 形式に変換します。`<input type="date">` はこの形式を期待するためです。
+日付は `dateOnlyFromValue()` で `"2024-12-31"` 形式に変換します。保存済みの ISO 文字列から `<input type="date">` 用の date-only 値を安全に取り出せます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -152,12 +156,10 @@ const handleEdit = (projectId: string) => {
   );
   if (!project) return;
   const startDate = project.startDate
-    ? new Date(project.startDate)
-        .toISOString().split('T')[0]
+    ? dateOnlyFromValue(project.startDate)
     : undefined;
   const endDate = project.endDate
-    ? new Date(project.endDate)
-        .toISOString().split('T')[0]
+    ? dateOnlyFromValue(project.endDate)
     : undefined;
   setEditingProject({
     id: project.id,
@@ -173,7 +175,7 @@ const handleEdit = (projectId: string) => {
 
 ✅ **確認ポイント**:
 - `handleEdit` が `handleCreate` の直下に配置されている
-- `description` に `||` を使って null を空文字に変換している
+- `description` に `|| ''` を使って null を空文字に変換している
 - 日付変換のロジックが正しく書けた
 
 #### 条件付きスプレッド構文
@@ -295,22 +297,24 @@ const handleSubmit = (
       id: data.id,
       name: data.name,
       description:
-        data.description || null,
+        data.description ?? null,
       color: data.color,
       startDate: data.startDate
-        ? new Date(data.startDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.startDate
+          )
         : null,
       endDate: data.endDate
-        ? new Date(data.endDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.endDate
+          )
         : null,
     });
 ```
 
 ✅ **確認ポイント**:
 - `data.id` がある場合に `updateMutation.mutate` を呼んでいる
-- `description` に `||` を使って空文字列や `undefined` を `null` に変換している
+- `description` に `?? null` を使って `undefined` のみ `null` に変換している
 
 同じ `handleSubmit` 関数の `else` 分岐です。`data.id` がない場合（新規作成）は Day 10 の `createMutation` を呼びます。
 
@@ -324,12 +328,14 @@ const handleSubmit = (
       description: data.description,
       color: data.color,
       startDate: data.startDate
-        ? new Date(data.startDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.startDate
+          )
         : undefined,
       endDate: data.endDate
-        ? new Date(data.endDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.endDate
+          )
         : undefined,
     });
   }
@@ -351,7 +357,7 @@ const handleSubmit = (
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
-`description ?? null` と `description || null` の違いに注意してください。
+プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。完成版 source では `description ?? null` を使い、空文字はそのまま残します。
 
 | 式 | `description` が `''`（空文字）の場合 | 結果 |
 |-----|--------------------------------------|------|
