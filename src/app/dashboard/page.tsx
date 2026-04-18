@@ -11,9 +11,9 @@ import { api } from '@/trpc/react';
 export default function DashboardPage() {
   const router = useRouter();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
-  const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery();
+  const { data: overview, isLoading: overviewLoading } = api.report.getOverview.useQuery();
 
-  if (projectsLoading || tasksLoading) {
+  if (projectsLoading || overviewLoading) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
@@ -21,14 +21,14 @@ export default function DashboardPage() {
     );
   }
 
-  const totalProjects = projects?.length ?? 0;
-  const totalTasks = tasks?.length ?? 0;
-  const completedTasks = tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
-  const inProgressTasks = tasks?.filter((t) => t.status === TASK_STATUS.IN_PROGRESS).length ?? 0;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const totalProjects = overview?.totalProjects ?? projects?.length ?? 0;
+  const totalTasks = overview?.totalTasks ?? 0;
+  const completedTasks = overview?.completedTasks ?? 0;
+  const inProgressTasks = overview?.inProgressTasks ?? 0;
+  const completionRate = overview?.completionRate ?? 0;
   const remaining = totalTasks - completedTasks - inProgressTasks;
 
-  const recentTasks = tasks?.slice(0, 5) ?? [];
+  const recentTasks = overview?.recentTasks ?? [];
 
   return (
     <AppLayout>
