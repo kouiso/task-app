@@ -146,8 +146,8 @@ const searchInputSchema = z.object({
 > 💡 全てのパラメータが任意です。`status` と `priority` は `'all'` を渡すと絞り込みなしとしてサーバー側で処理されます。
 
 > 💡 **`dateFrom` / `dateTo` は date-only 入力です。**
-> 完成版 source では `new Date(...).toISOString()` を
-> そのまま使わず、`dateOnlyToUtcStartIso` /
+> 完成版 source では生の Date 変換をそのまま使わず、
+> `dateOnlyToUtcStartIso` /
 > `dateOnlyToUtcEndIso` で日付境界を UTC に変換してから
 > API に渡します。これを省くとタイムゾーンによって
 > 「4/17 のつもりが 4/16 扱いになる」ずれが起きます。
@@ -223,6 +223,10 @@ import {
   isTaskStatus,
   TASK_STATUS_LABELS,
 } from '@/lib/constant/status';
+import {
+  dateOnlyToUtcEndIso,
+  dateOnlyToUtcStartIso,
+} from '@/lib/date';
 import { api } from '@/trpc/react';
 ```
 
@@ -834,12 +838,14 @@ const {
 // filepath: src/app/search/page.tsx
 // useQuery パラメータ続き
     dateFrom: formValues.dateFrom
-      ? new Date(formValues.dateFrom)
-        .toISOString()
+      ? dateOnlyToUtcStartIso(
+          formValues.dateFrom
+        )
       : undefined,
     dateTo: formValues.dateTo
-      ? new Date(formValues.dateTo)
-        .toISOString()
+      ? dateOnlyToUtcEndIso(
+          formValues.dateTo
+        )
       : undefined,
   },
   {
