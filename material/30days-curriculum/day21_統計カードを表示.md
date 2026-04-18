@@ -114,34 +114,20 @@ flowchart TD
 > これは「100件を超えても統計が欠けない」
 > 状態を守るためです。
 
-#### reduce の動き
+#### `getOverview` が返すもの
 
-`reduce` は配列の全要素を1つの値にまとめる
-関数です。買い物リストの合計金額を電卓で
-足していくイメージです。
+`api.report.getOverview` は、完成版 source で
+必要な集計をサーバー側でまとめて返します。
+クライアントは「計算する側」ではなく
+「受け取って表示する側」に集中します。
 
-| ステップ | acc（累積値） | 処理 |
-|---------|-------------|------|
-| 開始 | 0（初期値） | — |
-| 1個目（100円） | 0 + 100 = 100 | 足す |
-| 2個目（200円） | 100 + 200 = 300 | 足す |
-| 3個目（150円） | 300 + 150 = 450 | 足す |
-| 結果 | **450** | 合計金額 |
-
-#### useMemo とは
-
-`useMemo` は計算結果をメモしておくフックです。
-データが変わっていないのに毎回計算し直すのは
-無駄なので、結果をキャッシュして再利用します。
-
-```typescript
-// filepath: src/app/report/page.tsx
-// reduce で合計を求める例
-const total = tasks.reduce(
-  (acc, task) => acc + task.timeSpentMinutes,
-  0
-);
-```
+| プロパティ | 内容 |
+|-----------|------|
+| `totalTasks` | 対象プロジェクト全体のタスク数 |
+| `completionRate` | 完了率（整数パーセント） |
+| `totalTimeSpent` | 合計作業時間（分） |
+| `averageTimePerTask` | 1タスクあたり平均作業時間（分） |
+| `projectStats` | プロジェクト別の集計済み配列 |
 
 ✅ **確認ポイント**:
 - 完成版 source がサーバー集計を選んだ理由を理解した
@@ -162,9 +148,6 @@ const total = tasks.reduce(
 // filepath: src/app/report/page.tsx
 'use client';
 
-// React のフック
-import { useMemo } from 'react';
-// レイアウト用コンポーネント
 import { AppLayout }
   from '@/component/layout/app-layout';
 ```
@@ -203,14 +186,12 @@ import {
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// タスクの状態定数とAPIクライアント
-import { TASK_STATUS }
-  from '@/lib/constant/status';
+// APIクライアント
 import { api } from '@/trpc/react';
 ```
 
 ✅ **確認ポイント**:
-- `TASK_STATUS` と `api` をインポートした
+- `api` をインポートした
 - 保存してエラーが出ないこと
 
 ---
@@ -274,8 +255,8 @@ export default function ReportPage() {
 
 ### Step 4 🧭: データを取得する（3分）
 
-🎯 **ゴール**: tRPC でタスクとプロジェクトの
-データを同時に取得します。
+🎯 **ゴール**: tRPC の `getOverview` で
+集計済みデータをまとめて取得します。
 
 > ⚠️ **配置場所**: Step 3 のコメント
 > `// Step 4〜6 でここにフックを追加`
@@ -286,19 +267,14 @@ export default function ReportPage() {
 ```typescript
 // filepath: src/app/report/page.tsx
 // ReportPage 内、return 文の前に追加
-// タスクとプロジェクトを同時に取得
-const { data: tasks,
-  isLoading: tasksLoading }
-  = api.task.getAll.useQuery();
-const { data: projects,
-  isLoading: projectsLoading }
-  = api.project.getAll.useQuery();
+const { data: overview, isLoading } =
+  api.report.getOverview.useQuery();
 ```
 
-> 💡 `isLoading` は API がまだ応答を
-> 返していない状態を示すフラグです。
-> 2つのAPIを同時に呼ぶことで待ち時間を
-> 短縮しています。
+> 💡 `getOverview` の中では
+> `count` `aggregate` `groupBy` が使われ、
+> 100件を超えるデータでもサーバー側で
+> 正しい統計が作られます。
 
 ✅ **確認ポイント**:
 - 2つのAPIを同時に呼んでいる
@@ -306,10 +282,10 @@ const { data: projects,
 
 ---
 
-### Step 5 🧭: 統計値を計算する（5分）
+### Step 5 🧭: 受け取った概要データを読む（5分）
 
-🎯 **ゴール**: 取得したデータから
-4つの統計値を JavaScript で計算します。
+🎯 **ゴール**: `overview` のどのプロパティを
+どのカードに使うか整理します。
 
 > ⚠️ **配置場所**: Step 4 の `useQuery` の
 > 直後に続けて追加します。
@@ -318,78 +294,33 @@ const { data: projects,
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 合計作業時間（分単位の合算）
-const totalTimeSpent = useMemo(
-  () =>
-    tasks?.reduce(
-      (acc, task) =>
-        acc + (task.timeSpentMinutes ?? 0),
-      0
-    ) ?? 0,
-  [tasks],
-);
+// JSX で使う主な値
+const totalTasks = overview?.totalTasks ?? 0;
+const completionRate = overview?.completionRate ?? 0;
+const totalTimeHours =
+  ((overview?.totalTimeSpent ?? 0) / 60).toFixed(1);
+const averageTimeHours =
+  ((overview?.averageTimePerTask ?? 0) / 60).toFixed(1);
 ```
 
-> 💡 `?? 0` は **null合体演算子** です。
-> 左辺が `null` か `undefined` のときだけ
-> 右辺の `0` を返します。`|| 0` と違い
-> `0` や空文字はそのまま残ります。
+> 💡 完成版 source では、
+> `overview.totalTimeSpent` と
+> `overview.averageTimePerTask` は
+> 分単位で返るので、表示時だけ `/ 60` して
+> `toFixed(1)` で時間表記にします。
 
 ✅ **確認ポイント**:
-- `reduce` で全タスクの時間を合算している
-- `?? 0` で null を安全に処理している
-
-```typescript
-// filepath: src/app/report/page.tsx
-// 平均時間と完了率
-const averageTimePerTask = useMemo(
-  () =>
-    tasks && tasks.length > 0
-      ? totalTimeSpent / tasks.length
-      : 0,
-  [tasks, totalTimeSpent],
-);
-```
-
-✅ **確認ポイント**:
-- 0除算を防いでいる
-- 依存配列に `totalTimeSpent` を含めている
-
-```typescript
-// filepath: src/app/report/page.tsx
-// 完了率（パーセント文字列）
-const completionRate = useMemo(
-  () => {
-    if (!tasks || tasks.length === 0) {
-      return '0';
-    }
-    const doneCount = tasks.filter(
-      (t) => t.status === TASK_STATUS.DONE
-    ).length;
-    return (
-      (doneCount / tasks.length) * 100
-    ).toFixed(1);
-  },
-  [tasks],
-);
-```
-
-> 💡 `toFixed(1)` は数値を小数第1位まで
-> の文字列に変換します。`75.333...` なら
-> `"75.3"` になります。
-
-✅ **確認ポイント**:
-- `TASK_STATUS.DONE` で完了タスクを絞り込む
-- `toFixed(1)` でパーセントを小数1桁に丸める
+- 4枚のカードが `overview` を元に表示される
+- 集計計算をクライアント側で書いていない
 
 #### 各統計値の計算ロジック
 
 | 統計値 | 計算方法 | 使う関数 |
 |--------|---------|---------|
-| 総タスク数 | `tasks.length` | 配列の長さ |
-| 完了率 | DONE数 / 全数 × 100 | `filter` + `toFixed` |
-| 合計時間 | 全タスクの分を合算 | `reduce` |
-| 平均時間 | 合計 / タスク数 | 割り算 |
+| 総タスク数 | `overview.totalTasks` | server 集計結果 |
+| 完了率 | `overview.completionRate` | server 集計結果 |
+| 合計時間 | `overview.totalTimeSpent / 60` | 表示時だけ時間換算 |
+| 平均時間 | `overview.averageTimePerTask / 60` | 表示時だけ時間換算 |
 
 ---
 
@@ -398,18 +329,16 @@ const completionRate = useMemo(
 🎯 **ゴール**: データ取得中にスピナーを
 表示する early return を追加します。
 
-> ⚠️ **配置場所**: Step 5 の `useMemo` の
-> **下**、`return` 文の**前**に追加します。
-> フックは必ず early return より前に書くのが
-> React のルールです。
+> ⚠️ **配置場所**: Step 4〜5 の
+> データ取得・値の準備の**下**、
+> `return` 文の**前**に追加します。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// useMemo の下、return 文の前に追加
-// どちらかのAPIがロード中ならスピナー表示
-if (tasksLoading || projectsLoading) {
+// 値の準備の下、return 文の前に追加
+if (isLoading) {
   return <PageLoadingSpinner />;
 }
 ```
@@ -420,7 +349,7 @@ if (tasksLoading || projectsLoading) {
 
 ✅ **確認ポイント**:
 - ローディング中にスピナーが表示される
-- `useMemo` より下に書いている
+- `getOverview` の結果待ちだけを判定している
 
 📸 ローディング確認: データ読み込み中にスピナーが画面中央に表示されます。
 
@@ -451,7 +380,7 @@ if (tasksLoading || projectsLoading) {
         text-muted-foreground mb-1">
         タスク数</p>
       <p className="text-3xl font-bold">
-        {tasks?.length ?? 0}</p>
+        {overview?.totalTasks ?? 0}</p>
     </CardContent>
   </Card>
 ```
@@ -469,7 +398,7 @@ if (tasksLoading || projectsLoading) {
         text-muted-foreground mb-1">
         完了率</p>
       <p className="text-3xl font-bold">
-        {completionRate}%</p>
+        {overview?.completionRate ?? 0}%</p>
     </CardContent>
   </Card>
 ```
@@ -487,7 +416,7 @@ if (tasksLoading || projectsLoading) {
         text-muted-foreground mb-1">
         合計作業時間</p>
       <p className="text-3xl font-bold">
-        {(totalTimeSpent / 60)
+        {((overview?.totalTimeSpent ?? 0) / 60)
           .toFixed(1)}h</p>
     </CardContent>
   </Card>
@@ -506,7 +435,7 @@ if (tasksLoading || projectsLoading) {
         text-muted-foreground mb-1">
         平均作業時間/タスク</p>
       <p className="text-3xl font-bold">
-        {(averageTimePerTask / 60)
+        {((overview?.averageTimePerTask ?? 0) / 60)
           .toFixed(1)}h</p>
     </CardContent>
   </Card>
@@ -528,65 +457,38 @@ if (tasksLoading || projectsLoading) {
 🎯 **ゴール**: プロジェクトごとの統計を
 テーブルで表示します。
 
-まず、Step 5 の `useMemo` の並びに
-プロジェクト別集計を追加します。
+完成版 source では、プロジェクト別集計も
+`overview.projectStats` に入って返ってきます。
 
 💻 **実装**:
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// Step 5 の useMemo の後に追加
-// プロジェクト別統計
-const projectStats = useMemo(
-  () =>
-    projects?.map((project) => {
-      const projectTasks = tasks?.filter(
-        (t) => t.projectId === project.id
-      ) ?? [];
-      const completedTasks =
-        projectTasks.filter(
-          (t) =>
-            t.status === TASK_STATUS.DONE
-        );
-      const totalTime =
-        projectTasks.reduce(
-          (acc, t) =>
-            acc +
-            (t.timeSpentMinutes ?? 0),
-          0
-        );
-```
-
-各プロジェクトの完了タスク数と作業時間を算出しています。続けて進捗率の計算と戻り値を追加します：
-
-```typescript
-// filepath: src/app/report/page.tsx
-// projectStats useMemo の続き
-      const progress =
-        projectTasks.length > 0
-          ? (completedTasks.length
-              / projectTasks.length)
-            * 100
-          : 0;
-      return {
-        id: project.id,
-        name: project.name,
-        totalTasks: projectTasks.length,
-        completedTasks:
-          completedTasks.length,
-        progress: progress.toFixed(1),
-        totalTimeHours:
-          (totalTime / 60).toFixed(1),
-      };
-    }),
-  [projects, tasks],
-);
+// projectStats は server 側で集計済み
+{overview?.projectStats.map((stat) => (
+  <TableRow key={stat.id}>
+    <TableCell className="font-medium">
+      {stat.name}
+    </TableCell>
+    <TableCell className="text-right">
+      {stat.totalTasks}
+    </TableCell>
+    <TableCell className="text-right">
+      {stat.completedTasks}
+    </TableCell>
+    <TableCell className="text-right">
+      {stat.progress.toFixed(1)}%
+    </TableCell>
+    <TableCell className="text-right">
+      {stat.totalTimeHours.toFixed(1)}h
+    </TableCell>
+  </TableRow>
+))}
 ```
 
 ✅ **確認ポイント**:
-- `projects` を `map` して統計を計算している
-- 進捗と作業時間を計算している
-- `toFixed(1)` で小数1桁に丸めている
+- `overview.projectStats` をそのまま描画している
+- クライアント側で `filter` / `reduce` を再実行していない
 
 次に、Step 7 のカードグリッドの `</div>` の
 直後にテーブルの JSX を追加します。
@@ -634,7 +536,7 @@ const projectStats = useMemo(
 // filepath: src/app/report/page.tsx
 // テーブル: 行データと閉じタグ
       <TableBody>
-        {projectStats?.map((stat) => (
+        {overview?.projectStats.map((stat) => (
           <TableRow key={stat.id}>
             <TableCell
               className="font-medium">
@@ -657,10 +559,10 @@ const projectStats = useMemo(
 // テーブル: 残り列と全閉じタグ
             <TableCell
               className="text-right">
-              {stat.progress}%</TableCell>
+              {stat.progress.toFixed(1)}%</TableCell>
             <TableCell
               className="text-right">
-              {stat.totalTimeHours}h
+              {stat.totalTimeHours.toFixed(1)}h
             </TableCell>
           </TableRow>
         ))}
@@ -721,8 +623,8 @@ npm run dev
 
 ## 📋 今日のまとめ
 
-- [ ] ローカル集計の仕組みを理解した
-- [ ] `reduce` でデータを集計できた
+- [ ] `api.report.getOverview` の役割を理解した
+- [ ] server 集計済みデータをカードに表示できた
 - [ ] 4枚の統計カードを表示できた
 - [ ] プロジェクト統計テーブルを表示できた
 - [ ] レスポンシブグリッドを適用できた
@@ -731,8 +633,7 @@ npm run dev
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| NaN が表示される | tasks が undefined | `?? 0` でフォールバック |
-| 完了率が整数になる | toFixed未使用 | `.toFixed(1)` で小数1桁 |
+| NaN が表示される | `overview` が未取得のまま参照している | `?? 0` でフォールバック |
 | 時間が分で表示 | 60で割り忘れ | `/ 60` で時間に変換 |
 | カードが縦並び | グリッドクラス不足 | sm/lg ブレークポイント |
 
@@ -740,10 +641,10 @@ npm run dev
 
 | 用語 | 意味 |
 |------|------|
-| reduce | 配列を1つの値にまとめる関数 |
-| useMemo | 計算結果をキャッシュするフック |
+| getOverview | レポート用の集計済みデータを返す API |
+| groupBy | サーバー側で件数を分類して集計する処理 |
 | toFixed(1) | 小数点以下1桁に丸める |
-| ローカル集計 | APIでなくフロントで計算する方法 |
+| aggregate | サーバー側で合計値をまとめて計算する処理 |
 | early return | 条件付きで先に表示を返す手法 |
 
 ## 🔜 次回予告
