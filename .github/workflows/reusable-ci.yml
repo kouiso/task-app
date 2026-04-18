@@ -27,6 +27,20 @@ on:
 jobs:
   setup:
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: taskapp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,6 +72,8 @@ jobs:
           echo "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.firebase-app-id }}" >> .env
           echo "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${{ secrets.firebase-measurement-id }}" >> .env
           echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" >> .env
+          echo "TEST_DATABASE_URL=postgresql://user:password@localhost:5432/taskapp_test?schema=public" >> .env
+          echo "_DOCKER_COMPOSE_HOST_PORT_TEST_DB=5432" >> .env
           echo "JWT_SECRET=dummy-jwt-secret-for-ci-32-chars-min" >> .env
           echo "SKIP_ENV_VALIDATION=true" >> .env
 
@@ -65,8 +81,10 @@ jobs:
         run: npm run build:ci
 
       - name: Npm Lint
-        run: |
-          npm run lint || exit_code=$?
-          if [ $exit_code -ne 0 ] && [ $exit_code -ne 1 ]; then
-            exit $exit_code
-          fi
+        run: npm run lint
+
+      - name: Npm Type Check
+        run: npm run type-check
+
+      - name: Npm Test
+        run: npm test
