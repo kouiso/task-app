@@ -663,6 +663,8 @@ const { data: projectDetail } =
 ダイアログを閉じるハンドラと、
 メンバー削除のハンドラを定義します。
 
+> 💡 **現行の完成版 source では、メンバー削除は即実行ではなく確認ダイアログを挟みます。** ここではまず「どのユーザーを削除したいか」を state に保存する `handleRemoveMember` を作り、実際の `removeMemberMutation.mutate(...)` は `DeleteConfirmDialog` の `onConfirm` で呼ぶ構成にしてください。誤操作防止のため、この段階から確認ダイアログ前提で進めるのが安全です。
+
 ```typescript
 // filepath: src/app/project/page.tsx
 // ダイアログを閉じるハンドラ
@@ -674,16 +676,34 @@ const handleDetailClose = () => {
 // メンバー削除ハンドラ
 const handleRemoveMember =
   (userId: string) => {
-    removeMember.mutate({
-      projectId: selectedProject ?? '',
-      userId,
-    });
+    setRemoveMemberTargetId(userId);
+    setRemoveMemberDialogOpen(true);
   };
 ```
 
 ✅ **確認ポイント**:
 - `handleDetailClose` で state を2つともリセットしている
-- `handleRemoveMember` で `selectedProject` を使っている
+- `handleRemoveMember` では即削除せず、削除対象IDを state に保存している
+
+確認ダイアログの `onConfirm` 側では、次のように **確定時だけ** ミューテーションを実行します。
+
+```typescript
+// filepath: src/app/project/page.tsx
+<DeleteConfirmDialog
+  open={removeMemberDialogOpen}
+  onOpenChange={setRemoveMemberDialogOpen}
+  onConfirm={() => {
+    if (selectedProject && removeMemberTargetId) {
+      removeMemberMutation.mutate({
+        projectId: selectedProject,
+        userId: removeMemberTargetId,
+      });
+    }
+  }}
+  isPending={removeMemberMutation.isPending}
+  title="このメンバーを削除しますか？"
+/>
+```
 
 次に、archive・unarchive のミューテーションを定義します。**ダイアログを閉じる処理は `onSuccess` の中で行います**。ミューテーションの関数内でダイアログを閉じると、APIの成功を待たずに閉じてしまうためです。
 

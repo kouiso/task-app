@@ -145,6 +145,13 @@ const searchInputSchema = z.object({
 
 > 💡 全てのパラメータが任意です。`status` と `priority` は `'all'` を渡すと絞り込みなしとしてサーバー側で処理されます。
 
+> 💡 **`dateFrom` / `dateTo` は date-only 入力です。**
+> 完成版 source では `new Date(...).toISOString()` を
+> そのまま使わず、`dateOnlyToUtcStartIso` /
+> `dateOnlyToUtcEndIso` で日付境界を UTC に変換してから
+> API に渡します。これを省くとタイムゾーンによって
+> 「4/17 のつもりが 4/16 扱いになる」ずれが起きます。
+
 ---
 
 ### Step 2: ページの土台を作る（5分）
@@ -820,6 +827,8 @@ const {
 
 ✅ **確認ポイント**:
 - `formValues.keyword || undefined` で空文字を undefined に変換している
+
+> 💡 ここで `|| undefined` を使うのは、「空文字なら検索条件なしとして扱いたい」からです。今回は **空文字も未入力扱いにしたい** ので `??` ではなく `||` を使っています。
 
 ```typescript
 // filepath: src/app/search/page.tsx

@@ -228,6 +228,7 @@ const { data: projectDetail } =
 ```typescript
 // filepath: src/app/project/page.tsx
 // 仮実装（Step 6で削除して本実装に差し替える）
+// ⚠️ 動作確認用の一時コードです。確認後に残さず削除してください。
 const handleRemoveMember = (
   userId: string
 ) => {
@@ -238,6 +239,7 @@ const handleRemoveMember = (
 ✅ **確認ポイント**:
 - TypeScript のエラーが出ていない
 - これは仮実装であり、Step 6 で削除することを覚えておく
+- `console.log` は確認後に必ず削除し、Step 6 の本実装へ置き換える
 
 `ProjectDetailView` は Day 11 の Step 9 で URL ルーティングの分岐内に既に配置されています。`projectIdParam && selectedProject` が `true` のとき表示される構造を確認してください。
 
