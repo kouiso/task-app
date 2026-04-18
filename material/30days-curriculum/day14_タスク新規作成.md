@@ -772,6 +772,8 @@ return (
 import {
   TaskDialog, type TaskFormData,
 } from '@/component/task/task-dialog';
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
 import { Plus } from 'lucide-react';
 ```
 
@@ -845,8 +847,9 @@ const handleSubmit =
       status: data.status,
       priority: data.priority,
       dueDate: data.dueDate
-        ? new Date(data.dueDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.dueDate
+          )
         : undefined,
       estimatedHours:
         data.estimatedHours,
