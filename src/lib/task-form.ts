@@ -1,6 +1,7 @@
 import type { TaskFormData } from '@/component/task/task-dialog';
 import type { TaskPriority } from '@/lib/constant/priority';
 import type { TaskStatus } from '@/lib/constant/status';
+import { dateOnlyFromValue } from './date';
 
 interface TaskForFormConversion {
   id: string;
@@ -15,7 +16,7 @@ interface TaskForFormConversion {
 }
 
 export const taskToFormData = (task: TaskForFormConversion): TaskFormData => {
-  const dueDate = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined;
+  const dueDate = task.dueDate ? dateOnlyFromValue(task.dueDate) : undefined;
 
   return {
     id: task.id,

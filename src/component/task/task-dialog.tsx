@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
@@ -60,6 +61,23 @@ export interface TaskFormData {
   assigneeId?: string;
 }
 
+function buildTaskFormValues(
+  initialData: TaskFormData | undefined,
+  projects: Array<{ id: string; name: string }>,
+): TaskFormValues {
+  return {
+    id: initialData?.id,
+    title: initialData?.title ?? '',
+    description: initialData?.description ?? '',
+    status: initialData?.status ?? TASK_STATUS.TODO,
+    priority: initialData?.priority ?? TASK_PRIORITY.MEDIUM,
+    dueDate: initialData?.dueDate ?? '',
+    estimatedHours: initialData?.estimatedHours,
+    projectId: initialData?.projectId ?? (projects[0]?.id || ''),
+    assigneeId: initialData?.assigneeId ?? '',
+  };
+}
+
 export function TaskDialog({
   open,
   onClose,
@@ -76,21 +94,19 @@ export function TaskDialog({
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
-    values: {
-      id: initialData?.id,
-      title: initialData?.title ?? '',
-      description: initialData?.description ?? '',
-      status: initialData?.status ?? TASK_STATUS.TODO,
-      priority: initialData?.priority ?? TASK_PRIORITY.MEDIUM,
-      dueDate: initialData?.dueDate ?? '',
-      estimatedHours: initialData?.estimatedHours,
-      projectId: initialData?.projectId ?? (projects[0]?.id || ''),
-      assigneeId: initialData?.assigneeId ?? '',
-    },
+    defaultValues: buildTaskFormValues(initialData, projects),
   });
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    reset(buildTaskFormValues(initialData, projects));
+  }, [initialData, open, projects, reset]);
+
   const handleClose = () => {
-    reset();
+    reset(buildTaskFormValues(undefined, projects));
     onClose();
   };
 

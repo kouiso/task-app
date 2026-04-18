@@ -1,7 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
 import { CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -11,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { formatDateOnly } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { TaskTimer } from './task-timer';
 import { TimeLogDialog } from './time-log-dialog';
@@ -155,7 +154,7 @@ export function TaskCard({
             {dueDate && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <CalendarDays className="h-3 w-3" />
-                <span>{format(new Date(dueDate), 'yyyy/MM/dd', { locale: ja })}</span>
+                <span>{formatDateOnly(dueDate)}</span>
               </div>
             )}
           </div>
