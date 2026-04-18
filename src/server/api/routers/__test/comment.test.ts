@@ -9,6 +9,29 @@ import {
   createTestUser,
 } from '../../../../test/helpers';
 
+async function createCommentProjectCallerWithRole(role: 'OWNER' | 'EDITOR' | 'VIEWER') {
+  const owner = await createTestUser({ email: `comment-owner-${Date.now()}@example.com` });
+  const actor = await createTestUser({
+    email: `comment-${role.toLowerCase()}-${Date.now()}@example.com`,
+  });
+  const project = await createTestProject(owner.id);
+
+  if (role !== 'OWNER') {
+    await prisma.projectMember.create({
+      data: {
+        userId: actor.id,
+        projectId: project.id,
+        role: role === 'EDITOR' ? 'MEMBER' : 'VIEWER',
+      },
+    });
+  }
+
+  const callerUser = role === 'OWNER' ? owner : actor;
+  const caller = await createAuthenticatedCaller(callerUser.id, callerUser.email, callerUser.role);
+
+  return { caller, owner, actor: callerUser, project };
+}
+
 describe('commentRouter', () => {
   describe('getByTaskId', () => {
     it('should return all comments for a task', async () => {
@@ -186,6 +209,36 @@ describe('commentRouter', () => {
         }),
       ).rejects.toThrow('ログインが必要です');
     });
+
+    it('should reject VIEWER from creating comment', async () => {
+      const { caller, owner, project } = await createCommentProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, owner.id);
+
+      await expect(
+        caller.comment.create({
+          content: 'Viewer comment',
+          taskId: task.id,
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('should allow OWNER and EDITOR to create comment', async () => {
+      const ownerContext = await createCommentProjectCallerWithRole('OWNER');
+      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
+      const ownerComment = await ownerContext.caller.comment.create({
+        content: 'Owner comment',
+        taskId: ownerTask.id,
+      });
+      expect(ownerComment.content).toBe('Owner comment');
+
+      const editorContext = await createCommentProjectCallerWithRole('EDITOR');
+      const editorTask = await createTestTask(editorContext.project.id, editorContext.owner.id);
+      const editorComment = await editorContext.caller.comment.create({
+        content: 'Editor comment',
+        taskId: editorTask.id,
+      });
+      expect(editorComment.content).toBe('Editor comment');
+    });
   });
 
   describe('update', () => {
@@ -247,6 +300,43 @@ describe('commentRouter', () => {
         }),
       ).rejects.toThrow('ログインが必要です');
     });
+
+    it('should reject VIEWER from updating own comment', async () => {
+      const { caller, actor, project } = await createCommentProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, actor.id);
+      const comment = await createTestComment(task.id, actor.id, { content: 'Viewer Original' });
+
+      await expect(
+        caller.comment.update({
+          id: comment.id,
+          content: 'Viewer Updated',
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('should allow OWNER and EDITOR to update own comment', async () => {
+      const ownerContext = await createCommentProjectCallerWithRole('OWNER');
+      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
+      const ownerComment = await createTestComment(ownerTask.id, ownerContext.actor.id, {
+        content: 'Owner Original',
+      });
+      const ownerUpdated = await ownerContext.caller.comment.update({
+        id: ownerComment.id,
+        content: 'Owner Updated',
+      });
+      expect(ownerUpdated.content).toBe('Owner Updated');
+
+      const editorContext = await createCommentProjectCallerWithRole('EDITOR');
+      const editorTask = await createTestTask(editorContext.project.id, editorContext.owner.id);
+      const editorComment = await createTestComment(editorTask.id, editorContext.actor.id, {
+        content: 'Editor Original',
+      });
+      const editorUpdated = await editorContext.caller.comment.update({
+        id: editorComment.id,
+        content: 'Editor Updated',
+      });
+      expect(editorUpdated.content).toBe('Editor Updated');
+    });
   });
 
   describe('delete', () => {
@@ -270,6 +360,30 @@ describe('commentRouter', () => {
       const caller = await createTestCaller();
 
       await expect(caller.comment.delete({ id: 'clsomeid' })).rejects.toThrow('ログインが必要です');
+    });
+
+    it('should reject VIEWER from deleting own comment', async () => {
+      const { caller, actor, project } = await createCommentProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, actor.id);
+      const comment = await createTestComment(task.id, actor.id);
+
+      await expect(caller.comment.delete({ id: comment.id })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    });
+
+    it('should allow OWNER and EDITOR to delete own comment', async () => {
+      const ownerContext = await createCommentProjectCallerWithRole('OWNER');
+      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
+      const ownerComment = await createTestComment(ownerTask.id, ownerContext.actor.id);
+      const ownerDeleted = await ownerContext.caller.comment.delete({ id: ownerComment.id });
+      expect(ownerDeleted.success).toBe(true);
+
+      const editorContext = await createCommentProjectCallerWithRole('EDITOR');
+      const editorTask = await createTestTask(editorContext.project.id, editorContext.owner.id);
+      const editorComment = await createTestComment(editorTask.id, editorContext.actor.id);
+      const editorDeleted = await editorContext.caller.comment.delete({ id: editorComment.id });
+      expect(editorDeleted.success).toBe(true);
     });
   });
 });

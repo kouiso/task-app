@@ -242,7 +242,7 @@ export const taskRouter = createTRPCRouter({
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    const existingTask = await findTaskWithPermission(id, ctx.session.userId);
+    const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
 
     const updateData: Prisma.TaskUpdateInput = {};
     if (data.title !== undefined) {
@@ -306,7 +306,7 @@ export const taskRouter = createTRPCRouter({
     }),
 
   updateTimer: protectedProcedure.input(taskTimerSchema).mutation(async ({ ctx, input }) => {
-    const task = await findTaskWithPermission(input.id, ctx.session.userId);
+    const task = await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
 
     if (input.action === 'start') {
       if (task.isTimerActive) {
@@ -345,7 +345,7 @@ export const taskRouter = createTRPCRouter({
   }),
 
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
-    await findTaskWithPermission(input.id, ctx.session.userId);
+    await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
 
     return await prisma.task.update({
       where: { id: input.id },

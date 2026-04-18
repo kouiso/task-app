@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import type { PermissionKey } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
@@ -19,7 +20,11 @@ const commentUpdateSchema = z.object({
  * getByTaskId/createの両方で同一のタスク存在確認+メンバー権限検証が必要なため集約。
  * findTaskWithPermission（_helpers）はtask routerに特化しているためcomment独自で定義。
  */
-const findTaskAndAssertMembership = async (taskId: string, userId: string) => {
+const findTaskAndAssertMembership = async (
+  taskId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: {
@@ -38,7 +43,7 @@ const findTaskAndAssertMembership = async (taskId: string, userId: string) => {
     });
   }
 
-  assertMemberPermission(task.project.members);
+  assertMemberPermission(task.project.members, permission);
 
   return task;
 };
@@ -46,7 +51,11 @@ const findTaskAndAssertMembership = async (taskId: string, userId: string) => {
 /**
  * update/deleteの両方で同一の「コメント取得→メンバー確認→作者確認」パターンが必要なため集約。
  */
-const findCommentAndAssertOwnership = async (commentId: string, userId: string) => {
+const findCommentAndAssertOwnership = async (
+  commentId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
   const comment = await prisma.comment.findUnique({
     where: { id: commentId },
     select: {
@@ -70,7 +79,7 @@ const findCommentAndAssertOwnership = async (commentId: string, userId: string) 
     });
   }
 
-  assertMemberPermission(comment.task.project.members);
+  assertMemberPermission(comment.task.project.members, permission);
 
   if (comment.userId !== userId) {
     throw new TRPCError({
@@ -100,7 +109,7 @@ export const commentRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
-    await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
+    await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
 
     return await prisma.comment.create({
       data: {
@@ -118,7 +127,7 @@ export const commentRouter = createTRPCRouter({
 
   update: protectedProcedure.input(commentUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
-    await findCommentAndAssertOwnership(id, ctx.session.userId);
+    await findCommentAndAssertOwnership(id, ctx.session.userId, 'canEdit');
 
     return await prisma.comment.update({
       where: { id },
@@ -134,7 +143,7 @@ export const commentRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      await findCommentAndAssertOwnership(input.id, ctx.session.userId);
+      await findCommentAndAssertOwnership(input.id, ctx.session.userId, 'canEdit');
 
       await prisma.comment.delete({
         where: { id: input.id },
