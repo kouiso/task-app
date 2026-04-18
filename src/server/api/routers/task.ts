@@ -48,6 +48,28 @@ const taskTimeUpdateSchema = z.object({
   minutesToAdd: z.number().min(0),
 });
 
+async function assertTaskAssigneeBelongsToProject(
+  projectId: string,
+  assigneeId: string,
+): Promise<void> {
+  const member = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: assigneeId,
+        projectId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!member) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '担当者にはこのプロジェクトのメンバーを指定してください',
+    });
+  }
+}
+
 export const taskRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -168,6 +190,10 @@ export const taskRouter = createTRPCRouter({
 
     assertMemberPermission(project.members);
 
+    if (input.assigneeId) {
+      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
+    }
+
     const maxPosition = await prisma.task.findFirst({
       where: { projectId: input.projectId },
       orderBy: { position: 'desc' },
@@ -216,7 +242,7 @@ export const taskRouter = createTRPCRouter({
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    await findTaskWithPermission(id, ctx.session.userId);
+    const existingTask = await findTaskWithPermission(id, ctx.session.userId);
 
     const updateData: Prisma.TaskUpdateInput = {};
     if (data.title !== undefined) {
@@ -247,6 +273,7 @@ export const taskRouter = createTRPCRouter({
       if (data.assigneeId === null) {
         updateData.assignee = { disconnect: true };
       } else {
+        await assertTaskAssigneeBelongsToProject(existingTask.projectId, data.assigneeId);
         updateData.assignee = { connect: { id: data.assigneeId } };
       }
     }

@@ -61,13 +61,13 @@ export async function decrypt(token: string): Promise<SessionPayload | null> {
     });
 
     if (!isSessionPayload(payload)) {
-      console.error('Invalid session payload structure:', payload);
+      console.error('Invalid session payload structure');
       return null;
     }
 
     return payload;
-  } catch (error) {
-    console.error('Failed to decrypt token:', error);
+  } catch {
+    console.error('Failed to decrypt token');
     return null;
   }
 }

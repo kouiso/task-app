@@ -74,6 +74,16 @@ describe('taskRouter', () => {
 
       await expect(caller.task.getAll()).rejects.toThrow('ログインが必要です');
     });
+
+    it('should reject deactivated users even with a valid session', async () => {
+      const user = await createTestUser({
+        email: 'inactive-task-reader@example.com',
+        isActive: false,
+      });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await expect(caller.task.getAll()).rejects.toThrow('このアカウントは無効化されています');
+    });
   });
 
   describe('getById', () => {
@@ -160,6 +170,13 @@ describe('taskRouter', () => {
       const user = await createTestUser();
       const assignee = await createTestUser({ email: 'assignee@example.com' });
       const project = await createTestProject(user.id);
+      await prisma.projectMember.create({
+        data: {
+          userId: assignee.id,
+          projectId: project.id,
+          role: 'MEMBER',
+        },
+      });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
@@ -170,6 +187,22 @@ describe('taskRouter', () => {
       });
 
       expect(task.assigneeId).toBe(assignee.id);
+    });
+
+    it('should reject assignee who is not a project member', async () => {
+      const user = await createTestUser({ email: 'task-owner@example.com' });
+      const outsider = await createTestUser({ email: 'outsider@example.com' });
+      const project = await createTestProject(user.id);
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await expect(
+        caller.task.create({
+          title: 'Invalid Assignee Task',
+          projectId: project.id,
+          assigneeId: outsider.id,
+        }),
+      ).rejects.toThrow('担当者にはこのプロジェクトのメンバーを指定してください');
     });
 
     it('should set position correctly', async () => {
@@ -254,6 +287,13 @@ describe('taskRouter', () => {
       const user = await createTestUser();
       const newAssignee = await createTestUser({ email: 'newassignee@example.com' });
       const project = await createTestProject(user.id);
+      await prisma.projectMember.create({
+        data: {
+          userId: newAssignee.id,
+          projectId: project.id,
+          role: 'MEMBER',
+        },
+      });
       const task = await createTestTask(project.id, user.id);
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
@@ -264,6 +304,22 @@ describe('taskRouter', () => {
       });
 
       expect(updated.assigneeId).toBe(newAssignee.id);
+    });
+
+    it('should reject updating assignee to a non-member', async () => {
+      const user = await createTestUser({ email: 'task-editor@example.com' });
+      const outsider = await createTestUser({ email: 'task-outsider@example.com' });
+      const project = await createTestProject(user.id);
+      const task = await createTestTask(project.id, user.id);
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await expect(
+        caller.task.update({
+          id: task.id,
+          assigneeId: outsider.id,
+        }),
+      ).rejects.toThrow('担当者にはこのプロジェクトのメンバーを指定してください');
     });
 
     it('should require authentication', async () => {

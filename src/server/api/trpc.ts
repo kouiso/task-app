@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
@@ -36,9 +37,35 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
     });
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: ctx.session.userId },
+    select: {
+      id: true,
+      role: true,
+      isActive: true,
+    },
+  });
+
+  if (!currentUser) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'ユーザーが見つかりません',
+    });
+  }
+
+  if (!currentUser.isActive) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'このアカウントは無効化されています',
+    });
+  }
+
   return next({
     ctx: {
-      session: ctx.session,
+      session: {
+        ...ctx.session,
+        role: currentUser.role,
+      },
     },
   });
 });
