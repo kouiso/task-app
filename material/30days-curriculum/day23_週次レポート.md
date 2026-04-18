@@ -52,7 +52,7 @@ flowchart TD
 
 | やること | やらないこと |
 |---------|-------------|
-| プロジェクト別統計テーブル | 専用の統計API作成 |
+| プロジェクト別統計テーブル | `/report` 側で `task.getAll` を再集計する実装 |
 | 週次レポートAPI呼び出し | ユーザー別フィルタUI |
 | 折れ線グラフで完了推移表示 | カスタムテーブル作成 |
 | 棒グラフで優先度・ステータス表示 | 新規グラフライブラリ導入 |
@@ -85,7 +85,10 @@ flowchart TD
 ### Step 1: プロジェクト統計の集計ロジック（5分）
 
 🎯 **ゴール**: レポートページ（`/report`）に
-プロジェクト別の統計集計ロジックを追加します。
+表示するプロジェクト統計の構造を理解します。
+完成版 source では Day 21 で導入した
+`api.report.getOverview` の `projectStats` を
+そのまま描画し、ここで再集計はしません。
 
 #### 統計テーブルに表示する項目
 
@@ -332,10 +335,10 @@ api.report.getWeeklyReport.useQuery({
 | プロパティ | 型 | 説明 |
 |-----------|-----|------|
 | week | string | `1週目` のような週ラベル |
-| weekStart | string | その週の開始日 |
+| weekStart | string | その週の開始日（`YYYY-MM-DD`） |
 | totalCompleted | number | その週の完了数 |
-| byStatus | object | ステータス別の件数 |
-| byPriority | object | 優先度別の件数 |
+| byStatus | Record<string, number> | ステータス別の件数 |
+| byPriority | Record<string, number> | 優先度別の件数 |
 
 > 💡 サーバー側で Prisma を使って
 > `completedAt` の日付範囲でタスクを

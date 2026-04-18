@@ -206,6 +206,7 @@ const {
 });
 
 // フォーム送信時の処理（Step 7で書き換えます）
+// ⚠️ 動作確認用の一時コードです。Step 7で必ず削除してください。
 const onSubmit = async (
   data: LoginFormData
 ) => {
@@ -216,6 +217,7 @@ const onSubmit = async (
 ✅ **確認ポイント**:
 - `useForm` の設定を LoginForm 内に追加した
 - `npm run dev` でエラーが出ていない
+- `console.log` は動作確認後に残さず、Step 7で必ず削除する
 
 #### useFormの返り値の解説
 

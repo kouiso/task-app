@@ -172,7 +172,15 @@ const registerSchema = z.object({
   email: z.string()
     .email('有効なメールアドレスを入力してください'),
   password: z.string()
-    .min(8, 'パスワードは8文字以上で入力してください'),
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/,
+      'パスワードに大文字を1文字以上含めてください')
+    .regex(/[a-z]/,
+      'パスワードに小文字を1文字以上含めてください')
+    .regex(/[0-9]/,
+      'パスワードに数字を1文字以上含めてください')
+    .regex(/[^A-Za-z0-9]/,
+      'パスワードに記号を1文字以上含めてください'),
   confirmPassword: z.string()
     .min(1, 'パスワード(確認)を入力してください'),
 }).refine(
@@ -255,6 +263,7 @@ const {
 });
 
 // 仮の送信処理（Step 7で書き換えます）
+// ⚠️ 動作確認用の一時コードです。Step 7で必ず削除してください。
 const onSubmit = async (
   data: RegisterFormData
 ) => {
@@ -267,6 +276,7 @@ const onSubmit = async (
 - `npm run dev` でエラーが出ていない
 - ブラウザで `/register` にアクセスしてエラーが出ていない
 - この時点ではまだフォーム欄は表示されません。Step 4 で入力欄を作ります
+- `console.log` は動作確認後に残さず、Step 7で必ず削除する
 
 > 💡 `useForm<RegisterFormData>` の型引数に Zod スキーマから推論した型を渡すことで、入力値の型が保証されます。`zodResolver(registerSchema)` が送信前に自動でバリデーションを実行し、エラーは `formState.errors` に格納されます。フォームの項目が増えても `useForm` の呼び出し自体は変わりません。
 
@@ -464,6 +474,8 @@ const onSubmit = async (data: RegisterFormData) => {
 };
 ```
 
+> ⚠️ この `console.log` は Step 3 の仮実装です。確認が終わったら残さず削除し、下の `registerMutation` を使う本実装に置き換えてください。
+
 削除したら、以下の新しい `onSubmit` を追加します。
 
 ```typescript
@@ -660,7 +672,15 @@ const registerSchema = z.object({
   email: z.string()
     .email('有効なメールアドレスを入力してください'),
   password: z.string()
-    .min(8, 'パスワードは8文字以上で入力してください'),
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/,
+      'パスワードに大文字を1文字以上含めてください')
+    .regex(/[a-z]/,
+      'パスワードに小文字を1文字以上含めてください')
+    .regex(/[0-9]/,
+      'パスワードに数字を1文字以上含めてください')
+    .regex(/[^A-Za-z0-9]/,
+      'パスワードに記号を1文字以上含めてください'),
   confirmPassword: z.string()
     .min(1, 'パスワード(確認)を入力してください'),
 }).refine(
