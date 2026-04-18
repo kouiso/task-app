@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso } from '@/lib/date';
 import { taskToFormData } from '@/lib/task-form';
 import { api } from '@/trpc/react';
 
@@ -135,7 +136,7 @@ function TaskPageContent() {
         description: data.description || null,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
         estimatedHours: data.estimatedHours ?? null,
         assigneeId: data.assigneeId || null,
       });
@@ -148,7 +149,7 @@ function TaskPageContent() {
         description: data.description,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : undefined,
         estimatedHours: data.estimatedHours,
         projectId: data.projectId,
         assigneeId: data.assigneeId || undefined,

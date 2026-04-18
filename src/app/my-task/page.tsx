@@ -1,6 +1,5 @@
 'use client';
 
-import { isSameDay } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
@@ -22,6 +21,7 @@ import {
   TASK_STATUS_LABELS,
   type TaskStatus,
 } from '@/lib/constant/status';
+import { dateOnlyFromValue, dateOnlyToUtcStartIso, localDateOnly } from '@/lib/date';
 import { taskToFormData } from '@/lib/task-form';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
@@ -146,7 +146,7 @@ export default function MyTasksPage() {
         description: data.description || null,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
         estimatedHours: data.estimatedHours ?? null,
         assigneeId: data.assigneeId || null,
       });
@@ -158,16 +158,16 @@ export default function MyTasksPage() {
     const today: typeof tasks = [];
     const upcoming: typeof tasks = [];
     const noDueDate: typeof tasks = [];
-    const now = new Date();
+    const todayKey = localDateOnly(new Date());
 
     for (const t of tasks ?? []) {
       if (!t.dueDate) {
         noDueDate.push(t);
       } else {
-        const dueDate = new Date(t.dueDate);
-        if (isSameDay(dueDate, now)) {
+        const dueDateKey = dateOnlyFromValue(t.dueDate);
+        if (dueDateKey === todayKey) {
           today.push(t);
-        } else if (dueDate < now) {
+        } else if (dueDateKey < todayKey) {
           overdue.push(t);
         } else {
           upcoming.push(t);

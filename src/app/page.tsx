@@ -1,22 +1,12 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/session';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { api } from '@/trpc/react';
+export default async function HomePage() {
+  const session = await getSession();
 
-export default function HomePage() {
-  const { data: session, isLoading } = api.auth.getSession.useQuery();
-  const router = useRouter();
+  if (!session) {
+    redirect('/login');
+  }
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!session) {
-        router.push('/login');
-      } else {
-        router.push('/dashboard');
-      }
-    }
-  }, [session, isLoading, router]);
-
-  return null;
+  redirect('/dashboard');
 }
