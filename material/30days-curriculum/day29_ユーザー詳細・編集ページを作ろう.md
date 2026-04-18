@@ -137,25 +137,28 @@ src/app/user/
         └── page.tsx   ← 後で作成（編集ページ）
 ```
 
-まずは詳細ページの骨組みです。
+まずは route-level 404 を担当する
+server wrapper を作ります。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
-'use client';
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { UserDetailClient } from './user-detail-client';
 
-import { AppLayout } from '@/component/layout/app-layout';
+export default async function UserDetailPage({ params }) {
+  const { id } = await params;
 
-export default function UserDetailPage() {
-  return (
-    <AppLayout>
-      <div className="container mx-auto max-w-6xl py-8">
-        <h1 className="text-2xl font-bold">
-          ユーザー詳細ページ
-        </h1>
-        <p>ここにユーザー情報を表示します</p>
-      </div>
-    </AppLayout>
-  );
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+
+  return <UserDetailClient userId={id} />;
 }
 ```
 
@@ -172,26 +175,24 @@ npm run dev
 
 ✅ **確認ポイント**:
 - `src/app/user/[id]/page.tsx` ファイルが作成できた
-- `/user/test123` にアクセスして「ユーザー詳細ページ」と表示される
+- `src/app/user/[id]/page.tsx` が server wrapper になっている
 - `npm run dev` でエラーが出ない
 
 ---
 
 ### Step 3: URLからユーザーIDを取得してデータを取得する（7分）
 
-🎯 **ゴール**: `useParams()` でIDを読み取り、tRPCでユーザーデータを取得し、エラー時にトースト通知を表示する。
-
-`useParams()` は Next.js が提供するフックで、現在のURLのパラメータを読み取ります。
-
-> 💡 **現行の完成版 source では、`src/app/user/[id]/page.tsx` は server component の薄いラッパーになっていて、存在しないIDは route-level `notFound()` に流します。** この Day では学習しやすいように client component の流れから始めますが、最終的には `page.tsx` で存在確認し、UI 本体は `user-detail-client.tsx` のような client component に分離する構成がより App Router らしい完成形です。
+🎯 **ゴール**: `user-detail-client.tsx` で
+`userId` を受け取り、tRPC でユーザーデータを取得し、
+エラー時にトースト通知を表示する。
 
 インポートとデータ取得の部分を書きます。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -206,11 +207,13 @@ import { api } from '@/trpc/react';
 コンポーネントの中でURLのIDを取得し、データを取得します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
-export default function UserDetailPage() {
+// filepath: src/app/user/[id]/user-detail-client.tsx
+interface UserDetailClientProps {
+  userId: string;
+}
+
+export function UserDetailClient({ userId }: UserDetailClientProps) {
   const router = useRouter();
-  const params = useParams();
-  const userId = String(params['id'] ?? '');
 
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
 
@@ -234,7 +237,7 @@ export default function UserDetailPage() {
 次に早期リターンを書きます。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
   if (isLoading) {
     return (
       <AppLayout>
@@ -244,13 +247,20 @@ export default function UserDetailPage() {
   }
 
   if (!user) {
-    return null;
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 ```
 
 `if (!user)` の早期リターンを通過した後に権限変数を宣言します（`user` が確実に存在する状態でないと `user.id` にアクセスできないため）。
 
-> 💡 **完成版 source では、この `!user` 分岐自体を client component から外し、server wrapper で `notFound()` を呼びます。** client 側に残すのはローディング中や権限不足の表示で、存在しないIDは route-level 404 に寄せる方が検索エンジン・監視・UX の意味づけが揃います。
+> 💡 route-level 404 は Step 2 の
+> `page.tsx` で担当します。
+> client component 側の `!user` は
+> 一時的な再取得中に備える保険です。
 
 > 💡 期限列の完成版 source は
 > `format(new Date(task.dueDate), ...)` ではなく
@@ -260,18 +270,18 @@ export default function UserDetailPage() {
 > helper に寄せる」という方針と矛盾してしまいます。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
   // この位置に書く（if (!user) の後）
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
   const isOwnProfile = currentUser?.id === user.id;
 ```
 
-✅ **確認ポイント**: この教材ステップでは存在しないIDにアクセスすると描画されません。完成版 source では server wrapper により `notFound()` が呼ばれ、`src/app/not-found.tsx` の404画面が表示されます。
+✅ **確認ポイント**: 存在しないIDにアクセスすると server wrapper から `notFound()` が呼ばれ、`src/app/not-found.tsx` の404画面が表示されます。
 
 正常系の表示を書きます。次のステップで内容を充実させます。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
   return (
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
@@ -307,7 +317,7 @@ PC: 左4列 + 右8列
 必要なコンポーネントをインポートします。ファイルの先頭のインポート部分に追加してください。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Mail } from 'lucide-react';
@@ -318,6 +328,7 @@ import { Card, CardContent } from '@/component/ui/card';
 import { Separator } from '@/component/ui/separator';
 import { ActiveStatusBadge, UserRoleBadge }
   from '@/component/ui/user-badges';
+import { formatDateOnly } from '@/lib/date';
 ```
 
 ✅ **確認ポイント**: ファイルを保存してインポートエラーが出ないことを確認してください。
@@ -325,7 +336,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 12列グリッド（`md:grid-cols-12`）で左4列・右8列に分割します。`return` 文を書き換えます。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
   return (
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
@@ -344,7 +355,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 左カラムにアバターとユーザー基本情報を置きます。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
           {/* 左カラム: アバター・基本情報 */}
           <div className="md:col-span-4 space-y-6">
             <Card>
@@ -375,7 +386,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 次にセパレーターとメールアドレスを表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 // セパレーターとメールアドレス表示
                 <Separator className="my-4" />
                 <div className="space-y-4 text-sm">
@@ -395,7 +406,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 登録日も同じレイアウトパターンで表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 // 登録日の表示
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -421,7 +432,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 最終更新日も同じパターンで表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 // 最終更新日と左カラムの閉じタグ
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -451,7 +462,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 左カラムの `div` を閉じた後、右カラムの枠を書きます。中身は Step 5 で追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
           {/* 右カラム: Step 5で中身を追加 */}
           <div className="md:col-span-8 space-y-6">
             {/* Step 5 でプロジェクト・タスクを追加 */}
@@ -478,7 +489,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 必要なコンポーネントをインポートします。ファイル先頭のインポート部分に追加してください。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 import { Badge } from '@/component/ui/badge';
 import { CardHeader, CardTitle } from '@/component/ui/card';
 import {
@@ -495,7 +506,7 @@ import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 右カラムに「参加プロジェクト」カードを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 {/* 参加プロジェクト一覧（バッジ形式） */}
 <Card>
   <CardHeader>
@@ -514,7 +525,7 @@ import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 各バッジにクリックイベントを付けて、プロジェクトページへ遷移できるようにしています。上のコードブロック内の `<Badge` に以下の属性が含まれています。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 // Badge のクリックでプロジェクトページに遷移
 onClick={() =>
   router.push(
@@ -532,7 +543,7 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 「担当中のタスク」カードをテーブル形式で追加します。テーブルのヘッダー部分です。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
             {/* 担当中タスクのテーブル表示 */}
             <Card>
               <CardHeader>
@@ -556,7 +567,7 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 `TableHeader` の直後に `TableBody` を追加します。各タスク行はクリックでタスク詳細に遷移します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 // タスクテーブルのボディ部分
                     <TableBody>
                       {user.assignedTasks.map((task) => (
@@ -585,11 +596,11 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 期限列の表示とカードの閉じタグを追加します。日付がない場合は `-` を表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 // 期限列とテーブル・カードの閉じタグ
                           <TableCell>
                             {task.dueDate
-                              ? format(new Date(task.dueDate), 'yyyy/MM/dd', { locale: ja })
+                              ? formatDateOnly(task.dueDate)
                               : '-'}
                           </TableCell>
                         </TableRow>
@@ -625,7 +636,7 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 まずインポートを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
 import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 // Pencil を追加（ArrowLeft, Calendar, Mail は Step 4 で追加済み）
 ```
@@ -633,7 +644,7 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 左カラムの `Separator` と閉じタグ `</CardContent>` の間に追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/page.tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
                 {(isAdmin || isOwnProfile) && (
                   <>
                     <Separator className="my-4" />
@@ -669,16 +680,42 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 
 🎯 **ゴール**: `/user/[id]/edit` の骨組みを作り、権限チェックを実装する。
 
-まずインポートを書きます。
+まずは route-level 404 を担当する
+server wrapper を作ります。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { UserEditClient } from './user-edit-client';
+
+export default async function UserEditPage({ params }) {
+  const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+
+  return <UserEditClient userId={id} />;
+}
+```
+
+次に、実際のフォーム本体となる
+`user-edit-client.tsx` のインポートを書きます。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 'use client';
 
 import { zodResolver }
   from '@hookform/resolvers/zod';
 import { ArrowLeft } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -688,7 +725,7 @@ import { z } from 'zod';
 ✅ **確認ポイント**: `zodResolver`, `useForm`, `z` のインポートが含まれていることを確認してください。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 import { zodResolver }
   from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -700,21 +737,25 @@ import { Card, CardContent, CardHeader, CardTitle }
   from '@/component/ui/card';
 import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
-import { USER_ROLE, type UserRole }
+import { USER_ROLE }
   from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 ```
 
 ✅ **確認ポイント**: ファイルを保存してインポートエラーが出ないことを確認してください。
 
-URLパラメータ取得 → データ取得 → 早期リターンの流れで実装します。`useForm` + zod でフォーム状態を管理します。
+`page.tsx` から受け取った `userId` を使って
+データ取得 → 早期リターンの流れで実装します。
+`useForm` + zod でフォーム状態を管理します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
-export default function UserEditPage() {
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+interface UserEditClientProps {
+  userId: string;
+}
+
+export function UserEditClient({ userId }: UserEditClientProps) {
   const router = useRouter();
-  const params = useParams();
-  const userId = String(params['id'] ?? '');
 
   const form = useForm<UserEditFormValues>({
     resolver: zodResolver(userEditSchema),
@@ -736,7 +777,7 @@ export default function UserEditPage() {
 早期リターン（ローディング → 未発見）の後に権限チェックを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
   if (isLoading) {
     return (
       <AppLayout>
@@ -748,13 +789,7 @@ export default function UserEditPage() {
   if (!user) {
     return (
       <AppLayout>
-        <div className="container mx-auto max-w-md mt-8">
-          <Card>
-            <CardContent className="pt-6">
-              <p>ユーザーが見つかりません</p>
-            </CardContent>
-          </Card>
-        </div>
+        <PageLoadingSpinner />
       </AppLayout>
     );
   }
@@ -763,7 +798,7 @@ export default function UserEditPage() {
 続いて、権限チェックを追加します。管理者でも本人でもなければ編集画面にアクセスできません。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // 権限チェック部分
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
   const isOwnProfile = currentUser?.id === userId;
@@ -791,7 +826,7 @@ export default function UserEditPage() {
 権限チェックを通過した後に編集フォームの枠を表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
   return (
     <AppLayout>
       <div className="container mx-auto max-w-md mt-8 mb-8">
@@ -818,6 +853,7 @@ export default function UserEditPage() {
 ```
 
 ✅ **確認ポイント**:
+- 存在しないユーザーIDでは `page.tsx` 側で `notFound()` になる
 - 権限のないユーザーで `/user/他人のid/edit` にアクセスすると「権限がありません」と表示される
 - 管理者でアクセスすると「ユーザー編集」が表示される
 - 自分のIDでアクセスすると「ユーザー編集」が表示される
@@ -832,7 +868,7 @@ export default function UserEditPage() {
 zod スキーマを定義します（Step 7 で `zodResolver`, `useForm`, `z` はインポート済み）。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // ユーザー編集用の zodスキーマ
 const userEditSchema = z.object({
   name: z.string()
@@ -851,7 +887,7 @@ type UserEditFormValues =
 `useEffect` + `form.reset` でサーバーデータが届いたらフォームに反映します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
   // サーバーデータでフォームを初期化
   useEffect(() => {
     if (user) {
@@ -872,7 +908,7 @@ type UserEditFormValues =
 次に必要なコンポーネントをインポートし、フォームを書きます。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 import { Avatar, AvatarFallback, AvatarImage }
   from '@/component/ui/avatar';
 import { Input } from '@/component/ui/input';
@@ -886,7 +922,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 > 先に書き、Step 10 の完了後に動作確認します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // フォーム開始 + アバタープレビュー
             <form onSubmit={
               form.handleSubmit(onSubmit)}
@@ -908,7 +944,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 ```
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // 名前入力（register版）
               <div className="space-y-2">
                 <Label htmlFor="name">
@@ -934,7 +970,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 メールアドレスとアバターURL入力欄を追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
               <div className="space-y-2">
                 <Label htmlFor="email">
                   メールアドレス</Label>
@@ -976,7 +1012,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 インポートを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 import { Checkbox } from '@/component/ui/checkbox';
 import {
   Select, SelectContent, SelectItem,
@@ -991,7 +1027,7 @@ import { isUserRole, USER_ROLE_LABELS }
 ロール選択のドロップダウンを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // ロール選択（form.setValue版）
               <div className="space-y-2">
                 <Label htmlFor="role">
@@ -1014,7 +1050,7 @@ import { isUserRole, USER_ROLE_LABELS }
 ```
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // ロール選択肢（SelectContent）
                   <SelectContent>
                     {Object.entries(
@@ -1038,7 +1074,7 @@ import { isUserRole, USER_ROLE_LABELS }
 アクティブ状態を切り替えるチェックボックスを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
               <div className="flex
                 items-center space-x-2">
                 <Checkbox id="isActive"
@@ -1077,7 +1113,7 @@ import { isUserRole, USER_ROLE_LABELS }
 Day 25 で学んだ `useMutation` パターンで保存処理を実装します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle }
   from '@/component/ui/alert';
@@ -1087,7 +1123,7 @@ import { Alert, AlertDescription, AlertTitle }
 ✅ **確認ポイント**: ファイルを保存してインポートエラーが出ないことを確認してください。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
   const updateUser =
     api.user.update.useMutation({
       onSuccess: () => {
@@ -1104,7 +1140,7 @@ import { Alert, AlertDescription, AlertTitle }
 ```
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
   // zodバリデーション済みの値で送信
   const onSubmit =
     (values: UserEditFormValues) => {
@@ -1128,7 +1164,7 @@ import { Alert, AlertDescription, AlertTitle }
 エラー表示ブロックをチェックボックスの下に追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
               {updateUser.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -1147,7 +1183,7 @@ import { Alert, AlertDescription, AlertTitle }
 フォームの送信ボタンとキャンセルボタンを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/page.tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
               <div className="flex gap-2 pt-2">
                 <Button
                   type="submit"

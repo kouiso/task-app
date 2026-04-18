@@ -92,117 +92,67 @@ flowchart TD
 
 #### 統計テーブルに表示する項目
 
-| 項目 | 計算方法 | 意味 |
-|------|---------|------|
-| プロジェクト | project.name | プロジェクト名 |
-| タスク数 | filter結果の長さ | タスク総数 |
-| 完了 | DONE の件数 | 完了タスク数 |
-| 進捗 | 完了数 / 総数 × 100 | 進捗率（%） |
-| 作業時間 | reduce で合算 / 60 | 作業時間（h） |
+| 項目 | 参照先 | 意味 |
+|------|--------|------|
+| プロジェクト | `stat.name` | プロジェクト名 |
+| タスク数 | `stat.totalTasks` | タスク総数 |
+| 完了 | `stat.completedTasks` | 完了タスク数 |
+| 進捗 | `stat.progress` | 進捗率（%） |
+| 作業時間 | `stat.totalTimeHours` | 作業時間（h） |
 
 #### 計算の流れ
 
 | 手順 | 処理 | 例 |
 |------|------|-----|
-| 1 | projectId でタスクを絞る | Aのタスクだけ |
-| 2 | status が DONE のものを数える | 完了タスクは3件 |
-| 3 | 完了数 / 全数 × 100 | 3/10 × 100 = 30% |
-| 4 | timeSpentMinutes を合算 | 480分 = 8.0h |
+| 1 | `api.report.getOverview` を呼ぶ | server 側で全件集計 |
+| 2 | `overview.projectStats` を受け取る | Aプロジェクトの集計行が入る |
+| 3 | 各行を `TableRow` に流し込む | 進捗 30.0% と表示 |
+| 4 | `toFixed(1)` で表示だけ整える | 8.0h |
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// インポート（useMemo と TASK_STATUS）
-import { useMemo } from 'react';
-import {
-  TASK_STATUS,
-} from '@/lib/constant/status';
+// Day 21 で追加済みの overview 取得
+const { data: overview, isLoading } =
+  api.report.getOverview.useQuery();
 ```
 
 > 📝 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
 
 ✅ **確認ポイント**:
-- `useMemo` と `TASK_STATUS` がインポートされている
-- 表の4項目（タスク数・完了・進捗・作業時間）の計算式を理解した
+- `overview` を取得できている
+- 表の4項目が `projectStats` に入っていると理解した
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// projectStats 集計（projects.map）
-const projectStats = useMemo(
-  () =>
-    projects?.map((project) => {
-      const projectTasks =
-        tasks?.filter(
-          (t) => t.projectId === project.id
-        ) ?? [];
-      const completedTasks =
-        projectTasks.filter(
-          (t) => t.status === TASK_STATUS.DONE
-        );
-      return { project, projectTasks,
-        completedTasks };
-    }),
-  [projects, tasks],
-);
+// server 側で作られた projectStats をそのまま使う
+const projectStats = overview?.projectStats ?? [];
 ```
 
 ✅ **確認ポイント**:
-- `projects?.map` でプロジェクトごとにループしている
-- `tasks?.filter` で該当プロジェクトのタスクだけを抽出している
+- クライアント側で再集計していない
+- `projectStats` が配列として扱える
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 作業時間の合算と進捗率の計算
-const totalTime = projectTasks.reduce(
-  (acc, t) =>
-    acc + (t.timeSpentMinutes ?? 0),
-  0
-);
-const progress =
-  projectTasks.length > 0
-    ? (completedTasks.length
-        / projectTasks.length) * 100
-    : 0;
+// 描画時だけ小数第1位へ整える
+{projectStats.map((stat) => (
+  <TableRow key={stat.id}>
+    <TableCell className="font-medium">{stat.name}</TableCell>
+    <TableCell className="text-right">{stat.totalTasks}</TableCell>
+    <TableCell className="text-right">{stat.completedTasks}</TableCell>
+    <TableCell className="text-right">{stat.progress.toFixed(1)}%</TableCell>
+    <TableCell className="text-right">{stat.totalTimeHours.toFixed(1)}h</TableCell>
+  </TableRow>
+))}
 ```
 
 ✅ **確認ポイント**:
-- `reduce` で作業時間を合算している
-- ゼロ除算を `length > 0` で防いでいる
+- `progress` / `totalTimeHours` を表示時だけ整形している
+- `projectStats` の各要素がそのままテーブル行になる
 
-```typescript
-// filepath: src/app/report/page.tsx
-// 戻り値オブジェクトの定義
-return {
-  id: project.id,
-  name: project.name,
-  totalTasks: projectTasks.length,
-  completedTasks: completedTasks.length,
-  progress: progress.toFixed(1),
-  totalTimeHours:
-    (totalTime / 60).toFixed(1),
-};
-```
-
-✅ **確認ポイント**:
-- 6つのプロパティを持つオブジェクトを返している
-- `toFixed(1)` で小数第1位まで表示する
-
-> ⚠️ **組み立てガイド**: 上記の3つのコードブロック（`projects?.map` のループ、`totalTime`/`progress` の計算、`return { ... }`）は、すべて **1つの `useMemo`** の中に組み合わせます。`totalTime` の計算と `return` 文は `projects?.map` のコールバック内に配置してください。完成形は以下のとおりです:
->
-> ```
-> const projectStats = useMemo(
->   () => projects?.map((project) => {
->     // ① タスク抽出・完了フィルタ（1つ目のブロック）
->     // ② totalTime / progress 計算（2つ目のブロック）
->     // ③ return { id, name, ... }（3つ目のブロック）
->   }),
->   [projects, tasks],
-> );
-> ```
-
-> 💡 `TASK_STATUS.DONE` は Day 21 で
-> インポート済みの定数です。
-> `?? []` は `null`/`undefined` のみ
-> 空配列に変換します。
+> 💡 `projectStats` 自体は `reportRouter.getOverview`
+> の中で `groupBy` と `count` を使って作られています。
+> `/report` 側では集計の再実行は不要です。
 
 ---
 
