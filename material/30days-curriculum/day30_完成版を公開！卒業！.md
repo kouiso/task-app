@@ -122,10 +122,17 @@ openssl rand -base64 32
 
 ```bash
 # filepath: .env.example（主要部分の抜粋）
+# ホスト側のポート設定
+_DOCKER_COMPOSE_HOST_PORT_DB=5432
+
 # DB接続文字列（ローカル開発用）
-DATABASE_URL="postgresql://user:password@localhost:5432/taskapp?schema=public"
-# JWT署名用の秘密鍵（本番では必ず変更）
-JWT_SECRET="your-jwt-secret-key-32-chars-minimum"
+DATABASE_URL="postgresql://user:password@localhost:${_DOCKER_COMPOSE_HOST_PORT_DB}/taskapp?schema=public"
+
+# JWT署名用の秘密鍵（32文字以上必須。本番では必ず変更）
+JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
+
+# 本番URL（robots.txt / sitemap で使用。ローカル開発では空でOK）
+# NEXT_PUBLIC_BASE_URL="https://your-app.vercel.app"
 ```
 
 ✅ **確認ポイント**:
@@ -140,6 +147,25 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum"
 > Vercel のダッシュボードで環境変数を
 > 直接設定します。コードに秘密値を
 > 含めないのがセキュリティの基本です。
+
+> ⚠️ **ローカルで `npm run build` を実行する前の準備**:
+> このプロジェクトは `prisma.config.ts` と
+> `package.json` の `build` / `vercel-build` /
+> `postinstall` で Prisma Client 生成を行うため、
+> ローカルでも `DATABASE_URL` と `JWT_SECRET` が
+> 未設定だと build 時に失敗します。
+>
+> 先に `.env.example` をコピーして
+> `.env.local` を作成し、最低でも
+> `DATABASE_URL` と `JWT_SECRET` を設定してから
+> `npm run build` を実行してください。
+
+```bash
+# filepath: ターミナル
+cp .env.example .env.local
+
+# .env.local を開き、最低でも DATABASE_URL と JWT_SECRET を設定する
+```
 
 ✅ **確認ポイント**:
 - 2つの環境変数の値を準備できた
@@ -238,8 +264,10 @@ git status
 
 ```bash
 # filepath: ターミナル
-# 変更をステージングしてプッシュ
-git add .
+# 変更したファイルだけを明示してステージングしてプッシュ
+# 例: Day 29 で編集したファイルを個別指定する
+git add src/app/user/[id]/page.tsx src/app/user/[id]/user-detail-client.tsx
+git add src/app/user/[id]/edit/page.tsx src/app/user/[id]/edit/user-edit-client.tsx
 git commit -m "feat: 30日間の完成版"
 git push origin main
 ```
