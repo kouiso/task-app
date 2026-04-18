@@ -277,7 +277,7 @@ const { data: overview, isLoading } =
 > 正しい統計が作られます。
 
 ✅ **確認ポイント**:
-- 2つのAPIを同時に呼んでいる
+- `getOverview` を1回だけ呼んでいる
 - 保存してエラーが出ないこと
 
 ---
