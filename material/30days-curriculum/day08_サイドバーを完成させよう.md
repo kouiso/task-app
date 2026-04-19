@@ -163,7 +163,7 @@ export function AppLayout(
    1. `F12` でDevToolsを開く
    2. **Application** タブをクリック
    3. 左メニューの **Cookies** を展開
-   4. `localhost:3000` をクリック
+   4. `localhost:3001` をクリック
    5. `session` を右クリック
    6. **Delete** をクリック
 3. ブラウザで`/dashboard`にアクセス
@@ -482,7 +482,7 @@ VS Codeの検索で `menuItems` を検索してください。
 ```bash
 # filepath: ターミナル
 # 開発サーバーが起動していることを確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ✅ **確認ポイント**:
@@ -521,7 +521,7 @@ npm run dev
 
 🎯 **ゴール**: ログアウト機能が正しく動作することを確認します。
 
-ブラウザで `http://localhost:3000/dashboard` を開いてください。
+ブラウザで `http://localhost:3001/dashboard` を開いてください。
 
 ✅ **確認ポイント**:
 - ダッシュボード画面が表示されている
