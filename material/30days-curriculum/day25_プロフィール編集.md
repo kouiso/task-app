@@ -628,14 +628,23 @@ zod スキーマでバリデーションを定義します。
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// パスワード変更用の zodスキーマ
-const changePasswordSchema = z.object({
+// パスワード変更用スキーマ: currentPassword
+const changePasswordCurrentSchema =
+  z.object({
   currentPassword: z.string()
     .min(1, '現在のパスワードを'
       + '入力してください'),
-  newPassword: z.string()
-    .min(8, '新しいパスワードは'
-      + '8文字以上で入力してください')
+});
+```
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// newPassword のルールを追加（前半）
+const changePasswordPasswordSchema = changePasswordCurrentSchema.extend({
+  newPassword: z.string().min(
+    8,
+    '新しいパスワードは' + '8文字以上で入力してください',
+  )
     .regex(
       /[A-Z]/,
       'パスワードには大文字を'
@@ -646,6 +655,11 @@ const changePasswordSchema = z.object({
       'パスワードには小文字を'
         + '含める必要があります',
     )
+```
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// 同じ newPassword ルールの続き
     .regex(
       /[0-9]/,
       'パスワードには数字を'
@@ -656,10 +670,25 @@ const changePasswordSchema = z.object({
       'パスワードには特殊文字を'
         + '含める必要があります',
     ),
+});
+```
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// confirmPassword を追加してベーススキーマにする
+const changePasswordBaseSchema =
+  changePasswordPasswordSchema.extend({
   confirmPassword: z.string()
     .min(1, '確認用パスワードを'
       + '入力してください'),
-}).refine(
+});
+```
+
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// confirmPassword の一致チェックを追加
+const changePasswordSchema =
+  changePasswordBaseSchema.refine(
   (data) => data.newPassword
     === data.confirmPassword,
   {
@@ -1027,7 +1056,7 @@ export default function
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 1. `/profile` にアクセス
@@ -1533,7 +1562,7 @@ export default function ProfileEditPage() {
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 1. `/profile` にアクセス
