@@ -95,7 +95,7 @@ sequenceDiagram
 
 💻 **操作手順**:
 
-ブラウザで `http://localhost:3000/login` を開いてください。
+ブラウザで `http://localhost:3001/login` を開いてください。
 
 1. `/login`ページを開く
 2. DevToolsのNetworkタブを開く
@@ -352,7 +352,7 @@ export async function createSession(
 ✅ **確認ポイント**:
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
-- ログインし直してDevToolsのApplication → Cookies → `http://localhost:3000` → `session` Cookieの `SameSite` 列が `Lax` に変わっていればOK
+- ログインし直してDevToolsのApplication → Cookies → `http://localhost:3001` → `session` Cookieの `SameSite` 列が `Lax` に変わっていればOK
 - 確認したら`'strict'`に戻しましょう
 
 > ⚠️ `sameSite: 'strict'`は最も安全な設定です。`'lax'`にするとリンクからの遷移時にCookieが送られるようになり、CSRF攻撃のリスクがわずかに上がります。学習用の変更なので、確認が終わったら必ず`'strict'`に戻してください。
@@ -445,7 +445,7 @@ const loginMutation =
 ブラウザで `https://jwt.io` を開いてください。
 
 1. DevToolsを開く（`F12` または `Cmd+Option+I`）
-2. **Application**タブ → 左メニューの **Cookies** → `http://localhost:3000` を選択
+2. **Application**タブ → 左メニューの **Cookies** → `http://localhost:3001` を選択
 3. `session`という名前のCookieを見つける
 4. 値（長い文字列）をコピーする
 5. ブラウザで`https://jwt.io`を開く
@@ -500,7 +500,7 @@ jwt.io で以下の情報が確認できます。
 
 💻 **操作手順**:
 
-1. DevToolsのApplication → Cookies → `http://localhost:3000`
+1. DevToolsのApplication → Cookies → `http://localhost:3001`
 2. `session` Cookieを右クリック → Delete
 3. ブラウザで`/dashboard`にアクセスする
 4. 自動的に`/login`にリダイレクトされることを確認
