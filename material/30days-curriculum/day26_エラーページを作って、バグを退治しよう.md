@@ -100,7 +100,7 @@ flowchart TD
 
 💻 **操作手順**:
 
-1. ブラウザのアドレスバーに `http://localhost:3000/this-page-does-not-exist` と入力して Enter を押す
+1. ブラウザのアドレスバーに `http://localhost:3001/this-page-does-not-exist` と入力して Enter を押す
 2. 「404」と「ページが見つかりません」が表示されることを確認
 3. 次に、ダッシュボードのコードに一時的にエラーを仕込む
 
@@ -470,8 +470,8 @@ npx biome check \
 ```bash
 # filepath: ターミナル
 # 開発サーバーが起動中か確認
-npm run dev
-# ブラウザで http://localhost:3000 を開き
+PORT=3001 npm run dev
+# ブラウザで http://localhost:3001 を開き
 # F12（Macは Cmd+Option+I）でDevToolsを開く
 ```
 
