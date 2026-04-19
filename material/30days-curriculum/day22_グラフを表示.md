@@ -556,8 +556,8 @@ const priorityData = useMemo(() => {
 ```bash
 # filepath: ターミナル（確認用）
 # 開発サーバーを起動してグラフを確認する
-npm run dev
-# http://localhost:3000/report にアクセス
+PORT=3001 npm run dev
+# http://localhost:3001/report にアクセス
 ```
 
 1. `/report` にアクセス
