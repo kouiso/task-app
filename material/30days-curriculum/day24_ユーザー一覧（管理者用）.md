@@ -660,7 +660,7 @@ export default function UsersPage() {
 
 ```bash
 # filepath: ターミナル
-npm run dev
+PORT=3001 npm run dev
 ```
 
 動作確認チェックリスト:
