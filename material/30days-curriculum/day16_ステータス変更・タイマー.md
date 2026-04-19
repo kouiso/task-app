@@ -898,12 +898,12 @@ const handleOpenTimeLog =
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ✅ **確認ポイント**:
 - `npm run dev` でエラーが出ない
-- `http://localhost:3000/task` にアクセスできる
+- `http://localhost:3001/task` にアクセスできる
 
 ## 📋 今日のまとめ
 
