@@ -687,11 +687,11 @@ map 内で `ProjectCard` を返します。
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ✅ **確認ポイント**:
-- `http://localhost:3000` にアクセスできる
+- `http://localhost:3001` にアクセスできる
 
 以下の項目を順番に確認してください。
 
