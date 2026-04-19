@@ -482,14 +482,14 @@ const handleDeleteComment =
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ✅ **確認ポイント**:
 - 自分のコメントだけ操作できる
 - 編集後に内容が更新される
 - 削除後にコメントが消える
-- `http://localhost:3000` でアプリが表示される
+- `http://localhost:3001` でアプリが表示される
 
 ---
 
