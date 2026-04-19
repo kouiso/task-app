@@ -105,7 +105,6 @@ Day 14 の Step 3 で、TaskDialog に以下の設定を
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// useFormの初期値と同期処理
 function buildTaskFormValues(
   initialData: TaskFormData | undefined,
   projects: Array<{
@@ -130,7 +129,11 @@ function buildTaskFormValues(
       initialData?.assigneeId ?? '',
   };
 }
+```
 
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// useForm の初期値と reset 同期
 const { register, handleSubmit, control,
   reset, formState: { errors },
 } = useForm<TaskFormValues>({
@@ -273,8 +276,10 @@ const updateMutation =
 // filepath: src/app/task/page.tsx
 import { dateOnlyToUtcStartIso }
   from '@/lib/date';
+```
 
-// 送信ハンドラー: data.idで作成/更新を分岐
+```typescript
+// filepath: src/app/task/page.tsx
 const handleSubmit =
   (data: TaskFormData) => {
     if (data.id) {
@@ -576,7 +581,7 @@ const handleCreate = () => {
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ## 📋 今日のまとめ
