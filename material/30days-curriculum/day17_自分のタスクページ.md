@@ -612,7 +612,7 @@ const todayKey = localDateOnly(new Date());
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// タスクを期限別に4グループに分類
+// タスクを期限別に4グループへ振り分ける前半
 const groupedTasks = useMemo(() => {
   const overdue: typeof tasks = [];
   const today: typeof tasks = [];
@@ -635,6 +635,11 @@ const groupedTasks = useMemo(() => {
       upcoming.push(t);
     }
   }
+```
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 同じ useMemo の続き
   return { overdue, today, upcoming, noDueDate };
 }, [tasks]);
 ```
@@ -966,7 +971,7 @@ JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskD
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 以下の項目を順番に確認してください。
