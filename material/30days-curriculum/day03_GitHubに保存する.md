@@ -180,102 +180,51 @@ git log --oneline
 
 ---
 
-### Step 4: GitHub認証を設定する（10分）
+### Step 4: GitHub と接続する（初回だけ）（10分）
 
-🎯 **ゴール**: GitHubにコードをアップロードするための認証を設定します。
+🎯 **ゴール**: `git push` を使う前に、GitHub 側の保存先とローカルのリポジトリをつなぎます。
 
-🔰 **初心者向け解説**: GitHubにプッシュするには、「自分が本当にこのアカウントの持ち主だ」とGitHubに証明する必要があります。パスワードだけでは認証できないため、**Personal Access Token（PAT）**という「特別なパスワード」を作成します。
+🔰 **初心者向け解説**: `git push` をするには、「どこに送るか」と「その GitHub アカウントに入れるか」の 2 つが必要です。ここでは GitHub に `task-app` リポジトリを用意して、`gh auth login` でログインし、ローカルからその保存先へ送れる状態にします。この手順は初回だけでよく、1 回済ませたら次回からスキップできます。
 
-> 💡 **例え話**: 会社のビルに入るとき、社員証（ID＋パスワード）に加えてセキュリティカードが必要なのと同じです。PATがそのセキュリティカードに当たります。
+📝 **手順**:
 
-#### 4-1. Personal Access Tokenを作成する
+1. ブラウザで https://github.com/new を開き、リポジトリ名 `task-app` で新規作成する（Public 推奨。迷ったら Public を選ぶ）
+2. 作成直後に表示されるページは閉じずに残しておく
+3. ターミナルで GitHub CLI のログインを済ませる
 
-> 💡 このステップを乗り越えれば、次のStep 5でいよいよコードがGitHubに公開されます。あと少しです！
-
-📝 **手順（Fine-grained token推奨）**:
-
-1. ブラウザで `https://github.com/settings/tokens?type=beta` にアクセス
-2. 「Generate new token」をクリック
-3. 以下の項目を入力：
-
-| 項目 | 設定値 | 説明 |
-|------|--------|------|
-| Token name | `task-app-token` | トークンの用途メモ |
-| Expiration | `90 days` | 有効期限 |
-| Repository access | `Only select repositories` → `task-app` | このリポジトリのみ |
-| Permissions > Contents | `Read and write` | コードの読み書き |
-
-4. 「Generate token」をクリック
-5. **表示されたトークンをパスワードマネージャーなどの安全な場所に保存する**
-
-> ⚠️ **重要**: トークンは**一度しか表示されません**。ページを閉じると二度と見られないので、必ずコピーしてください。保存先には1Password・Bitwarden等のパスワードマネージャーを推奨します。
-
-#### 4-2. 認証情報を保存する（毎回入力しなくて済むように）
-
-**最も簡単な方法は `gh auth login` です。**まずこちらを試してください。OSネイティブの方法は、ghコマンドが使えない場合の代替です。
-
-**方法1（推奨）: gh コマンドで認証する**
+> 💡 **gh コマンドが見つからない場合**:
+> - macOS: `brew install gh`
+> - Windows (PowerShell): `winget install --id GitHub.cli`
+> - WSL (Ubuntu): `sudo apt install gh`（初回は https://cli.github.com/ の手順で apt リポジトリ追加が必要）
+> インストール後、ターミナルを開き直してから `gh auth login` を実行してください。
 
 ```bash
 # filepath: ターミナル
-# GitHub CLIでブラウザ経由の認証を行う（最も安全・簡単）
+# GitHub CLI にログイン（ブラウザが開くので、画面の指示にしたがって承認）
 gh auth login
 ```
 
-> 💡 ブラウザが開いてGitHubへのログインが求められます。画面の指示に従って認証を完了してください。この方法ではトークンを手動でコピーする必要がありません。
-
-**方法2: OSネイティブの credential helper を使う（ghコマンドがない場合）**
-
-自分のOSに合うコマンドを1つだけ実行してください。
-
-**macOS の場合:**
+4. ローカルのリポジトリに GitHub の URL を教える
 
 ```bash
-# filepath: ターミナル
-# macOSのキーチェーンにトークンを安全に保存する
-git config --global credential.helper osxkeychain
+# filepath: ターミナル（task-appフォルダ内で実行）
+# `<your-username>` は自分の GitHub ユーザー名に置き換える
+git remote add origin https://github.com/<your-username>/task-app.git
 ```
 
-**Windows の場合:**
+ここまで済んだら、`git push` ができる状態になっています。次の Step 5 へ進みましょう。
 
-```bash
-# filepath: ターミナル（Git Bash）
-# Windowsの資格情報マネージャーにトークンを安全に保存する
-git config --global credential.helper manager
-```
-
-**Linux の場合（最終手段）:**
-
-```bash
-# filepath: ターミナル
-# トークンをファイルに保存する
-git config --global credential.helper store
-```
-
-> ⚠️ **`store` はパスワードを平文保存します。** トークンが `~/.git-credentials` に暗号化なしで書き込まれるため、共有サーバーや複数ユーザーがいる環境では使用を避けてください。
->
-> より安全に保存したい場合は `git-credential-libsecret` 等の暗号化対応ヘルパーを検討してください。
-
-🔍 **コード解説**:
-
-| 方法 | 対応OS | 保存場所 | 安全性 |
-|-----|--------|---------|------|
-| `gh auth login` | 全OS | GitHub CLIが管理 | ✅ 最も安全（推奨） |
-| `osxkeychain` | macOS | macのキーチェーン（暗号化） | ✅ 安全 |
-| `manager` | Windows | 資格情報マネージャー（暗号化） | ✅ 安全 |
-| `store` | Linux（最終手段） | `~/.git-credentials`（平文） | ⚠️ 個人PCのみ可 |
-
-> 💡 この設定により、次のStep 5でプッシュするときにユーザー名とトークンを入力すると、2回目以降は自動で認証されます。
+> `gh` コマンドが入っていないときは、まず Homebrew で `brew install gh` してから上の手順に戻ります。
 
 ✅ **確認ポイント**:
 
-1. Personal Access Tokenが作成できた
-2. トークンをコピーして安全な場所に保存した
-3. `credential.helper`の設定ができた
+1. GitHub に `task-app` リポジトリを作成できた
+2. `gh auth login` を実行してログインできた
+3. `git remote add origin` で保存先を登録できた
 
-> 📸 GitHub の Settings > Developer settings > Personal access tokens ページでトークンが作成されていることを確認してください。
+> 📸 GitHub のリポジトリ作成画面、または作成後のリポジトリページで `task-app` ができていることを確認してください。
 
-📝 **学んだこと**: GitHubへのプッシュには認証が必要で、Personal Access Token（PAT）を使って安全に認証できるようになりました。
+📝 **学んだこと**: GitHub に保存先を用意して、ローカルから送るための接続を作れるようになりました。
 
 ---
 
@@ -285,50 +234,23 @@ git config --global credential.helper store
 
 🔰 **初心者向け解説**: プッシュは、ローカル（あなたのパソコン）のコミットをGitHub（クラウド）にアップロードする操作です。プッシュすることで、他の人もあなたのコードを見られるようになります。
 
-Day 01 で `git clone` したプロジェクトには、既に `origin` リモートが設定されています。まず、リモートURLを自分のリポジトリに変更します。
-
-💻 **実装**:
+Step 4 で保存先とログインが済んでいれば、ここではアップロードするだけで OK です。
 
 ```bash
 # filepath: ターミナル（task-appフォルダ内で実行）
-# リモートURLを自分のリポジトリに変更
-git remote set-url origin https://github.com/<あなたのユーザー名>/task-app.git
+# 初回だけ -u でブランチと紐づける（2 回目以降は `git push` だけで OK）
+git push -u origin HEAD
 ```
-
-✅ **確認ポイント**:
-- エラーが出ずにコマンドが完了する
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# URLが変更されたことを確認する
-git remote -v
-```
-
-✅ **確認ポイント**:
-- `origin` の URL が自分のリポジトリになっている
-
-> 💡 **origin**（オリジン）はGitHubのリポジトリを指す「ニックネーム」です。clone した教材リポジトリの URL を、自分のリポジトリに変更しました。
-
-> 💡 **知っておきたいこと**: `git clone` でコピーしたリポジトリには、教材リポジトリの全コミット履歴が含まれています。push すると、この履歴もすべて自分のリポジトリにアップロードされます。自分が追加したコミットだけでなく、元の履歴もすべて含まれることを覚えておいてください。
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# GitHubにアップロードする
-git push -u origin main
-```
-
-> 💡 初回プッシュ時に「Username」と「Password」を聞かれたら、**Username**にはGitHubのユーザー名、**Password**にはStep 4で作成した**Personal Access Token**を入力してください（GitHubのパスワードではありません）。
 
 🔍 **コード解説**:
 
 | コマンド | 意味 | 例え |
 |--------|------|------|
-| `git remote set-url origin [URL]` | リモートURLを変更 | クラウドの保存先を自分用に変える |
-| `git push -u origin main` | GitHubにアップロード。**main**（メイン）はコードの本流となるブランチ名 | クラウドに保存 |
+| `git push -u origin HEAD` | GitHubにアップロードし、今いるブランチを保存先と紐づける | クラウドに保存 |
 
 ✅ **確認ポイント**:
 
-1. ターミナルに`Branch 'main' set up to track remote branch 'main' from 'origin'`と表示される
+1. ターミナルにブランチが `origin` と紐づいたことを示すメッセージが表示される
 2. GitHubのリポジトリページをリロードすると、コードが表示される
 3. これでGitHubにプッシュが完了です
 
@@ -415,6 +337,38 @@ git push
 
 > 💡 2回目以降のプッシュは `git push` だけでOKです。`-u origin main`は初回のみ必要です。
 
+#### 6-5. 1 回だけ巻き戻してみる
+
+ここが今日の見せ場です。  
+「戻せるらしい」で終わらず、練習用の変更を 1 回だけ実際に戻します。
+
+まずは練習用に、どうでもええ小さな変更を 1 つ作ってコミットしてください。  
+たとえばカードを 1 枚足して、こんな感じで保存します。
+
+```bash
+# filepath: ターミナル
+git add .
+git commit -m "feat: 練習用にカードを1枚増やす"
+```
+
+そのあと、ひとつ前の保存ポイントへ戻します。今日は **`git revert`** を使います。これは「取り消すコミットを新しく 1 つ足す」やり方で、過去の履歴を壊さずに元の状態へ戻せます。
+
+```bash
+# filepath: ターミナル
+git revert --no-edit HEAD
+```
+
+![1 つ前の状態へ巻き戻せた画面](./screenshots/day03-rollback.png)
+
+この画面の意味はこうです。
+
+- `HEAD` は「今いちばん新しい保存ポイント」
+- `git revert --no-edit HEAD` は「その 1 つを取り消す新しい保存ポイントを作る」
+- さっきの練習用コミットの変更が画面から消えて、実質 1 個前の状態に戻る
+
+`git revert` は履歴を消さず、「取り消した」という記録を残すやり方です。あとで見返しても「何を取り消したか」が分かるので、チームで使うときも安心です。  
+今日は練習用コミットで試すから大丈夫です。本番の大事な変更でやる前に、「こうやって戻れるんやな」を 1 回だけ体で覚えておきましょう。
+
 ✅ **確認ポイント**:
 
 1. `git status`で変更の有無を確認できた
@@ -484,7 +438,7 @@ cat .gitignore
 - [ ] `git config`でGitの初期設定ができた
 - [ ] GitHubで新しいリポジトリを作成できた
 - [ ] `git add`と`git commit`で変更を記録できた
-- [ ] Personal Access Tokenを作成して認証を設定できた
+- [ ] `gh auth login` で GitHub アカウントに認証できた
 - [ ] `git push`でGitHubにアップロードできた
 - [ ] `git status`、`git diff`、`git log`で状態を確認できた
 - [ ] GitHubのリポジトリページでコードを確認できた
@@ -493,11 +447,17 @@ cat .gitignore
 
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| `git push`で`Authentication failed` | Personal Access Tokenが間違っている | Step 4に戻ってトークンを再作成し、正しくコピーする |
-| `git push`で`Permission denied` | SSH鍵を使おうとしているがHTTPSで設定した | `git remote set-url origin https://github.com/<ユーザー名>/task-app.git`でHTTPSに変更する |
+| `git push`で`Authentication failed` | GitHub のログインが済んでいない | Step 4に戻って `gh auth login` をやり直す |
+| `git push`で`Permission denied` | 保存先URLや権限が合っていない | `git remote add origin https://github.com/<ユーザー名>/task-app.git` の設定を見直す |
 | `fatal: remote origin already exists` | リモートが既に登録されている | `git remote rm origin`で削除してから再登録する |
-| `Password`にGitHubのパスワードを入力してしまった | GitHubはパスワード認証を廃止済み | 「Password」にはStep 4で作成した**Personal Access Token**を入力する |
 | `git diff`で何も表示されない | 変更がないか、既に`git add`済み | `git diff --cached`でステージング済みの差分を確認する |
+
+### `git revert` がこわい
+
+- その気持ちで正解です
+- だから今日は「練習用コミット」だけで試します
+- 大事な変更ではなく、戻しても困らへん小さな追加で 1 回だけやるのが安全です
+- `revert` は履歴を消さずに「取り消し」を記録する安全なやり方やから、練習でも本番でも使える手順です
 
 ## 🔜 次回予告
 
