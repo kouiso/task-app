@@ -748,7 +748,7 @@ addMember: protectedProcedure
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ✅ **確認ポイント**:
