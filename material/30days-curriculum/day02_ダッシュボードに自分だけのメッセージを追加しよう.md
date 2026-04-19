@@ -128,7 +128,7 @@ import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 
 `src/app/dashboard/page.tsx`を開いて、ウェルカムメッセージを追加します。
 
-> 💡 **挿入位置の見つけ方**: VS Codeで `Cmd+F`（Mac）または `Ctrl+F`（Windows）を押して `recentTasks` と検索してください。見つかった行（`const recentTasks = tasks?.slice(0, 5) ?? [];`）の**下**、`return (` の行の**直前**に変数を宣言します。
+> 💡 **挿入位置の見つけ方**: VS Codeで `Cmd+F`（Mac）または `Ctrl+F`（Windows）を押して `recentTasks` と検索してください。見つかった行（`const recentTasks = overview?.recentTasks ?? [];`）の**下**、`return (` の行の**直前**に変数を宣言します。
 
 > ⚠️ **前提**: ダッシュボードを表示するにはログインが必要です。ブラウザで `http://localhost:3000` を開き、メールアドレス `admin@example.com`、パスワード `password123` でログインしてからアクセスしてください。
 
@@ -365,9 +365,9 @@ const isCompleted: boolean = false;
 
 🎯 **ゴール**: ウェルカムバナーに「今日の統計」を追加し、型付き変数を実践的に使います。
 
-`const recentTasks = tasks?.slice(0, 5) ?? [];` の下に、バナー用の統計情報を追加します。
+`const recentTasks = overview?.recentTasks ?? [];` の下に、バナー用の統計情報を追加します。
 
-> 💡 **`completionRate` はどこから来る？**: ダッシュボードのコードを上にたどると、`api.task.getAll.useQuery()` でタスク一覧をサーバーから取得し、`totalTasks`（全タスク数）や `completedTasks`（完了タスク数）を計算しています。`completionRate` もすでに計算済みの変数です。ここでは新たに `statusText` だけを追加します。
+> 💡 **`completionRate` はどこから来る？**: ダッシュボードのコードを上にたどると、`api.report.getOverview.useQuery()` でダッシュボード全体のサマリーをサーバーから取得し、その結果（`overview`）から `totalTasks`（全タスク数）や `completedTasks`（完了タスク数）、`completionRate`（完了率）が計算済みで取れます。ここでは新たに `statusText` だけを追加します。
 
 💻 **実装**:
 
