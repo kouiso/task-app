@@ -256,6 +256,13 @@ code --version
 - VS Codeが起動する
 - `code --version` を実行するとバージョン番号が表示される（例: `1.90.0`）
 
+`code --version` が失敗した場合は、使っているOSに合わせて次を確認してください。
+
+- Mac: VS Codeを開いて `Cmd+Shift+P` → 「Shell Command: Install 'code' command in PATH」を実行してから、もう一度 `code --version` を試す
+- Windows: VS Codeのインストーラーを再実行し、「PATH に追加」または「PATHに追加」のオプションを有効にしてから、ターミナルを開き直して `code --version` を試す
+- Windows: すぐに直らない場合は、いったんVS Codeを起動して `File > Open Folder` からプロジェクトを開けば学習を先に進められる
+- WSL: `code .` は Windows 側のVS Codeが WSL Remote 経由で開くため、VS Code側に WSL Remote 拡張が入っていることを確認する
+
 #### 推奨拡張機能をインストールする
 
 VS Codeを起動し、左側のサイドバーにある四角いアイコン（拡張機能）をクリックします。検索窓に拡張機能名を入力して、「Install」ボタンを押してください。
@@ -447,7 +454,7 @@ code .
 
 【スクリーンショット】VS Code のエクスプローラー（左サイドバー）に `task-app` フォルダが開き、`package.json` や `src/` といったファイルが表示されていることを確認してください。
 
-> ⚠️ `code` コマンドが見つからない場合は、VS Codeを開いて `Cmd+Shift+P`（Macの場合）→「Shell Command: Install 'code' command in PATH」を実行してください。
+> ⚠️ `code` コマンドが見つからない場合は、Macでは VS Code を開いて `Cmd+Shift+P` → 「Shell Command: Install 'code' command in PATH」を実行してください。Windowsではインストーラーを再実行して「PATH に追加」オプションを有効にするか、VS Codeを起動して `File > Open Folder` から現在のプロジェクトを開いてください。WSLでは Windows 側のVS Codeと WSL Remote 拡張を使うと `code .` で開けます。
 
 📝 **学んだこと**: `code .` でカレントディレクトリをVS Codeで開けます。プロジェクトのファイル構造を視覚的に確認できるようになりました。
 
