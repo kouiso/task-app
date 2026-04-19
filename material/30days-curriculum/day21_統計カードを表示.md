@@ -129,6 +129,12 @@ flowchart TD
 | `averageTimePerTask` | 1タスクあたり平均作業時間（分） |
 | `projectStats` | プロジェクト別の集計済み配列 |
 
+```typescript
+// filepath: src/app/report/page.tsx
+// Step 3 以降でこの API を実際に呼び出します
+api.report.getOverview.useQuery();
+```
+
 ✅ **確認ポイント**:
 - 完成版 source がサーバー集計を選んだ理由を理解した
 - 一覧APIと統計APIは責務を分けるべきだと理解した
@@ -584,8 +590,8 @@ if (isLoading) {
 
 ```bash
 # filepath: ターミナル（確認用）
-npm run dev
-# http://localhost:3000/report にアクセス
+PORT=3001 npm run dev
+# http://localhost:3001/report にアクセス
 ```
 
 ブラウザの DevTools を開き（`F12` キー）、
