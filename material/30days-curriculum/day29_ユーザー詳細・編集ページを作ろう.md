@@ -165,7 +165,7 @@ export default async function UserDetailPage({ params }) {
 開発サーバーを起動して `/user/test123` にアクセスしてみましょう。
 
 ```bash
-npm run dev
+PORT=3001 npm run dev
 ```
 
 📸 スクリーンショット: ユーザー詳細ページの骨組みの表示を確認してください。
