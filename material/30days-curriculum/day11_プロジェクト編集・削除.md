@@ -675,12 +675,12 @@ if (projectIdParam && selectedProject) {
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ✅ **確認ポイント**:
 - 開発サーバーが起動した
-- ブラウザで `http://localhost:3000` にアクセスできる
+- ブラウザで `http://localhost:3001` にアクセスできる
 
 #### 編集フローの確認
 
