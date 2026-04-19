@@ -1145,11 +1145,11 @@ const handleTaskDelete =
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して動作確認
-npm run dev
+PORT=3001 npm run dev
 ```
 
 ✅ **確認ポイント**:
-- `http://localhost:3000/search` でアプリが表示される
+- `http://localhost:3001/search` でアプリが表示される
 
 以下の操作を順に試します。
 
