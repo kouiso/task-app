@@ -66,7 +66,8 @@ function ProjectPageContent() {
 
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
-    isArchived: showArchived,
+    // showArchived が true のとき isArchived フィルターを外して進行中・アーカイブ両方を取得する
+    isArchived: showArchived ? undefined : false,
   });
   const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
     { projectId: selectedProject ?? '' },
