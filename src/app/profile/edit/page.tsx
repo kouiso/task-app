@@ -27,6 +27,7 @@ type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
 
 export default function ProfileEditPage() {
   const router = useRouter();
+  const utils = api.useUtils();
 
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
@@ -40,7 +41,8 @@ export default function ProfileEditPage() {
   const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
 
   const updateProfile = api.user.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.auth.getCurrentUser.invalidate();
       toast.success('プロフィールを更新しました');
       router.push('/profile');
     },
