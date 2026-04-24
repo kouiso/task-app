@@ -289,6 +289,22 @@ describe('taskRouter', () => {
       });
 
       expect(updated.status).toBe('DONE');
+      expect(updated.completedAt).not.toBeNull();
+    });
+
+    it('should clear completedAt when status changes away from DONE', async () => {
+      const user = await createTestUser();
+      const project = await createTestProject(user.id);
+      const task = await createTestTask(project.id, user.id, { status: 'TODO' });
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await caller.task.update({ id: task.id, status: 'DONE' });
+
+      const updated = await caller.task.update({ id: task.id, status: 'IN_PROGRESS' });
+
+      expect(updated.status).toBe('IN_PROGRESS');
+      expect(updated.completedAt).toBeNull();
     });
 
     it('should update task priority', async () => {
