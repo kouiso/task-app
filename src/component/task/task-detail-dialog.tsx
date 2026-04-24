@@ -25,6 +25,7 @@ import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-vari
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { formatDateOnly } from '@/lib/date';
+import { formatMinutes } from '@/lib/utils/time';
 import { api } from '@/trpc/react';
 
 type TaskDetailDialogProps = {
@@ -192,6 +193,16 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                   <span>
                     {taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}
                   </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-1">見積時間</span>
+                  <span>
+                    {taskDetail.estimatedHours != null ? `${taskDetail.estimatedHours}h` : '未設定'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-1">作業時間</span>
+                  <span>{formatMinutes(taskDetail.timeSpentMinutes)}</span>
                 </div>
               </div>
 

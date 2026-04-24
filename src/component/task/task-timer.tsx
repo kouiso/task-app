@@ -4,6 +4,7 @@ import { Loader2, PauseIcon, PlayIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '@/component/ui/button';
+import { formatMinutes } from '@/lib/utils/time';
 import { api } from '@/trpc/react';
 
 interface TaskTimerProps {
@@ -73,12 +74,6 @@ export function TaskTimer({
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatMinutes = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
   return (

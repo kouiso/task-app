@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
@@ -51,9 +51,13 @@ interface TaskGroupSectionProps {
     priority: TaskPriority;
     dueDate: Date | null;
     assignee: { name: string | null; email: string; avatar: string | null } | null;
+    isTimerActive: boolean;
+    timerStartedAt: Date | null;
+    timeSpentMinutes: number;
   }>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onTimerUpdate: () => void;
 }
 
 const TaskGroupSection = ({
@@ -62,6 +66,7 @@ const TaskGroupSection = ({
   tasks,
   onEdit,
   onDelete,
+  onTimerUpdate,
 }: TaskGroupSectionProps) => {
   if (tasks.length === 0) return null;
 
@@ -81,8 +86,12 @@ const TaskGroupSection = ({
             priority={task.priority}
             dueDate={task.dueDate}
             assignee={task.assignee}
+            isTimerActive={task.isTimerActive}
+            timerStartedAt={task.timerStartedAt}
+            timeSpentMinutes={task.timeSpentMinutes}
             onEdit={onEdit}
             onDelete={onDelete}
+            onTimerUpdate={onTimerUpdate}
           />
         ))}
       </div>
@@ -137,6 +146,10 @@ export default function MyTasksPage() {
     setDeleteTargetId(taskId);
     setDeleteDialogOpen(true);
   };
+
+  const handleTimerUpdate = useCallback(() => {
+    utils.task.getAll.invalidate();
+  }, [utils.task.getAll]);
 
   const handleSubmit = (data: TaskFormData) => {
     if (data.id) {
@@ -226,6 +239,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.overdue ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onTimerUpdate={handleTimerUpdate}
           />
 
           <TaskGroupSection
@@ -234,6 +248,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.today ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onTimerUpdate={handleTimerUpdate}
           />
 
           <TaskGroupSection
@@ -241,6 +256,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.upcoming ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onTimerUpdate={handleTimerUpdate}
           />
 
           <TaskGroupSection
@@ -248,6 +264,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.noDueDate ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onTimerUpdate={handleTimerUpdate}
           />
 
           {tasks && tasks.length === 0 && (
