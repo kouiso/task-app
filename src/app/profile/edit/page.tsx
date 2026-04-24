@@ -43,7 +43,7 @@ export default function ProfileEditPage() {
 
   const updateProfile = api.user.updateProfile.useMutation({
     onSuccess: async () => {
-      await Promise.all([
+      await Promise.allSettled([
         utils.auth.getCurrentUser.invalidate(),
         utils.auth.getSession.invalidate(),
       ]);
