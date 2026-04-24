@@ -299,7 +299,8 @@ describe('taskRouter', () => {
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
-      await caller.task.update({ id: task.id, status: 'DONE' });
+      const done = await caller.task.update({ id: task.id, status: 'DONE' });
+      expect(done.completedAt).not.toBeNull();
 
       const updated = await caller.task.update({ id: task.id, status: 'IN_PROGRESS' });
 
