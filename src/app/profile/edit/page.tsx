@@ -39,8 +39,14 @@ export default function ProfileEditPage() {
 
   const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
 
+  const utils = api.useUtils();
+
   const updateProfile = api.user.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.all([
+        utils.auth.getCurrentUser.invalidate(),
+        utils.auth.getSession.invalidate(),
+      ]);
       toast.success('プロフィールを更新しました');
       router.push('/profile');
     },
