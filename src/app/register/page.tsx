@@ -42,8 +42,7 @@ export default function RegisterPage() {
 
   const registerMutation = api.auth.register.useMutation({
     onSuccess: () => {
-      router.push('/dashboard');
-      router.refresh();
+      router.push('/login');
     },
     onError: (error) => {
       setError(error.message ?? 'ユーザー登録中にエラーが発生しました');
