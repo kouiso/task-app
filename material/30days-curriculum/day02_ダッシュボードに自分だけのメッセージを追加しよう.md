@@ -1,538 +1,1002 @@
 # Day 02: ダッシュボードに自分だけのメッセージを追加しよう
 
-## 🔙 前回の振り返り
+30日で、自分専用のタスク管理アプリを育てていく。
+Day 01 で土台は立ち上がった。
+ルートの入口と、そこから入る最小のダッシュボードももうできている。
+今日はその土台に「自分の気配」を入れていく日や。
 
-Day 01 では開発環境のセットアップを行い、タスク管理アプリを `npm run dev` で起動するところまで完了しました。今日は実際にコードを編集してダッシュボードを改造していきます。
+ダッシュボードに自分の名前や今日の集中テーマが出るだけで、
+画面は急に「教材の見本」から「自分のプロダクト」に変わり始める。
 
-### 🔧 事前準備
+今日は `src/app/dashboard/page.tsx` だけを触る。
+そのぶん、1ファイルの中で
+「どういう情報を持たせるか」
+「どう見せるか」
+「どこまでを Server Component のまま保つか」
+を丁寧にやっていこう。
 
-作業を始める前に、以下が完了していることを確認してください。
+## 🌟 このDayで君が手に入れるもの
 
-| 確認項目 | コマンド/操作 | OK状態 |
-|---------|-------------|--------|
-| Docker Desktop起動 | アプリを開く | クジラアイコンが表示 |
-| DB起動 | `docker compose up -d db` | `running` 状態 |
-| 開発サーバー起動 | `npm run dev` | `✓ Ready` と表示 |
-| ログイン | http://localhost:3000 | ダッシュボードが見える |
+Day 01 の最後に作った最小ダッシュボードをベースにして、
+「Hello Task-App」だけやった画面を、
+自分の名前・時間帯に合ったあいさつ・今日の集中テーマが見える
+自分専用のダッシュボードへ育てられるようになる。
 
----
+- 画面の主役になるメッセージカードをつくる
+- そのメッセージに意味のある情報を添える
+- design token を崩さず見た目を整える
+- いらない `"use client"` を付けずに仕上げる
 
-## 🎯 今日のゴール
+ここまでやると、
+次の Day で GitHub に保存するときも
+「ちゃんと自分で手を入れた一歩目やな」と実感しやすい。
 
-ダッシュボードにウェルカムバナー（歓迎メッセージのカード）を追加します。この作業を通じて、変数（`const`/`let`）と型（`string`/`number`/`boolean`）の基本を体験します。
+【スクリーンショット】Day 02 完成時のダッシュボード
+![Day 02 完成時のダッシュボード](./screenshots/day02/dashboard-message.png)
 
-📸 スクリーンショット: ダッシュボード画面にウェルカムバナーが表示されている完成イメージ
+## 📍 今日のゴール（G0 Foundation の2日目）
 
-![ダッシュボード画面にウェルカムバナーが表示されている完成イメージ](./screenshots/day02-complete.png)
-## 🤔 なぜこれを作るのか？
+- [ ] Day 01 の完成状態から作業を再開する
+- [ ] `src/app/dashboard/page.tsx` の現在地を確認する
+- [ ] 自分だけのメッセージカードをダッシュボードに追加する
+- [ ] 時間帯に応じたあいさつを関数で組み立てる
+- [ ] 小さな情報カードも添えて、ダッシュボードらしい密度にする
+- [ ] Server Component のまま書く意味を Before/After で理解する
 
-変数と型は、全てのプログラムの「土台」です。理論だけ学んでも眠くなるだけなので、実際にダッシュボードを改造しながら体で覚えましょう。
+## 🧰 前提（Day 01 完了していること）
 
-> 💡 **例え話**: 変数は「ラベル付きの箱」です。引き出しに「文房具」「おやつ」とシールを貼るように、データに名前をつけて管理します。TypeScriptの型は「箱に入れていいものの種類」を決めるルールです。
+今日は Day 01 の続きから進める。
+なので、次の状態になっていることが前提や。
 
-### 📐 今日の作業の流れ
+- `~/workspace/task-app` みたいな自分の作業ディレクトリに `task-app` がある
+- `npm install` 済みで、`npm run dev` が動く
+- `src/app/globals.css` に token ベースの色や radius が入っている
+- `src/app/page.tsx` から `/dashboard` に入れる
+- ダッシュボードに `Hello Task-App` と出る最初の画面がある
 
-```mermaid
-flowchart TD
-    A[ダッシュボードのコードを読む] --> B[ウェルカムバナーを追加]
-    B --> C[constとletの違いを体験]
-    C --> D[型エラーをわざと起こす]
-    D --> E[型付き統計情報を追加]
-    E --> F[既存の型定義ファイルを読む]
+まだこの状態になっていなければ、
+先に Day 01 を完了させてから戻ってきてな。
 
-    style A fill:#e3f2fd
-    style B fill:#e8f5e9
-    style D fill:#ffebee
-    style F fill:#fff3e0
+## ✨ 今日のワクワクポイント
+
+ダッシュボードって、
+その日いちばん最初に目に入る場所や。
+朝開いたときに
+「お、今日はこれ進める日やな」
+と気持ちが前に出る画面にできたら、
+単なる練習から一段上がる。
+
+## 🔙 前日からの状態確認
+
+まずは、Day 01 で作った状態を確認しよう。
+今日は新しいプロジェクトを作り直したりしない。
+**昨日の続きの `task-app` を、そのまま育てる** のが今日のテーマや。
+
+先に `http://localhost:3000` を開いて、
+`ダッシュボードへ入る` ボタンから `/dashboard` に移動できることも見ておこう。
+
+### 起動確認
+
+まだ開発サーバーを立ち上げていなければ、
+プロジェクトのルートで起動する。
+
+```bash title="~/workspace/task-app"
+npm run dev
 ```
 
-### やること / やらないこと
+### Day 01 直後の `src/app/dashboard/page.tsx`
 
-| やること | やらないこと |
-|---------|-------------|
-| ダッシュボードにウェルカムバナーを追加 | 新しいページを作る |
-| `const`と`let`を実際に使って違いを体験 | 理論だけの暗記 |
-| 型エラーをわざと起こして読み方を学ぶ | エラーを避けて通る |
-| 既存コードの型定義を読む | 型定義ファイルを新規作成する |
+この Day では、
+Day 01 の最後に作った次のようなシンプルな状態から始める想定で進める。
 
-### 🆕 新しく学ぶ概念
+`~/workspace/task-app/src/app/dashboard/page.tsx` を開いて、
+まずは「今ここにいるんやな」という基準を揃えよう。
 
-| 概念 | 読み方 | 役割 | 例え |
-|------|--------|------|------|
-| const | コンスト | 変更できない変数を宣言する | 鍵付きの金庫。一度入れたら変えられない |
-| let | レット | 変更できる変数を宣言する | 普通の引き出し。中身を自由に入れ替えられる |
-| 型注釈 | かたちゅうしゃく | 変数にどんな種類のデータが入るか明示する | 箱に「文房具専用」とラベルを貼る |
+```tsx title="src/app/dashboard/page.tsx"
+export default function DashboardPage() {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-10">
+        <section className="w-full rounded-3xl border border-border bg-card px-8 py-10 shadow-md">
+          <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            Dashboard
+          </p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+            Hello Task-App
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+            Day 01 で立ち上げた最初のダッシュボードや。
+            ここから少しずつ、自分専用の画面に育てていこう。
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
 
-## 📊 実装ステップ一覧
+この時点では、まだ「アプリの箱」が立った状態や。
+今日はここに自分の名前と今日の空気を入れていく。
 
-| ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
-|---------|---------|---------|-------------|---------|
-| Step 1 | ダッシュボードのコードを読む | 5分 | なし（読むのみ） | コードの構造がわかる |
-| Step 2 | ウェルカムメッセージの変数を作る | 5分 | dashboard/page.tsx | 変数が表示される |
-| Step 3 | カード風デザインでバナーにする | 5分 | dashboard/page.tsx | バナーが表示される |
-| Step 4 | letに変えて違いを体験する | 4分 | dashboard/page.tsx | constが推奨な理由がわかる |
-| Step 5 | 型エラーをわざと起こす | 5分 | dashboard/page.tsx | エラーメッセージが読める |
-| Step 6 | 型エラーを修正する | 4分 | dashboard/page.tsx | エラーが消える |
-| Step 7 | バナーに統計情報を型付きで追加 | 7分 | dashboard/page.tsx | 統計が表示される |
-| Step 8 | 既存の型定義を読む（status.ts） | 5分 | なし（読むのみ） | as constの意味がわかる |
-| Step 9 | 既存の型定義を読む（priority.ts） | 3分 | なし（読むのみ） | Recordの意味がわかる |
+## Step 1: 自分だけのメッセージを、まず1枚のカードにする
 
-**合計時間**: 約48分
+いきなり情報を盛りすぎると見失いやすい。
+なので最初は、**主役のメッセージカード1枚だけ** を作る。
 
----
+ここで入れるのは次の3つや。
 
-### Step 1: ダッシュボードのコードを読む（5分）
+- 誰のダッシュボードなのか
+- 今日は何に集中したいのか
+- 開いた瞬間に気分が上がる一言
 
-🎯 **ゴール**: 現在のダッシュボードがどう作られているか把握します。
+### 編集アンカー
 
-VS Codeで`src/app/dashboard/page.tsx`を開いてください。先頭部分を確認しましょう。
+`~/workspace/task-app/src/app/dashboard/page.tsx` を開いて、
+**ファイルの先頭から最後まで全部置き換える**。
 
-💻 **確認するコード**:
+Day 01 と同じで、
+この段階は部分修正より丸ごと差し替えたほうが流れを掴みやすい。
 
-```typescript
-// filepath: src/app/dashboard/page.tsx
-// 先頭部分・読むのみ
+```tsx title="src/app/dashboard/page.tsx"
+const ownerName = 'Kouiso';
+const focusTheme = 'Day 02 のダッシュボードづくり';
+const encouragement = '今日の一歩が、そのまま自分のアプリの顔になる。';
+
+export default function DashboardPage() {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
+        <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+              G0 Foundation
+            </p>
+            <h1 className="text-lg font-semibold text-card-foreground">
+              My Dashboard
+            </h1>
+          </div>
+
+          <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
+            Day 02 Progress
+          </div>
+        </header>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
+            <div className="border-b border-border px-8 py-6">
+              <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+                Personal Message
+              </span>
+
+              <h2 className="mt-6 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+                こんにちは、{ownerName}さん。
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+                今日の集中テーマは
+                <span className="font-semibold text-foreground"> {focusTheme}</span>
+                や。
+                この1枚から、自分だけのダッシュボードを育てていこう。
+              </p>
+            </div>
+
+            <div className="bg-secondary px-8 py-6">
+              <p className="text-sm leading-8 text-secondary-foreground">
+                {encouragement}
+              </p>
+            </div>
+          </article>
+
+          <aside className="space-y-4">
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                今日の狙い
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                ただの見出しではなく、
+                開いた瞬間に「これは自分の画面や」と分かるメッセージを置く。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                今の変化
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                `Hello Task-App` から、
+                自分の名前と今日のテーマが見えるダッシュボードへ進んだ。
+              </p>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
+
+### ここで見てほしいポイント
+
+- `ownerName` みたいに、意味のある名前で文字列を置いている
+- `bg-card` や `text-muted-foreground` を使って、Day 01 の token 設計に乗っている
+- まだ `"use client"` は付けていない
+
+この段階で大事なんは、
+**何のための値かが名前から分かる** 状態にすることや。
+
+### ブラウザ確認
+
+- 見出しが `Hello Task-App` から変わっている
+- `こんにちは、Kouisoさん。` が主役として見える
+- 右側に小さな補助カードが2枚並ぶ
+
+まだこれでも十分ええ。
+でも、ここからもう一歩進める。
+
+## Step 2: 時間帯に合うあいさつを関数で組み立てる
+
+次は、
+メッセージをただベタ書きするんじゃなくて、
+**時間帯に合わせて少しだけ表情が変わる** ようにする。
+
+朝なら「おはよう」、
+昼なら「こんにちは」、
+夜なら「こんばんは」。
+この分岐は小さいけど、
+「その場に文字列を直書きし続ける」状態から抜ける最初の練習になる。
+
+### 編集アンカー
+
+同じく `~/workspace/task-app/src/app/dashboard/page.tsx` を開いて、
+**ファイル全体を次の内容に置き換える**。
+
+```tsx title="src/app/dashboard/page.tsx"
+type DashboardOwner = {
+  name: string;
+  role: string;
+  todayFocus: string;
+  todayGoal: string;
+};
+
+const dashboardOwner: DashboardOwner = {
+  name: 'Kouiso',
+  role: 'Builder of Task App',
+  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
+  todayGoal: 'Day 02 のうちに、自分の言葉が乗った画面にする',
+};
+
+function getGreetingByHour(hour: number): string {
+  if (hour < 12) {
+    return 'おはよう';
+  }
+
+  if (hour < 18) {
+    return 'こんにちは';
+  }
+
+  return 'こんばんは';
+}
+
+function buildMainMessage(owner: DashboardOwner, hour: number): string {
+  const greeting = getGreetingByHour(hour);
+
+  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日や。`;
+}
+
+export default function DashboardPage() {
+  const currentHour = new Date().getHours();
+  const mainMessage = buildMainMessage(dashboardOwner, currentHour);
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
+        <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+              G0 Foundation
+            </p>
+            <h1 className="text-lg font-semibold text-card-foreground">
+              My Dashboard
+            </h1>
+          </div>
+
+          <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
+            Day 02 Progress
+          </div>
+        </header>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
+            <div className="border-b border-border px-8 py-6">
+              <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+                Personal Message
+              </span>
+
+              <h2 className="mt-6 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+                {mainMessage}
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+                今の役目は
+                <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
+                。
+                小さくても、自分の言葉が乗った画面は一気にプロダクトらしくなる。
+              </p>
+            </div>
+
+            <div className="grid gap-4 bg-secondary px-8 py-6 sm:grid-cols-2">
+              <div className="rounded-2xl bg-background px-4 py-4 shadow-xs">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  Owner
+                </p>
+                <p className="mt-3 text-lg font-semibold text-foreground">
+                  {dashboardOwner.name}
+                </p>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  {dashboardOwner.role}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-background px-4 py-4 shadow-xs">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  Focus
+                </p>
+                <p className="mt-3 text-lg font-semibold text-foreground">
+                  Day 02
+                </p>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  {dashboardOwner.todayFocus}
+                </p>
+              </div>
+            </div>
+          </article>
+
+          <aside className="space-y-4">
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                時間帯で変わる理由
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                同じダッシュボードでも、
+                開く時間でひと言の空気が変わると、画面に体温が出る。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                今日の学び
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                値を並べるだけやなく、
+                関数にして意味を持たせると読みやすさが一段上がる。
+              </p>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
+
+### この段階で入った考え方
+
+- `DashboardOwner` という型で、どんな情報を持たせるか先に決めた
+- `getGreetingByHour` が、時間帯ごとのルールを引き受けている
+- `buildMainMessage` が、メッセージの組み立て役になっている
+
+こうしておくと、
+後で名前や肩書きや集中テーマを変えたくなっても、
+どこを触ればええか見失いにくい。
+
+## Step 3: メッセージの横に、ダッシュボードらしい情報を添える
+
+主役のメッセージができたら、
+その横に小さな情報カードを添えていく。
+
+ここで狙っているのは、
+本格的なレポート機能を先取りすることやない。
+**メッセージが孤立せず、ダッシュボード全体の文脈の中に置かれている**
+と感じられる密度を出すことや。
+
+今日は次の3種類を置こう。
+
+- いまの役割
+- 今日のフォーカス
+- 次にやること
+
+### 編集アンカー
+
+もう一度 `~/workspace/task-app/src/app/dashboard/page.tsx` 全体を置き換える。
+この Step が、Day 02 の完成版になる。
+
+```tsx title="src/app/dashboard/page.tsx"
+type DashboardOwner = {
+  name: string;
+  role: string;
+  todayFocus: string;
+  todayGoal: string;
+  nextAction: string;
+};
+
+type FocusCard = {
+  label: string;
+  value: string;
+  description: string;
+};
+
+const dashboardOwner: DashboardOwner = {
+  name: 'Kouiso',
+  role: 'Builder of Task App',
+  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
+  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
+  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+};
+
+function getGreetingByHour(hour: number): string {
+  if (hour < 12) {
+    return 'おはよう';
+  }
+
+  if (hour < 18) {
+    return 'こんにちは';
+  }
+
+  return 'こんばんは';
+}
+
+function buildMainMessage(owner: DashboardOwner, hour: number): string {
+  const greeting = getGreetingByHour(hour);
+
+  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日や。`;
+}
+
+export default function DashboardPage() {
+  const currentHour = new Date().getHours();
+  const mainMessage = buildMainMessage(dashboardOwner, currentHour);
+  const focusCards: FocusCard[] = [
+    {
+      label: 'Owner',
+      value: dashboardOwner.name,
+      description: dashboardOwner.role,
+    },
+    {
+      label: 'Today',
+      value: 'Day 02',
+      description: dashboardOwner.todayGoal,
+    },
+    {
+      label: 'Next',
+      value: 'Day 03',
+      description: dashboardOwner.nextAction,
+    },
+  ];
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
+        <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+              G0 Foundation
+            </p>
+            <h1 className="text-lg font-semibold text-card-foreground">
+              My Dashboard
+            </h1>
+          </div>
+
+          <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
+            Personalized Message Ready
+          </div>
+        </header>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
+            <div className="border-b border-border px-8 py-6">
+              <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+                Personal Message
+              </span>
+
+              <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+                {mainMessage}
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+                今日は
+                <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
+                を意識して進める。
+                ただ文字を置くんやなくて、
+                ダッシュボードに自分の意図が見える状態を作るのが狙いや。
+              </p>
+
+              <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
+                Focus: {dashboardOwner.todayFocus}
+              </div>
+            </div>
+
+            <div className="grid gap-4 bg-secondary px-8 py-6 md:grid-cols-3">
+              {focusCards.map((card) => (
+                <article
+                  key={card.label}
+                  className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    {card.label}
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-foreground">
+                    {card.value}
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                    {card.description}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <aside className="space-y-4">
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                今日のワンフレーズ
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                自分の名前が入るだけでも、
+                ダッシュボードは急に「使う画面」に変わる。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                ここで増えた価値
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                画面の主役が明確になって、
+                次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                次につながる視点
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                Day 03 ではこの変化を失わないように、
+                ちゃんと履歴として残していく段階へ進む。
+              </p>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
+
+### 完成版で見てほしいこと
+
+- 主役は大きいメッセージカードに集約されている
+- 補助情報は `focusCards` 配列に寄せている
+- 色は token 名で読めるようにしている
+- 動きがない画面なので Server Component のまま保っている
+
+ここまで来たら、Day 02 の狙いはちゃんと達成できてる。
+
+## Step 4: 保存して、ブラウザで「自分の画面」に変わったか確認する
+
+仕上げたら、
+ブラウザで見直そう。
+
+もし開発サーバーを止めているなら、
+もう一度起動する。
+
+```bash title="~/workspace/task-app"
+npm run dev
+```
+
+### チェックポイント
+
+- メイン見出しが時間帯によって変わる
+- `Kouiso` の名前が画面に出る
+- `Focus:` のバッジが主役色で見える
+- 下段に `Owner` `Today` `Next` の3カードがある
+- 右側の補助カードまで含めて、画面全体が「ダッシュボード」として見える
+
+### うまくいかないときの見直し順
+
+1. `src/app/dashboard/page.tsx` を途中だけ貼り換えていないか確認する
+2. 文字列のクオートやバッククオートを打ち間違えていないか見る
+3. `focusCards.map` の丸かっこや波かっこの閉じ忘れがないか見る
+4. 一度保存してからブラウザを再読み込みする
+
+## 💡 Pro パターンで書こう — ダッシュボードのメッセージは Server Component を標準にする
+
+ここまでで動くコードは書けた。
+でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+今日の文脈で言うと、
+「自分だけのメッセージを表示したい」というだけなら、
+ブラウザで状態を持つ必要はない。
+なのに最初から `"use client"` を付けると、
+必要ない JavaScript まで配る方向に寄っていく。
+
+### ❌ Before（動くけど、プロは書かない）
+
+```tsx title="src/app/dashboard/page.tsx"
 'use client';
 
-import {
-  ArrowUpRight, CheckCircle2, FolderKanban,
-  ListChecks, Timer
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { AppLayout } from '@/component/layout/app-layout';
-import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
-```
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `'use client'` | このファイルはブラウザで動く | 「この書類は現場用」の印 |
-| `import ... from` | 他のファイルから部品を持ってくる | 工具箱から道具を取り出す |
-| `lucide-react` | アイコンライブラリ | 「アイコン棚からアイコンを取る」 |
-
-> 💡 **ポイント**: 実際のファイルにはここで示した以外にも `TASK_STATUS_COLORS`、`TASK_PRIORITY_LABELS` など多くの import 文があります。今は全部を理解する必要はありません。今日使う部品だけに注目しましょう。
-
-✅ **確認ポイント**:
-- VS Codeで`src/app/dashboard/page.tsx`が開けた
-- `import`文でアイコンやレイアウト部品を読み込んでいることが確認できた
-- import文の中で知っている単語（AppLayout、Timerなど）を1つ見つけた
-
-📝 **学んだこと**: Reactのページは`import`で必要な部品を集めてから、画面を組み立てます。
-
----
-
-### Step 2: ウェルカムメッセージの変数を作る（5分）
-
-🎯 **ゴール**: `const`を使って変数を作り、画面に表示します。
-
-`src/app/dashboard/page.tsx`を開いて、ウェルカムメッセージを追加します。
-
-> 💡 **挿入位置の見つけ方**: VS Codeで `Cmd+F`（Mac）または `Ctrl+F`（Windows）を押して `recentTasks` と検索してください。見つかった行（`const recentTasks = overview?.recentTasks ?? [];`）の**下**、`return (` の行の**直前**に変数を宣言します。
-
-> ⚠️ **前提**: ダッシュボードを表示するにはログインが必要です。ブラウザで `http://localhost:3000` を開き、メールアドレス `admin@example.com`、パスワード `password123` でログインしてからアクセスしてください。
-
-💻 **実装**:
-
-`return`文の**前**に変数を宣言します。関数コンポーネント内の`return`より上に追加してください。
-
-```typescript
-// filepath: src/app/dashboard/page.tsx
-  // returnの直前に追加
-  // ウェルカムメッセージ用の変数
-  const greeting: string = "こんにちは！";
-  const userName: string = "開発者";
-  const message: string = `${greeting}${userName}さん`;
-```
-
-✅ **確認ポイント**:
-- ファイルを保存した（Ctrl+S / Cmd+S）
-- エラーが表示されていない
-
-次に、JSXの中の`<div className="space-y-10">`の直後に表示用の要素を追加します。
-
-> 💡 **挿入位置の見つけ方**: `Cmd+F`（Mac）または `Ctrl+F`（Windows）で `space-y-10` と検索し、その`<div>`タグの**次の行**に追加してください。
-
-```typescript
-// filepath: src/app/dashboard/page.tsx
-        {/* space-y-10のdiv直後に追加 */}
-        {/* ウェルカムメッセージを追加 */}
-        <p className="text-lg text-muted-foreground">
-          {message}
-        </p>
-```
-
-✅ **確認ポイント**:
-- ファイルを保存した（Ctrl+S / Cmd+S）
-- エラーが表示されていない
-
-> 💡 **ポイント**: 変数の宣言は必ず`return`文の**前**に書きます。`return`の中はJSX（画面の構造）を書く場所で、変数の宣言はできません。
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `const greeting: string` | string型の変数`greeting`を宣言 | 「文房具専用」のラベル付き箱 |
-| `` `${greeting}${userName}さん` `` | テンプレートリテラル（文字列の結合） | 差し込み印刷。枠に変数の値を埋め込む |
-| `{message}` | JSXで変数の中身を表示する | 箱を開けて中身を見せる |
-
-✅ **確認ポイント**:
-1. ファイルを保存した（Cmd+S / Ctrl+S）
-2. ブラウザで`http://localhost:3000/dashboard`を確認
-3. 「こんにちは！開発者さん」と表示されている
-
-📸 スクリーンショット: ダッシュボードのタイトル下に「こんにちは！開発者さん」というメッセージが表示されている状態
-
-![ダッシュボードのタイトル下に「こんにちは！開発者さん」というテキストが表示されている画面](./screenshots/day02-step2-greeting.png)
-📝 **学んだこと**: `const`で変数を宣言し、`{変数名}`でJSXに表示できます。
-
----
-
-### Step 3: カード風のデザインでバナーにする（5分）
-
-🎯 **ゴール**: メッセージをカード風のdivで囲んで、見た目を整えます。
-
-Step 2で追加した`<p>`タグを、カード風の`<div>`に置き換えます。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/dashboard/page.tsx
-        {/* Step 2のpタグをdivカードに置き換え */}
-        <div className="rounded-xl border border-border/50
-          bg-card p-6">
-          <h2 className="text-lg font-semibold mb-2">
-            {message} 👋
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            今日もタスク管理を頑張りましょう！
-          </p>
-        </div>
-```
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `rounded-xl` | 角丸の枠 | 名刺の丸い角 |
-| `border border-border/50` | 半透明の枠線 | うっすら見えるフレーム |
-| `bg-card` | カード背景色 | カードっぽい色の紙 |
-| `p-6` | 内側の余白 | 額縁の内側の余白 |
-
-✅ **確認ポイント**:
-1. ブラウザでダッシュボードを確認
-2. ウェルカムメッセージがカード風のデザインで表示されている
-3. 角丸と枠線がついている
-
-📸 スクリーンショット: ウェルカムメッセージがカード風のdivで囲まれた状態
-
-![ウェルカムメッセージがカード風のdivで囲まれて表示されている画面](./screenshots/day02-step3-card.png)
-📝 **学んだこと**: Tailwind CSSのユーティリティクラスで、カード風の見た目を作れます。
-
----
-
-> ⚠️ **Step 4〜6は実験タイムです**: 途中で赤い波線やエラーが出ても**正常**です。TypeScriptが「この書き方はまずいよ」と教えてくれているだけです。Step 6の最後でまとめて削除するので、安心して手を動かしてください。
-
-### Step 4: letに変えて違いを体験する（4分）
-
-🎯 **ゴール**: `const`を`let`に変えた時の違いを体験します。
-
-CardTitleの中身を変数で管理してみましょう。`return`の前に以下を追加してください。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/dashboard/page.tsx（returnの直前に追加）
-  // constで宣言 → 再代入しようとするとエラー
-  const welcomeText = "こんにちは！開発者さん 👋";
-  // welcomeText = "別のテキスト"; // ← この行のコメントを外すとエラー！
-
-  // letで宣言 → 再代入OK
-  let dynamicText = "今日もタスク管理を頑張りましょう！";
-  dynamicText = "今日のタスクをチェックしましょう！"; // ← OK
-```
-
-🔍 **コード解説**:
-
-| 宣言 | 再代入 | 使う場面 | イメージ |
-|------|--------|---------|---------|
-| `const` | できない | 変わらない値（名前、設定） | 鍵付きの金庫 |
-| `let` | できる | 変わる値（カウンター、入力値） | 普通の引き出し |
-
-✅ **確認ポイント**:
-1. `welcomeText = "別のテキスト";`のコメントを外すと赤い波線が出る
-2. エラーメッセージ「Cannot assign to 'welcomeText' because it is a constant.」が表示される
-3. コメントを戻してエラーを解消する
-
-📝 **学んだこと**: `const`は再代入できないので、うっかり値を変えてしまうミスを防げます。**迷ったら`const`を使う**のがルールです。
-
-> 🧪 **これは実験コードです**: `welcomeText`と`dynamicText`はStep 6の最後で削除します。今はそのまま残しておいてください。
-
----
-
-### Step 5: 型エラーをわざと起こす（5分）
-
-🎯 **ゴール**: 型が合わないコードを書いて、TypeScriptのエラーメッセージを読む練習をします。
-
-> 💡 **安心してください**: エラーを起こしてもアプリが壊れることはありません。VS Codeが赤い波線で教えてくれるだけです。いつでも元に戻せるので、安心して実験してください。
-
-📸 スクリーンショット: VS Codeで赤い波線とエラーメッセージが表示されている画面
-
-![VS Codeで赤い波線とエラーメッセージが表示されている画面](./screenshots/day02-step5-type-error.png)
-Step 4のコードの下に、わざと間違ったコードを追加してください。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/dashboard/page.tsx（returnの直前に追加）
-  // わざと型エラーを起こす ↓
-  const taskCount: number = "たくさん";
-  // ↑ number型なのにstring値を入れている！
-```
-
-VS Codeで`"たくさん"`の部分に赤い波線が表示されるはずです。波線の上にマウスを置いて、エラーメッセージを確認してください。
-
-🔍 **エラーメッセージの読み方**:
-
-| エラー文（英語） | 日本語訳 | 対処法 |
-|----------------|---------|--------|
-| Type 'string' is not assignable to type 'number' | string型をnumber型に代入できません | 値を数値に変える、または型をstringに変える |
-
-✅ **確認ポイント**:
-1. `"たくさん"`に赤い波線が表示されている
-2. マウスを置くとエラーメッセージが読める
-3. エラーの意味が理解できた
-
-📝 **学んだこと**: TypeScriptは**コードを書いた瞬間**に型の間違いを教えてくれます。実行してからバグを探す必要がありません。
-
-> 🧪 **これは実験コードです**: `taskCount`はStep 6の最後で削除します。今はそのまま残しておいてください。
-
----
-
-### Step 6: 型エラーを修正する（4分）
-
-🎯 **ゴール**: Step 5で起こした型エラーを正しく修正します。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/dashboard/page.tsx（Step 5のコードを修正）
-  // 修正：number型には数値を入れる
-  const taskCount: number = 5;
-
-  // 他の基本型も試してみよう
-  const projectName: string = "Webサイト制作";
-  const isCompleted: boolean = false;
-```
-
-🔍 **基本の3つの型**:
-
-| 型名 | 読み方 | 入れられる値 | 使う場面 |
-|------|--------|------------|---------|
-| `string` | ストリング | テキスト（`"文字列"`） | 名前、タイトル、メッセージ |
-| `number` | ナンバー | 数値（`42`、`3.14`） | 個数、金額、スコア |
-| `boolean` | ブーリアン | `true`（はい）または`false`（いいえ） | 完了/未完了、表示/非表示 |
-
-✅ **確認ポイント**:
-1. 赤い波線が消えた
-2. ターミナルにエラーが出ていない
-3. 3つの型（string、number、boolean）を変数で使えた
-
-📝 **学んだこと**: 型注釈は`変数名: 型 = 値`の形式で書きます。正しい型の値を入れないとエラーになります。
-
-⚠️ **後片付け（実験タイム終了）**: Step 7に進む前に、以下の実験用コードを削除してください。残しておくと未使用変数エラーが出ます。
-
-**Step 4で追加したコード（削除する）**:
-```typescript
-const welcomeText = "こんにちは！開発者さん";
-// welcomeText = "別のテキスト";
-let dynamicText = "今日もタスク管理を頑張りましょう";
-dynamicText = "今日のタスクをチェックしましょう";
-```
-
-**Step 5〜6で追加したコード（削除する）**:
-```typescript
-const taskCount: number = 5;
-const projectName: string = "Webサイト制作";
-const isCompleted: boolean = false;
-```
-
-**残すもの**: `greeting`、`userName`、`message`（Step 2）とCardコンポーネント（Step 3）
-
----
-
-### Step 7: バナーに統計情報を型付きで追加する（7分）
-
-🎯 **ゴール**: ウェルカムバナーに「今日の統計」を追加し、型付き変数を実践的に使います。
-
-`const recentTasks = overview?.recentTasks ?? [];` の下に、バナー用の統計情報を追加します。
-
-> 💡 **`completionRate` はどこから来る？**: ダッシュボードのコードを上にたどると、`api.report.getOverview.useQuery()` でダッシュボード全体のサマリーをサーバーから取得し、その結果（`overview`）から `totalTasks`（全タスク数）や `completedTasks`（完了タスク数）、`completionRate`（完了率）が計算済みで取れます。ここでは新たに `statusText` だけを追加します。
-
-💻 **実装**:
-
-```typescript
-// filepath: src/app/dashboard/page.tsx（recentTasksの下に追加）
-  // 80%以上なら褒める、未満なら励ます
-  const statusText: string = completionRate >= 80
-    ? "素晴らしい進捗です！"
-    : "コツコツ進めていきましょう！";
-```
-
-✅ **確認ポイント**:
-- ファイルを保存した（Ctrl+S / Cmd+S）
-- エラーが表示されていない
-
-次に、Step 3で作ったdiv内のメッセージを更新します。
-
-```typescript
-// filepath: src/app/dashboard/page.tsx（Step 3のdiv内を変更）
-          <p className="text-sm text-muted-foreground">
-            タスク完了率: {completionRate}%
-            — {statusText}
-          </p>
-```
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `completionRate` | 既存の完了率変数（上部で計算済み） | ダッシュボードが自動計算した達成度 |
-| `条件 ? A : B` | 三項演算子（条件分岐） | 「80%以上なら褒める、未満なら励ます」 |
-| `completionRate >= 80` | 80以上か判定 | テストで80点以上かチェック |
-
-✅ **確認ポイント**:
-1. ブラウザでダッシュボードを確認
-2. バナーに「タスク完了率: XX% — メッセージ」が表示されている
-3. 完了率に応じてメッセージが変わることを理解できた
-
-📸 スクリーンショット: バナーに「タスク完了率: XX% — メッセージ」が表示されている状態
-
-![バナーに「タスク完了率: XX% — メッセージ」が表示されている画面](./screenshots/day02-step7-stats.png)
-📝 **学んだこと**: 型付き変数と三項演算子を組み合わせて、動的なメッセージを作れます。
-
----
-
-### Step 8: 既存の型定義を読む — status.ts（5分）
-
-🎯 **ゴール**: プロジェクトで実際に使われている型定義を読み、`as const`と`Record`を理解します。
-
-VS Codeで`src/lib/constant/status.ts`を開いてください。
-
-💻 **確認するコード**:
-
-```typescript
-// filepath: src/lib/constant/status.ts（読むのみ）
-// タスクのステータス定数と型を定義しているファイル
-export const TASK_STATUS = {
-  TODO: 'TODO',
-  IN_PROGRESS: 'IN_PROGRESS',
-  IN_REVIEW: 'IN_REVIEW',
-  DONE: 'DONE',
-  CANCELLED: 'CANCELLED',
-  BLOCKED: 'BLOCKED',
-} as const;
-
-export type TaskStatus =
-  (typeof TASK_STATUS)[keyof typeof TASK_STATUS];
-```
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `as const` | オブジェクトの値を「刻印」する | セメントに文字を刻み込む（変更不可） |
-| `typeof TASK_STATUS` | オブジェクトの型を取得 | 金庫の中身リストを取り出す |
-| `keyof` | オブジェクトのキー一覧を取得 | リストの「見出し」だけ取り出す |
-| `export` | 他ファイルから使えるようにする | 書類を共有フォルダに入れる |
-
-`as const`なしと`as const`ありの違い:
-
-| 書き方 | 型 | 意味 |
-|--------|-----|------|
-| `{ TODO: 'TODO' }` | `{ TODO: string }` | 中身は何でもstringならOK |
-| `{ TODO: 'TODO' } as const` | `{ readonly TODO: 'TODO' }` | 中身は`'TODO'`固定 |
-
-✅ **確認ポイント**:
-1. `src/lib/constant/status.ts`を開けた
-2. `as const`が値を固定する仕組みがわかった
-3. `TASK_STATUS`が6種類のステータスを定義していることを確認した
-
-> 💡 **このファイルには他にも定義があります**: `TASK_STATUS_LABELS`（ステータスの日本語ラベル）や `TASK_STATUS_COLORS`（ステータスの色）も同じファイルに定義されています。ダッシュボードの `import` 文で見た `TASK_STATUS_LABELS` もここから来ています。
-
-📝 **学んだこと**: `as const`を使うと、オブジェクトの値が「変更不可の固定値」として扱われます。
-
----
-
-### Step 9: 既存の型定義を読む — priority.ts（3分）
-
-🎯 **ゴール**: `Record`型ユーティリティの使い方を理解します。
-
-VS Codeで`src/lib/constant/priority.ts`を開いてください。
-
-💻 **確認するコード**:
-
-```typescript
-// filepath: src/lib/constant/priority.ts（読むのみ）
-// タスクの優先度定数とラベル対応表を定義しているファイル
-export const TASK_PRIORITY_LABELS:
-  Record<TaskPriority, string> = {
-  LOW: '低',
-  MEDIUM: '中',
-  HIGH: '高',
-  URGENT: '緊急',
+import { useMemo } from 'react';
+
+type DashboardOwner = {
+  name: string;
+  role: string;
+  todayFocus: string;
+  todayGoal: string;
+  nextAction: string;
 };
+
+type FocusCard = {
+  label: string;
+  value: string;
+  description: string;
+};
+
+const dashboardOwner: DashboardOwner = {
+  name: 'Kouiso',
+  role: 'Builder of Task App',
+  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
+  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
+  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+};
+
+function getGreetingByHour(hour: number): string {
+  if (hour < 12) {
+    return 'おはよう';
+  }
+
+  if (hour < 18) {
+    return 'こんにちは';
+  }
+
+  return 'こんばんは';
+}
+
+function buildMainMessage(owner: DashboardOwner, hour: number): string {
+  const greeting = getGreetingByHour(hour);
+
+  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日や。`;
+}
+
+export default function DashboardPage() {
+  const currentHour = new Date().getHours();
+  const mainMessage = useMemo(() => {
+    return buildMainMessage(dashboardOwner, currentHour);
+  }, [currentHour]);
+  const focusCards: FocusCard[] = [
+    {
+      label: 'Owner',
+      value: dashboardOwner.name,
+      description: dashboardOwner.role,
+    },
+    {
+      label: 'Today',
+      value: 'Day 02',
+      description: dashboardOwner.todayGoal,
+    },
+    {
+      label: 'Next',
+      value: 'Day 03',
+      description: dashboardOwner.nextAction,
+    },
+  ];
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
+        <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+              G0 Foundation
+            </p>
+            <h1 className="text-lg font-semibold text-card-foreground">
+              My Dashboard
+            </h1>
+          </div>
+
+          <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
+            Personalized Message Ready
+          </div>
+        </header>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
+            <div className="border-b border-border px-8 py-6">
+              <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+                Personal Message
+              </span>
+
+              <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+                {mainMessage}
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+                今日は
+                <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
+                を意識して進める。
+                ただ文字を置くんやなくて、
+                ダッシュボードに自分の意図が見える状態を作るのが狙いや。
+              </p>
+
+              <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
+                Focus: {dashboardOwner.todayFocus}
+              </div>
+            </div>
+
+            <div className="grid gap-4 bg-secondary px-8 py-6 md:grid-cols-3">
+              {focusCards.map((card) => (
+                <article
+                  key={card.label}
+                  className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    {card.label}
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-foreground">
+                    {card.value}
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                    {card.description}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <aside className="space-y-4">
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                今日のワンフレーズ
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                自分の名前が入るだけでも、
+                ダッシュボードは急に「使う画面」に変わる。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                ここで増えた価値
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                画面の主役が明確になって、
+                次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                次につながる視点
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                Day 03 ではこの変化を失わないように、
+                ちゃんと履歴として残していく段階へ進む。
+              </p>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  );
+}
 ```
 
-🔍 **コード解説**:
+**このコードの問題点**:
 
-| コード | 意味 | 例え |
-|--------|------|------|
-| `Record<A, B>` | 「キーがA型、値がB型」の対応表 | 辞書。見出し語（A）と意味（B）のペア |
-| `Record<TaskPriority, string>` | 優先度→日本語ラベルの対応表 | 「LOW→低、HIGH→高」の辞書 |
+- メッセージ表示だけのために page 全体を Client Component にしてしまっている
+- `useMemo` を使っているけど、ここでは計算が軽くて効果が薄く、読み手の負担だけ増えやすい
+- 後で本当に client 化が必要な部品を足したとき、境界が曖昧になって設計がぶれやすい
 
-> 💡 **ポイント**: ファイルの上部に `export const TASK_PRIORITY` オブジェクトと `export type TaskPriority` 型が定義されています。`TASK_PRIORITY_LABELS` はその `TaskPriority` 型を `Record` のキーとして利用し、「優先度→日本語ラベル」の対応表を作っています。`as const` によって `TASK_PRIORITY` の値が固定されているため、`TaskPriority` 型は `'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'` の4種類に絞り込まれます。
+### ✅ After（プロが書くコード）
 
-✅ **確認ポイント**:
-1. `src/lib/constant/priority.ts`を開けた
-2. `Record`が「キーと値の対応表」を表すことがわかった
-3. ダッシュボードで使われている定数の定義元がわかった
+```tsx title="src/app/dashboard/page.tsx"
+type DashboardOwner = {
+  name: string;
+  role: string;
+  todayFocus: string;
+  todayGoal: string;
+  nextAction: string;
+};
 
-📝 **学んだこと**: `Record<キー型, 値型>`で、辞書のような型を定義できます。
+type FocusCard = {
+  label: string;
+  value: string;
+  description: string;
+};
 
----
+const dashboardOwner: DashboardOwner = {
+  name: 'Kouiso',
+  role: 'Builder of Task App',
+  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
+  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
+  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+};
 
-## 📋 今日のまとめ
+function getGreetingByHour(hour: number): string {
+  if (hour < 12) {
+    return 'おはよう';
+  }
 
-- [ ] `const`で変数を宣言し、画面に表示できた
-- [ ] `const`と`let`の違いを体験した（`const`は再代入不可）
-- [ ] 型エラーをわざと起こし、エラーメッセージを読めた
-- [ ] `string`、`number`、`boolean`の3つの型が使えた
-- [ ] 型付きの統計情報をバナーに追加できた
-- [ ] 既存コード（status.ts、priority.ts）の型定義を読めた
+  if (hour < 18) {
+    return 'こんにちは';
+  }
 
-### 今日学んだ概念
+  return 'こんばんは';
+}
 
-| 概念 | まとめ |
-|------|--------|
-| `const` | 再代入できない変数。迷ったらこれを使う |
-| `let` | 再代入できる変数。値が変わる時だけ使う |
-| 型注釈 | `変数名: 型 = 値`で型を明示する書き方 |
-| `string` | テキストを表す型 |
-| `number` | 数値を表す型 |
-| `boolean` | true/falseの2択を表す型 |
-| `as const` | オブジェクトの値を固定する |
-| `Record` | キーと値の対応表を表す型ユーティリティ |
+function buildMainMessage(owner: DashboardOwner, hour: number): string {
+  const greeting = getGreetingByHour(hour);
 
-## ⚠️ つまずきポイント
+  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日や。`;
+}
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| `Cannot assign to 'X' because it is a constant` | `const`変数に再代入しようとした | `let`に変更するか、新しい`const`変数を作る |
-| `Type 'string' is not assignable to type 'number'` | 型と値が一致しない | 値を正しい型に変える |
-| 保存してもブラウザに反映されない | Hot Reloadが止まっている | ターミナルでCtrl+Cして`npm run dev`を再実行 |
-| `import`に赤い波線が出る | ファイルパスが間違っている | `@/component/ui/card`のように`@/`始まりか確認 |
+export default function DashboardPage() {
+  const currentHour = new Date().getHours();
+  const mainMessage = buildMainMessage(dashboardOwner, currentHour);
+  const focusCards: FocusCard[] = [
+    {
+      label: 'Owner',
+      value: dashboardOwner.name,
+      description: dashboardOwner.role,
+    },
+    {
+      label: 'Today',
+      value: 'Day 02',
+      description: dashboardOwner.todayGoal,
+    },
+    {
+      label: 'Next',
+      value: 'Day 03',
+      description: dashboardOwner.nextAction,
+    },
+  ];
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
+        <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+              G0 Foundation
+            </p>
+            <h1 className="text-lg font-semibold text-card-foreground">
+              My Dashboard
+            </h1>
+          </div>
+
+          <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
+            Personalized Message Ready
+          </div>
+        </header>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
+            <div className="border-b border-border px-8 py-6">
+              <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+                Personal Message
+              </span>
+
+              <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+                {mainMessage}
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+                今日は
+                <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
+                を意識して進める。
+                ただ文字を置くんやなくて、
+                ダッシュボードに自分の意図が見える状態を作るのが狙いや。
+              </p>
+
+              <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
+                Focus: {dashboardOwner.todayFocus}
+              </div>
+            </div>
+
+            <div className="grid gap-4 bg-secondary px-8 py-6 md:grid-cols-3">
+              {focusCards.map((card) => (
+                <article
+                  key={card.label}
+                  className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    {card.label}
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-foreground">
+                    {card.value}
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                    {card.description}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <aside className="space-y-4">
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                今日のワンフレーズ
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                自分の名前が入るだけでも、
+                ダッシュボードは急に「使う画面」に変わる。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                ここで増えた価値
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                画面の主役が明確になって、
+                次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                次につながる視点
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                Day 03 ではこの変化を失わないように、
+                ちゃんと履歴として残していく段階へ進む。
+              </p>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
+
+**このコードの強み**:
+
+- 表示だけなら Server Component のままで十分やと判断できている
+- page の責務が「データを組み立てて UI を返す」に収まっていて読みやすい
+- ほんまに操作が必要になったときだけ、小さい部品を Client Component に切り出しやすい
+
+#### 🎓 覚えておきたいエッセンス
+
+ダッシュボードにメッセージを出すだけなら、
+**まず Server Component** が基本や。
+
+最初から page 全体を client 化するんやなくて、
+本当にブラウザ側の操作が必要な瞬間だけ client を足す。
+この順番が、あとで効いてくる。
+
+## 🎓 覚えておきたいエッセンス
+
+今日の本質は、
+**ダッシュボードの主役を決めて、その主役に意味のある情報を添えた**
+ことや。
+
+覚えておいてほしいのはこの3つ。
+
+- 自分だけの画面は、まず名前と意図が見えるところから始まる
+- 値はその場で散らすより、型や関数で意味を持たせたほうが育てやすい
+- 動かない UI まで client にしない。Server Component を標準に考える
+
+この3つが入るだけで、
+Day 02 のコードはかなり「プロダクトを育てる書き方」に近づく。
 
 ## 🔜 次回予告
 
-明日はGitHubにコードを保存する方法を学びます。今日追加したウェルカムバナーの変更を、Gitで記録して、GitHubにアップロードしましょう。
+Day 03 では、
+今日つくったこの変化をちゃんと履歴として残していく。
+
+せっかく自分の画面が立ち始めたのに、
+ローカルだけで消えてしまったらもったいない。
+
+次は GitHub に保存して、
+「自分で育てたアプリの進化」を積み上げていける状態にしていこう。
