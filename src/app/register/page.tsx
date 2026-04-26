@@ -30,7 +30,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string[]>([]);
 
   const {
     register,
@@ -44,13 +44,27 @@ export default function RegisterPage() {
     onSuccess: () => {
       router.push('/login');
     },
-    onError: (error) => {
-      setError(error.message ?? 'ユーザー登録中にエラーが発生しました');
+    onError: (err) => {
+      try {
+        const parsed: unknown = JSON.parse(err.message);
+        if (Array.isArray(parsed)) {
+          const messages = parsed
+            .filter((item): item is { message: string } => typeof item?.message === 'string')
+            .map((item) => item.message);
+          if (messages.length > 0) {
+            setError(messages);
+            return;
+          }
+        }
+      } catch {
+        // not JSON — fall through to plain message
+      }
+      setError([err.message ?? 'ユーザー登録中にエラーが発生しました']);
     },
   });
 
   const onSubmit = async (data: RegisterFormData) => {
-    setError(null);
+    setError([]);
     registerMutation.mutate({
       name: data.name,
       email: data.email,
@@ -74,11 +88,22 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
+            {error.length > 0 && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>エラー</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>
+                  {error.length === 1 ? (
+                    error[0]
+                  ) : (
+                    <ul className="list-disc pl-4 space-y-1">
+                      {error.map((msg, idx) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: error messages can be identical
+                        <li key={idx}>{msg}</li>
+                      ))}
+                    </ul>
+                  )}
+                </AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
