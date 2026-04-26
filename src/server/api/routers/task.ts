@@ -253,6 +253,13 @@ export const taskRouter = createTRPCRouter({
     }
     if (data.status !== undefined) {
       updateData.status = data.status;
+      if (data.completedAt === undefined) {
+        if (data.status === TASK_STATUS.DONE) {
+          updateData.completedAt = new Date();
+        } else {
+          updateData.completedAt = null;
+        }
+      }
     }
     if (data.priority !== undefined) {
       updateData.priority = data.priority;
