@@ -1,960 +1,1048 @@
 # Day 01: 開発環境を整えて、初めてのアプリを動かそう
 
-ようこそ、30日間カリキュラムへ！今日はこれから30日間で作り上げていくタスク管理アプリを、あなたのパソコンで実際に動かすところまで進めます。
+30日で、自分専用のタスク管理アプリを育てていく。
+今日の役目は、その最初の一歩や。
 
-最初のセットアップは少し手順が多く感じるかもしれませんが、ひとつずつ進めれば大丈夫です。今日の終わりには、ブラウザに自分だけのアプリが表示される達成感を味わえます。
+まだ機能は少ない。
+でも、空のディレクトリから自分の手で土台を立ち上げて、
+ブラウザに「もうこれプロダクトやん」と思える最初の画面を出せたら、
+この30日が一気に現実味を帯びる。
 
-## このDayについて
+今日触るのは、ただの Hello World ではない。
+Linear っぽい空気感をまとった、
+「この先ちゃんと育ちそう」な一枚目を自分で立ち上げる。
 
-| 項目 | 内容 |
-|------|------|
-| 所要時間 | 80〜100分 |
-| 前提知識 | パソコンの基本操作（ファイル作成、ブラウザ利用） |
-| 使用ツール | ターミナル、VS Code、Docker Desktop、mise、ブラウザ |
-| 学習形式 | 手順に従ってインストール → 設定 → 動作確認 |
+## 🌟 このDayで君が手に入れるもの
 
-### このDayでやること（3つ）
+空のディレクトリから `task-app` の土台を起動して、
+`http://localhost:3000` に最初の画面を出せるようになる。
 
-1. **開発に必要なツールをインストールする** - mise、Node.js、VS Code、Docker Desktopをセットアップする
-2. **プロジェクトを取得して設定する** - GitHubからコードをダウンロードし、環境変数とデータベースを準備する
-3. **アプリを起動してブラウザで確認する** - 開発サーバーを起動し、実際にアプリが動くことを確認する
+しかも最後は、真っ白な初期画面のまま終わらせへん。
+Linear 風の design token を使って、
+SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 
-### 完了条件（これができたらDay01は完了）
+完成イメージの雰囲気は、
+【スクリーンショット】Day 01 完成時の最小ページ
+![Day 01 完成時の最小ページ](./screenshots/day01/first-render.png)
+を眺めてもらうと掴みやすい。
+完全一致でなくてええ。
+「自分のアプリが始まった」と思える見た目を今日つくるのが狙いや。
 
-- [ ] miseがインストールされている
-- [ ] Node.js v25がインストールされている（mise経由）
-- [ ] VS Codeが起動し、推奨拡張機能が入っている
-- [ ] Docker Desktopが起動している
-- [ ] `npm run dev` で開発サーバーが起動する
-- [ ] ブラウザで http://localhost:3000 にアクセスしてアプリが表示される
+## 📍 今日のゴール（G0 Foundation の1日目）
 
-### 詰まった時の戻り先
+- [ ] 空のディレクトリを用意して、そこを `task-app` の作業場所にする
+- [ ] `scripts/scaffold-from-scratch.sh` を実行して、土台を一発で作る
+- [ ] `npm run dev` で Next.js の初期画面を表示する
+- [ ] `src/app/globals.css` に Linear 風 design token を入れる
+- [ ] `src/app/page.tsx` を自分専用の最初の画面に置き換える
+- [ ] `src/app/dashboard/page.tsx` を作って、明日の入口をつなぐ
 
-| 症状 | 戻るStep | 確認事項 |
-|------|---------|----------|
-| `mise` コマンドが見つからない | Step 1 | miseのインストールを確認 |
-| `node` コマンドが見つからない | Step 1 | `mise install` を再実行 |
-| `git clone` できない | Step 4 | Gitのインストール状態を確認 |
-| `npm install` でエラーが出る | Step 8 | `node -v` でv25か確認、違えば `mise install` |
-| データベースに接続できない | Step 9 | Docker Desktopが起動しているか確認 |
-| `npm run dev` で `.env` 関連エラー | Step 7 | `.env` ファイルの内容を確認 |
-| `npm run dev` で `MODULE_NOT_FOUND` | Step 8 | `npm install` を再実行 |
-| `npm run dev` で `P1001` エラー | Step 9 | Docker が起動しているか確認 |
+## 🧰 前提（これが揃ってたら進める）
 
----
+今日は「アプリの中身をいじる前に、まず動かす」がテーマやけど、
+何もない状態から進める都合上、
+いくつか前提は必要になる。
 
-## Step一覧
+### 必須
 
-| Step | タイトル | 目安時間 | 触るファイル | 成功状態 |
-|------|---------|---------|-------------|---------|
-| 1 | miseをインストールする | 7分 | なし | `mise --version` でバージョンが表示される |
-| 2 | VS Codeをインストール＆拡張機能を設定する | 10分 | なし | VS Codeが起動し、4つの拡張機能が入っている |
-| 3 | Docker Desktopをインストールする | 7分 | なし | `docker --version` でバージョンが表示される |
-| 4 | プロジェクトをクローンする | 5分 | なし | `task-app` フォルダが作成される |
-| 5 | VS Codeでプロジェクトを開く | 3分 | なし | VS Codeにファイル一覧が表示される |
-| 6 | Node.jsをセットアップする | 7分 | なし | `node -v` で `v25.6.1` が表示される |
-| 7 | 環境変数を設定する | 5分 | .env | `.env` ファイルが作成される |
-| 8 | 依存関係をインストールする | 5分 | なし | `node_modules` フォルダが作成される |
-| 9 | データベースを起動する | 5分 | なし | PostgreSQLコンテナが起動する |
-| 10 | データベースをセットアップする | 5分 | なし | テーブルとサンプルデータが作成される |
-| 11 | 開発サーバーを起動する | 5分 | なし | ターミナルに「Ready」と表示される |
-| 12 | ブラウザでアプリを確認する | 5分 | なし | ログイン画面が表示される |
+- Node.js `20` 以上
+- npm `10` 以上
+- PostgreSQL を使える状態
+- エディタ
+- ターミナル
+- ブラウザ
 
----
+### PostgreSQL はどういう状態ならOKか
 
-## 今日学ぶこと
+次のどちらかがあれば進める。
 
-| 項目 | 説明 | 例え話 |
-|------|------|--------|
-| mise | 開発ツールのバージョンを自動管理するツール | 「レシピに合った道具セット」を自動で揃えてくれるアシスタント |
-| Node.js | JavaScriptをパソコン上で動かす実行環境 | 料理をするための「キッチン」 |
-| npm | パッケージ（部品）を管理するツール | キッチンに食材を届ける「宅配サービス」 |
-| Docker | アプリの動作環境をまるごとパッケージ化するツール | 料理道具一式が入った「引っ越しダンボール」 |
-| PostgreSQL | データを保存するデータベース | 食材を保管する「冷蔵庫」 |
-| Prisma | TypeScriptからデータベースを操作するツール | 冷蔵庫の中身を整理する「収納ケース」 |
-| Next.js | Webアプリを作るためのフレームワーク | レシピに沿って料理を作る「クッキングガイド」 |
+- Docker Desktop が起動している
+- ローカル PostgreSQL と `psql` / `pg_isready` が入っている
 
-```mermaid
-flowchart TB
-    subgraph ブラウザ
-        A[http://localhost:3000]
-    end
+### 先に確認しておくコマンド
 
-    subgraph Node.js
-        B[Next.js 開発サーバー]
-        C[Prisma ORM]
-    end
+`Node.js` と `npm` のバージョンはここで見ておこう。
+数字が足りなければ、先に更新してから戻ってくるのが早い。
 
-    subgraph Docker
-        D[(PostgreSQL)]
-    end
-
-    A -->|リクエスト| B
-    B -->|データ操作| C
-    C -->|SQL| D
-    D -->|結果| C
-    C -->|データ| B
-    B -->|レスポンス| A
-```
-
----
-
-### Step 1: miseをインストールする（7分）
-
-🎯 **ゴール**: `mise --version` コマンドでバージョンが表示される状態にする。
-
-> 💡 **例え話**: **mise**は「レシピに合った道具を自動で揃えてくれるアシスタント」です。プロジェクトフォルダに入るだけで、正しいバージョンのNode.jsを自動的に使ってくれます。
-
-#### miseとは
-
-| 項目 | 内容 |
-|------|------|
-| 正式名称 | mise（ミーズ） |
-| 役割 | Node.jsなどの開発ツールのバージョンを自動管理する |
-| 設定ファイル | `.mise.toml`（プロジェクトのルートにある） |
-| なぜ必要か | 全員が同じバージョンのNode.jsを使えるようにするため |
-
-#### なぜバージョン管理が大切なのか
-
-| 状況 | バージョン管理なし | バージョン管理あり（mise） |
-|------|------------------|------------------------|
-| Aさんのパソコン | Node.js v22（古い） | Node.js v25.6.1（正確） |
-| Bさんのパソコン | Node.js v24（違う） | Node.js v25.6.1（正確） |
-| 結果 | 「Aさんだけエラーになる」 | 全員同じ環境で動く |
-
-このプロジェクトは `package.json` で Node.js v25 を要求しています。違うバージョンだと `npm install` の時点でエラーになります。miseを使えば、このような「バージョン違い事故」を完全に防げます。
-
-#### miseのインストール（Mac）
-
-> 💡 **安全性について**: 以下のコマンドはmise公式サイト（https://mise.run）のインストールスクリプトをダウンロードして実行します。信頼できる公式ソースからのみ実行してください。
-
+# ターミナル（どこでもOK）
 ```bash
-# filepath: ターミナル（Mac）
-# miseの公式インストールスクリプトを実行する
-curl https://mise.run | sh
-```
-
-✅ **確認ポイント**:
-- エラーなくインストールが完了した
-- `mise is installed!` または `mise` に関するメッセージが表示された
-
-インストールが完了したら、シェルにmiseを有効化する設定を追加します。
-
-```bash
-# filepath: ターミナル（Mac）
-# miseをzshで自動有効化する設定を追加する
-echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-✅ **確認ポイント**:
-- コマンドがエラーなく実行できた
-
-> ⚠️ **bashを使っている場合**（WSL2など）は、`~/.zshrc` の代わりに `~/.bashrc` に書いてください:
->
-> ```bash
-> # filepath: ターミナル（bash / WSL2）
-> # miseをbashで自動有効化する設定を追加する
-> echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
-> source ~/.bashrc
-> ```
->
-> ✅ 確認ポイント: コマンドがエラーなく実行できた
-
-#### miseのインストール（Windows）
-
-PowerShellを**管理者として**開き、以下を実行してください。
-
-```powershell
-# filepath: PowerShell（Windows・管理者）
-# wingetを使ってmiseをインストールする
-winget install jdx.mise
-```
-
-✅ **確認ポイント**:
-- インストールが完了した
-
-インストール後、miseの有効化設定をPowerShellプロファイルに追加します。
-
-> ⚠️ `$PROFILE` ファイルが存在しない場合は、先に以下のコマンドで作成してください:
->
-> ```powershell
-> # filepath: PowerShell（Windows）
-> # PowerShellプロファイルファイルを新規作成する
-> New-Item -Path $PROFILE -Force
-> ```
->
-> ✅ 確認ポイント: コマンドがエラーなく実行できた
-
-```powershell
-# filepath: PowerShell（Windows）
-# PowerShellプロファイルにmiseの有効化を追記する
-$cmd = 'mise activate powershell | Out-String | Invoke-Expression'
-Add-Content -Path $PROFILE -Value $cmd
-```
-
-✅ **確認ポイント**:
-- コマンドがエラーなく実行できた
-
-設定後、PowerShellを一度閉じて開き直してください。
-
-#### miseの動作確認
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル
-mise --version
-```
-
-🔍 **コード解説**:
-
-| コマンド | 意味 | 期待する結果 |
-|---------|------|------------|
-| `mise --version` | miseのバージョンを表示 | バージョン番号が表示される |
-
-✅ **確認ポイント**:
-- バージョン番号が表示されていればmiseのインストール成功
-
-【スクリーンショット】`mise --version` の出力にバージョン番号が表示されていることを確認してください。
-
-> ⚠️ `mise: command not found` と表示される場合は、ターミナルを一度閉じて開き直してください。
-
-📝 **学んだこと**: miseを使うと、プロジェクトごとに正しいバージョンのNode.jsが自動で使われます。チーム全員が同じ環境で開発できるので、「自分のパソコンでは動くのに…」という問題がなくなります。
-
----
-
-### Step 2: VS Codeをインストール＆拡張機能を設定する（10分）
-
-🎯 **ゴール**: VS Codeが起動し、このプロジェクトの推奨拡張機能4つが入っている状態にする。
-
-> 💡 **例え話**: VS Codeは「超高機能なメモ帳」です。普通のメモ帳と違い、コードの色分け、エラーの検知、自動補完といった、プログラミングを快適にする機能がたくさんあります。拡張機能は「VS Codeのプラグイン」で、料理の道具に例えると、VS Code本体は包丁、拡張機能は皮むき器や計量カップのような専用道具です。
-
-#### VS Codeとは
-
-| 項目 | 内容 |
-|------|------|
-| 正式名称 | Visual Studio Code |
-| 役割 | コードを書くためのエディター |
-| 特徴 | 無料・軽量・拡張機能が豊富 |
-| ダウンロード | https://code.visualstudio.com/ |
-
-#### インストール手順
-
-公式サイト（ https://code.visualstudio.com/ ）から、自分のOS（Windows / Mac）に合ったインストーラーをダウンロードして実行してください。
-
-インストール後、ターミナルで以下を実行してバージョンを確認してください。
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル
-code --version
-```
-
-✅ **確認ポイント**:
-- VS Codeが起動する
-- `code --version` を実行するとバージョン番号が表示される（例: `1.90.0`）
-
-`code --version` が失敗した場合は、使っているOSに合わせて次を確認してください。
-
-- Mac: VS Codeを開いて `Cmd+Shift+P` → 「Shell Command: Install 'code' command in PATH」を実行してから、もう一度 `code --version` を試す
-- Windows: VS Codeのインストーラーを再実行し、「PATH に追加」または「PATHに追加」のオプションを有効にしてから、ターミナルを開き直して `code --version` を試す
-- Windows: すぐに直らない場合は、いったんVS Codeを起動して `File > Open Folder` からプロジェクトを開けば学習を先に進められる
-- WSL: `code .` は Windows 側のVS Codeが WSL Remote 経由で開くため、VS Code側に WSL Remote 拡張が入っていることを確認する
-
-#### 推奨拡張機能をインストールする
-
-VS Codeを起動し、左側のサイドバーにある四角いアイコン（拡張機能）をクリックします。検索窓に拡張機能名を入力して、「Install」ボタンを押してください。
-
-> 💡 まとめてインストールしたい場合は、ターミナルで以下のコマンドを実行する方法もあります。
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル
-# このプロジェクトの推奨拡張機能を4つインストールする
-code --install-extension EditorConfig.EditorConfig
-code --install-extension biomejs.biome
-code --install-extension stylelint.vscode-stylelint
-code --install-extension wayou.vscode-todo-highlight
-```
-
-🔍 **コード解説**:
-
-| 拡張機能 | 役割 | なぜ必要か |
-|---------|------|----------|
-| EditorConfig | エディター設定の統一 | チーム全員のインデントや改行コードを揃える |
-| Biome | コードの品質チェック | 書き方のミスを自動で指摘してくれる |
-| stylelint | CSSの品質チェック | スタイルの書き方のミスを自動で指摘してくれる |
-| TODO Highlight | TODOコメントの強調表示 | コード内の「あとで直す」メモを見逃さない |
-
-> 💡 **ポイント**: このプロジェクトでは `.vscode/extensions.json` に推奨拡張機能が定義されています。VS Codeでプロジェクトを開くと「推奨拡張機能をインストールしますか？」と表示されるので、そこからまとめてインストールすることもできます。
-
-✅ **確認ポイント**:
-- 拡張機能一覧に上記の4つが表示されている
-
-📝 **学んだこと**: VS Codeは世界中の開発者が使っている無料のコードエディターです。拡張機能を入れることで、プロジェクトに合った開発環境にカスタマイズできます。
-
----
-
-### Step 3: Docker Desktopをインストールする（7分）
-
-🎯 **ゴール**: `docker --version` でバージョンが表示される状態にする。
-
-> 💡 **例え話**: Dockerは「引っ越しダンボール」です。データベースのような必要なソフトウェアを箱に詰めて、どのパソコンでもすぐ使える状態にしてくれます。
-
-#### Dockerとは
-
-| 項目 | 内容 |
-|------|------|
-| 正式名称 | Docker Desktop |
-| 役割 | アプリの実行環境をコンテナとして管理する |
-| 今回の用途 | PostgreSQL（データベース）を動かす |
-| ダウンロード | https://www.docker.com/products/docker-desktop/ |
-
-#### インストール手順
-
-1. 公式サイト（ https://www.docker.com/products/docker-desktop/ ）にアクセスします
-2. 自分のOS（Windows / Mac）に合ったインストーラーをダウンロードします
-3. ダウンロードしたファイルを実行してインストールします
-4. インストール完了後、Docker Desktopアプリを起動します
-
-> ⚠️ **初回起動時**: 利用規約への同意画面が表示されます。「Accept」をクリックしてください。
-
-> WindowsではWSL2のインストールを求められることがあります。画面の指示に従ってください。
-
-#### バージョン確認
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル
-docker --version
-```
-
-🔍 **コード解説**:
-
-| コマンド | 意味 | 期待する結果 |
-|---------|------|------------|
-| `docker --version` | Dockerのバージョンを表示 | `Docker version 2x.x.x` と表示 |
-
-✅ **確認ポイント**:
-- Docker Desktopアプリが起動している（タスクバー/メニューバーにクジラのアイコンが表示されている）
-- バージョン番号が表示される
-
-📝 **学んだこと**: Dockerを使うと、PostgreSQLのようなソフトウェアをパソコンに直接インストールせずにコンテナとして動かせます。環境を汚さずに開発できるのが大きなメリットです。
-
----
-
-### Step 4: プロジェクトをクローンする（5分）
-
-🎯 **ゴール**: `task-app` フォルダがパソコンに作成される。
-
-> 💡 **例え話**: `git clone` は「テンプレートのコピー」です。GitHubという倉庫に置いてある設計図一式を、自分のパソコンにまるごとコピーしてくる操作です。
-
-#### Gitとは
-
-| 項目 | 内容 |
-|------|------|
-| 正式名称 | Git |
-| 役割 | コードの変更履歴を管理するツール |
-| GitHub | Gitのリポジトリをオンラインに保管するサービス |
-| clone | リポジトリを自分のパソコンにコピーする操作 |
-
-#### Gitのインストール確認
-
-まず、Gitがインストールされているか確認します。
-
-```bash
-# filepath: ターミナル
-# Gitのバージョンを確認する
-git --version
-```
-
-✅ **確認ポイント**:
-- `git version 2.x.x` のようにバージョンが表示されればOK
-
-> ⚠️ `git: command not found` と表示される場合は、Gitのインストールが必要です。
-> - **Mac**: ターミナルで `xcode-select --install` を実行してください（コマンドラインツールに含まれています）。
-> - **Windows**: https://git-scm.com/ から Git for Windows をダウンロードしてインストールしてください。
-
-#### クローン手順
-
-💻 **実装**:
-
-まず、プロジェクトを保存する場所に移動します。デスクトップでなくても構いません。
-
-```bash
-# filepath: ターミナル（Mac / Linux）
-# 任意の作業フォルダに移動（例: デスクトップ）
-cd ~/Desktop
-```
-
-> ⚠️ **Windows（PowerShell）の場合**: `cd ~/Desktop` の代わりに `cd $HOME\Desktop` を実行してください。
-
-✅ **確認ポイント**:
-- エラーなく移動できた
-
-```bash
-# filepath: ターミナル
-# GitHubからプロジェクトをコピーする
-git clone https://github.com/kouiso/task-app.git
-```
-
-✅ **確認ポイント**:
-- `Cloning into 'task-app'...` と表示されてダウンロードが進む
-
-クローンが完了したら、プロジェクトフォルダに移動します。
-
-```bash
-# filepath: ターミナル
-# プロジェクトフォルダに移動する
-cd task-app
-```
-
-🔍 **コード解説**:
-
-| コマンド | 意味 | 例え |
-|---------|------|------|
-| `cd ~/Desktop` | 作業フォルダに移動（例） | 作業場所に向かう |
-| `git clone <URL>` | リポジトリをコピー | 設計図を取り寄せる |
-| `cd task-app` | プロジェクトフォルダに移動 | 作業場所に入る |
-
-✅ **確認ポイント**:
-- 選択した場所に `task-app` フォルダが作成されている
-- フォルダの中に `package.json` ファイルがある
-
-📝 **学んだこと**: `git clone` でGitHubからプロジェクトのソースコード一式を取得できます。これでソースコードが自分のパソコンにコピーされました。
-
----
-
-### Step 5: VS Codeでプロジェクトを開く（3分）
-
-🎯 **ゴール**: VS Codeに `task-app` のファイル一覧が表示される。
-
-> 💡 **例え話**: `code .` は「作業台の上にレシピと材料を広げる」操作です。ターミナルだけでもコードは書けますが、VS Codeを使うと色分け・補完・エラー表示が効いて格段に効率が上がります。
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-code .
-```
-
-🔍 **コード解説**:
-
-| コマンド | 意味 | 例え |
-|---------|------|------|
-| `code .` | 今いるフォルダをVS Codeで開く | 作業台にレシピを広げる |
-
-✅ **確認ポイント**:
-- VS Codeが起動している
-- 左サイドバー（エクスプローラー）に `package.json` や `src/` フォルダが表示されている
-
-【スクリーンショット】VS Code のエクスプローラー（左サイドバー）に `task-app` フォルダが開き、`package.json` や `src/` といったファイルが表示されていることを確認してください。
-
-> ⚠️ `code` コマンドが見つからない場合は、Macでは VS Code を開いて `Cmd+Shift+P` → 「Shell Command: Install 'code' command in PATH」を実行してください。Windowsではインストーラーを再実行して「PATH に追加」オプションを有効にするか、VS Codeを起動して `File > Open Folder` から現在のプロジェクトを開いてください。WSLでは Windows 側のVS Codeと WSL Remote 拡張を使うと `code .` で開けます。
-
-📝 **学んだこと**: `code .` でカレントディレクトリをVS Codeで開けます。プロジェクトのファイル構造を視覚的に確認できるようになりました。
-
----
-
-### Step 6: Node.jsをセットアップする（7分）
-
-🎯 **ゴール**: `node -v` で `v25.6.1`、`npm -v` でバージョン番号が表示される。
-
-> 💡 **例え話**: Step 1でインストールしたmise（アシスタント）に、「このプロジェクトに必要な道具を揃えて」とお願いする操作です。`.mise.toml` というメモを読んで、Node.js v25.6.1を自動でインストールしてくれます。
-
-#### Node.jsとは
-
-| 項目 | 内容 |
-|------|------|
-| 正式名称 | Node.js |
-| 役割 | JavaScriptをブラウザの外で動かす |
-| 含まれるもの | `node`（実行環境）と `npm`（パッケージ管理） |
-| 必要バージョン | v25.6.1（`.mise.toml` で指定済み） |
-
-#### miseでNode.jsをインストールする
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-mise install
-```
-
-🔍 **コード解説**:
-
-| コマンド | 意味 | 例え |
-|---------|------|------|
-| `mise install` | `.mise.toml` に書かれたツールをインストール | レシピの材料を自動で買い揃える |
-
-このコマンドは `.mise.toml` ファイルを読み取り、Node.js v25.6.1 を自動でダウンロード・インストールします。
-
-#### Node.jsのバージョンを確認する
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
 node -v
-```
-
-✅ **確認ポイント**:
-- `v25.6.1` と表示されている
-
-【スクリーンショット】ターミナルに `v25.6.1` と表示されていることを確認してください。
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
 npm -v
 ```
 
-✅ **確認ポイント**:
-- バージョン番号が表示されていれば成功
+### 期待する結果
 
-> ⚠️ `v25.6.1` と表示されない場合は、ターミナルを一度閉じて開き直してから、`task-app` フォルダで再度 `node -v` を試してください。
+- `node -v` が `v20.x.x` 以上
+- `npm -v` が `10.x.x` 以上
 
-📝 **学んだこと**: `mise install` でプロジェクトが必要とする正確なバージョンのNode.jsがインストールされます。チーム全員が同じバージョンを使えるので安心です。
+### PostgreSQL 利用手段の確認
 
----
+Docker 派でもローカル PostgreSQL 派でもええ。
+どっちかが通れば、今日のスクリプトは前に進める。
 
-### Step 7: 環境変数を設定する（5分）
-
-🎯 **ゴール**: `.env` ファイルが作成され、正しい設定値が入っている。
-
-> 💡 **例え話**: 環境変数は「お店の暗証番号」です。データベースの接続先やパスワードといった、コードに直接書くと危険な情報を、別ファイル（`.env`）で安全に管理します。
-
-#### 環境変数とは
-
-| 項目 | 説明 |
-|------|------|
-| 環境変数 | アプリの設定情報をコードの外で管理する仕組み |
-| `.env` ファイル | 環境変数を書くためのファイル |
-| `.env.example` | `.env` のテンプレート（見本） |
-| なぜ必要か | パスワードや秘密鍵をコードに書かないため |
-
-#### 設定手順
-
-`.env.example` をコピーして `.env` ファイルを作成します。
-
-💻 **実装**:
-
+# ターミナル（どこでもOK）
 ```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# テンプレートから環境変数ファイルを作成する
-cp .env.example .env
+docker info >/dev/null 2>&1 && echo "docker ok"
+psql --version
+pg_isready --version
 ```
 
-🔍 **コード解説**:
+## Step 1: 空のディレクトリから始める
 
-| コマンド | 意味 | 例え |
-|---------|------|------|
-| `cp` | ファイルをコピーする | テンプレートを複製 |
-| `.env.example` | コピー元（見本） | 記入例付きの申請書 |
-| `.env` | コピー先（実際に使うファイル） | 記入済みの申請書 |
+今日は既存プロジェクトに入って作業するんじゃなくて、
+何も入っていないフォルダから始める。
 
-✅ **確認ポイント**:
-- `task-app` フォルダ直下に `.env` ファイルが作成されている
+この原則がめっちゃ大事や。
+「あとで配られる完成形を前提に読む」のと、
+「自分で土台を立ち上げて積み上げる」のでは、
+理解の深さが全然ちゃう。
 
-#### `.env` ファイルを編集する
+### 作業用ディレクトリを作る
 
-VS Codeの左サイドバー（エクスプローラー）で `.env` ファイルをクリックして開いてください。ドット（`.`）で始まるファイルは通常のファイルマネージャーでは非表示ですが、VS Codeでは表示されます。
+ここでは例として、
+ホームディレクトリの中に `task-app` を作る。
 
-変更が必要なのは開発者情報の3行だけです。`DATABASE_URL` の内容は `dotenv` 系の仕組みが同ファイル内の変数参照を展開してくれるため、変更不要です。
-
-> 💡 **このステップでは3行だけ変更します**: `.env` ファイルには多数の変数がありますが、コピーしたテンプレートのほとんどはそのままでOKです。以下の3行だけ入力してください。
-
+# ~/workspace
 ```bash
-# filepath: .env（変更する行のみ表示 — ファイル全体ではありません）
-# 開発者情報（シードデータの管理者アカウントに使用）
-_DEVELOPER_EMAIL=admin@example.com
-_DEVELOPER_FIRSTNAME=Admin
-_DEVELOPER_LASTNAME=User
+mkdir -p ~/workspace/task-app
+cd ~/workspace/task-app
+pwd
 ```
 
-✅ **確認ポイント**:
-- 3つの開発者情報に値が入力されている
+### 期待する結果
 
-> 💡 **他の変数はそのままでOK**: `DATABASE_URL`、`JWT_SECRET`、`NODE_ENV` などはテンプレートの値のままで問題ありません。
+- `pwd` の結果が `~/workspace/task-app` っぽい場所になっている
+- ディレクトリの中身が空に近い
 
-🔍 **コード解説**:
+### ここで置いておく配布物
 
-| 変数名 | 役割 | 変更 |
-|--------|------|------|
-| `_DEVELOPER_EMAIL` | 管理者のメールアドレス | 要入力 |
-| `_DEVELOPER_FIRSTNAME` | 管理者の名前 | 要入力 |
-| `_DEVELOPER_LASTNAME` | 管理者の姓 | 要入力 |
-| `DATABASE_URL` | DBの接続先（自動解決） | 不要 |
-| `JWT_SECRET` | 認証トークンの暗号鍵 | 不要 |
-| `NODE_ENV` | 実行環境の区分 | 不要 |
+この Day では、教材配布物として渡される
+`scaffold-from-scratch.sh`
+を今いるディレクトリに置いてある前提で進める。
 
-> 💡 **JWT_SECRETとは**: JWT（JSON Web Token）はログイン状態を管理する仕組みです。`JWT_SECRET` はトークンの署名に使う秘密鍵で、この値を知らない人はトークンを偽造できません。本番環境では必ずランダムな長い文字列に変更してください。
+ファイル名はこれ。
 
-✅ **確認ポイント**:
-- `.env` ファイルが `task-app` フォルダ直下に存在する
-- `_DEVELOPER_EMAIL` に値が入っている
-- `DATABASE_URL` はテンプレートのまま（変更不要）
+- `scaffold-from-scratch.sh`
 
-> 💡 **セキュリティ**: `.gitignore` に `*.env*` というパターンが設定されているため、`.env` ファイルは Git に追跡されません。ただし `!.env.example` という例外ルールにより、テンプレートファイル `.env.example` だけはGitで管理されています。秘密情報がGitHubに公開される心配はありません。
+今いる場所に置けているかだけ確認しておこう。
 
-📝 **学んだこと**: 秘密情報は `.env` ファイルで管理し、コードに直接書かないのがセキュリティの基本です。`.gitignore` で `.env` をGitの管理対象外にすることで、うっかり公開してしまう事故を防げます。
-
----
-
-### Step 8: 依存関係をインストールする（5分）
-
-🎯 **ゴール**: `node_modules` フォルダが作成される。
-
-> 💡 **例え話**: `npm install` は「食材の買い出し」です。レシピ（`package.json`）に書かれた材料（ライブラリ）を、スーパー（npmレジストリ）からまとめて買ってくる操作です。
-
-#### package.jsonとは
-
-プロジェクトに必要なライブラリの一覧が書かれたファイルです。`npm install` はこのファイルを読み取り、必要なライブラリをすべてダウンロードします。
-
-| 用語 | 意味 | 例え |
-|------|------|------|
-| package.json | 必要なライブラリの一覧表 | 買い物リスト |
-| node_modules | ダウンロードされたライブラリの保管場所 | 冷蔵庫・食材棚 |
-| npm install | ライブラリを一括ダウンロード | まとめ買い |
-
-> 💡 **ポイント**: Step 7で `.env` を先に設定したのは、`npm install` の完了時に `prisma generate` が自動実行されるためです（`package.json` の `postinstall` スクリプトで定義されています）。`.env` の `DATABASE_URL` が設定されていないと、このステップでエラーになります。
-
-#### インストール実行
-
-💻 **実装**:
-
+# ~/workspace/task-app
 ```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# ライブラリを一括インストールする
-npm install
+ls
 ```
 
-この処理には1〜3分ほどかかります。
+### 期待する結果
 
-🔍 **コード解説**:
+- `scaffold-from-scratch.sh` が見えている
 
-| 出力 | 意味 |
-|------|------|
-| `added XXX packages` | XXX個のライブラリがインストールされた |
-| `found 0 vulnerabilities` | セキュリティ上の問題が0件 |
+## Step 2: scaffold-from-scratch.sh を走らせる
 
-✅ **確認ポイント**:
-- ターミナルにエラーが表示されていない
-- `node_modules` フォルダが作成されている
-- `added` と表示されてインストールが完了している
+ここが Day 01 の心臓や。
 
-【スクリーンショット】ターミナルに `added XXX packages` と表示され、エラーがないことを確認してください。
+手で `npx create-next-app` を打ち始めるんじゃなくて、
+教材用に整理された `scaffold-from-scratch.sh` を実行する。
 
-📝 **学んだこと**: `npm install` で `package.json` に記載されたライブラリを一括ダウンロードできます。
+このスクリプトは、次の順番で仕事してくれる。
 
----
+1. Node.js のバージョン確認
+2. npm のバージョン確認
+3. PostgreSQL を使えるか確認
+4. 空ディレクトリなら `create-next-app` を実行
+5. このカリキュラムで使う依存パッケージを追加
+6. ESLint 設定を外して Biome を初期化
+7. `.env.example` を作成
 
-### Step 9: データベースを起動する（5分）
+「何が必要か」を毎回自分で思い出さなくてよくなるから、
+初日にかなり効く。
 
-🎯 **ゴール**: PostgreSQLコンテナが起動し、データベースに接続できる状態にする。
+### 実行コマンド
 
-> 💡 **例え話**: `docker compose up` は「冷蔵庫の電源を入れる」操作です。食材（データ）を保管するためには、まず冷蔵庫（PostgreSQL）の電源を入れて動かす必要があります。
+まずは権限を付けてから実行する。
+`bash` で直接叩いてもええけど、
+最初に実行権限を付けておくと扱いやすい。
 
-#### Docker Composeとは
-
-| 項目 | 内容 |
-|------|------|
-| Docker Compose | 複数のコンテナをまとめて管理するツール |
-| `docker-compose.yml` | コンテナの設定を書いたファイル |
-| コンテナ | 独立した小さな仮想環境 |
-| 今回起動するもの | PostgreSQL（データベース） |
-
-#### データベースを起動する
-
-💻 **実装**:
-
+# ~/workspace/task-app
 ```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-docker compose up -d db
+chmod +x ./scaffold-from-scratch.sh
+./scaffold-from-scratch.sh
 ```
 
-🔍 **コード解説**:
+### 期待される出力
 
-| コマンド部分 | 意味 | 例え |
-|-------------|------|------|
-| `docker compose up` | コンテナを起動する | 電源を入れる |
-| `-d` | バックグラウンドで実行 | 裏で動かし続ける |
-| `db` | dbサービスだけ起動 | 冷蔵庫だけ電源ON |
+実行環境で多少前後はあるけど、
+だいたいこんな流れになる。
 
-#### 起動確認
+下のログは実際に空ディレクトリで流したときの例や。
 
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-docker compose ps
+# ターミナル出力（~/workspace/task-app）
+```text
+教材用の初期土台を /tmp/taskappday01-demo に作成します。
+
+Using defaults for unprovided options:
+
+  --ts                    TypeScript (use --js for JavaScript)
+  --no-react-compiler     No React Compiler (use --react-compiler for React Compiler)
+  --agents-md             AGENTS.md (use --no-agents-md for No AGENTS.md)
+
+Creating a new Next.js app in /private/tmp/taskappday01-demo.
+
+Using npm.
+
+Initializing project with template: app-tw
+
+
+Installing dependencies:
+- next
+- react
+- react-dom
+
+Installing devDependencies:
+- @tailwindcss/postcss
+- @types/node
+- @types/react
+- @types/react-dom
+- tailwindcss
+- typescript
+
+added 48 packages, and audited 49 packages in 6s
+
+11 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+Generating route types...
+✓ Types generated successfully
+
+Initialized a git repository.
+
+Success! Created taskappday01-demo at /private/tmp/taskappday01-demo
+
+added 192 packages, and audited 241 packages in 13s
+
+40 packages are looking for funding
+  run `npm fund` for details
+
+3 moderate severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+
+added 87 packages, and audited 328 packages in 3s
+
+62 packages are looking for funding
+  run `npm fund` for details
+
+3 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+init ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Welcome to Biome! Let's get you started...
+
+    Files created
+
+      - biome.json
+        Your project configuration. See https://biomejs.dev/reference/configuration
+
+    Found an ignore file. Biome enabled VCS integration.
+
+    Next Steps
+
+      1. Setup an editor extension
+         Get live errors as you type and format when you save.
+         Learn more at https://biomejs.dev/guides/editors/first-party-extensions/
+
+      2. Try a command
+         biome check  checks formatting, import sorting, and lint rules.
+         biome --help displays the available commands.
+
+      3. Migrate from ESLint and Prettier
+         biome migrate eslint   migrates your ESLint configuration to Biome.
+         biome migrate prettier migrates your Prettier configuration to Biome.
+
+      4. Read the documentation
+         Find guides and documentation at https://biomejs.dev/guides/getting-started/
+
+      5. Get involved with the community
+         Ask questions and contribute on GitHub: https://github.com/biomejs/biome
+         Seek for help on Discord: https://biomejs.dev/chat
+
+
+初期セットアップは完了やで。
+カリキュラムの Day 02 に進んで、次の実装を始めてください。
 ```
 
-🔍 **コード解説**:
+### 成功判定
 
-| 表示項目 | 意味 | 正常な状態 |
-|---------|------|----------|
-| `taskapp-postgres` | コンテナ名 | 表示されている |
-| `running` | 状態 | 「running」と表示 |
-| `0.0.0.0:5432->5432/tcp` | ポートマッピング | 5432ポートが使える |
+次のファイルが見えていれば、かなり順調や。
 
-✅ **確認ポイント**:
-- `taskapp-postgres` コンテナが `running` 状態になっている
-- Docker Desktopの画面でもコンテナが緑色（実行中）になっている
+- `package.json`
+- `tsconfig.json`
+- `biome.json`
+- `.env.example`
+- `src/app/layout.tsx`
+- `src/app/page.tsx`
+- `src/app/globals.css`
 
-【スクリーンショット】Docker Desktop を開き、`taskapp-postgres` コンテナが緑色の「Running」状態になっていることを確認してください。
+### 作られる `.env.example`
 
-📝 **学んだこと**: `docker compose up -d` でデータベースをバックグラウンドで起動できます。`-d` をつけないとターミナルがデータベースのログで埋まってしまいます。
+このスクリプトは `.env.example` も置いてくれる。
+中身はこんな感じや。
 
----
-
-### Step 10: データベースをセットアップする（5分）
-
-🎯 **ゴール**: データベースにテーブルが作成され、サンプルデータが投入される。
-
-> 💡 **例え話**: この作業は「冷蔵庫に棚を入れて、食材を補充する」操作です。`db push` で棚（テーブル）を設置し、`db seed` で食材（サンプルデータ）を入れます。
-
-#### Prismaとは
-
-| 項目 | 内容 |
-|------|------|
-| Prisma | TypeScriptからデータベースを操作するツール（ORM） |
-| `schema.prisma` | テーブルの設計図 |
-| `db push` | 設計図通りにテーブルを作る |
-| `db seed` | サンプルデータを投入する |
-
-#### テーブルを作成する
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-npx prisma db push
+# .env.example
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/task_app"
+JWT_SECRET="replace-with-a-secure-secret"
+NEXTAUTH_URL="http://localhost:3000"
 ```
 
-🔍 **コード解説**:
+### 危ないアンチパターン
 
-| コマンド | 意味 | 例え |
-|---------|------|------|
-| `npx` | パッケージを一時的に実行 | 道具を一回だけ借りる |
-| `prisma db push` | テーブルを作成・更新 | 冷蔵庫に棚を入れる |
+ここでだけ一個、危ない話をしておく。
 
-✅ **確認ポイント**:
-- `Your database is now in sync with your Prisma schema.` と表示される
+`JWT_SECRET` に本番で使う秘密値をそのまま貼って、
+公開場所に出してしまうのはあかん。
 
-【スクリーンショット】ターミナルに `Your database is now in sync with your Prisma schema.` と表示されていることを確認してください。
+今日は `.env.example` を眺めるだけで十分や。
+本物の秘密値は、あとで `.env` を作る段階で自分の手元だけに置く。
 
-#### サンプルデータを投入する
+## Step 3: npm run dev で初期画面を拝む
 
+土台ができたら、
+一回ちゃんと起動して、
+ブラウザで見よう。
+
+「自分の環境で動く」が確認できるだけで、
+次の編集がかなり安心になる。
+
+### 開発サーバーを起動する
+
+# ~/workspace/task-app
 ```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-npm run db:seed
-```
-
-🔍 **コード解説**:
-
-| コマンド | 意味 | 例え |
-|---------|------|------|
-| `npm run db:seed` | サンプルデータを投入 | 食材を冷蔵庫に入れる |
-
-✅ **確認ポイント**:
-- エラーが表示されず正常に完了する
-
-> 💡 **ポイント**: このシードスクリプトは成功時にメッセージを表示しません。何も表示されずにコマンドが終了すれば成功です（「沈黙は成功のサイン（No news is good news）」）。エラーがあれば必ず赤い文字で表示されます。
-
-📝 **学んだこと**: Prismaを使うと、`schema.prisma` に書いたテーブル定義をコマンド一つでデータベースに反映できます。
-
----
-
-### Step 11: 開発サーバーを起動する（5分）
-
-🎯 **ゴール**: ターミナルに「Ready」と表示され、開発サーバーが起動した状態にする。
-
-> 💡 **例え話**: `npm run dev` は「お店をオープンする」操作です。キッチン（Node.js）で料理（アプリ）の準備が整い、お客さん（ブラウザ）を迎え入れる体制になります。
-
-#### 開発サーバーとは
-
-| 項目 | 内容 |
-|------|------|
-| 開発サーバー | 開発中のアプリをブラウザで確認するための仕組み |
-| ホットリロード | コードを保存すると自動でブラウザが更新される |
-| Turbopack | Next.jsの高速バンドラー（`next dev --turbopack` で有効化できる） |
-| ポート番号 | 3000（http://localhost:3000） |
-
-#### サーバーを起動する
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
 npm run dev
 ```
 
-🔍 **コード解説**:
+### 期待される出力
 
-| 表示内容 | 意味 |
-|---------|------|
-| `▲ Next.js 15.x.x` | Next.jsのバージョン |
-| `Turbopack` | 高速バンドラー（`next dev --turbopack` で有効化）が有効な場合に表示 |
-| `- Local: http://localhost:3000` | アクセスするURL |
-| `✓ Ready` | 起動完了 |
+# ターミナル出力（~/workspace/task-app）
+```text
+> taskappday01-demo@0.1.0 dev
+> next dev
 
-✅ **確認ポイント**:
-- ターミナルに `Ready` が表示されている
-- エラーメッセージが出ていない
-
-> 💡 **Turbopackについて**: このプロジェクトでは `npm run dev` は標準のwebpackビルドを使います。Turbopack表示は出ない場合があります。Turbopackを有効にするには `next dev --turbopack` を使います。
-
-【スクリーンショット】ターミナルに `▲ Next.js 15.x.x` と `✓ Ready` が表示されていることを確認してください。エラーが出ていなければ起動成功です。
-
-#### 注意事項
-
-開発サーバーは起動中ずっとターミナルを占有します。サーバーを停止するには `Ctrl + C` を押してください。別のコマンドを実行したい場合は、新しいターミナルタブを開きます。
-
-📝 **学んだこと**: `npm run dev` で開発サーバーを起動すると、コードの変更がリアルタイムでブラウザに反映されます。
-
----
-
-### Step 12: ブラウザでアプリを確認する（5分）
-
-🎯 **ゴール**: ブラウザにタスク管理アプリのログイン画面が表示される。
-
-> 💡 **例え話**: ブラウザでURLを開くのは「お店に入る」操作です。お店（サーバー）がオープンしていれば、お客さん（ブラウザ）は入り口（URL）からアクセスできます。
-
-#### アプリにアクセスする
-
-💻 **実装**:
-
-ブラウザ（Chrome推奨）を開き、アドレスバーに以下のURLを入力してEnterキーを押してください。
-
-`http://localhost:3000`
-
-🔍 **コード解説**:
-
-| URL部分 | 意味 | 例え |
-|---------|------|------|
-| `http://` | 通信プロトコル | 配達方法 |
-| `localhost` | 自分のパソコン | 自分のお店 |
-| `:3000` | ポート番号 | 入り口の番号 |
-
-✅ **確認ポイント**:
-- ブラウザにアプリの画面が表示される
-- ログイン画面またはトップページが見える
-- 「ページが見つかりません」エラーが出ていない
-
-【スクリーンショット】ブラウザにログイン画面（メールアドレスとパスワードの入力欄）が表示されている状態
-
-![ブラウザにログイン画面（メールアドレスとパスワードの入力欄）](./screenshots/login.png)
-
-#### ログインを試す
-
-シードデータで作成されたテスト用アカウントでログインしてみてください。
-
-| 項目 | 値 |
-|------|-----|
-| メールアドレス | `admin@example.com` |
-| パスワード | `password123` |
-
-> 💡 Step 7で `_DEVELOPER_EMAIL` を別の値に変更した場合は、その値を使ってください。`admin@example.com` はデフォルト設定時のメールアドレスです。他にも `user1@example.com`（パスワード: `password123`）といったテストユーザーがいます。
-
-✅ **確認ポイント**:
-- ログイン後、ダッシュボード画面が表示される
-- タスク一覧が確認できる
-
-【スクリーンショット】ログイン後にダッシュボード画面が表示され、タスク一覧が見えていることを確認してください。
-
-📝 **学んだこと**: 開発サーバーが起動していれば、ブラウザから `http://localhost:3000` でアプリにアクセスできます。`localhost` は「自分のパソコン」を意味する特別なアドレスです。
-
----
-
-## 📋 今日のまとめ
-
-今日は開発環境を一からセットアップし、タスク管理アプリを実際に動かすところまで到達しました。
-
-### セットアップした全体像
-
-```mermaid
-flowchart LR
-    subgraph インストールしたツール
-        Z[mise] --> A[Node.js v25.6.1]
-        A --> B[npm]
-        C[VS Code] --> D[拡張機能]
-        E[Docker Desktop] --> F[PostgreSQL]
-    end
-
-    subgraph 実行したコマンド
-        G[git clone] --> G2[mise install]
-        G2 --> I[cp .env.example .env]
-        I --> H[npm install]
-        H --> J[docker compose up -d db]
-        J --> K[npx prisma db push]
-        K --> L[npm run db:seed]
-        L --> M[npm run dev]
-    end
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.55.2:3000
+✓ Ready in 158ms
 ```
 
-### 学んだコマンド一覧
+### ブラウザで開くURL
 
-| コマンド | 役割 |
-|---------|------|
-| `mise install` | プロジェクトが必要なツールを自動インストール |
-| `node -v` | Node.jsのバージョン確認 |
-| `cp .env.example .env` | 環境変数ファイルの作成 |
-| `npm install` | ライブラリの一括インストール |
-| `docker compose up -d db` | データベースの起動 |
-| `npx prisma db push` | テーブルの作成 |
-| `npm run db:seed` | サンプルデータの投入 |
-| `npm run dev` | 開発サーバーの起動 |
+- `http://localhost:3000`
 
-### 作成・変更したファイル
+### 何が見えたらOKか
 
-| ファイル | 操作 |
-|----------|------|
-| `.env` | `.env.example` からコピーして作成 |
+Next.js のロゴと
+`To get started, edit the page.tsx file.`
+が見えればOK。
 
----
+### スクリーンショットの見本
 
-## ⚠️ つまずきポイント
+雰囲気の確認用に、
+[day01-vscode-open.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-vscode-open.png)
+と
+[day01-success.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-success.png)
+も見ておくとイメージしやすい。
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| `mise: command not found` | miseがインストールされていない | Step 1に戻ってmiseをインストール |
-| `node: command not found` | miseでNode.jsが未インストール | `task-app` フォルダで `mise install` を実行 |
-| `npm install` で `EACCES` エラー | npmグローバルディレクトリの権限問題 | miseでNode.jsを管理しているため通常発生しません。発生した場合は `mise install` を再実行してください |
-| `docker: command not found` | Docker Desktopが起動していない | Docker Desktopアプリを起動してから再実行 |
-| `port 5432 already in use` | 5432ポートが他のアプリに使われている | 既存のPostgreSQLを停止するか、`.env` のポート番号を変更 |
-| `P1001: Can't reach database` | データベースが起動していない | `docker compose up -d db` を実行してから再試行 |
-| `npm run dev` で `.env` 関連エラー | `.env` ファイルがないか内容が不正 | Step 7に戻って `.env` を再確認 |
-| `npm run dev` で `MODULE_NOT_FOUND` | `npm install` が未完了 | Step 8に戻って `npm install` を再実行 |
-| `npm run dev` で `P1001` エラー | データベースが起動していない | Step 9に戻って `docker compose up -d db` を実行 |
+### ここで一回安心してええ理由
 
----
+この時点で、
+Node.js と npm と Next.js と Tailwind の土台はちゃんと動いてる。
 
-## 🔄 次回プロジェクトを再開するとき
+つまり次に画面を壊したとしても、
+「最初は動いていた」状態に戻れる。
+これ、地味やけどめっちゃ大事や。
 
-パソコンを再起動した後や、Day 02に進む際は以下の手順でプロジェクトを再開できます。
+## Step 4: 自分専用の"最初のページ"を作る
 
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# 1. Docker Desktopアプリを起動する（手動）
-# 2. データベースを起動する
-docker compose up -d db
+ここからが今日のいちばんおもろいところや。
+
+初期画面は「Next.js を始める人向けの案内」やった。
+でも君が30日で育てたいのは、
+自分専用のタスク管理アプリやろ。
+
+なのでここで、
+見た目の土台を `task-app` 仕様に寄せる。
+
+今日やる編集は2つ。
+
+1. `src/app/globals.css` に Linear 風 design token を入れる
+2. `src/app/page.tsx` を、自分専用の最初の画面に置き換える
+
+### 4-1. `globals.css` を token ベースに差し替える
+
+今の `globals.css` でも画面は出る。
+でも semantic token がまだ足りない。
+
+今日つくるページでは、
+`bg-primary`
+`text-primary-foreground`
+`bg-card`
+`text-muted-foreground`
+みたいな名前で色を呼びたい。
+
+そのためにまず、
+土台の色設計を `globals.css` に入れる。
+
+### 編集アンカー
+
+`src/app/globals.css` を開いて、
+**先頭の `@import "tailwindcss";` からファイルの最後まで全部置き換える**。
+
+今のファイルを部分修正するより、
+Day 01 は丸ごと入れ替えたほうが理解しやすい。
+
+# src/app/globals.css
+```css
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans:
+    var(--font-inter), var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Meiryo", sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono), "JetBrains Mono", "Geist Mono", "SFMono-Regular", monospace;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 8px 24px -12px rgb(79 70 229 / 0.18);
+  --shadow-md: 0 2px 4px 0 rgb(15 23 42 / 0.08), 0 18px 44px -20px rgb(79 70 229 / 0.22);
+  --shadow-lg: 0 8px 24px -12px rgb(15 23 42 / 0.12), 0 28px 64px -28px rgb(79 70 229 / 0.28);
+
+  --ease-linear-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 22% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 22% 10%;
+
+    --popover: 220 33% 99%;
+    --popover-foreground: 222 22% 10%;
+
+    --primary: 253 77% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 24% 96%;
+    --secondary-foreground: 223 20% 16%;
+
+    --muted: 225 23% 95%;
+    --muted-foreground: 220 11% 42%;
+
+    --accent: 191 82% 95%;
+    --accent-foreground: 193 73% 24%;
+
+    --destructive: 354 70% 54%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 64% 41%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 92% 55%;
+    --warning-foreground: 223 20% 12%;
+
+    --border: 225 20% 89%;
+    --input: 225 20% 89%;
+    --ring: 253 77% 60%;
+
+    --radius: 10px;
+
+    --chart-1: 253 77% 60%;
+    --chart-2: 191 72% 42%;
+    --chart-3: 333 72% 64%;
+    --chart-4: 35 92% 55%;
+    --chart-5: 222 18% 48%;
+
+    --sidebar: 224 28% 97%;
+    --sidebar-foreground: 222 22% 12%;
+    --sidebar-primary: 253 77% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 225 23% 95%;
+    --sidebar-accent-foreground: 223 20% 16%;
+    --sidebar-border: 225 20% 89%;
+    --sidebar-ring: 253 77% 60%;
+  }
+
+  .dark {
+    --background: 228 21% 10%;
+    --foreground: 220 20% 97%;
+
+    --card: 228 20% 12%;
+    --card-foreground: 220 20% 97%;
+
+    --popover: 228 20% 13%;
+    --popover-foreground: 220 20% 97%;
+
+    --primary: 254 86% 68%;
+    --primary-foreground: 233 35% 10%;
+
+    --secondary: 226 16% 18%;
+    --secondary-foreground: 220 20% 96%;
+
+    --muted: 226 16% 16%;
+    --muted-foreground: 220 12% 69%;
+
+    --accent: 184 33% 18%;
+    --accent-foreground: 183 85% 84%;
+
+    --destructive: 355 72% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 60% 46%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 60%;
+    --warning-foreground: 223 20% 12%;
+
+    --border: 224 15% 22%;
+    --input: 224 15% 22%;
+    --ring: 254 86% 68%;
+
+    --chart-1: 254 86% 68%;
+    --chart-2: 184 56% 52%;
+    --chart-3: 330 77% 71%;
+    --chart-4: 38 92% 60%;
+    --chart-5: 220 12% 69%;
+
+    --sidebar: 228 21% 9%;
+    --sidebar-foreground: 220 20% 96%;
+    --sidebar-primary: 254 86% 68%;
+    --sidebar-primary-foreground: 233 35% 10%;
+    --sidebar-accent: 226 16% 16%;
+    --sidebar-accent-foreground: 220 20% 96%;
+    --sidebar-border: 224 15% 22%;
+    --sidebar-ring: 254 86% 68%;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
 ```
 
-✅ **確認ポイント**:
-- `taskapp-postgres` コンテナが `running` 状態
+### 4-2. `page.tsx` を最初の画面に置き換える
 
+次に、
+トップページを君のアプリの顔に変える。
+
+今日のテーマはこれ。
+
+**自分専用のタスク管理アプリの最初の画面を立ち上げて、SNSに見せたくなる見た目で「Hello」する**
+
+派手すぎなくてええ。
+でも「初期画面のまま」からは卒業したい。
+
+### 編集アンカー
+
+`src/app/page.tsx` を開いて、
+**`import Image from "next/image";` からファイルの最後まで全部置き換える**。
+
+`Home` という初期コンポーネントを残すより、
+このDayでは丸ごと差し替えた方がスッキリ理解できる。
+
+# src/app/page.tsx
+```tsx
+import Link from 'next/link';
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
+        <header className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+              G0 Foundation
+            </p>
+            <h1 className="text-sm font-semibold text-card-foreground">
+              Kouiso Task App
+            </h1>
+          </div>
+
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
+            <span className="h-2 w-2 rounded-full bg-primary" />
+            Day 01 Ready
+          </div>
+        </header>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="overflow-hidden rounded-[28px] border border-border bg-card shadow-md">
+            <div className="border-b border-border px-8 py-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+                Hello, my first task app
+              </div>
+
+              <h2 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+                自分専用のタスク管理アプリが、今日ここから動き出す。
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+                今日つくるのは、30日後の完成版へつながる最初の画面や。
+                まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+              </p>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <a
+                  className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-transform duration-200 hover:-translate-y-0.5"
+                  href="#today-goals"
+                >
+                  今日のゴールを見る
+                </a>
+                <Link
+                  className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
+                  href="/dashboard"
+                >
+                  ダッシュボードへ入る
+                </Link>
+                <a
+                  className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
+                  href="#next-step"
+                >
+                  明日の予告を見る
+                </a>
+              </div>
+            </div>
+
+            <div className="grid gap-4 bg-secondary/60 px-8 py-6 md:grid-cols-3">
+              <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  今日の進捗
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">01</p>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  空のディレクトリから、ちゃんと動く土台を自分で立ち上げた。
+                </p>
+              </article>
+
+              <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  今見えているもの
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">UI</p>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  初期画面ではなく、自分のアプリの一枚目として見せられる見た目。
+                </p>
+              </article>
+
+              <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  次につながる土台
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">G0</p>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  明日からメッセージやカードを足しても、見た目の芯がぶれにくい。
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <article
+              id="today-goals"
+              className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
+            >
+              <p className="text-sm font-semibold text-card-foreground">
+                今日のゴール
+              </p>
+              <ul className="mt-4 space-y-3 text-sm leading-7 text-muted-foreground">
+                <li className="rounded-2xl bg-secondary px-4 py-3">
+                  空のディレクトリから `task-app` を始める
+                </li>
+                <li className="rounded-2xl bg-secondary px-4 py-3">
+                  スキャフォールド用スクリプトで土台を作る
+                </li>
+                <li className="rounded-2xl bg-secondary px-4 py-3">
+                  `npm run dev` でローカル起動を確認する
+                </li>
+                <li className="rounded-2xl bg-secondary px-4 py-3">
+                  design token を使って最初の画面をつくる
+                </li>
+              </ul>
+            </article>
+
+            <article className="rounded-[28px] border border-border bg-card p-6 shadow-sm">
+              <p className="text-sm font-semibold text-card-foreground">
+                今日のひとこと
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                最初の一枚目は、ただ映えればええわけやない。
+                これから30日育てる画面の、空気感の基準になる。
+              </p>
+
+              <div className="mt-5 rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary-foreground/80">
+                  Today&apos;s theme
+                </p>
+                <p className="mt-2 text-lg font-semibold">
+                  SNS に貼りたくなる Hello を、自分の手で立ち上げる
+                </p>
+              </div>
+            </article>
+
+            <article
+              id="next-step"
+              className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
+            >
+              <p className="text-sm font-semibold text-card-foreground">
+                明日につながる入口
+              </p>
+              <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
+                今日のページは入口として、ダッシュボードは明日の土台として整えておく。
+              </p>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
+
+### 4-3. 明日につながる `dashboard/page.tsx` を作る
+
+Day 02 は
+`src/app/dashboard/page.tsx` を育てる日や。
+
+せやから Day 01 の最後に、
+**ダッシュボードの入口だけは先に作っておく**。
+
+まず `src/app` の中に `dashboard` フォルダを作る。
+その中に `page.tsx` を新しく作って、
+次の内容をそのまま入れよう。
+
+# src/app/dashboard/page.tsx
+```tsx
+export default function DashboardPage() {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-10">
+        <section className="w-full rounded-3xl border border-border bg-card px-8 py-10 shadow-md">
+          <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            Dashboard
+          </p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+            Hello Task-App
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+            Day 01 で立ち上げた最初のダッシュボードや。
+            ここから少しずつ、自分専用の画面に育てていこう。
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
+
+### ここで押さえたいこと
+
+- ルートの `src/app/page.tsx` は「入口」の役目
+- `src/app/dashboard/page.tsx` は「育てていく本体」の役目
+- Day 02 では、この `Hello Task-App` のダッシュボードに自分の言葉を足していく
+
+### できあがる見た目のポイント
+
+このページでは、
+今日入れた token をそのまま使ってる。
+
+たとえば次の対応や。
+
+- `bg-background` で画面全体の背景
+- `bg-card` で主役の面
+- `bg-primary` と `text-primary-foreground` で CTA
+- `text-muted-foreground` で説明文
+- `border-border` で面同士の境界線
+
+### もし色が乗らないとき
+
+だいたいこのどっちかや。
+
+- `src/app/globals.css` の貼り付けが途中で切れている
+- `npm run dev` を起動し直していない
+
+一回落ち着いて、
+`@theme inline` と `:root` がちゃんと入っているか見直そう。
+
+### 💡 Pro パターンで書こう — arbitrary value 多用より design token を先に切る
+
+ここまでで動くコードは書けた。
+でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、
+**Before/After** で見比べてみよう。
+
+### ❌ Before（動くけど、プロは書かない）
+
+# src/app/page.tsx（比較用の一部）
+```tsx
+function WelcomeHero() {
+  return (
+    <section className="rounded-[28px] border border-[#25273f] bg-[#0f1021] px-[32px] py-[28px] shadow-[0_24px_80px_-32px_rgba(99,102,241,0.45)]">
+      <span className="inline-flex items-center rounded-full bg-[#16172d] px-[12px] py-[6px] text-[13px] font-medium text-[#9aa2c3]">
+        Hello, my first task app
+      </span>
+      <h2 className="mt-[24px] text-[44px] font-semibold leading-[1.08] tracking-[-0.04em] text-white">
+        自分専用のタスク管理アプリが、今日ここから動き出す。
+      </h2>
+      <p className="mt-[18px] max-w-[620px] text-[16px] leading-[1.9] text-[#b0b7d3]">
+        今日つくるのは、30日後の完成版へつながる最初の画面や。
+        まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+      </p>
+      <div className="mt-[32px] flex gap-[12px]">
+        <a
+          className="inline-flex items-center justify-center rounded-[12px] bg-[#6d5dfc] px-[20px] py-[12px] text-[14px] font-semibold text-white"
+          href="#today-goals"
+        >
+          今日のゴールを見る
+        </a>
+        <a
+          className="inline-flex items-center justify-center rounded-[12px] border border-[#2d314b] bg-[#151729] px-[20px] py-[12px] text-[14px] font-semibold text-white"
+          href="#next-step"
+        >
+          明日の予告を見る
+        </a>
+      </div>
+    </section>
+  );
+}
+
+export default function HomePage() {
+  return <WelcomeHero />;
+}
+```
+
+**このコードの問題点**:
+
+- 色や角丸や余白が全部その場の値なので、別画面でも同じ空気感を出したくなった瞬間にコピペが始まる
+- `#6d5dfc` と `#0f1021` が何の役割の色か名前から分からず、レビュー時に意図を読み取りづらい
+- 後で配色を少し変えたいとき、画面全体を検索して直す必要が出やすい
+
+### ✅ After（プロが書くコード）
+
+# src/app/page.tsx（比較用の一部）
+```tsx
+function WelcomeHero() {
+  return (
+    <section className="rounded-[28px] border border-border bg-card px-8 py-7 shadow-md">
+      <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+        Hello, my first task app
+      </span>
+      <h2 className="mt-6 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+        自分専用のタスク管理アプリが、今日ここから動き出す。
+      </h2>
+      <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+        今日つくるのは、30日後の完成版へつながる最初の画面や。
+        まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+      </p>
+      <div className="mt-8 flex gap-3">
+        <a
+          className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm"
+          href="#today-goals"
+        >
+          今日のゴールを見る
+        </a>
+        <a
+          className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground"
+          href="#next-step"
+        >
+          明日の予告を見る
+        </a>
+      </div>
+    </section>
+  );
+}
+
+export default function HomePage() {
+  return <WelcomeHero />;
+}
+```
+
+**このコードの強み**:
+
+- `primary` `card` `accent` みたいに役割で名前が付いているので、画面が増えても見た目のルールを共有しやすい
+- 色や面の意味がクラス名に表れるから、レビュー時に「何を主役にしたいのか」が読み取りやすい
+- テーマ調整や配色変更が `globals.css` に寄りやすくなり、後日の拡張でも崩れにくい
+
+#### 🎓 覚えておきたいエッセンス
+
+最初の一枚目ほど、
+値をその場で盛るより、
+**意味のある token 名で見た目を組む** ほうが後から効く。
+
+「この色きれい」より先に、
+「この色は主役か、補助か、背景か」を名前にしておく。
+
+## Step 5: 動作確認 — SNS に貼りたくなる画面を見る
+
+編集が終わったら、
+もう一回ブラウザを見る。
+
+まだ `npm run dev` を落としていなければ、
+保存した瞬間に変わっているはずや。
+
+止めていたら、もう一回起動しよう。
+
+# ~/workspace/task-app
 ```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# 3. 開発サーバーを起動する
 npm run dev
 ```
 
-✅ **確認ポイント**:
-- ブラウザで http://localhost:3000 にアクセスして画面が表示される
+### ブラウザ確認
 
-> 💡 たった3ステップで再開できます。Docker Desktopの起動 → `docker compose up -d db` → `npm run dev` の順番を覚えておきましょう。
+- `http://localhost:3000` を開く
 
----
+### チェックポイント
 
-## 🔜 次回予告
+- 上に `G0 Foundation` と `Kouiso Task App` が見える
+- `Day 01 Ready` の小さなバッジが見える
+- メインカードに「自分専用のタスク管理アプリが、今日ここから動き出す。」が見える
+- ボタンが `bg-primary` らしい主役色で出ている
+- `ダッシュボードへ入る` ボタンが見える
+- 右側に「今日のゴール」「今日のひとこと」「明日につながる入口」のカードが見える
+- `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開く
+- `/dashboard` で `Hello Task-App` が見える
 
-Day 02では、**ダッシュボードに自分だけのメッセージを追加**します。実際のコードを編集して、画面に変化を起こす体験をしましょう。「コードを変えると画面が変わる」という開発の醍醐味を味わってください。
+### 見た目が近いか確認する用の画像
+
+今日はここまで来たら十分すごい。
+雰囲気比較として、
+[day01-success.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-success.png)
+や
+[day01-dashboard-named.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-dashboard-named.png)
+も眺めてみてな。
+
+「完全一致」より、
+「自分の画面として立っているか」を見るのが大事や。
+
+### うまく表示されないときの見直し順
+
+1. ターミナルにエラーが出ていないか見る
+2. `src/app/globals.css` の貼り付け漏れがないか見る
+3. `src/app/page.tsx` のクラス名を打ち間違えていないか見る
+4. 開発サーバーをいったん止めて、もう一回 `npm run dev` する
+
+## 🎓 今日手に入れたもの
+
+今日は「環境構築だけの日」では終わってない。
+空のディレクトリから `task-app` の土台を立ち上げて、
+そのうえで最初の画面まで自分の色に変えた。
+
+これで、
+明日以降に機能を足していく土台ができた。
+しかもその土台は、
+ただ動くだけじゃなく、
+design token を使って見た目の芯まで整え始めている。
+
+Day 01 の勝ち筋はここや。
+「動く」と「ちょっと見せたくなる」の両方を、
+最初の日に取れた。
+
+## 🔜 明日のプレビュー
+
+Day 02 では、
+今日つないだ `src/app/dashboard/page.tsx` に、
+自分だけのメッセージや情報を足していく。
+
+ルートの入口はそのままに、
+中のダッシュボードが少しずつ「自分のプロダクト」っぽくなってくる日や。
+
+今日の `bg-card` や `bg-primary` が効いてくるのも、
+まさにここから。

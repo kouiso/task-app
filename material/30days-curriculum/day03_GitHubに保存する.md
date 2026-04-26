@@ -1,464 +1,989 @@
-# Day 03: GitHubに保存しよう
+# Day 03: GitHubに保存する
 
-## 🔙 前回の振り返り
+30日で、自分専用のタスク管理アプリを育てていく。
+Day 01 で土台を立ち上げて、
+Day 02 でダッシュボードに自分の気配を入れた。
 
-Day 02 ではダッシュボードにウェルカムバナーを追加しながら、`const`・`let` による変数宣言と `string`・`number`・`boolean` の型の基本を学びました。コードを編集してアプリに反映できるようになったので、今日はそのコードを GitHub に保存する方法を学びます。
+今日はその変化を、
+自分のパソコンの中だけで終わらせへん日や。
 
----
+GitHub に保存すると、
+このアプリははじめて
+「URL を持つ自分の開発物」
+になる。
 
-## 🎯 今日のゴール
+ローカルで作った一歩が、
+履歴として残る。
+あとから見返せる。
+次の Day で Vercel に公開するときも、
+この履歴がそのまま土台になる。
 
-あなたが書いたコードをGitHubに保存できるようになります。GitHubに保存することで、コードのバックアップを取ったり、他の人と共有したりできます。
+## 🌟 このDayで君が手に入れるもの
 
-> 📸 GitHub のリポジトリページ（`https://github.com/<ユーザー名>/task-app`）を開き、コードがアップロードされていることをブラウザで確認してください。
+Day 02 までで育てた `task-app` を、
+自分の GitHub リポジトリに安全に保存できるようになる。
 
-### 前提
+今日やるのは、
+ただ `git push` を通すことだけやない。
 
-Day 01で教材リポジトリを `git clone` 済みで、Day 02でウェルカムバナーを追加済みです。Day 03ではその変更を「自分のGitHub」に保存します。
+- 今のプロジェクトがどんな Git 状態かを読めるようになる
+- GitHub に空の保存先を正しく作れるようになる
+- `README.md` を最低限の顔として整えられるようになる
+- `.env` を巻き込まずに、変更したファイルだけを意図的に記録できるようになる
+- 次の Day で公開に進める状態を、自分の手でつくれるようになる
 
-## 🤔 なぜこれを作るのか？
+ここまで終わると、
+「教材を読んで触ったコード」やなくて、
+「自分が積み上げていくプロダクトの履歴」
+に見え始めるで。
 
-コードを書いていると、「間違えて削除してしまった」「前の状態に戻したい」という場面に出会います。GitHubに保存しておけば、いつでも過去の状態に戻せます。さらに、チームで開発する際にも、GitHubが中心的な役割を果たします。
+## 📍 今日のゴール（G0 Foundation の3日目）
 
-> 💡 **例え話**: GitHubは、Googleドライブのようなものです。コードをクラウドに保存しておけば、パソコンが壊れてもデータは残り、安心して開発を進められます。
+- [ ] Day 02 の完成状態から作業を再開する
+- [ ] いまの Git 状態とブランチ名、未保存の変更を確認する
+- [ ] `README.md` を、自分のアプリに合う内容へ整える
+- [ ] `.gitignore` と `.env.example` の役割を確認する
+- [ ] GitHub に空のリポジトリを作成する
+- [ ] `gh auth login` で安全に GitHub 認証を済ませる
+- [ ] `origin` を登録して、ローカルの履歴を GitHub に送る
+- [ ] ブラウザで GitHub のリポジトリページを開き、自分のコードが見えることを確認する
 
-### 📐 Git操作の流れ
+## 🧾 Front Matter
 
-```mermaid
-flowchart LR
-    A[ファイルを編集] --> B[git add<br/>変更を選択]
-    B --> C[git commit<br/>変更を記録]
-    C --> D[git push<br/>GitHubに送信]
-    D --> E[(GitHub<br/>クラウド保存)]
+- Day: `03`
+- Group: `G0 Foundation`
+- Feature Theme: `GitHub に保存する`
+- Learning Outcome: `ローカルで育てた task-app を、自分の GitHub に履歴付きで安全に保存できる`
+- Prerequisites: `Day 02 完了`
+
+## 🧰 前提（Day 02 完了していること）
+
+今日は Day 02 の続きから進める。
+新しいプロジェクトを作り直す日ではない。
+
+次の状態になっている前提で進めよう。
+
+- `task-app` ディレクトリが手元にある
+- `npm install` 済みで `npm run dev` が動く
+- `src/app/dashboard/page.tsx` に Day 02 の自分用ダッシュボードがある
+- `.env.example` が置かれている
+- `.gitignore` が置かれている
+
+ここで大事なんは、
+**昨日までの自分の作業を、そのまま GitHub に持っていく**
+という流れや。
+
+今日は別の完成品を取りに行かへん。
+昨日の続きの `task-app` を、
+そのまま外へ出していく。
+
+## ✨ 今日のワクワクポイント
+
+GitHub に保存できるようになると、
+自分のコードに「置き場所」ができる。
+
+これは地味に見えて、
+開発体験の質をかなり変える。
+
+たとえば今日の終わりには、
+ブラウザで
+`https://github.com/<自分のユーザー名>/task-app`
+みたいな URL を開いて、
+Day 01 から Day 03 までの自分の積み上げが見えるようになる。
+
+ローカルでしか見えへんものは、
+うっかり壊したり、
+別の端末に移れへんかったり、
+「いつでも消えるかもしれん」感じが残る。
+
+でも GitHub に履歴が残ると、
+その一歩はもう
+「なくなりやすい練習」
+やなくて、
+「次に進める土台」
+になる。
+
+Day 04 の公開も、
+ここがあるから安心して進める。
+
+## 🔙 前日からの状態確認
+
+まずは Day 02 の終わりから、
+いま何が残っているかを揃えよう。
+
+Day 02 の最後では、
+こう予告していた。
+
+> 次は GitHub に保存して、  
+> 「自分で育てたアプリの進化」を積み上げていける状態にしていこう。
+
+今日はまさにここをやる。
+
+### まずはアプリがまだ元気に動くか確認する
+
+開発サーバーを止めているなら、
+もう一度起動しておこう。
+
+```bash title="~/workspace/task-app"
+npm run dev
 ```
 
-## 📊 実装ステップ一覧
+ブラウザでは次の状態が見えていたら OK や。
 
-| ステップ | 作業内容 | 所要時間 |
-|---------|---------|---------|
-| Step 1 | Gitの初期設定 | 5分 |
-| Step 2 | リポジトリを作成 | 5分 |
-| Step 3 | 変更をコミット | 10分 |
-| Step 4 | GitHub認証を設定する | 10分 |
-| Step 5 | GitHubにプッシュ | 5分 |
-| Step 6 | Gitの便利コマンドを体験 | 10分 |
-| Step 7 | .gitignore を理解しよう | 5分 |
+- Day 02 で作った自分用ダッシュボードが表示される
+- `Hello Task-App` ではなく、自分の名前やメッセージが主役として見える
+- 画面が崩れていない
 
-**合計時間**: 約50分
+ここで表示が変やったら、
+GitHub に送る前に先に直したほうがええ。
 
----
+GitHub は
+「壊れたものでも保存できる場所」
+ではあるけど、
+今日の狙いは
+**いまの良い状態を、ちゃんと残すこと**
+やからや。
 
-### Step 1: Gitの初期設定（5分）
+### ローカルの Git はもう始まっている
 
-🎯 **ゴール**: Gitに自分の名前とメールアドレスを設定します。
+今日の教材では、
+ローカルの Git 管理そのものは
+もう始まっている前提で進める。
 
-🔰 **初心者向け解説**: Gitは、誰がいつコードを変更したのかを記録します。そのために、あなたの名前とメールアドレスを最初に設定する必要があります。設定は一度だけ行えば、それ以降は自動的に記録されます。
+理由は Day 01 の土台づくりで使った流れにある。
 
-💻 **実装**:
+`scripts/scaffold-from-scratch.sh` は、
+空ディレクトリに公式の `create-next-app` を実行する。
+そして Day 01 の実行ログにも、
+`Initialized a git repository.` と出ていた。
 
-```bash
-# filepath: ターミナル
-git config --global user.name "<あなたの名前>"
-git config --global user.email "<あなたのメールアドレス>"
+つまり今日は、
+ローカルの履歴づくりをゼロから始める日ではなく、
+**その履歴を GitHub に接続する日**
+や。
 
-# 設定内容を確認
-git config --list
+ここを分けて理解できると、
+Git の役割がかなり整理しやすい。
+
+## Step 1: いまの Git 状態を読む
+
+いきなり GitHub 側を触る前に、
+まずローカルの状態を確認しよう。
+
+ここを見ずに進むと、
+「いま何が未保存なんか」
+「どのブランチにいるんか」
+「すでに接続先があるんか」
+が分からんままになる。
+
+プロっぽい進め方は、
+送る前に現在地を読むことや。
+
+### 実行コマンド
+
+```bash title="~/workspace/task-app"
+pwd
+git status -sb
+git branch --show-current
+git log --oneline --decorate -3
+git remote -v
 ```
 
-🔍 **コード解説**:
+### この5つで見ていること
 
-| コマンド | 意味 | 例え |
-|--------|------|------|
-| `git config --global user.name` | Gitに名前を設定 | 作品に著者名を書く |
-| `git config --global user.email` | Gitにメールアドレスを設定 | 著者の連絡先を添える |
-| `--global` | 全プロジェクトで共通の設定 | 全ての作品に同じ署名を使う |
+- `pwd`
+  今ほんまに `task-app` のルートにいるか確認する
+- `git status -sb`
+  変更中のファイルと、ブランチの概要を短く見る
+- `git branch --show-current`
+  いまどのブランチ名で作業しているか確認する
+- `git log --oneline --decorate -3`
+  直近の履歴があるか確認する
+- `git remote -v`
+  すでに GitHub などの保存先がつながっていないか確認する
 
-✅ **確認ポイント**:
+### 期待するイメージ
 
-1. `git config --list`で設定を確認
-2. `user.name`と`user.email`が表示される
-3. これでGitの初期設定が完了です
+人によって多少違うけど、
+今日はだいたいこんな感じなら進めやすい。
 
-> 📸 ターミナルで `git config --list` を実行し、`user.name` と `user.email` が正しく表示されていることを確認してください。
-
-📝 **学んだこと**: `git config`コマンドで、Gitに自分の情報を登録できるようになりました。
-
----
-
-### Step 2: リポジトリを作成（5分）
-
-🎯 **ゴール**: GitHubに新しいリポジトリを作成します。
-
-🔰 **初心者向け解説**: リポジトリは、コードを保存する「プロジェクトフォルダ」のようなものです。GitHubのWebサイトから、新しいリポジトリを作成できます。リポジトリ名は、プロジェクトの内容がわかりやすい名前にしましょう。
-
-📝 **手順**:
-
-1. ブラウザで`https://github.com`にアクセス
-2. 右上の「+」ボタンをクリック
-3. 「New repository」を選択
-4. リポジトリ名に`task-app`と入力
-5. 「Public」を選択（公開リポジトリ）
-6. 「Create repository」をクリック
-
-🔍 **設定項目**:
-
-| 項目 | 設定値 | 意味 |
-|------|--------|------|
-| Repository name | `task-app` | リポジトリの名前 |
-| Public/Private | Public | 誰でも見られる |
-| Initialize this repository | **チェックしない** | 空のリポジトリとして作成する |
-
-> ⚠️ **「Initialize this repository」には絶対にチェックしないこと**: Day 01 で `git clone` した時点で、ローカルには既存のGit履歴が存在しています。GitHub側でREADME.mdや.gitignoreを追加して初期化すると、リモートとローカルの履歴が別々に作られた状態（unrelated histories）になり、`git push`が拒否されます。
-
-✅ **確認ポイント**:
-
-1. GitHubに新しいリポジトリが作成される
-2. リポジトリのURLが表示される（`https://github.com/<あなたのユーザー名>/task-app`）
-3. 「Initialize this repository」にチェックを入れていないこと
-
-> 📸 GitHub のリポジトリページが表示され、`https://github.com/<ユーザー名>/task-app` の URL が確認できることをブラウザで確認してください。
-
-📝 **学んだこと**: GitHubのWebサイトから、新しいリポジトリを作成できるようになりました。
-
----
-
-### Step 3: 変更をコミット（10分）
-
-🎯 **ゴール**: ローカルの変更をGitに記録します。
-
-🔰 **初心者向け解説**: コミットは、「この時点のコードを保存する」という操作です。ゲームのセーブポイントのようなもので、いつでもこの時点に戻れます。コミットメッセージには、何を変更したのかを簡潔に書きます。
-
-まず、Day 02で変更したファイルを確認します。
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# 変更されたファイルを確認する
-git status
+```text title="ターミナル出力のイメージ"
+/Users/your-name/workspace/task-app
+## main
+main
+8f2c4a1 (HEAD -> main) feat: personalize dashboard message
+4c6f8e0 chore: bootstrap task-app scaffold
 ```
 
-✅ **確認ポイント**:
-- Day 02で変更した `src/app/dashboard/page.tsx` が表示される
+`git remote -v` は、
+まだ何も出ないかもしれへん。
+それで問題ない。
 
-変更を確認できたら、ステージング（コミット前の準備場所に追加）してコミット（記録）します。
+### ここで見ておきたい判断ポイント
 
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# 変更をステージングエリアに追加してコミット
-git add .
-git commit -m "feat: ウェルカムバナーを追加"
+- `git status -sb` に `??` や `M` が出ているなら、まだコミットしていない変更がある
+- `git remote -v` が空なら、まだ GitHub 側の保存先は未接続
+- ブランチ名が `main` 以外でも慌てなくていい
+
+今日はブランチ名を固定で決め打ちせず、
+**いま実際にいるブランチをそのまま GitHub に送る**
+流れで進める。
+
+このやり方にしておくと、
+環境差でつまずきにくい。
+
+## Step 2: GitHub に置く前に、README を自分の顔に整える
+
+GitHub に保存すると、
+最初に見られるのはコードそのものだけやない。
+
+リポジトリのトップに出る `README.md` も、
+そのアプリの顔になる。
+
+Day 03 の段階では、
+まだ機能一覧を全部書き切る必要はない。
+でも最低限、
+「何のアプリで」
+「いま何ができて」
+「どう起動するか」
+が見えるだけで、
+リポジトリの印象はかなり変わる。
+
+### いまの README を開いて確認する
+
+```bash title="~/workspace/task-app"
+sed -n '1,200p' README.md
 ```
 
-🔍 **コード解説**:
+もし教材用の説明が中心で、
+まだ自分の `task-app` の現在地が見えにくいなら、
+ここで整えてしまおう。
 
-| コマンド | 意味 | 例え |
-|--------|------|------|
-| `git add .` | 全ての変更をステージングエリア（コミット前の準備場所）に追加。`.`は「このフォルダの全ファイル」の意味 | 引っ越しリストに荷物を書き込む |
-| `git commit -m "メッセージ"` | 変更を記録する | セーブボタンを押す |
+### 編集アンカー
 
-> ⚠️ `git add .` は全ファイルをまとめて追加しますが、`.gitignore` で除外されたファイル（`.env`など）は含まれません。このプロジェクトでは安全です。
+`~/workspace/task-app/README.md` を開いて、
+ファイル全体を次の内容に置き換える。
 
-✅ **確認ポイント**:
+```md title="README.md"
+# task-app
 
-1. `git status`で状態を確認
-2. `nothing to commit, working tree clean`と表示される
-3. これで変更がコミットされました
+30日カリキュラムで育てていく、
+自分専用のタスク管理アプリです。
 
-> 📸 ターミナルで `git status` を実行し、`nothing to commit, working tree clean` と表示されていることを確認してください。
+Day 03 時点では、
+Next.js 15 / TypeScript を土台にして、
+自分用のダッシュボード画面まで進んでいます。
 
-💡 **コミット履歴を確認するコマンド**:
+## 現在できること
+
+- ダッシュボード画面を表示できる
+- 自分の名前や集中テーマを画面に出せる
+- Git でローカル履歴を持てる
+- GitHub に保存して、次の公開準備に進める
+
+## 使用技術
+
+- Next.js 15
+- TypeScript
+- Tailwind CSS
+- Prisma
+- tRPC
+
+## ローカル起動
 
 ```bash
-# filepath: ターミナル
-git log --oneline
+npm install
+cp .env.example .env
+npm run dev
 ```
 
-1 行に 1 コミットが表示されます。コミットが増えていく様子を確認できます。
+ブラウザで `http://localhost:3000` を開いて確認します。
 
-📝 **学んだこと**: `git add`と`git commit`で、変更をGitに記録できるようになりました。
+## 今日の進捗
 
----
+Day 01:
+土台を立ち上げて、最初の画面を表示した。
 
-### Step 4: GitHub と接続する（初回だけ）（10分）
+Day 02:
+ダッシュボードに自分だけのメッセージを追加した。
 
-🎯 **ゴール**: `git push` を使う前に、GitHub 側の保存先とローカルのリポジトリをつなぎます。
+Day 03:
+このプロジェクトを GitHub に保存して、
+履歴を積み上げられる状態にする。
+```
 
-🔰 **初心者向け解説**: `git push` をするには、「どこに送るか」と「その GitHub アカウントに入れるか」の 2 つが必要です。ここでは GitHub に `task-app` リポジトリを用意して、`gh auth login` でログインし、ローカルからその保存先へ送れる状態にします。この手順は初回だけでよく、1 回済ませたら次回からスキップできます。
+### この README で押さえていること
 
-📝 **手順**:
+- リポジトリ名と内容が最初の数行で分かる
+- Day 03 時点の現在地だけを正直に書いている
+- 起動手順が短くまとまっている
+- まだできていない機能を盛っていない
 
-1. ブラウザで https://github.com/new を開き、リポジトリ名 `task-app` で新規作成する（Public 推奨。迷ったら Public を選ぶ）
-2. 作成直後に表示されるページは閉じずに残しておく
-3. ターミナルで GitHub CLI のログインを済ませる
+README は、
+派手に書くより
+**いまの状態を正確に伝える**
+のが強い。
 
-> 💡 **gh コマンドが見つからない場合**:
-> - macOS: `brew install gh`
-> - Windows (PowerShell): `winget install --id GitHub.cli`
-> - WSL (Ubuntu): `sudo apt install gh`（初回は https://cli.github.com/ の手順で apt リポジトリ追加が必要）
-> インストール後、ターミナルを開き直してから `gh auth login` を実行してください。
+Day 30 まで進んだら、
+ここはまた育て直せばええ。
 
-```bash
-# filepath: ターミナル
-# GitHub CLI にログイン（ブラウザが開くので、画面の指示にしたがって承認）
+## Step 3: `.gitignore` と `.env.example` の役割を確認する
+
+GitHub に保存するとき、
+いちばん気をつけたいのが
+「送っていいもの」と
+「送ったらあかんもの」
+の線引きや。
+
+今日の `task-app` では、
+その線引きを主に担っているのが
+`.gitignore`
+と
+`.env.example`
+や。
+
+### まずは `.gitignore` を確認する
+
+```bash title="~/workspace/task-app"
+sed -n '1,220p' .gitignore
+```
+
+このプロジェクトでは、
+ローカル環境変数を無視する設定がすでに入っている。
+特に見てほしいのはこのあたりや。
+
+```text title=".gitignore で見てほしい部分"
+# local env files
+*.env*
+!.env.example
+secret
+*.local
+```
+
+### この4行の意味
+
+- `*.env*`
+  `.env` や `.env.local` みたいなローカル設定を Git 管理から外す
+- `!.env.example`
+  ただし見本用の `.env.example` は GitHub に残す
+- `secret`
+  `secret` という名前のファイルも避ける
+- `*.local`
+  ローカル専用ファイルをまとめて避ける
+
+この形になっているから、
+チームでも個人開発でも
+「起動に必要な項目は共有するけど、
+本物の値は共有しない」
+がやりやすい。
+
+### `.env.example` も確認する
+
+```bash title="~/workspace/task-app"
+sed -n '1,120p' .env.example
+```
+
+Day 01 の scaffold では、
+すでに見本ファイルが作られている。
+
+これがあると、
+GitHub を見に来た未来の自分も、
+次に参加する人も、
+「何の環境変数が必要なんか」
+を推測しやすい。
+
+### ここでの判断
+
+- `.env` や `.env.local` は GitHub に送らない
+- `.env.example` は GitHub に送っていい
+- `.gitignore` があるから安心ではなく、送る前に `git status` でも確認する
+
+この
+「ignore 設定がある」
+と
+「実際の送信前に自分でも確認する」
+の両輪が大事や。
+
+## Step 4: GitHub アカウントと空のリポジトリを用意する
+
+次は GitHub 側に、
+このプロジェクトの保存先を用意する。
+
+ここでのポイントは
+**空のリポジトリを作る**
+ことや。
+
+ローカルにはすでに履歴がある。
+なので GitHub 側で別の初期ファイルを作る必要はない。
+
+### ブラウザでやること
+
+1. `https://github.com/new` を開く
+2. Owner を自分のアカウントにする
+3. Repository name に `task-app` と入れる
+4. Public / Private は好きなほうで選ぶ
+5. `Add a README file` はオフのままにする
+6. `Add .gitignore` もオフのままにする
+7. `Choose a license` も未選択のままにする
+8. `Create repository` を押す
+
+### ここで README を足さない理由
+
+GitHub 側で先に README を作ると、
+GitHub 側だけが持つ最初の履歴ができる。
+
+今回はローカルで Day 01 から育てた履歴を主役にしたい。
+せやから保存先は空でええ。
+
+### 作成後に確認すること
+
+- URL が `https://github.com/<自分のユーザー名>/task-app` になっている
+- まだファイル一覧は空に近い表示になっている
+- “push an existing repository” に近い案内が出ている
+
+この画面は、
+次のステップで使う URL を確認する場所でもある。
+
+ブラウザは開いたままにしておこう。
+
+## Step 5: GitHub CLI で認証する
+
+リポジトリの箱を作っただけでは、
+まだローカルから送れへん。
+
+次に必要なんは、
+**このターミナルが自分の GitHub アカウントとして送信していい**
+と認証してもらうことや。
+
+今日のメインルートでは、
+`gh auth login` を使う。
+
+理由はシンプルで、
+初回セットアップとして分かりやすく、
+秘密の値を手で URL に埋め込む運用を避けやすいからや。
+
+### まずは `gh` コマンドがあるか確認する
+
+```bash title="~/workspace/task-app"
+gh --version
+```
+
+### もし `gh` が見つからないとき
+
+macOS なら、
+次で入れられる。
+
+```bash title="~/workspace/task-app"
+brew install gh
+```
+
+入れ終わったら、
+もう一度バージョンを確認してから進めよう。
+
+### 認証を実行する
+
+```bash title="~/workspace/task-app"
 gh auth login
 ```
 
-4. ローカルのリポジトリに GitHub の URL を教える
+画面の質問では、
+次の選び方で進めると分かりやすい。
 
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# `<your-username>` は自分の GitHub ユーザー名に置き換える
-git remote add origin https://github.com/<your-username>/task-app.git
+- GitHub.com
+- HTTPS
+- Login with a web browser
+
+するとブラウザが開いて、
+コード入力や承認フローが出る。
+
+指示どおり進めればええ。
+
+### 認証できたか確認する
+
+```bash title="~/workspace/task-app"
+gh auth status
 ```
 
-ここまで済んだら、`git push` ができる状態になっています。次の Step 5 へ進みましょう。
+### 期待する状態
 
-> `gh` コマンドが入っていないときは、まず Homebrew で `brew install gh` してから上の手順に戻ります。
+- 自分の GitHub ユーザー名が表示される
+- 認証先が `github.com` になっている
+- エラーが出ていない
 
-✅ **確認ポイント**:
+ここが通ったら、
+今日のメインルートでは十分や。
 
-1. GitHub に `task-app` リポジトリを作成できた
-2. `gh auth login` を実行してログインできた
-3. `git remote add origin` で保存先を登録できた
+## Step 6: `origin` を登録して、ローカルと GitHub をつなぐ
 
-> 📸 GitHub のリポジトリ作成画面、または作成後のリポジトリページで `task-app` ができていることを確認してください。
+次はローカルの `task-app` に、
+GitHub の保存先 URL を教える。
 
-📝 **学んだこと**: GitHub に保存先を用意して、ローカルから送るための接続を作れるようになりました。
+Git では、
+こういう保存先の別名として
+`origin`
+を使うことが多い。
 
----
+名前は慣習やけど、
+ほぼ標準やと思ってええ。
 
-### Step 5: GitHubにプッシュ（5分）
+### URL を確認する
 
-🎯 **ゴール**: ローカルのコミットをGitHubにアップロードします。
+GitHub のリポジトリページで、
+HTTPS の URL を確認する。
 
-🔰 **初心者向け解説**: プッシュは、ローカル（あなたのパソコン）のコミットをGitHub（クラウド）にアップロードする操作です。プッシュすることで、他の人もあなたのコードを見られるようになります。
+形はこうや。
 
-Step 4 で保存先とログインが済んでいれば、ここではアップロードするだけで OK です。
-
-```bash
-# filepath: ターミナル（task-appフォルダ内で実行）
-# 初回だけ -u でブランチと紐づける（2 回目以降は `git push` だけで OK）
-git push -u origin HEAD
+```text title="GitHub リポジトリ URL の例"
+https://github.com/<your-user-name>/task-app.git
 ```
 
-🔍 **コード解説**:
+### `origin` を追加する
 
-| コマンド | 意味 | 例え |
-|--------|------|------|
-| `git push -u origin HEAD` | GitHubにアップロードし、今いるブランチを保存先と紐づける | クラウドに保存 |
+`<your-user-name>` は、
+自分の GitHub ユーザー名に置き換えてな。
 
-✅ **確認ポイント**:
-
-1. ターミナルにブランチが `origin` と紐づいたことを示すメッセージが表示される
-2. GitHubのリポジトリページをリロードすると、コードが表示される
-3. これでGitHubにプッシュが完了です
-
-> 📸 GitHub のリポジトリページ（`https://github.com/<ユーザー名>/task-app`）をリロードし、ソースコードの一覧が表示されていることをブラウザで確認してください。
-
-📝 **学んだこと**: `git push`コマンドで、ローカルのコミットをGitHubにアップロードできるようになりました。
-
----
-
-### Step 6: Gitの便利コマンドを体験（10分）
-
-🎯 **ゴール**: `git log`、`git diff`、`git status`を使って、Gitの状態を確認する方法を学びます。
-
-🔰 **初心者向け解説**: Gitはコードの履歴を管理するツールです。
-
-「今どんな状態か」「前とどこが変わったか」「これまでの記録は」を確認するコマンドがあります。
-
-これらを覚えておくと、安心して開発を進められます。
-
-#### 6-1. `git status`で現在の状態を確認
-
-```bash
-# filepath: ターミナル
-git status
+```bash title="~/workspace/task-app"
+git remote add origin https://github.com/<your-user-name>/task-app.git
+git remote -v
 ```
 
-🔍 **出力の読み方**:
+### 期待する表示
 
-| 出力メッセージ | 意味 |
-|--------------|------|
-| `nothing to commit, working tree clean` | 変更なし。すべて保存済み |
-| `Changes not staged for commit` | 変更があるがまだ`git add`していない |
-| `Untracked files` | Gitが追跡していない新しいファイルがある |
-
-#### 6-2. ファイルを変更して差分を確認
-
-試しに小さな変更を加えて、`git diff`で差分を確認してみましょう。
-
-VS Codeで `README.md` を開き、ファイルの末尾に以下の内容を追記して保存してください。
-
-```markdown
-# filepath: README.md（末尾に追記する内容）
-### 学習記録
-- Day 01: 環境構築完了
-- Day 02: ダッシュボードにバナー追加
-- Day 03: GitHubに保存
+```text title="ターミナル出力のイメージ"
+origin  https://github.com/<your-user-name>/task-app.git (fetch)
+origin  https://github.com/<your-user-name>/task-app.git (push)
 ```
 
-✅ **確認ポイント**:
-- ファイルを保存した（Ctrl+S / Cmd+S）
-- VS Codeのエクスプローラーで README.md に「M」（Modified）マークが付いている
+### もし `origin` がすでにあるとき
 
-```bash
-# filepath: ターミナル
-# 変更の差分を確認する
-git diff
+この教材の Day 03 では、
+基本的には未接続を想定している。
+
+でも `git remote -v` の時点ですでに何か出ていたなら、
+その URL がほんまに自分の GitHub リポジトリか確認しよう。
+
+自分のものと違うなら、
+いったん立ち止まって、
+どこにつながっているかを整理してから進めるほうが安全や。
+
+焦って送るのがいちばん危ない。
+
+## Step 7: 送る前に、どのファイルを履歴に残すか決める
+
+ここが今日の本質や。
+
+GitHub に保存する日は、
+「とりあえず全部送る」
+日やない。
+
+**今日の状態として残したいものだけを、自分で選ぶ**
+日や。
+
+Day 02 からの文脈で言うと、
+主役はこのへんやろう。
+
+- `src/app/dashboard/page.tsx`
+  Day 02 で育てた自分用ダッシュボード
+- `README.md`
+  GitHub に置いたときの顔
+- `.gitignore`
+  もし自分の環境で追記が必要なら、その調整
+- `.env.example`
+  起動に必要な見本が変わったなら、その更新
+
+### まずは `git status` で差分を読む
+
+```bash title="~/workspace/task-app"
+git status --short
 ```
 
-> 💡 `git diff`は、**まだ`git add`していない変更**を表示します。`+`で始まる行が「追加された行」、`-`で始まる行が「削除された行」です。
+この時点で、
+たとえばこんな表示になるかもしれへん。
 
-#### 6-3. `git log`でコミット履歴を確認
-
-```bash
-# filepath: ターミナル
-# コミット履歴を見やすく表示
-git log --oneline
+```text title="ターミナル出力のイメージ"
+ M README.md
+ M src/app/dashboard/page.tsx
 ```
 
-🔍 **出力の読み方**:
+もし `.env` や `.env.local` がここに出ていたら、
+そのまま進まんでええ。
 
-| 表示 | 意味 |
-|------|------|
-| `abc1234` | コミットID（短縮版） |
-| `first commit` | コミットメッセージ（教材リポジトリの初期コミット） |
+`.gitignore` の設定か、
+ファイル名の置き方を先に見直そう。
 
-#### 6-4. 変更をコミットしてプッシュ
+今日の目的は、
+動くものを保存するだけやなくて、
+**送っていいものだけを送る習慣を作ること**
+やからや。
 
-```bash
-# filepath: ターミナル
+### 変更したファイルだけを add する
+
+この Day では、
+`README.md` と `src/app/dashboard/page.tsx` を明示的に add する。
+
+`.gitignore` や `.env.example` を自分で編集した場合だけ、
+そのファイルも追加で指定しよう。
+
+```bash title="~/workspace/task-app"
 git add README.md
-git commit -m "docs: 学習記録セクションを追加"
-git push
+git add src/app/dashboard/page.tsx
+git status --short
 ```
 
-> 💡 2回目以降のプッシュは `git push` だけでOKです。`-u origin main`は初回のみ必要です。
+### ここで見たい表示
 
-#### 6-5. 1 回だけ巻き戻してみる
+```text title="ターミナル出力のイメージ"
+M  README.md
+M  src/app/dashboard/page.tsx
+```
 
-ここが今日の見せ場です。  
-「戻せるらしい」で終わらず、練習用の変更を 1 回だけ実際に戻します。
+左側に状態が出ていれば、
+ステージングできている。
 
-まずは練習用に、どうでもええ小さな変更を 1 つ作ってコミットしてください。  
-たとえばカードを 1 枚足して、こんな感じで保存します。
+### コミットメッセージを付けて保存する
 
-```bash
-# filepath: ターミナル
+今日は最初の GitHub 保存なので、
+何を残したかが一目で分かる名前にしよう。
+
+```bash title="~/workspace/task-app"
+git commit -m "feat: save initial dashboard project to GitHub"
+```
+
+### コミット後の確認
+
+```bash title="~/workspace/task-app"
+git status -sb
+git log --oneline --decorate -3
+```
+
+`working tree clean` に近い状態になって、
+最新のコミットが追加されていたら OK や。
+
+## 💡 Pro パターンで書こう — GitHub に送る日は `git add .` ではなく、残したいファイルを選ぶ
+
+ここまでで GitHub に送る流れは作れた。
+でもプロの現場ではもう一段上のやり方をする。
+
+今日の文脈で言うと、
+GitHub に保存する日は
+「全部まとめて乗せる」
+より、
+「今日の進化として残したいファイルを自分で選ぶ」
+ほうが強い。
+
+なぜそうするのか、
+**Before/After** で見比べてみよう。
+
+### ❌ Before（動くけど、プロは書かない）
+
+```bash title="~/workspace/task-app"
+git status --short
 git add .
-git commit -m "feat: 練習用にカードを1枚増やす"
+git commit -m "update"
+git push -u origin "$(git branch --show-current)"
 ```
 
-そのあと、ひとつ前の保存ポイントへ戻します。今日は **`git revert`** を使います。これは「取り消すコミットを新しく 1 つ足す」やり方で、過去の履歴を壊さずに元の状態へ戻せます。
+**この流れの問題点**:
 
-```bash
-# filepath: ターミナル
-git revert --no-edit HEAD
+- 何を GitHub に送ったのかが自分でも曖昧になりやすい
+- `.gitignore` の設定漏れや想定外ファイル混入に気づきにくい
+- `update` みたいなメッセージでは、あとから履歴を読んだときに意味が薄い
+
+### ✅ After（プロがやる流れ）
+
+```bash title="~/workspace/task-app"
+git status --short
+git add README.md
+git add src/app/dashboard/page.tsx
+git status --short
+git commit -m "feat: save initial dashboard project to GitHub"
+git push -u origin "$(git branch --show-current)"
 ```
 
-![1 つ前の状態へ巻き戻せた画面](./screenshots/day03-rollback.png)
+**この流れの強み**:
 
-この画面の意味はこうです。
+- どのファイルを今日の進化として残したいかが明確になる
+- 送信前に差分をもう一度目で確認できる
+- コミット履歴を読んだ未来の自分が、何をやった日かすぐ分かる
 
-- `HEAD` は「今いちばん新しい保存ポイント」
-- `git revert --no-edit HEAD` は「その 1 つを取り消す新しい保存ポイントを作る」
-- さっきの練習用コミットの変更が画面から消えて、実質 1 個前の状態に戻る
+#### 🎓 覚えておきたいエッセンス
 
-`git revert` は履歴を消さず、「取り消した」という記録を残すやり方です。あとで見返しても「何を取り消したか」が分かるので、チームで使うときも安心です。  
-今日は練習用コミットで試すから大丈夫です。本番の大事な変更でやる前に、「こうやって戻れるんやな」を 1 回だけ体で覚えておきましょう。
+GitHub に保存する日は、
+手を速く動かすより
+**何を残すかを自分で選ぶ**
+ほうが大事や。
 
-✅ **確認ポイント**:
+履歴は量より、
+意味の見えやすさが効く。
 
-1. `git status`で変更の有無を確認できた
-2. `git diff`で変更箇所が表示された
-3. `git log --oneline`でコミット履歴が表示された
-4. 2回目のプッシュが成功した
+## Step 8: いまいるブランチを GitHub に送る
 
-> 📸 `git log --oneline` を実行して、2つのコミットが表示されていることを確認してください。
+ここまで来たら、
+ローカルの履歴は整った。
 
-📝 **学んだこと**: `git status`で現在の状態、`git diff`で変更内容、`git log`で履歴を確認できるようになりました。
+次はそれを GitHub に送る。
 
----
+今日の教材では、
+ブランチ名を固定で決め打ちせず、
+**いま実際にいるブランチをそのまま push する**
+形で進める。
 
-### Step 7: .gitignoreを理解しよう（5分）
+これなら、
+`main` でも別名でも動かしやすい。
 
-🎯 **ゴール**: Gitに追跡させないファイルの設定を理解します。
+### 実行コマンド
 
-🔰 **初心者向け解説**: プロジェクトには、Gitに保存すべきでないファイルがあります。パスワードが書かれた設定ファイルや、サイズの大きいライブラリフォルダなどです。`.gitignore`は、Gitに「このファイルは追跡しないで」と伝えるための設定ファイルです。
-
-> 💡 **例え話**: `.gitignore`は「引っ越しで持っていかないものリスト」です。家具（node_modules）は引っ越し先で買い直せるし、日記（.env）は他人に見せたくない。だからリストに書いて「これは運ばないで」と伝えます。
-
-💻 **実装**:
-
-```bash
-# filepath: ターミナル
-# .gitignore の中身を確認してみましょう
-cat .gitignore
+```bash title="~/workspace/task-app"
+git push -u origin "$(git branch --show-current)"
 ```
 
-🔍 **コード解説**:
+### `-u` の意味
 
-出力の中から、主要な除外パターンを確認しましょう。
+初回だけ、
+「このローカルブランチは、今後この `origin` 側の同名ブランチに送る」
+という紐づけを作る。
 
-| パターン | 対象 | 理由 |
-|---------|------|------|
-| `node_modules/` | npm パッケージ | サイズ大、`npm install`で復元可能 |
-| `*.env*` | 環境変数ファイル全般 | パスワード等の秘密情報 |
-| `!.env.example` | `.env.example` は除外しない | テンプレートとしてGitで管理する |
-| `.next/` | ビルド成果物 | `npm run build`で再生成 |
+一度これが通れば、
+次からは `git push` だけで進めやすくなる。
 
-> 💡 **`*.env*` と `!.env.example` の組み合わせ**: `*.env*` で全ての `.env` 系ファイルを除外しつつ、`!.env.example`（`!`は「除外の除外」）でテンプレートだけはGitに残しています。秘密の値は追跡せず、テンプレートは共有する設計です。
+### 期待する表示イメージ
 
-次に「追跡する」ものと「追跡しない」ものの判断基準を理解しましょう。
+```text title="ターミナル出力のイメージ"
+Enumerating objects: 18, done.
+Counting objects: 100% (18/18), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (12/12), done.
+Writing objects: 100% (18/18), 3.10 KiB | 3.10 MiB/s, done.
+Total 18 (delta 2), reused 0 (delta 0), pack-reused 0
+To https://github.com/<your-user-name>/task-app.git
+ * [new branch]      main -> main
+branch 'main' set up to track 'origin/main'.
+```
 
-| 判断 | 追跡する | 追跡しない |
-|------|---------|-----------|
-| ソースコード | ✅ | |
-| 設定ファイル | ✅ | |
-| パッケージ | | ✅ |
-| ビルド成果物 | | ✅ |
-| 秘密情報 | | ✅ |
+環境によって文言は多少違う。
+でも次の3点が見えたらだいたい大丈夫や。
 
-✅ **確認ポイント**:
+- `To https://github.com/...` が出ている
+- 新しいブランチが GitHub 側に作られている
+- tracking が設定されたと分かる文言が出ている
 
-1. `.gitignore`ファイルの役割を理解した
-2. `node_modules/`や`.env`が除外される理由がわかった
-3. 「追跡する / しない」の判断基準を理解した
+## Step 9: ブラウザで GitHub のページを確認する
 
-> 📸 ターミナルで `cat .gitignore` を実行し、除外パターンが表示されていることを確認してください。
+ターミナルで push が通っても、
+最後はブラウザで見に行こう。
 
-📝 **学んだこと**: `.gitignore`を使って、Gitに追跡させないファイルを設定できることを理解しました。
+GitHub は
+「送れたつもり」
+より
+「見えている」
+が大事や。
 
----
+### 確認手順
 
-## 📋 今日のまとめ
+1. さっき作った GitHub リポジトリページを開く
+2. ブラウザを再読み込みする
+3. ファイル一覧が表示されるか確認する
+4. `README.md` の内容がページ下部に表示されるか確認する
+5. `src/app/dashboard/page.tsx` がリポジトリ内に存在するか確認する
 
-- [ ] `git config`でGitの初期設定ができた
-- [ ] GitHubで新しいリポジトリを作成できた
-- [ ] `git add`と`git commit`で変更を記録できた
-- [ ] `gh auth login` で GitHub アカウントに認証できた
-- [ ] `git push`でGitHubにアップロードできた
-- [ ] `git status`、`git diff`、`git log`で状態を確認できた
-- [ ] GitHubのリポジトリページでコードを確認できた
+### ここで見えていたら成功
 
-## ⚠️ つまずきポイント
+- リポジトリ URL が自分のアカウント配下になっている
+- `README.md` がトップページに表示される
+- `src` ディレクトリがある
+- Day 02 までのコードが GitHub 上で見える
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| `git push`で`Authentication failed` | GitHub のログインが済んでいない | Step 4に戻って `gh auth login` をやり直す |
-| `git push`で`Permission denied` | 保存先URLや権限が合っていない | `git remote add origin https://github.com/<ユーザー名>/task-app.git` の設定を見直す |
-| `fatal: remote origin already exists` | リモートが既に登録されている | `git remote rm origin`で削除してから再登録する |
-| `git diff`で何も表示されない | 変更がないか、既に`git add`済み | `git diff --cached`でステージング済みの差分を確認する |
+この瞬間が、
+今日のいちばん気持ちええところや。
 
-### `git revert` がこわい
+自分のコードに、
+はじめてちゃんとした置き場所ができた。
 
-- その気持ちで正解です
-- だから今日は「練習用コミット」だけで試します
-- 大事な変更ではなく、戻しても困らへん小さな追加で 1 回だけやるのが安全です
-- `revert` は履歴を消さずに「取り消し」を記録する安全なやり方やから、練習でも本番でも使える手順です
+## Step 10: よくあるつまずきを、送る前後で切り分ける
+
+GitHub まわりは、
+一個詰まると全部止まったように見えやすい。
+
+でも実際には、
+だいたい次のどこかに分かれる。
+
+- 認証の問題
+- 保存先 URL の問題
+- ローカル差分の問題
+- まだコミットしていない問題
+
+ここでは、
+今日の流れに沿って見直し順を置いておく。
+
+### `gh auth login` がうまく進まない
+
+まずはこれを見直そう。
+
+```bash title="~/workspace/task-app"
+gh auth status
+```
+
+ここで未認証っぽい表示なら、
+ブラウザ認証が最後まで終わっていない可能性が高い。
+
+もう一度、
+落ち着いてやり直せばええ。
+
+```bash title="~/workspace/task-app"
+gh auth login
+```
+
+### `git remote -v` に何も出ない
+
+保存先がまだ登録されていない。
+なので push 先が分からん状態や。
+
+あらためて `origin` を追加しよう。
+
+```bash title="~/workspace/task-app"
+git remote add origin https://github.com/<your-user-name>/task-app.git
+git remote -v
+```
+
+### push 前に「変更が残っている」と感じる
+
+まずはこれで状態を読む。
+
+```bash title="~/workspace/task-app"
+git status --short
+```
+
+ここで何が出ているかを見てから、
+add するか、
+今日は送らないかを決める。
+
+**見えていない差分を、そのまま送らない**。
+これだけ覚えておけばかなり安全や。
+
+### `.env` が出てきてしまった
+
+そのまま add しない。
+
+まず `.gitignore` に
+環境変数ファイルを避ける行があるか見直そう。
+この教材では Day 01 の土台にすでに入っている想定やから、
+ファイル名や配置のズレが原因なことが多い。
+
+```bash title="~/workspace/task-app"
+sed -n '1,220p' .gitignore
+git status --short
+```
+
+`.env.example` は見本として残してええ。
+でも本物の値が入った `.env` は送らへん。
+
+### push 後に GitHub ページへ反映されない
+
+まずは push が通っているか、
+直近ログを見直そう。
+
+```bash title="~/workspace/task-app"
+git log --oneline --decorate -3
+git remote -v
+git branch --show-current
+```
+
+つぎに GitHub ページを再読み込みする。
+ブランチ切り替え UI がある場合は、
+いま送ったブランチが表示対象になっているかも見ておこう。
+
+## Step 11: いまの Day 03 を、自分の言葉で説明できる状態にする
+
+ここまでできたら、
+操作としては十分や。
+
+でも教材としてもう一歩大事なんは、
+今日やったことを
+自分の言葉で説明できることや。
+
+次の4つを言えたら、
+理解としてかなり強い。
+
+### 1. ローカルの Git と GitHub は別物
+
+ローカルの Git は、
+自分のパソコンの中で履歴を持つ仕組みや。
+
+GitHub は、
+その履歴を置く外側の保存先や。
+
+今日は
+「ローカルで持っていた履歴を、GitHub に接続して送った」
+と説明できればええ。
+
+### 2. `origin` は保存先の別名
+
+覚えにくそうに見えるけど、
+意味はシンプルや。
+
+ローカルから見た
+「いつもの送信先」
+につける名前やと思えば十分。
+
+### 3. `commit` と `push` は役割が違う
+
+`commit` はローカル履歴を残すこと。
+
+`push` は、
+その履歴を GitHub に送ること。
+
+この2段階があるから、
+送る前に内容を自分で見直せる。
+
+### 4. `.gitignore` は守り、`git status` は最終確認
+
+設定があるだけで安心しない。
+最後は人間の目でも確認する。
+
+これが
+GitHub に安全に保存する日の基本姿勢や。
+
+## 🎓 覚えておきたいエッセンス
+
+- Day 03 は、新しい完成品を取りに行く日ではなく、Day 02 までの自分の進化を GitHub に乗せる日や
+- この教材の流れでは、ローカルの Git 管理はすでに始まっている。今日は GitHub と接続して外へ出す
+- GitHub に送る前に、`git status` で現在地を読むクセをつける
+- `README.md` はリポジトリの顔になる。Day 03 では正直で短い説明がいちばん強い
+- `.env` は送らず、`.env.example` は送る。この線引きを `.gitignore` と目視確認で守る
+- `git add .` で雑にまとめるより、今日残したいファイルを自分で選ぶほうが履歴の質が上がる
+- `commit` はローカル保存、`push` は GitHub への送信。この役割分担を分けて理解する
+- 最後はブラウザで GitHub ページを開いて、ほんまに見えているところまで確認する
+
+## ✅ 今日のチェックリスト
+
+最後に、
+この Day の完了条件を自分で確認しておこう。
+
+- [ ] `git status -sb` で現在地を読めた
+- [ ] `README.md` を自分の `task-app` に合う内容へ整えた
+- [ ] `.gitignore` と `.env.example` の役割を確認した
+- [ ] GitHub に空のリポジトリを作れた
+- [ ] `gh auth login` が通った
+- [ ] `git remote add origin ...` で保存先を登録できた
+- [ ] 変更したファイルだけを add してコミットできた
+- [ ] `git push -u origin "$(git branch --show-current)"` が通った
+- [ ] GitHub のブラウザ画面でコードが見えた
+
+全部埋まったら、
+Day 03 は完了や。
 
 ## 🔜 次回予告
 
-Day 4では、今日GitHubに保存したアプリを、インターネット上に公開する方法を学びます。Vercelというサービスを使えば、無料でアプリを公開できます。
+GitHub に保存できたら、
+このアプリはようやく
+「ローカルの中だけの制作物」
+から一歩出られる。
+
+次はこの履歴を使って、
+ネットに公開していく。
+
+Day 04 では Vercel につないで、
+自分の `task-app` を実際の URL で開ける状態まで持っていこう。
+
+GitHub に保存した今日の一歩が、
+そのまま公開への橋になるで。
