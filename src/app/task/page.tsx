@@ -2,7 +2,7 @@
 
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
@@ -53,6 +53,10 @@ function TaskPageContent() {
   }, [taskIdParam]);
 
   const utils = api.useUtils();
+
+  const handleTimerUpdate = useCallback(() => {
+    utils.task.getAll.invalidate();
+  }, [utils.task.getAll]);
 
   const { data: session } = api.auth.getSession.useQuery();
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery(
@@ -329,9 +333,13 @@ function TaskPageContent() {
                       priority={task.priority}
                       dueDate={task.dueDate}
                       assignee={task.assignee}
+                      isTimerActive={task.isTimerActive}
+                      timerStartedAt={task.timerStartedAt}
+                      timeSpentMinutes={task.timeSpentMinutes}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                       onClick={handleTaskClick}
+                      onTimerUpdate={handleTimerUpdate}
                     />
                   </div>
                 </div>
