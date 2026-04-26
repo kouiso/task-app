@@ -75,6 +75,7 @@ export function TaskCard({
   };
 
   return (
+    <>
     <Card
       className={cn(
         'transition-all h-full flex flex-col',
@@ -181,12 +182,13 @@ export function TaskCard({
         </div>
       </CardContent>
 
-      <TimeLogDialog
-        open={timeLogDialogOpen}
-        onClose={() => setTimeLogDialogOpen(false)}
-        taskId={id}
-        onSuccess={onTimerUpdate}
-      />
     </Card>
+    <TimeLogDialog
+      open={timeLogDialogOpen}
+      onClose={() => setTimeLogDialogOpen(false)}
+      taskId={id}
+      onSuccess={onTimerUpdate}
+    />
+    </>
   );
 }
