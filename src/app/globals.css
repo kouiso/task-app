@@ -2,7 +2,15 @@
 
 @plugin "tailwindcss-animate";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
+  --font-sans:
+    var(--font-inter), var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Meiryo", sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono), "JetBrains Mono", "Geist Mono", "SFMono-Regular", monospace;
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
 
@@ -46,9 +54,20 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 8px 24px -12px rgb(79 70 229 / 0.18);
+  --shadow-md: 0 2px 4px 0 rgb(15 23 42 / 0.08), 0 18px 44px -20px rgb(79 70 229 / 0.22);
+  --shadow-lg: 0 8px 24px -12px rgb(15 23 42 / 0.12), 0 28px 64px -28px rgb(79 70 229 / 0.28);
+
+  --ease-linear-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -75,106 +94,114 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 213 27% 14%;
+    --foreground: 222 22% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 213 27% 14%;
+    --card-foreground: 222 22% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 213 27% 14%;
+    --popover: 220 33% 99%;
+    --popover-foreground: 222 22% 10%;
 
-    --primary: 212 100% 54%;
+    --primary: 253 77% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 17% 96%;
-    --secondary-foreground: 213 27% 14%;
+    --secondary: 240 24% 96%;
+    --secondary-foreground: 223 20% 16%;
 
-    --muted: 210 17% 96%;
-    --muted-foreground: 215 14% 43%;
+    --muted: 225 23% 95%;
+    --muted-foreground: 220 11% 42%;
 
-    --accent: 210 17% 96%;
-    --accent-foreground: 213 27% 14%;
+    --accent: 191 82% 95%;
+    --accent-foreground: 193 73% 24%;
 
-    --destructive: 359 100% 65%;
+    --destructive: 354 70% 54%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 100 77% 44%;
+    --success: 158 64% 41%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 40 96% 53%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 35 92% 55%;
+    --warning-foreground: 223 20% 12%;
 
-    --border: 210 14% 89%;
-    --input: 210 14% 89%;
-    --ring: 212 100% 54%;
+    --border: 225 20% 89%;
+    --input: 225 20% 89%;
+    --ring: 253 77% 60%;
 
-    --radius: 0.5rem;
+    --radius: 10px;
 
-    --chart-1: 218 88% 66%;
-    --chart-2: 156 59% 60%;
-    --chart-3: 45 93% 53%;
-    --chart-4: 8 76% 65%;
-    --chart-5: 195 74% 68%;
+    --chart-1: 253 77% 60%;
+    --chart-2: 191 72% 42%;
+    --chart-3: 333 72% 64%;
+    --chart-4: 35 92% 55%;
+    --chart-5: 222 18% 48%;
 
-    --sidebar: 210 100% 8%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 212 100% 54%;
+    --sidebar: 224 28% 97%;
+    --sidebar-foreground: 222 22% 12%;
+    --sidebar-primary: 253 77% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 212 80% 25%;
-    --sidebar-accent-foreground: 210 60% 80%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 212 100% 54%;
+    --sidebar-accent: 225 23% 95%;
+    --sidebar-accent-foreground: 223 20% 16%;
+    --sidebar-border: 225 20% 89%;
+    --sidebar-ring: 253 77% 60%;
   }
 
   .dark {
-    --background: 213 27% 8%;
-    --foreground: 0 0% 98%;
+    --background: 228 21% 10%;
+    --foreground: 220 20% 97%;
 
-    --card: 213 27% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: 228 20% 12%;
+    --card-foreground: 220 20% 97%;
 
-    --popover: 213 27% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 228 20% 13%;
+    --popover-foreground: 220 20% 97%;
 
-    --primary: 212 100% 54%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 254 86% 68%;
+    --primary-foreground: 233 35% 10%;
 
-    --secondary: 217 19% 17%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 226 16% 18%;
+    --secondary-foreground: 220 20% 96%;
 
-    --muted: 217 19% 17%;
-    --muted-foreground: 215 14% 65%;
+    --muted: 226 16% 16%;
+    --muted-foreground: 220 12% 69%;
 
-    --accent: 217 19% 17%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 184 33% 18%;
+    --accent-foreground: 183 85% 84%;
 
-    --destructive: 359 100% 65%;
+    --destructive: 355 72% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 19% 17%;
-    --input: 217 19% 17%;
-    --ring: 212 100% 54%;
+    --success: 158 60% 46%;
+    --success-foreground: 0 0% 100%;
 
-    --chart-1: 218 88% 66%;
-    --chart-2: 156 59% 60%;
-    --chart-3: 45 93% 53%;
-    --chart-4: 8 76% 65%;
-    --chart-5: 195 74% 68%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 223 20% 12%;
 
-    --sidebar: 210 100% 8%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 212 100% 54%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 212 80% 25%;
-    --sidebar-accent-foreground: 210 60% 80%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 212 100% 54%;
+    --border: 224 15% 22%;
+    --input: 224 15% 22%;
+    --ring: 254 86% 68%;
+
+    --chart-1: 254 86% 68%;
+    --chart-2: 184 56% 52%;
+    --chart-3: 330 77% 71%;
+    --chart-4: 38 92% 60%;
+    --chart-5: 220 12% 69%;
+
+    --sidebar: 228 21% 9%;
+    --sidebar-foreground: 220 20% 96%;
+    --sidebar-primary: 254 86% 68%;
+    --sidebar-primary-foreground: 233 35% 10%;
+    --sidebar-accent: 226 16% 16%;
+    --sidebar-accent-foreground: 220 20% 96%;
+    --sidebar-border: 224 15% 22%;
+    --sidebar-ring: 254 86% 68%;
   }
 
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family:
-      var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }

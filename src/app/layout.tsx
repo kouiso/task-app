@@ -1,7 +1,19 @@
 import type { Metadata } from 'next';
-import { Noto_Sans_JP } from 'next/font/google';
+import { Inter, JetBrains_Mono, Noto_Sans_JP } from 'next/font/google';
 import { Providers } from './providers';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+});
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ['latin'],
@@ -18,7 +30,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className={notoSansJP.variable}>
+    <html
+      lang="ja"
+      className={`${inter.variable} ${jetBrainsMono.variable} ${notoSansJP.variable}`}
+    >
       <body>
         <Providers>{children}</Providers>
       </body>
