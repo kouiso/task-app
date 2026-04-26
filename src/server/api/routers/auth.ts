@@ -24,95 +24,114 @@ const registerSchema = z.object({
     .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
 });
 
+function handleUnexpectedError(context: string, error: unknown): never {
+  console.error(`[auth] ${context}:`, error);
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: `${context}中にエラーが発生しました。しばらくしてから再度お試しください。`,
+    cause: error,
+  });
+}
+
 export const authRouter = createTRPCRouter({
   login: publicProcedure.input(loginSchema).mutation(async ({ input }) => {
-    const user = await prisma.user.findUnique({
-      where: { email: input.email },
-    });
-
-    if (!user || !user.password) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'メールアドレスまたはパスワードが正しくありません',
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: input.email },
       });
-    }
 
-    if (!user.isActive) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このアカウントは無効化されています',
-      });
-    }
+      if (!user || !user.password) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
 
-    const isPasswordValid = await bcrypt.compare(input.password, user.password);
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
 
-    if (!isPasswordValid) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'メールアドレスまたはパスワードが正しくありません',
-      });
-    }
+      const isPasswordValid = await bcrypt.compare(input.password, user.password);
 
-    const sessionUser: SessionUser = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    };
+      if (!isPasswordValid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
 
-    await createSession(sessionUser);
-
-    return {
-      user: {
+      const sessionUser: SessionUser = {
         id: user.id,
         email: user.email,
-        name: user.name,
-        avatar: user.avatar,
         role: user.role,
-      },
-    };
+      };
+
+      await createSession(sessionUser);
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          role: user.role,
+        },
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      handleUnexpectedError('ログイン処理', error);
+    }
   }),
 
   register: publicProcedure.input(registerSchema).mutation(async ({ input }) => {
-    const existing = await prisma.user.findUnique({
-      where: { email: input.email },
-    });
-
-    if (existing) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'このメールアドレスは既に登録されています',
+    try {
+      const existing = await prisma.user.findUnique({
+        where: { email: input.email },
       });
-    }
 
-    const hashedPassword = await bcrypt.hash(input.password, 10);
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このメールアドレスは既に登録されています',
+        });
+      }
 
-    const user = await prisma.user.create({
-      data: {
-        email: input.email,
-        name: input.name,
-        password: hashedPassword,
-        role: USER_ROLE.USER,
-        isActive: true,
-      },
-    });
+      const hashedPassword = await bcrypt.hash(input.password, 10);
 
-    const sessionUser: SessionUser = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    };
+      const user = await prisma.user.create({
+        data: {
+          email: input.email,
+          name: input.name,
+          password: hashedPassword,
+          role: USER_ROLE.USER,
+          isActive: true,
+        },
+      });
 
-    await createSession(sessionUser);
-
-    return {
-      user: {
+      const sessionUser: SessionUser = {
         id: user.id,
         email: user.email,
-        name: user.name,
-        avatar: user.avatar,
         role: user.role,
-      },
-    };
+      };
+
+      await createSession(sessionUser);
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          role: user.role,
+        },
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      handleUnexpectedError('ユーザー登録処理', error);
+    }
   }),
 
   logout: publicProcedure.mutation(async () => {
