@@ -1,1 +1,0 @@
-../../prompt/instructions/git.instructions.md

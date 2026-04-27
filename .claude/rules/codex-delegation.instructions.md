@@ -1,1 +1,0 @@
-../../prompt/instructions/codex-delegation.instructions.md
