@@ -52,10 +52,10 @@ Day 01 の `localhost:3000` は修正不要。
 | 項目 | 状態 |
 |---|---:|
 | PNG files | 80 |
-| Screenshot referenced Days | 28/30 |
-| Missing references | Day 03, Day 27 |
+| Screenshot referenced Days | 30/30 |
+| Missing references | なし |
 
-80 枚の PNG が存在し、28/30 Days から参照されている。Day 03 と Day 27 は未参照だが、新対象読者向けの launch blocker ではない。
+80 枚の PNG が存在し、全 30 Days から参照されている。Day 03（Git 操作）と Day 27（プロジェクト詳細）のスクショ参照を 2026-04-27 に追加し、全 Day カバレッジ達成。
 
 ## Mechanical Quality
 
