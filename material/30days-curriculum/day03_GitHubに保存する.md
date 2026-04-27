@@ -183,6 +183,8 @@ Git の役割がかなり整理しやすい。
 いきなり GitHub 側を触る前に、
 まずローカルの状態を確認しよう。
 
+![git status の実行結果](./screenshots/day03-git-status.png)
+
 ここを見ずに進むと、
 「いま何が未保存なんか」
 「どのブランチにいるんか」
@@ -672,6 +674,8 @@ git log --oneline --decorate -3
 `working tree clean` に近い状態になって、
 最新のコミットが追加されていたら OK や。
 
+![コミット成功後の状態](./screenshots/day03-commit-success.png)
+
 ## 💡 Pro パターンで書こう — GitHub に送る日は `git add .` ではなく、残したいファイルを選ぶ
 
 ここまでで GitHub に送る流れは作れた。
@@ -805,6 +809,8 @@ GitHub は
 - `README.md` がトップページに表示される
 - `src` ディレクトリがある
 - Day 02 までのコードが GitHub 上で見える
+
+![GitHub リポジトリページでコードが見えている状態](./screenshots/day03-github-history.png)
 
 この瞬間が、
 今日のいちばん気持ちええところや。
