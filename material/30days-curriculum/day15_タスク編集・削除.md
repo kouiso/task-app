@@ -325,6 +325,8 @@ const handleSubmit =
 > 更新APIは「送られたフィールドだけ更新」する
 > 部分更新方式です。
 
+> 📌 **今日のゴールライン**: null と undefined の違いは「消したい vs 触らない」だけ覚えたら OK。実務では毎日使うから、今日のコードを書いてるうちに手が覚える。
+
 ✅ **確認ポイント**:
 - `data.id` がある場合に `updateMutation.mutate` を呼んでいる
 - `null` と `undefined` の違いを理解した
