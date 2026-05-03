@@ -98,6 +98,16 @@ ensure_empty_or_existing_next_app() {
     return 0
   fi
 
+  # create-next-app は空ディレクトリを要求するため、
+  # スクリプト自身を一時退避して実行後に戻す。
+  local self_name
+  self_name="$(basename "$0")"
+  local self_tmp=""
+  if [ -f "$self_name" ]; then
+    self_tmp="$(mktemp)"
+    mv "$self_name" "$self_tmp"
+  fi
+
   # 教材との差分を減らすため、生成は公式の create-next-app に寄せて固定する。
   npx create-next-app@latest . \
     --typescript \
@@ -107,6 +117,11 @@ ensure_empty_or_existing_next_app() {
     --import-alias "@/*" \
     --no-eslint \
     --use-npm
+
+  # スクリプト自身を元の位置に戻す
+  if [ -n "$self_tmp" ]; then
+    mv "$self_tmp" "$self_name"
+  fi
 }
 
 install_dependencies() {
