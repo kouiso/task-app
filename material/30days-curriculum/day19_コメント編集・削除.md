@@ -84,8 +84,9 @@ flowchart TD
 🎯 **ゴール**: comment ルーターの
 update / delete メソッドを把握します。
 
+scaffold が配布した
 `src/server/api/routers/comment.ts` に
-`update` と `delete` メソッドを追加する。
+`update` と `delete` メソッドがあることを確認する。
 
 💻 **実装**:
 

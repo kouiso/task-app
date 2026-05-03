@@ -621,15 +621,50 @@ const handleArchive = (
 
 ### Step 9: ProjectDetailView にアーカイブを渡す（4分）
 
-🎯 **ゴール**: `ProjectDetailView` に `onArchive` props を渡して、アーカイブ機能を有効にします。
+🎯 **ゴール**: `ProjectDetailView` に `onArchive` props を渡して、アーカイブ機能を有効にします。Day 12 で追加するメンバー管理の土台も、この Step でプレースホルダーとして用意します。
 
 💻 **実装**:
 
-プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`projectIdParam && selectedProject` が `true` のとき、カード一覧の代わりに `ProjectDetailView` を表示する分岐が使われます。
+まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1〜3 で本実装に置き換えます**。TypeScript エラーを出さずに Day 11 を完了させるための一時定義です。
+
+> ⚠️ **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleProjectClick` と `handleDetailClose` を本実装したとき、Step 2 で `handleRemoveMember` を本実装したとき、Step 3 で `memberDialogOpen` state を追加したときに、それぞれこの仮定義を削除してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// projectIdParam が存在する場合の表示
+// ── Day 12 で本実装する仮定義（Day 12 完了後に削除） ──
+const projectDetail = undefined; // Day 12 Step 1 で useQuery に置き換え
+const handleDetailClose = () => {
+  router.push('/project'); // Day 12 Step 1 で本実装に置き換え
+};
+const [memberDialogOpen, setMemberDialogOpen] =
+  useState(false); // Day 12 Step 3 で本実装に置き換え
+const handleRemoveMember = (_userId: string) => {
+  // Day 12 Step 6 で本実装に置き換え
+};
+// ── ここまで Day 12 仮定義 ──
+```
+
+✅ **確認ポイント**:
+- `npm run dev` でTypeScript エラーが出ていない
+- これらは仮定義なので、Day 12 で削除することを覚えておく
+
+次に、`ProjectDetailView` コンポーネントのインポートを追加します。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// ProjectDetailViewのインポートを追加
+import { ProjectDetailView } from
+  '@/component/project/project-detail-view';
+```
+
+✅ **確認ポイント**:
+- `@/component/project/project-detail-view` からインポートしている
+
+プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`ProjectPageContent` 関数の return 直前（`if` 分岐の形）に以下を追加してください。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// return の直前に追加: projectIdParam が存在する場合の表示
 if (projectIdParam && selectedProject) {
   return (
     <AppLayout>
@@ -654,13 +689,13 @@ if (projectIdParam && selectedProject) {
 
 #### ProjectDetailView に渡している props
 
-| prop | 由来 | 説明 |
-|------|------|------|
-| `projectDetail` | `api.project.getById.useQuery` | プロジェクト詳細データ |
-| `onBack` | `handleDetailClose` | 一覧画面に戻る（`router.push('/project')`） |
-| `onAddMemberClick` | `setMemberDialogOpen(true)` | メンバー追加ダイアログを開く |
-| `onRemoveMember` | `handleRemoveMember` | メンバー削除（Day 12 で詳しく実装） |
-| `onArchive` | `handleArchive` | アーカイブ切替 |
+| prop | 由来 | Day 11 時点 | Day 12 で本実装 |
+|------|------|-------------|----------------|
+| `projectDetail` | `api.project.getById.useQuery` | `undefined`（仮） | Step 1 で `useQuery` に置換 |
+| `onBack` | `handleDetailClose` | `/project` に戻るだけ（仮） | Step 1 で本実装に置換 |
+| `onAddMemberClick` | `setMemberDialogOpen(true)` | state は仮定義済み | Step 3 で本実装に置換 |
+| `onRemoveMember` | `handleRemoveMember` | 何もしない（仮） | Step 6 で本実装に置換 |
+| `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
 
 📸 スクリーンショット: プロジェクト詳細画面のアーカイブボタン
 
@@ -926,6 +961,8 @@ console.log(
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
 | アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailView` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
+| Step 9 追加後に TypeScript エラーが出る | 仮定義の変数名が重複している | 同名の `const` を2つ定義していないか確認する。仮定義ブロックをまとめて1か所に配置する |
+| `ProjectDetailView` が表示されない | `projectIdParam && selectedProject` の条件が false になっている | URLに `?projectId=xxx` が付いているか、`selectedProject` の state が正しく更新されているか確認 |
 
 ## 📝 今日学んだ用語
 
