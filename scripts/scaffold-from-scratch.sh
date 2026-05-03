@@ -118,7 +118,7 @@ ensure_empty_or_existing_next_app() {
   # 教材配布物（スクリプト自身 + _ui-components/ + _lib-utils/）を一時退避して実行後に戻す。
   local stash_dir
   stash_dir="$(mktemp -d)"
-  for item in "$(basename "$0")" _src-full _ui-components _lib-utils _server _lib-core _lib-base _constants _trpc-base _server-routers _prisma _docker _seed; do
+  for item in "$(basename "$0")" _src-full _ui-components _lib-utils _server _lib-core _lib-base _constants _trpc-base _server-routers _prisma _docker _seed _app-components; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
     fi
@@ -284,6 +284,33 @@ copy_scaffold_support() {
   fi
 }
 
+copy_app_components() {
+  # カリキュラムで「既存」と明示されている実装済みコンポーネントを配置する。
+  # 学習者は自分では作らず、既存ファイルとして読み取り・利用する。
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local comp_src="${script_dir}/_app-components"
+
+  if [ ! -d "$comp_src" ]; then
+    echo "_app-components/ が見つかりません。既存コンポーネントは手動で追加してください。"
+    return 0
+  fi
+
+  # project コンポーネント（Day 09/10/11 で既存扱い）
+  if [ -d "${comp_src}/project" ]; then
+    mkdir -p src/component/project
+    cp "${comp_src}/project"/*.tsx src/component/project/
+    echo "project コンポーネントを src/component/project/ に配置しました。"
+  fi
+
+  # task コンポーネント（Day 13 で既存扱い）
+  if [ -d "${comp_src}/task" ]; then
+    mkdir -p src/component/task
+    cp "${comp_src}/task"/*.tsx src/component/task/
+    echo "task コンポーネントを src/component/task/ に配置しました。"
+  fi
+}
+
 
 copy_prisma_files() {
   local script_dir
@@ -360,6 +387,7 @@ main() {
   copy_ui_components
   copy_lib_utils
   copy_scaffold_support
+  copy_app_components
   copy_prisma_files
   setup_database
 

@@ -129,11 +129,14 @@ import { ProjectDetailView } from
 
 > 💡 プロジェクト詳細はダイアログではなく、URLパラメータ（`?projectId=xxx`）によるページ内表示です。`useSearchParams` で URLから選択IDを取得します。
 
-ハンドラーを `handleArchive` の下に追加してください。
+ハンドラーを追加します。Day 11 Step 9 で仮定義した `handleDetailClose` を **削除して**、`handleArchive` の下に本実装を書いてください。あわせて `handleProjectClick` も追加します。
+
+> ⚠️ Day 11 の仮定義（`// Day 12 Step 1 で本実装に置き換え` とコメントされた箇所）を先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // handleArchiveの下に追加
+// （Day 11 の仮定義 handleDetailClose を削除してからここに書く）
 const handleProjectClick = (
   projectId: string
 ) => {
@@ -149,6 +152,7 @@ const handleDetailClose = () => {
 ✅ **確認ポイント**:
 - `handleProjectClick` は `router.push` でURL遷移する
 - `handleDetailClose` は `/project` に戻る（URLパラメータなし）
+- Day 11 の仮定義 `handleDetailClose` を削除した
 
 プロジェクトカードの `onClick` に `handleProjectClick` を接続します。`ProjectCard` は個別のpropsでデータを受け取ります。
 
@@ -178,11 +182,14 @@ const handleDetailClose = () => {
 - `ProjectCard` に個別のprops（`id`, `name`, `color` 等）を渡している
 - `onClick` で `handleProjectClick` を渡している
 
-選択中のプロジェクトデータを取得するクエリを追加します。既存の `useQuery` 群の末尾に追加してください。
+選択中のプロジェクトデータを取得するクエリを追加します。Day 11 Step 9 で仮定義した `const projectDetail = undefined;` を **削除して**、既存の `useQuery` 群の末尾に本実装を書いてください。
+
+> ⚠️ Day 11 の仮定義（`// Day 12 Step 1 で useQuery に置き換え` とコメントされた行）を先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // 既存のuseQuery群の末尾に追加
+// （Day 11 の仮定義 `const projectDetail = undefined` を削除してからここに書く）
 const { data: projectDetail } =
   api.project.getById.useQuery(
     { id: selectedProject ?? '' },
@@ -193,6 +200,7 @@ const { data: projectDetail } =
 ✅ **確認ポイント**:
 - `useQuery` に `enabled` オプションを設定した
 - 未選択時はAPIを呼ばない設定になっている
+- Day 11 の仮定義 `const projectDetail = undefined` を削除した
 
 > 💡 `enabled: !!selectedProject` は「`selectedProject` がある場合だけAPIを呼ぶ」という設定です。未選択時に不要なリクエストを防ぎます。
 
@@ -221,25 +229,13 @@ const { data: projectDetail } =
 - 5つのpropsが定義されている
 - `onRemoveMember` は `userId` を引数に取る
 
-まず `handleRemoveMember` の仮実装を追加します。Step 6 で本実装に差し替えます。TypeScript のエラーを防ぐため、先にプレースホルダーを定義しておきます。
+Day 11 Step 9 で `handleRemoveMember` の仮定義（何もしない空実装）を追加済みです。Step 6 で本実装に差し替えます。**ここでは仮定義がすでにあることを確認するだけで、コードの追加は不要です。**
 
-> ⚠️ **注意**: この `const handleRemoveMember` は **Step 6 で削除して本実装に書き換えます**。同名の `const` を2つ書くとエラーになるため、Step 6 では「Step 2 の仮実装を削除 → 本実装を書く」の順で進めてください。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 仮実装（Step 6で削除して本実装に差し替える）
-// ⚠️ 動作確認用の一時コードです。確認後に残さず削除してください。
-const handleRemoveMember = (
-  userId: string
-) => {
-  console.log('remove:', userId);
-};
-```
+> ⚠️ **注意**: Day 11 の仮定義 `const handleRemoveMember = (_userId: string) => {}` は **Step 6 で削除して本実装に書き換えます**。同名の `const` を2つ書くとエラーになるため、Step 6 では「Day 11 の仮実装を削除 → 本実装を書く」の順で進めてください。
 
 ✅ **確認ポイント**:
-- TypeScript のエラーが出ていない
-- これは仮実装であり、Step 6 で削除することを覚えておく
-- `console.log` は確認後に必ず削除し、Step 6 の本実装へ置き換える
+- TypeScript のエラーが出ていない（Day 11 の仮定義があるため）
+- `handleRemoveMember` は仮実装であり、Step 6 で削除することを覚えておく
 
 `ProjectDetailView` は Day 11 の Step 9 で URL ルーティングの分岐内に既に配置されています。`projectIdParam && selectedProject` が `true` のとき表示される構造を確認してください。
 
@@ -288,11 +284,14 @@ import {
 
 > ⚠️ `@prisma/client` からインポートすると、Prisma内部の型定義に依存してしまいます。`@/lib/constant/roles` に定義された定数・型を使うのが正しい方法です。
 
-メンバー追加フォームのstateを定義します。`ProjectPageContent` 関数の先頭にある state 一覧に追加してください。`useState` でシンプルにフォームの値を管理します。
+メンバー追加フォームのstateを定義します。Day 11 Step 9 で仮定義した `const [memberDialogOpen, setMemberDialogOpen] = useState(false)` を **削除して**、state 一覧の適切な位置に以下の本実装を書いてください。
+
+> ⚠️ Day 11 の仮定義（`// Day 12 Step 3 で本実装に置き換え` とコメントされた行）を先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // メンバー追加用のstate
+// （Day 11 の仮定義 memberDialogOpen を削除してからここに書く）
 const [memberDialogOpen,
   setMemberDialogOpen] = useState(false);
 const [newMemberUserId,
@@ -307,6 +306,7 @@ const [newMemberRole, setNewMemberRole] =
 - `memberDialogOpen` はダイアログ開閉用
 - `newMemberUserId` と `newMemberRole` でフォームの値を管理
 - `newMemberRole` の型が `ProjectMemberRole` になっている
+- Day 11 の仮定義 `memberDialogOpen` state を削除した
 
 > 💡 メンバー追加フォームはフィールドが2つだけなので、`react-hook-form` を使わずシンプルな `useState` で管理します。フォームが複雑になったら Day 10 で学んだ `react-hook-form + zod` パターンに移行できます。
 
