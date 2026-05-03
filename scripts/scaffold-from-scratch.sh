@@ -101,14 +101,14 @@ ensure_empty_or_existing_next_app() {
   fi
 
   # create-next-app は空ディレクトリを要求するため、
-  # スクリプト自身を一時退避して実行後に戻す。
-  local self_name
-  self_name="$(basename "$0")"
-  local self_tmp=""
-  if [ -f "$self_name" ]; then
-    self_tmp="$(mktemp)"
-    mv "$self_name" "$self_tmp"
-  fi
+  # 教材配布物（スクリプト自身 + _ui-components/ + _lib-utils/）を一時退避して実行後に戻す。
+  local stash_dir
+  stash_dir="$(mktemp -d)"
+  for item in "$(basename "$0")" _ui-components _lib-utils; do
+    if [ -e "$item" ]; then
+      mv "$item" "$stash_dir/"
+    fi
+  done
 
   # 教材との差分を減らすため、生成は公式の create-next-app に寄せて固定する。
   npx create-next-app@latest . \
@@ -120,10 +120,11 @@ ensure_empty_or_existing_next_app() {
     --no-eslint \
     --use-npm
 
-  # スクリプト自身を元の位置に戻す
-  if [ -n "$self_tmp" ]; then
-    mv "$self_tmp" "$self_name"
-  fi
+  # 退避した配布物を元の位置に戻す
+  for item in "$stash_dir"/*; do
+    [ -e "$item" ] && mv "$item" .
+  done
+  rmdir "$stash_dir" 2>/dev/null || true
 }
 
 install_dependencies() {
@@ -202,6 +203,39 @@ NODE_ENV="development"
 EOF
 }
 
+copy_ui_components() {
+  # 教材配布物の _ui-components/ から shadcn/ui コンポーネントをコピーする。
+  # scaffold と同じディレクトリに _ui-components/ が置かれている前提。
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local ui_src="${script_dir}/_ui-components"
+
+  if [ ! -d "$ui_src" ]; then
+    echo "_ui-components/ が見つかりません。shadcn/ui コンポーネントは手動で追加してください。"
+    return 0
+  fi
+
+  mkdir -p src/component/ui
+  cp -r "$ui_src"/* src/component/ui/
+  echo "shadcn/ui コンポーネントを src/component/ui/ にコピーしました。"
+}
+
+copy_lib_utils() {
+  # cn() ユーティリティを配置する。shadcn/ui コンポーネントが依存する。
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local utils_src="${script_dir}/_lib-utils"
+
+  if [ ! -d "$utils_src" ]; then
+    echo "_lib-utils/ が見つかりません。lib/utils.ts は手動で追加してください。"
+    return 0
+  fi
+
+  mkdir -p src/lib
+  cp -r "$utils_src"/* src/lib/
+  echo "lib ユーティリティを src/lib/ にコピーしました。"
+}
+
 main() {
   echo "教材用の初期土台を ${PROJECT_DIR} に作成します。"
 
@@ -214,6 +248,8 @@ main() {
   remove_eslint_config
   init_biome
   write_env_example
+  copy_lib_utils
+  copy_ui_components
 
   echo
   echo "初期セットアップは完了やで。"
