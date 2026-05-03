@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: taskapp-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: taskapp
+    ports:
+      - "${_DOCKER_COMPOSE_HOST_PORT_DB:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: .docker/backend/Dockerfile
+    container_name: taskapp-backend
+    ports:
+      - "${_DOCKER_COMPOSE_HOST_PORT_BACKEND:-3000}:3000"
+      - "${_DOCKER_COMPOSE_HOST_PORT_BACKEND_DEBUG:-9229}:9229"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/taskapp?schema=public
+    volumes:
+      - ./:/app:delegated
+      - backend-nodemodules-volume:/app/node_modules/
+    depends_on:
+      db:
+        condition: service_healthy
+    command: npm run dev
+
+  schemaspy:
+    profiles:
+      - schemaspy
+    image: schemaspy/schemaspy:6.1.0
+    container_name: taskapp-schemaspy
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # 接続先
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_USER: user
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: taskapp
+      # ドライバ
+      DATABASE_TYPE: pgsql
+      # 出力先
+      SCHEMASPY_OUTPUT: /output
+    volumes:
+      - ./doc/definition/db:/output
+      - ./.docker/schemaspy/schemaspy.properties:/schemaspy.properties
+    ports:
+      - "${_DOCKER_COMPOSE_HOST_PORT_SCHEMASPY:-8080}:8080"
+
+  test-db:
+    image: postgres:16-alpine
+    container_name: taskapp-test-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: taskapp_test
+    ports:
+      - "${_DOCKER_COMPOSE_HOST_PORT_TEST_DB:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  backend-nodemodules-volume:
