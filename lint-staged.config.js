@@ -3,9 +3,17 @@ const micromatch = require('micromatch');
 
 const filterFilesByPattern = (files, patterns) => micromatch(files, patterns);
 
-const getTypeScriptFiles = (files) => filterFilesByPattern(files, ['**/*.ts', '**/*.tsx']);
+const excludeDistribution = (files) => files.filter((f) => !f.includes('/scripts/_'));
+const getTypeScriptFiles = (files) =>
+  filterFilesByPattern(excludeDistribution(files), ['**/*.ts', '**/*.tsx']);
 const getBiomeFiles = (files) =>
-  filterFilesByPattern(files, ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', '**/*.json']);
+  filterFilesByPattern(excludeDistribution(files), [
+    '**/*.js',
+    '**/*.jsx',
+    '**/*.ts',
+    '**/*.tsx',
+    '**/*.json',
+  ]);
 const createTypeCheckCommand = (files) =>
   `npx tsc-files --noEmit ${files.map((f) => path.relative(process.cwd(), f)).join(' ')}`;
 

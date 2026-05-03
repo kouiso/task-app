@@ -104,7 +104,7 @@ ensure_empty_or_existing_next_app() {
   # 教材配布物（スクリプト自身 + _ui-components/ + _lib-utils/）を一時退避して実行後に戻す。
   local stash_dir
   stash_dir="$(mktemp -d)"
-  for item in "$(basename "$0")" _ui-components _lib-utils _prisma _docker _seed; do
+  for item in "$(basename "$0")" _src-full _ui-components _lib-utils _server _lib-core _prisma _docker _seed; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
     fi
@@ -236,6 +236,45 @@ copy_lib_utils() {
   echo "lib ユーティリティを src/lib/ にコピーしました。"
 }
 
+copy_full_src() {
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+
+  if [ -d "${script_dir}/_src-full" ]; then
+    cp -r "${script_dir}/_src-full"/* src/
+    echo "アプリの全ソースコードを src/ にコピーしました。"
+  else
+    echo "_src-full/ が見つかりません。src/ のファイルは教材の手順で作成してください。"
+  fi
+}
+
+copy_server_files() {
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+
+  # tRPC ルーター + API 設定
+  if [ -d "${script_dir}/_server" ]; then
+    mkdir -p src/server
+    cp -r "${script_dir}/_server"/* src/server/
+    echo "tRPC サーバーファイルを src/server/ にコピーしました。"
+  fi
+
+  # セッション管理・Prisma クライアント・環境変数・ミドルウェア
+  if [ -d "${script_dir}/_lib-core" ]; then
+    mkdir -p src/lib
+    for f in "${script_dir}/_lib-core"/*.ts; do
+      local basename_f
+      basename_f="$(basename "$f")"
+      if [ "$basename_f" = "middleware.ts" ]; then
+        cp "$f" src/
+      else
+        cp "$f" src/lib/
+      fi
+    done
+    echo "認証・DB・ミドルウェアファイルを配置しました。"
+  fi
+}
+
 copy_prisma_files() {
   local script_dir
   script_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -308,8 +347,7 @@ main() {
   remove_eslint_config
   init_biome
   write_env_example
-  copy_lib_utils
-  copy_ui_components
+  copy_full_src
   copy_prisma_files
   setup_database
 
