@@ -910,49 +910,185 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — ステータス遷移の処理
+### 💡 Pro パターンで書こう — ステータス遷移を配列で管理する
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const handleStatusChange = (taskId: string, newStatus: string) => {
-  if (newStatus === "TODO") {
-    updateTask({ id: taskId, status: "TODO", completedAt: null });
-  } else if (newStatus === "IN_PROGRESS") {
-    updateTask({ id: taskId, status: "IN_PROGRESS", completedAt: null });
-  } else if (newStatus === "DONE") {
-    updateTask({ id: taskId, status: "DONE", completedAt: new Date() });
-  }
+import { Button } from '@/component/ui/button';
+import {
+  TASK_STATUS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+type StatusActionButtonProps = {
+  taskId: string;
+  status: TaskStatus;
+  onUpdated?: () => void;
 };
+
+function getNextStatus(status: TaskStatus): TaskStatus {
+  if (status === TASK_STATUS.TODO) {
+    return TASK_STATUS.IN_PROGRESS;
+  }
+  if (status === TASK_STATUS.IN_PROGRESS) {
+    return TASK_STATUS.IN_REVIEW;
+  }
+  if (status === TASK_STATUS.IN_REVIEW) {
+    return TASK_STATUS.DONE;
+  }
+  if (status === TASK_STATUS.BLOCKED) {
+    return TASK_STATUS.IN_PROGRESS;
+  }
+  return status;
+}
+
+function getButtonLabel(status: TaskStatus): string {
+  if (status === TASK_STATUS.TODO) {
+    return '作業開始';
+  }
+  if (status === TASK_STATUS.IN_PROGRESS) {
+    return 'レビュー依頼';
+  }
+  if (status === TASK_STATUS.IN_REVIEW) {
+    return '完了にする';
+  }
+  if (status === TASK_STATUS.BLOCKED) {
+    return 'ブロック解除';
+  }
+  return '変更なし';
+}
+
+export function StatusActionButton({
+  taskId,
+  status,
+  onUpdated,
+}: StatusActionButtonProps) {
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: onUpdated,
+    });
+
+  const nextStatus = getNextStatus(status);
+  const disabled = nextStatus === status;
+
+  return (
+    <Button
+      disabled={disabled || updateMutation.isPending}
+      onClick={() => {
+        updateMutation.mutate({
+          id: taskId,
+          status: nextStatus,
+        });
+      }}
+    >
+      {getButtonLabel(status)}
+    </Button>
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- ステータスが増えるたびに else if が増える
-- `completedAt` の設定ロジックが各分岐に散らばっている
-- 「DONE の時だけ completedAt をセットする」というルールが暗黙的
+- 遷移先とボタン文言が別々の `if` に分かれ、対応関係を目で追いにくい
+- 新しい遷移を追加すると、複数の関数を同じ順番で更新する必要がある
+- 「このステータスでは何ができるか」がコード上で一覧になっていない
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-  updateTask({
-    id: taskId,
-    status: newStatus,
-    completedAt: newStatus === "DONE" ? new Date() : null,
-  });
+import { Button } from '@/component/ui/button';
+import {
+  TASK_STATUS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+type StatusActionButtonProps = {
+  taskId: string;
+  status: TaskStatus;
+  onUpdated?: () => void;
 };
+
+type StatusTransition = {
+  from: TaskStatus;
+  to: TaskStatus;
+  label: string;
+};
+
+const STATUS_TRANSITIONS: StatusTransition[] = [
+  {
+    from: TASK_STATUS.TODO,
+    to: TASK_STATUS.IN_PROGRESS,
+    label: '作業開始',
+  },
+  {
+    from: TASK_STATUS.IN_PROGRESS,
+    to: TASK_STATUS.IN_REVIEW,
+    label: 'レビュー依頼',
+  },
+  {
+    from: TASK_STATUS.IN_REVIEW,
+    to: TASK_STATUS.DONE,
+    label: '完了にする',
+  },
+  {
+    from: TASK_STATUS.BLOCKED,
+    to: TASK_STATUS.IN_PROGRESS,
+    label: 'ブロック解除',
+  },
+];
+
+function findTransition(status: TaskStatus) {
+  return STATUS_TRANSITIONS.find(
+    (transition) => transition.from === status,
+  );
+}
+
+export function StatusActionButton({
+  taskId,
+  status,
+  onUpdated,
+}: StatusActionButtonProps) {
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: onUpdated,
+    });
+  const transition = findTransition(status);
+
+  return (
+    <Button
+      disabled={
+        !transition || updateMutation.isPending
+      }
+      onClick={() => {
+        if (!transition) return;
+        updateMutation.mutate({
+          id: taskId,
+          status: transition.to,
+        });
+      }}
+    >
+      {transition?.label ?? '変更なし'}
+    </Button>
+  );
+}
 ```
 
 **このコードの強み**:
 
-- 分岐が1つの三項演算子に集約されて読みやすい
-- `TaskStatus` 型でステータス値が型安全
-- ルールが1行に凝縮：「DONE なら日付入り、それ以外は null」
+- `from` / `to` / `label` が1つの配列にまとまり、遷移ルールを一覧で読める
+- `find()` で該当する遷移だけを探すため、分岐が増えても関数が太りにくい
+- 新しい遷移を追加するときは `STATUS_TRANSITIONS` に1行足すだけで済む
 
 #### 🎓 覚えておきたいエッセンス
 
-if-else の連続は「分岐ごとに違う部分」だけを抽出すると、大体1つの式に集約できる。
+同じ条件の `if` が何度も出てきたら、配列にしてデータとして扱えないか考える。
+ルールをコードの分岐に埋めるより、一覧できる形にすると変更に強くなる。
 
 ## 📋 今日のまとめ
 

@@ -591,49 +591,172 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — 編集後のリスト更新
+### 💡 Pro パターンで書こう — 編集後の一覧更新を楽観的に反映する
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const handleUpdate = async (data: TaskFormData) => {
-  await updateTask(data);
-  // 更新後にタスク一覧を全件再取得
-  const newTasks = await fetchAllTasks();
-  setTasks(newTasks);
-  setDialogOpen(false);
+import { dateOnlyToUtcStartIso } from '@/lib/date';
+import { api } from '@/trpc/react';
+import type { TaskFormData } from '@/component/task/task-dialog';
+
+const utils = api.useUtils();
+
+const updateMutation =
+  api.task.update.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+      if (selectedTask) {
+        utils.task.getById.invalidate({
+          id: selectedTask,
+        });
+      }
+      setDialogOpen(false);
+    },
+  });
+
+const handleSubmit = (data: TaskFormData) => {
+  if (!data.id) return;
+
+  updateMutation.mutate({
+    id: data.id,
+    title: data.title,
+    description: data.description || null,
+    status: data.status,
+    priority: data.priority,
+    dueDate: data.dueDate
+      ? dateOnlyToUtcStartIso(data.dueDate)
+      : null,
+    estimatedHours: data.estimatedHours ?? null,
+    assigneeId: data.assigneeId || null,
+  });
 };
 ```
 
 **このコードの問題点**:
 
-- 1件更新しただけなのに全件再取得するのはムダ
-- `setTasks` で手動管理すると、他のコンポーネントのキャッシュと不整合が起きる
-- タスクが1000件あったら毎回1000件取り直し
+- 保存が成功するまで、画面上の一覧は古いタイトルや優先度のまま残る
+- 毎回 `invalidate()` で再取得するだけなので、通信が遅いと「保存できたのか」が分かりにくい
+- 失敗時の戻し方を決めていないため、あとから楽観的更新を足すと差分管理が難しくなる
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const utils = api.useUtils();
+import { dateOnlyToUtcStartIso } from '@/lib/date';
+import { api } from '@/trpc/react';
+import type { TaskFormData } from '@/component/task/task-dialog';
 
-const updateMutation = api.task.update.useMutation({
-  onSuccess: () => {
-    utils.task.getAll.invalidate();
-    setDialogOpen(false);
-    toast.success("タスクを更新しました");
-  },
-});
+const utils = api.useUtils();
+const taskListInput = {
+  projectId: filterProject === 'all'
+    ? undefined
+    : filterProject,
+  status: filterStatus === 'all'
+    ? undefined
+    : filterStatus,
+};
+
+const { data: tasks } = api.task.getAll.useQuery(
+  taskListInput,
+  { refetchOnWindowFocus: false },
+);
+
+const updateMutation =
+  api.task.update.useMutation({
+    onMutate: async (updatedTask) => {
+      await utils.task.getAll.cancel(
+        taskListInput,
+      );
+
+      const previousTasks =
+        utils.task.getAll.getData(taskListInput);
+
+      utils.task.getAll.setData(
+        taskListInput,
+        (oldTasks) =>
+          oldTasks?.map((task) =>
+            task.id === updatedTask.id
+              ? {
+                  ...task,
+                  title:
+                    updatedTask.title ?? task.title,
+                  description:
+                    updatedTask.description
+                    ?? task.description,
+                  status:
+                    updatedTask.status ?? task.status,
+                  priority:
+                    updatedTask.priority
+                    ?? task.priority,
+                  dueDate:
+                    updatedTask.dueDate === undefined
+                      ? task.dueDate
+                      : updatedTask.dueDate
+                        ? new Date(updatedTask.dueDate)
+                        : null,
+                  estimatedHours:
+                    updatedTask.estimatedHours
+                    ?? task.estimatedHours,
+                  assigneeId:
+                    updatedTask.assigneeId
+                    ?? task.assigneeId,
+                }
+              : task,
+          ),
+      );
+
+      return { previousTasks };
+    },
+    onError: (_error, _updatedTask, context) => {
+      utils.task.getAll.setData(
+        taskListInput,
+        context?.previousTasks,
+      );
+    },
+    onSettled: () => {
+      utils.task.getAll.invalidate(
+        taskListInput,
+      );
+      if (selectedTask) {
+        utils.task.getById.invalidate({
+          id: selectedTask,
+        });
+      }
+      setDialogOpen(false);
+    },
+  });
+
+const handleSubmit = (data: TaskFormData) => {
+  if (!data.id) return;
+
+  updateMutation.mutate({
+    id: data.id,
+    title: data.title,
+    description: data.description || null,
+    status: data.status,
+    priority: data.priority,
+    dueDate: data.dueDate
+      ? dateOnlyToUtcStartIso(data.dueDate)
+      : null,
+    estimatedHours: data.estimatedHours ?? null,
+    assigneeId: data.assigneeId || null,
+  });
+};
 ```
 
 **このコードの強み**:
 
-- `invalidate()` でキャッシュを無効にするだけ。TanStack Query が必要な分だけ再取得
-- 全コンポーネントのキャッシュが自動で一貫する
-- ネットワーク効率もユーザー体験も良い
+- 保存ボタンを押した直後に一覧の表示が変わるので、編集体験が軽く感じられる
+- 失敗したら `previousTasks` に戻せるため、楽観的更新でも壊れた表示を残しにくい
+- 最後に `invalidate()` も行うので、サーバーが返す正しいデータと最終的に同期できる
 
 #### 🎓 覚えておきたいエッセンス
 
-データ更新後は「全件再取得 + setState」ではなく `invalidate()`。キャッシュの管理はライブラリに任せるのがプロの書き方。
+`invalidate()` だけでも正しい。でも編集UIでは、先にキャッシュを更新してから最後に再同期すると体験が一段よくなる。
+楽観的更新は「先に見せる」「失敗したら戻す」「最後に確認する」の3点セットで考える。
 
 ## 📋 今日のまとめ
 

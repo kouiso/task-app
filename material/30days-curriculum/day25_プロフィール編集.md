@@ -1595,41 +1595,128 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — プロフィールデータへのアクセス
+### 💡 Pro パターンで書こう — プロフィール表示のデータアクセスは Optional chaining でそろえる
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-let avatarUrl = "/default-avatar.png";
-if (currentUser) {
-  if (currentUser.avatar) {
-    if (currentUser.avatar.length > 0) {
+// filepath: src/app/profile/page.tsx
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+
+type CurrentUser = {
+  name: string | null;
+  email: string;
+  avatar: string | null;
+  createdAt: Date | string | null;
+  updatedAt: Date | string | null;
+} | null;
+
+export function buildProfileViewModel(currentUser: CurrentUser) {
+  let avatarUrl = '';
+  if (currentUser) {
+    if (currentUser.avatar) {
       avatarUrl = currentUser.avatar;
     }
   }
+
+  let displayName = '未設定';
+  if (currentUser) {
+    if (currentUser.name) {
+      displayName = currentUser.name;
+    }
+  }
+
+  let initial = '?';
+  if (currentUser) {
+    if (currentUser.name) {
+      if (currentUser.name[0]) {
+        initial = currentUser.name[0].toUpperCase();
+      }
+    }
+  }
+
+  let createdAtLabel = '-';
+  if (currentUser) {
+    if (currentUser.createdAt) {
+      createdAtLabel = format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
+        locale: ja,
+      });
+    }
+  }
+
+  let updatedAtLabel = '-';
+  if (currentUser) {
+    if (currentUser.updatedAt) {
+      updatedAtLabel = format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
+        locale: ja,
+      });
+    }
+  }
+
+  return {
+    avatarUrl,
+    displayName,
+    email: currentUser ? currentUser.email : '',
+    initial,
+    createdAtLabel,
+    updatedAtLabel,
+  };
 }
 ```
 
 **このコードの問題点**:
 
-- null チェックのネストが無駄に深い
-- `let` で宣言しているので、後から書き換えられる不安がある
+- `currentUser` の null チェックが何度も出てきて、プロフィールで何を表示したいのかが埋もれる
+- `name[0]` のような細かいアクセスほどチェック漏れが起きやすい
+- 表示項目が増えるたびに `let` と `if` が増え、フォーム初期化でも同じ形を繰り返しやすい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const avatarUrl = currentUser?.avatar || "/default-avatar.png";
+// filepath: src/app/profile/page.tsx
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+
+type CurrentUser = {
+  name: string | null;
+  email: string;
+  avatar: string | null;
+  createdAt: Date | string | null;
+  updatedAt: Date | string | null;
+} | null;
+
+function formatProfileDate(value: Date | string | null | undefined) {
+  return value
+    ? format(new Date(value), 'yyyy年MM月dd日', { locale: ja })
+    : '-';
+}
+
+export function buildProfileViewModel(currentUser: CurrentUser) {
+  return {
+    avatarUrl: currentUser?.avatar ?? '',
+    displayName: currentUser?.name ?? '未設定',
+    email: currentUser?.email ?? '',
+    initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
+    createdAtLabel: formatProfileDate(currentUser?.createdAt),
+    updatedAtLabel: formatProfileDate(currentUser?.updatedAt),
+  };
+}
 ```
 
 **このコードの強み**:
 
-- 1行で意図が伝わる
-- `const` で不変。値がこの行以降で変わらない安心感
-- `||` で空文字列もフォールバック対象にできる
+- `?.` で「存在するときだけ進む」ことを1行で表せる
+- `??` で null / undefined のときの表示を近くに置けるので、代替値が読みやすい
+- 日付整形を helper に寄せることで、登録日と更新日のルールを1か所でそろえられる
 
 #### 🎓 覚えておきたいエッセンス
 
-プロフィール系のデータは「あるかもしれない、ないかもしれない」が基本。`?.` と `||` で1行にまとめるのが現代 JavaScript の書き方。
+深い null チェックを何段も書くより、
+`?.` と `??` で「安全なアクセス」と「代替表示」を近くに置く。
 
 ## 📋 今日のまとめ
 

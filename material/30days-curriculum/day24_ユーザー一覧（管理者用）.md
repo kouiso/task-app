@@ -689,43 +689,144 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — ユーザーカードの Props 型
+### 💡 Pro パターンで書こう — ユーザー一覧カードの Props は Pick で切り出す
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-type UserCardProps = {
+// filepath: src/component/user/user-list-card.tsx
+import type { User } from '@prisma/client';
+import { Eye, Pencil } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+
+type UserListCardProps = {
   id: string;
   name: string | null;
   email: string;
   avatar: string | null;
-  role: "ADMIN" | "USER";
+  role: User['role'];
   isActive: boolean;
+  onDetail: (id: string) => void;
+  onEdit: (id: string) => void;
 };
+
+export function UserListCard({
+  id,
+  name,
+  email,
+  avatar,
+  role,
+  isActive,
+  onDetail,
+  onEdit,
+}: UserListCardProps) {
+  const initial = name?.[0]?.toUpperCase() ?? '?';
+
+  return (
+    <article className="flex items-center justify-between rounded-lg border p-4">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-9 w-9">
+          {avatar && <AvatarImage src={avatar} alt={name ?? ''} />}
+          <AvatarFallback>{initial}</AvatarFallback>
+        </Avatar>
+        <div>
+          <p className="font-medium">{name}</p>
+          <p className="text-sm text-muted-foreground">{email}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <UserRoleBadge role={role} />
+        <ActiveStatusBadge isActive={isActive} />
+        <Button variant="ghost" size="icon" onClick={() => onDetail(id)}>
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onEdit(id)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </div>
+    </article>
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- DB スキーマと props 定義が二重管理
-- `role` の型を手書きしているので、Prisma 側で `VIEWER` を追加しても気づかない
+- `User` の項目と Props の項目を別々に保守する必要がある
+- `role` や `avatar` の型が変わったとき、Props 側だけ古い型のまま残りやすい
+- 一覧で使うユーザー情報が増えるたび、型定義と引数展開が長くなって読みづらい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-import type { User } from "@prismaClient";
+// filepath: src/component/user/user-list-card.tsx
+import type { User } from '@prisma/client';
+import { Eye, Pencil } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
 
-type UserCardProps = Pick<User, "id" | "name" | "email" | "avatar" | "role" | "isActive">;
+type UserListCardUser = Pick<
+  User,
+  'id' | 'name' | 'email' | 'avatar' | 'role' | 'isActive'
+>;
+
+type UserListCardProps = {
+  user: UserListCardUser;
+  onDetail: (id: string) => void;
+  onEdit: (id: string) => void;
+};
+
+export function UserListCard({
+  user,
+  onDetail,
+  onEdit,
+}: UserListCardProps) {
+  const initial = user.name?.[0]?.toUpperCase() ?? '?';
+
+  return (
+    <article className="flex items-center justify-between rounded-lg border p-4">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-9 w-9">
+          {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ''} />}
+          <AvatarFallback>{initial}</AvatarFallback>
+        </Avatar>
+        <div>
+          <p className="font-medium">{user.name}</p>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <UserRoleBadge role={user.role} />
+        <ActiveStatusBadge isActive={user.isActive} />
+        <Button variant="ghost" size="icon" onClick={() => onDetail(user.id)}>
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onEdit(user.id)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </div>
+    </article>
+  );
+}
 ```
 
 **このコードの強み**:
 
-- Prisma が生成する型が唯一の定義元
-- `role` に新しい値が追加されたら自動で追従
-- props の型が DB と常に一致する保証
+- 一覧カードが必要とする `User` の列だけを型として明示できる
+- `role` や `isActive` の型は元の `User` に追従するので、重複定義によるズレが起きにくい
+- Props が `user` にまとまるため、親コンポーネントから渡す値も読みやすくなる
 
 #### 🎓 覚えておきたいエッセンス
 
-管理画面こそ型の正確さが命。Prisma の型を `Pick` で使えば、DB 変更 → 型変更 → コンパイルエラー の安全ネットが効く。
+DB や API の型から一部だけ使うコンポーネントでは、
+個別に型を書き直すより `Pick` で「使う列」を切り出すほうが強い。
 
 ## 📋 今日のまとめ
 

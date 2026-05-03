@@ -558,62 +558,143 @@ npm run lint:fix
 
 ---
 
-### 💡 Pro パターンで書こう — エラー表示の条件分岐
+### 💡 Pro パターンで書こう — Error Boundary の表示分岐は early return で整理する
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-export default function ErrorPage({ error }: { error: Error }) {
-  return error.message === "UNAUTHORIZED"
-    ? <div><h1>認証エラー</h1><p>ログインし直してください</p><a href="/login">ログイン</a></div>
-    : error.message === "NOT_FOUND"
-      ? <div><h1>見つかりません</h1><p>ページが存在しません</p><a href="/">トップへ</a></div>
-      : <div><h1>エラー</h1><p>問題が発生しました</p><button onClick={() => window.location.reload()}>再試行</button></div>;
+// filepath: src/app/error.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { Button } from '@/component/ui/button';
+
+type ErrorBoundaryViewProps = {
+  error: (Error & { digest?: string }) | null;
+  reset: () => void;
+  isRecovering: boolean;
+};
+
+export function ErrorBoundaryView({
+  error,
+  reset,
+  isRecovering,
+}: ErrorBoundaryViewProps) {
+  useEffect(() => {
+    if (error) {
+      console.error(error);
+    }
+  }, [error]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="space-y-4 text-center">
+        {isRecovering ? (
+          <p className="text-muted-foreground">再読み込み中です...</p>
+        ) : !error ? (
+          <>
+            <h2 className="text-2xl font-bold">エラー情報がありません</h2>
+            <Button onClick={reset}>画面を再読み込みする</Button>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold">エラーが発生しました</h2>
+            <p className="text-muted-foreground">
+              {error.digest
+                ? 'サーバー側でエラーが発生しました。'
+                : error.message
+                  ? error.message
+                  : '予期しないエラーが発生しました。'}
+            </p>
+            <Button onClick={reset}>もう一度試す</Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 ```
 
 **このコードの問題点**:
 
-- 三項演算子のネストで、どのエラーで何が出るか追いにくい
-- エラーの種類が増えるとネストがさらに深くなる
+- JSX の中に三項演算子が重なり、どの状態を表示しているのか追いにくい
+- エラー表示本体と例外的な表示が同じ return に混ざっている
+- 状態がもう1つ増えたとき、さらにネストが深くなりやすい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-export default function ErrorPage({ error }: { error: Error }) {
-  if (error.message === "UNAUTHORIZED") {
+// filepath: src/app/error.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { Button } from '@/component/ui/button';
+
+type ErrorBoundaryViewProps = {
+  error: (Error & { digest?: string }) | null;
+  reset: () => void;
+  isRecovering: boolean;
+};
+
+export function ErrorBoundaryView({
+  error,
+  reset,
+  isRecovering,
+}: ErrorBoundaryViewProps) {
+  useEffect(() => {
+    if (error) {
+      console.error(error);
+    }
+  }, [error]);
+
+  if (isRecovering) {
     return (
-      <ErrorLayout title="認証エラー" message="ログインし直してください">
-        <Link href="/login">ログイン</Link>
-      </ErrorLayout>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">再読み込み中です...</p>
+      </div>
     );
   }
 
-  if (error.message === "NOT_FOUND") {
+  if (!error) {
     return (
-      <ErrorLayout title="見つかりません" message="ページが存在しません">
-        <Link href="/">トップへ</Link>
-      </ErrorLayout>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="space-y-4 text-center">
+          <h2 className="text-2xl font-bold">エラー情報がありません</h2>
+          <Button onClick={reset}>画面を再読み込みする</Button>
+        </div>
+      </div>
     );
   }
+
+  const message = error.digest
+    ? 'サーバー側でエラーが発生しました。'
+    : error.message || '予期しないエラーが発生しました。';
 
   return (
-    <ErrorLayout title="エラー" message="問題が発生しました">
-      <Button onClick={() => window.location.reload()}>再試行</Button>
-    </ErrorLayout>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="space-y-4 text-center">
+        <h2 className="text-2xl font-bold">エラーが発生しました</h2>
+        <p className="text-muted-foreground">{message}</p>
+        <Button onClick={reset}>もう一度試す</Button>
+      </div>
+    </div>
   );
 }
 ```
 
 **このコードの強み**:
 
-- 上から順に読むだけで、どのエラーで何を表示するかわかる
-- `ErrorLayout` に共通のデザインを閉じ込めて、各分岐は差分だけ書く
-- 新しいエラー種別は中間に1ブロック足すだけ
+- 例外的な状態を先に返すので、最後の return が通常のエラー表示だけになる
+- JSX の中から分岐ロジックが減り、表示構造を読みやすい
+- 状態が増えても early return を1つ足す形で拡張できる
 
 #### 🎓 覚えておきたいエッセンス
 
-エラーページは early return が最も活きる場所。「このエラーならこれを出して終わり」を上から並べるだけで、ネストなしに書ける。
+画面の状態分岐が増えたら、三項演算子を重ねる前に
+「先に返せる状態はないか」を考える。
 
 ## 📋 今日のまとめ
 

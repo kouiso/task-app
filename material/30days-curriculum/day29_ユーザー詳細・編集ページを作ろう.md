@@ -1218,54 +1218,148 @@ import { Alert, AlertDescription, AlertTitle }
 
 ---
 
-### 💡 Pro パターンで書こう — ユーザー編集フォームのバリデーション
+### 💡 Pro パターンで書こう — ユーザー編集フォームは zod で境界バリデーションする
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const handleSubmit = (data: Record<string, unknown>) => {
-  if (typeof data.name !== "string" || data.name.length === 0) {
-    setError("名前は必須です");
-    return;
-  }
-  if (typeof data.email !== "string" || !data.email.includes("@")) {
-    setError("メールアドレスが不正です");
-    return;
-  }
-  updateUser(data as UserUpdateInput);
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
+
+type UserEditFormValues = {
+  name: string;
+  avatar: string;
+  role: UserRole;
+  isActive: boolean;
 };
+
+type UpdateUserInput = {
+  id: string;
+  name: string;
+  avatar?: string;
+  role?: UserRole;
+  isActive?: boolean;
+};
+
+type UpdateUserMutation = {
+  mutate: (input: UpdateUserInput) => void;
+};
+
+export function submitUserEditForm(
+  rawValues: unknown,
+  userId: string,
+  updateUser: UpdateUserMutation,
+  isAdmin: boolean,
+) {
+  const values = rawValues as UserEditFormValues;
+
+  updateUser.mutate({
+    id: userId,
+    name: values.name,
+    avatar: values.avatar || undefined,
+    ...(isAdmin
+      ? {
+          role: values.role,
+          isActive: values.isActive,
+        }
+      : {}),
+  });
+}
+
+submitUserEditForm(
+  {
+    name: 'Kouiso',
+    avatar: '',
+    role: USER_ROLE.ADMIN,
+    isActive: true,
+  },
+  'clx_user_123',
+  updateUser,
+  true,
+);
 ```
 
 **このコードの問題点**:
 
-- `Record<string, unknown>` で型が不明。何が来るかわからない
-- typeof で手動チェックしていて、ルールが散らばる
-- `as UserUpdateInput` で強制キャスト。型安全が崩壊
+- `as UserEditFormValues` は「そういう型だと信じる」だけで、実際の値は検証していない
+- `role: 'OWNER'` や `isActive: 'yes'` のような値でも、クライアント側では通ってしまう
+- フォーム項目が増えると、型と実行時チェックのズレに気づきにくい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+import { z } from 'zod';
+import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
+
 const userEditSchema = z.object({
-  name: z.string().min(1, "名前は必須です"),
-  email: z.string().email("メールアドレスが不正です"),
-  avatar: z.string().url().nullable(),
+  name: z.string().min(1, '名前は必須です'),
+  avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
+  role: z.enum([USER_ROLE.USER, USER_ROLE.ADMIN]),
+  isActive: z.boolean(),
 });
 
-const { register, handleSubmit } = useForm({
-  resolver: zodResolver(userEditSchema),
-  defaultValues: { name: user.name ?? "", email: user.email, avatar: user.avatar },
-});
+type UserEditFormValues = z.infer<typeof userEditSchema>;
+
+type UpdateUserInput = {
+  id: string;
+  name: string;
+  avatar?: string;
+  role?: UserRole;
+  isActive?: boolean;
+};
+
+type UpdateUserMutation = {
+  mutate: (input: UpdateUserInput) => void;
+};
+
+export function submitUserEditForm(
+  rawValues: unknown,
+  userId: string,
+  updateUser: UpdateUserMutation,
+  isAdmin: boolean,
+) {
+  const values: UserEditFormValues = userEditSchema.parse(rawValues);
+
+  updateUser.mutate({
+    id: userId,
+    name: values.name,
+    avatar: values.avatar || undefined,
+    ...(isAdmin
+      ? {
+          role: values.role,
+          isActive: values.isActive,
+        }
+      : {}),
+  });
+}
+
+submitUserEditForm(
+  {
+    name: 'Kouiso',
+    avatar: '',
+    role: USER_ROLE.ADMIN,
+    isActive: true,
+  },
+  'clx_user_123',
+  updateUser,
+  true,
+);
 ```
 
 **このコードの強み**:
 
-- zod スキーマでルールを宣言的に定義。1箇所にまとまる
-- react-hook-form が自動でバリデーション実行 + エラー表示
-- `as` キャスト不要。zod が parse した時点で型が確定
+- zod が実行時にも値を検証するので、フォーム外から変な値が来ても止められる
+- `z.infer` で TypeScript の型をスキーマから作るため、型とバリデーションがズレにくい
+- 管理者だけ `role` / `isActive` を送るルールと、入力値の安全性を分けて読める
 
 #### 🎓 覚えておきたいエッセンス
 
-フォームバリデーションは Day 05 で学んだ「zod + react-hook-form」パターンの応用。手動 typeof チェックと `as` キャストは過去の書き方。
+`as` は型チェックを黙らせる道具であって、値を守る道具ではない。
+ユーザー入力や API 境界では zod で実際の値を検証する。
 
 ## ⚠️ つまずきポイント
 

@@ -678,50 +678,109 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — 作成後のリスト更新
+### 💡 Pro パターンで書こう — 作成後はリロードせず一覧キャッシュを更新する
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const handleCreate = async (data: ProjectFormData) => {
-  await fetch("/api/projects", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-  // 作成後にページ全体をリロード
-  window.location.reload();
+'use client';
+
+import { api } from '@/trpc/react';
+
+type ProjectFormData = {
+  name: string;
+  description?: string;
+  color: string;
+  startDate?: string;
+  endDate?: string;
 };
+
+export function useCreateProjectSubmit(onClose: () => void) {
+  const createMutation = api.project.create.useMutation({
+    onSuccess: () => {
+      onClose();
+      window.location.reload();
+    },
+  });
+
+  const submitProject = (data: ProjectFormData) => {
+    createMutation.mutate({
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate,
+      endDate: data.endDate,
+    });
+  };
+
+  return {
+    submitProject,
+    isPending: createMutation.isPending,
+  };
+}
 ```
 
 **このコードの問題点**:
 
-- `window.location.reload()` でページ全体が真っ白→再描画される
-- 他の状態（フィルター、スクロール位置）が全部リセットされる
-- ユーザー体験が「カクッ」として安っぽい
+- 作成後にページ全体をリロードするので、一覧以外の状態まで全部リセットされる
+- フィルターやスクロール位置が消えて、ユーザーが今いた場所を見失いやすい
+- tRPCのキャッシュを使っているのに、ブラウザ再読み込みで力技の更新になっている
 
 ### ✅ After（プロが書くコード）
 
 ```typescript
-const utils = api.useUtils();
+'use client';
 
-const createMutation = api.project.create.useMutation({
-  onSuccess: () => {
-    utils.project.getAll.invalidate();
-    setDialogOpen(false);
-    toast.success("プロジェクトを作成しました");
-  },
-});
+import { api } from '@/trpc/react';
+
+type ProjectFormData = {
+  name: string;
+  description?: string;
+  color: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export function useCreateProjectSubmit(onClose: () => void) {
+  const utils = api.useUtils();
+
+  const createMutation = api.project.create.useMutation({
+    onSuccess: () => {
+      void utils.project.getAll.invalidate();
+      onClose();
+    },
+  });
+
+  const submitProject = (data: ProjectFormData) => {
+    createMutation.mutate({
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate,
+      endDate: data.endDate,
+    });
+  };
+
+  return {
+    submitProject,
+    isPending: createMutation.isPending,
+  };
+}
 ```
 
 **このコードの強み**:
 
-- `invalidate()` で一覧のキャッシュだけ更新。ページは再読み込みしない
-- フィルターやスクロール位置はそのまま。ユーザーの作業が途切れない
-- `toast` でフィードバックを即座に返せる
+- `project.getAll` のキャッシュだけを無効化するので、必要な一覧だけ再取得できる
+- ダイアログを閉じてもページ全体は残るため、表示条件や操作中の流れが途切れにくい
+- 作成、更新、削除でも同じ `mutation + invalidate` の型を使い回せる
 
 #### 🎓 覚えておきたいエッセンス
 
-データ変更後は `window.location.reload()` ではなく `invalidate()`。必要なデータだけ再取得するのがプロの書き方。
+データを変えた後は、ページを丸ごとリロードするより **変わった一覧だけ再取得する** ほうが自然や。
+tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚えておこう。
 
 ## 📋 今日のまとめ
 

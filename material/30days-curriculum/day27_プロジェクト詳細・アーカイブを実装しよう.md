@@ -592,44 +592,99 @@ const handleRemoveMember = (userId: string) => {
 
 ---
 
-### 💡 Pro パターンで書こう — アーカイブ状態のフィルタリング
+### 💡 Pro パターンで書こう — アーカイブ状態の絞り込みは配列メソッドで選ぶ
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const getFilteredProjects = (projects: Project[], showArchived: boolean) => {
-  if (showArchived) {
-    return projects.filter((p) => p.isArchived === true);
-  } else {
-    return projects.filter((p) => p.isArchived === false);
-  }
+// filepath: src/app/project/page.tsx
+type ProjectListItem = {
+  id: string;
+  name: string;
+  isArchived: boolean;
 };
+
+type ArchiveFilter = 'active' | 'archived' | 'all';
+
+export function filterProjectsByArchiveStatus(
+  projects: ProjectListItem[],
+  filter: ArchiveFilter,
+) {
+  if (filter === 'active') {
+    return projects.filter((project) => !project.isArchived);
+  }
+
+  if (filter === 'archived') {
+    return projects.filter((project) => project.isArchived);
+  }
+
+  if (filter === 'all') {
+    return projects;
+  }
+
+  return projects;
+}
 ```
 
 **このコードの問題点**:
 
-- `showArchived` の意味が「アーカイブだけ表示」なのか「アーカイブも表示」なのか曖昧
-- if-else で同じ `.filter()` を二回書いていて冗長
+- `if` が増えるほど、どの条件が一覧のルールなのか見渡しにくくなる
+- 新しい絞り込み条件を足すと、関数の中に分岐がさらに増える
+- `filter` の値と実際の絞り込み処理が離れていないため、UI 側の選択肢と対応づけにくい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-// showArchived = true: 全件表示（フィルターなし）
-// showArchived = false: 進行中のみ
-const { data: projects } = api.project.getAll.useQuery({
-  isArchived: showArchived ? undefined : false,
-});
+// filepath: src/app/project/page.tsx
+type ProjectListItem = {
+  id: string;
+  name: string;
+  isArchived: boolean;
+};
+
+type ArchiveFilter = 'active' | 'archived' | 'all';
+
+const ARCHIVE_FILTERS: Array<{
+  key: ArchiveFilter;
+  apply: (projects: ProjectListItem[]) => ProjectListItem[];
+}> = [
+  {
+    key: 'active',
+    apply: (projects) => projects.filter((project) => !project.isArchived),
+  },
+  {
+    key: 'archived',
+    apply: (projects) => projects.filter((project) => project.isArchived),
+  },
+  {
+    key: 'all',
+    apply: (projects) => projects,
+  },
+];
+
+export function filterProjectsByArchiveStatus(
+  projects: ProjectListItem[],
+  filter: ArchiveFilter,
+) {
+  const archiveFilter = ARCHIVE_FILTERS.find((item) => item.key === filter);
+
+  return archiveFilter?.apply(projects) ?? projects;
+}
 ```
 
 **このコードの強み**:
 
-- フィルタリングをサーバー側に任せる。クライアントで全件持つ必要がない
-- `undefined` を渡すとサーバー側でフィルター条件がスキップされる（全件返る）
-- ロジックが1行で、意図が明確
+- 絞り込み条件が配列にまとまり、選択肢と処理の対応が一覧できる
+- 新しい条件を足すときは `ARCHIVE_FILTERS` に1要素追加するだけで済む
+- `find` で対象ルールを選ぶ形なので、分岐のネストが増えにくい
 
 #### 🎓 覚えておきたいエッセンス
 
-フィルタリングは「クライアントで全件 filter」より「サーバーに条件を渡す」方が効率的。`undefined` でフィルター解除するパターンは tRPC + Prisma でよく使う。
+同じ値を見て分岐する `if` が並び始めたら、
+「条件と処理を配列にして選ぶ」形にできないか考える。
 
 ## ⚠️ つまずきポイント
 

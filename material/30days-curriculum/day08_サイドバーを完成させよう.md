@@ -558,23 +558,61 @@ Step 5 で確認した `logoutMutation` と `handleLogout` が連携して動き
 
 ---
 
-### 💡 Pro パターンで書こう — Server Component と Client Component の分離
+### 💡 Pro パターンで書こう — サイドバーは静的部分と対話部分を分ける
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
-```typescript
-"use client";
-// レイアウト全体を Client Component にしてしまう
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { data: session } = api.auth.getSession.useQuery();
+```tsx
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { Button } from '@/component/ui/button';
+import { api } from '@/trpc/react';
+
+const navItems = [
+  { href: '/dashboard', label: 'ダッシュボード' },
+  { href: '/project', label: 'プロジェクト' },
+  { href: '/task', label: 'タスク' },
+];
+
+type AppLayoutProps = {
+  children: ReactNode;
+};
+
+export function AppLayout({ children }: AppLayoutProps) {
+  const router = useRouter();
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: () => {
+      router.push('/login');
+      router.refresh();
+    },
+  });
+
   return (
-    <div className="flex min-h-screen">
-      <aside className={sidebarOpen ? "w-64" : "w-0"}>
-        <nav>{/* ナビゲーションリンク */}</nav>
-        <p>{session?.user?.name}</p>
+    <div className="flex min-h-screen bg-background">
+      <aside className="w-64 border-r bg-card p-4">
+        <p className="text-lg font-semibold">Task App</p>
+        <nav className="mt-6 flex flex-col gap-2">
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm">
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <Button
+          className="mt-6 w-full"
+          variant="outline"
+          onClick={() => logoutMutation.mutate()}
+        >
+          ログアウト
+        </Button>
       </aside>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 p-6">{children}</main>
     </div>
   );
 }
@@ -582,46 +620,85 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 **このコードの問題点**:
 
-- レイアウト全体が Client Component になり、サーバー側で事前描画できない
-- `children` に渡される中身も全て Client Component の影響を受ける
-- 初期表示が遅くなり、JS のバンドルサイズも大きくなる
+- ログアウトボタンのためだけに、ナビゲーションやレイアウト全体まで Client Component になっている
+- 静的なリンク一覧にもブラウザ用JavaScriptが乗り、初期表示の負担が増えやすい
+- 後で通知バッジやユーザー操作を足したとき、どこまでが対話部分か境界が曖昧になる
 
 ### ✅ After（プロが書くコード）
 
-```typescript
-// layout.tsx (Server Component — "use client" なし)
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+```tsx title="src/component/layout/app-layout.tsx"
+import Link from 'next/link';
+import type { ReactNode } from 'react';
+import { LogoutButton } from '@/component/layout/logout-button';
+
+const navItems = [
+  { href: '/dashboard', label: 'ダッシュボード' },
+  { href: '/project', label: 'プロジェクト' },
+  { href: '/task', label: 'タスク' },
+];
+
+type AppLayoutProps = {
+  children: ReactNode;
+};
+
+export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1">{children}</main>
+    <div className="flex min-h-screen bg-background">
+      <aside className="w-64 border-r bg-card p-4">
+        <p className="text-lg font-semibold">Task App</p>
+        <nav className="mt-6 flex flex-col gap-2">
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm">
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <LogoutButton />
+      </aside>
+      <main className="flex-1 p-6">{children}</main>
     </div>
   );
 }
+```
 
-// sidebar.tsx ("use client" — 対話部分だけ)
-"use client";
-export function Sidebar() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { data: session } = api.auth.getSession.useQuery();
+```tsx title="src/component/layout/logout-button.tsx"
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { Button } from '@/component/ui/button';
+import { api } from '@/trpc/react';
+
+export function LogoutButton() {
+  const router = useRouter();
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: () => {
+      router.push('/login');
+      router.refresh();
+    },
+  });
+
   return (
-    <aside className={sidebarOpen ? "w-64" : "w-0"}>
-      <nav>{/* ナビゲーションリンク */}</nav>
-      <p>{session?.user?.name}</p>
-    </aside>
+    <Button
+      className="mt-6 w-full"
+      variant="outline"
+      onClick={() => logoutMutation.mutate()}
+    >
+      ログアウト
+    </Button>
   );
 }
 ```
 
 **このコードの強み**:
 
-- レイアウトはサーバーで事前描画される（初期表示が速い）
-- Client Component はサイドバーだけ。JS バンドルが小さくなる
-- Next.js の Server Component のメリットを最大限活かせる
+- レイアウトとリンク一覧は Server Component のままにでき、対話が必要なボタンだけを Client Component にできる
+- `use client` の影響範囲が `LogoutButton` に閉じるので、バンドルされるJavaScriptを抑えやすい
+- サイドバーに対話部品が増えても、小さなClient Componentとして足していける
 
 #### 🎓 覚えておきたいエッセンス
 
-「use client」は必要な部品にだけ付ける。レイアウト全体に付けると、Server Component のメリットが全部消える。
+`use client` はファイル全体に効くスイッチや。
+サイドバーでは、**静的な枠はServer、押せる部品はClient** に分けるのがプロの基本やで。
 
 ## 📋 今日のまとめ
 

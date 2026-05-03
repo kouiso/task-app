@@ -785,47 +785,157 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — コンポーネントの Props 型
+### 💡 Pro パターンで書こう — メンバーカードの props は元の型から Pick する
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
-```typescript
-// props を全部手書きで定義
+```tsx
+type ProjectMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+
 type MemberCardProps = {
   id: string;
   name: string | null;
   email: string;
   avatar: string | null;
-  role: string;
-  isActive: boolean;
-  createdAt: Date;
+  role: ProjectMemberRole;
+  onRemove: (id: string) => void;
 };
+
+export function MemberCard({
+  id,
+  name,
+  email,
+  avatar,
+  role,
+  onRemove,
+}: MemberCardProps) {
+  const displayName = name ?? email;
+  const initial = displayName.slice(0, 1).toUpperCase();
+
+  return (
+    <article className="flex items-center justify-between rounded-md border p-3">
+      <div className="flex items-center gap-3">
+        {avatar ? (
+          <img src={avatar} alt={displayName} className="h-8 w-8 rounded-full" />
+        ) : (
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+            {initial}
+          </span>
+        )}
+        <div>
+          <p className="font-medium">{displayName}</p>
+          <p className="text-sm text-muted-foreground">{role}</p>
+        </div>
+      </div>
+      <button type="button" onClick={() => onRemove(id)}>
+        削除
+      </button>
+    </article>
+  );
+}
+
+export function ExampleMemberCard() {
+  return (
+    <MemberCard
+      id="user_001"
+      name="Kouiso"
+      email="kouiso@example.com"
+      avatar={null}
+      role="MEMBER"
+      onRemove={(id) => console.log(`${id} を削除します`)}
+    />
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- User の型が変わったら、ここも手動で直す必要がある
-- DB のカラムと props の型がずれても、コンパイルエラーにならない
-- 同じ型定義が複数ファイルに散らばりやすい
+- `ProjectMember` 側に項目変更があっても、props型の手書き部分は自動で追従しない
+- 同じ `id`、`name`、`email`、`avatar`、`role` の並びを別ファイルでも書きがちになる
+- カードが本当に必要としているフィールドと、元データの関係が型から見えにくい
 
 ### ✅ After（プロが書くコード）
 
-```typescript
-// Prisma が生成した型から必要な部分だけ Pick
-import type { User } from "@prismaClient";
+```tsx
+type ProjectMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
-type MemberCardProps = Pick<User, "id" | "name" | "email" | "avatar">;
+type ProjectMember = {
+  id: string;
+  name: string | null;
+  email: string;
+  avatar: string | null;
+  role: ProjectMemberRole;
+  joinedAt: Date;
+  isCurrentUser: boolean;
+};
+
+type MemberCardProps = Pick<
+  ProjectMember,
+  'id' | 'name' | 'email' | 'avatar' | 'role'
+> & {
+  onRemove: (id: string) => void;
+};
+
+export function MemberCard({
+  id,
+  name,
+  email,
+  avatar,
+  role,
+  onRemove,
+}: MemberCardProps) {
+  const displayName = name ?? email;
+  const initial = displayName.slice(0, 1).toUpperCase();
+
+  return (
+    <article className="flex items-center justify-between rounded-md border p-3">
+      <div className="flex items-center gap-3">
+        {avatar ? (
+          <img src={avatar} alt={displayName} className="h-8 w-8 rounded-full" />
+        ) : (
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+            {initial}
+          </span>
+        )}
+        <div>
+          <p className="font-medium">{displayName}</p>
+          <p className="text-sm text-muted-foreground">{role}</p>
+        </div>
+      </div>
+      <button type="button" onClick={() => onRemove(id)}>
+        削除
+      </button>
+    </article>
+  );
+}
+
+export function ExampleMemberCard() {
+  return (
+    <MemberCard
+      id="user_001"
+      name="Kouiso"
+      email="kouiso@example.com"
+      avatar={null}
+      role="MEMBER"
+      onRemove={(id) => console.log(`${id} を削除します`)}
+    />
+  );
+}
 ```
 
 **このコードの強み**:
 
-- DB スキーマを変えたら Prisma が型を自動更新 → props も自動で追従
-- `Pick` で必要なフィールドだけ選ぶから、余計な情報を渡さない
-- 1箇所直せば全部直る（Single Source of Truth）
+- `ProjectMember` の中からカードが使うフィールドだけを切り出している、と型から分かる
+- 元の型で `role` や `avatar` の形が変わると、カード側にも型エラーとして伝わる
+- `joinedAt` や `isCurrentUser` のような不要な情報をpropsに混ぜず、必要なものだけ渡せる
 
 #### 🎓 覚えておきたいエッセンス
 
-Props 型を手書きするのは、DB スキーマのコピペと同じ。`Pick<User, ...>` で元の型から切り出すと、スキーマ変更に自動で追従する。
+props型を毎回手で写すと、元データとのズレが生まれやすい。
+メンバーカードみたいに元の型の一部だけ使うなら、**`Pick` で必要な列だけ選ぶ** のがきれいな書き方や。
 
 ## 📋 今日のまとめ
 

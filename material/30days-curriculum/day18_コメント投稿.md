@@ -582,60 +582,198 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — コメント表示の条件分岐
+### 💡 Pro パターンで書こう — 認証状態つきのコメント表示を読みやすくする
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-return (
-  <div>
-    {comments.length > 0
-      ? comments.map((c) =>
-          c.author
-            ? c.author.id === currentUser.id
-              ? <EditableComment key={c.id} comment={c} />
-              : <ReadOnlyComment key={c.id} comment={c} />
-            : <DeletedComment key={c.id} />
+import { Button } from '@/component/ui/button';
+
+type CommentItem = {
+  id: string;
+  content: string;
+  userId: string;
+  user: {
+    name: string | null;
+    email: string;
+  };
+};
+
+type CommentListProps = {
+  comments: CommentItem[];
+  currentUserId: string | null;
+  isLoading: boolean;
+  onEdit: (commentId: string) => void;
+  onDelete: (commentId: string) => void;
+};
+
+export function CommentList({
+  comments,
+  currentUserId,
+  isLoading,
+  onEdit,
+  onDelete,
+}: CommentListProps) {
+  return (
+    <div className="space-y-4">
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">
+          コメントを読み込んでいます...
+        </p>
+      ) : currentUserId ? (
+        comments.length > 0 ? (
+          comments.map((comment) => (
+            <div key={comment.id}
+              className="flex justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">
+                  {comment.user.name
+                    ?? comment.user.email}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {comment.content}
+                </p>
+              </div>
+              {comment.userId === currentUserId ? (
+                <div className="flex gap-2">
+                  <Button size="sm"
+                    onClick={() => onEdit(comment.id)}>
+                    編集
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    onClick={() => onDelete(comment.id)}>
+                    削除
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            コメントはまだありません。
+          </p>
         )
-      : <p>コメントはまだありません</p>}
-  </div>
-);
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          コメントを見るにはログインしてください。
+        </p>
+      )}
+    </div>
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- 三項演算子が3段ネストしていて、どの条件で何が出るか追いにくい
-- コメントの種類が増えるとネストがさらに深くなる
+- JSX の中で `isLoading` / 認証 / 空配列 / 自分のコメント判定がネストしている
+- 正常系のコメント表示にたどり着くまで、条件分岐を何段も追う必要がある
+- ローディングや未ログインの表示を後から変更すると、親の JSX 全体を読み直すことになる
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-if (comments.length === 0) {
-  return <p>コメントはまだありません</p>;
-}
+import { Button } from '@/component/ui/button';
 
-return (
-  <div>
-    {comments.map((comment) => (
-      <CommentItem
-        key={comment.id}
-        comment={comment}
-        isOwner={comment.author?.id === currentUser.id}
-      />
-    ))}
-  </div>
-);
+type CommentItem = {
+  id: string;
+  content: string;
+  userId: string;
+  user: {
+    name: string | null;
+    email: string;
+  };
+};
+
+type CommentListProps = {
+  comments: CommentItem[];
+  currentUserId: string | null;
+  isLoading: boolean;
+  onEdit: (commentId: string) => void;
+  onDelete: (commentId: string) => void;
+};
+
+export function CommentList({
+  comments,
+  currentUserId,
+  isLoading,
+  onEdit,
+  onDelete,
+}: CommentListProps) {
+  if (isLoading) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        コメントを読み込んでいます...
+      </p>
+    );
+  }
+
+  if (!currentUserId) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        コメントを見るにはログインしてください。
+      </p>
+    );
+  }
+
+  if (comments.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        コメントはまだありません。
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {comments.map((comment) => {
+        const isOwner =
+          comment.userId === currentUserId;
+
+        return (
+          <div key={comment.id}
+            className="flex justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">
+                {comment.user.name
+                  ?? comment.user.email}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {comment.content}
+              </p>
+            </div>
+            {isOwner && (
+              <div className="flex gap-2">
+                <Button size="sm"
+                  onClick={() => onEdit(comment.id)}>
+                  編集
+                </Button>
+                <Button size="sm" variant="outline"
+                  onClick={() => onDelete(comment.id)}>
+                  削除
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 ```
 
 **このコードの強み**:
 
-- early return で空状態を先に処理。残りは正常系だけ
-- `isOwner` を props で渡して、表示の分岐は CommentItem 内部に閉じ込める
-- 読む人が上から順に理解できる
+- 例外的な表示を early return で先に返し、最後の `return` を正常系だけにできる
+- 認証チェックと空状態の処理が独立しているので、変更箇所を探しやすい
+- `isOwner` を名前付き変数にすることで、自分のコメントだけ操作できる意図が伝わりやすい
 
 #### 🎓 覚えておきたいエッセンス
 
-JSX 内の三項演算子ネストは early return + props 分離で解消する。条件分岐をコンポーネントの中に閉じ込めると、親は「何を表示するか」だけに集中できる。
+JSX の三項演算子が深くなったら、先に返せる状態を early return に逃がす。
+親コンポーネントは「正常に表示するもの」だけを残すと読みやすくなる。
 
 ## 📋 今日のまとめ
 

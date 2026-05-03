@@ -719,47 +719,155 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — データ取得
+### 💡 Pro パターンで書こう — プロジェクト一覧は `useQuery` に任せる
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
-```typescript
-"use client";
-const [projects, setProjects] = useState([]);
-const [loading, setLoading] = useState(true);
+```tsx
+'use client';
 
-useEffect(() => {
-  fetch("/api/projects")
-    .then((res) => res.json())
-    .then((data) => setProjects(data))
-    .finally(() => setLoading(false));
-}, []);
+import { useEffect, useState } from 'react';
+
+type Project = {
+  id: string;
+  name: string;
+  description: string | null;
+};
+
+type ProjectListResponse = {
+  projects: Project[];
+};
+
+async function fetchProjects(): Promise<Project[]> {
+  const response = await fetch('/api/projects?isArchived=false');
+
+  if (!response.ok) {
+    throw new Error('プロジェクト一覧を取得できませんでした');
+  }
+
+  const body = (await response.json()) as ProjectListResponse;
+
+  return body.projects;
+}
+
+export function ProjectListPanel() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProjects() {
+      try {
+        const nextProjects = await fetchProjects();
+
+        if (!cancelled) {
+          setProjects(nextProjects);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'プロジェクト一覧を取得できませんでした',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadProjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (isLoading) {
+    return <p>読み込み中</p>;
+  }
+
+  if (errorMessage) {
+    return <p>{errorMessage}</p>;
+  }
+
+  return (
+    <ul className="space-y-2">
+      {projects.map((project) => (
+        <li key={project.id} className="rounded-md border p-3">
+          <p className="font-medium">{project.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {project.description ?? '説明なし'}
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- 状態管理が3つ（data, loading, error）必要で、書き忘れやすい
-- キャッシュがないので画面遷移のたびに毎回取得する
-- エラーハンドリングを忘れると、失敗時に画面が壊れる
+- `projects`、`isLoading`、`errorMessage` を自分で同期させる必要があり、状態の組み合わせが増える
+- キャッシュや再取得の仕組みを毎回考えることになり、一覧画面ごとに実装がばらつく
+- レスポンスの型を `as ProjectListResponse` で信じているので、APIの形が変わっても気づきにくい
 
 ### ✅ After（プロが書くコード）
 
-```typescript
-"use client";
-const { data: projects, isLoading } = api.project.getAll.useQuery({
-  isArchived: false,
-});
+```tsx
+'use client';
+
+import { api } from '@/trpc/react';
+
+export function ProjectListPanel() {
+  const {
+    data: projects = [],
+    isLoading,
+    error,
+  } = api.project.getAll.useQuery({
+    isArchived: false,
+  });
+
+  if (isLoading) {
+    return <p>読み込み中</p>;
+  }
+
+  if (error) {
+    return <p>{error.message}</p>;
+  }
+
+  return (
+    <ul className="space-y-2">
+      {projects.map((project) => (
+        <li key={project.id} className="rounded-md border p-3">
+          <p className="font-medium">{project.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {project.description ?? '説明なし'}
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
+}
 ```
 
 **このコードの強み**:
 
-- 1行で data, loading, error が全部手に入る
-- tRPC + TanStack Query が自動でキャッシュ・再取得を管理
-- 型も自動で付くので、`projects` の中身を typo すると即コンパイルエラー
+- `data`、`isLoading`、`error` が1つのフックから揃って返るので、状態管理がまとまる
+- tRPCとTanStack Queryがキャッシュ、再取得、型推論をまとめて面倒見てくれる
+- `project.name` や `project.description` の型がサーバー側ルーターからつながるので、変更に強い
 
 #### 🎓 覚えておきたいエッセンス
 
-`useEffect` + `fetch` + `useState` の3点セットは React の古い書き方。tRPC の `useQuery` なら1行で同じことができて、キャッシュも型安全もタダで付いてくる。
+一覧取得は `useEffect` で手作りするより、**データ取得専用のフックに任せる** ほうが安定する。
+tRPCの `useQuery` は、取得・状態・型をまとめて引き受けてくれるんや。
 
 ## 📋 今日のまとめ
 

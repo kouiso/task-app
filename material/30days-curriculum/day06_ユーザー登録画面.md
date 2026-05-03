@@ -628,47 +628,131 @@ const onSubmit = async (
 
 ---
 
-### 💡 Pro パターンで書こう — API レスポンスの型定義
+### 💡 Pro パターンで書こう — 登録APIの結果は判別共用体で受け取る
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-// API の結果を string で判定
-const handleRegister = async (data: RegisterData) => {
-  const result = await registerUser(data);
-  if (typeof result === "string") {
-    setError(result);
-  } else if (result && typeof result === "object" && "id" in result) {
-    router.push("/login");
-  }
+type RegisterInput = {
+  name: string;
+  email: string;
+  password: string;
 };
+
+type RegisteredUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type RegisterApiResponse = RegisteredUser | string;
+
+const registeredEmails = new Set<string>(['admin@example.com']);
+
+export function registerUser(input: RegisterInput): RegisterApiResponse {
+  if (registeredEmails.has(input.email)) {
+    return 'このメールアドレスは登録済みです';
+  }
+
+  return {
+    id: 'user_001',
+    name: input.name,
+    email: input.email,
+  };
+}
+
+export function buildRegisterMessage(result: RegisterApiResponse): string {
+  if (typeof result === 'string') {
+    return result;
+  }
+
+  return `${result.name}さんの登録が完了しました`;
+}
+
+const result = registerUser({
+  name: 'Kouiso',
+  email: 'kouiso@example.com',
+  password: 'password123',
+});
+
+console.log(buildRegisterMessage(result));
 ```
 
 **このコードの問題点**:
 
-- `typeof` で分岐すると、どんな値が来るか型からは読めない
-- 新しいエラーパターン（メール重複など）を足すと分岐が膨張する
-- `result` の形がコードを読まないとわからない
+- `string` なら失敗、`object` なら成功という約束が型名から読み取りづらい
+- エラーにコードやフィールド名を足したくなったとき、`string` では表現が足りなくなる
+- 呼び出し側が毎回 `typeof` を覚えておく必要があり、分岐の書き方が揺れやすい
 
 ### ✅ After（プロが書くコード）
 
 ```typescript
-// tRPC が型付きの成功/エラーを自動で返す
-const registerMutation = api.auth.register.useMutation({
-  onSuccess: () => router.push("/login"),
-  onError: (error) => setError(error.message),
+type RegisterInput = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+type RegisteredUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type RegisterResult =
+  | { ok: true; user: RegisteredUser }
+  | { ok: false; error: string };
+
+const registeredEmails = new Set<string>(['admin@example.com']);
+
+export function registerUser(input: RegisterInput): RegisterResult {
+  if (registeredEmails.has(input.email)) {
+    return {
+      ok: false,
+      error: 'このメールアドレスは登録済みです',
+    };
+  }
+
+  return {
+    ok: true,
+    user: {
+      id: 'user_001',
+      name: input.name,
+      email: input.email,
+    },
+  };
+}
+
+export function buildRegisterMessage(result: RegisterResult): string {
+  if (!result.ok) {
+    return result.error;
+  }
+
+  return `${result.user.name}さんの登録が完了しました`;
+}
+
+const result = registerUser({
+  name: 'Kouiso',
+  email: 'kouiso@example.com',
+  password: 'password123',
 });
+
+console.log(buildRegisterMessage(result));
 ```
 
 **このコードの強み**:
 
-- 成功と失敗の分岐が `onSuccess` / `onError` で明確
-- `error.message` は型安全。typo するとコンパイルエラーで教えてくれる
-- 新しいエラーパターンはサーバー側で追加するだけ。クライアント側は変更不要
+- `ok` を見るだけで成功と失敗が分かれ、返ってくる値の形もTypeScriptが絞り込んでくれる
+- 失敗時に `errorCode` や `field` を足す場合も、失敗側の型へ自然に拡張できる
+- 呼び出し側の分岐が毎回同じ形になるので、登録後の画面遷移やエラー表示を保守しやすい
 
 #### 🎓 覚えておきたいエッセンス
 
-API レスポンスの成功/失敗を `typeof` や `in` で判定するのは危うい。tRPC や zod を使えば、型が成功と失敗の形を保証してくれる。
+APIレスポンスは「なんとなく文字列なら失敗」より、**成功と失敗の形を型で分ける** ほうが強い。
+判別共用体にしておくと、分岐を書いた瞬間に中身の型まで決まるんや。
 
 ## 🏁 完成コード全体
 
