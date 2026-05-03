@@ -1002,39 +1002,155 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — タスクのグループ分け
+### 💡 Pro パターンで書こう — 自分のタスクをステータス別にまとめる
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const todoTasks = tasks.filter((t) => t.status === "TODO");
-const inProgressTasks = tasks.filter((t) => t.status === "IN_PROGRESS");
-const doneTasks = tasks.filter((t) => t.status === "DONE");
-// ステータスが増えたら行を追加...
+import {
+  TASK_STATUS,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+
+type MyTask = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+};
+
+type StatusTaskGroups = {
+  todo: MyTask[];
+  inProgress: MyTask[];
+  inReview: MyTask[];
+  done: MyTask[];
+};
+
+function groupTasksByStatus(
+  tasks: MyTask[],
+): StatusTaskGroups {
+  const groups: StatusTaskGroups = {
+    todo: [],
+    inProgress: [],
+    inReview: [],
+    done: [],
+  };
+
+  for (const task of tasks) {
+    switch (task.status) {
+      case TASK_STATUS.TODO:
+        groups.todo.push(task);
+        break;
+      case TASK_STATUS.IN_PROGRESS:
+        groups.inProgress.push(task);
+        break;
+      case TASK_STATUS.IN_REVIEW:
+        groups.inReview.push(task);
+        break;
+      case TASK_STATUS.DONE:
+        groups.done.push(task);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return groups;
+}
+
+function buildStatusSections(tasks: MyTask[]) {
+  const groups = groupTasksByStatus(tasks);
+
+  return [
+    {
+      title: TASK_STATUS_LABELS.TODO,
+      tasks: groups.todo,
+    },
+    {
+      title: TASK_STATUS_LABELS.IN_PROGRESS,
+      tasks: groups.inProgress,
+    },
+    {
+      title: TASK_STATUS_LABELS.IN_REVIEW,
+      tasks: groups.inReview,
+    },
+    {
+      title: TASK_STATUS_LABELS.DONE,
+      tasks: groups.done,
+    },
+  ];
+}
 ```
 
 **このコードの問題点**:
 
-- ステータスが増えるたびにフィルター行を足す必要がある
-- 配列を何度も走査するのでデータが多いと非効率
-- 変数名がステータスごとにバラバラで、まとめて扱いにくい
+- `switch` と `return` の配列で、同じステータス順を2回管理している
+- `BLOCKED` など別のグループを足すと、型・初期値・分岐・表示配列を全部直す必要がある
+- グループ対象のステータスがコード全体に散らばり、並び順の意図が見えにくい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const grouped = Object.groupBy(tasks, (t) => t.status);
-// grouped.TODO, grouped.IN_PROGRESS, grouped.DONE が自動で作られる
+import {
+  TASK_STATUS,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+
+type MyTask = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+};
+
+type StatusSection = {
+  status: TaskStatus;
+  title: string;
+  tasks: MyTask[];
+};
+
+const MY_TASK_STATUS_ORDER: TaskStatus[] = [
+  TASK_STATUS.TODO,
+  TASK_STATUS.IN_PROGRESS,
+  TASK_STATUS.IN_REVIEW,
+  TASK_STATUS.DONE,
+];
+
+function buildStatusSections(
+  tasks: MyTask[],
+): StatusSection[] {
+  const sectionMap = new Map<TaskStatus, StatusSection>(
+    MY_TASK_STATUS_ORDER.map((status) => [
+      status,
+      {
+        status,
+        title: TASK_STATUS_LABELS[status],
+        tasks: [],
+      },
+    ]),
+  );
+
+  for (const task of tasks) {
+    sectionMap.get(task.status)?.tasks.push(task);
+  }
+
+  return [...sectionMap.values()];
+}
 ```
 
 **このコードの強み**:
 
-- 1行で全ステータスのグループが作れる
-- ステータスが増えても、この行は変わらない
-- 配列の走査は1回だけ
+- ステータスの並び順が `MY_TASK_STATUS_ORDER` に集約される
+- `Map` によって「ステータス → 表示セクション」の対応をそのまま表現できる
+- 新しい表示グループを追加するときは、並び順の配列にステータスを足すだけで済む
 
 #### 🎓 覚えておきたいエッセンス
 
-同じ配列を何度もフィルターするなら `Object.groupBy` で1回にまとめる。ステータスの追加にもコード変更なしで対応できる。
+`switch` は少数分岐なら分かりやすい。でも「キーごとに入れ物を持つ」処理なら `Map` のほうが意図に近い。
+グループ化は分岐ではなく、対応表として考えると読みやすくなる。
 
 ## 📋 今日のまとめ
 

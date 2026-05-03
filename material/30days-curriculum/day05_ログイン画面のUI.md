@@ -741,58 +741,132 @@ export default function LoginPage() {
 
 ---
 
-### 💡 Pro パターンで書こう — フォームバリデーション
+### 💡 Pro パターンで書こう — ログインフォームは `as` で信じ切らず zod で受け止める
 
 ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-**Before/After** で見比べてみよう。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-// フォーム送信時に手動でチェック
-const onSubmit = async (data: { email: string; password: string }) => {
-  if (!data.email.includes("@")) {
-    setError("メールアドレスの形式が正しくありません");
-    return;
-  }
-  if (data.password.length < 8) {
-    setError("パスワードは8文字以上必要です");
-    return;
-  }
-  await login(data);
+type LoginFormValues = {
+  email: string;
+  password: string;
 };
+
+type LoginValidationResult =
+  | { ok: true; values: LoginFormValues }
+  | { ok: false; errors: { email?: string; password?: string } };
+
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function validateLoginForm(values: LoginFormValues): LoginValidationResult {
+  const email = values.email.trim();
+  const password = values.password;
+  const errors: { email?: string; password?: string } = {};
+
+  if (!isEmail(email)) {
+    errors.email = 'メールアドレス形式で入力してください';
+  }
+
+  if (password.length < 8) {
+    errors.password = 'パスワードは8文字以上で入力してください';
+  }
+
+  if (errors.email || errors.password) {
+    return { ok: false, errors };
+  }
+
+  return { ok: true, values: { email, password } };
+}
+
+export function readLoginForm(formData: FormData): LoginValidationResult {
+  const values = Object.fromEntries(formData.entries()) as LoginFormValues;
+
+  return validateLoginForm({
+    email: typeof values.email === 'string' ? values.email : '',
+    password: typeof values.password === 'string' ? values.password : '',
+  });
+}
+
+const demoFormData = new FormData();
+demoFormData.set('email', 'admin@example.com');
+demoFormData.set('password', 'password123');
+
+console.log(readLoginForm(demoFormData));
 ```
 
 **このコードの問題点**:
 
-- バリデーションルールがロジックの中に埋もれて、一覧性がない
-- 新しいルール（大文字必須など）を足すたびに if 文が増える
-- ルールの再利用ができない（登録画面でも同じチェックを書く？）
+- `as LoginFormValues` は「そういう型として扱う」と宣言しているだけで、入力値を検査しているわけではない
+- バリデーションルールが関数内に散らばるので、フォーム項目が増えたときに見落としが起きやすい
+- APIに渡す境界で何を保証したのかが、型定義と実行時チェックで分かれて読みづらい
 
 ### ✅ After（プロが書くコード）
 
 ```typescript
-// zodスキーマでルールを宣言的に定義
+import { z } from 'zod';
+
 const loginSchema = z.object({
-  email: z.string().email("メールアドレスの形式が正しくありません"),
-  password: z.string().min(8, "パスワードは8文字以上必要です"),
+  email: z
+    .preprocess(
+      (value) => (typeof value === 'string' ? value.trim() : ''),
+      z.string().refine(
+        (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+        'メールアドレス形式で入力してください',
+      ),
+    ),
+  password: z.preprocess(
+    (value) => (typeof value === 'string' ? value : ''),
+    z.string().min(8, 'パスワードは8文字以上で入力してください'),
+  ),
 });
 
-// react-hook-form が zodResolver 経由で自動チェック
-const { register, handleSubmit, formState: { errors } } = useForm({
-  resolver: zodResolver(loginSchema),
-});
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+type LoginValidationResult =
+  | { ok: true; values: LoginFormValues }
+  | { ok: false; errors: { email?: string; password?: string } };
+
+export function readLoginForm(formData: FormData): LoginValidationResult {
+  const result = loginSchema.safeParse(
+    Object.fromEntries(formData.entries()),
+  );
+
+  if (!result.success) {
+    const fieldErrors = result.error.flatten().fieldErrors;
+
+    return {
+      ok: false,
+      errors: {
+        email: fieldErrors.email?.[0],
+        password: fieldErrors.password?.[0],
+      },
+    };
+  }
+
+  return { ok: true, values: result.data };
+}
+
+const demoFormData = new FormData();
+demoFormData.set('email', 'admin@example.com');
+demoFormData.set('password', 'password123');
+
+console.log(readLoginForm(demoFormData));
 ```
 
 **このコードの強み**:
 
-- ルールが1箇所にまとまっていて、何をチェックしているか一目でわかる
-- 新しいルールはスキーマに1行足すだけ
-- 同じスキーマをサーバー側でも使い回せる（Day 06 で実践する）
+- zodスキーマが「入力の形」と「検査ルール」を同じ場所で持つので、読み手が判断しやすい
+- `z.infer` によって、バリデーション済みデータの型がスキーマから自動で決まる
+- フィールドが増えても、まずスキーマを更新する流れにできるのでフォーム全体の一貫性が保ちやすい
 
 #### 🎓 覚えておきたいエッセンス
 
-バリデーションは「ロジックの中に if で書く」のではなく「スキーマとして宣言する」。宣言的に書くと、ルールの追加・変更・共有が全部楽になる。
+`as` は型を黙らせる道具で、zod は入力を確かめる道具や。
+ログインみたいに外から値が入る場所では、**信じる前に検査する** ほうが強い。
 
 ## 📋 今日のまとめ
 

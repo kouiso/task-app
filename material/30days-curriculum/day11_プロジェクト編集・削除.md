@@ -727,43 +727,183 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — Optional な値の取り扱い
+### 💡 Pro パターンで書こう — 編集フォームの optional な値は `?.` と `??` で整える
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-// プロジェクトのオーナー名を表示
-let ownerName = "不明";
-if (project !== null && project !== undefined) {
+type ProjectFromApi = {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  owner: {
+    name: string | null;
+    email: string;
+  } | null;
+};
+
+type ProjectEditFormData = {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  ownerLabel: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+function toDateInputValue(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+export function buildProjectEditForm(
+  project: ProjectFromApi | null | undefined,
+): ProjectEditFormData | undefined {
+  if (project === null || project === undefined) {
+    return undefined;
+  }
+
+  let description = '';
+  if (project.description !== null && project.description !== undefined) {
+    description = project.description;
+  }
+
+  let color = '#3b82f6';
+  if (project.color !== null && project.color !== undefined) {
+    color = project.color;
+  }
+
+  let ownerLabel = '担当者未設定';
   if (project.owner !== null && project.owner !== undefined) {
     if (project.owner.name !== null && project.owner.name !== undefined) {
-      ownerName = project.owner.name;
+      ownerLabel = project.owner.name;
+    } else {
+      ownerLabel = project.owner.email;
     }
   }
+
+  const formData: ProjectEditFormData = {
+    id: project.id,
+    name: project.name,
+    description,
+    color,
+    ownerLabel,
+  };
+
+  if (project.startDate !== null && project.startDate !== undefined) {
+    formData.startDate = toDateInputValue(project.startDate);
+  }
+
+  if (project.endDate !== null && project.endDate !== undefined) {
+    formData.endDate = toDateInputValue(project.endDate);
+  }
+
+  return formData;
 }
+
+console.log(
+  buildProjectEditForm({
+    id: 'project_001',
+    name: '教材制作',
+    description: null,
+    color: null,
+    startDate: new Date('2026-05-01T00:00:00.000Z'),
+    endDate: null,
+    owner: { name: null, email: 'owner@example.com' },
+  }),
+);
 ```
 
 **このコードの問題点**:
 
-- null チェックのネストが深くて読みにくい
-- プロパティが増えるたびにネストが1段増える
-- 「結局何がしたいのか」がコードの奥に埋もれる
+- `null` と `undefined` の確認が何度も出てきて、編集フォームに必要な値が見えづらい
+- optional な項目が増えるほど `let` と `if` が増え、変換処理の見通しが悪くなる
+- `owner.name` のようなネストした値を読むたびに、同じ形の null チェックが増えやすい
 
 ### ✅ After（プロが書くコード）
 
 ```typescript
-const ownerName = project?.owner?.name ?? "不明";
+type ProjectFromApi = {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  owner: {
+    name: string | null;
+    email: string;
+  } | null;
+};
+
+type ProjectEditFormData = {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  ownerLabel: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+function toDateInputValue(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+export function buildProjectEditForm(
+  project: ProjectFromApi | null | undefined,
+): ProjectEditFormData | undefined {
+  if (!project) {
+    return undefined;
+  }
+
+  const startDate = project.startDate
+    ? toDateInputValue(project.startDate)
+    : undefined;
+  const endDate = project.endDate
+    ? toDateInputValue(project.endDate)
+    : undefined;
+
+  return {
+    id: project.id,
+    name: project.name,
+    description: project.description ?? '',
+    color: project.color ?? '#3b82f6',
+    ownerLabel: project.owner?.name ?? project.owner?.email ?? '担当者未設定',
+    ...(startDate ? { startDate } : {}),
+    ...(endDate ? { endDate } : {}),
+  };
+}
+
+console.log(
+  buildProjectEditForm({
+    id: 'project_001',
+    name: '教材制作',
+    description: null,
+    color: null,
+    startDate: new Date('2026-05-01T00:00:00.000Z'),
+    endDate: null,
+    owner: { name: null, email: 'owner@example.com' },
+  }),
+);
 ```
 
 **このコードの強み**:
 
-- 1行で同じことが書ける
-- `?.` が途中で null/undefined に当たったら自動的に止まる
-- `??` で「値がなかった場合のデフォルト」を最後に書ける
+- `??` で空欄時の初期値をその場で書けるので、フォームに渡す値が読みやすい
+- `project.owner?.name ?? project.owner?.email` のように、ネストした値も安全に辿れる
+- optional な日付が増えても、変換した値を条件付きスプレッドで自然に足せる
 
 #### 🎓 覚えておきたいエッセンス
 
-`?.`（オプショナルチェーニング）と `??`（Null 合体演算子）は、null チェックの if ネスト地獄を1行にする JavaScript の必須テクニック。
+編集画面では「値がないかもしれない」が何度も出てくる。
+多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになるで。
 
 ## 📋 今日のまとめ
 

@@ -939,45 +939,168 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — ステータスの型定義
+### 💡 Pro パターンで書こう — タスクのステータス・優先度型を1か所に集約する
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-// 文字列リテラルをあちこちで重複定義
-type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+import { z } from 'zod';
 
-// 別のファイルでも同じ定義
-const STATUSES: ("TODO" | "IN_PROGRESS" | "DONE")[] = [
-  "TODO", "IN_PROGRESS", "DONE"
-];
+type TaskStatus =
+  | 'TODO'
+  | 'IN_PROGRESS'
+  | 'IN_REVIEW'
+  | 'DONE'
+  | 'CANCELLED'
+  | 'BLOCKED';
+
+type TaskPriority =
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'URGENT';
+
+const taskFormSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: z.enum([
+    'TODO',
+    'IN_PROGRESS',
+    'IN_REVIEW',
+    'DONE',
+    'CANCELLED',
+    'BLOCKED',
+  ]),
+  priority: z.enum([
+    'LOW',
+    'MEDIUM',
+    'HIGH',
+    'URGENT',
+  ]),
+  dueDate: z.string().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().min(1, 'プロジェクトは必須です'),
+  assigneeId: z.string().optional(),
+});
+
+export interface TaskFormData {
+  id?: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string;
+  estimatedHours?: number;
+  projectId: string;
+  assigneeId?: string;
+}
+
+const statusLabels: Record<TaskStatus, string> = {
+  TODO: '未対応',
+  IN_PROGRESS: '進行中',
+  IN_REVIEW: 'レビュー中',
+  DONE: '完了',
+  CANCELLED: 'キャンセル',
+  BLOCKED: 'ブロック',
+};
+
+const priorityLabels: Record<TaskPriority, string> = {
+  LOW: '低',
+  MEDIUM: '中',
+  HIGH: '高',
+  URGENT: '緊急',
+};
+
+const defaultTaskValues = {
+  status: 'TODO' as TaskStatus,
+  priority: 'MEDIUM' as TaskPriority,
+};
 ```
 
 **このコードの問題点**:
 
-- DB にステータスを追加したら、全ファイルを手動で探して直す必要がある
-- 片方だけ直してもう片方を忘れると、実行時エラーになる
-- 型定義が散らばって、どれが正しいかわからなくなる
+- ステータスや優先度の値を、型・zod・ラベル・初期値で何度も書いている
+- 新しいステータスを追加したとき、どこか1か所の更新漏れでフォームと表示がずれやすい
+- `as TaskStatus` のような型アサーションが増え、実際の値が安全かどうかを型だけで追いにくい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-// Prisma の enum をそのまま使う
-import { TaskStatus } from "@prismaClient";
+import { z } from 'zod';
+import {
+  TASK_PRIORITY,
+  TASK_PRIORITY_LABELS,
+  type TaskPriority,
+} from '@/lib/constant/priority';
+import {
+  TASK_STATUS,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
 
-// 配列も enum の値から作る
-const STATUSES = Object.values(TaskStatus);
+const taskFormSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: z.nativeEnum(TASK_STATUS),
+  priority: z.nativeEnum(TASK_PRIORITY),
+  dueDate: z.string().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().min(1, 'プロジェクトは必須です'),
+  assigneeId: z.string().optional(),
+});
+
+type TaskFormValues = z.infer<typeof taskFormSchema>;
+
+export interface TaskFormData {
+  id?: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string;
+  estimatedHours?: number;
+  projectId: string;
+  assigneeId?: string;
+}
+
+const defaultTaskValues: Pick<
+  TaskFormValues,
+  'status' | 'priority'
+> = {
+  status: TASK_STATUS.TODO,
+  priority: TASK_PRIORITY.MEDIUM,
+};
+
+const statusOptions = Object.entries(
+  TASK_STATUS_LABELS,
+).map(([value, label]) => ({
+  value,
+  label,
+}));
+
+const priorityOptions = Object.entries(
+  TASK_PRIORITY_LABELS,
+).map(([value, label]) => ({
+  value,
+  label,
+}));
 ```
 
 **このコードの強み**:
 
-- DB スキーマの `enum TaskStatus` が唯一の定義元
-- `prisma migrate` でステータスを追加すれば、型も配列も自動更新
-- 手動の重複定義がゼロになる
+- ステータスと優先度の正しい値を `TASK_STATUS` / `TASK_PRIORITY` に集約できる
+- zod スキーマ・フォーム型・Select 選択肢が同じ定数を参照するので、値のずれが起きにくい
+- 新しい値を追加するとき、定数ファイルを中心に見ればよく、変更範囲が読みやすい
 
 #### 🎓 覚えておきたいエッセンス
 
-型の定義元は1箇所だけにする（Single Source of Truth）。Prisma の enum を直接 import すれば、DB とコードの型が常に一致する。
+同じ union をあちこちに書くと、最初は速くても後で必ずずれる。
+選択肢になる値は、型・バリデーション・表示ラベルを同じ出どころに寄せるのが強い。
 
 ## 📋 今日のまとめ
 

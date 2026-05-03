@@ -592,50 +592,87 @@ const isAuthenticated = t.middleware(
 
 ---
 
-### 💡 Pro パターンで書こう — 認証ガード
+### 💡 Pro パターンで書こう — 認証ガードは early return で道順を見せる
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
-```typescript
-// ネストした三項演算子で表示を切り替え
-return session === undefined
-  ? <Loading />
-  : session === null
-    ? <Redirect to="/login" />
-    : session.role === "ADMIN"
-      ? <AdminDashboard user={session} />
-      : <UserDashboard user={session} />;
+```tsx
+import type { ReactNode } from 'react';
+
+type AuthStatus = 'loading' | 'guest' | 'authenticated';
+
+type AuthGuardProps = {
+  authStatus: AuthStatus;
+  children: ReactNode;
+};
+
+export function AuthGuard({ authStatus, children }: AuthGuardProps) {
+  return authStatus === 'loading' ? (
+    <main className="flex min-h-screen items-center justify-center">
+      セッション確認中
+    </main>
+  ) : authStatus === 'guest' ? (
+    <main className="flex min-h-screen items-center justify-center">
+      ログイン画面へ移動します
+    </main>
+  ) : (
+    <>{children}</>
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- ネストが深くなるほど「どの条件で何が表示されるか」が読みにくい
-- 新しい条件（メール未確認ユーザーなど）を足すとさらにネストが深くなる
-- コードレビューで「この分岐、合ってる？」と毎回確認が必要
+- 条件が増えるほど `?` と `:` の対応を目で追う必要が出てくる
+- ローディング、未ログイン、ログイン済みの流れが横に詰まって読みにくい
+- メール未確認などの条件を追加すると、さらに三項演算子が深くなりやすい
 
 ### ✅ After（プロが書くコード）
 
-```typescript
-// early return で条件を先に弾く
-if (session === undefined) return <Loading />;
-if (session === null) {
-  router.push("/login");
-  return null;
+```tsx
+import type { ReactNode } from 'react';
+
+type AuthStatus = 'loading' | 'guest' | 'authenticated';
+
+type AuthGuardProps = {
+  authStatus: AuthStatus;
+  children: ReactNode;
+};
+
+export function AuthGuard({ authStatus, children }: AuthGuardProps) {
+  if (authStatus === 'loading') {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        セッション確認中
+      </main>
+    );
+  }
+
+  if (authStatus === 'guest') {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        ログイン画面へ移動します
+      </main>
+    );
+  }
+
+  return <>{children}</>;
 }
-// ここに来た時点で session は確実に存在する
-if (session.role === "ADMIN") return <AdminDashboard user={session} />;
-return <UserDashboard user={session} />;
 ```
 
 **このコードの強み**:
 
-- 上から順に読めば、どの条件で何が起きるか一目瞭然
-- 新しい条件は途中に1行足すだけ
-- TypeScript が各 return の後で型を自動的に絞ってくれる
+- 上から順に「まだ確認中」「未ログイン」「ログイン済み」と読める
+- 新しいガード条件を足すときも、独立した `if` と `return` を1つ増やせば済む
+- 最後の `return` に来た時点でログイン済みの画面だけを考えられる
 
 #### 🎓 覚えておきたいエッセンス
 
-三項演算子のネストは「読めるけど辛い」コードの典型。early return で「異常系を先に弾く」書き方にすると、正常系のコードがフラットに書ける。
+認証ガードは分岐が増えやすい場所や。
+三項演算子で詰め込むより、**先に返して本筋を残す** ほうが読みやすく育てやすい。
 
 ## 📋 今日のまとめ
 

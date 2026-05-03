@@ -860,52 +860,131 @@ npm run lint
 
 ---
 
-### 💡 Pro パターンで書こう — 一括操作のハンドラー
+### 💡 Pro パターンで書こう — 一括操作のハンドラは Map で選ぶ
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const handleBulkAction = (action: string, taskIds: string[]) => {
-  if (action === "complete") {
-    taskIds.forEach((id) => updateTask({ id, status: "DONE" }));
-  } else if (action === "delete") {
-    taskIds.forEach((id) => deleteTask({ id }));
-  } else if (action === "archive") {
-    taskIds.forEach((id) => archiveTask({ id }));
-  }
+// filepath: src/app/task/page.tsx
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
+
+type BulkAction = 'complete' | 'delete' | TaskStatus;
+
+type BulkActionContext = {
+  selectedTasks: Set<string>;
+  bulkComplete: (ids: string[]) => void;
+  openDeleteDialog: () => void;
+  bulkUpdateStatus: (ids: string[], status: TaskStatus) => void;
 };
+
+export function handleBulkAction(
+  action: BulkAction,
+  context: BulkActionContext,
+) {
+  if (context.selectedTasks.size === 0) {
+    return;
+  }
+
+  const ids = Array.from(context.selectedTasks);
+
+  switch (action) {
+    case 'complete':
+      context.bulkComplete(ids);
+      return;
+    case 'delete':
+      context.openDeleteDialog();
+      return;
+    case TASK_STATUS.TODO:
+      context.bulkUpdateStatus(ids, TASK_STATUS.TODO);
+      return;
+    case TASK_STATUS.IN_PROGRESS:
+      context.bulkUpdateStatus(ids, TASK_STATUS.IN_PROGRESS);
+      return;
+    case TASK_STATUS.IN_REVIEW:
+      context.bulkUpdateStatus(ids, TASK_STATUS.IN_REVIEW);
+      return;
+    case TASK_STATUS.DONE:
+      context.bulkUpdateStatus(ids, TASK_STATUS.DONE);
+      return;
+    case TASK_STATUS.CANCELLED:
+      context.bulkUpdateStatus(ids, TASK_STATUS.CANCELLED);
+      return;
+    case TASK_STATUS.BLOCKED:
+      context.bulkUpdateStatus(ids, TASK_STATUS.BLOCKED);
+      return;
+  }
+}
 ```
 
 **このコードの問題点**:
 
-- `action` が `string` なので typo してもエラーにならない
-- アクションが増えるたびに else if を足す
-- 各 `forEach` で N 回の API コールが走る（N+1 問題）
+- ステータスが増えるたびに `case` が増え、ハンドラの見通しが悪くなる
+- 「操作名」と「実行する処理」の対応が switch の中に埋もれる
+- 削除だけダイアログを開く、完了だけ別 API などの違いが増えると分岐がさらに長くなる
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const BULK_ACTIONS = {
-  complete: (ids: string[]) => bulkUpdateStatus.mutate({ ids, status: "DONE" }),
-  delete: (ids: string[]) => bulkDelete.mutate({ ids }),
-} as const;
+// filepath: src/app/task/page.tsx
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 
-type BulkAction = keyof typeof BULK_ACTIONS;
+type BulkAction = 'complete' | 'delete' | TaskStatus;
 
-const handleBulkAction = (action: BulkAction, taskIds: string[]) => {
-  BULK_ACTIONS[action](taskIds);
+type BulkActionContext = {
+  selectedTasks: Set<string>;
+  bulkComplete: (ids: string[]) => void;
+  openDeleteDialog: () => void;
+  bulkUpdateStatus: (ids: string[], status: TaskStatus) => void;
 };
+
+type BulkActionHandler = (context: BulkActionContext) => void;
+
+const createStatusHandler =
+  (status: TaskStatus): BulkActionHandler =>
+  (context) => {
+    context.bulkUpdateStatus(Array.from(context.selectedTasks), status);
+  };
+
+const BULK_ACTION_HANDLERS: Record<BulkAction, BulkActionHandler> = {
+  complete: (context) => {
+    context.bulkComplete(Array.from(context.selectedTasks));
+  },
+  delete: (context) => {
+    context.openDeleteDialog();
+  },
+  [TASK_STATUS.TODO]: createStatusHandler(TASK_STATUS.TODO),
+  [TASK_STATUS.IN_PROGRESS]: createStatusHandler(TASK_STATUS.IN_PROGRESS),
+  [TASK_STATUS.IN_REVIEW]: createStatusHandler(TASK_STATUS.IN_REVIEW),
+  [TASK_STATUS.DONE]: createStatusHandler(TASK_STATUS.DONE),
+  [TASK_STATUS.CANCELLED]: createStatusHandler(TASK_STATUS.CANCELLED),
+  [TASK_STATUS.BLOCKED]: createStatusHandler(TASK_STATUS.BLOCKED),
+};
+
+export function handleBulkAction(
+  action: BulkAction,
+  context: BulkActionContext,
+) {
+  if (context.selectedTasks.size === 0) {
+    return;
+  }
+
+  BULK_ACTION_HANDLERS[action](context);
+}
 ```
 
 **このコードの強み**:
 
-- `BulkAction` 型で使えるアクションが決まる。typo はコンパイルエラー
-- アクション追加はオブジェクトに1行足すだけ
-- `bulkUpdateStatus` で1回の API コールで全件更新
+- 操作名と処理の対応が `BULK_ACTION_HANDLERS` にまとまり、全体像を追いやすい
+- ステータス変更は `createStatusHandler` に寄せられるので、重複が減る
+- 新しい一括操作を足すときは Map に1行追加する形になり、既存分岐を壊しにくい
 
 #### 🎓 覚えておきたいエッセンス
 
-if-else の分岐は「アクションオブジェクト + 型」に置き換えると、型安全かつ拡張が楽になる。ループ内の個別 API コールは bulk API に置き換える。
+`switch` が「値に応じて関数を選ぶだけ」になってきたら、
+`Record` や Map で処理表を作ると読みやすくなる。
 
 ## ⚠️ つまずきポイント
 

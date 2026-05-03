@@ -137,9 +137,51 @@ write_env_example() {
   fi
 
   cat <<'EOF' > .env.example
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/task_app"
-JWT_SECRET="replace-with-a-secure-secret"
-NEXTAUTH_URL="http://localhost:3000"
+# ------------------------------------------------------------------------------
+# 開発者情報 (seedコマンドで管理者ユーザーを作成する際に使用)
+# ------------------------------------------------------------------------------
+_DEVELOPER_EMAIL=
+_DEVELOPER_FIRSTNAME=
+_DEVELOPER_LASTNAME=
+
+# ------------------------------------------------------------------------------
+# Docker Compose
+# ------------------------------------------------------------------------------
+# ホスト側のポート設定 (競合する場合はここを変更してください)
+_DOCKER_COMPOSE_HOST_PORT_DB=5432
+_DOCKER_COMPOSE_HOST_PORT_BACKEND=3000
+_DOCKER_COMPOSE_HOST_PORT_BACKEND_DEBUG=9229
+_DOCKER_COMPOSE_HOST_PORT_SCHEMASPY=8080
+_DOCKER_COMPOSE_HOST_PORT_TEST_DB=5433
+
+# ------------------------------------------------------------------------------
+# アプリケーション設定
+# ------------------------------------------------------------------------------
+# Prisma connection string
+# ホストマシンから接続する場合のURL (マイグレーション等で使用)
+# ポート番号は _DOCKER_COMPOSE_HOST_PORT_DB と合わせる必要があります
+DATABASE_URL="postgresql://user:password@localhost:${_DOCKER_COMPOSE_HOST_PORT_DB}/taskapp?schema=public"
+
+# Vitest が使うテスト用DB接続URL
+# ポート番号は _DOCKER_COMPOSE_HOST_PORT_TEST_DB と合わせる必要があります
+TEST_DATABASE_URL="postgresql://user:password@localhost:${_DOCKER_COMPOSE_HOST_PORT_TEST_DB}/taskapp_test?schema=public"
+
+# JWT Authentication (32文字以上必須。本番では必ず変更してください)
+JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
+
+# App
+NODE_ENV="development"
+
+# 本番URL (robots.txt/sitemapで使用。ローカル開発では空でOK)
+# NEXT_PUBLIC_BASE_URL="https://your-app.vercel.app"
+
+# ------------------------------------------------------------------------------
+# Sentry エラーモニタリング (オプション)
+# ------------------------------------------------------------------------------
+# 設定しない場合は Sentry は無効化されます（ローカル開発・CI では通常不要）
+# DSN は https://sentry.io のプロジェクト設定から取得してください
+# NEXT_PUBLIC_SENTRY_DSN="https://xxxx@xxxx.ingest.sentry.io/xxxx"
+# SENTRY_DSN="https://xxxx@xxxx.ingest.sentry.io/xxxx"
 EOF
 }
 

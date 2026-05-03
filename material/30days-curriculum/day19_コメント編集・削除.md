@@ -496,43 +496,148 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — コメント著者の確認
+### 💡 Pro パターンで書こう — コメント著者チェックを Optional chaining で書く
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-let canEdit = false;
-if (comment !== null && comment !== undefined) {
-  if (comment.author !== null && comment.author !== undefined) {
-    if (comment.author.id !== null && comment.author.id !== undefined) {
-      if (comment.author.id === currentUserId) {
-        canEdit = true;
-      }
-    }
+import { Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/component/ui/button';
+
+type Session = {
+  user?: {
+    id?: string | null;
+  } | null;
+} | null;
+
+type CommentItem = {
+  id: string;
+  userId: string;
+  content: string;
+};
+
+function canEditComment(
+  comment: CommentItem,
+  session: Session,
+): boolean {
+  if (session === null) {
+    return false;
   }
+  if (session.user === null
+    || session.user === undefined) {
+    return false;
+  }
+  if (session.user.id === null
+    || session.user.id === undefined) {
+    return false;
+  }
+  return comment.userId === session.user.id;
+}
+
+export function CommentActions({
+  comment,
+  session,
+  onEdit,
+  onDelete,
+}: {
+  comment: CommentItem;
+  session: Session;
+  onEdit: (comment: CommentItem) => void;
+  onDelete: (commentId: string) => void;
+}) {
+  if (!canEditComment(comment, session)) {
+    return null;
+  }
+
+  return (
+    <div className="flex gap-1">
+      <Button variant="ghost" size="icon"
+        onClick={() => onEdit(comment)}>
+        <Pencil className="h-3 w-3" />
+      </Button>
+      <Button variant="ghost" size="icon"
+        onClick={() => onDelete(comment.id)}>
+        <Trash2 className="h-3 w-3" />
+      </Button>
+    </div>
+  );
 }
 ```
 
 **このコードの問題点**:
 
-- 4段ネストで「結局何を確認しているのか」が見えにくい
-- `let` + `if` の組み合わせで、変数の値が途中で変わる可能性を気にする必要がある
+- `session` → `user` → `id` の null チェックが縦に長く、本人チェックの本質が埋もれる
+- `null` と `undefined` を毎回手で分けており、同じ形のコードが増えやすい
+- 実際に知りたいことは「コメントの `userId` とログインユーザー ID が同じか」だけなのに遠回りしている
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const canEdit = comment?.author?.id === currentUserId;
+import { Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/component/ui/button';
+
+type Session = {
+  user?: {
+    id?: string | null;
+  } | null;
+} | null;
+
+type CommentItem = {
+  id: string;
+  userId: string;
+  content: string;
+};
+
+function canEditComment(
+  comment: CommentItem,
+  session: Session,
+): boolean {
+  return comment.userId === session?.user?.id;
+}
+
+export function CommentActions({
+  comment,
+  session,
+  onEdit,
+  onDelete,
+}: {
+  comment: CommentItem;
+  session: Session;
+  onEdit: (comment: CommentItem) => void;
+  onDelete: (commentId: string) => void;
+}) {
+  if (!canEditComment(comment, session)) {
+    return null;
+  }
+
+  return (
+    <div className="flex gap-1">
+      <Button variant="ghost" size="icon"
+        onClick={() => onEdit(comment)}>
+        <Pencil className="h-3 w-3" />
+      </Button>
+      <Button variant="ghost" size="icon"
+        onClick={() => onDelete(comment.id)}>
+        <Trash2 className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+}
 ```
 
 **このコードの強み**:
 
-- 1行で意図が伝わる：「コメント著者が自分かどうか」
-- `?.` が途中で null に当たったら `undefined` を返し、`=== currentUserId` は `false` になる
-- `const` なので値が変わらない安心感がある
+- `session?.user?.id` で未ログインや未取得の状態をまとめて安全に扱える
+- 本人チェックの条件が1行になり、レビュー時に意図を確認しやすい
+- `CommentActions` 側は「編集できなければ何も出さない」という表示ルールだけに集中できる
 
 #### 🎓 覚えておきたいエッセンス
 
-「あるプロパティが自分のものかチェックする」は `?.` 1つで書ける。null チェックの if ネストは過去の書き方。
+多段の null チェックは Optional chaining で短くできる。
+「途中がなければ false でよい」本人確認には、`session?.user?.id` の形がよく合う。
 
 ## 📋 今日のまとめ
 

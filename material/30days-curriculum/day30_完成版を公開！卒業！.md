@@ -549,57 +549,124 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ---
 
-### 💡 Pro パターンで書こう — 最終アーキテクチャの振り返り
+### 💡 Pro パターンで書こう — 完成版の振り返り画面は Server Component を標準にする
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-// 全ページに "use client" を付けて、全部クライアントで描画
-"use client";
-export default function DashboardPage() {
-  const [tasks, setTasks] = useState([]);
-  useEffect(() => {
-    fetch("/api/tasks").then(r => r.json()).then(setTasks);
-  }, []);
-  return <TaskList tasks={tasks} />;
+// filepath: src/app/graduation/page.tsx
+'use client';
+
+import { useState } from 'react';
+
+const CURRICULUM_SUMMARY = [
+  { label: '認証', value: 'JWT ログイン' },
+  { label: 'プロジェクト', value: 'CRUD + メンバー管理' },
+  { label: 'タスク', value: 'CRUD + 一括操作' },
+  { label: '公開', value: 'Vercel デプロイ' },
+];
+
+export default function GraduationPage() {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    await navigator.clipboard.writeText('Task-App 30日間カリキュラムを完走しました');
+    setCopied(true);
+  };
+
+  return (
+    <main className="mx-auto max-w-4xl space-y-6 p-8">
+      <h1 className="text-3xl font-bold">Task-App 30日間ハンズオン修了</h1>
+      <div className="grid gap-4 md:grid-cols-2">
+        {CURRICULUM_SUMMARY.map((item) => (
+          <section key={item.label} className="rounded-lg border p-4">
+            <p className="text-sm text-muted-foreground">{item.label}</p>
+            <p className="text-lg font-semibold">{item.value}</p>
+          </section>
+        ))}
+      </div>
+      <button type="button" className="rounded-md border px-4 py-2" onClick={handleShare}>
+        {copied ? 'コピー済み' : '卒業メッセージをコピー'}
+      </button>
+    </main>
+  );
 }
 ```
 
 **このコードの問題点**:
 
-- 全ページが Client Component で、サーバー側レンダリングの恩恵がゼロ
-- `useEffect` + `fetch` + `useState` の3点セットが全ページに散乱
-- キャッシュなし、エラーハンドリングなし、型安全なし
+- ほとんど静的な振り返り画面まで Client Component になり、不要な JavaScript が増える
+- `useState` が必要なのはコピーボタンだけなのに、ページ全体がブラウザ実行前提になる
+- 最終日の構成確認で「どこが対話部分か」が見えにくくなる
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-// page.tsx (Server Component — "use client" なし)
-export default function DashboardPage() {
+// filepath: src/app/graduation/page.tsx
+import { ShareGraduationButton } from './share-graduation-button';
+
+const CURRICULUM_SUMMARY = [
+  { label: '認証', value: 'JWT ログイン' },
+  { label: 'プロジェクト', value: 'CRUD + メンバー管理' },
+  { label: 'タスク', value: 'CRUD + 一括操作' },
+  { label: '公開', value: 'Vercel デプロイ' },
+];
+
+export default function GraduationPage() {
   return (
-    <AppLayout>
-      <DashboardContent />
-    </AppLayout>
+    <main className="mx-auto max-w-4xl space-y-6 p-8">
+      <h1 className="text-3xl font-bold">Task-App 30日間ハンズオン修了</h1>
+      <div className="grid gap-4 md:grid-cols-2">
+        {CURRICULUM_SUMMARY.map((item) => (
+          <section key={item.label} className="rounded-lg border p-4">
+            <p className="text-sm text-muted-foreground">{item.label}</p>
+            <p className="text-lg font-semibold">{item.value}</p>
+          </section>
+        ))}
+      </div>
+      <ShareGraduationButton text="Task-App 30日間カリキュラムを完走しました" />
+    </main>
   );
 }
 
-// dashboard-content.tsx ("use client")
-"use client";
-export function DashboardContent() {
-  const { data: tasks } = api.task.getAll.useQuery();
-  return <TaskList tasks={tasks ?? []} />;
+// filepath: src/app/graduation/share-graduation-button.tsx
+'use client';
+
+import { useState } from 'react';
+
+type ShareGraduationButtonProps = {
+  text: string;
+};
+
+export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+  };
+
+  return (
+    <button type="button" className="rounded-md border px-4 py-2" onClick={handleShare}>
+      {copied ? 'コピー済み' : '卒業メッセージをコピー'}
+    </button>
+  );
 }
 ```
 
 **このコードの強み**:
 
-- Server Component でレイアウトを事前描画 → 初期表示が速い
-- tRPC `useQuery` で型安全 + キャッシュ + エラーハンドリングが自動
-- 30日間で学んだパターンが全て集約された設計
+- 静的な振り返り本文は Server Component のまま配信できる
+- ブラウザで状態を持つのはコピーボタンだけになり、責務の境界が見える
+- 本番公開前の設計レビューで「client 化が必要な場所」を説明しやすい
 
 #### 🎓 覚えておきたいエッセンス
 
-30日前に書いていた `useEffect` + `fetch` を振り返ってみよう。今なら tRPC + Server Component で、もっとシンプルに、もっと安全に書ける。それが30日間の成長の証。
+App Router では Server Component を標準にして、
+クリック・入力・ブラウザ API が必要な小さな部品だけを Client Component に切り出す。
 
 ## 📋 今日のまとめ
 

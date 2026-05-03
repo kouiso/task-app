@@ -87,6 +87,22 @@ Day 02 までで育てた `task-app` を、
 昨日の続きの `task-app` を、
 そのまま外へ出していく。
 
+### Step 0: Git の準備を確認する
+
+`create-next-app` で作ったプロジェクトは、
+基本的に最初から `git init` まで済んでいる。
+せやから、ほとんどの人はこのまま次へ進んで大丈夫や。
+
+もしこのあと `git status` を実行して
+`not a git repository` と表示されたら、
+プロジェクトのルートで一度だけ次を実行しよう。
+
+```bash title="~/workspace/task-app"
+git init
+```
+
+> 📌 Git の箱がまだ作られていない場合だけ実行すればOK。何度もやる作業ではないで。
+
 ### 🆕 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
@@ -289,7 +305,7 @@ sed -n '1,200p' README.md
 `~/workspace/task-app/README.md` を開いて、
 ファイル全体を次の内容に置き換える。
 
-```md title="README.md"
+~~~md title="README.md"
 # task-app
 
 30日カリキュラムで育てていく、
@@ -335,7 +351,7 @@ Day 02:
 Day 03:
 このプロジェクトを GitHub に保存して、
 履歴を積み上げられる状態にする。
-```
+~~~
 
 ### この README で押さえていること
 

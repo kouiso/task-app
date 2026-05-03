@@ -707,47 +707,128 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — 関連データの取得
+### 💡 Pro パターンで書こう — 週次レポートのデータ取得は Prisma include でまとめる
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-// N+1: タスクごとにユーザーを1件ずつ取得
-const tasks = await prisma.task.findMany();
-const tasksWithUser = await Promise.all(
-  tasks.map(async (task) => ({
-    ...task,
-    user: await prisma.user.findUnique({
-      where: { id: task.assigneeId ?? "" },
+// filepath: src/server/api/routers/report.ts
+import { prisma } from '@/lib/prisma';
+
+type WeeklyReportTask = {
+  id: string;
+  completedAt: Date | null;
+  status: string;
+  priority: string;
+  project: {
+    id: string;
+    name: string;
+  } | null;
+};
+
+export async function fetchWeeklyReportTasks(
+  targetUserId: string,
+  startDate: Date,
+  endDate: Date,
+): Promise<WeeklyReportTask[]> {
+  const tasks = await prisma.task.findMany({
+    where: {
+      assigneeId: targetUserId,
+      completedAt: { gte: startDate, lte: endDate },
+    },
+    select: {
+      id: true,
+      completedAt: true,
+      status: true,
+      priority: true,
+      projectId: true,
+    },
+  });
+
+  return await Promise.all(
+    tasks.map(async (task) => {
+      const project = await prisma.project.findUnique({
+        where: { id: task.projectId },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      return {
+        id: task.id,
+        completedAt: task.completedAt,
+        status: task.status,
+        priority: task.priority,
+        project,
+      };
     }),
-  }))
-);
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- タスクが100件あれば、DB クエリが101回走る（1 + 100）
-- レスポンスが遅くなり、DB に負荷がかかる
-- `assigneeId` が null の場合のハンドリングも雑
+- タスクが 30 件あれば、最初の取得 1 回に加えてプロジェクト取得が 30 回走る
+- `Promise.all` を使っていても、DB への問い合わせ回数が増える構造は変わらない
+- 週次レポートに担当者やプロジェクト情報を増やすたび、同じ N+1 が別の relation でも起きやすい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const tasks = await prisma.task.findMany({
-  include: { assignee: { select: { name: true, email: true } } },
-});
-// クエリは1回。assignee が自動で JOIN される
+// filepath: src/server/api/routers/report.ts
+import { prisma } from '@/lib/prisma';
+
+type WeeklyReportTask = {
+  id: string;
+  completedAt: Date | null;
+  status: string;
+  priority: string;
+  project: {
+    id: string;
+    name: string;
+  } | null;
+};
+
+export async function fetchWeeklyReportTasks(
+  targetUserId: string,
+  startDate: Date,
+  endDate: Date,
+): Promise<WeeklyReportTask[]> {
+  return await prisma.task.findMany({
+    where: {
+      assigneeId: targetUserId,
+      completedAt: { gte: startDate, lte: endDate },
+    },
+    select: {
+      id: true,
+      completedAt: true,
+      status: true,
+      priority: true,
+      project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+}
 ```
 
 **このコードの強み**:
 
-- DB クエリが1回で済む（Prisma が SQL JOIN を組み立てる）
-- `select` で必要なカラムだけ取得。パスワードなどの不要な情報を含まない
-- `assignee` が null のケースも Prisma が型で教えてくれる
+- タスクとプロジェクト情報を Prisma にまとめて取得させるので、問い合わせ回数が読みやすい
+- `projectId` を手で持ち回らず、戻り値の形が「画面で使うデータ」に近くなる
+- 担当者や関連情報を足すときも `select` / `include` の中に集約でき、取得ロジックが散らばりにくい
 
 #### 🎓 覚えておきたいエッセンス
 
-関連データは `include` で1回で取得する。ループ内で DB クエリを呼ぶ N+1 問題は、実務で最もよく見るパフォーマンスバグ。
+一覧やレポートで relation を使うなら、1 件ずつ取りに行く前に
+Prisma の `select` / `include` でまとめて取れないかを先に考える。
 
 ## 📋 今日のまとめ
 
