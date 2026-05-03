@@ -81,7 +81,7 @@ flowchart TD
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
 | Step 1 | error.tsxの動作を確認する | 5分 | dashboard/page.tsx | エラーページが表示される |
-| Step 2 | error.tsxのコードを読む | 4分 | なし（読むのみ） | Error Boundaryがわかる |
+| Step 2 | error.tsxを作る | 4分 | src/app/error.tsx | Error Boundaryがわかる |
 | Step 3 | バグA: Optional Chainingなし | 7分 | 教材内演習 | Console赤エラーを修正 |
 | Step 4 | バグB: useEffect依存配列ミス | 7分 | 教材内演習 | 無限リクエストを修正 |
 | Step 5 | バグC: console.log残し | 5分 | dashboard/page.tsx | Biome lintで検出・修正 |
@@ -135,9 +135,9 @@ throw new Error(
 
 🎯 **ゴール**: Error Boundaryの仕組みを理解します。
 
-VS Codeで`src/app/error.tsx`を開いてください。
+`src/app/error.tsx` を新規作成する。
 
-💻 **確認するコード**:
+💻 **実装**:
 
 ```typescript
 // filepath: src/app/error.tsx

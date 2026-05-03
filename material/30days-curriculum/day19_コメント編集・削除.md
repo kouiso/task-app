@@ -2,7 +2,7 @@
 
 ## 🔙 前回の振り返り
 
-Day 18 ではタスク詳細ダイアログのコメント一覧表示と新規投稿の仕組みを読み解きました。コメントの投稿ができるようになったので、今日は投稿済みコメントの編集・削除と権限チェックに取り組みます。
+Day 18 でコメント一覧表示と新規投稿を実装した。コメントの投稿ができるようになったので、今日は投稿済みコメントの編集・削除と権限チェックを作る。
 
 ---
 
@@ -84,9 +84,8 @@ flowchart TD
 🎯 **ゴール**: comment ルーターの
 update / delete メソッドを把握します。
 
-VS Code で `src/server/api/routers/comment.ts`
-を開いて、`update` と `delete` の定義を
-確認しましょう。
+`src/server/api/routers/comment.ts` に
+`update` と `delete` メソッドを追加する。
 
 💻 **実装**:
 
@@ -168,7 +167,7 @@ const editCommentForm =
 
 ✅ **確認ポイント**:
 - 3つの state + editCommentForm が定義されている
-- ファイルを開いて該当箇所を見つけた
+- コードを追加できた
 
 > 💡 `editingCommentId` が `null` なら
 > 通常表示、値があれば編集モードです。
