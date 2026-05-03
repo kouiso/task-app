@@ -435,8 +435,6 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
 ```css
 @import "tailwindcss";
 
-@plugin "tailwindcss-animate";
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
