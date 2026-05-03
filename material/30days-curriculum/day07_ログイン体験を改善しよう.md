@@ -1,28 +1,40 @@
-# Day 07: ログイン体験を改善しよう
+# Day 07: 認証バックエンドを作って、ログインを動かそう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
-Day 06 では react-hook-form と zod を使ったユーザー登録画面を実装しました。パスワード確認チェックなど高度なバリデーションができるようになったので、今日はログイン後のユーザー体験を改善するトースト通知と、認証の仕組みに取り組みます。
+Day 05-06 でログイン画面と登録画面の UI を作った。
+見た目はできてるけど、ログインボタンを押しても何も起きない——
+サーバー側がまだないからや。
+
+今日はその「裏側」を自分の手で作る。
+ここを超えたら、アプリが本当に「使える」ものになる。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
-ログイン成功時に「おかえりなさい」トーストを表示する機能を追加します。その過程で、JWTトークン・bcryptパスワード検証・HttpOnly Cookieの仕組みを体験的に学びます。
+ログイン・登録が実際に動くようにする。
+その過程で、JWT トークン・bcrypt パスワード検証・HttpOnly Cookie・tRPC の仕組みを体験的に学ぶ。
 
-![ログイン画面](./screenshots/login.png)
+- [ ] `src/lib/session.ts` — JWT セッション管理を作る
+- [ ] `src/server/api/trpc.ts` — tRPC の土台を作る
+- [ ] `src/server/api/routers/auth.ts` — 認証 API を作る
+- [ ] `src/server/api/root.ts` — ルーターを束ねる
+- [ ] `src/app/api/trpc/[trpc]/route.ts` — HTTP ハンドラを作る
+- [ ] `src/middleware.ts` — ルート保護を作る
+- [ ] DevTools でログインの流れを確認する
 
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか？
 
-Day 05-06で作ったログインフォームは、成功するとそのままダッシュボードに遷移します。でも「ログインできた！」というフィードバックがないと、ユーザーは不安になります。
+Day 05 で作ったログイン画面は、ブラウザ（フロントエンド）だけで動いている。
+「このメールとパスワードで合ってるか？」を確認するには、
+サーバー側にデータベースと照合する処理が必要。
 
-トースト（画面上に一時的に表示されるメッセージ）を追加して体験を向上させましょう。
+今日作る 6 ファイルが、ログインの「裏方」全部になる。
 
-> 💡 **例え話**: JWTトークンは「遊園地のリストバンド」です。入口（ログイン画面）で本人確認されると、リストバンド（JWTトークン）がもらえます。それ以降は、リストバンドを見せるだけでどのアトラクション（ページ）にも入れます。
+> **例え話**: レストランに例えると、Day 05-06 で作ったのは注文用紙（フォーム）。今日は厨房（サーバー）と配膳システム（API）を作って、注文がちゃんと通るようにする。
 
-> 📌 **今日のゴールライン**: JWT や Cookie の仕組みは「ログイン状態を覚えておく技術」とだけ理解すれば OK。詳しい暗号化の仕組みは今日は気にしなくてええ。
-
-### 📐 認証フローの全体像
+### 認証フローの全体像
 
 ```mermaid
 sequenceDiagram
@@ -35,9 +47,9 @@ sequenceDiagram
     B->>T: api.auth.login.mutate()
     T->>D: メールでユーザー検索
     D-->>T: ユーザー情報
-    T->>T: bcryptでパスワード照合
-    T->>T: JWTトークン生成（jose）
-    T->>B: Cookie保存 + レスポンス
+    T->>T: bcrypt でパスワード照合
+    T->>T: JWT トークン生成（jose）
+    T->>B: Cookie 保存 + レスポンス
     B->>B: トースト表示「おかえりなさい！」
     B->>U: ダッシュボードへ遷移
 ```
@@ -46,191 +58,113 @@ sequenceDiagram
 
 | やること | やらないこと |
 |---------|-------------|
-| 認証フローを追いかけて理解する | 認証コードをゼロから書く |
-| ログイン成功トーストを改善する | 暗号化の数学的仕組み |
-| DevToolsでJWTとCookieを確認する | データベース設計（Day 01完了済み） |
-| Cookieを消して認証ガードを体感する | 独自の暗号化実装 |
+| 認証バックエンドを自分の手で作る | 暗号化の数学的仕組みを理解する |
+| JWT・Cookie・middleware の仕組みを体験する | 独自の暗号化実装を作る |
+| DevTools で認証フローを目で確認する | データベース設計（scaffold 済み） |
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| JWT（JWTトークン） | ジェイ・ダブリュー・ティー | ユーザー情報を署名付きで格納したトークン | 遊園地のリストバンド。名前と有効期限入り |
+| JWT | ジェイ・ダブリュー・ティー | ユーザー情報を署名付きで格納したトークン | 遊園地のリストバンド。名前と有効期限入り |
 | bcrypt | ビークリプト | パスワードを安全にハッシュ化 | 暗証番号を解読不能な暗号に変換するマシン |
-| HttpOnly Cookie | エイチティーティーピー・オンリー・クッキー | JSから読めない安全なCookie | 見えない場所に隠したリストバンド |
+| HttpOnly Cookie | エイチティーティーピー・オンリー・クッキー | JS から読めない安全な Cookie | 見えない場所に隠したリストバンド |
+| tRPC | ティー・アール・ピー・シー | 型安全な API フレームワーク | フロントとバックで同じメニュー表を共有する仕組み |
+| middleware | ミドルウェア | リクエストの前処理（認証ガード等） | 店の入口にいるガードマン |
 
-> 📌 **今日のゴールライン**: JWT や bcrypt の数学的な仕組みまで理解する必要はない。「ログインしたらトークンがもらえて、それで認証が通る」という流れを体験できたら OK。暗号の詳細は興味が出たときに調べれば十分。
+> **今日のゴールライン**: JWT や bcrypt の数学的な仕組みまで理解する必要はない。「ログインしたらトークンがもらえて、それで認証が通る」という流れを体験できたら OK。
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
-|---------|---------|---------|-------------|---------|
-| Step 1 | わざとログイン失敗してDevToolsで観察 | 5分 | なし | tRPCリクエストが見える |
-| Step 2 | auth.tsのログイン処理を読む | 7分 | なし（読むのみ） | bcrypt照合の流れがわかる |
-| Step 3 | session.tsのJWT生成を読む | 5分 | なし（読むのみ） | JWTトークンの構造がわかる |
-| Step 4 | Cookie保存の仕組みを読む | 5分 | なし（読むのみ） | HttpOnlyの意味がわかる |
-| Step 5 | ログイン成功トーストを確認・改善する | 7分 | login/page.tsx | トーストメッセージが変わる |
-| Step 6 | DevToolsでJWTトークンを確認する | 5分 | なし | jwt.ioで中身が読める |
-| Step 7 | Cookieを消して認証ガードを体感する | 4分 | なし | リダイレクトされる |
-| Step 8 | publicとprotectedの違いを理解する | 5分 | なし（読むのみ） | 使い分けがわかる |
+| ステップ | 作業内容 | 所要時間 | 作成ファイル |
+|---------|---------|---------|-------------|
+| Step 1 | session.ts を作る（JWT セッション管理） | 12分 | `src/lib/session.ts` |
+| Step 2 | trpc.ts を作る（API の土台） | 10分 | `src/server/api/trpc.ts` |
+| Step 3 | auth.ts を作る（認証ルーター） | 15分 | `src/server/api/routers/auth.ts` + ヘルパー |
+| Step 4 | API を繋ぐ（ルーター登録 + HTTP ハンドラ） | 5分 | `src/server/api/root.ts`, `src/app/api/trpc/[trpc]/route.ts` |
+| Step 5 | middleware.ts を作る（ルート保護） | 8分 | `src/middleware.ts` |
+| Step 6 | ログインして動作確認する | 5分 | なし |
+| Step 7 | DevTools で JWT と Cookie を確認する | 5分 | なし |
 
-**合計時間**: 約43分（チャレンジセクションを含めると約55〜60分）
-
----
-
-### Step 1: わざとログイン失敗してDevToolsで観察する（5分）
-
-🎯 **ゴール**: ログイン時にブラウザとサーバーの間で何が起きているか、DevToolsで確認します。
-
-まず `PORT=3001 npm run dev` で開発サーバーをポート 3001 で起動してから、ブラウザの DevTools を開いてください。Day 07 と Day 08 では認証 Cookie の挙動を独立して確認するため、デフォルトの 3000 ではなく 3001 を使います (Day 08 で詳しく扱います)。
-
-| OS | ショートカット |
-|------|---------------|
-| Windows | `F12` または `Ctrl+Shift+I` |
-| Mac | `Cmd+Option+I` |
-
-**Network**タブを選択します。
-
-📸 スクリーンショット: DevToolsのNetworkタブを開いた状態
-
-![DevToolsのNetworkタブを開いた状態](./screenshots/dashboard.png)
-
-> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
-
-💻 **操作手順**:
-
-ブラウザで `http://localhost:3001/login` を開いてください。
-
-1. `/login`ページを開く
-2. DevToolsのNetworkタブを開く
-3. わざと間違ったメールアドレスでログインする
-4. Networkタブに表示されるリクエストを確認する
-
-✅ **確認ポイント**:
-- DevToolsが開けた
-- Networkタブが選択されている
-
-DevToolsのNetworkタブで以下の内容を確認してください。
-
-| 確認項目 | 内容 | 意味 |
-|---------|------|------|
-| URL | `/api/trpc/auth.login` | tRPCのログインAPIのエンドポイント |
-| Method | POST | データを送信する時のHTTPメソッド |
-| Request Body | `{"email":"...","password":"..."}` | 入力したデータがJSON形式で送られる |
-| Response | おおよそ `{"error":{"message":"..."}}` のような形式（プロジェクト設定により異なる場合があります） | サーバーからのエラーレスポンス |
-
-> 💡 tRPCはおおよそ以下のような形式でエラーを返します（プロジェクト設定により異なる場合があります）：レスポンスボディ内の `error` オブジェクトに `message` フィールドが含まれます。エラーでもHTTPステータスは `200` の場合があります。
-
-> 📝 **実際の Network タブの表示はバージョンによって異なります**。Response タブを開いて `error.message` というフィールドを探してください。JSONの構造がここで示した例と多少異なっていても問題ありません。
-
-#### DevTools Networkタブの見方
-
-| 列名 | 見るべきポイント |
-|------|-----------------|
-| Name | `auth.login` を含むリクエストを探す |
-| Status | tRPCでは成功・失敗ともに `200` が返ることが多い（エラー情報はボディ内） |
-| Type | `fetch` と表示される |
-| Size | リクエストとレスポンスのデータ量 |
-
-✅ **確認ポイント**:
-- DevToolsのNetworkタブにリクエストが表示された
-- tRPCのエンドポイント（`/api/trpc/auth.login`）が確認できた
-- リクエストとレスポンスのJSON構造が読めた
-
-📝 **学んだこと**: ログインボタンを押すと、ブラウザからサーバーへHTTPリクエストが送信されます。
+**合計時間**: 約 60 分
 
 ---
 
-### Step 2: auth.tsのログイン処理を読む（7分）
+### Step 1: session.ts を作る — JWT セッション管理（12分）
 
-🎯 **ゴール**: サーバー側のログイン処理がどう動くか理解します。
+**ゴール**: ログイン状態を JWT トークンで管理する仕組みを作る。
 
-VS Codeで`src/server/api/routers/auth.ts`を開いてください。
+このファイルが認証の心臓部。
+「トークンを作る」「トークンを読む」「Cookie に保存する」「Cookie から取り出す」——
+認証の基本操作が全部ここに入る。
 
-💻 **確認するコード**:
+`src/lib/session.ts` を新規作成する。
 
-```typescript
-// filepath: src/server/api/routers/auth.ts
-// ログイン処理の前半: ユーザー検索と存在チェック
-// ※ 読みやすさのために改行しています
-login: publicProcedure
-  .input(loginSchema)
-  .mutation(async ({ input }) => {
-    // 1. メールでユーザーを検索
-    const user = await prisma.user.findUnique({
-      where: { email: input.email },
-    });
-    // 2. ユーザーが見つからない場合はエラー
-    if (!user || !user.password) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'メールアドレスまたは'
-          + 'パスワードが正しくありません',
-      });
-    }
-```
-
-✅ **確認ポイント**:
-- `src/server/api/routers/auth.ts`を開けた
-- メールでユーザーを検索し、存在しなければエラーを返す流れが読めた
-
-```typescript
-// filepath: src/server/api/routers/auth.ts
-// ログイン処理の後半: 有効チェックとパスワード照合
-    // 3. アカウントが有効か確認
-    if (!user.isActive) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'このアカウントは無効化されています',
-      });
-    }
-    // 4. bcryptでパスワード照合
-    const isPasswordValid =
-      await bcrypt.compare(
-        input.password,
-        user.password
-      );
-    if (!isPasswordValid) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'メールアドレスまたは'
-          + 'パスワードが正しくありません',
-      });
-    }
-```
-
-✅ **確認ポイント**:
-- ログイン処理の4ステップ（検索→存在チェック→有効チェック→パスワード照合）が追えた
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `publicProcedure` | ログイン不要で呼べるAPI | 誰でも入れる受付窓口 |
-| `.input(loginSchema)` | zodで入力値を検証 | 受付の書類チェック |
-| `prisma.user.findUnique()` | DBからユーザーを検索 | 名簿からお客さんを探す |
-| `bcrypt.compare()` | パスワードのハッシュ値を比較 | 暗証番号を照合する |
-| `user.isActive` | アカウントが有効かチェック | 入場禁止リストに載っていないか確認 |
-
-> 💡 **なぜ同じエラーメッセージ？** 「メールが存在しない」と「パスワードが違う」を区別すると、攻撃者に「このメールは登録済み」と教えてしまいます。セキュリティのために、両方とも同じメッセージを返します。
-
-📝 **学んだこと**: パスワードは平文で比較せず、`bcrypt.compare`でハッシュ値同士を比較します。
-
----
-
-### Step 3: session.tsのJWT生成を読む（5分）
-
-🎯 **ゴール**: ログイン成功後にJWTトークンがどう生成されるか理解します。
-
-VS Codeで`src/lib/session.ts`を開いてください。
-
-💻 **確認するコード**:
+#### 1-1. インポートと秘密鍵の取得
 
 ```typescript
 // filepath: src/lib/session.ts
-// JWTトークンの生成処理
+import { type JWTPayload, jwtVerify, SignJWT } from 'jose';
+import { cookies } from 'next/headers';
+import type { UserRole } from './constant/roles';
+import { env } from './env';
+
+function getKey(): Uint8Array {
+  const SECRET_KEY = env.JWT_SECRET;
+  const encoded = new TextEncoder().encode(SECRET_KEY);
+  return new Uint8Array(encoded);
+}
+```
+
+| コード | 意味 | 例え |
+|--------|------|------|
+| `jose` | JWT を扱うライブラリ | リストバンド製造機 |
+| `cookies()` | Next.js の Cookie 操作 API | ブラウザの Cookie 棚 |
+| `getKey()` | 秘密鍵を Uint8Array に変換 | 店長の印鑑を取り出す |
+
+> `JWT_SECRET` は `.env` に scaffold が設定済み。32 文字以上の文字列で、本番では必ず変更する。
+
+#### 1-2. 型定義と定数
+
+```typescript
+// filepath: src/lib/session.ts（続き）
+export interface SessionPayload {
+  userId: string;
+  email: string;
+  role: UserRole;
+  exp: number;
+}
+
+export interface SessionUser {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
+const COOKIE_NAME = 'session';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
+```
+
+`SessionPayload` は JWT トークンの中身。
+`SessionUser` は「誰がログインしてるか」の最小情報。
+
+#### 1-3. 型ガードと暗号化
+
+```typescript
+// filepath: src/lib/session.ts（続き）
+function isSessionPayload(
+  payload: JWTPayload,
+): payload is JWTPayload & SessionPayload {
+  return (
+    typeof payload['userId'] === 'string' &&
+    typeof payload['email'] === 'string' &&
+    typeof payload['role'] === 'string' &&
+    typeof payload['exp'] === 'number'
+  );
+}
+
 export async function encrypt(
-  payload: SessionPayload
+  payload: SessionPayload,
 ): Promise<string> {
   const jwtPayload: Record<string, unknown> = {
     userId: payload.userId,
@@ -238,6 +172,7 @@ export async function encrypt(
     role: payload.role,
     exp: payload.exp,
   };
+
   return await new SignJWT(jwtPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -246,73 +181,59 @@ export async function encrypt(
 }
 ```
 
-✅ **確認ポイント**:
-- VS Codeで該当ファイルを開けた
-- JWTにユーザーID・メール・権限・有効期限が含まれることがわかった
-- `jose`ライブラリで署名していることを確認した
-
-🔍 **コード解説**:
-
 | コード | 意味 | 例え |
 |--------|------|------|
-| `SignJWT` | 署名付きJWTを作成する | リストバンドに情報を刻印する機械 |
+| `isSessionPayload()` | JWT の中身が正しい形式か検証 | 書類の記入漏れチェック |
+| `SignJWT` | 署名付き JWT を作成 | リストバンドに情報を刻印する機械 |
 | `alg: 'HS256'` | 署名アルゴリズム | 偽造防止の特殊インクの種類 |
-| `setExpirationTime('7d')` | 7日間有効（実際の有効期限を決定） | リストバンドの有効期限シール |
+| `setExpirationTime('7d')` | 7 日間有効 | リストバンドの有効期限シール |
 | `sign(getKey())` | 秘密鍵で署名 | 店長のハンコで正式認定 |
 
-> 💡 **`payload.exp` と `setExpirationTime('7d')` の関係**: `setExpirationTime('7d')` はペイロードの `exp` クレームを上書きします。このコードでは `payload.exp` も `createSession` 内で7日間として計算しているため結果は同じですが、最終的なトークンの有効期限は `setExpirationTime` の値で決まります。
-
-📝 **学んだこと**: JWTトークンには「誰が」「いつまで」「どの権限で」ログインしているかが記録されます。
-
-💪 **チャレンジ**: `src/lib/session.ts`の`setExpirationTime('7d')`を`'1d'`に変更して、セッションの有効期限を1日に短縮してみましょう。
+#### 1-4. 復号化（トークンを読む）
 
 ```typescript
-// filepath: src/lib/session.ts
-// setExpirationTimeの値だけ変更する
-    .setExpirationTime('1d')
+// filepath: src/lib/session.ts（続き）
+export async function decrypt(
+  token: string,
+): Promise<SessionPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getKey(), {
+      algorithms: ['HS256'],
+    });
+
+    if (!isSessionPayload(payload)) {
+      console.error('Invalid session payload structure');
+      return null;
+    }
+
+    return payload;
+  } catch {
+    console.error('Failed to decrypt token');
+    return null;
+  }
+}
 ```
 
-✅ **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
-- ログインし直してjwt.ioで`exp`の値が約1日後になっていればOK
-- 確認したら`'7d'`に戻しましょう
+`encrypt` でトークンを作り、`decrypt` でトークンを読む。対になる操作。
 
-> ⚠️ `setExpirationTime('1d')` に変更すると JWT は1日で期限切れになりますが、Cookie の `maxAge` は7日間のままです。Cookie はブラウザに残っていても、中身の JWT が期限切れなのでセッションは無効になります。なお `createSession` で計算される `payload.exp` は7日間のままですが、`setExpirationTime('1d')` がJWTの最終的な `exp` を1日後に上書きします。
-
----
-
-### Step 4: Cookie保存の仕組みを読む（5分）
-
-🎯 **ゴール**: JWTトークンがどうブラウザに保存されるか理解します。
-
-💻 **確認するコード**:
+#### 1-5. セッション操作（作成・取得・削除・検証）
 
 ```typescript
-// filepath: src/lib/session.ts
-// Cookie保存処理
+// filepath: src/lib/session.ts（続き）
 export async function createSession(
-  user: SessionUser
+  user: SessionUser,
 ): Promise<string> {
   const expiresAt =
-    Math.floor(Date.now() / 1000)
-    + COOKIE_MAX_AGE;
+    Math.floor(Date.now() / 1000) + COOKIE_MAX_AGE;
   const payload: SessionPayload = {
     userId: user.id,
     email: user.email,
     role: user.role,
     exp: expiresAt,
   };
+
   const token = await encrypt(payload);
-```
 
-✅ **確認ポイント**:
-- VS Codeで該当ファイルを開けた
-- ペイロードにユーザー情報と有効期限が含まれていることがわかった
-
-```typescript
-// filepath: src/lib/session.ts
-// Cookie設定部分
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
@@ -323,226 +244,127 @@ export async function createSession(
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   });
+
   return token;
+}
+
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  return await decrypt(token);
+}
+
+export async function deleteSession(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
+}
+
+export async function verifySession(): Promise<SessionUser | null> {
+  const session = await getSession();
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    id: session.userId,
+    email: session.email,
+    role: session.role,
+  };
 }
 ```
 
-✅ **確認ポイント**:
-- VS Codeで該当ファイルを開けた
-- `httpOnly: true`がJavaScriptからのアクセスを防ぐことがわかった
-- 複数のセキュリティ設定が組み合わさっていることを理解した
-
-🔍 **Cookie設定の意味**:
+**Cookie 設定の意味**:
 
 | 設定 | 値 | なぜ必要？ |
 |------|-----|---------|
-| `httpOnly` | `true` | JavaScriptから読めなくしてXSS攻撃を防ぐ |
-| `secure` | 本番のみ`true` | HTTPSでのみ送信して盗聴を防ぐ |
-| `sameSite` | `'strict'` | 別サイトからのリクエストにCookieを付けない |
-| `maxAge` | 7日間 | セッションの有効期限 |
+| `httpOnly` | `true` | JavaScript から読めなくして XSS 攻撃を防ぐ |
+| `secure` | 本番のみ `true` | HTTPS でのみ送信して盗聴を防ぐ |
+| `sameSite` | `'strict'` | 別サイトからのリクエストに Cookie を付けない |
+| `maxAge` | 7 日間 | セッションの有効期限 |
 
-> 💡 **`secure` の条件について**: 実コードでは `process.env['PLAYWRIGHT_TEST'] !== '1'` という条件もあります。これはE2Eテスト（Playwright）実行時に `secure` を無効にするためです。テスト環境は HTTP で動作するため、`secure: true` だと Cookie が送信されなくなるのを防ぎます。
+**確認ポイント**:
+- [ ] `src/lib/session.ts` が作成できた
+- [ ] `encrypt` / `decrypt` / `createSession` / `getSession` / `deleteSession` / `verifySession` の 6 関数がある
+- [ ] この時点ではまだ `npm run dev` しなくて OK
 
-📝 **学んだこと**: Cookieは単なるデータ保存ではなく、`httpOnly`や`secure`でセキュリティを強化できます。
-
-💪 **チャレンジ**: `src/lib/session.ts`の`sameSite`を`'strict'`から`'lax'`に変更してみましょう。DevToolsのApplication → Cookiesで`SameSite`列の値が変わることを確認してください。
-
-```typescript
-// filepath: src/lib/session.ts
-// sameSiteの値だけ変更する
-    sameSite: 'lax',
-```
-
-✅ **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
-- ログインし直してDevToolsのApplication → Cookies → `http://localhost:3001` → `session` Cookieの `SameSite` 列が `Lax` に変わっていればOK
-- 確認したら`'strict'`に戻しましょう
-
-> ⚠️ `sameSite: 'strict'`は最も安全な設定です。`'lax'`にするとリンクからの遷移時にCookieが送られるようになり、CSRF攻撃のリスクがわずかに上がります。学習用の変更なので、確認が終わったら必ず`'strict'`に戻してください。
+**学んだこと**: JWT は「誰が」「いつまで」「どの権限で」ログインしているかを暗号化署名付きで保持する仕組み。
 
 ---
 
-### Step 5: ログイン成功トーストを確認・改善する（7分）
+### Step 2: trpc.ts を作る — API の土台（10分）
 
-🎯 **ゴール**: 現在のログイン成功トーストを確認し、メッセージを改善します。
+**ゴール**: tRPC の初期設定と、public / protected / admin の 3 種類の API を定義する。
 
-VS Codeで`src/app/login/page.tsx`を開いてください。`onSuccess`コールバックを見つけましょう。
+Day 05 のログイン画面は `api.auth.login.useMutation()` でサーバーを呼んでいた。
+その「サーバー側の土台」がこのファイル。
 
-💻 **確認するコード**:
+`src/server/api/trpc.ts` を新規作成する。
 
-```typescript
-// filepath: src/app/login/page.tsx
-// 現在のonSuccessコールバック
-// ※ 読みやすさのために改行しています
-const loginMutation =
-  api.auth.login.useMutation({
-    onSuccess: (data) => {
-      toast.success(
-        `おかえりなさい、${data.user.name}さん`
-      );
-      router.push(callbackUrl);
-      router.refresh();
-    },
-    onError: (error) => {
-      setError(
-        error.message
-        ?? 'ログイン中にエラーが発生しました'
-      );
-    },
-  });
-```
-
-> 📝 **`??`（Nullish Coalescing演算子）について**: `??` は `null` と `undefined` のみをフォールバック値に置き換えます。`0` や空文字列 `""` は「偽」と判定しないため、エラーメッセージが空文字列のケースも正しく扱えます。
-
-✅ **確認ポイント**:
-- ファイルを保存した（まだ変更不要）
-- `onSuccess` でトーストが表示されていることを確認した
-
-トーストのメッセージを変更してみましょう。
-
-💻 **実装**:
-
-`onSuccess` の中の `toast.success()` を以下に変更します。
-
-```typescript
-// filepath: src/app/login/page.tsx
-// toast.success()の引数を変更する
-      toast.success(
-        `おかえりなさい、${data.user.name}さん`
-      );
-```
-
-✅ **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
-- ブラウザで`/login`にアクセス
-- `admin@example.com` / `password123`でログイン
-- 「おかえりなさい、管理者さん！」トーストが表示される
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `toast.success()` | 成功メッセージを表示 | 緑色のポップアップ通知 |
-| `data.user.name` | APIレスポンスからユーザー名を取得 | 「○○さん」の名前部分 |
-| `callbackUrl` | ログイン前にアクセスしようとしていたURL（`?callbackUrl=/dashboard`のようにURLパラメータから取得） | 元々行こうとしていた場所に案内する |
-
-![ログイン成功後のダッシュボード（トースト表示）](./screenshots/dashboard.png)
-
-> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
-
-📝 **学んだこと**: `react-hot-toast`で、APIレスポンスのデータを使った動的なメッセージを表示できます。
-
----
-
-### Step 6: DevToolsでJWTトークンを確認する（5分）
-
-🎯 **ゴール**: ブラウザに保存されたJWTトークンの中身を確認します。
-
-> ⚠️ **重要な注意**: これは開発環境のトークンなので問題ありませんが、**本番環境のJWTトークンは絶対に外部サイトに貼り付けないでください**。ユーザー情報が漏洩する危険があります。
-
-ログイン成功後に、DevToolsを開いてください。
-
-💻 **操作手順**:
-
-ブラウザで `https://jwt.io` を開いてください。
-
-1. DevToolsを開く（`F12` または `Cmd+Option+I`）
-2. **Application**タブ → 左メニューの **Cookies** → `http://localhost:3001` を選択
-3. `session`という名前のCookieを見つける
-4. 値（長い文字列）をコピーする
-5. ブラウザで`https://jwt.io`を開く
-6. 「Encoded」欄にコピーした値を貼り付ける
-
-✅ **確認ポイント**:
-- DevToolsのApplication → Cookiesで`session`Cookieが確認できた
-- Cookie値をコピーした
-- jwt.ioのページが開けた
-
-jwt.io で以下の情報が確認できます。
-
-| 部分 | フィールド | 表示例 | 意味 |
-|------|----------|--------|------|
-| Header | `alg` | `"HS256"` | 署名アルゴリズム |
-| Payload | `userId` | `"cm..."` | ユーザーID |
-| Payload | `email` | `"admin@example.com"` | メールアドレス |
-| Payload | `role` | `"ADMIN"` | 権限 |
-| Payload | `iat` | `1234567890` | トークン発行日時（UNIX時間） |
-| Payload | `exp` | `1235172690` | 有効期限（UNIX時間、約7日後） |
-
-> 💡 **UNIX時間とは？** `exp` の値は UNIX 時間（1970年1月1日からの秒数）です。`new Date(exp * 1000)` でJSのDateオブジェクトに変換できます。
-
-> ブラウザのコンソールで `new Date(1235172690 * 1000)` と入力すると、人間が読める日時形式で表示されます。
-
-🔍 **JWTトークンの3部構成**:
-
-| 部分 | 内容 | 例え |
-|------|------|------|
-| Header | アルゴリズム情報 | リストバンドの素材情報 |
-| Payload | ユーザー情報（ID、メール、権限、期限） | リストバンドに書かれた名前と有効期限 |
-| Signature | 改ざん検知用の署名 | 偽造防止の特殊インク |
-
-✅ **確認ポイント**:
-- Application → Cookies に`session`が存在する
-- jwt.ioでデコードして、自分のユーザーIDとメールが表示される
-- `exp`（有効期限）が7日後になっている
-
-📸 スクリーンショット: DevToolsのApplication → Cookiesで`session`Cookieを選択した状態
-
-![DevToolsのApplication → Cookies](./screenshots/dashboard.png)
-
-> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
-
-📝 **学んだこと**: JWTトークンは暗号化ではなく「署名」です。中身は誰でもデコードできますが、改ざんすると署名が合わなくなります。
-
----
-
-### Step 7: Cookieを消して認証ガードを体感する（4分）
-
-🎯 **ゴール**: Cookieを削除するとどうなるか体験して、認証ガードの動作を確認します。
-
-💻 **操作手順**:
-
-1. DevToolsのApplication → Cookies → `http://localhost:3001`
-2. `session` Cookieを右クリック → Delete
-3. ブラウザで`/dashboard`にアクセスする
-4. 自動的に`/login`にリダイレクトされることを確認
-
-```mermaid
-flowchart LR
-    A[/dashboardにアクセス] --> B{Cookieあり？}
-    B -->|あり| C[ダッシュボード表示]
-    B -->|なし| D[/loginにリダイレクト]
-
-    style C fill:#e8f5e9
-    style D fill:#ffebee
-```
-
-✅ **確認ポイント**:
-- Cookie削除後に`/dashboard`が表示できなくなった
-- 自動的に`/login`に飛ばされた
-- 再度ログインするとダッシュボードが表示される
-
-📸 スクリーンショット: Cookie削除後に`/login`にリダイレクトされた画面
-
-![ログイン画面（リダイレクト後）](./screenshots/login.png)
-
-📝 **学んだこと**: 認証ガードは「Cookieにセッションがあるか」をチェックし、なければログイン画面に強制遷移させます。
-
----
-
-### Step 8: publicProcedureとprotectedProcedureの違いを理解する（5分）
-
-🎯 **ゴール**: APIの認証制御の仕組みを理解します。
-
-VS Codeで`src/server/api/trpc.ts`を開いてください。
-
-💻 **確認するコード**:
+#### 2-1. コンテキスト作成
 
 ```typescript
 // filepath: src/server/api/trpc.ts
-// 認証チェック用のミドルウェア
+import { initTRPC, TRPCError } from '@trpc/server';
+import superjson from 'superjson';
+import { ZodError } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
+
+export const createTRPCContext = async (
+  opts: { headers: Headers },
+) => {
+  const session = await getSession();
+
+  return {
+    session,
+    ...opts,
+  };
+};
+
+export type Context = Awaited<
+  ReturnType<typeof createTRPCContext>
+>;
+```
+
+`createTRPCContext` は API リクエストのたびに呼ばれて、「今誰がログインしてるか」をコンテキストに入れる。
+
+#### 2-2. tRPC インスタンス初期化
+
+```typescript
+// filepath: src/server/api/trpc.ts（続き）
+const t = initTRPC.context<Context>().create({
+  transformer: superjson,
+  errorFormatter({ shape, error }) {
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        zodError:
+          error.cause instanceof ZodError
+            ? error.cause.flatten()
+            : null,
+      },
+    };
+  },
+});
+```
+
+| コード | 意味 |
+|--------|------|
+| `superjson` | Date や BigInt を JSON で送れるようにする変換器 |
+| `errorFormatter` | zod のバリデーションエラーを使いやすい形に整形 |
+
+#### 2-3. 認証ミドルウェアとプロシージャ
+
+```typescript
+// filepath: src/server/api/trpc.ts（続き）
 const isAuthenticated = t.middleware(
   async ({ ctx, next }) => {
     if (!ctx.session?.userId) {
@@ -551,149 +373,749 @@ const isAuthenticated = t.middleware(
         message: 'ログインが必要です',
       });
     }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (!currentUser) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーが見つかりません',
+      });
+    }
+
+    if (!currentUser.isActive) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'このアカウントは無効化されています',
+      });
+    }
+
     return next({
-      ctx: { session: ctx.session },
+      ctx: {
+        session: {
+          ...ctx.session,
+          role: currentUser.role,
+        },
+      },
+    });
+  },
+);
+
+const isAdmin = t.middleware(async ({ ctx, next }) => {
+  if (ctx.session?.role !== USER_ROLE.ADMIN) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '管理者権限が必要です',
     });
   }
-);
+
+  return next({ ctx });
+});
+
+export const createTRPCRouter = t.router;
+export const publicProcedure = t.procedure;
+export const protectedProcedure =
+  t.procedure.use(isAuthenticated);
+export const adminProcedure =
+  t.procedure.use(isAuthenticated).use(isAdmin);
+export const createCallerFactory = t.createCallerFactory;
 ```
 
-✅ **確認ポイント**:
-- VS Codeで該当ファイルを開けた
-- `npm run dev` でエラーが出ていない
+**3 種類の API**:
 
-🔍 **2種類のプロシージャ**:
-
-| 種別 | 認証 | 使う場面 | API例 |
+| 種別 | 認証 | 使う場面 | API 例 |
 |------|------|---------|-------|
-| `publicProcedure` | 不要 | 誰でもアクセスできるAPI | ログイン、登録、セッション確認 |
-| `protectedProcedure` | 必須 | ログイン必須のAPI | タスク操作、プロジェクト管理 |
+| `publicProcedure` | 不要 | 誰でも呼べる | ログイン、登録 |
+| `protectedProcedure` | 必須 | ログインユーザーのみ | タスク操作、プロジェクト管理 |
+| `adminProcedure` | 管理者のみ | 管理機能 | ユーザー管理 |
 
-> 💡 ログイン画面自体は「ログインしていなくてもアクセスできる」必要がありますよね。だからログインAPIは`publicProcedure`です。
+> `isAuthenticated` ミドルウェアは、Cookie のセッション情報だけでなく DB からユーザーの最新状態を取得する。アカウントが無効化されていたらここで弾く。
 
-📝 **学んだこと**: `protectedProcedure`は内部でセッションチェックを行い、未ログインユーザーを自動的に弾きます。
+**確認ポイント**:
+- [ ] `src/server/api/trpc.ts` が作成できた
+- [ ] `publicProcedure` / `protectedProcedure` / `adminProcedure` の 3 つが export されている
 
-💪 **チャレンジ**: `src/server/api/trpc.ts`のミドルウェアで、認証エラーメッセージを変更してみましょう。以下の1行だけ変更します。
+**学んだこと**: tRPC のミドルウェアで「ログイン必須」「管理者のみ」といった認証制御を API 定義にチェーン（`.use()`）するだけで追加できる。
+
+---
+
+### Step 3: auth.ts を作る — 認証ルーター（15分）
+
+**ゴール**: ログイン・登録・ログアウト・セッション取得の 4 つの API を作る。
+
+ここが今日のメイン。フロントから呼ばれる認証 API の実体を書く。
+
+まず、共通のヘルパーを作る。
+
+#### 3-0. select ヘルパーを作る
+
+`src/server/api/routers/_helpers/select.ts` を新規作成する。
 
 ```typescript
-// filepath: src/server/api/trpc.ts
-// この1行だけ変更する
-        message: 'この操作にはログインが必要です',
+// filepath: src/server/api/routers/_helpers/select.ts
+import { z } from 'zod';
+import { PROJECT_MEMBER_ROLE } from '@/lib/constant/roles';
+
+export const USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  avatar: true,
+} as const;
+
+export const USER_DETAIL_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  avatar: true,
+  role: true,
+  isActive: true,
+} as const;
+
+export const projectMemberRoleSchema =
+  z.nativeEnum(PROJECT_MEMBER_ROLE);
 ```
 
-✅ **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
-- ログイン状態でダッシュボードを開き、DevToolsのApplication → Cookiesで`session`を削除してからタスク操作を試み、エラーメッセージが変わっていればOK
-- 確認後は元のメッセージに戻しましょう
+Prisma の `select` を毎回書くのは面倒なので、共通化しておく。
+`as const` で型を絞ることで、返り値の型が正確になる。
+
+#### 3-1. auth.ts のインポートとバリデーション
+
+`src/server/api/routers/auth.ts` を新規作成する。
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import {
+  createSession,
+  deleteSession,
+  type SessionUser,
+} from '@/lib/session';
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .email('有効なメールアドレスを入力してください'),
+  password: z
+    .string()
+    .min(1, 'パスワードを入力してください'),
+});
+
+const registerSchema = z.object({
+  name: z
+    .string()
+    .min(1, '名前を入力してください'),
+  email: z
+    .string()
+    .email('有効なメールアドレスを入力してください'),
+  password: z
+    .string()
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, '大文字を含める必要があります')
+    .regex(/[a-z]/, '小文字を含める必要があります')
+    .regex(/[0-9]/, '数字を含める必要があります')
+    .regex(
+      /[^A-Za-z0-9]/,
+      '特殊文字を含める必要があります',
+    ),
+});
+```
+
+> zod でバリデーションを定義しておくと、tRPC が自動で入力チェックしてくれる。フロント側でもバックエンド側でも同じスキーマを使える。
+
+#### 3-2. エラーハンドラとログイン処理
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
+function handleUnexpectedError(
+  context: string,
+  error: unknown,
+): never {
+  console.error(`[auth] ${context}:`, error);
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: `${context}中にエラーが発生しました。しばらくしてから再度お試しください。`,
+    cause: error,
+  });
+}
+
+export const authRouter = createTRPCRouter({
+  login: publicProcedure
+    .input(loginSchema)
+    .mutation(async ({ input }) => {
+      try {
+        // 1. メールでユーザーを検索
+        const user = await prisma.user.findUnique({
+          where: { email: input.email },
+        });
+
+        // 2. ユーザーが見つからない場合
+        if (!user || !user.password) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message:
+              'メールアドレスまたはパスワードが正しくありません',
+          });
+        }
+
+        // 3. アカウントが有効か確認
+        if (!user.isActive) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'このアカウントは無効化されています',
+          });
+        }
+
+        // 4. bcrypt でパスワード照合
+        const isPasswordValid = await bcrypt.compare(
+          input.password,
+          user.password,
+        );
+
+        if (!isPasswordValid) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message:
+              'メールアドレスまたはパスワードが正しくありません',
+          });
+        }
+
+        // 5. セッション作成（JWT + Cookie）
+        const sessionUser: SessionUser = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+
+        await createSession(sessionUser);
+
+        return {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            avatar: user.avatar,
+            role: user.role,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        handleUnexpectedError('ログイン処理', error);
+      }
+    }),
+```
+
+**ログイン処理の流れ**:
+
+```mermaid
+flowchart TD
+    A[メール・パスワード受信] --> B{ユーザー存在する？}
+    B -->|No| E[UNAUTHORIZED エラー]
+    B -->|Yes| C{アカウント有効？}
+    C -->|No| F[FORBIDDEN エラー]
+    C -->|Yes| D{パスワード一致？}
+    D -->|No| E
+    D -->|Yes| G[JWT 生成 + Cookie 保存]
+    G --> H[ユーザー情報を返す]
+```
+
+> **なぜ同じエラーメッセージ？** 「メールが存在しない」と「パスワードが違う」を区別すると、攻撃者に「このメールは登録済み」と教えてしまう。セキュリティのために同じメッセージを返す。
+
+#### 3-3. 登録・ログアウト・セッション取得
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
+  register: publicProcedure
+    .input(registerSchema)
+    .mutation(async ({ input }) => {
+      try {
+        const existing = await prisma.user.findUnique({
+          where: { email: input.email },
+        });
+
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'このメールアドレスは既に登録されています',
+          });
+        }
+
+        const hashedPassword = await bcrypt.hash(
+          input.password,
+          10,
+        );
+
+        const user = await prisma.user.create({
+          data: {
+            email: input.email,
+            name: input.name,
+            password: hashedPassword,
+            role: USER_ROLE.USER,
+            isActive: true,
+          },
+        });
+
+        const sessionUser: SessionUser = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+
+        await createSession(sessionUser);
+
+        return {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            avatar: user.avatar,
+            role: user.role,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        handleUnexpectedError('ユーザー登録処理', error);
+      }
+    }),
+
+  logout: publicProcedure.mutation(async () => {
+    await deleteSession();
+    return { success: true };
+  }),
+
+  getSession: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.session) {
+      return null;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: USER_DETAIL_SELECT,
+    });
+
+    if (!user || !user.isActive) {
+      return null;
+    }
+
+    return { user };
+  }),
+
+  getCurrentUser: protectedProcedure.query(
+    async ({ ctx }) => {
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.session.userId },
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
+      return user;
+    },
+  ),
+});
+```
+
+| API | 種別 | 認証 | 用途 |
+|-----|------|------|------|
+| `login` | mutation | 不要 | ログイン |
+| `register` | mutation | 不要 | ユーザー登録 |
+| `logout` | mutation | 不要 | ログアウト |
+| `getSession` | query | 不要 | 現在のセッション確認（null 許容） |
+| `getCurrentUser` | query | 必須 | ログインユーザーの詳細取得 |
+
+> `bcrypt.hash(password, 10)` の `10` はソルトラウンド。数字が大きいほど安全だが遅くなる。10 が一般的なバランス。
+
+**確認ポイント**:
+- [ ] `src/server/api/routers/_helpers/select.ts` が作成できた
+- [ ] `src/server/api/routers/auth.ts` が作成できた
+- [ ] `authRouter` に 5 つの API（login, register, logout, getSession, getCurrentUser）がある
+
+**学んだこと**: パスワードは平文で保存せず `bcrypt.hash` でハッシュ化し、照合は `bcrypt.compare` で行う。
 
 ---
 
+### Step 4: API を繋ぐ — ルーター登録 + HTTP ハンドラ（5分）
+
+**ゴール**: 作った auth ルーターを tRPC に登録し、HTTP リクエストを受け付けられるようにする。
+
+#### 4-1. root.ts — ルーターを束ねる
+
+`src/server/api/root.ts` を新規作成する。
+
+```typescript
+// filepath: src/server/api/root.ts
+import { authRouter } from './routers/auth';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+今は `auth` だけ。Day 09 以降でプロジェクト・タスクなどのルーターを追加していく。
+
+#### 4-2. route.ts — HTTP ハンドラ
+
+`src/app/api/trpc/[trpc]/route.ts` を新規作成する。
+
+```typescript
+// filepath: src/app/api/trpc/[trpc]/route.ts
+import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
+import type { NextRequest } from 'next/server';
+import { appRouter } from '@/server/api/root';
+import { createTRPCContext } from '@/server/api/trpc';
+
+const handler = (req: NextRequest) =>
+  fetchRequestHandler({
+    endpoint: '/api/trpc',
+    req,
+    router: appRouter,
+    createContext: () =>
+      createTRPCContext({ headers: req.headers }),
+  });
+
+export { handler as GET, handler as POST };
+```
+
+Next.js の App Router では、`src/app/api/trpc/[trpc]/route.ts` に置くだけで `/api/trpc/*` のリクエストをすべて tRPC が処理する。
+
+**確認ポイント**:
+- [ ] `src/server/api/root.ts` が作成できた
+- [ ] `src/app/api/trpc/[trpc]/route.ts` が作成できた
 
 ---
 
-### 💡 Pro パターンで書こう — 認証ガードは early return で道順を見せる
+### Step 5: middleware.ts を作る — ルート保護（8分）
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+**ゴール**: ログインしていないユーザーを自動でログイン画面にリダイレクトする仕組みを作る。
 
-### ❌ Before（動くけど、プロは書かない）
+このファイルは Next.js の Edge Runtime で動く。
+すべてのリクエストの「入口」で、Cookie に有効な JWT があるかを確認する。
+
+`src/middleware.ts` を新規作成する（`src/app/` ではなく `src/` 直下）。
+
+```typescript
+// filepath: src/middleware.ts
+import { jwtVerify } from 'jose';
+import { type NextRequest, NextResponse } from 'next/server';
+
+const COOKIE_NAME = 'session';
+
+const PUBLIC_PATHS = ['/login', '/register'];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (path) =>
+      pathname === path
+      || pathname.startsWith(`${path}/`),
+  );
+}
+
+function isValidCallbackPath(path: string): boolean {
+  return (
+    path.startsWith('/')
+    && !path.startsWith('//')
+    && !path.includes('://')
+    && !path.includes('\\')
+  );
+}
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env['JWT_SECRET'];
+  if (!secret) {
+    throw new Error('JWT_SECRET is not set');
+  }
+  return new TextEncoder().encode(secret);
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 公開ページはスキップ
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  // tRPC エンドポイントはスキップ
+  // （tRPC 層の protectedProcedure で認証を担保）
+  if (pathname.startsWith('/api/trpc')) {
+    return NextResponse.next();
+  }
+
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+
+  // Cookie なし → ログインへリダイレクト
+  if (!token) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set(
+      'callbackUrl',
+      isValidCallbackPath(pathname)
+        ? pathname
+        : '/dashboard',
+    );
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // JWT 検証
+  try {
+    await jwtVerify(token, getJwtSecret(), {
+      algorithms: ['HS256'],
+    });
+    return NextResponse.next();
+  } catch {
+    // 無効なトークン: Cookie 削除してログインへ
+    const loginUrl = new URL('/login', request.url);
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete(COOKIE_NAME);
+    return response;
+  }
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+};
+```
+
+**middleware の判定フロー**:
+
+```mermaid
+flowchart TD
+    A[リクエスト受信] --> B{公開パス？}
+    B -->|Yes| C[そのまま通す]
+    B -->|No| D{tRPC API？}
+    D -->|Yes| C
+    D -->|No| E{Cookie あり？}
+    E -->|No| F[/login にリダイレクト]
+    E -->|Yes| G{JWT 有効？}
+    G -->|Yes| C
+    G -->|No| H[Cookie 削除 + /login]
+
+    style C fill:#e8f5e9
+    style F fill:#ffebee
+    style H fill:#ffebee
+```
+
+> **なぜ middleware で `session.ts` を import しない？** middleware は Edge Runtime で動くため、`cookies()` を使う `session.ts` は import できない。`jose` を直接使って JWT 検証する。
+
+> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぐ。`/` で始まり `://` を含まないパスのみ許可する。
+
+**確認ポイント**:
+- [ ] `src/middleware.ts` が作成できた（`src/app/` ではなく `src/` 直下）
+- [ ] `config.matcher` でアセットファイルを除外している
+
+**学んだこと**: Next.js の middleware はすべてのリクエストの入口で動く。認証チェックを一箇所に集約できるのでページごとにチェックコードを書く必要がない。
+
+---
+
+### Step 6: ログインして動作確認する（5分）
+
+**ゴール**: ここまで作った認証バックエンドが実際に動くことを確認する。
+
+開発サーバーを起動する。
+
+```bash
+npm run dev
+```
+
+> Docker が起動していること、`npx prisma db push` と `npx prisma db seed` が済んでいることを確認（Day 01 の scaffold で実行済みのはず）。
+
+ブラウザで `http://localhost:3000/login` を開く。
+
+**seed データのログイン情報**:
+
+| メール | パスワード | 権限 |
+|--------|-----------|------|
+| `admin@example.com` | `password123` | 管理者 |
+
+1. メールとパスワードを入力してログインボタンを押す
+2. 「おかえりなさい、管理者さん」トーストが表示される
+3. ダッシュボードに遷移する
+
+**確認ポイント**:
+- [ ] `npm run dev` でエラーが出ない
+- [ ] ログインが成功してトーストが表示される
+- [ ] ダッシュボードに遷移する
+
+> **うまくいかないとき**: ターミナルのエラーメッセージを確認する。よくある原因は「つまずきポイント」セクションにまとめてある。
+
+---
+
+### Step 7: DevTools で JWT と Cookie を確認する（5分）
+
+**ゴール**: ブラウザに保存された JWT トークンの中身を確認し、認証ガードの動作を体験する。
+
+#### 7-1. Cookie を確認する
+
+1. DevTools を開く（`F12` または `Cmd+Option+I`）
+2. **Application** タブ → 左メニューの **Cookies** → `http://localhost:3000`
+3. `session` という名前の Cookie を見つける
+
+| 確認項目 | 期待値 |
+|---------|-------|
+| Name | `session` |
+| HttpOnly | チェックあり |
+| SameSite | `Strict` |
+| Path | `/` |
+
+#### 7-2. JWT をデコードする
+
+> **重要**: 本番環境の JWT は絶対に外部サイトに貼り付けない。開発環境のトークンだから問題ない。
+
+1. `session` Cookie の値（長い文字列）をコピー
+2. ブラウザで `https://jwt.io` を開く
+3. 「Encoded」欄に貼り付ける
+
+jwt.io の Payload セクションで以下が確認できる:
+
+| フィールド | 表示例 | 意味 |
+|----------|--------|------|
+| `userId` | `"cm..."` | ユーザー ID |
+| `email` | `"admin@example.com"` | メールアドレス |
+| `role` | `"ADMIN"` | 権限 |
+| `exp` | `1234567890` | 有効期限（UNIX 時間、約 7 日後） |
+
+> **UNIX 時間**: ブラウザのコンソールで `new Date(1234567890 * 1000)` と入力すると、人間が読める日時に変換できる。
+
+#### 7-3. Cookie を削除して認証ガードを体感する
+
+1. Application → Cookies → `session` を右クリック → **Delete**
+2. ブラウザで `/dashboard` にアクセス
+3. **自動的に `/login` にリダイレクトされる**
+
+これが Step 5 で作った middleware の仕事。
+
+4. もう一度ログインするとダッシュボードが表示される
+
+**確認ポイント**:
+- [ ] `session` Cookie が存在する
+- [ ] jwt.io で userId, email, role, exp が確認できた
+- [ ] Cookie 削除後に `/dashboard` が表示できなくなった
+- [ ] 再ログインでダッシュボードが復活した
+
+**学んだこと**: JWT は暗号化ではなく「署名」。中身は誰でもデコードできるが、改ざんすると署名が合わなくなる。
+
+---
+
+## Pro パターンで書こう — 認証ガードは early return で道順を見せる
+
+Step 5 の middleware は「公開パス → tRPC → Cookie なし → JWT 無効」と early return で判定を重ねている。
+この書き方を他のコードでも使ってみよう。
+
+### Before（動くけど、プロは書かない）
 
 ```tsx
-import type { ReactNode } from 'react';
-
-type AuthStatus = 'loading' | 'guest' | 'authenticated';
-
-type AuthGuardProps = {
-  authStatus: AuthStatus;
-  children: ReactNode;
-};
-
-export function AuthGuard({ authStatus, children }: AuthGuardProps) {
+export function AuthGuard({
+  authStatus,
+  children,
+}: {
+  authStatus: 'loading' | 'guest' | 'authenticated';
+  children: React.ReactNode;
+}) {
   return authStatus === 'loading' ? (
-    <main className="flex min-h-screen items-center justify-center">
-      セッション確認中
-    </main>
+    <main>セッション確認中</main>
   ) : authStatus === 'guest' ? (
-    <main className="flex min-h-screen items-center justify-center">
-      ログイン画面へ移動します
-    </main>
+    <main>ログイン画面へ移動します</main>
   ) : (
     <>{children}</>
   );
 }
 ```
 
-**このコードの問題点**:
+**問題点**: 条件が増えるほど `?` と `:` の対応を目で追う必要が出る。
 
-- 条件が増えるほど `?` と `:` の対応を目で追う必要が出てくる
-- ローディング、未ログイン、ログイン済みの流れが横に詰まって読みにくい
-- メール未確認などの条件を追加すると、さらに三項演算子が深くなりやすい
-
-### ✅ After（プロが書くコード）
+### After（プロが書くコード）
 
 ```tsx
-import type { ReactNode } from 'react';
-
-type AuthStatus = 'loading' | 'guest' | 'authenticated';
-
-type AuthGuardProps = {
-  authStatus: AuthStatus;
-  children: ReactNode;
-};
-
-export function AuthGuard({ authStatus, children }: AuthGuardProps) {
+export function AuthGuard({
+  authStatus,
+  children,
+}: {
+  authStatus: 'loading' | 'guest' | 'authenticated';
+  children: React.ReactNode;
+}) {
   if (authStatus === 'loading') {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        セッション確認中
-      </main>
-    );
+    return <main>セッション確認中</main>;
   }
 
   if (authStatus === 'guest') {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        ログイン画面へ移動します
-      </main>
-    );
+    return <main>ログイン画面へ移動します</main>;
   }
 
   return <>{children}</>;
 }
 ```
 
-**このコードの強み**:
+**強み**: 上から順に読める。新しいガード条件を足すときも `if` + `return` を 1 つ増やすだけ。
 
-- 上から順に「まだ確認中」「未ログイン」「ログイン済み」と読める
-- 新しいガード条件を足すときも、独立した `if` と `return` を1つ増やせば済む
-- 最後の `return` に来た時点でログイン済みの画面だけを考えられる
+> **覚えておきたいエッセンス**: 認証ガードは分岐が増えやすい場所。三項演算子で詰め込むより、**先に返して本筋を残す**ほうが読みやすく育てやすい。
 
-#### 🎓 覚えておきたいエッセンス
+---
 
-認証ガードは分岐が増えやすい場所や。
-三項演算子で詰め込むより、**先に返して本筋を残す** ほうが読みやすく育てやすい。
+## 今日のまとめ
 
-## 📋 今日のまとめ
+- [ ] `src/lib/session.ts` — JWT セッション管理を作った
+- [ ] `src/server/api/trpc.ts` — tRPC の土台を作った
+- [ ] `src/server/api/routers/auth.ts` — 認証ルーターを作った
+- [ ] `src/server/api/root.ts` + `route.ts` — API を繋いだ
+- [ ] `src/middleware.ts` — ルート保護を作った
+- [ ] ログインが実際に動くことを確認した
+- [ ] DevTools で JWT と Cookie の中身を確認した
 
-- [ ] DevTools Networkタブでログインリクエストを観察した
-- [ ] bcryptでパスワードをハッシュ比較する仕組みを理解した
-- [ ] JWTトークンの生成と中身を確認した
-- [ ] HttpOnly Cookieのセキュリティ設定を理解した
-- [ ] ログイン成功トーストを改善した
-- [ ] jwt.ioでトークンをデコードした
-- [ ] Cookieを削除して認証ガードの動作を体験した
-- [ ] publicProcedureとprotectedProcedureの違いを理解した
-
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| ログインしても画面が変わらない | `router.refresh()`の呼び忘れ | `onSuccess`内で`router.refresh()`を追加 |
-| 「ログインが必要です」エラー | Cookieが保存されていない | ブラウザのCookie設定を確認 |
-| jwt.ioでデコードできない | 値のコピーが不完全 | Cookie値を全選択してからコピーする |
-| トーストが表示されない | `react-hot-toast`のインポート漏れ | `import toast from 'react-hot-toast'`を確認 |
+| `JWT_SECRET is not set` | `.env` に JWT_SECRET がない | scaffold が自動設定するので `.env` を確認。なければ 32 文字以上の文字列を追加 |
+| `Cannot find module '@/lib/session'` | ファイルパスの typo | `src/lib/session.ts` にあるか確認 |
+| `Cannot find module '@/server/api/root'` | root.ts が未作成 | Step 4 の root.ts を作成 |
+| ログインしてもトーストが出ない | auth ルーターが root.ts に登録されていない | root.ts で `auth: authRouter` を確認 |
+| `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
+| `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
+| `relation "User" does not exist` | DB にテーブルがない | `npx prisma db push && npx prisma db seed` を実行 |
+| middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
 
-## 🔜 次回予告
+## 次回予告
 
-Day 08 では、サイドバーにユーザー情報ウィジェットを追加し、ログアウト確認ダイアログを実装します。ログアウトとページ保護の仕組みを、自分の手で作りながら学びましょう。
+Day 08 では、サイドバー付きのアプリレイアウトを作る。
+ログアウトボタン、ユーザー情報ウィジェット、ナビゲーション——
+今日作った認証バックエンドの上に、使いやすい UI を組み立てていく。
