@@ -103,8 +103,8 @@ import { commentRouter } from './routers/comment';
 
 🎯 **ゴール**: コメントルーターの API を把握します。
 
-`src/server/api/routers/comment.ts` を新規作成する。
-まずはコメント投稿のバリデーションスキーマから書く。
+scaffold が配布した `src/server/api/routers/comment.ts` の中身を確認する。
+まずはコメント投稿のバリデーションスキーマを見てみよう。
 
 💻 **実装**:
 
