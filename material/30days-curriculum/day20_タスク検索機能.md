@@ -91,6 +91,22 @@ flowchart TD
 
 ---
 
+### Step 0: 検索 API を有効化する（2分）
+
+`src/server/api/root.ts` に search ルーターを追加する。
+
+```typescript
+// filepath: src/server/api/root.ts（import を追加）
+import { searchRouter } from './routers/search';
+
+// appRouter に追加
+  search: searchRouter,
+```
+
+✅ **確認ポイント**: `search: searchRouter` を追加した。
+
+---
+
 ### Step 1: 検索APIを理解する（3分）
 
 🎯 **ゴール**: search ルーターの構成を把握します。

@@ -95,6 +95,22 @@ flowchart TD
 
 ---
 
+### Step 0: レポート API を有効化する（2分）
+
+`src/server/api/root.ts` に report ルーターを追加する。
+
+```typescript
+// filepath: src/server/api/root.ts（import を追加）
+import { reportRouter } from './routers/report';
+
+// appRouter に追加
+  report: reportRouter,
+```
+
+✅ **確認ポイント**: `report: reportRouter` を追加した。
+
+---
+
 ### Step 1 🧭: サーバー集計の考え方（3分）
 
 🎯 **ゴール**: なぜ完成版 source では

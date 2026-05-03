@@ -98,6 +98,22 @@ flowchart TD
 
 ---
 
+### Step 0: ユーザー API を有効化する（2分）
+
+`src/server/api/root.ts` に user ルーターを追加する。
+
+```typescript
+// filepath: src/server/api/root.ts（import を追加）
+import { userRouter } from './routers/user';
+
+// appRouter に追加
+  user: userRouter,
+```
+
+✅ **確認ポイント**: `user: userRouter` を追加した。
+
+---
+
 ### Step 1: 使用するAPIの確認（3分）
 
 🎯 **ゴール**: ユーザー管理に使う2つのAPIを理解します。
