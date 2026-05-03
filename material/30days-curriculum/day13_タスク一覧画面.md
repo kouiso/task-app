@@ -111,6 +111,26 @@ src/
 
 ---
 
+### Step 0: タスク API を有効化する（2分）
+
+`src/server/api/root.ts` に task ルーターを追加する。
+
+```typescript
+// filepath: src/server/api/root.ts（import を追加）
+import { taskRouter } from './routers/task';
+
+// appRouter に追加
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+});
+```
+
+✅ **確認ポイント**: `task: taskRouter` を追加した。
+
+---
+
 ### Step 1: ページの土台を作る（5分）
 
 **ゴール**: タスク一覧ページの基本構造を作ります。

@@ -104,6 +104,38 @@ src/
 
 ---
 
+### Step 0: プロジェクト API を有効化する（2分）
+
+🎯 **ゴール**: scaffold が配布した project ルーターを root.ts に登録して、API を使えるようにする。
+
+scaffold は `src/server/api/routers/project.ts` を配布済み。でもまだ `root.ts` に登録されてないから API として動かない。Day 07 で作った `src/server/api/root.ts` を編集する。
+
+💻 **編集**:
+
+```typescript
+// filepath: src/server/api/root.ts
+import { authRouter } from './routers/auth';
+import { projectRouter } from './routers/project';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+✅ **確認ポイント**:
+- [ ] `projectRouter` の import を追加した
+- [ ] `appRouter` に `project: projectRouter` を追加した
+
+> scaffold が配布したルーターのコード（`project.ts`）を読んでみると、Day 07 で学んだ `protectedProcedure` や `prisma` の使い方がそのまま使われている。中身が気になったら開いてみよう。
+
+---
+
 ### Step 1 🧭: ページの骨組みを作る（3分）
 
 🎯 **ゴール**: プロジェクト一覧ページの基本構造を作ります。

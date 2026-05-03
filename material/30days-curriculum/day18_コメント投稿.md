@@ -83,6 +83,22 @@ flowchart TD
 
 ---
 
+### Step 0: コメント API を有効化する（2分）
+
+`src/server/api/root.ts` に comment ルーターを追加する。
+
+```typescript
+// filepath: src/server/api/root.ts（import を追加）
+import { commentRouter } from './routers/comment';
+
+// appRouter に追加
+  comment: commentRouter,
+```
+
+✅ **確認ポイント**: `comment: commentRouter` を追加した。
+
+---
+
 ### Step 1: コメント API を理解する（3分）
 
 🎯 **ゴール**: コメントルーターの API を把握します。
