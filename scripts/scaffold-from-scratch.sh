@@ -32,6 +32,18 @@ RUNTIME_DEPS=(
   @radix-ui/react-tabs
   tailwindcss-animate
   date-fns
+  react-hot-toast
+  superjson
+  server-only
+  react-is
+  @radix-ui/react-accordion
+  @radix-ui/react-alert-dialog
+  @radix-ui/react-avatar
+  @radix-ui/react-checkbox
+  @radix-ui/react-popover
+  @radix-ui/react-select
+  @radix-ui/react-separator
+  @radix-ui/react-switch
 )
 
 DEV_DEPS=(
