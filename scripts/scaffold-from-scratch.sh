@@ -104,7 +104,7 @@ ensure_empty_or_existing_next_app() {
   # 教材配布物（スクリプト自身 + _ui-components/ + _lib-utils/）を一時退避して実行後に戻す。
   local stash_dir
   stash_dir="$(mktemp -d)"
-  for item in "$(basename "$0")" _ui-components _lib-utils; do
+  for item in "$(basename "$0")" _ui-components _lib-utils _prisma _docker _seed; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
     fi
@@ -236,6 +236,66 @@ copy_lib_utils() {
   echo "lib ユーティリティを src/lib/ にコピーしました。"
 }
 
+copy_prisma_files() {
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+
+  # schema.prisma + prisma.config.ts
+  if [ -d "${script_dir}/_prisma" ]; then
+    mkdir -p prisma
+    cp "${script_dir}/_prisma/schema.prisma" prisma/ 2>/dev/null
+    cp "${script_dir}/_prisma/prisma.config.ts" . 2>/dev/null
+    echo "Prisma スキーマを配置しました。"
+  fi
+
+  # docker-compose.yml
+  if [ -d "${script_dir}/_docker" ]; then
+    cp "${script_dir}/_docker/docker-compose.yml" . 2>/dev/null
+    echo "docker-compose.yml を配置しました。"
+  fi
+
+  # seed コマンド
+  if [ -d "${script_dir}/_seed" ]; then
+    mkdir -p src/command
+    cp "${script_dir}/_seed/seed.ts" src/command/ 2>/dev/null
+    echo "seed コマンドを配置しました。"
+  fi
+}
+
+setup_database() {
+  # Docker が使える場合のみ DB を自動セットアップ
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "Docker が見つかりません。DB は手動でセットアップしてください。"
+    return 0
+  fi
+
+  if [ ! -f "docker-compose.yml" ]; then
+    echo "docker-compose.yml がありません。DB セットアップをスキップします。"
+    return 0
+  fi
+
+  echo "Docker で PostgreSQL を起動しています..."
+  docker compose up -d 2>/dev/null || docker-compose up -d 2>/dev/null
+
+  # DB の準備ができるまで少し待つ
+  echo "DB の起動を待っています..."
+  sleep 3
+
+  # .env がなければ .env.example からコピー
+  if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+    cp .env.example .env
+    echo ".env.example を .env にコピーしました。"
+  fi
+
+  # Prisma マイグレーション + クライアント生成
+  if [ -f "prisma/schema.prisma" ]; then
+    echo "Prisma マイグレーションを実行しています..."
+    npx prisma migrate dev --name init 2>/dev/null || npx prisma db push 2>/dev/null
+    npx prisma generate 2>/dev/null
+    echo "DB セットアップが完了しました。"
+  fi
+}
+
 main() {
   echo "教材用の初期土台を ${PROJECT_DIR} に作成します。"
 
@@ -250,6 +310,8 @@ main() {
   write_env_example
   copy_lib_utils
   copy_ui_components
+  copy_prisma_files
+  setup_database
 
   echo
   echo "初期セットアップは完了やで。"
