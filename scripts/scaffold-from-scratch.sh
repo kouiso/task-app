@@ -30,6 +30,7 @@ RUNTIME_DEPS=(
   @radix-ui/react-dropdown-menu
   @radix-ui/react-label
   @radix-ui/react-tabs
+  tailwindcss-animate
 )
 
 DEV_DEPS=(
