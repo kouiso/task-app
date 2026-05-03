@@ -11,23 +11,4 @@ export async function register() {
     });
   }
 
-  // Sentry: DSNが設定されている場合のみ初期化する (SENTRY_DSN or NEXT_PUBLIC_SENTRY_DSN)
-  const dsn = process.env['SENTRY_DSN'] ?? process.env['NEXT_PUBLIC_SENTRY_DSN'];
-  if (dsn) {
-    if (process.env['NEXT_RUNTIME'] === 'nodejs') {
-      await import('../sentry.server.config');
-    }
-    if (process.env['NEXT_RUNTIME'] === 'edge') {
-      await import('../sentry.edge.config');
-    }
-  }
 }
-
-export const onRequestError: import('next/dist/server/instrumentation/types').InstrumentationOnRequestError =
-  async (err, request, errorContext) => {
-    const dsn = process.env['SENTRY_DSN'] ?? process.env['NEXT_PUBLIC_SENTRY_DSN'];
-    if (dsn) {
-      const { captureRequestError } = await import('@sentry/nextjs');
-      captureRequestError(err, request, errorContext);
-    }
-  };
