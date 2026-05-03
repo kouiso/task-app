@@ -378,9 +378,9 @@ Next.js のロゴと
 ### スクリーンショットの見本
 
 雰囲気の確認用に、
-[day01-vscode-open.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-vscode-open.png)
+[day01-vscode-open.png](./screenshots/day01-vscode-open.png)
 と
-[day01-success.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-success.png)
+[day01-success.png](./screenshots/day01-success.png)
 も見ておくとイメージしやすい。
 
 ### ここで一回安心してええ理由
@@ -1025,9 +1025,9 @@ npm run dev
 
 今日はここまで来たら十分すごい。
 雰囲気比較として、
-[day01-success.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-success.png)
+[day01-success.png](./screenshots/day01-success.png)
 や
-[day01-dashboard-named.png](/Users/kouiso/ghq/kouiso/task-app/material/30days-curriculum/screenshots/day01-dashboard-named.png)
+[day01-dashboard-named.png](./screenshots/day01-dashboard-named.png)
 も眺めてみてな。
 
 「完全一致」より、
