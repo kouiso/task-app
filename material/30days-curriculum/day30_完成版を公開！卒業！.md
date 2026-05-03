@@ -484,7 +484,7 @@ npm ls next react typescript prisma
 | Docker | — | コンテナ（PostgreSQL） |
 | Vercel | — | ホスティング・CI/CD |
 
-> 💡 この技術スタックは2024-2025年の
+> 💡 この技術スタックは2024-2026年の
 > モダン Web 開発で広く使われています。
 > ここで学んだ知識は実務でも活かせます。
 
@@ -545,6 +545,61 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 > まず公式ドキュメントを読みましょう。
 
 ---
+
+
+---
+
+### 💡 Pro パターンで書こう — 最終アーキテクチャの振り返り
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// 全ページに "use client" を付けて、全部クライアントで描画
+"use client";
+export default function DashboardPage() {
+  const [tasks, setTasks] = useState([]);
+  useEffect(() => {
+    fetch("/api/tasks").then(r => r.json()).then(setTasks);
+  }, []);
+  return <TaskList tasks={tasks} />;
+}
+```
+
+**このコードの問題点**:
+
+- 全ページが Client Component で、サーバー側レンダリングの恩恵がゼロ
+- `useEffect` + `fetch` + `useState` の3点セットが全ページに散乱
+- キャッシュなし、エラーハンドリングなし、型安全なし
+
+### ✅ After（プロが書くコード）
+
+```typescript
+// page.tsx (Server Component — "use client" なし)
+export default function DashboardPage() {
+  return (
+    <AppLayout>
+      <DashboardContent />
+    </AppLayout>
+  );
+}
+
+// dashboard-content.tsx ("use client")
+"use client";
+export function DashboardContent() {
+  const { data: tasks } = api.task.getAll.useQuery();
+  return <TaskList tasks={tasks ?? []} />;
+}
+```
+
+**このコードの強み**:
+
+- Server Component でレイアウトを事前描画 → 初期表示が速い
+- tRPC `useQuery` で型安全 + キャッシュ + エラーハンドリングが自動
+- 30日間で学んだパターンが全て集約された設計
+
+#### 🎓 覚えておきたいエッセンス
+
+30日前に書いていた `useEffect` + `fetch` を振り返ってみよう。今なら tRPC + Server Component で、もっとシンプルに、もっと安全に書ける。それが30日間の成長の証。
 
 ## 📋 今日のまとめ
 

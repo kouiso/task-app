@@ -82,7 +82,7 @@ sequenceDiagram
 
 🎯 **ゴール**: ログイン時にブラウザとサーバーの間で何が起きているか、DevToolsで確認します。
 
-まず `npm run dev` で開発サーバーが起動していることを確認してから、ブラウザのDevToolsを開いてください。
+まず `PORT=3001 npm run dev` で開発サーバーをポート 3001 で起動してから、ブラウザの DevTools を開いてください。Day 07 と Day 08 では認証 Cookie の挙動を独立して確認するため、デフォルトの 3000 ではなく 3001 を使います (Day 08 で詳しく扱います)。
 
 | OS | ショートカット |
 |------|---------------|
@@ -588,6 +588,54 @@ const isAuthenticated = t.middleware(
 - 確認後は元のメッセージに戻しましょう
 
 ---
+
+
+---
+
+### 💡 Pro パターンで書こう — 認証ガード
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// ネストした三項演算子で表示を切り替え
+return session === undefined
+  ? <Loading />
+  : session === null
+    ? <Redirect to="/login" />
+    : session.role === "ADMIN"
+      ? <AdminDashboard user={session} />
+      : <UserDashboard user={session} />;
+```
+
+**このコードの問題点**:
+
+- ネストが深くなるほど「どの条件で何が表示されるか」が読みにくい
+- 新しい条件（メール未確認ユーザーなど）を足すとさらにネストが深くなる
+- コードレビューで「この分岐、合ってる？」と毎回確認が必要
+
+### ✅ After（プロが書くコード）
+
+```typescript
+// early return で条件を先に弾く
+if (session === undefined) return <Loading />;
+if (session === null) {
+  router.push("/login");
+  return null;
+}
+// ここに来た時点で session は確実に存在する
+if (session.role === "ADMIN") return <AdminDashboard user={session} />;
+return <UserDashboard user={session} />;
+```
+
+**このコードの強み**:
+
+- 上から順に読めば、どの条件で何が起きるか一目瞭然
+- 新しい条件は途中に1行足すだけ
+- TypeScript が各 return の後で型を自動的に絞ってくれる
+
+#### 🎓 覚えておきたいエッセンス
+
+三項演算子のネストは「読めるけど辛い」コードの典型。early return で「異常系を先に弾く」書き方にすると、正常系のコードがフラットに書ける。
 
 ## 📋 今日のまとめ
 

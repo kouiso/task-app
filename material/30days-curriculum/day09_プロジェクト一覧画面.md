@@ -716,6 +716,51 @@ PORT=3001 npm run dev
 - レスポンシブに列数が変わる
 - アーカイブ表示スイッチの切り替えで表示が変わる
 
+
+---
+
+### 💡 Pro パターンで書こう — データ取得
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+"use client";
+const [projects, setProjects] = useState([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  fetch("/api/projects")
+    .then((res) => res.json())
+    .then((data) => setProjects(data))
+    .finally(() => setLoading(false));
+}, []);
+```
+
+**このコードの問題点**:
+
+- 状態管理が3つ（data, loading, error）必要で、書き忘れやすい
+- キャッシュがないので画面遷移のたびに毎回取得する
+- エラーハンドリングを忘れると、失敗時に画面が壊れる
+
+### ✅ After（プロが書くコード）
+
+```typescript
+"use client";
+const { data: projects, isLoading } = api.project.getAll.useQuery({
+  isArchived: false,
+});
+```
+
+**このコードの強み**:
+
+- 1行で data, loading, error が全部手に入る
+- tRPC + TanStack Query が自動でキャッシュ・再取得を管理
+- 型も自動で付くので、`projects` の中身を typo すると即コンパイルエラー
+
+#### 🎓 覚えておきたいエッセンス
+
+`useEffect` + `fetch` + `useState` の3点セットは React の古い書き方。tRPC の `useQuery` なら1行で同じことができて、キャッシュも型安全もタダで付いてくる。
+
 ## 📋 今日のまとめ
 
 - [ ] `useQuery` でサーバーからデータを取得できた

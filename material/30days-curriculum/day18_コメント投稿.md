@@ -579,6 +579,64 @@ PORT=3001 npm run dev
 
 ---
 
+
+---
+
+### 💡 Pro パターンで書こう — コメント表示の条件分岐
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+return (
+  <div>
+    {comments.length > 0
+      ? comments.map((c) =>
+          c.author
+            ? c.author.id === currentUser.id
+              ? <EditableComment key={c.id} comment={c} />
+              : <ReadOnlyComment key={c.id} comment={c} />
+            : <DeletedComment key={c.id} />
+        )
+      : <p>コメントはまだありません</p>}
+  </div>
+);
+```
+
+**このコードの問題点**:
+
+- 三項演算子が3段ネストしていて、どの条件で何が出るか追いにくい
+- コメントの種類が増えるとネストがさらに深くなる
+
+### ✅ After（プロが書くコード）
+
+```typescript
+if (comments.length === 0) {
+  return <p>コメントはまだありません</p>;
+}
+
+return (
+  <div>
+    {comments.map((comment) => (
+      <CommentItem
+        key={comment.id}
+        comment={comment}
+        isOwner={comment.author?.id === currentUser.id}
+      />
+    ))}
+  </div>
+);
+```
+
+**このコードの強み**:
+
+- early return で空状態を先に処理。残りは正常系だけ
+- `isOwner` を props で渡して、表示の分岐は CommentItem 内部に閉じ込める
+- 読む人が上から順に理解できる
+
+#### 🎓 覚えておきたいエッセンス
+
+JSX 内の三項演算子ネストは early return + props 分離で解消する。条件分岐をコンポーネントの中に閉じ込めると、親は「何を表示するか」だけに集中できる。
+
 ## 📋 今日のまとめ
 
 - [ ] タスク詳細にコメント一覧を表示できた

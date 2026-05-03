@@ -501,13 +501,16 @@ PORT=3001 npm run dev
 
 📸 スクリーンショット: DevTools Consoleタブの表示を確認してください。
 
-![DevTools Consoleタブの表示を確認してください](./screenshots/dashboard.png)
+![DevTools Console タブでエラーログを確認している画面](./screenshots/dashboard.png)
+> 📷 TODO: DevTools の Console / Network / Elements タブのスクリーンショットを差し替え予定
 📸 スクリーンショット: DevTools Networkタブの表示を確認してください。
 
-![DevTools Networkタブの表示を確認してください](./screenshots/dashboard.png)
+![DevTools Network タブでリクエストの状態を確認している画面](./screenshots/dashboard.png)
+> 📷 TODO: DevTools の Console / Network / Elements タブのスクリーンショットを差し替え予定
 📸 スクリーンショット: DevTools Elementsタブの表示を確認してください。
 
-![DevTools Elementsタブの表示を確認してくださ](./screenshots/dashboard.png)
+![DevTools Elements タブで画面の HTML 構造を確認している画面](./screenshots/dashboard.png)
+> 📷 TODO: DevTools の Console / Network / Elements タブのスクリーンショットを差し替え予定
 📝 **学んだこと**: DevToolsは「症状に合った道具を選ぶ」のが大事です。Console→Network→Elementsの順でチェックするのが基本です。
 
 ---
@@ -551,6 +554,66 @@ npm run lint:fix
 📝 **学んだこと**: Biome lintはコードの問題を自動検出し、一部は自動修正もしてくれます。
 
 ---
+
+
+---
+
+### 💡 Pro パターンで書こう — エラー表示の条件分岐
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+export default function ErrorPage({ error }: { error: Error }) {
+  return error.message === "UNAUTHORIZED"
+    ? <div><h1>認証エラー</h1><p>ログインし直してください</p><a href="/login">ログイン</a></div>
+    : error.message === "NOT_FOUND"
+      ? <div><h1>見つかりません</h1><p>ページが存在しません</p><a href="/">トップへ</a></div>
+      : <div><h1>エラー</h1><p>問題が発生しました</p><button onClick={() => window.location.reload()}>再試行</button></div>;
+}
+```
+
+**このコードの問題点**:
+
+- 三項演算子のネストで、どのエラーで何が出るか追いにくい
+- エラーの種類が増えるとネストがさらに深くなる
+
+### ✅ After（プロが書くコード）
+
+```typescript
+export default function ErrorPage({ error }: { error: Error }) {
+  if (error.message === "UNAUTHORIZED") {
+    return (
+      <ErrorLayout title="認証エラー" message="ログインし直してください">
+        <Link href="/login">ログイン</Link>
+      </ErrorLayout>
+    );
+  }
+
+  if (error.message === "NOT_FOUND") {
+    return (
+      <ErrorLayout title="見つかりません" message="ページが存在しません">
+        <Link href="/">トップへ</Link>
+      </ErrorLayout>
+    );
+  }
+
+  return (
+    <ErrorLayout title="エラー" message="問題が発生しました">
+      <Button onClick={() => window.location.reload()}>再試行</Button>
+    </ErrorLayout>
+  );
+}
+```
+
+**このコードの強み**:
+
+- 上から順に読むだけで、どのエラーで何を表示するかわかる
+- `ErrorLayout` に共通のデザインを閉じ込めて、各分岐は差分だけ書く
+- 新しいエラー種別は中間に1ブロック足すだけ
+
+#### 🎓 覚えておきたいエッセンス
+
+エラーページは early return が最も活きる場所。「このエラーならこれを出して終わり」を上から並べるだけで、ネストなしに書ける。
 
 ## 📋 今日のまとめ
 

@@ -704,6 +704,51 @@ PORT=3001 npm run dev
 
 ![週次レポートページ全体の表示を確認してください。](./screenshots/report-weekly.png)
 
+
+---
+
+### 💡 Pro パターンで書こう — 関連データの取得
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// N+1: タスクごとにユーザーを1件ずつ取得
+const tasks = await prisma.task.findMany();
+const tasksWithUser = await Promise.all(
+  tasks.map(async (task) => ({
+    ...task,
+    user: await prisma.user.findUnique({
+      where: { id: task.assigneeId ?? "" },
+    }),
+  }))
+);
+```
+
+**このコードの問題点**:
+
+- タスクが100件あれば、DB クエリが101回走る（1 + 100）
+- レスポンスが遅くなり、DB に負荷がかかる
+- `assigneeId` が null の場合のハンドリングも雑
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const tasks = await prisma.task.findMany({
+  include: { assignee: { select: { name: true, email: true } } },
+});
+// クエリは1回。assignee が自動で JOIN される
+```
+
+**このコードの強み**:
+
+- DB クエリが1回で済む（Prisma が SQL JOIN を組み立てる）
+- `select` で必要なカラムだけ取得。パスワードなどの不要な情報を含まない
+- `assignee` が null のケースも Prisma が型で教えてくれる
+
+#### 🎓 覚えておきたいエッセンス
+
+関連データは `include` で1回で取得する。ループ内で DB クエリを呼ぶ N+1 問題は、実務で最もよく見るパフォーマンスバグ。
+
 ## 📋 今日のまとめ
 
 - [ ] プロジェクト別統計を計算できた

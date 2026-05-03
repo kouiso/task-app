@@ -678,6 +678,58 @@ PORT=3001 npm run dev
 
 ---
 
+
+---
+
+### 💡 Pro パターンで書こう — ステータス表示の色分け
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// switch 文で色を決める
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "TODO":
+      return "bg-gray-100 text-gray-800";
+    case "IN_PROGRESS":
+      return "bg-blue-100 text-blue-800";
+    case "DONE":
+      return "bg-green-100 text-green-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+```
+
+**このコードの問題点**:
+
+- ステータスが増えるたびに case を足す必要がある
+- ラベルの文字も別の場所で同じ switch を書くことになる
+- `default` に落ちるパターンが気づかないバグになりやすい
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const STATUS_CONFIG = {
+  TODO: { label: "未着手", color: "bg-gray-100 text-gray-800" },
+  IN_PROGRESS: { label: "進行中", color: "bg-blue-100 text-blue-800" },
+  DONE: { label: "完了", color: "bg-green-100 text-green-800" },
+} as const;
+
+// 使う時は1行
+const { label, color } = STATUS_CONFIG[status];
+```
+
+**このコードの強み**:
+
+- ステータスの追加は1行。色もラベルも1箇所で管理
+- `as const` で型が推論されるので、typo するとコンパイルエラー
+- switch を書く場所がゼロになる
+
+#### 🎓 覚えておきたいエッセンス
+
+switch 文は「設定オブジェクト + lookup」に置き換えられることが多い。データと振る舞いを1箇所にまとめると、追加・変更が楽になる。
+
 ## 今日のまとめ
 
 - [ ] `api.task.getAll` でタスク一覧を取得できた

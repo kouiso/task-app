@@ -625,6 +625,51 @@ const onSubmit = async (
 ![デザインが整った登録画面の完成形](./screenshots/register_complete.png)
 ---
 
+
+---
+
+### 💡 Pro パターンで書こう — API レスポンスの型定義
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// API の結果を string で判定
+const handleRegister = async (data: RegisterData) => {
+  const result = await registerUser(data);
+  if (typeof result === "string") {
+    setError(result);
+  } else if (result && typeof result === "object" && "id" in result) {
+    router.push("/login");
+  }
+};
+```
+
+**このコードの問題点**:
+
+- `typeof` で分岐すると、どんな値が来るか型からは読めない
+- 新しいエラーパターン（メール重複など）を足すと分岐が膨張する
+- `result` の形がコードを読まないとわからない
+
+### ✅ After（プロが書くコード）
+
+```typescript
+// tRPC が型付きの成功/エラーを自動で返す
+const registerMutation = api.auth.register.useMutation({
+  onSuccess: () => router.push("/login"),
+  onError: (error) => setError(error.message),
+});
+```
+
+**このコードの強み**:
+
+- 成功と失敗の分岐が `onSuccess` / `onError` で明確
+- `error.message` は型安全。typo するとコンパイルエラーで教えてくれる
+- 新しいエラーパターンはサーバー側で追加するだけ。クライアント側は変更不要
+
+#### 🎓 覚えておきたいエッセンス
+
+API レスポンスの成功/失敗を `typeof` や `in` で判定するのは危うい。tRPC や zod を使えば、型が成功と失敗の形を保証してくれる。
+
 ## 🏁 完成コード全体
 
 途中で迷った場合は、以下のコードをそのまま `src/app/register/page.tsx` にコピーしてください。
