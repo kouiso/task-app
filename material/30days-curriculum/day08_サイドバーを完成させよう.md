@@ -1,45 +1,50 @@
-# Day 08: サイドバーの仕組みを読み解こう
+# Day 08: サイドバー付きのアプリレイアウトを作ろう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
-Day 07 ではログイン成功時のトースト通知とCookieベースのセッション管理を学びました。認証の基盤が整ったので、今日はサイドバーに既に実装されているユーザー情報表示とログアウト機能のコードを読み解きます。
+Day 07 で認証バックエンドを作った。
+ログイン・登録・ログアウトが全部動くようになった。
+
+でも今のアプリ、ログインした先に何もない。
+今日はサイドバーとヘッダーを自分の手で作って、
+「アプリっぽい骨格」を完成させる。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
-サイドバーに既に実装されているユーザー情報ウィジェット（名前・ロールバッジ）とログアウト確認ダイアログのコードを読み解きます。認証ガード（未ログイン時のリダイレクト）の動作も体験します。
+サイドバー付きのレイアウトを自分で作って、
+ログイン後のすべてのページがこのレイアウトで表示されるようにする。
 
-📸 スクリーンショット: サイドバー（ユーザー情報・ログアウト）
+- [ ] `src/app/providers.tsx` — tRPC クライアントをアプリ全体に提供する
+- [ ] `src/app/(app)/layout.tsx` — 認証済みページ用のルートグループ
+- [ ] `src/component/layout/app-layout.tsx` — サイドバー + メインコンテンツ
+- [ ] `src/app/(app)/dashboard/page.tsx` — レイアウトの中で動くダッシュボード
+- [ ] ログアウトが動作することを確認する
 
-![サイドバー](./screenshots/sidebar.png)
+## なぜこれを作るのか？
 
-> 📌 **今日のゴールライン**: サイドバーの既存コードを読み解いて、ユーザー情報・ログアウト・認証ガードの流れを画面で確認できればOK。
+Day 07 のログイン API は動くけど、フロント側がまだ繋がっていない。
+ブラウザから tRPC を呼ぶには「tRPC クライアント」をアプリ全体に設定する必要がある。
+そしてログイン後のページには共通のサイドバーとヘッダーが欲しい。
 
-## 🤔 なぜこれを作るのか？
+> **例え話**: Day 07 で厨房（サーバー）を作った。今日は客席のレイアウト（テーブル配置・通路・メニュー看板）を作る。客が座ったときに「ちゃんとしたお店やな」と感じる骨格。
 
-現在のサイドバーにはナビゲーションメニューだけがあり、「誰がログインしているか」がわかりません。
-
-ユーザー名とロール（管理者/ユーザー）が表示される仕組みと、誤操作防止のログアウト確認ダイアログを理解しましょう。
-
-> 💡 **例え話**: サイドバーは「オフィスの廊下」です。壁には自分の名札（ユーザー情報ウィジェット）が掲示され、退出ボタン（ログアウト）を押すと「本当に退出しますか？」と確認されます。
-
-### 📐 AppLayoutの構造
+### 今日作る構造
 
 ```mermaid
 flowchart TD
-    A[AppLayout] --> B{セッションチェック}
-    B -->|なし| C[/loginへリダイレクト]
-    B -->|あり| D[レイアウト表示]
+    A[layout.tsx] --> B[Providers]
+    B --> C["(app)/layout.tsx"]
+    C --> D[AppLayout]
     D --> E[サイドバー]
-    D --> F[ヘッダー]
-    D --> G[メインコンテンツ]
-    E --> H[ナビメニュー]
-    E --> I[ユーザー情報ウィジェット]
-    E --> J[ログアウトボタン]
+    D --> F[メインコンテンツ]
+    E --> G[ナビゲーション]
+    E --> H[ユーザー情報]
+    E --> I[ログアウトボタン]
+    F --> J[dashboard/page.tsx]
 
-    style B fill:#fff3e0
-    style C fill:#ffebee
+    style B fill:#e3f2fd
     style D fill:#e8f5e9
 ```
 
@@ -47,678 +52,545 @@ flowchart TD
 
 | やること | やらないこと |
 |---------|-------------|
-| 既存のユーザー情報表示コードを読み解く | 新しいコードを追加する |
-| AlertDialogの構造と使い方を理解する | 認証ロジックを変更する |
-| ロールによるメニュー表示切替を理解する | 権限管理システムの設計 |
-| モバイル表示をDevToolsで確認する | CSSのレスポンシブ設計をゼロから書く |
+| tRPC クライアントを設定してフロントから API を呼べるようにする | tRPC サーバー側の追加（Day 07 済み） |
+| サイドバー + レイアウトを自分の手で書く | モバイル対応の Sheet（Day 09 以降） |
+| ログアウトを AlertDialog 付きで実装する | ユーザー編集機能 |
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| useEffect | ユース・エフェクト | コンポーネント表示後に実行される処理 | ページを開いた直後の自動チェック |
-| hasMounted | ハズ・マウンテッド | ハイドレーション不一致を防ぐための状態フラグ。コンポーネントがマウント（画面に表示）された後にのみ認証チェックを行う | 「お店が開店してから初めてお客さんをチェックする」 |
-| AlertDialog | アラート・ダイアログ | 確認が必要な操作の前に表示するモーダル | 「本当に退出しますか？」のポップアップ |
-| 条件付き配列結合（スプレッド + 三項演算子） | — | 条件によって配列の要素を動的に追加する | 映画館で年齢制限のある映画のように、条件を満たす人だけにコンテンツを表示する仕組み。Reactの条件付きレンダリング（`{condition && <Component />}`）とは少し異なるJSテクニック |
+| Provider | プロバイダー | コンポーネントツリー全体に値を配る仕組み | 建物全体に電気を通す配電盤 |
+| Route Group | ルートグループ | `(app)` のようにカッコで囲んだフォルダ。URL に影響しないレイアウト分岐 | 「関係者エリア」の見えない仕切り |
+| use client | ユーズクライアント | ブラウザ側で動くと宣言する | 「この部品はお客さんの手元で動きます」 |
+| useQuery | ユーズクエリ | サーバーからデータを取得する React Hook | 注文票を厨房に出して結果を待つ |
+| useMutation | ユーズミューテーション | サーバーのデータを変更する React Hook | 注文を厨房に送信する |
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
-|---------|---------|---------|-------------|---------|
-| Step 1 | AppLayoutの構造を読む | 5分 | なし（読むのみ） | 認証ガードの流れがわかる |
-| Step 2 | 認証ガードの動作を体験する | 4分 | なし | リダイレクトを確認 |
-| Step 3 | AlertDialogコンポーネントを確認する | 4分 | なし（確認のみ） | コンポーネントの存在と構造を確認できた |
-| Step 4 | サイドバーのユーザー情報表示を読み解く | 7分 | app-layout.tsx（読むのみ） | UserRoleBadgeの仕組みがわかる |
-| Step 5 | ログアウト確認ダイアログを読み解く | 7分 | app-layout.tsx（読むのみ） | AlertDialogの構造がわかる |
-| Step 6 | ロールによるメニュー切替を確認する | 4分 | app-layout.tsx（読むのみ） | ADMINメニューが見える |
-| Step 7 | モバイル表示を確認する | 3分 | なし | Sheet動作を確認 |
-| Step 8 | ログアウトの動作確認 | 3分 | なし | ログアウトが正常動作 |
+| ステップ | 作業内容 | 所要時間 | 作成ファイル |
+|---------|---------|---------|-------------|
+| Step 1 | providers.tsx を作る（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
+| Step 2 | ルートレイアウトに Provider を組み込む | 5分 | `src/app/layout.tsx` 編集 |
+| Step 3 | AppLayout を作る（サイドバーの骨格） | 15分 | `src/component/layout/app-layout.tsx` |
+| Step 4 | ルートグループ (app) で認証レイアウトを適用する | 5分 | `src/app/(app)/layout.tsx` |
+| Step 5 | ダッシュボードページを移動する | 5分 | `src/app/(app)/dashboard/page.tsx` |
+| Step 6 | ログインして全体の動作を確認する | 5分 | なし |
 
-**合計時間**: 約37分（ミニ演習を含めると約50〜55分）
+**合計時間**: 約 43 分
 
 ---
 
-### Step 1: AppLayoutの構造を読む（5分）
+### Step 1: providers.tsx を作る — tRPC クライアント設定（8分）
 
-🎯 **ゴール**: AppLayoutがどうページを保護しているか理解します。
+**ゴール**: フロントエンドから tRPC API を呼べるようにする。
 
-VS Codeで`src/component/layout/app-layout.tsx`を開いてください。先頭のセッションチェック部分を確認します。VS Codeの検索（`Ctrl+Shift+F`）で `useEffect` を検索すると見つけやすいです。
+Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
+「クライアント」が必要。scaffold が `src/trpc/` に設定ファイルを配布済みなので、
+それをアプリ全体に適用する Provider を作る。
 
-💻 **確認するコード**:
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-// AppLayout関数の先頭部分
-export function AppLayout(
-  { children }: { children: React.ReactNode }
-) {
-  const [mobileOpen, setMobileOpen]
-    = useState(false);
-  // ハイドレーション不一致防止フラグ
-  const [hasMounted, setHasMounted]
-    = useState(false);
-  const pathname = usePathname();
-  const router = useRouter();
-  // サーバーからセッション情報を取得
-  const { data: session, isLoading } =
-    api.auth.getSession.useQuery();
+```mermaid
+flowchart LR
+    A[ブラウザ] -->|api.auth.login.mutate| B[TRPCReactProvider]
+    B -->|HTTP POST /api/trpc| C[tRPC サーバー]
+    C -->|JSON| B
+    B -->|data| A
 ```
 
-✅ **確認ポイント**:
-- `app-layout.tsx`を開けた
-- `useQuery`でサーバーからセッション情報を取得していることがわかった
-- `hasMounted`という`useState`があることを確認した
+`src/app/providers.tsx` を新規作成する。
 
-```typescript
+```tsx
+// filepath: src/app/providers.tsx
+'use client';
+
+import type { ReactNode } from 'react';
+import { TRPCReactProvider } from '@/trpc/react';
+
+export function Providers({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return <TRPCReactProvider>{children}</TRPCReactProvider>;
+}
+```
+
+| コード | 意味 |
+|--------|------|
+| `'use client'` | この Provider はブラウザ側で動く |
+| `TRPCReactProvider` | scaffold が用意した tRPC + React Query の設定 |
+| `children` | この下に置かれる全コンポーネントが tRPC を使える |
+
+> scaffold の `src/trpc/react.tsx` の中身が気になったら開いてみてもいい。QueryClient と httpBatchLink の設定が入っている。
+
+**確認ポイント**:
+- [ ] `src/app/providers.tsx` が作成できた
+- [ ] `'use client'` が先頭にある
+
+---
+
+### Step 2: ルートレイアウトに Provider を組み込む（5分）
+
+**ゴール**: アプリ全体で tRPC が使えるように、ルートレイアウトを編集する。
+
+`src/app/layout.tsx` を開く（scaffold が作った初期ファイル）。
+
+```tsx
+// filepath: src/app/layout.tsx
+import type { Metadata } from 'next';
+import './globals.css';
+import { Providers } from './providers';
+
+export const metadata: Metadata = {
+  title: 'Task App',
+  description: 'タスク管理アプリケーション',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="ja">
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+| 変更点 | 意味 |
+|--------|------|
+| `import { Providers }` | Step 1 で作った Provider を読み込む |
+| `<Providers>{children}</Providers>` | 全ページを Provider で囲む |
+
+> これでアプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べる。
+
+**確認ポイント**:
+- [ ] `src/app/layout.tsx` に `<Providers>` が入った
+- [ ] この時点で `npm run dev` してエラーが出ないことを確認
+
+---
+
+### Step 3: AppLayout を作る — サイドバーの骨格（15分）
+
+**ゴール**: サイドバー + メインコンテンツのレイアウトコンポーネントを作る。
+
+ここが今日のメイン。認証チェック、ナビゲーション、ログアウトを一つのレイアウトに組み込む。
+
+```mermaid
+flowchart TD
+    A[AppLayout マウント] --> B{セッション取得中？}
+    B -->|Yes| C[ローディング表示]
+    B -->|No| D{ログイン済み？}
+    D -->|No| E[/login にリダイレクト]
+    D -->|Yes| F[サイドバー + コンテンツ表示]
+
+    style C fill:#fff3e0
+    style E fill:#ffebee
+    style F fill:#e8f5e9
+```
+
+`src/component/layout/app-layout.tsx` を新規作成する。
+
+#### 3-1. インポートと型定義
+
+```tsx
 // filepath: src/component/layout/app-layout.tsx
-// マウント後にフラグをtrueにする
+'use client';
+
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
+import { Button } from '@/component/ui/button';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+}
+
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+];
+```
+
+| コード | 意味 |
+|--------|------|
+| `'use client'` | ユーザー操作（ナビゲーション、ログアウト）があるので Client Component |
+| `lucide-react` | アイコンライブラリ（scaffold でインストール済み） |
+| `AlertDialog` | ログアウト前の確認ダイアログ（scaffold の UI コンポーネント） |
+| `menuItems` | サイドバーに表示するメニュー項目の定義 |
+
+#### 3-2. コンポーネント本体（認証チェック + ログアウト）
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+export function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: session, isLoading } =
+    api.auth.getSession.useQuery();
+
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: () => {
+      router.push('/login');
+      router.refresh();
+    },
+  });
+
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
-  // セッションチェックとリダイレクト処理
   useEffect(() => {
     if (hasMounted && !isLoading && !session) {
       router.push('/login');
     }
   }, [hasMounted, isLoading, session, router]);
 
-  // ローディング中はスピナーを表示
-  if (hasMounted && isLoading) {
-    return <PageLoadingSpinner />;
+  if (!hasMounted || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    );
   }
 
-  // セッションなしはnullを返す
-  if (hasMounted && !session?.user) {
+  if (!session?.user) {
     return null;
   }
 ```
 
-> 📝 実際の `app-layout.tsx` では、この間に `logoutMutation` と `menuItems` の定義があります。Step 5・6 で解説します。
-
-✅ **確認ポイント**:
-- `useEffect`が2つあることを確認した（マウント検知 + セッションチェック）
-- `hasMounted && !isLoading && !session`でリダイレクトの流れがわかった
-
-🔍 **コード解説**:
-
 | コード | 意味 | 例え |
 |--------|------|------|
-| `api.auth.getSession.useQuery()` | サーバーにセッション確認を問い合わせ | 「入口でリストバンドチェック」 |
-| `hasMounted` | コンポーネントがマウントされたかのフラグ | 「お店が開店したか確認」 |
-| `hasMounted && !isLoading && !session` | マウント後・読み込み完了かつセッションなし | 「開店確認後にリストバンドなしを検知」 |
-| `router.push('/login')` | ログイン画面にリダイレクト | 「受付に案内する」 |
-| `<PageLoadingSpinner />` | ローディング中のスピナー表示 | 「準備中の案内板を表示」 |
+| `hasMounted` | SSR と CSR のズレ防止フラグ | 店が開店してから初めて客チェックする |
+| `api.auth.getSession.useQuery()` | サーバーに「今ログインしてる？」を問い合わせる | 入口でリストバンドチェック |
+| `logoutMutation` | ログアウト API を呼ぶ準備 | 退出手続きのボタン |
+| `router.push('/login')` | ログイン画面へ飛ばす | 受付に案内する |
 
-📝 **学んだこと**: AppLayoutは全ページに共通の「認証ゲート」として機能します。`hasMounted`フラグでSSRとCSRのハイドレーション不一致を防いでいるのがポイントです。
+> `hasMounted` が必要な理由: Next.js はサーバーで HTML を生成してからブラウザに送る（SSR）。ブラウザ側で Cookie を確認するまでは「ログイン状態不明」。このフラグで「ブラウザ側の準備ができてから判定する」ことでチラつきを防ぐ。
 
----
-
-### Step 2: 認証ガードの動作を体験する（4分）
-
-🎯 **ゴール**: 未ログイン状態でページにアクセスした時の動作を確認します。
-
-💻 **操作手順**:
-
-1. ログインした状態で`/dashboard`が表示されることを確認
-2. Cookie を削除する（以下の手順で操作）
-   1. `F12` でDevToolsを開く
-   2. **Application** タブをクリック
-   3. 左メニューの **Cookies** を展開
-   4. `localhost:3001` をクリック
-   5. `session` を右クリック
-   6. **Delete** をクリック
-3. ブラウザで`/dashboard`にアクセス
-4. 自動的に`/login`にリダイレクトされることを確認
-5. 再度ログインする（`admin@example.com` / `password123`）
-
-📸 スクリーンショット: Cookie削除後にリダイレクトされたログイン画面
-
-![Cookie削除後にリダイレクトされたログイン画面](./screenshots/login.png)
-```mermaid
-flowchart LR
-    A["/dashboardにアクセス"] --> B{"session Cookie\nあり？"}
-    B -->|あり| C["ダッシュボード表示"]
-    B -->|なし| D["/loginにリダイレクト"]
-
-    style C fill:#e8f5e9
-    style D fill:#ffebee
-```
-
-✅ **確認ポイント**:
-- Cookie削除後に`/dashboard`にアクセスすると`/login`に飛ばされた
-- 再ログイン後は正常に`/dashboard`が表示された
-
-📝 **学んだこと**: 認証ガードはCookieのセッションをチェックし、なければログイン画面にリダイレクトします。
-
----
-
-### Step 3: AlertDialogコンポーネントを確認する（4分）
-
-🎯 **ゴール**: shadcn/uiのAlertDialogコンポーネントがプロジェクトに存在することを確認します。
-
-このプロジェクトには AlertDialog コンポーネントが既に用意されています。確認してみましょう。
-
-💻 **確認**:
-
-```bash
-# filepath: ターミナル
-# AlertDialogコンポーネントの存在を確認
-ls src/component/ui/alert-dialog.tsx
-```
-
-✅ **確認ポイント**:
-- `src/component/ui/alert-dialog.tsx`が存在する
-- ファイルの中に`AlertDialog`関連のコンポーネントが定義されている
-
-> 💡 通常は既にプロジェクトに含まれていますが、もし見つからない場合は `npx shadcn@latest add alert-dialog` で追加できます。
-
-VS Codeで `src/component/ui/alert-dialog.tsx` を開いてみましょう。以下のコンポーネントがエクスポートされていることが確認できます。
-
-| コンポーネント | 役割 |
-|--------------|------|
-| `AlertDialog` | ダイアログの外枠（開閉を管理） |
-| `AlertDialogTrigger` | ダイアログを開くボタン |
-| `AlertDialogContent` | ダイアログの中身 |
-| `AlertDialogHeader` | タイトルと説明文 |
-| `AlertDialogFooter` | キャンセル・確定ボタン |
-| `AlertDialogAction` | 確定ボタン |
-| `AlertDialogCancel` | キャンセルボタン |
-
-> 💡 shadcn/uiのコンポーネントは`node_modules`ではなく`src/component/ui/`にソースコードとして配置されます。そのため、プロジェクトに合わせて自由にカスタマイズできるのが特徴です。
-
-一般的なUIライブラリとの違いを確認しておきましょう。
-
-| 比較項目 | shadcn/ui | 一般的なUIライブラリ |
-|---------|-----------|-------------------|
-| コードの場所 | `src/`にソースとして配置 | `node_modules`内 |
-| カスタマイズ | 直接ソースを編集可能 | propsやテーマで制限的 |
-| バンドルサイズ | 使うものだけ含まれる | ライブラリ全体が含まれがち |
-
-📝 **学んだこと**: shadcn/uiはソースコードとしてコンポーネントを配置するため、自由にカスタマイズできます。
-
----
-
-### Step 4: サイドバーのユーザー情報表示を読み解く（7分）
-
-🎯 **ゴール**: サイドバー下部に表示されているユーザー名とロールバッジの仕組みを理解します。
-
-`src/component/layout/app-layout.tsx`を開いてください。VS Codeの検索で `border-sidebar-border p-4` を検索するとユーザー情報ウィジェットが見つかります。
-
-💻 **確認するコード（import部分）**:
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-// ロールバッジとアバターのimport
-import {
-  Avatar, AvatarFallback, AvatarImage,
-} from '@/component/ui/avatar';
-import { UserRoleBadge }
-  from '@/component/ui/user-badges';
-import { USER_ROLE }
-  from '@/lib/constant/roles';
-```
-
-✅ **確認ポイント**:
-- `AvatarImage`（プロフィール画像表示用）と`AvatarFallback`（画像がない場合の代替表示）の両方がimportされている
-- `'ADMIN'`のような文字列リテラルではなく`USER_ROLE.ADMIN`定数を使う設計方針
-
-> 📝 `USER_ROLE` は同じファイル内の Step 6 で使用する定数です。このステップではimportの存在確認だけでOKです。
-
-次に、ユーザー情報ウィジェットを確認します。
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-// サイドバー下部のユーザー情報ウィジェット
-<div className="border-t border-sidebar-border p-4">
-  <div className="flex items-center gap-3 mb-3">
-    <Avatar className="h-9 w-9">
-      {session?.user?.avatar && (
-        <AvatarImage
-          src={session.user.avatar}
-          alt={session.user.name || ''} />
-      )}
-      <AvatarFallback>
-        {session?.user?.name?.[0] || 'U'}
-      </AvatarFallback>
-    </Avatar>
-    <div className="flex flex-col min-w-0">
-      <span className="text-sm font-medium truncate
-        text-sidebar-foreground">
-        {session?.user?.name}
-      </span>
-      {session?.user?.role && (
-        <UserRoleBadge role={session.user.role} />
-      )}
-    </div>
-  </div>
-</div>
-```
-
-✅ **確認ポイント**:
-- `AvatarImage`は`session?.user?.avatar &&`で条件付きレンダリングされている（アバター画像がある場合のみ表示）
-- `AvatarFallback`は常に存在し、画像がない場合に名前の1文字目を表示する
-- `UserRoleBadge`は`session?.user?.role`が存在する場合のみ表示される（条件付きレンダリング）
-- `session.user.role`（`?`なし）を渡しているのは、直前の`session?.user?.role &&`チェックで`role`が存在すると確定しているため
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `AvatarImage` | プロフィール画像を表示 | 名札の写真 |
-| `AvatarFallback` | 画像がない時の代替表示 | 名前の頭文字を表示 |
-| `session?.user?.name` | ログイン中のユーザー名 | 名札に書かれた名前 |
-| `UserRoleBadge` | ロール表示の専用コンポーネント | 管理者はShieldアイコン付き |
-| `border-sidebar-border` | サイドバー用の境界線色 | 濃紺テーマに合う枠線 |
-| `text-sidebar-foreground` | サイドバー用の文字色 | 暗い背景の上で読みやすい色 |
-
-✅ **確認ポイント**:
-- ブラウザのサイドバー下部にユーザー名が表示されている
-- 「管理者」または「ユーザー」のバッジが表示されている
-- アバター（イニシャルまたは画像）が表示されている
-
-📸 スクリーンショット: サイドバーのユーザー情報ウィジェット
-
-![Step 4完了後のサイドバー表示](./screenshots/day08-step4-sidebar.png)
-> 📷 TODO: スクリーンショット差し替え予定
-
-> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
-
-📝 **学んだこと**: `session`オブジェクトからユーザー情報を取得してUIに反映しています。ロール表示には`UserRoleBadge`という専用コンポーネントを使い、文字列リテラルではなく`USER_ROLE`定数を使うのがベストプラクティスです。
-
----
-
-### Step 5: ログアウト確認ダイアログを読み解く（7分）
-
-🎯 **ゴール**: ログアウトボタンとAlertDialog確認の仕組みを理解します。
-
-ユーザー情報ウィジェットの下にログアウトボタンが既に実装されています。VS Codeの検索で `logoutMutation` を検索してください。
-
-💻 **確認するコード**:
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-// ログアウトAPIを呼び出すミューテーション
-  const logoutMutation =
-    api.auth.logout.useMutation({
-      onSuccess: () => {
-        router.push('/login');
-        router.refresh();
-      },
-    });
-
-  // ログアウトハンドラ（asyncは不要）
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
-```
-
-✅ **確認ポイント**:
-- `handleLogout`は`async`なしの通常関数
-- `mutate()`を呼ぶだけなので`await`は不要
-
-次に、AlertDialogで確認付きのログアウトボタン部分を確認します。VS Codeの検索で `AlertDialogTrigger` を検索してください。
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-// ログアウトボタン（確認ダイアログ付き）
-<AlertDialog>
-  <AlertDialogTrigger asChild>
-    <Button variant="outline" size="sm"
-      className="w-full gap-2
-        border-sidebar-border
-        text-sidebar-foreground/80
-        hover:bg-sidebar-accent
-        hover:text-sidebar-foreground">
-      <LogOut className="h-4 w-4" />
-      ログアウト
-    </Button>
-  </AlertDialogTrigger>
-```
-
-✅ **確認ポイント**:
-- `AlertDialogTrigger`に`asChild`が付いていることを確認した
-- `asChild`ありだと中の`Button`コンポーネントがそのままトリガーになる（ボタンの見た目を自由にカスタマイズできる）
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-// 確認ダイアログの中身
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>
-        ログアウトしますか？
-      </AlertDialogTitle>
-      <AlertDialogDescription>
-        ログアウトすると、再度ログインが
-        必要になります。
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel>
-        キャンセル
-      </AlertDialogCancel>
-      <AlertDialogAction
-        onClick={handleLogout}>
-        ログアウト
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
-```
-
-✅ **確認ポイント**:
-- `AlertDialogAction`の`onClick`に`handleLogout`を渡している
-- サイドバーの「ログアウト」ボタンをクリックして確認ダイアログが表示される
-- 「キャンセル」で閉じる → ダイアログが消える
-
-🔍 **コード解説**:
-
-| コード | 意味 | 例え |
-|--------|------|------|
-| `AlertDialogTrigger` | ダイアログを開くトリガー | ドアのノブ。押すとダイアログが開く |
-| `asChild` | 子要素をそのままトリガーにする | Buttonをそのまま使う |
-| `AlertDialogAction` | 確定ボタン | 「はい、退出します」ボタン |
-| `AlertDialogCancel` | キャンセルボタン | 「やっぱりやめます」ボタン |
-| `border-sidebar-border` | サイドバーテーマに合わせた枠線色 | 濃紺背景に馴染むボーダー |
-| `hover:bg-sidebar-accent` | ホバー時のアクセントカラー | マウスを乗せた時の視覚フィードバック |
-
-📸 スクリーンショット: ログアウト確認ダイアログ
-
-![Step 5完了後のサイドバー表示](./screenshots/day08-step5-sidebar.png)
-> 📷 TODO: スクリーンショット差し替え予定
-
-> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
-
-📝 **学んだこと**: AlertDialogを使うと、`window.confirm()`よりも美しく、アクセシブルな確認ダイアログを作れます。`handleLogout`は`mutate()`を呼ぶだけなので`async`は不要です。
-
----
-
-### Step 6: ロールによるメニュー切替を確認する（4分）
-
-🎯 **ゴール**: ADMINユーザーだけに「ユーザー管理」メニューが表示される仕組みを理解します。
-
-💻 **確認するコード**:
-
-VS Codeの検索で `menuItems` を検索してください。
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-// 全員共通メニュー + 管理者専用メニューを結合
-  const menuItems: MenuItem[] = [
-    // 全員に表示する基本メニュー6項目を展開
-    ...baseMenuItems,
-    // session?.user?.role が ADMIN なら追加
-    ...(session?.user?.role === USER_ROLE.ADMIN
-      ? [{
-          text: 'ユーザー管理',
-          icon: <Users className="h-5 w-5" />,
-          path: '/user',
-        }]
-      // ADMIN でなければ空配列（何も追加しない）
-      : []),
-  ];
-```
-
-✅ **確認ポイント**:
-- `USER_ROLE.ADMIN`定数を使って比較している（`'ADMIN'`のような文字列リテラルは使わない）
-- ADMINアカウント（`admin@example.com`）でサイドバーに「ユーザー管理」が表示される
-
-🔍 **`...(条件 ? [...] : [])` パターンの解説**:
-
-| コード部分 | 意味 |
-|-----------|------|
-| `...baseMenuItems` | 基本メニュー6項目を配列に展開 |
-| `session?.user?.role === USER_ROLE.ADMIN` | ログインユーザーが管理者か判定 |
-| `? [{ text: 'ユーザー管理', ... }]` | 管理者なら「ユーザー管理」を含む配列 |
-| `: []` | 管理者でなければ空配列（何も追加しない） |
-| `...( )` | 結果の配列を展開して結合 |
-
-📝 **学んだこと**: スプレッド構文と三項演算子を組み合わせて、条件付きでメニュー項目を追加できます。
-
----
-
-### Step 7: モバイル表示を確認する（3分）
-
-🎯 **ゴール**: DevToolsでモバイル表示を確認し、Sheet（スライドメニュー）の動作を体験します。
-
-💻 **操作手順**:
-
-```bash
-# filepath: ターミナル
-# 開発サーバーが起動していることを確認
-PORT=3001 npm run dev
-```
-
-✅ **確認ポイント**:
-- 開発サーバーが起動している
-
-| 手順 | 操作 |
-|------|------|
-| 1 | DevToolsを開く（`F12`） |
-| 2 | デバイスツールバーを有効にする（`Ctrl+Shift+M` / `Cmd+Shift+M`） |
-| 3 | iPhone 14 Pro のようなモバイルデバイスを選択 |
-| 4 | ハンバーガーメニュー（☰）をタップ → サイドメニューがスライドして表示される |
-
-📸 スクリーンショット: モバイル表示のSheet（スライドメニュー）
-
-![Step 7完了後のサイドバー表示](./screenshots/day08-step7-sidebar.png)
-> 📷 TODO: スクリーンショット差し替え予定
-
-> 📝 スクリーンショットはイメージです。実際の画面と細部が異なる場合があります。
-
-🔍 **レスポンシブ対応の仕組み**:
-
-| 画面サイズ | サイドバー | 実装方法 |
-|-----------|----------|---------|
-| デスクトップ（768px以上） | 常に表示 | `md:block` (CSSクラス) |
-| モバイル（768px未満） | Sheet（スライド） | `md:hidden` + Sheet |
-
-✅ **確認ポイント**:
-- モバイル表示でハンバーガーメニューが表示される
-- メニューをタップするとスライドで開く
-- メニュー項目をタップするとメニューが閉じる
-
-📝 **学んだこと**: Tailwind CSSの`md:`プレフィックスで、画面サイズに応じた表示切替ができます。
-
----
-
-### Step 8: ログアウトの動作確認（3分）
-
-🎯 **ゴール**: ログアウト機能が正しく動作することを確認します。
-
-ブラウザで `http://localhost:3001/dashboard` を開いてください。
-
-✅ **確認ポイント**:
-- ダッシュボード画面が表示されている
-
-💻 **操作手順**:
-
-1. サイドバーの「ログアウト」ボタンをクリック
-2. 確認ダイアログで「ログアウト」をクリック
-3. `/login`画面にリダイレクトされることを確認
-4. ブラウザの戻るボタンで戻れないことを確認
-
-Step 5 で確認した `logoutMutation` と `handleLogout` が連携して動きます。
-
-| 処理フロー | 担当コード | 例え |
-|-----------|-----------|------|
-| ① ボタンクリック → 確認ダイアログ表示 | `AlertDialogTrigger` | ドアノブを握る |
-| ② 「ログアウト」をクリック | `AlertDialogAction` → `handleLogout` | 「退出します」と宣言 |
-| ③ サーバーへログアウトAPI呼び出し（セッション削除） | `logoutMutation.mutate()` | サーバーにセッション削除を依頼 |
-| ④ ログイン画面へ遷移 + 状態リフレッシュ | `router.push('/login')` + `router.refresh()` | 受付に戻される |
-
-✅ **確認ポイント**:
-- ログアウト後に`/login`に遷移した
-- 戻るボタンでダッシュボードに戻れない（認証ガードがリダイレクトする）
-
-📝 **学んだこと**: ログアウトはサーバーへのAPI呼び出し（`deleteSession`によるセッション削除）→ `/login`への遷移 → `router.refresh()`による状態リフレッシュの3ステップで完了します。
-
----
-
-
----
-
-### 💡 Pro パターンで書こう — サイドバーは静的部分と対話部分を分ける
-
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
-
-### ❌ Before（動くけど、プロは書かない）
+#### 3-3. レイアウト JSX（サイドバー + コンテンツ）
 
 ```tsx
-'use client';
-
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
-import { Button } from '@/component/ui/button';
-import { api } from '@/trpc/react';
-
-const navItems = [
-  { href: '/dashboard', label: 'ダッシュボード' },
-  { href: '/project', label: 'プロジェクト' },
-  { href: '/task', label: 'タスク' },
-];
-
-type AppLayoutProps = {
-  children: ReactNode;
-};
-
-export function AppLayout({ children }: AppLayoutProps) {
-  const router = useRouter();
-  const logoutMutation = api.auth.logout.useMutation({
-    onSuccess: () => {
-      router.push('/login');
-      router.refresh();
-    },
-  });
-
+// filepath: src/component/layout/app-layout.tsx（続き）
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="w-64 border-r bg-card p-4">
-        <p className="text-lg font-semibold">Task App</p>
-        <nav className="mt-6 flex flex-col gap-2">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm">
-              {item.label}
-            </Link>
-          ))}
+    <div className="flex h-screen bg-background">
+      {/* サイドバー */}
+      <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        {/* ロゴ */}
+        <div className="border-b border-sidebar-border p-4">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
+            Task App
+          </h1>
+        </div>
+
+        {/* ナビゲーション */}
+        <nav className="flex-1 p-3">
+          <ul className="space-y-1">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    pathname === item.path
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                  )}
+                >
+                  {item.icon}
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </nav>
-        <Button
-          className="mt-6 w-full"
-          variant="outline"
-          onClick={() => logoutMutation.mutate()}
-        >
-          ログアウト
-        </Button>
+
+        {/* ユーザー情報 + ログアウト */}
+        <div className="border-t border-sidebar-border p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+              {session.user.name?.[0] || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {session.user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {session.user.role === 'ADMIN'
+                  ? '管理者'
+                  : 'ユーザー'}
+              </span>
+            </div>
+          </div>
+
+          {/* ログアウトボタン（確認ダイアログ付き） */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ログアウトしますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  ログアウトすると、再度ログインが必要になります。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  ログアウト
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </aside>
-      <main className="flex-1 p-6">{children}</main>
+
+      {/* メインコンテンツ */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
     </div>
   );
 }
 ```
 
-**このコードの問題点**:
+**AlertDialog の構造**:
 
-- ログアウトボタンのためだけに、ナビゲーションやレイアウト全体まで Client Component になっている
-- 静的なリンク一覧にもブラウザ用JavaScriptが乗り、初期表示の負担が増えやすい
-- 後で通知バッジやユーザー操作を足したとき、どこまでが対話部分か境界が曖昧になる
+| パーツ | 役割 |
+|--------|------|
+| `AlertDialogTrigger` | ダイアログを開くボタン |
+| `AlertDialogContent` | ダイアログの中身 |
+| `AlertDialogAction` | 確定（ログアウト実行） |
+| `AlertDialogCancel` | キャンセル（閉じるだけ） |
 
-### ✅ After（プロが書くコード）
+> `asChild` を付けると、中の `<Button>` がそのままトリガーになる。見た目を自由にカスタマイズできる。
 
-```tsx title="src/component/layout/app-layout.tsx"
-import Link from 'next/link';
-import type { ReactNode } from 'react';
-import { LogoutButton } from '@/component/layout/logout-button';
+**確認ポイント**:
+- [ ] `src/component/layout/app-layout.tsx` が作成できた
+- [ ] `'use client'` が先頭にある
+- [ ] `menuItems` に 3 つのメニュー項目がある
+- [ ] ログアウトボタンに `AlertDialog` が付いている
 
-const navItems = [
-  { href: '/dashboard', label: 'ダッシュボード' },
-  { href: '/project', label: 'プロジェクト' },
-  { href: '/task', label: 'タスク' },
-];
+**学んだこと**: `useQuery` でサーバーのセッション情報を取得し、ない場合はログイン画面にリダイレクト。レイアウト全体が認証ゲートの役割を持つ。
 
-type AppLayoutProps = {
-  children: ReactNode;
-};
+---
 
-export function AppLayout({ children }: AppLayoutProps) {
+### Step 4: ルートグループ (app) で認証レイアウトを適用する（5分）
+
+**ゴール**: 認証済みページだけに AppLayout を適用するルートグループを作る。
+
+Next.js の Route Group `(app)` は URL に影響しないフォルダ。
+`/dashboard` は `src/app/(app)/dashboard/page.tsx` に置いても URL は `/dashboard` のまま。
+
+```mermaid
+flowchart TD
+    A["src/app/layout.tsx (Providers)"] --> B["(app)/layout.tsx (AppLayout)"]
+    A --> C["login/page.tsx (レイアウトなし)"]
+    A --> D["register/page.tsx (レイアウトなし)"]
+    B --> E["dashboard/page.tsx"]
+    B --> F["project/page.tsx (Day 09)"]
+
+    style B fill:#e8f5e9
+    style C fill:#fff3e0
+    style D fill:#fff3e0
+```
+
+`src/app/(app)/layout.tsx` を新規作成する。
+
+```tsx
+// filepath: src/app/(app)/layout.tsx
+import { AppLayout } from '@/component/layout/app-layout';
+
+export default function AppGroupLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <AppLayout>{children}</AppLayout>;
+}
+```
+
+たった 3 行。この layout.tsx の中に入るページはすべて AppLayout（サイドバー + 認証チェック）が適用される。
+
+**確認ポイント**:
+- [ ] `src/app/(app)/layout.tsx` が作成できた
+- [ ] `(app)` フォルダ名にカッコが付いている（URL に影響しない）
+
+---
+
+### Step 5: ダッシュボードページを移動する（5分）
+
+**ゴール**: ダッシュボードを Route Group 内に移動して、AppLayout が適用されるようにする。
+
+`src/app/dashboard/page.tsx` を `src/app/(app)/dashboard/page.tsx` に移動する。
+
+```bash
+mkdir -p src/app/\(app\)/dashboard
+mv src/app/dashboard/page.tsx src/app/\(app\)/dashboard/page.tsx
+```
+
+> もし Day 02 で作った `dashboard/page.tsx` がなければ、以下の最小版を作る。
+
+```tsx
+// filepath: src/app/(app)/dashboard/page.tsx
+export default function DashboardPage() {
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="w-64 border-r bg-card p-4">
-        <p className="text-lg font-semibold">Task App</p>
-        <nav className="mt-6 flex flex-col gap-2">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <LogoutButton />
-      </aside>
-      <main className="flex-1 p-6">{children}</main>
+    <div>
+      <h1 className="text-2xl font-bold">
+        ダッシュボード
+      </h1>
+      <p className="mt-2 text-muted-foreground">
+        ようこそ Task App へ。
+      </p>
     </div>
   );
 }
 ```
 
-```tsx title="src/component/layout/logout-button.tsx"
-'use client';
+**確認ポイント**:
+- [ ] `src/app/(app)/dashboard/page.tsx` が存在する
+- [ ] 古い `src/app/dashboard/` は削除または移動済み
 
-import { useRouter } from 'next/navigation';
-import { Button } from '@/component/ui/button';
-import { api } from '@/trpc/react';
+---
 
-export function LogoutButton() {
-  const router = useRouter();
-  const logoutMutation = api.auth.logout.useMutation({
-    onSuccess: () => {
-      router.push('/login');
-      router.refresh();
-    },
-  });
+### Step 6: ログインして全体の動作を確認する（5分）
 
-  return (
-    <Button
-      className="mt-6 w-full"
-      variant="outline"
-      onClick={() => logoutMutation.mutate()}
-    >
-      ログアウト
-    </Button>
-  );
-}
+**ゴール**: ここまでの全 Step が正しく連携して動くことを確認する。
+
+```bash
+npm run dev
 ```
 
-**このコードの強み**:
+ブラウザで `http://localhost:3000` を開く。
 
-- レイアウトとリンク一覧は Server Component のままにでき、対話が必要なボタンだけを Client Component にできる
-- `use client` の影響範囲が `LogoutButton` に閉じるので、バンドルされるJavaScriptを抑えやすい
-- サイドバーに対話部品が増えても、小さなClient Componentとして足していける
+**確認フロー**:
 
-#### 🎓 覚えておきたいエッセンス
+1. `/dashboard` にアクセス → middleware が `/login` にリダイレクト
+2. `admin@example.com` / `password123` でログイン
+3. ダッシュボードが表示される（サイドバー付き）
+4. サイドバーに「ダッシュボード」「プロジェクト」「マイタスク」のメニューが見える
+5. サイドバー下部に「管理者」の名前とロールが表示される
+6. 「ログアウト」ボタンを押す → 確認ダイアログが出る
+7. 「ログアウト」を押す → `/login` に戻る
 
-`use client` はファイル全体に効くスイッチや。
-サイドバーでは、**静的な枠はServer、押せる部品はClient** に分けるのがプロの基本やで。
+**確認ポイント**:
+- [ ] `npm run dev` でエラーが出ない
+- [ ] サイドバーが左側に表示される
+- [ ] ユーザー名「管理者」とロール「管理者」が見える
+- [ ] ナビゲーションのアクティブ状態が正しい（現在のページがハイライト）
+- [ ] ログアウト → 確認ダイアログ → ログイン画面に戻る
 
-## 📋 今日のまとめ
+> **うまくいかないとき**: 「つまずきポイント」セクションを確認。
 
-- [ ] AppLayoutの認証ガード（useEffect + リダイレクト）を理解した
-- [ ] Cookie削除で認証ガードの動作を体験した
-- [ ] shadcn/uiのAlertDialogコンポーネントの構造を理解した
-- [ ] UserRoleBadgeによるロール表示の仕組みを理解した
-- [ ] ログアウト確認ダイアログの構造を理解した
-- [ ] USER_ROLE定数を使ったメニュー切替の仕組みを理解した
-- [ ] モバイル表示のSheet動作を確認した
+---
 
-## ⚠️ つまずきポイント
+## Pro パターンで書こう — `use client` の影響範囲を最小化する
+
+Step 3 では AppLayout 全体を `'use client'` にした。
+これは今日のスコープでは正しいが、プロの現場ではもう一段上を狙う。
+
+### Before（今日書いたコード — 動くけど改善の余地あり）
+
+```tsx
+// app-layout.tsx 全体が 'use client'
+// → ナビゲーションリンク（静的）まで Client Component になる
+```
+
+### After（プロが書くコード）
+
+```tsx
+// app-layout.tsx から 'use client' を外す（Server Component に）
+// ログアウトボタンだけ別ファイルに分離して 'use client'
+```
+
+**強み**: 静的な枠（ロゴ、リンク一覧）は Server Component のまま。
+対話が必要な部品（ログアウト、認証チェック）だけを Client Component にする。
+→ バンドルサイズが小さくなり、初期表示が速い。
+
+> **覚えておきたいエッセンス**: `use client` はファイル全体に効くスイッチ。サイドバーでは「静的な枠は Server、押せる部品は Client」に分けるのがプロの基本。今日の段階では全体 Client で OK。この最適化は Day 09 以降で必要になったタイミングでやる。
+
+---
+
+## 今日のまとめ
+
+- [ ] `src/app/providers.tsx` — tRPC Provider を作った
+- [ ] `src/app/layout.tsx` — Provider を組み込んだ
+- [ ] `src/component/layout/app-layout.tsx` — サイドバー付きレイアウトを作った
+- [ ] `src/app/(app)/layout.tsx` — 認証済みページ用ルートグループを作った
+- [ ] `src/app/(app)/dashboard/page.tsx` — レイアウト内でダッシュボードが動く
+- [ ] ログイン → サイドバー表示 → ログアウトの一連の流れを確認した
+
+## つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| `Cannot find module 'alert-dialog'` | AlertDialogが見つからない | 通常は既に含まれていますが、もし見つからない場合は`npx shadcn@latest add alert-dialog`を実行 |
-| ユーザー名が`null`と表示される | seedデータにnameがない | `admin@example.com`でログインし直す |
-| モバイルメニューが閉じない | `onClick`で`setMobileOpen(false)`が呼ばれていない | Sheet内のLinkに`onClick`を確認 |
-| ログアウト後もページが見える | `router.refresh()`の呼び忘れ | `onSuccess`内で`router.refresh()`を追加 |
+| `api is not defined` | `@/trpc/react` からの import 漏れ | `import { api } from '@/trpc/react'` を確認 |
+| `Cannot find module '@/component/ui/alert-dialog'` | UI コンポーネント未配置 | scaffold の `_ui-components/` が `src/component/ui/` にあるか確認 |
+| サイドバーが表示されない | `(app)/layout.tsx` で `AppLayout` を使っていない | Step 4 の layout.tsx を確認 |
+| ログイン後に白い画面 | `providers.tsx` が `layout.tsx` に組み込まれていない | Step 2 を確認 |
+| `useQuery` でエラー | tRPC サーバー側が動いていない | Day 07 の `src/server/api/root.ts` が存在するか確認 |
+| ログアウトしてもリダイレクトされない | `router.refresh()` の呼び忘れ | `onSuccess` 内に `router.push('/login'); router.refresh();` |
+| `(app)` フォルダで URL が変わってしまう | フォルダ名にカッコが付いていない | `(app)` — 丸カッコが必須 |
 
-## 🔜 次回予告
+## 次回予告
 
-Day 09では、プロジェクト一覧画面を作ります。tRPCでデータを取得し、Cardコンポーネントで一覧表示する方法を学びましょう。
+Day 09 では、プロジェクト一覧画面を作る。
+tRPC の `useQuery` でサーバーからプロジェクト一覧を取得して、
+カードコンポーネントで表示する。
+今日作ったレイアウトの中に、最初の「データを表示する画面」が入る。
