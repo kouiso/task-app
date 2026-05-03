@@ -43,9 +43,23 @@
 | Step 4-3: dashboard/page.tsx 作成 | ✅ | |
 | ブラウザ確認 (/ と /dashboard) | ✅ | 両方 200 |
 
+### BUG-5: Prisma スキーマ / マイグレーション / シード / docker-compose が scaffold に含まれてない (OPEN)
+- **症状**: Day 07 で `prisma.user.findUnique()` を使うが、DB が立ち上がってない
+- **原因**: scaffold は `prisma` をインストールするだけ。schema.prisma, docker-compose.yml, seed, migration は配布されてない
+- **影響**: Day 07 以降の全 Day で tRPC API がエラー
+- **修正案**:
+  - A) scaffold に `prisma/schema.prisma`, `docker-compose.yml`, `prisma/seed.ts` をコピーする配布物を追加
+  - B) scaffold の最後に `docker compose up -d && npx prisma migrate dev && npx prisma db seed` を実行
+  - C) Day 07 の冒頭に DB セットアップの案内を追加
+- **推奨**: A + B の組み合わせ（scaffold-first 原則に沿う）
+
+## Day 02-06 読者試行レポート
+
+Day 02-04 は dashboard/page.tsx 編集と Git/Vercel 操作のみ。新パッケージ不要。構造的な問題なし。
+Day 05-06 は UI のみ（DB 不要）。shadcn/ui コンポーネントは BUG-4 修正で配布済み。構造的な問題なし。
+
 ## 次セッションでの続行項目
 
-- BUG-4 の修正（shadcn/ui コンポーネント配置）
-- Day 02-04 の実行確認
-- Day 05 の shadcn 依存確認
-- Day 07+ の DB 依存確認（Docker/PostgreSQL）
+- BUG-5 の修正（Prisma + Docker 配布物の追加）
+- Day 07 以降の読者試行
+- 全 Day 完走確認
