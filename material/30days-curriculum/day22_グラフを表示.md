@@ -16,6 +16,8 @@ Recharts ライブラリを使って、レポートページに
 
 ![レポートページに円グラフが並んだ完成](./screenshots/report.png)
 
+> 📌 **今日のゴールライン**: Rechartsの部品を組み合わせ、集計したタスク分布を円グラフとして画面に出せればOK。
+
 ## 🤔 なぜこれを作るのか？
 
 統計カードの数値だけでは「全体のバランス」が
@@ -574,6 +576,49 @@ PORT=3001 npm run dev
 📸 スクリーンショット: 統計カード4枚の下に円グラフ2つがグリッド配置された完成画面を確認してください。
 
 ![統計カード4枚の下に円グラフ2つがグリッド配置された完成画面](./screenshots/report.png)
+
+
+---
+
+### 💡 Pro パターンで書こう — チャートコンポーネントの Props
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+type StatusChartProps = {
+  todoCount: number;
+  inProgressCount: number;
+  doneCount: number;
+  totalTasks: number;
+  completionRate: number;
+  chartWidth: number;
+  chartHeight: number;
+};
+```
+
+**このコードの問題点**:
+
+- props が7個もあり、使う側が全部渡す必要がある
+- 「statusCount 系」と「chart 設定系」が混在していて役割がわかりにくい
+- API のレスポンス型と二重管理になりやすい
+
+### ✅ After（プロが書くコード）
+
+```typescript
+type StatusChartProps = {
+  data: Pick<ReportOverview, "todoCount" | "inProgressCount" | "doneCount">;
+};
+```
+
+**このコードの強み**:
+
+- API の型から `Pick` で必要なフィールドだけ取り出す
+- API のフィールドが変わったら、コンパイルエラーですぐ気づく
+- props は1つのオブジェクトにまとまって使いやすい
+
+#### 🎓 覚えておきたいエッセンス
+
+props が5個以上になったら「まとめてオブジェクトで渡す」か「Pick で型から切り出す」を検討する。バラバラの primitive props は管理コストが高い。
 
 ## 📋 今日のまとめ
 

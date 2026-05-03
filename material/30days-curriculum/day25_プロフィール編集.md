@@ -1592,6 +1592,45 @@ PORT=3001 npm run dev
 - toast でフィードバックが表示される
 - 更新後に /profile に戻る
 
+
+---
+
+### 💡 Pro パターンで書こう — プロフィールデータへのアクセス
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+let avatarUrl = "/default-avatar.png";
+if (currentUser) {
+  if (currentUser.avatar) {
+    if (currentUser.avatar.length > 0) {
+      avatarUrl = currentUser.avatar;
+    }
+  }
+}
+```
+
+**このコードの問題点**:
+
+- null チェックのネストが無駄に深い
+- `let` で宣言しているので、後から書き換えられる不安がある
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const avatarUrl = currentUser?.avatar || "/default-avatar.png";
+```
+
+**このコードの強み**:
+
+- 1行で意図が伝わる
+- `const` で不変。値がこの行以降で変わらない安心感
+- `||` で空文字列もフォールバック対象にできる
+
+#### 🎓 覚えておきたいエッセンス
+
+プロフィール系のデータは「あるかもしれない、ないかもしれない」が基本。`?.` と `||` で1行にまとめるのが現代 JavaScript の書き方。
+
 ## 📋 今日のまとめ
 
 - [ ] api.auth.getCurrentUser でデータを取得した

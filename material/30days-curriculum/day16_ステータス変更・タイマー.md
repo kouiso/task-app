@@ -23,6 +23,8 @@ Day 15 で学んだこと:
 
 ![タスク詳細ダイアログの画面](./screenshots/task-detail-dialog.png)
 
+> 📌 **今日のゴールライン**: ステータス更新とタイマーの開始・停止をつなぎ、作業時間を記録する一連の流れが動けばOK。
+
 ## 🤔 なぜこれを作るのか？
 
 タスクの進捗を可視化し、作業時間を正確に記録
@@ -904,6 +906,53 @@ PORT=3001 npm run dev
 ✅ **確認ポイント**:
 - `npm run dev` でエラーが出ない
 - `http://localhost:3001/task` にアクセスできる
+
+
+---
+
+### 💡 Pro パターンで書こう — ステータス遷移の処理
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+const handleStatusChange = (taskId: string, newStatus: string) => {
+  if (newStatus === "TODO") {
+    updateTask({ id: taskId, status: "TODO", completedAt: null });
+  } else if (newStatus === "IN_PROGRESS") {
+    updateTask({ id: taskId, status: "IN_PROGRESS", completedAt: null });
+  } else if (newStatus === "DONE") {
+    updateTask({ id: taskId, status: "DONE", completedAt: new Date() });
+  }
+};
+```
+
+**このコードの問題点**:
+
+- ステータスが増えるたびに else if が増える
+- `completedAt` の設定ロジックが各分岐に散らばっている
+- 「DONE の時だけ completedAt をセットする」というルールが暗黙的
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
+  updateTask({
+    id: taskId,
+    status: newStatus,
+    completedAt: newStatus === "DONE" ? new Date() : null,
+  });
+};
+```
+
+**このコードの強み**:
+
+- 分岐が1つの三項演算子に集約されて読みやすい
+- `TaskStatus` 型でステータス値が型安全
+- ルールが1行に凝縮：「DONE なら日付入り、それ以外は null」
+
+#### 🎓 覚えておきたいエッセンス
+
+if-else の連続は「分岐ごとに違う部分」だけを抽出すると、大体1つの式に集約できる。
 
 ## 📋 今日のまとめ
 

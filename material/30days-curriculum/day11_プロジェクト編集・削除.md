@@ -724,6 +724,47 @@ PORT=3001 npm run dev
 - 削除前にshadcn/uiの確認ダイアログが表示される
 - アーカイブと解除が正しく動作する
 
+
+---
+
+### 💡 Pro パターンで書こう — Optional な値の取り扱い
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// プロジェクトのオーナー名を表示
+let ownerName = "不明";
+if (project !== null && project !== undefined) {
+  if (project.owner !== null && project.owner !== undefined) {
+    if (project.owner.name !== null && project.owner.name !== undefined) {
+      ownerName = project.owner.name;
+    }
+  }
+}
+```
+
+**このコードの問題点**:
+
+- null チェックのネストが深くて読みにくい
+- プロパティが増えるたびにネストが1段増える
+- 「結局何がしたいのか」がコードの奥に埋もれる
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const ownerName = project?.owner?.name ?? "不明";
+```
+
+**このコードの強み**:
+
+- 1行で同じことが書ける
+- `?.` が途中で null/undefined に当たったら自動的に止まる
+- `??` で「値がなかった場合のデフォルト」を最後に書ける
+
+#### 🎓 覚えておきたいエッセンス
+
+`?.`（オプショナルチェーニング）と `??`（Null 合体演算子）は、null チェックの if ネスト地獄を1行にする JavaScript の必須テクニック。
+
 ## 📋 今日のまとめ
 
 - [ ] 必要なインポート（`ProjectFormData`, `DeleteConfirmDialog`）を追加できた

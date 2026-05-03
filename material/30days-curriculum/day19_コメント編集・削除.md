@@ -493,6 +493,47 @@ PORT=3001 npm run dev
 
 ---
 
+
+---
+
+### 💡 Pro パターンで書こう — コメント著者の確認
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+let canEdit = false;
+if (comment !== null && comment !== undefined) {
+  if (comment.author !== null && comment.author !== undefined) {
+    if (comment.author.id !== null && comment.author.id !== undefined) {
+      if (comment.author.id === currentUserId) {
+        canEdit = true;
+      }
+    }
+  }
+}
+```
+
+**このコードの問題点**:
+
+- 4段ネストで「結局何を確認しているのか」が見えにくい
+- `let` + `if` の組み合わせで、変数の値が途中で変わる可能性を気にする必要がある
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const canEdit = comment?.author?.id === currentUserId;
+```
+
+**このコードの強み**:
+
+- 1行で意図が伝わる：「コメント著者が自分かどうか」
+- `?.` が途中で null に当たったら `undefined` を返し、`=== currentUserId` は `false` になる
+- `const` なので値が変わらない安心感がある
+
+#### 🎓 覚えておきたいエッセンス
+
+「あるプロパティが自分のものかチェックする」は `?.` 1つで書ける。null チェックの if ネストは過去の書き方。
+
 ## 📋 今日のまとめ
 
 - [ ] 本人チェックで操作を制限できた

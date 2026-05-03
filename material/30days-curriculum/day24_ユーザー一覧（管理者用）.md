@@ -686,6 +686,47 @@ PORT=3001 npm run dev
 - 全ユーザーがテーブルに表示される
 - 詳細・編集ボタンで正しく遷移する
 
+
+---
+
+### 💡 Pro パターンで書こう — ユーザーカードの Props 型
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+type UserCardProps = {
+  id: string;
+  name: string | null;
+  email: string;
+  avatar: string | null;
+  role: "ADMIN" | "USER";
+  isActive: boolean;
+};
+```
+
+**このコードの問題点**:
+
+- DB スキーマと props 定義が二重管理
+- `role` の型を手書きしているので、Prisma 側で `VIEWER` を追加しても気づかない
+
+### ✅ After（プロが書くコード）
+
+```typescript
+import type { User } from "@prismaClient";
+
+type UserCardProps = Pick<User, "id" | "name" | "email" | "avatar" | "role" | "isActive">;
+```
+
+**このコードの強み**:
+
+- Prisma が生成する型が唯一の定義元
+- `role` に新しい値が追加されたら自動で追従
+- props の型が DB と常に一致する保証
+
+#### 🎓 覚えておきたいエッセンス
+
+管理画面こそ型の正確さが命。Prisma の型を `Pick` で使えば、DB 変更 → 型変更 → コンパイルエラー の安全ネットが効く。
+
 ## 📋 今日のまとめ
 
 - [ ] api.auth.getCurrentUser で権限チェックした

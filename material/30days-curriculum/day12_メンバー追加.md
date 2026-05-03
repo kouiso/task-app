@@ -782,6 +782,51 @@ PORT=3001 npm run dev
 
 ---
 
+
+---
+
+### 💡 Pro パターンで書こう — コンポーネントの Props 型
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// props を全部手書きで定義
+type MemberCardProps = {
+  id: string;
+  name: string | null;
+  email: string;
+  avatar: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: Date;
+};
+```
+
+**このコードの問題点**:
+
+- User の型が変わったら、ここも手動で直す必要がある
+- DB のカラムと props の型がずれても、コンパイルエラーにならない
+- 同じ型定義が複数ファイルに散らばりやすい
+
+### ✅ After（プロが書くコード）
+
+```typescript
+// Prisma が生成した型から必要な部分だけ Pick
+import type { User } from "@prismaClient";
+
+type MemberCardProps = Pick<User, "id" | "name" | "email" | "avatar">;
+```
+
+**このコードの強み**:
+
+- DB スキーマを変えたら Prisma が型を自動更新 → props も自動で追従
+- `Pick` で必要なフィールドだけ選ぶから、余計な情報を渡さない
+- 1箇所直せば全部直る（Single Source of Truth）
+
+#### 🎓 覚えておきたいエッセンス
+
+Props 型を手書きするのは、DB スキーマのコピペと同じ。`Pick<User, ...>` で元の型から切り出すと、スキーマ変更に自動で追従する。
+
 ## 📋 今日のまとめ
 
 - [ ] `ProjectDetailView` コンポーネントでメンバー一覧を表示できた

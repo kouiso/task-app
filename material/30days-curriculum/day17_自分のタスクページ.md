@@ -14,6 +14,8 @@ Day 16 ではタスクのステータス変更機能と `useEffect` + `setInterv
 
 ![マイタスクページの完成画面](./screenshots/my-task.png)
 
+> 📌 **今日のゴールライン**: ログイン中の自分だけのタスクを取得し、期限グループとタブで今やることを整理できればOK。
+
 ## 🤔 なぜこれを作るのか？
 
 複数のプロジェクトに参加していると、自分が何をすべきか分からなくなります。
@@ -996,6 +998,43 @@ PORT=3001 npm run dev
 ![動作確認完了後のマイタスクページ](./screenshots/my-task.png)
 
 ---
+
+
+---
+
+### 💡 Pro パターンで書こう — タスクのグループ分け
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+const todoTasks = tasks.filter((t) => t.status === "TODO");
+const inProgressTasks = tasks.filter((t) => t.status === "IN_PROGRESS");
+const doneTasks = tasks.filter((t) => t.status === "DONE");
+// ステータスが増えたら行を追加...
+```
+
+**このコードの問題点**:
+
+- ステータスが増えるたびにフィルター行を足す必要がある
+- 配列を何度も走査するのでデータが多いと非効率
+- 変数名がステータスごとにバラバラで、まとめて扱いにくい
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const grouped = Object.groupBy(tasks, (t) => t.status);
+// grouped.TODO, grouped.IN_PROGRESS, grouped.DONE が自動で作られる
+```
+
+**このコードの強み**:
+
+- 1行で全ステータスのグループが作れる
+- ステータスが増えても、この行は変わらない
+- 配列の走査は1回だけ
+
+#### 🎓 覚えておきたいエッセンス
+
+同じ配列を何度もフィルターするなら `Object.groupBy` で1回にまとめる。ステータスの追加にもコード変更なしで対応できる。
 
 ## 📋 今日のまとめ
 

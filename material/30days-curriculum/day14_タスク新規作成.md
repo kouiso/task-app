@@ -16,6 +16,9 @@ TaskDialogコンポーネントで、新しいタスクを作成
 📸 スクリーンショット: タスク作成ダイアログの完成画面
 
 ![タスク作成ダイアログの完成画面](./screenshots/task-create-dialog.png)
+
+> 📌 **今日のゴールライン**: TaskDialogにフォーム管理とバリデーションを組み込み、新しいタスクが一覧へ反映される流れを体験できればOK。
+
 ## 🤔 なぜこれを作るのか？
 
 タスク管理アプリの最も重要な機能です。タスクが
@@ -932,6 +935,49 @@ const handleSubmit =
 # 開発サーバーを起動して動作確認
 PORT=3001 npm run dev
 ```
+
+
+---
+
+### 💡 Pro パターンで書こう — ステータスの型定義
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+// 文字列リテラルをあちこちで重複定義
+type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+
+// 別のファイルでも同じ定義
+const STATUSES: ("TODO" | "IN_PROGRESS" | "DONE")[] = [
+  "TODO", "IN_PROGRESS", "DONE"
+];
+```
+
+**このコードの問題点**:
+
+- DB にステータスを追加したら、全ファイルを手動で探して直す必要がある
+- 片方だけ直してもう片方を忘れると、実行時エラーになる
+- 型定義が散らばって、どれが正しいかわからなくなる
+
+### ✅ After（プロが書くコード）
+
+```typescript
+// Prisma の enum をそのまま使う
+import { TaskStatus } from "@prismaClient";
+
+// 配列も enum の値から作る
+const STATUSES = Object.values(TaskStatus);
+```
+
+**このコードの強み**:
+
+- DB スキーマの `enum TaskStatus` が唯一の定義元
+- `prisma migrate` でステータスを追加すれば、型も配列も自動更新
+- 手動の重複定義がゼロになる
+
+#### 🎓 覚えておきたいエッセンス
+
+型の定義元は1箇所だけにする（Single Source of Truth）。Prisma の enum を直接 import すれば、DB とコードの型が常に一致する。
 
 ## 📋 今日のまとめ
 

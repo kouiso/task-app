@@ -210,9 +210,9 @@ type ProjectFormValues =
 
 ---
 
-### Step 3: values propで初期値を自動同期する（5分）
+### Step 3: defaultValues と reset で初期値を同期する（5分）
 
-🎯 **ゴール**: `useForm` の `values` prop を使って、ダイアログが開くたびにフォームの初期値を自動で設定します。
+🎯 **ゴール**: `useForm` の `defaultValues` と `useEffect(reset)` を使って、ダイアログが開くたびにフォームの初期値を同期します。
 
 💻 **実装**:
 
@@ -228,23 +228,24 @@ export function ProjectDialog({
   } = useForm<ProjectFormValues>({
     resolver: zodResolver(
       projectFormSchema),
-    values: {
-      id: initialData?.id,
-      name: initialData?.name ?? '',
-      description:
-        initialData?.description ?? '',
-      color: initialData?.color
-        ?? DEFAULT_PROJECT_COLOR,
-      startDate:
-        initialData?.startDate ?? '',
-      endDate:
-        initialData?.endDate ?? '',
-    },
+    defaultValues:
+      buildProjectFormValues(initialData),
   });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    reset(
+      buildProjectFormValues(initialData)
+    );
+  }, [initialData, open, reset]);
 ```
 
 ✅ **確認ポイント**:
-- `useForm` に `resolver` と `values` が設定されている
+- `useForm` に `resolver` と `defaultValues` が設定されている
+- ダイアログが開いていて `initialData` が変わったときに `reset(...)` を呼んでいる
 - `register`, `handleSubmit`, `reset`, `errors` を取得している
 
 #### useForm の設定
@@ -252,13 +253,11 @@ export function ProjectDialog({
 | 設定 | 役割 |
 |------|------|
 | `resolver: zodResolver(...)` | zodスキーマでバリデーションを実行 |
-| `values: {...}` | `initialData` が変わるたびにフォームの値を自動同期 |
-| `register` | 各入力欄をフォームに登録する関数 |
-| `handleSubmit` | バリデーション通過後に送信する関数 |
-| `reset` | フォームの値をリセットする関数 |
-| `errors` | バリデーションエラーの情報 |
+| `defaultValues` | フォームを最初に作るときの初期値 |
+| `reset(...)` | ダイアログを開き直して `initialData` が変わったとき、フォームの値を同期 |
+| `buildProjectFormValues(...)` | 作成・編集どちらでも同じ形のフォーム初期値を作る関数 |
 
-> 💡 `values` prop を使うと、`initialData` が変わるたびにフォームの値が自動で更新されます。`useEffect` + `setState` のパターンが不要になり、コードがシンプルになります。`DEFAULT_PROJECT_COLOR` がカラーの初期値として使われている点にも注目してください。
+> 💡 `defaultValues` はフォーム作成時の初期値です。ただし同じダイアログを別プロジェクトで開き直すと `initialData` が変わるため、`useEffect` の中で `reset(...)` を呼んで再同期します。`setState` で入力値を1つずつ持つのではなく、react-hook-form にまとめて管理させるのがポイントです。`DEFAULT_PROJECT_COLOR` がカラーの初期値として使われている点にも注目してください。
 
 ---
 
@@ -552,6 +551,10 @@ const createMutation =
 
 ```typescript
 // filepath: src/app/project/page.tsx
+import {
+  dateOnlyToUtcStartIso,
+} from '@/lib/date';
+
 // 送信ハンドラー（更新ケース・確認）
 const handleSubmit = (
   data: ProjectFormData
@@ -566,12 +569,12 @@ const handleSubmit = (
           ? data.description : null,
       color: data.color,
       startDate: data.startDate
-        ? new Date(data.startDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.startDate)
         : null,
       endDate: data.endDate
-        ? new Date(data.endDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.endDate)
         : null,
     });
   } else { /* 新規作成ケースへ続く */ }
@@ -595,12 +598,12 @@ const handleSubmit = (
       description: data.description,
       color: data.color,
       startDate: data.startDate
-        ? new Date(data.startDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.startDate)
         : undefined,
       endDate: data.endDate
-        ? new Date(data.endDate)
-            .toISOString()
+        ? dateOnlyToUtcStartIso(
+            data.endDate)
         : undefined,
     });
   }
@@ -609,6 +612,8 @@ const handleSubmit = (
 ✅ **確認ポイント**:
 - `data.id` がない場合に `createMutation` を呼ぶことを確認した
 - 作成時の日付未入力は `undefined` で渡すことを確認した
+
+> ⚠️ `new Date(data.startDate).toISOString()` のように日付文字列をそのまま変換すると、ローカルの 00:00 として作られた Date が UTC へ変換され、タイムゾーン差で別の日付になることがあります。日付だけを扱う入力では、`dateOnlyToUtcStartIso` のような専用ヘルパーで UTC の時刻を明示します。
 
 JSX 内に `ProjectDialog` が組み込まれていることを確認します。
 
@@ -669,6 +674,54 @@ PORT=3001 npm run dev
 - 一覧が自動で更新される（ページリロードなし）
 - カードに選んだ色が反映されている
 - キャンセルで入力がリセットされる
+
+
+---
+
+### 💡 Pro パターンで書こう — 作成後のリスト更新
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+const handleCreate = async (data: ProjectFormData) => {
+  await fetch("/api/projects", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  // 作成後にページ全体をリロード
+  window.location.reload();
+};
+```
+
+**このコードの問題点**:
+
+- `window.location.reload()` でページ全体が真っ白→再描画される
+- 他の状態（フィルター、スクロール位置）が全部リセットされる
+- ユーザー体験が「カクッ」として安っぽい
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const utils = api.useUtils();
+
+const createMutation = api.project.create.useMutation({
+  onSuccess: () => {
+    utils.project.getAll.invalidate();
+    setDialogOpen(false);
+    toast.success("プロジェクトを作成しました");
+  },
+});
+```
+
+**このコードの強み**:
+
+- `invalidate()` で一覧のキャッシュだけ更新。ページは再読み込みしない
+- フィルターやスクロール位置はそのまま。ユーザーの作業が途切れない
+- `toast` でフィードバックを即座に返せる
+
+#### 🎓 覚えておきたいエッセンス
+
+データ変更後は `window.location.reload()` ではなく `invalidate()`。必要なデータだけ再取得するのがプロの書き方。
 
 ## 📋 今日のまとめ
 

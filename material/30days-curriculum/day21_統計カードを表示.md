@@ -627,6 +627,70 @@ PORT=3001 npm run dev
 
 ---
 
+
+---
+
+### 💡 Pro パターンで書こう — 統計レイアウトの Server/Client 分離
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+"use client";
+export default function ReportPage() {
+  const { data } = api.report.getOverview.useQuery();
+  return (
+    <AppLayout>
+      <h1>レポート</h1>
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard title="総タスク" value={data?.totalTasks ?? 0} />
+        <StatCard title="完了" value={data?.completedTasks ?? 0} />
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+**このコードの問題点**:
+
+- ページ全体が Client Component。見出しやレイアウトまで JS で描画する必要がある
+- SEO に不利（検索エンジンが中身を読めない可能性）
+
+### ✅ After（プロが書くコード）
+
+```typescript
+// page.tsx (Server Component)
+export default function ReportPage() {
+  return (
+    <AppLayout>
+      <h1>レポート</h1>
+      <ReportContent />
+    </AppLayout>
+  );
+}
+
+// report-content.tsx ("use client")
+"use client";
+export function ReportContent() {
+  const { data } = api.report.getOverview.useQuery();
+  return (
+    <div className="grid grid-cols-4 gap-4">
+      <StatCard title="総タスク" value={data?.totalTasks ?? 0} />
+      <StatCard title="完了" value={data?.completedTasks ?? 0} />
+    </div>
+  );
+}
+```
+
+**このコードの強み**:
+
+- 見出しとレイアウトはサーバーで事前描画
+- Client Component はデータ取得部分だけ
+- 初期表示が速く、SEO にも有利
+
+#### 🎓 覚えておきたいエッセンス
+
+ページコンポーネントはなるべく Server Component にして、データ取得する部分だけを "use client" の子コンポーネントに切り出す。
+
 ## 📋 今日のまとめ
 
 - [ ] `api.report.getOverview` の役割を理解した

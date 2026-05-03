@@ -588,6 +588,53 @@ const handleCreate = () => {
 PORT=3001 npm run dev
 ```
 
+
+---
+
+### 💡 Pro パターンで書こう — 編集後のリスト更新
+
+### ❌ Before（動くけど、プロは書かない）
+
+```typescript
+const handleUpdate = async (data: TaskFormData) => {
+  await updateTask(data);
+  // 更新後にタスク一覧を全件再取得
+  const newTasks = await fetchAllTasks();
+  setTasks(newTasks);
+  setDialogOpen(false);
+};
+```
+
+**このコードの問題点**:
+
+- 1件更新しただけなのに全件再取得するのはムダ
+- `setTasks` で手動管理すると、他のコンポーネントのキャッシュと不整合が起きる
+- タスクが1000件あったら毎回1000件取り直し
+
+### ✅ After（プロが書くコード）
+
+```typescript
+const utils = api.useUtils();
+
+const updateMutation = api.task.update.useMutation({
+  onSuccess: () => {
+    utils.task.getAll.invalidate();
+    setDialogOpen(false);
+    toast.success("タスクを更新しました");
+  },
+});
+```
+
+**このコードの強み**:
+
+- `invalidate()` でキャッシュを無効にするだけ。TanStack Query が必要な分だけ再取得
+- 全コンポーネントのキャッシュが自動で一貫する
+- ネットワーク効率もユーザー体験も良い
+
+#### 🎓 覚えておきたいエッセンス
+
+データ更新後は「全件再取得 + setState」ではなく `invalidate()`。キャッシュの管理はライブラリに任せるのがプロの書き方。
+
 ## 📋 今日のまとめ
 
 - [ ] TaskDialog を編集モードで再利用できた
