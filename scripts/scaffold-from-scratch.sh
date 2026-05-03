@@ -31,6 +31,7 @@ RUNTIME_DEPS=(
   @radix-ui/react-label
   @radix-ui/react-tabs
   tailwindcss-animate
+  date-fns
 )
 
 DEV_DEPS=(
