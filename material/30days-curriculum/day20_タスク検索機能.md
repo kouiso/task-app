@@ -332,17 +332,17 @@ const TASK_PRIORITY_VALUES = [
 // filepath: src/app/search/page.tsx
 // 検索フォームの zodスキーマ
 const searchFormSchema = z.object({
-  keyword: z.string().default(''),
-  projectId: z.string().default('all'),
+  keyword: z.string(),
+  projectId: z.string(),
   status: z.enum([
     'all', ...TASK_STATUS_VALUES,
-  ]).default('all'),
+  ]),
   priority: z.enum([
     'all', ...TASK_PRIORITY_VALUES,
-  ]).default('all'),
-  assignedTo: z.string().default('all'),
-  dateFrom: z.string().default(''),
-  dateTo: z.string().default(''),
+  ]),
+  assignedTo: z.string(),
+  dateFrom: z.string(),
+  dateTo: z.string(),
 });
 type SearchFormValues =
   z.infer<typeof searchFormSchema>;
