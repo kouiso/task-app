@@ -7,7 +7,7 @@
 | **タイマーステートマシン** | 開始/停止/累計計算 | ✅ start/stop を安全に制御できる |
 | **Prisma 時間フィールド設計** | 作業時間の永続化 | ✅ Float/Boolean/DateTime を使い分けられる |
 | **tRPC タイマー手続き** | サーバー側の時間計算 | ✅ 経過分を正確に積算できる |
-| **React 楽観的更新** | UX の即時反応 | ✅ サーバー応答前に UI を更新できる |
+| **React mutation + refetch** | UX の即時反応 | ✅ mutation 完了後に onSuccess でデータを再取得できる |
 | **手動入力ダイアログ** | タイマー以外の時間記録 | ✅ 時間・分の入力バリデーションができる |
 
 ## なぜこれを学ぶのか?
@@ -199,6 +199,10 @@ updateTimer: protectedProcedure
 
     // RUNNING → IDLE 遷移
     // elapsedMinutes を既存の timeSpentMinutes に加算して永続化
+    // 注意: task.timeSpentMinutes + elapsedMinutes は「読み取り → 加算 → 書き込み」の
+    // read-modify-write パターンになる。タイマー停止はユーザー操作起点で同時実行が
+    // 現実的に少ないため許容しているが、並列リクエストが競合した場合は後勝ちになる。
+    // より安全にするには { increment: elapsedMinutes } パターン(addTime 参照)を使う。
     return await prisma.task.update({
       where: { id: input.id },
       data: {
