@@ -6,7 +6,7 @@
   "author": "KosukeIsogai",
   "license": "UNLICENSED",
   "engines": {
-    "node": "25.x"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",

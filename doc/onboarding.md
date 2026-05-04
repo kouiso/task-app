@@ -36,7 +36,7 @@ choco install go-task
 <summary>Node.jsバージョン管理（mise）</summary>
 
 このプロジェクトは [mise](https://mise.jdx.dev/) でNode.jsのバージョンを管理しています。
-`.mise.toml` に `node = "25.6.1"` が定義されており、プロジェクトディレクトリで自動的に正しいバージョンが使用されます。
+`.mise.toml` に `node = "22.22.2"` が定義されており、プロジェクトディレクトリで自動的に正しいバージョンが使用されます。
 
 ```bash
 # miseのインストール (macOS/Linux)
@@ -53,7 +53,7 @@ source ~/.zshrc
 mise install
 ```
 
-`package.json` の `engines` フィールドで `node: "25.x"` を要求し、`.npmrc` で `engine-strict=true` が設定されているため、正しいバージョンでないと `npm install` が失敗します。
+`package.json` の `engines` フィールドで `node: "22.x"` を要求し、`.npmrc` で `engine-strict=true` が設定されているため、正しいバージョンでないと `npm install` が失敗します。
 
 </details>
 
