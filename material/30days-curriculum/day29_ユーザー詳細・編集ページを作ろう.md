@@ -878,7 +878,7 @@ const userEditSchema = z.object({
     .min(1, '名前は必須です'),
   avatar: z.string().url().or(
     z.literal('')),
-  role: z.string(),
+  role: z.enum(["USER", "ADMIN"]),
   isActive: z.boolean(),
 });
 type UserEditFormValues =
