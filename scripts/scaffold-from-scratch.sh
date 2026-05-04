@@ -118,7 +118,7 @@ ensure_empty_or_existing_next_app() {
   # 教材配布物（スクリプト自身 + _ui-components/ + _lib-utils/）を一時退避して実行後に戻す。
   local stash_dir
   stash_dir="$(mktemp -d)"
-  for item in "$(basename "$0")" _src-full _ui-components _lib-utils _server _lib-core _lib-base _constants _trpc-base _server-routers _prisma _docker _seed _app-components; do
+  for item in "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _server-routers _prisma _docker _seed _app-components; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
     fi
