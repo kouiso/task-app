@@ -55,7 +55,8 @@ function TaskPageContent() {
   const utils = api.useUtils();
 
   const handleTimerUpdate = useCallback(() => {
-    utils.task.getAll.invalidate();
+    void utils.task.getAll.invalidate();
+    void utils.task.getAll.refetch();
   }, [utils.task.getAll]);
 
   const { data: session } = api.auth.getSession.useQuery();

@@ -59,8 +59,8 @@ function LoginForm() {
   const loginMutation = api.auth.login.useMutation({
     onSuccess: (data) => {
       toast.success(`おかえりなさい、${data.user.name}さん`);
-      router.push(callbackUrl);
       router.refresh();
+      router.push(callbackUrl);
     },
     onError: (error) => {
       setError(error.message ?? 'ログイン中にエラーが発生しました');
