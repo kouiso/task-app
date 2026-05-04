@@ -49,6 +49,7 @@ export default function ProfileEditPage() {
       ]);
       toast.success('プロフィールを更新しました');
       router.push('/profile');
+      router.refresh();
     },
     onError: (error) => {
       toast.error(error.message ?? 'プロフィールの更新に失敗しました');
