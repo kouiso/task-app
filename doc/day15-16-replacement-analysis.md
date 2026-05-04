@@ -27,7 +27,7 @@
 #### project.ts
 - `getAll` / `getById` / `create` / `update` / `delete`
 - `archive` — アーカイブ
-- `addMember` / `removeMember` / `getAvailableUsers`
+- `addMember` / `removeMember` / `updateMemberRole` / `getAvailableUsers`
 
 #### report.ts
 - `getOverview` — ダッシュボード統計 (completionRate, statusData, priorityData, projectStats)
@@ -90,6 +90,7 @@
 
 **対象実装:**
 - `src/server/api/routers/_helpers/permission.ts`
+- `src/server/api/routers/project.ts` — `addMember`, `removeMember`, `updateMemberRole`, `getAvailableUsers`
 - `src/server/api/trpc.ts` — `adminProcedure`, `protectedProcedure`
 - `UserRole` / `ProjectMemberRole` enum
 - 条件付き UI レンダリング (admin-only 操作)
