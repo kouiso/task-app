@@ -279,7 +279,7 @@ export const userRouter = createTRPCRouter({
         select: { password: true, isActive: true },
       });
 
-      if (!user || !user.password) {
+      if (!user?.password) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'ユーザーが見つかりません',

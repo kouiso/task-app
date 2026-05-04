@@ -123,10 +123,10 @@ openssl rand -base64 32
 ```bash
 # filepath: .env.example（主要部分の抜粋）
 # ホスト側のポート設定
-_DOCKER_COMPOSE_HOST_PORT_DB=5432
+_DOCKER_COMPOSE_HOST_PORT_DB=25532
 
 # DB接続文字列（ローカル開発用）
-DATABASE_URL="postgresql://user:password@localhost:${_DOCKER_COMPOSE_HOST_PORT_DB}/taskapp?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:25532/taskapp?schema=public"
 
 # JWT署名用の秘密鍵（32文字以上必須。本番では必ず変更）
 JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
@@ -140,8 +140,10 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 - `DATABASE_URL` の構造を理解した
 
 > `.env.example` にはローカル開発用の設定が
-> 書かれています。`${_DOCKER_COMPOSE_HOST_PORT_DB}`
-> は Docker 用のポート切替変数です。
+> 書かれています。`25532` は教材用 DB の
+> ホスト側ポートです。既に使われている場合は、
+> `_DOCKER_COMPOSE_HOST_PORT_DB` と `DATABASE_URL` の
+> ポート番号を同じ値に変更します。
 
 > 💡 本番では `.env` ファイルは使いません。
 > Vercel のダッシュボードで環境変数を
@@ -180,22 +182,20 @@ docker-compose.yml の構成も把握しましょう。
 
 💻 **docker-compose.yml の確認（db サービス部分のみ抜粋）**:
 
-> 実際のファイルには backend や schemaspy
-> などのサービスも定義されていますが、
-> ここでは DB サービスだけを確認します。
+> 実際のファイルにはテスト用 DB も定義されていますが、
+> ここではメイン DB サービスだけを確認します。
 
 ```yaml
 # filepath: docker-compose.yml
 services:
   db:
     image: postgres:16-alpine  # 軽量版PostgreSQL
-    container_name: taskapp-postgres
     environment:
       POSTGRES_USER: user       # DBユーザー名
       POSTGRES_PASSWORD: password  # DBパスワード
       POSTGRES_DB: taskapp      # データベース名
     ports:
-      - "${_DOCKER_COMPOSE_HOST_PORT_DB:-5432}:5432"
+      - "${_DOCKER_COMPOSE_HOST_PORT_DB:-25532}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -217,7 +217,7 @@ services:
 | POSTGRES_USER | user | DB ユーザー名 |
 | POSTGRES_PASSWORD | password | DB パスワード |
 | POSTGRES_DB | taskapp | データベース名 |
-| ports | 5432:5432 | ホストからの接続ポート |
+| ports | 25532:5432 | ホストからの接続ポート |
 
 💻 **DB の起動**:
 
@@ -237,9 +237,8 @@ npm run db:push
 - `docker compose ps` で db が Running (healthy)
 - `npm run db:push` が成功した
 
-📸 スクリーンショット: `docker compose ps` で `taskapp-postgres` が `running (healthy)` の画面
-
-![docker compose ps で taskapp-postgres が running (healthy) と表示された画面](./screenshots/dashboard.png)
+📸 確認メモ: `docker compose ps` の `db` 行で
+`running (healthy)` と `25532->5432/tcp` が見えればOKです。
 > 💡 `npm run db:push` はローカル確認用です。
 > 本番では `prisma migrate deploy` を使うのが
 > 一般的です。Vercel のビルド時に
@@ -344,9 +343,9 @@ package.json の `scripts` を確認しましょう。
 - Vercel のビルドログでエラーがない
 - デプロイ URL が発行された
 
-📸 スクリーンショット: Vercel ダッシュボードの「Deployments」タブでビルドが完了した画面
-
-![Vercel ダッシュボードの「Deployments」タブ](./screenshots/login.png)
+📸 確認メモ:
+Vercel ダッシュボードの「Deployments」タブで
+最新デプロイが `Ready` になっていればOKです。
 
 ---
 

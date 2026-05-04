@@ -71,6 +71,7 @@ graph TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | search ルーターを有効化する | 2分 |
 | Step 1 | zodスキーマと型を定義する | 5分 |
 | Step 2 | TaskDialogの骨格を作る | 5分 |
 | Step 3 | useFormでフォームを設定する | 5分 |
@@ -81,7 +82,31 @@ graph TD
 | Step 8 | ページにDialogを組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約47分
+**合計時間**: 約49分
+
+---
+
+### Step 0: search ルーターを有効化する（2分）
+
+🎯 **ゴール**: タスク作成フォームで担当者候補を取得できるようにします。
+
+Day 14 では `api.search.getProjectMembers` を使います。
+Day 20 の検索画面より先に必要になるので、
+ここで `src/server/api/root.ts` に search ルーターを登録します。
+
+```typescript
+// filepath: src/server/api/root.ts
+// import群に追加
+import { searchRouter } from './routers/search';
+
+// appRouter に追加
+search: searchRouter,
+```
+
+✅ **確認ポイント**:
+- `searchRouter` を import した
+- `appRouter` に `search: searchRouter` を追加した
+- 保存して `npm run dev` で型エラーが出ていない
 
 ---
 
@@ -100,6 +125,7 @@ graph TD
 
 import { zodResolver }
   from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
 import { Controller, useForm }
   from 'react-hook-form';
 import { z } from 'zod';
@@ -261,6 +287,32 @@ interface TaskDialogProps {
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
+// フォーム初期値を作るヘルパー
+function buildTaskFormValues(
+  initialData: TaskFormData | undefined,
+  projects: Array<{
+    id: string; name: string;
+  }>,
+): TaskFormValues {
+  return {
+    id: initialData?.id,
+    title: initialData?.title ?? '',
+    description:
+      initialData?.description ?? '',
+    status: initialData?.status
+      ?? TASK_STATUS.TODO,
+    priority: initialData?.priority
+      ?? TASK_PRIORITY.MEDIUM,
+    dueDate: initialData?.dueDate ?? '',
+    estimatedHours:
+      initialData?.estimatedHours,
+    projectId: initialData?.projectId
+      ?? (projects[0]?.id || ''),
+    assigneeId:
+      initialData?.assigneeId ?? '',
+  };
+}
+
 // 関数定義とuseForm初期化（全体）
 export function TaskDialog({
   open, onClose, onSubmit,
@@ -271,25 +323,25 @@ export function TaskDialog({
     reset, formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
-    values: {
-      id: initialData?.id,
-      title: initialData?.title ?? '',
-      description: initialData?.description ?? '',
-      status: initialData?.status ?? TASK_STATUS.TODO,
-      priority: initialData?.priority ?? TASK_PRIORITY.MEDIUM,
-      dueDate: initialData?.dueDate ?? '',
-      estimatedHours: initialData?.estimatedHours,
-      projectId: initialData?.projectId ?? (projects[0]?.id || ''),
-      assigneeId: initialData?.assigneeId ?? '',
-    },
+    defaultValues:
+      buildTaskFormValues(
+        initialData, projects),
   });
+
+  useEffect(() => {
+    reset(
+      buildTaskFormValues(
+        initialData, projects),
+    );
+  }, [initialData, projects, reset]);
 ```
 
 ✅ **確認ポイント**:
-- `useForm` に `resolver` と `values` が設定されている
-- `values` に全フィールドが含まれている（このブロックをそのままコピーすれば動く）
+- `buildTaskFormValues` が全フィールドを返している
+- `useForm` に `resolver` と `defaultValues` が設定されている
+- `useEffect` で `initialData` の変更時に `reset` している
 
-> 💡 Day 10 の ProjectDialog と同じパターンです。`values` prop で `initialData` が変わるたびにフォームの値が自動同期されます。`id` や `dueDate` も含めることで、Day 15 の編集モードでも正しく初期化されます。
+> 💡 `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため、`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
 
 > ⚠️ **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 
