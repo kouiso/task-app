@@ -139,15 +139,18 @@ pwd
 
 ### ここで置いておく配布物
 
-この Day では、教材配布物として渡される
-`scaffold-from-scratch.sh`
-を今いるディレクトリに置いてある前提で進める。
+この Day では、ZIP を展開した直後の
+配布物ルートで作業している前提で進める。
 
-ファイル名はこれ。
+見えていてほしい主なファイルとフォルダはこれ。
 
-- `scaffold-from-scratch.sh`
+- `README.md`
+- `material`
+- `scripts`
+- `scripts/scaffold-from-scratch.sh`
+- `.env.example`
 
-今いる場所に置けているかだけ確認しておこう。
+今いる場所が配布物ルートになっているか確認しておこう。
 
 # ~/workspace/task-app
 ```bash
@@ -156,14 +159,15 @@ ls
 
 ### 期待する結果
 
-- `scaffold-from-scratch.sh` が見えている
+- `scripts` フォルダが見えている
+- `scripts/scaffold-from-scratch.sh` が見えている
 
 ## Step 2: scaffold-from-scratch.sh を走らせる
 
 ここが Day 01 の心臓や。
 
 手で `npx create-next-app` を打ち始めるんじゃなくて、
-教材用に整理された `scaffold-from-scratch.sh` を実行する。
+教材用に整理された `scripts/scaffold-from-scratch.sh` を実行する。
 
 このスクリプトは、次の順番で仕事してくれる。
 
@@ -172,8 +176,10 @@ ls
 3. PostgreSQL を使えるか確認
 4. 空ディレクトリなら `create-next-app` を実行
 5. このカリキュラムで使う依存パッケージを追加
-6. ESLint 設定を外して Biome を初期化
-7. `.env.example` を作成
+6. ESLint 設定を外して Biome 設定を作成
+7. `.env.example` と `.env` を用意
+8. Prisma スキーマと Docker Compose を配置
+9. Docker で PostgreSQL を起動して Prisma Client を生成
 
 「何が必要か」を毎回自分で思い出さなくてよくなるから、
 初日にかなり効く。
@@ -186,8 +192,8 @@ ls
 
 # ~/workspace/task-app
 ```bash
-chmod +x ./scaffold-from-scratch.sh
-./scaffold-from-scratch.sh
+chmod +x scripts/scaffold-from-scratch.sh
+bash scripts/scaffold-from-scratch.sh
 ```
 
 ### 期待される出力
@@ -195,24 +201,16 @@ chmod +x ./scaffold-from-scratch.sh
 実行環境で多少前後はあるけど、
 だいたいこんな流れになる。
 
-下のログは実際に空ディレクトリで流したときの例や。
+下のログは流れが分かるように短くした例や。
+`added ... packages` の数字や秒数は環境によって変わる。
 
 # ターミナル出力（~/workspace/task-app）
 ```text
-教材用の初期土台を /tmp/taskappday01-demo に作成します。
+教材用の初期土台を /Users/you/workspace/task-app に作成します。
 
-Using defaults for unprovided options:
-
-  --ts                    TypeScript (use --js for JavaScript)
-  --no-react-compiler     No React Compiler (use --react-compiler for React Compiler)
-  --agents-md             AGENTS.md (use --no-agents-md for No AGENTS.md)
-
-Creating a new Next.js app in /private/tmp/taskappday01-demo.
-
+Creating a new Next.js app in /Users/you/workspace/task-app.
 Using npm.
-
 Initializing project with template: app-tw
-
 
 Installing dependencies:
 - next
@@ -221,85 +219,23 @@ Installing dependencies:
 
 Installing devDependencies:
 - @tailwindcss/postcss
-- @types/node
-- @types/react
-- @types/react-dom
 - tailwindcss
 - typescript
 
-added 48 packages, and audited 49 packages in 6s
-
-11 packages are looking for funding
-  run `npm fund` for details
-
-found 0 vulnerabilities
-
-Generating route types...
-✓ Types generated successfully
-
 Initialized a git repository.
 
-Success! Created taskappday01-demo at /private/tmp/taskappday01-demo
-
-added 192 packages, and audited 241 packages in 13s
-
-40 packages are looking for funding
-  run `npm fund` for details
-
-3 moderate severity vulnerabilities
-
-To address all issues, run:
-  npm audit fix
-
-Run `npm audit` for details.
-
-added 87 packages, and audited 328 packages in 3s
-
-62 packages are looking for funding
-  run `npm fund` for details
-
-3 moderate severity vulnerabilities
-
-To address all issues (including breaking changes), run:
-  npm audit fix --force
-
-Run `npm audit` for details.
-
-init ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i Welcome to Biome! Let's get you started...
-
-    Files created
-
-      - biome.json
-        Your project configuration. See https://biomejs.dev/reference/configuration
-
-    Found an ignore file. Biome enabled VCS integration.
-
-    Next Steps
-
-      1. Setup an editor extension
-         Get live errors as you type and format when you save.
-         Learn more at https://biomejs.dev/guides/editors/first-party-extensions/
-
-      2. Try a command
-         biome check  checks formatting, import sorting, and lint rules.
-         biome --help displays the available commands.
-
-      3. Migrate from ESLint and Prettier
-         biome migrate eslint   migrates your ESLint configuration to Biome.
-         biome migrate prettier migrates your Prettier configuration to Biome.
-
-      4. Read the documentation
-         Find guides and documentation at https://biomejs.dev/guides/getting-started/
-
-      5. Get involved with the community
-         Ask questions and contribute on GitHub: https://github.com/biomejs/biome
-         Seek for help on Discord: https://biomejs.dev/chat
-
+Biome 設定を作成しました。
+shadcn/ui コンポーネントを src/component/ui/ にコピーしました。
+Prisma スキーマを配置しました。
+docker-compose.yml を配置しました。
+.env.example を .env にコピーしました。
+Docker で PostgreSQL を起動しています...
+Prisma スキーマをDBに反映しています...
+シードデータを投入しています...
+DB セットアップが完了しました。
 
 初期セットアップは完了やで。
-カリキュラムの Day 02 に進んで、次の実装を始めてください。
+カリキュラムの Day 01 の続きを進めてください。
 ```
 
 ### 成功判定
@@ -310,9 +246,13 @@ init ━━━━━━━━━━━━━━━━━━━━━━━━━
 - `tsconfig.json`
 - `biome.json`
 - `.env.example`
+- `.env`
+- `docker-compose.yml`
+- `prisma/schema.prisma`
 - `src/app/layout.tsx`
 - `src/app/page.tsx`
 - `src/app/globals.css`
+- `src/component/ui/button.tsx`
 
 ### 作られる `.env.example`
 
@@ -321,9 +261,14 @@ init ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # .env.example
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/task_app"
-JWT_SECRET="replace-with-a-secure-secret"
-NEXTAUTH_URL="http://localhost:3000"
+_DOCKER_COMPOSE_HOST_PORT_DB=25532
+_DOCKER_COMPOSE_HOST_PORT_TEST_DB=25533
+
+DATABASE_URL="postgresql://user:password@localhost:25532/taskapp?schema=public"
+TEST_DATABASE_URL="postgresql://user:password@localhost:25533/taskapp_test?schema=public"
+
+JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
+NODE_ENV="development"
 ```
 
 ### 危ないアンチパターン
@@ -359,7 +304,7 @@ npm run dev
 > taskappday01-demo@0.1.0 dev
 > next dev
 
-▲ Next.js 16.2.4 (Turbopack)
+▲ Next.js 15.5.15 (Turbopack)
 - Local:         http://localhost:3000
 - Network:       http://192.168.55.2:3000
 ✓ Ready in 158ms

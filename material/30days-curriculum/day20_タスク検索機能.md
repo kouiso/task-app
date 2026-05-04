@@ -91,9 +91,12 @@ flowchart TD
 
 ---
 
-### Step 0: 検索 API を有効化する（2分）
+### Step 0: 検索 API の登録を確認する（2分）
 
-`src/server/api/root.ts` に search ルーターを追加する。
+`src/server/api/root.ts` に search ルーターが登録済みか確認します。
+Day 14 で `api.search.getProjectMembers` を使うため、
+この登録はすでに済んでいるはずです。
+もし抜けていたら、ここで追加してください。
 
 ```typescript
 // filepath: src/server/api/root.ts（import を追加）
@@ -103,7 +106,7 @@ import { searchRouter } from './routers/search';
   search: searchRouter,
 ```
 
-✅ **確認ポイント**: `search: searchRouter` を追加した。
+✅ **確認ポイント**: `search: searchRouter` が存在する。
 
 ---
 

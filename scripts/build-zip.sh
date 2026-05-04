@@ -59,6 +59,9 @@ for dir in \
   _constants \
   _trpc-base \
   _server-routers \
+  _server-base \
+  _app-api-trpc \
+  _app-base \
   _prisma \
   _docker \
   _seed \

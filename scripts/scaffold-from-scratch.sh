@@ -7,54 +7,63 @@ set -euo pipefail
 PROJECT_DIR="$(pwd)"
 
 RUNTIME_DEPS=(
-  @trpc/client
-  @trpc/server
-  @trpc/react-query
-  @trpc/next
-  @tanstack/react-query@^5
-  prisma@^6
-  @prisma/client@^6
-  jose
-  bcryptjs
-  zod
-  react-hook-form
-  @hookform/resolvers
-  class-variance-authority
-  tailwind-merge
-  clsx
-  lucide-react
-  recharts
-  react-day-picker
-  @radix-ui/react-slot
-  @radix-ui/react-dialog
-  @radix-ui/react-dropdown-menu
-  @radix-ui/react-label
-  @radix-ui/react-tabs
-  tailwindcss-animate
-  date-fns
-  react-hot-toast
-  superjson
-  server-only
-  react-is
-  @radix-ui/react-accordion
-  @radix-ui/react-alert-dialog
-  @radix-ui/react-avatar
-  @radix-ui/react-checkbox
-  @radix-ui/react-popover
-  @radix-ui/react-select
-  @radix-ui/react-separator
-  @radix-ui/react-switch
+  next@15.5.15
+  react@^18.3.1
+  react-dom@^18.3.1
+  @trpc/client@^11.8.0
+  @trpc/server@^11.8.0
+  @trpc/react-query@^11.8.0
+  @trpc/next@^11.8.0
+  @tanstack/react-query@^5.59.0
+  prisma@^6.16.2
+  @prisma/client@^6.16.2
+  jose@^6.2.1
+  bcryptjs@^2.4.3
+  zod@^3.25.76
+  react-hook-form@^7.71.1
+  @hookform/resolvers@^3.10.0
+  class-variance-authority@^0.7.1
+  tailwind-merge@^3.4.0
+  clsx@^2.1.1
+  lucide-react@^0.563.0
+  recharts@^3.2.1
+  react-day-picker@^9.13.0
+  @radix-ui/react-slot@^1.2.4
+  @radix-ui/react-dialog@^1.1.15
+  @radix-ui/react-dropdown-menu@^2.1.16
+  @radix-ui/react-label@^2.1.8
+  @radix-ui/react-tabs@^1.1.13
+  tailwindcss-animate@^1.0.7
+  date-fns@^4.1.0
+  react-hot-toast@^2.4.1
+  superjson@^2.2.2
+  server-only@^0.0.1
+  react-is@^19.2.4
+  @radix-ui/react-accordion@^1.2.12
+  @radix-ui/react-alert-dialog@^1.1.15
+  @radix-ui/react-avatar@^1.1.11
+  @radix-ui/react-checkbox@^1.3.3
+  @radix-ui/react-popover@^1.1.15
+  @radix-ui/react-select@^2.2.6
+  @radix-ui/react-separator@^1.1.8
+  @radix-ui/react-switch@^1.2.6
 )
 
 DEV_DEPS=(
-  @biomejs/biome
-  vitest
-  @testing-library/react
-  @testing-library/jest-dom
-  jsdom
-  @types/bcryptjs
-  tsx
-  dotenv
+  @biomejs/biome@^2.3.15
+  vitest@^3.0.9
+  @testing-library/react@^16.2.0
+  @testing-library/jest-dom@^6.6.3
+  jsdom@^26.0.0
+  @types/bcryptjs@^2.4.6
+  @types/node@^22
+  @types/react@^18.3.12
+  @types/react-dom@^18.3.1
+  tsx@^4.19.0
+  dotenv@^17.4.2
+  typescript@^5.6.3
+  tailwindcss@^4.1.18
+  @tailwindcss/postcss@^4.1.18
 )
 
 print_error() {
@@ -115,29 +124,32 @@ ensure_empty_or_existing_next_app() {
   fi
 
   # create-next-app は空ディレクトリを要求するため、
-  # 教材配布物（スクリプト自身 + _ui-components/ + _lib-utils/）を一時退避して実行後に戻す。
+  # README.md / material / scripts などの配布物を一時退避して実行後に戻す。
   local stash_dir
   stash_dir="$(mktemp -d)"
-  for item in "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _server-routers _prisma _docker _seed _app-components; do
+  for item in README.md .env .env.example material scripts "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _server-routers _prisma _docker _seed _app-components; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
     fi
   done
 
-  # 教材との差分を減らすため、生成は公式の create-next-app に寄せて固定する。
-  npx create-next-app@latest . \
+  # 教材との差分を減らすため、Next.js 15 系に固定する。
+  npx create-next-app@15.5.15 . \
     --typescript \
     --tailwind \
     --app \
     --src-dir \
     --import-alias "@/*" \
     --no-eslint \
-    --use-npm
+    --use-npm \
+    --yes
 
   # 退避した配布物を元の位置に戻す
+  shopt -s dotglob nullglob
   for item in "$stash_dir"/*; do
     [ -e "$item" ] && mv "$item" .
   done
+  shopt -u dotglob nullglob
   rmdir "$stash_dir" 2>/dev/null || true
 }
 
@@ -158,8 +170,150 @@ init_biome() {
     return 0
   fi
 
-  # ESLint を外したあとに Biome を入れる流れを明示すると、学習者が役割分担を理解しやすい。
-  npx @biomejs/biome@latest init
+  # 教材内のコード断片と同じスタイルでチェックできるよう、配布用設定を固定する。
+  cat <<'EOF' > biome.json
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.15/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.next",
+      "!**/scripts",
+      "!**/scripts/**",
+      "!**/material",
+      "!**/material/**",
+      "!**/prisma/migrations"
+    ],
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noBannedTypes": "error",
+        "noUselessConstructor": "error",
+        "useArrowFunction": "error",
+        "noStaticOnlyClass": "warn",
+        "noForEach": "warn",
+        "useLiteralKeys": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "warn"
+      },
+      "style": {
+        "useConst": "error",
+        "useTemplate": "error",
+        "noNonNullAssertion": "warn"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn",
+        "noDebugger": "error",
+        "noConsole": {
+          "level": "error",
+          "options": {
+            "allow": ["warn", "error"]
+          }
+        }
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 100,
+    "attributePosition": "auto",
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.next",
+      "!**/scripts",
+      "!**/scripts/**",
+      "!**/material",
+      "!**/material/**",
+      "!**/prisma/migrations"
+    ]
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSpacing": true,
+      "bracketSameLine": false,
+      "quoteStyle": "single"
+    }
+  }
+}
+EOF
+  echo "Biome 設定を作成しました。"
+}
+
+configure_package_json() {
+  npm pkg set \
+    scripts.dev="next dev" \
+    scripts.build="prisma generate && next build" \
+    scripts.start="next start" \
+    scripts.lint="biome check src prisma.config.ts next.config.ts package.json tsconfig.json" \
+    scripts.lint:fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
+    scripts.fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
+    scripts.format="biome format --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
+    scripts.db:generate="prisma generate" \
+    scripts.db:push="prisma db push" \
+    scripts.db:migrate="prisma migrate dev" \
+    scripts.db:seed="tsx src/command/seed.ts" \
+    scripts.test="vitest run"
+}
+
+configure_tsconfig() {
+  node <<'EOF'
+const fs = require('node:fs');
+const path = 'tsconfig.json';
+const config = JSON.parse(fs.readFileSync(path, 'utf8'));
+const excludes = new Set(config.exclude ?? []);
+for (const entry of [
+  'node_modules',
+  'scripts',
+  'material',
+  'src/server',
+  'src/trpc',
+  'src/component/project',
+  'src/component/task',
+  'src/lib/task-form.ts',
+]) {
+  excludes.add(entry);
+}
+config.exclude = [...excludes];
+fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
+EOF
+}
+
+format_scaffold_files() {
+  npx biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json >/dev/null
 }
 
 write_env_example() {
@@ -180,11 +334,11 @@ _DEVELOPER_LASTNAME=
 # Docker Compose
 # ------------------------------------------------------------------------------
 # ホスト側のポート設定 (競合する場合はここを変更してください)
-_DOCKER_COMPOSE_HOST_PORT_DB=5432
+_DOCKER_COMPOSE_HOST_PORT_DB=25532
 _DOCKER_COMPOSE_HOST_PORT_BACKEND=3000
 _DOCKER_COMPOSE_HOST_PORT_BACKEND_DEBUG=9229
 _DOCKER_COMPOSE_HOST_PORT_SCHEMASPY=8080
-_DOCKER_COMPOSE_HOST_PORT_TEST_DB=5433
+_DOCKER_COMPOSE_HOST_PORT_TEST_DB=25533
 
 # ------------------------------------------------------------------------------
 # アプリケーション設定
@@ -192,11 +346,11 @@ _DOCKER_COMPOSE_HOST_PORT_TEST_DB=5433
 # Prisma connection string
 # ホストマシンから接続する場合のURL (マイグレーション等で使用)
 # ポート番号は _DOCKER_COMPOSE_HOST_PORT_DB と合わせる必要があります
-DATABASE_URL="postgresql://user:password@localhost:${_DOCKER_COMPOSE_HOST_PORT_DB}/taskapp?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:25532/taskapp?schema=public"
 
 # Vitest が使うテスト用DB接続URL
 # ポート番号は _DOCKER_COMPOSE_HOST_PORT_TEST_DB と合わせる必要があります
-TEST_DATABASE_URL="postgresql://user:password@localhost:${_DOCKER_COMPOSE_HOST_PORT_TEST_DB}/taskapp_test?schema=public"
+TEST_DATABASE_URL="postgresql://user:password@localhost:25533/taskapp_test?schema=public"
 
 # JWT Authentication (32文字以上必須。本番では必ず変更してください)
 JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
@@ -284,6 +438,39 @@ copy_scaffold_support() {
   fi
 }
 
+copy_server_base() {
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local server_base_src="${script_dir}/_server-base"
+  local app_api_src="${script_dir}/_app-api-trpc"
+
+  if [ -d "$server_base_src" ]; then
+    mkdir -p src/server/api
+    cp "${server_base_src}"/*.ts src/server/api/
+    echo "tRPC サーバー基盤を src/server/api/ に配置しました。"
+  fi
+
+  if [ -f "${app_api_src}/route.ts" ]; then
+    mkdir -p "src/app/api/trpc/[trpc]"
+    cp "${app_api_src}/route.ts" "src/app/api/trpc/[trpc]/route.ts"
+    echo "tRPC HTTP ハンドラを src/app/api/trpc/[trpc]/ に配置しました。"
+  fi
+}
+
+copy_app_base() {
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local app_base_src="${script_dir}/_app-base"
+
+  if [ ! -d "$app_base_src" ]; then
+    return 0
+  fi
+
+  cp "${app_base_src}/providers.tsx" src/app/providers.tsx 2>/dev/null
+  cp "${app_base_src}/layout.tsx" src/app/layout.tsx 2>/dev/null
+  echo "アプリ共通 Provider と layout を配置しました。"
+}
+
 copy_app_components() {
   # カリキュラムで「既存」と明示されている実装済みコンポーネントを配置する。
   # 学習者は自分では作らず、既存ファイルとして読み取り・利用する。
@@ -340,8 +527,12 @@ copy_prisma_files() {
 
 setup_database() {
   # Docker が使える場合のみ DB を自動セットアップ
-  if ! command -v docker >/dev/null 2>&1; then
-    echo "Docker が見つかりません。DB は手動でセットアップしてください。"
+  if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+    echo "Docker が使えないため、DB 起動はスキップします。"
+    echo "ローカル PostgreSQL を使う場合は .env の DATABASE_URL を合わせてください。"
+    if [ -f "prisma/schema.prisma" ]; then
+      npx prisma generate
+    fi
     return 0
   fi
 
@@ -350,24 +541,33 @@ setup_database() {
     return 0
   fi
 
-  echo "Docker で PostgreSQL を起動しています..."
-  docker compose up -d 2>/dev/null || docker-compose up -d 2>/dev/null
-
-  # DB の準備ができるまで少し待つ
-  echo "DB の起動を待っています..."
-  sleep 3
-
   # .env がなければ .env.example からコピー
   if [ ! -f ".env" ] && [ -f ".env.example" ]; then
     cp .env.example .env
     echo ".env.example を .env にコピーしました。"
   fi
 
-  # Prisma マイグレーション + クライアント生成
+  echo "Docker で PostgreSQL を起動しています..."
+  docker compose up -d db test-db || docker-compose up -d db test-db
+
+  # DB の準備ができるまで少し待つ
+  echo "DB の起動を待っています..."
+  for _ in {1..30}; do
+    if docker compose exec -T db pg_isready -U user -d taskapp >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+
+  # Prisma スキーマ反映 + クライアント生成
   if [ -f "prisma/schema.prisma" ]; then
-    echo "Prisma マイグレーションを実行しています..."
-    npx prisma migrate dev --name init 2>/dev/null || npx prisma db push 2>/dev/null
-    npx prisma generate 2>/dev/null
+    echo "Prisma スキーマをDBに反映しています..."
+    npx prisma db push
+    npx prisma generate
+    if [ -f "src/command/seed.ts" ]; then
+      echo "シードデータを投入しています..."
+      npm run db:seed
+    fi
     echo "DB セットアップが完了しました。"
   fi
 }
@@ -381,19 +581,24 @@ main() {
 
   ensure_empty_or_existing_next_app
   install_dependencies
+  configure_package_json
+  configure_tsconfig
   remove_eslint_config
   init_biome
   write_env_example
   copy_ui_components
   copy_lib_utils
   copy_scaffold_support
+  copy_server_base
+  copy_app_base
   copy_app_components
   copy_prisma_files
+  format_scaffold_files
   setup_database
 
   echo
   echo "初期セットアップは完了やで。"
-  echo "カリキュラムの Day 02 に進んで、次の実装を始めてください。"
+  echo "カリキュラムの Day 01 の続きを進めてください。"
 }
 
 main "$@"

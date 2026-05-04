@@ -32,7 +32,7 @@ interface TaskCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
-  onTimerUpdate?: () => void;
+  onTimerUpdate?: (() => void) | undefined;
 }
 
 export function TaskCard({

@@ -644,6 +644,10 @@ git status --short
 ```text title="ターミナル出力のイメージ"
  M README.md
  M src/app/dashboard/page.tsx
+?? package-lock.json
+?? package.json
+?? prisma/
+?? src/
 ```
 
 もし `.env` や `.env.local` がここに出ていたら、
@@ -657,17 +661,23 @@ git status --short
 **送っていいものだけを送る習慣を作ること**
 やからや。
 
-### 変更したファイルだけを add する
+### アプリ実行に必要なファイルを add する
 
-この Day では、
-`README.md` と `src/app/dashboard/page.tsx` を明示的に add する。
+この Day では、Vercel が GitHub 上で build できるように、
+アプリ実行に必要なファイルを明示的に add する。
 
-`.gitignore` や `.env.example` を自分で編集した場合だけ、
-そのファイルも追加で指定しよう。
+`material/` は教材本文、`scripts/` は初期セットアップ用なので、
+GitHub に上げなくてもアプリのデプロイには不要です。
+一方で `package.json` や `src/` や `prisma/` が抜けると、
+Day 04 の Vercel build が壊れます。
 
 ```bash title="~/workspace/task-app"
 git add README.md
-git add src/app/dashboard/page.tsx
+git add package.json package-lock.json
+git add tsconfig.json next.config.* postcss.config.* biome.json
+git add prisma prisma.config.ts
+git add public src
+git add .env.example docker-compose.yml
 git status --short
 ```
 
@@ -675,7 +685,10 @@ git status --short
 
 ```text title="ターミナル出力のイメージ"
 M  README.md
-M  src/app/dashboard/page.tsx
+A  package.json
+A  prisma/schema.prisma
+A  src/app/page.tsx
+A  src/app/dashboard/page.tsx
 ```
 
 左側に状態が出ていれば、
