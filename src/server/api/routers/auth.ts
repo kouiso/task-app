@@ -25,7 +25,7 @@ const registerSchema = z.object({
 });
 
 function handleUnexpectedError(context: string, error: unknown): never {
-  console.error(`[auth] ${context}:`, error);
+  console.error('[auth] unexpected error', { context, error });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
     message: `${context}中にエラーが発生しました。しばらくしてから再度お試しください。`,
