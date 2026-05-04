@@ -37,6 +37,8 @@
     "e2e/**/*",
     "prisma/seed.ts",
     "*.mjs",
+    "scripts/**/*",
+    "material/**/*",
     "**/__tests__/**/*",
     "**/*.test.ts",
     "**/*.test.tsx",

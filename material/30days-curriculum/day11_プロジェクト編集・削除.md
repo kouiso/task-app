@@ -106,10 +106,21 @@ src/
 
 💻 **実装**:
 
-まず、Day 10 で作成した `ProjectFormData` 型と、削除確認用の `DeleteConfirmDialog` をインポートします。`src/app/project/page.tsx` の先頭にあるインポート文に追記してください。
+まず、Day 10 で作成した `ProjectFormData` 型と、削除確認用の `DeleteConfirmDialog` をインポートします。
+既に `useState` や `Suspense` の import がある場合は、
+重複させずに以下の形へ揃えてください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
+import {
+  useRouter,
+  useSearchParams,
+} from 'next/navigation';
+import {
+  Suspense,
+  useEffect,
+  useState,
+} from 'react';
 // Day 10のProjectFormData型をインポート
 import {
   ProjectDialog,
@@ -128,11 +139,14 @@ import { DeleteConfirmDialog }
 - インポート文を追加してエラーが出ていない
 - `ProjectFormData` と `DeleteConfirmDialog` が正しくインポートされた
 
-Day 10 で `editingProject` を `ProjectFormData | undefined` 型で定義済みです。`ProjectPageContent` 関数の先頭にある state 一覧（`const [dialogOpen, ...]` の並び）で、以下の行があることを確認してください。
+次に、詳細表示と編集用の state を追加します。
+`ProjectPageContent` 関数の先頭にある state 一覧
+（`const [dialogOpen, ...]` の並び）に追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// Day 10で定義済みのeditingProject state（確認のみ）
+const [selectedProject, setSelectedProject] =
+  useState<string | null>(null);
 const [editingProject, setEditingProject] =
   useState<ProjectFormData | undefined>(
     undefined
@@ -140,8 +154,32 @@ const [editingProject, setEditingProject] =
 ```
 
 ✅ **確認ポイント**:
+- `selectedProject` が `string | null` で定義されている
 - `editingProject` の型が `ProjectFormData | undefined` になっている
 - 保存時にエラーが出ていない
+
+URL の `?projectId=...` と state を同期するコードも追加します。
+`utils = api.useUtils()` より前に置くと読みやすいです。
+
+```typescript
+// filepath: src/app/project/page.tsx
+const searchParams = useSearchParams();
+const projectIdParam =
+  searchParams.get('projectId');
+const router = useRouter();
+
+useEffect(() => {
+  if (projectIdParam) {
+    setSelectedProject(projectIdParam);
+  } else {
+    setSelectedProject(null);
+  }
+}, [projectIdParam]);
+```
+
+✅ **確認ポイント**:
+- `router.push(...)` を使う準備ができている
+- URL に `projectId` があると `selectedProject` に入る
 
 次に、Day 10 で定義済みの `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
 
@@ -257,7 +295,8 @@ const handleDelete = (projectId: string) => {
 
 💻 **実装**:
 
-まず、更新用の mutation を確認します。`createMutation` の直下に `updateMutation` を定義済みです（Day 10 の状態を確認してください）。もしまだであれば、以下を追加します。
+まず、更新用の mutation を追加します。
+`createMutation` の直下に `updateMutation` を定義してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -378,13 +417,12 @@ const handleSubmit = (
 
 💻 **実装**:
 
-> 📝 **注意**: `handleCreate` は Day 10 で既に実装済みです。ここでは確認のみです。
-
-`handleEdit` の直上に `handleCreate` が定義されていることを確認してください。このハンドラーは `editingProject` を `undefined` にリセットすることで「新規作成モード」にします。
+Day 10 の `handleCreate` はダイアログを開くだけでした。
+編集機能を追加したので、「新規作成」では
+`editingProject` を必ず `undefined` に戻すように更新します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// Day 10で実装済み（確認のみ）
 const handleCreate = () => {
   setEditingProject(undefined);
   setDialogOpen(true);

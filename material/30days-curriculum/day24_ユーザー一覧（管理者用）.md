@@ -320,9 +320,9 @@ export default function UsersPage() {
 ✅ **確認ポイント**:
 - `/user` にアクセスしてスピナーが出る
 
-📸 権限チェック: 一般ユーザーでアクセスすると以下のように拒否されます。
-
-![権限エラー画面の表示](./screenshots/user-list.png)
+📸 権限チェック:
+一般ユーザーでアクセスすると、ユーザー一覧ではなく
+権限エラーのメッセージが表示されればOKです。
 
 ```typescript
 // filepath: src/app/user/page.tsx

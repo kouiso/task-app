@@ -434,9 +434,9 @@ npx biome check \
 ✅ **確認ポイント**:
 - エラーが0件になった
 
-📸 スクリーンショット: Biome lint のエラー出力画面を確認してください。
-
-![Biome lint のエラー出力画面を確認してください。](./screenshots/error-page.png)
+📸 確認メモ:
+ターミナルに `lint/suspicious/noConsole` が表示され、
+修正後に `Checked ... No fixes applied.` のような成功表示になればOKです。
 > 💡 `npx biome check ファイルパス` は
 > Biome を1ファイルだけに実行するコマンドです。
 > Step 7 の `npm run lint` は内部的に
@@ -499,18 +499,9 @@ PORT=3001 npm run dev
 1. 3つのタブの使い分けが理解できた
 2. 症状に応じてどのタブを見るか判断できる
 
-📸 スクリーンショット: DevTools Consoleタブの表示を確認してください。
-
-![DevTools Console タブでエラーログを確認している画面](./screenshots/dashboard.png)
-> 📷 TODO: DevTools の Console / Network / Elements タブのスクリーンショットを差し替え予定
-📸 スクリーンショット: DevTools Networkタブの表示を確認してください。
-
-![DevTools Network タブでリクエストの状態を確認している画面](./screenshots/dashboard.png)
-> 📷 TODO: DevTools の Console / Network / Elements タブのスクリーンショットを差し替え予定
-📸 スクリーンショット: DevTools Elementsタブの表示を確認してください。
-
-![DevTools Elements タブで画面の HTML 構造を確認している画面](./screenshots/dashboard.png)
-> 📷 TODO: DevTools の Console / Network / Elements タブのスクリーンショットを差し替え予定
+DevTools の見た目はブラウザやOSで少し変わります。
+ここではスクリーンショットを暗記するのではなく、
+手元の画面で Console / Network / Elements の3タブを実際に切り替えて確認してください。
 📝 **学んだこと**: DevToolsは「症状に合った道具を選ぶ」のが大事です。Console→Network→Elementsの順でチェックするのが基本です。
 
 ---

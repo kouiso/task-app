@@ -53,7 +53,7 @@ Task-Appで学んだ技術スタックを使って、ゼロから新しいアプ
 ### ゼロから始めるときの手順
 ```bash
 # 1. Next.jsプロジェクトの作成
-npx create-next-app@latest my-new-app --typescript --tailwind --app
+npx create-next-app@15.5.15 my-new-app --typescript --tailwind --app --yes
 
 # 2. 必要なパッケージの追加
 npm install @trpc/server @trpc/client @trpc/react-query

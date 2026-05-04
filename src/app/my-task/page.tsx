@@ -57,7 +57,7 @@ interface TaskGroupSectionProps {
   }>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onTimerUpdate?: () => void;
+  onTimerUpdate?: (() => void) | undefined;
 }
 
 const TaskGroupSection = ({

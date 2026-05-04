@@ -149,7 +149,15 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { UserDetailClient } from './user-detail-client';
 
-export default async function UserDetailPage({ params }) {
+interface UserDetailPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function UserDetailPage({
+  params,
+}: UserDetailPageProps) {
   const { id } = await params;
 
   const user = await prisma.user.findUnique({
@@ -165,7 +173,10 @@ export default async function UserDetailPage({ params }) {
 }
 ```
 
-開発サーバーを起動して `/user/test123` にアクセスしてみましょう。
+開発サーバーを起動して、存在するユーザーIDのURLで確認しましょう。
+`/user/test123` のような存在しないIDでは、
+このコードは正しく 404 を表示します。
+実IDは Day 24 のユーザー一覧、または DB の `users` テーブルで確認します。
 
 ```bash
 PORT=3001 npm run dev
@@ -174,7 +185,9 @@ PORT=3001 npm run dev
 📸 スクリーンショット: ユーザー詳細ページの骨組みの表示を確認してください。
 
 ![ユーザー詳細ページの骨組みの表示を確認してください。](./screenshots/user-detail-skeleton.png)
-どんなIDを入れても同じページが表示されるはずです。次のステップでURLからIDを読み取ります。
+存在するユーザーIDなら骨組みが表示され、
+存在しないIDなら 404 になります。
+次のステップで `userId` を使って詳細データを読み込みます。
 
 ✅ **確認ポイント**:
 - `src/app/user/[id]/page.tsx` ファイルが作成できた
@@ -692,7 +705,15 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { UserEditClient } from './user-edit-client';
 
-export default async function UserEditPage({ params }) {
+interface UserEditPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function UserEditPage({
+  params,
+}: UserEditPageProps) {
   const { id } = await params;
 
   const user = await prisma.user.findUnique({
@@ -729,10 +750,6 @@ import { z } from 'zod';
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-import { zodResolver }
-  from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { AppLayout }
   from '@/component/layout/app-layout';
 import { Button } from '@/component/ui/button';

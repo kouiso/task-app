@@ -957,7 +957,13 @@ flowchart TD
 npm run dev
 ```
 
-> Docker が起動していること、`npx prisma db push` と `npx prisma db seed` が済んでいることを確認（Day 01 の scaffold で実行済みのはず）。
+> Docker が起動していること、DB スキーマとシードデータが入っていることを確認します。
+> Day 01 の scaffold を正常完了していれば済んでいますが、不安なら次の2つを実行してから進んでください。
+
+```bash
+npm run db:push
+npm run db:seed
+```
 
 ブラウザで `http://localhost:3000/login` を開く。
 
@@ -1111,7 +1117,7 @@ export function AuthGuard({
 | ログインしてもトーストが出ない | auth ルーターが root.ts に登録されていない | root.ts で `auth: authRouter` を確認 |
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
-| `relation "User" does not exist` | DB にテーブルがない | `npx prisma db push && npx prisma db seed` を実行 |
+| `relation "User" does not exist` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
 
 ## 次回予告
