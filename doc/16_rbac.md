@@ -192,7 +192,8 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 
 // ---- ミドルウェア 2: 管理者チェック ----
 // isAuthenticated の後に連結することで ctx.session.role が確実に存在する
-// 単独で使うと ctx.session が null のまま通過してしまうため isAuthenticated 経由専用
+// 単独で使うと ctx.session が null になり role チェックが機能しないため isAuthenticated 経由専用
+// role が USER_ROLE.ADMIN でない場合は FORBIDDEN を throw して管理者以外をブロックする
 const isAdmin = t.middleware(async ({ ctx, next }) => {
   if (ctx.session?.role !== USER_ROLE.ADMIN) {
     throw new TRPCError({ code: 'FORBIDDEN', message: '管理者権限が必要です' });
