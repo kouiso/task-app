@@ -10,7 +10,7 @@ permissions:
 jobs:
   trufflehog:
     name: TruffleHog シークレットスキャン
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
