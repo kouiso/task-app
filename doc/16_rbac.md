@@ -209,7 +209,7 @@ export const adminProcedure     = t.procedure.use(isAuthenticated).use(isAdmin);
 
 **ミドルウェアチェーンの実行フロー**:
 
-```
+```text
 リクエスト
   ↓
 isAuthenticated
@@ -465,7 +465,7 @@ updateMemberRole: protectedProcedure
 
 **OWNER 保護ロジックの必要性**:
 
-```
+```text
 なぜトランザクションが必要か?
 
 1. OWNER が 2 人いる状態で、2 人を同時に MEMBER に降格しようとした場合:
@@ -476,6 +476,10 @@ updateMemberRole: protectedProcedure
 
 2. $transaction を使うことで、ownerCount の確認と role の変更がアトミックになる
    → 競合が起きても OWNER が必ず 1 人以上残ることを保証できる
+
+注意: Prisma のデフォルト isolation level (READ COMMITTED) では厳密な write-skew
+を防げない場合があります。完全な保護が必要な場合は SET TRANSACTION ISOLATION LEVEL
+SERIALIZABLE 等を明示的に指定してください。
 ```
 
 ---

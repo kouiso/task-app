@@ -27,14 +27,14 @@
 #### project.ts
 - `getAll` / `getById` / `create` / `update` / `delete`
 - `archive` — アーカイブ
-- `addMember` / `removeMember` / `getMembers`
+- `addMember` / `removeMember` / `getAvailableUsers`
 
 #### report.ts
 - `getOverview` — ダッシュボード統計 (completionRate, statusData, priorityData, projectStats)
 - `getWeeklyReport` — 週次トレンドデータ
 
 #### search.ts
-- `search` — フルテキスト + 多条件フィルター (keyword, status, priority, assigneeId, 日付範囲)
+- `search` — フルテキスト + 多条件フィルター (keyword, status, priority, assignedTo, 日付範囲)
 - `quickSearch` — 軽量キーワード検索
 
 #### comment.ts
@@ -76,8 +76,11 @@
 
 **難易度:** 中級〜上級
 - 状態機械 (timer start/stop)
-- 楽観的更新 (optimistic update)
+- ローカル状態更新 + 再取得 (mutation 成功後に親コールバック経由で再取得)
 - 日時計算・経過時間フォーマット
+
+> **注意:** `timeSpentMinutes` は `updateTimer` (タイマー停止時) が自動計算して更新するフィールド。
+> `actualHours` は `update` mutation で手動入力する別フィールド。混同しないこと。
 
 **重複しない理由:** Day 9-10 はタスク基本 CRUD、Day 12 はコメント。タイマー機能は未登場。
 
