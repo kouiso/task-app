@@ -392,7 +392,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '25.6.1'
+          node-version: '22.22.2'
           cache: 'npm'
 
       - name: Install dependencies
