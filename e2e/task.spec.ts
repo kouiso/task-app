@@ -59,7 +59,7 @@ test.describe('Task Management', () => {
     await page.goto('/search');
 
     // Fill search keyword
-    const searchInput = page.getByPlaceholder(/検索|search|キーワード/i);
+    const searchInput = page.locator('#keyword');
     if (await searchInput.isVisible()) {
       await searchInput.fill('test');
 

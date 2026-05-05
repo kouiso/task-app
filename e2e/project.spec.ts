@@ -43,7 +43,7 @@ test.describe('Project Management', () => {
   test('should navigate to dashboard from header', async ({ page }) => {
     await page.goto('/project');
 
-    const dashboardLink = page.getByRole('link', { name: /ダッシュボード|dashboard/i });
+    const dashboardLink = page.getByRole('link', { name: /ダッシュボード|dashboard/i }).first();
     if (await dashboardLink.isVisible()) {
       await dashboardLink.click();
       await page.waitForURL('/dashboard', { timeout: 5000 });

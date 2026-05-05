@@ -6,7 +6,9 @@ test.describe('Authentication', () => {
   });
 
   test('should display login page', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /ログイン|login/i })).toBeVisible();
+    await expect(page.getByText('ログイン', { exact: true }).first()).toBeVisible();
+    await expect(page.locator('#email')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
   });
 
   test('should login with valid credentials', async ({ page }) => {
@@ -17,7 +19,8 @@ test.describe('Authentication', () => {
 
     await page.waitForURL('/dashboard', { timeout: 10000 });
 
-    await expect(page.getByRole('heading', { name: /ダッシュボード|dashboard/i })).toBeVisible();
+    await expect(page.getByText('全体の進捗')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'ダッシュボード' }).first()).toBeVisible();
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
@@ -43,8 +46,12 @@ test.describe('Authentication', () => {
     await page.waitForURL('/dashboard', { timeout: 10000 });
 
     await page.getByRole('button', { name: /ログアウト|logout/i }).click();
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: /ログアウト|logout/i })
+      .click();
 
     await page.waitForURL('/login', { timeout: 5000 });
-    await expect(page.getByRole('heading', { name: /ログイン|login/i })).toBeVisible();
+    await expect(page.getByText('ログイン', { exact: true }).first()).toBeVisible();
   });
 });
