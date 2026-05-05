@@ -7,7 +7,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BUILD_DIR="/tmp/task-app-curriculum-build"
+BUILD_PARENT="/tmp/task-app-curriculum-package"
+BUILD_DIR="${BUILD_PARENT}/task-app"
 ZIP_NAME="task-app-curriculum-v1.0.zip"
 OUTPUT_ZIP="${PROJECT_ROOT}/${ZIP_NAME}"
 
@@ -16,7 +17,7 @@ echo "プロジェクトルート: ${PROJECT_ROOT}"
 echo "ビルド一時ディレクトリ: ${BUILD_DIR}"
 
 # 前回のビルド残骸を掃除してからやり直す（冪等性の担保）
-rm -rf "${BUILD_DIR}"
+rm -rf "${BUILD_PARENT}"
 mkdir -p "${BUILD_DIR}"
 
 # ---- カリキュラム本文（内部ドキュメントを除いた .md だけコピー） ----
@@ -81,8 +82,8 @@ fi
 
 # ---- ZIP 作成（前回の残骸があれば上書き） ----
 rm -f "${OUTPUT_ZIP}"
-cd /tmp
-zip -r "${OUTPUT_ZIP}" "task-app-curriculum-build" -x "*.DS_Store"
+cd "${BUILD_PARENT}"
+zip -r "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store"
 
 ZIP_SIZE=$(du -sh "${OUTPUT_ZIP}" | cut -f1)
 echo ""
