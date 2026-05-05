@@ -65,10 +65,24 @@ export function ProjectCard({
             {isArchived && <Badge variant="secondary">アーカイブ</Badge>}
           </div>
           <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEdit}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`${name}を編集`}
+              onClick={handleEdit}
+            >
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`${name}を削除`}
+              onClick={handleDelete}
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

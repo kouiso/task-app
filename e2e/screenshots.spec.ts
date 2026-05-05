@@ -52,6 +52,27 @@ async function navigateToProfile(page: Page) {
   await page.waitForTimeout(5000);
 }
 
+async function firstProjectCard(page: Page) {
+  return page
+    .locator('[style*="border-left"]')
+    .filter({ hasText: 'Webサイトリニューアル' })
+    .first();
+}
+
+async function openFirstProjectDetail(page: Page) {
+  await navigateToPage(page, '/project');
+  await page.waitForTimeout(1500);
+  const card = await firstProjectCard(page);
+  if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await card.click();
+    await page.waitForFunction(() => window.location.search.includes('projectId='), {
+      timeout: 10000,
+    });
+    await page.getByRole('button', { name: /プロジェクト一覧/ }).waitFor({ timeout: 10000 });
+    await page.waitForTimeout(500);
+  }
+}
+
 test.describe('Curriculum Screenshots', () => {
   test.setTimeout(120000);
   // =====================================================
@@ -138,12 +159,11 @@ test.describe('Curriculum Screenshots', () => {
       await screenshot(page, 'project-create-dialog.png');
     });
 
-    test('project detail dialog (edit mode)', async ({ page }) => {
+    test('project edit dialog', async ({ page }) => {
       await navigateToPage(page, '/project');
       await page.waitForTimeout(1500);
-      const card = page.locator('.cursor-pointer').first();
-      if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
-        const editBtn = card.locator('button').first();
+      const editBtn = page.getByRole('button', { name: /Webサイトリニューアルを編集/ }).first();
+      if (await editBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
         await editBtn.click();
         await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
         await page.waitForTimeout(500);
@@ -152,16 +172,9 @@ test.describe('Curriculum Screenshots', () => {
     });
 
     test('project add member', async ({ page }) => {
-      await navigateToPage(page, '/project');
-      await page.waitForTimeout(2000);
-      const card = page.locator('.cursor-pointer').first();
-      if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await card.click();
-        const memberBtn = page
-          .locator('[role="dialog"]')
-          .getByRole('button', { name: /メンバー追加/ });
-        await memberBtn.waitFor({ timeout: 15000 });
-        await page.waitForTimeout(500);
+      await openFirstProjectDetail(page);
+      const memberBtn = page.getByRole('button', { name: /メンバー追加/ }).first();
+      if (await memberBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
         await memberBtn.click();
         await page
           .getByText('このプロジェクトに新しいメンバーを追加します')
@@ -177,7 +190,6 @@ test.describe('Curriculum Screenshots', () => {
             (dialogs[0] as HTMLElement).style.display = 'none';
           }
         });
-        await page.waitForTimeout(300);
       }
       await screenshot(page, 'project-add-member.png');
     });
@@ -346,62 +358,32 @@ test.describe('Curriculum Screenshots', () => {
     });
 
     // --- プロジェクト詳細 ---
-    test('プロジェクト詳細 - メンバータブ表示', async ({ page }) => {
-      await navigateToPage(page, '/project');
-      await page.waitForTimeout(1500);
-      const card = page.locator('[style*="border-left"]').first();
-      if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await card.click();
-        await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
-        await page.waitForTimeout(1000);
-        const membersTab = page
-          .locator('[role="dialog"]')
-          .getByRole('tab', { name: /メンバー/i })
-          .first();
-        if (await membersTab.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await membersTab.click();
-          await page.waitForTimeout(500);
-        }
+    test('プロジェクト詳細 - メンバーセクション表示', async ({ page }) => {
+      await openFirstProjectDetail(page);
+      const memberSection = page.getByText(/メンバー \(/).first();
+      if (await memberSection.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await memberSection.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(300);
       }
       await screenshot(page, 'project-detail-members.png');
     });
 
-    test('プロジェクト詳細 - タスクタブ表示', async ({ page }) => {
-      await navigateToPage(page, '/project');
-      await page.waitForTimeout(1500);
-      const card = page.locator('[style*="border-left"]').first();
-      if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await card.click();
-        await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
-        await page.waitForTimeout(1000);
-        const tasksTab = page
-          .locator('[role="dialog"]')
-          .getByRole('tab', { name: /タスク/i })
-          .first();
-        if (await tasksTab.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await tasksTab.click();
-          await page.waitForTimeout(500);
-        }
+    test('プロジェクト詳細 - タスクセクション表示', async ({ page }) => {
+      await openFirstProjectDetail(page);
+      const tasksSection = page.getByText(/タスク \(/).first();
+      if (await tasksSection.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await tasksSection.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(300);
       }
       await screenshot(page, 'project-detail-tasks.png');
     });
 
     test('プロジェクト詳細 - アーカイブボタン表示', async ({ page }) => {
-      await navigateToPage(page, '/project');
-      await page.waitForTimeout(1500);
-      const card = page.locator('[style*="border-left"]').first();
-      if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await card.click();
-        await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
-        await page.waitForTimeout(1000);
-        const archiveBtn = page
-          .locator('[role="dialog"]')
-          .getByRole('button', { name: /アーカイブ/i })
-          .first();
-        if (await archiveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await archiveBtn.scrollIntoViewIfNeeded();
-          await page.waitForTimeout(300);
-        }
+      await openFirstProjectDetail(page);
+      const archiveBtn = page.getByRole('button', { name: /アーカイブ/i }).first();
+      if (await archiveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await archiveBtn.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(300);
       }
       await screenshot(page, 'project-detail-archive-action.png');
     });
@@ -576,25 +558,15 @@ test.describe('Curriculum Screenshots', () => {
     test('プロジェクト削除確認ダイアログ', async ({ page }) => {
       await navigateToPage(page, '/project');
       await page.waitForTimeout(1500);
-      const card = page.locator('[style*="border-left"]').first();
-      if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await card.click();
-        await page.waitForSelector('[role="dialog"]', { timeout: 5000 }).catch(() => null);
-        await page.waitForTimeout(1000);
-        const deleteBtn = page
-          .locator('[role="dialog"]')
-          .getByRole('button', { name: /削除/i })
-          .first();
-        if (await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await deleteBtn.click();
-          await page.waitForTimeout(500);
-          await page
-            .waitForSelector('[role="alertdialog"], [role="dialog"]:has-text("削除")', {
-              timeout: 3000,
-            })
-            .catch(() => null);
-          await page.waitForTimeout(300);
-        }
+      const deleteBtn = page.getByRole('button', { name: /Webサイトリニューアルを削除/ }).first();
+      if (await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await deleteBtn.click();
+        await page
+          .waitForSelector('[role="alertdialog"], [role="dialog"]:has-text("削除")', {
+            timeout: 3000,
+          })
+          .catch(() => null);
+        await page.waitForTimeout(300);
       }
       await screenshot(page, 'project-delete-confirm.png');
     });
