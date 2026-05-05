@@ -585,7 +585,6 @@ const handleSubmit = (
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
   onSubmit={handleSubmit}
-  initialData={null}
 />
 ```
 

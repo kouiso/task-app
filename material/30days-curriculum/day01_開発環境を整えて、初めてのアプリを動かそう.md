@@ -30,7 +30,7 @@ SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 
 ## 📍 今日のゴール（G0 Foundation の1日目）
 
-- [ ] 空のディレクトリを用意して、そこを `task-app` の作業場所にする
+- [ ] 配布 ZIP を展開して、`scripts` と `material` が見える場所を `task-app` の作業場所にする
 - [ ] `scripts/scaffold-from-scratch.sh` を実行して、土台を一発で作る
 - [ ] `npm run dev` で Next.js の初期画面を表示する
 - [ ] `src/app/globals.css` に Linear 風 design token を入れる
@@ -110,32 +110,38 @@ pg_isready --version
 
 > 📌 **React が初めてでも大丈夫。** 今日はスクリプトが土台を作ってくれるから、まずは「動いた！」を体験するのがゴール。React の仕組みは Day 02 以降で手を動かしながら少しずつわかってくる。
 
-## Step 1: 空のディレクトリから始める
+## Step 1: 配布 ZIP を展開した場所から始める
 
-今日は既存プロジェクトに入って作業するんじゃなくて、
-何も入っていないフォルダから始める。
+今日は完成済みプロジェクトをそのまま編集するんじゃなくて、
+配布 ZIP を展開した作業場所から土台を作り直して始める。
 
 この原則がめっちゃ大事や。
 「あとで配られる完成形を前提に読む」のと、
 「自分で土台を立ち上げて積み上げる」のでは、
 理解の深さが全然ちゃう。
 
-### 作業用ディレクトリを作る
+### 作業用ディレクトリを用意して ZIP を展開する
 
 ここでは例として、
-ホームディレクトリの中に `task-app` を作る。
+ホームディレクトリの中の `workspace` に配布 ZIP を展開する。
 
 # ~/workspace
 ```bash
-mkdir -p ~/workspace/task-app
-cd ~/workspace/task-app
+mkdir -p ~/workspace
+cd ~/workspace
+unzip ~/Downloads/task-app-curriculum-v1.0.zip
+cd task-app
 pwd
 ```
+
+> 📌 上の `cd task-app` は、
+> 配布 ZIP を展開して `task-app` フォルダができた後に実行する。
+> まだ `task-app` フォルダがなければ、先に ZIP を展開してから戻ってこよう。
 
 ### 期待する結果
 
 - `pwd` の結果が `~/workspace/task-app` っぽい場所になっている
-- ディレクトリの中身が空に近い
+- `scripts` と `material` が見える配布物ルートにいる
 
 ### ここで置いておく配布物
 

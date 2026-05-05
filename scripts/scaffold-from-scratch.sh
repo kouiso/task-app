@@ -127,7 +127,7 @@ ensure_empty_or_existing_next_app() {
   # README.md / material / scripts などの配布物を一時退避して実行後に戻す。
   local stash_dir
   stash_dir="$(mktemp -d)"
-  for item in README.md .env .env.example material scripts "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _server-routers _prisma _docker _seed _app-components; do
+  for item in README.md .env .env.example material scripts "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _server-routers _server-base _app-api-trpc _prisma _docker _seed _app-components; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
     fi
@@ -282,6 +282,7 @@ configure_package_json() {
     scripts.lint:fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
     scripts.fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
     scripts.format="biome format --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
+    scripts.type-check="next typegen && tsc --noEmit" \
     scripts.db:generate="prisma generate" \
     scripts.db:push="prisma db push" \
     scripts.db:migrate="prisma migrate dev" \
@@ -429,13 +430,14 @@ copy_scaffold_support() {
     echo "tRPC クライアント設定を src/trpc/ に配置しました。"
   fi
 
-  # server-routers: tRPC ルーター（Day 07 で auth を自作した後、各 Day で root.ts に登録して有効化する）
+  # server-routers: tRPC ルーター（Day 07 で auth を確認した後、各 Day で root.ts に登録して有効化する）
   if [ -d "${script_dir}/_server-routers" ]; then
     mkdir -p src/server/api/routers/_helpers
     cp "${script_dir}/_server-routers"/*.ts src/server/api/routers/
     cp "${script_dir}/_server-routers/_helpers"/*.ts src/server/api/routers/_helpers/ 2>/dev/null
     echo "tRPC ルーターを src/server/api/routers/ に配置しました（Day 07 以降で有効化）。"
   fi
+
 }
 
 copy_server_base() {
