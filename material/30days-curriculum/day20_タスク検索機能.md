@@ -1225,7 +1225,7 @@ useEffect(() => {
 ### ✅ After（プロが書くコード）
 
 ```typescript
-const { data: results, isLoading } = api.task.search.useQuery(
+const { data: results, isLoading } = api.search.search.useQuery(
   { keyword, status, priority },
   { enabled: keyword.length > 0 }
 );

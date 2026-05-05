@@ -446,7 +446,7 @@ find src/app -name "page.tsx" | wc -l
 ```bash
 # filepath: ターミナル
 # 主要パッケージのバージョンを確認
-npm ls next react typescript prisma
+npm ls next react typescript prisma @prisma/client @trpc/server --depth=0
 ```
 
 ✅ **確認ポイント**:
@@ -457,9 +457,9 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Next.js | 15.3.6 | フレームワーク（App Router） |
+| Next.js | 15.5.15 | フレームワーク（App Router） |
 | React | 18.3.1 | UI ライブラリ |
-| TypeScript | 5.6.3 | 型安全な JavaScript |
+| TypeScript | 5.8.3 | 型安全な JavaScript |
 | shadcn/ui | — | UI コンポーネント |
 | Tailwind CSS | v4 | ユーティリティ CSS |
 | Recharts | 3.2.1 | グラフ・チャート |
@@ -468,8 +468,8 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| tRPC | 11.6.0 | End-to-End 型安全 API |
-| Prisma | 6.16.2 | ORM（DB 操作） |
+| tRPC | 11.8.0 | End-to-End 型安全 API |
+| Prisma | 6.16.2（Client）/ 6.19.3（CLI） | ORM（DB 操作） |
 | PostgreSQL | 16 | データベース |
 | jose | — | JWT トークン生成・検証 |
 | bcryptjs | — | パスワードハッシュ化 |

@@ -117,9 +117,9 @@ npm run dev
 | カテゴリ | 技術 |
 |---------|------|
 | フレームワーク | Next.js 15（App Router） |
-| 言語 | TypeScript 5.6 |
-| API 層 | tRPC 11.6 |
-| ORM | Prisma 6.16 |
+| 言語 | TypeScript 5.8 |
+| API 層 | tRPC 11.8 |
+| ORM | Prisma 6.16（Client）/ 6.19（CLI） |
 | データベース | PostgreSQL（Docker） |
 | UI コンポーネント | shadcn/ui + Tailwind CSS v4 |
 | フォーム | react-hook-form + zod |
