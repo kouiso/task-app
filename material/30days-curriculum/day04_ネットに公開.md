@@ -30,6 +30,17 @@ G0 Foundation の最終日は、
 今日はその最初の公開を、
 Vercel で丁寧にやっていこう。
 
+```mermaid
+flowchart LR
+  A[ローカルの task-app] --> B[GitHub]
+  B --> C[Vercel]
+  C --> D[公開URL]
+```
+
+![Day 04 公開前の準備パネル](./screenshots/day04-prep-panel.png)
+
+![Day 04 公開URLの例](./screenshots/day04-sample-url.png)
+
 ## 🌟 このDayで君が手に入れるもの
 
 Day 03 で GitHub に保存した **自分の `task-app`** を、
@@ -196,7 +207,7 @@ Vercel だけが原因とは限らへん。
 
 ### 実行コマンド
 
-```bash title="~/workspace/task-app"
+```bash
 pwd
 git status -sb
 git branch --show-current
@@ -247,7 +258,7 @@ Vercel の失敗ログはもちろん見られる。
 
 ### 実行コマンド
 
-```bash title="~/workspace/task-app"
+```bash
 npm run build
 ```
 
@@ -256,7 +267,7 @@ npm run build
 環境差はあるけど、
 だいたい次のような流れになればええ。
 
-```text title="ターミナル出力イメージ"
+```text
 Creating an optimized production build ...
 Compiled successfully
 Linting and checking validity of types ...
@@ -478,7 +489,7 @@ GitHub と Vercel の役割も整理しやすい。
 文言は多少違っても、
 だいたいこういう雰囲気や。
 
-```text title="Vercel 側の進行イメージ"
+```text
 Building
 Deploying
 Ready
@@ -708,11 +719,11 @@ Vercel 側でも当然見えへん。
 
 まずローカルでこれをやる。
 
-```bash title="~/workspace/task-app"
+```bash
 npm run build
 ```
 
-ここで同じように止まるなら、
+ここで同じエラーで止まるなら、
 原因はコード側の可能性が高い。
 
 逆にローカル build は通るのに Vercel で止まるなら、

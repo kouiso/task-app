@@ -236,6 +236,11 @@ Prisma スキーマを配置しました。
 docker-compose.yml を配置しました。
 .env.example を .env にコピーしました。
 Docker で PostgreSQL を起動しています...
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```text
 Prisma スキーマをDBに反映しています...
 シードデータを投入しています...
 DB セットアップが完了しました。
@@ -329,10 +334,11 @@ Next.js のロゴと
 ### スクリーンショットの見本
 
 雰囲気の確認用に、
-[day01-vscode-open.png](./screenshots/day01-vscode-open.png)
-と
-[day01-success.png](./screenshots/day01-success.png)
-も見ておくとイメージしやすい。
+次の2枚も見ておくとイメージしやすい。
+
+![VS Codeで配布物ルートを開いた状態](./screenshots/day01-vscode-open.png)
+
+![Next.jsの初期画面がブラウザに表示された状態](./screenshots/day01-success.png)
 
 ### ここで一回安心してええ理由
 
@@ -408,6 +414,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
   --color-primary-foreground: hsl(var(--primary-foreground));
 
   --color-secondary: hsl(var(--secondary));
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
   --color-secondary-foreground: hsl(var(--secondary-foreground));
 
   --color-muted: hsl(var(--muted));
@@ -432,6 +443,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-primary: hsl(var(--sidebar-primary));
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
   --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
   --color-sidebar-accent: hsl(var(--sidebar-accent));
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
@@ -456,6 +472,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
   @keyframes accordion-down {
     from {
       height: 0;
@@ -480,6 +501,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --background: 0 0% 100%;
     --foreground: 222 22% 10%;
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --card: 0 0% 100%;
     --card-foreground: 222 22% 10%;
 
@@ -504,6 +530,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --success: 158 64% 41%;
     --success-foreground: 0 0% 100%;
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --warning: 35 92% 55%;
     --warning-foreground: 223 20% 12%;
 
@@ -528,6 +559,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --sidebar-border: 225 20% 89%;
     --sidebar-ring: 253 77% 60%;
   }
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
 
   .dark {
     --background: 228 21% 10%;
@@ -552,6 +588,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --accent-foreground: 183 85% 84%;
 
     --destructive: 355 72% 60%;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --destructive-foreground: 0 0% 100%;
 
     --success: 158 60% 46%;
@@ -576,6 +617,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --sidebar-primary-foreground: 233 35% 10%;
     --sidebar-accent: 226 16% 16%;
     --sidebar-accent-foreground: 220 20% 96%;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --sidebar-border: 224 15% 22%;
     --sidebar-ring: 254 86% 68%;
   }
@@ -637,6 +683,12 @@ export default function HomePage() {
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="overflow-hidden rounded-[28px] border border-border bg-card shadow-md">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -661,6 +713,12 @@ export default function HomePage() {
                 <Link
                   className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
                   href="/dashboard"
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
                 >
                   ダッシュボードへ入る
                 </Link>
@@ -685,6 +743,12 @@ export default function HomePage() {
               </article>
 
               <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -709,6 +773,12 @@ export default function HomePage() {
           <div className="space-y-4">
             <article
               id="today-goals"
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
@@ -733,6 +803,12 @@ export default function HomePage() {
             <article className="rounded-[28px] border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
                 今日のひとこと
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればええわけやない。
@@ -757,6 +833,12 @@ export default function HomePage() {
                 明日につながる入口
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
                 Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
                 今日のページは入口として、ダッシュボードは明日の土台として整えておく。
               </p>
@@ -869,6 +951,12 @@ function WelcomeHero() {
           className="inline-flex items-center justify-center rounded-[12px] border border-[#2d314b] bg-[#151729] px-[20px] py-[12px] text-[14px] font-semibold text-white"
           href="#next-step"
         >
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
           明日の予告を見る
         </a>
       </div>
@@ -915,6 +1003,12 @@ function WelcomeHero() {
           className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground"
           href="#next-step"
         >
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: 続き
           明日の予告を見る
         </a>
       </div>

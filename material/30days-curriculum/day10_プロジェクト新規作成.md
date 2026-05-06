@@ -670,6 +670,12 @@ export function useCreateProjectSubmit(onClose: () => void) {
     createMutation.mutate({
       name: data.name,
       description: data.description,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
       color: data.color,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -716,6 +722,12 @@ export function useCreateProjectSubmit(onClose: () => void) {
 
   const submitProject = (data: ProjectFormData) => {
     createMutation.mutate({
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
       name: data.name,
       description: data.description,
       color: data.color,

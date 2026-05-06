@@ -310,6 +310,12 @@ function buildTaskFormValues(
       ?? (projects[0]?.id || ''),
     assigneeId:
       initialData?.assigneeId ?? '',
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   };
 }
 
@@ -1023,6 +1029,12 @@ const taskFormSchema = z.object({
     'TODO',
     'IN_PROGRESS',
     'IN_REVIEW',
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     'DONE',
     'CANCELLED',
     'BLOCKED',
@@ -1047,6 +1059,12 @@ export interface TaskFormData {
   priority: TaskPriority;
   dueDate?: string;
   estimatedHours?: number;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   projectId: string;
   assigneeId?: string;
 }
@@ -1106,6 +1124,12 @@ const taskFormSchema = z.object({
   assigneeId: z.string().optional(),
 });
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 export interface TaskFormData {
@@ -1130,6 +1154,12 @@ const defaultTaskValues: Pick<
 
 const statusOptions = Object.entries(
   TASK_STATUS_LABELS,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
 ).map(([value, label]) => ({
   value,
   label,
