@@ -706,6 +706,7 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: src/app/task/page.tsx（参考）
 // switch 文で色を決める
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -730,6 +731,7 @@ const getStatusColor = (status: string) => {
 ### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: src/app/task/page.tsx（参考）
 const STATUS_CONFIG = {
   TODO: { label: "未着手", color: "bg-gray-100 text-gray-800" },
   IN_PROGRESS: { label: "進行中", color: "bg-blue-100 text-blue-800" },

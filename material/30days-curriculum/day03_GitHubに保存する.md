@@ -97,11 +97,15 @@ Day 02 までで育てた `task-app` を、
 `not a git repository` と表示されたら、
 プロジェクトのルートで一度だけ次を実行しよう。
 
-```bash title="~/workspace/task-app"
+```bash
 git init
 ```
 
 > 📌 Git の箱がまだ作られていない場合だけ実行すればOK。何度もやる作業ではないで。
+
+✅ **確認ポイント**:
+- `git init` が必要な場合だけ実行した
+- すでに Git 管理されている場合は、このまま次へ進めると分かった
 
 ### 🆕 新しく学ぶ概念
 
@@ -163,7 +167,7 @@ Day 02 の最後では、
 開発サーバーを止めているなら、
 もう一度起動しておこう。
 
-```bash title="~/workspace/task-app"
+```bash
 npm run dev
 ```
 
@@ -222,7 +226,7 @@ Git の役割がかなり整理しやすい。
 
 ### 実行コマンド
 
-```bash title="~/workspace/task-app"
+```bash
 pwd
 git status -sb
 git branch --show-current
@@ -248,7 +252,7 @@ git remote -v
 人によって多少違うけど、
 今日はだいたいこんな感じなら進めやすい。
 
-```text title="ターミナル出力のイメージ"
+```text
 /Users/your-name/workspace/task-app
 ## main
 main
@@ -292,7 +296,7 @@ Day 03 の段階では、
 
 ### いまの README を開いて確認する
 
-```bash title="~/workspace/task-app"
+```bash
 sed -n '1,200p' README.md
 ```
 
@@ -385,7 +389,7 @@ GitHub に保存するとき、
 
 ### まずは `.gitignore` を確認する
 
-```bash title="~/workspace/task-app"
+```bash
 sed -n '1,220p' .gitignore
 ```
 
@@ -393,7 +397,7 @@ sed -n '1,220p' .gitignore
 ローカル環境変数を無視する設定がすでに入っている。
 特に見てほしいのはこのあたりや。
 
-```text title=".gitignore で見てほしい部分"
+```text
 # local env files
 *.env*
 !.env.example
@@ -420,7 +424,7 @@ secret
 
 ### `.env.example` も確認する
 
-```bash title="~/workspace/task-app"
+```bash
 sed -n '1,120p' .env.example
 ```
 
@@ -505,7 +509,7 @@ GitHub 側だけが持つ最初の履歴ができる。
 
 ### まずは `gh` コマンドがあるか確認する
 
-```bash title="~/workspace/task-app"
+```bash
 gh --version
 ```
 
@@ -514,7 +518,7 @@ gh --version
 macOS なら、
 次で入れられる。
 
-```bash title="~/workspace/task-app"
+```bash
 brew install gh
 ```
 
@@ -523,7 +527,7 @@ brew install gh
 
 ### 認証を実行する
 
-```bash title="~/workspace/task-app"
+```bash
 gh auth login
 ```
 
@@ -541,7 +545,7 @@ gh auth login
 
 ### 認証できたか確認する
 
-```bash title="~/workspace/task-app"
+```bash
 gh auth status
 ```
 
@@ -574,7 +578,7 @@ HTTPS の URL を確認する。
 
 形はこうや。
 
-```text title="GitHub リポジトリ URL の例"
+```text
 https://github.com/<your-user-name>/task-app.git
 ```
 
@@ -583,14 +587,14 @@ https://github.com/<your-user-name>/task-app.git
 `<your-user-name>` は、
 自分の GitHub ユーザー名に置き換えてな。
 
-```bash title="~/workspace/task-app"
+```bash
 git remote add origin https://github.com/<your-user-name>/task-app.git
 git remote -v
 ```
 
 ### 期待する表示
 
-```text title="ターミナル出力のイメージ"
+```text
 origin  https://github.com/<your-user-name>/task-app.git (fetch)
 origin  https://github.com/<your-user-name>/task-app.git (push)
 ```
@@ -634,14 +638,14 @@ Day 02 からの文脈で言うと、
 
 ### まずは `git status` で差分を読む
 
-```bash title="~/workspace/task-app"
+```bash
 git status --short
 ```
 
 この時点で、
 たとえばこんな表示になるかもしれへん。
 
-```text title="ターミナル出力のイメージ"
+```text
  M README.md
  M src/app/dashboard/page.tsx
 ?? package-lock.json
@@ -671,7 +675,7 @@ GitHub に上げなくてもアプリのデプロイには不要です。
 一方で `package.json` や `src/` や `prisma/` が抜けると、
 Day 04 の Vercel build が壊れます。
 
-```bash title="~/workspace/task-app"
+```bash
 git add README.md
 git add package.json package-lock.json
 git add tsconfig.json next.config.* postcss.config.* biome.json
@@ -683,7 +687,7 @@ git status --short
 
 ### ここで見たい表示
 
-```text title="ターミナル出力のイメージ"
+```text
 M  README.md
 A  package.json
 A  prisma/schema.prisma
@@ -699,13 +703,13 @@ A  src/app/dashboard/page.tsx
 今日は最初の GitHub 保存なので、
 何を残したかが一目で分かる名前にしよう。
 
-```bash title="~/workspace/task-app"
+```bash
 git commit -m "feat: save initial dashboard project to GitHub"
 ```
 
 ### コミット後の確認
 
-```bash title="~/workspace/task-app"
+```bash
 git status -sb
 git log --oneline --decorate -3
 ```
@@ -732,7 +736,7 @@ GitHub に保存する日は
 
 ### ❌ Before（動くけど、プロは書かない）
 
-```bash title="~/workspace/task-app"
+```bash
 git status --short
 git add .
 git commit -m "update"
@@ -747,7 +751,7 @@ git push -u origin "$(git branch --show-current)"
 
 ### ✅ After（プロがやる流れ）
 
-```bash title="~/workspace/task-app"
+```bash
 git status --short
 git add README.md
 git add src/app/dashboard/page.tsx
@@ -789,7 +793,7 @@ GitHub に保存する日は、
 
 ### 実行コマンド
 
-```bash title="~/workspace/task-app"
+```bash
 git push -u origin "$(git branch --show-current)"
 ```
 
@@ -804,7 +808,7 @@ git push -u origin "$(git branch --show-current)"
 
 ### 期待する表示イメージ
 
-```text title="ターミナル出力のイメージ"
+```text
 Enumerating objects: 18, done.
 Counting objects: 100% (18/18), done.
 Delta compression using up to 8 threads
@@ -877,7 +881,7 @@ GitHub まわりは、
 
 まずはこれを見直そう。
 
-```bash title="~/workspace/task-app"
+```bash
 gh auth status
 ```
 
@@ -887,7 +891,7 @@ gh auth status
 もう一度、
 落ち着いてやり直せばええ。
 
-```bash title="~/workspace/task-app"
+```bash
 gh auth login
 ```
 
@@ -898,7 +902,7 @@ gh auth login
 
 あらためて `origin` を追加しよう。
 
-```bash title="~/workspace/task-app"
+```bash
 git remote add origin https://github.com/<your-user-name>/task-app.git
 git remote -v
 ```
@@ -907,7 +911,7 @@ git remote -v
 
 まずはこれで状態を読む。
 
-```bash title="~/workspace/task-app"
+```bash
 git status --short
 ```
 
@@ -927,7 +931,7 @@ add するか、
 この教材では Day 01 の土台にすでに入っている想定やから、
 ファイル名や配置のズレが原因なことが多い。
 
-```bash title="~/workspace/task-app"
+```bash
 sed -n '1,220p' .gitignore
 git status --short
 ```
@@ -940,7 +944,7 @@ git status --short
 まずは push が通っているか、
 直近ログを見直そう。
 
-```bash title="~/workspace/task-app"
+```bash
 git log --oneline --decorate -3
 git remote -v
 git branch --show-current
