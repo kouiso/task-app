@@ -75,7 +75,7 @@ SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 `Node.js` と `npm` のバージョンはここで見ておこう。
 数字が足りなければ、先に更新してから戻ってくるのが早い。
 
-# ターミナル（どこでもOK）
+**ターミナル（どこでもOK）**
 ```bash
 node -v
 npm -v
@@ -91,7 +91,7 @@ npm -v
 Docker 派でもローカル PostgreSQL 派でも大丈夫です。
 どっちかが通れば、今日のスクリプトは前に進める。
 
-# ターミナル（どこでもOK）
+**ターミナル（どこでもOK）**
 ```bash
 docker info >/dev/null 2>&1 && echo "docker ok"
 psql --version
@@ -125,7 +125,7 @@ pg_isready --version
 ここでは例として、
 ホームディレクトリの中の `workspace` に配布 ZIP を展開する。
 
-# ~/workspace
+**~/workspace**
 ```bash
 mkdir -p ~/workspace
 cd ~/workspace
@@ -158,7 +158,7 @@ pwd
 
 今いる場所が配布物ルートになっているか確認しておこう。
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 ls
 ```
@@ -196,7 +196,7 @@ ls
 `bash` で直接実行しても大丈夫ですが、
 最初に実行権限を付けておくと扱いやすい。
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 chmod +x scripts/scaffold-from-scratch.sh
 bash scripts/scaffold-from-scratch.sh
@@ -210,7 +210,7 @@ bash scripts/scaffold-from-scratch.sh
 下のログは流れが分かるように短くした例です。
 `added ... packages` の数字や秒数は環境によって変わる。
 
-# ターミナル出力（~/workspace/task-app）
+**ターミナル出力（~/workspace/task-app）**
 ```text
 教材用の初期土台を /Users/you/workspace/task-app に作成します。
 
@@ -270,7 +270,7 @@ DB セットアップが完了しました。
 このスクリプトは `.env.example` も置いてくれる。
 中身はこんな感じや。
 
-# .env.example
+**.env.example**
 ```env
 _DOCKER_COMPOSE_HOST_PORT_DB=25532
 _DOCKER_COMPOSE_HOST_PORT_TEST_DB=25533
@@ -303,14 +303,14 @@ NODE_ENV="development"
 
 ### 開発サーバーを起動する
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 npm run dev
 ```
 
 ### 期待される出力
 
-# ターミナル出力（~/workspace/task-app）
+**ターミナル出力（~/workspace/task-app）**
 ```text
 > taskappday01-demo@0.1.0 dev
 > next dev
@@ -388,7 +388,7 @@ Node.js と npm と Next.js と Tailwind の土台はちゃんと動いてる。
 今のファイルを部分修正するより、
 Day 01 は丸ごと入れ替えたほうが理解しやすい。
 
-# src/app/globals.css
+**src/app/globals.css**
 ```css
 @import "tailwindcss";
 
@@ -657,8 +657,9 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
 `Home` という初期コンポーネントを残すより、
 このDayでは丸ごと差し替えた方がスッキリ理解できる。
 
-# src/app/page.tsx
+**src/app/page.tsx**
 ```tsx
+// filepath: src/app/page.tsx
 import Link from 'next/link';
 
 export default function HomePage() {
@@ -688,6 +689,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（続き）
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -717,6 +719,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（続き）
                 >
                   ダッシュボードへ入る
                 </Link>
@@ -746,6 +749,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（続き）
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -775,6 +779,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（続き）
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
@@ -804,6 +809,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（続き）
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればええわけやない。
@@ -833,6 +839,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（続き）
                 Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
                 今日のページは入口として、ダッシュボードは明日の土台として整えておく。
               </p>
@@ -857,8 +864,9 @@ Day 02 は
 その中に `page.tsx` を新しく作って、
 次の内容をそのまま入れよう。
 
-# src/app/dashboard/page.tsx
+**src/app/dashboard/page.tsx**
 ```tsx
+// filepath: src/app/dashboard/page.tsx
 export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -919,8 +927,9 @@ export default function DashboardPage() {
 
 ### ❌ Before（動くけど、プロは書かない）
 
-# src/app/page.tsx（比較用の一部）
+**src/app/page.tsx（比較用の一部）**
 ```tsx
+// filepath: src/app/page.tsx（比較用の一部）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-[#25273f] bg-[#0f1021] px-[32px] py-[28px] shadow-[0_24px_80px_-32px_rgba(99,102,241,0.45)]">
@@ -950,6 +959,7 @@ function WelcomeHero() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（比較用の一部・続き）
           明日の予告を見る
         </a>
       </div>
@@ -970,8 +980,9 @@ export default function HomePage() {
 
 ### ✅ After（プロが書くコード）
 
-# src/app/page.tsx（比較用の一部）
+**src/app/page.tsx（比較用の一部）**
 ```tsx
+// filepath: src/app/page.tsx（比較用の一部）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-border bg-card px-8 py-7 shadow-md">
@@ -1001,6 +1012,7 @@ function WelcomeHero() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: src/app/page.tsx（比較用の一部・続き）
           明日の予告を見る
         </a>
       </div>
@@ -1038,7 +1050,7 @@ export default function HomePage() {
 
 止めていたら、もう一回起動しよう。
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 npm run dev
 ```
