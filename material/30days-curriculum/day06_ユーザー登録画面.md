@@ -193,7 +193,6 @@ const registerSchema = z.object({
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
   },
 );
 ```
@@ -671,7 +670,6 @@ export function registerUser(input: RegisterInput): RegisterApiResponse {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
     email: input.email,
   };
 }
@@ -731,7 +729,6 @@ export function registerUser(input: RegisterInput): RegisterResult {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
   }
 
   return {
@@ -761,7 +758,6 @@ const result = registerUser({
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
 });
 
 console.log(buildRegisterMessage(result));
@@ -846,7 +842,6 @@ const registerSchema = z.object({
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
   },
 );
 

@@ -808,6 +808,7 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: src/app/project/page.tsx（参考）
 type ProjectFromApi = {
   id: string;
   name: string;
@@ -837,7 +838,6 @@ function toDateInputValue(value: Date): string {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
   return value.toISOString().slice(0, 10);
 }
 
@@ -867,7 +867,6 @@ export function buildProjectEditForm(
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
     } else {
       ownerLabel = project.owner.email;
     }
@@ -897,7 +896,6 @@ export function buildProjectEditForm(
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
 console.log(
   buildProjectEditForm({
     id: 'project_001',
@@ -920,6 +918,7 @@ console.log(
 ### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: src/app/project/page.tsx（参考）
 type ProjectFromApi = {
   id: string;
   name: string;
@@ -949,7 +948,6 @@ function toDateInputValue(value: Date): string {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
   return value.toISOString().slice(0, 10);
 }
 
@@ -979,7 +977,6 @@ export function buildProjectEditForm(
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
     ...(endDate ? { endDate } : {}),
   };
 }

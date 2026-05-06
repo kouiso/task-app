@@ -688,7 +688,6 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -718,7 +717,6 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
                 >
                   ダッシュボードへ入る
                 </Link>
@@ -748,7 +746,6 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -778,7 +775,6 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
@@ -808,7 +804,6 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればええわけやない。
@@ -838,7 +833,6 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
                 Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
                 今日のページは入口として、ダッシュボードは明日の土台として整えておく。
               </p>
@@ -956,7 +950,6 @@ function WelcomeHero() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
           明日の予告を見る
         </a>
       </div>
@@ -1008,7 +1001,6 @@ function WelcomeHero() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: 続き
           明日の予告を見る
         </a>
       </div>

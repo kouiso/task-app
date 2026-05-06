@@ -778,7 +778,6 @@ function validateLoginForm(values: LoginFormValues): LoginValidationResult {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
   }
 
   if (errors.email || errors.password) {
@@ -842,7 +841,6 @@ export function readLoginForm(formData: FormData): LoginValidationResult {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```typescript
-// filepath: 続き
   const result = loginSchema.safeParse(
     Object.fromEntries(formData.entries()),
   );
