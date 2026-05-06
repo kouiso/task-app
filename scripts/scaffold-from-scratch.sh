@@ -599,7 +599,7 @@ main() {
   setup_database
 
   echo
-  echo "初期セットアップは完了やで。"
+  echo "初期セットアップは完了しました。"
   echo "カリキュラムの Day 01 の続きを進めてください。"
 }
 
