@@ -6,6 +6,25 @@
 
 ## 実行手順
 
+-2. **Intent Confirmation（最優先・必須）**
+
+計画フェーズに入る前に、ユーザーの真の意図を言語化して確認する。以下の形式で出力し、承認を得るまで計画に進まない：
+
+```
+**Surface request**: [ユーザーが文字通り言ったこと]
+**Underlying goal**: [なぜそれが必要なのか — 言葉の裏にある本当の目的]
+**Proposed next action**: [確認後にAIが行うこと]
+```
+
+- ユーザーが「合ってる」→ 次のステップへ
+- ユーザーが「違う」→ ギャップを狙った質問をして再確認（推測で進めない）
+
+-1. **Pre-Plan: /healing**
+
+情報ギャップを解消する。
+- 情報ギャップがある → AskUserQuestion で質問し、回答後に計画フェーズへ
+- 情報が完全に揃っている → そのまま計画フェーズへ（質問なしでOK）
+
 0. **OpenSpec確認（最優先）**: `openspec/specs/`に対象機能の仕様があれば全て読み、現状を「正」として計画を組み立てる。仕様変更が必要な場合は`/openspec:proposal`をplanの最初のステップに含める。
 1. ユーザーの指示を分析し、タスクを分解
 2. 潜在リスクを特定
@@ -41,7 +60,7 @@
 
 ### 核心思想
 
-**planファイルを作成したら、CI通過・レビュー完了・worktreeクリーンアップまで全て完遂すること。途中で止めるな。**
+**planファイルを作成したら、CI通過・CodeRabbitレビュー完了・worktreeクリーンアップまで全て完遂すること。途中で止めるな。**
 
 ### Phase 1: Plan作成時のチェックリスト
 
@@ -50,8 +69,10 @@ planファイル作成前に以下を必ず確認：
 | チェック項目 | 確認方法 | 対応 |
 |-------------|---------|------|
 | ユーザーが本体リポジトリで作業中か | 「サーバー起動中」「動作確認中」等のキーワード | git worktree使用を計画に含める |
+| 複数リポジトリにまたがるか | Issue内容から判断 | 各リポジトリのworktree作成を計画 |
 | 既存の類似実装があるか | Grep/Globで検索 | パターン踏襲を計画に明記 |
 | テストコードが必要か | 既存テストの有無確認 | テスト追加を計画に含める |
+| PRはDraftで作成するか | ユーザー指示確認 | Draft/Ready状態を計画に明記 |
 
 ### Phase 2: Plan実行中の必須事項
 
@@ -61,20 +82,21 @@ planファイル作成前に以下を必ず確認：
 # 作成
 git worktree add /path/to/worktree-dir -b feature/xxx
 
-# 必要な設定ファイルコピー
-cp .env /path/to/worktree-dir/
+# envファイルコピー（忘れがち！）
+cp .env .env.test .env.keys /path/to/worktree-dir/
 ```
 
 #### 2.2. 実装時
 
 - **既存パターン完全踏襲** → 類似機能のコード構造・命名規則を100%模倣
+- **if-else構造の罠を避ける** → 複数条件分岐は連続if文で
 - **テストコード追加** → 正常系・異常系・境界値
 
 #### 2.3. コミット・プッシュ時
 
 - **lint/format/test全通過を確認してからコミット**
 - **`--no-verify`絶対禁止**
-- **コミットメッセージは意図を明確に**
+- **コミットメッセージは日本語で意図を明確に**
 
 ### Phase 3: PR作成〜レビュー完了
 
@@ -95,7 +117,24 @@ gh pr checks <PR番号>
 gh run view <run_id> --log
 ```
 
-#### 3.3. セルフレビュー（subagent活用）
+#### 3.3. CodeRabbitレビュー
+
+```bash
+# レビュー依頼
+gh pr comment <PR番号> --body "@coderabbitai review"
+
+# 指摘確認
+gh api repos/{owner}/{repo}/pulls/<PR番号>/comments --jq '.[] | select(.user.login == "coderabbitai[bot]")'
+```
+
+**指摘対応フロー:**
+1. 指摘内容を確認
+2. 修正実施
+3. **該当スレッドに返信**（コミットハッシュ明記）
+4. CodeRabbitの納得返信を待つ
+5. 納得返信が来たらresolve
+
+#### 3.4. セルフレビュー（subagent活用）
 
 ```
 Task tool（subagent_type=Explore）で以下を並列実行：
@@ -111,6 +150,7 @@ Task tool（subagent_type=Explore）で以下を並列実行：
 | 確認項目 | 期待状態 |
 |---------|---------|
 | CI/CD | 全通過 |
+| CodeRabbit | 全指摘対応済み・resolved |
 | PR状態 | Draft（指示がない限り） |
 | テスト | 全パス |
 
@@ -130,6 +170,7 @@ git worktree remove /path/to/worktree-dir --force
 ユーザーに以下を報告：
 - **PR URL**（必須）
 - **CI/CD状態**
+- **CodeRabbitレビュー結果**
 - **実装内容サマリ**
 
 ### チェックリスト（plan完了時に全て✅であること）
@@ -145,6 +186,8 @@ git worktree remove /path/to/worktree-dir --force
 ### PR
 - [ ] PRを作成した（URL: ）
 - [ ] CI/CD全通過
+- [ ] CodeRabbitレビュー完了
+- [ ] 全指摘に対応・resolved
 
 ### クリーンアップ
 - [ ] worktreeを削除した
