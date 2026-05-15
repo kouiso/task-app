@@ -64,6 +64,7 @@ DEV_DEPS=(
   typescript@^5.6.3
   tailwindcss@^4.1.18
   @tailwindcss/postcss@^4.1.18
+  postcss@8.5.10
 )
 
 print_error() {
@@ -127,7 +128,7 @@ ensure_empty_or_existing_next_app() {
   # README.md / material / scripts などの配布物を一時退避して実行後に戻す。
   local stash_dir
   stash_dir="$(mktemp -d)"
-  for item in README.md .env .env.example material scripts "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _server-routers _prisma _docker _seed _app-components; do
+  for item in README.md .env .env.example material scripts "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _prisma _docker _seed _app-components; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
     fi
@@ -157,6 +158,12 @@ install_dependencies() {
   # 再実行時も npm 側で整合性を取れるので、個別判定より同じ宣言を入れ直す方が教材向き。
   npm install "${RUNTIME_DEPS[@]}"
   npm install -D "${DEV_DEPS[@]}"
+}
+
+apply_audit_overrides() {
+  # Next.js 15 系の依存に入る古い postcss を、audit が通る版へ固定する。
+  npm pkg set devDependencies.postcss="8.5.10"
+  npm pkg set overrides.postcss="8.5.10"
 }
 
 remove_eslint_config() {
@@ -282,11 +289,25 @@ configure_package_json() {
     scripts.lint:fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
     scripts.fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
     scripts.format="biome format --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
+    scripts.type-check="tsc --noEmit" \
     scripts.db:generate="prisma generate" \
     scripts.db:push="prisma db push" \
     scripts.db:migrate="prisma migrate dev" \
     scripts.db:seed="tsx src/command/seed.ts" \
-    scripts.test="vitest run"
+    scripts.test="vitest run --passWithNoTests"
+}
+
+configure_next_config() {
+  # 親ディレクトリに別プロジェクトの lockfile があっても、この教材ディレクトリを Next.js の基準に固定する。
+  cat <<'EOF' > next.config.ts
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  outputFileTracingRoot: process.cwd(),
+};
+
+export default nextConfig;
+EOF
 }
 
 configure_tsconfig() {
@@ -408,11 +429,12 @@ copy_scaffold_support() {
   local script_dir
   script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-  # lib-base: env.ts, prisma.ts（DB接続に必要な最小限）
+  # lib-base: env.ts, prisma.ts, date.ts, badge-variant.ts, task-form.ts
+  # NOTE: session.ts / trpc.ts / root.ts / auth.ts / select.ts / route.ts は Day 07 で学習者が作成するため含めない
   if [ -d "${script_dir}/_lib-base" ]; then
     mkdir -p src/lib
     cp "${script_dir}/_lib-base"/*.ts src/lib/
-    echo "lib ベースファイル (env.ts, prisma.ts) を配置しました。"
+    echo "lib ベースファイル (env.ts, prisma.ts, date.ts, badge-variant.ts, task-form.ts) を配置しました。"
   fi
 
   # constants: roles, status, priority 等
@@ -429,46 +451,24 @@ copy_scaffold_support() {
     echo "tRPC クライアント設定を src/trpc/ に配置しました。"
   fi
 
-  # server-routers: tRPC ルーター（Day 07 で auth を自作した後、各 Day で root.ts に登録して有効化する）
+  # Day 09 以降で使う業務ルーターは配布物として置く。Day 07 で作る auth/root/trpc/select は含めない。
   if [ -d "${script_dir}/_server-routers" ]; then
-    mkdir -p src/server/api/routers/_helpers
-    cp "${script_dir}/_server-routers"/*.ts src/server/api/routers/
-    cp "${script_dir}/_server-routers/_helpers"/*.ts src/server/api/routers/_helpers/ 2>/dev/null
-    echo "tRPC ルーターを src/server/api/routers/ に配置しました（Day 07 以降で有効化）。"
+    shopt -s nullglob
+    local router_files=("${script_dir}/_server-routers"/*.ts)
+    if [ "${#router_files[@]}" -gt 0 ]; then
+      mkdir -p src/server/api/routers
+      cp "${router_files[@]}" src/server/api/routers/
+      echo "tRPC 業務ルーターを src/server/api/routers/ に配置しました。"
+    fi
+
+    local helper_files=("${script_dir}/_server-routers/_helpers"/*.ts)
+    if [ "${#helper_files[@]}" -gt 0 ]; then
+      mkdir -p src/server/api/routers/_helpers
+      cp "${helper_files[@]}" src/server/api/routers/_helpers/
+      echo "tRPC ルーターヘルパーを src/server/api/routers/_helpers/ に配置しました。"
+    fi
+    shopt -u nullglob
   fi
-}
-
-copy_server_base() {
-  local script_dir
-  script_dir="$(cd "$(dirname "$0")" && pwd)"
-  local server_base_src="${script_dir}/_server-base"
-  local app_api_src="${script_dir}/_app-api-trpc"
-
-  if [ -d "$server_base_src" ]; then
-    mkdir -p src/server/api
-    cp "${server_base_src}"/*.ts src/server/api/
-    echo "tRPC サーバー基盤を src/server/api/ に配置しました。"
-  fi
-
-  if [ -f "${app_api_src}/route.ts" ]; then
-    mkdir -p "src/app/api/trpc/[trpc]"
-    cp "${app_api_src}/route.ts" "src/app/api/trpc/[trpc]/route.ts"
-    echo "tRPC HTTP ハンドラを src/app/api/trpc/[trpc]/ に配置しました。"
-  fi
-}
-
-copy_app_base() {
-  local script_dir
-  script_dir="$(cd "$(dirname "$0")" && pwd)"
-  local app_base_src="${script_dir}/_app-base"
-
-  if [ ! -d "$app_base_src" ]; then
-    return 0
-  fi
-
-  cp "${app_base_src}/providers.tsx" src/app/providers.tsx 2>/dev/null
-  cp "${app_base_src}/layout.tsx" src/app/layout.tsx 2>/dev/null
-  echo "アプリ共通 Provider と layout を配置しました。"
 }
 
 copy_app_components() {
@@ -580,8 +580,11 @@ main() {
   check_postgres
 
   ensure_empty_or_existing_next_app
+  apply_audit_overrides
   install_dependencies
+  apply_audit_overrides
   configure_package_json
+  configure_next_config
   configure_tsconfig
   remove_eslint_config
   init_biome
@@ -589,8 +592,6 @@ main() {
   copy_ui_components
   copy_lib_utils
   copy_scaffold_support
-  copy_server_base
-  copy_app_base
   copy_app_components
   copy_prisma_files
   format_scaffold_files
