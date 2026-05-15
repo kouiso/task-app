@@ -98,7 +98,7 @@ fi
 
 FAIL_COUNT=0
 
-for DAY_N in $(seq -w 1 30); do
+for DAY_N in $(seq 1 30); do
   DAY_NUM=$(printf "%02d" "$DAY_N")
 
   # 再開時：START_DAY より前はスキップ

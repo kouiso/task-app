@@ -13,6 +13,9 @@ from pathlib import Path
 SKIP_LANGS = {"bash", "shell", "sh", "zsh", "mermaid", "sql", "text", ""}
 WRITE_LANGS = {"typescript", "tsx", "javascript", "jsx", "ts", "js", "css", "json", "prisma"}
 
+# （続き） suffix pattern — continuation blocks append to previous file
+CONTINUE_PATTERN = re.compile(r'^(.+?)（続き）\s*$')
+
 
 def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
     content = md_path.read_text(encoding="utf-8")
@@ -37,20 +40,67 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
             skipped_gui.append(f"no filepath: in block (lang={lang})")
             continue
 
-        rel_path = filepath_match.group(1).strip()
-        # src/ で始まらない場合はスキップ（安全のため）
+        rel_path_raw = filepath_match.group(1).strip()
+
+        # （続き） suffix → append to the base file
+        continue_match = CONTINUE_PATTERN.match(rel_path_raw)
+        if continue_match:
+            rel_path = continue_match.group(1).strip()
+            force_append = True
+        else:
+            rel_path = rel_path_raw
+            force_append = False
+
+        # src/ / prisma/ / public/ で始まらない場合はスキップ（安全のため）
         if not rel_path.startswith("src/") and not rel_path.startswith("prisma/") and not rel_path.startswith("public/"):
             skipped_gui.append(f"skipped non-src path: {rel_path}")
             continue
 
-        # 2行目が // 追記 なら追記モード
-        append_mode = len(lines) > 1 and lines[1].strip() == "// 追記"
+        # パスに日本語文字が含まれる場合はスキップ（説明用ラベルが混入した教材ブロック）
+        if re.search(r'[\u3040-\u30ff\u4e00-\u9fff（）]', rel_path):
+            skipped_gui.append(f"skipped path with Japanese chars: {rel_path}")
+            continue
+
+        # 2行目が // 追記 なら追記モード（明示的マーカー）
+        explicit_append = len(lines) > 1 and lines[1].strip() == "// 追記"
+        append_mode = force_append or explicit_append
 
         # filepath: 行と 追記 行を除いたコード本体
-        start = 2 if append_mode else 1
+        start = 2 if explicit_append else 1
         code_content = "\n".join(lines[start:])
         # 末尾の余分な改行を1つに統一
         code_content = code_content.rstrip("\n") + "\n"
+
+        # WRITE モードの場合、挿入指示スニペットをスキップ。
+        # 判定: filepath の次の行 (lines[start]) が // で始まり、かつ日本語を含む場合は
+        # 「〜に追加」「〜の前に追加」等の挿入位置指示コメントと判断してスキップする。
+        # append_mode（続き / 追記）は複数ブロックで1ファイルを組み立てるため対象外。
+        if not append_mode:
+            first_content_line = lines[start].strip() if len(lines) > start else ""
+            is_instructional = (
+                first_content_line.startswith("//")
+                and bool(re.search(r'[\u3040-\u30ff\u4e00-\u9fff]', first_content_line))
+            )
+            # For TypeScript/JS files: skip blocks that don't look like complete modules.
+            # Rule 1: Complete modules have at least one export statement.
+            # Rule 2: Complete modules have balanced braces (unclosed = truncated snippet).
+            if not is_instructional and lang in {"typescript", "tsx", "ts", "javascript", "jsx", "js"}:
+                has_export = bool(re.search(r'^export\b', code_content, re.MULTILINE))
+                if not has_export:
+                    is_instructional = True
+                else:
+                    # Brace balance check — unbalanced means the file is cut off mid-way
+                    depth = 0
+                    for ch in code_content:
+                        if ch == '{':
+                            depth += 1
+                        elif ch == '}':
+                            depth -= 1
+                    if depth != 0:
+                        is_instructional = True
+            if is_instructional:
+                skipped_gui.append(f"skipped instructional snippet: {rel_path}")
+                continue
 
         dest = target_dir / rel_path
         dest.parent.mkdir(parents=True, exist_ok=True)
