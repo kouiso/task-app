@@ -1203,6 +1203,7 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: 説明用サンプル（実装しない・悪い例の参考）
 const [results, setResults] = useState([]);
 const [loading, setLoading] = useState(false);
 
@@ -1225,6 +1226,7 @@ useEffect(() => {
 ### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: 説明用サンプル（実装ではなくパターン例示）
 const { data: results, isLoading } = api.search.search.useQuery(
   { keyword, status, priority },
   { enabled: keyword.length > 0 }

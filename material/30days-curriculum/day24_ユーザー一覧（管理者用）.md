@@ -714,6 +714,7 @@ PORT=3001 npm run dev
 
 ```typescript
 // filepath: src/component/user/user-list-card.tsx
+// import と Props 型（説明用サンプル・列ごとに props を並べる悪い例）
 import type { User } from '@prisma/client';
 import { Eye, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -730,7 +731,11 @@ type UserListCardProps = {
   onDetail: (id: string) => void;
   onEdit: (id: string) => void;
 };
+```
 
+```typescript
+// filepath: src/component/user/user-list-card.tsx（続き）
+// 関数本体・Props を全部展開して受け取るパート
 export function UserListCard({
   id,
   name,
@@ -751,6 +756,11 @@ export function UserListCard({
           <AvatarFallback>{initial}</AvatarFallback>
         </Avatar>
         <div>
+```
+
+```typescript
+// filepath: src/component/user/user-list-card.tsx（続き）
+// JSX 後半（名前/メール・ロール・操作ボタン）
           <p className="font-medium">{name}</p>
           <p className="text-sm text-muted-foreground">{email}</p>
         </div>
@@ -781,6 +791,7 @@ export function UserListCard({
 
 ```typescript
 // filepath: src/component/user/user-list-card.tsx
+// Pick で必要な列だけ受け取る Props（説明用サンプル・良い例）
 import type { User } from '@prisma/client';
 import { Eye, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -797,7 +808,11 @@ type UserListCardProps = {
   onDetail: (id: string) => void;
   onEdit: (id: string) => void;
 };
+```
 
+```typescript
+// filepath: src/component/user/user-list-card.tsx（続き）
+// 関数本体と JSX 前半（user オブジェクトを 1 つ受け取る）
 export function UserListCard({
   user,
   onDetail,
@@ -813,6 +828,11 @@ export function UserListCard({
           <AvatarFallback>{initial}</AvatarFallback>
         </Avatar>
         <div>
+```
+
+```typescript
+// filepath: src/component/user/user-list-card.tsx（続き）
+// JSX 後半（user.xxx で値を参照）
           <p className="font-medium">{user.name}</p>
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
