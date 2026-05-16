@@ -646,6 +646,7 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: src/component/project/project-dialog.tsx（参考）
 'use client';
 
 import { api } from '@/trpc/react';
@@ -670,6 +671,11 @@ export function useCreateProjectSubmit(onClose: () => void) {
     createMutation.mutate({
       name: data.name,
       description: data.description,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
       color: data.color,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -692,6 +698,7 @@ export function useCreateProjectSubmit(onClose: () => void) {
 ### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: src/component/project/project-dialog.tsx（参考）
 'use client';
 
 import { api } from '@/trpc/react';
@@ -716,6 +723,11 @@ export function useCreateProjectSubmit(onClose: () => void) {
 
   const submitProject = (data: ProjectFormData) => {
     createMutation.mutate({
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
       name: data.name,
       description: data.description,
       color: data.color,

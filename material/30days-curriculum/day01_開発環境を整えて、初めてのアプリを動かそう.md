@@ -1,11 +1,11 @@
 # Day 01: 開発環境を整えて、初めてのアプリを動かそう
 
 30日で、自分専用のタスク管理アプリを育てていく。
-今日の役目は、その最初の一歩や。
+今日の役目は、その最初の一歩です。
 
 まだ機能は少ない。
 でも、空のディレクトリから自分の手で土台を立ち上げて、
-ブラウザに「もうこれプロダクトやん」と思える最初の画面を出せたら、
+ブラウザに「もうこれはプロダクトのようだ」と思える最初の画面を出せたら、
 この30日が一気に現実味を帯びる。
 
 今日触るのは、ただの Hello World ではない。
@@ -17,7 +17,7 @@ Linear っぽい空気感をまとった、
 空のディレクトリから `task-app` の土台を起動して、
 `http://localhost:3000` に最初の画面を出せるようになる。
 
-しかも最後は、真っ白な初期画面のまま終わらせへん。
+しかも最後は、真っ白な初期画面のまま終わらせません。
 Linear 風の design token を使って、
 SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 
@@ -25,8 +25,8 @@ SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 【スクリーンショット】Day 01 完成時の最小ページ
 ![Day 01 完成時の最小ページ](./screenshots/day01/first-render.png)
 を眺めてもらうと掴みやすい。
-完全一致でなくてええ。
-「自分のアプリが始まった」と思える見た目を今日つくるのが狙いや。
+完全一致でなくても大丈夫です。
+「自分のアプリが始まった」と思える見た目を今日つくるのが狙いです。
 
 ## 📍 今日のゴール（G0 Foundation の1日目）
 
@@ -50,7 +50,7 @@ SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 
 ## 🧰 前提（これが揃ってたら進める）
 
-今日は「アプリの中身をいじる前に、まず動かす」がテーマやけど、
+今日は「アプリの中身をいじる前に、まず動かす」がテーマですが、
 何もない状態から進める都合上、
 いくつか前提は必要になる。
 
@@ -75,7 +75,7 @@ SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 `Node.js` と `npm` のバージョンはここで見ておこう。
 数字が足りなければ、先に更新してから戻ってくるのが早い。
 
-# ターミナル（どこでもOK）
+**ターミナル（どこでもOK）**
 ```bash
 node -v
 npm -v
@@ -88,10 +88,10 @@ npm -v
 
 ### PostgreSQL 利用手段の確認
 
-Docker 派でもローカル PostgreSQL 派でもええ。
+Docker 派でもローカル PostgreSQL 派でも大丈夫です。
 どっちかが通れば、今日のスクリプトは前に進める。
 
-# ターミナル（どこでもOK）
+**ターミナル（どこでもOK）**
 ```bash
 docker info >/dev/null 2>&1 && echo "docker ok"
 psql --version
@@ -115,17 +115,17 @@ pg_isready --version
 今日は完成済みプロジェクトをそのまま編集するんじゃなくて、
 配布 ZIP を展開した作業場所から土台を作り直して始める。
 
-この原則がめっちゃ大事や。
+この原則がとても大事です。
 「あとで配られる完成形を前提に読む」のと、
 「自分で土台を立ち上げて積み上げる」のでは、
-理解の深さが全然ちゃう。
+理解の深さが大きく変わります。
 
 ### 作業用ディレクトリを用意して ZIP を展開する
 
 ここでは例として、
 ホームディレクトリの中の `workspace` に配布 ZIP を展開する。
 
-# ~/workspace
+**~/workspace**
 ```bash
 mkdir -p ~/workspace
 cd ~/workspace
@@ -158,7 +158,7 @@ pwd
 
 今いる場所が配布物ルートになっているか確認しておこう。
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 ls
 ```
@@ -170,7 +170,7 @@ ls
 
 ## Step 2: scaffold-from-scratch.sh を走らせる
 
-ここが Day 01 の心臓や。
+ここが Day 01 の中心です。
 
 手で `npx create-next-app` を打ち始めるんじゃなくて、
 教材用に整理された `scripts/scaffold-from-scratch.sh` を実行する。
@@ -193,10 +193,10 @@ ls
 ### 実行コマンド
 
 まずは権限を付けてから実行する。
-`bash` で直接叩いてもええけど、
+`bash` で直接実行しても大丈夫ですが、
 最初に実行権限を付けておくと扱いやすい。
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 chmod +x scripts/scaffold-from-scratch.sh
 bash scripts/scaffold-from-scratch.sh
@@ -207,10 +207,10 @@ bash scripts/scaffold-from-scratch.sh
 実行環境で多少前後はあるけど、
 だいたいこんな流れになる。
 
-下のログは流れが分かるように短くした例や。
+下のログは流れが分かるように短くした例です。
 `added ... packages` の数字や秒数は環境によって変わる。
 
-# ターミナル出力（~/workspace/task-app）
+**ターミナル出力（~/workspace/task-app）**
 ```text
 教材用の初期土台を /Users/you/workspace/task-app に作成します。
 
@@ -236,17 +236,22 @@ Prisma スキーマを配置しました。
 docker-compose.yml を配置しました。
 .env.example を .env にコピーしました。
 Docker で PostgreSQL を起動しています...
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```text
 Prisma スキーマをDBに反映しています...
 シードデータを投入しています...
 DB セットアップが完了しました。
 
-初期セットアップは完了やで。
+初期セットアップは完了しました。
 カリキュラムの Day 01 の続きを進めてください。
 ```
 
 ### 成功判定
 
-次のファイルが見えていれば、かなり順調や。
+次のファイルが見えていれば、かなり順調です。
 
 - `package.json`
 - `tsconfig.json`
@@ -265,7 +270,7 @@ DB セットアップが完了しました。
 このスクリプトは `.env.example` も置いてくれる。
 中身はこんな感じや。
 
-# .env.example
+**.env.example**
 ```env
 _DOCKER_COMPOSE_HOST_PORT_DB=25532
 _DOCKER_COMPOSE_HOST_PORT_TEST_DB=25533
@@ -298,14 +303,14 @@ NODE_ENV="development"
 
 ### 開発サーバーを起動する
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 npm run dev
 ```
 
 ### 期待される出力
 
-# ターミナル出力（~/workspace/task-app）
+**ターミナル出力（~/workspace/task-app）**
 ```text
 > taskappday01-demo@0.1.0 dev
 > next dev
@@ -329,10 +334,11 @@ Next.js のロゴと
 ### スクリーンショットの見本
 
 雰囲気の確認用に、
-[day01-vscode-open.png](./screenshots/day01-vscode-open.png)
-と
-[day01-success.png](./screenshots/day01-success.png)
-も見ておくとイメージしやすい。
+次の2枚も見ておくとイメージしやすい。
+
+![VS Codeで配布物ルートを開いた状態](./screenshots/day01-vscode-open.png)
+
+![Next.jsの初期画面がブラウザに表示された状態](./screenshots/day01-success.png)
 
 ### ここで一回安心してええ理由
 
@@ -382,7 +388,7 @@ Node.js と npm と Next.js と Tailwind の土台はちゃんと動いてる。
 今のファイルを部分修正するより、
 Day 01 は丸ごと入れ替えたほうが理解しやすい。
 
-# src/app/globals.css
+**src/app/globals.css**
 ```css
 @import "tailwindcss";
 
@@ -408,6 +414,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
   --color-primary-foreground: hsl(var(--primary-foreground));
 
   --color-secondary: hsl(var(--secondary));
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
   --color-secondary-foreground: hsl(var(--secondary-foreground));
 
   --color-muted: hsl(var(--muted));
@@ -432,6 +443,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-primary: hsl(var(--sidebar-primary));
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
   --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
   --color-sidebar-accent: hsl(var(--sidebar-accent));
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
@@ -456,6 +472,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
   @keyframes accordion-down {
     from {
       height: 0;
@@ -480,6 +501,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --background: 0 0% 100%;
     --foreground: 222 22% 10%;
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --card: 0 0% 100%;
     --card-foreground: 222 22% 10%;
 
@@ -504,6 +530,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --success: 158 64% 41%;
     --success-foreground: 0 0% 100%;
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --warning: 35 92% 55%;
     --warning-foreground: 223 20% 12%;
 
@@ -528,6 +559,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --sidebar-border: 225 20% 89%;
     --sidebar-ring: 253 77% 60%;
   }
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
 
   .dark {
     --background: 228 21% 10%;
@@ -552,6 +588,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --accent-foreground: 183 85% 84%;
 
     --destructive: 355 72% 60%;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --destructive-foreground: 0 0% 100%;
 
     --success: 158 60% 46%;
@@ -576,6 +617,11 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
     --sidebar-primary-foreground: 233 35% 10%;
     --sidebar-accent: 226 16% 16%;
     --sidebar-accent-foreground: 220 20% 96%;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```css
     --sidebar-border: 224 15% 22%;
     --sidebar-ring: 254 86% 68%;
   }
@@ -600,7 +646,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
 
 **自分専用のタスク管理アプリの最初の画面を立ち上げて、SNSに見せたくなる見た目で「Hello」する**
 
-派手すぎなくてええ。
+派手すぎなくても大丈夫です。
 でも「初期画面のまま」からは卒業したい。
 
 ### 編集アンカー
@@ -611,8 +657,9 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
 `Home` という初期コンポーネントを残すより、
 このDayでは丸ごと差し替えた方がスッキリ理解できる。
 
-# src/app/page.tsx
+**src/app/page.tsx**
 ```tsx
+// filepath: src/app/page.tsx
 import Link from 'next/link';
 
 export default function HomePage() {
@@ -637,6 +684,12 @@ export default function HomePage() {
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="overflow-hidden rounded-[28px] border border-border bg-card shadow-md">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（続き）
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -661,6 +714,12 @@ export default function HomePage() {
                 <Link
                   className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
                   href="/dashboard"
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（続き）
                 >
                   ダッシュボードへ入る
                 </Link>
@@ -685,6 +744,12 @@ export default function HomePage() {
               </article>
 
               <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（続き）
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -709,6 +774,12 @@ export default function HomePage() {
           <div className="space-y-4">
             <article
               id="today-goals"
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（続き）
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
@@ -733,6 +804,12 @@ export default function HomePage() {
             <article className="rounded-[28px] border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
                 今日のひとこと
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（続き）
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればええわけやない。
@@ -757,6 +834,12 @@ export default function HomePage() {
                 明日につながる入口
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（続き）
                 Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
                 今日のページは入口として、ダッシュボードは明日の土台として整えておく。
               </p>
@@ -781,8 +864,9 @@ Day 02 は
 その中に `page.tsx` を新しく作って、
 次の内容をそのまま入れよう。
 
-# src/app/dashboard/page.tsx
+**src/app/dashboard/page.tsx**
 ```tsx
+// filepath: src/app/dashboard/page.tsx
 export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -843,8 +927,9 @@ export default function DashboardPage() {
 
 ### ❌ Before（動くけど、プロは書かない）
 
-# src/app/page.tsx（比較用の一部）
+**src/app/page.tsx（比較用の一部）**
 ```tsx
+// filepath: src/app/page.tsx（比較用の一部）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-[#25273f] bg-[#0f1021] px-[32px] py-[28px] shadow-[0_24px_80px_-32px_rgba(99,102,241,0.45)]">
@@ -869,6 +954,12 @@ function WelcomeHero() {
           className="inline-flex items-center justify-center rounded-[12px] border border-[#2d314b] bg-[#151729] px-[20px] py-[12px] text-[14px] font-semibold text-white"
           href="#next-step"
         >
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（比較用の一部・続き）
           明日の予告を見る
         </a>
       </div>
@@ -889,8 +980,9 @@ export default function HomePage() {
 
 ### ✅ After（プロが書くコード）
 
-# src/app/page.tsx（比較用の一部）
+**src/app/page.tsx（比較用の一部）**
 ```tsx
+// filepath: src/app/page.tsx（比較用の一部）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-border bg-card px-8 py-7 shadow-md">
@@ -915,6 +1007,12 @@ function WelcomeHero() {
           className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground"
           href="#next-step"
         >
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```tsx
+// filepath: src/app/page.tsx（比較用の一部・続き）
           明日の予告を見る
         </a>
       </div>
@@ -952,7 +1050,7 @@ export default function HomePage() {
 
 止めていたら、もう一回起動しよう。
 
-# ~/workspace/task-app
+**~/workspace/task-app**
 ```bash
 npm run dev
 ```

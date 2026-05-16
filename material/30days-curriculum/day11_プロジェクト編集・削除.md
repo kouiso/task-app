@@ -808,6 +808,7 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: src/app/project/page.tsx（参考）
 type ProjectFromApi = {
   id: string;
   name: string;
@@ -832,6 +833,11 @@ type ProjectEditFormData = {
 };
 
 function toDateInputValue(value: Date): string {
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   return value.toISOString().slice(0, 10);
 }
 
@@ -856,6 +862,11 @@ export function buildProjectEditForm(
   if (project.owner !== null && project.owner !== undefined) {
     if (project.owner.name !== null && project.owner.name !== undefined) {
       ownerLabel = project.owner.name;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
     } else {
       ownerLabel = project.owner.email;
     }
@@ -880,6 +891,11 @@ export function buildProjectEditForm(
   return formData;
 }
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
 console.log(
   buildProjectEditForm({
     id: 'project_001',
@@ -902,6 +918,7 @@ console.log(
 ### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: src/app/project/page.tsx（参考）
 type ProjectFromApi = {
   id: string;
   name: string;
@@ -926,6 +943,11 @@ type ProjectEditFormData = {
 };
 
 function toDateInputValue(value: Date): string {
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   return value.toISOString().slice(0, 10);
 }
 
@@ -950,6 +972,11 @@ export function buildProjectEditForm(
     color: project.color ?? '#3b82f6',
     ownerLabel: project.owner?.name ?? project.owner?.email ?? '担当者未設定',
     ...(startDate ? { startDate } : {}),
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
     ...(endDate ? { endDate } : {}),
   };
 }
