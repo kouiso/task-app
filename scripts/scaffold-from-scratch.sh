@@ -50,8 +50,9 @@ RUNTIME_DEPS=(
 )
 
 DEV_DEPS=(
-  @biomejs/biome@^2.3.15
-  vitest@^3.0.9
+  @biomejs/biome@^2.4.15
+  vitest@^3.2.4
+  @vitest/coverage-v8@^3.2.4
   @testing-library/react@^16.2.0
   @testing-library/jest-dom@^6.6.3
   jsdom@^26.0.0
