@@ -504,6 +504,8 @@ PORT=3001 npm run dev
 #### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: 説明用サンプル（実装しない・null チェックを縦に並べる悪い例）
+// import と型定義
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/component/ui/button';
 
@@ -518,7 +520,11 @@ type CommentItem = {
   userId: string;
   content: string;
 };
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// canEditComment：null/undefined を毎回手で潰す helper
 function canEditComment(
   comment: CommentItem,
   session: Session,
@@ -536,7 +542,11 @@ function canEditComment(
   }
   return comment.userId === session.user.id;
 }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// CommentActions：編集できないときは早期 return
 export function CommentActions({
   comment,
   session,
@@ -551,7 +561,11 @@ export function CommentActions({
   if (!canEditComment(comment, session)) {
     return null;
   }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 編集/削除ボタンの JSX
   return (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon"
@@ -576,6 +590,8 @@ export function CommentActions({
 #### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: 説明用サンプル（optional chaining で 1 行にする良い例）
+// import と型定義
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/component/ui/button';
 
@@ -597,7 +613,11 @@ function canEditComment(
 ): boolean {
   return comment.userId === session?.user?.id;
 }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// CommentActions：早期 return まで
 export function CommentActions({
   comment,
   session,
@@ -612,7 +632,11 @@ export function CommentActions({
   if (!canEditComment(comment, session)) {
     return null;
   }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 編集/削除ボタンを並べる JSX
   return (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon"

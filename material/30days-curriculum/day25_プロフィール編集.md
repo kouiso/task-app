@@ -1604,6 +1604,7 @@ PORT=3001 npm run dev
 
 ```typescript
 // filepath: src/app/profile/page.tsx
+// import と型定義（説明用サンプル・冗長なnullチェックの悪い例）
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
@@ -1614,7 +1615,11 @@ type CurrentUser = {
   createdAt: Date | string | null;
   updatedAt: Date | string | null;
 } | null;
+```
 
+```typescript
+// filepath: src/app/profile/page.tsx（続き）
+// avatarUrl・displayName・initial を if ネストで組み立てるパート
 export function buildProfileViewModel(currentUser: CurrentUser) {
   let avatarUrl = '';
   if (currentUser) {
@@ -1638,7 +1643,11 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
       }
     }
   }
+```
 
+```typescript
+// filepath: src/app/profile/page.tsx（続き）
+// 日付ラベルを if ネストで組み立てるパート
   let createdAtLabel = '-';
   if (currentUser) {
     if (currentUser.createdAt) {
@@ -1656,7 +1665,11 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
       });
     }
   }
+```
 
+```typescript
+// filepath: src/app/profile/page.tsx（続き）
+// 全項目をオブジェクトに集約して返すパート
   return {
     avatarUrl,
     displayName,
@@ -1678,6 +1691,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 ```typescript
 // filepath: src/app/profile/page.tsx
+// import と型・helper（説明用サンプル・?. と ?? を活かす良い例）
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
@@ -1694,7 +1708,11 @@ function formatProfileDate(value: Date | string | null | undefined) {
     ? format(new Date(value), 'yyyy年MM月dd日', { locale: ja })
     : '-';
 }
+```
 
+```typescript
+// filepath: src/app/profile/page.tsx（続き）
+// 1 つの return にビューモデルをまとめるパート
 export function buildProfileViewModel(currentUser: CurrentUser) {
   return {
     avatarUrl: currentUser?.avatar ?? '',

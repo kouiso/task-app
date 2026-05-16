@@ -199,6 +199,7 @@ flowchart TD
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx
+// 'use client' とアイコン・ルーター系の import
 'use client';
 
 import {
@@ -210,6 +211,11 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+```
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+// AlertDialog / Button / utility / API の import
 import {
   AlertDialog,
   AlertDialogAction,
@@ -224,7 +230,11 @@ import {
 import { Button } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
+```
 
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+// メニュー型と menuItems 配列
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
@@ -261,6 +271,7 @@ const menuItems: MenuItem[] = [
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（続き）
+// 関数シグネチャと state / hooks 宣言
 export function AppLayout({
   children,
 }: {
@@ -279,7 +290,11 @@ export function AppLayout({
       router.refresh();
     },
   });
+```
 
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+// useEffect でマウント検知 + 未ログイン時のリダイレクト
   useEffect(() => {
     setHasMounted(true);
   }, []);
@@ -316,6 +331,7 @@ export function AppLayout({
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（続き）
+// レイアウト枠と aside の冒頭・ロゴ
   return (
     <div className="flex h-screen bg-background">
       {/* サイドバー */}
@@ -326,8 +342,11 @@ export function AppLayout({
             Task App
           </h1>
         </div>
+```
 
-        {/* ナビゲーション */}
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+// ナビゲーション部分（menuItems を map して Link を出す）
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
             {menuItems.map((item) => (
@@ -348,8 +367,11 @@ export function AppLayout({
             ))}
           </ul>
         </nav>
+```
 
-        {/* ユーザー情報 + ログアウト */}
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+// サイドバー下部：ユーザー情報（アバター・名前・ロール）
         <div className="border-t border-sidebar-border p-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
@@ -366,8 +388,11 @@ export function AppLayout({
               </span>
             </div>
           </div>
+```
 
-          {/* ログアウトボタン（確認ダイアログ付き） */}
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+// ログアウトボタンと AlertDialog の前半（トリガーとタイトル）
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -388,6 +413,11 @@ export function AppLayout({
                   ログアウトすると、再度ログインが必要になります。
                 </AlertDialogDescription>
               </AlertDialogHeader>
+```
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+// AlertDialog のフッター（キャンセル / 実行）とメイン領域
               <AlertDialogFooter>
                 <AlertDialogCancel>キャンセル</AlertDialogCancel>
                 <AlertDialogAction
@@ -428,6 +458,10 @@ export function AppLayout({
 - [ ] ログアウトボタンに `AlertDialog` が付いている
 
 **学んだこと**: `useQuery` でサーバーのセッション情報を取得し、ない場合はログイン画面にリダイレクト。レイアウト全体が認証ゲートの役割を持つ。
+
+📸 完成したサイドバーの骨格を視覚的にも確認しましょう。
+
+![サイドバーの骨格（ロゴ・ナビゲーション・ユーザー情報）](./screenshots/sidebar.png)
 
 ---
 
@@ -507,6 +541,10 @@ export default function DashboardPage() {
 - [ ] `src/app/(app)/dashboard/page.tsx` が存在する
 - [ ] 古い `src/app/dashboard/` は削除または移動済み
 
+📸 移動後のダッシュボード表示も画像で確認しておきます。
+
+![Route Group 配下の dashboard が AppLayout 付きで表示される](./screenshots/dashboard.png)
+
 ---
 
 ### Step 6: ログインして全体の動作を確認する（5分）
@@ -535,6 +573,10 @@ npm run dev
 - [ ] ユーザー名「管理者」とロール「管理者」が見える
 - [ ] ナビゲーションのアクティブ状態が正しい（現在のページがハイライト）
 - [ ] ログアウト → 確認ダイアログ → ログイン画面に戻る
+
+📸 全体動作確認の完成画面イメージです。
+
+![ログイン後にサイドバー付きでダッシュボードが表示される](./screenshots/day08-step7-sidebar.png)
 
 > **うまくいかないとき**: 「つまずきポイント」セクションを確認。
 

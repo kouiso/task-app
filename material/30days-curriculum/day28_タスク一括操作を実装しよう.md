@@ -869,6 +869,7 @@ npm run lint
 
 ```typescript
 // filepath: src/app/task/page.tsx
+// 型定義パート（説明用サンプル・長い switch を使う悪い例）
 import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 
 type BulkAction = 'complete' | 'delete' | TaskStatus;
@@ -879,7 +880,11 @@ type BulkActionContext = {
   openDeleteDialog: () => void;
   bulkUpdateStatus: (ids: string[], status: TaskStatus) => void;
 };
+```
 
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+// 関数シグネチャと前処理パート
 export function handleBulkAction(
   action: BulkAction,
   context: BulkActionContext,
@@ -889,7 +894,11 @@ export function handleBulkAction(
   }
 
   const ids = Array.from(context.selectedTasks);
+```
 
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+// switch 分岐 前半（complete / delete / TODO / IN_PROGRESS）
   switch (action) {
     case 'complete':
       context.bulkComplete(ids);
@@ -903,6 +912,11 @@ export function handleBulkAction(
     case TASK_STATUS.IN_PROGRESS:
       context.bulkUpdateStatus(ids, TASK_STATUS.IN_PROGRESS);
       return;
+```
+
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+// switch 分岐 後半（IN_REVIEW / DONE / CANCELLED / BLOCKED）
     case TASK_STATUS.IN_REVIEW:
       context.bulkUpdateStatus(ids, TASK_STATUS.IN_REVIEW);
       return;
@@ -929,6 +943,7 @@ export function handleBulkAction(
 
 ```typescript
 // filepath: src/app/task/page.tsx
+// 型定義と helper（説明用サンプル・Map に処理を寄せる良い例）
 import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 
 type BulkAction = 'complete' | 'delete' | TaskStatus;
@@ -947,7 +962,11 @@ const createStatusHandler =
   (context) => {
     context.bulkUpdateStatus(Array.from(context.selectedTasks), status);
   };
+```
 
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+// 操作名と処理を 1 つの Map にまとめる
 const BULK_ACTION_HANDLERS: Record<BulkAction, BulkActionHandler> = {
   complete: (context) => {
     context.bulkComplete(Array.from(context.selectedTasks));
@@ -962,7 +981,11 @@ const BULK_ACTION_HANDLERS: Record<BulkAction, BulkActionHandler> = {
   [TASK_STATUS.CANCELLED]: createStatusHandler(TASK_STATUS.CANCELLED),
   [TASK_STATUS.BLOCKED]: createStatusHandler(TASK_STATUS.BLOCKED),
 };
+```
 
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+// Map から対応するハンドラを引いて呼び出すだけ
 export function handleBulkAction(
   action: BulkAction,
   context: BulkActionContext,

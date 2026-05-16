@@ -918,6 +918,8 @@ PORT=3001 npm run dev
 #### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: 説明用サンプル（実装しない・if が並ぶ悪い例）
+// import と Props 型
 import { Button } from '@/component/ui/button';
 import {
   TASK_STATUS,
@@ -930,7 +932,11 @@ type StatusActionButtonProps = {
   status: TaskStatus;
   onUpdated?: () => void;
 };
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 次ステータスを if で返す helper
 function getNextStatus(status: TaskStatus): TaskStatus {
   if (status === TASK_STATUS.TODO) {
     return TASK_STATUS.IN_PROGRESS;
@@ -946,7 +952,11 @@ function getNextStatus(status: TaskStatus): TaskStatus {
   }
   return status;
 }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// ラベルも別の if で返す helper
 function getButtonLabel(status: TaskStatus): string {
   if (status === TASK_STATUS.TODO) {
     return '作業開始';
@@ -962,7 +972,11 @@ function getButtonLabel(status: TaskStatus): string {
   }
   return '変更なし';
 }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 本体コンポーネント前半：mutation と helper 呼び出し
 export function StatusActionButton({
   taskId,
   status,
@@ -975,7 +989,11 @@ export function StatusActionButton({
 
   const nextStatus = getNextStatus(status);
   const disabled = nextStatus === status;
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 本体コンポーネント後半：Button の JSX
   return (
     <Button
       disabled={disabled || updateMutation.isPending}
@@ -1001,6 +1019,8 @@ export function StatusActionButton({
 #### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: 説明用サンプル（配列で遷移を管理する良い例）
+// import と型定義
 import { Button } from '@/component/ui/button';
 import {
   TASK_STATUS,
@@ -1019,7 +1039,11 @@ type StatusTransition = {
   to: TaskStatus;
   label: string;
 };
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 遷移を 1 つの配列にまとめる（前半 2 件）
 const STATUS_TRANSITIONS: StatusTransition[] = [
   {
     from: TASK_STATUS.TODO,
@@ -1031,6 +1055,11 @@ const STATUS_TRANSITIONS: StatusTransition[] = [
     to: TASK_STATUS.IN_REVIEW,
     label: 'レビュー依頼',
   },
+```
+
+```typescript
+// filepath: 説明用サンプル（続き）
+// 遷移配列の続き（後半 2 件）と find helper
   {
     from: TASK_STATUS.IN_REVIEW,
     to: TASK_STATUS.DONE,
@@ -1048,7 +1077,11 @@ function findTransition(status: TaskStatus) {
     (transition) => transition.from === status,
   );
 }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 本体コンポーネント前半：mutation 定義と transition 取得
 export function StatusActionButton({
   taskId,
   status,
@@ -1059,7 +1092,11 @@ export function StatusActionButton({
       onSuccess: onUpdated,
     });
   const transition = findTransition(status);
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 本体コンポーネント後半：Button の JSX（transition 1 つで完結）
   return (
     <Button
       disabled={

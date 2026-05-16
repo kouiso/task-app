@@ -145,6 +145,7 @@ server wrapper を作ります。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
+// import と Props 型
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { UserDetailClient } from './user-detail-client';
@@ -154,7 +155,11 @@ interface UserDetailPageProps {
     id: string;
   }>;
 }
+```
 
+```tsx
+// filepath: src/app/user/[id]/page.tsx（続き）
+// server wrapper 本体：ID 存在チェック → 子コンポーネントへ
 export default async function UserDetailPage({
   params,
 }: UserDetailPageProps) {
@@ -701,6 +706,7 @@ server wrapper を作ります。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
+// import と Props 型
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { UserEditClient } from './user-edit-client';
@@ -710,7 +716,11 @@ interface UserEditPageProps {
     id: string;
   }>;
 }
+```
 
+```tsx
+// filepath: src/app/user/[id]/edit/page.tsx（続き）
+// server wrapper 本体：存在しなければ 404、あれば子コンポーネントへ
 export default async function UserEditPage({
   params,
 }: UserEditPageProps) {
@@ -1244,6 +1254,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 ```typescript
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 型定義パート（説明用サンプル・as で型を信じ込む悪い例）
 import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
 type UserEditFormValues = {
@@ -1264,7 +1275,11 @@ type UpdateUserInput = {
 type UpdateUserMutation = {
   mutate: (input: UpdateUserInput) => void;
 };
+```
 
+```typescript
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx（続き）
+// submit 関数：as でキャストして mutate を呼ぶ
 export function submitUserEditForm(
   rawValues: unknown,
   userId: string,
@@ -1285,7 +1300,11 @@ export function submitUserEditForm(
       : {}),
   });
 }
+```
 
+```typescript
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx（続き）
+// 呼び出し例（実際にはイベントハンドラの中から呼ぶ）
 submitUserEditForm(
   {
     name: 'Kouiso',
@@ -1309,6 +1328,7 @@ submitUserEditForm(
 
 ```typescript
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// zod スキーマと型定義パート（説明用サンプル・境界バリデーションの良い例）
 import { z } from 'zod';
 import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
@@ -1332,7 +1352,11 @@ type UpdateUserInput = {
 type UpdateUserMutation = {
   mutate: (input: UpdateUserInput) => void;
 };
+```
 
+```typescript
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx（続き）
+// submit 関数：zod.parse で実行時バリデーション
 export function submitUserEditForm(
   rawValues: unknown,
   userId: string,
@@ -1353,7 +1377,11 @@ export function submitUserEditForm(
       : {}),
   });
 }
+```
 
+```typescript
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx（続き）
+// 呼び出し例（実際にはイベントハンドラの中から呼ぶ）
 submitUserEditForm(
   {
     name: 'Kouiso',
