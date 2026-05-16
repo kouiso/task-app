@@ -16,15 +16,7 @@
       "Bash(gh issue *)",
       "Bash(gh run *)",
       "Bash(docker compose *)",
-      "Bash(npx prisma *)",
-      "Bash(nvm ls:*)",
-      "Read(//usr/local/bin/**)",
-      "Read(//opt/homebrew/bin/**)",
-      "Bash(brew list:*)",
-      "Read(//opt/homebrew/Cellar/node@22/22.21.1_4/bin/**)",
-      "Bash(PATH=\"/opt/homebrew/opt/node@22/bin:$PATH\" node -v)",
-      "Bash(PATH=\"/opt/homebrew/opt/node@22/bin:$PATH\" npm install @trpc/client@^11.17.0 @trpc/server@^11.17.0 @trpc/next@^11.17.0 @trpc/react-query@^11.17.0)",
-      "Bash(git checkout:*)"
+      "Bash(npx prisma *)"
     ]
   },
   "hooks": {
