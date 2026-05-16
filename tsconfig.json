@@ -42,6 +42,13 @@
     "**/__tests__/**/*",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "edu-creator/**/*"
+    "edu-creator/**/*",
+    "scripts",
+    "material",
+    "src/server",
+    "src/trpc",
+    "src/component/project",
+    "src/component/task",
+    "src/lib/task-form.ts"
   ]
 }
