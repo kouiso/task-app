@@ -1697,8 +1697,8 @@ function formatProfileDate(value: Date | string | null | undefined) {
 
 export function buildProfileViewModel(currentUser: CurrentUser) {
   return {
-    avatarUrl: currentUser?.avatar ?? '',
-    displayName: currentUser?.name ?? '未設定',
+    avatarUrl: currentUser?.avatar || '',
+    displayName: currentUser?.name || '未設定',
     email: currentUser?.email ?? '',
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
     createdAtLabel: formatProfileDate(currentUser?.createdAt),
@@ -1710,13 +1710,13 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 **このコードの強み**:
 
 - `?.` で「存在するときだけ進む」ことを1行で表せる
-- `??` で null / undefined のときの表示を近くに置けるので、代替値が読みやすい
+- `||` や `??` で代替表示を近くに置けるので、フォールバックが読みやすい
 - 日付整形を helper に寄せることで、登録日と更新日のルールを1か所でそろえられる
 
 #### 🎓 覚えておきたいエッセンス
 
 深い null チェックを何段も書くより、
-`?.` と `??` で「安全なアクセス」と「代替表示」を近くに置く。
+`?.` とフォールバック演算子で「安全なアクセス」と「代替表示」を近くに置く。
 
 ## 📋 今日のまとめ
 

@@ -1227,7 +1227,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 ```typescript
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
+import type { UserRole } from '@/lib/constant/roles';
 
 type UserEditFormValues = {
   name: string;
@@ -1268,18 +1268,6 @@ export function submitUserEditForm(
       : {}),
   });
 }
-
-submitUserEditForm(
-  {
-    name: 'Kouiso',
-    avatar: '',
-    role: USER_ROLE.ADMIN,
-    isActive: true,
-  },
-  'clx_user_123',
-  updateUser,
-  true,
-);
 ```
 
 **このコードの問題点**:
@@ -1336,18 +1324,6 @@ export function submitUserEditForm(
       : {}),
   });
 }
-
-submitUserEditForm(
-  {
-    name: 'Kouiso',
-    avatar: '',
-    role: USER_ROLE.ADMIN,
-    isActive: true,
-  },
-  'clx_user_123',
-  updateUser,
-  true,
-);
 ```
 
 **このコードの強み**:

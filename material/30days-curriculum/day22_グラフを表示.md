@@ -580,45 +580,244 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — チャートコンポーネントの Props
+### 💡 Pro パターンで書こう — グラフコンポーネントの Props を Pick で切り出す
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-type StatusChartProps = {
-  todoCount: number;
-  inProgressCount: number;
-  doneCount: number;
-  totalTasks: number;
-  completionRate: number;
-  chartWidth: number;
-  chartHeight: number;
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+
+type ChartEntry = {
+  key: string;
+  name: string;
+  value: number;
 };
+
+type DistributionChartProps = {
+  title: string;
+  data: ChartEntry[];
+  getFillColor: (key: string) => string;
+  emptyMessage: string;
+};
+
+export function DistributionChart({
+  title,
+  data,
+  getFillColor,
+  emptyMessage,
+}: DistributionChartProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {data.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {emptyMessage}
+          </p>
+        ) : (
+          <div className="h-[300px]">
+            <ResponsiveContainer
+              width="100%" height="100%">
+              <PieChart>
+                <Pie data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%" cy="50%"
+                  outerRadius={80} label>
+                  {data.map((entry) => (
+                    <Cell key={entry.key}
+                      fill={
+                        getFillColor(entry.key)
+                      } />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- props が7個もあり、使う側が全部渡す必要がある
-- 「statusCount 系」と「chart 設定系」が混在していて役割がわかりにくい
-- API のレスポンス型と二重管理になりやすい
+- `DistributionChartProps` が設定オブジェクトと同じ項目を個別に列挙している
+- 一覧表示用の `id` などを持つ設定型と、コンポーネントに渡す型が別管理になりやすい
+- グラフ設定を増やすたびに、設定型と props 型の両方を更新する必要が出る
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-type StatusChartProps = {
-  data: Pick<ReportOverview, "todoCount" | "inProgressCount" | "doneCount">;
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import {
+  isTaskPriority,
+  TASK_PRIORITY_COLORS,
+} from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS_COLORS,
+} from '@/lib/constant/status';
+
+const CHART_FALLBACK_COLOR = '#9e9e9e';
+
+type ChartEntry = {
+  key: string;
+  name: string;
+  value: number;
 };
+
+type ReportChartData = {
+  statusData: ChartEntry[];
+  priorityData: ChartEntry[];
+};
+
+type ReportChartConfig = {
+  id: 'status' | 'priority';
+  title: string;
+  data: ChartEntry[];
+  getFillColor: (key: string) => string;
+  emptyMessage: string;
+};
+
+type DistributionChartProps = Pick<
+  ReportChartConfig,
+  'title'
+  | 'data'
+  | 'getFillColor'
+  | 'emptyMessage'
+>;
+
+function getStatusColor(key: string): string {
+  return isTaskStatus(key)
+    ? TASK_STATUS_COLORS[key]
+    : CHART_FALLBACK_COLOR;
+}
+
+function getPriorityColor(key: string): string {
+  return isTaskPriority(key)
+    ? TASK_PRIORITY_COLORS[key]
+    : CHART_FALLBACK_COLOR;
+}
+
+export function DistributionChart({
+  title,
+  data,
+  getFillColor,
+  emptyMessage,
+}: DistributionChartProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {data.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {emptyMessage}
+          </p>
+        ) : (
+          <div className="h-[300px]">
+            <ResponsiveContainer
+              width="100%" height="100%">
+              <PieChart>
+                <Pie data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%" cy="50%"
+                  outerRadius={80} label>
+                  {data.map((entry) => (
+                    <Cell key={entry.key}
+                      fill={
+                        getFillColor(entry.key)
+                      } />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function buildChartConfigs({
+  statusData,
+  priorityData,
+}: ReportChartData): ReportChartConfig[] {
+  return [
+    {
+      id: 'status',
+      title: 'ステータス別タスク',
+      data: statusData,
+      getFillColor: getStatusColor,
+      emptyMessage: 'ステータス集計はまだありません。',
+    },
+    {
+      id: 'priority',
+      title: '優先度別タスク',
+      data: priorityData,
+      getFillColor: getPriorityColor,
+      emptyMessage: '優先度集計はまだありません。',
+    },
+  ];
+}
+
+export function ReportCharts({
+  statusData,
+  priorityData,
+}: Pick<ReportChartData, 'statusData' | 'priorityData'>) {
+  const chartConfigs = buildChartConfigs({
+    statusData,
+    priorityData,
+  });
+
+  return (
+    <div className="grid grid-cols-1
+      md:grid-cols-2 gap-6">
+      {chartConfigs.map(({ id, ...chart }) => (
+        <DistributionChart key={id} {...chart} />
+      ))}
+    </div>
+  );
+}
 ```
 
 **このコードの強み**:
 
-- API の型から `Pick` で必要なフィールドだけ取り出す
-- API のフィールドが変わったら、コンパイルエラーですぐ気づく
-- props は1つのオブジェクトにまとまって使いやすい
+- `DistributionChartProps` が `ReportChartConfig` から必要な項目だけを切り出している
+- `id` は一覧の `key` にだけ使い、グラフ本体には不要な props を渡さずに済む
+- グラフ設定を増やしても、設定型を中心に更新すれば props 型が追随する
 
 #### 🎓 覚えておきたいエッセンス
 
-props が5個以上になったら「まとめてオブジェクトで渡す」か「Pick で型から切り出す」を検討する。バラバラの primitive props は管理コストが高い。
+コンポーネント props が設定オブジェクトの一部なら、個別列挙より `Pick` で切り出す。
+「一覧で管理する型」と「子に渡す型」をつなげると、変更時の更新漏れが減る。
 
 ## 📋 今日のまとめ
 

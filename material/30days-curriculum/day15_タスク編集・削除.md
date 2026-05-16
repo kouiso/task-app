@@ -659,10 +659,9 @@ const taskListInput = {
     : filterStatus,
 };
 
-const { data: tasks } = api.task.getAll.useQuery(
-  taskListInput,
-  { refetchOnWindowFocus: false },
-);
+api.task.getAll.useQuery(taskListInput, {
+  refetchOnWindowFocus: false,
+});
 
 const updateMutation =
   api.task.update.useMutation({
@@ -684,8 +683,9 @@ const updateMutation =
                   title:
                     updatedTask.title ?? task.title,
                   description:
-                    updatedTask.description
-                    ?? task.description,
+                    updatedTask.description === undefined
+                      ? task.description
+                      : updatedTask.description,
                   status:
                     updatedTask.status ?? task.status,
                   priority:
@@ -698,11 +698,13 @@ const updateMutation =
                         ? new Date(updatedTask.dueDate)
                         : null,
                   estimatedHours:
-                    updatedTask.estimatedHours
-                    ?? task.estimatedHours,
+                    updatedTask.estimatedHours === undefined
+                      ? task.estimatedHours
+                      : updatedTask.estimatedHours,
                   assigneeId:
-                    updatedTask.assigneeId
-                    ?? task.assigneeId,
+                    updatedTask.assigneeId === undefined
+                      ? task.assigneeId
+                      : updatedTask.assigneeId,
                 }
               : task,
           ),
@@ -716,6 +718,9 @@ const updateMutation =
         context?.previousTasks,
       );
     },
+    onSuccess: () => {
+      setDialogOpen(false);
+    },
     onSettled: () => {
       utils.task.getAll.invalidate(
         taskListInput,
@@ -725,7 +730,6 @@ const updateMutation =
           id: selectedTask,
         });
       }
-      setDialogOpen(false);
     },
   });
 

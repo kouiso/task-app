@@ -803,11 +803,7 @@ export async function fetchWeeklyReportTasks(
       assigneeId: targetUserId,
       completedAt: { gte: startDate, lte: endDate },
     },
-    select: {
-      id: true,
-      completedAt: true,
-      status: true,
-      priority: true,
+    include: {
       project: {
         select: {
           id: true,
@@ -823,7 +819,7 @@ export async function fetchWeeklyReportTasks(
 
 - タスクとプロジェクト情報を Prisma にまとめて取得させるので、問い合わせ回数が読みやすい
 - `projectId` を手で持ち回らず、戻り値の形が「画面で使うデータ」に近くなる
-- 担当者や関連情報を足すときも `select` / `include` の中に集約でき、取得ロジックが散らばりにくい
+- 担当者や関連情報を足すときも `include` の中に集約でき、取得ロジックが散らばりにくい
 
 #### 🎓 覚えておきたいエッセンス
 

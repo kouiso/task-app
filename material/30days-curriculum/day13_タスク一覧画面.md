@@ -681,54 +681,115 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — ステータス表示の色分け
+### 💡 Pro パターンで書こう — タスクステータス表示はMapでまとめる
+
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
 
-```typescript
-// switch 文で色を決める
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "TODO":
-      return "bg-gray-100 text-gray-800";
-    case "IN_PROGRESS":
-      return "bg-blue-100 text-blue-800";
-    case "DONE":
-      return "bg-green-100 text-green-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
+```tsx
+type TaskStatus =
+  | 'TODO'
+  | 'IN_PROGRESS'
+  | 'IN_REVIEW'
+  | 'DONE'
+  | 'CANCELLED'
+  | 'BLOCKED';
+
+type StatusDisplay = {
+  label: string;
+  className: string;
 };
+
+function getTaskStatusDisplay(status: TaskStatus): StatusDisplay {
+  switch (status) {
+    case 'TODO':
+      return { label: '未対応', className: 'bg-gray-100 text-gray-800' };
+    case 'IN_PROGRESS':
+      return { label: '進行中', className: 'bg-blue-100 text-blue-800' };
+    case 'IN_REVIEW':
+      return { label: 'レビュー中', className: 'bg-amber-100 text-amber-800' };
+    case 'DONE':
+      return { label: '完了', className: 'bg-green-100 text-green-800' };
+    case 'CANCELLED':
+      return { label: 'キャンセル', className: 'bg-red-100 text-red-800' };
+    case 'BLOCKED':
+      return { label: 'ブロック', className: 'bg-purple-100 text-purple-800' };
+  }
+}
+
+export function TaskStatusBadge({ status }: { status: TaskStatus }) {
+  const display = getTaskStatusDisplay(status);
+
+  return (
+    <span className={`rounded-full px-2 py-1 text-xs font-medium ${display.className}`}>
+      {display.label}
+    </span>
+  );
+}
+
+export function ExampleTaskStatusBadge() {
+  return <TaskStatusBadge status="IN_PROGRESS" />;
+}
 ```
 
 **このコードの問題点**:
 
-- ステータスが増えるたびに case を足す必要がある
-- ラベルの文字も別の場所で同じ switch を書くことになる
-- `default` に落ちるパターンが気づかないバグになりやすい
+- ステータスが増えるたびに `case` を追加し、ラベルと色を分岐の中へ書く必要がある
+- 別の画面でも同じ表示が必要になったとき、似た `switch` が増えやすい
+- ステータス一覧を俯瞰したいのに、処理の分岐として読むことになる
 
 ### ✅ After（プロが書くコード）
 
-```typescript
-const STATUS_CONFIG = {
-  TODO: { label: "未着手", color: "bg-gray-100 text-gray-800" },
-  IN_PROGRESS: { label: "進行中", color: "bg-blue-100 text-blue-800" },
-  DONE: { label: "完了", color: "bg-green-100 text-green-800" },
-} as const;
+```tsx
+type TaskStatus =
+  | 'TODO'
+  | 'IN_PROGRESS'
+  | 'IN_REVIEW'
+  | 'DONE'
+  | 'CANCELLED'
+  | 'BLOCKED';
 
-// 使う時は1行
-const { label, color } = STATUS_CONFIG[status];
+type StatusDisplay = {
+  label: string;
+  className: string;
+};
+
+const TASK_STATUS_DISPLAY: Record<TaskStatus, StatusDisplay> = {
+  TODO: { label: '未対応', className: 'bg-gray-100 text-gray-800' },
+  IN_PROGRESS: { label: '進行中', className: 'bg-blue-100 text-blue-800' },
+  IN_REVIEW: { label: 'レビュー中', className: 'bg-amber-100 text-amber-800' },
+  DONE: { label: '完了', className: 'bg-green-100 text-green-800' },
+  CANCELLED: { label: 'キャンセル', className: 'bg-red-100 text-red-800' },
+  BLOCKED: { label: 'ブロック', className: 'bg-purple-100 text-purple-800' },
+};
+
+export function TaskStatusBadge({ status }: { status: TaskStatus }) {
+  const display = TASK_STATUS_DISPLAY[status];
+
+  return (
+    <span className={`rounded-full px-2 py-1 text-xs font-medium ${display.className}`}>
+      {display.label}
+    </span>
+  );
+}
+
+export function ExampleTaskStatusBadge() {
+  return <TaskStatusBadge status="IN_PROGRESS" />;
+}
 ```
 
 **このコードの強み**:
 
-- ステータスの追加は1行。色もラベルも1箇所で管理
-- `as const` で型が推論されるので、typo するとコンパイルエラー
-- switch を書く場所がゼロになる
+- ステータスごとのラベルと色が1つの表にまとまるので、一覧として確認しやすい
+- `Record<TaskStatus, StatusDisplay>` によって、ステータスの追加漏れをTypeScriptが検出してくれる
+- Badge以外の画面でも `TASK_STATUS_DISPLAY[status]` を再利用しやすい
 
 #### 🎓 覚えておきたいエッセンス
 
-switch 文は「設定オブジェクト + lookup」に置き換えられることが多い。データと振る舞いを1箇所にまとめると、追加・変更が楽になる。
+ステータスのように「値ごとの設定」があるものは、`switch` より **Mapとして持つ** と強い。
+処理の分岐ではなく、データの一覧として管理できるからや。
 
 ## 今日のまとめ
 

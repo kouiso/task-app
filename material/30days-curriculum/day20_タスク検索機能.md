@@ -1179,48 +1179,204 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — 検索データの取得
+### 💡 Pro パターンで書こう — debounce 検索を tRPC useQuery で書く
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-const [results, setResults] = useState([]);
-const [loading, setLoading] = useState(false);
+import { useEffect, useState } from 'react';
+import { Input } from '@/component/ui/input';
 
-useEffect(() => {
-  if (!keyword) return;
-  setLoading(true);
-  fetch(`/api/tasks/search?q=${keyword}`)
-    .then((res) => res.json())
-    .then(setResults)
-    .finally(() => setLoading(false));
-}, [keyword]);
+type SearchResult = {
+  totalCount: number;
+  tasks: Array<{
+    id: string;
+    title: string;
+  }>;
+};
+
+async function fetchSearchResults(
+  keyword: string,
+  signal: AbortSignal,
+): Promise<SearchResult> {
+  const params = new URLSearchParams({
+    keyword,
+  });
+  const response = await fetch(
+    `/api/tasks/search?${params.toString()}`,
+    { signal },
+  );
+
+  if (!response.ok) {
+    throw new Error('検索に失敗しました');
+  }
+
+  return await response.json();
+}
+
+export function DebouncedTaskSearch() {
+  const [keyword, setKeyword] = useState('');
+  const [result, setResult] =
+    useState<SearchResult | null>(null);
+  const [isLoading, setIsLoading] =
+    useState(false);
+  const [errorMessage, setErrorMessage] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    const trimmedKeyword = keyword.trim();
+
+    if (!trimmedKeyword) {
+      setResult(null);
+      setErrorMessage(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timerId = window.setTimeout(async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      try {
+        const nextResult =
+          await fetchSearchResults(
+            trimmedKeyword,
+            controller.signal,
+          );
+        setResult(nextResult);
+      } catch (error) {
+        if (error instanceof DOMException
+          && error.name === 'AbortError') {
+          return;
+        }
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : '検索に失敗しました',
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timerId);
+      controller.abort();
+    };
+  }, [keyword]);
+
+  return (
+    <div className="space-y-3">
+      <Input
+        value={keyword}
+        onChange={(event) =>
+          setKeyword(event.target.value)}
+        placeholder="タスク名で検索..."
+      />
+      {isLoading && <p>検索中...</p>}
+      {errorMessage && <p>{errorMessage}</p>}
+      {result && (
+        <p>検索結果: {result.totalCount}件</p>
+      )}
+    </div>
+  );
+}
 ```
 
 **このコードの問題点**:
 
-- `keyword` が変わるたびに fetch が発火し、入力中に大量リクエストが飛ぶ
-- キャンセル処理がないので、古いリクエストの結果が新しい結果を上書きする可能性
-- エラーハンドリングが抜けている
+- debounce、キャンセル、loading、error、結果 state をすべて自前で管理している
+- API の入力型や戻り値型がフロント側の `fetch` と分離し、変更時にずれやすい
+- キャッシュや重複リクエスト制御を毎回実装することになり、検索フォームが太りやすい
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-const { data: results, isLoading } = api.task.search.useQuery(
-  { keyword, status, priority },
-  { enabled: keyword.length > 0 }
-);
+import { useEffect, useState } from 'react';
+import { Input } from '@/component/ui/input';
+import { api } from '@/trpc/react';
+
+function useDebouncedValue<T>(
+  value: T,
+  delayMs: number,
+): T {
+  const [debouncedValue, setDebouncedValue] =
+    useState(value);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [value, delayMs]);
+
+  return debouncedValue;
+}
+
+export function DebouncedTaskSearch() {
+  const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(
+    keyword,
+    400,
+  );
+  const normalizedKeyword =
+    debouncedKeyword.trim();
+
+  const shouldSearch =
+    normalizedKeyword.length > 0;
+
+  const {
+    data: result,
+    isLoading,
+    error,
+  } = api.search.search.useQuery(
+    {
+      keyword: shouldSearch
+        ? normalizedKeyword
+        : undefined,
+      status: 'all',
+      priority: 'all',
+    },
+    {
+      enabled: shouldSearch,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  return (
+    <div className="space-y-3">
+      <Input
+        value={keyword}
+        onChange={(event) =>
+          setKeyword(event.target.value)}
+        placeholder="タスク名で検索..."
+      />
+      {isLoading && <p>検索中...</p>}
+      {error && <p>{error.message}</p>}
+      {result && (
+        <p>検索結果: {result.totalCount}件</p>
+      )}
+    </div>
+  );
+}
 ```
 
 **このコードの強み**:
 
-- `enabled` で空検索を防止。不要なリクエストが飛ばない
-- TanStack Query が自動でリクエストの重複排除・キャンセルを処理
-- キャッシュが効くので、同じ検索語を入れ直しても即表示
+- debounce は入力値の変換だけに閉じ込め、データ取得は `useQuery` に任せられる
+- `api.search.search.useQuery` により、入力型・戻り値型がサーバーの tRPC ルーターとつながる
+- `enabled` と TanStack Query のキャッシュで、空検索や重複リクエストを自然に抑えられる
 
 #### 🎓 覚えておきたいエッセンス
 
-検索のように「条件が変わるたびにデータ取得」するパターンは、`useEffect` + `fetch` より `useQuery` + `enabled` が安全で効率的。
+検索の debounce は「いつ検索するか」の問題で、データ取得そのものを `useEffect` に寄せる理由にはならない。
+値を debounce して、取得は `useQuery` に任せると責務がきれいに分かれる。
 
 ## 📋 今日のまとめ
 

@@ -630,20 +630,67 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — 統計レイアウトの Server/Client 分離
+### 💡 Pro パターンで書こう — 統計カードのレイアウトを Server Component に寄せる
 
-### ❌ Before（動くけど、プロは書かない）
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+
+#### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-"use client";
+'use client';
+
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+} from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import { api } from '@/trpc/react';
+
 export default function ReportPage() {
-  const { data } = api.report.getOverview.useQuery();
+  const { data: overview, isLoading } =
+    api.report.getOverview.useQuery();
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
   return (
     <AppLayout>
-      <h1>レポート</h1>
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="総タスク" value={data?.totalTasks ?? 0} />
-        <StatCard title="完了" value={data?.completedTasks ?? 0} />
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">
+            レポート・統計
+          </h1>
+          <p className="text-muted-foreground">
+            プロジェクトの進捗とタスクの
+            状況を確認できます。
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1
+          sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                タスク数</p>
+              <p className="text-3xl font-bold">
+                {overview?.totalTasks ?? 0}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了率</p>
+              <p className="text-3xl font-bold">
+                {overview?.completionRate ?? 0}%</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );
@@ -652,44 +699,111 @@ export default function ReportPage() {
 
 **このコードの問題点**:
 
-- ページ全体が Client Component。見出しやレイアウトまで JS で描画する必要がある
-- SEO に不利（検索エンジンが中身を読めない可能性）
+- 統計カードはクリック操作がないのに、ページ全体を Client Component にしている
+- ローディング state とカードの見た目が同じファイルに混ざり、レイアウトの意図が読みづらい
+- サーバーで集計済みの値を表示するだけなのに、ブラウザ側 JavaScript に寄りすぎている
 
-### ✅ After（プロが書くコード）
+#### ✅ After（プロが書くコード）
 
 ```typescript
-// page.tsx (Server Component)
-export default function ReportPage() {
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+} from '@/component/ui/card';
+import { trpc } from '@/trpc/server';
+
+type ReportOverview =
+  Awaited<ReturnType<
+    typeof trpc.report.getOverview.query
+  >>;
+
+function StatCard({
+  title,
+  value,
+}: {
+  title: string;
+  value: string | number;
+}) {
   return (
-    <AppLayout>
-      <h1>レポート</h1>
-      <ReportContent />
-    </AppLayout>
+    <Card>
+      <CardContent className="pt-6">
+        <p className="text-sm
+          text-muted-foreground mb-1">
+          {title}
+        </p>
+        <p className="text-3xl font-bold">
+          {value}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
-// report-content.tsx ("use client")
-"use client";
-export function ReportContent() {
-  const { data } = api.report.getOverview.useQuery();
+function StatsCards({
+  overview,
+}: {
+  overview: ReportOverview;
+}) {
   return (
-    <div className="grid grid-cols-4 gap-4">
-      <StatCard title="総タスク" value={data?.totalTasks ?? 0} />
-      <StatCard title="完了" value={data?.completedTasks ?? 0} />
+    <div className="grid grid-cols-1
+      sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCard
+        title="タスク数"
+        value={overview.totalTasks}
+      />
+      <StatCard
+        title="完了率"
+        value={`${overview.completionRate}%`}
+      />
+      <StatCard
+        title="合計作業時間"
+        value={`${(overview.totalTimeSpent / 60)
+          .toFixed(1)}h`}
+      />
+      <StatCard
+        title="平均作業時間/タスク"
+        value={`${(overview.averageTimePerTask / 60)
+          .toFixed(1)}h`}
+      />
     </div>
+  );
+}
+
+export default async function ReportPage() {
+  const overview =
+    await trpc.report.getOverview.query();
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">
+            レポート・統計
+          </h1>
+          <p className="text-muted-foreground">
+            プロジェクトの進捗とタスクの
+            状況を確認できます。
+          </p>
+        </div>
+
+        <StatsCards overview={overview} />
+      </div>
+    </AppLayout>
   );
 }
 ```
 
 **このコードの強み**:
 
-- 見出しとレイアウトはサーバーで事前描画
-- Client Component はデータ取得部分だけ
-- 初期表示が速く、SEO にも有利
+- 統計値の取得と初期表示をサーバー側に寄せられる
+- カードは表示専用コンポーネントになり、Client Component 化する理由が明確になるまで待てる
+- 後でグラフやフィルターのような操作部分だけを Client Component として切り出しやすい
 
 #### 🎓 覚えておきたいエッセンス
 
-ページコンポーネントはなるべく Server Component にして、データ取得する部分だけを "use client" の子コンポーネントに切り出す。
+「表示するだけ」の統計レイアウトは Server Component に寄せる。
+クリックや入力が必要な部分だけ Client Component にすると、ページの責務が軽くなる。
 
 ## 📋 今日のまとめ
 
