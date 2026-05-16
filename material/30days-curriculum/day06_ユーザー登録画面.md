@@ -188,6 +188,11 @@ const registerSchema = z.object({
   {
     message: 'パスワードが一致しません',
     path: ['confirmPassword'],
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   },
 );
 ```
@@ -660,6 +665,11 @@ export function registerUser(input: RegisterInput): RegisterApiResponse {
   return {
     id: 'user_001',
     name: input.name,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
     email: input.email,
   };
 }
@@ -714,6 +724,11 @@ export function registerUser(input: RegisterInput): RegisterResult {
       ok: false,
       error: 'このメールアドレスは登録済みです',
     };
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   }
 
   return {
@@ -738,6 +753,11 @@ const result = registerUser({
   name: 'Kouiso',
   email: 'kouiso@example.com',
   password: 'password123',
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
 });
 
 console.log(buildRegisterMessage(result));
@@ -817,6 +837,11 @@ const registerSchema = z.object({
   {
     message: 'パスワードが一致しません',
     path: ['confirmPassword'],
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   },
 );
 

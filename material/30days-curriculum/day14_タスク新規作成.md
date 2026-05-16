@@ -310,6 +310,11 @@ function buildTaskFormValues(
       ?? (projects[0]?.id || ''),
     assigneeId:
       initialData?.assigneeId ?? '',
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   };
 }
 
@@ -999,6 +1004,7 @@ PORT=3001 npm run dev
 #### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: src/component/task/task-dialog.tsx（参考）
 import { z } from 'zod';
 
 type TaskStatus =
@@ -1023,6 +1029,11 @@ const taskFormSchema = z.object({
     'TODO',
     'IN_PROGRESS',
     'IN_REVIEW',
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
     'DONE',
     'CANCELLED',
     'BLOCKED',
@@ -1047,6 +1058,11 @@ export interface TaskFormData {
   priority: TaskPriority;
   dueDate?: string;
   estimatedHours?: number;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   projectId: string;
   assigneeId?: string;
 }
@@ -1082,6 +1098,7 @@ const defaultTaskValues = {
 #### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: src/component/task/task-dialog.tsx（参考）
 import { z } from 'zod';
 import {
   TASK_PRIORITY,
@@ -1106,6 +1123,11 @@ const taskFormSchema = z.object({
   assigneeId: z.string().optional(),
 });
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 export interface TaskFormData {
@@ -1130,6 +1152,11 @@ const defaultTaskValues: Pick<
 
 const statusOptions = Object.entries(
   TASK_STATUS_LABELS,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
 ).map(([value, label]) => ({
   value,
   label,

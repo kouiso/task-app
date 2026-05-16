@@ -773,6 +773,11 @@ function validateLoginForm(values: LoginFormValues): LoginValidationResult {
 
   if (password.length < 8) {
     errors.password = 'パスワードは8文字以上で入力してください';
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   }
 
   if (errors.email || errors.password) {
@@ -831,6 +836,11 @@ type LoginValidationResult =
   | { ok: false; errors: { email?: string; password?: string } };
 
 export function readLoginForm(formData: FormData): LoginValidationResult {
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
   const result = loginSchema.safeParse(
     Object.fromEntries(formData.entries()),
   );
