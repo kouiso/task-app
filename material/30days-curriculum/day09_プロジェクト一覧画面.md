@@ -55,7 +55,7 @@ src/
 │       └── page.tsx          ← メイン（既存ファイルを編集）
 ├── component/
 │   ├── project/
-│   │   └── project-card.tsx  ← 既存（読み取り専用）
+│   │   └── project-card.tsx  ← 今日の表示で使うカード
 │   ├── layout/
 │   │   └── app-layout.tsx    ← 既存（利用する）
 │   └── ui/
@@ -104,9 +104,12 @@ src/
 
 ### Step 0: プロジェクト API を有効化する（2分）
 
-🎯 **ゴール**: scaffold が配布した project ルーターを root.ts に登録して、API を使えるようにする。
+🎯 **ゴール**: project ルーターを root.ts に登録して、API を使えるようにする。
 
-scaffold は `src/server/api/routers/project.ts` を配布済み。でもまだ `root.ts` に登録されてないから API として動かない。Day 07 で作った `src/server/api/root.ts` を編集する。
+Day 07 で認証 API を登録したのと同じ形で、
+プロジェクト用 API も `root.ts` に登録する。
+`src/server/api/routers/project.ts` は、この Day から
+プロジェクト管理の API として使うファイルや。
 
 💻 **編集**:
 
@@ -130,7 +133,10 @@ export const createCaller = createCallerFactory(appRouter);
 - [ ] `projectRouter` の import を追加した
 - [ ] `appRouter` に `project: projectRouter` を追加した
 
-> scaffold が配布したルーターのコード（`project.ts`）を読んでみると、Day 07 で学んだ `protectedProcedure` や `prisma` の使い方がそのまま使われている。中身が気になったら開いてみよう。
+> `project.ts` は Day 07 で学んだ
+> `protectedProcedure` と `prisma` の延長にある。
+> API を増やすときは、まず router を登録してから
+> 画面側の `useQuery` をつなぐ順番にすると迷いにくい。
 
 ---
 
@@ -757,89 +763,20 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```tsx
-'use client';
-
 import { useEffect, useState } from 'react';
 
-type Project = {
-  id: string;
-  name: string;
-  description: string | null;
-};
-
-type ProjectListResponse = {
-  projects: Project[];
-};
-
-async function fetchProjects(): Promise<Project[]> {
-  const response = await fetch('/api/projects?isArchived=false');
-
-  if (!response.ok) {
-    throw new Error('プロジェクト一覧を取得できませんでした');
-  }
-
-  const body = (await response.json()) as ProjectListResponse;
-
-  return body.projects;
-}
-
 export function ProjectListPanel() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadProjects() {
-      try {
-        const nextProjects = await fetchProjects();
-
-        if (!cancelled) {
-          setProjects(nextProjects);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'プロジェクト一覧を取得できませんでした',
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadProjects();
-
-    return () => {
-      cancelled = true;
-    };
+    fetch('/api/projects')
+      .then((res) => res.json())
+      .then(setProjects)
+      .finally(() => setIsLoading(false));
   }, []);
 
-  if (isLoading) {
-    return <p>読み込み中</p>;
-  }
-
-  if (errorMessage) {
-    return <p>{errorMessage}</p>;
-  }
-
-  return (
-    <ul className="space-y-2">
-      {projects.map((project) => (
-        <li key={project.id} className="rounded-md border p-3">
-          <p className="font-medium">{project.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {project.description ?? '説明なし'}
-          </p>
-        </li>
-      ))}
-    </ul>
-  );
+  return isLoading ? <p>読み込み中</p> : <ProjectList />;
 }
 ```
 
@@ -852,8 +789,6 @@ export function ProjectListPanel() {
 ### ✅ After（プロが書くコード）
 
 ```tsx
-'use client';
-
 import { api } from '@/trpc/react';
 
 export function ProjectListPanel() {
@@ -873,18 +808,7 @@ export function ProjectListPanel() {
     return <p>{error.message}</p>;
   }
 
-  return (
-    <ul className="space-y-2">
-      {projects.map((project) => (
-        <li key={project.id} className="rounded-md border p-3">
-          <p className="font-medium">{project.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {project.description ?? '説明なし'}
-          </p>
-        </li>
-      ))}
-    </ul>
-  );
+  return <ProjectList projects={projects} />;
 }
 ```
 
@@ -930,3 +854,139 @@ tRPCの `useQuery` は、取得・状態・型をまとめて引き受けてく�
 ## 🔜 次回予告
 
 Day 10 では、プロジェクトの新規作成機能を実装します。ダイアログ（モーダル）を使ったフォーム入力と、tRPC の `useMutation` でデータを保存する方法を学びます。
+
+---
+
+## 📎 Day 09 完成形コード（参照用）
+
+### `src/app/project/page.tsx`
+
+Day 09 の全 Step を完了した状態の完成形です。
+
+```typescript
+// filepath: src/app/project/page.tsx
+'use client';
+
+import { Plus } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { ProjectCard } from '@/component/project/project-card';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { Switch } from '@/component/ui/switch';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+function ProjectPageContent() {
+  const [showArchived, setShowArchived] = useState(false);
+
+  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
+    isArchived: showArchived,
+  });
+
+  const handleEdit = (projectId: string) => {
+    void projectId;
+  };
+  const handleDelete = (projectId: string) => {
+    void projectId;
+  };
+  const handleProjectClick = (id: string) => {
+    void id;
+  };
+  const handleCreate = () => {};
+
+  if (projectsLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">プロジェクト</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+              <Label htmlFor="show-archived">アーカイブ表示</Label>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新規プロジェクト
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {projects && projects.length > 0 ? (
+            projects.map((project) => {
+              const taskCount = project.tasks?.length ?? 0;
+              const doneCount =
+                project.tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
+
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={project.description}
+                  color={project.color}
+                  memberCount={project.members?.length ?? 0}
+                  taskStats={{ total: taskCount, done: doneCount }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={handleProjectClick}
+                  isArchived={project.isArchived}
+                />
+              );
+            })
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>プロジェクトが見つかりません。</p>
+              <p>最初のプロジェクトを作成しましょう！</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+export default function ProjectPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <ProjectPageContent />
+    </Suspense>
+  );
+}
+```
+
+### `src/server/api/root.ts`
+
+スキャフォルドで配布済みの全ルーター登録済み版です。Day 09 の Step 0 でプロジェクトルーターを追加した後、この状態になります。
+
+```typescript
+// filepath: src/server/api/root.ts
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { reportRouter } from './routers/report';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { userRouter } from './routers/user';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  task: taskRouter,
+  project: projectRouter,
+  comment: commentRouter,
+  user: userRouter,
+  search: searchRouter,
+  report: reportRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```

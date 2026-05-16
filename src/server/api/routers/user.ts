@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
-import { createSession } from '@/lib/session';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 
@@ -260,7 +259,7 @@ export const userRouter = createTRPCRouter({
       updateData.avatar = input.avatar;
     }
 
-    const updatedUser = await prisma.user.update({
+    return await prisma.user.update({
       where: { id: userId },
       data: updateData,
       select: {
@@ -268,16 +267,6 @@ export const userRouter = createTRPCRouter({
         updatedAt: true,
       },
     });
-
-    if (input.email !== ctx.session.email) {
-      await createSession({
-        id: updatedUser.id,
-        email: updatedUser.email,
-        role: updatedUser.role,
-      });
-    }
-
-    return updatedUser;
   }),
 
   changePassword: protectedProcedure

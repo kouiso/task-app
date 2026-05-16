@@ -429,12 +429,12 @@ copy_scaffold_support() {
   local script_dir
   script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-  # lib-base: env.ts, prisma.ts, date.ts, badge-variant.ts, task-form.ts
-  # NOTE: session.ts / trpc.ts / root.ts / auth.ts / select.ts / route.ts は Day 07 で学習者が作成するため含めない
+  # lib-base: env.ts, prisma.ts, date.ts, badge-variant.ts, task-form.ts, session.ts
+  # NOTE: session.ts は Day 07 で学習者が実装を学ぶが、Day05以前のビルドが通るようにscaffoldにstubを含める
   if [ -d "${script_dir}/_lib-base" ]; then
     mkdir -p src/lib
     cp "${script_dir}/_lib-base"/*.ts src/lib/
-    echo "lib ベースファイル (env.ts, prisma.ts, date.ts, badge-variant.ts, task-form.ts) を配置しました。"
+    echo "lib ベースファイル (env.ts, prisma.ts, date.ts, badge-variant.ts, task-form.ts, session.ts) を配置しました。"
   fi
 
   # constants: roles, status, priority 等
@@ -451,7 +451,27 @@ copy_scaffold_support() {
     echo "tRPC クライアント設定を src/trpc/ に配置しました。"
   fi
 
-  # Day 09 以降で使う業務ルーターは配布物として置く。Day 07 で作る auth/root/trpc/select は含めない。
+  # app-base: layout.tsx + providers.tsx (TRPCReactProvider組み込み済み)
+  # Day08 で上書きされるが、Day05-07のビルドが通るよう事前配置
+  if [ -d "${script_dir}/_app-base" ]; then
+    cp "${script_dir}/_app-base/providers.tsx" src/app/providers.tsx 2>/dev/null || true
+    cp "${script_dir}/_app-base/layout.tsx" src/app/layout.tsx 2>/dev/null || true
+    echo "app ベースファイル (layout.tsx, providers.tsx) を src/app/ に配置しました。"
+  fi
+
+  # server-base: trpc.ts, root.ts — Day07 で実装を学ぶが、Day05以前のビルドが通るようにstubを含める
+  if [ -d "${script_dir}/_server-base" ]; then
+    shopt -s nullglob
+    local server_base_files=("${script_dir}/_server-base"/*.ts)
+    if [ "${#server_base_files[@]}" -gt 0 ]; then
+      mkdir -p src/server/api
+      cp "${server_base_files[@]}" src/server/api/
+      echo "tRPC サーバーベースファイル (trpc.ts, root.ts) を src/server/api/ に配置しました。"
+    fi
+    shopt -u nullglob
+  fi
+
+  # Day 09 以降で使う業務ルーターは配布物として置く。auth.ts も stub として含める。
   if [ -d "${script_dir}/_server-routers" ]; then
     shopt -s nullglob
     local router_files=("${script_dir}/_server-routers"/*.ts)

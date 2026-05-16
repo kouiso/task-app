@@ -1,8 +1,87 @@
 {
-  "loop_count": 0,
-  "current_day": "00",
-  "last_status": "NOT_STARTED",
-  "fail_history": [],
-  "started_at": null,
-  "last_updated": null
+  "loop_count": 2,
+  "current_day": "30",
+  "last_status": "COMPLETED",
+  "fail_history": [
+    {
+      "loop": 1,
+      "day": "05",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T04:09:07.099595+00:00"
+    },
+    {
+      "loop": 1,
+      "day": "05",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T04:14:38.060223+00:00"
+    },
+    {
+      "loop": 1,
+      "day": "06",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T04:23:14.810780+00:00"
+    },
+    {
+      "loop": 1,
+      "day": "10",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T04:27:53.966866+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "05",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:10:57.319612+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "01",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:15:58.537615+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "05",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:19:31.280420+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "06",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:33:21.693226+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "10",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:37:34.511865+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "11",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:47:16.657488+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "17",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:53:28.392077+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "23",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T05:56:49.111117+00:00"
+    },
+    {
+      "loop": 2,
+      "day": "27",
+      "reason": "npm run build failed",
+      "timestamp": "2026-05-15T06:00:15.406944+00:00"
+    }
+  ],
+  "started_at": "2026-05-15T05:15:48.428001+00:00",
+  "last_updated": "2026-05-15T06:03:27.120155+00:00"
 }

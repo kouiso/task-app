@@ -942,6 +942,12 @@ function getNextStatus(status: TaskStatus): TaskStatus {
     return TASK_STATUS.DONE;
   }
   if (status === TASK_STATUS.BLOCKED) {
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     return TASK_STATUS.IN_PROGRESS;
   }
   return status;
@@ -966,6 +972,12 @@ function getButtonLabel(status: TaskStatus): string {
 export function StatusActionButton({
   taskId,
   status,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   onUpdated,
 }: StatusActionButtonProps) {
   const updateMutation =
@@ -1025,6 +1037,12 @@ const STATUS_TRANSITIONS: StatusTransition[] = [
     from: TASK_STATUS.TODO,
     to: TASK_STATUS.IN_PROGRESS,
     label: '作業開始',
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   },
   {
     from: TASK_STATUS.IN_PROGRESS,
@@ -1049,6 +1067,12 @@ function findTransition(status: TaskStatus) {
   );
 }
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
 export function StatusActionButton({
   taskId,
   status,
@@ -1073,6 +1097,12 @@ export function StatusActionButton({
         });
       }}
     >
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
       {transition?.label ?? '変更なし'}
     </Button>
   );

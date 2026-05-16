@@ -1034,6 +1034,12 @@ function groupTasksByStatus(
 ): StatusTaskGroups {
   const groups: StatusTaskGroups = {
     todo: [],
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     inProgress: [],
     inReview: [],
     done: [],
@@ -1058,6 +1064,12 @@ function groupTasksByStatus(
     }
   }
 
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   return groups;
 }
 
@@ -1082,6 +1094,12 @@ function buildStatusSections(tasks: MyTask[]) {
       tasks: groups.done,
     },
   ];
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
 }
 ```
 
@@ -1118,6 +1136,12 @@ const MY_TASK_STATUS_ORDER: TaskStatus[] = [
   TASK_STATUS.IN_REVIEW,
   TASK_STATUS.DONE,
 ];
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
 
 function buildStatusSections(
   tasks: MyTask[],

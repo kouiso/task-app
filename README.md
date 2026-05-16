@@ -42,9 +42,11 @@ PostgreSQL は Docker Desktop 経由で起動するため、ローカルへの�
 task-app/
   material/          <- 教材（Day 01 〜 Day 30 の Markdown）
   scripts/           <- セットアップスクリプト
-  src/               <- アプリケーションソースコード
-  ...
+  .env.example       <- 開発用の環境変数サンプル
+  README.md          <- このファイル
 ```
+
+`src/` や `package.json` は、次のスキャフォルドスクリプト実行時に作成されます。
 
 ### 2. スキャフォルドスクリプトを実行する
 
@@ -117,9 +119,9 @@ npm run dev
 | カテゴリ | 技術 |
 |---------|------|
 | フレームワーク | Next.js 15（App Router） |
-| 言語 | TypeScript 5.6 |
-| API 層 | tRPC 11.6 |
-| ORM | Prisma 6.16 |
+| 言語 | TypeScript 5.8 |
+| API 層 | tRPC 11.8 |
+| ORM | Prisma 6.19 |
 | データベース | PostgreSQL（Docker） |
 | UI コンポーネント | shadcn/ui + Tailwind CSS v4 |
 | フォーム | react-hook-form + zod |

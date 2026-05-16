@@ -1627,6 +1627,12 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
   if (currentUser) {
     if (currentUser.name) {
       displayName = currentUser.name;
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     }
   }
 
@@ -1651,6 +1657,12 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
   let updatedAtLabel = '-';
   if (currentUser) {
     if (currentUser.updatedAt) {
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
       updatedAtLabel = format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
         locale: ja,
       });
@@ -1701,6 +1713,12 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     displayName: currentUser?.name ?? '未設定',
     email: currentUser?.email ?? '',
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     createdAtLabel: formatProfileDate(currentUser?.createdAt),
     updatedAtLabel: formatProfileDate(currentUser?.updatedAt),
   };

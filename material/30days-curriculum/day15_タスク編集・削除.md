@@ -623,6 +623,12 @@ const handleSubmit = (data: TaskFormData) => {
 
   updateMutation.mutate({
     id: data.id,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     title: data.title,
     description: data.description || null,
     status: data.status,
@@ -669,6 +675,12 @@ const updateMutation =
     onMutate: async (updatedTask) => {
       await utils.task.getAll.cancel(
         taskListInput,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
       );
 
       const previousTasks =
@@ -693,6 +705,12 @@ const updateMutation =
                     ?? task.priority,
                   dueDate:
                     updatedTask.dueDate === undefined
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
                       ? task.dueDate
                       : updatedTask.dueDate
                         ? new Date(updatedTask.dueDate)
@@ -717,6 +735,12 @@ const updateMutation =
       );
     },
     onSettled: () => {
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
       utils.task.getAll.invalidate(
         taskListInput,
       );
@@ -741,6 +765,12 @@ const handleSubmit = (data: TaskFormData) => {
     dueDate: data.dueDate
       ? dateOnlyToUtcStartIso(data.dueDate)
       : null,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     estimatedHours: data.estimatedHours ?? null,
     assigneeId: data.assigneeId || null,
   });

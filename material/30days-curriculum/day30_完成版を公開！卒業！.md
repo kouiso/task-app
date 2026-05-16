@@ -457,9 +457,9 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Next.js | 15.3.6 | フレームワーク（App Router） |
+| Next.js | 15.5.15 | フレームワーク（App Router） |
 | React | 18.3.1 | UI ライブラリ |
-| TypeScript | 5.6.3 | 型安全な JavaScript |
+| TypeScript | 5.8.3 | 型安全な JavaScript |
 | shadcn/ui | — | UI コンポーネント |
 | Tailwind CSS | v4 | ユーティリティ CSS |
 | Recharts | 3.2.1 | グラフ・チャート |
@@ -468,8 +468,8 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| tRPC | 11.6.0 | End-to-End 型安全 API |
-| Prisma | 6.16.2 | ORM（DB 操作） |
+| tRPC | 11.8.0 | End-to-End 型安全 API |
+| Prisma | 6.19.3 | ORM（DB 操作） |
 | PostgreSQL | 16 | データベース |
 | jose | — | JWT トークン生成・検証 |
 | bcryptjs | — | パスワードハッシュ化 |
@@ -580,6 +580,12 @@ export default function GraduationPage() {
     <main className="mx-auto max-w-4xl space-y-6 p-8">
       <h1 className="text-3xl font-bold">Task-App 30日間ハンズオン修了</h1>
       <div className="grid gap-4 md:grid-cols-2">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
         {CURRICULUM_SUMMARY.map((item) => (
           <section key={item.label} className="rounded-lg border p-4">
             <p className="text-sm text-muted-foreground">{item.label}</p>
@@ -628,6 +634,12 @@ export default function GraduationPage() {
       </div>
       <ShareGraduationButton text="Task-App 30日間カリキュラムを完走しました" />
     </main>
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   );
 }
 
@@ -652,6 +664,12 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
     <button type="button" className="rounded-md border px-4 py-2" onClick={handleShare}>
       {copied ? 'コピー済み' : '卒業メッセージをコピー'}
     </button>
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   );
 }
 ```

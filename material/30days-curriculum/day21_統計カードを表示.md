@@ -651,6 +651,7 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: src/app/report/page.tsx（参考）
 "use client";
 export default function ReportPage() {
   const { data } = api.report.getOverview.useQuery();
@@ -674,6 +675,7 @@ export default function ReportPage() {
 ### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: src/app/report/page.tsx（参考）
 // page.tsx (Server Component)
 export default function ReportPage() {
   return (

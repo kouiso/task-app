@@ -739,6 +739,12 @@ export async function fetchWeeklyReportTasks(
       assigneeId: targetUserId,
       completedAt: { gte: startDate, lte: endDate },
     },
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     select: {
       id: true,
       completedAt: true,
@@ -763,6 +769,12 @@ export async function fetchWeeklyReportTasks(
         completedAt: task.completedAt,
         status: task.status,
         priority: task.priority,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
         project,
       };
     }),
@@ -803,6 +815,12 @@ export async function fetchWeeklyReportTasks(
       assigneeId: targetUserId,
       completedAt: { gte: startDate, lte: endDate },
     },
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     select: {
       id: true,
       completedAt: true,

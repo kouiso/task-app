@@ -1,5 +1,7 @@
 # Day 07: 認証バックエンドを作って、ログインを動かそう
 
+![ログイン画面](./screenshots/login.png)
+
 ## 前回の振り返り
 
 Day 05-06 でログイン画面と登録画面の UI を作った。
@@ -8,6 +10,7 @@ Day 05-06 でログイン画面と登録画面の UI を作った。
 
 今日はその「裏側」を自分の手で作る。
 ここを超えたら、アプリが本当に「使える」ものになる。
+配布済みコードを開いて読む日ではなく、必要な認証ファイルを小さく書いてつなぐ日や。
 
 ---
 
@@ -162,7 +165,13 @@ function isSessionPayload(
     typeof payload['exp'] === 'number'
   );
 }
+```
 
+**確認ポイント**:
+- [ ] `isSessionPayload` が `userId` / `email` / `role` / `exp` を確認している
+
+```typescript
+// filepath: src/lib/session.ts（続き）
 export async function encrypt(
   payload: SessionPayload,
 ): Promise<string> {
@@ -220,6 +229,27 @@ export async function decrypt(
 
 ```typescript
 // filepath: src/lib/session.ts（続き）
+export async function saveSessionCookie(
+  token: string,
+): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure:
+      process.env['NODE_ENV'] === 'production'
+      && process.env['PLAYWRIGHT_TEST'] !== '1',
+    sameSite: 'strict',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+```
+
+**確認ポイント**:
+- [ ] Cookie 設定を `saveSessionCookie` に分けて書けている
+
+```typescript
+// filepath: src/lib/session.ts（続き）
 export async function createSession(
   user: SessionUser,
 ): Promise<string> {
@@ -233,21 +263,17 @@ export async function createSession(
   };
 
   const token = await encrypt(payload);
-
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure:
-      process.env['NODE_ENV'] === 'production'
-      && process.env['PLAYWRIGHT_TEST'] !== '1',
-    sameSite: 'strict',
-    maxAge: COOKIE_MAX_AGE,
-    path: '/',
-  });
+  await saveSessionCookie(token);
 
   return token;
 }
+```
 
+**確認ポイント**:
+- [ ] `createSession` から `saveSessionCookie(token)` を呼んでいる
+
+```typescript
+// filepath: src/lib/session.ts（続き）
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -258,7 +284,13 @@ export async function getSession(): Promise<SessionPayload | null> {
 
   return await decrypt(token);
 }
+```
 
+**確認ポイント**:
+- [ ] Cookie がない場合に `null` を返している
+
+```typescript
+// filepath: src/lib/session.ts（続き）
 export async function deleteSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
@@ -382,7 +414,13 @@ const isAuthenticated = t.middleware(
         isActive: true,
       },
     });
+```
 
+**確認ポイント**:
+- [ ] セッションの `userId` で DB のユーザーを取り直している
+
+```typescript
+// filepath: src/server/api/trpc.ts（続き）
     if (!currentUser) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
@@ -396,7 +434,13 @@ const isAuthenticated = t.middleware(
         message: 'このアカウントは無効化されています',
       });
     }
+```
 
+**確認ポイント**:
+- [ ] DB にユーザーがない場合と無効化済みの場合を分けている
+
+```typescript
+// filepath: src/server/api/trpc.ts（続き）
     return next({
       ctx: {
         session: {
@@ -407,7 +451,14 @@ const isAuthenticated = t.middleware(
     });
   },
 );
+```
 
+**確認ポイント**:
+- [ ] 未ログイン時に `UNAUTHORIZED` を返す分岐がある
+- [ ] DB から `isActive` を確認している
+
+```typescript
+// filepath: src/server/api/trpc.ts（続き）
 const isAdmin = t.middleware(async ({ ctx, next }) => {
   if (ctx.session?.role !== USER_ROLE.ADMIN) {
     throw new TRPCError({
@@ -418,7 +469,13 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
 
   return next({ ctx });
 });
+```
 
+**確認ポイント**:
+- [ ] 管理者以外を `FORBIDDEN` にする `isAdmin` がある
+
+```typescript
+// filepath: src/server/api/trpc.ts（続き）
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 export const protectedProcedure =
@@ -508,7 +565,13 @@ import {
   publicProcedure,
 } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
+```
 
+**確認ポイント**:
+- [ ] 認証 API に必要な import が揃っている
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
 const loginSchema = z.object({
   email: z
     .string()
@@ -517,7 +580,13 @@ const loginSchema = z.object({
     .string()
     .min(1, 'パスワードを入力してください'),
 });
+```
 
+**確認ポイント**:
+- [ ] ログイン入力は email と password を検証している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
 const registerSchema = z.object({
   name: z
     .string()
@@ -555,7 +624,13 @@ function handleUnexpectedError(
     cause: error,
   });
 }
+```
 
+**確認ポイント**:
+- [ ] 予期しないエラーを `TRPCError` に変換している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
 export const authRouter = createTRPCRouter({
   login: publicProcedure
     .input(loginSchema)
@@ -565,7 +640,13 @@ export const authRouter = createTRPCRouter({
         const user = await prisma.user.findUnique({
           where: { email: input.email },
         });
+```
 
+**確認ポイント**:
+- [ ] `login` mutation でユーザー検索まで書けている
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
         // 2. ユーザーが見つからない場合
         if (!user || !user.password) {
           throw new TRPCError({
@@ -588,7 +669,13 @@ export const authRouter = createTRPCRouter({
           input.password,
           user.password,
         );
+```
 
+**確認ポイント**:
+- [ ] ユーザー有無・アカウント有効・パスワード照合を確認している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
         if (!isPasswordValid) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
@@ -596,7 +683,13 @@ export const authRouter = createTRPCRouter({
               'メールアドレスまたはパスワードが正しくありません',
           });
         }
+```
 
+**確認ポイント**:
+- [ ] パスワード不一致時も同じ `UNAUTHORIZED` メッセージにしている
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
         // 5. セッション作成（JWT + Cookie）
         const sessionUser: SessionUser = {
           id: user.id,
@@ -649,7 +742,13 @@ flowchart TD
         const existing = await prisma.user.findUnique({
           where: { email: input.email },
         });
+```
 
+**確認ポイント**:
+- [ ] 登録前に同じメールアドレスのユーザーを探している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
         if (existing) {
           throw new TRPCError({
             code: 'CONFLICT',
@@ -662,7 +761,14 @@ flowchart TD
           input.password,
           10,
         );
+```
 
+**確認ポイント**:
+- [ ] 重複メールを `CONFLICT` で弾いている
+- [ ] `bcrypt.hash` でパスワードをハッシュ化している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
         const user = await prisma.user.create({
           data: {
             email: input.email,
@@ -672,7 +778,13 @@ flowchart TD
             isActive: true,
           },
         });
+```
 
+**確認ポイント**:
+- [ ] 新規ユーザーを `USER_ROLE.USER` で作成している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
         const sessionUser: SessionUser = {
           id: user.id,
           email: user.email,
@@ -695,7 +807,13 @@ flowchart TD
         handleUnexpectedError('ユーザー登録処理', error);
       }
     }),
+```
 
+**確認ポイント**:
+- [ ] 登録直後に `createSession` でログイン状態にしている
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
   logout: publicProcedure.mutation(async () => {
     await deleteSession();
     return { success: true };
@@ -717,7 +835,14 @@ flowchart TD
 
     return { user };
   }),
+```
 
+**確認ポイント**:
+- [ ] `logout` は Cookie を削除している
+- [ ] `getSession` は未ログインなら `null` を返す
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
   getCurrentUser: protectedProcedure.query(
     async ({ ctx }) => {
       const user = await prisma.user.findUnique({
@@ -728,7 +853,13 @@ flowchart TD
           updatedAt: true,
         },
       });
+```
 
+**確認ポイント**:
+- [ ] `getCurrentUser` はログイン中ユーザーの詳細を取得している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
       if (!user) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -840,7 +971,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 const COOKIE_NAME = 'session';
 
 const PUBLIC_PATHS = ['/login', '/register'];
+```
 
+**確認ポイント**:
+- [ ] Cookie 名と公開パスを定数で定義している
+
+```typescript
+// filepath: src/middleware.ts（続き）
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
     (path) =>
@@ -865,7 +1002,14 @@ function getJwtSecret(): Uint8Array {
   }
   return new TextEncoder().encode(secret);
 }
+```
 
+**確認ポイント**:
+- [ ] 公開パス判定と callbackUrl 検証の helper がある
+- [ ] `JWT_SECRET` を Edge Runtime でも読める形にしている
+
+```typescript
+// filepath: src/middleware.ts（続き）
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -879,7 +1023,13 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/trpc')) {
     return NextResponse.next();
   }
+```
 
+**確認ポイント**:
+- [ ] `/login` / `/register` / `/api/trpc` は middleware で通している
+
+```typescript
+// filepath: src/middleware.ts（続き）
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
   // Cookie なし → ログインへリダイレクト
@@ -893,7 +1043,14 @@ export async function middleware(request: NextRequest) {
     );
     return NextResponse.redirect(loginUrl);
   }
+```
 
+**確認ポイント**:
+- [ ] Cookie がないときに `/login` へ戻している
+- [ ] `callbackUrl` に外部 URL を入れない検証をしている
+
+```typescript
+// filepath: src/middleware.ts（続き）
   // JWT 検証
   try {
     await jwtVerify(token, getJwtSecret(), {
@@ -908,7 +1065,13 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 }
+```
 
+**確認ポイント**:
+- [ ] JWT が有効なら通し、無効なら Cookie を削除している
+
+```typescript
+// filepath: src/middleware.ts（続き）
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico).*)',
@@ -967,6 +1130,8 @@ npm run db:seed
 
 ブラウザで `http://localhost:3000/login` を開く。
 
+![ログイン失敗時の表示](./screenshots/login-error.png)
+
 **seed データのログイン情報**:
 
 | メール | パスワード | 権限 |
@@ -976,6 +1141,8 @@ npm run db:seed
 1. メールとパスワードを入力してログインボタンを押す
 2. 「おかえりなさい、管理者さん」トーストが表示される
 3. ダッシュボードに遷移する
+
+![ログイン後のダッシュボード](./screenshots/dashboard.png)
 
 **確認ポイント**:
 - [ ] `npm run dev` でエラーが出ない

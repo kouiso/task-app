@@ -29,7 +29,6 @@ function validateEnv() {
   }
 }
 
-// CI環境やVercelプレビューデプロイ時はバリデーションをスキップ
 const shouldSkipValidation = process.env['SKIP_ENV_VALIDATION'] === 'true';
 
 const buildFallbackEnv = (): Env => {
