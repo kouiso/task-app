@@ -601,6 +601,8 @@ PORT=3001 npm run dev
 #### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: 説明用サンプル（実装しない・三項ネストで分岐を詰め込む悪い例）
+// import と型定義
 import { Button } from '@/component/ui/button';
 
 type CommentItem = {
@@ -620,7 +622,11 @@ type CommentListProps = {
   onEdit: (commentId: string) => void;
   onDelete: (commentId: string) => void;
 };
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 関数シグネチャと return 冒頭（isLoading 分岐）
 export function CommentList({
   comments,
   currentUserId,
@@ -636,6 +642,11 @@ export function CommentList({
         </p>
       ) : currentUserId ? (
         comments.length > 0 ? (
+```
+
+```typescript
+// filepath: 説明用サンプル（続き）
+// 三項ネスト中央：コメント本文（ユーザー名・コンテンツ）
           comments.map((comment) => (
             <div key={comment.id}
               className="flex justify-between gap-3">
@@ -648,6 +659,11 @@ export function CommentList({
                   {comment.content}
                 </p>
               </div>
+```
+
+```typescript
+// filepath: 説明用サンプル（続き）
+// 三項ネスト中央：自分のコメントなら編集/削除ボタンを出す
               {comment.userId === currentUserId ? (
                 <div className="flex gap-2">
                   <Button size="sm"
@@ -662,6 +678,11 @@ export function CommentList({
               ) : null}
             </div>
           ))
+```
+
+```typescript
+// filepath: 説明用サンプル（続き）
+// 残りの三項分岐：空リスト・未ログイン・閉じカッコ
         ) : (
           <p className="text-sm text-muted-foreground">
             コメントはまだありません。
@@ -686,6 +707,8 @@ export function CommentList({
 #### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: 説明用サンプル（early return でフラットにする良い例）
+// import と型定義
 import { Button } from '@/component/ui/button';
 
 type CommentItem = {
@@ -705,7 +728,11 @@ type CommentListProps = {
   onEdit: (commentId: string) => void;
   onDelete: (commentId: string) => void;
 };
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 例外的な表示を early return で先に返す
 export function CommentList({
   comments,
   currentUserId,
@@ -720,7 +747,11 @@ export function CommentList({
       </p>
     );
   }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 未ログイン・空状態の early return
   if (!currentUserId) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -736,7 +767,11 @@ export function CommentList({
       </p>
     );
   }
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 正常系：map 内で isOwner を計算して 1 件分の枠を作る
   return (
     <div className="space-y-4">
       {comments.map((comment) => {
@@ -755,6 +790,11 @@ export function CommentList({
                 {comment.content}
               </p>
             </div>
+```
+
+```typescript
+// filepath: 説明用サンプル（続き）
+// isOwner のときだけ編集/削除ボタンを表示し、map と return を閉じる
             {isOwner && (
               <div className="flex gap-2">
                 <Button size="sm"

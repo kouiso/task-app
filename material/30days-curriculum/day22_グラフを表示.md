@@ -585,6 +585,7 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: 説明用サンプル（実装ではなく悪い例の参考）
 type StatusChartProps = {
   todoCount: number;
   inProgressCount: number;
@@ -605,6 +606,7 @@ type StatusChartProps = {
 ### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: 説明用サンプル（実装ではなくパターン例示）
 type StatusChartProps = {
   data: Pick<ReportOverview, "todoCount" | "inProgressCount" | "doneCount">;
 };

@@ -558,6 +558,7 @@ npm run lint:fix
 
 ```typescript
 // filepath: src/app/error.tsx
+// import と型・関数シグネチャ（説明用サンプル・三項ネストの悪い例）
 'use client';
 
 import { useEffect } from 'react';
@@ -579,7 +580,11 @@ export function ErrorBoundaryView({
       console.error(error);
     }
   }, [error]);
+```
 
+```typescript
+// filepath: src/app/error.tsx（続き）
+// 1 つの return に三項演算子で前半（recovering / no error）を詰め込む
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="space-y-4 text-center">
@@ -590,6 +595,11 @@ export function ErrorBoundaryView({
             <h2 className="text-2xl font-bold">エラー情報がありません</h2>
             <Button onClick={reset}>画面を再読み込みする</Button>
           </>
+```
+
+```typescript
+// filepath: src/app/error.tsx（続き）
+// 三項演算子の後半（通常のエラー表示） + 閉じカッコ
         ) : (
           <>
             <h2 className="text-2xl font-bold">エラーが発生しました</h2>
@@ -619,6 +629,7 @@ export function ErrorBoundaryView({
 
 ```typescript
 // filepath: src/app/error.tsx
+// import と型・関数シグネチャ（説明用サンプル・early return の良い例）
 'use client';
 
 import { useEffect } from 'react';
@@ -640,7 +651,11 @@ export function ErrorBoundaryView({
       console.error(error);
     }
   }, [error]);
+```
 
+```typescript
+// filepath: src/app/error.tsx（続き）
+// 再読み込み中の早期 return
   if (isRecovering) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -648,7 +663,11 @@ export function ErrorBoundaryView({
       </div>
     );
   }
+```
 
+```typescript
+// filepath: src/app/error.tsx（続き）
+// error が null のときの早期 return
   if (!error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -659,7 +678,11 @@ export function ErrorBoundaryView({
       </div>
     );
   }
+```
 
+```typescript
+// filepath: src/app/error.tsx（続き）
+// 通常のエラー表示パート（メッセージ整形と最後の return）
   const message = error.digest
     ? 'サーバー側でエラーが発生しました。'
     : error.message || '予期しないエラーが発生しました。';

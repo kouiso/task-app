@@ -299,6 +299,7 @@ if (!projectDetail) {
 
 ```tsx
 // filepath: src/component/project/project-detail-view.tsx
+// 詳細ビュー前半：ヘッダー（戻るボタン・タイトル）
 return (
   <div className="flex flex-col gap-6">
     <div className="flex items-center justify-between">
@@ -316,7 +317,11 @@ return (
         </div>
       </div>
     </div>
+```
 
+```tsx
+// filepath: src/component/project/project-detail-view.tsx（続き）
+// 詳細ビュー後半：説明文と 2 カラムグリッドの枠
     {projectDetail.description && (
       <p className="text-muted-foreground">{projectDetail.description}</p>
     )}
@@ -344,6 +349,7 @@ return (
 
 ```tsx
 // filepath: src/component/project/project-detail-view.tsx
+// メンバーカード前半：Card ヘッダーと追加ボタン
 <Card>
   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
     <CardTitle className="text-lg">
@@ -360,6 +366,11 @@ return (
           key={member.id}
           className="flex items-center justify-between p-2 rounded-lg border bg-muted/30"
         >
+```
+
+```tsx
+// filepath: src/component/project/project-detail-view.tsx（続き）
+// メンバーカード中央：Avatar とロール Badge
           <div className="flex items-center gap-3">
             <Avatar>
               {member.user?.avatar && <AvatarImage src={member.user.avatar} />}
@@ -376,6 +387,11 @@ return (
               </Badge>
             </div>
           </div>
+```
+
+```tsx
+// filepath: src/component/project/project-detail-view.tsx（続き）
+// メンバーカード後半：削除ボタン（OWNER は無効化）と閉じカッコ
           <Button
             variant="ghost"
             size="icon"
@@ -395,6 +411,7 @@ return (
 
 ```tsx
 // filepath: src/component/project/project-detail-view.tsx
+// タスクカード前半：ヘッダーと空表示分岐の入り口
 <Card>
   <CardHeader className="space-y-0 pb-4">
     <div className="flex items-center gap-2">
@@ -409,6 +426,11 @@ return (
           タスクがありません。
         </p>
       ) : (
+```
+
+```tsx
+// filepath: src/component/project/project-detail-view.tsx（続き）
+// タスクカード後半：タスク 1 件分のレンダリングと閉じカッコ
         projectDetail.tasks?.map((task) => (
           <div
             key={task.id}
@@ -550,6 +572,16 @@ const handleRemoveMember = (userId: string) => {
 
 ![プロジェクト詳細でアーカイブ操作ができる状態](./screenshots/project-detail-archive-action.png)
 
+📸 メンバーカードと削除確認の完成形も確認しておきましょう。
+
+![プロジェクト詳細のメンバーカードと削除確認ダイアログ](./screenshots/project-detail-members.png)
+
+✅ **確認ポイント**
+
+- 詳細はモーダルではなく `ProjectDetailView` でインライン表示されている
+- `ProjectDialog` / `DeleteConfirmDialog` は補助モーダルとして残っている
+- メンバー削除は確認ダイアログを挟んでから `mutate` が走る
+
 ---
 
 ## 📝 現在の完成形の流れ
@@ -601,6 +633,7 @@ const handleRemoveMember = (userId: string) => {
 
 ```typescript
 // filepath: src/app/project/page.tsx
+// 型定義パート（説明用サンプル・if を並べる悪い例）
 type ProjectListItem = {
   id: string;
   name: string;
@@ -608,7 +641,11 @@ type ProjectListItem = {
 };
 
 type ArchiveFilter = 'active' | 'archived' | 'all';
+```
 
+```typescript
+// filepath: src/app/project/page.tsx（続き）
+// filter 値ごとに if で分岐する関数本体
 export function filterProjectsByArchiveStatus(
   projects: ProjectListItem[],
   filter: ArchiveFilter,
@@ -639,6 +676,7 @@ export function filterProjectsByArchiveStatus(
 
 ```typescript
 // filepath: src/app/project/page.tsx
+// 型定義パート（説明用サンプル・配列で集約する良い例）
 type ProjectListItem = {
   id: string;
   name: string;
@@ -646,7 +684,11 @@ type ProjectListItem = {
 };
 
 type ArchiveFilter = 'active' | 'archived' | 'all';
+```
 
+```typescript
+// filepath: src/app/project/page.tsx（続き）
+// 絞り込みルールを 1 つの配列にまとめる
 const ARCHIVE_FILTERS: Array<{
   key: ArchiveFilter;
   apply: (projects: ProjectListItem[]) => ProjectListItem[];
@@ -664,7 +706,11 @@ const ARCHIVE_FILTERS: Array<{
     apply: (projects) => projects,
   },
 ];
+```
 
+```typescript
+// filepath: src/app/project/page.tsx（続き）
+// 関数本体：find でルールを選んで apply
 export function filterProjectsByArchiveStatus(
   projects: ProjectListItem[],
   filter: ArchiveFilter,

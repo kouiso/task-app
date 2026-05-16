@@ -599,6 +599,8 @@ PORT=3001 npm run dev
 #### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
+// filepath: 説明用サンプル（実装しない・invalidate だけで再取得する悪い例）
+// import と updateMutation 定義
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import { api } from '@/trpc/react';
 import type { TaskFormData } from '@/component/task/task-dialog';
@@ -617,7 +619,11 @@ const updateMutation =
       setDialogOpen(false);
     },
   });
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// handleSubmit：mutate を呼ぶだけのシンプル版
 const handleSubmit = (data: TaskFormData) => {
   if (!data.id) return;
 
@@ -645,6 +651,8 @@ const handleSubmit = (data: TaskFormData) => {
 #### ✅ After（プロが書くコード）
 
 ```typescript
+// filepath: 説明用サンプル（楽観的更新の良い例）
+// import と taskListInput の準備
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import { api } from '@/trpc/react';
 import type { TaskFormData } from '@/component/task/task-dialog';
@@ -663,7 +671,11 @@ const { data: tasks } = api.task.getAll.useQuery(
   taskListInput,
   { refetchOnWindowFocus: false },
 );
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// updateMutation 宣言と onMutate（楽観的更新の先頭部分）
 const updateMutation =
   api.task.update.useMutation({
     onMutate: async (updatedTask) => {
@@ -673,7 +685,11 @@ const updateMutation =
 
       const previousTasks =
         utils.task.getAll.getData(taskListInput);
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// 一覧キャッシュをマップで更新するパート（前半フィールド）
       utils.task.getAll.setData(
         taskListInput,
         (oldTasks) =>
@@ -691,6 +707,11 @@ const updateMutation =
                   priority:
                     updatedTask.priority
                     ?? task.priority,
+```
+
+```typescript
+// filepath: 説明用サンプル（続き）
+// 一覧キャッシュ更新の後半（dueDate / estimatedHours / assigneeId）
                   dueDate:
                     updatedTask.dueDate === undefined
                       ? task.dueDate
@@ -710,6 +731,11 @@ const updateMutation =
 
       return { previousTasks };
     },
+```
+
+```typescript
+// filepath: 説明用サンプル（続き）
+// onError / onSettled：失敗時の戻しと最終 invalidate
     onError: (_error, _updatedTask, context) => {
       utils.task.getAll.setData(
         taskListInput,
@@ -728,7 +754,11 @@ const updateMutation =
       setDialogOpen(false);
     },
   });
+```
 
+```typescript
+// filepath: 説明用サンプル（続き）
+// handleSubmit：mutate を呼ぶ部分は Before と同じ形
 const handleSubmit = (data: TaskFormData) => {
   if (!data.id) return;
 

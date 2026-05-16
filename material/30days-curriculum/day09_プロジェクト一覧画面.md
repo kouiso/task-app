@@ -757,6 +757,8 @@ PORT=3001 npm run dev
 ### ❌ Before（動くけど、プロは書かない）
 
 ```tsx
+// filepath: 説明用サンプル（実装しない・自前 fetch + useState で組む悪い例）
+// import と型定義
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -770,7 +772,11 @@ type Project = {
 type ProjectListResponse = {
   projects: Project[];
 };
+```
 
+```tsx
+// filepath: 説明用サンプル（続き）
+// fetcher 関数：API レスポンスを as でキャストする悪い例
 async function fetchProjects(): Promise<Project[]> {
   const response = await fetch('/api/projects?isArchived=false');
 
@@ -782,7 +788,11 @@ async function fetchProjects(): Promise<Project[]> {
 
   return body.projects;
 }
+```
 
+```tsx
+// filepath: 説明用サンプル（続き）
+// state 3 つと useEffect の枠組み
 export function ProjectListPanel() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -790,7 +800,11 @@ export function ProjectListPanel() {
 
   useEffect(() => {
     let cancelled = false;
+```
 
+```tsx
+// filepath: 説明用サンプル（続き）
+// loadProjects 関数本体：try/catch/finally で state を更新
     async function loadProjects() {
       try {
         const nextProjects = await fetchProjects();
@@ -812,7 +826,11 @@ export function ProjectListPanel() {
         }
       }
     }
+```
 
+```tsx
+// filepath: 説明用サンプル（続き）
+// 呼び出し・cleanup・ローディング/エラー分岐
     loadProjects();
 
     return () => {
@@ -827,7 +845,11 @@ export function ProjectListPanel() {
   if (errorMessage) {
     return <p>{errorMessage}</p>;
   }
+```
 
+```tsx
+// filepath: 説明用サンプル（続き）
+// 一覧表示の JSX 部分
   return (
     <ul className="space-y-2">
       {projects.map((project) => (
@@ -852,6 +874,8 @@ export function ProjectListPanel() {
 ### ✅ After（プロが書くコード）
 
 ```tsx
+// filepath: 説明用サンプル（useQuery に任せる良い例）
+// import と useQuery
 'use client';
 
 import { api } from '@/trpc/react';
@@ -864,7 +888,11 @@ export function ProjectListPanel() {
   } = api.project.getAll.useQuery({
     isArchived: false,
   });
+```
 
+```tsx
+// filepath: 説明用サンプル（続き）
+// ローディング・エラー・一覧 JSX
   if (isLoading) {
     return <p>読み込み中</p>;
   }
