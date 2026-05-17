@@ -1,4 +1,4 @@
-# Curriculum Walkthrough Audit — 2026-05-16 (supersedes prior partial completion claim)
+# カリキュラム・ウォークスルー監査レポート — 2026-05-16（以前の「一部完了」主張を上書き）
 
 - **対象**: macmini セッション `e5959b05` の写経ループ完走主張 + 切断時に残った WIP work
 - **監査日**: 2026-05-16 / 公式化: 2026-05-17
@@ -6,7 +6,7 @@
 
 > 本 audit は [PR #93 (merged, `298bfea`)](https://github.com/kouiso/task-app/pull/93) の audit を **supersede** する。#93 では `loop-state.json` と `apply_day.py` の静的解析で「Mac AI の Day01-30 全 PASS は虚偽」を結論づけたが、macmini シャットダウン前に **push されなかった WIP** が 3 branch 残っており、そこにこそ本来の完走主張が依拠していた追加修正と未完了タスクが含まれていた事実が見落とされていた。本 audit はその空白を埋める。
 
-## TL;DR
+## 要約 (TL;DR)
 
 | 主張 | 事実 | 判定 |
 |---|---|---|
@@ -112,7 +112,7 @@ PR #93 で挙げた P0-A (orchestrator success メッセージ嘘) / P0-B (verif
 
 | 結論 | tag |
 |---|---|
-| 「WIP 3 branch 存在」「HANDOFF doc 未解決タスク 5 点」 | `[コード解析]` (origin/wip/* の git log + `git show HANDOFF-2026-05-16.md`) |
+| 「WIP 3 branch 存在」「HANDOFF doc 未解決タスク 5 点」 | `[コード解析]` (origin/wip/* の git log + `git show origin/wip/preserve-curriculum-walkthrough-20260516:HANDOFF-2026-05-16.md` でファイル内容を直読) |
 | 「`9b59ae6` で Day08/09 skip bug fix」 | `[コード解析]` (commit log + diff sample) |
 | 「stash branch に Day 01 読者試行 BUG 4 件レポート」 | `[コード解析]` (commit message + 該当 commit の diff stat) |
 | 「PR #91/#92/#95 と WIP 162-file の重複」 | **未実施** (本 audit は branch 構造レベルまで。file-level diff vs main を full produce するのは別 audit) |
