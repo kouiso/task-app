@@ -142,6 +142,12 @@ def main():
 
     print(f"  → {len(written)} files written")
 
+    # 0 件書き込み = 教材の filepath マーカー不足 or 検出ロジック過剰スキップ。
+    # 後段ステップが false-positive で「pass」と判定するのを防ぐため non-zero で抜ける。
+    if not written:
+        print("  ❌ no files written — fail to surface false-positive day-pass")
+        sys.exit(2)
+
 
 if __name__ == "__main__":
     main()
