@@ -68,7 +68,8 @@ jobs:
         run: echo ${{ steps.deploy.outputs.url }}
 
       - name: Comment
-        uses: peter-evans/create-or-update-comment@v4.0.0
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: 'Deployed application URL: ${{ steps.deploy.outputs.url }}'
+          header: pull-request-deploy
+          number: ${{ github.event.pull_request.number }}
+          message: 'Deployed application URL: ${{ steps.deploy.outputs.url }}'
