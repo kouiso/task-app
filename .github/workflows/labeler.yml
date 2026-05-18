@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   labeler:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     steps:
       - name: Run Labeler
         uses: actions/labeler@v5

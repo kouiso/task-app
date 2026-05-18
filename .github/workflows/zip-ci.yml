@@ -12,7 +12,7 @@ on:
 jobs:
   zip-export:
     name: ZIP Export Test
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,7 +64,7 @@ jobs:
 
   environment-setup:
     name: Environment Setup Test
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     needs: zip-export
     steps:
       - name: Download ZIP artifact

@@ -10,7 +10,7 @@ permissions:
 jobs:
   trufflehog:
     name: TruffleHog シークレットスキャン
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
