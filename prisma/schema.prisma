@@ -160,6 +160,21 @@ model Comment {
   @@map("comments")
 }
 
+// ログイン試行履歴。brute force 攻撃検出と rate-limit に使用。
+// 30 日経過した record は login 試行時に lazy cleanup される。
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@index([createdAt])
+  @@map("login_attempts")
+}
+
 // Enums
 enum UserRole {
   USER
