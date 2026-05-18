@@ -285,16 +285,38 @@ Codex 反論を受けて axis score を **全 13 軸下方修正** (詳細は (e
 
 **📌 release-readiness verdict**: **NOT sales-ready (internal beta with serious validation gaps)**。Codex の bottom line を採択: paid 教材 launch には以下 **must-fix release blocker** がある:
 
-1. ✅ Day01-Day30 真の学習者写経 fresh run (incremental snippet 含む) — issue #105
-2. ✅ ZIP / distribution artifact 再生成 + 内容 verification — issue #120
+1. ✅ Day01-Day30 真の学習者写経 fresh run (incremental snippet 含む) — issue #110
+2. ✅ ZIP / distribution artifact 再生成 + 内容 verification — issue #111
 3. ✅ behavioral E2E (login / project CRUD / task CRUD / report / auth redirect) — issue #108
 4. ✅ login rate-limit 実装 or 明示的 launch constraint 受容 — issue #106
-5. ✅ DEPLOYMENT / INCIDENT / rollback runbook 整備 — issue #107
-6. ✅ 実 a11y check (axe / keyboard / sr) — issue #116
-7. ✅ mobile / tablet / desktop UX walkthrough — issue #118
-8. ✅ 購入者 support / errata / refund プロセス公開 — issue #107 と束ねる
-9. ✅ License / 第三者コンテンツ ownership clean check — issue #122
-10. ✅ supported environment matrix (OS / Node / npm / DB) 明文化 — issue #123
+5. ✅ DEPLOYMENT / INCIDENT / rollback runbook 整備 — issue #112
+6. ✅ 実 a11y check (axe / keyboard / sr) — issue #109
+7. ✅ mobile / tablet / desktop UX walkthrough — issue #116
+8. ✅ 購入者 support / errata / refund プロセス公開 — issue #107 + #112
+9. ✅ License / 第三者コンテンツ ownership clean check — issue #120
+10. ✅ supported environment matrix (OS / Node / npm / DB) 明文化 — issue #121
+
+### 起票済み follow-up issue (本 audit で起票、計 14 件)
+
+| Issue | Title | Severity |
+|---|---|---|
+| #106 | feat(security): login rate-limit + HIBP check | HIGH (must-fix) |
+| #107 | biz: LP / メルマガ MVP 要件定義 | HIGH (must-fix) |
+| #108 | test(e2e): playwright behavioral assertion | HIGH (must-fix) |
+| #109 | a11y: wcag 2.1 AA pass | HIGH (must-fix) |
+| #110 | test(curriculum): fresh Day01-Day30 transcription | HIGH (must-fix) |
+| #111 | release: ZIP 配布物再生成 + 内容 verification | HIGH (must-fix) |
+| #112 | docs: ARCHITECTURE / DEPLOYMENT / INCIDENT / SUPPORT | HIGH (must-fix) |
+| #113 | perf: bundle analyzer + Lighthouse CI | MEDIUM |
+| #114 | obs: metric + structured log + request-id | MEDIUM |
+| #115 | test: property-based + chaos | MEDIUM |
+| #116 | UX: mobile/tablet/desktop walkthrough | HIGH (must-fix) |
+| #117 | data: seed 冪等性 + orphan cleanup | MEDIUM |
+| #118 | ops: 副管理者構造 (副長/局長) | MEDIUM (bus factor) |
+| #119 | ops: dependency major bump quarterly plan | LOW |
+| #120 | license: 3rd-party content clean check | HIGH (must-fix) |
+| #121 | ops: supported environment matrix | MEDIUM |
+| #101 (update) | 161-file WIP triage deadline 2026-06-01 | MEDIUM |
 
 **「essential, not surface」観点での当 audit の自己採点**:
 - ✅ Phase 1: 過去 session inventory fully ingested (2 sessions、117 DONE 分類)
