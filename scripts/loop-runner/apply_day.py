@@ -52,8 +52,9 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
             force_append = False
 
         # src/ / prisma/ / public/ で始まらない場合はスキップ（安全のため）
-        if not rel_path.startswith("src/") and not rel_path.startswith("prisma/") and not rel_path.startswith("public/"):
-            skipped_gui.append(f"skipped non-src path: {rel_path}")
+        # ".." を含む場合も明示的に弾く（target_dir 外への書き込み防止）
+        if ".." in rel_path or not (rel_path.startswith("src/") or rel_path.startswith("prisma/") or rel_path.startswith("public/")):
+            skipped_gui.append(f"skipped non-src or unsafe path: {rel_path}")
             continue
 
         # パスに日本語文字が含まれる場合はスキップ（説明用ラベルが混入した教材ブロック）

@@ -94,6 +94,8 @@ def resolve_alias(alias_path: str) -> list[str]:
                 base + ".ts",
                 base + ".tsx",
                 base + ".js",
+                base + ".jsx",
+                base + ".css",
                 base + "/index.ts",
                 base + "/index.tsx",
             ]

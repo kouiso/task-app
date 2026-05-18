@@ -34,7 +34,7 @@ fi
 
 # state helper (requires python3)
 read_state() {
-  python3 -c "import json,sys; d=json.load(open('$STATE_FILE')); print(d.get('$1',''))"
+  python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get(sys.argv[2],''))" "$STATE_FILE" "$1"
 }
 
 write_state() {
@@ -116,15 +116,24 @@ for DAY_N in $(seq 1 30); do
   write_state current_day "$DAY_NUM"
   write_state last_status "RUNNING"
 
-  # 教材ファイルを探す
-  MD_FILE=$(ls "$MATERIAL_DIR/day${DAY_NUM}_"*.md 2>/dev/null | head -1)
-  if [[ -z "$MD_FILE" ]]; then
+  # 教材ファイルを探す（同名 Day 番号で複数ヒットしたら明示的に失敗させる）
+  shopt -s nullglob
+  MD_CANDIDATES=("$MATERIAL_DIR/day${DAY_NUM}_"*.md)
+  shopt -u nullglob
+  if [[ ${#MD_CANDIDATES[@]} -eq 0 ]]; then
     echo "  ❌ FAIL — Day $DAY_NUM: markdown file not found in $MATERIAL_DIR"
     append_fail "$DAY_NUM" "markdown file not found"
     write_state last_status "FAIL"
     FAIL_COUNT=$((FAIL_COUNT + 1))
     break
+  elif [[ ${#MD_CANDIDATES[@]} -gt 1 ]]; then
+    echo "  ❌ FAIL — Day $DAY_NUM: multiple markdown files matched: ${MD_CANDIDATES[*]}"
+    append_fail "$DAY_NUM" "multiple markdown files matched"
+    write_state last_status "FAIL"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    break
   fi
+  MD_FILE="${MD_CANDIDATES[0]}"
 
   # Step 1: コードブロックを適用
   if ! python3 "$SCRIPT_DIR/apply_day.py" "$MD_FILE" "$TARGET_DIR"; then
