@@ -61,106 +61,55 @@ jobs:
           # このステップは常に成功として終了
           exit 0
 
-      - name: Add or Update PR comment
+      - name: Build comment body
+        id: build-comment
         if: always()
-        uses: actions/github-script@v7
+        env:
+          HAS_UNUSED_DEPS: ${{ steps.check-unused-deps.outputs.has_unused_deps }}
+          HAS_UNUSED_DEV_DEPS: ${{ steps.check-unused-deps.outputs.has_unused_dev_deps }}
+          UNUSED_DEPS: ${{ steps.check-unused-deps.outputs.unused_dependencies }}
+          UNUSED_DEV_DEPS: ${{ steps.check-unused-deps.outputs.unused_dev_dependencies }}
+        run: |
+          # 入力を環境変数経由で受け取ってサニタイズ
+          format_section() {
+            local title="$1"
+            local has_unused="$2"
+            local unused="$3"
+            echo "### $title"
+            echo
+            local list=""
+            if [ "$has_unused" = "true" ] && [ -n "$unused" ] && [ "$unused" != "none" ]; then
+              list=$(echo "$unused" | awk -F',' '{
+                for (i = 1; i <= NF; i++) {
+                  s = $i
+                  gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+                  if (s != "" && s !~ /^[[:digit:]]+$/) print "- `" s "`"
+                }
+              }')
+            fi
+            if [ -n "$list" ]; then
+              echo "$list"
+            else
+              echo "${title}は検出されませんでした。"
+            fi
+            echo
+          }
+
+          {
+            echo "## 📦 未使用パッケージの検出"
+            echo
+            format_section "未使用の依存関係" "$HAS_UNUSED_DEPS" "$UNUSED_DEPS"
+            format_section "未使用の開発依存関係" "$HAS_UNUSED_DEV_DEPS" "$UNUSED_DEV_DEPS"
+            echo "> 注意: これらのパッケージはコード内で直接参照されていないことが検出されました。ただし、間接的に使用されている可能性もあります。不要なパッケージは削除を検討してください。"
+          } > unused_packages_comment.md
+
+          echo "--- preview ---"
+          cat unused_packages_comment.md
+
+      - name: Post or update PR comment
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            // NOTE: デバッグ用に出力を追加
-            console.log('Unused dependencies:', '${{ steps.check-unused-deps.outputs.unused_dependencies }}');
-            console.log('Unused dev dependencies:', '${{ steps.check-unused-deps.outputs.unused_dev_dependencies }}');
-
-            // 未使用パッケージの情報を取得
-            const unusedDeps = '${{ steps.check-unused-deps.outputs.unused_dependencies }}' || 'none';
-            const unusedDevDeps = '${{ steps.check-unused-deps.outputs.unused_dev_dependencies }}' || 'none';
-            const hasUnusedDeps = '${{ steps.check-unused-deps.outputs.has_unused_deps }}' === 'true';
-            const hasUnusedDevDeps = '${{ steps.check-unused-deps.outputs.has_unused_dev_deps }}' === 'true';
-
-            // コメント本文の作成
-            let commentBody = '## 📦 未使用パッケージの検出\n\n';
-
-            // 依存関係の処理
-            if (hasUnusedDeps && unusedDeps !== 'none') {
-              commentBody += '### 未使用の依存関係\n\n';
-
-              // 数字のみの場合は「なし」と表示
-              if (/^[\d\s,]+$/.test(unusedDeps)) {
-                commentBody += '未使用の依存関係は検出されませんでした。\n\n';
-              } else {
-                // カンマとスペースで分割
-                const depsArray = unusedDeps.split(/, */g).filter(dep => {
-                  // 数字のみの項目をフィルタリング
-                  return dep.trim() !== '' && !/^\d+$/.test(dep.trim());
-                });
-
-                if (depsArray.length > 0) {
-                  commentBody += depsArray.map(dep => `- \`${dep.trim()}\``).join('\n');
-                  commentBody += '\n\n';
-                } else {
-                  commentBody += '未使用の依存関係は検出されませんでした。\n\n';
-                }
-              }
-            } else {
-              commentBody += '### 未使用の依存関係\n\n';
-              commentBody += '未使用の依存関係は検出されませんでした。\n\n';
-            }
-
-            // 開発依存関係の処理
-            if (hasUnusedDevDeps && unusedDevDeps !== 'none') {
-              commentBody += '### 未使用の開発依存関係\n\n';
-
-              // 数字のみの場合は「なし」と表示
-              if (/^[\d\s,]+$/.test(unusedDevDeps)) {
-                commentBody += '未使用の開発依存関係は検出されませんでした。\n\n';
-              } else {
-                // カンマとスペースで分割
-                const devDepsArray = unusedDevDeps.split(/, */g).filter(dep => {
-                  // 数字のみの項目をフィルタリング
-                  return dep.trim() !== '' && !/^\d+$/.test(dep.trim());
-                });
-
-                if (devDepsArray.length > 0) {
-                  commentBody += devDepsArray.map(dep => `- \`${dep.trim()}\``).join('\n');
-                  commentBody += '\n\n';
-                } else {
-                  commentBody += '未使用の開発依存関係は検出されませんでした。\n\n';
-                }
-              }
-            } else {
-              commentBody += '### 未使用の開発依存関係\n\n';
-              commentBody += '未使用の開発依存関係は検出されませんでした。\n\n';
-            }
-
-            commentBody += '> 注意: これらのパッケージはコード内で直接参照されていないことが検出されました。ただし、間接的に使用されている可能性もあります。不要なパッケージは削除を検討してください。';
-
-            // コメント識別子
-            const commentIdentifier = '<!-- unused-packages-check -->';
-            commentBody = commentIdentifier + '\n' + commentBody;
-
-            // 既存のコメントを検索
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-
-            const existingComment = comments.find(comment => comment.body.includes(commentIdentifier));
-
-            if (existingComment) {
-              // 既存のコメントを更新
-              await github.rest.issues.updateComment({
-                comment_id: existingComment.id,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: commentBody
-              });
-            } else {
-              // 新しいコメントを作成
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: commentBody
-              });
-            }
+          header: unused-packages-check
+          number: ${{ github.event.pull_request.number }}
+          path: unused_packages_comment.md
