@@ -45,7 +45,7 @@ Seed data is created by `npm run db:seed`. After seeding the following accounts 
 | Dev DB | `25532` | `docker-compose.yml` `db` service |
 | Test DB | `25533` | `docker-compose.yml` `test-db` service |
 
-If any port is occupied: `lsof -ti:3000 \| xargs -r kill -9` (do the same for 25532 / 25533).
+If any port is occupied: `lsof -ti:3000 | xargs -r kill -9` (do the same for 25532 / 25533).
 
 ### 0.4 Evidence destination
 
@@ -356,12 +356,12 @@ echo "viewer edit attempt: ${HTTP}" | tee "$QA_EVIDENCE/53-viewer-status.txt"
 curl -s -b "$QA_EVIDENCE/cookies-user1.txt" -X GET "http://localhost:3000/api/trpc/report.getWeeklyReport?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22weeks%22%3A1%7D%7D%7D" \
   > "$QA_EVIDENCE/60-report.json"
 
-# JSON 構造の sanity check
+# JSON 構造の sanity check (パスは sys.argv 経由で渡す。shell interpolation を python source に埋め込まないため)
 python3 -c "
-import json,sys
-d = json.load(open('$QA_EVIDENCE/60-report.json'))
+import json, sys
+d = json.load(open(sys.argv[1]))
 print('keys:', list(d[0]['result']['data']['json'].keys()) if d else 'EMPTY')
-" | tee "$QA_EVIDENCE/61-report-shape.txt"
+" "$QA_EVIDENCE/60-report.json" | tee "$QA_EVIDENCE/61-report-shape.txt"
 ```
 
 **PASS**: `61-report-shape.txt` lists keys including `weeks` / `tasksCreated` / `tasksCompleted` (exact key names per `report.ts`).
