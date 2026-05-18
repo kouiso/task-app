@@ -7,14 +7,14 @@ on:
 jobs:
   assignAuthor:
     name: Assign author to PR
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     steps:
       - name: Assign author to PR
         uses: technote-space/assign-author@v1
 
   auto-label-branch:
     name: Label based on branch name
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     steps:
       - name: Add label based on branch name
         uses: actions/github-script@v5
@@ -71,7 +71,7 @@ jobs:
 
   auto-label-files:
     name: Label based on changed files
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     permissions:
       contents: read
       pull-requests: write
