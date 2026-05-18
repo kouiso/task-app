@@ -77,8 +77,18 @@ jobs:
             local unused="$3"
             echo "### $title"
             echo
-            if [ "$has_unused" = "true" ] && [ -n "$unused" ] && [ "$unused" != "none" ] && ! echo "$unused" | grep -qE '^[[:digit:][:space:],]+$'; then
-              echo "$unused" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -vE '^[[:digit:]]+$' | grep -v '^$' | sed 's/^/- `/;s/$/`/'
+            local list=""
+            if [ "$has_unused" = "true" ] && [ -n "$unused" ] && [ "$unused" != "none" ]; then
+              list=$(echo "$unused" | awk -F',' '{
+                for (i = 1; i <= NF; i++) {
+                  s = $i
+                  gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+                  if (s != "" && s !~ /^[[:digit:]]+$/) print "- `" s "`"
+                }
+              }')
+            fi
+            if [ -n "$list" ]; then
+              echo "$list"
             else
               echo "${title}は検出されませんでした。"
             fi
