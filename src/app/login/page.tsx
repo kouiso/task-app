@@ -62,7 +62,8 @@ function LoginForm() {
       // middleware 配下のページへ遷移する。router.push/refresh だと
       // cookie 反映と RSC 再フェッチのタイミング次第で middleware が未認証と判断し
       // /login に戻されるレースが起きる (Issue #98、2 回目以降は cookie が乗って正常遷移)
-      window.location.assign(callbackUrl);
+      // replace を使うことで /login を履歴から除去し、戻るボタンでログイン画面に戻らないようにする
+      window.location.replace(callbackUrl);
     },
     onError: (error) => {
       setError(error.message ?? 'ログイン中にエラーが発生しました');
