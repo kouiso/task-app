@@ -118,18 +118,72 @@
 
 ---
 
-## Phase 4: Adversarial Codex review
+## Phase 4: Adversarial Codex review (完了 2026-05-18 11:38)
 
-**Status**: 提出予定 (本 doc commit 後、codex cloud exec に Phase 1+2+3 全文を投げて反論を取得)
+**Status**: ✅ COMPLETED. codex cloud env が task-app に未設定だったため codex CLI (`gpt-5.5`, medium reasoning) で local execution。出力: `/tmp/task-app-audit/adversarial-review.md` (16,554 bytes, 291 行)。
 
-Cloud submission prompt 概要:
-> "Adversarial review. Challenge every claim in this audit. Find what is missed. Find what is wrong. Find what is hand-wavy. Push back hard on weak reasoning. Be ruthless. Specifically question: (a) the 14-axis scores, (b) the 14 pre-mortem scenarios, (c) the 'DONE with evidence' claims in Phase 1."
+### Codex の反論サマリ
 
-`codex cloud status <task_id>` でポーリング、結果は本 doc 末尾 (`## Phase 4 results`) に追記する。
+**Overall verdict (Codex)**: 「これは sales-ready ではない。internal beta with serious validation gaps レベル。本来の release-readiness avg は 60-65/100、本 audit が出した 87 は overstated」
+
+Codex が指摘した **CRITICAL 6 件** + **wrong score 13 軸** + **process flaw 6 件** + **missed risk 8 件**。
+
+| # | Codex 主張 | 私の応答 | 採択 |
+|---|---|---|---|
+| C1 | feature-completeness 95→70: curriculum incremental snippet apply 未実装は essential gap で must-fix release blocker | **採択**。Day01-30 真の学習者写経が未完。e5959b05 末尾でも user に "ほんとに？" と challenge され訂正済の通り | ✅ |
+| C2 | open PR を shipped evidence にしている (PR #104 でスコア計算)。release readiness は merged main で測れ | **採択**。PR #104 はその後 merged (commit `[merged at 02:37]`、本 audit 提出後)。**Phase 5 で merged 状態の post-merge スコアと open 時 スコアを両方明示する** | ✅ |
+| C3 | security: f4e2c507 session が「1 HIGH」と書いてるのに本 audit は「0 HIGH」、命令的に reconcile されてない | **採択**。f4e2c507 が古い (wip ブランチ時点情報)、main は実際 0 HIGH。本 doc に raw `npm audit` 出力を appendix で添付するべき → done in [Appendix A](#appendix-a) | ✅ |
+| C4 | security score: rate-limit 不在で HIGH×HIGH risk なのに 92 は不整合 | **採択**。security = 92 は overstated。実態は ~70 | ✅ |
+| C5 | test-coverage 75→45: 14 unit test file ≠ behavioral E2E、user journey 0 件 | **採択**。production journey test 0 件、screenshot capture のみ | ✅ |
+| C6 | a11y 70→40: `grep aria-` count は a11y test ではない (proxy metric flaw) | **採択**。実 axe / keyboard / screen-reader 検証なし、proxy metric に頼った採点 | ✅ |
+| C7 | UX-friction 88→60: 元 UX audit は session 中に DROPPED された (f4e2c507 #1)、なのに高得点は defensible でない | **採択**。playwright SP/tablet/desktop walkthrough 未実施 | ✅ |
+| C8 | observability 85→55: Sentry exception capture のみ。metrics / structured log / request-id / 学習者 funnel 全部なし | **採択**。仕様レベルで産業基準を満たさず | ✅ |
+| C9 | performance 90→65: Next 15.5.18 という framework version は performance evidence ではない、bundle analyzer / route timing / load test 0 | **採択**。proxy metric 失格 | ✅ |
+| C10 | docs 92→65: DEPLOYMENT / INCIDENT / ARCHITECTURE / secret rotate 不在 | **採択**。`doc/DATABASE_MIGRATIONS.md` は PR #104 で 1 件追加したが、release-ready doc セットは未達 | ✅ |
+| C11 | deploy-readiness 88→65: preview deploy は prod readiness ではない、runbook なし | **採択** | ✅ |
+| C12 | dep-health 88→70: react 18→19、prisma 6→7 等 major bump 放置 + 可能性 HIGH | **採択** | ✅ |
+| C13 | edge-cases 85→60: concurrency / network failures / pagination / destructive op / 学習者 mistakes 全部未テスト | **採択** | ✅ |
+| C14 | regression-risk 88→55: user journey assertion 0 | **採択** | ✅ |
+| C15 | data-integrity 95→75: seed 冪等性 / orphan cleanup 未テスト | **半採択**。PR #104 merge 後 baseline + drift check 確認済なので 85 程度 | ⚠️ |
+| C16 | i18n 除外で avg を inflate している | **採択**。Phase 5 で「13 軸 avg」と「14 軸 avg (N/A 含む)」を両方提示すべき | ✅ |
+| C17 | Phase 4 提出予定なのに Phase 5 verdict 書いた | **採択**。**本 commit でこの欠陥を修復**: Phase 5 を「Codex 反論統合後の最終 verdict」に書き直す | ✅ |
+
+### Codex の missed risk 8 件
+
+| # | Risk | 私の評価 |
+|---|---|---|
+| M1 | scaffold overreach による false-positive curriculum builds (scaffold に未教授概念の stub が入る) | 重要。「scaffold は教材より先の implementation stub を許容」という design decision が学習者体験を歪めるリスク → issue #105 (incremental snippet) と並列で要設計 |
+| M2 | ZIP 配布物と repo の drift (PR #100/#104 後の ZIP 未再生成) | 採択。issue #120 として起票 |
+| M3 | static audit が actual rebuild の代替になってる (PR #93 audit は 30 day 実 build なし) | 採択。issue #121 として起票 (fresh full walkthrough) |
+| M4 | PR #103 sticky 移行は review hygiene の process risk (product blocker ではないが) | 採択 (PR #103 merged 済) |
+| M5 | login compromise 後の destructive op path: CSRF / session revoke / 監査ログなし | 採択。issue #106 (rate-limit) と束ねる |
+| M6 | 購入者 support / refund path 未設計 | 採択。issue #107 (LP/メルマガ) と束ねる |
+| M7 | License / 第三者コンテンツの利用権 (screenshot / コードスニペット / template 等) | 採択。issue #122 として起票 |
+| M8 | 環境再現性: OS / Node / npm / DB の supported matrix 不明 | 採択。issue #123 として起票 |
+
+### 私が Codex に反論する点
+
+**1 件のみ**: data-integrity 75 → Codex 提案。私の主張 = 85。
+- 理由: PR #104 が **本 doc commit 直後に merged** (commit `[merge SHA pending lookup]`, 02:37 UTC)。drift check `prisma migrate diff --exit-code = 0` という直接出力評価可能な evidence あり。
+- Codex の懸念 (seed 冪等性 / orphan cleanup) は valid だが、それは追加 axis (operational maturity) 軸の課題。data-integrity (schema 真理性) では別。
+- 妥協: 80 (Codex 75 と私の主張 85 の中央値) を採用。
+
+### Codex 反論を反映した Phase 4 結論
+
+**The audit, as originally written, overstated readiness**. 14-axis score の平均は **87 → 60-65** に下方修正。「essential, not surface」ルールに対し、私が **proxy metric を使っていた**ことを認める。具体的に:
+
+- `aria- grep count` ≠ a11y test
+- `Next 15.5.18 version` ≠ performance evidence
+- `Sentry instrumentation existence` ≠ observability
+- `14 unit test files` ≠ regression coverage
+- `Vercel preview` ≠ deploy readiness
+- `existence of toast/dialog` ≠ UX validation
+
+これらは本 audit mission の anti-laziness rule #2 (「Marking an axis 100/100 without concrete evidence」) 違反だった。Codex が catch してくれて助かった。
 
 ---
 
-## Phase 5: Final verdict
+## Phase 5: Final verdict (Codex 反論統合後)
 
 ### (a) Confirmed-DONE (本 audit mission session 内、verification evidence 付き)
 
@@ -138,14 +192,17 @@ Cloud submission prompt 概要:
 | 1 | PR #99 merged (Issue #98 login race) | `gh pr view 99 --json state` = MERGED, commit 6a80217 |
 | 2 | PR #100 merged (loop-runner pipeline) | commit 1c8d476、bot review threads resolved (6 thread) |
 | 3 | PR #102 merged (runs-on 変数化、Issue #50) | commit 6314082、17 workflow file 変更 |
-| 4 | PR #103 open (sticky-pull-request-comment、Issue #45) | PR #103 OPEN、CI green、bot review 待ち |
-| 5 | PR #104 open (prisma migrations baseline + husky 修復) | PR #104 OPEN、`prisma migrate deploy` E2E PASS、drift check 0 |
-| 6 | Issue #38/39/40/41/42/43/98/50 closed | `gh issue view` 各 state=CLOSED |
+| 4 | PR #103 **merged** (sticky-pull-request-comment、Issue #45) | merged 2026-05-18 02:37、Issue #45 CLOSED |
+| 5 | PR #104 **merged** (prisma migrations baseline + husky 修復) | merged 2026-05-18 02:37、`prisma migrate deploy` E2E PASS、drift check 0 |
+| 6 | Issue #38/39/40/41/42/43/45/50/98 closed | `gh issue view` 各 state=CLOSED |
 | 7 | 18 stale branches deleted | `gh api -X DELETE` 17 件 + push delete 1 件 |
 | 8 | Issue #101 opened (161-file triage) | `gh issue view 101` state=OPEN |
-| 9 | Phase 1 inventory generated | `/tmp/task-app-audit/session-{e5959b05,f4e2c507}.md` |
-| 10 | Phase 2 14-axis scored with evidence | 本 doc 該当節 |
-| 11 | Phase 3 pre-mortem 14 scenarios | 本 doc 該当節 |
+| 9 | Issue #106 opened (rate-limit) | `gh issue view 106` state=OPEN |
+| 10 | Issue #107 opened (LP/メルマガ MVP) | `gh issue view 107` state=OPEN |
+| 11 | Phase 1 inventory generated | `/tmp/task-app-audit/session-{e5959b05,f4e2c507}.md` |
+| 12 | Phase 2 14-axis scored with evidence | 本 doc 該当節 |
+| 13 | Phase 3 pre-mortem 14 scenarios | 本 doc 該当節 |
+| 14 | Phase 4 adversarial codex review | `/tmp/task-app-audit/adversarial-review.md` (16KB, 17 反論項目) |
 
 ### (b) 新発見の missed work + remediation
 
@@ -163,7 +220,9 @@ Cloud submission prompt 概要:
 
 ### (c) Codex adversarial findings + response
 
-(Phase 4 完了後に追記)
+→ 上記 [Phase 4 セクション](#phase-4-adversarial-codex-review-完了-2026-05-18-1138) 全文参照。
+17 反論項目中 **16 を採択**、1 を半採択 (data-integrity: Codex 75 / 私 85 → 妥協 80)。
+Codex 反論を受けて axis score を **全 13 軸下方修正** (詳細は (e))。
 
 ### (d) Residual risks
 
@@ -177,38 +236,72 @@ Cloud submission prompt 概要:
 | R6 | dependency major bump 計画なし | Issue #113 で四半期ペース策定 | claude / 2026-07-01 |
 | R7 | observability metric 設計なし | Issue #114 で metric カタログ作成 | claude / 2026-06-30 |
 
-### (e) 100/100 score per axis with evidence — final
+### (e) 14-axis score — Codex 反論統合後の **revised** (i18n N/A)
 
-(i18n は intentional out-of-scope のため除外)
+| Axis | 当初 | Codex 提案 | **採択 (final)** | 根拠 |
+|---|---|---|---|---|
+| feature-completeness | 95 | 70 | **70** | 真の学習者写経が未検証、scaffold オーバーリーチ |
+| test-coverage | 75 | 45 | **45** | behavioral E2E 0、user journey assertion なし |
+| security | 92 | 55-65 | **65** | npm audit 0 HIGH 確認したが rate-limit 不在の HIGH×HIGH リスクで -35 |
+| docs | 92 | 65 | **70** | PR #104 merged で DATABASE_MIGRATIONS 反映 (+5)、DEPLOYMENT/INCIDENT/ARCHITECTURE 不在 |
+| dep-health | 88 | 70 | **70** | major bump 計画なし、外れ Major 9 件 |
+| performance | 90 | 65 | **65** | bundle analyzer 未実行、route timing 未測定 |
+| a11y | 70 | 40 | **40** | axe / sr / keyboard 検証なし、grep proxy 失格 |
+| edge-cases | 85 | 60 | **60** | concurrency / network failure / destructive op テスト 0 |
+| regression-risk | 88 | 55 | **55** | user journey assertion 0、screenshot capture only |
+| deploy-readiness | 88 | 65 | **65** | preview deploy ≠ prod ready、PR #104 merged で +0 (もともと credit していたため) |
+| observability | 85 | 55 | **55** | metrics / structured log / request-id 全部なし |
+| UX-friction | 88 | 60 | **60** | UX audit を DROPPED したのに高得点は defensible でない |
+| data-integrity | 95 | 75 | **80** | PR #104 merged で baseline + drift check 0 (+5)、seed 冪等性 / orphan cleanup 未検証 |
+| i18n | N/A | N/A | N/A (除外) | JP-only product。avg 計算から除外 |
 
-| Axis | Current | Target | Path to 100 |
-|---|---|---|---|
-| feature-completeness | 95 | 100 | incremental snippet apply 実装 (issue #105) |
-| test-coverage | 75 | 100 | E2E behavioral + unit coverage 80%+ (issue #108) |
-| security | 92 | 100 | rate-limit + HIBP check (issue #106) |
-| docs | 92 | 100 | ARCHITECTURE / DEPLOYMENT / INCIDENT (issue #107/#112) |
-| dep-health | 88 | 100 | major bump quarterly plan (issue #113) |
-| performance | 90 | 100 | bundle analyzer + cache headers (issue #115) |
-| a11y | 70 | 100 | wcag 2.1 AA pass via axe-core (issue #116) |
-| edge-cases | 85 | 100 | property-based tests + chaos (issue #117) |
-| regression-risk | 88 | 100 | E2E behavioral (issue #108) |
-| deploy-readiness | 88 | 100 | DEPLOYMENT.md + secret rotate procedure (issue #107) |
-| observability | 85 | 100 | metric / structured log (issue #114) |
-| UX-friction | 88 | 100 | mobile responsive 検証 + empty state catalog (issue #118) |
-| data-integrity | 95 | 100 | seed 冪等性テスト + orphan cleanup (issue #119) |
+**13 軸 revised 平均: (70+45+65+70+70+65+40+60+55+65+55+60+80) / 13 = 61.5 / 100**
+
+当初 87 → revised 61.5。**Codex の指摘どおり、当初は overstated** だった。
+
+### 100 への path (essential, not surface)
+
+| Axis | Current | Path to 100 |
+|---|---|---|
+| feature-completeness | 70 | 真の Day01-30 fresh transcription test (issue #105) + scaffold reduction |
+| test-coverage | 45 | E2E behavioral spec (login / project CRUD / task CRUD / report / auth redirect) (issue #108) |
+| security | 65 | login rate-limit + HIBP check (issue #106) + session revoke / audit log |
+| docs | 70 | DEPLOYMENT.md + INCIDENT_RESPONSE.md + ARCHITECTURE.md (issue #107/#112) |
+| dep-health | 70 | major bump quarterly plan (issue #113) |
+| performance | 65 | bundle analyzer + Lighthouse CI + route timing (issue #115) |
+| a11y | 40 | axe-core CI + keyboard-only flow + sr 確認 (issue #116) |
+| edge-cases | 60 | property-based + chaos + concurrent task edit (issue #117) |
+| regression-risk | 55 | playwright behavioral spec (issue #108) |
+| deploy-readiness | 65 | DEPLOYMENT.md + 初回 prod deploy 実演 + rollback drill (issue #107) |
+| observability | 55 | metric カタログ + structured log + request-id (issue #114) |
+| UX-friction | 60 | mobile / tablet / desktop walkthrough + empty/error catalog (issue #118) |
+| data-integrity | 80 | seed 冪等性テスト + orphan cleanup 戦略 (issue #119) |
 
 ---
 
-## 評価サマリ
+## 評価サマリ (Codex 反論統合後)
 
-**Honest 採点 (anti-laziness rule 適用後)**: 平均 87.0 / 100 (i18n 除外、13 軸)
+**Honest 採点**: 平均 **61.5 / 100** (i18n 除外、13 軸 revised)。当初 87.0 → revised 61.5、25.5 ポイント下方修正。
 
-**「essential, not surface」観点での評価**:
-- ✅ 本 mission 内で **essential remediation** を即実装: PR #104 (data-integrity + tooling)
-- ✅ 全 axis 評価に **observable evidence** を紐付け
-- ✅ 全 pre-mortem シナリオに **確率×影響×現状緩和** を明示
-- ⚠️ rate-limit (issue #106) は本 session 内で実装するか follow-up にするか judgment call: **kouiso (磯貝さん) の architectural sign-off (cache backend = DB / Redis / Upstash KV) が essential であるため follow-up とする**。本 session 内での実装は premature
-- ⚠️ Codex adversarial review (Phase 4) は本 doc commit 後に提出予定。結果反映前に Phase 5 closing は incomplete
+**📌 release-readiness verdict**: **NOT sales-ready (internal beta with serious validation gaps)**。Codex の bottom line を採択: paid 教材 launch には以下 **must-fix release blocker** がある:
+
+1. ✅ Day01-Day30 真の学習者写経 fresh run (incremental snippet 含む) — issue #105
+2. ✅ ZIP / distribution artifact 再生成 + 内容 verification — issue #120
+3. ✅ behavioral E2E (login / project CRUD / task CRUD / report / auth redirect) — issue #108
+4. ✅ login rate-limit 実装 or 明示的 launch constraint 受容 — issue #106
+5. ✅ DEPLOYMENT / INCIDENT / rollback runbook 整備 — issue #107
+6. ✅ 実 a11y check (axe / keyboard / sr) — issue #116
+7. ✅ mobile / tablet / desktop UX walkthrough — issue #118
+8. ✅ 購入者 support / errata / refund プロセス公開 — issue #107 と束ねる
+9. ✅ License / 第三者コンテンツ ownership clean check — issue #122
+10. ✅ supported environment matrix (OS / Node / npm / DB) 明文化 — issue #123
+
+**「essential, not surface」観点での当 audit の自己採点**:
+- ✅ Phase 1: 過去 session inventory fully ingested (2 sessions、117 DONE 分類)
+- ✅ Phase 2: PR #104 で data-integrity essential gap closure (curriculum-impl 不整合解消)、husky 副作用 hotfix 同梱
+- ✅ Phase 3: 14 pre-mortem シナリオ、HIGH×HIGH 3 件明示
+- ✅ Phase 4: Codex adversarial 完了、**17 反論項目中 16 採択、1 半採択**
+- ⚠️ 自己 audit が proxy metric を使った点を Codex に指摘されて訂正済。これ自体が大きな learning。
 
 **Follow-up PRs/issues**:
 
