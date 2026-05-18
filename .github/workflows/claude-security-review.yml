@@ -16,7 +16,7 @@ jobs:
   security-review:
     # シークレットが設定されていない場合はスキップ
     if: vars.CLAUDE_CODE_ENABLED == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
     permissions:
       contents: read
       pull-requests: write
