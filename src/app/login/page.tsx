@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Lock } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -39,7 +39,6 @@ function isValidRedirectUrl(url: string): boolean {
 }
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // callbackUrl の検証：相対パスのみを許可
@@ -59,8 +58,12 @@ function LoginForm() {
   const loginMutation = api.auth.login.useMutation({
     onSuccess: (data) => {
       toast.success(`おかえりなさい、${data.user.name}さん`);
-      router.refresh();
-      router.push(callbackUrl);
+      // tRPC レスポンスで Set-Cookie された session を確実にブラウザへ反映してから
+      // middleware 配下のページへ遷移する。router.push/refresh だと
+      // cookie 反映と RSC 再フェッチのタイミング次第で middleware が未認証と判断し
+      // /login に戻されるレースが起きる (Issue #98、2 回目以降は cookie が乗って正常遷移)
+      // replace を使うことで /login を履歴から除去し、戻るボタンでログイン画面に戻らないようにする
+      window.location.replace(callbackUrl);
     },
     onError: (error) => {
       setError(error.message ?? 'ログイン中にエラーが発生しました');
