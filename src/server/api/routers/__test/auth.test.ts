@@ -92,6 +92,73 @@ describe('authRouter', () => {
         }),
       ).rejects.toThrow();
     });
+
+    it('should block login after 5 failed attempts from the same email+ip (rate-limit)', async () => {
+      await createTestUser({
+        email: 'ratelimit@example.com',
+        password: 'CorrectPassword123!',
+      });
+
+      const headers = new Headers({ 'x-forwarded-for': '203.0.113.100' });
+      const caller = await createTestCaller(null, headers);
+
+      // 5 回失敗を意図的に発生させる
+      for (let i = 0; i < 5; i++) {
+        await expect(
+          caller.auth.login({
+            email: 'ratelimit@example.com',
+            password: 'WrongPassword999!',
+          }),
+        ).rejects.toThrow();
+      }
+
+      // 6 回目は rate-limit で TOO_MANY_REQUESTS
+      await expect(
+        caller.auth.login({
+          email: 'ratelimit@example.com',
+          password: 'CorrectPassword123!',
+        }),
+      ).rejects.toThrow('上限');
+
+      await prisma.loginAttempt.deleteMany({ where: { email: 'ratelimit@example.com' } });
+    });
+
+    it('should reset failure count on successful login', async () => {
+      await createTestUser({
+        email: 'reset-success@example.com',
+        password: 'CorrectPassword123!',
+      });
+
+      const headers = new Headers({ 'x-forwarded-for': '203.0.113.101' });
+      const caller = await createTestCaller(null, headers);
+
+      // 4 回失敗 → 5 回目は成功 → そのあと 4 回失敗してもまだ block されない
+      for (let i = 0; i < 4; i++) {
+        await expect(
+          caller.auth.login({
+            email: 'reset-success@example.com',
+            password: 'WrongPassword999!',
+          }),
+        ).rejects.toThrow();
+      }
+      const ok = await caller.auth.login({
+        email: 'reset-success@example.com',
+        password: 'CorrectPassword123!',
+      });
+      expect(ok.user.email).toBe('reset-success@example.com');
+
+      // 成功 reset 後、また 4 回失敗しても allowed なまま
+      for (let i = 0; i < 4; i++) {
+        await expect(
+          caller.auth.login({
+            email: 'reset-success@example.com',
+            password: 'WrongPassword999!',
+          }),
+        ).rejects.toThrow('メールアドレス');
+      }
+
+      await prisma.loginAttempt.deleteMany({ where: { email: 'reset-success@example.com' } });
+    });
   });
 
   describe('register', () => {

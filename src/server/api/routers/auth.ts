@@ -3,6 +3,12 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
+import {
+  checkLoginRateLimit,
+  extractClientIp,
+  rateLimitToTRPCError,
+  recordLoginAttempt,
+} from '@/lib/rate-limit';
 import { createSession, deleteSession, type SessionUser } from '@/lib/session';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
@@ -34,13 +40,22 @@ function handleUnexpectedError(context: string, error: unknown): never {
 }
 
 export const authRouter = createTRPCRouter({
-  login: publicProcedure.input(loginSchema).mutation(async ({ input }) => {
+  login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
+    const ip = extractClientIp(ctx.headers);
+
+    // brute force 対策: 直近 15 分の失敗回数で email×IP / IP 単独の両軸を rate-limit
+    const limitResult = await checkLoginRateLimit(input.email, ip);
+    if (!limitResult.allowed) {
+      throw rateLimitToTRPCError(limitResult);
+    }
+
     try {
       const user = await prisma.user.findUnique({
         where: { email: input.email },
       });
 
       if (!user?.password) {
+        await recordLoginAttempt(input.email, ip, false);
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'メールアドレスまたはパスワードが正しくありません',
@@ -48,6 +63,7 @@ export const authRouter = createTRPCRouter({
       }
 
       if (!user.isActive) {
+        // 無効アカウントは rate-limit カウントに含めない（誤入力ではない）
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'このアカウントは無効化されています',
@@ -57,6 +73,7 @@ export const authRouter = createTRPCRouter({
       const isPasswordValid = await bcrypt.compare(input.password, user.password);
 
       if (!isPasswordValid) {
+        await recordLoginAttempt(input.email, ip, false);
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'メールアドレスまたはパスワードが正しくありません',
@@ -70,6 +87,7 @@ export const authRouter = createTRPCRouter({
       };
 
       await createSession(sessionUser);
+      await recordLoginAttempt(input.email, ip, true);
 
       return {
         user: {

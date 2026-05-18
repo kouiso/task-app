@@ -136,10 +136,10 @@ export function createMockSession(
   };
 }
 
-export async function createTestCaller(session?: SessionPayload | null) {
+export async function createTestCaller(session?: SessionPayload | null, headers?: Headers) {
   const createCaller = createCallerFactory(appRouter);
   const context = await createTRPCContext({
-    headers: new Headers(),
+    headers: headers ?? new Headers(),
   });
 
   return createCaller({
