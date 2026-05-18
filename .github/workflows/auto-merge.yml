@@ -17,7 +17,7 @@ on:
 
 jobs:
   auto-merge:
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.RUNNER_LINUX }}
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Auto Merge PR

@@ -21,7 +21,7 @@ jobs:
       packages: 'write'
       pull-requests: 'write'
 
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.RUNNER_LINUX }}
 
     steps:
       - name: Checkout

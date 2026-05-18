@@ -22,7 +22,7 @@ jobs:
       id-token: 'write'
       packages: 'write'
 
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.RUNNER_LINUX }}
 
     steps:
       - name: Checkout

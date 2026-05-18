@@ -12,7 +12,7 @@ jobs:
       (github.event.pull_request.base.ref == 'main' ||
       github.event.pull_request.base.ref == 'develop') &&
       vars.CLAUDE_CODE_ENABLED == 'true'
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.RUNNER_LINUX }}
     permissions:
       contents: read
       pull-requests: read
