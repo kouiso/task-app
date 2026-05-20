@@ -165,10 +165,16 @@ async function seedTasks(
   users: Record<string, { id: string }>,
   projects: { p1: { id: string }; p2: { id: string }; p3: { id: string } },
 ) {
-  const admin = users['admin@example.com']!;
-  const owner = users['owner@example.com']!;
-  const member1 = users['member1@example.com']!;
-  const member2 = users['member2@example.com']!;
+  const admin = users['admin@example.com'];
+  const owner = users['owner@example.com'];
+  const member1 = users['member1@example.com'];
+  const member2 = users['member2@example.com'];
+
+  if (!admin || !owner || !member1 || !member2) {
+    throw new Error(
+      'タスク作成に必要なユーザーが見つかりませんでした。seedUsers を確認してください。',
+    );
+  }
 
   const now = new Date();
 
@@ -415,10 +421,16 @@ async function seedComments(
   users: Record<string, { id: string }>,
   projects: { p1: { id: string }; p2: { id: string }; p3: { id: string } },
 ) {
-  const admin = users['admin@example.com']!;
-  const owner = users['owner@example.com']!;
-  const member1 = users['member1@example.com']!;
-  const member2 = users['member2@example.com']!;
+  const admin = users['admin@example.com'];
+  const owner = users['owner@example.com'];
+  const member1 = users['member1@example.com'];
+  const member2 = users['member2@example.com'];
+
+  if (!admin || !owner || !member1 || !member2) {
+    throw new Error(
+      'コメント作成に必要なユーザーが見つかりませんでした。seedUsers を確認してください。',
+    );
+  }
 
   // プロジェクト1のタスクを取得（position順）
   const p1Tasks = await prisma.task.findMany({
@@ -426,7 +438,13 @@ async function seedComments(
     orderBy: { position: 'asc' },
   });
 
-  if (p1Tasks.length < 10) {
+  const task1 = p1Tasks[0];
+  const task3 = p1Tasks[2];
+  const task4 = p1Tasks[3];
+  const task5 = p1Tasks[4];
+  const task9 = p1Tasks[8];
+
+  if (!task1 || !task3 || !task4 || !task5 || !task9) {
     throw new Error(
       `コメント紐付けに必要なタスクが不足しています。期待: 10件以上、実際: ${p1Tasks.length}件`,
     );
@@ -436,56 +454,56 @@ async function seedComments(
     // タスク1（要件定義書）のコメント
     {
       content: '関係者ヒアリングが完了しました。ドキュメントに反映します。',
-      taskId: p1Tasks[0]!.id,
+      taskId: task1.id,
       userId: owner.id,
     },
     {
       content: 'レビューしました。LGTM です。マージ OK です。',
-      taskId: p1Tasks[0]!.id,
+      taskId: task1.id,
       userId: admin.id,
     },
     // タスク3（商品一覧）のコメント
     {
       content: 'フィルタのUI実装が完了しました。ページネーションを続けて実装します。',
-      taskId: p1Tasks[2]!.id,
+      taskId: task3.id,
       userId: member1.id,
     },
     {
       content: 'ページネーションはカーソルベースで実装しますか？オフセットベースでもよいですか？',
-      taskId: p1Tasks[2]!.id,
+      taskId: task3.id,
       userId: owner.id,
     },
     {
       content: '教材の方針に合わせてオフセットベースで進めてください。',
-      taskId: p1Tasks[2]!.id,
+      taskId: task3.id,
       userId: admin.id,
     },
     // タスク4（決済フロー）のコメント
     {
       content: 'Stripe の Webhook 設定が必要です。インフラチームに依頼しました。',
-      taskId: p1Tasks[3]!.id,
+      taskId: task4.id,
       userId: member2.id,
     },
     // タスク5（カート機能）のコメント
     {
       content: 'セッション切れ時の UX を改善しました。レビューをお願いします。',
-      taskId: p1Tasks[4]!.id,
+      taskId: task5.id,
       userId: member2.id,
     },
     {
       content: 'カート内容の永続化（ログイン後のマージ）も対応済みですか？',
-      taskId: p1Tasks[4]!.id,
+      taskId: task5.id,
       userId: owner.id,
     },
     {
       content: '対応済みです。テストコードも追加しました。',
-      taskId: p1Tasks[4]!.id,
+      taskId: task5.id,
       userId: member2.id,
     },
     // タスク9（アクセシビリティ）のコメント
     {
       content: 'デザインチームの確認待ちでブロックされています。',
-      taskId: p1Tasks[8]!.id,
+      taskId: task9.id,
       userId: member1.id,
     },
   ];
