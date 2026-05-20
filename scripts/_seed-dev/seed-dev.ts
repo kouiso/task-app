@@ -88,11 +88,17 @@ async function seedUsers() {
 // ─── プロジェクト ─────────────────────────────────────────────────────────────
 
 async function seedProjects(users: Record<string, { id: string }>) {
-  const admin = users['admin@example.com']!;
-  const owner = users['owner@example.com']!;
-  const member1 = users['member1@example.com']!;
-  const member2 = users['member2@example.com']!;
-  const viewer = users['viewer@example.com']!;
+  const admin = users['admin@example.com'];
+  const owner = users['owner@example.com'];
+  const member1 = users['member1@example.com'];
+  const member2 = users['member2@example.com'];
+  const viewer = users['viewer@example.com'];
+
+  if (!admin || !owner || !member1 || !member2 || !viewer) {
+    throw new Error(
+      '必要なユーザーが見つかりませんでした。USERS 定数と seedUsers 関数を確認してください。',
+    );
+  }
 
   // プロジェクト1: 全ロール網羅・進行中
   const p1 = await prisma.project.create({
@@ -419,6 +425,12 @@ async function seedComments(
     where: { projectId: projects.p1.id },
     orderBy: { position: 'asc' },
   });
+
+  if (p1Tasks.length < 10) {
+    throw new Error(
+      `コメント紐付けに必要なタスクが不足しています。期待: 10件以上、実際: ${p1Tasks.length}件`,
+    );
+  }
 
   const comments = [
     // タスク1（要件定義書）のコメント
