@@ -125,15 +125,7 @@ run_seed_dev() {
   print_step "デバッグ用フルデータを投入しています..."
   cd "$PROJECT_DIR"
 
-  local seed_src="${SCRIPT_DIR}/_seed-dev/seed-dev.ts"
-
-  if [ ! -f "$seed_src" ]; then
-    print_error "_seed-dev/seed-dev.ts が見つかりません。"
-    exit 1
-  fi
-
-  # tsx で直接実行（--tsconfig で教材用 exclude を無視）
-  npx tsx "$seed_src"
+  npm run db:seed:dev
   echo "  OK: seed-dev 完了"
 }
 
