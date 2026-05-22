@@ -4,7 +4,7 @@ const micromatch = require('micromatch');
 const filterFilesByPattern = (files, patterns) => micromatch(files, patterns);
 
 const excludeDistribution = (files) =>
-  files.filter((f) => !f.includes('/scripts/_') && !f.endsWith('package-lock.json'));
+  micromatch.not(files, ['**/scripts/_**', '**/package-lock.json']);
 const getTypeScriptFiles = (files) =>
   filterFilesByPattern(excludeDistribution(files), ['**/*.ts', '**/*.tsx']);
 const getBiomeFiles = (files) =>
