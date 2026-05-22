@@ -7,7 +7,7 @@ set -euo pipefail
 PROJECT_DIR="$(pwd)"
 
 RUNTIME_DEPS=(
-  next@15.5.15
+  next@15.5.18
   react@^18.3.1
   react-dom@^18.3.1
   @trpc/client@^11.8.0
@@ -135,7 +135,7 @@ ensure_empty_or_existing_next_app() {
   done
 
   # 教材との差分を減らすため、Next.js 15 系に固定する。
-  npx create-next-app@15.5.15 . \
+  npx create-next-app@15.5.18 . \
     --typescript \
     --tailwind \
     --app \
