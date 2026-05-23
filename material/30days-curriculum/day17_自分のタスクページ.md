@@ -1010,8 +1010,6 @@ PORT=3001 npm run dev
 #### ❌ Before（動くけど、プロは書かない）
 
 ```typescript
-// filepath: 説明用サンプル（実装しない・switch で if が並ぶ悪い例）
-// import と型定義
 import {
   TASK_STATUS,
   TASK_STATUS_LABELS,
@@ -1030,25 +1028,23 @@ type StatusTaskGroups = {
   inReview: MyTask[];
   done: MyTask[];
 };
-```
 
-```typescript
-// filepath: 説明用サンプル（続き）
-// groupTasksByStatus：初期値の準備
 function groupTasksByStatus(
   tasks: MyTask[],
 ): StatusTaskGroups {
   const groups: StatusTaskGroups = {
     todo: [],
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     inProgress: [],
     inReview: [],
     done: [],
   };
-```
 
-```typescript
-// filepath: 説明用サンプル（続き）
-// for + switch で各タスクを 4 グループに振り分け
   for (const task of tasks) {
     switch (task.status) {
       case TASK_STATUS.TODO:
@@ -1068,13 +1064,15 @@ function groupTasksByStatus(
     }
   }
 
-  return groups;
-}
 ```
 
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
 ```typescript
-// filepath: 説明用サンプル（続き）
-// buildStatusSections：表示用配列を別に組み立てる
+// filepath: 続き
+  return groups;
+}
+
 function buildStatusSections(tasks: MyTask[]) {
   const groups = groupTasksByStatus(tasks);
 
@@ -1096,6 +1094,12 @@ function buildStatusSections(tasks: MyTask[]) {
       tasks: groups.done,
     },
   ];
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
 }
 ```
 
@@ -1108,8 +1112,6 @@ function buildStatusSections(tasks: MyTask[]) {
 #### ✅ After（プロが書くコード）
 
 ```typescript
-// filepath: 説明用サンプル（Map と並び順配列で集約する良い例）
-// import と型定義
 import {
   TASK_STATUS,
   TASK_STATUS_LABELS,
@@ -1127,11 +1129,7 @@ type StatusSection = {
   title: string;
   tasks: MyTask[];
 };
-```
 
-```typescript
-// filepath: 説明用サンプル（続き）
-// 並び順を表す配列を 1 箇所に集約
 const MY_TASK_STATUS_ORDER: TaskStatus[] = [
   TASK_STATUS.TODO,
   TASK_STATUS.IN_PROGRESS,
@@ -1140,9 +1138,11 @@ const MY_TASK_STATUS_ORDER: TaskStatus[] = [
 ];
 ```
 
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
 ```typescript
-// filepath: 説明用サンプル（続き）
-// buildStatusSections：Map で初期化 → push → values で配列化
+// filepath: 続き
+
 function buildStatusSections(
   tasks: MyTask[],
 ): StatusSection[] {
