@@ -716,7 +716,6 @@ PORT=3001 npm run dev
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
-// 型定義パート（説明用サンプル・N+1 になる悪い例）
 import { prisma } from '@/lib/prisma';
 
 type WeeklyReportTask = {
@@ -729,11 +728,7 @@ type WeeklyReportTask = {
     name: string;
   } | null;
 };
-```
 
-```typescript
-// filepath: src/server/api/routers/report.ts（続き）
-// fetch関数：タスクを先に取得するパート
 export async function fetchWeeklyReportTasks(
   targetUserId: string,
   startDate: Date,
@@ -744,6 +739,12 @@ export async function fetchWeeklyReportTasks(
       assigneeId: targetUserId,
       completedAt: { gte: startDate, lte: endDate },
     },
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     select: {
       id: true,
       completedAt: true,
@@ -752,11 +753,7 @@ export async function fetchWeeklyReportTasks(
       projectId: true,
     },
   });
-```
 
-```typescript
-// filepath: src/server/api/routers/report.ts（続き）
-// 各タスクのプロジェクトを別クエリで取得 → N+1 になる
   return await Promise.all(
     tasks.map(async (task) => {
       const project = await prisma.project.findUnique({
@@ -772,6 +769,12 @@ export async function fetchWeeklyReportTasks(
         completedAt: task.completedAt,
         status: task.status,
         priority: task.priority,
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
         project,
       };
     }),
@@ -789,7 +792,6 @@ export async function fetchWeeklyReportTasks(
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
-// 型定義パート（説明用サンプル・include で N+1 を解消した良い例）
 import { prisma } from '@/lib/prisma';
 
 type WeeklyReportTask = {
@@ -802,10 +804,7 @@ type WeeklyReportTask = {
     name: string;
   } | null;
 };
-```
 
-```typescript
-// filepath: src/server/api/routers/report.ts（続き／1クエリで取得）
 export async function fetchWeeklyReportTasks(
   targetUserId: string,
   startDate: Date,
@@ -816,6 +815,12 @@ export async function fetchWeeklyReportTasks(
       assigneeId: targetUserId,
       completedAt: { gte: startDate, lte: endDate },
     },
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
     select: {
       id: true,
       completedAt: true,

@@ -551,164 +551,17 @@ npm run lint:fix
 
 ### 💡 Pro パターンで書こう — Error Boundary の表示分岐は early return で整理する
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+エラー画面は、再読み込み中・エラーなし・エラーありで表示が変わる。
+三項演算子を重ねるより、先に返すほうが読みやすい。
+最後の `return` に通常のエラー表示だけを残せる。
 
-#### ❌ Before（動くけど、プロは書かない）
+| 状態 | 表示 |
+|------|------|
+| 再読み込み中 | 再読み込み中です |
+| エラーなし | 再読み込みボタン |
+| エラーあり | メッセージと再試行ボタン |
 
-```typescript
-// filepath: src/app/error.tsx
-// import と型・関数シグネチャ（説明用サンプル・三項ネストの悪い例）
-'use client';
-
-import { useEffect } from 'react';
-import { Button } from '@/component/ui/button';
-
-type ErrorBoundaryViewProps = {
-  error: (Error & { digest?: string }) | null;
-  reset: () => void;
-  isRecovering: boolean;
-};
-
-export function ErrorBoundaryView({
-  error,
-  reset,
-  isRecovering,
-}: ErrorBoundaryViewProps) {
-  useEffect(() => {
-    if (error) {
-      console.error(error);
-    }
-  }, [error]);
-```
-
-```typescript
-// filepath: src/app/error.tsx（続き）
-// 1 つの return に三項演算子で前半（recovering / no error）を詰め込む
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="space-y-4 text-center">
-        {isRecovering ? (
-          <p className="text-muted-foreground">再読み込み中です...</p>
-        ) : !error ? (
-          <>
-            <h2 className="text-2xl font-bold">エラー情報がありません</h2>
-            <Button onClick={reset}>画面を再読み込みする</Button>
-          </>
-```
-
-```typescript
-// filepath: src/app/error.tsx（続き）
-// 三項演算子の後半（通常のエラー表示） + 閉じカッコ
-        ) : (
-          <>
-            <h2 className="text-2xl font-bold">エラーが発生しました</h2>
-            <p className="text-muted-foreground">
-              {error.digest
-                ? 'サーバー側でエラーが発生しました。'
-                : error.message
-                  ? error.message
-                  : '予期しないエラーが発生しました。'}
-            </p>
-            <Button onClick={reset}>もう一度試す</Button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-```
-
-**このコードの問題点**:
-
-- JSX の中に三項演算子が重なり、どの状態を表示しているのか追いにくい
-- エラー表示本体と例外的な表示が同じ return に混ざっている
-- 状態がもう1つ増えたとき、さらにネストが深くなりやすい
-
-#### ✅ After（プロが書くコード）
-
-```typescript
-// filepath: src/app/error.tsx
-// import と型・関数シグネチャ（説明用サンプル・early return の良い例）
-'use client';
-
-import { useEffect } from 'react';
-import { Button } from '@/component/ui/button';
-
-type ErrorBoundaryViewProps = {
-  error: (Error & { digest?: string }) | null;
-  reset: () => void;
-  isRecovering: boolean;
-};
-
-export function ErrorBoundaryView({
-  error,
-  reset,
-  isRecovering,
-}: ErrorBoundaryViewProps) {
-  useEffect(() => {
-    if (error) {
-      console.error(error);
-    }
-  }, [error]);
-```
-
-```typescript
-// filepath: src/app/error.tsx（続き）
-// 再読み込み中の早期 return
-  if (isRecovering) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">再読み込み中です...</p>
-      </div>
-    );
-  }
-```
-
-```typescript
-// filepath: src/app/error.tsx（続き）
-// error が null のときの早期 return
-  if (!error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="space-y-4 text-center">
-          <h2 className="text-2xl font-bold">エラー情報がありません</h2>
-          <Button onClick={reset}>画面を再読み込みする</Button>
-        </div>
-      </div>
-    );
-  }
-```
-
-```typescript
-// filepath: src/app/error.tsx（続き）
-// 通常のエラー表示パート（メッセージ整形と最後の return）
-  const message = error.digest
-    ? 'サーバー側でエラーが発生しました。'
-    : error.message || '予期しないエラーが発生しました。';
-
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="space-y-4 text-center">
-        <h2 className="text-2xl font-bold">エラーが発生しました</h2>
-        <p className="text-muted-foreground">{message}</p>
-        <Button onClick={reset}>もう一度試す</Button>
-      </div>
-    </div>
-  );
-}
-```
-
-**このコードの強み**:
-
-- 例外的な状態を先に返すので、最後の return が通常のエラー表示だけになる
-- JSX の中から分岐ロジックが減り、表示構造を読みやすい
-- 状態が増えても early return を1つ足す形で拡張できる
-
-#### 🎓 覚えておきたいエッセンス
-
-画面の状態分岐が増えたら、三項演算子を重ねる前に
-「先に返せる状態はないか」を考える。
+**覚えておきたいこと**: 状態が多い画面は early return。
 
 ## 📋 今日のまとめ
 
