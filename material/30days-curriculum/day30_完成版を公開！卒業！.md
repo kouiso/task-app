@@ -446,7 +446,7 @@ find src/app -name "page.tsx" | wc -l
 ```bash
 # filepath: ターミナル
 # 主要パッケージのバージョンを確認
-npm ls next react typescript prisma @prisma/client @trpc/server --depth=0
+npm ls next react typescript prisma
 ```
 
 ✅ **確認ポイント**:
@@ -469,7 +469,7 @@ npm ls next react typescript prisma @prisma/client @trpc/server --depth=0
 | 技術 | バージョン | 役割 |
 |------|----------|------|
 | tRPC | 11.8.0 | End-to-End 型安全 API |
-| Prisma | 6.16.2（Client）/ 6.19.3（CLI） | ORM（DB 操作） |
+| Prisma | 6.19.3 | ORM（DB 操作） |
 | PostgreSQL | 16 | データベース |
 | jose | — | JWT トークン生成・検証 |
 | bcryptjs | — | パスワードハッシュ化 |
@@ -557,7 +557,6 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ```typescript
 // filepath: src/app/graduation/page.tsx
-// 'use client' とデータ・state（説明用サンプル・全部 Client にする悪い例）
 'use client';
 
 import { useState } from 'react';
@@ -576,15 +575,17 @@ export default function GraduationPage() {
     await navigator.clipboard.writeText('Task-App 30日間カリキュラムを完走しました');
     setCopied(true);
   };
-```
 
-```typescript
-// filepath: src/app/graduation/page.tsx（続き）
-// JSX 本体（カリキュラム振り返りとコピー用ボタン）
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-8">
       <h1 className="text-3xl font-bold">Task-App 30日間ハンズオン修了</h1>
       <div className="grid gap-4 md:grid-cols-2">
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
         {CURRICULUM_SUMMARY.map((item) => (
           <section key={item.label} className="rounded-lg border p-4">
             <p className="text-sm text-muted-foreground">{item.label}</p>
@@ -610,7 +611,6 @@ export default function GraduationPage() {
 
 ```typescript
 // filepath: src/app/graduation/page.tsx
-// Server Component のままにする良い例：静的データと JSX のみ
 import { ShareGraduationButton } from './share-graduation-button';
 
 const CURRICULUM_SUMMARY = [
@@ -619,11 +619,7 @@ const CURRICULUM_SUMMARY = [
   { label: 'タスク', value: 'CRUD + 一括操作' },
   { label: '公開', value: 'Vercel デプロイ' },
 ];
-```
 
-```typescript
-// filepath: src/app/graduation/page.tsx（続き）
-// JSX 本体は server component のまま配信できる
 export default function GraduationPage() {
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-8">
@@ -638,13 +634,16 @@ export default function GraduationPage() {
       </div>
       <ShareGraduationButton text="Task-App 30日間カリキュラムを完走しました" />
     </main>
-  );
-}
 ```
 
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
 ```typescript
+// filepath: 続き
+  );
+}
+
 // filepath: src/app/graduation/share-graduation-button.tsx
-// ブラウザ状態を持つ部品だけを Client Component に切り出す
 'use client';
 
 import { useState } from 'react';
@@ -665,6 +664,12 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
     <button type="button" className="rounded-md border px-4 py-2" onClick={handleShare}>
       {copied ? 'コピー済み' : '卒業メッセージをコピー'}
     </button>
+```
+
+✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+
+```typescript
+// filepath: 続き
   );
 }
 ```

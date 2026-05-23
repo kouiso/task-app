@@ -78,7 +78,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
-| Step 1 | tRPC ルーターを読んで理解する | 5 分 | `task.ts`（読むだけ） | 3 つの bulk API が説明できる |
+| Step 1 | tRPC ルーターに一括操作 API を追加する | 5 分 | `task.ts` | 3 つの bulk API が説明できる |
 | Step 2 | 選択状態を管理する state を作る | 7 分 | `src/app/task/page.tsx` | state が正しく動作する |
 | Step 3 | チェックボックス付きタスクカードを作る | 8 分 | `src/app/task/page.tsx` | 各カードにチェックボックスが表示される |
 | Step 4 | まず「全選択 / 全解除」チェックボックスを作る | 4 分 | `src/app/task/page.tsx` | 全選択・全解除が切り替わる |
@@ -93,11 +93,12 @@ flowchart TD
 
 ---
 
-### Step 1: tRPC ルーターを読んで理解する（5 分）
+### Step 1: tRPC ルーターに一括操作 API を追加する（5 分）
 
-🎯 **ゴール**: サーバー側にどんな API が用意されているか把握し、なぜ `updateMany` と `completedAt` を使うのか理解する。
+🎯 **ゴール**: サーバー側に一括操作 API を追加し、なぜ `updateMany` と `completedAt` を使うのか理解する。
 
-まずサーバー側のコードを読みましょう。すでに実装済みの API が 3 つあります。
+まずサーバー側の `taskRouter` に、一括操作の API を追加する。
+この Step では `bulkComplete` から書き始める。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
@@ -862,152 +863,16 @@ npm run lint
 
 ### 💡 Pro パターンで書こう — 一括操作のハンドラは Map で選ぶ
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+一括操作は、完了・削除・ステータス変更のように種類が増えやすい。
+`switch` が長くなったら、操作名と処理を表に分けると読みやすい。
+ただし今日は、まず動く `switch` で流れを理解できれば十分です。
 
-#### ❌ Before（動くけど、プロは書かない）
+| 書き方 | 向いている場面 |
+|--------|----------------|
+| `switch` | 操作が少ない、学習初期 |
+| handler map | 操作が増えてきた実務コード |
 
-```typescript
-// filepath: src/app/task/page.tsx
-// 型定義パート（説明用サンプル・長い switch を使う悪い例）
-import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
-
-type BulkAction = 'complete' | 'delete' | TaskStatus;
-
-type BulkActionContext = {
-  selectedTasks: Set<string>;
-  bulkComplete: (ids: string[]) => void;
-  openDeleteDialog: () => void;
-  bulkUpdateStatus: (ids: string[], status: TaskStatus) => void;
-};
-```
-
-```typescript
-// filepath: src/app/task/page.tsx（続き）
-// 関数シグネチャと前処理パート
-export function handleBulkAction(
-  action: BulkAction,
-  context: BulkActionContext,
-) {
-  if (context.selectedTasks.size === 0) {
-    return;
-  }
-
-  const ids = Array.from(context.selectedTasks);
-```
-
-```typescript
-// filepath: src/app/task/page.tsx（続き）
-// switch 分岐 前半（complete / delete / TODO / IN_PROGRESS）
-  switch (action) {
-    case 'complete':
-      context.bulkComplete(ids);
-      return;
-    case 'delete':
-      context.openDeleteDialog();
-      return;
-    case TASK_STATUS.TODO:
-      context.bulkUpdateStatus(ids, TASK_STATUS.TODO);
-      return;
-    case TASK_STATUS.IN_PROGRESS:
-      context.bulkUpdateStatus(ids, TASK_STATUS.IN_PROGRESS);
-      return;
-```
-
-```typescript
-// filepath: src/app/task/page.tsx（続き）
-// switch 分岐 後半（IN_REVIEW / DONE / CANCELLED / BLOCKED）
-    case TASK_STATUS.IN_REVIEW:
-      context.bulkUpdateStatus(ids, TASK_STATUS.IN_REVIEW);
-      return;
-    case TASK_STATUS.DONE:
-      context.bulkUpdateStatus(ids, TASK_STATUS.DONE);
-      return;
-    case TASK_STATUS.CANCELLED:
-      context.bulkUpdateStatus(ids, TASK_STATUS.CANCELLED);
-      return;
-    case TASK_STATUS.BLOCKED:
-      context.bulkUpdateStatus(ids, TASK_STATUS.BLOCKED);
-      return;
-  }
-}
-```
-
-**このコードの問題点**:
-
-- ステータスが増えるたびに `case` が増え、ハンドラの見通しが悪くなる
-- 「操作名」と「実行する処理」の対応が switch の中に埋もれる
-- 削除だけダイアログを開く、完了だけ別 API などの違いが増えると分岐がさらに長くなる
-
-#### ✅ After（プロが書くコード）
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 型定義と helper（説明用サンプル・Map に処理を寄せる良い例）
-import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
-
-type BulkAction = 'complete' | 'delete' | TaskStatus;
-
-type BulkActionContext = {
-  selectedTasks: Set<string>;
-  bulkComplete: (ids: string[]) => void;
-  openDeleteDialog: () => void;
-  bulkUpdateStatus: (ids: string[], status: TaskStatus) => void;
-};
-
-type BulkActionHandler = (context: BulkActionContext) => void;
-
-const createStatusHandler =
-  (status: TaskStatus): BulkActionHandler =>
-  (context) => {
-    context.bulkUpdateStatus(Array.from(context.selectedTasks), status);
-  };
-```
-
-```typescript
-// filepath: src/app/task/page.tsx（続き）
-// 操作名と処理を 1 つの Map にまとめる
-const BULK_ACTION_HANDLERS: Record<BulkAction, BulkActionHandler> = {
-  complete: (context) => {
-    context.bulkComplete(Array.from(context.selectedTasks));
-  },
-  delete: (context) => {
-    context.openDeleteDialog();
-  },
-  [TASK_STATUS.TODO]: createStatusHandler(TASK_STATUS.TODO),
-  [TASK_STATUS.IN_PROGRESS]: createStatusHandler(TASK_STATUS.IN_PROGRESS),
-  [TASK_STATUS.IN_REVIEW]: createStatusHandler(TASK_STATUS.IN_REVIEW),
-  [TASK_STATUS.DONE]: createStatusHandler(TASK_STATUS.DONE),
-  [TASK_STATUS.CANCELLED]: createStatusHandler(TASK_STATUS.CANCELLED),
-  [TASK_STATUS.BLOCKED]: createStatusHandler(TASK_STATUS.BLOCKED),
-};
-```
-
-```typescript
-// filepath: src/app/task/page.tsx（続き）
-// Map から対応するハンドラを引いて呼び出すだけ
-export function handleBulkAction(
-  action: BulkAction,
-  context: BulkActionContext,
-) {
-  if (context.selectedTasks.size === 0) {
-    return;
-  }
-
-  BULK_ACTION_HANDLERS[action](context);
-}
-```
-
-**このコードの強み**:
-
-- 操作名と処理の対応が `BULK_ACTION_HANDLERS` にまとまり、全体像を追いやすい
-- ステータス変更は `createStatusHandler` に寄せられるので、重複が減る
-- 新しい一括操作を足すときは Map に1行追加する形になり、既存分岐を壊しにくい
-
-#### 🎓 覚えておきたいエッセンス
-
-`switch` が「値に応じて関数を選ぶだけ」になってきたら、
-`Record` や Map で処理表を作ると読みやすくなる。
+**覚えておきたいこと**: 分岐が増えたら処理表を検討する。
 
 ## ⚠️ つまずきポイント
 

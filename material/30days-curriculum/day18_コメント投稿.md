@@ -103,8 +103,10 @@ import { commentRouter } from './routers/comment';
 
 🎯 **ゴール**: コメントルーターの API を把握します。
 
-scaffold が配布した `src/server/api/routers/comment.ts` の中身を確認する。
-まずはコメント投稿のバリデーションスキーマを見てみよう。
+`src/server/api/routers/comment.ts` を作成し、
+まずはコメント投稿のバリデーションスキーマを書く。
+投稿 API の入口を先に固めると、画面側のフォームと
+サーバー側の受け取り条件をそろえやすい。
 
 💻 **実装**:
 
@@ -595,236 +597,18 @@ PORT=3001 npm run dev
 
 ### 💡 Pro パターンで書こう — 認証状態つきのコメント表示を読みやすくする
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+コメント表示では、読み込み中・未ログイン・空状態・通常表示が並ぶ。
+JSX の中に全部詰めると条件分岐が深くなる。
+先に例外状態を返すと、最後に通常表示だけを残せる。
 
-#### ❌ Before（動くけど、プロは書かない）
+| 状態 | 先に返す表示 |
+|------|--------------|
+| 読み込み中 | コメントを読み込んでいます |
+| 未ログイン | ログイン案内 |
+| 0件 | コメントはまだありません |
+| 通常 | コメント一覧 |
 
-```typescript
-// filepath: 説明用サンプル（実装しない・三項ネストで分岐を詰め込む悪い例）
-// import と型定義
-import { Button } from '@/component/ui/button';
-
-type CommentItem = {
-  id: string;
-  content: string;
-  userId: string;
-  user: {
-    name: string | null;
-    email: string;
-  };
-};
-
-type CommentListProps = {
-  comments: CommentItem[];
-  currentUserId: string | null;
-  isLoading: boolean;
-  onEdit: (commentId: string) => void;
-  onDelete: (commentId: string) => void;
-};
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 関数シグネチャと return 冒頭（isLoading 分岐）
-export function CommentList({
-  comments,
-  currentUserId,
-  isLoading,
-  onEdit,
-  onDelete,
-}: CommentListProps) {
-  return (
-    <div className="space-y-4">
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">
-          コメントを読み込んでいます...
-        </p>
-      ) : currentUserId ? (
-        comments.length > 0 ? (
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 三項ネスト中央：コメント本文（ユーザー名・コンテンツ）
-          comments.map((comment) => (
-            <div key={comment.id}
-              className="flex justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">
-                  {comment.user.name
-                    ?? comment.user.email}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {comment.content}
-                </p>
-              </div>
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 三項ネスト中央：自分のコメントなら編集/削除ボタンを出す
-              {comment.userId === currentUserId ? (
-                <div className="flex gap-2">
-                  <Button size="sm"
-                    onClick={() => onEdit(comment.id)}>
-                    編集
-                  </Button>
-                  <Button size="sm" variant="outline"
-                    onClick={() => onDelete(comment.id)}>
-                    削除
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          ))
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 残りの三項分岐：空リスト・未ログイン・閉じカッコ
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            コメントはまだありません。
-          </p>
-        )
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          コメントを見るにはログインしてください。
-        </p>
-      )}
-    </div>
-  );
-}
-```
-
-**このコードの問題点**:
-
-- JSX の中で `isLoading` / 認証 / 空配列 / 自分のコメント判定がネストしている
-- 正常系のコメント表示にたどり着くまで、条件分岐を何段も追う必要がある
-- ローディングや未ログインの表示を後から変更すると、親の JSX 全体を読み直すことになる
-
-#### ✅ After（プロが書くコード）
-
-```typescript
-// filepath: 説明用サンプル（early return でフラットにする良い例）
-// import と型定義
-import { Button } from '@/component/ui/button';
-
-type CommentItem = {
-  id: string;
-  content: string;
-  userId: string;
-  user: {
-    name: string | null;
-    email: string;
-  };
-};
-
-type CommentListProps = {
-  comments: CommentItem[];
-  currentUserId: string | null;
-  isLoading: boolean;
-  onEdit: (commentId: string) => void;
-  onDelete: (commentId: string) => void;
-};
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 例外的な表示を early return で先に返す
-export function CommentList({
-  comments,
-  currentUserId,
-  isLoading,
-  onEdit,
-  onDelete,
-}: CommentListProps) {
-  if (isLoading) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        コメントを読み込んでいます...
-      </p>
-    );
-  }
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 未ログイン・空状態の early return
-  if (!currentUserId) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        コメントを見るにはログインしてください。
-      </p>
-    );
-  }
-
-  if (comments.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        コメントはまだありません。
-      </p>
-    );
-  }
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 正常系：map 内で isOwner を計算して 1 件分の枠を作る
-  return (
-    <div className="space-y-4">
-      {comments.map((comment) => {
-        const isOwner =
-          comment.userId === currentUserId;
-
-        return (
-          <div key={comment.id}
-            className="flex justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium">
-                {comment.user.name
-                  ?? comment.user.email}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {comment.content}
-              </p>
-            </div>
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// isOwner のときだけ編集/削除ボタンを表示し、map と return を閉じる
-            {isOwner && (
-              <div className="flex gap-2">
-                <Button size="sm"
-                  onClick={() => onEdit(comment.id)}>
-                  編集
-                </Button>
-                <Button size="sm" variant="outline"
-                  onClick={() => onDelete(comment.id)}>
-                  削除
-                </Button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-```
-
-**このコードの強み**:
-
-- 例外的な表示を early return で先に返し、最後の `return` を正常系だけにできる
-- 認証チェックと空状態の処理が独立しているので、変更箇所を探しやすい
-- `isOwner` を名前付き変数にすることで、自分のコメントだけ操作できる意図が伝わりやすい
-
-#### 🎓 覚えておきたいエッセンス
-
-JSX の三項演算子が深くなったら、先に返せる状態を early return に逃がす。
-親コンポーネントは「正常に表示するもの」だけを残すと読みやすくなる。
+**覚えておきたいこと**: 例外状態は early return で先に返す。
 
 ## 📋 今日のまとめ
 

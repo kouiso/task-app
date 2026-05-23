@@ -84,9 +84,10 @@ flowchart TD
 🎯 **ゴール**: comment ルーターの
 update / delete メソッドを把握します。
 
-scaffold が配布した
+Day 18 で作った
 `src/server/api/routers/comment.ts` に
-`update` と `delete` メソッドがあることを確認する。
+`update` と `delete` メソッドを追加する。
+投稿できるようになったコメントに、編集と削除の入口を足す。
 
 💻 **実装**:
 
@@ -498,170 +499,16 @@ PORT=3001 npm run dev
 
 ### 💡 Pro パターンで書こう — コメント著者チェックを Optional chaining で書く
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+本人のコメントか確認するときは、
+`session`、`user`、`id` が未取得の可能性を考える。
+`session?.user?.id` と書くと、未ログイン時も安全に比較できる。
 
-#### ❌ Before（動くけど、プロは書かない）
+| 書き方 | 意味 |
+|--------|------|
+| `session.user.id` | session が必ずある前提 |
+| `session?.user?.id` | 途中がなければ `undefined` |
 
-```typescript
-// filepath: 説明用サンプル（実装しない・null チェックを縦に並べる悪い例）
-// import と型定義
-import { Pencil, Trash2 } from 'lucide-react';
-import { Button } from '@/component/ui/button';
-
-type Session = {
-  user?: {
-    id?: string | null;
-  } | null;
-} | null;
-
-type CommentItem = {
-  id: string;
-  userId: string;
-  content: string;
-};
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// canEditComment：null/undefined を毎回手で潰す helper
-function canEditComment(
-  comment: CommentItem,
-  session: Session,
-): boolean {
-  if (session === null) {
-    return false;
-  }
-  if (session.user === null
-    || session.user === undefined) {
-    return false;
-  }
-  if (session.user.id === null
-    || session.user.id === undefined) {
-    return false;
-  }
-  return comment.userId === session.user.id;
-}
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// CommentActions：編集できないときは早期 return
-export function CommentActions({
-  comment,
-  session,
-  onEdit,
-  onDelete,
-}: {
-  comment: CommentItem;
-  session: Session;
-  onEdit: (comment: CommentItem) => void;
-  onDelete: (commentId: string) => void;
-}) {
-  if (!canEditComment(comment, session)) {
-    return null;
-  }
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 編集/削除ボタンの JSX
-  return (
-    <div className="flex gap-1">
-      <Button variant="ghost" size="icon"
-        onClick={() => onEdit(comment)}>
-        <Pencil className="h-3 w-3" />
-      </Button>
-      <Button variant="ghost" size="icon"
-        onClick={() => onDelete(comment.id)}>
-        <Trash2 className="h-3 w-3" />
-      </Button>
-    </div>
-  );
-}
-```
-
-**このコードの問題点**:
-
-- `session` → `user` → `id` の null チェックが縦に長く、本人チェックの本質が埋もれる
-- `null` と `undefined` を毎回手で分けており、同じ形のコードが増えやすい
-- 実際に知りたいことは「コメントの `userId` とログインユーザー ID が同じか」だけなのに遠回りしている
-
-#### ✅ After（プロが書くコード）
-
-```typescript
-// filepath: 説明用サンプル（optional chaining で 1 行にする良い例）
-// import と型定義
-import { Pencil, Trash2 } from 'lucide-react';
-import { Button } from '@/component/ui/button';
-
-type Session = {
-  user?: {
-    id?: string | null;
-  } | null;
-} | null;
-
-type CommentItem = {
-  id: string;
-  userId: string;
-  content: string;
-};
-
-function canEditComment(
-  comment: CommentItem,
-  session: Session,
-): boolean {
-  return comment.userId === session?.user?.id;
-}
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// CommentActions：早期 return まで
-export function CommentActions({
-  comment,
-  session,
-  onEdit,
-  onDelete,
-}: {
-  comment: CommentItem;
-  session: Session;
-  onEdit: (comment: CommentItem) => void;
-  onDelete: (commentId: string) => void;
-}) {
-  if (!canEditComment(comment, session)) {
-    return null;
-  }
-```
-
-```typescript
-// filepath: 説明用サンプル（続き）
-// 編集/削除ボタンを並べる JSX
-  return (
-    <div className="flex gap-1">
-      <Button variant="ghost" size="icon"
-        onClick={() => onEdit(comment)}>
-        <Pencil className="h-3 w-3" />
-      </Button>
-      <Button variant="ghost" size="icon"
-        onClick={() => onDelete(comment.id)}>
-        <Trash2 className="h-3 w-3" />
-      </Button>
-    </div>
-  );
-}
-```
-
-**このコードの強み**:
-
-- `session?.user?.id` で未ログインや未取得の状態をまとめて安全に扱える
-- 本人チェックの条件が1行になり、レビュー時に意図を確認しやすい
-- `CommentActions` 側は「編集できなければ何も出さない」という表示ルールだけに集中できる
-
-#### 🎓 覚えておきたいエッセンス
-
-多段の null チェックは Optional chaining で短くできる。
-「途中がなければ false でよい」本人確認には、`session?.user?.id` の形がよく合う。
+**覚えておきたいこと**: 途中がないかもしれない値には `?.` を使う。
 
 ## 📋 今日のまとめ
 
