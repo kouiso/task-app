@@ -11,7 +11,7 @@ on:
 jobs:
   license-check:
     name: License Check
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.RUNNER_LINUX }}
     steps:
       - uses: actions/checkout@v6
         with:
