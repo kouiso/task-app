@@ -5,7 +5,7 @@
 
 まだ機能は少ない。
 でも、空のディレクトリから自分の手で土台を立ち上げて、
-ブラウザに「もうこれはプロダクトのようだ」と思える最初の画面を出せたら、
+ブラウザに「もうこれプロダクトやん」と思える最初の画面を出せたら、
 この30日が一気に現実味を帯びる。
 
 今日触るのは、ただの Hello World ではない。
@@ -17,7 +17,7 @@ Linear っぽい空気感をまとった、
 空のディレクトリから `task-app` の土台を起動して、
 `http://localhost:3000` に最初の画面を出せるようになる。
 
-しかも最後は、真っ白な初期画面のまま終わらせません。
+しかも最後は、真っ白な初期画面のまま終わらせへん。
 Linear 風の design token を使って、
 SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 
@@ -25,8 +25,8 @@ SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 【スクリーンショット】Day 01 完成時の最小ページ
 ![Day 01 完成時の最小ページ](./screenshots/day01/first-render.png)
 を眺めてもらうと掴みやすい。
-完全一致でなくても大丈夫です。
-「自分のアプリが始まった」と思える見た目を今日つくるのが狙いです。
+完全一致でなくてええ。
+「自分のアプリが始まった」と思える見た目を今日つくるのが狙いや。
 
 ## 📍 今日のゴール（G0 Foundation の1日目）
 
@@ -50,7 +50,7 @@ SNS に貼っても「教材の練習感」が薄い一枚目に変える。
 
 ## 🧰 前提（これが揃ってたら進める）
 
-今日は「アプリの中身をいじる前に、まず動かす」がテーマですが、
+今日は「アプリの中身をいじる前に、まず動かす」がテーマやけど、
 何もない状態から進める都合上、
 いくつか前提は必要になる。
 
@@ -125,7 +125,7 @@ pg_isready --version
 ここでは例として、
 ホームディレクトリの中の `workspace` に配布 ZIP を展開する。
 
-**~/workspace**
+**ターミナル（`~/workspace`）**
 ```bash
 mkdir -p ~/workspace
 cd ~/workspace
@@ -158,7 +158,7 @@ pwd
 
 今いる場所が配布物ルートになっているか確認しておこう。
 
-**~/workspace/task-app**
+**ターミナル（`~/workspace/task-app`）**
 ```bash
 ls
 ```
@@ -170,7 +170,7 @@ ls
 
 ## Step 2: scaffold-from-scratch.sh を走らせる
 
-ここが Day 01 の中心です。
+ここが Day 01 の心臓や。
 
 手で `npx create-next-app` を打ち始めるんじゃなくて、
 教材用に整理された `scripts/scaffold-from-scratch.sh` を実行する。
@@ -193,10 +193,10 @@ ls
 ### 実行コマンド
 
 まずは権限を付けてから実行する。
-`bash` で直接実行しても大丈夫ですが、
+`bash` で直接叩いてもええけど、
 最初に実行権限を付けておくと扱いやすい。
 
-**~/workspace/task-app**
+**ターミナル（`~/workspace/task-app`）**
 ```bash
 chmod +x scripts/scaffold-from-scratch.sh
 bash scripts/scaffold-from-scratch.sh
@@ -207,10 +207,10 @@ bash scripts/scaffold-from-scratch.sh
 実行環境で多少前後はあるけど、
 だいたいこんな流れになる。
 
-下のログは流れが分かるように短くした例です。
+下のログは流れが分かるように短くした例や。
 `added ... packages` の数字や秒数は環境によって変わる。
 
-**ターミナル出力（~/workspace/task-app）**
+**ターミナル出力（`~/workspace/task-app`）**
 ```text
 教材用の初期土台を /Users/you/workspace/task-app に作成します。
 
@@ -245,13 +245,13 @@ Prisma スキーマをDBに反映しています...
 シードデータを投入しています...
 DB セットアップが完了しました。
 
-初期セットアップは完了しました。
+初期セットアップは完了やで。
 カリキュラムの Day 01 の続きを進めてください。
 ```
 
 ### 成功判定
 
-次のファイルが見えていれば、かなり順調です。
+次のファイルが見えていれば、かなり順調や。
 
 - `package.json`
 - `tsconfig.json`
@@ -270,8 +270,8 @@ DB セットアップが完了しました。
 このスクリプトは `.env.example` も置いてくれる。
 中身はこんな感じや。
 
-**.env.example**
 ```env
+# filepath: .env.example
 _DOCKER_COMPOSE_HOST_PORT_DB=25532
 _DOCKER_COMPOSE_HOST_PORT_TEST_DB=25533
 
@@ -303,14 +303,14 @@ NODE_ENV="development"
 
 ### 開発サーバーを起動する
 
-**~/workspace/task-app**
+**ターミナル（`~/workspace/task-app`）**
 ```bash
 npm run dev
 ```
 
 ### 期待される出力
 
-**ターミナル出力（~/workspace/task-app）**
+**ターミナル出力（`~/workspace/task-app`）**
 ```text
 > taskappday01-demo@0.1.0 dev
 > next dev
@@ -388,8 +388,8 @@ Node.js と npm と Next.js と Tailwind の土台はちゃんと動いてる。
 今のファイルを部分修正するより、
 Day 01 は丸ごと入れ替えたほうが理解しやすい。
 
-**src/app/globals.css**
 ```css
+/* filepath: src/app/globals.css */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -646,7 +646,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
 
 **自分専用のタスク管理アプリの最初の画面を立ち上げて、SNSに見せたくなる見た目で「Hello」する**
 
-派手すぎなくても大丈夫です。
+派手すぎなくてええ。
 でも「初期画面のまま」からは卒業したい。
 
 ### 編集アンカー
@@ -657,7 +657,6 @@ Day 01 は丸ごと入れ替えたほうが理解しやすい。
 `Home` という初期コンポーネントを残すより、
 このDayでは丸ごと差し替えた方がスッキリ理解できる。
 
-**src/app/page.tsx**
 ```tsx
 // filepath: src/app/page.tsx
 import Link from 'next/link';
@@ -689,7 +688,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（続き）
+// filepath: 続き
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -719,7 +718,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（続き）
+// filepath: 続き
                 >
                   ダッシュボードへ入る
                 </Link>
@@ -749,7 +748,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（続き）
+// filepath: 続き
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -779,7 +778,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（続き）
+// filepath: 続き
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
@@ -809,7 +808,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（続き）
+// filepath: 続き
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればええわけやない。
@@ -839,7 +838,7 @@ export default function HomePage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（続き）
+// filepath: 続き
                 Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
                 今日のページは入口として、ダッシュボードは明日の土台として整えておく。
               </p>
@@ -864,7 +863,6 @@ Day 02 は
 その中に `page.tsx` を新しく作って、
 次の内容をそのまま入れよう。
 
-**src/app/dashboard/page.tsx**
 ```tsx
 // filepath: src/app/dashboard/page.tsx
 export default function DashboardPage() {
@@ -927,7 +925,6 @@ export default function DashboardPage() {
 
 ### ❌ Before（動くけど、プロは書かない）
 
-**src/app/page.tsx（比較用の一部）**
 ```tsx
 // filepath: src/app/page.tsx（比較用の一部）
 function WelcomeHero() {
@@ -959,7 +956,7 @@ function WelcomeHero() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（比較用の一部・続き）
+// filepath: src/app/page.tsx（続き）
           明日の予告を見る
         </a>
       </div>
@@ -980,7 +977,6 @@ export default function HomePage() {
 
 ### ✅ After（プロが書くコード）
 
-**src/app/page.tsx（比較用の一部）**
 ```tsx
 // filepath: src/app/page.tsx（比較用の一部）
 function WelcomeHero() {
@@ -1012,7 +1008,7 @@ function WelcomeHero() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
-// filepath: src/app/page.tsx（比較用の一部・続き）
+// filepath: 続き
           明日の予告を見る
         </a>
       </div>
@@ -1050,7 +1046,7 @@ export default function HomePage() {
 
 止めていたら、もう一回起動しよう。
 
-**~/workspace/task-app**
+**ターミナル（`~/workspace/task-app`）**
 ```bash
 npm run dev
 ```
