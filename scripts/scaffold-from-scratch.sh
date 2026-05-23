@@ -543,6 +543,41 @@ copy_prisma_files() {
   fi
 }
 
+compose() {
+  if docker compose "$@"; then
+    return 0
+  fi
+
+  if command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
+    return $?
+  fi
+
+  return 1
+}
+
+env_value() {
+  local key="$1"
+  local default_value="$2"
+
+  if [ -f ".env" ]; then
+    local value
+    value="$(grep -E "^${key}=" .env | tail -n 1 | cut -d= -f2- | tr -d '"' || true)"
+    if [ -n "$value" ]; then
+      echo "$value"
+      return 0
+    fi
+  fi
+
+  echo "$default_value"
+}
+
+postgres_ready_on_port() {
+  local port="$1"
+  local database="$2"
+  pg_isready -h localhost -p "$port" -U user -d "$database" >/dev/null 2>&1
+}
+
 setup_database() {
   # Docker が使える場合のみ DB を自動セットアップ
   if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
@@ -566,12 +601,33 @@ setup_database() {
   fi
 
   echo "Docker で PostgreSQL を起動しています..."
-  docker compose up -d db test-db || docker-compose up -d db test-db
+  local app_db_port
+  app_db_port="$(env_value "_DOCKER_COMPOSE_HOST_PORT_DB" "25532")"
+  if postgres_ready_on_port "$app_db_port" "taskapp"; then
+    echo "localhost:${app_db_port} の PostgreSQL が既に応答しているため、アプリ用 DB 起動はスキップします。"
+  elif ! compose up -d db; then
+    print_error "アプリ用 DB の起動に失敗しました。Docker の状態と 25532 番ポートの競合を確認してください。"
+    exit 1
+  fi
+
+  local test_db_log
+  test_db_log="$(mktemp)"
+  local test_db_port
+  test_db_port="$(env_value "_DOCKER_COMPOSE_HOST_PORT_TEST_DB" "25533")"
+  if postgres_ready_on_port "$test_db_port" "taskapp_test"; then
+    echo "localhost:${test_db_port} の PostgreSQL が既に応答しているため、テスト用 DB 起動はスキップします。"
+  elif ! compose up -d test-db >"$test_db_log" 2>&1; then
+    print_error "テスト用 DB の起動に失敗しました。${test_db_port} 番ポートが使用中の可能性があります。"
+    echo "Day 01 のアプリ起動は続行できますが、後でテストを実行する前に .env の _DOCKER_COMPOSE_HOST_PORT_TEST_DB を空いているポートへ変更してください。" >&2
+    echo "Docker の詳細:" >&2
+    cat "$test_db_log" >&2
+  fi
+  rm -f "$test_db_log"
 
   # DB の準備ができるまで少し待つ
   echo "DB の起動を待っています..."
   for _ in {1..30}; do
-    if docker compose exec -T db pg_isready -U user -d taskapp >/dev/null 2>&1; then
+    if postgres_ready_on_port "$app_db_port" "taskapp"; then
       break
     fi
     sleep 1
