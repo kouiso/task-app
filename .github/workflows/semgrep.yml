@@ -10,7 +10,7 @@ permissions:
 jobs:
   semgrep:
     name: Semgrep コード品質スキャン
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-24.04' }}
+    runs-on: ${{ vars.RUNNER_LINUX }}
     container:
       image: semgrep/semgrep
     if: (github.actor != 'dependabot[bot]')
