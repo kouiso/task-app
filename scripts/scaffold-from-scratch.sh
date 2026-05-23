@@ -134,8 +134,15 @@ ensure_empty_or_existing_next_app() {
     fi
   done
 
+  # create-next-app はカレントディレクトリ名を npm package name として検証する。
+  # 配布 ZIP を置いた親フォルダに大文字が含まれても詰まらないよう、
+  # 常に安全な小文字名の一時ディレクトリで生成してから中身を戻す。
+  local create_dir
+  create_dir="/tmp/task-app-scaffold-$$-$(date +%s)"
+  mkdir -p "$create_dir"
+
   # 教材との差分を減らすため、Next.js 15 系に固定する。
-  npx create-next-app@15.5.18 . \
+  npx create-next-app@15.5.18 "$create_dir" \
     --typescript \
     --tailwind \
     --app \
@@ -144,6 +151,13 @@ ensure_empty_or_existing_next_app() {
     --no-eslint \
     --use-npm \
     --yes
+
+  shopt -s dotglob nullglob
+  for item in "$create_dir"/*; do
+    [ -e "$item" ] && mv "$item" .
+  done
+  shopt -u dotglob nullglob
+  rm -rf "$create_dir"
 
   # 退避した配布物を元の位置に戻す
   shopt -s dotglob nullglob
@@ -276,6 +290,7 @@ EOF
 
 configure_package_json() {
   npm pkg set \
+    name="task-app" \
     scripts.dev="next dev" \
     scripts.build="prisma generate && next build" \
     scripts.start="next start" \
