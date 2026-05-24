@@ -2,13 +2,20 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
+import {
+  getRequestIdFromHeaders,
+  setSentryRequestContext,
+  writeStructuredLog,
+} from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await getSession();
+  const requestId = getRequestIdFromHeaders(opts.headers);
 
   return {
+    requestId,
     session,
     ...opts,
   };
@@ -70,6 +77,24 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
   });
 });
 
+const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
+  const startedAt = Date.now();
+  await setSentryRequestContext(ctx.requestId, `/api/trpc/${path}`);
+
+  const result = await next();
+  writeStructuredLog({
+    event: 'trpc.procedure',
+    requestId: ctx.requestId,
+    path,
+    method: type,
+    status: result.ok ? 200 : 500,
+    durationMs: Date.now() - startedAt,
+    ...(ctx.session?.userId ? { userId: ctx.session.userId } : {}),
+  });
+
+  return result;
+});
+
 // 単独使用するとctx.sessionがnullのまま通過してしまうため、isAuthenticated経由で使用する
 const isAdmin = t.middleware(async ({ ctx, next }) => {
   if (ctx.session?.role !== USER_ROLE.ADMIN) {
@@ -83,7 +108,7 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
 });
 
 export const createTRPCRouter = t.router;
-export const publicProcedure = t.procedure;
-export const protectedProcedure = t.procedure.use(isAuthenticated);
-export const adminProcedure = t.procedure.use(isAuthenticated).use(isAdmin);
+export const publicProcedure = t.procedure.use(withObservability);
+export const protectedProcedure = t.procedure.use(withObservability).use(isAuthenticated);
+export const adminProcedure = t.procedure.use(withObservability).use(isAuthenticated).use(isAdmin);
 export const createCallerFactory = t.createCallerFactory;
