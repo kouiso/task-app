@@ -3,11 +3,11 @@ import bcrypt from 'bcryptjs';
 
 const SEED_PROJECTS = {
   websiteRenewal: {
-    id: 'seed-project-website-renewal',
+    id: 'clseedwebsiterenewal0000000',
     name: 'Webサイトリニューアル',
   },
   mobileApp: {
-    id: 'seed-project-mobile-app',
+    id: 'clseedmobileapp000000000000',
     name: 'モバイルアプリ開発',
   },
 } as const;

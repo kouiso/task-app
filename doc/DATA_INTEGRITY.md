@@ -14,10 +14,10 @@ The seed command uses stable user emails and `user.upsert` for seeded users:
 
 Project, task, member, and comment seed records are reset before each seed run by deleting deterministic seed-only project IDs:
 
-- `seed-project-website-renewal`
-- `seed-project-mobile-app`
+- `clseedwebsiterenewal0000000`
+- `clseedmobileapp000000000000`
 
-Deleting those projects cascades to seeded tasks, project members, and task comments before the seed recreates them. Human-readable project names such as `Webサイトリニューアル` are never used as deletion keys because real users may create projects with the same names.
+Deleting those projects cascades to seeded tasks, project members, and task comments before the seed recreates them. These IDs are deterministic seed markers and also pass the app's CUID validation. Human-readable project names such as `Webサイトリニューアル` are never used as deletion keys because real users may create projects with the same names.
 
 The seed recreates the visible demo project names after cleanup:
 
