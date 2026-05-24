@@ -919,6 +919,7 @@ export default function DashboardPage() {
 ### ✅ After（プロが書くコード）
 
 ```tsx
+// filepath: src/app/dashboard/page.tsx
 type DashboardOwner = {
   name: string;
   role: string;
@@ -948,6 +949,7 @@ function getGreetingByHour(hour: number): string {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: 続き
     return 'おはよう';
   }
 
@@ -977,6 +979,7 @@ export default function DashboardPage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: 続き
     },
     {
       label: 'Today',
@@ -1006,6 +1009,7 @@ export default function DashboardPage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: 続き
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
@@ -1035,6 +1039,7 @@ export default function DashboardPage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: 続き
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -1064,6 +1069,7 @@ export default function DashboardPage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: 続き
             </div>
           </article>
 
@@ -1093,6 +1099,7 @@ export default function DashboardPage() {
 ✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
 
 ```tsx
+// filepath: 続き
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
                 次につながる視点
