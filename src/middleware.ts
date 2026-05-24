@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 const COOKIE_NAME = 'session';
 
-const PUBLIC_PATHS = ['/login', '/register'];
+const PUBLIC_PATHS = ['/login', '/register', '/lp'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
