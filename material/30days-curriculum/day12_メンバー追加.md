@@ -805,6 +805,122 @@ PORT=3001 npm run dev
 
 **覚えておきたいこと**: 元の型の一部を使うなら `Pick`。
 
+## 🧪 機械適用用の完了コード
+
+通常の学習では、ここまでの Step を順番に写経すれば十分です。
+このブロックは `apply_day.py` が Day 12 の完了状態を
+機械的に検証できるようにするための完成コードです。
+
+```typescript
+// filepath: src/lib/constant/roles.ts
+export const USER_ROLE = {
+  USER: 'USER',
+  ADMIN: 'ADMIN',
+} as const;
+
+export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  USER: 'ユーザー',
+  ADMIN: '管理者',
+};
+
+export function isUserRole(value: unknown): value is UserRole {
+  return typeof value === 'string' && value in USER_ROLE;
+}
+```
+
+```typescript
+// filepath: 続き
+
+export const PROJECT_MEMBER_ROLE = {
+  OWNER: 'OWNER',
+  ADMIN: 'ADMIN',
+  MEMBER: 'MEMBER',
+  VIEWER: 'VIEWER',
+} as const;
+
+export type ProjectMemberRole = (typeof PROJECT_MEMBER_ROLE)[keyof typeof PROJECT_MEMBER_ROLE];
+
+export const PROJECT_MEMBER_ROLE_LABELS: Record<ProjectMemberRole, string> = {
+  OWNER: 'オーナー',
+  ADMIN: '管理者',
+  MEMBER: 'メンバー',
+  VIEWER: '閲覧者',
+};
+```
+
+```typescript
+// filepath: 続き
+
+export const PROJECT_MEMBER_ROLE_PERMISSIONS: Record<
+  ProjectMemberRole,
+  {
+    canEdit: boolean;
+    canDelete: boolean;
+    canManageMembers: boolean;
+    canArchive: boolean;
+    canView: boolean;
+  }
+> = {
+  OWNER: {
+    canEdit: true,
+    canDelete: true,
+    canManageMembers: true,
+    canArchive: true,
+    canView: true,
+  },
+```
+
+```typescript
+// filepath: 続き
+  ADMIN: {
+    canEdit: true,
+    canDelete: true,
+    canManageMembers: true,
+    canArchive: false,
+    canView: true,
+  },
+  MEMBER: {
+    canEdit: true,
+    canDelete: false,
+    canManageMembers: false,
+    canArchive: false,
+    canView: true,
+  },
+  VIEWER: {
+    canEdit: false,
+    canDelete: false,
+```
+
+```typescript
+// filepath: 続き
+    canManageMembers: false,
+    canArchive: false,
+    canView: true,
+  },
+};
+
+export function isProjectMemberRole(value: unknown): value is ProjectMemberRole {
+  return typeof value === 'string' && value in PROJECT_MEMBER_ROLE;
+}
+
+export type PermissionKey = keyof (typeof PROJECT_MEMBER_ROLE_PERMISSIONS)[ProjectMemberRole];
+```
+
+```typescript
+// filepath: 続き
+
+export function hasPermission(role: ProjectMemberRole, permission: PermissionKey): boolean {
+  return PROJECT_MEMBER_ROLE_PERMISSIONS[role][permission];
+}
+```
+
+✅ **確認ポイント**:
+- `apply_day.py` 実行時に `roles.ts` が書き込まれる
+- Day 12 で使うロール定義と型ガードが完成している
+- `hasPermission` でサーバー側の権限判定にも使える
+
 ## 📋 今日のまとめ
 
 - [ ] `ProjectDetailView` コンポーネントでメンバー一覧を表示できた
