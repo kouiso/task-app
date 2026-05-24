@@ -27,8 +27,9 @@ def is_safe_rel_path(rel_path: str) -> bool:
     )
 
 
-def apply_safe_shell_ops(body: str, target_dir: Path) -> list[str]:
+def apply_safe_shell_ops(body: str, target_dir: Path) -> tuple[list[str], list[str]]:
     written: list[str] = []
+    skipped: list[str] = []
     for raw_line in body.split("\n"):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -37,21 +38,33 @@ def apply_safe_shell_ops(body: str, target_dir: Path) -> list[str]:
         try:
             parts = shlex.split(line)
         except ValueError:
+            if line.startswith("mv "):
+                skipped.append(f"skipped unparsable shell move: {line}")
             continue
 
-        if len(parts) == 3 and parts[0] == "mv":
-            src, dest = parts[1], parts[2]
-            if not is_safe_rel_path(src) or not is_safe_rel_path(dest):
-                continue
+        if parts[0] != "mv":
+            continue
 
-            src_path = target_dir / src
-            dest_path = target_dir / dest
-            if src_path.exists():
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                src_path.rename(dest_path)
-                written.append(f"MOVE   {src} -> {dest}")
+        if len(parts) != 3:
+            skipped.append(f"skipped unsupported shell move: {line}")
+            continue
 
-    return written
+        src, dest = parts[1], parts[2]
+        if not is_safe_rel_path(src) or not is_safe_rel_path(dest):
+            skipped.append(f"skipped unsafe shell move: {src} -> {dest}")
+            continue
+
+        src_path = target_dir / src
+        dest_path = target_dir / dest
+        if not src_path.exists():
+            skipped.append(f"skipped missing shell move source: {src}")
+            continue
+
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        src_path.rename(dest_path)
+        written.append(f"MOVE   {src} -> {dest}")
+
+    return written, skipped
 
 
 def has_continuation_header(body: str) -> bool:
@@ -67,6 +80,16 @@ def has_continuation_header(body: str) -> bool:
     return rel_path_raw == "続き" or bool(CONTINUE_PATTERN.match(rel_path_raw))
 
 
+def has_next_continuation(code_blocks: list[tuple[str, str]], index: int) -> bool:
+    for next_index in range(index + 1, len(code_blocks)):
+        next_lang, next_body = code_blocks[next_index]
+        next_lang = (next_lang or "").lower().strip()
+        if next_lang in SKIP_LANGS and next_lang not in WRITE_LANGS:
+            continue
+        return has_continuation_header(next_body)
+    return False
+
+
 def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
     content = md_path.read_text(encoding="utf-8")
     code_blocks = re.findall(r"```(\w+)?\n(.*?)```", content, re.DOTALL)
@@ -78,9 +101,12 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
     for index, (lang, body) in enumerate(code_blocks):
         lang = (lang or "").lower().strip()
         if lang in {"bash", "shell", "sh", "zsh"}:
-            shell_written = apply_safe_shell_ops(body, target_dir)
+            shell_written, shell_skipped = apply_safe_shell_ops(body, target_dir)
             if shell_written:
                 written.extend(shell_written)
+                append_target_path = None
+            if shell_skipped:
+                skipped_gui.extend(shell_skipped)
                 append_target_path = None
             continue
 
@@ -142,7 +168,7 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
         # 2行目が // 追記 なら追記モード（明示的マーカー）
         explicit_append = len(lines) > 1 and lines[1].strip() == "// 追記"
         append_mode = force_append or explicit_append
-        has_next_continuation = index + 1 < len(code_blocks) and has_continuation_header(code_blocks[index + 1][1])
+        next_continues_current_file = has_next_continuation(code_blocks, index)
 
         # filepath: 行と 追記 行を除いたコード本体
         start = 2 if explicit_append else 1
@@ -154,7 +180,7 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
         # 判定: filepath の次の行 (lines[start]) が // で始まり、かつ日本語を含む場合は
         # 「〜に追加」「〜の前に追加」等の挿入位置指示コメントと判断してスキップする。
         # append_mode（続き / 追記）は複数ブロックで1ファイルを組み立てるため対象外。
-        if not append_mode and not has_next_continuation:
+        if not append_mode and not next_continues_current_file:
             first_content_line = lines[start].strip() if len(lines) > start else ""
             is_instructional = (
                 first_content_line.startswith("//")

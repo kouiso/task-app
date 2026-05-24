@@ -30,7 +30,8 @@ def is_safe_rel_path(rel_path: str) -> bool:
     )
 
 
-def has_safe_shell_move(body: str) -> bool:
+def analyze_shell_block(body: str) -> tuple[str, Optional[str]]:
+    has_move = False
     for raw_line in body.split("\n"):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -38,10 +39,18 @@ def has_safe_shell_move(body: str) -> bool:
         try:
             parts = shlex.split(line)
         except ValueError:
+            if line.startswith("mv "):
+                return "SKIP_SHELL_MOVE", f"unparsable shell move: {line}"
             continue
-        if len(parts) == 3 and parts[0] == "mv" and is_safe_rel_path(parts[1]) and is_safe_rel_path(parts[2]):
-            return True
-    return False
+        if parts[0] != "mv":
+            continue
+        if len(parts) == 3 and is_safe_rel_path(parts[1]) and is_safe_rel_path(parts[2]):
+            has_move = True
+            continue
+        return "SKIP_SHELL_MOVE", f"unsupported or unsafe shell move: {line}"
+    if has_move:
+        return "MOVE", None
+    return "IGNORE_LANG", None
 
 
 def has_continuation_header(body: str) -> bool:
@@ -53,6 +62,16 @@ def has_continuation_header(body: str) -> bool:
 
     rel_path_raw = filepath_match.group(1).strip()
     return rel_path_raw == "続き" or bool(CONTINUE_PATTERN.match(rel_path_raw))
+
+
+def has_next_continuation(code_blocks: list[tuple[str, str]], index: int) -> bool:
+    for next_index in range(index + 1, len(code_blocks)):
+        next_lang, next_body = code_blocks[next_index]
+        next_lang = (next_lang or "").lower().strip()
+        if next_lang in SKIP_LANGS and next_lang not in WRITE_LANGS:
+            continue
+        return has_continuation_header(next_body)
+    return False
 
 
 def analyze_block(lang: str, body: str, append_target_path: Optional[str], has_next_continuation: bool) -> Tuple[dict, Optional[str]]:
@@ -70,8 +89,10 @@ def analyze_block(lang: str, body: str, append_target_path: Optional[str], has_n
         "reason": None,
         "preview": "\n".join(lines[:6]),
     }
-    if lang in {"bash", "shell", "sh", "zsh"} and has_safe_shell_move(body):
-        info["classification"] = "MOVE"
+    if lang in {"bash", "shell", "sh", "zsh"}:
+        classification, reason = analyze_shell_block(body)
+        info["classification"] = classification
+        info["reason"] = reason
         return info, None
 
     if lang in SKIP_LANGS and lang not in WRITE_LANGS:
@@ -151,8 +172,8 @@ def audit_day(md_path: Path) -> dict:
     results = []
     append_target_path = None
     for index, (lang, body) in enumerate(code_blocks):
-        has_next_continuation = index + 1 < len(code_blocks) and has_continuation_header(code_blocks[index + 1][1])
-        result, append_target_path = analyze_block(lang, body, append_target_path, has_next_continuation)
+        next_continues_current_file = has_next_continuation(code_blocks, index)
+        result, append_target_path = analyze_block(lang, body, append_target_path, next_continues_current_file)
         results.append(result)
     summary = {}
     for r in results:
@@ -168,7 +189,7 @@ def main():
     all_results = [audit_day(p) for p in day_files]
     out_path.write_text(json.dumps(all_results, ensure_ascii=False, indent=2), encoding="utf-8")
     # print summary
-    print(f"{'file':70} {'total':>6} {'WRITE':>6} {'APPEND':>6} {'MOVE':>6} {'SKIP_NOEX':>10} {'SKIP_BRACE':>11} {'SKIP_JPPATH':>12} {'SKIP_NONSRC':>12} {'SKIP_NOFP':>10} {'SKIP_ORPHAN':>12} {'SKIP_COMMENT':>13}")
+    print(f"{'file':70} {'total':>6} {'WRITE':>6} {'APPEND':>6} {'MOVE':>6} {'SKIP_MV':>8} {'SKIP_NOEX':>10} {'SKIP_BRACE':>11} {'SKIP_JPPATH':>12} {'SKIP_NONSRC':>12} {'SKIP_NOFP':>10} {'SKIP_ORPHAN':>12} {'SKIP_COMMENT':>13}")
     totals = {}
     for r in all_results:
         s = r["summary"]
@@ -178,6 +199,7 @@ def main():
             f"{s.get('WRITE', 0):>6} "
             f"{s.get('APPEND', 0):>6} "
             f"{s.get('MOVE', 0):>6} "
+            f"{s.get('SKIP_SHELL_MOVE', 0):>8} "
             f"{s.get('SKIP_NO_EXPORT', 0):>10} "
             f"{s.get('SKIP_BRACE', 0):>11} "
             f"{s.get('SKIP_JP_PATH', 0):>12} "
