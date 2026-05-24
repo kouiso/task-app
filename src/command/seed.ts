@@ -1,7 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-const SEED_PROJECTS = ['Webサイトリニューアル', 'モバイルアプリ開発'] as const;
+const SEED_PROJECTS = {
+  websiteRenewal: {
+    id: 'seed-project-website-renewal',
+    name: 'Webサイトリニューアル',
+  },
+  mobileApp: {
+    id: 'seed-project-mobile-app',
+    name: 'モバイルアプリ開発',
+  },
+} as const;
 
 class Seed {
   prisma = new PrismaClient();
@@ -34,8 +43,8 @@ class Seed {
   async cleanupSeedData(): Promise<void> {
     await this.prisma.project.deleteMany({
       where: {
-        name: {
-          in: [...SEED_PROJECTS],
+        id: {
+          in: Object.values(SEED_PROJECTS).map((project) => project.id),
         },
       },
     });
@@ -94,7 +103,8 @@ class Seed {
 
     const project1 = await this.prisma.project.create({
       data: {
-        name: 'Webサイトリニューアル',
+        id: SEED_PROJECTS.websiteRenewal.id,
+        name: SEED_PROJECTS.websiteRenewal.name,
         description: '企業サイトの全面リニューアルプロジェクト',
         color: '#1976d2',
         startDate: new Date('2025-01-01'),
@@ -120,7 +130,8 @@ class Seed {
 
     const project2 = await this.prisma.project.create({
       data: {
-        name: 'モバイルアプリ開発',
+        id: SEED_PROJECTS.mobileApp.id,
+        name: SEED_PROJECTS.mobileApp.name,
         description: 'iOS/Android向けアプリ開発',
         color: '#4caf50',
         startDate: new Date('2025-02-01'),

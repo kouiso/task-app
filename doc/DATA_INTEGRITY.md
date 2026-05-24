@@ -12,12 +12,19 @@ The seed command uses stable user emails and `user.upsert` for seeded users:
 - `user1@example.com`
 - `user2@example.com`
 
-Project, task, member, and comment seed records are reset before each seed run by deleting the known seeded project names:
+Project, task, member, and comment seed records are reset before each seed run by deleting deterministic seed-only project IDs:
+
+- `seed-project-website-renewal`
+- `seed-project-mobile-app`
+
+Deleting those projects cascades to seeded tasks, project members, and task comments before the seed recreates them. Human-readable project names such as `Webサイトリニューアル` are never used as deletion keys because real users may create projects with the same names.
+
+The seed recreates the visible demo project names after cleanup:
 
 - `Webサイトリニューアル`
 - `モバイルアプリ開発`
 
-Deleting those projects cascades to seeded tasks, project members, and task comments before the seed recreates them. This keeps two consecutive seed runs from duplicating rows while preserving the stable seeded users.
+This keeps two consecutive seed runs from duplicating rows while preserving the stable seeded users and protecting non-seed projects.
 
 ## Orphan Cleanup Policy
 
@@ -52,7 +59,7 @@ npm run db:seed
 Expected row counts after the second seed:
 
 - users: 3 seeded users, unless local data already has extra users
-- projects named above: 2
+- projects with seed IDs above: 2
 - tasks under those projects: 5
 - comments under those tasks: 2
 - project members under those projects: 5
