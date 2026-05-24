@@ -132,7 +132,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className="border-t border-sidebar-border p-4">
-            <div className="flex items-center gap-3 mb-3">
+            <Link
+              href="/profile"
+              aria-label="プロフィールを表示"
+              className="flex items-center gap-3 mb-3 -mx-2 px-2 py-2 rounded-md hover:bg-sidebar-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <Avatar className="h-9 w-9">
                 {session?.user?.avatar && (
                   <AvatarImage src={session.user.avatar} alt={session.user.name || ''} />
@@ -145,7 +149,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </span>
                 {session?.user?.role && <UserRoleBadge role={session.user.role} />}
               </div>
-            </div>
+            </Link>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
