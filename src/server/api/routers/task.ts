@@ -27,6 +27,7 @@ const taskCreateSchema = z.object({
 
 const taskUpdateSchema = z.object({
   id: z.string().cuid(),
+  expectedUpdatedAt: z.string().datetime().optional(),
   title: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
   status: taskStatusSchema.optional(),
@@ -240,9 +241,19 @@ export const taskRouter = createTRPCRouter({
   }),
 
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
-    const { id, ...data } = input;
+    const { id, expectedUpdatedAt, ...data } = input;
 
     const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
+    if (expectedUpdatedAt) {
+      const expectedDate = new Date(expectedUpdatedAt);
+      if (existingTask.updatedAt.getTime() !== expectedDate.getTime()) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+    }
 
     const updateData: Prisma.TaskUpdateInput = {};
     if (data.title !== undefined) {
