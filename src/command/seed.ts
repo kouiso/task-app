@@ -1,6 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
+const SEED_PROJECTS = {
+  websiteRenewal: {
+    id: 'clseedwebsiterenewal0000000',
+    name: 'Webサイトリニューアル',
+  },
+  mobileApp: {
+    id: 'clseedmobileapp000000000000',
+    name: 'モバイルアプリ開発',
+  },
+} as const;
+
 class Seed {
   prisma = new PrismaClient();
 
@@ -23,9 +34,20 @@ class Seed {
         : '管理者';
 
     await this.createUsers(developerEmail, developerName);
+    await this.cleanupSeedData();
     const projectIds = await this.createProjects(developerEmail);
     await this.createTasks(developerEmail, projectIds.project1Id, projectIds.project2Id);
     await this.createComments(developerEmail);
+  }
+
+  async cleanupSeedData(): Promise<void> {
+    await this.prisma.project.deleteMany({
+      where: {
+        id: {
+          in: Object.values(SEED_PROJECTS).map((project) => project.id),
+        },
+      },
+    });
   }
 
   async createUsers(developerEmail: string, developerName: string) {
@@ -81,7 +103,8 @@ class Seed {
 
     const project1 = await this.prisma.project.create({
       data: {
-        name: 'Webサイトリニューアル',
+        id: SEED_PROJECTS.websiteRenewal.id,
+        name: SEED_PROJECTS.websiteRenewal.name,
         description: '企業サイトの全面リニューアルプロジェクト',
         color: '#1976d2',
         startDate: new Date('2025-01-01'),
@@ -107,7 +130,8 @@ class Seed {
 
     const project2 = await this.prisma.project.create({
       data: {
-        name: 'モバイルアプリ開発',
+        id: SEED_PROJECTS.mobileApp.id,
+        name: SEED_PROJECTS.mobileApp.name,
         description: 'iOS/Android向けアプリ開発',
         color: '#4caf50',
         startDate: new Date('2025-02-01'),

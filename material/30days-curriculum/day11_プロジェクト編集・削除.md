@@ -797,6 +797,320 @@ PORT=3001 npm run dev
 - 削除前にshadcn/uiの確認ダイアログが表示される
 - アーカイブと解除が正しく動作する
 
+### Day 11 終了時点の完成コード
+
+写経ループでは、ここまでの差分説明を読んだあとに次の完成形で
+`src/app/project/page.tsx` を揃えます。手で進めている場合も、
+詰まったときはこのブロックと見比べてください。
+
+```typescript
+// filepath: src/app/project/page.tsx
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { ProjectCard } from '@/component/project/project-card';
+import { ProjectDetailView } from '@/component/project/project-detail-view';
+import {
+  ProjectDialog,
+  type ProjectFormData,
+} from '@/component/project/project-dialog';
+import { Button } from '@/component/ui/button';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
+import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { Switch } from '@/component/ui/switch';
+import { TASK_STATUS } from '@/lib/constant/status';
+import {
+  dateOnlyFromValue,
+  dateOnlyToUtcStartIso,
+} from '@/lib/date';
+import { api } from '@/trpc/react';
+
+function ProjectPageContent() {
+  const [showArchived, setShowArchived] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] =
+    useState<string | null>(null);
+  const [editingProject, setEditingProject] =
+    useState<ProjectFormData | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] =
+    useState(false);
+  const [deleteTargetId, setDeleteTargetId] =
+    useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const projectIdParam = searchParams.get('projectId');
+  const router = useRouter();
+  const utils = api.useUtils();
+
+  useEffect(() => {
+    if (projectIdParam) {
+      setSelectedProject(projectIdParam);
+    } else {
+      setSelectedProject(null);
+    }
+  }, [projectIdParam]);
+
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+  } = api.project.getAll.useQuery({
+    isArchived: showArchived ? undefined : false,
+  });
+
+  const { data: projectDetail } =
+    api.project.getById.useQuery(
+      { id: selectedProject ?? '' },
+      { enabled: !!selectedProject },
+    );
+
+  const createMutation = api.project.create.useMutation({
+    onSuccess: () => {
+      utils.project.getAll.invalidate();
+      setDialogOpen(false);
+    },
+  });
+
+  const updateMutation = api.project.update.useMutation({
+    onSuccess: () => {
+      utils.project.getAll.invalidate();
+      if (selectedProject) {
+        utils.project.getById.invalidate({
+          id: selectedProject,
+        });
+      }
+      setDialogOpen(false);
+    },
+  });
+
+  const deleteMutation = api.project.delete.useMutation({
+    onSuccess: () => {
+      utils.project.getAll.invalidate();
+      router.push('/project');
+    },
+  });
+
+  const archiveMutation = api.project.archive.useMutation({
+    onSuccess: () => {
+      utils.project.getAll.invalidate();
+      router.push('/project');
+    },
+  });
+
+  const unarchiveMutation =
+    api.project.unarchive.useMutation({
+      onSuccess: () => {
+        utils.project.getAll.invalidate();
+        router.push('/project');
+      },
+    });
+
+  const handleCreate = () => {
+    setEditingProject(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (projectId: string) => {
+    const project = projects?.find(
+      (item) => item.id === projectId,
+    );
+    if (!project) {
+      return;
+    }
+
+    const startDate = project.startDate
+      ? dateOnlyFromValue(project.startDate)
+      : undefined;
+    const endDate = project.endDate
+      ? dateOnlyFromValue(project.endDate)
+      : undefined;
+
+    setEditingProject({
+      id: project.id,
+      name: project.name,
+      description: project.description || '',
+      color: project.color,
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (projectId: string) => {
+    setDeleteTargetId(projectId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSubmit = (data: ProjectFormData) => {
+    if (data.id) {
+      updateMutation.mutate({
+        id: data.id,
+        name: data.name,
+        description: data.description ?? null,
+        color: data.color,
+        startDate: data.startDate
+          ? dateOnlyToUtcStartIso(data.startDate)
+          : null,
+        endDate: data.endDate
+          ? dateOnlyToUtcStartIso(data.endDate)
+          : null,
+      });
+      return;
+    }
+
+    createMutation.mutate({
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate
+        ? dateOnlyToUtcStartIso(data.startDate)
+        : undefined,
+      endDate: data.endDate
+        ? dateOnlyToUtcStartIso(data.endDate)
+        : undefined,
+    });
+  };
+
+  const handleProjectClick = (projectId: string) => {
+    router.push(`/project?projectId=${projectId}`);
+  };
+
+  const handleDetailClose = () => {
+    router.push('/project');
+  };
+
+  const handleArchive = (
+    projectId: string,
+    isArchived: boolean,
+  ) => {
+    const mutation = isArchived
+      ? unarchiveMutation
+      : archiveMutation;
+    mutation.mutate({ id: projectId });
+  };
+
+  if (projectsLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (projectIdParam && selectedProject) {
+    return (
+      <AppLayout>
+        <ProjectDetailView
+          projectDetail={projectDetail}
+          onBack={handleDetailClose}
+          onAddMemberClick={() => {
+            // Day 12 でメンバー追加ダイアログに置き換えます。
+          }}
+          onRemoveMember={() => {
+            // Day 12 でメンバー削除処理に置き換えます。
+          }}
+          onArchive={handleArchive}
+        />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">
+            プロジェクト
+          </h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+              />
+              <Label htmlFor="show-archived">
+                アーカイブ表示
+              </Label>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新規プロジェクト
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {projects && projects.length > 0 ? (
+            projects.map((project) => {
+              const taskCount = project.tasks?.length ?? 0;
+              const doneCount =
+                project.tasks?.filter(
+                  (task) => task.status === TASK_STATUS.DONE,
+                ).length ?? 0;
+
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={project.description}
+                  color={project.color}
+                  memberCount={project.members?.length ?? 0}
+                  taskStats={{
+                    total: taskCount,
+                    done: doneCount,
+                  }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={handleProjectClick}
+                  isArchived={project.isArchived}
+                />
+              );
+            })
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>プロジェクトが見つかりません。</p>
+              <p>最初のプロジェクトを作成しましょう！</p>
+            </div>
+          )}
+        </div>
+
+        <ProjectDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+          initialData={editingProject}
+        />
+      </div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            deleteMutation.mutate({ id: deleteTargetId });
+          }
+        }}
+        isPending={deleteMutation.isPending}
+        title="プロジェクトを削除しますか？"
+      />
+    </AppLayout>
+  );
+}
+
+export default function ProjectPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <ProjectPageContent />
+    </Suspense>
+  );
+}
+```
+
 
 ---
 
