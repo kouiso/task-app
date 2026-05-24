@@ -14,6 +14,11 @@ updates:
       - 'dependabot'
     # セキュリティ設定
     insecure-external-code-execution: deny
+    # major 更新は doc/DEPENDENCY_POLICY.md の四半期レビューで扱う
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - 'version-update:semver-major'
     # グループ化して複数の依存関係を1つのPRにまとめる
     groups:
       production-dependencies:
@@ -36,3 +41,8 @@ updates:
       - 'github-actions'
     # セキュリティ設定
     insecure-external-code-execution: deny
+    # major 更新は doc/DEPENDENCY_POLICY.md の四半期レビューで扱う
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - 'version-update:semver-major'
