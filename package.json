@@ -85,6 +85,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@biomejs/biome": "^2.4.15",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4.3.0",
