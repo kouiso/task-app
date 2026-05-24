@@ -1,4 +1,9 @@
+import createBundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
+
+const withBundleAnalyzer = createBundleAnalyzer({
+  enabled: process.env['ANALYZE'] === 'true',
+});
 
 const nextConfig: NextConfig = {
   // TypeScript設定
@@ -68,4 +73,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);
