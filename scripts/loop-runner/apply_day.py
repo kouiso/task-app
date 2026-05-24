@@ -7,7 +7,9 @@ Usage: python3 apply_day.py <day_md_file> <target_app_dir>
 
 import sys
 import re
+import shlex
 from pathlib import Path
+from typing import Optional
 
 
 SKIP_LANGS = {"bash", "shell", "sh", "zsh", "mermaid", "sql", "text", ""}
@@ -17,20 +19,103 @@ WRITE_LANGS = {"typescript", "tsx", "javascript", "jsx", "ts", "js", "css", "jso
 CONTINUE_PATTERN = re.compile(r'^(.+?)（続き）\s*$')
 
 
+def is_safe_rel_path(rel_path: str) -> bool:
+    return ".." not in rel_path and (
+        rel_path.startswith("src/")
+        or rel_path.startswith("prisma/")
+        or rel_path.startswith("public/")
+    )
+
+
+def apply_safe_shell_ops(body: str, target_dir: Path) -> tuple[list[str], list[str]]:
+    written: list[str] = []
+    skipped: list[str] = []
+    for raw_line in body.split("\n"):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        try:
+            parts = shlex.split(line)
+        except ValueError:
+            if line.startswith("mv "):
+                skipped.append(f"skipped unparsable shell move: {line}")
+            continue
+
+        if parts[0] != "mv":
+            continue
+
+        if len(parts) != 3:
+            skipped.append(f"skipped unsupported shell move: {line}")
+            continue
+
+        src, dest = parts[1], parts[2]
+        if not is_safe_rel_path(src) or not is_safe_rel_path(dest):
+            skipped.append(f"skipped unsafe shell move: {src} -> {dest}")
+            continue
+
+        src_path = target_dir / src
+        dest_path = target_dir / dest
+        if not src_path.exists():
+            skipped.append(f"skipped missing shell move source: {src}")
+            continue
+
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        src_path.rename(dest_path)
+        written.append(f"MOVE   {src} -> {dest}")
+
+    return written, skipped
+
+
+def has_continuation_header(body: str) -> bool:
+    lines = body.split("\n")
+    if not lines:
+        return False
+
+    filepath_match = re.match(r"//\s*filepath:\s*(.+)", lines[0].strip())
+    if not filepath_match:
+        return False
+
+    rel_path_raw = filepath_match.group(1).strip()
+    return rel_path_raw == "続き" or bool(CONTINUE_PATTERN.match(rel_path_raw))
+
+
+def has_next_continuation(code_blocks: list[tuple[str, str]], index: int) -> bool:
+    for next_index in range(index + 1, len(code_blocks)):
+        next_lang, next_body = code_blocks[next_index]
+        next_lang = (next_lang or "").lower().strip()
+        if next_lang in SKIP_LANGS and next_lang not in WRITE_LANGS:
+            continue
+        return has_continuation_header(next_body)
+    return False
+
+
 def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
     content = md_path.read_text(encoding="utf-8")
     code_blocks = re.findall(r"```(\w+)?\n(.*?)```", content, re.DOTALL)
 
     written: list[str] = []
     skipped_gui: list[str] = []
+    append_target_path: Optional[str] = None
 
-    for lang, body in code_blocks:
+    for index, (lang, body) in enumerate(code_blocks):
         lang = (lang or "").lower().strip()
+        if lang in {"bash", "shell", "sh", "zsh"}:
+            shell_written, shell_skipped = apply_safe_shell_ops(body, target_dir)
+            if shell_written:
+                written.extend(shell_written)
+                append_target_path = None
+            if shell_skipped:
+                skipped_gui.extend(shell_skipped)
+                append_target_path = None
+            continue
+
         if lang in SKIP_LANGS and lang not in WRITE_LANGS:
             continue
 
         lines = body.split("\n")
         if not lines:
+            append_target_path = None
             continue
 
         # filepath: コメントが最初の行にあるか確認
@@ -38,33 +123,52 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
         filepath_match = re.match(r"//\s*filepath:\s*(.+)", first_line)
         if not filepath_match:
             skipped_gui.append(f"no filepath: in block (lang={lang})")
+            append_target_path = None
             continue
 
         rel_path_raw = filepath_match.group(1).strip()
 
-        # （続き） suffix → append to the base file
-        continue_match = CONTINUE_PATTERN.match(rel_path_raw)
-        if continue_match:
-            rel_path = continue_match.group(1).strip()
+        # 「続き」は直前に同じファイルを書けた場合だけ追記する。
+        # 比較用・読むのみブロックが skip された直後の「（続き）」を誤って本番ファイルへ
+        # append すると、壊れた断片が混入して build が落ちるため。
+        if rel_path_raw == "続き":
+            if not append_target_path:
+                skipped_gui.append("skipped orphan continuation: 続き")
+                append_target_path = None
+                continue
+            rel_path = append_target_path
             force_append = True
         else:
-            rel_path = rel_path_raw
-            force_append = False
+            continue_match = CONTINUE_PATTERN.match(rel_path_raw)
+            if continue_match:
+                candidate_path = continue_match.group(1).strip()
+                if candidate_path != append_target_path:
+                    skipped_gui.append(f"skipped orphan continuation: {rel_path_raw}")
+                    append_target_path = None
+                    continue
+                rel_path = candidate_path
+                force_append = True
+            else:
+                rel_path = rel_path_raw
+                force_append = False
 
         # src/ / prisma/ / public/ で始まらない場合はスキップ（安全のため）
         # ".." を含む場合も明示的に弾く（target_dir 外への書き込み防止）
-        if ".." in rel_path or not (rel_path.startswith("src/") or rel_path.startswith("prisma/") or rel_path.startswith("public/")):
+        if not is_safe_rel_path(rel_path):
             skipped_gui.append(f"skipped non-src or unsafe path: {rel_path}")
+            append_target_path = None
             continue
 
         # パスに日本語文字が含まれる場合はスキップ（説明用ラベルが混入した教材ブロック）
         if re.search(r'[\u3040-\u30ff\u4e00-\u9fff（）]', rel_path):
             skipped_gui.append(f"skipped path with Japanese chars: {rel_path}")
+            append_target_path = None
             continue
 
         # 2行目が // 追記 なら追記モード（明示的マーカー）
         explicit_append = len(lines) > 1 and lines[1].strip() == "// 追記"
         append_mode = force_append or explicit_append
+        next_continues_current_file = has_next_continuation(code_blocks, index)
 
         # filepath: 行と 追記 行を除いたコード本体
         start = 2 if explicit_append else 1
@@ -76,7 +180,7 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
         # 判定: filepath の次の行 (lines[start]) が // で始まり、かつ日本語を含む場合は
         # 「〜に追加」「〜の前に追加」等の挿入位置指示コメントと判断してスキップする。
         # append_mode（続き / 追記）は複数ブロックで1ファイルを組み立てるため対象外。
-        if not append_mode:
+        if not append_mode and not next_continues_current_file:
             first_content_line = lines[start].strip() if len(lines) > start else ""
             is_instructional = (
                 first_content_line.startswith("//")
@@ -101,6 +205,7 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
                         is_instructional = True
             if is_instructional:
                 skipped_gui.append(f"skipped instructional snippet: {rel_path}")
+                append_target_path = None
                 continue
 
         dest = target_dir / rel_path
@@ -110,9 +215,11 @@ def apply_day(md_path: Path, target_dir: Path) -> tuple[list[str], list[str]]:
             with dest.open("a", encoding="utf-8") as f:
                 f.write(code_content)
             written.append(f"APPEND {rel_path}")
+            append_target_path = rel_path
         else:
             dest.write_text(code_content, encoding="utf-8")
             written.append(f"WRITE  {rel_path}")
+            append_target_path = rel_path
 
     return written, skipped_gui
 
@@ -142,7 +249,13 @@ def main():
 
     print(f"  → {len(written)} files written")
 
-    # 0 件書き込み = 教材の filepath マーカー不足 or 検出ロジック過剰スキップ。
+    # 0 件書き込みかつ skip もない = GitHub / deploy などアプリコードを書かない Day。
+    # build 検証だけ続けられるよう success とする。
+    if not written and not skipped:
+        print("  ℹ️ no app file changes in this day")
+        return
+
+    # 0 件書き込みで skip がある = 教材の filepath マーカー不足 or 検出ロジック過剰スキップ。
     # 後段ステップが false-positive で「pass」と判定するのを防ぐため non-zero で抜ける。
     if not written:
         print("  ❌ no files written — fail to surface false-positive day-pass")
