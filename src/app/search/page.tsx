@@ -202,7 +202,7 @@ function SearchPageContent() {
         </div>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 sm:pt-6">
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="keyword">キーワード</Label>
