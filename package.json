@@ -28,6 +28,7 @@
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
+    "test:e2e:ux": "playwright test e2e/ux-state-catalog.spec.ts",
     "capture-screenshots": "playwright test e2e/screenshots.spec.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
