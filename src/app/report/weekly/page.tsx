@@ -80,13 +80,13 @@ export default function WeeklyReportPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm text-muted-foreground mb-1">完了タスク合計</p>
               <p className="text-3xl font-bold">{reportData?.totalCompleted ?? 0}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm text-muted-foreground mb-1">週平均</p>
               <p className="text-3xl font-bold">
                 {reportData?.totalCompleted
@@ -96,7 +96,7 @@ export default function WeeklyReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm text-muted-foreground mb-1">対象期間</p>
               <p className="text-lg font-semibold">
                 {reportData?.startDate && reportData?.endDate

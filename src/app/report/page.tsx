@@ -64,21 +64,21 @@ export default function ReportPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm text-muted-foreground mb-1">タスク数</p>
               <p className="text-3xl font-bold">{overview?.totalTasks ?? 0}</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm text-muted-foreground mb-1">完了率</p>
               <p className="text-3xl font-bold">{overview?.completionRate ?? 0}%</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm text-muted-foreground mb-1">合計作業時間</p>
               <p className="text-3xl font-bold">
                 {((overview?.totalTimeSpent ?? 0) / 60).toFixed(1)}h
@@ -87,7 +87,7 @@ export default function ReportPage() {
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm text-muted-foreground mb-1">平均作業時間/タスク</p>
               <p className="text-3xl font-bold">
                 {((overview?.averageTimePerTask ?? 0) / 60).toFixed(1)}h
