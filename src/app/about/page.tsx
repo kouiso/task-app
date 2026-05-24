@@ -67,7 +67,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {features.map((feature) => (
             <Card key={feature.title}>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <div className="flex flex-col items-center text-center gap-4">
                   <div>{feature.icon}</div>
                   <h3 className="text-xl font-bold">{feature.title}</h3>
