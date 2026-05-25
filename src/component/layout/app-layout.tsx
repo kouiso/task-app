@@ -23,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/component/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Button } from '@/component/ui/button';
@@ -61,6 +60,7 @@ const baseMenuItems: MenuItem[] = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isLoading } = api.auth.getSession.useQuery();
@@ -104,104 +104,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r border-sidebar-border bg-sidebar md:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
-              <span className="text-sidebar-foreground font-bold text-lg">Task App</span>
-            </Link>
-          </div>
-          <div className="flex-1">
-            <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-              {menuItems.map((item) => (
-                <Link
-                  key={item.text}
-                  href={item.path}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
-                    pathname === item.path
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
-                  )}
-                >
-                  {item.icon}
-                  {item.text}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="border-t border-sidebar-border p-4">
-            <Link
-              href="/profile"
-              aria-label="プロフィールを表示"
-              className="flex items-center gap-3 mb-3 -mx-2 px-2 py-2 rounded-md hover:bg-sidebar-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Avatar className="h-9 w-9">
-                {session?.user?.avatar && (
-                  <AvatarImage src={session.user.avatar} alt={session.user.name || ''} />
-                )}
-                <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate text-sidebar-foreground">
-                  {session?.user?.name}
-                </span>
-                {session?.user?.role && <UserRoleBadge role={session.user.role} />}
-              </div>
-            </Link>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                >
-                  <LogOut className="h-4 w-4" />
-                  ログアウト
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>ログアウトしますか？</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    ログアウトすると、再度ログインが必要になります。
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleLogout}>ログアウト</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="shrink-0 md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">ナビゲーションメニューを切り替え</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col bg-sidebar border-sidebar-border">
-              <nav className="grid gap-2 text-lg font-medium">
-                <Link
-                  href="#"
-                  className="flex items-center gap-2 text-lg font-semibold mb-4 text-sidebar-foreground"
-                >
-                  Task App
-                </Link>
+    <>
+      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+        <div className="hidden border-r border-sidebar-border bg-sidebar md:block">
+          <div className="flex h-full max-h-screen flex-col gap-2">
+            <div className="flex h-14 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
+              <Link href="/" className="flex items-center gap-2 font-semibold">
+                <span className="text-sidebar-foreground font-bold text-lg">Task App</span>
+              </Link>
+            </div>
+            <div className="flex-1">
+              <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
                 {menuItems.map((item) => (
                   <Link
                     key={item.text}
                     href={item.path}
-                    onClick={() => setMobileOpen(false)}
                     className={cn(
-                      'mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2',
+                      'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
                       pathname === item.path
                         ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                         : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
@@ -212,37 +131,121 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </Link>
                 ))}
               </nav>
-            </SheetContent>
-          </Sheet>
-          <div className="w-full flex-1">
-            <QuickSearch />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-full">
-                <Avatar className="h-8 w-8">
+            </div>
+            <div className="border-t border-sidebar-border p-4">
+              <Link
+                href="/profile"
+                aria-label="プロフィールを表示"
+                className="flex items-center gap-3 mb-3 -mx-2 px-2 py-2 rounded-md hover:bg-sidebar-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Avatar className="h-9 w-9">
                   {session?.user?.avatar && (
                     <AvatarImage src={session.user.avatar} alt={session.user.name || ''} />
                   )}
                   <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
-                <span className="sr-only">ユーザーメニューを切り替え</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium truncate text-sidebar-foreground">
+                    {session?.user?.name}
+                  </span>
+                  {session?.user?.role && <UserRoleBadge role={session.user.role} />}
+                </div>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                onClick={() => setLogoutDialogOpen(true)}
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>マイアカウント</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/profile')}>
-                プロフィール
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>ログアウト</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
+            </div>
+          </div>
+        </div>
 
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">{children}</main>
+        <div className="flex flex-col">
+          <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">ナビゲーションメニューを切り替え</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex flex-col bg-sidebar border-sidebar-border">
+                <nav className="grid gap-2 text-lg font-medium">
+                  <Link
+                    href="#"
+                    className="flex items-center gap-2 text-lg font-semibold mb-4 text-sidebar-foreground"
+                  >
+                    Task App
+                  </Link>
+                  {menuItems.map((item) => (
+                    <Link
+                      key={item.text}
+                      href={item.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        'mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2',
+                        pathname === item.path
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+                      )}
+                    >
+                      {item.icon}
+                      {item.text}
+                    </Link>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+            <div className="w-full flex-1">
+              <QuickSearch />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    {session?.user?.avatar && (
+                      <AvatarImage src={session.user.avatar} alt={session.user.name || ''} />
+                    )}
+                    <AvatarFallback>{session?.user?.name?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <span className="sr-only">ユーザーメニューを切り替え</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>マイアカウント</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/profile')}>
+                  プロフィール
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setLogoutDialogOpen(true)}>
+                  ログアウト
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </header>
+
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">{children}</main>
+        </div>
       </div>
-    </div>
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ログアウトしますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              ログアウトすると、再度ログインが必要になります。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>ログアウト</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
