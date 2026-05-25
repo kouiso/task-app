@@ -1,6 +1,6 @@
 # 手動テストチェックリスト
 
-`doc/manual-test-checklist.csv` は task-app の主要機能を手動で確認するためのチェックリスト（全95ケース、うちレスポンシブ23ケース）。
+`doc/manual-test-checklist.csv` は task-app の主要機能を手動で確認するためのチェックリスト（全151ケース、うちレスポンシブ41ケース）。
 スプレッドシート（Google Sheets / Excel / Numbers）にそのまま取り込んで利用する。
 
 ## 使い方

@@ -61,6 +61,7 @@ const baseMenuItems: MenuItem[] = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isLoading } = api.auth.getSession.useQuery();
@@ -150,7 +151,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 {session?.user?.role && <UserRoleBadge role={session.user.role} />}
               </div>
             </Link>
-            <AlertDialog>
+            <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
@@ -236,7 +237,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 プロフィール
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>ログアウト</DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setLogoutDialogOpen(true);
+                }}
+              >
+                ログアウト
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
