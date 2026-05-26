@@ -154,16 +154,23 @@ describe('reportRouter', () => {
       const project = await createTestProject(user.id);
 
       await prisma.task.createMany({
-        data: Array.from({ length: 101 }, (_, index) => ({
-          title: `Overview Task ${index + 1}`,
-          description: 'overview test',
-          status: index < 40 ? 'DONE' : index < 70 ? 'IN_PROGRESS' : 'TODO',
-          priority: 'MEDIUM',
-          position: index,
-          projectId: project.id,
-          createdById: user.id,
-          assigneeId: user.id,
-        })),
+        data: Array.from({ length: 101 }, (_, index) => {
+          let status: 'DONE' | 'IN_PROGRESS' | 'IN_REVIEW' | 'TODO';
+          if (index < 40) status = 'DONE';
+          else if (index < 70) status = 'IN_PROGRESS';
+          else if (index < 85) status = 'IN_REVIEW';
+          else status = 'TODO';
+          return {
+            title: `Overview Task ${index + 1}`,
+            description: 'overview test',
+            status,
+            priority: 'MEDIUM' as const,
+            position: index,
+            projectId: project.id,
+            createdById: user.id,
+            assigneeId: user.id,
+          };
+        }),
       });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
@@ -173,6 +180,7 @@ describe('reportRouter', () => {
       expect(overview.totalTasks).toBe(101);
       expect(overview.completedTasks).toBe(40);
       expect(overview.inProgressTasks).toBe(30);
+      expect(overview.inReviewTasks).toBe(15);
       expect(overview.recentTasks).toHaveLength(5);
       expect(overview.projectStats.at(0)?.totalTasks).toBe(101);
     });
