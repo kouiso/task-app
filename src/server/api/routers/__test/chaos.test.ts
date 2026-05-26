@@ -168,6 +168,10 @@ describe('property-based and chaos coverage', () => {
       name: `Chaos Project ${index}`,
       color: '#1976d2',
     }));
+    const fallbackProject = projects.at(0);
+    if (!fallbackProject) {
+      throw new Error('Expected at least one project for chaos task fixtures');
+    }
 
     await prisma.project.createMany({ data: projects });
     await prisma.projectMember.createMany({
@@ -183,7 +187,7 @@ describe('property-based and chaos coverage', () => {
         status: index % 4 === 0 ? TASK_STATUS.DONE : TASK_STATUS.TODO,
         priority: TASK_PRIORITY.MEDIUM,
         position: index % 10,
-        projectId: projects[index % projects.length]?.id ?? projects[0].id,
+        projectId: projects[index % projects.length]?.id ?? fallbackProject.id,
         createdById: user.id,
         assigneeId: user.id,
       })),
