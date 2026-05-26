@@ -17,6 +17,7 @@ export const reportRouter = createTRPCRouter({
         totalTasks: 0,
         completedTasks: 0,
         inProgressTasks: 0,
+        inReviewTasks: 0,
         completionRate: 0,
         totalTimeSpent: 0,
         averageTimePerTask: 0,
@@ -32,6 +33,7 @@ export const reportRouter = createTRPCRouter({
       totalTasks,
       completedTasks,
       inProgressTasks,
+      inReviewTasks,
       totalTimeAggregate,
       recentTasks,
       statusGroups,
@@ -57,6 +59,12 @@ export const reportRouter = createTRPCRouter({
         where: {
           projectId: { in: projectIds },
           status: TASK_STATUS.IN_PROGRESS,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          projectId: { in: projectIds },
+          status: TASK_STATUS.IN_REVIEW,
         },
       }),
       prisma.task.aggregate({
@@ -122,6 +130,7 @@ export const reportRouter = createTRPCRouter({
       totalTasks,
       completedTasks,
       inProgressTasks,
+      inReviewTasks,
       completionRate,
       totalTimeSpent,
       averageTimePerTask,

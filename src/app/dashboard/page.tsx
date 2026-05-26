@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpRight, CheckCircle2, FolderKanban, ListChecks, Timer } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Eye, FolderKanban, ListChecks, Timer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
@@ -25,8 +25,9 @@ export default function DashboardPage() {
   const totalTasks = overview?.totalTasks ?? 0;
   const completedTasks = overview?.completedTasks ?? 0;
   const inProgressTasks = overview?.inProgressTasks ?? 0;
+  const inReviewTasks = overview?.inReviewTasks ?? 0;
   const completionRate = overview?.completionRate ?? 0;
-  const remaining = totalTasks - completedTasks - inProgressTasks;
+  const remaining = totalTasks - completedTasks - inProgressTasks - inReviewTasks;
 
   const recentTasks = overview?.recentTasks ?? [];
 
@@ -80,14 +81,14 @@ export default function DashboardPage() {
             </div>
 
             {/* ミニ統計 */}
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
               <div className="flex items-center gap-2">
                 <div
                   className="rounded-full"
                   style={{ width: '8px', height: '8px', backgroundColor: '#34d399' }}
                 />
                 <span className="text-sm text-slate-300">
-                  完了 <span className="font-semibold text-white">{completedTasks}</span>
+                  完了タスク <span className="font-semibold text-white">{completedTasks}</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -96,7 +97,16 @@ export default function DashboardPage() {
                   style={{ width: '8px', height: '8px', backgroundColor: '#60a5fa' }}
                 />
                 <span className="text-sm text-slate-300">
-                  進行中 <span className="font-semibold text-white">{inProgressTasks}</span>
+                  進行中タスク <span className="font-semibold text-white">{inProgressTasks}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="rounded-full"
+                  style={{ width: '8px', height: '8px', backgroundColor: '#fbbf24' }}
+                />
+                <span className="text-sm text-slate-300">
+                  レビュー中タスク <span className="font-semibold text-white">{inReviewTasks}</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -105,7 +115,7 @@ export default function DashboardPage() {
                   style={{ width: '8px', height: '8px', backgroundColor: '#64748b' }}
                 />
                 <span className="text-sm text-slate-300">
-                  残り <span className="font-semibold text-white">{remaining}</span>
+                  残りタスク <span className="font-semibold text-white">{remaining}</span>
                 </span>
               </div>
             </div>
@@ -113,12 +123,13 @@ export default function DashboardPage() {
         </div>
 
         {/* 統計カード — 控えめに、左ボーダーで色のアクセント */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
             { label: '全タスク', value: totalTasks, color: '#8b5cf6', icon: ListChecks },
-            { label: '完了', value: completedTasks, color: '#10b981', icon: CheckCircle2 },
-            { label: '進行中', value: inProgressTasks, color: '#f59e0b', icon: Timer },
+            { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
+            { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
+            { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
