@@ -18,6 +18,7 @@ export const reportRouter = createTRPCRouter({
         completedTasks: 0,
         inProgressTasks: 0,
         inReviewTasks: 0,
+        todoTasks: 0,
         completionRate: 0,
         totalTimeSpent: 0,
         averageTimePerTask: 0,
@@ -28,12 +29,19 @@ export const reportRouter = createTRPCRouter({
       };
     }
 
+    // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      projectId: { in: projectIds },
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+
     const [
       projects,
       totalTasks,
       completedTasks,
       inProgressTasks,
       inReviewTasks,
+      todoTasks,
       totalTimeAggregate,
       recentTasks,
       statusGroups,
@@ -46,9 +54,7 @@ export const reportRouter = createTRPCRouter({
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.task.count({
-        where: { projectId: { in: projectIds } },
-      }),
+      prisma.task.count({ where: activeTasksFilter }),
       prisma.task.count({
         where: {
           projectId: { in: projectIds },
@@ -67,8 +73,14 @@ export const reportRouter = createTRPCRouter({
           status: TASK_STATUS.IN_REVIEW,
         },
       }),
+      prisma.task.count({
+        where: {
+          projectId: { in: projectIds },
+          status: TASK_STATUS.TODO,
+        },
+      }),
       prisma.task.aggregate({
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _sum: { timeSpentMinutes: true },
       }),
       prisma.task.findMany({
@@ -94,7 +106,7 @@ export const reportRouter = createTRPCRouter({
       }),
       prisma.task.groupBy({
         by: ['projectId'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
         _sum: { timeSpentMinutes: true },
       }),
@@ -131,6 +143,7 @@ export const reportRouter = createTRPCRouter({
       completedTasks,
       inProgressTasks,
       inReviewTasks,
+      todoTasks,
       completionRate,
       totalTimeSpent,
       averageTimePerTask,
