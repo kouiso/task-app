@@ -12,14 +12,17 @@ updates:
     labels:
       - 'dependencies'
       - 'dependabot'
-    # セキュリティ設定
-    insecure-external-code-execution: deny
+    # major 更新は doc/DEPENDENCY_POLICY.md の四半期レビューで扱う
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - 'version-update:semver-major'
     # グループ化して複数の依存関係を1つのPRにまとめる
     groups:
       production-dependencies:
-        dependency-type: 'direct:production'
+        dependency-type: 'production'
       development-dependencies:
-        dependency-type: 'direct:development'
+        dependency-type: 'development'
 
   # GitHub Actionsの更新
   - package-ecosystem: 'github-actions'
@@ -34,5 +37,8 @@ updates:
       - 'dependencies'
       - 'dependabot'
       - 'github-actions'
-    # セキュリティ設定
-    insecure-external-code-execution: deny
+    # major 更新は doc/DEPENDENCY_POLICY.md の四半期レビューで扱う
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - 'version-update:semver-major'

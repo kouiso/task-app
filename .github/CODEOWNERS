@@ -1,1 +1,11 @@
+# Default owner for all repository changes.
 * @ritmo-inc/developpers
+
+# Governance, release, and security-sensitive areas.
+.github/** @ritmo-inc/developpers
+doc/RUNBOOK.md @ritmo-inc/developpers
+doc/DEPENDENCY_POLICY.md @ritmo-inc/developpers
+doc/LICENSE_INVENTORY.md @ritmo-inc/developpers
+package.json @ritmo-inc/developpers
+package-lock.json @ritmo-inc/developpers
+prisma/** @ritmo-inc/developpers

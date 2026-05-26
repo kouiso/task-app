@@ -8,7 +8,7 @@ on:
 jobs:
   bundle-and-lighthouse:
     name: Bundle analysis and Lighthouse CI
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LINUX }}
     timeout-minutes: 20
     env:
       DATABASE_URL: postgresql://user:password@localhost:5432/taskapp?schema=public
