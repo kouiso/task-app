@@ -299,7 +299,6 @@ enum TaskStatus {
   IN_REVIEW    // レビュー中
   DONE         // 完了
   CANCELLED    // キャンセル
-  BLOCKED      // ブロック中
 }
 
 enum TaskPriority {
@@ -357,7 +356,7 @@ const taskCreateSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   status: z
-    .enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED', 'BLOCKED'])
+    .enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'])
     .default('TODO'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
   dueDate: z.string().datetime().optional(),
