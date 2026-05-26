@@ -60,10 +60,19 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     { enabled: userId.length > 0 },
   );
 
+  const utils = api.useUtils();
+
   const updateUser = api.user.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.allSettled([
+        utils.user.getById.invalidate({ id: userId }),
+        utils.user.getAll.invalidate(),
+        utils.auth.getCurrentUser.invalidate(),
+        utils.auth.getSession.invalidate(),
+      ]);
       toast.success('ユーザー情報を更新しました');
       router.push(`/user/${userId}`);
+      router.refresh();
     },
     onError: (error) => {
       toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
@@ -82,10 +91,13 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }, [user, form]);
 
   const handleSubmit = (values: UserEditFormValues) => {
+    const isOwnEdit = currentUser?.id === userId;
     updateUser.mutate({
       id: userId,
-      ...values,
+      name: values.name,
       avatar: normalizeAvatarValue(values.avatar),
+      // 自分のプロフィール編集時はサーバー側で role/isActive 変更が禁止されているため送信しない
+      ...(isOwnEdit ? {} : { role: values.role, isActive: values.isActive }),
     });
   };
 
@@ -185,7 +197,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                       form.setValue('role', value);
                     }
                   }}
-                  disabled={updateUser.isPending}
+                  disabled={updateUser.isPending || isOwnProfile}
                 >
                   <SelectTrigger id="role">
                     <SelectValue placeholder="ロールを選択" />
@@ -198,6 +210,9 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                {isOwnProfile && (
+                  <p className="text-xs text-muted-foreground">自分のロールは変更できません</p>
+                )}
               </div>
 
               <div className="flex items-center space-x-2">
@@ -205,9 +220,14 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                   id="isActive"
                   checked={form.watch('isActive')}
                   onCheckedChange={(checked) => form.setValue('isActive', checked === true)}
-                  disabled={updateUser.isPending}
+                  disabled={updateUser.isPending || isOwnProfile}
                 />
                 <Label htmlFor="isActive">アクティブ</Label>
+                {isOwnProfile && (
+                  <span className="text-xs text-muted-foreground">
+                    （自分の有効状態は変更できません）
+                  </span>
+                )}
               </div>
 
               {updateUser.error && (

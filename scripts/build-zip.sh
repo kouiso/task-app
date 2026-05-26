@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# このスクリプトは販売用ZIP（task-app-curriculum-v1.0.zip）を作るためにある。
-# 内部ドキュメント・ソースコード・CI設定などは除外し、受講者に渡すファイルだけを梱包する。
+# このスクリプトは販売用ZIP（task-app-curriculum-v1.1.zip）を作るためにある。
+# 受講者が ZIP 展開後に npm install / build / test まで確認できるよう、
+# カリキュラム本文だけでなく現在のアプリ本体と Prisma migrations も梱包する。
 # 何度実行しても同じ結果になるよう冪等に設計してある。
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_PARENT="/tmp/task-app-curriculum-package"
 BUILD_DIR="${BUILD_PARENT}/task-app"
-ZIP_NAME="task-app-curriculum-v1.0.zip"
+ZIP_NAME="task-app-curriculum-v1.1.zip"
 OUTPUT_ZIP="${PROJECT_ROOT}/${ZIP_NAME}"
 
 echo "=== task-app 販売用ZIP ビルド開始 ==="
@@ -20,64 +21,44 @@ echo "ビルド一時ディレクトリ: ${BUILD_DIR}"
 rm -rf "${BUILD_PARENT}"
 mkdir -p "${BUILD_DIR}"
 
-# ---- カリキュラム本文（内部ドキュメントを除いた .md だけコピー） ----
-CURRICULUM_SRC="${PROJECT_ROOT}/material/30days-curriculum"
-CURRICULUM_DST="${BUILD_DIR}/material/30days-curriculum"
-mkdir -p "${CURRICULUM_DST}"
+# ---- アプリ本体 + カリキュラム + scaffold 補助ファイル ----
+rsync -a "${PROJECT_ROOT}/" "${BUILD_DIR}/" \
+  --exclude=".git/" \
+  --exclude=".github/" \
+  --exclude=".claude/" \
+  --exclude=".copilot/" \
+  --exclude=".agents/" \
+  --exclude=".gemini/" \
+  --exclude=".serena/" \
+  --exclude=".vercel/" \
+  --exclude=".devcontainer/" \
+  --exclude=".docker/" \
+  --exclude=".husky/" \
+  --exclude=".vscode/" \
+  --exclude=".mcp.json" \
+  --exclude=".next/" \
+  --exclude="node_modules/" \
+  --exclude="coverage/" \
+  --exclude="dist/" \
+  --exclude="build/" \
+  --exclude="out/" \
+  --exclude="playwright-report/" \
+  --exclude="test-results/" \
+  --exclude="node-compile-cache/" \
+  --exclude="*.tsbuildinfo" \
+  --exclude="*.log" \
+  --exclude="/*.png" \
+  --exclude="/audit-skips.json" \
+  --exclude="/context-mode-*" \
+  --exclude="/prisma/*.db" \
+  --exclude="*.env" \
+  --exclude=".env.*" \
+  --exclude="!.env.example" \
+  --exclude="task-app-curriculum-*.zip"
 
-rsync -a \
-  --include="day*.md" \
-  --include="00_カリキュラム目次.md" \
-  --include="appendix_*.md" \
-  --exclude="audit_*.md" \
-  --exclude="review_*.md" \
-  --exclude="round4*.md" \
-  --exclude="completion_report*.md" \
-  --exclude="*_quality_report.txt" \
-  --exclude="CURRICULUM_PLAN.md" \
-  --exclude="*.json" \
-  --exclude="*" \
-  "${CURRICULUM_SRC}/" "${CURRICULUM_DST}/"
-
-# ---- スクリーンショットディレクトリ（丸ごとコピー） ----
-if [ -d "${CURRICULUM_SRC}/screenshots" ]; then
-  rsync -a "${CURRICULUM_SRC}/screenshots/" "${CURRICULUM_DST}/screenshots/"
-fi
-
-# ---- スクリプト類 ----
-SCRIPTS_SRC="${PROJECT_ROOT}/scripts"
-SCRIPTS_DST="${BUILD_DIR}/scripts"
-mkdir -p "${SCRIPTS_DST}"
-
-# scaffold スクリプト本体
-cp "${SCRIPTS_SRC}/scaffold-from-scratch.sh" "${SCRIPTS_DST}/"
-
-# scaffold が参照するサブディレクトリ群（存在するものだけコピー）
-for dir in \
-  _ui-components \
-  _lib-utils \
-  _lib-base \
-  _constants \
-  _trpc-base \
-  _server-routers \
-  _server-base \
-  _app-api-trpc \
-  _app-base \
-  _prisma \
-  _docker \
-  _seed \
-  _app-components
-do
-  if [ -d "${SCRIPTS_SRC}/${dir}" ]; then
-    rsync -a "${SCRIPTS_SRC}/${dir}/" "${SCRIPTS_DST}/${dir}/"
-  fi
-done
-
-# ---- プロジェクトルート直下のファイル ----
-cp "${PROJECT_ROOT}/README.md" "${BUILD_DIR}/"
-
+# .env.example は学習者の初回セットアップに必要なので、環境除外より後で明示コピーする。
 if [ -f "${PROJECT_ROOT}/.env.example" ]; then
-  cp "${PROJECT_ROOT}/.env.example" "${BUILD_DIR}/"
+  cp "${PROJECT_ROOT}/.env.example" "${BUILD_DIR}/.env.example"
 fi
 
 # ---- ZIP 作成（前回の残骸があれば上書き） ----
@@ -86,7 +67,9 @@ cd "${BUILD_PARENT}"
 zip -r "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store"
 
 ZIP_SIZE=$(du -sh "${OUTPUT_ZIP}" | cut -f1)
+MIGRATION_COUNT=$(find "${BUILD_DIR}/prisma/migrations" -name "migration.sql" | wc -l | tr -d " ")
 echo ""
 echo "=== ビルド完了 ==="
 echo "出力ファイル: ${OUTPUT_ZIP}"
 echo "ZIP サイズ: ${ZIP_SIZE}"
+echo "Prisma migrations: ${MIGRATION_COUNT}"

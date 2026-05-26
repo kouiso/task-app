@@ -23,12 +23,16 @@
 
 | ツール | バージョン | 確認コマンド |
 |--------|-----------|------------|
-| Node.js | 20 以上 | `node -v` |
-| npm | 10 以上 | `npm -v` |
-| Docker Desktop | 最新版 | `docker -v` |
+| OS | macOS 13+ / Ubuntu 22.04 / Windows 11 (WSL2) | `sw_vers` / `lsb_release -a` |
+| Node.js | 22.x（mise で固定） | `mise install && node -v` |
+| npm | 10.x | `npm -v` |
+| Docker runtime | Docker Desktop または OrbStack | `docker -v` |
+| PostgreSQL | 16-alpine（Docker Compose で起動） | `docker compose ps` |
 | エディタ | VS Code 推奨 | — |
 
-PostgreSQL は Docker Desktop 経由で起動するため、ローカルへの個別インストールは不要です。
+詳細なサポート環境と Day01 setup E2E の確認項目は
+[`doc/SUPPORTED_ENVIRONMENTS.md`](doc/SUPPORTED_ENVIRONMENTS.md) を参照してください。
+PostgreSQL は Docker Compose 経由で起動するため、ローカルへの個別インストールは不要です。
 
 ---
 

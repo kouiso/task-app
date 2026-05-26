@@ -83,17 +83,17 @@ version_major() {
 }
 
 check_node() {
-  require_command "node" "Node.js が見つかりません。Node.js 20 以上を入れてから再実行してください: https://nodejs.org/"
+  require_command "node" "Node.js が見つかりません。Node.js 22 以上を入れてから再実行してください: https://nodejs.org/"
   local major
   major="$(version_major "$(node -v)")"
-  if [ "${major:-0}" -lt 20 ]; then
-    print_error "Node.js $(node -v) は非対応です。Node.js 20 以上が必要です: https://nodejs.org/"
+  if [ "${major:-0}" -lt 22 ]; then
+    print_error "Node.js $(node -v) は非対応です。Node.js 22 以上が必要です: https://nodejs.org/"
     exit 1
   fi
 }
 
 check_npm() {
-  require_command "npm" "npm が見つかりません。Node.js 20 系と一緒に npm 10 以上を入れてください: https://nodejs.org/"
+  require_command "npm" "npm が見つかりません。Node.js 22 系と一緒に npm 10 以上を入れてください: https://nodejs.org/"
   local major
   major="$(version_major "$(npm -v)")"
   if [ "${major:-0}" -lt 10 ]; then
@@ -579,6 +579,13 @@ postgres_ready_on_port() {
 }
 
 setup_database() {
+  # Docker の有無に関係なく、Next.js build と Prisma generate が参照する
+  # 必須環境変数を Day 01 の時点で用意する。
+  if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+    cp .env.example .env
+    echo ".env.example を .env にコピーしました。"
+  fi
+
   # Docker が使える場合のみ DB を自動セットアップ
   if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
     echo "Docker が使えないため、DB 起動はスキップします。"
@@ -592,12 +599,6 @@ setup_database() {
   if [ ! -f "docker-compose.yml" ]; then
     echo "docker-compose.yml がありません。DB セットアップをスキップします。"
     return 0
-  fi
-
-  # .env がなければ .env.example からコピー
-  if [ ! -f ".env" ] && [ -f ".env.example" ]; then
-    cp .env.example .env
-    echo ".env.example を .env にコピーしました。"
   fi
 
   echo "Docker で PostgreSQL を起動しています..."
