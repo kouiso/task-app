@@ -104,8 +104,11 @@ describe('property-based and chaos coverage', () => {
           const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
           const overview = await caller.report.getOverview();
 
+          // ダッシュボード集計は CANCELLED を除外する (アクティブな作業のみが対象)
+          const activeTasks = tasks.filter((task) => task.status !== TASK_STATUS.CANCELLED);
+
           expect(overview.totalProjects).toBe(1);
-          expect(overview.totalTasks).toBe(tasks.length);
+          expect(overview.totalTasks).toBe(activeTasks.length);
           expect(overview.completedTasks).toBe(
             tasks.filter((task) => task.status === TASK_STATUS.DONE).length,
           );
@@ -113,7 +116,7 @@ describe('property-based and chaos coverage', () => {
             tasks.filter((task) => task.status === TASK_STATUS.IN_PROGRESS).length,
           );
           expect(overview.totalTimeSpent).toBe(
-            tasks.reduce((total, task) => total + task.timeSpentMinutes, 0),
+            activeTasks.reduce((total, task) => total + task.timeSpentMinutes, 0),
           );
         },
       ),
