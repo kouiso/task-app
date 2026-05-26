@@ -4,7 +4,6 @@ export const TASK_STATUS = {
   IN_REVIEW: 'IN_REVIEW',
   DONE: 'DONE',
   CANCELLED: 'CANCELLED',
-  BLOCKED: 'BLOCKED',
 } as const;
 
 export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS];
@@ -15,7 +14,6 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   IN_REVIEW: 'レビュー中',
   DONE: '完了',
   CANCELLED: 'キャンセル',
-  BLOCKED: 'ブロック',
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
@@ -24,7 +22,6 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   IN_REVIEW: '#ff9800',
   DONE: '#4caf50',
   CANCELLED: '#f44336',
-  BLOCKED: '#9c27b0',
 };
 
 export function isTaskStatus(value: unknown): value is TaskStatus {
