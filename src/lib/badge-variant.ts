@@ -12,7 +12,6 @@ export const getStatusBadgeVariant = (status: TaskStatus): BadgeVariant => {
     case TASK_STATUS.IN_REVIEW:
       return 'outline';
     case TASK_STATUS.CANCELLED:
-    case TASK_STATUS.BLOCKED:
       return 'destructive';
     default:
       return 'outline';

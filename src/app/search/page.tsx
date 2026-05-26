@@ -28,14 +28,7 @@ import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
 import { api } from '@/trpc/react';
 
-const TASK_STATUS_VALUES = [
-  'TODO',
-  'IN_PROGRESS',
-  'IN_REVIEW',
-  'DONE',
-  'CANCELLED',
-  'BLOCKED',
-] as const;
+const TASK_STATUS_VALUES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'] as const;
 const TASK_PRIORITY_VALUES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const;
 
 const searchFormSchema = z.object({

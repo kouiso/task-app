@@ -39,7 +39,7 @@ export type TaskWithoutRelations = Prisma.TaskGetPayload<Record<string, never>>;
 export type TaskCreateInput = {
   title: string;
   description?: string;
-  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate?: string;
   estimatedHours?: number;
@@ -52,7 +52,7 @@ export type TaskUpdateInput = {
   id: string;
   title?: string;
   description?: string | null;
-  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate?: string | null;
   completedAt?: string | null;
@@ -63,7 +63,7 @@ export type TaskUpdateInput = {
 
 export type TaskFilterInput = {
   projectId?: string;
-  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+  status?: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
   assigneeId?: string;
 };
 
@@ -77,17 +77,10 @@ export type TaskTimeUpdateInput = {
   minutesToAdd: number;
 };
 
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED' | 'BLOCKED';
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
 
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
-export const TASK_STATUSES = [
-  'TODO',
-  'IN_PROGRESS',
-  'IN_REVIEW',
-  'DONE',
-  'CANCELLED',
-  'BLOCKED',
-] as const;
+export const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'] as const;
 
 export const TASK_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const;

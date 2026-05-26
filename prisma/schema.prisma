@@ -187,7 +187,6 @@ enum TaskStatus {
   IN_REVIEW
   DONE
   CANCELLED
-  BLOCKED
 }
 
 enum TaskPriority {
