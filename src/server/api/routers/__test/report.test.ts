@@ -155,11 +155,12 @@ describe('reportRouter', () => {
 
       await prisma.task.createMany({
         data: Array.from({ length: 101 }, (_, index) => {
-          let status: 'DONE' | 'IN_PROGRESS' | 'IN_REVIEW' | 'TODO';
+          let status: 'DONE' | 'IN_PROGRESS' | 'IN_REVIEW' | 'TODO' | 'CANCELLED';
           if (index < 40) status = 'DONE';
           else if (index < 70) status = 'IN_PROGRESS';
           else if (index < 85) status = 'IN_REVIEW';
-          else status = 'TODO';
+          else if (index < 95) status = 'TODO';
+          else status = 'CANCELLED';
           return {
             title: `Overview Task ${index + 1}`,
             description: 'overview test',
@@ -177,12 +178,15 @@ describe('reportRouter', () => {
       const overview = await caller.report.getOverview();
 
       expect(overview.totalProjects).toBe(1);
-      expect(overview.totalTasks).toBe(101);
+      // totalTasks は CANCELLED を除外する (101 - 6 = 95)
+      expect(overview.totalTasks).toBe(95);
       expect(overview.completedTasks).toBe(40);
       expect(overview.inProgressTasks).toBe(30);
       expect(overview.inReviewTasks).toBe(15);
+      expect(overview.todoTasks).toBe(10);
       expect(overview.recentTasks).toHaveLength(5);
-      expect(overview.projectStats.at(0)?.totalTasks).toBe(101);
+      // プロジェクト別の totalTasks も CANCELLED を除外する
+      expect(overview.projectStats.at(0)?.totalTasks).toBe(95);
     });
   });
 });

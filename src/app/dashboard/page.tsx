@@ -1,6 +1,14 @@
 'use client';
 
-import { ArrowUpRight, CheckCircle2, Eye, FolderKanban, ListChecks, Timer } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  Circle,
+  Eye,
+  FolderKanban,
+  ListChecks,
+  Timer,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
@@ -22,12 +30,11 @@ export default function DashboardPage() {
   }
 
   const totalProjects = overview?.totalProjects ?? projects?.length ?? 0;
-  const totalTasks = overview?.totalTasks ?? 0;
   const completedTasks = overview?.completedTasks ?? 0;
   const inProgressTasks = overview?.inProgressTasks ?? 0;
   const inReviewTasks = overview?.inReviewTasks ?? 0;
+  const todoTasks = overview?.todoTasks ?? 0;
   const completionRate = overview?.completionRate ?? 0;
-  const remaining = totalTasks - completedTasks - inProgressTasks - inReviewTasks;
 
   const recentTasks = overview?.recentTasks ?? [];
 
@@ -115,7 +122,7 @@ export default function DashboardPage() {
                   style={{ width: '8px', height: '8px', backgroundColor: '#64748b' }}
                 />
                 <span className="text-sm text-slate-300">
-                  残りタスク <span className="font-semibold text-white">{remaining}</span>
+                  未対応タスク <span className="font-semibold text-white">{todoTasks}</span>
                 </span>
               </div>
             </div>
@@ -126,7 +133,7 @@ export default function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
-            { label: '全タスク', value: totalTasks, color: '#8b5cf6', icon: ListChecks },
+            { label: '未対応タスク', value: todoTasks, color: '#64748b', icon: Circle },
             { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
             { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
             { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
