@@ -127,9 +127,9 @@ export default function DashboardPage() {
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
             { label: '全タスク', value: totalTasks, color: '#8b5cf6', icon: ListChecks },
-            { label: '完了タスク', value: completedTasks, color: '#10b981', icon: CheckCircle2 },
-            { label: '進行中タスク', value: inProgressTasks, color: '#f59e0b', icon: Timer },
-            { label: 'レビュー中タスク', value: inReviewTasks, color: '#ec4899', icon: Eye },
+            { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
+            { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
+            { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
