@@ -87,7 +87,7 @@ export default function DashboardPage() {
                   style={{ width: '8px', height: '8px', backgroundColor: '#34d399' }}
                 />
                 <span className="text-sm text-slate-300">
-                  完了 <span className="font-semibold text-white">{completedTasks}</span>
+                  完了タスク <span className="font-semibold text-white">{completedTasks}</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -96,7 +96,7 @@ export default function DashboardPage() {
                   style={{ width: '8px', height: '8px', backgroundColor: '#60a5fa' }}
                 />
                 <span className="text-sm text-slate-300">
-                  進行中 <span className="font-semibold text-white">{inProgressTasks}</span>
+                  進行中タスク <span className="font-semibold text-white">{inProgressTasks}</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                   style={{ width: '8px', height: '8px', backgroundColor: '#64748b' }}
                 />
                 <span className="text-sm text-slate-300">
-                  残り <span className="font-semibold text-white">{remaining}</span>
+                  残りタスク <span className="font-semibold text-white">{remaining}</span>
                 </span>
               </div>
             </div>
@@ -117,8 +117,8 @@ export default function DashboardPage() {
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
             { label: '全タスク', value: totalTasks, color: '#8b5cf6', icon: ListChecks },
-            { label: '完了', value: completedTasks, color: '#10b981', icon: CheckCircle2 },
-            { label: '進行中', value: inProgressTasks, color: '#f59e0b', icon: Timer },
+            { label: '完了タスク', value: completedTasks, color: '#10b981', icon: CheckCircle2 },
+            { label: '進行中タスク', value: inProgressTasks, color: '#f59e0b', icon: Timer },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
