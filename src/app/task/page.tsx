@@ -279,8 +279,11 @@ function TaskPageContent() {
 
             <div className="flex gap-2 w-full sm:w-auto ml-auto">
               <div className="w-[200px]">
+                <Label htmlFor="task-project-filter" className="sr-only">
+                  プロジェクトで絞り込み
+                </Label>
                 <Select value={filterProject} onValueChange={setFilterProject}>
-                  <SelectTrigger>
+                  <SelectTrigger id="task-project-filter">
                     <SelectValue placeholder="すべてのプロジェクト" />
                   </SelectTrigger>
                   <SelectContent>
@@ -294,13 +297,16 @@ function TaskPageContent() {
                 </Select>
               </div>
               <div className="w-[200px]">
+                <Label htmlFor="task-status-filter" className="sr-only">
+                  ステータスで絞り込み
+                </Label>
                 <Select
                   value={filterStatus}
                   onValueChange={(value) => {
                     if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="task-status-filter">
                     <SelectValue placeholder="すべてのステータス" />
                   </SelectTrigger>
                   <SelectContent>
@@ -324,6 +330,7 @@ function TaskPageContent() {
                     checked={selectedTasks.has(task.id)}
                     onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}
                     className="mt-4"
+                    aria-label={`${task.title}を選択`}
                   />
                   <div className="flex-1 min-w-0 h-full">
                     <TaskCard
