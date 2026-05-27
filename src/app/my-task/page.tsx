@@ -207,7 +207,7 @@ export default function MyTasksPage() {
               }}
               className="w-full sm:w-auto"
             >
-              <TabsList>
+              <TabsList aria-label="ステータスフィルター">
                 {STATUS_TABS.map((tab) => (
                   <TabsTrigger key={tab.label} value={tab.value}>
                     {tab.label}
@@ -218,7 +218,7 @@ export default function MyTasksPage() {
 
             <div className="ml-auto w-full sm:w-[200px]">
               <Select value={filterProject} onValueChange={setFilterProject}>
-                <SelectTrigger>
+                <SelectTrigger id="project-filter" aria-label="プロジェクトフィルター">
                   <SelectValue placeholder="すべてのプロジェクト" />
                 </SelectTrigger>
                 <SelectContent>
