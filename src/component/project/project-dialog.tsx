@@ -112,7 +112,12 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
                   *
                 </span>
               </Label>
-              <Input id="name" placeholder="プロジェクト名を入力" {...register('name')} />
+              <Input
+                id="name"
+                placeholder="プロジェクト名を入力"
+                aria-required="true"
+                {...register('name')}
+              />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
             <div className="grid gap-2">

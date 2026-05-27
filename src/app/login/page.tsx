@@ -111,6 +111,7 @@ function LoginForm() {
                 placeholder="your@email.com"
                 autoComplete="email"
                 autoFocus
+                aria-required="true"
                 {...register('email')}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
@@ -126,6 +127,7 @@ function LoginForm() {
                 id="password"
                 type="password"
                 autoComplete="current-password"
+                aria-required="true"
                 {...register('password')}
               />
               {errors.password && (

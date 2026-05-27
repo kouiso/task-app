@@ -145,7 +145,12 @@ export function TaskDialog({
                   *
                 </span>
               </Label>
-              <Input id="title" placeholder="タスクのタイトルを入力" {...register('title')} />
+              <Input
+                id="title"
+                placeholder="タスクのタイトルを入力"
+                aria-required="true"
+                {...register('title')}
+              />
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
             <div className="grid gap-2">
@@ -171,7 +176,7 @@ export function TaskDialog({
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="status" aria-label="ステータスを選択">
+                      <SelectTrigger id="status" aria-label="ステータスを選択" aria-required="true">
                         <SelectValue placeholder="ステータスを選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -197,7 +202,7 @@ export function TaskDialog({
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="priority" aria-label="優先度を選択">
+                      <SelectTrigger id="priority" aria-label="優先度を選択" aria-required="true">
                         <SelectValue placeholder="優先度を選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -228,7 +233,11 @@ export function TaskDialog({
                       onValueChange={field.onChange}
                       disabled={!projects.length}
                     >
-                      <SelectTrigger id="project" aria-label="プロジェクトを選択">
+                      <SelectTrigger
+                        id="project"
+                        aria-label="プロジェクトを選択"
+                        aria-required="true"
+                      >
                         <SelectValue placeholder="プロジェクトを選択" />
                       </SelectTrigger>
                       <SelectContent>

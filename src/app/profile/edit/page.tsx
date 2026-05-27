@@ -102,7 +102,12 @@ export default function ProfileEditPage() {
                     *
                   </span>
                 </Label>
-                <Input id="name" {...form.register('name')} disabled={updateProfile.isPending} />
+                <Input
+                  id="name"
+                  aria-required="true"
+                  {...form.register('name')}
+                  disabled={updateProfile.isPending}
+                />
                 {form.formState.errors.name && (
                   <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                 )}
@@ -118,6 +123,7 @@ export default function ProfileEditPage() {
                 <Input
                   id="email"
                   type="email"
+                  aria-required="true"
                   {...form.register('email')}
                   disabled={updateProfile.isPending}
                 />
