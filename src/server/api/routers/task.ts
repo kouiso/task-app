@@ -36,6 +36,7 @@ const taskUpdateSchema = z.object({
   completedAt: z.string().datetime().optional().nullable(),
   estimatedHours: z.number().min(0).optional().nullable(),
   actualHours: z.number().min(0).optional(),
+  projectId: z.string().cuid().optional(),
   assigneeId: z.string().cuid().optional().nullable(),
 });
 
@@ -287,12 +288,45 @@ export const taskRouter = createTRPCRouter({
     if (data.completedAt !== undefined) {
       updateData.completedAt = data.completedAt ? new Date(data.completedAt) : null;
     }
+
+    const isProjectChanging =
+      data.projectId !== undefined && data.projectId !== existingTask.projectId;
+    const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+
+    if (isProjectChanging) {
+      // 移動先プロジェクトでも canEdit 権限を持つかを確認
+      const destinationMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: targetProjectId,
+          },
+        },
+      });
+      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+      updateData.project = { connect: { id: targetProjectId } };
+    }
+
     if (data.assigneeId !== undefined) {
       if (data.assigneeId === null) {
         updateData.assignee = { disconnect: true };
       } else {
-        await assertTaskAssigneeBelongsToProject(existingTask.projectId, data.assigneeId);
+        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
         updateData.assignee = { connect: { id: data.assigneeId } };
+      }
+    } else if (isProjectChanging && existingTask.assigneeId) {
+      // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+      const assigneeStillMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: existingTask.assigneeId,
+            projectId: targetProjectId,
+          },
+        },
+        select: { id: true },
+      });
+      if (!assigneeStillMember) {
+        updateData.assignee = { disconnect: true };
       }
     }
 
