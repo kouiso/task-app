@@ -1,0 +1,41 @@
+name: Codex Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  codex-review:
+    # main と develop への変更だけを確認する
+    if: |
+      (github.event.pull_request.base.ref == 'main' ||
+      github.event.pull_request.base.ref == 'develop') &&
+      vars.CODEX_CODE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Run Codex Code Review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: read-only
+          prompt: |
+            変更内容を日本語で確認してください。
+
+            確認すること:
+            - ユーザーが困る不具合が増えていないか
+            - 画面表示や入力の分かりやすさが悪くなっていないか
+            - 秘密情報や個人情報が漏れていないか
+            - 既存の作り方から大きく外れていないか
+            - 必要な確認が不足していないか
+
+            コメントは必ず平易な日本語で書いてください。
