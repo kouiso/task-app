@@ -34,7 +34,8 @@ jobs:
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-5.5
-          safety-strategy: workspace-write
+          safety-strategy: drop-sudo
+          sandbox: workspace-write
           prompt: |
             このリポジトリで依頼された作業を行ってください。
 

@@ -32,7 +32,8 @@ jobs:
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-5.5
-          safety-strategy: workspace-write
+          safety-strategy: drop-sudo
+          sandbox: workspace-write
           output-file: codex-security-review.md
           prompt: |
             この変更のセキュリティ面を確認してください。
