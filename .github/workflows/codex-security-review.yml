@@ -1,0 +1,44 @@
+name: Codex Security Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/**/*.js'
+      - 'prisma/**/*'
+      - 'package*.json'
+      - '.env*'
+
+jobs:
+  security-review:
+    if: vars.CODEX_CODE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Codex Security Review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: read-only
+          prompt: |
+            この変更で危ない使い方が増えていないか、日本語で確認してください。
+
+            見ること:
+            - ログインや権限確認が弱くなっていないか
+            - 入力された文字で画面やデータが壊れないか
+            - 秘密情報や個人情報が漏れないか
+            - エラー時に利用者へ分かりやすく伝わるか
+            - 依存パッケージの危険な変更がないか
+
+            問題がある場合は、何が危ないかと直し方を平易な日本語で書いてください。
