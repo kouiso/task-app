@@ -31,7 +31,10 @@ export function isOverdue(dueDate: Date | string | null | undefined): boolean {
   if (!dueDate) {
     return false;
   }
-  const dueKey = dateOnlyFromValue(dueDate);
+  // Date は toISOString が UTC を返すため、JST など UTC と差がある環境では日付がずれる。
+  // ローカル日付で比較するため Date の場合は localDateOnly を用いる。
+  // 文字列 (YYYY-MM-DDTHH:mm:ss...) は先頭 10 文字をそのまま日付として扱う。
+  const dueKey = typeof dueDate === 'string' ? dueDate.slice(0, 10) : localDateOnly(dueDate);
   const todayKey = localDateOnly(new Date());
   return dueKey < todayKey;
 }
