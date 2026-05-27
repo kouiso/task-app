@@ -73,6 +73,7 @@ export default function ChangePasswordPage() {
                 </Label>
                 <PasswordInput
                   id="currentPassword"
+                  aria-required="true"
                   {...form.register('currentPassword')}
                   disabled={changePassword.isPending}
                 />
@@ -92,6 +93,7 @@ export default function ChangePasswordPage() {
                 </Label>
                 <PasswordInput
                   id="newPassword"
+                  aria-required="true"
                   {...form.register('newPassword')}
                   disabled={changePassword.isPending}
                 />
@@ -112,6 +114,7 @@ export default function ChangePasswordPage() {
                 </Label>
                 <PasswordInput
                   id="confirmPassword"
+                  aria-required="true"
                   {...form.register('confirmPassword')}
                   disabled={changePassword.isPending}
                 />

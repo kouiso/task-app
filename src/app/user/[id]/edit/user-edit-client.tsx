@@ -168,7 +168,12 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                     *
                   </span>
                 </Label>
-                <Input id="name" {...form.register('name')} disabled={updateUser.isPending} />
+                <Input
+                  id="name"
+                  aria-required="true"
+                  {...form.register('name')}
+                  disabled={updateUser.isPending}
+                />
                 {form.formState.errors.name && (
                   <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                 )}

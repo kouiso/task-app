@@ -119,6 +119,7 @@ export default function RegisterPage() {
                 placeholder="山田 太郎"
                 autoComplete="name"
                 autoFocus
+                aria-required="true"
                 {...register('name')}
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
@@ -135,6 +136,7 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="your@email.com"
                 autoComplete="email"
+                aria-required="true"
                 {...register('email')}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
@@ -150,6 +152,7 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 autoComplete="new-password"
+                aria-required="true"
                 {...register('password')}
               />
               {errors.password && (
@@ -167,6 +170,7 @@ export default function RegisterPage() {
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
+                aria-required="true"
                 {...register('confirmPassword')}
               />
               {errors.confirmPassword && (
