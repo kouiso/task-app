@@ -107,34 +107,52 @@ export default function RegisterPage() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="name">名前</Label>
+              <Label htmlFor="name">
+                名前{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
               <Input
                 id="name"
                 type="text"
                 placeholder="山田 太郎"
                 autoComplete="name"
                 autoFocus
+                aria-required="true"
                 {...register('name')}
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">メールアドレス</Label>
+              <Label htmlFor="email">
+                メールアドレス{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="your@email.com"
                 autoComplete="email"
+                aria-required="true"
                 {...register('email')}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">パスワード</Label>
+              <Label htmlFor="password">
+                パスワード{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
+                aria-required="true"
                 {...register('password')}
               />
               {errors.password && (
@@ -142,11 +160,17 @@ export default function RegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">パスワード(確認)</Label>
+              <Label htmlFor="confirmPassword">
+                パスワード(確認){' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
+                aria-required="true"
                 {...register('confirmPassword')}
               />
               {errors.confirmPassword && (
