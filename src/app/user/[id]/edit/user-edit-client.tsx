@@ -163,7 +163,10 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="name">
-                  名前 <span className="text-destructive">*</span>
+                  名前{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </Label>
                 <Input id="name" {...form.register('name')} disabled={updateUser.isPending} />
                 {form.formState.errors.name && (
