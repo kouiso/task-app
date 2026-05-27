@@ -95,7 +95,7 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
   const selectedProjectId = watch('projectId');
   const { data: projectMembers } = api.search.getMembersByProject.useQuery(
     { projectId: selectedProjectId },
-    { enabled: !!selectedProjectId },
+    { enabled: open && !!selectedProjectId },
   );
   const users = projectMembers ?? [];
 
