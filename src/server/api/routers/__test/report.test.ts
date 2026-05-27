@@ -187,6 +187,12 @@ describe('reportRouter', () => {
       expect(overview.recentTasks).toHaveLength(5);
       // プロジェクト別の totalTasks も CANCELLED を除外する
       expect(overview.projectStats.at(0)?.totalTasks).toBe(95);
+
+      const statusMap = new Map(overview.statusData.map((item) => [item.key, item.value]));
+      expect(statusMap.get('CANCELLED')).toBeUndefined();
+
+      const priorityTotal = overview.priorityData.reduce((sum, item) => sum + item.value, 0);
+      expect(priorityTotal).toBe(95);
     });
   });
 });
