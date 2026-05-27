@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
@@ -27,6 +27,10 @@ import {
 } from '@/component/ui/select';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
+import {
+  buildTaskFiltersQueryString,
+  parseTaskFiltersFromSearchParams,
+} from '@/lib/task-filter-query';
 import { taskToFormData } from '@/lib/task-form';
 import { api } from '@/trpc/react';
 
@@ -43,6 +47,8 @@ function TaskPageContent() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const taskIdParam = searchParams.get('taskId');
 
   useEffect(() => {
@@ -51,6 +57,37 @@ function TaskPageContent() {
       setDetailOpen(true);
     }
   }, [taskIdParam]);
+
+  useEffect(() => {
+    const parsed = parseTaskFiltersFromSearchParams(searchParams);
+    setFilterProject(parsed.project);
+    setFilterStatus(parsed.status);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('project');
+    params.delete('status');
+
+    const filterQuery = buildTaskFiltersQueryString({
+      project: filterProject,
+      status: filterStatus,
+    });
+
+    if (filterQuery) {
+      const filterParams = new URLSearchParams(filterQuery);
+      for (const [key, value] of filterParams.entries()) {
+        params.set(key, value);
+      }
+    }
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [filterProject, filterStatus, pathname, router, searchParams]);
 
   const utils = api.useUtils();
 
