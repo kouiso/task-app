@@ -1,0 +1,57 @@
+name: Codex Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  codex-review:
+    if: |
+      (github.event.pull_request.base.ref == 'main' ||
+      github.event.pull_request.base.ref == 'develop') &&
+      vars.CODEX_REVIEW_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Run Codex Code Review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.5
+          safety-strategy: workspace-write
+          output-file: codex-review.md
+          prompt: |
+            この変更をレビューしてください。
+
+            必ず日本語で、具体的で直せる指摘だけを書いてください。
+            指摘がない場合は「重大な問題は見つかりませんでした」と書いてください。
+
+            確認すること:
+            - 型の安全性が保たれているか
+            - 利用者に見える不具合が増えていないか
+            - セキュリティ上の危険がないか
+            - 既存の書き方と大きくずれていないか
+            - 必要なテストが足りているか
+
+      - name: Comment review result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const body = fs.readFileSync('codex-review.md', 'utf8').trim();
+            if (!body) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });

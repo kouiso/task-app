@@ -1,0 +1,46 @@
+name: Codex
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  codex:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@codex')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@codex')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@codex')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@codex'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.5
+          safety-strategy: workspace-write
+          prompt: |
+            このリポジトリで依頼された作業を行ってください。
+
+            必ず守ること:
+            - main、master、develop へ直接 push しない
+            - 変更が必要な場合は新しいブランチで作業し、Pull Request を作る
+            - コメントと説明は日本語で書く
+            - 利用者が何をできるようになったかを説明する
+            - 動作確認の結果を残す

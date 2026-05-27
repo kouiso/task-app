@@ -1,0 +1,62 @@
+name: Codex Security Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/**/*.js'
+      - 'prisma/**/*'
+      - 'package*.json'
+      - '.env*'
+
+jobs:
+  security-review:
+    if: vars.CODEX_REVIEW_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Codex Security Review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.5
+          safety-strategy: workspace-write
+          output-file: codex-security-review.md
+          prompt: |
+            この変更のセキュリティ面を確認してください。
+
+            必ず日本語で、利用者に影響する危険を平易に説明してください。
+            問題がなければ「重大なセキュリティ問題は見つかりませんでした」と書いてください。
+
+            確認すること:
+            - ログインや権限の抜け道がないか
+            - 入力値の扱いが安全か
+            - 個人情報や秘密情報が漏れないか
+            - エラー表示で余計な情報を出していないか
+            - 依存パッケージ変更に危険がないか
+
+      - name: Comment security review result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const body = fs.readFileSync('codex-security-review.md', 'utf8').trim();
+            if (!body) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
