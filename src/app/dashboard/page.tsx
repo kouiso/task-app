@@ -45,7 +45,7 @@ export default function DashboardPage() {
         <div
           className="relative overflow-hidden rounded-2xl p-8"
           style={{
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+            background: '#0f172a',
           }}
         >
           {/* 装飾 */}
@@ -82,7 +82,7 @@ export default function DashboardPage() {
                 style={{
                   height: '8px',
                   width: `${completionRate}%`,
-                  background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                  background: '#3b82f6',
                 }}
               />
             </div>
