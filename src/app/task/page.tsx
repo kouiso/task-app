@@ -320,8 +320,8 @@ function TaskPageContent() {
               <Label htmlFor="select-all">すべて選択</Label>
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto ml-auto">
-              <div className="w-[200px]">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto ml-auto">
+              <div className="w-full sm:w-[200px]">
                 <Label htmlFor="task-project-filter" className="sr-only">
                   プロジェクトで絞り込み
                 </Label>
@@ -339,7 +339,7 @@ function TaskPageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-[200px]">
+              <div className="w-full sm:w-[200px]">
                 <Label htmlFor="task-status-filter" className="sr-only">
                   ステータスで絞り込み
                 </Label>
@@ -362,7 +362,7 @@ function TaskPageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-[200px]">
+              <div className="w-full sm:w-[200px]">
                 <Select
                   value={filterPriority}
                   onValueChange={(value) => {
@@ -382,7 +382,7 @@ function TaskPageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-[200px]">
+              <div className="w-full sm:w-[200px]">
                 <Select value={filterAssignee} onValueChange={setFilterAssignee}>
                   <SelectTrigger>
                     <SelectValue placeholder="すべての担当者" />
