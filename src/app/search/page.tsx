@@ -48,20 +48,21 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const utils = api.useUtils();
 
-  const initialStatus = searchParams.get('status') ?? 'all';
-  const initialPriority = searchParams.get('priority') ?? 'all';
+  const defaultSearchValues: SearchFormValues = {
+    keyword: '',
+    projectId: 'all',
+    status: 'all',
+    priority: 'all',
+    assignedTo: 'all',
+    dateFrom: '',
+    dateTo: '',
+  };
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
-    defaultValues: {
-      keyword: searchParams.get('keyword') ?? '',
-      projectId: searchParams.get('projectId') ?? 'all',
-      status: isTaskStatus(initialStatus) ? initialStatus : 'all',
-      priority: isTaskPriority(initialPriority) ? initialPriority : 'all',
-      assignedTo: searchParams.get('assignedTo') ?? 'all',
-      dateFrom: searchParams.get('dateFrom') ?? '',
-      dateTo: searchParams.get('dateTo') ?? '',
-    },
+    defaultValues: searchFormSchema.parse(
+      applySearchParamsToValues(new URLSearchParams(searchParams.toString()), defaultSearchValues),
+    ),
   });
 
   const formValues = form.watch();
@@ -99,10 +100,7 @@ function SearchPageContent() {
       form.getValues(),
     );
 
-    nextValues.status = isTaskStatus(nextValues.status) ? nextValues.status : 'all';
-    nextValues.priority = isTaskPriority(nextValues.priority) ? nextValues.priority : 'all';
-
-    form.reset(nextValues);
+    form.reset(searchFormSchema.parse(nextValues));
   }, [searchParams, form]);
 
   const handleSearch = () => {

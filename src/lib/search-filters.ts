@@ -1,3 +1,6 @@
+import { isTaskPriority } from '@/lib/constant/priority';
+import { isTaskStatus } from '@/lib/constant/status';
+
 export type SearchFormValues = {
   keyword: string;
   projectId: string;
@@ -18,6 +21,14 @@ const SEARCH_PARAM_KEYS: Array<keyof SearchFormValues> = [
   'dateTo',
 ];
 
+const normalizeSearchFormValues = (values: SearchFormValues): SearchFormValues => ({
+  ...values,
+  projectId: values.projectId || 'all',
+  status: isTaskStatus(values.status) ? values.status : 'all',
+  priority: isTaskPriority(values.priority) ? values.priority : 'all',
+  assignedTo: values.assignedTo || 'all',
+});
+
 export const applySearchParamsToValues = (
   searchParams: URLSearchParams,
   currentValues: SearchFormValues,
@@ -28,24 +39,20 @@ export const applySearchParamsToValues = (
     nextValues[key] = searchParams.get(key) ?? '';
   }
 
-  nextValues.projectId ||= 'all';
-  nextValues.status ||= 'all';
-  nextValues.priority ||= 'all';
-  nextValues.assignedTo ||= 'all';
-
-  return nextValues;
+  return normalizeSearchFormValues(nextValues);
 };
 
 export const buildSearchParamsFromValues = (values: SearchFormValues): URLSearchParams => {
   const params = new URLSearchParams();
+  const normalizedValues = normalizeSearchFormValues(values);
 
-  if (values.keyword) params.set('keyword', values.keyword);
-  if (values.projectId !== 'all') params.set('projectId', values.projectId);
-  if (values.status !== 'all') params.set('status', values.status);
-  if (values.priority !== 'all') params.set('priority', values.priority);
-  if (values.assignedTo !== 'all') params.set('assignedTo', values.assignedTo);
-  if (values.dateFrom) params.set('dateFrom', values.dateFrom);
-  if (values.dateTo) params.set('dateTo', values.dateTo);
+  if (normalizedValues.keyword) params.set('keyword', normalizedValues.keyword);
+  if (normalizedValues.projectId !== 'all') params.set('projectId', normalizedValues.projectId);
+  if (normalizedValues.status !== 'all') params.set('status', normalizedValues.status);
+  if (normalizedValues.priority !== 'all') params.set('priority', normalizedValues.priority);
+  if (normalizedValues.assignedTo !== 'all') params.set('assignedTo', normalizedValues.assignedTo);
+  if (normalizedValues.dateFrom) params.set('dateFrom', normalizedValues.dateFrom);
+  if (normalizedValues.dateTo) params.set('dateTo', normalizedValues.dateTo);
 
   return params;
 };

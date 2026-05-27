@@ -27,6 +27,18 @@ describe('search filter helpers', () => {
     });
   });
 
+  it('不正なステータスと優先度を既定値へ戻す', () => {
+    const next = applySearchParamsToValues(
+      new URLSearchParams('status=ARCHIVED&priority=CRITICAL&keyword=api'),
+      DEFAULT_VALUES,
+    );
+
+    expect(next).toEqual({
+      ...DEFAULT_VALUES,
+      keyword: 'api',
+    });
+  });
+
   it('all/空文字を除外して検索パラメータを構築する', () => {
     const params = buildSearchParamsFromValues({
       ...DEFAULT_VALUES,
@@ -35,5 +47,16 @@ describe('search filter helpers', () => {
     });
 
     expect(params.toString()).toBe('keyword=api&assignedTo=user-1');
+  });
+
+  it('検索パラメータ構築時も不正なステータスと優先度を除外する', () => {
+    const params = buildSearchParamsFromValues({
+      ...DEFAULT_VALUES,
+      status: 'ARCHIVED',
+      priority: 'CRITICAL',
+      projectId: 'p1',
+    });
+
+    expect(params.toString()).toBe('projectId=p1');
   });
 });
