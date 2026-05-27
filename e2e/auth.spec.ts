@@ -11,6 +11,15 @@ test.describe('Authentication', () => {
     await expect(page.locator('#password')).toBeVisible();
   });
 
+  test('should redirect protected pages to login when unauthenticated', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    await page.waitForURL(/\/login/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.getByText('ログイン', { exact: true }).first()).toBeVisible();
+    await expect(page.locator('#email')).toBeFocused();
+  });
+
   test('should login with valid credentials', async ({ page }) => {
     await page.fill('#email', 'admin@example.com');
     await page.fill('#password', 'password123');
