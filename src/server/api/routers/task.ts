@@ -79,6 +79,7 @@ export const taskRouter = createTRPCRouter({
         .object({
           projectId: z.string().cuid().optional(),
           status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
           assigneeId: z.string().cuid().optional(),
           limit: z.number().min(1).max(100).default(100),
           offset: z.number().min(0).default(0),
@@ -104,6 +105,7 @@ export const taskRouter = createTRPCRouter({
         where.projectId = input.projectId;
       }
       if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
 
       return await prisma.task.findMany({

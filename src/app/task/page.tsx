@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
+import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import {
@@ -41,6 +42,8 @@ function TaskPageContent() {
   const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [filterPriority, setFilterPriority] = useState<TaskPriority | 'all'>('all');
+  const [filterAssignee, setFilterAssignee] = useState<string>('all');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -101,6 +104,8 @@ function TaskPageContent() {
     {
       projectId: filterProject === 'all' ? undefined : filterProject,
       status: filterStatus === 'all' ? undefined : filterStatus,
+      priority: filterPriority === 'all' ? undefined : filterPriority,
+      assigneeId: filterAssignee === 'all' ? undefined : filterAssignee,
     },
     { refetchOnWindowFocus: false },
   );
@@ -352,6 +357,41 @@ function TaskPageContent() {
                     {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
                       <SelectItem key={value} value={value}>
                         {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[200px]">
+                <Select
+                  value={filterPriority}
+                  onValueChange={(value) => {
+                    if (value === 'all' || isTaskPriority(value)) setFilterPriority(value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="すべての優先度" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべての優先度</SelectItem>
+                    {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[200px]">
+                <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="すべての担当者" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべての担当者</SelectItem>
+                    {users?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
                       </SelectItem>
                     ))}
                   </SelectContent>
