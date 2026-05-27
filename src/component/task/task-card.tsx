@@ -6,11 +6,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
-import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
-import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import type { TaskStatus } from '@/lib/constant/status';
 import { formatDateOnly } from '@/lib/date';
 import { cn } from '@/lib/utils';
+import { StatusBadge } from './status-badge';
 import { TaskTimer } from './task-timer';
 import { TimeLogDialog } from './time-log-dialog';
 
@@ -130,7 +131,7 @@ export function TaskCard({
           )}
 
           <div className="flex gap-2 flex-wrap">
-            <Badge variant={getStatusBadgeVariant(status)}>{TASK_STATUS_LABELS[status]}</Badge>
+            <StatusBadge status={status} />
             <Badge variant={getPriorityBadgeVariant(priority)}>
               {TASK_PRIORITY_LABELS[priority]}
             </Badge>
