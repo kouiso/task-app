@@ -66,7 +66,10 @@ export default function ChangePasswordPage() {
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">
-                  現在のパスワード <span className="text-destructive">*</span>
+                  現在のパスワード{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </Label>
                 <PasswordInput
                   id="currentPassword"
@@ -82,7 +85,10 @@ export default function ChangePasswordPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="newPassword">
-                  新しいパスワード <span className="text-destructive">*</span>
+                  新しいパスワード{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </Label>
                 <PasswordInput
                   id="newPassword"
@@ -99,7 +105,10 @@ export default function ChangePasswordPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">
-                  新しいパスワード（確認） <span className="text-destructive">*</span>
+                  新しいパスワード（確認）{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </Label>
                 <PasswordInput
                   id="confirmPassword"

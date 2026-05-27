@@ -139,7 +139,12 @@ export function TaskDialog({
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">タイトル</Label>
+              <Label htmlFor="title">
+                タイトル{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
               <Input id="title" placeholder="タスクのタイトルを入力" {...register('title')} />
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
@@ -155,7 +160,12 @@ export function TaskDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="status">ステータス</Label>
+                <Label htmlFor="status">
+                  ステータス{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="status"
                   control={control}
@@ -176,7 +186,12 @@ export function TaskDialog({
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="priority">優先度</Label>
+                <Label htmlFor="priority">
+                  優先度{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="priority"
                   control={control}
@@ -198,7 +213,12 @@ export function TaskDialog({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="project">プロジェクト</Label>
+                <Label htmlFor="project">
+                  プロジェクト{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="projectId"
                   control={control}

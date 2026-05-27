@@ -99,7 +99,12 @@ function LoginForm() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">メールアドレス</Label>
+              <Label htmlFor="email">
+                メールアドレス{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -111,7 +116,12 @@ function LoginForm() {
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">パスワード</Label>
+              <Label htmlFor="password">
+                パスワード{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
               <Input
                 id="password"
                 type="password"

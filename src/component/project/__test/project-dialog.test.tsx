@@ -14,8 +14,8 @@ describe('ProjectDialog', () => {
 
     const { rerender } = render(<ProjectDialog open={true} onClose={onClose} onSubmit={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('プロジェクト名'), '持ち越してはいけない名前');
-    expect(screen.getByLabelText('プロジェクト名')).toHaveValue('持ち越してはいけない名前');
+    await user.type(screen.getByLabelText(/プロジェクト名/), '持ち越してはいけない名前');
+    expect(screen.getByLabelText(/プロジェクト名/)).toHaveValue('持ち越してはいけない名前');
 
     await user.click(screen.getByRole('button', { name: 'キャンセル' }));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -23,6 +23,6 @@ describe('ProjectDialog', () => {
     rerender(<ProjectDialog open={false} onClose={onClose} onSubmit={vi.fn()} />);
     rerender(<ProjectDialog open={true} onClose={onClose} onSubmit={vi.fn()} />);
 
-    expect(screen.getByLabelText('プロジェクト名')).toHaveValue('');
+    expect(screen.getByLabelText(/プロジェクト名/)).toHaveValue('');
   });
 });
