@@ -97,9 +97,17 @@ export default function ProfileEditPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="name">
-                  名前 <span className="text-destructive">*</span>
+                  名前{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </Label>
-                <Input id="name" {...form.register('name')} disabled={updateProfile.isPending} />
+                <Input
+                  id="name"
+                  aria-required="true"
+                  {...form.register('name')}
+                  disabled={updateProfile.isPending}
+                />
                 {form.formState.errors.name && (
                   <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                 )}
@@ -107,11 +115,15 @@ export default function ProfileEditPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="email">
-                  メールアドレス <span className="text-destructive">*</span>
+                  メールアドレス{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </Label>
                 <Input
                   id="email"
                   type="email"
+                  aria-required="true"
                   {...form.register('email')}
                   disabled={updateProfile.isPending}
                 />

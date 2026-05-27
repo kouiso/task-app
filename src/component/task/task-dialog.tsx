@@ -141,8 +141,18 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">タイトル</Label>
-              <Input id="title" placeholder="タスクのタイトルを入力" {...register('title')} />
+              <Label htmlFor="title">
+                タイトル{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
+              <Input
+                id="title"
+                placeholder="タスクのタイトルを入力"
+                aria-required="true"
+                {...register('title')}
+              />
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
             <div className="grid gap-2">
@@ -157,13 +167,18 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="status">ステータス</Label>
+                <Label htmlFor="status">
+                  ステータス{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="status"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="status" aria-label="ステータスを選択">
+                      <SelectTrigger id="status" aria-label="ステータスを選択" aria-required="true">
                         <SelectValue placeholder="ステータスを選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -178,13 +193,18 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="priority">優先度</Label>
+                <Label htmlFor="priority">
+                  優先度{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="priority"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="priority" aria-label="優先度を選択">
+                      <SelectTrigger id="priority" aria-label="優先度を選択" aria-required="true">
                         <SelectValue placeholder="優先度を選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -200,7 +220,12 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="project">プロジェクト</Label>
+                <Label htmlFor="project">
+                  プロジェクト{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="projectId"
                   control={control}
@@ -216,7 +241,11 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
                       }}
                       disabled={!projects.length}
                     >
-                      <SelectTrigger id="project" aria-label="プロジェクトを選択">
+                      <SelectTrigger
+                        id="project"
+                        aria-label="プロジェクトを選択"
+                        aria-required="true"
+                      >
                         <SelectValue placeholder="プロジェクトを選択" />
                       </SelectTrigger>
                       <SelectContent>
