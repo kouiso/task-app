@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["before 9am on saturday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 3,
+  "major": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["dependencies"],
+      "groupName": "本番で使う依存関係"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "開発で使う依存関係"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "自動確認で使う部品",
+      "addLabels": ["github-actions"]
+    }
+  ]
+}
