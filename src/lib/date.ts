@@ -25,3 +25,13 @@ export function dateOnlyToUtcStartIso(dateOnly: string): string {
 export function dateOnlyToUtcEndIso(dateOnly: string): string {
   return new Date(`${dateOnly}T23:59:59.999Z`).toISOString();
 }
+
+/** dueDate がローカル日付で今日より過去なら true (今日は含めない) */
+export function isOverdue(dueDate: Date | string | null | undefined): boolean {
+  if (!dueDate) {
+    return false;
+  }
+  const dueKey = dateOnlyFromValue(dueDate);
+  const todayKey = localDateOnly(new Date());
+  return dueKey < todayKey;
+}
