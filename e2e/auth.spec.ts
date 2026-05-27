@@ -38,6 +38,18 @@ test.describe('Authentication', () => {
     expect(errorVisible || page.url().includes('/login')).toBeTruthy();
   });
 
+  test('should redirect unauthenticated dashboard access to login', async ({ page }) => {
+    await page.context().clearCookies();
+
+    const response = await page.goto('/dashboard');
+
+    expect(response?.status()).toBe(200);
+    await page.waitForURL(/\/login\?callbackUrl=%2Fdashboard$/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/login\?callbackUrl=%2Fdashboard$/);
+    await expect(page.getByText('ログイン', { exact: true }).first()).toBeVisible();
+    await expect(page.locator('#email')).toBeVisible();
+  });
+
   test('should logout successfully', async ({ page }) => {
     await page.fill('#email', 'admin@example.com');
     await page.fill('#password', 'password123');
