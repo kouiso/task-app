@@ -21,11 +21,11 @@ import {
 } from '@/component/ui/dialog';
 import { Separator } from '@/component/ui/separator';
 import { Textarea } from '@/component/ui/textarea';
-import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { formatDateOnly } from '@/lib/date';
 import { api } from '@/trpc/react';
+import { StatusBadge } from './status-badge';
 
 type TaskDetailDialogProps = {
   open: boolean;
@@ -159,9 +159,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground block mb-1">ステータス</span>
-                  <Badge variant={getStatusBadgeVariant(taskDetail.status)}>
-                    {TASK_STATUS_LABELS[taskDetail.status] ?? taskDetail.status}
-                  </Badge>
+                  <StatusBadge status={taskDetail.status} />
                 </div>
                 <div>
                   <span className="text-muted-foreground block mb-1">優先度</span>
