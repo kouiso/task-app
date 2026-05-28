@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
@@ -8,8 +8,8 @@ import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
-import type { TaskStatus } from '@/lib/constant/status';
-import { formatDateOnly } from '@/lib/date';
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
+import { formatDateOnly, isOverdue } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from './status-badge';
 import { TaskTimer } from './task-timer';
@@ -53,6 +53,8 @@ export function TaskCard({
   onTimerUpdate,
 }: TaskCardProps) {
   const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
+  const overdue =
+    isOverdue(dueDate) && status !== TASK_STATUS.DONE && status !== TASK_STATUS.CANCELLED;
 
   const handleCardClick = () => {
     if (onClick) {
@@ -81,6 +83,7 @@ export function TaskCard({
         className={cn(
           'transition-all h-full flex flex-col',
           onClick && 'cursor-pointer hover:shadow-md',
+          overdue && 'border-destructive/60 bg-destructive/5',
         )}
         onClick={handleCardClick}
       >
@@ -135,6 +138,12 @@ export function TaskCard({
             <Badge variant={getPriorityBadgeVariant(priority)}>
               {TASK_PRIORITY_LABELS[priority]}
             </Badge>
+            {overdue && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                期限切れ
+              </Badge>
+            )}
           </div>
 
           <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
@@ -156,9 +165,17 @@ export function TaskCard({
               )}
 
               {dueDate && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div
+                  className={cn(
+                    'flex items-center gap-1 text-xs',
+                    overdue ? 'text-destructive font-semibold' : 'text-muted-foreground',
+                  )}
+                >
                   <CalendarDays className="h-3 w-3" />
-                  <span>{formatDateOnly(dueDate)}</span>
+                  <span>
+                    {overdue && <span className="sr-only">期限切れ </span>}
+                    {formatDateOnly(dueDate)}
+                  </span>
                 </div>
               )}
             </div>

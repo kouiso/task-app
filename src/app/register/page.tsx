@@ -73,13 +73,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center px-4 bg-blue-700 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-72 h-72 bg-blue-400/20 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-400/20 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl" />
       <Card className="w-full max-w-sm relative z-10 bg-white/95 backdrop-blur-sm shadow-2xl border-0">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <div className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 p-3 shadow-lg">
+            <div className="rounded-full bg-blue-500 p-3 shadow-lg">
               <UserPlus className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function RegisterPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md"
+              className="w-full bg-blue-600 hover:bg-blue-700 shadow-md"
               disabled={registerMutation.isPending}
             >
               {registerMutation.isPending ? '登録中...' : '登録'}
