@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 const credentials = { email: 'admin@example.com', password: 'password123' };
 
@@ -60,7 +60,10 @@ test.describe('Task Comment CRUD', () => {
 
     // edit the comment: click pencil icon button near comment text
     const commentEntry = dialog.locator('div', { has: dialog.getByText(commentText) }).first();
-    await commentEntry.getByRole('button').filter({ has: page.locator('.lucide-pencil') }).click();
+    await commentEntry
+      .getByRole('button')
+      .filter({ has: page.locator('.lucide-pencil') })
+      .click();
 
     const editTextarea = dialog.locator('textarea').last();
     await editTextarea.clear();
