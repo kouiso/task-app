@@ -70,6 +70,37 @@ describe('reportRouter', () => {
       }
     });
 
+    it('should count recurring tasks in weekly progress output', async () => {
+      const user = await createTestUser({ email: 'recurring-report@example.com' });
+      const project = await createTestProject(user.id);
+
+      const recurringTaskA = await createTestTask(project.id, user.id, {
+        title: '日次スタンドアップ',
+        status: 'DONE',
+        assigneeId: user.id,
+      });
+      const recurringTaskB = await createTestTask(project.id, user.id, {
+        title: '日次スタンドアップ',
+        status: 'DONE',
+        assigneeId: user.id,
+      });
+
+      await prisma.task.update({
+        where: { id: recurringTaskA.id },
+        data: { completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+      });
+      await prisma.task.update({
+        where: { id: recurringTaskB.id },
+        data: { completedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) },
+      });
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const report = await caller.report.getWeeklyReport({ weeks: 4 });
+
+      expect(report.totalCompleted).toBe(2);
+      expect(report.weeklyData.reduce((sum, week) => sum + week.byStatus.DONE, 0)).toBe(2);
+    });
+
     it('should allow ADMIN to view other user reports', async () => {
       const admin = await createTestUser({ role: 'ADMIN', email: 'admin@example.com' });
       const targetUser = await createTestUser({ email: 'target@example.com' });
