@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 const credentials = { email: 'admin@example.com', password: 'password123' };
 
@@ -96,6 +96,52 @@ test.describe('Task Management', () => {
     await expect(page.getByRole('button', { name: taskTitle, exact: true })).toHaveCount(0);
   });
 
+  test('should create task and assign to member', async ({ page }) => {
+    const suffix = Date.now().toString(36);
+    const taskTitle = `E2E 担当者変更 ${suffix}`;
+
+    await page.goto('/task');
+    await page.getByRole('button', { name: '新規タスク' }).click();
+    await page.getByLabel('タイトル').fill(taskTitle);
+    await page.getByRole('button', { name: '作成' }).click();
+    await expect(page.getByRole('button', { name: taskTitle, exact: true })).toBeVisible();
+
+    // edit to assign a member
+    await page
+      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .getByRole('button', { name: 'タスクを編集' })
+      .click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // pick the first available assignee option if any exist
+    const assigneeSelect = dialog.getByLabel('担当者を選択');
+    if (await assigneeSelect.isVisible()) {
+      await assigneeSelect.click();
+      const firstOption = page.getByRole('option').first();
+      if (await firstOption.isVisible()) {
+        await firstOption.click();
+      }
+    }
+    await dialog.getByRole('button', { name: '更新' }).click();
+
+    // task card should still exist after update
+    await expect(
+      page.locator('.rounded-xl', {
+        has: page.getByRole('button', { name: taskTitle, exact: true }),
+      }),
+    ).toBeVisible();
+
+    // cleanup
+    await page
+      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .getByRole('button', { name: 'タスクを削除' })
+      .click();
+    await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click();
+    await expect(page.getByRole('button', { name: taskTitle, exact: true })).toHaveCount(0);
+  });
+
   test('should filter tasks by status', async ({ page }) => {
     await page.goto('/task');
     await page.waitForLoadState('networkidle');
@@ -103,7 +149,10 @@ test.describe('Task Management', () => {
     const statusFilter = page.getByLabel(/ステータス|status/i).first();
     if (await statusFilter.isVisible()) {
       await statusFilter.click();
-      await page.getByRole('option', { name: /進行中/i }).first().click();
+      await page
+        .getByRole('option', { name: /進行中/i })
+        .first()
+        .click();
       await page.waitForLoadState('networkidle');
       await expect(page).toHaveURL(/ステータス|status/i);
     }
