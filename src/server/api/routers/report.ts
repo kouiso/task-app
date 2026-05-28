@@ -84,7 +84,7 @@ export const reportRouter = createTRPCRouter({
         _sum: { timeSpentMinutes: true },
       }),
       prisma.task.findMany({
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         select: {
           id: true,
           title: true,
@@ -96,12 +96,12 @@ export const reportRouter = createTRPCRouter({
       }),
       prisma.task.groupBy({
         by: ['status'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
       }),
       prisma.task.groupBy({
         by: ['priority'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
       }),
       prisma.task.groupBy({
