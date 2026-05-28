@@ -83,17 +83,17 @@ version_major() {
 }
 
 check_node() {
-  require_command "node" "Node.js が見つかりません。Node.js 20 以上を入れてから再実行してください: https://nodejs.org/"
+  require_command "node" "Node.js が見つかりません。Node.js 22 以上を入れてから再実行してください: https://nodejs.org/"
   local major
   major="$(version_major "$(node -v)")"
-  if [ "${major:-0}" -lt 20 ]; then
-    print_error "Node.js $(node -v) は非対応です。Node.js 20 以上が必要です: https://nodejs.org/"
+  if [ "${major:-0}" -lt 22 ]; then
+    print_error "Node.js $(node -v) は非対応です。Node.js 22 以上が必要です: https://nodejs.org/"
     exit 1
   fi
 }
 
 check_npm() {
-  require_command "npm" "npm が見つかりません。Node.js 20 系と一緒に npm 10 以上を入れてください: https://nodejs.org/"
+  require_command "npm" "npm が見つかりません。Node.js 22 系と一緒に npm 10 以上を入れてください: https://nodejs.org/"
   local major
   major="$(version_major "$(npm -v)")"
   if [ "${major:-0}" -lt 10 ]; then
