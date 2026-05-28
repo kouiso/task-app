@@ -28,6 +28,29 @@ test.describe('Accessibility smoke checks', () => {
     });
   }
 
+  test('my task filters are keyboard accessible with proper labels', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('#email', 'admin@example.com');
+    await page.fill('#password', 'password123');
+    await page.getByRole('button', { name: /ログイン|login/i }).click();
+    await page.waitForURL('/dashboard', { timeout: 10000 });
+
+    await page.goto('/my-task');
+    await expect(page.getByRole('heading', { name: 'マイタスク' })).toBeVisible();
+
+    const statusFilter = page.getByRole('tablist', { name: 'ステータスフィルター' });
+    await expect(statusFilter).toBeVisible();
+
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('tab', { name: 'すべて' })).toBeFocused();
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: '未着手' })).toBeFocused();
+
+    const projectFilter = page.getByRole('combobox', { name: 'プロジェクトフィルター' });
+    await expect(projectFilter).toBeVisible();
+  });
+
   test('login form supports keyboard-only tab order and submit focus', async ({ page }) => {
     await page.goto('/login');
 
