@@ -25,6 +25,7 @@ import {
 import { Textarea } from '@/component/ui/textarea';
 import { TASK_PRIORITY, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
 import { TASK_STATUS, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
 
 const taskFormSchema = z.object({
   id: z.string().optional(),
@@ -46,7 +47,6 @@ interface TaskDialogProps {
   onSubmit: (data: TaskFormData) => void;
   initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
-  users: Array<{ id: string; name: string | null; email: string }>;
 }
 
 export interface TaskFormData {
@@ -78,24 +78,26 @@ function buildTaskFormValues(
   };
 }
 
-export function TaskDialog({
-  open,
-  onClose,
-  onSubmit,
-  initialData,
-  projects,
-  users,
-}: TaskDialogProps) {
+export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: TaskDialogProps) {
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: buildTaskFormValues(initialData, projects),
   });
+
+  const selectedProjectId = watch('projectId');
+  const { data: projectMembers } = api.search.getMembersByProject.useQuery(
+    { projectId: selectedProjectId },
+    { enabled: open && !!selectedProjectId },
+  );
+  const users = projectMembers ?? [];
 
   useEffect(() => {
     if (!open) {
@@ -230,7 +232,13 @@ export function TaskDialog({
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        if (value !== field.value) {
+                          // 移動先プロジェクトに現担当者が居ない可能性があるため一旦未割当へ
+                          setValue('assigneeId', '');
+                        }
+                        field.onChange(value);
+                      }}
                       disabled={!projects.length}
                     >
                       <SelectTrigger
