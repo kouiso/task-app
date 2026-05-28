@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "labels": ["dependencies", "renovate"],
+  "packageRules": [
+    {
+      "matchDepTypes": ["dependencies"],
+      "groupName": "production dependencies"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "development dependencies"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "labels": ["dependencies", "renovate", "github-actions"]
+    }
+  ],
+  "prHourlyLimit": 2,
+  "timezone": "Asia/Tokyo"
+}
