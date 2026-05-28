@@ -72,4 +72,22 @@ describe('TaskDialog', () => {
       'プロジェクトA',
     );
   });
+
+  it('期限に終了日の補足説明を表示する', () => {
+    render(
+      <TaskDialog
+        open={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        initialData={undefined}
+        projects={projects}
+      />,
+    );
+
+    expect(screen.getByLabelText('期限（終了日）')).toBeInTheDocument();
+    const helperTexts = screen.getAllByText(
+      '繰り返しタスクでは、この日付が最終発生日（終了日）として扱われます。',
+    );
+    expect(helperTexts.length).toBeGreaterThan(0);
+  });
 });

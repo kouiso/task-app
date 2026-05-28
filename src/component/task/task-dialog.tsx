@@ -289,8 +289,11 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="dueDate">期限</Label>
+                <Label htmlFor="dueDate">期限（終了日）</Label>
                 <Input id="dueDate" type="date" {...register('dueDate')} />
+                <p className="text-xs text-muted-foreground">
+                  繰り返しタスクでは、この日付が最終発生日（終了日）として扱われます。
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="estimatedHours">見積時間</Label>
