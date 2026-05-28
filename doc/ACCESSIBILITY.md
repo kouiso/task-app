@@ -7,9 +7,16 @@ Issue #109 tracks WCAG 2.1 AA readiness. This checklist separates automated cove
 - Run `npx playwright test e2e/a11y.spec.ts --project=chromium`.
 - The Playwright spec uses `@axe-core/playwright`.
 - Current automated scope:
-  - `/login`
-  - `/register`
+  - `/login` (public)
+  - `/register` (public)
+  - `/dashboard` (authenticated)
+  - `/task` (authenticated)
+  - `/project` (authenticated)
+  - `/my-task` (authenticated)
   - login form keyboard-only tab order
+  - my-task status filter keyboard navigation (aria-labels, Tab / ArrowRight)
+  - task dialog focus trap + Escape to close
+  - project dialog focus trap + Escape to close
 - Required axe result for covered pages: 0 `critical` violations for `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa` tags.
 
 ## Keyboard-only checklist
