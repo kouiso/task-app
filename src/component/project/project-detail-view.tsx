@@ -2,18 +2,18 @@
 
 import type { inferRouterOutputs } from '@trpc/server';
 import { Archive, ArchiveRestore, ArrowLeft, CheckSquare, Trash2, UserPlus } from 'lucide-react';
+import { StatusBadge } from '@/component/task/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
-import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import {
   isProjectMemberRole,
   PROJECT_MEMBER_ROLE,
   PROJECT_MEMBER_ROLE_LABELS,
 } from '@/lib/constant/roles';
-import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import type { AppRouter } from '@/server/api/root';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -161,9 +161,7 @@ export function ProjectDetailView({
                   >
                     <p className="font-medium">{task.title}</p>
                     <div className="flex gap-2">
-                      <Badge variant={getStatusBadgeVariant(task.status)}>
-                        {TASK_STATUS_LABELS[task.status] ?? task.status}
-                      </Badge>
+                      <StatusBadge status={task.status} />
                       <Badge variant={getPriorityBadgeVariant(task.priority)}>
                         {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
                       </Badge>

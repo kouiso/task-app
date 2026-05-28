@@ -2,6 +2,9 @@
 
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { Download } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import {
   Bar,
@@ -27,12 +30,15 @@ import {
 } from '@/component/ui/select';
 import { TASK_PRIORITY, TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
 import { TASK_STATUS, TASK_STATUS_COLORS } from '@/lib/constant/status';
+import { buildWeeklyReportExportPath, normalizeReportWeeksParam } from '@/lib/report-path';
 import { api } from '@/trpc/react';
 
 const CHART_PRIMARY_COLOR = '#8884d8';
 
 export default function WeeklyReportPage() {
-  const [weeks, setWeeks] = useState('4');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [weeks, setWeeks] = useState(() => normalizeReportWeeksParam(searchParams.get('weeks')));
 
   const { data: reportData, isLoading } = api.report.getWeeklyReport.useQuery({
     weeks: Number.parseInt(weeks, 10),
@@ -41,6 +47,15 @@ export default function WeeklyReportPage() {
   if (isLoading) {
     return <PageLoadingSpinner />;
   }
+
+  const handleWeeksChange = (value: string) => {
+    const normalized = normalizeReportWeeksParam(value);
+    setWeeks(normalized);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('weeks', normalized);
+    router.replace(`/report/weekly?${params.toString()}`);
+  };
 
   const chartData = reportData?.weeklyData.map((week) => ({
     name: week.week,
@@ -65,7 +80,7 @@ export default function WeeklyReportPage() {
             <p className="text-muted-foreground">週ごとのタスク進捗の詳細レポートです。</p>
           </div>
           <div className="w-[150px]">
-            <Select value={weeks} onValueChange={setWeeks}>
+            <Select value={weeks} onValueChange={handleWeeksChange}>
               <SelectTrigger>
                 <SelectValue placeholder="期間" />
               </SelectTrigger>
@@ -76,6 +91,13 @@ export default function WeeklyReportPage() {
               </SelectContent>
             </Select>
           </div>
+          <Link
+            href={buildWeeklyReportExportPath(weeks)}
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+          >
+            レポートを出力
+            <Download className="h-4 w-4" />
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

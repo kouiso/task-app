@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
@@ -27,6 +27,10 @@ import {
 } from '@/component/ui/select';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
+import {
+  buildTaskFiltersQueryString,
+  parseTaskFiltersFromSearchParams,
+} from '@/lib/task-filter-query';
 import { taskToFormData } from '@/lib/task-form';
 import { api } from '@/trpc/react';
 
@@ -43,6 +47,8 @@ function TaskPageContent() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const taskIdParam = searchParams.get('taskId');
 
   useEffect(() => {
@@ -51,6 +57,37 @@ function TaskPageContent() {
       setDetailOpen(true);
     }
   }, [taskIdParam]);
+
+  useEffect(() => {
+    const parsed = parseTaskFiltersFromSearchParams(searchParams);
+    setFilterProject(parsed.project);
+    setFilterStatus(parsed.status);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('project');
+    params.delete('status');
+
+    const filterQuery = buildTaskFiltersQueryString({
+      project: filterProject,
+      status: filterStatus,
+    });
+
+    if (filterQuery) {
+      const filterParams = new URLSearchParams(filterQuery);
+      for (const [key, value] of filterParams.entries()) {
+        params.set(key, value);
+      }
+    }
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [filterProject, filterStatus, pathname, router, searchParams]);
 
   const utils = api.useUtils();
 
@@ -69,7 +106,6 @@ function TaskPageContent() {
   );
 
   const { data: projects } = api.project.getAll.useQuery();
-  const { data: users } = api.search.getProjectMembers.useQuery();
 
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
@@ -143,6 +179,7 @@ function TaskPageContent() {
         priority: data.priority,
         dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
         estimatedHours: data.estimatedHours ?? null,
+        projectId: data.projectId,
         assigneeId: data.assigneeId || null,
       });
     } else {
@@ -273,6 +310,7 @@ function TaskPageContent() {
                 id="select-all"
                 checked={selectAllState}
                 onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                aria-label="すべてのタスクを選択"
               />
               <Label htmlFor="select-all">すべて選択</Label>
             </div>
@@ -283,7 +321,7 @@ function TaskPageContent() {
                   プロジェクトで絞り込み
                 </Label>
                 <Select value={filterProject} onValueChange={setFilterProject}>
-                  <SelectTrigger id="task-project-filter">
+                  <SelectTrigger id="task-project-filter" aria-label="プロジェクトで絞り込み">
                     <SelectValue placeholder="すべてのプロジェクト" />
                   </SelectTrigger>
                   <SelectContent>
@@ -306,7 +344,7 @@ function TaskPageContent() {
                     if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
                   }}
                 >
-                  <SelectTrigger id="task-status-filter">
+                  <SelectTrigger id="task-status-filter" aria-label="ステータスで絞り込み">
                     <SelectValue placeholder="すべてのステータス" />
                   </SelectTrigger>
                   <SelectContent>
@@ -366,7 +404,6 @@ function TaskPageContent() {
             onSubmit={handleSubmit}
             initialData={editingTask}
             projects={projects ?? []}
-            users={users ?? []}
           />
 
           <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />

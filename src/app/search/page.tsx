@@ -26,6 +26,7 @@ import { Separator } from '@/component/ui/separator';
 import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
+import { applySearchParamsToValues, buildSearchParamsFromValues } from '@/lib/search-filters';
 import { api } from '@/trpc/react';
 
 const TASK_STATUS_VALUES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'] as const;
@@ -47,20 +48,21 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const utils = api.useUtils();
 
-  const initialStatus = searchParams.get('status') ?? 'all';
-  const initialPriority = searchParams.get('priority') ?? 'all';
+  const defaultSearchValues: SearchFormValues = {
+    keyword: '',
+    projectId: 'all',
+    status: 'all',
+    priority: 'all',
+    assignedTo: 'all',
+    dateFrom: '',
+    dateTo: '',
+  };
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
-    defaultValues: {
-      keyword: searchParams.get('keyword') ?? '',
-      projectId: searchParams.get('projectId') ?? 'all',
-      status: isTaskStatus(initialStatus) ? initialStatus : 'all',
-      priority: isTaskPriority(initialPriority) ? initialPriority : 'all',
-      assignedTo: searchParams.get('assignedTo') ?? 'all',
-      dateFrom: searchParams.get('dateFrom') ?? '',
-      dateTo: searchParams.get('dateTo') ?? '',
-    },
+    defaultValues: searchFormSchema.parse(
+      applySearchParamsToValues(new URLSearchParams(searchParams.toString()), defaultSearchValues),
+    ),
   });
 
   const formValues = form.watch();
@@ -93,53 +95,17 @@ function SearchPageContent() {
   );
 
   useEffect(() => {
-    const paramMap: Array<{ key: keyof SearchFormValues; transform?: (v: string) => string }> = [
-      { key: 'keyword' },
-      { key: 'projectId' },
-      {
-        key: 'status',
-        transform: (v: string) =>
-          isTaskStatus(v) ? v : v === 'all' ? 'all' : form.getValues('status'),
-      },
-      {
-        key: 'priority',
-        transform: (v: string) =>
-          isTaskPriority(v) ? v : v === 'all' ? 'all' : form.getValues('priority'),
-      },
-      { key: 'assignedTo' },
-      { key: 'dateFrom' },
-      { key: 'dateTo' },
-    ];
+    const nextValues = applySearchParamsToValues(
+      new URLSearchParams(searchParams.toString()),
+      form.getValues(),
+    );
 
-    for (const { key, transform } of paramMap) {
-      const value = searchParams.get(key);
-      if (value) {
-        const transformed = transform ? transform(value) : value;
-        form.setValue(key, transformed);
-      }
-    }
+    form.reset(searchFormSchema.parse(nextValues));
   }, [searchParams, form]);
 
   const handleSearch = () => {
     const values = form.getValues();
-    const searchParamList = [
-      { key: 'keyword', value: values.keyword },
-      { key: 'projectId', value: values.projectId, exclude: 'all' },
-      { key: 'status', value: values.status, exclude: 'all' },
-      { key: 'priority', value: values.priority, exclude: 'all' },
-      { key: 'assignedTo', value: values.assignedTo, exclude: 'all' },
-      { key: 'dateFrom', value: values.dateFrom },
-      { key: 'dateTo', value: values.dateTo },
-    ];
-
-    const params = new URLSearchParams();
-    const filteredParams = searchParamList.filter(
-      (param) => param.value && param.value !== param.exclude,
-    );
-    for (const param of filteredParams) {
-      params.set(param.key, param.value);
-    }
-
+    const params = buildSearchParamsFromValues(values);
     router.push(`/search?${params.toString()}`);
   };
 
