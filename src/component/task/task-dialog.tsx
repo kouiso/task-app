@@ -27,6 +27,22 @@ import { TASK_PRIORITY, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/co
 import { TASK_STATUS, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
+const RECURRENCE_FREQUENCY = {
+  NONE: 'NONE',
+  DAILY: 'DAILY',
+  WEEKLY: 'WEEKLY',
+  MONTHLY: 'MONTHLY',
+} as const;
+
+const RECURRENCE_FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
+  [RECURRENCE_FREQUENCY.NONE]: '繰り返さない',
+  [RECURRENCE_FREQUENCY.DAILY]: '毎日',
+  [RECURRENCE_FREQUENCY.WEEKLY]: '毎週',
+  [RECURRENCE_FREQUENCY.MONTHLY]: '毎月',
+};
+
+type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCY)[keyof typeof RECURRENCE_FREQUENCY];
+
 const taskFormSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, 'タイトルは必須です'),
@@ -34,6 +50,8 @@ const taskFormSchema = z.object({
   status: z.nativeEnum(TASK_STATUS),
   priority: z.nativeEnum(TASK_PRIORITY),
   dueDate: z.string().optional(),
+  recurrenceFrequency: z.nativeEnum(RECURRENCE_FREQUENCY),
+  recurrenceEndDate: z.string().optional(),
   estimatedHours: z.number().min(0).optional(),
   projectId: z.string().min(1, 'プロジェクトは必須です'),
   assigneeId: z.string().optional(),
@@ -56,6 +74,8 @@ export interface TaskFormData {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate?: string;
+  recurrenceFrequency?: RecurrenceFrequency;
+  recurrenceEndDate?: string;
   estimatedHours?: number;
   projectId: string;
   assigneeId?: string;
@@ -72,6 +92,8 @@ function buildTaskFormValues(
     status: initialData?.status ?? TASK_STATUS.TODO,
     priority: initialData?.priority ?? TASK_PRIORITY.MEDIUM,
     dueDate: initialData?.dueDate ?? '',
+    recurrenceFrequency: initialData?.recurrenceFrequency ?? RECURRENCE_FREQUENCY.NONE,
+    recurrenceEndDate: initialData?.recurrenceEndDate ?? '',
     estimatedHours: initialData?.estimatedHours,
     projectId: initialData?.projectId ?? (projects[0]?.id || ''),
     assigneeId: initialData?.assigneeId ?? '',
@@ -83,14 +105,16 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     register,
     handleSubmit,
     control,
+    watch,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: buildTaskFormValues(initialData, projects),
   });
+  const recurrenceFrequency = watch('recurrenceFrequency');
+  const recurrenceEndDate = watch('recurrenceEndDate');
 
   const selectedProjectId = watch('projectId');
   const { data: projectMembers } = api.search.getMembersByProject.useQuery(
@@ -121,6 +145,10 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
       projectId: data.projectId,
       ...(data.description && { description: data.description }),
       ...(data.dueDate && { dueDate: data.dueDate }),
+      ...(data.recurrenceFrequency !== RECURRENCE_FREQUENCY.NONE && {
+        recurrenceFrequency: data.recurrenceFrequency,
+      }),
+      ...(data.recurrenceEndDate && { recurrenceEndDate: data.recurrenceEndDate }),
       ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
       ...(data.assigneeId && { assigneeId: data.assigneeId }),
     };
@@ -295,6 +323,35 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
                   繰り返しタスクでは、この日付が最終発生日（終了日）として扱われます。
                 </p>
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="recurrenceFrequency">繰り返し頻度</Label>
+                <Controller
+                  name="recurrenceFrequency"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="recurrenceFrequency" aria-label="繰り返し頻度を選択">
+                        <SelectValue placeholder="繰り返し頻度を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(RECURRENCE_FREQUENCY_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="recurrenceEndDate">繰り返し終了日</Label>
+                <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
+              </div>
+              <p className="text-sm text-muted-foreground" role="status">
+                繰り返し設定: {RECURRENCE_FREQUENCY_LABELS[recurrenceFrequency]} / 終了日:{' '}
+                {recurrenceEndDate || '未設定（無期限）'}
+              </p>
               <div className="grid gap-2">
                 <Label htmlFor="estimatedHours">見積時間</Label>
                 <Input

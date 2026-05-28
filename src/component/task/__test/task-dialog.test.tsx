@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { TaskDialog } from '../task-dialog';
 
 vi.mock('@/trpc/react', () => ({
@@ -18,6 +18,15 @@ vi.mock('@/trpc/react', () => ({
 }));
 
 describe('TaskDialog', () => {
+  beforeAll(() => {
+    Object.defineProperties(HTMLElement.prototype, {
+      hasPointerCapture: { value: vi.fn(() => false), configurable: true },
+      releasePointerCapture: { value: vi.fn(), configurable: true },
+      scrollIntoView: { value: vi.fn(), configurable: true },
+      setPointerCapture: { value: vi.fn(), configurable: true },
+    });
+  });
+
   const projects = [
     { id: 'project-1', name: 'プロジェクトA' },
     { id: 'project-2', name: 'プロジェクトB' },
@@ -89,5 +98,29 @@ describe('TaskDialog', () => {
       '繰り返しタスクでは、この日付が最終発生日（終了日）として扱われます。',
     );
     expect(helperTexts.length).toBeGreaterThan(0);
+  });
+
+  it('繰り返し頻度と終了日の要約が表示される', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TaskDialog
+        open={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        initialData={undefined}
+        projects={projects}
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '繰り返し設定: 繰り返さない / 終了日: 未設定（無期限）',
+    );
+
+    await user.click(screen.getByRole('combobox', { name: '繰り返し頻度を選択' }));
+    await user.click(await screen.findByRole('option', { name: '毎週' }));
+    fireEvent.change(screen.getByLabelText('繰り返し終了日'), { target: { value: '2026-12-31' } });
+
+    expect(screen.getByRole('status')).toHaveTextContent('繰り返し設定: 毎週 / 終了日: 2026-12-31');
   });
 });
