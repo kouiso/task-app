@@ -108,7 +108,6 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     watch,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
