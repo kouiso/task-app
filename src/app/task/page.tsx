@@ -69,7 +69,6 @@ function TaskPageContent() {
   );
 
   const { data: projects } = api.project.getAll.useQuery();
-  const { data: users } = api.search.getProjectMembers.useQuery();
 
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
@@ -143,6 +142,7 @@ function TaskPageContent() {
         priority: data.priority,
         dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
         estimatedHours: data.estimatedHours ?? null,
+        projectId: data.projectId,
         assigneeId: data.assigneeId || null,
       });
     } else {
@@ -359,7 +359,6 @@ function TaskPageContent() {
             onSubmit={handleSubmit}
             initialData={editingTask}
             projects={projects ?? []}
-            users={users ?? []}
           />
 
           <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />

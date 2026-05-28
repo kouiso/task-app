@@ -109,7 +109,6 @@ export default function MyTasksPage() {
 
   const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
   const { data: projects } = api.project.getAll.useQuery();
-  const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: tasks, isLoading } = api.task.getAll.useQuery(
     {
       assigneeId: currentUser?.id,
@@ -161,6 +160,7 @@ export default function MyTasksPage() {
         priority: data.priority,
         dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
         estimatedHours: data.estimatedHours ?? null,
+        projectId: data.projectId,
         assigneeId: data.assigneeId || null,
       });
     }
@@ -279,7 +279,6 @@ export default function MyTasksPage() {
             onSubmit={handleSubmit}
             initialData={editingTask}
             projects={projects ?? []}
-            users={users ?? []}
           />
         </div>
       )}
