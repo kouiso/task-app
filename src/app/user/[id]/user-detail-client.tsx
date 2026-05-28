@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
+import { StatusBadge } from '@/component/task/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
@@ -22,10 +23,9 @@ import {
   TableRow,
 } from '@/component/ui/table';
 import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
-import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { USER_ROLE } from '@/lib/constant/roles';
-import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { formatDateOnly } from '@/lib/date';
 import { api } from '@/trpc/react';
 
@@ -200,9 +200,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                         >
                           <TableCell className="font-medium">{task.title}</TableCell>
                           <TableCell>
-                            <Badge variant={getStatusBadgeVariant(task.status)}>
-                              {TASK_STATUS_LABELS[task.status]}
-                            </Badge>
+                            <StatusBadge status={task.status} />
                           </TableCell>
                           <TableCell>
                             <Badge variant={getPriorityBadgeVariant(task.priority)}>
