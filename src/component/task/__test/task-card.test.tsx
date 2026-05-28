@@ -204,6 +204,18 @@ describe('TaskCard', () => {
     expect(mockOnClick).toHaveBeenCalledWith('task-1');
   });
 
+  it('should keep focus-visible keyboard style classes on title button', () => {
+    const Wrapper = createWrapper();
+    render(<TaskCard {...defaultProps} />, { wrapper: Wrapper });
+
+    const titleButton = screen.getByRole('button', { name: /^Test Task$/ });
+    expect(titleButton).toHaveClass('focus-visible:ring-2');
+    expect(titleButton).toHaveClass('focus-visible:ring-ring');
+
+    titleButton.focus();
+    expect(titleButton).toHaveFocus();
+  });
+
   it('should handle keyboard navigation with Space on title button', async () => {
     const Wrapper = createWrapper();
     const user = userEvent.setup();
