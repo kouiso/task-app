@@ -84,10 +84,9 @@ test.describe('Project Management', () => {
     await page.goto('/project');
 
     const dashboardLink = page.getByRole('link', { name: /ダッシュボード|dashboard/i }).first();
-    if (await dashboardLink.isVisible()) {
-      await dashboardLink.click();
-      await page.waitForURL('/dashboard', { timeout: 5000 });
-      await expect(page.getByText('全体の進捗')).toBeVisible();
-    }
+    await expect(dashboardLink).toBeVisible();
+    await dashboardLink.click();
+    await page.waitForURL('/dashboard', { timeout: 5000 });
+    await expect(page.getByText('全体の進捗')).toBeVisible();
   });
 });

@@ -67,10 +67,9 @@ test.describe('Search', () => {
     await expect(page.locator('#keyword')).toHaveValue('テスト');
 
     const resetButton = page.getByRole('button', { name: /リセット|reset/i });
-    if (await resetButton.isVisible()) {
-      await resetButton.click();
-      await page.waitForLoadState('networkidle');
-      await expect(page.locator('#keyword')).toHaveValue('');
-    }
+    await expect(resetButton).toBeVisible();
+    await resetButton.click();
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#keyword')).toHaveValue('');
   });
 });

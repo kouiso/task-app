@@ -17,10 +17,7 @@ test.describe('Register and Login flow', () => {
 
     await page.getByRole('button', { name: '登録' }).click();
 
-    // at least one validation error should appear
-    await page.waitForTimeout(500);
-    const body = await page.locator('body').textContent();
-    expect(body).toMatch(/必須|入力してください|required/i);
+    await expect(page.locator('body')).toContainText(/必須|入力してください|required/i);
   });
 
   test('should show error for mismatched passwords', async ({ page }) => {
@@ -32,9 +29,7 @@ test.describe('Register and Login flow', () => {
     await page.locator('#confirmPassword').fill('DifferentPassword!');
     await page.getByRole('button', { name: '登録' }).click();
 
-    await page.waitForTimeout(500);
-    const body = await page.locator('body').textContent();
-    expect(body).toMatch(/一致|match/i);
+    await expect(page.locator('body')).toContainText(/一致|match/i);
   });
 
   test('should register new user and redirect to login', async ({ page }) => {

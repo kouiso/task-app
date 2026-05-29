@@ -147,15 +147,14 @@ test.describe('Task Management', () => {
     await page.waitForLoadState('networkidle');
 
     const statusFilter = page.getByLabel(/ステータス|status/i).first();
-    if (await statusFilter.isVisible()) {
-      await statusFilter.click();
-      await page
-        .getByRole('option', { name: /進行中/i })
-        .first()
-        .click();
-      await page.waitForLoadState('networkidle');
-      await expect(page).toHaveURL(/ステータス|status/i);
-    }
+    await expect(statusFilter).toBeVisible();
+    await statusFilter.click();
+    await page
+      .getByRole('option', { name: /進行中/i })
+      .first()
+      .click();
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/ステータス|status/i);
   });
 
   test('should search tasks by partial keyword', async ({ page }) => {
