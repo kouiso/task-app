@@ -111,6 +111,7 @@ function TaskPageContent() {
   );
 
   const { data: projects } = api.project.getAll.useQuery();
+  const { data: users } = api.search.getProjectMembers.useQuery();
 
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
