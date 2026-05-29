@@ -30,6 +30,8 @@ test.describe('Search', () => {
 
     // create a task first
     await page.goto('/task');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('button', { name: '新規タスク' })).toBeVisible();
     await page.getByRole('button', { name: '新規タスク' }).click();
     await page.getByLabel('タイトル').fill(taskTitle);
     await page.getByRole('button', { name: '作成' }).click();
@@ -45,7 +47,7 @@ test.describe('Search', () => {
     // cleanup
     await page.goto('/task');
     await page
-      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .locator('.rounded-lg', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
       .getByRole('button', { name: 'タスクを削除' })
       .click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click();
@@ -57,8 +59,8 @@ test.describe('Search', () => {
     await page.goto(`/search?keyword=${impossibleKeyword}`);
 
     await expect(page.locator('#keyword')).toHaveValue(impossibleKeyword);
-    const body = await page.locator('body').textContent();
-    expect(body).toMatch(/見つかりませんでした|0件|結果が/);
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('検索結果が見つかりませんでした')).toBeVisible();
   });
 
   test('should reset search filters', async ({ page }) => {
@@ -66,9 +68,9 @@ test.describe('Search', () => {
 
     await expect(page.locator('#keyword')).toHaveValue('テスト');
 
-    const resetButton = page.getByRole('button', { name: /リセット|reset/i });
-    await expect(resetButton).toBeVisible();
-    await resetButton.click();
+    const clearButton = page.getByRole('button', { name: /クリア/i });
+    await expect(clearButton).toBeVisible();
+    await clearButton.click();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#keyword')).toHaveValue('');
   });

@@ -18,7 +18,7 @@ test.describe('Task Management', () => {
   test('should navigate to tasks page', async ({ page }) => {
     await page.goto('/task');
 
-    await expect(page.getByRole('heading', { name: /タスク|task/i })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'タスク' })).toBeVisible();
     await expect(page.getByRole('button', { name: '新規タスク' })).toBeVisible();
     await expect(page).toHaveURL('/task');
   });
@@ -29,7 +29,7 @@ test.describe('Task Management', () => {
 
     const hasContent = await page.locator('body').textContent();
     expect(hasContent).toBeTruthy();
-    await expect(page.getByRole('heading', { name: /タスク|task/i })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'タスク' })).toBeVisible();
   });
 
   test('should open create task dialog', async ({ page }) => {
@@ -57,7 +57,7 @@ test.describe('Task Management', () => {
 
     // delete
     await page
-      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .locator('.rounded-lg', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
       .getByRole('button', { name: 'タスクを削除' })
       .click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click();
@@ -76,7 +76,7 @@ test.describe('Task Management', () => {
 
     // edit to change status
     await page
-      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .locator('.rounded-lg', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
       .getByRole('button', { name: 'タスクを編集' })
       .click();
 
@@ -85,7 +85,7 @@ test.describe('Task Management', () => {
     await page.getByRole('dialog').getByRole('button', { name: '更新' }).click();
 
     // status badge should reflect change
-    const taskCard = page.locator('.rounded-xl', {
+    const taskCard = page.locator('.rounded-lg', {
       has: page.getByRole('button', { name: taskTitle, exact: true }),
     });
     await expect(taskCard).toBeVisible();
@@ -108,7 +108,7 @@ test.describe('Task Management', () => {
 
     // edit to assign a member
     await page
-      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .locator('.rounded-lg', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
       .getByRole('button', { name: 'タスクを編集' })
       .click();
 
@@ -128,14 +128,14 @@ test.describe('Task Management', () => {
 
     // task card should still exist after update
     await expect(
-      page.locator('.rounded-xl', {
+      page.locator('.rounded-lg', {
         has: page.getByRole('button', { name: taskTitle, exact: true }),
       }),
     ).toBeVisible();
 
     // cleanup
     await page
-      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .locator('.rounded-lg', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
       .getByRole('button', { name: 'タスクを削除' })
       .click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click();
@@ -158,17 +158,12 @@ test.describe('Task Management', () => {
   });
 
   test('should search tasks by partial keyword', async ({ page }) => {
-    await page.goto('/search');
-
-    const searchInput = page.locator('#keyword');
-    await expect(searchInput).toBeVisible();
-
-    await searchInput.fill('タスク');
-    const searchButton = page.getByRole('button', { name: /検索|search/i });
-    await searchButton.click();
-
+    const keyword = 'タスク';
+    await page.goto(`/search?keyword=${encodeURIComponent(keyword)}`);
     await page.waitForLoadState('networkidle');
-    const heading = page.getByRole('heading', { name: /検索結果/ });
+
+    await expect(page.locator('#keyword')).toHaveValue(keyword);
+    const heading = page.locator('h2', { hasText: '検索結果' });
     await expect(heading).toBeVisible();
     const headingText = await heading.textContent();
     expect(headingText).toMatch(/検索結果/);

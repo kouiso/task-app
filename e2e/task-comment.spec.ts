@@ -20,7 +20,7 @@ async function createTask(page: Page, title: string) {
 
 async function deleteTask(page: Page, title: string) {
   await page.goto('/task');
-  const taskCard = page.locator('.rounded-xl', {
+  const taskCard = page.locator('.rounded-lg', {
     has: page.getByRole('button', { name: title, exact: true }),
   });
   await taskCard.getByRole('button', { name: 'タスクを削除' }).click();
@@ -50,7 +50,7 @@ test.describe('Task Comment CRUD', () => {
     await expect(dialog.getByRole('heading', { name: taskTitle })).toBeVisible();
 
     // verify comment section is visible
-    await expect(dialog.getByText('コメント')).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'コメント', exact: true })).toBeVisible();
 
     // post a comment
     await dialog.getByPlaceholder('コメントを追加...').fill(commentText);
@@ -58,14 +58,10 @@ test.describe('Task Comment CRUD', () => {
 
     await expect(dialog.getByText(commentText)).toBeVisible();
 
-    // edit the comment: click pencil icon button near comment text
-    const commentEntry = dialog.locator('div', { has: dialog.getByText(commentText) }).first();
-    await commentEntry
-      .getByRole('button')
-      .filter({ has: page.locator('.lucide-pencil') })
-      .click();
+    // edit the comment: click the pencil icon button in the dialog
+    await dialog.getByRole('button').filter({ has: page.locator('.lucide-pencil') }).click();
 
-    const editTextarea = dialog.locator('textarea').last();
+    const editTextarea = dialog.locator('textarea').first();
     await editTextarea.clear();
     await editTextarea.fill(updatedComment);
     await dialog.getByRole('button', { name: '更新' }).click();
@@ -73,14 +69,8 @@ test.describe('Task Comment CRUD', () => {
     await expect(dialog.getByText(updatedComment)).toBeVisible();
     await expect(dialog.getByText(commentText)).toHaveCount(0);
 
-    // delete the comment: click trash icon button near updated comment text
-    const updatedCommentEntry = dialog
-      .locator('div', { has: dialog.getByText(updatedComment) })
-      .first();
-    await updatedCommentEntry
-      .getByRole('button')
-      .filter({ has: page.locator('.lucide-trash-2') })
-      .click();
+    // delete the comment: click the trash icon button in the dialog
+    await dialog.getByRole('button').filter({ has: page.locator('.lucide-trash-2') }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click();
 
     await expect(dialog.getByText(updatedComment)).toHaveCount(0);
