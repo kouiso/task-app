@@ -285,29 +285,31 @@ function TaskPageContent() {
     setSelectedTasks(checked ? new Set(selectableTasks.map((t) => t.id)) : new Set());
   };
 
+  // 一括操作は「現在表示されている選択中タスク」のみを対象にする。
+  // フィルタで非表示になったタスクや権限外タスクを巻き込まないようにするため。
   const handleBulkComplete = () => {
-    if (selectedTasks.size > 0) {
-      bulkCompleteMutation.mutate({ ids: Array.from(selectedTasks) });
+    if (selectedTaskList.length > 0) {
+      bulkCompleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
     }
   };
 
   const handleBulkDelete = () => {
-    if (selectedTasks.size > 0) {
+    if (selectedTaskList.length > 0) {
       setBulkDeleteDialogOpen(true);
     }
   };
 
   const handleBulkUpdateStatus = (status: TaskStatus) => {
-    if (selectedTasks.size > 0) {
-      bulkUpdateStatusMutation.mutate({ ids: Array.from(selectedTasks), status });
+    if (selectedTaskList.length > 0) {
+      bulkUpdateStatusMutation.mutate({ ids: selectedTaskList.map((t) => t.id), status });
     }
   };
 
   const selectAllState =
     selectableTasks.length > 0
-      ? selectedTasks.size === 0
+      ? selectedTaskList.length === 0
         ? false
-        : selectedTasks.size === selectableTasks.length
+        : selectedTaskList.length === selectableTasks.length
           ? true
           : 'indeterminate'
       : false;
@@ -321,9 +323,9 @@ function TaskPageContent() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
-              {selectedTasks.size > 0 && (
+              {selectedTaskList.length > 0 && (
                 <span className="text-sm text-muted-foreground">
-                  ({selectedTasks.size}件選択中)
+                  ({selectedTaskList.length}件選択中)
                 </span>
               )}
             </div>
@@ -536,10 +538,10 @@ function TaskPageContent() {
         open={bulkDeleteDialogOpen}
         onOpenChange={setBulkDeleteDialogOpen}
         onConfirm={() => {
-          bulkDeleteMutation.mutate({ ids: Array.from(selectedTasks) });
+          bulkDeleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
         }}
         isPending={bulkDeleteMutation.isPending}
-        title={`${selectedTasks.size}件のタスクを削除しますか？`}
+        title={`${selectedTaskList.length}件のタスクを削除しますか？`}
       />
     </AppLayout>
   );
