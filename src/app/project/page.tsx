@@ -28,6 +28,7 @@ import {
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
 import {
+  hasPermission,
   isProjectMemberRole,
   PROJECT_MEMBER_ROLE,
   PROJECT_MEMBER_ROLE_LABELS,
@@ -241,6 +242,14 @@ function ProjectPageContent() {
     );
   }
 
+  // ログインユーザー自身のプロジェクト内ロールから、メンバー管理権限の有無を求める
+  const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
+  const currentMemberRole =
+    currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
+  const canManageMembers = currentMemberRole
+    ? hasPermission(currentMemberRole, 'canManageMembers')
+    : false;
+
   // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
   if (projectIdParam && selectedProject) {
     return (
@@ -252,6 +261,7 @@ function ProjectPageContent() {
           onRemoveMember={handleRemoveMember}
           onUpdateMemberRole={handleUpdateMemberRole}
           onArchive={handleArchive}
+          canManageMembers={canManageMembers}
         />
 
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>

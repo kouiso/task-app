@@ -63,6 +63,7 @@ const renderView = (override?: Partial<React.ComponentProps<typeof ProjectDetail
       onRemoveMember={vi.fn()}
       onUpdateMemberRole={onUpdateMemberRole}
       onArchive={vi.fn()}
+      canManageMembers={true}
       {...override}
     />,
   );
@@ -86,5 +87,14 @@ describe('ProjectDetailView の権限編集', () => {
     expect(screen.getByText('オーナー')).toBeInTheDocument();
     // コンボボックスはMEMBER分の1つのみ＝オーナーには出ていない
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
+  });
+
+  it('メンバー管理権限が無い閲覧者には権限変更セレクトを表示せず読み取り専用にする', () => {
+    renderView({ canManageMembers: false });
+
+    // 権限管理できないユーザーにはセレクト（コンボボックス）を一切出さない
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    // 役割は読み取り専用ラベルで表示される
+    expect(screen.getByText('メンバー')).toBeInTheDocument();
   });
 });
