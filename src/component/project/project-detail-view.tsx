@@ -34,6 +34,7 @@ interface ProjectDetailViewProps {
   onRemoveMember: (userId: string) => void;
   onUpdateMemberRole: (userId: string, role: ProjectMemberRole) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
+  canManageMembers: boolean;
 }
 
 export function ProjectDetailView({
@@ -43,6 +44,7 @@ export function ProjectDetailView({
   onRemoveMember,
   onUpdateMemberRole,
   onArchive,
+  canManageMembers,
 }: ProjectDetailViewProps) {
   if (!projectDetail) {
     return (
@@ -128,10 +130,13 @@ export function ProjectDetailView({
                       <p className="font-medium">
                         {member.user?.name || member.user?.email || '不明'}
                       </p>
-                      {member.role === PROJECT_MEMBER_ROLE.OWNER ? (
-                        // オーナーは権限の付与・剥奪対象外（メンバー追加時にOWNERを選択肢から除外しているのと同じ方針）
+                      {member.role === PROJECT_MEMBER_ROLE.OWNER || !canManageMembers ? (
+                        // オーナーは権限変更対象外。加えて、メンバー管理権限を持たないユーザーには
+                        // 読み取り専用で表示する（操作してもバックエンドで弾かれるため誤操作を防ぐ）
                         <Badge variant="outline" className="text-xs">
-                          {PROJECT_MEMBER_ROLE_LABELS[PROJECT_MEMBER_ROLE.OWNER]}
+                          {isProjectMemberRole(member.role)
+                            ? PROJECT_MEMBER_ROLE_LABELS[member.role]
+                            : member.role}
                         </Badge>
                       ) : (
                         <Select
