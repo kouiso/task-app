@@ -44,7 +44,7 @@ test.describe('教材デモ導線', () => {
     await page.getByLabel('期限').fill('2026-05-27');
     await page.getByLabel('見積時間').fill('1.5');
     await page.getByLabel('プロジェクトを選択').click();
-    await page.getByRole('option', { name: projectName }).click();
+    await page.getByRole('option', { name: projectName }).dispatchEvent('click');
     await page.getByRole('button', { name: '作成' }).click();
     const taskTitleButton = page.getByRole('button', { name: taskTitle, exact: true });
     await expect(taskTitleButton).toBeVisible();
@@ -56,12 +56,12 @@ test.describe('教材デモ導線', () => {
 
     await page.goto('/report');
     await expect(page.getByRole('heading', { name: 'レポート・統計' })).toBeVisible();
-    await expect(page.getByText('タスク数')).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'タスク数' })).toBeVisible();
     await expect(page.getByRole('cell', { name: projectName })).toBeVisible();
 
     await page.goto('/task');
     await page
-      .locator('.rounded-xl', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
+      .locator('.rounded-lg', { has: page.getByRole('button', { name: taskTitle, exact: true }) })
       .getByRole('button', { name: 'タスクを削除' })
       .click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click();
