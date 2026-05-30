@@ -59,7 +59,10 @@ test.describe('Task Comment CRUD', () => {
     await expect(dialog.getByText(commentText)).toBeVisible();
 
     // edit the comment: click the pencil icon button in the dialog
-    await dialog.getByRole('button').filter({ has: page.locator('.lucide-pencil') }).click();
+    await dialog
+      .getByRole('button')
+      .filter({ has: page.locator('.lucide-pencil') })
+      .click();
 
     const editTextarea = dialog.locator('textarea').first();
     await editTextarea.clear();
@@ -70,7 +73,10 @@ test.describe('Task Comment CRUD', () => {
     await expect(dialog.getByText(commentText)).toHaveCount(0);
 
     // delete the comment: click the trash icon button in the dialog
-    await dialog.getByRole('button').filter({ has: page.locator('.lucide-trash-2') }).click();
+    await dialog
+      .getByRole('button')
+      .filter({ has: page.locator('.lucide-trash-2') })
+      .click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click();
 
     await expect(dialog.getByText(updatedComment)).toHaveCount(0);
