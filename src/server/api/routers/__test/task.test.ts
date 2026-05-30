@@ -598,4 +598,50 @@ describe('taskRouter', () => {
       expect(memberResult.timeSpentMinutes).toBe(25);
     });
   });
+
+  describe('編集権限の制御', () => {
+    it('閲覧者(VIEWER)はタスクを作成できない', async () => {
+      const { caller, project } = await createProjectCallerWithRole('VIEWER');
+
+      await expect(
+        caller.task.create({
+          title: 'Viewer Task',
+          status: 'TODO',
+          priority: 'MEDIUM',
+          projectId: project.id,
+        }),
+      ).rejects.toThrow('この操作を実行する権限がありません');
+    });
+
+    it('メンバー(MEMBER)はタスクを作成できる', async () => {
+      const { caller, project } = await createProjectCallerWithRole('MEMBER');
+
+      const task = await caller.task.create({
+        title: 'Member Task',
+        status: 'TODO',
+        priority: 'MEDIUM',
+        projectId: project.id,
+      });
+
+      expect(task.title).toBe('Member Task');
+    });
+
+    it('閲覧者(VIEWER)はタスクを一括完了できない', async () => {
+      const { caller, owner, project } = await createProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, owner.id);
+
+      await expect(caller.task.bulkComplete({ ids: [task.id] })).rejects.toThrow(
+        'この操作を実行する権限がありません',
+      );
+    });
+
+    it('閲覧者(VIEWER)はタスクのステータスを一括変更できない', async () => {
+      const { caller, owner, project } = await createProjectCallerWithRole('VIEWER');
+      const task = await createTestTask(project.id, owner.id);
+
+      await expect(
+        caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' }),
+      ).rejects.toThrow('この操作を実行する権限がありません');
+    });
+  });
 });

@@ -2,7 +2,7 @@
 
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import {
@@ -115,6 +116,44 @@ function TaskPageContent() {
   const { data: users } = api.search.getProjectMembers.useQuery(undefined, {
     enabled: !!session?.user,
   });
+
+  // プロジェクトごとのログインユーザー自身のロールを引けるようにする
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find((member) => member.userId === userId);
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+
+  // 作成可能なプロジェクト（canEdit）のみをタスク作成ダイアログに渡す
+  const editableProjects = useMemo(
+    () => projects?.filter((project) => canEditProject(project.id)) ?? [],
+    [projects, canEditProject],
+  );
 
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
@@ -226,8 +265,24 @@ function TaskPageContent() {
     });
   };
 
+  // 編集も削除もできないタスク（閲覧のみ）は一括操作の対象から除外する
+  const selectableTasks = useMemo(
+    () => tasks?.filter((t) => canEditProject(t.projectId) || canDeleteProject(t.projectId)) ?? [],
+    [tasks, canEditProject, canDeleteProject],
+  );
+
+  const selectedTaskList = useMemo(
+    () => tasks?.filter((t) => selectedTasks.has(t.id)) ?? [],
+    [tasks, selectedTasks],
+  );
+
+  const canCompleteSelected =
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canEditProject(t.projectId));
+  const canDeleteSelected =
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
+
   const handleSelectAll = (checked: boolean) => {
-    setSelectedTasks(checked ? new Set(tasks?.map((t) => t.id) ?? []) : new Set());
+    setSelectedTasks(checked ? new Set(selectableTasks.map((t) => t.id)) : new Set());
   };
 
   const handleBulkComplete = () => {
@@ -249,10 +304,10 @@ function TaskPageContent() {
   };
 
   const selectAllState =
-    tasks && tasks.length > 0
+    selectableTasks.length > 0
       ? selectedTasks.size === 0
         ? false
-        : selectedTasks.size === tasks.length
+        : selectedTasks.size === selectableTasks.length
           ? true
           : 'indeterminate'
       : false;
@@ -273,7 +328,7 @@ function TaskPageContent() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {selectedTasks.size > 0 && (
+              {canCompleteSelected && (
                 <>
                   <Button variant="outline" size="sm" onClick={handleBulkComplete}>
                     <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
@@ -297,19 +352,23 @@ function TaskPageContent() {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={handleBulkDelete}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> 削除
-                  </Button>
                 </>
               )}
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" /> 新規タスク
-              </Button>
+              {canDeleteSelected && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> 削除
+                </Button>
+              )}
+              {editableProjects.length > 0 && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" /> 新規タスク
+                </Button>
+              )}
             </div>
           </div>
 
@@ -406,34 +465,42 @@ function TaskPageContent() {
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {tasks && tasks.length > 0 ? (
-              tasks.map((task) => (
-                <div key={task.id} className="flex gap-2 items-start h-full">
-                  <Checkbox
-                    checked={selectedTasks.has(task.id)}
-                    onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}
-                    className="mt-4"
-                    aria-label={`${task.title}を選択`}
-                  />
-                  <div className="flex-1 min-w-0 h-full">
-                    <TaskCard
-                      id={task.id}
-                      title={task.title}
-                      description={task.description}
-                      status={task.status}
-                      priority={task.priority}
-                      dueDate={task.dueDate}
-                      assignee={task.assignee}
-                      isTimerActive={task.isTimerActive}
-                      timerStartedAt={task.timerStartedAt}
-                      timeSpentMinutes={task.timeSpentMinutes}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onClick={handleTaskClick}
-                      onTimerUpdate={handleTimerUpdate}
-                    />
+              tasks.map((task) => {
+                const taskCanEdit = canEditProject(task.projectId);
+                const taskCanDelete = canDeleteProject(task.projectId);
+                return (
+                  <div key={task.id} className="flex gap-2 items-start h-full">
+                    {(taskCanEdit || taskCanDelete) && (
+                      <Checkbox
+                        checked={selectedTasks.has(task.id)}
+                        onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}
+                        className="mt-4"
+                        aria-label={`${task.title}を選択`}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0 h-full">
+                      <TaskCard
+                        id={task.id}
+                        title={task.title}
+                        description={task.description}
+                        status={task.status}
+                        priority={task.priority}
+                        dueDate={task.dueDate}
+                        assignee={task.assignee}
+                        isTimerActive={task.isTimerActive}
+                        timerStartedAt={task.timerStartedAt}
+                        timeSpentMinutes={task.timeSpentMinutes}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onClick={handleTaskClick}
+                        onTimerUpdate={handleTimerUpdate}
+                        canEdit={taskCanEdit}
+                        canDelete={taskCanDelete}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                 <p>タスクが見つかりません。</p>
@@ -447,7 +514,7 @@ function TaskPageContent() {
             onClose={() => setDialogOpen(false)}
             onSubmit={handleSubmit}
             initialData={editingTask}
-            projects={projects ?? []}
+            projects={editableProjects}
           />
 
           <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />

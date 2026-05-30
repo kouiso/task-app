@@ -66,6 +66,12 @@ afterEach(async () => {
       // テーブル名は上記の内部定数から取得するためSQLインジェクションリスクはない
       await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
     }
+  } else {
+    // jsdom環境（コンポーネントテスト）では、各テスト後にReactツリーをアンマウントする。
+    // singleForkで複数テストファイルを同一プロセス実行する際、自動クリーンアップが
+    // 後続ファイルで発火せずDOMが蓄積する問題を防ぐための恒久対応。
+    const { cleanup } = await import('@testing-library/react');
+    cleanup();
   }
 });
 

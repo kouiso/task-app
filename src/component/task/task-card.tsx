@@ -34,6 +34,8 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
   onTimerUpdate?: (() => void) | undefined;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function TaskCard({
@@ -51,6 +53,8 @@ export function TaskCard({
   onDelete,
   onClick,
   onTimerUpdate,
+  canEdit = true,
+  canDelete = true,
 }: TaskCardProps) {
   const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
   const overdue =
@@ -108,24 +112,28 @@ export function TaskCard({
             )}
           </CardTitle>
           <div className="flex gap-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleEdit}
-              aria-label="タスクを編集"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={handleDelete}
-              aria-label="タスクを削除"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleEdit}
+                aria-label="タスクを編集"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={handleDelete}
+                aria-label="タスクを削除"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col gap-3">
