@@ -25,6 +25,8 @@ interface ProjectDetailViewProps {
   onAddMemberClick: () => void;
   onRemoveMember: (userId: string) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
+  canManageMembers: boolean;
+  canArchive: boolean;
 }
 
 export function ProjectDetailView({
@@ -33,6 +35,8 @@ export function ProjectDetailView({
   onAddMemberClick,
   onRemoveMember,
   onArchive,
+  canManageMembers,
+  canArchive,
 }: ProjectDetailViewProps) {
   if (!projectDetail) {
     return (
@@ -68,20 +72,22 @@ export function ProjectDetailView({
             )}
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
-        >
-          {projectDetail.isArchived ? (
-            <>
-              <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
-            </>
-          ) : (
-            <>
-              <Archive className="mr-2 h-4 w-4" /> アーカイブ
-            </>
-          )}
-        </Button>
+        {canArchive && (
+          <Button
+            variant="outline"
+            onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
+          >
+            {projectDetail.isArchived ? (
+              <>
+                <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
+              </>
+            ) : (
+              <>
+                <Archive className="mr-2 h-4 w-4" /> アーカイブ
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* 説明 */}
@@ -96,9 +102,11 @@ export function ProjectDetailView({
             <CardTitle className="text-lg">
               メンバー ({projectDetail.members?.length ?? 0})
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={onAddMemberClick}>
-              <UserPlus className="mr-2 h-4 w-4" /> メンバー追加
-            </Button>
+            {canManageMembers && (
+              <Button variant="outline" size="sm" onClick={onAddMemberClick}>
+                <UserPlus className="mr-2 h-4 w-4" /> メンバー追加
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <div className="grid gap-2">
@@ -125,14 +133,17 @@ export function ProjectDetailView({
                       </Badge>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemoveMember(member.userId)}
-                    disabled={member.role === PROJECT_MEMBER_ROLE.OWNER}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  {canManageMembers && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`${member.user?.name || member.user?.email || '不明'}をプロジェクトから削除`}
+                      onClick={() => onRemoveMember(member.userId)}
+                      disabled={member.role === PROJECT_MEMBER_ROLE.OWNER}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

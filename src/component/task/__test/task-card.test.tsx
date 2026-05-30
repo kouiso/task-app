@@ -245,4 +245,29 @@ describe('TaskCard', () => {
     expect(screen.getByText('Test Task')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Test Task$/ })).not.toBeInTheDocument();
   });
+
+  it('canEditがfalseのとき編集ボタンを表示しない', () => {
+    const Wrapper = createWrapper();
+    render(<TaskCard {...defaultProps} canEdit={false} />, { wrapper: Wrapper });
+
+    expect(screen.queryByLabelText('タスクを編集')).not.toBeInTheDocument();
+    // 削除はデフォルトtrueなので残る
+    expect(screen.getByLabelText('タスクを削除')).toBeInTheDocument();
+  });
+
+  it('canDeleteがfalseのとき削除ボタンを表示しない', () => {
+    const Wrapper = createWrapper();
+    render(<TaskCard {...defaultProps} canDelete={false} />, { wrapper: Wrapper });
+
+    expect(screen.queryByLabelText('タスクを削除')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('タスクを編集')).toBeInTheDocument();
+  });
+
+  it('canEdit・canDeleteが共にfalse（閲覧者）のとき編集・削除ボタンを表示しない', () => {
+    const Wrapper = createWrapper();
+    render(<TaskCard {...defaultProps} canEdit={false} canDelete={false} />, { wrapper: Wrapper });
+
+    expect(screen.queryByLabelText('タスクを編集')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('タスクを削除')).not.toBeInTheDocument();
+  });
 });
