@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { TaskDialog } from '../task-dialog';
@@ -121,6 +121,10 @@ describe('TaskDialog', () => {
     await user.click(await screen.findByRole('option', { name: '毎週' }));
     fireEvent.change(screen.getByLabelText('繰り返し終了日'), { target: { value: '2026-12-31' } });
 
-    expect(screen.getByRole('status')).toHaveTextContent('繰り返し設定: 毎週 / 終了日: 2026-12-31');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        '繰り返し設定: 毎週 / 終了日: 2026-12-31',
+      );
+    });
   });
 });
