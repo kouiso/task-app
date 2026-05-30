@@ -111,6 +111,10 @@ function TaskPageContent() {
   );
 
   const { data: projects } = api.project.getAll.useQuery();
+  // getProjectMembers は protectedProcedure のため、セッション確定後にのみ実行する
+  const { data: users } = api.search.getProjectMembers.useQuery(undefined, {
+    enabled: !!session?.user,
+  });
 
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
