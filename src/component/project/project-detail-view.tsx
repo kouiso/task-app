@@ -7,12 +7,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
 import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import {
   isProjectMemberRole,
   PROJECT_MEMBER_ROLE,
   PROJECT_MEMBER_ROLE_LABELS,
+  type ProjectMemberRole,
 } from '@/lib/constant/roles';
 import type { AppRouter } from '@/server/api/root';
 
@@ -24,6 +32,7 @@ interface ProjectDetailViewProps {
   onBack: () => void;
   onAddMemberClick: () => void;
   onRemoveMember: (userId: string) => void;
+  onUpdateMemberRole: (userId: string, role: ProjectMemberRole) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
 }
 
@@ -32,6 +41,7 @@ export function ProjectDetailView({
   onBack,
   onAddMemberClick,
   onRemoveMember,
+  onUpdateMemberRole,
   onArchive,
 }: ProjectDetailViewProps) {
   if (!projectDetail) {
@@ -118,11 +128,37 @@ export function ProjectDetailView({
                       <p className="font-medium">
                         {member.user?.name || member.user?.email || '不明'}
                       </p>
-                      <Badge variant="outline" className="text-xs">
-                        {isProjectMemberRole(member.role)
-                          ? PROJECT_MEMBER_ROLE_LABELS[member.role]
-                          : member.role}
-                      </Badge>
+                      {member.role === PROJECT_MEMBER_ROLE.OWNER ? (
+                        // オーナーは権限の付与・剥奪対象外（メンバー追加時にOWNERを選択肢から除外しているのと同じ方針）
+                        <Badge variant="outline" className="text-xs">
+                          {PROJECT_MEMBER_ROLE_LABELS[PROJECT_MEMBER_ROLE.OWNER]}
+                        </Badge>
+                      ) : (
+                        <Select
+                          value={member.role}
+                          onValueChange={(value) => {
+                            if (isProjectMemberRole(value)) {
+                              onUpdateMemberRole(member.userId, value);
+                            }
+                          }}
+                        >
+                          <SelectTrigger
+                            aria-label={`${member.user?.name || member.user?.email || '不明'}の権限`}
+                            className="mt-1 h-7 w-32 text-xs"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(PROJECT_MEMBER_ROLE_LABELS)
+                              .filter(([value]) => value !== PROJECT_MEMBER_ROLE.OWNER)
+                              .map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                   <Button
