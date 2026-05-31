@@ -122,6 +122,14 @@ function ProjectPageContent() {
     },
   });
 
+  const updateMemberRoleMutation = api.project.updateMemberRole.useMutation({
+    onSuccess: () => {
+      if (selectedProject) {
+        utils.project.getById.invalidate({ id: selectedProject });
+      }
+    },
+  });
+
   const archiveMutation = api.project.archive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
@@ -211,6 +219,16 @@ function ProjectPageContent() {
     setRemoveMemberDialogOpen(true);
   };
 
+  const handleUpdateMemberRole = (userId: string, role: ProjectMemberRole) => {
+    if (selectedProject) {
+      updateMemberRoleMutation.mutate({
+        projectId: selectedProject,
+        userId,
+        role,
+      });
+    }
+  };
+
   const handleArchive = (projectId: string, isArchived: boolean) => {
     const mutation = isArchived ? unarchiveMutation : archiveMutation;
     mutation.mutate({ id: projectId });
@@ -244,6 +262,7 @@ function ProjectPageContent() {
           onBack={handleDetailClose}
           onAddMemberClick={() => setMemberDialogOpen(true)}
           onRemoveMember={handleRemoveMember}
+          onUpdateMemberRole={handleUpdateMemberRole}
           onArchive={handleArchive}
           canManageMembers={canManageMembers}
           canArchive={canArchiveProject}
