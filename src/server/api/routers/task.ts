@@ -192,7 +192,7 @@ export const taskRouter = createTRPCRouter({
       });
     }
 
-    assertMemberPermission(project.members);
+    assertMemberPermission(project.members, 'canEdit');
 
     if (input.assigneeId) {
       await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
@@ -414,7 +414,10 @@ export const taskRouter = createTRPCRouter({
   bulkComplete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await findTasksWithPermission(input.ids, ctx.session.userId);
+      const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
+      for (const task of tasks) {
+        assertMemberPermission(task.project.members, 'canEdit');
+      }
 
       const completedAt = new Date();
       return await prisma.task.updateMany({
@@ -444,7 +447,10 @@ export const taskRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await findTasksWithPermission(input.ids, ctx.session.userId);
+      const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
+      for (const task of tasks) {
+        assertMemberPermission(task.project.members, 'canEdit');
+      }
 
       const data: Prisma.TaskUpdateManyMutationInput = {
         status: input.status,
