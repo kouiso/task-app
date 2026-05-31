@@ -54,18 +54,21 @@ const buildProjectDetail = (): ProjectDetail => ({
 });
 
 const renderView = (override?: Partial<React.ComponentProps<typeof ProjectDetailView>>) => {
+  const onUpdateMemberRole = vi.fn();
   render(
     <ProjectDetailView
       projectDetail={buildProjectDetail()}
       onBack={vi.fn()}
       onAddMemberClick={vi.fn()}
       onRemoveMember={vi.fn()}
+      onUpdateMemberRole={onUpdateMemberRole}
       onArchive={vi.fn()}
       canManageMembers={true}
       canArchive={true}
       {...override}
     />,
   );
+  return { onUpdateMemberRole };
 };
 
 describe('ProjectDetailView の権限による表示制御', () => {
@@ -96,5 +99,34 @@ describe('ProjectDetailView の権限による表示制御', () => {
     renderView({ canArchive: true });
 
     expect(screen.getByRole('button', { name: /アーカイブ/ })).toBeInTheDocument();
+  });
+});
+
+describe('ProjectDetailView の権限編集', () => {
+  it('オーナー以外のメンバーには権限変更用のセレクトが表示される', () => {
+    renderView();
+
+    // OWNER以外（MEMBER）の行にのみ権限変更コンボボックスが出る
+    const roleSelectors = screen.getAllByRole('combobox');
+    expect(roleSelectors).toHaveLength(1);
+    expect(roleSelectors[0]).toHaveTextContent('メンバー');
+  });
+
+  it('オーナーの権限はロックされ、変更用セレクトが表示されない', () => {
+    renderView();
+
+    // オーナー行は固定ラベル表示（コンボボックスではない）
+    expect(screen.getByText('オーナー')).toBeInTheDocument();
+    // コンボボックスはMEMBER分の1つのみ＝オーナーには出ていない
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+  });
+
+  it('メンバー管理権限が無い閲覧者には権限変更セレクトを表示せず読み取り専用にする', () => {
+    renderView({ canManageMembers: false });
+
+    // 権限管理できないユーザーにはセレクト（コンボボックス）を一切出さない
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    // 役割は読み取り専用ラベルで表示される
+    expect(screen.getByText('メンバー')).toBeInTheDocument();
   });
 });
