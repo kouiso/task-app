@@ -64,11 +64,43 @@ const renderView = (override?: Partial<React.ComponentProps<typeof ProjectDetail
       onUpdateMemberRole={onUpdateMemberRole}
       onArchive={vi.fn()}
       canManageMembers={true}
+      canArchive={true}
       {...override}
     />,
   );
   return { onUpdateMemberRole };
 };
+
+describe('ProjectDetailView の権限による表示制御', () => {
+  it('canManageMembers=false ではメンバー追加・削除ボタンを表示しない', () => {
+    renderView({ canManageMembers: false });
+
+    expect(screen.queryByRole('button', { name: 'メンバー追加' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /削除/ })).not.toBeInTheDocument();
+  });
+
+  it('canManageMembers=true ではメンバー追加・削除ボタンを表示する', () => {
+    renderView({ canManageMembers: true });
+
+    expect(screen.getByRole('button', { name: 'メンバー追加' })).toBeInTheDocument();
+    // オーナー以外（メンバー花子）の削除ボタンが表示される
+    expect(
+      screen.getByRole('button', { name: 'メンバー花子をプロジェクトから削除' }),
+    ).toBeInTheDocument();
+  });
+
+  it('canArchive=false ではアーカイブボタンを表示しない', () => {
+    renderView({ canArchive: false });
+
+    expect(screen.queryByRole('button', { name: /アーカイブ/ })).not.toBeInTheDocument();
+  });
+
+  it('canArchive=true ではアーカイブボタンを表示する', () => {
+    renderView({ canArchive: true });
+
+    expect(screen.getByRole('button', { name: /アーカイブ/ })).toBeInTheDocument();
+  });
+});
 
 describe('ProjectDetailView の権限編集', () => {
   it('オーナー以外のメンバーには権限変更用のセレクトが表示される', () => {

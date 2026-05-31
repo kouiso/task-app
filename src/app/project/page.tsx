@@ -242,12 +242,15 @@ function ProjectPageContent() {
     );
   }
 
-  // ログインユーザー自身のプロジェクト内ロールから、メンバー管理権限の有無を求める
+  // 詳細画面で操作ボタンの表示可否を決めるため、ログインユーザー自身のプロジェクト内ロールから権限を求める
   const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
   const currentMemberRole =
     currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
   const canManageMembers = currentMemberRole
     ? hasPermission(currentMemberRole, 'canManageMembers')
+    : false;
+  const canArchiveProject = currentMemberRole
+    ? hasPermission(currentMemberRole, 'canArchive')
     : false;
 
   // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
@@ -262,6 +265,7 @@ function ProjectPageContent() {
           onUpdateMemberRole={handleUpdateMemberRole}
           onArchive={handleArchive}
           canManageMembers={canManageMembers}
+          canArchive={canArchiveProject}
         />
 
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
