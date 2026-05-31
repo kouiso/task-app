@@ -28,6 +28,7 @@ import {
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
 import {
+  hasPermission,
   isProjectMemberRole,
   PROJECT_MEMBER_ROLE,
   PROJECT_MEMBER_ROLE_LABELS,
@@ -114,6 +115,14 @@ function ProjectPageContent() {
   });
 
   const removeMemberMutation = api.project.removeMember.useMutation({
+    onSuccess: () => {
+      if (selectedProject) {
+        utils.project.getById.invalidate({ id: selectedProject });
+      }
+    },
+  });
+
+  const updateMemberRoleMutation = api.project.updateMemberRole.useMutation({
     onSuccess: () => {
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
@@ -210,6 +219,16 @@ function ProjectPageContent() {
     setRemoveMemberDialogOpen(true);
   };
 
+  const handleUpdateMemberRole = (userId: string, role: ProjectMemberRole) => {
+    if (selectedProject) {
+      updateMemberRoleMutation.mutate({
+        projectId: selectedProject,
+        userId,
+        role,
+      });
+    }
+  };
+
   const handleArchive = (projectId: string, isArchived: boolean) => {
     const mutation = isArchived ? unarchiveMutation : archiveMutation;
     mutation.mutate({ id: projectId });
@@ -223,6 +242,14 @@ function ProjectPageContent() {
     );
   }
 
+  // ログインユーザー自身のプロジェクト内ロールから、メンバー管理権限の有無を求める
+  const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
+  const currentMemberRole =
+    currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
+  const canManageMembers = currentMemberRole
+    ? hasPermission(currentMemberRole, 'canManageMembers')
+    : false;
+
   // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
   if (projectIdParam && selectedProject) {
     return (
@@ -232,7 +259,9 @@ function ProjectPageContent() {
           onBack={handleDetailClose}
           onAddMemberClick={() => setMemberDialogOpen(true)}
           onRemoveMember={handleRemoveMember}
+          onUpdateMemberRole={handleUpdateMemberRole}
           onArchive={handleArchive}
+          canManageMembers={canManageMembers}
         />
 
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
