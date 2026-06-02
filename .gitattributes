@@ -1,0 +1,4 @@
+# CI の sync-ai-rules.sh チェックで CRLF/LF ズレを防ぐ
+*.md text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
