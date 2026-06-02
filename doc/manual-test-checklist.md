@@ -3,6 +3,9 @@
 `doc/manual-test-checklist.csv` は task-app の主要機能を手動で確認するためのチェックリスト（全156ケース、うちレスポンシブ41ケース）。
 スプレッドシート（Google Sheets / Excel / Numbers）にそのまま取り込んで利用する。
 
+> **権限（ロール）を軸にしたチェックは [`doc/permission-test-checklist.md`](./permission-test-checklist.md) を参照。**
+> 本CSVは機能別（画面別）の網羅チェック、権限別チェックリストは「誰が・何を・できる/できないか」を API層・UI層の両面で潰すことに特化している。権限機能の改修時は両方を更新すること。
+
 ## 使い方
 
 ### Google Sheets
