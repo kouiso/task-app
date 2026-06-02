@@ -325,6 +325,43 @@ describe('projectRouter', () => {
       ).rejects.toThrow('この操作を実行する権限がありません');
     });
 
+    it('should allow OWNER to add a member as OWNER (co-owner)', async () => {
+      const owner = await createTestUser();
+      const newUser = await createTestUser({ email: 'co-owner@example.com' });
+      const project = await createTestProject(owner.id);
+
+      const caller = await createAuthenticatedCaller(owner.id, owner.email, owner.role);
+
+      const member = await caller.project.addMember({
+        projectId: project.id,
+        userId: newUser.id,
+        role: 'OWNER',
+      });
+
+      expect(member.role).toBe('OWNER');
+    });
+
+    it('should reject ADMIN from adding a member as OWNER', async () => {
+      const owner = await createTestUser();
+      const admin = await createTestUser({ email: 'admin-add-owner@example.com' });
+      const newUser = await createTestUser({ email: 'new@example.com' });
+      const project = await createTestProject(owner.id);
+
+      await prisma.projectMember.create({
+        data: { userId: admin.id, projectId: project.id, role: 'ADMIN' },
+      });
+
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
+
+      await expect(
+        caller.project.addMember({
+          projectId: project.id,
+          userId: newUser.id,
+          role: 'OWNER',
+        }),
+      ).rejects.toThrow('オーナー権限の付与はオーナーのみ可能です');
+    });
+
     it('should require authentication', async () => {
       const caller = await createTestCaller();
 
@@ -377,6 +414,25 @@ describe('projectRouter', () => {
       ).rejects.toThrow('プロジェクト唯一のオーナーは削除できません');
     });
 
+    it('should reject ADMIN from removing an OWNER', async () => {
+      const owner = await createTestUser();
+      const admin = await createTestUser({ email: 'admin-remove-owner@example.com' });
+      const project = await createTestProject(owner.id);
+
+      await prisma.projectMember.create({
+        data: { userId: admin.id, projectId: project.id, role: 'ADMIN' },
+      });
+
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
+
+      await expect(
+        caller.project.removeMember({
+          projectId: project.id,
+          userId: owner.id,
+        }),
+      ).rejects.toThrow('オーナーの削除はオーナーのみ可能です');
+    });
+
     it('should require authentication', async () => {
       const caller = await createTestCaller();
 
@@ -421,6 +477,89 @@ describe('projectRouter', () => {
           role: 'ADMIN',
         }),
       ).rejects.toThrow('プロジェクト唯一のオーナーの権限は変更できません');
+    });
+
+    it('should allow OWNER to promote a member to OWNER', async () => {
+      const owner = await createTestUser();
+      const member = await createTestUser({ email: 'promote-target@example.com' });
+      const project = await createTestProject(owner.id);
+
+      await prisma.projectMember.create({
+        data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+      });
+
+      const caller = await createAuthenticatedCaller(owner.id, owner.email, owner.role);
+      const updated = await caller.project.updateMemberRole({
+        projectId: project.id,
+        userId: member.id,
+        role: 'OWNER',
+      });
+
+      expect(updated.role).toBe('OWNER');
+    });
+
+    it('should reject ADMIN from promoting a member to OWNER', async () => {
+      const owner = await createTestUser();
+      const admin = await createTestUser({ email: 'admin-promote@example.com' });
+      const member = await createTestUser({ email: 'member-promote@example.com' });
+      const project = await createTestProject(owner.id);
+
+      await prisma.projectMember.create({
+        data: { userId: admin.id, projectId: project.id, role: 'ADMIN' },
+      });
+      await prisma.projectMember.create({
+        data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+      });
+
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
+
+      await expect(
+        caller.project.updateMemberRole({
+          projectId: project.id,
+          userId: member.id,
+          role: 'OWNER',
+        }),
+      ).rejects.toThrow('オーナー権限の変更はオーナーのみ可能です');
+    });
+
+    it('should reject ADMIN from promoting themselves to OWNER', async () => {
+      const owner = await createTestUser();
+      const admin = await createTestUser({ email: 'admin-self-promote@example.com' });
+      const project = await createTestProject(owner.id);
+
+      await prisma.projectMember.create({
+        data: { userId: admin.id, projectId: project.id, role: 'ADMIN' },
+      });
+
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
+
+      await expect(
+        caller.project.updateMemberRole({
+          projectId: project.id,
+          userId: admin.id,
+          role: 'OWNER',
+        }),
+      ).rejects.toThrow('オーナー権限の変更はオーナーのみ可能です');
+    });
+
+    it('should reject ADMIN from demoting an OWNER', async () => {
+      const owner = await createTestUser();
+      const admin = await createTestUser({ email: 'admin-demote@example.com' });
+      const project = await createTestProject(owner.id);
+
+      await prisma.projectMember.create({
+        data: { userId: admin.id, projectId: project.id, role: 'ADMIN' },
+      });
+
+      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
+
+      await expect(
+        caller.project.updateMemberRole({
+          projectId: project.id,
+          userId: owner.id,
+          role: 'ADMIN',
+        }),
+      ).rejects.toThrow('オーナー権限の変更はオーナーのみ可能です');
     });
   });
 
