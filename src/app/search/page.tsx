@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
+import { useDebounce } from '@/hook/use-debounce';
 import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
@@ -66,27 +67,31 @@ function SearchPageContent() {
   });
 
   const formValues = form.watch();
+  // 入力のたびに検索APIを叩かないよう、フォーム値をデバウンスしてからクエリ・URL同期に使う
+  const debouncedValues = useDebounce(formValues, 300);
 
   const shouldSearch =
-    !!formValues.keyword ||
-    formValues.projectId !== 'all' ||
-    formValues.status !== 'all' ||
-    formValues.priority !== 'all' ||
-    formValues.assignedTo !== 'all' ||
-    !!formValues.dateFrom ||
-    !!formValues.dateTo;
+    !!debouncedValues.keyword ||
+    debouncedValues.projectId !== 'all' ||
+    debouncedValues.status !== 'all' ||
+    debouncedValues.priority !== 'all' ||
+    debouncedValues.assignedTo !== 'all' ||
+    !!debouncedValues.dateFrom ||
+    !!debouncedValues.dateTo;
 
   const { data: projects } = api.search.getUserProjects.useQuery();
   const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: searchResults, isLoading } = api.search.search.useQuery(
     {
-      keyword: formValues.keyword || undefined,
-      projectId: formValues.projectId !== 'all' ? formValues.projectId : undefined,
-      status: formValues.status,
-      priority: formValues.priority,
-      assignedTo: formValues.assignedTo !== 'all' ? formValues.assignedTo : undefined,
-      dateFrom: formValues.dateFrom ? dateOnlyToUtcStartIso(formValues.dateFrom) : undefined,
-      dateTo: formValues.dateTo ? dateOnlyToUtcEndIso(formValues.dateTo) : undefined,
+      keyword: debouncedValues.keyword || undefined,
+      projectId: debouncedValues.projectId !== 'all' ? debouncedValues.projectId : undefined,
+      status: debouncedValues.status,
+      priority: debouncedValues.priority,
+      assignedTo: debouncedValues.assignedTo !== 'all' ? debouncedValues.assignedTo : undefined,
+      dateFrom: debouncedValues.dateFrom
+        ? dateOnlyToUtcStartIso(debouncedValues.dateFrom)
+        : undefined,
+      dateTo: debouncedValues.dateTo ? dateOnlyToUtcEndIso(debouncedValues.dateTo) : undefined,
     },
     {
       enabled: shouldSearch,
@@ -94,7 +99,14 @@ function SearchPageContent() {
     },
   );
 
+  // URL → フォーム: ブラウザの戻る/進む・共有リンクからの復元用。
+  // 自前の「フォーム → URL」同期で生じた変更時は値が一致するため reset をスキップし、無限ループと入力中のカーソル飛びを防ぐ。
   useEffect(() => {
+    const currentParams = buildSearchParamsFromValues(form.getValues()).toString();
+    if (currentParams === searchParams.toString()) {
+      return;
+    }
+
     const nextValues = applySearchParamsToValues(
       new URLSearchParams(searchParams.toString()),
       form.getValues(),
@@ -103,11 +115,16 @@ function SearchPageContent() {
     form.reset(searchFormSchema.parse(nextValues));
   }, [searchParams, form]);
 
-  const handleSearch = () => {
-    const values = form.getValues();
-    const params = buildSearchParamsFromValues(values);
-    router.push(`/search?${params.toString()}`);
-  };
+  // フォーム → URL: デバウンス済みの検索条件をURLに反映し、共有・リロード・戻る/進むで条件を保持する。
+  // 履歴を汚さないよう push ではなく replace を使う。
+  useEffect(() => {
+    const nextParams = buildSearchParamsFromValues(debouncedValues).toString();
+    if (nextParams === searchParams.toString()) {
+      return;
+    }
+
+    router.replace(nextParams ? `/search?${nextParams}` : '/search', { scroll: false });
+  }, [debouncedValues, router, searchParams]);
 
   const handleClear = () => {
     form.reset({
@@ -172,11 +189,6 @@ function SearchPageContent() {
                     placeholder="タスク名、説明で検索..."
                     className="pl-8"
                     {...form.register('keyword')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch();
-                      }
-                    }}
                   />
                 </div>
               </div>
@@ -288,10 +300,6 @@ function SearchPageContent() {
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={handleClear}>
                   クリア
-                </Button>
-                <Button onClick={handleSearch}>
-                  <Search className="mr-2 h-4 w-4" />
-                  検索
                 </Button>
               </div>
             </div>

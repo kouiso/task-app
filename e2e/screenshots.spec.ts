@@ -293,7 +293,7 @@ test.describe('Curriculum Screenshots', () => {
       const searchInput = page.locator('#keyword');
       if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
         await searchInput.fill('デザイン');
-        await page.getByRole('button', { name: '検索' }).click();
+        // ライブ検索: 入力後はデバウンスを経て自動的に結果が反映される（検索ボタンは無し）
         await page.waitForTimeout(2000);
       }
       await screenshot(page, 'search-results.png');
