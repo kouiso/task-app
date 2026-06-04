@@ -51,8 +51,6 @@ interface TaskGroupSectionProps {
     priority: TaskPriority;
     dueDate: Date | null;
     assignee: { name: string | null; email: string; avatar: string | null } | null;
-    isTimerActive: boolean;
-    timerStartedAt: Date | null;
     timeSpentMinutes: number;
   }>;
   onEdit: (id: string) => void;
@@ -86,8 +84,6 @@ const TaskGroupSection = ({
             priority={task.priority}
             dueDate={task.dueDate}
             assignee={task.assignee}
-            isTimerActive={task.isTimerActive}
-            timerStartedAt={task.timerStartedAt}
             timeSpentMinutes={task.timeSpentMinutes}
             onEdit={onEdit}
             onDelete={onDelete}

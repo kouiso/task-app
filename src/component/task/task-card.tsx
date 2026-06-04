@@ -12,8 +12,13 @@ import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 import { formatDateOnly, isOverdue } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from './status-badge';
-import { TaskTimer } from './task-timer';
 import { TimeLogDialog } from './time-log-dialog';
+
+const formatMinutes = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.floor(minutes % 60);
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+};
 
 interface TaskCardProps {
   id: string;
@@ -27,8 +32,6 @@ interface TaskCardProps {
     email: string;
     avatar: string | null;
   } | null;
-  isTimerActive?: boolean;
-  timerStartedAt?: Date | null;
   timeSpentMinutes?: number;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -46,8 +49,6 @@ export function TaskCard({
   priority,
   dueDate,
   assignee,
-  isTimerActive = false,
-  timerStartedAt = null,
   timeSpentMinutes = 0,
   onEdit,
   onDelete,
@@ -189,13 +190,9 @@ export function TaskCard({
             </div>
 
             <div className="space-y-2">
-              <TaskTimer
-                taskId={id}
-                isTimerActive={isTimerActive}
-                timerStartedAt={timerStartedAt}
-                timeSpentMinutes={timeSpentMinutes}
-                onTimerUpdate={onTimerUpdate}
-              />
+              <p className="text-sm text-muted-foreground">
+                合計作業時間: {formatMinutes(timeSpentMinutes)}
+              </p>
               <Button
                 variant="outline"
                 size="sm"

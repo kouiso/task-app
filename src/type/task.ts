@@ -67,11 +67,6 @@ export type TaskFilterInput = {
   assigneeId?: string;
 };
 
-export type TaskTimerAction = {
-  id: string;
-  action: 'start' | 'stop';
-};
-
 export type TaskTimeUpdateInput = {
   id: string;
   minutesToAdd: number;
