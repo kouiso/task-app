@@ -489,8 +489,6 @@ function TaskPageContent() {
                         priority={task.priority}
                         dueDate={task.dueDate}
                         assignee={task.assignee}
-                        isTimerActive={task.isTimerActive}
-                        timerStartedAt={task.timerStartedAt}
                         timeSpentMinutes={task.timeSpentMinutes}
                         onEdit={handleEdit}
                         onDelete={handleDelete}

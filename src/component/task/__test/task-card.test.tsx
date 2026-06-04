@@ -11,30 +11,7 @@ import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { createTRPCTestUtils } from '../../../test/helpers';
 import { TaskCard } from '../task-card';
 
-// Mock the TaskTimer and TimeLogDialog components to avoid tRPC calls
-vi.mock('../task-timer', () => ({
-  TaskTimer: ({
-    taskId,
-    isTimerActive,
-    onTimerUpdate,
-  }: {
-    taskId: string;
-    isTimerActive: boolean;
-    onTimerUpdate?: () => void;
-  }) => (
-    <div data-testid="task-timer" data-task-id={taskId}>
-      <button
-        type="button"
-        data-testid={isTimerActive ? 'stop-timer-button' : 'start-timer-button'}
-        onClick={() => onTimerUpdate?.()}
-        aria-label={isTimerActive ? 'Stop timer' : 'Start timer'}
-      >
-        {isTimerActive ? 'Stop Timer' : 'Start Timer'}
-      </button>
-    </div>
-  ),
-}));
-
+// Mock the TimeLogDialog component to avoid tRPC calls
 vi.mock('../time-log-dialog', () => ({
   TimeLogDialog: ({
     open,

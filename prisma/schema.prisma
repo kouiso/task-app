@@ -118,8 +118,6 @@ model Task {
   estimatedHours   Float?       @map("estimated_hours")
   actualHours      Float        @default(0) @map("actual_hours")
   timeSpentMinutes Float        @default(0) @map("time_spent_minutes")
-  isTimerActive    Boolean      @default(false) @map("is_timer_active")
-  timerStartedAt   DateTime?    @map("timer_started_at")
   position         Int          @default(0)
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
