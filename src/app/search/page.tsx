@@ -67,31 +67,31 @@ function SearchPageContent() {
   });
 
   const formValues = form.watch();
-  // 入力のたびに検索APIを叩かないよう、フォーム値をデバウンスしてからクエリ・URL同期に使う
-  const debouncedValues = useDebounce(formValues, 300);
+  // テキスト入力のkeywordのみをデバウンスする。セレクト・日付の変更は即時反映したいので
+  // フォーム値のオブジェクト全体ではなくkeyword(プリミティブ)だけをデバウンス対象にする。
+  const debouncedKeyword = useDebounce(formValues.keyword, 300);
+  const searchValues = { ...formValues, keyword: debouncedKeyword };
 
   const shouldSearch =
-    !!debouncedValues.keyword ||
-    debouncedValues.projectId !== 'all' ||
-    debouncedValues.status !== 'all' ||
-    debouncedValues.priority !== 'all' ||
-    debouncedValues.assignedTo !== 'all' ||
-    !!debouncedValues.dateFrom ||
-    !!debouncedValues.dateTo;
+    !!searchValues.keyword ||
+    searchValues.projectId !== 'all' ||
+    searchValues.status !== 'all' ||
+    searchValues.priority !== 'all' ||
+    searchValues.assignedTo !== 'all' ||
+    !!searchValues.dateFrom ||
+    !!searchValues.dateTo;
 
   const { data: projects } = api.search.getUserProjects.useQuery();
   const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: searchResults, isLoading } = api.search.search.useQuery(
     {
-      keyword: debouncedValues.keyword || undefined,
-      projectId: debouncedValues.projectId !== 'all' ? debouncedValues.projectId : undefined,
-      status: debouncedValues.status,
-      priority: debouncedValues.priority,
-      assignedTo: debouncedValues.assignedTo !== 'all' ? debouncedValues.assignedTo : undefined,
-      dateFrom: debouncedValues.dateFrom
-        ? dateOnlyToUtcStartIso(debouncedValues.dateFrom)
-        : undefined,
-      dateTo: debouncedValues.dateTo ? dateOnlyToUtcEndIso(debouncedValues.dateTo) : undefined,
+      keyword: searchValues.keyword || undefined,
+      projectId: searchValues.projectId !== 'all' ? searchValues.projectId : undefined,
+      status: searchValues.status,
+      priority: searchValues.priority,
+      assignedTo: searchValues.assignedTo !== 'all' ? searchValues.assignedTo : undefined,
+      dateFrom: searchValues.dateFrom ? dateOnlyToUtcStartIso(searchValues.dateFrom) : undefined,
+      dateTo: searchValues.dateTo ? dateOnlyToUtcEndIso(searchValues.dateTo) : undefined,
     },
     {
       enabled: shouldSearch,
@@ -115,16 +115,35 @@ function SearchPageContent() {
     form.reset(searchFormSchema.parse(nextValues));
   }, [searchParams, form]);
 
-  // フォーム → URL: デバウンス済みの検索条件をURLに反映し、共有・リロード・戻る/進むで条件を保持する。
-  // 履歴を汚さないよう push ではなく replace を使う。
+  // フォーム → URL: keywordはデバウンス後、その他フィルタは即時にURLへ反映し、
+  // 共有・リロード・戻る/進むで条件を保持する。履歴を汚さないよう push ではなく replace を使う。
+  // 依存配列はオブジェクト参照ではなく各プリミティブ値を個別に指定し、不要な再実行を防ぐ。
   useEffect(() => {
-    const nextParams = buildSearchParamsFromValues(debouncedValues).toString();
+    const nextParams = buildSearchParamsFromValues({
+      keyword: debouncedKeyword,
+      projectId: formValues.projectId,
+      status: formValues.status,
+      priority: formValues.priority,
+      assignedTo: formValues.assignedTo,
+      dateFrom: formValues.dateFrom,
+      dateTo: formValues.dateTo,
+    }).toString();
     if (nextParams === searchParams.toString()) {
       return;
     }
 
     router.replace(nextParams ? `/search?${nextParams}` : '/search', { scroll: false });
-  }, [debouncedValues, router, searchParams]);
+  }, [
+    debouncedKeyword,
+    formValues.projectId,
+    formValues.status,
+    formValues.priority,
+    formValues.assignedTo,
+    formValues.dateFrom,
+    formValues.dateTo,
+    router,
+    searchParams,
+  ]);
 
   const handleClear = () => {
     form.reset({
