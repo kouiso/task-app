@@ -55,7 +55,7 @@ interface TaskGroupSectionProps {
   }>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onTimerUpdate?: (() => void) | undefined;
+  onTimeLogSuccess?: (() => void) | undefined;
 }
 
 const TaskGroupSection = ({
@@ -64,7 +64,7 @@ const TaskGroupSection = ({
   tasks,
   onEdit,
   onDelete,
-  onTimerUpdate,
+  onTimeLogSuccess,
 }: TaskGroupSectionProps) => {
   if (tasks.length === 0) return null;
 
@@ -87,7 +87,7 @@ const TaskGroupSection = ({
             timeSpentMinutes={task.timeSpentMinutes}
             onEdit={onEdit}
             onDelete={onDelete}
-            onTimerUpdate={onTimerUpdate}
+            onTimeLogSuccess={onTimeLogSuccess}
           />
         ))}
       </div>
@@ -116,7 +116,7 @@ export default function MyTasksPage() {
 
   const utils = api.useUtils();
 
-  const handleTimerUpdate = useCallback(() => {
+  const handleTimeLogSuccess = useCallback(() => {
     utils.task.getAll.invalidate();
   }, [utils.task.getAll]);
 
@@ -235,7 +235,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.overdue ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimerUpdate={handleTimerUpdate}
+            onTimeLogSuccess={handleTimeLogSuccess}
           />
 
           <TaskGroupSection
@@ -244,7 +244,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.today ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimerUpdate={handleTimerUpdate}
+            onTimeLogSuccess={handleTimeLogSuccess}
           />
 
           <TaskGroupSection
@@ -252,7 +252,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.upcoming ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimerUpdate={handleTimerUpdate}
+            onTimeLogSuccess={handleTimeLogSuccess}
           />
 
           <TaskGroupSection
@@ -260,7 +260,7 @@ export default function MyTasksPage() {
             tasks={groupedTasks.noDueDate ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimerUpdate={handleTimerUpdate}
+            onTimeLogSuccess={handleTimeLogSuccess}
           />
 
           {tasks && tasks.length === 0 && (

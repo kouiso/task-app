@@ -36,7 +36,7 @@ interface TaskCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
-  onTimerUpdate?: (() => void) | undefined;
+  onTimeLogSuccess?: (() => void) | undefined;
   canEdit?: boolean;
   canDelete?: boolean;
 }
@@ -53,7 +53,7 @@ export function TaskCard({
   onEdit,
   onDelete,
   onClick,
-  onTimerUpdate,
+  onTimeLogSuccess,
   canEdit = true,
   canDelete = true,
 }: TaskCardProps) {
@@ -211,7 +211,7 @@ export function TaskCard({
         open={timeLogDialogOpen}
         onClose={() => setTimeLogDialogOpen(false)}
         taskId={id}
-        onSuccess={onTimerUpdate}
+        onSuccess={onTimeLogSuccess}
       />
     </>
   );
