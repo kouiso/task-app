@@ -69,7 +69,11 @@ function SearchPageContent() {
   const formValues = form.watch();
   // テキスト入力のkeywordのみをデバウンスする。セレクト・日付の変更は即時反映したいので
   // フォーム値のオブジェクト全体ではなくkeyword(プリミティブ)だけをデバウンス対象にする。
-  const debouncedKeyword = useDebounce(formValues.keyword, 300);
+  const debouncedKeywordRaw = useDebounce(formValues.keyword, 300);
+  // 空文字（クリアボタンや全消し）は即時反映する。デバウンス値が遅延している間に
+  // 「フォーム→URL同期」が古いキーワードをURLへ書き戻し、それが「URL→フォーム」で
+  // 復活してクリアが取り消される不具合を防ぐため。
+  const debouncedKeyword = formValues.keyword === '' ? '' : debouncedKeywordRaw;
   const searchValues = { ...formValues, keyword: debouncedKeyword };
 
   const shouldSearch =
