@@ -63,11 +63,7 @@ test.describe('Task Management', () => {
     if (await searchInput.isVisible()) {
       await searchInput.fill('test');
 
-      // Click search button
-      const searchButton = page.getByRole('button', { name: /検索|search/i });
-      await searchButton.click();
-
-      // Wait for results
+      // ライブ検索: 入力後はデバウンス（300ms）を経て自動的に結果が更新される（検索ボタンは無し）
       await page.waitForTimeout(2000);
     }
   });
