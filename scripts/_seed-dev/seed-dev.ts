@@ -176,8 +176,6 @@ async function seedTasks(
     );
   }
 
-  const now = new Date();
-
   // プロジェクト1: 全ステータス × 全優先度を網羅
   const p1Tasks = [
     {
@@ -233,9 +231,6 @@ async function seedTasks(
       estimatedHours: 48,
       actualHours: 8,
       timeSpentMinutes: 480,
-      // タイマー稼働中
-      isTimerActive: true,
-      timerStartedAt: new Date(now.getTime() - 45 * 60 * 1000),
       position: 4,
       projectId: projects.p1.id,
       createdById: admin.id,
@@ -296,7 +291,7 @@ async function seedTasks(
     {
       title: 'アクセシビリティ監査',
       description: 'WCAG 2.1 AA 準拠のチェックと修正',
-      status: 'BLOCKED' as const,
+      status: 'IN_PROGRESS' as const,
       priority: 'MEDIUM' as const,
       dueDate: new Date('2025-06-15'),
       estimatedHours: 20,

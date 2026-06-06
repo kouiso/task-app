@@ -95,7 +95,7 @@ function TaskPageContent() {
 
   const utils = api.useUtils();
 
-  const handleTimerUpdate = useCallback(() => {
+  const handleTimeLogSuccess = useCallback(() => {
     void utils.task.getAll.invalidate();
     void utils.task.getAll.refetch();
   }, [utils.task.getAll]);
@@ -489,13 +489,11 @@ function TaskPageContent() {
                         priority={task.priority}
                         dueDate={task.dueDate}
                         assignee={task.assignee}
-                        isTimerActive={task.isTimerActive}
-                        timerStartedAt={task.timerStartedAt}
                         timeSpentMinutes={task.timeSpentMinutes}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onClick={handleTaskClick}
-                        onTimerUpdate={handleTimerUpdate}
+                        onTimeLogSuccess={handleTimeLogSuccess}
                         canEdit={taskCanEdit}
                         canDelete={taskCanDelete}
                       />

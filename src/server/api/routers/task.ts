@@ -40,11 +40,6 @@ const taskUpdateSchema = z.object({
   assigneeId: z.string().cuid().optional().nullable(),
 });
 
-const taskTimerSchema = z.object({
-  id: z.string().cuid(),
-  action: z.enum(['start', 'stop']),
-});
-
 const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
   minutesToAdd: z.number().min(0),
@@ -358,45 +353,6 @@ export const taskRouter = createTRPCRouter({
       });
       return { success: true };
     }),
-
-  updateTimer: protectedProcedure.input(taskTimerSchema).mutation(async ({ ctx, input }) => {
-    const task = await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
-
-    if (input.action === 'start') {
-      if (task.isTimerActive) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'タイマーは既に実行中です',
-        });
-      }
-
-      return await prisma.task.update({
-        where: { id: input.id },
-        data: {
-          isTimerActive: true,
-          timerStartedAt: new Date(),
-        },
-      });
-    }
-    if (!task.isTimerActive || !task.timerStartedAt) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'タイマーは実行されていません',
-      });
-    }
-
-    const MS_PER_MINUTE = 60_000;
-    const elapsedMinutes = Math.floor((Date.now() - task.timerStartedAt.getTime()) / MS_PER_MINUTE);
-
-    return await prisma.task.update({
-      where: { id: input.id },
-      data: {
-        isTimerActive: false,
-        timerStartedAt: null,
-        timeSpentMinutes: task.timeSpentMinutes + elapsedMinutes,
-      },
-    });
-  }),
 
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
     await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
