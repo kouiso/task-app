@@ -361,9 +361,11 @@ function ProjectPageContent() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
-              const taskCount = project.tasks?.length ?? 0;
-              const doneCount =
-                project.tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
+              // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）
+              const activeTasks =
+                project.tasks?.filter((t) => t.status !== TASK_STATUS.CANCELLED) ?? [];
+              const taskCount = activeTasks.length;
+              const doneCount = activeTasks.filter((t) => t.status === TASK_STATUS.DONE).length;
 
               return (
                 <ProjectCard
