@@ -95,7 +95,7 @@ function TaskPageContent() {
 
   const utils = api.useUtils();
 
-  const handleTimerUpdate = useCallback(() => {
+  const handleTimeLogSuccess = useCallback(() => {
     void utils.task.getAll.invalidate();
     void utils.task.getAll.refetch();
   }, [utils.task.getAll]);
@@ -493,7 +493,7 @@ function TaskPageContent() {
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onClick={handleTaskClick}
-                        onTimerUpdate={handleTimerUpdate}
+                        onTimeLogSuccess={handleTimeLogSuccess}
                         canEdit={taskCanEdit}
                         canDelete={taskCanDelete}
                       />
