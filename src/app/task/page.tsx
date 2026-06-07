@@ -375,15 +375,17 @@ function TaskPageContent() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 items-center mb-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="select-all"
-                checked={selectAllState}
-                onCheckedChange={(checked) => handleSelectAll(checked === true)}
-                aria-label="すべてのタスクを選択"
-              />
-              <Label htmlFor="select-all">すべて選択</Label>
-            </div>
+            {selectableTasks.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="select-all"
+                  checked={selectAllState}
+                  onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                  aria-label="すべてのタスクを選択"
+                />
+                <Label htmlFor="select-all">すべて選択</Label>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2 w-full sm:w-auto ml-auto">
               <div className="w-full sm:w-[200px]">
