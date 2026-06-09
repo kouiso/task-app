@@ -62,27 +62,39 @@ export default function DashboardPage() {
           {/* ミニ統計 */}
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#34d399' }} />
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: TASK_STATUS_COLORS[TASK_STATUS.DONE] }}
+              />
               <span className="text-sm text-muted-foreground">
                 完了タスク <span className="font-semibold text-foreground">{completedTasks}</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#60a5fa' }} />
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: TASK_STATUS_COLORS[TASK_STATUS.IN_PROGRESS] }}
+              />
               <span className="text-sm text-muted-foreground">
                 進行中タスク{' '}
                 <span className="font-semibold text-foreground">{inProgressTasks}</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#fbbf24' }} />
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: TASK_STATUS_COLORS[TASK_STATUS.IN_REVIEW] }}
+              />
               <span className="text-sm text-muted-foreground">
                 レビュー中タスク{' '}
                 <span className="font-semibold text-foreground">{inReviewTasks}</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#64748b' }} />
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: TASK_STATUS_COLORS[TASK_STATUS.TODO] }}
+              />
               <span className="text-sm text-muted-foreground">
                 未対応タスク <span className="font-semibold text-foreground">{todoTasks}</span>
               </span>
