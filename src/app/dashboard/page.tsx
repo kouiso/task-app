@@ -42,89 +42,50 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="space-y-10">
         {/* ヒーローセクション — 完了率が主役 */}
-        <div
-          className="relative overflow-hidden rounded-2xl p-8"
-          style={{
-            background: '#0f172a',
-          }}
-        >
-          {/* 装飾 */}
-          <div
-            className="absolute top-0 right-0 h-64 w-64 rounded-full opacity-20 blur-3xl"
-            style={{ background: 'radial-gradient(circle, #3b82f6, transparent 70%)' }}
-          />
-          <div
-            className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full opacity-15 blur-3xl"
-            style={{ background: 'radial-gradient(circle, #8b5cf6, transparent 70%)' }}
-          />
+        <div className="rounded-2xl border border-border/50 bg-card p-8">
+          <p className="text-sm font-medium text-muted-foreground mb-1">全体の進捗</p>
+          <div className="flex items-end gap-3 mb-6">
+            <span className="text-6xl font-extrabold text-foreground tracking-tighter leading-none">
+              {completionRate}
+            </span>
+            <span className="text-2xl font-bold text-muted-foreground mb-1">%</span>
+          </div>
 
-          <div className="relative z-10">
-            <p className="text-sm font-medium text-slate-400 mb-1">全体の進捗</p>
-            <div className="flex items-end gap-3 mb-6">
-              <span className="text-6xl font-extrabold text-white tracking-tighter leading-none">
-                {completionRate}
-              </span>
-              <span className="text-2xl font-bold text-slate-400 mb-1">%</span>
-            </div>
-
-            {/* プログレスバー */}
+          {/* プログレスバー */}
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted mb-4">
             <div
-              className="rounded-full overflow-hidden"
-              style={{
-                height: '8px',
-                width: '100%',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                marginBottom: '16px',
-              }}
-            >
-              <div
-                className="rounded-full transition-all duration-700 ease-out"
-                style={{
-                  height: '8px',
-                  width: `${completionRate}%`,
-                  background: '#3b82f6',
-                }}
-              />
-            </div>
+              className="h-2 rounded-full bg-primary transition-all duration-700 ease-out"
+              style={{ width: `${completionRate}%` }}
+            />
+          </div>
 
-            {/* ミニ統計 */}
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              <div className="flex items-center gap-2">
-                <div
-                  className="rounded-full"
-                  style={{ width: '8px', height: '8px', backgroundColor: '#34d399' }}
-                />
-                <span className="text-sm text-slate-300">
-                  完了タスク <span className="font-semibold text-white">{completedTasks}</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="rounded-full"
-                  style={{ width: '8px', height: '8px', backgroundColor: '#60a5fa' }}
-                />
-                <span className="text-sm text-slate-300">
-                  進行中タスク <span className="font-semibold text-white">{inProgressTasks}</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="rounded-full"
-                  style={{ width: '8px', height: '8px', backgroundColor: '#fbbf24' }}
-                />
-                <span className="text-sm text-slate-300">
-                  レビュー中タスク <span className="font-semibold text-white">{inReviewTasks}</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="rounded-full"
-                  style={{ width: '8px', height: '8px', backgroundColor: '#64748b' }}
-                />
-                <span className="text-sm text-slate-300">
-                  未対応タスク <span className="font-semibold text-white">{todoTasks}</span>
-                </span>
-              </div>
+          {/* ミニ統計 */}
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#34d399' }} />
+              <span className="text-sm text-muted-foreground">
+                完了タスク <span className="font-semibold text-foreground">{completedTasks}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#60a5fa' }} />
+              <span className="text-sm text-muted-foreground">
+                進行中タスク{' '}
+                <span className="font-semibold text-foreground">{inProgressTasks}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#fbbf24' }} />
+              <span className="text-sm text-muted-foreground">
+                レビュー中タスク{' '}
+                <span className="font-semibold text-foreground">{inReviewTasks}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#64748b' }} />
+              <span className="text-sm text-muted-foreground">
+                未対応タスク <span className="font-semibold text-foreground">{todoTasks}</span>
+              </span>
             </div>
           </div>
         </div>
