@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
-import { useDebounce } from '@/hook/use-debounce';
 import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
@@ -67,9 +66,27 @@ function SearchPageContent() {
   });
 
   const formValues = form.watch();
-  // テキスト入力のkeywordのみをデバウンスする。セレクト・日付の変更は即時反映したいので
-  // フォーム値のオブジェクト全体ではなくkeyword(プリミティブ)だけをデバウンス対象にする。
-  const debouncedKeyword = useDebounce(formValues.keyword, 300);
+  // テキスト入力のkeywordのみをデバウンスする（セレクト・日付の変更は即時反映）。
+  // 空文字（クリアや全消し）は即時に反映し、入力中のみ300msデバウンスする。
+  // useDebounce(値) を使うとクリア直後に高速で再入力した際、保留中の古いタイマー値が
+  // 一時的に復活してしまうため、状態を直接管理して古い値の混入を防ぐ。
+  const [debouncedKeyword, setDebouncedKeyword] = useState(formValues.keyword);
+
+  useEffect(() => {
+    if (formValues.keyword === '') {
+      setDebouncedKeyword('');
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      setDebouncedKeyword(formValues.keyword);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [formValues.keyword]);
+
   const searchValues = { ...formValues, keyword: debouncedKeyword };
 
   const shouldSearch =
