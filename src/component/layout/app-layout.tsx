@@ -105,15 +105,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="grid h-dvh w-full overflow-hidden md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <div className="grid h-screen w-full overflow-hidden md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r border-sidebar-border bg-sidebar md:block">
-          <div className="flex h-full flex-col gap-2 overflow-y-auto">
-            <div className="flex h-14 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
+          <div className="flex h-full flex-col gap-2">
+            <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
               <Link href="/" className="flex items-center gap-2 font-semibold">
                 <span className="text-sidebar-foreground font-bold text-lg">Task App</span>
               </Link>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
                 {menuItems.map((item) => (
                   <Link
@@ -132,7 +132,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 ))}
               </nav>
             </div>
-            <div className="border-t border-sidebar-border p-4">
+            <div className="shrink-0 border-t border-sidebar-border p-4">
               <Link
                 href="/profile"
                 aria-label="プロフィールを表示"
