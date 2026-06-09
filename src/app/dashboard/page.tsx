@@ -182,11 +182,15 @@ export default function DashboardPage() {
             {projects && projects.length > 0 ? (
               <div className="space-y-1">
                 {projects.slice(0, 5).map((project) => {
-                  // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）
-                  const activeTasks =
-                    project.tasks?.filter((t) => t.status !== TASK_STATUS.CANCELLED) ?? [];
-                  const taskCount = activeTasks.length;
-                  const doneCount = activeTasks.filter((t) => t.status === TASK_STATUS.DONE).length;
+                  // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）。
+                  // 総数と完了数を1回のループで同時に集計する。
+                  let taskCount = 0;
+                  let doneCount = 0;
+                  for (const t of project.tasks ?? []) {
+                    if (t.status === TASK_STATUS.CANCELLED) continue;
+                    taskCount++;
+                    if (t.status === TASK_STATUS.DONE) doneCount++;
+                  }
                   const progress = taskCount > 0 ? (doneCount / taskCount) * 100 : 0;
 
                   return (

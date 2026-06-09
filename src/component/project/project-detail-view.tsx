@@ -61,11 +61,17 @@ export function ProjectDetailView({
     );
   }
 
-  // 総数はアクティブな4ステータスのみで数え、キャンセル済みは別表記にする（進捗指標との整合のため）
-  const activeTaskCount =
-    projectDetail.tasks?.filter((task) => task.status !== TASK_STATUS.CANCELLED).length ?? 0;
-  const cancelledTaskCount =
-    projectDetail.tasks?.filter((task) => task.status === TASK_STATUS.CANCELLED).length ?? 0;
+  // 総数はアクティブな4ステータスのみで数え、キャンセル済みは別表記にする（進捗指標との整合のため）。
+  // アクティブ数とキャンセル数を1回のループで同時に集計する。
+  let activeTaskCount = 0;
+  let cancelledTaskCount = 0;
+  for (const task of projectDetail.tasks ?? []) {
+    if (task.status === TASK_STATUS.CANCELLED) {
+      cancelledTaskCount++;
+    } else {
+      activeTaskCount++;
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
