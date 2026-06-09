@@ -227,7 +227,7 @@ export function ProjectDetailView({
                 projectDetail.tasks?.map((task) => (
                   <div
                     key={task.id}
-                    className="flex flex-col gap-1 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="flex flex-col gap-1 p-3 rounded-lg border bg-muted/30"
                   >
                     <p className="font-medium">{task.title}</p>
                     <div className="flex gap-2">
