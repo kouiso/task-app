@@ -109,10 +109,7 @@ export function ProjectDetailDialog({
               </h3>
               <div className="grid gap-2">
                 {projectDetail.tasks?.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex flex-col gap-1 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                  >
+                  <div key={task.id} className="flex flex-col gap-1 p-3 rounded-lg border bg-card">
                     <p className="font-medium">{task.title}</p>
                     <div className="flex gap-2">
                       <StatusBadge status={task.status} />

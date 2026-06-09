@@ -142,7 +142,7 @@ export default function DashboardPage() {
             return (
               <div
                 key={stat.label}
-                className="group flex items-center gap-4 rounded-xl border border-border/50 bg-card p-4 transition-all hover:shadow-md"
+                className="flex items-center gap-4 rounded-xl border border-border/50 bg-card p-4"
                 style={{ borderLeft: `3px solid ${stat.color}` }}
               >
                 <div
