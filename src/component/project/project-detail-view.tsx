@@ -22,6 +22,7 @@ import {
   PROJECT_MEMBER_ROLE_LABELS,
   type ProjectMemberRole,
 } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
 import type { AppRouter } from '@/server/api/root';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -58,6 +59,18 @@ export function ProjectDetailView({
         </Button>
       </div>
     );
+  }
+
+  // 総数はアクティブな4ステータスのみで数え、キャンセル済みは別表記にする（進捗指標との整合のため）。
+  // アクティブ数とキャンセル数を1回のループで同時に集計する。
+  let activeTaskCount = 0;
+  let cancelledTaskCount = 0;
+  for (const task of projectDetail.tasks ?? []) {
+    if (task.status === TASK_STATUS.CANCELLED) {
+      cancelledTaskCount++;
+    } else {
+      activeTaskCount++;
+    }
   }
 
   return (
@@ -194,7 +207,14 @@ export function ProjectDetailView({
           <CardHeader className="space-y-0 pb-4">
             <div className="flex items-center gap-2">
               <CheckSquare className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-lg">タスク ({projectDetail.tasks?.length ?? 0})</CardTitle>
+              <CardTitle className="text-lg">
+                タスク ({activeTaskCount})
+                {cancelledTaskCount > 0 && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    （キャンセル済 {cancelledTaskCount}）
+                  </span>
+                )}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>

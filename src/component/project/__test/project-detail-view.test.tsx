@@ -53,6 +53,28 @@ const buildProjectDetail = (): ProjectDetail => ({
   tasks: [],
 });
 
+type ProjectTask = NonNullable<ProjectDetail['tasks']>[number];
+
+const buildTask = (id: string, status: ProjectTask['status']): ProjectTask => ({
+  id,
+  title: `項目-${id}`,
+  description: null,
+  status,
+  priority: 'MEDIUM',
+  dueDate: null,
+  completedAt: null,
+  estimatedHours: null,
+  actualHours: 0,
+  timeSpentMinutes: 0,
+  position: 0,
+  createdAt: new Date('2024-01-01T00:00:00.000Z'),
+  updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+  projectId: 'project-1',
+  createdById: 'user-owner',
+  assigneeId: null,
+  assignee: null,
+});
+
 const renderView = (override?: Partial<React.ComponentProps<typeof ProjectDetailView>>) => {
   const onUpdateMemberRole = vi.fn();
   render(
@@ -128,5 +150,38 @@ describe('ProjectDetailView の権限編集', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     // 役割は読み取り専用ラベルで表示される
     expect(screen.getByText('メンバー')).toBeInTheDocument();
+  });
+});
+
+describe('ProjectDetailView のタスク件数表示', () => {
+  it('総数はキャンセル済みを除外し、キャンセル済みは別表記する', () => {
+    renderView({
+      projectDetail: {
+        ...buildProjectDetail(),
+        tasks: [
+          buildTask('1', 'TODO'),
+          buildTask('2', 'IN_PROGRESS'),
+          buildTask('3', 'DONE'),
+          buildTask('4', 'CANCELLED'),
+        ],
+      },
+    });
+
+    // 総数はアクティブな3件（CANCELLEDを除外）
+    expect(screen.getByText('タスク (3)')).toBeInTheDocument();
+    // キャンセル済みは別表記で1件
+    expect(screen.getByText('（キャンセル済 1）')).toBeInTheDocument();
+  });
+
+  it('キャンセル済みが無ければ別表記を出さない', () => {
+    renderView({
+      projectDetail: {
+        ...buildProjectDetail(),
+        tasks: [buildTask('1', 'TODO'), buildTask('2', 'DONE')],
+      },
+    });
+
+    expect(screen.getByText('タスク (2)')).toBeInTheDocument();
+    expect(screen.queryByText(/キャンセル済/)).not.toBeInTheDocument();
   });
 });
