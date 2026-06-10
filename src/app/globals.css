@@ -4,6 +4,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* /task のフィルタ用プルダウン群。
+   狭い順に 1列 → 2列(640px〜) → 4列(1280px〜) に並べる。
+   flex-wrap だと幅によって 3+1 のように段落ちするため、グリッドで常に揃える。
+   (Tailwind の任意値が当環境のビルドで生成されないため生CSSで定義する) */
+.task-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .task-filter-grid {
+    width: auto;
+    grid-template-columns: repeat(2, 180px);
+  }
+}
+@media (min-width: 1280px) {
+  .task-filter-grid {
+    grid-template-columns: repeat(4, 180px);
+  }
+}
+
 @theme inline {
   /* ダッシュボードの統計カードを 1350px 以上で 5 列にするためのカスタムブレークポイント。 */
   --breakpoint-xxl: 1350px;
