@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftRight, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -59,16 +59,6 @@ export default function ReportPage() {
           >
             週次レポートを見る
             <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        <div>
-          <Link
-            href="/report/weekly/export"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            週次レポート出力ページへ
-            <ArrowLeftRight className="h-4 w-4" />
           </Link>
         </div>
 
