@@ -4,28 +4,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ダッシュボードの統計カードグリッド。
-   1列(モバイル) → 2列(640px〜タブレット) → 5列(1350px〜)。
-   1024〜1349px ではタブレットと同じ2列を維持する。
-   (Tailwind の min-[1350px]: 等の任意ブレークポイントが当環境のビルドで
-   生成されないため、生CSSのメディアクエリで定義する) */
-.dashboard-stats-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(0, 1fr);
-}
-@media (min-width: 640px) {
-  .dashboard-stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (min-width: 1350px) {
-  .dashboard-stats-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
 @theme inline {
+  /* ダッシュボードの統計カードを 1350px 以上で 5 列にするためのカスタムブレークポイント。 */
+  --breakpoint-xxl: 1350px;
+
   --font-sans:
     var(--font-inter), var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
     "Meiryo", sans-serif;

@@ -103,7 +103,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 統計カード — 控えめに、左ボーダーで色のアクセント */}
-        <div className="dashboard-stats-grid">
+        <div className="grid gap-3 sm:grid-cols-2 xxl:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
             { label: '未対応タスク', value: todoTasks, color: '#64748b', icon: Circle },
