@@ -134,7 +134,7 @@ export default function DashboardPage() {
         </div>
 
         {/* プロジェクト & タスク */}
-        <div className="dashboard-main-grid">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           {/* 最近のプロジェクト */}
           <div className="rounded-xl border border-border/50 bg-card p-6">
             <div className="flex items-center justify-between mb-5">

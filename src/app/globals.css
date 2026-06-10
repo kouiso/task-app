@@ -4,20 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ダッシュボードの「プロジェクト」「最近のタスク」セクション。
-   画面幅が狭い場合(1024px未満)は縦並び(1列)、広い場合は 3:2 の横並びにする。
-   (Tailwind の任意値グリッドが当環境のビルドで生成されないため生CSSで定義する) */
-.dashboard-main-grid {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: minmax(0, 1fr);
-}
-@media (min-width: 1024px) {
-  .dashboard-main-grid {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  }
-}
-
 @theme inline {
   --font-sans:
     var(--font-inter), var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
