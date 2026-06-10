@@ -105,7 +105,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="grid h-screen w-full overflow-hidden md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      {/* 高さは h-screen(100vh) を土台にしつつ、モバイルのアドレスバー伸縮へ対応するため
+          dvh対応ブラウザではインラインの 100dvh で上書きする。dvh非対応時は無効化され h-screen にフォールバック。
+          (Tailwind の h-dvh / h-[100dvh] が当環境のビルドで生成されないためインラインで指定) */}
+      <div
+        className="grid h-screen w-full overflow-hidden md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]"
+        style={{ height: '100dvh' }}
+      >
         <div className="hidden border-r border-sidebar-border bg-sidebar md:block">
           <div className="flex h-full flex-col gap-2">
             <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
