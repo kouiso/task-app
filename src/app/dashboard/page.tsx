@@ -134,10 +134,7 @@ export default function DashboardPage() {
         </div>
 
         {/* プロジェクト & タスク */}
-        <div
-          className="grid gap-6"
-          style={{ gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)' }}
-        >
+        <div className="dashboard-main-grid">
           {/* 最近のプロジェクト */}
           <div className="rounded-xl border border-border/50 bg-card p-6">
             <div className="flex items-center justify-between mb-5">
