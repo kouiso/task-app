@@ -84,7 +84,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         <div className="grid gap-6 md:grid-cols-12">
           <div className="md:col-span-4 space-y-6">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent style={{ paddingTop: '2.5rem' }}>
                 <div className="text-center mb-6">
                   <Avatar className="w-24 h-24 mx-auto mb-4">
                     {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
