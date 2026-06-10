@@ -376,19 +376,21 @@ function TaskPageContent() {
 
           <div className="flex flex-col sm:flex-row gap-4 items-center mb-4">
             {selectableTasks.length > 0 && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 shrink-0">
                 <Checkbox
                   id="select-all"
                   checked={selectAllState}
                   onCheckedChange={(checked) => handleSelectAll(checked === true)}
                   aria-label="すべてのタスクを選択"
                 />
-                <Label htmlFor="select-all">すべて選択</Label>
+                <Label htmlFor="select-all" className="whitespace-nowrap">
+                  すべて選択
+                </Label>
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto ml-auto">
-              <div className="w-full sm:w-[200px]">
+            <div className="task-filter-grid ml-auto">
+              <div>
                 <Label htmlFor="task-project-filter" className="sr-only">
                   プロジェクトで絞り込み
                 </Label>
@@ -406,7 +408,7 @@ function TaskPageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-full sm:w-[200px]">
+              <div>
                 <Label htmlFor="task-status-filter" className="sr-only">
                   ステータスで絞り込み
                 </Label>
@@ -429,7 +431,7 @@ function TaskPageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-full sm:w-[200px]">
+              <div>
                 <Select
                   value={filterPriority}
                   onValueChange={(value) => {
@@ -449,7 +451,7 @@ function TaskPageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-full sm:w-[200px]">
+              <div>
                 <Select value={filterAssignee} onValueChange={setFilterAssignee}>
                   <SelectTrigger>
                     <SelectValue placeholder="すべての担当者" />
