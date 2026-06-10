@@ -367,7 +367,7 @@ function TaskPageContent() {
                 </Button>
               )}
               {editableProjects.length > 0 && (
-                <Button onClick={handleCreate}>
+                <Button size="sm" onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" /> 新規タスク
                 </Button>
               )}
