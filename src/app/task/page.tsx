@@ -374,7 +374,7 @@ function TaskPageContent() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center mb-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-4">
             {selectableTasks.length > 0 && (
               <div className="flex items-center space-x-2 shrink-0">
                 <Checkbox
@@ -432,13 +432,16 @@ function TaskPageContent() {
                 </Select>
               </div>
               <div>
+                <Label htmlFor="task-priority-filter" className="sr-only">
+                  優先度で絞り込み
+                </Label>
                 <Select
                   value={filterPriority}
                   onValueChange={(value) => {
                     if (value === 'all' || isTaskPriority(value)) setFilterPriority(value);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="task-priority-filter" aria-label="優先度で絞り込み">
                     <SelectValue placeholder="すべての優先度" />
                   </SelectTrigger>
                   <SelectContent>
@@ -452,8 +455,11 @@ function TaskPageContent() {
                 </Select>
               </div>
               <div>
+                <Label htmlFor="task-assignee-filter" className="sr-only">
+                  担当者で絞り込み
+                </Label>
                 <Select value={filterAssignee} onValueChange={setFilterAssignee}>
-                  <SelectTrigger>
+                  <SelectTrigger id="task-assignee-filter" aria-label="担当者で絞り込み">
                     <SelectValue placeholder="すべての担当者" />
                   </SelectTrigger>
                   <SelectContent>
