@@ -5,6 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* ダッシュボードの統計カードを 1350px 以上で 5 列にするためのカスタムブレークポイント。 */
+  --breakpoint-xxl: 1350px;
+
   --font-sans:
     var(--font-inter), var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
     "Meiryo", sans-serif;
