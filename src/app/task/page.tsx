@@ -320,7 +320,7 @@ function TaskPageContent() {
         <PageLoadingSpinner />
       ) : (
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
               {selectedTaskList.length > 0 && (
@@ -329,20 +329,20 @@ function TaskPageContent() {
                 </span>
               )}
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
               {canCompleteSelected && (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full sm:w-auto"
+                    className="w-full lg:w-auto"
                     onClick={handleBulkComplete}
                   >
                     <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                      <Button variant="outline" size="sm" className="w-full lg:w-auto">
                         ステータス変更
                       </Button>
                     </DropdownMenuTrigger>
@@ -365,14 +365,14 @@ function TaskPageContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full text-destructive hover:text-destructive sm:w-auto"
+                  className="w-full text-destructive hover:text-destructive lg:w-auto"
                   onClick={handleBulkDelete}
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> 削除
                 </Button>
               )}
               {editableProjects.length > 0 && (
-                <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
+                <Button size="sm" className="w-full lg:w-auto" onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" /> 新規タスク
                 </Button>
               )}
