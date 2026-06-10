@@ -372,7 +372,7 @@ function TaskPageContent() {
                 </Button>
               )}
               {editableProjects.length > 0 && (
-                <Button className="w-full sm:w-auto" onClick={handleCreate}>
+                <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" /> 新規タスク
                 </Button>
               )}
