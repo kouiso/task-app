@@ -76,20 +76,20 @@ export function ProjectDetailView({
   return (
     <div className="flex flex-col gap-6">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4 min-w-0">
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={onBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             プロジェクト一覧
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div
               className="h-4 w-4 rounded-full flex-shrink-0"
               style={{ backgroundColor: projectDetail.color }}
             />
-            <h1 className="text-3xl font-bold tracking-tight">{projectDetail.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight truncate">{projectDetail.name}</h1>
             {projectDetail.isArchived && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs shrink-0">
                 アーカイブ済み
               </Badge>
             )}
@@ -98,6 +98,7 @@ export function ProjectDetailView({
         {canArchive && (
           <Button
             variant="outline"
+            className="shrink-0"
             onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
           >
             {projectDetail.isArchived ? (
