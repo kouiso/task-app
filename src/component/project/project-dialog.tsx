@@ -132,7 +132,12 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 grid gap-2">
                 <Label htmlFor="color">カラー</Label>
-                <Input id="color" type="color" className="h-10 w-full" {...register('color')} />
+                <Input
+                  id="color"
+                  type="color"
+                  className="h-10 w-20 cursor-pointer p-1"
+                  {...register('color')}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="startDate">開始日</Label>
