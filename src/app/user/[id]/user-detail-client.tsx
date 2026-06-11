@@ -92,7 +92,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       {user.name?.[0]?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <h2 className="text-xl font-bold mb-2">{user.name}</h2>
+                  <h2 className="text-xl font-bold mb-2 break-words">{user.name || user.email}</h2>
                   <div className="flex justify-center gap-2 mb-4">
                     <UserRoleBadge role={user.role} />
                     <ActiveStatusBadge isActive={user.isActive} />
