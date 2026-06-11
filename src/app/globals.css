@@ -229,4 +229,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Tailwind v4 の preflight はボタンのカーソルを default に戻すため、
+     クリック可能な要素には pointer カーソルを明示する（v3 の挙動を復元）。 */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
