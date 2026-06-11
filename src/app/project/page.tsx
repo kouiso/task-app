@@ -345,7 +345,7 @@ function ProjectPageContent() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-3xl font-bold tracking-tight">プロジェクト</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">

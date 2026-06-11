@@ -50,8 +50,10 @@ export default function ProfilePage() {
                   <User className="w-10 h-10 text-primary" />
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold">{currentUser.name}</h1>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold break-words">
+                  {currentUser.name || currentUser.email}
+                </h1>
                 <div className="flex gap-2 mt-2">
                   {currentUser.role === USER_ROLE.ADMIN && (
                     <UserRoleBadge role={currentUser.role} />
