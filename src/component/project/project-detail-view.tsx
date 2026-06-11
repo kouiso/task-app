@@ -87,7 +87,9 @@ export function ProjectDetailView({
               className="h-4 w-4 rounded-full flex-shrink-0"
               style={{ backgroundColor: projectDetail.color }}
             />
-            <h1 className="text-3xl font-bold tracking-tight truncate">{projectDetail.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight truncate" title={projectDetail.name}>
+              {projectDetail.name}
+            </h1>
             {projectDetail.isArchived && (
               <Badge variant="secondary" className="text-xs shrink-0">
                 アーカイブ済み
