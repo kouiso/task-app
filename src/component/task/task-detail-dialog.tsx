@@ -139,7 +139,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
         <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl">{taskDetail?.title}</DialogTitle>
+            <DialogTitle className="text-xl break-words">{taskDetail?.title}</DialogTitle>
             <DialogDescription>
               プロジェクト:{' '}
               <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
