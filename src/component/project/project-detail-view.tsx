@@ -86,6 +86,7 @@ export function ProjectDetailView({
           {canArchive && (
             <Button
               variant="outline"
+              size="sm"
               className="shrink-0"
               onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
             >
