@@ -76,44 +76,47 @@ export function ProjectDetailView({
   return (
     <div className="flex flex-col gap-6">
       {/* ヘッダー */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="flex flex-col gap-4">
+        {/* アクション行: 戻る・アーカイブ操作 */}
+        <div className="flex items-center justify-between gap-2">
           <Button variant="ghost" size="sm" className="shrink-0" onClick={onBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             プロジェクト一覧
           </Button>
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="h-4 w-4 rounded-full flex-shrink-0"
-              style={{ backgroundColor: projectDetail.color }}
-            />
-            <h1 className="text-3xl font-bold tracking-tight truncate" title={projectDetail.name}>
-              {projectDetail.name}
-            </h1>
-            {projectDetail.isArchived && (
-              <Badge variant="secondary" className="text-xs shrink-0">
-                アーカイブ済み
-              </Badge>
-            )}
-          </div>
+          {canArchive && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
+            >
+              {projectDetail.isArchived ? (
+                <>
+                  <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
+                </>
+              ) : (
+                <>
+                  <Archive className="mr-2 h-4 w-4" /> アーカイブ
+                </>
+              )}
+            </Button>
+          )}
         </div>
-        {canArchive && (
-          <Button
-            variant="outline"
-            className="shrink-0"
-            onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
-          >
-            {projectDetail.isArchived ? (
-              <>
-                <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
-              </>
-            ) : (
-              <>
-                <Archive className="mr-2 h-4 w-4" /> アーカイブ
-              </>
-            )}
-          </Button>
-        )}
+        {/* タイトル行: 長い名前も省略せず全文表示する */}
+        <div className="flex items-start gap-3">
+          <div
+            className="mt-2.5 h-4 w-4 rounded-full shrink-0"
+            style={{ backgroundColor: projectDetail.color }}
+          />
+          <h1 className="text-3xl font-bold tracking-tight break-words min-w-0">
+            {projectDetail.name}
+          </h1>
+          {projectDetail.isArchived && (
+            <Badge variant="secondary" className="mt-2 text-xs shrink-0">
+              アーカイブ済み
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* 説明 */}
