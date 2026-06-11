@@ -320,7 +320,7 @@ function TaskPageContent() {
         <PageLoadingSpinner />
       ) : (
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
               {selectedTaskList.length > 0 && (
@@ -329,7 +329,7 @@ function TaskPageContent() {
                 </span>
               )}
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               {canCompleteSelected && (
                 <>
                   <Button
