@@ -59,16 +59,41 @@ export function ProjectCard({
       onClick={handleCardClick}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <CardTitle className="truncate text-lg" title={name}>
-              {name}
-            </CardTitle>
-            {isArchived && (
-              <Badge variant="secondary" className="mt-1.5">
-                アーカイブ
-              </Badge>
-            )}
+        <CardTitle className="truncate text-lg" title={name}>
+          {name}
+        </CardTitle>
+        {isArchived && (
+          <Badge variant="secondary" className="w-fit">
+            アーカイブ済み
+          </Badge>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {description && (
+          <p className="line-clamp-2 text-sm text-muted-foreground" title={description}>
+            {description}
+          </p>
+        )}
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>進捗</span>
+            <span>
+              {taskStats.done} / {taskStats.total} タスク
+            </span>
+          </div>
+          <div className="w-full bg-secondary rounded-full h-2">
+            <div
+              className="bg-primary h-2 rounded-full transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <Badge variant="outline">{memberCount} メンバー</Badge>
           </div>
           <div className="flex shrink-0 gap-1">
             <Button
@@ -92,29 +117,6 @@ export function ProjectCard({
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
-
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>進捗</span>
-            <span>
-              {taskStats.done} / {taskStats.total} タスク
-            </span>
-          </div>
-          <div className="w-full bg-secondary rounded-full h-2">
-            <div
-              className="bg-primary h-2 rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <Badge variant="outline">{memberCount} メンバー</Badge>
         </div>
       </CardContent>
     </Card>
