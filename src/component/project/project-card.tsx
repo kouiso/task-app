@@ -64,12 +64,16 @@ export function ProjectCard({
         </CardTitle>
         {isArchived && (
           <Badge variant="secondary" className="w-fit">
-            アーカイブ
+            アーカイブ済み
           </Badge>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        {description && (
+          <p className="line-clamp-2 text-sm text-muted-foreground" title={description}>
+            {description}
+          </p>
+        )}
 
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
