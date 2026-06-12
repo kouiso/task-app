@@ -29,9 +29,15 @@ export const reportRouter = createTRPCRouter({
       };
     }
 
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
     // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
     const activeTasksFilter = {
-      projectId: { in: projectIds },
+      ...projectScope,
       NOT: { status: TASK_STATUS.CANCELLED },
     } as const;
 
@@ -59,25 +65,25 @@ export const reportRouter = createTRPCRouter({
       prisma.task.count({ where: activeTasksFilter }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.DONE,
         },
       }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.IN_PROGRESS,
         },
       }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.IN_REVIEW,
         },
       }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.TODO,
         },
       }),
@@ -115,7 +121,7 @@ export const reportRouter = createTRPCRouter({
       prisma.task.groupBy({
         by: ['projectId'],
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.DONE,
         },
         _count: { _all: true },
