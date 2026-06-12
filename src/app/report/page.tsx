@@ -178,21 +178,29 @@ export default function ReportPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">プロジェクト</TableHead>
-                  <TableHead className="text-right">タスク数</TableHead>
-                  <TableHead className="text-right">完了</TableHead>
-                  <TableHead className="text-right">進捗</TableHead>
-                  <TableHead className="text-right">作業時間</TableHead>
+                  <TableHead className="w-[200px] whitespace-nowrap">プロジェクト</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">タスク数</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">完了</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">進捗</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">作業時間</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
-                    <TableCell className="font-medium">{stat.name}</TableCell>
-                    <TableCell className="text-right">{stat.totalTasks}</TableCell>
-                    <TableCell className="text-right">{stat.completedTasks}</TableCell>
-                    <TableCell className="text-right">{stat.progress.toFixed(1)}%</TableCell>
-                    <TableCell className="text-right">{stat.totalTimeHours.toFixed(1)}h</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{stat.name}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {stat.totalTasks}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {stat.completedTasks}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {stat.progress.toFixed(1)}%
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {stat.totalTimeHours.toFixed(1)}h
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
