@@ -49,8 +49,10 @@ export const reportRouter = createTRPCRouter({
       projectTaskGroups,
       projectDoneGroups,
     ] = await Promise.all([
+      // アーカイブ済みプロジェクトは「アクティブな状況」の集計対象外とし、
+      // プロジェクト数(totalProjects)とプロジェクト統計(projectStats)から除外する。
       prisma.project.findMany({
-        where: { id: { in: projectIds } },
+        where: { id: { in: projectIds }, isArchived: false },
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),
