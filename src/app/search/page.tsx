@@ -213,7 +213,7 @@ function SearchPageContent() {
           <p className="text-muted-foreground">タスクやプロジェクトを検索します</p>
         </div>
 
-        <Card className="max-w-3xl">
+        <Card className="max-w-5xl">
           <CardContent className="pt-6 sm:pt-6">
             <div className="grid gap-4">
               <div className="grid gap-2">
