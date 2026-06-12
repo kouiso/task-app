@@ -102,20 +102,20 @@ export function ProjectDetailView({
             </Button>
           )}
         </div>
-        {/* タイトル行: 長い名前も省略せず全文表示する */}
+        {/* タイトル行: 長い名前も省略せず全文表示する。アーカイブバッジはタイトルの下に置く */}
         <div className="flex items-start gap-3">
           <div
             className="mt-2.5 h-4 w-4 rounded-full shrink-0"
             style={{ backgroundColor: projectDetail.color }}
           />
-          <h1 className="text-3xl font-bold tracking-tight break-words min-w-0">
-            {projectDetail.name}
-          </h1>
-          {projectDetail.isArchived && (
-            <Badge variant="secondary" className="mt-2 text-xs shrink-0">
-              アーカイブ済み
-            </Badge>
-          )}
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold tracking-tight break-words">{projectDetail.name}</h1>
+            {projectDetail.isArchived && (
+              <Badge variant="secondary" className="mt-2 w-fit text-xs">
+                アーカイブ済み
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
