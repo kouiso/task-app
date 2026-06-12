@@ -18,7 +18,10 @@ import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery();
+  // ダッシュボードはアクティブな状況の概要のため、アーカイブ済みプロジェクトは除外する
+  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
+    isArchived: false,
+  });
   const { data: overview, isLoading: overviewLoading } = api.report.getOverview.useQuery();
 
   if (projectsLoading || overviewLoading) {
