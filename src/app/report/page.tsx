@@ -175,7 +175,7 @@ export default function ReportPage() {
             <CardTitle>プロジェクト統計</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table className="whitespace-nowrap">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px]">プロジェクト</TableHead>
