@@ -98,7 +98,9 @@ describe('reportRouter', () => {
       const report = await caller.report.getWeeklyReport({ weeks: 4 });
 
       expect(report.totalCompleted).toBe(2);
-      expect(report.weeklyData.reduce((sum, week) => sum + week.byStatus.DONE, 0)).toBe(2);
+      expect(report.weeklyData.reduce((sum, week) => sum + (week.byStatus['DONE'] ?? 0), 0)).toBe(
+        2,
+      );
     });
 
     it('should allow ADMIN to view other user reports', async () => {
@@ -224,6 +226,33 @@ describe('reportRouter', () => {
 
       const priorityTotal = overview.priorityData.reduce((sum, item) => sum + item.value, 0);
       expect(priorityTotal).toBe(95);
+    });
+
+    it('should exclude archived projects from project list, stats and task aggregates', async () => {
+      const user = await createTestUser({ email: 'archived-overview@example.com' });
+      const activeProject = await createTestProject(user.id, { name: 'Active Project' });
+      const archivedProject = await createTestProject(user.id, {
+        name: 'Archived Project',
+        isArchived: true,
+      });
+      // アクティブ側は完了タスク、アーカイブ側は未完了タスクを用意する
+      await createTestTask(activeProject.id, user.id, { status: 'DONE', assigneeId: user.id });
+      await createTestTask(archivedProject.id, user.id, { status: 'TODO', assigneeId: user.id });
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const overview = await caller.report.getOverview();
+
+      // アーカイブ済みプロジェクトは一覧・統計の対象外
+      expect(overview.totalProjects).toBe(1);
+      expect(overview.projectStats).toHaveLength(1);
+      expect(overview.projectStats.at(0)?.id).toBe(activeProject.id);
+
+      // タスク集計もアーカイブ済みプロジェクトのタスクを除外する
+      // (アクティブの完了1件のみ。アーカイブの未完了タスクは母数に含めない → 完了率100%)
+      expect(overview.totalTasks).toBe(1);
+      expect(overview.completedTasks).toBe(1);
+      expect(overview.todoTasks).toBe(0);
+      expect(overview.completionRate).toBe(100);
     });
   });
 });
