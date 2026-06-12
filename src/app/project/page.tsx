@@ -346,7 +346,9 @@ function ProjectPageContent() {
     <AppLayout>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">プロジェクト</h1>
+          <h1 className="shrink-0 whitespace-nowrap text-3xl font-bold tracking-tight">
+            プロジェクト
+          </h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
