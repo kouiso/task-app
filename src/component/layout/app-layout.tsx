@@ -235,8 +235,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </header>
 
-          <main className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 lg:gap-6 lg:p-6">
-            {children}
+          <main className="flex flex-1 flex-col overflow-y-auto p-4 lg:p-6">
+            {/* 広いモニターでコンテンツが間延びしないよう最大幅を設けて中央寄せする */}
+            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 lg:gap-6">
+              {children}
+            </div>
           </main>
         </div>
       </div>
