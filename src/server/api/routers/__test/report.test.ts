@@ -98,7 +98,9 @@ describe('reportRouter', () => {
       const report = await caller.report.getWeeklyReport({ weeks: 4 });
 
       expect(report.totalCompleted).toBe(2);
-      expect(report.weeklyData.reduce((sum, week) => sum + week.byStatus.DONE, 0)).toBe(2);
+      expect(report.weeklyData.reduce((sum, week) => sum + (week.byStatus['DONE'] ?? 0), 0)).toBe(
+        2,
+      );
     });
 
     it('should allow ADMIN to view other user reports', async () => {
@@ -224,6 +226,20 @@ describe('reportRouter', () => {
 
       const priorityTotal = overview.priorityData.reduce((sum, item) => sum + item.value, 0);
       expect(priorityTotal).toBe(95);
+    });
+
+    it('should exclude archived projects from totalProjects and projectStats', async () => {
+      const user = await createTestUser({ email: 'archived-overview@example.com' });
+      const activeProject = await createTestProject(user.id, { name: 'Active Project' });
+      await createTestProject(user.id, { name: 'Archived Project', isArchived: true });
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const overview = await caller.report.getOverview();
+
+      // アーカイブ済みプロジェクトは集計対象外
+      expect(overview.totalProjects).toBe(1);
+      expect(overview.projectStats).toHaveLength(1);
+      expect(overview.projectStats.at(0)?.id).toBe(activeProject.id);
     });
   });
 });
