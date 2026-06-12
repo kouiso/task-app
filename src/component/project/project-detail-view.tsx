@@ -111,7 +111,7 @@ export function ProjectDetailView({
           <div className="min-w-0">
             <h1 className="text-3xl font-bold tracking-tight break-words">{projectDetail.name}</h1>
             {projectDetail.isArchived && (
-              <Badge variant="secondary" className="mt-2 w-fit text-xs">
+              <Badge variant="secondary" className="mt-2 text-xs">
                 アーカイブ済み
               </Badge>
             )}
