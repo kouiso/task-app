@@ -60,12 +60,12 @@ export function ProjectCard({
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="min-w-0">
             <CardTitle className="truncate text-lg" title={name}>
               {name}
             </CardTitle>
             {isArchived && (
-              <Badge variant="secondary" className="shrink-0">
+              <Badge variant="secondary" className="mt-1.5">
                 アーカイブ
               </Badge>
             )}
