@@ -350,9 +350,11 @@ function ProjectPageContent() {
             プロジェクト
           </h1>
           <div className="flex items-center gap-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex shrink-0 items-center space-x-2">
               <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-              <Label htmlFor="show-archived">アーカイブ表示</Label>
+              <Label htmlFor="show-archived" className="whitespace-nowrap">
+                アーカイブ表示
+              </Label>
             </div>
             <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" /> 新規プロジェクト
