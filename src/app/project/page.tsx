@@ -349,8 +349,8 @@ function ProjectPageContent() {
           <h1 className="shrink-0 whitespace-nowrap text-3xl font-bold tracking-tight">
             プロジェクト
           </h1>
-          <div className="flex items-center gap-4">
-            <div className="flex shrink-0 items-center space-x-2">
+          <div className="flex shrink-0 items-center gap-4">
+            <div className="flex items-center space-x-2">
               <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
               <Label htmlFor="show-archived" className="whitespace-nowrap">
                 アーカイブ表示
