@@ -59,12 +59,18 @@ export function ProjectCard({
       onClick={handleCardClick}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">{name}</CardTitle>
-            {isArchived && <Badge variant="secondary">アーカイブ</Badge>}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <CardTitle className="truncate text-lg" title={name}>
+              {name}
+            </CardTitle>
+            {isArchived && (
+              <Badge variant="secondary" className="mt-1.5">
+                アーカイブ
+              </Badge>
+            )}
           </div>
-          <div className="flex gap-1">
+          <div className="flex shrink-0 gap-1">
             <Button
               type="button"
               variant="ghost"
