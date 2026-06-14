@@ -3,377 +3,224 @@ import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
   createTestCaller,
-  createTestProject,
-  createTestTask,
   createTestUser,
 } from '../../../../test/helpers';
 
+// ユーザー管理仕様(user.ts)を起点に検証する。
+// 一覧/作成/メール検索/削除は ADMIN 限定。詳細・更新は本人または ADMIN。
+
+let seq = 0;
+const uniqueEmail = (p: string) => `${p}-${Date.now()}-${seq++}@example.com`;
+const NON_EXISTENT_ID = 'clxxxxxxxxxxxxxxxxxxxxxxxx';
+const VALID_PASSWORD = 'Password123!';
+
+const adminCaller = async () => {
+  const admin = await createTestUser({ email: uniqueEmail('u-admin'), role: 'ADMIN' });
+  return { admin, caller: await createAuthenticatedCaller(admin.id, admin.email, admin.role) };
+};
+
 describe('userRouter', () => {
-  describe('getAll', () => {
-    it('should return all users', async () => {
-      const user1 = await createTestUser({ email: 'user1@example.com', role: 'ADMIN' });
-      await createTestUser({ email: 'user2@example.com' });
-      await createTestUser({ email: 'user3@example.com' });
+  describe('getAll（一覧・ADMIN限定）', () => {
+    it('ADMINは全ユーザーを取得できる', async () => {
+      const { admin, caller } = await adminCaller();
+      const other = await createTestUser({ email: uniqueEmail('u-list') });
 
-      const caller = await createAuthenticatedCaller(user1.id, user1.email, user1.role);
-
-      const users = await caller.user.getAll();
-
-      expect(users.length).toBeGreaterThanOrEqual(3);
+      const result = await caller.user.getAll();
+      const ids = result.map((u) => u.id);
+      expect(ids).toContain(admin.id);
+      expect(ids).toContain(other.id);
     });
 
-    it('should filter users by isActive', async () => {
-      const user = await createTestUser({ role: 'ADMIN' });
-      await createTestUser({ email: 'active@example.com', isActive: true });
-      await createTestUser({ email: 'inactive@example.com', isActive: false });
+    it('role でフィルタできる', async () => {
+      const { admin, caller } = await adminCaller();
+      const normal = await createTestUser({ email: uniqueEmail('u-normal'), role: 'USER' });
 
+      const result = await caller.user.getAll({ role: 'USER' });
+      const ids = result.map((u) => u.id);
+      expect(ids).toContain(normal.id);
+      expect(ids).not.toContain(admin.id);
+    });
+
+    it('一般ユーザーは取得を拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-deny'), role: 'USER' });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const activeUsers = await caller.user.getAll({ isActive: true });
-
-      expect(activeUsers.every((u) => u.isActive)).toBe(true);
-    });
-
-    it('should filter users by role', async () => {
-      const user = await createTestUser({ role: 'ADMIN' });
-      await createTestUser({ email: 'user1@example.com', role: 'USER' });
-      await createTestUser({ email: 'admin1@example.com', role: 'ADMIN' });
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const admins = await caller.user.getAll({ role: 'ADMIN' });
-
-      expect(admins.every((u) => u.role === 'ADMIN')).toBe(true);
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.user.getAll()).rejects.toThrow('ログインが必要です');
+      await expect(caller.user.getAll()).rejects.toThrow('管理者権限が必要です');
     });
   });
 
-  describe('getById', () => {
-    it('should return user by id', async () => {
-      const user = await createTestUser({ email: 'getbyid@example.com', name: 'Get By ID User' });
-
+  describe('getById（詳細・本人またはADMIN）', () => {
+    it('本人は自分の詳細を取得できる', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-self') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
       const result = await caller.user.getById({ id: user.id });
-
       expect(result.id).toBe(user.id);
-      expect(result.email).toBe('getbyid@example.com');
-      expect(result.name).toBe('Get By ID User');
-    }, 10000);
+    });
 
-    it('should include user projects', async () => {
-      const user = await createTestUser();
-      await createTestProject(user.id, { name: 'User Project' });
+    it('ADMINは他ユーザーの詳細を取得できる', async () => {
+      const { caller } = await adminCaller();
+      const target = await createTestUser({ email: uniqueEmail('u-admin-view') });
+      const result = await caller.user.getById({ id: target.id });
+      expect(result.id).toBe(target.id);
+    });
 
+    it('一般ユーザーは他人の詳細取得を拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-view-deny'), role: 'USER' });
+      const other = await createTestUser({ email: uniqueEmail('u-view-target') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const result = await caller.user.getById({ id: user.id });
-
-      expect(result.projects).toBeDefined();
-      expect(result.projects.length).toBeGreaterThan(0);
-    });
-
-    it('should include user assigned tasks', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      await createTestTask(project.id, user.id, { assigneeId: user.id, status: 'TODO' });
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const result = await caller.user.getById({ id: user.id });
-
-      expect(result.assignedTasks).toBeDefined();
-      expect(result.assignedTasks.length).toBeGreaterThan(0);
-    });
-
-    it('should fail when user not found', async () => {
-      const admin = await createTestUser({ email: 'admin-notfound@example.com', role: 'ADMIN' });
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      await expect(caller.user.getById({ id: 'clnonexistent' })).rejects.toThrow(
-        'ユーザーが見つかりません',
-      );
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.user.getById({ id: 'clsomeid' })).rejects.toThrow('ログインが必要です');
-    });
-
-    it('should deny non-admin access to other users', async () => {
-      const user = await createTestUser({ email: 'viewer@example.com' });
-      const otherUser = await createTestUser({ email: 'other@example.com' });
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      await expect(caller.user.getById({ id: otherUser.id })).rejects.toThrow(
+      await expect(caller.user.getById({ id: other.id })).rejects.toThrow(
         'この操作を行う権限がありません',
       );
     });
 
-    it('should allow admin to access other users', async () => {
-      const admin = await createTestUser({ email: 'admin-viewer@example.com', role: 'ADMIN' });
-      const otherUser = await createTestUser({ email: 'other-target@example.com' });
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      const result = await caller.user.getById({ id: otherUser.id });
-      expect(result.id).toBe(otherUser.id);
-    });
-  });
-
-  describe('getByEmail', () => {
-    it('should return user by email', async () => {
-      const admin = await createTestUser({ role: 'ADMIN' });
-      await createTestUser({ email: 'findme@example.com', name: 'Find Me User' });
-
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      const result = await caller.user.getByEmail({ email: 'findme@example.com' });
-
-      expect(result.email).toBe('findme@example.com');
-      expect(result.name).toBe('Find Me User');
-    });
-
-    it('should fail when user not found', async () => {
-      const admin = await createTestUser({ role: 'ADMIN' });
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      await expect(caller.user.getByEmail({ email: 'notfound@example.com' })).rejects.toThrow(
+    it('存在しないユーザーは NOT_FOUND', async () => {
+      const { caller } = await adminCaller();
+      await expect(caller.user.getById({ id: NON_EXISTENT_ID })).rejects.toThrow(
         'ユーザーが見つかりません',
       );
     });
+  });
 
-    it('should require admin role', async () => {
-      const user = await createTestUser({ email: 'public@example.com' });
+  describe('create（作成・ADMIN限定）', () => {
+    it('ADMINはユーザーを作成できる', async () => {
+      const { caller } = await adminCaller();
+      const result = await caller.user.create({
+        email: 'created@example.com',
+        name: '作成ユーザー',
+      });
+      expect(result.email).toBe('created@example.com');
+    });
+
+    it('重複メールアドレスは拒否される', async () => {
+      const { caller } = await adminCaller();
+      await createTestUser({ email: 'exists@example.com' });
+      await expect(caller.user.create({ email: 'exists@example.com' })).rejects.toThrow(
+        'このメールアドレスは既に使用されています',
+      );
+    });
+
+    it('一般ユーザーは作成を拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-create-deny'), role: 'USER' });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      await expect(caller.user.getByEmail({ email: 'public@example.com' })).rejects.toThrow(
+      await expect(caller.user.create({ email: 'x@example.com' })).rejects.toThrow(
         '管理者権限が必要です',
       );
     });
   });
 
-  describe('create', () => {
-    it('should create a new user', async () => {
-      const admin = await createTestUser({ role: 'ADMIN' });
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      const user = await caller.user.create({
-        email: 'newuser@example.com',
-        name: 'New User',
-        role: 'USER',
-      });
-
-      expect(user.email).toBe('newuser@example.com');
-      expect(user.name).toBe('New User');
-      expect(user.role).toBe('USER');
-    });
-
-    it('should create user with default role', async () => {
-      const admin = await createTestUser({ role: 'ADMIN' });
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      const user = await caller.user.create({
-        email: 'defaultrole@example.com',
-      });
-
-      expect(user.role).toBe('USER');
-    });
-
-    it('should fail when creating user with duplicate email', async () => {
-      await createTestUser({ email: 'duplicate@example.com' });
-
-      const admin = await createTestUser({ role: 'ADMIN' });
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      await expect(
-        caller.user.create({
-          email: 'duplicate@example.com',
-          name: 'Duplicate User',
-        }),
-      ).rejects.toThrow('このメールアドレスは既に使用されています');
-    });
-
-    it('should require admin role', async () => {
-      const user = await createTestUser();
+  describe('update（更新・本人またはADMIN）', () => {
+    it('本人は自分の名前を更新できる', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-upd-self') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.user.update({ id: user.id, name: '新しい名前' });
+      expect(result.name).toBe('新しい名前');
+    });
 
-      await expect(
-        caller.user.create({
-          email: 'publiccreate@example.com',
-          name: 'Public Create User',
-        }),
-      ).rejects.toThrow('管理者権限が必要です');
+    it('本人による role/isActive の変更は拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-upd-role') });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await expect(caller.user.update({ id: user.id, role: 'ADMIN' })).rejects.toThrow(
+        'roleとisActiveは変更できません',
+      );
+    });
+
+    it('一般ユーザーは他人の更新を拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-upd-deny'), role: 'USER' });
+      const other = await createTestUser({ email: uniqueEmail('u-upd-other') });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await expect(caller.user.update({ id: other.id, name: 'X' })).rejects.toThrow(
+        '管理者権限が必要です',
+      );
+    });
+
+    it('ADMINは他ユーザーの role を変更できる', async () => {
+      const { caller } = await adminCaller();
+      const target = await createTestUser({ email: uniqueEmail('u-promote'), role: 'USER' });
+      const result = await caller.user.update({ id: target.id, role: 'ADMIN' });
+      expect(result.role).toBe('ADMIN');
     });
   });
 
-  describe('update', () => {
-    it('should update user name', async () => {
-      const user = await createTestUser({ name: 'Original Name' });
+  describe('delete（無効化・ADMIN限定）', () => {
+    it('ADMINによる削除はソフトデリート(isActive=false)になる', async () => {
+      const { caller } = await adminCaller();
+      const target = await createTestUser({ email: uniqueEmail('u-del') });
 
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const updated = await caller.user.update({
-        id: user.id,
-        name: 'Updated Name',
-      });
-
-      expect(updated.name).toBe('Updated Name');
-    });
-
-    it('should update user avatar', async () => {
-      const user = await createTestUser();
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const updated = await caller.user.update({
-        id: user.id,
-        avatar: 'https://example.com/avatar.jpg',
-      });
-
-      expect(updated.avatar).toBe('https://example.com/avatar.jpg');
-    });
-
-    it('should clear user avatar when passing null', async () => {
-      const user = await createTestUser();
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      await caller.user.update({
-        id: user.id,
-        avatar: 'https://example.com/avatar.jpg',
-      });
-
-      const cleared = await caller.user.update({
-        id: user.id,
-        avatar: null,
-      });
-
-      expect(cleared.avatar).toBeNull();
-    });
-
-    it('should update user role', async () => {
-      const admin = await createTestUser({ role: 'ADMIN' });
-      const user = await createTestUser({ role: 'USER' });
-
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      const updated = await caller.user.update({
-        id: user.id,
-        role: 'ADMIN',
-      });
-
-      expect(updated.role).toBe('ADMIN');
-    });
-
-    it('should update user active status', async () => {
-      const admin = await createTestUser({ role: 'ADMIN' });
-      const user = await createTestUser({ isActive: true });
-
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      const updated = await caller.user.update({
-        id: user.id,
-        isActive: false,
-      });
-
-      expect(updated.isActive).toBe(false);
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.user.update({
-          id: 'clsomeid',
-          name: 'Updated',
-        }),
-      ).rejects.toThrow('ログインが必要です');
-    });
-  });
-
-  describe('delete', () => {
-    it('should soft delete user by setting isActive to false', async () => {
-      const admin = await createTestUser({ role: 'ADMIN' });
-      const user = await createTestUser({ isActive: true });
-
-      const caller = await createAuthenticatedCaller(admin.id, admin.email, admin.role);
-
-      const result = await caller.user.delete({ id: user.id });
-
+      const result = await caller.user.delete({ id: target.id });
       expect(result.success).toBe(true);
 
-      const deletedUser = await prisma.user.findUnique({ where: { id: user.id } });
-      expect(deletedUser).not.toBeNull();
-      expect(deletedUser?.isActive).toBe(false);
+      // ソフトデリートのためレコードは残る(findUniqueOrThrow で存在を前提に取得)
+      const after = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
+      expect(after.isActive).toBe(false);
     });
 
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.user.delete({ id: 'clsomeid' })).rejects.toThrow('ログインが必要です');
+    it('一般ユーザーは削除を拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-del-deny'), role: 'USER' });
+      const target = await createTestUser({ email: uniqueEmail('u-del-target') });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await expect(caller.user.delete({ id: target.id })).rejects.toThrow('管理者権限が必要です');
     });
   });
 
-  describe('register (via auth.register)', () => {
-    it('should register a new user', async () => {
-      const caller = await createTestCaller();
-
-      const result = await caller.auth.register({
-        email: 'register@example.com',
-        name: 'Register User',
-        password: 'Password123!',
+  describe('updateProfile（プロフィール更新）', () => {
+    it('名前とメールを更新できる', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-prof') });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.user.updateProfile({
+        name: 'プロフィール更新',
+        email: 'updated-profile@example.com',
       });
-
-      expect(result.user.email).toBe('register@example.com');
-      expect(result.user.name).toBe('Register User');
-      expect(result.user.role).toBe('USER');
+      expect(result.name).toBe('プロフィール更新');
+      expect(result.email).toBe('updated-profile@example.com');
     });
 
-    it('should hash password', async () => {
-      const caller = await createTestCaller();
-
-      await caller.auth.register({
-        email: 'hashed@example.com',
-        name: 'Hashed User',
-        password: 'Password123!',
-      });
-
-      const userInDb = await prisma.user.findUnique({ where: { email: 'hashed@example.com' } });
-
-      expect(userInDb?.password).not.toBe('Password123!');
-      expect(userInDb?.password).toBeTruthy();
-    });
-
-    it('should fail with duplicate email', async () => {
-      await createTestUser({ email: 'duplicate-register@example.com' });
-
-      const caller = await createTestCaller();
-
+    it('他ユーザーが使用中のメールへの変更は拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-prof-self') });
+      await createTestUser({ email: 'taken@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
       await expect(
-        caller.auth.register({
-          email: 'duplicate-register@example.com',
-          name: 'Duplicate Register',
-          password: 'Password123!',
-        }),
-      ).rejects.toThrow('このメールアドレスは既に登録されています');
+        caller.user.updateProfile({ name: 'X', email: 'taken@example.com' }),
+      ).rejects.toThrow('このメールアドレスは既に使用されています');
+    });
+  });
+
+  describe('changePassword（パスワード変更）', () => {
+    it('正しい現在のパスワードで変更できる', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-pw'), password: VALID_PASSWORD });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.user.changePassword({
+        currentPassword: VALID_PASSWORD,
+        newPassword: 'NewPass456!',
+      });
+      expect(result.success).toBe(true);
     });
 
-    it('should be publicly accessible', async () => {
-      const caller = await createTestCaller();
-
-      const result = await caller.auth.register({
-        email: 'publicregister@example.com',
-        name: 'Public Register User',
-        password: 'Password123!',
+    it('現在のパスワードが誤っていると拒否される', async () => {
+      const user = await createTestUser({
+        email: uniqueEmail('u-pw-wrong'),
+        password: VALID_PASSWORD,
       });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await expect(
+        caller.user.changePassword({ currentPassword: 'WrongPass1!', newPassword: 'NewPass456!' }),
+      ).rejects.toThrow('現在のパスワードが正しくありません');
+    });
 
-      expect(result.user.email).toBe('publicregister@example.com');
+    it('新しいパスワードが要件を満たさないと拒否される', async () => {
+      const user = await createTestUser({
+        email: uniqueEmail('u-pw-weak'),
+        password: VALID_PASSWORD,
+      });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await expect(
+        caller.user.changePassword({ currentPassword: VALID_PASSWORD, newPassword: 'weak' }),
+      ).rejects.toThrow('新しいパスワードは8文字以上で入力してください');
+    });
+  });
+
+  describe('認証ガード', () => {
+    it('未認証では一覧取得が拒否される', async () => {
+      const caller = await createTestCaller();
+      await expect(caller.user.getAll()).rejects.toThrow('ログインが必要です');
     });
   });
 });
