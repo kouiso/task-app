@@ -259,13 +259,12 @@ describe('projectRouter', () => {
     });
 
     it('既存メンバーの重複追加は拒否される', async () => {
-      const { project, actor, caller } = await setupProjectWithActor('OWNER');
+      const { project, caller } = await setupProjectWithActor('OWNER');
       const newUser = await createTestUser({ email: 'am-dup@example.com' });
       await addMember(project.id, newUser.id, 'MEMBER');
       await expect(
         caller.project.addMember({ projectId: project.id, userId: newUser.id, role: 'VIEWER' }),
       ).rejects.toThrow('このユーザーは既にプロジェクトのメンバーです');
-      expect(actor).toBeDefined();
     });
   });
 
@@ -290,15 +289,11 @@ describe('projectRouter', () => {
     });
 
     it('唯一のOWNERは削除できない', async () => {
-      const { owner, project, caller } = await setupProjectWithActor('OWNER');
-      // actor 自身が唯一の OWNER。owner(初期作成者)は setup で除去済みのため、actor を削除しようとする
-      const actorMember = await prisma.projectMember.findFirst({
-        where: { projectId: project.id, role: 'OWNER' },
-      });
+      // setupProjectWithActor('OWNER') では actor が唯一の OWNER になる
+      const { actor, project, caller } = await setupProjectWithActor('OWNER');
       await expect(
-        caller.project.removeMember({ projectId: project.id, userId: actorMember?.userId ?? '' }),
+        caller.project.removeMember({ projectId: project.id, userId: actor.id }),
       ).rejects.toThrow('プロジェクト唯一のオーナーは削除できません');
-      expect(owner).toBeDefined();
     });
 
     it('存在しないメンバーの削除は NOT_FOUND', async () => {
@@ -371,14 +366,12 @@ describe('projectRouter', () => {
     });
 
     it('唯一のOWNERは降格できない', async () => {
-      const { project, caller } = await setupProjectWithActor('OWNER');
-      const actorMember = await prisma.projectMember.findFirst({
-        where: { projectId: project.id, role: 'OWNER' },
-      });
+      // setupProjectWithActor('OWNER') では actor が唯一の OWNER になる
+      const { actor, project, caller } = await setupProjectWithActor('OWNER');
       await expect(
         caller.project.updateMemberRole({
           projectId: project.id,
-          userId: actorMember?.userId ?? '',
+          userId: actor.id,
           role: 'MEMBER',
         }),
       ).rejects.toThrow('プロジェクト唯一のオーナーの権限は変更できません');

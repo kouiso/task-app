@@ -148,9 +148,9 @@ describe('userRouter', () => {
       const result = await caller.user.delete({ id: target.id });
       expect(result.success).toBe(true);
 
-      const after = await prisma.user.findUnique({ where: { id: target.id } });
-      expect(after).not.toBeNull();
-      expect(after?.isActive).toBe(false);
+      // ソフトデリートのためレコードは残る(findUniqueOrThrow で存在を前提に取得)
+      const after = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
+      expect(after.isActive).toBe(false);
     });
 
     it('一般ユーザーは削除を拒否される', async () => {
