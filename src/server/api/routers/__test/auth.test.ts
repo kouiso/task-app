@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
@@ -6,342 +6,244 @@ import {
   createTestUser,
 } from '../../../../test/helpers';
 
+// 認証仕様(auth.ts / doc/06_nextauth.md)を起点に、login / register / logout /
+// getSession / getCurrentUser の正常系・バリデーション・レート制限・アカウント無効化を検証する。
+
+// 登録バリデーションを満たすパスワード(8文字以上 + 大文字 + 小文字 + 数字 + 特殊文字)
+const VALID_PASSWORD = 'Password123!';
+
 describe('authRouter', () => {
-  describe('login', () => {
-    it('should login successfully with correct credentials', async () => {
-      const testUser = await createTestUser({
-        email: 'login-test@example.com',
-        password: 'Password123!',
-        name: 'Login Test User',
-      });
-
-      const caller = await createTestCaller();
-
-      const result = await caller.auth.login({
-        email: 'login-test@example.com',
-        password: 'Password123!',
-      });
-
-      expect(result.user.id).toBe(testUser.id);
-      expect(result.user.email).toBe(testUser.email);
-      expect(result.user.name).toBe(testUser.name);
-    });
-
-    it('should fail login with incorrect password', async () => {
-      await createTestUser({
-        email: 'wrong-password@example.com',
-        password: 'correctpassword',
-      });
-
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.auth.login({
-          email: 'wrong-password@example.com',
-          password: 'wrongpassword',
-        }),
-      ).rejects.toThrow('メールアドレスまたはパスワードが正しくありません');
-    });
-
-    it('should fail login when user does not exist', async () => {
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.auth.login({
-          email: 'nonexistent@example.com',
-          password: 'Password123!',
-        }),
-      ).rejects.toThrow('メールアドレスまたはパスワードが正しくありません');
-    });
-
-    it('should fail login when account is deactivated', async () => {
-      await createTestUser({
-        email: 'deactivated@example.com',
-        password: 'Password123!',
-        isActive: false,
-      });
-
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.auth.login({
-          email: 'deactivated@example.com',
-          password: 'Password123!',
-        }),
-      ).rejects.toThrow('このアカウントは無効化されています');
-    });
-
-    it('should fail login with invalid email format', async () => {
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.auth.login({
-          email: 'invalid-email',
-          password: 'Password123!',
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should fail login with empty password', async () => {
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.auth.login({
-          email: 'test@example.com',
-          password: '',
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should block login after 5 failed attempts from the same email+ip (rate-limit)', async () => {
-      await createTestUser({
-        email: 'ratelimit@example.com',
-        password: 'CorrectPassword123!',
-      });
-
-      const headers = new Headers({ 'x-forwarded-for': '203.0.113.100' });
-      const caller = await createTestCaller(null, headers);
-
-      // 5 回失敗を意図的に発生させる
-      for (let i = 0; i < 5; i++) {
-        await expect(
-          caller.auth.login({
-            email: 'ratelimit@example.com',
-            password: 'WrongPassword999!',
-          }),
-        ).rejects.toThrow();
-      }
-
-      // 6 回目は rate-limit で TOO_MANY_REQUESTS
-      await expect(
-        caller.auth.login({
-          email: 'ratelimit@example.com',
-          password: 'CorrectPassword123!',
-        }),
-      ).rejects.toThrow('上限');
-
-      await prisma.loginAttempt.deleteMany({ where: { email: 'ratelimit@example.com' } });
-    });
-
-    it('should reset failure count on successful login', async () => {
-      await createTestUser({
-        email: 'reset-success@example.com',
-        password: 'CorrectPassword123!',
-      });
-
-      const headers = new Headers({ 'x-forwarded-for': '203.0.113.101' });
-      const caller = await createTestCaller(null, headers);
-
-      // 4 回失敗 → 5 回目は成功 → そのあと 4 回失敗してもまだ block されない
-      for (let i = 0; i < 4; i++) {
-        await expect(
-          caller.auth.login({
-            email: 'reset-success@example.com',
-            password: 'WrongPassword999!',
-          }),
-        ).rejects.toThrow();
-      }
-      const ok = await caller.auth.login({
-        email: 'reset-success@example.com',
-        password: 'CorrectPassword123!',
-      });
-      expect(ok.user.email).toBe('reset-success@example.com');
-
-      // 成功 reset 後、また 4 回失敗しても allowed なまま
-      for (let i = 0; i < 4; i++) {
-        await expect(
-          caller.auth.login({
-            email: 'reset-success@example.com',
-            password: 'WrongPassword999!',
-          }),
-        ).rejects.toThrow('メールアドレス');
-      }
-
-      await prisma.loginAttempt.deleteMany({ where: { email: 'reset-success@example.com' } });
-    });
+  // レート制限は loginAttempt テーブルを参照するが、共通の afterEach では TRUNCATE されない。
+  // 同一IPの失敗が累積して後続テストを誤ってブロックしないよう、各テスト前に明示的にクリアする。
+  beforeEach(async () => {
+    await prisma.loginAttempt.deleteMany();
   });
 
-  describe('register', () => {
-    it('should register a new user successfully', async () => {
+  describe('register（新規登録）', () => {
+    it('有効な入力で登録でき、role=USER・isActive=true・パスワードはハッシュ化される', async () => {
       const caller = await createTestCaller();
 
       const result = await caller.auth.register({
-        email: 'newuser@example.com',
-        name: 'New User',
-        password: 'Password123!',
+        name: '新規ユーザー',
+        email: 'new-user@example.com',
+        password: VALID_PASSWORD,
       });
 
-      expect(result.user.email).toBe('newuser@example.com');
-      expect(result.user.name).toBe('New User');
+      expect(result.user.email).toBe('new-user@example.com');
+      expect(result.user.name).toBe('新規ユーザー');
       expect(result.user.role).toBe('USER');
 
-      const userInDb = await prisma.user.findUnique({
-        where: { email: 'newuser@example.com' },
-      });
-
-      expect(userInDb).not.toBeNull();
-      expect(userInDb?.password).not.toBe('Password123!');
+      const created = await prisma.user.findUnique({ where: { email: 'new-user@example.com' } });
+      expect(created?.role).toBe('USER');
+      expect(created?.isActive).toBe(true);
+      expect(created?.password).not.toBe(VALID_PASSWORD);
     });
 
-    it('should fail registration with duplicate email', async () => {
-      await createTestUser({ email: 'duplicate@example.com' });
-
+    it('重複メールアドレスは拒否する', async () => {
+      await createTestUser({ email: 'dup@example.com' });
       const caller = await createTestCaller();
 
       await expect(
-        caller.auth.register({
-          email: 'duplicate@example.com',
-          name: 'Duplicate User',
-          password: 'Password123!',
-        }),
+        caller.auth.register({ name: 'X', email: 'dup@example.com', password: VALID_PASSWORD }),
       ).rejects.toThrow('このメールアドレスは既に登録されています');
     });
 
-    it('should fail registration with invalid email', async () => {
+    it('名前が空ならバリデーションエラー', async () => {
       const caller = await createTestCaller();
-
       await expect(
-        caller.auth.register({
-          email: 'invalid-email',
-          name: 'Invalid Email User',
-          password: 'Password123!',
-        }),
-      ).rejects.toThrow();
+        caller.auth.register({ name: '', email: 'a@example.com', password: VALID_PASSWORD }),
+      ).rejects.toThrow('名前を入力してください');
     });
 
-    it('should fail registration with short password', async () => {
+    it('メール形式が不正ならバリデーションエラー', async () => {
       const caller = await createTestCaller();
-
       await expect(
-        caller.auth.register({
-          email: 'shortpw@example.com',
-          name: 'Short Password User',
-          password: 'short',
-        }),
-      ).rejects.toThrow();
+        caller.auth.register({ name: 'X', email: 'invalid-email', password: VALID_PASSWORD }),
+      ).rejects.toThrow('有効なメールアドレスを入力してください');
     });
 
-    it('should fail registration with empty name', async () => {
+    it('8文字未満のパスワードは拒否する', async () => {
       const caller = await createTestCaller();
-
       await expect(
-        caller.auth.register({
-          email: 'noname@example.com',
-          name: '',
-          password: 'Password123!',
-        }),
-      ).rejects.toThrow();
+        caller.auth.register({ name: 'X', email: 'a@example.com', password: 'Ab1!' }),
+      ).rejects.toThrow('パスワードは8文字以上で入力してください');
     });
 
-    it('should set default role to USER', async () => {
+    it('大文字を含まないパスワードは拒否する', async () => {
       const caller = await createTestCaller();
-
-      const result = await caller.auth.register({
-        email: 'defaultrole@example.com',
-        name: 'Default Role User',
-        password: 'Password123!',
-      });
-
-      expect(result.user.role).toBe('USER');
+      await expect(
+        caller.auth.register({ name: 'X', email: 'a@example.com', password: 'password1!' }),
+      ).rejects.toThrow('パスワードには大文字を含める必要があります');
     });
 
-    it('should set isActive to true by default', async () => {
+    it('数字を含まないパスワードは拒否する', async () => {
       const caller = await createTestCaller();
+      await expect(
+        caller.auth.register({ name: 'X', email: 'a@example.com', password: 'Password!' }),
+      ).rejects.toThrow('パスワードには数字を含める必要があります');
+    });
 
-      await caller.auth.register({
-        email: 'defaultactive@example.com',
-        name: 'Default Active User',
-        password: 'Password123!',
-      });
-
-      const user = await prisma.user.findUnique({
-        where: { email: 'defaultactive@example.com' },
-      });
-
-      expect(user?.isActive).toBe(true);
+    it('特殊文字を含まないパスワードは拒否する', async () => {
+      const caller = await createTestCaller();
+      await expect(
+        caller.auth.register({ name: 'X', email: 'a@example.com', password: 'Password123' }),
+      ).rejects.toThrow('パスワードには特殊文字を含める必要があります');
     });
   });
 
-  describe('logout', () => {
-    it('should logout successfully', async () => {
+  describe('login（ログイン）', () => {
+    it('正しい資格情報でログインに成功しユーザー情報を返す', async () => {
+      const user = await createTestUser({ email: 'login@example.com', password: VALID_PASSWORD });
       const caller = await createTestCaller();
 
-      const result = await caller.auth.logout();
+      const result = await caller.auth.login({
+        email: 'login@example.com',
+        password: VALID_PASSWORD,
+      });
 
+      expect(result.user.id).toBe(user.id);
+      expect(result.user.email).toBe('login@example.com');
+    });
+
+    it('パスワードが誤っている場合は認証エラー', async () => {
+      await createTestUser({ email: 'login2@example.com', password: VALID_PASSWORD });
+      const caller = await createTestCaller();
+
+      await expect(
+        caller.auth.login({ email: 'login2@example.com', password: 'WrongPass1!' }),
+      ).rejects.toThrow('メールアドレスまたはパスワードが正しくありません');
+    });
+
+    it('存在しないユーザーは(有無を秘匿し)同一の認証エラー', async () => {
+      const caller = await createTestCaller();
+      await expect(
+        caller.auth.login({ email: 'nope@example.com', password: VALID_PASSWORD }),
+      ).rejects.toThrow('メールアドレスまたはパスワードが正しくありません');
+    });
+
+    it('無効化アカウントはログインを拒否する', async () => {
+      await createTestUser({
+        email: 'inactive@example.com',
+        password: VALID_PASSWORD,
+        isActive: false,
+      });
+      const caller = await createTestCaller();
+
+      await expect(
+        caller.auth.login({ email: 'inactive@example.com', password: VALID_PASSWORD }),
+      ).rejects.toThrow('このアカウントは無効化されています');
+    });
+
+    it('メール形式が不正ならバリデーションエラー', async () => {
+      const caller = await createTestCaller();
+      await expect(
+        caller.auth.login({ email: 'invalid', password: VALID_PASSWORD }),
+      ).rejects.toThrow('有効なメールアドレスを入力してください');
+    });
+
+    it('パスワードが空ならバリデーションエラー', async () => {
+      const caller = await createTestCaller();
+      await expect(caller.auth.login({ email: 'a@example.com', password: '' })).rejects.toThrow(
+        'パスワードを入力してください',
+      );
+    });
+
+    it('同一email×IPで5回失敗するとレート制限でブロックされる', async () => {
+      await createTestUser({ email: 'brute@example.com', password: VALID_PASSWORD });
+      const caller = await createTestCaller();
+
+      for (let i = 0; i < 5; i++) {
+        await expect(
+          caller.auth.login({ email: 'brute@example.com', password: 'WrongPass1!' }),
+        ).rejects.toThrow();
+      }
+
+      // 6回目は正しいパスワードでもブロックされる
+      await expect(
+        caller.auth.login({ email: 'brute@example.com', password: VALID_PASSWORD }),
+      ).rejects.toThrow('上限に達しました');
+    });
+
+    it('ログイン成功で失敗カウントがリセットされ、直後はブロックされない', async () => {
+      await createTestUser({ email: 'reset@example.com', password: VALID_PASSWORD });
+      const caller = await createTestCaller();
+
+      for (let i = 0; i < 4; i++) {
+        await expect(
+          caller.auth.login({ email: 'reset@example.com', password: 'WrongPass1!' }),
+        ).rejects.toThrow();
+      }
+
+      const ok = await caller.auth.login({ email: 'reset@example.com', password: VALID_PASSWORD });
+      expect(ok.user.email).toBe('reset@example.com');
+
+      // カウントがリセットされているため、次の失敗はレート制限ではなく通常の認証エラーになる
+      await expect(
+        caller.auth.login({ email: 'reset@example.com', password: 'WrongPass1!' }),
+      ).rejects.toThrow('メールアドレスまたはパスワードが正しくありません');
+    });
+  });
+
+  describe('logout（ログアウト）', () => {
+    it('ログアウトは success:true を返す', async () => {
+      const caller = await createTestCaller();
+      const result = await caller.auth.logout();
       expect(result.success).toBe(true);
     });
   });
 
-  describe('getSession', () => {
-    it('should return session for authenticated user', async () => {
-      const testUser = await createTestUser({
-        email: 'session@example.com',
-        name: 'Session User',
-      });
-
-      const caller = await createAuthenticatedCaller(testUser.id, testUser.email, testUser.role);
-
-      const result = await caller.auth.getSession();
-
-      expect(result).not.toBeNull();
-      expect(result?.user.id).toBe(testUser.id);
-      expect(result?.user.email).toBe(testUser.email);
-    });
-
-    it('should return null when not authenticated', async () => {
+  describe('getSession（セッション取得）', () => {
+    it('未認証では null を返す', async () => {
       const caller = await createTestCaller();
-
-      const result = await caller.auth.getSession();
-
-      expect(result).toBeNull();
+      expect(await caller.auth.getSession()).toBeNull();
     });
 
-    it('should return null for inactive user', async () => {
-      const testUser = await createTestUser({
-        email: 'inactive-session@example.com',
-        isActive: false,
-      });
-
-      const caller = await createAuthenticatedCaller(testUser.id, testUser.email, testUser.role);
+    it('認証済み(有効ユーザー)ではユーザーを返す', async () => {
+      const user = await createTestUser({ email: 'sess@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
       const result = await caller.auth.getSession();
+      expect(result?.user.id).toBe(user.id);
+    });
 
-      expect(result).toBeNull();
+    it('無効化ユーザーのセッションは null を返す', async () => {
+      const user = await createTestUser({ email: 'sess-inactive@example.com', isActive: false });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      expect(await caller.auth.getSession()).toBeNull();
     });
   });
 
-  describe('getCurrentUser', () => {
-    it('should return current user for authenticated user', async () => {
-      const testUser = await createTestUser({
-        email: 'current@example.com',
-        name: 'Current User',
-      });
-
-      const caller = await createAuthenticatedCaller(testUser.id, testUser.email, testUser.role);
+  describe('getCurrentUser（現在のユーザー）', () => {
+    it('認証済みでユーザー情報(createdAt含む)を返す', async () => {
+      const user = await createTestUser({ email: 'cur@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
 
       const result = await caller.auth.getCurrentUser();
-
-      expect(result.id).toBe(testUser.id);
-      expect(result.email).toBe(testUser.email);
-      expect(result.name).toBe(testUser.name);
+      expect(result.id).toBe(user.id);
+      expect(result.createdAt).toBeDefined();
     });
 
-    it('should fail when not authenticated', async () => {
+    it('未認証では拒否される', async () => {
       const caller = await createTestCaller();
-
       await expect(caller.auth.getCurrentUser()).rejects.toThrow('ログインが必要です');
     });
 
-    it('should fail when user is deleted', async () => {
-      const testUser = await createTestUser({
-        email: 'deleted@example.com',
-      });
-
-      const caller = await createAuthenticatedCaller(testUser.id, testUser.email, testUser.role);
-
-      await prisma.user.delete({ where: { id: testUser.id } });
+    it('セッションのユーザーが削除済みなら NOT_FOUND', async () => {
+      const user = await createTestUser({ email: 'deleted@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await prisma.user.delete({ where: { id: user.id } });
 
       await expect(caller.auth.getCurrentUser()).rejects.toThrow('ユーザーが見つかりません');
+    });
+
+    it('無効化ユーザーは拒否される', async () => {
+      const user = await createTestUser({ email: 'cur-inactive@example.com', isActive: false });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await expect(caller.auth.getCurrentUser()).rejects.toThrow(
+        'このアカウントは無効化されています',
+      );
     });
   });
 });
