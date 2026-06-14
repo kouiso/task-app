@@ -33,10 +33,12 @@ describe('authRouter', () => {
       expect(result.user.name).toBe('新規ユーザー');
       expect(result.user.role).toBe('USER');
 
-      const created = await prisma.user.findUnique({ where: { email: 'new-user@example.com' } });
-      expect(created?.role).toBe('USER');
-      expect(created?.isActive).toBe(true);
-      expect(created?.password).not.toBe(VALID_PASSWORD);
+      const created = await prisma.user.findUniqueOrThrow({
+        where: { email: 'new-user@example.com' },
+      });
+      expect(created.role).toBe('USER');
+      expect(created.isActive).toBe(true);
+      expect(created.password).not.toBe(VALID_PASSWORD);
     });
 
     it('重複メールアドレスは拒否する', async () => {
