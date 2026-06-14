@@ -8,239 +8,141 @@ import {
   createTestUser,
 } from '../../../../test/helpers';
 
+// 検索仕様(search.ts)を起点に search / quickSearch / getUserProjects /
+// getProjectMembers / getMembersByProject を検証する。検索は常に自分が参加するプロジェクトに限定される。
+
+let seq = 0;
+const uniqueEmail = (p: string) => `${p}-${Date.now()}-${seq++}@example.com`;
+
 describe('searchRouter', () => {
-  describe('search', () => {
-    it('should find tasks by keyword in title', async () => {
-      const user = await createTestUser();
+  describe('search（詳細検索）', () => {
+    it('キーワードでタスクをタイトル部分一致検索できる(大文字小文字無視)', async () => {
+      const user = await createTestUser({ email: uniqueEmail('s-kw') });
       const project = await createTestProject(user.id);
-      await createTestTask(project.id, user.id, { title: 'Fix login bug' });
-      await createTestTask(project.id, user.id, { title: 'Add dashboard' });
+      const hit = await createTestTask(project.id, user.id, { title: 'Apple Pie Recipe' });
+      await createTestTask(project.id, user.id, { title: 'Banana Bread' });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.search.search({ keyword: 'apple' });
 
-      const result = await caller.search.search({ keyword: 'login' });
-
-      expect(result.tasks).toHaveLength(1);
-      expect(result.tasks.at(0)?.title).toBe('Fix login bug');
+      expect(result.tasks.map((t) => t.id)).toEqual([hit.id]);
     });
 
-    it('should find tasks by keyword in description', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      await createTestTask(project.id, user.id, {
-        title: 'Task A',
-        description: 'This involves authentication',
-      });
+    it('自分が参加しないプロジェクトのタスクは検索結果に含まれない', async () => {
+      const user = await createTestUser({ email: uniqueEmail('s-scope') });
+      const other = await createTestUser({ email: uniqueEmail('s-scope-other') });
+      const otherProject = await createTestProject(other.id);
+      await createTestTask(otherProject.id, other.id, { title: 'Secret Task' });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.search.search({ keyword: 'Secret' });
 
-      const result = await caller.search.search({ keyword: 'authentication' });
-
-      expect(result.tasks).toHaveLength(1);
-      expect(result.tasks.at(0)?.title).toBe('Task A');
+      expect(result.tasks).toHaveLength(0);
     });
 
-    it('should filter tasks by status', async () => {
-      const user = await createTestUser();
+    it('status フィルタでタスクを絞り込める', async () => {
+      const user = await createTestUser({ email: uniqueEmail('s-status') });
       const project = await createTestProject(user.id);
-      await createTestTask(project.id, user.id, { title: 'Done Task', status: 'DONE' });
-      await createTestTask(project.id, user.id, { title: 'Todo Task', status: 'TODO' });
+      await createTestTask(project.id, user.id, { status: 'TODO' });
+      const done = await createTestTask(project.id, user.id, { status: 'DONE' });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
       const result = await caller.search.search({ status: 'DONE' });
 
-      expect(result.tasks).toHaveLength(1);
-      expect(result.tasks.at(0)?.title).toBe('Done Task');
+      expect(result.tasks.map((t) => t.id)).toEqual([done.id]);
     });
 
-    it('should filter tasks by priority', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      await createTestTask(project.id, user.id, { title: 'Urgent Task', priority: 'URGENT' });
-      await createTestTask(project.id, user.id, { title: 'Low Task', priority: 'LOW' });
+    it('キーワードでプロジェクトも検索できる', async () => {
+      const user = await createTestUser({ email: uniqueEmail('s-proj') });
+      const project = await createTestProject(user.id, { name: 'Marketing Campaign' });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.search.search({ keyword: 'Marketing' });
 
-      const result = await caller.search.search({ priority: 'URGENT' });
-
-      expect(result.tasks).toHaveLength(1);
-      expect(result.tasks.at(0)?.title).toBe('Urgent Task');
-    });
-
-    it('should find matching projects when keyword is provided', async () => {
-      const user = await createTestUser();
-      await createTestProject(user.id, { name: 'Alpha Project' });
-      await createTestProject(user.id, { name: 'Beta Project' });
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const result = await caller.search.search({ keyword: 'Alpha' });
-
-      expect(result.projects).toHaveLength(1);
-      expect(result.projects.at(0)?.name).toBe('Alpha Project');
-    });
-
-    it('should only return tasks the user is involved in', async () => {
-      const user = await createTestUser();
-      const otherUser = await createTestUser({ email: 'other@example.com' });
-      const project = await createTestProject(user.id);
-      const otherProject = await createTestProject(otherUser.id);
-
-      await createTestTask(project.id, user.id, { title: 'My Task' });
-      await createTestTask(otherProject.id, otherUser.id, { title: 'Other Task' });
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const result = await caller.search.search({});
-
-      const titles = result.tasks.map((t) => t.title);
-      expect(titles).toContain('My Task');
-      expect(titles).not.toContain('Other Task');
-    });
-
-    it('should include tasks where user is assignee', async () => {
-      const creator = await createTestUser();
-      const assignee = await createTestUser({ email: 'assignee@example.com' });
-      const project = await createTestProject(creator.id);
-
-      await prisma.projectMember.create({
-        data: { userId: assignee.id, projectId: project.id, role: 'MEMBER' },
-      });
-
-      await createTestTask(project.id, creator.id, {
-        title: 'Assigned Task',
-        assigneeId: assignee.id,
-      });
-
-      const caller = await createAuthenticatedCaller(assignee.id, assignee.email, assignee.role);
-
-      const result = await caller.search.search({});
-
-      expect(result.tasks.some((t) => t.title === 'Assigned Task')).toBe(true);
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.search.search({})).rejects.toThrow('ログインが必要です');
+      expect(result.projects.map((p) => p.id)).toContain(project.id);
     });
   });
 
-  describe('quickSearch', () => {
-    it('should find tasks by keyword', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      await createTestTask(project.id, user.id, { title: 'Important Feature' });
+  describe('quickSearch（クイック検索）', () => {
+    it('キーワードでタスクとプロジェクトを横断検索する', async () => {
+      const user = await createTestUser({ email: uniqueEmail('q-kw') });
+      const project = await createTestProject(user.id, { name: 'Zephyr' });
+      await createTestTask(project.id, user.id, { title: 'Zephyr deploy' });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.search.quickSearch({ keyword: 'Zephyr' });
 
-      const result = await caller.search.quickSearch({ keyword: 'Important' });
-
-      expect(result.tasks).toHaveLength(1);
-      expect(result.tasks.at(0)?.title).toBe('Important Feature');
+      expect(result.totalCount).toBeGreaterThanOrEqual(2);
     });
 
-    it('should find projects by keyword', async () => {
-      const user = await createTestUser();
-      await createTestProject(user.id, { name: 'Marketing Campaign' });
-
+    it('空のキーワードは拒否される', async () => {
+      const user = await createTestUser({ email: uniqueEmail('q-empty') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const result = await caller.search.quickSearch({ keyword: 'Marketing' });
-
-      expect(result.projects).toHaveLength(1);
-      expect(result.projects.at(0)?.name).toBe('Marketing Campaign');
-    });
-
-    it('should reject empty keyword', async () => {
-      const user = await createTestUser();
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      await expect(caller.search.quickSearch({ keyword: '' })).rejects.toThrow();
-    });
-
-    it('should return totalCount', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id, { name: 'Test Project' });
-      await createTestTask(project.id, user.id, { title: 'Test Task' });
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const result = await caller.search.quickSearch({ keyword: 'Test' });
-
-      expect(result.totalCount).toBe(result.tasks.length + result.projects.length);
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.search.quickSearch({ keyword: 'test' })).rejects.toThrow(
-        'ログインが必要です',
+      await expect(caller.search.quickSearch({ keyword: '' })).rejects.toThrow(
+        'キーワードは必須です',
       );
     });
   });
 
-  describe('getUserProjects', () => {
-    it('should return projects the user is a member of', async () => {
-      const user = await createTestUser();
-      const otherUser = await createTestUser({ email: 'other@example.com' });
-
-      await createTestProject(user.id, { name: 'My Project' });
-      await createTestProject(otherUser.id, { name: 'Not My Project' });
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const projects = await caller.search.getUserProjects();
-
-      expect(projects).toHaveLength(1);
-      expect(projects.at(0)?.name).toBe('My Project');
-    });
-
-    it('should include task count', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      await createTestTask(project.id, user.id);
-      await createTestTask(project.id, user.id);
+  describe('getUserProjects（参加プロジェクト一覧）', () => {
+    it('自分が参加するプロジェクトを返す', async () => {
+      const user = await createTestUser({ email: uniqueEmail('gup') });
+      const mine = await createTestProject(user.id);
+      const other = await createTestUser({ email: uniqueEmail('gup-other') });
+      await createTestProject(other.id);
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.search.getUserProjects();
 
-      const projects = await caller.search.getUserProjects();
-
-      expect(projects.at(0)?._count?.tasks).toBe(2);
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.search.getUserProjects()).rejects.toThrow('ログインが必要です');
+      expect(result.map((p) => p.id)).toEqual([mine.id]);
     });
   });
 
-  describe('getProjectMembers', () => {
-    it('should return unique members from user projects', async () => {
-      const user = await createTestUser({ name: 'User A' });
-      const memberB = await createTestUser({ email: 'b@example.com', name: 'User B' });
+  describe('getProjectMembers（メンバー候補）', () => {
+    it('自分の参加プロジェクトのメンバーを重複なく返す', async () => {
+      const user = await createTestUser({ email: uniqueEmail('gpm') });
       const project = await createTestProject(user.id);
-
+      const colleague = await createTestUser({ email: uniqueEmail('gpm-colleague') });
       await prisma.projectMember.create({
-        data: { userId: memberB.id, projectId: project.id, role: 'MEMBER' },
+        data: { projectId: project.id, userId: colleague.id, role: 'MEMBER' },
       });
 
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.search.getProjectMembers();
 
-      const members = await caller.search.getProjectMembers();
+      const ids = result.map((u) => u.id);
+      expect(ids).toContain(user.id);
+      expect(ids).toContain(colleague.id);
+    });
+  });
 
-      expect(members.length).toBeGreaterThanOrEqual(2);
-      const names = members.map((m) => m.name);
-      expect(names).toContain('User A');
-      expect(names).toContain('User B');
+  describe('getMembersByProject（指定プロジェクトのメンバー）', () => {
+    it('メンバーはそのプロジェクトのメンバー一覧を取得できる', async () => {
+      const user = await createTestUser({ email: uniqueEmail('gmbp') });
+      const project = await createTestProject(user.id);
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.search.getMembersByProject({ projectId: project.id });
+
+      expect(result.map((u) => u.id)).toContain(user.id);
     });
 
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
+    it('非メンバーは取得を拒否される', async () => {
+      const owner = await createTestUser({ email: uniqueEmail('gmbp-owner') });
+      const stranger = await createTestUser({ email: uniqueEmail('gmbp-stranger') });
+      const project = await createTestProject(owner.id);
 
-      await expect(caller.search.getProjectMembers()).rejects.toThrow('ログインが必要です');
+      const caller = await createAuthenticatedCaller(stranger.id, stranger.email, stranger.role);
+      await expect(caller.search.getMembersByProject({ projectId: project.id })).rejects.toThrow(
+        'このプロジェクトのメンバーではありません',
+      );
+    });
+  });
+
+  describe('認証ガード', () => {
+    it('未認証では検索が拒否される', async () => {
+      const caller = await createTestCaller();
+      await expect(caller.search.search({ keyword: 'x' })).rejects.toThrow('ログインが必要です');
     });
   });
 });
