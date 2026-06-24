@@ -104,10 +104,10 @@ src/
 
 ### Step 0: プロジェクト API を有効化する（2分）
 
-🎯 **ゴール**: project ルーターを root.ts に登録して、API を使えるようにする。
+🎯 **ゴール**: project ルーターを root.ts に登録して、API を使えるようにします。
 
 Day 07 で認証 API を登録したのと同じ形で、
-プロジェクト用 API も `root.ts` に登録する。
+プロジェクト用 API も `root.ts` に登録します。
 `src/server/api/routers/project.ts` は、この Day から
 プロジェクト管理の API として使うファイルです。
 
@@ -134,9 +134,9 @@ export const createCaller = createCallerFactory(appRouter);
 - [ ] `appRouter` に `project: projectRouter` を追加した
 
 > `project.ts` は Day 07 で学んだ
-> `protectedProcedure` と `prisma` の延長にある。
+> `protectedProcedure` と `prisma` の延長にあります。
 > API を増やすときは、まず router を登録してから
-> 画面側の `useQuery` をつなぐ順番にすると迷いにくい。
+> 画面側の `useQuery` をつなぐ順番にすると迷いにくいです。
 
 ---
 
@@ -757,7 +757,7 @@ PORT=3001 npm run dev
 
 ### 💡 Pro パターンで書こう — プロジェクト一覧は `useQuery` に任せる
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
@@ -820,8 +820,8 @@ export function ProjectListPanel() {
 
 #### 🎓 覚えておきたいエッセンス
 
-一覧取得は `useEffect` で手作りするより、**データ取得専用のフックに任せる** ほうが安定する。
-tRPCの `useQuery` は、取得・状態・型をまとめて引き受けてくれるんや。
+一覧取得は `useEffect` で手作りするより、**データ取得専用のフックに任せる** ほうが安定します。
+tRPCの `useQuery` は、取得・状態・型をまとめて引き受けてくれるのです。
 
 ## 📋 今日のまとめ
 

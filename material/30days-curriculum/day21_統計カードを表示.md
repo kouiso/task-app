@@ -97,7 +97,7 @@ flowchart TD
 
 ### Step 0: レポート API を有効化する（2分）
 
-`src/server/api/root.ts` に report ルーターを追加する。
+`src/server/api/root.ts` に report ルーターを追加します。
 
 ```typescript
 // filepath: src/server/api/root.ts（import を追加）
@@ -107,7 +107,7 @@ import { reportRouter } from './routers/report';
   report: reportRouter,
 ```
 
-✅ **確認ポイント**: `report: reportRouter` を追加した。
+✅ **確認ポイント**: `report: reportRouter` を追加しました。
 
 ---
 
@@ -707,7 +707,7 @@ export function ReportContent() {
 
 #### 🎓 覚えておきたいエッセンス
 
-ページコンポーネントはなるべく Server Component にして、データ取得する部分だけを "use client" の子コンポーネントに切り出す。
+ページコンポーネントはなるべく Server Component にして、データ取得する部分だけを "use client" の子コンポーネントに切り出します。
 
 ## 📋 今日のまとめ
 

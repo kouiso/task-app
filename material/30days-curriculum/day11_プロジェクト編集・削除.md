@@ -417,7 +417,7 @@ const handleSubmit = (
 
 💻 **実装**:
 
-Day 10 の `handleCreate` はダイアログを開くだけでした。
+Day 10 の `handleCreate` はダイアログを開くだけでしました。
 編集機能を追加したので、「新規作成」では
 `editingProject` を必ず `undefined` に戻すように更新します。
 
@@ -1116,7 +1116,7 @@ export default function ProjectPage() {
 
 ### 💡 Pro パターンで書こう — 編集フォームの optional な値は `?.` と `??` で整える
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
@@ -1148,7 +1148,7 @@ type ProjectEditFormData = {
 function toDateInputValue(value: Date): string {
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1178,7 +1178,7 @@ export function buildProjectEditForm(
       ownerLabel = project.owner.name;
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1208,7 +1208,7 @@ export function buildProjectEditForm(
 
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1260,7 +1260,7 @@ type ProjectEditFormData = {
 function toDateInputValue(value: Date): string {
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1290,7 +1290,7 @@ export function buildProjectEditForm(
     ...(startDate ? { startDate } : {}),
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1319,7 +1319,7 @@ console.log(
 
 #### 🎓 覚えておきたいエッセンス
 
-編集画面では「値がないかもしれない」が何度も出てくる。
+編集画面では「値がないかもしれない」が何度も出てきます。
 多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになるで。
 
 ## 📋 今日のまとめ
@@ -1343,7 +1343,7 @@ console.log(
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
 | アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailView` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
-| Step 9 追加後に TypeScript エラーが出る | 仮定義の変数名が重複している | 同名の `const` を2つ定義していないか確認する。仮定義ブロックをまとめて1か所に配置する |
+| Step 9 追加後に TypeScript エラーが出る | 仮定義の変数名が重複している | 同名の `const` を2つ定義していないか確認します。仮定義ブロックをまとめて1か所に配置する |
 | `ProjectDetailView` が表示されない | `projectIdParam && selectedProject` の条件が false になっている | URLに `?projectId=xxx` が付いているか、`selectedProject` の state が正しく更新されているか確認 |
 
 ## 📝 今日学んだ用語

@@ -75,7 +75,7 @@ flowchart TD
 | useForm + zod（復習） | — | フォーム管理とバリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
 | refine | リファイン | zod のカスタムバリデーション | 複数フィールドを横断して検証するルール |
 
-> 📌 **今日のゴールライン**: 3画面あって量は多いけど、14ステップに分かれてて1つ3-5分。プロフィール表示 → 編集 → パスワード変更を順番に追いかけるだけで完成する。全部一気に理解しようとしなくてええ。
+> 📌 **今日のゴールライン**: 3画面あって量は多いけど、14ステップに分かれてて1つ3-5分。プロフィール表示 → 編集 → パスワード変更を順番に追いかけるだけで完成します。全部一気に理解しようとしなくてよい。
 
 ## 📊 実装ステップ一覧
 
@@ -1604,7 +1604,7 @@ PORT=3001 npm run dev
 
 ### 💡 Pro パターンで書こう — プロフィール表示のデータアクセスは Optional chaining でそろえる
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 #### ❌ Before（動くけど、プロは書かない）
@@ -1636,7 +1636,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
       displayName = currentUser.name;
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1666,7 +1666,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     if (currentUser.updatedAt) {
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1722,7 +1722,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き

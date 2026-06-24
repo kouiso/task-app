@@ -113,7 +113,7 @@ src/
 
 ### Step 0: タスク API を有効化する（2分）
 
-`src/server/api/root.ts` に task ルーターを追加する。
+`src/server/api/root.ts` に task ルーターを追加します。
 
 ```typescript
 // filepath: src/server/api/root.ts（import を追加）
@@ -127,7 +127,7 @@ export const appRouter = createTRPCRouter({
 });
 ```
 
-✅ **確認ポイント**: `task: taskRouter` を追加した。
+✅ **確認ポイント**: `task: taskRouter` を追加しました。
 
 ---
 
@@ -750,7 +750,7 @@ const { label, color } = STATUS_CONFIG[status];
 
 #### 🎓 覚えておきたいエッセンス
 
-switch 文は「設定オブジェクト + lookup」に置き換えられることが多い。データと振る舞いを1箇所にまとめると、追加・変更が楽になる。
+switch 文は「設定オブジェクト + lookup」に置き換えられることが多いです。データと振る舞いを1箇所にまとめると、追加・変更が楽になります。
 
 ## 今日のまとめ
 

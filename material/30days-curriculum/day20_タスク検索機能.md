@@ -106,7 +106,7 @@ import { searchRouter } from './routers/search';
   search: searchRouter,
 ```
 
-✅ **確認ポイント**: `search: searchRouter` が存在する。
+✅ **確認ポイント**: `search: searchRouter` が存在します。
 
 ---
 

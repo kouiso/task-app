@@ -107,7 +107,7 @@ flowchart TD
 
 ### Step 0: ユーザー API を有効化する（2分）
 
-`src/server/api/root.ts` に user ルーターを追加する。
+`src/server/api/root.ts` に user ルーターを追加します。
 
 ```typescript
 // filepath: src/server/api/root.ts（import を追加）
@@ -117,7 +117,7 @@ import { userRouter } from './routers/user';
   user: userRouter,
 ```
 
-✅ **確認ポイント**: `user: userRouter` を追加した。
+✅ **確認ポイント**: `user: userRouter` を追加しました。
 
 ---
 
@@ -714,9 +714,9 @@ PORT=3001 npm run dev
 
 ### 💡 Pro パターンで書こう — ユーザー一覧カードの Props は Pick で切り出す
 
-ユーザー一覧カードは、ユーザー情報の一部だけを使う。
+ユーザー一覧カードは、ユーザー情報の一部だけを使います。
 `User` 型を丸ごと渡すより、使う列だけを `Pick` すると、
-カードの責務が読みやすくなる。
+カードの責務が読みやすくなります。
 
 | 書き方 | 特徴 |
 |--------|------|
