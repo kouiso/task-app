@@ -716,7 +716,7 @@ PORT=3001 npm run dev
 
 ### 💡 Pro パターンで書こう — 週次レポートのデータ取得は Prisma include でまとめる
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 #### ❌ Before（動くけど、プロは書かない）
@@ -748,7 +748,7 @@ export async function fetchWeeklyReportTasks(
     },
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -778,7 +778,7 @@ export async function fetchWeeklyReportTasks(
         priority: task.priority,
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -824,7 +824,7 @@ export async function fetchWeeklyReportTasks(
     },
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -853,7 +853,7 @@ export async function fetchWeeklyReportTasks(
 #### 🎓 覚えておきたいエッセンス
 
 一覧やレポートで relation を使うなら、1 件ずつ取りに行く前に
-Prisma の `select` / `include` でまとめて取れないかを先に考える。
+Prisma の `select` / `include` でまとめて取れないかを先に考えます。
 
 ## 📋 今日のまとめ
 

@@ -550,7 +550,7 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ### 💡 Pro パターンで書こう — 完成版の振り返り画面は Server Component を標準にする
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 #### ❌ Before（動くけど、プロは書かない）
@@ -582,7 +582,7 @@ export default function GraduationPage() {
       <div className="grid gap-4 md:grid-cols-2">
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -636,7 +636,7 @@ export default function GraduationPage() {
     </main>
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -666,7 +666,7 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
     </button>
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -683,7 +683,7 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
 #### 🎓 覚えておきたいエッセンス
 
 App Router では Server Component を標準にして、
-クリック・入力・ブラウザ API が必要な小さな部品だけを Client Component に切り出す。
+クリック・入力・ブラウザ API が必要な小さな部品だけを Client Component に切り出します。
 
 ## 📋 今日のまとめ
 
@@ -745,7 +745,7 @@ App Router では Server Component を標準にして、
 
 ### あなたの成長
 
-30日前のあなたは `npm` って何？の状態でした。今のあなたは、フルスタック Web アプリをゼロから構築し、世界に公開できるエンジニアです。
+30日前のあなたは `npm` って何？の状態でしました。今のあなたは、フルスタック Web アプリをゼロから構築し、世界に公開できるエンジニアです。
 
 この 30 日間で身につけた知識と経験は、あなたのエンジニアキャリアの確かな土台になります。
 

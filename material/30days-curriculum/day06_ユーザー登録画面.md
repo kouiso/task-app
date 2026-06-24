@@ -197,7 +197,7 @@ const registerSchema = z.object({
     path: ['confirmPassword'],
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -643,7 +643,7 @@ const onSubmit = async (
 
 ### 💡 Pro パターンで書こう — 登録APIの結果は判別共用体で受け取る
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
 ### ❌ Before（動くけど、プロは書かない）
@@ -675,7 +675,7 @@ export function registerUser(input: RegisterInput): RegisterApiResponse {
     name: input.name,
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -735,7 +735,7 @@ export function registerUser(input: RegisterInput): RegisterResult {
     };
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -765,7 +765,7 @@ const result = registerUser({
   password: 'password123',
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -782,8 +782,8 @@ console.log(buildRegisterMessage(result));
 
 #### 🎓 覚えておきたいエッセンス
 
-APIレスポンスは「なんとなく文字列なら失敗」より、**成功と失敗の形を型で分ける** ほうが強い。
-判別共用体にしておくと、分岐を書いた瞬間に中身の型まで決まるんや。
+APIレスポンスは「なんとなく文字列なら失敗」より、**成功と失敗の形を型で分ける** ほうが強いです。
+判別共用体にしておくと、分岐を書いた瞬間に中身の型まで決まるのです。
 
 ## 🏁 完成コード全体
 
@@ -850,7 +850,7 @@ const registerSchema = z.object({
     path: ['confirmPassword'],
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
