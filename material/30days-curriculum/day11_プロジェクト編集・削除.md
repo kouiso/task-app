@@ -417,7 +417,7 @@ const handleSubmit = (
 
 **実装**:
 
-Day 10 の `handleCreate` はダイアログを開くだけでしました。
+Day 10 の `handleCreate` はダイアログを開くだけでした。
 編集機能を追加したので、「新規作成」では
 `editingProject` を必ず `undefined` に戻すように更新します。
 

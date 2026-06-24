@@ -1741,7 +1741,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 #### 覚えておきたいエッセンス
 
 深い null チェックを何段も書くより、
-`?.` と `??` で「安全なアクセス」と「代替表示」を近くに置く。
+`?.` と `??` で「安全なアクセス」と「代替表示」を近くに置きます。
 
 ## 今日のまとめ
 

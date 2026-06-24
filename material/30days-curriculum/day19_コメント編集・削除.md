@@ -87,7 +87,7 @@ update / delete メソッドを把握します。
 Day 18 で作った
 `src/server/api/routers/comment.ts` に
 `update` と `delete` メソッドを追加します。
-投稿できるようになったコメントに、編集と削除の入口を足す。
+投稿できるようになったコメントに、編集と削除の入口を足します。
 
 **実装**:
 
