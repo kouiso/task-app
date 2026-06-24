@@ -107,7 +107,7 @@ flowchart TD
 **ゴール**: サーバー側に一括操作 API を追加し、なぜ `updateMany` と `completedAt` を使うのか理解します。
 
 まずサーバー側の `taskRouter` に、一括操作の API を追加します。
-この Step では `bulkComplete` から書き始める。
+この Step では `bulkComplete` から書き始めます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
