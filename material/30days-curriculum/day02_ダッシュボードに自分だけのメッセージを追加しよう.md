@@ -15,7 +15,7 @@ Day 01 で土台は立ち上がった。
 「どこまでを Server Component のまま保つか」
 を丁寧にやっていこう。
 
-## 🌟 このDayで君が手に入れるもの
+## このDayで君が手に入れるもの
 
 Day 01 の最後に作った最小ダッシュボードをベースにして、
 「Hello Task-App」だけだった画面を、
@@ -38,7 +38,7 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、
 
 ![Day 02 メッセージカードを追加した途中状態](./screenshots/day02-step3-card.png)
 
-## 📍 今日のゴール（G0 Foundation の2日目）
+## 今日のゴール（G0 Foundation の2日目）
 
 - [ ] Day 01 の完成状態から作業を再開する
 - [ ] `src/app/dashboard/page.tsx` の現在地を確認する
@@ -47,7 +47,7 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、
 - [ ] 小さな情報カードも添えて、ダッシュボードらしい密度にする
 - [ ] Server Component のまま書く意味を Before/After で理解する
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -56,7 +56,7 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、
 | Tailwind CSS | テイルウィンド | クラス名でスタイルを指定する CSS フレームワーク | 見た目シール |
 | import / export | インポート / エクスポート | 他ファイルから部品を持ってくる / 渡す | 別の部屋から道具を借りる / 貸す |
 
-## 🧰 前提（Day 01 完了していること）
+## 前提（Day 01 完了していること）
 
 今日は Day 01 の続きから進めます。
 なので、次の状態になっていることが前提です。
@@ -70,7 +70,7 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、
 まだこの状態になっていなければ、
 先に Day 01 を完了させてから戻ってきてほしい。
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -78,9 +78,9 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、
 | TypeScript | タイプスクリプト | JavaScript に「型」（変数に入る値の種類）を付けた言語 | 「この箱には文字しか入れてはいけない」という注意書き付き JavaScript |
 | Tailwind CSS | テイルウィンド | クラス名でスタイルを当てる CSS フレームワーク | `text-red-500` と書くだけで赤い文字になる便利ツール |
 
-> 📌 **React のコードを初めて自分で書く日。** `export default function` や `className` は今日から何度も出てくる「定番の形」。今日はこの形に慣れるだけで OK。
+> **React のコードを初めて自分で書く日。** `export default function` や `className` は今日から何度も出てくる「定番の形」。今日はこの形に慣れるだけで OK。
 
-## ✨ 今日のワクワクポイント
+## 今日のワクワクポイント
 
 ダッシュボードって、
 その日いちばん最初に目に入る場所です。
@@ -89,7 +89,7 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、
 と気持ちが前に出る画面にできたら、
 単なる練習から一段上がります。
 
-## 🔙 前日からの状態確認
+## 前日からの状態確認
 
 まずは、Day 01 で作った状態を確認しよう。
 今日は新しいプロジェクトを作り直したりしません。
@@ -187,7 +187,7 @@ export default function DashboardPage() {
         <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
           <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
@@ -216,7 +216,7 @@ export default function DashboardPage() {
           </article>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
           <aside className="space-y-4">
@@ -244,7 +244,7 @@ export default function DashboardPage() {
       </div>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
     </main>
@@ -314,7 +314,7 @@ function getGreetingByHour(hour: number): string {
   return 'こんばんは';
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 }
@@ -343,7 +343,7 @@ export default function DashboardPage() {
           </div>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
@@ -371,7 +371,7 @@ export default function DashboardPage() {
             </div>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
             <div className="grid gap-4 bg-secondary px-8 py-6 sm:grid-cols-2">
@@ -399,7 +399,7 @@ export default function DashboardPage() {
                 </p>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
               </div>
@@ -428,7 +428,7 @@ export default function DashboardPage() {
             </article>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
           </aside>
@@ -497,7 +497,7 @@ function getGreetingByHour(hour: number): string {
   if (hour < 12) {
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
     return 'おはよう';
@@ -526,7 +526,7 @@ export default function DashboardPage() {
       description: dashboardOwner.role,
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
     },
@@ -555,7 +555,7 @@ export default function DashboardPage() {
             </h1>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
           </div>
@@ -584,7 +584,7 @@ export default function DashboardPage() {
                 ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
               </p>
@@ -613,7 +613,7 @@ export default function DashboardPage() {
               ))}
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
             </div>
@@ -642,7 +642,7 @@ export default function DashboardPage() {
 
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
@@ -698,7 +698,7 @@ npm run dev
 3. `focusCards.map` の丸かっこや波かっこの閉じ忘れがないか見る
 4. 一度保存してからブラウザを再読み込みする
 
-## 💡 Pro パターンで書こう — ダッシュボードのメッセージは Server Component を標準にする
+## Pro パターンで書こう — ダッシュボードのメッセージは Server Component を標準にする
 
 ここまでで動くコードは書けた。
 でもプロの現場ではもう一段上の書き方をします。
@@ -710,7 +710,7 @@ npm run dev
 なのに最初から `"use client"` を付けると、
 必要ない JavaScript まで配る方向に寄っていきます。
 
-### ❌ Before（動くけど、プロは書かない）
+### Before（動くけど、プロは書かない）
 
 ```tsx
 'use client';
@@ -739,7 +739,7 @@ const dashboardOwner: DashboardOwner = {
   nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 };
@@ -768,7 +768,7 @@ export default function DashboardPage() {
     return buildMainMessage(dashboardOwner, currentHour);
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
   }, [currentHour]);
@@ -797,7 +797,7 @@ export default function DashboardPage() {
           <div className="space-y-1">
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
@@ -826,7 +826,7 @@ export default function DashboardPage() {
 
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
@@ -855,7 +855,7 @@ export default function DashboardPage() {
                     {card.value}
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
                   </p>
@@ -884,7 +884,7 @@ export default function DashboardPage() {
               </p>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
@@ -916,7 +916,7 @@ export default function DashboardPage() {
 - `useMemo` を使っているけど、ここでは計算が軽くて効果が薄く、読み手の負担だけ増えやすい
 - 後で本当に client 化が必要な部品を足したとき、境界が曖昧になって設計がぶれやすい
 
-### ✅ After（プロが書くコード）
+### After（プロが書くコード）
 
 ```tsx
 // filepath: src/app/dashboard/page.tsx
@@ -946,7 +946,7 @@ function getGreetingByHour(hour: number): string {
   if (hour < 12) {
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 // filepath: 続き
@@ -976,7 +976,7 @@ export default function DashboardPage() {
       description: dashboardOwner.role,
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 // filepath: 続き
@@ -1006,7 +1006,7 @@ export default function DashboardPage() {
             </h1>
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 // filepath: 続き
@@ -1036,7 +1036,7 @@ export default function DashboardPage() {
                 ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 // filepath: 続き
@@ -1066,7 +1066,7 @@ export default function DashboardPage() {
               ))}
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 // filepath: 続き
@@ -1096,7 +1096,7 @@ export default function DashboardPage() {
 
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 // filepath: 続き
@@ -1123,7 +1123,7 @@ export default function DashboardPage() {
 - page の責務が「データを組み立てて UI を返す」に収まっていて読みやすい
 - 本当に操作が必要になったときだけ、小さい部品を Client Component に切り出しやすい
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
 ダッシュボードにメッセージを出すだけなら、
 **まず Server Component** が基本です。
@@ -1132,7 +1132,7 @@ export default function DashboardPage() {
 本当にブラウザ側の操作が必要な瞬間だけ client を足す。
 この順番が、あとで効いてきます。
 
-## 🎓 覚えておきたいエッセンス
+## 覚えておきたいエッセンス
 
 今日の本質は、
 **ダッシュボードの主役を決めて、その主役に意味のある情報を添えた**
@@ -1147,7 +1147,7 @@ export default function DashboardPage() {
 この3つが入るだけで、
 Day 02 のコードはかなり「プロダクトを育てる書き方」に近づく。
 
-## 🔜 次回予告
+## 次回予告
 
 Day 03 では、
 今日つくったこの変化をちゃんと履歴として残していきます。
