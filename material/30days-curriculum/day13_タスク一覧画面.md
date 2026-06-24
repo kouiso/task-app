@@ -127,7 +127,7 @@ export const appRouter = createTRPCRouter({
 });
 ```
 
-✅ **確認ポイント**: `task: taskRouter` を追加しました。
+**確認ポイント**: `task: taskRouter` を追加しました。
 
 ---
 
@@ -701,9 +701,9 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — ステータス表示の色分け
+### Pro パターンで書こう — ステータス表示の色分け
 
-### ❌ Before（動くけど、プロは書かない）
+### Before（動くけど、プロは書かない）
 
 ```typescript
 // filepath: src/app/task/page.tsx（参考）
@@ -728,7 +728,7 @@ const getStatusColor = (status: string) => {
 - ラベルの文字も別の場所で同じ switch を書くことになる
 - `default` に落ちるパターンが気づかないバグになりやすい
 
-### ✅ After（プロが書くコード）
+### After（プロが書くコード）
 
 ```typescript
 // filepath: src/app/task/page.tsx（参考）
@@ -748,7 +748,7 @@ const { label, color } = STATUS_CONFIG[status];
 - `as const` で型が推論されるので、typo するとコンパイルエラー
 - switch を書く場所がゼロになる
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
 switch 文は「設定オブジェクト + lookup」に置き換えられることが多いです。データと振る舞いを1箇所にまとめると、追加・変更が楽になります。
 

@@ -1,28 +1,28 @@
 # Day 11: プロジェクト編集・削除を実装しよう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
 Day 10 では react-hook-form・zod・tRPC の `useMutation` を組み合わせて、ダイアログ形式のプロジェクト新規作成機能を実装しました。CRUDの「Create」ができたので、今日は同じダイアログを再利用して「Update」と「Delete」を実装します。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
 Day 10 で作った ProjectDialog を「編集モード」で再利用し、プロジェクトの更新と削除を実装します。既存データをフォームに反映する方法と、削除前の確認ダイアログも学びます。
 
-📸 スクリーンショット: 編集モードの ProjectDialog が表示されている画面
+スクリーンショット: 編集モードの ProjectDialog が表示されている画面
 
 ![編集モードの ProjectDialog](./screenshots/project-create-dialog.png)
 
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか？
 
 Day 10 で「プロジェクト作成」ができるようになりました。しかし、名前の間違いを直したいときや、不要になったプロジェクトを整理したいときはどうすればよいでしょうか？
 
 今日は「編集」と「削除」を追加して、プロジェクト管理を完成させます。今日の作業が終わると、プロジェクトの作成・編集・削除・アーカイブという一連の管理操作が全て揃います。
 
-> 💡 **例え話**: Day 10 で作ったダイアログは「万能な注文用紙」です。新規注文にも注文変更にも使え、変更時は元の内容を用紙に書いておくだけです。このように1つのコンポーネントで両方に対応する設計を「再利用性の高い設計」と言います。
+> **例え話**: Day 10 で作ったダイアログは「万能な注文用紙」です。新規注文にも注文変更にも使え、変更時は元の内容を用紙に書いておくだけです。このように1つのコンポーネントで両方に対応する設計を「再利用性の高い設計」と言います。
 
-### 📐 編集・削除の処理フロー
+### 編集・削除の処理フロー
 
 ```mermaid
 flowchart TD
@@ -54,7 +54,7 @@ flowchart TD
 | キャッシュ無効化で一覧更新 | 手動リロード |
 | アーカイブ mutation の実装 | アーカイブUIの詳細カスタマイズ |
 
-## 🆕 新しく学ぶ概念
+## 新しく学ぶ概念
 
 | 概念 | 説明 |
 |------|------|
@@ -63,9 +63,9 @@ flowchart TD
 | キャッシュ無効化（invalidate） | 更新・削除後に tRPC のキャッシュを破棄して最新データを再取得させる処理 |
 | アーカイブ | データを削除せずに非表示にする方法。復元が可能 |
 
-> 💡 **補足**: 「楽観的更新（Optimistic Update）」という手法もありますが、今回は使いません。楽観的更新はサーバーの応答を待たず先にUIを更新し、失敗したらロールバックする高度な手法です。今回はよりシンプルな `invalidate()`（キャッシュ無効化）で一覧を更新します。
+> **補足**: 「楽観的更新（Optimistic Update）」という手法もありますが、今回は使いません。楽観的更新はサーバーの応答を待たず先にUIを更新し、失敗したらロールバックする高度な手法です。今回はよりシンプルな `invalidate()`（キャッシュ無効化）で一覧を更新します。
 
-### 📂 今日の作業ファイル
+### 今日の作業ファイル
 
 ```
 src/
@@ -81,7 +81,7 @@ src/
             └── project.ts    ← archive/unarchiveルーター（既存・変更なし）
 ```
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -102,9 +102,9 @@ src/
 
 ### Step 1: インポートと編集ボタンのハンドラーを作る（7分）
 
-🎯 **ゴール**: 必要なインポートを追加し、カードの編集ボタンで既存データを取得します。
+**ゴール**: 必要なインポートを追加し、カードの編集ボタンで既存データを取得します。
 
-💻 **実装**:
+**実装**:
 
 まず、Day 10 で作成した `ProjectFormData` 型と、削除確認用の `DeleteConfirmDialog` をインポートします。
 既に `useState` や `Suspense` の import がある場合は、
@@ -135,7 +135,7 @@ import { DeleteConfirmDialog }
   from '@/component/ui/delete-confirm-dialog';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - インポート文を追加してエラーが出ていない
 - `ProjectFormData` と `DeleteConfirmDialog` が正しくインポートされた
 
@@ -153,7 +153,7 @@ const [editingProject, setEditingProject] =
   );
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `selectedProject` が `string | null` で定義されている
 - `editingProject` の型が `ProjectFormData | undefined` になっている
 - 保存時にエラーが出ていない
@@ -177,7 +177,7 @@ useEffect(() => {
 }, [projectIdParam]);
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `router.push(...)` を使う準備ができている
 - URL に `projectId` があると `selectedProject` に入る
 
@@ -211,7 +211,7 @@ const handleEdit = (projectId: string) => {
 };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `handleEdit` が `handleCreate` の直下に配置されている
 - `description` に `|| ''` を使って null を空文字に変換している
 - 日付変換のロジックが正しく書けた
@@ -227,15 +227,15 @@ const handleEdit = (projectId: string) => {
 
 `undefined` がプロパティに入ると、サーバー（Prisma）が「日付を空にする」と解釈する場合があります。プロパティ自体を含めなければ「日付は変更しない」という意味になります。
 
-> 💡 **注文書の例え**: 注文変更で「お届け日」欄に「指定なし」と書くのと、そもそも欄を空白にするのでは意味が違います。「指定なし」は配送日をリセット、空白は変更しないという意味です。
+> **注文書の例え**: 注文変更で「お届け日」欄に「指定なし」と書くのと、そもそも欄を空白にするのでは意味が違います。「指定なし」は配送日をリセット、空白は変更しないという意味です。
 
 ---
 
 ### Step 2: 削除の state と mutation を実装する（5分）
 
-🎯 **ゴール**: 削除確認ダイアログ用の state と mutation を実装します。
+**ゴール**: 削除確認ダイアログ用の state と mutation を実装します。
 
-💻 **実装**:
+**実装**:
 
 削除フローでは、2つの state で「どのプロジェクトを削除するか」「確認ダイアログを表示するか」を管理します。`ProjectPageContent` 関数の先頭にある state 一覧（`const [showArchived, ...]` の直下）に追加してください。
 
@@ -248,7 +248,7 @@ const [deleteTargetId, setDeleteTargetId]
   = useState<string | null>(null);
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `deleteDialogOpen` と `deleteTargetId` の2つの state が追加された
 - `deleteTargetId` の型が `string | null` になっている
 
@@ -266,7 +266,7 @@ const deleteMutation =
   });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `deleteMutation` が `updateMutation` の直下に定義できた
 - 成功時に `invalidate()` で一覧を更新し、`router.push` で一覧画面に戻る
 
@@ -281,19 +281,19 @@ const handleDelete = (projectId: string) => {
 };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `handleDelete` は `setDeleteTargetId` と `setDeleteDialogOpen` を呼ぶだけ
 - まだ削除は実行されない（確認ダイアログで実行する）
 
-> 💡 `handleDelete` では直接削除を実行しません。まず「どのプロジェクトを削除するか」を記録し、確認ダイアログを開きます。実際の削除は Step 5 で配置するダイアログの `onConfirm` で行います。
+> `handleDelete` では直接削除を実行しません。まず「どのプロジェクトを削除するか」を記録し、確認ダイアログを開きます。実際の削除は Step 5 で配置するダイアログの `onConfirm` で行います。
 
 ---
 
 ### Step 3: 送信ハンドラーを作る（7分）
 
-🎯 **ゴール**: 更新用の mutation を定義し、1つの `handleSubmit` で新規作成と更新を分岐します。
+**ゴール**: 更新用の mutation を定義し、1つの `handleSubmit` で新規作成と更新を分岐します。
 
-💻 **実装**:
+**実装**:
 
 まず、更新用の mutation を追加します。
 `createMutation` の直下に `updateMutation` を定義してください。
@@ -315,13 +315,13 @@ const updateMutation =
   });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `updateMutation` が `createMutation` の直下に定義されている
 - `onSuccess` で `invalidate()` を呼んでいる
 
 次に送信ハンドラーを作ります。実際のコードでは `handleDelete` の直下に `handleSubmit` が定義されています。`data.id` の有無で更新と新規作成を `if/else` で分岐します。
 
-> 📝 **配置の注意**: `handleSubmit` は `handleDelete` の直下に配置してください。コードの並び順は `handleCreate` → `handleEdit` → `handleDelete` → `handleSubmit` です。
+> **配置の注意**: `handleSubmit` は `handleDelete` の直下に配置してください。コードの並び順は `handleCreate` → `handleEdit` → `handleDelete` → `handleSubmit` です。
 
 更新の場合（`data.id` がある場合）のコードです。
 
@@ -351,7 +351,7 @@ const handleSubmit = (
     });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `data.id` がある場合に `updateMutation.mutate` を呼んでいる
 - `description` に `?? null` を使って `undefined` のみ `null` に変換している
 
@@ -381,7 +381,7 @@ const handleSubmit = (
 };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `data.id` がない場合に `createMutation.mutate` を呼んでいる
 - `currentUser?.id` のガードがある
 
@@ -392,7 +392,7 @@ const handleSubmit = (
 | 更新 | `null` を送信 | 「既存の日付を消す」 |
 | 新規作成 | `undefined`（= プロパティを含めない） | 「日付は指定しない」 |
 
-> 💡 **注文書の例え**: 注文変更で「お届け日: なし」と書けば配送日をキャンセルする意味。新規注文でお届け日欄に何も書かなければ「指定なし」の意味。Prisma はこの2つを区別するため、使い分けが必要です。
+> **注文書の例え**: 注文変更で「お届け日: なし」と書けば配送日をキャンセルする意味。新規注文でお届け日欄に何も書かなければ「指定なし」の意味。Prisma はこの2つを区別するため、使い分けが必要です。
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
@@ -405,7 +405,7 @@ const handleSubmit = (
 
 `??` は `null` と `undefined` のみを判定し、`||` は `''`・`0`・`false` もfalsyとして扱います。空文字を有効な値として保持したい場合は `??` を使います。
 
-📸 スクリーンショット: 編集後に一覧が更新された画面
+スクリーンショット: 編集後に一覧が更新された画面
 
 ![編集後に一覧が更新された画面](./screenshots/project-list.png)
 
@@ -413,9 +413,9 @@ const handleSubmit = (
 
 ### Step 4: ProjectDialog を配置する（5分）
 
-🎯 **ゴール**: ProjectDialog をJSXに配置し、新規作成・編集の両モードで動作させます。
+**ゴール**: ProjectDialog をJSXに配置し、新規作成・編集の両モードで動作させます。
 
-💻 **実装**:
+**実装**:
 
 Day 10 の `handleCreate` はダイアログを開くだけでしました。
 編集機能を追加したので、「新規作成」では
@@ -429,7 +429,7 @@ const handleCreate = () => {
 };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `handleCreate` で `setEditingProject(undefined)` を呼んでいる
 - 新規作成ボタンでダイアログが空の状態で開く
 
@@ -446,7 +446,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 />
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 編集ボタンでダイアログを開くと既存の名前が入っている
 - 新規作成ボタンで空のダイアログが開く
 
@@ -458,15 +458,15 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 | タイトル | 「プロジェクト作成」 | 「プロジェクト編集」 |
 | ボタン文言 | 「作成」 | 「更新」 |
 
-> 💡 `handleCreate` で `setEditingProject(undefined)` を呼ぶことで、フォームが空の状態（新規作成モード）になります。`ProjectDialog` は `initialData` の `id` 有無でタイトルとボタン文言を自動切替します。
+> `handleCreate` で `setEditingProject(undefined)` を呼ぶことで、フォームが空の状態（新規作成モード）になります。`ProjectDialog` は `initialData` の `id` 有無でタイトルとボタン文言を自動切替します。
 
 ---
 
 ### Step 5: DeleteConfirmDialog を配置する（5分）
 
-🎯 **ゴール**: shadcn/ui ベースの確認ダイアログを配置し、削除フローを完成させます。
+**ゴール**: shadcn/ui ベースの確認ダイアログを配置し、削除フローを完成させます。
 
-💻 **実装**:
+**実装**:
 
 `DeleteConfirmDialog` は `</AppLayout>` の直前に配置します。`ProjectDialog` よりも後ろの位置です。
 
@@ -488,7 +488,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 />
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 削除ボタンでshadcn/uiスタイルの確認ダイアログが出る
 - 「キャンセル」で削除されない
 - 「削除」で削除が実行される
@@ -504,9 +504,9 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 | `title?` | `string` | ダイアログのタイトル（省略時:「本当に削除しますか？」） |
 | `description?` | `string` | 補足説明文（省略時:「この操作は取り消せません。」） |
 
-> 💡 `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending` を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
+> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending` を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
 
-📸 スクリーンショット: 削除確認ダイアログが表示されている画面
+スクリーンショット: 削除確認ダイアログが表示されている画面
 
 ![削除確認ダイアログが表示されている画面](./screenshots/project-delete-confirm.png)
 
@@ -514,9 +514,9 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 
 ### Step 6: 削除 vs アーカイブの違いを理解する（5分）
 
-🎯 **ゴール**: 完全削除ではなく「アーカイブ」する方法を理解し、実務での使い分けを学びます。
+**ゴール**: 完全削除ではなく「アーカイブ」する方法を理解し、実務での使い分けを学びます。
 
-> ⚠️ **このステップのコードは既存実装です。今日は編集しません。** 仕組みを理解するために確認するだけです。
+> **このステップのコードは既存実装です。今日は編集しません。** 仕組みを理解するために確認するだけです。
 
 #### なぜアーカイブが必要か
 
@@ -529,9 +529,9 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 | 用途 | 本当に不要なデータ | 終了したプロジェクト |
 | 実務での頻度 | まれ | よく使う |
 
-> 💡 実務では「削除」より「アーカイブ」が好まれます。間違えて消してもデータは残っているからです。GitHubのリポジトリも「Archive」機能がありますね。
+> 実務では「削除」より「アーカイブ」が好まれます。間違えて消してもデータは残っているからです。GitHubのリポジトリも「Archive」機能がありますね。
 
-### 📐 アーカイブの処理フロー
+### アーカイブの処理フロー
 
 ```mermaid
 flowchart TD
@@ -578,7 +578,7 @@ const setArchiveStatus = async (
 };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - アーカイブは `isArchived` フラグで管理されている
 - 権限チェック（`canArchive`）が含まれている
 - `archive` と `unarchive` の2つのルーターがこの関数を呼んでいる
@@ -587,9 +587,9 @@ const setArchiveStatus = async (
 
 ### Step 7: アーカイブ mutation を定義する（5分）
 
-🎯 **ゴール**: フロントエンドでアーカイブ・解除用の mutation を2つ定義します。
+**ゴール**: フロントエンドでアーカイブ・解除用の mutation を2つ定義します。
 
-💻 **実装**:
+**実装**:
 
 `deleteMutation` の直下にアーカイブ用の mutation を2つ追加してください。実際のコードでは `deleteMutation` → `addMemberMutation` の間にいくつか mutation がありますが、`deleteMutation` の直後に配置します。
 
@@ -605,7 +605,7 @@ const archiveMutation =
   });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `archiveMutation` が定義できた
 - 成功時に `invalidate()` と `router.push('/project')` で一覧画面に戻る
 
@@ -621,7 +621,7 @@ const unarchiveMutation =
   });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `unarchiveMutation` が定義できた
 - `archiveMutation` と同じく `invalidate()` と `router.push` を呼んでいる
 
@@ -629,9 +629,9 @@ const unarchiveMutation =
 
 ### Step 8: アーカイブハンドラーを作る（3分）
 
-🎯 **ゴール**: アーカイブと解除を1つのハンドラーで切り替えます。
+**ゴール**: アーカイブと解除を1つのハンドラーで切り替えます。
 
-💻 **実装**:
+**実装**:
 
 実際のコードでは、ハンドラーの並び順は `handleCreate` → `handleEdit` → `handleDelete` → `handleSubmit` → ... → `handleArchive` です。`handleRemoveMember`（Day 12 で追加予定）の直下、または現時点のハンドラー一覧の末尾に `handleArchive` を追加してください。
 
@@ -649,23 +649,23 @@ const handleArchive = (
 };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `handleArchive` がアーカイブと解除の両方に対応している
 - `isArchived` が `true` なら解除、`false` ならアーカイブを実行
 
-> 💡 `isArchived` は「現在アーカイブされているか」を表します。アーカイブ済みのプロジェクトでボタンを押したら「解除」、アクティブなプロジェクトなら「アーカイブ」です。三項演算子で切り替えることで、1つのハンドラーで両方に対応できます。
+> `isArchived` は「現在アーカイブされているか」を表します。アーカイブ済みのプロジェクトでボタンを押したら「解除」、アクティブなプロジェクトなら「アーカイブ」です。三項演算子で切り替えることで、1つのハンドラーで両方に対応できます。
 
 ---
 
 ### Step 9: ProjectDetailView にアーカイブを渡す（4分）
 
-🎯 **ゴール**: `ProjectDetailView` に `onArchive` props を渡して、アーカイブ機能を有効にします。Day 12 で追加するメンバー管理の土台も、この Step でプレースホルダーとして用意します。
+**ゴール**: `ProjectDetailView` に `onArchive` props を渡して、アーカイブ機能を有効にします。Day 12 で追加するメンバー管理の土台も、この Step でプレースホルダーとして用意します。
 
-💻 **実装**:
+**実装**:
 
 まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1〜3 で本実装に置き換えます**。TypeScript エラーを出さずに Day 11 を完了させるための一時定義です。
 
-> ⚠️ **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleProjectClick` と `handleDetailClose` を本実装したとき、Step 2 で `handleRemoveMember` を本実装したとき、Step 3 で `memberDialogOpen` state を追加したときに、それぞれこの仮定義を削除してください。
+> **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleProjectClick` と `handleDetailClose` を本実装したとき、Step 2 で `handleRemoveMember` を本実装したとき、Step 3 で `memberDialogOpen` state を追加したときに、それぞれこの仮定義を削除してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -682,7 +682,7 @@ const handleRemoveMember = (_userId: string) => {
 // ── ここまで Day 12 仮定義 ──
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `npm run dev` でTypeScript エラーが出ていない
 - これらは仮定義なので、Day 12 で削除することを覚えておく
 
@@ -695,7 +695,7 @@ import { ProjectDetailView } from
   '@/component/project/project-detail-view';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `@/component/project/project-detail-view` からインポートしている
 
 プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`ProjectPageContent` 関数の return 直前（`if` 分岐の形）に以下を追加してください。
@@ -720,7 +720,7 @@ if (projectIdParam && selectedProject) {
 }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `onArchive={handleArchive}` が渡されている
 - `ProjectDetailView` はダイアログではなくページ内にインライン表示される
 - `onBack` で一覧画面に戻る
@@ -735,7 +735,7 @@ if (projectIdParam && selectedProject) {
 | `onRemoveMember` | `handleRemoveMember` | 何もしない（仮） | Step 6 で本実装に置換 |
 | `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
 
-📸 スクリーンショット: プロジェクト詳細画面のアーカイブボタン
+スクリーンショット: プロジェクト詳細画面のアーカイブボタン
 
 ![プロジェクト詳細画面のアーカイブボタン](./screenshots/project-detail-archive-action.png)
 
@@ -743,7 +743,7 @@ if (projectIdParam && selectedProject) {
 
 ### Step 10: 動作確認（7分）
 
-🎯 **ゴール**: 編集・削除・アーカイブの全フローを確認します。
+**ゴール**: 編集・削除・アーカイブの全フローを確認します。
 
 ```bash
 # filepath: ターミナル
@@ -751,7 +751,7 @@ if (projectIdParam && selectedProject) {
 PORT=3001 npm run dev
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 開発サーバーが起動した
 - ブラウザで `http://localhost:3001` にアクセスできる
 
@@ -764,7 +764,7 @@ PORT=3001 npm run dev
 5. 名前を変更して「更新」をクリック
 6. 一覧が自動的に更新されることを確認
 
-> 📸 スクリーンショット: 編集ダイアログに既存のプロジェクト名が表示されている画面
+> スクリーンショット: 編集ダイアログに既存のプロジェクト名が表示されている画面
 
 > ![編集ダイアログに既存のプロジェクト名が表示されている画面](./screenshots/project-create-dialog.png)
 
@@ -776,7 +776,7 @@ PORT=3001 npm run dev
 4. 再度削除ボタンをクリック → 「削除」をクリック
 5. 一覧からプロジェクトが消えることを確認
 
-> 📸 スクリーンショット: 削除確認ダイアログが表示されている画面
+> スクリーンショット: 削除確認ダイアログが表示されている画面
 
 > ![削除確認ダイアログが表示されている画面](./screenshots/project-delete-confirm.png)
 
@@ -787,11 +787,11 @@ PORT=3001 npm run dev
 3. 「アーカイブ表示」スイッチをONにする
 4. アーカイブしたプロジェクトが表示されることを確認
 
-> 📸 スクリーンショット: アーカイブ表示を切り替えた後の一覧画面
+> スクリーンショット: アーカイブ表示を切り替えた後の一覧画面
 
 > ![アーカイブ表示を切り替えた後の一覧画面](./screenshots/project-list.png)
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 編集で既存データが反映される
 - 更新後に一覧が自動更新される（`invalidate()` が動作している）
 - 削除前にshadcn/uiの確認ダイアログが表示される
@@ -1114,12 +1114,12 @@ export default function ProjectPage() {
 
 ---
 
-### 💡 Pro パターンで書こう — 編集フォームの optional な値は `?.` と `??` で整える
+### Pro パターンで書こう — 編集フォームの optional な値は `?.` と `??` で整える
 
 ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
-### ❌ Before（動くけど、プロは書かない）
+### Before（動くけど、プロは書かない）
 
 ```typescript
 type ProjectFromApi = {
@@ -1148,7 +1148,7 @@ type ProjectEditFormData = {
 function toDateInputValue(value: Date): string {
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1178,7 +1178,7 @@ export function buildProjectEditForm(
       ownerLabel = project.owner.name;
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1208,7 +1208,7 @@ export function buildProjectEditForm(
 
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1231,7 +1231,7 @@ console.log(
 - optional な項目が増えるほど `let` と `if` が増え、変換処理の見通しが悪くなる
 - `owner.name` のようなネストした値を読むたびに、同じ形の null チェックが増えやすい
 
-### ✅ After（プロが書くコード）
+### After（プロが書くコード）
 
 ```typescript
 type ProjectFromApi = {
@@ -1260,7 +1260,7 @@ type ProjectEditFormData = {
 function toDateInputValue(value: Date): string {
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1290,7 +1290,7 @@ export function buildProjectEditForm(
     ...(startDate ? { startDate } : {}),
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1317,12 +1317,12 @@ console.log(
 - `project.owner?.name ?? project.owner?.email` のように、ネストした値も安全に辿れる
 - optional な日付が増えても、変換した値を条件付きスプレッドで自然に足せる
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
 編集画面では「値がないかもしれない」が何度も出てきます。
 多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになるで。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] 必要なインポート（`ProjectFormData`, `DeleteConfirmDialog`）を追加できた
 - [ ] 既存データをダイアログに渡して編集モードにできた
@@ -1332,7 +1332,7 @@ console.log(
 - [ ] 削除とアーカイブの違いを理解し、適切に使い分けられた
 - [ ] アーカイブ mutation とハンドラーを実装できた
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -1346,7 +1346,7 @@ console.log(
 | Step 9 追加後に TypeScript エラーが出る | 仮定義の変数名が重複している | 同名の `const` を2つ定義していないか確認します。仮定義ブロックをまとめて1か所に配置する |
 | `ProjectDetailView` が表示されない | `projectIdParam && selectedProject` の条件が false になっている | URLに `?projectId=xxx` が付いているか、`selectedProject` の state が正しく更新されているか確認 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -1358,6 +1358,6 @@ console.log(
 | キャッシュ無効化（invalidate） | tRPC のキャッシュを破棄して最新データを再取得させること |
 | assertMemberPermission | サーバー側で権限をチェックするヘルパー関数 |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 12 では、プロジェクトにメンバーを追加・管理する機能を実装します。複数のユーザーが同じプロジェクトで共同作業できるようにします。

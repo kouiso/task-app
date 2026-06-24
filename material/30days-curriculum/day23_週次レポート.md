@@ -1,41 +1,41 @@
 # Day 23: 週次レポートを表示しよう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
 Day 22 では Recharts ライブラリを使って、ステータス別・優先度別の円グラフを実装しました。`Map` によるグラフ用データ集計や `ResponsiveContainer` でのレスポンシブ対応も学んだので、今日はプロジェクト別統計テーブルと週次レポート機能に取り組みます。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
 レポートページにプロジェクト別統計テーブルを追加し、
 週次レポートページでグラフ付きの詳細レポートを表示します。
 テーブルで進捗を一覧表示し、折れ線グラフ・棒グラフで推移を可視化します。
 
-📸 スクリーンショット: レポートページの全体像を確認してください。
+スクリーンショット: レポートページの全体像を確認してください。
 
 ![レポートページの全体像を確認してください。](./screenshots/report.png)
 
-## 🧰 始める前の前提
+## 始める前の前提
 
 - Day 22 のグラフ表示が動いている
 - プロジェクトとタスクが複数件あり、完了済みタスクも含まれている
 - `/report` を開いて統計カードとグラフを確認できる
 - 週次レポートは集計結果の読み方も大事なので、数字が少ない場合は練習用データを追加してから確認する
 
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか？
 
 プロジェクトごとの進捗を比較し、
 チーム全体の生産性を週単位で把握します。
 
-> 💡 **例え話**: プロジェクト統計は
+> **例え話**: プロジェクト統計は
 > 「学校の通信簿」です。
 > 各教科（プロジェクト）ごとに成績（進捗率）
 > や勉強時間（作業時間）が書かれています。
 > 通信簿を見れば、どの教科が順調で
 > どこを頑張るべきかが一目でわかります。
 
-### 📐 週次レポートの全体フロー
+### 週次レポートの全体フロー
 
 ```mermaid
 flowchart TD
@@ -64,7 +64,7 @@ flowchart TD
 | 折れ線グラフで完了推移表示 | カスタムテーブル作成 |
 | 棒グラフで優先度・ステータス表示 | 新規グラフライブラリ導入 |
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -73,7 +73,7 @@ flowchart TD
 | getWeeklyReport | — | 週次データ取得API | 週間天気予報 |
 | LineChart | ラインチャート | 折れ線グラフ | 気温の推移グラフ |
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -91,7 +91,7 @@ flowchart TD
 
 ### Step 1: プロジェクト統計の集計ロジック（5分）
 
-🎯 **ゴール**: レポートページ（`/report`）に
+**ゴール**: レポートページ（`/report`）に
 表示するプロジェクト統計の構造を理解します。
 完成版 source では Day 21 で導入した
 `api.report.getOverview` の `projectStats` を
@@ -123,9 +123,9 @@ const { data: overview, isLoading } =
   api.report.getOverview.useQuery();
 ```
 
-> 📝 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
+> 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `overview` を取得できている
 - 表の4項目が `projectStats` に入っていると理解した
 
@@ -135,7 +135,7 @@ const { data: overview, isLoading } =
 const projectStats = overview?.projectStats ?? [];
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - クライアント側で再集計していない
 - `projectStats` が配列として扱える
 
@@ -153,11 +153,11 @@ const projectStats = overview?.projectStats ?? [];
 ))}
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `progress` / `totalTimeHours` を表示時だけ整形している
 - `projectStats` の各要素がそのままテーブル行になる
 
-> 💡 `projectStats` 自体は `reportRouter.getOverview`
+> `projectStats` 自体は `reportRouter.getOverview`
 > の中で `groupBy` と `count` を使って作られています。
 > `/report` 側では集計の再実行は不要です。
 
@@ -165,7 +165,7 @@ const projectStats = overview?.projectStats ?? [];
 
 ### Step 2: 統計テーブルを表示（5分）
 
-🎯 **ゴール**: Table コンポーネントで
+**ゴール**: Table コンポーネントで
 プロジェクト統計を表形式で表示します。
 
 ```typescript
@@ -177,7 +177,7 @@ import {
 } from '@/component/ui/table';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - Table 関連の6つのコンポーネントをインポートした
 
 #### Table コンポーネントの構造
@@ -216,7 +216,7 @@ import {
       </TableHeader>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `TableHeader` の中に `TableRow` と `TableHead` がある
 - ヘッダー5列を定義した
 
@@ -241,16 +241,16 @@ import {
 </TableBody>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - テーブルにプロジェクト名が並ぶ
 - 数値が `text-right` で右寄せ表示される
 
-> 💡 shadcn/ui の Table はHTML の
+> shadcn/ui の Table はHTML の
 > テーブル要素をラップしたものです。
 > `text-right` で数値を右寄せにすると
 > 表が見やすくなります。
 
-📸 スクリーンショット: プロジェクト統計テーブルの表示を確認してください。
+スクリーンショット: プロジェクト統計テーブルの表示を確認してください。
 
 ![プロジェクト統計テーブルの表示を確認してください。](./screenshots/report.png)
 
@@ -258,7 +258,7 @@ import {
 
 ### Step 3: 週次レポートAPIの概要（3分）
 
-🎯 **ゴール**: 週次レポートAPIの
+**ゴール**: 週次レポートAPIの
 パラメータとレスポンス構造を理解します。
 このステップはコードを読んで理解するだけです。
 
@@ -297,11 +297,11 @@ api.report.getWeeklyReport.useQuery({
 | byStatus | Record<string, number> | ステータス別の件数 |
 | byPriority | Record<string, number> | 優先度別の件数 |
 
-> 💡 サーバー側で Prisma を使って
+> サーバー側で Prisma を使って
 > `completedAt` の日付範囲でタスクを
 > フィルタし、週ごとに集計しています。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - APIのパラメータとレスポンスの構造を理解した
 - `weeklyData` が週ごとのデータ配列であることを把握した
 - `byStatus` と `byPriority` でグラフ用データが取れることを理解した
@@ -310,7 +310,7 @@ api.report.getWeeklyReport.useQuery({
 
 ### Step 4: 週次レポートページの基本構造（5分）
 
-🎯 **ゴール**: `/report/weekly` ページを作成し、
+**ゴール**: `/report/weekly` ページを作成し、
 API呼び出しと週数選択UIを実装します。
 
 ```typescript
@@ -330,7 +330,7 @@ import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `date-fns` と `ja` ロケールをインポートした
 - `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` である
 
@@ -357,7 +357,7 @@ import {
 import { api } from '@/trpc/react';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - Recharts の6種類のコンポーネントをインポートした
 - `TASK_PRIORITY_COLORS` と `TASK_STATUS_COLORS` をインポートした
 
@@ -381,7 +381,7 @@ export default function WeeklyReportPage() {
   }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useState('4')` で初期値4週間を設定している
 - `isLoading` のときスピナーを表示している
 
@@ -410,11 +410,11 @@ export default function WeeklyReportPage() {
 </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 4・8・12週間の選択肢がある
 - `onValueChange` で `setWeeks` を呼んでいる
 
-> 💡 `useState` で週数を管理します。
+> `useState` で週数を管理します。
 > ユーザーが週数を変更すると、
 > `useQuery` が自動的に再取得します。
 
@@ -428,7 +428,7 @@ export default function WeeklyReportPage() {
 | 3 | `grid grid-cols-3` | 3枚のサマリーカード |
 | 3 | `grid grid-cols-2` | グラフ4枚 |
 
-📸 スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
+スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
 
 ![ローディング中にスピナーが表示されることを確認してください。](./screenshots/report-weekly.png)
 
@@ -436,7 +436,7 @@ export default function WeeklyReportPage() {
 
 ### Step 5: サマリーカードを表示（5分）
 
-🎯 **ゴール**: 完了タスク合計・週平均・
+**ゴール**: 完了タスク合計・週平均・
 対象期間の3枚のカードを表示します。
 
 ```typescript
@@ -457,7 +457,7 @@ export default function WeeklyReportPage() {
   </Card>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `grid-cols-3` で3列レイアウトになっている
 - 完了タスク合計の数値が表示される
 
@@ -482,7 +482,7 @@ export default function WeeklyReportPage() {
   </Card>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `Math.round` で小数を丸めている
 - `Number.parseInt` で文字列の `weeks` を数値に変換している
 
@@ -511,7 +511,7 @@ export default function WeeklyReportPage() {
 </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `format` と `ja` ロケールで日付を整形している
 - データがないときは `'-'` を表示している
 
@@ -527,7 +527,7 @@ export default function WeeklyReportPage() {
 
 ### Step 6: グラフを表示する（5分）
 
-🎯 **ゴール**: Recharts で折れ線グラフと
+**ゴール**: Recharts で折れ線グラフと
 棒グラフを表示して、週次推移を可視化します。
 
 ```typescript
@@ -546,7 +546,7 @@ const chartData =
   }));
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `chartData` は完了数と優先度データを持つ
 
 ```typescript
@@ -566,7 +566,7 @@ const statusData =
   }));
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `statusData` はステータス別データを持つ
 
 ```typescript
@@ -596,7 +596,7 @@ const statusData =
 </Card>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `LineChart` で折れ線グラフを描画している
 - `col-span-2` で横幅いっぱいに表示される
 
@@ -626,7 +626,7 @@ const statusData =
 </Card>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `BarChart` で棒グラフを描画している
 - `TASK_PRIORITY_COLORS` で色分けしている
 
@@ -647,7 +647,7 @@ const statusData =
           <YAxis /><Tooltip /><Legend />
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `statusData` を `BarChart` に渡している
 
 ```typescript
@@ -669,16 +669,16 @@ const statusData =
 </Card>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `stackId="status"` で積み上げ棒グラフになっている
 - 3つのステータスが色分けで表示される
 
-> 💡 Day 22 で学んだ Recharts を
+> Day 22 で学んだ Recharts を
 > 週次レポートでも活用しています。
 > `LineChart` は推移の把握に、
 > `BarChart` は比較に適しています。
 
-📸 スクリーンショット: 週次レポートのグラフ表示を確認してください。
+スクリーンショット: 週次レポートのグラフ表示を確認してください。
 
 ![週次レポートのグラフ表示を確認してください。](./screenshots/report-weekly.png)
 
@@ -686,7 +686,7 @@ const statusData =
 
 ### Step 7: 動作確認（3分）
 
-🎯 **ゴール**: 全体の表示を確認します。
+**ゴール**: 全体の表示を確認します。
 
 ```bash
 # filepath: ターミナル
@@ -694,7 +694,7 @@ const statusData =
 PORT=3001 npm run dev
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 開発サーバーが正常に起動した
 
 1. `/report` にアクセス
@@ -707,19 +707,19 @@ PORT=3001 npm run dev
 8. 折れ線グラフが表示される
 9. 優先度別・ステータス別棒グラフが表示される
 
-📸 スクリーンショット: 週次レポートページ全体の表示を確認してください。
+スクリーンショット: 週次レポートページ全体の表示を確認してください。
 
 ![週次レポートページ全体の表示を確認してください。](./screenshots/report-weekly.png)
 
 
 ---
 
-### 💡 Pro パターンで書こう — 週次レポートのデータ取得は Prisma include でまとめる
+### Pro パターンで書こう — 週次レポートのデータ取得は Prisma include でまとめる
 
 ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
-#### ❌ Before（動くけど、プロは書かない）
+#### Before（動くけど、プロは書かない）
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
@@ -748,7 +748,7 @@ export async function fetchWeeklyReportTasks(
     },
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -778,7 +778,7 @@ export async function fetchWeeklyReportTasks(
         priority: task.priority,
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -795,7 +795,7 @@ export async function fetchWeeklyReportTasks(
 - `Promise.all` を使っていても、DB への問い合わせ回数が増える構造は変わらない
 - 週次レポートに担当者やプロジェクト情報を増やすたび、同じ N+1 が別の relation でも起きやすい
 
-#### ✅ After（プロが書くコード）
+#### After（プロが書くコード）
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
@@ -824,7 +824,7 @@ export async function fetchWeeklyReportTasks(
     },
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -850,12 +850,12 @@ export async function fetchWeeklyReportTasks(
 - `projectId` を手で持ち回らず、戻り値の形が「画面で使うデータ」に近くなる
 - 担当者や関連情報を足すときも `select` / `include` の中に集約でき、取得ロジックが散らばりにくい
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
 一覧やレポートで relation を使うなら、1 件ずつ取りに行く前に
 Prisma の `select` / `include` でまとめて取れないかを先に考えます。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] プロジェクト別統計を計算できた
 - [ ] Table コンポーネントで一覧表示した
@@ -864,7 +864,7 @@ Prisma の `select` / `include` でまとめて取れないかを先に考えま
 - [ ] 折れ線グラフで完了推移を表示した
 - [ ] 棒グラフで優先度・ステータス別分布を表示した
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -874,7 +874,7 @@ Prisma の `select` / `include` でまとめて取れないかを先に考えま
 | 型エラーが出る | weeks が string | Number.parseInt で変換 |
 | グラフが表示されない | recharts 未インストール | Day 22 で導入済みか確認 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -885,7 +885,7 @@ Prisma の `select` / `include` でまとめて取れないかを先に考えま
 | BarChart | Recharts の棒グラフ |
 | stackId | 積み上げグラフにするための識別子 |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 24 では、管理者専用のユーザー一覧ページを
 実装します。権限チェックでアクセスを制限し、

@@ -1,31 +1,31 @@
 # Day 25: プロフィール編集を実装しよう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
 Day 24 では管理者専用のユーザー一覧ページを実装し、`api.auth.getCurrentUser` による権限チェックや Avatar・Badge を使ったユーザー情報の表示を学びました。管理者視点でのユーザー管理ができるようになったので、今日は自分自身のプロフィール表示とパスワード変更に取り組みます。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
 プロフィール表示ページ・プロフィール編集ページ・パスワード変更ページの3画面を実装します。自分の情報を確認・編集し、パスワードを安全に変更できるようにします。
 
-📸 スクリーンショット: プロフィールページ全体の表示を確認してください。
+スクリーンショット: プロフィールページ全体の表示を確認してください。
 
 ![プロフィールページ全体の表示を確認してください。](./screenshots/profile.png)
 
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか？
 
 ユーザーが自分の情報を確認し、パスワードを管理するための画面です。
 
-> 💡 **例え話**: プロフィールページは
+> **例え話**: プロフィールページは
 > 「SNSのマイページ」です。
 > 自分の名前やアイコンを確認（表示）し、
 > 設定画面で情報を更新（編集）できます。
 > パスワード変更は、銀行のATMで
 > 暗証番号を変えるイメージです。
 
-### 📐 プロフィール関連ページの構造
+### プロフィール関連ページの構造
 
 ```mermaid
 flowchart TD
@@ -57,14 +57,14 @@ flowchart TD
 | バリデーション実装 | |
 | toast でフィードバック | |
 
-## 🧰 始める前の前提
+## 始める前の前提
 
 - ログイン済みユーザーで `/profile` を開ける
 - Day 24 のユーザー管理で、本人と管理者の違いを確認済み
 - パスワード変更を試すため、練習用アカウントの現在のパスワードが分かっている
 - 今日はプロフィール表示、プロフィール編集、パスワード変更の3画面を順番に確認する
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -75,9 +75,9 @@ flowchart TD
 | useForm + zod（復習） | — | フォーム管理とバリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
 | refine | リファイン | zod のカスタムバリデーション | 複数フィールドを横断して検証するルール |
 
-> 📌 **今日のゴールライン**: 3画面あって量は多いけど、14ステップに分かれてて1つ3-5分。プロフィール表示 → 編集 → パスワード変更を順番に追いかけるだけで完成します。全部一気に理解しようとしなくてよい。
+> **今日のゴールライン**: 3画面あって量は多いけど、14ステップに分かれてて1つ3-5分。プロフィール表示 → 編集 → パスワード変更を順番に追いかけるだけで完成します。全部一気に理解しようとしなくてよい。
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -102,7 +102,7 @@ flowchart TD
 
 ### Step 1: プロフィールページの概要（3分）
 
-🎯 **ゴール**: プロフィールページに
+**ゴール**: プロフィールページに
 表示する情報を理解します。
 
 #### ディレクトリ構造
@@ -122,7 +122,7 @@ src/app/profile/
 ls src/app/profile/
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `ls` の結果に `page.tsx`、`edit/`、`change-password/` が表示された
 
 #### 表示する情報一覧
@@ -145,7 +145,7 @@ ls src/app/profile/
 | パスワード変更 | /profile/change-password | 全ユーザー |
 | ユーザー管理 | /user | ADMIN のみ |
 
-> 💡 `api.auth.getCurrentUser` で
+> `api.auth.getCurrentUser` で
 > 自分の情報を取得します。
 > useSession ではなく tRPC のAPIを
 > 使うのがこのアプリの設計です。
@@ -154,10 +154,10 @@ ls src/app/profile/
 
 ### Step 2: ユーザーデータの取得（3分）
 
-🎯 **ゴール**: getCurrentUser APIで
+**ゴール**: getCurrentUser APIで
 ログイン中のユーザー情報を取得します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -202,7 +202,7 @@ import { USER_ROLE }
 import { api } from '@/trpc/react';
 ```
 
-> 💡 `UserRoleBadge` と `ActiveStatusBadge` は
+> `UserRoleBadge` と `ActiveStatusBadge` は
 > 再利用可能なバッジコンポーネントです。
 > 定数 `USER_ROLE` を使うと、文字列リテラルの
 > タイポを防げます。
@@ -234,7 +234,7 @@ export default function ProfilePage() {
   }
 ```
 
-> 💡 `PageLoadingSpinner` は
+> `PageLoadingSpinner` は
 > `@/component/ui/loading-spinner` から
 > インポートする共通コンポーネントです。
 > 各ページのローディング表示を統一します。
@@ -247,13 +247,13 @@ export default function ProfilePage() {
   }
 ```
 
-> 💡 `useEffect` でローディング完了後に
+> `useEffect` でローディング完了後に
 > `currentUser` が null だったら
 > ログインページへリダイレクトします。
 > ローディング中は `return null` にせず、
 > スピナーを表示するようにします。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - currentUser にデータが入る
 - 未ログインでリダイレクトされる
 
@@ -261,14 +261,14 @@ export default function ProfilePage() {
 
 ### Step 3: プロフィール情報の表示（5分）
 
-🎯 **ゴール**: アバター、名前、バッジ、
+**ゴール**: アバター、名前、バッジ、
 詳細情報をCard内に表示します。
 
 Step 2 で書いた `if (!currentUser)` の後に
 `return` 文を書きます。
 全体は `AppLayout > div > Card` の構造です。
 
-💻 **実装**:
+**実装**:
 
 まず `return` 文とページの骨格です。
 
@@ -295,7 +295,7 @@ return (
 );
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - return 文の骨格を書いた
 
 上の `CardContent` の中に、以下のアバター・
@@ -323,9 +323,9 @@ return (
   </Avatar>
 ```
 
-> 💡 ここで `<div className="flex gap-4">` はまだ閉じていません。次のコードブロックで `</div>` を追加して閉じます。
+> ここで `<div className="flex gap-4">` はまだ閉じていません。次のコードブロックで `</div>` を追加して閉じます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `<div className="flex gap-4">` で囲んでいる
 - `avatar ?? ''` で null 安全にしている
 
@@ -349,11 +349,11 @@ return (
 </div>
 ```
 
-> 💡 `UserRoleBadge` は管理者のみ表示します。
+> `UserRoleBadge` は管理者のみ表示します。
 > `USER_ROLE.ADMIN` と比較して条件付き
 > レンダリングします。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ロールバッジが表示される
 - ステータスバッジが表示される
 - `</div>` で `flex gap-4` を閉じている
@@ -384,7 +384,7 @@ return (
 </div>
 ```
 
-✅ **確認ポイント**: ブラウザでプロフィールページを開き、メールアドレスが表示されていることを確認しましょう。
+**確認ポイント**: ブラウザでプロフィールページを開き、メールアドレスが表示されていることを確認しましょう。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -411,7 +411,7 @@ return (
 </div>
 ```
 
-✅ **確認ポイント**: 登録日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
+**確認ポイント**: 登録日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -440,18 +440,18 @@ return (
 </div>
 ```
 
-✅ **確認ポイント**: 最終更新日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
+**確認ポイント**: 最終更新日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
 
-> 💡 `Separator` は区切り線を表示する
+> `Separator` は区切り線を表示する
 > shadcn/ui のコンポーネントです。
 > セクションを視覚的に分離します。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - アバターと名前が表示される
 - バッジが正しく色分けされる
 - メール・登録日・最終更新日が表示される
 
-📸 スクリーンショット: プロフィール情報表示の表示を確認してください。
+スクリーンショット: プロフィール情報表示の表示を確認してください。
 
 ![プロフィール情報表示の表示を確認してください。](./screenshots/profile.png)
 
@@ -459,10 +459,10 @@ return (
 
 ### Step 4: ナビゲーションボタン（5分）
 
-🎯 **ゴール**: 編集・パスワード変更・
+**ゴール**: 編集・パスワード変更・
 ユーザー管理へのボタンを配置します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -500,12 +500,12 @@ return (
 </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 3つのボタンが縦に並ぶ
 - 管理者にだけユーザー管理ボタンが出る
 - ファイルを保存してエラーが出ていない
 
-📸 スクリーンショット: ナビゲーションボタンの表示を確認してください。
+スクリーンショット: ナビゲーションボタンの表示を確認してください。
 
 ![ナビゲーションボタンの表示を確認してください。](./screenshots/profile.png)
 
@@ -517,7 +517,7 @@ return (
 | パスワード変更 | outline（枠線） | サブアクション |
 | ユーザー管理 | outline（枠線） | サブアクション |
 
-> 💡 `currentUser.role === USER_ROLE.ADMIN` で
+> `currentUser.role === USER_ROLE.ADMIN` で
 > 条件付きレンダリングをしています。
 > 管理者にだけ「ユーザー管理」ボタンが
 > 表示されます。
@@ -526,7 +526,7 @@ return (
 
 ### Step 5: パスワード変更ページの概要（3分）
 
-🎯 **ゴール**: パスワード変更ページの
+**ゴール**: パスワード変更ページの
 構成とAPIを理解します。
 
 ```bash
@@ -535,7 +535,7 @@ return (
 ls src/app/profile/change-password/
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `ls` で `page.tsx` が存在する
 - 入力項目が3つあることを確認した
 
@@ -553,7 +553,7 @@ ls src/app/profile/change-password/
 |-----|---------|------|
 | api.user.changePassword | useMutation | パスワード変更 |
 
-> 💡 `changePassword` はサーバー側で
+> `changePassword` はサーバー側で
 > 現在のパスワードの照合と新パスワードの
 > ハッシュ化を行います。
 >
@@ -567,10 +567,10 @@ ls src/app/profile/change-password/
 
 ### Step 6: パスワード変更フォームのインポートとスキーマ（5分）
 
-🎯 **ゴール**: useForm + zod でフォームの
+**ゴール**: useForm + zod でフォームの
 状態管理とバリデーションを定義します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -593,7 +593,7 @@ import {
 } from '@/component/ui/alert';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useForm`, `zodResolver`, `z` がインポートされている
 
 フォーム用のコンポーネントをインポートします。
@@ -614,7 +614,7 @@ import { PasswordInput }
 import { api } from '@/trpc/react';
 ```
 
-> 💡 `PasswordInput` はパスワードの表示/非表示
+> `PasswordInput` はパスワードの表示/非表示
 > トグル（Eye/EyeOff）を内蔵したコンポーネントです。
 > ページ側で `showPassword` を管理する必要がありません。
 
@@ -709,7 +709,7 @@ type ChangePasswordFormValues =
   z.infer<typeof changePasswordSchema>;
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - スキーマ名が `changePasswordSchema` である
 - 型名が `ChangePasswordFormValues` である
 - `newPassword` に 4つの `regex()` を追加している
@@ -730,7 +730,7 @@ type ChangePasswordFormValues =
 | 数字を1文字以上含む | `.regex(/[0-9]/)` | `パスワードには数字を含める必要があります` |
 | 特殊文字を1文字以上含む | `.regex(/[^A-Za-z0-9]/)` | `パスワードには特殊文字を含める必要があります` |
 
-> 💡 現在のパスワードが違う場合は、
+> 現在のパスワードが違う場合は、
 > バリデーション通過後にサーバーから
 > `現在のパスワードが正しくありません`
 > が返ります。
@@ -765,7 +765,7 @@ export default function
     });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `zodResolver(changePasswordSchema)` を設定している
 - `defaultValues` で全フィールドを空文字で初期化している
 
@@ -789,7 +789,7 @@ export default function
     });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `onSuccess` で toast 表示と画面遷移をしている
 - `onError` で `??` を使ってフォールバックメッセージを設定している
 
@@ -797,10 +797,10 @@ export default function
 
 ### Step 7: パスワード変更フォームの入力欄（5分）
 
-🎯 **ゴール**: フォームの送信ハンドラーと
+**ゴール**: フォームの送信ハンドラーと
 3つの入力フィールドを実装します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -815,7 +815,7 @@ export default function
     };
 ```
 
-> 💡 `form.handleSubmit(handleSubmit)` が zod
+> `form.handleSubmit(handleSubmit)` が zod
 > スキーマでバリデーションを実行してから
 > `handleSubmit` を呼びます。`confirmPassword` は
 > 一致チェック用なのでAPIには送りません。
@@ -840,7 +840,7 @@ export default function
               className="space-y-6">
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `form.handleSubmit(handleSubmit)` でバリデーション後に送信している
 
 `<form>` タグの中に、以下の入力フィールドを
@@ -874,7 +874,7 @@ export default function
 </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `register` でフォームに登録している
 - エラーメッセージが自動表示される
 
@@ -914,7 +914,7 @@ export default function
 </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ヒントテキストに文字種の条件まで表示される
 - エラーメッセージとヒントが別々に表示される
 
@@ -945,17 +945,17 @@ export default function
 </div>
 ```
 
-> 💡 `refine` でパスワード一致チェックを
+> `refine` でパスワード一致チェックを
 > 定義したので、`formState.errors` に
 > 自動でエラーが入ります。手動の
 > `if (a !== b)` チェックが不要になりました。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - フォームに入力できる
 - 目のアイコンでパスワードの表示/非表示が切り替わる
 - 不一致の時に zod がエラーを表示する
 
-📸 スクリーンショット: パスワード変更フォームの表示を確認してください。
+スクリーンショット: パスワード変更フォームの表示を確認してください。
 
 ![パスワード変更フォームの表示を確認してください。](./screenshots/change-password.png)
 
@@ -963,10 +963,10 @@ export default function
 
 ### Step 8: パスワード変更の送信とエラー処理（5分）
 
-🎯 **ゴール**: APIエラーの表示と
+**ゴール**: APIエラーの表示と
 送信・キャンセルボタンを実装します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -982,7 +982,7 @@ export default function
 )}
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - API側のエラー（現在のパスワード不正など）が Alert で表示される
 
 ```typescript
@@ -1008,7 +1008,7 @@ export default function
 </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 送信中はボタンテキストが「変更中...」になる
 - `isPending` 中はボタンが無効化される
 - キャンセルで `/profile` に戻る
@@ -1027,7 +1027,7 @@ export default function
 }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
 
@@ -1050,7 +1050,7 @@ export default function
 | toast.success | 成功メッセージ | 緑 |
 | toast.error | エラーメッセージ | 赤 |
 
-> 💡 `toast` は画面の隅に一時的に
+> `toast` は画面の隅に一時的に
 > 表示される通知メッセージです。
 > `alert()` と違い、ユーザーの操作を
 > ブロックしません。
@@ -1059,7 +1059,7 @@ export default function
 
 ### Step 9: パスワード変更の動作確認（3分）
 
-🎯 **ゴール**: プロフィールページと
+**ゴール**: プロフィールページと
 パスワード変更の全体を確認します。
 
 ```bash
@@ -1078,22 +1078,22 @@ PORT=3001 npm run dev
 8. `password1!` を入力して「大文字」が不足した時のエラーを確認
 9. `Abc123!@` のような条件を満たすパスワードで変更成功を確認
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - プロフィール情報が正しく表示される
 - パスワード変更のフローが完了する
 - 成功時に toast が表示される
 
-📸 スクリーンショット: パスワード変更成功の表示を確認してください。
+スクリーンショット: パスワード変更成功の表示を確認してください。
 
 ![パスワード変更成功の表示を確認してください。](./screenshots/change-password.png)
 
-> 🎉 ここまでで、プロフィール表示とパスワード変更の2ページが完成しました！残りはプロフィール編集ページだけです。あと少しで今日のゴールに到達します。
+> ここまでで、プロフィール表示とパスワード変更の2ページが完成しました！残りはプロフィール編集ページだけです。あと少しで今日のゴールに到達します。
 
 ---
 
 ### Step 10: 編集ページの設計を理解しよう（3分）
 
-🎯 **ゴール**: プロフィール編集ページの
+**ゴール**: プロフィール編集ページの
 データフローと使用コンポーネントを理解します。
 
 パスワード変更ページより入力項目が多いので、
@@ -1105,7 +1105,7 @@ PORT=3001 npm run dev
 ls src/app/profile/edit/
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `page.tsx` が存在することを確認した
 
 #### 編集ページのデータフロー
@@ -1150,12 +1150,12 @@ flowchart LR
 | `register` で入力を管理 | 入力変更時 | ユーザーの入力を反映 |
 | `form.handleSubmit` で送信 | フォーム送信時 | zod バリデーション後に送信 |
 
-> 💡 `useEffect` + `form.reset()` で
+> `useEffect` + `form.reset()` で
 > サーバーデータをフォームにセットします。
 > Day 14 の `values` prop と同じく、
 > データ到着時にフォームが自動で埋まります。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 編集ページのデータフローを理解した
 - useEffect + form.reset が初期値セットに使われることを理解した
 
@@ -1163,10 +1163,10 @@ flowchart LR
 
 ### Step 11: 編集ページのインポートとスキーマ（5分）
 
-🎯 **ゴール**: プロフィール編集ページの
+**ゴール**: プロフィール編集ページの
 インポートと zod スキーマを実装します。
 
-💻 **実装**:
+**実装**:
 
 まず、ファイルの先頭部分を書きます。
 
@@ -1192,7 +1192,7 @@ import {
 } from '@/component/ui/alert';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useForm`, `zodResolver`, `z` がインポートされている
 
 残りの UI コンポーネントをインポートします。
@@ -1219,7 +1219,7 @@ import { PageLoadingSpinner }
 import { api } from '@/trpc/react';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `PageLoadingSpinner` のインポートパスが `@/component/ui/loading-spinner` である
 - shadcn/ui のコンポーネントをインポートしている
 
@@ -1242,7 +1242,7 @@ type ProfileEditFormValues =
   z.infer<typeof profileEditSchema>;
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - スキーマ名が `profileEditSchema` である
 - 型名が `ProfileEditFormValues` である
 - `email()` でメール形式を検証している
@@ -1252,10 +1252,10 @@ type ProfileEditFormValues =
 
 ### Step 12: 編集ページのデータ取得と初期化（5分）
 
-🎯 **ゴール**: useForm の初期化、API設定、
+**ゴール**: useForm の初期化、API設定、
 useEffect でのデータセットを実装します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
@@ -1274,7 +1274,7 @@ export default function ProfileEditPage() {
     });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - useForm に zodResolver を設定している
 - defaultValues で空文字を設定している
 
@@ -1303,7 +1303,7 @@ export default function ProfileEditPage() {
     });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - useQuery でデータを取得している
 - useMutation で更新APIを設定している
 - `??` でフォールバックメッセージを設定している
@@ -1324,7 +1324,7 @@ export default function ProfileEditPage() {
   }, [currentUser, form]);
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `form.reset` でフォーム初期値をセットしている
 - `??` で null/undefined を空文字に変換している
 
@@ -1339,7 +1339,7 @@ export default function ProfileEditPage() {
     };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 関数名が `handleSubmit` である
 - zod でバリデーション済みの値を受け取る
 
@@ -1365,17 +1365,17 @@ export default function ProfileEditPage() {
           <CardContent>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ローディング中は PageLoadingSpinner を表示している
 
 ---
 
 ### Step 13: 編集フォームの入力欄（5分）
 
-🎯 **ゴール**: アバタープレビュー、名前、
+**ゴール**: アバタープレビュー、名前、
 メール、アバターURLの入力欄を実装します。
 
-💻 **実装**:
+**実装**:
 
 フォームとアバター表示の部分です。
 
@@ -1402,7 +1402,7 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `form.watch` でリアルタイムにプレビューが更新される
 - `form.handleSubmit(handleSubmit)` を設定している
 
@@ -1429,7 +1429,7 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `register` でフォームに登録している
 - zod のエラーが自動表示される
 
@@ -1457,7 +1457,7 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - zod の `email()` でメール形式を検証している
 
 アバターURLの入力欄です。
@@ -1485,7 +1485,7 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - アバターは任意なので空文字も許可されている
 - placeholder が1行で正しく設定されている
 
@@ -1510,7 +1510,7 @@ export default function ProfileEditPage() {
               )}
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - エラー時に Alert が表示される
 
 ```typescript
@@ -1539,7 +1539,7 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - isPending 中はボタンが無効化される
 - ボタンテキストが「更新中...」に切り替わる
 
@@ -1557,7 +1557,7 @@ export default function ProfileEditPage() {
 }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
 
@@ -1565,7 +1565,7 @@ export default function ProfileEditPage() {
 
 ### Step 14: 編集の動作確認（3分）
 
-🎯 **ゴール**: プロフィール編集が
+**ゴール**: プロフィール編集が
 正しく動作することを確認します。
 
 ```bash
@@ -1581,7 +1581,7 @@ PORT=3001 npm run dev
 5. toast で「プロフィールを更新しました」と表示される
 6. `/profile` に戻り、変更が反映されている
 
-📸 スクリーンショット: プロフィール編集フォームの表示を確認してください。
+スクリーンショット: プロフィール編集フォームの表示を確認してください。
 
 ![プロフィール編集フォームの表示を確認してください。](./screenshots/profile-edit.png)
 
@@ -1594,7 +1594,7 @@ PORT=3001 npm run dev
 | アバターが表示されない | URLが不正 | https:// で始まるURLを入力 |
 | サーバーエラー | API通信失敗 | 開発サーバーの起動を確認 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 名前の変更が保存される
 - toast でフィードバックが表示される
 - 更新後に /profile に戻る
@@ -1602,12 +1602,12 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — プロフィール表示のデータアクセスは Optional chaining でそろえる
+### Pro パターンで書こう — プロフィール表示のデータアクセスは Optional chaining でそろえる
 
 ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
 
-#### ❌ Before（動くけど、プロは書かない）
+#### Before（動くけど、プロは書かない）
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -1636,7 +1636,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
       displayName = currentUser.name;
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1666,7 +1666,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     if (currentUser.updatedAt) {
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1693,7 +1693,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 - `name[0]` のような細かいアクセスほどチェック漏れが起きやすい
 - 表示項目が増えるたびに `let` と `if` が増え、フォーム初期化でも同じ形を繰り返しやすい
 
-#### ✅ After（プロが書くコード）
+#### After（プロが書くコード）
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -1722,7 +1722,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
 ```
 
-✅ **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -1738,12 +1738,12 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 - `??` で null / undefined のときの表示を近くに置けるので、代替値が読みやすい
 - 日付整形を helper に寄せることで、登録日と更新日のルールを1か所でそろえられる
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
 深い null チェックを何段も書くより、
 `?.` と `??` で「安全なアクセス」と「代替表示」を近くに置く。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] api.auth.getCurrentUser でデータを取得した
 - [ ] プロフィール情報をCard内に表示した
@@ -1752,7 +1752,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 - [ ] プロフィール編集フォームを実装した
 - [ ] updateProfile で名前・メール・アバターを更新した
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -1764,7 +1764,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 | メール重複エラー | 既に使われているメール | 別のアドレスを入力 |
 | アバターが表示されない | URLが不正 | https:// で始まるURLを入力 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -1775,7 +1775,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 | updateProfile | プロフィール更新API |
 | refine | zodのカスタムバリデーション（複数フィールド横断チェック） |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 26 では、エラーページ（error.tsx）の
 仕組みを確認し、意図的にバグを仕込んで
