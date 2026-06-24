@@ -160,7 +160,7 @@ Day 02 の最後では、
 > 次は GitHub に保存して、
 > 「自分で育てたアプリの進化」を積み上げていける状態にしていこう。
 
-今日はまさにここをやる。
+今日はまさにここに取り組みます。
 
 ### まずはアプリがまだ元気に動くか確認する
 
@@ -307,7 +307,7 @@ sed -n '1,200p' README.md
 ### 編集アンカー
 
 `~/workspace/task-app/README.md` を開いて、
-ファイル全体を次の内容に置き換える。
+ファイル全体を次の内容に置き換えます。
 
 ~~~md title="README.md"
 # task-app
@@ -516,7 +516,7 @@ gh --version
 ### もし `gh` が見つからないとき
 
 macOS なら、
-次で入れられる。
+次で入れられます。
 
 ```bash
 brew install gh
@@ -585,7 +585,7 @@ https://github.com/<your-user-name>/task-app.git
 ### `origin` を追加する
 
 `<your-user-name>` は、
-自分の GitHub ユーザー名に置き換えてほしい。
+自分の GitHub ユーザー名に置き換えてください。
 
 ```bash
 git remote add origin https://github.com/<your-user-name>/task-app.git
@@ -721,7 +721,7 @@ git log --oneline --decorate -3
 
 ## Pro パターンで書こう — GitHub に送る日は `git add .` ではなく、残したいファイルを選ぶ
 
-ここまでで GitHub に送る流れは作れた。
+ここまでで GitHub に送る流れは作れました。
 でもプロの現場ではもう一段上のやり方をします。
 
 今日の文脈で言うと、
@@ -774,12 +774,12 @@ GitHub に保存する日は、
 ほうが大事です。
 
 履歴は量より、
-意味の見えやすさが効く。
+意味の見えやすさが効きます。
 
 ## Step 8: いまいるブランチを GitHub に送る
 
 ここまで来たら、
-ローカルの履歴は整った。
+ローカルの履歴は整いました。
 
 次はそれを GitHub に送ります。
 
@@ -820,7 +820,7 @@ To https://github.com/<your-user-name>/task-app.git
 branch 'main' set up to track 'origin/main'.
 ```
 
-環境によって文言は多少違う。
+環境によって文言は多少違います。
 でも次の3点が見えたらだいたい大丈夫です。
 
 - `To https://github.com/...` が出ている
@@ -995,7 +995,7 @@ GitHub は、
 その履歴を GitHub に送ること。
 
 この2段階があるから、
-送る前に内容を自分で見直せる。
+送る前に内容を自分で見直せます。
 
 ### 4. `.gitignore` は守り、`git status` は最終確認
 
@@ -1039,7 +1039,7 @@ Day 03 は完了です。
 GitHub に保存できたら、
 このアプリはようやく
 「ローカルの中だけの制作物」
-から一歩出られる。
+から一歩踏み出せます。
 
 次はこの履歴を使って、
 ネットに公開していきます。
