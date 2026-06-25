@@ -1,75 +1,49 @@
-# /bad - Bad Behavior to Prohibition + Hook Enforcement
+# /bad — アカン挙動を二度と起こさん状態にする
 
-**Identify the bad behavior and determine the best enforcement method: hook (mechanism) or prompt (instruction).**
+> **起動口（必ず最初に）**: `/bad` を受けたら、まず重いskill `skills/bad/SKILL.md` を**ロードして最後まで走らす**。
+> このファイルは「見分けの物差し」。実行本体はskill側。skillの5目印
+> (TRIGGER / CORPUS-MAP / ROOT-CAUSE / EDIT / RE-RUN-RESULT) を全部出すまで「done」を言うな。
+> 「もう原因は分かってる」と読み返し・再走を飛ばすのが、このskillが潰す**楽な逃げ**。
 
-## Execution Steps
+局長が「これアカン」と言うた挙動を捕まえて、**根っこから**直す。
+謝って終わり・その場逃げ・見張りで止めるだけ、は禁止（それ自体がアカン挙動）。
 
-1. Analyze the preceding conversation and identify **what went wrong**
-2. Determine the root cause and articulate **why it is bad**
-3. **Apply DS/AI Engineering Quality Gate** (Step 2.5 — before choosing enforcement):
+## まず問う（ここが全部）
+なんでその挙動が出た？ → **ワイが読んでる説明書(rules/skills/commands)がそう仕向けたから。**
+説明書＝その瞬間のワイの頭の中身。中身が間違うてたら、間違った動きが出る。
+だから直すのは**説明書(＝思考)**。出てきた挙動を後から見張り(hook)で止めるのは、
+**サッカーしてるAIに「野球やれ」と叫ぶのと同じ＝ナンセンス**。しかも抜け道を覚えるだけ。
 
-   | Check | Question | If NO → Fix |
-   |-------|----------|-------------|
-   | Reproducibility | Would a different AI reliably avoid this with the proposed rule? | Remove vague prohibitions ("don't do bad things"). Add concrete patterns/examples. |
-   | Quantifiability | Can violation be detected with a boolean or threshold? | Define a measurable detection criterion (e.g., "contains `--no-verify`" not "bypasses checks"). |
-   | Semantic Structure | Is the prohibition in "NEVER [action] WHEN [condition] BECAUSE [reason]" form? | Rewrite to match this structure. |
-   | Confidence | How certain is it that this behavior is always wrong? | Assign High/Medium/Low. If Low, add exception conditions rather than a blanket ban. |
-   | False Positive Risk | Could this rule block legitimate use cases? | Define explicit exceptions. A rule that blocks valid work is worse than no rule. |
+## 見分け（これで直し方が決まる）
+- **思考が間違ってる**（動作確認せん／ルール足すだけ／逃げる）→ **説明書を直す。**
+  - 埋もれてた → 目立たす（順位・置き場所を上げる）
+  - 曖昧やった → 具体例・基準で鋭くする
+  - 競合してた → ぶつかってるルールを出して解消
+  - 薄かった → 周りの重複を削って信号を濃くする
+  - ⚠ 足す前に毎回問う：**それ、もう在るんちゃう？**（埋もれ/間違いなだけちゃうか）
+    - もう在る → **足さん。在るやつを直す・目立たす**（重複を足すと元がもっと埋もれて逆効果）。
+    - 本当に無い → **足す**（数が増えるのは問題やない）。
+    - 余計なのがある → **減らす**。
+    「増減ゼロ」みたいな数の目標は置かへん。「足す/直す/減らす」を毎回**中身で判断する**。
+    byte/行数バジェットは治し**でもない**し仕組みに**もしない**（行数を hook で縛るのは
+    撤去した block-frozen-rule-growth の正体）。埋もれた rule を具体例で鋭くするのは**正味増でも正しい**。
+  - ⚠ 「動作確認」みたいな“やるべき手順”は、ルールに書くより**作業の流れに組み込む**
+     （「作る→動かす→見る」で1セット。流れに入ってへんからルールが何回あっても素通りする）。
+- **ボタン1個で決まった作業をさせたい（繰り返しのDO）** → skill / 自作plugin / hook を作る（これは正しい）。
+  - ⚠ 常設の問い：**この挙動に、外すべき hook がボルト留めされてへんか？**
+    意味/トーン/質を正規表現＋exit2 で止める hook は失格（`hooks/HOOK-INVENTORY.md` で棚卸し）。
+    決定論（PID・パス・コマンド型）だけが hook 適格。意味判断は rule を濃くして守る。
+- **説明書じゃ守りきれん、不可逆・決まりきった事**（マシン跨ぎの整合 等）→ 仕組みで守る（SSOT 等）。
+- **環境構築で詰まった** → 自分で解決手順を skill にして、二度と詰まらんように。
 
-4. **Evaluate enforcement method** (CRITICAL — this is the core of AI engineering):
+## 効いたかの確かめ方
+「次に同じ場面で、**言われんでも**正しく動くか」を見る。
+hookが通った／ログのカウンタが増えた、では確かめたことにならん。
 
-   | Criteria | Hook (Mechanism) | Prompt (Instruction) |
-   |----------|-----------------|---------------------|
-   | Detectable by pattern matching | **Use hook** | - |
-   | Requires judgment/context | - | **Use prompt** |
-   | Already has similar hook | **Extend existing hook** | - |
-   | Behavioral/attitude issue | - | **Use prompt** |
+## 言葉と報告（相手目線）
+- 局長と共有してる言葉だけ使う。横文字・専門語を勝手に作らへん。難しい話はまず普段の言葉で。
+- 報告は短く、結論先に。「何がアカンかった → どう直したか」を2〜3行。
+- 送る前に「磯貝さんがパッと読んで分かるか？」を自分で確かめる。
 
-5. Present the proposed solution (hook script + prompt rule, or prompt rule only) to the user for approval
-6. After approval, implement:
-   - **Hook**: Create/update script in `.claude/hooks/`, register in `.claude/settings.json`
-   - **Prompt**: Add to `prompt/instructions/prohibitions.md` (Absolute Prohibitions section)
-   - **Both**: When the rule benefits from both mechanical enforcement AND contextual understanding
-
-## Hook-First Thinking
-
-**Always ask: "Can a hook detect and prevent this automatically?"**
-
-- File pattern violations → `file-safety.sh` (PreToolUse Write|Edit)
-- Dangerous CLI commands → `git-safety.sh` (PreToolUse Bash)
-- Code quality violations → `post-edit-check.sh` (PostToolUse Edit|Write)
-- PR/commit format violations → `validate-pr-body.sh` (PostToolUse Bash)
-- New category → Create a new hook script
-
-## Existing Hooks Reference
-
-| Hook | Trigger | Enforces |
-|------|---------|----------|
-| `git-safety.sh` | PreToolUse Bash | --no-verify, git reset, --force, --legacy-peer-deps |
-| `file-safety.sh` | PreToolUse Write\|Edit | Backup files, ESLint config protection |
-| `post-edit-check.sh` | PostToolUse Edit\|Write | console.log, debugger, any type, @ts-ignore, eslint-disable |
-| `validate-pr-body.sh` | PostToolUse Bash | PR template compliance |
-
-## Output Format
-
-```markdown
-### Bad Behavior Identified
-[Description of what went wrong]
-
-### Root Cause
-[Why this happened]
-
-### DS/AI Engineering Quality Gate
-- **Reproducibility**: [Pass/Fail — explanation]
-- **Quantifiability**: [Pass/Fail — measurable detection criterion]
-- **Semantic Structure**: NEVER [action] WHEN [condition] BECAUSE [reason]
-- **Confidence**: High / Medium / Low
-- **False Positive Risk**: [Low/Medium/High — exceptions if any]
-
-### Enforcement Plan
-- **Hook**: [Hook script name + what it detects] (or "N/A — requires contextual judgment")
-- **Prompt rule**: [Rule text to add to prohibitions.md] (or "N/A — fully enforced by hook")
-
-### Reason
-[Why this is prohibited]
-```
+## 単一ソース
+正本は `~/.claude`（git）1個。編集はここだけ。他は指す／取ってくるだけ（コピーを作らへん）。
