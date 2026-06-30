@@ -42,3 +42,24 @@ npm run db:studio    # Prisma Studio 起動
 - Prisma: `findFirstOrThrow` / `findUniqueOrThrow` を活用（null チェック削減）
 - `git reset --hard/--soft/--mixed` 禁止
 - `--no-verify` 禁止・`--force`（`--force-with-lease` 以外）禁止
+
+## 再発ミスパターン（レビューアへの指摘指示）
+
+作業 AI（Claude / Copilot / Codex 等）が繰り返す意味的ミスのカタログ。
+CodeRabbit・Gemini Code Assist はこのカタログを参照して PR を自動指摘する。
+
+| # | パターン名 | 指摘観点 | 優先度 |
+|---|-----------|---------|--------|
+| 1 | **スコープクリープ** | バグ修正 PR に、修正に不要なリファクタ・型整理・無関係な変更が混入していないか | [MUST] |
+| 2 | **架空完了 / 動作未確認** | PR 説明・コミットに「動くはず」「確認してください」「動作確認済み（根拠なし）」がないか | [MUST] |
+| 3 | **影響範囲漏れ** | 1 ファイルだけ変更し、同パターンの類似ファイル（他 page.tsx / router / 設定）が未更新でないか | [MUST] |
+| 4 | **認証・認可の欠落** | tRPC procedure / Route Handler / Server Action 追加時に authn/authz チェックがないか | [MUST] |
+| 5 | **setTimeout レースハック** | アニメ完了待ち等を `setTimeout` で誤魔化していないか（正: `onTransitionEnd` / コールバック） | [MUST] |
+| 6 | **既存状態初期化の削除** | UX 改善名目で、バグ修正として導入された state リセット（`state = []` 等）を削除していないか | [MUST] |
+| 7 | **N+1 / ループ内 DB アクセス** | `for` / `map` 内で都度 `prisma.*.find*`（正: `include` / `in` でバッチ取得） | [MUST] |
+| 8 | **useEffect / useLayoutEffect 誤用** | 依存配列欠落・過剰、DOM 測定以外で `useLayoutEffect`、不要な effect | [MUST] |
+| 9 | **エラー握りつぶし** | 空 `catch {}`、`\|\| true`、失敗を握って成功扱い | [SUGGEST] |
+| 10 | **テスト品質** | 振る舞い変更にテスト無し、アサーション緩め/削除でグリーン偽装、エッジケース未網羅 | [SUGGEST] |
+| 11 | **マジックナンバー / props バケツリレー** | 補助的観点として styleguide に記載 | [NITS] |
+
+優先度タグ: `[MUST]` = ブロッカー / `[SUGGEST]` = 推奨 / `[Q]` = 確認 / `[NITS]` = 細かい指摘
