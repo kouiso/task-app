@@ -13,20 +13,26 @@ applyTo: "material/**"
 ## Required Check Commands
 <!-- 必須チェックコマンド -->
 
-Before declaring any curriculum task complete, run:
-<!-- 教材タスク完了報告の前に、以下を実行すること -->
+Before declaring any curriculum task complete, run ALL three gates in order:
+<!-- 教材タスク完了報告の前に、以下の3ゲートを順番に実行すること -->
 
 ```bash
-# 統合品質チェック（全スクリプト一括実行）
-bash script/check_quality.sh material/30days-curriculum/
+# Gate 1: 文章衛生チェック（textlint — AI臭・文体ブレ・誇張表現）
+npx textlint material/30days-curriculum/dayXX_xxx.md
+# 自動修正: npx textlint --fix material/30days-curriculum/dayXX_xxx.md
+
+# Gate 2: 統合品質チェック（単一ファイルまたはディレクトリ両対応）
+bash script/check_quality.sh material/30days-curriculum/dayXX_xxx.md
+bash script/check_quality.sh material/30days-curriculum/   # ディレクトリ指定も可
 
 # 個別チェック（デバッグ用）
-python3 script/check_visualization.py <day_file>    # テーブル≥4、スクショ≥3、Mermaid
-python3 script/check_no_skip.py <day_file>          # 各Stepに確認ポイント(✅)とコードブロック
-python3 script/check_step_length.py <day_file>      # コードブロック≤25行
+python3 script/check_visualization.py <day_file>     # テーブル≥4、スクショ≥3、Mermaid
+python3 script/check_no_skip.py <day_file>           # 各Stepに確認ポイント(✅)とコードブロック
+python3 script/check_step_length.py <day_file>       # コードブロック≤25行
 python3 script/check_code_completeness.py <day_file> # // filepath: コメント必須
 python3 script/check_tech_stack.py <day_file>        # MUI禁止、shadcn/ui必須
 python3 script/check_tone.py <day_file>              # 敬体一貫・AI構文ゼロ・関西弁混入ゼロ
+python3 script/check_comprehension.py <day_file>     # 注釈なし専門用語・禁止表現・確認ポイント
 ```
 
 ## Pass Criteria
