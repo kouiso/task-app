@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+
+language: "ja-JP"
+
+reviews:
+  profile: "assertive"
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+  tools:
+    biome:
+      enabled: true
+    gitleaks:
+      enabled: false
+    semgrep:
+      enabled: false
+  path_instructions:
+    - path: "**/*.ts"
+      instructions: |
+        TypeScript規約を厳格に確認してください：
+        1. `any` 型の完全禁止（`as any`, `any[]`, `: any`, `Promise<any>` 等）— 違反はタスク失敗
+        2. 型アサーション `as SomeType` の禁止（`as const` は許可）— 代替: 型ガード(`is`)、Zod `safeParse`、判別共用体
+        3. `typeof` による型チェックの多用禁止（SSR判定 `typeof window !== 'undefined'` 等の例外のみ許可）
+        4. Props型は必ず `ComponentNameProps` 形式で命名（`type Props = {}` 等の汎用名は禁止）
+        5. 型ユーティリティ（`Omit<T,K>`, `Pick<T,K>`, `Partial<T>`, `Required<T>`, `Record<K,T>`, `Readonly<T>`）を積極活用
+        6. 境界値では Zod スキーマでバリデーション、内部ロジックでは型ガードを使用
+        7. アロー関数を原則使用（`function` キーワードは原則禁止）
+        8. `export { A as B }` 形式の禁止 — 純粋な Named Export を使用
+        9. Prisma クライアントのインポートパスは必ず `@prismaClient` エイリアスを使用（他エイリアス禁止）
+        10. `$Enums` 禁止 — `@prismaClient` から Enum 型を直接 import すること
+        11. 直接 SQL 禁止（embedding 用途の例外除く）、Prisma クライアント経由でクエリすること
+        12. Prisma 生成型を積極活用し、独自型の再定義を回避すること
+    - path: "**/*.tsx"
+      instructions: |
+        TypeScript規約を厳格に確認してください：
+        1. `any` 型の完全禁止（`as any`, `any[]`, `: any`, `Promise<any>` 等）— 違反はタスク失敗
+        2. 型アサーション `as SomeType` の禁止（`as const` は許可）— 代替: 型ガード(`is`)、Zod `safeParse`、判別共用体
+        3. `typeof` による型チェックの多用禁止（SSR判定 `typeof window !== 'undefined'` 等の例外のみ許可）
+        4. Props型は必ず `ComponentNameProps` 形式で命名（`type Props = {}` 等の汎用名は禁止）
+        5. 型ユーティリティ（`Omit<T,K>`, `Pick<T,K>`, `Partial<T>`, `Required<T>`, `Record<K,T>`, `Readonly<T>`）を積極活用
+        6. 境界値では Zod スキーマでバリデーション、内部ロジックでは型ガードを使用
+        7. アロー関数を原則使用（`function` キーワードは原則禁止）
+        8. `export { A as B }` 形式の禁止 — 純粋な Named Export を使用
+        9. Prisma クライアントのインポートパスは必ず `@prismaClient` エイリアスを使用（他エイリアス禁止）
+        10. `$Enums` 禁止 — `@prismaClient` から Enum 型を直接 import すること
+        11. 直接 SQL 禁止（embedding 用途の例外除く）、Prisma クライアント経由でクエリすること
+        12. Prisma 生成型を積極活用し、独自型の再定義を回避すること
+    - path: "**/*.prisma"
+      instructions: |
+        Prismaスキーマ規約を確認してください：
+        1. モデル名は PascalCase、フィールド名は camelCase で命名すること
+        2. 検索・結合に使うフィールドには `@@index` を付与すること
+        3. 一意性が必要なフィールドには `@@unique` を付与すること
+        4. リレーションには `onDelete` / `onUpdate` を明示すること（暗黙のデフォルト禁止）
+        5. NULL 許容フィールドの意図を明確にし、不要な `?` を避けること
+
+chat:
+  auto_reply: true
