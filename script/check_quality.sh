@@ -154,6 +154,20 @@ run_checks_for_file() {
     FILE_FAILED=1
   fi
 
+  # 8. 文体チェック（敬体一貫・AI構文ゼロ・関西弁混入ゼロ）
+  echo ""
+  echo "=========================================="
+  echo "🗣️ Step 8: 文体チェック"
+  echo "=========================================="
+  if [ ! -f "$SCRIPT_DIR/check_tone.py" ]; then
+    echo "⏭️ Step 8 SKIP (スクリプトなし)"
+  elif python3 "$SCRIPT_DIR/check_tone.py" "$TARGET_FILE"; then
+    echo "✅ Step 8 PASS"
+  else
+    echo "❌ Step 8 FAIL"
+    FILE_FAILED=1
+  fi
+
   return $FILE_FAILED
 }
 
@@ -163,22 +177,6 @@ for f in "${FILES[@]}"; do
     FAILED=1
   fi
 done
-
-# 7. 文体チェック（敬体一貫・AI構文ゼロ・関西弁混入ゼロ）
-echo ""
-echo "=========================================="
-echo "🗣️ Step 7: 文体チェック"
-echo "=========================================="
-if [ -f "$SCRIPT_DIR/check_tone.py" ]; then
-  if python3 "$SCRIPT_DIR/check_tone.py" "$TARGET_FILE"; then
-    echo "✅ Step 7 PASS"
-  else
-    echo "❌ Step 7 FAIL"
-    FAILED=1
-  fi
-else
-  echo "⏭️ Step 7 SKIP (スクリプトなし)"
-fi
 
 # 最終結果
 echo ""
