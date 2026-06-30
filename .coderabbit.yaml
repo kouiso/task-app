@@ -27,6 +27,10 @@ reviews:
         6. 境界値では Zod スキーマでバリデーション、内部ロジックでは型ガードを使用
         7. アロー関数を原則使用（`function` キーワードは原則禁止）
         8. `export { A as B }` 形式の禁止 — 純粋な Named Export を使用
+        9. Prisma クライアントのインポートパスは必ず `@prismaClient` エイリアスを使用（他エイリアス禁止）
+        10. `$Enums` 禁止 — `@prismaClient` から Enum 型を直接 import すること
+        11. 直接 SQL 禁止（embedding 用途の例外除く）、Prisma クライアント経由でクエリすること
+        12. Prisma 生成型を積極活用し、独自型の再定義を回避すること
     - path: "**/*.tsx"
       instructions: |
         TypeScript規約を厳格に確認してください：
@@ -38,13 +42,18 @@ reviews:
         6. 境界値では Zod スキーマでバリデーション、内部ロジックでは型ガードを使用
         7. アロー関数を原則使用（`function` キーワードは原則禁止）
         8. `export { A as B }` 形式の禁止 — 純粋な Named Export を使用
+        9. Prisma クライアントのインポートパスは必ず `@prismaClient` エイリアスを使用（他エイリアス禁止）
+        10. `$Enums` 禁止 — `@prismaClient` から Enum 型を直接 import すること
+        11. 直接 SQL 禁止（embedding 用途の例外除く）、Prisma クライアント経由でクエリすること
+        12. Prisma 生成型を積極活用し、独自型の再定義を回避すること
     - path: "**/*.prisma"
       instructions: |
-        Prisma規約を確認してください：
-        1. インポートパスは必ず `@prismaClient` エイリアスを使用（他エイリアス禁止）
-        2. `$Enums` 禁止 — `@prismaClient` から Enum 型を直接 import すること
-        3. 直接 SQL 禁止（embedding 用途の例外除く）、Prisma クライアント経由でクエリすること
-        4. Prisma 生成型を積極活用し、独自型の再定義を回避すること
+        Prismaスキーマ規約を確認してください：
+        1. モデル名は PascalCase、フィールド名は camelCase で命名すること
+        2. 検索・結合に使うフィールドには `@@index` を付与すること
+        3. 一意性が必要なフィールドには `@@unique` を付与すること
+        4. リレーションには `onDelete` / `onUpdate` を明示すること（暗黙のデフォルト禁止）
+        5. NULL 許容フィールドの意図を明確にし、不要な `?` を避けること
 
 chat:
   auto_reply: true
