@@ -30,13 +30,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Get changed material files
+      - name: Get changed material files (all .md)
         id: changed-files
         uses: tj-actions/changed-files@v46
         with:
           files: 'material/**/*.md'
 
-      - name: Gate 1 — 文章衛生チェック (textlint)
+      - name: Get changed tutorial day files (dayXX_*.md only)
+        id: changed-day-files
+        uses: tj-actions/changed-files@v46
+        with:
+          files: 'material/**/day[0-9][0-9]_*.md'
+
+      - name: Gate 1 — 文章衛生チェック (textlint) — material/**/*.md 全体
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
           echo "::group::textlint — changed material files"
@@ -44,11 +50,11 @@ jobs:
           npx textlint ${{ steps.changed-files.outputs.all_changed_files }}
           echo "::endgroup::"
 
-      - name: Gate 2 — 品質チェック (check_quality.sh)
-        if: steps.changed-files.outputs.any_changed == 'true'
+      - name: Gate 2 — 品質チェック (check_quality.sh) — dayXX_*.md のみ
+        if: steps.changed-day-files.outputs.any_changed == 'true'
         run: |
-          echo "::group::check_quality.sh — changed material files"
-          for f in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          echo "::group::check_quality.sh — changed tutorial day files"
+          for f in ${{ steps.changed-day-files.outputs.all_changed_files }}; do
             echo "チェック中: $f"
             bash script/check_quality.sh "$f"
           done

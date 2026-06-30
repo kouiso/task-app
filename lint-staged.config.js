@@ -16,6 +16,9 @@ const getBiomeFiles = (files) =>
     '**/*.json',
   ]);
 const getMaterialMdFiles = (files) => filterFilesByPattern(files, ['**/material/**/*.md']);
+// check_quality.sh は tutorial ステップファイル(dayXX_*.md)のみ対象
+const getMaterialDayFiles = (files) =>
+  filterFilesByPattern(files, ['**/material/**/day[0-9][0-9]_*.md']);
 const createTypeCheckCommand = (files) =>
   `npx tsc-files --noEmit ${files.map((f) => path.relative(process.cwd(), f)).join(' ')}`;
 
@@ -26,6 +29,7 @@ module.exports = {
     const typeScriptFiles = getTypeScriptFiles(allFiles);
     const biomeFiles = getBiomeFiles(allFiles);
     const materialMdFiles = getMaterialMdFiles(allFiles);
+    const materialDayFiles = getMaterialDayFiles(allFiles);
 
     // TypeScript compilation check (変更ファイルのみ - 高速化)
     if (typeScriptFiles.length) {
@@ -37,11 +41,14 @@ module.exports = {
       commands.push(`biome check --write ${biomeFiles.join(' ')}`);
     }
 
-    // 教材品質ゲート: 文章衛生(textlint) + 品質チェック
+    // 教材品質ゲート
+    // Gate 1: 文章衛生(textlint) — material/**/*.md 全体
     if (materialMdFiles.length) {
       commands.push(`npx textlint ${materialMdFiles.join(' ')}`);
-      // check_quality.sh は単一ファイル引数のためperファイルで実行
-      for (const f of materialMdFiles) {
+    }
+    // Gate 2: 品質チェック(check_quality.sh) — dayXX_*.md のみ (index/appendix は対象外)
+    if (materialDayFiles.length) {
+      for (const f of materialDayFiles) {
         commands.push(`bash script/check_quality.sh ${f}`);
       }
     }
