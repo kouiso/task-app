@@ -1,0 +1,19 @@
+{
+  "plugins": {},
+  "filters": {
+    "comments": true
+  },
+  "rules": {
+    "preset-ja-technical-writing": {
+      "no-mix-dearu-desumasu": {
+        "preferInBody": "ですます",
+        "preferInList": "である"
+      },
+      "sentence-length": {
+        "max": 120
+      },
+      "ja-no-weak-phrase": false
+    },
+    "@textlint-ja/preset-ai-writing": true
+  }
+}

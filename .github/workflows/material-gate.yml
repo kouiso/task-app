@@ -1,0 +1,61 @@
+name: Material Quality Gate
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - 'material/**/*.md'
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'material/**/*.md'
+  workflow_dispatch:
+
+jobs:
+  material-gate:
+    name: 教材品質ゲート
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get changed material files (all .md)
+        id: changed-files
+        uses: tj-actions/changed-files@v46
+        with:
+          files: 'material/**/*.md'
+
+      - name: Get changed tutorial day files (dayXX_*.md only)
+        id: changed-day-files
+        uses: tj-actions/changed-files@v46
+        with:
+          files: 'material/**/day[0-9][0-9]_*.md'
+
+      - name: Gate 1 — 文章衛生チェック (textlint) — material/**/*.md 全体
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "::group::textlint — changed material files"
+          echo "対象ファイル: ${{ steps.changed-files.outputs.all_changed_files }}"
+          npx textlint ${{ steps.changed-files.outputs.all_changed_files }}
+          echo "::endgroup::"
+
+      - name: Gate 2 — 品質チェック (check_quality.sh) — dayXX_*.md のみ
+        if: steps.changed-day-files.outputs.any_changed == 'true'
+        run: |
+          echo "::group::check_quality.sh — changed tutorial day files"
+          for f in ${{ steps.changed-day-files.outputs.all_changed_files }}; do
+            echo "チェック中: $f"
+            bash script/check_quality.sh "$f"
+          done
+          echo "::endgroup::"
