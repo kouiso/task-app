@@ -1,3 +1,6 @@
 [submodule "edu-creator"]
 	path = edu-creator
 	url = https://github.com/kouiso/edu-creator.git
+[submodule ".claude/skills/material-writing/hana652-tech-writing-pack"]
+	path = .claude/skills/material-writing/hana652-tech-writing-pack
+	url = https://github.com/hana652/tech-writing-pack
