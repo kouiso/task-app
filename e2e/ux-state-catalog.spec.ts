@@ -13,7 +13,7 @@ type RouteCase = {
   requiresAuth: boolean;
 };
 
-const OUTPUT_DIR = path.join('docs', 'evidence', 'ux-state-catalog', 'issue-116');
+const OUTPUT_DIR = path.join('doc', 'evidence', 'ux-state-catalog', 'issue-116');
 
 const VIEWPORTS: ViewportCase[] = [
   { name: 'sp-375', width: 375, height: 812 },

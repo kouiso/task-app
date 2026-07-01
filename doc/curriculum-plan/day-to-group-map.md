@@ -126,7 +126,7 @@ Phase 2 (全体統合検証)
 | E. ワクワク感 | 磯貝さん + Claude | Playwright スクショ目視 |
 | F. 商品信頼性 | Claude | 禁止語・矛盾 0 hit |
 
-**不通過時**: Step A/B/C に差し戻し → 修正 → 再判定。判定レポートは `docs/evidence/<date>/group-G<N>-verdict.md` に記録。
+**不通過時**: Step A/B/C に差し戻し → 修正 → 再判定。判定レポートは `doc/evidence/<date>/group-G<N>-verdict.md` に記録。
 
 ---
 

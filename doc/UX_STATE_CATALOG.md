@@ -1,6 +1,6 @@
 # UX State Catalog
 
-Issue #116 の mobile / tablet / desktop walkthrough と empty / error / loading state の確認結果を記録するためのカタログです。スクリーンショットは `npm run test:e2e:ux` で `docs/evidence/ux-state-catalog/issue-116/` に保存します。
+Issue #116 の mobile / tablet / desktop walkthrough と empty / error / loading state の確認結果を記録するためのカタログです。スクリーンショットは `npm run test:e2e:ux` で `doc/evidence/ux-state-catalog/issue-116/` に保存します。
 
 ## Viewport Matrix
 
