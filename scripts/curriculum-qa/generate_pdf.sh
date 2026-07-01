@@ -12,7 +12,7 @@ generate_single_pdf() {
 
   if [ -z "$file" ]; then
     echo "❌ エラー: ファイルパスを指定してください"
-    echo "使用法: bash scripts/curriculum-qa/generate_pdf.sh single docs/file.md [OPEN]"
+    echo "使用法: bash scripts/curriculum-qa/generate_pdf.sh single doc/file.md [OPEN]"
     exit 1
   fi
 
