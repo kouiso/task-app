@@ -129,7 +129,7 @@ npx textlint --fix material/30days-curriculum/dayXX_xxx.md
 ### Gate 2: 品質チェック（check_quality.sh）
 
 ```bash
-bash script/check_quality.sh material/30days-curriculum/dayXX_xxx.md
+bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/dayXX_xxx.md
 ```
 
 **チェック項目:**
@@ -206,7 +206,7 @@ bash script/check_quality.sh material/30days-curriculum/dayXX_xxx.md
 ```bash
 # 全ゲートを一括確認
 npx textlint material/30days-curriculum/dayXX_xxx.md && \
-bash script/check_quality.sh material/30days-curriculum/dayXX_xxx.md && \
+bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/dayXX_xxx.md && \
 echo "全ゲートPASS — コミット可"
 ```
 

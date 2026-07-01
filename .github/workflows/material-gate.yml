@@ -56,6 +56,6 @@ jobs:
           echo "::group::check_quality.sh — changed tutorial day files"
           for f in ${{ steps.changed-day-files.outputs.all_changed_files }}; do
             echo "チェック中: $f"
-            bash script/check_quality.sh "$f"
+            bash scripts/curriculum-qa/check_quality.sh "$f"
           done
           echo "::endgroup::"

@@ -45,6 +45,7 @@ rsync -a "${PROJECT_ROOT}/" "${BUILD_DIR}/" \
   --exclude="playwright-report/" \
   --exclude="test-results/" \
   --exclude="node-compile-cache/" \
+  --exclude="scripts/curriculum-qa/" \
   --exclude="*.tsbuildinfo" \
   --exclude="*.log" \
   --exclude="/*.png" \

@@ -9,8 +9,8 @@ FILES=()
 
 if [ $# -eq 0 ]; then
   echo "❌ エラー: ファイルパスまたはディレクトリを指定してください"
-  echo "使用法: bash script/check_quality.sh material/30days-curriculum/dayXX_xxx.md"
-  echo "        bash script/check_quality.sh material/30days-curriculum/"
+  echo "使用法: bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/dayXX_xxx.md"
+  echo "        bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/"
   exit 1
 fi
 
