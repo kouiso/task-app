@@ -7,6 +7,8 @@ applyTo: "material/**"
 ## Absolute Rule
 <!-- 絶対ルール -->
 
+**Before writing any curriculum content, invoke `/material-writing` and complete the 6-step thinking process (guide 04: 偏愛語スキャン → 実体判定 → 具体化 → 構文修正 → 語選択修正 → 重言除去).**
+
 **NEVER report curriculum work as "complete" or "done" without running ALL quality check scripts and achieving ZERO failures.**
 <!-- 品質チェックスクリプトを全て実行し、失敗ゼロを達成するまで、教材作業を「完了」「完成」と報告することは絶対禁止 -->
 
