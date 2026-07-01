@@ -113,7 +113,7 @@ def check_tone(filepath: str) -> bool:
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("使用法: python3 script/check_tone.py <filepath>")
+        print("使用法: python3 scripts/curriculum-qa/check_tone.py <filepath>")
         sys.exit(1)
 
     success = check_tone(sys.argv[1])

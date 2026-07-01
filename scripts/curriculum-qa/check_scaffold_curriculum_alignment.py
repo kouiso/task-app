@@ -16,7 +16,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 MATERIAL_DIR = REPO_ROOT / "material" / "30days-curriculum"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 

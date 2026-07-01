@@ -1,7 +1,7 @@
 #!/bin/bash
 # PDF生成スクリプト（Task.dev から呼び出し）
-# 使用例: bash script/generate_pdf.sh single /path/to/file.md 1
-#         bash script/generate_pdf.sh all 1
+# 使用例: bash scripts/generate_pdf.sh single /path/to/file.md 1
+#         bash scripts/generate_pdf.sh all 1
 
 set -e
 
@@ -12,7 +12,7 @@ generate_single_pdf() {
 
   if [ -z "$file" ]; then
     echo "❌ エラー: ファイルパスを指定してください"
-    echo "使用法: bash script/generate_pdf.sh single docs/file.md [OPEN]"
+    echo "使用法: bash scripts/generate_pdf.sh single doc/file.md [OPEN]"
     exit 1
   fi
 

@@ -49,7 +49,7 @@ module.exports = {
     // Gate 2: 品質チェック(check_quality.sh) — dayXX_*.md のみ (index/appendix は対象外)
     if (materialDayFiles.length) {
       for (const f of materialDayFiles) {
-        commands.push(`bash script/check_quality.sh ${f}`);
+        commands.push(`bash scripts/curriculum-qa/check_quality.sh ${f}`);
       }
     }
 

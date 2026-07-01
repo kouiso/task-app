@@ -10,6 +10,22 @@ REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 STATE_FILE="$REPO_DIR/.planning/loop-state.json"
 MATERIAL_DIR="$REPO_DIR/material/30days-curriculum"
 
+# .planning/loop-state.json はランタイム状態のため gitignore 対象。
+# フレッシュチェックアウトでは存在しないので、なければ初期状態で作成する。
+mkdir -p "$(dirname "$STATE_FILE")"
+if [[ ! -f "$STATE_FILE" ]]; then
+  cat > "$STATE_FILE" <<'EOF'
+{
+  "loop_count": 0,
+  "current_day": "00",
+  "last_status": "NOT_STARTED",
+  "fail_history": [],
+  "started_at": null,
+  "last_updated": null
+}
+EOF
+fi
+
 RESUME=false
 TARGET_DIR=""
 
