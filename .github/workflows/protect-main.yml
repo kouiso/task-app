@@ -1,0 +1,64 @@
+name: Protect main branch
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, edited, synchronize]
+
+jobs:
+  check-branch:
+    name: Check branch policy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Enforce merge policy
+        id: enforce
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          # 許可ブランチ: develop / staging (完全一致) / release/* / hotfix/* (glob)
+          # bash case の glob は全文一致なので任意文字列の混入を許さない
+          case "$HEAD_REF" in
+            develop|staging|release/*|hotfix/*)
+              echo "Allowed: $HEAD_REF -> main"
+              ;;
+            *)
+              echo "Disallowed: $HEAD_REF -> main"
+              exit 1
+              ;;
+          esac
+
+      - name: Find existing bot comment
+        if: failure()
+        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "<!-- protect-main-bot -->"
+
+      - name: Upsert branch policy comment
+        if: failure()
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- protect-main-bot -->
+            ## :warning: mainブランチへの直接PRは禁止です
+
+            `main` へPRを出せるのは以下のブランチのみです：
+
+            - `hotfix/*`（ホットフィックス）
+            - `release/*`（リリース）
+            - `staging`（ステージングからのリリース）
+            - `develop`（リリースPR）
+
+            上記以外のブランチからは `develop` に向けて変更してください：
+
+            ```bash
+            gh pr edit ${{ github.event.pull_request.number }} --base develop
+            ```
