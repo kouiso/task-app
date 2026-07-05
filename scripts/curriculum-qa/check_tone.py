@@ -8,12 +8,16 @@
 
 import re
 import sys
+from pathlib import Path
+
+Finding = tuple[int, str, str, str]
+PatternSpec = tuple[re.Pattern[str], str, str]
 
 
 def strip_code_blocks(content: str) -> list[tuple[int, str]]:
     """コードブロックとインラインコードを除外して、(行番号, 行テキスト) のリストを返す"""
     lines = content.split('\n')
-    result = []
+    result: list[tuple[int, str]] = []
     in_code_block = False
     for i, line in enumerate(lines, start=1):
         stripped = line.strip()
@@ -22,32 +26,37 @@ def strip_code_blocks(content: str) -> list[tuple[int, str]]:
             continue
         if in_code_block:
             continue
-        # インラインコード (`...`) を空白に置換
         cleaned = re.sub(r'`[^`]+`', ' ', line)
-        # URLを除外
         cleaned = re.sub(r'https?://\S+', ' ', cleaned)
         result.append((i, cleaned))
     return result
 
 
-# Layer 1: 関西弁・タメ口語尾パターン
-KANSAI_PATTERNS: list[tuple[str, str, str]] = [
-    # (pattern, description, suggested fix)
-    (r'やで[。！\n]', '関西弁語尾「やで」', '「です」「ました」に変更'),
-    (r'やな[。！\n]', '関西弁語尾「やな」', '「ですね」「ましたね」に変更'),
-    (r'やねん[。！\n]', '関西弁語尾「やねん」', '「なんです」「だからです」に変更'),
-    (r'からや[。！\n]', '関西弁語尾「からや」', '「からです」「ためです」に変更'),
-    (r'ちゃう[。！\n？か]', '関西弁「ちゃう」', '「ではありません」「違います」に変更'),
+def compile_specs(items: list[tuple[str, str, str]]) -> list[PatternSpec]:
+    return [(re.compile(pattern), description, fix) for pattern, description, fix in items]
+
+
+KANSAI_PATTERNS = compile_specs([
+    (r'やで(?:[。！!？?\s]|$)', '関西弁語尾「やで」', '「です」「ました」に変更'),
+    (r'やな(?:[。！!？?\s]|$)', '関西弁語尾「やな」', '「ですね」「ましたね」に変更'),
+    (r'やねん(?:[。！!？?\s]|$)', '関西弁語尾「やねん」', '「なんです」「だからです」に変更'),
+    (r'からや(?:[。！!？?\s]|$)', '関西弁語尾「からや」', '「からです」「ためです」に変更'),
+    (r'日や(?:[。！!？?\s]|$)', '関西弁語尾「日や」', '「日です」に変更'),
+    (r'ちゃう(?:[。！!？?か\s]|$)', '関西弁「ちゃう」', '「ではありません」「違います」に変更'),
     (r'ええわけやない', '関西弁「ええわけやない」', '「ではありません」「よくありません」に変更'),
     (r'\bワイ\b', '関西弁一人称「ワイ」', '「私」「筆者」または削除'),
-    (r'やんか[。！\n]', '関西弁「やんか」', '「じゃないですか」「ですよね」に変更'),
-    (r'あかんで[。！\n]', '関西弁「あかんで」', '「いけません」「避けましょう」に変更'),
-    (r'せやから', '関西弁「せやから」', '「だから」「なので」に変更'),
-    (r'そやから', '関西弁「そやから」', '「だから」「なので」に変更'),
-]
+    (r'やんか(?:[。！!？?\s]|$)', '関西弁「やんか」', '「じゃないですか」「ですよね」に変更'),
+    (r'あかん(?:で)?(?:[。！!？?\s]|$)', '関西弁「あかん」', '「いけません」「避けましょう」に変更'),
+    (r'[せそ]やから', '関西弁「せやから/そやから」', '「だから」「なので」に変更'),
+])
 
-# Layer 2: AI典型構文（banned-phrases.md 教材向けサブセット）
-AI_PHRASE_PATTERNS: list[tuple[str, str, str]] = [
+CASUAL_PATTERNS = compile_specs([
+    (r'(?:作る|動く|なる|学ぶ|読む|つなぐ|確認する|追加する)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「作ります」「動きます」など敬体に変更'),
+    (r'(?:作った|起きない|できてる|合ってる|超える)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「作りました」「起きません」など敬体に変更'),
+    (r'(?:必要はない|全部になる)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「必要はありません」「全部になります」に変更'),
+])
+
+AI_PHRASE_PATTERNS = compile_specs([
     (r'することができます', 'AI構文「することができます」', '「できます」に変更'),
     (r'これにより', 'AI構文「これにより」', '「だから」「なので」「よって」に変更'),
     (r'と言えるでしょう', 'AI構文「と言えるでしょう」', '「です」「になります」に変更'),
@@ -60,40 +69,36 @@ AI_PHRASE_PATTERNS: list[tuple[str, str, str]] = [
     (r'重要な示唆を与えて', 'AI構文「重要な示唆を与えて」', '「〜が分かります」に変更'),
     (r'浮き彫りにして', 'AI構文「浮き彫りにして」', '「〜が分かった」に変更'),
     (r'注目に値する', 'AI構文「注目に値する」', '削除する'),
-]
+])
 
-# Layer 3: 英語直訳調マーカー（誤検出リスクの低いものだけ）
-TRANSLATION_PATTERNS: list[tuple[str, str, str]] = [
+TRANSLATION_PATTERNS = compile_specs([
     (r'することは可能です', '直訳調「することは可能です」', '「できます」に変更'),
     (r'について言及', '直訳調「について言及」', '「について」「を紹介」に変更'),
     (r'に関しても同様です', '直訳調「に関しても同様です」', '「も同じです」に変更'),
     (r'を実施することができます', '直訳調「を実施することができます」', '「できます」に変更'),
-]
+])
+
+ALL_PATTERNS = KANSAI_PATTERNS + CASUAL_PATTERNS + AI_PHRASE_PATTERNS + TRANSLATION_PATTERNS
 
 
 def check_tone(filepath: str) -> bool:
-    with open(filepath, encoding='utf-8') as f:
-        content = f.read()
+    content = Path(filepath).read_text(encoding='utf-8')
+    findings: list[Finding] = []
 
-    plain_lines = strip_code_blocks(content)
-    findings: list[tuple[int, str, str, str]] = []
-
-    for lineno, line in plain_lines:
-        # 引用行（> で始まる行）はスキップ
+    for lineno, line in strip_code_blocks(content):
         if line.strip().startswith('>'):
             continue
+        stripped = line.strip()
+        casual_exempt = stripped.startswith(('|', '- ', '- [ ]', '#', '**ゴール**', '**学んだこと**'))
 
-        for pattern, description, fix in KANSAI_PATTERNS:
-            if re.search(pattern, line):
-                findings.append((lineno, description, fix, line.strip()))
+        for pattern, description, fix in KANSAI_PATTERNS + AI_PHRASE_PATTERNS + TRANSLATION_PATTERNS:
+            if pattern.search(line):
+                findings.append((lineno, description, fix, stripped))
 
-        for pattern, description, fix in AI_PHRASE_PATTERNS:
-            if re.search(pattern, line):
-                findings.append((lineno, description, fix, line.strip()))
-
-        for pattern, description, fix in TRANSLATION_PATTERNS:
-            if re.search(pattern, line):
-                findings.append((lineno, description, fix, line.strip()))
+        if not casual_exempt:
+            for pattern, description, fix in CASUAL_PATTERNS:
+                if pattern.search(line):
+                    findings.append((lineno, description, fix, stripped))
 
     if findings:
         print(f"❌ 文体チェックFAIL: {filepath}")
@@ -112,9 +117,8 @@ def check_tone(filepath: str) -> bool:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("使用法: python3 scripts/curriculum-qa/check_tone.py <filepath>")
+    if len(sys.argv) != 2:
+        print('使用法: python3 scripts/curriculum-qa/check_tone.py <filepath>')
         sys.exit(1)
 
-    success = check_tone(sys.argv[1])
-    sys.exit(0 if success else 1)
+    sys.exit(0 if check_tone(sys.argv[1]) else 1)
