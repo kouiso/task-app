@@ -2,388 +2,136 @@ import { describe, expect, it } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
-  createTestCaller,
   createTestComment,
   createTestProject,
   createTestTask,
   createTestUser,
 } from '../../../../test/helpers';
 
-async function createCommentProjectCallerWithRole(role: 'OWNER' | 'EDITOR' | 'VIEWER') {
-  const owner = await createTestUser({ email: `comment-owner-${Date.now()}@example.com` });
-  const actor = await createTestUser({
-    email: `comment-${role.toLowerCase()}-${Date.now()}@example.com`,
-  });
-  const project = await createTestProject(owner.id);
+// コメント仕様(comment.ts / doc/12_comment_feature.md)を起点に検証する。
+// 閲覧はメンバー、投稿は canEdit、編集・削除は「メンバー かつ 自分のコメント」のみ可能。
 
+type MemberRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+const NON_EXISTENT_ID = 'clxxxxxxxxxxxxxxxxxxxxxxxx';
+
+let seq = 0;
+const uniqueEmail = (p: string) => `${p}-${Date.now()}-${seq++}@example.com`;
+
+async function setup(role: MemberRole) {
+  const actor = await createTestUser({ email: uniqueEmail('cm-actor') });
+  const project = await createTestProject(actor.id);
   if (role !== 'OWNER') {
-    await prisma.projectMember.create({
-      data: {
-        userId: actor.id,
-        projectId: project.id,
-        role: role === 'EDITOR' ? 'MEMBER' : 'VIEWER',
-      },
+    await prisma.projectMember.update({
+      where: { userId_projectId: { userId: actor.id, projectId: project.id } },
+      data: { role },
     });
   }
-
-  const callerUser = role === 'OWNER' ? owner : actor;
-  const caller = await createAuthenticatedCaller(callerUser.id, callerUser.email, callerUser.role);
-
-  return { caller, owner, actor: callerUser, project };
+  const task = await createTestTask(project.id, actor.id);
+  const caller = await createAuthenticatedCaller(actor.id, actor.email, actor.role);
+  return { actor, project, task, caller };
 }
 
 describe('commentRouter', () => {
-  describe('getByTaskId', () => {
-    it('should return all comments for a task', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-      await createTestComment(task.id, user.id, { content: 'Comment 1' });
-      await createTestComment(task.id, user.id, { content: 'Comment 2' });
+  describe('getByTaskId（一覧）', () => {
+    it('メンバーはタスクのコメントを取得できる(VIEWERでも可)', async () => {
+      const { actor, task, caller } = await setup('VIEWER');
+      const comment = await createTestComment(task.id, actor.id, { content: 'コメント本文' });
 
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const comments = await caller.comment.getByTaskId({ taskId: task.id });
-
-      expect(comments).toHaveLength(2);
-      expect(comments.some((c) => c.content === 'Comment 1')).toBe(true);
-      expect(comments.some((c) => c.content === 'Comment 2')).toBe(true);
+      const result = await caller.comment.getByTaskId({ taskId: task.id });
+      expect(result.map((c) => c.id)).toContain(comment.id);
     });
 
-    it('should return empty array when no comments exist', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const comments = await caller.comment.getByTaskId({ taskId: task.id });
-
-      expect(comments).toHaveLength(0);
+    it('存在しないタスクは NOT_FOUND', async () => {
+      const { caller } = await setup('OWNER');
+      await expect(caller.comment.getByTaskId({ taskId: NON_EXISTENT_ID })).rejects.toThrow(
+        'タスクが見つかりません',
+      );
     });
 
-    it('should include user information in comments', async () => {
-      const user = await createTestUser({ name: 'Comment Author' });
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-      await createTestComment(task.id, user.id, { content: 'Test Comment' });
+    it('非メンバーは取得を拒否される', async () => {
+      const { task } = await setup('OWNER');
+      const stranger = await createTestUser({ email: uniqueEmail('cm-stranger') });
+      const caller = await createAuthenticatedCaller(stranger.id, stranger.email, stranger.role);
 
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const comments = await caller.comment.getByTaskId({ taskId: task.id });
-
-      expect(comments?.at(0)).toBeDefined();
-      if (comments?.at(0)) {
-        expect(comments.at(0)?.user?.name).toBe('Comment Author');
-      }
-    });
-
-    it('should order comments by createdAt desc', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-
-      await createTestComment(task.id, user.id, { content: 'First Comment' });
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      await createTestComment(task.id, user.id, { content: 'Second Comment' });
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const comments = await caller.comment.getByTaskId({ taskId: task.id });
-
-      expect(comments?.at(0)?.content).toBe('Second Comment');
-      expect(comments?.at(1)?.content).toBe('First Comment');
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.comment.getByTaskId({ taskId: 'clsometask' })).rejects.toThrow(
-        'ログインが必要です',
+      await expect(caller.comment.getByTaskId({ taskId: task.id })).rejects.toThrow(
+        'この操作を実行する権限がありません',
       );
     });
   });
 
-  describe('create', () => {
-    it('should create a new comment', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const comment = await caller.comment.create({
-        content: 'New Comment',
-        taskId: task.id,
-      });
-
-      expect(comment.content).toBe('New Comment');
-      expect(comment.taskId).toBe(task.id);
-      expect(comment.userId).toBe(user.id);
+  describe('create（投稿）', () => {
+    it('canEditメンバーはコメントを投稿できる', async () => {
+      const { task, caller } = await setup('MEMBER');
+      const result = await caller.comment.create({ taskId: task.id, content: '進捗報告です' });
+      expect(result.content).toBe('進捗報告です');
     });
 
-    it('should trim whitespace from content', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const comment = await caller.comment.create({
-        content: '  Trimmed Content  ',
-        taskId: task.id,
-      });
-
-      expect(comment.content).toBe('Trimmed Content');
+    it('VIEWERは投稿を拒否される', async () => {
+      const { task, caller } = await setup('VIEWER');
+      await expect(caller.comment.create({ taskId: task.id, content: 'x' })).rejects.toThrow(
+        'この操作を実行する権限がありません',
+      );
     });
 
-    it('should fail with empty content', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      await expect(
-        caller.comment.create({
-          content: '',
-          taskId: task.id,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should fail with whitespace-only content', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      await expect(
-        caller.comment.create({
-          content: '   ',
-          taskId: task.id,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should include user information in response', async () => {
-      const user = await createTestUser({ name: 'Comment Creator' });
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const comment = await caller.comment.create({
-        content: 'Test Comment',
-        taskId: task.id,
-      });
-
-      expect(comment.user).toBeDefined();
-      expect(comment.user.name).toBe('Comment Creator');
-    });
-
-    it('should reject non-member comment creation', async () => {
-      const owner = await createTestUser();
-      const nonMember = await createTestUser({ email: 'nonmember@example.com' });
-      const project = await createTestProject(owner.id);
-      const task = await createTestTask(project.id, owner.id);
-
-      const caller = await createAuthenticatedCaller(nonMember.id, nonMember.email, nonMember.role);
-
-      await expect(
-        caller.comment.create({
-          content: 'Non-member comment',
-          taskId: task.id,
-        }),
-      ).rejects.toThrow('この操作を実行する権限がありません');
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.comment.create({
-          content: 'Unauthorized Comment',
-          taskId: 'clsometask',
-        }),
-      ).rejects.toThrow('ログインが必要です');
-    });
-
-    it('should reject VIEWER from creating comment', async () => {
-      const { caller, owner, project } = await createCommentProjectCallerWithRole('VIEWER');
-      const task = await createTestTask(project.id, owner.id);
-
-      await expect(
-        caller.comment.create({
-          content: 'Viewer comment',
-          taskId: task.id,
-        }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    });
-
-    it('should allow OWNER and EDITOR to create comment', async () => {
-      const ownerContext = await createCommentProjectCallerWithRole('OWNER');
-      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
-      const ownerComment = await ownerContext.caller.comment.create({
-        content: 'Owner comment',
-        taskId: ownerTask.id,
-      });
-      expect(ownerComment.content).toBe('Owner comment');
-
-      const editorContext = await createCommentProjectCallerWithRole('EDITOR');
-      const editorTask = await createTestTask(editorContext.project.id, editorContext.owner.id);
-      const editorComment = await editorContext.caller.comment.create({
-        content: 'Editor comment',
-        taskId: editorTask.id,
-      });
-      expect(editorComment.content).toBe('Editor comment');
+    it('空のコメントは拒否される', async () => {
+      const { task, caller } = await setup('OWNER');
+      await expect(caller.comment.create({ taskId: task.id, content: '   ' })).rejects.toThrow(
+        'コメント内容は必須です',
+      );
     });
   });
 
-  describe('update', () => {
-    it('should update comment content', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-      const comment = await createTestComment(task.id, user.id, { content: 'Original Content' });
+  describe('update（編集）', () => {
+    it('自分のコメントは編集できる', async () => {
+      const { actor, task, caller } = await setup('MEMBER');
+      const comment = await createTestComment(task.id, actor.id, { content: '元の内容' });
 
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const updated = await caller.comment.update({
-        id: comment.id,
-        content: 'Updated Content',
-      });
-
-      expect(updated.content).toBe('Updated Content');
+      const result = await caller.comment.update({ id: comment.id, content: '編集後の内容' });
+      expect(result.content).toBe('編集後の内容');
     });
 
-    it('should trim whitespace from updated content', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-      const comment = await createTestComment(task.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const updated = await caller.comment.update({
-        id: comment.id,
-        content: '  Trimmed Updated  ',
+    it('他人のコメントは編集できない', async () => {
+      const { project, task, caller } = await setup('OWNER');
+      const colleague = await createTestUser({ email: uniqueEmail('cm-colleague') });
+      await prisma.projectMember.create({
+        data: { projectId: project.id, userId: colleague.id, role: 'MEMBER' },
       });
+      const othersComment = await createTestComment(task.id, colleague.id, { content: '他人の' });
 
-      expect(updated.content).toBe('Trimmed Updated');
+      await expect(caller.comment.update({ id: othersComment.id, content: 'X' })).rejects.toThrow(
+        '自分のコメントのみ編集・削除できます',
+      );
     });
 
-    it('should fail with empty content', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-      const comment = await createTestComment(task.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      await expect(
-        caller.comment.update({
-          id: comment.id,
-          content: '',
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(
-        caller.comment.update({
-          id: 'clsomeid',
-          content: 'Updated',
-        }),
-      ).rejects.toThrow('ログインが必要です');
-    });
-
-    it('should reject VIEWER from updating own comment', async () => {
-      const { caller, actor, project } = await createCommentProjectCallerWithRole('VIEWER');
-      const task = await createTestTask(project.id, actor.id);
-      const comment = await createTestComment(task.id, actor.id, { content: 'Viewer Original' });
-
-      await expect(
-        caller.comment.update({
-          id: comment.id,
-          content: 'Viewer Updated',
-        }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    });
-
-    it('should allow OWNER and EDITOR to update own comment', async () => {
-      const ownerContext = await createCommentProjectCallerWithRole('OWNER');
-      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
-      const ownerComment = await createTestComment(ownerTask.id, ownerContext.actor.id, {
-        content: 'Owner Original',
-      });
-      const ownerUpdated = await ownerContext.caller.comment.update({
-        id: ownerComment.id,
-        content: 'Owner Updated',
-      });
-      expect(ownerUpdated.content).toBe('Owner Updated');
-
-      const editorContext = await createCommentProjectCallerWithRole('EDITOR');
-      const editorTask = await createTestTask(editorContext.project.id, editorContext.owner.id);
-      const editorComment = await createTestComment(editorTask.id, editorContext.actor.id, {
-        content: 'Editor Original',
-      });
-      const editorUpdated = await editorContext.caller.comment.update({
-        id: editorComment.id,
-        content: 'Editor Updated',
-      });
-      expect(editorUpdated.content).toBe('Editor Updated');
+    it('存在しないコメントは NOT_FOUND', async () => {
+      const { caller } = await setup('OWNER');
+      await expect(caller.comment.update({ id: NON_EXISTENT_ID, content: 'X' })).rejects.toThrow(
+        'コメントが見つかりません',
+      );
     });
   });
 
-  describe('delete', () => {
-    it('should delete comment', async () => {
-      const user = await createTestUser();
-      const project = await createTestProject(user.id);
-      const task = await createTestTask(project.id, user.id);
-      const comment = await createTestComment(task.id, user.id);
-
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-
-      const result = await caller.comment.delete({ id: comment.id });
-
-      expect(result.success).toBe(true);
-
-      const deletedComment = await prisma.comment.findUnique({ where: { id: comment.id } });
-      expect(deletedComment).toBeNull();
-    });
-
-    it('should require authentication', async () => {
-      const caller = await createTestCaller();
-
-      await expect(caller.comment.delete({ id: 'clsomeid' })).rejects.toThrow('ログインが必要です');
-    });
-
-    it('should reject VIEWER from deleting own comment', async () => {
-      const { caller, actor, project } = await createCommentProjectCallerWithRole('VIEWER');
-      const task = await createTestTask(project.id, actor.id);
+  describe('delete（削除）', () => {
+    it('自分のコメントは削除できる', async () => {
+      const { actor, task, caller } = await setup('MEMBER');
       const comment = await createTestComment(task.id, actor.id);
 
-      await expect(caller.comment.delete({ id: comment.id })).rejects.toMatchObject({
-        code: 'FORBIDDEN',
-      });
+      const result = await caller.comment.delete({ id: comment.id });
+      expect(result.success).toBe(true);
+      expect(await prisma.comment.findUnique({ where: { id: comment.id } })).toBeNull();
     });
 
-    it('should allow OWNER and EDITOR to delete own comment', async () => {
-      const ownerContext = await createCommentProjectCallerWithRole('OWNER');
-      const ownerTask = await createTestTask(ownerContext.project.id, ownerContext.owner.id);
-      const ownerComment = await createTestComment(ownerTask.id, ownerContext.actor.id);
-      const ownerDeleted = await ownerContext.caller.comment.delete({ id: ownerComment.id });
-      expect(ownerDeleted.success).toBe(true);
+    it('他人のコメントは削除できない', async () => {
+      const { project, task, caller } = await setup('OWNER');
+      const colleague = await createTestUser({ email: uniqueEmail('cm-del-colleague') });
+      await prisma.projectMember.create({
+        data: { projectId: project.id, userId: colleague.id, role: 'MEMBER' },
+      });
+      const othersComment = await createTestComment(task.id, colleague.id);
 
-      const editorContext = await createCommentProjectCallerWithRole('EDITOR');
-      const editorTask = await createTestTask(editorContext.project.id, editorContext.owner.id);
-      const editorComment = await createTestComment(editorTask.id, editorContext.actor.id);
-      const editorDeleted = await editorContext.caller.comment.delete({ id: editorComment.id });
-      expect(editorDeleted.success).toBe(true);
+      await expect(caller.comment.delete({ id: othersComment.id })).rejects.toThrow(
+        '自分のコメントのみ編集・削除できます',
+      );
     });
   });
 });

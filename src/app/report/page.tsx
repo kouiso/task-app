@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftRight, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -46,7 +46,7 @@ export default function ReportPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 items-start sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">レポート・統計</h1>
             <p className="text-muted-foreground">
@@ -59,16 +59,6 @@ export default function ReportPage() {
           >
             週次レポートを見る
             <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        <div>
-          <Link
-            href="/report/weekly/export"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            週次レポート出力ページへ
-            <ArrowLeftRight className="h-4 w-4" />
           </Link>
         </div>
 
@@ -185,7 +175,7 @@ export default function ReportPage() {
             <CardTitle>プロジェクト統計</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table className="whitespace-nowrap">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px]">プロジェクト</TableHead>

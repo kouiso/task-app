@@ -4,7 +4,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* /task のフィルタ用プルダウン群。
+   狭い順に 1列 → 2列(640px〜) → 4列(1280px〜) に並べる。
+   flex-wrap だと幅によって 3+1 のように段落ちするため、グリッドで常に揃える。
+   (Tailwind の任意値が当環境のビルドで生成されないため生CSSで定義する) */
+.task-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .task-filter-grid {
+    width: auto;
+    grid-template-columns: repeat(2, 180px);
+  }
+}
+@media (min-width: 1280px) {
+  .task-filter-grid {
+    grid-template-columns: repeat(4, 180px);
+  }
+}
+
 @theme inline {
+  /* ダッシュボードの統計カードを 1350px 以上で 5 列にするためのカスタムブレークポイント。 */
+  --breakpoint-xxl: 1350px;
+
   --font-sans:
     var(--font-inter), var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
     "Meiryo", sans-serif;
@@ -203,5 +228,12 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tailwind v4 の preflight はボタンのカーソルを default に戻すため、
+     クリック可能な要素には pointer カーソルを明示する（v3 の挙動を復元）。 */
+  button:not(:disabled),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    cursor: pointer;
   }
 }

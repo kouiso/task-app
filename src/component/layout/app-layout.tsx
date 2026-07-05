@@ -105,15 +105,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      {/* 高さは h-screen(100vh) を土台にしつつ、モバイルのアドレスバー伸縮へ対応するため
+          dvh対応ブラウザではインラインの 100dvh で上書きする。dvh非対応時は無効化され h-screen にフォールバック。
+          (Tailwind の h-dvh / h-[100dvh] が当環境のビルドで生成されないためインラインで指定) */}
+      <div
+        className="grid h-screen w-full overflow-hidden md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]"
+        style={{ height: '100dvh' }}
+      >
         <div className="hidden border-r border-sidebar-border bg-sidebar md:block">
-          <div className="flex h-full max-h-screen flex-col gap-2">
-            <div className="flex h-14 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
+          <div className="flex h-full flex-col gap-2">
+            <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
               <Link href="/" className="flex items-center gap-2 font-semibold">
                 <span className="text-sidebar-foreground font-bold text-lg">Task App</span>
               </Link>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
                 {menuItems.map((item) => (
                   <Link
@@ -132,7 +138,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 ))}
               </nav>
             </div>
-            <div className="border-t border-sidebar-border p-4">
+            <div className="shrink-0 border-t border-sidebar-border p-4">
               <Link
                 href="/profile"
                 aria-label="プロフィールを表示"
@@ -164,7 +170,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div className="flex flex-col">
+        <div className="flex flex-col overflow-hidden">
           <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -229,7 +235,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </header>
 
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">{children}</main>
+          <main className="flex flex-1 flex-col overflow-y-auto p-4 lg:p-6">
+            {/* 広いモニターでコンテンツが間延びしないよう最大幅を設けて中央寄せする */}
+            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 lg:gap-6">
+              {children}
+            </div>
+          </main>
         </div>
       </div>
       <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>

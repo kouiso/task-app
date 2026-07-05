@@ -28,6 +28,7 @@ import {
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
 import {
+  hasPermission,
   isProjectMemberRole,
   PROJECT_MEMBER_ROLE,
   PROJECT_MEMBER_ROLE_LABELS,
@@ -114,6 +115,14 @@ function ProjectPageContent() {
   });
 
   const removeMemberMutation = api.project.removeMember.useMutation({
+    onSuccess: () => {
+      if (selectedProject) {
+        utils.project.getById.invalidate({ id: selectedProject });
+      }
+    },
+  });
+
+  const updateMemberRoleMutation = api.project.updateMemberRole.useMutation({
     onSuccess: () => {
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
@@ -210,6 +219,16 @@ function ProjectPageContent() {
     setRemoveMemberDialogOpen(true);
   };
 
+  const handleUpdateMemberRole = (userId: string, role: ProjectMemberRole) => {
+    if (selectedProject) {
+      updateMemberRoleMutation.mutate({
+        projectId: selectedProject,
+        userId,
+        role,
+      });
+    }
+  };
+
   const handleArchive = (projectId: string, isArchived: boolean) => {
     const mutation = isArchived ? unarchiveMutation : archiveMutation;
     mutation.mutate({ id: projectId });
@@ -223,6 +242,17 @@ function ProjectPageContent() {
     );
   }
 
+  // 詳細画面で操作ボタンの表示可否を決めるため、ログインユーザー自身のプロジェクト内ロールから権限を求める
+  const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
+  const currentMemberRole =
+    currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
+  const canManageMembers = currentMemberRole
+    ? hasPermission(currentMemberRole, 'canManageMembers')
+    : false;
+  const canArchiveProject = currentMemberRole
+    ? hasPermission(currentMemberRole, 'canArchive')
+    : false;
+
   // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
   if (projectIdParam && selectedProject) {
     return (
@@ -232,7 +262,10 @@ function ProjectPageContent() {
           onBack={handleDetailClose}
           onAddMemberClick={() => setMemberDialogOpen(true)}
           onRemoveMember={handleRemoveMember}
+          onUpdateMemberRole={handleUpdateMemberRole}
           onArchive={handleArchive}
+          canManageMembers={canManageMembers}
+          canArchive={canArchiveProject}
         />
 
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
@@ -312,12 +345,16 @@ function ProjectPageContent() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">プロジェクト</h1>
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="shrink-0 whitespace-nowrap text-3xl font-bold tracking-tight">
+            プロジェクト
+          </h1>
+          <div className="flex shrink-0 items-center gap-4">
             <div className="flex items-center space-x-2">
               <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-              <Label htmlFor="show-archived">アーカイブ表示</Label>
+              <Label htmlFor="show-archived" className="whitespace-nowrap">
+                アーカイブ表示
+              </Label>
             </div>
             <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" /> 新規プロジェクト
@@ -328,9 +365,15 @@ function ProjectPageContent() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
-              const taskCount = project.tasks?.length ?? 0;
-              const doneCount =
-                project.tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
+              // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）。
+              // 総数と完了数を1回のループで同時に集計する。
+              let taskCount = 0;
+              let doneCount = 0;
+              for (const t of project.tasks ?? []) {
+                if (t.status === TASK_STATUS.CANCELLED) continue;
+                taskCount++;
+                if (t.status === TASK_STATUS.DONE) doneCount++;
+              }
 
               return (
                 <ProjectCard

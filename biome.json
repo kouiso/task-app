@@ -25,7 +25,7 @@
       "!**/.ruff_cache",
       "!**/__pycache__",
       "!**/prisma/migrations",
-      "!docs/evidence/**"
+      "!doc/evidence/**"
     ],
     "rules": {
       "recommended": true,
@@ -77,7 +77,7 @@
       "!**/.mypy_cache",
       "!**/.ruff_cache",
       "!**/__pycache__",
-      "!docs/evidence/**"
+      "!doc/evidence/**"
     ]
   },
   "css": {

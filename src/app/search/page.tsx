@@ -66,27 +66,49 @@ function SearchPageContent() {
   });
 
   const formValues = form.watch();
+  // テキスト入力のkeywordのみをデバウンスする（セレクト・日付の変更は即時反映）。
+  // 空文字（クリアや全消し）は即時に反映し、入力中のみ300msデバウンスする。
+  // useDebounce(値) を使うとクリア直後に高速で再入力した際、保留中の古いタイマー値が
+  // 一時的に復活してしまうため、状態を直接管理して古い値の混入を防ぐ。
+  const [debouncedKeyword, setDebouncedKeyword] = useState(formValues.keyword);
+
+  useEffect(() => {
+    if (formValues.keyword === '') {
+      setDebouncedKeyword('');
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      setDebouncedKeyword(formValues.keyword);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [formValues.keyword]);
+
+  const searchValues = { ...formValues, keyword: debouncedKeyword };
 
   const shouldSearch =
-    !!formValues.keyword ||
-    formValues.projectId !== 'all' ||
-    formValues.status !== 'all' ||
-    formValues.priority !== 'all' ||
-    formValues.assignedTo !== 'all' ||
-    !!formValues.dateFrom ||
-    !!formValues.dateTo;
+    !!searchValues.keyword ||
+    searchValues.projectId !== 'all' ||
+    searchValues.status !== 'all' ||
+    searchValues.priority !== 'all' ||
+    searchValues.assignedTo !== 'all' ||
+    !!searchValues.dateFrom ||
+    !!searchValues.dateTo;
 
   const { data: projects } = api.search.getUserProjects.useQuery();
   const { data: users } = api.search.getProjectMembers.useQuery();
   const { data: searchResults, isLoading } = api.search.search.useQuery(
     {
-      keyword: formValues.keyword || undefined,
-      projectId: formValues.projectId !== 'all' ? formValues.projectId : undefined,
-      status: formValues.status,
-      priority: formValues.priority,
-      assignedTo: formValues.assignedTo !== 'all' ? formValues.assignedTo : undefined,
-      dateFrom: formValues.dateFrom ? dateOnlyToUtcStartIso(formValues.dateFrom) : undefined,
-      dateTo: formValues.dateTo ? dateOnlyToUtcEndIso(formValues.dateTo) : undefined,
+      keyword: searchValues.keyword || undefined,
+      projectId: searchValues.projectId !== 'all' ? searchValues.projectId : undefined,
+      status: searchValues.status,
+      priority: searchValues.priority,
+      assignedTo: searchValues.assignedTo !== 'all' ? searchValues.assignedTo : undefined,
+      dateFrom: searchValues.dateFrom ? dateOnlyToUtcStartIso(searchValues.dateFrom) : undefined,
+      dateTo: searchValues.dateTo ? dateOnlyToUtcEndIso(searchValues.dateTo) : undefined,
     },
     {
       enabled: shouldSearch,
@@ -94,7 +116,14 @@ function SearchPageContent() {
     },
   );
 
+  // URL → フォーム: ブラウザの戻る/進む・共有リンクからの復元用。
+  // 自前の「フォーム → URL」同期で生じた変更時は値が一致するため reset をスキップし、無限ループと入力中のカーソル飛びを防ぐ。
   useEffect(() => {
+    const currentParams = buildSearchParamsFromValues(form.getValues()).toString();
+    if (currentParams === searchParams.toString()) {
+      return;
+    }
+
     const nextValues = applySearchParamsToValues(
       new URLSearchParams(searchParams.toString()),
       form.getValues(),
@@ -103,11 +132,35 @@ function SearchPageContent() {
     form.reset(searchFormSchema.parse(nextValues));
   }, [searchParams, form]);
 
-  const handleSearch = () => {
-    const values = form.getValues();
-    const params = buildSearchParamsFromValues(values);
-    router.push(`/search?${params.toString()}`);
-  };
+  // フォーム → URL: keywordはデバウンス後、その他フィルタは即時にURLへ反映し、
+  // 共有・リロード・戻る/進むで条件を保持する。履歴を汚さないよう push ではなく replace を使う。
+  // 依存配列はオブジェクト参照ではなく各プリミティブ値を個別に指定し、不要な再実行を防ぐ。
+  useEffect(() => {
+    const nextParams = buildSearchParamsFromValues({
+      keyword: debouncedKeyword,
+      projectId: formValues.projectId,
+      status: formValues.status,
+      priority: formValues.priority,
+      assignedTo: formValues.assignedTo,
+      dateFrom: formValues.dateFrom,
+      dateTo: formValues.dateTo,
+    }).toString();
+    if (nextParams === searchParams.toString()) {
+      return;
+    }
+
+    router.replace(nextParams ? `/search?${nextParams}` : '/search', { scroll: false });
+  }, [
+    debouncedKeyword,
+    formValues.projectId,
+    formValues.status,
+    formValues.priority,
+    formValues.assignedTo,
+    formValues.dateFrom,
+    formValues.dateTo,
+    router,
+    searchParams,
+  ]);
 
   const handleClear = () => {
     form.reset({
@@ -160,7 +213,7 @@ function SearchPageContent() {
           <p className="text-muted-foreground">タスクやプロジェクトを検索します</p>
         </div>
 
-        <Card>
+        <Card className="max-w-5xl">
           <CardContent className="pt-6 sm:pt-6">
             <div className="grid gap-4">
               <div className="grid gap-2">
@@ -172,11 +225,6 @@ function SearchPageContent() {
                     placeholder="タスク名、説明で検索..."
                     className="pl-8"
                     {...form.register('keyword')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch();
-                      }
-                    }}
                   />
                 </div>
               </div>
@@ -288,10 +336,6 @@ function SearchPageContent() {
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={handleClear}>
                   クリア
-                </Button>
-                <Button onClick={handleSearch}>
-                  <Search className="mr-2 h-4 w-4" />
-                  検索
                 </Button>
               </div>
             </div>

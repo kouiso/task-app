@@ -15,7 +15,7 @@ import {
 
 const COOKIE_NAME = 'session';
 
-const PUBLIC_PATHS = ['/login', '/register', '/lp'];
+const PUBLIC_PATHS = ['/login', '/register'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
