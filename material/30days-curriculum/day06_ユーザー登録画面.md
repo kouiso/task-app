@@ -692,7 +692,7 @@ export function buildRegisterMessage(result: RegisterApiResponse): string {
 }
 
 const result = registerUser({
-  name: 'Kouiso',
+  name: 'Taro',
   email: 'kouiso@example.com',
   password: 'password123',
 });
@@ -760,7 +760,7 @@ export function buildRegisterMessage(result: RegisterResult): string {
 }
 
 const result = registerUser({
-  name: 'Kouiso',
+  name: 'Taro',
   email: 'kouiso@example.com',
   password: 'password123',
 ```

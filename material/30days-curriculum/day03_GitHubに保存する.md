@@ -22,9 +22,7 @@ GitHub に保存すると、
 
 Day 02 までで育てた `task-app` を、
 自分の GitHub リポジトリに安全に保存できるようになります。
-
-今日やるのは、
-ただ `git push` を通すことだけではありません。
+ただ `git push` を通すだけでなく、次のことができるようになります。
 
 - 今のプロジェクトがどんな Git 状態かを読めるようになる
 - GitHub に空の保存先を正しく作れるようになる
@@ -37,7 +35,7 @@ Day 02 までで育てた `task-app` を、
 「自分が積み上げていくプロダクトの履歴」
 に見えてきます。
 
-## 今日のゴール（G0 Foundation の3日目）
+## 今日のゴール
 
 - [ ] Day 02 の完成状態から作業を再開する
 - [ ] いまの Git 状態とブランチ名、未保存の変更を確認する
@@ -61,7 +59,7 @@ Day 02 までで育てた `task-app` を、
 ## Front Matter
 
 - Day: `03`
-- Group: `G0 Foundation`
+- Group: `Phase 1（環境構築・即公開）`
 - Feature Theme: `GitHub に保存する`
 - Learning Outcome: `ローカルで育てた task-app を、自分の GitHub に履歴付きで安全に保存できる`
 - Prerequisites: `Day 02 完了`
