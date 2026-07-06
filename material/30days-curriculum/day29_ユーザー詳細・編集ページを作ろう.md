@@ -1315,7 +1315,7 @@ export function submitUserEditForm(
 
 submitUserEditForm(
   {
-    name: 'Kouiso',
+    name: 'Taro',
     avatar: '',
     role: USER_ROLE.ADMIN,
 ```
@@ -1401,7 +1401,7 @@ submitUserEditForm(
 
 ```typescript
 // filepath: 続き
-    name: 'Kouiso',
+    name: 'Taro',
     avatar: '',
     role: USER_ROLE.ADMIN,
     isActive: true,

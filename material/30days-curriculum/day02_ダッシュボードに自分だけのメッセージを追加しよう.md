@@ -1,33 +1,25 @@
 # Day 02: ダッシュボードに自分だけのメッセージを追加しよう
 
-30日かけて、自分専用のタスク管理アプリを作っていきます。
-Day 01 で土台は立ち上がりました。
-todo くさい
-ルートの入口と、そこから入る最小のダッシュボードもできています。
-今日はその土台に、自分だけの情報を載せていきます。
+このカリキュラムでは、30日かけて自分専用のタスク管理アプリを作ります。Day 01 では、アプリの土台と、トップページから入れる最小のダッシュボードまで用意できました。
 
-ダッシュボードに自分の名前や今日の集中テーマが出るだけで、
-画面は「教材の見本」から「自分のプロダクト」に近づきます。
+今日は、その土台に自分だけの情報を載せていきます。ダッシュボードに自分の名前や今日の集中テーマが表示されるだけで、画面は「教材の見本」から「自分のプロダクト」へと近づきます。
 
 今日触るのは `src/app/dashboard/page.tsx` の1ファイルだけです。
 そのぶん、
 「どういう情報を持たせるか」
 「どう見せるか」
-todo server componentって伝わる？
-「どこまでを Server Component のまま保つか」
-を1ファイルの中で丁寧に見ていきます。
+「どこまでをサーバー側で動く部品（Server Component）のまま保つか」
+を1ファイルの中で丁寧に見ていきます。Server Component が何なのかは、この日の後半の Before/After のところで具体的に説明します。
 
 ## この日でできるようになること
 
 Day 01 の最後に作った最小ダッシュボードをベースにして、
-「Hello Task-App」だけだった画面を、
-自分の名前・時間帯に合ったあいさつ・今日の集中テーマが見える
-自分専用のダッシュボードへ育てられるようになります。
+「Hello Task-App」だけだった画面を自分専用のダッシュボードへ育てます。
 
-- 画面の主役になるメッセージカードをつくる
-- そのメッセージに意味のある情報を添える
-- design token を崩さず見た目を整える
-- いらない `"use client"` を付けずに仕上げる
+- 画面の主役になるメッセージカードをつくれるようになる
+- 自分の名前・時間帯に合ったあいさつ・今日の集中テーマなど、メッセージに意味のある情報を添えられるようになる
+- design token を崩さず見た目を整えられるようになる
+- いらない `"use client"` を付けずに仕上げられるようになる
 
 ここまでやると、
 次の Day で GitHub に保存するときも
@@ -36,11 +28,11 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、
 【スクリーンショット】Day 02 完成時のダッシュボード
 ![Day 02 完成時のダッシュボード](./screenshots/day02/dashboard-message.png)
 
-![Day 02 作業前のダッシュボード](./screenshots/day02-before.png)
+![Day 02 作業前のダッシュボード](./screenshots/day01/dashboard-hello.png)
 
-![Day 02 メッセージカードを追加した途中状態](./screenshots/day02-step3-card.png)
+![Day 02 メッセージカードを追加した途中状態](./screenshots/day02/step2-greeting-card.png)
 
-## 今日のゴール（G0 Foundation の2日目）
+## 今日のゴール
 
 - [ ] Day 01 の完成状態から作業を再開する
 - [ ] `src/app/dashboard/page.tsx` の現在地を確認する
@@ -139,9 +131,7 @@ export default function DashboardPage() {
 }
 ```
 
-この時点では、まだ「アプリの箱」が立った状態です。
-todo 空気ってなんだ
-今日はここに自分の名前と今日の空気を入れていきます。
+この時点では、まだ「アプリの入れ物」ができただけの状態です。今日はここに、自分の名前と「今日は何に集中するか」というメッセージを入れていきます。
 
 ## Step 1: 自分だけのメッセージを、まず1枚のカードにする
 
@@ -163,7 +153,7 @@ Day 01 と同じで、
 この段階は部分修正より丸ごと差し替えたほうが流れを掴みやすいです。
 
 ```tsx
-const ownerName = 'Kouiso';
+const ownerName = 'Taro';
 const focusTheme = 'Day 02 のダッシュボードづくり';
 const encouragement = '今日の一歩が、そのまま自分のアプリの顔になる。';
 
@@ -174,7 +164,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              G0 Foundation
+              Task App
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -266,9 +256,10 @@ export default function DashboardPage() {
 ### ブラウザ確認
 
 - 見出しが `Hello Task-App` から変わっている
-todo kouisoはおかしい
-- `こんにちは、Kouisoさん。` が主役として見える
+- `こんにちは、Taroさん。` が主役として見える
 - 右側に小さな補助カードが2枚並ぶ
+
+> `Taro` はサンプルの名前です。`ownerName`（このあとの Step では `dashboardOwner.name`）の値を自分の名前に書き換えると、あいさつもその名前で表示されます。
 
 ## Step 2: 時間帯に合うあいさつを関数で組み立てる
 
@@ -296,7 +287,7 @@ type DashboardOwner = {
 };
 
 const dashboardOwner: DashboardOwner = {
-  name: 'Kouiso',
+  name: 'Taro',
   role: 'Builder of Task App',
   todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
   todayGoal: 'Day 02 のうちに、自分の言葉が乗った画面にする',
@@ -335,7 +326,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              G0 Foundation
+              Task App
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -451,15 +442,11 @@ export default function DashboardPage() {
 
 ## Step 3: メッセージの横に、ダッシュボードらしい情報を添える
 
-主役のメッセージができたら、
-その横に小さな情報カードを添えていきます。
-todo くさい
-ここで狙っているのは、
-本格的なレポート機能を先取りすることではありません。
-**メッセージが孤立せず、ダッシュボード全体の文脈の中に置かれている**
-と感じられる密度を出すことです。
-todo ですますじゃないんか
-今日は次の3種類を置こう。
+主役のメッセージができたら、その横に小さな情報カードを添えていきます。
+
+ここで狙うのは、本格的なレポート機能を先取りすることではありません。**メッセージカードが1枚だけ浮いて見えないように、ダッシュボード全体としてまとまって見える**ようにすることです。
+
+今日は次の3種類のカードを置きます。
 
 - いまの役割
 - 今日のフォーカス
@@ -486,7 +473,7 @@ type FocusCard = {
 };
 
 const dashboardOwner: DashboardOwner = {
-  name: 'Kouiso',
+  name: 'Taro',
   role: 'Builder of Task App',
   todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
   todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
@@ -548,7 +535,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              G0 Foundation
+              Task App
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -686,9 +673,8 @@ npm run dev
 ### チェックポイント
 
 - メイン見出しが時間帯によって変わる
-- `Kouiso` の名前が画面に出る
-todo main color
-- `Focus:` のバッジが主役色で見える
+- `Taro` の名前が画面に出る
+- `Focus:` のバッジが `bg-primary`（メインカラー）で表示されている
 - 下段に `Owner` `Today` `Next` の3カードがある
 - 右側の補助カードまで含めて、画面全体が「ダッシュボード」として見える
 
@@ -698,12 +684,10 @@ todo main color
 2. 文字列のクオートやバッククオートを打ち間違えていないか見る
 3. `focusCards.map` の丸かっこや波かっこの閉じ忘れがないか見る
 4. 一度保存してからブラウザを再読み込みする
-todo プロって項目なんなの？やらなくていいの？
+
 ## Pro パターンで書こう — ダッシュボードのメッセージは Server Component を標準にする
 
-ここまでで動くコードは書けました。
-でもプロの現場ではもう一段上の書き方をします。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+ここからの「Pro パターン」は、すでに動いているコードを、実務でよく使われる「より良い書き方」に近づけるための解説コーナーです。各 Day に用意しています。写経は必須ではありませんが、なぜその書き方が好まれるのかを **Before/After** で見比べておくと、これからの理解がぐっと深まります。
 
 今日の文脈で言うと、
 「自分だけのメッセージを表示したい」というだけなら、
@@ -733,7 +717,7 @@ type FocusCard = {
 };
 
 const dashboardOwner: DashboardOwner = {
-  name: 'Kouiso',
+  name: 'Taro',
   role: 'Builder of Task App',
   todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
   todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
@@ -802,7 +786,7 @@ export default function DashboardPage() {
 
 ```tsx
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              G0 Foundation
+              Task App
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -912,9 +896,9 @@ export default function DashboardPage() {
 ```
 
 **このコードの問題点**:
-todo usememoがなんなのか説明してない
+
 - メッセージ表示だけのために page 全体を Client Component にしてしまっている
-- `useMemo` を使っているけど、ここでは計算が軽くて効果が薄く、読み手の負担だけ増えやすい
+- `useMemo`（計算結果を覚えておいて、不要な再計算を減らすための React の仕組み）を使っているが、ここでは計算がとても軽いため効果はほとんどなく、読み手の負担だけが増えてしまう
 - 後で本当に client 化が必要な部品を足したとき、境界が曖昧になって設計がぶれやすい
 
 ### After（プロが書くコード）
@@ -936,7 +920,7 @@ type FocusCard = {
 };
 
 const dashboardOwner: DashboardOwner = {
-  name: 'Kouiso',
+  name: 'Taro',
   role: 'Builder of Task App',
   todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
   todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
@@ -1000,7 +984,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              G0 Foundation
+              Task App
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -1133,22 +1117,21 @@ export default function DashboardPage() {
 本当にブラウザ側の操作が必要な瞬間だけ client を足します。
 この順番が、あとで効いてきます。
 
-## 覚えておきたいエッセンス
+## 今日手に入れたもの
 
 今日の本質は、
 **ダッシュボードの主役を決めて、その主役に意味のある情報を添えた**
 ことです。
 
-覚えておきたいのは、この3つです。
-todo 意味わかんない
-- 自分だけの画面は、まず名前と意図が見えるところから始まる
-- 値はその場で散らすより、型や関数で意味を持たせたほうが育てやすい
-- 動かない UI まで client にしません。Server Component を標準に考える
+覚えておきたいのは、次の3つです。
+
+- 自分専用の画面づくりは、「誰の画面で、今日は何に集中するのか」が見えるようにするところから始まる
+- 値はその場に直接書き散らすより、型（`type`）や関数にまとめて意味を持たせたほうが、あとから変更しやすい
+- クリックなどの操作がない画面は、無理に Client Component にせず、Server Component のままにしておく
 
 この3つが入るだけで、
 Day 02 のコードはかなり「プロダクトを育てる書き方」に近づきます。
-todo 第一章と見出し名違くね
-## 次回予告
+## 明日のプレビュー
 
 Day 03 では、
 今日つくったこの変化をちゃんと履歴として残していきます。
