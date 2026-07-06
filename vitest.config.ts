@@ -42,7 +42,7 @@ export default defineConfig({
         'node_modules/**',
         '.next/**',
         'coverage/**',
-        'docs/**',
+        'doc/**',
         'e2e/**',
         '**/*.d.ts',
         '**/*.test.{ts,tsx}',

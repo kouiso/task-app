@@ -6,6 +6,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AGENTS="$REPO_ROOT/AGENTS.md"
 GEMINI="$REPO_ROOT/.gemini/styleguide.md"
+GEMINI_CONFIG="$REPO_ROOT/.gemini/config.yaml"
 COPILOT="$REPO_ROOT/.github/copilot-instructions.md"
 
 if [[ ! -f "$AGENTS" ]]; then
@@ -43,13 +44,27 @@ generate_gemini() {
   printf '%s\n\n%s\n' "$GEMINI_PROLOG" "$AGENTS_CONTENT"
 }
 
+generate_gemini_config() {
+  cat <<'EOF'
+# AUTO-GENERATED from AGENTS.md by scripts/sync-ai-rules.sh
+# DO NOT HAND-EDIT — changes will be overwritten on next sync
+# To update: edit AGENTS.md, then run: bash scripts/sync-ai-rules.sh
+code_review:
+  comment_language: ja
+  max_comments: 10
+  pull_request_scope: diff_only
+EOF
+}
+
 generate_copilot() {
   printf '%s\n\n%s\n' "$COPILOT_PROLOG" "$AGENTS_CONTENT"
 }
 
 mkdir -p "$REPO_ROOT/.gemini" "$REPO_ROOT/.github"
 generate_gemini > "$GEMINI"
+generate_gemini_config > "$GEMINI_CONFIG"
 generate_copilot > "$COPILOT"
 echo "Generated: $GEMINI"
+echo "Generated: $GEMINI_CONFIG"
 echo "Generated: $COPILOT"
 echo "Done. AGENTS.md → bridge ファイル同期完了。"

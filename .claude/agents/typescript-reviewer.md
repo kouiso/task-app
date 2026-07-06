@@ -1,0 +1,1 @@
+../../prompt/agents/typescript-reviewer.md
