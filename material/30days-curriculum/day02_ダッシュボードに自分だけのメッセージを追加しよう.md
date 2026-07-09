@@ -724,7 +724,7 @@ const dashboardOwner: DashboardOwner = {
   nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
 };
@@ -753,7 +753,7 @@ export default function DashboardPage() {
     return buildMainMessage(dashboardOwner, currentHour);
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
   }, [currentHour]);
@@ -782,7 +782,7 @@ export default function DashboardPage() {
           <div className="space-y-1">
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
@@ -811,7 +811,7 @@ export default function DashboardPage() {
 
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
@@ -840,7 +840,7 @@ export default function DashboardPage() {
                     {card.value}
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
                   </p>
@@ -869,7 +869,7 @@ export default function DashboardPage() {
               </p>
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
@@ -931,7 +931,7 @@ function getGreetingByHour(hour: number): string {
   if (hour < 12) {
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
 // filepath: 続き
@@ -961,7 +961,7 @@ export default function DashboardPage() {
       description: dashboardOwner.role,
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
 // filepath: 続き
@@ -991,7 +991,7 @@ export default function DashboardPage() {
             </h1>
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
 // filepath: 続き
@@ -1021,7 +1021,7 @@ export default function DashboardPage() {
                 ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
 // filepath: 続き
@@ -1051,7 +1051,7 @@ export default function DashboardPage() {
               ))}
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
 // filepath: 続き
@@ -1081,7 +1081,7 @@ export default function DashboardPage() {
 
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```tsx
 // filepath: 続き
