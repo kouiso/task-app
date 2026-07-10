@@ -4,19 +4,19 @@
 
 ## 前回の振り返り
 
-Day 07 で認証バックエンドを作った。
-ログイン・登録・ログアウトが全部動くようになった。
+Day 07 で認証バックエンドを作りました。
+ログイン・登録・ログアウトが全部動くようになりました。
 
-でも今のアプリ、ログインした先に何もない。
+でも今のアプリ、ログインした先に何もありません。
 今日はサイドバーとヘッダーを自分の手で作って、
-「アプリっぽい骨格」を完成させる。
+「アプリっぽい骨格」を完成させます。
 
 ---
 
 ## 今日のゴール
 
 サイドバー付きのレイアウトを自分で作って、
-ログイン後のすべてのページがこのレイアウトで表示されるようにする。
+ログイン後のすべてのページがこのレイアウトで表示されるようにします。
 
 - [ ] `src/app/providers.tsx` — tRPC クライアントをアプリ全体に提供する
 - [ ] `src/app/(app)/layout.tsx` — 認証済みページ用のルートグループ
@@ -24,13 +24,13 @@ Day 07 で認証バックエンドを作った。
 - [ ] `src/app/(app)/dashboard/page.tsx` — レイアウトの中で動くダッシュボード
 - [ ] ログアウトが動作することを確認する
 
-## なぜこれを作るのか？
+## なぜこれを作るのか
 
-Day 07 のログイン API は動くけど、フロント側がまだ繋がっていない。
-ブラウザから tRPC を呼ぶには「tRPC クライアント」をアプリ全体に設定する必要がある。
-そしてログイン後のページには共通のサイドバーとヘッダーが欲しい。
+Day 07 のログイン API は動くけど、フロント側がまだ繋がっていません。
+ブラウザから tRPC を呼ぶには、「tRPC クライアント」をアプリ全体に設定します。
+そしてログイン後のページには共通のサイドバーとヘッダーが必要です。
 
-> **例え話**: Day 07 で厨房（サーバー）を作った。今日は客席のレイアウト（テーブル配置・通路・メニュー看板）を作る。客が座ったときに「ちゃんとしたお店やな」と感じる骨格。
+> **例え話**: Day 07 で厨房（サーバー）を作った。今日は客席のレイアウト（テーブル配置・通路・メニュー看板）を作ります。客が座ったときに「ちゃんとしたお店だな」と感じる骨格。
 
 ### 今日作る構造
 
@@ -79,17 +79,17 @@ flowchart TD
 | Step 5 | ダッシュボードページを移動する | 5分 | `src/app/(app)/dashboard/page.tsx` |
 | Step 6 | ログインして全体の動作を確認する | 5分 | なし |
 
-**合計時間**: 約 43 分
+**合計時間**: 約 43 分。
 
 ---
 
 ### Step 1: providers.tsx を作る — tRPC クライアント設定（8分）
 
-**ゴール**: フロントエンドから tRPC API を呼べるようにする。
+**ゴール**: フロントエンドから tRPC API を呼べるようにします。
 
 Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
 「クライアント」が必要。scaffold が `src/trpc/` に設定ファイルを配布済みなので、
-それをアプリ全体に適用する Provider を作る。
+それをアプリ全体に適用する Provider を作ります。
 
 ```mermaid
 flowchart LR
@@ -99,7 +99,7 @@ flowchart LR
     B -->|data| A
 ```
 
-`src/app/providers.tsx` を新規作成する。
+`src/app/providers.tsx` を新規作成します。
 
 ```tsx
 // filepath: src/app/providers.tsx
@@ -123,7 +123,7 @@ export function Providers({
 | `TRPCReactProvider` | scaffold が用意した tRPC + React Query の設定 |
 | `children` | この下に置かれる全コンポーネントが tRPC を使える |
 
-> scaffold の `src/trpc/react.tsx` の中身が気になったら開いてみてもいい。QueryClient と httpBatchLink の設定が入っている。
+> scaffold の `src/trpc/react.tsx` の中身が気になったら開いてみてもいいです。QueryClient と httpBatchLink の設定が入っています。
 
 **確認ポイント**:
 - [ ] `src/app/providers.tsx` が作成できた
@@ -133,7 +133,7 @@ export function Providers({
 
 ### Step 2: ルートレイアウトに Provider を組み込む（5分）
 
-**ゴール**: アプリ全体で tRPC が使えるように、ルートレイアウトを編集する。
+**ゴール**: アプリ全体で tRPC が使えるように、ルートレイアウトを編集します。
 
 `src/app/layout.tsx` を開く（scaffold が作った初期ファイル）。
 
@@ -178,9 +178,9 @@ export default function RootLayout({
 
 ### Step 3: AppLayout を作る — サイドバーの骨格（15分）
 
-**ゴール**: サイドバー + メインコンテンツのレイアウトコンポーネントを作る。
+**ゴール**: サイドバー + メインコンテンツのレイアウトコンポーネントを作ります。
 
-ここが今日のメイン。認証チェック、ナビゲーション、ログアウトを一つのレイアウトに組み込む。
+ここが今日のメイン。認証チェック、ナビゲーション、ログアウトを 1 つのレイアウトに組み込みます。
 
 ```mermaid
 flowchart TD
@@ -195,7 +195,7 @@ flowchart TD
     style F fill:#e8f5e9
 ```
 
-`src/component/layout/app-layout.tsx` を新規作成する。
+`src/component/layout/app-layout.tsx` を新規作成します。
 
 #### 3-1. インポートと型定義
 
@@ -329,7 +329,7 @@ export function AppLayout({
 | コード | 意味 | 例え |
 |--------|------|------|
 | `hasMounted` | SSR と CSR のズレ防止フラグ | 店が開店してから初めて客チェックする |
-| `api.auth.getSession.useQuery()` | サーバーに「今ログインしてる？」を問い合わせる | 入口でリストバンドチェック |
+| `api.auth.getSession.useQuery()` | サーバーに「今ログインしているか」を問い合わせる | 入口でリストバンドチェック |
 | `logoutMutation` | ログアウト API を呼ぶ準備 | 退出手続きのボタン |
 | `router.push('/login')` | ログイン画面へ飛ばす | 受付に案内する |
 
@@ -476,7 +476,7 @@ export function AppLayout({
 | `AlertDialogAction` | 確定（ログアウト実行） |
 | `AlertDialogCancel` | キャンセル（閉じるだけ） |
 
-> `asChild` を付けると、中の `<Button>` がそのままトリガーになる。見た目を自由にカスタマイズできる。
+> `asChild` を付けると、中の `<Button>` がそのままトリガーになります。見た目を自由にカスタマイズできます。
 
 **確認ポイント**:
 - [ ] `src/component/layout/app-layout.tsx` が作成できた
@@ -484,13 +484,13 @@ export function AppLayout({
 - [ ] `menuItems` に 3 つのメニュー項目がある
 - [ ] ログアウトボタンに `AlertDialog` が付いている
 
-**学んだこと**: `useQuery` でサーバーのセッション情報を取得し、ない場合はログイン画面にリダイレクト。レイアウト全体が認証ゲートの役割を持つ。
+**学んだこと**: `useQuery` でサーバーのセッション情報を取得し、ない場合はログイン画面にリダイレクト。レイアウト全体が認証ゲートの役割を持ちます。
 
 ---
 
 ### Step 4: ルートグループ (app) で認証レイアウトを適用する（5分）
 
-**ゴール**: 認証済みページだけに AppLayout を適用するルートグループを作る。
+**ゴール**: 認証済みページだけに AppLayout を適用するルートグループを作ります。
 
 Next.js の Route Group `(app)` は URL に影響しないフォルダ。
 `/dashboard` は `src/app/(app)/dashboard/page.tsx` に置いても URL は `/dashboard` のまま。
@@ -508,7 +508,7 @@ flowchart TD
     style D fill:#fff3e0
 ```
 
-`src/app/(app)/layout.tsx` を新規作成する。
+`src/app/(app)/layout.tsx` を新規作成します。
 
 ```tsx
 // filepath: src/app/(app)/layout.tsx
@@ -523,7 +523,7 @@ export default function AppGroupLayout({
 }
 ```
 
-たった 3 行。この layout.tsx の中に入るページはすべて AppLayout（サイドバー + 認証チェック）が適用される。
+たった 3 行。この layout.tsx の中に入るページはすべて AppLayout（サイドバー + 認証チェック）が適用されます。
 
 **確認ポイント**:
 - [ ] `src/app/(app)/layout.tsx` が作成できた
@@ -533,16 +533,16 @@ export default function AppGroupLayout({
 
 ### Step 5: ダッシュボードページを移動する（5分）
 
-**ゴール**: ダッシュボードを Route Group 内に移動して、AppLayout が適用されるようにする。
+**ゴール**: ダッシュボードを Route Group 内に移動して、AppLayout が適用されるようにします。
 
-`src/app/dashboard/page.tsx` を `src/app/(app)/dashboard/page.tsx` に移動する。
+`src/app/dashboard/page.tsx` を `src/app/(app)/dashboard/page.tsx` に移動します。
 
 ```bash
 mkdir -p src/app/\(app\)/dashboard
 mv src/app/dashboard/page.tsx src/app/\(app\)/dashboard/page.tsx
 ```
 
-> もし Day 02 で作った `dashboard/page.tsx` がなければ、以下の最小版を作る。
+> もし Day 02 で作った `dashboard/page.tsx` がなければ、以下の最小版を作ります。
 
 ```tsx
 // filepath: src/app/(app)/dashboard/page.tsx
@@ -568,27 +568,27 @@ export default function DashboardPage() {
 
 ### Step 6: ログインして全体の動作を確認する（5分）
 
-**ゴール**: ここまでの全 Step が正しく連携して動くことを確認する。
+**ゴール**: ここまでの全 Step が正しく連携して動くことを確認します。
 
 ```bash
 npm run dev
 ```
 
-ブラウザで `http://localhost:3000` を開く。
+ブラウザで `http://localhost:3000` を開きます。
 
 ![ログイン画面](./screenshots/login.png)
 
 **確認フロー**:
 
-1. `/dashboard` にアクセス → middleware が `/login` にリダイレクト
-2. `admin@example.com` / `password123` でログイン
-3. ダッシュボードが表示される（サイドバー付き）
+1. `/dashboard` へアクセス → middleware が `/login` にリダイレクト。
+2. `admin@example.com` / `password123` でログイン。
+3. ダッシュボードが表示される（サイドバー付き）。
 
 ![ダッシュボードとサイドバー](./screenshots/dashboard.png)
-4. サイドバーに「ダッシュボード」「プロジェクト」「マイタスク」のメニューが見える
-5. サイドバー下部に「管理者」の名前とロールが表示される
-6. 「ログアウト」ボタンを押す → 確認ダイアログが出る
-7. 「ログアウト」を押す → `/login` に戻る
+4. サイドバーに「ダッシュボード」「プロジェクト」「マイタスク」のメニューが見える。
+5. サイドバー下部に「管理者」の名前とロールが表示される。
+6. 「ログアウト」ボタンを押す → 確認ダイアログが出る。
+7. 「ログアウト」を押す → `/login` に戻る。
 
 **確認ポイント**:
 - [ ] `npm run dev` でエラーが出ない
@@ -603,8 +603,8 @@ npm run dev
 
 ## Pro パターンで書こう — `use client` の影響範囲を最小化する
 
-Step 3 では AppLayout 全体を `'use client'` にした。
-これは今日のスコープでは正しいが、プロの現場ではもう一段上を狙う。
+Step 3 では AppLayout 全体を `'use client'` にしました。
+これは今日のスコープでは正しいですが、プロの現場ではもう一段上を狙います。
 
 ### Before（今日書いたコード — 動くけど改善の余地あり）
 
@@ -621,8 +621,8 @@ Step 3 では AppLayout 全体を `'use client'` にした。
 ```
 
 **強み**: 静的な枠（ロゴ、リンク一覧）は Server Component のまま。
-対話が必要な部品（ログアウト、認証チェック）だけを Client Component にする。
-→ バンドルサイズが小さくなり、初期表示が速い。
+対話が必要な部品（ログアウト、認証チェック）だけを Client Component にします。
+→ バンドルサイズが小さくなり、初期表示が速いです。
 
 > **覚えておきたいエッセンス**: `use client` はファイル全体に効くスイッチ。サイドバーでは「静的な枠は Server、押せる部品は Client」に分けるのがプロの基本。今日の段階では全体 Client で OK。この最適化は Day 09 以降で必要になったタイミングでやる。
 
@@ -651,7 +651,7 @@ Step 3 では AppLayout 全体を `'use client'` にした。
 
 ## 次回予告
 
-Day 09 では、プロジェクト一覧画面を作る。
+Day 09 では、プロジェクト一覧画面を作ります。
 tRPC の `useQuery` でサーバーからプロジェクト一覧を取得して、
-カードコンポーネントで表示する。
-今日作ったレイアウトの中に、最初の「データを表示する画面」が入る。
+カードコンポーネントで表示します。
+今日作ったレイアウトの中に、最初の「データを表示する画面」が入ります。
