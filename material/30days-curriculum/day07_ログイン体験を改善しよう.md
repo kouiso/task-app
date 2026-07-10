@@ -27,10 +27,10 @@ Day 05-06 でログイン画面と登録画面の UI を作りました。
 - [ ] `src/middleware.ts` — ルート保護を作る
 - [ ] DevTools でログインの流れを確認する
 
-## なぜこれを作るのか？
+## なぜこれを作るのか
 
 Day 05 で作ったログイン画面は、ブラウザ（フロントエンド）だけで動いています。
-「このメールとパスワードで合ってるか？」を確認するには、
+「このメールとパスワードが正しいか」を確認するには、
 サーバー側にデータベースと照合する処理が必要です。
 
 今日作る 6 ファイルが、ログインの「裏方」全部になります。
@@ -89,7 +89,7 @@ sequenceDiagram
 | Step 6 | ログインして動作確認する | 5分 | なし |
 | Step 7 | DevTools で JWT と Cookie を確認する | 5分 | なし |
 
-**合計時間**: 約 60 分
+**合計時間**: 約 60 分。
 
 ---
 
@@ -313,7 +313,7 @@ export async function verifySession(): Promise<SessionUser | null> {
 
 **Cookie 設定の意味**:
 
-| 設定 | 値 | なぜ必要？ |
+| 設定 | 値 | なぜ必要か |
 |------|-----|---------|
 | `httpOnly` | `true` | JavaScript から読めなくして XSS 攻撃を防ぐ |
 | `secure` | 本番のみ `true` | HTTPS でのみ送信して盗聴を防ぐ |
@@ -810,7 +810,7 @@ flowchart TD
 ```
 
 **確認ポイント**:
-- [ ] 登録直後に `createSession` でログイン状態にしている
+- [ ] 登録直後、`createSession` でログイン状態にしている
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
@@ -893,7 +893,7 @@ flowchart TD
 **確認ポイント**:
 - [ ] `src/server/api/routers/_helpers/select.ts` が作成できた
 - [ ] `src/server/api/routers/auth.ts` が作成できた
-- [ ] `authRouter` に 5 つの API（login, register, logout, getSession, getCurrentUser）がある
+- [ ] `authRouter` に 5 つの API（login / register / logout / getSession / getCurrentUser）がある
 
 **学んだこと**: パスワードは平文で保存せず `bcrypt.hash` でハッシュ化し、照合は `bcrypt.compare` で行う。
 
@@ -1172,13 +1172,13 @@ npm run db:seed
 
 #### 7-2. JWT をデコードする
 
-> **重要**: 本番環境の JWT は絶対に外部サイトに貼り付けないでください。ここで使うのは開発環境のトークンなので問題ありません。
+> 本番環境の JWT は絶対に外部サイトに貼り付けないでください。ここで使うのは開発環境のトークンなので問題ありません。
 
 1. `session` Cookie の値（長い文字列）をコピー
 2. ブラウザで `https://jwt.io` を開く
 3. 「Encoded」欄に貼り付ける
 
-jwt.io の Payload セクションで以下が確認できる:
+jwt.io の Payload セクションでは、次のフィールドを確認できます。
 
 | フィールド | 表示例 | 意味 |
 |----------|--------|------|
@@ -1205,14 +1205,14 @@ jwt.io の Payload セクションで以下が確認できる:
 - [ ] Cookie 削除後に `/dashboard` が表示できなくなった
 - [ ] 再ログインでダッシュボードが復活した
 
-**学んだこと**: JWT は暗号化ではなく「署名」。中身は誰でもデコードできるが、改ざんすると署名が合わなくなります。
+**学んだこと**: JWT は暗号化しません。行うのは「署名」です。中身は誰でもデコードできます。ただし改ざんすると署名が合わなくなります。
 
 ---
 
 ## Pro パターンで書こう — 認証ガードは early return で道順を見せる
 
 Step 5 の middleware は「公開パス → tRPC → Cookie なし → JWT 無効」と early return で判定を重ねています。
-この書き方を他のコードでも使ってみよう。
+この書き方を他のコードでも使ってみましょう。
 
 ### Before（動くけど、プロは書かない）
 
