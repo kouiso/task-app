@@ -1,8 +1,8 @@
 # Day 16: ステータス変更・タイマーを実装しよう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
-Day 15 で学んだこと:
+Day 15 で学んだことは次のとおりです。
 - TaskDialog を `initialData` で編集モードに切り替え
 - `DeleteConfirmDialog` で削除前の確認
 - `null` と `undefined` の使い分け
@@ -12,30 +12,32 @@ Day 15 で学んだこと:
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
 タスクのステータスを編集ダイアログから変更でき、
 作業時間を計測するタイマー機能を実装します。
 さらに、手動で作業時間を記録するダイアログも
 作ります。
 
-📸 スクリーンショット: タスク詳細ダイアログの画面
+スクリーンショット: タスク詳細ダイアログの画面。
 
 ![タスク詳細ダイアログの画面](./screenshots/task-detail-dialog.png)
 
-> 📌 **今日のゴールライン**: ステータス更新とタイマーの開始・停止をつなぎ、作業時間を記録する一連の流れが動けばOK。
+> **今日のゴールライン**: ステータス更新とタイマーの開始・停止をつなぎ、作業時間を記録する一連の流れが動けばOK。
 
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか
 
-タスクの進捗を可視化し、作業時間を正確に記録
-する機能は、プロジェクト管理に不可欠です。
+タスクが「未着手か、進行中か、完了か」がひと目で
+分からないと、何から手を付けるか毎回考え直すことになります。
+さらに作業時間を記録しておくと、あとから
+「何にどれだけかかったか」を振り返れます。
 
-> 💡 **例え話**: ステータスは「信号機」で、
+> **例え話**: ステータスは「信号機」で、
 > 赤（TODO）→黄色（IN_PROGRESS）→青（DONE）と変わります。
 > タイマーは「ストップウォッチ」で、
 > スタート/ストップで作業時間を記録します。
 
-### 📐 タスクステータス遷移図
+### タスクステータス遷移図
 
 この図は主要な遷移のみを示しています。
 
@@ -69,7 +71,7 @@ stateDiagram-v2
 | タイマー開始/停止 | ポモドーロ機能 |
 | 手動時間記録（TimeLogDialog） | レポート機能（Day 21-23） |
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -78,7 +80,7 @@ stateDiagram-v2
 | useEffect cleanup | クリーンアップ | コンポーネント解除時の後片付け | 部屋を出る時に電気を消す |
 | mutateAsync | ミューテート・アシンク | 非同期でAPIを呼ぶ | 注文して料理が届くのを待つ |
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -92,13 +94,13 @@ stateDiagram-v2
 | Step 8 | TaskCardにタイマーを組み込む | 5分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約41分
+**合計時間**: 約41分。
 
 ---
 
 ### Step 1: ステータス変更の仕組みを理解する（3分）
 
-🎯 **ゴール**: タスクのステータスが
+**ゴール**: タスクのステータスが
 どのように変更されるかを理解します。
 
 ステータス変更は **Day 15 で作った編集ダイアログ
@@ -122,7 +124,7 @@ const updateMutation =
   });
 ```
 
-> 💡 専用の `updateStatus` API はありません。
+> 専用の `updateStatus` API はありません。
 > `api.task.update` に `id` と `status` だけ
 > 渡すことで、ステータスだけを変更できます。
 > 他のフィールドは変更されません。
@@ -144,7 +146,7 @@ const updateMutation =
 | 一括操作 | タスク一覧ページ（Day 28） | 複数タスクを一括変更 |
 | 詳細画面 | TaskDetailDialog（Day 17） | 詳細画面からの変更 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 編集ダイアログでステータスの Select がある
 - ステータスを変更して保存するとBadge が変わる
 - 一覧画面に変更が即反映される
@@ -153,10 +155,10 @@ const updateMutation =
 
 ### Step 2: TaskTimerの骨格を作る（5分）
 
-🎯 **ゴール**: タイマーコンポーネントの基本構造
+**ゴール**: タイマーコンポーネントの基本構造
 を作ります。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
@@ -171,7 +173,7 @@ import { Button } from '@/component/ui/button';
 import { api } from '@/trpc/react';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ファイル `src/component/task/task-timer.tsx` を作成できた
 - インポートでエラーが出ていない
 
@@ -195,13 +197,13 @@ interface TaskTimerProps {
 | `isTimerActive` | boolean | タイマーが動作中か |
 | `timerStartedAt` | Date \| null | 開始時刻 |
 | `timeSpentMinutes` | number | 累計作業時間（分） |
-| `onTimerUpdate` | function? | 更新後のコールバック |
+| `onTimerUpdate` | `function?` | 更新後のコールバック |
 
-> 💡 `timerStartedAt` はサーバーに保存された
+> `timerStartedAt` はサーバーに保存された
 > 開始時刻です。ブラウザを閉じて再度開いても、
 > 正確な経過時間を計算できます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - interface が定義できた
 - 5つのpropsがすべて揃っている
 
@@ -209,10 +211,10 @@ interface TaskTimerProps {
 
 ### Step 3: タイマーのカウントアップ（5分）
 
-🎯 **ゴール**: 1秒ごとに経過時間を更新する処理
+**ゴール**: 1秒ごとに経過時間を更新する処理
 を実装します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
@@ -227,7 +229,7 @@ export function TaskTimer({
     = useState(0);
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `export function TaskTimer` が宣言できた
 - `elapsedSeconds` の state が定義できた
 
@@ -257,7 +259,7 @@ export function TaskTimer({
   }, [isTimerActive, timerStartedAt]);
 ```
 
-> 💡 `setInterval` は指定したミリ秒ごとに関数
+> `setInterval` は指定したミリ秒ごとに関数
 > を実行します。`return () => clearInterval()`
 > はコンポーネントが消える時やタイマーが止まる
 > 時に定期実行を停止します。これが
@@ -271,7 +273,7 @@ export function TaskTimer({
 | `clearInterval(id)` | 繰り返しを止める | useEffect の return |
 | `Date.now()` | 現在時刻をミリ秒で取得 | 経過時間の計算 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useEffect` の中で `setInterval` を使っている
 - return 文で `clearInterval` を呼んでいる
 - `npm run dev` でエラーが出ていない
@@ -280,10 +282,10 @@ export function TaskTimer({
 
 ### Step 4: 開始/停止のAPI呼び出し（5分）
 
-🎯 **ゴール**: タイマーの開始・停止をサーバーに
+**ゴール**: タイマーの開始・停止をサーバーに
 保存します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
@@ -296,7 +298,7 @@ export function TaskTimer({
     });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - mutation が定義できた
 - `onSuccess` でコールバックを呼んでいる
 
@@ -336,17 +338,17 @@ export function TaskTimer({
 | `'start'` | タイマー開始 | `timerStartedAt` に現在時刻を保存 |
 | `'stop'` | タイマー停止 | 経過時間を `timeSpentMinutes` に加算 |
 
-> 💡 `mutateAsync` は `mutate` の非同期版です。
+> `mutateAsync` は `mutate` の非同期版です。
 > `await` で完了を待ってからUIを更新します。
 > `catch (err)` でエラーを受け取り、
 > `err instanceof Error` で型を判定して
 > メッセージを取得します。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 「タイマー開始」で `action: 'start'` が送信される
 - 「タイマー停止」で `action: 'stop'` が送信される
 
-📸 スクリーンショット: タイマー動作中の画面
+スクリーンショット: タイマー動作中の画面。
 
 ![タイマー動作中の画面](./screenshots/task-timer.png)
 
@@ -354,10 +356,10 @@ export function TaskTimer({
 
 ### Step 5: 時間のフォーマット関数を作る（3分）
 
-🎯 **ゴール**: 経過時間と累計時間を見やすく
+**ゴール**: 経過時間と累計時間を見やすく
 表示するフォーマット関数を作ります。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-timer.tsx
@@ -374,7 +376,7 @@ export function TaskTimer({
   };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `formatTime(90)` は `"00:01:30"` になる
 - `formatTime(3661)` は `"01:01:01"` になる
 
@@ -398,11 +400,11 @@ export function TaskTimer({
 | `formatTime` | 経過秒をHH:MM:SSで表示 | `01:23:45` |
 | `formatMinutes` | 累計分をh m形式で表示 | `2h 30m` |
 
-> 💡 `padStart(2, '0')` は「2桁になるまで
+> `padStart(2, '0')` は「2桁になるまで
 > 先頭にゼロを埋める」メソッドです。
 > `5` → `"05"` のようにゼロ埋めされます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `formatMinutes(150)` は `"2h 30m"` になる
 - `formatMinutes(30)` は `"30m"` になる
 
@@ -410,10 +412,10 @@ export function TaskTimer({
 
 ### Step 6: タイマーのJSXを完成させる（5分）
 
-🎯 **ゴール**: タイマーの表示部分を完成させて
+**ゴール**: タイマーの表示部分を完成させて
 コンポーネントを閉じます。
 
-💻 **実装**:
+**実装**:
 
 <!-- quality-exception: PageLoadingSpinner は AppLayout を内包するフルページローディング用コンポーネントのため、ボタン内のインラインスピナーには使用できません。ここでは Loader2 アイコンを直接使用しています。 -->
 
@@ -435,7 +437,7 @@ export function TaskTimer({
             : 'タイマー開始'}>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - return 文で JSX を返している
 - `disabled` で二重送信を防止している
 
@@ -458,12 +460,12 @@ export function TaskTimer({
         </Button>
 ```
 
-> 💡 `isPending` 中は `Loader2` のスピナーを
+> `isPending` 中は `Loader2` のスピナーを
 > 表示して処理中であることを伝えます。
 > `animate-spin` は Tailwind CSS のクラスで
 > 回転アニメーションを付けます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 送信中はスピナーが回転する
 - 停止中は PlayIcon、動作中は PauseIcon が表示される
 
@@ -487,7 +489,7 @@ export function TaskTimer({
 }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 動作中は `00:00:00` 形式で経過時間が表示される
 - 累計時間が `2h 30m` 形式で常に表示される
 - 関数の閉じ括弧 `}` でコンポーネントが完成している
@@ -496,10 +498,10 @@ export function TaskTimer({
 
 ### Step 7: TimeLogDialogを作る（7分）
 
-🎯 **ゴール**: 手動で作業時間を記録する
+**ゴール**: 手動で作業時間を記録する
 ダイアログを1ファイルで完成させます。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
@@ -513,7 +515,7 @@ import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ファイル `src/component/task/time-log-dialog.tsx` を作成できた
 - `react-hook-form` と `zod` をインポートしている
 
@@ -530,7 +532,7 @@ import { Label } from '@/component/ui/label';
 import { api } from '@/trpc/react';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - Dialog 関連のコンポーネントをインポートしている
 - Input と Label をインポートしている
 
@@ -549,7 +551,7 @@ type TimeLogFormData =
   z.infer<typeof timeLogSchema>;
 ```
 
-> 💡 タイマーは自動で時間を計測しますが、
+> タイマーは自動で時間を計測しますが、
 > 手動記録は「昨日2時間作業した」のように
 > 後から記録する場合に使います。
 
@@ -561,7 +563,7 @@ type TimeLogFormData =
 | `minutes` | 0〜59の整数 | `60`、`-5` |
 | `refine` | 合計 > 0分 | 両方0のまま送信 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - zod スキーマが定義できた
 - `refine` で「合計0分」を弾いている
 
@@ -587,11 +589,11 @@ export function TimeLogDialog({
   });
 ```
 
-> 💡 `useState` ではなく
+> `useState` ではなく
 > `react-hook-form + zod` を使うことで、
 > バリデーションロジックをスキーマに集約できます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useForm` に `zodResolver` を渡している
 - `register` と `handleSubmit` を分割代入している
 
@@ -608,7 +610,7 @@ export function TimeLogDialog({
     });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `addTimeMutation` が定義できた
 - 成功時に `reset()` と `onClose()` を呼んでいる
 
@@ -642,7 +644,7 @@ export function TimeLogDialog({
 | `id` | string | タスクID |
 | `minutesToAdd` | number | 追加する分数 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `addTimeMutation` が定義できた
 - 成功時に `reset()` と `onClose()` を呼んでいる
 
@@ -671,7 +673,7 @@ export function TimeLogDialog({
           </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - Dialog の構造が書けている
 - `register` で hours フィールドを紐づけている
 
@@ -694,9 +696,9 @@ export function TimeLogDialog({
         </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 分の入力フィールドが追加できた
-- エラーメッセージが表示される領域がある
+- エラーメッセージを表示する領域がある
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
@@ -719,12 +721,12 @@ export function TimeLogDialog({
 }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ダイアログが開閉できる
 - 時間と分の入力欄がある
 - 「1時間30分」を入力して追加できる
 
-📸 スクリーンショット: 手動時間記録ダイアログの画面
+スクリーンショット: 手動時間記録ダイアログの画面。
 
 ![手動時間記録ダイアログの画面](./screenshots/task-detail-dialog.png)
 
@@ -732,10 +734,10 @@ export function TimeLogDialog({
 
 ### Step 8: TaskCardにタイマーを組み込む（5分）
 
-🎯 **ゴール**: `TaskTimer` と `TimeLogDialog` を
+**ゴール**: `TaskTimer` と `TimeLogDialog` を
 `TaskCard` に組み込みます。
 
-💻 **実装**:
+**実装**:
 
 まず、`task-card.tsx` にインポートを追加します。
 
@@ -748,7 +750,7 @@ import { TimeLogDialog }
 import { Clock } from 'lucide-react';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 3つのインポートが追加できた
 - エラーが出ていない
 
@@ -790,7 +792,7 @@ interface TaskCardProps {
 | `timeSpentMinutes` | `0` | 累計作業時間（分） |
 | `onTimerUpdate` | - | 更新後のコールバック |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `TaskCardProps` に4つのタイマーpropsがある
 - すべてオプショナル（`?`）になっている
 
@@ -808,7 +810,7 @@ const handleOpenTimeLog =
   };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useState` で開閉状態を管理している
 - `stopPropagation` でカードのクリックを止めている
 
@@ -838,7 +840,7 @@ const handleOpenTimeLog =
 </Button>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `timerStartedAt ?? null` で null 合体を使っている
 - `timeSpentMinutes ?? 0` でデフォルト値を設定している
 
@@ -857,12 +859,12 @@ const handleOpenTimeLog =
 />
 ```
 
-> 💡 既存の `TaskCard` に新しいコンポーネントを
+> 既存の `TaskCard` に新しいコンポーネントを
 > 組み込むパターンは、React開発で頻繁に使います。
 > 小さなコンポーネントを作り、親コンポーネントに
 > 配置する「コンポジション」の考え方です。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - タスクカード内にタイマーボタンが表示される
 - 「時間記録」ボタンが表示される
 
@@ -870,7 +872,7 @@ const handleOpenTimeLog =
 
 ### Step 9: 動作確認（3分）
 
-🎯 **ゴール**: ステータス変更・タイマーの全機能
+**ゴール**: ステータス変更・タイマーの全機能
 を確認します。
 
 1. 編集ダイアログでステータスを変更する
@@ -881,17 +883,17 @@ const handleOpenTimeLog =
 6. 「時間記録」ボタンで手動時間を追加
 7. 累計時間がさらに加算される
 
-おめでとうございます！ステータス管理とタイマーが
+おめでとうございます。ステータス管理とタイマーが
 動くようになり、本格的なタスク管理ツールに
 近づきました。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ステータス変更が反映される
 - タイマーが1秒ごとにカウントアップする
 - 停止後に累計時間が更新される
 - 手動記録が累計時間に反映される
 
-📸 スクリーンショット: タイマー停止後の累計時間表示
+スクリーンショット: タイマー停止後の累計時間表示。
 
 ![タイマー停止後の累計時間表示](./screenshots/task-list.png)
 
@@ -903,19 +905,19 @@ const handleOpenTimeLog =
 PORT=3001 npm run dev
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `npm run dev` でエラーが出ない
 - `http://localhost:3001/task` にアクセスできる
 
 
 ---
 
-### 💡 Pro パターンで書こう — ステータス遷移を配列で管理する
+### Pro パターンで書こう — ステータス遷移を配列で管理する
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### ❌ Before（動くけど、プロは書かない）
+#### Before（動くけど、プロは書かない）
 
 ```typescript
 import { Button } from '@/component/ui/button';
@@ -944,7 +946,7 @@ function getNextStatus(status: TaskStatus): TaskStatus {
   if (status === TASK_STATUS.BLOCKED) {
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -974,7 +976,7 @@ export function StatusActionButton({
   status,
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1010,7 +1012,7 @@ export function StatusActionButton({
 - 新しい遷移を追加すると、複数の関数を同じ順番で更新する必要がある
 - 「このステータスでは何ができるか」がコード上で一覧になっていない
 
-#### ✅ After（プロが書くコード）
+#### After（プロが書くコード）
 
 ```typescript
 import { Button } from '@/component/ui/button';
@@ -1039,7 +1041,7 @@ const STATUS_TRANSITIONS: StatusTransition[] = [
     label: '作業開始',
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1069,7 +1071,7 @@ function findTransition(status: TaskStatus) {
 
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1099,7 +1101,7 @@ export function StatusActionButton({
     >
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1115,19 +1117,19 @@ export function StatusActionButton({
 - `find()` で該当する遷移だけを探すため、分岐が増えても関数が太りにくい
 - 新しい遷移を追加するときは `STATUS_TRANSITIONS` に1行足すだけで済む
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
-同じ条件の `if` が何度も出てきたら、配列にしてデータとして扱えないか考える。
-ルールをコードの分岐に埋めるより、一覧できる形にすると変更に強くなる。
+同じ条件の `if` が何度も出てきたら、配列にしてデータとして扱えないか考えます。
+ルールをコードの分岐に埋めるより、一覧できる形にすると変更に強くなります。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] `api.task.update` でステータスを変更できた
 - [ ] TaskTimer でタイマーを実装できた
 - [ ] `useEffect` + `setInterval` でカウントアップ
 - [ ] TimeLogDialog で手動記録できた
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -1136,7 +1138,7 @@ export function StatusActionButton({
 | 手動記録が反映されない | invalidate忘れ | onSuccessでキャッシュ更新 |
 | ボタンが効かない | isPending未チェック | disabled属性で二重送信防止 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -1146,9 +1148,9 @@ export function StatusActionButton({
 | mutateAsync | 完了を待てる非同期版のmutate |
 | padStart | 文字列の先頭をゼロ埋めする |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 17 では、自分に割り当てられたタスクだけを
 表示する「マイタスク」ページを作ります。期限別の
-グループ表示で、今日やるべきことが一目でわかる
-ようになります。
+グループ表示で、今日やるべきことをすばやく
+把握できるようになります。
