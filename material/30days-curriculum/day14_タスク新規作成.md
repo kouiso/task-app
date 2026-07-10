@@ -13,7 +13,7 @@ TaskDialogコンポーネントで、新しいタスクを作成
 パターンとreact-hook-form + zodをタスク版に
 応用します。
 
-スクリーンショット: タスク作成ダイアログの完成画面
+スクリーンショット: タスク作成ダイアログの完成画面。
 
 ![タスク作成ダイアログの完成画面](./screenshots/task-create-dialog.png)
 
@@ -26,7 +26,7 @@ TaskDialogコンポーネントで、新しいタスクを作成
 - ログイン済みユーザーで `/task` を開ける
 - `src/server/api/root.ts` と `src/component/task/task-dialog.tsx` を編集できる
 
-## なぜこれを作るのか？
+## なぜこれを作るのか
 
 これまで作ってきた一覧・フィルター・詳細は、
 すべて「タスクがある」ことが前提でした。
@@ -91,7 +91,7 @@ graph TD
 | Step 8 | ページにDialogを組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約49分
+**合計時間**: 約49分。
 
 ---
 
@@ -100,8 +100,8 @@ graph TD
 **ゴール**: タスク作成フォームで担当者候補を取得できるようにします。
 
 Day 14 では `api.search.getProjectMembers` を使います。
-Day 20 の検索画面より先に必要になるので、
-ここで `src/server/api/root.ts` に search ルーターを登録します。
+Day 20 の検索画面より先に必要なので、
+ここで `src/server/api/root.ts` へ search ルーターを登録します。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -271,15 +271,15 @@ interface TaskDialogProps {
 
 | フィールド | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
-| `id` | string? | × | 編集時のみ使用 |
+| `id` | `string?` | × | 編集時のみ使用 |
 | `title` | string | ○ | タスク名 |
-| `description` | string? | × | 詳細説明 |
+| `description` | `string?` | × | 詳細説明 |
 | `status` | TaskStatus | ○ | 進捗状態 |
 | `priority` | TaskPriority | ○ | 優先度 |
-| `dueDate` | string? | × | 期限日 |
-| `estimatedHours` | number? | × | 見積時間 |
+| `dueDate` | `string?` | × | 期限日 |
+| `estimatedHours` | `number?` | × | 見積時間 |
 | `projectId` | string | ○ | 所属プロジェクト |
-| `assigneeId` | string? | × | 担当者 |
+| `assigneeId` | `string?` | × | 担当者 |
 
 **確認ポイント**:
 - `TaskFormData` をエクスポートした
@@ -504,7 +504,7 @@ return (
 - タイトルと説明の入力欄が表示される
 - タイトルが空のまま送信するとエラーメッセージが表示される
 
-スクリーンショット: タイトルと説明の入力欄が表示されている画面
+スクリーンショット: タイトルと説明の入力欄が表示されている画面。
 
 ![タイトルと説明の入力欄が表示されている画面](./screenshots/task-create-dialog.png)
 ---
@@ -750,7 +750,7 @@ return (
 - プロジェクト一覧が表示される
 - 担当者一覧に「未割当」がある
 
-スクリーンショット: プロジェクト・担当者のSelect欄が表示されている画面
+スクリーンショット: プロジェクト・担当者のSelect欄が表示されている画面。
 
 ![プロジェクト・担当者のSelect欄が表示されている画面](./screenshots/task-create-dialog.png)
 ---
@@ -935,9 +935,9 @@ const handleSubmit =
 - フォーム送信でタスクが作成される
 - 一覧に新しいタスクが表示される
 
-スクリーンショット: タスク作成後に一覧画面に新しいタスクが表示されている
+スクリーンショット: タスク作成後、一覧画面に新しいタスクが表示されている画面。
 
-![タスク作成後に一覧画面に新しいタスクが表示されている](./screenshots/task-list.png)
+![タスク作成後、一覧画面に新しいタスクが表示されている](./screenshots/task-list.png)
 #### createMutationに渡すパラメータ
 
 | パラメータ | フロントから送信 | 説明 |
@@ -1009,7 +1009,7 @@ PORT=3001 npm run dev
 ### Pro パターンで書こう — タスクのステータス・優先度型を1か所に集約する
 
 ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（動くけど、プロは書かない）
 

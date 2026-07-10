@@ -23,7 +23,7 @@ Day 22 では Recharts ライブラリを使って、ステータス別・優先
 - `/report` を開いて統計カードとグラフを確認できる
 - 週次レポートは集計結果の読み方も大事なので、数字が少ない場合は練習用データを追加してから確認する
 
-## なぜこれを作るのか？
+## なぜこれを作るのか
 
 Day 21・22 では「今この瞬間」の数字を見てきました。
 でも「先週より進んだのか」は、期間で区切って
@@ -87,7 +87,7 @@ flowchart TD
 | Step 6 | グラフを表示する | 5分 |
 | Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約31分
+**合計時間**: 約31分。
 
 ---
 
@@ -107,7 +107,7 @@ flowchart TD
 | タスク数 | `stat.totalTasks` | タスク総数 |
 | 完了 | `stat.completedTasks` | 完了タスク数 |
 | 進捗 | `stat.progress` | 進捗率（%） |
-| 作業時間 | `stat.totalTimeHours` | 作業時間（h） |
+| 作業時間 | `stat.totalTimeHours` | 作業時間（`h`） |
 
 #### 計算の流れ
 
@@ -719,7 +719,7 @@ PORT=3001 npm run dev
 ### Pro パターンで書こう — 週次レポートのデータ取得は Prisma include でまとめる
 
 ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（動くけど、プロは書かない）
 
@@ -854,8 +854,8 @@ export async function fetchWeeklyReportTasks(
 
 #### 覚えておきたいエッセンス
 
-一覧やレポートで relation を使うなら、1 件ずつ取りに行く前に
-Prisma の `select` / `include` でまとめて取れないかを先に考えます。
+一覧やレポートで relation を使うなら、1 件ずつ取得する前に
+Prisma の `select` / `include` でまとめて取れないかを考えます。
 
 ## 今日のまとめ
 
@@ -870,7 +870,7 @@ Prisma の `select` / `include` でまとめて取れないかを先に考えま
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| テーブルが空 | projectStats が undefined | projects?.map で安全に処理 |
+| テーブルが空 | projectStats が undefined | `projects?.map` で安全に処理 |
 | 進捗率が NaN | タスク0件で割り算 | length > 0 チェック追加 |
 | 週次データが空 | completedAt 未設定 | シードデータを確認 |
 | 型エラーが出る | weeks が string | Number.parseInt で変換 |

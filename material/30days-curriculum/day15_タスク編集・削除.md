@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 14 で学んだこと:
+Day 14 で学んだことは次のとおりです。
 - TaskDialog で react-hook-form + zod のバリデーション
 - `Controller` による Select 連携
 - `useMutation` による保存処理
@@ -14,11 +14,11 @@ Day 14 で学んだこと:
 ## 今日のゴール
 
 これで CRUD の「U（更新）」と「D（削除）」が
-揃い、タスク管理の基本操作が完成します！
+揃い、タスク管理の基本操作が完成します。
 1つのコンポーネントで作成と編集の両方に対応する
 パターンを学びます。
 
-スクリーンショット: タスク編集ダイアログの画面
+スクリーンショット: タスク編集ダイアログの画面。
 
 ![タスク編集ダイアログの画面](./screenshots/task-detail-dialog.png)
 
@@ -29,7 +29,7 @@ Day 14 で学んだこと:
 - `TaskDialog` の新規作成モードを読み返せる
 - 削除操作を試すため、消えてもよい練習用タスクを使う
 
-## なぜこれを作るのか？
+## なぜこれを作るのか
 
 タスクの内容は常に変化します。優先度が上がったり、
 担当者が変わったり、期限が延びたりします。
@@ -77,7 +77,7 @@ flowchart TD
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | initialData | イニシャル・データ | 編集時の初期値 | 書き直す前の付箋の内容 |
-| DeleteConfirmDialog | デリート・コンファーム・ダイアログ | 削除確認ダイアログ | 「本当に捨てますか？」の確認 |
+| DeleteConfirmDialog | デリート・コンファーム・ダイアログ | 削除確認ダイアログ | 「本当に捨てますか」の確認 |
 | update mutation | アップデート・ミューテーション | 更新APIの呼び出し | 付箋を書き直してボードに貼る |
 
 > **今日のゴールライン**: `null` と `undefined` の使い分けが出てくるけど、今日覚えるのは「null = クリアしたい、undefined = 変更しない」の2行だけ。JavaScript の型の深い話は今日は不要。
@@ -98,7 +98,7 @@ flowchart TD
 | Step 10 | TaskDialogにeditingTaskを渡す | 3分 |
 | Step 11 | 動作確認 | 3分 |
 
-**合計時間**: 約49分
+**合計時間**: 約49分。
 
 ---
 
@@ -473,7 +473,7 @@ const handleDelete = (taskId: string) => {
 - 確認ボタンでタスクが削除される
 - キャンセルで何も起こらない
 
-スクリーンショット: 削除確認ダイアログの画面
+スクリーンショット: 削除確認ダイアログの画面。
 
 ![削除確認ダイアログの画面](./screenshots/project-delete-confirm.png)
 ---
@@ -531,10 +531,10 @@ const handleCreate = () => {
 />
 ```
 
-> `TaskCard` にはタイマー関連の optional
-> props（`isTimerActive`, `timerStartedAt`,
-> `timeSpentMinutes`, `onTimerUpdate`）も
-> あります。これらは Day 16 で実装します。
+> `TaskCard` にはタイマー関連の optional な props も
+> あります。`isTimerActive`, `timerStartedAt`,
+> `timeSpentMinutes`, `onTimerUpdate` の 4 つです。
+> これらは Day 16 で実装します。
 
 **確認ポイント**:
 - `onEdit` に `handleEdit` を渡している
@@ -567,7 +567,7 @@ const handleCreate = () => {
 - カードの編集ボタンで編集モードが開く
 - カードの削除ボタンで確認→削除される
 
-スクリーンショット: 編集後のタスク一覧画面
+スクリーンショット: 編集後のタスク一覧画面。
 
 ![編集後のタスク一覧画面](./screenshots/task-list.png)
 ---
@@ -602,7 +602,7 @@ PORT=3001 npm run dev
 ### Pro パターンで書こう — 編集後の一覧更新を楽観的に反映する
 
 ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（動くけど、プロは書かない）
 

@@ -1048,7 +1048,7 @@ export default function HomePage() {
 まだ `npm run dev` を落としていなければ、
 保存した瞬間に変わっているはずです。
 
-止めていたら、もう1回起動しよう。
+止めていたら、もう1回起動しましょう。
 
 **ターミナル（`~/workspace/task-app`）**
 ```bash

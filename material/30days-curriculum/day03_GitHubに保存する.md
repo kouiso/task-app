@@ -93,7 +93,7 @@ Day 02 までで育てた `task-app` を、
 
 もしこのあと `git status` を実行して
 `not a git repository` と表示されたら、
-プロジェクトのルートで一度だけ次を実行しよう。
+プロジェクトのルートで一度だけ次を実行しましょう。
 
 ```bash
 git init
@@ -156,7 +156,7 @@ Day 02 の最後では、
 こう予告していました。
 
 > 次は GitHub に保存して、
-> 「自分で育てたアプリの進化」を積み上げていける状態にしていこう。
+> 「自分で育てたアプリの進化」を積み上げていける状態にしていきましょう。
 
 今日はまさにここに取り組みます。
 
@@ -209,7 +209,7 @@ Git の役割がかなり整理しやすいです。
 ## Step 1: いまの Git 状態を読む
 
 いきなり GitHub 側を触る前に、
-まずローカルの状態を確認しよう。
+まずローカルの状態を確認しましょう。
 
 ![git status の実行結果](./screenshots/day03-git-status.png)
 
@@ -603,7 +603,7 @@ origin  https://github.com/<your-user-name>/task-app.git (push)
 基本的には未接続を想定しています。
 
 でも `git remote -v` の時点ですでに何か出ていたなら、
-その URL が本当に自分の GitHub リポジトリか確認しよう。
+その URL が本当に自分の GitHub リポジトリか確認しましょう。
 
 自分のものと違うなら、
 いったん立ち止まって、
@@ -699,7 +699,7 @@ A  src/app/dashboard/page.tsx
 ### コミットメッセージを付けて保存する
 
 今日は最初の GitHub 保存なので、
-何を残したかが一目で分かる名前にしよう。
+何を残したかが一目で分かる名前にしましょう。
 
 ```bash
 git commit -m "feat: save initial dashboard project to GitHub"
@@ -730,7 +730,7 @@ GitHub に保存する日は
 ほうが強いです。
 
 なぜそうするのか、
-**Before/After** で見比べてみよう。
+**Before/After** で見比べてみましょう。
 
 ### Before（動くけど、プロは書かない）
 
@@ -898,7 +898,7 @@ gh auth login
 保存先がまだ登録されていません。
 なので push 先が分からない状態です。
 
-あらためて `origin` を追加しよう。
+あらためて `origin` を追加しましょう。
 
 ```bash
 git remote add origin https://github.com/<your-user-name>/task-app.git
@@ -1043,7 +1043,7 @@ GitHub に保存できたら、
 ネットに公開していきます。
 
 Day 04 では Vercel につないで、
-自分の `task-app` を実際の URL で開ける状態まで持っていこう。
+自分の `task-app` を実際の URL で開ける状態まで持っていきましょう。
 
 GitHub に保存した今日の一歩が、
 そのまま公開への橋になります。
