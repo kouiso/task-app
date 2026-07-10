@@ -1040,7 +1040,7 @@ const taskFormSchema = z.object({
     'IN_REVIEW',
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1070,7 +1070,7 @@ export interface TaskFormData {
   estimatedHours?: number;
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1135,7 +1135,7 @@ const taskFormSchema = z.object({
 
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1165,7 +1165,7 @@ const statusOptions = Object.entries(
   TASK_STATUS_LABELS,
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
