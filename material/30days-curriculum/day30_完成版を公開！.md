@@ -582,7 +582,7 @@ export default function GraduationPage() {
       <div className="grid gap-4 md:grid-cols-2">
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -636,7 +636,7 @@ export default function GraduationPage() {
     </main>
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -666,7 +666,7 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
     </button>
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き

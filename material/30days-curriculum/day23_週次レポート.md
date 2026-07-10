@@ -750,7 +750,7 @@ export async function fetchWeeklyReportTasks(
     },
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -780,7 +780,7 @@ export async function fetchWeeklyReportTasks(
         priority: task.priority,
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -826,7 +826,7 @@ export async function fetchWeeklyReportTasks(
     },
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き

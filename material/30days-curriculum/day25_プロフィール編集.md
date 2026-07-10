@@ -1636,7 +1636,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
       displayName = currentUser.name;
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1666,7 +1666,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     if (currentUser.updatedAt) {
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1722,7 +1722,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
