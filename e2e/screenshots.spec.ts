@@ -228,23 +228,12 @@ test.describe('Curriculum Screenshots', () => {
     });
 
     test('project page - empty state', async ({ page }) => {
-      // シードのユーザーはいずれかのプロジェクトに所属しているため、空状態を撮影できない。
-      // 実行のたびに未所属のユーザーを新規登録して使う。
-      const email = `empty-state-${Date.now()}@example.com`;
-      const password = 'Passw0rd!';
-
-      await page.goto('/register');
-      await page.waitForSelector('#name', { timeout: 30000 });
-      await page.fill('#name', '新人 太郎');
-      await page.fill('#email', email);
-      await page.fill('#password', password);
-      await page.fill('#confirmPassword', password);
-      await page.getByRole('button', { name: '登録', exact: true }).click();
-      await page.waitForURL('**/login', { timeout: 60000, waitUntil: 'domcontentloaded' });
-
+      // シードの `empty@example.com` はどのプロジェクトにも所属しないため、
+      // 空状態（プロジェクトが1件もない画面）を撮影できる。
+      await page.goto('/login');
       await page.waitForSelector('#email', { timeout: 30000 });
-      await page.fill('#email', email);
-      await page.fill('#password', password);
+      await page.fill('#email', 'empty@example.com');
+      await page.fill('#password', 'password123');
       await page.getByRole('button', { name: /ログイン|login/i }).click();
       await page.waitForURL('**/dashboard', { timeout: 60000, waitUntil: 'domcontentloaded' });
 
