@@ -80,7 +80,7 @@
 Module not found: Can't resolve '@/component/ui/button'
 ```
 **原因**: インポートパスが間違っている、またはファイルが存在しない
-**解決**: ファイルの存在を確認し、パスエイリアス（`@/`）が正しく設定されているか`tsconfig.json`を確認
+**解決**: ファイルの存在を確認し、パスエイリアス（`@/`）が正しく設定されているか`tsconfig.json`を確認します。
 
 ### `Hydration Error`
 ```
@@ -95,11 +95,11 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 
 ### `Prisma: Invalid `prisma.xxx.findMany()` invocation`
 **原因**: Prismaクライアントとスキーマが不一致
-**解決**: `npx prisma generate`を実行してクライアントを再生成
+**解決**: `npx prisma generate`を実行してクライアントを再生成します。
 
 ### `Port 3000 is already in use`
 **原因**: 既に別のプロセスがポート3000を使用している
-**解決**: `lsof -i :3000`で使用中のプロセスを確認し、終了してから`npm run dev`を実行
+**解決**: `lsof -i :3000`で使用中のプロセスを確認し、終了してから`npm run dev`を実行します。
 
 ---
 
@@ -114,7 +114,7 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 ターミナルで`npm run dev`を実行中のログを確認。エラーの詳細が表示される。
 
 ### 3. エラーメッセージを検索
-エラーメッセージをそのままコピーしてGoogle検索。Stack Overflowや公式ドキュメントで解決策が見つかることが多いです。
+エラーメッセージをそのままコピーしてGoogle検索。Stack Overflowや公式ドキュメントで解決策が見つかることも多いです。
 
 ### 4. 変更を小さく保つ
 大きな変更を一度に行うとエラーの特定が難しいです。小さな変更→確認→コミットを繰り返します。
