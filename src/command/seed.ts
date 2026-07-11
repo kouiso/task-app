@@ -88,6 +88,20 @@ class Seed {
         isActive: true,
       },
     });
+
+    // どのプロジェクトにも所属しないユーザー。
+    // e2eの「プロジェクトが1件もない空状態」スクリーンショット撮影で使用する。
+    await this.prisma.user.upsert({
+      where: { email: 'empty@example.com' },
+      update: {},
+      create: {
+        email: 'empty@example.com',
+        name: '新人 太郎',
+        password: hashedPassword,
+        role: 'USER',
+        isActive: true,
+      },
+    });
   }
 
   async createProjects(developerEmail: string) {
