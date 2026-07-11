@@ -65,7 +65,7 @@ npm を使用します。理由は以下のとおりです。
 
 - URLや画面遷移の取り扱いについて
 
-  - 画面遷移時に, `useNavigate`等を使用して、画面遷移するが、これらはroute dir内にある `PAGE_CONSTANT`を使用すること。
+  - 画面遷移時に、`useRouter`（`next/navigation`）等を使用して画面遷移するが、これらはroute dir内にある `PAGE_CONSTANT`を使用すること。
     ※ Next.jsでdynamic routingのobjectを出力する方法があった気もするため、要調査
 
 ## api型定義の自動生成
