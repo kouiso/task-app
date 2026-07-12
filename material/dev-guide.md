@@ -20,14 +20,14 @@ npm-run-allで様々なコマンドを一括で動かせるようにしていま
 
 ## パッケージ管理
 
-npm を使用します。理由としては、
+npm を使用します。理由は以下のとおりです。
 
-- voltaでNode.jsバージョン管理を行っているため
+- voltaでNode.jsのバージョンを管理しているため
 - yarnのバージョンで大きく挙動が異なるため却下した
 
 ## Debugger
 
-任意の位置で実行を止めて変数確認やコード実行が可能
+任意の位置で実行を止めて変数確認やコード実行が可能です。
 
 1. ブレイククポイントを設定 (任意の行をクリックし、赤丸を付ける)
 1. backend 起動状態で、VSCode の `Next.js: debug full stack`
@@ -44,9 +44,9 @@ npm を使用します。理由としては、
 
   - 本リポジトリではNext.jsのApp Routerを採用した。
   - 原則ドメイン/urlごとにcomponentやpageを分割する。
-  - ドメインの垣根を越える場合に初めて、app直下に該当のフォルダを配置することが検討される
-    → dir構成に関しては議論の余地有りだが、ドメイン/url毎に管理することで『あのコンポーネントどこだっけ？』を無くす狙い
-    例: 認証系 【auth】の画面ならば、(auth)/sing-up/page.tsx, URLは/sign-up, (auth)/component/button/google-auth-button.tsx
+  - ドメインの垣根を越える場合に初めて、app直下に該当のフォルダを配置することを検討する。
+    → dir構成には議論の余地があるが、ドメインやURLごとに管理することで『あのコンポーネントはどこか』を探しやすくする狙いがある。
+    例: 認証系【auth】の画面ならば、(auth)/sign-up/page.tsx（URLは/sign-up）、(auth)/component/button/google-auth-button.tsx
 
   - スタイルは`scss module`以前まで使用していたが、shadcn/ui + Tailwind CSSに全切り替えする。sass が 残っていたら気付いたらshadcn/uiへの移行をお願いしたい
 
@@ -65,19 +65,19 @@ npm を使用します。理由としては、
 
 - URLや画面遷移の取り扱いについて
 
-  - 画面遷移時に, `useNavigate`等を使用して、画面遷移を行うが、これらはroute dir内にある `PAGE_CONSTANT`を使用すること。
-    ※ Next.jsでdynamic routingのobjectを出力する方法があった気がするのでそれを要調査
+  - 画面遷移時に、`useRouter`（`next/navigation`）等を使用して画面遷移するが、これらはroute dir内にある `PAGE_CONSTANT`を使用すること。
+    ※ Next.jsでdynamic routingのobjectを出力する方法があった気もするため、要調査
 
-## api型定義自動生成
+## api型定義の自動生成
 
-apiの型定義を手動で作るのは面倒。。。
+apiの型定義を手動で作るのは面倒です。
 そう思い、ここではopenapi.ymlを使った型定義の自動生成を積極的に取り入れています。
 
 ### 下準備
 
 - 対象リポジトリ: `horsemanager-backend`
 
-  - 本repositoryでは、上記対象repositoryを起動していればコマンドを実行するだけで、swagger-jsonを自動で見に行くので、コマンドを実行するだけです。
+  - 本repositoryでは、上記対象repositoryを起動していれば、swagger-jsonを自動で見に行くので、コマンドを実行するだけでよい。
 
   下記の両方とも`npm run compile`をやれば、自動生成される。
 
@@ -98,7 +98,7 @@ apiの型定義を手動で作るのは面倒。。。
 
 ## その他ライブラリについて
 
-特に無し
+特にありません。
 
 # SCSS Coding Guidelines
 
@@ -106,14 +106,14 @@ apiの型定義を手動で作るのは面倒。。。
 
 ## 基本ルール
 
-1. **Block**: コンポーネントのルートクラス。PascalCaseで命名します。
-2. **Element**: Blockの一部である要素。Block名の後にアンダースコア（\_）を付けてPascalCaseで命名します。
-3. **Modifier**: BlockまたはElementのバリエーション。アンダースコア（\_）を付けてcamelCaseで命名します。
+1. **Block** はコンポーネントのルートクラス。PascalCaseで命名する。
+2. **Element** はBlockの一部である要素。Block名の後にアンダースコア（\_）を付けてPascalCaseで命名する。
+3. **Modifier** はBlockまたはElementのバリエーション。アンダースコア（\_）を付けてcamelCaseで命名する。
 
 ## 注意点
 
-- **Block**はPascalCaseで命名します。
-- **Element**はBlock名の後にアンダースコア（\_）を付けてPascalCaseで命名します。
-- **Modifier**はアンダースコア（\_）を付けてcamelCaseで命名します。
-- **Element**はBlockの中にネストして記述します。
-- **Modifier**は対応するBlockまたはElementの中にネストして記述します。
+- **Block**はPascalCaseで命名する。
+- **Element**はBlock名の後にアンダースコア（\_）を付けてPascalCaseで命名する。
+- **Modifier**はアンダースコア（\_）を付けてcamelCaseで命名する。
+- **Element**はBlockの中にネストして記述する。
+- **Modifier**は対応するBlockまたはElementの中にネストして記述する。

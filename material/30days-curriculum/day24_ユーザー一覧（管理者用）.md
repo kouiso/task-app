@@ -1,36 +1,36 @@
 # Day 24: ユーザー一覧（管理者用）を作ろう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
 Day 23 ではプロジェクト別統計テーブルの表示と、週次レポートAPIの呼び出し・データ表示を実装しました。Table コンポーネントでデータを一覧表示するパターンを学んだので、今日は管理者専用のユーザー一覧ページに取り組みます。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
 管理者だけがアクセスできるユーザー管理ページを実装します。
 ユーザー一覧をテーブルで表示し、詳細画面や編集画面へ遷移できるようにします。
 
-📸 完成イメージ: 管理者がユーザーを一覧管理できるページです。
+完成イメージ: 管理者がユーザーを一覧管理できるページです。
 
 ![ユーザー管理ページの完成イメージ](./screenshots/user-list.png)
 
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか
 
-チームメンバーの情報を管理者が一覧で確認・管理するための画面です。
+メンバーが増えるほど、「誰がどの権限を持っているか」「無効にしたアカウントはどれか」が把握しづらくなります。管理者が全ユーザーを一覧で見渡し、権限や状態を確認できる画面を用意します。
 
-> 💡 **例え話**: ユーザー管理は「学校の出席簿」です。
+> **例え話**: ユーザー管理は「学校の出席簿」です。
 > 先生（管理者）だけが出席簿を開いて、
 > 生徒（ユーザー）の名前や出席状況を確認できます。
 
-## 🧰 始める前の前提
+## 始める前の前提
 
 - 管理者ユーザーでログインできる
 - 一般ユーザーも1人以上登録済みで、一覧に表示する対象がある
 - `src/server/api/root.ts` に user ルーターを追加する準備ができている
 - 管理者以外で開いたときのアクセス拒否も確認する
 
-### 📐 ユーザー管理ページのフロー
+### ユーザー管理ページのフロー
 
 ```mermaid
 flowchart TD
@@ -62,7 +62,7 @@ flowchart TD
 | 詳細・編集へのリンク | ユーザー削除 |
 | 空状態UI表示 | ソート・フィルタ |
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -87,7 +87,7 @@ flowchart TD
 | テーブル | ユーザー一覧 | Step 6-8 |
 | 空状態 | ユーザー0件時のメッセージ | Step 9 |
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -101,13 +101,13 @@ flowchart TD
 | Step 8 | アクションボタンの追加 | 4分 |
 | Step 9 | 空状態UIと動作確認 | 3分 |
 
-**合計時間**: 約35分
+**合計時間**: 約35分。
 
 ---
 
 ### Step 0: ユーザー API を有効化する（2分）
 
-`src/server/api/root.ts` に user ルーターを追加する。
+`src/server/api/root.ts` に user ルーターを追加します。
 
 ```typescript
 // filepath: src/server/api/root.ts（import を追加）
@@ -117,13 +117,13 @@ import { userRouter } from './routers/user';
   user: userRouter,
 ```
 
-✅ **確認ポイント**: `user: userRouter` を追加した。
+**確認ポイント**: `user: userRouter` を追加しました。
 
 ---
 
 ### Step 1: 使用するAPIの確認（3分）
 
-🎯 **ゴール**: ユーザー管理に使う2つのAPIを理解します。
+**ゴール**: ユーザー管理に使う2つのAPIを理解します。
 
 #### 使用するAPI一覧
 
@@ -148,11 +148,11 @@ api.auth.getCurrentUser.useQuery();
 api.user.getAll.useQuery();
 ```
 
-> 💡 `api.auth.getCurrentUser` で自分のロールを確認し、
+> `api.auth.getCurrentUser` で自分のロールを確認し、
 > ADMIN でなければアクセスを拒否します。
 > `api.user.getAll` は管理者のみ呼べるAPIです。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 2つのAPIの役割を理解した
 - getCurrentUser でロール判定することを理解した
 
@@ -160,7 +160,7 @@ api.user.getAll.useQuery();
 
 ### Step 2: インポート文（外部ライブラリ）（3分）
 
-🎯 **ゴール**: 外部ライブラリのインポートを追加します。
+**ゴール**: 外部ライブラリのインポートを追加します。
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -175,7 +175,7 @@ import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 ```
 
-> 💡 `'use client'` はこのファイルが
+> `'use client'` はこのファイルが
 > クライアントコンポーネントであることを示します。
 > `useRouter` や `useEffect` を使うために必須です。
 
@@ -189,7 +189,7 @@ import toast from 'react-hot-toast';
 | useEffect | 副作用処理（エラー検知） |
 | react-hot-toast | トースト通知 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `'use client'` がファイル先頭にある
 - 各ライブラリの役割を理解した
 
@@ -197,7 +197,7 @@ import toast from 'react-hot-toast';
 
 ### Step 3: インポート文（プロジェクト内）（3分）
 
-🎯 **ゴール**: プロジェクト内のコンポーネントと定数をインポートします。
+**ゴール**: プロジェクト内のコンポーネントと定数をインポートします。
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -213,7 +213,7 @@ import {
 } from '@/component/ui/card';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `AppLayout` はページ全体のレイアウト
 - `Avatar` はユーザーアイコン表示用
 
@@ -233,12 +233,12 @@ import { USER_ROLE }
 import { api } from '@/trpc/react';
 ```
 
-> 💡 `PageLoadingSpinner` は
+> `PageLoadingSpinner` は
 > `@/component/ui/loading-spinner` にあります。
 > `AppLayout` を内包しているため、サイドバーや
 > ヘッダーが自動的に表示されます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` になっている
 - `USER_ROLE` 定数を `@/lib/constant/roles` からインポートしている
 - `UserRoleBadge` と `ActiveStatusBadge` をインポートしている
@@ -247,9 +247,9 @@ import { api } from '@/trpc/react';
 
 ### Step 4: データ取得とエラー処理（5分）
 
-🎯 **ゴール**: APIからデータを取得し、エラー時の処理を追加します。
+**ゴール**: APIからデータを取得し、エラー時の処理を追加します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -266,11 +266,11 @@ export default function UsersPage() {
   } = api.user.getAll.useQuery();
 ```
 
-> 💡 `useQuery` はデータ取得用のhookです。
+> `useQuery` はデータ取得用のhookです。
 > `data`, `isLoading`, `error` の3つの状態を返します。
 > これらを使い分けて画面表示を切り替えます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `getCurrentUser` と `getAll` の2つのAPIを呼んでいる
 - `isLoading` と `error` を取得している
 
@@ -299,13 +299,13 @@ export default function UsersPage() {
   }, [error, router]);
 ```
 
-> 💡 `||` は falsy な値のとき右辺を使います。
+> `||` は falsy な値のとき右辺を使います。
 > `if (error)` の中なので error オブジェクトの
 > 存在は保証されています。
 > `error.message.includes` で管理者権限エラーを
 > 検知し、ダッシュボードへリダイレクトします。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - エラー時にトーストが表示される
 - 権限エラー時にダッシュボードへリダイレクトする
 
@@ -313,9 +313,9 @@ export default function UsersPage() {
 
 ### Step 5: ローディングと権限チェック（5分）
 
-🎯 **ゴール**: ローディング表示とADMIN以外のアクセス拒否画面を実装します。
+**ゴール**: ローディング表示とADMIN以外のアクセス拒否画面を実装します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -324,10 +324,10 @@ export default function UsersPage() {
   }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `/user` にアクセスしてスピナーが出る
 
-📸 権限チェック:
+権限チェック:
 一般ユーザーでアクセスすると、ユーザー一覧ではなく
 権限エラーのメッセージが表示されればOKです。
 
@@ -347,7 +347,7 @@ export default function UsersPage() {
               </h1>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `USER_ROLE.ADMIN` を使っている（文字列 `'ADMIN'` ではない）
 
 ```typescript
@@ -373,11 +373,11 @@ export default function UsersPage() {
 | role === USER_ROLE.USER | アクセス拒否 | エラーカード |
 | currentUser が null | アクセス拒否 | エラーカード |
 
-> 💡 `USER_ROLE.ADMIN` は `@/lib/constant/roles` で
+> `USER_ROLE.ADMIN` は `@/lib/constant/roles` で
 > 定義された定数です。文字列 `'ADMIN'` を直接書かず、
 > 定数を使うことでタイプミスを防げます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 一般ユーザーでアクセスすると拒否される
 - 管理者でアクセスすると一覧が見える
 
@@ -385,9 +385,9 @@ export default function UsersPage() {
 
 ### Step 6: ページヘッダーとテーブル枠（4分）
 
-🎯 **ゴール**: ページのメインレイアウトとテーブルのヘッダー行を作ります。
+**ゴール**: ページのメインレイアウトとテーブルのヘッダー行を作ります。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -405,7 +405,7 @@ export default function UsersPage() {
         </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 「ユーザー管理」のタイトルが表示される
 
 ```typescript
@@ -426,7 +426,7 @@ export default function UsersPage() {
                   </TableHead>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - テーブルヘッダーに列名が表示される
 
 ```typescript
@@ -445,11 +445,11 @@ export default function UsersPage() {
               </TableHeader>
 ```
 
-> 💡 `TableHeader` と `TableBody` は
+> `TableHeader` と `TableBody` は
 > 同じ `<Table>` タグの中に並べて書きます。
 > HTMLの `<thead>` と `<tbody>` に対応しています。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 6列のヘッダーが表示される
 - アクション列が右寄せになっている
 
@@ -457,9 +457,9 @@ export default function UsersPage() {
 
 ### Step 7: アバターとバッジの表示（5分）
 
-🎯 **ゴール**: テーブル本体にアバター画像とロール・ステータスのバッジを表示します。
+**ゴール**: テーブル本体にアバター画像とロール・ステータスのバッジを表示します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -480,12 +480,12 @@ export default function UsersPage() {
                           )}
 ```
 
-> 💡 `{user.avatar && ...}` で画像URLが
+> `{user.avatar && ...}` で画像URLが
 > 存在するときだけ `AvatarImage` を表示します。
 > avatar が null/undefined のときは
 > AvatarFallback が自動的に表示されます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 条件付きレンダリングを使っている
 
 ```typescript
@@ -508,11 +508,11 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - アバター画像または頭文字が表示される
 - ユーザー名とメールアドレスが表示される
 
-📸 アバターとバッジの表示を確認してください。
+アバターとバッジの表示を確認してください。
 
 ![アバターとバッジの表示](./screenshots/user-list.png)
 
@@ -541,11 +541,11 @@ export default function UsersPage() {
 | アクティブ | green-500/10 | green-700 | アクティブ |
 | 無効 | gray-500/10 | gray-700 | 無効 |
 
-> 💡 `AvatarFallback` にはユーザー名の頭文字を
+> `AvatarFallback` にはユーザー名の頭文字を
 > 大文字で表示します。画像がないユーザーでも
 > アイコンが表示されます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 管理者は Shield アイコン付きで表示される
 - アクティブは緑、無効はグレーで表示される
 
@@ -553,9 +553,9 @@ export default function UsersPage() {
 
 ### Step 8: アクションボタンの追加（4分）
 
-🎯 **ゴール**: 各行に日付表示と、詳細・編集ボタンを追加します。
+**ゴール**: 各行に日付表示と、詳細・編集ボタンを追加します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -570,12 +570,12 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-> 💡 `format` は `date-fns` の関数です。
+> `format` は `date-fns` の関数です。
 > `ja` ロケールを渡すと日本語の日付形式で
 > 表示されます。`createdAt` が undefined なら
 > `-` を表示して安全に処理しています。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 登録日が yyyy/MM/dd 形式で表示される
 
 ```typescript
@@ -598,7 +598,7 @@ export default function UsersPage() {
                         </Button>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 目のアイコン（Eye）の詳細ボタンが表示される
 
 ```typescript
@@ -620,7 +620,7 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 各行に詳細・編集の2つのボタンが表示される
 - ホバーで背景色が変わる
 
@@ -641,20 +641,20 @@ export default function UsersPage() {
 | 詳細 | Eye | /user/ユーザーID | 情報閲覧 |
 | 編集 | Pencil | /user/ユーザーID/edit | 情報編集 |
 
-> 💡 `variant="ghost"` は背景色なしのボタンです。
+> `variant="ghost"` は背景色なしのボタンです。
 > テーブル内では控えめなデザインが適しています。
 > `size="icon"` でアイコンサイズになります。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - テーブルが完成し、全列にデータが表示される
 
 ---
 
 ### Step 9: 空状態UIと動作確認（3分）
 
-🎯 **ゴール**: ユーザー0件時のメッセージを追加し、全体の動作を確認します。
+**ゴール**: ユーザー0件時のメッセージを追加し、全体の動作を確認します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -670,14 +670,14 @@ export default function UsersPage() {
 }
 ```
 
-> 💡 データが0件のとき何も表示しないと、
+> データが0件のとき何も表示しないと、
 > ユーザーは混乱します。
 > 空状態メッセージを表示して安心させましょう。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ユーザーが0件のときメッセージが表示される
 
-📸 完成画面: 全ユーザーが一覧表示されています。
+完成画面: 全ユーザーが一覧表示されています。
 
 ![完成したユーザー管理ページ](./screenshots/user-list.png)
 
@@ -686,7 +686,7 @@ export default function UsersPage() {
 PORT=3001 npm run dev
 ```
 
-動作確認チェックリスト:
+**動作確認チェックリスト**:
 
 1. 管理者でログインする
 2. `/user` にアクセスする
@@ -704,7 +704,7 @@ PORT=3001 npm run dev
 | 詳細 | /user/{id} | /user/abc123 |
 | 編集 | /user/{id}/edit | /user/abc123/edit |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 管理者のみアクセスできる
 - 全ユーザーがテーブルに表示される
 - 詳細・編集ボタンで正しく遷移する
@@ -712,20 +712,20 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — ユーザー一覧カードの Props は Pick で切り出す
+### Pro パターンで書こう — ユーザー一覧カードの Props は Pick で切り出す
 
-ユーザー一覧カードは、ユーザー情報の一部だけを使う。
+ユーザー一覧カードは、ユーザー情報の一部だけを使います。
 `User` 型を丸ごと渡すより、使う列だけを `Pick` すると、
-カードの責務が読みやすくなる。
+カードの責務が読みやすくなります。
 
 | 書き方 | 特徴 |
 |--------|------|
 | `User` を丸ごと渡す | 使わない情報も混ざる |
 | `Pick<User, ...>` | 必要な列だけ分かる |
 
-**覚えておきたいこと**: 表示部品には必要な情報だけ渡す。
+**覚えておきたいこと**: 表示部品には必要な情報だけ渡します。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] api.auth.getCurrentUser で権限チェックした
 - [ ] api.user.getAll でユーザー一覧を取得した
@@ -733,17 +733,17 @@ PORT=3001 npm run dev
 - [ ] アクションボタンで詳細・編集に遷移できた
 - [ ] 空状態UIを実装した
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 一般ユーザーで表示される | 権限チェック漏れ | role !== USER_ROLE.ADMIN を追加 |
+| 一般ユーザーで表示される | 権限チェック漏れ | `role !== USER_ROLE.ADMIN` を追加 |
 | アバターが空白 | avatar が null | AvatarFallback で頭文字表示 |
 | 日付がInvalid Date | createdAt が undefined | 三項演算子で '-' を表示 |
 | ボタンが押せない | onClick 未設定 | router.push を追加 |
 | テーブルが空で不安 | 空状態UI未実装 | length === 0 のメッセージを追加 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -751,11 +751,11 @@ PORT=3001 npm run dev
 | USER_ROLE.ADMIN | 管理者ロールを表す定数 |
 | \|\| (OR演算子) | falsy値のとき代替値を使う演算子 |
 | && (条件付きレンダリング) | 条件がtrueのときだけ要素を表示するパターン |
-| ?. (オプショナルチェーン) | プロパティがnull/undefinedでもエラーにならない |
+| `?.` (オプショナルチェーン) | プロパティがnull/undefinedでもエラーにならない |
 | UserRoleBadge | ロール表示用の専用バッジコンポーネント |
 | variant="ghost" | 背景なしの控えめなボタンスタイル |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 25 では、プロフィールページとパスワード変更機能を実装します。
 自分の情報を確認・変更できるようにします。
