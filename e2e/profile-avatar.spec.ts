@@ -58,7 +58,7 @@ test.describe('avatar update', () => {
     await page.fill('input#avatar', '');
     await page.fill('input#avatar', newAvatar);
     await page.click('button[type="submit"]');
-    await page.waitForURL(new RegExp(`/user/${userId}$`));
+    await page.waitForURL((currentUrl) => currentUrl.pathname === `/user/${userId}`);
     await page.waitForTimeout(2000);
 
     const imgSrc = await page.locator('main img').first().getAttribute('src');
