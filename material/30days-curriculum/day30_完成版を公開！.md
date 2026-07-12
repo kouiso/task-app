@@ -1,30 +1,30 @@
-# Day 30: 完成版を公開！卒業！
+# Day 30: 完成版を公開
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
-Day 29 では**ユーザー詳細・編集ページ**を実装しました。管理者がユーザー情報を閲覧・編集できる画面を作り、権限チェックやフォームバリデーションも組み込みましたね。
+Day 29 では**ユーザー詳細・編集ページ**を実装しました。管理者がユーザー情報を閲覧・編集できる画面を作り、権限チェックやフォームバリデーションも組み込みました。
 
 今日はいよいよ最終日。完成したアプリをインターネットに公開して、30日間の集大成を形にします。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
-完成したタスク管理アプリを Vercel にデプロイし
+完成したタスク管理アプリを Vercel へデプロイし、
 インターネットに公開します。30日間の学習を
 振り返り、次のステップを考えます。
 
-## 🤔 なぜこれをやるのか？
+## なぜこれをやるのか
 
 自分のパソコンでしか動かないアプリは
 まだ「作品」ではありません。公開して初めて
 世界中の人に使ってもらえるプロダクトになります。
 
-> 💡 **例え話**: デプロイは「料理をお店に並べる」ことです。30日間かけて腕を磨き、レシピを覚え、食材を選びました。
+> **例え話**: デプロイは「料理をお店に並べる」ことです。30日間かけて腕を磨き、レシピを覚え、食材を選びました。
 >
 > ようやく完成した一皿をテーブルに出す瞬間が一番の醍醐味です。
 
-### 📐 30日間のジャーニー
+### 30日間の歩み
 
 ```mermaid
 flowchart TD
@@ -46,13 +46,13 @@ flowchart TD
 | Vercel にデプロイ | ドメイン購入 |
 | 本番動作確認 | 負荷テスト |
 
-> ⚠️ **ローカル DB と本番 DB の違い**:
+> **ローカル DB と本番 DB の違い**:
 > Docker の PostgreSQL はローカル開発専用です。
 > 本番では Vercel Postgres や Supabase などの
 > マネージド DB を使います。Vercel に設定する
 > `DATABASE_URL` は本番 DB の接続文字列です。
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -61,7 +61,7 @@ flowchart TD
 | CI/CD | シーアイシーディー | 自動ビルド・デプロイ | 自動配送システム |
 | Production | プロダクション | 本番環境 | 実店舗の営業 |
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -74,13 +74,13 @@ flowchart TD
 | Step 7 | 技術スタックの振り返り | 5分 |
 | Step 8 | 次のステップとリソース | 5分 |
 
-**合計時間**: 約44分
+**合計時間**: 約44分。
 
 ---
 
 ### Step 1: 本番用の環境変数を準備（5分）
 
-🎯 **ゴール**: Vercel にデプロイするための
+**ゴール**: Vercel にデプロイするための
 環境変数を準備します。
 
 **必要な環境変数**
@@ -90,17 +90,17 @@ flowchart TD
 | DATABASE_URL | `postgresql://user:pass@host:5432/db` | DB 接続（本番用） |
 | JWT_SECRET | 32文字以上のランダムな秘密鍵 | JWT の HMAC 署名鍵 |
 
-> 💡 `NODE_ENV` は Vercel が自動で
+> `NODE_ENV` は Vercel が自動で
 > `production` に設定するため、
 > 手動設定は不要です。
 
-> 💡 本番用の `DATABASE_URL` は Vercel
+> 本番用の `DATABASE_URL` は Vercel
 > Postgres や Supabase 等のクラウド DB
 > サービスで取得できます。Day 4 で
 > 初回デプロイ時に設定済みの場合は
 > その接続文字列をそのまま使います。
 
-💻 **シークレットキーの生成**:
+**シークレットキーの生成**:
 
 ```bash
 # filepath: ターミナル
@@ -109,16 +109,16 @@ openssl rand -base64 32
 # 出力例: K7x3mP9q...（これをコピー）
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 44文字程度のランダム文字列が表示された
 - コピーして安全な場所にメモした
 
-> 💡 `JWT_SECRET` は JWT トークンの
+> `JWT_SECRET` は JWT トークンの
 > HMAC 署名に使う秘密鍵です。
 > `openssl rand -base64 32` は32バイト
 > （Base64で44文字）の鍵を生成します。
 
-💻 **.env.example の主要変数（ローカル参考）**:
+次に、**.env.example の主要変数**（ローカル参考）を確認します。
 
 ```bash
 # filepath: .env.example（主要部分の抜粋）
@@ -135,7 +135,7 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 # NEXT_PUBLIC_BASE_URL="https://your-app.vercel.app"
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `.env.example` の主要変数を確認できた
 - `DATABASE_URL` の構造を理解した
 
@@ -145,12 +145,12 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 > `_DOCKER_COMPOSE_HOST_PORT_DB` と `DATABASE_URL` の
 > ポート番号を同じ値に変更します。
 
-> 💡 本番では `.env` ファイルは使いません。
+> 本番では `.env` ファイルは使いません。
 > Vercel のダッシュボードで環境変数を
 > 直接設定します。コードに秘密値を
 > 含めないのがセキュリティの基本です。
 
-> ⚠️ **ローカルで `npm run build` を実行する前の準備**:
+> **ローカルで `npm run build` を実行する前の準備**:
 > このプロジェクトは `prisma.config.ts` と
 > `package.json` の `build` / `vercel-build` /
 > `postinstall` で Prisma Client 生成を行うため、
@@ -169,18 +169,18 @@ cp .env.example .env.local
 # .env.local を開き、最低でも DATABASE_URL と JWT_SECRET を設定する
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 2つの環境変数の値を準備できた
 
 ---
 
 ### Step 2: 本番前のローカル最終確認（5分）
 
-🎯 **ゴール**: 本番デプロイ前に、ローカルで
+**ゴール**: 本番デプロイ前に、ローカルで
 アプリが正常に動くことを最終確認します。
 docker-compose.yml の構成も把握しましょう。
 
-💻 **docker-compose.yml の確認（db サービス部分のみ抜粋）**:
+次に、**docker-compose.yml の db サービス部分**を抜粋して確認します。
 
 > 実際のファイルにはテスト用 DB も定義されていますが、
 > ここではメイン DB サービスだけを確認します。
@@ -205,7 +205,7 @@ services:
       retries: 5
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - YAML のインデントがスペース2個で統一されている
 - `ports` や `volumes` の値が1行で書かれている
 
@@ -219,7 +219,7 @@ services:
 | POSTGRES_DB | taskapp | データベース名 |
 | ports | 25532:5432 | ホストからの接続ポート |
 
-💻 **DB の起動**:
+**DB の起動**:
 
 ```bash
 # filepath: ターミナル
@@ -233,13 +233,13 @@ docker compose ps
 npm run db:push
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `docker compose ps` で db が Running (healthy)
 - `npm run db:push` が成功した
 
-📸 確認メモ: `docker compose ps` の `db` 行で
+確認メモ: `docker compose ps` の `db` 行で
 `running (healthy)` と `25532->5432/tcp` が見えればOKです。
-> 💡 `npm run db:push` はローカル確認用です。
+> `npm run db:push` はローカル確認用です。
 > 本番では `prisma migrate deploy` を使うのが
 > 一般的です。Vercel のビルド時に
 > `prisma generate` が自動実行されます。
@@ -248,7 +248,7 @@ npm run db:push
 
 ### Step 3: Git にプッシュ（3分）
 
-🎯 **ゴール**: 最新のコードを GitHub に
+**ゴール**: 最新のコードを GitHub に
 プッシュします。
 
 ```bash
@@ -257,7 +257,7 @@ npm run db:push
 git status
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `.env` ファイルが含まれていない
 - `.gitignore` で秘密情報が除外されている
 
@@ -271,7 +271,7 @@ git commit -m "feat: 30日間の完成版"
 git push origin main
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `git push` が成功した
 - GitHub のリポジトリで最新コミットが見える
 
@@ -279,7 +279,7 @@ git push origin main
 
 ### Step 4: Vercel にデプロイ（7分）
 
-🎯 **ゴール**: Vercel にアプリを
+**ゴール**: Vercel にアプリを
 デプロイして公開します。
 
 #### デプロイの流れ
@@ -305,7 +305,7 @@ Day 4 で Vercel 連携済みの場合は、
 | Vercel アカウント | [vercel.com](https://vercel.com) で GitHub 登録 |
 | プロジェクト Import | 「Add New → Project」→ リポジトリ選択 |
 
-💻 **Vercel で環境変数を設定**:
+**Vercel で環境変数を設定**:
 
 1. Vercel ダッシュボードにログイン
 2. プロジェクトの Settings → Environment Variables
@@ -316,15 +316,15 @@ Day 4 で Vercel 連携済みの場合は、
 | DATABASE_URL | 本番DBの接続文字列 | Production |
 | JWT_SECRET | Step 1 で生成した値 | Production |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 2つの環境変数を Vercel に追加できた
 - 各変数の「Environment」が Production になっている
 
-> 💡 Vercel は GitHub と連携しているため
+> Vercel は GitHub と連携しているため
 > `git push` するだけで自動的にビルドと
 > デプロイが実行されます。これが CI/CD です。
 
-💻 **ビルドスクリプトの確認**:
+**ビルドスクリプトの確認**:
 
 package.json の `scripts` を確認しましょう。
 
@@ -333,17 +333,17 @@ package.json の `scripts` を確認しましょう。
 | `build` | `prisma generate && next build` | 通常ビルド |
 | `vercel-build` | `prisma generate && next build` | Vercel 用ビルド |
 
-> 💡 Vercel では `vercel-build` が優先的に
+> Vercel では `vercel-build` が優先的に
 > 実行されます。`prisma generate` で
 > Prisma Client を生成してから
 > `next build` を実行します。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ビルドスクリプトの内容を理解できた
 - Vercel のビルドログでエラーがない
 - デプロイ URL が発行された
 
-📸 確認メモ:
+確認メモ:
 Vercel ダッシュボードの「Deployments」タブで
 最新デプロイが `Ready` になっていればOKです。
 
@@ -351,7 +351,7 @@ Vercel ダッシュボードの「Deployments」タブで
 
 ### Step 5: 本番環境の動作確認（7分）
 
-🎯 **ゴール**: 公開された URL で
+**ゴール**: 公開された URL で
 全機能が動作することを確認します。
 
 ```bash
@@ -360,11 +360,11 @@ Vercel ダッシュボードの「Deployments」タブで
 open https://your-app-name.vercel.app
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ブラウザでデプロイ URL が開けた
 - ログインページが表示される
 
-📸 スクリーンショット: 本番環境のログイン画面
+【スクリーンショット】本番環境のログイン画面。
 
 ![本番環境のログイン画面](./screenshots/login.png)
 #### 本番環境チェックリスト
@@ -380,7 +380,7 @@ open https://your-app-name.vercel.app
 | 検索 | `/search` でキーワード検索 | ☐ |
 | プロフィール | `/profile` で情報更新 | ☐ |
 
-💻 **確認手順**:
+**確認手順**:
 
 1. デプロイ URL にアクセス
 2. `/register` で新規ユーザー作成
@@ -391,20 +391,20 @@ open https://your-app-name.vercel.app
 7. `/report` で統計確認
 8. ログアウト → 再ログイン
 
-> 💡 ブラウザの DevTools を開き、
+> ブラウザの DevTools を開き、
 > Console にエラーが出ていないことも
 > 確認しましょう。Network タブで
 > API レスポンスが 200 であることも
 > チェックします。
 
-📸 スクリーンショット: 本番環境のダッシュボード画面
+【スクリーンショット】本番環境のダッシュボード画面。
 
 ![本番環境のダッシュボード画面](./screenshots/dashboard.png)
 ---
 
 ### Step 6: 30日間の学習サマリー（7分）
 
-🎯 **ゴール**: 30日間で身につけたスキルを
+**ゴール**: 30日間で身につけたスキルを
 振り返ります。
 
 ```bash
@@ -415,7 +415,7 @@ git log --oneline | wc -l
 find src/app -name "page.tsx" | wc -l
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - コミット数が 30 以上あれば毎日コミットできた証拠
 - ページ数が 12 以上あれば充実したアプリ
 
@@ -430,7 +430,7 @@ find src/app -name "page.tsx" | wc -l
 | 第5週 | 17-22 | マイタスク・検索・統計・グラフ |
 | 第6週 | 23-30 | レポート・管理・詳細・デプロイ |
 
-> 💡 30日間で17ページ以上のアプリを
+> 30日間で17ページ以上のアプリを
 > ゼロから構築しました。
 > フロントエンドからバックエンド、
 > データベース設計からデプロイまで
@@ -440,7 +440,7 @@ find src/app -name "page.tsx" | wc -l
 
 ### Step 7: 技術スタックの振り返り（5分）
 
-🎯 **ゴール**: このアプリで使った
+**ゴール**: このアプリで使った
 技術スタックを総復習します。
 
 ```bash
@@ -449,7 +449,7 @@ find src/app -name "page.tsx" | wc -l
 npm ls next react typescript prisma
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 各パッケージのバージョンが表示された
 - 各技術の役割を説明できる
 
@@ -483,7 +483,7 @@ npm ls next react typescript prisma
 | Docker | — | コンテナ（PostgreSQL） |
 | Vercel | — | ホスティング・CI/CD |
 
-> 💡 この技術スタックは2024-2026年の
+> この技術スタックは2024-2026年の
 > モダン Web 開発で広く使われています。
 > ここで学んだ知識は実務でも活かせます。
 
@@ -492,7 +492,7 @@ npm ls next react typescript prisma
 
 ### Step 8: 次のステップとリソース（5分）
 
-🎯 **ゴール**: 今後の学習の方向性と
+**ゴール**: 今後の学習の方向性と
 参考リソースを確認します。
 
 ```bash
@@ -502,7 +502,7 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
   | xargs wc -l | tail -1
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 自分が書いたコードの総行数を把握できた
 - 次の学習目標を決められた
 
@@ -539,7 +539,7 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 | TypeScript Handbook | https://www.typescriptlang.org/docs |
 | MDN Web Docs | https://developer.mozilla.org |
 
-> 💡 公式ドキュメントが最も正確で
+> 公式ドキュメントが最も正確で
 > 最新の情報源です。困ったときは
 > まず公式ドキュメントを読みましょう。
 
@@ -548,12 +548,12 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ---
 
-### 💡 Pro パターンで書こう — 完成版の振り返り画面は Server Component を標準にする
+### Pro パターンで書こう — 完成版の振り返り画面は Server Component を標準にする
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### ❌ Before（動くけど、プロは書かない）
+#### Before（動くけど、プロは書かない）
 
 ```typescript
 // filepath: src/app/graduation/page.tsx
@@ -582,7 +582,7 @@ export default function GraduationPage() {
       <div className="grid gap-4 md:grid-cols-2">
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -607,7 +607,7 @@ export default function GraduationPage() {
 - `useState` が必要なのはコピーボタンだけなのに、ページ全体がブラウザ実行前提になる
 - 最終日の構成確認で「どこが対話部分か」が見えにくくなる
 
-#### ✅ After（プロが書くコード）
+#### After（プロが書くコード）
 
 ```typescript
 // filepath: src/app/graduation/page.tsx
@@ -636,7 +636,7 @@ export default function GraduationPage() {
     </main>
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -666,7 +666,7 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
     </button>
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -680,12 +680,12 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
 - ブラウザで状態を持つのはコピーボタンだけになり、責務の境界が見える
 - 本番公開前の設計レビューで「client 化が必要な場所」を説明しやすい
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
 App Router では Server Component を標準にして、
-クリック・入力・ブラウザ API が必要な小さな部品だけを Client Component に切り出す。
+クリック・入力・ブラウザ API が必要な小さな部品だけを Client Component に切り出します。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] 環境変数を Vercel に設定した
 - [ ] Docker で DB を起動できた
@@ -696,7 +696,7 @@ App Router では Server Component を標準にして、
 - [ ] 技術スタックを総復習した
 - [ ] 次のステップを決めた
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -705,7 +705,7 @@ App Router では Server Component を標準にして、
 | JWT エラー | JWT_SECRET が未設定 | openssl で生成して設定 |
 | ページが真っ白 | JS エラー | DevTools Console を確認 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -718,7 +718,7 @@ App Router では Server Component を標準にして、
 
 ---
 
-## 🎓 卒業おめでとうございます！
+## 卒業おめでとうございます
 
 **Task-App 30日間ハンズオンカリキュラム修了**
 
@@ -745,7 +745,7 @@ App Router では Server Component を標準にして、
 
 ### あなたの成長
 
-30日前のあなたは `npm` って何？の状態でした。今のあなたは、フルスタック Web アプリをゼロから構築し、世界に公開できるエンジニアです。
+30日前のあなたは `npm` が何かも分からない状態でした。今のあなたは、フルスタック Web アプリをゼロから構築し、世界に公開できるエンジニアです。
 
 この 30 日間で身につけた知識と経験は、あなたのエンジニアキャリアの確かな土台になります。
 
@@ -758,4 +758,4 @@ App Router では Server Component を標準にして、
 次のプロジェクトでも、ここで学んだスキルを
 活かして、さらに成長していってください。
 
-**Happy Coding!** 🎉
+**Happy Coding**
