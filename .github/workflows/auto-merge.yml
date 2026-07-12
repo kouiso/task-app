@@ -15,10 +15,17 @@ on:
     types:
       - submitted
 
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.head_branch || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   auto-merge:
     runs-on: ${{ vars.RUNNER_LINUX }}
-    if: github.actor != 'dependabot[bot]'
+    if: |
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'check_suite' || github.event.check_suite.conclusion == 'success') &&
+      (github.event_name != 'status' || github.event.state == 'success')
     steps:
       - name: Auto Merge PR
         uses: pascalgn/automerge-action@7961b8b5eec56cc088c140b56d864285eabd3f67
