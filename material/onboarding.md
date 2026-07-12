@@ -1,10 +1,10 @@
 # ONBOARDING
 
-チームにジョインしてフロントエンドを立ち上げるところまで
+チームにジョインしてフロントエンドを立ち上げるところまでを解説します。
 
 ## prerequisite
 
-セットアップとその後の開発に必要な依存をインストール
+セットアップとその後の開発に必要な依存をインストールします。
 
 - Machine: MacOS or Windows WSL2
 - Homebrew
@@ -14,7 +14,7 @@
 <summary>複数のnodeバージョン管理</summary>
 
 ※複数の node バージョン管理が必要な場合は各自バージョン管理ツールを導入して管理する
-まだ未導入であればプラグイン式で全言語の環境管理ができる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)がおすすめ
+まだ未導入であれば、プラグイン式で全言語の環境を管理できる[asdf](https://asdf-vm.com/guide/getting-started.html#_3-install-asdf)をおすすめします。
 
 ```bash
 # brewを手動インストール後、以下を実行
@@ -36,7 +36,7 @@ asdf reshim
 
 - dev環境の.envを以下のURLから取得する
   [develop]()
-  localの開発環境もこれで動かします。
+  localの開発環境もこれで動かす。
 
 ```bash
 # firebaseの認証情報

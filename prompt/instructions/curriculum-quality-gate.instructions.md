@@ -47,7 +47,7 @@ python3 scripts/curriculum-qa/check_comprehension.py <day_file>     # 注釈な�
 | check_step_length.py | All code blocks ≤ 25 lines |
 | check_code_completeness.py | All TypeScript code blocks have `// filepath:` comment |
 | check_tech_stack.py | Zero MUI imports, shadcn/ui patterns present |
-| check_tone.py | 敬体一貫・AI構文ゼロ・関西弁混入ゼロ |
+| check_tone.py | 敬体一貫・AI構文ゼロ・関西弁混入ゼロ・英語直訳調ゼロ |
 
 ## Code-Curriculum Consistency Check (実コード照合)
 <!-- コードと教材の一致確認 -->
