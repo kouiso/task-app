@@ -1,25 +1,25 @@
 # Day 10: プロジェクト新規作成を実装しよう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
-Day 09 では tRPC の `useQuery` を使ってサーバーからプロジェクトデータを取得し、`PageLoadingSpinner` によるローディング表示、グリッドレイアウトでのカード一覧、クエリパラメータによる詳細画面の自動オープンを実装しました。データの「読み取り」ができるようになったので、今日はダイアログ形式のフォームでプロジェクトの「作成」に挑戦します。
+Day 09 では tRPC の `useQuery` を使ってサーバーからプロジェクトデータを取得しました。あわせて `PageLoadingSpinner` によるローディング表示、グリッドレイアウトでのカード一覧、クエリパラメータによる詳細画面の自動オープンも実装しました。データの「読み取り」ができるようになったので、今日は「作成」に進みます。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
-ダイアログ（モーダル）形式のフォームで、新しいプロジェクトを作成できるようにします。react-hook-form と zod でフォームのバリデーションと状態管理を行い、tRPC の `useMutation` でサーバーに保存します。
+ダイアログ（モーダル）形式のフォームで、新しいプロジェクトを作成できるようにします。react-hook-form と zod でフォームのバリデーションと状態管理を担当し、tRPC の `useMutation` でサーバーに保存します。
 
-📸 スクリーンショット: プロジェクト作成ダイアログ
+【スクリーンショット】プロジェクト作成ダイアログ。
 
 ![プロジェクト作成ダイアログ](./screenshots/project-create-dialog.png)
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか
 
 プロジェクトがなければタスクも管理できません。ここでは「ダイアログ」という新しいUIパターンを学びます。
 
-> 💡 **例え話**: ダイアログは「付箋」のようなものです。ページ全体を移動せずに、今いる画面の上にメモ用紙をペタッと貼って書き込みます。書き終わったら付箋をはがすと、元の画面がそのまま残っています。
+> **例え話**: ダイアログは「付箋」のようなものです。ページ全体を移動せずに、今いる画面の上にメモ用紙をペタッと貼って書き込みます。書き終わったら付箋をはがすと、元の画面がそのまま残っています。
 
-### 📐 プロジェクト作成の流れ
+### プロジェクト作成の流れ
 
 ```mermaid
 flowchart TD
@@ -47,7 +47,7 @@ flowchart TD
 | useMutation でサーバーに保存 | fetch を手書きする |
 | キャッシュ無効化で一覧を自動更新 | 手動でページリロード |
 
-### 📂 今日触るファイル
+### 今日触るファイル
 
 ```
 src/
@@ -62,11 +62,11 @@ src/
         └── project.ts            ← 既存（定数を利用する）
 ```
 
-> 💡 今日は Day 09 で作った `src/app/project/page.tsx` に、プロジェクト作成・編集機能を追加します。`project-dialog.tsx` はリポジトリに配布済みの scaffold ファイルで、中身を読み解きながら `page.tsx` と連携させます。
+> 今日は Day 09 で作った `src/app/project/page.tsx` に、プロジェクト作成・編集機能を追加します。`project-dialog.tsx` はリポジトリに配布済みの scaffold ファイルで、中身を読み解きながら `page.tsx` と連携させます。
 
-> 📌 **今日のゴールライン**: 既存コードを「全部理解する」必要はない。「この部品がこう動く」が見えたら十分。細かい型やユーティリティは使いながら慣れていく。
+> **今日のゴールライン**: 既存コードを「全部理解する」必要はありません。「この部品がこう動く」が見えたら十分。細かい型やユーティリティは使いながら慣れていきます。
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -75,9 +75,9 @@ src/
 | register | レジスター | 入力欄を react-hook-form に登録する関数 | 記入欄に名札を付けて、どの欄かを管理する |
 | キャッシュ無効化 | — | データ変更後に一覧を自動で再取得 | 掲示板の更新ボタン。新しい投稿を反映する |
 
-> 📌 **今日のゴールライン**: 今日は既存のコードを読む場面が多い。「なぜこう書いてあるか」は全部わからなくて OK。「ダイアログでプロジェクトを作成できた」という結果が出たら今日の勝ち。読解力は Day 11 以降で同じパターンを繰り返すうちについてくる。
+> **今日のゴールライン**: 今日は既存のコードを読む場面が多いです。「なぜこう書いてあるか」は全部わからなくて OK。「ダイアログでプロジェクトを作成できた」という結果が出たら今日の勝ち。読解力は Day 11 以降で同じパターンを繰り返すうちについてきます。
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -90,17 +90,17 @@ src/
 | Step 7 | ページにDialogを組み込む | 7分 |
 | Step 8 | 動作確認 | 3分 |
 
-**合計時間**: 約44分
+**合計時間**は約44分です。
 
 ---
 
 ### Step 1: ProjectDialogの骨格を作る（5分）
 
-🎯 **ゴール**: ダイアログの基本構造を作ります。
+**ゴール**: ダイアログの基本構造を作ります。
 
-> 💡 **例え話**: AppLayout は「建物の共通設備」でしたが、Dialog は「部屋の中で開く小窓」です。中に入力フォームを置いて、書き終わったら閉じます。
+> **例え話**: AppLayout は「建物の共通設備」でしたが、Dialog は「部屋の中で開く小窓」です。中に入力フォームを置いて、書き終わったら閉じます。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -130,7 +130,7 @@ import { DEFAULT_PROJECT_COLOR }
   from '@/lib/constant/project';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - コードの内容を確認した
 - 全てのimportが確認できた
 
@@ -158,9 +158,9 @@ export interface ProjectFormData {
 }
 ```
 
-> 💡 `onClose` は「ダイアログを閉じる」ためのコールバックです。親コンポーネントが `setDialogOpen(false)` を渡します。
+> `onClose` は「ダイアログを閉じる」ためのコールバックです。親コンポーネントが `setDialogOpen(false)` を渡します。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `src/component/project/project-dialog.tsx` の内容を確認した
 - `ProjectDialogProps` と `ProjectFormData` の定義を理解した
 
@@ -168,9 +168,9 @@ export interface ProjectFormData {
 
 ### Step 2: zodスキーマとフォーム設定を作る（5分）
 
-🎯 **ゴール**: zod でバリデーションルールを定義し、react-hook-form で入力管理します。
+**ゴール**: zod でバリデーションルールを定義し、react-hook-form で入力管理します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -190,7 +190,7 @@ type ProjectFormValues =
   z.infer<typeof projectFormSchema>;
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `projectFormSchema` を定義した
 - `name` フィールドに `min(1)` バリデーションが設定されている
 
@@ -204,15 +204,15 @@ type ProjectFormValues =
 | `startDate` | `z.string().optional()` | 開始日（任意） |
 | `endDate` | `z.string().optional()` | 終了日（任意） |
 
-> 💡 `z.infer<typeof projectFormSchema>` は、zod スキーマから TypeScript の型を自動生成する機能です。スキーマと型が常に一致するので、ズレが起きません。
+> `z.infer<typeof projectFormSchema>` は、zod スキーマから TypeScript の型を自動生成する機能です。スキーマと型が常に一致するので、ズレが起きません。
 
 ---
 
 ### Step 3: defaultValues と reset で初期値を同期する（5分）
 
-🎯 **ゴール**: `useForm` の `defaultValues` と `useEffect(reset)` を使って、ダイアログが開くたびにフォームの初期値を同期します。
+**ゴール**: `useForm` の `defaultValues` と `useEffect(reset)` を使って、ダイアログが開くたびにフォームの初期値を同期します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -241,7 +241,7 @@ export function ProjectDialog({
   }, [initialData, open, reset]);
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useForm` に `resolver` と `defaultValues` が設定されている
 - ダイアログが開いていて `initialData` が変わったときに `reset(...)` を呼んでいる
 - `register`, `handleSubmit`, `reset`, `errors` を取得している
@@ -255,15 +255,15 @@ export function ProjectDialog({
 | `reset(...)` | ダイアログを開き直して `initialData` が変わったとき、フォームの値を同期 |
 | `buildProjectFormValues(...)` | 作成・編集どちらでも同じ形のフォーム初期値を作る関数 |
 
-> 💡 `defaultValues` はフォーム作成時の初期値です。ただし同じダイアログを別プロジェクトで開き直すと `initialData` が変わるため、`useEffect` の中で `reset(...)` を呼んで再同期します。`setState` で入力値を1つずつ持つのではなく、react-hook-form にまとめて管理させるのがポイントです。`DEFAULT_PROJECT_COLOR` がカラーの初期値として使われている点にも注目してください。
+> `defaultValues` はフォーム作成時の初期値です。ただし同じダイアログを別プロジェクトで開き直すと `initialData` が変わるため、`useEffect` の中で `reset(...)` を呼んで再同期します。`setState` で入力値を1つずつ持つのではなく、react-hook-form にまとめて管理させるのがポイントです。`DEFAULT_PROJECT_COLOR` がカラーの初期値として使われている点にも注目してください。
 
 ---
 
 ### Step 4: 名前・説明の入力欄を作る（7分）
 
-🎯 **ゴール**: プロジェクト名と説明の入力フォームを追加します。
+**ゴール**: プロジェクト名と説明の入力フォームを追加します。
 
-💻 **実装**:
+**実装**:
 
 まず、ダイアログを閉じるハンドラーと送信ハンドラーを作ります。
 
@@ -295,9 +295,9 @@ const handleFormSubmit =
   };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `handleClose` でフォームのリセットとダイアログの閉じが両方行われる
-- `...(data.description && { description: data.description })` は「description が入力されている場合だけプロパティを含める」条件付きスプレッド。`&&` はここでは null/undefined フォールバックではなく、「真なら含める」という意味で使っている。`??` とは用途が異なる
+- `...(data.description && { description: data.description })` は「description が入力されている場合だけプロパティを含める」条件付きスプレッド。`&&` はこの場面で null/undefined を埋める働きとは違い、「真なら含める」という意味で使う。`??` とは用途が異なる
 
 続いて、JSX を返します。Dialog の中にフォームを配置します。
 
@@ -323,7 +323,7 @@ return (
       </DialogHeader>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `Dialog` の `onOpenChange` で閉じ動作をハンドリングしている
 - `initialData?.id` の有無でタイトルが「作成」と「編集」に切り替わる
 
@@ -351,7 +351,7 @@ return (
           </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `{...register('name')}` でフォームに登録されている
 - `errors.name` でバリデーションエラーを表示している
 
@@ -373,12 +373,12 @@ return (
           </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `Textarea` に `{...register('description')}` が設定されている
 
-> 💡 `{...register('name')}` は、入力欄に `name`, `onChange`, `onBlur`, `ref` をまとめて設定するスプレッド構文です。`value` と `onChange` を手動で書く必要がなくなります。
+> `{...register('name')}` は、入力欄に `name`, `onChange`, `onBlur`, `ref` をまとめて設定するスプレッド構文です。`value` と `onChange` を手動で書く必要がなくなります。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - プロジェクト名の入力欄が表示される
 - 名前が空のまま送信するとエラーメッセージが表示される
 - DialogDescription でモードに応じた説明文が表示される
@@ -387,9 +387,9 @@ return (
 
 ### Step 5: カラーピッカーと日付欄を作る（7分）
 
-🎯 **ゴール**: プロジェクトの色と期間を設定できるようにします。
+**ゴール**: プロジェクトの色と期間を設定できるようにします。
 
-💻 **実装**:
+**実装**:
 
 カラー・開始日・終了日を横並び3列で配置します。
 
@@ -408,7 +408,7 @@ return (
             </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `type="color"` でカラーピッカーが表示される
 
 ```typescript
@@ -424,7 +424,7 @@ return (
             </div>
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `type="date"` で日付ピッカーが表示される
 
 続いて、終了日フィールドとフォーム全体の閉じタグを追加します。
@@ -444,22 +444,22 @@ return (
         </div>
 ```
 
-> 💡 `type="color"` を指定すると、ブラウザ標準のカラーピッカーが表示されます。`className="h-10"` で他の入力欄と高さを揃えています。`{...register('color')}` で、選んだ色が自動的にフォームの値として管理されます。
+> `type="color"` を指定すると、ブラウザ標準のカラーピッカーが表示されます。`className="h-10"` で他の入力欄と高さを揃えています。`{...register('color')}` で、選んだ色が自動的にフォームの値として管理されます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - カラーピッカーで色を選べる
 - 開始日・終了日を入力できる
 
-📸 スクリーンショット: フォーム入力中のダイアログ
+【スクリーンショット】フォーム入力中のダイアログ。
 
 ![フォーム入力中のダイアログ](./screenshots/project-create-dialog.png)
 ---
 
 ### Step 6: 送信処理を実装する（5分）
 
-🎯 **ゴール**: 送信ボタンとキャンセルボタンを追加します。
+**ゴール**: 送信ボタンとキャンセルボタンを追加します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -480,7 +480,7 @@ return (
 );
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 作成ボタンとキャンセルボタンが表示される
 - プロジェクト名が空のまま送信するとzodのエラーメッセージが表示される
 - キャンセルでダイアログが閉じ、フォームがリセットされる
@@ -493,19 +493,19 @@ return (
 | キャンセル | `button` | `handleClose` でフォームをリセットし、ダイアログを閉じる |
 | 作成 / 更新 | `submit` | `handleSubmit` → zodバリデーション → `handleFormSubmit` |
 
-> 💡 `type="button"` を指定しないと、キャンセルボタンでもフォーム送信が実行されてしまいます。キャンセル時は `handleClose` で `reset()` を呼び、フォームの入力内容をクリアしてから閉じます。
+> `type="button"` を指定しないと、キャンセルボタンでもフォーム送信が実行されてしまいます。キャンセル時は `handleClose` で `reset()` を呼び、フォームの入力内容をクリアしてから閉じます。
 
 ---
 
 ### Step 7: ページにDialogを組み込む（7分）
 
-🎯 **ゴール**: プロジェクト一覧ページにダイアログを組み込み、作成処理を実装します。
+**ゴール**: プロジェクト一覧ページにダイアログを組み込み、作成処理を実装します。
 
 Day 09 では「新規プロジェクト」ボタンを押すと
 `dialogOpen` が `true` になるところまで作りました。
 今日はその state に `ProjectDialog` をつなぎます。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -520,7 +520,7 @@ import {
 } from '@/lib/date';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - importを追加した
 
 ```typescript
@@ -540,7 +540,7 @@ const createMutation =
   });
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `useUtils` でキャッシュ操作ユーティリティを取得している
 - `onSuccess` でキャッシュ無効化とダイアログ閉じを行っている
 
@@ -570,11 +570,11 @@ const handleSubmit = (
 };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `handleSubmit` が `createMutation.mutate` を呼んでいる
 - 日付未入力は `undefined` で渡している
 
-> ⚠️ `new Date(data.startDate).toISOString()` のように日付文字列をそのまま変換すると、ローカルの 00:00 として作られた Date が UTC へ変換され、タイムゾーン差で別の日付になることがあります。日付だけを扱う入力では、`dateOnlyToUtcStartIso` のような専用ヘルパーで UTC の時刻を明示します。
+> `new Date(data.startDate).toISOString()` のように日付文字列をそのまま変換すると、ローカルの 00:00 として作られた Date が UTC へ変換され、タイムゾーン差で別の日付になることがあります。日付だけを扱う入力では、`dateOnlyToUtcStartIso` のような専用ヘルパーで UTC の時刻を明示します。
 
 最後に JSX 内へ `ProjectDialog` を組み込みます。
 
@@ -588,21 +588,21 @@ const handleSubmit = (
 />
 ```
 
-> 💡 `utils.project.getAll.invalidate()` はキャッシュ無効化です。これにより、作成後に一覧が自動で再取得され、新しいプロジェクトが表示されます。Day 11 では `initialData` に編集対象のプロジェクトを渡して、同じダイアログを編集にも再利用します。
+> `utils.project.getAll.invalidate()` はキャッシュ無効化です。これにより、作成後に一覧が自動で再取得され、新しいプロジェクトが表示されます。Day 11 では `initialData` に編集対象のプロジェクトを渡して、同じダイアログを編集にも再利用します。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 新規作成ボタンでダイアログが開く
 - フォーム送信でプロジェクトが作成される
 - 一覧に新しいプロジェクトが表示される
 
-📸 スクリーンショット: 作成後に一覧に追加されたプロジェクト
+【スクリーンショット】作成後の一覧に追加されたプロジェクト。
 
 ![作成後に一覧に追加されたプロジェクト](./screenshots/project-list.png)
 ---
 
 ### Step 8: 動作確認（3分）
 
-🎯 **ゴール**: プロジェクト作成の全体フローを確認します。
+**ゴール**: プロジェクト作成の全体フローを確認します。
 
 開発サーバーを起動します。
 
@@ -612,7 +612,7 @@ const handleSubmit = (
 PORT=3001 npm run dev
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `http://localhost:3001` にアクセスできる
 
 以下の手順で動作を確認してください。
@@ -626,10 +626,10 @@ PORT=3001 npm run dev
 | 5 | 一覧を確認 | 新しいプロジェクトが追加されている |
 | 6 | カードの色帯を確認 | 選んだ色が反映されている |
 
-📸 スクリーンショット: 完成した作成フロー
+【スクリーンショット】完成した作成フロー。
 
 ![完成した作成フロー](./screenshots/project-create-dialog.png)
-✅ **確認ポイント**:
+**確認ポイント**:
 - プロジェクトが作成できる
 - 一覧が自動で更新される（ページリロードなし）
 - カードに選んだ色が反映されている
@@ -638,12 +638,12 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — 作成後はリロードせず一覧キャッシュを更新する
+### Pro パターンで書こう — 作成後はリロードせず一覧キャッシュを更新する
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-### ❌ Before（動くけど、プロは書かない）
+### Before（動くけど、プロは書かない）
 
 ```typescript
 'use client';
@@ -672,7 +672,7 @@ export function useCreateProjectSubmit(onClose: () => void) {
       description: data.description,
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -695,7 +695,7 @@ export function useCreateProjectSubmit(onClose: () => void) {
 - フィルターやスクロール位置が消えて、ユーザーが今いた場所を見失いやすい
 - tRPCのキャッシュを使っているのに、ブラウザ再読み込みで力技の更新になっている
 
-### ✅ After（プロが書くコード）
+### After（プロが書くコード）
 
 ```typescript
 'use client';
@@ -724,7 +724,7 @@ export function useCreateProjectSubmit(onClose: () => void) {
     createMutation.mutate({
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -749,12 +749,12 @@ export function useCreateProjectSubmit(onClose: () => void) {
 - ダイアログを閉じてもページ全体は残るため、表示条件や操作中の流れが途切れにくい
 - 作成、更新、削除でも同じ `mutation + invalidate` の型を使い回せる
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
-データを変えた後は、ページを丸ごとリロードするより **変わった一覧だけ再取得する** ほうが自然や。
-tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚えておこう。
+データを変えた後は、ページを丸ごとリロードするより **変わった一覧だけ再取得する** ほうが自然です。
+tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚えておきましょう。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] Dialog コンポーネントでモーダルフォームを作れた
 - [ ] react-hook-form + zodResolver でフォームのバリデーションを実装できた
@@ -762,7 +762,7 @@ tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚
 - [ ] `useMutation` でサーバーにデータを保存できた
 - [ ] `invalidate()` でキャッシュを自動更新できた
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -773,7 +773,7 @@ tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚
 | 入力しても値が反映されない | `register` の接続漏れ | `{...register('name')}` のスプレッド構文を確認 |
 | 作成ボタンを押しても何も起きない | `currentUser` が null | ログイン状態を確認 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -784,315 +784,20 @@ tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚
 | zodResolver | zod スキーマを react-hook-form に接続するアダプター |
 | register | 入力欄を react-hook-form に登録する関数 |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 11 では、プロジェクトの編集・削除機能を実装します。Day 10 で作った ProjectDialog を「編集モード」で再利用する方法を学びます。
 
 ---
 
-## 📎 Day 10 完成形コード（参照用）
+## Day 10 完成形コード（参照用）
 
 Day 10 終了時点の各ファイルの完成形です。
 
 ### `src/component/project/project-dialog.tsx`
 
-```typescript
-// filepath: src/component/project/project-dialog.tsx
-'use client';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Button } from '@/component/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/component/ui/dialog';
-import { Input } from '@/component/ui/input';
-import { Label } from '@/component/ui/label';
-import { Textarea } from '@/component/ui/textarea';
-import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
-
-const projectFormSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, 'プロジェクト名は必須です'),
-  description: z.string().optional(),
-  color: z.string(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
-
-type ProjectFormValues = z.infer<typeof projectFormSchema>;
-
-interface ProjectDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: ProjectFormData) => void;
-  initialData?: ProjectFormData | undefined;
-}
-
-export interface ProjectFormData {
-  id?: string;
-  name: string;
-  description?: string;
-  color: string;
-  startDate?: string;
-  endDate?: string;
-}
-
-function buildProjectFormValues(initialData: ProjectFormData | undefined): ProjectFormValues {
-  return {
-    id: initialData?.id,
-    name: initialData?.name ?? '',
-    description: initialData?.description ?? '',
-    color: initialData?.color ?? DEFAULT_PROJECT_COLOR,
-    startDate: initialData?.startDate ?? '',
-    endDate: initialData?.endDate ?? '',
-  };
-}
-
-export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectDialogProps) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<ProjectFormValues>({
-    resolver: zodResolver(projectFormSchema),
-    defaultValues: buildProjectFormValues(initialData),
-  });
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    reset(buildProjectFormValues(initialData));
-  }, [initialData, open, reset]);
-
-  const handleClose = () => {
-    reset(buildProjectFormValues(undefined));
-    onClose();
-  };
-
-  const handleFormSubmit = (data: ProjectFormValues) => {
-    const submitData: ProjectFormData = {
-      ...(data.id !== undefined && { id: data.id }),
-      name: data.name,
-      color: data.color,
-      ...(data.description && { description: data.description }),
-      ...(data.startDate && { startDate: data.startDate }),
-      ...(data.endDate && { endDate: data.endDate }),
-    };
-    onSubmit(submitData);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>{initialData?.id ? 'プロジェクト編集' : 'プロジェクト作成'}</DialogTitle>
-          <DialogDescription>
-            {initialData?.id
-              ? 'プロジェクトの詳細を更新します。'
-              : '新しいプロジェクトを作成します。'}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(handleFormSubmit)}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">プロジェクト名</Label>
-              <Input id="name" placeholder="プロジェクト名を入力" {...register('name')} />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">説明</Label>
-              <Textarea
-                id="description"
-                placeholder="プロジェクトの説明..."
-                rows={4}
-                {...register('description')}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="color">カラー</Label>
-                <Input id="color" type="color" className="h-10" {...register('color')} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="startDate">開始日</Label>
-                <Input id="startDate" type="date" {...register('startDate')} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="endDate">終了日</Label>
-                <Input id="endDate" type="date" {...register('endDate')} />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              キャンセル
-            </Button>
-            <Button type="submit">{initialData?.id ? '更新' : '作成'}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-```
+Day 10 終了時点の状態は、このリポジトリの `src/component/project/project-dialog.tsx` と同じです。手元のコードと見比べて確認してください。
 
 ### `src/app/project/page.tsx`
 
-Day 10 終了時点の `src/app/project/page.tsx` の完成形です。
-
-```typescript
-// filepath: src/app/project/page.tsx
-'use client';
-
-import { Plus } from 'lucide-react';
-import { Suspense, useState } from 'react';
-import { AppLayout } from '@/component/layout/app-layout';
-import { ProjectCard } from '@/component/project/project-card';
-import {
-  ProjectDialog,
-  type ProjectFormData,
-} from '@/component/project/project-dialog';
-import { Button } from '@/component/ui/button';
-import { Label } from '@/component/ui/label';
-import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
-import { Switch } from '@/component/ui/switch';
-import { TASK_STATUS } from '@/lib/constant/status';
-import { dateOnlyToUtcStartIso } from '@/lib/date';
-import { api } from '@/trpc/react';
-
-function ProjectPageContent() {
-  const [showArchived, setShowArchived] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const {
-    data: projects,
-    isLoading: projectsLoading,
-  } = api.project.getAll.useQuery({
-    isArchived: showArchived,
-  });
-
-  const utils = api.useUtils();
-
-  const createMutation = api.project.create.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      setDialogOpen(false);
-    },
-  });
-
-  const handleEdit = (projectId: string) => {
-    void projectId;
-  };
-  const handleDelete = (projectId: string) => {
-    void projectId;
-  };
-  const handleProjectClick = (id: string) => {
-    void id;
-  };
-
-  const handleCreate = () => {
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = (data: ProjectFormData) => {
-    createMutation.mutate({
-      name: data.name,
-      description: data.description,
-      color: data.color,
-      startDate: data.startDate
-        ? dateOnlyToUtcStartIso(data.startDate)
-        : undefined,
-      endDate: data.endDate
-        ? dateOnlyToUtcStartIso(data.endDate)
-        : undefined,
-    });
-  };
-
-  if (projectsLoading) {
-    return <PageLoadingSpinner />;
-  }
-
-  return (
-    <AppLayout>
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">プロジェクト</h1>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="show-archived"
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
-              />
-              <Label htmlFor="show-archived">アーカイブ表示</Label>
-            </div>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              新規プロジェクト
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {projects && projects.length > 0 ? (
-            projects.map((project) => {
-              const taskCount = project.tasks?.length ?? 0;
-              const doneCount =
-                project.tasks?.filter(
-                  (t) => t.status === TASK_STATUS.DONE,
-                ).length ?? 0;
-              return (
-                <ProjectCard
-                  key={project.id}
-                  id={project.id}
-                  name={project.name}
-                  description={project.description}
-                  color={project.color}
-                  memberCount={project.members?.length ?? 0}
-                  taskStats={{ total: taskCount, done: doneCount }}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onClick={handleProjectClick}
-                  isArchived={project.isArchived}
-                />
-              );
-            })
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>プロジェクトが見つかりません。</p>
-              <p>最初のプロジェクトを作成しましょう！</p>
-            </div>
-          )}
-        </div>
-
-        <ProjectDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSubmit={handleSubmit}
-        />
-      </div>
-    </AppLayout>
-  );
-}
-
-export default function ProjectPage() {
-  return (
-    <Suspense fallback={<PageLoadingSpinner />}>
-      <ProjectPageContent />
-    </Suspense>
-  );
-}
-```
+Day 10 終了時点の状態は、このリポジトリの `src/app/project/page.tsx` と同じです。手元のコードと見比べて確認してください。

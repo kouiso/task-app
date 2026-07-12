@@ -1,43 +1,45 @@
 # Day 14: タスク新規作成を実装しよう
 
-## 🔙 前回の振り返り
+## 前回の振り返り
 
 Day 13 ではタスク一覧画面を作成し、`api.task.getAll` によるデータ取得やフィルタリング、TaskCard コンポーネントによるカード表示を実装しました。一覧でタスクを表示できるようになったので、今日は新しいタスクを作成するダイアログを実装します。
 
 ---
 
-## 🎯 今日のゴール
+## 今日のゴール
 
 TaskDialogコンポーネントで、新しいタスクを作成
 できるようにします。Day 10 で学んだダイアログ
 パターンとreact-hook-form + zodをタスク版に
 応用します。
 
-📸 スクリーンショット: タスク作成ダイアログの完成画面
+スクリーンショット: タスク作成ダイアログの完成画面。
 
 ![タスク作成ダイアログの完成画面](./screenshots/task-create-dialog.png)
 
-> 📌 **今日のゴールライン**: TaskDialogにフォーム管理とバリデーションを組み込み、新しいタスクが一覧へ反映される流れを体験できればOK。
+> **今日のゴールライン**: TaskDialogにフォーム管理とバリデーションを組み込み、新しいタスクが一覧へ反映される流れを体験できればOK。
 
-## 🧰 始める前の前提
+## 始める前の前提
 
 - Day 13 のタスク一覧画面が表示できる
 - 少なくとも1つのプロジェクトが作成済みで、タスクを紐づけられる
 - ログイン済みユーザーで `/task` を開ける
 - `src/server/api/root.ts` と `src/component/task/task-dialog.tsx` を編集できる
 
-## 🤔 なぜこれを作るのか？
+## なぜこれを作るのか
 
-タスク管理アプリの最も重要な機能です。タスクが
-なければ管理も進捗確認もできません。
+これまで作ってきた一覧・フィルター・詳細は、
+すべて「タスクがある」ことが前提でした。
+そのタスクを生み出す入口がまだありません。
+今日はタスクを作成する画面を用意します。
 
-> 💡 **例え話**: タスク作成は「料理のレシピカード
+> **例え話**: タスク作成は「料理のレシピカード
 > を書く」ようなものです。何を作るか（タイトル）、
 > どう作るか（説明）、いつまでに（期限）、
 > 誰が作るか（担当者）を1枚のカードに書きます。
 > ダイアログはそのカードの記入用紙です。
 
-### 📐 タスク作成の流れ
+### タスク作成の流れ
 
 ```mermaid
 graph TD
@@ -65,7 +67,7 @@ graph TD
 | useMutation でサーバーに保存 | タスクの編集（Day 15） |
 | キャッシュ無効化で一覧更新 | タイマー機能（Day 16） |
 
-### 🆕 新しく学ぶ概念
+### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
@@ -74,7 +76,7 @@ graph TD
 | TASK_STATUS_LABELS | ― | ステータスの表示名を定義した定数 | 選択肢の翻訳表 |
 | nativeEnum | ネイティブ・イーナム | zodで既存の定数オブジェクトを検証する | 記入用紙の「選択肢チェック」 |
 
-## 📊 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
@@ -89,17 +91,17 @@ graph TD
 | Step 8 | ページにDialogを組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約49分
+**合計時間**: 約49分。
 
 ---
 
 ### Step 0: search ルーターを有効化する（2分）
 
-🎯 **ゴール**: タスク作成フォームで担当者候補を取得できるようにします。
+**ゴール**: タスク作成フォームで担当者候補を取得できるようにします。
 
 Day 14 では `api.search.getProjectMembers` を使います。
-Day 20 の検索画面より先に必要になるので、
-ここで `src/server/api/root.ts` に search ルーターを登録します。
+Day 20 の検索画面より先に必要なので、
+ここで `src/server/api/root.ts` へ search ルーターを登録します。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -110,7 +112,7 @@ import { searchRouter } from './routers/search';
 search: searchRouter,
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `searchRouter` を import した
 - `appRouter` に `search: searchRouter` を追加した
 - 保存して `npm run dev` で型エラーが出ていない
@@ -119,9 +121,9 @@ search: searchRouter,
 
 ### Step 1: zodスキーマと型を定義する（5分）
 
-🎯 **ゴール**: zodスキーマでバリデーションルールを定義し、フォームデータの型を作ります。
+**ゴール**: zodスキーマでバリデーションルールを定義し、フォームデータの型を作ります。
 
-💻 **実装**:
+**実装**:
 
 `src/component/task/task-dialog.tsx` を新規作成します。以下の3つのコードブロックは全て **同じファイルに上から順に** 書いてください。表示の都合でブロックを分けていますが、1つのファイルです。
 
@@ -149,7 +151,7 @@ import { Label }
   from '@/component/ui/label';
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `zodResolver`, `useForm`, `Controller` がインポートされている
 
 ```typescript
@@ -205,9 +207,9 @@ type TaskFormValues =
 | `projectId` | `z.string().min(1, ...)` | プロジェクト選択必須 |
 | `estimatedHours` | `z.number().min(0).optional()` | 0以上の数値（任意） |
 
-> 💡 `z.nativeEnum(TASK_STATUS)` は、`TASK_STATUS` オブジェクトの値（`'TODO'`, `'IN_PROGRESS'` ）だけを許可するバリデーションです。不正な値が入力されると自動でエラーになります。
+> `z.nativeEnum(TASK_STATUS)` は、`TASK_STATUS` オブジェクトの値（`'TODO'`, `'IN_PROGRESS'` ）だけを許可するバリデーションです。不正な値が入力されると自動でエラーになります。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `taskFormSchema` を定義した
 - `TaskFormValues` が自動生成されている
 
@@ -215,10 +217,10 @@ type TaskFormValues =
 
 ### Step 2: TaskDialogの骨格を作る（5分）
 
-🎯 **ゴール**: コンポーネントのProps型とフォーム
+**ゴール**: コンポーネントのProps型とフォーム
 データの型を定義します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -256,12 +258,12 @@ interface TaskDialogProps {
 }
 ```
 
-> 💡 `TaskFormValues`（zod推論型）はコンポーネント
+> `TaskFormValues`（zod推論型）はコンポーネント
 > 内部で使い、`TaskFormData`（インターフェース）は
 > 外部に公開します。2つの型を使い分けることで、
 > 内部のバリデーションと外部のAPIを分離できます。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `TaskFormData` をエクスポートした
 - `TaskDialogProps` に `projects` と `users` がある
 
@@ -269,17 +271,17 @@ interface TaskDialogProps {
 
 | フィールド | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
-| `id` | string? | × | 編集時のみ使用 |
+| `id` | `string?` | × | 編集時のみ使用 |
 | `title` | string | ○ | タスク名 |
-| `description` | string? | × | 詳細説明 |
+| `description` | `string?` | × | 詳細説明 |
 | `status` | TaskStatus | ○ | 進捗状態 |
 | `priority` | TaskPriority | ○ | 優先度 |
-| `dueDate` | string? | × | 期限日 |
-| `estimatedHours` | number? | × | 見積時間 |
+| `dueDate` | `string?` | × | 期限日 |
+| `estimatedHours` | `number?` | × | 見積時間 |
 | `projectId` | string | ○ | 所属プロジェクト |
-| `assigneeId` | string? | × | 担当者 |
+| `assigneeId` | `string?` | × | 担当者 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `TaskFormData` をエクスポートした
 - `TaskDialogProps` に `projects` と `users` がある
 
@@ -287,10 +289,10 @@ interface TaskDialogProps {
 
 ### Step 3: useFormでフォームを設定する（5分）
 
-🎯 **ゴール**: `useForm` と `zodResolver` で
+**ゴール**: `useForm` と `zodResolver` で
 フォームの状態管理とバリデーションを設定します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -319,7 +321,7 @@ function buildTaskFormValues(
       initialData?.assigneeId ?? '',
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```typescript
 // filepath: 続き
@@ -349,14 +351,14 @@ export function TaskDialog({
   }, [initialData, projects, reset]);
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `buildTaskFormValues` が全フィールドを返している
 - `useForm` に `resolver` と `defaultValues` が設定されている
 - `useEffect` で `initialData` の変更時に `reset` している
 
-> 💡 `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため、`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
+> `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため、`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
 
-> ⚠️ **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
+> **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 
 #### useFormから取得するもの
 
@@ -368,7 +370,7 @@ export function TaskDialog({
 | `reset` | フォームの値をリセット |
 | `errors` | バリデーションエラー情報 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `register` と `control` の違いを理解した
 - `npm run dev` でエラーが出ていない
 
@@ -376,9 +378,9 @@ export function TaskDialog({
 
 ### Step 4: タイトル・説明の入力欄を作る（5分）
 
-🎯 **ゴール**: タイトルと説明の入力欄を追加します。
+**ゴール**: タイトルと説明の入力欄を追加します。
 
-💻 **実装**:
+**実装**:
 
 まず、ダイアログを閉じるハンドラーと送信ハンドラーを作ります。
 
@@ -429,7 +431,7 @@ const handleFormSubmit =
 | `...(data.description && { description: ... })` | 説明を追加 | 何も追加しない |
 | `...(data.dueDate && { dueDate: ... })` | 期限を追加 | 何も追加しない |
 
-> 💡 Day 11 の `handleEdit` と同じパターンです。値がある場合だけプロパティを含め、空の場合はプロパティ自体を含めません。
+> Day 11 の `handleEdit` と同じパターンです。値がある場合だけプロパティを含め、空の場合はプロパティ自体を含めません。
 
 JSXのダイアログ構造とタイトル入力欄を書きます。
 
@@ -493,26 +495,26 @@ return (
           </div>
 ```
 
-> 💡 `{...register('title')}` は Day 10 で学んだ
+> `{...register('title')}` は Day 10 で学んだ
 > パターンです。入力欄をフォームに登録し、値の
 > 追跡・バリデーションを自動化します。
 > `errors.title` でバリデーションエラーを表示します。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - タイトルと説明の入力欄が表示される
 - タイトルが空のまま送信するとエラーメッセージが表示される
 
-📸 スクリーンショット: タイトルと説明の入力欄が表示されている画面
+スクリーンショット: タイトルと説明の入力欄が表示されている画面。
 
 ![タイトルと説明の入力欄が表示されている画面](./screenshots/task-create-dialog.png)
 ---
 
 ### Step 5: ステータス・優先度のSelectを作る（7分）
 
-🎯 **ゴール**: `Controller` で Select コンポーネント
+**ゴール**: `Controller` で Select コンポーネント
 をreact-hook-formに接続します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -599,7 +601,7 @@ return (
   </div>
 ```
 
-> 💡 `Controller` は、`register` が使えない
+> `Controller` は、`register` が使えない
 > コンポーネント（Select）をreact-hook-formに
 > 接続します。`field.value` で現在の値を取得し、
 > `field.onChange` で値を更新します。
@@ -607,7 +609,7 @@ return (
 > 選択肢を自動生成するので、追加・変更に強い
 > 構造になります。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ステータスと優先度が選択できる
 - 選択肢が日本語で表示される
 
@@ -636,7 +638,7 @@ return (
 | `HIGH` | 高 |
 | `URGENT` | 緊急 |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - ステータスと優先度が選択できる
 - 2列グリッドで横並びになっている
 
@@ -644,10 +646,10 @@ return (
 
 ### Step 6: プロジェクト・担当者のSelectを作る（5分）
 
-🎯 **ゴール**: 外から渡されたデータで選択肢を
+**ゴール**: 外から渡されたデータで選択肢を
 表示します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -742,23 +744,23 @@ return (
   </div>
 ```
 
-> 💡 「未割当」を選んだ時は空文字にしたいのですが、shadcn/ui の `Select` は空文字 `''` を有効な値として扱えません（値が空だと選択状態にならず、`placeholder` が表示されてしまいます）。そのため `'unassigned'` を特別な値として使い、送信時に空文字に変換するテクニックが必要です。
+> 「未割当」を選んだ時は空文字にしたいのですが、shadcn/ui の `Select` は空文字 `''` を有効な値として扱えません（値が空だと選択状態にならず、`placeholder` が表示されてしまいます）。そのため `'unassigned'` を特別な値として使い、送信時に空文字に変換するテクニックが必要です。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - プロジェクト一覧が表示される
 - 担当者一覧に「未割当」がある
 
-📸 スクリーンショット: プロジェクト・担当者のSelect欄が表示されている画面
+スクリーンショット: プロジェクト・担当者のSelect欄が表示されている画面。
 
 ![プロジェクト・担当者のSelect欄が表示されている画面](./screenshots/task-create-dialog.png)
 ---
 
 ### Step 7: 期限・見積時間・ボタンを作る（5分）
 
-🎯 **ゴール**: 日付入力、数値入力、送信ボタンを
+**ゴール**: 日付入力、数値入力、送信ボタンを
 追加します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -784,7 +786,7 @@ return (
         </div>
 ```
 
-> 💡 `setValueAs` は入力値を変換する関数です。
+> `setValueAs` は入力値を変換する関数です。
 > 空文字を `undefined` に、それ以外を `Number` に
 > 変換します。`type="number"` でも HTML の入力値は
 > 文字列なので、この変換が必要です。
@@ -810,7 +812,7 @@ return (
 }
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 日付ピッカーで期限を選べる
 - 見積時間に0.5刻みで入力できる
 - 作成ボタンが表示される
@@ -822,7 +824,7 @@ return (
 | キャンセル | `button` | `handleClose` でリセットして閉じる |
 | 作成 / 更新 | `submit` | zodバリデーション → `handleFormSubmit` |
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - キャンセルでフォームがリセットされる
 - タイトル未入力で送信するとエラーが表示される
 
@@ -830,10 +832,10 @@ return (
 
 ### Step 8: ページにDialogを組み込む（7分）
 
-🎯 **ゴール**: タスク一覧ページにダイアログを
+**ゴール**: タスク一覧ページにダイアログを
 組み込み、作成処理を実装します。
 
-💻 **実装**:
+**実装**:
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -883,7 +885,7 @@ const { data: session } =
 // utils は上で定義済み
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - `users` と `session` のデータ取得が追加できた
 
 create mutationを `utils` の下に追加します。
@@ -928,14 +930,14 @@ const handleSubmit =
   };
 ```
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - 「新規タスク」ボタンでダイアログが開く
 - フォーム送信でタスクが作成される
 - 一覧に新しいタスクが表示される
 
-📸 スクリーンショット: タスク作成後に一覧画面に新しいタスクが表示されている
+スクリーンショット: タスク作成後、一覧画面に新しいタスクが表示されている画面。
 
-![タスク作成後に一覧画面に新しいタスクが表示されている](./screenshots/task-list.png)
+![タスク作成後、一覧画面に新しいタスクが表示されている](./screenshots/task-list.png)
 #### createMutationに渡すパラメータ
 
 | パラメータ | フロントから送信 | 説明 |
@@ -947,7 +949,7 @@ const handleSubmit =
 | `dueDate` | 任意 | ISO 8601文字列 |
 | `assigneeId` | 任意 | 担当者ID |
 
-> 💡 サーバー側のスキーマでは `status` と `priority` にデフォルト値（TODO / MEDIUM）が設定されていますが、フロントエンドからは常にフォームの選択値を送信します。
+> サーバー側のスキーマでは `status` と `priority` にデフォルト値（TODO / MEDIUM）が設定されていますが、フロントエンドからは常にフォームの選択値を送信します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -967,11 +969,11 @@ const handleSubmit =
 />
 ```
 
-> 💡 `createdById`（作成者ID）はサーバー側で
+> `createdById`（作成者ID）はサーバー側で
 > セッションから自動的に取得されます。
 > フロントエンドから渡す必要はありません。
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - TaskDialogに `initialData` と `projects` が渡されている
 - `createdById` をフロントから渡していない
 
@@ -979,7 +981,7 @@ const handleSubmit =
 
 ### Step 9: 動作確認（3分）
 
-🎯 **ゴール**: タスク作成の全体フローを確認
+**ゴール**: タスク作成の全体フローを確認
 します。
 
 1. 「新規タスク」ボタンをクリック
@@ -988,7 +990,7 @@ const handleSubmit =
 4. 「作成」ボタンをクリック
 5. ダイアログが閉じ、一覧に新タスクが表示される
 
-✅ **確認ポイント**:
+**確認ポイント**:
 - タスクが作成できる
 - 一覧が自動で更新される
 - タイトル未入力で送信するとエラーが表示される
@@ -1004,12 +1006,12 @@ PORT=3001 npm run dev
 
 ---
 
-### 💡 Pro パターンで書こう — タスクのステータス・優先度型を1か所に集約する
+### Pro パターンで書こう — タスクのステータス・優先度型を1か所に集約する
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をする。
-なぜ上の書き方をするのか、**Before/After** で見比べてみよう。
+ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### ❌ Before（動くけど、プロは書かない）
+#### Before（動くけど、プロは書かない）
 
 ```typescript
 import { z } from 'zod';
@@ -1038,7 +1040,7 @@ const taskFormSchema = z.object({
     'IN_REVIEW',
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1068,7 +1070,7 @@ export interface TaskFormData {
   estimatedHours?: number;
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1104,7 +1106,7 @@ const defaultTaskValues = {
 - 新しいステータスを追加したとき、どこか1か所の更新漏れでフォームと表示がずれやすい
 - `as TaskStatus` のような型アサーションが増え、実際の値が安全かどうかを型だけで追いにくい
 
-#### ✅ After（プロが書くコード）
+#### After（プロが書くコード）
 
 ```typescript
 import { z } from 'zod';
@@ -1133,7 +1135,7 @@ const taskFormSchema = z.object({
 
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1163,7 +1165,7 @@ const statusOptions = Object.entries(
   TASK_STATUS_LABELS,
 ```
 
-✅ **確認ポイント**: ここまで写経できた。次のブロックを続けて書く。
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
@@ -1186,12 +1188,12 @@ const priorityOptions = Object.entries(
 - zod スキーマ・フォーム型・Select 選択肢が同じ定数を参照するので、値のずれが起きにくい
 - 新しい値を追加するとき、定数ファイルを中心に見ればよく、変更範囲が読みやすい
 
-#### 🎓 覚えておきたいエッセンス
+#### 覚えておきたいエッセンス
 
-同じ union をあちこちに書くと、最初は速くても後で必ずずれる。
-選択肢になる値は、型・バリデーション・表示ラベルを同じ出どころに寄せるのが強い。
+同じ union をあちこちに書くと、最初は速くても後で必ずずれます。
+選択肢になる値は、型・バリデーション・表示ラベルを同じ出どころに寄せるのが強いです。
 
-## 📋 今日のまとめ
+## 今日のまとめ
 
 - [ ] zodスキーマでフォームのバリデーションを定義できた
 - [ ] `register` で入力欄をフォームに登録できた
@@ -1200,7 +1202,7 @@ const priorityOptions = Object.entries(
 - [ ] `useMutation` でタスクを保存できた
 - [ ] `invalidate()` でキャッシュを自動更新できた
 
-## ⚠️ つまずきポイント
+## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
@@ -1210,7 +1212,7 @@ const priorityOptions = Object.entries(
 | 担当者一覧が空 | users未取得 | `getProjectMembers` の戻り値確認 |
 | バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(taskFormSchema)` を確認 |
 
-## 📝 今日学んだ用語
+## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
@@ -1221,7 +1223,7 @@ const priorityOptions = Object.entries(
 | setValueAs | register のオプションで入力値を型変換する関数 |
 | getProjectMembers | プロジェクトメンバー一覧を取得するAPI |
 
-## 🔜 次回予告
+## 次回予告
 
 Day 15 では、タスクの編集・削除機能を実装します。
 Day 14 で作った TaskDialog を「編集モード」で
