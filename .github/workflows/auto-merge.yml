@@ -10,6 +10,7 @@ on:
   check_suite:
     types:
       - completed
+  status:
   pull_request_review:
     types:
       - submitted
@@ -23,7 +24,8 @@ jobs:
     runs-on: ${{ vars.RUNNER_LINUX }}
     if: |
       github.actor != 'dependabot[bot]' &&
-      (github.event_name != 'check_suite' || github.event.check_suite.conclusion == 'success')
+      (github.event_name != 'check_suite' || github.event.check_suite.conclusion == 'success') &&
+      (github.event_name != 'status' || github.event.state == 'success')
     steps:
       - name: Auto Merge PR
         uses: pascalgn/automerge-action@v0.16.4
