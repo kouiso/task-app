@@ -28,7 +28,7 @@ jobs:
       (github.event_name != 'status' || github.event.state == 'success')
     steps:
       - name: Auto Merge PR
-        uses: pascalgn/automerge-action@v0.16.4
+        uses: pascalgn/automerge-action@7961b8b5eec56cc088c140b56d864285eabd3f67
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MERGE_LABELS: 'automerge,!work in progress,!do not merge'
