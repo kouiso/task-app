@@ -1,5 +1,5 @@
 ---
-applyTo: "material/**"
+applyTo: "material/30days-curriculum/**/*.md"
 ---
 
 # Curriculum Style & Voice (教材文体スペック)
