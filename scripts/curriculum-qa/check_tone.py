@@ -51,8 +51,9 @@ KANSAI_PATTERNS = compile_specs([
 ])
 
 CASUAL_PATTERNS = compile_specs([
-    (r'(?:作る|動く|なる|学ぶ|読む|つなぐ|確認する|追加する)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「作ります」「動きます」など敬体に変更'),
-    (r'(?:作った|起きない|できてる|合ってる|超える)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「作りました」「起きません」など敬体に変更'),
+    (r'(?:する|作る|動く|なる|学ぶ|読む|つなぐ|開く)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「します」「作ります」など敬体に変更'),
+    (r'(?:した|作った|起きない|できてる|合ってる|超える)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「しました」「起きません」など敬体に変更'),
+    (r'(?:である|ではない|じゃない|ない)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「です」「ではありません」など敬体に変更'),
     (r'(?:必要はない|全部になる)(?:[。！!？?\s]|$)', 'タメ口の常体語尾', '「必要はありません」「全部になります」に変更'),
 ])
 
@@ -78,9 +79,6 @@ TRANSLATION_PATTERNS = compile_specs([
     (r'を実施することができます', '直訳調「を実施することができます」', '「できます」に変更'),
 ])
 
-ALL_PATTERNS = KANSAI_PATTERNS + CASUAL_PATTERNS + AI_PHRASE_PATTERNS + TRANSLATION_PATTERNS
-
-
 def check_tone(filepath: str) -> bool:
     content = Path(filepath).read_text(encoding='utf-8')
     findings: list[Finding] = []
@@ -89,7 +87,9 @@ def check_tone(filepath: str) -> bool:
         if line.strip().startswith('>'):
             continue
         stripped = line.strip()
-        casual_exempt = stripped.startswith(('|', '- ', '- [ ]', '#', '**ゴール**', '**学んだこと**'))
+        casual_exempt = stripped.startswith(
+            ('|', '- ', '- [ ]', '#', '**ゴール**', '**学んだこと**'),
+        ) or bool(re.match(r'^\d+\.\s', stripped))
 
         for pattern, description, fix in KANSAI_PATTERNS + AI_PHRASE_PATTERNS + TRANSLATION_PATTERNS:
             if pattern.search(line):
