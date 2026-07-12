@@ -139,29 +139,30 @@ run_checks_for_file() {
     FILE_FAILED=1
   fi
 
-  # 7. 理解度チェック（専門用語・確認ポイント）
+  # 7. 文体チェック（敬体一貫・AI構文ゼロ・関西弁混入ゼロ）
   echo ""
   echo "=========================================="
-  echo "🎓 Step 7: 理解度チェック"
+  echo "🗣️ Step 7: 文体チェック"
   echo "=========================================="
-  if [ ! -f "$SCRIPT_DIR/check_comprehension.py" ]; then
-    echo "❌ Step 7 FAIL (スクリプト欠落: check_comprehension.py)"
+  if [ ! -f "$SCRIPT_DIR/check_tone.py" ]; then
+    echo "❌ Step 7 FAIL (スクリプト欠落: check_tone.py)"
     FILE_FAILED=1
-  elif python3 "$SCRIPT_DIR/check_comprehension.py" "$TARGET_FILE"; then
+  elif python3 "$SCRIPT_DIR/check_tone.py" "$TARGET_FILE"; then
     echo "✅ Step 7 PASS"
   else
     echo "❌ Step 7 FAIL"
     FILE_FAILED=1
   fi
 
-  # 8. 文体チェック（敬体一貫・AI構文ゼロ・関西弁混入ゼロ）
+  # 8. 理解度チェック（専門用語・確認ポイント）
   echo ""
   echo "=========================================="
-  echo "🗣️ Step 8: 文体チェック"
+  echo "🎓 Step 8: 理解度チェック"
   echo "=========================================="
-  if [ ! -f "$SCRIPT_DIR/check_tone.py" ]; then
-    echo "⏭️ Step 8 SKIP (スクリプトなし)"
-  elif python3 "$SCRIPT_DIR/check_tone.py" "$TARGET_FILE"; then
+  if [ ! -f "$SCRIPT_DIR/check_comprehension.py" ]; then
+    echo "❌ Step 8 FAIL (スクリプト欠落: check_comprehension.py)"
+    FILE_FAILED=1
+  elif python3 "$SCRIPT_DIR/check_comprehension.py" "$TARGET_FILE"; then
     echo "✅ Step 8 PASS"
   else
     echo "❌ Step 8 FAIL"
