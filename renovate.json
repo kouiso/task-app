@@ -5,15 +5,18 @@
   "packageRules": [
     {
       "matchDepTypes": ["dependencies"],
-      "groupName": "production dependencies"
+      "groupName": "production dependencies",
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchDepTypes": ["devDependencies"],
-      "groupName": "development dependencies"
+      "groupName": "development dependencies",
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchManagers": ["github-actions"],
-      "labels": ["dependencies", "renovate", "github-actions"]
+      "labels": ["dependencies", "renovate", "github-actions"],
+      "minimumReleaseAge": "7 days"
     }
   ],
   "prHourlyLimit": 2,
