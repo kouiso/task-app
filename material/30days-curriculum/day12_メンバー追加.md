@@ -222,10 +222,10 @@ src/
 
 #### 0-3. addMember — ここが一番のヤマ場、重複チェック
 
-`addMember` に使う入力スキーマをまず定義します。`project.ts` の import 群に `projectMemberRoleSchema` を追加してから、`projectCreateSchema` の下にスキーマを書きます。
+`addMember` に使う入力スキーマをまず定義します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行を、`projectMemberRoleSchema` も一緒に取り込む形へ**書き換えます**（新しい行を追加するのではありません）。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（import群を修正）
+// filepath: src/server/api/routers/project.ts（既存の import { USER_SELECT } from './_helpers/select'; をこの行に置き換える）
 import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
 ```
 
@@ -255,7 +255,25 @@ const projectMemberSchema = z.object({
     assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-ここまでは他の手続きと同じ「自分の権限を確認する」流れです。ここからが `addMember` 固有の処理です。すでにメンバーでないかを確認します。
+ここまでは他の手続きと同じ「自分の権限を確認する」流れです。`canManageMembers` は OWNER と ADMIN の両方が持っています。ここで、もう一段階だけ強いチェックを挟みます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+    // OWNERロールの付与はOWNERのみに限定する。canManageMembersを持つADMINによる権限昇格を防ぐため。
+    if (
+      input.role === PROJECT_MEMBER_ROLE.OWNER &&
+      userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'オーナー権限の付与はオーナーのみ可能です',
+      });
+    }
+```
+
+`canManageMembers` はメンバーを管理する権限であって、「新しいオーナーを作ってよい」権限ではありません。もしこのチェックが無いと、ADMIN 権限のユーザーが新しいメンバーを OWNER として追加でき、追加した相手を通じてプロジェクトを乗っ取れてしまいます。「誰が追加できるか」だけでなく「どのロールまで付与できるか」も分けて確認するのが、ここでのもう一段の権限管理です。
+
+続けて、すでにメンバーでないかを確認します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -340,9 +358,25 @@ const projectMemberSchema = z.object({
       }
 ```
 
-自分の権限と削除対象の存在を確認できたら、次は削除してよいかの最終チェックです。
+自分の権限と削除対象の存在を確認できたら、addMember と同じ理由でもう一段階のチェックを挟みます。
 
-削除対象が OWNER のときだけ、そのプロジェクトの OWNER が何人いるかを数えます。
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      // OWNERメンバーの削除はOWNERのみに限定する。ADMINによるオーナー排除を防ぐため。
+      if (
+        member.role === PROJECT_MEMBER_ROLE.OWNER &&
+        userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'オーナーの削除はオーナーのみ可能です',
+        });
+      }
+```
+
+`canManageMembers` を持つ ADMIN は普通のメンバーを削除できますが、OWNER を削除できてしまうと、ADMIN が邪魔なオーナーを外して実質的にプロジェクトを乗っ取れます。削除対象が OWNER のときだけ、削除する側も OWNER であることを確認します。
+
+続けて、削除してよいかの最終チェックです。削除対象が OWNER のときだけ、そのプロジェクトの OWNER が何人いるかを数えます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -387,6 +421,7 @@ const projectMemberSchema = z.object({
 **確認ポイント**:
 - `getById` / `getAvailableUsers` / `addMember` / `removeMember` を追加した
 - `addMember` の重複チェック、`removeMember` の最後のOWNER保護、それぞれ「なぜ必要か」を説明できる
+- `addMember` のOWNER付与制限、`removeMember` のOWNER削除制限、それぞれADMINによる権限昇格をどう防いでいるか説明できる
 - `npm run dev` で型エラーが出ていない
 
 ---
