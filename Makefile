@@ -24,8 +24,16 @@ pdf-clean:
 # ============================================
 
 # プレゼント配布用ZIP作成
+# src/server/api/routers/project.ts は Day 09〜12 で受講生が自分で書く対象のため配布しない。
+# 完成品の root.ts(project登録済み)をそのまま含めるとビルドが壊れるので、
+# zip作成の間だけ Day 08 終了時点の root.ts(auth のみ)に差し替え、完了後に元へ戻す。
 zip-export:
 	mkdir -p dist
+	rm -f dist/task-app.zip
+	@if [ -f scripts/_server-base/root.ts ]; then \
+		cp src/server/api/root.ts /tmp/task-app-root-ts-backup.ts; \
+		cp scripts/_server-base/root.ts src/server/api/root.ts; \
+	fi
 	zip -r dist/task-app.zip . \
 		-x@.gitignore \
 		-x "node_modules/*" \
@@ -52,7 +60,13 @@ zip-export:
 		-x "renovate.json" \
 		-x "edu-creator/*" \
 		-x "edu-config.yaml" \
-		-x "talk.md"
+		-x "talk.md" \
+		-x "src/server/api/routers/project.ts" \
+		-x "scripts/_server-routers/project.ts" \
+		|| { [ -f /tmp/task-app-root-ts-backup.ts ] && mv /tmp/task-app-root-ts-backup.ts src/server/api/root.ts; exit 1; }
+	@if [ -f /tmp/task-app-root-ts-backup.ts ]; then \
+		mv /tmp/task-app-root-ts-backup.ts src/server/api/root.ts; \
+	fi
 	zip -u dist/task-app.zip .env.example
 	@echo ""
 	@echo "============================================"

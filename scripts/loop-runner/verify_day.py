@@ -93,7 +93,7 @@ def verify_day(day_num: str, target_dir: Path, evidence_dir: Path) -> bool:
 
     checks = [
         ("build", ["npm", "run", "build"], 180),
-        ("test", ["npm", "test"], 180),
+        ("test", ["npm", "test", "--", "--passWithNoTests"], 180),
         (
             "playwright-screenshots",
             [

@@ -447,11 +447,16 @@ copy_scaffold_support() {
   fi
 
   # server-routers: tRPC ルーター（Day 07 で auth を確認した後、各 Day で root.ts に登録して有効化する）
+  # project.ts のみ配布しない。Day 09〜12 で受講生が自分の手で1から書く対象のため
+  # (他ルーターは D1リファクタが済むまで完成品のまま配布を継続する暫定措置)。
   if [ -d "${script_dir}/_server-routers" ]; then
     mkdir -p src/server/api/routers/_helpers
-    cp "${script_dir}/_server-routers"/*.ts src/server/api/routers/
+    for f in "${script_dir}/_server-routers"/*.ts; do
+      [ "$(basename "$f")" = "project.ts" ] && continue
+      cp "$f" src/server/api/routers/
+    done
     cp "${script_dir}/_server-routers/_helpers"/*.ts src/server/api/routers/_helpers/ 2>/dev/null
-    echo "tRPC ルーターを src/server/api/routers/ に配置しました（Day 07 以降で有効化）。"
+    echo "tRPC ルーターを src/server/api/routers/ に配置しました（Day 07 以降で有効化。project.ts は Day 09〜12 で自分で書きます）。"
   fi
 
 }
