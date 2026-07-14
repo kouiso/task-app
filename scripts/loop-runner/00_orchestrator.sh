@@ -162,7 +162,19 @@ for DAY_N in $(seq 1 30); do
 
   # Step 2: ビルド検証
   if ! python3 "$SCRIPT_DIR/verify_day.py" "$DAY_NUM" "$TARGET_DIR"; then
-    append_fail "$DAY_NUM" "npm run build failed"
+    # verify_day.py が書く summary.json から実際に失敗したチェック名(build/test/playwright-screenshots)を読む。
+    # 固定文言 "npm run build failed" のままだと、test や playwright が落ちても build のせいに誤表示される。
+    VERIFY_SUMMARY="$REPO_DIR/.planning/loop-3/day-$DAY_NUM/summary.json"
+    FAIL_REASON=$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('$VERIFY_SUMMARY'))
+    failed = [c['name'] for c in d.get('checks', []) if c.get('status') == 'FAIL']
+    print(failed[0] if failed else 'verify_day.py failed (reason unknown)')
+except Exception:
+    print('verify_day.py failed (summary.json not found)')
+" 2>/dev/null)
+    append_fail "$DAY_NUM" "$FAIL_REASON failed"
     write_state last_status "FAIL"
     FAIL_COUNT=$((FAIL_COUNT + 1))
     break

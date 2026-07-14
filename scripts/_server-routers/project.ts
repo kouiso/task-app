@@ -310,6 +310,17 @@ export const projectRouter = createTRPCRouter({
 
     assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 
+    // OWNERロールの付与はOWNERのみに限定する。canManageMembersを持つADMINによる権限昇格を防ぐため。
+    if (
+      input.role === PROJECT_MEMBER_ROLE.OWNER &&
+      userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'オーナー権限の付与はオーナーのみ可能です',
+      });
+    }
+
     const existing = await prisma.projectMember.findUnique({
       where: {
         userId_projectId: {
@@ -368,6 +379,17 @@ export const projectRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'メンバーが見つかりません',
+        });
+      }
+
+      // OWNERメンバーの削除はOWNERのみに限定する。ADMINによるオーナー排除を防ぐため。
+      if (
+        member.role === PROJECT_MEMBER_ROLE.OWNER &&
+        userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'オーナーの削除はオーナーのみ可能です',
         });
       }
 
@@ -433,6 +455,18 @@ export const projectRouter = createTRPCRouter({
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'メンバーが見つかりません',
+          });
+        }
+
+        // OWNERロールの付与・剥奪はOWNERのみに限定する。ADMINによる権限昇格・オーナー降格を防ぐため。
+        if (
+          (input.role === PROJECT_MEMBER_ROLE.OWNER ||
+            targetMember.role === PROJECT_MEMBER_ROLE.OWNER) &&
+          userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'オーナー権限の変更はオーナーのみ可能です',
           });
         }
 

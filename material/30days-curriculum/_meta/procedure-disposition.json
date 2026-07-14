@@ -1,0 +1,29 @@
+{
+  "_doc": "UI(api.*.*)から呼ばれないprocedureの処置台帳。Phase A-0 exitゲート①『孤児ゼロ or 全件処置』の後半を機械判定するための入力。写経移行の受け入れ基準(src/ = 受講生がbuildするもの、バイト一致)+ D1(per-procedure、各procedureはちょうど1つのdayが構築)から、UI未使用は削除理由にならず、既定の処置は『該当routerを作るdayで写経構築し、必要なら使わない理由も教える』。真に不要なもののみ delete。",
+  "_schema": {
+    "disposition": "construct-and-teach | delete",
+    "construct_day": "写経で構築するday番号(constructの場合、暫定。Phase Bで確定)",
+    "reason": "この処置を選んだ根拠",
+    "evidence": "根拠のソース(ファイル:行 等)"
+  },
+  "dispositions": {
+    "comment.getByTaskId": {
+      "disposition": "construct-and-teach",
+      "construct_day": 18,
+      "reason": "Day18が『task.getByIdがcomment込みだから、これは使わない』と意図的に教えている。教育的意図あり。commentルーターを作るdayで他procedureと一緒に写経し、使わない理由も教える。",
+      "evidence": "material/30days-curriculum/day18_コメント投稿.md:185-188 / scripts/_server-routers/comment.ts:95"
+    },
+    "search.quickSearch": {
+      "disposition": "construct-and-teach",
+      "construct_day": 20,
+      "reason": "既存testが caller.search.quickSearch で消費している(D8テスト来歴チャネルで確定)。searchルーターを作るdayで写経構築する。",
+      "evidence": "src/server/api/routers/__test/search.test.ts:66-73 / scripts/_server-routers/search.ts:143"
+    },
+    "project.updateMemberRole": {
+      "disposition": "construct-and-teach",
+      "construct_day": 12,
+      "reason": "配布済みの src/app/project/page.tsx が api.project.updateMemberRole を実際に呼んでいる(ロール変更UIは配布済みのまま、フロントのStepでは教えない)。day12 Step0-5 でサーバー側procedureだけを写経構築させ、配布UIとの整合を取る。教材mdにフロント側の呼び出しコードを書いていないため、first_used_in_curriculum_day の機械判定は依然Noneのまま(ツールの検出限界。文字列マッチではなくStep0構築の事実で処置済みと判定する)。",
+      "evidence": "src/app/project/page.tsx:125 (api.project.updateMemberRole.useMutation) / material/30days-curriculum/day12_メンバー追加.md:420 (#### 0-5. updateMemberRole節)"
+    }
+  }
+}
