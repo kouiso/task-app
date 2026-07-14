@@ -7,7 +7,8 @@
       "defined_at": "scripts/_server-routers/auth.ts:37",
       "first_used_in_curriculum_day": 5,
       "referenced_by_scaffold_components": ["src/app/login/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "auth.register": {
       "router": "auth",
@@ -15,7 +16,8 @@
       "defined_at": "scripts/_server-routers/auth.ts:89",
       "first_used_in_curriculum_day": 6,
       "referenced_by_scaffold_components": ["src/app/register/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "auth.logout": {
       "router": "auth",
@@ -23,7 +25,8 @@
       "defined_at": "scripts/_server-routers/auth.ts:137",
       "first_used_in_curriculum_day": 8,
       "referenced_by_scaffold_components": ["src/component/layout/app-layout.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "auth.getSession": {
       "router": "auth",
@@ -36,7 +39,8 @@
         "src/component/layout/app-layout.tsx",
         "src/component/task/task-detail-dialog.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "auth.getCurrentUser": {
       "router": "auth",
@@ -52,7 +56,8 @@
         "src/app/profile/page.tsx",
         "src/app/profile/edit/page.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "comment.getByTaskId": {
       "router": "comment",
@@ -60,7 +65,13 @@
       "defined_at": "scripts/_server-routers/comment.ts:95",
       "first_used_in_curriculum_day": null,
       "referenced_by_scaffold_components": [],
-      "orphan": true
+      "ui_unreferenced": true,
+      "disposition": {
+        "disposition": "construct-and-teach",
+        "construct_day": 18,
+        "reason": "Day18が『task.getByIdがcomment込みだから、これは使わない』と意図的に教えている。教育的意図あり。commentルーターを作るdayで他procedureと一緒に写経し、使わない理由も教える。",
+        "evidence": "material/30days-curriculum/day18_コメント投稿.md:185-188 / scripts/_server-routers/comment.ts:95"
+      }
     },
     "comment.create": {
       "router": "comment",
@@ -71,7 +82,8 @@
         "scripts/_app-components/task/task-detail-dialog.tsx",
         "src/component/task/task-detail-dialog.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "comment.update": {
       "router": "comment",
@@ -82,7 +94,8 @@
         "scripts/_app-components/task/task-detail-dialog.tsx",
         "src/component/task/task-detail-dialog.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "comment.delete": {
       "router": "comment",
@@ -93,7 +106,8 @@
         "scripts/_app-components/task/task-detail-dialog.tsx",
         "src/component/task/task-detail-dialog.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.getAll": {
       "router": "project",
@@ -106,7 +120,8 @@
         "src/app/dashboard/page.tsx",
         "src/app/task/page.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.getById": {
       "router": "project",
@@ -114,7 +129,8 @@
       "defined_at": "scripts/_server-routers/project.ts:113",
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.getAvailableUsers": {
       "router": "project",
@@ -122,7 +138,8 @@
       "defined_at": "scripts/_server-routers/project.ts:152",
       "first_used_in_curriculum_day": 12,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.create": {
       "router": "project",
@@ -130,7 +147,8 @@
       "defined_at": "scripts/_server-routers/project.ts:180",
       "first_used_in_curriculum_day": 10,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.update": {
       "router": "project",
@@ -138,7 +156,8 @@
       "defined_at": "scripts/_server-routers/project.ts:211",
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.delete": {
       "router": "project",
@@ -146,7 +165,8 @@
       "defined_at": "scripts/_server-routers/project.ts:267",
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.addMember": {
       "router": "project",
@@ -154,7 +174,8 @@
       "defined_at": "scripts/_server-routers/project.ts:301",
       "first_used_in_curriculum_day": 12,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.removeMember": {
       "router": "project",
@@ -162,7 +183,8 @@
       "defined_at": "scripts/_server-routers/project.ts:339",
       "first_used_in_curriculum_day": 12,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.updateMemberRole": {
       "router": "project",
@@ -170,7 +192,8 @@
       "defined_at": "scripts/_server-routers/project.ts:402",
       "first_used_in_curriculum_day": null,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.archive": {
       "router": "project",
@@ -178,7 +201,8 @@
       "defined_at": "scripts/_server-routers/project.ts:477",
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.unarchive": {
       "router": "project",
@@ -186,7 +210,8 @@
       "defined_at": "scripts/_server-routers/project.ts:483",
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "report.getOverview": {
       "router": "report",
@@ -197,7 +222,8 @@
         "src/app/dashboard/page.tsx",
         "src/app/report/page.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "report.getWeeklyReport": {
       "router": "report",
@@ -205,7 +231,8 @@
       "defined_at": "scripts/_server-routers/report.ts:157",
       "first_used_in_curriculum_day": 23,
       "referenced_by_scaffold_components": ["src/app/report/weekly/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "search.search": {
       "router": "search",
@@ -213,7 +240,8 @@
       "defined_at": "scripts/_server-routers/search.ts:67",
       "first_used_in_curriculum_day": 20,
       "referenced_by_scaffold_components": ["src/app/search/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "search.quickSearch": {
       "router": "search",
@@ -221,7 +249,13 @@
       "defined_at": "scripts/_server-routers/search.ts:143",
       "first_used_in_curriculum_day": null,
       "referenced_by_scaffold_components": [],
-      "orphan": true
+      "ui_unreferenced": true,
+      "disposition": {
+        "disposition": "construct-and-teach",
+        "construct_day": 20,
+        "reason": "既存testが caller.search.quickSearch で消費している(D8テスト来歴チャネルで確定)。searchルーターを作るdayで写経構築する。",
+        "evidence": "src/server/api/routers/__test/search.test.ts:66-73 / scripts/_server-routers/search.ts:143"
+      }
     },
     "search.getUserProjects": {
       "router": "search",
@@ -229,7 +263,8 @@
       "defined_at": "scripts/_server-routers/search.ts:186",
       "first_used_in_curriculum_day": 20,
       "referenced_by_scaffold_components": ["src/app/search/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "search.getProjectMembers": {
       "router": "search",
@@ -237,7 +272,8 @@
       "defined_at": "scripts/_server-routers/search.ts:208",
       "first_used_in_curriculum_day": 14,
       "referenced_by_scaffold_components": ["src/app/search/page.tsx", "src/app/task/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.getAll": {
       "router": "task",
@@ -245,7 +281,8 @@
       "defined_at": "scripts/_server-routers/task.ts:74",
       "first_used_in_curriculum_day": 13,
       "referenced_by_scaffold_components": ["src/app/my-task/page.tsx", "src/app/task/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.getById": {
       "router": "task",
@@ -256,7 +293,8 @@
         "scripts/_app-components/task/task-detail-dialog.tsx",
         "src/component/task/task-detail-dialog.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.create": {
       "router": "task",
@@ -264,7 +302,8 @@
       "defined_at": "scripts/_server-routers/task.ts:174",
       "first_used_in_curriculum_day": 14,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.update": {
       "router": "task",
@@ -272,7 +311,8 @@
       "defined_at": "scripts/_server-routers/task.ts:242",
       "first_used_in_curriculum_day": 15,
       "referenced_by_scaffold_components": ["src/app/my-task/page.tsx", "src/app/task/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.delete": {
       "router": "task",
@@ -284,7 +324,8 @@
         "src/app/search/page.tsx",
         "src/app/task/page.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.updateTimer": {
       "router": "task",
@@ -292,7 +333,8 @@
       "defined_at": "scripts/_server-routers/task.ts:315",
       "first_used_in_curriculum_day": 16,
       "referenced_by_scaffold_components": ["scripts/_app-components/task/task-timer.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.addTime": {
       "router": "task",
@@ -303,7 +345,8 @@
         "scripts/_app-components/task/time-log-dialog.tsx",
         "src/component/task/time-log-dialog.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.bulkComplete": {
       "router": "task",
@@ -311,7 +354,8 @@
       "defined_at": "scripts/_server-routers/task.ts:367",
       "first_used_in_curriculum_day": 28,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.bulkDelete": {
       "router": "task",
@@ -319,7 +363,8 @@
       "defined_at": "scripts/_server-routers/task.ts:379",
       "first_used_in_curriculum_day": 28,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "task.bulkUpdateStatus": {
       "router": "task",
@@ -327,7 +372,8 @@
       "defined_at": "scripts/_server-routers/task.ts:392",
       "first_used_in_curriculum_day": 28,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "user.getById": {
       "router": "user",
@@ -338,7 +384,8 @@
         "src/app/user/[id]/user-detail-client.tsx",
         "src/app/user/[id]/edit/user-edit-client.tsx"
       ],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "user.update": {
       "router": "user",
@@ -346,7 +393,8 @@
       "defined_at": "scripts/_server-routers/user.ts:182",
       "first_used_in_curriculum_day": 29,
       "referenced_by_scaffold_components": ["src/app/user/[id]/edit/user-edit-client.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "user.updateProfile": {
       "router": "user",
@@ -354,7 +402,8 @@
       "defined_at": "scripts/_server-routers/user.ts:235",
       "first_used_in_curriculum_day": 25,
       "referenced_by_scaffold_components": ["src/app/profile/edit/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "user.changePassword": {
       "router": "user",
@@ -362,7 +411,8 @@
       "defined_at": "scripts/_server-routers/user.ts:272",
       "first_used_in_curriculum_day": 25,
       "referenced_by_scaffold_components": ["src/app/profile/change-password/page.tsx"],
-      "orphan": false
+      "ui_unreferenced": false,
+      "disposition": null
     }
   },
   "test_files": {
@@ -390,9 +440,11 @@
     "src/test/chaos-helpers.test.ts": "UNASSIGNED"
   },
   "gates": {
-    "G-orphan": {
-      "pass": false,
-      "orphan_procedures": ["comment.getByTaskId", "search.quickSearch"]
+    "G-disposition": {
+      "_desc": "UI未参照procedureは削除対象ではなく、全件が処置台帳(procedure-disposition.json)で構築day割当 or 削除の判断を持つべき(exitゲート①の後半『全件処置』)。",
+      "pass": true,
+      "ui_unreferenced_procedures": ["comment.getByTaskId", "search.quickSearch"],
+      "undispositioned_procedures": []
     },
     "G-testchan": {
       "pass": false,
