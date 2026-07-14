@@ -180,7 +180,7 @@
     "project.removeMember": {
       "router": "project",
       "procedure": "removeMember",
-      "defined_at": "scripts/_server-routers/project.ts:339",
+      "defined_at": "scripts/_server-routers/project.ts:350",
       "first_used_in_curriculum_day": 12,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
@@ -189,16 +189,21 @@
     "project.updateMemberRole": {
       "router": "project",
       "procedure": "updateMemberRole",
-      "defined_at": "scripts/_server-routers/project.ts:402",
+      "defined_at": "scripts/_server-routers/project.ts:424",
       "first_used_in_curriculum_day": null,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
-      "disposition": null
+      "disposition": {
+        "disposition": "construct-and-teach",
+        "construct_day": 12,
+        "reason": "配布済みの src/app/project/page.tsx が api.project.updateMemberRole を実際に呼んでいる(ロール変更UIは配布済みのまま、フロントのStepでは教えない)。day12 Step0-5 でサーバー側procedureだけを写経構築させ、配布UIとの整合を取る。教材mdにフロント側の呼び出しコードを書いていないため、first_used_in_curriculum_day の機械判定は依然Noneのまま(ツールの検出限界。文字列マッチではなくStep0構築の事実で処置済みと判定する)。",
+        "evidence": "src/app/project/page.tsx:125 (api.project.updateMemberRole.useMutation) / material/30days-curriculum/day12_メンバー追加.md:420 (#### 0-5. updateMemberRole節)"
+      }
     },
     "project.archive": {
       "router": "project",
       "procedure": "archive",
-      "defined_at": "scripts/_server-routers/project.ts:477",
+      "defined_at": "scripts/_server-routers/project.ts:511",
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
@@ -207,7 +212,7 @@
     "project.unarchive": {
       "router": "project",
       "procedure": "unarchive",
-      "defined_at": "scripts/_server-routers/project.ts:483",
+      "defined_at": "scripts/_server-routers/project.ts:517",
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,

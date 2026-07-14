@@ -46,8 +46,9 @@ flowchart TD
 |---------|-------------|
 | メンバー一覧の表示 | メンバーの権限システムの設計 |
 | メンバー追加・削除 | 招待メール送信 |
-| ロールを選んで追加 | ロール変更UI（今回のスコープ外） |
+| ロールを選んで追加 | ロール変更UIの見た目・操作（配布済みのまま） |
 | 専用APIの呼び出し | Prisma のリレーション設計 |
+| `updateMemberRole` を自分で書く | ロール変更ボタンをどこに配置するかの調整 |
 
 ### 新しく学ぶ概念
 
@@ -98,7 +99,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | project.ts に getById/getAvailableUsers/addMember/removeMember を自分で書く | 18分 |
+| Step 0 | project.ts に getById/getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く | 25分 |
 | Step 1 | プロジェクト詳細ビューを接続する | 6分 |
 | Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
 | Step 3 | ロール関連のインポートとフォームを準備する | 6分 |
@@ -108,7 +109,7 @@ src/
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
 
-**合計時間**: 約63分。
+**合計時間**: 約70分。
 
 ---
 
@@ -416,12 +417,131 @@ const projectMemberSchema = z.object({
     }),
 ```
 
+#### 0-5. updateMemberRole — 配布済みのUIが、実はもうこの手続きを呼んでいる
+
+`removeMember` の下に追加します。実は `src/app/project/page.tsx` には、今日ここまでで扱っていない `handleUpdateMemberRole` というハンドラーがすでにあります。メンバーのロールを変えるセレクトボックスから呼ばれる作りになっていますが、対応する `updateMemberRole` procedure が `project.ts` に無いと、そこだけエラーになります。ここで用意して、配布済みのUIと辻褄を合わせます。
+
+まず自分の権限を確認します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  updateMemberRole: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string().cuid(),
+        userId: z.string().cuid(),
+        role: projectMemberRoleSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+ここから先は `prisma.$transaction` の中で処理します。例えば「対象メンバーを検索した直後に、別のリクエストが同じメンバーを削除してしまう」ようなタイミングのズレが起きると、存在しないメンバーを更新しようとしてデータが壊れかねません。`$transaction` は、対象メンバーの検索から更新までの複数の読み書きを、途中に他の操作を挟ませない1つのまとまりとして実行する仕組みです。中の処理では `prisma` の代わりに、引数で渡された `tx` を使います。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      return await prisma.$transaction(async (tx) => {
+        const targetMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        if (!targetMember) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'メンバーが見つかりません',
+          });
+        }
+```
+
+続けて、権限昇格を防ぐチェックです。`addMember` は「OWNERとして追加できるか」、`removeMember` は「OWNERを削除できるか」を見ました。`updateMemberRole` は「ロールを変える」1つの操作の中に、昇格（誰かをOWNERにする）と降格（OWNERを他のロールに変える）の両方が起こり得ます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+        // OWNERロールの付与・剥奪はOWNERのみに限定する。ADMINによる権限昇格・オーナー降格を防ぐため。
+        if (
+          (input.role === PROJECT_MEMBER_ROLE.OWNER ||
+            targetMember.role === PROJECT_MEMBER_ROLE.OWNER) &&
+          userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'オーナー権限の変更はオーナーのみ可能です',
+          });
+        }
+```
+
+`input.role === OWNER`（誰かを新しくOWNERにしようとしている＝昇格）と `targetMember.role === OWNER`（今OWNERの人のロールを変えようとしている＝降格）を `||` でつないでいます。昇格と降格のどちらであっても「実行する本人がOWNERか」を同じ条件で確認したいからです。2つの操作を別々のif文で分けず1つにまとめ、チェック漏れを防いでいます。どちらの操作も、実行する本人がOWNERでなければ止めます。
+
+最後に、`removeMember` の「最後のOWNERは削除できない」と対になる保護です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+        if (
+          targetMember.role === PROJECT_MEMBER_ROLE.OWNER &&
+          input.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          const ownerCount = await tx.projectMember.count({
+            where: {
+              projectId: input.projectId,
+              role: PROJECT_MEMBER_ROLE.OWNER,
+            },
+          });
+
+          if (ownerCount === 1) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'プロジェクト唯一のオーナーの権限は変更できません',
+            });
+          }
+        }
+```
+
+唯一のOWNERを他のロールに降格させると、削除したのと同じく管理者不在のプロジェクトが残ってしまいます。チェックを抜けたら、実際に更新します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+        return await tx.projectMember.update({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+          data: {
+            role: input.role,
+          },
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        });
+      });
+    }),
+```
+
 最後の `});` で `projectRouter` 全体を閉じます。
 
 **確認ポイント**:
-- `getById` / `getAvailableUsers` / `addMember` / `removeMember` を追加した
+- `getById` / `getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` を追加した
 - `addMember` の重複チェック、`removeMember` の最後のOWNER保護、それぞれ「なぜ必要か」を説明できる
 - `addMember` のOWNER付与制限、`removeMember` のOWNER削除制限、それぞれADMINによる権限昇格をどう防いでいるか説明できる
+- `updateMemberRole` が昇格・降格の両方をどう防いでいるか説明できる
 - `npm run dev` で型エラーが出ていない
 
 ---
