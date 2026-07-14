@@ -4,3 +4,6 @@
 [submodule ".claude/skills/material-writing/hana652-tech-writing-pack"]
 	path = .claude/skills/material-writing/hana652-tech-writing-pack
 	url = https://github.com/hana652/tech-writing-pack
+[submodule ".claude/skills/material-writing/xamfonos-technical-writing-best-practices"]
+	path = .claude/skills/material-writing/xamfonos-technical-writing-best-practices
+	url = https://github.com/Xamfonos/technical-writing-best-practices
