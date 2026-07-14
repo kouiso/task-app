@@ -69,11 +69,22 @@ def scan_curriculum_first_use() -> dict[tuple[str, str], int]:
 
 
 def scan_scaffold_components_first_use() -> dict[tuple[str, str], list[str]]:
+    """scaffold配布物 + 実アプリ本体(src/)の両方で api.* 呼び出しを検索する。
+
+    Codexレビューで判明: src/ を見ていなかったため project.updateMemberRole の
+    実使用(src/app/project/page.tsx)を見落とし、孤児と誤判定していた。
+    """
     refs: dict[tuple[str, str], list[str]] = {}
-    for base in [REPO_ROOT / "scripts" / "_app-components", REPO_ROOT / "scripts" / "_app-base"]:
+    bases = [
+        REPO_ROOT / "scripts" / "_app-components",
+        REPO_ROOT / "scripts" / "_app-base",
+        REPO_ROOT / "scripts" / "_app-api-trpc",
+        REPO_ROOT / "src",
+    ]
+    for base in bases:
         if not base.exists():
             continue
-        for f in base.rglob("*.tsx"):
+        for f in list(base.rglob("*.tsx")) + list(base.rglob("*.ts")):
             text = f.read_text(encoding="utf-8", errors="ignore")
             for m in API_CALL_RE.finditer(text):
                 key = (m.group(1), m.group(2))
