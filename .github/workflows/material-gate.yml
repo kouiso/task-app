@@ -5,15 +5,64 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - 'material/**/*.md'
+      - '.claude/skills/material-writing/**'
+      - '.gitmodules'
   push:
     branches:
       - develop
       - main
     paths:
       - 'material/**/*.md'
+      - '.claude/skills/material-writing/**'
+      - '.gitmodules'
   workflow_dispatch:
 
 jobs:
+  vendored-skill-integrity:
+    name: 執筆スキルvendoring整合性チェック
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: submodule化への退行を検出（hana652/Xamfonos再発防止）
+        run: |
+          echo "::group::.gitmodules に material-writing 配下のsubmoduleが無いか確認"
+          if grep -q '.claude/skills/material-writing/' .gitmodules 2>/dev/null; then
+            echo "::error::.gitmodules に .claude/skills/material-writing/ 配下のsubmoduleエントリが検出されました。"
+            echo "hana652/Xamfonosはsubmodule未初期化による誤読バグ(2026-07-14)を受けてvendoring(直接埋め込み)に統一済みです。"
+            echo "submoduleへ戻さず、ファイルを直接コピーしてください。詳細: .claude/skills/material-writing/references/ATTRIBUTION.md"
+            cat .gitmodules
+            exit 1
+          fi
+          echo "OK: .gitmodules に material-writing 配下のsubmoduleは無い"
+          echo "::endgroup::"
+
+      - name: vendoredディレクトリが空になっていないか確認
+        run: |
+          echo "::group::hana652/Xamfonosの中身が実在するか確認"
+          fail=0
+          for dir in \
+            ".claude/skills/material-writing/hana652-tech-writing-pack" \
+            ".claude/skills/material-writing/xamfonos-technical-writing-best-practices"; do
+            if [ ! -d "$dir" ]; then
+              echo "::error::$dir が存在しません"
+              fail=1
+              continue
+            fi
+            count=$(find "$dir" -type f | wc -l)
+            if [ "$count" -lt 1 ]; then
+              echo "::error::$dir が空です(未初期化submoduleと同じ症状)。ファイルが直接コピーされているか確認してください。"
+              fail=1
+            else
+              echo "OK: $dir ($count ファイル)"
+            fi
+          done
+          if [ "$fail" -eq 1 ]; then
+            exit 1
+          fi
+          echo "::endgroup::"
+
   material-gate:
     name: 教材品質ゲート
     runs-on: ubuntu-latest

@@ -3,19 +3,21 @@
 ## hana652/tech-writing-pack (CC BY 4.0)
 
 Source: **hana652/tech-writing-pack** (CC BY 4.0)  
-Used in this skill via git submodule.
+Files are vendored (directly embedded) into this repository.
 
 Original repository: https://github.com/hana652/tech-writing-pack  
 License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 
-### Submodule location
+### Vendored location
 
 ```
 .claude/skills/material-writing/hana652-tech-writing-pack/
 ```
 
-The guides are referenced directly from the submodule rather than vendored (inlined),
-so upstream improvements are picked up with `git submodule update --remote`.
+The guides are copied directly into this repository rather than tracked via git submodule,
+because unattended clones/sessions never ran `git submodule update --init`, leaving the
+directory empty and causing a real misreading incident (2026-07-14). Upstream improvements
+must be picked up by manually re-copying changed files from the original repository.
 
 ### Guides used
 
@@ -31,16 +33,20 @@ so upstream improvements are picked up with `git submodule update --remote`.
 
 Source: **Xamfonos/technical-writing-best-practices** (MIT)  
 Copyright (c) 2025 Henry Bassey  
-Used in this skill via git submodule.
+Files are vendored (directly embedded) into this repository.
 
 Original repository: https://github.com/Xamfonos/technical-writing-best-practices  
 License: MIT License
 
-### Submodule location
+### Vendored location
 
 ```
 .claude/skills/material-writing/xamfonos-technical-writing-best-practices/
 ```
+
+Vendored (not tracked as a git submodule) for the same reason as hana652 above: an
+uninitialized submodule silently reads as empty, which is exactly what caused the
+2026-07-14 misreading incident.
 
 26原則・5ドメイン構成の開発者向けライティングスキル。教材レジスタでは開発者向けのトーン
 （箇条書き禁止・ピアトーン）は採らず、以下3原則の考え方だけを「なぜを教える」節で使う。
