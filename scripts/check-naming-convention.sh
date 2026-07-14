@@ -17,6 +17,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 violations=0
+LC_ALL=C
 
 is_exempt() {
   local path="$1"
@@ -24,15 +25,27 @@ is_exempt() {
   basename="$(basename "$path")"
 
   # 日本語(非ASCII)を含むパスは対象外(コンテンツの言語選択)
-  # grep -P はBSD grep(macOS)非対応のため、python3で移植性のある非ASCII判定を行う
-  if ! python3 -c "import sys; sys.exit(0 if sys.argv[1].isascii() else 1)" "$basename" 2>/dev/null; then
+  # 純粋なBashのパターンマッチングで判定(外部プロセス起動なし・移植性あり)
+  if [[ "$basename" =~ [^[:cntrl:][:print:]] ]]; then
     return 0
   fi
 
   # material/ 配下(教材コンテンツ)は対象外
   case "$path" in
+    material) return 0 ;;
     material/*) return 0 ;;
+    edu-creator) return 0 ;;
     edu-creator/*) return 0 ;;
+  esac
+
+  # Next.js App Router の動的ルートフォルダ規約: [param] / [...param] / (group)
+  case "$basename" in
+    \[*\]|\(*\)) return 0 ;;
+  esac
+
+  # GitHub認識の固定フォルダ名
+  case "$path" in
+    .github/ISSUE_TEMPLATE) return 0 ;;
   esac
 
   # Python: snake_case許容(PEP 8)
@@ -70,37 +83,59 @@ is_exempt() {
     CODE_OF_CONDUCT.md|CONTRIBUTING.md|SECURITY.md|CHANGELOG.md) return 0 ;;
   esac
 
-  # __test, _xxx プレフィックス(scripts/のscaffold用マーカー・vitestの慣習)は
-  # プレフィックス自体は対象外、プレフィックス以降がkebab-caseかは別途チェックする
+  # ドットファイル(.gitignore, .editorconfig 等)は先頭の "." を接頭辞として除去した上で
+  # 本体をkebab-caseチェックにかける(is_exempt自体はここでは通過させない)
   return 1
 }
 
 strip_known_prefix() {
   local name="$1"
-  # scripts/ 配下の "_" scaffoldマーカー、テストの "__test" は接頭辞のみ除去
+  # scripts/ のscaffoldマーカー("_"接頭辞)、ドットファイルの先頭"."を除去
   name="${name#_}"
+  name="${name#.}"
   echo "$name"
 }
 
 is_kebab_case() {
   local name="$1"
+  name="$(strip_known_prefix "$name")"
   # 拡張子を分離(最初のドットまでを本体とする。複数拡張子は許容)
   local stem="${name%%.*}"
-  stem="$(strip_known_prefix "$stem")"
   [ -z "$stem" ] && return 0
   # 小文字英数字とハイフンのみ、大文字・アンダースコア・スペース禁止
   echo "$stem" | grep -qE '^[a-z0-9]+(-[a-z0-9]+)*$'
 }
 
-while IFS= read -r path; do
+check_path() {
+  local path="$1"
+  local basename
   basename="$(basename "$path")"
-  [ "$basename" = "__test" ] && continue
-  is_exempt "$path" && continue
+  [ "$basename" = "__test" ] && return 0
+  is_exempt "$path" && return 0
   if ! is_kebab_case "$basename"; then
     echo "::error file=$path::kebab-case違反: '$basename' は英語小文字単数形ケバブケースではありません"
     violations=$((violations + 1))
   fi
-done < <(git -c core.quotepath=false ls-files)
+}
+
+# ファイル名チェック(null区切りでスペース・改行を含むパスにも安全)
+while IFS= read -r -d '' path; do
+  check_path "$path"
+done < <(git ls-files -z)
+
+# フォルダ名チェック(git管理下ファイルが属する全ディレクトリの各階層名、重複排除)
+all_dirs="$(git -c core.quotepath=false ls-files | while IFS= read -r path; do
+  dir="$(dirname "$path")"
+  while [ "$dir" != "." ] && [ "$dir" != "/" ]; do
+    echo "$dir"
+    dir="$(dirname "$dir")"
+  done
+done | sort -u)"
+
+while IFS= read -r dir; do
+  [ -z "$dir" ] && continue
+  check_path "$dir"
+done <<< "$all_dirs"
 
 if [ "$violations" -gt 0 ]; then
   echo ""
