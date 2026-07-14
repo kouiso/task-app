@@ -65,8 +65,10 @@ src/
 │   └── page.tsx              ← メンバー追加ダイアログ・state管理
 ├── component/project/
 │   └── project-detail-view.tsx  ← メンバー一覧表示（独立コンポーネント）
-└── lib/constant/
-    └── roles.ts              ← ロール定義・権限・型ガード
+├── lib/constant/
+│   └── roles.ts              ← ロール定義・権限・型ガード
+└── server/api/routers/
+    └── project.ts            ← getById/getAvailableUsers/addMember/removeMember を追加（Step 0）
 ```
 
 ### ロール定義ファイル `roles.ts` の中身
@@ -96,6 +98,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | project.ts に getById/getAvailableUsers/addMember/removeMember を自分で書く | 18分 |
 | Step 1 | プロジェクト詳細ビューを接続する | 6分 |
 | Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
 | Step 3 | ロール関連のインポートとフォームを準備する | 6分 |
@@ -105,7 +108,286 @@ src/
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
 
-**合計時間**: 約45分。
+**合計時間**: 約63分。
+
+---
+
+### Step 0: project.ts に getById/getAvailableUsers/addMember/removeMember を自分で書く（18分）
+
+**ゴール**: プロジェクト詳細取得・追加可能ユーザー取得・メンバー追加・メンバー削除の4つの手続きを追加します。
+
+#### 0-1. getById — 1件だけ取得する
+
+`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。`project.ts` の `getAll` の下に追加します。
+
+まず `findUnique` で1件検索します。詳細画面はタスクの担当者（`assignee`）も表示するので、`tasks.include.assignee` で一緒に取ります。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { ...USER_SELECT, role: true },
+              },
+            },
+          },
+          tasks: {
+            include: {
+              assignee: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+          },
+        },
+      });
+```
+
+続けて、見つからなかったときのチェックです。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+```
+
+`getAll` は一覧なので「見つからない」というケースがありませんでした。`getById` は違います。指定した `id` のプロジェクトは存在しないこともあるため、`NOT_FOUND` チェックが必要です。
+
+続けて権限チェックと戻り値です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      assertMemberPermission(
+        project.members.filter((m) => m.userId === ctx.session.userId),
+        'canView',
+      );
+
+      return project;
+    }),
+```
+
+`getAll` では `where` で「自分がメンバーのものだけ」を絞り込んでいましたが、`getById` は先にプロジェクトを取得してから、取得した `members` の中に自分がいるかを `filter` で確認しています。他人のプロジェクトの `id` を直接指定されても、メンバーでなければ `canView` の権限チェックで弾かれます。
+
+#### 0-2. getAvailableUsers — まだ参加していないユーザーを探す
+
+メンバー追加ダイアログの候補一覧に使う手続きです。`getById` の下に追加します。まず自分の権限を確認します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  getAvailableUsers: protectedProcedure
+    .input(z.object({ projectId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+続けて、まだ参加していないユーザーを検索します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      return await prisma.user.findMany({
+        where: {
+          isActive: true,
+          projects: {
+            none: {
+              projectId: input.projectId,
+            },
+          },
+        },
+        select: USER_SELECT,
+        orderBy: { name: 'asc' },
+      });
+    }),
+```
+
+`projects: { none: { projectId: input.projectId } }` は「このプロジェクトのメンバーに1件も該当しないユーザー」という条件です。Day 09 の `getAll` では `some`（1件でも該当すれば対象）を使いました。`none` はその逆で、1件も該当しない場合を対象にします。これで、まだ参加していない人だけが候補として残ります。
+
+#### 0-3. addMember — ここが一番のヤマ場、重複チェック
+
+`addMember` に使う入力スキーマをまず定義します。`project.ts` の import 群に `projectMemberRoleSchema` を追加してから、`projectCreateSchema` の下にスキーマを書きます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（import群を修正）
+import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
+```
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+const projectMemberSchema = z.object({
+  projectId: z.string().cuid(),
+  userId: z.string().cuid(),
+  role: projectMemberRoleSchema.default(PROJECT_MEMBER_ROLE.MEMBER),
+});
+```
+
+`role` に `.default(PROJECT_MEMBER_ROLE.MEMBER)` が付いているのは、ロールを指定しなかったときに一番権限の弱い MEMBER として追加するためです。ここまで準備できたら、`getAvailableUsers` の下に `addMember` を追加します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ ctx, input }) => {
+    const userMember = await prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          userId: ctx.session.userId,
+          projectId: input.projectId,
+        },
+      },
+    });
+
+    assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+ここまでは他の手続きと同じ「自分の権限を確認する」流れです。ここからが `addMember` 固有の処理です。すでにメンバーでないかを確認します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+    const existing = await prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          userId: input.userId,
+          projectId: input.projectId,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'このユーザーは既にプロジェクトのメンバーです',
+      });
+    }
+```
+
+重複していなければ、実際にメンバーとして追加します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+    return await prisma.projectMember.create({
+      data: input,
+      include: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+    });
+  }),
+```
+
+`addMember` で一番大事なのは、追加する前に「もう既にメンバーではないか」を確認している点です。フロント側の `getAvailableUsers` は未参加ユーザーだけを候補に出します。しかし候補を取得したあと、実際に追加ボタンを押すまでにはタイムラグがあります。この間に別のタブや別のメンバーが先に同じユーザーを追加していると、候補一覧が古いままボタンを押すことになります。フロントのUIだけを信用せず、サーバー側でも同じ確認をもう一度することで、同じユーザーが二重登録される事故を防いでいます。
+
+#### 0-4. removeMember — 最後のOWNERは消せない
+
+`addMember` の下に追加します。まず入力の形と、自分の権限を確認します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  removeMember: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string().cuid(),
+        userId: z.string().cuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+続けて、削除対象のメンバーが実際に存在するかを確認します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      const member = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: input.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      if (!member) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'メンバーが見つかりません',
+        });
+      }
+```
+
+自分の権限と削除対象の存在を確認できたら、次は削除してよいかの最終チェックです。
+
+削除対象が OWNER のときだけ、そのプロジェクトの OWNER が何人いるかを数えます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
+        const ownerCount = await prisma.projectMember.count({
+          where: {
+            projectId: input.projectId,
+            role: PROJECT_MEMBER_ROLE.OWNER,
+          },
+        });
+
+        if (ownerCount === 1) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'プロジェクト唯一のオーナーは削除できません',
+          });
+        }
+      }
+```
+
+1人しかいない場合は削除を止めます。OWNER が0人になると、名前を変える・メンバーを追加する・アーカイブするといった管理操作を誰も実行できなくなり、プロジェクトが誰の手も届かない状態のまま残ってしまいます。MEMBER や VIEWER を削除するときはこのチェックを通らず、そのまま削除されます。
+
+チェックを抜けたら、実際に削除します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      await prisma.projectMember.delete({
+        where: {
+          userId_projectId: {
+            userId: input.userId,
+            projectId: input.projectId,
+          },
+        },
+      });
+
+      return { success: true };
+    }),
+```
+
+最後の `});` で `projectRouter` 全体を閉じます。
+
+**確認ポイント**:
+- `getById` / `getAvailableUsers` / `addMember` / `removeMember` を追加した
+- `addMember` の重複チェック、`removeMember` の最後のOWNER保護、それぞれ「なぜ必要か」を説明できる
+- `npm run dev` で型エラーが出ていない
 
 ---
 
@@ -687,11 +969,7 @@ JSX 内の `</div>` 閉じタグの後、`</AppLayout>` の直前（`AppLayout` 
 
 **ゴール**: フロントエンドとバックエンドの権限チェックの仕組みを理解します。
 
-> **このステップはサーバー側の完成形を写経して確認します。**
-> 画面から呼ぶ前に、権限チェックがどこで行われるかを
-> コード上で追えるようにしておきます。
-
-メンバー追加APIでは `assertMemberPermission` 関数で権限チェックを行います。Day 12 で関係するAPIは、実際には次の3種類の権限で分かれています。
+Step 0 で `getById` / `getAvailableUsers` / `addMember` / `removeMember` の権限チェックはすでに書きました。ここではコードを追加せず、Day 09〜12 で書いた権限チェックを一段上から整理します。実際には次の3種類の権限で分かれています。
 
 | 権限キー | 該当API | 通るロール |
 |---------|---------|-----------|
@@ -699,35 +977,27 @@ JSX 内の `</div>` 閉じタグの後、`</AppLayout>` の直前（`AppLayout` 
 | `canManageMembers` | `getAvailableUsers`, `addMember`, `removeMember`, `updateMemberRole`, `update` | OWNER / ADMIN |
 | `canArchive` | `archive`, `unarchive` | OWNER |
 
-まずはメンバー追加APIの抜粋を確認しましょう。
+Step 0 で書いた `addMember` を見比べてみましょう。`assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers')` の1行が、この表の `canManageMembers` 判定そのものです。
 
-```typescript
-// filepath: src/server/api/routers/project.ts
-// メンバー追加APIの権限チェック
-addMember: protectedProcedure
-  .input(projectMemberSchema)
-  .mutation(async ({ ctx, input }) => {
-    const userMember = await
-      prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-    assertMemberPermission(
-      userMember ? [userMember] : [],
-      'canManageMembers',
-    );
-  }),
+MEMBER 権限のユーザーが操作したときの流れを図にすると、フロントとバックエンドで二重にチェックされていることが見えます。
+
+```mermaid
+sequenceDiagram
+    participant U as MEMBER権限のユーザー
+    participant F as フロント(ProjectDetailView)
+    participant S as サーバー(project.ts)
+
+    U->>F: メンバー追加ボタンを探す
+    F-->>U: ボタンが非表示（UX）
+    U->>S: 開発者ツールでAPIを直接呼ぶ
+    S->>S: assertMemberPermission(canManageMembers)
+    S-->>U: FORBIDDEN（最後の砦）
 ```
 
 **確認ポイント**:
-- まず操作するユーザー自身の権限を取得している
-- `'canManageMembers'` でメンバー管理権限をチェックしている
-- 同じ `canManageMembers` が `removeMember` / `updateMemberRole` / `update` にも使われている
-- `archive` / `unarchive` は別の `canArchive` で判定され、OWNERだけが通る
+- Step 0 で書いた `addMember` を見て、`'canManageMembers'` でメンバー管理権限をチェックしていることを確認した
+- 同じ `canManageMembers` が `removeMember` / `updateMemberRole` / `update` にも使われていることを確認した
+- `archive` / `unarchive` は Day 11 で書いた `canArchive` で判定され、OWNERだけが通ることを確認した
 
 #### フロントエンドとバックエンドの権限チェック比較
 
