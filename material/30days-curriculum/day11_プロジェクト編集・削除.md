@@ -107,7 +107,16 @@ src/
 
 #### 0-1. update — 送られてきた項目だけ更新する
 
-まず更新用の入力スキーマです。`project.ts` の `projectCreateSchema` の下に追加します。
+今日書く `update` / `delete` / `archive` / `unarchive` はすべて `assertMemberPermission` という権限チェック関数を使います。まず `project.ts` の import 群に追加します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（import群を修正）
+import { assertMemberPermission } from './_helpers/permission';
+```
+
+これは `_helpers/permission.ts` にまとまっている権限チェックの共通関数です。Day 07 で作った `_helpers/select.ts` と同じ場所にあり、こちらは配布済みの既存ファイルです。ここから先の手続きはこれを何度も呼びます。
+
+続けて、更新用の入力スキーマです。`project.ts` の `projectCreateSchema` の下に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
