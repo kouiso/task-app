@@ -46,6 +46,8 @@ rsync -a "${PROJECT_ROOT}/" "${BUILD_DIR}/" \
   --exclude="test-results/" \
   --exclude="node-compile-cache/" \
   --exclude="scripts/curriculum-qa/" \
+  --exclude="src/server/api/routers/project.ts" \
+  --exclude="scripts/_server-routers/project.ts" \
   --exclude="*.tsbuildinfo" \
   --exclude="*.log" \
   --exclude="/*.png" \
@@ -60,6 +62,14 @@ rsync -a "${PROJECT_ROOT}/" "${BUILD_DIR}/" \
 # .env.example は学習者の初回セットアップに必要なので、環境除外より後で明示コピーする。
 if [ -f "${PROJECT_ROOT}/.env.example" ]; then
   cp "${PROJECT_ROOT}/.env.example" "${BUILD_DIR}/.env.example"
+fi
+
+# root.ts を Day 08 終了時点の状態(auth のみ登録)に差し替える。
+# src/server/api/routers/project.ts を除外した以上、完成品の root.ts(project登録済み)を
+# そのまま配布するとビルドが通らない。scaffold-from-scratch.sh が使っている
+# _server-base/root.ts と同じ初期状態ファイルをここでも使う。
+if [ -f "${PROJECT_ROOT}/scripts/_server-base/root.ts" ]; then
+  cp "${PROJECT_ROOT}/scripts/_server-base/root.ts" "${BUILD_DIR}/src/server/api/root.ts"
 fi
 
 # ---- ZIP 作成（前回の残骸があれば上書き） ----
