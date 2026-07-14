@@ -1,0 +1,163 @@
+{
+  "proposals": {
+    "src/component/project/__test/project-detail-view.test.tsx": {
+      "lines": 188,
+      "tests": "ProjectDetailView の権限による表示制御を RTL で検証（9テスト）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "188行・9テストと大きく、権限マトリクス網羅の回帰テスト寄り。1日の150行予算を単体で超えるため写経に不向き。"
+    },
+    "src/component/project/__test/project-dialog.test.tsx": {
+      "lines": 29,
+      "tests": "ProjectDialog の基本レンダリング（1テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "29行・1テストと小さく、ProjectDialog を作った直後の動作確認として写経すれば概念が定着する。予算に余裕。"
+    },
+    "src/component/task/__test/task-card.test.tsx": {
+      "lines": 251,
+      "tests": "TaskCard の表示・操作を RTL で検証（16テスト）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "251行・16テストと最大級。表示分岐を広く網羅する回帰スイートで、写経すると予算を大幅超過。"
+    },
+    "src/component/task/__test/task-dialog.test.tsx": {
+      "lines": 99,
+      "tests": "TaskDialog のフォーム挙動を RTL で検証（2テスト）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "99行に対し実質2テストで、Provider/モックのボイラープレート比率が高い。写経コスト対学習価値が低く、ハーネス送りが妥当。"
+    },
+    "src/lib/__test/rate-limit.test.ts": {
+      "lines": 97,
+      "tests": "レート制限ロジックの単体検証（10テスト）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "97行とやや大きく、レート制限はインフラ的関心事。回帰目的が強く、写経より _answer-tests 側が適切。"
+    },
+    "src/lib/__test/task-filter-query.test.ts": {
+      "lines": 33,
+      "tests": "タスクフィルタのクエリ生成ヘルパー（2テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "33行の純粋関数テスト。フィルタヘルパーを作った日の動作確認として写経すれば直後の概念を補強できる。"
+    },
+    "src/lib/date.test.ts": {
+      "lines": 43,
+      "tests": "日付ヘルパーの整形・計算（8テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "43行・純粋関数の単体テスト。date ユーティリティ作成日に写経しやすく予算内。"
+    },
+    "src/lib/observability.test.ts": {
+      "lines": 50,
+      "tests": "observability ロギングの単体検証（5テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "50行で単一モジュールに密結合。observability ヘルパー実装日の動作確認として写経可能。"
+    },
+    "src/lib/report-path.test.ts": {
+      "lines": 21,
+      "tests": "レポートパス生成ヘルパー（3テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "21行と最小級の純粋関数テスト。写経コストが低く、report-path 実装日にそのまま組み込める。"
+    },
+    "src/lib/search-filters.test.ts": {
+      "lines": 63,
+      "tests": "検索フィルタヘルパーの単体検証（4テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "63行の純粋ヘルパーテスト。150行予算に十分収まり、検索フィルタ実装日の理解補強に適する（境界的だが写経寄り）。"
+    },
+    "src/lib/session.test.ts": {
+      "lines": 103,
+      "tests": "セッション関連ヘルパーの検証（4テスト）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "103行・認証セッションのインフラ的テスト。サイズと関心事の両面で写経より回帰ハーネスが適切。"
+    },
+    "src/lib/use-local-storage/use-local-storage.test.ts": {
+      "lines": 28,
+      "tests": "useLocalStorage フックの基本挙動（1テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "28行・1テストと小さく、フック実装日の動作確認として写経すれば custom hook の概念が定着。"
+    },
+    "src/lib/utils/__test/type-guards.test.ts": {
+      "lines": 20,
+      "tests": "型ガード関数の単体検証（2テスト）",
+      "channel": "写経",
+      "construct_day_hint": null,
+      "rationale": "20行と最小。型ガードを教えた日の直後に写経すると is 述語の理解を補強できる。"
+    },
+    "src/server/api/routers/__test/auth.test.ts": {
+      "lines": 252,
+      "tests": "authRouter の統合テスト（24テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "252行のルーター統合スイート。多数の手続きを一括検証する回帰インフラで、写経対象外。"
+    },
+    "src/server/api/routers/__test/chaos.test.ts": {
+      "lines": 208,
+      "tests": "プロパティベース/カオスによる横断カバレッジ（5テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "208行のカオス/プロパティテスト。学習フローと直交する堅牢性ツールで、明確にハーネス。"
+    },
+    "src/server/api/routers/__test/comment.test.ts": {
+      "lines": 138,
+      "tests": "commentRouter の統合テスト（11テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "138行のルーター統合テスト。Prisma を通しルーター全体を検証するため回帰ハーネス。"
+    },
+    "src/server/api/routers/__test/project.test.ts": {
+      "lines": 447,
+      "tests": "projectRouter の統合テスト（43テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "447行・43テストと最大のルータースイート。写経不可能な規模で、ハーネス確定。"
+    },
+    "src/server/api/routers/__test/report.test.ts": {
+      "lines": 150,
+      "tests": "reportRouter の統合テスト（10テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "150行のルーター統合テスト。ルーター全体の回帰目的でハーネス。"
+    },
+    "src/server/api/routers/__test/search.test.ts": {
+      "lines": 149,
+      "tests": "searchRouter の統合テスト（11テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "149行のルーター統合テスト。Prisma 経由でルーターを網羅検証するためハーネス。"
+    },
+    "src/server/api/routers/__test/task.test.ts": {
+      "lines": 273,
+      "tests": "taskRouter の統合テスト（27テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "273行・27テストの大規模ルータースイート。回帰インフラでハーネス。"
+    },
+    "src/server/api/routers/__test/user.test.ts": {
+      "lines": 227,
+      "tests": "userRouter の統合テスト（22テスト・Prisma使用）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "227行のルーター統合テスト。多手続き一括検証でハーネス。"
+    },
+    "src/test/chaos-helpers.test.ts": {
+      "lines": 27,
+      "tests": "カオステスト用共有ヘルパー自体の自己検証（1テスト）",
+      "channel": "ハーネス",
+      "construct_day_hint": null,
+      "rationale": "27行と小さいが、カオスハーネス専用の共有ヘルパーで学習フローと直交。chaos.test.ts と同じチャネルに置くべき。"
+    }
+  },
+  "totals": {
+    "写経": 8,
+    "ハーネス": 14,
+    "写経_total_lines": 287
+  }
+}
