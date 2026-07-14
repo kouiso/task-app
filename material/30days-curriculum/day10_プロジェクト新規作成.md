@@ -81,6 +81,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | プロジェクト作成 API（create）を自分で書く | 12分 |
 | Step 1 | ProjectDialogの骨格を作る | 5分 |
 | Step 2 | zodスキーマとフォーム設定を作る | 5分 |
 | Step 3 | values propで初期値を自動同期する | 5分 |
@@ -90,7 +91,97 @@ src/
 | Step 7 | ページにDialogを組み込む | 7分 |
 | Step 8 | 動作確認 | 3分 |
 
-**合計時間**は約44分です。
+**合計時間**は約56分です。
+
+---
+
+### Step 0: プロジェクト作成 API（create）を自分で書く（12分）
+
+**ゴール**: `src/server/api/routers/project.ts` に `create` を追加し、`api.project.create` を呼べる状態にします。
+
+Day 09 で書いた `getAll` は、3部品（入力・処理・戻り値）のうち処理が「探す（`.query`）」でした。今日の `create` は「作る（`.mutation`）」になるだけで、骨組みは同じです。
+
+#### 0-1. 入力スキーマを追加する
+
+まず、受け取るデータの形を zod で定義します。`project.ts` の `USER_SELECT` の import の下に追加します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
+import { PROJECT_MEMBER_ROLE } from '@/lib/constant/roles';
+
+const projectCreateSchema = z.object({
+  name: z.string().min(1, 'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .default(DEFAULT_PROJECT_COLOR),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+```
+
+`name` に `.min(1, ...)` が付いているのは、空文字のプロジェクト名を作れないようにするためです。`color` の `.regex(/^#[0-9A-F]{6}$/i)` は「`#` に続いて英数字6桁」という色コードの形をチェックします。これが無いと、フロント側のバリデーションを迂回して変な文字列が color に入ってしまいます。`.default(DEFAULT_PROJECT_COLOR)` は、色を指定しなかったときに使う既定色です。
+
+#### 0-2. ここが一番のヤマ場 — 作った本人をメンバーに入れる
+
+`create` の処理本体です。ここで一番大事なのは、プロジェクトを作るのと同時に、作った本人をメンバーとして登録する部分です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
+    const createData: Prisma.ProjectCreateInput = {
+      name: input.name,
+      color: input.color,
+      startDate: input.startDate ? new Date(input.startDate) : null,
+      endDate: input.endDate ? new Date(input.endDate) : null,
+      members: {
+        create: {
+          userId: ctx.session.userId,
+          role: PROJECT_MEMBER_ROLE.OWNER,
+        },
+      },
+    };
+```
+
+`members: { create: { ... } }` は、プロジェクト本体を作るのと同時に、関連する `ProjectMember` の行も1件同時に作る書き方です。プロジェクトとメンバーは別々のテーブルなので、放っておくと2回に分けて書き込む必要がありますが、Prisma はこの入れ子の `create` でまとめて1回の書き込みにできます。
+
+なぜここが一番のヤマ場かというと、Day 09 で書いた `getAll` を思い出すと分かります。`getAll` は「自分がメンバーのプロジェクトだけ」を返す条件になっていました。もしここで `members.create` を忘れると、プロジェクトは作成されるのに、作った本人がメンバーに入っていないので `getAll` の一覧には表示されません。「作ったのに一覧に出てこない」という不具合の原因は、たいていこの登録漏れです。`role: PROJECT_MEMBER_ROLE.OWNER` で、作成者にはオーナー権限を与えます。
+
+#### 0-3. description は値があるときだけ入れる
+
+`description` は入力が任意なので、扱い方を分けます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+    if (input.description) {
+      createData.description = input.description;
+    }
+
+    return await prisma.project.create({
+      data: createData,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        },
+      },
+    });
+  }),
+```
+
+最初に作る `createData` には `description` を含めず、値が入力されているときだけ後から足しています。空文字や未入力のまま `description: input.description` と書いてしまうと、データが無いことを表す値（空文字や `undefined`）がわざわざ DB に書き込まれてしまいます。値があるときだけキー自体を足すと、無いものは無いまま扱われます。これは Day 09 の `update` パターン（値がある項目だけ更新オブジェクトに足す書き方）と同じ考え方です。`include` は `getAll` と同じ形にしています。API を呼ぶ側は、一覧で見るデータと作成直後に返るデータの形が揃っているほうが扱いやすいからです。最後の `}),` で `create` を閉じます。
+
+`root.ts` は Day 09 で `project` を登録済みなので、今日は変更しません。
+
+**確認ポイント**:
+- `projectCreateSchema` と `create` を追加し、`getAll` の直後に `}),` `});` まで閉じた
+- `members.create` で `userId` と `role: PROJECT_MEMBER_ROLE.OWNER` を渡している
+- `npm run dev` で型エラーが出ていない
 
 ---
 
@@ -793,6 +884,10 @@ Day 11 では、プロジェクトの編集・削除機能を実装します。D
 ## Day 10 完成形コード（参照用）
 
 Day 10 終了時点の各ファイルの完成形です。
+
+### `src/server/api/routers/project.ts`
+
+Day 10 終了時点の状態は、このリポジトリの `src/server/api/routers/project.ts` の `getAll` と `create` の部分と同じです。`update` 以降は Day 11 で追加するので、まだ存在しません。
 
 ### `src/component/project/project-dialog.tsx`
 
