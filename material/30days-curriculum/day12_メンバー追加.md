@@ -255,7 +255,7 @@ const projectMemberSchema = z.object({
     assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-ここまでは他の手続きと同じ「自分の権限を確認する」流れです。`canManageMembers` は OWNER と ADMIN の両方が持っています。ここで、もう一段階だけ強いチェックを挟みます。
+ここまでは他の手続きと同じ「自分の権限を確認する」流れです。`canManageMembers` は OWNER と ADMIN の両方が持っています。ここから先は2段階のチェックです。1段階目は「自分にメンバーを追加する権限があるか」、2段階目は「自分に、そのロールまで付与する権限があるか」です。前者を通っても後者は別に確認します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -358,7 +358,7 @@ const projectMemberSchema = z.object({
       }
 ```
 
-自分の権限と削除対象の存在を確認できたら、addMember と同じ理由でもう一段階のチェックを挟みます。
+自分の権限と削除対象の存在を確認できたら、addMember と同じ2段階チェックです。1段階目は「自分にメンバーを削除する権限があるか」（`canManageMembers`）、2段階目は「削除対象が OWNER なら、自分も OWNER か」です。`canManageMembers` があっても、OWNER の削除だけは別に確認します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）

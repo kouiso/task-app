@@ -107,7 +107,7 @@ src/
 
 #### 0-1. update — 送られてきた項目だけ更新する
 
-今日書く `update` / `delete` / `archive` / `unarchive` はすべて `assertMemberPermission` という権限チェック関数を使います。まず `project.ts` の import 群に追加します。
+今日書く `update` / `delete` / `archive` / `unarchive` は、どれも「自分にその操作をする権限があるか」を確認してから実行します。この確認をまとめて行うのが `assertMemberPermission` という関数です。渡されたメンバー情報と権限名（`canManageMembers` 等）を照合し、権限が無ければその場でエラーを発生させます。まず `project.ts` の import 群に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（import群を修正）
