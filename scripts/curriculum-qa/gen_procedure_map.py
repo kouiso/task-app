@@ -6,7 +6,7 @@
     src/server/api/routers/<router>/<procedure>.ts を読む形に切り替える)
   - material/30days-curriculum/day*.md (`api.<router>.<procedure>` 呼び出し箇所を
     最初に登場したdayとして記録)
-  - src/**/__test__/**, src/**/*.test.ts (来歴未定義のテスト21本の棚卸し対象)
+  - src/**/__test/**, src/**/*.test.ts (来歴未定義のテスト21本の棚卸し対象)
 
 出力: material/30days-curriculum/_meta/procedure-day-map.json
 
@@ -32,7 +32,7 @@ OUT_DIR = CURRICULUM_DIR / "_meta"
 OUT_PATH = OUT_DIR / "procedure-day-map.json"
 
 PROCEDURE_RE = re.compile(
-    r"^\s*([a-zA-Z][a-zA-Z0-9]*)\s*:\s*(publicProcedure|protectedProcedure)", re.MULTILINE
+    r"^\s*([a-zA-Z][a-zA-Z0-9]*)\s*:\s*([a-zA-Z][a-zA-Z0-9]*Procedure)", re.MULTILINE
 )
 API_CALL_RE = re.compile(r"api\.([a-zA-Z][a-zA-Z0-9]*)\.([a-zA-Z][a-zA-Z0-9]*)")
 DAY_FILE_RE = re.compile(r"^day(\d+)_")
@@ -96,7 +96,7 @@ def scan_test_files() -> list[str]:
     if not SRC_DIR.exists():
         return []
     tests = list(SRC_DIR.rglob("*.test.ts")) + list(SRC_DIR.rglob("*.test.tsx"))
-    tests += [p for p in SRC_DIR.rglob("__test__/**/*") if p.is_file() and p.suffix in (".ts", ".tsx")]
+    tests += [p for p in SRC_DIR.rglob("__test/**/*") if p.is_file() and p.suffix in (".ts", ".tsx")]
     seen = sorted({str(p.relative_to(REPO_ROOT)) for p in tests})
     return seen
 
