@@ -102,16 +102,136 @@ src/
 
 ---
 
-### Step 0: プロジェクト API を有効化する（2分）
+### Step 0: プロジェクト一覧 API を自分で書く（10分）
 
-**ゴール**: project ルーターを root.ts に登録して、API を使えるようにします。
+**ゴール**: プロジェクト一覧を返す `project` ルーターを自分の手で作り、
+`root.ts` に登録して画面から呼べるようにします。
 
-Day 07 で認証 API を登録したのと同じ形で、
-プロジェクト用 API も `root.ts` に登録します。
-`src/server/api/routers/project.ts` は、この Day から
-プロジェクト管理の API として使うファイルです。
+Day 07 で認証 API（`auth.ts`）を1から書いたのと同じ流れです。
+今回は `src/server/api/routers/project.ts` を新規作成し、
+まずプロジェクト一覧を取得する `getAll` だけを書きます。
+`create` や `update` など他の処理は、それを使う Day 10 以降で
+少しずつ追記していきます。1日で全部書かなくて大丈夫です。
 
-**編集**:
+#### 0-1. project.ts のインポート
+
+`src/server/api/routers/project.ts` を新規作成します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_SELECT } from './_helpers/select';
+```
+
+**確認ポイント**:
+- [ ] 一覧取得に必要な import が揃っている
+- [ ] `USER_SELECT` は Day 07 で作った `_helpers/select.ts` から来ている
+
+#### 0-2. getAll の入力と絞り込み条件
+
+ここから `getAll` を書きます。ログイン中のユーザーが見てよい
+プロジェクトだけを返すため、まず検索条件（`where`）を組み立てます。
+他人の `userId` を指定できるのは管理者だけ、という制限もここで入れます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+export const projectRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          userId: z.string().cuid().optional(),
+          isArchived: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.ProjectWhereInput = {};
+
+      if (input?.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+```
+
+**確認ポイント**:
+- [ ] 管理者以外は自分以外の `userId` を指定できないようにしている
+
+#### 0-3. 絞り込み条件の続き
+
+`where` に「自分がメンバーのプロジェクト」という条件を足し、
+アーカイブ済みかどうかの絞り込みも加えます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+
+      if (!input?.userId) {
+        where.members = {
+          some: { userId: ctx.session.userId },
+        };
+      } else {
+        where.members = {
+          some: { userId: input.userId },
+        };
+      }
+
+      if (input?.isArchived !== undefined) {
+        where.isArchived = input.isArchived;
+      }
+```
+
+**確認ポイント**:
+- [ ] 自分がメンバーのプロジェクトを条件に入れている
+
+#### 0-4. 一覧の取得
+
+組み立てた `where` を使って、Prisma でプロジェクト一覧を取得します。
+関連するメンバーとタスクも一緒に取ってきます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+
+      return await prisma.project.findMany({
+        where,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+});
+```
+
+**確認ポイント**:
+- [ ] メンバーとタスクを一緒に取得している
+- [ ] `getAll` の閉じ括弧までそろっている
+
+#### 0-5. root.ts に project ルーターを登録する
+
+書いた `project` ルーターを `root.ts` に登録して、
+画面から `api.project.getAll` を呼べるようにします。
+Day 07 で `auth` を登録したのと同じ形です。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -132,11 +252,6 @@ export const createCaller = createCallerFactory(appRouter);
 **確認ポイント**:
 - [ ] `projectRouter` の import を追加した
 - [ ] `appRouter` に `project: projectRouter` を追加した
-
-> `project.ts` は Day 07 で学んだ
-> `protectedProcedure` と `prisma` の延長にあります。
-> API を増やすときは、まず router を登録してから
-> 画面側の `useQuery` をつなぐ順番にすると迷いにくいです。
 
 ---
 
