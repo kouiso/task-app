@@ -1,0 +1,368 @@
+{
+  "generated_by": "script/gen_procedure_map.py",
+  "procedures": {
+    "auth.login": {
+      "router": "auth",
+      "procedure": "login",
+      "defined_at": "scripts/_server-routers/auth.ts:37",
+      "first_used_in_curriculum_day": 5,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "auth.register": {
+      "router": "auth",
+      "procedure": "register",
+      "defined_at": "scripts/_server-routers/auth.ts:89",
+      "first_used_in_curriculum_day": 6,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "auth.logout": {
+      "router": "auth",
+      "procedure": "logout",
+      "defined_at": "scripts/_server-routers/auth.ts:137",
+      "first_used_in_curriculum_day": 8,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "auth.getSession": {
+      "router": "auth",
+      "procedure": "getSession",
+      "defined_at": "scripts/_server-routers/auth.ts:142",
+      "first_used_in_curriculum_day": 8,
+      "referenced_by_scaffold_components": ["scripts/_app-components/task/task-detail-dialog.tsx"],
+      "orphan": false
+    },
+    "auth.getCurrentUser": {
+      "router": "auth",
+      "procedure": "getCurrentUser",
+      "defined_at": "scripts/_server-routers/auth.ts:161",
+      "first_used_in_curriculum_day": 17,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "comment.getByTaskId": {
+      "router": "comment",
+      "procedure": "getByTaskId",
+      "defined_at": "scripts/_server-routers/comment.ts:95",
+      "first_used_in_curriculum_day": null,
+      "referenced_by_scaffold_components": [],
+      "orphan": true
+    },
+    "comment.create": {
+      "router": "comment",
+      "procedure": "create",
+      "defined_at": "scripts/_server-routers/comment.ts:111",
+      "first_used_in_curriculum_day": 18,
+      "referenced_by_scaffold_components": ["scripts/_app-components/task/task-detail-dialog.tsx"],
+      "orphan": false
+    },
+    "comment.update": {
+      "router": "comment",
+      "procedure": "update",
+      "defined_at": "scripts/_server-routers/comment.ts:128",
+      "first_used_in_curriculum_day": 19,
+      "referenced_by_scaffold_components": ["scripts/_app-components/task/task-detail-dialog.tsx"],
+      "orphan": false
+    },
+    "comment.delete": {
+      "router": "comment",
+      "procedure": "delete",
+      "defined_at": "scripts/_server-routers/comment.ts:143",
+      "first_used_in_curriculum_day": 19,
+      "referenced_by_scaffold_components": ["scripts/_app-components/task/task-detail-dialog.tsx"],
+      "orphan": false
+    },
+    "project.getAll": {
+      "router": "project",
+      "procedure": "getAll",
+      "defined_at": "scripts/_server-routers/project.ts:57",
+      "first_used_in_curriculum_day": 9,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.getById": {
+      "router": "project",
+      "procedure": "getById",
+      "defined_at": "scripts/_server-routers/project.ts:113",
+      "first_used_in_curriculum_day": 11,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.getAvailableUsers": {
+      "router": "project",
+      "procedure": "getAvailableUsers",
+      "defined_at": "scripts/_server-routers/project.ts:152",
+      "first_used_in_curriculum_day": 12,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.create": {
+      "router": "project",
+      "procedure": "create",
+      "defined_at": "scripts/_server-routers/project.ts:180",
+      "first_used_in_curriculum_day": 10,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.update": {
+      "router": "project",
+      "procedure": "update",
+      "defined_at": "scripts/_server-routers/project.ts:211",
+      "first_used_in_curriculum_day": 11,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.delete": {
+      "router": "project",
+      "procedure": "delete",
+      "defined_at": "scripts/_server-routers/project.ts:267",
+      "first_used_in_curriculum_day": 11,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.addMember": {
+      "router": "project",
+      "procedure": "addMember",
+      "defined_at": "scripts/_server-routers/project.ts:301",
+      "first_used_in_curriculum_day": 12,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.removeMember": {
+      "router": "project",
+      "procedure": "removeMember",
+      "defined_at": "scripts/_server-routers/project.ts:339",
+      "first_used_in_curriculum_day": 12,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.updateMemberRole": {
+      "router": "project",
+      "procedure": "updateMemberRole",
+      "defined_at": "scripts/_server-routers/project.ts:402",
+      "first_used_in_curriculum_day": null,
+      "referenced_by_scaffold_components": [],
+      "orphan": true
+    },
+    "project.archive": {
+      "router": "project",
+      "procedure": "archive",
+      "defined_at": "scripts/_server-routers/project.ts:477",
+      "first_used_in_curriculum_day": 11,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "project.unarchive": {
+      "router": "project",
+      "procedure": "unarchive",
+      "defined_at": "scripts/_server-routers/project.ts:483",
+      "first_used_in_curriculum_day": 11,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "report.getOverview": {
+      "router": "report",
+      "procedure": "getOverview",
+      "defined_at": "scripts/_server-routers/report.ts:11",
+      "first_used_in_curriculum_day": 21,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "report.getWeeklyReport": {
+      "router": "report",
+      "procedure": "getWeeklyReport",
+      "defined_at": "scripts/_server-routers/report.ts:157",
+      "first_used_in_curriculum_day": 23,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "search.search": {
+      "router": "search",
+      "procedure": "search",
+      "defined_at": "scripts/_server-routers/search.ts:67",
+      "first_used_in_curriculum_day": 20,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "search.quickSearch": {
+      "router": "search",
+      "procedure": "quickSearch",
+      "defined_at": "scripts/_server-routers/search.ts:143",
+      "first_used_in_curriculum_day": null,
+      "referenced_by_scaffold_components": [],
+      "orphan": true
+    },
+    "search.getUserProjects": {
+      "router": "search",
+      "procedure": "getUserProjects",
+      "defined_at": "scripts/_server-routers/search.ts:186",
+      "first_used_in_curriculum_day": 20,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "search.getProjectMembers": {
+      "router": "search",
+      "procedure": "getProjectMembers",
+      "defined_at": "scripts/_server-routers/search.ts:208",
+      "first_used_in_curriculum_day": 14,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "task.getAll": {
+      "router": "task",
+      "procedure": "getAll",
+      "defined_at": "scripts/_server-routers/task.ts:74",
+      "first_used_in_curriculum_day": 13,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "task.getById": {
+      "router": "task",
+      "procedure": "getById",
+      "defined_at": "scripts/_server-routers/task.ts:132",
+      "first_used_in_curriculum_day": 18,
+      "referenced_by_scaffold_components": ["scripts/_app-components/task/task-detail-dialog.tsx"],
+      "orphan": false
+    },
+    "task.create": {
+      "router": "task",
+      "procedure": "create",
+      "defined_at": "scripts/_server-routers/task.ts:174",
+      "first_used_in_curriculum_day": 14,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "task.update": {
+      "router": "task",
+      "procedure": "update",
+      "defined_at": "scripts/_server-routers/task.ts:242",
+      "first_used_in_curriculum_day": 15,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "task.delete": {
+      "router": "task",
+      "procedure": "delete",
+      "defined_at": "scripts/_server-routers/task.ts:303",
+      "first_used_in_curriculum_day": 15,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "task.updateTimer": {
+      "router": "task",
+      "procedure": "updateTimer",
+      "defined_at": "scripts/_server-routers/task.ts:315",
+      "first_used_in_curriculum_day": 16,
+      "referenced_by_scaffold_components": ["scripts/_app-components/task/task-timer.tsx"],
+      "orphan": false
+    },
+    "task.addTime": {
+      "router": "task",
+      "procedure": "addTime",
+      "defined_at": "scripts/_server-routers/task.ts:354",
+      "first_used_in_curriculum_day": 16,
+      "referenced_by_scaffold_components": ["scripts/_app-components/task/time-log-dialog.tsx"],
+      "orphan": false
+    },
+    "task.bulkComplete": {
+      "router": "task",
+      "procedure": "bulkComplete",
+      "defined_at": "scripts/_server-routers/task.ts:367",
+      "first_used_in_curriculum_day": 28,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "task.bulkDelete": {
+      "router": "task",
+      "procedure": "bulkDelete",
+      "defined_at": "scripts/_server-routers/task.ts:379",
+      "first_used_in_curriculum_day": 28,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "task.bulkUpdateStatus": {
+      "router": "task",
+      "procedure": "bulkUpdateStatus",
+      "defined_at": "scripts/_server-routers/task.ts:392",
+      "first_used_in_curriculum_day": 28,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "user.getById": {
+      "router": "user",
+      "procedure": "getById",
+      "defined_at": "scripts/_server-routers/user.ts:76",
+      "first_used_in_curriculum_day": 29,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "user.update": {
+      "router": "user",
+      "procedure": "update",
+      "defined_at": "scripts/_server-routers/user.ts:182",
+      "first_used_in_curriculum_day": 29,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "user.updateProfile": {
+      "router": "user",
+      "procedure": "updateProfile",
+      "defined_at": "scripts/_server-routers/user.ts:235",
+      "first_used_in_curriculum_day": 25,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    },
+    "user.changePassword": {
+      "router": "user",
+      "procedure": "changePassword",
+      "defined_at": "scripts/_server-routers/user.ts:272",
+      "first_used_in_curriculum_day": 25,
+      "referenced_by_scaffold_components": [],
+      "orphan": false
+    }
+  },
+  "test_files": {
+    "src/component/project/__test/project-detail-view.test.tsx": "UNASSIGNED",
+    "src/component/project/__test/project-dialog.test.tsx": "UNASSIGNED",
+    "src/component/task/__test/task-card.test.tsx": "UNASSIGNED",
+    "src/component/task/__test/task-dialog.test.tsx": "UNASSIGNED",
+    "src/lib/__test/rate-limit.test.ts": "UNASSIGNED",
+    "src/lib/__test/task-filter-query.test.ts": "UNASSIGNED",
+    "src/lib/date.test.ts": "UNASSIGNED",
+    "src/lib/observability.test.ts": "UNASSIGNED",
+    "src/lib/report-path.test.ts": "UNASSIGNED",
+    "src/lib/search-filters.test.ts": "UNASSIGNED",
+    "src/lib/session.test.ts": "UNASSIGNED",
+    "src/lib/use-local-storage/use-local-storage.test.ts": "UNASSIGNED",
+    "src/lib/utils/__test/type-guards.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/auth.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/chaos.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/comment.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/project.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/report.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/search.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/task.test.ts": "UNASSIGNED",
+    "src/server/api/routers/__test/user.test.ts": "UNASSIGNED",
+    "src/test/chaos-helpers.test.ts": "UNASSIGNED"
+  },
+  "gates": {
+    "G-orphan": {
+      "pass": false,
+      "orphan_procedures": ["comment.getByTaskId", "project.updateMemberRole", "search.quickSearch"]
+    },
+    "G-testchan": {
+      "pass": false,
+      "unassigned_count": 22,
+      "total_count": 22
+    },
+    "G-budget": {
+      "pass": null,
+      "note": "requires per-day added-line counts, filled after Phase B day-level ledger exists"
+    },
+    "G-perday": {
+      "pass": null,
+      "note": "requires per-day added-line counts, filled after Phase B day-level ledger exists"
+    }
+  }
+}
