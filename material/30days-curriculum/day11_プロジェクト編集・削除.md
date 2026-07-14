@@ -78,13 +78,14 @@ src/
 └── server/
     └── api/
         └── routers/
-            └── project.ts    ← archive/unarchiveルーター（既存・変更なし）
+            └── project.ts    ← update/delete/archive/unarchive を追加（Step 0）
 ```
 
 ## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | project.ts に update/delete/archive/unarchive を自分で書く | 15分 |
 | Step 1 | インポートと編集ボタンのハンドラーを作る | 7分 |
 | Step 2 | 削除の state と mutation を実装する | 5分 |
 | Step 3 | 送信ハンドラーを作る | 7分 |
@@ -96,7 +97,223 @@ src/
 | Step 9 | ProjectDetailView にアーカイブを渡す | 4分 |
 | Step 10 | 動作確認 | 7分 |
 
-**合計時間**: 約53分。
+**合計時間**: 約68分。
+
+---
+
+### Step 0: project.ts に update/delete/archive/unarchive を自分で書く（15分）
+
+**ゴール**: プロジェクトの更新・削除・アーカイブ・アーカイブ解除の4つの手続きを追加します。`api.project.update` / `api.project.delete` / `api.project.archive` / `api.project.unarchive` を呼べる状態にします。
+
+#### 0-1. update — 送られてきた項目だけ更新する
+
+まず更新用の入力スキーマです。`project.ts` の `projectCreateSchema` の下に追加します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+const projectUpdateSchema = z.object({
+  id: z.string().cuid(),
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .optional(),
+  isArchived: z.boolean().optional(),
+  startDate: z.string().datetime().optional().nullable(),
+  endDate: z.string().datetime().optional().nullable(),
+});
+```
+
+`create` のスキーマとの違いは、`id` 以外の全項目が `.optional()` になっていることです。更新は「送られてきた項目だけ書き換える」のが基本なので、名前だけ変えたいときに `description` や `color` まで毎回送る必要はありません。
+
+続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, ...data } = input;
+
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
+```
+
+`{ id, ...data }` は `input` から `id` だけを取り出し、残りをまとめて `data` に入れる分割代入です。`id` は「どのプロジェクトを更新するか」を探すために使い、それ以外の項目（`data`）は更新内容として使います。
+
+続けて、権限チェックと更新データの組み立てです。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+    assertMemberPermission(project.members, 'canManageMembers');
+
+    const updateData: Prisma.ProjectUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    if (data.color !== undefined) {
+      updateData.color = data.color;
+    }
+    if (data.isArchived !== undefined) {
+      updateData.isArchived = data.isArchived;
+    }
+    if (data.startDate !== undefined) {
+      updateData.startDate = data.startDate ? new Date(data.startDate) : null;
+    }
+    if (data.endDate !== undefined) {
+      updateData.endDate = data.endDate ? new Date(data.endDate) : null;
+    }
+```
+
+`assertMemberPermission(project.members, 'canManageMembers')` は、自分がこのプロジェクトのメンバーで、かつ管理権限（`canManageMembers`）を持っているかを確認します。権限が無ければここで処理が止まります。
+
+`updateData` を空のオブジェクトから始めて、`data.name !== undefined` のように「送られてきた項目だけ」を1つずつ足しています。Day 10 の `create` で書いた `description` の条件付き代入と同じ考え方を、6項目すべてに広げた形です。
+
+最後に、組み立てた `updateData` で実際に更新します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+    return await prisma.project.update({
+      where: { id },
+      data: updateData,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        },
+      },
+    });
+  }),
+```
+
+`include` は `getAll` / `create` と同じ形にしています。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
+
+#### 0-2. delete — ここが一番のヤマ場、削除だけは OWNER 限定
+
+`update` の下に `delete` を追加します。まずは `update` と同じく対象を探すところからです。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            where: { userId: ctx.session.userId },
+          },
+        },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+```
+
+続けて、権限チェックと削除の実行です。ここが `delete` で一番大事な部分です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      // canDeleteはタスク削除の権限でADMINにも付与されているため、プロジェクト削除はOWNER限定で明示チェック
+      const userMember = project.members[0];
+      if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を実行する権限がありません',
+        });
+      }
+
+      await prisma.project.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+```
+
+他の手続きは `assertMemberPermission(..., 'canManageMembers')` のような共通の権限チェック関数を使っています。しかし `delete` だけは `userMember.role !== PROJECT_MEMBER_ROLE.OWNER` と明示的に比べています。
+
+理由はコードのコメントの通りです。`canDelete` という権限名はタスク削除にも使われていて、ADMIN 権限にも与えられています。それをそのまま使うと、プロジェクト自体の削除まで ADMIN に許可されてしまいます。プロジェクトを消す操作はメンバー管理より重いので、共通の権限チェックに乗せず、あえてここだけ独自のチェックを書いています。
+
+#### 0-3. archive / unarchive — 同じ処理をヘルパー関数にまとめる
+
+アーカイブとアーカイブ解除は「`isArchived` を true にするか false にするか」の違いしかありません。同じ処理を2回書かずに、共通のヘルパー関数にまとめます。`project.ts` の `projectRouter` 定義の少し上、`projectMemberSchema` の下に追加します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
+  const userMember = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: { userId, projectId },
+    },
+  });
+
+  assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
+
+  return await prisma.project.update({
+    where: { id: projectId },
+    data: { isArchived },
+  });
+};
+```
+
+`isArchived` を引数で受け取り、それをそのまま DB に書き込むだけの単純な関数です。呼び出す側が `true` を渡せばアーカイブ、`false` を渡せば解除になります。`delete` の下に、この関数を呼ぶ2つの手続きを追加します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  archive: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      return await setArchiveStatus(ctx.session.userId, input.id, true);
+    }),
+
+  unarchive: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      return await setArchiveStatus(ctx.session.userId, input.id, false);
+    }),
+});
+```
+
+`archive` は `true`、`unarchive` は `false` を渡しているだけで、中身の処理は同じ関数に任せています。同じロジックを2箇所に書き写すと、片方だけ直して片方を直し忘れるバグが起きやすくなります。関数にまとめておくと、権限チェックのルールを直すときも1箇所を直すだけで済みます。最後の `});` で `projectRouter` 全体を閉じます。
+
+#### 今日書いた3つの権限チェックの使い分け
+
+Step 0 では権限まわりの書き方が3パターン出てきました。表にすると選び方が見えます。
+
+| 操作 | 権限チェックの書き方 | 選んだ理由 |
+|------|---------------------|-----------|
+| `update` | `assertMemberPermission(..., 'canManageMembers')` | 複数の権限で共通して使う、標準の書き方 |
+| `delete` | `role !== PROJECT_MEMBER_ROLE.OWNER` を直接比較 | 他の権限と間違って混ざると困る、特に重い操作だけの例外 |
+| `archive` / `unarchive` | `setArchiveStatus` にまとめて`assertMemberPermission(..., 'canArchive')`を1箇所に | 全く同じ処理を2つの手続きが呼ぶので、関数化して重複を消す |
+
+基本は `assertMemberPermission` を使います。他の権限と混ざると困る重い操作だけ、直接比較にします。全く同じ処理を2手続き以上が呼ぶなら、関数にまとめます。この判断は Day 12 の `addMember` / `removeMember` でも使います。
+
+**確認ポイント**:
+- `projectUpdateSchema` と `update` / `delete` / `setArchiveStatus` / `archive` / `unarchive` を追加した
+- `delete` の権限チェックが `assertMemberPermission` ではなく `role !== PROJECT_MEMBER_ROLE.OWNER` の直接比較になっている
+- `npm run dev` で型エラーが出ていない
 
 ---
 
@@ -516,7 +733,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 
 **ゴール**: 完全削除ではなく「アーカイブ」する方法を理解し、実務での使い分けを学びます。
 
-> **このステップのコードは既存実装です。今日は編集しません。** 仕組みを理解するために確認するだけです。
+`archive` / `unarchive` の中身は Step 0 で書きました。ここではコードを追加せず、その2つが実務でなぜ必要かを整理します。
 
 #### なぜアーカイブが必要か
 
@@ -549,38 +766,11 @@ flowchart TD
     style G fill:#e3f2fd
 ```
 
-バックエンドでは `setArchiveStatus` ヘルパー関数でアーカイブを処理しています。権限チェック（`canArchive`）も含まれています。
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 既存実装（確認のみ・編集不要）
-const setArchiveStatus = async (
-  userId: string,
-  projectId: string,
-  isArchived: boolean
-) => {
-  const userMember =
-    await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId, projectId,
-        },
-      },
-    });
-  assertMemberPermission(
-    userMember ? [userMember] : [],
-    'canArchive'
-  );
-  return await prisma.project.update({
-    where: { id: projectId },
-    data: { isArchived },
-  });
-};
-```
+バックエンドでは `setArchiveStatus` ヘルパー関数でアーカイブを処理しています。権限チェック（`canArchive`）も含まれています。Step 0 で書いた `setArchiveStatus` を見比べながら、`archive` と `unarchive` がなぜ同じ関数を呼んでいるかを振り返ってください。
 
 **確認ポイント**:
-- アーカイブは `isArchived` フラグで管理されている
-- 権限チェック（`canArchive`）が含まれている
+- Step 0 で書いた `setArchiveStatus` を見て、アーカイブが `isArchived` フラグで管理されていることを確認した
+- 権限チェック（`canArchive`）が含まれていることを確認した
 - `archive` と `unarchive` の2つのルーターがこの関数を呼んでいる
 
 ---
@@ -802,6 +992,8 @@ PORT=3001 npm run dev
 写経ループでは、ここまでの差分説明を読んだあとに
 このリポジトリの `src/app/project/page.tsx` と見比べて揃えます。
 手で進めている場合も、詰まったときはこのファイルと見比べてください。
+
+`src/server/api/routers/project.ts` は、Day 11 終了時点で `getAll` / `create` / `update` / `delete` / `archive` / `unarchive` が揃った状態です。`getById` / `addMember` / `removeMember` は Day 12 で追加するので、まだ存在しません。
 
 
 ---
