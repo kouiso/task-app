@@ -493,7 +493,7 @@ export const createCallerFactory = t.createCallerFactory;
 | `protectedProcedure` | 必須 | ログインユーザーのみ | タスク操作、プロジェクト管理 |
 | `adminProcedure` | 管理者のみ | 管理機能 | ユーザー管理 |
 
-> `isAuthenticated` ミドルウェアは、Cookie のセッション情報だけでなく DB からユーザーの最新状態を取得します。アカウントが無効化されていたらここで弾く。
+> `isAuthenticated` ミドルウェアは、Cookie のセッション情報だけでなく DB からユーザーの最新状態を取得します。アカウントが無効化されていたら、ここで弾きます。
 
 **確認ポイント**:
 - [ ] `src/server/api/trpc.ts` が作成できた
@@ -729,7 +729,7 @@ flowchart TD
     G --> H[ユーザー情報を返す]
 ```
 
-> **なぜ同じエラーメッセージ？** 「メールが存在しない」と「パスワードが違う」を区別すると、攻撃者に「このメールは登録済み」と教えてしまう。セキュリティのために同じメッセージを返します。
+> **なぜ同じエラーメッセージ？** 「メールが存在しない」と「パスワードが違う」を区別すると、攻撃者に「このメールは登録済み」と教えてしまいます。セキュリティのために同じメッセージを返します。
 
 #### 3-3. 登録・ログアウト・セッション取得
 
@@ -895,7 +895,7 @@ flowchart TD
 - [ ] `src/server/api/routers/auth.ts` が作成できた
 - [ ] `authRouter` に 5 つの API（login / register / logout / getSession / getCurrentUser）がある
 
-**学んだこと**: パスワードは平文で保存せず `bcrypt.hash` でハッシュ化し、照合は `bcrypt.compare` で行う。
+**学んだこと**: パスワードは平文で保存せず `bcrypt.hash` でハッシュ化し、照合は `bcrypt.compare` で行います。
 
 ---
 
@@ -1100,7 +1100,7 @@ flowchart TD
 
 > **なぜ middleware で `session.ts` を import しない？** middleware は Edge Runtime で動くため、`cookies()` を使う `session.ts` は import できません。`jose` を直接使って JWT 検証します。
 
-> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぐ。`/` で始まり `://` を含まないパスのみ許可します。
+> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。`/` で始まり `://` を含まないパスのみ許可します。
 
 **確認ポイント**:
 - [ ] `src/middleware.ts` が作成できた（`src/app/` ではなく `src/` 直下）
