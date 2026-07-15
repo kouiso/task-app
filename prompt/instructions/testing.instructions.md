@@ -1,10 +1,5 @@
 ---
 applyTo: "**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/__tests__/**"
-paths:
-  - "**/*.test.ts"
-  - "**/*.test.tsx"
-  - "**/*.spec.ts"
-  - "**/__tests__/**"
 ---
 
 # TDD & Testing Rules
