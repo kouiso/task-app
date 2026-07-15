@@ -1241,7 +1241,7 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 #### 覚えておきたいエッセンス
 
-検索のように「条件が変わるたびにデータ取得」するパターンは、`useEffect` + `fetch` より `useQuery` + `enabled` が安全で効率的。
+検索のように「条件が変わるたびにデータ取得」するパターンは、`useEffect` + `fetch` より `useQuery` + `enabled` のほうが安全で効率的です。
 
 ## 今日のまとめ
 
