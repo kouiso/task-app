@@ -65,21 +65,21 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 
 | ファイル名 | 説明 |
 |-----------|------|
-| [autonomous-execution.instructions.md](instructions/autonomous-execution.instructions.md) | 自律実行プロトコル、エージェントファースト設計、MCP活用 |
-| [core-mission.instructions.md](instructions/core-mission.instructions.md) | AIの最重要任務、究極目標、作業量に関する絶対原則、影響範囲調査義務 |
-| [persona.instructions.md](instructions/persona.instructions.md) | 内田祐貴の人格設定、磯貝光佑のプロフィール、コミュニケーションスタイル、**Think in English, Respond in Japanese** |
-| [workflow.instructions.md](instructions/workflow.instructions.md) | 自律的情報収集、AI完全自律実行、Deep Analysis & Planning、実装、品質保証、ショートカットエイリアス |
-| [quality.instructions.md](instructions/quality.instructions.md) | 実装ルール、絶対禁止事項、Biome規約、品質基準、リポジトリヘルスチェック、TDD |
-| [code-review.instructions.md](instructions/code-review.instructions.md) | コードレビューガイドライン、PRレビューポリシー |
-| [intentional-execution.instructions.md](instructions/intentional-execution.instructions.md) | 意図的実行プロトコル |
-| [no-obvious-comments.md](instructions/no-obvious-comments.md) | 自明なコメント禁止 |
-| [planning-dual-proposal.instructions.md](instructions/planning-dual-proposal.instructions.md) | デュアル提案プロトコル |
-| [performance.instructions.md](instructions/performance.instructions.md) | コンテキストウィンドウ最適化 |
-| [prohibitions.instructions.md](instructions/prohibitions.instructions.md) | 絶対禁止事項 |
-| [testing.instructions.md](instructions/testing.instructions.md) | TDDルール、テスト規約 |
-| [session-resilience.instructions.md](instructions/session-resilience.instructions.md) | セッション安定性、復旧 |
-| [data-driven-execution.instructions.md](instructions/data-driven-execution.instructions.md) | データサイエンス思考: 重み付きトリアージ、パイプライン探索、仮説駆動デバッグ、自己採点 |
-| [pre-mortem.instructions.md](instructions/pre-mortem.instructions.md) | プレモーテム分析: 失敗から逆算する思考、実装前の失敗モード特定、予防的チェックポイント |
+| [autonomous-execution.instructions.md](prompt/instructions/autonomous-execution.instructions.md) | 自律実行プロトコル、エージェントファースト設計、MCP活用 |
+| [core-mission.instructions.md](prompt/instructions/core-mission.instructions.md) | AIの最重要任務、究極目標、作業量に関する絶対原則、影響範囲調査義務 |
+| [persona.instructions.md](prompt/instructions/persona.instructions.md) | 内田祐貴の人格設定、磯貝光佑のプロフィール、コミュニケーションスタイル、**Think in English, Respond in Japanese** |
+| [workflow.instructions.md](prompt/instructions/workflow.instructions.md) | 自律的情報収集、AI完全自律実行、Deep Analysis & Planning、実装、品質保証、ショートカットエイリアス |
+| [quality.instructions.md](prompt/instructions/quality.instructions.md) | 実装ルール、絶対禁止事項、Biome規約、品質基準、リポジトリヘルスチェック、TDD |
+| [code-review.instructions.md](prompt/instructions/code-review.instructions.md) | コードレビューガイドライン、PRレビューポリシー |
+| [intentional-execution.instructions.md](prompt/instructions/intentional-execution.instructions.md) | 意図的実行プロトコル |
+| [no-obvious-comments.md](prompt/instructions/no-obvious-comments.md) | 自明なコメント禁止 |
+| [planning-dual-proposal.instructions.md](prompt/instructions/planning-dual-proposal.instructions.md) | デュアル提案プロトコル |
+| [performance.instructions.md](prompt/instructions/performance.instructions.md) | コンテキストウィンドウ最適化 |
+| [prohibitions.instructions.md](prompt/instructions/prohibitions.instructions.md) | 絶対禁止事項 |
+| [testing.instructions.md](prompt/instructions/testing.instructions.md) | TDDルール、テスト規約 |
+| [session-resilience.instructions.md](prompt/instructions/session-resilience.instructions.md) | セッション安定性、復旧 |
+| [data-driven-execution.instructions.md](prompt/instructions/data-driven-execution.instructions.md) | データサイエンス思考: 重み付きトリアージ、パイプライン探索、仮説駆動デバッグ、自己採点 |
+| [pre-mortem.instructions.md](prompt/instructions/pre-mortem.instructions.md) | プレモーテム分析: 失敗から逆算する思考、実装前の失敗モード特定、予防的チェックポイント |
 | [ecc-common-agents.md](prompt/instructions/ecc-common-agents.md) | ECC: Agent orchestration patterns |
 | [ecc-common-coding-style.md](prompt/instructions/ecc-common-coding-style.md) | ECC: Common coding style (all languages) |
 | [ecc-common-development-workflow.md](prompt/instructions/ecc-common-development-workflow.md) | ECC: Development workflow standards |
@@ -94,12 +94,12 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 
 | ファイル名 | 対象 | 説明 |
 |-----------|------|------|
-| [typescript.instructions.md](instructions/typescript.instructions.md) | `**/*.ts, **/*.tsx` | TypeScript型安全性規約、any/as禁止、型ユーティリティ活用義務 |
-| [prisma.instructions.md](instructions/prisma.instructions.md) | `**/*.prisma, **/prisma/**/*` | Prismaインポート・型定義・クエリ規約 |
-| [python.instructions.md](instructions/python.instructions.md) | `**/*.py` | Python規約（edu-creator専用） |
-| [edu-creator.instructions.md](instructions/edu-creator.instructions.md) | `**/edu-creator/**` | edu-creator開発ガイド |
-| [curriculum-quality-gate.instructions.md](instructions/curriculum-quality-gate.instructions.md) | `material/**` | 教材品質ゲート、教材ファイルの品質基準 |
-| [github-project.instructions.md](instructions/github-project.instructions.md) | `**` | GitHub Projectフィールド設定ルール、Issue/PRメタデータ管理 |
+| [typescript.instructions.md](prompt/instructions/typescript.instructions.md) | `**/*.ts, **/*.tsx` | TypeScript型安全性規約、any/as禁止、型ユーティリティ活用義務 |
+| [prisma.instructions.md](prompt/instructions/prisma.instructions.md) | `**/*.prisma, **/prisma/**/*` | Prismaインポート・型定義・クエリ規約 |
+| [python.instructions.md](prompt/instructions/python.instructions.md) | `**/*.py` | Python規約（edu-creator専用） |
+| [edu-creator.instructions.md](prompt/instructions/edu-creator.instructions.md) | `**/edu-creator/**` | edu-creator開発ガイド |
+| [curriculum-quality-gate.instructions.md](prompt/instructions/curriculum-quality-gate.instructions.md) | `material/**` | 教材品質ゲート、教材ファイルの品質基準 |
+| [github-project.instructions.md](prompt/instructions/github-project.instructions.md) | `**` | GitHub Projectフィールド設定ルール、Issue/PRメタデータ管理 |
 | [ecc-ts-coding-style.md](prompt/instructions/ecc-ts-coding-style.md) | `**/*.ts, **/*.tsx, **/*.js, **/*.jsx` | ECC: TypeScript/JS coding style |
 | [ecc-ts-hooks.md](prompt/instructions/ecc-ts-hooks.md) | `**/*.ts, **/*.tsx, **/*.js, **/*.jsx` | ECC: TypeScript/JS hooks patterns |
 | [ecc-ts-patterns.md](prompt/instructions/ecc-ts-patterns.md) | `**/*.ts, **/*.tsx, **/*.js, **/*.jsx` | ECC: TypeScript/JS design patterns |
