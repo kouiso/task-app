@@ -65,7 +65,7 @@ graph TD
 | TaskDialog を作る | 別ページでフォーム作成 |
 | react-hook-form + zod でフォーム管理 | useState で手動管理 |
 | useMutation でサーバーに保存 | タスクの編集（Day 15） |
-| キャッシュ無効化で一覧更新 | タイマー機能（Day 16） |
+| キャッシュ無効化で一覧更新 | 作業時間の記録（Day 16） |
 
 ### 新しく学ぶ概念
 

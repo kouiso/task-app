@@ -58,7 +58,7 @@ flowchart TD
 | `api.task.getAll` でタスク取得 | タスクの作成（Day 14） |
 | プロジェクト・ステータスでフィルタ | ドラッグ＆ドロップ |
 | TaskCard でカード表示 | タスク詳細ページ |
-| レスポンシブなグリッドレイアウト | タイマー機能（Day 16） |
+| レスポンシブなグリッドレイアウト | 作業時間の記録（Day 16） |
 
 ### 新しく学ぶ概念
 
@@ -490,7 +490,7 @@ const handleDelete =
 - 3つのハンドラーが定義できた
 - Step 7 で `handleTaskClick` を本実装に差し替える
 
-> TaskCardは `isTimerActive`・`timerStartedAt`・`timeSpentMinutes` というタイマー関連のpropsも受け取れますが、タイマー機能はDay 16で実装するので今日は渡しません。
+> TaskCardは `timeSpentMinutes`（合計作業時間）という作業時間まわりのpropも受け取れますが、作業時間の記録はDay 16で扱うので今日は渡しません。
 
 フィルターUIの直下にグリッドを追加します。タスクがある場合のカード表示です。
 

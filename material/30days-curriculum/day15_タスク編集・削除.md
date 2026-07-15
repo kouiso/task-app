@@ -531,10 +531,10 @@ const handleCreate = () => {
 />
 ```
 
-> `TaskCard` にはタイマー関連の optional な props も
-> あります。`isTimerActive`, `timerStartedAt`,
-> `timeSpentMinutes`, `onTimerUpdate` の 4 つです。
-> これらは Day 16 で実装します。
+> `TaskCard` には作業時間まわりの optional な props も
+> あります。`timeSpentMinutes`（合計作業時間）と
+> `onTimeLogSuccess`（記録成功時のコールバック）の 2 つです。
+> これらは Day 16 で扱います。
 
 **確認ポイント**:
 - `onEdit` に `handleEdit` を渡している
