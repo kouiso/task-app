@@ -56,14 +56,10 @@ stateDiagram-v2
     TODO --> CANCELLED: キャンセル
 
     IN_PROGRESS --> IN_REVIEW: レビュー依頼
-    IN_PROGRESS --> BLOCKED: ブロック発生
     IN_PROGRESS --> TODO: 一時停止
 
     IN_REVIEW --> DONE: レビュー承認
     IN_REVIEW --> IN_PROGRESS: 修正必要
-
-    BLOCKED --> IN_PROGRESS: ブロック解消
-    BLOCKED --> CANCELLED: キャンセル
 
     DONE --> [*]: 完了
     CANCELLED --> [*]: 中止
@@ -669,18 +665,14 @@ function getNextStatus(status: TaskStatus): TaskStatus {
   if (status === TASK_STATUS.IN_REVIEW) {
     return TASK_STATUS.DONE;
   }
-  if (status === TASK_STATUS.BLOCKED) {
+  return status;
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
 // filepath: 続き
-    return TASK_STATUS.IN_PROGRESS;
-  }
-  return status;
-}
-
 function getButtonLabel(status: TaskStatus): string {
   if (status === TASK_STATUS.TODO) {
     return '作業開始';
@@ -690,9 +682,6 @@ function getButtonLabel(status: TaskStatus): string {
   }
   if (status === TASK_STATUS.IN_REVIEW) {
     return '完了にする';
-  }
-  if (status === TASK_STATUS.BLOCKED) {
-    return 'ブロック解除';
   }
   return '変更なし';
 }
@@ -781,11 +770,6 @@ const STATUS_TRANSITIONS: StatusTransition[] = [
     from: TASK_STATUS.IN_REVIEW,
     to: TASK_STATUS.DONE,
     label: '完了にする',
-  },
-  {
-    from: TASK_STATUS.BLOCKED,
-    to: TASK_STATUS.IN_PROGRESS,
-    label: 'ブロック解除',
   },
 ];
 

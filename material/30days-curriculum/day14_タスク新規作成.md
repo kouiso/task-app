@@ -629,7 +629,6 @@ return (
 | `IN_REVIEW` | レビュー中 | レビュー待ち |
 | `DONE` | 完了 | 完了 |
 | `CANCELLED` | キャンセル | 取り消し |
-| `BLOCKED` | ブロック | ブロック中 |
 
 | 優先度 | 表示名 |
 |-------|-------|
@@ -1023,8 +1022,7 @@ type TaskStatus =
   | 'IN_PROGRESS'
   | 'IN_REVIEW'
   | 'DONE'
-  | 'CANCELLED'
-  | 'BLOCKED';
+  | 'CANCELLED';
 
 type TaskPriority =
   | 'LOW'
@@ -1048,7 +1046,6 @@ const taskFormSchema = z.object({
 // filepath: 続き
     'DONE',
     'CANCELLED',
-    'BLOCKED',
   ]),
   priority: z.enum([
     'LOW',
@@ -1086,7 +1083,6 @@ const statusLabels: Record<TaskStatus, string> = {
   IN_REVIEW: 'レビュー中',
   DONE: '完了',
   CANCELLED: 'キャンセル',
-  BLOCKED: 'ブロック',
 };
 
 const priorityLabels: Record<TaskPriority, string> = {

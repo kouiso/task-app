@@ -321,7 +321,7 @@ export default function SearchPage() {
 // ステータス・優先度の値定義
 const TASK_STATUS_VALUES = [
   'TODO', 'IN_PROGRESS', 'IN_REVIEW',
-  'DONE', 'CANCELLED', 'BLOCKED',
+  'DONE', 'CANCELLED',
 ] as const;
 const TASK_PRIORITY_VALUES = [
   'LOW', 'MEDIUM', 'HIGH', 'URGENT',
