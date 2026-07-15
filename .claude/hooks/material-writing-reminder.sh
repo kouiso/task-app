@@ -37,8 +37,11 @@ CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
 FILE_PATH="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)"
 [[ -n "$FILE_PATH" ]] || exit 0
 
-# material 配下の .md のみ対象
-[[ "$FILE_PATH" == */material/* && "$FILE_PATH" == *.md ]] || exit 0
+# material 配下の .md のみ対象。
+# 絶対パス（*/material/*）と、先頭がそのまま material/ で始まる相対パスの両方を受ける。
+# 実測(2026-07-15, v2.1.210)では Claude Code は常に絶対パスへ正規化して渡すが、
+# それは観測された挙動であって文書化された契約ではない（Geminiレビュー指摘 PR#284 の横展開）。
+[[ ( "$FILE_PATH" == */material/* || "$FILE_PATH" == material/* ) && "$FILE_PATH" == *.md ]] || exit 0
 
 REMINDER='[material-writing フック発火] MW-CANARY-HOOK-91b2d7
 
