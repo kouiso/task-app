@@ -106,7 +106,7 @@ npm run dev
 Day 01 の最後に作った次のようなシンプルな状態から始める想定で進めます。
 
 `~/workspace/task-app/src/app/dashboard/page.tsx` を開いて、
-まずは「今ここにいるのだな」という基準を揃えよう。
+まずは「今ここにいるのだな」という基準を揃えましょう。
 
 ```tsx
 export default function DashboardPage() {
@@ -661,7 +661,7 @@ export default function DashboardPage() {
 ## Step 4: 保存して、ブラウザで「自分の画面」に変わったか確認する
 
 仕上げたら、
-ブラウザで見直そう。
+ブラウザで見直しましょう。
 
 もし開発サーバーを止めているなら、
 もう一度起動します。
