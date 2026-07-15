@@ -10,7 +10,7 @@ description: 世界最高峰のエンジニアAI統合システム Ver. 2.0
 
 **`material/**` 配下のファイルを編集する前に、必ず `.claude/skills/material-writing/SKILL.md` を読み、その手順に従うこと。**
 
-これは任意ではない。外部編集者から「言い回しがAI独特・翻訳文感がある。**この文章を見たら購入見送る**」と拒否された実績があり、この教材の売上に直結する。同じ指示は `AGENTS.md` / `.github/copilot-instructions.md` / `.gemini/styleguide.md` にも入っている（Codex・Copilot・Gemini 向け）。**このファイルだけ指示が抜けていたため、Claude は一度もスキルを適用していなかった。**
+これは任意ではない。外部レビューで**AI独特の言い回しと翻訳文感を指摘され、商品として通用しないと判断された実績がある**。同じ指示は `AGENTS.md` / `.github/copilot-instructions.md` / `.gemini/styleguide.md` にも入っている（Codex・Copilot・Gemini 向け）。**このファイルだけ指示が抜けていたため、Claude は一度もスキルを適用していなかった。**
 
 守るべき最小の3点（詳細は SKILL.md 本体）:
 
