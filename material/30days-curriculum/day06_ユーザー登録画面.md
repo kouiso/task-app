@@ -440,7 +440,7 @@ const onSubmit = async (
 
 スクリーンショット: 名前・メール・パスワード・パスワード確認の4つの入力欄が揃ったフォーム。
 
-![名前・メール・パスワード・パスワード確認の4つの入力欄が揃っ](./screenshots/register_step6.png)
+![名前・メール・パスワード・パスワード確認の4つの入力欄が揃ったフォーム](./screenshots/register_step6.png)
 ---
 
 ### Step 7: tRPCで登録APIを呼ぶ（7分）
