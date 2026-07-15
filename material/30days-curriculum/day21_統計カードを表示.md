@@ -59,7 +59,6 @@ flowchart TD
 
     style A fill:#e3f2fd
     style F fill:#fff3e0
-    style K fill:#e8f5e9
 ```
 
 ### やること / やらないこと
@@ -302,7 +301,7 @@ const { data: overview, isLoading } =
 > 正しい統計が作られます。
 
 **確認ポイント**:
-- 2つのAPIを同時に呼んでいる
+- `getOverview` 1つで統計データをまとめて取得している
 - 保存してエラーが出ないこと
 
 ---
