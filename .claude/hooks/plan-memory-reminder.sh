@@ -39,9 +39,13 @@ CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
 FILE_PATH="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)"
 [[ -n "$FILE_PATH" ]] || exit 0
 
-# plan ファイルのみ対象
+# plan ファイルのみ対象。
+# 絶対パス・相対パス（先頭にディレクトリが付かない bare 形）の両方を受ける。
+# 実測(2026-07-15, v2.1.210)では Claude Code は常に絶対パスへ正規化して渡すが、
+# それは観測された挙動であって文書化された契約ではないため、bare 形も受けておく
+# （Geminiレビュー指摘 PR#284。1行で済む防御なので実測結果に依存しない形にする）。
 case "$FILE_PATH" in
-  */plan-*.md|*/plan_*.md) ;;
+  */plan-*.md|*/plan_*.md|plan-*.md|plan_*.md) ;;
   *) exit 0 ;;
 esac
 

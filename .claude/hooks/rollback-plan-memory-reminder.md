@@ -44,17 +44,24 @@ chmod +x .claude/hooks/plan-memory-reminder.sh
 export CLAUDE_PROJECT_DIR="$PWD"
 H=./.claude/hooks/plan-memory-reminder.sh
 
-# 1. plan-*.md → 注入される
+# 1. plan-*.md 絶対パス → 注入される
 echo '{"tool_input":{"file_path":"'"$PWD"'/plan-x.md"}}' | $H | jq .
-# 2. 無関係ファイル → 空（負の対照）
+# 2. plan-x.md 相対パス（bare形）→ 注入される
+#    実測では Claude Code は常に絶対パスへ正規化するが、契約ではないので両方受ける
+echo '{"tool_input":{"file_path":"plan-x.md"}}' | $H | jq .
+# 3. 無関係ファイル → 空（負の対照）
 echo '{"tool_input":{"file_path":"'"$PWD"'/src/app/page.tsx"}}' | $H
-# 3. planning.md（名前にplanを含むが対象外）→ 空
-echo '{"tool_input":{"file_path":"'"$PWD"'/planning.md"}}' | $H
-# 4. 壊れたJSON → fail-open
+# 4. planning.md（名前にplanを含むが対象外）→ 空
+echo '{"tool_input":{"file_path":"planning.md"}}' | $H
+# 5. plan-x.txt（拡張子違い）→ 空
+echo '{"tool_input":{"file_path":"plan-x.txt"}}' | $H
+# 6. 壊れたJSON → fail-open
 echo 'garbage' | $H; echo $?   # → 0
 ```
 
-2026-07-15 に上記7ケース（plan-*/plan_*/無関係/planning.md/壊れたJSON/別プロジェクト/JSON妥当性）を全て確認済み。
+**Claude Code が渡すパス形式の実測（2026-07-15, v2.1.210）**: 生 stdin をログするプローブ hook で確認したところ、ユーザーが「相対パスで指定して」と頼んだ場合でも `file_path = /private/tmp/pathprobe/plan-x.md` と**絶対パスへ正規化して**渡していた。よって bare 相対パスは実際には来ない。ただしこれは観測された挙動であって文書化された契約ではないため、パターン側で両方受けている（Geminiレビュー指摘 PR#284）。
+
+2026-07-15 に上記＋別プロジェクト／JSON妥当性を含む全ケースを確認済み。同じ相対パス対応を `material-writing-reminder.sh` にも横展開済み（`material/*` 形も受ける。`materials/x.md` のような別ディレクトリは無音になることも確認）。
 
 ## 要件
 
