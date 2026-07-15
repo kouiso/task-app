@@ -429,15 +429,13 @@ return (
           >
             <p className="font-medium">{task.title}</p>
             <div className="flex gap-2">
-              <Badge variant={getStatusBadgeVariant(task.status)}>
-                {TASK_STATUS_LABELS[task.status] ?? task.status}
+              <StatusBadge status={task.status} />
 ```
 
 **確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
 
 ```tsx
 // filepath: 続き
-              </Badge>
               <Badge variant={getPriorityBadgeVariant(task.priority)}>
                 {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
               </Badge>
