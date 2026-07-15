@@ -58,29 +58,42 @@ def scaffold_provided() -> set[str]:
     return provided
 
 
-def curriculum_creates() -> set[str]:
-    """day*.md の filepath: ブロックが作成するファイルパス集合（src/ 基準）"""
-    creates: set[str] = set()
+def day_number(md: Path) -> int:
+    """dayNN_*.md → NN。day 以外の命名は 0（＝どの日より前）として扱う。"""
+    m = re.match(r"day(\d+)", md.stem)
+    return int(m.group(1)) if m else 0
+
+
+def curriculum_creates_by_day() -> dict[int, set[str]]:
+    """day 番号 → その日の filepath: ブロックが作成するファイルパス集合（src/ 基準）
+
+    以前は全 day を1つの集合にまとめていたため、day13 の import が day27 でしか
+    登場しないファイルで満たされても PASS していた（順序盲目＝偽の緑）。
+    学習者は day を順番に進むので、day13 の時点で day27 のファイルは存在しない。
+    """
+    by_day: dict[int, set[str]] = defaultdict(set)
     for md in MATERIAL_DIR.glob("day*.md"):
+        n = day_number(md)
         content = md.read_text(encoding="utf-8")
         for block in re.finditer(r"```(?:\w+)?\n(.*?)```", content, re.DOTALL):
             lines = block.group(1).split("\n")
             if lines:
                 m = re.match(r"//\s*filepath:\s*(.+)", lines[0].strip())
                 if m:
-                    creates.add(m.group(1).strip())
-    return creates
+                    by_day[n].add(m.group(1).strip())
+    return dict(by_day)
 
 
-def curriculum_imports() -> dict[str, list[str]]:
-    """day*.md に登場する @/ import → [day ファイル名リスト]"""
-    imports: dict[str, list[str]] = defaultdict(list)
+def curriculum_imports() -> dict[str, list[tuple[int, str]]]:
+    """day*.md に登場する @/ import → [(day番号, day ファイル名), ...]"""
+    imports: dict[str, list[tuple[int, str]]] = defaultdict(list)
     import_re = re.compile(r"""from\s+['"](@/[^'"]+)['"]""")
     for md in MATERIAL_DIR.glob("day*.md"):
+        n = day_number(md)
         content = md.read_text(encoding="utf-8")
         for m in import_re.finditer(content):
             alias_path = m.group(1)
-            imports[alias_path].append(md.stem)
+            imports[alias_path].append((n, md.stem))
     return dict(imports)
 
 
@@ -102,28 +115,55 @@ def resolve_alias(alias_path: str) -> list[str]:
     return []
 
 
+def with_stems(paths: set[str]) -> set[str]:
+    """拡張子ありなしの両方で引けるように stem も足した集合を返す"""
+    return paths | {Path(p).with_suffix("").as_posix() for p in paths}
+
+
 def main() -> int:
     provided = scaffold_provided()
-    creates = curriculum_creates()
+    creates_by_day = curriculum_creates_by_day()
     imports = curriculum_imports()
 
-    # src/ 正規化: 拡張子なしのキーも対応するため、提供セットを stem でも引けるように
-    provided_stems = {Path(p).with_suffix("").as_posix() for p in provided}
-    creates_stems = {Path(p).with_suffix("").as_posix() for p in creates}
-    all_known = provided | creates | provided_stems | creates_stems
+    provided_known = with_stems(provided)
+
+    # day N 時点で学習者の手元に存在するもの = scaffold + day <= N が作ったもの。
+    # 各 day について累積集合を先に作っておく。
+    max_day = max([*creates_by_day.keys(), *(n for v in imports.values() for n, _ in v)], default=0)
+    cumulative: dict[int, set[str]] = {}
+    acc: set[str] = set()
+    for n in range(0, max_day + 1):
+        acc = acc | creates_by_day.get(n, set())
+        cumulative[n] = provided_known | with_stems(acc)
 
     errors: list[str] = []
-    for alias_path, day_names in sorted(imports.items()):
+    for alias_path, occurrences in sorted(imports.items()):
         candidates = resolve_alias(alias_path)
         if not candidates:
             continue
-        found = any(c in all_known for c in candidates)
-        if not found:
-            days_str = ", ".join(sorted(set(day_names)))
-            errors.append(
-                f"ERROR: {alias_path} is imported ({days_str}) "
-                f"but not in scaffold or curriculum"
-            )
+        for day_n, day_stem in sorted(set(occurrences)):
+            known_at_day = cumulative.get(day_n, provided_known)
+            if not any(c in known_at_day for c in candidates):
+                # 後の day でなら提供されるのか、そもそもどこにも無いのかを区別して出す
+                later = next(
+                    (
+                        n
+                        for n in sorted(creates_by_day)
+                        if n > day_n
+                        and any(c in with_stems(creates_by_day[n]) for c in candidates)
+                    ),
+                    None,
+                )
+                if later is not None:
+                    errors.append(
+                        f"ERROR: {alias_path} is imported at {day_stem} (day{day_n:02d}) "
+                        f"but only created at day{later:02d} — 学習者はその時点で未所持（順序違反）"
+                    )
+                else:
+                    errors.append(
+                        f"ERROR: {alias_path} is imported at {day_stem} (day{day_n:02d}) "
+                        f"but not in scaffold or any curriculum day"
+                    )
 
     if errors:
         for e in errors:
@@ -132,7 +172,10 @@ def main() -> int:
         return 1
 
     total = len(imports)
-    print(f"✅ All {total} @/ imports are covered by scaffold or curriculum.")
+    print(
+        f"✅ All {total} @/ imports are covered by scaffold or "
+        f"an earlier/same day (順序込みで検証)."
+    )
     return 0
 
 

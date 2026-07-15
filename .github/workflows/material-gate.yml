@@ -11,9 +11,18 @@ on:
       # マージ後ではなくPR時点で気づくため）
       - '.textlintrc.json'
       - 'package.json'
-      - 'prh-rules/**'
       - 'scripts/curriculum-qa/**'
       - '.github/workflows/material-gate.yml'
+      # scaffold 配布物。Gate 3 の check_scaffold_curriculum_alignment.py が
+      # SCAFFOLD_COPY_MAP 経由でここを読むため、これらを消す/改名するPRでも
+      # 起動しないと「ゲートが捕まえるはずの退行」を取り逃す（Codexレビュー指摘 PR#282）。
+      - 'scripts/_lib-base/**'
+      - 'scripts/_lib-utils/**'
+      - 'scripts/_constants/**'
+      - 'scripts/_trpc-base/**'
+      - 'scripts/_app-components/**'
+      - 'scripts/_ui-components/**'
+      - 'scripts/_server-routers/**'
   push:
     branches:
       - develop
@@ -26,9 +35,18 @@ on:
       # マージ後ではなくPR時点で気づくため）
       - '.textlintrc.json'
       - 'package.json'
-      - 'prh-rules/**'
       - 'scripts/curriculum-qa/**'
       - '.github/workflows/material-gate.yml'
+      # scaffold 配布物。Gate 3 の check_scaffold_curriculum_alignment.py が
+      # SCAFFOLD_COPY_MAP 経由でここを読むため、これらを消す/改名するPRでも
+      # 起動しないと「ゲートが捕まえるはずの退行」を取り逃す（Codexレビュー指摘 PR#282）。
+      - 'scripts/_lib-base/**'
+      - 'scripts/_lib-utils/**'
+      - 'scripts/_constants/**'
+      - 'scripts/_trpc-base/**'
+      - 'scripts/_app-components/**'
+      - 'scripts/_ui-components/**'
+      - 'scripts/_server-routers/**'
   workflow_dispatch:
 
 jobs:
@@ -116,15 +134,13 @@ jobs:
       - name: Gate 2 — 品質チェック (check_quality.sh) — dayXX_*.md 全体
         run: |
           echo "::group::check_quality.sh — dayXX_*.md 全件（変更有無を問わない）"
-          fail=0
-          while IFS= read -r -d '' f; do
-            echo "チェック中: $f"
-            bash scripts/curriculum-qa/check_quality.sh "$f" || fail=1
-          done < <(find material -type f -name 'day[0-9][0-9]_*.md' -print0 | sort -z)
-          if [ "$fail" -eq 1 ]; then
-            echo "::error::check_quality.sh に失敗したファイルがあります"
-            exit 1
-          fi
+          # check_quality.sh は複数ファイルを一度に受け取れる（`for arg in "$@"`）ので
+          # 1ファイルずつ呼ばない。1ファイルずつ呼ぶとサマリーがファイル数だけ出て
+          # CIログが冗長になる（CodeRabbitレビュー指摘 PR#282。実測で145行削減）。
+          # ファイル名の空白対策として -print0 / xargs -0 を使う。
+          find material -type f -name 'day[0-9][0-9]_*.md' -print0 \
+            | sort -z \
+            | xargs -0 bash scripts/curriculum-qa/check_quality.sh
           echo "::endgroup::"
 
       # Gate 3: 2026-07-15 配線。それまで書かれていたのに誰からも呼ばれていなかった。
