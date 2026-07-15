@@ -520,18 +520,18 @@ import { formatDateOnly } from '@/lib/date';
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
+import { StatusBadge } from '@/component/task/status-badge';
 import { Badge } from '@/component/ui/badge';
 import { CardHeader, CardTitle } from '@/component/ui/card';
 import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow,
 } from '@/component/ui/table';
-import {
-  getPriorityBadgeVariant, getStatusBadgeVariant,
-} from '@/lib/badge-variant';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { TASK_STATUS_LABELS } from '@/lib/constant/status';
 ```
+
+ステータス表示は `StatusBadge` に任せます。このコンポーネントが status に応じたラベルと色を内部で決めるため、この画面でバッジの見た目を組み立てる必要はありません。優先度は `getPriorityBadgeVariant` で色の種類だけを選び、ラベルは `TASK_PRIORITY_LABELS` から引きます。
 
 右カラムに「参加プロジェクト」カードを追加します。
 
@@ -612,9 +612,7 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
                             {task.title}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getStatusBadgeVariant(task.status)}>
-                              {TASK_STATUS_LABELS[task.status]}
-                            </Badge>
+                            <StatusBadge status={task.status} />
                           </TableCell>
                           <TableCell>
                             <Badge variant={getPriorityBadgeVariant(task.priority)}>
@@ -1449,8 +1447,8 @@ submitUserEditForm(
 | 動的ルーティング `[id]` | フォルダ名を変数にして任意のURLに対応 | ユーザー詳細、記事詳細など |
 | `useParams()` | URLのパラメータを読み取るオブジェクトを返す | 動的ルーティングとセットで使う |
 | `useEffect` + 依存配列 | 指定した値が変わったときに処理を実行 | サーバーデータをフォームに反映 |
-| 制御コンポーネント | Reactが入力値を管理するフォーム（初期値は空文字） | すべてのフォーム入力 |
-| `handleChange` 共通ハンドラ | `name` 属性を使って対象フィールドを動的に更新 | テキスト入力フォーム全般 |
+| `useForm` + `zodResolver` | フォーム状態管理とバリデーションをまとめて担当 | すべてのフォーム入力 |
+| `form.reset` / `register` / `watch` | データ到着時に初期化し、入力欄と現在値をつなぐ | react-hook-form のフォーム全般 |
 | 早期リターンの順序 | ローディング → 未発見 → 権限なし → 本体 | ページの安全な描画 |
 | `isAdmin \|\| isOwnProfile` | OR条件で権限チェック | ページやボタンの表示制御 |
 | `isPending` | mutationが処理中かどうか | 2重送信防止・入力無効化 |
@@ -1471,9 +1469,9 @@ sequenceDiagram
     tRPC->>DB: SELECT * FROM users WHERE id = 'abc123'
     DB-->>tRPC: ユーザーデータ
     tRPC-->>Comp: user オブジェクト
-    Comp->>Comp: useEffect → setFormData(userのデータ)
+    Comp->>Comp: useEffect → form.reset(userのデータ)
     Note over Comp: フォームに自動入力
-    Comp->>Comp: ユーザーが編集（handleChange）
+    Comp->>Comp: ユーザーが編集（register / watch）
     Comp->>tRPC: update({ id, name, role, ... })
     Note over tRPC: 権限チェック（本人はrole/isActive変更不可）
     tRPC->>DB: UPDATE users SET ...
