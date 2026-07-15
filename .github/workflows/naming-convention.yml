@@ -1,0 +1,21 @@
+name: Naming Convention Check
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+jobs:
+  naming-convention:
+    name: ファイル・フォルダ命名規約チェック
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: kebab-case命名規約チェック
+        run: bash scripts/check-naming-convention.sh
