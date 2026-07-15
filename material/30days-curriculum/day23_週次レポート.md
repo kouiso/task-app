@@ -235,9 +235,9 @@ import {
       <TableCell className="text-right">
         {stat.completedTasks}</TableCell>
       <TableCell className="text-right">
-        {stat.progress}%</TableCell>
+        {stat.progress.toFixed(1)}%</TableCell>
       <TableCell className="text-right">
-        {stat.totalTimeHours}h</TableCell>
+        {stat.totalTimeHours.toFixed(1)}h</TableCell>
     </TableRow>
   ))}
 </TableBody>
@@ -265,8 +265,8 @@ import {
 このステップはコードを読んで理解するだけです。
 
 ```typescript
-// filepath: src/server/api/routers/report.ts
-// 週次レポートAPIの呼び出しイメージ
+// filepath: src/app/report/weekly/page.tsx（Step 4 で作成）
+// 週次レポートAPIの呼び出しイメージ（クライアント側で呼ぶ）
 api.report.getWeeklyReport.useQuery({
   weeks: 4,
 });

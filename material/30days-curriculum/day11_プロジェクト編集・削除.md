@@ -1213,7 +1213,7 @@ console.log(
 #### 覚えておきたいエッセンス
 
 編集画面では「値がないかもしれない」が何度も出てきます。
-多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになるで。
+多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになります。
 
 ## 今日のまとめ
 
@@ -1231,7 +1231,7 @@ console.log(
 |--------------|------|---------|
 | 編集ダイアログに古いデータが残る | `useForm` の `values` プロパティが `initialData` と連動していない | `ProjectDialog` 側で `values`（`defaultValues` ではない）に `initialData` の値を渡しているか確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `utils.project.getAll.invalidate()` を呼ぶ |
-| 「権限がありません」エラー（削除） | OWNER/ADMIN 以外で削除操作 | OWNER か ADMIN アカウントで操作する（`canDelete` 権限が必要） |
+| 「権限がありません」エラー（削除） | OWNER 以外で削除操作 | OWNER アカウントで操作する（プロジェクト削除は OWNER だけに許可） |
 | 「権限がありません」エラー（アーカイブ） | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する（`canArchive` 権限が必要） |
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |

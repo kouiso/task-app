@@ -301,12 +301,11 @@ const handleSubmit =
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate
-          ? dateOnlyToUtcStartIso(
-              data.dueDate
-            )
+          ? dateOnlyToUtcStartIso(data.dueDate)
           : null,
         estimatedHours:
           data.estimatedHours ?? null,
+        projectId: data.projectId,
         assigneeId:
           data.assigneeId || null,
       });
@@ -380,7 +379,7 @@ Day 14 で実装した `createMutation` を使います。
 |-----------|--------|--------|
 | `id` | なし | **必須** |
 | `title` | **必須** | 常に送信 |
-| `projectId` | **必須** | 変更対象外 |
+| `projectId` | **必須** | 常に送信 |
 | `description` | 任意 | 任意（null可） |
 | `dueDate` | 任意 | 任意（null可） |
 
@@ -558,7 +557,6 @@ const handleCreate = () => {
   onSubmit={handleSubmit}
   initialData={editingTask}
   projects={projects ?? []}
-  users={users ?? []}
 />
 ```
 
