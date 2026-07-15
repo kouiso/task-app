@@ -190,7 +190,7 @@ Finalizing page optimization ...
 ### もしここで止まったら
 
 落ち着いて、
-まずローカルの build エラーを直そう。
+まずローカルの build エラーを直しましょう。
 
 この時点なら、
 Vercel の設定が悪いのか、
@@ -250,7 +250,7 @@ Vercel 側でリポジトリ選択がかなり素直になります。
 ## Step 4: GitHub の `task-app` リポジトリを Import する
 
 ログインできたら、
-Vercel に Day 03 で作った GitHub リポジトリを読み込ませる。
+Vercel に Day 03 で作った GitHub リポジトリを読み込ませます。
 
 ここで選ぶのは、
 **自分の `task-app`** です。
@@ -424,7 +424,7 @@ https://task-app-kouiso.vercel.app
 ### まずはブラウザで開く
 
 表示された URL をクリックして、
-自分のアプリを開こう。
+自分のアプリを開きましょう。
 
 ここで見えた瞬間、
 かなりテンション上がるはずです。
