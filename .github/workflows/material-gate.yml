@@ -7,6 +7,13 @@ on:
       - 'material/**/*.md'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
+      # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを
+      # マージ後ではなくPR時点で気づくため）
+      - '.textlintrc.json'
+      - 'package.json'
+      - 'prh-rules/**'
+      - 'scripts/curriculum-qa/**'
+      - '.github/workflows/material-gate.yml'
   push:
     branches:
       - develop
@@ -15,6 +22,13 @@ on:
       - 'material/**/*.md'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
+      # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを
+      # マージ後ではなくPR時点で気づくため）
+      - '.textlintrc.json'
+      - 'package.json'
+      - 'prh-rules/**'
+      - 'scripts/curriculum-qa/**'
+      - '.github/workflows/material-gate.yml'
   workflow_dispatch:
 
 jobs:
@@ -79,32 +93,59 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Get changed material files (all .md)
-        id: changed-files
-        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c
-        with:
-          files: 'material/**/*.md'
-
-      - name: Get changed tutorial day files (dayXX_*.md only)
-        id: changed-day-files
-        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c
-        with:
-          files: 'material/**/day[0-9][0-9]_*.md'
+      # 変更ファイルのみの検査は 2026-07-15 に廃止した。
+      # 理由: 変更されていないファイルは永久に検査対象外になるため、911件の違反が
+      #       2026-06-30〜07-10 の11日間 corpus に滞留し、ebca2f2 が手で掃除するまで
+      #       誰にも検出されなかった。これは実在するカバレッジ欠陥である。
+      # 注意: これは阿部さんの拒否(2026-06-30 21:21)の原因ではない。ゲート自体が
+      #       拒否の当日(97d59f5, 2026-06-30 11:01)に生まれており、彼が読んだ教材は
+      #       ゲート不在時に書かれた。因果を混同しないこと。
+      # 移行コスト: ゼロ（2026-07-15 時点でフルスキャン 0 violations / 38ファイル）。
 
       - name: Gate 1 — 文章衛生チェック (textlint) — material/**/*.md 全体
-        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
-          echo "::group::textlint — changed material files"
-          echo "対象ファイル: ${{ steps.changed-files.outputs.all_changed_files }}"
-          npx textlint ${{ steps.changed-files.outputs.all_changed_files }}
+          echo "::group::textlint — material 配下の全 .md（変更有無を問わない）"
+          # glob はシェルではなく textlint に展開させる（クォート必須）。
+          # 旧実装は ${{ }} を run: に素で展開しており、スペース入りファイル名で壊れ、
+          # ブランチ名経由のシェル注入面にもなっていた。
+          npx textlint "material/**/*.md"
           echo "::endgroup::"
 
-      - name: Gate 2 — 品質チェック (check_quality.sh) — dayXX_*.md のみ
-        if: steps.changed-day-files.outputs.any_changed == 'true'
+      - name: Gate 2 — 品質チェック (check_quality.sh) — dayXX_*.md 全体
         run: |
-          echo "::group::check_quality.sh — changed tutorial day files"
-          for f in ${{ steps.changed-day-files.outputs.all_changed_files }}; do
+          echo "::group::check_quality.sh — dayXX_*.md 全件（変更有無を問わない）"
+          fail=0
+          while IFS= read -r -d '' f; do
             echo "チェック中: $f"
-            bash scripts/curriculum-qa/check_quality.sh "$f"
-          done
+            bash scripts/curriculum-qa/check_quality.sh "$f" || fail=1
+          done < <(find material -type f -name 'day[0-9][0-9]_*.md' -print0 | sort -z)
+          if [ "$fail" -eq 1 ]; then
+            echo "::error::check_quality.sh に失敗したファイルがあります"
+            exit 1
+          fi
           echo "::endgroup::"
+
+      # Gate 3: 2026-07-15 配線。それまで書かれていたのに誰からも呼ばれていなかった。
+      #
+      # 【このゲートが保証すること / しないこと】
+      #   保証する : 教材の @/ import が「scaffold配布物」か「day <= N の filepath ブロック」
+      #              のいずれかで宣言されている（+ day順序も見る）
+      #   保証しない: コンパイル・実行・アプリが動くこと。
+      #              「指示通り打てば動く」の保証ではない（阿部さん要求#2は未達）。
+      #              それを見るのは typescript-docs-verifier の担当。
+      #
+      # 【柱3 との衝突・次セッションへの申し送り】
+      #   柱3（配布ZIPを学習用/解答用に分離）は scaffold のルーターを意図的に空にする。
+      #   その時点でこの不変条件は壊れる。柱3のPRが「このゲートの更新または削除」を
+      #   自分の責任範囲に含めること。今は緑（EXIT 0 / All @/ imports are covered）。
+      - name: Gate 3 — 教材importの解決チェック (順序込み)
+        run: |
+          echo "::group::check_scaffold_curriculum_alignment.py"
+          python3 scripts/curriculum-qa/check_scaffold_curriculum_alignment.py
+          echo "::endgroup::"
+
+      # gen_procedure_map.py は「生成器」であってチェッカーではないため配線しない。
+      # CI に置くと再生成して破棄するだけの「緑のno-op」になり、
+      # 「走った=検査した」と誤読させる。配線するなら必ず差分検出の形にすること:
+      #   python3 scripts/curriculum-qa/gen_procedure_map.py \
+      #     && git diff --exit-code material/30days-curriculum/_meta/procedure-day-map.json
