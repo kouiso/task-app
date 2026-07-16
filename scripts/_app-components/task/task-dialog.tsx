@@ -25,6 +25,7 @@ import {
 import { Textarea } from '@/component/ui/textarea';
 import { TASK_PRIORITY, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
 import { TASK_STATUS, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
 
 const taskFormSchema = z.object({
   id: z.string().optional(),
@@ -46,7 +47,6 @@ interface TaskDialogProps {
   onSubmit: (data: TaskFormData) => void;
   initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
-  users: Array<{ id: string; name: string | null; email: string }>;
 }
 
 export interface TaskFormData {
@@ -78,24 +78,25 @@ function buildTaskFormValues(
   };
 }
 
-export function TaskDialog({
-  open,
-  onClose,
-  onSubmit,
-  initialData,
-  projects,
-  users,
-}: TaskDialogProps) {
+export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: TaskDialogProps) {
   const {
     register,
     handleSubmit,
     control,
+    watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: buildTaskFormValues(initialData, projects),
   });
+  const selectedProjectId = watch('projectId');
+  const { data: projectMembers } = api.search.getMembersByProject.useQuery(
+    { projectId: selectedProjectId },
+    { enabled: open && !!selectedProjectId },
+  );
+  const users = projectMembers ?? [];
 
   useEffect(() => {
     if (!open) {
@@ -139,8 +140,18 @@ export function TaskDialog({
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">タイトル</Label>
-              <Input id="title" placeholder="タスクのタイトルを入力" {...register('title')} />
+              <Label htmlFor="title">
+                タイトル{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
+              <Input
+                id="title"
+                placeholder="タスクのタイトルを入力"
+                aria-required="true"
+                {...register('title')}
+              />
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
             <div className="grid gap-2">
@@ -153,15 +164,20 @@ export function TaskDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="status">ステータス</Label>
+                <Label htmlFor="status">
+                  ステータス{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="status"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="status" aria-label="ステータスを選択">
+                      <SelectTrigger id="status" aria-label="ステータスを選択" aria-required="true">
                         <SelectValue placeholder="ステータスを選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -176,13 +192,18 @@ export function TaskDialog({
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="priority">優先度</Label>
+                <Label htmlFor="priority">
+                  優先度{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="priority"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="priority" aria-label="優先度を選択">
+                      <SelectTrigger id="priority" aria-label="優先度を選択" aria-required="true">
                         <SelectValue placeholder="優先度を選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -198,17 +219,32 @@ export function TaskDialog({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="project">プロジェクト</Label>
+                <Label htmlFor="project">
+                  プロジェクト{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="projectId"
                   control={control}
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        if (value !== field.value) {
+                          // 移動先プロジェクトに現担当者が居ない可能性があるため一旦未割当へ
+                          setValue('assigneeId', '');
+                        }
+                        field.onChange(value);
+                      }}
                       disabled={!projects.length}
                     >
-                      <SelectTrigger id="project" aria-label="プロジェクトを選択">
+                      <SelectTrigger
+                        id="project"
+                        aria-label="プロジェクトを選択"
+                        aria-required="true"
+                      >
                         <SelectValue placeholder="プロジェクトを選択" />
                       </SelectTrigger>
                       <SelectContent>

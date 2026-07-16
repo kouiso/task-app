@@ -1,18 +1,24 @@
 'use client';
 
-import { CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
-import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@/lib/badge-variant';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
-import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
-import { formatDateOnly } from '@/lib/date';
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
+import { formatDateOnly, isOverdue } from '@/lib/date';
 import { cn } from '@/lib/utils';
-import { TaskTimer } from './task-timer';
+import { StatusBadge } from './status-badge';
 import { TimeLogDialog } from './time-log-dialog';
+
+const formatMinutes = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.floor(minutes % 60);
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+};
 
 interface TaskCardProps {
   id: string;
@@ -26,13 +32,13 @@ interface TaskCardProps {
     email: string;
     avatar: string | null;
   } | null;
-  isTimerActive?: boolean;
-  timerStartedAt?: Date | null;
   timeSpentMinutes?: number;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
-  onTimerUpdate?: (() => void) | undefined;
+  onTimeLogSuccess?: (() => void) | undefined;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function TaskCard({
@@ -43,15 +49,17 @@ export function TaskCard({
   priority,
   dueDate,
   assignee,
-  isTimerActive = false,
-  timerStartedAt = null,
   timeSpentMinutes = 0,
   onEdit,
   onDelete,
   onClick,
-  onTimerUpdate,
+  onTimeLogSuccess,
+  canEdit = true,
+  canDelete = true,
 }: TaskCardProps) {
   const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
+  const overdue =
+    isOverdue(dueDate) && status !== TASK_STATUS.DONE && status !== TASK_STATUS.CANCELLED;
 
   const handleCardClick = () => {
     if (onClick) {
@@ -80,6 +88,7 @@ export function TaskCard({
         className={cn(
           'transition-all h-full flex flex-col',
           onClick && 'cursor-pointer hover:shadow-md',
+          overdue && 'border-destructive/60 bg-destructive/5',
         )}
         onClick={handleCardClick}
       >
@@ -104,24 +113,28 @@ export function TaskCard({
             )}
           </CardTitle>
           <div className="flex gap-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleEdit}
-              aria-label="タスクを編集"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={handleDelete}
-              aria-label="タスクを削除"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleEdit}
+                aria-label="タスクを編集"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={handleDelete}
+                aria-label="タスクを削除"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col gap-3">
@@ -130,10 +143,16 @@ export function TaskCard({
           )}
 
           <div className="flex gap-2 flex-wrap">
-            <Badge variant={getStatusBadgeVariant(status)}>{TASK_STATUS_LABELS[status]}</Badge>
+            <StatusBadge status={status} />
             <Badge variant={getPriorityBadgeVariant(priority)}>
               {TASK_PRIORITY_LABELS[priority]}
             </Badge>
+            {overdue && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                期限切れ
+              </Badge>
+            )}
           </div>
 
           <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
@@ -155,21 +174,25 @@ export function TaskCard({
               )}
 
               {dueDate && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div
+                  className={cn(
+                    'flex items-center gap-1 text-xs',
+                    overdue ? 'text-destructive font-semibold' : 'text-muted-foreground',
+                  )}
+                >
                   <CalendarDays className="h-3 w-3" />
-                  <span>{formatDateOnly(dueDate)}</span>
+                  <span>
+                    {overdue && <span className="sr-only">期限切れ </span>}
+                    {formatDateOnly(dueDate)}
+                  </span>
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <TaskTimer
-                taskId={id}
-                isTimerActive={isTimerActive}
-                timerStartedAt={timerStartedAt}
-                timeSpentMinutes={timeSpentMinutes}
-                onTimerUpdate={onTimerUpdate}
-              />
+              <p className="text-sm text-muted-foreground">
+                合計作業時間: {formatMinutes(timeSpentMinutes)}
+              </p>
               <Button
                 variant="outline"
                 size="sm"
@@ -188,7 +211,7 @@ export function TaskCard({
         open={timeLogDialogOpen}
         onClose={() => setTimeLogDialogOpen(false)}
         taskId={id}
-        onSuccess={onTimerUpdate}
+        onSuccess={onTimeLogSuccess}
       />
     </>
   );

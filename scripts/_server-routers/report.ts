@@ -17,6 +17,8 @@ export const reportRouter = createTRPCRouter({
         totalTasks: 0,
         completedTasks: 0,
         inProgressTasks: 0,
+        inReviewTasks: 0,
+        todoTasks: 0,
         completionRate: 0,
         totalTimeSpent: 0,
         averageTimePerTask: 0,
@@ -27,11 +29,25 @@ export const reportRouter = createTRPCRouter({
       };
     }
 
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
+    // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      ...projectScope,
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+
     const [
       projects,
       totalTasks,
       completedTasks,
       inProgressTasks,
+      inReviewTasks,
+      todoTasks,
       totalTimeAggregate,
       recentTasks,
       statusGroups,
@@ -39,32 +55,44 @@ export const reportRouter = createTRPCRouter({
       projectTaskGroups,
       projectDoneGroups,
     ] = await Promise.all([
+      // アーカイブ済みプロジェクトは「アクティブな状況」の集計対象外とし、
+      // プロジェクト数(totalProjects)とプロジェクト統計(projectStats)から除外する。
       prisma.project.findMany({
-        where: { id: { in: projectIds } },
+        where: { id: { in: projectIds }, isArchived: false },
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.task.count({
-        where: { projectId: { in: projectIds } },
-      }),
+      prisma.task.count({ where: activeTasksFilter }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.DONE,
         },
       }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.IN_PROGRESS,
         },
       }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_REVIEW,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.TODO,
+        },
+      }),
       prisma.task.aggregate({
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _sum: { timeSpentMinutes: true },
       }),
       prisma.task.findMany({
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         select: {
           id: true,
           title: true,
@@ -76,24 +104,24 @@ export const reportRouter = createTRPCRouter({
       }),
       prisma.task.groupBy({
         by: ['status'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
       }),
       prisma.task.groupBy({
         by: ['priority'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
       }),
       prisma.task.groupBy({
         by: ['projectId'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
         _sum: { timeSpentMinutes: true },
       }),
       prisma.task.groupBy({
         by: ['projectId'],
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.DONE,
         },
         _count: { _all: true },
@@ -122,6 +150,8 @@ export const reportRouter = createTRPCRouter({
       totalTasks,
       completedTasks,
       inProgressTasks,
+      inReviewTasks,
+      todoTasks,
       completionRate,
       totalTimeSpent,
       averageTimePerTask,
