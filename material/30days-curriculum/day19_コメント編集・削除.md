@@ -105,6 +105,90 @@ const commentUpdateSchema = z.object({
 - 編集時も投稿と同じバリデーションが適用される
 - `id` でどのコメントを更新するか指定する
 
+次に、コメントの作者かどうかを確かめるヘルパー関数を、Day 18 で書いた `findTaskAndAssertMembership` の下に追加します。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// findTaskAndAssertMembership の下に追加
+const findCommentAndAssertOwnership = async (
+  commentId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: {
+      userId: true,
+      task: {
+        include: {
+          project: {
+            include: { members: { where: { userId } } },
+          },
+        },
+      },
+    },
+  });
+```
+
+コメントに紐づくタスク、そのプロジェクト、さらに自分がメンバーかどうかまでを一度に引き当てます。`select` で必要な項目だけに絞っているので、無駄なデータは取りません。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（続き）
+  if (!comment) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'コメントが見つかりません',
+    });
+  }
+
+  assertMemberPermission(
+    comment.task.project.members, permission,
+  );
+
+  if (comment.userId !== userId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '自分のコメントのみ編集・削除できます',
+    });
+  }
+
+  return comment;
+};
+```
+
+チェックは2段階です。まずプロジェクトのメンバーかを確かめ、次に「そのコメントの作者本人か」を確かめます。メンバーでも他人のコメントは編集・削除できないよう、`comment.userId !== userId` で弾きます。
+
+続いて、Day 18 で書いた `commentRouter` の中（`create` の後、閉じる `});` の前）に `update` と `delete` を追加します。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// commentRouter の create の後、}); の前に追加
+  update: protectedProcedure
+    .input(commentUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+      await findCommentAndAssertOwnership(id, ctx.session.userId, 'canEdit');
+      return await prisma.comment.update({
+        where: { id },
+        data,
+        include: { user: { select: USER_SELECT } },
+      });
+    }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await findCommentAndAssertOwnership(
+        input.id, ctx.session.userId, 'canEdit',
+      );
+      await prisma.comment.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+```
+
+`update` は本文だけを書き換え、`delete` はコメントごと消します。どちらも先ほどの `findCommentAndAssertOwnership` で「メンバーかつ作者本人か」を確かめてから実行するので、他人のコメントは操作できません。
+
 #### comment.update の入力パラメータ
 
 | パラメータ | 型 | バリデーション | 説明 |

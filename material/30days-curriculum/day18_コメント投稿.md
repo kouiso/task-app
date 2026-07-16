@@ -218,6 +218,8 @@ export const commentRouter = createTRPCRouter({
 - `commentRouter` を `export` して `create` を実装した
 - 投稿者 ID はセッションから取得している
 
+> 今この `commentRouter` は `create` だけを持っています。コメントの編集・削除に使う `update` と `delete` は Day 19 で、この `createTRPCRouter({ ... })` の中（`create` の後、閉じる `});` の前）に足します。今日は `create` まで書ければ大丈夫です。閉じる `});` は残したままで構いません。
+
 #### comment ルーターの全メソッド
 
 | メソッド | 種別 | 説明 |
