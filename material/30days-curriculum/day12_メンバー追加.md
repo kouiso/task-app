@@ -121,7 +121,9 @@ src/
 
 `getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。`project.ts` の `getAll` の下に追加します。
 
-まず `findUnique` で1件検索します。詳細画面はタスクの担当者（`assignee`）も表示するので、`tasks.include.assignee` で一緒に取ります。
+先頭の `protectedProcedure`（ログイン必須の入口）に `.query`（読み取り用の手続き）をつなげて、ログイン済みの人だけが呼べる読み取りAPIにします。データを書き換えるときは `.query` の代わりに `.mutation`（書き込み用の手続き）を使い分けます。入力の `id` は `.cuid()`（cuid形式のID検証）で、決まった形式のIDだけを受け付けます。
+
+まず `findUnique` で1件検索します。詳細画面はタスクの担当者（`assignee`）も表示するので、`include`（関連データも一緒に取る指定）で `tasks` に紐づく `assignee` も一緒に取ります。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -150,7 +152,7 @@ src/
       });
 ```
 
-続けて、見つからなかったときのチェックです。
+続けて、見つからなかったときのチェックです。`TRPCError`（tRPCのエラーを返す仕組み）を使い、該当がなければ処理を止めてエラーを呼び出し側へ返します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -164,7 +166,7 @@ src/
 
 `getAll` は一覧なので「見つからない」というケースがありませんでした。`getById` は違います。指定した `id` のプロジェクトは存在しないこともあるため、`NOT_FOUND` チェックが必要です。
 
-続けて権限チェックと戻り値です。
+続けて権限チェックと戻り値です。`ctx.session`（サーバーが持つログイン情報）には、いまログインしているユーザーの `userId` が入っています。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -181,7 +183,7 @@ src/
 
 #### 0-2. getAvailableUsers — まだ参加していないユーザーを探す
 
-メンバー追加ダイアログの候補一覧に使う手続きです。`getById` の下に追加します。まず自分の権限を確認します。
+メンバー追加ダイアログの候補一覧に使う手続きです。`getById` の下に追加します。まず自分の権限を確認します。ここでは `userId_projectId`（2つの列を組にした一意キー）で、ログイン中のユーザーがこのプロジェクトのメンバーかどうかを1件だけ引き当てます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -858,6 +860,8 @@ import {
 **確認ポイント**:
 - `Dialog` の `open` / `onOpenChange` でダイアログ開閉を制御している
 
+`open` に `memberDialogOpen` という state を渡しているので、`setMemberDialogOpen(true)` で開き、閉じる操作は `onOpenChange` が受け取って state を戻します。`DialogHeader` は見出しのまとまりで、`DialogTitle` が「メンバー追加」という題名、`DialogDescription` が操作の説明文を担当します。利用者はこの2つを読んで、何をする画面かを開いた瞬間に判断できます。
+
 ユーザー選択のドロップダウンを追加します。`useState` の `newMemberUserId` で値を直接管理します。
 
 ```typescript
@@ -884,6 +888,8 @@ import {
 - `Select` の `value` / `onValueChange` で `useState` と直接接続している
 - `Controller` ラッパーは不要（シンプルなstateで十分）
 
+`value` に `newMemberUserId` を渡すことで、いま選ばれているユーザーが常に state と同じになります。`onValueChange` は選択が変わるたびに `setNewMemberUserId` を呼ぶので、画面の表示と state がずれません。フィールドが1つだけなら、この直接つなぐ形の方が `react-hook-form` を挟むより追いやすくなります。
+
 SelectContent 内にユーザー候補を表示します。
 
 ```typescript
@@ -908,6 +914,8 @@ SelectContent 内にユーザー候補を表示します。
 - 名前がない場合はメールアドレスを表示する
 - `availableUsers` はプロジェクト未参加ユーザーのみ
 
+`user.name || user.email` としているのは、名前を登録していないユーザーでも空欄にせず、必ず何かを画面に出すためです。`key={user.id}` は、React が候補の並びを追跡するための目印です。これを省くと、候補の増減時に表示が入れ替わってしまいます。
+
 ロール選択も `useState` の `newMemberRole` で管理します。`isProjectMemberRole` 型ガードで値を安全に検証してからstateに設定します。
 
 ```typescript
@@ -931,6 +939,8 @@ SelectContent 内にユーザー候補を表示します。
 **確認ポイント**:
 - `isProjectMemberRole` 型ガードで安全にロールを検証している
 - 不正な値が `setNewMemberRole` に渡されることを防いでいる
+
+`Select` が渡してくる `value` はただの文字列で、`ProjectMemberRole` 型である保証はありません。`isProjectMemberRole` を通った値だけを `setNewMemberRole` に渡すので、想定外の文字列が state に入りません。ここで弾いておくと、あとのメンバー追加APIで不正なロールがサーバーまで届くのを防げます。
 
 ロール選択肢はOWNERを除外して生成します。
 
@@ -988,6 +998,8 @@ SelectContent 内にユーザー候補を表示します。
 **確認ポイント**:
 - ユーザー未選択時は「メンバー追加」ボタンが `disabled` になる
 - キャンセルボタンでダイアログが閉じる
+
+`disabled={!newMemberUserId}` にしているのは、ユーザーを選ばないまま追加すると、誰を追加するのか決まらずサーバー側でエラーになるためです。ボタンを押せるのはユーザーを1人選んだあとだけにして、無効な操作を最初から避けています。
 
 スクリーンショット: メンバー追加ダイアログでユーザーとロールを選択した状態。
 
