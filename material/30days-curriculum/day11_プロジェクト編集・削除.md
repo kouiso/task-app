@@ -407,6 +407,20 @@ useEffect(() => {
 - `router.push(...)` を使う準備ができている
 - URL に `projectId` があると `selectedProject` に入る
 
+ログイン中のユーザー情報も取得しておきます。この後の作成分岐でユーザーIDを確認するのに使います。`utils` の並びに追加してください。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// ログインユーザーを取得（作成者チェック・権限判定に使う）
+const { data: currentUser } =
+  api.auth.getCurrentUser.useQuery();
+```
+
+**確認ポイント**:
+- `currentUser` でログイン中のユーザーを取得できた
+
+`getCurrentUser` はサーバーが持つログイン情報を返します。フォームから送られる値ではなくこの値を使うことで、他人になりすました作成を防げます。Day 12 では、このユーザーがプロジェクト内でどのロールかを調べて、ボタンの表示可否も決めます。
+
 次に、Day 10 で定義済みの `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
 
 日付は `dateOnlyFromValue()` で `"2024-12-31"` 形式に変換します。保存済みの ISO 文字列から `<input type="date">` 用の date-only 値を安全に取り出せます。
