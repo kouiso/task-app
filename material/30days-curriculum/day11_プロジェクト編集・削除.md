@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 10 では react-hook-form・zod・tRPC の `useMutation` を組み合わせて、ダイアログ形式のプロジェクト新規作成機能を実装しました。CRUDの「Create」ができたので、今日は「Update」と「Delete」に進みます。
+Day 10 では react-hook-form・zod・tRPC の `useMutation`（データ変更API呼び出しのフック）を組み合わせて、ダイアログ形式のプロジェクト新規作成機能を実装しました。CRUDの「Create」ができたので、今日は「Update」と「Delete」に進みます。
 
 ---
 
@@ -136,6 +136,8 @@ const projectUpdateSchema = z.object({
 
 `create` のスキーマとの違いは、`id` 以外の全項目が `.optional()` になっていることです。更新は「送られてきた項目だけ書き換える」のが基本なので、名前だけ変えたいときに `description` や `color` まで毎回送る必要はありません。
 
+`startDate` と `endDate` に付けた `.datetime()`（ISO日時文字列の検証）は、`"2024-12-31T00:00:00Z"` のような形式の文字列だけを通します。日付として解釈できない値が入ってきたら、その時点でエラーにして弾けます。
+
 続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。
 
 ```typescript
@@ -161,6 +163,8 @@ const projectUpdateSchema = z.object({
 ```
 
 `{ id, ...data }` は `input` から `id` だけを取り出し、残りをまとめて `data` に入れる分割代入です。`id` は「どのプロジェクトを更新するか」を探すために使い、それ以外の項目（`data`）は更新内容として使います。
+
+対象は `findUnique`（条件に合う1件を取得）で1件だけ引きます。あわせてメンバー一覧を `ctx.session.userId`（サーバーが持つログインユーザーID）で絞り込み、ログイン本人の情報だけを取り出して、この後の権限チェックに使います。
 
 続けて、権限チェックと更新データの組み立てです。
 
@@ -213,7 +217,7 @@ const projectUpdateSchema = z.object({
   }),
 ```
 
-`include` は `getAll` / `create` と同じ形にしています。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
+`include`（関連データを一緒に取る指定）は `getAll` / `create` と同じ形にしています。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
 
 #### 0-2. delete — ここが一番のヤマ場、削除だけは OWNER 限定
 
@@ -333,7 +337,7 @@ Step 0 では権限まわりの書き方が3パターン出てきました。表
 **実装**:
 
 まず、Day 10 で作成した `ProjectFormData` 型と、削除確認用の `DeleteConfirmDialog` をインポートします。
-既に `useState` や `Suspense` の import がある場合は、
+既に `useState` や `Suspense`（準備中に仮表示へ差し替える仕組み）の import がある場合は、
 重複させずに以下の形へ揃えてください。
 
 ```typescript
@@ -361,6 +365,8 @@ import { DeleteConfirmDialog }
   from '@/component/ui/delete-confirm-dialog';
 ```
 
+この2つは Day 10 で作った資産を編集機能に持ち込むための import です。`ProjectFormData` 型を取り込むと、フォームに渡す値の形をコンパイラが検査してくれます。`DeleteConfirmDialog` は削除確認のUIを毎回書かずに済ませるための共通部品です。
+
 **確認ポイント**:
 - インポート文を追加してエラーが出ていない
 - `ProjectFormData` と `DeleteConfirmDialog` が正しくインポートされた
@@ -378,6 +384,8 @@ const [editingProject, setEditingProject] =
     undefined
   );
 ```
+
+`selectedProject` は詳細表示の対象を、`editingProject` は編集ダイアログに流し込む既存データを覚えておくための state です。値を state に持たせておくと、ボタンを押した瞬間の選択を、後続の送信処理まで持ち運べます。
 
 **確認ポイント**:
 - `selectedProject` が `string | null` で定義されている
@@ -402,6 +410,8 @@ useEffect(() => {
   }
 }, [projectIdParam]);
 ```
+
+URL の `?projectId=...` を読むだけでは、リロードや戻る操作のたびに表示がずれます。`useEffect` で URL の値を `selectedProject` に写しておくと、画面の状態が常に URL と一致します。
 
 **確認ポイント**:
 - `router.push(...)` を使う準備ができている
@@ -686,6 +696,8 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 />
 ```
 
+`initialData` に `editingProject` を渡しているので、同じ `ProjectDialog` が新規作成と編集の両方で動きます。`editingProject` が `undefined` なら空のフォーム、既存データが入っていれば値の埋まったフォームになります。
+
 **確認ポイント**:
 - 編集ボタンでダイアログを開くと既存の名前が入っている
 - 新規作成ボタンで空のダイアログが開く
@@ -744,7 +756,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 | `title?` | `string` | ダイアログのタイトル（省略時は `本当に削除しますか？`） |
 | `description?` | `string` | 補足説明文（省略時:「この操作は取り消せません。」） |
 
-> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending` を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
+> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending`（mutation実行中フラグ）を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
 
 スクリーンショット: 削除確認ダイアログが表示されている画面。
 
@@ -818,6 +830,8 @@ const archiveMutation =
   });
 ```
 
+`onSuccess` で `invalidate()` を呼ぶと、アーカイブ後に一覧のキャッシュが捨てられ、最新の状態が取り直されます。`router.push('/project')` で詳細画面から一覧へ戻せば、アーカイブしたプロジェクトが画面から消えます。
+
 **確認ポイント**:
 - `archiveMutation` が定義できた
 - 成功時に `invalidate()` と `router.push('/project')` で一覧画面に戻る
@@ -833,6 +847,8 @@ const unarchiveMutation =
     },
   });
 ```
+
+解除も成功後の流れは同じで、`invalidate()` で一覧を取り直します。呼ぶAPIはアーカイブと違いますが、画面を最新化する手順をそろえておくと、どちらを押しても同じ挙動になって迷いません。
 
 **確認ポイント**:
 - `unarchiveMutation` が定義できた

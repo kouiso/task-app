@@ -5,7 +5,7 @@
 Day 14 で学んだことは次のとおりです。
 - TaskDialog で react-hook-form + zod のバリデーション
 - `Controller` による Select 連携
-- `useMutation` による保存処理
+- `useMutation`（データ変更APIのフック）による保存処理
 
 今日は同じダイアログを**編集モード**で再利用して、タスクの編集・削除に取り組みます。
 
@@ -105,8 +105,8 @@ flowchart TD
 ### Step 1: `defaultValues` + `useEffect(reset)` を理解する（5分）
 
 **ゴール**: `useForm` の `defaultValues` と
-`useEffect(reset(...))` がどのように編集モードを
-実現するかを理解します。
+`useEffect(reset(...))`（描画後に副作用を走らせるフック）が
+どのように編集モードを実現するかを理解します。
 
 **実装**:
 
@@ -169,6 +169,12 @@ useEffect(() => {
 > 変わった時だけ `useEffect(reset(...))` で
 > フォームを同期します。`useForm({ values })` は
 > 使っていません。
+
+> `useEffect` の末尾にある
+> `[initialData, open, projects, reset]` が依存配列
+> （useEffectを再実行する条件の配列）です。この中の
+> 値が変わったときだけ、`reset` でフォームを
+> 作り直します。
 
 **作成モード vs 編集モードの比較**
 
@@ -255,8 +261,8 @@ const updateMutation =
   });
 ```
 
-> `invalidate` は「キャッシュを無効化して
-> 再取得する」命令です。一覧（`getAll`）を必ず
+> `invalidate` は「キャッシュ（取得済みデータの一時保存）を
+> 無効化して再取得する」命令です。一覧（`getAll`）を必ず
 > 更新し、詳細画面（`getById`）は
 > `selectedTask` がある場合のみ更新します。
 
@@ -391,8 +397,8 @@ Day 14 で実装した `createMutation` を使います。
 
 ### Step 6: 削除用のstateとmutationを定義する（5分）
 
-**ゴール**: 削除確認に使うstateと削除APIの
-mutationを定義します。
+**ゴール**: 削除確認に使うstate（Reactが再描画のために覚える値）と
+削除APIのmutationを定義します。
 
 **実装**:
 
@@ -423,7 +429,7 @@ const deleteMutation =
 > `DeleteConfirmDialog` コンポーネントを使います。
 > (1) アプリ全体のUIに統一感が出る
 > (2) ボタンのテキストをカスタマイズできる
-> (3) `isPending` 中の二重クリックを防止できる
+> (3) `isPending`（mutation実行中フラグ）中の二重クリックを防止できる
 
 **確認ポイント**:
 - `DeleteConfirmDialog` のインポートを追加できた
@@ -466,6 +472,12 @@ const handleDelete = (taskId: string) => {
   isPending={deleteMutation.isPending}
 />
 ```
+
+> `open` と `onOpenChange` でダイアログの表示を
+> `deleteDialogOpen` に結びつけ、`onConfirm` は
+> 確認ボタンを押したときだけ削除を実行します。
+> だから、いきなり消えずに削除の確認を
+> 一度はさめます。
 
 **確認ポイント**:
 - 削除ボタンで確認ダイアログが出る
@@ -530,6 +542,11 @@ const handleCreate = () => {
 />
 ```
 
+> `onEdit` と `onDelete` に関数を渡すと、カード内の
+> 編集ボタン・削除ボタンが押されたときに、その関数が
+> `task.id` を受け取って呼ばれます。ボタンの見た目は
+> `TaskCard`、実際の処理は親ページ、と役割が分かれます。
+
 > `TaskCard` には作業時間まわりの optional な props も
 > あります。`timeSpentMinutes`（合計作業時間）と
 > `onTimeLogSuccess`（記録成功時のコールバック）の 2 つです。
@@ -559,6 +576,12 @@ const handleCreate = () => {
   projects={projects ?? []}
 />
 ```
+
+> `initialData` に `editingTask` を渡すと、Step 1 の
+> `buildTaskFormValues` がその値をフォームの初期値に
+> 使うので、編集モードになります。`editingTask` が
+> `undefined` のときは空の初期値になり、作成モードに
+> なります。
 
 **確認ポイント**:
 - 「新規タスク」で作成モードが開く
@@ -807,7 +830,7 @@ const handleSubmit = (data: TaskFormData) => {
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
 | 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC の開始時刻にそろえる |
+| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（世界協定時、タイムゾーンの基準）の開始時刻にそろえる |
 | 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
 | 前回の値が残る | フォーム同期不足 | `defaultValues` と `useEffect(reset(...))` を確認 |
 

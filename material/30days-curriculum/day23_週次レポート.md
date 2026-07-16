@@ -116,7 +116,7 @@ flowchart TD
 | 1 | `api.report.getOverview` を呼ぶ | server 側で全件集計 |
 | 2 | `overview.projectStats` を受け取る | Aプロジェクトの集計行が入る |
 | 3 | 各行を `TableRow` に流し込む | 進捗 30.0% と表示 |
-| 4 | `toFixed(1)` で表示だけ整える | 8.0h |
+| 4 | `toFixed(1)`（小数第1位に丸める）で表示だけ整える | 8.0h |
 
 ```typescript
 // filepath: src/app/report/page.tsx
@@ -127,6 +127,9 @@ const { data: overview, isLoading } =
 
 > 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
 
+> `useQuery`（データ取得のフック）は、サーバーから届いた値を `data` に、取得中かどうかを `isLoading` に入れてくれます。
+> 画面はこの2つを見て、表示を切り替えます。
+
 **確認ポイント**:
 - `overview` を取得できている
 - 表の4項目が `projectStats` に入っていると理解した
@@ -136,6 +139,9 @@ const { data: overview, isLoading } =
 // server 側で作られた projectStats をそのまま使う
 const projectStats = overview?.projectStats ?? [];
 ```
+
+> `?? []`（左が無いとき空配列を使う書き方）を付けています。
+> `overview` がまだ届いていない瞬間でも `projectStats` は空配列になり、後の `.map` がエラーになりません。
 
 **確認ポイント**:
 - クライアント側で再集計していない
@@ -222,6 +228,9 @@ import {
 - `TableHeader` の中に `TableRow` と `TableHead` がある
 - ヘッダー5列を定義した
 
+> `TableHeader` の中に見出し行の `TableRow` を置き、その中へ見出しセルの `TableHead` を並べます。
+> この入れ子は、ブラウザに「ここが表の見出し行」と伝えるための形です。
+
 ```typescript
 // filepath: src/app/report/page.tsx
 // テーブル本体（mapで各行を生成）
@@ -296,7 +305,7 @@ api.report.getWeeklyReport.useQuery({
 | week | string | `1週目` のような週ラベル |
 | weekStart | string | その週の開始日（`YYYY-MM-DD`） |
 | totalCompleted | number | その週の完了数 |
-| byStatus | Record<string, number> | ステータス別の件数 |
+| byStatus | Record<string, number>（キーが文字列・値が数値のオブジェクト型） | ステータス別の件数 |
 | byPriority | Record<string, number> | 優先度別の件数 |
 
 > サーバー側で Prisma を使って
@@ -335,6 +344,9 @@ import { PageLoadingSpinner }
 **確認ポイント**:
 - `date-fns` と `ja` ロケールをインポートした
 - `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` である
+
+> 先頭の `'use client'`（ブラウザ側で動く宣言）を書くと、このページはブラウザ側で動く画面になります。
+> `useState` などブラウザ側で動く機能を使うため、この宣言が必要です。
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
@@ -517,6 +529,9 @@ export default function WeeklyReportPage() {
 - `format` と `ja` ロケールで日付を整形している
 - データがないときは `'-'` を表示している
 
+> 3枚のカードは1つの `reportData` から値を取り出し、合計・週平均・対象期間という3種類の見せ方にしています。
+> 対象期間の `format` には `{ locale: ja }`（日付表示の言語・地域設定）を渡し、`2026/07/16` のような日本語圏の表記にします。
+
 #### 週次レポートの表示項目
 
 | カード | 表示内容 | 計算方法 |
@@ -550,6 +565,9 @@ const chartData =
 
 **確認ポイント**:
 - `chartData` は完了数と優先度データを持つ
+
+> Recharts のグラフは、1週分を1オブジェクトにまとめ、各系列の値をキーに持つ配列を受け取ります。
+> `weeklyData` はこの形と違うので、`name` や `completed` をキーに持つ形へ組み替えています。
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
@@ -749,6 +767,8 @@ export async function fetchWeeklyReportTasks(
       completedAt: { gte: startDate, lte: endDate },
     },
 ```
+
+> `gte`/`lte`（以上／以下のPrisma条件）で、`completedAt` が指定した期間内のタスクだけを絞り込みます。
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
