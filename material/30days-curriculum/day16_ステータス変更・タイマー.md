@@ -495,11 +495,15 @@ interface TaskCardProps {
 ```
 
 `timeSpentMinutes` は表示する合計作業時間です。
-まだ記録がないタスクもあるのでオプショナル（`?`）にし、
-あとで既定値0を与えます。
+まだ記録がないタスクもあるのでオプショナル（`?`）にします。
 `onTimeLogSuccess` は記録成功を親へ伝える
 コールバックで、`TimeLogDialog` の `onSuccess` に
 そのまま渡します。
+
+オプショナルにしたので、`TaskCard` 関数の引数（分割代入）では
+`timeSpentMinutes = 0` と既定値 0 を付けてください。
+渡されなかったタスクでも 0 として扱われ、
+次に書く `formatMinutes(timeSpentMinutes)` が `NaN` になりません。
 
 カード関数の中に、ダイアログの開閉状態と
 開くためのハンドラーを足します。
@@ -587,6 +591,38 @@ Reactは複数の要素を並べて返せないので、
 - カードに合計作業時間が表示される
 - 「時間記録」ボタンが表示される
 - ボタンを押すとダイアログが開く
+
+最後に、`page.tsx` から `TaskCard` へ合計作業時間と成功コールバックを渡します。これがないと、記録しても一覧の合計が更新されず、Step 4 の「合計作業時間が増える」確認まで到達できません。
+
+まず、記録成功後に一覧を取り直すハンドラーを追加します。`useCallback` を使うので、`react` からのインポートに `useCallback` を足しておきます。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 時間記録の成功後に一覧を取り直す（useCallback は react から import）
+const handleTimeLogSuccess = useCallback(() => {
+  void utils.task.getAll.invalidate();
+  void utils.task.getAll.refetch();
+}, [utils.task.getAll]);
+```
+
+`invalidate` でキャッシュを古い印にし、`refetch` で即座に取り直します。これで記録した分がその場で合計作業時間へ反映されます。
+
+次に、Day 15 で置いた `<TaskCard>` に2つの props を足します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// Day 15 の <TaskCard> に2つの props を追加
+<TaskCard
+  // ...Day 15 で渡した props...
+  timeSpentMinutes={task.timeSpentMinutes}
+  onTimeLogSuccess={handleTimeLogSuccess}
+/>
+```
+
+`timeSpentMinutes` にサーバーが返す合計作業時間を渡し、`onTimeLogSuccess` に先ほどのハンドラーを渡します。これで「記録 → 再取得 → 合計が増える」という流れがつながり、Step 4 で増加を確認できます。
+
+**確認ポイント**:
+- `handleTimeLogSuccess` を追加し、`<TaskCard>` に2つの props を渡した
 
 ---
 
