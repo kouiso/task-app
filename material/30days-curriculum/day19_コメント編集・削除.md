@@ -581,7 +581,7 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — コメント著者チェックを Optional chaining で書く
+### Pro パターンで書こう（コメント著者チェックを Optional chaining で書く）
 
 本人のコメントか確認するときは、
 `session`、`user`、`id` が未取得の可能性を考えます。

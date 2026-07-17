@@ -117,7 +117,7 @@ src/
 
 **ゴール**: プロジェクト詳細取得・追加可能ユーザー取得・メンバー追加・メンバー削除の4つの手続きを追加します。
 
-#### 0-1. getById — 1件だけ取得する
+#### 0-1. getById（1件だけ取得する）
 
 `getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。`project.ts` の `getAll` の下に追加します。
 
@@ -181,7 +181,7 @@ src/
 
 `getAll` では `where` で「自分がメンバーのものだけ」を絞り込んでいましたが、`getById` は先にプロジェクトを取得してから、取得した `members` の中に自分がいるかを `filter` で確認しています。他人のプロジェクトの `id` を直接指定されても、メンバーでなければ `canView` の権限チェックで弾かれます。
 
-#### 0-2. getAvailableUsers — まだ参加していないユーザーを探す
+#### 0-2. getAvailableUsers（まだ参加していないユーザーを探す）
 
 メンバー追加ダイアログの候補一覧に使う手続きです。`getById` の下に追加します。まず自分の権限を確認します。ここでは `userId_projectId`（2つの列を組にした一意キー）で、ログイン中のユーザーがこのプロジェクトのメンバーかどうかを1件だけ引き当てます。
 
@@ -223,7 +223,7 @@ src/
 
 `projects: { none: { projectId: input.projectId } }` は「このプロジェクトのメンバーに1件も該当しないユーザー」という条件です。Day 09 の `getAll` では `some`（1件でも該当すれば対象）を使いました。`none` はその逆で、1件も該当しない場合を対象にします。これで、まだ参加していない人だけが候補として残ります。
 
-#### 0-3. addMember — ここが一番のヤマ場、重複チェック
+#### 0-3. addMember（ここが一番のヤマ場、重複チェック）
 
 `addMember` に使う入力スキーマをまず定義します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行を、`projectMemberRoleSchema` も一緒に取り込む形へ**書き換えます**（新しい行を追加するのではありません）。
 
@@ -314,7 +314,7 @@ const projectMemberSchema = z.object({
 
 `addMember` で一番大事なのは、追加する前に「もう既にメンバーではないか」を確認している点です。フロント側の `getAvailableUsers` は未参加ユーザーだけを候補に出します。しかし候補を取得したあと、実際に追加ボタンを押すまでにはタイムラグがあります。この間に別のタブや別のメンバーが先に同じユーザーを追加していると、候補一覧が古いままボタンを押すことになります。フロントのUIだけを信用せず、サーバー側でも同じ確認をもう一度することで、同じユーザーが二重登録される事故を防いでいます。
 
-#### 0-4. removeMember — 最後のOWNERは消せない
+#### 0-4. removeMember（最後のOWNERは消せない）
 
 `addMember` の下に追加します。まず入力の形と、自分の権限を確認します。
 
@@ -419,7 +419,7 @@ const projectMemberSchema = z.object({
     }),
 ```
 
-#### 0-5. updateMemberRole — ロール変更の手続きを用意する
+#### 0-5. updateMemberRole（ロール変更の手続きを用意する）
 
 `removeMember` の下に追加します。`ProjectDetailView` の中には、メンバーのロールを変えるセレクトボックスがあります。これは Step 2 で書く `handleUpdateMemberRole` から呼ばれ、その先でこの `updateMemberRole` procedure を叩きます。先にサーバー側の手続きを用意して、Step 2 のクライアント側とつなげます。
 
@@ -1291,7 +1291,7 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — メンバーカードの props は元の型から Pick する
+### Pro パターンで書こう（メンバーカードの props は元の型から Pick する）
 
 メンバー表示の props を全部手で写すと、元データとずれやすいです。
 元の型から必要な列だけを `Pick` すると、

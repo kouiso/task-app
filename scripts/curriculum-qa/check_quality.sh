@@ -14,12 +14,14 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-# 引数を展開: ディレクトリなら配下のmdを収集、ファイルはそのまま追加
+# 引数を展開: ディレクトリなら配下の教材md（day/appendix）を収集、ファイルはそのまま追加
+# 目次・ロードマップ等のナビ文書は日次教材の構造チェック（Agenda/表/スクショ）の
+# 対象外なので、ディレクトリ一括では day/appendix のみを見る（CIのGate2と同じスコープ）
 for arg in "$@"; do
   if [ -d "$arg" ]; then
     while IFS= read -r f; do
       FILES+=("$f")
-    done < <(find "$arg" -name "*.md" -type f | sort)
+    done < <(find "$arg" -type f \( -name "day[0-9][0-9]_*.md" -o -name "appendix_*.md" \) | sort)
   elif [ -f "$arg" ]; then
     FILES+=("$arg")
   else

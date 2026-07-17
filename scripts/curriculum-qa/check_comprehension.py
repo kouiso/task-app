@@ -4,13 +4,15 @@
 beginner-review/SKILL.md の数値基準をコード化
 
 チェック項目:
-1. 注釈なし専門用語の初出 (3個超 → WARNING, 5個超 → FAIL)
+1. 注釈なし専門用語の初出 (カリキュラム全体で未注釈なら1件でもFAIL。
+   より前のdayで注釈済みの再出用語はグレー扱いでWARNINGに留める)
 2. 「当然」「簡単」「ググってください」等の禁止表現
 3. 各Stepに確認ポイント(✅)が存在するか
 """
 
 import re
 import sys
+from pathlib import Path
 
 # 機械チェック対象の専門用語 (初出時に注釈が期待されるもの)
 TECH_TERMS = [
@@ -106,6 +108,45 @@ def check_unannotated_terms(content: str, lines: list[str]) -> list[dict]:
     return issues
 
 
+def curriculum_order_key(path: Path) -> tuple[int, str]:
+    """カリキュラム内の読む順序 (目次/roadmap → day01..day30 → appendix)"""
+    name = path.name
+    m = re.match(r'day(\d+)_', name)
+    if m:
+        return (1000 + int(m.group(1)), name)
+    if name.startswith("appendix"):
+        return (9000, name)
+    return (0, name)
+
+
+def file_annotates_term(path: Path, term: str) -> bool:
+    """そのファイル内の地の文初出箇所に注釈があるか"""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    lines = content.splitlines()
+    for m in re.finditer(re.escape(term), content):
+        line_idx = content[:m.start()].count('\n')
+        if is_in_code_block(lines, line_idx):
+            continue
+        return has_annotation_nearby(content, m.start())
+    return False
+
+
+def find_prior_annotation(target: str, term: str) -> str | None:
+    """カリキュラム上で target より前のファイルに注釈済み初出があれば、そのファイル名を返す"""
+    target_path = Path(target)
+    target_key = curriculum_order_key(target_path)
+    siblings = sorted(target_path.parent.glob("*.md"), key=curriculum_order_key)
+    for sib in siblings:
+        if curriculum_order_key(sib) >= target_key:
+            break
+        if file_annotates_term(sib, term):
+            return sib.name
+    return None
+
+
 def check_forbidden_phrases(content: str, lines: list[str]) -> list[dict]:
     """禁止表現チェック"""
     issues = []
@@ -164,21 +205,30 @@ def main() -> int:
     failed = False
 
     # 1. 専門用語チェック
+    # 閾値は0: カリキュラム全体で一度も注釈されていない用語は1件でもFAIL。
+    # より前のday/appendixで注釈済みの「再出」はグレー扱いでWARNINGに留める。
     unannotated = check_unannotated_terms(content, lines)
-    warn_threshold = 3
-    fail_threshold = 5
 
-    if unannotated:
-        print(f"📚 注釈なし初出専門用語: {len(unannotated)} 件")
-        for issue in unannotated:
-            print(f"   Line {issue['line']:4d}: 「{issue['term']}」 — 初出時に注釈がありません")
+    hard_issues = []
+    gray_issues = []
+    for issue in unannotated:
+        prior = find_prior_annotation(target, issue["term"])
+        if prior:
+            gray_issues.append({**issue, "prior": prior})
+        else:
+            hard_issues.append(issue)
 
-        if len(unannotated) > fail_threshold:
-            print(f"❌ 注釈なし専門用語が {fail_threshold} 件を超えています ({len(unannotated)} 件) → FAIL")
-            failed = True
-        elif len(unannotated) > warn_threshold:
-            print(f"⚠️  注釈なし専門用語が {warn_threshold} 件を超えています ({len(unannotated)} 件) → WARNING")
-    else:
+    if gray_issues:
+        print(f"⚠️  既出用語の再出 (グレー): {len(gray_issues)} 件 → WARNING")
+        for issue in gray_issues:
+            print(f"   Line {issue['line']:4d}: 「{issue['term']}」 — このファイルに注釈はないが {issue['prior']} で注釈済み")
+    if hard_issues:
+        print(f"📚 注釈なし初出専門用語: {len(hard_issues)} 件")
+        for issue in hard_issues:
+            print(f"   Line {issue['line']:4d}: 「{issue['term']}」 — カリキュラム内のどのファイルでも未注釈")
+        print(f"❌ カリキュラム内未注釈の専門用語があります ({len(hard_issues)} 件) → FAIL")
+        failed = True
+    if not gray_issues and not hard_issues:
         print("✅ 専門用語: 全ての初出用語に注釈あり（またはリストにない用語のみ）")
 
     # 2. 禁止表現チェック

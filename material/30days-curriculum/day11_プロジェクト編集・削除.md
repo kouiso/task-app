@@ -105,7 +105,7 @@ src/
 
 **ゴール**: プロジェクトの更新・削除・アーカイブ・アーカイブ解除の4つの手続きを追加します。`api.project.update` / `api.project.delete` / `api.project.archive` / `api.project.unarchive` を呼べる状態にします。
 
-#### 0-1. update — 送られてきた項目だけ更新する
+#### 0-1. update（送られてきた項目だけ更新する）
 
 今日書く `update` / `delete` / `archive` / `unarchive` は、どれも「自分にその操作をする権限があるか」を確認してから実行します。この確認をまとめて行うのが `assertMemberPermission` という関数です。渡されたメンバー情報と権限名（`canManageMembers` 等）を照合し、権限が無ければその場でエラーを発生させます。まず `project.ts` の import 群に追加します。
 
@@ -219,7 +219,7 @@ const projectUpdateSchema = z.object({
 
 `include`（関連データを一緒に取る指定）は `getAll` / `create` と同じ形にしています。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
 
-#### 0-2. delete — ここが一番のヤマ場、削除だけは OWNER 限定
+#### 0-2. delete（ここが一番のヤマ場、削除だけは OWNER 限定）
 
 `update` の下に `delete` を追加します。まずは `update` と同じく対象を探すところからです。
 
@@ -269,7 +269,7 @@ const projectUpdateSchema = z.object({
 
 理由はコードのコメントの通りです。`canDelete` という権限名はタスク削除にも使われていて、ADMIN 権限にも与えられています。それをそのまま使うと、プロジェクト自体の削除まで ADMIN に許可されてしまいます。プロジェクトを消す操作はメンバー管理より重いので、共通の権限チェックに乗せず、あえてここだけ独自のチェックを書いています。
 
-#### 0-3. archive / unarchive — 同じ処理をヘルパー関数にまとめる
+#### 0-3. archive / unarchive（同じ処理をヘルパー関数にまとめる）
 
 アーカイブとアーカイブ解除は「`isArchived` を true にするか false にするか」の違いしかありません。同じ処理を2回書かずに、共通のヘルパー関数にまとめます。`project.ts` の `projectRouter` 定義の少し上、`projectMemberSchema` の下に追加します。
 
@@ -1037,7 +1037,7 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — 編集フォームの optional な値は `?.` と `??` で整える
+### Pro パターンで書こう（編集フォームの optional な値は `?.` と `??` で整える）
 
 ここまでで動くコードは書けました。でもプロの現場では、もう一段上の書き方をします。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。

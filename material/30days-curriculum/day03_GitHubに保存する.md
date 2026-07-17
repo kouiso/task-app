@@ -363,14 +363,16 @@ Windows で WSL2（Ubuntu）を使っている場合は、[GitHub CLI 公式の 
 gh auth login
 ```
 
-画面ではいくつか続けて質問されます。次の順で選ぶと分かりやすいです。
+画面ではいくつか続けて質問されます。次の順で選ぶと分かりやすいです（文言は gh 2.89 時点のもので、バージョンによって少し変わることがあります。似た意味の質問に同じ趣旨で答えれば大丈夫です）。
 
-- `What account do you want to log into?` → `GitHub.com`
-- `What is your preferred protocol for Git operations?` → `HTTPS`
+- `Where do you use GitHub?` → `GitHub.com`
+- `What is your preferred protocol for Git operations on this host?` → `HTTPS`
 - `Authenticate Git with your GitHub credentials?` → `Yes`
 - `How would you like to authenticate GitHub CLI?` → `Login with a web browser`
 
-最後の項目を選ぶと、ターミナルに8桁のコード（例: `ABCD-1234`）が表示されます。Enter を押すとブラウザが開くので、そのコードを貼り付けて認証を許可します。ターミナルに戻って認証完了の表示が出れば成功です。3番目の `Authenticate Git with your GitHub credentials?` を `Yes` にしておくと、このあとの `git push` もこの認証をそのまま使えるので、パスワードを聞かれずに済みます。
+最後の項目を選ぶと、ターミナルにワンタイムコード（例: `ABCD-1234`）が表示されます。Enter を押すとブラウザが開くので、そのコードを貼り付けて認証を許可します。ターミナルに戻って認証完了の表示が出れば成功です。
+
+3番目の `Authenticate Git with your GitHub credentials?` は `Yes` にしておきましょう。このあとの `git push` でも同じ認証をそのまま使えるので、パスワードを聞かれずに済みます。
 
 ### 認証できたか確認する
 
@@ -501,7 +503,9 @@ git add .env.example docker-compose.yml
 git status --short
 ```
 
-環境によっては、上のうち一部のファイルがまだ無いこともあります。無いファイルを指定すると `git add` は `did not match any files` と表示しますが、これはエラーではなく「そのファイルは無い」という知らせです。その行のファイル名を外して先へ進んで問題ありません。今日の目的である `README.md` と `src` が add できていれば大丈夫です。
+環境によっては、上のうち一部のファイルがまだ無いこともあります。存在しないファイルを指定すると `git add` は `fatal: pathspec '...' did not match any files` と表示して、そのコマンド全体が失敗します。注意したいのは、同じ行に書いた実在するファイルも一緒に add されない点です。たとえば `git add README.md missing-file` のように実在しないファイルを混ぜると、`README.md` 側もステージングされません。
+
+`fatal` が出たら、その行から無いファイル名だけを外して同じコマンドをもう一度実行してください。そのあと `git status --short` で、対象ファイルの行頭に `A` や `M` が付いた（ステージングされた）ことを確認します。今日の目的である `README.md` と `src` がステージングできていれば大丈夫です。
 
 ### ここで見たい表示
 
@@ -534,7 +538,7 @@ git log --oneline --decorate -3
 
 ![コミット成功後の状態](./screenshots/day03-commit-success.png)
 
-## Pro パターンで書こう — GitHub に送る日は `git add .` ではなく、残したいファイルを選ぶ
+## Pro パターンで書こう（GitHub に送る日は `git add .` ではなく、残したいファイルを選ぶ）
 
 ここまでで GitHub に送る流れは作れました。ただし現場では、もう一段ていねいなやり方をします。
 
