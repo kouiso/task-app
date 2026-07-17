@@ -16,9 +16,24 @@ fi
 
 # 引数を展開: ディレクトリなら配下の教材md（day/appendix）を収集、ファイルはそのまま追加
 # 目次・ロードマップ等のナビ文書は日次教材の構造チェック（Agenda/表/スクショ）の
-# 対象外なので、ディレクトリ一括では day/appendix のみを見る（CIのGate2と同じスコープ）
+# 対象外なので、ディレクトリ一括では day/appendix のみを見る。
+# 注: CIのGate2は dayXX_*.md のみを対象にしており、ここ（day+appendix）より狭い。
+# 命名規則を外れた md（day1_x.md 等）が無検査のまま通過しないよう、
+# 許可パターン外のファイルが存在したら FAIL するガードを併設する。
 for arg in "$@"; do
   if [ -d "$arg" ]; then
+    # ガード: 許可パターン {day[0-9][0-9]_*, appendix_*, 00_*, 00-1_*} 以外の md を検出
+    UNEXPECTED=$(find "$arg" -type f -name "*.md" \
+      ! -name "day[0-9][0-9]_*.md" \
+      ! -name "appendix_*.md" \
+      ! -name "00_*.md" \
+      ! -name "00-1_*.md" | sort)
+    if [ -n "$UNEXPECTED" ]; then
+      echo "❌ エラー: 命名規則外の md ファイルを検出しました（品質ゲートの対象外になるため許可できません）:"
+      echo "$UNEXPECTED"
+      echo "   day ファイルは day[0-9][0-9]_*.md 形式に、付録は appendix_*.md 形式にリネームしてください"
+      exit 1
+    fi
     while IFS= read -r f; do
       FILES+=("$f")
     done < <(find "$arg" -type f \( -name "day[0-9][0-9]_*.md" -o -name "appendix_*.md" \) | sort)

@@ -451,7 +451,7 @@ const {
 
 > `'all'` の場合に `undefined` を渡すと「この条件は使わない」という意味になり、サーバーは全件を返します。フィルターの選択が変わるたびにReactが `useQuery` を再実行し、画面が自動更新されます。
 
-![フィルタリング後のタスク一覧](./screenshots/task-list.png)
+![フィルタリング後のタスク一覧（ステータスを完了に絞った状態）](./screenshots/task-list-filtered.png)
 
 ---
 

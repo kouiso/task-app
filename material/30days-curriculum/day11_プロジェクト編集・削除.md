@@ -1018,7 +1018,7 @@ PORT=3001 npm run dev
 
 > スクリーンショット: アーカイブ表示を切り替えた後の一覧画面
 
-> ![アーカイブ表示を切り替えた後の一覧画面](./screenshots/project-list.png)
+> ![アーカイブ表示を切り替えた後の一覧画面（アーカイブ済みプロジェクトが表示される）](./screenshots/archived-project-list.png)
 
 **確認ポイント**:
 - 編集で既存データが反映される

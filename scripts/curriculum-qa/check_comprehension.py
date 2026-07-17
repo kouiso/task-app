@@ -31,14 +31,20 @@ TECH_TERMS = [
     "外部キー", "トランザクション", "インデックス", "リレーション",
 ]
 
-# 注釈パターン: （説明）「説明」: 説明 が直後にある
+# 注釈パターン: （説明）「説明」 Xとは、... が用語の近くにある
 ANNOTATION_PATTERNS = [
     r'[（(][^）)]{3,}[）)]',      # （...）
     r'「[^」]{3,}」',              # 「...」
-    r'：[^\n]{5,}',               # ：説明
-    r':\s*[A-Za-z\s]{5,}',       # : explanation
-    r'[とはとは]、[^\n。]{5,}',    # Xとは、...
-    r'[とは][^\n。]{5,}[。]',     # Xとは...。
+    r'とは、[^\n。]{5,}',          # Xとは、...
+    r'とは[^\n。]{5,}[。]',        # Xとは...。
+]
+
+# コロン注釈パターン: 「用語：説明」形式。用語の直後(短距離)にコロンが
+# 来る場合のみ注釈とみなす。ウィンドウ全体に適用すると表や箇条書きの
+# コロンを誤検出して閾値0ゲートが無効化されるため、直後限定にする。
+COLON_ANNOTATION_PATTERNS = [
+    r'^[^\n]{0,15}：[^\n]{5,}',      # 用語：説明（全角）
+    r'^[^\n]{0,15}:\s*[^\n]{5,}',    # 用語: 説明（半角）
 ]
 
 FORBIDDEN_PHRASES = [
@@ -74,12 +80,20 @@ def is_in_code_block(lines: list[str], line_idx: int) -> bool:
     return False
 
 
-def has_annotation_nearby(content: str, term_start: int, window: int = 120) -> bool:
-    """用語の前後window文字に注釈があるか"""
-    start = max(0, term_start - 20)
-    end = min(len(content), term_start + len(content[term_start:term_start+50]) + window)
-    context = content[start:end]
-    return any(re.search(p, context) for p in ANNOTATION_PATTERNS)
+def has_annotation_nearby(content: str, term_start: int, term_len: int) -> bool:
+    """用語の直前20文字＋直後80文字に注釈があるか
+
+    旧実装は用語の後ろ約170文字まで見ており、離れた場所の括弧や
+    コロンまで注釈扱いしていた。誤検出を減らすため後方は80文字に絞る。
+    """
+    before = content[max(0, term_start - 20):term_start]
+    term_end = term_start + term_len
+    after = content[term_end:term_end + 80]
+    context = before + content[term_start:term_end] + after
+    if any(re.search(p, context) for p in ANNOTATION_PATTERNS):
+        return True
+    # コロン形式は「用語の直後15文字以内にコロン」の場合のみ注釈とみなす
+    return any(re.search(p, after) for p in COLON_ANNOTATION_PATTERNS)
 
 
 def check_unannotated_terms(content: str, lines: list[str]) -> list[dict]:
@@ -98,7 +112,7 @@ def check_unannotated_terms(content: str, lines: list[str]) -> list[dict]:
                 continue  # コードブロック内はスキップ
 
             seen.add(term)
-            if not has_annotation_nearby(content, m.start()):
+            if not has_annotation_nearby(content, m.start(), len(term)):
                 issues.append({
                     "term": term,
                     "line": line_idx + 1,
@@ -130,18 +144,41 @@ def file_annotates_term(path: Path, term: str) -> bool:
         line_idx = content[:m.start()].count('\n')
         if is_in_code_block(lines, line_idx):
             continue
-        return has_annotation_nearby(content, m.start())
+        return has_annotation_nearby(content, m.start(), len(term))
     return False
 
 
+def is_teaching_file(path: Path) -> bool:
+    """「先に教えた」とみなせる教材ファイルか (dayXX / appendix)。
+
+    目次(00_)やロードマップ(00-1_)の箇条書きは教えたことにならないため除外。
+    """
+    return bool(re.match(r'day\d+_', path.name)) or path.name.startswith("appendix")
+
+
 def find_prior_annotation(target: str, term: str) -> str | None:
-    """カリキュラム上で target より前のファイルに注釈済み初出があれば、そのファイル名を返す"""
+    """カリキュラム上で target より前の教材ファイルに注釈済み初出があれば、そのファイル名を返す"""
     target_path = Path(target)
     target_key = curriculum_order_key(target_path)
     siblings = sorted(target_path.parent.glob("*.md"), key=curriculum_order_key)
     for sib in siblings:
         if curriculum_order_key(sib) >= target_key:
             break
+        if not is_teaching_file(sib):
+            continue
+        if file_annotates_term(sib, term):
+            return sib.name
+    return None
+
+
+def find_later_annotation(target: str, term: str) -> str | None:
+    """カリキュラム上で target より後のファイルに注釈があれば、そのファイル名を返す"""
+    target_path = Path(target)
+    target_key = curriculum_order_key(target_path)
+    siblings = sorted(target_path.parent.glob("*.md"), key=curriculum_order_key)
+    for sib in siblings:
+        if curriculum_order_key(sib) <= target_key:
+            continue
         if file_annotates_term(sib, term):
             return sib.name
     return None
@@ -177,7 +214,8 @@ def check_confirmation_points(content: str) -> dict:
         has_checkpoint = bool(
             re.search(r'✅', section) or
             re.search(r'- \[[ x]\]', section) or
-            re.search(r'確認[：:]', section)
+            re.search(r'確認[：:]', section) or
+            re.search(r'\*\*確認ポイント\*\*', section)
         )
         if not has_checkpoint:
             without_checkpoints += 1
@@ -225,7 +263,11 @@ def main() -> int:
     if hard_issues:
         print(f"📚 注釈なし初出専門用語: {len(hard_issues)} 件")
         for issue in hard_issues:
-            print(f"   Line {issue['line']:4d}: 「{issue['term']}」 — カリキュラム内のどのファイルでも未注釈")
+            later = find_later_annotation(target, issue["term"])
+            if later:
+                print(f"   Line {issue['line']:4d}: 「{issue['term']}」 — {Path(target).name} より後の {later} にしか注釈がない（読者は先に出会う）")
+            else:
+                print(f"   Line {issue['line']:4d}: 「{issue['term']}」 — カリキュラム内のどのファイルにも注釈がない")
         print(f"❌ カリキュラム内未注釈の専門用語があります ({len(hard_issues)} 件) → FAIL")
         failed = True
     if not gray_issues and not hard_issues:

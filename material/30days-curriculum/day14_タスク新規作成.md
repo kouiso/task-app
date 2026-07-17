@@ -938,7 +938,7 @@ const handleSubmit =
 
 スクリーンショット: タスク作成後、一覧画面に新しいタスクが表示されている画面。
 
-![タスク作成後、一覧画面に新しいタスクが表示されている](./screenshots/task-list.png)
+![タスク作成後、一覧の先頭に新しいタスクが表示されている](./screenshots/task-list-after-create.png)
 #### createMutationに渡すパラメータ
 
 | パラメータ | フロントから送信 | 説明 |

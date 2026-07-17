@@ -48,7 +48,7 @@ flowchart TD
 
 > **ローカル DB と本番 DB の違い**:
 > Docker の PostgreSQL はローカル開発専用です。
-> 本番では Vercel Postgres や Supabase などの
+> 本番では Vercel Postgres や Supabase（PostgreSQL をクラウド上で提供してくれるサービス。読み方: スーパベース）などの
 > マネージド DB を使います。Vercel に設定する
 > `DATABASE_URL` は本番 DB の接続文字列です。
 
@@ -407,9 +407,9 @@ open https://your-app-name.vercel.app
 > API レスポンスが 200 であることも
 > チェックします。
 
-【スクリーンショット】本番環境のダッシュボード画面。
+【スクリーンショット】完成版のダッシュボード画面。
 
-![本番環境のダッシュボード画面](./screenshots/dashboard.png)
+![完成版のダッシュボード画面](./screenshots/dashboard.png)
 ---
 
 ### Step 6: 30日間の学習サマリー（7分）

@@ -590,7 +590,7 @@ const handleCreate = () => {
 
 スクリーンショット: 編集後のタスク一覧画面。
 
-![編集後のタスク一覧画面](./screenshots/task-list.png)
+![編集後のタスク一覧（先頭のタスクの優先度が高に変わっている）](./screenshots/task-list-after-edit.png)
 ---
 
 ### Step 11: 動作確認（3分）

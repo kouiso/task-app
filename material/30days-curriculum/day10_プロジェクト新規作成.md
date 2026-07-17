@@ -225,7 +225,7 @@ import { DEFAULT_PROJECT_COLOR }
 - コードの内容を確認した
 - 全てのimportが確認できた
 
-続いて、Props の型定義を確認します。
+続いて、Props（親コンポーネントから子コンポーネントへ渡す値。読み方: プロップス）の型定義を確認します。
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -688,7 +688,7 @@ const handleSubmit = (
 
 【スクリーンショット】作成後の一覧に追加されたプロジェクト。
 
-![作成後に一覧に追加されたプロジェクト](./screenshots/project-list.png)
+![作成後に一覧へ追加されたポートフォリオサイトのカード](./screenshots/project-list-after-create.png)
 ---
 
 ### Step 8: 動作確認（3分）

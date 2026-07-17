@@ -537,7 +537,7 @@ export const projectMemberRoleSchema =
   z.nativeEnum(PROJECT_MEMBER_ROLE);
 ```
 
-Prisma の `select` を毎回書くのは面倒なので、共通化しておきます。
+Prisma（TypeScript からデータベースを操作するための道具。読み方: プリズマ）の `select` を毎回書くのは面倒なので、共通化しておきます。
 `as const` で型を絞ることで、返り値の型が正確になります。
 
 #### 3-1. auth.ts のインポートとバリデーション

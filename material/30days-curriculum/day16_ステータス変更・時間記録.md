@@ -595,7 +595,7 @@ Reactは複数の要素を並べて返せないので、
 
 最後に、`page.tsx` から `TaskCard` へ合計作業時間と成功コールバックを渡します。これがないと、記録しても一覧の合計が更新されず、Step 4 の「合計作業時間が増える」確認まで到達できません。
 
-まず、記録成功後に一覧を取り直すハンドラーを追加します。`useCallback` を使うので、`react` からのインポートに `useCallback` を足しておきます。
+まず、記録成功後に一覧を取り直すハンドラーを追加します。`useCallback`（同じ関数を毎回作り直さないように覚えておく React の機能）を使うので、`react` からのインポートに `useCallback` を足しておきます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
