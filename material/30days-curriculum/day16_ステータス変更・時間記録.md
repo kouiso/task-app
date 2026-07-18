@@ -278,24 +278,39 @@ Props（親から受け取る値）には
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
+// 閉じる処理をまとめる
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+```
+
+ダイアログを閉じる経路は複数あります。記録の成功後、
+キャンセルボタン、右上の×ボタン、背景クリックのどれでも閉じます。
+リセットと `onClose` を `handleClose` に1つへまとめると、
+どの経路で閉じても入力欄が空に戻ります。まとめずに `onClose`
+だけを呼ぶと、入力したまま閉じたとき値が残り、次に開いたときに
+古い入力が見えてしまいます。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
 // mutation定義
   const addTimeMutation =
     api.task.addTime.useMutation({
       onSuccess: () => {
         onSuccess?.();
-        reset();
-        onClose();
+        handleClose();
       },
     });
 ```
 
-`addTime` の成功後にやることは3つです。
+`addTime` の成功後にやることは2つです。
 まず `onSuccess?.()` で親のコールバックを呼びます。
 この呼び出しが親側の再取得（`getAll.invalidate`）を
 引き起こし、増えたあとの合計作業時間が
 カードへ流れて表示が更新されます。
-続いて `reset()` で入力欄を空に戻し、
-`onClose()` でダイアログを閉じます。
+続いて `handleClose()` で入力欄を空に戻してから
+ダイアログを閉じます。
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
@@ -340,7 +355,7 @@ Props（親から受け取る値）には
 // Dialog UIの前半部分
   return (
     <Dialog open={open}
-      onOpenChange={onClose}>
+      onOpenChange={handleClose}>
       <DialogContent className="space-y-4">
         <DialogHeader>
           <DialogTitle>
@@ -415,7 +430,7 @@ Props（親から受け取る値）には
 // フッターボタンとダイアログ終了
         <DialogFooter>
           <Button variant="outline"
-            onClick={onClose}>
+            onClick={handleClose}>
             キャンセル
           </Button>
           <Button
