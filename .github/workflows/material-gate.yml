@@ -5,6 +5,8 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - 'material/**/*.md'
+      # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
+      - 'material/**/*.png'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
       # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを
@@ -29,6 +31,8 @@ on:
       - main
     paths:
       - 'material/**/*.md'
+      # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
+      - 'material/**/*.png'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
       # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを

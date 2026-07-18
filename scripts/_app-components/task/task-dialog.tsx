@@ -299,6 +299,8 @@ export function TaskDialog({
                     <Select
                       value={field.value || 'unassigned'}
                       onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)}
+                      // 読み込み中は前プロジェクトの fallback が並ぶため、確定するまで操作させない
+                      disabled={isMembersPending || isMembersError}
                     >
                       <SelectTrigger id="assignee" aria-label="担当者を選択">
                         <SelectValue placeholder="担当者を選択" />

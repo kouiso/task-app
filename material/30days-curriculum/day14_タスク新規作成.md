@@ -192,7 +192,7 @@ const taskFormSchema = z.object({
     'プロジェクトは必須です'),
   assigneeId: z.string().optional(),
   expectedUpdatedAt:
-    z.string().optional(),
+    z.string().datetime().optional(),
 });
 
 type TaskFormValues =

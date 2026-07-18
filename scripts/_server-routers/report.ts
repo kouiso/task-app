@@ -208,11 +208,13 @@ export const reportRouter = createTRPCRouter({
       // 実カバー範囲が3週間+今日に縮んでいた（PR#285 レビュー指摘）。排他的上端を
       // 明日0時に固定した完全な7日バケット×weeks本にすることで、ラベル・週平均の
       // 分母と実際の集計範囲が一致し、範囲内タスクは必ずいずれかの週に入る。
+      // 日付ラベルは toISOString()（UTC）で出すため、バケット境界も UTC で刻む。
+      // ローカル時刻メソッドで刻むと、JST などのサーバーでラベルが1日ずれる。
       const rangeEnd = new Date(now);
-      rangeEnd.setHours(0, 0, 0, 0);
-      rangeEnd.setDate(rangeEnd.getDate() + 1);
+      rangeEnd.setUTCHours(0, 0, 0, 0);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
       const startDate = new Date(rangeEnd);
-      startDate.setDate(startDate.getDate() - input.weeks * 7);
+      startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
 
       const where = {
         completedAt: { gte: startDate, lte: now },
@@ -232,9 +234,9 @@ export const reportRouter = createTRPCRouter({
 
       const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
         const weekStart = new Date(startDate);
-        weekStart.setDate(weekStart.getDate() + i * 7);
+        weekStart.setUTCDate(weekStart.getUTCDate() + i * 7);
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
+        weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
         const weekTasks = tasks.filter(
           (task) => task.completedAt && task.completedAt >= weekStart && task.completedAt < weekEnd,
