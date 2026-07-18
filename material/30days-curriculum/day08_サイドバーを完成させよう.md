@@ -84,6 +84,7 @@ flowchart TD
 ---
 
 ### Step 1: providers.tsx を作る（tRPC クライアント設定・8分）
+
 **ゴール**: フロントエンドから tRPC API を呼べるようにします。
 
 Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
@@ -176,6 +177,7 @@ export default function RootLayout({
 ---
 
 ### Step 3: AppLayout を作る（サイドバーの骨格・15分）
+
 **ゴール**: サイドバー + メインコンテンツのレイアウトコンポーネントを作ります。
 
 ここが今日のメイン。認証チェック、ナビゲーション、ログアウトを 1 つのレイアウトに組み込みます。
@@ -605,6 +607,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 これは今日のスコープでは正しいですが、プロの現場ではもう一段上を狙います。
 
 ### Before（今日書いたコード・動くけど改善の余地あり）
+
 ```tsx
 // app-layout.tsx 全体が 'use client'
 // → ナビゲーションリンク（静的）まで Client Component になる

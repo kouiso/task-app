@@ -93,7 +93,7 @@ flowchart TD
 > `NODE_ENV` は Vercel が自動で
 > `production` に設定するため、
 > 手動設定は不要です。
-
+>
 > 本番用の `DATABASE_URL` は、クラウド DB
 > サービスで用意します。Vercel なら、管理画面で
 > 対象プロジェクトを開きます。Storage タブから
@@ -154,12 +154,12 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 > ホスト側ポートです。既に使われている場合は、
 > `_DOCKER_COMPOSE_HOST_PORT_DB` と `DATABASE_URL` の
 > ポート番号を同じ値に変更します。
-
+>
 > 本番では `.env` ファイルは使いません。
 > Vercel のダッシュボードで環境変数を
 > 直接設定します。コードに秘密値を
 > 含めないのがセキュリティの基本です。
-
+>
 > **ローカルで `npm run build` を実行する前の準備**:
 > このプロジェクトは `prisma.config.ts` と
 > `package.json` の `build` / `vercel-build` /
@@ -377,6 +377,7 @@ open https://your-app-name.vercel.app
 【スクリーンショット】本番環境のログイン画面。
 
 ![本番環境のログイン画面](./screenshots/login.png)
+
 #### 本番環境チェックリスト
 
 | 機能 | 確認内容 | 結果 |
@@ -410,6 +411,7 @@ open https://your-app-name.vercel.app
 【スクリーンショット】完成版のダッシュボード画面。
 
 ![完成版のダッシュボード画面](./screenshots/dashboard.png)
+
 ---
 
 ### Step 6: 30日間の学習サマリー（7分）
@@ -560,7 +562,7 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ### Pro パターンで書こう（完成版の振り返り画面は Server Component を標準にする）
 
-ここまでで動くコードは書けました。でもプロの現場では、もう一段上の書き方をします。
+振り返り画面は動きますが、対話が必要なのはコピーボタンだけなのに、ページ全体を Client Component にしています。プロの現場では、Server Component を標準にして対話部分だけを切り出します。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（動くけど、プロは書かない）

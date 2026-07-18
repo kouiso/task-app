@@ -203,8 +203,11 @@ export const reportRouter = createTRPCRouter({
 
       const targetUserId = input.userId ?? ctx.session.userId;
       const now = new Date();
+      // 検索範囲は最初の週バケットの開始日に揃える（weeks*7 日前まで遡ると
+      // バケットに入らない 1 週間分が合計値だけに混ざってグラフと食い違う）。
+      // 最終週は「今日を含む進行中の週」で、weekEnd が未来になるのは意図した動作。
       const startDate = new Date(now);
-      startDate.setDate(startDate.getDate() - input.weeks * 7);
+      startDate.setDate(startDate.getDate() - (input.weeks - 1) * 7);
       startDate.setHours(0, 0, 0, 0);
 
       const where = {

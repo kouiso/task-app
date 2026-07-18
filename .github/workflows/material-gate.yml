@@ -131,16 +131,14 @@ jobs:
           npx textlint "material/**/*.md"
           echo "::endgroup::"
 
-      - name: Gate 2 — 品質チェック (check_quality.sh) — dayXX_*.md 全体
+      - name: Gate 2 — 品質チェック (check_quality.sh) — day/appendix 全体
         run: |
-          echo "::group::check_quality.sh — dayXX_*.md 全件（変更有無を問わない）"
-          # check_quality.sh は複数ファイルを一度に受け取れる（`for arg in "$@"`）ので
-          # 1ファイルずつ呼ばない。1ファイルずつ呼ぶとサマリーがファイル数だけ出て
-          # CIログが冗長になる（CodeRabbitレビュー指摘 PR#282。実測で145行削減）。
-          # ファイル名の空白対策として -print0 / xargs -0 を使う。
-          find material -type f -name 'day[0-9][0-9]_*.md' -print0 \
-            | sort -z \
-            | xargs -0 bash scripts/curriculum-qa/check_quality.sh
+          echo "::group::check_quality.sh — day/appendix 全件（変更有無を問わない）"
+          # ディレクトリモードで呼ぶ。理由は2つ（PR#285 CodeRabbitレビュー指摘）:
+          # 1. 命名規則外の md（day1_x.md 等）を検出するガードはディレクトリモードに
+          #    実装されており、find でファイルを渡す旧方式ではガードが一度も走らない。
+          # 2. スコープが day のみ → day+appendix に広がる（appendix も検査対象になる）。
+          bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/
           echo "::endgroup::"
 
       - name: Gate 2.5 — スクショmd5重複チェック — screenshots/ 全体

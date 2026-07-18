@@ -242,18 +242,13 @@ export const taskRouter = createTRPCRouter({
     const { id, expectedUpdatedAt, ...data } = input;
 
     const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
-    if (expectedUpdatedAt) {
-      const expectedDate = new Date(expectedUpdatedAt);
-      if (existingTask.updatedAt.getTime() !== expectedDate.getTime()) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message:
-            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
-        });
-      }
-    }
 
-    const updateData: Prisma.TaskUpdateInput = {};
+    // 楽観ロック: 事前に updatedAt を比較してから update する方式だと、
+    // 比較と更新の間に他の更新が入って後勝ちになる。updatedAt を WHERE 条件に
+    // 含めた条件付き更新（末尾の updateMany）で比較と更新を 1 回にまとめる。
+    // updateMany はネストした connect/disconnect を受け付けないため、
+    // 外部キーを直接書く Unchecked 型でデータを組み立てる。
+    const updateData: Prisma.TaskUncheckedUpdateManyInput = {};
     if (data.title !== undefined) {
       updateData.title = data.title;
     }
@@ -301,15 +296,15 @@ export const taskRouter = createTRPCRouter({
         },
       });
       assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
-      updateData.project = { connect: { id: targetProjectId } };
+      updateData.projectId = targetProjectId;
     }
 
     if (data.assigneeId !== undefined) {
       if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
+        updateData.assigneeId = null;
       } else {
         await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
+        updateData.assigneeId = data.assigneeId;
       }
     } else if (isProjectChanging && existingTask.assigneeId) {
       // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
@@ -323,13 +318,24 @@ export const taskRouter = createTRPCRouter({
         select: { id: true },
       });
       if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
+        updateData.assigneeId = null;
       }
     }
 
-    return await prisma.task.update({
-      where: { id },
+    const updated = await prisma.task.updateMany({
+      where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
       data: updateData,
+    });
+    if (updated.count === 0) {
+      // 0 件更新 = 読み込み後に他のユーザーが更新（または削除）済み
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
+      });
+    }
+
+    return await prisma.task.findUniqueOrThrow({
+      where: { id },
       include: {
         project: true,
         createdBy: {

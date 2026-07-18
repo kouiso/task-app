@@ -126,7 +126,7 @@ const { data: overview, isLoading } =
 ```
 
 > 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
-
+>
 > `useQuery`（データ取得のフック）は、サーバーから届いた値を `data` に、取得中かどうかを `isLoading` に入れてくれます。
 > 画面はこの2つを見て、表示を切り替えます。
 
@@ -375,6 +375,12 @@ import { api } from '@/trpc/react';
 - Recharts の6種類のコンポーネントをインポートした
 - `TASK_PRIORITY_COLORS` と `TASK_STATUS_COLORS` をインポートした
 
+> 今日初めて使う Recharts の部品を先に紹介します。
+> `CartesianGrid` はグラフ背景の目盛り線を引きます。
+> `XAxis` / `YAxis` は横軸と縦軸を描きます。
+> `Line` は折れ線グラフの線1本、`Bar` は棒グラフの1系列です。
+> どれも Step 6 で実際に配置します。
+
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
 // API呼び出しとローディング処理
@@ -440,7 +446,42 @@ export default function WeeklyReportPage() {
 | 2 | `<div className="space-y-6">` | 縦方向の余白 |
 | 3 | ヘッダー（h1 + Select） | タイトルと期間選択 |
 | 3 | `grid grid-cols-3` | 3枚のサマリーカード |
-| 3 | `grid grid-cols-2` | グラフ4枚 |
+| 3 | `grid grid-cols-2` | グラフ3枚 |
+
+#### ページの骨格を完成させる
+
+上の表を実際のコードにすると、次の骨格になります。
+`if (isLoading)` の直後に、この `return` を書きます。
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// ページの骨格（return から関数の閉じ括弧まで）
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center
+          justify-between">
+          <h1 className="text-3xl font-bold">
+            週次レポート
+          </h1>
+          {/* 週数選択の Select を置く */}
+        </div>
+        {/* Step 5: サマリーカード3枚 */}
+        {/* Step 6: グラフ3枚のグリッド */}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+最後の `}` は `WeeklyReportPage` 関数を閉じる括弧です。
+先ほど書いた週数選択の `Select` は、`h1` の隣にある
+コメントの行と置き換えます。Step 5 と Step 6 で作る
+カードとグラフも、対応するコメントの行と置き換えていきます。
+
+**確認ポイント**:
+- `return` の一番外側が `<AppLayout>` になっている
+- 関数を閉じる `}` まで書けている
 
 スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
 
@@ -530,7 +571,7 @@ export default function WeeklyReportPage() {
 - データがないときは `'-'` を表示している
 
 > 3枚のカードは1つの `reportData` から値を取り出し、合計・週平均・対象期間という3種類の見せ方にしています。
-> 対象期間の `format` には `{ locale: ja }`（日付表示の言語・地域設定）を渡し、`2026/07/16` のような日本語圏の表記にします。
+> 対象期間の `format` には `{ locale: ja }`（日付表示の言語・地域設定）を渡しています。`yyyy/MM/dd` のような数字だけの書式では並びは変わりませんが、月名や曜日を文字で出す書式に変えたとき、日本語表記になります。
 
 #### 週次レポートの表示項目
 
@@ -693,6 +734,9 @@ const statusData =
 - `stackId="status"` で積み上げ棒グラフになっている
 - 3つのステータスが色分けで表示される
 
+> `stackId` は今日初登場の指定です。同じ `stackId` を持つ
+> `Bar` 同士は、横に並ばず1本の棒として積み上がります。
+>
 > Day 22 で学んだ Recharts を
 > 週次レポートでも活用しています。
 > `LineChart` は推移の把握に、
@@ -734,9 +778,9 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう（週次レポートのデータ取得は Prisma include でまとめる）
+### Pro パターンで書こう（週次レポートのデータ取得は Prisma の select でまとめる）
 
-ここまでで動くコードは書けました。でもプロの現場では、もう一段上の書き方をします。
+週次レポートの取得は動きますが、タスク1件ごとにプロジェクトを取り直すと、30件で31回の問い合わせが走ります。プロの現場では、`select` のネストで問い合わせをまとめます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（動くけど、プロは書かない）
@@ -764,11 +808,11 @@ export async function fetchWeeklyReportTasks(
   const tasks = await prisma.task.findMany({
     where: {
       assigneeId: targetUserId,
-      completedAt: { gte: startDate, lte: endDate },
+      completedAt: { gte: startDate, lt: endDate },
     },
 ```
 
-> `gte`/`lte`（以上／以下のPrisma条件）で、`completedAt` が指定した期間内のタスクだけを絞り込みます。
+> `gte`/`lt`（以上／未満のPrisma条件）で、`completedAt` が指定した期間内のタスクだけを絞り込みます。終了側を `lt`（未満）にするのは、`endDate` ちょうどの瞬間を次の週に含めるためです。週の境界を「開始以上・終了未満」でそろえると、同じタスクが2つの週に二重で数えられません。
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
@@ -842,7 +886,7 @@ export async function fetchWeeklyReportTasks(
   return await prisma.task.findMany({
     where: {
       assigneeId: targetUserId,
-      completedAt: { gte: startDate, lte: endDate },
+      completedAt: { gte: startDate, lt: endDate },
     },
 ```
 
@@ -890,7 +934,7 @@ Prisma の `select` / `include` でまとめて取れないかを考えます。
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| テーブルが空 | projectStats が undefined | `projects?.map` で安全に処理 |
+| テーブルが空 | タスクやプロジェクトが0件、または `getOverview` の取得エラー | データを追加し、開発者ツールの Network タブでエラー有無を確認 |
 | 進捗率が NaN | タスク0件で割り算 | length > 0 チェック追加 |
 | 週次データが空 | completedAt 未設定 | シードデータを確認 |
 | 型エラーが出る | weeks が string | Number.parseInt で変換 |

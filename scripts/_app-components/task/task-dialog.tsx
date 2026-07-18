@@ -47,6 +47,9 @@ interface TaskDialogProps {
   onSubmit: (data: TaskFormData) => void;
   initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
+  // Day14/17 の教材コードが渡してくる取得済みメンバー一覧。
+  // プロジェクト別メンバーの取得が終わるまでの fallback として使う。
+  users?: Array<{ id: string; name: string | null; email: string }>;
 }
 
 export interface TaskFormData {
@@ -58,7 +61,8 @@ export interface TaskFormData {
   dueDate?: string;
   estimatedHours?: number;
   projectId: string;
-  assigneeId?: string;
+  // null は「担当者を外した」ことをサーバーに伝える明示値（undefined は変更なし扱い）
+  assigneeId?: string | null;
 }
 
 function buildTaskFormValues(
@@ -78,7 +82,14 @@ function buildTaskFormValues(
   };
 }
 
-export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: TaskDialogProps) {
+export function TaskDialog({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
+  projects,
+  users: fallbackUsers = [],
+}: TaskDialogProps) {
   const {
     register,
     handleSubmit,
@@ -96,7 +107,7 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     { projectId: selectedProjectId },
     { enabled: open && !!selectedProjectId },
   );
-  const users = projectMembers ?? [];
+  const users = projectMembers ?? fallbackUsers;
 
   useEffect(() => {
     if (!open) {
@@ -121,7 +132,11 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
       ...(data.description && { description: data.description }),
       ...(data.dueDate && { dueDate: data.dueDate }),
       ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
-      ...(data.assigneeId && { assigneeId: data.assigneeId }),
+      // 編集時に担当者を外した場合、undefined だと update API が「変更なし」と
+      // 解釈して旧担当者が残るため、明示的に null を送って解除する
+      ...(data.assigneeId
+        ? { assigneeId: data.assigneeId }
+        : data.id !== undefined && { assigneeId: null }),
     };
     onSubmit(submitData);
   };

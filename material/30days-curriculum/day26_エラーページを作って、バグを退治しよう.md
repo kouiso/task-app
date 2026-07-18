@@ -217,6 +217,7 @@ export default function ErrorPage({
 ---
 
 ### Step 3: バグA（Optional Chainingなし・7分）
+
 **ゴール**: `?.`（Optional Chaining）を使わないとどうなるか体験し、修正します。
 
 以下のバグコードを**教材内で確認**してください。実際のアプリでは`?.`が正しく使われていますが、もし`?.`を外すとどうなるかを理解しましょう。
@@ -307,6 +308,7 @@ function TaskCard(
 ---
 
 ### Step 4: バグB（useEffectの依存配列ミス・7分）
+
 **ゴール**: useEffectの依存配列を間違えると無限リクエストが発生することを理解し、修正方法を学びます。
 
 > task-app では tRPC の `useQuery` が
@@ -390,6 +392,7 @@ function TaskList() {
 ---
 
 ### Step 5: バグC（console.log残し・5分）
+
 **ゴール**: `console.log`の残りをBiome lintで検出し、修正します。
 
 ダッシュボードのコードにわざと`console.log`を追加してみましょう。

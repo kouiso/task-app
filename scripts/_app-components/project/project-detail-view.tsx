@@ -33,10 +33,12 @@ interface ProjectDetailViewProps {
   onBack: () => void;
   onAddMemberClick: () => void;
   onRemoveMember: (userId: string) => void;
-  onUpdateMemberRole: (userId: string, role: ProjectMemberRole) => void;
+  // Day11 時点の呼び出しは権限 props とロール変更を渡さないため optional にする。
+  // 未指定時は従来どおり表示し、最終的な権限判定はサーバー側で行う。
+  onUpdateMemberRole?: (userId: string, role: ProjectMemberRole) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
-  canManageMembers: boolean;
-  canArchive: boolean;
+  canManageMembers?: boolean;
+  canArchive?: boolean;
 }
 
 export function ProjectDetailView({
@@ -46,8 +48,8 @@ export function ProjectDetailView({
   onRemoveMember,
   onUpdateMemberRole,
   onArchive,
-  canManageMembers,
-  canArchive,
+  canManageMembers = true,
+  canArchive = true,
 }: ProjectDetailViewProps) {
   if (!projectDetail) {
     return (
@@ -155,7 +157,9 @@ export function ProjectDetailView({
                       <p className="font-medium">
                         {member.user?.name || member.user?.email || '不明'}
                       </p>
-                      {member.role === PROJECT_MEMBER_ROLE.OWNER || !canManageMembers ? (
+                      {member.role === PROJECT_MEMBER_ROLE.OWNER ||
+                      !canManageMembers ||
+                      !onUpdateMemberRole ? (
                         // オーナーは権限変更対象外。加えて、メンバー管理権限を持たないユーザーには
                         // 読み取り専用で表示する（操作してもバックエンドで弾かれるため誤操作を防ぐ）
                         <Badge variant="outline" className="text-xs">
@@ -168,7 +172,7 @@ export function ProjectDetailView({
                           value={member.role}
                           onValueChange={(value) => {
                             if (isProjectMemberRole(value)) {
-                              onUpdateMemberRole(member.userId, value);
+                              onUpdateMemberRole?.(member.userId, value);
                             }
                           }}
                         >

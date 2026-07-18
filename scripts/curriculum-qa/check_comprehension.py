@@ -31,21 +31,39 @@ TECH_TERMS = [
     "外部キー", "トランザクション", "インデックス", "リレーション",
 ]
 
-# 注釈パターン: （説明）「説明」 Xとは、... が用語の近くにある
-ANNOTATION_PATTERNS = [
-    r'[（(][^）)]{3,}[）)]',      # （...）
-    r'「[^」]{3,}」',              # 「...」
-    r'とは、[^\n。]{5,}',          # Xとは、...
-    r'とは[^\n。]{5,}[。]',        # Xとは...。
-]
+# 注釈判定は「用語そのものを含むパターン」でのみ成立させる。
+# 旧実装は用語の周辺ウィンドウに（...）や「...」があるだけで注釈扱いしており、
+# 「Next.js React ... を使います。私は昼食を食べました。」のような説明ゼロの文が
+# PASS していた（PR#285 レビュー指摘）。用語を正規表現に動的に埋め込むことで、
+# 注釈が必ずその用語に結び付いていることを保証する。
 
-# コロン注釈パターン: 「用語：説明」形式。用語の直後(短距離)にコロンが
-# 来る場合のみ注釈とみなす。ウィンドウ全体に適用すると表や箇条書きの
-# コロンを誤検出して閾値0ゲートが無効化されるため、直後限定にする。
-COLON_ANNOTATION_PATTERNS = [
-    r'^[^\n]{0,15}：[^\n]{5,}',      # 用語：説明（全角）
-    r'^[^\n]{0,15}:\s*[^\n]{5,}',    # 用語: 説明（半角）
-]
+
+def annotation_patterns_for(term: str) -> list[re.Pattern]:
+    """用語に結び付いた注釈だけを検出するパターン群を動的に生成する"""
+    t = re.escape(term)
+    # 閉じ記号のほか、`shadcn/ui` や `Tailwind CSS` のような短いASCII接尾辞まで許容
+    deco = r'[」』`＊*）)]{0,2}[A-Za-z0-9/._ -]{0,6}'
+    return [
+        # 用語（説明） / `用語`（説明） / shadcn/ui（説明）
+        re.compile(rf'{t}{deco}\s*[（(][^（）()\n]{{3,}}[）)]'),
+        # Markdownリンクの用語に注釈が続く形: [用語](URL)（説明）
+        re.compile(rf'\[{t}[^\]\n]{{0,12}}\]\([^)\n]+\)\s*[（(][^（）()\n]{{3,}}[）)]'),
+        # 用語集の形式: 見出しが用語で、直後の行に説明の地の文が続く
+        re.compile(rf'^#{{2,4}}\s*[`*]*{t}[^\n]{{0,12}}\n+[^\n#|`]{{5,}}', re.MULTILINE),
+        # 用語とは、説明
+        re.compile(rf'{t}{deco}\s*とは、?[^\n。]{{5,}}'),
+        # 「用語」は説明 / 「用語」とは説明
+        re.compile(rf'「{t}」[^\n。]{{0,8}}(?:は|とは)、?[^\n。]{{5,}}'),
+        # 行頭の 用語：説明
+        re.compile(rf'^[`*]*{t}[`*]*\s*[：:]\s*[^\n]{{3,}}', re.MULTILINE),
+        # 概念表の行（| 用語 | 読み方 | 役割 | 例え |）: 先頭セルが用語で始まり
+        # （`Tailwind CSS` や `shadcn/ui` のような短い接尾辞は許容）、
+        # 続きに中身のあるセルが2つ以上ある
+        re.compile(
+            rf'^\|\s*[`*]*{t}[^|\n]{{0,12}}\|(?:[^|\n]*\S[^|\n]*\|){{2,}}',
+            re.MULTILINE,
+        ),
+    ]
 
 FORBIDDEN_PHRASES = [
     "当然",
@@ -80,44 +98,48 @@ def is_in_code_block(lines: list[str], line_idx: int) -> bool:
     return False
 
 
-def has_annotation_nearby(content: str, term_start: int, term_len: int) -> bool:
-    """用語の直前20文字＋直後80文字に注釈があるか
+def code_block_lines(lines: list[str]) -> set[int]:
+    """コードブロックに含まれる行番号(0始まり)の集合を一度だけ計算する"""
+    in_code = False
+    result = set()
+    for i, line in enumerate(lines):
+        if line.strip().startswith("```"):
+            in_code = not in_code
+            result.add(i)
+            continue
+        if in_code:
+            result.add(i)
+    return result
 
-    旧実装は用語の後ろ約170文字まで見ており、離れた場所の括弧や
-    コロンまで注釈扱いしていた。誤検出を減らすため後方は80文字に絞る。
-    """
-    before = content[max(0, term_start - 20):term_start]
-    term_end = term_start + term_len
-    after = content[term_end:term_end + 80]
-    context = before + content[term_start:term_end] + after
-    if any(re.search(p, context) for p in ANNOTATION_PATTERNS):
-        return True
-    # コロン形式は「用語の直後15文字以内にコロン」の場合のみ注釈とみなす
-    return any(re.search(p, after) for p in COLON_ANNOTATION_PATTERNS)
+
+def term_annotated(content: str, code_lines: set[int], term: str) -> bool:
+    """地の文のどこかに、用語に結び付いた注釈があるか"""
+    for pat in annotation_patterns_for(term):
+        for m in pat.finditer(content):
+            line_idx = content[:m.start()].count('\n')
+            if line_idx not in code_lines:
+                return True
+    return False
 
 
 def check_unannotated_terms(content: str, lines: list[str]) -> list[dict]:
     """初出の専門用語で注釈がないものを列挙"""
     issues = []
-    seen = set()
+    code_lines = code_block_lines(lines)
 
     for term in TECH_TERMS:
         pattern = re.compile(re.escape(term))
         for m in pattern.finditer(content):
-            if term in seen:
-                break  # 初出のみ
-
             line_idx = content[:m.start()].count('\n')
-            if is_in_code_block(lines, line_idx):
+            if line_idx in code_lines:
                 continue  # コードブロック内はスキップ
 
-            seen.add(term)
-            if not has_annotation_nearby(content, m.start(), len(term)):
+            if not term_annotated(content, code_lines, term):
                 issues.append({
                     "term": term,
                     "line": line_idx + 1,
                 })
-            break  # 初出チェック済み
+            break  # 地の文の初出だけ見ればよい（注釈判定はファイル全体）
 
     return issues
 
@@ -133,19 +155,29 @@ def curriculum_order_key(path: Path) -> tuple[int, str]:
     return (0, name)
 
 
-def file_annotates_term(path: Path, term: str) -> bool:
-    """そのファイル内の地の文初出箇所に注釈があるか"""
+_FILE_CACHE: dict[Path, tuple[str, set[int]]] = {}
+
+
+def _load_file(path: Path) -> tuple[str, set[int]] | None:
+    """クロスファイル走査用にファイル内容とコード行集合をキャッシュする"""
+    if path in _FILE_CACHE:
+        return _FILE_CACHE[path]
     try:
         content = path.read_text(encoding="utf-8")
     except OSError:
+        return None
+    entry = (content, code_block_lines(content.splitlines()))
+    _FILE_CACHE[path] = entry
+    return entry
+
+
+def file_annotates_term(path: Path, term: str) -> bool:
+    """そのファイルの地の文に、用語に結び付いた注釈があるか"""
+    entry = _load_file(path)
+    if entry is None:
         return False
-    lines = content.splitlines()
-    for m in re.finditer(re.escape(term), content):
-        line_idx = content[:m.start()].count('\n')
-        if is_in_code_block(lines, line_idx):
-            continue
-        return has_annotation_nearby(content, m.start(), len(term))
-    return False
+    content, code_lines = entry
+    return term_annotated(content, code_lines, term)
 
 
 def is_teaching_file(path: Path) -> bool:

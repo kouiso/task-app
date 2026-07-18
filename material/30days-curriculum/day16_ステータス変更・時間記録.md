@@ -350,6 +350,14 @@ Props（親から受け取る値）には
             タスクに作業時間を記録します
           </DialogDescription>
         </DialogHeader>
+```
+
+続けて、時間の入力欄です。`DialogHeader` の
+閉じタグの直後に書きます。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 時間入力フィールドとエラー表示
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours">時間</Label>
@@ -357,6 +365,12 @@ Props（親から受け取る値）には
               inputMode="numeric"
               {...register('hours',
                 { valueAsNumber: true })} />
+            {errors.hours && (
+              <p className="text-sm
+                text-destructive">
+                {errors.hours.message}
+              </p>
+            )}
           </div>
 ```
 
@@ -367,6 +381,9 @@ Props（親から受け取る値）には
 スキーマの `z.number()` と型を合わせるためです。
 これを忘れると「数値のはずが文字列」になり
 検証で弾かれます。
+`errors.hours` の表示は次の分入力と同じ形です。
+これが無いと、時間欄だけ検証エラーが
+画面に出ず、利用者は何が悪いのか分かりません。
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
@@ -602,11 +619,10 @@ Reactは複数の要素を並べて返せないので、
 // 時間記録の成功後に一覧を取り直す（useCallback は react から import）
 const handleTimeLogSuccess = useCallback(() => {
   void utils.task.getAll.invalidate();
-  void utils.task.getAll.refetch();
 }, [utils.task.getAll]);
 ```
 
-`invalidate` でキャッシュを古い印にし、`refetch` で即座に取り直します。これで記録した分がその場で合計作業時間へ反映されます。
+`invalidate` はキャッシュに「古い」という印を付けます。画面で表示中のクエリは、この印を見つけると自動で取り直されます。そのため `refetch` を重ねて呼ぶ必要はなく、`invalidate` の1回だけで記録した分がその場で合計作業時間へ反映されます。
 
 次に、Day 15 で置いた `<TaskCard>` に2つの props を足します。
 
@@ -673,7 +689,7 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（ステータス遷移を配列で管理する）
 
-ここまでで動くコードは書けました。でもプロの現場では、もう一段上の書き方をします。
+ステータス変更は動きますが、遷移先とボタン文言が別々の `if` に分かれていて、対応関係を目で追う必要があります。プロの現場では、遷移ルールを配列データにまとめて1か所で管理します。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（動くけど、プロは書かない）

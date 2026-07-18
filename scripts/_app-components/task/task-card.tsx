@@ -37,6 +37,9 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
   onTimeLogSuccess?: (() => void) | undefined;
+  // 権限はサーバー側 (assertMemberPermission) が最終判定する。この props は
+  // 「権限が無いと分かっているボタンを出さない」ための表示制御で、
+  // 権限を扱わない序盤の教材 (Day13〜16) がそのまま動くように未指定時は表示する。
   canEdit?: boolean;
   canDelete?: boolean;
 }
@@ -193,16 +196,18 @@ export function TaskCard({
               <p className="text-sm text-muted-foreground">
                 合計作業時間: {formatMinutes(timeSpentMinutes)}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-8"
-                onClick={handleOpenTimeLog}
-                aria-label={`${title}の時間を記録`}
-              >
-                <Clock className="mr-2 h-3 w-3" />
-                時間記録
-              </Button>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8"
+                  onClick={handleOpenTimeLog}
+                  aria-label={`${title}の時間を記録`}
+                >
+                  <Clock className="mr-2 h-3 w-3" />
+                  時間記録
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>

@@ -224,7 +224,7 @@ export const commentRouter = createTRPCRouter({
 
 | メソッド | 種別 | 説明 |
 |---------|------|------|
-| `getByTaskId` | query | タスクのコメント一覧取得 |
+| `getByTaskId` | query | タスクのコメント一覧取得（配布コードに実装済み。本教材では手を加えません） |
 | `create` | mutation | コメント投稿 |
 | `update` | mutation | コメント編集（Day 19） |
 | `delete` | mutation | コメント削除（Day 19） |
@@ -379,8 +379,10 @@ import { Badge }
 - AvatarFallback で頭文字（先頭 1 文字を大文字化）を表示する
 
 > `comment.user.name` が空のときは email を、
-> それも無いときは `'?'` を頭文字に使います。
+> それも無いときは `'?'` を使います。
 > `||` を左から順にたどり、最初の使える値で止まります。
+> この後の表示名も同じ順でたどるので、
+> 頭文字と表示名が別々の値になることはありません。
 
 日時の表示には `date-fns` の `format` を使います。
 ユーザー名の横に `yyyy/MM/dd HH:mm` 形式で
@@ -407,7 +409,9 @@ import { ja } from 'date-fns/locale';
 // filepath: src/component/task/task-detail-dialog.tsx
 // .map ループ内: ユーザー名と投稿日時
 <span className="font-medium">
-  {comment.user.name || comment.user.email}
+  {comment.user.name
+    || comment.user.email
+    || '?'}
 </span>
 <span className="text-xs
   text-muted-foreground">
