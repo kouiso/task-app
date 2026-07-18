@@ -908,7 +908,7 @@ export default function HomePage() {
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
 ```
 
-「今日のひとこと」カードの続きです。途中にある `bg-primary px-4 py-4 text-primary-foreground` の箱は、主役の面色とその上に乗せる文字色をペアで使う実例になっています。この2つをセットで使うと、背景と文字のコントラストが崩れません。最後に `id="next-step"` のカードを開きました。これも、最初のブロックで書いたボタンの `href="#next-step"` から飛んでくるための目印です。
+「今日のひとこと」カードの続きです。途中にある `bg-primary px-4 py-4 text-primary-foreground` の箱は、主役の面色とその上に乗せる文字色をペアで使う実例になっています。この2つをセットで使うと、背景と文字の色の役割が揃い、読みやすい配色にしやすくなります。最後に `id="next-step"` のカードを開きました。これも、最初のブロックで書いたボタンの `href="#next-step"` から飛んでくるための目印です。
 
 **確認ポイント**: `id="next-step"` の `<article>` を開いたところまで書けていることを確認できたら、最後のブロックを続けて書きます。
 
