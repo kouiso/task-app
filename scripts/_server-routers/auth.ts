@@ -63,14 +63,6 @@ export const authRouter = createTRPCRouter({
         });
       }
 
-      if (!user.isActive) {
-        // 無効アカウントへの試行も先取り記録のままカウントに残す（列挙攻撃の抑止を優先）
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'このアカウントは無効化されています',
-        });
-      }
-
       const isPasswordValid = await bcrypt.compare(input.password, user.password);
 
       if (!isPasswordValid) {
@@ -81,14 +73,25 @@ export const authRouter = createTRPCRouter({
         });
       }
 
+      if (!user.isActive) {
+        // 無効判定はパスワード照合が通ったあとに行う。先に判定すると、正しいパスワードを
+        // 知らなくても「無効化されたアカウントが存在する」ことを列挙できてしまうため。
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
       const sessionUser: SessionUser = {
         id: user.id,
         email: user.email,
         role: user.role,
       };
 
-      await createSession(sessionUser);
+      // セッション発行の前に成功記録を確定させる。順序が逆だと、記録の失敗で 500 を返す一方で
+      // 認証済みセッションだけが残るため。
       await recordLoginSuccess(input.email, ip);
+      await createSession(sessionUser);
 
       return {
         user: {
