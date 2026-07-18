@@ -1200,7 +1200,7 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（検索データの取得）
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/search/page.tsx（参考）

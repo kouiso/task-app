@@ -562,10 +562,10 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ### Pro パターンで書こう（完成版の振り返り画面は Server Component を標準にする）
 
-振り返り画面は動きますが、対話が必要なのはコピーボタンだけなのに、ページ全体を Client Component にしています。プロの現場では、Server Component を標準にして対話部分だけを切り出します。
+静的な表示部分を Server Component にまとめると、JS バンドルサイズを小さくでき、初期表示も速くなります。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/graduation/page.tsx

@@ -703,7 +703,7 @@ npm run dev
 なのに最初から `"use client"` を付けると、
 必要のない JavaScript までブラウザへ送ることになります。
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```tsx
 'use client';

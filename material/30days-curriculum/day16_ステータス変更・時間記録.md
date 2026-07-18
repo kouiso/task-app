@@ -352,12 +352,10 @@ Props（親から受け取る値）には
         </DialogHeader>
 ```
 
-続けて、時間の入力欄です。`DialogHeader` の
-閉じタグの直後に書きます。
+続けて、時間の入力欄です。`src/component/task/time-log-dialog.tsx` の
+`DialogHeader` の閉じタグの直後に書きます。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 時間入力フィールドとエラー表示
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours">時間</Label>
@@ -689,10 +687,10 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（ステータス遷移を配列で管理する）
 
-ステータス変更は動きますが、遷移先とボタン文言が別々の `if` に分かれていて、対応関係を目で追う必要があります。プロの現場では、遷移ルールを配列データにまとめて1か所で管理します。
+遷移ルールを1か所にまとめると、ステータスの追加や文言の変更をする際の対応漏れを防げます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 import { Button } from '@/component/ui/button';

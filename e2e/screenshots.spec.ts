@@ -223,8 +223,9 @@ test.describe('Curriculum Screenshots', () => {
 
     test('project page - cards grid', async ({ page }) => {
       await navigateToPage(page, '/project');
+      // 完成形は day09-cards.png に一本化。以前は同一状態を day09-complete.png にも
+      // 撮っており、md5重複ゲート(material-gate)がスクショ更新のたびに落ちるため削除した。
       await screenshot(page, 'day09-cards.png');
-      await screenshot(page, 'day09-complete.png');
     });
 
     test('project page - empty state', async ({ page }) => {

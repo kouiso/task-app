@@ -541,7 +541,7 @@ git log --oneline --decorate -3
 
 GitHub に保存するときは、全部まとめて送るよりも、今日の変更として残したいファイルを自分で選ぶほうが確実です。理由を Before/After で見比べてみます。
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```bash
 git status --short

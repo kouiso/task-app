@@ -997,7 +997,7 @@ export default function DashboardPage() {
 ここまでで動くコードは書けました。本編で書いた `page.tsx` は、すでに After 側（トークンで色を組む書き方）になっています。
 この部分は写経しません。もし生の値で色や余白を直接書いていたら（Before）どう困るのか、読み比べてみましょう。なぜトークンで書くのかが見えてきます。
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```tsx
 // filepath: src/app/page.tsx（比較用の一部）

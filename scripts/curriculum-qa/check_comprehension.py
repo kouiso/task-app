@@ -112,12 +112,29 @@ def code_block_lines(lines: list[str]) -> set[int]:
     return result
 
 
-def term_annotated(content: str, code_lines: set[int], term: str) -> bool:
-    """地の文のどこかに、用語に結び付いた注釈があるか"""
+# 初出行からこの行数以内の注釈だけを有効とみなす。ファイル末尾の用語集で
+# 「1行目の未注釈初出」が免罪されるのを防ぎつつ（PR#285 レビュー指摘）、
+# 導入文の直後に概念表を置く既存教材の書き方は許容するための猶予幅。
+ANNOTATION_WINDOW_LINES = 50
+
+
+def term_annotated(
+    content: str,
+    code_lines: set[int],
+    term: str,
+    first_line: int | None = None,
+) -> bool:
+    """用語に結び付いた注釈が地の文にあるか (first_line指定時は初出近傍に限る)
+
+    first_line=None はクロスファイル走査用: 別ファイルでは「そのファイル内の
+    どこかで注釈済みか」だけが問題で、初出位置との距離は意味を持たないため。
+    """
     for pat in annotation_patterns_for(term):
         for m in pat.finditer(content):
             line_idx = content[:m.start()].count('\n')
-            if line_idx not in code_lines:
+            if line_idx in code_lines:
+                continue
+            if first_line is None or line_idx <= first_line + ANNOTATION_WINDOW_LINES:
                 return True
     return False
 
@@ -134,12 +151,12 @@ def check_unannotated_terms(content: str, lines: list[str]) -> list[dict]:
             if line_idx in code_lines:
                 continue  # コードブロック内はスキップ
 
-            if not term_annotated(content, code_lines, term):
+            if not term_annotated(content, code_lines, term, first_line=line_idx):
                 issues.append({
                     "term": term,
                     "line": line_idx + 1,
                 })
-            break  # 地の文の初出だけ見ればよい（注釈判定はファイル全体）
+            break  # 地の文の初出だけ見ればよい（注釈は初出近傍のみ有効）
 
     return issues
 

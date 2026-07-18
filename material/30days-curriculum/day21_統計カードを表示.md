@@ -650,7 +650,7 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（統計レイアウトの Server/Client 分離）
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/report/page.tsx（参考）

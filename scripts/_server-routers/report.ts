@@ -203,12 +203,16 @@ export const reportRouter = createTRPCRouter({
 
       const targetUserId = input.userId ?? ctx.session.userId;
       const now = new Date();
-      // 検索範囲は最初の週バケットの開始日に揃える（weeks*7 日前まで遡ると
-      // バケットに入らない 1 週間分が合計値だけに混ざってグラフと食い違う）。
-      // 最終週は「今日を含む進行中の週」で、weekEnd が未来になるのは意図した動作。
-      const startDate = new Date(now);
-      startDate.setDate(startDate.getDate() - (input.weeks - 1) * 7);
-      startDate.setHours(0, 0, 0, 0);
+      // 週バケットは「今日で終わる直近7日間」を最終週として7日刻みで遡る。
+      // 旧実装は最終週が「今日0時〜現在」だけの進行中バケットで、「4週間」表示の
+      // 実カバー範囲が3週間+今日に縮んでいた（PR#285 レビュー指摘）。排他的上端を
+      // 明日0時に固定した完全な7日バケット×weeks本にすることで、ラベル・週平均の
+      // 分母と実際の集計範囲が一致し、範囲内タスクは必ずいずれかの週に入る。
+      const rangeEnd = new Date(now);
+      rangeEnd.setHours(0, 0, 0, 0);
+      rangeEnd.setDate(rangeEnd.getDate() + 1);
+      const startDate = new Date(rangeEnd);
+      startDate.setDate(startDate.getDate() - input.weeks * 7);
 
       const where = {
         completedAt: { gte: startDate, lte: now },
@@ -227,9 +231,8 @@ export const reportRouter = createTRPCRouter({
       });
 
       const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
-        const weekStart = new Date(now);
-        weekStart.setDate(weekStart.getDate() - (input.weeks - i - 1) * 7);
-        weekStart.setHours(0, 0, 0, 0);
+        const weekStart = new Date(startDate);
+        weekStart.setDate(weekStart.getDate() + i * 7);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 7);
 

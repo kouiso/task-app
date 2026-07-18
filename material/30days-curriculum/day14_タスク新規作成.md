@@ -191,6 +191,8 @@ const taskFormSchema = z.object({
   projectId: z.string().min(1,
     'プロジェクトは必須です'),
   assigneeId: z.string().optional(),
+  expectedUpdatedAt:
+    z.string().optional(),
 });
 
 type TaskFormValues =
@@ -235,6 +237,7 @@ export interface TaskFormData {
   estimatedHours?: number;
   projectId: string;
   assigneeId?: string;
+  expectedUpdatedAt?: string;
 }
 ```
 
@@ -280,6 +283,7 @@ interface TaskDialogProps {
 | `estimatedHours` | `number?` | × | 見積時間 |
 | `projectId` | string | ○ | 所属プロジェクト |
 | `assigneeId` | `string?` | × | 担当者 |
+| `expectedUpdatedAt` | `string?` | × | 編集時のみ使用。詳しくは Day 15 |
 
 **確認ポイント**:
 - `TaskFormData` をエクスポートした
@@ -325,6 +329,8 @@ function buildTaskFormValues(
 
 ```typescript
 // filepath: 続き
+    expectedUpdatedAt:
+      initialData?.expectedUpdatedAt,
   };
 }
 
@@ -342,7 +348,12 @@ export function TaskDialog({
       buildTaskFormValues(
         initialData, projects),
   });
+```
 
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+
+```typescript
+// filepath: 続き
   useEffect(() => {
     reset(
       buildTaskFormValues(
@@ -418,6 +429,17 @@ const handleFormSubmit =
       ...(data.assigneeId
         && { assigneeId:
           data.assigneeId }),
+```
+
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+
+```typescript
+// filepath: 続き
+      ...(data.id !== undefined
+        && data.expectedUpdatedAt
+          !== undefined
+        && { expectedUpdatedAt:
+          data.expectedUpdatedAt }),
     };
     onSubmit(submitData);
   };
@@ -432,6 +454,8 @@ const handleFormSubmit =
 | `...(data.dueDate && { dueDate: ... })` | 期限を追加 | 何も追加しない |
 
 > Day 11 の `handleEdit` と同じパターンです。値がある場合だけプロパティを含め、空の場合はプロパティ自体を含めません。
+
+> `expectedUpdatedAt` は今日の新規作成では使いません。編集機能（Day 15）で「他の人が先に更新していないか」をサーバーが見分けるために送る値です。今は型と送信処理だけ用意しておきます。
 
 JSXのダイアログ構造とタイトル入力欄を書きます。
 
@@ -1010,10 +1034,10 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（タスクのステータス・優先度型を1か所に集約する）
 
-タスク作成フォームは動きますが、ステータスと優先度の値を型・zod・ラベル・初期値の4か所で別々に書いています。プロの現場では、この定義を1か所に集約して更新漏れを防ぎます。
+型・zod・ラベル・初期値の定義を1か所に集約すると、値を追加・変更するときの対応漏れを防げます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 import { z } from 'zod';

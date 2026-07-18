@@ -37,6 +37,7 @@ const taskFormSchema = z.object({
   estimatedHours: z.number().min(0).optional(),
   projectId: z.string().min(1, 'プロジェクトは必須です'),
   assigneeId: z.string().optional(),
+  expectedUpdatedAt: z.string().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -63,6 +64,9 @@ export interface TaskFormData {
   projectId: string;
   // null は「担当者を外した」ことをサーバーに伝える明示値（undefined は変更なし扱い）
   assigneeId?: string | null;
+  // 楽観ロック用。編集画面を開いた時点の updatedAt（ISO文字列）を保持し、
+  // update API に渡すことで「他の人が先に更新していたら CONFLICT」を検出できる
+  expectedUpdatedAt?: string;
 }
 
 function buildTaskFormValues(
@@ -79,6 +83,7 @@ function buildTaskFormValues(
     estimatedHours: initialData?.estimatedHours,
     projectId: initialData?.projectId ?? (projects[0]?.id || ''),
     assigneeId: initialData?.assigneeId ?? '',
+    expectedUpdatedAt: initialData?.expectedUpdatedAt,
   };
 }
 
@@ -103,11 +108,17 @@ export function TaskDialog({
     defaultValues: buildTaskFormValues(initialData, projects),
   });
   const selectedProjectId = watch('projectId');
-  const { data: projectMembers } = api.search.getMembersByProject.useQuery(
+  const {
+    data: projectMembers,
+    isPending: isMembersPending,
+    isError: isMembersError,
+  } = api.search.getMembersByProject.useQuery(
     { projectId: selectedProjectId },
     { enabled: open && !!selectedProjectId },
   );
-  const users = projectMembers ?? fallbackUsers;
+  // fallback は読み込み中に限定する。取得失敗時にまで使うと、プロジェクトに
+  // 属さないユーザーが候補に混ざり、エラーの発生も画面から見えなくなるため
+  const users = projectMembers ?? (isMembersPending ? fallbackUsers : []);
 
   useEffect(() => {
     if (!open) {
@@ -137,6 +148,9 @@ export function TaskDialog({
       ...(data.assigneeId
         ? { assigneeId: data.assigneeId }
         : data.id !== undefined && { assigneeId: null }),
+      // 編集時のみ送る。サーバー側は updatedAt が一致しないと CONFLICT を返す
+      ...(data.id !== undefined &&
+        data.expectedUpdatedAt !== undefined && { expectedUpdatedAt: data.expectedUpdatedAt }),
     };
     onSubmit(submitData);
   };
@@ -300,6 +314,11 @@ export function TaskDialog({
                     </Select>
                   )}
                 />
+                {isMembersError && (
+                  <p className="text-sm text-destructive">
+                    メンバー一覧の取得に失敗しました。再読み込みしてもう一度お試しください
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-2">

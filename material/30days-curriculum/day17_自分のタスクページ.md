@@ -917,10 +917,14 @@ const handleSubmit = (data: TaskFormData) => {
       estimatedHours:
         data.estimatedHours ?? null,
       assigneeId: data.assigneeId ?? null,
+      expectedUpdatedAt:
+        data.expectedUpdatedAt,
     });
   }
 };
 ```
+
+> `expectedUpdatedAt` は Day 15 と同じ楽観ロック用の値です。編集画面を開いてから保存するまでの間に、他の人が同じタスクを更新していたらサーバーが CONFLICT エラーで知らせてくれます。
 
 JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskDialog` を配置します。
 
@@ -1004,10 +1008,10 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（自分のタスクをステータス別にまとめる）
 
-ステータス別のグループ表示は動きますが、同じステータスの並び順を `switch` と配列の2か所で管理しています。プロの現場では、並び順の定義を1つにして、表示をそこから導きます。
+並び順の定義を1か所に集約すると、順序を変更するときに修正箇所が1点に絞られます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 import {

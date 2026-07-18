@@ -1256,10 +1256,10 @@ import { Alert, AlertDescription, AlertTitle }
 
 ### Pro パターンで書こう（ユーザー編集フォームは zod で境界バリデーションする）
 
-ユーザー編集フォームは動きますが、`as` で型を信じているだけなので `role: 'OWNER'` のような不正値も素通りします。プロの現場では、境界に zod を置いて実行時に検査します。
+入力境界に zod を置くと、`role` などのフィールドに不正値が混入したときに実行時エラーとして検出できます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx

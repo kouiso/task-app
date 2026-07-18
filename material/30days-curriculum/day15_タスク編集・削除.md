@@ -244,6 +244,11 @@ const handleEdit = (taskId: string) => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
+import toast from 'react-hot-toast';
+```
+
+```typescript
+// filepath: src/app/task/page.tsx
 // タスク更新用のmutation
 const updateMutation =
   api.task.update.useMutation({
@@ -258,8 +263,18 @@ const updateMutation =
       }
       setDialogOpen(false);
     },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
 ```
+
+> 更新は自分の入力ミス以外でも失敗します。たとえば
+> 同じタスクを別の人が先に更新していた場合、
+> サーバーは競合（CONFLICT）エラーを返します。
+> `onError` でそのメッセージを toast（画面隅に出る
+> 通知）に表示して、保存されなかったことに
+> 気づけるようにします。
 
 > `invalidate` は「キャッシュ（取得済みデータの一時保存）を
 > 無効化して再取得する」命令です。一覧（`getAll`）を必ず
@@ -314,6 +329,14 @@ const handleSubmit =
         projectId: data.projectId,
         assigneeId:
           data.assigneeId || null,
+```
+
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+
+```typescript
+// filepath: 続き
+        expectedUpdatedAt:
+          data.expectedUpdatedAt,
       });
       return;
     }
@@ -324,6 +347,13 @@ const handleSubmit =
 > `data.id` の有無で作成か編集かを判断します。
 > 編集モードでは `initialData` に既存データが
 > 入っているので `data.id` が存在します。
+
+> `expectedUpdatedAt` には編集画面を開いた時点の
+> 更新日時が入っています。サーバーはこの値と DB の
+> `updatedAt` を比べ、一致しなければ CONFLICT
+> エラーを返します。先に画面を開いた人が、あとから
+> 保存して他の人の変更を黙って上書きする事故を
+> 防ぐ仕組みです。
 
 #### null と undefined の使い分け
 
@@ -625,7 +655,7 @@ PORT=3001 npm run dev
 編集後の一覧更新は動きますが、保存が終わるまで画面は古い内容のままです。そこで、保存の完了を待たずに結果を先に画面へ反映し、もし保存が失敗したら元の状態へ戻す楽観的更新を使うと、待ち時間を感じさせなくできます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 import { dateOnlyToUtcStartIso } from '@/lib/date';

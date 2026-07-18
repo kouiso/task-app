@@ -574,7 +574,7 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（集計はクライアントかサーバーか）
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```tsx
 // filepath: src/app/report/page.tsx（アンチパターン）
