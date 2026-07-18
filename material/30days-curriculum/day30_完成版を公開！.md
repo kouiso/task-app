@@ -48,9 +48,9 @@ flowchart TD
 
 > **ローカル DB と本番 DB の違い**:
 > Docker の PostgreSQL はローカル開発専用です。
-> 本番では Vercel Postgres や Supabase（PostgreSQL をクラウド上で提供してくれるサービス。読み方: スーパベース）などの
-> マネージド DB を使います。Vercel に設定する
-> `DATABASE_URL` は本番 DB の接続文字列です。
+> 本番では Neon や Supabase（PostgreSQL をクラウド上で提供してくれるサービス。読み方: ニオン、スーパベース）などの
+> マネージド DB を、Vercel の Marketplace 連携から追加します。連携すると本番 DB の接続文字列が
+> `DATABASE_URL` として Vercel に自動で設定されます。
 
 ### 新しく学ぶ概念
 
