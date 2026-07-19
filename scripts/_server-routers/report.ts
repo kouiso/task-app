@@ -17,6 +17,8 @@ export const reportRouter = createTRPCRouter({
         totalTasks: 0,
         completedTasks: 0,
         inProgressTasks: 0,
+        inReviewTasks: 0,
+        todoTasks: 0,
         completionRate: 0,
         totalTimeSpent: 0,
         averageTimePerTask: 0,
@@ -27,11 +29,25 @@ export const reportRouter = createTRPCRouter({
       };
     }
 
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
+    // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      ...projectScope,
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+
     const [
       projects,
       totalTasks,
       completedTasks,
       inProgressTasks,
+      inReviewTasks,
+      todoTasks,
       totalTimeAggregate,
       recentTasks,
       statusGroups,
@@ -39,32 +55,44 @@ export const reportRouter = createTRPCRouter({
       projectTaskGroups,
       projectDoneGroups,
     ] = await Promise.all([
+      // アーカイブ済みプロジェクトは「アクティブな状況」の集計対象外とし、
+      // プロジェクト数(totalProjects)とプロジェクト統計(projectStats)から除外する。
       prisma.project.findMany({
-        where: { id: { in: projectIds } },
+        where: { id: { in: projectIds }, isArchived: false },
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.task.count({
-        where: { projectId: { in: projectIds } },
-      }),
+      prisma.task.count({ where: activeTasksFilter }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.DONE,
         },
       }),
       prisma.task.count({
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.IN_PROGRESS,
         },
       }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_REVIEW,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.TODO,
+        },
+      }),
       prisma.task.aggregate({
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _sum: { timeSpentMinutes: true },
       }),
       prisma.task.findMany({
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         select: {
           id: true,
           title: true,
@@ -76,24 +104,24 @@ export const reportRouter = createTRPCRouter({
       }),
       prisma.task.groupBy({
         by: ['status'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
       }),
       prisma.task.groupBy({
         by: ['priority'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
       }),
       prisma.task.groupBy({
         by: ['projectId'],
-        where: { projectId: { in: projectIds } },
+        where: activeTasksFilter,
         _count: { _all: true },
         _sum: { timeSpentMinutes: true },
       }),
       prisma.task.groupBy({
         by: ['projectId'],
         where: {
-          projectId: { in: projectIds },
+          ...projectScope,
           status: TASK_STATUS.DONE,
         },
         _count: { _all: true },
@@ -122,6 +150,8 @@ export const reportRouter = createTRPCRouter({
       totalTasks,
       completedTasks,
       inProgressTasks,
+      inReviewTasks,
+      todoTasks,
       completionRate,
       totalTimeSpent,
       averageTimePerTask,
@@ -173,9 +203,18 @@ export const reportRouter = createTRPCRouter({
 
       const targetUserId = input.userId ?? ctx.session.userId;
       const now = new Date();
-      const startDate = new Date(now);
-      startDate.setDate(startDate.getDate() - input.weeks * 7);
-      startDate.setHours(0, 0, 0, 0);
+      // 週バケットは「今日で終わる直近7日間」を最終週として7日刻みで遡る。
+      // 旧実装は最終週が「今日0時〜現在」だけの進行中バケットで、「4週間」表示の
+      // 実カバー範囲が3週間+今日に縮んでいた（PR#285 レビュー指摘）。排他的上端を
+      // 明日0時に固定した完全な7日バケット×weeks本にすることで、ラベル・週平均の
+      // 分母と実際の集計範囲が一致し、範囲内タスクは必ずいずれかの週に入る。
+      // 日付ラベルは toISOString()（UTC）で出すため、バケット境界も UTC で刻む。
+      // ローカル時刻メソッドで刻むと、JST などのサーバーでラベルが1日ずれる。
+      const rangeEnd = new Date(now);
+      rangeEnd.setUTCHours(0, 0, 0, 0);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
+      const startDate = new Date(rangeEnd);
+      startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
 
       const where = {
         completedAt: { gte: startDate, lte: now },
@@ -194,11 +233,10 @@ export const reportRouter = createTRPCRouter({
       });
 
       const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
-        const weekStart = new Date(now);
-        weekStart.setDate(weekStart.getDate() - (input.weeks - i - 1) * 7);
-        weekStart.setHours(0, 0, 0, 0);
+        const weekStart = new Date(startDate);
+        weekStart.setUTCDate(weekStart.getUTCDate() + i * 7);
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
+        weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
         const weekTasks = tasks.filter(
           (task) => task.completedAt && task.completedAt >= weekStart && task.completedAt < weekEnd,

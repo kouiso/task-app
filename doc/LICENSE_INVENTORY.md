@@ -64,10 +64,7 @@ Default source for the following PNG files is self-captured TaskApp output gener
 | `material/30days-curriculum/screenshots/day02-card-title.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day02-code-snippet.png` | Local editor/browser capture | Project code only | OK |
 | `material/30days-curriculum/screenshots/day02-complete.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
-| `material/30days-curriculum/screenshots/day02-step2-greeting.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day02-step3-card.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
-| `material/30days-curriculum/screenshots/day02-step5-type-error.png` | Local editor/browser capture | Project code/error only | OK |
-| `material/30days-curriculum/screenshots/day02-step7-stats.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day02/dashboard-message.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day03-commit-success.png` | Git/GitHub workflow capture | Third-party service or terminal UI reference possible | Reference use; replace if stricter clearance is required |
 | `material/30days-curriculum/screenshots/day03-git-diff.png` | Git terminal/editor capture | Project code only | OK |
@@ -80,11 +77,9 @@ Default source for the following PNG files is self-captured TaskApp output gener
 | `material/30days-curriculum/screenshots/day04-sample-url.png` | Deployed app/browser capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day04-sharing-diagram.png` | Project-authored diagram | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day04/public-url.png` | Deployed app/browser capture | No third-party UI detected from path/name | OK |
-| `material/30days-curriculum/screenshots/day08-step4-sidebar.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day08-step5-sidebar.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day08-step7-sidebar.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day09-cards.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
-| `material/30days-curriculum/screenshots/day09-complete.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day09-empty.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day09-loading.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day09-responsive.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
@@ -103,6 +98,8 @@ Default source for the following PNG files is self-captured TaskApp output gener
 | `material/30days-curriculum/screenshots/project-detail-members.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/project-detail-tasks.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/project-list.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
+| `material/30days-curriculum/screenshots/project-list-after-create.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
+| `material/30days-curriculum/screenshots/archived-project-list.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/register.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/register_complete.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/register_step4.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
@@ -120,6 +117,9 @@ Default source for the following PNG files is self-captured TaskApp output gener
 | `material/30days-curriculum/screenshots/task-detail-comments-list.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/task-detail-dialog.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/task-list.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
+| `material/30days-curriculum/screenshots/task-list-filtered.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
+| `material/30days-curriculum/screenshots/task-list-after-create.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
+| `material/30days-curriculum/screenshots/task-list-after-edit.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/task-row-with-checkbox.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/task-timer.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/user-detail-page.png` | TaskApp app capture | No third-party UI detected from path/name | OK |

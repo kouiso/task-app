@@ -30,7 +30,7 @@
 | 技術 | 公式ドキュメント | 概要 |
 |------|------------------|------|
 | tRPC | https://trpc.io/docs | 型安全APIの構築方法 |
-| Prisma | https://www.prisma.io/docs | スキーマ定義、クエリAPI、マイグレーション |
+| Prisma | https://www.prisma.io/docs | スキーマ定義、クエリAPI、マイグレーション（データベースの構造変更を履歴として管理する仕組み） |
 | PostgreSQL | https://www.postgresql.org/docs/ | SQLリファレンス、チューニングガイド |
 | Zod | https://zod.dev/ | バリデーションスキーマの定義方法 |
 

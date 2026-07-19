@@ -25,6 +25,7 @@ import {
 import { Textarea } from '@/component/ui/textarea';
 import { TASK_PRIORITY, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
 import { TASK_STATUS, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
 
 const taskFormSchema = z.object({
   id: z.string().optional(),
@@ -36,6 +37,7 @@ const taskFormSchema = z.object({
   estimatedHours: z.number().min(0).optional(),
   projectId: z.string().min(1, 'プロジェクトは必須です'),
   assigneeId: z.string().optional(),
+  expectedUpdatedAt: z.string().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -46,7 +48,9 @@ interface TaskDialogProps {
   onSubmit: (data: TaskFormData) => void;
   initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
-  users: Array<{ id: string; name: string | null; email: string }>;
+  // Day14/17 の教材コードが渡してくる取得済みメンバー一覧。
+  // プロジェクト別メンバーの取得が終わるまでの fallback として使う。
+  users?: Array<{ id: string; name: string | null; email: string }>;
 }
 
 export interface TaskFormData {
@@ -58,7 +62,11 @@ export interface TaskFormData {
   dueDate?: string;
   estimatedHours?: number;
   projectId: string;
-  assigneeId?: string;
+  // null は「担当者を外した」ことをサーバーに伝える明示値（undefined は変更なし扱い）
+  assigneeId?: string | null;
+  // 楽観ロック用。編集画面を開いた時点の updatedAt（ISO文字列）を保持し、
+  // update API に渡すことで「他の人が先に更新していたら CONFLICT」を検出できる
+  expectedUpdatedAt?: string;
 }
 
 function buildTaskFormValues(
@@ -75,6 +83,7 @@ function buildTaskFormValues(
     estimatedHours: initialData?.estimatedHours,
     projectId: initialData?.projectId ?? (projects[0]?.id || ''),
     assigneeId: initialData?.assigneeId ?? '',
+    expectedUpdatedAt: initialData?.expectedUpdatedAt,
   };
 }
 
@@ -84,18 +93,32 @@ export function TaskDialog({
   onSubmit,
   initialData,
   projects,
-  users,
+  users: fallbackUsers = [],
 }: TaskDialogProps) {
   const {
     register,
     handleSubmit,
     control,
+    watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: buildTaskFormValues(initialData, projects),
   });
+  const selectedProjectId = watch('projectId');
+  const {
+    data: projectMembers,
+    isPending: isMembersPending,
+    isError: isMembersError,
+  } = api.search.getMembersByProject.useQuery(
+    { projectId: selectedProjectId },
+    { enabled: open && !!selectedProjectId },
+  );
+  // fallback は読み込み中に限定する。取得失敗時にまで使うと、プロジェクトに
+  // 属さないユーザーが候補に混ざり、エラーの発生も画面から見えなくなるため
+  const users = projectMembers ?? (isMembersPending ? fallbackUsers : []);
 
   useEffect(() => {
     if (!open) {
@@ -120,7 +143,14 @@ export function TaskDialog({
       ...(data.description && { description: data.description }),
       ...(data.dueDate && { dueDate: data.dueDate }),
       ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
-      ...(data.assigneeId && { assigneeId: data.assigneeId }),
+      // 編集時に担当者を外した場合、undefined だと update API が「変更なし」と
+      // 解釈して旧担当者が残るため、明示的に null を送って解除する
+      ...(data.assigneeId
+        ? { assigneeId: data.assigneeId }
+        : data.id !== undefined && { assigneeId: null }),
+      // 編集時のみ送る。サーバー側は updatedAt が一致しないと CONFLICT を返す
+      ...(data.id !== undefined &&
+        data.expectedUpdatedAt !== undefined && { expectedUpdatedAt: data.expectedUpdatedAt }),
     };
     onSubmit(submitData);
   };
@@ -139,8 +169,18 @@ export function TaskDialog({
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">タイトル</Label>
-              <Input id="title" placeholder="タスクのタイトルを入力" {...register('title')} />
+              <Label htmlFor="title">
+                タイトル{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
+              <Input
+                id="title"
+                placeholder="タスクのタイトルを入力"
+                aria-required="true"
+                {...register('title')}
+              />
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
             <div className="grid gap-2">
@@ -153,15 +193,20 @@ export function TaskDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="status">ステータス</Label>
+                <Label htmlFor="status">
+                  ステータス{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="status"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="status" aria-label="ステータスを選択">
+                      <SelectTrigger id="status" aria-label="ステータスを選択" aria-required="true">
                         <SelectValue placeholder="ステータスを選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -176,13 +221,18 @@ export function TaskDialog({
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="priority">優先度</Label>
+                <Label htmlFor="priority">
+                  優先度{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="priority"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="priority" aria-label="優先度を選択">
+                      <SelectTrigger id="priority" aria-label="優先度を選択" aria-required="true">
                         <SelectValue placeholder="優先度を選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -198,17 +248,32 @@ export function TaskDialog({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="project">プロジェクト</Label>
+                <Label htmlFor="project">
+                  プロジェクト{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
                 <Controller
                   name="projectId"
                   control={control}
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        if (value !== field.value) {
+                          // 移動先プロジェクトに現担当者が居ない可能性があるため一旦未割当へ
+                          setValue('assigneeId', '');
+                        }
+                        field.onChange(value);
+                      }}
                       disabled={!projects.length}
                     >
-                      <SelectTrigger id="project" aria-label="プロジェクトを選択">
+                      <SelectTrigger
+                        id="project"
+                        aria-label="プロジェクトを選択"
+                        aria-required="true"
+                      >
                         <SelectValue placeholder="プロジェクトを選択" />
                       </SelectTrigger>
                       <SelectContent>
@@ -234,6 +299,8 @@ export function TaskDialog({
                     <Select
                       value={field.value || 'unassigned'}
                       onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)}
+                      // 読み込み中は前プロジェクトの fallback が並ぶため、確定するまで操作させない
+                      disabled={isMembersPending || isMembersError}
                     >
                       <SelectTrigger id="assignee" aria-label="担当者を選択">
                         <SelectValue placeholder="担当者を選択" />
@@ -249,6 +316,11 @@ export function TaskDialog({
                     </Select>
                   )}
                 />
+                {isMembersError && (
+                  <p className="text-sm text-destructive">
+                    メンバー一覧の取得に失敗しました。再読み込みしてもう一度お試しください
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-2">

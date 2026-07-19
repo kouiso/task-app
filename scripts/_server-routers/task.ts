@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { TASK_PRIORITY } from '@/lib/constant/priority';
@@ -27,6 +27,7 @@ const taskCreateSchema = z.object({
 
 const taskUpdateSchema = z.object({
   id: z.string().cuid(),
+  expectedUpdatedAt: z.string().datetime().optional(),
   title: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
   status: taskStatusSchema.optional(),
@@ -35,12 +36,8 @@ const taskUpdateSchema = z.object({
   completedAt: z.string().datetime().optional().nullable(),
   estimatedHours: z.number().min(0).optional().nullable(),
   actualHours: z.number().min(0).optional(),
+  projectId: z.string().cuid().optional(),
   assigneeId: z.string().cuid().optional().nullable(),
-});
-
-const taskTimerSchema = z.object({
-  id: z.string().cuid(),
-  action: z.enum(['start', 'stop']),
 });
 
 const taskTimeUpdateSchema = z.object({
@@ -77,6 +74,7 @@ export const taskRouter = createTRPCRouter({
         .object({
           projectId: z.string().cuid().optional(),
           status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
           assigneeId: z.string().cuid().optional(),
           limit: z.number().min(1).max(100).default(100),
           offset: z.number().min(0).default(0),
@@ -102,6 +100,7 @@ export const taskRouter = createTRPCRouter({
         where.projectId = input.projectId;
       }
       if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
 
       return await prisma.task.findMany({
@@ -188,7 +187,7 @@ export const taskRouter = createTRPCRouter({
       });
     }
 
-    assertMemberPermission(project.members);
+    assertMemberPermission(project.members, 'canEdit');
 
     if (input.assigneeId) {
       await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
@@ -240,11 +239,16 @@ export const taskRouter = createTRPCRouter({
   }),
 
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
-    const { id, ...data } = input;
+    const { id, expectedUpdatedAt, ...data } = input;
 
     const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
 
-    const updateData: Prisma.TaskUpdateInput = {};
+    // 楽観ロック: 事前に updatedAt を比較してから update する方式だと、
+    // 比較と更新の間に他の更新が入って後勝ちになる。updatedAt を WHERE 条件に
+    // 含めた条件付き update（末尾）に比較と更新を 1 回のクエリでまとめる。
+    // ネストした connect/disconnect ではなく外部キーを直接書く Unchecked 型で
+    // データを組み立てる。
+    const updateData: Prisma.TaskUncheckedUpdateInput = {};
     if (data.title !== undefined) {
       updateData.title = data.title;
     }
@@ -276,28 +280,85 @@ export const taskRouter = createTRPCRouter({
     if (data.completedAt !== undefined) {
       updateData.completedAt = data.completedAt ? new Date(data.completedAt) : null;
     }
+
+    const isProjectChanging =
+      data.projectId !== undefined && data.projectId !== existingTask.projectId;
+    const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+
+    if (isProjectChanging) {
+      // 移動先プロジェクトでも canEdit 権限を持つかを確認
+      const destinationMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: targetProjectId,
+          },
+        },
+      });
+      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+      updateData.projectId = targetProjectId;
+
+      // 位置はプロジェクト単位の連番なので移動先の末尾に付け直す、重複や割り込みを防ぐ
+      const maxPosition = await prisma.task.findFirst({
+        where: { projectId: targetProjectId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+      });
+      updateData.position = (maxPosition?.position ?? -1) + 1;
+    }
+
     if (data.assigneeId !== undefined) {
       if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
+        updateData.assigneeId = null;
       } else {
-        await assertTaskAssigneeBelongsToProject(existingTask.projectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
+        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
+        updateData.assigneeId = data.assigneeId;
+      }
+    } else if (isProjectChanging && existingTask.assigneeId) {
+      // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+      const assigneeStillMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: existingTask.assigneeId,
+            projectId: targetProjectId,
+          },
+        },
+        select: { id: true },
+      });
+      if (!assigneeStillMember) {
+        updateData.assigneeId = null;
       }
     }
 
-    return await prisma.task.update({
-      where: { id },
-      data: updateData,
-      include: {
-        project: true,
-        createdBy: {
-          select: USER_SELECT,
+    try {
+      // updateMany + 件数チェック + 再取得の3手だと、チェックと再取得の間に別の更新が
+      // 割り込む余地が残る（TOCTOU）。updatedAt を含めた where で単一の update に
+      // まとめ、条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
+      // 投げる P2025 を捕捉して CONFLICT に変換する。
+      return await prisma.task.update({
+        where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
+        data: updateData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
         },
-        assignee: {
-          select: USER_SELECT,
-        },
-      },
-    });
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        // 0 件更新 = 読み込み後に他のユーザーが更新（または削除）済み
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
   }),
 
   delete: protectedProcedure
@@ -311,45 +372,6 @@ export const taskRouter = createTRPCRouter({
       });
       return { success: true };
     }),
-
-  updateTimer: protectedProcedure.input(taskTimerSchema).mutation(async ({ ctx, input }) => {
-    const task = await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
-
-    if (input.action === 'start') {
-      if (task.isTimerActive) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'タイマーは既に実行中です',
-        });
-      }
-
-      return await prisma.task.update({
-        where: { id: input.id },
-        data: {
-          isTimerActive: true,
-          timerStartedAt: new Date(),
-        },
-      });
-    }
-    if (!task.isTimerActive || !task.timerStartedAt) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'タイマーは実行されていません',
-      });
-    }
-
-    const MS_PER_MINUTE = 60_000;
-    const elapsedMinutes = Math.floor((Date.now() - task.timerStartedAt.getTime()) / MS_PER_MINUTE);
-
-    return await prisma.task.update({
-      where: { id: input.id },
-      data: {
-        isTimerActive: false,
-        timerStartedAt: null,
-        timeSpentMinutes: task.timeSpentMinutes + elapsedMinutes,
-      },
-    });
-  }),
 
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
     await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
@@ -367,7 +389,10 @@ export const taskRouter = createTRPCRouter({
   bulkComplete: protectedProcedure
     .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await findTasksWithPermission(input.ids, ctx.session.userId);
+      const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
+      for (const task of tasks) {
+        assertMemberPermission(task.project.members, 'canEdit');
+      }
 
       const completedAt = new Date();
       return await prisma.task.updateMany({
@@ -397,7 +422,10 @@ export const taskRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await findTasksWithPermission(input.ids, ctx.session.userId);
+      const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
+      for (const task of tasks) {
+        assertMemberPermission(task.project.members, 'canEdit');
+      }
 
       const data: Prisma.TaskUpdateManyMutationInput = {
         status: input.status,

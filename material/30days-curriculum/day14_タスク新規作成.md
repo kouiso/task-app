@@ -65,7 +65,7 @@ graph TD
 | TaskDialog を作る | 別ページでフォーム作成 |
 | react-hook-form + zod でフォーム管理 | useState で手動管理 |
 | useMutation でサーバーに保存 | タスクの編集（Day 15） |
-| キャッシュ無効化で一覧更新 | タイマー機能（Day 16） |
+| キャッシュ無効化で一覧更新 | 作業時間の記録（Day 16） |
 
 ### 新しく学ぶ概念
 
@@ -191,6 +191,8 @@ const taskFormSchema = z.object({
   projectId: z.string().min(1,
     'プロジェクトは必須です'),
   assigneeId: z.string().optional(),
+  expectedUpdatedAt:
+    z.string().datetime().optional(),
 });
 
 type TaskFormValues =
@@ -235,6 +237,7 @@ export interface TaskFormData {
   estimatedHours?: number;
   projectId: string;
   assigneeId?: string;
+  expectedUpdatedAt?: string;
 }
 ```
 
@@ -259,7 +262,7 @@ interface TaskDialogProps {
 ```
 
 > `TaskFormValues`（zod推論型）はコンポーネント
-> 内部で使い、`TaskFormData`（インターフェース）は
+> 内部で使い、`TaskFormData` というインターフェース（オブジェクトがどんな項目を持つかを定めた型）は
 > 外部に公開します。2つの型を使い分けることで、
 > 内部のバリデーションと外部のAPIを分離できます。
 
@@ -280,6 +283,7 @@ interface TaskDialogProps {
 | `estimatedHours` | `number?` | × | 見積時間 |
 | `projectId` | string | ○ | 所属プロジェクト |
 | `assigneeId` | `string?` | × | 担当者 |
+| `expectedUpdatedAt` | `string?` | × | 編集時のみ使用。詳しくは Day 15 |
 
 **確認ポイント**:
 - `TaskFormData` をエクスポートした
@@ -325,6 +329,8 @@ function buildTaskFormValues(
 
 ```typescript
 // filepath: 続き
+    expectedUpdatedAt:
+      initialData?.expectedUpdatedAt,
   };
 }
 
@@ -342,7 +348,12 @@ export function TaskDialog({
       buildTaskFormValues(
         initialData, projects),
   });
+```
 
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+
+```typescript
+// filepath: 続き
   useEffect(() => {
     reset(
       buildTaskFormValues(
@@ -357,7 +368,7 @@ export function TaskDialog({
 - `useEffect` で `initialData` の変更時に `reset` している
 
 > `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため、`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
-
+>
 > **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 
 #### useFormから取得するもの
@@ -418,6 +429,17 @@ const handleFormSubmit =
       ...(data.assigneeId
         && { assigneeId:
           data.assigneeId }),
+```
+
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+
+```typescript
+// filepath: 続き
+      ...(data.id !== undefined
+        && data.expectedUpdatedAt
+          !== undefined
+        && { expectedUpdatedAt:
+          data.expectedUpdatedAt }),
     };
     onSubmit(submitData);
   };
@@ -432,6 +454,8 @@ const handleFormSubmit =
 | `...(data.dueDate && { dueDate: ... })` | 期限を追加 | 何も追加しない |
 
 > Day 11 の `handleEdit` と同じパターンです。値がある場合だけプロパティを含め、空の場合はプロパティ自体を含めません。
+
+> `expectedUpdatedAt` は今日の新規作成では使いません。編集機能（Day 15）で「他の人が先に更新していないか」をサーバーが見分けるために送る値です。今は型と送信処理だけ用意しておきます。
 
 JSXのダイアログ構造とタイトル入力欄を書きます。
 
@@ -629,7 +653,6 @@ return (
 | `IN_REVIEW` | レビュー中 | レビュー待ち |
 | `DONE` | 完了 | 完了 |
 | `CANCELLED` | キャンセル | 取り消し |
-| `BLOCKED` | ブロック | ブロック中 |
 
 | 優先度 | 表示名 |
 |-------|-------|
@@ -902,6 +925,8 @@ const createMutation =
   });
 ```
 
+> ここが今日の心臓部です。作成が成功した瞬間に、2つのことをします。1つは `utils.task.getAll.invalidate()` で、一覧のキャッシュに「古い」と印を付けます。すると Day 13 で書いた一覧の `useQuery` がひとりでに取り直し、作ったタスクがすぐ画面に出ます。自分で「一覧をもう一度取りに行く」コードを書かなくてよいのが利点です。もう1つの `setDialogOpen(false)` はダイアログを閉じる処理です。これを `onSuccess` の中に置くのは、作成が成功したときだけ閉じたいからです。もし失敗したらダイアログは開いたままにして、ユーザーがその場で入力を直せるようにします。
+
 ```typescript
 // filepath: src/app/task/page.tsx
 // createMutationの下に追加
@@ -937,7 +962,8 @@ const handleSubmit =
 
 スクリーンショット: タスク作成後、一覧画面に新しいタスクが表示されている画面。
 
-![タスク作成後、一覧画面に新しいタスクが表示されている](./screenshots/task-list.png)
+![タスク作成後、一覧の先頭に新しいタスクが表示されている](./screenshots/task-list-after-create.png)
+
 #### createMutationに渡すパラメータ
 
 | パラメータ | フロントから送信 | 説明 |
@@ -1006,12 +1032,12 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — タスクのステータス・優先度型を1か所に集約する
+### Pro パターンで書こう（タスクのステータス・優先度型を1か所に集約する）
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+型・zod・ラベル・初期値の定義を1か所に集約すると、値を追加・変更するときの対応漏れを防げます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 import { z } from 'zod';
@@ -1021,8 +1047,7 @@ type TaskStatus =
   | 'IN_PROGRESS'
   | 'IN_REVIEW'
   | 'DONE'
-  | 'CANCELLED'
-  | 'BLOCKED';
+  | 'CANCELLED';
 
 type TaskPriority =
   | 'LOW'
@@ -1046,7 +1071,6 @@ const taskFormSchema = z.object({
 // filepath: 続き
     'DONE',
     'CANCELLED',
-    'BLOCKED',
   ]),
   priority: z.enum([
     'LOW',
@@ -1084,7 +1108,6 @@ const statusLabels: Record<TaskStatus, string> = {
   IN_REVIEW: 'レビュー中',
   DONE: '完了',
   CANCELLED: 'キャンセル',
-  BLOCKED: 'ブロック',
 };
 
 const priorityLabels: Record<TaskPriority, string> = {

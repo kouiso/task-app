@@ -59,7 +59,6 @@ flowchart TD
 
     style A fill:#e3f2fd
     style F fill:#fff3e0
-    style K fill:#e8f5e9
 ```
 
 ### やること / やらないこと
@@ -142,7 +141,7 @@ import { reportRouter } from './routers/report';
 
 | プロパティ | 内容 |
 |-----------|------|
-| `totalTasks` | 対象プロジェクト全体のタスク数 |
+| `totalTasks` | 集計対象タスク数（キャンセル済みタスクとアーカイブ済みプロジェクトは除く） |
 | `completionRate` | 完了率（整数パーセント） |
 | `totalTimeSpent` | 合計作業時間（分） |
 | `averageTimePerTask` | 1タスクあたり平均作業時間（分） |
@@ -302,7 +301,7 @@ const { data: overview, isLoading } =
 > 正しい統計が作られます。
 
 **確認ポイント**:
-- 2つのAPIを同時に呼んでいる
+- `getOverview` 1つで統計データをまとめて取得している
 - 保存してエラーが出ないこと
 
 ---
@@ -618,7 +617,7 @@ PORT=3001 npm run dev
 
 1. `/report` にアクセス
 2. 4枚のカードが表示される
-3. 総タスク数がタスク件数と一致
+3. 総タスク数が、キャンセル済みを除いたタスク件数と一致
 4. 完了率が正しく計算されている
 5. 作業時間が時間（`h`）で表示される
 6. ブラウザ幅を変えてレスポンシブ確認
@@ -649,9 +648,9 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — 統計レイアウトの Server/Client 分離
+### Pro パターンで書こう（統計レイアウトの Server/Client 分離）
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/report/page.tsx（参考）

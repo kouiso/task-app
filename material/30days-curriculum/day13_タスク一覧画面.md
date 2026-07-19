@@ -58,7 +58,7 @@ flowchart TD
 | `api.task.getAll` でタスク取得 | タスクの作成（Day 14） |
 | プロジェクト・ステータスでフィルタ | ドラッグ＆ドロップ |
 | TaskCard でカード表示 | タスク詳細ページ |
-| レスポンシブなグリッドレイアウト | タイマー機能（Day 16） |
+| レスポンシブなグリッドレイアウト | 作業時間の記録（Day 16） |
 
 ### 新しく学ぶ概念
 
@@ -451,7 +451,7 @@ const {
 
 > `'all'` の場合に `undefined` を渡すと「この条件は使わない」という意味になり、サーバーは全件を返します。フィルターの選択が変わるたびにReactが `useQuery` を再実行し、画面が自動更新されます。
 
-![フィルタリング後のタスク一覧](./screenshots/task-list.png)
+![フィルタリング後のタスク一覧（ステータスを完了に絞った状態）](./screenshots/task-list-filtered.png)
 
 ---
 
@@ -490,7 +490,7 @@ const handleDelete =
 - 3つのハンドラーが定義できた
 - Step 7 で `handleTaskClick` を本実装に差し替える
 
-> TaskCardは `isTimerActive`・`timerStartedAt`・`timeSpentMinutes` というタイマー関連のpropsも受け取れますが、タイマー機能はDay 16で実装するので今日は渡しません。
+> TaskCardは `timeSpentMinutes`（合計作業時間）という作業時間まわりのpropも受け取れますが、作業時間の記録はDay 16で扱うので今日は渡しません。
 
 フィルターUIの直下にグリッドを追加します。タスクがある場合のカード表示です。
 
@@ -701,9 +701,9 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — ステータス表示の色分け
+### Pro パターンで書こう（ステータス表示の色分け）
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/task/page.tsx（参考）

@@ -5,7 +5,7 @@
 Day 14 で学んだことは次のとおりです。
 - TaskDialog で react-hook-form + zod のバリデーション
 - `Controller` による Select 連携
-- `useMutation` による保存処理
+- `useMutation`（データ変更APIのフック）による保存処理
 
 今日は同じダイアログを**編集モード**で再利用して、タスクの編集・削除に取り組みます。
 
@@ -105,8 +105,8 @@ flowchart TD
 ### Step 1: `defaultValues` + `useEffect(reset)` を理解する（5分）
 
 **ゴール**: `useForm` の `defaultValues` と
-`useEffect(reset(...))` がどのように編集モードを
-実現するかを理解します。
+`useEffect(reset(...))`（描画後に副作用を走らせるフック）が
+どのように編集モードを実現するかを理解します。
 
 **実装**:
 
@@ -169,6 +169,12 @@ useEffect(() => {
 > 変わった時だけ `useEffect(reset(...))` で
 > フォームを同期します。`useForm({ values })` は
 > 使っていません。
+>
+> `useEffect` の末尾にある
+> `[initialData, open, projects, reset]` が依存配列
+> （useEffectを再実行する条件の配列）です。この中の
+> 値が変わったときだけ、`reset` でフォームを
+> 作り直します。
 
 **作成モード vs 編集モードの比較**
 
@@ -238,6 +244,11 @@ const handleEdit = (taskId: string) => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
+import toast from 'react-hot-toast';
+```
+
+```typescript
+// filepath: src/app/task/page.tsx
 // タスク更新用のmutation
 const updateMutation =
   api.task.update.useMutation({
@@ -252,11 +263,21 @@ const updateMutation =
       }
       setDialogOpen(false);
     },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
 ```
 
-> `invalidate` は「キャッシュを無効化して
-> 再取得する」命令です。一覧（`getAll`）を必ず
+> 更新は自分の入力ミス以外でも失敗します。たとえば
+> 同じタスクを別の人が先に更新していた場合、
+> サーバーは競合（CONFLICT）エラーを返します。
+> `onError` でそのメッセージを toast（画面隅に出る
+> 通知）に表示して、保存されなかったことに
+> 気づけるようにします。
+>
+> `invalidate` は「キャッシュ（取得済みデータの一時保存）を
+> 無効化して再取得する」命令です。一覧（`getAll`）を必ず
 > 更新し、詳細画面（`getById`）は
 > `selectedTask` がある場合のみ更新します。
 
@@ -301,14 +322,21 @@ const handleSubmit =
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate
-          ? dateOnlyToUtcStartIso(
-              data.dueDate
-            )
+          ? dateOnlyToUtcStartIso(data.dueDate)
           : null,
         estimatedHours:
           data.estimatedHours ?? null,
+        projectId: data.projectId,
         assigneeId:
           data.assigneeId || null,
+```
+
+**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+
+```typescript
+// filepath: 続き
+        expectedUpdatedAt:
+          data.expectedUpdatedAt,
       });
       return;
     }
@@ -319,6 +347,13 @@ const handleSubmit =
 > `data.id` の有無で作成か編集かを判断します。
 > 編集モードでは `initialData` に既存データが
 > 入っているので `data.id` が存在します。
+
+> `expectedUpdatedAt` には編集画面を開いた時点の
+> 更新日時が入っています。サーバーはこの値と DB の
+> `updatedAt` を比べ、一致しなければ CONFLICT
+> エラーを返します。先に画面を開いた人が、あとから
+> 保存して他の人の変更を黙って上書きする事故を
+> 防ぐ仕組みです。
 
 #### null と undefined の使い分け
 
@@ -332,7 +367,7 @@ const handleSubmit =
 > ときは `undefined`（=送信しない）にします。
 > 更新APIは「送られたフィールドだけ更新」する
 > 部分更新方式です。
-
+>
 > **今日のゴールライン**: null と undefined の違いは「消したい vs 触らない」だけ覚えたら OK。実務では毎日使うから、今日のコードを書いてるうちに手が覚えます。
 
 **確認ポイント**:
@@ -380,7 +415,7 @@ Day 14 で実装した `createMutation` を使います。
 |-----------|--------|--------|
 | `id` | なし | **必須** |
 | `title` | **必須** | 常に送信 |
-| `projectId` | **必須** | 変更対象外 |
+| `projectId` | **必須** | 常に送信 |
 | `description` | 任意 | 任意（null可） |
 | `dueDate` | 任意 | 任意（null可） |
 
@@ -392,8 +427,8 @@ Day 14 で実装した `createMutation` を使います。
 
 ### Step 6: 削除用のstateとmutationを定義する（5分）
 
-**ゴール**: 削除確認に使うstateと削除APIの
-mutationを定義します。
+**ゴール**: 削除確認に使うstate（Reactが再描画のために覚える値）と
+削除APIのmutationを定義します。
 
 **実装**:
 
@@ -424,7 +459,7 @@ const deleteMutation =
 > `DeleteConfirmDialog` コンポーネントを使います。
 > (1) アプリ全体のUIに統一感が出る
 > (2) ボタンのテキストをカスタマイズできる
-> (3) `isPending` 中の二重クリックを防止できる
+> (3) `isPending`（mutation実行中フラグ）中の二重クリックを防止できる
 
 **確認ポイント**:
 - `DeleteConfirmDialog` のインポートを追加できた
@@ -467,6 +502,12 @@ const handleDelete = (taskId: string) => {
   isPending={deleteMutation.isPending}
 />
 ```
+
+> `open` と `onOpenChange` でダイアログの表示を
+> `deleteDialogOpen` に結びつけ、`onConfirm` は
+> 確認ボタンを押したときだけ削除を実行します。
+> だから、いきなり消えずに削除の確認を
+> 一度はさめます。
 
 **確認ポイント**:
 - 削除ボタンで確認ダイアログが出る
@@ -531,10 +572,15 @@ const handleCreate = () => {
 />
 ```
 
-> `TaskCard` にはタイマー関連の optional な props も
-> あります。`isTimerActive`, `timerStartedAt`,
-> `timeSpentMinutes`, `onTimerUpdate` の 4 つです。
-> これらは Day 16 で実装します。
+> `onEdit` と `onDelete` に関数を渡すと、カード内の
+> 編集ボタン・削除ボタンが押されたときに、その関数が
+> `task.id` を受け取って呼ばれます。ボタンの見た目は
+> `TaskCard`、実際の処理は親ページ、と役割が分かれます。
+>
+> `TaskCard` には作業時間まわりの optional な props も
+> あります。`timeSpentMinutes`（合計作業時間）と
+> `onTimeLogSuccess`（記録成功時のコールバック）の 2 つです。
+> これらは Day 16 で扱います。
 
 **確認ポイント**:
 - `onEdit` に `handleEdit` を渡している
@@ -558,9 +604,14 @@ const handleCreate = () => {
   onSubmit={handleSubmit}
   initialData={editingTask}
   projects={projects ?? []}
-  users={users ?? []}
 />
 ```
+
+> `initialData` に `editingTask` を渡すと、Step 1 の
+> `buildTaskFormValues` がその値をフォームの初期値に
+> 使うので、編集モードになります。`editingTask` が
+> `undefined` のときは空の初期値になり、作成モードに
+> なります。
 
 **確認ポイント**:
 - 「新規タスク」で作成モードが開く
@@ -569,7 +620,7 @@ const handleCreate = () => {
 
 スクリーンショット: 編集後のタスク一覧画面。
 
-![編集後のタスク一覧画面](./screenshots/task-list.png)
+![編集後のタスク一覧（先頭のタスクの優先度が高に変わっている）](./screenshots/task-list-after-edit.png)
 ---
 
 ### Step 11: 動作確認（3分）
@@ -599,12 +650,12 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — 編集後の一覧更新を楽観的に反映する
+### Pro パターンで書こう（編集後の一覧更新を楽観的に反映する）
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+編集後の一覧更新は動きますが、保存が終わるまで画面は古い内容のままです。そこで、保存の完了を待たずに結果を先に画面へ反映し、もし保存が失敗したら元の状態へ戻す楽観的更新を使うと、待ち時間を感じさせなくできます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 import { dateOnlyToUtcStartIso } from '@/lib/date';
@@ -809,7 +860,7 @@ const handleSubmit = (data: TaskFormData) => {
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
 | 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC の開始時刻にそろえる |
+| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（世界協定時、タイムゾーンの基準）の開始時刻にそろえる |
 | 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
 | 前回の値が残る | フォーム同期不足 | `defaultValues` と `useEffect(reset(...))` を確認 |
 
@@ -825,6 +876,6 @@ const handleSubmit = (data: TaskFormData) => {
 
 ## 次回予告
 
-Day 16 では、タスクのステータス変更とタイマー
-機能を実装します。作業時間の計測で、プロジェクト
-の工数管理ができるようになります。
+Day 16 では、タスクのステータス変更と作業時間の
+記録を実装します。手動で作業時間を記録して、
+プロジェクトの工数管理ができるようになります。
