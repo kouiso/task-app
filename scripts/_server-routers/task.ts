@@ -353,7 +353,8 @@ export const taskRouter = createTRPCRouter({
         // 0 件更新 = 読み込み後に他のユーザーが更新（または削除）済み
         throw new TRPCError({
           code: 'CONFLICT',
-          message: 'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
+          message:
+            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
         });
       }
       throw err;
