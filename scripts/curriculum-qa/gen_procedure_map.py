@@ -31,6 +31,39 @@ SRC_DIR = REPO_ROOT / "src"
 OUT_DIR = CURRICULUM_DIR / "_meta"
 OUT_PATH = OUT_DIR / "procedure-day-map.json"
 
+# CI の `biome check .` は生成物の JSON にもフォーマッタを適用する
+# (lineWidth=100: 収まる配列は1行、収まらなければ1要素1行)。
+# json.dumps(indent=2) は配列を常に展開してしまい format エラーになるため、
+# Biome と同じ折り返し規則で直接シリアライズする。
+BIOME_LINE_WIDTH = 100
+
+
+def dumps_biome_style(value, indent: int = 0, prefix_len: int = 0) -> str:
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        pad = " " * (indent + 2)
+        items = []
+        for k, v in value.items():
+            key = json.dumps(k, ensure_ascii=False) + ": "
+            items.append(
+                pad + key + dumps_biome_style(v, indent + 2, indent + 2 + len(key))
+            )
+        return "{\n" + ",\n".join(items) + "\n" + " " * indent + "}"
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        if all(not isinstance(v, (dict, list)) for v in value):
+            inline = "[" + ", ".join(json.dumps(v, ensure_ascii=False) for v in value) + "]"
+            # 末尾カンマの1文字も行幅に含めて判定する
+            if prefix_len + len(inline) + 1 <= BIOME_LINE_WIDTH:
+                return inline
+        pad = " " * (indent + 2)
+        items = [pad + dumps_biome_style(v, indent + 2, indent + 2) for v in value]
+        return "[\n" + ",\n".join(items) + "\n" + " " * indent + "]"
+    return json.dumps(value, ensure_ascii=False)
+
+
 PROCEDURE_RE = re.compile(
     r"^\s*([a-zA-Z][a-zA-Z0-9]*)\s*:\s*([a-zA-Z][a-zA-Z0-9]*Procedure)", re.MULTILINE
 )
@@ -180,7 +213,7 @@ def main() -> int:
     }
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    OUT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    OUT_PATH.write_text(dumps_biome_style(result) + "\n", encoding="utf-8")
 
     print(f"procedures: {len(procedure_map)} "
           f"(UI-unreferenced: {len(ui_unreferenced)}, undispositioned: {len(undispositioned)})")

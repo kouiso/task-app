@@ -6,9 +6,7 @@
       "procedure": "login",
       "defined_at": "scripts/_server-routers/auth.ts:43",
       "first_used_in_curriculum_day": 5,
-      "referenced_by_scaffold_components": [
-        "src/app/login/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/login/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -17,9 +15,7 @@
       "procedure": "register",
       "defined_at": "scripts/_server-routers/auth.ts:111",
       "first_used_in_curriculum_day": 6,
-      "referenced_by_scaffold_components": [
-        "src/app/register/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/register/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -28,9 +24,7 @@
       "procedure": "logout",
       "defined_at": "scripts/_server-routers/auth.ts:159",
       "first_used_in_curriculum_day": 8,
-      "referenced_by_scaffold_components": [
-        "src/component/layout/app-layout.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/component/layout/app-layout.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -134,9 +128,7 @@
       "procedure": "getById",
       "defined_at": "scripts/_server-routers/project.ts:113",
       "first_used_in_curriculum_day": 11,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -145,9 +137,7 @@
       "procedure": "getAvailableUsers",
       "defined_at": "scripts/_server-routers/project.ts:152",
       "first_used_in_curriculum_day": 12,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -156,9 +146,7 @@
       "procedure": "create",
       "defined_at": "scripts/_server-routers/project.ts:180",
       "first_used_in_curriculum_day": 10,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -167,9 +155,7 @@
       "procedure": "update",
       "defined_at": "scripts/_server-routers/project.ts:211",
       "first_used_in_curriculum_day": 11,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -178,9 +164,7 @@
       "procedure": "delete",
       "defined_at": "scripts/_server-routers/project.ts:267",
       "first_used_in_curriculum_day": 11,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -189,9 +173,7 @@
       "procedure": "addMember",
       "defined_at": "scripts/_server-routers/project.ts:301",
       "first_used_in_curriculum_day": 12,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -200,9 +182,7 @@
       "procedure": "removeMember",
       "defined_at": "scripts/_server-routers/project.ts:350",
       "first_used_in_curriculum_day": 12,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -211,9 +191,7 @@
       "procedure": "updateMemberRole",
       "defined_at": "scripts/_server-routers/project.ts:424",
       "first_used_in_curriculum_day": 12,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": {
         "disposition": "construct-and-teach",
@@ -227,9 +205,7 @@
       "procedure": "archive",
       "defined_at": "scripts/_server-routers/project.ts:511",
       "first_used_in_curriculum_day": 11,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -238,9 +214,7 @@
       "procedure": "unarchive",
       "defined_at": "scripts/_server-routers/project.ts:517",
       "first_used_in_curriculum_day": 11,
-      "referenced_by_scaffold_components": [
-        "src/app/project/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/project/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -261,9 +235,7 @@
       "procedure": "getWeeklyReport",
       "defined_at": "scripts/_server-routers/report.ts:187",
       "first_used_in_curriculum_day": 23,
-      "referenced_by_scaffold_components": [
-        "src/app/report/weekly/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/report/weekly/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -272,9 +244,7 @@
       "procedure": "search",
       "defined_at": "scripts/_server-routers/search.ts:68",
       "first_used_in_curriculum_day": 20,
-      "referenced_by_scaffold_components": [
-        "src/app/search/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/search/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -297,9 +267,7 @@
       "procedure": "getUserProjects",
       "defined_at": "scripts/_server-routers/search.ts:189",
       "first_used_in_curriculum_day": 20,
-      "referenced_by_scaffold_components": [
-        "src/app/search/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/search/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -308,10 +276,7 @@
       "procedure": "getProjectMembers",
       "defined_at": "scripts/_server-routers/search.ts:211",
       "first_used_in_curriculum_day": 14,
-      "referenced_by_scaffold_components": [
-        "src/app/search/page.tsx",
-        "src/app/task/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/search/page.tsx", "src/app/task/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -332,10 +297,7 @@
       "procedure": "getAll",
       "defined_at": "scripts/_server-routers/task.ts:71",
       "first_used_in_curriculum_day": 13,
-      "referenced_by_scaffold_components": [
-        "src/app/my-task/page.tsx",
-        "src/app/task/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/my-task/page.tsx", "src/app/task/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -356,9 +318,7 @@
       "procedure": "create",
       "defined_at": "scripts/_server-routers/task.ts:173",
       "first_used_in_curriculum_day": 14,
-      "referenced_by_scaffold_components": [
-        "src/app/task/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -367,10 +327,7 @@
       "procedure": "update",
       "defined_at": "scripts/_server-routers/task.ts:241",
       "first_used_in_curriculum_day": 15,
-      "referenced_by_scaffold_components": [
-        "src/app/my-task/page.tsx",
-        "src/app/task/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/my-task/page.tsx", "src/app/task/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -404,9 +361,7 @@
       "procedure": "bulkComplete",
       "defined_at": "scripts/_server-routers/task.ts:376",
       "first_used_in_curriculum_day": 28,
-      "referenced_by_scaffold_components": [
-        "src/app/task/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -415,9 +370,7 @@
       "procedure": "bulkDelete",
       "defined_at": "scripts/_server-routers/task.ts:391",
       "first_used_in_curriculum_day": 28,
-      "referenced_by_scaffold_components": [
-        "src/app/task/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -426,9 +379,7 @@
       "procedure": "bulkUpdateStatus",
       "defined_at": "scripts/_server-routers/task.ts:404",
       "first_used_in_curriculum_day": 28,
-      "referenced_by_scaffold_components": [
-        "src/app/task/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -437,9 +388,7 @@
       "procedure": "getAll",
       "defined_at": "scripts/_server-routers/user.ts:46",
       "first_used_in_curriculum_day": 24,
-      "referenced_by_scaffold_components": [
-        "src/app/user/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/user/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -478,9 +427,7 @@
       "procedure": "update",
       "defined_at": "scripts/_server-routers/user.ts:183",
       "first_used_in_curriculum_day": 29,
-      "referenced_by_scaffold_components": [
-        "src/app/user/[id]/edit/user-edit-client.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/user/[id]/edit/user-edit-client.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -498,9 +445,7 @@
       "procedure": "updateProfile",
       "defined_at": "scripts/_server-routers/user.ts:236",
       "first_used_in_curriculum_day": 25,
-      "referenced_by_scaffold_components": [
-        "src/app/profile/edit/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/profile/edit/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     },
@@ -509,9 +454,7 @@
       "procedure": "changePassword",
       "defined_at": "scripts/_server-routers/user.ts:283",
       "first_used_in_curriculum_day": 25,
-      "referenced_by_scaffold_components": [
-        "src/app/profile/change-password/page.tsx"
-      ],
+      "referenced_by_scaffold_components": ["src/app/profile/change-password/page.tsx"],
       "ui_unreferenced": false,
       "disposition": null
     }
@@ -551,11 +494,7 @@
         "user.create",
         "user.delete"
       ],
-      "undispositioned_procedures": [
-        "user.getByEmail",
-        "user.create",
-        "user.delete"
-      ]
+      "undispositioned_procedures": ["user.getByEmail", "user.create", "user.delete"]
     },
     "G-testchan": {
       "pass": false,
