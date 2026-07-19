@@ -259,12 +259,20 @@ def check_confirmation_points(content: str) -> dict:
         end = steps[i + 1].start() if i + 1 < len(steps) else len(content)
         section = content[start:end]
 
-        # ✅ または [ ] チェックボックスがあるか
+        # ✅・チェックボックス・確認系マーカーに加え、リライト後のdayが使う
+        # 検証見出し（「期待する結果」「ここで見たい表示」「成功判定」等）も
+        # 確認ポイントとして数える。判定したい実体はマーカーの字面ではなく
+        # 「そのStepに検証手段が書かれているか」のため。
         has_checkpoint = bool(
             re.search(r'✅', section) or
             re.search(r'- \[[ x]\]', section) or
             re.search(r'確認[：:]', section) or
-            re.search(r'\*\*確認ポイント\*\*', section)
+            re.search(r'\*\*確認ポイント\*\*', section) or
+            re.search(
+                r'^#{2,4}\s+.*(確認|期待|チェック|成功|OK|見えたら|見ておき|見たい|見てほしい)',
+                section,
+                re.MULTILINE,
+            )
         )
         if not has_checkpoint:
             without_checkpoints += 1
@@ -334,10 +342,14 @@ def main() -> int:
         print("✅ 禁止表現: なし")
 
     # 3. 確認ポイントチェック (Stepありの場合のみ)
+    # WARNING止まりだと全ファイルで発火してもPASSになり形骸化するため、
+    # 検証見出しも検出対象に含めたうえで未設定はFAILに昇格させている。
     cp = check_confirmation_points(content)
     if cp["steps"] > 0:
         if cp["without_checkpoints"] > 0:
-            print(f"⚠️  確認ポイント未設定のStep: {cp['without_checkpoints']}/{cp['steps']} 件 → WARNING")
+            print(f"❌ 確認ポイント未設定のStep: {cp['without_checkpoints']}/{cp['steps']} 件 → FAIL")
+            print("   各Stepに「期待する結果」「確認ポイント」等、読者が動作を確かめる手段を書いてください")
+            failed = True
         else:
             print(f"✅ 確認ポイント: 全 {cp['steps']} Stepに設定あり")
     else:
