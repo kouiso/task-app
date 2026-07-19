@@ -53,10 +53,23 @@ def dumps_biome_style(value, indent: int = 0, prefix_len: int = 0) -> str:
     if isinstance(value, list):
         if not value:
             return "[]"
-        if all(not isinstance(v, (dict, list)) for v in value):
-            inline = "[" + ", ".join(json.dumps(v, ensure_ascii=False) for v in value) + "]"
+        # Biome は object を含む配列は常に展開するが、スカラーと入れ子のスカラー配列
+        # だけなら行幅に収まる限り1行に畳む
+        def _inlineable(v):
+            if isinstance(v, dict):
+                return False
+            if isinstance(v, list):
+                return all(_inlineable(x) for x in v)
+            return True
+
+        if all(_inlineable(v) for v in value):
+            inline = "[" + ", ".join(
+                dumps_biome_style(v) if isinstance(v, list)
+                else json.dumps(v, ensure_ascii=False)
+                for v in value
+            ) + "]"
             # 末尾カンマの1文字も行幅に含めて判定する
-            if prefix_len + len(inline) + 1 <= BIOME_LINE_WIDTH:
+            if "\n" not in inline and prefix_len + len(inline) + 1 <= BIOME_LINE_WIDTH:
                 return inline
         pad = " " * (indent + 2)
         items = [pad + dumps_biome_style(v, indent + 2, indent + 2) for v in value]

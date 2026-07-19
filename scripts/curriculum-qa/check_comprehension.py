@@ -257,7 +257,10 @@ def check_confirmation_points(content: str) -> dict:
     for i, step_match in enumerate(steps):
         start = step_match.start()
         end = steps[i + 1].start() if i + 1 < len(steps) else len(content)
+        # Step自身のタイトル行（「〜を確認する」等）だけで合格になるのを防ぐため、
+        # 判定対象は本文のみとする
         section = content[start:end]
+        section = section.split("\n", 1)[1] if "\n" in section else ""
 
         # ✅・チェックボックス・確認系マーカーに加え、リライト後のdayが使う
         # 検証見出し（「期待する結果」「ここで見たい表示」「成功判定」等）も
