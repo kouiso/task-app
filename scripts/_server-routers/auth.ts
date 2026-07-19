@@ -3,6 +3,12 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
+import {
+  checkLoginRateLimit,
+  extractClientIp,
+  rateLimitToTRPCError,
+  recordLoginSuccess,
+} from '@/lib/rate-limit';
 import { createSession, deleteSession, type SessionUser } from '@/lib/session';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
@@ -34,13 +40,33 @@ function handleUnexpectedError(context: string, error: unknown): never {
 }
 
 export const authRouter = createTRPCRouter({
-  login: publicProcedure.input(loginSchema).mutation(async ({ input }) => {
+  login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
+    const ip = extractClientIp(ctx.headers);
+
+    // brute force 対策: 直近 15 分の失敗回数を email 単独 / email×IP / IP 単独の3軸で rate-limit。
+    // checkLoginRateLimit は許可と同時に失敗行を先取りで記録する（成功時は recordLoginSuccess が削除）
+    const limitResult = await checkLoginRateLimit(input.email, ip);
+    if (!limitResult.allowed) {
+      throw rateLimitToTRPCError(limitResult);
+    }
+
     try {
       const user = await prisma.user.findUnique({
         where: { email: input.email },
       });
 
       if (!user?.password) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(input.password, user.password);
+
+      if (!isPasswordValid) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'メールアドレスまたはパスワードが正しくありません',
@@ -48,18 +74,11 @@ export const authRouter = createTRPCRouter({
       }
 
       if (!user.isActive) {
+        // 無効判定はパスワード照合が通ったあとに行う。先に判定すると、正しいパスワードを
+        // 知らなくても「無効化されたアカウントが存在する」ことを列挙できてしまうため。
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'このアカウントは無効化されています',
-        });
-      }
-
-      const isPasswordValid = await bcrypt.compare(input.password, user.password);
-
-      if (!isPasswordValid) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'メールアドレスまたはパスワードが正しくありません',
         });
       }
 
@@ -69,6 +88,9 @@ export const authRouter = createTRPCRouter({
         role: user.role,
       };
 
+      // セッション発行の前に成功記録を確定させる。順序が逆だと、記録の失敗で 500 を返す一方で
+      // 認証済みセッションだけが残るため。
+      await recordLoginSuccess(input.email, ip);
       await createSession(sessionUser);
 
       return {

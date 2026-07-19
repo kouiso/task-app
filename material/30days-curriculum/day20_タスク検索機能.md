@@ -321,7 +321,7 @@ export default function SearchPage() {
 // ステータス・優先度の値定義
 const TASK_STATUS_VALUES = [
   'TODO', 'IN_PROGRESS', 'IN_REVIEW',
-  'DONE', 'CANCELLED', 'BLOCKED',
+  'DONE', 'CANCELLED',
 ] as const;
 const TASK_PRIORITY_VALUES = [
   'LOW', 'MEDIUM', 'HIGH', 'URGENT',
@@ -1198,9 +1198,9 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — 検索データの取得
+### Pro パターンで書こう（検索データの取得）
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/search/page.tsx（参考）
@@ -1241,7 +1241,7 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 #### 覚えておきたいエッセンス
 
-検索のように「条件が変わるたびにデータ取得」するパターンは、`useEffect` + `fetch` より `useQuery` + `enabled` が安全で効率的。
+検索のように「条件が変わるたびにデータ取得」するパターンは、`useEffect` + `fetch` より `useQuery` + `enabled` のほうが安全で効率的です。
 
 ## 今日のまとめ
 

@@ -116,7 +116,7 @@ flowchart TD
 | 1 | `api.report.getOverview` を呼ぶ | server 側で全件集計 |
 | 2 | `overview.projectStats` を受け取る | Aプロジェクトの集計行が入る |
 | 3 | 各行を `TableRow` に流し込む | 進捗 30.0% と表示 |
-| 4 | `toFixed(1)` で表示だけ整える | 8.0h |
+| 4 | `toFixed(1)`（小数第1位に丸める）で表示だけ整える | 8.0h |
 
 ```typescript
 // filepath: src/app/report/page.tsx
@@ -126,6 +126,9 @@ const { data: overview, isLoading } =
 ```
 
 > 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
+>
+> `useQuery`（データ取得のフック）は、サーバーから届いた値を `data` に、取得中かどうかを `isLoading` に入れてくれます。
+> 画面はこの2つを見て、表示を切り替えます。
 
 **確認ポイント**:
 - `overview` を取得できている
@@ -136,6 +139,9 @@ const { data: overview, isLoading } =
 // server 側で作られた projectStats をそのまま使う
 const projectStats = overview?.projectStats ?? [];
 ```
+
+> `?? []`（左が無いとき空配列を使う書き方）を付けています。
+> `overview` がまだ届いていない瞬間でも `projectStats` は空配列になり、後の `.map` がエラーになりません。
 
 **確認ポイント**:
 - クライアント側で再集計していない
@@ -222,6 +228,9 @@ import {
 - `TableHeader` の中に `TableRow` と `TableHead` がある
 - ヘッダー5列を定義した
 
+> `TableHeader` の中に見出し行の `TableRow` を置き、その中へ見出しセルの `TableHead` を並べます。
+> この入れ子は、ブラウザに「ここが表の見出し行」と伝えるための形です。
+
 ```typescript
 // filepath: src/app/report/page.tsx
 // テーブル本体（mapで各行を生成）
@@ -235,9 +244,9 @@ import {
       <TableCell className="text-right">
         {stat.completedTasks}</TableCell>
       <TableCell className="text-right">
-        {stat.progress}%</TableCell>
+        {stat.progress.toFixed(1)}%</TableCell>
       <TableCell className="text-right">
-        {stat.totalTimeHours}h</TableCell>
+        {stat.totalTimeHours.toFixed(1)}h</TableCell>
     </TableRow>
   ))}
 </TableBody>
@@ -265,8 +274,8 @@ import {
 このステップはコードを読んで理解するだけです。
 
 ```typescript
-// filepath: src/server/api/routers/report.ts
-// 週次レポートAPIの呼び出しイメージ
+// filepath: src/app/report/weekly/page.tsx（Step 4 で作成）
+// 週次レポートAPIの呼び出しイメージ（クライアント側で呼ぶ）
 api.report.getWeeklyReport.useQuery({
   weeks: 4,
 });
@@ -296,7 +305,7 @@ api.report.getWeeklyReport.useQuery({
 | week | string | `1週目` のような週ラベル |
 | weekStart | string | その週の開始日（`YYYY-MM-DD`） |
 | totalCompleted | number | その週の完了数 |
-| byStatus | Record<string, number> | ステータス別の件数 |
+| byStatus | Record<string, number>（キーが文字列・値が数値のオブジェクト型） | ステータス別の件数 |
 | byPriority | Record<string, number> | 優先度別の件数 |
 
 > サーバー側で Prisma を使って
@@ -336,6 +345,9 @@ import { PageLoadingSpinner }
 - `date-fns` と `ja` ロケールをインポートした
 - `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` である
 
+> 先頭の `'use client'`（ブラウザ側で動く宣言）を書くと、このページはブラウザ側で動く画面になります。
+> `useState` などブラウザ側で動く機能を使うため、この宣言が必要です。
+
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
 // インポート（Select・Recharts・定数）
@@ -362,6 +374,12 @@ import { api } from '@/trpc/react';
 **確認ポイント**:
 - Recharts の6種類のコンポーネントをインポートした
 - `TASK_PRIORITY_COLORS` と `TASK_STATUS_COLORS` をインポートした
+
+> 今日初めて使う Recharts の部品を先に紹介します。
+> `CartesianGrid` はグラフ背景の目盛り線を引きます。
+> `XAxis` / `YAxis` は横軸と縦軸を描きます。
+> `Line` は折れ線グラフの線1本、`Bar` は棒グラフの1系列です。
+> どれも Step 6 で実際に配置します。
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
@@ -428,7 +446,42 @@ export default function WeeklyReportPage() {
 | 2 | `<div className="space-y-6">` | 縦方向の余白 |
 | 3 | ヘッダー（h1 + Select） | タイトルと期間選択 |
 | 3 | `grid grid-cols-3` | 3枚のサマリーカード |
-| 3 | `grid grid-cols-2` | グラフ4枚 |
+| 3 | `grid grid-cols-2` | グラフ3枚 |
+
+#### ページの骨格を完成させる
+
+上の表を実際のコードにすると、次の骨格になります。
+`if (isLoading)` の直後に、この `return` を書きます。
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// ページの骨格（return から関数の閉じ括弧まで）
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center
+          justify-between">
+          <h1 className="text-3xl font-bold">
+            週次レポート
+          </h1>
+          {/* 週数選択の Select を置く */}
+        </div>
+        {/* Step 5: サマリーカード3枚 */}
+        {/* Step 6: グラフ3枚のグリッド */}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+最後の `}` は `WeeklyReportPage` 関数を閉じる括弧です。
+先ほど書いた週数選択の `Select` は、`h1` の隣にある
+コメントの行と置き換えます。Step 5 と Step 6 で作る
+カードとグラフも、対応するコメントの行と置き換えていきます。
+
+**確認ポイント**:
+- `return` の一番外側が `<AppLayout>` になっている
+- 関数を閉じる `}` まで書けている
 
 スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
 
@@ -517,6 +570,9 @@ export default function WeeklyReportPage() {
 - `format` と `ja` ロケールで日付を整形している
 - データがないときは `'-'` を表示している
 
+> 3枚のカードは1つの `reportData` から値を取り出し、合計・週平均・対象期間という3種類の見せ方にしています。
+> 対象期間の `format` には `{ locale: ja }`（日付表示の言語・地域設定）を渡しています。`yyyy/MM/dd` のような数字だけの書式では並びは変わりませんが、月名や曜日を文字で出す書式に変えたとき、日本語表記になります。
+
 #### 週次レポートの表示項目
 
 | カード | 表示内容 | 計算方法 |
@@ -550,6 +606,9 @@ const chartData =
 
 **確認ポイント**:
 - `chartData` は完了数と優先度データを持つ
+
+> Recharts のグラフは、1週分を1オブジェクトにまとめ、各系列の値をキーに持つ配列を受け取ります。
+> `weeklyData` はこの形と違うので、`name` や `completed` をキーに持つ形へ組み替えています。
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
@@ -675,6 +734,9 @@ const statusData =
 - `stackId="status"` で積み上げ棒グラフになっている
 - 3つのステータスが色分けで表示される
 
+> `stackId` は今日初登場の指定です。同じ `stackId` を持つ
+> `Bar` 同士は、横に並ばず1本の棒として積み上がります。
+>
 > Day 22 で学んだ Recharts を
 > 週次レポートでも活用しています。
 > `LineChart` は推移の把握に、
@@ -716,12 +778,12 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — 週次レポートのデータ取得は Prisma include でまとめる
+### Pro パターンで書こう（週次レポートのデータ取得は Prisma の select でまとめる）
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+`select` をネストするとタスクとプロジェクトを1回の問い合わせで取得でき、N+1問題（一覧を1回取得したあと、要素ごとに追加のクエリを発行してしまう問題）を回避できます。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
@@ -746,9 +808,11 @@ export async function fetchWeeklyReportTasks(
   const tasks = await prisma.task.findMany({
     where: {
       assigneeId: targetUserId,
-      completedAt: { gte: startDate, lte: endDate },
+      completedAt: { gte: startDate, lt: endDate },
     },
 ```
+
+> `gte`/`lt`（以上／未満のPrisma条件）で、`completedAt` が指定した期間内のタスクだけを絞り込みます。終了側を `lt`（未満）にするのは、`endDate` ちょうどの瞬間を次の週に含めるためです。週の境界を「開始以上・終了未満」でそろえると、同じタスクが2つの週に二重で数えられません。
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
@@ -822,7 +886,7 @@ export async function fetchWeeklyReportTasks(
   return await prisma.task.findMany({
     where: {
       assigneeId: targetUserId,
-      completedAt: { gte: startDate, lte: endDate },
+      completedAt: { gte: startDate, lt: endDate },
     },
 ```
 
@@ -870,7 +934,7 @@ Prisma の `select` / `include` でまとめて取れないかを考えます。
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| テーブルが空 | projectStats が undefined | `projects?.map` で安全に処理 |
+| テーブルが空 | タスクやプロジェクトが0件、または `getOverview` の取得エラー | データを追加し、開発者ツールの Network タブでエラー有無を確認 |
 | 進捗率が NaN | タスク0件で割り算 | length > 0 チェック追加 |
 | 週次データが空 | completedAt 未設定 | シードデータを確認 |
 | 型エラーが出る | weeks が string | Number.parseInt で変換 |

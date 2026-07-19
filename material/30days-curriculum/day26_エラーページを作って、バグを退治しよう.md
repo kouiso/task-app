@@ -108,6 +108,13 @@ flowchart TD
 
 **操作手順**:
 
+このDayでは 3001 番ポートで開発サーバーを起動します。ほかのDayのサーバーを 3000 番で起動したままでも、衝突させずに確認するためです。
+
+```bash
+# filepath: ターミナル
+PORT=3001 npm run dev
+```
+
 1. ブラウザのアドレスバーに `http://localhost:3001/this-page-does-not-exist` と入力して Enter を押す
 2. 「404」と「ページが見つかりません」が表示されることを確認
 3. 次に、ダッシュボードのコードに一時的にエラーを仕込む
@@ -209,7 +216,7 @@ export default function ErrorPage({
 
 ---
 
-### Step 3: バグA — Optional Chainingなし（7分）
+### Step 3: バグA（Optional Chainingなし・7分）
 
 **ゴール**: `?.`（Optional Chaining）を使わないとどうなるか体験し、修正します。
 
@@ -300,7 +307,7 @@ function TaskCard(
 
 ---
 
-### Step 4: バグB — useEffectの依存配列ミス（7分）
+### Step 4: バグB（useEffectの依存配列ミス・7分）
 
 **ゴール**: useEffectの依存配列を間違えると無限リクエストが発生することを理解し、修正方法を学びます。
 
@@ -384,7 +391,7 @@ function TaskList() {
 
 ---
 
-### Step 5: バグC — console.log残し（5分）
+### Step 5: バグC（console.log残し・5分）
 
 **ゴール**: `console.log`の残りをBiome lintで検出し、修正します。
 
@@ -557,7 +564,7 @@ npm run lint:fix
 
 ---
 
-### Pro パターンで書こう — Error Boundary の表示分岐は early return で整理する
+### Pro パターンで書こう（Error Boundary の表示分岐は early return で整理する）
 
 エラー画面は、再読み込み中・エラーなし・エラーありで表示が変わります。
 三項演算子を重ねるより、先に返すほうが読みやすいです。

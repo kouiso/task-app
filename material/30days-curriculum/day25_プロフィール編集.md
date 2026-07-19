@@ -327,7 +327,7 @@ return (
 
 **確認ポイント**:
 - `<div className="flex gap-4">` で囲んでいる
-- `avatar ?? ''` で null 安全にしている
+- `currentUser.avatar && (...)` で、アバターがあるときだけ画像を表示している
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -1216,12 +1216,19 @@ import { Label }
   from '@/component/ui/label';
 import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
+import { normalizeAvatarValue }
+  from '@/lib/utils';
 import { api } from '@/trpc/react';
 ```
 
 **確認ポイント**:
 - `PageLoadingSpinner` のインポートパスが `@/component/ui/loading-spinner` である
+- `normalizeAvatarValue` を `@/lib/utils` からインポートしている
 - shadcn/ui のコンポーネントをインポートしている
+
+> `normalizeAvatarValue` は `@/lib/utils` にある関数です。
+> アバターURLが空のときに `null` へ変換する役割で、
+> Step 12 の送信処理で使います。
 
 プロフィール編集用の zod スキーマを定義します。
 
@@ -1332,14 +1339,26 @@ export default function ProfileEditPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-  // zodバリデーション済みの値で送信
+  // 送信直前にアバターの空文字を正規化する
   const handleSubmit =
     (values: ProfileEditFormValues) => {
-      updateProfile.mutate(values);
+      updateProfile.mutate({
+        ...values,
+        avatar: normalizeAvatarValue(values.avatar),
+      });
     };
 ```
 
+なぜ `avatar` だけ `normalizeAvatarValue` を通すのでしょうか。理由は、クライアントとサーバーでアバターの入力条件がずれているからです。
+
+このページの `profileEditSchema` は、`avatar` に空文字を許しています（`.url().or(z.literal(''))`）。ところがサーバーの `profileUpdateSchema` は `.url()` だけを許すので、空文字をそのまま送ると「URLの形式ではない」と弾かれます。
+
+`normalizeAvatarValue` は、空文字や未入力を `null` に変換し、URLが入っているときだけその文字列を返す関数です。空を `null` に直してから送るので、アバターを空のまま更新してもサーバーは受け取れます。
+
+> クライアントとサーバーでバリデーションの条件が違うときは、送信する直前に値をサーバーの条件へ合わせます。空文字のような「空を表す値」は、`null` や未入力に直してから送るのが定番の対処です。
+
 **確認ポイント**:
+- 送信時に `normalizeAvatarValue(values.avatar)` でアバターを正規化している
 - 関数名が `handleSubmit` である
 - zod でバリデーション済みの値を受け取る
 
@@ -1580,6 +1599,8 @@ PORT=3001 npm run dev
 4. 名前を変更して「更新」をクリック
 5. toast で「プロフィールを更新しました」と表示される
 6. `/profile` に戻り、変更が反映されている
+7. アバターURLを空のままにして、名前だけ変更して「更新」をクリック
+8. アバターが空でも更新が成功し、サーバーエラーにならないことを確認する
 
 スクリーンショット: プロフィール編集フォームの表示を確認してください。
 
@@ -1602,12 +1623,12 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — プロフィール表示のデータアクセスは Optional chaining でそろえる
+### Pro パターンで書こう（プロフィール表示のデータアクセスは Optional chaining でそろえる）
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+`?.` と `??` でアクセスの形をそろえると、null チェックの繰り返しが減り、表示ロジックが読みやすくなります。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/profile/page.tsx
@@ -1763,6 +1784,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 | 編集が反映されない | useEffectの依存配列 | [currentUser, form] を指定 |
 | メール重複エラー | 既に使われているメール | 別のアドレスを入力 |
 | アバターが表示されない | URLが不正 | https:// で始まるURLを入力 |
+| アバターを空で更新するとサーバーエラー | クライアントは空文字を許すがサーバーは URL 形式だけ許す | `normalizeAvatarValue` で空文字を `null` に正規化してから送る |
 
 ## 今日学んだ用語
 
@@ -1774,6 +1796,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 | isPending | API通信中かどうかのフラグ |
 | updateProfile | プロフィール更新API |
 | refine | zodのカスタムバリデーション（複数フィールド横断チェック） |
+| normalizeAvatarValue | アバターの空文字を null に変換し、サーバーの検証に通す関数 |
 
 ## 次回予告
 

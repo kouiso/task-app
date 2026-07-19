@@ -106,8 +106,18 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">プロジェクト名</Label>
-              <Input id="name" placeholder="プロジェクト名を入力" {...register('name')} />
+              <Label htmlFor="name">
+                プロジェクト名{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
+              <Input
+                id="name"
+                placeholder="プロジェクト名を入力"
+                aria-required="true"
+                {...register('name')}
+              />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
             <div className="grid gap-2">
@@ -119,10 +129,15 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
                 {...register('description')}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 grid gap-2">
                 <Label htmlFor="color">カラー</Label>
-                <Input id="color" type="color" className="h-10" {...register('color')} />
+                <Input
+                  id="color"
+                  type="color"
+                  className="h-10 w-20 cursor-pointer p-1"
+                  {...register('color')}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="startDate">開始日</Label>

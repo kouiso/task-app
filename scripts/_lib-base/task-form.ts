@@ -13,6 +13,7 @@ interface TaskForFormConversion {
   dueDate: Date | null;
   estimatedHours: number | null;
   assigneeId: string | null;
+  updatedAt: Date;
 }
 
 export const taskToFormData = (task: TaskForFormConversion): TaskFormData => {
@@ -28,5 +29,7 @@ export const taskToFormData = (task: TaskForFormConversion): TaskFormData => {
     ...(dueDate && { dueDate }),
     ...(task.estimatedHours && { estimatedHours: task.estimatedHours }),
     ...(task.assigneeId && { assigneeId: task.assigneeId }),
+    // 楽観ロック用。読み込み時点の updatedAt を保持して update API に渡す
+    expectedUpdatedAt: task.updatedAt.toISOString(),
   };
 };

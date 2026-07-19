@@ -59,23 +59,21 @@ export function ProjectCard({
       onClick={handleCardClick}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">{name}</CardTitle>
-            {isArchived && <Badge variant="secondary">アーカイブ</Badge>}
-          </div>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEdit}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <CardTitle className="truncate text-lg" title={name}>
+          {name}
+        </CardTitle>
+        {isArchived && (
+          <Badge variant="secondary" className="w-fit">
+            アーカイブ済み
+          </Badge>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        {description && (
+          <p className="line-clamp-2 text-sm text-muted-foreground" title={description}>
+            {description}
+          </p>
+        )}
 
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -92,9 +90,33 @@ export function ProjectCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <Badge variant="outline">{memberCount} メンバー</Badge>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <Badge variant="outline">{memberCount} メンバー</Badge>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`${name}を編集`}
+              onClick={handleEdit}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`${name}を削除`}
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
@@ -79,19 +80,21 @@ export const searchRouter = createTRPCRouter({
 
     const projectIds = await getUserProjectIds(userId);
 
-    const taskWhere: Prisma.TaskWhereInput = {
-      projectId: { in: projectIds },
-      ...buildDynamicWhere(baseFilters),
-      ...(dueDateFilter && { dueDate: dueDateFilter }),
-    };
-
-    if (keyword) {
-      taskWhere.AND = [
-        {
-          OR: buildKeywordFilter(keyword, ['title', 'description']),
-        },
-      ];
+    // メンバーシップ条件と caller 指定の projectId を AND で重ねる。
+    // spread で合成すると caller の projectId がメンバーシップ条件を上書きして
+    // 非所属プロジェクトのタスクが読めてしまうため、必ず両方が効く形にする。
+    const andConditions: Prisma.TaskWhereInput[] = [
+      { projectId: { in: projectIds } },
+      buildDynamicWhere(baseFilters),
+    ];
+    if (dueDateFilter) {
+      andConditions.push({ dueDate: dueDateFilter });
     }
+    if (keyword) {
+      andConditions.push({ OR: buildKeywordFilter(keyword, ['title', 'description']) });
+    }
+
+    const taskWhere: Prisma.TaskWhereInput = { AND: andConditions };
 
     const tasks = await prisma.task.findMany({
       where: taskWhere,
@@ -233,4 +236,41 @@ export const searchRouter = createTRPCRouter({
 
     return projectMembers.map((member) => member.user);
   }),
+
+  getMembersByProject: protectedProcedure
+    .input(z.object({ projectId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const callerMembership = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!callerMembership) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このプロジェクトのメンバーではありません',
+        });
+      }
+
+      const members = await prisma.projectMember.findMany({
+        where: { projectId: input.projectId },
+        select: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+        orderBy: {
+          user: {
+            name: 'asc',
+          },
+        },
+      });
+
+      return members.map((member) => member.user);
+    }),
 });

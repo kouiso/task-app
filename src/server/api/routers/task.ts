@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { TASK_PRIORITY } from '@/lib/constant/priority';
@@ -242,17 +242,10 @@ export const taskRouter = createTRPCRouter({
     const { id, expectedUpdatedAt, ...data } = input;
 
     const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
-    if (expectedUpdatedAt) {
-      const expectedDate = new Date(expectedUpdatedAt);
-      if (existingTask.updatedAt.getTime() !== expectedDate.getTime()) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message:
-            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
-        });
-      }
-    }
 
+    // 楽観ロック: ここで updatedAt を比較して即座に CONFLICT を判定しても、
+    // 比較と末尾の update の間に他の更新が割り込む余地が残る（TOCTOU）。
+    // 比較は末尾の update の where に含め、比較と更新を 1 回のクエリでまとめる。
     const updateData: Prisma.TaskUpdateInput = {};
     if (data.title !== undefined) {
       updateData.title = data.title;
@@ -302,6 +295,14 @@ export const taskRouter = createTRPCRouter({
       });
       assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
       updateData.project = { connect: { id: targetProjectId } };
+
+      // 位置はプロジェクト単位の連番なので移動先の末尾に付け直す、重複や割り込みを防ぐ
+      const maxPosition = await prisma.task.findFirst({
+        where: { projectId: targetProjectId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+      });
+      updateData.position = (maxPosition?.position ?? -1) + 1;
     }
 
     if (data.assigneeId !== undefined) {
@@ -327,19 +328,34 @@ export const taskRouter = createTRPCRouter({
       }
     }
 
-    return await prisma.task.update({
-      where: { id },
-      data: updateData,
-      include: {
-        project: true,
-        createdBy: {
-          select: USER_SELECT,
+    try {
+      // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
+      // updatedAt を where に含めた単一の update で比較と更新を 1 回のクエリにまとめる。
+      // 条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
+      // 投げる P2025 を捕捉して CONFLICT に変換する。
+      return await prisma.task.update({
+        where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
+        data: updateData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
         },
-        assignee: {
-          select: USER_SELECT,
-        },
-      },
-    });
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
   }),
 
   delete: protectedProcedure

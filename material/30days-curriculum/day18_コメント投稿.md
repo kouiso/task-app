@@ -129,11 +129,102 @@ const commentCreateSchema = z.object({
 > `@prismaClient` ではなくこのパスが本プロジェクトの
 > 規約です。
 
+続いて、ファイル冒頭に必要なインポートを追加します。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// ファイル冒頭のインポート
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import type { PermissionKey } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { assertMemberPermission } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+```
+
+先ほどのスキーマで使った `z` もここで読み込みます。
+`protectedProcedure` はログイン済みのユーザーだけが呼べる入口です。
+`assertMemberPermission` はプロジェクトのメンバーかどうかを確かめる関数で、
+`USER_SELECT` は投稿者情報から返す項目をまとめた定義です。
+
+次に、タスクの存在確認とメンバー権限チェックをまとめた関数を書きます。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// タスクの存在確認とメンバー権限チェック
+const findTaskAndAssertMembership = async (
+  taskId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      project: { include: { members: { where: { userId } } } },
+    },
+  });
+
+  if (!task) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'タスクが見つかりません' });
+  }
+
+  assertMemberPermission(task.project.members, permission);
+  return task;
+};
+```
+
+コメントは必ずどれかのタスクに紐づきます。
+存在しないタスク ID が来たら `NOT_FOUND` を返し、
+そのプロジェクトのメンバーでなければ権限エラーにします。
+投稿と一覧取得で同じ確認が必要なので、1つの関数にまとめています。
+
+最後に、この関数を使ってコメントを保存する `create` を持つルーターを書きます。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// コメント投稿のルーター
+export const commentRouter = createTRPCRouter({
+  create: protectedProcedure
+    .input(commentCreateSchema)
+    .mutation(async ({ ctx, input }) => {
+      await findTaskAndAssertMembership(
+        input.taskId,
+        ctx.session.userId,
+        'canEdit',
+      );
+
+      return await prisma.comment.create({
+        data: {
+          content: input.content,
+          taskId: input.taskId,
+          userId: ctx.session.userId,
+        },
+        include: { user: { select: USER_SELECT } },
+      });
+    }),
+});
+```
+
+投稿者 ID は入力ではなく `ctx.session.userId` から取ります。
+フォームから送られてくる値を信用せず、サーバーが持つログイン情報を使うことで、
+他人になりすました投稿を防げます。
+`'canEdit'` を渡して、閲覧だけの権限では投稿できないようにしています。
+この `commentRouter` を Step 0 で `root.ts` に登録したので、
+画面から `api.comment.create` が呼べるようになります。
+
+**確認ポイント**:
+- ファイル冒頭にインポートを追加した
+- `commentRouter` を `export` して `create` を実装した
+- 投稿者 ID はセッションから取得している
+
+> 今この `commentRouter` は `create` だけを持っています。コメントの編集・削除に使う `update` と `delete` は Day 19 で、この `createTRPCRouter({ ... })` の中（`create` の後、閉じる `});` の前）に足します。今日は `create` まで書ければ大丈夫です。閉じる `});` は残したままで構いません。
+
 #### comment ルーターの全メソッド
 
 | メソッド | 種別 | 説明 |
 |---------|------|------|
-| `getByTaskId` | query | タスクのコメント一覧取得 |
+| `getByTaskId` | query | タスクのコメント一覧取得（配布コードに実装済み。本教材では手を加えません） |
 | `create` | mutation | コメント投稿 |
 | `update` | mutation | コメント編集（Day 19） |
 | `delete` | mutation | コメント削除（Day 19） |
@@ -276,32 +367,51 @@ import { Badge }
       )}
       <AvatarFallback>
         {(comment.user.name
-          ?? comment.user.email
-          ?? '?')[0]?.toUpperCase()}
+          || comment.user.email
+          || '?')[0]?.toUpperCase()}
       </AvatarFallback>
     </Avatar>
 ```
 
 **確認ポイント**:
 - `AvatarImage` は `{comment.user.avatar && ...}` で条件付きレンダリング（画像URLがある場合のみ表示）
-- `AvatarFallback` の名前取得にも `??` を使い、name がなければ email、両方なければ `'?'` を使う
+- `AvatarFallback` の名前取得には `||` を使い、name がなければ email、両方なければ `'?'` を使う
 - AvatarFallback で頭文字（先頭 1 文字を大文字化）を表示する
 
-> **`??` vs `||` の違い**:
-> プロジェクト規約では `??`（Nullish Coalescing）を推奨しています。
-> 実際の `task-detail-dialog.tsx` では `||` が使われていますが、
-> `avatar` は `null | string` 型なので `??` がより正確です。
-> `||` は空文字 `''` もフォールバックしますが、`??` は `null`/`undefined` のみ対象です。
+> `comment.user.name` が空のときは email を、
+> それも無いときは `'?'` を使います。
+> `||` を左から順にたどり、最初の使える値で止まります。
+> この後の表示名も同じ順でたどるので、
+> 頭文字と表示名が別々の値になることはありません。
 
 日時の表示には `date-fns` の `format` を使います。
 ユーザー名の横に `yyyy/MM/dd HH:mm` 形式で
 投稿時刻を表示します。
 
+まず、ファイル冒頭に `date-fns` のインポートを追加します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// 日時整形に使う date-fns のインポート
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+```
+
+**確認ポイント**:
+- `format` は `date-fns` からインポート
+- `ja` は `date-fns/locale` からインポート
+
+投稿日時をそのまま出すと読みにくいので、`format` で
+`yyyy/MM/dd HH:mm` の形にそろえます。`ja` ロケールを渡すと、
+月名などが日本語表記で扱われます。
+
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
 // .map ループ内: ユーザー名と投稿日時
 <span className="font-medium">
-  {comment.user.name || comment.user.email}
+  {comment.user.name
+    || comment.user.email
+    || '?'}
 </span>
 <span className="text-xs
   text-muted-foreground">
@@ -595,7 +705,7 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — 認証状態つきのコメント表示を読みやすくする
+### Pro パターンで書こう（認証状態つきのコメント表示を読みやすくする）
 
 コメント表示では、読み込み中・未ログイン・空状態・通常表示が並びます。
 JSX の中に全部詰めると条件分岐が深くなります。

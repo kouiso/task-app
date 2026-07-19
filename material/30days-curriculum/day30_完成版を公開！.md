@@ -30,7 +30,7 @@ Day 29 では**ユーザー詳細・編集ページ**を実装しました。管
 flowchart TD
     A[第1週: Day 1-4\n環境構築・初回デプロイ]
     B[第2週: Day 5-10\n認証・プロジェクト管理]
-    C[第3週: Day 11-16\nタスク CRUD・タイマー]
+    C[第3週: Day 11-16\nタスク CRUD・作業時間記録]
     D[第4週: Day 17-20\n検索・マイタスク]
     E[第5週: Day 21-24\n統計・グラフ・管理]
     F[第6週: Day 25-30\n仕上げ・デプロイ]
@@ -48,9 +48,9 @@ flowchart TD
 
 > **ローカル DB と本番 DB の違い**:
 > Docker の PostgreSQL はローカル開発専用です。
-> 本番では Vercel Postgres や Supabase などの
-> マネージド DB を使います。Vercel に設定する
-> `DATABASE_URL` は本番 DB の接続文字列です。
+> 本番では Neon や Supabase（PostgreSQL をクラウド上で提供してくれるサービス。読み方: ニオン、スーパベース）などの
+> マネージド DB を、Vercel の Marketplace 連携から追加します。連携すると本番 DB の接続文字列が
+> `DATABASE_URL` として Vercel に自動で設定されます。
 
 ### 新しく学ぶ概念
 
@@ -93,12 +93,22 @@ flowchart TD
 > `NODE_ENV` は Vercel が自動で
 > `production` に設定するため、
 > 手動設定は不要です。
-
-> 本番用の `DATABASE_URL` は Vercel
-> Postgres や Supabase 等のクラウド DB
-> サービスで取得できます。Day 4 で
-> 初回デプロイ時に設定済みの場合は
-> その接続文字列をそのまま使います。
+>
+> 本番用の `DATABASE_URL` は、クラウド DB
+> サービスで用意します。Vercel なら、管理画面で
+> 対象プロジェクトを開きます。Storage タブから
+> Postgres データベースを作成すると、接続文字列が
+> 発行されます。この文字列は環境変数にも自動で
+> 追加されます。Supabase など外部サービスで作る
+> 場合は、発行された接続文字列をこの `DATABASE_URL`
+> に設定します。Day 4 の初回デプロイ時に設定済み
+> なら、その接続文字列をそのまま使います。
+>
+> 環境変数を Vercel に登録するときは、Production
+> だけでなく Preview にも同じ値を入れておきます。
+> ブランチのプレビュー用ビルドでも同じ変数が要る
+> ため、Production だけだとプレビュー側のビルドが
+> 失敗します。
 
 **シークレットキーの生成**:
 
@@ -144,12 +154,12 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 > ホスト側ポートです。既に使われている場合は、
 > `_DOCKER_COMPOSE_HOST_PORT_DB` と `DATABASE_URL` の
 > ポート番号を同じ値に変更します。
-
+>
 > 本番では `.env` ファイルは使いません。
 > Vercel のダッシュボードで環境変数を
 > 直接設定します。コードに秘密値を
 > 含めないのがセキュリティの基本です。
-
+>
 > **ローカルで `npm run build` を実行する前の準備**:
 > このプロジェクトは `prisma.config.ts` と
 > `package.json` の `build` / `vercel-build` /
@@ -367,6 +377,7 @@ open https://your-app-name.vercel.app
 【スクリーンショット】本番環境のログイン画面。
 
 ![本番環境のログイン画面](./screenshots/login.png)
+
 #### 本番環境チェックリスト
 
 | 機能 | 確認内容 | 結果 |
@@ -397,9 +408,10 @@ open https://your-app-name.vercel.app
 > API レスポンスが 200 であることも
 > チェックします。
 
-【スクリーンショット】本番環境のダッシュボード画面。
+【スクリーンショット】完成版のダッシュボード画面。
 
-![本番環境のダッシュボード画面](./screenshots/dashboard.png)
+![完成版のダッシュボード画面](./screenshots/dashboard.png)
+
 ---
 
 ### Step 6: 30日間の学習サマリー（7分）
@@ -426,7 +438,7 @@ find src/app -name "page.tsx" | wc -l
 | 第1週 | 1-4 | 環境構築・初回デプロイ |
 | 第2週 | 5-8 | 認証 UI・JWT・サイドバー |
 | 第3週 | 9-12 | プロジェクト CRUD・メンバー追加 |
-| 第4週 | 13-16 | タスク CRUD・ステータス・タイマー |
+| 第4週 | 13-16 | タスク CRUD・ステータス・作業時間記録 |
 | 第5週 | 17-22 | マイタスク・検索・統計・グラフ |
 | 第6週 | 23-30 | レポート・管理・詳細・デプロイ |
 
@@ -548,12 +560,12 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ---
 
-### Pro パターンで書こう — 完成版の振り返り画面は Server Component を標準にする
+### Pro パターンで書こう（完成版の振り返り画面は Server Component を標準にする）
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+静的な表示部分を Server Component にまとめると、JS バンドルサイズを小さくでき、初期表示も速くなります。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-#### Before（動くけど、プロは書かない）
+#### Before（改善前のコード）
 
 ```typescript
 // filepath: src/app/graduation/page.tsx

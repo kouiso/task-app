@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 10 では react-hook-form・zod・tRPC の `useMutation` を組み合わせて、ダイアログ形式のプロジェクト新規作成機能を実装しました。CRUDの「Create」ができたので、今日は「Update」と「Delete」に進みます。
+Day 10 では react-hook-form・zod・tRPC の `useMutation`（データ変更API呼び出しのフック）を組み合わせて、ダイアログ形式のプロジェクト新規作成機能を実装しました。CRUD（作成 Create・読み取り Read・更新 Update・削除 Delete の4操作をまとめた呼び名）の「Create」ができたので、今日は「Update」と「Delete」に進みます。
 
 ---
 
@@ -105,7 +105,7 @@ src/
 
 **ゴール**: プロジェクトの更新・削除・アーカイブ・アーカイブ解除の4つの手続きを追加します。`api.project.update` / `api.project.delete` / `api.project.archive` / `api.project.unarchive` を呼べる状態にします。
 
-#### 0-1. update — 送られてきた項目だけ更新する
+#### 0-1. update（送られてきた項目だけ更新する）
 
 今日書く `update` / `delete` / `archive` / `unarchive` は、どれも「自分にその操作をする権限があるか」を確認してから実行します。この確認をまとめて行うのが `assertMemberPermission` という関数です。渡されたメンバー情報と権限名（`canManageMembers` 等）を照合し、権限が無ければその場でエラーを発生させます。まず `project.ts` の import 群に追加します。
 
@@ -136,6 +136,8 @@ const projectUpdateSchema = z.object({
 
 `create` のスキーマとの違いは、`id` 以外の全項目が `.optional()` になっていることです。更新は「送られてきた項目だけ書き換える」のが基本なので、名前だけ変えたいときに `description` や `color` まで毎回送る必要はありません。
 
+`startDate` と `endDate` に付けた `.datetime()`（ISO日時文字列の検証）は、`"2024-12-31T00:00:00Z"` のような形式の文字列だけを通します。日付として解釈できない値が入ってきたら、その時点でエラーにして弾けます。
+
 続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。
 
 ```typescript
@@ -161,6 +163,8 @@ const projectUpdateSchema = z.object({
 ```
 
 `{ id, ...data }` は `input` から `id` だけを取り出し、残りをまとめて `data` に入れる分割代入です。`id` は「どのプロジェクトを更新するか」を探すために使い、それ以外の項目（`data`）は更新内容として使います。
+
+対象は `findUnique`（条件に合う1件を取得）で1件だけ引きます。あわせてメンバー一覧を `ctx.session.userId`（サーバーが持つログインユーザーID）で絞り込み、ログイン本人の情報だけを取り出して、この後の権限チェックに使います。
 
 続けて、権限チェックと更新データの組み立てです。
 
@@ -213,9 +217,9 @@ const projectUpdateSchema = z.object({
   }),
 ```
 
-`include` は `getAll` / `create` と同じ形にしています。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
+`include`（関連データを一緒に取る指定）のうち、メンバー情報を `user` 付きで取る部分は `getAll` / `create` と共通です。`getAll` は一覧表示用にタスクの `id` と `status` も取りますが、`update` の返り値では不要なので付けていません。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
 
-#### 0-2. delete — ここが一番のヤマ場、削除だけは OWNER 限定
+#### 0-2. delete（ここが一番のヤマ場、削除だけは OWNER 限定）
 
 `update` の下に `delete` を追加します。まずは `update` と同じく対象を探すところからです。
 
@@ -265,7 +269,7 @@ const projectUpdateSchema = z.object({
 
 理由はコードのコメントの通りです。`canDelete` という権限名はタスク削除にも使われていて、ADMIN 権限にも与えられています。それをそのまま使うと、プロジェクト自体の削除まで ADMIN に許可されてしまいます。プロジェクトを消す操作はメンバー管理より重いので、共通の権限チェックに乗せず、あえてここだけ独自のチェックを書いています。
 
-#### 0-3. archive / unarchive — 同じ処理をヘルパー関数にまとめる
+#### 0-3. archive / unarchive（同じ処理をヘルパー関数にまとめる）
 
 アーカイブとアーカイブ解除は「`isArchived` を true にするか false にするか」の違いしかありません。同じ処理を2回書かずに、共通のヘルパー関数にまとめます。`project.ts` の `projectRouter` 定義の少し上、`projectMemberSchema` の下に追加します。
 
@@ -333,7 +337,7 @@ Step 0 では権限まわりの書き方が3パターン出てきました。表
 **実装**:
 
 まず、Day 10 で作成した `ProjectFormData` 型と、削除確認用の `DeleteConfirmDialog` をインポートします。
-既に `useState` や `Suspense` の import がある場合は、
+既に `useState` や `Suspense`（準備中に仮表示へ差し替える仕組み）の import がある場合は、
 重複させずに以下の形へ揃えてください。
 
 ```typescript
@@ -361,6 +365,8 @@ import { DeleteConfirmDialog }
   from '@/component/ui/delete-confirm-dialog';
 ```
 
+この2つは Day 10 で作った資産を編集機能に持ち込むための import です。`ProjectFormData` 型を取り込むと、フォームに渡す値の形をコンパイラが検査してくれます。`DeleteConfirmDialog` は削除確認のUIを毎回書かずに済ませるための共通部品です。
+
 **確認ポイント**:
 - インポート文を追加してエラーが出ていない
 - `ProjectFormData` と `DeleteConfirmDialog` が正しくインポートされた
@@ -378,6 +384,8 @@ const [editingProject, setEditingProject] =
     undefined
   );
 ```
+
+`selectedProject` は詳細表示の対象を、`editingProject` は編集ダイアログに流し込む既存データを覚えておくための state です。値を state に持たせておくと、ボタンを押した瞬間の選択を、後続の送信処理まで持ち運べます。
 
 **確認ポイント**:
 - `selectedProject` が `string | null` で定義されている
@@ -403,9 +411,25 @@ useEffect(() => {
 }, [projectIdParam]);
 ```
 
+URL の `?projectId=...` を読むだけでは、リロードや戻る操作のたびに表示がずれます。`useEffect` で URL の値を `selectedProject` に写しておくと、画面の状態が常に URL と一致します。
+
 **確認ポイント**:
 - `router.push(...)` を使う準備ができている
 - URL に `projectId` があると `selectedProject` に入る
+
+ログイン中のユーザー情報も取得しておきます。この後の作成分岐でユーザーIDを確認するのに使います。`utils` の並びに追加してください。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// ログインユーザーを取得（画面の表示切り替えに使う）
+const { data: currentUser } =
+  api.auth.getCurrentUser.useQuery();
+```
+
+**確認ポイント**:
+- `currentUser` でログイン中のユーザーを取得できた
+
+`getCurrentUser` はサーバーが持つログイン情報を返します。ここで取った `currentUser` は、あくまで画面の表示やボタンの出し分けに使う値です。なりすましを防ぐのは、ブラウザで動くこの値ではなく、サーバー側の各手続きが参照する `ctx.session.userId` の役割です。Day 12 では、このユーザーがプロジェクト内でどのロールかを調べて、ボタンの表示可否も決めます。
 
 次に、Day 10 で定義済みの `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
 
@@ -672,6 +696,8 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 />
 ```
 
+`initialData` に `editingProject` を渡しているので、同じ `ProjectDialog` が新規作成と編集の両方で動きます。`editingProject` が `undefined` なら空のフォーム、既存データが入っていれば値の埋まったフォームになります。
+
 **確認ポイント**:
 - 編集ボタンでダイアログを開くと既存の名前が入っている
 - 新規作成ボタンで空のダイアログが開く
@@ -730,7 +756,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 | `title?` | `string` | ダイアログのタイトル（省略時は `本当に削除しますか？`） |
 | `description?` | `string` | 補足説明文（省略時:「この操作は取り消せません。」） |
 
-> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending` を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
+> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending`（mutation実行中フラグ）を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
 
 スクリーンショット: 削除確認ダイアログが表示されている画面。
 
@@ -804,6 +830,8 @@ const archiveMutation =
   });
 ```
 
+`onSuccess` で `invalidate()` を呼ぶと、アーカイブ後に一覧のキャッシュが捨てられ、最新の状態が取り直されます。`router.push('/project')` で詳細画面から一覧へ戻せば、アーカイブしたプロジェクトが画面から消えます。
+
 **確認ポイント**:
 - `archiveMutation` が定義できた
 - 成功時に `invalidate()` と `router.push('/project')` で一覧画面に戻る
@@ -819,6 +847,8 @@ const unarchiveMutation =
     },
   });
 ```
+
+解除も成功後の流れは同じで、`invalidate()` で一覧を取り直します。呼ぶAPIはアーカイブと違いますが、画面を最新化する手順をそろえておくと、どちらを押しても同じ挙動になって迷いません。
 
 **確認ポイント**:
 - `unarchiveMutation` が定義できた
@@ -964,7 +994,7 @@ PORT=3001 npm run dev
 6. 一覧が自動的に更新されることを確認
 
 > スクリーンショット: 編集ダイアログに既存のプロジェクト名が表示されている画面
-
+>
 > ![編集ダイアログに既存のプロジェクト名が表示されている画面](./screenshots/project-create-dialog.png)
 
 #### 削除フローの確認
@@ -976,7 +1006,7 @@ PORT=3001 npm run dev
 5. 一覧からプロジェクトが消えることを確認
 
 > スクリーンショット: 削除確認ダイアログが表示されている画面
-
+>
 > ![削除確認ダイアログが表示されている画面](./screenshots/project-delete-confirm.png)
 
 #### アーカイブフローの確認
@@ -987,8 +1017,8 @@ PORT=3001 npm run dev
 4. アーカイブしたプロジェクトが表示されることを確認
 
 > スクリーンショット: アーカイブ表示を切り替えた後の一覧画面
-
-> ![アーカイブ表示を切り替えた後の一覧画面](./screenshots/project-list.png)
+>
+> ![アーカイブ表示を切り替えた後の一覧画面（アーカイブ済みプロジェクトが表示される）](./screenshots/archived-project-list.png)
 
 **確認ポイント**:
 - 編集で既存データが反映される
@@ -1007,12 +1037,12 @@ PORT=3001 npm run dev
 
 ---
 
-### Pro パターンで書こう — 編集フォームの optional な値は `?.` と `??` で整える
+### Pro パターンで書こう（編集フォームの optional な値は `?.` と `??` で整える）
 
-ここまでで動くコードは書けた。でもプロの現場ではもう一段上の書き方をします。
+`?.` と `??` を使うと null チェックと代替値の指定が1行に収まり、変換の意図が読みやすくなります。
 なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
 
-### Before（動くけど、プロは書かない）
+### Before（改善前のコード）
 
 ```typescript
 type ProjectFromApi = {
@@ -1213,7 +1243,7 @@ console.log(
 #### 覚えておきたいエッセンス
 
 編集画面では「値がないかもしれない」が何度も出てきます。
-多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになるで。
+多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになります。
 
 ## 今日のまとめ
 
@@ -1231,7 +1261,7 @@ console.log(
 |--------------|------|---------|
 | 編集ダイアログに古いデータが残る | `useForm` の `values` プロパティが `initialData` と連動していない | `ProjectDialog` 側で `values`（`defaultValues` ではない）に `initialData` の値を渡しているか確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `utils.project.getAll.invalidate()` を呼ぶ |
-| 「権限がありません」エラー（削除） | OWNER/ADMIN 以外で削除操作 | OWNER か ADMIN アカウントで操作する（`canDelete` 権限が必要） |
+| 「権限がありません」エラー（削除） | OWNER 以外で削除操作 | OWNER アカウントで操作する（プロジェクト削除は OWNER だけに許可） |
 | 「権限がありません」エラー（アーカイブ） | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する（`canArchive` 権限が必要） |
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |

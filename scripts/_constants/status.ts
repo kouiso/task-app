@@ -4,7 +4,6 @@ export const TASK_STATUS = {
   IN_REVIEW: 'IN_REVIEW',
   DONE: 'DONE',
   CANCELLED: 'CANCELLED',
-  BLOCKED: 'BLOCKED',
 } as const;
 
 export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS];
@@ -15,16 +14,15 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   IN_REVIEW: 'レビュー中',
   DONE: '完了',
   CANCELLED: 'キャンセル',
-  BLOCKED: 'ブロック',
 };
 
+// ダッシュボードヒーロー/統計カードと統一した Tailwind -400/-500 系パレット
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  TODO: '#9e9e9e',
-  IN_PROGRESS: '#2196f3',
-  IN_REVIEW: '#ff9800',
-  DONE: '#4caf50',
-  CANCELLED: '#f44336',
-  BLOCKED: '#9c27b0',
+  TODO: '#64748b',
+  IN_PROGRESS: '#60a5fa',
+  IN_REVIEW: '#fbbf24',
+  DONE: '#34d399',
+  CANCELLED: '#f87171',
 };
 
 export function isTaskStatus(value: unknown): value is TaskStatus {
