@@ -5,12 +5,11 @@
 ## 前回の振り返り
 
 Day 05-06 でログイン画面と登録画面の UI を作りました。
-見た目はできていますが、ログインボタンを押しても何も起きません——
-サーバー側がまだないからです。
+画面の動作確認に使える認証バックエンドは、配布スターターに入っています。
 
-今日はその「裏側」を自分の手で作ります。
-ここを超えたら、アプリが本当に「使える」ものになります。
-配布済みコードを開いて読む日ではなく、必要な認証ファイルを小さく書いてつなぐ日です。
+今日は、その「裏側」を自分の手で作り直します。
+完成済みコードを残したまま読むのではなく、対象ファイルの中身を空にし、
+小さな部品から順番につなぎ直します。
 
 ---
 
@@ -19,11 +18,11 @@ Day 05-06 でログイン画面と登録画面の UI を作りました。
 ログイン・登録が実際に動くようにします。
 その過程で、JWT トークン・bcrypt パスワード検証・HttpOnly Cookie・tRPC の仕組みを体験的に学びます。
 
-- [ ] `src/lib/session.ts` — JWT セッション管理を作る
-- [ ] `src/server/api/trpc.ts` — tRPC の土台を作る
-- [ ] `src/server/api/routers/auth.ts` — 認証 API を作る
-- [ ] `src/server/api/root.ts` — ルーターを束ねる
-- [ ] `src/app/api/trpc/[trpc]/route.ts` — HTTP ハンドラを作る
+- [ ] `src/lib/session.ts` — JWT セッション管理を作り直す
+- [ ] `src/server/api/trpc.ts` — tRPC の土台を作り直す
+- [ ] `src/server/api/routers/auth.ts` — 認証 API を作り直す
+- [ ] `src/server/api/root.ts` — ルーターの束ね方を作り直す
+- [ ] `src/app/api/trpc/[trpc]/route.ts` — HTTP ハンドラを作り直す
 - [ ] `src/middleware.ts` — ルート保護を作る
 - [ ] DevTools でログインの流れを確認する
 
@@ -81,10 +80,10 @@ sequenceDiagram
 
 | ステップ | 作業内容 | 所要時間 | 作成ファイル |
 |---------|---------|---------|-------------|
-| Step 1 | session.ts を作る（JWT セッション管理） | 12分 | `src/lib/session.ts` |
-| Step 2 | trpc.ts を作る（API の土台） | 10分 | `src/server/api/trpc.ts` |
-| Step 3 | auth.ts を作る（認証ルーター） | 15分 | `src/server/api/routers/auth.ts` + ヘルパー |
-| Step 4 | API を繋ぐ（ルーター登録 + HTTP ハンドラ） | 5分 | `src/server/api/root.ts`, `src/app/api/trpc/[trpc]/route.ts` |
+| Step 1 | session.ts を作り直す（JWT セッション管理） | 12分 | `src/lib/session.ts` |
+| Step 2 | trpc.ts を作り直す（API の土台） | 10分 | `src/server/api/trpc.ts` |
+| Step 3 | auth.ts を作り直す（認証ルーター） | 15分 | `src/server/api/routers/auth.ts` + ヘルパー |
+| Step 4 | API を繋ぎ直す（ルーター登録 + HTTP ハンドラ） | 5分 | `src/server/api/root.ts`, `src/app/api/trpc/[trpc]/route.ts` |
 | Step 5 | middleware.ts を作る（ルート保護） | 8分 | `src/middleware.ts` |
 | Step 6 | ログインして動作確認する | 5分 | なし |
 | Step 7 | DevTools で JWT と Cookie を確認する | 5分 | なし |
@@ -93,14 +92,14 @@ sequenceDiagram
 
 ---
 
-### Step 1: session.ts を作る（JWT セッション管理・12分）
+### Step 1: session.ts を作り直す（JWT セッション管理・12分）
 **ゴール**: ログイン状態を JWT トークンで管理する仕組みを作ります。
 
 このファイルが認証の中心です。
 「トークンを作る」「トークンを読む」「Cookie に保存する」「Cookie から取り出す」——
 認証の基本操作が全部ここに入ります。
 
-`src/lib/session.ts` を新規作成します。
+`src/lib/session.ts` を開き、中身をすべて削除してから作り直します。
 
 #### 1-1. インポートと秘密鍵の取得
 
@@ -320,7 +319,7 @@ export async function verifySession(): Promise<SessionUser | null> {
 | `maxAge` | 7 日間 | セッションの有効期限 |
 
 **確認ポイント**:
-- [ ] `src/lib/session.ts` が作成できた
+- [ ] `src/lib/session.ts` を教材のコードで作り直した
 - [ ] `encrypt` / `decrypt` / `createSession` / `getSession` / `deleteSession` / `verifySession` の 6 関数がある
 - [ ] この時点ではまだ `npm run dev` しなくて OK
 
@@ -328,13 +327,13 @@ export async function verifySession(): Promise<SessionUser | null> {
 
 ---
 
-### Step 2: trpc.ts を作る（API の土台・10分）
+### Step 2: trpc.ts を作り直す（API の土台・10分）
 **ゴール**: tRPC の初期設定と、public / protected / admin の 3 種類の API を定義します。
 
 Day 05 のログイン画面は `api.auth.login.useMutation()` でサーバーを呼んでいました。
 その「サーバー側の土台」がこのファイル。
 
-`src/server/api/trpc.ts` を新規作成します。
+`src/server/api/trpc.ts` を開き、中身をすべて削除してから作り直します。
 
 #### 2-1. コンテキスト作成
 
@@ -494,23 +493,24 @@ export const createCallerFactory = t.createCallerFactory;
 > `isAuthenticated` ミドルウェアは、Cookie のセッション情報だけでなく DB からユーザーの最新状態を取得します。アカウントが無効化されていたら、ここで弾きます。
 
 **確認ポイント**:
-- [ ] `src/server/api/trpc.ts` が作成できた
+- [ ] `src/server/api/trpc.ts` を教材のコードで作り直した
 - [ ] `publicProcedure` / `protectedProcedure` / `adminProcedure` の 3 つが export されている
 
 **学んだこと**: tRPC のミドルウェアで「ログイン必須」「管理者のみ」といった認証制御を API 定義にチェーン（`.use()`）するだけで追加できます。
 
 ---
 
-### Step 3: auth.ts を作る（認証ルーター・15分）
+### Step 3: auth.ts を作り直す（認証ルーター・15分）
 **ゴール**: ログイン・登録・ログアウト・セッション取得の 4 つの API を作ります。
 
-ここが今日のメイン。フロントから呼ばれる認証 API の実体を書きます。
+ここが今日のメインです。配布スターターには、Day 05 と Day 06 の画面を先に動かすため、完成済みの認証 API が入っています。ここでは動いているコードを答えとして眺めるだけにせず、`auth.ts` の中身を削除し、手順どおりに自分で作り直します。
 
 まず、共通のヘルパーを作ります。
 
 #### 3-0. select ヘルパーを作る
 
-`src/server/api/routers/_helpers/select.ts` を新規作成します。
+`src/server/api/routers/_helpers/select.ts` を開き、教材のコードと見比べます。
+内容が異なる場合は、中身を教材のコードへ置き換えてください。
 
 ```typescript
 // filepath: src/server/api/routers/_helpers/select.ts
@@ -542,7 +542,8 @@ Prisma（TypeScript からデータベースを操作するための道具。読
 
 #### 3-1. auth.ts のインポートとバリデーション
 
-`src/server/api/routers/auth.ts` を新規作成します。
+`src/server/api/routers/auth.ts` を開き、中身をすべて削除してから作り直します。
+ファイル自体は削除せず、空になった同じファイルへ次のコードを書いてください。
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
@@ -888,20 +889,20 @@ flowchart TD
 > `bcrypt.hash(password, 10)` の `10` はソルトラウンド。数字が大きいほど安全だが遅くなります。10 が一般的なバランス。
 
 **確認ポイント**:
-- [ ] `src/server/api/routers/_helpers/select.ts` が作成できた
-- [ ] `src/server/api/routers/auth.ts` が作成できた
+- [ ] `src/server/api/routers/_helpers/select.ts` を教材のコードと照合した
+- [ ] `src/server/api/routers/auth.ts` を教材のコードで作り直した
 - [ ] `authRouter` に 5 つの API（login / register / logout / getSession / getCurrentUser）がある
 
 **学んだこと**: パスワードは平文で保存せず `bcrypt.hash` でハッシュ化し、照合は `bcrypt.compare` で行います。
 
 ---
 
-### Step 4: API を繋ぐ（ルーター登録 + HTTP ハンドラ・5分）
+### Step 4: API を繋ぎ直す（ルーター登録 + HTTP ハンドラ・5分）
 **ゴール**: 作った auth ルーターを tRPC に登録し、HTTP リクエストを受け付けられるようにします。
 
 #### 4-1. root.ts（ルーターを束ねる）
 
-`src/server/api/root.ts` を新規作成します。
+`src/server/api/root.ts` を開き、中身を教材のコードへ置き換えます。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -921,7 +922,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 #### 4-2. route.ts（HTTP ハンドラ）
 
-`src/app/api/trpc/[trpc]/route.ts` を新規作成します。
+`src/app/api/trpc/[trpc]/route.ts` を開き、中身を教材のコードへ置き換えます。
 
 ```typescript
 // filepath: src/app/api/trpc/[trpc]/route.ts
@@ -945,8 +946,8 @@ export { handler as GET, handler as POST };
 Next.js の App Router では、`src/app/api/trpc/[trpc]/route.ts` に置くだけで `/api/trpc/*` のリクエストをすべて tRPC が処理します。
 
 **確認ポイント**:
-- [ ] `src/server/api/root.ts` が作成できた
-- [ ] `src/app/api/trpc/[trpc]/route.ts` が作成できた
+- [ ] `src/server/api/root.ts` を教材のコードで作り直した
+- [ ] `src/app/api/trpc/[trpc]/route.ts` を教材のコードで作り直した
 
 ---
 
@@ -1261,10 +1262,10 @@ export function AuthGuard({
 
 ## 今日のまとめ
 
-- [ ] `src/lib/session.ts` — JWT セッション管理を作った
-- [ ] `src/server/api/trpc.ts` — tRPC の土台を作った
-- [ ] `src/server/api/routers/auth.ts` — 認証ルーターを作った
-- [ ] `src/server/api/root.ts` + `route.ts` — API を繋いだ
+- [ ] `src/lib/session.ts` — JWT セッション管理を作り直した
+- [ ] `src/server/api/trpc.ts` — tRPC の土台を作り直した
+- [ ] `src/server/api/routers/auth.ts` — 認証ルーターを作り直した
+- [ ] `src/server/api/root.ts` + `route.ts` — API を繋ぎ直した
 - [ ] `src/middleware.ts` — ルート保護を作った
 - [ ] ログインが実際に動くことを確認した
 - [ ] DevTools で JWT と Cookie の中身を確認した

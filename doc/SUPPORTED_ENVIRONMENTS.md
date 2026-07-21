@@ -13,15 +13,17 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 | Node.js | 22.x | `.mise.toml` の `node = "22.22.2"` / `package.json` の `engines.node >=22` | `node -v` |
 | npm | 10.x | Node.js 22 同梱 npm を基準 | `npm -v` |
 | PostgreSQL | 16-alpine | `docker-compose.yml` の `postgres:16-alpine` | `docker compose ps` |
-| Docker runtime | Docker Desktop または OrbStack | ローカル PostgreSQL 起動に使用 | `docker -v` / `docker compose version` |
+| Docker runtime | Docker Desktop / OrbStack / Docker Engine | ローカル PostgreSQL 起動に使用 | `docker -v` / `docker compose version` |
 | エディタ | VS Code 推奨 | 教材本文の操作説明に合わせる | `code --version` |
 
 ## バージョン管理方針
 
-- Node.js は mise で固定します。初回セットアップ時は `mise install` を実行してください。
+- mise を使う場合は、同梱の `.mise.toml` を `mise trust` で許可してから `mise install` を実行します。
+- mise を使わない場合は、Day 01 の OS 別手順で Node.js 22 を導入します。
 - npm は Node.js 22 系に同梱される 10.x 系をサポート対象にします。
 - PostgreSQL はローカルに直接インストールせず、`docker-compose.yml` の `postgres:16-alpine` を使います。
-- Docker runtime は Docker Desktop または OrbStack をサポート対象にします。Windows は WSL2 上で Docker Desktop 連携を有効にしてください。
+- macOS は Docker Desktop または OrbStack を使います。Windows は WSL2 上で Docker Desktop 連携を有効にしてください。
+- Ubuntu は Docker Engine と Docker Compose plugin を使います。
 
 ## Day01 Setup E2E 確認項目
 
@@ -29,7 +31,7 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 
 | 確認 | コマンド | 成功条件 |
 |------|----------|----------|
-| Node.js 固定 | `mise install && node -v` | `v22.x.x` が表示される |
+| Node.js 固定 | `mise trust && mise install && node -v` | `v22.x.x` が表示される |
 | npm 確認 | `npm -v` | `10.x.x` が表示される |
 | 依存関係インストール | `npm install` | エラーなく完了する |
 | PostgreSQL 起動 | `docker compose up -d` | `db` と `test-db` が起動する |
@@ -52,7 +54,8 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 
 ### Ubuntu 22.04 LTS
 
-- Docker Engine と Docker Compose plugin が利用できる状態にします。
+- [Docker 公式の Ubuntu 手順](https://docs.docker.com/engine/install/ubuntu/)で Docker Engine を導入します。
+- `docker-compose-plugin` も導入し、`docker compose version` で確認します。
 - 権限エラーが出る場合は、ユーザーを `docker` グループへ追加し、シェルを開き直してください。
 
 ## サポート外
