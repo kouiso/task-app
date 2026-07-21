@@ -1,7 +1,7 @@
 name: Auto Merge PR
 
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] fork対応に書き込み権限が必要で、PRのコードは実行しない。
     types:
       - opened
       - synchronize
@@ -14,6 +14,10 @@ on:
   pull_request_review:
     types:
       - submitted
+
+permissions:
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.head_branch || github.ref }}
