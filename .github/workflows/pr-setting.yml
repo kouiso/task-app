@@ -10,14 +10,14 @@ jobs:
     runs-on: ${{ vars.RUNNER_LINUX }}
     steps:
       - name: Assign author to PR
-        uses: technote-space/assign-author@9558557c5c4816f38bd06176fbc324ba14bb3160
+        uses: technote-space/assign-author@9558557c5c4816f38bd06176fbc324ba14bb3160 # v1.6.2
 
   auto-label-branch:
     name: Label based on branch name
     runs-on: ${{ vars.RUNNER_LINUX }}
     steps:
       - name: Add label based on branch name
-        uses: actions/github-script@211cb3fefb35a799baa5156f9321bb774fe56294
+        uses: actions/github-script@211cb3fefb35a799baa5156f9321bb774fe56294 # v5.2.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -76,6 +76,6 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9
+      - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5.0.0
         with:
           configuration-path: '.github/labeler.yml'
