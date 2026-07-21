@@ -203,9 +203,18 @@ export const reportRouter = createTRPCRouter({
 
       const targetUserId = input.userId ?? ctx.session.userId;
       const now = new Date();
-      const startDate = new Date(now);
-      startDate.setDate(startDate.getDate() - input.weeks * 7);
-      startDate.setHours(0, 0, 0, 0);
+      // 週バケットは「今日で終わる直近7日間」を最終週として7日刻みで遡る。
+      // 旧実装は最終週が「今日0時〜現在」だけの進行中バケットで、「4週間」表示の
+      // 実カバー範囲が3週間+今日に縮んでいた（PR#285 レビュー指摘）。排他的上端を
+      // 明日0時に固定した完全な7日バケット×weeks本にすることで、ラベル・週平均の
+      // 分母と実際の集計範囲が一致し、範囲内タスクは必ずいずれかの週に入る。
+      // 日付ラベルは toISOString()（UTC）で出すため、バケット境界も UTC で刻む。
+      // ローカル時刻メソッドで刻むと、JST などのサーバーでラベルが1日ずれる。
+      const rangeEnd = new Date(now);
+      rangeEnd.setUTCHours(0, 0, 0, 0);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
+      const startDate = new Date(rangeEnd);
+      startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
 
       const where = {
         completedAt: { gte: startDate, lte: now },
@@ -224,11 +233,10 @@ export const reportRouter = createTRPCRouter({
       });
 
       const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
-        const weekStart = new Date(now);
-        weekStart.setDate(weekStart.getDate() - (input.weeks - i - 1) * 7);
-        weekStart.setHours(0, 0, 0, 0);
+        const weekStart = new Date(startDate);
+        weekStart.setUTCDate(weekStart.getUTCDate() + i * 7);
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
+        weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
         const weekTasks = tasks.filter(
           (task) => task.completedAt && task.completedAt >= weekStart && task.completedAt < weekEnd,
