@@ -80,19 +80,21 @@ export const searchRouter = createTRPCRouter({
 
     const projectIds = await getUserProjectIds(userId);
 
-    const taskWhere: Prisma.TaskWhereInput = {
-      projectId: { in: projectIds },
-      ...buildDynamicWhere(baseFilters),
-      ...(dueDateFilter && { dueDate: dueDateFilter }),
-    };
-
-    if (keyword) {
-      taskWhere.AND = [
-        {
-          OR: buildKeywordFilter(keyword, ['title', 'description']),
-        },
-      ];
+    // メンバーシップ条件と caller 指定の projectId を AND で重ねる。
+    // spread で合成すると caller の projectId がメンバーシップ条件を上書きして
+    // 非所属プロジェクトのタスクが読めてしまうため、必ず両方が効く形にする。
+    const andConditions: Prisma.TaskWhereInput[] = [
+      { projectId: { in: projectIds } },
+      buildDynamicWhere(baseFilters),
+    ];
+    if (dueDateFilter) {
+      andConditions.push({ dueDate: dueDateFilter });
     }
+    if (keyword) {
+      andConditions.push({ OR: buildKeywordFilter(keyword, ['title', 'description']) });
+    }
+
+    const taskWhere: Prisma.TaskWhereInput = { AND: andConditions };
 
     const tasks = await prisma.task.findMany({
       where: taskWhere,

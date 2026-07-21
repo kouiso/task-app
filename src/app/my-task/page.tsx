@@ -15,6 +15,7 @@ import {
 } from '@/component/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
 import type { TaskPriority } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import {
   isTaskStatus,
   TASK_STATUS,
@@ -52,10 +53,13 @@ interface TaskGroupSectionProps {
     dueDate: Date | null;
     assignee: { name: string | null; email: string; avatar: string | null } | null;
     timeSpentMinutes: number;
+    projectId: string;
   }>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTimeLogSuccess?: (() => void) | undefined;
+  canEditProject: (projectId: string) => boolean;
+  canDeleteProject: (projectId: string) => boolean;
 }
 
 const TaskGroupSection = ({
@@ -65,6 +69,8 @@ const TaskGroupSection = ({
   onEdit,
   onDelete,
   onTimeLogSuccess,
+  canEditProject,
+  canDeleteProject,
 }: TaskGroupSectionProps) => {
   if (tasks.length === 0) return null;
 
@@ -88,6 +94,8 @@ const TaskGroupSection = ({
             onEdit={onEdit}
             onDelete={onDelete}
             onTimeLogSuccess={onTimeLogSuccess}
+            canEdit={canEditProject(task.projectId)}
+            canDelete={canDeleteProject(task.projectId)}
           />
         ))}
       </div>
@@ -112,6 +120,38 @@ export default function MyTasksPage() {
       projectId: filterProject === 'all' ? undefined : filterProject,
     },
     { enabled: !!currentUser },
+  );
+
+  // プロジェクトごとのログインユーザー自身のロールを引けるようにする
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = currentUser?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find((member) => member.userId === userId);
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, currentUser?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
   );
 
   const utils = api.useUtils();
@@ -236,6 +276,8 @@ export default function MyTasksPage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onTimeLogSuccess={handleTimeLogSuccess}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
           />
 
           <TaskGroupSection
@@ -245,6 +287,8 @@ export default function MyTasksPage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onTimeLogSuccess={handleTimeLogSuccess}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
           />
 
           <TaskGroupSection
@@ -253,6 +297,8 @@ export default function MyTasksPage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onTimeLogSuccess={handleTimeLogSuccess}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
           />
 
           <TaskGroupSection
@@ -261,6 +307,8 @@ export default function MyTasksPage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onTimeLogSuccess={handleTimeLogSuccess}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
           />
 
           {tasks && tasks.length === 0 && (
