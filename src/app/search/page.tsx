@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -24,6 +24,7 @@ import {
 } from '@/component/ui/select';
 import { Separator } from '@/component/ui/separator';
 import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
 import { applySearchParamsToValues, buildSearchParamsFromValues } from '@/lib/search-filters';
@@ -98,8 +99,42 @@ function SearchPageContent() {
     !!searchValues.dateFrom ||
     !!searchValues.dateTo;
 
+  const { data: session } = api.auth.getSession.useQuery();
   const { data: projects } = api.search.getUserProjects.useQuery();
+  const { data: memberProjects } = api.project.getAll.useQuery();
   const { data: users } = api.search.getProjectMembers.useQuery();
+
+  // プロジェクトごとのログインユーザー自身のロールを引けるようにする
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !memberProjects) {
+      return map;
+    }
+    for (const project of memberProjects) {
+      const me = project.members?.find((member) => member.userId === userId);
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [memberProjects, session?.user?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
   const { data: searchResults, isLoading } = api.search.search.useQuery(
     {
       keyword: searchValues.keyword || undefined,
@@ -378,6 +413,8 @@ function SearchPageContent() {
                       onEdit={handleTaskEdit}
                       onDelete={handleTaskDelete}
                       onClick={handleTaskClick}
+                      canEdit={canEditProject(task.projectId)}
+                      canDelete={canDeleteProject(task.projectId)}
                     />
                   ))}
                 </div>
