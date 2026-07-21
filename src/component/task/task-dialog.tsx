@@ -37,6 +37,7 @@ const taskFormSchema = z.object({
   estimatedHours: z.number().min(0).optional(),
   projectId: z.string().min(1, 'プロジェクトは必須です'),
   assigneeId: z.string().optional(),
+  expectedUpdatedAt: z.string().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -59,6 +60,9 @@ export interface TaskFormData {
   estimatedHours?: number;
   projectId: string;
   assigneeId?: string;
+  // 楽観ロック用。編集画面を開いた時点の updatedAt（ISO文字列）を保持し、
+  // update API に渡すことで「他の人が先に更新していたら CONFLICT」を検出できる
+  expectedUpdatedAt?: string;
 }
 
 function buildTaskFormValues(
@@ -75,6 +79,7 @@ function buildTaskFormValues(
     estimatedHours: initialData?.estimatedHours,
     projectId: initialData?.projectId ?? (projects[0]?.id || ''),
     assigneeId: initialData?.assigneeId ?? '',
+    expectedUpdatedAt: initialData?.expectedUpdatedAt,
   };
 }
 
@@ -122,6 +127,9 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
       ...(data.dueDate && { dueDate: data.dueDate }),
       ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
       ...(data.assigneeId && { assigneeId: data.assigneeId }),
+      // 編集時のみ送る。サーバー側は updatedAt が一致しないと CONFLICT を返す
+      ...(data.id !== undefined &&
+        data.expectedUpdatedAt !== undefined && { expectedUpdatedAt: data.expectedUpdatedAt }),
     };
     onSubmit(submitData);
   };

@@ -198,6 +198,9 @@ export default function MyTasksPage() {
         estimatedHours: data.estimatedHours ?? null,
         projectId: data.projectId,
         assigneeId: data.assigneeId || null,
+        ...(data.expectedUpdatedAt !== undefined && {
+          expectedUpdatedAt: data.expectedUpdatedAt,
+        }),
       });
     }
   };

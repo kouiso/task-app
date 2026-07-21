@@ -228,6 +228,9 @@ function TaskPageContent() {
         estimatedHours: data.estimatedHours ?? null,
         projectId: data.projectId,
         assigneeId: data.assigneeId || null,
+        ...(data.expectedUpdatedAt !== undefined && {
+          expectedUpdatedAt: data.expectedUpdatedAt,
+        }),
       });
     } else {
       if (!session?.user?.id) {
