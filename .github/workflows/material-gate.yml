@@ -5,6 +5,11 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - 'material/**/*.md'
+      - 'README.md'
+      - 'doc/SUPPORTED_ENVIRONMENTS.md'
+      - '.env.example'
+      - '.mise.toml'
+      - '.node-version'
       # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
       - 'material/**/*.png'
       - '.claude/skills/material-writing/**'
@@ -14,11 +19,19 @@ on:
       - '.textlintrc.json'
       - 'package.json'
       - 'scripts/curriculum-qa/**'
+      - 'scripts/build-zip.sh'
+      - 'scripts/scaffold-from-scratch.sh'
       - '.github/workflows/material-gate.yml'
       # scaffold 配布物。Gate 3 の check_scaffold_curriculum_alignment.py が
       # SCAFFOLD_COPY_MAP 経由でここを読むため、これらを消す/改名するPRでも
       # 起動しないと「ゲートが捕まえるはずの退行」を取り逃す（Codexレビュー指摘 PR#282）。
       - 'scripts/_lib-base/**'
+      - 'scripts/_app-api-trpc/**'
+      - 'scripts/_app-base/**'
+      - 'scripts/_docker/**'
+      - 'scripts/_prisma/**'
+      - 'scripts/_seed/**'
+      - 'scripts/_server-base/**'
       - 'scripts/_lib-utils/**'
       - 'scripts/_constants/**'
       - 'scripts/_trpc-base/**'
@@ -31,6 +44,11 @@ on:
       - main
     paths:
       - 'material/**/*.md'
+      - 'README.md'
+      - 'doc/SUPPORTED_ENVIRONMENTS.md'
+      - '.env.example'
+      - '.mise.toml'
+      - '.node-version'
       # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
       - 'material/**/*.png'
       - '.claude/skills/material-writing/**'
@@ -40,11 +58,19 @@ on:
       - '.textlintrc.json'
       - 'package.json'
       - 'scripts/curriculum-qa/**'
+      - 'scripts/build-zip.sh'
+      - 'scripts/scaffold-from-scratch.sh'
       - '.github/workflows/material-gate.yml'
       # scaffold 配布物。Gate 3 の check_scaffold_curriculum_alignment.py が
       # SCAFFOLD_COPY_MAP 経由でここを読むため、これらを消す/改名するPRでも
       # 起動しないと「ゲートが捕まえるはずの退行」を取り逃す（Codexレビュー指摘 PR#282）。
       - 'scripts/_lib-base/**'
+      - 'scripts/_app-api-trpc/**'
+      - 'scripts/_app-base/**'
+      - 'scripts/_docker/**'
+      - 'scripts/_prisma/**'
+      - 'scripts/_seed/**'
+      - 'scripts/_server-base/**'
       - 'scripts/_lib-utils/**'
       - 'scripts/_constants/**'
       - 'scripts/_trpc-base/**'
@@ -54,6 +80,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  sale-package-gate:
+    name: 販売用ZIP初期状態チェック
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Build and verify sale package
+        run: bash scripts/build-zip.sh
+
   vendored-skill-integrity:
     name: 執筆スキルvendoring整合性チェック
     runs-on: ubuntu-latest

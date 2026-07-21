@@ -46,7 +46,7 @@
 
 - Node.js `22` 以上
 - npm `10` 以上
-- Docker Desktop（この上で PostgreSQL を動かす環境）
+- Docker Desktop または Docker Engine（この上で PostgreSQL を動かす環境）
 - エディタ（VS Code など）
 - ターミナル
 - ブラウザ
@@ -57,11 +57,11 @@
 |--------|------|----------|
 | Node.js | JavaScript をパソコン上で動かす実行環境。Next.js を動かすために必須 | 公式サイトからインストール（下の手順で説明します） |
 | npm | ライブラリ（他の人が作った部品）を管理するツール | Node.js に同梱されるので個別インストール不要 |
-| Docker Desktop | PostgreSQL を動かすための「コンテナ」実行環境 | 公式サイトからインストール（下の手順で説明します） |
+| Docker | PostgreSQL を動かすための「コンテナ」実行環境 | OS 別の公式手順からインストール（下の手順で説明します） |
 | PostgreSQL | 入力したデータを保存するデータベース | Docker から起動するので個別インストール不要 |
 | エディタ | コードを書くアプリ | [VS Code](https://code.visualstudio.com/) を推奨 |
 
-> このカリキュラムは macOS を基準に説明します。Windows の場合は、Windows の中で Linux を動かす「WSL2」の Ubuntu を使う前提です。まだ WSL2 が無い場合は、先に [Microsoft の公式手順](https://learn.microsoft.com/ja-jp/windows/wsl/install) に従って WSL2 と Ubuntu を入れ、以降のコマンドはすべて Ubuntu のターミナルで実行してください。
+> このカリキュラムは macOS を基準に説明します。Windows の場合は、Windows の中で Linux を動かす「WSL2」の Ubuntu を使う前提です。まだ WSL2 が無い場合は、先に [Microsoft の公式手順](https://learn.microsoft.com/ja-jp/windows/wsl/install) に従って WSL2 と Ubuntu を入れ、以降のコマンドはすべて Ubuntu のターミナルで実行してください。Ubuntu 22.04 を直接使っている場合も、Linux 用と書かれた手順を選びます。
 
 ### ターミナルを開く
 
@@ -69,6 +69,7 @@
 
 - macOS の場合は `command + スペース` で Spotlight を開き、`ターミナル` と入力して Enter
 - Windows (WSL2) の場合はスタートメニューで `Ubuntu` を検索して起動
+- Ubuntu の場合は `Ctrl + Alt + T` でターミナルを起動
 
 最初は文字が並ぶだけの画面に戸惑うかもしれませんが、これから使うのは決まったコマンドだけなので心配いりません。
 
@@ -83,7 +84,7 @@
 3. ダウンロードした `.pkg` をダブルクリックし、案内どおり「続ける」を押していく
 4. インストールが終わったら、開いているターミナルをいったん閉じて、もう一度開き直す
 
-**Windows (WSL2) の場合**
+**Windows (WSL2) / Ubuntu の場合**
 
 Ubuntu のターミナルで、次を1行ずつ実行します。
 
@@ -94,19 +95,28 @@ sudo apt-get install -y nodejs
 
 > 1行目で Node.js 22 の配布元を登録し、2行目で本体をインストールしています。`sudo` の実行時にパソコンのパスワード入力を求められることがあります。
 
-### Docker Desktop をインストールする
+### Docker をインストールする
 
 PostgreSQL（データベース）は、このあと Docker という仕組みの上で動かします。Docker 本体をまだ入れていなければ、先に入れておきましょう。
+
+**macOS / Windows (WSL2) の場合**
 
 1. [Docker Desktop 公式サイト](https://www.docker.com/products/docker-desktop/) を開き、自分の OS 用のインストーラをダウンロードする
 2. 案内どおりにインストールし、Docker Desktop を起動する
 3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備完了
 
-> Docker Desktop は起動していないと PostgreSQL を動かせません。今日の作業中は起動したままにしておきましょう。
+**Ubuntu の場合**
+
+1. [Docker 公式の Ubuntu 手順](https://docs.docker.com/engine/install/ubuntu/)を開く
+2. `Install using the apt repository` の順に Docker Engine を入れる
+3. `docker-ce` と一緒に `docker-compose-plugin` も入れる
+4. `docker version` と `docker compose version` が表示されることを確認する
+
+> macOS と Windows では Docker Desktop を起動したままにします。Ubuntu では Docker Engine が起動していることを `sudo systemctl status docker` で確認します。
 
 ### PostgreSQL はどういう状態ならOKか
 
-Docker Desktop が起動していれば進められます。PostgreSQL は Docker の上で自動的に立ち上がるので、パソコンへ個別にインストールする必要はありません。
+Docker が起動していれば進められます。PostgreSQL は Docker の上で自動的に立ち上がるので、パソコンへ個別にインストールする必要はありません。
 
 ### 先に確認しておくコマンド
 
@@ -126,14 +136,23 @@ npm -v
 
 ### Docker が動いているか確認する
 
-PostgreSQL は Docker Desktop の上で起動します。次のコマンドで Docker が動いているかを確認しておきましょう。`docker ok` と表示されれば準備完了です。
+PostgreSQL は Docker 上で起動します。次のコマンドで Docker が動いているかを確認しておきましょう。`docker ok` と表示されれば準備完了です。
 
 **ターミナル（どこでもOK）**
 ```bash
 docker info >/dev/null 2>&1 && echo "docker ok"
 ```
 
-このコマンドは Docker の状態を確認して、正常なら `docker ok` とだけ表示します。途中の `>/dev/null 2>&1` は細かい表示を隠す指定で、`&&` は「前のコマンドが成功したら次を実行する」という意味です。もし何も表示されなければ、Docker Desktop がまだ起動していないか、起動の途中の可能性があります。まず Docker Desktop を開いて、クジラのアイコンが安定するまで待ってから、もう一度このコマンドを実行してください。それでも表示されない場合は、`docker info` を隠し指定なしでそのまま実行して、出てきたエラーメッセージを読んでください。原因が起動待ちではないとき（インストール不完全や権限の問題など）は、そのメッセージに手がかりが書かれています。
+このコマンドは Docker の状態を確認して、正常なら `docker ok` とだけ表示します。途中の `>/dev/null 2>&1` は細かい表示を隠す指定で、`&&` は「前のコマンドが成功したら次を実行する」という意味です。
+
+何も表示されないときは、次のように確認してください。
+
+- macOS・Windows: Docker Desktop を開き、起動が完了してから、もう一度コマンドを実行する
+- Ubuntu: `sudo systemctl status docker` で Docker の状態を確認する
+
+Ubuntu で `docker info` に権限エラーが出た場合は、Docker 公式の[Linux インストール後の手順](https://docs.docker.com/engine/install/linux-postinstall/)に従ってください。`docker` グループへの追加後は、ログアウトしてからログインし直します。
+
+それでも表示されない場合は、`docker info` を隠し指定なしで実行してください。表示されたエラーメッセージから、起動待ち、インストール不完全、権限の問題などを確認できます。
 
 ## Step 1: 配布 ZIP を展開した場所から始める
 
@@ -153,8 +172,12 @@ docker info >/dev/null 2>&1 && echo "docker ok"
 ```bash
 mkdir -p ~/workspace
 cd ~/workspace
-unzip ~/Downloads/task-app-curriculum-v1.0.zip
+unzip ~/Downloads/task-app-curriculum-v1.1.zip
 cd task-app
+if command -v mise >/dev/null 2>&1; then
+  mise trust
+  mise install
+fi
 pwd
 ```
 
@@ -163,9 +186,10 @@ pwd
 > - `cd ~/workspace`: 作ったフォルダに移動します（`cd` は change directory の略）
 > - `unzip ...`: 配布 ZIP を展開する
 > - `cd task-app`: 展開してできた `task-app` フォルダに移動する
+> - `mise trust` と `mise install`: mise を使っている場合だけ、配布物の Node.js 設定を許可してインストールする
 > - `pwd`: いま自分がどのフォルダにいるかを表示します（`pwd` は print working directory の略）
 >
-> ZIP のファイル名は、手元では `task-app-curriculum-v1.0.zip` と違うことがあります（バージョン番号が新しい、ブラウザが `(1)` を付けた、など）。`unzip` で `cannot find` と出たら、`ls ~/Downloads` で実際のファイル名を確認して、その名前に合わせて実行し直してください。
+> ZIP のファイル名は、手元では上記の名前と違うことがあります（バージョン番号が新しい、ブラウザが `(1)` を付けた、など）。`unzip` で `cannot find` と出たら、`ls ~/Downloads` で実際のファイル名を確認して、その名前に合わせて実行し直してください。
 >
 > 上の `cd task-app` は、配布 ZIP が `task-app` フォルダに展開される前提のコマンドです。
 > もし `cd task-app` で `No such file or directory` と出たら、展開先のフォルダ名が違います。

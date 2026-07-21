@@ -16,8 +16,8 @@
 
 | エラー | 原因 | 解決方法 |
 |--------|------|----------|
-| `node: command not found` | miseでNode.jsがインストールされていない | `task-app` フォルダで `mise install` を実行（miseが未導入なら `curl https://mise.run \| sh`） |
-| `npm install`でエラー | Node.jsのバージョンが違う | `node -v` で確認し、v22.22.2でなければ `mise install` を再実行 |
+| `node: command not found` | Node.jsがインストールされていない | Day 01のOS別手順でNode.js 22以上をインストール。mise利用時は`task-app`フォルダで`mise install`を実行 |
+| `npm install`でエラー | Node.jsのバージョンが古い可能性がある | `node -v`で確認し、22未満ならDay 01のOS別手順で更新。mise利用時は`mise install`を実行 |
 | `prisma generate`でエラー | `DATABASE_URL`が設定されていない | `.env`ファイルに`DATABASE_URL`を設定 |
 | PostgreSQLに接続できない | DockerまたはPostgreSQLが起動していない | `docker compose up -d`でコンテナを起動 |
 

@@ -221,10 +221,36 @@ const findCommentAndAssertOwnership = async (
 
 ---
 
-### Step 2: 編集用 state を確認する（3分）
+### Step 2: 編集用 state を追加する（3分）
 
 **ゴール**: 「どのコメントを編集中か」を
-管理する state を確認します。
+管理する state とフォームを追加します。
+
+まず、編集ボタン、削除ボタン、確認ダイアログ、
+state に必要なインポートを追加します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// コメント編集・削除で使うインポート
+import { Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+```
+
+Day 18 の `commentSchema` の下に、
+編集フォーム用のスキーマと型を追加します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// コメント編集用 zod スキーマ定義
+const editCommentSchema = z.object({
+  content: z.string().trim()
+    .min(1, 'コメントを入力してください'),
+});
+type EditCommentFormValues =
+  z.infer<typeof editCommentSchema>;
+```
 
 **実装**:
 
@@ -278,13 +304,13 @@ const editCommentForm =
 
 まずセッション情報の取得を確認しましょう。
 `api.auth.getSession` でログインユーザーの ID を
-取得しています。
+取得します。
 
 **実装**:
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// セッション情報の取得（既存コード）
+// セッション情報の取得を追加
 const { data: session } =
   api.auth.getSession.useQuery();
 ```
@@ -414,7 +440,7 @@ const handleCancelEdit = () => {
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// 編集 mutation（既存コード）
+// 編集 mutation を追加
 const updateCommentMutation =
   api.comment.update.useMutation({
     onSuccess: () => {
@@ -476,7 +502,7 @@ const handleSaveEdit =
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// 削除 mutation（既存コード）
+// 削除 mutation を追加
 const deleteCommentMutation =
   api.comment.delete.useMutation({
     onSuccess: () => {
@@ -511,27 +537,44 @@ const handleDeleteComment =
 `DeleteConfirmDialog` は Day 11 で
 タスク削除にも使った再利用コンポーネントです。
 
+タスク詳細と削除確認の2つのダイアログを並べるため、
+まず `return` 直後の既存コードを次の形に変えます。
+`<>` と `</>` は、複数の要素をまとめる Fragment です。
+
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// JSX 内に DeleteConfirmDialog を配置
-<DeleteConfirmDialog
-  open={deleteCommentDialogOpen}
-  onOpenChange={setDeleteCommentDialogOpen}
-  onConfirm={() => {
-    if (deleteCommentTargetId) {
-      deleteCommentMutation.mutate(
-        { id: deleteCommentTargetId });
-    }
-  }}
-  isPending={
-    deleteCommentMutation.isPending}
-  title="コメントを削除しますか？"
-/>
+return (
+  <>
+    <Dialog open={open}
+      onOpenChange={(isOpen) => !isOpen && onClose()}>
+```
+
+既存のタスク詳細ダイアログを閉じる `</Dialog>` の直後、
+`</>` の前に削除確認ダイアログを配置します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// 既存の </Dialog> の直後に配置
+    <DeleteConfirmDialog
+      open={deleteCommentDialogOpen}
+      onOpenChange={setDeleteCommentDialogOpen}
+      onConfirm={() => {
+        if (deleteCommentTargetId) {
+          deleteCommentMutation.mutate(
+            { id: deleteCommentTargetId });
+        }
+      }}
+      isPending={
+        deleteCommentMutation.isPending}
+      title="コメントを削除しますか？"
+    />
+  </>
 ```
 
 **確認ポイント**:
 - 確認ダイアログが表示される
 - OK でコメントが削除される
+- `Dialog` と `DeleteConfirmDialog` が Fragment 内で並ぶ
 
 スクリーンショット: タスク詳細ダイアログのコメントセクション完成画面。
 

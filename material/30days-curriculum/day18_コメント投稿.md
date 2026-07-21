@@ -103,8 +103,12 @@ import { commentRouter } from './routers/comment';
 
 **ゴール**: コメントルーターの API を把握します。
 
-`src/server/api/routers/comment.ts` を作成し、
-まずはコメント投稿のバリデーションスキーマを書きます。
+配布スターターにある `src/server/api/routers/comment.ts` を開きます。
+このファイルには一覧取得用の `getByTaskId` だけが入っています。
+今日は既存の取得処理を残し、投稿用の `create` を追加します。
+
+まずはコメント投稿のバリデーションスキーマを、
+`findTaskAndAssertMembership` の前に書きます。
 投稿 API の入口を先に固めると、画面側のフォームと
 サーバー側の受け取り条件をそろえやすいです。
 
@@ -129,7 +133,8 @@ const commentCreateSchema = z.object({
 > `@prismaClient` ではなくこのパスが本プロジェクトの
 > 規約です。
 
-続いて、ファイル冒頭に必要なインポートを追加します。
+続いて、ファイル冒頭のインポートを確認します。
+配布スターターにはすでに入っているため、足りない場合だけ追加してください。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
@@ -148,7 +153,8 @@ import { USER_SELECT } from './_helpers/select';
 `assertMemberPermission` はプロジェクトのメンバーかどうかを確かめる関数で、
 `USER_SELECT` は投稿者情報から返す項目をまとめた定義です。
 
-次に、タスクの存在確認とメンバー権限チェックをまとめた関数を書きます。
+次に、タスクの存在確認とメンバー権限チェックをまとめた関数を確認します。
+この関数も配布スターターに入っているため、内容を読み、同じ形であることを確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
@@ -179,12 +185,12 @@ const findTaskAndAssertMembership = async (
 そのプロジェクトのメンバーでなければ権限エラーにします。
 投稿と一覧取得で同じ確認が必要なので、1つの関数にまとめています。
 
-最後に、この関数を使ってコメントを保存する `create` を持つルーターを書きます。
+最後に、既存の `getByTaskId` の後ろへ、コメントを保存する `create` を追加します。
+ルーター末尾の `});` より前に書いてください。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
-// コメント投稿のルーター
-export const commentRouter = createTRPCRouter({
+// 既存の getByTaskId の後ろに追加
   create: protectedProcedure
     .input(commentCreateSchema)
     .mutation(async ({ ctx, input }) => {
@@ -203,7 +209,6 @@ export const commentRouter = createTRPCRouter({
         include: { user: { select: USER_SELECT } },
       });
     }),
-});
 ```
 
 投稿者 ID は入力ではなく `ctx.session.userId` から取ります。
@@ -218,7 +223,7 @@ export const commentRouter = createTRPCRouter({
 - `commentRouter` を `export` して `create` を実装した
 - 投稿者 ID はセッションから取得している
 
-> 今この `commentRouter` は `create` だけを持っています。コメントの編集・削除に使う `update` と `delete` は Day 19 で、この `createTRPCRouter({ ... })` の中（`create` の後、閉じる `});` の前）に足します。今日は `create` まで書ければ大丈夫です。閉じる `});` は残したままで構いません。
+> 今この `commentRouter` は、配布済みの `getByTaskId` と今日追加した `create` を持っています。コメントの編集・削除に使う `update` と `delete` は Day 19 で、`create` の後、閉じる `});` の前に足します。
 
 #### comment ルーターの全メソッド
 
@@ -242,7 +247,7 @@ export const commentRouter = createTRPCRouter({
 > セッションから自動取得されます。
 
 **確認ポイント**:
-- `src/server/api/routers/comment.ts` を作成した
+- 既存の `getByTaskId` を残して `create` を追加した
 - 4 つのメソッドの名前と種別を把握した
 
 ---
