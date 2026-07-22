@@ -6,7 +6,7 @@
   "author": "KosukeIsogai",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -124,5 +124,8 @@
     "typescript": "^5.9.3",
     "vitest": "^3.2.4",
     "webpack": "^5.107.2"
+  },
+  "overrides": {
+    "tmp": "0.2.5"
   }
 }
