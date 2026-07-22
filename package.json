@@ -124,5 +124,9 @@
     "typescript": "^5.9.3",
     "vitest": "^3.2.4",
     "webpack": "^5.107.2"
+  },
+  "overrides": {
+    "tmp": "0.2.5",
+    "@radix-ui/react-presence": "1.1.5"
   }
 }
