@@ -35,6 +35,8 @@ reconciled_tree=$(git rev-parse "${reconciled_commit}^{tree}")
 
 printf 'Source:     %s (%s)\n' "$source_ref" "$source_commit"
 printf 'Reconciled: %s (%s)\n' "$reconciled_ref" "$reconciled_commit"
+printf 'Source tree:     %s\n' "$source_tree"
+printf 'Reconciled tree: %s\n' "$reconciled_tree"
 
 if [[ "$source_tree" == "$reconciled_tree" ]]; then
   printf 'PASS: tracked-file trees are identical (%s).\n' "$source_tree"
