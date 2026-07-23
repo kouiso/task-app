@@ -9,13 +9,6 @@ import { createSession } from '@/lib/session';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 
-const userCreateSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  name: z.string().min(1, '名前を入力してください').optional(),
-  avatar: z.string().url().optional(),
-  role: z.nativeEnum(USER_ROLE).default(USER_ROLE.USER),
-});
-
 const userUpdateSchema = z.object({
   id: z.string().cuid(),
   name: z.string().min(1, '名前を入力してください').optional(),
@@ -130,56 +123,6 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  getByEmail: adminProcedure
-    .input(z.object({ email: z.string().email() }))
-    .query(async ({ input }) => {
-      const user = await prisma.user.findUnique({
-        where: { email: input.email },
-        select: USER_DETAIL_SELECT,
-      });
-
-      if (!user) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'ユーザーが見つかりません',
-        });
-      }
-
-      return user;
-    }),
-
-  create: adminProcedure.input(userCreateSchema).mutation(async ({ input }) => {
-    const existing = await prisma.user.findUnique({
-      where: { email: input.email },
-    });
-
-    if (existing) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'このメールアドレスは既に使用されています',
-      });
-    }
-
-    const createData: Prisma.UserCreateInput = {
-      email: input.email,
-      role: input.role,
-    };
-    if (input.name) {
-      createData.name = input.name;
-    }
-    if (input.avatar) {
-      createData.avatar = input.avatar;
-    }
-
-    return await prisma.user.create({
-      data: createData,
-      select: {
-        ...USER_DETAIL_SELECT,
-        createdAt: true,
-      },
-    });
-  }),
-
   update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
@@ -223,14 +166,6 @@ export const userRouter = createTRPCRouter({
         updatedAt: true,
       },
     });
-  }),
-
-  delete: adminProcedure.input(z.object({ id: z.string().cuid() })).mutation(async ({ input }) => {
-    await prisma.user.update({
-      where: { id: input.id },
-      data: { isActive: false },
-    });
-    return { success: true };
   }),
 
   updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
