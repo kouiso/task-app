@@ -192,7 +192,8 @@ import {
   useRouter, useSearchParams,
 } from 'next/navigation';
 import {
-  Suspense, useEffect, useState,
+  Suspense, useCallback, useEffect,
+  useMemo, useState,
 } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -240,6 +241,16 @@ import {
   isTaskPriority,
   TASK_PRIORITY_LABELS,
 } from '@/lib/constant/priority';
+```
+
+続けて、ロール判定用と検索条件用のインポートを追加します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
 import {
   isTaskStatus,
   TASK_STATUS_LABELS,
@@ -418,6 +429,65 @@ const { data: users } =
 - `watch()` でフォームの値をリアクティブに取得している
 
 > Day 14 では `register` と `Controller` で各入力を管理しました。検索フォームでは `setValue` と `watch` の組み合わせで Select コンポーネントの値も管理できます。
+
+検索結果の TaskCard にも編集・削除ボタンの表示可否が必要です。Day 13 と同じロール判定を、ログインユーザーとメンバー所属プロジェクトから求めます。`projects`（Selectの選択肢用）とは別に、ロール情報つきのプロジェクト一覧を取得します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// ログインユーザーの情報とロール判定用のプロジェクト一覧
+const { data: session } =
+  api.auth.getSession.useQuery();
+const { data: memberProjects } =
+  api.project.getAll.useQuery();
+
+// プロジェクトごとのログインユーザー自身のロールを引けるようにする
+const myRoleByProject = useMemo(() => {
+  const map = new Map<string, ProjectMemberRole>();
+  const userId = session?.user?.id;
+  if (!userId || !memberProjects) {
+    return map;
+  }
+  for (const project of memberProjects) {
+    const me = project.members?.find(
+      (member) => member.userId === userId,
+    );
+    if (me && isProjectMemberRole(me.role)) {
+      map.set(project.id, me.role);
+    }
+  }
+  return map;
+}, [memberProjects, session?.user?.id]);
+```
+
+> `projects`（`getUserProjects`）はSelectの選択肢専用で、メンバーのロール情報を含みません。ロール判定には `api.project.getAll` が返す `memberProjects`（`members` 配列つき）を使います。
+
+続けて、そのロールから編集・削除の権限を判定する関数を追加します。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// ロールから編集・削除の権限を判定する
+const canEditProject = useCallback(
+  (projectId: string) => {
+    const role = myRoleByProject.get(projectId);
+    return role ? hasPermission(role, 'canEdit') : false;
+  },
+  [myRoleByProject],
+);
+
+const canDeleteProject = useCallback(
+  (projectId: string) => {
+    const role = myRoleByProject.get(projectId);
+    return role ? hasPermission(role, 'canDelete') : false;
+  },
+  [myRoleByProject],
+);
+```
+
+> `canEditProject` / `canDeleteProject` の考え方はDay 13のタスク一覧ページと同じです。
+
+**確認ポイント**:
+- `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できた
+- `npm run dev` でエラーが出ていない
 
 ---
 
@@ -996,9 +1066,36 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
     )}
 ```
 
+TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
+
+```typescript
+// filepath: src/app/search/page.tsx
+// TaskCardに権限フラグを追加
+<TaskCard key={task.id}
+  id={task.id}
+  title={task.title}
+  description={
+    task.description}
+  status={task.status}
+  priority={task.priority}
+  dueDate={task.dueDate}
+  assignee={task.assignee}
+  onEdit={handleTaskEdit}
+  onDelete={handleTaskDelete}
+  onClick={
+    handleTaskClick}
+  canEdit={canEditProject(
+    task.projectId)}
+  canDelete={canDeleteProject(
+    task.projectId)} />
+```
+
+> `canEdit` / `canDelete` を渡さないと、TaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため、`task.projectId` ごとに個別に権限を判定します。
+
 **確認ポイント**:
 - Day 13 で作った `TaskCard` をそのまま再利用している
 - カードクリック・編集・削除の3操作が使える
+- 閲覧者（VIEWER）ロールのプロジェクトのタスクでは編集・削除ボタンが表示されない
 
 スクリーンショット: 検索結果がカード形式で表示されている画面。
 

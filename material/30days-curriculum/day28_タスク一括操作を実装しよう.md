@@ -321,18 +321,23 @@ import { TaskCard } from '@/component/task/task-card';
 // タスク一覧の grid レイアウト
 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
   {tasks && tasks.length > 0 ? (
-    tasks.map((task) => (
+    tasks.map((task) => {
+      const taskCanEdit = canEditProject(task.projectId);
+      const taskCanDelete = canDeleteProject(task.projectId);
+      return (
       <div
         key={task.id}
         className="flex gap-2 items-start h-full"
       >
-        <Checkbox
-          checked={selectedTasks.has(task.id)}
-          onCheckedChange={(checked) =>
-            handleTaskSelect(task.id, checked === true)
-          }
-          className="mt-4"
-        />
+        {(taskCanEdit || taskCanDelete) && (
+          <Checkbox
+            checked={selectedTasks.has(task.id)}
+            onCheckedChange={(checked) =>
+              handleTaskSelect(task.id, checked === true)
+            }
+            className="mt-4"
+          />
+        )}
 ```
 
 上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
@@ -351,15 +356,20 @@ import { TaskCard } from '@/component/task/task-card';
             onEdit={handleEdit}
             onDelete={handleDelete}
             onClick={handleTaskClick}
+            canEdit={taskCanEdit}
+            canDelete={taskCanDelete}
           />
         </div>
       </div>
-    ))
+      );
+    })
   ) : (
     <p>タスクが見つかりません。</p>
   )}
 </div>
 ```
+
+> `taskCanEdit` / `taskCanDelete` は Day 13 で定義した `canEditProject` / `canDeleteProject` を `task.projectId` に適用した結果です。チェックボックスは編集・削除どちらかの権限がある時だけ表示し、`TaskCard` にもそのまま渡します。閲覧者（VIEWER）ロールのプロジェクトのタスクは、チェックボックスも編集・削除ボタンも表示されません。
 
 **`onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}`**
 

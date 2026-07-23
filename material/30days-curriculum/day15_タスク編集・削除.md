@@ -569,6 +569,8 @@ const handleCreate = () => {
   onEdit={handleEdit}
   onDelete={handleDelete}
   onClick={handleTaskClick}
+  canEdit={canEditProject(task.projectId)}
+  canDelete={canDeleteProject(task.projectId)}
 />
 ```
 
@@ -576,6 +578,12 @@ const handleCreate = () => {
 > 編集ボタン・削除ボタンが押されたときに、その関数が
 > `task.id` を受け取って呼ばれます。ボタンの見た目は
 > `TaskCard`、実際の処理は親ページ、と役割が分かれます。
+>
+> `canEdit` / `canDelete` は Day 13 で定義した
+> `canEditProject` / `canDeleteProject` をそのまま使います。
+> 閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になり、
+> 編集・削除ボタンが表示されません。渡し忘れるとデフォルトの
+> `true` が使われ、ボタンを押しても403エラーになるので注意してください。
 >
 > `TaskCard` には作業時間まわりの optional な props も
 > あります。`timeSpentMinutes`（合計作業時間）と
