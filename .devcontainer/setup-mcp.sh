@@ -36,7 +36,7 @@ claude mcp add mobile-mcp --scope user --env ANDROID_HOME=/home/kouiso/Android/S
 # figma (thirdstrandstudio - full Figma API implementation, all methods)
 # Requires FIGMA_TOKEN environment variable
 # Get your token from: https://www.figma.com/developers/api#access-tokens
-claude mcp add figma --scope user --env FIGMA_TOKEN=figd_PCHRxArFW_OdKtI5iP0WEhdhS2IiBk0j1TES4Fuq -- npx -y @thirdstrandstudio/mcp-figma
+claude mcp add figma --scope user --env FIGMA_TOKEN="${FIGMA_TOKEN}" -- npx -y @thirdstrandstudio/mcp-figma
 
 # sqlite
 claude mcp add sqlite --scope user -- npx -y mcp-server-sqlite-npx /workspace/database.db
