@@ -1,0 +1,38 @@
+name: PR Auto Setting
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  assign-author:
+    name: Assign Author
+    if: github.event.action == 'opened' || github.event.action == 'reopened'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const login = context.payload.pull_request.user.login;
+
+            await github.graphql(`
+              mutation($input: AddAssigneesToAssignableInput!) {
+                addAssigneesToAssignable(input: $input) {
+                  assignable {
+                    ... on PullRequest { number }
+                  }
+                }
+              }
+            `, {
+              input: {
+                assignableId: context.payload.pull_request.node_id,
+                assigneeIds: [context.payload.pull_request.user.node_id]
+              }
+            });
+
+            console.info('Assigned ' + login + ' to PR #' + context.issue.number);

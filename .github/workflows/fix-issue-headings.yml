@@ -1,0 +1,28 @@
+name: Fix Issue Headings
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  fix-headings:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Fix heading levels
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const body = context.payload.issue.body;
+            if (!body) return;
+            const fixed = body
+              .replace(/^### /gm, '## ')
+              .replace(/^#### /gm, '### ');
+            if (fixed !== body) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: fixed,
+              });
+            }
