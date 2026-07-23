@@ -84,10 +84,18 @@ version_major() {
 
 check_node() {
   require_command "node" "Node.js が見つかりません。Node.js 22 以上を入れてから再実行してください: https://nodejs.org/"
+  local node_version
+  if ! node_version="$(node -v 2>&1)"; then
+    print_error "Node.js の確認に失敗しました: ${node_version}"
+    if [[ "$node_version" == *"not trusted"* ]]; then
+      print_error "mise を使っている場合は、このフォルダで 'mise trust' と 'mise install' を実行してください。"
+    fi
+    exit 1
+  fi
   local major
-  major="$(version_major "$(node -v)")"
+  major="$(version_major "$node_version")"
   if [ "${major:-0}" -lt 22 ]; then
-    print_error "Node.js $(node -v) は非対応です。Node.js 22 以上が必要です: https://nodejs.org/"
+    print_error "Node.js ${node_version} は非対応です。Node.js 22 以上が必要です: https://nodejs.org/"
     exit 1
   fi
 }
@@ -111,7 +119,7 @@ check_postgres() {
     return 0
   fi
 
-  print_error "PostgreSQL の利用手段が見つかりません。Docker Desktop を起動するか、ローカル PostgreSQL と psql/pg_isready を用意してください。"
+  print_error "PostgreSQL の利用手段が見つかりません。Docker を起動するか、ローカル PostgreSQL と psql/pg_isready を用意してください。"
   echo "例:" >&2
   echo "  - Docker Desktop: https://www.docker.com/products/docker-desktop/" >&2
   echo "  - PostgreSQL: https://www.postgresql.org/download/" >&2
