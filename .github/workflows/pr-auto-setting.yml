@@ -15,24 +15,25 @@ jobs:
     if: github.event.action == 'opened' || github.event.action == 'reopened'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const login = context.payload.pull_request.user.login;
 
-            await github.graphql(`
-              mutation($input: AddAssigneesToAssignableInput!) {
-                addAssigneesToAssignable(input: $input) {
-                  assignable {
-                    ... on PullRequest { number }
-                  }
-                }
-              }
-            `, {
-              input: {
-                assignableId: context.payload.pull_request.node_id,
-                assigneeIds: [context.payload.pull_request.user.node_id]
-              }
+            // GraphQL の addAssigneesToAssignable は既にassign済みだと
+            // "Assignee has already been taken" で失敗するため、
+            // 冪等な REST API (重複・無効assigneeを黙って無視する) を使う
+            const assignees = context.payload.pull_request.assignees ?? [];
+            if (assignees.some((a) => a.login === login)) {
+              console.info(login + ' is already assigned to PR #' + context.issue.number);
+              return;
+            }
+
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              assignees: [login],
             });
 
             console.info('Assigned ' + login + ' to PR #' + context.issue.number);
