@@ -79,6 +79,22 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
 4. **配布ファイルの除外 (scaffold/build-zip 側の変更)**: day を写経化しても、`scaffold-from-scratch.sh` / build-zip がその router ファイルを配布し続けると、受講生の手元に完成品が最初から置かれてしまう。族変換とセットで、その router を配布対象から外す scaffold 側の変更が必要 (project.ts は既にそうなっているはず。要確認)。これは md rewrite とは別の SBI。
 5. **テスト来歴 (G-testchan)**: 未割当テスト22本の channel 割当 (写経 / harness) は Phase A-0 の宿題として残っている。族変換時に該当ルーターのテストを写経側に寄せる。
 
+## 決定事項 (2026-07-24 局長確認済み)
+
+上の「要判断の点」1〜3 は以下で確定した。族変換はこの決定に従う。
+
+1. **共有 permission ヘルパー → 配布済み共有部品として import 参照** (USER_SELECT と同じ扱い)。
+   理由: 横断インフラを day 内で写経させると day のスコープが膨れ、主役のルーター構築がぼやける。
+   ただし初出 day (day13) では「このヘルパーが何をしているか」の なぜ解説を必ず添える (サンプル済)。
+2. **search.ts は初出の day14 で新規作成** し、day20 は残り procedure の追記のみ。
+   理由: お手本 (project 族 day09) と同じ「初めて使う日に作る」原則で全体整合を取る。
+3. **`user.getByEmail` / `user.create` / `user.delete` は削除**。
+   根拠: UI 参照ゼロの未使用コード (grep 確認済み。user.create のヒットは全て user.createdAt の誤マッチ)。
+   売り物に死にコードを残さない。src + テストの削除と procedure マップ再生成を独立 SBI として実施
+   (G-disposition FAIL もこれで解消)。
+4. 配布除外 (scaffold/build-zip) は族変換ごとのセット SBI として実施 (決定不要・実行事項)。
+5. テスト来歴 (G-testchan) は各族変換時にそのルーターのテストを写経側へ割当 (決定不要・実行事項)。
+
 ## acceptance (全 SBI 共通の完了条件)
 
 - `bash scripts/curriculum-qa/check_quality.sh <day.md>` が ALL CHECKS PASS (視覚化/コード長25行/ステップ連続/禁止ワード/技術スタック/コード完全性/文体/理解度)
