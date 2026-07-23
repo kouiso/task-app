@@ -350,8 +350,9 @@ export const taskRouter = createTRPCRouter({
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         throw new TRPCError({
           code: 'CONFLICT',
-          message:
-            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
+          // 自分自身の別操作（時間記録の追加など）による更新でも起こり得るため、
+          // 「他のユーザー」と断定しない文言にする
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
         });
       }
       throw err;
