@@ -166,7 +166,7 @@ describe('taskRouter', () => {
       const staleDate = new Date(task.updatedAt.getTime() - 1000).toISOString();
       await expect(
         caller.task.update({ id: task.id, title: 'X', expectedUpdatedAt: staleDate }),
-      ).rejects.toThrow('他のユーザーによって更新されています');
+      ).rejects.toThrow('タスクの内容が更新されています');
     });
 
     it('存在しないタスクは NOT_FOUND', async () => {
