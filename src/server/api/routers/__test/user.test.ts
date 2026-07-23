@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
   createTestCaller,
@@ -80,33 +79,6 @@ describe('userRouter', () => {
     });
   });
 
-  describe('create（作成・ADMIN限定）', () => {
-    it('ADMINはユーザーを作成できる', async () => {
-      const { caller } = await adminCaller();
-      const result = await caller.user.create({
-        email: 'created@example.com',
-        name: '作成ユーザー',
-      });
-      expect(result.email).toBe('created@example.com');
-    });
-
-    it('重複メールアドレスは拒否される', async () => {
-      const { caller } = await adminCaller();
-      await createTestUser({ email: 'exists@example.com' });
-      await expect(caller.user.create({ email: 'exists@example.com' })).rejects.toThrow(
-        'このメールアドレスは既に使用されています',
-      );
-    });
-
-    it('一般ユーザーは作成を拒否される', async () => {
-      const user = await createTestUser({ email: uniqueEmail('u-create-deny'), role: 'USER' });
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-      await expect(caller.user.create({ email: 'x@example.com' })).rejects.toThrow(
-        '管理者権限が必要です',
-      );
-    });
-  });
-
   describe('update（更新・本人またはADMIN）', () => {
     it('本人は自分の名前を更新できる', async () => {
       const user = await createTestUser({ email: uniqueEmail('u-upd-self') });
@@ -137,27 +109,6 @@ describe('userRouter', () => {
       const target = await createTestUser({ email: uniqueEmail('u-promote'), role: 'USER' });
       const result = await caller.user.update({ id: target.id, role: 'ADMIN' });
       expect(result.role).toBe('ADMIN');
-    });
-  });
-
-  describe('delete（無効化・ADMIN限定）', () => {
-    it('ADMINによる削除はソフトデリート(isActive=false)になる', async () => {
-      const { caller } = await adminCaller();
-      const target = await createTestUser({ email: uniqueEmail('u-del') });
-
-      const result = await caller.user.delete({ id: target.id });
-      expect(result.success).toBe(true);
-
-      // ソフトデリートのためレコードは残る(findUniqueOrThrow で存在を前提に取得)
-      const after = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
-      expect(after.isActive).toBe(false);
-    });
-
-    it('一般ユーザーは削除を拒否される', async () => {
-      const user = await createTestUser({ email: uniqueEmail('u-del-deny'), role: 'USER' });
-      const target = await createTestUser({ email: uniqueEmail('u-del-target') });
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-      await expect(caller.user.delete({ id: target.id })).rejects.toThrow('管理者権限が必要です');
     });
   });
 
