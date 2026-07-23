@@ -80,7 +80,7 @@ graph TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | search ルーターを有効化する | 2分 |
+| Step 0 | タスク作成 API（create）を自分で書く | 12分 |
 | Step 1 | zodスキーマと型を定義する | 5分 |
 | Step 2 | TaskDialogの骨格を作る | 5分 |
 | Step 3 | useFormでフォームを設定する | 5分 |
@@ -91,24 +91,209 @@ graph TD
 | Step 8 | ページにDialogを組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約49分。
+**合計時間**: 約59分。
 
 ---
 
-### Step 0: search ルーターを有効化する（2分）
+### Step 0: タスク作成 API（create）を自分で書く（12分）
 
-**ゴール**: タスク作成フォームで担当者候補を取得できるようにします。
+**ゴール**: `src/server/api/routers/task.ts` に `create` を追加し、`api.task.create` を呼べる状態にします。あわせて、担当者候補の取得に使う search ルーターも登録します。
 
-Day 14 では `api.search.getProjectMembers` を使います。
-Day 20 の検索画面より先に必要なので、
-ここで `src/server/api/root.ts` へ search ルーターを登録します。
+Day 13 で書いた `getAll` は、3部品（入力・処理・戻り値）のうち処理が「探す（`.query`）」でした。今日の `create` は「作る（`.mutation`）」になるだけで、骨組みは同じです。Day 10 でプロジェクトの `create` を書いたのと同じ流れです。
+
+#### 0-1. 入力スキーマと import を足す
+
+まず、受け取るデータの形を zod で定義します。`task.ts` の import に次を足します（`_helpers/permission` の行には `assertMemberPermission` を追記します）。
 
 ```typescript
-// filepath: src/server/api/root.ts
-// import群に追加
+// filepath: src/server/api/routers/task.ts（import を追加）
+import { TASK_PRIORITY }
+  from '@/lib/constant/priority';
+import { TASK_STATUS }
+  from '@/lib/constant/status';
+import {
+  assertMemberPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+```
+
+`TASK_STATUS` と `TASK_PRIORITY` は、入力スキーマの既定値に使う定数です。`assertMemberPermission` は「そのプロジェクトのメンバーが、その操作をしてよい権限を持っているか」を確認する共有ヘルパーです。`getUserProjectIds` は Day 13 で足したものと同じなので、1つの import 文にまとめます。
+
+続いて、`export const taskRouter` の前に入力スキーマを追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
+const taskCreateSchema = z.object({
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: taskStatusSchema.default(TASK_STATUS.TODO),
+  priority: taskPrioritySchema
+    .default(TASK_PRIORITY.MEDIUM),
+  dueDate: z.string().datetime().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().cuid(),
+  assigneeId: z.string().cuid().optional(),
+});
+```
+
+`title` に `.min(1, ...)` が付いているのは、空のタイトルでタスクを作れないようにするためです。`status` と `priority` の `.default(...)` は、指定がなかったときに使う既定値です。`projectId` は `.cuid()`（この形式の id か）で検証し、どのプロジェクトに属すかを必ず受け取ります。
+
+#### 0-2. 担当者チェック用のヘルパーを足す
+
+担当者を指定できるので、その担当者がプロジェクトのメンバーかを確認するヘルパーを、`taskRouter` の前に追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
+async function assertTaskAssigneeBelongsToProject(
+  projectId: string,
+  assigneeId: string,
+): Promise<void> {
+  const member = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: assigneeId,
+        projectId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!member) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '担当者にはこのプロジェクトのメンバーを指定してください',
+    });
+  }
+}
+```
+
+このヘルパーは、指定された担当者がそのプロジェクトの `ProjectMember`（プロジェクトに紐づくメンバー行）に存在するかを調べ、いなければ `TRPCError` を `throw` します。プロジェクト外の人を担当者にしてしまう事故を防ぎます。
+
+#### 0-3. ここが一番のヤマ場（作ってよい人かを確認する）
+
+`create` の処理本体です。ここで一番大事なのは、タスクを作る前に「その人がこのプロジェクトで作成してよい権限を持っているか」を確認する部分です。`create` は `getAll` の直後（`getAll` の `}),` の後）に足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（getAll の直後に追加）
+  create: protectedProcedure
+    .input(taskCreateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.projectId },
+        include: {
+          members: {
+            where: { userId: ctx.session.userId },
+          },
+        },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+
+      assertMemberPermission(project.members, 'canEdit');
+```
+
+まず対象のプロジェクトを取り、そのとき `members` を「ログイン中の自分の分だけ」に絞って一緒に取ります。プロジェクトが無ければ `NOT_FOUND` で止めます。`assertMemberPermission(project.members, 'canEdit')` は、自分がそのプロジェクトで編集（作成）権限を持っているかを確認し、無ければここで弾きます。これを忘れると、メンバーでない人でもタスクを作れてしまいます。
+
+#### 0-4. 担当者の確認と並び順の番号を決める
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(
+          input.projectId, input.assigneeId);
+      }
+
+      const maxPosition = await prisma.task.findFirst({
+        where: { projectId: input.projectId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+      });
+```
+
+担当者が指定されているときだけ、0-2 のヘルパーでメンバーかを確認します。`maxPosition` は、同じプロジェクトの中で今いちばん大きい `position`（並べ替え用の番号）を探しています。この後、それに1を足して新しいタスクを末尾に置きます。
+
+#### 0-5. 保存するデータを組み立てる
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      const createData: Prisma.TaskCreateInput = {
+        title: input.title,
+        status: input.status,
+        priority: input.priority,
+        dueDate: input.dueDate
+          ? new Date(input.dueDate) : null,
+        position: (maxPosition?.position ?? -1) + 1,
+        project: {
+          connect: { id: input.projectId },
+        },
+        createdBy: {
+          connect: { id: ctx.session.userId },
+        },
+      };
+```
+
+`position: (maxPosition?.position ?? -1) + 1` は「今の最大番号 + 1」です。タスクが1件も無いときは `maxPosition` が無いので、`?? -1`（左が無いときだけ -1 を使う書き方）で -1 として扱い、最初のタスクの番号が 0 になります。`project.connect` と `createdBy.connect` は、既にある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
+
+#### 0-6. 任意の項目を足して保存する
+
+`description`・`estimatedHours`・`assigneeId` は任意なので、値があるときだけ足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      if (input.description !== undefined) {
+        createData.description = input.description;
+      }
+      if (input.estimatedHours !== undefined) {
+        createData.estimatedHours =
+          input.estimatedHours;
+      }
+      if (input.assigneeId) {
+        createData.assignee = {
+          connect: { id: input.assigneeId },
+        };
+      }
+```
+
+最初の `createData` にはこれらを含めず、値が入力されているときだけ後から足しています。値があるときだけキー自体を足すと、無いものは無いまま扱われます。Day 10 の `description` と同じ考え方です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      return await prisma.task.create({
+        data: createData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+        },
+      });
+    }),
+```
+
+`include` は `getAll` と同じく、画面が使うプロジェクト・作成者・担当者を一緒に返す指定です。作成直後に返るデータと一覧のデータの形を揃えておくと、画面側が扱いやすくなります。最後の `}),` で `create` を閉じます。
+
+**確認ポイント**:
+- `taskCreateSchema` と `assertTaskAssigneeBelongsToProject` を `taskRouter` の前に、`create` を `getAll` の直後に足した
+- `assertMemberPermission(project.members, 'canEdit')` で作成権限を確認している
+- `npm run dev` で型エラーが出ていない
+
+#### 0-7. search ルーターを有効化する
+
+Day 14 では、担当者候補の取得に `api.search.getProjectMembers` を使います。そこで search ルーターを `root.ts` に登録しておきます。search ルーター自体を自分で書くのは、検索画面を作る Day 20 です。今日は登録だけして先に使います。
+
+```typescript
+// filepath: src/server/api/root.ts（import と appRouter に追加）
 import { searchRouter } from './routers/search';
 
-// appRouter に追加
+// appRouter の中に追加
 search: searchRouter,
 ```
 
