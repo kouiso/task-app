@@ -86,6 +86,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | タスク編集・削除 API（update / delete）を自分で書く | 18分 |
 | Step 1 | `defaultValues` + `useEffect(reset)` を理解する | 5分 |
 | Step 2 | 編集ハンドラーを実装する | 5分 |
 | Step 3 | update mutationを実装する | 5分 |
@@ -98,7 +99,277 @@ flowchart TD
 | Step 10 | TaskDialogにeditingTaskを渡す | 3分 |
 | Step 11 | 動作確認 | 3分 |
 
-**合計時間**: 約49分。
+**合計時間**: 約67分。
+
+---
+
+### Step 0: タスク編集・削除 API（update / delete）を自分で書く（18分）
+
+**ゴール**: タスクを書き換える `update` と、タスクを消す `delete` を自分で書き、`api.task.update` と `api.task.delete` を呼べる状態にします。この2つは、このあと Step 3・Step 6 で画面から呼び出します。
+
+Day 13 で `getAll`、Day 14 で `create` を書きました。今日はそこへ `update`（書き換え）と `delete`（削除）を足します。`update` は今まででいちばん長い手続きです。長いのは、書き換えという操作が「誰が書き換えてよいか」「途中で別の人が書き換えていないか」まで気を配る必要があるためです。ここが今日のヤマ場なので、少しずつ分けて進めます。
+
+#### 0-1. import に findTaskWithPermission を足す
+
+`update` と `delete` は、対象のタスクを取りつつ「自分が触ってよいタスクか」を確認する共有ヘルパー `findTaskWithPermission` を使います。Day 13・14 で書いた `_helpers/permission` の import 文に、この1行を足して次の形にします。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（permission の import に findTaskWithPermission を足した完成形）
+import {
+  assertMemberPermission,
+  findTaskWithPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+```
+
+`findTaskWithPermission` は「id でタスクを1件取り、そのプロジェクトで自分が指定した権限を持っているかを確認し、無ければ弾く」共有ヘルパーです。`assertMemberPermission` と `getUserProjectIds` は前の Day で足したものなので、新しく行を増やすのではなく、同じ import 文の中に並べます。
+
+#### 0-2. 入力スキーマを足す
+
+書き換える項目を受け取る `taskUpdateSchema` を、`taskRouter` の前（Day 14 の `taskCreateSchema` の近く）に追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
+const taskUpdateSchema = z.object({
+  id: z.string().cuid(),
+  expectedUpdatedAt: z.string().datetime().optional(),
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  status: taskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  dueDate: z.string().datetime().optional().nullable(),
+  completedAt: z.string().datetime().optional().nullable(),
+  estimatedHours: z.number().min(0).optional().nullable(),
+  actualHours: z.number().min(0).optional(),
+  projectId: z.string().cuid().optional(),
+  assigneeId: z.string().cuid().optional().nullable(),
+});
+```
+
+`id` を除くほとんどの項目に `.optional()` が付いています。編集では「変えたい項目だけ」を送るので、送られてこなかった項目はそのままにします。`.nullable()` は「空にできる」という意味で、たとえば担当者を外して未割り当てに戻す操作を表します。`expectedUpdatedAt` は少し特別で、これは 0-8 で使う「自分が編集を始めた時点のタスクの更新時刻」です。この値が、あとで説明する「別の人の書き換えとぶつかっていないか」の判定に効いてきます。
+
+#### 0-3. 手続きの骨組みと下ごしらえ
+
+`update` を `create` の直後に足します。まず入力を取り出し、対象のタスクを権限つきで取ってきます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（create の直後に追加）
+  update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, expectedUpdatedAt, ...data } = input;
+
+    const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
+
+    // 楽観ロック: ここで updatedAt を比較して即座に CONFLICT を判定しても、
+    // 比較と末尾の update の間に他の更新が割り込む余地が残る（TOCTOU）。
+    // 比較は末尾の update の where に含め、比較と更新を 1 回のクエリでまとめる。
+    const updateData: Prisma.TaskUpdateInput = {};
+    if (data.title !== undefined) {
+      updateData.title = data.title;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+```
+
+`const { id, expectedUpdatedAt, ...data } = input` は、入力から `id` と `expectedUpdatedAt` を取り出し、残りの書き換え項目を `data` にまとめる書き方です。`findTaskWithPermission(id, ctx.session.userId, 'canEdit')` で、対象のタスクを取りつつ編集権限を確認します。権限が無ければここで弾かれるので、他人のタスクを書き換える事故を防げます。`updateData` は、このあと「送られてきた項目だけ」を詰めていく入れ物です。`title` と `description` は、値が送られてきたときだけ詰めます。
+
+#### 0-4. ステータスと完了日時を組み立てる
+
+ステータスの変更には、完了日時を合わせて動かす処理が付きます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+      if (data.completedAt === undefined) {
+        if (data.status === TASK_STATUS.DONE) {
+          updateData.completedAt = new Date();
+        } else {
+          updateData.completedAt = null;
+        }
+      }
+    }
+```
+
+ステータスが送られてきたら、それを詰めます。あわせて、完了日時（`completedAt`）が明示的に送られてきていないときは、ステータスに合わせて自動で決めます。`DONE`（完了）になったら今の時刻を入れ、それ以外に戻ったら `null`（空）にします。こうすると「完了にしたのに完了日時が残っていない」といった食い違いが起きません。
+
+#### 0-5. 残りの項目を詰める
+
+優先度・見積・実績・期限・完了日時を、送られてきたときだけ詰めます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    if (data.priority !== undefined) {
+      updateData.priority = data.priority;
+    }
+    if (data.estimatedHours !== undefined) {
+      updateData.estimatedHours = data.estimatedHours;
+    }
+    if (data.actualHours !== undefined) {
+      updateData.actualHours = data.actualHours;
+    }
+    if (data.dueDate !== undefined) {
+      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    }
+    if (data.completedAt !== undefined) {
+      updateData.completedAt = data.completedAt ? new Date(data.completedAt) : null;
+    }
+
+    const isProjectChanging =
+      data.projectId !== undefined && data.projectId !== existingTask.projectId;
+    const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+```
+
+前半は 0-3 と同じで、送られてきた項目だけを詰めます。`dueDate` と `completedAt` は、値があれば `new Date(...)` で日付に変換し、空なら `null` にします。最後の2行は、プロジェクトの移動が起きるかどうかを判定しています。`isProjectChanging` は「新しい `projectId` が送られていて、しかも今のプロジェクトと違う」ときだけ真になります。`targetProjectId` は、移動するなら移動先、しないなら今のプロジェクトを指します。
+
+#### 0-6. プロジェクトを移すときの確認
+
+プロジェクトを移す場合は、移動先でも編集権限があるかを確認し、並び順の番号を付け直します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    if (isProjectChanging) {
+      // 移動先プロジェクトでも canEdit 権限を持つかを確認
+      const destinationMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: targetProjectId,
+          },
+        },
+      });
+      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+      updateData.project = { connect: { id: targetProjectId } };
+```
+
+移動先のプロジェクトで自分がメンバーかを `findUnique` で調べ、`assertMemberPermission(..., 'canEdit')` で編集権限を確認します。ここを飛ばすと、自分が入っていないプロジェクトへタスクを移し込めてしまいます。権限が確認できたら、`updateData.project = { connect: ... }` で移動先へ付け替えます。
+
+#### 0-7. 移動先での並び順を決める
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      // 位置はプロジェクト単位の連番なので移動先の末尾に付け直す、重複や割り込みを防ぐ
+      const maxPosition = await prisma.task.findFirst({
+        where: { projectId: targetProjectId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+      });
+      updateData.position = (maxPosition?.position ?? -1) + 1;
+    }
+```
+
+並び順の番号（`position`）はプロジェクトごとの連番なので、移動したら移動先の末尾に置き直します。Day 14 の `create` と同じく、今いちばん大きい番号を探して1を足します。移動先にタスクが1件も無いときは `?? -1` で -1 として扱い、最初の番号が 0 になります。最後の `}` で、プロジェクト移動のときだけ走るこのまとまりを閉じます。
+
+#### 0-8. 担当者の付け替え
+
+担当者の指定にも、プロジェクト内のメンバーかを確認する処理を入れます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    if (data.assigneeId !== undefined) {
+      if (data.assigneeId === null) {
+        updateData.assignee = { disconnect: true };
+      } else {
+        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
+        updateData.assignee = { connect: { id: data.assigneeId } };
+      }
+    } else if (isProjectChanging && existingTask.assigneeId) {
+      // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+      const assigneeStillMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: existingTask.assigneeId,
+            projectId: targetProjectId,
+          },
+        },
+        select: { id: true },
+      });
+      if (!assigneeStillMember) {
+        updateData.assignee = { disconnect: true };
+      }
+    }
+```
+
+担当者が送られてきたときは、`null` なら担当を外し（`disconnect`）、指定があれば Day 14 で作った `assertTaskAssigneeBelongsToProject` でメンバーかを確認してから付けます。担当者の指定が無くても、プロジェクトを移した結果、今までの担当者が移動先のメンバーでなくなることがあります。その場合だけ、後半の `else if` で担当を自動的に外します。
+
+#### 0-9. ここが一番のヤマ場（楽観ロックで書き換える）
+
+最後に DB を書き換えます。ここで、Day で初めて出てくる楽観ロック（optimistic lock）を使います。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    try {
+      // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
+      // updatedAt を where に含めた単一の update で比較と更新を 1 回のクエリにまとめる。
+      // 条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
+      // 投げる P2025 を捕捉して CONFLICT に変換する。
+      return await prisma.task.update({
+        where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
+        data: updateData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+        },
+      });
+```
+
+楽観ロックとは、「たぶん誰ともぶつからないだろう」と考えて先に書き換えを試し、もしぶつかっていたらそのとき初めて止める、というやり方です。たとえば2人が同じタスクを開いて、片方が先に保存したあと、もう片方が古い内容のまま保存すると、先の変更が上書きで消えてしまいます。これを防ぐため、`where` に `updatedAt: new Date(expectedUpdatedAt)` を含めます。これは「自分が編集を始めた時点から、タスクの更新時刻が変わっていないときだけ書き換える」という条件です。誰かが先に保存していれば更新時刻がずれているので、この `update` は対象を見つけられず失敗します。`include` は、書き換えた後のデータを一覧と同じ形（プロジェクト・作成者・担当者つき）で返す指定です。
+
+#### 0-10. ぶつかったときのエラーに変える
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          // 自分自身の別操作（時間記録の追加など）による更新でも起こり得るため、
+          // 「他のユーザー」と断定しない文言にする
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
+  }),
+```
+
+更新時刻の条件に合わず対象が見つからないと、Prisma は `P2025` というコードのエラーを投げます。それを `catch` で受け取り、`CONFLICT`（ぶつかった）という意味の `TRPCError` に変えて画面へ返します。画面はこの合図を見て「内容が更新されています。読み込み直してください」と伝えられます。`P2025` 以外のエラーは、`throw err` でそのまま上へ伝えます。最後の `}),` で `update` を閉じます。
+
+**確認ポイント**:
+- `taskUpdateSchema` を `taskRouter` の前に、`update` を `create` の直後に足した
+- `where` に `updatedAt` を含めて、書き換えのぶつかりを1回のクエリで判定している
+- `npm run dev` で型エラーが出ていない
+
+#### 0-11. delete を書く
+
+最後に、タスクを消す `delete` を `update` の直後に足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（update の直後に追加）
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await findTaskWithPermission(input.id, ctx.session.userId);
+      assertMemberPermission(task.project.members, 'canDelete');
+
+      await prisma.task.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+```
+
+`delete` はまず `findTaskWithPermission` で対象のタスクを取り、`assertMemberPermission(task.project.members, 'canDelete')` で削除権限を確認します。編集はできても削除はできない、という権限の分け方があるため、`update` の `'canEdit'` とは別に `'canDelete'` を確認します。権限が通ったら `prisma.task.delete` で1件消し、`{ success: true }` を返して「消せた」と画面へ伝えます。
+
+**確認ポイント**:
+- `delete` を `update` の直後に足した
+- `'canDelete'` 権限を確認してから `prisma.task.delete` を呼んでいる
+- `npm run dev` で型エラーが出ていない
 
 ---
 
