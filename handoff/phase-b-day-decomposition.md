@@ -50,13 +50,13 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
 | day | 見出し | 導入procedure | 変更前Step0 | rewrite内容 | 依存(先行必須) |
 |-----|--------|-------------|----------|------------|-------------|
 | 13 | タスク一覧 | task.getAll | register-only | Step0 を「task.ts を新規作成し getAll を写経」に。root.ts 登録込み | project族完了(済) |
-| 14 | タスク新規作成 | task.create, search.getProjectMembers | register-only | Step0 に「task.ts へ create を追記(写経)」+「search.ts を新規作成し getProjectMembers を写経」(決定事項2・反映済み) | day13 |
+| 14 | タスク新規作成 | task.create, search.getProjectMembers, search.getMembersByProject | register-only | Step0 に「task.ts へ create を追記(写経)」+「search.ts を新規作成し担当者取得2手続きを写経」(決定事項2・反映済み) | day13 |
 | 15 | タスク編集・削除 | task.update, task.delete | Step0なし | Step0 新設「task.ts へ update/delete を追記(写経)」。update は楽観ロック(expectedUpdatedAt)含む(反映済み) | day14 |
 | 16 | ステータス変更・時間記録 | task.addTime | Step0なし | Step0 新設「task.ts へ addTime を追記(写経)」(反映済み) | day15 |
 | 28 | タスク一括操作 | task.bulkComplete/bulkDelete/bulkUpdateStatus | Step0なし | Step0 新設「task.ts へ bulk3種を追記(写経)」。既存のStep1(登録のみ)をStep0(逐語写経)へ変換し以降のUIステップを1つずつ繰り上げ(反映済み) | day16 |
 | 18 | コメント投稿 | comment.create, comment.getByTaskId, task.getById | register-only | Step0 を「comment.ts 新規作成 + create/getByTaskId 写経」に。task.getById も task.ts へ追記(task族の穴埋め) | day16 |
 | 19 | コメント編集・削除 | comment.update, comment.delete | Step0なし | Step0 新設「comment.ts へ update/delete 追記(写経)」 | day18 |
-| 14/20 | タスク検索 | search族5procedure | register-only | day14 で search.ts を新規作成し getProjectMembers を写経(既に反映済み)。day20 で残り4つ(search / getUserProjects / quickSearch / getMembersByProject)を追記(写経)。5 procedure すべてを写経で網羅する | project族完了(済) |
+| 14/20 | タスク検索 | search族5procedure | register-only | day14 で search.ts を新規作成し担当者取得2手続き(getProjectMembers / getMembersByProject)を写経(反映済み)。day20 で残り3つ(search / quickSearch / getUserProjects)を追記(写経)。5 procedure すべてを写経で網羅する | project族完了(済) |
 | 21 | 統計カード | report.getOverview | register-only | Step0 を「report.ts 新規作成 + getOverview 写経」に。集計クエリで難度中〜高。Mermaid必須day | project族完了(済) |
 | 23 | 週次レポート | report.getWeeklyReport | Step0なし | Step0 新設「report.ts へ getWeeklyReport 追記(写経)」 | day21 |
 | 24 | ユーザー一覧(管理者) | user.getAll | register-only | Step0 を「user.ts 新規作成 + getAll 写経」に | project族完了(済) |
@@ -74,10 +74,10 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
 ## scope が不明・要判断の点 (正直な申し送り)
 
 1. **共有ヘルパーの写経有無**: task/comment 等の procedure は `scripts/_server-routers/_helpers/permission.ts` の `getUserProjectIds` / `assertMemberPermission` / `findTaskWithPermission` 等に依存する。project 族は `_helpers/select.ts` の `USER_SELECT` を「day07で作成済みの共有部品」として import 参照するだけで済ませている。permission ヘルパーも同じ扱い(配布済み共有部品として import)にするか、どこかの day で写経させるかは族変換前に決める必要がある。今回のサンプル(day13/14)は USER_SELECT と同様「共有部品として import 参照」で書いた。
-2. ~~**search 族の day 順序**~~ → **決定事項2 で確定・day14 へ反映済み**: search.ts は初出の day14 で新規作成し getProjectMembers を写経、day20 は残り4 procedure の追記のみ。
+2. ~~**search 族の day 順序**~~ → **決定事項2 で確定・day14 へ反映済み**: search.ts は初出の day14 で新規作成し担当者取得2手続きを写経、day20 は検索画面用の残り3 procedure の追記のみ。
 3. ~~**未処置の UI 未参照 procedure**~~ → **決定事項3 で確定・完了済み**: `user.getByEmail` / `user.create` / `user.delete` は削除で確定し、PR #308 (4e1764b) で main にマージ済み。G-disposition も解消済み。
 4. **配布ファイルの除外 (scaffold/build-zip 側の変更)**: day を写経化しても、`scaffold-from-scratch.sh` / build-zip がその router ファイルを配布し続けると、受講生の手元に完成品が最初から置かれてしまう。族変換とセットで、その router を配布対象から外す scaffold 側の変更が必要 (project.ts は既にそうなっているはず。要確認)。これは md rewrite とは別の SBI。
-5. **テスト来歴 (G-testchan)**: 未割当テスト22本の channel 割当 (写経 / harness) は Phase A-0 の宿題として残っている。族変換時に該当ルーターのテストを写経側に寄せる。
+5. ~~**テスト来歴 (G-testchan)**~~ → **全22本の割当を反映済み**: `test-channel-proposal.json` のレビュー済み分類 (写経 / ハーネス) を生成器が読み込み、`procedure-day-map.json` の G-testchan は PASS。新しいテストを追加した場合は、同じ台帳への分類追加が必要。
 
 ## 決定事項 (2026-07-24 局長確認済み)
 
@@ -95,14 +95,13 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
    この削除で user 族の procedure は 8 → 5 (getAll / getById / update / updateProfile / changePassword) となり、
    G-disposition (UI 未参照 procedure の処置台帳エントリ欠落) も解消済み。
 4. 配布除外 (scaffold/build-zip) は族変換ごとのセット SBI として実施 (決定不要・実行事項)。
-5. テスト来歴 (G-testchan) は各族変換時にそのルーターのテストを写経側へ割当 (決定不要・実行事項)。
+5. テスト来歴 (G-testchan) はレビュー済みの全22本を生成物へ反映済み。今後の新規テストは追加時に写経 / ハーネスへ分類する。
 
 ## レビューで新規発見 (2026-07-24)
 
 day13/day14 サンプルを src 逐語一致へ整合させる作業中に、族変換前に潰しておくべき点が3つ見つかった。いずれも wave-1 (task/search 族) の scope に取り込む。
 
-1. **担当者取得 procedure の curriculum と src のズレ**: curriculum の TaskDialog は `search.getProjectMembers` を呼ぶが、実 `src/component/task/task-dialog.tsx:100` は `search.getMembersByProject` を呼んでいる。
-   解決: wave-1 の scope に「day14 の UI ステップを src に合わせる」を含める。src が正 (受講生の完成物 = 本物)。今回の PR では day14 の UI ステップ (Step 6 以降) は変更せず、この差分は SBI として記録するに留める。
+1. **担当者取得 procedure の curriculum と src のズレ → 解消済み**: TaskDialog は実装と同じ `search.getMembersByProject` を呼び、選択中のプロジェクトに候補を絞る形へ修正した。day14 で `getProjectMembers` と `getMembersByProject` の両方を写経するため、その日の完成物だけで画面が動く。
 2. **root.ts のフィールド順が学習の積み上げ順と不一致**: 実 `src/server/api/root.ts` のフィールド順は auth, task, project, comment, user, search, report だが、受講生が構築する時系列は auth, project, task, search, comment, report, user。
    解決: wave-1 の scaffold SBI で src root.ts のフィールド順を時系列順に並べ替える (挙動は変わらない中立な変更)。各 day の incremental な root.ts 断片はこの時系列順を前提に書く。
 3. **scaffold が task.ts / search.ts を完成品として配布したまま**: `scaffold-from-scratch.sh` は現状 project.ts のみ配布から除外しており、task.ts / search.ts は完成ファイルとして受講生の手元に配ってしまう。

@@ -95,8 +95,6 @@ required_support_files=(
   "_server-routers/auth.ts"
   "_server-routers/comment.ts"
   "_server-routers/report.ts"
-  "_server-routers/search.ts"
-  "_server-routers/task.ts"
   "_server-routers/user.ts"
   "_trpc-base/query-client.ts"
   "_trpc-base/query-constants.ts"
@@ -146,9 +144,9 @@ done
 for directory in "${support_directories[@]}"; do
   while IFS= read -r source_file; do
     relative_path="${source_file#"${PROJECT_ROOT}/scripts/"}"
-    if [ "${relative_path}" = "_server-routers/project.ts" ]; then
-      continue
-    fi
+    case "${relative_path}" in
+      "_server-routers/project.ts"|"_server-routers/task.ts"|"_server-routers/search.ts") continue ;;
+    esac
     if ! has_exact_entry "task-app/scripts/${relative_path}"; then
       echo "販売用 ZIP に scaffold 補助ファイルがありません: scripts/${relative_path}" >&2
       exit 1
@@ -168,6 +166,8 @@ forbidden_entries=(
   "task-app/node_modules/"
   "task-app/.git/"
   "task-app/scripts/_server-routers/project.ts"
+  "task-app/scripts/_server-routers/task.ts"
+  "task-app/scripts/_server-routers/search.ts"
 )
 
 for entry in "${forbidden_entries[@]}"; do

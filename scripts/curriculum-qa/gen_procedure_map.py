@@ -30,6 +30,7 @@ CURRICULUM_DIR = REPO_ROOT / "material" / "30days-curriculum"
 SRC_DIR = REPO_ROOT / "src"
 OUT_DIR = CURRICULUM_DIR / "_meta"
 OUT_PATH = OUT_DIR / "procedure-day-map.json"
+TEST_CHANNEL_PATH = OUT_DIR / "test-channel-proposal.json"
 
 # CI の `biome check .` は生成物の JSON にもフォーマッタを適用する
 # (lineWidth=100: 収まる配列は1行、収まらなければ1要素1行)。
@@ -130,11 +131,12 @@ def scan_scaffold_components_first_use() -> dict[tuple[str, str], list[str]]:
     for base in bases:
         if not base.exists():
             continue
-        for f in list(base.rglob("*.tsx")) + list(base.rglob("*.ts")):
+        files = list(base.rglob("*.tsx")) + list(base.rglob("*.ts"))
+        for f in sorted(files, key=lambda path: path.relative_to(REPO_ROOT).as_posix()):
             text = f.read_text(encoding="utf-8", errors="ignore")
             for m in API_CALL_RE.finditer(text):
                 key = (m.group(1), m.group(2))
-                refs.setdefault(key, []).append(str(f.relative_to(REPO_ROOT)))
+                refs.setdefault(key, []).append(f.relative_to(REPO_ROOT).as_posix())
     return refs
 
 
@@ -143,7 +145,7 @@ def scan_test_files() -> list[str]:
         return []
     tests = list(SRC_DIR.rglob("*.test.ts")) + list(SRC_DIR.rglob("*.test.tsx"))
     tests += [p for p in SRC_DIR.rglob("__test/**/*") if p.is_file() and p.suffix in (".ts", ".tsx")]
-    seen = sorted({str(p.relative_to(REPO_ROOT)) for p in tests})
+    seen = sorted({p.relative_to(REPO_ROOT).as_posix() for p in tests})
     return seen
 
 
@@ -156,6 +158,22 @@ def load_dispositions() -> dict[str, dict]:
         return {}
     data = json.loads(DISPOSITION_PATH.read_text(encoding="utf-8"))
     return data.get("dispositions", {})
+
+
+def load_test_channels() -> dict[str, str]:
+    """レビュー済みのテスト来歴台帳を読み、許可された channel だけを返す。"""
+    if not TEST_CHANNEL_PATH.exists():
+        return {}
+
+    data = json.loads(TEST_CHANNEL_PATH.read_text(encoding="utf-8"))
+    proposals = data.get("proposals", {})
+    channels: dict[str, str] = {}
+    for test_file, proposal in proposals.items():
+        channel = proposal.get("channel")
+        if channel not in {"写経", "ハーネス"}:
+            raise ValueError(f"invalid test channel for {test_file}: {channel!r}")
+        channels[test_file] = channel
+    return channels
 
 
 def main() -> int:
@@ -192,7 +210,8 @@ def main() -> int:
             }
 
     tests = scan_test_files()
-    test_channel: dict[str, str] = {t: "UNASSIGNED" for t in tests}
+    channel_ledger = load_test_channels()
+    test_channel: dict[str, str] = {t: channel_ledger.get(t, "UNASSIGNED") for t in tests}
 
     ui_unreferenced = [k for k, v in procedure_map.items() if v["ui_unreferenced"]]
     # exitゲート①「孤児ゼロ or 全件処置」: UI未参照でも処置台帳にエントリがあればOK。
@@ -230,7 +249,8 @@ def main() -> int:
 
     print(f"procedures: {len(procedure_map)} "
           f"(UI-unreferenced: {len(ui_unreferenced)}, undispositioned: {len(undispositioned)})")
-    print(f"test files: {len(tests)} (all UNASSIGNED — Phase A-0 D8 channel assignment pending)")
+    assigned_count = sum(1 for channel in test_channel.values() if channel != "UNASSIGNED")
+    print(f"test files: {len(tests)} ({assigned_count} assigned, {len(tests) - assigned_count} unassigned)")
     print(f"written: {OUT_PATH.relative_to(REPO_ROOT)}")
 
     # 未処置のUI未参照procedureが残っていればFAIL(処置台帳に追記して解消する)。

@@ -49,12 +49,12 @@
       "first_used_in_curriculum_day": 11,
       "referenced_by_scaffold_components": [
         "src/app/my-task/page.tsx",
-        "src/app/user/page.tsx",
-        "src/app/user/[id]/user-detail-client.tsx",
-        "src/app/user/[id]/edit/user-edit-client.tsx",
-        "src/app/project/page.tsx",
+        "src/app/profile/edit/page.tsx",
         "src/app/profile/page.tsx",
-        "src/app/profile/edit/page.tsx"
+        "src/app/project/page.tsx",
+        "src/app/user/[id]/edit/user-edit-client.tsx",
+        "src/app/user/[id]/user-detail-client.tsx",
+        "src/app/user/page.tsx"
       ],
       "ui_unreferenced": false,
       "disposition": null
@@ -79,10 +79,10 @@
       "defined_at": "scripts/_server-routers/project.ts:57",
       "first_used_in_curriculum_day": 9,
       "referenced_by_scaffold_components": [
-        "src/app/my-task/page.tsx",
-        "src/app/search/page.tsx",
-        "src/app/project/page.tsx",
         "src/app/dashboard/page.tsx",
+        "src/app/my-task/page.tsx",
+        "src/app/project/page.tsx",
+        "src/app/search/page.tsx",
         "src/app/task/page.tsx"
       ],
       "ui_unreferenced": false,
@@ -249,7 +249,7 @@
       "router": "search",
       "procedure": "getMembersByProject",
       "defined_at": "scripts/_server-routers/search.ts:240",
-      "first_used_in_curriculum_day": null,
+      "first_used_in_curriculum_day": 14,
       "referenced_by_scaffold_components": [
         "scripts/_app-components/task/task-dialog.tsx",
         "src/component/task/task-dialog.tsx"
@@ -363,8 +363,8 @@
       "defined_at": "scripts/_server-routers/user.ts:70",
       "first_used_in_curriculum_day": 29,
       "referenced_by_scaffold_components": [
-        "src/app/user/[id]/user-detail-client.tsx",
-        "src/app/user/[id]/edit/user-edit-client.tsx"
+        "src/app/user/[id]/edit/user-edit-client.tsx",
+        "src/app/user/[id]/user-detail-client.tsx"
       ],
       "ui_unreferenced": false,
       "disposition": null
@@ -398,28 +398,28 @@
     }
   },
   "test_files": {
-    "src/component/project/__test/project-detail-view.test.tsx": "UNASSIGNED",
-    "src/component/project/__test/project-dialog.test.tsx": "UNASSIGNED",
-    "src/component/task/__test/task-card.test.tsx": "UNASSIGNED",
-    "src/component/task/__test/task-dialog.test.tsx": "UNASSIGNED",
-    "src/lib/__test/rate-limit.test.ts": "UNASSIGNED",
-    "src/lib/__test/task-filter-query.test.ts": "UNASSIGNED",
-    "src/lib/date.test.ts": "UNASSIGNED",
-    "src/lib/observability.test.ts": "UNASSIGNED",
-    "src/lib/report-path.test.ts": "UNASSIGNED",
-    "src/lib/search-filters.test.ts": "UNASSIGNED",
-    "src/lib/session.test.ts": "UNASSIGNED",
-    "src/lib/use-local-storage/use-local-storage.test.ts": "UNASSIGNED",
-    "src/lib/utils/__test/type-guards.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/auth.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/chaos.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/comment.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/project.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/report.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/search.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/task.test.ts": "UNASSIGNED",
-    "src/server/api/routers/__test/user.test.ts": "UNASSIGNED",
-    "src/test/chaos-helpers.test.ts": "UNASSIGNED"
+    "src/component/project/__test/project-detail-view.test.tsx": "ハーネス",
+    "src/component/project/__test/project-dialog.test.tsx": "写経",
+    "src/component/task/__test/task-card.test.tsx": "ハーネス",
+    "src/component/task/__test/task-dialog.test.tsx": "ハーネス",
+    "src/lib/__test/rate-limit.test.ts": "ハーネス",
+    "src/lib/__test/task-filter-query.test.ts": "写経",
+    "src/lib/date.test.ts": "写経",
+    "src/lib/observability.test.ts": "写経",
+    "src/lib/report-path.test.ts": "写経",
+    "src/lib/search-filters.test.ts": "写経",
+    "src/lib/session.test.ts": "ハーネス",
+    "src/lib/use-local-storage/use-local-storage.test.ts": "写経",
+    "src/lib/utils/__test/type-guards.test.ts": "写経",
+    "src/server/api/routers/__test/auth.test.ts": "ハーネス",
+    "src/server/api/routers/__test/chaos.test.ts": "ハーネス",
+    "src/server/api/routers/__test/comment.test.ts": "ハーネス",
+    "src/server/api/routers/__test/project.test.ts": "ハーネス",
+    "src/server/api/routers/__test/report.test.ts": "ハーネス",
+    "src/server/api/routers/__test/search.test.ts": "ハーネス",
+    "src/server/api/routers/__test/task.test.ts": "ハーネス",
+    "src/server/api/routers/__test/user.test.ts": "ハーネス",
+    "src/test/chaos-helpers.test.ts": "ハーネス"
   },
   "gates": {
     "G-disposition": {
@@ -429,8 +429,8 @@
       "undispositioned_procedures": []
     },
     "G-testchan": {
-      "pass": false,
-      "unassigned_count": 22,
+      "pass": true,
+      "unassigned_count": 0,
       "total_count": 22
     },
     "G-budget": {

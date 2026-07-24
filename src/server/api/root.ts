@@ -9,12 +9,12 @@ import { createCallerFactory, createTRPCRouter } from './trpc';
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
-  task: taskRouter,
   project: projectRouter,
-  comment: commentRouter,
-  user: userRouter,
+  task: taskRouter,
   search: searchRouter,
+  comment: commentRouter,
   report: reportRouter,
+  user: userRouter,
 });
 
 export type AppRouter = typeof appRouter;

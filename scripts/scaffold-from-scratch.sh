@@ -454,17 +454,18 @@ copy_scaffold_support() {
     echo "tRPC クライアント設定を src/trpc/ に配置しました。"
   fi
 
-  # server-routers: tRPC ルーター（Day 07 で auth を確認した後、各 Day で root.ts に登録して有効化する）
-  # project.ts のみ配布しない。Day 09〜12 で受講生が自分の手で1から書く対象のため
-  # (他ルーターは D1リファクタが済むまで完成品のまま配布を継続する暫定措置)。
+  # server-routers: Day 05〜07 の画面と写経に先行して必要な auth.ts だけを配布する。
+  # project.ts / task.ts / search.ts は、各導入 Day で受講生が1から書く。
   if [ -d "${script_dir}/_server-routers" ]; then
     mkdir -p src/server/api/routers/_helpers
     for f in "${script_dir}/_server-routers"/*.ts; do
-      [ "$(basename "$f")" = "project.ts" ] && continue
+      case "$(basename "$f")" in
+        project.ts|task.ts|search.ts) continue ;;
+      esac
       cp "$f" src/server/api/routers/
     done
     cp "${script_dir}/_server-routers/_helpers"/*.ts src/server/api/routers/_helpers/ 2>/dev/null
-    echo "tRPC ルーターを src/server/api/routers/ に配置しました（Day 07 以降で有効化。project.ts は Day 09〜12 で自分で書きます）。"
+    echo "先行 Day で必要な tRPC ルーターを配置しました。project.ts / task.ts / search.ts は教材で作ります。"
   fi
 
 }
