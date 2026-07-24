@@ -11,6 +11,7 @@ scaffold と教材の整合性チェック。
 満たさない import があれば exit 1。
 """
 
+import json
 import re
 import sys
 from collections import defaultdict
@@ -166,6 +167,7 @@ def main() -> int:
                     )
 
     scaffold_script = (SCRIPTS_DIR / "scaffold-from-scratch.sh").read_text(encoding="utf-8")
+    package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
     day07_candidates = sorted(MATERIAL_DIR.glob("day07_*.md"))
     day07_text = (
         day07_candidates[0].read_text(encoding="utf-8") if len(day07_candidates) == 1 else ""
@@ -214,6 +216,22 @@ def main() -> int:
         ),
         'scaffold scripts.postinstall="prisma generate"': (
             'scripts.postinstall="prisma generate"' in scaffold_script
+        ),
+        "source production dependency audit overrides": (
+            package_json["dependencies"].get("next") == "^15.5.21"
+            and package_json["devDependencies"].get("postcss") == "8.5.23"
+            and package_json["overrides"].get("postcss") == "8.5.23"
+            and package_json["overrides"].get("sharp") == "0.35.3"
+        ),
+        "scaffold production dependency audit overrides": all(
+            token in scaffold_script
+            for token in (
+                "next@15.5.21",
+                "npx create-next-app@15.5.21",
+                'overrides.postcss="8.5.23"',
+                'overrides.sharp="0.35.3"',
+                "configure_security_overrides",
+            )
         ),
         "Day 30 production schema command": (
             "npx vercel env run -e production -- npx prisma db push" in day30_text

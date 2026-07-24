@@ -7,7 +7,7 @@ set -euo pipefail
 PROJECT_DIR="$(pwd)"
 
 RUNTIME_DEPS=(
-  next@15.5.18
+  next@15.5.21
   react@^18.3.1
   react-dom@^18.3.1
   @trpc/client@^11.8.0
@@ -150,7 +150,7 @@ ensure_empty_or_existing_next_app() {
   mkdir -p "$create_dir"
 
   # 教材との差分を減らすため、Next.js 15 系に固定する。
-  npx create-next-app@15.5.18 "$create_dir" \
+  npx create-next-app@15.5.21 "$create_dir" \
     --typescript \
     --tailwind \
     --app \
@@ -174,6 +174,14 @@ ensure_empty_or_existing_next_app() {
   done
   shopt -u dotglob nullglob
   rmdir "$stash_dir" 2>/dev/null || true
+}
+
+configure_security_overrides() {
+  # Next.js が内部で固定している脆弱な推移依存を、互換性を検証した修正版へ揃える。
+  # install より先に設定し、package-lock.json と node_modules の両方へ反映させる。
+  npm pkg set \
+    overrides.postcss="8.5.23" \
+    overrides.sharp="0.35.3"
 }
 
 install_dependencies() {
@@ -671,6 +679,7 @@ main() {
   check_postgres
 
   ensure_empty_or_existing_next_app
+  configure_security_overrides
   install_dependencies
   configure_package_json
   configure_tsconfig
