@@ -374,7 +374,6 @@ import { projectRouter } from './routers/project';
 import { reportRouter } from './routers/report';
 import { searchRouter } from './routers/search';
 import { taskRouter } from './routers/task';
-import { userRouter } from './routers/user';
 import { createCallerFactory, createTRPCRouter } from './trpc';
 ```
 
@@ -387,11 +386,10 @@ export const appRouter = createTRPCRouter({
   search: searchRouter,
   comment: commentRouter,
   report: reportRouter,
-  user: userRouter,
 });
 ```
 
-import と `appRouter` の順番は、教材で作ってきた時系列に揃えます。`report` は `comment` の次、`user` の前です。今後の day でもこの順番で積み上げていきます。
+import と `appRouter` の順番は、教材で作ってきた時系列に揃えます。Day 21 の時点では `report` が `comment` の次にある最後の router です。`user` は Day 24 でファイルを作ってから追加します。
 
 **確認ポイント**:
 - `src/server/api/routers/report.ts` を新規作成し、`getOverview` を最後の `});` まで書いた

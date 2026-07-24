@@ -97,7 +97,7 @@ flowchart TD
 
 **ゴール**: Day 14 で作った `src/server/api/routers/search.ts` に、
 残っている `search`・`quickSearch`・`getUserProjects` を追記します。
-最後に `scripts/_server-routers/search.ts` と同じ並び・同じ処理へ揃えます。
+最後に、この Step で示す5手続きの順序と確認ポイントを使って自己点検します。
 
 Day 14 では担当者候補を取る 2 手続きだけを先に作りました。今日はその続きです。検索画面は `api.search.search` と `api.search.getUserProjects` を使います。さらに `quickSearch` は画面から直接は呼ばれませんが、完成版 source とテストでは使うので、ここで一緒に仕上げます。
 
@@ -451,19 +451,16 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 4. `getProjectMembers`
 5. `getMembersByProject`
 
-Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード自体は変えません。位置だけが後ろへ下がるイメージです。`root.ts` は Day 14 の時点で `auth → project → task → search → comment → report → user` の時系列順に登録済みなので、今日は追加で触らなくて大丈夫です。
+Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード自体は変えません。位置だけが後ろへ下がるイメージです。`root.ts` は Day 18 までに `auth → project → task → search → comment` の時系列順で登録済みなので、今日は追加で触らなくて大丈夫です。`report` と `user` は、それぞれ Day 21 と Day 24 で初めて追加します。
 
-#### 0-8. 最後に完成版 source と見比べる
+#### 0-8. 最後に完成形を自己点検する
 
-VS Code で次の 2 ファイルを左右に開いて、上から順に見比べてください。
-
-- `src/server/api/routers/search.ts`
-- `scripts/_server-routers/search.ts`
+`src/server/api/routers/search.ts` を先頭から読み直し、次の確認ポイントと照らし合わせてください。販売用 ZIP には完成済み router を入れていないため、この教材内のコードと順序が正本です。
 
 **確認ポイント**:
 - `search.ts` の手続き順が `search → quickSearch → getUserProjects → getProjectMembers → getMembersByProject` になっている
 - `searchInputSchema` / `quickSearchInputSchema` / `FilterConfig` / 3つの helper が `searchRouter` の前にある
-- `root.ts` は Day 14 のまま、`search: searchRouter` が `task` と `comment` の間にある
+- `root.ts` は Day 18 のまま、`search: searchRouter` が `task` と `comment` の間にある
 - `npm run dev` で型エラーが出ていない
 
 ---

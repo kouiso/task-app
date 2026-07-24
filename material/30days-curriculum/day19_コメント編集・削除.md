@@ -88,8 +88,7 @@ Day 18 で作った
 `src/server/api/routers/comment.ts` に
 `update` と `delete` メソッドを追加します。
 投稿できるようになったコメントへ、編集と削除の入口を足します。
-今日の追記まで終わると、このファイルは
-`scripts/_server-routers/comment.ts` と同じ形になります。
+今日の追記まで終わると、`comment.ts` の編集・削除手続きが完成します。
 
 **実装**:
 
