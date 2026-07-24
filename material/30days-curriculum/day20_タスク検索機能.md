@@ -1340,6 +1340,79 @@ const handleProjectClick =
 - タスククリックで詳細画面に遷移する
 - 編集ボタンを押すと編集モードで開く
 
+検索画面の編集ボタンは `edit=true` を付けるため、
+タスク一覧ページ側でもこの値を受け取ります。
+`src/app/task/page.tsx` にある既存の
+`taskIdParam` と詳細ダイアログ用 `useEffect` を、
+次の形へ置き換えてください。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const taskIdParam = searchParams.get('taskId');
+const isEditLink =
+  searchParams.get('edit') === 'true';
+const { data: linkedTask } =
+  api.task.getById.useQuery(
+    { id: taskIdParam ?? '' },
+    { enabled: !!taskIdParam && isEditLink },
+  );
+
+useEffect(() => {
+  if (taskIdParam && !isEditLink) {
+    setSelectedTask(taskIdParam);
+    setDetailOpen(true);
+  }
+}, [isEditLink, taskIdParam]);
+```
+
+検索から編集用データを取得できたら、
+Day 15 の `TaskDialog` を編集モードで開きます。
+
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+useEffect(() => {
+  if (!isEditLink || !linkedTask) return;
+  setEditingTask(
+    taskToFormData(linkedTask),
+  );
+  setDetailOpen(false);
+  setDialogOpen(true);
+}, [isEditLink, linkedTask]);
+```
+
+ダイアログを閉じたあとに再び開かないよう、
+URL の編集指定も取り除きます。この関数を
+`createMutation` / `updateMutation` より前へ追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+const closeTaskDialog = () => {
+  setDialogOpen(false);
+  setEditingTask(undefined);
+  if (!isEditLink) return;
+
+  const params = new URLSearchParams(
+    searchParams.toString(),
+  );
+  params.delete('taskId');
+  params.delete('edit');
+  const query = params.toString();
+  router.replace(
+    query ? `/task?${query}` : '/task',
+  );
+};
+```
+
+`createMutation` と `updateMutation` の成功時にある
+`setDialogOpen(false)` は、`closeTaskDialog()` へ
+置き換えます。`TaskDialog` の
+`onClose={() => setDialogOpen(false)}` も、
+`onClose={closeTaskDialog}` へ置き換えてください。
+
+**確認ポイント**:
+- `/task?taskId=...&edit=true` で編集ダイアログが開く
+- ダイアログを閉じると URL から `taskId` と `edit` が消える
+
 Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ローディング表示と結果件数です。
 
 ```typescript
