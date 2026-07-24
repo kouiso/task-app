@@ -98,6 +98,35 @@ flowchart TD
 
 この2本で初めて、Day 24 の一覧 → Day 29 の詳細 → Day 29 の編集、という流れが閉じます。ここも source と同じく、**閲覧権限** と **更新権限** を先に判定してから DB を触ります。
 
+最初に import 群を完成形へ置き換えます。`getById` の未完了タスク絞り込みに使う `TASK_STATUS` が今日の追加分です。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（import 群の完成形）
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/session';
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+```
+
+Day 25 で書いた `profileUpdateSchema` の前へ、管理者または本人が使う更新入力を追加します。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（profileUpdateSchema の前に追加）
+const userUpdateSchema = z.object({
+  id: z.string().cuid(),
+  name: z.string().min(1, '名前を入力してください').optional(),
+  avatar: z.string().url().optional().nullable(),
+  role: z.nativeEnum(USER_ROLE).optional(),
+  isActive: z.boolean().optional(),
+});
+```
+
 #### 0-1. getAll の直後に getById を足す
 
 完成版 source では `getAll` の次が `getById` です。まずそこへ追記します。

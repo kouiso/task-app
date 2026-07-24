@@ -8,7 +8,7 @@ import { defineConfig } from 'vitest/config';
 // Vitest が接続するポートを同じ変数(_DOCKER_COMPOSE_HOST_PORT_TEST_DB)から導出する
 const env = loadEnv('test', process.cwd(), '');
 
-const testDbPort = env['_DOCKER_COMPOSE_HOST_PORT_TEST_DB'] ?? '5433';
+const testDbPort = env['_DOCKER_COMPOSE_HOST_PORT_TEST_DB'] ?? '25533';
 const testDatabaseUrl =
   env['TEST_DATABASE_URL'] ??
   `postgresql://user:password@localhost:${testDbPort}/taskapp_test?schema=public`;

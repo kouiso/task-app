@@ -62,7 +62,7 @@
     "comment.getByTaskId": {
       "router": "comment",
       "procedure": "getByTaskId",
-      "defined_at": "scripts/_server-routers/comment.ts:42",
+      "defined_at": "scripts/_server-routers/comment.ts:95",
       "first_used_in_curriculum_day": null,
       "referenced_by_scaffold_components": [],
       "ui_unreferenced": true,
@@ -72,6 +72,33 @@
         "reason": "Day18が『task.getByIdがcomment込みだから、これは使わない』と意図的に教えている。教育的意図あり。commentルーターを作るdayで他procedureと一緒に写経し、使わない理由も教える。",
         "evidence": "material/30days-curriculum/day18_コメント投稿.md:185-188 / scripts/_server-routers/comment.ts:95"
       }
+    },
+    "comment.create": {
+      "router": "comment",
+      "procedure": "create",
+      "defined_at": "scripts/_server-routers/comment.ts:111",
+      "first_used_in_curriculum_day": 18,
+      "referenced_by_scaffold_components": ["src/component/task/task-detail-dialog.tsx"],
+      "ui_unreferenced": false,
+      "disposition": null
+    },
+    "comment.update": {
+      "router": "comment",
+      "procedure": "update",
+      "defined_at": "scripts/_server-routers/comment.ts:128",
+      "first_used_in_curriculum_day": 19,
+      "referenced_by_scaffold_components": ["src/component/task/task-detail-dialog.tsx"],
+      "ui_unreferenced": false,
+      "disposition": null
+    },
+    "comment.delete": {
+      "router": "comment",
+      "procedure": "delete",
+      "defined_at": "scripts/_server-routers/comment.ts:143",
+      "first_used_in_curriculum_day": 19,
+      "referenced_by_scaffold_components": ["src/component/task/task-detail-dialog.tsx"],
+      "ui_unreferenced": false,
+      "disposition": null
     },
     "project.getAll": {
       "router": "project",
@@ -260,7 +287,7 @@
     "task.getAll": {
       "router": "task",
       "procedure": "getAll",
-      "defined_at": "scripts/_server-routers/task.ts:71",
+      "defined_at": "scripts/_server-routers/task.ts:120",
       "first_used_in_curriculum_day": 13,
       "referenced_by_scaffold_components": ["src/app/my-task/page.tsx", "src/app/task/page.tsx"],
       "ui_unreferenced": false,
@@ -269,8 +296,8 @@
     "task.getById": {
       "router": "task",
       "procedure": "getById",
-      "defined_at": "scripts/_server-routers/task.ts:131",
-      "first_used_in_curriculum_day": 18,
+      "defined_at": "scripts/_server-routers/task.ts:180",
+      "first_used_in_curriculum_day": 13,
       "referenced_by_scaffold_components": [
         "scripts/_app-components/task/task-detail-dialog.tsx",
         "src/component/task/task-detail-dialog.tsx"
@@ -281,7 +308,7 @@
     "task.create": {
       "router": "task",
       "procedure": "create",
-      "defined_at": "scripts/_server-routers/task.ts:173",
+      "defined_at": "scripts/_server-routers/task.ts:222",
       "first_used_in_curriculum_day": 14,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,
@@ -290,7 +317,7 @@
     "task.update": {
       "router": "task",
       "procedure": "update",
-      "defined_at": "scripts/_server-routers/task.ts:241",
+      "defined_at": "scripts/_server-routers/task.ts:286",
       "first_used_in_curriculum_day": 15,
       "referenced_by_scaffold_components": ["src/app/my-task/page.tsx", "src/app/task/page.tsx"],
       "ui_unreferenced": false,
@@ -299,7 +326,7 @@
     "task.delete": {
       "router": "task",
       "procedure": "delete",
-      "defined_at": "scripts/_server-routers/task.ts:364",
+      "defined_at": "scripts/_server-routers/task.ts:405",
       "first_used_in_curriculum_day": 15,
       "referenced_by_scaffold_components": [
         "src/app/my-task/page.tsx",
@@ -312,7 +339,7 @@
     "task.addTime": {
       "router": "task",
       "procedure": "addTime",
-      "defined_at": "scripts/_server-routers/task.ts:376",
+      "defined_at": "scripts/_server-routers/task.ts:417",
       "first_used_in_curriculum_day": 16,
       "referenced_by_scaffold_components": [
         "scripts/_app-components/task/time-log-dialog.tsx",
@@ -324,7 +351,7 @@
     "task.bulkComplete": {
       "router": "task",
       "procedure": "bulkComplete",
-      "defined_at": "scripts/_server-routers/task.ts:389",
+      "defined_at": "scripts/_server-routers/task.ts:430",
       "first_used_in_curriculum_day": 28,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,
@@ -333,7 +360,7 @@
     "task.bulkDelete": {
       "router": "task",
       "procedure": "bulkDelete",
-      "defined_at": "scripts/_server-routers/task.ts:404",
+      "defined_at": "scripts/_server-routers/task.ts:449",
       "first_used_in_curriculum_day": 28,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,
@@ -342,7 +369,7 @@
     "task.bulkUpdateStatus": {
       "router": "task",
       "procedure": "bulkUpdateStatus",
-      "defined_at": "scripts/_server-routers/task.ts:417",
+      "defined_at": "scripts/_server-routers/task.ts:466",
       "first_used_in_curriculum_day": 28,
       "referenced_by_scaffold_components": ["src/app/task/page.tsx"],
       "ui_unreferenced": false,

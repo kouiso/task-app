@@ -107,6 +107,46 @@ flowchart TD
 
 Day 24 の `getAll` は管理者一覧の入口でした。今日は「本人が自分のプロフィールを更新する」「本人が自分のパスワードを変更する」という2本を足します。どちらも **`protectedProcedure`** なので、ログイン済みユーザー本人のセッションを前提に動きます。
 
+最初に、Day 24 の import 群を次の形へ置き換えます。今日から使う `TRPCError`・`bcrypt`・`createSession`・`protectedProcedure` が増えます。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（Day 25 時点の import）
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/session';
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+```
+
+`userRouter` の前へ、本人更新とパスワード変更の入力スキーマを追加します。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（userRouter の前に追加）
+const profileUpdateSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  avatar: z.string().url().optional().nullable(),
+});
+```
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+  newPassword: z
+    .string()
+    .min(8, '新しいパスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
+```
+
 #### 0-1. まず updateProfile を追加する
 
 `getAll` の直後ではなく、完成版 source と同じ順で `getById` と `update` を将来置く場所を残しつつ、今日は `updateProfile` と `changePassword` を追記します。Day 29 で `getById` / `update` を差し込むので、今は source と同じ並びを頭に入れておくことが大事です。

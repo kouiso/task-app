@@ -98,6 +98,22 @@ flowchart TD
 
 週次レポートは「今の合計」ではなく「7日ごとの推移」を返します。だから Day 21 の `count` 中心の集計とは違い、今回は **期間を切る**・**週ごとに配列を作る**・**各週の中で status / priority を数える**、という3段階になります。
 
+最初に、Day 21 の import 群を次の完成形へ置き換えます。今日から使う `TRPCError`・`z`・`USER_ROLE` が加わります。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（import 群の完成形）
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
+```
+
+`z` は入力検証、`USER_ROLE` と `TRPCError` は他人のレポートを一般ユーザーから守る認可エラーに使います。
+
 #### 0-1. getOverview の直後に input を足す
 
 ```typescript
@@ -105,14 +121,14 @@ flowchart TD
   getWeeklyReport: protectedProcedure
     .input(
       z.object({
-        weeks: z.number().min(1).max(12).default(4),
+        weeks: z.number().int().min(1).max(12).default(4),
         userId: z.string().cuid().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
 ```
 
-ここで受け取るのは `weeks` と `userId` の2つです。`weeks` は何週間分を見るかで、最小 1、最大 12、未指定なら 4 です。`userId` は「誰の週次レポートを見るか」で、省略したときは自分自身のレポートになります。
+ここで受け取るのは `weeks` と `userId` の2つです。`weeks` は何週間分を見るかで、整数かつ最小 1、最大 12、未指定なら 4 です。`userId` は「誰の週次レポートを見るか」で、省略したときは自分自身のレポートになります。
 
 #### 0-2. 他人のレポートを見てよいかを確認する
 

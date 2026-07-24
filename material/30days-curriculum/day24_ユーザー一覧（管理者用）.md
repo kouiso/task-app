@@ -118,66 +118,16 @@ flowchart TD
 ```typescript
 // filepath: src/server/api/routers/user.ts
 import type { Prisma } from '@prisma/client';
-import { TRPCError } from '@trpc/server';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
-import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
-import { createSession } from '@/lib/session';
-import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { adminProcedure, createTRPCRouter } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
-今日は `getAll` しか使いません。
-ただ、Day 25 と Day 29 で `updateProfile`・`changePassword`・`getById`・`update` を同じファイルに足します。
-そのため、最初から完成版 source と同じ import 順で並べます。
-`bcrypt` と `createSession` は、今日時点ではまだ未使用です。
-でも、このあと必ず使います。
+今日は `getAll` に必要な import だけを書きます。Day 25 と Day 29 で初めて使う認可・パスワード・詳細取得の道具は、その procedure を追加する日に足します。こうすると、各 Day の終了時点で未使用 import が残りません。
 
-#### 0-2. 先にスキーマを置く
-
-`userRouter` の前に、完成版 source と同じ順で3つのスキーマを並べます。
-今日は `userUpdateSchema` だけを使います。
-ただ、Day 25 と Day 29 でそのまま再利用するため、先に土台を作っておきます。
-
-```typescript
-// filepath: src/server/api/routers/user.ts（続き）
-const userUpdateSchema = z.object({
-  id: z.string().cuid(),
-  name: z.string().min(1, '名前を入力してください').optional(),
-  avatar: z.string().url().optional().nullable(),
-  role: z.nativeEnum(USER_ROLE).optional(),
-  isActive: z.boolean().optional(),
-});
-```
-
-```typescript
-// filepath: src/server/api/routers/user.ts（続き）
-const profileUpdateSchema = z.object({
-  name: z.string().min(1, '名前を入力してください'),
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  avatar: z.string().url().optional().nullable(),
-});
-```
-
-```typescript
-// filepath: src/server/api/routers/user.ts（続き）
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
-  newPassword: z
-    .string()
-    .min(8, '新しいパスワードは8文字以上で入力してください')
-    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
-    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
-    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
-    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
-});
-```
-
-この段階では「まだ使っていないコードがある」ように見えますが、順番どおりに積み上げるための先行配置です。Day 25 で `profileUpdateSchema` と `changePasswordSchema` を、Day 29 で `userUpdateSchema` を実際に使います。
-
-#### 0-3. 管理者専用の getAll を書く
+#### 0-2. 管理者専用の getAll を書く
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -198,7 +148,7 @@ export const userRouter = createTRPCRouter({
 
 ここで大事なのは `protectedProcedure` ではなく **`adminProcedure`** を使っている点です。今日のページは管理者専用なので、入口で `ADMIN` 判定まで済ませます。コメントにもあるとおり、ここでは「管理者かどうか」を確認する追加 DB クエリは不要です。セッションに入っている `role` をそのまま使います。
 
-#### 0-4. 条件があるときだけ where に足す
+#### 0-3. 条件があるときだけ where に足す
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -213,7 +163,7 @@ export const userRouter = createTRPCRouter({
 
 一覧画面の最初の版では絞り込み UI をまだ作りませんが、API は先に対応済みです。条件が渡されたときだけ `where` に足し、未指定なら全件のままにします。`isActive` は `false` が有効な値なので、`if (input?.isActive)` ではなく `!== undefined` で判定しているのがポイントです。
 
-#### 0-5. 表示に使う項目だけ返す
+#### 0-4. 表示に使う項目だけ返す
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -232,7 +182,7 @@ export const userRouter = createTRPCRouter({
 
 `USER_DETAIL_SELECT` は共有の select 定義で、名前・メール・ロール・アバターなど「返してよいユーザー項目」をまとめたものです。そこへ `createdAt` と `updatedAt` だけ足しているので、Day 24 の一覧画面に必要な列をそのまま返せます。
 
-#### 0-6. root.ts に時系列順で登録する
+#### 0-5. root.ts に時系列順で登録する
 
 最後に `userRouter` を `root.ts` に登録します。完成版 source と同じく、`user` は一番最後です。
 
@@ -264,7 +214,7 @@ export const appRouter = createTRPCRouter({
 Day 21 でも触れたとおり、root の順番は教材で作った時系列に揃えます。`user` は `report` のあとです。
 
 **確認ポイント**:
-- `src/server/api/routers/user.ts` を新規作成し、3つのスキーマと `getAll` を source と同じ順で書けた
+- `src/server/api/routers/user.ts` を新規作成し、今日使う import と `getAll` を書けた
 - `getAll` が `adminProcedure` になっている
 - `root.ts` に `userRouter` を import / registration の両方で追加し、最後尾に置けた
 

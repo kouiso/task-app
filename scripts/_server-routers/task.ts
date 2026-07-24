@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, ProjectMemberRole } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { TASK_PRIORITY } from '@/lib/constant/priority';
@@ -44,6 +44,55 @@ const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
   minutesToAdd: z.number().int().min(0),
 });
+
+const MAX_BULK_TASKS = 100;
+const TASK_EDIT_ROLES = [
+  ProjectMemberRole.OWNER,
+  ProjectMemberRole.ADMIN,
+  ProjectMemberRole.MEMBER,
+];
+const TASK_DELETE_ROLES = [ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN];
+
+const buildBulkPermissionWhere = (
+  ids: string[],
+  userId: string,
+  roles: ProjectMemberRole[],
+): Prisma.TaskWhereInput => ({
+  id: { in: ids },
+  project: {
+    members: {
+      some: { userId, role: { in: roles } },
+    },
+  },
+});
+
+const assertBulkWriteCount = (count: number, expected: number) => {
+  if (count !== expected) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '一括操作の途中で権限が変更されました。もう一度お試しください',
+    });
+  }
+};
+
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+  );
+  if (lockedProjects.length === 0) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'プロジェクトが見つかりません',
+    });
+  }
+
+  const maxPosition = await tx.task.findFirst({
+    where: { projectId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  return (maxPosition?.position ?? -1) + 1;
+};
 
 async function assertTaskAssigneeBelongsToProject(
   projectId: string,
@@ -193,48 +242,44 @@ export const taskRouter = createTRPCRouter({
       await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
     }
 
-    const maxPosition = await prisma.task.findFirst({
-      where: { projectId: input.projectId },
-      orderBy: { position: 'desc' },
-      select: { position: true },
-    });
-
-    const createData: Prisma.TaskCreateInput = {
-      title: input.title,
-      status: input.status,
-      priority: input.priority,
-      dueDate: input.dueDate ? new Date(input.dueDate) : null,
-      position: (maxPosition?.position ?? -1) + 1,
-      project: {
-        connect: { id: input.projectId },
-      },
-      createdBy: {
-        connect: { id: ctx.session.userId },
-      },
-    };
-    if (input.description !== undefined) {
-      createData.description = input.description;
-    }
-    if (input.estimatedHours !== undefined) {
-      createData.estimatedHours = input.estimatedHours;
-    }
-    if (input.assigneeId) {
-      createData.assignee = {
-        connect: { id: input.assigneeId },
-      };
-    }
-
-    return await prisma.task.create({
-      data: createData,
-      include: {
-        project: true,
+    return await prisma.$transaction(async (tx) => {
+      const createData: Prisma.TaskCreateInput = {
+        title: input.title,
+        status: input.status,
+        priority: input.priority,
+        dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        position: await getNextTaskPosition(tx, input.projectId),
+        project: {
+          connect: { id: input.projectId },
+        },
         createdBy: {
-          select: USER_SELECT,
+          connect: { id: ctx.session.userId },
         },
-        assignee: {
-          select: USER_SELECT,
+      };
+      if (input.description !== undefined) {
+        createData.description = input.description;
+      }
+      if (input.estimatedHours !== undefined) {
+        createData.estimatedHours = input.estimatedHours;
+      }
+      if (input.assigneeId) {
+        createData.assignee = {
+          connect: { id: input.assigneeId },
+        };
+      }
+
+      return await tx.task.create({
+        data: createData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
         },
-      },
+      });
     });
   }),
 
@@ -243,12 +288,10 @@ export const taskRouter = createTRPCRouter({
 
     const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
 
-    // 楽観ロック: 事前に updatedAt を比較してから update する方式だと、
-    // 比較と更新の間に他の更新が入って後勝ちになる。updatedAt を WHERE 条件に
-    // 含めた条件付き update（末尾）に比較と更新を 1 回のクエリでまとめる。
-    // ネストした connect/disconnect ではなく外部キーを直接書く Unchecked 型で
-    // データを組み立てる。
-    const updateData: Prisma.TaskUncheckedUpdateInput = {};
+    // 楽観ロック: ここで updatedAt を比較して即座に CONFLICT を判定しても、
+    // 比較と末尾の update の間に他の更新が割り込む余地が残る（TOCTOU）。
+    // 比較は末尾の update の where に含め、比較と更新を 1 回のクエリでまとめる。
+    const updateData: Prisma.TaskUpdateInput = {};
     if (data.title !== undefined) {
       updateData.title = data.title;
     }
@@ -296,23 +339,15 @@ export const taskRouter = createTRPCRouter({
         },
       });
       assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
-      updateData.projectId = targetProjectId;
-
-      // 位置はプロジェクト単位の連番なので移動先の末尾に付け直す、重複や割り込みを防ぐ
-      const maxPosition = await prisma.task.findFirst({
-        where: { projectId: targetProjectId },
-        orderBy: { position: 'desc' },
-        select: { position: true },
-      });
-      updateData.position = (maxPosition?.position ?? -1) + 1;
+      updateData.project = { connect: { id: targetProjectId } };
     }
 
     if (data.assigneeId !== undefined) {
       if (data.assigneeId === null) {
-        updateData.assigneeId = null;
+        updateData.assignee = { disconnect: true };
       } else {
         await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assigneeId = data.assigneeId;
+        updateData.assignee = { connect: { id: data.assigneeId } };
       }
     } else if (isProjectChanging && existingTask.assigneeId) {
       // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
@@ -326,35 +361,41 @@ export const taskRouter = createTRPCRouter({
         select: { id: true },
       });
       if (!assigneeStillMember) {
-        updateData.assigneeId = null;
+        updateData.assignee = { disconnect: true };
       }
     }
 
     try {
-      // updateMany + 件数チェック + 再取得の3手だと、チェックと再取得の間に別の更新が
-      // 割り込む余地が残る（TOCTOU）。updatedAt を含めた where で単一の update に
-      // まとめ、条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
+      // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
+      // updatedAt を where に含めた単一の update で比較と更新を 1 回のクエリにまとめる。
+      // 条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
       // 投げる P2025 を捕捉して CONFLICT に変換する。
-      return await prisma.task.update({
-        where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
-        data: updateData,
-        include: {
-          project: true,
-          createdBy: {
-            select: USER_SELECT,
+      return await prisma.$transaction(async (tx) => {
+        if (isProjectChanging) {
+          updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        }
+
+        return await tx.task.update({
+          where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
+          data: updateData,
+          include: {
+            project: true,
+            createdBy: {
+              select: USER_SELECT,
+            },
+            assignee: {
+              select: USER_SELECT,
+            },
           },
-          assignee: {
-            select: USER_SELECT,
-          },
-        },
+        });
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
-        // 0 件更新 = 読み込み後に他のユーザーが更新（または削除）済み
         throw new TRPCError({
           code: 'CONFLICT',
-          message:
-            'タスクは他のユーザーによって更新されています。最新の内容を再読み込みしてください',
+          // 自分自身の別操作（時間記録の追加など）による更新でも起こり得るため、
+          // 「他のユーザー」と断定しない文言にする
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
         });
       }
       throw err;
@@ -387,7 +428,7 @@ export const taskRouter = createTRPCRouter({
   }),
 
   bulkComplete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
+    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
@@ -395,29 +436,37 @@ export const taskRouter = createTRPCRouter({
       }
 
       const completedAt = new Date();
-      return await prisma.task.updateMany({
-        where: { id: { in: input.ids } },
-        data: { status: TASK_STATUS.DONE, completedAt },
+      return await prisma.$transaction(async (tx) => {
+        const result = await tx.task.updateMany({
+          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+          data: { status: TASK_STATUS.DONE, completedAt },
+        });
+        assertBulkWriteCount(result.count, input.ids.length);
+        return result;
       });
     }),
 
   bulkDelete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
+    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
         assertMemberPermission(task.project.members, 'canDelete');
       }
 
-      return await prisma.task.deleteMany({
-        where: { id: { in: input.ids } },
+      return await prisma.$transaction(async (tx) => {
+        const result = await tx.task.deleteMany({
+          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
+        });
+        assertBulkWriteCount(result.count, input.ids.length);
+        return result;
       });
     }),
 
   bulkUpdateStatus: protectedProcedure
     .input(
       z.object({
-        ids: z.array(z.string().cuid()).min(1),
+        ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS),
         status: taskStatusSchema,
       }),
     )
@@ -437,9 +486,13 @@ export const taskRouter = createTRPCRouter({
         data.completedAt = null;
       }
 
-      return await prisma.task.updateMany({
-        where: { id: { in: input.ids } },
-        data,
+      return await prisma.$transaction(async (tx) => {
+        const result = await tx.task.updateMany({
+          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+          data,
+        });
+        assertBulkWriteCount(result.count, input.ids.length);
+        return result;
       });
     }),
 });

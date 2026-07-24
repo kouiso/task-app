@@ -134,6 +134,17 @@ describe('taskRouter', () => {
       });
       expect(task.assigneeId).toBe(actor.id);
     });
+
+    it('同じプロジェクトへ同時作成しても position が重複しない', async () => {
+      const { project, caller } = await setup('OWNER');
+      const tasks = await Promise.all(
+        Array.from({ length: 6 }, (_, index) =>
+          caller.task.create({ title: `同時作成${index}`, projectId: project.id }),
+        ),
+      );
+
+      expect(new Set(tasks.map((task) => task.position)).size).toBe(tasks.length);
+    });
   });
 
   describe('update（更新）', () => {
@@ -175,6 +186,20 @@ describe('taskRouter', () => {
         'タスクが見つかりません',
       );
     });
+
+    it('同じプロジェクトへ同時移動しても position が重複しない', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const sourceProject = await createTestProject(actor.id);
+      const first = await createTestTask(sourceProject.id, actor.id);
+      const second = await createTestTask(sourceProject.id, actor.id);
+
+      const moved = await Promise.all([
+        caller.task.update({ id: first.id, projectId: project.id }),
+        caller.task.update({ id: second.id, projectId: project.id }),
+      ]);
+
+      expect(new Set(moved.map((task) => task.position)).size).toBe(moved.length);
+    });
   });
 
   describe('delete（削除）', () => {
@@ -201,6 +226,12 @@ describe('taskRouter', () => {
       const task = await createTestTask(project.id, actor.id);
       const result = await caller.task.addTime({ id: task.id, minutesToAdd: 30 });
       expect(result.timeSpentMinutes).toBe(30);
+    });
+
+    it('小数の分数は拒否する', async () => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const task = await createTestTask(project.id, actor.id);
+      await expect(caller.task.addTime({ id: task.id, minutesToAdd: 0.5 })).rejects.toThrow();
     });
   });
 
@@ -260,6 +291,12 @@ describe('taskRouter', () => {
       await expect(caller.task.bulkComplete({ ids: [task.id, NON_EXISTENT_ID] })).rejects.toThrow(
         'タスクが見つかりません',
       );
+    });
+
+    it('一括操作は100件を超える入力を拒否する', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const task = await createTestTask(project.id, actor.id);
+      await expect(caller.task.bulkComplete({ ids: Array(101).fill(task.id) })).rejects.toThrow();
     });
   });
 

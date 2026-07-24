@@ -187,7 +187,7 @@ export const reportRouter = createTRPCRouter({
   getWeeklyReport: protectedProcedure
     .input(
       z.object({
-        weeks: z.number().min(1).max(12).default(4),
+        weeks: z.number().int().min(1).max(12).default(4),
         userId: z.string().cuid().optional(),
       }),
     )

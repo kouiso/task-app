@@ -98,17 +98,17 @@ flowchart TD
 | Step 8 | DropdownMenu でステータス一括変更を実装する | 7 分 | `src/app/task/page.tsx` | ステータス変更が動作する |
 | Step 9 | 動作確認と仕上げ | 4 分 | — | 一括操作が一通り動く |
 
-**合計時間**: 約 63 分。
+**合計時間**: 約 73 分。
 
 ---
 
-### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（10 分）
+### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（20 分）
 
 **ゴール**: 複数のタスクをまとめて処理する `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` を自分で書き、`api.task.bulkComplete` などを呼べる状態にします。この3つは、このあと Step 6〜8 で画面のボタンから呼び出します。
 
 Day 13〜16 で `task.ts` に、1件ずつ扱う手続きを積み上げてきました。今日はそこへ、複数のタスクを一度に処理する3つの手続きを足します。骨組みはこれまでと同じ入力・処理・戻り値の3部品です。ちがうのは、入力が「タスク id の配列」になり、処理が「まとめて更新する」`updateMany` や「まとめて削除する」`deleteMany` になるところです。
 
-#### 0-1. import に findTasksWithPermission を足す
+#### 0-1. import に一括操作で使う道具を足す
 
 3つの手続きは、渡された id の配列をまとめて権限つきで取る共有ヘルパー `findTasksWithPermission`（複数形）を使います。Day 15 までに書いた `_helpers/permission` の import 文に、この1行を足して次の形にします。
 
@@ -124,14 +124,72 @@ import {
 
 `findTasksWithPermission`（複数形）は、id の配列を受け取り、その全部のタスクを権限つきで取ってくるヘルパーです。Day 15 で使った `findTaskWithPermission`（単数形）の複数版と考えてください。名前が `s` の1文字だけ違うので、取り違えに注意します。`assertMemberPermission` などは前の Day で足したものなので、新しく行を増やさず同じ import 文の中に並べます。
 
-#### 0-2. bulkComplete を書く（まとめて完了にする）
+Day 13 で書いた `import type { Prisma } from '@prisma/client';` は、次の行へ置き換えます。`ProjectMemberRole` は、書き込み直前にも権限を確認するために使います。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（既存の Prisma import を置き換える）
+import { Prisma, ProjectMemberRole } from '@prisma/client';
+```
+
+#### 0-2. 件数上限と書き込み条件を作る
+
+一度に受け付ける件数と、編集・削除できるロールを定数にします。`taskTimeUpdateSchema` の直後へ追加してください。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskTimeUpdateSchema の直後に追加）
+const MAX_BULK_TASKS = 100;
+const TASK_EDIT_ROLES = [
+  ProjectMemberRole.OWNER,
+  ProjectMemberRole.ADMIN,
+  ProjectMemberRole.MEMBER,
+];
+const TASK_DELETE_ROLES = [ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN];
+```
+
+`MAX_BULK_TASKS` は巨大な id 配列による DB 負荷を防ぎます。編集は OWNER・ADMIN・MEMBER、削除は OWNER・ADMIN だけです。
+
+続けて、タスク id と現在の権限を同じ `where` にまとめる部品を書きます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+const buildBulkPermissionWhere = (
+  ids: string[],
+  userId: string,
+  roles: ProjectMemberRole[],
+): Prisma.TaskWhereInput => ({
+  id: { in: ids },
+  project: {
+    members: {
+      some: { userId, role: { in: roles } },
+    },
+  },
+});
+```
+
+最後に、書き込めた件数が入力件数と違った場合に処理を止める部品を追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+const assertBulkWriteCount = (count: number, expected: number) => {
+  if (count !== expected) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '一括操作の途中で権限が変更されました。もう一度お試しください',
+    });
+  }
+};
+```
+
+一括操作は、最初の権限確認と DB への書き込みの間にロールが変わる可能性も考えます。書き込み側の `where` でも現在のロールを確認し、件数がずれたらトランザクション（途中で失敗した場合に変更全体を取り消すまとまり）を失敗させます。
+
+#### 0-3. bulkComplete を書く（まとめて完了にする）
 
 まず、選んだタスクをまとめて完了にする `bulkComplete` を、Day 16 で書いた `addTime` の直後に足します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（addTime の直後に追加）
   bulkComplete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
+    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
@@ -139,45 +197,53 @@ import {
       }
 
       const completedAt = new Date();
-      return await prisma.task.updateMany({
-        where: { id: { in: input.ids } },
-        data: { status: TASK_STATUS.DONE, completedAt },
+      return await prisma.$transaction(async (tx) => {
+        const result = await tx.task.updateMany({
+          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+          data: { status: TASK_STATUS.DONE, completedAt },
+        });
+        assertBulkWriteCount(result.count, input.ids.length);
+        return result;
       });
     }),
 ```
 
-入力の `ids` は `z.array(z.string().cuid()).min(1)` で「1件以上のタスク id の配列」に絞ります。まず `findTasksWithPermission` で配列のタスクをまとめて取り、`for` で1件ずつ `assertMemberPermission(..., 'canEdit')` を確認します。`prisma.task.updateMany` は `where: { id: { in: input.ids } }`（id がこの配列のどれかに一致するもの全部）を1回のクエリでまとめて更新します。`status` を `DONE` にするのと同時に `completedAt` へ現在時刻を入れているのは、いつ完了したかを残すためです。あとで週次レポート（Day 23）で「今週何件終わったか」を数えるときに、この日時が効いてきます。
+入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず `findTasksWithPermission` と `assertMemberPermission` で入力全体を確認します。書き込み時にも `buildBulkPermissionWhere` で id と現在の編集権限を同時に絞ります。
 
-1件ずつ権限を確かめてから `updateMany` で一気に書き換えるのは、確認は個別に、更新はまとめて、と役割を分けるためです。100件を1件ずつ `update` すると DB へ100回問い合わせますが、`updateMany` なら1回で済みます。
+`$transaction` の中で件数を確認するため、途中で権限が変わり `result.count` が入力件数より少なくなった場合は、更新全体が取り消されます。`status` と同時に `completedAt` へ現在時刻を入れるのは、Day 23 の週次レポートで完了件数を数えるためです。
 
 | 方法 | DB への問い合わせ回数 |
 |------|---------------------|
 | `for` ループ + `update` | タスク数と同じ（100件なら100回） |
 | `updateMany` | 1回 |
 
-#### 0-3. bulkDelete を書く（まとめて削除する）
+#### 0-4. bulkDelete を書く（まとめて削除する）
 
 次に、選んだタスクをまとめて消す `bulkDelete` を、`bulkComplete` の直後に足します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（bulkComplete の直後に追加）
   bulkDelete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1) }))
+    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
         assertMemberPermission(task.project.members, 'canDelete');
       }
 
-      return await prisma.task.deleteMany({
-        where: { id: { in: input.ids } },
+      return await prisma.$transaction(async (tx) => {
+        const result = await tx.task.deleteMany({
+          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
+        });
+        assertBulkWriteCount(result.count, input.ids.length);
+        return result;
       });
     }),
 ```
 
-流れは `bulkComplete` とよく似ていますが、権限の確認が `'canDelete'` になっている点が違います。タスクを編集できる人でも、削除まではできない設定があり得るためです。だから `bulkComplete` の `'canEdit'` とは分けて、削除のときは `'canDelete'` を確かめます。権限が通ったら `prisma.task.deleteMany` で、id が配列に含まれるタスクをまとめて消します。
+流れは `bulkComplete` とよく似ていますが、権限の確認と書き込み条件が削除用になっています。`TASK_DELETE_ROLES` を使うため、編集はできても削除はできない MEMBER を書き込み直前にも除外できます。件数がずれた場合は削除全体を取り消します。
 
-#### 0-4. bulkUpdateStatus を書く（まとめてステータス変更・前半）
+#### 0-5. bulkUpdateStatus を書く（まとめてステータス変更・前半）
 
 最後に、選んだタスクのステータスをまとめて変える `bulkUpdateStatus` を、`bulkDelete` の直後に足します。まず入力と権限確認までを書きます。
 
@@ -186,7 +252,7 @@ import {
   bulkUpdateStatus: protectedProcedure
     .input(
       z.object({
-        ids: z.array(z.string().cuid()).min(1),
+        ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS),
         status: taskStatusSchema,
       }),
     )
@@ -199,7 +265,7 @@ import {
 
 入力は id の配列に加えて、変更後の `status`（`taskStatusSchema` で検証）も受け取ります。ここまでは `bulkComplete` と同じで、まとめてタスクを取り、`for` で1件ずつ `'canEdit'` 権限を確かめます。ステータスの変更は編集にあたるので、確認する権限は `'canEdit'` です。
 
-#### 0-5. bulkUpdateStatus を書く（後半・完了日時の管理）
+#### 0-6. bulkUpdateStatus を書く（後半・完了日時の管理）
 
 続けて、更新するデータを組み立てて `updateMany` を呼びます。
 
@@ -215,19 +281,24 @@ import {
         data.completedAt = null;
       }
 
-      return await prisma.task.updateMany({
-        where: { id: { in: input.ids } },
-        data,
+      return await prisma.$transaction(async (tx) => {
+        const result = await tx.task.updateMany({
+          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+          data,
+        });
+        assertBulkWriteCount(result.count, input.ids.length);
+        return result;
       });
     }),
 ```
 
-`data` に `Prisma.TaskUpdateManyMutationInput` 型を付けているのは、あとから `completedAt` を足し引きするからです。型を付けておくと、キーの打ち間違いを型チェックが教えてくれます。変更後のステータスが `DONE` のときだけ `completedAt` に現在時刻を入れ、それ以外に戻すときは `null` で消します。完了を取り消したのに完了日時が残る、という食い違いをここで防ぎます。最後の `}),` で `bulkUpdateStatus` を閉じ、`});` で `taskRouter` 全体を閉じます。
+`data` に `Prisma.TaskUpdateManyMutationInput` 型を付けているのは、あとから `completedAt` を足し引きするからです。変更後が `DONE` のときだけ現在時刻を入れ、それ以外では `null` に戻します。書き込みは編集用ロールを含む条件で再確認し、件数がずれた場合はトランザクション全体を取り消します。
 
 **確認ポイント**:
 - `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` の3つを `addTime` の直後に順に足した
+- 3つの `ids` が1件以上・`MAX_BULK_TASKS` 件以下に制限されている
 - `findTasksWithPermission`（複数形）で権限を確認してから `updateMany` / `deleteMany` を呼んでいる
-- 削除は `'canDelete'`、完了とステータス変更は `'canEdit'` を確認している
+- 書き込み側でも現在のロールを確認し、件数がずれたら全体を取り消している
 - `npm run dev` で型エラーが出ていない
 
 ---

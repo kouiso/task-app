@@ -224,7 +224,7 @@ const taskUpdateSchema = z.object({
 
 #### 0-6. プロジェクトを移すときの確認
 
-プロジェクトを移す場合は、移動先でも編集権限があるかを確認し、並び順の番号を付け直します。
+プロジェクトを移す場合は、移動先でも編集権限があるかを確認します。並び順の採番は、Day 14 のロックを使い、実際の保存と同じトランザクション内で 0-9 に行います。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -244,21 +244,14 @@ const taskUpdateSchema = z.object({
 
 移動先のプロジェクトで自分がメンバーかを `findUnique` で調べ、`assertMemberPermission(..., 'canEdit')` で編集権限を確認します。ここを飛ばすと、自分が入っていないプロジェクトへタスクを移し込めてしまいます。権限が確認できたら、`updateData.project = { connect: ... }` で移動先へ付け替えます。
 
-#### 0-7. 移動先での並び順を決める
+#### 0-7. プロジェクト変更のまとまりを閉じる
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-      // 位置はプロジェクト単位の連番なので移動先の末尾に付け直す、重複や割り込みを防ぐ
-      const maxPosition = await prisma.task.findFirst({
-        where: { projectId: targetProjectId },
-        orderBy: { position: 'desc' },
-        select: { position: true },
-      });
-      updateData.position = (maxPosition?.position ?? -1) + 1;
     }
 ```
 
-並び順の番号（`position`）はプロジェクトごとの連番なので、移動したら移動先の末尾に置き直します。Day 14 の `create` と同じく、今いちばん大きい番号を探して1を足します。移動先にタスクが1件も無いときは `?? -1` で -1 として扱い、最初の番号が 0 になります。最後の `}` で、プロジェクト移動のときだけ走るこのまとまりを閉じます。
+この段階では project の接続先だけを `updateData` に入れます。`position` の最大値を先に読むだけでは、同時移動した2件へ同じ番号を付ける恐れがあります。そのため、0-9 で project 行をロックしてから採番します。
 
 #### 0-8. 担当者の付け替え
 
@@ -294,7 +287,7 @@ const taskUpdateSchema = z.object({
 
 #### 0-9. ここが一番のヤマ場（楽観ロックで書き換える）
 
-最後に DB を書き換えます。ここで、この教材で初めて出てくる楽観ロック（optimistic lock）を使います。
+最後に DB を書き換えます。ここで、この教材で初めて出てくる楽観ロック（optimistic lock）を使います。プロジェクトを移す場合は、採番と更新を同じトランザクションへ入れます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -303,20 +296,28 @@ const taskUpdateSchema = z.object({
       // updatedAt を where に含めた単一の update で比較と更新を 1 回のクエリにまとめる。
       // 条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
       // 投げる P2025 を捕捉して CONFLICT に変換する。
-      return await prisma.task.update({
-        where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
-        data: updateData,
-        include: {
-          project: true,
-          createdBy: {
-            select: USER_SELECT,
+      return await prisma.$transaction(async (tx) => {
+        if (isProjectChanging) {
+          updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        }
+
+        return await tx.task.update({
+          where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
+          data: updateData,
+          include: {
+            project: true,
+            createdBy: {
+              select: USER_SELECT,
+            },
+            assignee: {
+              select: USER_SELECT,
+            },
           },
-          assignee: {
-            select: USER_SELECT,
-          },
-        },
+        });
       });
 ```
+
+移動時は `getNextTaskPosition` が移動先 project をロックし、そのロックを保った `tx.task.update` で保存します。これで同じプロジェクトへの同時移動も順番に処理されます。
 
 楽観ロックとは、「たぶん誰ともぶつからないだろう」と考えて先に書き換えを試し、もしぶつかっていたらそのとき初めて止める、というやり方です。たとえば2人が同じタスクを開いて、片方が先に保存したあと、もう片方が古い内容のまま保存すると、先の変更が上書きで消えてしまいます。これを防ぐため、画面が `expectedUpdatedAt` を送ってきたときだけ、`where` に `updatedAt: new Date(expectedUpdatedAt)` を足します。「自分が編集を始めた時点から、タスクの更新時刻が変わっていないときだけ書き換える」という条件です。送られてこなければ、今までと同じく `id` だけで書き換えます。先にほかの書き換え（別の人の保存だけでなく、自分の時間記録などでも起こります）が入っていれば更新時刻がずれているので、この `update` は対象を見つけられず失敗します。`include` は、書き換えた後のデータを一覧と同じ形（プロジェクト・作成者・担当者つき）で返す指定です。
 

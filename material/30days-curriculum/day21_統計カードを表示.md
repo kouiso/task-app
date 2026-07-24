@@ -109,17 +109,14 @@ flowchart TD
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
-import { TRPCError } from '@trpc/server';
-import { z } from 'zod';
 import { TASK_PRIORITY } from '@/lib/constant/priority';
-import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { getUserProjectIds } from './_helpers/permission';
 ```
 
-`TASK_STATUS` と `TASK_PRIORITY` は、後でステータス別・優先度別の集計を作るために使います。`getUserProjectIds` は Day 13 でも使った共有ヘルパーで、「ログイン中のユーザーが参加中のプロジェクト id 一覧」を返します。
+`TASK_STATUS` と `TASK_PRIORITY` は、後でステータス別・優先度別の集計を作るために使います。`getUserProjectIds` は Day 13 でも使った共有ヘルパーで、「ログイン中のユーザーが参加中のプロジェクト id 一覧」を返します。Day 23 で初めて使う `TRPCError`・`z`・`USER_ROLE` は、未使用 import にしないため今日はまだ追加しません。
 
 #### 0-2. 空配列のとき先に返す
 
