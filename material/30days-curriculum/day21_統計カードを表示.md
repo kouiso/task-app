@@ -448,6 +448,55 @@ api.report.getOverview.useQuery();
 
 **ゴール**: 必要なモジュールを読み込みます。
 
+先に、Day 8 で作ったサイドバーから
+レポートページへ移動できるようにします。
+`src/component/layout/app-layout.tsx` の
+`lucide-react` の import に `BarChart` を追加してください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  BarChart,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+```
+
+同じファイルの `menuItems` に、
+レポート用の項目を追加します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'レポート',
+    icon: <BarChart className="h-5 w-5" />,
+    path: '/report',
+  },
+];
+```
+
+**確認ポイント**:
+- サイドバーに「レポート」が表示された
+- 既存のメニュー項目が消えていない
+
 まず `src/app/report/page.tsx` を新規作成し、
 先頭に以下の import を書きます。
 
