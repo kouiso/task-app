@@ -130,6 +130,15 @@ export function TaskDialog({
     reset(buildTaskFormValues(initialData, projectsRef.current));
   }, [initialData, open, reset]);
 
+  useEffect(() => {
+    const firstProjectId = projects[0]?.id;
+    if (!open || initialData || selectedProjectId || !firstProjectId) {
+      return;
+    }
+
+    setValue('projectId', firstProjectId, { shouldDirty: false });
+  }, [initialData, open, projects, selectedProjectId, setValue]);
+
   const handleClose = () => {
     reset(buildTaskFormValues(undefined, projects));
     onClose();

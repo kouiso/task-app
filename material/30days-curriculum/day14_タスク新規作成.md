@@ -650,7 +650,8 @@ export function TaskDialog({
 }: TaskDialogProps) {
   const {
     register, handleSubmit, control,
-    watch, reset, formState: { errors },
+    watch, reset, setValue,
+    formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues:
@@ -688,15 +689,48 @@ export function TaskDialog({
   }, [initialData, open, reset]);
 ```
 
+フォームを表示した後でプロジェクト一覧が届くケースへ備え、空の `projectId` だけを初期化します。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// TaskDialog 関数内の続き
+  useEffect(() => {
+    const firstProjectId =
+      projects[0]?.id;
+    if (
+      !open
+      || initialData
+      || selectedProjectId
+      || !firstProjectId
+    ) {
+      return;
+    }
+    setValue(
+      'projectId',
+      firstProjectId,
+      { shouldDirty: false },
+    );
+  }, [
+    initialData,
+    open,
+    projects,
+    selectedProjectId,
+    setValue,
+  ]);
+```
+
 **確認ポイント**:
 - `buildTaskFormValues` が全フィールドを返している
 - `useForm` に `resolver` と `defaultValues` が設定されている
 - 選択中のプロジェクトだけを `getMembersByProject` に渡している
 - `useEffect` で `initialData` の変更時に `reset` している
+- プロジェクト一覧が遅れて届いた場合も、入力済みの他フィールドを維持したまま空の `projectId` だけを初期化している
 
 > `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため、`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
 >
 > `projectsRef` は最新の候補一覧を保持しますが、一覧の再取得だけでは `reset` を実行しません。ダイアログを開いたあとに候補一覧が更新されても、入力途中のタイトルや説明が初期値へ戻らないためです。
+>
+> 一方、作成ダイアログを開いた時点で候補がまだ0件だった場合は、候補の到着後に空の `projectId` だけを `setValue` で補完します。フォーム全体を `reset` しないため、先に入力したタイトルや説明は維持されます。
 >
 > **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 
