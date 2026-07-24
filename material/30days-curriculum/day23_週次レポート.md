@@ -274,6 +274,10 @@ import { getUserProjectIds } from './_helpers/permission';
 `api.report.getOverview` の `projectStats` を
 そのまま描画し、ここで再集計はしません。
 
+> Step 1・2 のコードは読み比べ用です。
+> `overview`、`projectStats`、Table import、
+> 「プロジェクト統計」カードを追加し直しません。
+
 #### 統計テーブルに表示する項目
 
 | 項目 | 参照先 | 意味 |
@@ -350,6 +354,10 @@ const projectStats = overview?.projectStats ?? [];
 
 **ゴール**: Table コンポーネントで
 プロジェクト統計を表形式で表示します。
+
+Day 21 で表示済みのテーブルを確認します。
+以下のコードを2つ目のテーブルとして
+貼り付けないでください。
 
 ```typescript
 // filepath: src/app/report/page.tsx
@@ -661,6 +669,35 @@ export default function WeeklyReportPage() {
 スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
 
 ![ローディング中にスピナーが表示されることを確認してください。](./screenshots/report-weekly.png)
+
+週次ページを直接 URL 入力しなくても開けるよう、
+`src/app/report/page.tsx` のヘッダーへリンクを
+追加します。既存 import に次を追加してください。
+
+```typescript
+// filepath: src/app/report/page.tsx
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+```
+
+レポート見出しの右側へリンクを置きます。
+
+```typescript
+// filepath: src/app/report/page.tsx
+<Link
+  href="/report/weekly"
+  className="inline-flex items-center gap-2
+    text-sm font-medium text-primary
+    hover:underline"
+>
+  週次レポートを見る
+  <ArrowRight className="h-4 w-4" />
+</Link>
+```
+
+**確認ポイント**:
+- `/report` から週次レポートを開ける
+- 「プロジェクト統計」テーブルは1つだけ表示される
 
 ---
 

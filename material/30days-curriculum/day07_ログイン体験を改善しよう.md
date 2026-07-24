@@ -73,6 +73,7 @@ sequenceDiagram
 | HttpOnly Cookie | エイチティーティーピー・オンリー・クッキー | JS から読めない安全な Cookie | 見えない場所に隠したリストバンド |
 | tRPC | ティー・アール・ピー・シー | 型安全な API フレームワーク | フロントとバックで同じメニュー表を共有する仕組み |
 | ミドルウェア | middleware | リクエストの前処理（認証ガード等） | 店の入口にいるガードマン |
+| rate limit | レート・リミット | 短時間のログイン失敗回数を制限する | 暗証番号を何度も間違えると一時停止する仕組み |
 
 > **今日のゴールライン**: JWT や bcrypt の数学的な仕組みまで理解する必要はありません。「ログインしたらトークンがもらえて、それで認証が通る」という流れを体験できたら OK。
 
@@ -553,15 +554,13 @@ import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
 import {
-  createSession,
-  deleteSession,
-  type SessionUser,
-} from '@/lib/session';
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from '../trpc';
+  checkLoginRateLimit,
+  extractClientIp,
+  rateLimitToTRPCError,
+  recordLoginSuccess,
+} from '@/lib/rate-limit';
+import { createSession, deleteSession, type SessionUser } from '@/lib/session';
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
@@ -571,12 +570,8 @@ import { USER_DETAIL_SELECT } from './_helpers/select';
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
 const loginSchema = z.object({
-  email: z
-    .string()
-    .email('有効なメールアドレスを入力してください'),
-  password: z
-    .string()
-    .min(1, 'パスワードを入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  password: z.string().min(1, 'パスワードを入力してください'),
 });
 ```
 
@@ -586,22 +581,15 @@ const loginSchema = z.object({
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
 const registerSchema = z.object({
-  name: z
-    .string()
-    .min(1, '名前を入力してください'),
-  email: z
-    .string()
-    .email('有効なメールアドレスを入力してください'),
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
   password: z
     .string()
     .min(8, 'パスワードは8文字以上で入力してください')
-    .regex(/[A-Z]/, '大文字を含める必要があります')
-    .regex(/[a-z]/, '小文字を含める必要があります')
-    .regex(/[0-9]/, '数字を含める必要があります')
-    .regex(
-      /[^A-Za-z0-9]/,
-      '特殊文字を含める必要があります',
-    ),
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
 });
 ```
 
@@ -611,11 +599,8 @@ const registerSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
-function handleUnexpectedError(
-  context: string,
-  error: unknown,
-): never {
-  console.error(`[auth] ${context}:`, error);
+function handleUnexpectedError(context: string, error: unknown): never {
+  console.error('[auth] unexpected error', { context, error });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
     message: `${context}中にエラーが発生しました。しばらくしてから再度お試しください。`,
@@ -630,104 +615,121 @@ function handleUnexpectedError(
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
 export const authRouter = createTRPCRouter({
-  login: publicProcedure
-    .input(loginSchema)
-    .mutation(async ({ input }) => {
-      try {
-        // 1. メールでユーザーを検索
-        const user = await prisma.user.findUnique({
-          where: { email: input.email },
+  login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
+    const ip = extractClientIp(ctx.headers);
+
+    // brute force 対策: 直近 15 分の失敗回数を email 単独 / email×IP / IP 単独の3軸で rate-limit。
+    // checkLoginRateLimit は許可と同時に失敗行を先取りで記録する（成功時は recordLoginSuccess が削除）
+    const limitResult = await checkLoginRateLimit(input.email, ip);
+    if (!limitResult.allowed) {
+      throw rateLimitToTRPCError(limitResult);
+    }
+```
+
+**確認ポイント**:
+- [ ] IP を取り出し、ログイン試行回数を先に確認している
+
+```typescript
+// filepath: src/server/api/routers/auth.ts（続き）
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: input.email },
+      });
+
+      if (!user?.password) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
         });
+      }
+
+      const isPasswordValid = await bcrypt.compare(input.password, user.password);
 ```
 
 **確認ポイント**:
-- [ ] `login` mutation でユーザー検索まで書けている
+- [ ] ユーザー有無とパスワード照合を同じエラーで確認している
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
-        // 2. ユーザーが見つからない場合
-        if (!user || !user.password) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message:
-              'メールアドレスまたはパスワードが正しくありません',
-          });
-        }
+      if (!isPasswordValid) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
 
-        // 3. アカウントが有効か確認
-        if (!user.isActive) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'このアカウントは無効化されています',
-          });
-        }
-
-        // 4. bcrypt でパスワード照合
-        const isPasswordValid = await bcrypt.compare(
-          input.password,
-          user.password,
-        );
+      if (!user.isActive) {
+        // 無効判定はパスワード照合が通ったあとに行う。先に判定すると、正しいパスワードを
+        // 知らなくても「無効化されたアカウントが存在する」ことを列挙できてしまうため。
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
 ```
 
 **確認ポイント**:
-- [ ] ユーザー有無・アカウント有効・パスワード照合を確認している
+- [ ] パスワード照合後に `isActive` を確認している
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
-        if (!isPasswordValid) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message:
-              'メールアドレスまたはパスワードが正しくありません',
-          });
-        }
+      const sessionUser: SessionUser = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      // セッション発行の前に成功記録を確定させる。順序が逆だと、記録の失敗で 500 を返す一方で
+      // 認証済みセッションだけが残るため。
+      await recordLoginSuccess(input.email, ip);
+      await createSession(sessionUser);
 ```
 
 **確認ポイント**:
-- [ ] パスワード不一致時も同じ `UNAUTHORIZED` メッセージにしている
+- [ ] 成功記録を確定してからセッションを発行している
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
-        // 5. セッション作成（JWT + Cookie）
-        const sessionUser: SessionUser = {
+
+      return {
+        user: {
           id: user.id,
           email: user.email,
+          name: user.name,
+          avatar: user.avatar,
           role: user.role,
-        };
-
-        await createSession(sessionUser);
-
-        return {
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            avatar: user.avatar,
-            role: user.role,
-          },
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        handleUnexpectedError('ログイン処理', error);
-      }
-    }),
+        },
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      handleUnexpectedError('ログイン処理', error);
+    }
+  }),
 ```
 
 **ログイン処理の流れ**:
 
 ```mermaid
 flowchart TD
-    A[メール・パスワード受信] --> B{ユーザー存在する？}
-    B -->|No| E[UNAUTHORIZED エラー]
-    B -->|Yes| C{アカウント有効？}
-    C -->|No| F[FORBIDDEN エラー]
-    C -->|Yes| D{パスワード一致？}
-    D -->|No| E
-    D -->|Yes| G[JWT 生成 + Cookie 保存]
-    G --> H[ユーザー情報を返す]
+    A[メール・パスワード受信] --> B{試行回数は上限内？}
+    B -->|No| I[TOO MANY REQUESTS]
+    B -->|Yes| C{ユーザーとパスワードは正しい？}
+    C -->|No| E[UNAUTHORIZED エラー]
+    C -->|Yes| D{アカウント有効？}
+    D -->|No| F[FORBIDDEN エラー]
+    D -->|Yes| G[成功記録を確定]
+    G --> H[JWT 生成 + Cookie 保存]
 ```
 
 > **なぜ同じエラーメッセージ？** 「メールが存在しない」と「パスワードが違う」を区別すると、攻撃者に「このメールは登録済み」と教えてしまいます。セキュリティのために同じメッセージを返します。
+>
+> `checkLoginRateLimit` は、同じメールや IP から短時間に
+> 失敗が続いたとき、パスワード照合へ進む前に止めます。
+> 成功時は `recordLoginSuccess` で失敗記録を削除してから
+> セッションを発行します。順序を逆にすると、記録の削除に
+> 失敗したのに認証 Cookie だけが残るため、この順にします。
 
 #### 3-3. 登録・ログアウト・セッション取得
 
@@ -961,7 +963,7 @@ Next.js の App Router では、`src/app/api/trpc/[trpc]/route.ts` に置くだ�
 
 ```typescript
 // filepath: src/middleware.ts
-import { jwtVerify } from 'jose';
+import { jwtVerify } from 'jose/jwt/verify';
 import { type NextRequest, NextResponse } from 'next/server';
 
 const COOKIE_NAME = 'session';

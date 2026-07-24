@@ -149,10 +149,13 @@ const changePasswordSchema = z.object({
 
 #### 0-1. まず updateProfile を追加する
 
-`getAll` の直後ではなく、完成版 source と同じ順で `getById` と `update` を将来置く場所を残しつつ、今日は `updateProfile` と `changePassword` を追記します。Day 29 で `getById` / `update` を差し込むので、今は source と同じ並びを頭に入れておくことが大事です。
+`getAll` のあと、ルーターを閉じる `});` の前へ、今日は
+`updateProfile` と `changePassword` をこの順で追記します。
+Day 29 では `getAll` と `updateProfile` の間へ
+`getById` / `update` を差し込むので、その場所を残しておきます。
 
 ```typescript
-// filepath: src/server/api/routers/user.ts（changePassword の前に追加）
+// filepath: src/server/api/routers/user.ts（getAll のあと、閉じる }); の前に追加）
   updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.userId;
 
@@ -313,12 +316,15 @@ src/app/profile/
 
 ```bash
 # filepath: ターミナル
-# プロフィールページの構成を確認
-ls src/app/profile/
+# 今日使うディレクトリを先に作る
+mkdir -p src/app/profile/edit
+mkdir -p src/app/profile/change-password
+find src/app/profile -maxdepth 1 -type d
 ```
 
 **確認ポイント**:
-- `ls` の結果に `page.tsx`、`edit/`、`change-password/` が表示された
+- `edit/` と `change-password/` が表示された
+- 各 `page.tsx` は該当 Step で新規作成する
 
 #### 表示する情報一覧
 
@@ -717,6 +723,67 @@ return (
 > 管理者にだけ「ユーザー管理」ボタンが
 > 表示されます。
 
+プロフィールを URL の手入力なしで開けるよう、
+Day 8 の `app-layout.tsx` も更新します。
+デスクトップのユーザー情報を囲む `<div>` を
+次の `Link` に置き換え、中の表示は残します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+<Link
+  href="/profile"
+  className="mb-3 flex items-center gap-3
+    rounded-md px-2 py-2
+    hover:bg-sidebar-accent"
+>
+  {/* 既存のユーザーアイコンと名前を残す */}
+</Link>
+```
+
+Day 8 の末尾にあるメインコンテンツ部分は、
+モバイル用ナビゲーションを持つ形へ置き換えます。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+<div className="flex min-w-0 flex-1 flex-col">
+  <nav className="flex gap-2 overflow-x-auto
+    border-b p-2 md:hidden">
+    {menuItems.map((item) => (
+      <Link key={item.path}
+        href={item.path}
+        className="whitespace-nowrap
+          rounded-md px-3 py-2 text-sm">
+        {item.text}
+      </Link>
+    ))}
+    {session.user.role === USER_ROLE.ADMIN && (
+      <Link href="/user"
+        className="whitespace-nowrap
+          rounded-md px-3 py-2 text-sm">
+        ユーザー管理
+      </Link>
+    )}
+```
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx（続き）
+    <Link href="/profile"
+      className="whitespace-nowrap
+        rounded-md px-3 py-2 text-sm">
+      プロフィール
+    </Link>
+  </nav>
+  <main className="flex-1 overflow-y-auto p-6">
+    {children}
+  </main>
+</div>
+```
+
+**確認ポイント**:
+- デスクトップのユーザー情報から `/profile` を開ける
+- モバイル幅でも全メニューとプロフィールを開ける
+- 「ユーザー管理」はモバイルでも ADMIN だけに出る
+
 ---
 
 ### Step 5: パスワード変更ページの概要（3分）
@@ -724,15 +791,19 @@ return (
 **ゴール**: パスワード変更ページの
 構成とAPIを理解します。
 
+`src/app/profile/change-password/page.tsx` は
+次の実装セクションで新規作成します。この時点では
+空ファイルを作らず、入力項目を先に確認します。
+
 ```bash
 # filepath: ターミナル
-# パスワード変更ページの構成を確認
-ls src/app/profile/change-password/
+test -d src/app/profile/change-password \
+  && echo "change-password directory ready"
 ```
 
 **確認ポイント**:
-- `ls` で `page.tsx` が存在する
-- 入力項目が3つあることを確認した
+- 作成先ディレクトリの準備完了が表示された
+- 空の `page.tsx` はまだ作っていない
 
 #### パスワード変更の入力項目
 
@@ -1266,12 +1337,14 @@ PORT=3001 npm run dev
 1. `/profile` にアクセス
 2. アバターと名前が表示される
 3. メールアドレスと日付が表示される
-4. 「プロフィール編集」ボタンで遷移
-5. 「パスワード変更」ボタンで遷移
-6. パスワード変更フォームに入力
-7. `Password1` を入力して「特殊文字」が不足した時のエラーを確認
-8. `password1!` を入力して「大文字」が不足した時のエラーを確認
-9. `Abc123!@` のような条件を満たすパスワードで変更成功を確認
+4. 「パスワード変更」ボタンで遷移
+5. パスワード変更フォームに入力
+6. `Password1` で「特殊文字」不足を確認
+7. `password1!` で「大文字」不足を確認
+8. `Abc123!@` のような値で変更成功を確認
+
+> 「プロフィール編集」の遷移確認は、
+> 編集ページを作る Step 14 で行います。
 
 **確認ポイント**:
 - プロフィール情報が正しく表示される
@@ -1294,14 +1367,9 @@ PORT=3001 npm run dev
 パスワード変更ページより入力項目が多いので、
 まず全体像を把握してから実装に入りましょう。
 
-```bash
-# filepath: ターミナル
-# 編集ページのファイルを確認
-ls src/app/profile/edit/
-```
-
-**確認ポイント**:
-- `page.tsx` が存在することを確認した
+`src/app/profile/edit/page.tsx` は Step 11 で
+新規作成します。ここではファイルの存在確認を
+先に行わず、データフローを設計します。
 
 #### 編集ページのデータフロー
 
@@ -1464,6 +1532,7 @@ useEffect でのデータセットを実装します。
 // useForm でフォームを初期化
 export default function ProfileEditPage() {
   const router = useRouter();
+  const utils = api.useUtils();
   const form =
     useForm<ProfileEditFormValues>({
       resolver:
@@ -1490,11 +1559,16 @@ export default function ProfileEditPage() {
 
   const updateProfile =
     api.user.updateProfile.useMutation({
-      onSuccess: () => {
+      onSuccess: async () => {
+        await Promise.allSettled([
+          utils.auth.getCurrentUser.invalidate(),
+          utils.auth.getSession.invalidate(),
+        ]);
         toast.success(
           'プロフィールを更新しました'
         );
         router.push('/profile');
+        router.refresh();
       },
       onError: (error) => {
         toast.error(
@@ -1508,6 +1582,7 @@ export default function ProfileEditPage() {
 **確認ポイント**:
 - useQuery でデータを取得している
 - useMutation で更新APIを設定している
+- 更新後に auth キャッシュを無効化している
 - `??` でフォールバックメッセージを設定している
 
 サーバーデータでフォームを初期化します。

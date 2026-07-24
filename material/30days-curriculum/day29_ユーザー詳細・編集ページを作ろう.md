@@ -997,6 +997,23 @@ import { api } from '@/trpc/react';
 
 **確認ポイント**: ファイルを保存してインポートエラーが出ないことを確認してください。
 
+`useForm` より先に zod スキーマと型を定義します。
+Step 7 の骨組みだけでも型検査が通る順序です。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+const userEditSchema = z.object({
+  name: z.string()
+    .min(1, '名前は必須です'),
+  avatar: z.string().url().or(
+    z.literal('')),
+  role: z.enum(["USER", "ADMIN"]),
+  isActive: z.boolean(),
+});
+type UserEditFormValues =
+  z.infer<typeof userEditSchema>;
+```
+
 `page.tsx` から受け取った `userId` を使って
 データ取得 → 早期リターンの流れで実装します。
 `useForm` + zod でフォーム状態を管理します。
@@ -1009,6 +1026,7 @@ interface UserEditClientProps {
 
 export function UserEditClient({ userId }: UserEditClientProps) {
   const router = useRouter();
+  const utils = api.useUtils();
 
   const form = useForm<UserEditFormValues>({
     resolver: zodResolver(userEditSchema),
@@ -1019,28 +1037,43 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       isActive: true,
     },
   });
+```
 
+現在ユーザーから権限フラグを作り、
+許可された場合だけ編集対象を取得します。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     api.auth.getCurrentUser.useQuery();
+  const isAdmin =
+    currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile =
+    currentUser?.id === userId;
+  const canEditUser =
+    isAdmin || isOwnProfile;
+  const canManageAccount =
+    isAdmin && !isOwnProfile;
+
   const { data: user, isLoading } = api.user.getById.useQuery(
     { id: userId },
-    { enabled: userId.length > 0 },
+    {
+      enabled:
+        !!currentUser
+        && canEditUser
+        && userId.length > 0,
+    },
   );
 ```
 
-早期リターン（ローディング → 未発見）の後に権限チェックを追加します。
+現在ユーザーの取得後に権限を判定し、
+許可された場合だけ `getById` を呼びます。
+一般ユーザーが他人の ID を開いても、
+権限エラーになる API を送信しません。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-  if (isLoading || isCurrentUserLoading) {
-    return (
-      <AppLayout>
-        <PageLoadingSpinner />
-      </AppLayout>
-    );
-  }
-
-  if (!user) {
+  if (isCurrentUserLoading || !currentUser) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
@@ -1049,15 +1082,12 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 ```
 
-続いて、権限チェックを追加します。管理者または本人でなければ編集画面を開けません。
+権限がなければ、API エラーではなく
+安定した拒否画面を返します。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 権限チェック部分
-  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
-  const isOwnProfile = currentUser?.id === userId;
-
-  if (!isAdmin && !isOwnProfile) {
+  if (!canEditUser) {
     return (
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
@@ -1072,6 +1102,19 @@ export function UserEditClient({ userId }: UserEditClientProps) {
             </CardContent>
           </Card>
         </div>
+      </AppLayout>
+    );
+  }
+```
+
+許可された query の完了を待ちます。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+  if (isLoading || !user) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
       </AppLayout>
     );
   }
@@ -1119,24 +1162,10 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 **ゴール**: react-hook-form + zod でフォームを管理し、サーバーデータを自動入力します。
 
-zod スキーマを定義します（Step 7 で `zodResolver`, `useForm`, `z` はインポート済み）。
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// ユーザー編集用の zodスキーマ
-const userEditSchema = z.object({
-  name: z.string()
-    .min(1, '名前は必須です'),
-  avatar: z.string().url().or(
-    z.literal('')),
-  role: z.enum(["USER", "ADMIN"]),
-  isActive: z.boolean(),
-});
-type UserEditFormValues =
-  z.infer<typeof userEditSchema>;
-```
-
-**確認ポイント**: `z.infer` で型を自動生成しています。
+zod スキーマと `useForm` は Step 7 で
+定義済みです。ここでは重複して追加せず、
+`z.infer` で型が自動生成されていることを
+確認してください。
 
 `useEffect` + `form.reset` でサーバーデータが届いたらフォームに反映します。
 
@@ -1261,7 +1290,11 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 
 **ゴール**: Select でロールを選択、Checkbox でアクティブ状態を切り替える。
 
-**サーバー側のアクセス制御**: 一般ユーザーが自分の `role` や `isActive` を変更しようとすると、サーバーが `FORBIDDEN` エラーを返します。Step 10 の `handleSubmit` で非管理者の場合はこれらのフィールドを送信しないようにガードしています。
+**サーバー側のアクセス制御**:
+本人は管理者であっても、自分の `role` や
+`isActive` を変更できません。
+Step 10 では `canManageAccount` を使い、
+管理者が他人を編集するときだけ送信します。
 
 インポートを追加します。
 
@@ -1279,6 +1312,15 @@ import { isUserRole, USER_ROLE_LABELS }
 **確認ポイント**: ファイルを保存してインポートエラーが出ないことを確認してください。
 
 ロール選択のドロップダウンを追加します。
+
+次のロール選択とアクティブ切り替えは、
+`canManageAccount` が `true` の場合だけ表示します。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+{canManageAccount && (
+  <>
+```
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
@@ -1346,6 +1388,12 @@ import { isUserRole, USER_ROLE_LABELS }
               </div>
 ```
 
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+  </>
+)}
+```
+
 **確認ポイント**: チェックボックスの ON/OFF が切り替えられることを確認してください。
 
 `checked === true` と書くのは、`onCheckedChange` が `boolean | 'indeterminate'` を受け取るためです。
@@ -1380,10 +1428,18 @@ import { Alert, AlertDescription, AlertTitle }
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
   const updateUser =
     api.user.update.useMutation({
-      onSuccess: () => {
+      onSuccess: async () => {
+        await Promise.allSettled([
+          utils.user.getById.invalidate(
+            { id: userId }),
+          utils.user.getAll.invalidate(),
+          utils.auth.getCurrentUser.invalidate(),
+          utils.auth.getSession.invalidate(),
+        ]);
         toast.success(
           'ユーザー情報を更新しました');
         router.push(`/user/${userId}`);
+        router.refresh();
       },
       onError: (error) => {
         toast.error(error.message
@@ -1403,7 +1459,7 @@ import { Alert, AlertDescription, AlertTitle }
         name: values.name,
         avatar: values.avatar
           || undefined,
-        ...(isAdmin
+        ...(canManageAccount
           ? { role: values.role,
               isActive: values.isActive }
           : {}),
@@ -1411,9 +1467,9 @@ import { Alert, AlertDescription, AlertTitle }
     };
 ```
 
-**確認ポイント**: ファイルを保存してエラーが出ないことを確認してください。`onSubmit` と `updateUser` が定義されたことで、Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が動作するようになりました。
+**確認ポイント**: ファイルを保存してエラーが出ないことを確認してください。`onSubmit` と `updateUser` が定義されたことで、Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が動作するようになりました。更新後は30秒待たなくても詳細・一覧・セッション表示へ反映されます。
 
-サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`isAdmin` で分岐し、管理者のときだけこれらを送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `undefined` に変換しています。
+サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `undefined` に変換しています。
 
 エラー表示ブロックをチェックボックスの下に追加します。
 
@@ -1589,7 +1645,7 @@ export function submitUserEditForm(
   rawValues: unknown,
   userId: string,
   updateUser: UpdateUserMutation,
-  isAdmin: boolean,
+  canManageAccount: boolean,
 ) {
   const values: UserEditFormValues = userEditSchema.parse(rawValues);
 
@@ -1597,7 +1653,7 @@ export function submitUserEditForm(
     id: userId,
     name: values.name,
     avatar: values.avatar || undefined,
-    ...(isAdmin
+    ...(canManageAccount
       ? {
           role: values.role,
           isActive: values.isActive,
@@ -1629,7 +1685,9 @@ submitUserEditForm(
 
 - zod が実行時にも値を検証するので、フォーム外から変な値が来ても止められる
 - `z.infer` で TypeScript の型をスキーマから作るため、型とバリデーションがズレにくい
-- 管理者だけ `role` / `isActive` を送るルールと、入力値の安全性を分けて読める
+- 管理者が他人を編集するときだけ
+  `role` / `isActive` を送るルールと、
+  入力値の安全性を分けて読める
 
 #### 覚えておきたいエッセンス
 
@@ -1644,8 +1702,8 @@ submitUserEditForm(
 | `useParams()`が`undefined`を返す | App Routerの動的ルートでファイル配置が間違っている | `src/app/user/[id]/page.tsx`のパス構造を確認する |
 | フォームの初期値が空になる | `useForm` の `values` に `user` データを渡していない | `useForm({ values: { name: user.name, ... } })` でデータ到着時にフォームが自動更新されることを確認する |
 | 権限チェックが効かない | `currentUser?.role` の比較で定数を使っていない | `USER_ROLE.ADMIN` を使って比較しているか確認する |
-| 更新後に古いデータが表示される | `onSuccess` でページ遷移していない | `onSuccess` 内で `router.push(\`/user/\${userId}\`)` により詳細ページに戻る（再取得される） |
-| `FORBIDDEN`エラーが表示される | 一般ユーザーが `role`・`isActive` を送信している | `handleSubmit` で `isAdmin` 判定を行い、非管理者のときは `role`・`isActive` を送信データから除外する |
+| 更新後に古いデータが表示される | tRPC のキャッシュが残っている | `onSuccess` で user/auth を invalidate してから詳細へ戻る |
+| `FORBIDDEN`エラーが表示される | 本人更新で `role`・`isActive` を送信している | `canManageAccount` が true のときだけ送信する |
 
 ---
 

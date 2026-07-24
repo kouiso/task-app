@@ -2,7 +2,9 @@
 
 ## 前回の振り返り
 
-Day 27 では、プロジェクト詳細ページとアーカイブ機能を実装しました。動的ルート `[id]` でプロジェクトごとの専用ページを作り、`isArchived` フラグで論理削除を実現しました。
+Day 27 では、`/project?projectId=...` で
+一覧と詳細を切り替え、`isArchived` フラグによる
+アーカイブ機能を確認しました。
 
 今日はそこで学んだ「状態管理」の応用として、タスク一覧での **一括操作** に挑戦します。
 
@@ -26,6 +28,11 @@ Day 27 では、プロジェクト詳細ページとアーカイブ機能を実�
 - `/task` に複数のタスクが表示されている
 - 一括削除を試すため、消えてもよい練習用タスクを用意している
 - `src/server/api/routers/task.ts` と `src/app/task/page.tsx` を編集できる
+
+> Day 13〜16 で作った import、`TaskCard`、
+> `DeleteConfirmDialog`、時間記録機能は残します。
+> 同じ import やコンポーネントを追加し直さず、
+> 既存コードへ一括操作だけを統合してください。
 
 ---
 
@@ -124,7 +131,7 @@ import {
 
 `findTasksWithPermission`（複数形）は、id の配列を受け取り、その全部のタスクを権限つきで取ってくるヘルパーです。Day 15 で使った `findTaskWithPermission`（単数形）の複数版と考えてください。名前が `s` の1文字だけ違うので、取り違えに注意します。`assertMemberPermission` などは前の Day で足したものなので、新しく行を増やさず同じ import 文の中に並べます。
 
-Day 13 で書いた `import type { Prisma } from '@prisma/client';` は、次の行へ置き換えます。`ProjectMemberRole` は、書き込み直前にも権限を確認するために使います。
+Day 13 で書いた `import { Prisma } from '@prisma/client';` は、次の行へ置き換えます。`ProjectMemberRole` は、書き込み直前にも権限を確認するために使います。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（既存の Prisma import を置き換える）
@@ -364,20 +371,65 @@ React では state を直接変更してはいけません。`prev.add(id)` と�
 
 `new Set(prev)` で新しい Set を作ってから変更することで、React が「状態が変わった」と検知して画面を更新してくれます。
 
-全選択・全解除は 1 つの関数で処理します。
+全選択の前に、操作できるタスクと
+現在表示中の選択タスクを求めます。
+閲覧専用タスクや、フィルターで消えたタスクを
+一括操作へ混ぜないためです。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const selectableTasks = useMemo(
+  () => tasks?.filter(
+    (task) =>
+      canEditProject(task.projectId)
+      || canDeleteProject(task.projectId),
+  ) ?? [],
+  [tasks, canEditProject, canDeleteProject],
+);
+
+const selectedTaskList = useMemo(
+  () => tasks?.filter(
+    (task) => selectedTasks.has(task.id),
+  ) ?? [],
+  [tasks, selectedTasks],
+);
+```
+
+選択中タスクすべてに必要な権限があるかも
+操作ごとに判定します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const canCompleteSelected =
+  selectedTaskList.length > 0
+  && selectedTaskList.every(
+    (task) => canEditProject(task.projectId),
+  );
+const canDeleteSelected =
+  selectedTaskList.length > 0
+  && selectedTaskList.every(
+    (task) => canDeleteProject(task.projectId),
+  );
+```
+
+全選択・全解除は、操作できるタスクだけを対象に
+1 つの関数で処理します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
 const handleSelectAll = (checked: boolean) => {
   setSelectedTasks(
     checked
-      ? new Set(tasks?.map((t) => t.id) ?? [])
+      ? new Set(selectableTasks.map(
+          (task) => task.id
+        ))
       : new Set()
   );
 };
 ```
 
-`checked` が `true` なら全タスクの ID を Set に詰める、`false` なら空の Set で上書き。2 つの関数（`selectAll`/`clearSelection`）に分けず、**1 つの関数** で管理するのが実際のコードのスタイルです。
+`checked` が `true` なら操作可能なタスクの ID を
+Set に詰め、`false` なら空の Set で上書きします。
 
 **確認ポイント**:
 - `selectedTasks` が `Set<string>` 型で定義されている
@@ -385,6 +437,7 @@ const handleSelectAll = (checked: boolean) => {
 - `handleTaskSelect(taskId, checked)` が 2 引数を受け取る
 - `handleSelectAll(checked)` の 1 つの関数で全選択・全解除ができる
 - `new Set(prev)` でコピーしてから変更している
+- 閲覧専用タスクが全選択に含まれない
 
 ---
 
@@ -402,7 +455,6 @@ const handleSelectAll = (checked: boolean) => {
 ```typescript
 // filepath: src/app/task/page.tsx
 import { Checkbox } from '@/component/ui/checkbox';
-import { TaskCard } from '@/component/task/task-card';
 
 // タスク一覧の grid レイアウト
 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -439,13 +491,21 @@ import { TaskCard } from '@/component/task/task-card';
             priority={task.priority}
             dueDate={task.dueDate}
             assignee={task.assignee}
+            timeSpentMinutes={task.timeSpentMinutes}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onClick={handleTaskClick}
+            onTimeLogSuccess={handleTimeLogSuccess}
             canEdit={taskCanEdit}
             canDelete={taskCanDelete}
           />
         </div>
+```
+
+カード行と一覧の条件分岐を閉じます。
+
+```typescript
+// filepath: src/app/task/page.tsx（続き）
       </div>
       );
     })
@@ -455,7 +515,12 @@ import { TaskCard } from '@/component/task/task-card';
 </div>
 ```
 
-> `taskCanEdit` / `taskCanDelete` は Day 13 で定義した `canEditProject` / `canDeleteProject` を `task.projectId` に適用した結果です。チェックボックスは編集・削除どちらかの権限がある時だけ表示し、`TaskCard` にもそのまま渡します。閲覧者（VIEWER）ロールのプロジェクトのタスクは、チェックボックスも編集・削除ボタンも表示されません。
+> `TaskCard` は Day 13 で import 済みです。
+> `taskCanEdit` / `taskCanDelete` は
+> `canEditProject` / `canDeleteProject` を
+> `task.projectId` に適用した結果です。
+> Day 16 の `timeSpentMinutes` と
+> `onTimeLogSuccess` も残してください。
 
 **`onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}`**
 
@@ -494,9 +559,9 @@ import { TaskCard } from '@/component/task/task-card';
 // filepath: src/app/task/page.tsx
 // まずシンプルに boolean で管理する
 const isAllSelected =
-  tasks !== undefined
-  && tasks.length > 0
-  && selectedTasks.size === tasks.length;
+  selectableTasks.length > 0
+  && selectedTaskList.length
+    === selectableTasks.length;
 ```
 
 `isAllSelected` は「タスクが存在し、全タスクの ID が `selectedTasks` に入っているか」を判定するだけのシンプルな `boolean` です。
@@ -524,7 +589,7 @@ import { Label } from '@/component/ui/label';
 
 | 操作 | 結果 |
 |------|------|
-| チェックボックスをクリック | 全タスクが選択される（全選択） |
+| チェックボックスをクリック | 操作可能なタスクが選択される |
 | もう一度クリック | 全タスクの選択が解除される（全解除） |
 | 一部だけ手動で選択 | ヘッダーは未チェック（□）のまま |
 
@@ -555,10 +620,11 @@ import { Label } from '@/component/ui/label';
 // filepath: src/app/task/page.tsx
 // isAllSelected を削除して、以下に置き換える
 const selectAllState =
-  tasks && tasks.length > 0
-    ? selectedTasks.size === 0
+  selectableTasks.length > 0
+    ? selectedTaskList.length === 0
       ? false
-      : selectedTasks.size === tasks.length
+      : selectedTaskList.length
+          === selectableTasks.length
         ? true
         : 'indeterminate'
     : false;
@@ -615,14 +681,14 @@ JSX 側の `checked` に渡す値を差し替えます。
     <h1 className="text-3xl font-bold tracking-tight">
       タスク
     </h1>
-    {selectedTasks.size > 0 && (
+    {selectedTaskList.length > 0 && (
       <span className="text-sm text-muted-foreground">
-        ({selectedTasks.size}件選択中)
+        ({selectedTaskList.length}件選択中)
       </span>
     )}
   </div>
   <div className="flex items-center gap-2">
-    {selectedTasks.size > 0 && (
+    {selectedTaskList.length > 0 && (
       <>
         {/* ここにStep 6〜8でボタンを追加していく */}
       </>
@@ -645,9 +711,11 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 > `{/* ここにStep 6〜8でボタンを追加していく */}` は一時的なプレースホルダーです。この後の Step 6・7・8 で、ここに「完了にする」「削除」「ステータス変更」ボタンを順番に追加していきます。今はこのまま進めてください。
 
-**`{selectedTasks.size > 0 && (...)}` のパターン**
+**`{selectedTaskList.length > 0 && (...)}` のパターン**
 
-React で「条件が真のときだけ描画する」定番パターンです。`selectedTasks.size` が 0 のときは `false` と評価されるため何も描画されず、1 以上のときだけ JSX が描画されます。
+React で「条件が真のときだけ描画する」
+定番パターンです。現在の一覧に残っている
+選択タスクが1件以上のときだけ JSX を描画します。
 
 **確認ポイント**:
 - タスクを 1 件も選択していないとき、「新規タスク」ボタンだけが表示される
@@ -680,10 +748,11 @@ const bulkCompleteMutation =
 
 // 一括完了のハンドラ
 const handleBulkComplete = () => {
-  if (selectedTasks.size > 0) {
-    // SetをArrayに変換してAPIに渡す
+  if (canCompleteSelected) {
     bulkCompleteMutation.mutate({
-      ids: Array.from(selectedTasks),
+      ids: selectedTaskList.map(
+        (task) => task.id
+      ),
     });
   }
 };
@@ -694,23 +763,27 @@ const handleBulkComplete = () => {
 ```typescript
 // filepath: src/app/task/page.tsx
 // 一括操作ボタン領域に「完了にする」ボタンを追加
-<Button
-  variant="outline"
-  size="sm"
-  onClick={handleBulkComplete}
->
-  <CheckSquare className="mr-2 h-4 w-4" />
-  完了にする
-</Button>
+{canCompleteSelected && (
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={handleBulkComplete}
+  >
+    <CheckSquare className="mr-2 h-4 w-4" />
+    完了にする
+  </Button>
+)}
 ```
 
 **確認ポイント**:
 - Step 5 の `{/* ここにStep 6〜8で... */}` の位置にボタンを追加した
 - ファイルを保存してエラーが出ない
 
-**`Array.from(selectedTasks)` が必要な理由**
+**`selectedTaskList.map()` を使う理由**
 
-`selectedTasks` は `Set<string>` 型ですが、tRPC の `bulkComplete` は `string[]`（配列）を期待しています。`Array.from()` で Set を配列に変換してから渡します。
+フィルター変更後も Set に残っている非表示 ID や、
+操作権限のない ID を API に送らないためです。
+現在表示中で編集可能な選択タスクだけを送ります。
 
 **`utils.task.getAll.invalidate()` の意味**
 
@@ -739,11 +812,6 @@ tRPC は一度取得したデータをキャッシュ（記憶）しています
 
 ```typescript
 // filepath: src/app/task/page.tsx
-import { Trash2 } from 'lucide-react';
-import {
-  DeleteConfirmDialog
-} from '@/component/ui/delete-confirm-dialog';
-
 // 一括削除のミューテーション
 const bulkDeleteMutation =
   api.task.bulkDelete.useMutation({
@@ -755,11 +823,16 @@ const bulkDeleteMutation =
 
 // 削除ボタンのハンドラ（ダイアログを開くだけ）
 const handleBulkDelete = () => {
-  if (selectedTasks.size > 0) {
+  if (canDeleteSelected) {
     setBulkDeleteDialogOpen(true);
   }
 };
 ```
+
+> `Trash2` と `DeleteConfirmDialog` は
+> 過去の Day で import 済みなら追加しません。
+> `lucide-react` の既存 import に `Trash2` が
+> 無い場合だけ、同じ import 文へ加えてください。
 
 `handleBulkDelete` は **削除しない**点に注目してください。ダイアログを開くだけです。実際の削除は、ダイアログで OK を押したときに実行されます。
 
@@ -768,14 +841,16 @@ const handleBulkDelete = () => {
 ```typescript
 // filepath: src/app/task/page.tsx
 // 削除ボタン（赤色のテキスト）
-<Button
-  variant="outline"
-  size="sm"
-  className="text-destructive hover:text-destructive"
-  onClick={handleBulkDelete}
->
-  <Trash2 className="mr-2 h-4 w-4" /> 削除
-</Button>
+{canDeleteSelected && (
+  <Button
+    variant="outline"
+    size="sm"
+    className="text-destructive hover:text-destructive"
+    onClick={handleBulkDelete}
+  >
+    <Trash2 className="mr-2 h-4 w-4" /> 削除
+  </Button>
+)}
 ```
 
 **確認ポイント**:
@@ -792,11 +867,13 @@ const handleBulkDelete = () => {
   onConfirm={() => {
     // OKが押されたら実際に削除を実行
     bulkDeleteMutation.mutate({
-      ids: Array.from(selectedTasks),
+      ids: selectedTaskList.map(
+        (task) => task.id
+      ),
     });
   }}
   isPending={bulkDeleteMutation.isPending}
-  title={`${selectedTasks.size}件のタスクを削除しますか？`}
+  title={`${selectedTaskList.length}件のタスクを削除しますか？`}
 />
 ```
 
@@ -830,12 +907,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/component/ui/dropdown-menu';
-import {
-  isTaskStatus,
-  TASK_STATUS_LABELS,
-  type TaskStatus,
-} from '@/lib/constant/status';
 ```
+
+`TASK_STATUS_LABELS` は過去の Day で import 済みです。
+同じ `@/lib/constant/status` の import 文に
+`isTaskStatus` と `type TaskStatus` が無い場合だけ
+加えてください。別の import 文を重複させません。
 
 `isTaskStatus` は型ガード関数で、文字列が `TaskStatus` 型であることを保証します。mutation と handler は以下のように定義します。
 
@@ -854,9 +931,11 @@ const bulkUpdateStatusMutation =
 const handleBulkUpdateStatus = (
   status: TaskStatus
 ) => {
-  if (selectedTasks.size > 0) {
+  if (canCompleteSelected) {
     bulkUpdateStatusMutation.mutate({
-      ids: Array.from(selectedTasks),
+      ids: selectedTaskList.map(
+        (task) => task.id
+      ),
       status,
     });
   }
@@ -868,28 +947,29 @@ const handleBulkUpdateStatus = (
 ```typescript
 // filepath: src/app/task/page.tsx
 // ステータス変更ドロップダウン
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="outline" size="sm">
-      ステータス変更
-    </Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    {Object.entries(
-      TASK_STATUS_LABELS
-    ).map(([value, label]) => (
-      <DropdownMenuItem key={value}
-        onClick={() => {
-          if (isTaskStatus(value)) {
-            handleBulkUpdateStatus(
-              value);
-          }
-        }}>
-        {label}
-      </DropdownMenuItem>
-    ))}
-  </DropdownMenuContent>
-</DropdownMenu>
+{canCompleteSelected && (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="outline" size="sm">
+        ステータス変更
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      {Object.entries(
+        TASK_STATUS_LABELS
+      ).map(([value, label]) => (
+        <DropdownMenuItem key={value}
+          onClick={() => {
+            if (isTaskStatus(value)) {
+              handleBulkUpdateStatus(value);
+            }
+          }}>
+          {label}
+        </DropdownMenuItem>
+      ))}
+    </DropdownMenuContent>
+  </DropdownMenu>
+)}
 ```
 
 **`isTaskStatus` 型ガードが必要な理由**

@@ -155,15 +155,6 @@ const { data: currentUser, isLoading: isCurrentUserLoading } =
   api.auth.getCurrentUser.useQuery();
 ```
 
-`TaskDialog`（Step 11）で担当者を選択できるようにするため、メンバー一覧も取得します。
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// TaskDialogの担当者選択肢として使う
-const { data: users } =
-  api.search.getProjectMembers.useQuery();
-```
-
 ローディング中はスピナーを表示します。`return` の**前に**以下を追加してください。
 
 ```typescript
@@ -1010,9 +1001,12 @@ JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskD
   onSubmit={handleSubmit}
   initialData={editingTask}
   projects={projects ?? []}
-  users={users ?? []}
 />
 ```
+
+`TaskDialog` は選択中のプロジェクトに合わせて
+`search.getMembersByProject` を内部で呼びます。
+このページからメンバー一覧を渡す必要はありません。
 
 `TaskDialog` の**下に** `DeleteConfirmDialog` を配置します。
 

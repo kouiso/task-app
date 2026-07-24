@@ -54,10 +54,14 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     },
   });
 
-  const { data: currentUser } = api.auth.getCurrentUser.useQuery();
+  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile = currentUser?.id === userId;
+  const canEditUser = isAdmin || isOwnProfile;
+  const canManageAccount = isAdmin && !isOwnProfile;
   const { data: user, isLoading } = api.user.getById.useQuery(
     { id: userId },
-    { enabled: userId.length > 0 },
+    { enabled: !!currentUser && canEditUser && userId.length > 0 },
   );
 
   const utils = api.useUtils();
@@ -91,17 +95,16 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }, [user, form]);
 
   const handleSubmit = (values: UserEditFormValues) => {
-    const isOwnEdit = currentUser?.id === userId;
     updateUser.mutate({
       id: userId,
       name: values.name,
       avatar: normalizeAvatarValue(values.avatar),
-      // 自分のプロフィール編集時はサーバー側で role/isActive 変更が禁止されているため送信しない
-      ...(isOwnEdit ? {} : { role: values.role, isActive: values.isActive }),
+      // 管理者でも本人編集時は role/isActive を送らない
+      ...(canManageAccount ? { role: values.role, isActive: values.isActive } : {}),
     });
   };
 
-  if (isLoading) {
+  if (isCurrentUserLoading || !currentUser) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
@@ -109,17 +112,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     );
   }
 
-  if (!user) {
-    return (
-      <AppLayout>
-        <PageLoadingSpinner />
-      </AppLayout>
-    );
-  }
-
-  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
-  const isOwnProfile = currentUser?.id === userId;
-  if (!isAdmin && !isOwnProfile) {
+  if (!canEditUser) {
     return (
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
@@ -130,6 +123,14 @@ export function UserEditClient({ userId }: UserEditClientProps) {
             </CardContent>
           </Card>
         </div>
+      </AppLayout>
+    );
+  }
+
+  if (isLoading || !user) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
       </AppLayout>
     );
   }
@@ -196,47 +197,43 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="role">ロール</Label>
-                <Select
-                  value={form.watch('role')}
-                  onValueChange={(value) => {
-                    if (isUserRole(value)) {
-                      form.setValue('role', value);
-                    }
-                  }}
-                  disabled={updateUser.isPending || isOwnProfile}
-                >
-                  <SelectTrigger id="role">
-                    <SelectValue placeholder="ロールを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(USER_ROLE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isOwnProfile && (
-                  <p className="text-xs text-muted-foreground">自分のロールは変更できません</p>
-                )}
-              </div>
+              {canManageAccount && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">ロール</Label>
+                    <Select
+                      value={form.watch('role')}
+                      onValueChange={(value) => {
+                        if (isUserRole(value)) {
+                          form.setValue('role', value);
+                        }
+                      }}
+                      disabled={updateUser.isPending}
+                    >
+                      <SelectTrigger id="role">
+                        <SelectValue placeholder="ロールを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(USER_ROLE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isActive"
-                  checked={form.watch('isActive')}
-                  onCheckedChange={(checked) => form.setValue('isActive', checked === true)}
-                  disabled={updateUser.isPending || isOwnProfile}
-                />
-                <Label htmlFor="isActive">アクティブ</Label>
-                {isOwnProfile && (
-                  <span className="text-xs text-muted-foreground">
-                    （自分の有効状態は変更できません）
-                  </span>
-                )}
-              </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isActive"
+                      checked={form.watch('isActive')}
+                      onCheckedChange={(checked) => form.setValue('isActive', checked === true)}
+                      disabled={updateUser.isPending}
+                    />
+                    <Label htmlFor="isActive">アクティブ</Label>
+                  </div>
+                </>
+              )}
 
               {updateUser.error && (
                 <Alert variant="destructive">

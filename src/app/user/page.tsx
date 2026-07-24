@@ -26,24 +26,28 @@ import { api } from '@/trpc/react';
 export default function UsersPage() {
   const router = useRouter();
 
-  const { data: currentUser } = api.auth.getCurrentUser.useQuery();
+  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
 
-  const { data: users, isLoading, error } = api.user.getAll.useQuery();
+  const {
+    data: users,
+    isLoading,
+    error,
+  } = api.user.getAll.useQuery(undefined, {
+    enabled: isAdmin,
+  });
 
   useEffect(() => {
     if (error) {
       toast.error(error.message || 'ユーザー一覧の取得に失敗しました');
-      if (error.message.includes('管理者権限')) {
-        router.push('/dashboard');
-      }
     }
-  }, [error, router]);
+  }, [error]);
 
-  if (isLoading) {
+  if (isCurrentUserLoading) {
     return <PageLoadingSpinner />;
   }
 
-  if (currentUser?.role !== USER_ROLE.ADMIN) {
+  if (!isAdmin) {
     return (
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
@@ -56,6 +60,10 @@ export default function UsersPage() {
         </div>
       </AppLayout>
     );
+  }
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
   }
 
   return (

@@ -355,14 +355,22 @@ import { api } from '@/trpc/react';
 export default function UsersPage() {
   const router = useRouter();
 
-  const { data: currentUser } =
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+  } =
     api.auth.getCurrentUser.useQuery();
+  const isAdmin =
+    currentUser?.role === USER_ROLE.ADMIN;
 
   const {
     data: users,
     isLoading,
     error,
-  } = api.user.getAll.useQuery();
+  } = api.user.getAll.useQuery(
+    undefined,
+    { enabled: isAdmin },
+  );
 ```
 
 > `useQuery` はデータ取得用のhookです。
@@ -370,7 +378,7 @@ export default function UsersPage() {
 > これらを使い分けて画面表示を切り替えます。
 
 **確認ポイント**:
-- `getCurrentUser` と `getAll` の2つのAPIを呼んでいる
+- ADMIN のときだけ `getAll` を呼んでいる
 - `isLoading` と `error` を取得している
 
 #### `||` 演算子によるフォールバック
@@ -390,23 +398,19 @@ export default function UsersPage() {
         error.message
         || 'ユーザー一覧の取得に失敗しました'
       );
-      if (error.message
-          .includes('管理者権限')) {
-        router.push('/dashboard');
-      }
     }
-  }, [error, router]);
+  }, [error]);
 ```
 
 > `||` は falsy な値のとき右辺を使います。
 > `if (error)` の中なので error オブジェクトの
-> 存在は保証されています。
-> `error.message.includes` で管理者権限エラーを
-> 検知し、ダッシュボードへリダイレクトします。
+> 存在は保証されています。権限がない場合は
+> query 自体を無効にするため、この error は
+> ADMIN の取得失敗だけを扱います。
 
 **確認ポイント**:
 - エラー時にトーストが表示される
-- 権限エラー時にダッシュボードへリダイレクトする
+- 一般ユーザーは `getAll` を送信しない
 
 ---
 
@@ -418,7 +422,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx
-  if (isLoading) {
+  if (isCurrentUserLoading) {
     return <PageLoadingSpinner />;
   }
 ```
@@ -432,8 +436,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx
-  if (currentUser?.role
-      !== USER_ROLE.ADMIN) {
+  if (!isAdmin) {
     return (
       <AppLayout>
         <div className="container mx-auto
@@ -464,6 +467,16 @@ export default function UsersPage() {
   }
 ```
 
+権限を通過した後で、一覧のローディングを
+判定します。
+
+```typescript
+// filepath: src/app/user/page.tsx
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+```
+
 #### 権限チェックの判定ロジック
 
 | 条件 | 結果 | 表示 |
@@ -479,6 +492,7 @@ export default function UsersPage() {
 **確認ポイント**:
 - 一般ユーザーでアクセスすると拒否される
 - 管理者でアクセスすると一覧が見える
+- 一般ユーザーでは `getAll` リクエストが発生しない
 
 ---
 
@@ -752,6 +766,37 @@ export default function UsersPage() {
 ### Step 9: 空状態UIと動作確認（3分）
 
 **ゴール**: ユーザー0件時のメッセージを追加し、全体の動作を確認します。
+
+一覧を通常操作から開けるよう、
+`app-layout.tsx` に管理者専用リンクを加えます。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import { USER_ROLE }
+  from '@/lib/constant/roles';
+```
+
+Day 8 のデスクトップ用 `<ul>` 内で、
+`menuItems.map(...)` の直後へ追加します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+{session.user.role === USER_ROLE.ADMIN && (
+  <li>
+    <Link
+      href="/user"
+      className="flex items-center gap-3
+        rounded-md px-3 py-2 text-sm"
+    >
+      ユーザー管理
+    </Link>
+  </li>
+)}
+```
+
+**確認ポイント**:
+- ADMIN にだけ「ユーザー管理」が表示される
+- USER にはリンクが表示されない
 
 **実装**:
 

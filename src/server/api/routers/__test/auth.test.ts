@@ -136,6 +136,22 @@ describe('authRouter', () => {
       ).rejects.toThrow('このアカウントは無効化されています');
     });
 
+    it('無効化アカウントでもパスワードが違えば存在を明かさない', async () => {
+      await createTestUser({
+        email: 'inactive-wrong-password@example.com',
+        password: VALID_PASSWORD,
+        isActive: false,
+      });
+      const caller = await createTestCaller();
+
+      await expect(
+        caller.auth.login({
+          email: 'inactive-wrong-password@example.com',
+          password: 'WrongPass1!',
+        }),
+      ).rejects.toThrow('メールアドレスまたはパスワードが正しくありません');
+    });
+
     it('メール形式が不正ならバリデーションエラー', async () => {
       const caller = await createTestCaller();
       await expect(
@@ -152,7 +168,10 @@ describe('authRouter', () => {
 
     it('同一email×IPで5回失敗するとレート制限でブロックされる', async () => {
       await createTestUser({ email: 'brute@example.com', password: VALID_PASSWORD });
-      const caller = await createTestCaller();
+      const caller = await createTestCaller(
+        undefined,
+        new Headers({ 'x-forwarded-for': '203.0.113.80' }),
+      );
 
       for (let i = 0; i < 5; i++) {
         await expect(

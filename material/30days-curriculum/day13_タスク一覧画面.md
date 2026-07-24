@@ -364,6 +364,50 @@ export const createCaller = createCallerFactory(appRouter);
 
 **実装**:
 
+先に Day 8 のサイドバーへタスク導線を追加します。
+`lucide-react` の既存 import に
+`ClipboardList` を加えてください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+```
+
+`menuItems` は既存項目を残し、
+タスクを加えた次の4項目にします。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+];
+```
+
 `src/app/task/page.tsx` を新規作成します。まずインポートとメインコンテンツの骨格です。
 
 ```typescript
@@ -422,7 +466,7 @@ export default function TaskPage() {
 
 **確認ポイント**:
 - `/task` にアクセスして「タスク」と表示される
-- サイドバーが表示されている
+- サイドバーの「タスク」から開ける
 
 ---
 

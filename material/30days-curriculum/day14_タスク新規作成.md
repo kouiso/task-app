@@ -197,7 +197,7 @@ async function assertTaskAssigneeBelongsToProject(
 `create` の処理本体です。ここで一番大事なのは、タスクを作る前に「その人がこのプロジェクトで作成してよい権限を持っているか」を確認する部分です。`create` は Day 13 で書いた `getById` の直後に足します。
 
 ```typescript
-// filepath: src/server/api/routers/task.ts（getAll の直後に追加）
+// filepath: src/server/api/routers/task.ts（getById の直後に追加）
   create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },

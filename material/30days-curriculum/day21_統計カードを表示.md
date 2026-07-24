@@ -448,6 +448,41 @@ api.report.getOverview.useQuery();
 
 **ゴール**: 必要なモジュールを読み込みます。
 
+先に、Day 8 で作ったサイドバーから
+レポートページへ移動できるようにします。
+`src/component/layout/app-layout.tsx` の
+`lucide-react` の import に `BarChart` を追加してください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  BarChart,
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Search,
+} from 'lucide-react';
+```
+
+同じファイルの `menuItems` に、
+レポート用の項目を追加します。Day 20 までの
+項目を残し、配列の閉じかっこ直前へ入れます。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+{
+  text: 'レポート',
+  icon: <BarChart className="h-5 w-5" />,
+  path: '/report',
+},
+```
+
+**確認ポイント**:
+- サイドバーに「レポート」が表示された
+- 既存のメニュー項目が消えていない
+
 まず `src/app/report/page.tsx` を新規作成し、
 先頭に以下の import を書きます。
 
@@ -689,7 +724,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         タスク数</p>
       <p className="text-3xl font-bold">
-        {overview?.totalTasks ?? 0}</p>
+        {totalTasks}</p>
     </CardContent>
   </Card>
 ```
@@ -707,7 +742,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         完了率</p>
       <p className="text-3xl font-bold">
-        {overview?.completionRate ?? 0}%</p>
+        {completionRate}%</p>
     </CardContent>
   </Card>
 ```
@@ -725,8 +760,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         合計作業時間</p>
       <p className="text-3xl font-bold">
-        {((overview?.totalTimeSpent ?? 0) / 60)
-          .toFixed(1)}h</p>
+        {totalTimeHours}h</p>
     </CardContent>
   </Card>
 ```
@@ -744,8 +778,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         平均作業時間/タスク</p>
       <p className="text-3xl font-bold">
-        {((overview?.averageTimePerTask ?? 0) / 60)
-          .toFixed(1)}h</p>
+        {averageTimeHours}h</p>
     </CardContent>
   </Card>
 </div>

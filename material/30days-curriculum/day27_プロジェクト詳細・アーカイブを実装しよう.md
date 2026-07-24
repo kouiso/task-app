@@ -22,6 +22,12 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 > **今日のゴールライン**: URLのprojectIdで一覧と詳細を切り替え、アーカイブまで同じページ内で扱える感覚を掴めばOK。
 >
 > 現在の完成形は `ProjectDetailDialog` のモーダルではなく、`ProjectDetailView` を使った**インライン詳細表示**です。URL は `/project?projectId=xxx` のように変わり、同じページの中で一覧 ↔ 詳細を切り替えます。
+>
+> **この Day は Day 11・12 で作った機能の
+> 統合確認です。** 以下のコードは完成状態との
+> 照合用です。同じ名前の state、query、mutation、
+> handler、Props を追加し直してはいけません。
+> 不足がある場合だけ、該当箇所を補ってください。
 
 ## なぜこれを作るのか
 
@@ -97,6 +103,10 @@ flowchart TD
 ### Step 1: アーカイブ API を確認・実装する (5分)
 
 **ゴール**: `project.archive` と `project.unarchive` で `isArchived` を切り替えられるようにします。
+
+Day 11 で実装済みなら、ここではコードを追加せず
+次の完成形と照合してください。同名 procedure を
+追加すると重複定義になるため、書き直しません。
 
 まず前提です。アーカイブは**削除ではありません**。
 
@@ -175,6 +185,10 @@ unarchive: protectedProcedure
 
 **ゴール**: 一覧カードをクリックしたら URL の `projectId` を更新し、同じ `/project` ページ内で詳細表示へ切り替える。
 
+この state、query、handler、描画分岐は
+Day 11・12 で実装済みです。以下は追加手順ではなく
+照合用です。同名の宣言があれば変更しません。
+
 現在の完成形では、`page.tsx` が**画面全体の分岐役**です。
 
 - `projectId` が無いとき: 一覧を表示
@@ -236,7 +250,10 @@ if (projectIdParam && selectedProject) {
         onBack={handleDetailClose}
         onAddMemberClick={() => setMemberDialogOpen(true)}
         onRemoveMember={handleRemoveMember}
+        onUpdateMemberRole={handleUpdateMemberRole}
         onArchive={handleArchive}
+        canManageMembers={canManageMembers}
+        canArchive={canArchiveProject}
       />
     </AppLayout>
   );
@@ -255,11 +272,18 @@ if (projectIdParam && selectedProject) {
 
 **ゴール**: モーダルではなく、ページ内に表示する詳細ビューコンポーネントを作ります。
 
+Day 12 で作成済みのファイルを削除したり、
+5 props の旧形式へ置き換えたりしないでください。
+現在の8 props 契約を、次の完成形と照合します。
+
 まず tRPC の戻り値から型を取ります。
 
 ```ts
 // filepath: src/component/project/project-detail-view.tsx
 import type { inferRouterOutputs } from '@trpc/server';
+import type {
+  ProjectMemberRole,
+} from '@/lib/constant/roles';
 import type { AppRouter } from '@/server/api/root';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -275,7 +299,13 @@ interface ProjectDetailViewProps {
   onBack: () => void;
   onAddMemberClick: () => void;
   onRemoveMember: (userId: string) => void;
+  onUpdateMemberRole: (
+    userId: string,
+    role: ProjectMemberRole,
+  ) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
+  canManageMembers: boolean;
+  canArchive: boolean;
 }
 ```
 
@@ -346,6 +376,9 @@ return (
 ### Step 4: メンバー一覧とタスク一覧を表示する (10分)
 
 **ゴール**: `ProjectDetailView` の中に、現在の完成形と同じ情報量を持つ 2 つのカードを配置します。
+
+Day 12 で実装済みなら、以下は読み比べだけ行います。
+既存の権限制御やロール変更 UI を残してください。
 
 メンバーカードは `Card` と `Avatar` を使って構成します。
 
@@ -460,6 +493,9 @@ return (
 
 **ゴール**: 詳細画面上部のボタンで `archive` / `unarchive` を切り替えられるようにします。
 
+Day 11 で作った mutation と handler があれば、
+追加し直さず、次の条件を満たすか確認します。
+
 `ProjectDetailView` 側では「どちらを呼ぶか」は判断せず、現在状態だけを親へ渡します。
 
 ```tsx
@@ -520,6 +556,9 @@ const handleArchive = (projectId: string, isArchived: boolean) => {
 ### Step 6: 補助ダイアログと完成形を整える (5分)
 
 **ゴール**: 詳細表示はインラインのままにしつつ、補助的なモーダルだけ `page.tsx` 側で扱う現在構成を完成させる。
+
+Day 12 で実装済みのダイアログや state は
+再宣言しません。以下は配置と動作の確認用です。
 
 ここが少し重要です。**いまも `Dialog` は使っていますが、詳細表示のためではありません。**
 

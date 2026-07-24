@@ -54,13 +54,25 @@ function TaskPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const taskIdParam = searchParams.get('taskId');
+  const isEditLink = searchParams.get('edit') === 'true';
+  const { data: linkedTask } = api.task.getById.useQuery(
+    { id: taskIdParam ?? '' },
+    { enabled: !!taskIdParam && isEditLink },
+  );
 
   useEffect(() => {
-    if (taskIdParam) {
+    if (taskIdParam && !isEditLink) {
       setSelectedTask(taskIdParam);
       setDetailOpen(true);
     }
-  }, [taskIdParam]);
+  }, [isEditLink, taskIdParam]);
+
+  useEffect(() => {
+    if (!isEditLink || !linkedTask) return;
+    setEditingTask(taskToFormData(linkedTask));
+    setDetailOpen(false);
+    setDialogOpen(true);
+  }, [isEditLink, linkedTask]);
 
   useEffect(() => {
     const parsed = parseTaskFiltersFromSearchParams(searchParams);
@@ -154,10 +166,23 @@ function TaskPageContent() {
     [projects, canEditProject],
   );
 
+  const closeTaskDialog = useCallback(() => {
+    setDialogOpen(false);
+    setEditingTask(undefined);
+
+    if (isEditLink) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('taskId');
+      params.delete('edit');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [isEditLink, pathname, router, searchParams]);
+
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-      setDialogOpen(false);
+      closeTaskDialog();
     },
   });
 
@@ -167,7 +192,7 @@ function TaskPageContent() {
       if (selectedTask) {
         utils.task.getById.invalidate({ id: selectedTask });
       }
-      setDialogOpen(false);
+      closeTaskDialog();
     },
   });
 
@@ -528,7 +553,7 @@ function TaskPageContent() {
 
           <TaskDialog
             open={dialogOpen}
-            onClose={() => setDialogOpen(false)}
+            onClose={closeTaskDialog}
             onSubmit={handleSubmit}
             initialData={editingTask}
             projects={editableProjects}

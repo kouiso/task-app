@@ -535,6 +535,38 @@ const searchInputSchema = z.object({
 
 **ゴール**: 検索ページの基本構造と export default を完成させます。
 
+Day 13 までのサイドバーへ検索導線を追加します。
+`lucide-react` の既存 import に `Search` を
+加えてください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Search,
+} from 'lucide-react';
+```
+
+`menuItems` の閉じかっこ直前へ
+検索項目を追加します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+{
+  text: '検索',
+  icon: <Search className="h-5 w-5" />,
+  path: '/search',
+},
+```
+
+**確認ポイント**:
+- 既存の4項目を残した
+- サイドバーの「検索」から `/search` を開ける
+
 `src/app/search/page.tsx` を新規作成します。まずインポートを記述します。
 
 ```typescript
@@ -1339,6 +1371,79 @@ const handleProjectClick =
 **確認ポイント**:
 - タスククリックで詳細画面に遷移する
 - 編集ボタンを押すと編集モードで開く
+
+検索画面の編集ボタンは `edit=true` を付けるため、
+タスク一覧ページ側でもこの値を受け取ります。
+`src/app/task/page.tsx` にある既存の
+`taskIdParam` と詳細ダイアログ用 `useEffect` を、
+次の形へ置き換えてください。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const taskIdParam = searchParams.get('taskId');
+const isEditLink =
+  searchParams.get('edit') === 'true';
+const { data: linkedTask } =
+  api.task.getById.useQuery(
+    { id: taskIdParam ?? '' },
+    { enabled: !!taskIdParam && isEditLink },
+  );
+
+useEffect(() => {
+  if (taskIdParam && !isEditLink) {
+    setSelectedTask(taskIdParam);
+    setDetailOpen(true);
+  }
+}, [isEditLink, taskIdParam]);
+```
+
+検索から編集用データを取得できたら、
+Day 15 の `TaskDialog` を編集モードで開きます。
+
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+useEffect(() => {
+  if (!isEditLink || !linkedTask) return;
+  setEditingTask(
+    taskToFormData(linkedTask),
+  );
+  setDetailOpen(false);
+  setDialogOpen(true);
+}, [isEditLink, linkedTask]);
+```
+
+ダイアログを閉じたあとに再び開かないよう、
+URL の編集指定も取り除きます。この関数を
+`createMutation` / `updateMutation` より前へ追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+const closeTaskDialog = () => {
+  setDialogOpen(false);
+  setEditingTask(undefined);
+  if (!isEditLink) return;
+
+  const params = new URLSearchParams(
+    searchParams.toString(),
+  );
+  params.delete('taskId');
+  params.delete('edit');
+  const query = params.toString();
+  router.replace(
+    query ? `/task?${query}` : '/task',
+  );
+};
+```
+
+`createMutation` と `updateMutation` の成功時にある
+`setDialogOpen(false)` は、`closeTaskDialog()` へ
+置き換えます。`TaskDialog` の
+`onClose={() => setDialogOpen(false)}` も、
+`onClose={closeTaskDialog}` へ置き換えてください。
+
+**確認ポイント**:
+- `/task?taskId=...&edit=true` で編集ダイアログが開く
+- ダイアログを閉じると URL から `taskId` と `edit` が消える
 
 Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ローディング表示と結果件数です。
 
