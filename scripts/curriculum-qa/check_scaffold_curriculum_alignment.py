@@ -11,6 +11,7 @@ scaffold と教材の整合性チェック。
 満たさない import があれば exit 1。
 """
 
+import json
 import re
 import sys
 from collections import defaultdict
@@ -166,6 +167,18 @@ def main() -> int:
                     )
 
     scaffold_script = (SCRIPTS_DIR / "scaffold-from-scratch.sh").read_text(encoding="utf-8")
+    package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
+    dependencies = package_json.get("dependencies", {})
+    dev_dependencies = package_json.get("devDependencies", {})
+    overrides = package_json.get("overrides", {})
+    scaffold_main_match = re.search(
+        r"\nmain\(\) \{\n(?P<body>.*?)\n\}\n\nmain \"\$@\"",
+        scaffold_script,
+        re.DOTALL,
+    )
+    scaffold_main_body = (
+        scaffold_main_match.group("body") if scaffold_main_match is not None else ""
+    )
     day07_candidates = sorted(MATERIAL_DIR.glob("day07_*.md"))
     day07_text = (
         day07_candidates[0].read_text(encoding="utf-8") if len(day07_candidates) == 1 else ""
@@ -214,6 +227,26 @@ def main() -> int:
         ),
         'scaffold scripts.postinstall="prisma generate"': (
             'scripts.postinstall="prisma generate"' in scaffold_script
+        ),
+        "source production dependency audit overrides": (
+            dependencies.get("next") == "^15.5.21"
+            and dev_dependencies.get("postcss") == "8.5.23"
+            and overrides.get("postcss") == "8.5.23"
+            and overrides.get("sharp") == "0.35.3"
+        ),
+        "scaffold production dependency audit overrides": (
+            all(
+                token in scaffold_script
+                for token in (
+                    "next@15.5.21",
+                    "npx create-next-app@15.5.21",
+                    'overrides.postcss="8.5.23"',
+                    'overrides.sharp="0.35.3"',
+                )
+            )
+            and 0
+            <= scaffold_main_body.find("configure_security_overrides")
+            < scaffold_main_body.find("install_dependencies")
         ),
         "Day 30 production schema command": (
             "npx vercel env run -e production -- npx prisma db push" in day30_text
