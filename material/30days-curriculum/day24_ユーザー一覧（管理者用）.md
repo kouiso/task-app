@@ -184,7 +184,7 @@ export const userRouter = createTRPCRouter({
 
 #### 0-5. root.ts に時系列順で登録する
 
-最後に `userRouter` を `root.ts` に登録します。完成版 source と同じく、`user` は一番最後です。
+最後に `userRouter` を `root.ts` に登録します。完成版 source と同じく、`user` は `report` のあとです。
 
 ```typescript
 // filepath: src/server/api/root.ts

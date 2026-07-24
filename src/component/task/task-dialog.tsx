@@ -98,12 +98,15 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
   });
   const selectedProjectId = watch('projectId');
   const projectsRef = useRef(projects);
-  projectsRef.current = projects;
   const { data: projectMembers } = api.search.getMembersByProject.useQuery(
     { projectId: selectedProjectId },
     { enabled: open && !!selectedProjectId },
   );
   const users = projectMembers ?? [];
+
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
 
   useEffect(() => {
     if (!open) {

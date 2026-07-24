@@ -667,7 +667,6 @@ export function TaskDialog({
   const selectedProjectId =
     watch('projectId');
   const projectsRef = useRef(projects);
-  projectsRef.current = projects;
   const { data: projectMembers } =
     api.search.getMembersByProject.useQuery(
       { projectId: selectedProjectId },
@@ -677,6 +676,15 @@ export function TaskDialog({
       },
     );
   const users = projectMembers ?? [];
+```
+
+プロジェクト一覧の参照はレンダー中に書き換えず、画面へ反映されたあとで同期します。
+
+```typescript
+// filepath: 続き
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
 
   useEffect(() => {
     if (!open) {

@@ -81,6 +81,9 @@ describe('searchRouter', () => {
       await expect(caller.search.quickSearch({ keyword: '' })).rejects.toThrow(
         'キーワードは必須です',
       );
+      await expect(caller.search.quickSearch({ keyword: '   ' })).rejects.toThrow(
+        'キーワードは必須です',
+      );
     });
   });
 

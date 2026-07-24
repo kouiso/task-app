@@ -534,14 +534,9 @@ Props（親から受け取る値）には
 
 `TaskCard` は Day 13 で一覧ページに配置したタスク表示カードです。
 
-ここでも先に種明かしをします。配布版の `task-card.tsx` には、
-この組み込みが最初から入っています（Day 13 から時間記録ボタンが
-使えていたのはそのためです）。だから Step 3 は「白紙に書き足す」のではなく、
-**これから示すコードを配布版の該当箇所と1つずつ突き合わせて、
-自分で書けるか確かめながら進む**ステップです。
-実際に手を動かしたい場合は、該当箇所をいったん削除してから
-書き足し直しても構いません。削除→追加でも最終形は同じになります。
-同じ行を二重に書き足さないことにだけ注意してください。
+配布版の `task-card.tsx` は Day 13 の表示機能まで入った状態です。
+この Step で時間記録用の props・ボタン・ダイアログを初めて追加します。
+次のコードを順番に書き足し、Day 16 の終了時点で完成版と同じ形にします。
 
 まず、`task-card.tsx` のインポートを確認します。
 
@@ -549,6 +544,7 @@ Props（親から受け取る値）には
 // filepath: src/component/task/task-card.tsx
 // TimeLogDialogとClockアイコンのインポート
 import { Clock } from 'lucide-react';
+import { useState } from 'react';
 import { TimeLogDialog } from './time-log-dialog';
 ```
 

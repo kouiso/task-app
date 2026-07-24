@@ -104,6 +104,14 @@ describe('reportRouter', () => {
       expect(report.totalCompleted).toBe(1);
     });
 
+    it('引数を省略すると4週間分を返す', async () => {
+      const user = await createTestUser({ email: uniqueEmail('wk-default') });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const report = await caller.report.getWeeklyReport();
+      expect(report.weeks).toBe(4);
+      expect(report.weeklyData).toHaveLength(4);
+    });
+
     it('weeks パラメータの週数だけ weeklyData を返す', async () => {
       const user = await createTestUser({ email: uniqueEmail('wk-range') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);

@@ -109,7 +109,6 @@ export function TaskDialog({
   });
   const selectedProjectId = watch('projectId');
   const projectsRef = useRef(projects);
-  projectsRef.current = projects;
   const {
     data: projectMembers,
     isPending: isMembersPending,
@@ -121,6 +120,10 @@ export function TaskDialog({
   // fallback は読み込み中に限定する。取得失敗時にまで使うと、プロジェクトに
   // 属さないユーザーが候補に混ざり、エラーの発生も画面から見えなくなるため
   const users = projectMembers ?? (isMembersPending ? fallbackUsers : []);
+
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
 
   useEffect(() => {
     if (!open) {

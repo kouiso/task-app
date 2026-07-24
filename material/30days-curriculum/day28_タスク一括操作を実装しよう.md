@@ -129,24 +129,37 @@ Day 13 で書いた `import type { Prisma } from '@prisma/client';` は、次の
 ```typescript
 // filepath: src/server/api/routers/task.ts（既存の Prisma import を置き換える）
 import { Prisma, ProjectMemberRole } from '@prisma/client';
+import { hasPermission, type PermissionKey } from '@/lib/constant/roles';
 ```
 
 #### 0-2. 件数上限と書き込み条件を作る
 
-一度に受け付ける件数と、編集・削除できるロールを定数にします。`taskTimeUpdateSchema` の直後へ追加してください。
+一度に受け付ける件数と、重複を拒否する ID 配列スキーマを作ります。編集・削除できるロールは権限マップから導出し、権限定義を二重管理しません。`taskTimeUpdateSchema` の直後へ追加してください。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（taskTimeUpdateSchema の直後に追加）
 const MAX_BULK_TASKS = 100;
-const TASK_EDIT_ROLES = [
-  ProjectMemberRole.OWNER,
-  ProjectMemberRole.ADMIN,
-  ProjectMemberRole.MEMBER,
-];
-const TASK_DELETE_ROLES = [ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN];
+const bulkTaskIdsSchema = z
+  .array(z.string().cuid())
+  .min(1)
+  .max(MAX_BULK_TASKS)
+  .refine(
+    (ids) => new Set(ids).size === ids.length,
+    'タスクIDを重複して指定できません',
+  );
+const getRolesWithPermission = (
+  permission: PermissionKey,
+): ProjectMemberRole[] =>
+  Object.values(ProjectMemberRole).filter(
+    (role) => hasPermission(role, permission),
+  );
+const TASK_EDIT_ROLES =
+  getRolesWithPermission('canEdit');
+const TASK_DELETE_ROLES =
+  getRolesWithPermission('canDelete');
 ```
 
-`MAX_BULK_TASKS` は巨大な id 配列による DB 負荷を防ぎます。編集は OWNER・ADMIN・MEMBER、削除は OWNER・ADMIN だけです。
+`MAX_BULK_TASKS` は巨大な id 配列による DB 負荷を防ぎ、`bulkTaskIdsSchema` は同じ id の二重指定を入力段階で拒否します。ロール配列は `hasPermission` が参照する権限マップから作るため、権限設定を変更しても読み取り側と書き込み側がずれません。
 
 続けて、タスク id と現在の権限を同じ `where` にまとめる部品を書きます。
 
@@ -189,7 +202,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 ```typescript
 // filepath: src/server/api/routers/task.ts（addTime の直後に追加）
   bulkComplete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
+    .input(z.object({ ids: bulkTaskIdsSchema }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
@@ -224,7 +237,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 ```typescript
 // filepath: src/server/api/routers/task.ts（bulkComplete の直後に追加）
   bulkDelete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
+    .input(z.object({ ids: bulkTaskIdsSchema }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
@@ -252,7 +265,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
   bulkUpdateStatus: protectedProcedure
     .input(
       z.object({
-        ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS),
+        ids: bulkTaskIdsSchema,
         status: taskStatusSchema,
       }),
     )

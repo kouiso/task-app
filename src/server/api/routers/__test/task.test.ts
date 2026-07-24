@@ -298,6 +298,14 @@ describe('taskRouter', () => {
       const task = await createTestTask(project.id, actor.id);
       await expect(caller.task.bulkComplete({ ids: Array(101).fill(task.id) })).rejects.toThrow();
     });
+
+    it('一括操作は重複したタスクIDを拒否する', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const task = await createTestTask(project.id, actor.id);
+      await expect(caller.task.bulkComplete({ ids: [task.id, task.id] })).rejects.toThrow(
+        'タスクIDを重複して指定できません',
+      );
+    });
   });
 
   describe('認証ガード', () => {

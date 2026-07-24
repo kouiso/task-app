@@ -123,7 +123,7 @@ import { getUserProjectIds } from './_helpers/permission';
       z.object({
         weeks: z.number().int().min(1).max(12).default(4),
         userId: z.string().cuid().optional(),
-      }),
+      }).default({}),
     )
     .query(async ({ ctx, input }) => {
 ```

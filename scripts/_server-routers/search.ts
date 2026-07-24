@@ -29,7 +29,7 @@ const searchInputSchema = z.object({
 });
 
 const quickSearchInputSchema = z.object({
-  keyword: z.string().min(1, 'キーワードは必須です'),
+  keyword: z.string().trim().min(1, 'キーワードは必須です'),
 });
 
 type FilterConfig = {

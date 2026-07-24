@@ -157,7 +157,7 @@ const searchInputSchema = z.object({
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
 const quickSearchInputSchema = z.object({
-  keyword: z.string().min(1, 'キーワードは必須です'),
+  keyword: z.string().trim().min(1, 'キーワードは必須です'),
 });
 ```
 

@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { TASK_PRIORITY } from '@/lib/constant/priority';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { hasPermission, type PermissionKey } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
@@ -46,12 +47,15 @@ const taskTimeUpdateSchema = z.object({
 });
 
 const MAX_BULK_TASKS = 100;
-const TASK_EDIT_ROLES = [
-  ProjectMemberRole.OWNER,
-  ProjectMemberRole.ADMIN,
-  ProjectMemberRole.MEMBER,
-];
-const TASK_DELETE_ROLES = [ProjectMemberRole.OWNER, ProjectMemberRole.ADMIN];
+const bulkTaskIdsSchema = z
+  .array(z.string().cuid())
+  .min(1)
+  .max(MAX_BULK_TASKS)
+  .refine((ids) => new Set(ids).size === ids.length, 'タスクIDを重複して指定できません');
+const getRolesWithPermission = (permission: PermissionKey): ProjectMemberRole[] =>
+  Object.values(ProjectMemberRole).filter((role) => hasPermission(role, permission));
+const TASK_EDIT_ROLES = getRolesWithPermission('canEdit');
+const TASK_DELETE_ROLES = getRolesWithPermission('canDelete');
 
 const buildBulkPermissionWhere = (
   ids: string[],
@@ -428,7 +432,7 @@ export const taskRouter = createTRPCRouter({
   }),
 
   bulkComplete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
+    .input(z.object({ ids: bulkTaskIdsSchema }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
@@ -447,7 +451,7 @@ export const taskRouter = createTRPCRouter({
     }),
 
   bulkDelete: protectedProcedure
-    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS) }))
+    .input(z.object({ ids: bulkTaskIdsSchema }))
     .mutation(async ({ ctx, input }) => {
       const tasks = await findTasksWithPermission(input.ids, ctx.session.userId);
       for (const task of tasks) {
@@ -466,7 +470,7 @@ export const taskRouter = createTRPCRouter({
   bulkUpdateStatus: protectedProcedure
     .input(
       z.object({
-        ids: z.array(z.string().cuid()).min(1).max(MAX_BULK_TASKS),
+        ids: bulkTaskIdsSchema,
         status: taskStatusSchema,
       }),
     )
