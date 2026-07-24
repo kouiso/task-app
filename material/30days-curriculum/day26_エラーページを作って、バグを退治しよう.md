@@ -88,8 +88,8 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
-| Step 1 | error.tsxの動作を確認する | 5分 | dashboard/page.tsx | エラーページが表示される |
-| Step 2 | error.tsxを作る | 4分 | src/app/error.tsx | Error Boundaryがわかる |
+| Step 1 | error.tsxを作る | 4分 | src/app/error.tsx | Error Boundaryがわかる |
+| Step 2 | error.tsxの動作を確認する | 5分 | dashboard/page.tsx | エラーページが表示される |
 | Step 3 | バグA: Optional Chainingなし | 7分 | 教材内演習 | Console赤エラーを修正 |
 | Step 4 | バグB: useEffect依存配列ミス | 7分 | 教材内演習 | 無限リクエストを修正 |
 | Step 5 | バグC: console.log残し | 5分 | dashboard/page.tsx | Biome lintで検出・修正 |
@@ -100,53 +100,7 @@ flowchart TD
 
 ---
 
-### Step 1: error.tsxの動作を確認する（5分）
-
-**ゴール**: Next.jsのError Boundary（error.tsx）がどう動くか体験します。
-
-まず、存在しないページにアクセスしてnot-found.tsxが動作することを確認します。次に、わざとエラーを起こしてerror.tsxの動作を確認します。
-
-**操作手順**:
-
-このDayでは 3001 番ポートで開発サーバーを起動します。ほかのDayのサーバーを 3000 番で起動したままでも、衝突させずに確認するためです。
-
-```bash
-# filepath: ターミナル
-PORT=3001 npm run dev
-```
-
-1. ブラウザのアドレスバーに `http://localhost:3001/this-page-does-not-exist` と入力して Enter を押す
-2. 「404」と「ページが見つかりません」が表示されることを確認
-3. 次に、ダッシュボードのコードに一時的にエラーを仕込む
-
-```typescript
-// filepath: src/app/dashboard/page.tsx（一時的に追加）
-// DashboardPage関数の先頭に追加する
-// error.tsx の動作を確認するためのテストエラー
-throw new Error(
-  'テストエラー: これは練習です'
-);
-```
-
-> 開発モード（`npm run dev`）では
-> Next.js のエラーオーバーレイが先に
-> 表示されます。右上の × ボタンで閉じると、
-> error.tsx のフォールバック UI が確認できます。
-
-**確認ポイント**:
-1. `/this-page-does-not-exist`で404ページが表示された
-2. エラーオーバーレイを閉じると「エラーが発生しました」画面が表示される
-3. 「もう一度試す」ボタンが機能する
-4. **追加した`throw`行を必ず削除する**
-
-【スクリーンショット】error.tsxのエラーページ画面の表示を確認してください。
-
-![error.tsxのエラーページ画面の表示を確認してください](./screenshots/error-page.png)
-**学んだこと**: error.tsxは予期しないエラーが発生した時に「白い画面」の代わりにフォールバックUIを表示します。
-
----
-
-### Step 2: error.tsxのコードを読む（4分）
+### Step 1: error.tsxのコードを書く（4分）
 
 **ゴール**: Error Boundaryの仕組みを理解します。
 
@@ -213,6 +167,57 @@ export default function ErrorPage({
 | `console.error(error)` | エラー詳細をConsoleに出力 | カルテをログに記録 |
 
 **学んだこと**: Next.js App Routerでは、`error.tsx`を配置するだけでError Boundaryが自動的に機能します。
+
+---
+
+### Step 2: error.tsxの動作を確認する（5分）
+
+**ゴール**: 作成した Error Boundary が
+どう動くか体験します。
+
+まず、存在しないページにアクセスして
+`not-found.tsx` が動作することを確認します。
+次に、わざとエラーを起こして
+`error.tsx` の動作を確認します。
+
+この Day では 3001 番ポートで
+開発サーバーを起動します。
+
+```bash
+# filepath: ターミナル
+PORT=3001 npm run dev
+```
+
+1. `http://localhost:3001/this-page-does-not-exist`
+   をブラウザで開く
+2. 「404」と「ページが見つかりません」を確認する
+3. ダッシュボードへ一時的にエラーを追加する
+
+```typescript
+// filepath: src/app/dashboard/page.tsx（一時的に追加）
+// DashboardPage関数の先頭に追加する
+throw new Error(
+  'テストエラー: これは練習です'
+);
+```
+
+> 開発モードではエラーオーバーレイが
+> 先に表示されます。右上の × ボタンで閉じると、
+> 作成したフォールバック UI を確認できます。
+
+**確認ポイント**:
+1. 存在しないページで404画面が表示された
+2. 意図的なエラーで作成済みの画面が表示された
+3. 「もう一度試す」ボタンが機能した
+4. **追加した `throw` 行を必ず削除した**
+
+【スクリーンショット】error.tsxのエラーページ画面の表示を確認してください。
+
+![error.tsxのエラーページ画面の表示を確認してください](./screenshots/error-page.png)
+
+**学んだこと**: `error.tsx` は予期しないエラーが
+発生したときに、白い画面の代わりとなる
+フォールバック UI を表示します。
 
 ---
 
@@ -401,12 +406,12 @@ function TaskList() {
 
 ```typescript
 // filepath: src/app/dashboard/page.tsx
-// recentTasks の直後に一時的に追加する
+// focusCards の定義直後に一時的に追加する
 console.log(
-  'DEBUG: tasks =', tasks
+  'DEBUG: owner =', dashboardOwner
 );
 console.log(
-  'DEBUG: projects =', projects
+  'DEBUG: cards =', focusCards
 );
 ```
 

@@ -535,6 +535,38 @@ const searchInputSchema = z.object({
 
 **ゴール**: 検索ページの基本構造と export default を完成させます。
 
+Day 13 までのサイドバーへ検索導線を追加します。
+`lucide-react` の既存 import に `Search` を
+加えてください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Search,
+} from 'lucide-react';
+```
+
+`menuItems` の閉じかっこ直前へ
+検索項目を追加します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+{
+  text: '検索',
+  icon: <Search className="h-5 w-5" />,
+  path: '/search',
+},
+```
+
+**確認ポイント**:
+- 既存の4項目を残した
+- サイドバーの「検索」から `/search` を開ける
+
 `src/app/search/page.tsx` を新規作成します。まずインポートを記述します。
 
 ```typescript

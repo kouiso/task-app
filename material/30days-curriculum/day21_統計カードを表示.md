@@ -457,40 +457,26 @@ api.report.getOverview.useQuery();
 // filepath: src/component/layout/app-layout.tsx
 import {
   BarChart,
+  ClipboardList,
   FolderOpen,
   LayoutDashboard,
   ListTodo,
   LogOut,
+  Search,
 } from 'lucide-react';
 ```
 
 同じファイルの `menuItems` に、
-レポート用の項目を追加します。
+レポート用の項目を追加します。Day 20 までの
+項目を残し、配列の閉じかっこ直前へ入れます。
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-const menuItems: MenuItem[] = [
-  {
-    text: 'ダッシュボード',
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    path: '/dashboard',
-  },
-  {
-    text: 'プロジェクト',
-    icon: <FolderOpen className="h-5 w-5" />,
-    path: '/project',
-  },
-  {
-    text: 'マイタスク',
-    icon: <ListTodo className="h-5 w-5" />,
-    path: '/my-task',
-  },
-  {
-    text: 'レポート',
-    icon: <BarChart className="h-5 w-5" />,
-    path: '/report',
-  },
-];
+{
+  text: 'レポート',
+  icon: <BarChart className="h-5 w-5" />,
+  path: '/report',
+},
 ```
 
 **確認ポイント**:
@@ -738,7 +724,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         タスク数</p>
       <p className="text-3xl font-bold">
-        {overview?.totalTasks ?? 0}</p>
+        {totalTasks}</p>
     </CardContent>
   </Card>
 ```
@@ -756,7 +742,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         完了率</p>
       <p className="text-3xl font-bold">
-        {overview?.completionRate ?? 0}%</p>
+        {completionRate}%</p>
     </CardContent>
   </Card>
 ```
@@ -774,8 +760,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         合計作業時間</p>
       <p className="text-3xl font-bold">
-        {((overview?.totalTimeSpent ?? 0) / 60)
-          .toFixed(1)}h</p>
+        {totalTimeHours}h</p>
     </CardContent>
   </Card>
 ```
@@ -793,8 +778,7 @@ if (isLoading) {
         text-muted-foreground mb-1">
         平均作業時間/タスク</p>
       <p className="text-3xl font-bold">
-        {((overview?.averageTimePerTask ?? 0) / 60)
-          .toFixed(1)}h</p>
+        {averageTimeHours}h</p>
     </CardContent>
   </Card>
 </div>

@@ -67,8 +67,8 @@ flowchart TD
 |---------|---------|---------|
 | Step 1 | 本番用の環境変数を準備 | 5分 |
 | Step 2 | 本番前のローカル最終確認 | 5分 |
-| Step 3 | Git にプッシュ | 3分 |
-| Step 4 | Vercel にデプロイし、本番 DB を準備 | 10分 |
+| Step 3 | Git の公開準備 | 3分 |
+| Step 4 | Vercel を設定してプッシュ | 10分 |
 | Step 5 | 本番環境の動作確認 | 7分 |
 | Step 6 | 30日間の学習サマリー | 7分 |
 | Step 7 | 技術スタックの振り返り | 5分 |
@@ -258,10 +258,10 @@ npm run db:push
 
 ---
 
-### Step 3: Git にプッシュ（3分）
+### Step 3: Git の公開準備（3分）
 
-**ゴール**: 最新のコードを GitHub に
-プッシュします。
+**ゴール**: 30日間の変更を漏れなく
+コミットし、公開直前の状態にします。
 
 ```bash
 # filepath: ターミナル
@@ -275,21 +275,33 @@ git status
 
 ```bash
 # filepath: ターミナル
-# 変更したファイルだけを明示してステージングしてプッシュ
-# 例: Day 29 で編集したファイルを個別指定する
-git add src/app/user/[id]/page.tsx src/app/user/[id]/user-detail-client.tsx
-git add src/app/user/[id]/edit/page.tsx src/app/user/[id]/edit/user-edit-client.tsx
+# Day 4〜29 で変更したアプリ用の場所を明示する
+git add src prisma package.json package-lock.json
+git add .env.example docker-compose.yml
+git add next.config.ts tsconfig.json components.json biome.json
+
+# コミット対象と未ステージ差分を必ず確認する
+git diff --cached --name-only
+git status --short
+```
+
+一覧に `.env` や `.env.local` が無く、
+Day 4〜29 の `src` と `prisma` が含まれることを
+確認してからコミットします。
+
+```bash
+# filepath: ターミナル
 git commit -m "feat: 30日間の完成版"
-git push origin main
 ```
 
 **確認ポイント**:
-- `git push` が成功した
-- GitHub のリポジトリで最新コミットが見える
+- `.env` と `.env.local` が含まれていない
+- Day 29 の `src/server/api/routers/user.ts` も含まれる
+- `git status --short` の未追跡・未ステージを確認した
 
 ---
 
-### Step 4: Vercel にデプロイし、本番 DB を準備（10分）
+### Step 4: Vercel を設定してプッシュする（10分）
 
 **ゴール**: Vercel にアプリを
 デプロイして公開します。
@@ -335,6 +347,23 @@ Day 4 で Vercel 連携済みの場合は、
 Preview デプロイも使う場合は、同じ2変数を Preview
 にも追加します。Production だけを公開する場合は、
 まず Production の設定と動作確認を完了させます。
+
+環境変数を先に設定できたら、現在のブランチを
+GitHub へプッシュします。Day 3 と同じく、
+ブランチ名を固定しません。
+
+```bash
+# filepath: ターミナル
+git push origin "$(git branch --show-current)"
+```
+
+この push で始まった Vercel デプロイが
+`Ready` になるまで待ってください。
+
+**確認ポイント**:
+- 現在のブランチの push が成功した
+- GitHub に Day 4〜29 の変更が反映された
+- 環境変数の設定後に始まったデプロイが `Ready` になった
 
 > Vercel は GitHub と連携しているため
 > `git push` するだけで自動的にビルドと
