@@ -71,7 +71,8 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | コメント API を理解する | 3分 |
+| Step 0 | `task.getById` と `comment.ts` を写経する | 15分 |
+| Step 1 | コメント API の形を整理する | 3分 |
 | Step 2 | タスク詳細でコメントを取得 | 5分 |
 | Step 3 | コメント一覧の表示コードを確認 | 7分 |
 | Step 4 | コメント投稿フォームを確認 | 5分 |
@@ -79,66 +80,93 @@ flowchart TD
 | Step 6 | キャッシュ更新の仕組みを理解 | 3分 |
 | Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約31分。
+**合計時間**: 約46分。
 
 ---
 
-### Step 0: コメント API を有効化する（2分）
+### Step 0: `task.getById` と `comment.ts` を写経する（15分）
 
-`src/server/api/root.ts` に comment ルーターを追加します。
+**ゴール**: コメント機能の土台になる server 側コードを、
+空の状態から自分で組み立てます。
+
+今日は `src/server/api/routers/comment.ts` が配布されていません。
+だから「有効化する」では足りません。まず router 本体を作ります。
+その前に、`TaskDetailDialog` が使う `task.getById` も `task.ts` に足します。
+
+#### 0-1. `task.ts` に `getById` を追加する
+
+コメント一覧は `TaskDetailDialog` の中で
+`api.task.getById.useQuery()` から受け取る `taskDetail.comments`
+を表示します。つまり Day 18 の時点で、
+`task.getById` が server 側に存在していないと画面が動きません。
+
+`src/server/api/routers/task.ts` の `getAll` の下に、
+次の procedure を追加します。
 
 ```typescript
-// filepath: src/server/api/root.ts（import を追加）
-import { commentRouter } from './routers/comment';
-
-// appRouter に追加
-  comment: commentRouter,
+// filepath: src/server/api/routers/task.ts
+// getAll の下に追加
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
 ```
 
-**確認ポイント**: `comment: commentRouter` を追加しました。
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+```
 
----
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'タスクが見つかりません',
+        });
+      }
 
-### Step 1: コメント API を理解する（3分）
+      assertMemberPermission(task.project.members);
 
-**ゴール**: コメントルーターの API を把握します。
+      return task;
+    }),
+```
 
-配布スターターにある `src/server/api/routers/comment.ts` を開きます。
-このファイルには一覧取得用の `getByTaskId` だけが入っています。
-今日は既存の取得処理を残し、投稿用の `create` を追加します。
+`getAll` が一覧用だったのに対して、`getById` は1件だけを返します。
+ここで `comments` を一緒に `include` しているので、
+後ろの UI ステップでは `comment.getByTaskId` を直接呼ばずに済みます。
 
-まずはコメント投稿のバリデーションスキーマを、
-`findTaskAndAssertMembership` の前に書きます。
-投稿 API の入口を先に固めると、画面側のフォームと
-サーバー側の受け取り条件をそろえやすいです。
+#### 0-2. `comment.ts` を新規作成して入口を書く
 
-**実装**:
+次に `src/server/api/routers/comment.ts` を新規作成します。
+まずは import と入力スキーマです。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
-// コメント投稿用のバリデーションスキーマ
-const commentCreateSchema = z.object({
-  content: z.string().trim().min(1,
-    'コメント内容は必須です'),
-  taskId: z.string().cuid(),
-});
-```
-
-**確認ポイント**:
-- `trim()` で前後の空白を除去している
-- `min(1)` で空コメントを防止している
-
-> **Prisma インポート規約**: サーバー側コードでは
-> `import { prisma } from '@/lib/prisma'` を使います。
-> `@prismaClient` ではなくこのパスが本プロジェクトの
-> 規約です。
-
-続いて、ファイル冒頭のインポートを確認します。
-配布スターターにはすでに入っているため、足りない場合だけ追加してください。
-
-```typescript
-// filepath: src/server/api/routers/comment.ts
-// ファイル冒頭のインポート
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import type { PermissionKey } from '@/lib/constant/roles';
@@ -146,19 +174,26 @@ import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
+
+const commentCreateSchema = z.object({
+  content: z.string().trim().min(1, 'コメント内容は必須です'),
+  taskId: z.string().cuid(),
+});
 ```
 
-先ほどのスキーマで使った `z` もここで読み込みます。
-`protectedProcedure` はログイン済みのユーザーだけが呼べる入口です。
-`assertMemberPermission` はプロジェクトのメンバーかどうかを確かめる関数で、
-`USER_SELECT` は投稿者情報から返す項目をまとめた定義です。
+`trim().min(1)` の組み合わせは、
+空白だけの投稿を止めるための入口です。
+画面側でも止めますが、最後に守るのは server 側です。
 
-次に、タスクの存在確認とメンバー権限チェックをまとめた関数を確認します。
-この関数も配布スターターに入っているため、内容を読み、同じ形であることを確かめます。
+#### 0-3. タスク存在確認と権限確認を関数にまとめる
+
+コメントは単独で存在しません。必ず task にぶら下がります。
+だから `create` と `getByTaskId` の両方で、
+「その task があるか」「自分はその project のメンバーか」を
+先に確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
-// タスクの存在確認とメンバー権限チェック
 const findTaskAndAssertMembership = async (
   taskId: string,
   userId: string,
@@ -167,84 +202,170 @@ const findTaskAndAssertMembership = async (
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: {
-      project: { include: { members: { where: { userId } } } },
+      project: {
+        include: {
+          members: { where: { userId } },
+        },
+      },
     },
   });
+```
 
+```typescript
+// filepath: src/server/api/routers/comment.ts（続き）
   if (!task) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'タスクが見つかりません' });
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'タスクが見つかりません',
+    });
   }
 
   assertMemberPermission(task.project.members, permission);
+
   return task;
 };
 ```
 
-コメントは必ずどれかのタスクに紐づきます。
-存在しないタスク ID が来たら `NOT_FOUND` を返し、
-そのプロジェクトのメンバーでなければ権限エラーにします。
-投稿と一覧取得で同じ確認が必要なので、1つの関数にまとめています。
+同じ確認を毎回ベタ書きすると、
+Day 19 の update/delete でも同じ形が増えて読みづらくなります。
+先に関数へ抜いておくと、router 本体では
+「何を確認してから、何を返すか」が見やすくなります。
 
-最後に、既存の `getByTaskId` の後ろへ、コメントを保存する `create` を追加します。
-ルーター末尾の `});` より前に書いてください。
+#### 0-4. `getByTaskId` と `create` を書く
+
+ここで初めて `commentRouter` 本体を組み立てます。
+Day 18 の完成形は `getByTaskId` と `create` の2つです。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
-// 既存の getByTaskId の後ろに追加
-  create: protectedProcedure
-    .input(commentCreateSchema)
-    .mutation(async ({ ctx, input }) => {
-      await findTaskAndAssertMembership(
-        input.taskId,
-        ctx.session.userId,
-        'canEdit',
-      );
+export const commentRouter = createTRPCRouter({
+  getByTaskId: protectedProcedure
+    .input(z.object({ taskId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
 
-      return await prisma.comment.create({
-        data: {
-          content: input.content,
-          taskId: input.taskId,
-          userId: ctx.session.userId,
+      return await prisma.comment.findMany({
+        where: { taskId: input.taskId },
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
         },
-        include: { user: { select: USER_SELECT } },
+        orderBy: { createdAt: 'desc' },
       });
     }),
 ```
 
-投稿者 ID は入力ではなく `ctx.session.userId` から取ります。
-フォームから送られてくる値を信用せず、サーバーが持つログイン情報を使うことで、
-他人になりすました投稿を防げます。
-`'canEdit'` を渡して、閲覧だけの権限では投稿できないようにしています。
-この `commentRouter` を Step 0 で `root.ts` に登録したので、
-画面から `api.comment.create` が呼べるようになります。
+```typescript
+// filepath: src/server/api/routers/comment.ts（続き）
+  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
+    await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+
+    return await prisma.comment.create({
+      data: {
+        content: input.content,
+        taskId: input.taskId,
+        userId: ctx.session.userId,
+      },
+      include: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+    });
+  }),
+});
+```
+
+`getByTaskId` は「その task に紐づくコメントを新しい順で返す」query です。
+`create` は mutation なので DB を更新します。
+投稿者 ID を `ctx.session.userId` から取っているのは、
+フォームから他人の userId を送られても信用しないためです。
+
+#### 0-5. `root.ts` に登録する
+
+router だけ書いても `api.comment.create` はまだ呼べません。
+最後に appRouter へ登録します。
+
+```typescript
+// filepath: src/server/api/root.ts
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+```
+
+```typescript
+// filepath: src/server/api/root.ts（続き）
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+});
+```
+
+`root.ts` は「どの router を外から呼べるようにするか」を束ねる場所です。
+ここに `comment: commentRouter` が無いと、
+comment.ts にコードがあっても client 側から見えません。
 
 **確認ポイント**:
-- ファイル冒頭にインポートを追加した
-- `commentRouter` を `export` して `create` を実装した
-- 投稿者 ID はセッションから取得している
+- `task.ts` に `getById` を追加した
+- `comment.ts` を新規作成し、`getByTaskId` と `create` を書いた
+- `root.ts` に `commentRouter` を登録した
 
-> 今この `commentRouter` は、配布済みの `getByTaskId` と今日追加した `create` を持っています。コメントの編集・削除に使う `update` と `delete` は Day 19 で、`create` の後、閉じる `});` の前に足します。
+---
+
+### Step 1: コメント API の形を整理する（3分）
+
+**ゴール**: さっき書いた server 側コードを、
+「何を受け取って、何をして、何を返すか」で整理します。
+
+```typescript
+// filepath: src/server/api/root.ts
+comment: commentRouter,
+```
+
+#### Day 18 時点の commentRouter
+
+| メソッド | 種類 | 役割 |
+|---------|------|------|
+| `getByTaskId` | query | task に紐づくコメント一覧を返す |
+| `create` | mutation | 新しいコメントを保存する |
+
+#### `comment.create` の入力
+
+| パラメータ | 型 | バリデーション | 説明 |
+|-----------|-----|--------------|------|
+| `content` | string | `trim().min(1)` | コメント本文 |
+| `taskId` | string (CUID) | `.cuid()` | 紐づけ先の task ID |
+
+#### `task.getById` が返すコメント関連のデータ
+
+| フィールド | 型 | 役割 |
+|-----------|-----|------|
+| `comments` | 配列 | コメント一覧そのもの |
+| `comments[].content` | string | 本文 |
+| `comments[].createdAt` | Date | 投稿日時 |
+| `comments[].userId` | string | 投稿者 ID |
+| `comments[].user` | object | 表示用の投稿者情報 |
+
+ここで大事なのは、Day 18 の画面側が直接使うのは
+`task.getById` の返り値だという点です。
+`comment.getByTaskId` も書きましたが、今回は
+「task 詳細を取ったら comment も一緒に付いてくる」形で進めます。
 
 #### comment ルーターの全メソッド
 
 | メソッド | 種別 | 説明 |
 |---------|------|------|
-| `getByTaskId` | query | タスクのコメント一覧取得（配布コードに実装済み。本教材では手を加えません） |
+| `getByTaskId` | query | タスクのコメント一覧取得 |
 | `create` | mutation | コメント投稿 |
 | `update` | mutation | コメント編集（Day 19） |
 | `delete` | mutation | コメント削除（Day 19） |
-
-#### comment.create の入力パラメータ
-
-| パラメータ | 型 | バリデーション | 説明 |
-|-----------|-----|--------------|------|
-| `content` | string | `trim().min(1)` | コメント本文 |
-| `taskId` | string (CUID) | `.cuid()` | タスク ID |
-
-> コメントはタスクに紐づきます。
-> `taskId` で「どのタスクへのコメントか」を
-> 指定します。投稿者 ID はサーバー側で
-> セッションから自動取得されます。
 
 **確認ポイント**:
 - 既存の `getByTaskId` を残して `create` を追加した

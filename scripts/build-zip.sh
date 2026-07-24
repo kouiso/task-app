@@ -75,6 +75,7 @@ for directory in "${support_directories[@]}"; do
       --exclude="project.ts" \
       --exclude="task.ts" \
       --exclude="search.ts" \
+      --exclude="comment.ts" \
       "${source_directory}/" "${BUILD_DIR}/scripts/${directory}/"
   else
     rsync -a "${source_directory}/" "${BUILD_DIR}/scripts/${directory}/"

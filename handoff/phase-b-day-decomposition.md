@@ -54,8 +54,8 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
 | 15 | タスク編集・削除 | task.update, task.delete | Step0なし | Step0 新設「task.ts へ update/delete を追記(写経)」。update は楽観ロック(expectedUpdatedAt)含む(反映済み) | day14 |
 | 16 | ステータス変更・時間記録 | task.addTime | Step0なし | Step0 新設「task.ts へ addTime を追記(写経)」(反映済み) | day15 |
 | 28 | タスク一括操作 | task.bulkComplete/bulkDelete/bulkUpdateStatus | Step0なし | Step0 新設「task.ts へ bulk3種を追記(写経)」。既存のStep1(登録のみ)をStep0(逐語写経)へ変換し以降のUIステップを1つずつ繰り上げ(反映済み) | day16 |
-| 18 | コメント投稿 | comment.create, comment.getByTaskId, task.getById | register-only | Step0 を「comment.ts 新規作成 + create/getByTaskId 写経」に。task.getById も task.ts へ追記(task族の穴埋め) | day16 |
-| 19 | コメント編集・削除 | comment.update, comment.delete | Step0なし | Step0 新設「comment.ts へ update/delete 追記(写経)」 | day18 |
+| 18 | コメント投稿 | comment.create, comment.getByTaskId, task.getById | register-only | Step0 を「comment.ts 新規作成 + create/getByTaskId 写経」に。task.getById も task.ts へ追記(task族の穴埋め) (反映済み) | day16 |
+| 19 | コメント編集・削除 | comment.update, comment.delete | Step0なし | Step0 新設「comment.ts へ update/delete 追記(写経)」(反映済み) | day18 |
 | 14/20 | タスク検索 | search族5procedure | day14反映済み / day20反映済み | day14 で search.ts を新規作成し担当者取得2手続き(getProjectMembers / getMembersByProject)を写経(反映済み)。day20 で残り3つ(search / quickSearch / getUserProjects)を追記し、完成版 source と同じ並びへ整える形で写経化(反映済み)。5 procedure すべてを写経で網羅する | project族完了(済) |
 | 21 | 統計カード | report.getOverview | register-only | Step0 を「report.ts 新規作成 + getOverview 写経」に。集計クエリで難度中〜高。Mermaid必須day | project族完了(済) |
 | 23 | 週次レポート | report.getWeeklyReport | Step0なし | Step0 新設「report.ts へ getWeeklyReport 追記(写経)」 | day21 |
@@ -76,7 +76,7 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
 1. **共有ヘルパーの写経有無**: task/comment 等の procedure は `scripts/_server-routers/_helpers/permission.ts` の `getUserProjectIds` / `assertMemberPermission` / `findTaskWithPermission` 等に依存する。project 族は `_helpers/select.ts` の `USER_SELECT` を「day07で作成済みの共有部品」として import 参照するだけで済ませている。permission ヘルパーも同じ扱い(配布済み共有部品として import)にするか、どこかの day で写経させるかは族変換前に決める必要がある。今回のサンプル(day13/14)は USER_SELECT と同様「共有部品として import 参照」で書いた。
 2. ~~**search 族の day 順序**~~ → **決定事項2 で確定・day14 へ反映済み**: search.ts は初出の day14 で新規作成し担当者取得2手続きを写経、day20 は検索画面用の残り3 procedure の追記のみ。
 3. ~~**未処置の UI 未参照 procedure**~~ → **決定事項3 で確定・完了済み**: `user.getByEmail` / `user.create` / `user.delete` は削除で確定し、PR #308 (4e1764b) で main にマージ済み。G-disposition も解消済み。
-4. **配布ファイルの除外 (scaffold/build-zip 側の変更)**: day を写経化しても、`scaffold-from-scratch.sh` / build-zip がその router ファイルを配布し続けると、受講生の手元に完成品が最初から置かれてしまう。族変換とセットで、その router を配布対象から外す scaffold 側の変更が必要 (project.ts は既にそうなっているはず。要確認)。これは md rewrite とは別の SBI。
+4. **配布ファイルの除外 (scaffold/build-zip 側の変更)**: day を写経化しても、`scaffold-from-scratch.sh` / build-zip がその router ファイルを配布し続けると、受講生の手元に完成品が最初から置かれてしまう。族変換とセットで、その router を配布対象から外す scaffold 側の変更が必要。comment 族は 2026-07-24 時点で `comment.ts` の除外まで反映済み。これは md rewrite とは別の SBI。
 5. ~~**テスト来歴 (G-testchan)**~~ → **全22本の割当を反映済み**: `test-channel-proposal.json` のレビュー済み分類 (写経 / ハーネス) を生成器が読み込み、`procedure-day-map.json` の G-testchan は PASS。新しいテストを追加した場合は、同じ台帳への分類追加が必要。
 
 ## 決定事項 (2026-07-24 局長確認済み)

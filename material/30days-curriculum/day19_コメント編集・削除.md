@@ -88,6 +88,8 @@ Day 18 で作った
 `src/server/api/routers/comment.ts` に
 `update` と `delete` メソッドを追加します。
 投稿できるようになったコメントへ、編集と削除の入口を足します。
+今日の追記まで終わると、このファイルは
+`scripts/_server-routers/comment.ts` と同じ形になります。
 
 **実装**:
 
@@ -351,7 +353,7 @@ const { data: session } =
 スクリーンショット: 本人コメントに編集・削除ボタンが表示されている画面。
 
 ![本人コメントに編集・削除ボタンが表示されている](./screenshots/task-detail-dialog.png)
-> `comment.userId` は Day 18 Step 2 の
+> `comment.userId` は Day 18 Step 1 の
 > 構造テーブルで確認したフィールドです。
 > Prisma のリレーションで取得されます。
 
