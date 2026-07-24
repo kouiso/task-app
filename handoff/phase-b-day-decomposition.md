@@ -92,7 +92,7 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
    根拠: UI 参照ゼロの未使用コード (grep 確認済み。user.create のヒットは全て user.createdAt の誤マッチ)。
    売り物に死にコードを残さない。**PR #308 (commit 4e1764b) で main にマージ済み**。
    src (`src/server/api/routers/user.ts`) と該当テストを削除し、procedure マップを再生成した。
-   これにより user 族の procedure は 8 → 5 (getAll / getById / update / updateProfile / changePassword) となり、
+   この削除で user 族の procedure は 8 → 5 (getAll / getById / update / updateProfile / changePassword) となり、
    G-disposition (UI 未参照 procedure の処置台帳エントリ欠落) も解消済み。
 4. 配布除外 (scaffold/build-zip) は族変換ごとのセット SBI として実施 (決定不要・実行事項)。
 5. テスト来歴 (G-testchan) は各族変換時にそのルーターのテストを写経側へ割当 (決定不要・実行事項)。
