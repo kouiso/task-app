@@ -51,9 +51,9 @@ acceptance は全 day 共通: `check_quality.sh` (Step1-8, 内 Step7=check_tone.
 |-----|--------|-------------|----------|------------|-------------|
 | 13 | タスク一覧 | task.getAll | register-only | Step0 を「task.ts を新規作成し getAll を写経」に。root.ts 登録込み | project族完了(済) |
 | 14 | タスク新規作成 | task.create, search.getProjectMembers | register-only | Step0 に「task.ts へ create を追記(写経)」+「search.ts を新規作成し getProjectMembers を写経」(決定事項2・反映済み) | day13 |
-| 15 | タスク編集・削除 | task.update, task.delete | Step0なし | Step0 新設「task.ts へ update/delete を追記(写経)」。update は楽観ロック(expectedUpdatedAt)含む | day14 |
-| 16 | ステータス変更・時間記録 | task.addTime | Step0なし | Step0 新設「task.ts へ addTime を追記(写経)」 | day15 |
-| 28 | タスク一括操作 | task.bulkComplete/bulkDelete/bulkUpdateStatus | Step0なし | Step0 新設「task.ts へ bulk3種を追記(写経)」 | day16 |
+| 15 | タスク編集・削除 | task.update, task.delete | Step0なし | Step0 新設「task.ts へ update/delete を追記(写経)」。update は楽観ロック(expectedUpdatedAt)含む(反映済み) | day14 |
+| 16 | ステータス変更・時間記録 | task.addTime | Step0なし | Step0 新設「task.ts へ addTime を追記(写経)」(反映済み) | day15 |
+| 28 | タスク一括操作 | task.bulkComplete/bulkDelete/bulkUpdateStatus | Step0なし | Step0 新設「task.ts へ bulk3種を追記(写経)」。既存のStep1(登録のみ)をStep0(逐語写経)へ変換し以降のUIステップを1つずつ繰り上げ(反映済み) | day16 |
 | 18 | コメント投稿 | comment.create, comment.getByTaskId, task.getById | register-only | Step0 を「comment.ts 新規作成 + create/getByTaskId 写経」に。task.getById も task.ts へ追記(task族の穴埋め) | day16 |
 | 19 | コメント編集・削除 | comment.update, comment.delete | Step0なし | Step0 新設「comment.ts へ update/delete 追記(写経)」 | day18 |
 | 14/20 | タスク検索 | search族5procedure | register-only | day14 で search.ts を新規作成し getProjectMembers を写経(既に反映済み)。day20 で残り4つ(search / getUserProjects / quickSearch / getMembersByProject)を追記(写経)。5 procedure すべてを写経で網羅する | project族完了(済) |
