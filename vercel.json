@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm ci"
+  "installCommand": "npm ci --include=dev",
+  "buildCommand": "if [ \"$VERCEL_ENV\" = \"preview\" ]; then SKIP_ENV_VALIDATION=true npm run vercel-build; else npm run vercel-build; fi"
 }

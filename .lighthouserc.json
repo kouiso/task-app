@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "url": ["http://localhost:3000/lp"],
+      "url": ["http://localhost:3000/login"],
       "startServerCommand": "npm run start",
       "startServerReadyPattern": "Ready",
       "numberOfRuns": 1,
