@@ -86,12 +86,64 @@ stateDiagram-v2
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | 作業時間の記録 API（addTime）を自分で書く | 7分 |
 | Step 1 | ステータス変更の仕組みを理解する | 3分 |
 | Step 2 | TimeLogDialogで手動時間記録を作る | 8分 |
 | Step 3 | TaskCardに時間記録を組み込む | 5分 |
 | Step 4 | 動作確認 | 3分 |
 
-**合計時間**: 約19分。
+**合計時間**: 約26分。
+
+---
+
+### Step 0: 作業時間の記録 API（addTime）を自分で書く（7分）
+
+**ゴール**: タスクに作業時間を積み上げる `addTime` を自分で書き、`api.task.addTime` を呼べる状態にします。この API は、このあと Step 2 で作る時間記録ダイアログから呼び出します。
+
+Day 15 では `update` と `delete` を `task.ts` に足しました。今日はそこへ、作業時間を記録する `addTime` をもう1つ足します。骨組みは今までと同じで、入力・処理・戻り値の3部品でできています。今回の処理は「今ある時間に、入力された分数を足す」ところがポイントです。
+
+#### 0-1. 入力スキーマを足す
+
+まず、受け取るデータの形を zod で定義します。`taskRouter` の前（Day 15 で足したスキーマの近く）に追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
+const taskTimeUpdateSchema = z.object({
+  id: z.string().cuid(),
+  minutesToAdd: z.number().min(0),
+});
+```
+
+`id` はどのタスクに記録するかの指定で、`.cuid()`（この形式の id か）で検証します。`minutesToAdd` は今回足す分数です。`.min(0)` を付けているので、マイナスの分数を渡して時間を減らすことはできません。あくまで足すだけの入力にしておくと、記録が意図せず巻き戻る事故を防げます。
+
+#### 0-2. addTime 手続きを書く
+
+`addTime` を、Day 15 で書いた `delete` の直後に足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（delete の直後に追加）
+  addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
+    await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
+
+    return await prisma.task.update({
+      where: { id: input.id },
+      data: {
+        timeSpentMinutes: {
+          increment: input.minutesToAdd,
+        },
+      },
+    });
+  }),
+```
+
+最初の `findTaskWithPermission(input.id, ctx.session.userId, 'canEdit')` は、そのタスクが自分の編集できるものかを確認する共有ヘルパーです。Day 15 の `update` でも使ったものと同じで、権限がなければここで弾かれます。
+
+処理の中心は `timeSpentMinutes` の `increment` です。`increment: input.minutesToAdd` は、今の値に入力された分数を足すという Prisma の書き方です。現在の値を読み出して足し算してから書き戻すのではなく、DB に「この分だけ増やして」と直接頼みます。こうすると、同じタスクにほぼ同時に2回記録しても、片方の記録が消えずに両方とも正しく足されます。
+
+**確認ポイント**:
+- `taskTimeUpdateSchema` を `taskRouter` の前に、`addTime` を `delete` の直後に足した
+- `increment` で今の作業時間に分数を足している
+- `npm run dev` で型エラーが出ていない
 
 ---
 
