@@ -42,7 +42,7 @@ const taskUpdateSchema = z.object({
 
 const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
-  minutesToAdd: z.number().min(0),
+  minutesToAdd: z.number().int().min(0),
 });
 
 async function assertTaskAssigneeBelongsToProject(
@@ -76,8 +76,8 @@ export const taskRouter = createTRPCRouter({
           status: taskStatusSchema.optional(),
           priority: taskPrioritySchema.optional(),
           assigneeId: z.string().cuid().optional(),
-          limit: z.number().min(1).max(100).default(100),
-          offset: z.number().min(0).default(0),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
         })
         .optional(),
     )

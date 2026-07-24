@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
@@ -108,6 +108,8 @@ export function TaskDialog({
     defaultValues: buildTaskFormValues(initialData, projects),
   });
   const selectedProjectId = watch('projectId');
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
   const {
     data: projectMembers,
     isPending: isMembersPending,
@@ -125,8 +127,8 @@ export function TaskDialog({
       return;
     }
 
-    reset(buildTaskFormValues(initialData, projects));
-  }, [initialData, open, projects, reset]);
+    reset(buildTaskFormValues(initialData, projectsRef.current));
+  }, [initialData, open, reset]);
 
   const handleClose = () => {
     reset(buildTaskFormValues(undefined, projects));

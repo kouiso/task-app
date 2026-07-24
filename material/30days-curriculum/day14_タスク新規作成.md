@@ -422,7 +422,7 @@ search: searchRouter,
 
 import { zodResolver }
   from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Controller, useForm }
   from 'react-hook-form';
 import { z } from 'zod';
@@ -641,6 +641,8 @@ export function TaskDialog({
 // filepath: 続き
   const selectedProjectId =
     watch('projectId');
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
   const { data: projectMembers } =
     api.search.getMembersByProject.useQuery(
       { projectId: selectedProjectId },
@@ -657,9 +659,9 @@ export function TaskDialog({
     }
     reset(
       buildTaskFormValues(
-        initialData, projects),
+        initialData, projectsRef.current),
     );
-  }, [initialData, open, projects, reset]);
+  }, [initialData, open, reset]);
 ```
 
 **確認ポイント**:
@@ -669,6 +671,8 @@ export function TaskDialog({
 - `useEffect` で `initialData` の変更時に `reset` している
 
 > `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため、`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
+>
+> `projectsRef` は最新の候補一覧を保持しますが、一覧の再取得だけでは `reset` を実行しません。ダイアログを開いたあとに候補一覧が更新されても、入力途中のタイトルや説明が初期値へ戻らないためです。
 >
 > **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 

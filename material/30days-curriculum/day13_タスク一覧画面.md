@@ -165,8 +165,8 @@ export const taskRouter = createTRPCRouter({
           status: taskStatusSchema.optional(),
           priority: taskPrioritySchema.optional(),
           assigneeId: z.string().cuid().optional(),
-          limit: z.number().min(1).max(100).default(100),
-          offset: z.number().min(0).default(0),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
         })
         .optional(),
     )
@@ -176,7 +176,7 @@ export const taskRouter = createTRPCRouter({
       const offset = input?.offset ?? 0;
 ```
 
-各項目に `.optional()` が付いているのは、その項目を省略してよいという意味です。いちばん外側にも `.optional()` があるので、条件オブジェクトごと渡さずに呼ぶこともできます。`limit` と `offset` は一度に取りすぎないための件数と開始位置で、`.default(...)` で既定値を持たせています。`.query(...)` の中の `ctx` にはログイン中のユーザー情報が入り、`input` には今定義した条件が入ってきます。`where` は、このあと組み立てる検索条件を入れておく変数です。
+各項目に `.optional()` が付いているのは、その項目を省略してよいという意味です。いちばん外側にも `.optional()` があるので、条件オブジェクトごと渡さずに呼ぶこともできます。`limit` と `offset` は一度に取りすぎないための件数と開始位置で、`.int()` により小数を拒否し、`.default(...)` で既定値を持たせています。`.query(...)` の中の `ctx` にはログイン中のユーザー情報が入り、`input` には今定義した条件が入ってきます。`where` は、このあと組み立てる検索条件を入れておく変数です。
 
 #### 0-3. ここが一番のヤマ場（自分のプロジェクトのタスクだけ返す）
 

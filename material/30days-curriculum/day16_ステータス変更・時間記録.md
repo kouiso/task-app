@@ -110,11 +110,11 @@ Day 15 では `update` と `delete` を `task.ts` に足しました。今日は
 // filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
 const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
-  minutesToAdd: z.number().min(0),
+  minutesToAdd: z.number().int().min(0),
 });
 ```
 
-`id` はどのタスクに記録するかの指定で、`.cuid()`（この形式の id か）で検証します。`minutesToAdd` は今回足す分数です。`.min(0)` を付けているので、マイナスの分数を渡して時間を減らすことはできません。あくまで足すだけの入力にしておくと、記録が意図せず巻き戻る事故を防げます。
+`id` はどのタスクに記録するかの指定で、`.cuid()`（この形式の id か）で検証します。`minutesToAdd` は今回足す分数です。`.int()` で整数だけを受け取り、`.min(0)` でマイナスの分数を拒否します。あくまで分単位で足す入力にしておくと、記録が意図せず巻き戻る事故を防げます。
 
 #### 0-2. addTime 手続きを書く
 

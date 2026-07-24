@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROUTERS_DIR = REPO_ROOT / "scripts" / "_server-routers"
@@ -169,10 +169,13 @@ def load_test_channels() -> dict[str, str]:
     proposals = data.get("proposals", {})
     channels: dict[str, str] = {}
     for test_file, proposal in proposals.items():
+        normalized_path = PurePosixPath(test_file.replace("\\", "/"))
+        if normalized_path.is_absolute() or ".." in normalized_path.parts:
+            raise ValueError(f"test channel path must stay inside the repository: {test_file!r}")
         channel = proposal.get("channel")
         if channel not in {"写経", "ハーネス"}:
             raise ValueError(f"invalid test channel for {test_file}: {channel!r}")
-        channels[test_file] = channel
+        channels[normalized_path.as_posix()] = channel
     return channels
 
 
@@ -254,7 +257,8 @@ def main() -> int:
     print(f"written: {OUT_PATH.relative_to(REPO_ROOT)}")
 
     # 未処置のUI未参照procedureが残っていればFAIL(処置台帳に追記して解消する)。
-    return 1 if undispositioned else 0
+    has_unassigned_tests = any(channel == "UNASSIGNED" for channel in test_channel.values())
+    return 1 if undispositioned or has_unassigned_tests else 0
 
 
 if __name__ == "__main__":
