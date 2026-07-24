@@ -9,13 +9,19 @@ import { createSession } from '@/lib/session';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 
-const userUpdateSchema = z.object({
-  id: z.string().cuid(),
-  name: z.string().min(1, '名前を入力してください').optional(),
-  avatar: z.string().url().optional().nullable(),
-  role: z.nativeEnum(USER_ROLE).optional(),
-  isActive: z.boolean().optional(),
-});
+const userUpdateSchema = z
+  .object({
+    id: z.string().cuid(),
+    name: z.string().min(1, '名前を入力してください').optional(),
+    avatar: z.string().url().optional().nullable(),
+    role: z.nativeEnum(USER_ROLE).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    ({ name, avatar, role, isActive }) =>
+      name !== undefined || avatar !== undefined || role !== undefined || isActive !== undefined,
+    '更新する項目を1つ以上指定してください',
+  );
 
 const profileUpdateSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),

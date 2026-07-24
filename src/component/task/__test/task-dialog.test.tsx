@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { TaskDialog } from '../task-dialog';
@@ -94,5 +94,37 @@ describe('TaskDialog', () => {
     );
 
     expect(screen.getByLabelText('期限')).toBeInTheDocument();
+  });
+
+  it('プロジェクト一覧が遅れて届いても入力中の値を維持して最初の候補を選ぶ', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <TaskDialog
+        open={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        initialData={undefined}
+        projects={[]}
+      />,
+    );
+
+    await user.type(screen.getByPlaceholderText('タスクのタイトルを入力'), '入力中のタスク');
+
+    rerender(
+      <TaskDialog
+        open={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        initialData={undefined}
+        projects={projects}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText('タスクのタイトルを入力')).toHaveValue('入力中のタスク');
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'プロジェクトを選択' })).toHaveTextContent(
+        'プロジェクトA',
+      );
+    });
   });
 });

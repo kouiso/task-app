@@ -79,6 +79,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | 週次レポート API（getWeeklyReport）を自分で書く | 14分 |
 | Step 1 | プロジェクト統計の集計ロジック | 5分 |
 | Step 2 | 統計テーブルを表示 | 5分 |
 | Step 3 | 週次レポートAPIの概要 | 3分 |
@@ -90,6 +91,180 @@ flowchart TD
 **合計時間**: 約31分。
 
 ---
+
+### Step 0: 週次レポート API（getWeeklyReport）を自分で書く（14分）
+
+**ゴール**: Day 21 で作った `src/server/api/routers/report.ts` に `getWeeklyReport` を追記し、`api.report.getWeeklyReport` を自分で生やします。今回の追加は `reportRouter` の2本目の procedure です。新規ファイルではなく、前回作った `getOverview` の **直後** に足します。
+
+週次レポートは「今の合計」ではなく「7日ごとの推移」を返します。だから Day 21 の `count` 中心の集計とは違い、今回は **期間を切る**・**週ごとに配列を作る**・**各週の中で status / priority を数える**、という3段階になります。
+
+最初に、Day 21 の import 群を次の完成形へ置き換えます。今日から使う `TRPCError`・`z`・`USER_ROLE` が加わります。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（import 群の完成形）
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
+```
+
+`z` は入力検証、`USER_ROLE` と `TRPCError` は他人のレポートを一般ユーザーから守る認可エラーに使います。
+
+#### 0-1. getOverview の直後に input を足す
+
+```typescript
+// filepath: src/server/api/routers/report.ts（getOverview の直後に追加）
+  getWeeklyReport: protectedProcedure
+    .input(
+      z.object({
+        weeks: z.number().int().min(1).max(12).default(4),
+        userId: z.string().cuid().optional(),
+      }).default({}),
+    )
+    .query(async ({ ctx, input }) => {
+```
+
+ここで受け取るのは `weeks` と `userId` の2つです。`weeks` は何週間分を見るかで、整数かつ最小 1、最大 12、未指定なら 4 です。`userId` は「誰の週次レポートを見るか」で、省略したときは自分自身のレポートになります。
+
+#### 0-2. 他人のレポートを見てよいかを確認する
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      if (input.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+```
+
+ここが認可の入口です。`userId` を指定していて、しかもそれが自分以外なら、管理者だけに許可します。一般ユーザーが他人の週報を覗けてしまうと困るので、ここで止めます。
+
+#### 0-3. 集計する期間を決める
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      const targetUserId = input.userId ?? ctx.session.userId;
+      const now = new Date();
+      // 週バケットは「今日で終わる直近7日間」を最終週として7日刻みで遡る。
+      // 旧実装は最終週が「今日0時〜現在」だけの進行中バケットで、「4週間」表示の
+      // 実カバー範囲が3週間+今日に縮んでいた（PR#285 レビュー指摘）。排他的上端を
+      // 明日0時に固定した完全な7日バケット×weeks本にすることで、ラベル・週平均の
+      // 分母と実際の集計範囲が一致し、範囲内タスクは必ずいずれかの週に入る。
+      // 日付ラベルは toISOString()（UTC）で出すため、バケット境界も UTC で刻む。
+      // ローカル時刻メソッドで刻むと、JST などのサーバーでラベルが1日ずれる。
+      const rangeEnd = new Date(now);
+      rangeEnd.setUTCHours(0, 0, 0, 0);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
+```
+
+`rangeEnd` を「明日の 00:00 UTC」に寄せているのが重要です。1週間を 7 日ぴったりで切るため、最後の週も「今日 0 時から現在まで」ではなく、**今日を含む 7 日間** に揃えます。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      const startDate = new Date(rangeEnd);
+      startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
+
+      const where = {
+        completedAt: { gte: startDate, lte: now },
+        assigneeId: targetUserId,
+      };
+```
+
+ここで期間の下端を作り、`where` に閉じ込めます。今回は「その期間に完了したタスク」だけを見るので、`completedAt` を軸にしています。
+
+#### 0-4. 期間内タスクを 1 回で取る
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      const tasks = await prisma.task.findMany({
+        where,
+        select: {
+          id: true,
+          completedAt: true,
+          status: true,
+          priority: true,
+          project: { select: { id: true, name: true } },
+        },
+      });
+```
+
+ここでは週ごとに使う材料を 1 回で取ります。`status` と `priority` を後で数えるので両方必要です。`project` も返していますが、これは週次ページや将来の拡張で同じ配列をそのまま使える形にしておくためです。
+
+#### 0-5. 1週ずつバケットを作る
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
+        const weekStart = new Date(startDate);
+        weekStart.setUTCDate(weekStart.getUTCDate() + i * 7);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+        const weekTasks = tasks.filter(
+          (task) => task.completedAt && task.completedAt >= weekStart && task.completedAt < weekEnd,
+        );
+```
+
+`Array.from({ length: input.weeks }, (_, i) => ...)` は「必要な週数ぶんだけ箱を作る」書き方です。各週について `weekStart` と `weekEnd` を作り、その範囲に入るタスクだけを `filter` で抜き出します。終了側を `< weekEnd` にしているので、同じタスクが次の週と二重に数えられません。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+        return {
+          week: `${i + 1}週目`,
+          weekStart: weekStart.toISOString().split('T')[0],
+          totalCompleted: weekTasks.length,
+          byStatus: Object.fromEntries(
+            Object.values(TASK_STATUS).map((status) => [
+              status,
+              weekTasks.filter((t) => t.status === status).length,
+            ]),
+          ),
+```
+
+`week` は画面表示用ラベル、`weekStart` はその週の開始日です。`byStatus` は `TASK_STATUS` を1つずつ回して件数を数え、`Object.fromEntries` で `{ TODO: 3, DONE: 5, ... }` の形へ戻しています。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+          byPriority: Object.fromEntries(
+            Object.values(TASK_PRIORITY).map((priority) => [
+              priority,
+              weekTasks.filter((t) => t.priority === priority).length,
+            ]),
+          ),
+        };
+      });
+```
+
+`byPriority` も考え方は同じです。Day 23 のグラフは、この `weeklyData` をクライアント側で `chartData` と `statusData` に組み替えて使います。server 側の役目は「週ごとの集計済み材料を返すところ」までです。
+
+#### 0-6. 最後に返して閉じる
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      return {
+        weeks: input.weeks,
+        startDate: startDate.toISOString(),
+        endDate: now.toISOString(),
+        weeklyData,
+        totalCompleted: tasks.length,
+      };
+    }),
+});
+```
+
+これで `reportRouter` は `getOverview` と `getWeeklyReport` の2本立てになりました。`root.ts` は Day 21 で `report: reportRouter` を登録済みなので、今日は追加の登録作業は不要です。
+
+**確認ポイント**:
+- `src/server/api/routers/report.ts` の `getOverview` の直後に `getWeeklyReport` を追記できた
+- `weeks` / `userId` の入力検証、管理者チェック、週バケット生成まで source と同じ順序で書けた
+- `root.ts` は Day 21 時点の `report: reportRouter` のままでよいと理解できた
 
 ### Step 1: プロジェクト統計の集計ロジック（5分）
 

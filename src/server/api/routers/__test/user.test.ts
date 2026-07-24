@@ -87,6 +87,14 @@ describe('userRouter', () => {
       expect(result.name).toBe('新しい名前');
     });
 
+    it('更新項目がない入力を拒否する', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-upd-empty') });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await expect(caller.user.update({ id: user.id })).rejects.toThrow(
+        '更新する項目を1つ以上指定してください',
+      );
+    });
+
     it('本人による role/isActive の変更は拒否される', async () => {
       const user = await createTestUser({ email: uniqueEmail('u-upd-role') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);

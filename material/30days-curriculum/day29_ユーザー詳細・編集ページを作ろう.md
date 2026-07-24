@@ -76,6 +76,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
+| Step 0 | user.ts に getById / update を追記する | 16分 | `src/server/api/routers/user.ts` | 詳細取得と更新APIが生える |
 | Step 1 | 動的ルーティングの仕組みを理解する | 5分 | 概念説明のみ | 仕組みが頭に入る |
 | Step 2 | ユーザー詳細ページのファイルを作成 | 5分 | `src/app/user/[id]/page.tsx` | ファイルが存在する |
 | Step 3 | URLからユーザーIDを取得してデータを取得 | 7分 | `src/app/user/[id]/page.tsx` | ユーザー名が表示される |
@@ -90,6 +91,220 @@ flowchart TD
 **合計時間**: 約60分。
 
 ---
+
+### Step 0: user.ts に getById / update を追記する（16分）
+
+**ゴール**: Day 24・Day 25 で作った `src/server/api/routers/user.ts` に、`getById` と `update` を追記します。今日は UI で動的ルーティングを学びますが、その前に「ユーザー詳細を返す入口」と「編集内容を保存する出口」を完成させます。
+
+この2本で初めて、Day 24 の一覧 → Day 29 の詳細 → Day 29 の編集、という流れが閉じます。ここも source と同じく、**閲覧権限** と **更新権限** を先に判定してから DB を触ります。
+
+最初に import 群を完成形へ置き換えます。`getById` の未完了タスク絞り込みに使う `TASK_STATUS` が今日の追加分です。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（import 群の完成形）
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/session';
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+```
+
+Day 25 で書いた `profileUpdateSchema` の前へ、管理者または本人が使う更新入力を追加します。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（profileUpdateSchema の前に追加）
+const userUpdateSchema = z
+  .object({
+    id: z.string().cuid(),
+    name: z.string().min(1, '名前を入力してください').optional(),
+    avatar: z.string().url().optional().nullable(),
+    role: z.nativeEnum(USER_ROLE).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    ({ name, avatar, role, isActive }) =>
+      name !== undefined ||
+      avatar !== undefined ||
+      role !== undefined ||
+      isActive !== undefined,
+    '更新する項目を1つ以上指定してください',
+  );
+```
+
+#### 0-1. getAll の直後に getById を足す
+
+完成版 source では `getAll` の次が `getById` です。まずそこへ追記します。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（getAll の直後に追加）
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      // 本人またはADMINのみ他ユーザーの詳細情報にアクセス可能
+      if (ctx.session.userId !== input.id && ctx.session.role !== USER_ROLE.ADMIN) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を行う権限がありません',
+        });
+      }
+```
+
+`getById` は管理者専用ではありません。本人なら自分の詳細を見られる必要があるからです。だから `protectedProcedure` を使い、`本人または ADMIN` という条件を中で判定しています。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      const user = await prisma.user.findUnique({
+        where: { id: input.id },
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+          projects: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: true,
+                },
+              },
+            },
+          },
+```
+
+ここからが「詳細ページに必要なデータ」を返す本体です。`USER_DETAIL_SELECT` に加えて、登録日・更新日・所属プロジェクトを返します。`projects.include.project.select` が少し深いですが、これは `ProjectMember` 経由でぶら下がっているプロジェクト本体の `id`・`name`・`color` まで一緒に返すためです。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+          assignedTasks: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true,
+              dueDate: true,
+            },
+            where: {
+              status: {
+                notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
+              },
+            },
+            orderBy: { dueDate: 'asc' },
+          },
+        },
+      });
+```
+
+`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので、`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+
+      return user;
+    }),
+```
+
+`findUnique` は「無ければ null」を返すので、そのまま返さず `NOT_FOUND` に変換します。UI 側はこのエラーを受けて 404 やエラートーストに繋げられます。
+
+#### 0-2. 次に update を追加する
+
+`getById` の直後に `update` を追記します。Day 24 で先に置いた `userUpdateSchema` をここで使います。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（getById の直後に追加）
+  update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, ...data } = input;
+
+    if (id !== ctx.session.userId) {
+      // 他ユーザーを更新する場合はセッションのroleでADMIN判定
+      if (ctx.session.role !== USER_ROLE.ADMIN) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: '管理者権限が必要です',
+        });
+      }
+```
+
+ここでもまず権限判定です。更新対象が自分以外なら、管理者だけに許可します。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+    } else {
+      // 自分のプロフィール更新の場合、roleとisActiveは変更不可
+      if (data.role !== undefined || data.isActive !== undefined) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'roleとisActiveは変更できません',
+        });
+      }
+    }
+```
+
+本人編集のときは逆に制限が入ります。自分の名前やアバターは変えられても、自分で `role` や `isActive` を変えるのは不可です。ここを入れておかないと、一般ユーザーが DevTools から管理者権限を送り込めてしまいます。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+    const updateData: Prisma.UserUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.avatar !== undefined) {
+      updateData.avatar = data.avatar;
+    }
+    if (data.role !== undefined) {
+      updateData.role = data.role;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+```
+
+ここは「渡された項目だけを更新対象に足す」段階です。空文字や `undefined` を無理にまとめて送らず、存在する項目だけ 1 本ずつ加えています。Day 25 の `updateProfile` で作った `updateData` と同じ考え方です。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+    return await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        ...USER_DETAIL_SELECT,
+        updatedAt: true,
+      },
+    });
+  }),
+```
+
+更新後は、画面がすぐに描画し直せるよう `USER_DETAIL_SELECT` と `updatedAt` を返します。ここまでで `update` は完成です。
+
+#### 0-3. Day 25 までの user.ts 完成形を確認する
+
+今日ここまで追記すると、`src/server/api/routers/user.ts` には次の5本が揃います。
+
+| 順番 | procedure | 追加した日 |
+|------|-----------|-----------|
+| 1 | `getAll` | Day 24 |
+| 2 | `getById` | Day 29 |
+| 3 | `update` | Day 29 |
+| 4 | `updateProfile` | Day 25 |
+| 5 | `changePassword` | Day 25 |
+
+順番も source と同じです。`root.ts` の `user: userRouter` は Day 24 ですでに登録済みなので、今日も root の追記はありません。
+
+**確認ポイント**:
+- `src/server/api/routers/user.ts` に `getById` と `update` を source と同じ位置へ追記できた
+- `getById` が「本人または ADMIN」、`update` が「本人更新 / 他人更新」で分岐している
+- Day 24〜29 の積み上がりで `userRouter` の5手続きが揃った
 
 ### Step 1: 動的ルーティングの仕組みを理解する（5分）
 

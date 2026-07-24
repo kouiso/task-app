@@ -98,6 +98,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | タスク取得 API（getAll・getById）を自分で書く | 20分 |
 | Step 1 | ページの土台を作る | 5分 |
 | Step 2 | タスクデータを取得する | 5分 |
 | Step 3 | フィルター用のstateとimportを追加する | 5分 |
@@ -107,27 +108,253 @@ src/
 | Step 7 | タスク詳細ダイアログを追加する | 7分 |
 | Step 8 | 動作確認 | 4分 |
 
-**合計時間**: 約45分。
+**合計時間**: 約65分。
 
 ---
 
-### Step 0: タスク API を有効化する（2分）
+### Step 0: タスク取得 API（getAll・getById）を自分で書く（20分）
 
-`src/server/api/root.ts` に task ルーターを追加します。
+**ゴール**: タスク一覧を返す `getAll` と、詳細ダイアログで1件を返す `getById` を自分で書き、`root.ts` に登録して、画面から両方を呼べる状態にします。
+
+一覧画面には、サーバーが持っているタスクを画面まで運んでくる入口が必要です。その入口を、今日は自分の手で1つ作ります。Day 09 でプロジェクト一覧の `getAll` を書いたのと同じ流れです。
+
+#### tRPC の手続きは3つの部品でできている（復習）
+
+Day 09 で見たとおり、tRPC の手続き（procedure）はいつも同じ3部品の組み合わせです。今日の `getAll` も、この型に当てはめるだけです。
+
+| 部品 | 役割 | `task.getAll` での中身 |
+|------|------|----------------------|
+| 入力（input） | クライアントから何を受け取るか。`z` で形を検証する | プロジェクト・ステータス・担当者などの絞り込み条件 |
+| 処理（query） | 受け取った条件で DB に問い合わせる | Prisma でタスクを検索する |
+| 戻り値（return） | 画面に返すデータ | タスクの配列 |
+
+今日は一覧取得の `getAll` に加えて、Step 7 の詳細ダイアログが呼ぶ `getById` も書きます。`create` や `update` は、それを実際に使う Day 14 以降で1つずつ足していきます。
+
+#### 0-1. まず import から
+
+`src/server/api/routers/task.ts` を新規作成し、先頭に import を書きます。
 
 ```typescript
-// filepath: src/server/api/root.ts（import を追加）
-import { taskRouter } from './routers/task';
+// filepath: src/server/api/routers/task.ts
+import { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import {
+  assertMemberPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+```
 
-// appRouter に追加
+import は「これから使う道具を最初に並べておく」宣言です。`Prisma` は `where`（検索条件）の型注釈に使います。`taskStatusSchema` と `taskPrioritySchema` は、この画面でも使うステータス・優先度の検証ルールです。`protectedProcedure` はログイン済みの人だけが呼べる手続きを作る道具、`prisma` は DB に問い合わせる道具です。`getUserProjectIds` は「ログイン中のユーザーがメンバーになっているプロジェクトの id 一覧」を返す共有ヘルパーです。`assertMemberPermission` は、このあと `getById` で取得したタスクを自分が閲覧できるか確認します。`USER_SELECT` は返してよいユーザー項目だけを選びます。
+
+#### 0-2. 手続きの骨組みと入力を書く
+
+`getAll` の骨組みを書きます。`protectedProcedure` で始めると、ログインしていない人がこの API を呼んだときに自動で弾かれます。`.input(...)` では受け取る絞り込み条件を定義します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+export const taskRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          projectId: z.string().cuid().optional(),
+          status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
+          assigneeId: z.string().cuid().optional(),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.TaskWhereInput = {};
+      const limit = input?.limit ?? 100;
+      const offset = input?.offset ?? 0;
+```
+
+各項目に `.optional()` が付いているのは、その項目を省略してよいという意味です。いちばん外側にも `.optional()` があるので、条件オブジェクトごと渡さずに呼ぶこともできます。`limit` と `offset` は一度に取りすぎないための件数と開始位置で、`.int()` により小数を拒否し、`.default(...)` で既定値を持たせています。`.query(...)` の中の `ctx` にはログイン中のユーザー情報が入り、`input` には今定義した条件が入ってきます。`where` は、このあと組み立てる検索条件を入れておく変数です。
+
+#### 0-3. ここが一番のヤマ場（自分のプロジェクトのタスクだけ返す）
+
+ここが `getAll` で最も気をつける部分です。タスクはプロジェクトにぶら下がるので、「自分がメンバーのプロジェクトのタスクだけ」を返さないと、他人のタスクまで見えてしまいます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      const projectIds = await getUserProjectIds(ctx.session.userId);
+
+      where.projectId = { in: projectIds };
+
+      if (input?.projectId) {
+        if (!projectIds.includes(input.projectId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'このプロジェクトへのアクセス権限がありません',
+          });
+        }
+        where.projectId = input.projectId;
+      }
+```
+
+`getUserProjectIds` で自分が入っているプロジェクトの id 一覧を取り、`where.projectId = { in: projectIds }` で「その中のどれかに属するタスク」に絞ります。`input.projectId` で特定のプロジェクトを指定されたときは、それが自分の一覧に含まれるかを確認し、含まれないなら `TRPCError` を `throw` して処理を打ち切ります。`throw` は「これ以上は進めない」とその場で処理を止める命令です。この確認を挟まないと、他人のプロジェクト id を渡すだけで中身が覗けてしまいます。
+
+#### 0-4. 残りの絞り込み条件を足す
+
+弾く条件を通過したら、ステータス・優先度・担当者の絞り込みを足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
+      if (input?.assigneeId) where.assigneeId = input.assigneeId;
+```
+
+3つとも、指定されたときだけ条件に足します。未指定のときはその条件を使わないので、絞り込みなしで対象になります。
+
+#### 0-5. Prisma でタスクを取得する
+
+組み立てた `where` を使って、Prisma で一覧を取得します。画面はプロジェクト名・担当者・コメントを表示するので、関連するデータも `include` で一緒に取ってきます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      return await prisma.task.findMany({
+        where,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+```
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+```
+
+`include` は関連するデータも一緒に取ってくる指定です。`project` はタスクの所属プロジェクト、`createdBy` と `assignee` は作成者と担当者で、どちらも `USER_SELECT` で必要な項目だけに絞り、パスワードなどは返しません。`comments` はコメントとその投稿者を新しい順に取ります。こうして関連を一緒に取っておくと、画面側は追加の通信なしで表示できます。
+
+#### 0-6. 並び順と件数を指定して返す
+
+最後に、並び順と取得件数を付けて閉じます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+        take: limit,
+        skip: offset,
+      });
+    }),
+```
+
+`orderBy` は `position`（並べ替え用の番号）の昇順で、同じなら作成日の新しい順にします。`take` と `skip` は取得件数と開始位置の指定です。ここでは `}),` で `getAll` までを閉じ、次の手続きを続けられる状態にします。
+
+#### 0-7. 詳細ダイアログ用の getById を書く
+
+Step 7 で配置する `TaskDetailDialog` は、選択した1件を `api.task.getById` で取得します。画面を置く前に API を用意して、Day 13 の終了時点で型チェックと詳細表示の両方が成立するようにします。`getAll` の直後へ追加してください。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（getAll の直後に追加）
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+```
+
+```typescript
+// filepath: src/server/api/routers/task.ts（getById の続き）
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+```
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'タスクが見つかりません',
+        });
+      }
+
+      assertMemberPermission(task.project.members);
+
+      return task;
+    }),
+});
+```
+
+`getById` でも project の members をログインユーザーに絞って取得し、`assertMemberPermission` で閲覧権限を確認します。コメントも一緒に返すので、詳細ダイアログは別の通信を増やさず表示できます。最後の `});` で `taskRouter` 全体を閉じます。
+
+**確認ポイント**:
+- `src/server/api/routers/task.ts` に `getAll` と `getById` を書き、`}),` と `});` まで閉じた
+- `getUserProjectIds` を使って自分のプロジェクトのタスクだけに絞っている
+- `getById` でも `assertMemberPermission` で閲覧権限を確認している
+- `npm run dev` で型エラーが出ていない（この API を画面から呼ぶのは Step 2 以降なので、今は起動時にエラーが出なければよい）
+
+#### 0-8. root.ts に task ルーターを登録する
+
+`taskRouter` を書いただけでは、まだ画面から呼べません。作った router を `root.ts` に登録して、初めて `api.task.getAll` と `api.task.getById` という呼び名が生まれます。Day 09 で `project` を登録したのと同じ形です。
+
+```typescript
+// filepath: src/server/api/root.ts
+import { authRouter } from './routers/auth';
+import { projectRouter } from './routers/project';
+import { taskRouter } from './routers/task';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   project: projectRouter,
   task: taskRouter,
 });
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
 ```
 
-**確認ポイント**: `task: taskRouter` を追加しました。
+`appRouter` に `task: taskRouter` を足したことで、フロント側の `api.task.getAll` と `api.task.getById` が手続きにつながります。今の `root.ts` には auth・project・task の3つが並びます。`comment` や `search` などは、それを使う Day で1つずつ足していきます。
+
+**確認ポイント**:
+- `root.ts` に `taskRouter` の import と `task: taskRouter` の2行を追加した
+- `npm run dev` で型エラーが出ていない
 
 ---
 

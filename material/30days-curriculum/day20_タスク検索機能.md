@@ -59,6 +59,7 @@ flowchart TD
 
 | ファイル | 役割 |
 |---------|------|
+| `src/server/api/routers/search.ts` | search ルーターの残り3手続きを追記し、完成版の並びに揃える |
 | `src/app/search/page.tsx` | 検索ページ本体（新規作成） |
 | `src/app/search/loading.tsx` | ローディング画面（既存） |
 
@@ -76,7 +77,8 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 1 | 検索APIを理解する | 3分 |
+| Step 0 | search ルーターの残り3手続きを自分で書く | 22分 |
+| Step 1 | 検索画面から使うAPIを確認する | 3分 |
 | Step 2 | ページの土台を作る | 5分 |
 | Step 3 | zodスキーマとuseFormを設定する | 5分 |
 | Step 4 | キーワード入力とプロジェクトフィルター | 5分 |
@@ -87,34 +89,387 @@ flowchart TD
 | Step 9 | プロジェクト結果と削除機能を追加する | 5分 |
 | Step 10 | 動作確認 | 3分 |
 
-**合計時間**: 約48分。
+**合計時間**: 約70分。
 
 ---
 
-### Step 0: 検索 API の登録を確認する（2分）
+### Step 0: search ルーターの残り3手続きを自分で書く（22分）
 
-`src/server/api/root.ts` に search ルーターが登録済みか確認します。
-Day 14 で `api.search.getProjectMembers` を使うため、
-この登録はすでに済んでいるはずです。
-もし抜けていたら、ここで追加してください。
+**ゴール**: Day 14 で作った `src/server/api/routers/search.ts` に、
+残っている `search`・`quickSearch`・`getUserProjects` を追記します。
+最後に、この Step で示す5手続きの順序と確認ポイントを使って自己点検します。
+
+Day 14 では担当者候補を取る 2 手続きだけを先に作りました。今日はその続きです。検索画面は `api.search.search` と `api.search.getUserProjects` を使います。さらに `quickSearch` は画面から直接は呼ばれませんが、完成版 source とテストでは使うので、ここで一緒に仕上げます。
+
+大事なのは、**今日の作業で `search.ts` を完成版 source と同じ並びに揃える**ことです。Day 14 の時点では `getProjectMembers` と `getMembersByProject` だけを先に書きましたが、完成版ではその前に `search`・`quickSearch`・`getUserProjects` が入ります。ここで順番を整えておくと、以降の Day と差分を見比べやすくなります。
+
+#### 0-1. まず足りない import と定数を追加する
+
+Day 14 で書いた import に、今日初めて必要になるものだけを足します。
+`Prisma` は検索条件の型に使います。
+`taskStatusSchema` と `taskPrioritySchema` は検索フォーム入力の検証に使います。
+`getUserProjectIds` は「自分が参加しているプロジェクトだけを検索対象にする」ために使います。
 
 ```typescript
-// filepath: src/server/api/root.ts（import を追加）
-import { searchRouter } from './routers/search';
-
-// appRouter に追加
-  search: searchRouter,
+// filepath: src/server/api/routers/search.ts（既存 import に追記）
+import type { Prisma } from '@prisma/client';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { getUserProjectIds } from './_helpers/permission';
 ```
 
-**確認ポイント**: `search: searchRouter` が存在します。
+続けて、Day 14 の `import` 群の下に検索件数の上限を置きます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（import の下に追加）
+const SEARCH_TASK_LIMIT = 100;
+const SEARCH_PROJECT_LIMIT = 20;
+const QUICK_SEARCH_TASK_LIMIT = 20;
+const QUICK_SEARCH_PROJECT_LIMIT = 10;
+```
+
+`LIMIT` を定数にしておくと、あとから「検索結果を20件までにしよう」と変えたいときも、数字を探し回らずに済みます。最初に名前を付けておくと、処理本体を読むときも「これは検索件数の上限だな」と一目で分かります。
+
+#### 0-2. 検索入力スキーマを追加する
+
+次に、`search` と `quickSearch` が受け取る入力を zod で定義します。Day 14 の `searchRouter` 宣言の前に、次の 2 つを追加してください。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（searchRouter の前に追加）
+const searchInputSchema = z.object({
+  keyword: z.string().optional(),
+  projectId: z.string().cuid().optional(),
+  status: z
+    .union([z.literal('all'), taskStatusSchema])
+    .optional()
+    .default('all'),
+  priority: z
+    .union([z.literal('all'), taskPrioritySchema])
+    .optional()
+    .default('all'),
+  assignedTo: z.string().cuid().optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+});
+```
+
+`status` と `priority` が `z.union([z.literal('all'), ...])` になっているのは、「特定の値で絞り込む」だけでなく「絞り込みなし」も受け取りたいからです。検索フォーム側では「すべて」を `'all'` で送るので、サーバー側もその値を受け取れる形にしておきます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+const quickSearchInputSchema = z.object({
+  keyword: z.string().trim().min(1, 'キーワードは必須です'),
+});
+```
+
+`quickSearch` は検索窓に文字を入れてすぐ使う用途なので、空文字は受け付けません。ここで `.min(1, ...)` を付けておくと、「検索語なしで呼ばれる」事故を入口で止められます。
+
+#### 0-3. 動的な検索条件を組み立てる部品を作る
+
+複数条件検索は、最初から `.findMany({ where: ... })` を一気に書くと見通しが悪くなります。そこで、完成版 source では「条件を小さな部品に分けてから最後に合体する」形にしています。Day 14 の `searchRouter` の前へ、次を上から順に追加します。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+type FilterConfig = {
+  key: keyof Prisma.TaskWhereInput;
+  value: string | undefined;
+  transform?: (value: string) => Prisma.TaskWhereInput[keyof Prisma.TaskWhereInput];
+};
+```
+
+`FilterConfig` は「どの列に」「どの値を」「必要ならどう変換して」入れるかを表す設計図です。後で `projectId`・`status`・`priority`・`assigneeId` を同じパターンで処理できるように、この形を先に決めています。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInput> => {
+  const result: Partial<Prisma.TaskWhereInput> = {};
+  for (const f of filters) {
+    if (f.value !== undefined && f.value !== 'all') {
+      Object.assign(result, { [f.key]: f.transform ? f.transform(f.value) : f.value });
+    }
+  }
+  return result;
+};
+```
+
+ここで大事なのは `f.value !== 'all'` の判定です。検索フォームでは「すべて」を `'all'` で送りますが、そのまま `where` に入れると `status = 'all'` のような存在しない条件になってしまいます。だから `'all'` は「条件を足さない」という意味で捨てます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+const buildKeywordFilter = (keyword: string, fields: string[]) =>
+  fields.map((field) => ({
+    [field]: { contains: keyword, mode: 'insensitive' satisfies Prisma.QueryMode },
+  }));
+```
+
+`mode: 'insensitive'` は大文字・小文字を区別しない検索です。`Task` と `task` を別物扱いしないので、ユーザーが入力の細かい表記を意識せずに済みます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
+  const dateFilter: Partial<{ gte: Date; lte: Date }> = {};
+  if (dateFrom) {
+    dateFilter.gte = new Date(dateFrom);
+  }
+  if (dateTo) {
+    dateFilter.lte = new Date(dateTo);
+  }
+  return Object.keys(dateFilter).length > 0 ? dateFilter : undefined;
+};
+```
+
+`gte` は「この日以降」、`lte` は「この日以前」です。両方そろっていなくても動くように、開始日だけ・終了日だけでも条件を作れる形にしています。
+
+#### 0-4. 既存の 2 手続きを下へ移し、search を先頭に入れる
+
+ここからが本体です。Day 14 で書いた `getProjectMembers` と
+`getMembersByProject` は、いったんそのまま残してよいです。
+ただし最終的には、その前に `search`・`quickSearch`・`getUserProjects`
+が並ぶ形にしてください。
+完成形の `export const searchRouter = createTRPCRouter({ ... })` の先頭は、
+まず `search:` から始まります。
+
+まず `search` を追加します。`export const searchRouter = createTRPCRouter({` の直後へ、次の 4 ブロックを順に入れてください。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（searchRouter の先頭に追加）
+  search: protectedProcedure.input(searchInputSchema).query(async ({ input, ctx }) => {
+    const userId = ctx.session.userId;
+    const keyword = input.keyword?.trim();
+
+    const baseFilters: FilterConfig[] = [
+      { key: 'projectId', value: input.projectId },
+      { key: 'status', value: input.status },
+      { key: 'priority', value: input.priority },
+      { key: 'assigneeId', value: input.assignedTo },
+    ];
+```
+
+`keyword?.trim()` の `?.` は「値があるときだけ `.trim()` する」です。
+前後の空白だけで検索したときに、空白を条件として持ち込まないためです。
+そのため最初に整えています。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+    const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
+
+    const projectIds = await getUserProjectIds(userId);
+
+    const andConditions: Prisma.TaskWhereInput[] = [
+      { projectId: { in: projectIds } },
+      buildDynamicWhere(baseFilters),
+    ];
+    if (dueDateFilter) {
+      andConditions.push({ dueDate: dueDateFilter });
+    }
+```
+
+`getUserProjectIds(userId)` が重要です。これで「自分が所属しているプロジェクト id の一覧」を先に取り、`projectId: { in: projectIds }` で検索対象を絞ります。これを入れないと、キーワードさえ合えば他人のプロジェクトのタスクまで検索できてしまいます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+    if (keyword) {
+      andConditions.push({ OR: buildKeywordFilter(keyword, ['title', 'description']) });
+    }
+
+    const taskWhere: Prisma.TaskWhereInput = { AND: andConditions };
+
+    const tasks = await prisma.task.findMany({
+      where: taskWhere,
+      include: {
+        project: true,
+        createdBy: {
+          select: USER_SELECT,
+        },
+```
+
+検索条件を `AND` の配列で積み上げているのは、「参加中プロジェクトであること」「指定したフィルターに合うこと」「キーワードが合うこと」を全部同時に満たさせたいからです。条件が増えても、配列に 1 個ずつ足していけば読みやすさを保てます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+        assignee: {
+          select: USER_SELECT,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: SEARCH_TASK_LIMIT,
+    });
+
+    const projects = !keyword
+      ? []
+      : await prisma.project.findMany({
+          where: {
+            members: {
+              some: { userId },
+            },
+```
+
+プロジェクト検索は `!keyword ? []` で分岐しています。プロジェクト名検索はキーワードがあって初めて意味があるので、空検索のときは無理に DB を読まず、空配列を返します。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+            OR: buildKeywordFilter(keyword, ['name', 'description']),
+          },
+          include: {
+            members: {
+              include: {
+                user: {
+                  select: USER_SELECT,
+                },
+              },
+            },
+            _count: {
+              select: { tasks: true },
+            },
+```
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+          },
+          orderBy: { updatedAt: 'desc' },
+          take: SEARCH_PROJECT_LIMIT,
+        });
+
+    return {
+      tasks,
+      projects,
+      totalCount: tasks.length + projects.length,
+    };
+  }),
+```
+
+`totalCount` をサーバー側で返しておくと、フロントエンドは `tasks.length + projects.length` を毎回書かずに済みます。検索結果の件数表示にそのまま使えるので、画面側の責務が軽くなります。
+
+#### 0-5. quickSearch をその次に追加する
+
+続けて `search` の直後に `quickSearch` を追加します。これは検索ページ本体ではまだ使いませんが、完成版 source とテストで必要です。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（search の直後に追加）
+  quickSearch: protectedProcedure.input(quickSearchInputSchema).query(async ({ input, ctx }) => {
+    const userId = ctx.session.userId;
+    const keyword = input.keyword.trim();
+
+    const projectIds = await getUserProjectIds(userId);
+
+    const [tasks, projects] = await Promise.all([
+      prisma.task.findMany({
+        where: {
+          projectId: { in: projectIds },
+          OR: buildKeywordFilter(keyword, ['title', 'description']),
+        },
+```
+
+`Promise.all([...])` にしているのは、タスク検索とプロジェクト検索に
+互いを待つ必要がないからです。
+順番に 2 回待つより、同時実行のほうが検索体験は軽くなります。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+        include: {
+          project: true,
+          createdBy: { select: USER_SELECT },
+          assignee: { select: USER_SELECT },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: QUICK_SEARCH_TASK_LIMIT,
+      }),
+      prisma.project.findMany({
+        where: {
+          members: { some: { userId } },
+          OR: buildKeywordFilter(keyword, ['name', 'description']),
+        },
+```
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+        include: {
+          members: {
+            include: { user: { select: USER_SELECT } },
+          },
+          _count: { select: { tasks: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: QUICK_SEARCH_PROJECT_LIMIT,
+      }),
+    ]);
+```
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+    return {
+      tasks,
+      projects,
+      totalCount: tasks.length + projects.length,
+    };
+  }),
+```
+
+`quickSearch` は `search` より件数上限が小さく、絞り込み条件もキーワードだけです。つまり「しっかり探す」より「さっと候補を見る」用に薄く作っています。同じ検索でも、用途が違えば上限や入力を変えると使い勝手が良くなります。
+
+#### 0-6. getUserProjects を追加する
+
+検索フォームのプロジェクト Select では、参加中のプロジェクト一覧が必要です。そのための `getUserProjects` を、`quickSearch` の直後に追加します。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（quickSearch の直後に追加）
+  getUserProjects: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.userId;
+
+    const projects = await prisma.project.findMany({
+      where: {
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+```
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+      include: {
+        _count: {
+          select: { tasks: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return projects;
+  }),
+```
+
+ここでは `members.some.userId` で「自分が入っているプロジェクトだけ」を取り、`orderBy: { name: 'asc' }` で名前順に並べています。検索フォームの Select は毎回同じ順で並んだほうが探しやすいので、更新順ではなく名前順にしています。
+
+#### 0-7. 既存の 2 手続きはそのまま下へ続ける
+
+この時点で `search.ts` の並びは、上から次の順になります。
+
+1. `search`
+2. `quickSearch`
+3. `getUserProjects`
+4. `getProjectMembers`
+5. `getMembersByProject`
+
+Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード自体は変えません。位置だけが後ろへ下がるイメージです。`root.ts` は Day 18 までに `auth → project → task → search → comment` の時系列順で登録済みなので、今日は追加で触らなくて大丈夫です。`report` と `user` は、それぞれ Day 21 と Day 24 で初めて追加します。
+
+#### 0-8. 最後に完成形を自己点検する
+
+`src/server/api/routers/search.ts` を先頭から読み直し、次の確認ポイントと照らし合わせてください。販売用 ZIP には完成済み router を入れていないため、この教材内のコードと順序が正本です。
+
+**確認ポイント**:
+- `search.ts` の手続き順が `search → quickSearch → getUserProjects → getProjectMembers → getMembersByProject` になっている
+- `searchInputSchema` / `quickSearchInputSchema` / `FilterConfig` / 3つの helper が `searchRouter` の前にある
+- `root.ts` は Day 18 のまま、`search: searchRouter` が `task` と `comment` の間にある
+- `npm run dev` で型エラーが出ていない
 
 ---
 
-### Step 1: 検索APIを理解する（3分）
+### Step 1: 検索画面から使うAPIを確認する（3分）
 
-**ゴール**: search ルーターの構成を把握します。
+**ゴール**: 今書いた `search` ルーターのうち、検索画面がどの手続きを呼ぶのかを整理します。
 
-VS Code で `src/server/api/routers/search.ts` を開いて、検索APIの構造を確認しましょう。`Ctrl+F` で `searchInputSchema` を検索します。
+Day 20 の画面が直接使うのは、主に `search.search` と `search.getUserProjects` です。担当者フィルターには Day 14 で作った `search.getProjectMembers` も使います。まず `src/server/api/routers/search.ts` を開き、`searchInputSchema` と `getUserProjects` を確認しましょう。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
@@ -150,7 +505,8 @@ const searchInputSchema = z.object({
 | `search` | query | 検索実行（メイン） |
 | `quickSearch` | query | クイック検索 |
 | `getUserProjects` | query | ユーザーのプロジェクト取得 |
-| `getProjectMembers` | query | プロジェクトメンバー取得 |
+| `getProjectMembers` | query | 参加中プロジェクトを横断した、担当者候補の取得 |
+| `getMembersByProject` | query | 選択中プロジェクトだけの、担当者候補の取得 |
 
 #### search メソッドのパラメータ
 
@@ -164,7 +520,7 @@ const searchInputSchema = z.object({
 | `dateFrom` | `string (ISO日付)?` | — | 期限開始 |
 | `dateTo` | `string (ISO日付)?` | — | 期限終了 |
 
-> 全てのパラメータが任意です。`status` と `priority` は `'all'` を渡すと絞り込みなしとしてサーバー側で処理されます。
+> `search` は「複数条件検索」、`quickSearch` は「キーワードだけの軽い検索」、`getUserProjects` は「検索フォームの選択肢取得」と役割が分かれています。使い道が違うので、似た名前でも1本に詰め込まず分けています。
 
 > **`dateFrom` / `dateTo` は date-only 入力です。**
 > 完成版 source では生の Date 変換をそのまま使わず、

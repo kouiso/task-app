@@ -80,7 +80,7 @@ graph TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | search ルーターを有効化する | 2分 |
+| Step 0 | タスク作成 API（create）と search ルーターを自分で書く | 25分 |
 | Step 1 | zodスキーマと型を定義する | 5分 |
 | Step 2 | TaskDialogの骨格を作る | 5分 |
 | Step 3 | useFormでフォームを設定する | 5分 |
@@ -91,31 +91,343 @@ graph TD
 | Step 8 | ページにDialogを組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約49分。
+**合計時間**: 約72分。
 
 ---
 
-### Step 0: search ルーターを有効化する（2分）
+### Step 0: タスク作成 API（create）と search ルーターを自分で書く（25分）
 
-**ゴール**: タスク作成フォームで担当者候補を取得できるようにします。
+**ゴール**: `src/server/api/routers/task.ts` に `create` を追加し、`api.task.create` を呼べる状態にします。あわせて、担当者候補の取得に使う `search` ルーターを新規作成し、`root.ts` に登録します。
 
-Day 14 では `api.search.getProjectMembers` を使います。
-Day 20 の検索画面より先に必要なので、
-ここで `src/server/api/root.ts` へ search ルーターを登録します。
+Day 13 で書いた `getAll`・`getById` は、3部品（入力・処理・戻り値）のうち処理が「探す（`.query`）」でした。今日の `create` は「作る（`.mutation`）」になるだけで、骨組みは同じです。Day 10 でプロジェクトの `create` を書いたのと同じ流れです。
+
+#### 0-1. 入力スキーマと import を足す
+
+まず、受け取るデータの形を zod で定義します。`task.ts` の import に次を足します。`_helpers/permission` の行は Day 13 で完成しているため、そのまま残します。
 
 ```typescript
-// filepath: src/server/api/root.ts
-// import群に追加
+// filepath: src/server/api/routers/task.ts（import を追記。permission の行は Day 13 の行と統合した完成形）
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { TASK_STATUS } from '@/lib/constant/status';
+import {
+  assertMemberPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+```
+
+`TASK_STATUS` と `TASK_PRIORITY` は、入力スキーマの既定値に使う定数です。`assertMemberPermission` と `getUserProjectIds` は Day 13 で足したものなので、重ねて import を書かず同じ行を保ちます。
+
+続いて、`export const taskRouter` の前に入力スキーマを追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
+const taskCreateSchema = z.object({
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: taskStatusSchema.default(TASK_STATUS.TODO),
+  priority: taskPrioritySchema.default(TASK_PRIORITY.MEDIUM),
+  dueDate: z.string().datetime().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().cuid(),
+  assigneeId: z.string().cuid().optional(),
+});
+```
+
+`title` に `.min(1, ...)` が付いているのは、空のタイトルでタスクを作れないようにするためです。`status` と `priority` の `.default(...)` は、指定がなかったときに使う既定値です。`projectId` は `.cuid()`（この形式の id か）で検証し、どのプロジェクトに属すかを必ず受け取ります。
+
+#### 0-2. 担当者チェックと並び順採番のヘルパーを足す
+
+最初に、同じプロジェクトへ同時に複数のタスクが作られても `position` が重複しないよう、採番用ヘルパーを `taskRouter` の前に追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+  );
+  if (lockedProjects.length === 0) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'プロジェクトが見つかりません',
+    });
+  }
+
+  const maxPosition = await tx.task.findFirst({
+    where: { projectId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  return (maxPosition?.position ?? -1) + 1;
+};
+```
+
+`FOR UPDATE` は、同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため、同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメーターとして渡され、文字列連結で SQL を作らない安全な書き方です。
+
+次に、指定した担当者がプロジェクトのメンバーかを確認するヘルパーを続けます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+async function assertTaskAssigneeBelongsToProject(
+  projectId: string,
+  assigneeId: string,
+): Promise<void> {
+  const member = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: assigneeId,
+        projectId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!member) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '担当者にはこのプロジェクトのメンバーを指定してください',
+    });
+  }
+}
+```
+
+このヘルパーは、指定された担当者がそのプロジェクトの `ProjectMember`（プロジェクトに紐づくメンバー行）に存在するかを調べ、いなければ `TRPCError` を `throw` します。プロジェクト外の人を担当者にしてしまう事故を防ぎます。
+
+#### 0-3. ここが一番のヤマ場（作ってよい人かを確認する）
+
+`create` の処理本体です。ここで一番大事なのは、タスクを作る前に「その人がこのプロジェクトで作成してよい権限を持っているか」を確認する部分です。`create` は Day 13 で書いた `getById` の直後に足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（getAll の直後に追加）
+  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
+    const project = await prisma.project.findUnique({
+      where: { id: input.projectId },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
+
+    assertMemberPermission(project.members, 'canEdit');
+```
+
+まず対象のプロジェクトを取り、そのとき `members` を「ログイン中の自分の分だけ」に絞って一緒に取ります。プロジェクトが無ければ `NOT_FOUND` で止めます。`assertMemberPermission(project.members, 'canEdit')` は、自分がそのプロジェクトで編集（作成）権限を持っているかを確認し、無ければここで弾きます。これを忘れると、メンバーでない人でもタスクを作れてしまいます。
+
+#### 0-4. 担当者を確認してトランザクションを始める
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    if (input.assigneeId) {
+      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
+    }
+
+    return await prisma.$transaction(async (tx) => {
+```
+
+担当者が指定されているときだけ、0-2 のヘルパーでメンバーかを確認します。続く採番と保存は `$transaction` の中へまとめます。途中で失敗した場合、DB への変更全体が取り消されます。
+
+#### 0-5. 保存するデータを組み立てる
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      const createData: Prisma.TaskCreateInput = {
+        title: input.title,
+        status: input.status,
+        priority: input.priority,
+        dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        position: await getNextTaskPosition(tx, input.projectId),
+        project: {
+          connect: { id: input.projectId },
+        },
+        createdBy: {
+          connect: { id: ctx.session.userId },
+        },
+      };
+```
+
+`getNextTaskPosition(tx, input.projectId)` は、project 行をロックしてから「今の最大番号 + 1」を返します。タスクが1件も無いときはヘルパー内で -1 に1を足すため、最初の番号は 0 です。`project.connect` と `createdBy.connect` は、既にある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
+
+#### 0-6. 任意の項目を足して保存する
+
+`description`・`estimatedHours`・`assigneeId` は任意なので、値があるときだけ足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      if (input.description !== undefined) {
+        createData.description = input.description;
+      }
+      if (input.estimatedHours !== undefined) {
+        createData.estimatedHours = input.estimatedHours;
+      }
+      if (input.assigneeId) {
+        createData.assignee = {
+          connect: { id: input.assigneeId },
+        };
+      }
+```
+
+最初の `createData` にはこれらを含めず、値が入力されているときだけ後から足しています。値があるときだけキー自体を足すと、無いものは無いまま扱われます。Day 10 の `description` と同じ考え方です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+      return await tx.task.create({
+        data: createData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+        },
+      });
+    });
+  }),
+```
+
+`tx.task.create` の `tx` は、0-4 で始めた同じトランザクションです。採番に使ったロックは保存が終わるまで保持されるため、待っていた次の作成処理は最新の最大値を読めます。`include` は `getAll` と同じく、画面が使うプロジェクト・作成者・担当者を一緒に返す指定です。最後の `}),` で `create` を閉じます。
+
+**確認ポイント**:
+- `taskCreateSchema`・2つのヘルパーを `taskRouter` の前に、`create` を `getById` の直後に足した
+- `assertMemberPermission(project.members, 'canEdit')` で作成権限を確認している
+- `getNextTaskPosition` と保存を同じトランザクションに入れている
+- `npm run dev` で型エラーが出ていない
+
+#### 0-7. 担当者候補を取る search ルーターを作る
+
+タスクを作るとき、担当者は「選択中のプロジェクトのメンバー」から選びます。全プロジェクトのメンバーを混ぜると、所属していない人を担当者に指定して送信し、サーバー側で拒否されます。この後 Step 6 で作る担当者の選択欄は `api.search.getMembersByProject` を使い、選択中のプロジェクトだけに候補を絞ります。
+
+タスク一覧の担当者フィルターには、参加中の全プロジェクトを横断する `getProjectMembers` も必要です。まだ `search` ルーターが無いので、ここで2つを新規に作ります。`search`・`quickSearch` など検索画面用の残り3手続きは、Day 20 で足します。
+
+`src/server/api/routers/search.ts` を新規作成し、まず import を書きます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_SELECT } from './_helpers/select';
+```
+
+`prisma` は DB に問い合わせる道具、`protectedProcedure` はログイン済みの人だけが呼べる手続きを作る道具です。`USER_SELECT` は Day 07 で作った「ユーザーのどの項目を返すか」の指定で、パスワードなど返してはいけない項目を毎回書かずに済みます。`task.ts` でも使ったものと同じ共有部品です。
+
+続いて、ルーターの骨組みと問い合わせの条件を書きます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+export const searchRouter = createTRPCRouter({
+  getProjectMembers: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.userId;
+
+    const projectMembers = await prisma.projectMember.findMany({
+      where: {
+        project: {
+          members: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
+```
+
+`where` の中の `project.members.some` は「自分がメンバーであるプロジェクトだけを対象にする」条件です。`some` は Prisma で「関連の中に条件を満たすものが1つでもあれば対象にする」という書き方です。こうすると、自分が入っていないプロジェクトのメンバーは対象から外れ、無関係な人まで候補に出てしまう事故を防げます。
+
+最後に、返す項目・重複の除去・並び順を指定して閉じます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+      select: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+      distinct: ['userId'],
+      orderBy: {
+        user: {
+          name: 'asc',
+        },
+      },
+    });
+
+    return projectMembers.map((member) => member.user);
+  }),
+```
+
+続けて、選択中のプロジェクトに絞る手続きを書きます。最初に、呼び出した人自身がそのプロジェクトのメンバーかを確認します。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+  getMembersByProject: protectedProcedure
+    .input(z.object({ projectId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const callerMembership = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!callerMembership) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このプロジェクトのメンバーではありません',
+        });
+      }
+```
+
+確認を通ったら、そのプロジェクトのメンバーだけを取得してルーターを閉じます。
+
+```typescript
+// filepath: src/server/api/routers/search.ts（続き）
+      const members = await prisma.projectMember.findMany({
+        where: { projectId: input.projectId },
+        select: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+        orderBy: {
+          user: {
+            name: 'asc',
+          },
+        },
+      });
+
+      return members.map((member) => member.user);
+    }),
+});
+```
+
+`getProjectMembers` は一覧のフィルター用、`getMembersByProject` は作成ダイアログ用です。後者は `projectId` を入力として受け取り、所属確認を通ったプロジェクトの候補だけを返します。どちらも `USER_SELECT` を使うため、パスワードなど画面に不要な項目は返しません。
+
+作った `searchRouter` を `root.ts` に登録すると、`api.search.getProjectMembers` と `api.search.getMembersByProject` という呼び名が生まれます。Day 13 で `task` を登録したのと同じ形です。
+
+```typescript
+// filepath: src/server/api/root.ts（import と appRouter に追加）
 import { searchRouter } from './routers/search';
 
-// appRouter に追加
+// appRouter の中に追加
 search: searchRouter,
 ```
 
 **確認ポイント**:
-- `searchRouter` を import した
-- `appRouter` に `search: searchRouter` を追加した
-- 保存して `npm run dev` で型エラーが出ていない
+- `src/server/api/routers/search.ts` に2つの手続きを書き、`}),` と `});` まで閉じた
+- `getMembersByProject` が呼び出した人の所属を確認している
+- `root.ts` に `searchRouter` の import と `search: searchRouter` を追加した
+- `npm run dev` で型エラーが出ていない
 
 ---
 
@@ -134,7 +446,7 @@ search: searchRouter,
 
 import { zodResolver }
   from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Controller, useForm }
   from 'react-hook-form';
 import { z } from 'zod';
@@ -171,6 +483,7 @@ import {
   TASK_STATUS, TASK_STATUS_LABELS,
   type TaskStatus,
 } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
 ```
 
 zodスキーマを定義します。
@@ -253,11 +566,6 @@ interface TaskDialogProps {
   projects: Array<{
     id: string; name: string;
   }>;
-  users: Array<{
-    id: string;
-    name: string | null;
-    email: string;
-  }>;
 }
 ```
 
@@ -268,7 +576,8 @@ interface TaskDialogProps {
 
 **確認ポイント**:
 - `TaskFormData` をエクスポートした
-- `TaskDialogProps` に `projects` と `users` がある
+- `TaskDialogProps` に `projects` がある
+- 担当者候補を外から渡す `users` prop は追加していない
 
 #### TaskFormData の各フィールド
 
@@ -287,7 +596,7 @@ interface TaskDialogProps {
 
 **確認ポイント**:
 - `TaskFormData` をエクスポートした
-- `TaskDialogProps` に `projects` と `users` がある
+- `TaskDialogProps` に `projects` がある
 
 ---
 
@@ -337,11 +646,12 @@ function buildTaskFormValues(
 // 関数定義とuseForm初期化（全体）
 export function TaskDialog({
   open, onClose, onSubmit,
-  initialData, projects, users,
+  initialData, projects,
 }: TaskDialogProps) {
   const {
     register, handleSubmit, control,
-    reset, formState: { errors },
+    watch, reset, setValue,
+    formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues:
@@ -354,20 +664,81 @@ export function TaskDialog({
 
 ```typescript
 // filepath: 続き
+  const selectedProjectId =
+    watch('projectId');
+  const projectsRef = useRef(projects);
+  const { data: projectMembers } =
+    api.search.getMembersByProject.useQuery(
+      { projectId: selectedProjectId },
+      {
+        enabled:
+          open && !!selectedProjectId,
+      },
+    );
+  const users = projectMembers ?? [];
+```
+
+プロジェクト一覧の参照はレンダー中に書き換えず、画面へ反映されたあとで同期します。
+
+```typescript
+// filepath: 続き
   useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
     reset(
       buildTaskFormValues(
-        initialData, projects),
+        initialData, projectsRef.current),
     );
-  }, [initialData, projects, reset]);
+  }, [initialData, open, reset]);
+```
+
+フォームを表示した後でプロジェクト一覧が届くケースへ備え、空の `projectId` だけを初期化します。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// TaskDialog 関数内の続き
+  useEffect(() => {
+    const firstProjectId =
+      projects[0]?.id;
+    if (
+      !open
+      || initialData
+      || selectedProjectId
+      || !firstProjectId
+    ) {
+      return;
+    }
+    setValue(
+      'projectId',
+      firstProjectId,
+      { shouldDirty: false },
+    );
+  }, [
+    initialData,
+    open,
+    projects,
+    selectedProjectId,
+    setValue,
+  ]);
 ```
 
 **確認ポイント**:
 - `buildTaskFormValues` が全フィールドを返している
 - `useForm` に `resolver` と `defaultValues` が設定されている
+- 選択中のプロジェクトだけを `getMembersByProject` に渡している
 - `useEffect` で `initialData` の変更時に `reset` している
+- プロジェクト一覧が遅れて届いた場合も、入力済みの他フィールドを維持したまま空の `projectId` だけを初期化している
 
 > `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため、`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
+>
+> `projectsRef` は最新の候補一覧を保持しますが、一覧の再取得だけでは `reset` を実行しません。ダイアログを開いたあとに候補一覧が更新されても、入力途中のタイトルや説明が初期値へ戻らないためです。
+>
+> 一方、作成ダイアログを開いた時点で候補がまだ0件だった場合は、候補の到着後に空の `projectId` だけを `setValue` で補完します。フォーム全体を `reset` しないため、先に入力したタイトルや説明は維持されます。
 >
 > **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
 
@@ -887,13 +1258,13 @@ const handleCreate = () => {
 };
 ```
 
-続けて、既存の `useQuery` 群の末尾にユーザー一覧とセッション取得を追加します。
+続けて、既存の `useQuery` 群の末尾に一覧フィルター用のユーザー一覧とセッション取得を追加します。ダイアログの担当者候補は、TaskDialog 内で選択中のプロジェクトに絞って取得済みです。
 
 #### 追加するAPI
 
 | API | 戻り値 | 用途 |
 |-----|-------|------|
-| `api.search.getProjectMembers` | ユーザー一覧 | 担当者Selectの候補 |
+| `api.search.getProjectMembers` | ユーザー一覧 | タスク一覧の担当者フィルター |
 | `api.auth.getSession` | ログイン中のセッション | 作成者IDの確認 |
 
 これらは既に実装済みのAPIです。
@@ -991,7 +1362,6 @@ const handleSubmit =
   onSubmit={handleSubmit}
   initialData={editingTask}
   projects={projects ?? []}
-  users={users ?? []}
 />
 ```
 
@@ -1232,7 +1602,7 @@ const priorityOptions = Object.entries(
 | ダイアログが開かない | `open` propが渡されてない | `open={dialogOpen}` を確認 |
 | 作成後に一覧が更新されない | invalidate忘れ | `onSuccess` に追加 |
 | Selectの値が更新されない | `Controller` 未使用 | `register` ではなく `Controller` を使う |
-| 担当者一覧が空 | users未取得 | `getProjectMembers` の戻り値確認 |
+| 担当者一覧が空 | プロジェクト未選択または所属なし | `getMembersByProject` の入力と所属を確認 |
 | バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(taskFormSchema)` を確認 |
 
 ## 今日学んだ用語
@@ -1245,6 +1615,7 @@ const priorityOptions = Object.entries(
 | TASK_STATUS_LABELS | ステータス値と日本語表示名の対応表 |
 | setValueAs | register のオプションで入力値を型変換する関数 |
 | getProjectMembers | プロジェクトメンバー一覧を取得するAPI |
+| getMembersByProject | 選択したプロジェクトのメンバーだけを取得するAPI |
 
 ## 次回予告
 

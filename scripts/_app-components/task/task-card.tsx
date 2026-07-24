@@ -1,7 +1,6 @@
 'use client';
 
-import { AlertTriangle, CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { AlertTriangle, CalendarDays, Pencil, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
@@ -12,13 +11,6 @@ import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 import { formatDateOnly, isOverdue } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from './status-badge';
-import { TimeLogDialog } from './time-log-dialog';
-
-const formatMinutes = (minutes: number) => {
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.floor(minutes % 60);
-  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-};
 
 interface TaskCardProps {
   id: string;
@@ -32,11 +24,9 @@ interface TaskCardProps {
     email: string;
     avatar: string | null;
   } | null;
-  timeSpentMinutes?: number;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
-  onTimeLogSuccess?: (() => void) | undefined;
   // 権限はサーバー側 (assertMemberPermission) が最終判定する。この props は
   // 「権限が無いと分かっているボタンを出さない」ための表示制御で、
   // 権限を扱わない序盤の教材 (Day13〜16) がそのまま動くように未指定時は表示する。
@@ -52,15 +42,12 @@ export function TaskCard({
   priority,
   dueDate,
   assignee,
-  timeSpentMinutes = 0,
   onEdit,
   onDelete,
   onClick,
-  onTimeLogSuccess,
   canEdit = true,
   canDelete = true,
 }: TaskCardProps) {
-  const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
   const overdue =
     isOverdue(dueDate) && status !== TASK_STATUS.DONE && status !== TASK_STATUS.CANCELLED;
 
@@ -80,144 +67,111 @@ export function TaskCard({
     onDelete(id);
   };
 
-  const handleOpenTimeLog = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setTimeLogDialogOpen(true);
-  };
-
   return (
-    <>
-      <Card
-        className={cn(
-          'transition-all h-full flex flex-col',
-          onClick && 'cursor-pointer hover:shadow-md',
-          overdue && 'border-destructive/60 bg-destructive/5',
-        )}
-        onClick={handleCardClick}
-      >
-        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-          <CardTitle
-            className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
-            title={title}
-          >
-            {onClick ? (
-              <button
-                type="button"
-                className="w-full text-left truncate cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCardClick();
-                }}
-              >
-                {title}
-              </button>
-            ) : (
-              title
-            )}
-          </CardTitle>
-          <div className="flex gap-0">
-            {canEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleEdit}
-                aria-label="タスクを編集"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-            {canDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={handleDelete}
-                aria-label="タスクを削除"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col gap-3">
-          {description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
+    <Card
+      className={cn(
+        'transition-all h-full flex flex-col',
+        onClick && 'cursor-pointer hover:shadow-md',
+        overdue && 'border-destructive/60 bg-destructive/5',
+      )}
+      onClick={handleCardClick}
+    >
+      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+        <CardTitle
+          className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
+          title={title}
+        >
+          {onClick ? (
+            <button
+              type="button"
+              className="w-full text-left truncate cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardClick();
+              }}
+            >
+              {title}
+            </button>
+          ) : (
+            title
           )}
+        </CardTitle>
+        <div className="flex gap-0">
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleEdit}
+              aria-label="タスクを編集"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={handleDelete}
+              aria-label="タスクを削除"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col gap-3">
+        {description && <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>}
 
-          <div className="flex gap-2 flex-wrap">
-            <StatusBadge status={status} />
-            <Badge variant={getPriorityBadgeVariant(priority)}>
-              {TASK_PRIORITY_LABELS[priority]}
+        <div className="flex gap-2 flex-wrap">
+          <StatusBadge status={status} />
+          <Badge variant={getPriorityBadgeVariant(priority)}>
+            {TASK_PRIORITY_LABELS[priority]}
+          </Badge>
+          {overdue && (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+              期限切れ
             </Badge>
-            {overdue && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-                期限切れ
-              </Badge>
+          )}
+        </div>
+
+        <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
+          <div className="flex justify-between items-center">
+            {assignee ? (
+              <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  {assignee.avatar && <AvatarImage src={assignee.avatar} />}
+                  <AvatarFallback className="text-[10px]">
+                    {(assignee.name || assignee.email || '?')[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                  {assignee.name || assignee.email}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">未割当</span>
+            )}
+
+            {dueDate && (
+              <div
+                className={cn(
+                  'flex items-center gap-1 text-xs',
+                  overdue ? 'text-destructive font-semibold' : 'text-muted-foreground',
+                )}
+              >
+                <CalendarDays className="h-3 w-3" />
+                <span>
+                  {overdue && <span className="sr-only">期限切れ </span>}
+                  {formatDateOnly(dueDate)}
+                </span>
+              </div>
             )}
           </div>
-
-          <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
-            <div className="flex justify-between items-center">
-              {assignee ? (
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    {assignee.avatar && <AvatarImage src={assignee.avatar} />}
-                    <AvatarFallback className="text-[10px]">
-                      {(assignee.name || assignee.email || '?')[0]?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                    {assignee.name || assignee.email}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">未割当</span>
-              )}
-
-              {dueDate && (
-                <div
-                  className={cn(
-                    'flex items-center gap-1 text-xs',
-                    overdue ? 'text-destructive font-semibold' : 'text-muted-foreground',
-                  )}
-                >
-                  <CalendarDays className="h-3 w-3" />
-                  <span>
-                    {overdue && <span className="sr-only">期限切れ </span>}
-                    {formatDateOnly(dueDate)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                合計作業時間: {formatMinutes(timeSpentMinutes)}
-              </p>
-              {canEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs h-8"
-                  onClick={handleOpenTimeLog}
-                  aria-label={`${title}の時間を記録`}
-                >
-                  <Clock className="mr-2 h-3 w-3" />
-                  時間記録
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <TimeLogDialog
-        open={timeLogDialogOpen}
-        onClose={() => setTimeLogDialogOpen(false)}
-        taskId={id}
-        onSuccess={onTimeLogSuccess}
-      />
-    </>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

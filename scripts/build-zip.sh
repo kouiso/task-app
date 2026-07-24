@@ -71,7 +71,13 @@ for directory in "${support_directories[@]}"; do
   fi
   mkdir -p "${BUILD_DIR}/scripts/${directory}"
   if [ "${directory}" = "_server-routers" ]; then
-    rsync -a --exclude="project.ts" \
+    rsync -a \
+      --exclude="project.ts" \
+      --exclude="task.ts" \
+      --exclude="search.ts" \
+      --exclude="comment.ts" \
+      --exclude="report.ts" \
+      --exclude="user.ts" \
       "${source_directory}/" "${BUILD_DIR}/scripts/${directory}/"
   else
     rsync -a "${source_directory}/" "${BUILD_DIR}/scripts/${directory}/"

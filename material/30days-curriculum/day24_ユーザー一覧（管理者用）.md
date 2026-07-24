@@ -105,19 +105,118 @@ flowchart TD
 
 ---
 
-### Step 0: ユーザー API を有効化する（2分）
+### Step 0: ユーザー一覧 API（getAll）を自分で書く（14分）
 
-`src/server/api/root.ts` に user ルーターを追加します。
+**ゴール**: `src/server/api/routers/user.ts` を新規作成し、まず `getAll` を写経して `api.user.getAll` を自分で生やします。管理者一覧ページの入口はここです。Day 21 の `report.ts` と同じく、ファイルを「登録するだけ」ではなく、最初の procedure から自分で作ります。
+
+一覧ページが必要としているのは、全ユーザーの詳細全部ではありません。名前・メール・ロール・状態・登録日など、表示に使う項目だけです。そこで完成版 source では、`USER_DETAIL_SELECT` を再利用しつつ `createdAt` と `updatedAt` を足して返します。
+
+#### 0-1. import を並べる
+
+まず `src/server/api/routers/user.ts` を新規作成し、先頭に import を書きます。
 
 ```typescript
-// filepath: src/server/api/root.ts（import を追加）
-import { userRouter } from './routers/user';
-
-// appRouter に追加
-  user: userRouter,
+// filepath: src/server/api/routers/user.ts
+import type { Prisma } from '@prisma/client';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { adminProcedure, createTRPCRouter } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
-**確認ポイント**: `user: userRouter` を追加しました。
+今日は `getAll` に必要な import だけを書きます。Day 25 と Day 29 で初めて使う認可・パスワード・詳細取得の道具は、その procedure を追加する日に足します。こうすると、各 Day の終了時点で未使用 import が残りません。
+
+#### 0-2. 管理者専用の getAll を書く
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+export const userRouter = createTRPCRouter({
+  // adminProcedureによりセッションのroleを参照してADMIN判定するためDBクエリ不要
+  getAll: adminProcedure
+    .input(
+      z
+        .object({
+          isActive: z.boolean().optional(),
+          role: z.nativeEnum(USER_ROLE).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const where: Prisma.UserWhereInput = {};
+```
+
+ここで大事なのは `protectedProcedure` ではなく **`adminProcedure`** を使っている点です。今日のページは管理者専用なので、入口で `ADMIN` 判定まで済ませます。コメントにもあるとおり、ここでは「管理者かどうか」を確認する追加 DB クエリは不要です。セッションに入っている `role` をそのまま使います。
+
+#### 0-3. 条件があるときだけ where に足す
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      if (input?.isActive !== undefined) {
+        where.isActive = input.isActive;
+      }
+
+      if (input?.role) {
+        where.role = input.role;
+      }
+```
+
+一覧画面の最初の版では絞り込み UI をまだ作りませんが、API は先に対応済みです。条件が渡されたときだけ `where` に足し、未指定なら全件のままにします。`isActive` は `false` が有効な値なので、`if (input?.isActive)` ではなく `!== undefined` で判定しているのがポイントです。
+
+#### 0-4. 表示に使う項目だけ返す
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      return await prisma.user.findMany({
+        where,
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+});
+```
+
+`USER_DETAIL_SELECT` は共有の select 定義で、名前・メール・ロール・アバターなど「返してよいユーザー項目」をまとめたものです。そこへ `createdAt` と `updatedAt` だけ足しているので、Day 24 の一覧画面に必要な列をそのまま返せます。
+
+#### 0-5. root.ts に時系列順で登録する
+
+最後に `userRouter` を `root.ts` に登録します。完成版 source と同じく、`user` は `report` のあとです。
+
+```typescript
+// filepath: src/server/api/root.ts
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { reportRouter } from './routers/report';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { userRouter } from './routers/user';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+```
+
+```typescript
+// filepath: src/server/api/root.ts（続き）
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+  report: reportRouter,
+  user: userRouter,
+});
+```
+
+Day 21 でも触れたとおり、root の順番は教材で作った時系列に揃えます。`user` は `report` のあとです。
+
+**確認ポイント**:
+- `src/server/api/routers/user.ts` を新規作成し、今日使う import と `getAll` を書けた
+- `getAll` が `adminProcedure` になっている
+- `root.ts` に `userRouter` を import / registration の両方で追加し、最後尾に置けた
 
 ---
 
