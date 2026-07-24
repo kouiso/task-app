@@ -97,19 +97,309 @@ flowchart TD
 
 ---
 
-### Step 0: レポート API を有効化する（2分）
+### Step 0: レポート集計 API（getOverview）を自分で書く（14分）
 
-`src/server/api/root.ts` に report ルーターを追加します。
+**ゴール**: `src/server/api/routers/report.ts` を新規作成し、`getOverview` を写経して `api.report.getOverview` を自分で生やします。Day 09 の `project.getAll` や Day 13 の `task.getAll` と同じで、今日は「統計カードに渡す集計の入口」を1つ作ります。
+
+統計カードは、一覧データをクライアントで数え直しているわけではありません。完成版 source は `count`・`aggregate`・`groupBy` を server 側にまとめ、画面には「計算済みの答え」だけを返します。件数が増えても、カードとテーブルの数字がぶれないようにするためです。
+
+#### 0-1. import を並べる
+
+まず `src/server/api/routers/report.ts` を新規作成し、先頭に import を書きます。
 
 ```typescript
-// filepath: src/server/api/root.ts（import を追加）
-import { reportRouter } from './routers/report';
-
-// appRouter に追加
-  report: reportRouter,
+// filepath: src/server/api/routers/report.ts
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
 ```
 
-**確認ポイント**: `report: reportRouter` を追加しました。
+`TASK_STATUS` と `TASK_PRIORITY` は、後でステータス別・優先度別の集計を作るために使います。`getUserProjectIds` は Day 13 でも使った共有ヘルパーで、「ログイン中のユーザーが参加中のプロジェクト id 一覧」を返します。
+
+#### 0-2. 空配列のとき先に返す
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+export const reportRouter = createTRPCRouter({
+  getOverview: protectedProcedure.query(async ({ ctx }) => {
+    const projectIds = await getUserProjectIds(ctx.session.userId);
+
+    if (projectIds.length === 0) {
+      return {
+        totalProjects: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        inReviewTasks: 0,
+        todoTasks: 0,
+        completionRate: 0,
+        totalTimeSpent: 0,
+        averageTimePerTask: 0,
+        recentTasks: [],
+        statusData: [],
+        priorityData: [],
+        projectStats: [],
+      };
+    }
+```
+
+ここは **early return（先に返して処理を終える書き方）** です。参加中のプロジェクトが1件もない人に対して、その先の集計処理を走らせる意味はありません。空の配列と 0 をまとめて返し、画面側は「空のレポート」としてそのまま描画できます。
+
+#### 0-3. 集計の土台となる条件を作る
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
+    // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      ...projectScope,
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+```
+
+`projectScope` は「自分が参加中で、しかもアーカイブされていないプロジェクトの範囲」です。`activeTasksFilter` はそこにさらに `CANCELLED` 除外を足した条件で、カードの母数に使います。こうして条件を変数にまとめておくと、同じ条件を `count`・`groupBy` の全部で使い回せます。
+
+#### 0-4. Promise.all で集計をまとめて取る
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+    const [
+      projects,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      totalTimeAggregate,
+      recentTasks,
+      statusGroups,
+      priorityGroups,
+      projectTaskGroups,
+      projectDoneGroups,
+    ] = await Promise.all([
+```
+
+`Promise.all` は「独立した問い合わせをまとめて同時に待つ」書き方です。プロジェクト数、完了数、優先度別件数などは互いに依存しないので、順番に12回待つよりまとめて走らせる方が素直です。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      prisma.project.findMany({
+        where: { id: { in: projectIds }, isArchived: false },
+        select: { id: true, name: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.task.count({ where: activeTasksFilter }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_PROGRESS,
+        },
+      }),
+```
+
+最初の数本は `findMany` と `count` です。ここでは「プロジェクト一覧」「総タスク数」「完了数」「進行中数」を取っています。`projectScope` と `activeTasksFilter` を使い分けている点が重要で、完了数などのステータス別件数は「アーカイブ済みではないプロジェクト内」で数え、総タスク数はさらに `CANCELLED` を除外した母数を使います。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_REVIEW,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.TODO,
+        },
+      }),
+      prisma.task.aggregate({
+        where: activeTasksFilter,
+        _sum: { timeSpentMinutes: true },
+      }),
+```
+
+`aggregate` は合計値をまとめて返す Prisma の関数です。ここでは `timeSpentMinutes` の合計だけが欲しいので、`_sum` を使います。Day 16 で記録した作業時間を、ここでレポートの数字に変換します。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      prisma.task.findMany({
+        where: activeTasksFilter,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.task.groupBy({
+        by: ['status'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+```
+
+`recentTasks` は「直近で更新された5件」です。`groupBy` は「同じ値ごとにまとめて数える」関数で、ここでは `status` ごとの件数を作ります。Day 22 の円グラフは、この `statusData` をそのまま使います。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      prisma.task.groupBy({
+        by: ['priority'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+        _sum: { timeSpentMinutes: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+        _count: { _all: true },
+      }),
+    ]);
+```
+
+ここで「優先度別件数」「プロジェクトごとの総タスク数と合計時間」「プロジェクトごとの完了数」を取っています。後で `projectStats` を作るために、`groupBy` を2本に分けているのがポイントです。1本で全部済ませるのではなく、必要な軸ごとに集計を分け、その結果を最後に組み立てます。
+
+#### 0-5. 表示用データに組み立てて返す
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+    const totalTimeSpent = totalTimeAggregate._sum.timeSpentMinutes ?? 0;
+    const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+```
+
+この3行は、カードに直接出す値を作る部分です。`?? 0` は「左が無いときだけ 0 を使う」書き方でした。タスクが0件のときに 0 で割ると壊れるので、平均と完了率は三項演算子で先に守っています。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+    const doneCountByProject = new Map(
+      projectDoneGroups.map((group) => [group.projectId, group._count._all]),
+    );
+    const taskStatsByProject = new Map(
+      projectTaskGroups.map((group) => [
+        group.projectId,
+        {
+          totalTasks: group._count._all,
+          totalTimeSpent: group._sum.timeSpentMinutes ?? 0,
+        },
+      ]),
+    );
+```
+
+`Map` は「projectId をキーにして、あとで素早く取り出す辞書」です。`projectDoneGroups` と `projectTaskGroups` はどちらも `projectId` ごとの集計なので、いったん `Map` に変えてから `projects.map(...)` で合体させます。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+    return {
+      totalProjects: projects.length,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      completionRate,
+      totalTimeSpent,
+      averageTimePerTask,
+      recentTasks,
+      statusData: statusGroups.map((group) => ({
+        key: group.status,
+        value: group._count._all,
+      })),
+      priorityData: priorityGroups.map((group) => ({
+        key: group.priority,
+        value: group._count._all,
+      })),
+```
+
+ここで `statusGroups` と `priorityGroups` を、画面が使いやすい `{ key, value }` 配列へ並べ替えています。`groupBy` の生データをそのまま返さず、UI がそのまま読みやすい形に直して返すのがポイントです。
+
+```typescript
+// filepath: src/server/api/routers/report.ts（続き）
+      projectStats: projects.map((project) => {
+        const taskStats = taskStatsByProject.get(project.id) ?? {
+          totalTasks: 0,
+          totalTimeSpent: 0,
+        };
+        const completedTaskCount = doneCountByProject.get(project.id) ?? 0;
+
+        return {
+          id: project.id,
+          name: project.name,
+          totalTasks: taskStats.totalTasks,
+          completedTasks: completedTaskCount,
+          progress:
+            taskStats.totalTasks > 0 ? (completedTaskCount / taskStats.totalTasks) * 100 : 0,
+          totalTimeHours: taskStats.totalTimeSpent / 60,
+        };
+      }),
+    };
+  }),
+});
+```
+
+最後の `projectStats` が Day 21 のテーブルに入る配列です。各プロジェクトについて `Map` から総数と完了数を取り出し、進捗率と時間を計算して返します。ここまで書けたら、`getOverview` は完成です。
+
+#### 0-6. root.ts に時系列順で登録する
+
+ルーターを書いただけでは、まだ `api.report.getOverview` とは呼べません。`src/server/api/root.ts` に追加して初めて、フロントから呼べる名前になります。
+
+```typescript
+// filepath: src/server/api/root.ts
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { reportRouter } from './routers/report';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { userRouter } from './routers/user';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+```
+
+```typescript
+// filepath: src/server/api/root.ts（続き）
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+  report: reportRouter,
+  user: userRouter,
+});
+```
+
+import と `appRouter` の順番は、教材で作ってきた時系列に揃えます。`report` は `comment` の次、`user` の前です。今後の day でもこの順番で積み上げていきます。
+
+**確認ポイント**:
+- `src/server/api/routers/report.ts` を新規作成し、`getOverview` を最後の `});` まで書いた
+- `root.ts` に `reportRouter` を追加し、`report: reportRouter` を時系列順で登録した
+- `npm run dev` で型エラーが出ていない
 
 ---
 

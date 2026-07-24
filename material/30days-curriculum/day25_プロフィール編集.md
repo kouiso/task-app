@@ -81,6 +81,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
+| Step 0 | user.ts に updateProfile / changePassword を追記する | 15分 |
 | Step 1 | プロフィールページの概要 | 3分 |
 | Step 2 | ユーザーデータの取得 | 3分 |
 | Step 3 | プロフィール情報の表示 | 5分 |
@@ -99,6 +100,160 @@ flowchart TD
 **合計時間**: 約58分。
 
 ---
+
+### Step 0: user.ts に updateProfile / changePassword を追記する（15分）
+
+**ゴール**: Day 24 で作った `src/server/api/routers/user.ts` に、`updateProfile` と `changePassword` を source と同じ順番で追記します。今日はプロフィール表示 UI を作りますが、その前に「更新先の API」が必要です。
+
+Day 24 の `getAll` は管理者一覧の入口でした。今日は「本人が自分のプロフィールを更新する」「本人が自分のパスワードを変更する」という2本を足します。どちらも **`protectedProcedure`** なので、ログイン済みユーザー本人のセッションを前提に動きます。
+
+#### 0-1. まず updateProfile を追加する
+
+`getAll` の直後ではなく、完成版 source と同じ順で `getById` と `update` を将来置く場所を残しつつ、今日は `updateProfile` と `changePassword` を追記します。Day 29 で `getById` / `update` を差し込むので、今は source と同じ並びを頭に入れておくことが大事です。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（changePassword の前に追加）
+  updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
+    const userId = ctx.session.userId;
+
+    if (input.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          email: input.email,
+          id: { not: userId },
+        },
+      });
+```
+
+最初に `userId` をセッションから取っています。本人更新なので、フォームから「どのユーザーを更新するか」は受け取りません。次に同じメールアドレスを別ユーザーが使っていないかを確認します。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      if (existingUser) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このメールアドレスは既に使用されています',
+        });
+      }
+    }
+
+    const updateData: Prisma.UserUpdateInput = {
+      name: input.name,
+      email: input.email,
+    };
+```
+
+メールアドレスは一意でないと困るので、見つかったら `CONFLICT` を返して止めます。ここで `updateData` を先にオブジェクトとして作っておくと、あとから `avatar` のような任意項目だけ条件付きで足せます。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+    if (input.avatar !== undefined) {
+      updateData.avatar = input.avatar;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        ...USER_DETAIL_SELECT,
+        updatedAt: true,
+      },
+    });
+```
+
+`avatar` は任意項目なので、渡されたときだけ足します。ここでは `USER_DETAIL_SELECT` に `updatedAt` を追加して返しているので、プロフィール画面へ戻ったあとすぐ最新の更新日時を表示できます。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+    if (input.email !== ctx.session.email) {
+      await createSession({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      });
+    }
+
+    return updatedUser;
+  }),
+```
+
+ここが `updateProfile` の一番大事な行です。メールアドレスを変えたのにセッションを更新しないと、ブラウザが古いメールアドレスのままになってしまいます。だから `createSession(...)` でセッションも同時に作り直します。
+
+#### 0-2. 次に changePassword を追加する
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+  changePassword: protectedProcedure
+    .input(changePasswordSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.userId;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { password: true, isActive: true },
+      });
+```
+
+ここでも更新対象は本人なので、`userId` はセッションから取ります。まず現在のハッシュ済みパスワードと `isActive` を取りに行きます。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      if (!user?.password) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+```
+
+ユーザー自体が見つからない、または無効化されている場合は、この時点で止めます。パスワード変更はログイン中の本人だけが触れるので、この2つのチェックを先に終わらせます。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      const isPasswordValid = await bcrypt.compare(input.currentPassword, user.password);
+
+      if (!isPasswordValid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: '現在のパスワードが正しくありません',
+        });
+      }
+```
+
+`bcrypt.compare` は「平文の現在パスワード」と「DBに保存されているハッシュ」を照合する関数です。一致しなければ `UNAUTHORIZED` を返します。ここで古いパスワードを確認しているから、本人だけが変更できます。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      return { success: true, message: 'パスワードを変更しました' };
+    }),
+});
+```
+
+`bcrypt.hash(input.newPassword, 10)` の `10` はハッシュ化のコストです。新しいパスワードを平文のまま保存せず、必ずハッシュにしてから DB へ更新します。最後に成功メッセージを返せば、フロント側は toast を出して終了できます。
+
+#### 0-3. root.ts は Day 24 の登録をそのまま使う
+
+Day 24 で `user: userRouter` は登録済みです。今日は `user.ts` の中身に 2 本 procedure を増やしただけなので、`root.ts` の追記はありません。つまり `api.user.updateProfile` と `api.user.changePassword` は、**既存の `userRouter` 登録の中で自動的に増える** 形です。
+
+**確認ポイント**:
+- `src/server/api/routers/user.ts` に `updateProfile` と `changePassword` を source と同じ処理順で追記できた
+- `updateProfile` がメール重複チェックと `createSession(...)` を持っている
+- `changePassword` が `bcrypt.compare` → `bcrypt.hash` → `prisma.user.update` の順で並んでいる
+- `root.ts` は Day 24 の `user: userRouter` のままでよいと理解できた
 
 ### Step 1: プロフィールページの概要（3分）
 
