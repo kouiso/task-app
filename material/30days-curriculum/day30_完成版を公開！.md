@@ -68,13 +68,13 @@ flowchart TD
 | Step 1 | 本番用の環境変数を準備 | 5分 |
 | Step 2 | 本番前のローカル最終確認 | 5分 |
 | Step 3 | Git にプッシュ | 3分 |
-| Step 4 | Vercel にデプロイ | 7分 |
+| Step 4 | Vercel にデプロイし、本番 DB を準備 | 10分 |
 | Step 5 | 本番環境の動作確認 | 7分 |
 | Step 6 | 30日間の学習サマリー | 7分 |
 | Step 7 | 技術スタックの振り返り | 5分 |
 | Step 8 | 次のステップとリソース | 5分 |
 
-**合計時間**: 約44分。
+**合計時間**: 約47分。
 
 ---
 
@@ -104,11 +104,10 @@ flowchart TD
 > に設定します。Day 4 の初回デプロイ時に設定済み
 > なら、その接続文字列をそのまま使います。
 >
-> 環境変数を Vercel に登録するときは、Production
-> だけでなく Preview にも同じ値を入れておきます。
-> ブランチのプレビュー用ビルドでも同じ変数が要る
-> ため、Production だけだとプレビュー側のビルドが
-> 失敗します。
+> 環境変数は、まず公開先の Production に登録します。
+> ブランチの Preview デプロイも使う場合は、Preview
+> にも同じ値を登録してください。DB を共有したくない
+> 場合は、Preview 専用の接続先を用意します。
 
 **シークレットキーの生成**:
 
@@ -251,8 +250,11 @@ npm run db:push
 `running (healthy)` と `25532->5432/tcp` が見えればOKです。
 > `npm run db:push` はローカル確認用です。
 > 本番では `prisma migrate deploy` を使うのが
-> 一般的です。Vercel のビルド時に
-> `prisma generate` が自動実行されます。
+> 一般的です。ただし、この30日教材では migration
+> 履歴を作る手順を扱っていないため、Step 4 で
+> **新しく作った教材用の本番 DB に限り**
+> `prisma db push` を1回実行します。既存データがある
+> 実務の DB では、この手順をそのまま使わないでください。
 
 ---
 
@@ -287,7 +289,7 @@ git push origin main
 
 ---
 
-### Step 4: Vercel にデプロイ（7分）
+### Step 4: Vercel にデプロイし、本番 DB を準備（10分）
 
 **ゴール**: Vercel にアプリを
 デプロイして公開します。
@@ -330,6 +332,10 @@ Day 4 で Vercel 連携済みの場合は、
 - 2つの環境変数を Vercel に追加できた
 - 各変数の「Environment」が Production になっている
 
+Preview デプロイも使う場合は、同じ2変数を Preview
+にも追加します。Production だけを公開する場合は、
+まず Production の設定と動作確認を完了させます。
+
 > Vercel は GitHub と連携しているため
 > `git push` するだけで自動的にビルドと
 > デプロイが実行されます。これが CI/CD です。
@@ -356,6 +362,37 @@ package.json の `scripts` を確認しましょう。
 確認メモ:
 Vercel ダッシュボードの「Deployments」タブで
 最新デプロイが `Ready` になっていればOKです。
+
+#### 本番 DB に Prisma スキーマを反映する
+
+デプロイが `Ready` でも、本番 DB が空のままだと
+登録やログインなど、DB を使う操作は失敗します。
+Vercel CLI で現在のフォルダを既存プロジェクトへ
+紐づけ、本番環境変数を一時的にコマンドへ渡して
+スキーマを反映します。
+
+```bash
+# filepath: ターミナル
+# 初回だけ、画面の案内に従って既存 Vercel プロジェクトを選ぶ
+npx vercel link
+
+# Production の秘密値をファイルへ保存せず、教材用の新規 DB へ反映する
+npx vercel env run -e production -- npx prisma db push
+```
+
+**確認ポイント**:
+- `npx vercel link` で Day 4 から使っているプロジェクトを選んだ
+- `prisma db push` に `Your database is now in sync` と表示された
+- データ損失の警告が出た場合は続行せず、接続先が新規 DB か確認した
+
+> `vercel env run` は Vercel の環境変数をコマンドへ
+> 一時的に渡します。`DATABASE_URL` をターミナル履歴や
+> `.env` ファイルへコピーしないための方法です。
+>
+> 実務では migration ファイルを Git で管理し、
+> CI/CD から `prisma migrate deploy` を実行します。
+> この教材を拡張してスキーマを変更するときは、
+> Prisma Migrate の導入を次の学習課題にしてください。
 
 ---
 

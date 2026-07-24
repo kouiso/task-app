@@ -165,6 +165,64 @@ def main() -> int:
                         f"but not in scaffold or any curriculum day"
                     )
 
+    scaffold_script = (SCRIPTS_DIR / "scaffold-from-scratch.sh").read_text(encoding="utf-8")
+    day07_candidates = sorted(MATERIAL_DIR.glob("day07_*.md"))
+    day07_text = (
+        day07_candidates[0].read_text(encoding="utf-8") if len(day07_candidates) == 1 else ""
+    )
+    day08_candidates = sorted(MATERIAL_DIR.glob("day08_*.md"))
+    day08_text = (
+        day08_candidates[0].read_text(encoding="utf-8") if len(day08_candidates) == 1 else ""
+    )
+    day30_candidates = sorted(MATERIAL_DIR.glob("day30_*.md"))
+    day30_text = (
+        day30_candidates[0].read_text(encoding="utf-8") if len(day30_candidates) == 1 else ""
+    )
+    deployment_contract = {
+        "source/scaffold seed byte parity": (
+            REPO_ROOT / "src" / "command" / "seed.ts"
+        ).read_bytes()
+        == (SCRIPTS_DIR / "_seed" / "seed.ts").read_bytes(),
+        "source/scaffold rate-limit byte parity": (
+            REPO_ROOT / "src" / "lib" / "rate-limit.ts"
+        ).read_bytes()
+        == (SCRIPTS_DIR / "_lib-base" / "rate-limit.ts").read_bytes(),
+        "source/scaffold auth router byte parity": (
+            REPO_ROOT / "src" / "server" / "api" / "routers" / "auth.ts"
+        ).read_bytes()
+        == (SCRIPTS_DIR / "_server-routers" / "auth.ts").read_bytes(),
+        "Day 07 login rate-limit": all(
+            token in day07_text
+            for token in (
+                "checkLoginRateLimit",
+                "extractClientIp",
+                "rateLimitToTRPCError",
+                "recordLoginSuccess",
+                "mutation(async ({ input, ctx })",
+            )
+        ),
+        "Day 07 Edge-safe jose import": (
+            "import { jwtVerify } from 'jose/jwt/verify';" in day07_text
+            and "import { jwtVerify } from 'jose/jwt/verify';"
+            in (REPO_ROOT / "src" / "middleware.ts").read_text(encoding="utf-8")
+        ),
+        "Day 08 route continuity": (
+            "src/app/dashboard/page.tsx" in day08_text and "src/app/(app)" not in day08_text
+        ),
+        'scaffold scripts.vercel-build="prisma generate && next build"': (
+            'scripts.vercel-build="prisma generate && next build"' in scaffold_script
+        ),
+        'scaffold scripts.postinstall="prisma generate"': (
+            'scripts.postinstall="prisma generate"' in scaffold_script
+        ),
+        "Day 30 production schema command": (
+            "npx vercel env run -e production -- npx prisma db push" in day30_text
+        ),
+    }
+    for contract, satisfied in deployment_contract.items():
+        if not satisfied:
+            errors.append(f"ERROR: deployment contract missing: {contract}")
+
     if errors:
         for e in errors:
             print(e)
@@ -174,7 +232,7 @@ def main() -> int:
     total = len(imports)
     print(
         f"✅ All {total} @/ imports are covered by scaffold or "
-        f"an earlier/same day (順序込みで検証)."
+        f"an earlier/same day (順序込みで検証), and deployment contracts match."
     )
     return 0
 

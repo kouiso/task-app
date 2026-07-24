@@ -1,9 +1,17 @@
 import { TRPCError } from '@trpc/server';
 import { prisma } from '@/lib/prisma';
 
+const WINDOW_MS = 15 * 60 * 1000; // 15 分
+const EMAIL_IP_LIMIT = 5; // 同一 email × IP の組み合わせで 5 回失敗 → block
+const EMAIL_LIMIT = 10; // 同一 email 単独（IP を跨いだ合算）で 10 回失敗 → block (IP ローテーション対策)
+const IP_LIMIT = 20; // 同一 IP のみで 20 回失敗 → block (bot 単一 IP 対策)
+const RECORD_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 日
+const UNKNOWN_IP = 'unknown';
+
 // Vercel / Cloudflare / 一般的 reverse proxy が立てる header から client IP を抽出する。
 // 先頭 = 最も近い proxy 直前の client。Spoofing 対策はインフラ側で行う前提。
-// テスト環境などで何も無い場合は 'unknown' を返してカウントに含めない設計（攻撃成立しないため）。
+// header が無い環境では 'unknown' を返し、IP 軸のカウントからは除外する
+// （全員が 'unknown' を共有すると header の無い環境で相乗りロックアウトが起きるため）。
 export function extractClientIp(headers: Headers): string {
   const xff = headers.get('x-forwarded-for');
   if (xff) {
@@ -12,74 +20,84 @@ export function extractClientIp(headers: Headers): string {
   }
   const realIp = headers.get('x-real-ip');
   if (realIp) return realIp.trim();
-  return 'unknown';
+  return UNKNOWN_IP;
 }
-
-const WINDOW_MS = 15 * 60 * 1000; // 15 分
-const EMAIL_LIMIT = 5; // 同一 email × IP の組み合わせで 5 回失敗 → block
-const IP_LIMIT = 20; // 同一 IP のみで 20 回失敗 → block (bot 単一 IP 対策)
-const RECORD_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 日
 
 export type RateLimitResult =
   | { allowed: true }
   | { allowed: false; reason: 'email_locked' | 'ip_locked'; retryAfterMs: number };
 
-// 直近 WINDOW_MS の失敗回数を email × ip と ip 単独で並列カウントし、
-// 上限超過時は 429 相当を返す。
-// 30 日より古いレコードは同時に lazy cleanup する。
+// rate-limit チェックと「試行枠の予約」を 1 トランザクションで行う。
+// カウント (check) と記録 (record) を別々にすると、並行リクエストが全部カウント 0 の
+// 状態でチェックを通過してしまうため、email / IP ごとの PostgreSQL advisory lock を取り、
+// 認証前に失敗行を先取りで INSERT しておく。
+// 成功時は recordLoginSuccess が window 内の失敗行（予約行を含む）を消すので、
+// 正規ユーザーの成功ログインは失敗としてカウントされない。
 export async function checkLoginRateLimit(email: string, ip: string): Promise<RateLimitResult> {
   const now = Date.now();
   const windowStart = new Date(now - WINDOW_MS);
   const retentionCutoff = new Date(now - RECORD_RETENTION_MS);
+  const hasKnownIp = ip !== UNKNOWN_IP;
 
-  const [emailFails, ipFails] = await Promise.all([
-    prisma.loginAttempt.count({
-      where: {
-        email,
-        ip,
-        success: false,
-        createdAt: { gte: windowStart },
-      },
-    }),
-    prisma.loginAttempt.count({
-      where: {
-        ip,
-        success: false,
-        createdAt: { gte: windowStart },
-      },
-    }),
-    prisma.loginAttempt.deleteMany({
+  return await prisma.$transaction(async (tx) => {
+    // 同じ email は必ず直列化するため、IP を変える攻撃でも EMAIL_LIMIT を超えて通らない。
+    // 既知 IP は IP 軸も直列化し、多数の email へ同時に試す攻撃を IP_LIMIT で止める。
+    // 全トランザクションが email → IP の順に取得するので、ロック順序も一貫する。
+    await tx.$queryRaw`
+      SELECT 1 AS acquired
+      FROM (SELECT pg_advisory_xact_lock(hashtext(${`login-email:${email}`}))) AS lock
+    `;
+    if (hasKnownIp) {
+      await tx.$queryRaw`
+        SELECT 1 AS acquired
+        FROM (SELECT pg_advisory_xact_lock(hashtext(${`login-ip:${ip}`}))) AS lock
+      `;
+    }
+
+    // 30 日より古いレコードは lazy cleanup
+    await tx.loginAttempt.deleteMany({
       where: { createdAt: { lt: retentionCutoff } },
-    }),
-  ]);
+    });
 
-  if (emailFails >= EMAIL_LIMIT) {
-    return { allowed: false, reason: 'email_locked', retryAfterMs: WINDOW_MS };
-  }
-  if (ipFails >= IP_LIMIT) {
-    return { allowed: false, reason: 'ip_locked', retryAfterMs: WINDOW_MS };
-  }
-  return { allowed: true };
+    const emailFails = await tx.loginAttempt.count({
+      where: { email, success: false, createdAt: { gte: windowStart } },
+    });
+    if (emailFails >= EMAIL_LIMIT) {
+      return { allowed: false, reason: 'email_locked', retryAfterMs: WINDOW_MS } as const;
+    }
+
+    if (hasKnownIp) {
+      const emailIpFails = await tx.loginAttempt.count({
+        where: { email, ip, success: false, createdAt: { gte: windowStart } },
+      });
+      if (emailIpFails >= EMAIL_IP_LIMIT) {
+        return { allowed: false, reason: 'email_locked', retryAfterMs: WINDOW_MS } as const;
+      }
+
+      const ipFails = await tx.loginAttempt.count({
+        where: { ip, success: false, createdAt: { gte: windowStart } },
+      });
+      if (ipFails >= IP_LIMIT) {
+        return { allowed: false, reason: 'ip_locked', retryAfterMs: WINDOW_MS } as const;
+      }
+    }
+
+    // 認証前の先取り INSERT（予約）。認証に成功したら recordLoginSuccess が削除する
+    await tx.loginAttempt.create({ data: { email, ip, success: false } });
+    return { allowed: true } as const;
+  });
 }
 
-// login 試行結果を記録する。成功時は email の失敗履歴を reset（古い IP からの reattempt は許容）。
-export async function recordLoginAttempt(
-  email: string,
-  ip: string,
-  success: boolean,
-): Promise<void> {
-  if (success) {
-    // 該当 email の失敗履歴を WINDOW 内分だけ削除して、正規ユーザーが直後に再 login できるようにする
-    const windowStart = new Date(Date.now() - WINDOW_MS);
-    await prisma.$transaction([
-      prisma.loginAttempt.deleteMany({
-        where: { email, success: false, createdAt: { gte: windowStart } },
-      }),
-      prisma.loginAttempt.create({ data: { email, ip, success: true } }),
-    ]);
-  } else {
-    await prisma.loginAttempt.create({ data: { email, ip, success: false } });
-  }
+// login 成功時の記録。window 内の失敗履歴（checkLoginRateLimit の予約行を含む）を削除して、
+// 正規ユーザーが直後に再 login できるようにする。
+export async function recordLoginSuccess(email: string, ip: string): Promise<void> {
+  const windowStart = new Date(Date.now() - WINDOW_MS);
+  await prisma.$transaction([
+    prisma.loginAttempt.deleteMany({
+      where: { email, success: false, createdAt: { gte: windowStart } },
+    }),
+    prisma.loginAttempt.create({ data: { email, ip, success: true } }),
+  ]);
 }
 
 export function rateLimitToTRPCError(

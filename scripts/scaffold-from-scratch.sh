@@ -301,6 +301,8 @@ configure_package_json() {
     name="task-app" \
     scripts.dev="next dev" \
     scripts.build="prisma generate && next build" \
+    scripts.vercel-build="prisma generate && next build" \
+    scripts.postinstall="prisma generate" \
     scripts.start="next start" \
     scripts.lint="biome check src prisma.config.ts next.config.ts package.json tsconfig.json" \
     scripts.lint:fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \

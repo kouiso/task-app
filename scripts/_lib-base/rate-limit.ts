@@ -29,11 +29,10 @@ export type RateLimitResult =
 
 // rate-limit チェックと「試行枠の予約」を 1 トランザクションで行う。
 // カウント (check) と記録 (record) を別々にすると、並行リクエストが全部カウント 0 の
-// 状態でチェックを通過してしまうため、認証前に失敗行を先取りで INSERT しておく。
+// 状態でチェックを通過してしまうため、email / IP ごとの PostgreSQL advisory lock を取り、
+// 認証前に失敗行を先取りで INSERT しておく。
 // 成功時は recordLoginSuccess が window 内の失敗行（予約行を含む）を消すので、
 // 正規ユーザーの成功ログインは失敗としてカウントされない。
-// 残る競合: READ COMMITTED では同時実行中のリクエスト数ぶんだけ上限を数件超過し得るが、
-// 各試行が必ず 1 行を先に消費するため「無制限に素通り」は起きない（教材として許容する設計）。
 export async function checkLoginRateLimit(email: string, ip: string): Promise<RateLimitResult> {
   const now = Date.now();
   const windowStart = new Date(now - WINDOW_MS);
@@ -41,6 +40,20 @@ export async function checkLoginRateLimit(email: string, ip: string): Promise<Ra
   const hasKnownIp = ip !== UNKNOWN_IP;
 
   return await prisma.$transaction(async (tx) => {
+    // 同じ email は必ず直列化するため、IP を変える攻撃でも EMAIL_LIMIT を超えて通らない。
+    // 既知 IP は IP 軸も直列化し、多数の email へ同時に試す攻撃を IP_LIMIT で止める。
+    // 全トランザクションが email → IP の順に取得するので、ロック順序も一貫する。
+    await tx.$queryRaw`
+      SELECT 1 AS acquired
+      FROM (SELECT pg_advisory_xact_lock(hashtext(${`login-email:${email}`}))) AS lock
+    `;
+    if (hasKnownIp) {
+      await tx.$queryRaw`
+        SELECT 1 AS acquired
+        FROM (SELECT pg_advisory_xact_lock(hashtext(${`login-ip:${ip}`}))) AS lock
+      `;
+    }
+
     // 30 日より古いレコードは lazy cleanup
     await tx.loginAttempt.deleteMany({
       where: { createdAt: { lt: retentionCutoff } },

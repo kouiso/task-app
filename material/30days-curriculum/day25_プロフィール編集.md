@@ -149,10 +149,13 @@ const changePasswordSchema = z.object({
 
 #### 0-1. まず updateProfile を追加する
 
-`getAll` の直後ではなく、完成版 source と同じ順で `getById` と `update` を将来置く場所を残しつつ、今日は `updateProfile` と `changePassword` を追記します。Day 29 で `getById` / `update` を差し込むので、今は source と同じ並びを頭に入れておくことが大事です。
+`getAll` のあと、ルーターを閉じる `});` の前へ、今日は
+`updateProfile` と `changePassword` をこの順で追記します。
+Day 29 では `getAll` と `updateProfile` の間へ
+`getById` / `update` を差し込むので、その場所を残しておきます。
 
 ```typescript
-// filepath: src/server/api/routers/user.ts（changePassword の前に追加）
+// filepath: src/server/api/routers/user.ts（getAll のあと、閉じる }); の前に追加）
   updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.userId;
 

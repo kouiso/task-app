@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '../prisma';
-import { checkLoginRateLimit, extractClientIp, recordLoginAttempt } from '../rate-limit';
+import { checkLoginRateLimit, extractClientIp, recordLoginSuccess } from '../rate-limit';
 
 describe('rate-limit', () => {
   beforeEach(async () => {
@@ -31,7 +31,9 @@ describe('rate-limit', () => {
 
     it('blocks email_locked after 5 failures from the same email+ip within window', async () => {
       for (let i = 0; i < 5; i++) {
-        await recordLoginAttempt('user@example.com', '203.0.113.20', false);
+        await expect(checkLoginRateLimit('user@example.com', '203.0.113.20')).resolves.toEqual({
+          allowed: true,
+        });
       }
       const r = await checkLoginRateLimit('user@example.com', '203.0.113.20');
       expect(r.allowed).toBe(false);
@@ -43,7 +45,9 @@ describe('rate-limit', () => {
 
     it('blocks ip_locked after 20 failures from the same IP across emails', async () => {
       for (let i = 0; i < 20; i++) {
-        await recordLoginAttempt(`u${i}@example.com`, '203.0.113.30', false);
+        await expect(checkLoginRateLimit(`u${i}@example.com`, '203.0.113.30')).resolves.toEqual({
+          allowed: true,
+        });
       }
       const r = await checkLoginRateLimit('different@example.com', '203.0.113.30');
       expect(r.allowed).toBe(false);
@@ -52,12 +56,52 @@ describe('rate-limit', () => {
       }
     });
 
-    it('does not block a different IP even after many failures elsewhere', async () => {
+    it('does not block a different email and IP after many failures elsewhere', async () => {
       for (let i = 0; i < 20; i++) {
-        await recordLoginAttempt('victim@example.com', '203.0.113.40', false);
+        await checkLoginRateLimit(`other-${i}@example.com`, '203.0.113.40');
       }
       const r = await checkLoginRateLimit('victim@example.com', '203.0.113.99');
       expect(r.allowed).toBe(true);
+    });
+
+    it('blocks one email after 10 failures across rotated IP addresses', async () => {
+      for (let i = 0; i < 10; i++) {
+        await expect(
+          checkLoginRateLimit('rotated@example.com', `203.0.113.${100 + i}`),
+        ).resolves.toEqual({ allowed: true });
+      }
+
+      const r = await checkLoginRateLimit('rotated@example.com', '203.0.113.200');
+      expect(r.allowed).toBe(false);
+      if (!r.allowed) {
+        expect(r.reason).toBe('email_locked');
+      }
+    });
+
+    it('allows only 5 of 10 concurrent attempts for the same email and IP', async () => {
+      const results = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          checkLoginRateLimit('concurrent@example.com', '203.0.113.210'),
+        ),
+      );
+
+      expect(results.filter((result) => result.allowed)).toHaveLength(5);
+      expect(results.filter((result) => !result.allowed)).toHaveLength(5);
+      expect(
+        results
+          .filter((result) => !result.allowed)
+          .every((result) => result.reason === 'email_locked'),
+      ).toBe(true);
+    });
+
+    it('does not share an IP lock between callers whose IP is unknown', async () => {
+      for (let i = 0; i < 20; i++) {
+        await checkLoginRateLimit(`unknown-${i}@example.com`, 'unknown');
+      }
+
+      await expect(checkLoginRateLimit('new@example.com', 'unknown')).resolves.toEqual({
+        allowed: true,
+      });
     });
 
     it('does not count records older than the 15-minute window', async () => {
@@ -78,17 +122,29 @@ describe('rate-limit', () => {
         data: { email: 'aged@example.com', ip: '203.0.113.60', success: false, createdAt: long },
       });
       await checkLoginRateLimit('aged@example.com', '203.0.113.60');
-      const left = await prisma.loginAttempt.count({ where: { email: 'aged@example.com' } });
-      expect(left).toBe(0);
+      const expired = await prisma.loginAttempt.count({
+        where: {
+          email: 'aged@example.com',
+          createdAt: { lt: new Date(Date.now() - 30 * 86400000) },
+        },
+      });
+      const current = await prisma.loginAttempt.count({ where: { email: 'aged@example.com' } });
+      expect(expired).toBe(0);
+      expect(current).toBe(1);
     });
   });
 
-  describe('recordLoginAttempt', () => {
+  describe('recordLoginSuccess', () => {
     it('success clears failure history for the same email in the window', async () => {
       for (let i = 0; i < 4; i++) {
-        await recordLoginAttempt('reset@example.com', '203.0.113.70', false);
+        await checkLoginRateLimit('reset@example.com', '203.0.113.70');
       }
-      await recordLoginAttempt('reset@example.com', '203.0.113.70', true);
+      await recordLoginSuccess('reset@example.com', '203.0.113.70');
+      expect(
+        await prisma.loginAttempt.count({
+          where: { email: 'reset@example.com', success: false },
+        }),
+      ).toBe(0);
       const r = await checkLoginRateLimit('reset@example.com', '203.0.113.70');
       expect(r.allowed).toBe(true);
     });

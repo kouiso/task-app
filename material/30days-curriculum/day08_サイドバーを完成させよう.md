@@ -19,9 +19,8 @@ Day 07 で認証バックエンドを作りました。
 ログイン後のすべてのページがこのレイアウトで表示されるようにします。
 
 - [ ] `src/app/providers.tsx` — tRPC クライアントをアプリ全体に提供する
-- [ ] `src/app/(app)/layout.tsx` — 認証済みページ用のルートグループ
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー + メインコンテンツ
-- [ ] `src/app/(app)/dashboard/page.tsx` — レイアウトの中で動くダッシュボード
+- [ ] `src/app/dashboard/page.tsx` — AppLayout の中で動くダッシュボード
 - [ ] ログアウトが動作することを確認する
 
 ## なぜこれを作るのか
@@ -37,7 +36,7 @@ Day 07 のログイン API は動くけど、フロント側がまだ繋がっ�
 ```mermaid
 flowchart TD
     A[layout.tsx] --> B[Providers]
-    B --> C["(app)/layout.tsx"]
+    B --> C["dashboard/page.tsx"]
     C --> D[AppLayout]
     D --> E[サイドバー]
     D --> F[メインコンテンツ]
@@ -63,7 +62,6 @@ flowchart TD
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | Provider | プロバイダー | コンポーネントツリー全体に値を配る仕組み | 建物全体に電気を通す配電盤 |
-| Route Group | ルートグループ | `(app)` のようにカッコで囲んだフォルダ。URL に影響しないレイアウト分岐 | 「関係者エリア」の見えない仕切り |
 | use client | ユーズクライアント | ブラウザ側で動くと宣言する | 「この部品はお客さんの手元で動きます」 |
 | useQuery | ユーズクエリ | サーバーからデータを取得する React Hook | 注文票を厨房に出して結果を待つ |
 | useMutation | ユーズミューテーション | サーバーのデータを変更する React Hook | 注文を厨房に送信する |
@@ -75,11 +73,10 @@ flowchart TD
 | Step 1 | providers.tsx を作る（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
 | Step 2 | ルートレイアウトに Provider を組み込む | 5分 | `src/app/layout.tsx` 編集 |
 | Step 3 | AppLayout を作る（サイドバーの骨格） | 15分 | `src/component/layout/app-layout.tsx` |
-| Step 4 | ルートグループ (app) で認証レイアウトを適用する | 5分 | `src/app/(app)/layout.tsx` |
-| Step 5 | ダッシュボードページを移動する | 5分 | `src/app/(app)/dashboard/page.tsx` |
-| Step 6 | ログインして全体の動作を確認する | 5分 | なし |
+| Step 4 | ダッシュボードに AppLayout を適用する | 5分 | `src/app/dashboard/page.tsx` |
+| Step 5 | ログインして全体の動作を確認する | 5分 | なし |
 
-**合計時間**: 約 43 分。
+**合計時間**: 約 38 分。
 
 ---
 
@@ -488,85 +485,63 @@ export function AppLayout({
 
 ---
 
-### Step 4: ルートグループ (app) で認証レイアウトを適用する（5分）
+### Step 4: ダッシュボードに AppLayout を適用する（5分）
 
-**ゴール**: 認証済みページだけに AppLayout を適用するルートグループを作ります。
+**ゴール**: Day 02 で作ったダッシュボードを、サイドバー付きの AppLayout で囲みます。
 
-Next.js の Route Group `(app)` は URL に影響しないフォルダ。
-`/dashboard` は `src/app/(app)/dashboard/page.tsx` に置いても URL は `/dashboard` のまま。
+Day 09 以降も、各ページを同じ方法で AppLayout の中へ入れます。
+ファイルは移動せず、`src/app/dashboard/page.tsx` をそのまま編集します。
 
 ```mermaid
 flowchart TD
-    A["src/app/layout.tsx (Providers)"] --> B["(app)/layout.tsx (AppLayout)"]
-    A --> C["login/page.tsx (レイアウトなし)"]
-    A --> D["register/page.tsx (レイアウトなし)"]
-    B --> E["dashboard/page.tsx"]
-    B --> F["project/page.tsx (Day 09)"]
+    A["src/app/layout.tsx (Providers)"] --> B["dashboard/page.tsx"]
+    A --> C["login/page.tsx"]
+    A --> D["register/page.tsx"]
+    B --> E["AppLayout"]
+    E --> F["Day 02 で作った dashboard の中身"]
 
-    style B fill:#e8f5e9
+    style E fill:#e8f5e9
     style C fill:#fff3e0
     style D fill:#fff3e0
 ```
 
-`src/app/(app)/layout.tsx` を新規作成します。
+`src/app/dashboard/page.tsx` の import に AppLayout を追加します。
 
 ```tsx
-// filepath: src/app/(app)/layout.tsx
+// filepath: src/app/dashboard/page.tsx（import に追加）
 import { AppLayout } from '@/component/layout/app-layout';
-
-export default function AppGroupLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <AppLayout>{children}</AppLayout>;
-}
 ```
 
-たった 3 行。この layout.tsx の中に入るページはすべて AppLayout（サイドバー + 認証チェック）が適用されます。
-
-**確認ポイント**:
-- [ ] `src/app/(app)/layout.tsx` が作成できた
-- [ ] `(app)` フォルダ名にカッコが付いている（URL に影響しない）
-
----
-
-### Step 5: ダッシュボードページを移動する（5分）
-
-**ゴール**: ダッシュボードを Route Group 内に移動して、AppLayout が適用されるようにします。
-
-`src/app/dashboard/page.tsx` を `src/app/(app)/dashboard/page.tsx` に移動します。
-
-```bash
-mkdir -p src/app/\(app\)/dashboard
-mv src/app/dashboard/page.tsx src/app/\(app\)/dashboard/page.tsx
-```
-
-> もし Day 02 で作った `dashboard/page.tsx` がなければ、以下の最小版を作ります。
+次に、Day 02 で作った外側の `<main>...</main>` を
+`<div>...</div>` に変え、その全体を
+`<AppLayout>...</AppLayout>` で囲みます。
+AppLayout 側が `<main>` を持つため、内側は `<div>`
+にして重複を避けます。中身は消さず、そのまま残してください。
 
 ```tsx
-// filepath: src/app/(app)/dashboard/page.tsx
-export default function DashboardPage() {
+// filepath: src/app/dashboard/page.tsx（return の外側を変更）
   return (
-    <div>
-      <h1 className="text-2xl font-bold">
-        ダッシュボード
-      </h1>
-      <p className="mt-2 text-muted-foreground">
-        ようこそ Task App へ。
-      </p>
-    </div>
+    <AppLayout>
+      <div className="min-h-screen bg-background text-foreground">
+        {/* Day 02 で作った内容は、そのままここに残す */}
+      </div>
+    </AppLayout>
   );
-}
 ```
 
+AppLayout がサイドバーと認証チェックを担当し、
+内側の `<main>` は Day 02 のダッシュボード表示を担当します。
+ログイン画面と登録画面は AppLayout で囲まないため、
+認証前でもサイドバーなしで表示されます。
+
 **確認ポイント**:
-- [ ] `src/app/(app)/dashboard/page.tsx` が存在する
-- [ ] 古い `src/app/dashboard/` は削除または移動済み
+- [ ] `src/app/dashboard/page.tsx` に AppLayout の import がある
+- [ ] `return` の外側が `<AppLayout>...</AppLayout>` で囲まれている
+- [ ] Day 02 の外側の `<main>` を `<div>` に変え、中身が残っている
 
 ---
 
-### Step 6: ログインして全体の動作を確認する（5分）
+### Step 5: ログインして全体の動作を確認する（5分）
 
 **ゴール**: ここまでの全 Step が正しく連携して動くことを確認します。
 
@@ -633,8 +608,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 - [ ] `src/app/providers.tsx` — tRPC Provider を作った
 - [ ] `src/app/layout.tsx` — Provider を組み込んだ
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー付きレイアウトを作った
-- [ ] `src/app/(app)/layout.tsx` — 認証済みページ用ルートグループを作った
-- [ ] `src/app/(app)/dashboard/page.tsx` — レイアウト内でダッシュボードが動く
+- [ ] `src/app/dashboard/page.tsx` — AppLayout で囲んだ
 - [ ] ログイン → サイドバー表示 → ログアウトの一連の流れを確認した
 
 ## つまずきポイント
@@ -643,11 +617,10 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 |------------|------|---------|
 | `api is not defined` | `@/trpc/react` からの import 漏れ | `import { api } from '@/trpc/react'` を確認 |
 | `Cannot find module '@/component/ui/alert-dialog'` | UI コンポーネント未配置 | scaffold の `_ui-components/` が `src/component/ui/` にあるか確認 |
-| サイドバーが表示されない | `(app)/layout.tsx` で `AppLayout` を使っていない | Step 4 の layout.tsx を確認 |
+| サイドバーが表示されない | `dashboard/page.tsx` を `AppLayout` で囲んでいない | Step 4 の import と return を確認 |
 | ログイン後に白い画面 | `providers.tsx` が `layout.tsx` に組み込まれていない | Step 2 を確認 |
 | `useQuery` でエラー | tRPC サーバー側が動いていない | Day 07 の `src/server/api/root.ts` が存在するか確認 |
 | ログアウトしてもリダイレクトされない | `router.refresh()` の呼び忘れ | `onSuccess` 内に `router.push('/login'); router.refresh();` |
-| `(app)` フォルダで URL が変わってしまう | フォルダ名にカッコが付いていない | `(app)` — 丸カッコが必須 |
 
 ## 次回予告
 
