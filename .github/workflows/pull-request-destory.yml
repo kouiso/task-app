@@ -12,6 +12,9 @@ env:
 
 jobs:
   destroy:
+    # Match the preview deploy workflow: cleanup only runs when the legacy
+    # GCP preview environment has been explicitly enabled and configured.
+    if: ${{ vars.ENABLE_GCP_PR_PREVIEW == 'true' }}
     permissions:
       contents: 'read'
       id-token: 'write'
