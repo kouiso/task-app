@@ -13,7 +13,7 @@ TaskDialogコンポーネントで、新しいタスクを作成
 パターンとreact-hook-form + zodをタスク版に
 応用します。
 
-スクリーンショット: タスク作成ダイアログの完成画面。
+スクリーンショット: タスク作成ダイアログの完成イメージを確認してください。
 
 ![タスク作成ダイアログの完成画面](./screenshots/task-create-dialog.png)
 
@@ -58,6 +58,8 @@ graph TD
     style I fill:#c8e6c9
 ```
 
+この図で目を留めてほしいのは D の分岐です。入力はサーバーへ飛ぶ前に、いったんブラウザ側の zod で止まります。ここで弾いておけば、空のタイトルのまま通信が飛ぶことはありません。読者は入力欄のすぐ下でやり直せます。もう1か所は E から H までの順番です。保存が成功したあと G のキャッシュ更新を挟んでから、ダイアログを閉じます。この順番を入れ替えると、閉じた先の一覧が古いままになります。
+
 ### やること / やらないこと
 
 | やること | やらないこと |
@@ -91,7 +93,7 @@ graph TD
 | Step 8 | ページにDialogを組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約72分。
+**合計時間**: 約72分です。
 
 ---
 
@@ -161,7 +163,7 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 ```
 
-`FOR UPDATE` は、同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため、同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメーターとして渡され、文字列連結で SQL を作らない安全な書き方です。
+`FOR UPDATE` は、同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため、同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメータとして渡され、文字列連結で SQL を作らない安全な書き方です。
 
 次に、指定した担当者がプロジェクトのメンバーかを確認するヘルパーを続けます。
 
@@ -388,6 +390,8 @@ export const searchRouter = createTRPCRouter({
       }
 ```
 
+呼び出した人の所属を先に確かめているのは、`projectId` がクライアントから送られてくる値だからです。他人のプロジェクトの id に書き換えて呼べば、入っていないプロジェクトのメンバー名とメールアドレスが手に入ってしまいます。`findUnique` が `null` を返した時点で `FORBIDDEN` を投げ、後ろの取得処理までたどり着かせません。Day 09 の `getAll` で、他人の `userId` を指定できる相手を管理者だけに絞ったのと同じ守り方です。
+
 確認を通ったら、そのプロジェクトのメンバーだけを取得してルーターを閉じます。
 
 ```typescript
@@ -486,6 +490,8 @@ import {
 import { api } from '@/trpc/react';
 ```
 
+ここで足す取り込みは、フォームの部品と選択肢の元になる定数です。`Select` 一式は shadcn/ui のドロップダウン、`Textarea` は複数行を書ける入力欄です。`TASK_STATUS_LABELS` と `TASK_PRIORITY_LABELS` は、`'TODO'` のような内部の値と「未対応」という表示名を対応づけた定数で、Day 13 のタスク一覧でも同じものを使いました。選択肢をここに書き写さず定数から取り出すので、一覧とダイアログで表示名がずれません。`api` は担当者の候補をサーバーから取るために使います。
+
 zodスキーマを定義します。
 
 ```typescript
@@ -511,6 +517,8 @@ const taskFormSchema = z.object({
 type TaskFormValues =
   z.infer<typeof taskFormSchema>;
 ```
+
+このスキーマは2つの仕事を兼ねます。1つは入力の検証で、タイトルが空なら送信を止めます。もう1つは型づくりで、最後の `z.infer` がスキーマから `TaskFormValues` を組み立てます。型を別に手書きしないので、あとで項目を1つ足しても、検証の内容と型が食い違いません。`z.nativeEnum(TASK_STATUS)` を選ぶ理由も同じです。`'TODO'` のような文字列をここへ並べ直すと、定数ファイルとの二重管理が始まります。
 
 #### zodスキーマの各フィールド
 
@@ -553,6 +561,8 @@ export interface TaskFormData {
   expectedUpdatedAt?: string;
 }
 ```
+
+この `TaskFormData` は、ダイアログが外へ渡す荷物の形です。`export` を付けてあるのは、Step 8 で `src/app/task/page.tsx` が同じ型を取り込んで受け取るためです。`?` の付いた項目は省略できます。必須は `title`・`status`・`priority`・`projectId` の4つで、これは Step 0 の `taskCreateSchema` で必須にした項目とそろえてあります。画面とサーバーで必須の範囲がずれていると、送信して初めて弾かれる手戻りが起きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -634,7 +644,7 @@ function buildTaskFormValues(
       initialData?.assigneeId ?? '',
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+この関数を `useForm` の外へ切り出したのは、初期値を作る場所を1か所に決めるためです。`initialData?.title ?? ''` のように既定値を全項目へ置いたので、`initialData` が無い新規作成でも入力欄は空文字から始まります。ここを `undefined` のまま渡すと、React はその入力欄を「値を管理していない」と見なし、あとで文字を打った瞬間に警告を出します。`projects[0]?.id || ''` は、プロジェクトが1件でもあれば先頭を選んだ状態で開くための既定値です。関数はまだ途中なので、続きを次のブロックで書きます。
 
 ```typescript
 // filepath: 続き
@@ -660,7 +670,7 @@ export function TaskDialog({
   });
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+`useForm` から受け取った7つは、すべてこのあとの入力欄で使います。`register` は Input と Textarea をフォームへつなぐ道具、`control` は Select をつなぐ道具で、この使い分けが Step 5 の山場になります。いちばん効いているのは `resolver: zodResolver(taskFormSchema)` の1行です。Step 1 で書いたスキーマが、ここで送信前の検問として組み込まれます。この行が抜けるとスキーマは書いただけの存在になり、タイトルが空でも送信が通ります。関数はまだ続くので、次のブロックへ進みます。
 
 ```typescript
 // filepath: 続き
@@ -677,6 +687,8 @@ export function TaskDialog({
     );
   const users = projectMembers ?? [];
 ```
+
+担当者の候補は、どのプロジェクトかが決まって初めて意味を持ちます。だから `watch('projectId')` で選択中の値を見張り、それを `getMembersByProject` へ渡します。第2引数の `enabled` は、条件を満たすまで通信そのものを止めておく指定です。ダイアログが閉じている間や未選択の間は呼びに行きません。これが無いと、ページを開いただけで空の `projectId` が飛び、Step 0 で書いた所属確認に弾かれます。`projectMembers ?? []` は、返事が来るまでの間を空の配列として受け止める書き方です。
 
 プロジェクト一覧の参照はレンダー中に書き換えず、画面へ反映されたあとで同期します。
 
@@ -696,6 +708,8 @@ export function TaskDialog({
     );
   }, [initialData, open, reset]);
 ```
+
+2つ目の `useEffect` が `if (!open) { return; }` で始まるのは、閉じている間に `reset` を走らせても無駄だからです。開いた瞬間だけ初期値を作り直すので、前回入力した内容が次に開いたとき残りません。要点は、`reset` に渡すのが `projects` ではなく `projectsRef.current` である点です。依存配列へ `projects` を入れると、候補一覧が裏で取り直されるたびに `reset` が走り、入力途中のタイトルが消えます。1つ目の `useEffect` は、その参照を最新に保つ係です。
 
 フォームを表示した後でプロジェクト一覧が届くケースへ備え、空の `projectId` だけを初期化します。
 
@@ -802,7 +816,7 @@ const handleFormSubmit =
           data.assigneeId }),
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+ここで組み立てている `submitData` は、入力欄の値をそのまま渡すのではなく、空の項目を落としてから渡します。`...(data.description && { description: data.description })` は、説明が空文字ならキーごと消える書き方です。空文字を送ると、サーバー側では「空という値が指定された」と読め、未入力と区別が付きません。必須の4項目は条件を付けず常に入れます。この関数はまだ途中なので、続きを次のブロックで書きます。
 
 ```typescript
 // filepath: 続き
@@ -815,6 +829,8 @@ const handleFormSubmit =
     onSubmit(submitData);
   };
 ```
+
+最後の1つだけ条件が2段になっているのは、`expectedUpdatedAt` を送ってよい場面が編集に限られるからです。`data.id` が入っているのは編集で開いたときなので、新規作成ではこのキーが付きません。`onSubmit(submitData)` で親へ渡したら、この部品の仕事は終わりです。実際に保存を頼むのは Step 8 で書く `src/app/task/page.tsx` の側で、ダイアログは通信を1つも持ちません。
 
 #### 条件付きスプレッド構文の解説
 
@@ -851,6 +867,8 @@ return (
       </DialogHeader>
 ```
 
+`onOpenChange` に `!isOpen && handleClose()` を渡したのは、閉じ方が「キャンセル」ボタンだけではないからです。背景をクリックしても Esc キーを押しても閉じますが、どの経路も `handleClose` を通れば、入力内容のリセットは1か所で済みます。タイトルと説明文を `initialData?.id` で切り替えてあるのは、この同じ部品を Day 15 の編集でも使い回すためです。今日は `initialData` を渡さないので、必ず「タスク作成」と表示されます。
+
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
       <form onSubmit={
@@ -872,6 +890,8 @@ return (
             )}
           </div>
 ```
+
+`{...register('title')}` の1行で、この入力欄がフォームの管理下に入ります。`value` や `onChange` を自分で書かなくても、react-hook-form が値を持ち、送信時に `handleFormSubmit` へ渡してくれます。下の `errors.title && (...)` は、検証に引っかかったときだけ赤い文字を出す分岐です。普段の `errors.title` は `undefined` なので、何も表示されません。ここに出る文言は、Step 1 のスキーマへ書いた「タイトルは必須です」がそのまま届いたものです。
 
 説明欄を追加します。
 
@@ -899,7 +919,7 @@ return (
 - タイトルと説明の入力欄が表示される
 - タイトルが空のまま送信するとエラーメッセージが表示される
 
-スクリーンショット: タイトルと説明の入力欄が表示されている画面。
+スクリーンショット: タイトルと説明の入力欄が並んだ画面を確認してください。
 
 ![タイトルと説明の入力欄が表示されている画面](./screenshots/task-create-dialog.png)
 ---
@@ -934,6 +954,8 @@ return (
           </SelectTrigger>
 ```
 
+ここで `register` ではなく `Controller` を使うのは、shadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体（`ref`）を受け取って値を読みますが、`Select` はボタンとメニューの組み合わせで、渡せる `ref` を持ちません。代わりに `Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。`name="status"` は、フォームのどの項目とつなぐかの指定です。
+
 続けて、ステータスの選択肢を `TASK_STATUS_LABELS` から生成します。
 
 ```typescript
@@ -953,6 +975,8 @@ return (
       )} />
   </div>
 ```
+
+選択肢を手で並べず `Object.entries(TASK_STATUS_LABELS)` から作るところが、この部分の要点です。`value` には内部の値、画面には日本語のラベルが入ります。ステータスを1つ増やしたくなったら定数ファイルを直すだけで、このダイアログにも Day 13 の一覧にも同じ表示名が届きます。`key={value}` は、並んだ項目を React が見分けるための印です。
 
 優先度Selectも同じパターンで作ります。
 
@@ -977,6 +1001,8 @@ return (
                 "優先度を選択" />
           </SelectTrigger>
 ```
+
+優先度の作りはステータスと同じで、変わるのは `name` と参照する定数だけです。同じ形をもう一度書いてもらうのは、`Controller` の3点セット（`name`・`control`・`render`）が身に付けば、Select が何個増えても同じ手順で足せると確かめるためです。`aria-label` を付けてあるのは、画面読み上げを使う人へどちらの選択欄かを伝えるためで、見た目には出ません。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -1067,6 +1093,8 @@ return (
           </SelectTrigger>
 ```
 
+プロジェクトだけは、選択肢の出どころが定数ではなく親から渡される `projects` です。`disabled={!projects.length}` を付けたのは、プロジェクトが1件も無いときに選べない見た目へ変えるためです。ここが空のままだと `projectId` も空で、Step 1 のスキーマが送信を止めます。タスクは必ずどれかのプロジェクトへ属するので、未選択のまま先へは進めません。
+
 プロジェクトの選択肢とエラー表示です。
 
 ```typescript
@@ -1090,6 +1118,8 @@ return (
     )}
   </div>
 ```
+
+エラー表示をタイトルと同じ形でここにも置くのは、必須の項目が画面に2つあるからです。プロジェクトが未選択でも「作成」ボタンは押せてしまいますが、押した先でこの赤い文字が理由を伝えます。押しても無反応な作りにすると、読者は何が足りないのか分からず、入力欄を順に見直すことになります。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -1115,6 +1145,8 @@ return (
               "担当者を選択" />
           </SelectTrigger>
 ```
+
+担当者の欄だけは、値の出入りで変換を1回挟みます。画面では未割当を `'unassigned'` という文字列で持ち、`onValueChange` の中で空文字へ戻してからフォームへ渡します。理由はこの節の最後に補足したとおりで、`Select` は空文字を選択済みとして扱えません。フォーム側の値は空文字のまま保つため、`handleFormSubmit` の条件付きスプレッドが `assigneeId` のキーごと落とします。担当者を決めずに作ったタスクは、未割当のままサーバーへ届きます。
 
 担当者の選択肢です。
 
@@ -1144,7 +1176,7 @@ return (
 - プロジェクト一覧が表示される
 - 担当者一覧に「未割当」がある
 
-スクリーンショット: プロジェクト・担当者のSelect欄が表示されている画面。
+スクリーンショット: プロジェクトと担当者のSelect欄が並んだ画面を確認してください。
 
 ![プロジェクト・担当者のSelect欄が表示されている画面](./screenshots/task-create-dialog.png)
 ---
@@ -1205,6 +1237,8 @@ return (
 );
 }
 ```
+
+`type="button"` と `type="submit"` の書き分けが、ここでの分かれ目です。`<form>` の中のボタンは既定で送信ボタンになるため、キャンセル側に `type="button"` を付けないと、押した瞬間に送信が走ります。送信側の `type="submit"` は `handleSubmit(handleFormSubmit)` へつながり、zod の検証を通ったときだけ `handleFormSubmit` が呼ばれます。最後の `}` で `TaskDialog` 関数が閉じ、ダイアログの部品が1つ完成します。
 
 **確認ポイント**:
 - 日付ピッカーで期限を選べる
@@ -1331,7 +1365,7 @@ const handleSubmit =
 - フォーム送信でタスクが作成される
 - 一覧に新しいタスクが表示される
 
-スクリーンショット: タスク作成後、一覧画面に新しいタスクが表示されている画面。
+スクリーンショット: 作成したタスクが一覧の先頭に並んだ画面を確認してください。
 
 ![タスク作成後、一覧の先頭に新しいタスクが表示されている](./screenshots/task-list-after-create.png)
 
@@ -1399,6 +1433,7 @@ const handleSubmit =
 PORT=3001 npm run dev
 ```
 
+ここまでで、入力 → 検証 → 保存 → 一覧の更新が1本につながりました。`PORT=3001` を付けるのは、他の作業でポート 3000 がふさがっていても起動できるようにするためです。作ったタスクが一覧に出てこないときは、まず `onSuccess` の `invalidate()` が書けているかを見てください。保存自体は成功していて画面だけが古い、という詰まり方がいちばん多いところです。
 
 ---
 
@@ -1437,6 +1472,8 @@ const taskFormSchema = z.object({
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+Before では、ステータスの5つの値がすでに2か所へ並んでいます。`TaskStatus` の union と、`z.enum([...])` の中です。いま中身がそろっているので動きますが、片方だけ直しても誰も教えてくれません。次のブロックで、この重複がさらに増えていきます。
+
 ```typescript
 // filepath: 続き
     'DONE',
@@ -1465,6 +1502,8 @@ export interface TaskFormData {
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+優先度でも同じ重複が起きました。`TaskPriority` の union と `z.enum([...])` で、4つの値を2回書いています。`TaskFormData` の側は `TaskStatus` を参照するので union に追随しますが、このあと出てくるラベルと初期値は文字列を直に書きます。定義が散らばるほど、値を1つ足すときに触る場所が増えます。
 
 ```typescript
 // filepath: 続き
@@ -1528,6 +1567,8 @@ const taskFormSchema = z.object({
 
 ```
 
+After では、値の出どころが `@/lib/constant/status` と `@/lib/constant/priority` の2ファイルだけになりました。`z.nativeEnum(TASK_STATUS)` は定数オブジェクトの値をそのまま許可リストへ変えるので、文字列を書き写す作業が消えます。ステータスを1つ増やす作業は、定数ファイルへ1行足すところから始まります。
+
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
@@ -1559,6 +1600,8 @@ const statusOptions = Object.entries(
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+初期値に `Pick<TaskFormValues, 'status' | 'priority'>` を付けたところが効きます。スキーマ側の値を変えると、この定数がその場で型エラーになり、直し忘れが起動前に見つかります。Before の `'TODO' as TaskStatus` は型を名乗らせるだけなので、綴りが違っても素通りしました。`statusOptions` もラベル定数から組み立てるため、選択肢を並べ直す場所はここにも残りません。
 
 ```typescript
 // filepath: 続き

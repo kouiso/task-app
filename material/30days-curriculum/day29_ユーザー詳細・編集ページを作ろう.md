@@ -14,7 +14,7 @@ Day 28 では **タスク一括操作**を実装しました。チェックボ�
 
 ![ユーザー詳細ページの完成イメージの表示を確認してください。](./screenshots/user-detail-page.png)
 
-> **今日のゴールライン**: 動的ルーティングでユーザーIDを受け取り、詳細表示から編集保存まで権限つきで動かせればOK。
+> **今日のゴールライン**: 動的ルーティングでユーザーIDを受け取り、詳細表示から編集保存まで権限つきで動かせれば大丈夫です。
 
 ## 始める前の前提
 
@@ -49,6 +49,8 @@ flowchart TD
     I --> K["/user/abc123/edit"]
     K --> L["server wrapper + client form"]
 ```
+
+この図で見てほしいのは、B と F で2回サーバーに問い合わせているところです。B の `page.tsx` が Prisma（データベースを読み書きする道具）で確かめるのは「その ID のユーザーが居るか」だけで、名前やメールは取りません。居なければ D の `notFound()` に進み、画面が1度も描かれないまま404になります。居たときだけ F の `getById` が本物の詳細データを取りに行き、そこで「見る権限があるか」を確かめます。存在の確認と権限の確認を分けているので、他人のIDを打ち込まれたときに「そんな人は居ない」と「居るが見せない」を別々に返せます。
 
 ### やること / やらないこと
 
@@ -88,7 +90,7 @@ flowchart TD
 | Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/page.tsx` | ドロップダウンとチェックボックスが動く |
 | Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/page.tsx` | 保存ボタンでDBが更新される |
 
-**合計時間**: 約60分。
+**合計時間**: 約60分です。
 
 ---
 
@@ -135,6 +137,8 @@ const userUpdateSchema = z
     '更新する項目を1つ以上指定してください',
   );
 ```
+
+末尾の `.refine` は、項目ごとの検査では捕まえられない条件を足すための書き方です。この `userUpdateSchema` は `id` 以外の4項目すべてに `.optional()` が付いているので、`{ id }` だけを送っても項目単位の検査は通ります。それを許すと「何も変えない更新」が DB まで届き、`updatedAt` だけが動いたレコードが残ります。`.refine` で「4つのうち1つは入っていること」を最後に確かめると、その空振りの更新を入口で止められます。
 
 #### 0-1. getAll の直後に getById を足す
 
@@ -219,7 +223,7 @@ const userUpdateSchema = z
 
 #### 0-2. 次に update を追加する
 
-`getById` の直後に `update` を追記します。Day 24 で先に置いた `userUpdateSchema` をここで使います。
+`getById` の直後に `update` を追記します。この日の Step 1 で `profileUpdateSchema` の前に置いた `userUpdateSchema` をここで使います。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（getById の直後に追加）
@@ -236,7 +240,7 @@ const userUpdateSchema = z
       }
 ```
 
-ここでもまず権限判定です。更新対象が自分以外なら、管理者だけに許可します。
+ここでもまず権限判定です。更新対象が自分以外なら、管理者だけに許可します。判定に使っているのは `ctx.session.role` で、クライアントから送られてきた値ではありません。ここを `input` の中身で判定すると、送信内容を書き換えるだけで誰でも管理者を名乗れてしまいます。0-1 の `getById` と判定材料をそろえてあるので、閲覧と更新で権限の基準がずれません。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -362,6 +366,8 @@ src/app/user/
         └── page.tsx   ← 後で作成（編集ページ）
 ```
 
+`[id]` の下にさらに `edit/` を置くのは、URLの入れ子とフォルダの入れ子を同じ形にそろえるためです。`/user/abc123` は `[id]/page.tsx` が受け持ち、`/user/abc123/edit` は `[id]/edit/page.tsx` が受け持ちます。編集ページ側でも同じ `[id]` の値を読めるので、詳細から編集へIDを持ち回す仕組みを別に作る必要はありません。
+
 まずは route-level 404 を担当する
 server wrapper を作ります。
 
@@ -392,7 +398,9 @@ export default async function UserDetailPage({
   }
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+`params` が `Promise` になっているのは、Next.js 15 から動的ルーティングの値が非同期で渡されるようになったためです。だから `await params` で中身を開いてから `id` を取り出します。`select: { id: true }` として名前やメールを取っていないのは、この段階で知りたいのが「その ID のユーザーが居るかどうか」だけだからです。`notFound()` は下の行へ進まず、`src/app/not-found.tsx` の404画面に切り替えます。この確認を server 側に置くと、存在しないIDのときブラウザは一瞬も詳細画面を描きません。
+
+続きを次のブロックで書きます。
 
 ```tsx
 // filepath: 続き
@@ -400,6 +408,8 @@ export default async function UserDetailPage({
   return <UserDetailClient userId={id} />;
 }
 ```
+
+`notFound()` の後に `return` が続きますが、この行に届くのは `user` が見つかったときだけです。`notFound()` はその場で描画を打ち切るため、下の `return` は実行されません。取り出した `id` を `userId` として渡すので、client 側はURLをもう一度読み直さずに済みます。
 
 開発サーバーを起動して、存在するユーザーIDのURLで確認しましょう。
 `/user/test123` のような存在しないIDでは、
@@ -500,7 +510,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   }
 ```
 
-`if (!user)` の早期リターンを通過した後に権限変数を宣言します（`user` が確実に存在する状態でないと `user.id` にアクセスできないため）。
+`if (!user)` の早期リターンを通過した後に権限変数を宣言します。`user` が確実に存在する状態でないと `user.id` に触れないためです。
 
 > route-level 404 は Step 2 の
 > `page.tsx` で担当します。
@@ -559,6 +569,8 @@ PC: 左4列 + 右8列
   └──────┴────────────────────┘
 ```
 
+左を4列、右を8列に分けるのは、左が名前やロールのような長さの決まった情報で、右が件数によって伸び縮みする一覧だからです。伸びる側に広い幅を渡します。スマートフォンの幅では12列を横に割ると1つが狭くなりすぎるので、`md:` を付けて画面が広いときだけ2カラムにします。狭い画面では上下に積まれます。
+
 必要なコンポーネントをインポートします。ファイルの先頭のインポート部分に追加してください。
 
 ```tsx
@@ -596,6 +608,8 @@ import { formatDateOnly } from '@/lib/date';
 
         <div className="grid gap-6 md:grid-cols-12">
 ```
+
+戻るボタンを画面の先頭に置いているのは、この詳細ページがURLを直接開いても表示できるからです。一覧を経由せずに来た人はブラウザの戻るボタンで一覧へ帰れません。`router.push('/user')` と行き先を書いておけば、どこから来ても同じ場所へ戻せます。最後の `md:grid-cols-12` で12列の枠を開き、この中に左右のカラムを入れていきます。
 
 左カラムにアバターとユーザー基本情報を置きます。
 
@@ -781,7 +795,7 @@ onClick={() =>
 
 **確認ポイント**: プロジェクトバッジにカーソルを合わせるとポインターカーソルになることを確認してください。
 
-プロジェクトがないユーザー向けの空メッセージも忘れずに。`CardContent` の閉じタグまで書き切りましょう。
+プロジェクトが1件もないユーザー向けに、空のときのメッセージも入れておきます。`CardContent` の閉じタグまで書き切りましょう。
 
 Tailwind CSS では動的な色をクラスで指定できないため、`style={{ backgroundColor: member.project.color }}` でプロジェクトカラーを適用しています。
 
@@ -836,6 +850,8 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
                           </TableCell>
 ```
 
+`onClick` を `TableRow` そのものに付けているので、タイトルの文字だけでなく行のどこを押してもタスク詳細へ移動します。`hover:bg-muted/50` で指を乗せた行の色が変わるのは、押せる場所だと目で分かるようにするためです。`key={task.id}` は Day 09 のカード一覧と同じ役目で、React が行の入れ替わりを追うための印です。
+
 期限列の表示とカードの閉じタグを追加します。日付がない場合は `-` を表示します。
 
 ```tsx
@@ -884,7 +900,7 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 // Pencil を追加（ArrowLeft, Calendar, Mail は Step 4 で追加済み）
 ```
 
-左カラムの `Separator` と閉じタグ `</CardContent>` の間に追加します。
+アイコンはすべて `lucide-react` から取り込むので、行を増やさず Step 4 で書いた行へ `Pencil` を足します。まとめて1行にしておくと、このファイルが使うアイコンを1か所で見渡せます。ボタンを置く場所は左カラムの下端です。プロフィールを読んでから操作へ進む順番になります。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
@@ -953,7 +969,9 @@ export default async function UserEditPage({
   }
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+詳細ページの `page.tsx` と見比べると、違うのは最後に返す部品の名前だけです。編集ページでも同じ存在確認をもう一度書くのは、`/user/存在しないid/edit` を直接開かれる場合があるからです。詳細ページを通らないと編集ページに入れない、という前提は、URLを手打ちできる以上は成り立ちません。入口ごとに404を確かめます。
+
+続きを次のブロックで書きます。
 
 ```tsx
 // filepath: 続き
@@ -961,6 +979,8 @@ export default async function UserEditPage({
   return <UserEditClient userId={id} />;
 }
 ```
+
+フォームの中身をこのファイルに直接書かず、`UserEditClient` という別ファイルに渡しているのには理由があります。`page.tsx` は `await` と Prisma を使う server 側のファイルで、フォームは入力に反応する client 側の部品です。役割の違う2つを1ファイルに混ぜると `'use client'` の境目が引けません。ファイルを分けて、境目をそのままファイルの境目にします。
 
 次に、実際のフォーム本体となる
 `user-edit-client.tsx` のインポートを書きます。
@@ -1039,6 +1059,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   });
 ```
 
+`defaultValues` を空文字と `USER_ROLE.USER` で埋めているのは、サーバーからデータが届く前にフォームが1度描かれるからです。ここを省くと入力欄の値が `undefined` になり、React が「値を持たない入力欄が途中から値を持った」と警告を出します。中身は次に置く `useEffect` で本物のデータに差し替えるので、この初期値は最初の一瞬だけ使われます。
+
 現在ユーザーから権限フラグを作り、
 許可された場合だけ編集対象を取得します。
 
@@ -1082,6 +1104,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 ```
 
+読み込み中を表す `isCurrentUserLoading` だけでなく `!currentUser` も見ています。読み込みが終わっても取得に失敗して中身が空の場合があり、そのまま下へ進むと `currentUser?.role` がずっと `undefined` のままになります。すると下の権限判定が必ず「権限なし」に倒れ、ログイン済みの本人にまで拒否画面が出ます。それを止める1行です。
+
 権限がなければ、API エラーではなく
 安定した拒否画面を返します。
 
@@ -1107,6 +1131,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 ```
 
+拒否するとき、サーバーのエラーをそのまま見せずに自分でこの画面を返しています。`getById` は `enabled` の条件を満たしていないので通信自体が起きず、待っていてもエラーは返ってきません。読者にとっても「白い画面のあとに通知が出る」より「なぜ入れないかが書いてある画面」のほうが迷いません。
+
 許可された query の完了を待ちます。
 
 ```tsx
@@ -1119,6 +1145,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     );
   }
 ```
+
+3つの早期リターンは並び順に意味があります。先に現在ユーザー、次に権限、最後に編集対象のデータです。権限より先に `user` の到着を待つ形にすると、そもそも入れない人の画面が読み込み中のまま止まります。この順にしておけば、拒否する相手には待ち時間なしで拒否画面が出ます。
 
 権限チェックを通過した後に編集フォームの枠を表示します。
 
@@ -1226,6 +1254,8 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
               </div>
 ```
 
+`form.watch('avatar')` は、その項目の今の入力値を読み出して、変わるたびに描き直させる書き方です。だからURLを1文字打つごとにプレビューが差し替わります。`AvatarImage` を `form.watch('avatar') &&` で囲むのは、空欄のときに `src=""` の画像を出さないためです。空欄なら下の `AvatarFallback` が名前の頭文字を表示します。
+
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // 名前入力（register版）
@@ -1249,6 +1279,8 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
                   </p>)}
               </div>
 ```
+
+`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下に入ります。`value` と `onChange` を自分で書かずに済むのは、`register` が両方を作って渡してくれるからです。下の `form.formState.errors.name` は、Step 7 の zod スキーマに書いた「名前は必須です」を受け取る場所です。文言をスキーマ側だけに置けるので、検査の条件と画面の表示が食い違いません。
 
 メールアドレスとアバターURL入力欄を追加します。
 
@@ -1288,7 +1320,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 
 ### Step 9: ロール選択・アクティブ状態の切り替えを実装する（7分）
 
-**ゴール**: Select でロールを選択、Checkbox でアクティブ状態を切り替える。
+**ゴール**: Select でロールを選び、Checkbox でアクティブ状態を切り替えられるようにします。
 
 **サーバー側のアクセス制御**:
 本人は管理者であっても、自分の `role` や
@@ -1322,6 +1354,8 @@ import { isUserRole, USER_ROLE_LABELS }
   <>
 ```
 
+`canManageAccount` は Step 7 で `isAdmin && !isOwnProfile` として作った値です。管理者が自分自身を編集しているときは `false` になるので、この囲みの中は画面に出ません。管理者が自分の権限を自分で下げてしまい、誰も管理できないアプリになる事故を防ぐためです。`<>` は画面に何も残さない囲みで、条件が成り立つときだけ中の2つをまとめて出します。
+
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
 // ロール選択（form.setValue版）
@@ -1344,6 +1378,8 @@ import { isUserRole, USER_ROLE_LABELS }
                         "ロールを選択" />
                   </SelectTrigger>
 ```
+
+ここだけ `register` を使わず、`value` と `onValueChange` の2つで `useForm` へつないでいます。`Select` は素の `<select>` タグではなく、ボタンと一覧を組み合わせて作られた部品なので、`register` が待っている `onChange` が発生しないからです。代わりに `form.setValue` で値を書き戻します。選択肢の中身は次のブロックで足すので、いまは開いたままにしておきます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
@@ -1388,6 +1424,8 @@ import { isUserRole, USER_ROLE_LABELS }
               </div>
 ```
 
+`checked` と `onCheckedChange` の組み方は、上の `Select` とそろえてあります。`form.watch('isActive')` で今の値を映し、切り替わったら `form.setValue` で書き戻す形です。どの入力欄にも `disabled={updateUser.isPending}` を付けているのは、保存中に値を変えられると、送った内容と画面に見えている内容が食い違うからです。
+
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
   </>
@@ -1410,7 +1448,7 @@ import { isUserRole, USER_ROLE_LABELS }
 
 ### Step 10: 保存機能を実装して完成（5分）
 
-**ゴール**: 保存ボタンをクリックするとtRPCでDBが更新され、詳細ページに戻る。
+**ゴール**: 保存ボタンを押すとtRPCでDBが更新され、詳細ページに戻るところまで作ります。
 
 Day 25 で学んだ `useMutation` パターンを使い、保存処理を実装します。
 
@@ -1421,6 +1459,8 @@ import { Alert, AlertDescription, AlertTitle }
   from '@/component/ui/alert';
 // ArrowLeft は既にインポート済みなので AlertCircle を追加
 ```
+
+`Alert` を足すのは、保存に失敗した理由を画面に残すためです。この後に書く `onError` のトーストは数秒で消えるので、目を離している間に失敗すると読者は何が起きたか分かりません。消えない場所にも同じ内容を出しておきます。
 
 **確認ポイント**: ファイルを保存してインポートエラーが出ないことを確認してください。
 
@@ -1448,6 +1488,8 @@ import { Alert, AlertDescription, AlertTitle }
       },
     });
 ```
+
+`onSuccess` で4つを `invalidate` しているのは、同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのは、ここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるので、どれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
@@ -1561,6 +1603,8 @@ export function submitUserEditForm(
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+入口の引数が `rawValues: unknown` になっているところに目を留めてください。`unknown` は「まだ何の型か分からない値」を表し、そのままでは中身に触れません。フォームから来た値を最初に受け止める型としては、これで正しいです。Before と After が分かれるのは、この `unknown` をこの先どう扱うかという1点です。
+
 ```typescript
 // filepath: 続き
   userId: string,
@@ -1590,6 +1634,8 @@ submitUserEditForm(
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+問題は `const values = rawValues as UserEditFormValues;` の1行です。`as` は値を1つも見ずに「この形だと思って進む」と伝える書き方なので、`unknown` で受け取った意味がここで消えます。呼び出し側が正しい形を渡している限りは動きます。ただし、それを保証しているのは書き手の記憶だけで、TypeScript は何も確かめていません。
 
 ```typescript
 // filepath: 続き
@@ -1638,6 +1684,8 @@ type UpdateUserMutation = {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+After では、型を用意する順番が逆になっています。先に `userEditSchema` を書き、そこから `z.infer` で型を取り出します。名前・アバター・ロール・アクティブの条件が置いてある場所が1か所だけになるので、項目を足すときに直すのもスキーマだけです。Step 7 でフォームに渡したのと同じスキーマを、ここでは送信前の検査にも使い回しています。
+
 ```typescript
 // filepath: 続き
 
@@ -1667,6 +1715,8 @@ submitUserEditForm(
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+`as` が `userEditSchema.parse(rawValues)` に置き換わりました。`parse` は値を1項目ずつスキーマと照らし合わせて、合っていれば型の付いた値を返し、合っていなければその場で例外を投げます。`role` に `'OWNER'` が紛れ込んでいれば、サーバーへ送る前にここで止まります。左辺に `UserEditFormValues` と型を書いても `as` のような信じるだけの宣言にはなりません。中身が確かめられた後の値だからです。
 
 ```typescript
 // filepath: 続き
@@ -1753,6 +1803,8 @@ sequenceDiagram
     Comp->>URL: /user/abc123 に遷移
 ```
 
+この図を上から下へたどると、今日書いたコードが1本の線でつながります。URLの文字列が `id` になり、`id` が SQL の `WHERE` に入り、返ってきたユーザーが `form.reset` でフォームの初期値になります。戻りも同じ線です。フォームの値が `update` に乗り、`UPDATE` 文になって DB に届き、`onSuccess` が画面を詳細ページへ送り返します。表示が変わらないときは、この線のどこで値が止まっているかを探すと原因に近づけます。
+
 ### 次回予告
 
 Day 30では、いよいよ完成版をVercelに公開します。30日間コツコツ作ってきたタスク管理アプリを、世界中からアクセスできる状態にしましょう。
@@ -1791,6 +1843,8 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 }
 ```
 
+この server wrapper が短いのは、担当を存在確認と404だけに絞ったからです。表示に必要なデータは client 側の `getById` が取りに行くので、ここで名前やタスクまで読む必要はありません。
+
 ### `src/app/user/[id]/edit/page.tsx`
 
 ```typescript
@@ -1820,6 +1874,8 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   return <UserEditClient userId={id} />;
 }
 ```
+
+編集ページの wrapper は、返す部品が `UserEditClient` になっている以外は詳細ページと同じ形です。似た形が2つ並ぶのは無駄に見えますが、URLごとに404の判定を独立させておくためです。片方を消すと、消したほうのURLだけ存在しないIDでも画面が描かれ始めます。
 
 ### `src/app/user/[id]/user-detail-client.tsx`
 

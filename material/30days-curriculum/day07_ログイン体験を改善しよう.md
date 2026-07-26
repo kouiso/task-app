@@ -22,7 +22,7 @@ Day 05-06 でログイン画面と登録画面の UI を作りました。
 - [ ] `src/server/api/trpc.ts` — tRPC の土台を作り直す
 - [ ] `src/server/api/routers/auth.ts` — 認証 API を作り直す
 - [ ] `src/server/api/root.ts` — ルーターの束ね方を作り直す
-- [ ] `src/app/api/trpc/[trpc]/route.ts` — HTTP ハンドラを作り直す
+- [ ] `src/app/api/trpc/[trpc]/route.ts` — HTTP ハンドラーを作り直す
 - [ ] `src/middleware.ts` — ルート保護を作る
 - [ ] DevTools でログインの流れを確認する
 
@@ -56,6 +56,11 @@ sequenceDiagram
     B->>U: ダッシュボードへ遷移
 ```
 
+この図で追ってほしいのは、パスワードの登場が最初の 1 往復だけで終わる点です。
+2 往復目からブラウザが持ち歩くのは、Cookie に入った JWT のほうになります。
+だから今日いちばん守らないといけないものは、パスワードそのものではなく、この Cookie の中身です。
+以降の Step は、そのトークンを誰に渡し、誰に読ませないかを 1 つずつ決めていく作業になります。
+
 ### やること / やらないこと
 
 | やること | やらないこと |
@@ -84,7 +89,7 @@ sequenceDiagram
 | Step 1 | session.ts を作り直す（JWT セッション管理） | 12分 | `src/lib/session.ts` |
 | Step 2 | trpc.ts を作り直す（API の土台） | 10分 | `src/server/api/trpc.ts` |
 | Step 3 | auth.ts を作り直す（認証ルーター） | 15分 | `src/server/api/routers/auth.ts` + ヘルパー |
-| Step 4 | API を繋ぎ直す（ルーター登録 + HTTP ハンドラ） | 5分 | `src/server/api/root.ts`, `src/app/api/trpc/[trpc]/route.ts` |
+| Step 4 | API を繋ぎ直す（ルーター登録 + HTTP ハンドラー） | 5分 | `src/server/api/root.ts`, `src/app/api/trpc/[trpc]/route.ts` |
 | Step 5 | middleware.ts を作る（ルート保護） | 8分 | `src/middleware.ts` |
 | Step 6 | ログインして動作確認する | 5分 | なし |
 | Step 7 | DevTools で JWT と Cookie を確認する | 5分 | なし |
@@ -124,6 +129,11 @@ function getKey(): Uint8Array {
 | `cookies()` | Next.js の Cookie 操作 API | ブラウザの Cookie 棚 |
 | `getKey()` | 秘密鍵を Uint8Array に変換 | 店長の印鑑を取り出す |
 
+`getKey()` の返すこの鍵が、今日作る認証の土台です。
+署名に使う鍵と検証に使う鍵が同じなので、鍵を知っている人は誰でも正規のトークンを作れます。
+つまり `JWT_SECRET` が漏れた時点で、攻撃者は好きな `userId` と `role` を書いたトークンを自作でき、パスワードは要らなくなります。
+`.env` をリポジトリへコミットしないのは、この 1 行を守るためです。
+
 > `JWT_SECRET` は `.env` に scaffold が設定済み。32 文字以上の文字列で、本番では必ず変更します。
 
 #### 1-2. 型定義と定数
@@ -147,8 +157,8 @@ const COOKIE_NAME = 'session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
 ```
 
-`SessionPayload` は JWT トークンの中身。
-`SessionUser` は「誰がログインしてるか」の最小情報。
+`SessionPayload` は、JWT トークンの中に入れる中身の型です。
+`SessionUser` は、画面側が「いま誰がログインしているか」を判断するために必要な最小限の情報です。
 
 #### 1-3. 型ガードと暗号化
 
@@ -197,6 +207,11 @@ export async function encrypt(
 | `setExpirationTime('7d')` | 7 日間有効 | リストバンドの有効期限シール |
 | `sign(getKey())` | 秘密鍵で署名 | 店長のハンコで正式認定 |
 
+`jwtPayload` に入れているのは `userId` / `email` / `role` / `exp` の 4 つだけです。
+JWT は暗号化しないので、ここへ入れた値は受け取った人がそのまま読めます。
+パスワードや電話番号を足したくなっても入れてはいけないのは、そのためです。
+最後の `.sign(getKey())` が付ける署名は、中身を隠すものではなく、書き換えられていないことを示す封印だと考えてください。
+
 #### 1-4. 復号化（トークンを読む）
 
 ```typescript
@@ -222,7 +237,11 @@ export async function decrypt(
 }
 ```
 
-`encrypt` でトークンを作り、`decrypt` でトークンを読みます。対になる操作。
+`encrypt` でトークンを作り、`decrypt` でトークンを読みます。この2つは対になる操作です。
+読む側の中心は `jwtVerify` で、秘密鍵と合う署名が付いているかを確かめます。
+ここを飛ばして中身だけ取り出す作りにすると、攻撃者は自分で `role: "ADMIN"` と書いたトークンを貼り付けるだけで管理者になれます。
+署名が通っても項目が足りなければ `isSessionPayload` で弾き、期限切れなどで例外が出たときは `catch` が `null` を返します。
+ログイン済みとみなしてよいのは、この関数が `null` 以外を返したときだけです。
 
 #### 1-5. セッション操作（作成・取得・削除・検証）
 
@@ -243,6 +262,12 @@ export async function saveSessionCookie(
   });
 }
 ```
+
+トークンを Cookie へ書き込む処理だけを、別の関数へ切り出しています。
+ログイン直後と、あとから発行し直すときの両方から呼ぶので、書き込みの条件を 1 か所にそろえておくためです。
+そして、ここで渡している 5 つの設定が、ブラウザに置かれたトークンを守る唯一の柵になります。
+たとえば `httpOnly: true` を外すと、ページに紛れ込んだスクリプトが `document.cookie` からトークンを読み出せてしまいます。
+設定それぞれの意味は、この節の最後の表へまとめてあります。
 
 **確認ポイント**:
 - [ ] Cookie 設定を `saveSessionCookie` に分けて書けている
@@ -285,6 +310,12 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 ```
 
+`cookieStore.get(COOKIE_NAME)?.value` は、Cookie が見つからないと `undefined` になります。
+それをそのまま `decrypt` へ渡すと例外で止まるので、手前で `null` を返して打ち切ります。
+未ログインはエラーではなく、まだ誰でもない状態です。
+だからここでは例外を投げず、呼び出した側へ「セッションが無い」とだけ伝えます。
+この使い分けができていないと、ログイン画面を開いただけでサーバーエラーが出る作りになります。
+
 **確認ポイント**:
 - [ ] Cookie がない場合に `null` を返している
 
@@ -324,7 +355,7 @@ export async function verifySession(): Promise<SessionUser | null> {
 - [ ] `encrypt` / `decrypt` / `createSession` / `getSession` / `deleteSession` / `verifySession` の 6 関数がある
 - [ ] この時点ではまだ `npm run dev` しなくて OK
 
-**学んだこと**: JWT は「誰が」「いつまで」「どの権限で」ログインしているかを暗号化署名付きで保持する仕組み。
+**学んだこと**: JWT は「誰が」「いつまで」「どの権限で」ログインしているかを、署名付きで保持する仕組みです。
 
 ---
 
@@ -332,7 +363,7 @@ export async function verifySession(): Promise<SessionUser | null> {
 **ゴール**: tRPC の初期設定と、public / protected / admin の 3 種類の API を定義します。
 
 Day 05 のログイン画面は `api.auth.login.useMutation()` でサーバーを呼んでいました。
-その「サーバー側の土台」がこのファイル。
+その呼び出しを受け止めるサーバー側の土台が、これから作り直すこのファイルです。
 
 `src/server/api/trpc.ts` を開き、中身をすべて削除してから作り直します。
 
@@ -414,6 +445,12 @@ const isAuthenticated = t.middleware(
     });
 ```
 
+前半は、`ctx.session?.userId` が無ければ `UNAUTHORIZED` を投げて先へ進ませない門番です。
+目を留めてほしいのは、その直後に `prisma.user.findUnique` でデータベースを引き直しているところです。
+JWT の有効期限は 7 日間あるので、たった今アカウントを止めても、相手の手元にあるトークンは形の上では有効なままです。
+トークンの中身だけを信じる作りだと、止めたはずの相手を最大 7 日間止められません。
+リクエストのたびにデータベースを見に行くのは、この時間差を埋めるためです。
+
 **確認ポイント**:
 - [ ] セッションの `userId` で DB のユーザーを取り直している
 
@@ -433,6 +470,12 @@ const isAuthenticated = t.middleware(
       });
     }
 ```
+
+分岐を 2 つに分けているのは、返すべき答えが違うからです。
+ユーザーが見つからない側は、退会などでレコードが消えた状態にあたります。
+相手が誰なのか確かめられないので `UNAUTHORIZED` を返し、ログインし直せば通る可能性を残します。
+`isActive` が `false` の側は、誰かは分かっているが利用を止めてある状態なので `FORBIDDEN` を返します。
+まとめて 1 つのエラーにすると、画面側は「もう一度ログインしてください」と案内すべきかどうかを判断できません。
 
 **確認ポイント**:
 - [ ] DB にユーザーがない場合と無効化済みの場合を分けている
@@ -468,6 +511,12 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
   return next({ ctx });
 });
 ```
+
+`isAdmin` は、これ単体では守りになりません。
+見ているのは `ctx.session?.role` だけで、その値は 1 つ前の `isAuthenticated` がデータベースの内容で上書きしたものだからです。
+`isAuthenticated` を通さずにこれだけを使うと、権限を下げた直後のユーザーが、古いトークンに残った `ADMIN` のまま管理者向け API を呼べてしまいます。
+本当の守りは `isAuthenticated` 側にあり、`isAdmin` はそこで確定した値をふるいにかける役です。
+次のコードで `.use()` を並べる順番が、そのまま守りの順番になります。
 
 **確認ポイント**:
 - [ ] 管理者以外を `FORBIDDEN` にする `isAdmin` がある
@@ -538,7 +587,7 @@ export const projectMemberRoleSchema =
   z.nativeEnum(PROJECT_MEMBER_ROLE);
 ```
 
-Prisma（TypeScript からデータベースを操作するための道具。読み方: プリズマ）の `select` を毎回書くのは面倒なので、共通化しておきます。
+Prisma（読み方はプリズマ、TypeScript からデータベースを操作するための道具）の `select` を毎回書くのは面倒なので、共通化しておきます。
 `as const` で型を絞ることで、返り値の型が正確になります。
 
 #### 3-1. auth.ts のインポートとバリデーション
@@ -564,6 +613,12 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
+取り込んだ道具は役割ごとに分かれています。
+`bcrypt` はパスワードの照合、`z` は入力の検証、`prisma` はデータベースへの問い合わせに使います。
+`@/lib/rate-limit` から取り込んだ 4 つは、ログイン失敗の回数を数えて、当てずっぽうの試行を止めるための道具です。
+最後の `publicProcedure` はログイン前でも呼べる手続き、`protectedProcedure` はログイン済みだけが呼べる手続きを作ります。
+ログインと登録に `publicProcedure` を使わないと、まだログインしていない人がログインできない API になってしまいます。
+
 **確認ポイント**:
 - [ ] 認証 API に必要な import が揃っている
 
@@ -574,6 +629,11 @@ const loginSchema = z.object({
   password: z.string().min(1, 'パスワードを入力してください'),
 });
 ```
+
+このあと出てくる `registerSchema` と見比べると、`password` の条件が `min(1)` だけになっています。
+ログイン側で 8 文字以上や記号必須まで課すと、入力を弾いた時点で「その形では登録されていない」と相手へ教えることになります。
+ここでの検証は、空の値をデータベース照合まで流さないための入口チェックにとどめます。
+正しいかどうかを決めるのは、このあとの `bcrypt.compare` の仕事です。
 
 **確認ポイント**:
 - [ ] ログイン入力は email と password を検証している
@@ -595,7 +655,7 @@ const registerSchema = z.object({
 
 > zod でバリデーションを定義しておくと、tRPC が自動で入力チェックしてくれます。フロント側でもバックエンド側でも同じスキーマを使える。
 
-#### 3-2. エラーハンドラとログイン処理
+#### 3-2. エラーハンドラーとログイン処理
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
@@ -608,6 +668,12 @@ function handleUnexpectedError(context: string, error: unknown): never {
   });
 }
 ```
+
+戻り値の型が `never` なのは、この関数が値を返さず必ず例外を投げるからです。
+呼んだ側は、この行から先へ進まないと型の上でも分かります。
+本物のエラーは `console.error` でサーバーのログにだけ残し、画面へ返すのは決まった文言だけにします。
+データベースのエラー文をそのまま返すと、テーブル名や列名といった内部の作りが相手に見えてしまうためです。
+末尾の `cause: error` は、原因を捨てずに開発時の調査へ残しておくための指定です。
 
 **確認ポイント**:
 - [ ] 予期しないエラーを `TRPCError` に変換している
@@ -625,6 +691,12 @@ export const authRouter = createTRPCRouter({
       throw rateLimitToTRPCError(limitResult);
     }
 ```
+
+ログイン処理の最初の仕事は、データベースを引くことではなく回数を数えることです。
+`checkLoginRateLimit` を `prisma.user.findUnique` より前に置くのは、当てずっぽうのパスワードを何万回も試す攻撃を、照合へ届く前に止めるためです。
+数える軸は、`extractClientIp` で取り出した接続元 IP と、送られてきたメールアドレスの両方です。
+IP だけで数えると、接続元を変えながら同じアカウントを狙う手口を数え落とします。
+逆にメールだけで数えると、1 つの IP から大量のアカウントを試す手口が素通りします。
 
 **確認ポイント**:
 - [ ] IP を取り出し、ログイン試行回数を先に確認している
@@ -646,6 +718,12 @@ export const authRouter = createTRPCRouter({
 
       const isPasswordValid = await bcrypt.compare(input.password, user.password);
 ```
+
+`user?.password` という 1 つの条件で、ユーザーが存在しない場合とパスワードが登録されていない場合をまとめて弾いています。
+返す文言は、このあとのパスワード不一致とまったく同じです。
+片方だけ「そのメールアドレスは登録されていません」と返すと、攻撃者は総当たりで有効なメールアドレスの一覧を作れてしまいます。
+照合に `===` ではなく `bcrypt.compare` を使うのは、データベースに入っているのがハッシュ化された文字列で、入力された生のパスワードとは一致しないためです。
+`bcrypt.compare` は、入力を同じ手順で変換してから見比べます。
 
 **確認ポイント**:
 - [ ] ユーザー有無とパスワード照合を同じエラーで確認している
@@ -670,6 +748,12 @@ export const authRouter = createTRPCRouter({
       }
 ```
 
+`isActive` の判定をパスワード照合より後ろへ置いた理由は、コード中のコメントのとおりです。
+先に判定すると、パスワードを知らない相手でも「このメールアドレスは無効化済みのアカウントとして実在する」と読み取れてしまいます。
+判定を 1 つ入れ替えるだけで、隠しておきたい事実が漏れます。
+認証の処理では、書いてある順番そのものが守りの一部になります。
+上から読んだときに、通過条件が厳しい順に並んでいるかを確かめてください。
+
 **確認ポイント**:
 - [ ] パスワード照合後に `isActive` を確認している
 
@@ -686,6 +770,12 @@ export const authRouter = createTRPCRouter({
       await recordLoginSuccess(input.email, ip);
       await createSession(sessionUser);
 ```
+
+ここまで来た人だけが、ログイン成功として扱われます。
+`recordLoginSuccess` を `createSession` より先に呼ぶのは、Cookie を配ったあとで失敗記録の削除に失敗すると、ログインできた本人が失敗回数に縛られたまま残るからです。
+記録を先に確定させておけば、途中で落ちても発行済みのセッションだけが宙に浮く事態を避けられます。
+`SessionUser` へ詰めるのは `id` / `email` / `role` の 3 つだけです。
+ここへ `password` を足すと、ハッシュ化済みとはいえトークンの中身として誰でも読める場所へ出てしまいます。
 
 **確認ポイント**:
 - [ ] 成功記録を確定してからセッションを発行している
@@ -708,6 +798,11 @@ export const authRouter = createTRPCRouter({
     }
   }),
 ```
+
+返しているのは画面表示に要る 5 項目だけで、`user` をそのまま返してはいません。
+`prisma.user.findUnique` の戻り値にはハッシュ化済みのパスワードも入っており、返してしまうと総当たりの材料を相手へ渡すことになります。
+`catch` の中で `TRPCError` だけを投げ直しているのは、`UNAUTHORIZED` のような意図した失敗を 500 エラーへ塗り替えないためです。
+それ以外の想定外だけが `handleUnexpectedError` へ回り、ログには残しつつ当たり障りのない文言に置き換わります。
 
 **ログイン処理の流れ**:
 
@@ -743,6 +838,12 @@ flowchart TD
           where: { email: input.email },
         });
 ```
+
+登録処理の最初は、同じメールアドレスが既に使われていないかの確認です。
+ただし、この検索は重複を止める最後の砦ではありません。
+ほぼ同時に 2 件の登録が届くと、どちらも「まだ無い」と判断して通り抜ける瞬間があるからです。
+最終的に重複を止めるのは、`schema.prisma` で `email` に付けてある一意制約のほうです。
+ここでの検索は、利用者へ分かりやすいエラーを返すための確認だと考えてください。
 
 **確認ポイント**:
 - [ ] 登録前に同じメールアドレスのユーザーを探している
@@ -780,6 +881,12 @@ flowchart TD
         });
 ```
 
+このコードで一番大事な行は `role: USER_ROLE.USER` です。
+ここを `input.role` にして利用者の入力から受け取る作りにすると、登録フォームへ `role: "ADMIN"` を混ぜて送るだけで、誰でも管理者アカウントを作れてしまいます。
+登録 API は誰でも呼べる `publicProcedure` なので、権限だけは入力から切り離してサーバー側で固定します。
+`isActive: true` も同じ考え方で、有効か無効かを利用者に決めさせません。
+入力に混ぜてよいのは、間違っても本人しか困らない値だけです。
+
 **確認ポイント**:
 - [ ] 新規ユーザーを `USER_ROLE.USER` で作成している
 
@@ -808,6 +915,11 @@ flowchart TD
       }
     }),
 ```
+
+登録が終わったらそのまま `createSession` を呼び、ログイン画面へ戻さずに済ませます。
+ここを省くと、登録し終えた人がもう一度メールアドレスとパスワードを打ち直すことになり、その一手間で離脱する人が出ます。
+返す `user` から `password` を外してあるのは、ログインの戻り値とそろえた理由です。
+`catch` の形もログインと合わせてあるので、`TRPCError` はそのまま画面へ、それ以外は `handleUnexpectedError` へ渡ります。
 
 **確認ポイント**:
 - [ ] 登録直後、`createSession` でログイン状態にしている
@@ -855,6 +967,12 @@ flowchart TD
       });
 ```
 
+5 つの API のうち、`protectedProcedure` で作るのは `getCurrentUser` だけです。
+未ログインなら `null` を返せばよい `getSession` と違って、こちらは本人しか呼ばない前提なので、入口で弾いてしまうほうが安全です。
+`ctx.session.userId` を鍵にしてデータベースを引き直すのは、トークンを作ったあとに名前やアイコンが変わっていても、最新の値を返すためです。
+`select` に `createdAt` と `updatedAt` を足しているのは、プロフィール画面で登録日と更新日を出すからです。
+必要な項目だけを並べておけば、パスワードのような返してはいけない列が紛れ込みません。
+
 **確認ポイント**:
 - [ ] `getCurrentUser` はログイン中ユーザーの詳細を取得している
 
@@ -899,7 +1017,7 @@ flowchart TD
 
 ---
 
-### Step 4: API を繋ぎ直す（ルーター登録 + HTTP ハンドラ・5分）
+### Step 4: API を繋ぎ直す（ルーター登録 + HTTP ハンドラー・5分）
 **ゴール**: 作った auth ルーターを tRPC に登録し、HTTP リクエストを受け付けられるようにします。
 
 #### 4-1. root.ts（ルーターを束ねる）
@@ -920,9 +1038,9 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-今は `auth` だけ。Day 09 以降でプロジェクト・タスクなどのルーターを追加していきます。
+いまここに並んでいるのは `auth` の 1 つだけです。プロジェクトやタスクのルーターは、それを実際に使う Day 09 以降で 1 つずつ足していきます。
 
-#### 4-2. route.ts（HTTP ハンドラ）
+#### 4-2. route.ts（HTTP ハンドラー）
 
 `src/app/api/trpc/[trpc]/route.ts` を開き、中身を教材のコードへ置き換えます。
 
@@ -959,7 +1077,7 @@ Next.js の App Router では、`src/app/api/trpc/[trpc]/route.ts` に置くだ�
 このファイルは Next.js の Edge Runtime で動きます。
 すべてのリクエストの「入口」で、Cookie に有効な JWT があるかを確認します。
 
-`src/middleware.ts` を新規作成する（`src/app/` ではなく `src/` 直下）。
+`src/middleware.ts` を新規作成します。置き場所は `src/app/` の中ではなく、`src/` の直下です。
 
 ```typescript
 // filepath: src/middleware.ts
@@ -970,6 +1088,13 @@ const COOKIE_NAME = 'session';
 
 const PUBLIC_PATHS = ['/login', '/register'];
 ```
+
+`COOKIE_NAME` を `session.ts` から取り込まず、同じ値をここへ書き直しています。
+middleware は Edge Runtime で動くため、`next/headers` の `cookies()` を使うファイルを読み込めないからです。
+2 か所の値がずれると、middleware が Cookie を見つけられず、ログイン済みの人まで全員ログイン画面へ戻されます。
+片方を変えるときは、必ずもう片方も直してください。
+`PUBLIC_PATHS` に並べたパスは、ログイン前でも開ける入口です。
+うっかりここへ `/dashboard` を書き足すと、そのページだけ認証を通さず中身が見えてしまいます。
 
 **確認ポイント**:
 - [ ] Cookie 名と公開パスを定数で定義している
@@ -1065,6 +1190,12 @@ export async function middleware(request: NextRequest) {
 }
 ```
 
+`jwtVerify` が確かめるのは、署名が秘密鍵と合っているかと、`exp` の期限が切れていないかの 2 点です。
+どちらかが崩れていれば例外になり、処理は `catch` 側へ落ちます。
+そこで Cookie を削除してからログイン画面へ送るのは、壊れたトークンを持ったままリダイレクトを繰り返す状態を避けるためです。
+署名を見ずに中身のデコードだけで通す作りにすると、期限切れのトークンでも、自作のトークンでも入れてしまいます。
+middleware が守っているのはページの表示だけで、API 側の守りは Step 2 の `protectedProcedure` が受け持ちます。
+
 **確認ポイント**:
 - [ ] JWT が有効なら通し、無効なら Cookie を削除している
 
@@ -1076,6 +1207,11 @@ export const config = {
   ],
 };
 ```
+
+`config.matcher` は、middleware を動かす URL を絞り込む指定です。
+`_next/static` や画像、`favicon.ico` を外しているのは、画像 1 枚を読むたびに JWT の検証を走らせても得るものが無く、表示が遅くなるだけだからです。
+`(?!...)` は「この語で始まらないもの」を表す書き方で、通したいパスをここへ並べます。
+逆に外しすぎると、守りたいページが middleware を素通りしてしまうので、足すのは画像やスタイルのような表示用ファイルだけにとどめます。
 
 **middleware の判定フロー**:
 
@@ -1193,7 +1329,7 @@ jwt.io の Payload セクションでは、次のフィールドを確認でき�
 2. ブラウザで `/dashboard` にアクセス
 3. **自動的に `/login` にリダイレクトされる**
 
-これが Step 5 で作った middleware の仕事。
+このリダイレクトが、Step 5 で作った middleware の仕事です。
 
 4. もう一度ログインするとダッシュボードが表示される
 
@@ -1233,6 +1369,9 @@ export function AuthGuard({
 ```
 
 **問題点**: 条件が増えるほど `?` と `:` の対応を目で追う必要が出ます。
+3 つ目の状態を足すときは、既にある入れ子のどこへ差し込むかを考えることになります。
+認証ガードは、あとから「メール未確認」「権限不足」といった分岐が増えやすい場所です。
+分岐を足すたびに全体を読み直す形だと、差し込む位置を 1 つ間違えただけで、通してはいけない相手を通してしまいます。
 
 ### After（プロが書くコード）
 
@@ -1256,7 +1395,7 @@ export function AuthGuard({
 }
 ```
 
-**強み**: 上から順に読める。新しいガード条件を足すときも `if` + `return` を 1 つ増やすだけ。
+**強み**: 判定の順番が上から下へそのまま読めます。新しいガード条件を足すときも、`if` と `return` を 1 組増やすだけで済みます。
 
 > **覚えておきたいエッセンス**: 認証ガードは分岐が増えやすい場所。三項演算子で詰め込むより、**先に返して本筋を残す**ほうが読みやすく育てやすいです。
 

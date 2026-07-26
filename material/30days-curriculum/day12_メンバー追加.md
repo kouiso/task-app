@@ -41,6 +41,8 @@ flowchart TD
     style I fill:#ffebee
 ```
 
+図の中で `page.tsx` から下へ伸びる矢印は props、下から戻る矢印はコールバックです。メンバー一覧やボタンを描くのは `ProjectDetailView` ですが、ダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと、追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても、追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
+
 ### やること / やらないこと
 
 | やること | やらないこと |
@@ -72,6 +74,8 @@ src/
 └── server/api/routers/
     └── project.ts            ← getById/getAvailableUsers/addMember/removeMember を追加（Step 0）
 ```
+
+この4つのうち、今日ゼロから書き足すのは `project.ts` の手続きです。`roles.ts` にはロールの一覧と権限の対応表がすでに入っています。`project-detail-view.tsx` にはメンバー一覧の見た目が用意されています。だから今日の作業は「並べる部品はそろっている、それを動かす配線とサーバー側の許可判定を自分で書く」という形になります。`page.tsx` はその配線を置く場所で、Day 09 から続けて書き足しているファイルです。どこに何を足すのか分からなくなったら、この一覧に戻ってきてください。
 
 ### ロール定義ファイル `roles.ts` の中身
 
@@ -110,7 +114,7 @@ src/
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
 
-**合計時間**: 約70分。
+**合計時間**: 約70分です。
 
 ---
 
@@ -152,6 +156,8 @@ src/
         },
       });
 ```
+
+`include` に `members` と `tasks` を並べているのは、詳細画面がこの2つを同じ画面に出すからです。別々のAPIで取ると通信が2回になり、片方だけ古い内容のまま表示される瞬間ができます。`members` の中でさらに `user` を `include` しているのは、`ProjectMember` の行が持っているのは `userId` だけで、画面に出す名前やアイコンはユーザー側にあるためです。ここを省くと、メンバー一覧に並ぶのは名前ではなく英数字のIDになります。
 
 続けて、見つからなかったときのチェックです。`TRPCError`（tRPCのエラーを返す仕組み）を使い、該当がなければ処理を止めてエラーを呼び出し側へ返します。
 
@@ -203,6 +209,8 @@ src/
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
+`userId_projectId` で引くと、プロジェクトとユーザーの組で1件だけを狙って取れます。メンバーが何人いても取ってくる行は1つなので、人数が増えても速度が変わりません。`assertMemberPermission` は、渡した配列の中に `canManageMembers` を持つロールが1つも無ければ `FORBIDDEN` を投げて処理を止める関数です。自分がこのプロジェクトのメンバーでなければ `userMember` は `null` になり、空配列を渡すことになるので、そこで止まります。この候補一覧には社内ユーザーの名前とメールアドレスが並ぶため、メンバーを管理できる人以外には返しません。
+
 続けて、まだ参加していないユーザーを検索します。
 
 ```typescript
@@ -226,12 +234,14 @@ src/
 
 #### 0-3. addMember（ここが一番のヤマ場、重複チェック）
 
-`addMember` に使う入力スキーマをまず定義します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行を、`projectMemberRoleSchema` も一緒に取り込む形へ**書き換えます**（新しい行を追加するのではありません）。
+`addMember` に使う入力スキーマをまず定義します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行は**書き換え**ます。`projectMemberRoleSchema` も一緒に取り込む形へ直してください。新しい行を足すのではありません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（既存の import { USER_SELECT } from './_helpers/select'; をこの行に置き換える）
 import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
 ```
+
+同じファイルから2回に分けて取り込まず1行へまとめるのは、後から読む人が「どちらの行が生きているのか」を毎回確かめなくて済むようにするためです。`projectMemberRoleSchema` は `_helpers/select.ts` にある、ロールとして許される4つの文字列を表す zod スキーマです。画面側の `isProjectMemberRole` も同じ4つを指しているので、選択肢に出る値とサーバーが受け付ける値はずれません。続けて、この行を使う入力の形を決めます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -298,6 +308,8 @@ const projectMemberSchema = z.object({
     }
 ```
 
+`findUnique` が行を返してきたら、そのユーザーはすでにこのプロジェクトのメンバーです。`CONFLICT` は「入力の書式ではなく、いまのデータの状態とぶつかっている」ことを表すコードなので、`BAD_REQUEST` とは分けています。呼び出し側はコードを見て、入力を直させるのか一覧を取り直させるのかを選べます。ここで止めなければ、次の `create` が `userId_projectId` の一意制約に当たり、Prisma の例外がそのまま外へ出ます。利用者の画面には、日本語の説明が付かないデータベースのエラーが表示されます。
+
 重複していなければ、実際にメンバーとして追加します。
 
 ```typescript
@@ -340,6 +352,8 @@ const projectMemberSchema = z.object({
 
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
+
+削除でも、最初に見るのは自分の権限です。`removeMember` は他人をプロジェクトから外す操作なので、`canManageMembers` を持つ OWNER と ADMIN だけが先へ進めます。MEMBER と VIEWER はこの1行で `FORBIDDEN` になり、以降のコードは1行も動きません。権限を先に確かめておくと、外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。Step 6 では画面側でも削除ボタンを隠しますが、このチェックはボタンの有無とは関係なく毎回動きます。
 
 続けて、削除対象のメンバーが実際に存在するかを確認します。
 
@@ -419,6 +433,8 @@ const projectMemberSchema = z.object({
       return { success: true };
     }),
 ```
+
+`delete` にも `userId_projectId` を渡すので、消えるのは「このプロジェクトの、このユーザー」を表す1行だけです。`ProjectMember` の行が消えてもユーザー本体は残るため、外された人は他のプロジェクトではこれまで通り作業できます。最後の `return { success: true }` は、削除には返せる中身が無いための返事です。Step 6 で書く画面側は、これを受け取った時点で `getById` を取り直し、消えたメンバーが一覧から居なくなったことを表示へ反映します。
 
 #### 0-5. updateMemberRole（ロール変更の手続きを用意する）
 
@@ -514,7 +530,9 @@ const projectMemberSchema = z.object({
         }
 ```
 
-唯一のOWNERを他のロールに降格させると、削除したのと同じく管理者不在のプロジェクトが残ってしまいます。チェックを抜けたら、実際に更新します。
+この `count` を `$transaction` の中で数えているのには理由があります。外で数えると、「OWNERは2人いる」と分かった直後に別のリクエストがもう1人を降格させ、書き込みが終わったときにはOWNERが0人という結果になり得ます。数えるところから書き換えるところまでを1つのまとまりに閉じると、その隙間が生まれません。
+
+唯一のOWNERを他のロールに降格させると、削除したのと同じく管理者不在のプロジェクトが残ってしまいます。OWNERが0人になったプロジェクトは、名前も変えられず、メンバーも足せず、アーカイブもできない状態のまま一覧に残り続けます。チェックを抜けたら、実際に更新します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -646,7 +664,7 @@ const { data: projectDetail } =
 
 プロジェクトカードをクリックして詳細ページが表示されることを確認しましょう。
 
-スクリーンショット: プロジェクト詳細ページが表示されている画面。
+スクリーンショット: プロジェクト詳細ページの表示を確認してください。
 
 ![プロジェクト詳細ページが表示されている画面](./screenshots/project-detail-dialog.png)
 ---
@@ -655,9 +673,9 @@ const { data: projectDetail } =
 
 **ゴール**: `ProjectDetailView` がどのようなpropsを受け取るか決めます。
 
-`ProjectDetailView` は独立コンポーネントとして作ります。
-まず props の型定義を決めて、親ページから渡す値を
-迷わない形にそろえよう。
+`ProjectDetailView` は独立したコンポーネントとして作ります。
+まず props の型定義を決めて、親ページから渡す値の形をそろえます。
+型を先に決めておくと、このあとハンドラーを足すときに、どの引数が来るのかを毎回さかのぼって確認せずに済みます。
 
 | props | 型 | 役割 |
 |-------|-----|------|
@@ -677,7 +695,7 @@ const { data: projectDetail } =
 
 Day 11 Step 9 で `handleRemoveMember` の仮定義（何もしない空実装）を追加済みです。Step 6 で本実装に差し替えます。**ここでは仮定義がすでにあることを確認するだけで、コードの追加は不要です。**
 
-> Day 11 の仮定義 `const handleRemoveMember = (_userId: string) => {}` は **Step 6 で削除して本実装に書き換えます**。同名の `const` を2つ書くとエラーになるため、Step 6 では「Day 11 の仮実装を削除 → 本実装を書く」の順で進めてください。
+> Day 11 の仮定義 `const handleRemoveMember = (_userId: string) => {}` は、**Step 6 で削除して本実装に**書き換えます。同名の `const` を2つ書くとエラーになるため、Step 6 では「Day 11 の仮実装を削除 → 本実装を書く」の順で進めてください。
 
 **確認ポイント**:
 - TypeScript のエラーが出ていない（Day 11 の仮定義があるため）
@@ -828,6 +846,8 @@ const { data: availableUsers } =
     { enabled: !!selectedProject },
   );
 ```
+
+候補をサーバー側で絞っておくと、画面は返ってきた配列をそのまま並べるだけで済みます。ユーザー全員を返して画面側で除外する作りにすると、参加済みの人を判別するために既存メンバーの一覧も別に持たなければなりません。`enabled: !!selectedProject` は Step 1 の `getById` と同じ書き方で、プロジェクトを開いていないうちは呼びません。開く前に呼んでしまうと、`projectId` が空文字のまま送られて `.cuid()` の検証で弾かれます。
 
 **確認ポイント**:
 - `getAvailableUsers` はプロジェクト未参加のユーザーだけを返す
@@ -1032,7 +1052,7 @@ SelectContent 内にユーザー候補を表示します。
 
 `disabled={!newMemberUserId}` にしているのは、ユーザーを選ばないまま追加すると、誰を追加するのか決まらずサーバー側でエラーになるためです。ボタンを押せるのはユーザーを1人選んだあとだけにして、無効な操作を最初から避けています。
 
-スクリーンショット: メンバー追加ダイアログでユーザーとロールを選択した状態。
+スクリーンショット: メンバー追加ダイアログでユーザーとロールを選んだ状態の表示を確認してください。
 
 ![メンバー追加ダイアログでユーザーとロールを選択した状態](./screenshots/project-add-member.png)
 ---
@@ -1069,6 +1089,8 @@ const addMemberMutation =
 **確認ポイント**:
 - 成功時に `getById` のキャッシュを更新している
 - `setNewMemberUserId('')` と `setNewMemberRole()` でフォームを初期値に戻している
+
+`onSuccess` で `invalidate` を呼ぶと、`getById` が持っている古いデータに印が付き、tRPC が裏で取り直します。追加したメンバーは、この取り直しの結果として一覧に現れます。`invalidate` を書き忘れると、サーバーには追加できているのに画面のメンバー一覧が増えず、手で再読み込みするまで誰も気づけません。フォームの初期化を同じ `onSuccess` に置いているのは、次にダイアログを開いたとき前回選んだユーザーが残っていると、押し間違いで同じ人をもう一度追加しようとするからです。
 
 ハンドラーを追加します。`handleArchive` の下に追加してください。
 
@@ -1139,6 +1161,8 @@ const removeMemberMutation =
 **確認ポイント**:
 - 成功時に `getById` キャッシュを更新してメンバー一覧を再取得している
 
+追加のときと同じ `getById.invalidate` を呼んでいるのは、メンバー一覧の出どころが `getById` の1か所だからです。Step 1 で `projectDetail` を `getById` から受け取ると決めたので、メンバーの増減があっても取り直す相手はここだけになります。`removeMember` が返すのは Step 0 で書いた `{ success: true }` だけですが、画面が欲しいのは更新後のメンバー一覧なので、返り値を使わず取り直す形にしています。
+
 ```typescript
 // filepath: src/app/project/page.tsx
 // Step 2の仮実装を削除してここに書き換える
@@ -1190,7 +1214,7 @@ JSX 内の `</div>` 閉じタグの後、`</AppLayout>` の直前（`AppLayout` 
 | カスタマイズ不可 | タイトル・説明を自由に設定 |
 | ローディング状態なし | `isPending` でボタン制御 |
 
-スクリーンショット: メンバー削除の確認ダイアログが表示されている画面。
+スクリーンショット: メンバー削除の確認ダイアログの表示を確認してください。
 
 ![メンバー削除の確認ダイアログが表示されている画面](./screenshots/project-delete-confirm.png)
 ---
@@ -1258,6 +1282,8 @@ sequenceDiagram
 PORT=3001 npm run dev
 ```
 
+`PORT=3001` を付けるのは、Day 01 から使っている 3000 番が別のアプリで埋まっていても起動できるようにするためです。起動したら、OWNER として参加しているアカウントでログインしてから先へ進んでください。ログイン中のユーザーのロールによって、メンバー追加ボタンが出るかどうかが変わります。MEMBER でログインすると追加ボタンそのものが現れないので、シナリオ1の手順2から先を試せません。
+
 **確認ポイント**:
 - 開発サーバーがエラーなく起動した
 
@@ -1278,7 +1304,7 @@ PORT=3001 npm run dev
 | 2 | 「削除」を確認 | メンバー一覧から削除される |
 | 3 | OWNERの削除ボタンを確認 | ボタンが `disabled` で押せない |
 
-スクリーンショット: メンバーが追加され一覧に表示されている画面。
+スクリーンショット: メンバーが追加され一覧に並んだ状態の表示を確認してください。
 
 ![メンバーが追加され一覧に表示されている画面](./screenshots/project-detail-members.png)
 **確認ポイント**:
@@ -1303,7 +1329,7 @@ PORT=3001 npm run dev
 | props を手書き | 項目変更に弱い |
 | `Pick<ProjectMember, ...>` | 元データの型に追従しやすい |
 
-**覚えておきたいこと**: 元の型の一部を使うなら `Pick`。
+**覚えておきたいこと**: 元の型の一部だけを使うなら `Pick` を選びます。
 
 ## 今日のまとめ
 

@@ -145,6 +145,8 @@ git log --oneline --decorate -3
 git remote -v
 ```
 
+この5つはどれも読み取るだけのコマンドです。ファイルやコミットを書き換えないので、何度実行しても手元の状態は変わりません。もし `fatal: not a git repository (or any of the parent directories): .git` と出たら、Git 管理の外でコマンドを打っています。1行目の `pwd` の表示を見て、`task-app` のルートにいるか確かめてください。
+
 ### この5つで見ていること
 
 - `pwd`
@@ -170,7 +172,7 @@ main
 4c6f8e0 chore: bootstrap task-app scaffold
 ```
 
-`git remote -v` は、まだ何も表示されないかもしれません。この時点ではそれで問題ありません。
+`git remote -v` は、まだ何も表示されないかもしれません。この時点ではそれで問題ありません。GitHub 側の保存先をまだ作っていないので、つなぎ先は空のままで正しい状態です。見てほしいのは残りの4行です。1行目のパスの末尾が `task-app` になっているか確かめてください。その下にコミットが1件以上並んでいれば、Day 02 までの履歴は手元に残っています。
 
 ### ここで見ておきたい判断ポイント
 
@@ -207,8 +209,9 @@ sed -n '1,200p' README.md
 自分専用のタスク管理アプリです。
 
 Day 03 時点では、
-Next.js 15 / TypeScript（どちらも Day 01 で土台づくりに使った技術。くわしい説明は Day 01 を参照）を土台にして、
+Next.js 15 / TypeScript を土台にして、
 自分用のダッシュボード画面まで進んでいます。
+どちらも Day 01 の土台づくりで使った技術です。
 
 ## 現在できること
 
@@ -234,6 +237,9 @@ npm run dev
 ```
 
 ブラウザで `http://localhost:3000` を開いて確認します。
+`.env` はコピーした見本のままでも画面は表示されます。
+データベースを使う機能を触るときに、
+値を自分の環境に合わせて書き換えます。
 
 ## 今日の進捗
 
@@ -267,7 +273,7 @@ GitHub へ保存するとき、いちばん気をつけたいのは、送って�
 sed -n '1,220p' .gitignore
 ```
 
-このプロジェクトには、ローカル環境変数を無視する設定がすでに入っています。特に見てほしいのは次の部分です。
+`sed` は中身を表示するだけで、`.gitignore` を書き換えません。`No such file or directory` と出たら、`.gitignore` の無い場所でコマンドを打っています。`pwd` で `task-app` のルートに戻ってから、もう一度実行してください。このプロジェクトには、ローカル環境変数を無視する設定がすでに入っています。特に見てほしいのは次の部分です。
 
 ```text
 # local env files
@@ -276,6 +282,8 @@ sed -n '1,220p' .gitignore
 secret
 *.local
 ```
+
+この4行が、GitHub へ送るものと送らないものを分ける境目です。自分で書いた覚えがなくても心配いりません。プロジェクトを作った時点ですでに入っている行だからです。手元の `.gitignore` に同じ4行が見つかれば、このあとの手順はそのまま進められます。
 
 ### この4行の意味
 
@@ -365,7 +373,7 @@ Windows で WSL2（Ubuntu）を使っている場合は、[GitHub CLI 公式の 
 gh auth login
 ```
 
-画面ではいくつか続けて質問されます。次の順で選ぶと分かりやすいです（文言は gh 2.89 時点のもので、バージョンによって少し変わることがあります。似た意味の質問に同じ趣旨で答えれば大丈夫です）。
+このコマンドは、ターミナルに GitHub アカウントの認証情報を持たせます。ここを通すと、このあとの `git push` でパスワードを聞かれずに済みます。画面ではいくつか続けて質問されるので、次の順で選んでください。表示される文言は gh 2.89 時点のもので、バージョンによって少し変わります。似た意味の質問に同じ趣旨で答えれば大丈夫です。
 
 - `Where do you use GitHub?` → `GitHub.com`
 - `What is your preferred protocol for Git operations on this host?` → `HTTPS`
@@ -382,6 +390,8 @@ gh auth login
 gh auth status
 ```
 
+`gh auth status` は今の認証状態を読み出すだけで、ログインし直したり設定を書き換えたりはしません。`You are not logged into any GitHub hosts` と出たら、まだ認証が終わっていない状態です。その場合はブラウザ側の許可が最後まで進んでいないことが多いので、`gh auth login` からやり直します。
+
 ### 期待する状態
 
 - 自分の GitHub ユーザー名が表示される
@@ -394,24 +404,17 @@ gh auth status
 
 次はローカルの `task-app` に、GitHub の保存先 URL を教えます。
 
-Git では、
-こういう保存先の別名として
-`origin`
-を使うことが多いです。
-
-名前は慣習ですが、
-ほぼ標準だと思ってよいです。
+Git では、こういう保存先に別名を付けて呼びます。その別名として `origin` を使うのが慣習で、ほぼ標準だと思ってかまいません。名前自体に特別な意味はないので、あとから変えることもできます。
 
 ### URL を確認する
 
-GitHub のリポジトリページで、
-HTTPS の URL を確認します。
-
-形はこうです。
+GitHub のリポジトリページで、HTTPS の URL を確認します。形はこうです。
 
 ```text
 https://github.com/<your-user-name>/task-app.git
 ```
+
+末尾が `.git` で終わっているのが、Git がやり取りに使う形の URL です。ブラウザのアドレス欄に出ている `https://github.com/<your-user-name>/task-app` には `.git` が付きません。どちらを登録しても push は通りますが、`.git` を付けておくと、あとで `git remote -v` を見たときに保存先だと一目で分かります。
 
 ### `origin` を追加する
 
@@ -422,6 +425,8 @@ git remote add origin https://github.com/<your-user-name>/task-app.git
 git remote -v
 ```
 
+1行目が書き換えるのは `.git/config` というファイルだけで、保存先の名前と URL が1行増えます。コードやコミットは触らないので、間違えても `git remote remove origin` で消してやり直せます。`error: remote origin already exists.` と出たら、すでに `origin` が登録されている状態です。その場合はこのあとの「もし `origin` がすでにあるとき」に進んでください。
+
 ### 期待する表示
 
 ```text
@@ -429,33 +434,19 @@ origin  https://github.com/<your-user-name>/task-app.git (fetch)
 origin  https://github.com/<your-user-name>/task-app.git (push)
 ```
 
+同じ URL が2行出ます。Git は取得と送信で別々の保存先を持てる仕組みなので、`(fetch)` と `(push)` に分かれて表示されます。今日はどちらも同じ場所でよいので、2行の URL がそろっていれば登録は成功です。あわせて、`<your-user-name>` の部分が自分の GitHub ユーザー名になっているかも見ておいてください。
+
 ### もし `origin` がすでにあるとき
 
-この教材の Day 03 では、
-基本的には未接続を想定しています。
+この教材の Day 03 では、基本的には未接続を想定しています。ただ、`git remote -v` の時点ですでに何か表示されていたなら、その URL が本当に自分の GitHub リポジトリか確認しましょう。
 
-でも `git remote -v` の時点ですでに何か出ていたなら、
-その URL が本当に自分の GitHub リポジトリか確認しましょう。
-
-自分のものと違うなら、
-いったん立ち止まって、
-どこにつながっているかを整理してから進めるほうが安全です。
-
-焦って送るのがいちばん危ないです。
+自分のものと違うなら、いったん立ち止まります。どこにつながっているかを整理してから進めるほうが安全です。焦って送るのがいちばん危ないです。
 
 ## Step 7: 送る前に、どのファイルを履歴に残すか決める
 
-ここが今日の本質です。
+ここが今日の本質です。GitHub に保存する日は、とりあえず全部送る日ではありません。**今日の状態として残したいものだけを、自分で選ぶ**日です。
 
-GitHub に保存する日は、
-「とりあえず全部送る」
-日ではありません。
-
-**今日の状態として残したいものだけを、自分で選ぶ**
-日です。
-
-Day 02 からの文脈で言うと、
-主役はこのへんでしょう。
+Day 02 からの文脈で言うと、主役はこのあたりです。
 
 - `src/app/dashboard/page.tsx`
   Day 02 で育てた自分用ダッシュボード
@@ -472,7 +463,7 @@ Day 02 からの文脈で言うと、
 git status --short
 ```
 
-この時点では、たとえば次のような表示になります。
+`git status --short` は今の差分を読み出すだけで、ファイルもステージング（コミットに含める候補として選んでおく状態）も変えません。何度打っても安全なので、迷ったらまずこれを実行します。この時点では、たとえば次のような表示になります。
 
 ```text
  M README.md
@@ -485,15 +476,9 @@ git status --short
 
 ### アプリ実行に必要なファイルを add する
 
-この Day では、Vercel が GitHub 上で build できるように、
-アプリ実行に必要なファイルを明示的に add します。
+この Day では、Vercel が GitHub 上で build できるように、アプリ実行に必要なファイルを名前で指定して add します。
 
-`material/` は教材本文、`scripts/` は初期セットアップ用なので、
-GitHub に上げなくてもアプリのデプロイ（作ったアプリをサーバーに置いて公開する作業）には不要です。
-一方で `package.json` や `src/` や `prisma/` は、
-Day 04 の Vercel build に欠かせないファイルです。
-すでに履歴に入っていて変更のないファイルは、add しても何も起きないだけで害はありません。
-それでも名前を挙げて add しておくと、デプロイに必要なものがそろっていることを自分の目で確認できます。
+`material/` は教材本文、`scripts/` は初期セットアップ用なので、GitHub に上げなくてもアプリのデプロイ（作ったアプリをサーバーに置いて公開する作業）には要りません。一方で `package.json` や `src/` や `prisma/` は、Day 04 の Vercel build に欠かせないファイルです。すでに履歴に入っていて変更のないファイルは、add しても何も起きないだけで害はありません。それでも名前を挙げておくと、デプロイに必要なものがそろっていることを自分の目で確認できます。
 
 ```bash
 git add README.md
@@ -515,7 +500,7 @@ git status --short
 M  README.md
 ```
 
-`M` が行頭の左側（1文字目）に移っていれば、`README.md` がコミットに含める候補として選べた状態（ステージング）になっています。変更のないファイルは add しても表示に出ません。ここで確認したいのは、`README.md` の `M` が左側に付いていることと、`.env` がどこにも出ていないことの2点です。
+`M` が行頭の左側（1文字目）に移っていれば、`README.md` がステージングされた状態です。変更のないファイルは add しても表示に出ません。ここで確認したいのは、`README.md` の `M` が左側に付いていることと、`.env` がどこにも出ていないことの2点です。
 
 ### コミットメッセージを付けて保存する
 
@@ -524,6 +509,8 @@ M  README.md
 ```bash
 git commit -m "feat: save initial dashboard project to GitHub"
 ```
+
+このコマンドで、ステージングした内容が1つのセーブポイントとしてローカルの履歴に刻まれます。まだ GitHub には何も送られていません。増えたのは手元の履歴だけです。`nothing to commit, working tree clean` と出たら、add が終わっていないか、そもそも変更が無い状態です。1つ前の `git add` からやり直してください。
 
 ### コミット後の確認
 
@@ -590,14 +577,11 @@ GitHub に保存するときは、手早く済ませることよりも、何を�
 git push -u origin "$(git branch --show-current)"
 ```
 
+ここで初めて、手元のコミットが GitHub 側にコピーされます。ここまでの `commit` はすべて自分のパソコンの中だけの操作だったので、外へ出るのは今回が最初です。`Authentication failed` や `could not read Username` と出たら、Step 5 の認証が効いていません。`gh auth status` で状態を見てから、`gh auth login` をやり直します。
+
 ### `-u` の意味
 
-初回だけ、
-「このローカルブランチは、今後この `origin` 側の同名ブランチに送る」
-という紐づけを作ります。
-
-一度これが通れば、
-次からは `git push` だけで進めやすくなります。
+初回だけ、「このローカルブランチは、今後この `origin` 側の同名ブランチに送る」という紐づけを作ります。一度これが通れば、次からは `git push` だけで同じ場所へ送れます。
 
 ### 期待する表示イメージ
 
@@ -613,8 +597,7 @@ To https://github.com/<your-user-name>/task-app.git
 branch 'main' set up to track 'origin/main'.
 ```
 
-環境によって文言は多少違います。
-でも次の3点が見えたらだいたい大丈夫です。
+環境によって文言は多少違います。それでも次の3点が見えたら大丈夫です。
 
 - `To https://github.com/...` が出ている
 - 新しいブランチが GitHub 側に作られている
@@ -668,6 +651,8 @@ gh auth status
 gh auth login
 ```
 
+`gh auth login` は何度でも実行できます。成功したときだけ設定が書き換わるので、途中でやめても手元の状態は壊れません。認証が通ると `Logged in as <自分のユーザー名>` の行が出ます。そこまで見えたら、もう一度 `gh auth status` で確かめてから先へ進んでください。
+
 ### `git remote -v` に何も出ない
 
 保存先がまだ登録されておらず、push 先が分からない状態です。あらためて `origin` を追加します。
@@ -676,6 +661,8 @@ gh auth login
 git remote add origin https://github.com/<your-user-name>/task-app.git
 git remote -v
 ```
+
+登録できていれば、2行目の `git remote -v` に `(fetch)` と `(push)` の2行が出ます。ここでも `error: remote origin already exists.` と出るなら、名前は登録済みで URL だけが違う状態です。その場合は追加ではなく `git remote set-url origin https://github.com/<your-user-name>/task-app.git` で URL を差し替えます。
 
 ### push 前に「変更が残っている」と感じる
 
@@ -696,7 +683,7 @@ sed -n '1,220p' .gitignore
 git status --short
 ```
 
-`.env.example` は見本として残して問題ありません。ただし、本物の値が入った `.env` は送りません。
+2つとも読み取るだけのコマンドなので、`.env` を消したり書き換えたりはしません。`git status --short` の一覧から `.env` の行が消えていれば、無視の設定が効いています。`.env.example` は見本として残して問題ありません。ただし、本物の値が入った `.env` は送りません。
 
 ### push 後に GitHub ページへ反映されない
 

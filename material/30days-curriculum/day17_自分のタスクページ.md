@@ -10,7 +10,7 @@ Day 16 ではタスクのステータス変更機能と、作業時間を手動�
 
 ログイン中のユーザーに割り当てられたタスクだけを表示する「マイタスク」ページを実装します。期限別のグループ表示とステータスタブで、今やるべきことをすぐに把握できるようにします。
 
-スクリーンショット: マイタスクページの完成画面。
+スクリーンショット: マイタスクページの完成画面を確認してください。
 
 ![マイタスクページの完成画面](./screenshots/my-task.png)
 
@@ -43,6 +43,8 @@ flowchart TD
     style F fill:#fff3e0
     style G fill:#e8f5e9
 ```
+
+この図で見てほしいのは、ステータスTabs（B）とプロジェクトフィルター（C）が、どちらも同じ `api.task.getAll`（I）へ矢印を向けている点です。絞り込みの条件が2つに増えても、呼び出す API は1本のままです。取得したタスクを期限別に振り分けるのは画面側の仕事です。サーバーへ渡す条件は「誰のタスクか」「どの状態か」の2つだけにします。だからマイタスク専用の API を新しく作らずに済みます。
 
 ### やること / やらないこと
 
@@ -80,7 +82,7 @@ flowchart TD
 | Step 11 | ダイアログを配置する | 3分 |
 | Step 12 | 動作確認 | 3分 |
 
-**合計時間**: 約58分。
+**合計時間**: 約58分です。
 
 ---
 
@@ -145,6 +147,8 @@ import {
 import { api } from '@/trpc/react';
 ```
 
+ここで取り込む道具は、これから3つの役目に分かれます。`PageLoadingSpinner` は Day 09 でも使った読み込み中のスピナーで、ユーザー情報が届くまで画面を受け持ちます。`useCallback` は Step 5 で権限判定の関数を作るときに使います。残る `hasPermission` と `isProjectMemberRole` は、Step 5 で「このプロジェクトでの自分の役割」を調べるための道具です。まだ出番のない名前も並びますが、インポートを何度も書き足すより、先にそろえておくと差分を追いやすくなります。
+
 次に、`MyTasksPage` の `return` の**前に**以下を追加します。
 
 ```typescript
@@ -154,6 +158,8 @@ import { api } from '@/trpc/react';
 const { data: currentUser, isLoading: isCurrentUserLoading } =
   api.auth.getCurrentUser.useQuery();
 ```
+
+`api.auth.getCurrentUser` は、いま誰がログインしているかをサーバーへ聞き直す手続きです。ブラウザが持っている情報をそのまま信じず、毎回サーバーに確かめます。ここで得た `currentUser.id` が、このあと「自分のタスクだけを取る」ための鍵になります。返り値に `currentUser` と `isCurrentUserLoading` という別名を付けているのは、Step 3 でタスク側の読み込み状態も受け取るからです。同じ名前が2つ並ぶと、どちらの読み込み状態なのか見分けられません。
 
 ローディング中はスピナーを表示します。`return` の**前に**以下を追加してください。
 
@@ -203,6 +209,8 @@ const { data: tasks, isLoading } =
     { enabled: !!currentUser },
   );
 ```
+
+このページの主役は `assigneeId: currentUser?.id` という1行です。Day 13 のタスク一覧では全員分を取っていました。今回は担当者を自分に固定して取り直します。新しい API を作らずに済むのは、`getAll` がすでに担当者での絞り込みを受け付けるからです。第2引数の `enabled: !!currentUser` は、`currentUser` が届くまでこの通信を止めておく指定です。これを外すと `assigneeId` は `undefined` のまま送られ、他人のタスクまで混ざった一覧が一瞬表示されます。
 
 タスクキャッシュ操作用のユーティリティを追加します。tasks の取得の**下に**以下を追加します。
 
@@ -279,6 +287,8 @@ const ACTIVE_STATUSES: TaskStatus[] = [
 ];
 ```
 
+この配列は、タブに並べるステータスと、その並び順の両方を決めています。`'TODO'` という文字列を直接書かず、`TASK_STATUS.TODO` を使います。Day 13 から続けている書き方です。定数にしておくと、綴りの間違いは TypeScript が先に止めてくれます。`CANCELLED` はここに入れません。取り消し済みのタスクを並べても、今日やることの判断には使えないからです。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
 // ステータス定数からタブを動的に生成
@@ -294,6 +304,8 @@ const STATUS_TABS: {
 ];
 ```
 
+`STATUS_TABS` を手で4行書き並べず、`ACTIVE_STATUSES` から作っているところが肝心です。タブのラベルは `TASK_STATUS_LABELS` から引くので、日本語の表記を変えたいときも、この画面には手を入れずに済みます。先頭の `{ label: 'すべて', value: 'all' }` だけ別に書いてあるのは、これがステータスではなく「絞り込みなし」を表す特別な値だからです。型を `TaskStatus | 'all'` と書いてあるのも、その特別扱いを型の上で示すためです。
+
 `MyTasksPage` 内の `currentUser` 取得の**前に**stateを追加します。
 
 ```typescript
@@ -302,6 +314,8 @@ const STATUS_TABS: {
 const [activeTab, setActiveTab] =
   useState<TaskStatus | 'all'>('all');
 ```
+
+選んでいるタブを `useState` で覚えます。初期値は `'all'` なので、ページを開いた直後は全ステータスのタスクが並びます。この state は次のブロックで `useQuery` の引数につなぎます。だからタブを押すだけで絞り込み条件が変わり、tRPC がタスクを取り直します。押されたタブの中身を自分で数える処理は要りません。
 
 Step 3 の `useQuery` を以下に**置き換えて**ください。ステータスフィルターを追加します。
 
@@ -318,6 +332,8 @@ const { data: tasks, isLoading } =
     { enabled: !!currentUser },
   );
 ```
+
+`status: activeTab === 'all' ? undefined : activeTab` は、「すべて」タブのときだけ条件そのものを外す書き方です。ここで `'all'` をそのままサーバーへ送ると、`'all'` というステータスを探しに行き、結果は0件になります。絞り込みを外したいときは、値を空にするのではなく項目ごと `undefined` にする、と覚えてください。そして `useQuery` の引数に `activeTab` が入ったので、タブを押すたびにこの query は新しい条件で走り直します。取り直しの処理を自分で書く場所はありません。
 
 JSXの `<h1>` タグの**下に**タブUIを追加します。
 
@@ -353,7 +369,7 @@ JSXの `<h1>` タグの**下に**タブUIを追加します。
 - タブ切り替えでタスクが絞り込まれる
 - `npm run dev` でエラーが出ていない
 
-スクリーンショット: ステータスTabsが表示されている画面。
+スクリーンショット: ステータスTabsが表示されている画面を確認してください。
 
 ![ステータスTabsが表示されている画面](./screenshots/my-task.png)
 
@@ -375,6 +391,8 @@ import {
   SelectTrigger, SelectValue,
 } from '@/component/ui/select';
 ```
+
+`Select` は Day 13 のタスク一覧でも使った shadcn/ui のドロップダウンです。5つの名前を一度に取り込むのは、この部品が入れ物・引き金・中身・項目・表示文字と、役割ごとに分かれているためです。ブラウザ標準の `<select>` タグ1つで済ませない代わりに、開いたときの見た目や項目の並びを細かく作り込めます。
 
 `MyTasksPage` 内にstateとクエリを追加します。
 
@@ -410,6 +428,8 @@ const myRoleByProject = useMemo(() => {
   return map;
 }, [projects, currentUser?.id]);
 ```
+
+ここで作っているのは、プロジェクトIDを渡すと自分のロールが返ってくる対応表です。マイタスクには複数のプロジェクトのタスクが混ざって並びます。カードを描くたびに `projects` の配列を端から探すと、タスクの件数だけ探し直しが起きます。先に `Map` へ入れておけば、あとは1件ずつ引くだけで済みます。`useMemo` で包んであるのは、この対応表を再描画のたびに作り直させないためです。第2引数の `[projects, currentUser?.id]` に挙げた2つが変わったときだけ、中の処理がもう一度走ります。`isProjectMemberRole(me.role)` を通してから `Map` へ入れているのは、データベースから来た文字列を `as` で型に押し込まず、実行時に確かめてから使うためです。
 
 続けて、そのロールから編集・削除の権限を判定する関数を追加します。
 
@@ -456,6 +476,8 @@ const { data: tasks, isLoading } =
     { enabled: !!currentUser },
   );
 ```
+
+`projectId` の行が増えても、形は `status` のときとまったく同じです。「`'all'` なら `undefined`」という同じ判断を、条件ごとに1行ずつ並べています。絞り込みが3つ4つに増えても、この形のまま足していけます。`useQuery` の第1引数に並んだ値のどれか1つでも変われば、tRPC はその組み合わせで取り直します。だからタブとドロップダウンを同時に使った絞り込みも、追加の処理なしで動きます。
 
 Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を追加します。
 
@@ -575,6 +597,8 @@ const TaskGroupSection = ({
       </h2>
 ```
 
+最初の `if (tasks.length === 0) return null;` が、このコンポーネントで一番効いている1行です。`null` を返すと、そのグループは見出しごと画面から消えます。期限切れのタスクが1件もない人の画面に「期限切れ (0)」という見出しだけ残ると、読む人はそこで一瞬とまどいます。この判断をコンポーネントの中に置いたので、呼び出す側は4つのグループをただ並べるだけで済みます。見出しに `({tasks.length})` と件数を添えているのは、開かなくても量が分かるようにするためです。
+
 続けて、タスクカードのグリッド表示部分です。上のコードブロックの `</h2>` の**直後に**追加してください。
 
 ```typescript
@@ -666,6 +690,8 @@ import {
 const todayKey = localDateOnly(new Date());
 ```
 
+`localDateOnly(new Date())` は、いまのブラウザの日付を `2026-04-17` のような文字列にそろえて返します。時刻を落として日付だけにするのがねらいです。`new Date()` のまま比べると、同じ「今日」でも 9時00分 と 18時30分 は別物として扱われ、今日が期限のタスクは1件も一致しません。文字列にそろえてしまえば、比較は普通の文字列の大小で足ります。`2026-04-16` は `2026-04-17` より小さい、という並びが日付の前後とそのまま一致するからです。
+
 続けて、`useMemo` で4グループに分類するロジックを追加します。
 
 ```typescript
@@ -694,6 +720,8 @@ const groupedTasks = useMemo(() => {
     }
   }
 ```
+
+振り分けの順番には意味があります。先に `!t.dueDate` を見て期限なしを抜き、そのあとで期限ありのタスクだけを3つに分けます。こうすると以降の比較では `dueDate` が必ず存在するので、値が無い場合を毎回確かめずに済みます。`continue` は「この1件はここまで、次のタスクへ」という合図です。比較そのものは `dateOnlyFromValue()` で `YYYY-MM-DD` にそろえてから行うため、時刻やタイムゾーンの違いに振り回されません。等しければ今日、小さければ期限切れ、それ以外が今後の予定になります。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -781,6 +809,8 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
 />
 ```
 
+`titleClassName` に渡している色が、この2つの違いです。期限切れは `text-destructive` で赤、今日が期限は `text-orange-500` でオレンジにします。同じ `TaskGroupSection` を色違いで使い回せるのは、Step 6 で見出しの色をコンポーネントの中に固定せず、外から受け取る形にしておいたからです。末尾の `?? []` にも理由があります。`tasks` は取得が終わるまで `undefined` になりうるので、`typeof tasks` で宣言した4つの配列も `undefined` を含む型です。`?? []` を挟むと、その型が空の配列に寄り、`TaskGroupSection` は必ず配列を受け取れます。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
 // 今後の予定グループ
@@ -803,6 +833,8 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   canDeleteProject={canDeleteProject}
 />
 ```
+
+今後の予定と期限なしには `titleClassName` を渡していません。色を付けないのは、急ぎではないからです。4つ全部を目立たせると、どれから手を付ければよいか分からなくなります。色で急かすのは赤とオレンジの2つだけにとどめます。並べる順番も上から「期限切れ・今日・今後・期限なし」と、締め切りが近い順にしてあります。画面を開いた人の目が最初に届く場所へ、いちばん急ぐタスクを置くためです。
 
 タスクが0件の場合のメッセージも追加します。
 
@@ -849,6 +881,8 @@ import { taskToFormData }
   from '@/lib/task-form';
 ```
 
+編集ダイアログは Day 15 で作った `TaskDialog` をそのまま使い、マイタスク専用の編集画面は作りません。同じ形のダイアログが画面の数だけ増えると、入力欄を1つ足すたびに全部を直す作業が発生します。`taskToFormData` は、サーバーから来たタスクを `TaskDialog` が受け取れる形へ変える関数です。期限は `Date` 型のままでは入力欄に入らないので、その詰め替えをこの関数へ任せます。
+
 `MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
 
 ```typescript
@@ -859,6 +893,8 @@ const [dialogOpen, setDialogOpen] =
 const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>(undefined);
 ```
+
+状態を2つに分けているのは、役割が違うからです。`dialogOpen` はダイアログが開いているかどうかだけを持ち、`editingTask` は「いまどのタスクを編集中か」を持ちます。1つにまとめて「中身があれば開く」としても動きはしますが、閉じる途中で中身が消え、ダイアログが一瞬空になります。`editingTask` の初期値が `undefined` なのは、`TaskDialog` が `initialData` の有無で新規と編集を見分けるためです。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -911,6 +947,8 @@ import { DeleteConfirmDialog }
   from '@/component/ui/delete-confirm-dialog';
 ```
 
+削除の確認を `window.confirm()` で済ませないのには理由があります。ブラウザが出すあの小さな窓は見た目を変えられず、表示している間はページの他の操作も止まります。`DeleteConfirmDialog` は Day 15 で作った共通の部品で、アプリの他の画面と同じ見た目で確認を出せます。通信中は確認ボタンを押せなくする仕組みも入っているため、同じタスクを2回消しに行く事故を防げます。
+
 `MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
 
 ```typescript
@@ -921,6 +959,8 @@ const [deleteDialogOpen, setDeleteDialogOpen] =
 const [deleteTargetId, setDeleteTargetId] =
   useState<string | null>(null);
 ```
+
+`deleteTargetId` は、確認ダイアログで「はい」が押されるまで、消す相手を覚えておく置き場です。削除ボタンを押した時点ではまだ消さず、IDを控えてダイアログを開くだけにします。この2段構えは Day 15 の削除と同じ形です。取り消せない操作では、必ず「対象を覚える」と「実行する」を分けます。初期値を `null` にしておくと、まだ相手が決まっていない状態と、決まった状態を区別できます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -1064,7 +1104,7 @@ PORT=3001 npm run dev
 - 期限別グループが正しく分類される
 - 編集・削除が正常に動作する
 
-スクリーンショット: 動作確認が終わったあとのマイタスクページ。
+スクリーンショット: 動作確認が終わったあとのマイタスクページを確認してください。
 
 ![動作確認完了後のマイタスクページ](./screenshots/my-task.png)
 
@@ -1109,6 +1149,8 @@ function groupTasksByStatus(
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+`StatusTaskGroups` という型に、`todo` から `done` まで4つの入れ物を手で書き並べています。ステータスの一覧が、ここで1回目の登場です。このあと同じ4つが `switch` にも、表示用の配列にも出てきます。同じ知識が何か所に散らばるか、を数えながら読み進めてください。
+
 ```typescript
 // filepath: 続き
     inProgress: [],
@@ -1137,7 +1179,7 @@ function groupTasksByStatus(
 
 ```
 
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+`switch` の分岐が2回目です。`TASK_STATUS.TODO` なら `groups.todo` へ、というつなぎ方を同じ形で4回書いています。ここに `CANCELLED` を足したくなったら、型・初期値・分岐の3か所すべてに追記が要ります。1か所でも忘れると、そのステータスのタスクはどの配列にも入らず、画面から静かに消えます。
 
 ```typescript
 // filepath: 続き
@@ -1168,6 +1210,8 @@ function buildStatusSections(tasks: MyTask[]) {
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+3回目が、この戻り値の配列です。画面に出す並び順を決めているのは、ここだけです。`switch` の `case` を入れ替えても表示の順番は変わらず、この配列を入れ替えたときだけ変わります。同じ4つが3か所に散っているせいで、どこを直せば何が変わるのかが読み取りにくくなっています。
 
 ```typescript
 // filepath: 続き
@@ -1210,6 +1254,8 @@ const MY_TASK_STATUS_ORDER: TaskStatus[] = [
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+4つのステータスが `MY_TASK_STATUS_ORDER` の1か所へまとまりました。この配列が、そのまま表示の並び順にもなります。Before で3回書いていた同じ知識が1回になったので、`CANCELLED` を足したくなったら、この配列へ1行加えるだけで済みます。分岐と表示は、その1行に付いてきます。Step 4 の `ACTIVE_STATUSES` からタブを作った書き方と、考え方は同じです。次のブロックで、この配列から表示セクションを組み立てます。
 
 ```typescript
 // filepath: 続き

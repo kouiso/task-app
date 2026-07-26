@@ -87,11 +87,11 @@ Module not found: Can't resolve '@/component/ui/button'
 Error: Hydration failed because the initial UI does not match what was rendered on the server
 ```
 **原因**: サーバーとクライアントで異なるHTMLが生成された
-**解決**: `Date.now()`や`Math.random()`などのランダム値をServer Componentで直接使っていないか確認。`'use client'`を適切に設定。
+**解決**: `Date.now()`や`Math.random()`などのランダム値をServer Componentで直接使っていないか確認します。ブラウザ側で動かす必要がある箇所には`'use client'`を指定します。
 
 ### `TRPC Error: ログインが必要です`
 **原因**: 認証が必要なAPIに未認証でアクセスしている
-**解決**: ログイン画面からログインし直す。Cookieが正しく設定されているか確認。
+**解決**: ログイン画面からログインし直します。あわせて、Cookieが正しく設定されているか確認します。
 
 ### `Prisma: Invalid `prisma.xxx.findMany()` invocation`
 **原因**: Prismaクライアントとスキーマが不一致
@@ -111,10 +111,10 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 - **Application**タブ: Cookieの確認
 
 ### 2. サーバーログの確認
-ターミナルで`npm run dev`を実行中のログを確認。エラーの詳細が表示される。
+ターミナルで`npm run dev`を実行しているウィンドウのログを確認します。エラーの詳しい内容は、ここに表示されます。
 
 ### 3. エラーメッセージを検索
-エラーメッセージをそのままコピーしてGoogle検索。Stack Overflowや公式ドキュメントで解決策が見つかることも多いです。
+エラーメッセージをそのままコピーしてGoogleで検索します。Stack Overflowや公式ドキュメントで解決策が見つかることも多いです。
 
 ### 4. 変更を小さく保つ
 大きな変更を一度に行うとエラーの特定が難しいです。小さな変更→確認→コミットを繰り返します。

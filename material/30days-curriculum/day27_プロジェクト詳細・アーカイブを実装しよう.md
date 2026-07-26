@@ -19,7 +19,7 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 - タスク一覧
 - アーカイブ / アーカイブ解除
 
-> **今日のゴールライン**: URLのprojectIdで一覧と詳細を切り替え、アーカイブまで同じページ内で扱える感覚を掴めばOK。
+> **今日のゴールライン**: URLのprojectIdで一覧と詳細を切り替え、アーカイブまで同じページ内で扱える感覚を掴めれば大丈夫です。
 >
 > 現在の完成形は `ProjectDetailDialog` のモーダルではなく、`ProjectDetailView` を使った**インライン詳細表示**です。URL は `/project?projectId=xxx` のように変わり、同じページの中で一覧 ↔ 詳細を切り替えます。
 >
@@ -56,6 +56,8 @@ flowchart TD
     I --> J["tRPC: project.archive / unarchive"]
     J --> K["一覧を invalidate して /project に戻る"]
 ```
+
+この図で目を留めてほしいのは、B から C への戻りです。カードをクリックしたとき、`selectedProject` を直接書き換えてはいません。いったん URL を書き換えて、そのあと `page.tsx` が URL を読み直して `selectedProject` に反映します。遠回りに見えますが、画面の状態を決める大元が URL 1か所にそろいます。だから再読み込みしても、リンクを人に送っても、同じ詳細画面が開きます。
 
 ### やること / やらないこと
 
@@ -96,7 +98,7 @@ flowchart TD
 | Step 5 | アーカイブ / アーカイブ解除をつなぐ | 5分 | `page.tsx`, `project-detail-view.tsx` | ボタンで状態が切り替わる |
 | Step 6 | 補助ダイアログと完成形を整える | 5分 | `src/app/project/page.tsx` | メンバー追加・削除確認も動く |
 
-**合計時間**: 約41分。
+**合計時間**: 約41分です。
 
 ---
 
@@ -183,7 +185,7 @@ unarchive: protectedProcedure
 
 ### Step 2: 一覧 ↔ 詳細の切り替えを作る (8分)
 
-**ゴール**: 一覧カードをクリックしたら URL の `projectId` を更新し、同じ `/project` ページ内で詳細表示へ切り替える。
+**ゴール**: 一覧カードをクリックしたら URL の `projectId` を更新し、同じ `/project` ページ内で詳細表示へ切り替えます。
 
 この state、query、handler、描画分岐は
 Day 11・12 で実装済みです。以下は追加手順ではなく
@@ -225,6 +227,8 @@ const { data: projectDetail } = api.project.getById.useQuery(
 );
 ```
 
+`useQuery` は Day 09 で書いたときと同じで、置いておくだけで自動的に走ります。ところが一覧を見ている間は `selectedProject` が `null` です。そのままだと、空の ID で詳細を取りに行ってサーバー側でエラーになります。それを止めているのが第2引数の `enabled` です。`!!selectedProject` が `false` の間、この `useQuery` は通信そのものを行いません。第1引数の `?? ''` は、その間も `id` が文字列であるという型の約束を満たすための埋め合わせで、この空文字が実際に送られることはありません。
+
 カードクリック時は `router.push()` で URL を変えます。
 
 ```ts
@@ -237,6 +241,8 @@ const handleDetailClose = () => {
   router.push('/project');
 };
 ```
+
+どちらのハンドラーも `setSelectedProject` を呼んでいません。やっているのは URL の書き換えだけです。ここで state も一緒に書き換えたくなりますが、そうすると更新の経路が2本になります。ブラウザの戻るボタンを押したとき、URL だけ `/project` に戻って詳細の表示が残る、という食い違いはその一例です。URL を唯一の起点にしておけば、上で書いた `useEffect` が `projectIdParam` の変化を受け取って、state のほうを合わせてくれます。
 
 最後に、`projectIdParam` があるかどうかで描画を分岐します。
 
@@ -290,6 +296,8 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type ProjectDetail = RouterOutputs['project']['getById'];
 ```
 
+ここで `ProjectDetail` の中身を自分で書き並べないのが肝心なところです。`inferRouterOutputs` は、サーバー側の手続きが実際に返す形をそのまま取り出して型にしてくれます。Day 09 の `getAll` でメンバーとタスクを `include` して返したように、`getById` も関連データを一緒に返します。その入れ子の形まで自動で付いてくるので、`{ id: string; name: string; ... }` と手で書く必要はありません。手書きにすると、あとで `include` を1つ増やしたときに画面側の型だけが古いまま取り残されます。
+
 Props は次の形です。
 
 ```ts
@@ -309,6 +317,8 @@ interface ProjectDetailViewProps {
 }
 ```
 
+8つと聞くと多く感じますが、中身は2種類しかありません。`projectDetail` と `canManageMembers` / `canArchive` は「表示に必要な材料」、`on` で始まる5つは「押されたことを親に伝える窓口」です。裏を返すと、`ProjectDetailView` は mutation を1つも持ちません。通信も権限の判定もこの部品の仕事ではありません。Day 15 以降で使ってきたコールバック Props と同じ考え方で、判断は `page.tsx` に集めます。こう分けておくと、あとで詳細を別ページへ移したくなったときも、この部品はそのまま持っていけます。
+
 現在の完成形は、データが見つからないケースも自前で処理します。
 
 ```tsx
@@ -325,6 +335,8 @@ if (!projectDetail) {
   );
 }
 ```
+
+Props の型が `ProjectDetail | null | undefined` になっているので、この `if` は2つの場面をまとめて受け止めます。まだ通信が終わっていない `undefined` のときと、その ID のプロジェクトが存在しない `null` のときです。どちらも「まだ中身がない」ので、同じ案内でかまいません。そしてこの早い `return` には、もう1つの効き目があります。ここを通り抜けた先では、TypeScript が「`projectDetail` には必ず中身がある」と判断してくれます。だからこの後に出てくる `projectDetail.color` や `projectDetail.name` を、`?.` を付けずにそのまま書けます。逆にこの `if` を消すと、以降のすべての参照で型エラーが出ます。
 
 詳細ビュー本体の骨格はこうなります。
 
@@ -355,7 +367,9 @@ return (
     <div className="grid gap-6 lg:grid-cols-2">
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+先に外枠だけを置いています。上から順に、戻るボタンと色の丸と名前を1行に並べたヘッダー、説明文、そして下半分に来る2カラムの入れ物、という3段構えです。`projectDetail.description && (...)` としてあるので、説明が空のプロジェクトでは段落そのものが出ません。空の `<p>` が残って行間だけ空くのを防げます。`lg:grid-cols-2` は Day 09 のグリッドと同じ考え方で、画面が広いときだけ横2列にします。スマートフォンの幅ではメンバーとタスクが縦に積まれます。
+
+なお最後の `<div className="grid ...">` は開いたままです。閉じタグが足りない状態なので、この時点では保存してもエラーが出ます。続きを次のブロックで書きます。
 
 ```tsx
 // filepath: 続き
@@ -409,7 +423,9 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
             </Avatar>
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+`Avatar` の中を2段構えにしているのは、アイコン画像を持たないメンバーがいるからです。`member.user?.avatar` があるときだけ `AvatarImage` を出し、無ければ `AvatarFallback` が受け止めて、名前かメールの1文字目を大文字にして丸の中に置きます。`(member.user?.name || member.user?.email || '?')` と3段に重ねてあるのは、名前とメールが両方空だったときに `?` を出すためです。ここを `member.user.name[0]` と素直に書くと、名前が空のメンバーが1人いるだけで詳細画面が真っ白になります。
+
+`<Avatar>` を閉じた直後で切れているので、続きを次のブロックで書きます。
 
 ```tsx
 // filepath: 続き
@@ -436,6 +452,8 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
   </CardContent>
 </Card>
 ```
+
+この一覧でいちばん大事な1行は、削除ボタンの `disabled={member.role === PROJECT_MEMBER_ROLE.OWNER}` です。オーナーを消せてしまうと、そのプロジェクトを操作できる人が誰も残らず、誰も直せない状態のプロジェクトが残ります。押せない見た目にしておけば、うっかりクリックがそこで止まります。ただし画面側の `disabled` は入口の防波堤にすぎません。本当の門番は Step 1 で見た `assertMemberPermission` で、そちらが最後に権限を確かめます。ロール名を `PROJECT_MEMBER_ROLE_LABELS` に通しているのも同じ発想で、`'OWNER'` という英字をそのまま出さず、他の画面と同じ日本語のラベルにそろえます。
 
 タスクカードは 0 件のときの表示も入れておくのがポイントです。
 
@@ -465,7 +483,9 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
               <StatusBadge status={task.status} />
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+タスクカードで先に書いてあるのは、0 件のときの分岐です。`projectDetail.tasks?.length === 0` を最初に見て、空なら「タスクがありません。」の1行だけを出します。これが無いと、タスクを作っていないプロジェクトでは枠だけが残ります。読者には、読み込みの失敗と本当の0件を見分けるすべがありません。`StatusBadge` はタスク一覧でも使っている共通の部品で、`task.status` を渡すだけで状態に応じた色の札になります。ここで色分けを直に書かないので、状態の色を変えたいときは部品側を1か所直すだけで全画面に効きます。
+
+こちらも `<div>` の途中で切れています。続きを次のブロックで書きます。
 
 ```tsx
 // filepath: 続き
@@ -516,6 +536,8 @@ Day 11 で作った mutation と handler があれば、
 </Button>
 ```
 
+このボタンは `archive` と `unarchive` のどちらを呼ぶかを決めていません。親に渡しているのは `projectDetail.isArchived`、つまり今どちらの状態なのかという事実だけです。判断を親に預けておくと、あとで「アーカイブ前に確認ダイアログを挟む」と決めても、直すのは `page.tsx` の1か所で済みます。表示のほうは `isArchived` を見て文字とアイコンを入れ替えるので、アーカイブが成功して詳細のデータが取り直されると、ラベルも自動で反対側へ変わります。押すたびに文字を書き換える処理を自分で持つ必要はありません。
+
 親の `page.tsx` では 2 つの mutation を持ちます。
 
 ```ts
@@ -534,6 +556,8 @@ const unarchiveMutation = api.project.unarchive.useMutation({
   },
 });
 ```
+
+2つの mutation で `onSuccess` の中身がそろっているのは、どちらも「一覧の中身が変わった」という同じ結果を生むからです。`utils.project.getAll.invalidate()` は、tRPC が手元に持っている一覧のデータに古いという印を付けて、次に表示されるときに取り直させます。これを忘れると、アーカイブしたはずのプロジェクトが一覧に残って見えます。サーバー側は正しく更新されているのに画面だけが古い、という一番気付きにくいずれ方です。続く `router.push('/project')` で詳細から一覧へ戻すので、読者は取り直された一覧をその場で確かめられます。
 
 切り替え関数は次の通りです。
 
@@ -555,7 +579,7 @@ const handleArchive = (projectId: string, isArchived: boolean) => {
 
 ### Step 6: 補助ダイアログと完成形を整える (5分)
 
-**ゴール**: 詳細表示はインラインのままにしつつ、補助的なモーダルだけ `page.tsx` 側で扱う現在構成を完成させる。
+**ゴール**: 詳細表示はインラインのままにしつつ、補助的なモーダルだけ `page.tsx` 側で扱う現在構成を完成させます。
 
 Day 12 で実装済みのダイアログや state は
 再宣言しません。以下は配置と動作の確認用です。
@@ -583,6 +607,8 @@ const handleRemoveMember = (userId: string) => {
   setRemoveMemberDialogOpen(true);
 };
 ```
+
+この関数は削除そのものを行いません。誰を消すのかを `removeMemberTargetId` に覚えて、ダイアログを開くところまでです。実際に消すのは、次に置く `DeleteConfirmDialog` の `onConfirm` の中です。ここで即座に mutation を呼ぶ形にすると、押し間違いがそのままメンバーの削除になります。取り消せない操作では「対象を覚える」と「実行する」を2段に分ける、という形を覚えてください。`ProjectDetailView` 側が `onRemoveMember` を呼ぶだけで済んでいるのも、この2段を親が引き受けているからです。
 
 ```tsx
 // filepath: src/app/project/page.tsx
@@ -671,6 +697,8 @@ type ArchiveFilter = 'active' | 'archived' | 'all';
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+`ArchiveFilter` は3つの文字列だけを許す型なので、`'finished'` のような綴り違いを渡すと TypeScript が先に止めてくれます。ここまでは Before と After で共通です。次のブロックから、この3つを処理へ結びつける書き方が分かれます。
+
 ```typescript
 export function filterProjectsByArchiveStatus(
   projects: ProjectListItem[],
@@ -712,6 +740,8 @@ type ArchiveFilter = 'active' | 'archived' | 'all';
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+型の定義は Before とまったく同じです。書き換えるのは、この3つの値と処理をどこで結びつけるか、その1点だけです。型を触らずに組み立て方だけを差し替えられる、という確認も兼ねています。
+
 ```typescript
 const ARCHIVE_FILTERS: Array<{
   key: ArchiveFilter;
@@ -733,6 +763,8 @@ const ARCHIVE_FILTERS: Array<{
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+ここで効いているのは、配列の要素が `key` と `apply` の組になっている点です。`'active'` という選択肢の名前と「アーカイブ済みを除く」という処理が、同じ1つの要素の中で隣り合います。Before では、選択肢の名前と処理が `if` を挟んで数行離れていました。並べて置くと、画面の絞り込みメニューの選択肢をこの配列から作る、といった使い回しもできます。
 
 ```typescript
 export function filterProjectsByArchiveStatus(

@@ -37,6 +37,8 @@ flowchart TD
     style F fill:#fff3e0
 ```
 
+図の左にフィルター、右にカードのグリッドがぶら下がっています。今日はこの2つを別々に作ります。フィルターは「どのタスクを取ってくるか」を決める側、グリッドは「取ってきたタスクをどう並べるか」を決める側です。Day 09 のプロジェクト一覧は取得と表示だけでしたが、今日はその手前に絞り込みが1段増えます。`TaskCard` の下にステータス・優先度・担当者・期限が並んでいるのは、カード1枚を見れば状況を判断できるようにするためです。一覧をざっと眺めて「急ぎはどれか」がすぐ分かる状態を目指します。
+
 ### フィルタリングのデータフロー
 
 ```mermaid
@@ -50,6 +52,8 @@ flowchart TD
     style C fill:#fff3e0
     style E fill:#e8f5e9
 ```
+
+注目してほしいのは、絞り込みがブラウザの中だけで終わっていない点です。選択を変えると state が更新され、`useQuery` はサーバーへ問い合わせ直します。手元の配列を `filter` で減らすやり方もあります。ただ、それだと自分がメンバーでないプロジェクトのタスクまで、いったんブラウザへ届いてしまいます。届いてしまえば、開発者ツールの通信タブを開くだけで中身を読めます。だから絞り込みはサーバー側で行い、ブラウザには最初から見せてよいタスクだけを渡します。Step 0 で書く `getAll` が、その線引きを受け持ちます。
 
 ### やること / やらないこと
 
@@ -84,6 +88,8 @@ src/
     status.ts             ... ステータス定義・型ガード（既存）
 ```
 
+新しく作るのは `src/app/task/page.tsx` の1枚だけです。`task-card.tsx` と `loading-spinner.tsx` は前の Day までに用意した部品で、今日は呼び出す側を書きます。カードの見た目まで今日ゼロから作ろうとすると、覚えることが一度に増えて手が止まります。表示部品は既にあるものを使い、「サーバーから取ってきて、絞り込んで、並べる」という流れの理解に集中してください。`status.ts` にはステータスの日本語ラベルと型ガード（値が想定の種類かを確かめる関数）が入っていて、Step 3 と Step 4 で使います。
+
 ### 完成ファイルの全体像
 
 最終的に `src/app/task/page.tsx` は以下の構造になります。Step 1〜7 で少しずつ組み立てていきます。
@@ -108,7 +114,7 @@ src/
 | Step 7 | タスク詳細ダイアログを追加する | 7分 |
 | Step 8 | 動作確認 | 4分 |
 
-**合計時間**: 約65分。
+**合計時間**: 約65分です。
 
 ---
 
@@ -213,7 +219,7 @@ export const taskRouter = createTRPCRouter({
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
 ```
 
-3つとも、指定されたときだけ条件に足します。未指定のときはその条件を使わないので、絞り込みなしで対象になります。
+3つとも、値が渡されたときだけ `where` に足します。未指定なら足さないので、その条件では絞り込まれず、対象は広いままです。ここが効いてくるのは Step 5 で、画面で「すべて」を選ぶと `undefined` が渡り、サーバーはその条件を無視して全件を返します。気をつけたいのは、この3行が権限の判定を一切していない点です。ステータスや担当者で自由に絞り込めるのは、0-3 で `where.projectId` を自分のプロジェクトに限定した後だからです。もし 0-3 を書き忘れると、ここは素通しになり、他人のタスクまで `status` の一致だけで返ってきます。
 
 #### 0-5. Prisma でタスクを取得する
 
@@ -233,6 +239,8 @@ export const taskRouter = createTRPCRouter({
           },
 ```
 
+ここまでで `project`・`createdBy`・`assignee` の3つを一緒に取る指定を書きました。ブロックが長いので、残りは次に分けます。行末が `,` のままで `include` の中括弧も閉じていないのは、まだ途中だからです。エディタが赤い波線を出しても、この時点では正しい状態です。`createdBy` と `assignee` に `USER_SELECT` を挟んでいるのは、`assignee: true` と書くとハッシュ化済みパスワードを含む全項目が画面まで返ってしまうためです。続きをそのまま下へ書き足してください。
+
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
           comments: {
@@ -246,7 +254,7 @@ export const taskRouter = createTRPCRouter({
         },
 ```
 
-`include` は関連するデータも一緒に取ってくる指定です。`project` はタスクの所属プロジェクト、`createdBy` と `assignee` は作成者と担当者で、どちらも `USER_SELECT` で必要な項目だけに絞り、パスワードなどは返しません。`comments` はコメントとその投稿者を新しい順に取ります。こうして関連を一緒に取っておくと、画面側は追加の通信なしで表示できます。
+`include` は関連するデータも一緒に取ってくる指定です。`project` はタスクの所属プロジェクト、`createdBy` と `assignee` は作成者と担当者で、どちらも `USER_SELECT` で必要な項目だけに絞り、パスワードなどは返しません。`comments` はコメントとその投稿者を新しい順に取ります。こうして関連を一緒に取っておくと、画面側は追加の通信なしで表示できます。`include` を書かずにタスクだけ取ると、カードにはプロジェクト名の代わりに `projectId` という文字列しか出せません。名前を出すために1件ずつ問い合わせ直すと、タスク100件で101回の通信になり、一覧が開くまで待たされます。
 
 #### 0-6. 並び順と件数を指定して返す
 
@@ -261,7 +269,7 @@ export const taskRouter = createTRPCRouter({
     }),
 ```
 
-`orderBy` は `position`（並べ替え用の番号）の昇順で、同じなら作成日の新しい順にします。`take` と `skip` は取得件数と開始位置の指定です。ここでは `}),` で `getAll` までを閉じ、次の手続きを続けられる状態にします。
+`orderBy` は `position`（並べ替え用の番号）の昇順で、同じなら作成日の新しい順にします。`take` と `skip` は取得件数と開始位置の指定です。ここでは `}),` で `getAll` までを閉じ、次の手続きを続けられる状態にします。並び順を指定しないと、DB が返す順序は保証されません。読み込むたびにカードの位置が入れ替わって見えるので、`orderBy` は必ず付けます。`take` で上限を置くのは、タスクが数千件へ育った状態で全件をまとめて送り、画面が固まるのを防ぐためです。
 
 #### 0-7. 詳細ダイアログ用の getById を書く
 
@@ -290,6 +298,8 @@ Step 7 で配置する `TaskDetailDialog` は、選択した1件を `api.task.ge
           },
 ```
 
+`getById` の `include` も、ここでいったん切ります。`getAll` と違うのは `project` の取り方で、`members` を `ctx.session.userId` で絞って一緒に取っています。この1件を見るだけで「自分がこのタスクのプロジェクトに入っているか」が分かる形です。判定の材料をタスクと同じ問い合わせで取っておくと、DB への往復が1回で済みます。`where: { userId: ctx.session.userId }` を落とすと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。残りのコメント部分は次に続けます。
+
 ```typescript
 // filepath: src/server/api/routers/task.ts（getById の続き）
           comments: {
@@ -303,6 +313,8 @@ Step 7 で配置する `TaskDetailDialog` は、選択した1件を `api.task.ge
         },
       });
 ```
+
+`});` で `findUnique` の呼び出しが閉じ、結果が `task` に入りました。ただし、まだ返してはいけません。`findUnique` は見つからないときに例外ではなく `null` を返すからです。Day 09 の `getAll` は配列を返すので0件でも困りませんでしたが、1件を返す `getById` は「無い」と「見てはいけない」を自分で分ける必要があります。次のブロックがその2つの入口です。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -379,8 +391,7 @@ import {
 } from 'lucide-react';
 ```
 
-`menuItems` は既存項目を残し、
-タスクを加えた次の4項目にします。
+`ClipboardList` は、サイドバーに置くタスク項目のアイコンです。既にある `FolderOpen` などと同じ `lucide-react` から、まとめて読み込みます。この1行を足し忘れると、次のコードで `ClipboardList is not defined` というエラーになり、サイドバーごと表示されなくなります。import は「これから使う道具を先に並べる」宣言なので、部品を増やすたびにファイルの先頭へ戻る癖をつけてください。続く `menuItems` は既存の項目を残したまま、タスクを加えた次の4項目にします。
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
@@ -408,6 +419,8 @@ const menuItems: MenuItem[] = [
 ];
 ```
 
+`menuItems` は配列なので、要素を1つ足すだけでサイドバーのリンクが1本増えます。Day 08 で作った仕組みへ手を入れずに済むのは、項目をコードの中に直接書かず、配列にまとめてあるからです。`path` の `/task` は、このあと作る `src/app/task/page.tsx` の URL と一致している必要があります。App Router はフォルダの並びをそのまま URL にするので、`/tasks` と書き間違えるとクリックしても404ページに飛びます。
+
 `src/app/task/page.tsx` を新規作成します。まずインポートとメインコンテンツの骨格です。
 
 ```typescript
@@ -421,6 +434,8 @@ import { AppLayout }
 import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
 ```
+
+`'use client'` は、このファイルをブラウザ側で動くコンポーネントとして扱う宣言です。App Router のページは既定でサーバー側だけで動くので、この1行が無いと `useState` を書いた瞬間にエラーが出ます。今日はフィルターの選択を state で覚えるため、宣言が要ります。読み込んでいる4つのうち `Suspense` と `useState` は React の機能、`AppLayout` と `PageLoadingSpinner` は自分たちで作った部品です。
 
 **確認ポイント**:
 - ファイルが `src/app/task/page.tsx` に作成された
@@ -445,6 +460,8 @@ function TaskPageContent() {
 }
 ```
 
+中身はまだ見出しだけです。`AppLayout` を外側に置くと、このページにもサイドバーとヘッダーが付き、Day 08 で作った導線から行き来できます。先に空の器を作って表示を確かめてから中身を足すと、うまくいかないときに原因の場所を絞れます。この段階で画面が真っ白なら、疑うのはデータ取得ではなく、ファイルの置き場所か `export` の書き方です。
+
 **確認ポイント**:
 - `TaskPageContent` 関数が定義できた
 - `AppLayout` でラップしている
@@ -463,6 +480,8 @@ export default function TaskPage() {
   );
 }
 ```
+
+`export default` を付けた関数が、そのファイルのページ本体です。`TaskPageContent` をそのまま default にせず `Suspense` で包むのは、Step 7 で `useSearchParams` を使うからです。`useSearchParams` を含むコンポーネントを `Suspense` の外に置くと、ビルド時に境界が無いというエラーで止まります。今は中身が軽いのでスピナーはほとんど見えませんが、先に器を用意しておけば Step 7 でここを書き直さずに済みます。
 
 **確認ポイント**:
 - `/task` にアクセスして「タスク」と表示される
@@ -484,6 +503,8 @@ export default function TaskPage() {
 import { api } from '@/trpc/react';
 ```
 
+`@/trpc/react` の `api` は、Step 0 で書いたサーバー側の手続きへ、型を保ったままつながる入口です。`api.task.getAll` と打った時点でエディタが引数の形を教えてくれるのは、`root.ts` に登録した `appRouter` の型がそのまま画面側へ届いているからです。URL を文字列で組み立てないので、綴りを間違えれば通信の前に赤い波線が出ます。
+
 **確認ポイント**:
 - `api` のインポートが追加できた
 
@@ -500,13 +521,15 @@ const { data: tasks,
 );
 ```
 
+`useQuery` は呼んだ時点でサーバーへ問い合わせ、結果を `data` に、読み込み中かどうかを `isLoading` に入れて返します。`data: tasks` と書いているのは、名前を付け替えて受け取るためです。この画面ではプロジェクトも取得するので、どちらも `data` のままでは名前がぶつかります。
+
 **確認ポイント**:
 - `api` をインポートしてエラーが出ていない
 - `useQuery` に空オブジェクト `{}` を渡している
 
 > `useQuery({})` の `{}` は「条件なしで全件取得」という意味です。後のステップでここにフィルター条件を入れます。`refetchOnWindowFocus: false` は、ブラウザタブを切り替えても再取得しない設定です。
 
-プロジェクト一覧も取得します（フィルター用）。
+フィルターの選択肢に並べるため、プロジェクト一覧も取得します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -514,6 +537,8 @@ const { data: tasks,
 const { data: projects } =
   api.project.getAll.useQuery();
 ```
+
+Day 09 で書いた `project.getAll` を、そのまま呼び直しています。一度サーバーに置いた手続きは、別の画面からでも同じ呼び方で使えます。ここで取ったプロジェクトは Step 4 のドロップダウンの選択肢になり、Step 6 では自分のロール（プロジェクト内での権限の種類）を調べるのにも使います。引数を渡していないのは、`project.getAll` の入力がすべて省略できる形だからです。
 
 **確認ポイント**:
 - `projects` のデータ取得が追加できた
@@ -531,6 +556,8 @@ if (tasksLoading) {
   );
 }
 ```
+
+`tasksLoading` が `true` の間、`tasks` はまだ `undefined` です。この早期 return を置かずに先へ進むと、Step 6 で書く `tasks.map(...)` が `undefined` に対して呼ばれ、`Cannot read properties of undefined` で画面が落ちます。`return` でそこまで到達させないのが、いちばん確実な防ぎ方です。スピナーも `AppLayout` で包むのは、読み込み中にサイドバーとヘッダーが消えて画面が跳ねるのを避けるためです。Day 09 のプロジェクト一覧でも同じ形を書きました。
 
 **確認ポイント**:
 - データ取得中にスピナーが表示される
@@ -570,6 +597,8 @@ import {
 } from '@/lib/constant/status';
 ```
 
+`Select` は shadcn/ui のドロップダウンで、5つの部品を組み合わせて1つの選択欄になります。`TASK_STATUS_LABELS` はステータスの値と日本語の見出しを対応させた表で、画面に `IN_PROGRESS` と出さず「進行中」と出すために使います。`isTaskStatus` は、受け取った文字列がステータスとして正しいかを確かめる関数です。`@prisma/client` から型を直接引かないのは、画面側のコードが DB の都合へ引きずられない形を保つためです。
+
 **確認ポイント**:
 - `isTaskStatus` 型ガードもインポートしている
 - インポート元が `@/lib/constant/status`（`@prisma/client` ではない）
@@ -584,6 +613,8 @@ const [filterProject, setFilterProject] =
 const [filterStatus, setFilterStatus] =
   useState<TaskStatus | 'all'>('all');
 ```
+
+`useState` は「画面が覚えておく値」を作る関数です。初期値を `'all'` にするのは、開いた直後は絞り込みなしで全件を見せたいからです。`filterStatus` の型を `TaskStatus | 'all'` と書くのは、選べる値がステータスのどれか、または「すべて」の2種類しか無いと決めるためです。ここを `string` にすると、綴りを間違えた値を入れてもエディタは何も言わず、絞り込んだ結果が黙って0件になります。
 
 **確認ポイント**:
 - `filterProject` と `filterStatus` の state が追加された
@@ -616,6 +647,8 @@ const [filterStatus, setFilterStatus] =
 </div>
 ```
 
+`value` に state を渡し、`onValueChange` で state を書き換えます。選ばれている値の置き場所を state の1か所にまとめると、画面の見た目と手元の値がずれません。`ml-auto` は、この操作欄を見出しの反対側へ寄せる指定です。`sm:w-auto` があるので、スマホでは横幅いっぱいに広がり、指で押しやすい大きさになります。
+
 **確認ポイント**:
 - `Select` の `value` に `filterProject` state を渡している
 - JSXが閉じタグまで完結している
@@ -636,6 +669,8 @@ const [filterStatus, setFilterStatus] =
   ))}
 </SelectContent>
 ```
+
+選択肢の中身は、Step 2 で取得した `projects` から作ります。プロジェクトが増えても手で書き足さずに済むのは、`.map()` が配列の要素1つにつき `SelectItem` を1つ返すからです。先頭の「すべてのプロジェクト」だけは配列に無い値なので、手で1行書いています。`projects?.` の `?.` は、まだ取得できていない `undefined` の状態で `.map()` を呼んで落ちるのを防ぐ書き方です。
 
 **確認ポイント**:
 - 「すべてのプロジェクト」が先頭にある
@@ -661,6 +696,8 @@ const [filterStatus, setFilterStatus] =
 </div>
 ```
 
+`onValueChange` が受け取る値は、shadcn/ui の都合でただの `string` です。そのまま `setFilterStatus(value)` と書くと型が合わず、`as TaskStatus` で黙らせたくなります。ただ、それは中身を確かめずに正しいと言い張る書き方なので、想定外の文字列がそのままサーバーへ飛びます。`isTaskStatus(value)` を通せば、確かめて真だったときだけ代入されるため、型と実際の値がそろいます。
+
 **確認ポイント**:
 - `as` キャストではなく `isTaskStatus()` 型ガードで安全に判定している
 - `'all'` も許可している
@@ -683,6 +720,8 @@ const [filterStatus, setFilterStatus] =
   ))}
 </SelectContent>
 ```
+
+`Object.entries` は、`TASK_STATUS_LABELS` のような対応表を `[値, 見出し]` の配列へ並べ替える関数です。`value` を `SelectItem` の値に、`label` を画面の文字にすれば、ステータスが増えたときも `status.ts` の表へ1行足すだけで選択肢に出ます。ステータスの一覧をこの画面の中へ書き写すと、後で表を直したときに片方だけ古いまま残ります。
 
 **確認ポイント**:
 - プロジェクトとステータスの2つのドロップダウンが並んで表示される
@@ -716,6 +755,8 @@ const {
 );
 ```
 
+ここで渡す `projectId` は、Step 0 の 0-3 が受け取る値です。ドロップダウンには自分のプロジェクトしか並びませんが、サーバーはその前提を信用しません。通信を書き換えて他人のプロジェクト id を送っても、`projectIds.includes(...)` の確認で弾かれ、タスクの代わりに FORBIDDEN が返ります。画面の絞り込みは見やすさのための道具で、見せてよい範囲を決めているのはサーバーです。
+
 **確認ポイント**:
 - プロジェクトを選択すると表示が絞り込まれる
 - 「すべて」を選ぶと全タスクが表示される
@@ -740,6 +781,8 @@ const {
 import { TaskCard }
   from '@/component/task/task-card';
 ```
+
+`TaskCard` は Day 09 の `ProjectCard` と同じ考え方の表示部品で、1件分のデータを props で受け取り、カード1枚を返します。中身を今日書かないのは、一覧ページ側の仕事が「取ってきて並べる」ことだからです。表示の細かい調整をカードの中へ閉じ込めておくと、この先で見た目を変えたくなっても直す場所が1か所で済みます。
 
 **確認ポイント**:
 - `TaskCard` のインポートが追加できた
@@ -776,6 +819,8 @@ import {
 } from '@/lib/constant/roles';
 ```
 
+`useMemo`（計算した結果を覚えておく仕組み）と `useCallback`（作った関数を覚えておく仕組み）は、必要のない作り直しを避けるための道具です。`hasPermission` と `isProjectMemberRole` は Day 12 で書いたもので、ロールから何ができるかを判定します。サーバー側と同じ関数をここでも読み込むのが要点で、判定の基準を2か所に書き分けないためです。基準が分かれると、画面ではボタンが見えるのにサーバーは拒む、といったちぐはぐな状態になります。
+
 続けて、`TaskPageContent` 内にログインユーザーの情報とプロジェクトごとのロールを求める処理を追加します。`tasks` の `useQuery` の近くに置いてください。
 
 ```typescript
@@ -804,6 +849,8 @@ const myRoleByProject = useMemo(() => {
 ```
 
 > `myRoleByProject` はプロジェクトIDをキーに「自分がそのプロジェクトで何のロールか」を引けるMapです。
+
+`session` を取れていないときや `projects` がまだ空のときは、空の Map をそのまま返します。ここで `undefined` を返すと、この後の `.get()` を呼んだ時点で落ちます。`useMemo` の第2引数に `[projects, session?.user?.id]` を渡しているので、表を作り直すのはこの2つが変わったときだけです。カードが1枚描画されるたびに全プロジェクトを走査し直すと、件数が増えたときに操作の反応が鈍くなります。
 
 続けて、そのロールから編集・削除の権限を判定する関数を追加します。
 
@@ -863,6 +910,8 @@ const canDeleteProject = useCallback(
 </div>
 ```
 
+`tasks && tasks.length > 0` で先に件数を確かめ、1件以上あるときだけ `.map()` へ進みます。`tasks` は読み込み中だと `undefined` なので、この確認が無いと `undefined` に対して `.map()` を呼んでしまいます。`key={task.id}` は、React がどのカードがどれかを見分けるための印です。`grid` の後ろに並ぶ `sm:` `lg:` `xl:` は画面幅ごとの列数で、狭い画面では1列、広い画面では4列に増えます。else 側をいったん `<div />` にしているのは、0件のときの表示をこの節の最後で差し替えるからです。
+
 TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` を以下に**置き換えて**ください。
 
 ```typescript
@@ -906,6 +955,8 @@ TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` 
 </div>
 ```
 
+`col-span-full` は、グリッドの全列にまたがって表示するクラスです。これを外すと、メッセージが1列分の幅へ押し込まれ、4列表示のときに左端へ寄って見えます。0件のときに何も出さない作りにすると、読者は読み込み中なのか本当に0件なのかを判断できません。空のときこそ画面から言葉をかける、と考えてください。Day 09 のプロジェクト一覧でも、同じ理由で空状態のメッセージを置きました。
+
 **確認ポイント**:
 - タスクがない時にメッセージが表示される
 - カードがレスポンシブなグリッドで並んでいる
@@ -946,6 +997,8 @@ import { useSearchParams }
 import { useEffect } from 'react';
 ```
 
+`useSearchParams` は、URL の `?` 以降を読み取る Next.js のフックです。`useEffect` は、指定した値が変わった後に処理を走らせる React の仕組みで、ここでは URL の変化を拾うために使います。`TaskDetailDialog` は Day 09 以降で作ってきたダイアログと同じ形の部品で、開くかどうかと、どのタスクを見せるかを親から受け取ります。
+
 **確認ポイント**:
 - `TaskDetailDialog` と `useSearchParams` がインポートできた
 - `useEffect` も `react` からインポートしている
@@ -966,6 +1019,8 @@ const taskIdParam =
   searchParams.get('taskId');
 ```
 
+`selectedTask` は「どのタスクを見ているか」、`detailOpen` は「ダイアログが開いているか」を覚えます。2つに分けるのは、閉じる動きの途中で id を消すと中身が一瞬空になるからです。`searchParams.get('taskId')` は、`/task?taskId=abc` の `abc` の部分を取り出します。開いている画面の状態を URL に載せておくと、そのアドレスをそのまま人へ送れます。
+
 **確認ポイント**:
 - `selectedTask` と `detailOpen` の state が追加された
 - `searchParams` から `taskId` を取得している
@@ -982,6 +1037,8 @@ useEffect(() => {
   }
 }, [taskIdParam]);
 ```
+
+第2引数の `[taskIdParam]` が「見張る値」で、URL の `taskId` が変わったときだけ中身が動きます。ここを空配列の `[]` にすると最初の1回しか動かず、他の画面から `/task?taskId=...` へ移動しても詳細が開きません。逆に第2引数ごと省くと毎回動いてしまい、state の更新と再描画が止まらなくなります。見張る値を正しく書くことが、`useEffect` を安全に使う条件です。
 
 **確認ポイント**:
 - `taskIdParam` が変わると `useEffect` が実行される
@@ -1002,6 +1059,8 @@ const handleDetailClose = () => {
 };
 ```
 
+Step 6 では空の関数を置いていました。あの時点でダイアログがまだ無く、押しても何も起きない状態でよかったからです。ここで中身を入れると、カードのクリックが `selectedTask` と `detailOpen` を同時に動かし、画面に詳細が出ます。閉じる側で `selectedTask` を `null` へ戻すのは、次に別のカードを押したとき前のタスクが一瞬見えるのを防ぐためです。
+
 **確認ポイント**:
 - カードクリックで `selectedTask` が設定される
 - `handleDetailClose` で state がリセットされる
@@ -1017,6 +1076,8 @@ JSX のグリッド `</div>` の直下に詳細ダイアログを追加します
   onClose={handleDetailClose}
 />
 ```
+
+`TaskDetailDialog` は `taskId` を受け取り、その1件を `api.task.getById` で取りに行きます。Step 0 の 0-7 で `getById` を先に書いたのは、この行のためです。もし `root.ts` への登録を忘れていれば、ここでクリックしても中身が空のままになります。ダイアログをグリッドの外へ置くのは、カードの並びに影響されず画面の最前面へ重ねるためです。
 
 **確認ポイント**:
 - カードクリックで詳細ダイアログが開く
@@ -1035,6 +1096,8 @@ JSX のグリッド `</div>` の直下に詳細ダイアログを追加します
 # 開発サーバーを起動して動作確認
 PORT=3001 npm run dev
 ```
+
+`PORT=3001` を付けるのは、3000番を別のアプリが使っていても起動できるようにするためです。立ち上がったら `http://localhost:3001/task` を開いてください。ここからは、書いたコードが本当に動くかを目で確かめる時間です。表示が思ったとおりでなくても慌てず、下の表を上から1つずつ試して、どこで期待とずれるかを絞り込んでください。ずれた場所が分かれば、直す場所もほぼ決まります。タスクが1件も無いときは空状態のメッセージが出るので、それも Step 6 で書いた表示の確認になります。
 
 **確認ポイント**:
 - 開発サーバーが起動した
@@ -1089,6 +1152,10 @@ const getStatusColor = (status: string) => {
 };
 ```
 
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+`switch` は値ごとに分岐を並べる構文です。この書き方でも色は出ますが、ステータスの種類と色の対応が関数の中に埋もれます。日本語のラベルも出したくなったら、同じ形の関数をもう1つ書くことになります。
+
 **このコードの問題点**:
 
 - ステータスが増えるたびに case を足す必要がある
@@ -1108,6 +1175,8 @@ const STATUS_CONFIG = {
 // 使う時は1行
 const { label, color } = STATUS_CONFIG[status];
 ```
+
+`STATUS_CONFIG` はステータスをキーにした対応表です。`as const` を付けると値が書き換えられない前提になり、キーの種類まで型として固定されます。だから `STATUS_CONFIG[status]` の `status` に想定外の文字列を渡した時点でエラーになります。表を1つ持つ形にすると、ラベルと色を並べて置けるので、片方だけ直し忘れる事故も減ります。
 
 **このコードの強み**:
 

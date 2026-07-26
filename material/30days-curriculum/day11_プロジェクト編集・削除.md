@@ -10,7 +10,7 @@ Day 10 では react-hook-form・zod・tRPC の `useMutation`（データ変更AP
 
 Day 10 で作った ProjectDialog を「編集モード」で再利用し、プロジェクトの更新と削除を実装します。既存データをフォームに反映する方法と、削除前の確認ダイアログも学びます。
 
-スクリーンショット: 編集モードの ProjectDialog が表示されている画面。
+スクリーンショット: 編集モードの ProjectDialog の表示を確認してください。
 
 ![編集モードの ProjectDialog](./screenshots/project-create-dialog.png)
 
@@ -43,6 +43,10 @@ flowchart TD
     style G fill:#ffebee
     style J fill:#ffcdd2
 ```
+
+図には道が2本あります。上の編集は、ボタンを押してからサーバーを呼ぶまで途中で止まりません。下の削除は、押した時点では `deleteTargetId` に「どれを消すか」を控えるだけで、サーバーを呼ぶのは確認ダイアログの「削除」を押した後です。
+
+削除にだけ寄り道を作るのは、押し間違いを取り消せないためです。編集なら名前を書き直せば元の状態に戻せますが、消えたプロジェクトは戻せません。2本の道が最後に `invalidate` へ合流するのは、どちらを実行しても Day 09 で作った一覧が古い内容のまま残らないようにするためです。
 
 ### やること / やらないこと
 
@@ -81,6 +85,10 @@ src/
             └── project.ts    ← update/delete/archive/unarchive を追加（Step 0）
 ```
 
+今日コードを書き足すのは `project.ts` と `page.tsx` の2つだけです。`delete-confirm-dialog.tsx` は配布済みで、中身には手を入れません。
+
+作業はサーバー側の `project.ts` から始めます。カードに並ぶ編集ボタンと削除ボタンは、プロジェクトを見られる人全員の画面に出ていて、誰でも押せる状態です。押された操作を断れるのはサーバーだけなので、断る側を先に用意してから画面をつなぎます。逆の順番で進めると、権限のないアカウントで押した瞬間にデータが消え、後から気付いても戻せません。
+
 ## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
@@ -97,7 +105,7 @@ src/
 | Step 9 | ProjectDetailView にアーカイブを渡す | 4分 |
 | Step 10 | 動作確認 | 7分 |
 
-**合計時間**: 約68分。
+**合計時間**: 約68分です。
 
 ---
 
@@ -244,6 +252,10 @@ const projectUpdateSchema = z.object({
         });
       }
 ```
+
+`delete` でも、いきなり `prisma.project.delete` を呼ばずに `findUnique` で対象を1件引いています。狙いは2つです。存在しない `id` が届いたときに `NOT_FOUND` で止めることと、`members` をログイン本人の1件だけに絞り、この次に書く権限チェックへ渡す材料をそろえることです。
+
+この「探す → 権限を見る → 実行する」という3段の並びは `update` と共通です。同じ形を繰り返しているので、Day 12 で書く `addMember` も同じ順番で組み立てられます。
 
 続けて、権限チェックと削除の実行です。ここが `delete` で一番大事な部分です。
 
@@ -431,7 +443,7 @@ const { data: currentUser } =
 
 `getCurrentUser` はサーバーが持つログイン情報を返します。ここで取った `currentUser` は、あくまで画面の表示やボタンの出し分けに使う値です。なりすましを防ぐのは、ブラウザで動くこの値ではなく、サーバー側の各手続きが参照する `ctx.session.userId` の役割です。Day 12 では、このユーザーがプロジェクト内でどのロールかを調べて、ボタンの表示可否も決めます。
 
-次に、Day 10 で定義済みの `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
+次に、Day 09 で定義した `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
 
 日付は `dateOnlyFromValue()` で `"2024-12-31"` 形式に変換します。保存済みの ISO 文字列から `<input type="date">` 用の date-only 値を安全に取り出せます。
 
@@ -460,6 +472,12 @@ const handleEdit = (projectId: string) => {
   setDialogOpen(true);
 };
 ```
+
+`handleEdit` はサーバーを呼びません。Day 09 の `getAll` で受け取り済みの `projects` から一致する1件を探し、その値を `editingProject` へ写すだけです。押すたびに通信を挟むと、ダイアログが開くまでの待ち時間が毎回発生します。
+
+`description` に `|| ''` を付けるのは、DB 上の `null` をそのまま `<input>` へ渡せないからです。`null` のまま渡すと React が「値を管理していない入力欄」と判断し、文字を打った瞬間に警告が出ます。空文字へ寄せておけば、最初から空欄の入力欄として扱えます。
+
+日付の変換を飛ばすと、名前と色は埋まっているのに開始日と終了日だけが空のダイアログになります。`2026-05-01T00:00:00.000Z` は `<input type="date">` が読める形ではなく、ブラウザが値を捨てるためです。
 
 **確認ポイント**:
 - `handleEdit` が `handleCreate` の直下に配置されている
@@ -631,6 +649,10 @@ const handleSubmit = (
 };
 ```
 
+`if (!currentUser?.id) return;` は、ログイン情報がまだ届いていない状態で作成を走らせないための足止めです。`getCurrentUser` は通信で取ってくるので、画面を開いた直後の一瞬は `undefined` のことがあります。そこで送信すると、誰のものか決まらないプロジェクトを作りかけてサーバー側で弾かれます。
+
+日付が空のときに更新は `null` を送り、新規作成は `undefined` を送っています。同じ「空」でもサーバーへの伝わり方が変わるので、次の表で並べて確かめます。
+
 **確認ポイント**:
 - `data.id` がない場合に `createMutation.mutate` を呼んでいる
 - `currentUser?.id` のガードがある
@@ -642,7 +664,7 @@ const handleSubmit = (
 | 更新 | `null` を送信 | 「既存の日付を消す」 |
 | 新規作成 | `undefined`（= プロパティを含めない） | 「日付は指定しない」 |
 
-> **注文書の例え**: 注文変更で「お届け日: なし」と書けば配送日をキャンセルする意味。新規注文でお届け日欄に何も書かなければ「指定なし」の意味。Prisma はこの2つを区別するため、使い分けが必要です。
+> **注文書の例え**: 注文変更で「お届け日: なし」と書けば、配送日をキャンセルする意味になります。新規注文でお届け日欄を空けたままなら、「指定なし」の意味です。Prisma はこの2つを区別するので、使い分けが必要です。
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
@@ -655,7 +677,7 @@ const handleSubmit = (
 
 `??` は `null` と `undefined` のみを判定し、`||` は `''`・`0`・`false` もfalsyとして扱います。空文字を有効な値として保持したい場合は `??` を使います。
 
-スクリーンショット: 編集後に一覧が更新された画面。
+スクリーンショット: 編集後に更新された一覧の表示を確認してください。
 
 ![編集後に一覧が更新された画面](./screenshots/project-list.png)
 
@@ -667,7 +689,7 @@ const handleSubmit = (
 
 **実装**:
 
-Day 10 の `handleCreate` はダイアログを開くだけでした。
+Day 09 の `handleCreate` はダイアログを開くだけでした。
 編集機能を追加したので、「新規作成」では
 `editingProject` を必ず `undefined` に戻すように更新します。
 
@@ -740,6 +762,12 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 />
 ```
 
+`onConfirm` の中で `deleteTargetId` が入っているかを先に確かめてから `mutate` を呼びます。ダイアログを開いたまま state が空に戻っても、`id` の無いリクエストをサーバーへ送らずに済みます。
+
+ゴミ箱ボタンは、カードを見られる人全員の画面に出ます。役割による出し分けはしていません。それでも OWNER 以外がプロジェクトを消せないのは、Step 0 の `delete` が `role !== PROJECT_MEMBER_ROLE.OWNER` をサーバー側で毎回見直すからです。ADMIN のアカウントで押すと `FORBIDDEN` が返り、一覧からプロジェクトは消えません。ボタンを隠す処理は誤操作を減らすための工夫であって、守りの本体はサーバーにあります。
+
+削除が通ったときは、そのプロジェクトに属するタスクも一緒に消えます。`prisma/schema.prisma` の `Task` はプロジェクトへ `onDelete: Cascade` でつながっています。だから `prisma.project.delete` を1回呼ぶと、DB がタスク行とメンバー行まで落とします。これから作るタスクは、親のプロジェクトを消した時点で取り戻せません。Step 6 でアーカイブを先に覚えるのは、この取り返しのつかなさを避けるためです。
+
 **確認ポイント**:
 - 削除ボタンでshadcn/uiスタイルの確認ダイアログが出る
 - 「キャンセル」で削除されない
@@ -758,7 +786,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 
 > `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending`（mutation実行中フラグ）を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
 
-スクリーンショット: 削除確認ダイアログが表示されている画面。
+スクリーンショット: 削除確認ダイアログの表示を確認してください。
 
 ![削除確認ダイアログが表示されている画面](./screenshots/project-delete-confirm.png)
 
@@ -964,7 +992,7 @@ if (projectIdParam && selectedProject) {
 | `onRemoveMember` | `handleRemoveMember` | 何もしない（仮） | Step 6 で本実装に置換 |
 | `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
 
-スクリーンショット: プロジェクト詳細画面のアーカイブボタン。
+スクリーンショット: プロジェクト詳細画面のアーカイブボタンの表示を確認してください。
 
 ![プロジェクト詳細画面のアーカイブボタン](./screenshots/project-detail-archive-action.png)
 
@@ -979,6 +1007,8 @@ if (projectIdParam && selectedProject) {
 # 開発サーバーを起動して動作確認
 PORT=3001 npm run dev
 ```
+
+`PORT=3001` を付けるのは、3000 番を別の作業で開いたままでも確認を始められるようにするためです。ここから先の3つのフローは、すべてこの起動中のサーバーを通ります。押したボタンが通るか弾かれるかを決めるのはブラウザではなく、Step 0 で書いた権限チェックです。
 
 **確認ポイント**:
 - 開発サーバーが起動した
@@ -1073,6 +1103,8 @@ function toDateInputValue(value: Date): string {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+ここまでは型の宣言だけで、後に出てくる After 版とまったく同じ内容です。目を留めてほしいのは、`ProjectFromApi` 側の `string | null` と `ProjectEditFormData` 側の `string` のずれです。API から届く「無いかもしれない値」を、フォームが扱える「必ずある値」へ寄せる作業が、この後の関数本体で始まります。
+
 ```typescript
 // filepath: 続き
   return value.toISOString().slice(0, 10);
@@ -1103,6 +1135,8 @@ export function buildProjectEditForm(
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+`description` と `color` で、`let` に初期値を置いてから `if` で上書きする形が2回続いています。扱う項目が増えるたびにこの塊も増えるので、フォームへ何が渡るのかは関数を最後まで読まないと分かりません。
+
 ```typescript
 // filepath: 続き
     } else {
@@ -1132,6 +1166,8 @@ export function buildProjectEditForm(
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+`startDate` と `endDate` でも判定が2回続き、返す値は `formData` へ少しずつ足してから最後にまとめて返す形です。空欄だったときの初期値がどこで決まったのかを確かめるには、関数の先頭まで読み戻ることになります。
 
 ```typescript
 // filepath: 続き
@@ -1185,6 +1221,8 @@ function toDateInputValue(value: Date): string {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+型の宣言は Before から1文字も変えていません。書き換えるのは型ではなく、値を詰め替える手続きの側です。入り口と出口をそろえてあるので、途中の書き方だけを読み比べられます。
+
 ```typescript
 // filepath: 続き
   return value.toISOString().slice(0, 10);
@@ -1214,6 +1252,8 @@ export function buildProjectEditForm(
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+日付を条件付きスプレッドで足すのは、Step 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので、`startDate?` は「未設定」のまま残ります。
 
 ```typescript
 // filepath: 続き
