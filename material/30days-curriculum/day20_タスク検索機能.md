@@ -1924,7 +1924,7 @@ PORT=3001 npm run dev
 ### Before（改善前のコード）
 
 ```typescript
-// filepath: src/app/search/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 const [results, setResults] = useState([]);
 const [loading, setLoading] = useState(false);
 
@@ -1949,7 +1949,7 @@ useEffect(() => {
 ### After（プロが書くコード）
 
 ```typescript
-// filepath: src/app/search/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 const { data: results, isLoading } = api.search.search.useQuery(
   { keyword, status, priority },
   { enabled: keyword.length > 0 }

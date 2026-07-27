@@ -1029,7 +1029,7 @@ PORT=3001 npm run dev
 ### Before（改善前のコード）
 
 ```typescript
-// filepath: src/app/report/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 "use client";
 export default function ReportPage() {
   const { data } = api.report.getOverview.useQuery();
@@ -1055,7 +1055,7 @@ export default function ReportPage() {
 ### After（プロが書くコード）
 
 ```typescript
-// filepath: src/app/report/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 // page.tsx (Server Component)
 export default function ReportPage() {
   return (

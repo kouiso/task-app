@@ -1051,7 +1051,7 @@ export default function DashboardPage() {
 ### Before（改善前のコード）
 
 ```tsx
-// filepath: src/app/page.tsx（比較用の一部）
+// filepath: 読み比べ用サンプル（比較用の一部・実ファイルには対応しません）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-[#25273f] bg-[#0f1021] px-[32px] py-[28px] shadow-[0_24px_80px_-32px_rgba(99,102,241,0.45)]">
@@ -1105,7 +1105,7 @@ export default function HomePage() {
 ### After（プロが書くコード）
 
 ```tsx
-// filepath: src/app/page.tsx（比較用の一部）
+// filepath: 読み比べ用サンプル（比較用の一部・実ファイルには対応しません）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-border bg-card px-8 py-7 shadow-md">

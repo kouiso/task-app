@@ -1143,7 +1143,7 @@ PORT=3001 npm run dev
 ### Before（改善前のコード）
 
 ```typescript
-// filepath: src/app/task/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 // switch 文で色を決める
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -1172,7 +1172,7 @@ const getStatusColor = (status: string) => {
 ### After（プロが書くコード）
 
 ```typescript
-// filepath: src/app/task/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 const STATUS_CONFIG = {
   TODO: { label: "未対応", color: "bg-gray-100 text-gray-800" },
   IN_PROGRESS: { label: "進行中", color: "bg-blue-100 text-blue-800" },

@@ -11,7 +11,35 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from check_anchor import find, find_missing  # noqa: E402
+from check_anchor import (  # noqa: E402
+    find,
+    find_missing,
+    find_sample_with_real_path,
+)
+
+# Before/After の節にあるコードは写経の対象ではない。実ファイル名を名乗らせない。
+SAMPLE_CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
+    (
+        "読み比べ用の節で実ファイル名を名乗ったら拾う",
+        "#### Before（改善前のコード）\n\n```tsx\n// filepath: src/app/page.tsx\n```",
+        [(4, "src/app/page.tsx")],
+    ),
+    (
+        "読み比べ用と書いてあれば通す",
+        "#### After（プロが書くコード）\n\n```tsx\n// filepath: 読み比べ用サンプル（実ファイルには対応しません）\n```",
+        [],
+    ),
+    (
+        "写経の節なら実ファイル名でよい",
+        "### Step 1: 書く\n\n```tsx\n// filepath: src/app/page.tsx\n```",
+        [],
+    ),
+    (
+        "読み比べ用の節を抜けたら対象外に戻る",
+        "#### Before（改善前のコード）\n\n### Step 2: 書く\n\n```tsx\n// filepath: src/app/page.tsx\n```",
+        [],
+    ),
+]
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -105,12 +133,17 @@ def main() -> int:
         if got != expected:
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
+    for name, text, expected in SAMPLE_CASES:
+        got = find_sample_with_real_path(text)
+        if got != expected:
+            failed += 1
+            print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
     for name, text, expected in MISSING_CASES:
         got = find_missing(text, REPO)
         if got != expected:
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
-    total = len(CASES) + len(MISSING_CASES)
+    total = len(CASES) + len(MISSING_CASES) + len(SAMPLE_CASES)
     if failed:
         print(f"❌ check_anchor 自己テスト {failed}/{total} 失敗")
         return 1

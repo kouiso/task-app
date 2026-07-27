@@ -948,7 +948,7 @@ PORT=3001 npm run dev
 ### Before（改善前のコード）
 
 ```tsx
-// filepath: src/app/project/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 import { useEffect, useState } from 'react';
 
 export function ProjectListPanel() {
@@ -979,7 +979,7 @@ export function ProjectListPanel() {
 ### After（プロが書くコード）
 
 ```tsx
-// filepath: src/app/project/page.tsx（参考）
+// filepath: 読み比べ用サンプル（参考・実ファイルには対応しません）
 import { api } from '@/trpc/react';
 
 export function ProjectListPanel() {

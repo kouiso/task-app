@@ -598,7 +598,7 @@ PORT=3001 npm run dev
 ### Before（改善前のコード）
 
 ```tsx
-// filepath: src/app/report/page.tsx（アンチパターン）
+// filepath: 読み比べ用サンプル（アンチパターン・実ファイルには対応しません）
 // サーバーが集計済みなのに、生の tasks をもう一度数え直す
 const todo = tasks.filter((t) => t.status === 'TODO').length;
 const done = tasks.filter((t) => t.status === 'DONE').length;
@@ -619,7 +619,7 @@ const statusData = [
 ### After（プロが書くコード）
 
 ```tsx
-// filepath: src/app/report/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // サーバー集計済みの statusData を受け取り name だけ足す
 const statusData =
   overview?.statusData.map((entry) => ({

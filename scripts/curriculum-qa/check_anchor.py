@@ -47,6 +47,39 @@ def find(text: str) -> list[tuple[int, str]]:
     return hits
 
 
+def find_sample_with_real_path(text: str) -> list[tuple[int, str]]:
+    """読み比べ用の節にあるのに、実ファイル名を名乗っているブロックを返す。
+
+    「Before（改善前のコード）」「After（プロが書くコード）」の中のコードは、写経の対象では
+    ない。実測では、続きのブロックだけが読み比べ用と書かれていて、先頭だけ実ファイル名を
+    名乗っていた。読者は30日ずっと `// filepath:` に従って写しているので、そこに本物の
+    パスがあれば、改善前のコードを本物のファイルへ貼る。しかもどれも閉じていない断片になる。
+    """
+    hits: list[tuple[int, str]] = []
+    fence = None
+    in_sample = False
+    for i, line in enumerate(text.split("\n"), start=1):
+        if line.startswith("#"):
+            in_sample = ("Before" in line) or ("After" in line)
+        m = FENCE.match(line)
+        if m:
+            mark = m.group(1)
+            if fence is None:
+                fence = mark
+            elif line.strip().startswith(fence):
+                fence = None
+            continue
+        if fence is None or not in_sample:
+            continue
+        fp = FILEPATH.match(line)
+        if not fp:
+            continue
+        value = fp.group(1)
+        if value.startswith(("src/", "prisma/", "scripts/")):
+            hits.append((i, value))
+    return hits
+
+
 def find_missing(text: str, root: Path) -> list[tuple[int, str]]:
     """完成版に存在しないファイルを書き込み先として挙げている行を返す。
 
@@ -100,12 +133,15 @@ def main(argv: list[str]) -> int:
 
     findings: list[tuple[str, int, str]] = []
     missing: list[tuple[str, int, str]] = []
+    samples: list[tuple[str, int, str]] = []
     for path in targets:
         text = path.read_text(encoding="utf-8")
         for line, value in find(text):
             findings.append((path.name, line, value))
         for line, value in find_missing(text, root):
             missing.append((path.name, line, value))
+        for line, value in find_sample_with_real_path(text):
+            samples.append((path.name, line, value))
 
     status = 0
     if findings:
@@ -119,6 +155,12 @@ def main(argv: list[str]) -> int:
         for name, line, value in missing:
             print(f"  {name}:{line} filepath: {value}")
         print("  読み比べ用なら、その旨をコード欄の中に書いてください。")
+        status = 1
+    if samples:
+        print(f"❌ 読み比べ用の節が実ファイル名を名乗っている {len(samples)} 件")
+        for name, line, value in samples:
+            print(f"  {name}:{line} filepath: {value}")
+        print("  読み比べ用サンプルである旨を書いてください。")
         status = 1
     if status:
         return status
