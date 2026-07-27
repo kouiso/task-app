@@ -996,7 +996,7 @@ function getGreetingByHour(hour: number): string {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-After の1行目に `'use client'` はありません。`useMemo` の取り込みも消えています。変わるのはこの入り口の2行だけではなく、このあと出てくる `mainMessage` を作る3行も1行に縮みます。合わせて4行ぶんの違いで、`type` の並びも `dashboardOwner` の中身も変えていません。HTML をサーバー側で組み立てるところは Before と同じで、違うのは、このページの JavaScript をブラウザへ送らなくなる点です。
+After の1行目に `'use client'` はありません。`useMemo` の取り込みも消えています。変わるのはこの入り口の2行だけではなく、このあと出てくる `mainMessage` を作る3行も1行に縮みます。あわせて4行ぶんの違いで、`type` の並びも `dashboardOwner` の中身も変えていません。HTML をサーバー側で組み立てるところは Before と同じで、違うのは、このページの JavaScript をブラウザへ送らなくなる点です。
 
 ```tsx
 // filepath: 続き

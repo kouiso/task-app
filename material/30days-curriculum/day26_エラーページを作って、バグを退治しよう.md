@@ -100,12 +100,12 @@ Elements には、いま画面に出ている HTML と当たっている CSS の
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
-| Step 1 | error.tsxを作る | 4分 | src/app/error.tsx | Error Boundaryがわかる |
+| Step 1 | error.tsxを作る | 4分 | src/app/error.tsx | Error Boundaryが分かる |
 | Step 2 | error.tsxの動作を確認する | 5分 | dashboard/page.tsx | エラーページが表示される |
 | Step 3 | バグA: Optional Chainingなし | 7分 | 教材内演習 | Console赤エラーを修正 |
 | Step 4 | バグB: useEffect依存配列ミス | 7分 | 教材内演習 | 無限リクエストを修正 |
 | Step 5 | バグC: console.log残し | 5分 | dashboard/page.tsx | Biome lintで検出・修正 |
-| Step 6 | DevTools 3タブの使い分けまとめ | 5分 | なし | いつ何を見るかわかる |
+| Step 6 | DevTools 3タブの使い分けまとめ | 5分 | なし | いつ何を見るか分かる |
 | Step 7 | Biome lintで全体チェック | 4分 | ターミナル | lint警告ゼロ |
 
 **合計時間**: 約37分です。

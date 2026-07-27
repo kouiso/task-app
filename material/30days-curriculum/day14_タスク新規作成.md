@@ -443,7 +443,7 @@ import 行を足しただけでは `api.search` が生まれません。`appRout
 
 **実装**:
 
-`src/component/task/task-dialog.tsx` は Day 01 の scaffold が配布済みです。今日はこの部品を作ることが学習の主役なので、開いて中身をすべて書き換えます。以下の3つのコードブロックは全て **同じファイルに上から順に** 書いてください。表示の都合でブロックを分けていますが、1つのファイルです。
+`src/component/task/task-dialog.tsx` は Day 01 の scaffold が配布済みです。今日はこの部品を作ることが学習の主役なので、開いて中身をすべて書き換えます。以下の3つのコードブロックはすべて **同じファイルに上から順に** 書いてください。表示の都合でブロックを分けていますが、1つのファイルです。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
