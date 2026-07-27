@@ -1316,13 +1316,18 @@ console.log(
 |--------------|------|---------|
 | 編集ダイアログに古いデータが残る | `initialData` がフォームへ反映されていない | `ProjectDialog` 側で `defaultValues` と `useEffect` の `reset(...)` が `initialData` を見ているか確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `utils.project.getAll.invalidate()` を呼ぶ |
-| 「権限がありません」エラー（削除） | OWNER 以外で削除操作 | OWNER アカウントで操作する（プロジェクト削除は OWNER だけに許可） |
-| 「権限がありません」エラー（アーカイブ） | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する（`canArchive` 権限が必要） |
+| 削除ボタンを押しても消えない | OWNER 以外で削除操作 | OWNER アカウントで操作する |
+| アーカイブボタンを押しても変わらない | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する |
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
 | アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailView` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
 | Step 9 追加後に TypeScript エラーが出る | 仮定義の変数名が重複している | 同名の `const` を2つ定義していないか確認します。仮定義ブロックをまとめて1か所に配置する |
 | `ProjectDetailView` が表示されない | `projectIdParam && selectedProject` の条件が false になっている | URLに `?projectId=xxx` が付いているか、`selectedProject` の state が正しく更新されているか確認 |
+
+表の3行目と4行目は、サーバーが `この操作を実行する権限がありません` を返しています。
+ただし今日の時点では、そのエラーは画面に何も出しません。
+エラーを受け取って知らせる仕組みは Day 15 で追加します。
+「押しても何も起きない」ときは、権限で弾かれている場合があると覚えておいてください。
 
 ## 今日学んだ用語
 
