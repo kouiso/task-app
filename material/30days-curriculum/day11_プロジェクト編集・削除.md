@@ -44,7 +44,7 @@ flowchart TD
     style J fill:#ffcdd2
 ```
 
-図には道が2本あります。上の編集は、ボタンを押してからサーバーを呼ぶまで途中で止まりません。下の削除は、押した時点では `deleteTargetId` に「どれを消すか」を控えるだけで、サーバーを呼ぶのは確認ダイアログの「削除」を押した後です。
+図には道が2本あります。上の編集は、ボタンを押すとダイアログが開くだけで、サーバーを呼ぶのは保存ボタンを押した後です。下の削除は、押した時点では `deleteTargetId` に「どれを消すか」を控えるだけで、サーバーを呼ぶのは確認ダイアログの「削除」を押した後です。
 
 削除にだけ寄り道を作るのは、押し間違いを取り消せないためです。編集なら名前を書き直せば元の状態に戻せますが、消えたプロジェクトは戻せません。2本の道が最後に `invalidate` へ合流するのは、どちらを実行しても Day 09 で作った一覧が古い内容のまま残らないようにするためです。
 
@@ -475,7 +475,7 @@ const handleEdit = (projectId: string) => {
 
 `handleEdit` はサーバーを呼びません。Day 09 の `getAll` で受け取り済みの `projects` から一致する1件を探し、その値を `editingProject` へ写すだけです。押すたびに通信を挟むと、ダイアログが開くまでの待ち時間が毎回発生します。
 
-`description` に `|| ''` を付けるのは、DB 上の `null` をそのまま `<input>` へ渡せないからです。`null` のまま渡すと React が「値を管理していない入力欄」と判断し、文字を打った瞬間に警告が出ます。空文字へ寄せておけば、最初から空欄の入力欄として扱えます。
+`description` に `|| ''` を付けるのは、DB 上の `null` をそのまま `<input>` へ渡せないからです。`null` のまま渡すと、最初の描画の時点で「value に null を渡さないでください」という警告が出ます。空文字へ寄せておけば、最初から空欄の入力欄として扱えます。
 
 日付の変換を飛ばすと、名前と色は埋まっているのに開始日と終了日だけが空のダイアログになります。`2026-05-01T00:00:00.000Z` は `<input type="date">` が読める形ではなく、ブラウザが値を捨てるためです。
 
@@ -493,7 +493,7 @@ const handleEdit = (projectId: string) => {
 | ❌ `{ startDate: startDate }` | `{ startDate: undefined }` | `undefined` がオブジェクトに入る |
 | ✅ `...(startDate && { startDate })` | `{}` | プロパティ自体が存在しない |
 
-`{ startDate: undefined }` と書くと、`startDate?: string` と宣言された `ProjectFormData` の型と合わず、型エラーが出ます。このプロジェクトは `tsconfig.json` で `exactOptionalPropertyTypes` を有効にしています。省略できる項目へ `undefined` を入れることを許さない設定です。条件付きスプレッドなら、値があるときだけ項目が増えるので、型のとおりに書けます。
+`{ startDate: undefined }` と書くと、`startDate?: string` と宣言された `ProjectFormData` の型と合わず、型エラーが出ます。生成される `tsconfig.json` では、省略できる項目へ `undefined` を入れても型エラーにはなりません。それでも、値があるときだけキーを足す書き方にそろえておきます。条件付きスプレッドなら、値があるときだけ項目が増えるので、型のとおりに書けます。
 
 > **注文書の例え**: 注文書の「お届け日」欄は、日付を書くか、欄そのものを使わないかのどちらかです。「未定」とだけ書かれた欄は受け付けてもらえません。`startDate` も同じで、日付が入っているか、項目が無いかの2択です。
 
@@ -1309,7 +1309,7 @@ console.log(
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 編集ダイアログに古いデータが残る | `useForm` の `values` プロパティが `initialData` と連動していない | `ProjectDialog` 側で `values`（`defaultValues` ではない）に `initialData` の値を渡しているか確認 |
+| 編集ダイアログに古いデータが残る | `initialData` がフォームへ反映されていない | `ProjectDialog` 側で `defaultValues` と `useEffect` の `reset(...)` が `initialData` を見ているか確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `utils.project.getAll.invalidate()` を呼ぶ |
 | 「権限がありません」エラー（削除） | OWNER 以外で削除操作 | OWNER アカウントで操作する（プロジェクト削除は OWNER だけに許可） |
 | 「権限がありません」エラー（アーカイブ） | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する（`canArchive` 権限が必要） |

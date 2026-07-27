@@ -465,7 +465,7 @@ const projectMemberSchema = z.object({
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-ここから先は `prisma.$transaction` の中で処理します。例えば「対象メンバーを検索した直後に、別のリクエストが同じメンバーを削除してしまう」ようなタイミングのズレが起きると、存在しないメンバーを更新しようとしてデータが壊れかねません。`$transaction` は、対象メンバーの検索から更新までの複数の読み書きを、途中に他の操作を挟ませない1つのまとまりとして実行する仕組みです。中の処理では `prisma` の代わりに、引数で渡された `tx` を使います。
+ここから先は `prisma.$transaction` の中で処理します。例えば「対象メンバーを検索した直後に、別のリクエストが同じメンバーを削除してしまう」ようなタイミングのズレが起きると、存在しないメンバーを更新しようとしてデータが壊れかねません。`$transaction` は、複数の読み書きを1つのまとまりにして、途中で失敗したときに全部を取り消す仕組みです。中の処理では `prisma` の代わりに、引数で渡された `tx` を使います。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
