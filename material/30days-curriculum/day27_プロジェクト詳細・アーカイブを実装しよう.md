@@ -158,6 +158,8 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 - 権限確認は `prisma.project` ではなく `prisma.projectMember` で行う
 - `assertMemberPermission(..., 'canArchive')` でアーカイブ権限を明示する
 
+`prisma.project` を引いても、そのユーザーがそのプロジェクトの何なのかは分かりません。役割が載っているのは `ProjectMember` の行のほうです。`assertMemberPermission` は渡された配列の先頭を見て、行が1つも無ければ `FORBIDDEN` を返します。だから `findUnique` が `null` を返す「そもそも参加していない人」は、ここで止まります。第2引数の `'canArchive'` を渡すと、役割の中身まで見ます。`canArchive` が `true` の役割は `OWNER` だけなので、管理者でもアーカイブはできません。この引数を省くと「メンバーなら誰でもアーカイブできる」に意味が変わってしまいます。
+
 ルーター本体はシンプルです。
 
 ```ts
@@ -174,6 +176,8 @@ unarchive: protectedProcedure
     return await setArchiveStatus(ctx.session.userId, input.id, false);
   }),
 ```
+
+2つの procedure で違うのは、最後に渡す `true` と `false` だけです。1つにまとめて現在値を反転させる作り方もできますが、そうすると画面が送ってきた「今の状態」を信じることになります。同じプロジェクトを2人が開いていると、反転した結果がお互いにずれます。呼ぶ名前で結果を決めておけば、サーバーが受け取るのは「こうしたい」という最終状態だけです。`archive` を続けて2回呼んでも、`isArchived` は `true` のままで変わりません。権限確認をヘルパー1か所に寄せてあるので、片方だけ確認を書き忘れる事故も起きません。
 
 **確認ポイント**
 
@@ -265,6 +269,8 @@ if (projectIdParam && selectedProject) {
   );
 }
 ```
+
+肝心なのは、この分岐が `if` の中の `return` になっている点です。ここで `return` すると、この下に書いてある一覧の JSX には一切進みません。条件を満たすときだけ詳細を返す形なので、一覧と詳細が同時に描かれる状態になりません。条件に `projectIdParam && selectedProject` と2つ並べているのにも理由があります。URL が変わった直後の1回目の描画では `useEffect` がまだ走っておらず、`selectedProject` には前の値が残っています。`projectIdParam` だけで判定すると、その一瞬だけ前のプロジェクトの詳細が見えてしまいます。Props を8つも渡しているのは、`ProjectDetailView` が自分ではデータを取りに行かないためです。
 
 **確認ポイント**
 
@@ -378,6 +384,8 @@ return (
   </div>
 );
 ```
+
+閉じタグが2つ並ぶだけのブロックですが、どれがどれを閉じるかを数えておいてください。1つ目の `</div>` が `grid gap-6 lg:grid-cols-2` を、2つ目が一番外側の `flex flex-col gap-6` を閉じます。JSX は開いたタグが閉じていないとビルドで止まるため、ここまで書いて初めてファイルが保存できる状態になります。中のコメント行は Step 4 で中身に置き換える目印で、このままでも表示は崩れません。2カラムの入れ物だけが先にあり、そこに入るカードがまだ無い状態です。
 
 **確認ポイント**
 
@@ -505,6 +513,8 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 </Card>
 ```
 
+優先度の札だけは専用の部品にせず、共通の `Badge` に `variant` を渡す形にしています。色を決める役目は `getPriorityBadgeVariant` が持っていて、`URGENT` なら `destructive`、`HIGH` なら `default`、`MEDIUM` なら `secondary`、残りは `outline` を返します。ここで `task.priority === 'URGENT' ? ... : ...` と書き始めると、同じ優先度がタスク一覧と詳細で違う色になっていきます。文字のほうは `TASK_PRIORITY_LABELS[task.priority]` を通して「緊急」「高」「中」「低」の日本語にします。`?? task.priority` を添えてあるのは、対応表で見つからない値が届いても札を空にしないためです。
+
 **確認ポイント**
 
 - メンバー追加ボタンがヘッダー右上にある
@@ -573,6 +583,8 @@ const handleArchive = (projectId: string, isArchived: boolean) => {
 };
 ```
 
+3行しかありませんが、この関数がアーカイブ機能の分かれ道です。受け取る `isArchived` は今の状態なので、`true`（すでにアーカイブ済み）なら呼ぶのは `unarchiveMutation` のほうです。渡ってくるのは現在で、呼ぶのは反対側、と覚えてください。ここを逆にすると、アーカイブ済みのプロジェクトをもう一度アーカイブする通信になります。エラーにはならず、ボタンを押しても何も変わらないので、原因を見つけるのに時間がかかります。`useMutation` の戻り値をいったん変数に入れてから `mutate` を呼べるのは、戻り値がただのオブジェクトだからです。おかげで `if` を2つに分けて同じ `mutate` を2回書かずに済みます。
+
 **確認ポイント**
 
 - 未アーカイブなら「アーカイブ」と表示される
@@ -631,6 +643,8 @@ const handleRemoveMember = (userId: string) => {
   title="このメンバーを削除しますか？"
 />
 ```
+
+`onConfirm` の中で `selectedProject && removeMemberTargetId` を確かめてから `mutate` を呼びます。`selectedProject` の型は `string | null` なので、この確認が無いと `projectId` に `null` が入りうる形になり、TypeScript が先に止めます。`isPending` を渡しているのは、通信の返事を待つ間にボタンを押せなくするためです。`DeleteConfirmDialog` は `isPending` が `true` の間、削除ボタンの文字を「削除中...」に変えて、キャンセルも含めて `disabled` にします。これが無いと連打で同じ削除要求が何本も飛びます。`title` を上書きしているのは、既定の文言が削除対象を名指ししない一般的な言い回しで、プロジェクトそのものの削除と見分けが付かないためです。
 
 これで完成です。
 
