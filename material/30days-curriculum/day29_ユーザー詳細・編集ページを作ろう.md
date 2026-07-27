@@ -98,7 +98,7 @@ flowchart TD
 
 **ゴール**: Day 24・Day 25 で作った `src/server/api/routers/user.ts` に、`getById` と `update` を追記します。今日は UI で動的ルーティングを学びますが、その前に「ユーザー詳細を返す入口」と「編集内容を保存する出口」を完成させます。
 
-この2本で初めて、Day 24 の一覧 → Day 29 の詳細 → Day 29 の編集、という流れが閉じます。ここも source と同じく、**閲覧権限** と **更新権限** を先に判定してから DB を触ります。
+この2本で初めて、Day 24 の一覧 → Day 29 の詳細 → Day 29 の編集、という流れが閉じます。ここも 完成版と同じく、**閲覧権限** と **更新権限** を先に判定してから DB を触ります。
 
 最初に import 群を完成形へ置き換えます。`getById` の未完了タスク絞り込みに使う `TASK_STATUS` が今日の追加分です。
 
@@ -142,7 +142,7 @@ const userUpdateSchema = z
 
 #### 0-1. getAll の直後に getById を足す
 
-完成版 source では `getAll` の次が `getById` です。まずそこへ追記します。
+完成版のコード では `getAll` の次が `getById` です。まずそこへ追記します。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（getAll の直後に追加）
@@ -303,10 +303,10 @@ const userUpdateSchema = z
 | 4 | `updateProfile` | Day 25 |
 | 5 | `changePassword` | Day 25 |
 
-順番も source と同じです。`root.ts` の `user: userRouter` は Day 24 ですでに登録済みなので、今日も root の追記はありません。
+順番も 完成版と同じです。`root.ts` の `user: userRouter` は Day 24 ですでに登録済みなので、今日も root の追記はありません。
 
 **確認ポイント**:
-- `src/server/api/routers/user.ts` に `getById` と `update` を source と同じ位置へ追記できた
+- `src/server/api/routers/user.ts` に `getById` と `update` を 完成版と同じ位置へ追記できた
 - `getById` が「本人または ADMIN」、`update` が「本人更新 / 他人更新」で分岐している
 - Day 24〜29 の積み上がりで `userRouter` の5手続きが揃った
 
@@ -519,7 +519,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 > ブラウザ側の部品にある `!user` は、
 > 取り直しの最中に備える保険です。
 >
-> 期限列の完成版 source は
+> 期限列の完成版のコード は
 > `format(new Date(task.dueDate), ...)` ではなく
 > `formatDateOnly(task.dueDate)` を使います。
 > User 詳細だけ違う日付処理にすると、

@@ -1169,7 +1169,7 @@ const handleSubmit = (data: TaskFormData) => {
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
 | 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（世界協定時、タイムゾーンの基準）の開始時刻にそろえる |
+| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（協定世界時、タイムゾーンの基準）の開始時刻にそろえる |
 | 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
 | 前回の値が残る | フォーム同期不足 | `defaultValues` と `useEffect(reset(...))` を確認 |
 

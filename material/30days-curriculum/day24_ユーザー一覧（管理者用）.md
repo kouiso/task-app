@@ -112,7 +112,7 @@ flowchart TD
 
 **ゴール**: `src/server/api/routers/user.ts` を新規作成し、まず `getAll` を写経して `api.user.getAll` を自分で生やします。管理者一覧ページの入口はここです。Day 21 の `report.ts` と同じく、ファイルを「登録するだけ」ではなく、最初の procedure から自分で作ります。
 
-一覧ページが必要としているのは、全ユーザーの詳細全部ではありません。名前・メール・ロール・状態・登録日など、表示に使う項目だけです。そこで完成版 source では、`USER_DETAIL_SELECT` を再利用しつつ `createdAt` と `updatedAt` を足して返します。
+一覧ページが必要としているのは、全ユーザーの詳細全部ではありません。名前・メール・ロール・状態・登録日など、表示に使う項目だけです。そこで完成版のコード では、`USER_DETAIL_SELECT` を再利用しつつ `createdAt` と `updatedAt` を足して返します。
 
 #### 0-1. import を並べる
 
@@ -187,7 +187,7 @@ export const userRouter = createTRPCRouter({
 
 #### 0-5. root.ts に時系列順で登録する
 
-最後に `userRouter` を `root.ts` に登録します。完成版 source と同じく、`user` は `report` のあとです。
+最後に `userRouter` を `root.ts` に登録します。完成版のコード と同じく、`user` は `report` のあとです。
 
 ```typescript
 // filepath: src/server/api/root.ts

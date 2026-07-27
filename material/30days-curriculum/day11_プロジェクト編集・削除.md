@@ -734,7 +734,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 | タイトル | 「プロジェクト作成」 | 「プロジェクト編集」 |
 | ボタン文言 | 「作成」 | 「更新」 |
 
-> `handleCreate` で `setEditingProject(undefined)` を呼ぶことで、フォームが空の状態（新規作成モード）になります。`ProjectDialog` は `initialData` の `id` 有無でタイトルとボタン文言を自動切替します。
+> `handleCreate` で `setEditingProject(undefined)` を呼ぶことで、フォームが空の状態（新規作成モード）になります。`ProjectDialog` は `initialData` の `id` 有無でタイトルとボタン文言を自動で切り替えます。
 
 ---
 
@@ -985,7 +985,7 @@ if (projectIdParam && selectedProject) {
 
 条件が `projectIdParam && selectedProject` の2つになっているのは、URL に id が付いていても、その id のプロジェクトが手元の一覧に無い場合があるからです。他人のプロジェクトの URL を開いたときや、id を打ち間違えたときがこれに当たります。片方だけの判定にすると、中身の無い詳細画面が開きます。
 
-この `return` を `return` 文の直前に置くのは、詳細を表示するときは一覧を描かないためです。あとに置くと、一覧を組み立ててから捨てることになります。
+この分岐を一覧の `return` 文の直前に置くのは、詳細を表示するときは一覧を描かないためです。あとに置くと、一覧を組み立ててから捨てることになります。
 
 **確認ポイント**:
 - `onArchive={handleArchive}` が渡されている

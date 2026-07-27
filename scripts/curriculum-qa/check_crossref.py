@@ -119,12 +119,16 @@ def has_own_evidence(body: str, token: str, day: int) -> bool:
     生の行で見ると「Day 11 で作った」と「`Foo`」が別々の行になり、
     後ろの行が day 指定なしの証拠として通ってしまう。
     """
-    for line in logical_lines(body):
-        if not contains(line, token):
-            continue
-        mentioned = {int(m.group(1)) for m in DAY_MENTION.finditer(line)}
-        if not (mentioned - {day}) or day in mentioned:
-            return True
+    for logical in logical_lines(body):
+        # 段落ごと見ると、隣の文が別の day に触れているだけで定義の文まで捨ててしまう。実例:
+        #   day13「ここで `TaskCard` を作ります。この部品は Day 17 でも再利用します。」
+        # これは定義の文であって先送りではないので、文単位で見る。
+        for line in re.split(r"(?<=[。！？])", logical):
+            if not contains(line, token):
+                continue
+            mentioned = {int(m.group(1)) for m in DAY_MENTION.finditer(line)}
+            if not (mentioned - {day}) or day in mentioned:
+                return True
     return False
 
 
@@ -222,6 +226,9 @@ def strip_fences(text: str) -> str:
     """``` と ~~~ の両方を閉じ記号として扱い、字下げされた開始記号も認める。
 
     開いた記号を覚えておくので、~~~ が ``` のブロックを閉じることはない。
+
+    閉じ忘れたフェンスがあると、そこから下の行が全部落ちる。落ちた範囲の参照切れは
+    誰にも見えないまま緑になるので、ファイルの終わりまで開いたままなら例外で止める。
     """
     out: list[str] = []
     marker: str | None = None
@@ -235,6 +242,8 @@ def strip_fences(text: str) -> str:
             continue
         if fence and fence.group(1) == marker:
             marker = None
+    if marker is not None:
+        raise ValueError("閉じていないコードブロックがあります")
     return "\n".join(out)
 
 
@@ -275,7 +284,12 @@ def main(argv: list[str]) -> int:
     seen: set[tuple[str, str, str]] = set()
 
     for path in sources:
-        for line in logical_lines(strip_fences(texts[path])):
+        try:
+            source_text = strip_fences(texts[path])
+        except ValueError as e:
+            print(f"❌ {path.name}: {e}", file=sys.stderr)
+            return 2
+        for line in logical_lines(source_text):
             # Day が先の形と語が先の形を同じ土俵に乗せる。
             # 語が先の形では Day が後ろに来るので、後ろの Day へ付け替える REANCHOR は当てない。
             claims = [(m.group(1), m.group(2), m.end(), True) for m in CLAIM.finditer(line)]

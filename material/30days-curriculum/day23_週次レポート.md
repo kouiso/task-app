@@ -279,14 +279,14 @@ import { getUserProjectIds } from './_helpers/permission';
 
 **確認ポイント**:
 - `src/server/api/routers/report.ts` の `getOverview` の直後に `getWeeklyReport` を追記できた
-- `weeks` / `userId` の入力検証、管理者チェック、週バケット生成まで source と同じ順序で書けた
+- `weeks` / `userId` の入力検証、管理者チェック、週バケット生成まで 完成版と同じ順序で書けた
 - `root.ts` は Day 21 時点の `report: reportRouter` のままでよいと理解できた
 
 ### Step 1: プロジェクト統計の集計ロジック（5分）
 
 **ゴール**: レポートページ（`/report`）に
 表示するプロジェクト統計の構造を理解します。
-完成版 source では Day 21 で導入した
+完成版のコード では Day 21 で導入した
 `api.report.getOverview` の `projectStats` を
 そのまま描画し、ここで再集計はしません。
 

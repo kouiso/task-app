@@ -15,13 +15,16 @@ import re
 import sys
 from pathlib import Path
 
-FENCE = re.compile(r"^\s*(```|~~~)(.*)$")
+# 4連以上のバッククォートも開始記号になる。3連決め打ちだと、````md のブロックを
+# 開いたまま閉じられず、そこから下のコードブロックが1つも検査されないまま緑になる。
+FENCE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
 HEADING = re.compile(r"^\s*#{1,6}\s")
 # 説明として数えない行。
-# 表と引用は数える。教材はコードの意味を対応表や補足の引用で説明することがあり、
-# これを外すと「表で説明しているのに説明が無い」と報告してしまう（day08 で実測）。
-# 確認ポイントの箇条書きは、できたかどうかの点検であって理由ではないので数えない。
-NOT_PROSE = re.compile(r"^\s*([-*+]\s|\d+[.)]\s|!\[|\*\*確認ポイント)")
+# 表・引用・箇条書きは数える。教材はコードの意味を対応表や箇条書きで説明することがあり、
+# これを外すと「箇条書きで説明しているのに説明が無い」と報告してしまう。
+# 確認ポイントの見出しだけは、できたかどうかの点検であって理由ではないので数えない
+# （見出しに続く箇条書きも、この見出しで打ち切るため数に入らない）。
+NOT_PROSE = re.compile(r"^\s*(!\[|\*\*確認ポイント)")
 
 # 写経させないブロックの目印。この語が直前の地の文にあれば対象から外す。
 COMPARE_ONLY = re.compile(r"読み比べ用|写経しません|比較用")
@@ -50,11 +53,19 @@ def blocks_with_following_prose(text: str):
         i += 1
         while i < len(lines):
             close = FENCE.match(lines[i])
-            if close and close.group(1) == marker and not close.group(2).strip():
+            if (
+                close
+                and close.group(1)[0] == marker[0]
+                and len(close.group(1)) >= len(marker)
+                and not close.group(2).strip()
+            ):
                 break
             i += 1
         i += 1  # 閉じフェンスの次へ
 
+        # 次のコードブロックか見出しまでを、このブロックの説明として数える。
+        # 空行で打ち切る案も試したが、1つ目の段落が短く2つ目が本体という
+        # 正しい書き方まで落ちた（実測68件）。区切りはブロックと見出しに置く。
         after: list[str] = []
         first_meaningful: str | None = None
         j = i

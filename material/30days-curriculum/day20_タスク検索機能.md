@@ -101,9 +101,9 @@ flowchart TD
 残っている `search`・`quickSearch`・`getUserProjects` を追記します。
 最後に、この Step で示す5手続きの順序と確認ポイントを使って自己点検します。
 
-Day 14 では担当者候補を取る 2 手続きだけを先に作りました。今日はその続きです。検索画面は `api.search.search` と `api.search.getUserProjects` を使います。さらに `quickSearch` は画面から直接は呼ばれませんが、完成版 source とテストでは使うので、ここで一緒に仕上げます。
+Day 14 では担当者候補を取る 2 手続きだけを先に作りました。今日はその続きです。検索画面は `api.search.search` と `api.search.getUserProjects` を使います。さらに `quickSearch` は画面から直接は呼ばれませんが、完成版のコード とテストでは使うので、ここで一緒に仕上げます。
 
-大事なのは、**今日の作業で `search.ts` を完成版 source と同じ並びに揃える**ことです。Day 14 の時点では `getProjectMembers` と `getMembersByProject` だけを先に書きましたが、完成版ではその前に `search`・`quickSearch`・`getUserProjects` が入ります。ここで順番を整えておくと、以降の Day と差分を見比べやすくなります。
+大事なのは、**今日の作業で `search.ts` を完成版のコード と同じ並びに揃える**ことです。Day 14 の時点では `getProjectMembers` と `getMembersByProject` だけを先に書きましたが、完成版ではその前に `search`・`quickSearch`・`getUserProjects` が入ります。ここで順番を整えておくと、以降の Day と差分を見比べやすくなります。
 
 #### 0-1. まず足りない import と定数を追加する
 
@@ -175,7 +175,7 @@ const quickSearchInputSchema = z.object({
 
 #### 0-3. 動的な検索条件を組み立てる部品を作る
 
-複数条件検索は、最初から `.findMany({ where: ... })` を一気に書くと見通しが悪くなります。そこで、完成版 source では「条件を小さな部品に分けてから最後に合体する」形にしています。Day 14 の `searchRouter` の前へ、次を上から順に追加します。
+複数条件検索は、最初から `.findMany({ where: ... })` を一気に書くと見通しが悪くなります。そこで、完成版のコード では「条件を小さな部品に分けてから最後に合体する」形にしています。Day 14 の `searchRouter` の前へ、次を上から順に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -371,7 +371,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 
 #### 0-5. quickSearch をその次に追加する
 
-続けて `search` の直後に `quickSearch` を追加します。これは検索ページ本体ではまだ使いませんが、完成版 source とテストで必要です。
+続けて `search` の直後に `quickSearch` を追加します。これは検索ページ本体ではまだ使いませんが、完成版のコード とテストで必要です。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（search の直後に追加）
@@ -563,7 +563,7 @@ const searchInputSchema = z.object({
 > `search` は「複数条件検索」、`quickSearch` は「キーワードだけの軽い検索」、`getUserProjects` は「検索フォームの選択肢取得」と役割が分かれています。使い道が違うので、似た名前でも1本に詰め込まず分けています。
 
 > **`dateFrom` / `dateTo` は date-only 入力です。**
-> 完成版 source では生の Date 変換をそのまま使わず、
+> 完成版のコード では生の Date 変換をそのまま使わず、
 > `dateOnlyToUtcStartIso` /
 > `dateOnlyToUtcEndIso` で日付境界を UTC に変換してから
 > API に渡します。これを省くとタイムゾーンによって

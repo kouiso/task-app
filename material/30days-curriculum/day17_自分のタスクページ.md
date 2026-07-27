@@ -668,7 +668,7 @@ const TaskGroupSection = ({
 
 ### Step 7 : 期限別グループに分類する（7分）
 
-**ゴール**: タスクを期限で4つのグループに分類します。完成版 source と同じ `dateOnlyFromValue()` / `localDateOnly()` を使い、日付だけを比較します。
+**ゴール**: タスクを期限で4つのグループに分類します。完成版のコード と同じ `dateOnlyFromValue()` / `localDateOnly()` を使い、日付だけを比較します。
 
 **実装**:
 
@@ -750,7 +750,7 @@ const groupedTasks = useMemo(() => {
 | `new Date(t.dueDate) < new Date()` | タイムゾーン境界で前日・翌日にずれやすい | △ |
 | `dateOnlyFromValue()` / `localDateOnly()` | `YYYY-MM-DD` にそろえて安全に比較できる | ✅ |
 
-> 完成版 source では、`dueDate` を
+> 完成版のコード では、`dueDate` を
 > `new Date()` にして比較するのではなく、
 > `dateOnlyFromValue()` と `localDateOnly()` で
 > `YYYY-MM-DD` に正規化して比較します。

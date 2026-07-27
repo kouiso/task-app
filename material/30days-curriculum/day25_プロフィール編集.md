@@ -105,7 +105,7 @@ flowchart TD
 
 ### Step 0: user.ts に updateProfile / changePassword を追記する（15分）
 
-**ゴール**: Day 24 で作った `src/server/api/routers/user.ts` に、`updateProfile` と `changePassword` を source と同じ順番で追記します。今日はプロフィール表示 UI を作りますが、その前に「更新先の API」が必要です。
+**ゴール**: Day 24 で作った `src/server/api/routers/user.ts` に、`updateProfile` と `changePassword` を 完成版と同じ順番で追記します。今日はプロフィール表示 UI を作りますが、その前に「更新先の API」が必要です。
 
 Day 24 の `getAll` は管理者一覧の入口でした。今日は「本人が自分のプロフィールを更新する」「本人が自分のパスワードを変更する」という2本を足します。どちらも **`protectedProcedure`** なので、ログイン済みユーザー本人のセッションを前提に動きます。
 
@@ -301,7 +301,7 @@ Day 29 では `getAll` と `updateProfile` の間へ
 Day 24 で `user: userRouter` は登録済みです。今日は `user.ts` の中身に 2 本 procedure を増やしただけなので、`root.ts` の追記はありません。つまり `api.user.updateProfile` と `api.user.changePassword` は、**既存の `userRouter` 登録の中で自動的に増える** 形です。
 
 **確認ポイント**:
-- `src/server/api/routers/user.ts` に `updateProfile` と `changePassword` を source と同じ処理順で追記できた
+- `src/server/api/routers/user.ts` に `updateProfile` と `changePassword` を 完成版と同じ処理順で追記できた
 - `updateProfile` がメール重複チェックと `createSession(...)` を持っている
 - `changePassword` が `bcrypt.compare` → `bcrypt.hash` → `prisma.user.update` の順で並んでいる
 - `root.ts` は Day 24 の `user: userRouter` のままでよいと理解できた
