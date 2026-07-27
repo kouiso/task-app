@@ -76,6 +76,7 @@
 ## 一般的なエラーと対処法
 
 ### `Module not found`
+
 ```
 Module not found: Can't resolve '@/component/ui/button'
 ```
@@ -83,21 +84,25 @@ Module not found: Can't resolve '@/component/ui/button'
 **解決**: ファイルの存在を確認し、パスエイリアス（`@/`）が正しく設定されているか`tsconfig.json`を確認します。
 
 ### `Hydration Error`
+
 ```
 Error: Hydration failed because the initial UI does not match what was rendered on the server
 ```
 **原因**: サーバーとクライアントで異なるHTMLが生成された
-**解決**: `Date.now()`や`Math.random()`などのランダム値をServer Componentで直接使っていないか確認します。ブラウザ側で動かす必要がある箇所には`'use client'`を指定します。
+**解決**: `Date.now()`や`Math.random()`のように実行するたびに変わる値を、最初の描画で使っていないか確認します。`'use client'`を付けても直りません。`'use client'`を付けたコンポーネントも、ブラウザへ送る前にサーバー側で一度描画されるので、サーバーとブラウザで値がずれる状況は変わらないためです。変わる値は`useEffect`の中で計算して`useState`に入れ、画面へ出すのはブラウザでの描画からにします。最初の描画では`--`など固定の文字を表示しておけば、サーバーとブラウザのHTMLが一致します。
 
 ### `TRPC Error: ログインが必要です`
+
 **原因**: 認証が必要なAPIに未認証でアクセスしている
 **解決**: ログイン画面からログインし直します。あわせて、Cookieが正しく設定されているか確認します。
 
 ### `Prisma: Invalid `prisma.xxx.findMany()` invocation`
+
 **原因**: Prismaクライアントとスキーマが不一致
 **解決**: `npx prisma generate`を実行してクライアントを再生成します。
 
 ### `Port 3000 is already in use`
+
 **原因**: 既に別のプロセスがポート3000を使用している
 **解決**: `lsof -i :3000`で使用中のプロセスを確認し、終了してから`npm run dev`を実行します。
 
@@ -106,17 +111,21 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 ## デバッグのコツ
 
 ### 1. ブラウザの開発者ツールを活用
+
 - **Console**タブ: エラーメッセージの確認
 - **Network**タブ: APIリクエスト/レスポンスの確認
 - **Application**タブ: Cookieの確認
 
 ### 2. サーバーログの確認
+
 ターミナルで`npm run dev`を実行しているウィンドウのログを確認します。エラーの詳しい内容は、ここに表示されます。
 
 ### 3. エラーメッセージを検索
+
 エラーメッセージをそのままコピーしてGoogleで検索します。Stack Overflowや公式ドキュメントで解決策が見つかることも多いです。
 
 ### 4. 変更を小さく保つ
+
 大きな変更を一度に行うとエラーの特定が難しいです。小さな変更→確認→コミットを繰り返します。
 
 ---

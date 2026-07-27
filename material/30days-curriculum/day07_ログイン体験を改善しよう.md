@@ -99,6 +99,7 @@ sequenceDiagram
 ---
 
 ### Step 1: session.ts を作り直す（JWT セッション管理・12分）
+
 **ゴール**: ログイン状態を JWT トークンで管理する仕組みを作ります。
 
 このファイルが認証の中心です。
@@ -157,8 +158,10 @@ const COOKIE_NAME = 'session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
 ```
 
-`SessionPayload` は、JWT トークンの中に入れる中身の型です。
-`SessionUser` は、画面側が「いま誰がログインしているか」を判断するために必要な最小限の情報です。
+型を 2 つに分けているのは、トークンの都合を画面へ持ち込まないためです。
+`SessionPayload` には `exp`（トークンの有効期限を表す数値）のような、トークンの管理にしか使わない値が入っています。
+画面へ同じ型をそのまま渡すと、期限の持ち方を変えただけで画面側のコードまで直すことになります。
+そこで `SessionUser` を別に用意して、画面が実際に表示する 3 つの値だけを渡します。
 
 #### 1-3. 型ガードと暗号化
 
@@ -360,6 +363,7 @@ export async function verifySession(): Promise<SessionUser | null> {
 ---
 
 ### Step 2: trpc.ts を作り直す（API の土台・10分）
+
 **ゴール**: tRPC の初期設定と、public / protected / admin の 3 種類の API を定義します。
 
 Day 05 のログイン画面は `api.auth.login.useMutation()` でサーバーを呼んでいました。
@@ -394,7 +398,9 @@ export type Context = Awaited<
 >;
 ```
 
-`createTRPCContext` は API リクエストのたびに呼ばれて、「今誰がログインしてるか」をコンテキストに入れます。
+コンテキストとは、1 回のリクエストのあいだ、どの API 処理からも参照できる共通の入れ物です。
+ログイン中のユーザーをここへ入れておくのは、API を 1 つ増やすたびに Cookie の読み取りと JWT の検証を書き足さずに済ませるためです。
+判定は 1 リクエストにつき 1 回だけ走り、どの API 処理も同じ結果を受け取ります。
 
 #### 2-2. tRPC インスタンス初期化
 
@@ -551,6 +557,7 @@ export const createCallerFactory = t.createCallerFactory;
 ---
 
 ### Step 3: auth.ts を作り直す（認証ルーター・15分）
+
 **ゴール**: ログイン・登録・ログアウト・セッション取得の 4 つの API を作ります。
 
 ここが今日のメインです。配布スターターには、Day 05 と Day 06 の画面を先に動かすため、完成済みの認証 API が入っています。ここでは動いているコードを答えとして眺めるだけにせず、`auth.ts` の中身を削除し、手順どおりに自分で作り直します。
@@ -587,8 +594,11 @@ export const projectMemberRoleSchema =
   z.nativeEnum(PROJECT_MEMBER_ROLE);
 ```
 
-Prisma（読み方はプリズマ、TypeScript からデータベースを操作するための道具）の `select` を毎回書くのは面倒なので、共通化しておきます。
-`as const` で型を絞ることで、返り値の型が正確になります。
+Prisma（読み方はプリズマ、TypeScript からデータベースを操作するための道具）の `select` は、取り出す項目をこちらで指定する書き方です。
+これを API ごとに書くと、同じユーザー情報でも API によって返る項目がばらつきます。
+1 か所でも書き間違えれば、その API だけが外へ出したくない項目まで返します。
+定数にまとめておけば、項目を足すときに直す場所は 1 つで済みます。
+`as const` を付けると中身が読み取り専用になり、返り値の型もここで並べた項目どおりに決まります。
 
 #### 3-1. auth.ts のインポートとバリデーション
 
@@ -1018,6 +1028,7 @@ flowchart TD
 ---
 
 ### Step 4: API を繋ぎ直す（ルーター登録 + HTTP ハンドラー・5分）
+
 **ゴール**: 作った auth ルーターを tRPC に登録し、HTTP リクエストを受け付けられるようにします。
 
 #### 4-1. root.ts（ルーターを束ねる）
@@ -1038,7 +1049,7 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-いまここに並んでいるのは `auth` の 1 つだけです。プロジェクトやタスクのルーターは、それを実際に使う Day 09 以降で 1 つずつ足していきます。
+プロジェクトやタスクのルーターは、それを実際に使う Day 09 以降で 1 つずつ足していきます。
 
 #### 4-2. route.ts（HTTP ハンドラー）
 
@@ -1063,7 +1074,9 @@ const handler = (req: NextRequest) =>
 export { handler as GET, handler as POST };
 ```
 
-Next.js の App Router では、`src/app/api/trpc/[trpc]/route.ts` に置くだけで `/api/trpc/*` のリクエストをすべて tRPC が処理します。
+フォルダ名の `[trpc]` が角括弧で囲まれているのは、URL のその部分に何が来ても受け取るという印です。
+おかげで `/api/trpc/auth.login` でも `/api/trpc/auth.me` でも、呼ばれるのはこの 1 ファイルになります。
+API を 1 つ足すたびにファイルを作らずに済むのは、入口をここへまとめているからです。
 
 **確認ポイント**:
 - [ ] `src/server/api/root.ts` を教材のコードで作り直した
@@ -1072,6 +1085,7 @@ Next.js の App Router では、`src/app/api/trpc/[trpc]/route.ts` に置くだ�
 ---
 
 ### Step 5: middleware.ts を作る（ルート保護・8分）
+
 **ゴール**: ログインしていないユーザーを自動でログイン画面にリダイレクトする仕組みを作ります。
 
 このファイルは Next.js の Edge Runtime で動きます。
@@ -1210,8 +1224,10 @@ export const config = {
 
 `config.matcher` は、middleware を動かす URL を絞り込む指定です。
 `_next/static` や画像、`favicon.ico` を外しているのは、画像 1 枚を読むたびに JWT の検証を走らせても得るものが無く、表示が遅くなるだけだからです。
-`(?!...)` は「この語で始まらないもの」を表す書き方で、通したいパスをここへ並べます。
-逆に外しすぎると、守りたいページが middleware を素通りしてしまうので、足すのは画像やスタイルのような表示用ファイルだけにとどめます。
+`(?!...)` は「ここに並べた語で始まらない URL にだけ一致する」という書き方です。
+つまり、ここへ並べたパスは middleware を通らず、JWT の検証を受けません。
+並べる数を増やしすぎると、守りたいページまで middleware を素通りします。
+足すのは画像やスタイルのような表示用ファイルだけにとどめます。
 
 **middleware の判定フロー**:
 

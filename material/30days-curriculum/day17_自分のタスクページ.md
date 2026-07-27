@@ -51,7 +51,7 @@ flowchart TD
 | やること | やらないこと |
 |---------|-------------|
 | `getCurrentUser` で自分のIDを取得 | useSessionは使わない |
-| `getAll({ assigneeId })` でフィルタ | 専用のAPIエンドポイント |
+| `getAll({ assigneeId })` でフィルター | 専用のAPIエンドポイント |
 | 期限別にグループ表示 | カレンダー表示 |
 | ステータスTabsで絞り込み | 検索機能（Day 20） |
 | 編集・削除をTaskDialogで | 新規作成 |
@@ -194,7 +194,7 @@ if (isCurrentUserLoading) {
 
 ### Step 3 : 自分のタスクを取得する（5分）
 
-**ゴール**: `assigneeId` でフィルタして自分のタスクだけを取得します。
+**ゴール**: `assigneeId` でフィルターして自分のタスクだけを取得します。
 
 **実装**:
 
@@ -1300,7 +1300,7 @@ Day 17 おつかれさまでした。これで自分専用のタスクダッシ�
 - [ ] `getCurrentUser` で自分のIDを取得できた
 - [ ] `getAll({ assigneeId })` で自分のタスク取得
 - [ ] `PageLoadingSpinner` でローディング表示を実装した
-- [ ] Tabs でステータスフィルタを実装できた
+- [ ] Tabs でステータスフィルターを実装できた
 - [ ] `dateOnlyFromValue()` / `localDateOnly()` で期限別グループ表示を実装できた
 - [ ] TaskDialog を使って編集・削除できた
 

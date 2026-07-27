@@ -662,7 +662,7 @@ git remote add origin https://github.com/<your-user-name>/task-app.git
 git remote -v
 ```
 
-登録できていれば、2行目の `git remote -v` に `(fetch)` と `(push)` の2行が出ます。ここでも `error: remote origin already exists.` と出るなら、名前は登録済みで URL だけが違う状態です。その場合は追加ではなく `git remote set-url origin https://github.com/<your-user-name>/task-app.git` で URL を差し替えます。
+登録できていれば、2行目の `git remote -v` に `(fetch)` と `(push)` の2行が出ます。ここでも `error: remote origin already exists.` と出るなら、`origin` という名前がすでに使われています。URL が同じでもこのエラーは出るので、まず `git remote -v` の表示を見てください。表示された URL が自分の GitHub リポジトリと同じなら、そのままで問題ありません。違っていたときだけ、追加ではなく `git remote set-url origin https://github.com/<your-user-name>/task-app.git` で URL を差し替えます。
 
 ### push 前に「変更が残っている」と感じる
 
@@ -681,9 +681,10 @@ git status --short
 ```bash
 sed -n '1,220p' .gitignore
 git status --short
+git ls-files .env
 ```
 
-2つとも読み取るだけのコマンドなので、`.env` を消したり書き換えたりはしません。`git status --short` の一覧から `.env` の行が消えていれば、無視の設定が効いています。`.env.example` は見本として残して問題ありません。ただし、本物の値が入った `.env` は送りません。
+3つとも読み取るだけのコマンドなので、`.env` を消したり書き換えたりはしません。`git status --short` の一覧から `.env` の行が消えても、それだけでは安心できません。`.gitignore` は、Git がすでに記録している（追跡している）ファイルには効かないからです。判断は `git ls-files .env` の結果で行います。何も表示されなければ、`.env` は追跡されていません。ファイル名が表示されたら追跡されているので、`git rm --cached .env` で追跡だけを外します。このコマンドは手元の `.env` を消さず、Git の管理から外すだけです。すでに push していた場合は、その値は漏れたものとして扱い、パスワードやキーを新しい値に変えてください。`.env.example` は見本として残して問題ありません。
 
 ### push 後に GitHub ページへ反映されない
 

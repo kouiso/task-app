@@ -217,6 +217,24 @@ jobs:
           python3 scripts/curriculum-qa/check_scaffold_curriculum_alignment.py
           echo "::endgroup::"
 
+      # Gate 4: 2026-07-26 配線。Gate 3 と同じ穴だった。両スクリプトとも書かれてから
+      # 一度も呼ばれておらず、リポジトリ全体を grep してもスクリプト自身以外に
+      # 名前が出てこなかった。
+      #
+      # check_quality.sh と lint-staged には入れない。あちらは1ファイル単位で走るため、
+      # 「day13 の語を直した結果 day20 と表記が割れた」「day07 の節を消した結果 day30 の
+      # 参照が切れた」型の破損を原理的に観測できない。corpus 全体を一度に見る場所が要る。
+      # 引数は明示して渡す。スクリプト側の既定値に頼ると、教材の置き場所を変えたときに
+      # 「0件検査して緑」になる。
+      - name: Gate 4 — 用語ゆれ・day間参照チェック (corpus 全体)
+        run: |
+          echo "::group::check_terms.py — 同じ概念が2通りの表記に割れていないか"
+          python3 scripts/curriculum-qa/check_terms.py material/30days-curriculum
+          echo "::endgroup::"
+          echo "::group::check_crossref.py — 前の日を指す参照の先が実在するか"
+          python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum
+          echo "::endgroup::"
+
       # gen_procedure_map.py は「生成器」であってチェッカーではないため配線しない。
       # CI に置くと再生成して破棄するだけの「緑のno-op」になり、
       # 「走った=検査した」と誤読させる。配線するなら必ず差分検出の形にすること:

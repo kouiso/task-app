@@ -1111,7 +1111,7 @@ npm run lint
 
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| チェックボックスをクリックしても反応しない | `onChange`ハンドラーで`Set`を正しく更新していない | `new Set(prev)`でコピーを作ってから`add`/`delete`する（直接mutateしない） |
+| チェックボックスをクリックしても反応しない | `onCheckedChange`ハンドラーで`Set`を正しく更新していない（`Checkbox`は`onChange`ではなく`onCheckedChange`を受け取る） | `new Set(prev)`でコピーを作ってから`add`/`delete`する（直接mutateしない） |
 | `indeterminate`状態が表示されない | `checked`propに`true`/`false`しか渡していない | shadcn/uiの`Checkbox`は`checked`に文字列`'indeterminate'`を渡すと部分選択状態になる |
 | 一括操作後にチェックが残る | 操作成功後に`selectedTasks`をクリアしていない | `onSuccess`内で`setSelectedTasks(new Set())`を呼ぶ |
 | `updateMany`で型エラーが出る | `status`に文字列をそのまま渡している | `isTaskStatus`型ガードで検証してから渡す |
