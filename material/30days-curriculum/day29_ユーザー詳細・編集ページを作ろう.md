@@ -1371,10 +1371,12 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 
 メールアドレスの欄だけ `register` を使わず、`user.email` を直接入れて `disabled` にしています。この欄は送信の対象ではないからです。Step 7 の `userEditSchema` にも `email` は入れていません。ログインに使う値なので、ここで気軽に書き換えられると本人が締め出されます。それでも欄ごと消さないのは、いま誰を編集しているのかを画面で確かめられるようにするためです。読み取り専用で置いておくと、開くページを間違えたことにその場で気付けます。
 
+画面での確認は Step 10 の最後で行います。ここではコードを見ます。
+
 **確認ポイント**:
-- 編集ページを開くとフォームにユーザーの名前が自動入力される
-- アバターURLを入力するとプレビューがリアルタイムで変わる（`form.watch('avatar')` が `AvatarImage` の `src` に直結しているため）
-- メールアドレスの入力欄が `disabled` でグレーアウトしている
+- `<form onSubmit={form.handleSubmit(onSubmit)}>` から名前・メール・アバターの3つの `<div>` までが書けている
+- 名前欄に `{...form.register('name')}` が入っている
+- メールアドレスの欄だけ `register` を使わず `value={user.email}` と `disabled` になっている
 
 ---
 
@@ -1459,7 +1461,7 @@ import { isUserRole, USER_ROLE_LABELS }
               </div>
 ```
 
-**確認ポイント**: ドロップダウンを開いて「ユーザー」「管理者」が表示されることを確認してください。
+**確認ポイント**: `SelectItem` が「ユーザー」「管理者」の2つ書けていることをコードで確認してください。画面での確認は、`</form>` を書き終える Step 10 の最後で行います。
 
 `onValueChange` が渡してくる `value` は、どんな文字列でもありうる `string` 型です。一方 `form.watch('role')` の型は zod スキーマから作られるので `'USER' | 'ADMIN'` の2択に絞られています。広いほうの型を狭いほうへそのまま入れることはできないので、`isUserRole` 型ガードで中身を確かめてから渡します（`as UserRole` は使いません）。
 
@@ -1492,17 +1494,19 @@ import { isUserRole, USER_ROLE_LABELS }
 )}
 ```
 
-**確認ポイント**: チェックボックスの ON/OFF が切り替えられることを確認してください。
+**確認ポイント**: `Checkbox` に `checked` と `onCheckedChange` の2つが書けていることをコードで確認してください。実際の切り替えは Step 10 の最後で確かめます。
 
 `checked === true` と書くのは、`onCheckedChange` が `boolean | 'indeterminate'` を受け取るためです。
 
 スクリーンショット: 編集フォームの完成イメージの表示を確認してください。
 
 ![編集フォームの完成イメージの表示を確認してください。](./screenshots/user-edit-form.png)
+画面での確認は Step 10 の最後で行います。ここではコードを見ます。
+
 **確認ポイント**:
-- ロール選択ドロップダウンに「ユーザー」「管理者」の2つが表示される
-- 現在のロールが選択済み状態で表示される
-- チェックボックスのON/OFFが切り替えられる
+- ロール選択の `SelectItem` に「ユーザー」「管理者」の2つが書けている
+- `Select` の `value` に現在のロールが渡っている
+- `Checkbox` に `checked` と `onCheckedChange` が書けている
 
 ---
 
@@ -1569,7 +1573,7 @@ import { Alert, AlertDescription, AlertTitle }
     };
 ```
 
-**確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くので、この時点ではまだ構文エラーが残ります。`onSubmit` と `updateUser` が定義されたことで、Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が動作するようになりました。更新後は30秒待たなくても詳細・一覧・セッション表示へ反映されます。
+**確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くので、この時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が指している2つがそろいました。実際に動くかどうかは、`</form>` を書き終えた Step 10 の最後で確かめます。
 
 サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `undefined` に変換しています。
 
@@ -1588,7 +1592,7 @@ import { Alert, AlertDescription, AlertTitle }
               )}
 ```
 
-**確認ポイント**: エラー発生時、フォーム内に赤いアラートが表示されることを確認してください。
+**確認ポイント**: `{updateUser.error && (...)}` のブロックがチェックボックスの下に書けていることを確認してください。赤いアラートの実表示は、`</form>` を書き終えた後の最終確認で見ます。
 
 `toast` は一時的な通知（数秒で消える）、`Alert` はフォーム内に残り続ける表示です。両方使うことでユーザーにエラーを確実に伝えます。
 
@@ -1942,11 +1946,11 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
 ### `src/app/user/[id]/user-detail-client.tsx`
 
-完成形は、完成版の `src/app/user/[id]/user-detail-client.tsx` と同じです。手元のコードと見比べて確認してください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+完成形は、完成版の `src/app/user/[id]/user-detail-client.tsx` と同じです。手元のコードが下の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ### `src/app/user/[id]/edit/user-edit-client.tsx`
 
-完成形は、完成版の `src/app/user/[id]/edit/user-edit-client.tsx` と同じです。手元のコードと見比べて確認してください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+完成形は、完成版の `src/app/user/[id]/edit/user-edit-client.tsx` と同じです。手元のコードが下の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ---
 
