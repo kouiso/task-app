@@ -708,7 +708,7 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 #### Before（改善前のコード）
 
 ```typescript
-// filepath: src/app/graduation/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 'use client';
 
 import { useState } from 'react';
@@ -764,7 +764,7 @@ export default function GraduationPage() {
 #### After（プロが書くコード）
 
 ```typescript
-// filepath: src/app/graduation/page.tsx
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 import { ShareGraduationButton } from './share-graduation-button';
 
 const CURRICULUM_SUMMARY = [
@@ -799,7 +799,7 @@ export default function GraduationPage() {
   );
 }
 
-// filepath: src/app/graduation/share-graduation-button.tsx
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 'use client';
 
 import { useState } from 'react';
