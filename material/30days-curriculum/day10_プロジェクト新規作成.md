@@ -1014,7 +1014,7 @@ Day 10 終了時点の状態は、完成版の `src/server/api/routers/project.t
 
 ### `src/component/project/project-dialog.tsx`
 
-Day 10 終了時点のダイアログは、完成版の `src/component/project/project-dialog.tsx` と同じ考え方で作ってあります。ただし必須マークの付け方や列の分け方は違うので、フォームの組み立て方は、上に書いたコードのほうを正としてください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+Day 10 終了時点のダイアログは、完成版の `src/component/project/project-dialog.tsx` と同じ考え方で作ってあります。ただし必須マークの付け方や列の分け方は違います。フォームの組み立て方は Step 3 から Step 6 に載せたコードのほうを正としてください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ### `src/app/project/page.tsx`
 

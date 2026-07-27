@@ -1502,7 +1502,7 @@ import { isUserRole, USER_ROLE_LABELS }
 
 スクリーンショット: 完成後の編集フォームはこのように表示されます（この時点ではまだ描画されません）。
 
-![編集フォームの完成イメージの表示を確認してください。](./screenshots/user-edit-form.png)
+![完成後の編集フォーム（ロール選択とアクティブのチェックボックスが並んだ状態）](./screenshots/user-edit-form.png)
 
 画面での確認は Step 10 の最後で行います。ここではコードを見ます。
 
