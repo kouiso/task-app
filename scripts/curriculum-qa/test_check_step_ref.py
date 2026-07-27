@@ -6,6 +6,8 @@
 検査でも緑になってしまう。
 """
 
+import contextlib
+import io
 import sys
 import tempfile
 from pathlib import Path
@@ -59,31 +61,36 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, int]]]] = [
 ]
 
 
-def check_exit_code() -> int:
-    """main() の戻り値まで見る。
+def check_exit_code() -> tuple[int, int]:
+    """main() の戻り値まで見る。(失敗数, 実行したケース数) を返す。
 
     ケースを直接 find_bad_refs に当てるだけだと、main() が指摘を持ちながら 0 を返すよう
     壊れても自己テストは緑のままになる。CI は終了コードしか見ないので、そこを塞ぐ。
     """
     import check_step_ref
 
+    # 合格した回に ❌ を出さないよう、検査自身の出力は捨てる。
+    def run(args: list[str]) -> int:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return check_step_ref.main(args)
+
     failed = 0
     cases = [
-        ("この日に無い Step を指したら 1 を返す", "### Step 1: あ\n\nStep 9 で書いた値。\n"),
-        ("存在しない Day を指したら 1 を返す", "### Step 1: あ\n\nDay 99 の Step 1 で書いた値。\n"),
+        ("この日に無い Step を指したら 1 を返す", "### Step 1: あ\n\nStep 9 で書いた値。\n", 1),
+        ("存在しない Day を指したら 1 を返す", "### Step 1: あ\n\nDay 99 の Step 1 で書いた値。\n", 1),
+        ("指摘が無ければ 0 を返す", "### Step 1: あ\n\nStep 1 で書いた値。\n", 0),
     ]
-    for name, body in cases:
+    for name, body, want in cases:
         with tempfile.TemporaryDirectory() as d:
             Path(d, "day05_x.md").write_text(body, encoding="utf-8")
-            if check_step_ref.main(["check_step_ref.py", d]) != 1:
+            if run(["check_step_ref.py", d]) != want:
                 failed += 1
                 print(f"  ❌ {name}")
-    with tempfile.TemporaryDirectory() as d:
-        Path(d, "day05_x.md").write_text("### Step 1: あ\n\nStep 1 で書いた値。\n", encoding="utf-8")
-        if check_step_ref.main(["check_step_ref.py", d]) != 0:
-            failed += 1
-            print("  ❌ 指摘が無いのに 0 を返さない")
-    return failed
+    # 対象が見つからない経路。ここを 0 に書き換えられても気付けるようにする。
+    if run(["check_step_ref.py", "/no/such/path"]) != 2:
+        failed += 1
+        print("  ❌ 見つからないパスで 2 を返さない")
+    return failed, len(cases) + 1
 
 
 def main() -> int:
@@ -105,8 +112,9 @@ def main() -> int:
         if sorted(got) != sorted(expected):
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
-    failed += check_exit_code()
-    total = len(CASES) + 3
+    exit_failed, exit_total = check_exit_code()
+    failed += exit_failed
+    total = len(CASES) + exit_total
     if failed:
         print(f"❌ check_step_ref 自己テスト {failed}/{total} 失敗")
         return 1
