@@ -69,6 +69,7 @@ flowchart TD
 |---------|---------|---------|
 | Step 1 | 本番用の環境変数を準備 | 5分 |
 | Step 2 | 本番前のローカル最終確認 | 5分 |
+| Step 2.5 | セキュリティヘッダーを設定する | 6分 |
 | Step 3 | Git の公開準備 | 3分 |
 | Step 4 | Vercel を設定してプッシュ | 10分 |
 | Step 5 | 本番環境の動作確認 | 7分 |
@@ -76,7 +77,7 @@ flowchart TD
 | Step 7 | 技術スタックの振り返り | 5分 |
 | Step 8 | 次のステップとリソース | 5分 |
 
-**合計時間**: 約47分です。
+**合計時間**: 約53分です。
 
 ---
 
@@ -258,6 +259,59 @@ npm run db:push
 > **新しく作った教材用の本番 DB に限り**
 > `prisma db push` を1回実行します。既存データがある
 > 実務の DB では、この手順をそのまま使わないでください。
+
+---
+
+### Step 2.5: セキュリティヘッダーを設定する（6分）
+
+**ゴール**: 公開したアプリが、ブラウザに守り方を伝えられるようにします。
+
+ここまでのアプリには、セキュリティヘッダーが1つも入っていません。ヘッダーとは、ページ本体とは別にサーバーがブラウザへ渡す短い指示書のことです。これが無いと、たとえば他人のサイトが自分のアプリを見えない枠として埋め込み、その上に偽のボタンを重ねる、といった手口を止められません。公開する前にここを埋めます。
+
+`next.config.ts` を開き、`const nextConfig` の中へ `headers` を追加します。
+
+```typescript
+// filepath: next.config.ts
+// nextConfig の中に追加
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+        ],
+      },
+    ];
+  },
+```
+
+`source: '/(.*)'` は「すべてのURL」という意味で、アプリ全体に同じ指示を配ります。`X-Frame-Options: DENY` は、他人のページの中へ自分のアプリを枠として埋め込むことを禁じます。`X-Content-Type-Options: nosniff` は、ブラウザがファイルの中身を見て種類を勝手に決め直すのをやめさせます。`Referrer-Policy` は、外部サイトへ移るときに、どのページから来たかを細かく渡しすぎないようにします。
+
+続けて、通信と権限に関する3つを足します。
+
+```typescript
+// filepath: next.config.ts（headers の配列に追加）
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          { key: 'X-DNS-Prefetch-Control', value: 'off' },
+```
+
+`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`Permissions-Policy` はカメラ・マイク・位置情報を一切使わないと宣言するものです。このアプリはどれも使わないので、閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` は、リンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
+
+**確認ポイント**:
+- `next.config.ts` に `async headers()` を追加した
+- `npm run build` がエラーなく終わる
+- 公開後にブラウザの開発者ツールの Network タブでページを選ぶと、応答ヘッダーに `X-Frame-Options` が見える
+
+> 完成版のリポジトリには、これに加えて `Content-Security-Policy` も入っています。読み込んでよい場所を種類ごとに列挙する指示で、効き目は大きいぶん、書き方を誤ると自分のアプリの画像やスクリプトまで止まります。まずは上の6つを入れて、動く状態を保ったまま公開してください。
 
 ---
 
