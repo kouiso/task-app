@@ -568,14 +568,14 @@ npx biome check \
 Biome が以下のようなエラーを出します。
 
 ```text
-src/app/dashboard/page.tsx:XX:3
-  lint/suspicious/noConsole
-  Unexpected console object method call.
+src/app/dashboard/page.tsx:XX:3 lint/suspicious/noConsole  FIXABLE
+  × Don't use console.
+  i The use of console is often reserved for debugging.
 ```
 
-この3行も、Console のエラーと同じ読み方が通じます。
+この表示も、Console のエラーと同じ読み方が通じます。
 1行目の `src/app/dashboard/page.tsx:XX:3` が場所で、ファイル・行番号・行の何文字目か、の順です。
-2行目の `lint/suspicious/noConsole` がルール名、3行目が指摘の理由です。
+同じ行に並ぶ `lint/suspicious/noConsole` がルール名、`×` の行が指摘の内容です。
 ルール名はそのまま検索語として使えます。
 見慣れない指摘が出たときは、この行をコピーして調べれば、何を嫌がられているのかが分かります。
 

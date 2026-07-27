@@ -376,13 +376,16 @@ npm run dev
 > task-app@0.1.0 dev
 > next dev
 
-▲ Next.js 15.5.21
-- Local:         http://localhost:3000
-- Network:       http://192.168.55.2:3000
-✓ Ready in 158ms
+   ▲ Next.js 15.5.21
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.55.2:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 5.5s
 ```
 
-> `Network:` の数字と秒数は環境によって変わります。`Local: http://localhost:3000` と `Ready` が見えていれば成功です。
+> `Network:` の数字と `Ready in` の秒数は環境によって変わります。`Local: http://localhost:3000` と `Ready` が見えていれば成功です。
 >
 > このコマンドは「開発サーバー」を動かし続けるので、実行したあともターミナルには次の入力待ち（プロンプト）が戻ってきません。止まっているのではなく、動き続けている状態です。このターミナルは閉じずにそのままにしておきましょう。止めたいときは、このターミナルで `control + C` を押します。別のコマンドを打ちたくなったら、新しいターミナルをもう1つ開いて使います。
 
