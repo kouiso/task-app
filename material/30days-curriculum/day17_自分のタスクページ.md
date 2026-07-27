@@ -586,6 +586,7 @@ interface TaskGroupSectionProps {
 | `tasks` | `Array<...>` | 表示するタスクの配列 |
 | `onEdit` | `(id: string) => void` | 編集ボタン押下時のコールバック |
 | `onDelete` | `(id: string) => void` | 削除ボタン押下時のコールバック |
+| `onTimeLogSuccess` | `() => void` | 作業時間の記録に成功したときの合図 |
 | `canEditProject` | `(projectId: string) => boolean` | プロジェクトIDから編集可否を判定する関数 |
 | `canDeleteProject` | `(projectId: string) => boolean` | プロジェクトIDから削除可否を判定する関数 |
 
@@ -672,7 +673,7 @@ const TaskGroupSection = ({
 
 > `cn()` は `clsx` + `tailwind-merge` のユーティリティです。条件付きでクラス名を結合できます。`titleClassName` に `"text-destructive"` を渡すとタイトルが赤色になります。
 
-> `timeSpentMinutes` を渡しているのは、カードに出る「合計作業時間」を実際の記録に合わせるためです。渡さないと `TaskCard` の既定値 0 が使われ、時間を記録済みのタスクでも `0m` と表示されます。なお、このページの「時間記録」ボタンで記録した直後は数字がすぐ変わりません。ページを開き直すと反映されます。
+> `timeSpentMinutes` を渡しているのは、カードに出る「合計作業時間」を実際の記録に合わせるためです。渡さないと `TaskCard` の既定値 0 が使われ、時間を記録済みのタスクでも `0m` と表示されます。「時間記録」ボタンで記録すると、`onTimeLogSuccess` が `MyTasksPage` の `handleTimeLogSuccess` を呼び、一覧を取り直すので数字はその場で変わります。
 
 **確認ポイント**:
 - ファイルを保存した

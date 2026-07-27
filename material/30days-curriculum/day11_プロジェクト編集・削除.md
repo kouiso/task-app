@@ -1081,7 +1081,7 @@ PORT=3001 npm run dev
 
 ### Day 11 終了時点の完成コード
 
-Day 11 終了時点では、`getAll` / `create` / `update` / `delete` / `archive` / `unarchive` と、
+Day 11 終了時点の `src/app/project/page.tsx` は、編集・削除・アーカイブの各ハンドラーと、
 Step 9 で置いた仮定義がそろっていれば正解です。完成版の `src/app/project/page.tsx` は
 Day 12 と Day 27 まで書き足したあとの姿なので、いまの時点で揃えてはいけません。
 先に写すと Step 9 の仮定義が消え、翌日の「仮定義を削除してから書く」手順が通らなくなります。

@@ -883,14 +883,14 @@ const handleBulkDelete = () => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// lucide-react の既存 import に Trash2 を足す
+// lucide-react の import を1行にまとめる
+// （Day 14 の Plus と Step 6 の CheckSquare の行は削除する）
 import { CheckSquare, Plus, Trash2 }
   from 'lucide-react';
 ```
 
 取り込みを忘れると、一括削除ボタンを置いた瞬間に `Trash2 is not defined` が出て、
-タスク一覧の画面ごと表示されなくなります。`DeleteConfirmDialog` も同じで、
-このファイルで初めて使うなら import 文を足してください。
+タスク一覧の画面ごと表示されなくなります。`DeleteConfirmDialog` は Day 15 でこのファイルへ import 済みなので、追加は要りません。
 
 `handleBulkDelete` は **削除しない**点に注目してください。ダイアログを開くだけです。実際の削除は、ダイアログで OK を押したときに実行されます。
 
