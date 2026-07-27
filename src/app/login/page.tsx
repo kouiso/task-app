@@ -115,7 +115,7 @@ function LoginForm() {
                 aria-required="true"
                 {...register('password')}
                 aria-invalid={!!errors.password}
-                aria-describedby="password-error"
+                aria-describedby={errors.password ? 'password-error' : undefined}
               />
               {errors.password && (
                 <p id="password-error" className="text-sm text-destructive">

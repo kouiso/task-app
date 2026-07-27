@@ -173,7 +173,7 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
                 placeholder="タスクのタイトルを入力"
                 aria-required="true"
                 aria-invalid={!!errors.title}
-                aria-describedby="title-error"
+                aria-describedby={errors.title ? 'title-error' : undefined}
                 {...register('title')}
               />
               {errors.title && (

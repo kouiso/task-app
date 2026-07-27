@@ -885,7 +885,7 @@ return (
               placeholder=
                 "タスクのタイトルを入力"
               aria-invalid={!!errors.title}
-              aria-describedby="title-error"
+              aria-describedby={errors.title ? 'title-error' : undefined}
               {...register('title')} />
             {errors.title && (
               <p id="title-error"

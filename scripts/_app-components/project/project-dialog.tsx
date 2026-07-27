@@ -117,7 +117,7 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
                 placeholder="プロジェクト名を入力"
                 aria-required="true"
                 aria-invalid={!!errors.name}
-                aria-describedby="name-error"
+                aria-describedby={errors.name ? 'name-error' : undefined}
                 {...register('name')}
               />
               {errors.name && (

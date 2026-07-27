@@ -225,7 +225,7 @@ const userUpdateSchema = z
 
 #### 0-2. 次に update を追加する
 
-`getById` の直後に `update` を追記します。この日の Step 1 で `profileUpdateSchema` の前に置いた `userUpdateSchema` をここで使います。
+`getById` の直後に `update` を追記します。この日の Step 0 で `profileUpdateSchema` の前に置いた `userUpdateSchema` をここで使います。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（getById の直後に追加）

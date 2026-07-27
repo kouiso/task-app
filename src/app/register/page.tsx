@@ -155,7 +155,7 @@ export default function RegisterPage() {
                 aria-required="true"
                 {...register('password')}
                 aria-invalid={!!errors.password}
-                aria-describedby="password-error"
+                aria-describedby={errors.password ? 'password-error' : undefined}
               />
               {errors.password && (
                 <p id="password-error" className="text-sm text-destructive">
@@ -177,7 +177,7 @@ export default function RegisterPage() {
                 aria-required="true"
                 {...register('confirmPassword')}
                 aria-invalid={!!errors.confirmPassword}
-                aria-describedby="confirmPassword-error"
+                aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
               />
               {errors.confirmPassword && (
                 <p id="confirmPassword-error" className="text-sm text-destructive">
