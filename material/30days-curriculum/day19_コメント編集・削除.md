@@ -284,6 +284,8 @@ type EditCommentFormValues =
   z.infer<typeof editCommentSchema>;
 ```
 
+名前の付け方には決まりがあります。サーバー側の入力ルールは `commentCreateSchema` のように「対象 + 操作 + Schema」、画面側のフォーム用は `editCommentSchema` のように「操作 + 対象 + Schema」にしています。同じ形にすると、どちらのファイルの話をしているのか読み分けられなくなるためです。
+
 Step 1 の `commentUpdateSchema` とよく似ていますが、こちらは画面側の担当です。
 テキストエリアが空のまま更新ボタンを押しても送信させず、
 その場で「コメントを入力してください」と出すために使います。
