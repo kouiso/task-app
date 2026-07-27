@@ -1276,7 +1276,8 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
                 <Avatar className="w-24 h-24">
                   {form.watch('avatar') && (
                     <AvatarImage
-                      src={form.watch('avatar')} />
+                      src={form.watch('avatar')}
+                      alt="" />
                   )}
                   <AvatarFallback
                     className="text-2xl">

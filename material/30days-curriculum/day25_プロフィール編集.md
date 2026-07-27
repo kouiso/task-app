@@ -533,6 +533,7 @@ return (
     {currentUser.avatar && (
       <AvatarImage
         src={currentUser.avatar}
+        alt=""
         className="object-cover" />
     )}
     <AvatarFallback
@@ -1769,7 +1770,8 @@ export default function ProfileEditPage() {
                   className="w-24 h-24">
                   <AvatarImage
                     src={form.watch(
-                      'avatar')} />
+                      'avatar')}
+                    alt="" />
                   <AvatarFallback
                     className="text-2xl">
                     {form.watch('name')

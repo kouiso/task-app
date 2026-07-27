@@ -142,7 +142,7 @@ export function TaskCard({
             {assignee ? (
               <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  {assignee.avatar && <AvatarImage src={assignee.avatar} />}
+                  {assignee.avatar && <AvatarImage src={assignee.avatar} alt="" />}
                   <AvatarFallback className="text-[10px]">
                     {(assignee.name || assignee.email || '?')[0]?.toUpperCase()}
                   </AvatarFallback>

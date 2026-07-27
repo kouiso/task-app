@@ -44,7 +44,7 @@ export default function ProfilePage() {
             <div className="flex gap-4">
               <Avatar className="w-20 h-20 rounded-lg">
                 {currentUser.avatar && (
-                  <AvatarImage src={currentUser.avatar} className="object-cover" />
+                  <AvatarImage src={currentUser.avatar} className="object-cover" alt="" />
                 )}
                 <AvatarFallback className="rounded-lg bg-primary/10">
                   <User className="w-10 h-10 text-primary" />

@@ -174,7 +174,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                       {taskDetail.assignee?.avatar && (
-                        <AvatarImage src={taskDetail.assignee.avatar} />
+                        <AvatarImage src={taskDetail.assignee.avatar} alt="" />
                       )}
                       <AvatarFallback className="text-[10px]">
                         {(taskDetail.assignee?.name ||
@@ -214,7 +214,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                   {taskDetail.comments?.map((comment) => (
                     <div key={comment.id} className="flex gap-3 text-sm">
                       <Avatar className="h-8 w-8 mt-1">
-                        {comment.user.avatar && <AvatarImage src={comment.user.avatar} />}
+                        {comment.user.avatar && <AvatarImage src={comment.user.avatar} alt="" />}
                         <AvatarFallback>
                           {(comment.user.name || comment.user.email || '?')[0]?.toUpperCase()}
                         </AvatarFallback>

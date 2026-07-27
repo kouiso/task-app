@@ -518,7 +518,8 @@ import { Badge }
     <Avatar className="h-8 w-8 mt-1">
       {comment.user.avatar && (
         <AvatarImage
-          src={comment.user.avatar} />
+          src={comment.user.avatar}
+          alt="" />
       )}
       <AvatarFallback>
         {(comment.user.name
@@ -530,6 +531,7 @@ import { Badge }
 
 **確認ポイント**:
 - `AvatarImage` は `{comment.user.avatar && ...}` で条件付きレンダリング（画像URLがある場合のみ表示）
+- `alt=""` は「読み上げなくてよい画像」の指定。隣に投稿者名が文字で出ているため、画像まで読み上げると同じ名前を二度聞くことになる。名前が隣に無い場所へ置くときは `alt={user.name}` のように誰の画像かを入れる
 - `AvatarFallback` の名前取得には `||` を使い、name がなければ email、両方なければ `'?'` を使う
 - AvatarFallback で頭文字（先頭 1 文字を大文字化）を表示する
 
