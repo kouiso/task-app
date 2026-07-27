@@ -10,6 +10,7 @@
 | 認証 | JWT / Cookie / bcryptjs / jose | Phase 2 (Day 05-08) |
 | バックエンド | tRPC / Prisma / PostgreSQL | Phase 3-5 (Day 09-20) |
 | データベース | Table / Relation / CRUD / CUID | Phase 3-4 (Day 09-17) |
+| フォーム | react-hook-form / zod / zodResolver | Phase 2 (Day 05) から随時 |
 | レポート・可視化 | Recharts | Phase 6 (Day 21-23) |
 | 開発ツール | Git / npm / TypeScript / Biome | Phase 1 (Day 01) + 随時 |
 | アーキテクチャ | Server/Client Component / Edge Runtime | Day全般 |
@@ -74,6 +75,35 @@ JavaScriptの中にHTMLのような構文を書ける拡張記法。TSXはTypeSc
 ### shadcn/ui
 
 Radix UIをベースにした、コピー&ペースト方式のコンポーネントライブラリ。ボタン、ダイアログ、セレクトボックスなど、よく使うUIパーツが揃っています。
+
+---
+
+## フォーム関連
+
+### フォーム用語サマリー
+
+| 用語 | 役割 | 身近な例え |
+|---|---|---|
+| react-hook-form | 入力値とエラーの管理 | 記入中の申込書を預かる受付 |
+| zod | 入力ルールの定義 | 申込書の記入例と条件 |
+| zodResolver | 2つをつなぐ部品 | 受付に記入例を渡す係 |
+
+### react-hook-form
+
+入力欄の値と、入力の誤りをまとめて預かる仕組みです。`useState` を欄の数だけ書く代わりに、
+`register` で欄を登録すると、打った文字は react-hook-form の内側にたまります。
+初出は Day 05 です。
+
+### zod
+
+入力の形を先に決めておくためのライブラリです。「1文字以上」「メールアドレスの形」のような
+条件を書いておくと、その条件で入力を確かめられます。
+サーバー側の入力検査にも同じものを使います。初出は Day 05 です。
+
+### zodResolver
+
+react-hook-form に zod のルールを渡すための部品です。
+`useForm({ resolver: zodResolver(loginSchema) })` の形で使います。
 
 ---
 
