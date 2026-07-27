@@ -27,6 +27,25 @@ from pathlib import Path
 # 読点だけは同じ文の中に留まるので許す。
 CLAIM = re.compile(r"[Dd]ay\s*(\d{1,4})\s*(?:の|で|に|は|では|から)[^\n`。！？：（）()|]{0,40}?`([^`]+)`")
 
+# 「`TaskCard` は Day 13 で import 済みです」のように、語が先で Day が後に来る書き方。
+# CLAIM は Day が先の並びしか拾わないので、この形は一度も照合されていなかった。
+# 文の区切りをまたがせない条件は CLAIM と同じ。
+#
+# 「Day NN の」を受けないのは、その形の Day が語ではなく後ろの名詞に係るため。実例:
+#   「`lg:grid-cols-2` は Day 09 のグリッドと同じ考え方で、…」
+#   これは Day 09 に grid があると言っているだけで、この語がそこに在るとは述べていない。
+# 「のような」を弾くのは、そこが例示であって参照ではないため。実例:
+#   「ここで `bg-white` のような色を直接書くと、Day 01 で用意した配色から外れて…」
+TOKEN_CLAIM = re.compile(
+    r"`([^`]+)`\s*(?:は|が|も|を|の)(?!よう|みたい)"
+    r"[^\n`。！？：（）()|]{0,40}?[Dd]ay\s*(\d{1,4})\s*(?:で|に|は|では|から)"
+)
+
+# Day のあとに別の語が続くときは、その語が主張の対象になる。実例:
+#   「`bulkComplete` を、Day 16 で書いた `addTime` の直後に足します。」
+#   Day 16 に在るのは `addTime` であって `bulkComplete` ではない。
+ANCHOR_AFTER = re.compile(r"^[^\n。！？：（）()|]{0,24}`")
+
 # 照合対象から外す語。汎用すぎて存在確認に意味がないもの。
 IGNORE = {"npm", "src", "app", "page.tsx", "layout.tsx", "README.md"}
 
@@ -138,22 +157,34 @@ def main(argv: list[str]) -> int:
     own_day = {path: num for num, path in targets.items()}
     failures = []
 
+    seen: set[tuple[str, str, str]] = set()
+
     for path in sources:
         for line in strip_fences(texts[path]).split("\n"):
-            for m in CLAIM.finditer(line):
-                digits, token = m.group(1), m.group(2).strip()
+            # Day が先の形と語が先の形を同じ土俵に乗せる。
+            # 語が先の形では Day が後ろに来るので、後ろの Day へ付け替える REANCHOR は当てない。
+            claims = [(m.group(1), m.group(2), m.end(), True) for m in CLAIM.finditer(line)]
+            claims += [(m.group(2), m.group(1), m.end(), False) for m in TOKEN_CLAIM.finditer(line)]
+            for digits, raw, end, allow_reanchor in claims:
+                token = raw.strip()
                 if token.endswith("()"):
                     token = token[:-2].strip()
                 if len(token) < 3 or token in IGNORE:
                     continue
                 if CJK.search(token) or NOT_IDENTIFIER.search(token) or too_many_words(token):
                     continue
-                tail = line[m.end() :]
+                tail = line[end:]
                 if NEGATED.match(tail):
                     continue
-                reanchored = REANCHOR.match(tail)
-                if reanchored:
-                    digits = reanchored.group(1)
+                if allow_reanchor:
+                    reanchored = REANCHOR.match(tail)
+                    if reanchored:
+                        digits = reanchored.group(1)
+                elif ANCHOR_AFTER.match(tail):
+                    continue
+                if (path.name, token, digits) in seen:
+                    continue
+                seen.add((path.name, token, digits))
                 if len(digits) >= 3:
                     failures.append(
                         (path.name, token, f"Day {digits} は day 番号として桁数が不正です")
