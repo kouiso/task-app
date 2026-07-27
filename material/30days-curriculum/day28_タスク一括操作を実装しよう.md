@@ -649,7 +649,7 @@ import { Label } from '@/component/ui/label';
 | `'indeterminate'` | ▪（部分チェック） | 一部のタスクだけ選択されている |
 | `true` | ✓（全チェック） | 全タスクが選択されている |
 
-先ほどの `isAllSelected`（boolean）を、3 状態を返す `selectAllState` に置き換えます。
+Step 3 で書いた `isAllSelected`（boolean）を、3 状態を返す `selectAllState` に置き換えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -679,7 +679,7 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 前のステップで書いた Checkbox の checked を差し替える
+// Step 3 で書いた Checkbox の checked を差し替える
 <Checkbox
   id="select-all"
   checked={selectAllState}

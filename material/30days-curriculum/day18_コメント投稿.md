@@ -192,7 +192,7 @@ Day 12 で作ったプロジェクトメンバーの一覧が、ここまで効�
 `if (!task)` で先に止める理由は、この後の `task.project.members` を安全に読むためです。
 task が `null` のまま次の行へ進むと、`null` から `project` を読もうとして実行時エラーになります。
 存在しない ID が届いたときは、この 4 行のおかげで `NOT_FOUND` として返せます。
-続く `assertMemberPermission` は、さきほど絞り込んだ `members` の1件目を見ます。
+続く `assertMemberPermission` は、1つ前のブロックの `include` でログインユーザー分だけに絞り込んだ `members` の1件目を見ます。
 本人がメンバーでなければ配列は空です。
 1件目は `undefined` になるため `FORBIDDEN` を投げます。
 権限キーを渡した場合は、そのメンバーの役割まで確認します。
@@ -314,7 +314,7 @@ export const appRouter = createTRPCRouter({
 
 ### Step 1: コメント API の形を整理する（3分）
 
-**ゴール**: さっき書いた server 側コードを、
+**ゴール**: Step 0 で写経した `src/server/api/routers/comment.ts` を、
 「何を受け取って、何をして、何を返すか」で整理します。
 
 ```typescript
@@ -585,7 +585,7 @@ import { ja } from 'date-fns/locale';
 </span>
 ```
 
-表示名の `||` は、さきほどの頭文字と同じ順でたどります。
+表示名の `||` は、`AvatarFallback` に渡す頭文字と同じ順でたどります。
 順番をそろえてあるので、アイコンの頭文字が「T」なのに名前が別人、という食い違いは起きません。
 `new Date(comment.createdAt)` でいったん `Date` へ包み直します。
 このアプリは tRPC に superjson を設定しているので、日時は文字列ではなく `Date` のまま届きます。

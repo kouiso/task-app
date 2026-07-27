@@ -687,7 +687,7 @@ export default function WeeklyReportPage() {
 ```
 
 最後の `}` は `WeeklyReportPage` 関数を閉じる括弧です。
-先ほど書いた週数選択の `Select` は、`h1` の隣にある
+この Step の前半で書いた週数選択の `Select` は、`src/app/report/weekly/page.tsx` の `h1` の隣にある
 コメントの行と置き換えます。Step 5 と Step 6 で作る
 カードとグラフも、対応するコメントの行と置き換えていきます。
 

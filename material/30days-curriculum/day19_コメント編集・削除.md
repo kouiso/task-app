@@ -210,7 +210,7 @@ const findCommentAndAssertOwnership = async (
     }),
 ```
 
-`update` は本文だけを書き換え、`delete` はコメントごと消します。どちらも先ほどの `findCommentAndAssertOwnership` で「メンバーかつ作者本人か」を確かめてから実行するので、他人のコメントは操作できません。
+`update` は本文だけを書き換え、`delete` はコメントごと消します。権限の判定は `src/server/api/routers/comment.ts` の `findCommentAndAssertOwnership` が担います。どちらも「メンバーかつ作者本人か」を確かめてから実行するので、他人のコメントは操作できません。
 
 #### comment.update の入力パラメータ
 
