@@ -641,7 +641,8 @@ const loginSchema = z.object({
 ```
 
 このあと出てくる `registerSchema` と見比べると、`password` の条件が `min(1)` だけになっています。
-ログイン側で 8 文字以上や記号必須まで課すと、入力を弾いた時点で「その形では登録されていない」と相手へ教えることになります。
+ログイン側で 8 文字以上や記号必須まで課すと、いま登録されているパスワードでログインできなくなる人が出ます。
+登録時の条件は、あとから厳しくすることがあります。付属の初期データに入っている `password123` も、いまの `registerSchema` の条件は満たしません。
 ここでの検証は、空の値をデータベース照合まで流さないための入口チェックにとどめます。
 正しいかどうかを決めるのは、このあとの `bcrypt.compare` の仕事です。
 
@@ -1097,6 +1098,7 @@ API を 1 つ足すたびにファイルを作らずに済むのは、入口を�
 // filepath: src/middleware.ts
 import { jwtVerify } from 'jose/jwt/verify';
 import { type NextRequest, NextResponse } from 'next/server';
+import { isValidRedirectUrl } from '@/lib/redirect';
 
 const COOKIE_NAME = 'session';
 
@@ -1125,10 +1127,8 @@ function isPublicPath(pathname: string): boolean {
 
 function isValidCallbackPath(path: string): boolean {
   return (
-    path.startsWith('/')
-    && !path.startsWith('//')
+    isValidRedirectUrl(path)
     && !path.includes('://')
-    && !path.includes('\\')
   );
 }
 
@@ -1250,7 +1250,7 @@ flowchart TD
 
 > **なぜ middleware で `session.ts` を import しない？** middleware は Edge Runtime で動くため、`cookies()` を使う `session.ts` は import できません。`jose` を直接使って JWT 検証します。
 
-> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。通すのは、4つの条件をすべて満たすパスだけです。`/` で始まること、`//` では始まらないこと、`://` を含まないこと、`\` を含まないことの4つです。`//evil.example.com` は `/` で始まりますが、ブラウザはこれを別サイトの URL として読むので、2つ目の条件で落としています。`\` を弾いているのは、ブラウザによっては `\` を `/` と同じに扱うものがあり、`/\evil.example.com` のような形で1つ目と2つ目をすり抜けられるためです。
+> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。判定の本体は Day 05 で作った `src/lib/redirect.ts` の `isValidRedirectUrl` です。`/` で始まること、`//` では始まらないこと、`\` やタブ・改行・復帰を含まないことを、そちらが確かめます。ここで足しているのは `://` を含まないという条件だけです。同じ規則を2箇所へ書き写すと、片方だけ直したときに緩いほうが残ります。
 
 **確認ポイント**:
 - [ ] `src/middleware.ts` が作成できた（`src/app/` ではなく `src/` 直下）
