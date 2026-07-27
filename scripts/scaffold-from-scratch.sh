@@ -150,7 +150,8 @@ ensure_empty_or_existing_next_app() {
   mkdir -p "$create_dir"
 
   # 教材との差分を減らすため、Next.js 15 系に固定する。
-  npx create-next-app@15.5.21 "$create_dir" \
+  # npx 自身が初回に確認を出して入力待ちで止まるため、--yes を npx へも渡す。
+  npx --yes create-next-app@15.5.21 "$create_dir" \
     --typescript \
     --tailwind \
     --app \

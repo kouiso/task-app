@@ -314,6 +314,10 @@ ignore 設定があることと、送信前に自分でも `git status` で確�
 
 ### ブラウザでやること
 
+GitHub のアカウントをまだ持っていない場合は、先に `https://github.com/signup` を開いて、
+メールアドレス・パスワード・ユーザー名を登録します。確認メールに届いたコードを入力すると
+アカウントができます。
+
 1. `https://github.com/new` を開く
 2. Owner を自分のアカウントにする
 3. Repository name に `task-app` と入れる
@@ -524,6 +528,26 @@ A  src/app/dashboard/page.tsx
 
 いちばん下に `?? material/` と `?? scripts/` が残りますが、
 これは add していないので正しい状態です。
+
+### 初回だけ、自分の名前とメールアドレスを Git へ登録する
+
+Git は、誰が保存したかを記録に残します。名乗りを登録していないと、次のコミットで
+`*** Please tell me who you are.` と英語で止まります。パソコンごとに1回だけ実行してください。
+
+```bash
+git config --global user.name "あなたの名前"
+git config --global user.email "GitHubに登録したメールアドレス"
+```
+
+メールアドレスは GitHub に登録したものと同じにします。違うものを入れると、GitHub 上で
+「誰のコミットか分からない」扱いになり、自分のアイコンが出ません。
+
+登録できたか確かめます。入力した2つがそのまま出れば成功です。
+
+```bash
+git config --global user.name
+git config --global user.email
+```
 
 ### コミットメッセージを付けて保存する
 

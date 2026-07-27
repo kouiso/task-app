@@ -158,7 +158,7 @@ Day 01 と同じで、
 このあとコードを4つのブロックに分けて載せますが、**すべて上から順に1つの `src/app/dashboard/page.tsx` へ続けて書く、同じファイルの中身**です。ブロックの切れ目は読みやすさのための区切りで、別ファイルに分ける意味ではありません。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+// filepath: src/app/dashboard/page.tsx
 const ownerName = 'Taro';
 const focusTheme = 'Day 02 のダッシュボードづくり';
 const encouragement = '今日の一歩が、そのまま自分のアプリの顔になる。';
