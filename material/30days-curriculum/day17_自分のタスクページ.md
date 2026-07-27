@@ -559,8 +559,15 @@ interface TaskGroupSectionProps {
     projectId: string;
     timeSpentMinutes: number;
   }>;
+```
+
+残りは親から受け取る関数と判定です。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onTimeLogSuccess: () => void;
   canEditProject: (projectId: string) => boolean;
   canDeleteProject: (projectId: string) => boolean;
 }
@@ -582,12 +589,27 @@ interface TaskGroupSectionProps {
 
 Props型の**下に**コンポーネント本体を追加します。
 
+作業時間を記録したあとに一覧を取り直すための関数を用意します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 時間記録の成功後に一覧を取り直す
+const handleTimeLogSuccess =
+  useCallback(() => {
+    utils.task.getAll.invalidate();
+  }, [utils.task.getAll]);
+```
+
+この関数が無いと、マイタスク画面で作業時間を記録しても表示が変わりません。
+`TaskCard` は記録に成功したことを親へ伝えるだけなので、取り直しは親側で行います。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
 // タスクが0件なら何も表示しない
 const TaskGroupSection = ({
   title, titleClassName,
   tasks, onEdit, onDelete,
+  onTimeLogSuccess,
   canEditProject, canDeleteProject,
 }: TaskGroupSectionProps) => {
   if (tasks.length === 0) return null;
@@ -623,11 +645,18 @@ const TaskGroupSection = ({
             assignee={task.assignee}
             onEdit={onEdit}
             onDelete={onDelete}
+            onTimeLogSuccess={onTimeLogSuccess}
             canEdit={canEditProject(task.projectId)}
             canDelete={canDeleteProject(task.projectId)}
             timeSpentMinutes={task.timeSpentMinutes}
           />
         ))}
+```
+
+`))}` で `map` を閉じ、`</div>` を2つ、`);` で `return` を閉じ、最後の `};` で `TaskGroupSection` そのものを閉じます。開いた順と逆に閉じるのは、この教材で何度も出てくる決まりです。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
       </div>
     </div>
   );
@@ -805,6 +834,7 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.overdue ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
+  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
@@ -816,6 +846,7 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.today ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
+  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
@@ -831,6 +862,7 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.upcoming ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
+  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
@@ -841,6 +873,7 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.noDueDate ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
+  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
