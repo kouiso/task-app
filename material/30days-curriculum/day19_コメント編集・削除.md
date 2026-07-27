@@ -73,7 +73,7 @@ flowchart TD
 | editingCommentId | — | 編集中のコメント ID | 開いているノートのページ番号 |
 | comment.update | — | コメントを更新する API | ノートの書き直し |
 | comment.delete | — | コメントを削除する API | ノートのページを破る |
-| DeleteConfirmDialog | — | 削除確認ダイアログ | 「本当に消すか」の確認 |
+| DeleteConfirmDialog（Day 15 の復習） | — | 削除確認ダイアログ | 「本当に消すか」の確認 |
 
 ## 実装ステップ一覧
 
