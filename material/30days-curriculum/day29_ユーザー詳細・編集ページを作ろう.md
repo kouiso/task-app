@@ -1919,3 +1919,12 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 ### `src/app/user/[id]/edit/user-edit-client.tsx`
 
 完成形は、このリポジトリの `src/app/user/[id]/edit/user-edit-client.tsx` と同じです。手元のコードと見比べて確認してください。
+
+---
+
+## 次に読むもの
+
+- 前の日: [Day 28](./day28_タスク一括操作を実装しよう.md)
+- 次の日: [Day 30](./day30_完成版を公開！.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)

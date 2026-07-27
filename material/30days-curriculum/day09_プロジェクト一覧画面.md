@@ -1079,3 +1079,12 @@ export const createCaller = createCallerFactory(appRouter);
 ```
 
 手元の `root.ts` がこの形になっていれば、Step 0-6 の登録は正しく終わっています。ここに並べた名前が、そのまま画面側の呼び名です。`project: projectRouter` の行を消すと、`api.project.getAll` は呼べなくなります。一覧にはカードが1枚も出ません。Day 10 以降は、この `createTRPCRouter({ ... })` の中へ1行ずつ足していきます。
+
+---
+
+## 次に読むもの
+
+- 前の日: [Day 08](./day08_サイドバーを完成させよう.md)
+- 次の日: [Day 10](./day10_プロジェクト新規作成.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
