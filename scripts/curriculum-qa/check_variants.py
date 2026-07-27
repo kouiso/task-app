@@ -18,6 +18,9 @@ import sys
 from pathlib import Path
 
 FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+# 行の中のバッククォートで囲んだ部分。実装のエラー文言をそのまま引用している所なので、
+# ここを書き換えると教材のとおりに写した読者のコードと実装が食い違う。
+INLINE_CODE = re.compile(r"`[^`]*`")
 
 # (見つけたら直す書き方, 正とする書き方, その語を含むが直してはいけない語)
 RULES: list[tuple[str, str, tuple[str, ...]]] = [
@@ -50,8 +53,10 @@ def prose_lines(text: str):
 
 def find(text: str):
     for lineno, line in prose_lines(text):
+        # バッククォートの中身は同じ長さの空白へ置き換え、位置をずらさずに検査から外す。
+        masked = INLINE_CODE.sub(lambda m: " " * len(m.group(0)), line)
         for wrong, right, keep in RULES:
-            for m in re.finditer(re.escape(wrong), line):
+            for m in re.finditer(re.escape(wrong), masked):
                 head = line[: m.end()]
                 if any(head.endswith(k) for k in keep):
                     continue
