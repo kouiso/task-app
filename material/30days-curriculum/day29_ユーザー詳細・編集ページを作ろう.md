@@ -90,7 +90,7 @@ flowchart TD
 | Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/page.tsx` | ドロップダウンとチェックボックスが動く |
 | Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/page.tsx` | 保存ボタンでDBが更新される |
 
-**合計時間**: 約60分です。
+**合計時間**: 約76分です。
 
 ---
 
