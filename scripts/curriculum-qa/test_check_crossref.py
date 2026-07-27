@@ -68,6 +68,17 @@ CASES: list[tuple[str, dict[str, str], int]] = [
         0,
     ),
     (
+        "折り返した先送りの文を証拠に数えない",
+        {
+            # day10 の本文では `Wrapped` が Day 11 のものだと述べている。
+            # 行が折り返されているため、生の行で見ると2行目が day 指定なしに見える。
+            "day10_a.md": "# Day 10\n\nDay 11 で作る\n`Wrapped` をあとで使います。\n",
+            "day11_b.md": "# Day 11\n\n本文です。\n",
+            "day12_c.md": "# Day 12\n\nDay 10 の `Wrapped` を使います。\n",
+        },
+        1,
+    ),
+    (
         "同じ day 番号のファイルが2つあれば止める",
         {
             "day01_a.md": "# Day 01\n\n本文です。\n",

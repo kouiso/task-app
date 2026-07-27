@@ -185,7 +185,7 @@ export default function RootLayout({
 | `className={...}` | フォントの変数を全ページへ渡す |
 
 > `--font-inter` などの変数を定義しているのはこの `next/font` の行です。Day 01 で書いた `globals.css` がこの変数を参照しているので、消すとフォント指定が黙って効かなくなります。
-
+>
 > これでアプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べます。
 
 **確認ポイント**:

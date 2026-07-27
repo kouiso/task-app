@@ -114,8 +114,12 @@ def has_own_evidence(body: str, token: str, day: int) -> bool:
     ただし、その行が対象の day 自身にも触れているなら先送りではない。実例:
       day10「Day 10 の `foo` は Day 11 でも使います」
     ここで `foo` が在るのは Day 10 なので、Day 11 への言及を理由に落とすと誤検出になる。
+
+    行の見方は参照元と同じ `logical_lines` にそろえる。教材は1文を折り返して書くため、
+    生の行で見ると「Day 11 で作った」と「`Foo`」が別々の行になり、
+    後ろの行が day 指定なしの証拠として通ってしまう。
     """
-    for line in body.split("\n"):
+    for line in logical_lines(body):
         if not contains(line, token):
             continue
         mentioned = {int(m.group(1)) for m in DAY_MENTION.finditer(line)}
@@ -144,6 +148,7 @@ def logical_lines(text: str):
     項目の行だけを単独で流すと、続きの行が別のかたまりになり参照として拾えない。
     そこで、箇条書きの行はそこで打ち切らず、続きの行を同じかたまりへ足していく。
     """
+    fence_marker: str | None = None
     buf: list[str] = []
 
     def flush():
@@ -156,6 +161,25 @@ def logical_lines(text: str):
 
     for line in text.split("\n"):
         stripped = line.strip()
+        fence = FENCE.match(line)
+        # コードブロックの中は1行ずつそのまま返す。つないでしまうと、
+        # 定義の行と「Day NN で置き換え」というコメント行が1つになり、
+        # 定義が別の day のものに見えてしまう（day11 の仮定義で実測）。
+        if fence_marker is not None:
+            pending = flush()
+            if pending is not None:
+                yield pending
+            yield line
+            if fence and fence.group(1) == fence_marker:
+                fence_marker = None
+            continue
+        if fence:
+            pending = flush()
+            if pending is not None:
+                yield pending
+            yield line
+            fence_marker = fence.group(1)
+            continue
         if not stripped:
             pending = flush()
             if pending is not None:
