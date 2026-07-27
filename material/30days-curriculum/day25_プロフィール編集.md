@@ -1220,6 +1220,7 @@ export default function
 **確認ポイント**:
 - `register` でフォームに登録している
 - エラーメッセージが自動表示される
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -1264,6 +1265,7 @@ export default function
 **確認ポイント**:
 - ヒントテキストに文字種の条件まで表示される
 - エラーメッセージとヒントが別々に表示される
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -1301,6 +1303,7 @@ export default function
 - フォームに入力できる
 - 目のアイコンでパスワードの表示/非表示が切り替わる
 - 不一致の時に zod がエラーを表示する
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 ![現在のパスワード・新しいパスワード・確認用の3つの入力欄が並んだ画面](./screenshots/change-password.png)
 
@@ -1335,6 +1338,7 @@ export default function
 
 **確認ポイント**:
 - API側のエラー（現在のパスワード不正など）が Alert で表示される
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
@@ -1449,6 +1453,7 @@ PORT=3001 npm run dev
 - プロフィール情報が正しく表示される
 - パスワード変更のフローが完了する
 - 成功時に toast が表示される
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 変更に成功すると、画面の隅に「パスワードを変更しました」という通知が出て、
 そのままプロフィールページへ戻ります。フォームに留まったままなら、
@@ -1812,6 +1817,7 @@ export default function ProfileEditPage() {
 **確認ポイント**:
 - `form.watch` でリアルタイムにプレビューが更新される
 - `form.handleSubmit(handleSubmit)` を設定している
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 名前の入力欄です。
 
@@ -1841,6 +1847,7 @@ export default function ProfileEditPage() {
 **確認ポイント**:
 - `register` でフォームに登録している
 - zod のエラーが自動表示される
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 メールアドレスの入力欄です。
 
@@ -1927,6 +1934,7 @@ export default function ProfileEditPage() {
 
 **確認ポイント**:
 - エラー時に Alert が表示される
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
@@ -1959,6 +1967,7 @@ Step 8 のパスワード変更画面と同じ形にそろえています。`dis
 **確認ポイント**:
 - isPending 中はボタンが無効化される
 - ボタンテキストが「更新中...」に切り替わる
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 最後に閉じタグです。
 
@@ -2021,6 +2030,7 @@ PORT=3001 npm run dev
 - 名前の変更が保存される
 - toast でフィードバックが表示される
 - 更新後、/profile に戻る
+- 画面での確認は、`</form>` を書き終えたあとの動作確認で行う
 
 
 ---

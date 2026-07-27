@@ -1500,9 +1500,10 @@ import { isUserRole, USER_ROLE_LABELS }
 
 `checked === true` と書くのは、`onCheckedChange` が `boolean | 'indeterminate'` を受け取るためです。
 
-スクリーンショット: 編集フォームの完成イメージの表示を確認してください。
+スクリーンショット: 完成後の編集フォームはこのように表示されます（この時点ではまだ描画されません）。
 
 ![編集フォームの完成イメージの表示を確認してください。](./screenshots/user-edit-form.png)
+
 画面での確認は Step 10 の最後で行います。ここではコードを見ます。
 
 **確認ポイント**:
@@ -1632,6 +1633,11 @@ import { Alert, AlertDescription, AlertTitle }
 - 「キャンセル」をクリックすると詳細ページに戻る（変更は保存されない）
 - 一般ユーザーが自分のロールや isActive を変更しようとすると FORBIDDEN エラーが `Alert` で表示される
 - `npm run dev` でエラーが出ない
+- 編集ページを開くとフォームにユーザーの名前が自動入力されている
+- アバターURLを入力するとプレビューがリアルタイムで変わる
+- メールアドレスの入力欄がグレーアウトして編集できない
+- ロール選択のドロップダウンを開くと「ユーザー」「管理者」の2つが出て、現在のロールが選ばれている
+- アクティブのチェックボックスの ON/OFF が切り替えられる
 
 
 ---
@@ -1946,13 +1952,13 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
 編集ページの wrapper は、返す部品が `UserEditClient` になっている以外は詳細ページと同じ形です。似た形が2つ並ぶのは無駄に見えますが、URLごとに404の判定を独立させておくためです。片方を消すと、消したほうのURLだけ存在しないIDでも画面が描かれ始めます。
 
-### `src/app/user/[id]/user-detail-client.tsx`
+### `src/app/user/[id]/user-detail-client.tsx`（完成版との違いの説明）
 
-完成形は、完成版の `src/app/user/[id]/user-detail-client.tsx` と同じです。手元のコードが下の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+完成形は、完成版の `src/app/user/[id]/user-detail-client.tsx` と同じです。手元のコードが各 Step の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
-### `src/app/user/[id]/edit/user-edit-client.tsx`
+### `src/app/user/[id]/edit/user-edit-client.tsx`（完成版との違いの説明）
 
-完成形は、完成版の `src/app/user/[id]/edit/user-edit-client.tsx` と同じです。手元のコードが下の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+完成形は、完成版の `src/app/user/[id]/edit/user-edit-client.tsx` と同じです。手元のコードが各 Step の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ---
 

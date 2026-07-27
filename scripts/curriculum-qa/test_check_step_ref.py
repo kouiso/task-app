@@ -86,11 +86,15 @@ def check_exit_code() -> tuple[int, int]:
             if run(["check_step_ref.py", d]) != want:
                 failed += 1
                 print(f"  ❌ {name}")
-    # 対象が見つからない経路。ここを 0 に書き換えられても気付けるようにする。
+    # 対象が見つからない経路。`return 2` は2か所あるので両方を塞ぐ。
     if run(["check_step_ref.py", "/no/such/path"]) != 2:
         failed += 1
         print("  ❌ 見つからないパスで 2 を返さない")
-    return failed, len(cases) + 1
+    with tempfile.TemporaryDirectory() as d:
+        if run(["check_step_ref.py", d]) != 2:
+            failed += 1
+            print("  ❌ 対象0件で 2 を返さない")
+    return failed, len(cases) + 2
 
 
 def main() -> int:
