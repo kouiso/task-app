@@ -301,6 +301,8 @@ export const appRouter = createTRPCRouter({
 });
 ```
 
+このオブジェクトが、サーバー側の手続きの全体像です。ここに載っていない router は、ファイルが存在していても外からは呼べません。`root.ts` は Day 07 で書いたとおり、この `appRouter` から `AppRouter` 型を作って書き出しています。client 側の `api` はその型を読んで呼び名と引数を決めるため、登録を忘れると `api.comment` と書いた行そのものが型エラーになります。動かす前に間違いが分かる代わりに、エラーの表示はコメント画面側に出ます。原因はこのファイルなので、赤い波線が出たらまず `appRouter` を見てください。
+
 **確認ポイント**:
 - Day 13 で追加した `task.getById` が残っている
 - `comment.ts` を新規作成し、`getByTaskId` と `create` を書いた
