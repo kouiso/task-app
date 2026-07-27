@@ -1008,15 +1008,15 @@ Day 10 終了時点の各ファイルの完成形です。
 
 ### `src/server/api/routers/project.ts`
 
-Day 10 終了時点の状態は、このリポジトリの `src/server/api/routers/project.ts` の `getAll` と `create` の部分と同じです。`update` 以降は Day 11 で追加するので、まだ存在しません。
+Day 10 終了時点の状態は、完成版の `src/server/api/routers/project.ts` の `getAll` と `create` の部分と同じです。`update` 以降は Day 11 で追加するので、まだ存在しません（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ### `src/component/project/project-dialog.tsx`
 
-Day 10 終了時点のダイアログは、このリポジトリの `src/component/project/project-dialog.tsx` と同じ考え方で作ってあります。ただし必須マークの付け方や列の分け方は違うので、フォームの組み立て方だけを見比べてください。
+Day 10 終了時点のダイアログは、完成版の `src/component/project/project-dialog.tsx` と同じ考え方で作ってあります。ただし必須マークの付け方や列の分け方は違うので、フォームの組み立て方だけを見比べてください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ### `src/app/project/page.tsx`
 
-このリポジトリの `src/app/project/page.tsx` は、Day 12 と Day 27 まで書き足した後の姿です。削除確認、アーカイブ、詳細表示が入っているので、今日の終わりの手元のコードより長くなります。今日の時点では、一覧の取得と作成ダイアログの配線までが一致していれば大丈夫です。
+完成版の `src/app/project/page.tsx` は、Day 12 と Day 27 まで書き足した後の姿です。削除確認、アーカイブ、詳細表示が入っているので、今日の終わりの手元のコードより長くなります。今日の時点では、一覧の取得と作成ダイアログの配線までが一致していれば大丈夫です（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ---
 

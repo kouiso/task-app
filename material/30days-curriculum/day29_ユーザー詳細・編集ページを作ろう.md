@@ -1942,11 +1942,11 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
 ### `src/app/user/[id]/user-detail-client.tsx`
 
-完成形は、このリポジトリの `src/app/user/[id]/user-detail-client.tsx` と同じです。手元のコードと見比べて確認してください。
+完成形は、完成版の `src/app/user/[id]/user-detail-client.tsx` と同じです。手元のコードと見比べて確認してください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ### `src/app/user/[id]/edit/user-edit-client.tsx`
 
-完成形は、このリポジトリの `src/app/user/[id]/edit/user-edit-client.tsx` と同じです。手元のコードと見比べて確認してください。
+完成形は、完成版の `src/app/user/[id]/edit/user-edit-client.tsx` と同じです。手元のコードと見比べて確認してください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ---
 
