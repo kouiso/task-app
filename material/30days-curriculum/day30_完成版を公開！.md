@@ -472,7 +472,12 @@ npx vercel link
 
 # Production の接続情報を一時ファイルへ取り出し、教材用の新規 DB へ反映する
 npx vercel env pull .env.production.local --environment=production
-npx dotenv -e .env.production.local -- npx prisma db push
+
+# 取り出した値を読み込んでから実行する
+set -a
+. ./.env.production.local
+set +a
+npx prisma db push
 
 # 接続情報を手元に残さないよう、終わったら消す
 rm .env.production.local
@@ -485,6 +490,9 @@ rm .env.production.local
 - データ損失の警告が出た場合は続行せず、接続先が新規 DB か確認した
 
 > `vercel env pull` は Vercel の環境変数をファイルへ取り出します。
+> `set -a` は「このあと読み込む値をコマンドへ渡す」という指定、
+> `. ./.env.production.local` はそのファイルを読み込む書き方です。
+> `set +a` で元に戻します。
 > `DATABASE_URL` をターミナルの履歴へ残さないための方法です。
 > 取り出したファイルには本番の接続情報が入っているので、
 > 使い終わったら必ず `rm` で消します。
