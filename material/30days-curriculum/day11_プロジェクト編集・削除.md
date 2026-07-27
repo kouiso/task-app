@@ -493,9 +493,9 @@ const handleEdit = (projectId: string) => {
 | ❌ `{ startDate: startDate }` | `{ startDate: undefined }` | `undefined` がオブジェクトに入る |
 | ✅ `...(startDate && { startDate })` | `{}` | プロパティ自体が存在しない |
 
-`undefined` がプロパティに入ると、サーバー（Prisma）が「日付を空にする」と解釈する場合があります。プロパティ自体を含めなければ「日付は変更しない」という意味になります。
+`{ startDate: undefined }` と書くと、`startDate?: string` と宣言された `ProjectFormData` の型と合わず、型エラーが出ます。このプロジェクトは `tsconfig.json` で `exactOptionalPropertyTypes` を有効にしています。省略できる項目へ `undefined` を入れることを許さない設定です。条件付きスプレッドなら、値があるときだけ項目が増えるので、型のとおりに書けます。
 
-> **注文書の例え**: 注文変更で「お届け日」欄に「指定なし」と書くのと、そもそも欄を空白にするのでは意味が違います。「指定なし」は配送日をリセット、空白は変更しないという意味です。
+> **注文書の例え**: 注文書の「お届け日」欄は、日付を書くか、欄そのものを使わないかのどちらかです。「未定」とだけ書かれた欄は受け付けてもらえません。`startDate` も同じで、日付が入っているか、項目が無いかの2択です。
 
 ---
 
@@ -668,14 +668,14 @@ const handleSubmit = (
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
-プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。完成版 source では `description ?? null` を使い、空文字はそのまま残します。
+プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。完成版 source では `description || null` を使い、説明欄を空にして保存したときは `null` を送ります。
 
-| 式 | `description` が `''`（空文字）の場合 | 結果 |
+| 式 | `description` が `''`（空文字）の場合 | このアプリでの結果 |
 |-----|--------------------------------------|------|
-| `description ?? null` | `''`（空文字をそのまま返す） | ✅ 正しい |
-| `description \|\| null` | `null`（空文字をfalsyとして扱う） | ❌ 意図しない |
+| `description \|\| null` | `null`（空文字もfalsyとして扱う） | ✅ 説明を消したことが DB に残る |
+| `description ?? null` | `''`（空文字をそのまま返す） | ❌ 空文字が保存され、未入力と区別できない |
 
-`??` は `null` と `undefined` のみを判定し、`||` は `''`・`0`・`false` もfalsyとして扱います。空文字を有効な値として保持したい場合は `??` を使います。
+`??` は `null` と `undefined` だけを判定し、`||` は `''`・`0`・`false` もfalsyとして扱います。ここでは空欄を「説明なし」として保存したいので `||` を使います。空文字そのものを意味のある値として残したい場面なら、`??` の方が合います。
 
 スクリーンショット: 編集後に更新された一覧の表示を確認してください。
 

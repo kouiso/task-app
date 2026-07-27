@@ -69,7 +69,7 @@ flowchart TD
 | 動的ルーティング `[id]` | どうてきルーティング | URLのID部分を変数として受け取る | 「社員番号001の名簿ページ」→ URLの001が変数 |
 | `notFound()` | ノットファウンド | そのIDが存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
 | server wrapper | — | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
-| `useParams()` | ユーズパラムズ | URLのパラメータ（変数）を読み取るフック | 住所から「番地」だけを取り出す |
+| `await params` | アウェイト パラムズ | URLのパラメータ（変数）を server 側で受け取る | 受付で渡された整理番号を開いて読む |
 | `useEffect` | ユーズエフェクト | コンポーネント外部の変化に反応して副作用を実行するフック | 荷物が届いたら自動で棚に並べる係 |
 | useForm + zod（復習） | — | フォーム管理＋バリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
 | 権限チェック | けんげんチェック | ユーザーの役割によって表示を変える | 社員証の種類によって入れる部屋を変える |
@@ -340,7 +340,7 @@ src/app/user/[id]/page.tsx
 // このファイルは /user/なんでも という全てのURLに対応する
 // URLの「なんでも」部分が params['id'] として受け取れる
 export default function UserDetailPage() {
-  // 次のステップでここに useParams() を書く
+  // 次のステップでここに params から id を取り出す処理を書く
   return <div>ユーザー詳細ページ</div>;
 }
 ```
@@ -487,7 +487,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 `useEffect` で `error` の変化を監視し、エラー発生時にトースト表示します。
 
-> React の Strict Mode（開発時のみ有効）では `useEffect` が2回実行されることがあります。ただし依存配列に `[error]` を指定しているため、`error` オブジェクトの参照が変わらなければ再実行されません。本番ビルドでは1回だけ実行されます。
+> React の Strict Mode（開発時のみ有効）は、コンポーネントをいったん取り外してからもう一度取り付けます。そのため最初の `useEffect` は、依存配列に何を書いても2回走ります。`[error]` を指定しても、この2回は減りません。依存配列の役割は別で、取り付けが済んだあと `error` が変わったときだけ中身を走らせることです。取り付け直しの時点では `error` はまだ `undefined` なので、`if (error)` に阻まれてトーストは出ません。本番ビルドでは Strict Mode が外れるため、取り付けは1回だけになります。
 
 次に早期リターンを書きます。
 
@@ -1401,7 +1401,7 @@ import { isUserRole, USER_ROLE_LABELS }
 
 **確認ポイント**: ドロップダウンを開いて「ユーザー」「管理者」が表示されることを確認してください。
 
-`onValueChange` の `value` は `string` 型ですが、`form.watch('role')` は `string` 型です。`isUserRole` 型ガードで安全に検証します（`as UserRole` は使いません）。
+`onValueChange` が渡してくる `value` は、どんな文字列でもありうる `string` 型です。一方 `form.watch('role')` の型は zod スキーマから作られるので `'USER' | 'ADMIN'` の2択に絞られています。広いほうの型を狭いほうへそのまま入れることはできないので、`isUserRole` 型ガードで中身を確かめてから渡します（`as UserRole` は使いません）。
 
 アクティブ状態を切り替えるチェックボックスを追加します。
 
@@ -1749,8 +1749,8 @@ submitUserEditForm(
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
 | ページが404になる | `[id]`フォルダ名のブラケットが全角になっている | 半角の`[id]`でフォルダを作り直す |
-| `useParams()`が`undefined`を返す | App Routerの動的ルートでファイル配置が間違っている | `src/app/user/[id]/page.tsx`のパス構造を確認する |
-| フォームの初期値が空になる | `useForm` の `values` に `user` データを渡していない | `useForm({ values: { name: user.name, ... } })` でデータ到着時にフォームが自動更新されることを確認する |
+| `await params` の `id` が `undefined` になる | App Routerの動的ルートでファイル配置が間違っている | `src/app/user/[id]/page.tsx`のパス構造を確認する |
+| フォームの初期値が空になる | Step 8 の `useEffect` で `form.reset` を呼んでいない | `useEffect(() => { if (user) form.reset({ ... }); }, [user, form])` が書けているか確認する |
 | 権限チェックが効かない | `currentUser?.role` の比較で定数を使っていない | `USER_ROLE.ADMIN` を使って比較しているか確認する |
 | 更新後に古いデータが表示される | tRPC のキャッシュが残っている | `onSuccess` で user/auth を invalidate してから詳細へ戻る |
 | `FORBIDDEN`エラーが表示される | 本人更新で `role`・`isActive` を送信している | `canManageAccount` が true のときだけ送信する |
@@ -1768,7 +1768,7 @@ submitUserEditForm(
 | 概念 | 意味 | 使い場面 |
 |------|------|---------|
 | 動的ルーティング `[id]` | フォルダ名を変数にして任意のURLに対応 | ユーザー詳細、記事詳細など |
-| `useParams()` | URLのパラメータを読み取るオブジェクトを返す | 動的ルーティングとセットで使う |
+| `await params` | server component で URL のパラメータを受け取る | 動的ルーティングとセットで使う |
 | `useEffect` + 依存配列 | 指定した値が変わったときに処理を実行 | サーバーデータをフォームに反映 |
 | `useForm` + `zodResolver` | フォーム状態管理とバリデーションをまとめて担当 | すべてのフォーム入力 |
 | `form.reset` / `register` / `watch` | データ到着時に初期化し、入力欄と現在値をつなぐ | react-hook-form のフォーム全般 |
@@ -1787,7 +1787,7 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     URL->>Comp: /user/abc123/edit にアクセス
-    Comp->>Comp: useParams() → id = "abc123"
+    Comp->>Comp: await params → id = "abc123"
     Comp->>tRPC: getById({ id: "abc123" })
     tRPC->>DB: SELECT * FROM users WHERE id = 'abc123'
     DB-->>tRPC: ユーザーデータ

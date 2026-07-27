@@ -1250,7 +1250,7 @@ flowchart TD
 
 > **なぜ middleware で `session.ts` を import しない？** middleware は Edge Runtime で動くため、`cookies()` を使う `session.ts` は import できません。`jose` を直接使って JWT 検証します。
 
-> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。`/` で始まり `://` を含まないパスのみ許可します。
+> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。通すのは、4つの条件をすべて満たすパスだけです。`/` で始まること、`//` では始まらないこと、`://` を含まないこと、`\` を含まないことの4つです。`//evil.example.com` は `/` で始まりますが、ブラウザはこれを別サイトの URL として読むので、2つ目の条件で落としています。`\` を弾いているのは、ブラウザによっては `\` を `/` と同じに扱うものがあり、`/\evil.example.com` のような形で1つ目と2つ目をすり抜けられるためです。
 
 **確認ポイント**:
 - [ ] `src/middleware.ts` が作成できた（`src/app/` ではなく `src/` 直下）

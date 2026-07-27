@@ -180,7 +180,7 @@ cp .env.example .env.local
 # .env.local を開き、最低でも DATABASE_URL と JWT_SECRET を設定する
 ```
 
-`.env.local` という名前を使うのは、Day 3 で `.gitignore` に除外を書いたファイルだからです。ここへ書いた値は `git add` しても追跡対象になりません。中身の検証を担当するのは `src/lib/env.ts` の zod スキーマで、`DATABASE_URL` には URL の形を、`JWT_SECRET` には32文字以上を求めます。どちらかを満たさないと例外が投げられ、`npm run build` はページを1枚も出力せずに止まります。この検証は Vercel のビルドでもまったく同じものが走ります。手元で一度通しておけば、公開直前のビルドログで初めてこのエラーを読む展開にはなりません。
+`.env.local` という名前を使うのは、Day 3 で `.gitignore` に除外を書いたファイルだからです。ここへ書いた値は `git add` しても追跡対象になりません。中身の検証を担当するのは `src/lib/env.ts` の zod スキーマで、`DATABASE_URL` には URL の形を、`JWT_SECRET` には32文字以上を求めます。どちらかを満たさないと例外が投げられ、`npm run build` はページを1枚も出力せずに止まります。この検証は Vercel の本番ビルドでも同じものが走ります。ただしプレビュー用のビルドだけは別です。`vercel.json` が `SKIP_ENV_VALIDATION=true` を付けて起動するので、`src/lib/env.ts` は形の検査を飛ばし、値をそのまま受け取ります。つまりプレビューが通っても、本番ビルドが通る保証にはなりません。手元で一度通しておけば、公開直前の本番ビルドログで初めてこのエラーを読む展開にはなりません。
 
 **確認ポイント**:
 - 2つの環境変数の値を準備できた
@@ -555,18 +555,18 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Next.js | 15.5.15 | フレームワーク（App Router） |
+| Next.js | 15.5.21 | フレームワーク（App Router） |
 | React | 18.3.1 | UI ライブラリ |
-| TypeScript | 5.8.3 | 型安全な JavaScript |
+| TypeScript | 5.9.3 | 型安全な JavaScript |
 | shadcn/ui | — | UI コンポーネント |
 | Tailwind CSS | v4 | ユーティリティ CSS |
-| Recharts | 3.2.1 | グラフ・チャート |
+| Recharts | 3.8.1 | グラフ・チャート |
 
 #### バックエンド技術
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| tRPC | 11.8.0 | End-to-End 型安全 API |
+| tRPC | 11.17.0 | End-to-End 型安全 API |
 | Prisma | 6.19.3 | ORM（DB 操作） |
 | PostgreSQL | 16 | データベース |
 | jose | — | JWT トークン生成・検証 |
@@ -576,8 +576,8 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Biome | 2.3.15 | リンター・フォーマッター |
-| Vitest | 3.0.9 | テストフレームワーク |
+| Biome | 2.4.15 | リンター・フォーマッター |
+| Vitest | 3.2.7 | テストフレームワーク |
 | Docker | — | コンテナ（PostgreSQL） |
 | Vercel | — | ホスティング・CI/CD |
 

@@ -31,6 +31,9 @@ function isValidRedirectUrl(url: string): boolean {
   // プロトコル相対URL（//example.com）は許可しない
   if (url.startsWith('//')) return false;
 
+  // ブラウザの URL 解決は円記号をスラッシュと同一視するため、/\evil.example が外部へ抜ける
+  if (url.includes('\\')) return false;
+
   // 外部URLは許可しない
   if (url.startsWith('http://') || url.startsWith('https://')) return false;
 
