@@ -1284,6 +1284,8 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/component/ui/button';
 ```
 
+取り込むのは4つです。`TaskDialog` と `TaskFormData` はさきほど作ったダイアログ本体と、その入力値の型です。`dateOnlyToUtcStartIso` は画面の日付を保存用の形へ直す関数、`Plus` と `Button` は一覧に置く「新規タスク」ボタンの部品です。
+
 既存の `useState` 群の末尾に追加します。
 
 ```typescript
