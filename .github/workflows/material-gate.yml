@@ -239,6 +239,7 @@ jobs:
           steptime_status=0
           anchor_status=0
           procorder_status=0
+          stepref_status=0
           echo "::group::test_check_crossref.py — 参照検査そのものの退行テスト"
           python3 scripts/curriculum-qa/test_check_crossref.py || selftest_status=$?
           echo "::endgroup::"
@@ -266,6 +267,12 @@ jobs:
           echo "::group::check_procedure_order.py — まだ書いていない手続きを呼んでいないか"
           python3 scripts/curriculum-qa/check_procedure_order.py material/30days-curriculum || procorder_status=$?
           echo "::endgroup::"
+          echo "::group::test_check_step_ref.py — Step 参照検査そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_step_ref.py || stepref_status=$?
+          echo "::endgroup::"
+          echo "::group::check_step_ref.py — 本文が指す Step が実在するか"
+          python3 scripts/curriculum-qa/check_step_ref.py material/30days-curriculum || stepref_status=$?
+          echo "::endgroup::"
           echo "::group::check_why.py — コードの直後に理由が書かれているか"
           python3 scripts/curriculum-qa/check_why.py material/30days-curriculum || why_status=$?
           echo "::endgroup::"
@@ -275,8 +282,8 @@ jobs:
           echo "::group::check_crossref.py — 前の日を指す参照の先が実在するか"
           python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum || crossref_status=$?
           echo "::endgroup::"
-          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ]; then
-            echo "::error::Gate 4 失敗 (check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status)"
+          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ]; then
+            echo "::error::Gate 4 失敗 (check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status)"
             exit 1
           fi
 
