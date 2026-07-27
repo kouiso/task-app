@@ -154,9 +154,13 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 aria-required="true"
                 {...register('password')}
+                aria-invalid={!!errors.password}
+                aria-describedby="password-error"
               />
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p id="password-error" className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
               )}
             </div>
             <div className="space-y-2">
@@ -172,9 +176,13 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 aria-required="true"
                 {...register('confirmPassword')}
+                aria-invalid={!!errors.confirmPassword}
+                aria-describedby="confirmPassword-error"
               />
               {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                <p id="confirmPassword-error" className="text-sm text-destructive">
+                  {errors.confirmPassword.message}
+                </p>
               )}
             </div>
             <Button

@@ -887,9 +887,12 @@ return (
             <Input id="title"
               placeholder=
                 "タスクのタイトルを入力"
+              aria-invalid={!!errors.title}
+              aria-describedby="title-error"
               {...register('title')} />
             {errors.title && (
-              <p className=
+              <p id="title-error"
+                className=
                 "text-sm text-destructive">
                 {errors.title.message}
               </p>

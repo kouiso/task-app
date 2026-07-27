@@ -114,9 +114,13 @@ function LoginForm() {
                 autoComplete="current-password"
                 aria-required="true"
                 {...register('password')}
+                aria-invalid={!!errors.password}
+                aria-describedby="password-error"
               />
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p id="password-error" className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
               )}
             </div>
             <Button type="submit" className="w-full shadow-md" disabled={loginMutation.isPending}>

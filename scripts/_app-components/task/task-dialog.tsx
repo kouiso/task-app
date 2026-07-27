@@ -193,9 +193,15 @@ export function TaskDialog({
                 id="title"
                 placeholder="タスクのタイトルを入力"
                 aria-required="true"
+                aria-invalid={!!errors.title}
+                aria-describedby="title-error"
                 {...register('title')}
               />
-              {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+              {errors.title && (
+                <p id="title-error" className="text-sm text-destructive">
+                  {errors.title.message}
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">説明</Label>
