@@ -853,6 +853,8 @@ flowchart TD
 
 #### 3-3. 登録・ログアウト・セッション取得
 
+ここから先の「（続き）」のブロックは、`auth.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
   register: publicProcedure

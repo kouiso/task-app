@@ -200,7 +200,7 @@ if (isCurrentUserLoading) {
 
 **実装**:
 
-Step 2 で追加した `users` の取得の**下に**以下を追加します。
+Step 2 で追加した `currentUser` の取得の**下に**以下を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx

@@ -234,6 +234,8 @@ Day 29 では `getAll` と `updateProfile` の間へ
 
 #### 0-2. 次に changePassword を追加する
 
+ここから先の「（続き）」のブロックは、`user.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
   changePassword: protectedProcedure

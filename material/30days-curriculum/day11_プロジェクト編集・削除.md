@@ -150,6 +150,8 @@ const projectUpdateSchema = z.object({
 
 続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。
 
+ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
   update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ ctx, input }) => {
@@ -285,7 +287,7 @@ const projectUpdateSchema = z.object({
 
 #### 0-3. archive / unarchive（同じ処理をヘルパー関数にまとめる）
 
-アーカイブとアーカイブ解除は「`isArchived` を true にするか false にするか」の違いしかありません。同じ処理を2回書かずに、共通のヘルパー関数にまとめます。`project.ts` の `projectRouter` 定義の少し上、`projectMemberSchema` の下に追加します。
+アーカイブとアーカイブ解除は「`isArchived` を true にするか false にするか」の違いしかありません。同じ処理を2回書かずに、共通のヘルパー関数にまとめます。`project.ts` の `projectUpdateSchema` の下、`export const projectRouter` の上に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）

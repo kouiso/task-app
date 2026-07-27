@@ -137,6 +137,8 @@ const projectCreateSchema = z.object({
 
 `create` の処理本体です。ここで一番大事なのは、プロジェクトを作るのと同時に、作った本人をメンバーとして登録する部分です。
 
+ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
   create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {

@@ -369,6 +369,8 @@ export const searchRouter = createTRPCRouter({
 
 続けて、選択中のプロジェクトに絞る手続きを書きます。最初に、呼び出した人自身がそのプロジェクトのメンバーかを確認します。
 
+ここから先の「（続き）」のブロックは、`search.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
   getMembersByProject: protectedProcedure

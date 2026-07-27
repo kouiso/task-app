@@ -237,6 +237,8 @@ export const commentRouter = createTRPCRouter({
 `USER_SELECT` を挟むと、パスワードなど返してはいけない項目が自動で外れます。
 Day 09 の `getAll` で使ったのと同じ道具です。
 
+ここから先の「（続き）」のブロックは、`comment.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
 ```typescript
 // filepath: src/server/api/routers/comment.ts（続き）
   create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {

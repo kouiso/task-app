@@ -120,7 +120,7 @@ src/
 
 ---
 
-### Step 0: project.ts に getById/getAvailableUsers/addMember/removeMember を自分で書く（18分）
+### Step 0: project.ts に getById/getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く（25分）
 
 **ゴール**: プロジェクト詳細取得・追加可能ユーザー取得・メンバー追加・メンバー削除の4つの手続きを追加します。
 
@@ -131,6 +131,8 @@ src/
 先頭の `protectedProcedure`（ログイン必須の入口）に `.query`（読み取り用の手続き）をつなげて、ログイン済みの人だけが呼べる読み取りAPIにします。データを書き換えるときは `.query` の代わりに `.mutation`（書き込み用の手続き）を使い分けます。入力の `id` は `.cuid()`（cuid形式のID検証）で、決まった形式のIDだけを受け付けます。
 
 まず `findUnique` で1件検索します。詳細画面はタスクの担当者（`assignee`）も表示するので、`include`（関連データも一緒に取る指定）で `tasks` に紐づく `assignee` も一緒に取ります。
+
+ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
