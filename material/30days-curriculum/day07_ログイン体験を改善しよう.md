@@ -1310,6 +1310,8 @@ npm run db:push
 npm run db:seed
 ```
 
+`npm run db:seed` は初期データの2つのプロジェクトを削除して作り直します。そのプロジェクトに自分で追加したタスクやコメントも一緒に消えます。Day 09 以降でこのコマンドを使うときは、付録のトラブルシューティングの注意書きを先に読んでください。
+
 ブラウザで `http://localhost:3000/login` を開きます。
 
 ![ログイン失敗時の表示](./screenshots/login-error.png)
