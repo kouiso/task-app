@@ -502,9 +502,12 @@ import { Checkbox } from '@/component/ui/checkbox';
               handleTaskSelect(task.id, checked === true)
             }
             className="mt-4"
+            aria-label={`${task.title}を選択`}
           />
         )}
 ```
+
+`aria-label` にタスク名を入れているのは、同じ形のチェックボックスがカードの数だけ並ぶためです。名前が無いと、読み上げでは「チェックボックス」が何個も続くだけになり、どのタスクを選んでいるのか分かりません。まとめて削除する操作なので、取り違えると戻せません。
 
 上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 

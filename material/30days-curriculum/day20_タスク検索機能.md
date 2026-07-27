@@ -1018,16 +1018,18 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
 <div className="grid grid-cols-1
   md:grid-cols-2 lg:grid-cols-3 gap-4">
   <div className="grid gap-2">
-    <Label>プロジェクト</Label>
+    <Label htmlFor="project">プロジェクト</Label>
     <Select
       value={formValues.projectId}
       onValueChange={(v) =>
         form.setValue('projectId', v)}>
-      <SelectTrigger>
+      <SelectTrigger id="project">
         <SelectValue
           placeholder="すべて" />
       </SelectTrigger>
 ```
+
+`Label` の `htmlFor` と `SelectTrigger` の `id` に同じ文字を入れているのは、ラベルとプルダウンを結び付けるためです。こうするとラベルの文字を押しても開き、読み上げソフトも「何の絞り込みか」を伝えられます。
 
 Select は `<input>` と違って `register` では結び付けられません。値の表示は `value={formValues.projectId}`、変更の受け取りは `onValueChange` から `form.setValue` を呼ぶ、という2本立てにして自分の手でつなぎます。`formValues` は `form.watch()` の結果なので、`setValue` で書き込むと表示側もすぐ追いつきます。この2つのどちらかを書き忘れると、選んだ項目が画面に反映されない、あるいは選んでも検索条件に入らない、という食い違いが起きます。
 
@@ -1068,14 +1070,14 @@ Select は `<input>` と違って `register` では結び付けられません�
 // filepath: src/app/search/page.tsx
 // ステータスフィルター（型ガード付き）
   <div className="grid gap-2">
-    <Label>ステータス</Label>
+    <Label htmlFor="status">ステータス</Label>
     <Select value={formValues.status}
       onValueChange={(v) => {
         if (isTaskStatus(v)
           || v === 'all')
           form.setValue('status', v);
       }}>
-      <SelectTrigger>
+      <SelectTrigger id="status">
         <SelectValue /></SelectTrigger>
       <SelectContent>
         <SelectItem value="all">
@@ -1103,14 +1105,14 @@ Select は `<input>` と違って `register` では結び付けられません�
 // filepath: src/app/search/page.tsx
 // 優先度フィルター（型ガード付き）
   <div className="grid gap-2">
-    <Label>優先度</Label>
+    <Label htmlFor="priority">優先度</Label>
     <Select value={formValues.priority}
       onValueChange={(v) => {
         if (isTaskPriority(v)
           || v === 'all')
           form.setValue('priority', v);
       }}>
-      <SelectTrigger>
+      <SelectTrigger id="priority">
         <SelectValue /></SelectTrigger>
       <SelectContent>
         <SelectItem value="all">
