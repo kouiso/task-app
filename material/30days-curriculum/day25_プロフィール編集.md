@@ -103,6 +103,8 @@ flowchart TD
 
 **合計時間**: 約73分です。
 
+この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
+
 ---
 
 ### Step 0: user.ts に updateProfile / changePassword を追記する（15分）
