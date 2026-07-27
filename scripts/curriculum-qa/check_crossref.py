@@ -100,6 +100,26 @@ def contains(body: str, token: str) -> bool:
     return re.search(pattern, body) is not None
 
 
+DAY_MENTION = re.compile(r"[Dd]ay\s*(\d{1,2})")
+
+
+def has_own_evidence(body: str, token: str, day: int) -> bool:
+    """その day に token が「ある」と言えるかを、行単位で判定する。
+
+    単純な包含だと、先送りを述べた文まで証拠に数えてしまう。実例:
+      day09「`create` や `update` は、それを実際に使う Day 10 以降で1つずつ足していきます」
+    この行を根拠に「Day 09 の `update`」を実在と判定すると、参照切れを見逃す。
+    そこで、別の day を指している行は証拠から外し、それ以外の行が1つでも要る。
+    """
+    for line in body.split("\n"):
+        if not contains(line, token):
+            continue
+        others = {int(m.group(1)) for m in DAY_MENTION.finditer(line)} - {day}
+        if not others:
+            return True
+    return False
+
+
 # 行頭がこれで始まる行は、前の行と地続きの文ではない。
 # 見出し・箇条書き・表・引用をつなぐと、別々の項目が1文に化けてしまう。
 STRUCTURAL = re.compile(r"^\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|\||>|\[!)")
@@ -223,7 +243,7 @@ def main(argv: list[str]) -> int:
                 if target not in bodies:
                     failures.append((path.name, token, f"Day {target:02d} が存在しません"))
                     continue
-                if not contains(bodies[target], token):
+                if not has_own_evidence(bodies[target], token, target):
                     failures.append(
                         (path.name, token, f"Day {target:02d} に `{token}` がありません")
                     )
