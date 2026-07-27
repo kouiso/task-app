@@ -215,6 +215,9 @@ pwd
 - `scripts/scaffold-from-scratch.sh`
 - `.env.example`
 
+`.env.example` はドットで始まるファイルなので、`ls` だけでは表示されません。
+見たいときは `ls -a` を使ってください。表示されなくても壊れていません。
+
 今いる場所が配布物ルートになっているか確認しておきましょう。
 
 **ターミナル（`~/workspace/task-app`）**
@@ -396,8 +399,8 @@ npm run dev
 ### 何が見えたらOKか
 
 Next.js のロゴと、
-`To get started, edit the page.tsx file.`
-のような「page.tsx を編集してね」という案内文が見えれば大丈夫です。
+`Get started by editing src/app/page.tsx.`
+という「page.tsx を編集してね」という案内文が見えれば大丈夫です。
 （案内文の文言は Next.js のバージョンによって少し変わります。ロゴ入りの案内ページが出ていれば成功です。）
 
 ### スクリーンショットの見本
