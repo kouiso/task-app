@@ -361,6 +361,10 @@ macOS なら、次のコマンドで入れられます。
 brew install gh
 ```
 
+`zsh: command not found: brew` と出た場合は、Homebrew がまだ入っていません。
+Homebrew は macOS へソフトを入れるための道具です。`https://brew.sh` の先頭にある
+インストール用のコマンドをコピーして実行し、終わってから `brew install gh` をもう一度実行します。
+
 Windows で WSL2（Ubuntu）を使っている場合は、[GitHub CLI 公式の Linux インストール手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) に沿って Ubuntu のターミナルで入れます。
 
 インストールが終わったら、もう一度バージョンを確認してから進めます。

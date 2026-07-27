@@ -190,6 +190,11 @@ pwd
 > - `mise trust` と `mise install`: mise を使っている場合だけ、配布物の Node.js 設定を許可してインストールする
 > - `pwd`: いま自分がどのフォルダにいるかを表示します（`pwd` は print working directory の略）
 >
+> Windows で WSL2（Ubuntu）を使っている場合、`~/Downloads` は Windows のダウンロードフォルダ
+> ではありません。Windows 側に保存した ZIP を使うので、次のように書き換えてください。
+> `unzip /mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1.zip`
+> `unzip: command not found` と出たら、先に `sudo apt-get update && sudo apt-get install -y unzip` を実行します。
+>
 > ZIP のファイル名は、手元では上記の名前と違うことがあります。バージョン番号が新しいときや、ブラウザがファイル名の末尾に `(1)` を付けたときです。`unzip` で `cannot find` と出たら、`ls ~/Downloads` で実際のファイル名を確認して、その名前に合わせて実行し直してください。
 >
 > 上の `cd task-app` は、配布 ZIP が `task-app` フォルダに展開される前提のコマンドです。
