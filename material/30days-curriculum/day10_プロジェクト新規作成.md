@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 09 では tRPC の `useQuery` を使ってサーバーからプロジェクトデータを取得しました。あわせて `PageLoadingSpinner` によるローディング表示、グリッドレイアウトでのカード一覧、クエリパラメータによる詳細画面の自動オープンも実装しました。データの「読み取り」ができるようになったので、今日は「作成」に進みます。
+Day 09 では tRPC の `useQuery` を使ってサーバーからプロジェクトデータを取得しました。あわせて `PageLoadingSpinner` によるローディング表示と、グリッドレイアウトでのカード一覧も実装しました。データの「読み取り」ができるようになったので、今日は「作成」に進みます。
 
 ---
 
@@ -206,11 +206,20 @@ const projectCreateSchema = z.object({
 // filepath: src/component/project/project-dialog.tsx
 'use client';
 
-// フォームバリデーション関連
+// React と フォームバリデーション関連
+import { useEffect } from 'react';
 import { zodResolver }
   from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+```
+
+この4つが、フォームの中身を預かる組です。`useEffect` は Step 3 で、ダイアログを開くたびに初期値を入れ直すときに使います。ここで取り込んでおかないと、Step 3 で `Cannot find name 'useEffect'` というエラーになります。
+
+続けて、画面の部品を取り込みます。
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx（続き）
 // shadcn/uiコンポーネント
 import { Button }
   from '@/component/ui/button';
@@ -960,7 +969,7 @@ Day 10 終了時点の状態は、このリポジトリの `src/server/api/route
 
 ### `src/component/project/project-dialog.tsx`
 
-Day 10 終了時点の状態は、このリポジトリの `src/component/project/project-dialog.tsx` と同じです。手元のコードと見比べて確認してください。
+Day 10 終了時点のダイアログは、このリポジトリの `src/component/project/project-dialog.tsx` と同じ考え方で作ってあります。ただし必須マークの付け方や列の分け方は違うので、フォームの組み立て方だけを見比べてください。
 
 ### `src/app/project/page.tsx`
 
