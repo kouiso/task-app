@@ -589,13 +589,13 @@ interface TaskGroupSectionProps {
 | `canEditProject` | `(projectId: string) => boolean` | プロジェクトIDから編集可否を判定する関数 |
 | `canDeleteProject` | `(projectId: string) => boolean` | プロジェクトIDから削除可否を判定する関数 |
 
-Props型の**下に**コンポーネント本体を追加します。
-
-作業時間を記録したあとに一覧を取り直すための関数を用意します。
+先に、作業時間を記録したあとに一覧を取り直すための関数を用意します。
+これは `MyTasksPage` の中で使うので、**Step 5 で書いた `canDeleteProject` の下**へ追加してください。
+このあと作る `TaskGroupSection` の中ではありません。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 時間記録の成功後に一覧を取り直す
+// MyTasksPage 内: canDeleteProject の下に追加
 const handleTimeLogSuccess =
   useCallback(() => {
     utils.task.getAll.invalidate();
@@ -604,6 +604,9 @@ const handleTimeLogSuccess =
 
 この関数が無いと、マイタスク画面で作業時間を記録しても表示が変わりません。
 `TaskCard` は記録に成功したことを親へ伝えるだけなので、取り直しは親側で行います。
+`utils` は Step 3 で書いた `const utils = api.useUtils();` をそのまま使います。
+
+Props型の**下に**コンポーネント本体を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
