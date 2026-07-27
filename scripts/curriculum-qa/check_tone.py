@@ -15,16 +15,27 @@ PatternSpec = tuple[re.Pattern[str], str, str]
 
 
 def strip_code_blocks(content: str) -> list[tuple[int, str]]:
-    """コードブロックとインラインコードを除外して、(行番号, 行テキスト) のリストを返す"""
+    """コードブロックとインラインコードを除外して、(行番号, 行テキスト) のリストを返す
+
+    ```text のブロックだけは中身も検査する。読者がそのまま貼る前提の文面
+    （SNS への共有文など）をここへ置くことがあり、除外すると話し言葉が
+    そのまま商品の外へ出る。実際に day04 の共有文へ方言が残っていた。
+    """
     lines = content.split('\n')
     result: list[tuple[int, str]] = []
     in_code_block = False
+    check_inside = False
     for i, line in enumerate(lines, start=1):
         stripped = line.strip()
         if stripped.startswith('```'):
-            in_code_block = not in_code_block
+            if in_code_block:
+                in_code_block = False
+                check_inside = False
+            else:
+                in_code_block = True
+                check_inside = stripped[3:].strip().lower() == 'text'
             continue
-        if in_code_block:
+        if in_code_block and not check_inside:
             continue
         cleaned = re.sub(r'`[^`]+`', ' ', line)
         cleaned = re.sub(r'https?://\S+', ' ', cleaned)
@@ -47,6 +58,8 @@ KANSAI_PATTERNS = compile_specs([
     (r'\bワイ\b', '関西弁一人称「ワイ」', '「私」「筆者」または削除'),
     (r'やんか(?:[。！!？?\s]|$)', '関西弁「やんか」', '「じゃないですか」「ですよね」に変更'),
     (r'あかん(?:で)?(?:[。！!？?\s]|$)', '関西弁「あかん」', '「いけません」「避けましょう」に変更'),
+    (r'やけど(?:[、。！!？?\s]|$)', '関西弁「やけど」', '「ですが」「だけど」に変更'),
+    (r'せやから', '関西弁「せやから」', '「だから」「そのため」に変更'),
     (r'[せそ]やから', '関西弁「せやから/そやから」', '「だから」「なので」に変更'),
 ])
 
