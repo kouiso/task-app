@@ -464,7 +464,7 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 
 スクリーンショット: プロジェクト統計テーブルの表示を確認してください。
 
-![プロジェクト統計テーブルの表示を確認してください。](./screenshots/report.png)
+![統計カードと円グラフ。プロジェクト統計テーブルはこの下に続く](./screenshots/report.png)
 
 ---
 
@@ -694,7 +694,10 @@ export default function WeeklyReportPage() {
 
 スクリーンショット: ローディング中にスピナーが表示されることを確認してください。
 
-![ローディング中にスピナーが表示されることを確認してください。](./screenshots/report-weekly.png)
+読み込んでいる間は、スピナーだけが出ます。
+下の画像は読み込みが終わったあとの姿です。
+
+![読み込みが終わり、集計カードと折れ線グラフが並んだ週次レポート](./screenshots/report-weekly.png)
 
 週次ページを直接 URL 入力しなくても開けるよう、
 `src/app/report/page.tsx` のヘッダーへリンクを

@@ -660,7 +660,7 @@ export default function UsersPage() {
 
 アバターとバッジの表示を確認してください。
 
-![アバターとバッジの表示](./screenshots/user-list.png)
+![アバターとロールのバッジが並んだ一覧。右端のアクション列は次の Step で追加する](./screenshots/user-list.png)
 
 ```typescript
 // filepath: src/app/user/page.tsx
