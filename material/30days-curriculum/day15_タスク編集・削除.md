@@ -489,6 +489,8 @@ import { taskToFormData } from
 
 編集ボタンから受け取れるのは `taskId` という文字列だけです。ダイアログが求めているのはフォーム用の形なので、その間をつなぐ変換が要ります。`taskToFormData` はその変換をまとめた関数で、`src/lib/task-form.ts` にあります。日付を `YYYY-MM-DD` へ直すといった処理が中に入っているため、ページごとに手で書き直さずに済みます。取り込みを忘れると、次のブロックの `handleEdit` が「そんな名前は無い」という型エラーで止まります。
 
+Day 13 で置いた仮の `handleEdit` は、この中身へ**丸ごと置き換え**ます。2つ並べると同じ名前を2回宣言することになり、ページ全体が止まります。
+
 ```typescript
 // filepath: src/app/task/page.tsx
 // editingTask は Day 14 で定義済み
@@ -766,6 +768,8 @@ const deleteMutation =
 
 **実装**:
 
+Day 13 で置いた仮の `handleDelete` を**置き換え**ます。仮のほうは残しません。
+
 ```typescript
 // filepath: src/app/task/page.tsx
 // 削除ボタンのハンドラー
@@ -822,6 +826,8 @@ const handleDelete = (taskId: string) => {
 実装します。
 
 **実装**:
+
+Day 14 で書いた `handleCreate` を**置き換え**ます。増やさず、中身だけ差し替えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx

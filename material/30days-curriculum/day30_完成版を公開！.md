@@ -470,18 +470,24 @@ Vercel CLI で現在のフォルダを既存プロジェクトへ
 # 初回だけ、画面の案内に従って既存 Vercel プロジェクトを選ぶ
 npx vercel link
 
-# Production の秘密値をファイルへ保存せず、教材用の新規 DB へ反映する
-npx vercel env run -e production -- npx prisma db push
+# Production の接続情報を一時ファイルへ取り出し、教材用の新規 DB へ反映する
+npx vercel env pull .env.production.local --environment=production
+npx dotenv -e .env.production.local -- npx prisma db push
+
+# 接続情報を手元に残さないよう、終わったら消す
+rm .env.production.local
 ```
 
 **確認ポイント**:
 - `npx vercel link` で Day 04 から使っているプロジェクトを選んだ
+- `.env.production.local` を最後に削除した
 - `prisma db push` に `Your database is now in sync` と表示された
 - データ損失の警告が出た場合は続行せず、接続先が新規 DB か確認した
 
-> `vercel env run` は Vercel の環境変数をコマンドへ
-> 一時的に渡します。`DATABASE_URL` をターミナル履歴や
-> `.env` ファイルへコピーしないための方法です。
+> `vercel env pull` は Vercel の環境変数をファイルへ取り出します。
+> `DATABASE_URL` をターミナルの履歴へ残さないための方法です。
+> 取り出したファイルには本番の接続情報が入っているので、
+> 使い終わったら必ず `rm` で消します。
 >
 > 実務では migration ファイルを Git で管理し、
 > CI/CD から `prisma migrate deploy` を実行します。
