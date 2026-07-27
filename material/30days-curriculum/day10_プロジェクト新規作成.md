@@ -309,6 +309,35 @@ type ProjectFormValues =
   z.infer<typeof projectFormSchema>;
 ```
 
+画面側のスキーマは、サーバーへ送る前にブラウザで入力を確かめるためのものです。`id` を `optional` にしているのは、新規作成の時点ではまだ ID が無いためです。
+
+続けて、初期値を作る関数を同じファイルへ書きます。
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx（同じファイルの続き）
+// 作成でも編集でも同じ形の初期値を作る
+function buildProjectFormValues(
+  initialData: ProjectFormData | undefined,
+): ProjectFormValues {
+  return {
+    id: initialData?.id,
+    name: initialData?.name ?? '',
+    description:
+      initialData?.description ?? '',
+    color: initialData?.color
+      ?? DEFAULT_PROJECT_COLOR,
+    startDate:
+      initialData?.startDate ?? '',
+    endDate: initialData?.endDate ?? '',
+  };
+}
+```
+
+`buildProjectFormValues` は、フォームの初期値を1か所で作る関数です。新規作成のときは
+`initialData` が `undefined` なので、`??` の右側が使われて空文字と既定の色が入ります。
+編集のときは渡された値がそのまま入ります。この関数が無いと、作成と編集で初期値の作り方が
+2通りに分かれ、片方だけ直して食い違う原因になります。
+
 Step 0 で書いたサーバー側のスキーマと、ここで書く画面側のスキーマは、見た目がよく似ています。ただし役割は別です。サーバー側は保存してよいかどうかの最終判定で、こちらは入力中の読者へ赤字を返すための下書きチェックです。だから `color` は `z.string()` だけにしてあり、色コードの形までは見ていません。形の検査はサーバー側の `.regex(...)` が持っているので、ここで二重に厳しくしても防げる事故が増えないためです。
 
 `id` が `optional` なのは、新規作成の時点ではまだ ID が存在しないからです。ID はサーバーがデータベースへ書き込んだ瞬間に決まります。Day 11 の編集で初めてここに値が入り、同じスキーマが編集フォームにも使えるようになります。
