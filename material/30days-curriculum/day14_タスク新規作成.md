@@ -562,7 +562,7 @@ export interface TaskFormData {
 }
 ```
 
-この `TaskFormData` は、ダイアログが外へ渡す荷物の形です。`export` を付けてあるのは、Step 8 で `src/app/task/page.tsx` が同じ型を取り込んで受け取るためです。`?` の付いた項目は省略できます。必須は `title`・`status`・`priority`・`projectId` の4つで、これは Step 0 の `taskCreateSchema` で必須にした項目とそろえてあります。画面とサーバーで必須の範囲がずれていると、送信して初めて弾かれる手戻りが起きます。
+この `TaskFormData` は、ダイアログが外へ渡す荷物の形です。`export` を付けてあるのは、Step 8 で `src/app/task/page.tsx` が同じ型を取り込んで受け取るためです。`?` の付いた項目は省略できます。必須は `title`・`status`・`priority`・`projectId` の4つです。Step 0 の `taskCreateSchema` が必須にしているのは `title` と `projectId` だけで、`status` と `priority` は `.default(...)` があるため省略できます。画面側であえて4つとも必須にしているのは、選択欄を未選択のまま送らせないためです。画面のほうを緩くすると、送信して初めて弾かれる手戻りが起きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
