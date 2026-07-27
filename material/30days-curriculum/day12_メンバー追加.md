@@ -670,7 +670,7 @@ const { data: projectDetail } =
 
 スクリーンショット: プロジェクト詳細ページの表示を確認してください。
 
-![プロジェクト詳細ページが表示されている画面](./screenshots/project-detail-dialog.png)
+![プロジェクト詳細ページ。左にメンバー、右にタスクが並ぶ](./screenshots/project-detail-tasks.png)
 ---
 
 ### Step 2: ProjectDetailViewのpropsを作る（4分）

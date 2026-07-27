@@ -12,7 +12,7 @@ Day 10 で作った ProjectDialog を「編集モード」で再利用し、プ�
 
 スクリーンショット: 編集モードの ProjectDialog の表示を確認してください。
 
-![編集モードの ProjectDialog](./screenshots/project-create-dialog.png)
+![プロジェクト編集ダイアログに既存の名前と説明が入っている画面](./screenshots/project-detail-dialog.png)
 
 ## なぜこれを作るのか
 
@@ -1035,7 +1035,7 @@ PORT=3001 npm run dev
 
 > スクリーンショット: 編集ダイアログに既存のプロジェクト名が表示されている画面
 >
-> ![編集ダイアログに既存のプロジェクト名が表示されている画面](./screenshots/project-create-dialog.png)
+> ![タイトルがプロジェクト編集で、名前欄に既存の値が入り、ボタンが更新になっている画面](./screenshots/project-detail-dialog.png)
 
 #### 削除フローの確認
 
