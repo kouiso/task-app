@@ -1,0 +1,26 @@
+{
+  "agents": [
+    {
+      "agent_id": "apr-investigator-8ff12850013aaec8",
+      "agent_type": "pr-investigator",
+      "started_at": "2026-07-23T14:43:26.991Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-23T14:47:19.503Z",
+      "duration_ms": 232512
+    },
+    {
+      "agent_id": "aharvest-c-d7e71f5ed2fb1206",
+      "agent_type": "harvest-c",
+      "started_at": "2026-07-23T14:43:42.636Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-23T14:46:28.313Z",
+      "duration_ms": 165677
+    }
+  ],
+  "total_spawned": 2,
+  "total_completed": 2,
+  "total_failed": 0,
+  "last_updated": "2026-07-23T14:47:19.605Z"
+}

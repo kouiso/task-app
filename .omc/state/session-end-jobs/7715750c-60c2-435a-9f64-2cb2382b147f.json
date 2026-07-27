@@ -1,0 +1,335 @@
+{
+  "version": 1,
+  "jobId": "dadfe35d-691b-4902-86c7-825754b464fb",
+  "sessionId": "7715750c-60c2-435a-9f64-2cb2382b147f",
+  "scopeKey": "5dfceb13539cba9d7218c22d2011bfeca25aca1fbeed8d3776d4c6628590ccce",
+  "revision": 41,
+  "createdAt": "2026-07-23T14:28:46.007Z",
+  "updatedAt": "2026-07-23T14:28:47.004Z",
+  "producerGraceExpiresAt": "2026-07-23T14:29:16.007Z",
+  "bestEffortDeadlineAt": "2026-07-23T14:30:07.007Z",
+  "producers": {
+    "core": {
+      "state": "sealed",
+      "intentKey": "998c546569834c7c952325bfafa82b342fa874ec07284326f13cdc8cf27cb437",
+      "payloadDigest": "998c546569834c7c952325bfafa82b342fa874ec07284326f13cdc8cf27cb437",
+      "sealedAt": "2026-07-23T14:28:46.061Z",
+      "sealedBy": "foreground"
+    },
+    "wiki": {
+      "state": "no-op",
+      "sealedAt": "2026-07-23T14:28:46.007Z",
+      "sealedBy": "wiki-producer"
+    }
+  },
+  "actions": {
+    "foreground-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 0,
+      "idempotencyKey": "febf6dba2f2536433960a07f7cedce72e946b43ced0896570df80f017b8914d2",
+      "payload": {
+        "transcriptPath": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+        "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+        "reason": "clear",
+        "input": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "transcript_path": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+          "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+          "prompt_id": "e73b8c81-32aa-4d93-be54-b693eabb2a1f",
+          "agent_type": "claude",
+          "hook_event_name": "SessionEnd",
+          "reason": "clear"
+        },
+        "metrics": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "ended_at": "2026-07-23T14:28:46.001Z",
+          "reason": "clear",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {},
+        "foregroundResult": {
+          "removedTransientFiles": 1,
+          "completedAt": "2026-07-23T14:28:46.060Z"
+        }
+      },
+      "budgetMs": 9000,
+      "completedAt": "2026-07-23T14:28:46.061Z",
+      "lastOutcomeCode": "completed"
+    },
+    "wiki-capture": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 0,
+      "idempotencyKey": "1719cd1ef5b51e0269b78c4cb8c9308c9c1f7b82fd1c067fc034c060f23863f5",
+      "payload": {},
+      "budgetMs": 9000,
+      "completedAt": "2026-07-23T14:28:46.007Z"
+    },
+    "team-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "cee6ac31df545408e1e822247ac249b3f8182a98a5fe8e448ae3b251e55bdee1",
+      "payload": {
+        "transcriptPath": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+        "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+        "reason": "clear",
+        "input": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "transcript_path": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+          "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+          "prompt_id": "e73b8c81-32aa-4d93-be54-b693eabb2a1f",
+          "agent_type": "claude",
+          "hook_event_name": "SessionEnd",
+          "reason": "clear"
+        },
+        "metrics": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "ended_at": "2026-07-23T14:28:46.001Z",
+          "reason": "clear",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "claimedAt": "2026-07-23T14:28:46.149Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "8fb27565-b172-4726-a957-eb6dc582dd9d",
+        "phase": "terminal",
+        "deadlineAt": "2026-07-23T14:28:56.097Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-07-23T14:28:46.296Z"
+    },
+    "python-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "1f1370c4ac056606059d517e2f106b602d8cbcb04587b3fcc5f3b9f89e649cd0",
+      "payload": {
+        "transcriptPath": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+        "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+        "reason": "clear",
+        "input": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "transcript_path": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+          "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+          "prompt_id": "e73b8c81-32aa-4d93-be54-b693eabb2a1f",
+          "agent_type": "claude",
+          "hook_event_name": "SessionEnd",
+          "reason": "clear"
+        },
+        "metrics": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "ended_at": "2026-07-23T14:28:46.001Z",
+          "reason": "clear",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "claimedAt": "2026-07-23T14:28:46.317Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "826ae596-032b-4d47-95eb-3a6f3b095ae1",
+        "phase": "terminal",
+        "deadlineAt": "2026-07-23T14:28:56.097Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-07-23T14:28:46.441Z"
+    },
+    "reply-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "0b3a8b47c28b26d56aca004d4f572b96c118f16819c0d35162418816f9a5420a",
+      "payload": {
+        "transcriptPath": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+        "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+        "reason": "clear",
+        "input": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "transcript_path": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+          "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+          "prompt_id": "e73b8c81-32aa-4d93-be54-b693eabb2a1f",
+          "agent_type": "claude",
+          "hook_event_name": "SessionEnd",
+          "reason": "clear"
+        },
+        "metrics": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "ended_at": "2026-07-23T14:28:46.001Z",
+          "reason": "clear",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "claimedAt": "2026-07-23T14:28:46.462Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "d4ae5d27-becf-4f7b-b2a4-bc74f71f7376",
+        "phase": "terminal",
+        "deadlineAt": "2026-07-23T14:28:56.097Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-07-23T14:28:46.578Z"
+    },
+    "callback": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "d068ede2655bf89e0c0950e087d0603d7dcf45538e94f20a654d08c6f4841895",
+      "payload": {
+        "transcriptPath": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+        "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+        "reason": "clear",
+        "input": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "transcript_path": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+          "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+          "prompt_id": "e73b8c81-32aa-4d93-be54-b693eabb2a1f",
+          "agent_type": "claude",
+          "hook_event_name": "SessionEnd",
+          "reason": "clear"
+        },
+        "metrics": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "ended_at": "2026-07-23T14:28:46.001Z",
+          "reason": "clear",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 2000,
+      "claimedAt": "2026-07-23T14:28:46.598Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "a34948ab-c5ce-4023-9b61-115305e18b44",
+        "phase": "terminal",
+        "deadlineAt": "2026-07-23T14:28:56.097Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-07-23T14:28:46.708Z"
+    },
+    "notification": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "89c0438ff63097ce04beb60efb87292ff68a7af350a0ee331f3de9dbf42d62fc",
+      "payload": {
+        "transcriptPath": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+        "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+        "reason": "clear",
+        "input": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "transcript_path": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+          "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+          "prompt_id": "e73b8c81-32aa-4d93-be54-b693eabb2a1f",
+          "agent_type": "claude",
+          "hook_event_name": "SessionEnd",
+          "reason": "clear"
+        },
+        "metrics": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "ended_at": "2026-07-23T14:28:46.001Z",
+          "reason": "clear",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 2000,
+      "claimedAt": "2026-07-23T14:28:46.728Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "64cb1351-f725-421a-bfc8-2e6c0db8041f",
+        "phase": "terminal",
+        "deadlineAt": "2026-07-23T14:28:56.097Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-07-23T14:28:46.840Z"
+    },
+    "openclaw": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "31fe8f6e1cf204e27006de511df257326fdd98655122ca437013e8779ffc735b",
+      "payload": {
+        "transcriptPath": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+        "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+        "reason": "clear",
+        "input": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "transcript_path": "/Users/kouiso/.claude-personal/projects/-Users-kouiso-ghq-kouiso-task-app/7715750c-60c2-435a-9f64-2cb2382b147f.jsonl",
+          "cwd": "/Users/kouiso/ghq/kouiso/task-app",
+          "prompt_id": "e73b8c81-32aa-4d93-be54-b693eabb2a1f",
+          "agent_type": "claude",
+          "hook_event_name": "SessionEnd",
+          "reason": "clear"
+        },
+        "metrics": {
+          "session_id": "7715750c-60c2-435a-9f64-2cb2382b147f",
+          "ended_at": "2026-07-23T14:28:46.001Z",
+          "reason": "clear",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 2000,
+      "claimedAt": "2026-07-23T14:28:46.861Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "6cff34b7-279d-4002-8648-b0acb7686ed2",
+        "phase": "terminal",
+        "deadlineAt": "2026-07-23T14:28:56.097Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-07-23T14:28:46.965Z"
+    }
+  },
+  "owner": null,
+  "phase": "complete",
+  "completion": {
+    "completedAt": "2026-07-23T14:28:46.985Z",
+    "terminalDigest": "8d797df26471f0a15c3f54ee468d3241ab12a03a3bf770681d6d1ee5a79414d4",
+    "terminalRevision": 40
+  }
+}

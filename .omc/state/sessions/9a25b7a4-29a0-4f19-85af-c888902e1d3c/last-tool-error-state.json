@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /Users/kouiso/ghq/kouiso/task-app/edu-creator\\necho \\\"=== current (uncommitted) symlink targets ===\\\"\\nls -la .claude/rules/pre-mortem.instructions.md .claude/rules/prohibitions.instruc...",
+  "error": "Exit code 1\n=== current (uncommitted) symlink targets ===\nlrwxr-xr-x  1 kouiso  staff  55 Apr 18 14:30 .claude/rules/pre-mortem.instructions.md -> ../../../prompt/instructions/pre-mortem.instructions.md\nlrwxr-xr-x  1 kouiso  staff  57 Apr 18 14:30 .claude/rules/prohibitions.instructions.md -> ../../../prompt/instructions/prohibitions.instructions.md\n=== resolves to real file? ===\n/Users/kouiso/ghq/kouiso/task-app/prompt/instructions/pre-mortem.instructions.md\n/Users/kouiso/ghq/kouiso/task-app/pr...",
+  "timestamp": "2026-07-23T14:45:54.982Z",
+  "retry_count": 3
+}

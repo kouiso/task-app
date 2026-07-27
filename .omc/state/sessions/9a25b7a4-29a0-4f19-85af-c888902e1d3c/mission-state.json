@@ -1,0 +1,79 @@
+{
+  "updatedAt": "2026-07-23T14:47:19.503Z",
+  "missions": [
+    {
+      "id": "session:9a25b7a4-29a0-4f19-85af-c888902e1d3c:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-07-23T14:43:26.991Z",
+      "updatedAt": "2026-07-23T14:47:19.503Z",
+      "status": "done",
+      "workerCount": 2,
+      "taskCounts": {
+        "total": 2,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 0,
+        "completed": 2,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "pr-investigator:apr-inv",
+          "role": "pr-investigator",
+          "ownership": "apr-investigator-8ff12850013aaec8",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-07-23T14:47:19.503Z"
+        },
+        {
+          "name": "harvest-c:aharves",
+          "role": "harvest-c",
+          "ownership": "aharvest-c-d7e71f5ed2fb1206",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-07-23T14:46:28.313Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:apr-investigator-8ff12850013aaec8:2026-07-23T14:43:26.991Z",
+          "at": "2026-07-23T14:43:26.991Z",
+          "kind": "update",
+          "agent": "pr-investigator:apr-inv",
+          "detail": "started pr-investigator:apr-inv",
+          "sourceKey": "session-start:apr-investigator-8ff12850013aaec8"
+        },
+        {
+          "id": "session-start:aharvest-c-d7e71f5ed2fb1206:2026-07-23T14:43:42.636Z",
+          "at": "2026-07-23T14:43:42.636Z",
+          "kind": "update",
+          "agent": "harvest-c:aharves",
+          "detail": "started harvest-c:aharves",
+          "sourceKey": "session-start:aharvest-c-d7e71f5ed2fb1206"
+        },
+        {
+          "id": "session-stop:aharvest-c-d7e71f5ed2fb1206:2026-07-23T14:46:28.313Z",
+          "at": "2026-07-23T14:46:28.313Z",
+          "kind": "completion",
+          "agent": "harvest-c:aharves",
+          "detail": "completed",
+          "sourceKey": "session-stop:aharvest-c-d7e71f5ed2fb1206"
+        },
+        {
+          "id": "session-stop:apr-investigator-8ff12850013aaec8:2026-07-23T14:47:19.503Z",
+          "at": "2026-07-23T14:47:19.503Z",
+          "kind": "completion",
+          "agent": "pr-investigator:apr-inv",
+          "detail": "completed",
+          "sourceKey": "session-stop:apr-investigator-8ff12850013aaec8"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,395 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1784947738913,
+  "projectRoot": "/Users/kouiso/ghq/kouiso/task-app",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": "22.x",
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      },
+      {
+        "name": "C/C++",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "Makefile"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "next",
+        "version": "15.5.18",
+        "category": "fullstack"
+      },
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "@playwright/test",
+        "version": "1.56.1",
+        "category": "testing"
+      },
+      {
+        "name": "playwright",
+        "version": "1.56.1",
+        "category": "testing"
+      },
+      {
+        "name": "vitest",
+        "version": "3.2.7",
+        "category": "testing"
+      },
+      {
+        "name": "webpack",
+        "version": "5.107.2",
+        "category": "build"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": "Node.js 22.x"
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": "npm test",
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "next dev",
+      "build": "prisma generate && next build",
+      "build:ci": "prisma generate && next build",
+      "vercel-build": "prisma generate && next build",
+      "start": "next start",
+      "lint": "biome check .",
+      "lint:fix": "biome check --write .",
+      "fix": "biome check --write .",
+      "format": "biome format --write .",
+      "lint:ci": "biome ci .",
+      "type-check": "next typegen && tsc --noEmit",
+      "db:generate": "prisma generate",
+      "db:push": "prisma db push",
+      "db:migrate": "prisma migrate dev",
+      "db:studio": "prisma studio",
+      "db:seed": "tsx src/command/seed.ts",
+      "test": "vitest run",
+      "test:ui": "vitest --ui",
+      "test:e2e": "playwright test",
+      "test:e2e:ux": "playwright test e2e/ux-state-catalog.spec.ts",
+      "capture-screenshots": "playwright test e2e/screenshots.spec.ts",
+      "test:e2e:ui": "playwright test --ui",
+      "test:e2e:headed": "playwright test --headed",
+      "postinstall": "prisma generate && npx patch-package",
+      "vercel:setup": "node setup-vercel-db.mjs",
+      "vercel:env": "vercel env pull .env.production.local",
+      "vercel:seed": "vercel env pull .env.production.local && npx prisma db seed",
+      "check:unused-deps": "depcheck --json",
+      "prepare": "husky",
+      "db:seed:dev": "tsx scripts/_seed-dev/seed-dev.ts"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "public",
+      "scripts",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "context-mode-guidance-27027": {
+      "path": "context-mode-guidance-27027",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1784947738880,
+      "keyFiles": [
+        "bash"
+      ]
+    },
+    "coverage": {
+      "path": "coverage",
+      "purpose": null,
+      "fileCount": 9,
+      "lastAccessed": 1784947738881,
+      "keyFiles": [
+        "base.css",
+        "block-navigation.js",
+        "coverage-final.json",
+        "favicon.png",
+        "index.html"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 0,
+      "lastAccessed": 1784947738905,
+      "keyFiles": []
+    },
+    "doc": {
+      "path": "doc",
+      "purpose": null,
+      "fileCount": 46,
+      "lastAccessed": 1784947738906,
+      "keyFiles": [
+        "01-setup-environment.md",
+        "02-nextjs-app-router.md",
+        "03-typescript-prisma.md",
+        "04-material-ui.md",
+        "05-prisma-crud.md"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 0,
+      "lastAccessed": 1784947738907,
+      "keyFiles": []
+    },
+    "e2e": {
+      "path": "e2e",
+      "purpose": null,
+      "fileCount": 14,
+      "lastAccessed": 1784947738908,
+      "keyFiles": [
+        "a11y.spec.ts",
+        "auth-redirect.spec.ts",
+        "auth.spec.ts",
+        "learner-demo.spec.ts",
+        "profile-avatar.spec.ts"
+      ]
+    },
+    "edu-creator": {
+      "path": "edu-creator",
+      "purpose": null,
+      "fileCount": 22,
+      "lastAccessed": 1784947738908,
+      "keyFiles": [
+        "ABEJA_INTEGRATION_REPORT.md",
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "IMPLEMENTATION_COMPLETE.md",
+        "IMPLEMENTATION_ROADMAP.md"
+      ]
+    },
+    "handoff": {
+      "path": "handoff",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1784947738909,
+      "keyFiles": [
+        "thread-1779489086-undone-audit.md"
+      ]
+    },
+    "material": {
+      "path": "material",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1784947738909,
+      "keyFiles": [
+        "dev-guide.md",
+        "onboarding.md",
+        "pr-reviewer-rule.md"
+      ]
+    },
+    "node-compile-cache": {
+      "path": "node-compile-cache",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1784947738909,
+      "keyFiles": []
+    },
+    "patches": {
+      "path": "patches",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1784947738910,
+      "keyFiles": [
+        "@radix-ui+react-presence+1.1.5.patch"
+      ]
+    },
+    "playwright-report": {
+      "path": "playwright-report",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1784947738910,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "playwright-transform-cache-501": {
+      "path": "playwright-transform-cache-501",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1784947738910,
+      "keyFiles": []
+    },
+    "prisma": {
+      "path": "prisma",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1784947738911,
+      "keyFiles": [
+        "dev.db",
+        "schema.prisma",
+        "test.db"
+      ]
+    },
+    "prompt": {
+      "path": "prompt",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1784947738911,
+      "keyFiles": [
+        "prompt.md"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 2,
+      "lastAccessed": 1784947738911,
+      "keyFiles": [
+        "robots.txt",
+        "sitemap.xml"
+      ]
+    },
+    "reports": {
+      "path": "reports",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1784947738911,
+      "keyFiles": [
+        "v10-batch8-sbi-ready-audit.md"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 7,
+      "lastAccessed": 1784947738911,
+      "keyFiles": [
+        "build-zip.sh",
+        "check-branch-reconciliation.sh",
+        "check-naming-convention.sh",
+        "generate_pdf.sh",
+        "scaffold-from-scratch.sh"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 3,
+      "lastAccessed": 1784947738911,
+      "keyFiles": [
+        "instrumentation.ts",
+        "middleware.ts",
+        "robots.tsx"
+      ]
+    },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1784947738912,
+      "keyFiles": []
+    },
+    "coverage/src": {
+      "path": "coverage/src",
+      "purpose": "Source code",
+      "fileCount": 4,
+      "lastAccessed": 1784947738912,
+      "keyFiles": [
+        "index.html",
+        "instrumentation.ts.html",
+        "middleware.ts.html"
+      ]
+    },
+    "playwright-report/data": {
+      "path": "playwright-report/data",
+      "purpose": "Data files",
+      "fileCount": 2,
+      "lastAccessed": 1784947738912,
+      "keyFiles": [
+        "ddc5841a4ac16d1bf578ddbc366c9eb884f5722e.png",
+        "f1b6bafcbd94dcd9ac4a730da054f96c9332f9a9.md"
+      ]
+    },
+    "prisma/migrations": {
+      "path": "prisma/migrations",
+      "purpose": "Database migrations",
+      "fileCount": 1,
+      "lastAccessed": 1784947738912,
+      "keyFiles": [
+        "migration_lock.toml"
+      ]
+    },
+    "src/app": {
+      "path": "src/app",
+      "purpose": "Application code",
+      "fileCount": 6,
+      "lastAccessed": 1784947738913,
+      "keyFiles": [
+        "error.tsx",
+        "globals.css",
+        "layout.tsx"
+      ]
+    },
+    "src/lib": {
+      "path": "src/lib",
+      "purpose": "Library code",
+      "fileCount": 17,
+      "lastAccessed": 1784947738913,
+      "keyFiles": [
+        "badge-variant.ts",
+        "date.test.ts",
+        "date.ts"
+      ]
+    },
+    "src/test": {
+      "path": "src/test",
+      "purpose": "Test files",
+      "fileCount": 4,
+      "lastAccessed": 1784947738913,
+      "keyFiles": [
+        "chaos-helpers.test.ts",
+        "chaos-helpers.ts",
+        "helpers.ts"
+      ]
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}

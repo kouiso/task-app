@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "entries": {
+    "79a93d4a2f8f50b95f852280616242fee1855dc99a3c75211917f55e72e95fae": {
+      "last_emitted_at_ms": 1784818047161,
+      "message": "Use parallel execution for independent tasks. Use run_in_background for long operations (npm install, builds, tests)."
+    },
+    "b2212a89f3b6fa0aaf51b628de958cbc73d84933c420e32180eea08c9e550230": {
+      "last_emitted_at_ms": 1784817821873,
+      "message": "Spawning agent: general-purpose (sonnet) | Task: Investigate Track C harvest"
+    },
+    "18f99a7b6940c95dbecab7fd801961b4f500fffa481a403029a077ef0cc21ee7": {
+      "last_emitted_at_ms": 1784817806362,
+      "message": "Spawning agent: general-purpose (sonnet) | Task: Investigate PR merge readiness"
+    },
+    "466399dafa2d20f60587180bad0a07358eb7f2bce724df0ff682f038ad33f5ad": {
+      "last_emitted_at_ms": 1784817572751,
+      "message": "Read multiple files in parallel when possible for faster analysis."
+    }
+  },
+  "updated_at": "2026-07-23T14:47:27.161Z"
+}

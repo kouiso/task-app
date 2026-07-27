@@ -1,0 +1,4 @@
+{"t":0,"agent":"apr-inv","agent_type":"pr-investigator","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aharves","agent_type":"harvest-c","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aharves","agent_type":"harvest-c","event":"agent_stop","success":true,"duration_ms":165677}
+{"t":0,"agent":"apr-inv","agent_type":"pr-investigator","event":"agent_stop","success":true,"duration_ms":232512}
