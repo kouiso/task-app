@@ -311,6 +311,7 @@ const userUpdateSchema = z
 - `src/server/api/routers/user.ts` に `getById` と `update` を 完成版と同じ位置へ追記できた
 - `getById` が「本人または ADMIN」、`update` が「本人更新 / 他人更新」で分岐している
 - Day 24〜29 の積み上がりで `userRouter` の5手続きが揃った
+- `npm run dev` で型エラーが出ていない
 
 ### Step 1: 動的ルーティングの仕組みを理解する（5分）
 

@@ -226,6 +226,7 @@ Day 21 でも触れたとおり、root の順番は教材で作った時系列�
 - `src/server/api/routers/user.ts` を新規作成し、今日使う import と `getAll` を書けた
 - `getAll` が `adminProcedure` になっている
 - `root.ts` に `userRouter` を import / registration の両方で追加し、最後尾に置けた
+- `npm run dev` で型エラーが出ていない
 
 ---
 

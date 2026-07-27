@@ -309,6 +309,7 @@ Day 24 で `user: userRouter` は登録済みです。今日は `user.ts` の中
 - `updateProfile` がメール重複チェックと `createSession(...)` を持っている
 - `changePassword` が `bcrypt.compare` → `bcrypt.hash` → `prisma.user.update` の順で並んでいる
 - `root.ts` は Day 24 の `user: userRouter` のままでよいと理解できた
+- `npm run dev` で型エラーが出ていない
 
 ### Step 1: プロフィールページの概要（3分）
 

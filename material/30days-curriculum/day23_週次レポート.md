@@ -284,6 +284,7 @@ import { getUserProjectIds } from './_helpers/permission';
 - `src/server/api/routers/report.ts` の `getOverview` の直後に `getWeeklyReport` を追記できた
 - `weeks` / `userId` の入力検証、管理者チェック、週バケット生成まで 完成版と同じ順序で書けた
 - `root.ts` は Day 21 時点の `report: reportRouter` のままでよいと理解できた
+- `npm run dev` で型エラーが出ていない
 
 ### Step 1: プロジェクト統計の集計ロジック（5分）
 

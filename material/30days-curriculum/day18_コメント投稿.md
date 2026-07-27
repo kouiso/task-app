@@ -309,6 +309,7 @@ export const appRouter = createTRPCRouter({
 - Day 13 で追加した `task.getById` が残っている
 - `comment.ts` を新規作成し、`getByTaskId` と `create` を書いた
 - `root.ts` に `commentRouter` を登録した
+- `npm run dev` で型エラーが出ていない
 
 ---
 

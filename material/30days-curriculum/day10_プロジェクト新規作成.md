@@ -278,7 +278,7 @@ export interface ProjectFormData {
 > `onClose` は「ダイアログを閉じる」ためのコールバックです。親コンポーネントが `setDialogOpen(false)` を渡します。
 
 **確認ポイント**:
-- `src/component/project/project-dialog.tsx` の内容を確認した
+- `npm run dev` を動かしたまま、ターミナルに型エラーが出ていない
 - `ProjectDialogProps` と `ProjectFormData` の定義を理解した
 
 ---
@@ -312,7 +312,7 @@ Step 0 で書いたサーバー側のスキーマと、ここで書く画面側�
 `id` が `optional` なのは、新規作成の時点ではまだ ID が存在しないからです。ID はサーバーがデータベースへ書き込んだ瞬間に決まります。Day 11 の編集で初めてここに値が入り、同じスキーマが編集フォームにも使えるようになります。
 
 **確認ポイント**:
-- `projectFormSchema` を定義した
+- `npm run dev` を動かしたまま、ターミナルに型エラーが出ていない
 - `name` フィールドに `min(1)` バリデーションが設定されている
 
 #### zodスキーマの各フィールド

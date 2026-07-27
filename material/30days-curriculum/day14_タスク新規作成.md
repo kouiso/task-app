@@ -610,10 +610,6 @@ interface TaskDialogProps {
 | `assigneeId` | `string?` | × | 担当者 |
 | `expectedUpdatedAt` | `string?` | × | 編集時のみ使用。詳しくは Day 15 |
 
-**確認ポイント**:
-- `TaskFormData` をエクスポートした
-- `TaskDialogProps` に `projects` がある
-
 ---
 
 ### Step 3: useFormでフォームを設定する（5分）
