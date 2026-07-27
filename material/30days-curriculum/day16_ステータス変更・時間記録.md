@@ -241,7 +241,7 @@ const updateMutation =
 完成版に頼らず自分の手で作り直します。次のコードは、
 **既存の `src/component/task/time-log-dialog.tsx` を丸ごと上書き**してください。
 新しいファイルを作るのではなく、開いて中身を全部入れ替える、という操作です。
-配布版は `useState` だけで書いた別解なので、写経が終わってから見比べると、
+上書きする前の配布版は `scripts/_app-components/task/time-log-dialog.tsx` に残っています。見比べるときはこちらを開いてください。配布版は `useState` だけで書いた別解なので、写経が終わってから見比べると、
 入力検証の置き場所（zod + react-hook-form）の違いも学べます。
 
 **実装**:
