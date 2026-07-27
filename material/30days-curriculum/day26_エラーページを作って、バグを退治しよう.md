@@ -216,9 +216,41 @@ Day 09 で書いた一覧のように、描画の途中で `undefined` のプロ
 **ゴール**: 作成した Error Boundary が
 どう動くか体験します。
 
-まず、存在しないページにアクセスして
+まず `src/app/not-found.tsx` を新規作成します。
+このファイルは、存在しない URL を開いたときに出る画面です。
+
+```tsx
+// filepath: src/app/not-found.tsx
+import Link from 'next/link';
+
+export default function NotFound() {
+  return (
+    <div className="flex min-h-screen
+      flex-col items-center justify-center
+      gap-4 px-4">
+      <h1 className="text-6xl font-bold
+        text-muted-foreground">404</h1>
+      <p className="text-xl
+        text-muted-foreground">
+        ページが見つかりません
+      </p>
+      <Link href="/dashboard"
+        className="mt-4 rounded-md
+          bg-primary px-4 py-2 text-sm
+          font-medium text-primary-foreground
+          hover:bg-primary/90">
+        ダッシュボードに戻る
+      </Link>
+    </div>
+  );
+}
+```
+
+このファイルを置かなくても404の画面自体は出ます。Next.js が用意した既定の画面へ切り替わるためです。ただしその画面は英語で、戻る先へのリンクもありません。自分のアプリの言葉で書いて戻り道を用意しておくと、行き止まりになりません。`error.tsx` と違って `'use client'` が要らないのは、押す場所がリンク1つで、状態を持たないためです。
+
+次に、存在しないページにアクセスして
 `not-found.tsx` が動作することを確認します。
-次に、わざとエラーを起こして
+そのあとで、わざとエラーを起こして
 `error.tsx` の動作を確認します。
 
 この Day では 3001 番ポートで
