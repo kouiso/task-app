@@ -740,7 +740,7 @@ export default function GraduationPage() {
 ここまでで目を留めてほしいのは、1行目の `'use client'` がファイル全体にかかっている点です。この宣言は行や関数ではなく、ファイル単位で効きます。だから下に続く振り返りカードも、動きを持たない見出しも、まとめてブラウザ側へ送られます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
         {CURRICULUM_SUMMARY.map((item) => (
           <section key={item.label} className="rounded-lg border p-4">
             <p className="text-sm text-muted-foreground">{item.label}</p>
@@ -796,7 +796,7 @@ export default function GraduationPage() {
 ここまでがサーバー側に残る部分です。`'use client'` が消え、`useState` の取り込みも無くなりました。カードを並べる `.map()` は Before とまったく同じままです。動かしたのはボタン1個だけで、置き換えた `<ShareGraduationButton />` の中身は次のブロックで別ファイルとして作ります。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   );
 }
 
@@ -828,7 +828,7 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
 `'use client'` は、この小さなボタンのファイルだけに付きました。コピー済みかどうかを覚える `useState` も、ここに閉じ込められています。親のページは静的なまま配信されるので、ブラウザが受け取る JavaScript はこのボタン1個分で済みます。表示だけの部分にまで JavaScript を送らなくなるぶん、公開したページは最初の表示が速くなります。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   );
 }
 ```

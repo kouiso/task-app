@@ -381,7 +381,7 @@ return (
 なお最後の `<div className="grid ...">` は開いたままです。閉じタグが足りない状態なので、この時点では保存してもエラーが出ます。続きを次のブロックで書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/component/project/project-detail-view.tsx（同じファイルの続き）
       {/* Step 4 でメンバー一覧とタスク一覧を入れる */}
     </div>
   </div>
@@ -439,7 +439,7 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 `<Avatar>` を閉じた直後で切れているので、続きを次のブロックで書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/component/project/project-detail-view.tsx（同じファイルの続き）
             <div>
               <p className="font-medium">{member.user?.name || member.user?.email || '不明'}</p>
               <Badge variant="outline" className="text-xs">
@@ -506,7 +506,7 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 こちらも `<div>` の途中で切れています。続きを次のブロックで書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/component/project/project-detail-view.tsx（同じファイルの続き）
               <Badge variant={getPriorityBadgeVariant(task.priority)}>
                 {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
               </Badge>

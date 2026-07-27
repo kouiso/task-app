@@ -1095,7 +1095,7 @@ export async function fetchWeeklyReportTasks(
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     select: {
       id: true,
       completedAt: true,
@@ -1127,7 +1127,7 @@ export async function fetchWeeklyReportTasks(
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
         project,
       };
     }),
@@ -1175,7 +1175,7 @@ export async function fetchWeeklyReportTasks(
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     select: {
       id: true,
       completedAt: true,

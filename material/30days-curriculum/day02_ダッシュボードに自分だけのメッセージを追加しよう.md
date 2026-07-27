@@ -999,7 +999,7 @@ function getGreetingByHour(hour: number): string {
 After の1行目に `'use client'` はありません。`useMemo` の取り込みも消えています。変わるのはこの入り口の2行だけではなく、このあと出てくる `mainMessage` を作る3行も1行に縮みます。あわせて4行ぶんの違いで、`type` の並びも `dashboardOwner` の中身も変えていません。HTML をサーバー側で組み立てるところは Before と同じで、違うのは、このページの JavaScript をブラウザへ送らなくなる点です。
 
 ```tsx
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     return 'おはよう';
   }
 
@@ -1031,7 +1031,7 @@ export default function DashboardPage() {
 `mainMessage` の行を Before と見比べてください。`useMemo` が外れて、`buildMainMessage(dashboardOwner, currentHour)` を呼ぶだけになりました。この関数はページを組み立てるときに1回動くだけなので、結果を覚えておく相手がいません。覚えておく仕組みを外すと、`[currentHour]` の書き漏らしを心配する場所も消えます。なお `new Date().getHours()` もサーバー側で動くので、あいさつは読者のパソコンではなくサーバーの時計で決まります。このページはリクエストごとの情報を読まないので、ビルドのときに一度だけ描かれます。公開後は、ビルドした瞬間の時刻のまま固定されます。
 
 ```tsx
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     },
     {
       label: 'Today',
@@ -1063,7 +1063,7 @@ export default function DashboardPage() {
 `focusCards` の中身も Before と同じです。ここで確かめたいのは、サーバー側に置いたからといって書き方を変える必要は無いという点です。配列を作り、値を差し込み、タグを並べるところまでは、サーバー側で組み立てても書き方は変わりません。書き方が変わるのは、ブラウザ側で値を覚えたり、クリックに反応したくなったときです。
 
 ```tsx
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
@@ -1095,7 +1095,7 @@ export default function DashboardPage() {
 見た目の部分は Before から変わりません。同じタグ、同じ `className`、同じ差し込みです。それでも読者のブラウザへ届くものは違います。組み立て終わった HTML はどちらも届きますが、Before ではそれに加えて、この JSX を動かすための JavaScript も送られます。見え方が同じだからといって、送られている中身まで同じではありません。
 
 ```tsx
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -1127,7 +1127,7 @@ export default function DashboardPage() {
 `map` でカードを3枚作る処理も、そのまま置いています。この配列はサーバー側だけで回るので、3枚のカードを作る JavaScript はブラウザへ送られません。Day 02 のように出す内容が決まっている画面では、この差がそのまま読み込むファイルの軽さに出ます。
 
 ```tsx
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
             </div>
           </article>
 
@@ -1159,7 +1159,7 @@ export default function DashboardPage() {
 右側の補助カードも同じです。ここまで見てきて、After で消えたのは `'use client'` と `useMemo` に関わる数行だけでした。裏を返せば、Before で増えていた負担も、その数行が呼び込んでいたものだけだったということです。ページ全体を書き直す話ではありません。
 
 ```tsx
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
                 次につながる視点

@@ -1127,7 +1127,7 @@ function toDateInputValue(value: Date): string {
 ここまでは型の宣言だけで、後に出てくる After 版とまったく同じ内容です。目を留めてほしいのは、`ProjectFromApi` 側の `string | null` と `ProjectEditFormData` 側の `string` のずれです。API から届く「無いかもしれない値」を、フォームが扱える「必ずある値」へ寄せる作業が、この後の関数本体で始まります。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   return value.toISOString().slice(0, 10);
 }
 
@@ -1159,7 +1159,7 @@ export function buildProjectEditForm(
 `description` と `color` で、`let` に初期値を置いてから `if` で上書きする形が2回続いています。扱う項目が増えるたびにこの塊も増えるので、フォームへ何が渡るのかは関数を最後まで読まないと分かりません。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     } else {
       ownerLabel = project.owner.email;
     }
@@ -1191,7 +1191,7 @@ export function buildProjectEditForm(
 `startDate` と `endDate` でも判定が2回続き、返す値は `formData` へ少しずつ足してから最後にまとめて返す形です。空欄だったときの初期値がどこで決まったのかを確かめるには、関数の先頭まで読み戻ることになります。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 console.log(
   buildProjectEditForm({
     id: 'project_001',
@@ -1245,7 +1245,7 @@ function toDateInputValue(value: Date): string {
 型の宣言は Before から1文字も変えていません。書き換えるのは型ではなく、値を詰め替える手続きの側です。入り口と出口をそろえてあるので、途中の書き方だけを読み比べられます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   return value.toISOString().slice(0, 10);
 }
 
@@ -1277,7 +1277,7 @@ export function buildProjectEditForm(
 日付を条件付きスプレッドで足すのは、Step 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので、`startDate?` は「未設定」のまま残ります。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     ...(endDate ? { endDate } : {}),
   };
 }

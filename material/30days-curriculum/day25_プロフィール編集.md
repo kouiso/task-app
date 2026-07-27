@@ -2036,7 +2036,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 ここまでで `avatarUrl` と `displayName` の2つを作るのに、`if` が4つ並びました。どれも「`currentUser` があるか」「その中の項目があるか」を2段で確かめています。表示する項目が増えるたびに同じ形が積み上がる点に注目してください。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     }
   }
 
@@ -2068,7 +2068,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 `initial` では入れ子が3段になりました。名前の1文字目を取り出すために、`currentUser`、`name`、`name[0]` の順で確かめています。登録日と更新日も同じ形なので、表示項目を1つ足すたびに `let` と `if` が5行ずつ増えていきます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       updatedAtLabel = format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
         locale: ja,
       });
@@ -2126,7 +2126,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 同じ内容が1項目1行になりました。`currentUser?.avatar ?? ''` は、`currentUser` があれば `avatar` を見て、無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     createdAtLabel: formatProfileDate(currentUser?.createdAt),
     updatedAtLabel: formatProfileDate(currentUser?.updatedAt),
   };

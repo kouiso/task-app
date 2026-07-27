@@ -958,7 +958,7 @@ function getNextStatus(status: TaskStatus): TaskStatus {
 覚えておきたいのは、この関数が持っている情報が遷移先だけだという点です。画面に出す文言は1文字も入っていません。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 function getButtonLabel(status: TaskStatus): string {
   if (status === TASK_STATUS.TODO) {
     return '作業開始';
@@ -984,7 +984,7 @@ export function StatusActionButton({
 片方だけを直したときに何が起きるかを想像してください。ボタンには「完了にする」と出るのに、保存されるステータスは別のもの、という食い違いが生まれます。型では捕まえられない種類のずれなので、気づくのは動かしたあとです。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   onUpdated,
 }: StatusActionButtonProps) {
   const updateMutation =
@@ -1055,7 +1055,7 @@ const STATUS_TRANSITIONS: StatusTransition[] = [
 型を `StatusTransition` として先に決めてあるので、`label` を書き忘れた要素があれば TypeScript が止めてくれます。遷移を足すときの書き漏らしは、動かす前に見つかります。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   },
   {
     from: TASK_STATUS.IN_PROGRESS,
@@ -1084,7 +1084,7 @@ function findTransition(status: TaskStatus) {
 Before では `DONE` と `CANCELLED` のために `return status` と `return '変更なし'` を書きました。ここでは、配列に載っていないという事実がその答えを兼ねています。終わりのステータスが増えても、配列へ足さなければ進めない扱いのままです。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 export function StatusActionButton({
   taskId,
   status,
@@ -1118,7 +1118,7 @@ export function StatusActionButton({
 `updateMutation.isPending` を `disabled` に混ぜているのは、送信中の二度押しを止めるためです。Step 2 の時間記録ダイアログで `isPending` を使ったのと同じ考え方が、ここでも効いています。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       {transition?.label ?? '変更なし'}
     </Button>
   );

@@ -213,7 +213,7 @@ const registerSchema = z.object({
 1行ずつが「これを通さない」という宣言です。`name` の `.min(1)` を外すと、名前が空のまま登録が通り、サイドバーにもタスクの担当者欄にも名前の出ないユーザーができます。`email` の `.email()` を外すと `abc` のような文字列でも登録でき、その人にはパスワード再設定の案内が永久に届きません。`password` に並ぶ4本の `.regex()` は、大文字・小文字・数字・記号をそれぞれ1文字以上求めます。これを外すと `password` の8文字だけで登録が通り、辞書に載っている単語を順に試すだけで入られる入り口になります。最後の `.refine()` は、項目ごとのチェックが済んだあとに、2つの欄をまたいで見る確認です。項目側でエラーが出ていても、続けられる種類のエラーなら `.refine()` も走ります。短すぎるパスワードで確認欄も違っていれば、両方のエラーが同時に出ます。
 
 ```typescript
-// filepath: 続き
+// filepath: src/app/register/page.tsx（同じファイルの続き）
   },
 );
 ```
@@ -758,7 +758,7 @@ export function registerUser(input: RegisterInput): RegisterApiResponse {
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     email: input.email,
   };
 }
@@ -822,7 +822,7 @@ export function registerUser(input: RegisterInput): RegisterResult {
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   }
 
   return {
@@ -854,7 +854,7 @@ const result = registerUser({
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 });
 
 console.log(buildRegisterMessage(result));
@@ -945,7 +945,7 @@ const registerSchema = z.object({
 この `registerSchema` が、登録画面の入口の検査を1か所に集めた部分です。パスワードの4本の `.regex()` は、Day 07 で読むサーバー側の `auth.ts` と同じ条件で書いてあります。片方だけ緩めると、画面では通るのにサーバーで断られる登録ができてしまい、読者には理由の分からないエラーとして見えます。このブロックはまだ括弧が開いたままなので、次の続きと合わせて1つの式になります。
 
 ```typescript
-// filepath: 続き
+// filepath: src/app/register/page.tsx（同じファイルの続き）
   },
 );
 

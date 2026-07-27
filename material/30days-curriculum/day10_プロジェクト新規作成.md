@@ -840,7 +840,7 @@ export function useCreateProjectSubmit(onClose: () => void) {
 ここまでが Before の前半です。`onSuccess` の中の `window.location.reload()` に目を留めてください。この1行はページを丸ごと読み込み直すので、一覧は確かに新しくなります。ただし戻ってくるのは開いた直後の画面です。Day 09 で作ったアーカイブ表示スイッチも、途中まで下げていたスクロール位置も既定へ戻ります。作ったばかりのプロジェクトを自分で探し直すことになるので、1件作るたびに読者の手が止まります。後半では、この関数がサーバーへ何を送っているかを見ます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       color: data.color,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -896,7 +896,7 @@ export function useCreateProjectSubmit(onClose: () => void) {
 ここまでが After の前半です。Before との違いは `void utils.project.getAll.invalidate()` の1行に集まっています。`invalidate` は「この一覧の控えはもう古い」と印を付ける操作で、印の付いたクエリを今表示しているページだけが取り直します。ページそのものは生き残るので、スイッチとスクロール位置はそのまま残ります。頭の `void` は、取り直しの完了を待たずに次の `onClose()` へ進むという意思表示です。ダイアログは先に閉じてよく、新しいカードは届き次第あとから並びます。後半は Before と同じ送信部分なので、見比べる箇所はここまでです。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       name: data.name,
       description: data.description,
       color: data.color,

@@ -621,7 +621,7 @@ const handleSubmit =
 ここまでが `updateMutation.mutate` に渡す値の前半です。`description: data.description || null` のように `|| null` を付けているのは、入力欄を空にして保存したとき、空文字ではなく `null` を送るためです。空文字のまま送ると「説明を空文字という内容に書き換える」意味になり、Step 0 の `update` は `.nullable()` の側ではなく通常の更新として受け取ります。渡すオブジェクトはまだ閉じていないので、続きを次のブロックで書きます。
 
 ```typescript
-// filepath: 続き
+// filepath: src/app/task/page.tsx（同じファイルの続き）
         expectedUpdatedAt:
           data.expectedUpdatedAt,
       });
@@ -994,7 +994,7 @@ const handleSubmit = (data: TaskFormData) => {
 Before は Step 3 と Step 4 で書いた形とほぼ同じです。手を動かす順番は「保存する → サーバーの返事を待つ → `invalidate()` で一覧を取り直す」で、画面の表示が新しくなるのは通信が往復し終わったあとになります。After との違いは、この待ち時間の扱い方1点だけです。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     title: data.title,
     description: data.description || null,
     status: data.status,
@@ -1048,7 +1048,7 @@ const updateMutation =
 After が変わるのはここからです。`onMutate` は `mutate` を呼んだ直後、サーバーの返事を待たずに走る処理です。最初の `utils.task.getAll.cancel(...)` は、いま飛んでいる一覧の再取得を止めます。止めないまま進めると、これから手元で書き換えるキャッシュを、古い内容を積んだ返事があとから上書きしてしまいます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       );
 
       const previousTasks =
@@ -1080,7 +1080,7 @@ After が変わるのはここからです。`onMutate` は `mutate` を呼ん�
 `getData` で今のキャッシュを控えてから、`setData` で一覧の該当タスクだけを書き換えます。`updatedTask.title ?? task.title` は「送られてきた項目は新しい値、送られていない項目は今のまま」という意味です。ただし `??` は `null` も「送られていない」と同じ扱いにするため、説明や担当者を空にしたときは、キャッシュの上では前の値が残ります。`dueDate` だけ `=== undefined` で見分けているのはそのためで、期限を空にした操作はここで正しく反映されます。他の項目は、保存後にサーバーから取り直した時点で空になります。控えた `previousTasks` は、保存に失敗したときの戻し先になります。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
                       ? task.dueDate
                       : updatedTask.dueDate
                         ? new Date(updatedTask.dueDate)
@@ -1112,7 +1112,7 @@ After が変わるのはここからです。`onMutate` は `mutate` を呼ん�
 `onError` は、控えておいた `previousTasks` をそのままキャッシュへ書き戻します。ここが無いと、Step 0 の楽観ロックが CONFLICT を返して保存が失敗しても、画面だけは新しい内容に変わったまま残ります。読者が「保存できた」と思い込む嘘の表示です。`onSettled` は成功と失敗のどちらでも最後に必ず走る出口で、次のブロックでその中身を書きます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       utils.task.getAll.invalidate(
         taskListInput,
       );
@@ -1144,7 +1144,7 @@ const handleSubmit = (data: TaskFormData) => {
 `onSettled` の中で `invalidate()` を呼ぶのは、手元で組み立てた表示をサーバーの中身へそろえ直すためです。`updatedAt` のようにサーバー側で決まる値は手元では作れないので、最後に必ず本物を取り直します。`handleSubmit` の中身は Step 4 とほとんど同じです。足した処理はすべて `useMutation` の中に収まっているため、呼び出し側は書き換えずに済みます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     estimatedHours: data.estimatedHours ?? null,
     assigneeId: data.assigneeId || null,
   });

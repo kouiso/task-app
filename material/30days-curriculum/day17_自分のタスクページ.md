@@ -1164,7 +1164,7 @@ function groupTasksByStatus(
 `StatusTaskGroups` という型に、`todo` から `done` まで4つの入れ物を手で書き並べています。ステータスの一覧が、ここで1回目の登場です。このあと同じ4つが `switch` にも、表示用の配列にも出てきます。同じ知識が何か所に散らばるか、を数えながら読み進めてください。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     inProgress: [],
     inReview: [],
     done: [],
@@ -1194,7 +1194,7 @@ function groupTasksByStatus(
 `switch` の分岐が2回目です。`TASK_STATUS.TODO` なら `groups.todo` へ、というつなぎ方を同じ形で4回書いています。ここに `CANCELLED` を足したくなったら、型・初期値・分岐の3か所すべてに追記が要ります。1か所でも忘れると、そのステータスのタスクはどの配列にも入らず、画面から静かに消えます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   return groups;
 }
 
@@ -1226,7 +1226,7 @@ function buildStatusSections(tasks: MyTask[]) {
 3回目が、この戻り値の配列です。画面に出す並び順を決めているのは、ここだけです。`switch` の `case` を入れ替えても表示の順番は変わらず、この配列を入れ替えたときだけ変わります。同じ4つが3か所に散っているせいで、どこを直せば何が変わるのかが読み取りにくくなっています。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 }
 ```
 
@@ -1270,7 +1270,7 @@ const MY_TASK_STATUS_ORDER: TaskStatus[] = [
 4つのステータスが `MY_TASK_STATUS_ORDER` の1か所へまとまりました。この配列が、そのまま表示の並び順にもなります。Before で3回書いていた同じ知識が1回になったので、`CANCELLED` を足したくなったら、この配列へ1行加えるだけで済みます。分岐と表示は、その1行に付いてきます。Step 4 の `ACTIVE_STATUSES` からタブを作った書き方と、考え方は同じです。次のブロックで、この配列から表示セクションを組み立てます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 
 function buildStatusSections(
   tasks: MyTask[],

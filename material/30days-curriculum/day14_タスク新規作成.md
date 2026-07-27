@@ -653,7 +653,7 @@ function buildTaskFormValues(
 この関数を `useForm` の外へ切り出したのは、初期値を作る場所を1か所に決めるためです。`initialData?.title ?? ''` のように既定値を全項目へ置いたので、`initialData` が無い新規作成でも入力欄は空文字から始まります。ここを `undefined` のまま渡すと、React はその入力欄を「値を管理していない」と見なし、あとで文字を打った瞬間に警告を出します。`projects[0]?.id || ''` は、プロジェクトが1件でもあれば先頭を選んだ状態で開くための既定値です。関数はまだ途中なので、続きを次のブロックで書きます。
 
 ```typescript
-// filepath: 続き
+// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
     expectedUpdatedAt:
       initialData?.expectedUpdatedAt,
   };
@@ -679,7 +679,7 @@ export function TaskDialog({
 `useForm` から受け取った7つは、すべてこのあとの入力欄で使います。`register` は Input と Textarea をフォームへつなぐ道具、`control` は Select をつなぐ道具で、この使い分けが Step 5 の山場になります。いちばん効いているのは `resolver: zodResolver(taskFormSchema)` の1行です。Step 1 で書いたスキーマが、ここで送信前の検問として組み込まれます。この行が抜けるとスキーマは書いただけの存在になり、タイトルが空でも送信が通ります。関数はまだ続くので、次のブロックへ進みます。
 
 ```typescript
-// filepath: 続き
+// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）（同じファイルの続き）
   const selectedProjectId =
     watch('projectId');
   const projectsRef = useRef(projects);
@@ -699,7 +699,7 @@ export function TaskDialog({
 プロジェクト一覧の参照はレンダー中に書き換えず、画面へ反映されたあとで同期します。
 
 ```typescript
-// filepath: 続き
+// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）
   useEffect(() => {
     projectsRef.current = projects;
   }, [projects]);
@@ -825,7 +825,7 @@ const handleFormSubmit =
 ここで組み立てている `submitData` は、入力欄の値をそのまま渡すのではなく、空の項目を落としてから渡します。`...(data.description && { description: data.description })` は、説明が空文字ならキーごと消える書き方です。空文字を送ると、サーバー側では「空という値が指定された」と読め、未入力と区別が付きません。必須の4項目は条件を付けず常に入れます。この関数はまだ途中なので、続きを次のブロックで書きます。
 
 ```typescript
-// filepath: 続き
+// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
       ...(data.id !== undefined
         && data.expectedUpdatedAt
           !== undefined
@@ -1491,7 +1491,7 @@ const taskFormSchema = z.object({
 Before では、ステータスの5つの値がすでに2か所へ並んでいます。`TaskStatus` の union と、`z.enum([...])` の中です。いま中身がそろっているので動きますが、片方だけ直しても誰も教えてくれません。次のブロックで、この重複がさらに増えていきます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     'DONE',
     'CANCELLED',
   ]),
@@ -1522,7 +1522,7 @@ export interface TaskFormData {
 優先度でも同じ重複が起きました。`TaskPriority` の union と `z.enum([...])` で、4つの値を2回書いています。`TaskFormData` の側は `TaskStatus` を参照するので union に追随しますが、このあと出てくるラベルと初期値は文字列を直に書きます。定義が散らばるほど、値を1つ足すときに触る場所が増えます。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   projectId: string;
   assigneeId?: string;
 }
@@ -1588,7 +1588,7 @@ After では、値の出どころが `@/lib/constant/status` と `@/lib/constant
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 export interface TaskFormData {
@@ -1620,7 +1620,7 @@ const statusOptions = Object.entries(
 初期値に `Pick<TaskFormValues, 'status' | 'priority'>` を付けたところが効きます。スキーマ側の値を変えると、この定数がその場で型エラーになり、直し忘れが起動前に見つかります。Before の `'TODO' as TaskStatus` は型を名乗らせるだけなので、綴りが違っても素通りしました。`statusOptions` もラベル定数から組み立てるため、選択肢を並べ直す場所はここにも残りません。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 ).map(([value, label]) => ({
   value,
   label,

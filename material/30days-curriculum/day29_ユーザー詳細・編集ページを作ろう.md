@@ -407,7 +407,7 @@ export default async function UserDetailPage({
 続きを次のブロックで書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
 
   return <UserDetailClient userId={id} />;
 }
@@ -1001,7 +1001,7 @@ export default async function UserEditPage({
 続きを次のブロックで書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
 
   return <UserEditClient userId={id} />;
 }
@@ -1643,7 +1643,7 @@ export function submitUserEditForm(
 入口の引数が `rawValues: unknown` になっているところに目を留めてください。`unknown` は「まだ何の型か分からない値」を表し、そのままでは中身に触れません。フォームから来た値を最初に受け止める型としては、これで正しいです。Before と After が分かれるのは、この `unknown` をこの先どう扱うかという1点です。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   userId: string,
   updateUser: UpdateUserMutation,
   isAdmin: boolean,
@@ -1675,7 +1675,7 @@ submitUserEditForm(
 問題は `const values = rawValues as UserEditFormValues;` の1行です。`as` は値を1つも見ずに「この形だと思って進む」と伝える書き方なので、`unknown` で受け取った意味がここで消えます。呼び出し側が正しい形を渡している限りは動きます。ただし、それを保証しているのは書き手の記憶だけで、TypeScript は何も確かめていません。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     isActive: true,
   },
   'clx_user_123',
@@ -1724,7 +1724,7 @@ type UpdateUserMutation = {
 After では、型を用意する順番が逆になっています。先に `userEditSchema` を書き、そこから `z.infer` で型を取り出します。名前・アバター・ロール・アクティブの条件が置いてある場所が1か所だけになるので、項目を足すときに直すのもスキーマだけです。Step 7 でフォームに渡したのと同じスキーマを、ここでは送信前の検査にも使い回しています。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 
 export function submitUserEditForm(
   rawValues: unknown,
@@ -1756,7 +1756,7 @@ submitUserEditForm(
 `as` が `userEditSchema.parse(rawValues)` に置き換わりました。`parse` は値を1項目ずつスキーマと照らし合わせて、合っていれば型の付いた値を返し、合っていなければその場で例外を投げます。`role` に `'OWNER'` が紛れ込んでいれば、サーバーへ送る前にここで止まります。左辺に `UserEditFormValues` と型を書いても `as` のような信じるだけの宣言にはなりません。中身が確かめられた後の値だからです。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     name: 'Taro',
     avatar: '',
     role: USER_ROLE.ADMIN,

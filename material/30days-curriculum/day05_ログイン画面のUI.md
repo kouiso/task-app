@@ -901,7 +901,7 @@ function validateLoginForm(values: LoginFormValues): LoginValidationResult {
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   }
 
   if (errors.email || errors.password) {
@@ -973,7 +973,7 @@ export function readLoginForm(formData: FormData): LoginValidationResult {
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   const result = loginSchema.safeParse(
     Object.fromEntries(formData.entries()),
   );
