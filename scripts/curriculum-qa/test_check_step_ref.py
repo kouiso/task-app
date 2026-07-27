@@ -59,6 +59,33 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, int]]]] = [
 ]
 
 
+def check_exit_code() -> int:
+    """main() の戻り値まで見る。
+
+    ケースを直接 find_bad_refs に当てるだけだと、main() が指摘を持ちながら 0 を返すよう
+    壊れても自己テストは緑のままになる。CI は終了コードしか見ないので、そこを塞ぐ。
+    """
+    import check_step_ref
+
+    failed = 0
+    cases = [
+        ("この日に無い Step を指したら 1 を返す", "### Step 1: あ\n\nStep 9 で書いた値。\n"),
+        ("存在しない Day を指したら 1 を返す", "### Step 1: あ\n\nDay 99 の Step 1 で書いた値。\n"),
+    ]
+    for name, body in cases:
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "day05_x.md").write_text(body, encoding="utf-8")
+            if check_step_ref.main(["check_step_ref.py", d]) != 1:
+                failed += 1
+                print(f"  ❌ {name}")
+    with tempfile.TemporaryDirectory() as d:
+        Path(d, "day05_x.md").write_text("### Step 1: あ\n\nStep 1 で書いた値。\n", encoding="utf-8")
+        if check_step_ref.main(["check_step_ref.py", d]) != 0:
+            failed += 1
+            print("  ❌ 指摘が無いのに 0 を返さない")
+    return failed
+
+
 def main() -> int:
     failed = 0
     for name, files, expected in CASES:
@@ -78,10 +105,12 @@ def main() -> int:
         if sorted(got) != sorted(expected):
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
+    failed += check_exit_code()
+    total = len(CASES) + 3
     if failed:
-        print(f"❌ check_step_ref 自己テスト {failed}/{len(CASES)} 失敗")
+        print(f"❌ check_step_ref 自己テスト {failed}/{total} 失敗")
         return 1
-    print(f"✅ check_step_ref 自己テスト {len(CASES)}/{len(CASES)} 合格")
+    print(f"✅ check_step_ref 自己テスト {total}/{total} 合格")
     return 0
 
 

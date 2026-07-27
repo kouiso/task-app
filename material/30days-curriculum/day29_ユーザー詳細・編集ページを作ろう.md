@@ -1271,7 +1271,7 @@ zod スキーマと `useForm` は Step 7 で
 
 `user` データは非同期に取得されるため、コンポーネント表示時はまだ `undefined` です。`[user]` 依存配列により、データ到着時に `form.reset` が自動実行されフォームが埋まります。
 
-**確認ポイント**: `onSubmit` と `updateUser` が定義できた。この時点ではまだ `</form>` を書いていないので、保存すると構文エラーが出ます。この Step の最後まで書くと消えます。
+**確認ポイント**: ファイルを保存してエラーが出ないことを確認してください。
 
 次に必要なコンポーネントをインポートし、フォームを書きます。
 
@@ -1569,7 +1569,7 @@ import { Alert, AlertDescription, AlertTitle }
     };
 ```
 
-**確認ポイント**: ファイルを保存してエラーが出ないことを確認してください。`onSubmit` と `updateUser` が定義されたことで、Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が動作するようになりました。更新後は30秒待たなくても詳細・一覧・セッション表示へ反映されます。
+**確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くので、この時点ではまだ構文エラーが残ります。`onSubmit` と `updateUser` が定義されたことで、Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が動作するようになりました。更新後は30秒待たなくても詳細・一覧・セッション表示へ反映されます。
 
 サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `undefined` に変換しています。
 
