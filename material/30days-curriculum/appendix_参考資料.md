@@ -23,7 +23,7 @@
 | shadcn/ui | https://ui.shadcn.com/ | コンポーネントのAPIドキュメントと使用例 |
 | Radix UI | https://www.radix-ui.com/docs/primitives | shadcn/uiの基盤となるプリミティブコンポーネント |
 | Lucide Icons | https://lucide.dev/icons/ | アイコン一覧と検索 |
-| Recharts | https://recharts.org/en-US/ | グラフ・チャートコンポーネントのAPI |
+| Recharts | https://recharts.org/ | グラフ・チャートコンポーネントのAPI |
 
 ### バックエンド
 
