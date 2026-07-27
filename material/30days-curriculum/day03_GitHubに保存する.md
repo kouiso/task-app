@@ -168,15 +168,16 @@ git remote -v
 /Users/your-name/workspace/task-app
 ## main
 main
-8f2c4a1 (HEAD -> main) feat: personalize dashboard message
-4c6f8e0 chore: bootstrap task-app scaffold
+ea211a9 (HEAD -> main) Initial commit from Create Next App
 ```
 
-`git remote -v` は、まだ何も表示されないかもしれません。この時点ではそれで問題ありません。GitHub 側の保存先をまだ作っていないので、つなぎ先は空のままで正しい状態です。見てほしいのは残りの4行です。1行目のパスの末尾が `task-app` になっているか確かめてください。その下にコミットが1件以上並んでいれば、Day 02 までの履歴は手元に残っています。
+`git remote -v` は、まだ何も表示されないかもしれません。この時点ではそれで問題ありません。GitHub 側の保存先をまだ作っていないので、つなぎ先は空のままで正しい状態です。1行目のパスの末尾が `task-app` になっているか確かめてください。
+
+コミットが1本しか無いことにも注目してください。これは土台を作った時点のもので、Day 01 のセットアップで置いたファイルも、Day 02 で書いたダッシュボードも、まだ保存されていません。だから `git status -sb` には未保存の行が10行以上並びます。今日はそれを GitHub へ送るところまでを行います。
 
 ### ここで見ておきたい判断ポイント
 
-- `git status -sb` に `??` や `M` が出ているなら、まだコミットしていない変更がある
+- `git status -sb` に `??` や `M` が10行以上並ぶのが、この時点では正しい状態
 - `git remote -v` が空なら、まだ GitHub 側の保存先は未接続
 - ブランチ名が `main` 以外でも慌てなくていい
 
@@ -460,10 +461,20 @@ git status --short
 
 ```text
  M README.md
- M src/app/dashboard/page.tsx
+ M package.json
+ M package-lock.json
+ M src/app/layout.tsx
+ M src/app/page.tsx
+ M tsconfig.json
+?? biome.json
+?? docker-compose.yml
+?? prisma/
+?? src/app/dashboard/
+?? src/component/
+?? src/lib/
 ```
 
-表示される行数が違っても心配いりません。ここに出ているのは、履歴に入っている状態から書き換えたファイルです。`README.md` は Step 2 で、`src/app/dashboard/page.tsx` は Day 02 で書き換えました。`package.json` などその他のファイルは Day 01 の初期コミットのまま変更していないので、ここには出てきません。
+行数や並びが違っても心配いりません。`M` は履歴に入っているファイルを書き換えたという印、`??` はまだ一度も保存していないファイルという印です。数が多いのは、Day 01 のセットアップで置いたファイルが、まるごと未保存のまま残っているためです。土台を作った時点のコミットは1本だけで、そのあとの変更はすべてこれから保存します。
 
 もし `.env` や `.env.local` がここに出ていたら、そのまま進めずに、`.gitignore` の設定かファイル名の置き方を先に見直します。今日の目的は、動くものを保存するだけでなく、送っていいものだけを送る習慣を作ることだからです。
 
