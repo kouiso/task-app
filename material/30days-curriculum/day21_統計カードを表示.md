@@ -676,7 +676,9 @@ const averageTimeHours =
   ((overview?.averageTimePerTask ?? 0) / 60).toFixed(1);
 ```
 
-4つとも `?? 0` で受け止めているのは、`overview` が届くまでの一瞬だけ `undefined` になるからです。`undefined / 60` の答えは `NaN` で、`toFixed(1)` を通しても `NaN` のままです。画面には数字ではなく「NaNh」という文字が出ます。ここで 0 を差し込んでおけば、読み込み中は「0.0h」と表示され、値が届いた時点で置き換わります。`totalTasks` と `completionRate` は server が出した答えをそのまま受け取るだけで、画面側では足し算や割り算を一切していません。
+4つとも `?? 0` で受け止めているのは、`overview` が `undefined` になる場面があるからです。`undefined / 60` の答えは `NaN` で、`toFixed(1)` を通しても `NaN` のままです。画面には数字ではなく「NaNh」という文字が出ます。
+
+読み込み中については、Step 6 で `isLoading` のときに先へ進ませない書き方にするので、この4行までは届きません。`?? 0` が実際に働くのは、取得そのものが失敗したときです。ただしその場合、画面には失敗した事実ではなく「0」が並びます。本当に0件なのか取得に失敗したのかを読者が見分けられないので、実務では `error` も受け取って、失敗したときだけ別の案内を出す形にします。`totalTasks` と `completionRate` は server が出した答えをそのまま受け取るだけで、画面側では足し算や割り算を一切していません。
 
 > 完成版 source では、
 > `overview.totalTimeSpent` と

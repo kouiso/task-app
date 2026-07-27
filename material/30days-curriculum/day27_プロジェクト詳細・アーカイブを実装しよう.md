@@ -336,7 +336,7 @@ if (!projectDetail) {
 }
 ```
 
-Props の型が `ProjectDetail | null | undefined` になっているので、この `if` は中身が無い場面をまとめて受け止めます。まだ通信が終わっていない `undefined` のときと、親から明示的に `null` を渡されたときです。存在しない ID を開いたときは `null` にはなりません。`project.getById` が `NOT_FOUND` を投げるので、`data` は `undefined` のままで、代わりに `error` のほうに中身が入ります。どの場合もこの `if` が受け止めるので、案内は1つでかまいません。そしてこの早い `return` には、もう1つの効き目があります。ここを通り抜けた先では、TypeScript が「`projectDetail` には必ず中身がある」と判断してくれます。だからこの後に出てくる `projectDetail.color` や `projectDetail.name` を、`?.` を付けずにそのまま書けます。逆にこの `if` を消すと、以降のすべての参照で型エラーが出ます。
+Props の型が `ProjectDetail | null | undefined` になっているので、この `if` は中身が無い場面をまとめて受け止めます。まだ通信が終わっていない `undefined` のときと、親から明示的に `null` を渡されたときです。存在しない ID を開いたときは `null` にはなりません。`project.getById` が `NOT_FOUND` を投げるので、`data` は `undefined` のままで、代わりに `error` のほうに中身が入ります。どの場合もこの `if` が受け止めます。ただし、受け止め方は同じでも中身は違います。通信中も、通信に失敗したときも、この案内は「プロジェクトが見つかりません」と出ます。読者から見ると、待っているだけなのか本当に無いのかが分かりません。実務では `isLoading` と `error` も親から渡し、待機中・失敗・不在の3つを別々に出し分けます。今日は3つを1つにまとめた形で進めます。そしてこの早い `return` には、もう1つの効き目があります。ここを通り抜けた先では、TypeScript が「`projectDetail` には必ず中身がある」と判断してくれます。だからこの後に出てくる `projectDetail.color` や `projectDetail.name` を、`?.` を付けずにそのまま書けます。逆にこの `if` を消すと、以降のすべての参照で型エラーが出ます。
 
 詳細ビュー本体の骨格はこうなります。
 

@@ -623,7 +623,7 @@ const [error, setError] =
   useState<string | null>(null);
 ```
 
-`callbackUrl` は「ログインが終わったらどこへ戻すか」の行き先です。たとえばログインしていない状態で `/project` を開こうとすると、アプリはログイン画面へ飛ばしたうえで、URL の末尾に `?callbackUrl=/project` を付けます。`searchParams?.get('callbackUrl')` は、その付け足された文字を読み取っています。何も付いていなければ `??` の右側が使われ、`/dashboard` へ戻ります。
+`callbackUrl` は「ログインが終わったらどこへ戻すか」の行き先です。たとえばログインしていない状態で `/project` を開こうとすると、アプリはログイン画面へ飛ばしたうえで、URL の末尾に `?callbackUrl=/project` を付けます。`searchParams?.get('callbackUrl')` は、その付け足された文字を読み取っています。何も付いていなければ `||` の右側が使われ、`/dashboard` へ戻ります。`??` ではなく `||` を使っているので、`?callbackUrl=` のように中身が空の場合も `/dashboard` になります。
 
 読み取った値をそのまま使わず、`isValidRedirectUrl` に通してから `callbackUrl` に入れている点が要です。URL の末尾は誰でも自由に書けます。攻撃者が `?callbackUrl=https://偽サイト` というリンクを配れば、本物のログイン画面を通ったあと利用者を偽サイトへ送り込めてしまいます。通す前に検査しているので、そういう値は捨てられて `/dashboard` に落ち着きます。
 
