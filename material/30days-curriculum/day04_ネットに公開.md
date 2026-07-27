@@ -619,7 +619,7 @@ Day 03 では `.gitignore` と `.env.example` の役割を確認しました。�
 
 ```text
 Day 04 で自分の task-app を初公開できた。
-まだ土台やけど、URL を持てたのがうれしい。
+まだ土台だけど、URL を持てたのがうれしい。
 次は Day 05 からログインまわりに入っていく。
 https://your-task-app.vercel.app
 ```
