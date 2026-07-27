@@ -11,7 +11,33 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from check_anchor import find  # noqa: E402
+from check_anchor import find, find_missing  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[2]
+
+# 実在するファイルは通し、実在しないファイルは止める。読み比べ用の断りは対象外にする。
+MISSING_CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
+    (
+        "完成版に無いパスは拾う",
+        "```tsx\n// filepath: src/app/graduation/page.tsx\n```",
+        [(2, "src/app/graduation/page.tsx")],
+    ),
+    (
+        "完成版に在るパスは通す",
+        "```tsx\n// filepath: src/app/page.tsx\n```",
+        [],
+    ),
+    (
+        "在るパスに注記が付いていても通す",
+        "```tsx\n// filepath: src/app/page.tsx（同じファイルの続き）\n```",
+        [],
+    ),
+    (
+        "読み比べ用の断りは対象外",
+        "```tsx\n// filepath: 読み比べ用サンプル（実ファイルには対応しません）\n```",
+        [],
+    ),
+]
 
 CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
     (
@@ -79,10 +105,16 @@ def main() -> int:
         if got != expected:
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
+    for name, text, expected in MISSING_CASES:
+        got = find_missing(text, REPO)
+        if got != expected:
+            failed += 1
+            print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
+    total = len(CASES) + len(MISSING_CASES)
     if failed:
-        print(f"❌ check_anchor 自己テスト {failed}/{len(CASES)} 失敗")
+        print(f"❌ check_anchor 自己テスト {failed}/{total} 失敗")
         return 1
-    print(f"✅ check_anchor 自己テスト {len(CASES)}/{len(CASES)} 合格")
+    print(f"✅ check_anchor 自己テスト {total}/{total} 合格")
     return 0
 
 

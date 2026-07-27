@@ -47,6 +47,37 @@ def find(text: str) -> list[tuple[int, str]]:
     return hits
 
 
+def find_missing(text: str, root: Path) -> list[tuple[int, str]]:
+    """完成版に存在しないファイルを書き込み先として挙げている行を返す。
+
+    実測で day30 の読み比べ用コードが `src/app/graduation/page.tsx` を名乗っていた。
+    完成版にその画面は無い。見出しに「例です」と書いても、コードを写す瞬間には
+    視界に入らないので、読者はそのパスのファイルを作りにいく。
+    """
+    hits: list[tuple[int, str]] = []
+    fence = None
+    for i, line in enumerate(text.split("\n"), start=1):
+        m = FENCE.match(line)
+        if m:
+            mark = m.group(1)
+            if fence is None:
+                fence = mark
+            elif line.strip().startswith(fence):
+                fence = None
+            continue
+        if fence is None:
+            continue
+        fp = FILEPATH.match(line)
+        if not fp:
+            continue
+        value = fp.group(1).split("（")[0].split("(")[0].strip()
+        if not value.startswith(("src/", "prisma/", "scripts/")):
+            continue
+        if not (root / value).exists():
+            hits.append((i, value))
+    return hits
+
+
 def main(argv: list[str]) -> int:
     args = argv[1:] or ["material/30days-curriculum"]
     targets: list[Path] = []
@@ -64,17 +95,33 @@ def main(argv: list[str]) -> int:
         print("❌ 対象ファイルがありません", file=sys.stderr)
         return 2
 
-    findings: list[tuple[str, int, str]] = []
-    for path in targets:
-        for line, value in find(path.read_text(encoding="utf-8")):
-            findings.append((path.name, line, value))
+    # リポジトリの根。この検査は scripts/curriculum-qa/ に置いてある。
+    root = Path(__file__).resolve().parents[2]
 
+    findings: list[tuple[str, int, str]] = []
+    missing: list[tuple[str, int, str]] = []
+    for path in targets:
+        text = path.read_text(encoding="utf-8")
+        for line, value in find(text):
+            findings.append((path.name, line, value))
+        for line, value in find_missing(text, root):
+            missing.append((path.name, line, value))
+
+    status = 0
     if findings:
         print(f"❌ 書き込み先が分からないコードブロック {len(findings)} 件")
         for name, line, value in findings:
             print(f"  {name}:{line} filepath: {value}")
         print("  実ファイル名を書くか、実ファイルを持たない旨を書いてください。")
-        return 1
+        status = 1
+    if missing:
+        print(f"❌ 完成版に存在しないファイルを書き込み先にしている {len(missing)} 件")
+        for name, line, value in missing:
+            print(f"  {name}:{line} filepath: {value}")
+        print("  読み比べ用なら、その旨をコード欄の中に書いてください。")
+        status = 1
+    if status:
+        return status
 
     print(f"✅ コードブロックの書き込み先 OK（{len(targets)} ファイル）")
     return 0
