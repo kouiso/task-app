@@ -870,7 +870,7 @@ export default function DashboardPage() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-ここから先は、見た目を組み立てる JSX が続きます。押す場所も、値が変わって表示が動く場所もありません。それでも1行目に `'use client'` があるので、この部分の JavaScript もブラウザへ送る対象に入ります。読者のブラウザへ届く JavaScript の量は、ここに書いたタグの数だけ増えます。
+ここから先は、見た目を組み立てる JSX が続きます。押す場所も、値が変わって表示が動く場所もありません。それでも1行目に `'use client'` があるので、この部分の JavaScript もブラウザへ送る対象に入ります。このコンポーネントの実装コードと、そこから読み込んでいる部品が、まとめてブラウザへ届く側に含まれます。
 
 ```tsx
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">

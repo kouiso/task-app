@@ -1316,29 +1316,28 @@ const handleClear = () => {
 useEffect(() => {
   const paramMap: Array<{
     key: keyof SearchFormValues;
+    empty: string;
     transform?: (v: string) => string;
   }> = [
-    { key: 'keyword' },
-    { key: 'projectId' },
-    { key: 'status',
+    { key: 'keyword', empty: '' },
+    { key: 'projectId', empty: 'all' },
+    { key: 'status', empty: 'all',
       transform: (v) =>
-        isTaskStatus(v) ? v
-        : v === 'all' ? 'all'
-        : form.getValues('status') },
-    { key: 'priority',
+        isTaskStatus(v) ? v : 'all' },
+    { key: 'priority', empty: 'all',
       transform: (v) =>
-        isTaskPriority(v) ? v
-        : v === 'all' ? 'all'
-        : form.getValues('priority') },
-    { key: 'assignedTo' },
-    { key: 'dateFrom' },
-    { key: 'dateTo' },
+        isTaskPriority(v) ? v : 'all' },
+    { key: 'assignedTo', empty: 'all' },
+    { key: 'dateFrom', empty: '' },
+    { key: 'dateTo', empty: '' },
   ];
 ```
 
 ここが「条件をURLに置く」設計の見返りです。ブラウザの戻る、リンクの共有、再読み込みのどれで来ても、フォームの値はURLから組み直されます。条件を `useState` だけで持っていると、戻るを押してもURLが変わるだけで画面の入力欄はそのまま、という食い違いが起きます。URLを正、フォームを写しと決めておけば、どちらを見て直せばよいのかで迷いません。
 
-`transform` を持たせたのは、`status` と `priority` だけ値の正しさを確かめてから入れたいからです。おかしな値が来たときは `form.getValues` で今の値をそのまま返し、書き換えずに済ませます。
+`empty` は、そのパラメータがURLに載っていなかったときに入れる値です。キーワードと日付は空文字、4つの Select は `'all'` が「絞り込みなし」を表します。
+
+`transform` を持たせたのは、`status` と `priority` だけ値の正しさを確かめてから入れたいためです。URLを手で書き換えるなどしておかしな値が来たときは `'all'` に戻し、絞り込みなしとして扱います。
 
 **確認ポイント**:
 - `status` / `priority` は型ガードで不正な値を防いでいる
@@ -1346,26 +1345,27 @@ useEffect(() => {
 ```typescript
 // filepath: src/app/search/page.tsx
 // paramMap ループ処理
-  for (const { key, transform }
+  for (const { key, empty, transform }
     of paramMap) {
     const value =
       searchParams.get(key);
-    if (value) {
-      const transformed = transform
-        ? transform(value) : value;
-      form.setValue(key, transformed);
-    }
+    const next = value
+      ? transform
+        ? transform(value)
+        : value
+      : empty;
+    form.setValue(key, next);
   }
 }, [searchParams, form]);
 ```
 
-`if (value)` で囲んでいるので、URLに載っていないパラメータは書き込みません。触っていない項目まで空文字で上書きされると、消したつもりのない条件まで消えます。依存配列に `searchParams` を入れてあるため、この処理はURLが変わるたびに走ります。`handleSearch` でURLを書き換えると、その変化を受けてここが動き、フォームの値がURLに追いつく、という一方向の流れになります。
+7つの項目すべてを毎回書き込みます。URLに載っていない項目は `empty` に戻るので、`?status=TODO` の画面から `status` の付いていないURLへ戻れば、フォームの `status` も `'all'` に戻ります。URLに書いてあることが画面のすべて、と言い切れる状態です。書き込む項目をURLに載っているものだけに絞ると、消えた条件が画面に残り、表示と検索結果が食い違います。
 
-この書き方には裏側もあります。`?status=TODO` の画面から、`status` の付いていないURLへ戻ると、消えた項目は書き換えの対象にならないので、フォームには古い `TODO` が残ります。URLと画面がここだけ食い違います。そろえるなら、URLに無い項目は既定値へ戻す処理を足します。
+依存配列に `searchParams` を入れてあるため、この処理はURLが変わるたびに走ります。`handleSearch` でURLを書き換えると、その変化を受けてここが動き、フォームの値がURLに追いつく、という一方向の流れになります。
 
 **確認ポイント**:
 - 依存配列に `searchParams` と `form` を指定している
-- URLのパラメータをループでフォームに反映している
+- 7つの項目すべてに `form.setValue` を呼んでいる
 
 検索条件が1つでもあるか判定するフラグを定義します。
 

@@ -77,17 +77,19 @@
 
 ### `Module not found`
 
-```
+```text
 Module not found: Can't resolve '@/component/ui/button'
 ```
+
 **原因**: インポートパスが間違っている、またはファイルが存在しない
 **解決**: ファイルの存在を確認し、パスエイリアス（`@/`）が正しく設定されているか`tsconfig.json`を確認します。
 
 ### `Hydration Error`
 
-```
+```text
 Error: Hydration failed because the initial UI does not match what was rendered on the server
 ```
+
 **原因**: サーバーとクライアントで異なるHTMLが生成された
 **解決**: `Date.now()`や`Math.random()`のように実行するたびに変わる値を、最初の描画で使っていないか確認します。`'use client'`を付けても直りません。`'use client'`を付けたコンポーネントも、ブラウザへ送る前にサーバー側で一度描画されるので、サーバーとブラウザで値がずれる状況は変わらないためです。変わる値は`useEffect`の中で計算して`useState`に入れ、画面へ出すのはブラウザでの描画からにします。最初の描画では`--`など固定の文字を表示しておけば、サーバーとブラウザのHTMLが一致します。
 
@@ -96,7 +98,7 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 **原因**: 認証が必要なAPIに未認証でアクセスしている
 **解決**: ログイン画面からログインし直します。あわせて、Cookieが正しく設定されているか確認します。
 
-### `Prisma: Invalid `prisma.xxx.findMany()` invocation`
+### ``Prisma: Invalid `prisma.xxx.findMany()` invocation``
 
 **原因**: Prismaクライアントとスキーマが不一致
 **解決**: `npx prisma generate`を実行してクライアントを再生成します。

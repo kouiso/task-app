@@ -604,7 +604,7 @@ const handleSubmit = (
       id: data.id,
       name: data.name,
       description:
-        data.description ?? null,
+        data.description || null,
       color: data.color,
       startDate: data.startDate
         ? dateOnlyToUtcStartIso(
@@ -621,7 +621,7 @@ const handleSubmit = (
 
 **確認ポイント**:
 - `data.id` がある場合に `updateMutation.mutate` を呼んでいる
-- `description` に `?? null` を使って `undefined` のみ `null` に変換している
+- `description` に `|| null` を使って、空欄のときは `null` に変換している
 
 同じ `handleSubmit` 関数の `else` 分岐です。`data.id` がない場合（新規作成）は Day 10 の `createMutation` を呼びます。
 
@@ -668,7 +668,7 @@ const handleSubmit = (
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
-プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。完成版 source では `description || null` を使い、説明欄を空にして保存したときは `null` を送ります。
+プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。上のコードで `description || null` を使ったのは、説明欄を空にして保存したときに `null` を送るためです。
 
 | 式 | `description` が `''`（空文字）の場合 | このアプリでの結果 |
 |-----|--------------------------------------|------|

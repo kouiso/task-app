@@ -228,12 +228,21 @@ jobs:
       # 「0件検査して緑」になる。
       - name: Gate 4 — 用語ゆれ・day間参照チェック (corpus 全体)
         run: |
+          # 2つのチェックを1つの run: に置くと、前半が落ちた時点で bash -e が
+          # 打ち切って後半が一度も走らない。レビューで「片方しか見えていない」
+          # 状態を毎回作るため、終了コードを個別に受けて最後にまとめて落とす。
+          terms_status=0
+          crossref_status=0
           echo "::group::check_terms.py — 同じ概念が2通りの表記に割れていないか"
-          python3 scripts/curriculum-qa/check_terms.py material/30days-curriculum
+          python3 scripts/curriculum-qa/check_terms.py material/30days-curriculum || terms_status=$?
           echo "::endgroup::"
           echo "::group::check_crossref.py — 前の日を指す参照の先が実在するか"
-          python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum
+          python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum || crossref_status=$?
           echo "::endgroup::"
+          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ]; then
+            echo "::error::Gate 4 失敗 (check_terms.py=$terms_status / check_crossref.py=$crossref_status)"
+            exit 1
+          fi
 
       # gen_procedure_map.py は「生成器」であってチェッカーではないため配線しない。
       # CI に置くと再生成して破棄するだけの「緑のno-op」になり、
