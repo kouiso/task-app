@@ -13,6 +13,7 @@ import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { isValidRedirectUrl } from '@/lib/redirect';
 import { api } from '@/trpc/react';
 
 const loginSchema = z.object({
@@ -21,25 +22,6 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
-
-/**
- * Open Redirect対策：URL が相対パスで同一オリジンであることを検証
- */
-function isValidRedirectUrl(url: string): boolean {
-  if (!url) return false;
-
-  // プロトコル相対URL（//example.com）は許可しない
-  if (url.startsWith('//')) return false;
-
-  // ブラウザの URL 解決は円記号をスラッシュと同一視するため、/\evil.example が外部へ抜ける
-  if (url.includes('\\')) return false;
-
-  // 外部URLは許可しない
-  if (url.startsWith('http://') || url.startsWith('https://')) return false;
-
-  // 相対パスのみを許可
-  return url.startsWith('/');
-}
 
 function LoginForm() {
   const searchParams = useSearchParams();

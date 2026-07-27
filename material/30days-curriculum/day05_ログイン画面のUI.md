@@ -556,6 +556,8 @@ import文を追加します。
 
 ```typescript
 // filepath: src/app/login/page.tsx
+import { isValidRedirectUrl }
+  from '@/lib/redirect';
 import { api } from '@/trpc/react';
 import {
   useRouter,
@@ -567,41 +569,41 @@ import toast from 'react-hot-toast';
 ```
 
 **確認ポイント**:
-- `api` / `useRouter` / `useSearchParams` / `useState` / `toast` の import を追加した
+- `isValidRedirectUrl` / `api` / `useRouter` / `useSearchParams` / `useState` / `toast` の import を追加した
 - `npm run dev` でエラーが出ていない
 
 > `react-hot-toast` はログイン成功時に通知メッセージを表示するライブラリです。Day 01の初期セットアップでインストール済みなので、import するだけで使えます。
 >
 > `useSearchParams` を使うコンポーネントには `Suspense` ラッパーが必要です。Step 9で追加するので、このステップではエラーが出る場合があります。
 
-まず、LoginForm の**外側**（コンポーネントの上）にセキュリティ関数を定義します。
+まず、遷移先を検査する関数を別ファイルに作ります。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// LoginFormの外側（モジュールスコープ）に定義
+// filepath: src/lib/redirect.ts
 // Open Redirect対策: 相対パスのみを許可
-function isValidRedirectUrl(
+export function isValidRedirectUrl(
   url: string
 ): boolean {
   // URLが空ならfalseを返す
   if (!url) return false;
-  // プロトコル相対URL（//example.com）を禁止
-  if (url.startsWith('//')) return false;
+  // ブラウザが解釈前に取り除く空白文字を禁止
+  if (url.includes('\t')
+    || url.includes('\n')
+    || url.includes('\r')) return false;
   // 円記号はブラウザが / と同じに扱うため禁止
   if (url.includes('\\')) return false;
-  // 外部URLを禁止
-  if (url.startsWith('http://')
-    || url.startsWith('https://')) return false;
+  // プロトコル相対URL（//example.com）を禁止
+  if (url.startsWith('//')) return false;
   // 相対パスのみを許可
   return url.startsWith('/');
 }
 ```
 
 **確認ポイント**:
-- `isValidRedirectUrl` 関数を LoginForm コンポーネントの外側に定義した
+- `src/lib/redirect.ts` を新しく作った
 - `npm run dev` でエラーが出ていない
 
-> `isValidRedirectUrl` を LoginForm の外に置くのがポイントです。この関数はコンポーネントの状態に依存しないため、モジュールスコープ（ファイルの直下）に定義します。再レンダリング（画面の描き直し）のたびに関数が再生成されるのを防げます。
+> 画面のファイルではなく `src/lib/` に置くのは、同じ判定をミドルウェア（どのページを表示するときも手前で必ず通る共通の処理）でも使うためです。同じ規則を2箇所に書き写すと、片方だけ直したときに緩いほうが残ります。1つに寄せておけば、直す場所も1つで済みます。
 
 次に、LoginForm 内の先頭に以下を追加します。
 
@@ -628,7 +630,9 @@ const [error, setError] =
 
 読み取った値をそのまま使わず、`isValidRedirectUrl` に通してから `callbackUrl` に入れている点が要です。URL の末尾は誰でも自由に書けます。攻撃者が `?callbackUrl=https://偽サイト` というリンクを配れば、本物のログイン画面を通ったあと利用者を偽サイトへ送り込めてしまいます。通す前に検査しているので、そういう値は捨てられて `/dashboard` に落ち着きます。
 
-`\` を弾く行が入っているのは、この文字がブラウザの URL 解釈では `/` と同じ扱いになるためです。`/\偽サイト` は `/` で始まり `//` でもないので、この行が無いと検査を通り抜け、行き先は外部サイトになります。見た目が相対パスでも外へ出る書き方がある、という一例です。
+`\` を弾く行が入っているのは、この文字がブラウザの URL 解釈では `/` と同じ扱いになるためです。`/\偽サイト` は `/` で始まり `//` でもないので、この行が無いと検査を通り抜け、行き先は外部サイトになります。
+
+タブ・改行・復帰を弾く行も同じ理由です。ブラウザは URL を解釈する前にこの3種類を取り除きます。`?callbackUrl=/%09/偽サイト` は検査には `/` で始まる文字列として届きますが、取り除いたあとは `//偽サイト` になり、外部サイトを指します。見た目が相対パスでも外へ出る書き方がある、という一例です。
 
 `useState<string | null>(null)` で用意した `error` は、サーバーから返ってきたエラー文言の置き場です。ここは zod の判定結果とは別物です。zod が扱うのは「入力欄の形が正しいか」で、`error` に入るのは「形は正しいが、そのメールアドレスとパスワードの組み合わせでは入れない」という返事です。判定する場所が違うので、置き場も分けています。
 

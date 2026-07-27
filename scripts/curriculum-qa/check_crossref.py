@@ -110,12 +110,16 @@ def has_own_evidence(body: str, token: str, day: int) -> bool:
       day09「`create` や `update` は、それを実際に使う Day 10 以降で1つずつ足していきます」
     この行を根拠に「Day 09 の `update`」を実在と判定すると、参照切れを見逃す。
     そこで、別の day を指している行は証拠から外し、それ以外の行が1つでも要る。
+
+    ただし、その行が対象の day 自身にも触れているなら先送りではない。実例:
+      day10「Day 10 の `foo` は Day 11 でも使います」
+    ここで `foo` が在るのは Day 10 なので、Day 11 への言及を理由に落とすと誤検出になる。
     """
     for line in body.split("\n"):
         if not contains(line, token):
             continue
-        others = {int(m.group(1)) for m in DAY_MENTION.finditer(line)} - {day}
-        if not others:
+        mentioned = {int(m.group(1)) for m in DAY_MENTION.finditer(line)}
+        if not (mentioned - {day}) or day in mentioned:
             return True
     return False
 
@@ -148,9 +152,18 @@ def logical_lines(text: str):
 
 
 def day_files(root: Path) -> dict[int, Path]:
-    found = {}
+    """day 番号をキーにファイルを引けるようにする。
+
+    同じ番号のファイルが2つあると、後から入れた方だけが残り、もう一方は
+    参照元としても参照先としても検査対象から消える。消えたファイルの参照切れは
+    誰も見ないまま緑になるので、黙って上書きせずその場で止める。
+    """
+    found: dict[int, Path] = {}
     for p in sorted(root.glob("day[0-9][0-9]_*.md")):
-        found[int(p.name[3:5])] = p
+        num = int(p.name[3:5])
+        if num in found:
+            raise ValueError(f"day {num:02d} のファイルが2つあります: {found[num].name} / {p.name}")
+        found[num] = p
     return found
 
 
@@ -180,7 +193,11 @@ def main(argv: list[str]) -> int:
         print(f"❌ ディレクトリが見つかりません: {root}", file=sys.stderr)
         return 2
 
-    targets = day_files(root)
+    try:
+        targets = day_files(root)
+    except ValueError as e:
+        print(f"❌ {e}", file=sys.stderr)
+        return 2
     if not targets:
         print(f"❌ dayファイルが見つかりません: {root}", file=sys.stderr)
         return 2
