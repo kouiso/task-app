@@ -33,7 +33,7 @@ flowchart TD
     B -->|No| D[ボタン非表示]
     C --> E[編集ボタン]
     C --> F[削除ボタン]
-    E --> G[テキストエリアに切替]
+    E --> G[テキストエリアに切り替え]
     G --> H[api.comment.update]
     F --> I[確認ダイアログ表示]
     I --> J[api.comment.delete]
@@ -342,7 +342,7 @@ const editCommentForm =
 
 > `editingCommentId` が `null` なら
 > 通常表示、値があれば編集モードです。
-> Day 15 で学んだ「モード切替」パターンを
+> Day 15 で学んだ「モード切り替え」パターンを
 > コメントにも活用しています。
 
 #### state の役割

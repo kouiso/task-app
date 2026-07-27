@@ -775,7 +775,7 @@ const canArchiveProject = currentMemberRole
   : false;
 ```
 
-権限判定を `ProjectDetailView` の内部ではなく `page.tsx` で行うのは、サーバーと同じ `hasPermission` を使って「見せてよいボタンか」を一箇所で決めるためです。コンポーネントは受け取った `boolean` に従って表示を切り替えるだけになり、権限ロジックが画面のあちこちに散らばりません。
+権限判定を `ProjectDetailView` の内部ではなく `page.tsx` で行うのは、サーバーと同じ `hasPermission` を使って「見せてよいボタンか」を1か所で決めるためです。コンポーネントは受け取った `boolean` に従って表示を切り替えるだけになり、権限ロジックが画面のあちこちに散らばりません。
 
 `ProjectDetailView` は Day 11 の Step 9 で作った
 URL ルーティングの分岐内に配置します。

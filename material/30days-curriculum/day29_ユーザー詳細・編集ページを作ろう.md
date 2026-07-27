@@ -339,7 +339,7 @@ src/app/user/[id]/page.tsx
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
-// このファイルは /user/なんでも という全てのURLに対応する
+// このファイルは /user/なんでも というすべてのURLに対応する
 // URLの「なんでも」部分が params['id'] として受け取れる
 export default function UserDetailPage() {
   // 次のステップでここに params から id を取り出す処理を書く

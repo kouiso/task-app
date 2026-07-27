@@ -634,7 +634,7 @@ const TaskGroupSection = ({
 };
 ```
 
-> `canEditProject` / `canDeleteProject` は `MyTasksPage` から渡された関数です。`TaskGroupSection` 自身はロールを判定せず、渡された関数をそのまま `task.projectId` に適用するだけにすることで、権限ロジックが1箇所（`MyTasksPage`）にまとまります。渡し忘れると `TaskCard` のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが表示されてしまいます。
+> `canEditProject` / `canDeleteProject` は `MyTasksPage` から渡された関数です。`TaskGroupSection` 自身はロールを判定せず、渡された関数をそのまま `task.projectId` に適用するだけにすることで、権限ロジックが1か所（`MyTasksPage`）にまとまります。渡し忘れると `TaskCard` のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが表示されてしまいます。
 
 > `cn()` は `clsx` + `tailwind-merge` のユーティリティです。条件付きでクラス名を結合できます。`titleClassName` に `"text-destructive"` を渡すとタイトルが赤色になります。
 

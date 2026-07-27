@@ -20,6 +20,10 @@ FILEPATH = re.compile(r"^\s*(?://|#)\s*filepath:\s*(.+?)\s*$")
 # 「続き」「同上」だけで、どのファイルなのかを名乗っていない値。
 # 「読み比べ用サンプル」は実ファイルを持たないと明言しているので通す。
 VAGUE = re.compile(r"^(続き|同上|前の続き|上記の続き|同じファイル)[（(]?[^）)]*[）)]?$")
+# 同じ注記が2回以上ぶら下がった値。実測で、上の行を書き換えながら下の行を作る処理が
+# 書き換え済みの値を拾い直し、`（同じファイルの続き）` が最大6回積み上がっていた。
+# 指示語ではないので VAGUE では捕まらず、読者が写経する欄にそのまま残る。
+REPEATED = re.compile(r"([（(][^）)]+[）)])\1")
 
 
 def find(text: str) -> list[tuple[int, str]]:
@@ -38,7 +42,7 @@ def find(text: str) -> list[tuple[int, str]]:
         if fence is None:
             continue
         fp = FILEPATH.match(line)
-        if fp and VAGUE.match(fp.group(1)):
+        if fp and (VAGUE.match(fp.group(1)) or REPEATED.search(fp.group(1))):
             hits.append((i, fp.group(1)))
     return hits
 

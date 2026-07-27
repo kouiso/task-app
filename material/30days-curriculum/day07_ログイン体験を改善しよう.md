@@ -1284,13 +1284,13 @@ flowchart TD
 
 > **なぜ middleware で `session.ts` を import しない？** middleware は Edge Runtime で動くため、`cookies()` を使う `session.ts` は import できません。`jose` を直接使って JWT 検証します。
 
-> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。判定の本体は Day 05 で作った `src/lib/redirect.ts` の `isValidRedirectUrl` です。`/` で始まること、`//` では始まらないこと、`\` やタブ・改行・復帰を含まないことを、そちらが確かめます。ここで足しているのは `://` を含まないという条件だけです。同じ規則を2箇所へ書き写すと、片方だけ直したときに緩いほうが残ります。
+> **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。判定の本体は Day 05 で作った `src/lib/redirect.ts` の `isValidRedirectUrl` です。`/` で始まること、`//` では始まらないこと、`\` やタブ・改行・復帰を含まないことを、そちらが確かめます。ここで足しているのは `://` を含まないという条件だけです。同じ規則を2か所へ書き写すと、片方だけ直したときに緩いほうが残ります。
 
 **確認ポイント**:
 - [ ] `src/middleware.ts` が作成できた（`src/app/` ではなく `src/` 直下）
 - [ ] `config.matcher` でアセットファイルを除外している
 
-**学んだこと**: Next.js の middleware はすべてのリクエストの入口で動きます。認証チェックを一箇所に集約できるのでページごとにチェックコードを書く必要がありません。
+**学んだこと**: Next.js の middleware はすべてのリクエストの入口で動きます。認証チェックを1か所に集約できるのでページごとにチェックコードを書く必要がありません。
 
 ---
 

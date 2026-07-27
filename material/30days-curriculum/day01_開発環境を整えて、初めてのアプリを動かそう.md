@@ -830,7 +830,7 @@ export default function HomePage() {
 **確認ポイント**: `<a>` と `<Link>` の2種類のリンクを書き分けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）（同じファイルの続き）
+// filepath: src/app/page.tsx（同じファイルの続き）
                 >
                   ダッシュボードへ入る
                 </Link>
@@ -862,7 +862,7 @@ export default function HomePage() {
 **確認ポイント**: 「今日の進捗」のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）
+// filepath: src/app/page.tsx（同じファイルの続き）
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -894,7 +894,7 @@ export default function HomePage() {
 **確認ポイント**: 3枚目の `<article>` を閉じて、`id="today-goals"` まで書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）
+// filepath: src/app/page.tsx（同じファイルの続き）
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
@@ -926,7 +926,7 @@ export default function HomePage() {
 **確認ポイント**: `<ul>` の中に4つの `<li>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）
+// filepath: src/app/page.tsx（同じファイルの続き）
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればいいわけではない。
@@ -958,7 +958,7 @@ export default function HomePage() {
 **確認ポイント**: `id="next-step"` の `<article>` を開いたところまで書けていることを確認できたら、最後のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）
+// filepath: src/app/page.tsx（同じファイルの続き）
                 Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
                 今日のページは入口として、ダッシュボードは明日の土台として整えておく。
               </p>

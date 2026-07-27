@@ -383,7 +383,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 **実装**:
 
-先に Day 8 のサイドバーへタスク導線を追加します。
+先に Day 08 のサイドバーへタスク導線を追加します。
 `lucide-react` の既存 import に
 `ClipboardList` を加えてください。
 
@@ -1187,13 +1187,13 @@ const { label, color } = STATUS_CONFIG[status];
 
 **このコードの強み**:
 
-- ステータスの追加は1行。色とラベルを1箇所で管理
+- ステータスの追加は1行。色とラベルを1か所で管理
 - `as const` で型が推論されるので、typo するとコンパイルエラー
 - switch を書く場所がゼロになる
 
 #### 覚えておきたいエッセンス
 
-switch 文は「設定オブジェクト + lookup」に置き換えられることが多いです。データと振る舞いを1箇所にまとめると、追加・変更が楽になります。
+switch 文は「設定オブジェクト + lookup」に置き換えられることが多いです。データと振る舞いを1か所にまとめると、追加・変更が楽になります。
 
 ## 今日のまとめ
 

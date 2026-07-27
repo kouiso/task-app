@@ -55,6 +55,16 @@ CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
         [(2, "続き"), (10, "同上")],
     ),
     (
+        "同じ注記が2回ぶら下がったら拾う",
+        "```tsx\n// filepath: src/a.tsx（同じファイルの続き）（同じファイルの続き）\n```",
+        [(2, "src/a.tsx（同じファイルの続き）（同じファイルの続き）")],
+    ),
+    (
+        "違う注記が2つ並ぶのは通す",
+        "```tsx\n// filepath: src/a.tsx（Step 3 で作成）（同じファイルの続き）\n```",
+        [],
+    ),
+    (
         "filepath の無いブロックは対象外",
         "```tsx\nconst a = 1;\n```",
         [],

@@ -459,7 +459,7 @@ api.report.getOverview.useQuery();
 
 **ゴール**: 必要なモジュールを読み込みます。
 
-先に、Day 8 で作ったサイドバーから
+先に、Day 08 で作ったサイドバーから
 レポートページへ移動できるようにします。
 `src/component/layout/app-layout.tsx` の
 `lucide-react` の import に `BarChart` を追加してください。

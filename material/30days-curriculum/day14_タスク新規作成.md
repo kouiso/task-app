@@ -679,7 +679,7 @@ export function TaskDialog({
 `useForm` から受け取った7つは、すべてこのあとの入力欄で使います。`register` は Input と Textarea をフォームへつなぐ道具、`control` は Select をつなぐ道具で、この使い分けが Step 5 の山場になります。いちばん効いているのは `resolver: zodResolver(taskFormSchema)` の1行です。Step 1 で書いたスキーマが、ここで送信前の検問として組み込まれます。この行が抜けるとスキーマは書いただけの存在になり、タイトルが空でも送信が通ります。関数はまだ続くので、次のブロックへ進みます。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）（同じファイルの続き）
+// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
   const selectedProjectId =
     watch('projectId');
   const projectsRef = useRef(projects);
@@ -699,7 +699,7 @@ export function TaskDialog({
 プロジェクト一覧の参照はレンダー中に書き換えず、画面へ反映されたあとで同期します。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）（同じファイルの続き）（同じファイルの続き）
+// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
   useEffect(() => {
     projectsRef.current = projects;
   }, [projects]);

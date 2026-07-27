@@ -791,7 +791,7 @@ const bulkCompleteMutation =
     },
   });
 
-// 一括完了のハンドラ
+// 一括完了のハンドラー
 const handleBulkComplete = () => {
   if (canCompleteSelected) {
     bulkCompleteMutation.mutate({
@@ -870,7 +870,7 @@ const bulkDeleteMutation =
     },
   });
 
-// 削除ボタンのハンドラ（ダイアログを開くだけ）
+// 削除ボタンのハンドラー（ダイアログを開くだけ）
 const handleBulkDelete = () => {
   if (canDeleteSelected) {
     setBulkDeleteDialogOpen(true);
@@ -980,7 +980,7 @@ const bulkUpdateStatusMutation =
     },
   });
 
-// ステータス変更のハンドラ
+// ステータス変更のハンドラー
 const handleBulkUpdateStatus = (
   status: TaskStatus
 ) => {

@@ -323,7 +323,7 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 });
 ```
 
-`archive` は `true`、`unarchive` は `false` を渡しているだけで、中身の処理は同じ関数に任せています。同じロジックを2箇所に書き写すと、片方だけ直して片方を直し忘れるバグが起きやすくなります。関数にまとめておくと、権限チェックのルールを直すときも1箇所を直すだけで済みます。最後の `});` で `projectRouter` 全体を閉じます。
+`archive` は `true`、`unarchive` は `false` を渡しているだけで、中身の処理は同じ関数に任せています。同じロジックを2か所に書き写すと、片方だけ直して片方を直し忘れるバグが起きやすくなります。関数にまとめておくと、権限チェックのルールを直すときも1か所を直すだけで済みます。最後の `});` で `projectRouter` 全体を閉じます。
 
 #### 今日書いた3つの権限チェックの使い分け
 
@@ -333,7 +333,7 @@ Step 0 では権限まわりの書き方が3パターン出てきました。表
 |------|---------------------|-----------|
 | `update` | `assertMemberPermission(..., 'canManageMembers')` | 複数の権限で共通して使う、標準の書き方 |
 | `delete` | `role !== PROJECT_MEMBER_ROLE.OWNER` を直接比較 | 他の権限と間違って混ざると困る、特に重い操作だけの例外 |
-| `archive` / `unarchive` | `setArchiveStatus` にまとめて`assertMemberPermission(..., 'canArchive')`を1箇所に | まったく同じ処理を2つの手続きが呼ぶので、関数化して重複を消す |
+| `archive` / `unarchive` | `setArchiveStatus` にまとめて`assertMemberPermission(..., 'canArchive')`を1か所に | まったく同じ処理を2つの手続きが呼ぶので、関数化して重複を消す |
 
 基本は `assertMemberPermission` を使います。他の権限と混ざると困る重い操作だけ、直接比較にします。まったく同じ処理を2手続き以上が呼ぶなら、関数にまとめます。この判断は Day 12 の `addMember` / `removeMember` でも使います。
 

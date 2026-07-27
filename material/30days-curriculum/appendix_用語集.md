@@ -7,11 +7,11 @@
 | カテゴリ | 主な用語 | 主に登場するPhase |
 |---|---|---|
 | フロントエンド | React / Next.js / Tailwind / shadcn/ui | Phase 1-8(全カリキュラム) |
-| 認証 | JWT / Cookie / bcryptjs / jose | Phase 2 (Day 5-8) |
-| バックエンド | tRPC / Prisma / PostgreSQL | Phase 3-5 (Day 9-20) |
-| データベース | Table / Relation / CRUD / CUID | Phase 3-4 (Day 9-17) |
+| 認証 | JWT / Cookie / bcryptjs / jose | Phase 2 (Day 05-08) |
+| バックエンド | tRPC / Prisma / PostgreSQL | Phase 3-5 (Day 09-20) |
+| データベース | Table / Relation / CRUD / CUID | Phase 3-4 (Day 09-17) |
 | レポート・可視化 | Recharts | Phase 6 (Day 21-23) |
-| 開発ツール | Git / npm / TypeScript / Biome | Phase 1 (Day 1) + 随時 |
+| 開発ツール | Git / npm / TypeScript / Biome | Phase 1 (Day 01) + 随時 |
 | アーキテクチャ | Server/Client Component / Edge Runtime | Day全般 |
 
 ![用語が実際に使われている画面(ダッシュボード)](./screenshots/dashboard.png)
