@@ -10,6 +10,8 @@ Day 10 では react-hook-form・zod・tRPC の `useMutation`（データ変更AP
 
 Day 10 で作った ProjectDialog を「編集モード」で再利用し、プロジェクトの更新と削除を実装します。既存データをフォームに反映する方法と、削除前の確認ダイアログも学びます。
 
+この日は、まずサーバー側の `update` / `delete` / `archive` / `unarchive` の4つを自分で書きます。そのあと画面をつなぎます。
+
 スクリーンショット: 編集モードの ProjectDialog の表示を確認してください。
 
 ![プロジェクト編集ダイアログに既存の名前と説明が入っている画面](./screenshots/project-detail-dialog.png)

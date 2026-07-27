@@ -10,6 +10,8 @@ Day 11 ではプロジェクトの編集・削除機能を実装しました。`
 
 プロジェクトにメンバーを追加・削除できる機能を実装します。`ProjectDetailView` コンポーネントでメンバー一覧を表示し、`page.tsx` からprops経由で操作を制御します。
 
+この日は、まずサーバー側の `getById` / `getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` の5つを自分で書きます。そのあと画面をつなぎます。
+
 スクリーンショット: メンバー管理画面（プロジェクト詳細ページ内）
 
 ![プロジェクト詳細ページの左側にメンバー3人とロールが並んだ画面](./screenshots/project-detail-tasks.png)
