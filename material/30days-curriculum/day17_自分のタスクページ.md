@@ -561,7 +561,9 @@ interface TaskGroupSectionProps {
   }>;
 ```
 
-残りは親から受け取る関数と判定です。
+残りは親から受け取る関数と判定です。`onEdit` と `onDelete` はボタンを押したときの処理、
+`onTimeLogSuccess` は時間を記録できたときの合図です。
+`canEditProject` と `canDeleteProject` は、そのプロジェクトで編集や削除をしてよいかを返します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
