@@ -370,8 +370,8 @@ src/app/user/
 
 `[id]` の下にさらに `edit/` を置くのは、URLの入れ子とフォルダの入れ子を同じ形にそろえるためです。`/user/abc123` は `[id]/page.tsx` が受け持ち、`/user/abc123/edit` は `[id]/edit/page.tsx` が受け持ちます。編集ページ側でも同じ `[id]` の値を読めるので、詳細から編集へIDを持ち回す仕組みを別に作る必要はありません。
 
-まずは route-level 404 を担当する
-server wrapper を作ります。
+まずは、その ID の人が居ないときに404を返す役目のファイルを作ります。
+この役目を持つ入口のことを、この教材では server wrapper と呼びます。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
@@ -514,10 +514,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 `if (!user)` の早期リターンを通過した後に権限変数を宣言します。`user` が確実に存在する状態でないと `user.id` に触れないためです。
 
-> route-level 404 は Step 2 の
-> `page.tsx` で担当します。
-> client component 側の `!user` は
-> 一時的な再取得中に備える保険です。
+> 存在しないIDへの404は Step 2 の
+> `page.tsx` が担当します。
+> ブラウザ側の部品にある `!user` は、
+> 取り直しの最中に備える保険です。
 >
 > 期限列の完成版 source は
 > `format(new Date(task.dueDate), ...)` ではなく
@@ -556,7 +556,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 **確認ポイント**:
 - 存在するユーザーIDでアクセスするとユーザー名が表示される
-- 完成版 source では、存在しないIDは route-level 404 に流れる
+- 完成版では、存在しないIDは Step 2 の `page.tsx` が404へ流す
 - 読み込み中はスピナーが表示される
 
 ---
@@ -955,8 +955,8 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 
 **ゴール**: `/user/[id]/edit` の骨組みを作り、権限チェックを実装します。
 
-まずは route-level 404 を担当する
-server wrapper を作ります。
+まずは、その ID の人が居ないときに404を返す役目のファイルを作ります。
+この役目を持つ入口のことを、この教材では server wrapper と呼びます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
