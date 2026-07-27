@@ -183,6 +183,11 @@ npm run build
 環境差はあるけど、
 だいたい次のような流れになればよいです。
 
+なお `npm run build` は、その中で `prisma generate` も実行します。
+そのため `▲ Next.js` の行より先に Prisma の行が数行流れます。
+`Generated Prisma Client` という行が出ていれば、そこは正常です。
+ページ数の `(5/5)` の部分は、その時点のページ数によって変わります。
+
 ```text
    ▲ Next.js 15.5.21
    - Environments: .env

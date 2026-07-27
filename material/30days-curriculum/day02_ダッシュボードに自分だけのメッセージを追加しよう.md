@@ -123,8 +123,8 @@ export default function DashboardPage() {
             Hello Task-App
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-            Day 01 で立ち上げた最初のダッシュボードだ。
-            ここから少しずつ、自分専用の画面に育てていこう。
+            Day 01 で用意した最初のダッシュボードです。
+            ここから少しずつ、自分専用の画面にしていきます。
           </p>
         </section>
       </div>
