@@ -16,8 +16,8 @@
 
 | エラー | 原因 | 解決方法 |
 |--------|------|----------|
-| `node: command not found` | Node.jsがインストールされていない | Day 01のOS別手順でNode.js 22以上をインストール。mise利用時は`task-app`フォルダで`mise install`を実行 |
-| `npm install`でエラー | Node.jsのバージョンが古い可能性がある | `node -v`で確認し、22未満ならDay 01のOS別手順で更新。mise利用時は`mise install`を実行 |
+| `node: command not found` | Node.jsがインストールされていない | Day 01のOS別手順でNode.js 22以上をインストール。mise利用時は`task-app`フォルダで`mise trust && mise install`を実行 |
+| `npm install`でエラー | Node.jsのバージョンが古い可能性がある | `node -v`で確認し、22未満ならDay 01のOS別手順で更新。mise利用時は`mise trust && mise install`を実行 |
 | `prisma generate`でエラー | `DATABASE_URL`が設定されていない | `.env`ファイルに`DATABASE_URL`を設定 |
 | PostgreSQLに接続できない | DockerまたはPostgreSQLが起動していない | `docker compose up -d`でコンテナを起動 |
 
@@ -27,7 +27,7 @@
 |--------|------|----------|
 | `git push`で認証エラー | GitHubの認証設定が不足 | SSH鍵の設定またはPersonal Access Tokenの設定 |
 | Vercelデプロイでビルドエラー | 環境変数が設定されていない | Vercelダッシュボードで`DATABASE_URL`と`JWT_SECRET`を設定 |
-| `SKIP_ENV_VALIDATION`エラー | CI環境で環境変数が不足 | Vercelの場合は自動設定されるので、ローカルの`.env`を確認 |
+| `環境変数の検証に失敗しました` | `.env` に必要な変数がない、または `JWT_SECRET` が32文字未満 | エラー本文に出ている変数名を `.env.example` と見比べて `.env` に追記します。Vercel では Project Settings の Environment Variables に `DATABASE_URL` と `JWT_SECRET` を登録します |
 
 ### Day 05-08: 認証・ログイン
 
@@ -54,7 +54,7 @@
 |--------|------|----------|
 | タスクが表示されない | プロジェクトのメンバーでない | プロジェクトメンバーに追加してもらう |
 | タスクの担当者を設定できない | 担当者がプロジェクトメンバーでない | まずメンバーとして追加してから担当者に設定 |
-| ステータス変更が反映されない | ブラウザキャッシュ | ページをリロード（Ctrl+Shift+R） |
+| ステータス変更が反映されない | `onSuccess` での `invalidate()` 呼び忘れで、一覧の控えが古いまま | ステータス変更の `useMutation` の `onSuccess` に `utils.task.getAll.invalidate()` があるか確認します。リロード（Windows と Linux は Ctrl+Shift+R、Mac は Cmd+Shift+R）で直る場合も、原因はこの呼び忘れです |
 
 ### Day 17-25: 応用機能
 
@@ -62,14 +62,12 @@
 |--------|------|----------|
 | 検索結果が0件 | 自分が関わるタスク/プロジェクトのみが対象 | 検索キーワードとフィルター条件を確認 |
 | レポートにデータが表示されない | 完了タスクがない、または期間外 | タスクを完了にして、期間設定を確認 |
-| 作業時間が保存されない | 記録ダイアログで数値が未入力 | 分数を入力してから保存する |
+| 作業時間が保存されない | 時間と分の合計が0のまま保存しようとしている（`1分以上入力してください` が出る） | 時間か分のどちらかに1以上を入れてから保存する |
 
-### Day 26-30: テスト・品質
+### Day 26-30: 仕上げ・公開
 
 | エラー | 原因 | 解決方法 |
 |--------|------|----------|
-| テストが失敗する | テスト用DBに接続できない | `docker compose up -d`でテスト用DBを起動 |
-| `vitest`が見つからない | 依存パッケージが不足 | `npm install`を実行 |
 | 型エラー（`tsc --noEmit`） | TypeScriptの型定義が不正 | エラーメッセージの行番号を確認して型を修正 |
 | Biomeのエラー | コードスタイルの違反 | `npm run lint:fix`で自動修正 |
 
