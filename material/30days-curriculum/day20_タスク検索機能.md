@@ -63,7 +63,7 @@ flowchart TD
 |---------|------|
 | `src/server/api/routers/search.ts` | search ルーターの残り3手続きを追記し、完成版の並びに揃える |
 | `src/app/search/page.tsx` | 検索ページ本体（新規作成） |
-| `src/app/search/loading.tsx` | ローディング画面（既存） |
+| `src/app/search/loading.tsx` | ローディング画面（新規作成） |
 
 ### 新しく学ぶ概念
 
@@ -502,6 +502,20 @@ Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード�
 - `npm run dev` で型エラーが出ていない
 
 ---
+
+`src/app/search/loading.tsx` を新規作成します。ページと同じフォルダに `loading.tsx` を置くと、Next.js はそのページの読み込み中に自動でこれを表示します。
+
+```tsx
+// filepath: src/app/search/loading.tsx
+import { PageSkeleton }
+  from '@/component/ui/page-skeleton';
+
+export default function Loading() {
+  return <PageSkeleton />;
+}
+```
+
+自分で `isLoading` を見て切り替えなくてよいのは、この置き場所そのものが合図になっているからです。ファイル名と場所で役割が決まるので、`page.tsx` 側に読み込み中の分岐を書かずに済みます。中身は Day 09 で使った骨組み表示の部品をそのまま返すだけです。
 
 ### Step 1: 検索画面から使うAPIを確認する（3分）
 
