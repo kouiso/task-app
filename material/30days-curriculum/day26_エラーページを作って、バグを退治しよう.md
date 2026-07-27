@@ -760,9 +760,6 @@ npm run lint:fix
 
 ---
 
-
----
-
 ### Pro パターンで書こう（Error Boundary の表示分岐は early return で整理する）
 
 エラー画面は、再読み込み中・エラーなし・エラーありで表示が変わります。

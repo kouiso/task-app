@@ -672,7 +672,7 @@ const handleSubmit = (
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
-プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。上のコードで `description || null` を使ったのは、説明欄を空にして保存したときに `null` を送るためです。
+プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。Step 5 の更新ハンドラー（`src/app/project/page.tsx`）で `description || null` を使ったのは、説明欄を空にして保存したときに `null` を送るためです。
 
 | 式 | `description` が `''`（空文字）の場合 | このアプリでの結果 |
 |-----|--------------------------------------|------|
@@ -1091,7 +1091,7 @@ PORT=3001 npm run dev
 ### Pro パターンで書こう（編集フォームの optional な値は `?.` と `??` で整える）
 
 `?.` と `??` を使うと null チェックと代替値の指定が1行に収まり、変換の意図が読みやすくなります。
-なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
 
 ### Before（改善前のコード）
 

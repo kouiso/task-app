@@ -184,9 +184,9 @@ export default function RootLayout({
 | `<Providers>{children}</Providers>` | 全ページを Provider で囲む |
 | `className={...}` | フォントの変数を全ページへ渡す |
 
-> `--font-inter` などの変数を定義しているのはこの `next/font` の行です。Day 01 で書いた `globals.css` がこの変数を参照しているので、消すとフォント指定が黙って効かなくなります。
+> `--font-inter` などの変数は、`src/app/layout.tsx` の冒頭にある `next/font/google` の import で定義しています。Day 01 で書いた `globals.css` がこの変数を参照しているので、消すとフォント指定が黙って効かなくなります。
 >
-> これでアプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べます。
+> `<Providers>` で全体を囲んだので、アプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べます。
 
 **確認ポイント**:
 - [ ] `src/app/layout.tsx` に `<Providers>` が入っていることを確認した

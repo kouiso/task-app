@@ -949,7 +949,7 @@ TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` 
 - タスクがカード形式で表示されている
 - ステータス・優先度がBadgeで表示される
 
-タスクがない場合の空状態メッセージです。上のコードの `<div />` を以下に差し替えてください。
+タスクが0件のときの表示です。`src/app/task/page.tsx` にある `<div />`（1つ前のブロックの三項演算子の else 側）を、以下に差し替えてください。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1134,9 +1134,6 @@ PORT=3001 npm run dev
 - フィルタリングが正しく動作する
 - カードにステータス・優先度のBadgeがある
 - 詳細ダイアログが開閉する
-
----
-
 
 ---
 

@@ -1019,9 +1019,6 @@ PORT=3001 npm run dev
 
 ---
 
-
----
-
 ### Pro パターンで書こう（統計レイアウトの Server/Client 分離）
 
 ### Before（改善前のコード）
