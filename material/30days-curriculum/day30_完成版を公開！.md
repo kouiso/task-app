@@ -143,7 +143,7 @@ DATABASE_URL="postgresql://user:password@localhost:25532/taskapp?schema=public"
 # JWT署名用の秘密鍵（32文字以上必須。本番では必ず変更）
 JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 
-# 本番URL（robots.txt / sitemap で使用。ローカル開発では空でOK）
+# 本番URL（完成版の robots.txt 生成で使います。このカリキュラムでは robots.txt を作らないため、空のままで構いません）
 # NEXT_PUBLIC_BASE_URL="https://your-app.vercel.app"
 ```
 
