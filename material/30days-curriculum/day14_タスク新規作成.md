@@ -1282,7 +1282,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/component/ui/button';
 ```
 
-既存の `useState` 群の末尾（`const utils = api.useUtils()` の直前）に追加します。
+既存の `useState` 群の末尾に追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1315,15 +1315,19 @@ const handleCreate = () => {
 // 既存のuseQuery群の末尾に追加
 const { data: users } =
   api.search.getProjectMembers.useQuery();
-const { data: session } =
-  api.auth.getSession.useQuery();
-// utils は上で定義済み
+const utils = api.useUtils();
 ```
+
+`session` は Day 13 の Step 6 で追加済みなので、ここでは書きません。同じ名前を2回宣言すると、
+ページ全体が英語のエラーで止まります。`utils` は取得したデータの控えを操作するための入口で、
+このあとの `createMutation` で使います。
 
 `getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので、一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは、他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうは、送信の直前にログインが切れていないかを確かめるために使います。作成者のIDはサーバーがセッションから決めるので、画面側が送る値ではありません。
 
 **確認ポイント**:
-- `users` と `session` のデータ取得が追加できた
+- `users` の取得と `const utils = api.useUtils();` が追加できた
+- `session` は増やしていない（Day 13 で書いたものをそのまま使う）
+- `npm run dev` で型エラーが出ていない
 
 create mutationを `utils` の下に追加します。
 

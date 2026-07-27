@@ -54,7 +54,7 @@ sequenceDiagram
 src/
 ├── app/
 │   └── project/
-│       └── page.tsx          ← メイン（既存ファイルを編集）
+│       └── page.tsx          ← メイン（新規作成）
 ├── component/
 │   ├── project/
 │   │   └── project-card.tsx  ← 今日の表示で使うカード
@@ -280,7 +280,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 **実装**:
 
-`src/app/project/page.tsx` を開き、以下の内容に置き換えてください。
+`src/app/project/page.tsx` を新規作成します。`src/app/` の下に `project` フォルダを作り、その中に `page.tsx` を置いてください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
