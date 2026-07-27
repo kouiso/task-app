@@ -1092,3 +1092,5 @@ export const createCaller = createCallerFactory(appRouter);
 - 次の日: [Day 10](./day10_プロジェクト新規作成.md)
 - 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
 - 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 詰まったとき: [トラブルシューティング](./appendix_トラブルシューティング.md)
+- 言葉の意味: [用語集](./appendix_用語集.md)
