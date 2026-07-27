@@ -400,6 +400,7 @@ Step 1 の `findCommentAndAssertOwnership` が、届いたリクエストごと�
   <div className="flex gap-1">
     <Button variant="ghost" size="icon"
       className="h-6 w-6"
+      aria-label="自分のコメントを編集"
       onClick={() =>
         handleStartEdit(comment)}>
       <Pencil className="h-3 w-3" />
@@ -407,6 +408,7 @@ Step 1 の `findCommentAndAssertOwnership` が、届いたリクエストごと�
     <Button variant="ghost" size="icon"
       className="h-6 w-6 text-destructive
         hover:text-destructive"
+      aria-label="自分のコメントを削除"
       onClick={() =>
         handleDeleteComment(comment.id)}>
       <Trash2 className="h-3 w-3" />
@@ -414,6 +416,8 @@ Step 1 の `findCommentAndAssertOwnership` が、届いたリクエストごと�
   </div>
 )}
 ```
+
+2つのボタンはアイコンだけなので、`aria-label` で名前を付けています。コメントが並ぶと名前の無いボタンが2個ずつ続き、押す前にどちらが削除か分かりません。削除は取り消せません。
 
 ここで使っている `handleStartEdit` と `handleDeleteComment` は、
 このあとの Step で定義します。定義するまでこの画面は表示できません。

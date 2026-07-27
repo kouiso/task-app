@@ -644,7 +644,8 @@ const [filterStatus, setFilterStatus] =
   <div className="w-[200px]">
     <Select value={filterProject}
       onValueChange={setFilterProject}>
-      <SelectTrigger>
+      <SelectTrigger
+        aria-label="プロジェクトで絞り込み">
         <SelectValue placeholder=
           "すべてのプロジェクト" />
       </SelectTrigger>
@@ -652,6 +653,8 @@ const [filterStatus, setFilterStatus] =
   </div>
 </div>
 ```
+
+`SelectTrigger` に `aria-label` を付けているのは、この絞り込みに画面上の見出しが無いためです。`placeholder` は値を選んだ時点で消えるので、選んだあとは何の絞り込みか分からなくなります。読み上げソフトを使う人には、選んだ値だけが読まれます。
 
 `value` に state を渡し、`onValueChange` で state を書き換えます。選ばれている値の置き場所を state の1か所にまとめると、画面の見た目と手元の値がずれません。`ml-auto` は、この操作欄を見出しの反対側へ寄せる指定です。`w-full` は外枠を横いっぱいに広げる指定です。`sm:w-auto` は、画面が広いときだけ外枠を中身の幅に戻します。中の `Select` は `w-[200px]` で固定してあるので、画面幅が変わっても操作欄そのものの大きさは変わりません。
 

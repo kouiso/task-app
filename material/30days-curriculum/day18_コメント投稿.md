@@ -717,6 +717,7 @@ Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り�
   className="space-y-2">
   <Textarea
     placeholder="コメントを追加..."
+    aria-label="コメント本文"
     {...commentForm.register('content')}
     className="resize-none"
     rows={2} />
@@ -732,6 +733,8 @@ Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り�
   </div>
 </form>
 ```
+
+入力欄に `aria-label` を付けているのは、`placeholder` が1文字打つと消えるためです。消えたあとは何の欄か確かめる手段がなくなります。
 
 ここで使っている `handleCommentSubmit` は、このあとの Step で定義します。
 定義するまでこの画面は表示できないので、動きの確認はそのあとに行います。
