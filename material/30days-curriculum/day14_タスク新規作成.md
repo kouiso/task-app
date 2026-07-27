@@ -254,7 +254,7 @@ async function assertTaskAssigneeBelongsToProject(
       };
 ```
 
-`getNextTaskPosition(tx, input.projectId)` は、project 行をロックしてから「今の最大番号 + 1」を返します。タスクが1件も無いときはヘルパー内で -1 に1を足すため、最初の番号は 0 です。`project.connect` と `createdBy.connect` は、既にある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
+`getNextTaskPosition(tx, input.projectId)` は、project 行をロックしてから「今の最大番号 + 1」を返します。タスクが1件も無いときはヘルパー内で -1 に1を足すため、最初の番号は 0 です。`project.connect` と `createdBy.connect` は、すでにある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
 
 #### 0-6. 任意の項目を足して保存する
 
@@ -1305,7 +1305,7 @@ const handleCreate = () => {
 | `api.search.getProjectMembers` | ユーザー一覧 | タスク一覧の担当者フィルター |
 | `api.auth.getSession` | ログイン中のセッション | 作成者IDの確認 |
 
-これらは既に実装済みのAPIです。
+これらはすでに実装済みのAPIです。
 
 ```typescript
 // filepath: src/app/task/page.tsx

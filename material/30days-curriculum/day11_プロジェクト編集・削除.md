@@ -349,7 +349,7 @@ Step 0 では権限まわりの書き方が3パターン出てきました。表
 **実装**:
 
 まず、Day 10 で作成した `ProjectFormData` 型と、削除確認用の `DeleteConfirmDialog` をインポートします。
-既に `useState` や `Suspense`（準備中に仮表示へ差し替える仕組み）の import がある場合は、
+すでに `useState` や `Suspense`（準備中に仮表示へ差し替える仕組み）の import がある場合は、
 重複させずに以下の形へ揃えてください。
 
 ```typescript

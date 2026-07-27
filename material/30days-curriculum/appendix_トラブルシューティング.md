@@ -44,7 +44,7 @@
 |--------|------|----------|
 | プロジェクト一覧が空 | ログインユーザーがメンバーのプロジェクトがない | 新規プロジェクトを作成するか、`npm run db:seed`を実行 |
 | メンバー追加できない | OWNER/ADMIN権限がない | プロジェクトオーナーに依頼するか、権限を確認 |
-| `User is already a member` | 既にメンバーとして追加済み | メンバー一覧を確認 |
+| `User is already a member` | すでにメンバーとして追加済み | メンバー一覧を確認 |
 
 ### Day 13-16: タスク管理
 
@@ -105,7 +105,7 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 
 ### `Port 3000 is already in use`
 
-**原因**: 既に別のプロセスがポート3000を使用している
+**原因**: すでに別のプロセスがポート3000を使用している
 **解決**: `lsof -i :3000`で使用中のプロセスを確認し、終了してから`npm run dev`を実行します。
 
 ---

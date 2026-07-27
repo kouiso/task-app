@@ -529,7 +529,7 @@ import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
 ```
 
-`Card` は shadcn/ui のカード部品です。`CardHeader` が見出しの帯、`CardContent` が中身の入れ物、`CardTitle` が見出しの文字を受け持ちます。統計カードは4枚とも同じ見た目にそろえたいので、枠線や角丸を自分で書かず、既にある部品を使います。`PageLoadingSpinner` は Day 09 の一覧画面でも出した読み込み中の表示です。集計は件数が増えるほど返るまでが長くなるので、待っている間に見せる画面を先に手元へ用意しておきます。
+`Card` は shadcn/ui のカード部品です。`CardHeader` が見出しの帯、`CardContent` が中身の入れ物、`CardTitle` が見出しの文字を受け持ちます。統計カードは4枚とも同じ見た目にそろえたいので、枠線や角丸を自分で書かず、すでにある部品を使います。`PageLoadingSpinner` は Day 09 の一覧画面でも出した読み込み中の表示です。集計は件数が増えるほど返るまでが長くなるので、待っている間に見せる画面を先に手元へ用意しておきます。
 
 **確認ポイント**:
 - `Card` 関連をインポートした

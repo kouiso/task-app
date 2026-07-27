@@ -136,7 +136,7 @@ Recharts は複数のコンポーネント（画面を組み立てる部品）�
 
 ### Step 1: Rechartsを確認する（3分）
 
-**ゴール**: Recharts が既に
+**ゴール**: Recharts がすでに
 インストール済みであることを確認します。
 
 次のコマンドで確認します。
@@ -166,7 +166,7 @@ npm list recharts
 色定数のインポートを追加します。
 
 > Day 21 では `Card`, `CardContent`,
-> `CardHeader`, `CardTitle` を既にインポート
+> `CardHeader`, `CardTitle` をすでにインポート
 > しています。今回はそこに Recharts と
 > 色・ラベルの定数を追加します。
 

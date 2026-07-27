@@ -152,7 +152,7 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 
 > `.env.example` にはローカル開発用の設定が
 > 書かれています。`25532` は教材用 DB の
-> ホスト側ポートです。既に使われている場合は、
+> ホスト側ポートです。すでに使われている場合は、
 > `_DOCKER_COMPOSE_HOST_PORT_DB` と `DATABASE_URL` の
 > ポート番号を同じ値に変更します。
 >
