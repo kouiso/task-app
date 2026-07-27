@@ -405,7 +405,7 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 | TableCell | データセル | `<td>` |
 
 ```typescript
-// filepath: src/app/report/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // テーブルのヘッダー定義
 <Card>
   <CardHeader>
@@ -437,7 +437,7 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 > この入れ子は、ブラウザに「ここが表の見出し行」と伝えるための形です。
 
 ```typescript
-// filepath: src/app/report/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // テーブル本体（mapで各行を生成）
 <TableBody>
   {projectStats?.map((stat) => (
@@ -1065,7 +1065,7 @@ PORT=3001 npm run dev
 #### Before（改善前のコード）
 
 ```typescript
-// filepath: src/server/api/routers/report.ts
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { prisma } from '@/lib/prisma';
 
 type WeeklyReportTask = {
@@ -1145,7 +1145,7 @@ export async function fetchWeeklyReportTasks(
 #### After（プロが書くコード）
 
 ```typescript
-// filepath: src/server/api/routers/report.ts
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { prisma } from '@/lib/prisma';
 
 type WeeklyReportTask = {

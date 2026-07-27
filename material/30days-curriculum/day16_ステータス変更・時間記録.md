@@ -519,6 +519,7 @@ Day 15 の編集ダイアログは、開いたときに今の値が入ってい�
 `DialogHeader` の閉じタグの直後に書きます。
 
 ```typescript
+// filepath: src/component/task/time-log-dialog.tsx
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours">時間</Label>

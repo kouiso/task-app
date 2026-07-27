@@ -735,6 +735,19 @@ return (
 
 ここでやっているのはボタンを隠すことだけで、`/user` に入れなくなるわけではありません。URL を直接打てば、一般ユーザーでもそのページを開けます。実際の線引きは別の2か所にあります。`/user` のページ自身が管理者かどうかを見て「アクセス権限がありません」と表示し、一覧を返す `user.getAll` はサーバー側で管理者だけを通します。この `&&` は、押しても断られるボタンを最初から見せないための配慮です。見た目の制御と権限の制御は、別々に用意します。
 
+最後に、開いたタグと関数を閉じます。
+
+```typescript
+// filepath: src/app/profile/page.tsx（同じファイルの続き）
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+`</AppLayout>` で外枠を閉じ、`);` で `return (` を閉じ、最後の `}` で `ProfilePage` 関数そのものを
+閉じます。この `}` が無いと、ファイルの終わりで「`}` が足りない」という英語のエラーが出ます。
+
 **確認ポイント**:
 - 3つのボタンが縦に並ぶ
 - 管理者にだけユーザー管理ボタンが出る
@@ -2018,7 +2031,7 @@ PORT=3001 npm run dev
 #### Before（改善前のコード）
 
 ```typescript
-// filepath: src/app/profile/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
@@ -2108,7 +2121,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 #### After（プロが書くコード）
 
 ```typescript
-// filepath: src/app/profile/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 

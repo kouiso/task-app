@@ -992,7 +992,7 @@ export default function DashboardPage() {
 ### After（プロが書くコード）
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type DashboardOwner = {
   name: string;
   role: string;

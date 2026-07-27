@@ -1614,6 +1614,7 @@ import { Alert, AlertDescription, AlertTitle }
                   キャンセル
                 </Button>
               </div>
+            </form>
 ```
 
 キャンセル側の `type="button"` は、書き忘れると事故になる1行です。`<button>` はフォームの中に置くと、何も指定しない限り送信ボタンとして扱われます。つまり `type` を書かずにいると、キャンセルを押した瞬間に保存が走ります。取り消すつもりの操作が保存になるので、読者は自分が何をしたのか分かりません。2つのボタンに `disabled={updateUser.isPending}` を付けているのも同じ考え方で、保存中の連打で同じ更新が二重に飛ぶのを止めます。
@@ -1637,7 +1638,7 @@ import { Alert, AlertDescription, AlertTitle }
 #### Before（改善前のコード）
 
 ```typescript
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
 type UserEditFormValues = {
@@ -1718,7 +1719,7 @@ submitUserEditForm(
 #### After（プロが書くコード）
 
 ```typescript
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
 import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
