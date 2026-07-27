@@ -1028,7 +1028,7 @@ export default function DashboardPage() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`mainMessage` の行を Before と見比べてください。`useMemo` が外れて、`buildMainMessage(dashboardOwner, currentHour)` を呼ぶだけになりました。この関数はページを組み立てるときに1回動くだけなので、結果を覚えておく相手がいません。覚えておく仕組みを外すと、`[currentHour]` の書き漏らしを心配する場所も消えます。なお `new Date().getHours()` もサーバー側で動くので、あいさつは読者のパソコンではなくサーバーの時計で決まります。手元で動かしているあいだは同じ時計ですが、Day 04 でネットに公開したあとは公開先の時計に合わせて切り替わります。
+`mainMessage` の行を Before と見比べてください。`useMemo` が外れて、`buildMainMessage(dashboardOwner, currentHour)` を呼ぶだけになりました。この関数はページを組み立てるときに1回動くだけなので、結果を覚えておく相手がいません。覚えておく仕組みを外すと、`[currentHour]` の書き漏らしを心配する場所も消えます。なお `new Date().getHours()` もサーバー側で動くので、あいさつは読者のパソコンではなくサーバーの時計で決まります。このページはリクエストごとの情報を読まないので、ビルドのときに一度だけ描かれます。公開後は、ビルドした瞬間の時刻のまま固定されます。
 
 ```tsx
 // filepath: 続き

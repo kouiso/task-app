@@ -425,7 +425,7 @@ useEffect(() => {
 }, [projectIdParam]);
 ```
 
-URL の `?projectId=...` を読むだけでは、リロードや戻る操作のたびに表示がずれます。`useEffect` で URL の値を `selectedProject` に写しておくと、画面の状態が常に URL と一致します。
+リロードや戻る操作でずれるのは、URL ではなく手元の `selectedProject` のほうです。URL の `?projectId=...` は常に今の状態を持っています。`useEffect` で URL の値を写しておくと、`selectedProject` が URL に追いつきます。
 
 **確認ポイント**:
 - `router.push(...)` を使う準備ができている
