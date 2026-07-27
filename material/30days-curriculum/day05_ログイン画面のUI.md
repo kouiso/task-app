@@ -293,7 +293,7 @@ import { Label } from '@/component/ui/label';
 - `Input` と `Label` の import 文を追加した
 - `npm run dev` でエラーが出ていない
 
-LoginForm の return 内を以下に書き換えます。
+`LoginForm` の `return (` の中身を書き換えます。Step 1 で書いた外側の `<div>` は残し、その内側にある `<div className="w-full max-w-sm">` と `<h1>ログイン</h1>` を消して、代わりに次の `<form>` を丸ごと置きます。
 
 ```typescript
 // filepath: src/app/login/page.tsx
@@ -455,7 +455,9 @@ Step 1 で書いた外側の `<div>` はそのまま残し、その内側にあ�
 - `return (` の下に `Card` と `CardHeader` を書いた
 - 閉じかっこが未入力なので、この時点では構文エラーが出たままでよい
 
-続いて、CardContentの開始とメールアドレス入力欄を追加します。
+ここから4つのブロックで書き直します。**Step 4 と Step 5 で書いた `<form>` から `</form>` までは、先にすべて削除してください。** 残したまま足すと入力欄が二重になり、同じ欄が2つ並びます。
+
+続いて、CardContent の開始とメールアドレス入力欄を追加します。
 
 ```typescript
 // filepath: src/app/login/page.tsx
