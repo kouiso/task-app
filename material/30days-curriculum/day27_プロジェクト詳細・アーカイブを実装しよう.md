@@ -12,7 +12,7 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 
 ![プロジェクト詳細画面の完成イメージ](./screenshots/project-detail-tasks.png)
 
-![プロジェクト詳細でメンバーを確認できる状態](./screenshots/project-detail-members.png)
+![別のプロジェクトの詳細画面。右上にアーカイブボタンがある](./screenshots/project-detail-archive-action.png)
 
 - プロジェクト名・色・説明
 - メンバー一覧
