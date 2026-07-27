@@ -2130,6 +2130,8 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 深い null チェックを何段も書くより、
 `?.` と `??` で「安全なアクセス」と「代替表示」を近くに置きます。
 
+> **完成形の参考コード**: このリポジトリにも `src/app/profile/change-password/page.tsx` があります。ただし今日書いたコードと1文字まで同じではありません。違うのは1か所で、リポジトリ側の画面のパスワード条件が `.min(8)` だけになっており、大文字・小文字・数字・記号の `.regex()` が書かれていない点です。4本の `.regex()` はサーバー側の `src/server/api/routers/user.ts` にだけあります。今日の書き方は、同じ条件を画面にも置いて、送る前に読者へ知らせる形です。見比べるときは、この1か所は違って当たり前だと思って読んでください。
+
 ## 今日のまとめ
 
 - [ ] api.auth.getCurrentUser でデータを取得した
