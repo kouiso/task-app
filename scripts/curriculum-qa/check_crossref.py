@@ -100,6 +100,33 @@ def contains(body: str, token: str) -> bool:
     return re.search(pattern, body) is not None
 
 
+# 行頭がこれで始まる行は、前の行と地続きの文ではない。
+# 見出し・箇条書き・表・引用をつなぐと、別々の項目が1文に化けてしまう。
+STRUCTURAL = re.compile(r"^\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|\||>|\[!)")
+
+
+def logical_lines(text: str):
+    """折り返された地の文を1つにつないで返す。
+
+    教材は1文を複数行に折り返して書く。実例（day19）:
+        Day 18 で作った
+        `src/server/api/routers/comment.ts` に
+    行ごとに見ると Day 18 とファイル名が別々の行にあるため、参照として拾えない。
+    句点をまたがせない条件は正規表現側が持っているので、つないでも文はまたがない。
+    """
+    buf: list[str] = []
+    for line in text.split("\n"):
+        if not line.strip() or STRUCTURAL.match(line):
+            if buf:
+                yield " ".join(buf)
+                buf = []
+            yield line
+            continue
+        buf.append(line.strip())
+    if buf:
+        yield " ".join(buf)
+
+
 def day_files(root: Path) -> dict[int, Path]:
     found = {}
     for p in sorted(root.glob("day[0-9][0-9]_*.md")):
@@ -160,7 +187,7 @@ def main(argv: list[str]) -> int:
     seen: set[tuple[str, str, str]] = set()
 
     for path in sources:
-        for line in strip_fences(texts[path]).split("\n"):
+        for line in logical_lines(strip_fences(texts[path])):
             # Day が先の形と語が先の形を同じ土俵に乗せる。
             # 語が先の形では Day が後ろに来るので、後ろの Day へ付け替える REANCHOR は当てない。
             claims = [(m.group(1), m.group(2), m.end(), True) for m in CLAIM.finditer(line)]

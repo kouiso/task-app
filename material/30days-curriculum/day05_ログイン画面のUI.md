@@ -587,6 +587,8 @@ function isValidRedirectUrl(
   if (!url) return false;
   // プロトコル相対URL（//example.com）を禁止
   if (url.startsWith('//')) return false;
+  // 円記号はブラウザが / と同じに扱うため禁止
+  if (url.includes('\\')) return false;
   // 外部URLを禁止
   if (url.startsWith('http://')
     || url.startsWith('https://')) return false;
@@ -625,6 +627,8 @@ const [error, setError] =
 `callbackUrl` は「ログインが終わったらどこへ戻すか」の行き先です。たとえばログインしていない状態で `/project` を開こうとすると、アプリはログイン画面へ飛ばしたうえで、URL の末尾に `?callbackUrl=/project` を付けます。`searchParams?.get('callbackUrl')` は、その付け足された文字を読み取っています。何も付いていなければ `??` の右側が使われ、`/dashboard` へ戻ります。
 
 読み取った値をそのまま使わず、`isValidRedirectUrl` に通してから `callbackUrl` に入れている点が要です。URL の末尾は誰でも自由に書けます。攻撃者が `?callbackUrl=https://偽サイト` というリンクを配れば、本物のログイン画面を通ったあと利用者を偽サイトへ送り込めてしまいます。通す前に検査しているので、そういう値は捨てられて `/dashboard` に落ち着きます。
+
+`\` を弾く行が入っているのは、この文字がブラウザの URL 解釈では `/` と同じ扱いになるためです。`/\偽サイト` は `/` で始まり `//` でもないので、この行が無いと検査を通り抜け、行き先は外部サイトになります。見た目が相対パスでも外へ出る書き方がある、という一例です。
 
 `useState<string | null>(null)` で用意した `error` は、サーバーから返ってきたエラー文言の置き場です。ここは zod の判定結果とは別物です。zod が扱うのは「入力欄の形が正しいか」で、`error` に入るのは「形は正しいが、そのメールアドレスとパスワードの組み合わせでは入れない」という返事です。判定する場所が違うので、置き場も分けています。
 
