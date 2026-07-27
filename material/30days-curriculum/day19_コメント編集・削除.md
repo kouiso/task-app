@@ -415,6 +415,11 @@ Step 1 の `findCommentAndAssertOwnership` が、届いたリクエストごと�
 )}
 ```
 
+ここで使っている `handleStartEdit` と `handleDeleteComment` は、
+このあとの Step で定義します。定義するまでこの画面は表示できません。
+
+2つのハンドラーを書いたあとで、次の2点を確かめます。
+
 **確認ポイント**:
 - 自分のコメントにのみボタンが表示される
 - 他人のコメントにはボタンがない
