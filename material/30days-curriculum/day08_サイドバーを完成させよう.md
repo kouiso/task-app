@@ -90,7 +90,7 @@ flowchart TD
 
 Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
 「クライアント」が必要です。scaffold が `src/trpc/` に設定ファイルを配布済みなので、
-それをアプリ全体に適用する Provider を作ります。
+それをアプリ全体に適用する Provider は配布済みなので、中身を読んで仕組みを掴みます。
 
 ```mermaid
 flowchart LR

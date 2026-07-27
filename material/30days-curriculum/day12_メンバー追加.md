@@ -122,7 +122,7 @@ src/
 
 ### Step 0: project.ts に getById/getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く（25分）
 
-**ゴール**: プロジェクト詳細取得・追加可能ユーザー取得・メンバー追加・メンバー削除の4つの手続きを追加します。
+**ゴール**: プロジェクト詳細取得・追加可能ユーザー取得・メンバー追加・メンバー削除・メンバー権限変更の5つの手続きを追加します。
 
 #### 0-1. getById（1件だけ取得する）
 

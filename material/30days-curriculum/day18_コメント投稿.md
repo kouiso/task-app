@@ -577,6 +577,18 @@ import { ja } from 'date-fns/locale';
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
+// .map ループ内: 名前と日時を包む2つの箱を開く
+<div className="flex-1 space-y-1">
+  <div className="flex items-center
+    justify-between">
+```
+
+外側の `flex-1` は、アイコンの右側の残り幅をすべて使うための指定です。
+内側の `justify-between` は、名前を左端、日時を右端へ寄せるための指定です。
+この2つはあとで閉じるので、いまは開いたままにしておきます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
 // .map ループ内: ユーザー名と投稿日時
 <span className="font-medium">
   {comment.user.name
@@ -626,8 +638,9 @@ import { ja } from 'date-fns/locale';
 ))}
 ```
 
+`</div>` の3つは、内側から順に「名前と日時の箱」「アイコンの右側の箱」「1件分の箱」を閉じます。
 `))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じます。
-ここまで書くと括弧がすべて閉じるので、保存してもエラーが出なくなります。
+コメント欄を包む外側の箱はこのあと閉じるので、この時点ではまだ構文エラーが残ります。
 
 **確認ポイント**:
 - コメントがリスト表示される
