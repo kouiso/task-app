@@ -1169,7 +1169,7 @@ const getStatusColor = (status: string) => {
 ```typescript
 // filepath: src/app/task/page.tsx（参考）
 const STATUS_CONFIG = {
-  TODO: { label: "未着手", color: "bg-gray-100 text-gray-800" },
+  TODO: { label: "未対応", color: "bg-gray-100 text-gray-800" },
   IN_PROGRESS: { label: "進行中", color: "bg-blue-100 text-blue-800" },
   DONE: { label: "完了", color: "bg-green-100 text-green-800" },
 } as const;
