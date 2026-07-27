@@ -104,21 +104,22 @@ flowchart LR
 
 この Provider が無いと `api` は送り先を知らないため、呼んだ瞬間にエラーで止まります。
 
-`src/app/providers.tsx` を新規作成します。
+`src/app/providers.tsx` は Day 01 の scaffold が配布済みです。新しく作らず、開いて中身を確認します。
 
 ```tsx
 // filepath: src/app/providers.tsx
 'use client';
 
-import type { ReactNode } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { TRPCReactProvider } from '@/trpc/react';
 
-export function Providers({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return <TRPCReactProvider>{children}</TRPCReactProvider>;
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <TRPCReactProvider>
+      {children}
+      <Toaster />
+    </TRPCReactProvider>
+  );
 }
 ```
 
@@ -126,13 +127,15 @@ export function Providers({
 |--------|------|
 | `'use client'` | この Provider はブラウザ側で動く |
 | `TRPCReactProvider` | scaffold が用意した tRPC + React Query の設定 |
+| `Toaster` | `toast()` で出す通知の表示場所。これが無いと通知は一切出ない |
 | `children` | この下に置かれる全コンポーネントが tRPC を使える |
 
 > scaffold の `src/trpc/react.tsx` の中身が気になったら開いてみてもいいです。QueryClient と httpBatchLink の設定が入っています。
 
 **確認ポイント**:
-- [ ] `src/app/providers.tsx` が作成できた
+- [ ] `src/app/providers.tsx` の中身を確認した
 - [ ] `'use client'` が先頭にある
+- [ ] `<Toaster />` が入っている
 
 ---
 
@@ -140,26 +143,33 @@ export function Providers({
 
 **ゴール**: アプリ全体で tRPC が使えるように、ルートレイアウトを編集します。
 
-`src/app/layout.tsx` を開きます。scaffold が最初に作ったファイルで、まだ Provider は入っていません。
+`src/app/layout.tsx` を開きます。こちらも scaffold が配布済みで、Provider はすでに組み込まれています。書き換えずに、どこで囲んでいるかを確認します。
 
 ```tsx
 // filepath: src/app/layout.tsx
 import type { Metadata } from 'next';
-import './globals.css';
+import { Inter, JetBrains_Mono, Noto_Sans_JP } from 'next/font/google';
 import { Providers } from './providers';
+import './globals.css';
 
-export const metadata: Metadata = {
-  title: 'Task App',
-  description: 'タスク管理アプリケーション',
-};
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+```
 
+同じ書き方で `JetBrains_Mono` を `--font-jetbrains-mono`、`Noto_Sans_JP` を `--font-noto-sans-jp` として読み込んでいます。続きは次のとおりです。
+
+```tsx
+// filepath: src/app/layout.tsx（続き）
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="ja" className={`${inter.variable} ${jetBrainsMono.variable} ${notoSansJP.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>
@@ -168,15 +178,18 @@ export default function RootLayout({
 }
 ```
 
-| 変更点 | 意味 |
+| 確認する箇所 | 意味 |
 |--------|------|
-| `import { Providers }` | Step 1 で作った Provider を読み込む |
+| `import { Providers }` | Step 1 で見た Provider を読み込む |
 | `<Providers>{children}</Providers>` | 全ページを Provider で囲む |
+| `className={...}` | フォントの変数を全ページへ渡す |
+
+> `--font-inter` などの変数を定義しているのはこの `next/font` の行です。Day 01 で書いた `globals.css` がこの変数を参照しているので、消すとフォント指定が黙って効かなくなります。
 
 > これでアプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べます。
 
 **確認ポイント**:
-- [ ] `src/app/layout.tsx` に `<Providers>` が入った
+- [ ] `src/app/layout.tsx` に `<Providers>` が入っていることを確認した
 - [ ] この時点で `npm run dev` してエラーが出ないことを確認
 
 ---

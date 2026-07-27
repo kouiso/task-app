@@ -276,25 +276,18 @@ sed -n '1,220p' .gitignore
 `sed` は中身を表示するだけで、`.gitignore` を書き換えません。`No such file or directory` と出たら、`.gitignore` の無い場所でコマンドを打っています。`pwd` で `task-app` のルートに戻ってから、もう一度実行してください。このプロジェクトには、ローカル環境変数を無視する設定がすでに入っています。特に見てほしいのは次の部分です。
 
 ```text
-# local env files
-*.env*
-!.env.example
-secret
-*.local
+# env files (can opt-in for committing if needed)
+.env*
 ```
 
-この4行が、GitHub へ送るものと送らないものを分ける境目です。自分で書いた覚えがなくても心配いりません。プロジェクトを作った時点ですでに入っている行だからです。手元の `.gitignore` に同じ4行が見つかれば、このあとの手順はそのまま進められます。
+この行が、GitHub へ送るものと送らないものを分ける境目です。自分で書いた覚えがなくても心配いりません。プロジェクトを作った時点ですでに入っている行だからです。
 
-### この4行の意味
+### この1行の意味
 
-- `*.env*`
-  `.env` や `.env.local` みたいなローカル設定を Git 管理から外す
-- `!.env.example`
-  ただし見本用の `.env.example` は GitHub に残す
-- `secret`
-  `secret` という名前のファイルも避ける
-- `*.local`
-  ローカル専用ファイルをまとめて避ける
+- `.env*`
+  `.env` や `.env.local` や `.env.example` のように、`.env` で始まるファイルをまとめて Git 管理から外す
+
+打ち消しの行が無いので、見本用の `.env.example` もこの1行に含まれます。GitHub へ載せたいときは、あとの手順で `git add -f` を使って明示的に加えます。
 
 この設定があることで、チーム開発と個人開発のどちらでも、起動に必要な項目は共有しつつ、本物の値は共有しない運用がやりやすくなります。
 
@@ -309,7 +302,7 @@ Day 01 の scaffold で、すでに見本ファイルが作られています。
 ### ここでの判断
 
 - `.env` や `.env.local` は GitHub に送らない
-- `.env.example` は GitHub に送っていい
+- `.env.example` も既定では除外されるので、GitHub に載せたいときは `git add -f` で明示的に加える
 - `.gitignore` があるから安心ではなく、送る前に `git status` でも確認する
 
 ignore 設定があることと、送信前に自分でも `git status` で確認することの両方が大切です。
@@ -486,9 +479,12 @@ git add package.json package-lock.json
 git add tsconfig.json next.config.* postcss.config.* biome.json
 git add prisma prisma.config.ts
 git add public src
-git add .env.example docker-compose.yml
+git add docker-compose.yml
+git add -f .env.example
 git status --short
 ```
+
+`.env.example` にだけ `-f` を付けているのは、`.gitignore` の `.env*` がこのファイルも除外しているためです。見本ファイルだけは意図的に例外として加えます。`-f` を付けずに実行すると `The following paths are ignored by one of your .gitignore files` と表示され、追加されません。
 
 環境によっては、上のうち一部のファイルがまだ無いこともあります。存在しないファイルを指定すると `git add` は `fatal: pathspec '...' did not match any files` と表示して、そのコマンド全体が失敗します。注意したいのは、同じ行に書いた実在するファイルも一緒に add されない点です。たとえば `git add README.md missing-file` のように実在しないファイルを混ぜると、`README.md` 側もステージングされません。
 

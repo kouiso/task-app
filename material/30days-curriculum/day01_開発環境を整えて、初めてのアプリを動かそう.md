@@ -373,16 +373,16 @@ npm run dev
 
 **ターミナル出力（`~/workspace/task-app`）**
 ```text
-> taskappday01-demo@0.1.0 dev
+> task-app@0.1.0 dev
 > next dev
 
-▲ Next.js 15.5.15 (Turbopack)
+▲ Next.js 15.5.21
 - Local:         http://localhost:3000
 - Network:       http://192.168.55.2:3000
 ✓ Ready in 158ms
 ```
 
-> 1行目の `taskappday01-demo@0.1.0` の部分や、Next.js のバージョン番号、`Network:` の数字、秒数は環境によって変わります。`Local: http://localhost:3000` と `Ready` が見えていれば成功です。
+> `Network:` の数字と秒数は環境によって変わります。`Local: http://localhost:3000` と `Ready` が見えていれば成功です。
 >
 > このコマンドは「開発サーバー」を動かし続けるので、実行したあともターミナルには次の入力待ち（プロンプト）が戻ってきません。止まっているのではなく、動き続けている状態です。このターミナルは閉じずにそのままにしておきましょう。止めたいときは、このターミナルで `control + C` を押します。別のコマンドを打ちたくなったら、新しいターミナルをもう1つ開いて使います。
 

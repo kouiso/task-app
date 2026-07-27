@@ -168,19 +168,16 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 > ローカルでも `DATABASE_URL` と `JWT_SECRET` が
 > 未設定だと build 時に失敗します。
 >
-> 先に `.env.example` をコピーして
-> `.env.local` を作成し、最低でも
-> `DATABASE_URL` と `JWT_SECRET` を設定してから
+> この2つは Day 01 のセットアップで `.env` に
+> 用意済みです。中身が残っているかだけ確かめてから
 > `npm run build` を実行してください。
 
 ```bash
 # filepath: ターミナル
-cp .env.example .env.local
-
-# .env.local を開き、最低でも DATABASE_URL と JWT_SECRET を設定する
+cat .env
 ```
 
-`.env.local` という名前を使うのは、Day 3 で `.gitignore` に除外を書いたファイルだからです。ここへ書いた値は `git add` しても追跡対象になりません。中身の検証を担当するのは `src/lib/env.ts` の zod スキーマで、`DATABASE_URL` には URL の形を、`JWT_SECRET` には32文字以上を求めます。どちらかを満たさないと例外が投げられ、`npm run build` はページを1枚も出力せずに止まります。この検証は Vercel の本番ビルドでも同じものが走ります。ただしプレビュー用のビルドだけは別です。`vercel.json` が `SKIP_ENV_VALIDATION=true` を付けて起動するので、`src/lib/env.ts` は形の検査を飛ばし、値をそのまま受け取ります。つまりプレビューが通っても、本番ビルドが通る保証にはなりません。手元で一度通しておけば、公開直前の本番ビルドログで初めてこのエラーを読む展開にはなりません。
+`.env` は `.gitignore` の `.env*` に当てはまるので、ここへ書いた値は `git add` しても追跡対象になりません。中身の検証を担当するのは `src/lib/env.ts` の zod スキーマで、`DATABASE_URL` には URL の形を、`JWT_SECRET` には32文字以上を求めます。どちらかを満たさないと例外が投げられ、`npm run build` はページを1枚も出力せずに止まります。この検証は Vercel のビルドでも同じものが走ります。Vercel 側の環境変数に `DATABASE_URL` と `JWT_SECRET` を入れ忘れると、同じエラーでビルドが止まります。手元で一度通しておけば、公開直前の本番ビルドログで初めてこのエラーを読む展開にはなりません。
 
 **確認ポイント**:
 - 2つの環境変数の値を準備できた
@@ -218,7 +215,7 @@ services:
       retries: 5
 ```
 
-`ports` の `25532:5432` は、パソコン側の 25532 番をコンテナの中の PostgreSQL の 5432 番につなぐ指定です。`.env.local` の `DATABASE_URL` に書いたポート番号がこれとずれていると、DB は動いているのに接続だけが拒否されます。`healthcheck` は `pg_isready` を5秒ごとに実行し、問い合わせを受け付けられる状態になって初めて healthy と表示します。起動してすぐ `npm run db:push` が失敗する原因は、healthy と出る前にコマンドを打ったことです。`volumes` はデータの保存先をコンテナの外へ逃がす指定で、これが無いとコンテナを作り直すたびに登録済みのユーザーが消えます。
+`ports` の `25532:5432` は、パソコン側の 25532 番をコンテナの中の PostgreSQL の 5432 番につなぐ指定です。`.env` の `DATABASE_URL` に書いたポート番号がこれとずれていると、DB は動いているのに接続だけが拒否されます。`healthcheck` は `pg_isready` を5秒ごとに実行し、問い合わせを受け付けられる状態になって初めて healthy と表示します。起動してすぐ `npm run db:push` が失敗する原因は、healthy と出る前にコマンドを打ったことです。`volumes` はデータの保存先をコンテナの外へ逃がす指定で、これが無いとコンテナを作り直すたびに登録済みのユーザーが消えます。
 
 **確認ポイント**:
 - YAML のインデントがスペース2個で統一されている
@@ -553,21 +550,23 @@ npm ls next react typescript prisma
 
 #### フロントエンド技術
 
+> Next.js 以外はインストールした時点の最新版が入るため、末尾の数字は手元と少し違うことがあります。
+
 | 技術 | バージョン | 役割 |
 |------|----------|------|
 | Next.js | 15.5.21 | フレームワーク（App Router） |
 | React | 18.3.1 | UI ライブラリ |
-| TypeScript | 5.9.3 | 型安全な JavaScript |
+| TypeScript | 5.x | 型安全な JavaScript |
 | shadcn/ui | — | UI コンポーネント |
 | Tailwind CSS | v4 | ユーティリティ CSS |
-| Recharts | 3.8.1 | グラフ・チャート |
+| Recharts | 3.x | グラフ・チャート |
 
 #### バックエンド技術
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| tRPC | 11.17.0 | End-to-End 型安全 API |
-| Prisma | 6.19.3 | ORM（DB 操作） |
+| tRPC | 11.x | End-to-End 型安全 API |
+| Prisma | 6.x | ORM（DB 操作） |
 | PostgreSQL | 16 | データベース |
 | jose | — | JWT トークン生成・検証 |
 | bcryptjs | — | パスワードハッシュ化 |
@@ -576,8 +575,8 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Biome | 2.4.15 | リンター・フォーマッター |
-| Vitest | 3.2.7 | テストフレームワーク |
+| Biome | 2.x | リンター・フォーマッター |
+| Vitest | 3.x | テストフレームワーク |
 | Docker | — | コンテナ（PostgreSQL） |
 | Vercel | — | ホスティング・CI/CD |
 
