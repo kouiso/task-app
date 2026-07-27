@@ -598,7 +598,7 @@ npx biome check \
 > `npx biome check ファイルパス` は
 > Biome を1ファイルだけに実行するコマンドです。
 > Step 7 の `npm run lint` は
-> `src` の下と設定ファイルを
+> プロジェクト全体を
 > まとめて対象にします。
 
 **console.logを残すべきでない理由**:
@@ -677,7 +677,7 @@ npm run lint
 ```
 
 Step 5 では1ファイルに絞りましたが、ここでは自分で書いたコードをまとめて見ます。
-`npm run lint` の中身は `biome check src prisma.config.ts next.config.ts package.json tsconfig.json` です。`src` の下にあるコードと、うしろに並んだ4つの設定ファイルが対象になります。
+`npm run lint` の中身は `biome check .` です。末尾の `.` が「このフォルダから下すべて」という意味で、`.gitignore` で無視されているものを除いた全体が対象になります。
 
 消し忘れた `console.log` が見つかるのは、たいてい今日触ったファイルではなく、数日前に触ったファイルです。
 1つずつ思い出して開いて確かめるより、全体に1回かけるほうが速くて漏れません。

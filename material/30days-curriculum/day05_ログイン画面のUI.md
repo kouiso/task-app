@@ -552,30 +552,6 @@ Step 1 で書いた外側の `<div>` はそのまま残し、その内側にあ�
 
 **実装**:
 
-import文を追加します。
-
-```typescript
-// filepath: src/app/login/page.tsx
-import { isValidRedirectUrl }
-  from '@/lib/redirect';
-import { api } from '@/trpc/react';
-import {
-  useRouter,
-  useSearchParams,
-} from 'next/navigation';
-import { useState } from 'react';
-// トースト通知ライブラリ（画面上部にメッセージを表示）
-import toast from 'react-hot-toast';
-```
-
-**確認ポイント**:
-- `isValidRedirectUrl` / `api` / `useRouter` / `useSearchParams` / `useState` / `toast` の import を追加した
-- `npm run dev` でエラーが出ていない
-
-> `react-hot-toast` はログイン成功時に通知メッセージを表示するライブラリです。Day 01の初期セットアップでインストール済みなので、import するだけで使えます。
->
-> `useSearchParams` を使うコンポーネントには `Suspense` ラッパーが必要です。Step 9で追加するので、このステップではエラーが出る場合があります。
-
 まず、遷移先を検査する関数を別ファイルに作ります。
 
 ```typescript
@@ -605,19 +581,40 @@ export function isValidRedirectUrl(
 
 > 画面のファイルではなく `src/lib/` に置くのは、同じ判定をミドルウェア（どのページを表示するときも手前で必ず通る共通の処理）でも使うためです。同じ規則を2箇所に書き写すと、片方だけ直したときに緩いほうが残ります。1つに寄せておけば、直す場所も1つで済みます。
 
+次に、ログイン画面へ import 文を追加します。
+
+```typescript
+// filepath: src/app/login/page.tsx
+import { isValidRedirectUrl }
+  from '@/lib/redirect';
+import { api } from '@/trpc/react';
+import { useSearchParams }
+  from 'next/navigation';
+import { useState } from 'react';
+// トースト通知ライブラリ（画面上部にメッセージを表示）
+import toast from 'react-hot-toast';
+```
+
+**確認ポイント**:
+- `isValidRedirectUrl` / `api` / `useSearchParams` / `useState` / `toast` の import を追加した
+- `npm run dev` でエラーが出ていない
+
+> `react-hot-toast` はログイン成功時に通知メッセージを表示するライブラリです。Day 01の初期セットアップでインストール済みなので、import するだけで使えます。
+>
+> `useSearchParams` を使うコンポーネントには `Suspense` ラッパーが必要です。Step 9で追加するので、このステップではエラーが出る場合があります。
+
 次に、LoginForm 内の先頭に以下を追加します。
 
 ```typescript
 // filepath: src/app/login/page.tsx
 // LoginFormコンポーネント内の先頭に追加
-const router = useRouter();
 const searchParams = useSearchParams();
 
 // ログイン後の遷移先（未指定ならダッシュボード）
-// nullish coalescing演算子(??)でnull/undefinedのみをフォールバック
+// 空文字も未指定として扱いたいので || を使う
 const rawCallbackUrl =
   searchParams?.get('callbackUrl')
-  ?? '/dashboard';
+  || '/dashboard';
 const callbackUrl =
   isValidRedirectUrl(rawCallbackUrl)
     ? rawCallbackUrl : '/dashboard';
@@ -637,7 +634,7 @@ const [error, setError] =
 `useState<string | null>(null)` で用意した `error` は、サーバーから返ってきたエラー文言の置き場です。ここは zod の判定結果とは別物です。zod が扱うのは「入力欄の形が正しいか」で、`error` に入るのは「形は正しいが、そのメールアドレスとパスワードの組み合わせでは入れない」という返事です。判定する場所が違うので、置き場も分けています。
 
 **確認ポイント**:
-- `router`, `searchParams`, `callbackUrl`, `error` を LoginForm 内に追加した
+- `searchParams`, `callbackUrl`, `error` を LoginForm 内に追加した
 - `npm run dev` でエラーが出ていない
 
 tRPCのログインAPI呼び出しを定義します。
@@ -651,8 +648,8 @@ const loginMutation =
       toast.success(
         `おかえりなさい、${data.user.name}さん`
       );
-      router.push(callbackUrl);
-      router.refresh();
+      window.location
+        .replace(callbackUrl);
     },
     onError: (error) => {
       // エラーメッセージがなければデフォルト文言を使用
@@ -666,7 +663,7 @@ const loginMutation =
 
 `useMutation` は、呼び出しの手順を先に登録しておく書き方です。この行を書いた時点ではまだ通信は起きません。実際に走るのは、Step のあとで `loginMutation.mutate(data)` を呼んだときです。「準備」と「実行」を分けておくと、成功したときと失敗したときの処理をここに一度書くだけで、送信のたびに使い回せます。
 
-`onSuccess` の中で `router.push(callbackUrl)` と `router.refresh()` を続けて呼んでいるのには役割の違いがあります。`push` は画面を移す指示、`refresh` はサーバー側の表示内容を取り直す指示です。`push` だけだと、移った先のサイドバーやヘッダーがログイン前のまま残ることがあります。
+`onSuccess` で `window.location.replace(callbackUrl)` を使っているのには理由があります。Next.js の `router.push` は、いまのページを保ったまま次の画面ぶんだけをサーバーへ取りに行きます。ログイン直後はこれが裏目に出ます。応答と一緒に届いたログイン情報がブラウザへ収まる前に次の画面を取りに行くと、サーバー側からは未ログインに見えて、またログイン画面へ戻されるためです。`window.location.replace` はページ全体を読み込み直すので、この行き違いが起きません。`replace` は履歴を置き換える指示でもあるので、遷移後に戻るボタンを押してもログイン画面には戻りません。
 
 ここで正直に断っておきたいのが `api.auth.login` の中身です。この手続きは Day 01 のセットアップですでに入っていて、今日はそれを借りて呼びます。パスワードをどう照合し、ログイン状態をどう覚えているかは、まだ読んでいません。中身を消して自分の手で書き直すのは Day 07 です。だから今日ログインが通ったとしても、自分で組んだ仕組みの正しさを証明したことにはなりません。今日証明できるのは、画面がサーバーへ正しく話しかけられているところまでです。
 
