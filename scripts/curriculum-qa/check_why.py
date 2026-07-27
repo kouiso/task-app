@@ -24,7 +24,13 @@ HEADING = re.compile(r"^\s*#{1,6}\s")
 # これを外すと「箇条書きで説明しているのに説明が無い」と報告してしまう。
 # 確認ポイントの見出しだけは、できたかどうかの点検であって理由ではないので数えない
 # （見出しに続く箇条書きも、この見出しで打ち切るため数に入らない）。
-NOT_PROSE = re.compile(r"^\s*(!\[|\*\*確認ポイント)")
+NOT_PROSE = re.compile(r"^\s*!\[")
+
+# 確認ポイントは点検であって理由ではない。ここで数えるのをやめる。
+CHECKPOINT = re.compile(r"^\s*(\*\*確認ポイント|#{1,6}\s*確認ポイント)")
+
+# 箇条書きの行。確認ポイントの中にある間だけ読み飛ばす。
+LIST_ITEM = re.compile(r"^\s*([-*+]\s|\d+[.)]\s)")
 
 # 写経させないブロックの目印。この語が直前の地の文にあれば対象から外す。
 COMPARE_ONLY = re.compile(r"読み比べ用|写経しません|比較用")
@@ -63,24 +69,42 @@ def blocks_with_following_prose(text: str):
             i += 1
         i += 1  # 閉じフェンスの次へ
 
-        # 次のコードブロックか見出しまでを、このブロックの説明として数える。
+        # 次のコードブロックまでを、このブロックの説明として数える。
         # 空行で打ち切る案も試したが、1つ目の段落が短く2つ目が本体という
-        # 正しい書き方まで落ちた（実測68件）。区切りはブロックと見出しに置く。
+        # 正しい書き方まで落ちた（実測68件）。
+        #
+        # 見出しが挟まっても、そこで数えるのをやめない。教材はコードの直後に
+        # 小見出しを置き、説明をその下に書くことがある。見出しで打ち切ると、
+        # 「見出しだけ置いて理由を書かない」書き方が素通りする。
+        #
+        # 確認ポイントは、できたかどうかの点検であって理由ではない。
+        # その見出しに当たった時点で数えるのをやめる。続く箇条書きを数えると、
+        # 点検項目が並んでいるだけで説明があることになってしまう。
         after: list[str] = []
         first_meaningful: str | None = None
+        in_checkpoint = False
         j = i
         while j < len(lines):
             line = lines[j]
             if FENCE.match(line):
                 break
-            if HEADING.match(line):
+            if CHECKPOINT.match(line):
+                in_checkpoint = True
                 if first_meaningful is None:
-                    first_meaningful = "heading"
-                break
+                    first_meaningful = "checkpoint"
+                j += 1
+                continue
+            if in_checkpoint:
+                # 確認ポイントの箇条書きは点検であって理由ではないので数えない。
+                # 箇条書きが終わったら、その先の地の文はまた説明として数える。
+                if not line.strip() or LIST_ITEM.match(line):
+                    j += 1
+                    continue
+                in_checkpoint = False
             if line.strip():
                 if first_meaningful is None:
-                    first_meaningful = "prose" if not NOT_PROSE.match(line) else "list"
-                if not NOT_PROSE.match(line):
+                    first_meaningful = "heading" if HEADING.match(line) else "prose"
+                if not NOT_PROSE.match(line) and not HEADING.match(line):
                     after.append(line.strip())
             j += 1
 
@@ -114,8 +138,6 @@ def main(argv: list[str]) -> int:
         text = path.read_text(encoding="utf-8")
         for start, info, prev, first, after in blocks_with_following_prose(text):
             if not TARGET_LANG.match(info):
-                continue
-            if first == "heading":
                 continue
             if COMPARE_ONLY.search(prev):
                 continue
