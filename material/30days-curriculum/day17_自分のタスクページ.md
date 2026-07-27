@@ -809,7 +809,7 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   canDeleteProject={canDeleteProject}
 />
 
-// 今日が期限のグループ（オレンジ色タイトル）
+{/* 今日が期限のグループ（オレンジ色タイトル） */}
 <TaskGroupSection
   title="今日が期限"
   titleClassName="text-orange-500"
@@ -835,7 +835,7 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   canDeleteProject={canDeleteProject}
 />
 
-// 期限なしグループ
+{/* 期限なしグループ */}
 <TaskGroupSection
   title="期限なし"
   tasks={groupedTasks.noDueDate ?? []}
