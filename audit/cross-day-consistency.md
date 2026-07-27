@@ -169,13 +169,18 @@ day25 のパスワード復旧手順も、書きかけの段階で誤りに気�
 
 ### CI が動かない手順を守らせていた
 
-`check_scaffold_curriculum_alignment.py` の deployment contract は、
-`npx vercel env run -e production -- npx prisma db push` を固定していました。
+`check_scaffold_curriculum_alignment.py` の deployment contract に問題がありました。
+固定していたのは次のコマンドです。
+
+```
+npx vercel env run -e production -- npx prisma db push
+```
+
 `vercel env` に `run` はありません。あるのは ls / add / rm / pull です。
 動かない手順が契約として守られていたことになります。
 取り出してから読み込む形へ変え、契約もそれに合わせました。
 
-契約の書き換えは、実態が正しいことを確かめてから行う。実行して値が渡ることを確認した:
+契約の書き換えは、実態が正しいことを確かめてから行います。実行して値が渡ることを確認しました。
 `set -a` → `. ./.env.production.local` → `set +a` で `DATABASE_URL` と `JWT_SECRET` が
 後続コマンドから見える。
 
