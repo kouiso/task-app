@@ -86,6 +86,7 @@ sequenceDiagram
 
 | ステップ | 作業内容 | 所要時間 | 作成ファイル |
 |---------|---------|---------|-------------|
+| Step 0 | 書き直す前に控えを取る | 3分 | なし |
 | Step 1 | session.ts を作り直す（JWT セッション管理） | 12分 | `src/lib/session.ts` |
 | Step 2 | trpc.ts を作り直す（API の土台） | 10分 | `src/server/api/trpc.ts` |
 | Step 3 | auth.ts を作り直す（認証ルーター） | 15分 | `src/server/api/routers/auth.ts` + ヘルパー |
@@ -94,11 +95,35 @@ sequenceDiagram
 | Step 6 | ログインして動作確認する | 5分 | なし |
 | Step 7 | DevTools で JWT と Cookie を確認する | 5分 | なし |
 
-**合計時間**: 約 60 分。
+**合計時間**: 約 63 分。
+
+---
+
+### Step 0: 書き直す前に控えを取る（3分）
+
+今日は動いている4つのファイルを、いったん空にしてから書き直します。途中で貼り間違えても
+戻せるように、先に控えを取ります。ターミナルで次を実行してください。
+
+```bash
+# filepath: ターミナル
+mkdir -p ~/day07-backup
+cp src/lib/session.ts src/server/api/trpc.ts \
+   src/server/api/routers/auth.ts src/server/api/root.ts \
+   ~/day07-backup/
+ls ~/day07-backup
+```
+
+`ls` で4つのファイル名が出れば控えが取れています。書き直しに失敗したときは、たとえば
+`cp ~/day07-backup/session.ts src/lib/` のように書き戻せば元の状態に戻ります。
+
+**確認ポイント**:
+- `ls ~/day07-backup` に `session.ts` `trpc.ts` `auth.ts` `root.ts` の4つが出る
 
 ---
 
 ### Step 1: session.ts を作り直す（JWT セッション管理・12分）
+
+Step 1 から Step 4 のあいだ、アプリは動かない状態になります。開発サーバーを起動したままだと、まだ書き直していないファイル由来の英語のエラーが画面いっぱいに出ます。**Step 4 を終えるまでは `npm run dev` を Ctrl+C で止めておいて構いません。**
 
 **ゴール**: ログイン状態を JWT トークンで管理する仕組みを作ります。
 
