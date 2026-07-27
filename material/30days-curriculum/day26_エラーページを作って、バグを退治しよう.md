@@ -87,6 +87,7 @@ Elements には、いま画面に出ている HTML と当たっている CSS の
 | 3つのバグパターンを学び、1つは実際に修正する | バグを見つけてもらうだけ |
 | DevTools 3タブの使い分けを学ぶ | DevToolsの全機能を網羅する |
 | Biome lintでコード品質をチェックする | ESLintの設定を書く |
+| | ページ単位のエラー表示（project と task の `error.tsx`） |
 
 ### 新しく学ぶ概念
 

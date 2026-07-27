@@ -509,6 +509,8 @@ Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード�
 
 ---
 
+完成版は同じ4行を dashboard・my-task・project・report・task の各フォルダにも置いています。今日は検索ページの1枚だけ作ります。ほかの画面にも同じ表示を出したくなったら、同じ内容のファイルをそのフォルダへ置いてください。
+
 `src/app/search/loading.tsx` を新規作成します。ページと同じフォルダに `loading.tsx` を置くと、Next.js はそのページの読み込み中に自動でこれを表示します。
 
 ```tsx
@@ -521,7 +523,7 @@ export default function Loading() {
 }
 ```
 
-これが出るのはページへ移動したときだけです。検索結果そのものの読み込み表示は、Step 8 で `isLoading` を見て切り替えます。役割が分かれている点に注意してください。中身は Day 09 で使った骨組み表示の部品をそのまま返すだけです。
+これが出るのはページへ移動したときだけです。検索結果そのものの読み込み表示は、Step 8 で `isLoading` を見て切り替えます。役割が分かれている点に注意してください。中身は配布済みの `PageSkeleton` をそのまま返すだけです。この部品を使うのは今日がはじめてです。
 
 ### Step 1: 検索画面から使うAPIを確認する（3分）
 
@@ -563,7 +565,7 @@ const searchInputSchema = z.object({
 | メソッド | 種別 | 説明 |
 |---------|------|------|
 | `search` | query | 検索実行（メイン） |
-| `quickSearch` | query | クイック検索 |
+| `quickSearch` | query | クイック検索。呼び出す画面はこのカリキュラムでは作りません |
 | `getUserProjects` | query | ユーザーのプロジェクト取得 |
 | `getProjectMembers` | query | 参加中プロジェクトを横断した、担当者候補の取得 |
 | `getMembersByProject` | query | 選択中プロジェクトだけの、担当者候補の取得 |
