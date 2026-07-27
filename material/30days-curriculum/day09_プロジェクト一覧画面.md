@@ -618,6 +618,8 @@ Step 6 のmap部分を三項演算子で囲みます。`projects.map((project) =
 
 `projects && projects.length > 0` と2つ並べているのは、確かめたいことが2つあるからです。Step 2 で見たとおり、読み込みが終わるまで `projects` は `undefined` です。手前の `projects &&` が無いと、まだ中身のない `undefined` から `length` を読みに行きます。その結果、画面は真っ白になります。後ろの `length > 0` は、届いたけれど0件だった場合を切り分けます。
 
+なお Step 3 で読み込み中は手前で `return` しているので、ここへ来た時点の `undefined` は取得の失敗を意味します。いまの書き方だと、失敗も「まだ1件もありません」と同じ見た目になります。実務では `error` も受け取り、失敗したときだけ別の案内を出します。
+
 `ProjectCard` の props の途中で切れています。続きを次のブロックで書きます。
 
 ```typescript

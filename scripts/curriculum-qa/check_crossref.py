@@ -137,18 +137,45 @@ def logical_lines(text: str):
         `src/server/api/routers/comment.ts` に
     行ごとに見ると Day 18 とファイル名が別々の行にあるため、参照として拾えない。
     句点をまたがせない条件は正規表現側が持っているので、つないでも文はまたがない。
+
+    箇条書きも同じ形で折り返される。実例:
+        - Day 01 で作った
+          `MissingToken` を使います。
+    項目の行だけを単独で流すと、続きの行が別のかたまりになり参照として拾えない。
+    そこで、箇条書きの行はそこで打ち切らず、続きの行を同じかたまりへ足していく。
     """
     buf: list[str] = []
+
+    def flush():
+        nonlocal buf
+        if buf:
+            joined = " ".join(buf)
+            buf = []
+            return joined
+        return None
+
     for line in text.split("\n"):
-        if not line.strip() or STRUCTURAL.match(line):
-            if buf:
-                yield " ".join(buf)
-                buf = []
+        stripped = line.strip()
+        if not stripped:
+            pending = flush()
+            if pending is not None:
+                yield pending
             yield line
             continue
-        buf.append(line.strip())
-    if buf:
-        yield " ".join(buf)
+        if STRUCTURAL.match(line):
+            pending = flush()
+            if pending is not None:
+                yield pending
+            # 箇条書きは続きの行を持つので、ここで確定させずに次の行を待つ。
+            if re.match(r"^\s*([-*+]\s|\d+[.)]\s)", line):
+                buf.append(stripped)
+            else:
+                yield line
+            continue
+        buf.append(stripped)
+    pending = flush()
+    if pending is not None:
+        yield pending
 
 
 def day_files(root: Path) -> dict[int, Path]:
