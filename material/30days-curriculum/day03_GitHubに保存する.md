@@ -472,6 +472,8 @@ git status --short
 ?? src/app/dashboard/
 ?? src/component/
 ?? src/lib/
+?? material/
+?? scripts/
 ```
 
 行数や並びが違っても心配いりません。`M` は履歴に入っているファイルを書き換えたという印、`??` はまだ一度も保存していないファイルという印です。数が多いのは、Day 01 のセットアップで置いたファイルが、まるごと未保存のまま残っているためです。土台を作った時点のコミットは1本だけで、そのあとの変更はすべてこれから保存します。
@@ -503,11 +505,25 @@ git status --short
 
 ### ここで見たい表示
 
+行数が一気に増えて、数十行になります。`git add public src` が `src/` の下の
+ファイルを1つずつ数えるためです。先頭のあたりは次のように見えます。
+
 ```text
 M  README.md
+A  biome.json
+A  docker-compose.yml
+A  prisma/schema.prisma
+A  src/app/dashboard/page.tsx
 ```
 
-`M` が行頭の左側（1文字目）に移っていれば、`README.md` がステージングされた状態です。変更のないファイルは add しても表示に出ません。ここで確認したいのは、`README.md` の `M` が左側に付いていることと、`.env` がどこにも出ていないことの2点です。
+行が多くても、やりすぎではありません。数える必要もありません。
+ここで確認したいのは次の2点だけです。
+
+- `README.md` の `M` が左側（1文字目）に付いている
+- どの行にも `.env` が出ていない
+
+いちばん下に `?? material/` と `?? scripts/` が残りますが、
+これは add していないので正しい状態です。
 
 ### コミットメッセージを付けて保存する
 
@@ -526,7 +542,9 @@ git status -sb
 git log --oneline --decorate -3
 ```
 
-`working tree clean` とほぼ同じ状態になり、最新のコミットが追加されていれば成功です。
+`git status -sb` に残るのは `?? material/` と `?? scripts/` の2行だけになります。
+この2つは GitHub へ送らないので、残っていて正常です。
+`git log` の1行目に、いま付けたメッセージが出ていれば成功です。
 
 ![コミット成功後の状態](./screenshots/day03-commit-success.png)
 
@@ -604,7 +622,9 @@ To https://github.com/<your-user-name>/task-app.git
 branch 'main' set up to track 'origin/main'.
 ```
 
-環境によって文言は多少違います。それでも次の3点が見えたら大丈夫です。
+オブジェクトの数と容量は、送るファイル数によって変わります。
+100件を超えて数百 KB になることもあり、上の数字と違っても問題ありません。
+次の3点が見えたら大丈夫です。
 
 - `To https://github.com/...` が出ている
 - 新しいブランチが GitHub 側に作られている
