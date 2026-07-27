@@ -103,10 +103,10 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 **原因**: Prismaクライアントとスキーマが不一致
 **解決**: `npx prisma generate`を実行してクライアントを再生成します。
 
-### `Port 3000 is already in use`
+### `Port 3000 is in use ... using available port 3001 instead.`
 
-**原因**: すでに別のプロセスがポート3000を使用している
-**解決**: `lsof -i :3000`で使用中のプロセスを確認し、終了してから`npm run dev`を実行します。
+**原因**: すでに別のプロセスがポート3000を使用しています。
+**解決**: 開発サーバーは止まらず、空いている番号で起動します。このメッセージに出た番号をブラウザで開いてください。3000番のまま使いたい場合は、`lsof -i :3000`で使用中のプロセスを確認し、終了してから起動し直します。
 
 ---
 

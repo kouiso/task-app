@@ -413,26 +413,20 @@ export default async function UserDetailPage({
 
 `notFound()` の後に `return` が続きますが、この行に届くのは `user` が見つかったときだけです。`notFound()` はその場で描画を打ち切るため、下の `return` は実行されません。取り出した `id` を `userId` として渡すので、client 側はURLをもう一度読み直さずに済みます。
 
-開発サーバーを起動して、存在するユーザーIDのURLで確認しましょう。
-`/user/test123` のような存在しないIDでは、
-このコードは正しく 404 を表示します。
-実IDは Day 24 のユーザー一覧、または DB の `users` テーブルで確認します。
+ここでブラウザを開くのは、まだ早いです。
+1行目で読み込んでいる `./user-detail-client` を、次の Step 3 で作るためです。
+この時点で `/user/...` を開くと、画面いっぱいに
+`Module not found: Can't resolve './user-detail-client'` と表示されます。
+これは書き間違いではなく、まだファイルが無いだけです。
 
-```bash
-PORT=3001 npm run dev
-```
-
-スクリーンショット: ユーザー詳細ページの骨組みの表示を確認してください。
-
-![ユーザー詳細ページの骨組みの表示を確認してください。](./screenshots/user-detail-skeleton.png)
-存在するユーザーIDなら骨組みが表示され、
-存在しないIDなら 404 になります。
-次のステップで `userId` を使って詳細データを読み込みます。
+動作確認は Step 3 でそのファイルを作ってから行います。
+そのときに使う実在のユーザーIDは、Day 24 のユーザー一覧、
+または DB の `users` テーブルで確認できます。
 
 **確認ポイント**:
 - `src/app/user/[id]/page.tsx` ファイルが作成できた
 - `src/app/user/[id]/page.tsx` が server wrapper になっている
-- `npm run dev` でエラーが出ない
+- この時点ではブラウザで開かず、次の Step へ進む
 
 ---
 
@@ -553,6 +547,21 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 ```
 
 名前とIDの2つしか出さないのは、データが本当に届いているかを最短で確かめるためです。レイアウトを先に作り込んでしまうと、画面が空のときに原因を絞り込めません。データが来ていないのか、権限で弾かれたのか、CSS で見えなくなっているのかが混ざります。名前が出た時点で、URL から `getById` までの経路は通ったと確定します。飾りを足すのはそのあとです。
+
+ここで初めてブラウザを開きます。Step 2 で読み込んでいたファイルがそろったので、
+今度は `Module not found` が出ません。
+
+```bash
+PORT=3001 npm run dev
+```
+
+実在するユーザーIDを Day 24 のユーザー一覧で確認し、`/user/そのID` を開きます。
+データが届くまでの一瞬は、次のようにスピナーだけが出ます。
+
+![読み込み中はスピナーだけが表示されます](./screenshots/user-detail-skeleton.png)
+
+スピナーが消えたあとにユーザー名と ID が出れば、
+URL から `getById` までの経路がつながっています。
 
 **確認ポイント**:
 - 存在するユーザーIDでアクセスするとユーザー名が表示される
