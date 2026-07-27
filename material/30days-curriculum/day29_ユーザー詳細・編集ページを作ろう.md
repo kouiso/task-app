@@ -806,7 +806,7 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
             style={{ backgroundColor: member.project.color }}
 ```
 
-各バッジにクリックイベントを付けて、プロジェクトページへ遷移できるようにしています。上のコードブロック内の `<Badge` に以下の属性が含まれています。
+各バッジにクリックイベントを付けて、プロジェクトページへ遷移できるようにしています。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトは、このバッジの文字が読みにくくなります。暗めの色を選んでおくと、この画面でも文字が残ります。上のコードブロック内の `<Badge` に以下の属性が含まれています。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
