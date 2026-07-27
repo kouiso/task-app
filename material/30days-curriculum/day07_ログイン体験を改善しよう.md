@@ -1333,14 +1333,15 @@ npm run dev
 ```
 
 > Docker が起動していること、DB スキーマとシードデータが入っていることを確認します。
-> Day 01 の scaffold を正常完了していれば済んでいますが、不安なら次の2つを実行してから進んでください。
+> ブラウザで `http://localhost:3000/login` を開いてログイン画面が出れば、どちらも入っています。
+> 画面が出ない場合だけ、次の2つを実行してください。
 
 ```bash
 npm run db:push
 npm run db:seed
 ```
 
-`npm run db:seed` は初期データの2つのプロジェクトを削除して作り直します。そのプロジェクトに自分で追加したタスクやコメントも一緒に消えます。Day 09 以降でこのコマンドを使うときは、付録のトラブルシューティングの注意書きを先に読んでください。
+`npm run db:seed` は初期データの2つのプロジェクトを削除して作り直します。Day 07 の時点では、消えて困るものはまだありません。Day 06 で登録した自分のアカウントも残ります。Day 09 以降に自分でプロジェクトやタスクを作ったあとは、同じ操作でそれらが消えるので実行しないでください。
 
 ブラウザで `http://localhost:3000/login` を開きます。
 
@@ -1508,6 +1509,7 @@ export function AuthGuard({
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
 | `relation "User" does not exist` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
+| `ログイン試行回数が上限に達しました` | 同じメールで10回失敗したための一時ロック | 15分待つか、別のメールアドレスで試す。コードの問題ではない |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
 
 ## 次回予告
