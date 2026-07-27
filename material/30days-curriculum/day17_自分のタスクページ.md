@@ -557,6 +557,7 @@ interface TaskGroupSectionProps {
       avatar: string | null;
     } | null;
     projectId: string;
+    timeSpentMinutes: number;
   }>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -624,6 +625,7 @@ const TaskGroupSection = ({
             onDelete={onDelete}
             canEdit={canEditProject(task.projectId)}
             canDelete={canDeleteProject(task.projectId)}
+            timeSpentMinutes={task.timeSpentMinutes}
           />
         ))}
       </div>
@@ -635,6 +637,8 @@ const TaskGroupSection = ({
 > `canEditProject` / `canDeleteProject` は `MyTasksPage` から渡された関数です。`TaskGroupSection` 自身はロールを判定せず、渡された関数をそのまま `task.projectId` に適用するだけにすることで、権限ロジックが1箇所（`MyTasksPage`）にまとまります。渡し忘れると `TaskCard` のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが表示されてしまいます。
 
 > `cn()` は `clsx` + `tailwind-merge` のユーティリティです。条件付きでクラス名を結合できます。`titleClassName` に `"text-destructive"` を渡すとタイトルが赤色になります。
+
+> `timeSpentMinutes` を渡しているのは、カードに出る「合計作業時間」を実際の記録に合わせるためです。渡さないと `TaskCard` の既定値 0 が使われ、時間を記録済みのタスクでも `0m` と表示されます。なお、このページの「時間記録」ボタンで記録した直後は数字がすぐ変わりません。ページを開き直すと反映されます。
 
 **確認ポイント**:
 - ファイルを保存した
