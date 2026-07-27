@@ -469,6 +469,7 @@ useEffect(() => {
 **確認ポイント**:
 - `defaultValues` で初期値を作る仕組みを理解した
 - `useEffect(reset(...))` で編集データを同期する流れを理解した
+- `npm run dev` で型エラーが出ていない
 
 ---
 

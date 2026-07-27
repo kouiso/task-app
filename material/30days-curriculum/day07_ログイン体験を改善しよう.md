@@ -1106,6 +1106,7 @@ API を 1 つ足すたびにファイルを作らずに済むのは、入口を�
 **確認ポイント**:
 - [ ] `src/server/api/root.ts` を教材のコードで作り直した
 - [ ] `src/app/api/trpc/[trpc]/route.ts` を教材のコードで作り直した
+- [ ] `npm run dev` で型エラーが出ていない
 
 ---
 

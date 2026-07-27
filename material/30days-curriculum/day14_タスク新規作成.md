@@ -594,6 +594,7 @@ interface TaskDialogProps {
 - `TaskFormData` をエクスポートした
 - `TaskDialogProps` に `projects` がある
 - 担当者候補を外から渡す `users` prop は追加していない
+- `npm run dev` で型エラーが出ていない
 
 #### TaskFormData の各フィールド
 

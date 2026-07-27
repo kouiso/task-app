@@ -407,6 +407,7 @@ Step 0 で書いた server 側と違い、画面側に権限チェックはあ�
 **確認ポイント**:
 - `taskDetail?.comments` でデータが取得できる
 - コメントデータはタスク詳細に含まれている
+- `npm run dev` で型エラーが出ていない
 
 > `api.task.getById` のレスポンスには
 > `comments` が含まれています。
@@ -855,6 +856,7 @@ const handleCommentSubmit =
 **確認ポイント**:
 - `values` は zod でバリデーション済み
 - フォームがリセットされる
+- `npm run dev` で型エラーが出ていない
 
 > 投稿成功後に `commentForm.reset()` で
 > フォームをクリアし、`invalidate` で

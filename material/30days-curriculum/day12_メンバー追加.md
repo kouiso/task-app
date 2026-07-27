@@ -858,6 +858,7 @@ const { data: availableUsers } =
 **確認ポイント**:
 - `getAvailableUsers` はプロジェクト未参加のユーザーだけを返す
 - `enabled` で未選択時のリクエストを防いでいる
+- `npm run dev` で型エラーが出ていない
 
 ---
 

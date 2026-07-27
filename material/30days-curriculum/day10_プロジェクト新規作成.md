@@ -370,6 +370,7 @@ export function ProjectDialog({
 - `useForm` に `resolver` と `defaultValues` が設定されている
 - ダイアログが開いていて `initialData` が変わったときに `reset(...)` を呼んでいる
 - `register`, `handleSubmit`, `reset`, `errors` を取得している
+- `npm run dev` で型エラーが出ていない
 
 #### useForm の設定
 
