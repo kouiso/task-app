@@ -74,7 +74,7 @@ src/
 ├── lib/constant/
 │   └── roles.ts              ← ロール定義・権限・型ガード
 └── server/api/routers/
-    └── project.ts            ← getById/getAvailableUsers/addMember/removeMember を追加（Step 0）
+    └── project.ts            ← getById/getAvailableUsers/addMember/removeMember/updateMemberRole を追加（Step 0）
 ```
 
 この4つのうち、今日ゼロから書き足すのは `project.ts` の手続きです。`roles.ts` にはロールの一覧と権限の対応表がすでに入っています。`project-detail-view.tsx` にはメンバー一覧の見た目が用意されています。だから今日の作業は「並べる部品はそろっている、それを動かす配線とサーバー側の許可判定を自分で書く」という形になります。`page.tsx` はその配線を置く場所で、Day 09 から続けて書き足しているファイルです。どこに何を足すのか分からなくなったら、この一覧に戻ってきてください。

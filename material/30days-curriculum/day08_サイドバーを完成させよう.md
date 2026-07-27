@@ -16,7 +16,7 @@ Day 07 で認証バックエンドを作りました。
 ## 今日のゴール
 
 サイドバー付きのレイアウトを自分で作って、
-ログイン後のすべてのページがこのレイアウトで表示されるようにします。
+まずダッシュボードにこのレイアウトを適用します。Day 09 以降のページには、作るたびに同じレイアウトを巻いていきます。
 
 - [ ] `src/app/providers.tsx` — tRPC クライアントをアプリ全体に提供する
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー + メインコンテンツ
@@ -58,7 +58,7 @@ flowchart TD
 | やること | やらないこと |
 |---------|-------------|
 | tRPC クライアントを設定してフロントから API を呼べるようにする | tRPC サーバー側の追加（Day 07 済み） |
-| サイドバー + レイアウトを自分の手で書く | モバイル対応の Sheet（Day 09 以降） |
+| サイドバー + レイアウトを自分の手で書く | モバイル対応のサイドバー（このカリキュラムでは扱いません） |
 | ログアウトを AlertDialog 付きで実装する | ユーザー編集機能 |
 
 ### 新しく学ぶ概念
@@ -74,7 +74,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 作成ファイル |
 |---------|---------|---------|-------------|
-| Step 1 | providers.tsx を作る（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
+| Step 1 | providers.tsx の中身を読む（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
 | Step 2 | ルートレイアウトに Provider を組み込む | 5分 | `src/app/layout.tsx` 編集 |
 | Step 3 | AppLayout を作る（サイドバーの骨格） | 15分 | `src/component/layout/app-layout.tsx` |
 | Step 4 | ダッシュボードに AppLayout を適用する | 5分 | `src/app/dashboard/page.tsx` |

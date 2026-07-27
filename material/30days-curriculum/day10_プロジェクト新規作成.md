@@ -61,13 +61,13 @@ src/
 │       └── page.tsx              ← 編集（Day 09 で作ったページに機能を追加）
 ├── component/
 │   └── project/
-│       └── project-dialog.tsx    ← 既存（今日内容を理解する）
+│       └── project-dialog.tsx    ← 配布済み。今日 Step 1〜6 で中身を書き直す
 └── lib/
     └── constant/
         └── project.ts            ← 既存（定数を利用する）
 ```
 
-> 今日は Day 09 で作った `src/app/project/page.tsx` に、プロジェクト作成・編集機能を追加します。`project-dialog.tsx` はリポジトリに配布済みの scaffold ファイルで、中身を読み解きながら `page.tsx` と連携させます。
+> 今日は Day 09 で作った `src/app/project/page.tsx` に、プロジェクト作成・編集機能を追加します。`project-dialog.tsx` は配布済みですが、今日は Step 1 から Step 6 で中身を自分の手で書き直します。そのあと `page.tsx` と連携させます。
 >
 > **今日のゴールライン**: 既存コードを「全部理解する」必要はありません。「この部品がこう動く」が見えたら十分です。細かい型やユーティリティは使いながら慣れていきます。
 
