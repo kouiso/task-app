@@ -958,8 +958,13 @@ import { ProjectDetailView } from
   '@/component/project/project-detail-view';
 ```
 
+この部品の型は `project.getById` の戻り値を参照しています。その手続きを書くのは Day 12 なので、
+この時点ではエディタに `getById` が無いという型エラーの出ることがあります。
+Day 12 Step 0 で `getById` を足すと消えます。写し間違いではありません。
+
 **確認ポイント**:
 - `@/component/project/project-detail-view` からインポートしている
+- `getById` に関する型エラーが出ても、そのまま次へ進む
 
 プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`ProjectPageContent` 関数の return 直前（`if` 分岐の形）に以下を追加してください。
 

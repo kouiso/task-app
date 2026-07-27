@@ -1277,6 +1277,7 @@ import {
 import { dateOnlyToUtcStartIso }
   from '@/lib/date';
 import { Plus } from 'lucide-react';
+import { Button } from '@/component/ui/button';
 ```
 
 既存の `useState` 群の末尾（`const utils = api.useUtils()` の直前）に追加します。
@@ -1397,7 +1398,7 @@ const handleSubmit =
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// JSX内にDialogとボタンを追加
+// return の中、ページ見出し <h1> の直後に追加
 <Button onClick={handleCreate}>
   <Plus className="mr-2 h-4 w-4" />
   新規タスク

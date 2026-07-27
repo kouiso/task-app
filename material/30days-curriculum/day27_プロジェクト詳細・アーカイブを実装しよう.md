@@ -313,15 +313,18 @@ interface ProjectDetailViewProps {
   onBack: () => void;
   onAddMemberClick: () => void;
   onRemoveMember: (userId: string) => void;
-  onUpdateMemberRole: (
+  onUpdateMemberRole?: (
     userId: string,
     role: ProjectMemberRole,
   ) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
-  canManageMembers: boolean;
-  canArchive: boolean;
+  canManageMembers?: boolean;
+  canArchive?: boolean;
 }
 ```
+
+末尾の3つに `?` が付いているのは、Day 11 の呼び出しがこの3つを渡さないためです。
+必須にすると Day 11 で書いた記述が型エラーになります。
 
 8つと聞くと多く感じますが、中身は2種類しかありません。`projectDetail` と `canManageMembers` / `canArchive` は「表示に必要な材料」、`on` で始まる5つは「押されたことを親に伝える窓口」です。裏を返すと、`ProjectDetailView` は mutation を1つも持ちません。通信も権限の判定もこの部品の仕事ではありません。Day 15 以降で使ってきたコールバック Props と同じ考え方で、判断は `page.tsx` に集めます。こう分けておくと、あとで詳細を別ページへ移したくなったときも、この部品はそのまま持っていけます。
 
