@@ -723,6 +723,26 @@ import {
 
 `hasPermission` は「そのロールがこの操作を許されているか」を返す関数、`isProjectMemberRole` は文字列が正しいロールかを確かめる型ガードです。どちらもサーバーと同じ `@/lib/constant/roles` から取り込むので、フロントとサーバーで判定基準がずれません。
 
+`getById` を書いたので、Day 11 で保留にしていた1行をここで足します。
+`src/app/project/page.tsx` の `updateMutation` の `onSuccess` を、次の形にしてください。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// updateMutation の onSuccess を差し替える
+onSuccess: () => {
+  utils.project.getAll.invalidate();
+  if (selectedProject) {
+    utils.project.getById.invalidate(
+      { id: selectedProject },
+    );
+  }
+  setDialogOpen(false);
+},
+```
+
+プロジェクト名を変えたときに、一覧だけでなく開いている詳細画面の表示も入れ替わります。
+この1行が無いと、詳細画面には古い名前が残ったままになります。
+
 続いて、ロール変更の mutation とハンドラーを `handleArchive` の並びに追加します。
 
 ```typescript

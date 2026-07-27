@@ -575,19 +575,18 @@ const updateMutation =
   api.project.update.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate(
-          { id: selectedProject }
-        );
-      }
       setDialogOpen(false);
     },
   });
 ```
 
+完成版はここで詳細画面の取り直しも行っていますが、その `getById` はまだ書いていません。
+Day 12 で `getById` を追加したあとに、この `onSuccess` へ1行足します。
+
 **確認ポイント**:
 - `updateMutation` が `createMutation` の直下に定義されている
 - `onSuccess` で `invalidate()` を呼んでいる
+- `npm run dev` で型エラーが出ていない
 
 次に送信ハンドラーを作ります。実際のコードでは `handleDelete` の直下に `handleSubmit` が定義されています。`data.id` の有無で更新と新規作成を `if/else` で分岐します。
 
