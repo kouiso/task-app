@@ -1968,4 +1968,4 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 ## 次回予告
 
-Day 21 では、レポートページに統計カードを表示します。タスクデータをローカルで集計してダッシュボードを作ります。
+Day 21 では、レポートページに統計カードを表示します。集計はサーバー側の `getOverview` に任せ、画面は受け取った数値を並べるだけにします。

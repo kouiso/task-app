@@ -499,7 +499,7 @@ const handleProjectClick = (id: string) => {
 - `npm run dev` でエラーが出ていない
 - 型エラーが出ていない
 
-> **仮実装について**: `handleEdit` / `handleDelete` / `handleProjectClick` は今の時点では何もしません。Day 10 で編集ダイアログ、Day 11 で削除確認、Day 12 で詳細画面遷移を実装するので、今日はカードに渡すための「受け皿」だけ作っておきます。ボタンをクリックしても今は何も起きませんが、それで正常です。
+> **仮実装について**: `handleEdit` / `handleDelete` / `handleProjectClick` は今の時点では何もしません。Day 11 で編集ダイアログと削除確認、Day 12 で詳細画面遷移を実装するので、今日はカードに渡すための「受け皿」だけ作っておきます。ボタンをクリックしても今は何も起きませんが、それで正常です。
 >
 > `void projectId` は「この引数を意図的に使わない」ことをTypeScriptに伝える書き方です。`_` プレフィックスの代わりに使えるテクニックです。
 

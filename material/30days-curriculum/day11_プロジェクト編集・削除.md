@@ -922,9 +922,9 @@ const handleArchive = (
 
 **実装**:
 
-まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1〜3 で本実装に置き換えます**。TypeScript エラーを出さずに Day 11 を完了させるための一時定義です。
+まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1・3・6 で本実装に置き換えます**。TypeScript エラーを出さずに Day 11 を完了させるための一時定義です。
 
-> **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleProjectClick` と `handleDetailClose` を本実装したとき、Step 2 で `handleRemoveMember` を本実装したとき、Step 3 で `memberDialogOpen` state を追加したときに、それぞれこの仮定義を削除してください。
+> **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleProjectClick` と `handleDetailClose` を、Step 3 で `memberDialogOpen` state を、Step 6 で `handleRemoveMember` を本実装したときに、それぞれこの仮定義を削除してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx

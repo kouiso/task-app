@@ -923,7 +923,7 @@ tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
 | ダイアログが開かない | `open` prop が渡されていない | `open={dialogOpen}` を確認 |
-| `dialogOpen is not defined` | state 宣言が漏れている | Day 09 Step 7 で `useState(false)` を宣言したか確認 |
+| `dialogOpen is not defined` | state 宣言が漏れている | Day 09 Step 8 で `useState(false)` を宣言したか確認 |
 | 作成後に一覧が更新されない | キャッシュ無効化の呼び忘れ | `utils.project.getAll.invalidate()` を追加 |
 | バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(projectFormSchema)` を確認 |
 | 入力しても値が反映されない | `register` の接続漏れ | `{...register('name')}` のスプレッド構文を確認 |

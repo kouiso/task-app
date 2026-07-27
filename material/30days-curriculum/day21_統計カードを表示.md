@@ -259,7 +259,7 @@ export const reportRouter = createTRPCRouter({
       }),
 ```
 
-`recentTasks` は「直近で更新された5件」です。`groupBy` は「同じ値ごとにまとめて数える」関数で、ここでは `status` ごとの件数を作ります。Day 22 の円グラフは、この `statusData` をそのまま使います。
+`recentTasks` は「直近で更新された5件」です。`groupBy` は「同じ値ごとにまとめて数える」関数で、ここでは `status` ごとの件数を作ります。Day 22 の円グラフは、この `statusData` に日本語ラベルと色を足して使います。
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（続き）
