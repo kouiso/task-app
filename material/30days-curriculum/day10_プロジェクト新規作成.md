@@ -89,7 +89,7 @@ src/
 | Step 0 | プロジェクト作成 API（create）を自分で書く | 12分 |
 | Step 1 | ProjectDialogの骨格を作る | 5分 |
 | Step 2 | zodスキーマとフォーム設定を作る | 5分 |
-| Step 3 | values propで初期値を自動同期する | 5分 |
+| Step 3 | defaultValues と reset で初期値を同期する | 5分 |
 | Step 4 | 名前・説明の入力欄を作る | 7分 |
 | Step 5 | カラーピッカーと日付欄を作る | 7分 |
 | Step 6 | 送信処理を実装する | 5分 |

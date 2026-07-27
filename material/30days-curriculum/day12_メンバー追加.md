@@ -107,7 +107,7 @@ src/
 | Step 0 | project.ts に getById/getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く | 25分 |
 | Step 1 | プロジェクト詳細ビューを接続する | 6分 |
 | Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
-| Step 3 | ロール関連のインポートとフォームを準備する | 6分 |
+| Step 3 | メンバー追加用のstateを準備する | 6分 |
 | Step 4 | メンバー追加ダイアログのUIを作る | 7分 |
 | Step 5 | メンバー追加APIを呼ぶ | 5分 |
 | Step 6 | メンバー削除を実装する | 7分 |
