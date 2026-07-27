@@ -850,10 +850,11 @@ if (isLoading) {
 完成版のコード では、プロジェクト別集計も
 `overview.projectStats` に入って返ってきます。
 
-**実装**:
+まず、これから書く行の中身を1つの塊で見ておきます。**このブロックはまだ書きません。**
+実際に書く場所は、このあと作る `<TableBody>` の中です。
 
 ```typescript
-// filepath: src/app/report/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // projectStats は server 側で集計済み
 {overview?.projectStats.map((stat) => (
   <TableRow key={stat.id}>
