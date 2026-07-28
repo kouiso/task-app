@@ -148,13 +148,21 @@ def paragraphs(text: str) -> list[list[tuple[int, str]]]:
     落とすので、フェンスだけで隔てられた前後の地の文をそのまま繋ぐと、1つの段落に
     なる。前の文が挙げた置き場と、後ろの文の「見比べて確認してください」が同居した
     ことになり、書いた人が別々の話として書いた2つが1件の指摘になる。
+
+    HTML コメントは中身を消して返す。`<!-- 見比べてください -->` は Markdown が
+    読者に表示しないので、書かれていない案内として検査に引っかかる。消し方は
+    桁を保つ塗りつぶしにする。一致位置から行番号を引く検査があるため、
+    詰めると別の行を指した報告になる。フェンスの中を先に空行へ落としてから塗る。
+    コードブロックの中で開いた `<!--` が、その先の地の文まで巻き込むのを防ぐ。
     """
+    masked = mask_html_comments(blank_fences(text)).split("\n")
     out: list[list[tuple[int, str]]] = []
     current: list[tuple[int, str]] | None = None
     for lineno, line, state, _ in fence_states(text):
         if state != "outside":
             current = None
             continue
+        line = masked[lineno - 1]
         if not line.strip():
             current = None
             continue

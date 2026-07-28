@@ -209,6 +209,26 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, str]]]] = [
         },
         [("src/app/foo/page.tsx", "form")],
     ),
+    (
+        "正規表現リテラルの中のタグは開始タグではない",
+        {
+            "day07_x.md": block(
+                "src/app/foo/page.tsx",
+                "  const pattern = /<form>/;\n  const ok = pattern.test(html);",
+            )
+        },
+        [],
+    ),
+    (
+        "正規表現を疑っても除算の後ろの閉じ忘れは見つける",
+        {
+            "day07_x.md": block(
+                "src/app/foo/page.tsx",
+                "  const half = total / 2;\n  <form>",
+            )
+        },
+        [("src/app/foo/page.tsx", "form")],
+    ),
 ]
 
 # (説明, ファイル, 期待する day 一覧)
@@ -252,6 +272,11 @@ MASK_CASES: list[tuple[str, str, str]] = [
     ("文字列を潰す", 'const s = "}}}";', "const s =" + " " * 6 + ";"),
     ("テンプレートリテラルを潰す", "const s = `${a} }`;", "const s =         ;"),
     ("ブロックコメントを潰す", "a /* } */ b", "a         b"),
+    ("正規表現リテラルを潰す", "const re = /}{/;", "const re = " + " " * 4 + ";"),
+    ("除算は潰さない", "const x = a / b;", "const x = a / b;"),
+    ("閉じタグの / を正規表現の開始と読まない", "<div>\n</div>", "<div>\n</div>"),
+    ("自己終了タグの / を正規表現の開始と読まない", "<A a={1} /> <B b={2} />", "<A a={1} /> <B b={2} />"),
+    ("行内で閉じない / はそのまま置く", "const x = /abc;\n<div>", "const x = /abc;\n<div>"),
 ]
 
 

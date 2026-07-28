@@ -53,6 +53,16 @@ DISCLAIMED = re.compile(r"ZIP\s*(?:に|には)[^。]{0,40}(?:入って?い?ま�
 # 「`src/a.tsx` は ZIP に入っていません。一方 `src/b.tsx` と見比べてください。」の
 # 後半まで一緒に免除され、実害のある指示が黙って通る。
 SENTENCE_END = "。"
+# 照合を指示する文が、自分で照合先を名指ししているかを見るための語。ZIP に入るか
+# どうかは問わない。名指ししていれば、段落の他の文が挙げた置き場は照合先ではない。
+# 名指ししていなければ照合先は前の文にある（「…と同じです。手元のコードと見比べて
+# ください。」）ので、段落全体から探す。
+# 拡張子だけで判定すると `Next.js` のような地の文の語まで照合先になるので、
+# インラインコードの中に在る形か、`/` を含む形に絞る。URL は照合先ではないので外す。
+INLINE_CODE = re.compile(r"`+([^`]+)`+")
+URL = re.compile(r"https?://\S+")
+NAMED_FILE = re.compile(r"[\w.\[\]-]+\.[A-Za-z0-9]{1,6}\b")
+NAMED_PATH = re.compile(r"[\w.\[\]-]+/[\w./\[\]-]*")
 # 照合を打ち消す語。「`src/app/page.tsx` と見比べる必要はありません」は、読者を
 # 存在しない照合先へ送らないための正しい案内である。照合の語だけで一致を取ると、
 # 30周目の修正で足したこの案内ごと赤くなる。語の直後に続く形だけを見る。
@@ -79,22 +89,34 @@ def not_in_zip(location: str) -> bool:
 
 
 def _demands_compare(joined: str) -> bool:
-    """その段落が照合を指示しているなら True。打ち消しで続く言い回しは数えない。"""
+    """その文が照合を指示しているなら True。打ち消しで続く言い回しは数えない。"""
     return any(not NEGATED.match(joined, m.end()) for m in COMPARE.finditer(joined))
 
 
-def _sentences(joined: str) -> list[str]:
-    """段落を句点で切る。切れ目の句点は前の文に残す。"""
-    out: list[str] = []
+def _names_target(sentence: str) -> bool:
+    """その文が照合先を自分で名指ししているなら True。"""
+    without_url = URL.sub(" ", sentence)
+    if NAMED_PATH.search(without_url):
+        return True
+    return any(NAMED_FILE.search(m.group(1)) for m in INLINE_CODE.finditer(without_url))
+
+
+def _sentences(joined: str) -> list[tuple[int, str]]:
+    """段落を句点で切る。(段落内の開始位置, 文) を返す。切れ目の句点は前の文に残す。
+
+    開始位置を添えるのは、文の中で見つけた位置を段落全体の位置へ戻して
+    行番号を引くためである。
+    """
+    out: list[tuple[int, str]] = []
     start = 0
     while True:
         i = joined.find(SENTENCE_END, start)
         if i < 0:
             break
-        out.append(joined[start : i + 1])
+        out.append((start, joined[start : i + 1]))
         start = i + 1
     if joined[start:]:
-        out.append(joined[start:])
+        out.append((start, joined[start:]))
     return out
 
 
@@ -108,7 +130,7 @@ def disclaimed_locations(joined: str) -> set[str]:
     大きく書くことが多い。末尾が `/` の語はその配下すべてを指す断りとして扱う。
     """
     out: set[str] = set()
-    for sentence in _sentences(joined):
+    for _, sentence in _sentences(joined):
         if not DISCLAIMED.search(sentence):
             continue
         out.update(m.group(1) for m in DISCLAIM_SCOPE.finditer(sentence))
@@ -122,22 +144,37 @@ def _is_disclaimed(location: str, disclaimed: set[str]) -> bool:
 
 
 def find_refs(paths: list[Path]) -> list[tuple[str, int, str, str]]:
-    """(ファイル名, 行番号, 置き場, 該当行) を返す。"""
+    """(ファイル名, 行番号, 置き場, 該当行) を返す。
+
+    照合の指示は、それを書いた文が名指ししている置き場にだけ結び付ける。段落まるごとを
+    照合先の範囲にすると、「`src/app/missing/page.tsx` を作ります。次に `README.md` と
+    見比べて確認してください。」の作成の指示まで照合先として挙がる。照合されているのは
+    ZIP に入る `README.md` だけなので、これは誤検知である。
+
+    照合を指示する文が照合先を名指ししていないときだけ、段落全体を照合先の範囲にする。
+    「…`src/app/x.tsx` と同じです。手元のコードと見比べてください。」は照合先が前の文に
+    在るので、文だけを見ると実害のある指示を落とす。
+
+    断りの範囲は段落全体のままにする。断り書きは照合を指示する文とは別の文に
+    置かれるのが普通である。
+    """
     hits: list[tuple[str, int, str, str]] = []
     for path in paths:
         for para in paragraphs(path.read_text(encoding="utf-8")):
             joined = paragraph_text(para)
-            if not _demands_compare(joined):
-                continue
             disclaimed = disclaimed_locations(joined)
             seen: set[str] = set()
-            for m in LOCATION.finditer(joined):
-                loc = m.group(1)
-                if loc in seen or not not_in_zip(loc) or _is_disclaimed(loc, disclaimed):
+            for start, sentence in _sentences(joined):
+                if not _demands_compare(sentence):
                     continue
-                seen.add(loc)
-                lineno, line = paragraph_line(para, m.start())
-                hits.append((path.name, lineno, loc, line.strip()))
+                scope, base = (sentence, start) if _names_target(sentence) else (joined, 0)
+                for m in LOCATION.finditer(scope):
+                    loc = m.group(1)
+                    if loc in seen or not not_in_zip(loc) or _is_disclaimed(loc, disclaimed):
+                        continue
+                    seen.add(loc)
+                    lineno, line = paragraph_line(para, base + m.start())
+                    hits.append((path.name, lineno, loc, line.strip()))
     return hits
 
 

@@ -36,6 +36,19 @@ REAL_PREFIXES = ("src/", "prisma/", "scripts/")
 # 写経対象として扱う言語。bash は同じ `# filepath:` の書式を使うが、
 # 波括弧の意味が違う（`${VAR}` や関数定義）ので構文の収支検査には載せない。
 CODE_LANGS = frozenset({"typescript", "ts", "tsx", "javascript", "js", "jsx"})
+IDENT = re.compile(r"[A-Za-z0-9_$]")
+# `/` の直前に来ると、その `/` が除算になる文字。値の終わりだからである。
+# `>` と `<` も入れる。JSX の `<div>/` は要素の中身の文字であり、`</div>` の `/` は
+# 閉じタグの一部で、どちらも正規表現の開始ではない。
+DIVISION_AFTER = ")]}><"
+# 直後に式が来る予約語。`return /\d+/.test(s)` の `/` は除算ではない。
+# 直前が識別子でも、この語なら正規表現の開始として読む。
+REGEX_KEYWORDS = frozenset(
+    {
+        "return", "typeof", "case", "in", "of", "new",
+        "delete", "void", "throw", "yield", "await", "do", "else",
+    }
+)
 
 
 class Block(NamedTuple):
@@ -143,12 +156,42 @@ def _in_jsx_text(src: str, pos: int) -> bool:
     return False
 
 
+def _starts_regex(src: str, pos: int) -> bool:
+    """pos の `/` が正規表現リテラルの開始なら True。
+
+    直前の非空白文字を見る。`scan_tags` が開始タグを見分けるのと同じ形である。
+    値の終わり（識別子・`)`・`]`・`}`）の後ろに来る `/` は除算で、それ以外の位置に
+    来る `/` は正規表現の開始しかありえない。ただし識別子でも、直後に式が来る
+    予約語なら正規表現として読む（`return /\\d+/.test(s)`）。
+
+    直後が `>` のときは自己終了タグ（`<Input />`）なので数えない。
+    """
+    if src[pos + 1 : pos + 2] == ">":
+        return False
+    j = pos - 1
+    while j >= 0 and src[j] in " \t\n":
+        j -= 1
+    if j < 0:
+        return True
+    if src[j] in DIVISION_AFTER:
+        return False
+    if IDENT.match(src[j]):
+        k = j
+        while k >= 0 and IDENT.match(src[k]):
+            k -= 1
+        return src[k + 1 : j + 1] in REGEX_KEYWORDS
+    return True
+
+
 def mask_code(src: str) -> str:
-    """文字列・コメント・テンプレートリテラルを空白へ潰す。行数と桁は変えない。
+    """文字列・コメント・テンプレートリテラル・正規表現を空白へ潰す。行数と桁は変えない。
 
     括弧やタグを数える前に通す。`"}"`  のような文字列や `// 閉じる }` のような
     コメントを数えると、収支は必ず合わなくなる。テンプレートリテラルは中身ごと
     潰す。`${...}` の中の括弧はその中で閉じているので、丸ごと消しても収支は動かない。
+
+    正規表現リテラルも潰す。`const pattern = /<form>/;` の `<form>` を開始タグとして
+    数えると、`</form>` はどこにも要らないのに「閉じていない」と報告される。
     """
     out = list(src)
     i = 0
@@ -170,6 +213,37 @@ def mask_code(src: str) -> str:
         if c == "/" and i + 1 < n and src[i + 1] == "*":
             j = src.find("*/", i + 2)
             j = n if j < 0 else j + 2
+            blank(i, j)
+            i = j
+            continue
+        if c == "/" and _starts_regex(src, i):
+            j = i + 1
+            in_class = False
+            closed = False
+            while j < n:
+                d = src[j]
+                if d == "\\":
+                    j += 2
+                    continue
+                if d == "\n":
+                    break
+                if in_class:
+                    if d == "]":
+                        in_class = False
+                elif d == "[":
+                    # 文字クラスの中の `/` は終端にならない（`/[/]/`）。
+                    in_class = True
+                elif d == "/":
+                    j += 1
+                    closed = True
+                    break
+                j += 1
+            if not closed:
+                # 行内で閉じない。正規表現は行を跨げないので、これは正規表現ではなく
+                # 断片コードに残った除算の片割れである。潰すと同じ行の閉じタグまで
+                # 消えるので、そのまま置いて次の文字から数え直す。
+                i += 1
+                continue
             blank(i, j)
             i = j
             continue

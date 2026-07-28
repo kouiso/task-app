@@ -107,6 +107,19 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, int]]]] = [
         },
         [],
     ),
+    (
+        "HTML コメントの中の宣言は読者に見えない",
+        {"day29_x.md": block("  <form>") + "\n<!-- エラーが出なくなります。 -->\n"},
+        [],
+    ),
+    (
+        "HTML コメントの外に宣言があればこれまでどおり止める",
+        {
+            "day29_x.md": block("  <form>")
+            + "\n<!-- 補足 -->エラーが出なくなります。\n"
+        },
+        [("day29_x.md", 6)],
+    ),
 ]
 
 
