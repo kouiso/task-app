@@ -11,10 +11,9 @@
 - 空のディレクトリから `task-app` の土台を起動して、`http://localhost:3000` に最初の画面を表示できるようになる
 - 配色やフォントなどの見た目の設定（design token）を整えて、自分のアプリらしい画面まで仕上げられるようになる
 
-完成イメージの雰囲気は、
-【スクリーンショット】Day 01 完成時の最小ページ
+完成イメージの雰囲気は、次のスクリーンショットを眺めてもらうと掴みやすいです。
 ![Day 01 完成時の最小ページ](./screenshots/day01/first-render.png)
-を眺めてもらうと掴みやすいです。
+スクリーンショット: Day 01 を終えた時点の最小ページが、ブラウザに表示されています。
 完全一致でなくてよいです。
 「自分のアプリ開発が始まった」と思える見た目を今日つくるのが狙いです。
 
@@ -129,6 +128,8 @@ node -v
 npm -v
 ```
 
+この2つはバージョンを表示するだけのコマンドで、パソコンの中身は何も変わりません。だから何度実行しても平気です。`command not found` と出たときは、Node.js がまだ入っていないか、インストール後にターミナルを開き直していないかのどちらかです。インストール直後は、いま開いているターミナルが古い状態を持ったままなので、一度閉じて開き直すと見つかるようになります。
+
 ### 期待する結果
 
 - `node -v` が `v22.x.x` 以上
@@ -182,14 +183,19 @@ pwd
 ```
 
 > ここで使っているコマンドの意味も確認しておきましょう。ターミナルの操作に慣れていなくても、1つずつ意味が分かれば怖くありません。
-> - `mkdir -p ~/workspace`: `workspace` フォルダを作ります（`mkdir` は make directory の略。すでにあってもエラーになりません）
+> - `mkdir -p ~/workspace`: `workspace` フォルダを作ります（`mkdir` は make directory の略で、すでに同じ名前があってもエラーになりません）
 > - `cd ~/workspace`: 作ったフォルダに移動します（`cd` は change directory の略）
 > - `unzip ...`: 配布 ZIP を展開する
 > - `cd task-app`: 展開してできた `task-app` フォルダに移動する
 > - `mise trust` と `mise install`: mise を使っている場合だけ、配布物の Node.js 設定を許可してインストールする
 > - `pwd`: いま自分がどのフォルダにいるかを表示します（`pwd` は print working directory の略）
 >
-> ZIP のファイル名は、手元では上記の名前と違うことがあります（バージョン番号が新しい、ブラウザが `(1)` を付けた、など）。`unzip` で `cannot find` と出たら、`ls ~/Downloads` で実際のファイル名を確認して、その名前に合わせて実行し直してください。
+> Windows で WSL2（Ubuntu）を使っている場合、`~/Downloads` は Windows のダウンロードフォルダ
+> ではありません。Windows 側に保存した ZIP を使うので、次のように書き換えてください。
+> `unzip /mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1.zip`
+> `unzip: command not found` と出たら、先に `sudo apt-get update && sudo apt-get install -y unzip` を実行します。
+>
+> ZIP のファイル名は、手元では上記の名前と違うことがあります。バージョン番号が新しいときや、ブラウザがファイル名の末尾に `(1)` を付けたときです。`unzip` で `cannot find` と出たら、`ls ~/Downloads` で実際のファイル名を確認して、その名前に合わせて実行し直してください。
 >
 > 上の `cd task-app` は、配布 ZIP が `task-app` フォルダに展開される前提のコマンドです。
 > もし `cd task-app` で `No such file or directory` と出たら、展開先のフォルダ名が違います。
@@ -214,12 +220,17 @@ pwd
 - `scripts/scaffold-from-scratch.sh`
 - `.env.example`
 
+`.env.example` はドットで始まるファイルなので、`ls` だけでは表示されません。
+見たいときは `ls -a` を使ってください。表示されなくても壊れていません。
+
 今いる場所が配布物ルートになっているか確認しておきましょう。
 
 **ターミナル（`~/workspace/task-app`）**
 ```bash
 ls
 ```
+
+`ls` は、いまいるフォルダの中身を並べて見せるだけのコマンドです。ファイルを作ったり消したりしないので、迷子になったと感じたときは何度でも実行できます。一覧に `scripts` と `material` が出てこないときは、展開先の1つ外側か1つ内側にいます。表示の中に `task-app` というフォルダ名が見えていれば `cd task-app` で中に入り、見覚えのない一覧が出たときは `cd ~/workspace/task-app` と打てば戻ってこられます。
 
 ### 期待する結果
 
@@ -257,6 +268,10 @@ chmod +x scripts/scaffold-from-scratch.sh
 bash scripts/scaffold-from-scratch.sh
 ```
 
+このスクリプトを走らせてよいのは、この Day 01 の一度だけです。Day 10 以降にもう一度実行すると、`src/component/` に自分で書いたファイルが配布版で上書きされます。初期データのプロジェクトと、その中に自分で作ったタスクやコメントも消えます。うまくいかないときは、先に付録のトラブルシューティングを読んでください。
+
+この2行を実行すると、いまいるフォルダの中に `package.json` や `src` などが一気に作られ、データベース用のコンテナも起動します。インターネットから部品を取り寄せる時間があるので、終わるまで数分かかることもあります。文字が流れているあいだは動いているので、そのまま待ってください。`Permission denied` と出たときは、ファイルを直接指定して実行していないか確かめてください。`./scripts/scaffold-from-scratch.sh` のようにファイル名だけで動かす書き方は、実行権限が付いていないと止まります。ここでは `bash` にファイルを渡しているので、実行権限が付いていなくても動きます。それでも出るときは、書き込みできない場所にいる可能性があるので、`pwd` で `~/workspace/task-app` にいるか確認してください。`Cannot connect to the Docker daemon` と出たときは Docker が起動していないので、Docker Desktop を立ち上げてから実行し直してください。
+
 ### 期待される出力
 
 スクリプトを実行すると、ターミナルに進行状況が次々と表示されます。表示される内容や順番はパソコンの環境によって多少前後しますが、だいたい次のような流れになります。
@@ -293,6 +308,8 @@ Docker で PostgreSQL を起動しています...
 
 （ログはこの後も続きます。自分で入力するものではないので、表示されるのを待ちましょう。）
 
+ここまでの行は、上から順に「Next.js の土台を作った」「必要な部品を取り寄せた」「このカリキュラム用の設定を置いた」という3つの段階を表しています。`Installing dependencies:` のあたりで長く止まって見えますが、部品のダウンロード中なので待つだけで大丈夫です。`Biome 設定を作成しました。` の行が出はじめたら、スクリプトの後半に入った合図です。
+
 ```text
 Prisma スキーマをDBに反映しています...
 シードデータを投入しています...
@@ -301,6 +318,8 @@ DB セットアップが完了しました。
 初期セットアップは完了しました。
 カリキュラムの Day 01 の続きを進めてください。
 ```
+
+このログで見るべきなのは、最後の `初期セットアップは完了しました。` の行です。ここが出ていれば、データベースの準備まで含めて最後まで走りきっています。逆に `Docker で PostgreSQL を起動しています...` から先へ進まないときは、Docker 側で止まっています。Docker Desktop が起動しているか確かめてから、同じスクリプトをもう一度実行してください。Day 01 の時点なら、2回実行しても土台は壊れません。ただし Day 02 以降に自分で書いたコードは上書きされるので、このスクリプトは Day 01 でだけ使ってください。
 
 ### 成功判定
 
@@ -335,13 +354,15 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 NODE_ENV="development"
 ```
 
+この見本で今日いちばん大事なのは `DATABASE_URL` の行です。ここに書いた住所が、アプリからデータベースへ届くための道になります。末尾に近い `localhost:25532` の数字はポート番号（1台のパソコンの中で通信の入口を区別する番号）で、さきほどのスクリプトが Docker で起動した PostgreSQL と同じ番号にそろえてあります。だから今日はここを書き換えずに進めます。後の Day で「データが取れない」となったときは、まずこの行を見に来ると原因を絞り込めます。
+
 ### 危ないアンチパターン
 
 ここで1つ、注意してほしい点を説明しておきます。
 
 `JWT_SECRET` は、JWT（ログイン状態を証明するために発行される通行証のようなデータ）の署名に使う「合言葉」にあたるシークレットキー（秘密の文字列）です。これが他人に知られると、本人になりすましてログインされてしまう恐れがあります。だからこそ、本番で使うシークレットキーを GitHub などの公開される場所に置いてはいけません。
 
-今日は `.env.example`（設定の見本ファイル）を眺めるだけで十分です。さっきのスクリプトが、この見本をコピーして `.env` という実際の設定ファイルも作ってくれています。`.env` の中身は、当面のあいだ練習用の値のままで問題ありません。本物のシークレットキーを使う段階になったら、公開されない `.env` の側にだけ書き、自分のパソコンの中だけに置きます。
+今日は `.env.example`（設定の見本ファイル）を眺めるだけで十分です。Step 2 で実行した `scripts/scaffold-from-scratch.sh` が、この見本をコピーして `.env` という実際の設定ファイルも作ってくれています。`.env` の中身は、当面のあいだ練習用の値のままで問題ありません。本物のシークレットキーを使う段階になったら、公開されない `.env` の側にだけ書き、自分のパソコンの中だけに置きます。
 
 ## Step 3: npm run dev で初期画面を起動する
 
@@ -356,20 +377,25 @@ NODE_ENV="development"
 npm run dev
 ```
 
+このコマンドは、書いたコードをブラウザへ届ける「開発サーバー」を起動します。ファイルは何も書き換わりませんが、パソコンの 3000 番の入口をこのサーバーが使いはじめます。`Missing script: "dev"` と出たときは、原因が2つあります。1つは `package.json` のないフォルダにいる場合です。もう1つは、`package.json` があるのに `scripts` の中に `dev` が書かれていない場合です。まず `pwd` で場所を確かめ、違っていれば `cd ~/workspace/task-app` で戻ってから打ち直してください。場所が合っているなら `cat package.json` を実行し、`scripts` の中に `"dev": "next dev"` の行があるか確認してください。`Port 3000 is in use` と出たときは、別のターミナルで開発サーバーがすでに動いています。そちらの画面で `control + C` を押して止めれば、こちらから起動できます。
+
 ### 期待される出力
 
 **ターミナル出力（`~/workspace/task-app`）**
 ```text
-> taskappday01-demo@0.1.0 dev
+> task-app@0.1.0 dev
 > next dev
 
-▲ Next.js 15.5.15 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://192.168.55.2:3000
-✓ Ready in 158ms
+   ▲ Next.js 15.5.21
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.55.2:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 5.5s
 ```
 
-> 1行目の `taskappday01-demo@0.1.0` の部分や、Next.js のバージョン番号、`Network:` の数字、秒数は環境によって変わります。`Local: http://localhost:3000` と `Ready` が見えていれば成功です。
+> `Network:` の数字と `Ready in` の秒数は環境によって変わります。`Local: http://localhost:3000` と `Ready` が見えていれば成功です。
 >
 > このコマンドは「開発サーバー」を動かし続けるので、実行したあともターミナルには次の入力待ち（プロンプト）が戻ってきません。止まっているのではなく、動き続けている状態です。このターミナルは閉じずにそのままにしておきましょう。止めたいときは、このターミナルで `control + C` を押します。別のコマンドを打ちたくなったら、新しいターミナルをもう1つ開いて使います。
 
@@ -380,8 +406,8 @@ npm run dev
 ### 何が見えたらOKか
 
 Next.js のロゴと、
-`To get started, edit the page.tsx file.`
-のような「page.tsx を編集してね」という案内文が見えれば大丈夫です。
+`Get started by editing src/app/page.tsx.`
+という「page.tsx を編集してね」という案内文が見えれば大丈夫です。
 （案内文の文言は Next.js のバージョンによって少し変わります。ロゴ入りの案内ページが出ていれば成功です。）
 
 ### スクリーンショットの見本
@@ -416,7 +442,7 @@ Next.js のロゴと、
 
 ### 編集を始める前に、VS Code でプロジェクトを開く
 
-ファイルの編集にはエディタを使います。VS Code を起動して、メニューの「ファイル」から「フォルダーを開く...」を選び、`workspace` の中の `task-app` フォルダを選んで開いてください。左側のファイル一覧（エクスプローラー）に `src` や `package.json` が並んでいれば準備完了です。以降「`src/app/globals.css` を開く」と書いてあったら、このファイル一覧で `src` フォルダ、`app` フォルダの順にクリックして中のファイルを開く、という意味です。
+ファイルの編集にはエディタを使います。VS Code を起動して、メニューの「ファイル」から「フォルダを開く...」を選び、`workspace` の中の `task-app` フォルダを選んで開いてください。左側のファイル一覧（エクスプローラー）に `src` や `package.json` が並んでいれば準備完了です。以降「`src/app/globals.css` を開く」と書いてあったら、このファイル一覧で `src` フォルダ、`app` フォルダの順にクリックして中のファイルを開く、という意味です。
 
 `npm run dev` を動かしているターミナルは、そのまま動かし続けて大丈夫です。ファイルを保存するたびに、ブラウザの画面が自動で更新されます。
 
@@ -440,7 +466,7 @@ Next.js のロゴと、
 ### 編集アンカー
 
 `src/app/globals.css` を開いて、
-**先頭の `@import "tailwindcss";` からファイルの最後まで全部置き換える**。
+**先頭の `@import "tailwindcss";` からファイルの最後まで全部置き換えます**。
 
 今のファイルを部分修正するより、
 Day 01 は丸ごと入れ替えたほうが理解しやすいです。
@@ -739,7 +765,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
 ### 編集アンカー
 
 `src/app/page.tsx` を開いて、
-**`import Image from "next/image";` からファイルの最後まで全部置き換える**。
+**`import Image from "next/image";` からファイルの最後まで全部置き換えます**。
 
 `Home` という初期コンポーネントを残すより、
 このDayでは丸ごと差し替えた方がスッキリ理解できます。
@@ -777,7 +803,7 @@ export default function HomePage() {
 **確認ポイント**: `export default function HomePage()` と、その中の `<header>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/page.tsx（同じファイルの続き）
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -809,7 +835,7 @@ export default function HomePage() {
 **確認ポイント**: `<a>` と `<Link>` の2種類のリンクを書き分けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/page.tsx（同じファイルの続き）
                 >
                   ダッシュボードへ入る
                 </Link>
@@ -841,7 +867,7 @@ export default function HomePage() {
 **確認ポイント**: 「今日の進捗」のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/page.tsx（同じファイルの続き）
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -873,7 +899,7 @@ export default function HomePage() {
 **確認ポイント**: 3枚目の `<article>` を閉じて、`id="today-goals"` まで書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/page.tsx（同じファイルの続き）
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
@@ -905,7 +931,7 @@ export default function HomePage() {
 **確認ポイント**: `<ul>` の中に4つの `<li>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/page.tsx（同じファイルの続き）
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればいいわけではない。
@@ -937,7 +963,7 @@ export default function HomePage() {
 **確認ポイント**: `id="next-step"` の `<article>` を開いたところまで書けていることを確認できたら、最後のブロックを続けて書きます。
 
 ```tsx
-// filepath: 続き
+// filepath: src/app/page.tsx（同じファイルの続き）
                 Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
                 今日のページは入口として、ダッシュボードは明日の土台として整えておく。
               </p>
@@ -956,9 +982,9 @@ export default function HomePage() {
 
 Day 02 では、`src/app/dashboard/page.tsx` に機能を追加していきます。
 
-その準備として、Day 01 の最後に **ダッシュボードのページだけ先に用意しておきます**。
+その準備として、Day 01 の最後に **ダッシュボードのページだけ** を先に用意しておきます。
 
-まず `src/app` の中に `dashboard` フォルダを作ります。VS Code で作るなら、左側のファイル一覧（エクスプローラー）で `src/app` を右クリックして「新しいフォルダー」を選び、`dashboard` と名前を付けます。ターミナルが好きなら、`task-app` フォルダにいる状態で `mkdir src/app/dashboard` と打っても同じ結果になります。
+まず `src/app` の中に `dashboard` フォルダを作ります。VS Code で作るなら、左側のファイル一覧（エクスプローラー）で `src/app` を右クリックして「新しいフォルダ」を選び、`dashboard` と名前を付けます。ターミナルが好きなら、`task-app` フォルダにいる状態で `mkdir src/app/dashboard` と打っても同じ結果になります。
 
 次に、作った `dashboard` フォルダを右クリックして「新しいファイル」を選び、`page.tsx` という名前を付けます。ここに次の内容をそのまま入力しましょう。
 
@@ -985,6 +1011,8 @@ export default function DashboardPage() {
   );
 }
 ```
+
+このファイルは、`src/app/dashboard/` というフォルダの中に `page.tsx` という名前で置いたことに意味があります。Next.js はフォルダの名前をそのまま URL の一部として扱うので、これで `/dashboard` という住所ができました。中身はトップページと同じ token 名だけで組んであるため、今日そろえた配色がこちらの画面にもそのまま効きます。保存したら `http://localhost:3000/dashboard` を開いて、`Hello Task-App` の見出しが出るか確かめましょう。`404` と表示されるときは、フォルダ名かファイル名が1文字違っています。
 
 ### ここで押さえたいこと
 
@@ -1023,7 +1051,7 @@ export default function DashboardPage() {
 ### Before（改善前のコード）
 
 ```tsx
-// filepath: src/app/page.tsx（比較用の一部）
+// filepath: 読み比べ用サンプル（比較用の一部・実ファイルには対応しません）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-[#25273f] bg-[#0f1021] px-[32px] py-[28px] shadow-[0_24px_80px_-32px_rgba(99,102,241,0.45)]">
@@ -1052,8 +1080,10 @@ function WelcomeHero() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+このブロックには `bg-[#0f1021]` や `text-[13px]` のように、角かっこの中へ値を直接書いた指定が並んでいます。書いた本人はその場で決められるので速いのですが、`#0f1021` が背景なのか面なのかは名前から読み取れません。同じ色を別の画面でも使いたくなったとき、この文字列を探して回ることになります。続きのブロックでは、同じ書き方がボタンにも広がっていきます。
+
 ```tsx
-// filepath: src/app/page.tsx（続き）
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
           明日の予告を見る
         </a>
       </div>
@@ -1075,7 +1105,7 @@ export default function HomePage() {
 ### After（プロが書くコード）
 
 ```tsx
-// filepath: src/app/page.tsx（比較用の一部）
+// filepath: 読み比べ用サンプル（比較用の一部・実ファイルには対応しません）
 function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-border bg-card px-8 py-7 shadow-md">
@@ -1104,8 +1134,10 @@ function WelcomeHero() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+見た目は Before とほとんど同じなのに、`bg-card` や `text-muted-foreground` という役割の名前だけで組み立てられています。色の実際の値は `globals.css` の1か所にしか無いので、主役の色を変えたくなったらそこを直すだけで全画面が追いかけてきます。クラス名を見た人が「これは主役の面」と判断できるのも、値ではなく名前で書いてあるからです。
+
 ```tsx
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
           明日の予告を見る
         </a>
       </div>
@@ -1144,6 +1176,8 @@ export default function HomePage() {
 ```bash
 npm run dev
 ```
+
+すでに開発サーバーが動いたままなら、この起動は要りません。止めていた場合は、`Ready` の行が出るまで待ってからブラウザを開きます。ここで赤い文字が出たときは、ブラウザではなくこのターミナルが原因を教えてくれています。`globals.css` や `page.tsx` のどのファイルの何行目でつまずいたかがそこに出るので、その場所を開いて、貼り付けが途中で切れていないか見てください。エラーの行番号を頼りに直せるのは、初日から使える強い武器です。
 
 ### ブラウザ確認
 
@@ -1198,3 +1232,13 @@ Day 02 では、
 
 今日の `bg-card` や `bg-primary` が効いてくるのも、
 まさにここからです。
+
+---
+
+## 次に読むもの
+
+- 次の日: [Day 02](./day02_ダッシュボードに自分だけのメッセージを追加しよう.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 詰まったとき: [トラブルシューティング](./appendix_トラブルシューティング.md)
+- 言葉の意味: [用語集](./appendix_用語集.md)

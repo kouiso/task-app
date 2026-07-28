@@ -55,7 +55,7 @@ Task-Appで学んだ技術スタックを使って、ゼロから新しいアプ
 
 ```bash
 # 1. Next.jsプロジェクトの作成
-npx create-next-app@15.5.15 my-new-app --typescript --tailwind --app --yes
+npx create-next-app@15.5.21 my-new-app --typescript --tailwind --app --src-dir --import-alias "@/*" --yes
 
 # 2. 必要なパッケージの追加
 npm install @trpc/server @trpc/client @trpc/react-query
@@ -68,6 +68,12 @@ npx prisma init
 # 4. 開発開始！
 npm run dev
 ```
+
+この4手順の順番には理由があります。1番の `create-next-app` が土台のフォルダと設定ファイルを作るので、これより先に何かを入れる場所がありません。2番で入れる3つは、この教材で毎日使ってきた道具です。画面とサーバーを型でつなぐ tRPC、データベースを読み書きする Prisma、入力の中身を確かめる zod の3つがそろって、Day 09 以降でやってきた「画面から呼ぶと型が合っている」状態になります。
+
+3番の `prisma init` は `schema.prisma` と `.env` を作ります。この2つが無いと `npx prisma migrate` がテーブルを作れません。Day 01 で走らせたセットアップ用のスクリプトは、ここまでをまとめて済ませてくれていました。今回は自分の手で1つずつ通すことになります。
+
+4番まで進むと `http://localhost:3000` に初期画面が出ます。ここが Day 01 と同じ地点です。違うのは、何が入っていて何がまだ無いかを自分で把握している点です。
 
 ---
 
@@ -150,3 +156,10 @@ npm run dev
 ---
 
 [← カリキュラム目次に戻る](./00_カリキュラム目次.md)
+
+---
+
+## 戻る
+
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)

@@ -16,7 +16,7 @@ Day 07 で認証バックエンドを作りました。
 ## 今日のゴール
 
 サイドバー付きのレイアウトを自分で作って、
-ログイン後のすべてのページがこのレイアウトで表示されるようにします。
+まずダッシュボードにこのレイアウトを適用します。Day 09 以降のページには、作るたびに同じレイアウトを巻いていきます。
 
 - [ ] `src/app/providers.tsx` — tRPC クライアントをアプリ全体に提供する
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー + メインコンテンツ
@@ -49,12 +49,16 @@ flowchart TD
     style D fill:#e8f5e9
 ```
 
+図は上から下へ、部品が別の部品を包む順番を表しています。いちばん外側の `layout.tsx` は全ページ共通の枠で、その内側に `Providers` を置くと、下にぶら下がるページ全部から tRPC を呼べます。さらに内側の `AppLayout` がサイドバーとメインコンテンツに分かれ、サイドバーの中にナビゲーション・ユーザー情報・ログアウトボタンが並びます。
+
+包む順番は、そのまま「どこまで届くか」になります。仮に `Providers` をダッシュボードの内側だけに置くと、ログイン画面から tRPC を呼び出せません。
+
 ### やること / やらないこと
 
 | やること | やらないこと |
 |---------|-------------|
 | tRPC クライアントを設定してフロントから API を呼べるようにする | tRPC サーバー側の追加（Day 07 済み） |
-| サイドバー + レイアウトを自分の手で書く | モバイル対応の Sheet（Day 09 以降） |
+| サイドバー + レイアウトを自分の手で書く | モバイル対応のサイドバー（このカリキュラムでは扱いません） |
 | ログアウトを AlertDialog 付きで実装する | ユーザー編集機能 |
 
 ### 新しく学ぶ概念
@@ -62,7 +66,7 @@ flowchart TD
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | Provider | プロバイダー | コンポーネントツリー全体に値を配る仕組み | 建物全体に電気を通す配電盤 |
-| use client | ユーズクライアント | ブラウザ側で動くと宣言する | 「この部品はお客さんの手元で動きます」 |
+| use client（Day 02 の復習） | ユーズクライアント | ブラウザ側で動くと宣言する | 「この部品はお客さんの手元で動きます」 |
 | useQuery | ユーズクエリ | サーバーからデータを取得する React Hook | 注文票を厨房に出して結果を待つ |
 | useMutation | ユーズミューテーション | サーバーのデータを変更する React Hook | 注文を厨房に送信する |
 
@@ -70,23 +74,25 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 作成ファイル |
 |---------|---------|---------|-------------|
-| Step 1 | providers.tsx を作る（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
+| Step 1 | providers.tsx の中身を読む（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
 | Step 2 | ルートレイアウトに Provider を組み込む | 5分 | `src/app/layout.tsx` 編集 |
 | Step 3 | AppLayout を作る（サイドバーの骨格） | 15分 | `src/component/layout/app-layout.tsx` |
 | Step 4 | ダッシュボードに AppLayout を適用する | 5分 | `src/app/dashboard/page.tsx` |
 | Step 5 | ログインして全体の動作を確認する | 5分 | なし |
 
-**合計時間**: 約 38 分。
+**合計時間**: 約 38 分です。
+
+この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
 ---
 
-### Step 1: providers.tsx を作る（tRPC クライアント設定・8分）
+### Step 1: providers.tsx を読む（tRPC クライアント設定・8分）
 
 **ゴール**: フロントエンドから tRPC API を呼べるようにします。
 
 Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
-「クライアント」が必要。scaffold が `src/trpc/` に設定ファイルを配布済みなので、
-それをアプリ全体に適用する Provider を作ります。
+「クライアント」が必要です。scaffold が `src/trpc/` に設定ファイルを配布済みなので、
+それをアプリ全体に適用する Provider は配布済みなので、中身を読んで仕組みを掴みます。
 
 ```mermaid
 flowchart LR
@@ -96,21 +102,26 @@ flowchart LR
     B -->|data| A
 ```
 
-`src/app/providers.tsx` を新規作成します。
+矢印は、ボタンを押してから画面が変わるまでの一往復です。ブラウザ側では `api.auth.login.mutate` のような関数呼び出しを書くだけで、`TRPCReactProvider` がそれを `/api/trpc` への HTTP リクエストに変換して送ります。返ってきた JSON も同じ道を逆にたどり、型の付いた値としてブラウザに戻ります。
+
+この Provider が無いと `api` は送り先を知らないため、呼んだ瞬間にエラーで止まります。
+
+`src/app/providers.tsx` は Day 01 の scaffold が配布済みです。新しく作らず、開いて中身を確認します。
 
 ```tsx
 // filepath: src/app/providers.tsx
 'use client';
 
-import type { ReactNode } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { TRPCReactProvider } from '@/trpc/react';
 
-export function Providers({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return <TRPCReactProvider>{children}</TRPCReactProvider>;
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <TRPCReactProvider>
+      {children}
+      <Toaster />
+    </TRPCReactProvider>
+  );
 }
 ```
 
@@ -118,13 +129,15 @@ export function Providers({
 |--------|------|
 | `'use client'` | この Provider はブラウザ側で動く |
 | `TRPCReactProvider` | scaffold が用意した tRPC + React Query の設定 |
+| `Toaster` | `toast()` で出す通知の表示場所。これが無いと通知は一切出ない |
 | `children` | この下に置かれる全コンポーネントが tRPC を使える |
 
 > scaffold の `src/trpc/react.tsx` の中身が気になったら開いてみてもいいです。QueryClient と httpBatchLink の設定が入っています。
 
 **確認ポイント**:
-- [ ] `src/app/providers.tsx` が作成できた
+- [ ] `src/app/providers.tsx` の中身を確認した
 - [ ] `'use client'` が先頭にある
+- [ ] `<Toaster />` が入っている
 
 ---
 
@@ -132,26 +145,33 @@ export function Providers({
 
 **ゴール**: アプリ全体で tRPC が使えるように、ルートレイアウトを編集します。
 
-`src/app/layout.tsx` を開く（scaffold が作った初期ファイル）。
+`src/app/layout.tsx` を開きます。こちらも scaffold が配布済みで、Provider はすでに組み込まれています。書き換えずに、どこで囲んでいるかを確認します。
 
 ```tsx
 // filepath: src/app/layout.tsx
 import type { Metadata } from 'next';
-import './globals.css';
+import { Inter, JetBrains_Mono, Noto_Sans_JP } from 'next/font/google';
 import { Providers } from './providers';
+import './globals.css';
 
-export const metadata: Metadata = {
-  title: 'Task App',
-  description: 'タスク管理アプリケーション',
-};
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+```
 
+同じ書き方で `JetBrains_Mono` を `--font-jetbrains-mono`、`Noto_Sans_JP` を `--font-noto-sans-jp` として読み込んでいます。続きは次のとおりです。
+
+```tsx
+// filepath: src/app/layout.tsx（続き）
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="ja" className={`${inter.variable} ${jetBrainsMono.variable} ${notoSansJP.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>
@@ -160,15 +180,18 @@ export default function RootLayout({
 }
 ```
 
-| 変更点 | 意味 |
+| 確認する箇所 | 意味 |
 |--------|------|
-| `import { Providers }` | Step 1 で作った Provider を読み込む |
+| `import { Providers }` | Step 1 で見た Provider を読み込む |
 | `<Providers>{children}</Providers>` | 全ページを Provider で囲む |
+| `className={...}` | フォントの変数を全ページへ渡す |
 
-> これでアプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べます。
+> `--font-inter` などの変数は、`src/app/layout.tsx` の冒頭にある `next/font/google` の import で定義しています。Day 01 で書いた `globals.css` がこの変数を参照しているので、消すとフォント指定が黙って効かなくなります。
+>
+> `<Providers>` で全体を囲んだので、アプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べます。
 
 **確認ポイント**:
-- [ ] `src/app/layout.tsx` に `<Providers>` が入った
+- [ ] `src/app/layout.tsx` に `<Providers>` が入っていることを確認した
 - [ ] この時点で `npm run dev` してエラーが出ないことを確認
 
 ---
@@ -177,7 +200,7 @@ export default function RootLayout({
 
 **ゴール**: サイドバー + メインコンテンツのレイアウトコンポーネントを作ります。
 
-ここが今日のメイン。認証チェック、ナビゲーション、ログアウトを 1 つのレイアウトに組み込みます。
+ここが今日のメインです。認証チェック、ナビゲーション、ログアウトを 1 つのレイアウトに組み込みます。
 
 ```mermaid
 flowchart TD
@@ -191,6 +214,12 @@ flowchart TD
     style E fill:#ffebee
     style F fill:#e8f5e9
 ```
+
+この分岐は、AppLayout が中身を描く前に必ず通る判定です。セッションの問い合わせが終わるまでは読み込み中の表示を出し、終わってからログイン済みかどうかを見ます。ログインしていなければ何も描かずに `/login` へ送るので、未ログインの人にサイドバーが一瞬でも見えることはありません。
+
+この書き方は、問い合わせ自体が失敗したときも未ログインとして扱います。ログイン済みの人が通信の失敗でログイン画面へ送られることがある、ということです。実務では `error` も受け取り、失敗したときは再試行の案内を出してから判断します。
+
+この判定をレイアウト側に置いたおかげで、この先に作るページは自分で認証を確認せずに済みます。
 
 `src/component/layout/app-layout.tsx` を新規作成します。
 
@@ -222,6 +251,10 @@ import {
 } from '@/component/ui/alert-dialog';
 ```
 
+import は、このファイルで使う道具を先に並べる宣言です。`lucide-react` はサイドバーのアイコン、`Link` はページ移動、`usePathname` は今いるページの URL を取る道具で、現在のメニューを目立たせるときに使います。`useState` は画面の状態を覚えておく仕組みです。`useEffect`（画面が表示された後など、決まったタイミングで処理を走らせる React の仕組み）は、あとで「ブラウザ側の準備が終わったか」を記録するときに使います。
+
+`AlertDialog` で始まる 9 個は、ログアウト前の確認ダイアログを組み立てる部品一式です。shadcn/ui のダイアログは 1 つの部品ではなく、枠・見出し・本文・ボタンに分かれています。だから使う分だけ名前を並べて取り込みます。1 つでも取り込み漏れがあると、その名前を書いた行で「定義されていない」というエラーが出ます。
+
 **確認ポイント**:
 - [ ] ログアウト確認に使う `AlertDialog` 一式を import している
 
@@ -231,6 +264,12 @@ import { Button } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 ```
+
+`cn` は、条件によって変わるクラス名を1つの文字列にまとめる関数です。あとでメニューの現在地を色分けするとき、選択中と未選択のクラスを混ぜて渡します。
+
+`+` でつないでも動きます。ただ、空白を1つ入れ忘れると `text-smfont-bold` のようにくっついて、そのクラスだけ効かなくなります。画面は崩れず、ただ色が付かないだけです。だから原因を探すのに時間がかかります。
+
+`api` は tRPC のクライアントです。これを取り込まないと、あとで書く `api.auth.getSession` の行で「名前が見つからない」と言われて開発サーバーが止まります。
 
 **確認ポイント**:
 - [ ] ログアウト用の `AlertDialog` を import している
@@ -294,6 +333,10 @@ export function AppLayout({
   });
 ```
 
+状態と問い合わせを、関数の先頭でまとめて宣言しています。`useState` や `useQuery` のようなフックは、毎回同じ順番で呼ばれることを前提に作られています。`if` の中や `return` より後ろに置くと順番が変わり、React が値を取り違えてエラーになります。並べる場所には理由があります。
+
+`logoutMutation` を関数の先頭で用意しておくのは、`useMutation` もフックだからです。フックは毎回同じ順番で呼ばれる前提なので、`onClick` の中には書けません。実際に通信が始まるのは、ボタンが押されて `mutate` が呼ばれたときです。`onSuccess` で `router.push` に加えて `router.refresh()` を呼ぶのは、サーバー側で組み立て済みの表示が残るのを防ぐためです。これを省くと、ログアウトしたのに前のユーザー名が画面に残る場合があります。
+
 **確認ポイント**:
 - [ ] `getSession` でログイン状態を取得している
 - [ ] ログアウト成功後に `/login` へ戻している
@@ -323,14 +366,16 @@ export function AppLayout({
   }
 ```
 
+読み込み中の表示をここでは自分で書いていますが、Day 09 以降は配布済みの `PageLoadingSpinner` を使います。完成版の `AppLayout` もその部品を使っています。今日は仕組みを追いやすいように、まず素の要素で書いています。
+
 | コード | 意味 | 例え |
 |--------|------|------|
-| `hasMounted` | SSR（サーバー側で先に HTML を組み立てる仕組み）と CSR（ブラウザ側で後から HTML を組み立てる仕組み）のズレ防止フラグ | 店が開店してから初めて客チェックする |
+| `hasMounted` | SSR（サーバー側で先に HTML を組み立てる仕組み）と CSR（ブラウザ側で後から HTML を組み立てる仕組み）のズレ防止フラグ | 店が開店してから初めて客をチェックする |
 | `api.auth.getSession.useQuery()` | サーバーに「今ログインしているか」を問い合わせる | 入口でリストバンドチェック |
 | `logoutMutation` | ログアウト API を呼ぶ準備 | 退出手続きのボタン |
 | `router.push('/login')` | ログイン画面へ飛ばす | 受付に案内する |
 
-> `hasMounted` が必要な理由: Next.js はサーバーで HTML を生成してからブラウザに送ります（SSR）。ブラウザ側で Cookie を確認するまでは、ログイン状態が分かりません。このフラグで「ブラウザ側の準備ができてから判定する」ようにして、チラつきを防ぎます。
+> `hasMounted` が必要な理由: Next.js はサーバーで HTML を生成してからブラウザに送ります（SSR）。session Cookie には Day 07 で `httpOnly` を付けたので、ブラウザ側の JavaScript からは中身を読めません。ログイン状態を知る道は、`api.auth.getSession.useQuery()` でサーバーに聞くことだけです。このとき Cookie はリクエストへ自動で付いて飛び、中身を開いて誰なのかを判定するのはサーバー側です。答えが返ってくるのは画面が出たあとなので、このフラグで「ブラウザ側の準備ができてから判定する」ようにして、チラつきを防ぎます。
 
 #### 3-3. レイアウト JSX（サイドバー + コンテンツ）
 
@@ -347,6 +392,10 @@ export function AppLayout({
           </h1>
         </div>
 ```
+
+サイドバーを `<div>` ではなく `<aside>` で書いています。見た目はどちらも同じですが、`<aside>` には「ここは本文ではなく脇の案内です」という意味が付きます。読み上げソフトを使う人は、この目印でページの主役がどこかを判断します。`<div>` で揃えてしまうと、その手がかりが消えます。
+
+`hidden` と `md:flex` を並べているのは、画面が狭いときにサイドバーを隠すためです。`w-64` は幅 256px を指します。スマートフォンの画面にこの帯が居座ると、本文に残る幅が 100px ほどになり、文章が1文字ずつ折り返されて読めなくなります。
 
 **確認ポイント**:
 - [ ] 左側にサイドバーを作っている
@@ -377,6 +426,10 @@ export function AppLayout({
         </nav>
 ```
 
+メニューを `map` で組み立てるのは、項目を増やすときに `menuItems` へ1行足すだけで済むようにするためです。`<li>` を3つ手で書き並べても今は動きます。ただし項目が増えるたびに同じクラス名を書き写すことになり、1つだけ直し忘れた項目がいずれ出ます。`key` に `item.path` を渡すのは、React が並び替えのときにどの項目が動いたかを見分けるためです。
+
+`pathname === item.path` の比較で、今開いているページのリンクだけ背景色を変えています。この目印が無いと、読者は自分がどこにいるかを画面から判断できません。移動したかどうかも分からなくなります。
+
 **確認ポイント**:
 - [ ] `menuItems.map` でメニューを表示している
 - [ ] 現在ページは背景色で強調している
@@ -402,6 +455,10 @@ export function AppLayout({
           </div>
 ```
 
+ここはサイドバーの下に、今ログインしている人の情報を出す部分です。`session.user.name?.[0]` は名前の 1 文字目だけを取り出し、丸いアイコンの中に入れます。`?.` は途中の値が無ければそこで止めて `undefined` を返す書き方で、名前が未設定でも画面が落ちません。取り出せなかったときは `|| 'U'` が働き、丸の中は `U` になります。
+
+この `session` は 3-2 で書いた `getSession` の結果なので、ログインした本人の名前と権限がそのまま出ます。別のユーザーでログインし直せば、ここの表示も入れ替わります。
+
 **確認ポイント**:
 - [ ] サイドバー下部にユーザー名と権限を表示している
 
@@ -420,6 +477,10 @@ export function AppLayout({
               </Button>
             </AlertDialogTrigger>
 ```
+
+`AlertDialogTrigger` は、ダイアログを開くきっかけになる部品です。`asChild` を付けると、この部品は自分でボタンを描かず、中に置いた `<Button>` へきっかけ役だけを渡します。付け忘れるとボタンが二重に描かれ、サイドバーの見た目が崩れます。
+
+ログアウトをすぐ実行せずダイアログを挟むのは、押し間違いで作業中の画面から追い出されるのを防ぐためです。Day 07 で作ったログアウトは、呼べばその場でセッションが消えます。取り消せない操作の手前に一段置く、という考え方はこの先の削除機能でも同じです。
 
 **確認ポイント**:
 - [ ] ボタンを押すと確認ダイアログが開く
@@ -448,6 +509,10 @@ export function AppLayout({
         </div>
       </aside>
 ```
+
+ダイアログの中身は、見出し・説明・下部のボタンという 3 つの区画に分かれています。`AlertDialogCancel` は何もせずに閉じるだけの出口です。`AlertDialogAction` を押したときだけ `logoutMutation.mutate()` が走ります。
+
+`mutate()` を呼ぶとサーバーのログアウト手続きが動き、成功したら 3-2 で書いた `onSuccess` が `/login` へ戻します。`onClick` を `AlertDialogCancel` の側に書いてしまうと、キャンセルのつもりでログアウトする画面になります。押した先で何が起きるかは、この 2 行のどちらに `onClick` を置くかで決まります。
 
 **確認ポイント**:
 - [ ] ログアウト前に確認ダイアログを表示している
@@ -481,7 +546,7 @@ export function AppLayout({
 - [ ] `menuItems` に 3 つのメニュー項目がある
 - [ ] ログアウトボタンに `AlertDialog` が付いている
 
-**学んだこと**: `useQuery` でサーバーのセッション情報を取得し、ない場合はログイン画面にリダイレクト。レイアウト全体が認証ゲートの役割を持ちます。
+**学んだこと**: `useQuery` でサーバーのセッション情報を取得し、無ければログイン画面へ送ります。レイアウト全体が認証ゲートの役割を持ちます。
 
 ---
 
@@ -504,6 +569,10 @@ flowchart TD
     style C fill:#fff3e0
     style D fill:#fff3e0
 ```
+
+図の左端 `src/app/layout.tsx` はすべてのページの親なので、ログイン画面と登録画面もここを通ります。一方 `AppLayout` はダッシュボードの内側にだけ置きます。サイドバーを出したい画面と出したくない画面は、この置き場所だけで分かれます。
+
+ページを増やすときも同じで、サイドバーが要るページだけ `AppLayout` で囲みます。ログイン画面を囲んでしまうと、ログインしていない人が認証チェックに引っかかり、ログイン画面から `/login` へ送られ続けます。
 
 `src/app/dashboard/page.tsx` の import に AppLayout を追加します。
 
@@ -561,6 +630,7 @@ npm run dev
 
 ![ダッシュボードとサイドバー](./screenshots/dashboard.png)
 4. サイドバーに「ダッシュボード」「プロジェクト」「マイタスク」の3つのメニューが見える。
+   （「プロジェクト」と「マイタスク」を押すと 404 になりますが正常です。ページは Day 09 と Day 17 で作ります）
 5. サイドバー下部に「管理者」の名前とロールが表示される。
 6. 「ログアウト」ボタンを押す → 確認ダイアログが出る。
 7. 「ログアウト」を押す → `/login` に戻る。
@@ -572,7 +642,7 @@ npm run dev
 - [ ] ナビゲーションのアクティブ状態が正しい（現在のページがハイライト）
 - [ ] ログアウト → 確認ダイアログ → ログイン画面に戻る
 
-> **うまくいかないとき**: 「つまずきポイント」セクションを確認。
+> **うまくいかないとき**: 「つまずきポイント」セクションを確認してください。
 
 ---
 
@@ -588,6 +658,8 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 // → ナビゲーションリンク（静的）まで Client Component になる
 ```
 
+今日書いた `app-layout.tsx` は先頭に `'use client'` を置いたので、このファイルの中身はまとめてブラウザへ送られます。ロゴやリンク一覧のように押しても何も起きない部分まで一緒に送られるため、その分だけ読み込むファイルが増えます。動きは正しく、最初に書く形としてはこれで問題ありません。
+
 ### After（プロが書くコード）
 
 ```tsx
@@ -595,11 +667,11 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 // ログアウトボタンだけ別ファイルに分離して 'use client'
 ```
 
-**強み**: 静的な枠（ロゴ、リンク一覧）は Server Component のまま。
+**強み**: 静的な枠（ロゴ、リンク一覧）は Server Component のまま残せます。
 対話が必要な部品（ログアウト、認証チェック）だけを Client Component にします。
-→ バンドルサイズが小さくなり、初期表示が速いです。
+→ ブラウザへ送るコードが減り、初期表示が速くなります。
 
-> **覚えておきたいエッセンス**: `use client` はファイル全体に効くスイッチ。サイドバーでは「静的な枠は Server、押せる部品は Client」に分けるのがプロの基本。今日の段階では全体 Client で OK。この最適化は Day 09 以降で必要になったタイミングで取り組みます。
+> **覚えておきたいエッセンス**: `use client` はファイル全体に効くスイッチです。サイドバーでは「静的な枠は Server、押せる部品は Client」に分けるのがプロの基本です。今日の段階では全体を Client のままにしておいて問題ありません。この最適化は Day 09 以降で必要になったタイミングで取り組みます。
 
 ---
 
@@ -628,3 +700,14 @@ Day 09 では、プロジェクト一覧画面を作ります。
 tRPC の `useQuery` でサーバーからプロジェクト一覧を取得して、
 カードコンポーネントで表示します。
 今日作ったレイアウトの中に、最初の「データを表示する画面」が入ります。
+
+---
+
+## 次に読むもの
+
+- 前の日: [Day 07](./day07_ログイン体験を改善しよう.md)
+- 次の日: [Day 09](./day09_プロジェクト一覧画面.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 詰まったとき: [トラブルシューティング](./appendix_トラブルシューティング.md)
+- 言葉の意味: [用語集](./appendix_用語集.md)

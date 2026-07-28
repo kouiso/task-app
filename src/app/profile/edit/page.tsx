@@ -88,7 +88,7 @@ export default function ProfileEditPage() {
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="flex justify-center mb-6">
                 <Avatar className="w-24 h-24">
-                  {form.watch('avatar') && <AvatarImage src={form.watch('avatar')} />}
+                  {form.watch('avatar') && <AvatarImage src={form.watch('avatar')} alt="" />}
                   <AvatarFallback className="text-2xl">
                     {form.watch('name')?.[0]?.toUpperCase()}
                   </AvatarFallback>

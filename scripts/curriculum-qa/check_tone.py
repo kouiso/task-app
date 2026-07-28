@@ -10,25 +10,32 @@ import re
 import sys
 from pathlib import Path
 
+from markdown_scan import fence_states, mask_inline_code
+
 Finding = tuple[int, str, str, str]
 PatternSpec = tuple[re.Pattern[str], str, str]
 
 
 def strip_code_blocks(content: str) -> list[tuple[int, str]]:
-    """コードブロックとインラインコードを除外して、(行番号, 行テキスト) のリストを返す"""
-    lines = content.split('\n')
+    """コードブロックとインラインコードを除外して、(行番号, 行テキスト) のリストを返す
+
+    ```text のブロックだけは中身も検査する。読者がそのまま貼る前提の文面
+    （SNS への共有文など）をここへ置くことがあり、除外すると話し言葉が
+    そのまま商品の外へ出る。実際に day04 の共有文へ方言が残っていた。
+
+    言語名は情報文字列の最初の語で判定する。```text title="post" のように属性を
+    足した書き方や ````text のような長いフェンスは、文字列そのものを 'text' と
+    比べていた頃は素通りしていた。
+    """
     result: list[tuple[int, str]] = []
-    in_code_block = False
-    for i, line in enumerate(lines, start=1):
-        stripped = line.strip()
-        if stripped.startswith('```'):
-            in_code_block = not in_code_block
+    for lineno, line, state, fence in fence_states(content):
+        if state in ('open', 'close'):
             continue
-        if in_code_block:
+        if state == 'inside' and (fence is None or fence.lang != 'text'):
             continue
-        cleaned = re.sub(r'`[^`]+`', ' ', line)
+        cleaned = mask_inline_code(line)
         cleaned = re.sub(r'https?://\S+', ' ', cleaned)
-        result.append((i, cleaned))
+        result.append((lineno, cleaned))
     return result
 
 
@@ -47,6 +54,9 @@ KANSAI_PATTERNS = compile_specs([
     (r'\bワイ\b', '関西弁一人称「ワイ」', '「私」「筆者」または削除'),
     (r'やんか(?:[。！!？?\s]|$)', '関西弁「やんか」', '「じゃないですか」「ですよね」に変更'),
     (r'あかん(?:で)?(?:[。！!？?\s]|$)', '関西弁「あかん」', '「いけません」「避けましょう」に変更'),
+    # 「だけど」を勧めない。あれも常体なので、そのまま直すと敬体の教材に常体が残る。
+    (r'やけど(?:[、。！!？?\s]|$)', '関西弁「やけど」', '「ですが」「けれども」に変更'),
+    # 「せやから」は下の [せそ]やから にも一致する。両方置くと1つの方言で2件報告される。
     (r'[せそ]やから', '関西弁「せやから/そやから」', '「だから」「なので」に変更'),
 ])
 

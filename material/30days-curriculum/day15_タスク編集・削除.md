@@ -18,15 +18,18 @@ Day 14 で学んだことは次のとおりです。
 1つのコンポーネントで作成と編集の両方に対応する
 パターンを学びます。
 
-スクリーンショット: タスク編集ダイアログの画面。
+この日は、まずサーバー側の `update` と `delete` を自分で書きます。ここが今日いちばん長い工程です。
 
-![タスク編集ダイアログの画面](./screenshots/task-detail-dialog.png)
+スクリーンショット: 今日さわるタスクダイアログです。下の画像は新規作成のときの姿で、
+編集で開くと見出しが「タスク編集」、ボタンが「更新」に変わり、各欄には今の値が入ります。
+
+![タイトルや説明、ステータスなどの入力欄が並んだタスクダイアログ](./screenshots/task-create-dialog.png)
 
 ## 始める前の前提
 
 - Day 14 のタスク作成ダイアログが動いている
 - 編集・削除を試せるタスクが1件以上ある
-- `TaskDialog` の新規作成モードを読み返せる
+- `src/component/task/task-dialog.tsx` を開いて、Day 14 で書いた新規作成モードのコードを読み返せる
 - 削除操作を試すため、消えてもよい練習用タスクを使う
 
 ## なぜこれを作るのか
@@ -62,6 +65,10 @@ flowchart TD
     style F fill:#e8f5e9
     style K fill:#ffebee
 ```
+
+図の上半分が編集、下半分が削除です。編集は「カードの編集ボタン → 既存データをフォームの形に直す → Day 14 で作った TaskDialog をそのまま開く」と進みます。削除の側だけ途中に `DeleteConfirmDialog` が挟まり、確認を押したときだけ `api.task.delete` へ進みます。ここで一度止めるのは、削除に取り消しがきかないからです。
+
+2つの流れは最後で合流し、どちらもキャッシュ更新へ入ります。画面のタスク一覧は、サーバーから取ってきたデータの写しです。DB を書き換えただけでは写しが古いままです。更新したときと削除したときのどちらでも、一覧を取り直す必要があります。
 
 ### やること / やらないこと
 
@@ -99,7 +106,9 @@ flowchart TD
 | Step 10 | TaskDialogにeditingTaskを渡す | 3分 |
 | Step 11 | 動作確認 | 3分 |
 
-**合計時間**: 約79分。
+**合計時間**: 約79分です。
+
+この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
 ---
 
@@ -413,6 +422,8 @@ function buildTaskFormValues(
 }
 ```
 
+`buildTaskFormValues` は、タスクのデータをフォームが扱える形にそろえる関数です。`initialData?.title ?? ''` のように、値が無いときの代わりを全項目に用意しています。入力欄に `undefined` を渡すと、React はその欄を「値を管理していない欄」と見なし、あとから値を入れた時点で警告を出します。空文字を初期値にしておけば、作成モードと編集モードで同じ入力欄をそのまま使い回せます。`projects[0]?.id` を既定にしているのは、プロジェクトが未選択のまま保存へ進めないようにするためです。
+
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
 // useForm の初期値と reset 同期
@@ -460,6 +471,7 @@ useEffect(() => {
 **確認ポイント**:
 - `defaultValues` で初期値を作る仕組みを理解した
 - `useEffect(reset(...))` で編集データを同期する流れを理解した
+- `npm run dev` で型エラーが出ていない
 
 ---
 
@@ -476,6 +488,10 @@ useEffect(() => {
 import { taskToFormData } from
   '@/lib/task-form';
 ```
+
+編集ボタンから受け取れるのは `taskId` という文字列だけです。ダイアログが求めているのはフォーム用の形なので、その間をつなぐ変換が要ります。`taskToFormData` はその変換をまとめた関数で、`src/lib/task-form.ts` にあります。日付を `YYYY-MM-DD` へ直すといった処理が中に入っているため、ページごとに手で書き直さずに済みます。取り込みを忘れると、次のブロックの `handleEdit` が「そんな名前は無い」という型エラーで止まります。
+
+Day 13 で置いた仮の `handleEdit` は、この中身へ**丸ごと置き換え**ます。2つ並べると同じ名前を2回宣言することになり、ページ全体が止まります。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -502,9 +518,9 @@ const handleEdit = (taskId: string) => {
 - `taskToFormData` のインポートを追加できた
 - `handleEdit` 関数が定義できた
 
-スクリーンショット: 編集モードのタスクダイアログ（既存データが入っている）
-
-![編集モードのタスクダイアログ（既存データが入っている）](./screenshots/task-detail-dialog.png)
+編集ボタンから開くと、見出しが「タスク編集」、ボタンが「更新」になり、
+タイトル・説明・ステータス・優先度・担当者・期限に今の値が入った状態で開きます。
+どれか1つでも空のまま開くなら、`taskToFormData` に渡す値を見直してください。
 ---
 
 ### Step 3: update mutationを実装する（5分）
@@ -518,6 +534,8 @@ const handleEdit = (taskId: string) => {
 // filepath: src/app/task/page.tsx
 import toast from 'react-hot-toast';
 ```
+
+`toast` は画面の隅に短い通知を出す道具です。更新は自分の入力ミス以外でも失敗するので、失敗を伝える先を先に用意しておきます。次のブロックの `onError` からこれを呼びます。取り込みを忘れると、保存に失敗した瞬間だけ `toast is not defined` というエラーが出て、画面が固まったように見えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -581,6 +599,8 @@ import { dateOnlyToUtcStartIso }
   from '@/lib/date';
 ```
 
+入力欄が持っている期限は `2026-07-26` という日付だけの文字列ですが、Step 0 で書いた `update` が受け取るのは時刻まで含んだ形です。`dateOnlyToUtcStartIso` はその変換を1か所にまとめた関数で、Day 14 の作成処理でも同じものを使いました。ここを自前の `new Date(...)` で済ませると、渡す文字列の形で読まれ方が変わります。日付だけなら世界共通の基準時刻（UTC）の0時、時刻まで書いて末尾に `Z` が無ければブラウザの時間帯の0時です。この差を取り違えると、期限が前日として保存されます。
+
 ```typescript
 // filepath: src/app/task/page.tsx
 const handleSubmit =
@@ -603,10 +623,10 @@ const handleSubmit =
           data.assigneeId || null,
 ```
 
-**確認ポイント**: ここまで写経できました。次のブロックを続けて書きます。
+ここまでが `updateMutation.mutate` に渡す値の前半です。`description: data.description || null` のように `|| null` を付けているのは、入力欄を空にして保存したとき、空文字ではなく `null` を送るためです。空文字のまま送ると「説明を空文字という内容に書き換える」意味になり、Step 0 の `update` は `.nullable()` の側ではなく通常の更新として受け取ります。渡すオブジェクトはまだ閉じていないので、続きを次のブロックで書きます。
 
 ```typescript
-// filepath: 続き
+// filepath: src/app/task/page.tsx（同じファイルの続き）
         expectedUpdatedAt:
           data.expectedUpdatedAt,
       });
@@ -681,6 +701,8 @@ Day 14 で実装した `createMutation` を使います。
   };
 ```
 
+`data.id` が無いときだけこの行に届くので、ここから下は新規作成の道です。先頭の `if (!session?.user?.id) return;` は、ログイン情報がまだ読み込めていないうちの送信を止めます。更新と違うのは、空の値に `null` ではなく `undefined` を使っている点です。作成はまだ存在しない行を作る手続きなので、「この項目を空にする」という指示そのものが要りません。最後の `};` で `handleSubmit` が閉じ、更新と作成の2つの道が1つの関数にそろいます。
+
 #### 作成 vs 更新のAPIパラメータ比較
 
 | パラメータ | create | update |
@@ -692,8 +714,8 @@ Day 14 で実装した `createMutation` を使います。
 | `dueDate` | 任意 | 任意（null可） |
 
 **確認ポイント**:
-- 既存タスクを編集して更新できる
-- 一覧が自動で更新される
+- 「新規タスク」から入力して保存すると、一覧に新しいカードが出る
+- ダイアログが閉じたあと、一覧が自動で取り直される
 
 ---
 
@@ -709,6 +731,8 @@ Day 14 で実装した `createMutation` を使います。
 import { DeleteConfirmDialog } from
   '@/component/ui/delete-confirm-dialog';
 ```
+
+削除の確認はブラウザ標準の `window.confirm()` でも出せますが、見た目はブラウザ任せになり、通信中にボタンを押せなくする指定もできません。Day 11 のプロジェクト削除で使った `DeleteConfirmDialog` は同じ用途の共通部品なので、タスク側でも取り込むだけで済みます。新しく作る必要はありません。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -746,6 +770,8 @@ const deleteMutation =
 
 **実装**:
 
+Day 13 で置いた仮の `handleDelete` を**置き換え**ます。仮のほうは残しません。
+
 ```typescript
 // filepath: src/app/task/page.tsx
 // 削除ボタンのハンドラー
@@ -754,6 +780,8 @@ const handleDelete = (taskId: string) => {
   setDeleteDialogOpen(true);
 };
 ```
+
+`handleDelete` は削除そのものを実行しません。消す相手の id を `deleteTargetId` に覚えて、確認ダイアログを開くところまでです。実行の合図は確認ボタン側へ預けるので、押し間違いは確認画面で止まります。id を state に入れるのは、ダイアログが開いている間ずっと「どれを消すのか」を保つ必要があるためです。ふつうの変数に入れると、ダイアログが開いた再描画のときに消えてしまいます。
 
 続いて、JSXの閉じタグ付近に
 `DeleteConfirmDialog` を配置します。
@@ -786,9 +814,12 @@ const handleDelete = (taskId: string) => {
 - 確認ボタンでタスクが削除される
 - キャンセルで何も起こらない
 
-スクリーンショット: 削除確認ダイアログの画面。
+スクリーンショット: 削除確認ダイアログの表示を確認してください。
 
-![削除確認ダイアログの画面](./screenshots/project-delete-confirm.png)
+![削除の確認ダイアログ。キャンセルと削除のボタンが並ぶ](./screenshots/project-delete-confirm.png)
+
+画像はプロジェクトを消すときのものなので見出しが違います。
+タスクの削除では `title` を渡していないため、見出しは `本当に削除しますか` の形になります。
 ---
 
 ### Step 8: 新規作成ハンドラーを実装する（3分）
@@ -797,6 +828,8 @@ const handleDelete = (taskId: string) => {
 実装します。
 
 **実装**:
+
+Day 14 で書いた `handleCreate` を**置き換え**ます。増やさず、中身だけ差し替えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -814,7 +847,7 @@ const handleCreate = () => {
 > 開くので「編集モード」になります。
 
 **確認ポイント**:
-- `handleCreate` で `editingTask` を `undefined` にしている
+- 「新規タスク」を押すと、見出しが「タスク作成」、ボタンが「作成」の空のダイアログが開く
 - 作成モードと編集モードの切り替えを理解した
 
 ---
@@ -898,7 +931,7 @@ const handleCreate = () => {
 - カードの編集ボタンで編集モードが開く
 - カードの削除ボタンで確認→削除される
 
-スクリーンショット: 編集後のタスク一覧画面。
+スクリーンショット: 編集後のタスク一覧の表示を確認してください。
 
 ![編集後のタスク一覧（先頭のタスクの優先度が高に変わっている）](./screenshots/task-list-after-edit.png)
 ---
@@ -911,7 +944,7 @@ const handleCreate = () => {
 2. タイトルや優先度を変更して「更新」
 3. 一覧に変更が反映される
 4. 別のタスクの削除ボタンをクリック
-5. 確認ダイアログで「OK」
+5. 確認ダイアログで「削除」をクリック
 6. タスクが一覧から消える
 
 **確認ポイント**:
@@ -927,13 +960,14 @@ const handleCreate = () => {
 PORT=3001 npm run dev
 ```
 
+`PORT=3001` を付けるのは、Day 09 からの動作確認と同じ入口にそろえるためです。起動したら `http://localhost:3001/task` を開き、編集と削除を1回ずつ通してみてください。編集の直後に一覧のカードが新しい内容へ変われば、Step 3 の `invalidate` が効いています。削除してもカードが残る場合は、Step 6 の `deleteMutation` で `utils.task.getAll.invalidate()` を呼び忘れています。DB からは消えているので、再読み込みすると一覧から消えます。
 
 ---
 
 ### Pro パターンで書こう（編集後の一覧更新を楽観的に反映する）
 
 編集後の一覧更新は動きますが、保存が終わるまで画面は古い内容のままです。そこで、保存の完了を待たずに結果を先に画面へ反映し、もし保存が失敗したら元の状態へ戻す楽観的更新を使うと、待ち時間を感じさせなくできます。
-なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
@@ -966,8 +1000,10 @@ const handleSubmit = (data: TaskFormData) => {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+Before は Step 3 と Step 4 で書いた形とほぼ同じです。手を動かす順番は「保存する → サーバーの返事を待つ → `invalidate()` で一覧を取り直す」で、画面の表示が新しくなるのは通信が往復し終わったあとになります。After との違いは、この待ち時間の扱い方1点だけです。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     title: data.title,
     description: data.description || null,
     status: data.status,
@@ -1018,8 +1054,10 @@ const updateMutation =
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+After が変わるのはここからです。`onMutate` は `mutate` を呼んだ直後、サーバーの返事を待たずに走る処理です。最初の `utils.task.getAll.cancel(...)` は、いま飛んでいる一覧の再取得を止めます。止めないまま進めると、これから手元で書き換えるキャッシュを、古い内容を積んだ返事があとから上書きしてしまいます。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       );
 
       const previousTasks =
@@ -1048,8 +1086,10 @@ const updateMutation =
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+`getData` で今のキャッシュを控えてから、`setData` で一覧の該当タスクだけを書き換えます。`updatedTask.title ?? task.title` は「送られてきた項目は新しい値、送られていない項目は今のまま」という意味です。ただし `??` は `null` も「送られていない」と同じ扱いにするため、説明や担当者を空にしたときは、キャッシュの上では前の値が残ります。`dueDate` だけ `=== undefined` で見分けているのはそのためで、期限を空にした操作はここで正しく反映されます。他の項目は、保存後にサーバーから取り直した時点で空になります。控えた `previousTasks` は、保存に失敗したときの戻し先になります。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
                       ? task.dueDate
                       : updatedTask.dueDate
                         ? new Date(updatedTask.dueDate)
@@ -1078,8 +1118,10 @@ const updateMutation =
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+`onError` は、控えておいた `previousTasks` をそのままキャッシュへ書き戻します。ここが無いと、Step 0 の楽観ロックが CONFLICT を返して保存が失敗しても、画面だけは新しい内容に変わったまま残ります。読者が「保存できた」と思い込む嘘の表示です。`onSettled` は成功と失敗のどちらでも最後に必ず走る出口で、次のブロックでその中身を書きます。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
       utils.task.getAll.invalidate(
         taskListInput,
       );
@@ -1108,8 +1150,10 @@ const handleSubmit = (data: TaskFormData) => {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+`onSettled` の中で `invalidate()` を呼ぶのは、手元で組み立てた表示をサーバーの中身へそろえ直すためです。`updatedAt` のようにサーバー側で決まる値は手元では作れないので、最後に必ず本物を取り直します。`handleSubmit` の中身は Step 4 とほとんど同じです。足した処理はすべて `useMutation` の中に収まっているため、呼び出し側は書き換えずに済みます。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     estimatedHours: data.estimatedHours ?? null,
     assigneeId: data.assigneeId || null,
   });
@@ -1140,7 +1184,7 @@ const handleSubmit = (data: TaskFormData) => {
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
 | 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（世界協定時、タイムゾーンの基準）の開始時刻にそろえる |
+| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（協定世界時、タイムゾーンの基準）の開始時刻にそろえる |
 | 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
 | 前回の値が残る | フォーム同期不足 | `defaultValues` と `useEffect(reset(...))` を確認 |
 
@@ -1159,3 +1203,14 @@ const handleSubmit = (data: TaskFormData) => {
 Day 16 では、タスクのステータス変更と作業時間の
 記録を実装します。手動で作業時間を記録して、
 プロジェクトの工数管理ができるようになります。
+
+---
+
+## 次に読むもの
+
+- 前の日: [Day 14](./day14_タスク新規作成.md)
+- 次の日: [Day 16](./day16_ステータス変更・時間記録.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 詰まったとき: [トラブルシューティング](./appendix_トラブルシューティング.md)
+- 言葉の意味: [用語集](./appendix_用語集.md)

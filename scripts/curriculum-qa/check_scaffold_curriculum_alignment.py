@@ -239,7 +239,7 @@ def main() -> int:
                 token in scaffold_script
                 for token in (
                     "next@15.5.21",
-                    "npx create-next-app@15.5.21",
+                    "create-next-app@15.5.21",
                     'overrides.postcss="8.5.23"',
                     'overrides.sharp="0.35.3"',
                 )
@@ -248,8 +248,13 @@ def main() -> int:
             <= scaffold_main_body.find("configure_security_overrides")
             < scaffold_main_body.find("install_dependencies")
         ),
+        # `vercel env run` は実在しないサブコマンド（あるのは ls / add / rm / pull）。
+        # 以前はその文字列を契約として固定していたため、動かない手順が守られていた。
+        # 取り出してから読み込む形に変え、追加の道具を要らない書き方を契約にする。
         "Day 30 production schema command": (
-            "npx vercel env run -e production -- npx prisma db push" in day30_text
+            "npx vercel env pull .env.production.local --environment=production" in day30_text
+            and "npx prisma db push" in day30_text
+            and "rm .env.production.local" in day30_text
         ),
     }
     for contract, satisfied in deployment_contract.items():

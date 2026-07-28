@@ -116,9 +116,15 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
                 id="name"
                 placeholder="プロジェクト名を入力"
                 aria-required="true"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
                 {...register('name')}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+              {errors.name && (
+                <p id="name-error" className="text-sm text-destructive">
+                  {errors.name.message}
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">説明</Label>

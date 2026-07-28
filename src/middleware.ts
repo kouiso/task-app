@@ -6,6 +6,7 @@ import {
   setSentryRequestContext,
   writeStructuredLog,
 } from '@/lib/observability';
+import { isValidRedirectUrl } from '@/lib/redirect';
 
 /**
  * Edge Runtime対応のJWT認証ミドルウェア
@@ -22,9 +23,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 function isValidCallbackPath(path: string): boolean {
-  return (
-    path.startsWith('/') && !path.startsWith('//') && !path.includes('://') && !path.includes('\\')
-  );
+  return isValidRedirectUrl(path) && !path.includes('://');
 }
 
 function getJwtSecret(): Uint8Array {

@@ -69,7 +69,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
                     {taskDetail.assignee?.avatar && (
-                      <AvatarImage src={taskDetail.assignee.avatar} />
+                      <AvatarImage src={taskDetail.assignee.avatar} alt="" />
                     )}
                     <AvatarFallback className="text-[10px]">
                       {(taskDetail.assignee?.name ||

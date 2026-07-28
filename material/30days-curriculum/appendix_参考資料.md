@@ -21,9 +21,11 @@
 | TypeScript | https://www.typescriptlang.org/docs/ | 型システムのハンドブックが充実 |
 | Tailwind CSS | https://tailwindcss.com/docs | ユーティリティクラスの全リファレンス |
 | shadcn/ui | https://ui.shadcn.com/ | コンポーネントのAPIドキュメントと使用例 |
-| Radix UI | https://www.radix-ui.com/docs/primitives | shadcn/uiの基盤となるプリミティブコンポーネント |
+| Radix UI | https://www.radix-ui.com/primitives/docs/overview/introduction | shadcn/uiの基盤となるプリミティブコンポーネント |
 | Lucide Icons | https://lucide.dev/icons/ | アイコン一覧と検索 |
-| Recharts | https://recharts.org/en-US/ | グラフ・チャートコンポーネントのAPI |
+| Recharts | https://recharts.org/ | グラフ・チャートコンポーネントのAPI |
+| TanStack Query | https://tanstack.com/query/latest | tRPC の `useQuery` / `useMutation` の土台。控えの持ち方と取り直しの挙動 |
+| react-hook-form | https://react-hook-form.com/docs | フォームの値の管理とバリデーションの連携 |
 
 ### バックエンド
 
@@ -32,7 +34,7 @@
 | tRPC | https://trpc.io/docs | 型安全APIの構築方法 |
 | Prisma | https://www.prisma.io/docs | スキーマ定義、クエリAPI、マイグレーション（データベースの構造変更を履歴として管理する仕組み） |
 | PostgreSQL | https://www.postgresql.org/docs/ | SQLリファレンス、チューニングガイド |
-| Zod | https://zod.dev/ | バリデーションスキーマの定義方法 |
+| Zod | https://zod.dev/ | バリデーションスキーマの定義方法。このカリキュラムは v3 系を使うので、公式が v4 の書き方を出している場合は v3 のドキュメントに切り替えて読んでください |
 
 ### 認証
 
@@ -83,7 +85,7 @@
 | ツール | URL | 用途 |
 |--------|-----|------|
 | VS Code | https://code.visualstudio.com/ | コードエディタ |
-| Postman | https://www.postman.com/ | APIテストツール |
+| ブラウザの開発者ツール（Networkタブ） | Chrome / Edge / Firefox に標準搭載 | このアプリの通信は tRPC を通るので、専用ツールより画面を操作して確認するほうが早い |
 | pgAdmin | https://www.pgadmin.org/ | PostgreSQL管理ツール |
 | Prisma Studio | `npx prisma studio` | データベースのGUI管理 |
 | React Developer Tools | Chrome拡張機能 | Reactコンポーネントのデバッグ |
@@ -91,3 +93,10 @@
 ---
 
 [← カリキュラム目次に戻る](./00_カリキュラム目次.md)
+
+---
+
+## 戻る
+
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)

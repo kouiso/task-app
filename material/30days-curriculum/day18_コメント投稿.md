@@ -9,17 +9,19 @@ Day 17 ではログインユーザー専用の「マイタスク」ページを�
 ## 今日のゴール
 
 タスクの詳細ダイアログにコメント機能を追加します。
-コメント一覧の表示と新規投稿の仕組みを自分の手で作ります。
+コメント API を自分の手で書き、配布済みの詳細ダイアログにその API をつないで動かします。
 
-スクリーンショット: コメント付きのタスク詳細ダイアログ。
+この日は、まずサーバー側のコメント API（`comment.ts`）を自分で書きます。画面側は配布済みの詳細ダイアログにその API をつなぎます。
 
-![コメント付きのタスク詳細ダイアログ](./screenshots/task-detail-dialog.png)
+スクリーンショット: コメント付きのタスク詳細ダイアログの表示を確認してください。
+
+![コメント欄が0件のタスク詳細ダイアログ。今日ここへ一覧と投稿欄を足す](./screenshots/task-detail-dialog.png)
 
 ## なぜこれを作るのか
 
 チームでタスクに取り組む時、進捗報告や質問を
 タスクに紐づけて記録します。
-例えば、プロジェクトに 50 件のタスクがあるとき、
+たとえば、プロジェクトに 50 件のタスクがあるとき、
 各タスクにコメントで経緯を残せると便利です。
 
 > **例え話**: コメントは「付箋に貼るメモ」
@@ -43,6 +45,15 @@ flowchart TD
     style C fill:#e8f5e9
     style F fill:#fff3e0
 ```
+
+図の右下で `F → G → C` と折り返している線が、今日いちばん大事な部分です。
+投稿が成功した直後に「取得をやり直せ」とサーバーへ伝える合図です。
+この線を消すと、投稿自体は通っているのに画面のコメント欄が古いままになります。
+Day 13 でタスク詳細を開いたとき、一度取ってきたデータはブラウザ側へ残り、次に開いたときも再利用されました。
+その手元のコピーを捨てさせる役目が `invalidate` です。
+図では投稿フォーム `E` から取得 `C` へ直接つながる線を引いていません。
+フォームは自分でコメント一覧を書き換えません。
+サーバーへ取り直しを頼むだけです。
 
 > コメント機能は `TaskDetailDialog`
 > コンポーネントの内部で完結しています。
@@ -74,13 +85,15 @@ flowchart TD
 | Step 0 | `comment.ts` を写経する | 11分 |
 | Step 1 | コメント API の形を整理する | 3分 |
 | Step 2 | タスク詳細でコメントを取得 | 5分 |
-| Step 3 | コメント一覧の表示コードを確認 | 7分 |
-| Step 4 | コメント投稿フォームを確認 | 5分 |
-| Step 5 | 投稿処理と mutation を確認 | 5分 |
+| Step 3 | コメント一覧の表示コードを書く | 7分 |
+| Step 4 | コメント投稿フォームを書く | 5分 |
+| Step 5 | 投稿処理と mutation を書く | 5分 |
 | Step 6 | キャッシュ更新の仕組みを理解 | 3分 |
 | Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約42分。
+**合計時間**: 約42分です。
+
+この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
 ---
 
@@ -115,9 +128,17 @@ const commentCreateSchema = z.object({
 });
 ```
 
-`trim().min(1)` の組み合わせは、
-空白だけの投稿を止めるための入口です。
-画面側でも止めますが、最後に守るのは server 側です。
+`trim().min(1)` の組み合わせは、空白だけの投稿を止めるための入口です。
+まず `trim()` が前後の空白を削ります。
+削ったあとの文字列へ `min(1)` が長さの下限をかけます。
+順番を逆にすると、半角スペース3つだけの本文が長さ3として通過してしまいます。
+そのあと `trim()` が空白を削るので、中身の無い文字列が DB に保存されます。
+画面ではアバターと投稿日時だけが並び、中身の無い吹き出しに見えます。
+`taskId` に付けた `.cuid()` は、Prisma が発行する ID の形と違う文字列を弾きます。
+存在しない task にコメントがぶら下がる事故を、入口の時点で防いでいます。
+ただし `.cuid()` が確かめるのは ID の形だけで、形は合っていて実在しない ID を弾くのは、このあと書く `findTaskAndAssertMembership` の役目です。
+フォーム側にも同じ検証を Step 4 で書きますが、最後に守るのは server 側です。
+ブラウザの検証ツールから直接この API へリクエストが届いても、ここを通らない限り保存されません。
 
 #### 0-2. タスク存在確認と権限確認を関数にまとめる
 
@@ -145,6 +166,16 @@ const findTaskAndAssertMembership = async (
   });
 ```
 
+ここまでで探しているのは、その ID を持つ task 1件だけです。
+`include` に書いた `members: { where: { userId } }` が今日の勘所です。
+メンバー全員ではなく、いまログインしている本人の行だけに絞って取ってきます。
+本人がそのプロジェクトに参加していれば配列は1件、参加していなければ空配列になります。
+誰ならコメントしてよいかは、task を1回引くついでに分かります。
+Day 12 で作ったプロジェクトメンバーの一覧が、ここまで効いてきます。
+コメント専用の権限テーブルを別に作らずに済みます。
+参加者がすでにそこへ登録されているからです。
+配列が空だったときに何が起きるかは、次のブロックで決めます。
+
 ```typescript
 // filepath: src/server/api/routers/comment.ts（続き）
   if (!task) {
@@ -160,6 +191,14 @@ const findTaskAndAssertMembership = async (
 };
 ```
 
+`if (!task)` で先に止める理由は、この後の `task.project.members` を安全に読むためです。
+task が `null` のまま次の行へ進むと、`null` から `project` を読もうとして実行時エラーになります。
+存在しない ID が届いたときは、この 4 行のおかげで `NOT_FOUND` として返せます。
+続く `assertMemberPermission` は、1つ前のブロックの `include` でログインユーザー分だけに絞り込んだ `members` の1件目を見ます。
+本人がメンバーでなければ配列は空です。
+1件目は `undefined` になるため `FORBIDDEN` を投げます。
+権限キーを渡した場合は、そのメンバーの役割まで確認します。
+`canEdit` を持たない閲覧者ロールは、コメントを読めても投稿できません。
 同じ確認を毎回ベタ書きすると、
 Day 19 の update/delete でも同じ形が増えて読みづらくなります。
 先に関数へ抜いておくと、router 本体では
@@ -190,6 +229,18 @@ export const commentRouter = createTRPCRouter({
     }),
 ```
 
+`getByTaskId` の1行目は `findTaskAndAssertMembership` の呼び出しです。
+コメントを取り出すのは、その確認を通り抜けた後です。
+順番が逆だと、権限の無い人にもコメント本文が返ってしまいます。
+権限チェックは必ずデータを取る前に置きます。
+`orderBy: { createdAt: 'desc' }` で新しい順に並べているので、直近のやりとりが先頭へ来ます。
+`include` の `user` は表示用です。
+名前とアバターをここで一緒に取っておかないと、コメント1件ごとに追加の通信が発生します。
+`USER_SELECT` を挟むと、パスワードなど返してはいけない項目が自動で外れます。
+Day 09 の `getAll` で使ったのと同じ道具です。
+
+ここから先の「（続き）」のブロックは、`comment.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
 ```typescript
 // filepath: src/server/api/routers/comment.ts（続き）
   create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
@@ -211,10 +262,16 @@ export const commentRouter = createTRPCRouter({
 });
 ```
 
-`getByTaskId` は「その task に紐づくコメントを新しい順で返す」query です。
-`create` は mutation なので DB を更新します。
-投稿者 ID を `ctx.session.userId` から取っているのは、
-フォームから他人の userId を送られても信用しないためです。
+投稿者 ID は `ctx.session.userId` から取ります。
+フォーム経由で他人の userId を送られても信用しないためです。
+入力スキーマに `userId` を入れていないため、client からは投稿者を指定できません。
+なりすまし投稿を防ぐいちばん確実な方法は、client に選ばせないことです。
+`findTaskAndAssertMembership` の第3引数へ `'canEdit'` を渡している点にも注目してください。
+`getByTaskId` は参加者なら誰でも通ります。
+`create` を通れるのは編集権限を持つ役割だけです。
+閲覧者ロールのメンバーがコメントを送ると、ここで `FORBIDDEN` が返ります。
+最後の `include` で投稿者情報を付けて返します。
+投稿直後の1件を、そのまま画面へ描けるようにするためです。
 
 #### 0-4. `root.ts` に登録する
 
@@ -231,6 +288,14 @@ import { taskRouter } from './routers/task';
 import { createCallerFactory, createTRPCRouter } from './trpc';
 ```
 
+この import 行は、Day 07 の `auth` から少しずつ増えてきた並びです。
+今日は `commentRouter` の1行を足しましたが、これだけではまだ何も有効になりません。
+import は「この名前をこのファイルで使う」と宣言するだけの行だからです。
+外から呼べるようになるのは、次のブロックで `appRouter` へ登録した瞬間です。
+import を書き忘れると `commentRouter` が未定義になり、型エラーで起動できません。
+逆に import だけ書いて登録を忘れると、`api.comment` と書いた行が型エラーになります。
+後者のほうが原因を見つけにくいので、2つの作業は続けて済ませます。
+
 ```typescript
 // filepath: src/server/api/root.ts（続き）
 export const appRouter = createTRPCRouter({
@@ -242,26 +307,32 @@ export const appRouter = createTRPCRouter({
 });
 ```
 
-`root.ts` は「どの router を外から呼べるようにするか」を束ねる場所です。
-ここに `comment: commentRouter` が無いと、
-comment.ts にコードがあっても client 側から見えません。
+このオブジェクトが、サーバー側の手続きの全体像です。ここに載っていない router は、ファイルが存在していても外からは呼べません。`root.ts` は Day 07 で書いたとおり、この `appRouter` から `AppRouter` 型を作って書き出しています。client 側の `api` はその型を読んで呼び名と引数を決めるため、登録を忘れると `api.comment` と書いた行そのものが型エラーになります。動かす前に間違いが分かる代わりに、エラーの表示はコメント画面側に出ます。原因はこのファイルなので、赤い波線が出たらまず `appRouter` を見てください。
 
 **確認ポイント**:
 - Day 13 で追加した `task.getById` が残っている
 - `comment.ts` を新規作成し、`getByTaskId` と `create` を書いた
 - `root.ts` に `commentRouter` を登録した
+- `npm run dev` で型エラーが出ていない
 
 ---
 
 ### Step 1: コメント API の形を整理する（3分）
 
-**ゴール**: さっき書いた server 側コードを、
+**ゴール**: Step 0 で写経した `src/server/api/routers/comment.ts` を、
 「何を受け取って、何をして、何を返すか」で整理します。
 
 ```typescript
 // filepath: src/server/api/root.ts
 comment: commentRouter,
 ```
+
+この1行が、client 側の呼び名を決めています。
+左側へ書いた `comment` が、そのまま `api.comment.create` の `comment` になります。
+別の名前を付ければ呼び名もその名前へ変わるので、両者は必ず一致します。
+tRPC で「サーバーに書いた関数をそのまま client から呼べる」と言えるのは、この対応づけがあるからです。
+関数名を変えれば client 側の型もその場で変わり、呼び出し側にエラーが出ます。
+実行してみるまで壊れたことに気づかない、という事故が起きません。
 
 #### Day 18 時点の commentRouter
 
@@ -329,9 +400,18 @@ const { data: taskDetail } =
   );
 ```
 
+`enabled: !!taskId` は、ダイアログを開く前に問い合わせが走らないよう止めるスイッチです。
+`taskId` が `null` のあいだ、`useQuery` は待機したまま何も送りません。
+これが無いと、まだタスクを開いていない状態でも空文字の `id` が送られ、`.cuid()` の検証に引っかかります。
+`{ id: taskId ?? '' }` に書いた `?? ''` は、型を `string` へそろえるための保険です。
+`enabled` で止めているので、この空文字が実際にサーバーへ届くことはありません。
+Step 0 で書いた server 側と違い、画面側に権限チェックはありません。
+その確認は `task.getById` の中で済んでいるため、画面側へ書き足す必要はありません。
+
 **確認ポイント**:
 - `taskDetail?.comments` でデータが取得できる
 - コメントデータはタスク詳細に含まれている
+- `npm run dev` で型エラーが出ていない
 
 > `api.task.getById` のレスポンスには
 > `comments` が含まれています。
@@ -353,7 +433,9 @@ const { data: taskDetail } =
 
 ---
 
-### Step 3: コメント一覧の表示コードを確認する（7分）
+### Step 3: コメント一覧の表示コードを書く（7分）
+
+配布されている `task-detail-dialog.tsx` にコメント欄はありません。ここから先は、ダイアログの中へ自分で書き足していきます。
 
 **ゴール**: コメントをアバター・日時付きの
 リストで表示する部分を作ります。
@@ -369,6 +451,16 @@ import { Avatar, AvatarFallback, AvatarImage }
 import { Badge }
   from '@/component/ui/badge';
 ```
+
+`Avatar` は3つの部品でひと組です。
+`Avatar` は丸い外枠です。
+その中へ画像を出す部品が `AvatarImage` です。
+画像を出せないときに代わりを出す部品が `AvatarFallback` です。
+コメントの投稿者が全員アバター画像を登録しているとは限りません。
+だから代役の側が必ず要ります。
+`Badge` は件数を丸く囲んで表示する小さな部品で、この後コメント件数の表示に使います。
+どちらも shadcn/ui の部品で、実体は `src/component/ui/` の下にあります。
+自分のプロジェクト内へファイルとして置いてあるため、色や角丸を変えたくなったら直接編集できます。
 
 **確認ポイント**:
 - Avatar は `@/component/ui/avatar` からインポート
@@ -390,9 +482,16 @@ import { Badge }
 </div>
 ```
 
+`taskDetail.comments?.length ?? 0` の `?.` と `?? 0` は保険です。
+このコメント欄は `taskDetail` が届いたあとだけ描かれ、`task.getById` は `comments` を必ず含めて返します。
+つまりここでの `comments` は常に配列で、1件も無ければ空の配列です。
+今日のコードで `?.` と `?? 0` が実際に働く場面はありませんが、この式を `taskDetail` の判定の外へ移しても壊れない書き方になっています。
+件数をヘッダーへ出しておくと、コメント欄を開かなくてもやりとりの有無が分かります。
+コメントが1件も無いタスクと、20件たまったタスクを一目で見分けられます。
+
 **確認ポイント**:
 - Badge でコメント件数が表示される
-- `?? 0` でコメントが無い場合もエラーにならない
+- コメントが1件も無いタスクでは `0` と表示される
 
 コメントが 0 件のときは案内メッセージを表示し、
 1 件以上あればリストを描画します。
@@ -407,6 +506,10 @@ import { Badge }
   </p>
 )}
 ```
+
+`comments` は必ず配列で届くので、`length` が `0` かどうかだけを見れば足ります。
+空の状態へ言葉を置く理由は、Day 09 の一覧画面で空状態を作ったときと変わりません。
+何も無い画面は、読者にとって「壊れている画面」と見分けが付きません。
 
 **確認ポイント**:
 - コメントが無い時に案内が表示される
@@ -423,7 +526,8 @@ import { Badge }
     <Avatar className="h-8 w-8 mt-1">
       {comment.user.avatar && (
         <AvatarImage
-          src={comment.user.avatar} />
+          src={comment.user.avatar}
+          alt="" />
       )}
       <AvatarFallback>
         {(comment.user.name
@@ -435,6 +539,7 @@ import { Badge }
 
 **確認ポイント**:
 - `AvatarImage` は `{comment.user.avatar && ...}` で条件付きレンダリング（画像URLがある場合のみ表示）
+- `alt=""` は「読み上げなくてよい画像」の指定。隣に投稿者名が文字で出ているため、画像まで読み上げると同じ名前を二度聞くことになる。名前が隣に無い場所へ置くときは `alt={user.name}` のように誰の画像かを入れる
 - `AvatarFallback` の名前取得には `||` を使い、name がなければ email、両方なければ `'?'` を使う
 - AvatarFallback で頭文字（先頭 1 文字を大文字化）を表示する
 
@@ -457,6 +562,13 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 ```
 
+`format` は Date を好きな並びの文字列へ変換する関数です。
+`ja` は日本語ロケール（言語ごとの表記ルール一式）で、曜日や月の呼び方を日本語にそろえます。
+標準の `toLocaleString` でも似たことはできますが、ブラウザや OS の設定によって出力が変わります。
+読者全員で同じ画面を再現するため、出力の決まった `date-fns` を使います。
+`date-fns/locale` から `ja` だけを取り込みます。こうすると、他の言語のデータまで配信せずに済みます。
+必要な分だけ import すると、完成したアプリの読み込みが軽くなります。
+
 **確認ポイント**:
 - `format` は `date-fns` からインポート
 - `ja` は `date-fns/locale` からインポート
@@ -464,6 +576,18 @@ import { ja } from 'date-fns/locale';
 投稿日時をそのまま出すと読みにくいので、`format` で
 `yyyy/MM/dd HH:mm` の形にそろえます。`ja` ロケールを渡すと、
 月名などが日本語表記で扱われます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// .map ループ内: 名前と日時を包む2つの箱を開く
+<div className="flex-1 space-y-1">
+  <div className="flex items-center
+    justify-between">
+```
+
+外側の `flex-1` は、アイコンの右側の残り幅をすべて使うための指定です。
+内側の `justify-between` は、名前を左端、日時を右端へ寄せるための指定です。
+この2つはあとで閉じるので、いまは開いたままにしておきます。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
@@ -483,6 +607,14 @@ import { ja } from 'date-fns/locale';
 </span>
 ```
 
+表示名の `||` は、`AvatarFallback` に渡す頭文字と同じ順でたどります。
+順番をそろえてあるので、アイコンの頭文字が「T」なのに名前が別人、という食い違いは起きません。
+`new Date(comment.createdAt)` でいったん `Date` へ包み直します。
+このアプリは tRPC に superjson を設定しているので、日時は文字列ではなく `Date` のまま届きます。
+つまりこの包み直しは無くても動きます。それでも書いておくのは、通信の設定を変えたときや、別の経路から文字列で受け取ったときに、この行だけで吸収できるからです。
+日時を `text-xs text-muted-foreground` で小さく薄くしています。
+読者が追いたいのは本文であり、時刻は補足だからです。
+
 **確認ポイント**:
 - 投稿日時が表示される
 - `date-fns` の `format` と `ja` ロケールを使用
@@ -497,13 +629,32 @@ import { ja } from 'date-fns/locale';
 </p>
 ```
 
+ここまでで `.map` の中身が揃いました。最後に、開いたタグと括弧を閉じます。
+`{comment.content}` の `</p>` の下へ続けてください。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+      </div>
+    </div>
+  </div>
+))}
+```
+
+`</div>` の3つは、内側から順に「名前と日時の箱」「アイコンの右側の箱」「1件分の箱」を閉じます。
+`))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じます。
+コメント欄を包む外側の箱はこのあと閉じるので、この時点ではまだ構文エラーが残ります。
+
 **確認ポイント**:
-- コメントがリスト表示される
-- アバター・名前・日時・本文が揃っている
+- `.map` の中身を、閉じるところまで書けた
+- `</div>` が3つ、`))}` が1つ並んでいる
+- この時点ではまだ構文エラーが残る（コメント欄を包む外側の箱は、このあと閉じる）
 
-スクリーンショット: コメント一覧がタスク詳細に表示されている画面。
+スクリーンショット: コメント一覧がタスク詳細に並んだ画面の表示を確認してください。
 
-![コメント一覧の表示](./screenshots/task-detail-comments-list.png)
+![アバター・名前・日時・本文が並んだコメント一覧](./screenshots/task-detail-comments-list.png)
+
+画像の各行に見えるペンとゴミ箱のアイコンは Day 19 で足すものです。
+今日の時点では出ません。
 
 > `max-h-[200px] overflow-y-auto` で
 > コメントが多い場合にスクロール可能です。
@@ -512,7 +663,7 @@ import { ja } from 'date-fns/locale';
 
 ---
 
-### Step 4: コメント投稿フォームを確認する（5分）
+### Step 4: コメント投稿フォームを書く（5分）
 
 **ゴール**: react-hook-form + zod で管理された
 コメント投稿フォームを作ります。
@@ -531,6 +682,10 @@ import { z } from 'zod';
 import { Textarea }
   from '@/component/ui/textarea';
 ```
+
+`useForm`・`zodResolver`・`z` の3つは、Day 05 と Day 16 で使ったものと同じ役割です。
+`Textarea` は複数行を書ける入力欄で、改行を含むコメントを受け取れます。
+1行だけの `Input` にすると、長い経過報告を書きたい人がすぐ困ります。
 
 **確認ポイント**:
 - `zodResolver` は `@hookform/resolvers/zod` から
@@ -551,6 +706,17 @@ type CommentFormValues =
   z.infer<typeof commentSchema>;
 ```
 
+画面側のスキーマは、Step 0 で書いた `commentCreateSchema` とほぼ同じ形です。
+違いは `taskId` が無い点です。
+`taskId` はフォームへ入力する値ではなく、開いているダイアログが持っています。
+同じ検証を2か所に書くのは無駄に見えますが、役割が違います。
+画面側の役目は、送る前に赤字で教えることです。
+server 側の役目は、送られてきたものを最後に弾くことです。
+画面側だけだと、API を直接叩かれた時点で守りがゼロになります。
+server 側だけだと、送信して往復するまで入力ミスに気づけません。
+`z.infer<typeof commentSchema>` は、スキーマから型を作り直す書き方です。
+ルールを1か所直せば型も追随します。型とルールがずれる心配はありません。
+
 **確認ポイント**:
 - `trim()` → `min(1)` の順でバリデーションする
 - `z.infer` で型を自動生成している
@@ -564,6 +730,15 @@ const commentForm =
     defaultValues: { content: '' },
   });
 ```
+
+`defaultValues: { content: '' }` を書いておくと、`content` は最初から空文字になります。
+初期値を省くと `undefined` から始まります。後で `watch('content').trim()` を呼んだ瞬間、エラーになります。
+Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り替えます。
+だから初期値が必ず要ります。
+`resolver: zodResolver(commentSchema)` を渡すと、送信ボタンを押した時点で zod が入力値を検査します。
+検査に落ちた場合、`handleSubmit` は先へ進みません。
+投稿ハンドラーも呼ばれません。
+そのため、ハンドラーの中で空文字かどうかを自分で調べる必要がありません。
 
 **確認ポイント**:
 - Day 14 と同じ `zodResolver` パターンを使っている
@@ -580,6 +755,7 @@ const commentForm =
   className="space-y-2">
   <Textarea
     placeholder="コメントを追加..."
+    aria-label="コメント本文"
     {...commentForm.register('content')}
     className="resize-none"
     rows={2} />
@@ -596,13 +772,18 @@ const commentForm =
 </form>
 ```
 
+入力欄に `aria-label` を付けているのは、`placeholder` が1文字打つと消えるためです。消えたあとは何の欄か確かめる手段がなくなります。
+
+ここで使っている `handleCommentSubmit` は、このあとの Step で定義します。
+定義するまでこの画面は表示できないので、動きの確認はそのあとに行います。
+
 **確認ポイント**:
 - `<form className="space-y-2">` でレイアウトする
 - `register('content')` でテキストエリアを管理
 - `handleSubmit` でバリデーション後に送信
-- 投稿中は「投稿中...」と表示される
+- 投稿中の「投稿中...」の表示は、`handleCommentSubmit` を書いてから確かめる
 
-スクリーンショット: テキストエリアと投稿ボタンが表示されている画面。
+スクリーンショット: テキストエリアと投稿ボタンが並んだ画面の表示を確認してください。
 
 ![コメント投稿フォーム](./screenshots/task-detail-comment-form.png)
 
@@ -622,7 +803,7 @@ const commentForm =
 
 ---
 
-### Step 5: 投稿処理と mutation を確認する（5分）
+### Step 5: 投稿処理と mutation を書く（5分）
 
 **ゴール**: コメントをサーバーに保存する
 mutation の仕組みを理解します。
@@ -638,6 +819,15 @@ mutation の仕組みを理解します。
 // tRPC キャッシュ操作ユーティリティ
 const utils = api.useUtils();
 ```
+
+`api.useUtils()` は、tRPC が裏で持っているキャッシュの操作盤を取り出すフックです。
+これまでの Day で使ってきた `useQuery` は、取得したデータを画面の裏側へ保存します。
+同じ問い合わせが来たら、保存済みの中身をすぐ返します。
+そのおかげで、タスクを開き直しても毎回サーバーへ問い合わせずに済みます。
+ただし、コメントを1件足した後は、保存済みの中身が古くなります。
+古くなったと伝える窓口が `utils` です。
+`utils.task.getById` のように、router と手続きの名前をそのままたどれます。
+呼び名が API 側とそろっているため、どのキャッシュを触っているかは読むだけで分かります。
 
 **確認ポイント**:
 - `utils` が定義されている
@@ -658,6 +848,17 @@ const createCommentMutation =
   });
 ```
 
+`useMutation` は、`useQuery` と対になるフックです。
+`useQuery` は読む担当です。
+`useMutation` は書く担当で、こちらは自動で走りません。
+`mutate()` を呼んだときだけサーバーへ送ります。
+`onSuccess` はサーバーが成功を返したときだけ動きます。
+投稿に失敗したのに入力欄だけ空になる事故を防げます。
+`if (taskId)` で囲んだ理由は、`taskId` が `null` のまま呼ばれても壊れないようにするためです。
+`invalidate` へ渡す `id` は、いま開いているタスクの ID とぴったり一致させます。
+別の ID を渡すと、無関係なタスクのキャッシュが消えるだけです。
+目の前の一覧は古いままになります。
+
 **確認ポイント**:
 - mutation が定義されている
 - `onSuccess` で invalidate とフォームリセットを実行
@@ -675,9 +876,21 @@ const handleCommentSubmit =
   };
 ```
 
+`handleCommentSubmit` が受け取る `values` は、zod の検査を通り抜けてきた値です。
+だから `if (!values.content)` のような空チェックをここへ書く必要がありません。
+検査に落ちた入力は、そもそもこの関数まで届きません。
+残っている `if (!taskId) return;` が見ているのは、入力値ではなく画面の状態です。
+ダイアログを閉じた直後に送信が走ると、`taskId` は `null` になります。
+その `null` をそのまま送ると、server 側の `.cuid()` で弾かれてエラー表示になります。
+手前で黙って止めておくほうが、読者にとって親切です。
+`mutate` へ渡しているのは `content` と `taskId` の2つだけです。
+投稿者を決めるのは Step 0 で見たとおり server 側です。
+だからここでは送りません。
+
 **確認ポイント**:
 - `values` は zod でバリデーション済み
 - フォームがリセットされる
+- `npm run dev` で型エラーが出ていない
 
 > 投稿成功後に `commentForm.reset()` で
 > フォームをクリアし、`invalidate` で
@@ -719,6 +932,9 @@ utils.task.getById.invalidate(
 );
 ```
 
+コメント配列へ自分で1件足す書き方もありますが、今日は使いません。
+サーバーが実際に保存した中身をそのまま表示するほうが、画面と DB の食い違いが起きないからです。
+
 **確認ポイント**:
 - 投稿後に新しいコメントが一覧に表示される
 
@@ -753,15 +969,14 @@ PORT=3001 npm run dev
 - 空コメントは送信できない
 - 投稿中はボタンが無効になる
 
-スクリーンショット: コメント投稿後にリストが更新された画面。
+![投稿ボタンを押す直前のダイアログ。入力欄に文章が残っている](./screenshots/task-detail-comment-posted.png)
 
-![コメント投稿後の更新画面](./screenshots/task-detail-comment-posted.png)
+画像は「コメント投稿」を押す**直前**の状態です。押したあとは、
+いま入力欄にある文章が一覧の末尾に加わり、見出しの件数が1つ増え、
+入力欄は空に戻ります。この3つが同時に起きれば成功です。
 
 おめでとうございます。コメント投稿が動きました。
 いろいろなタスクにコメントを書いてみてください。
-
----
-
 
 ---
 
@@ -809,3 +1024,14 @@ JSX の中に全部詰めると条件分岐が深くなります。
 
 Day 19 では、投稿したコメントの編集・削除機能を作ります。
 自分のコメントだけを操作できる権限チェックも実装します。
+
+---
+
+## 次に読むもの
+
+- 前の日: [Day 17](./day17_自分のタスクページ.md)
+- 次の日: [Day 19](./day19_コメント編集・削除.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 詰まったとき: [トラブルシューティング](./appendix_トラブルシューティング.md)
+- 言葉の意味: [用語集](./appendix_用語集.md)

@@ -148,7 +148,7 @@ export function ProjectDetailView({
                 >
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      {member.user?.avatar && <AvatarImage src={member.user.avatar} />}
+                      {member.user?.avatar && <AvatarImage src={member.user.avatar} alt="" />}
                       <AvatarFallback>
                         {(member.user?.name || member.user?.email || '?')[0]?.toUpperCase()}
                       </AvatarFallback>

@@ -28,14 +28,16 @@ Day 29 では**ユーザー詳細・編集ページ**を実装しました。管
 
 ```mermaid
 flowchart TD
-    A[第1週: Day 1-4\n環境構築・初回デプロイ]
-    B[第2週: Day 5-10\n認証・プロジェクト管理]
-    C[第3週: Day 11-16\nタスク CRUD・作業時間記録]
-    D[第4週: Day 17-20\n検索・マイタスク]
-    E[第5週: Day 21-24\n統計・グラフ・管理]
-    F[第6週: Day 25-30\n仕上げ・デプロイ]
+    A[第1週: Day 01-04\n環境構築・初回デプロイ]
+    B[第2週: Day 05-08\n認証 UI・JWT・サイドバー]
+    C[第3週: Day 09-12\nプロジェクト CRUD・メンバー追加]
+    D[第4週: Day 13-16\nタスク CRUD・作業時間記録]
+    E[第5週: Day 17-22\nマイタスク・検索・統計・グラフ]
+    F[第6週: Day 23-30\nレポート・管理・詳細・デプロイ]
     A --> B --> C --> D --> E --> F
 ```
+
+この図は思い出の一覧ではありません。今日のデプロイが成立する理由は、各週の成果物がそのまま本番の部品になるからです。第1週で GitHub と Vercel をつないだので、今日は `git push` するだけでビルドが始まります。第2週で作った JWT の署名鍵は、本番でも同じ役割を持つ環境変数として登録します。第3週から第5週で書いた画面と API は、接続先の DB を差し替えるだけで本番でも同じコードのまま動きます。今日新しく足すのは公開先の設定だけで、アプリのコードには一行も手を入れません。
 
 ### やること / やらないこと
 
@@ -67,6 +69,7 @@ flowchart TD
 |---------|---------|---------|
 | Step 1 | 本番用の環境変数を準備 | 5分 |
 | Step 2 | 本番前のローカル最終確認 | 5分 |
+| Step 2.5 | セキュリティヘッダーを設定する | 6分 |
 | Step 3 | Git の公開準備 | 3分 |
 | Step 4 | Vercel を設定してプッシュ | 10分 |
 | Step 5 | 本番環境の動作確認 | 7分 |
@@ -74,7 +77,9 @@ flowchart TD
 | Step 7 | 技術スタックの振り返り | 5分 |
 | Step 8 | 次のステップとリソース | 5分 |
 
-**合計時間**: 約47分。
+**合計時間**: 約53分です。
+
+この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
 ---
 
@@ -101,7 +106,7 @@ flowchart TD
 > 発行されます。この文字列は環境変数にも自動で
 > 追加されます。Supabase など外部サービスで作る
 > 場合は、発行された接続文字列をこの `DATABASE_URL`
-> に設定します。Day 4 の初回デプロイ時に設定済み
+> に設定します。Day 04 の初回デプロイ時に設定済み
 > なら、その接続文字列をそのまま使います。
 >
 > 環境変数は、まず公開先の Production に登録します。
@@ -140,7 +145,7 @@ DATABASE_URL="postgresql://user:password@localhost:25532/taskapp?schema=public"
 # JWT署名用の秘密鍵（32文字以上必須。本番では必ず変更）
 JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 
-# 本番URL（robots.txt / sitemap で使用。ローカル開発では空でOK）
+# 本番URL（完成版の robots.txt 生成で使います。このカリキュラムでは robots.txt を作らないため、空のままで構いません）
 # NEXT_PUBLIC_BASE_URL="https://your-app.vercel.app"
 ```
 
@@ -150,7 +155,7 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 
 > `.env.example` にはローカル開発用の設定が
 > 書かれています。`25532` は教材用 DB の
-> ホスト側ポートです。既に使われている場合は、
+> ホスト側ポートです。すでに使われている場合は、
 > `_DOCKER_COMPOSE_HOST_PORT_DB` と `DATABASE_URL` の
 > ポート番号を同じ値に変更します。
 >
@@ -166,17 +171,16 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 > ローカルでも `DATABASE_URL` と `JWT_SECRET` が
 > 未設定だと build 時に失敗します。
 >
-> 先に `.env.example` をコピーして
-> `.env.local` を作成し、最低でも
-> `DATABASE_URL` と `JWT_SECRET` を設定してから
+> この2つは Day 01 のセットアップで `.env` に
+> 用意済みです。中身が残っているかだけ確かめてから
 > `npm run build` を実行してください。
 
 ```bash
 # filepath: ターミナル
-cp .env.example .env.local
-
-# .env.local を開き、最低でも DATABASE_URL と JWT_SECRET を設定する
+cat .env
 ```
+
+`.env` は `.gitignore` の `.env*` に当てはまるので、ここへ書いた値は `git add` しても追跡対象になりません。中身の検証を担当するのは `src/lib/env.ts` の zod スキーマで、`DATABASE_URL` には URL の形を、`JWT_SECRET` には32文字以上を求めます。どちらかを満たさないと例外が投げられ、`npm run build` はページを1枚も出力せずに止まります。この検証は Vercel のビルドでも同じものが走ります。Vercel 側の環境変数に `DATABASE_URL` と `JWT_SECRET` を入れ忘れると、同じエラーでビルドが止まります。手元で一度通しておけば、公開直前の本番ビルドログで初めてこのエラーを読む展開にはなりません。
 
 **確認ポイント**:
 - 2つの環境変数の値を準備できた
@@ -213,6 +217,8 @@ services:
       timeout: 5s
       retries: 5
 ```
+
+`ports` の `25532:5432` は、パソコン側の 25532 番をコンテナの中の PostgreSQL の 5432 番につなぐ指定です。`.env` の `DATABASE_URL` に書いたポート番号がこれとずれていると、DB は動いているのに接続だけが拒否されます。`healthcheck` は `pg_isready` を5秒ごとに実行し、問い合わせを受け付けられる状態になって初めて healthy と表示します。起動してすぐ `npm run db:push` が失敗する原因は、healthy と出る前にコマンドを打ったことです。`volumes` はデータの保存先をコンテナの外へ逃がす指定で、これが無いとコンテナを作り直すたびに登録済みのユーザーが消えます。
 
 **確認ポイント**:
 - YAML のインデントがスペース2個で統一されている
@@ -258,6 +264,59 @@ npm run db:push
 
 ---
 
+### Step 2.5: セキュリティヘッダーを設定する（6分）
+
+**ゴール**: 公開したアプリが、ブラウザに守り方を伝えられるようにします。
+
+ここまでのアプリには、セキュリティヘッダーが1つも入っていません。ヘッダーとは、ページ本体とは別にサーバーがブラウザへ渡す短い指示書のことです。これが無いと、たとえば他人のサイトが自分のアプリを見えない枠として埋め込み、その上に偽のボタンを重ねる、といった手口を止められません。公開する前にここを埋めます。
+
+`next.config.ts` を開き、`const nextConfig` の中へ `headers` を追加します。
+
+```typescript
+// filepath: next.config.ts
+// nextConfig の中に追加
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+        ],
+      },
+    ];
+  },
+```
+
+`source: '/(.*)'` は「すべてのURL」という意味で、アプリ全体に同じ指示を配ります。`X-Frame-Options: DENY` は、他人のページの中へ自分のアプリを枠として埋め込むことを禁じます。`X-Content-Type-Options: nosniff` は、ブラウザがファイルの中身を見て種類を勝手に決め直すのをやめさせます。`Referrer-Policy` は、外部サイトへ移るときに、どのページから来たかを細かく渡しすぎないようにします。
+
+続けて、通信と権限に関する3つを足します。
+
+```typescript
+// filepath: next.config.ts（headers の配列に追加）
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          { key: 'X-DNS-Prefetch-Control', value: 'off' },
+```
+
+`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`Permissions-Policy` はカメラ・マイク・位置情報を一切使わないと宣言するものです。このアプリはどれも使わないので、閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` は、リンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
+
+**確認ポイント**:
+- `next.config.ts` に `async headers()` を追加した
+- `npm run build` がエラーなく終わる
+- 公開後にブラウザの開発者ツールの Network タブでページを選ぶと、応答ヘッダーに `X-Frame-Options` が見える
+
+> 完成版のリポジトリには、これに加えて `Content-Security-Policy` も入っています。読み込んでよい場所を種類ごとに列挙する指示で、効き目は大きいぶん、書き方を誤ると自分のアプリの画像やスクリプトまで止まります。まずは上の6つを入れて、動く状態を保ったまま公開してください。
+
+---
+
 ### Step 3: Git の公開準備（3分）
 
 **ゴール**: 30日間の変更を漏れなく
@@ -269,13 +328,15 @@ npm run db:push
 git status
 ```
 
+公開の前に `git status` を読むのは、載せてはいけないファイルをここで最後に一度だけ止められるからです。とくに `.env.local` が混ざったまま GitHub へ上がると、`JWT_SECRET` を誰でも読める状態になります。この鍵さえ手に入れば、他人でも有効なセッション Cookie を自分で作れます。Day 08 で組んだログイン確認は、正しい署名として素通りさせてしまいます。一度 push した秘密鍵は、あとからファイルを消しても履歴の中に残り続けます。だからこの1手だけは飛ばさないでください。
+
 **確認ポイント**:
 - `.env` ファイルが含まれていない
 - `.gitignore` で秘密情報が除外されている
 
 ```bash
 # filepath: ターミナル
-# Day 4〜29 で変更したアプリ用の場所を明示する
+# Day 04〜29 で変更したアプリ用の場所を明示する
 git add src prisma package.json package-lock.json
 git add .env.example docker-compose.yml
 git add next.config.ts tsconfig.json components.json biome.json
@@ -286,7 +347,7 @@ git status --short
 ```
 
 一覧に `.env` や `.env.local` が無く、
-Day 4〜29 の `src` と `prisma` が含まれることを
+Day 04〜29 の `src` と `prisma` が含まれることを
 確認してからコミットします。
 
 ```bash
@@ -318,9 +379,11 @@ flowchart TD
     F --> G[公開 URL 発行]
 ```
 
+この5段のうち、自分の手で動かすのは左端の `git push` だけです。残りは Vercel が自動で進めます。ここで押さえておきたいのは、環境変数を読む時点が `prisma generate` と `next build` だという点です。ビルドが始まったあとに Vercel の画面へ変数を足しても、走っている最中のビルドはその値を知りません。だから順番は「環境変数を登録してから push」になります。逆にしてしまったときは、Deployments タブから同じコミットを Redeploy すれば、新しい値でビルドし直せます。
+
 #### 前提条件
 
-Day 4 で Vercel 連携済みの場合は、
+Day 04 で Vercel 連携済みの場合は、
 既存プロジェクトを開いてください。
 未連携の場合は以下の手順で準備します。
 
@@ -348,8 +411,12 @@ Preview デプロイも使う場合は、同じ2変数を Preview
 にも追加します。Production だけを公開する場合は、
 まず Production の設定と動作確認を完了させます。
 
+2つの変数が何を左右するのかを、間違えたときの見え方で押さえておきます。`DATABASE_URL` は、どの PostgreSQL に読み書きするかを決めます。URL の形になっていなければ、Step 1 で見た `src/lib/env.ts` の検証がビルドの途中で例外を投げます。Vercel のビルドはそこで失敗し、その回のデプロイは公開されません。公開 URL には前回のデプロイがそのまま残るので、画面は 500 にならず、気付く場所はビルドログです。形は正しいのに空の DB を指していた場合は、検証を通るのでデプロイまで進みます。画面も出ますが、新規登録を押した瞬間にテーブルが無いというエラーが返ります。`JWT_SECRET` は、ログイン Cookie の署名と検証に使う鍵です。この値は Production と Preview で別々にしてください。環境ごとに玄関が別にあるイメージです。練習用の玄関に合わせて作った鍵で、本物の玄関が開いてはいけません。両方に同じ値を入れると、Preview のデプロイが発行した Cookie を Production がそのまま受け入れます。Preview は動作確認用の環境で、気軽に作り直します。そこから本番の入口を通せる状態は避けます。
+
+Preview を開いたときにログイン画面へ戻されるのは、鍵が違うからではありません。Vercel は Production と Preview に別のホスト名を割り当てます。Day 07 で設定したログイン Cookie には `domain` を指定していないため、Cookie は発行したホスト名にだけ送られます。Production で取った Cookie は Preview のホスト名には届かないので、Preview では改めてログインすれば使えます。鍵をそろえても、この動きは変わりません。
+
 環境変数を先に設定できたら、現在のブランチを
-GitHub へプッシュします。Day 3 と同じく、
+GitHub へプッシュします。Day 03 と同じく、
 ブランチ名を固定しません。
 
 ```bash
@@ -362,7 +429,7 @@ git push origin "$(git branch --show-current)"
 
 **確認ポイント**:
 - 現在のブランチの push が成功した
-- GitHub に Day 4〜29 の変更が反映された
+- GitHub に Day 04〜29 の変更が反映された
 - 環境変数の設定後に始まったデプロイが `Ready` になった
 
 > Vercel は GitHub と連携しているため
@@ -405,18 +472,39 @@ Vercel CLI で現在のフォルダを既存プロジェクトへ
 # 初回だけ、画面の案内に従って既存 Vercel プロジェクトを選ぶ
 npx vercel link
 
-# Production の秘密値をファイルへ保存せず、教材用の新規 DB へ反映する
-npx vercel env run -e production -- npx prisma db push
+# Production の接続情報を一時ファイルへ取り出し、教材用の新規 DB へ反映する
+npx vercel env pull .env.production.local --environment=production
+
+# 括弧の中だけで読み込んでから実行する
+(
+  set -a
+  . ./.env.production.local
+  set +a
+  npx prisma db push
+)
+
+# 接続情報を手元に残さないよう、終わったら消す
+rm .env.production.local
 ```
 
 **確認ポイント**:
-- `npx vercel link` で Day 4 から使っているプロジェクトを選んだ
+- `npx vercel link` で Day 04 から使っているプロジェクトを選んだ
+- `.env.production.local` を最後に削除した
 - `prisma db push` に `Your database is now in sync` と表示された
 - データ損失の警告が出た場合は続行せず、接続先が新規 DB か確認した
 
-> `vercel env run` は Vercel の環境変数をコマンドへ
-> 一時的に渡します。`DATABASE_URL` をターミナル履歴や
-> `.env` ファイルへコピーしないための方法です。
+> `vercel env pull` は Vercel の環境変数をファイルへ取り出します。
+> `set -a` は「このあと読み込む値をコマンドへ渡す」という指定、
+> `. ./.env.production.local` はそのファイルを読み込む書き方です。
+> `set +a` で元に戻します。
+> ここで `( )` を使うのは、括弧の中が別のシェルとして動くからです。
+> `set +a` は自動で渡す指定を解除するだけで、読み込んだ
+> `DATABASE_URL` の値そのものは消えません。括弧なしで実行すると、
+> そのあと同じターミナルで打った Prisma やシードのコマンドが
+> 本番 DB を見に行ってしまいます。括弧で囲めば、読み込んだ値は
+> 括弧を抜けた時点で消えます。
+> 取り出したファイルには本番の接続情報が入っているので、
+> 使い終わったら必ず `rm` で消します。
 >
 > 実務では migration ファイルを Git で管理し、
 > CI/CD から `prisma migrate deploy` を実行します。
@@ -436,11 +524,13 @@ npx vercel env run -e production -- npx prisma db push
 open https://your-app-name.vercel.app
 ```
 
+この `open` は自分のパソコンのブラウザを開くだけなので、「インターネット越しに届いている」ことまでは確かめてくれません。手元では開発サーバーもまだ動いていて、見た目は `localhost` のときとほとんど変わらないので見分けが付きにくいところです。外から届いているかを確かめる一番早い方法は、Wi-Fi を切ってモバイル回線にしたスマートフォンで同じ URL を開くことです。自分の家の回線を1つも通らない端末で画面が出たなら、そのアプリはもう自分のパソコンに依存していません。ここで初めて、人に URL を渡せる状態になります。
+
 **確認ポイント**:
 - ブラウザでデプロイ URL が開けた
 - ログインページが表示される
 
-【スクリーンショット】本番環境のログイン画面。
+【スクリーンショット】本番環境のログイン画面の表示を確認してください。
 
 ![本番環境のログイン画面](./screenshots/login.png)
 
@@ -474,7 +564,7 @@ open https://your-app-name.vercel.app
 > API レスポンスが 200 であることも
 > チェックします。
 
-【スクリーンショット】完成版のダッシュボード画面。
+【スクリーンショット】完成版のダッシュボード画面の表示を確認してください。
 
 ![完成版のダッシュボード画面](./screenshots/dashboard.png)
 
@@ -493,6 +583,8 @@ git log --oneline | wc -l
 find src/app -name "page.tsx" | wc -l
 ```
 
+`git log --oneline` は1コミットを1行で出すので、`wc -l` に渡すとそのまま件数になります。数そのものより、Day 03 で最初のコミットを打ってから今日まで履歴が途切れていないことのほうが大事です。下の `find` が数えているのは `page.tsx` というファイル名だけです。App Router では `page.tsx` を置いたフォルダの位置がそのまま URL になるので、この件数は公開したアプリの画面数とほぼ一致します。数字が思ったより少なければ、フォルダを作っただけで `page.tsx` を置いていない場所が残っています。
+
 **確認ポイント**:
 - コミット数が 30 以上あれば毎日コミットできた証拠
 - ページ数が 12 以上あれば充実したアプリ
@@ -508,8 +600,8 @@ find src/app -name "page.tsx" | wc -l
 | 第5週 | 17-22 | マイタスク・検索・統計・グラフ |
 | 第6週 | 23-30 | レポート・管理・詳細・デプロイ |
 
-> 30日間で17ページ以上のアプリを
-> 教材スターターから機能を段階的に構築しました。
+> 30日間で、教材スターターから機能を段階的に足して、
+> 17ページ以上のアプリを構築しました。
 > フロントエンドからバックエンド、
 > データベース設計からデプロイまで
 > 一貫して経験できました。
@@ -527,27 +619,31 @@ find src/app -name "page.tsx" | wc -l
 npm ls next react typescript prisma
 ```
 
+`npm ls` が表示するのは、`package.json` に書いた希望のバージョンではなく、`node_modules` へ実際に入った番号です。この番号を覚えておく価値は、公式ドキュメントを読むときに出てきます。Next.js は 14 系と 15 系で書き方の変わった箇所があります。手元が 15 系だと知らないまま古い記事のコードを写すと、そのままでは動きません。`UNMET DEPENDENCY` と表示された場合は、必要なパッケージが入っていない状態です。`npm install` をやり直してから、もう一度本番のビルドを確認してください。
+
 **確認ポイント**:
 - 各パッケージのバージョンが表示された
 - 各技術の役割を説明できる
 
 #### フロントエンド技術
 
+> Next.js 以外はインストールした時点の最新版が入るため、末尾の数字は手元と少し違うことがあります。
+
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Next.js | 15.5.15 | フレームワーク（App Router） |
+| Next.js | 15.5.21 | フレームワーク（App Router） |
 | React | 18.3.1 | UI ライブラリ |
-| TypeScript | 5.8.3 | 型安全な JavaScript |
+| TypeScript | 5.x | 型安全な JavaScript |
 | shadcn/ui | — | UI コンポーネント |
 | Tailwind CSS | v4 | ユーティリティ CSS |
-| Recharts | 3.2.1 | グラフ・チャート |
+| Recharts | 3.x | グラフ・チャート |
 
 #### バックエンド技術
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| tRPC | 11.8.0 | End-to-End 型安全 API |
-| Prisma | 6.19.3 | ORM（DB 操作） |
+| tRPC | 11.x | End-to-End 型安全 API |
+| Prisma | 6.x | ORM（DB 操作） |
 | PostgreSQL | 16 | データベース |
 | jose | — | JWT トークン生成・検証 |
 | bcryptjs | — | パスワードハッシュ化 |
@@ -556,8 +652,8 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Biome | 2.3.15 | リンター・フォーマッター |
-| Vitest | 3.0.9 | テストフレームワーク |
+| Biome | 2.x | リンター・フォーマッター |
+| Vitest | 3.x | テストフレームワーク |
 | Docker | — | コンテナ（PostgreSQL） |
 | Vercel | — | ホスティング・CI/CD |
 
@@ -579,6 +675,8 @@ npm ls next react typescript prisma
 find src \( -name "*.ts" -o -name "*.tsx" \) \
   | xargs wc -l | tail -1
 ```
+
+`find` で集めた `.ts` と `.tsx` を `xargs` が `wc -l` へまとめて渡し、最後の `tail -1` がファイルごとの内訳を捨てて合計行だけを残します。この数字は成績ではありません。30日前は1行も書けなかったものが、いま本番の URL で動いている、という事実の目印として見てください。次に何を作るか迷ったときは、この合計のうち自分の言葉で説明できる範囲がどこまでかを見直すほうが役に立ちます。説明できない場所が残っているなら、そこが次に読み返す場所です。
 
 **確認ポイント**:
 - 自分が書いたコードの総行数を把握できた
@@ -623,18 +721,17 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 ---
 
+### Pro パターンで書こう（振り返り画面を例に、Server Component を標準にする）
 
----
-
-### Pro パターンで書こう（完成版の振り返り画面は Server Component を標準にする）
+この画面は説明のための例で、完成版には含まれません。
 
 静的な表示部分を Server Component にまとめると、JS バンドルサイズを小さくでき、初期表示も速くなります。
-なぜ上の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
-// filepath: src/app/graduation/page.tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 'use client';
 
 import { useState } from 'react';
@@ -662,8 +759,10 @@ export default function GraduationPage() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+ここまでで目を留めてほしいのは、1行目の `'use client'` がファイル全体にかかっている点です。この宣言は行や関数ではなく、ファイル単位で効きます。だから下に続く振り返りカードも、動きを持たない見出しも、まとめてブラウザ側へ送られます。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
         {CURRICULUM_SUMMARY.map((item) => (
           <section key={item.label} className="rounded-lg border p-4">
             <p className="text-sm text-muted-foreground">{item.label}</p>
@@ -688,7 +787,7 @@ export default function GraduationPage() {
 #### After（プロが書くコード）
 
 ```typescript
-// filepath: src/app/graduation/page.tsx
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 import { ShareGraduationButton } from './share-graduation-button';
 
 const CURRICULUM_SUMMARY = [
@@ -716,12 +815,14 @@ export default function GraduationPage() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+ここまでがサーバー側に残る部分です。`'use client'` が消え、`useState` の取り込みも無くなりました。カードを並べる `.map()` は Before とまったく同じままです。動かしたのはボタン1個だけで、置き換えた `<ShareGraduationButton />` の中身は次のブロックで別ファイルとして作ります。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   );
 }
 
-// filepath: src/app/graduation/share-graduation-button.tsx
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 'use client';
 
 import { useState } from 'react';
@@ -746,8 +847,10 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
+`'use client'` は、この小さなボタンのファイルだけに付きました。コピー済みかどうかを覚える `useState` も、ここに閉じ込められています。親のページは静的なまま配信されるので、ブラウザが受け取る JavaScript はこのボタン1個分で済みます。表示だけの部分にまで JavaScript を送らなくなるぶん、公開したページは最初の表示が速くなります。
+
 ```typescript
-// filepath: 続き
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   );
 }
 ```
@@ -806,13 +909,13 @@ App Router では Server Component を標準にして、
 
 | # | カテゴリ | できるようになったこと | 学んだ Day |
 |---|---------|---------------------|-----------|
-| 1 | 環境構築 | `npm run dev` でアプリを起動できる | Day 1 |
-| 2 | UI基礎 | ダッシュボードにメッセージを追加できる | Day 2 |
-| 3 | Git | コミット・プッシュができる | Day 3 |
-| 4 | デプロイ基礎 | ネットに公開できる | Day 4 |
-| 5 | 認証UI | ログイン・登録画面を作れる | Day 5-6 |
-| 6 | 認証機能 | JWT + Cookie の仕組みを説明できる | Day 7-8 |
-| 7 | API | tRPC でサーバー・クライアント通信ができる | Day 9-10 |
+| 1 | 環境構築 | `npm run dev` でアプリを起動できる | Day 01 |
+| 2 | UI基礎 | ダッシュボードにメッセージを追加できる | Day 02 |
+| 3 | Git | コミット・プッシュができる | Day 03 |
+| 4 | デプロイ基礎 | ネットに公開できる | Day 04 |
+| 5 | 認証UI | ログイン・登録画面を作れる | Day 05-06 |
+| 6 | 認証機能 | JWT + Cookie の仕組みを説明できる | Day 07-08 |
+| 7 | API | tRPC でサーバー・クライアント通信ができる | Day 09-10 |
 | 8 | CRUD | プロジェクト・タスクの作成・編集・削除ができる | Day 11-16 |
 | 9 | 機能拡張 | マイタスク・コメント・検索を実装できる | Day 17-20 |
 | 10 | レポート | 統計・グラフ・週次レポートを表示できる | Day 21-23 |
@@ -837,3 +940,13 @@ App Router では Server Component を標準にして、
 活かして、さらに成長していってください。
 
 **Happy Coding**
+
+---
+
+## 次に読むもの
+
+- 前の日: [Day 29](./day29_ユーザー詳細・編集ページを作ろう.md)
+- 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+- 目次: [カリキュラム目次](./00_カリキュラム目次.md)
+- 詰まったとき: [トラブルシューティング](./appendix_トラブルシューティング.md)
+- 言葉の意味: [用語集](./appendix_用語集.md)
