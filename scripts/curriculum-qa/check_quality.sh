@@ -207,6 +207,10 @@ CORPUS_CHECKS=(
   check_anchor
   check_procedure_order
   check_step_ref
+  check_tag_balance
+  check_false_success
+  check_zip_reference
+  check_unused_image
   check_why
   check_terms
   check_crossref
@@ -220,6 +224,10 @@ SELF_TESTS=(
   test_check_anchor
   test_check_procedure_order
   test_check_step_ref
+  test_check_tag_balance
+  test_check_false_success
+  test_check_zip_reference
+  test_check_unused_image
   test_check_why
 )
 
