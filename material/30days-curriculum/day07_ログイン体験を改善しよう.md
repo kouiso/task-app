@@ -1490,6 +1490,911 @@ export function AuthGuard({
 
 ---
 
+## 完成コード全体
+
+今日は7つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、Step 1 から Step 5 で書いたものがどう1つのファイルになったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/lib/session.ts` | JWT の発行・検証と Cookie の出し入れ | Step 1 |
+| `src/server/api/trpc.ts` | tRPC の土台と4種類の入口 | Step 2 |
+| `src/server/api/routers/_helpers/select.ts` | Prisma で取り出す列の定型 | Step 3 |
+| `src/server/api/routers/auth.ts` | ログイン・登録・ログアウトの手続き | Step 3 |
+| `src/server/api/root.ts` | 手続きの一覧表 | Step 4 |
+| `src/app/api/trpc/[trpc]/route.ts` | HTTP から tRPC への橋渡し | Step 4 |
+| `src/middleware.ts` | ログインしていない人をログイン画面へ送る | Step 5 |
+
+### `src/lib/session.ts`
+
+**インポートと鍵の組み立て**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: インポートと鍵の組み立て
+import { type JWTPayload, jwtVerify, SignJWT } from 'jose';
+import { cookies } from 'next/headers';
+import type { UserRole } from './constant/roles';
+import { env } from './env';
+
+function getKey(): Uint8Array {
+  const SECRET_KEY = env.JWT_SECRET;
+  const encoded = new TextEncoder().encode(SECRET_KEY);
+  return new Uint8Array(encoded);
+}
+```
+
+1枚目は jose と Cookie 操作の取り込み、そして署名に使う鍵を組み立てる部分です。`getKey` を関数にしてあるのは、`.env` の `JWT_SECRET` を読む時点を呼び出しの瞬間まで遅らせるためです。ファイルを読み込んだ瞬間に鍵を確定させると、環境変数がまだ入っていない場面で起動そのものが止まります。
+
+**型定義と定数**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: 型定義と定数
+export interface SessionPayload {
+  userId: string;
+  email: string;
+  role: UserRole;
+  exp: number;
+}
+
+export interface SessionUser {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
+const COOKIE_NAME = 'session';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
+```
+
+トークンに詰める中身が `SessionPayload`、アプリ側から渡す材料が `SessionUser` です。2つを分けてあるので、Cookie の有効期間を表す `exp` をアプリ側が組み立てる必要はありません。`COOKIE_MAX_AGE` は秒で数えるため、7日間を `60 * 60 * 24 * 7` と書いてあります。
+
+**型ガード**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: 型ガード
+function isSessionPayload(
+  payload: JWTPayload,
+): payload is JWTPayload & SessionPayload {
+  return (
+    typeof payload['userId'] === 'string' &&
+    typeof payload['email'] === 'string' &&
+    typeof payload['role'] === 'string' &&
+    typeof payload['exp'] === 'number'
+  );
+}
+```
+
+`jwtVerify` が返す中身は、署名が正しくても形まで保証されていません。そこで4つの項目が期待した型で入っているかを1つずつ確かめ、`payload is JWTPayload & SessionPayload` で TypeScript に結果を伝えます。この関数を通したあとは `payload.userId` を型付きで読めます。
+
+**encrypt — トークンの発行**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: encrypt — トークンの発行
+export async function encrypt(
+  payload: SessionPayload,
+): Promise<string> {
+  const jwtPayload: Record<string, unknown> = {
+    userId: payload.userId,
+    email: payload.email,
+    role: payload.role,
+    exp: payload.exp,
+  };
+
+  return await new SignJWT(jwtPayload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(getKey());
+}
+```
+
+`SignJWT` は `Record<string, unknown>` の形を求めるため、いったん詰め替えてから渡します。`setProtectedHeader` で HS256 を宣言し、`setIssuedAt` で発行時刻、`setExpirationTime` で7日後の期限を書き込みます。最後の `sign` で鍵を使った署名が付き、文字列のトークンになります。
+
+**decrypt — トークンの検証**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: decrypt — トークンの検証
+export async function decrypt(
+  token: string,
+): Promise<SessionPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getKey(), {
+      algorithms: ['HS256'],
+    });
+
+    if (!isSessionPayload(payload)) {
+      console.error('Invalid session payload structure');
+      return null;
+    }
+
+    return payload;
+  } catch {
+    console.error('Failed to decrypt token');
+    return null;
+  }
+}
+```
+
+`jwtVerify` は署名が合わなければ例外を投げます。`algorithms: ['HS256']` を明示してあるのは、攻撃者が「署名なし」を意味する別のアルゴリズムを名乗って検証をすり抜ける手口を塞ぐためです。読めなかった場合は例外を外へ流さず `null` を返し、呼び出し側では未ログインとして扱います。
+
+**Cookie への保存**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: Cookie への保存
+export async function saveSessionCookie(
+  token: string,
+): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure:
+      process.env['NODE_ENV'] === 'production'
+      && process.env['PLAYWRIGHT_TEST'] !== '1',
+    sameSite: 'strict',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+```
+
+`httpOnly: true` を付けると JavaScript から Cookie を読めなくなり、ページへ紛れ込んだスクリプトにトークンを盗まれる経路が消えます。`sameSite: 'strict'` は別サイトからの遷移で Cookie を送らない指定です。`secure` を本番だけ有効にしてあるのは、開発中の `http://localhost` でも Cookie を保存できるようにするためです。
+
+**createSession — 発行と保存の連結**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: createSession — 発行と保存の連結
+export async function createSession(
+  user: SessionUser,
+): Promise<string> {
+  const expiresAt =
+    Math.floor(Date.now() / 1000) + COOKIE_MAX_AGE;
+  const payload: SessionPayload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    exp: expiresAt,
+  };
+
+  const token = await encrypt(payload);
+  await saveSessionCookie(token);
+
+  return token;
+}
+```
+
+ログイン処理から呼ぶ入口です。期限を計算し、トークンを作り、Cookie に保存する3つを1本にまとめてあります。呼び出す側は `createSession(sessionUser)` の1行で済み、有効期限の秒数や Cookie の名前を知らなくても動きます。
+
+**getSession と deleteSession**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: getSession と deleteSession
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  return await decrypt(token);
+}
+export async function deleteSession(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
+}
+```
+
+`getSession` は Cookie を取り出して `decrypt` に渡すだけの薄い関数です。Cookie が無ければ復号を試さずに `null` を返します。`deleteSession` は Cookie を消すだけで、サーバー側に消すべき記録はありません。ログアウトが1行で終わるのは、状態をトークンの中に持たせているからです。
+
+**verifySession — 画面向けの形へ変換**:
+
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: verifySession — 画面向けの形へ変換
+export async function verifySession(): Promise<SessionUser | null> {
+  const session = await getSession();
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    id: session.userId,
+    email: session.email,
+    role: session.role,
+  };
+}
+```
+
+トークンの中身は `userId` という名前ですが、アプリ側で扱うユーザーは `id` という名前を使います。ここで名前を詰め替えておくと、画面やルーターは Cookie の都合を知らずに済みます。これで `src/lib/session.ts` は完成です。
+
+### `src/server/api/trpc.ts`
+
+**インポートとコンテキスト**:
+
+```typescript
+// filepath: src/server/api/trpc.ts
+// 完成版: インポートとコンテキスト
+import { initTRPC, TRPCError } from '@trpc/server';
+import superjson from 'superjson';
+import { ZodError } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
+
+export const createTRPCContext = async (
+  opts: { headers: Headers },
+) => {
+  const session = await getSession();
+
+  return {
+    session,
+    ...opts,
+  };
+};
+
+export type Context = Awaited<
+  ReturnType<typeof createTRPCContext>
+>;
+```
+
+`createTRPCContext` は、リクエストが届くたびに1回だけ走ります。ここで `getSession` を呼んでおくと、以降のすべての手続きが `ctx.session` から同じ結果を読めます。`Context` 型を `Awaited<ReturnType<...>>` で作ってあるので、返す項目を増やしたときに型を手で書き直す必要はありません。
+
+**initTRPC の初期化**:
+
+```typescript
+// filepath: src/server/api/trpc.ts
+// 完成版: initTRPC の初期化
+const t = initTRPC.context<Context>().create({
+  transformer: superjson,
+  errorFormatter({ shape, error }) {
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        zodError:
+          error.cause instanceof ZodError
+            ? error.cause.flatten()
+            : null,
+      },
+    };
+  },
+});
+```
+
+`transformer: superjson` を入れると、`Date` や `Map` をそのままの型でサーバーとブラウザの間でやり取りできます。`errorFormatter` は zod の検証エラーを `zodError` として取り出す指定です。フォームの入力ミスを、画面側が項目ごとに読み分けられる形へ整えて返します。
+
+**ログイン確認の前半**:
+
+```typescript
+// filepath: src/server/api/trpc.ts
+// 完成版: ログイン確認の前半
+const isAuthenticated = t.middleware(
+  async ({ ctx, next }) => {
+    if (!ctx.session?.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ログインが必要です',
+      });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+      },
+    });
+```
+
+`t.middleware` は、手続きの本体が走る前に挟み込む関門です。まず `ctx.session?.userId` が無ければ `UNAUTHORIZED` で止めます。通ったあとに DB を引き直しているのは、トークンを発行したあとにアカウントが消されたり無効化されたりする場合があるからです。
+
+**ログイン確認の後半**:
+
+```typescript
+// filepath: src/server/api/trpc.ts
+// 完成版: ログイン確認の後半
+    if (!currentUser) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーが見つかりません',
+      });
+    }
+
+    if (!currentUser.isActive) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'このアカウントは無効化されています',
+      });
+    }
+    return next({
+      ctx: {
+        session: {
+          ...ctx.session,
+          role: currentUser.role,
+        },
+      },
+    });
+  },
+);
+```
+
+ユーザーが見つからなければ `UNAUTHORIZED`、見つかっても `isActive` が偽なら `FORBIDDEN` を返します。2つを分けてあるのは、画面側で「ログインし直してほしい」と「管理者に連絡してほしい」を書き分けられるようにするためです。最後の `next` で、DB から取り直した `role` を `ctx` に上書きして先へ渡します。
+
+**管理者チェックと4種類の入口**:
+
+```typescript
+// filepath: src/server/api/trpc.ts
+// 完成版: 管理者チェックと4種類の入口
+const isAdmin = t.middleware(async ({ ctx, next }) => {
+  if (ctx.session?.role !== USER_ROLE.ADMIN) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '管理者権限が必要です',
+    });
+  }
+
+  return next({ ctx });
+});
+export const createTRPCRouter = t.router;
+export const publicProcedure = t.procedure;
+export const protectedProcedure =
+  t.procedure.use(isAuthenticated);
+export const adminProcedure =
+  t.procedure.use(isAuthenticated).use(isAdmin);
+export const createCallerFactory = t.createCallerFactory;
+```
+
+`isAdmin` は役割だけを見る短い関門です。下の4行が、この先すべてのルーターが使う入口になります。`publicProcedure` は誰でも、`protectedProcedure` はログイン済みだけ、`adminProcedure` は管理者だけが通れます。手続きを書くときに入口を選ぶだけで、認証の判定が付いてきます。
+
+### `src/server/api/routers/_helpers/select.ts`
+
+**ファイル全体**:
+
+```typescript
+// filepath: src/server/api/routers/_helpers/select.ts
+// 完成版: ファイル全体
+import { z } from 'zod';
+import { PROJECT_MEMBER_ROLE } from '@/lib/constant/roles';
+
+export const USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  avatar: true,
+} as const;
+
+export const USER_DETAIL_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  avatar: true,
+  role: true,
+  isActive: true,
+} as const;
+
+export const projectMemberRoleSchema =
+  z.nativeEnum(PROJECT_MEMBER_ROLE);
+```
+
+Prisma に「どの列を返すか」を渡すための定型をまとめたファイルです。`as const` を付けてあるので、あとから中身を書き換えられず、Prisma が返す型もここの並びから決まります。パスワードの列が入っていないことを確かめてください。取得する列を毎回書かずに済むうえ、書き忘れて余計な列を返す事故も防げます。
+
+### `src/server/api/routers/auth.ts`
+
+**インポート**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: インポート
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import {
+  checkLoginRateLimit,
+  extractClientIp,
+  rateLimitToTRPCError,
+  recordLoginSuccess,
+} from '@/lib/rate-limit';
+import { createSession, deleteSession, type SessionUser } from '@/lib/session';
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+```
+
+認証ルーターが借りてくるものの一覧です。`bcryptjs` はパスワードの照合、`@/lib/rate-limit` は連続失敗の制限、`@/lib/session` は先ほど作ったセッション管理です。最後の2行は、1つ上のフォルダの `trpc.ts` と、同じフォルダの `_helpers/select.ts` から読み込みます。
+
+**入力スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: 入力スキーマ
+const loginSchema = z.object({
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  password: z.string().min(1, 'パスワードを入力してください'),
+});
+const registerSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  password: z
+    .string()
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
+```
+
+ログインは形だけ、登録は文字数と文字種まで見ます。ここで弾いた入力は手続きの本体に届かないため、`login` や `register` の中で入力の形を確かめる必要はありません。登録側の4本の `.regex()` は、Day 06 の登録画面が持つ条件とそろえてあります。
+
+**想定外エラーの受け皿**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: 想定外エラーの受け皿
+function handleUnexpectedError(context: string, error: unknown): never {
+  console.error('[auth] unexpected error', { context, error });
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: `${context}中にエラーが発生しました。しばらくしてから再度お試しください。`,
+    cause: error,
+  });
+}
+```
+
+`never` を返す型にしてあるので、この関数を呼んだ先は「必ず投げて終わる」と TypeScript が判断します。中身をそのまま画面へ返さずログにだけ残すのは、DB の接続情報のような内部の事情が利用者の画面に出るのを避けるためです。
+
+**login — 回数制限の確認**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: login — 回数制限の確認
+export const authRouter = createTRPCRouter({
+  login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
+    const ip = extractClientIp(ctx.headers);
+
+    // brute force 対策: 直近 15 分の失敗回数を email 単独 / email×IP / IP 単独の3軸で rate-limit。
+    // checkLoginRateLimit は許可と同時に失敗行を先取りで記録する（成功時は recordLoginSuccess が削除）
+    const limitResult = await checkLoginRateLimit(input.email, ip);
+    if (!limitResult.allowed) {
+      throw rateLimitToTRPCError(limitResult);
+    }
+```
+
+ルーターの中で最初に走るのが回数制限の判定です。`checkLoginRateLimit` は許可を返すと同時に失敗の記録を先に1件置きます。成功したときだけ後で取り消す形にしてあるので、途中で処理が止まっても失敗が数え漏れになりません。
+
+**login — ユーザーの取得**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: login — ユーザーの取得
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: input.email },
+      });
+
+      if (!user?.password) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
+```
+
+`try` の中に入れてあるのは、この先で投げる `TRPCError` と、DB の障害のような想定外の例外を、最後の `catch` で仕分けるためです。ユーザーが見つからない場合とパスワードが未設定の場合を `!user?.password` の1本でまとめ、どちらも同じ文言で返します。
+
+**login — 照合と有効判定**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: login — 照合と有効判定
+
+      const isPasswordValid = await bcrypt.compare(input.password, user.password);
+      if (!isPasswordValid) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
+
+      if (!user.isActive) {
+        // 無効判定はパスワード照合が通ったあとに行う。先に判定すると、正しいパスワードを
+        // 知らなくても「無効化されたアカウントが存在する」ことを列挙できてしまうため。
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+```
+
+`bcrypt.compare` は保存されたハッシュと入力を突き合わせます。メールが違うときとパスワードが違うときで文言を変えていないのは、どちらが間違っているかを外から探れないようにするためです。無効化の判定をパスワード照合のあとに置いている理由は、コード中のコメントに書いたとおりです。
+
+**login — セッション発行と戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: login — セッション発行と戻り値
+      const sessionUser: SessionUser = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      // セッション発行の前に成功記録を確定させる。順序が逆だと、記録の失敗で 500 を返す一方で
+      // 認証済みセッションだけが残るため。
+      await recordLoginSuccess(input.email, ip);
+      await createSession(sessionUser);
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          role: user.role,
+        },
+      };
+```
+
+`recordLoginSuccess` を `createSession` より先に呼ぶ順番には理由があります。逆にすると、記録に失敗して 500 を返しながら、ログイン済みの Cookie だけが残る状態が起きます。戻り値からパスワードを外してあるので、画面側が誤って表示する余地がありません。
+
+**login — 例外の仕分け**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: login — 例外の仕分け
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      handleUnexpectedError('ログイン処理', error);
+    }
+  }),
+```
+
+自分で投げた `TRPCError` はそのまま外へ通し、それ以外だけを `handleUnexpectedError` に渡します。この1行が無いと、`UNAUTHORIZED` として投げたエラーまで 500 に化けて、画面が「メールアドレスまたはパスワードが正しくありません」を出せなくなります。
+
+**register — 重複チェックとハッシュ化**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: register — 重複チェックとハッシュ化
+  register: publicProcedure
+    .input(registerSchema)
+    .mutation(async ({ input }) => {
+      try {
+        const existing = await prisma.user.findUnique({
+          where: { email: input.email },
+        });
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'このメールアドレスは既に登録されています',
+          });
+        }
+
+        const hashedPassword = await bcrypt.hash(
+          input.password,
+          10,
+        );
+```
+
+同じメールアドレスがすでにあれば `CONFLICT` で止めます。`bcrypt.hash` の第2引数 `10` は計算の重さを決める数値で、大きいほど総当たりに時間がかかる代わりにログインも遅くなります。生のパスワードは、この行から先へ持ち回りません。
+
+**register — 作成とセッション発行**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: register — 作成とセッション発行
+        const user = await prisma.user.create({
+          data: {
+            email: input.email,
+            name: input.name,
+            password: hashedPassword,
+            role: USER_ROLE.USER,
+            isActive: true,
+          },
+        });
+        const sessionUser: SessionUser = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+
+        await createSession(sessionUser);
+```
+
+`role` に `USER_ROLE.USER` を固定で入れているのは、入力から役割を受け取らないためです。ここを入力任せにすると、登録の申し込みに `role: 'ADMIN'` を混ぜるだけで管理者になれてしまいます。作成できたらログインと同じ `createSession` を呼び、そのまま使い始められる状態にします。
+
+**register — 戻り値と例外**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: register — 戻り値と例外
+        return {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            avatar: user.avatar,
+            role: user.role,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        handleUnexpectedError('ユーザー登録処理', error);
+      }
+    }),
+```
+
+返す項目はログインとそろえてあります。画面側は、登録直後とログイン直後で同じ形のデータを受け取れます。`catch` の書き方もログインと共通で、想定外だけを `handleUnexpectedError` に渡します。
+
+**logout と getSession**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: logout と getSession
+  logout: publicProcedure.mutation(async () => {
+    await deleteSession();
+    return { success: true };
+  }),
+
+  getSession: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.session) {
+      return null;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: USER_DETAIL_SELECT,
+    });
+
+    if (!user || !user.isActive) {
+      return null;
+    }
+
+    return { user };
+  }),
+```
+
+`logout` は Cookie を消すだけで終わります。`getSession` を `publicProcedure` にしてあるのは、未ログインの画面からも呼ばれるからです。ログインしていなければエラーではなく `null` を返し、画面は「ログインしていない状態」として描き分けます。
+
+**getCurrentUser — 取得**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: getCurrentUser — 取得
+  getCurrentUser: protectedProcedure.query(
+    async ({ ctx }) => {
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.session.userId },
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+```
+
+こちらは `protectedProcedure` なので、関門を通った時点で `ctx.session` が存在すると確定しています。`USER_DETAIL_SELECT` に作成日時と更新日時を足して取り出し、プロフィール画面で使える形にします。
+
+**getCurrentUser — 判定と締め**:
+
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: getCurrentUser — 判定と締め
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
+      return user;
+    },
+  ),
+});
+```
+
+無効化されたアカウントは `FORBIDDEN` で弾きます。最後の `});` がルーター全体の閉じ括弧です。この行より下にコードを足すとルーターの外に出てしまい、英語のエラーで止まります。
+
+### `src/server/api/root.ts`
+
+**ファイル全体**:
+
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: ファイル全体
+import { authRouter } from './routers/auth';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+アプリが持つ手続きの一覧表です。今日の時点では `auth` の1本だけを載せます。`AppRouter` 型を書き出しているので、ブラウザ側は `api.auth.login` と打った時点で入力と戻り値の型を受け取れます。Day 08 以降でルーターを足すときは、ここに1行ずつ加えていきます。
+
+### `src/app/api/trpc/[trpc]/route.ts`
+
+**ファイル全体**:
+
+```typescript
+// filepath: src/app/api/trpc/[trpc]/route.ts
+// 完成版: ファイル全体
+import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
+import type { NextRequest } from 'next/server';
+import { appRouter } from '@/server/api/root';
+import { createTRPCContext } from '@/server/api/trpc';
+
+const handler = (req: NextRequest) =>
+  fetchRequestHandler({
+    endpoint: '/api/trpc',
+    req,
+    router: appRouter,
+    createContext: () =>
+      createTRPCContext({ headers: req.headers }),
+  });
+
+export { handler as GET, handler as POST };
+```
+
+ブラウザからの HTTP リクエストを tRPC に橋渡しする入口です。`endpoint` に書いた `/api/trpc` は、フォルダ名 `src/app/api/trpc/[trpc]` と対応しています。`createContext` を関数のまま渡してあるのは、リクエストが届くたびに新しいコンテキストを作るためです。
+
+### `src/middleware.ts`
+
+**インポートと公開パス**:
+
+```typescript
+// filepath: src/middleware.ts
+// 完成版: インポートと公開パス
+import { jwtVerify } from 'jose/jwt/verify';
+import { type NextRequest, NextResponse } from 'next/server';
+import { isValidRedirectUrl } from '@/lib/redirect';
+
+const COOKIE_NAME = 'session';
+
+const PUBLIC_PATHS = ['/login', '/register'];
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (path) =>
+      pathname === path
+      || pathname.startsWith(`${path}/`),
+  );
+}
+```
+
+`session.ts` ではなく jose を直接読み込んでいます。middleware は Edge Runtime という軽い実行環境で動き、そこでは `cookies()` を使う `session.ts` を読み込めないためです。`isPublicPath` は `/login` と `/register`、およびその配下を公開扱いにします。
+
+**戻り先の検証と鍵**:
+
+```typescript
+// filepath: src/middleware.ts
+// 完成版: 戻り先の検証と鍵
+
+function isValidCallbackPath(path: string): boolean {
+  return (
+    isValidRedirectUrl(path)
+    && !path.includes('://')
+  );
+}
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env['JWT_SECRET'];
+  if (!secret) {
+    throw new Error('JWT_SECRET is not set');
+  }
+  return new TextEncoder().encode(secret);
+}
+```
+
+`isValidCallbackPath` は、ログイン後の戻り先として渡された文字列が自分のサイト内かを確かめます。`://` を弾いているのは、`https://悪意のあるサイト` を戻り先に仕込まれる経路を塞ぐためです。鍵の取り出しでは `process.env` を直接読みます。Edge Runtime では `@/lib/env` を使えません。
+
+**素通りさせる2つの経路**:
+
+```typescript
+// filepath: src/middleware.ts
+// 完成版: 素通りさせる2つの経路
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 公開ページはスキップ
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  // tRPC エンドポイントはスキップ
+  // （tRPC 層の protectedProcedure で認証を担保）
+  if (pathname.startsWith('/api/trpc')) {
+    return NextResponse.next();
+  }
+```
+
+判定を上から順に並べ、当てはまったらその場で返します。公開ページと `/api/trpc` はここで抜けます。tRPC を素通りさせても穴にはなりません。`protectedProcedure` が同じ判定をサーバー側で行うためです。
+
+**Cookie が無い場合**:
+
+```typescript
+// filepath: src/middleware.ts
+// 完成版: Cookie が無い場合
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+
+  // Cookie なし → ログインへリダイレクト
+  if (!token) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set(
+      'callbackUrl',
+      isValidCallbackPath(pathname)
+        ? pathname
+        : '/dashboard',
+    );
+    return NextResponse.redirect(loginUrl);
+  }
+```
+
+Cookie が無ければログイン画面へ送ります。このとき `callbackUrl` に元のページを付けておくと、ログイン後にそこへ戻せます。検証を通らなかった場合は `/dashboard` に落とすので、外部のアドレスが戻り先に紛れ込みません。
+
+**JWT の検証**:
+
+```typescript
+// filepath: src/middleware.ts
+// 完成版: JWT の検証
+  // JWT 検証
+  try {
+    await jwtVerify(token, getJwtSecret(), {
+      algorithms: ['HS256'],
+    });
+    return NextResponse.next();
+  } catch {
+    // 無効なトークン: Cookie 削除してログインへ
+    const loginUrl = new URL('/login', request.url);
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete(COOKIE_NAME);
+    return response;
+  }
+}
+```
+
+署名が合えば `NextResponse.next()` でそのまま先へ通します。合わなければ Cookie を消してからログイン画面へ送ります。消しておかないと、壊れたトークンを持ったまま毎回リダイレクトが起き、利用者から見ると画面が往復し続けます。
+
+**適用範囲の指定**:
+
+```typescript
+// filepath: src/middleware.ts
+// 完成版: 適用範囲の指定
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+};
+```
+
+`matcher` は middleware を走らせる範囲の指定です。`_next/static` や `favicon.ico` を外してあるのは、画像やスクリプトを読み込むたびに JWT を検証すると無駄が大きいからです。これで `src/middleware.ts` は完成です。
+
+> **完成形の参考コード**: 完成版のリポジトリにも同じ7つのファイルがあります。ただし今日書いたコードと1文字まで同じではありません。違いは2種類です。1つ目は、完成版の `trpc.ts` と `middleware.ts` にリクエスト ID とログ出力の処理が入っている点です。障害を追いかけるための仕組みで、認証の判定そのものには関係しません。2つ目は、完成版の `root.ts` に `project` や `task` を含む7本のルーターが登録されている点です。今日の時点では `auth` しか作っていないため、1本だけを載せてあります。Day 08 以降で1本ずつ増やしていきます。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは、完成版がどう書かれているかの説明として読んでください）
+
+---
+
 ## 今日のまとめ
 
 - [ ] `src/lib/session.ts` — JWT セッション管理を作り直した
