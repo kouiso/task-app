@@ -530,8 +530,8 @@ A  src/app/dashboard/page.tsx
 - `README.md` の `M` が左側（1文字目）に付いている
 - どの行にも `.env` が出ていない
 
-いちばん下に `?? material/` と `?? scripts/` が残りますが、
-これは add していないので正しい状態です。
+いちばん下には、add しなかったものが `??` の行として残ります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? .node-version` `?? doc/` `?? material/` `?? scripts/` が並びます。
+どれも add していないので正しい状態です。
 
 ### 初回だけ、自分の名前とメールアドレスを Git へ登録する
 
@@ -570,8 +570,8 @@ git status -sb
 git log --oneline --decorate -3
 ```
 
-`git status -sb` に残るのは `?? material/` と `?? scripts/` の2行だけになります。
-この2つは GitHub へ送らないので、残っていて正常です。
+`git status -sb` に残るのは、add しなかったものの `??` の行だけになります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? .node-version` `?? doc/` `?? material/` `?? scripts/` が並びます。
+これらは GitHub へ送らないので、残っていて正常です。行の数が説明と違っていても、`.env` の行が無ければ問題ありません。
 `git log` の1行目に、いま付けたメッセージが出ていれば成功です。
 
 ![コミット成功後の状態](./screenshots/day03-commit-success.png)
