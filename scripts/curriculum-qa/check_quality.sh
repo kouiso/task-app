@@ -6,6 +6,7 @@
 SCRIPT_DIR="$(dirname "$0")"
 FAILED=0
 FILES=()
+ROOTS=()
 
 if [ $# -eq 0 ]; then
   echo "❌ エラー: ファイルパスまたはディレクトリを指定してください"
@@ -37,8 +38,10 @@ for arg in "$@"; do
     while IFS= read -r f; do
       FILES+=("$f")
     done < <(find "$arg" -type f \( -name "day[0-9][0-9]_*.md" -o -name "appendix_*.md" \) | sort)
+    ROOTS+=("$arg")
   elif [ -f "$arg" ]; then
     FILES+=("$arg")
+    ROOTS+=("$(dirname "$arg")")
   else
     echo "❌ エラー: ファイルが見つかりません: $arg"
     exit 1
@@ -189,12 +192,104 @@ run_checks_for_file() {
   return $FILE_FAILED
 }
 
+# corpus 全体を一度に見る検査。CI の Gate 4 と同じ顔ぶれをここでも走らせる。
+#
+# ここを入れる前は、手元が緑でも CI が赤くなることがあった。Gate 4 は
+# 「day13 の語を直した結果 day20 と表記が割れた」型の破損を見るので、
+# 1ファイル単位のチェックだけでは原理的に観測できない。手元の判定が
+# CI の判定を予測しないと、赤くなるのはPRを出したあとになる。
+#
+# 1ファイルだけを渡された場合も、そのファイルが置かれているディレクトリを
+# corpus とみなして走らせる。範囲を狭めると、また同じずれが戻ってくる。
+CORPUS_CHECKS=(
+  check_variants
+  check_step_time
+  check_anchor
+  check_procedure_order
+  check_step_ref
+  check_why
+  check_terms
+  check_crossref
+)
+# 検査そのものの退行テスト。Gate 4 は本体とセットでこれも走らせる。
+SELF_TESTS=(
+  test_markdown_scan
+  test_check_crossref
+  test_check_variants
+  test_check_step_time
+  test_check_anchor
+  test_check_procedure_order
+  test_check_step_ref
+  test_check_why
+)
+
+run_corpus_checks() {
+  local corpus_failed=0
+
+  echo ""
+  echo "=========================================="
+  echo "🧪 Gate 4 相当: 検査そのものの退行テスト"
+  echo "=========================================="
+  for t in "${SELF_TESTS[@]}"; do
+    if [ ! -f "$SCRIPT_DIR/$t.py" ]; then
+      echo "❌ $t FAIL (スクリプト欠落: $t.py)"
+      corpus_failed=1
+    elif python3 "$SCRIPT_DIR/$t.py"; then
+      :
+    else
+      echo "❌ $t FAIL"
+      corpus_failed=1
+    fi
+  done
+
+  # 同じディレクトリを2回渡されても1回だけ走らせる。
+  local seen=()
+  for root in "${ROOTS[@]}"; do
+    local dup=0
+    for s in "${seen[@]}"; do
+      [ "$s" = "$root" ] && dup=1
+    done
+    [ $dup -eq 1 ] && continue
+    seen+=("$root")
+
+    # day ファイルが1つも無い置き場は corpus ではない。ここを見ないと、
+    # 教材以外の md を1枚渡しただけで「dayファイルが見つかりません」で落ちる。
+    if ! compgen -G "$root/day[0-9][0-9]_*.md" > /dev/null; then
+      echo ""
+      echo "⏭️  corpus 全体チェックは対象外（day ファイルがありません）: $root"
+      continue
+    fi
+
+    echo ""
+    echo "=========================================="
+    echo "🌐 Gate 4 相当: corpus 全体チェック ($root)"
+    echo "=========================================="
+    for c in "${CORPUS_CHECKS[@]}"; do
+      if [ ! -f "$SCRIPT_DIR/$c.py" ]; then
+        echo "❌ $c FAIL (スクリプト欠落: $c.py)"
+        corpus_failed=1
+      elif python3 "$SCRIPT_DIR/$c.py" "$root"; then
+        :
+      else
+        echo "❌ $c FAIL"
+        corpus_failed=1
+      fi
+    done
+  done
+
+  return $corpus_failed
+}
+
 # 全ファイルを処理
 for f in "${FILES[@]}"; do
   if ! run_checks_for_file "$f"; then
     FAILED=1
   fi
 done
+
+if ! run_corpus_checks; then
+  FAILED=1
+fi
 
 # 最終結果
 echo ""

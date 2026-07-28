@@ -20,6 +20,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from markdown_scan import iter_prose, mask_inline_code
+
 # 意図的に使い分けている (正規化した鍵, 実際の表記) の組。
 # 束ごとではなく組で除外する。束ごと外すと、同じ束に紛れ込んだ誤記まで隠れるため。
 ALLOW: set[tuple[str, str]] = set()
@@ -47,9 +49,6 @@ SMALL_TO_LARGE = str.maketrans("ァィゥェォャュョヮッ", "アイウエ�
 # 「インターフェイス」を「インターフェース」と同じ束に入れるため。
 E_ROW = "エケセテネヘメレゲゼデベペ"
 
-FENCE = re.compile(r"^\s*(```|~~~)")
-
-
 def normalize(term: str) -> str:
     """表記の割れやすい軸をつぶして、同じ概念を1つの鍵にまとめる。
 
@@ -71,22 +70,11 @@ def normalize(term: str) -> str:
 def strip_code(text: str) -> str:
     """コードブロックとインラインコードを除く。読者が書く対象なので表記統一の対象外。
 
-    ``` と ~~~ の両方を扱い、字下げされた開始記号も認める。
-    開いた記号を覚えておき、違う記号では閉じない。
+    フェンスと code span の解釈は markdown_scan が持つ。ここで自前に数えていたときは、
+    記号の長さを見ていなかったため、4連で開いたブロックを内側の3連が閉じてしまい、
+    サンプルコードの中のカタカナ語が表記ゆれとして報告されていた。
     """
-    out: list[str] = []
-    marker: str | None = None
-    for line in text.split("\n"):
-        fence = FENCE.match(line)
-        if marker is None:
-            if fence:
-                marker = fence.group(1)
-            else:
-                out.append(re.sub(r"`[^`]*`", "", line))
-            continue
-        if fence and fence.group(1) == marker:
-            marker = None
-    return "\n".join(out)
+    return "\n".join(mask_inline_code(line, fill="") for _, line in iter_prose(text))
 
 
 def main(argv: list[str]) -> int:

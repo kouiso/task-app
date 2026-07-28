@@ -18,6 +18,8 @@ import re
 import sys
 from pathlib import Path
 
+import markdown_scan as md
+
 # 「Day 13 で作った `TaskCard`」のように、その日に何かを作った／置いたと述べる文を拾う。
 #
 # 句点をまたぐと別の文の単語を拾ってしまう。実例:
@@ -76,7 +78,12 @@ REANCHOR = re.compile(
 #   これは day07 に `domain` が無いことを承知で書いている文で、参照切れではない。
 NEGATED = re.compile(r"^[^\n。！？]{0,20}?(?:ていない|ていません|ません|ありません)")
 
-FENCE = re.compile(r"^\s*(```|~~~)")
+# 参照先の側でも同じことが起きる。語に触れてはいるが「無い」と述べている文は、
+# その語がそこに在る証拠にならない。実例:
+#   day01「`MissingToken` はまだありません。」
+# これを証拠に数えると、「Day 01 で作った `MissingToken`」という参照が
+# 参照先の本文に真っ向から否定されているのに Gate 4 を通ってしまう。
+ABSENT = re.compile(r"(?:ありません|存在しません|登場しません|出てきません|作っていません|書いていません)")
 
 
 def too_many_words(token: str) -> bool:
@@ -126,10 +133,23 @@ def has_own_evidence(body: str, token: str, day: int) -> bool:
         for line in re.split(r"(?<=[。！？])", logical):
             if not contains(line, token):
                 continue
+            if denies_presence(line, token):
+                continue
             mentioned = {int(m.group(1)) for m in DAY_MENTION.finditer(line)}
             if not (mentioned - {day}) or day in mentioned:
                 return True
     return False
+
+
+def denies_presence(sentence: str, token: str) -> bool:
+    """その文が「token は無い」と述べているかを見る。
+
+    語より後ろだけを見る。前に別の否定があっても、それはこの語の話ではない。
+    """
+    last = sentence.rfind(token)
+    if last < 0:
+        return False
+    return ABSENT.search(sentence[last + len(token):]) is not None
 
 
 # 行頭がこれで始まる行は、前の行と地続きの文ではない。
@@ -152,7 +172,6 @@ def logical_lines(text: str):
     項目の行だけを単独で流すと、続きの行が別のかたまりになり参照として拾えない。
     そこで、箇条書きの行はそこで打ち切らず、続きの行を同じかたまりへ足していく。
     """
-    fence_marker: str | None = None
     buf: list[str] = []
 
     def flush():
@@ -163,26 +182,16 @@ def logical_lines(text: str):
             return joined
         return None
 
-    for line in text.split("\n"):
+    for _, line, state, _ in md.fence_states(text):
         stripped = line.strip()
-        fence = FENCE.match(line)
         # コードブロックの中は1行ずつそのまま返す。つないでしまうと、
         # 定義の行と「Day NN で置き換え」というコメント行が1つになり、
         # 定義が別の day のものに見えてしまう（day11 の仮定義で実測）。
-        if fence_marker is not None:
+        if state != "outside":
             pending = flush()
             if pending is not None:
                 yield pending
             yield line
-            if fence and fence.group(1) == fence_marker:
-                fence_marker = None
-            continue
-        if fence:
-            pending = flush()
-            if pending is not None:
-                yield pending
-            yield line
-            fence_marker = fence.group(1)
             continue
         if not stripped:
             pending = flush()
@@ -223,28 +232,18 @@ def day_files(root: Path) -> dict[int, Path]:
 
 
 def strip_fences(text: str) -> str:
-    """``` と ~~~ の両方を閉じ記号として扱い、字下げされた開始記号も認める。
+    """コードブロックを落とす。記号の種類と長さは markdown_scan が見る。
 
-    開いた記号を覚えておくので、~~~ が ``` のブロックを閉じることはない。
+    4連で開いたブロックの中に普通の3連の例があると、以前はそこで閉じたことになり、
+    サンプルの中の「Day 01 で作った `MissingToken`」が本物の参照として拾われていた。
 
     閉じ忘れたフェンスがあると、そこから下の行が全部落ちる。落ちた範囲の参照切れは
     誰にも見えないまま緑になるので、ファイルの終わりまで開いたままなら例外で止める。
     """
-    out: list[str] = []
-    marker: str | None = None
-    for line in text.split("\n"):
-        fence = FENCE.match(line)
-        if marker is None:
-            if fence:
-                marker = fence.group(1)
-            else:
-                out.append(line)
-            continue
-        if fence and fence.group(1) == marker:
-            marker = None
-    if marker is not None:
-        raise ValueError("閉じていないコードブロックがあります")
-    return "\n".join(out)
+    try:
+        return md.strip_fences(text, require_closed=True)
+    except md.UnclosedFence as e:
+        raise ValueError(str(e)) from e
 
 
 def main(argv: list[str]) -> int:

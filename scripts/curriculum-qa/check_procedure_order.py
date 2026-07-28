@@ -18,13 +18,17 @@ import re
 import sys
 from pathlib import Path
 
+from markdown_scan import fence_states
+
 # `getAll: protectedProcedure` のように、ルーターへ手続きを定義している行。
-DEFINE = re.compile(
-    r"^\s*(\w+):\s*(?:protected|public|admin|member)\w*Procedure", re.M
-)
+DEFINE = re.compile(r"^\s*(\w+):\s*(?:protected|public|admin|member)\w*Procedure")
+# `// filepath: src/server/api/routers/project.ts（続き）` から、そのブロックが
+# どのルーターを書いているのかを取る。手続き名だけでは、どのルーターに生えたのかが
+# 分からない。実例では project.getById と task.getById が別の日に定義されており、
+# 名前だけで索引すると day12 の `api.task.getById` が通ってしまっていた。
+ROUTER_FILE = re.compile(r"^\s*//\s*filepath:\s*src/server/api/routers/(\w+)\.ts")
 # `api.project.getAll.useQuery` / `utils.project.getById.invalidate` の呼び出し。
 CALL = re.compile(r"(?:api|utils)\.(\w+)\.(\w+)\.")
-FENCE = re.compile(r"^\s*(?:`{3,}|~{3,})")
 # scaffold が最初から配布するルーター。読者が書く前から呼んでよい。
 SHIPPED = {"auth"}
 
@@ -34,33 +38,56 @@ def day_number(name: str) -> int:
     return int(m.group(1)) if m else 99
 
 
-def collect_definitions(paths: list[Path]) -> dict[str, int]:
-    """手続き名 -> 最初に定義された日。"""
-    defs: dict[str, int] = {}
+def collect_definitions(paths: list[Path]) -> dict[tuple[str, str], int]:
+    """(ルーター名, 手続き名) -> 最初に定義された日。
+
+    どのルーターを書いているブロックなのかは `// filepath:` の値から取る。
+    filepath を持たないブロックの定義は、どのルーターのものか決められないので
+    索引しない。
+    """
+    defs: dict[tuple[str, str], int] = {}
     for path in sorted(paths, key=lambda p: day_number(p.name)):
         day = day_number(path.name)
-        for m in DEFINE.finditer(path.read_text(encoding="utf-8")):
-            defs.setdefault(m.group(1), day)
+        router: str | None = None
+        for _, line, state, _ in fence_states(path.read_text(encoding="utf-8")):
+            if state == "open":
+                router = None
+                continue
+            if state != "inside":
+                continue
+            found = ROUTER_FILE.match(line)
+            if found:
+                router = found.group(1)
+                continue
+            if router is None:
+                continue
+            m = DEFINE.match(line)
+            if m:
+                defs.setdefault((router, m.group(1)), day)
     return defs
 
 
-def find_early_calls(path: Path, defs: dict[str, int]) -> list[tuple[int, str, int]]:
-    """(行番号, router.procedure, 定義される日) を返す。"""
+def find_early_calls(
+    path: Path, defs: dict[tuple[str, str], int]
+) -> list[tuple[int, str, int | None]]:
+    """(行番号, router.procedure, 定義される日) を返す。
+
+    定義がどこにも無い呼び出しは日を None にして返す。以前は lookup が None の
+    呼び出しを黙って通していたため、綴りを間違えた手続き名が素通りしていた。
+    """
     day = day_number(path.name)
-    hits: list[tuple[int, str, int]] = []
-    inside = False
-    for i, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
-        if FENCE.match(line):
-            inside = not inside
-            continue
-        if not inside:
+    hits: list[tuple[int, str, int | None]] = []
+    for i, line, state, _ in fence_states(path.read_text(encoding="utf-8")):
+        if state != "inside":
             continue
         for m in CALL.finditer(line):
             router, proc = m.group(1), m.group(2)
             if router in SHIPPED:
                 continue
-            defined = defs.get(proc)
-            if defined is not None and day < defined:
+            defined = defs.get((router, proc))
+            if defined is None:
+                hits.append((i, f"{router}.{proc}", None))
+            elif day < defined:
                 hits.append((i, f"{router}.{proc}", defined))
     return hits
 
@@ -83,17 +110,30 @@ def main(argv: list[str]) -> int:
         return 2
 
     defs = collect_definitions(targets)
-    findings: list[tuple[str, int, str, int]] = []
+    early: list[tuple[str, int, str, int]] = []
+    unknown: list[tuple[str, int, str]] = []
     for path in targets:
         for line, name, defined in find_early_calls(path, defs):
-            findings.append((path.name, line, name, defined))
+            if defined is None:
+                unknown.append((path.name, line, name))
+            else:
+                early.append((path.name, line, name, defined))
 
-    if findings:
-        print(f"❌ まだ書いていない手続きを呼んでいる {len(findings)} 件")
-        for name, line, proc, defined in findings:
+    status = 0
+    if early:
+        print(f"❌ まだ書いていない手続きを呼んでいる {len(early)} 件")
+        for name, line, proc, defined in early:
             print(f"  {name}:{line} {proc}（定義は Day {defined:02d}）")
         print("  その日までに書いた手続きだけを使ってください。")
-        return 1
+        status = 1
+    if unknown:
+        print(f"❌ どの日にも定義されていない手続きを呼んでいる {len(unknown)} 件")
+        for name, line, proc in unknown:
+            print(f"  {name}:{line} {proc}")
+        print("  ルーター名と手続き名の綴りを確かめてください。")
+        status = 1
+    if status:
+        return status
 
     print(f"✅ 手続きを使う順番 OK（{len(targets)} ファイル / 手続き {len(defs)} 個）")
     return 0

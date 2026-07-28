@@ -38,6 +38,13 @@ on:
       - 'scripts/_app-components/**'
       - 'scripts/_ui-components/**'
       - 'scripts/_server-routers/**'
+      # Gate 4 の check_anchor.py は、教材の `// filepath:` の値を
+      # src/ prisma/ scripts/ の実ファイルへ突き合わせる。ここを絞っていると、
+      # 参照先を消したり改名したりするだけのPRでワークフローが起動せず、
+      # そのPRが作った参照切れをゲートが報告できない（Codexレビュー指摘 PR#333）。
+      - 'src/**'
+      - 'prisma/**'
+      - 'scripts/**'
   push:
     branches:
       - develop
@@ -77,6 +84,13 @@ on:
       - 'scripts/_app-components/**'
       - 'scripts/_ui-components/**'
       - 'scripts/_server-routers/**'
+      # Gate 4 の check_anchor.py は、教材の `// filepath:` の値を
+      # src/ prisma/ scripts/ の実ファイルへ突き合わせる。ここを絞っていると、
+      # 参照先を消したり改名したりするだけのPRでワークフローが起動せず、
+      # そのPRが作った参照切れをゲートが報告できない（Codexレビュー指摘 PR#333）。
+      - 'src/**'
+      - 'prisma/**'
+      - 'scripts/**'
   workflow_dispatch:
 
 jobs:
@@ -221,9 +235,11 @@ jobs:
       # 一度も呼ばれておらず、リポジトリ全体を grep してもスクリプト自身以外に
       # 名前が出てこなかった。
       #
-      # check_quality.sh と lint-staged には入れない。あちらは1ファイル単位で走るため、
-      # 「day13 の語を直した結果 day20 と表記が割れた」「day07 の節を消した結果 day30 の
-      # 参照が切れた」型の破損を原理的に観測できない。corpus 全体を一度に見る場所が要る。
+      # 2026-07-27 追記: 同じ顔ぶれを check_quality.sh 側にも入れた（PR#333）。
+      # 以前は「1ファイル単位で走るから corpus 全体の破損を観測できない」を理由に
+      # 入れていなかったが、その結果、手元が緑でも CI が赤くなる状態が常態化していた。
+      # check_quality.sh 側は渡されたファイルの置き場所を corpus とみなして
+      # 同じ検査を一度だけ走らせる。ここと向こうで顔ぶれがずれたら、また同じずれが戻る。
       # 引数は明示して渡す。スクリプト側の既定値に頼ると、教材の置き場所を変えたときに
       # 「0件検査して緑」になる。
       - name: Gate 4 — 用語ゆれ・day間参照チェック (corpus 全体)
@@ -240,6 +256,10 @@ jobs:
           anchor_status=0
           procorder_status=0
           stepref_status=0
+          scan_status=0
+          echo "::group::test_markdown_scan.py — フェンス解釈そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_markdown_scan.py || scan_status=$?
+          echo "::endgroup::"
           echo "::group::test_check_crossref.py — 参照検査そのものの退行テスト"
           python3 scripts/curriculum-qa/test_check_crossref.py || selftest_status=$?
           echo "::endgroup::"
@@ -273,6 +293,9 @@ jobs:
           echo "::group::check_step_ref.py — 本文が指す Step が実在するか"
           python3 scripts/curriculum-qa/check_step_ref.py material/30days-curriculum || stepref_status=$?
           echo "::endgroup::"
+          echo "::group::test_check_why.py — 説明の分量検査そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_why.py || why_status=$?
+          echo "::endgroup::"
           echo "::group::check_why.py — コードの直後に理由が書かれているか"
           python3 scripts/curriculum-qa/check_why.py material/30days-curriculum || why_status=$?
           echo "::endgroup::"
@@ -282,8 +305,8 @@ jobs:
           echo "::group::check_crossref.py — 前の日を指す参照の先が実在するか"
           python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum || crossref_status=$?
           echo "::endgroup::"
-          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ]; then
-            echo "::error::Gate 4 失敗 (check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status)"
+          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ] || [ "$scan_status" -ne 0 ]; then
+            echo "::error::Gate 4 失敗 (check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status / test_markdown_scan.py=$scan_status)"
             exit 1
           fi
 

@@ -20,6 +20,8 @@ import re
 import sys
 from pathlib import Path
 
+from markdown_scan import iter_prose, strip_fences
+
 # `### Step 3: ...` と `### Step 3 : ...` の両方。day02 だけ `## Step 1: ...` の階層なので
 # 2段でも3段でも拾う。
 HEADING = re.compile(r"^#{2,3}\s+Step\s*([\d.]+)\s*[:：]", re.M)
@@ -33,7 +35,13 @@ def day_number(name: str) -> int:
 
 
 def headings(text: str) -> set[str]:
-    return set(HEADING.findall(text))
+    """実在する Step 見出しの番号を返す。
+
+    コードブロックの中は数えない。参照側 (find_bad_refs) はフェンスの中を見ないのに
+    こちらだけ生の Markdown を見ていたため、````md のサンプルに書いた
+    `### Step 99: ...` が本物の行き先として索引され、存在しない Step への参照が通っていた。
+    """
+    return set(HEADING.findall(strip_fences(text)))
 
 
 def find_bad_refs(
@@ -41,13 +49,7 @@ def find_bad_refs(
 ) -> list[tuple[int, str, str]]:
     """(行番号, 参照先の表記, 理由) を返す。"""
     hits: list[tuple[int, str, str]] = []
-    fence = None
-    for i, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
-        if line.strip().startswith(("```", "~~~")):
-            fence = None if fence else True
-            continue
-        if fence:
-            continue
+    for i, line in iter_prose(path.read_text(encoding="utf-8")):
         for m in REF.finditer(line):
             day, step = m.group(1), m.group(2)
             if day is not None:

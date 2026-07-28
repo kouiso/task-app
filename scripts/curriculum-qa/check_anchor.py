@@ -15,7 +15,8 @@ import re
 import sys
 from pathlib import Path
 
-FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+from markdown_scan import fence_states
+
 FILEPATH = re.compile(r"^\s*(?://|#)\s*filepath:\s*(.+?)\s*$")
 # 「続き」「同上」だけで、どのファイルなのかを名乗っていない値。
 # 「読み比べ用サンプル」は実ファイルを持たないと明言しているので通す。
@@ -29,17 +30,8 @@ REPEATED = re.compile(r"([（(][^）)]+[）)])\1")
 def find(text: str) -> list[tuple[int, str]]:
     """(行番号, 値) を返す。行番号は1始まり。"""
     hits: list[tuple[int, str]] = []
-    fence = None
-    for i, line in enumerate(text.split("\n"), start=1):
-        m = FENCE.match(line)
-        if m:
-            mark = m.group(1)
-            if fence is None:
-                fence = mark
-            elif line.strip().startswith(fence):
-                fence = None
-            continue
-        if fence is None:
+    for i, line, state, _ in fence_states(text):
+        if state != "inside":
             continue
         fp = FILEPATH.match(line)
         if fp and (VAGUE.match(fp.group(1)) or REPEATED.search(fp.group(1))):
@@ -54,22 +46,19 @@ def find_sample_with_real_path(text: str) -> list[tuple[int, str]]:
     ない。実測では、続きのブロックだけが読み比べ用と書かれていて、先頭だけ実ファイル名を
     名乗っていた。読者は30日ずっと `// filepath:` に従って写しているので、そこに本物の
     パスがあれば、改善前のコードを本物のファイルへ貼る。しかもどれも閉じていない断片になる。
+
+    見出しの判定はフェンスの外だけで行う。Bash のブロックは `# filepath: scripts/foo.sh`
+    という行そのものが `#` 始まりなので、フェンスの中でも見出しとして数えると
+    その行が in_sample を落とし、直後に自分自身を検査する前に対象から外れていた。
     """
     hits: list[tuple[int, str]] = []
-    fence = None
     in_sample = False
-    for i, line in enumerate(text.split("\n"), start=1):
-        if line.startswith("#"):
-            in_sample = ("Before" in line) or ("After" in line)
-        m = FENCE.match(line)
-        if m:
-            mark = m.group(1)
-            if fence is None:
-                fence = mark
-            elif line.strip().startswith(fence):
-                fence = None
+    for i, line, state, _ in fence_states(text):
+        if state == "outside":
+            if line.startswith("#"):
+                in_sample = ("Before" in line) or ("After" in line)
             continue
-        if fence is None or not in_sample:
+        if state != "inside" or not in_sample:
             continue
         fp = FILEPATH.match(line)
         if not fp:
@@ -88,17 +77,8 @@ def find_missing(text: str, root: Path) -> list[tuple[int, str]]:
     視界に入らないので、読者はそのパスのファイルを作りにいく。
     """
     hits: list[tuple[int, str]] = []
-    fence = None
-    for i, line in enumerate(text.split("\n"), start=1):
-        m = FENCE.match(line)
-        if m:
-            mark = m.group(1)
-            if fence is None:
-                fence = mark
-            elif line.strip().startswith(fence):
-                fence = None
-            continue
-        if fence is None:
+    for i, line, state, _ in fence_states(text):
+        if state != "inside":
             continue
         fp = FILEPATH.match(line)
         if not fp:

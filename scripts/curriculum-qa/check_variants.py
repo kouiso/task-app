@@ -17,10 +17,7 @@ import re
 import sys
 from pathlib import Path
 
-FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
-# 行の中のバッククォートで囲んだ部分。実装のエラー文言をそのまま引用している所なので、
-# ここを書き換えると教材のとおりに写した読者のコードと実装が食い違う。
-INLINE_CODE = re.compile(r"`[^`]*`")
+from markdown_scan import iter_prose, mask_inline_code
 
 # (見つけたら直す書き方, 正とする書き方, その語を含むが直してはいけない語)
 RULES: list[tuple[str, str, tuple[str, ...]]] = [
@@ -35,26 +32,20 @@ RULES: list[tuple[str, str, tuple[str, ...]]] = [
 
 
 def prose_lines(text: str):
-    """コードブロックの外にある行だけを (行番号, 本文) で返す。"""
-    fence = False
-    marker = ""
-    for lineno, line in enumerate(text.split("\n"), 1):
-        opener = FENCE.match(line)
-        if opener:
-            if not fence:
-                fence, marker = True, opener.group(1)
-            elif line.strip().startswith(marker[0]):
-                fence = False
-            continue
-        if fence:
-            continue
-        yield lineno, line
+    """コードブロックの外にある行だけを (行番号, 本文) で返す。
+
+    フェンスの解釈は markdown_scan が持つ。ここで自前に数えていたときは、
+    4連で開いたブロックを3連の内側フェンスが閉じてしまい、サンプルコードが
+    地の文として検査されていた。
+    """
+    return iter_prose(text)
 
 
 def find(text: str):
     for lineno, line in prose_lines(text):
         # バッククォートの中身は同じ長さの空白へ置き換え、位置をずらさずに検査から外す。
-        masked = INLINE_CODE.sub(lambda m: " " * len(m.group(0)), line)
+        # 区切りは1連とは限らない。``既にメンバーです`` のような2連の code span も外す。
+        masked = mask_inline_code(line)
         for wrong, right, keep in RULES:
             for m in re.finditer(re.escape(wrong), masked):
                 head = line[: m.end()]

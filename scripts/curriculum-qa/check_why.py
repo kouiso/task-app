@@ -15,9 +15,8 @@ import re
 import sys
 from pathlib import Path
 
-# 4連以上のバッククォートも開始記号になる。3連決め打ちだと、````md のブロックを
-# 開いたまま閉じられず、そこから下のコードブロックが1つも検査されないまま緑になる。
-FENCE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
+from markdown_scan import fence_states, mask_html_comments
+
 HEADING = re.compile(r"^\s*#{1,6}\s")
 # 説明として数えない行。
 # 表・引用・箇条書きは数える。教材はコードの意味を対応表や箇条書きで説明することがあり、
@@ -32,7 +31,7 @@ CHECKPOINT = re.compile(r"^\s*(\*\*確認ポイント|#{1,6}\s*確認ポイン�
 # 箇条書きの行。確認ポイントの中にある間だけ読み飛ばす。
 LIST_ITEM = re.compile(r"^\s*([-*+]\s|\d+[.)]\s)")
 
-# 写経させないブロックの目印。この語が直前の地の文にあれば対象から外す。
+# 写経させないブロックの目印。この語がブロックの直前の1行にあれば対象から外す。
 COMPARE_ONLY = re.compile(r"読み比べ用|写経しません|比較用")
 
 TARGET_LANG = re.compile(r"^(tsx|ts|typescript|jsx|javascript)\b", re.IGNORECASE)
@@ -41,31 +40,32 @@ MIN_CHARS = 60
 
 
 def blocks_with_following_prose(text: str):
-    """コードブロックごとに (開始行, 言語, 直前の地の文, 直後の地の文) を返す。"""
-    lines = text.split("\n")
+    """コードブロックごとに (開始行, 言語, 直前の1行, 最初の要素, 直後の地の文) を返す。
+
+    HTML コメントは先に潰す。`<!-- ... -->` は Markdown が読者に出さないので、
+    説明の分量に数えるとコメントだけで 60 字を満たすブロックが通ってしまう。
+    """
+    rows = list(fence_states(mask_html_comments(text)))
     i = 0
     prev_prose: list[str] = []
-    while i < len(lines):
-        fence = FENCE.match(lines[i])
-        if not fence:
-            if lines[i].strip() and not NOT_PROSE.match(lines[i]) and not HEADING.match(lines[i]):
-                prev_prose.append(lines[i].strip())
+    while i < len(rows):
+        lineno, line, state, fence = rows[i]
+        if state != "open":
+            # 見出しが来たら、そこまでの前置きは別の話として捨てる。
+            # 残したままだと、離れた場所の「読み比べ用」という断りが
+            # 次の節の実装コードまで検査対象から外してしまう。
+            if HEADING.match(line):
+                prev_prose = []
+            elif line.strip() and not NOT_PROSE.match(line):
+                prev_prose.append(line.strip())
                 prev_prose = prev_prose[-6:]
             i += 1
             continue
 
-        marker, info = fence.group(1), fence.group(2).strip()
-        start = i + 1
+        info = fence.info
+        start = lineno
         i += 1
-        while i < len(lines):
-            close = FENCE.match(lines[i])
-            if (
-                close
-                and close.group(1)[0] == marker[0]
-                and len(close.group(1)) >= len(marker)
-                and not close.group(2).strip()
-            ):
-                break
+        while i < len(rows) and rows[i][2] != "close":
             i += 1
         i += 1  # 閉じフェンスの次へ
 
@@ -77,30 +77,44 @@ def blocks_with_following_prose(text: str):
         # 小見出しを置き、説明をその下に書くことがある。見出しで打ち切ると、
         # 「見出しだけ置いて理由を書かない」書き方が素通りする。
         #
-        # 確認ポイントは、できたかどうかの点検であって理由ではない。
-        # その見出しに当たった時点で数えるのをやめる。続く箇条書きを数えると、
-        # 点検項目が並んでいるだけで説明があることになってしまう。
+        # 確認ポイントは、できたかどうかの点検であって理由ではない。点検項目は数えない。
+        #
+        # 点検が終わったあとの地の文は、まだこの節の中なので数える。教材は
+        # 「コード → 確認ポイント → なぜそう書くかの補足」という順で書くことがあり、
+        # ここで打ち切ると本物の説明が 0 字扱いになる（実測70ブロック）。
+        # 代わりに、確認ポイントより後は見出しで打ち切る。見出しの下は別の節であって、
+        # このブロックの説明ではない。
+        #
+        # 点検項目の続き行（行頭に印の無い字下げ行）も点検の一部として数えない。
+        # 印を持つ行だけを飛ばしていた頃は、折り返した長い点検項目が
+        # そのまま 60 字の説明として通っていた。
         after: list[str] = []
         first_meaningful: str | None = None
         in_checkpoint = False
+        checkpoint_seen = False
         j = i
-        while j < len(lines):
-            line = lines[j]
-            if FENCE.match(line):
+        while j < len(rows):
+            _, line, state_j, _ = rows[j]
+            if state_j == "open":
                 break
             if CHECKPOINT.match(line):
                 in_checkpoint = True
+                checkpoint_seen = True
                 if first_meaningful is None:
                     first_meaningful = "checkpoint"
                 j += 1
                 continue
             if in_checkpoint:
-                # 確認ポイントの箇条書きは点検であって理由ではないので数えない。
-                # 箇条書きが終わったら、その先の地の文はまた説明として数える。
-                if not line.strip() or LIST_ITEM.match(line):
+                if (
+                    not line.strip()
+                    or LIST_ITEM.match(line)
+                    or line[:1].isspace()
+                ):
                     j += 1
                     continue
                 in_checkpoint = False
+            if checkpoint_seen and HEADING.match(line):
+                break
             if line.strip():
                 if first_meaningful is None:
                     first_meaningful = "heading" if HEADING.match(line) else "prose"
@@ -108,7 +122,9 @@ def blocks_with_following_prose(text: str):
                     after.append(line.strip())
             j += 1
 
-        yield start, info, " ".join(prev_prose), first_meaningful, "".join(after)
+        # 「読み比べ用」の断りは、直前の1行に付いているものだけを認める。
+        # 6行ぶんをまとめて見ていた頃は、離れた場所の断りが無関係なブロックを免除していた。
+        yield start, info, prev_prose[-1] if prev_prose else "", first_meaningful, "".join(after)
         prev_prose = []
 
 

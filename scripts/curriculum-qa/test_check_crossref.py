@@ -79,6 +79,32 @@ CASES: list[tuple[str, dict[str, str], int]] = [
         1,
     ),
     (
+        "「まだありません」と書いてある行は証拠にしない",
+        {
+            "day01_a.md": "# Day 01\n\n`MissingToken` はまだありません。\n",
+            "day02_b.md": "# Day 02\n\nDay 01 で作った `MissingToken` を使います。\n",
+        },
+        1,
+    ),
+    (
+        "語より前の否定は関係ない",
+        {
+            "day01_a.md": "# Day 01\n\nここには何もありません。const RealToken = 1;\n",
+            "day02_b.md": "# Day 02\n\nDay 01 で作った `RealToken` を使います。\n",
+        },
+        0,
+    ),
+    (
+        "4連フェンスの中の見本は参照として拾わない",
+        {
+            "day01_a.md": "# Day 01\n\n本文です。\n",
+            "day02_b.md": (
+                "# Day 02\n\n````md\n```\nDay 01 で作った `MissingToken` を使います。\n```\n````\n"
+            ),
+        },
+        0,
+    ),
+    (
         "同じ day 番号のファイルが2つあれば止める",
         {
             "day01_a.md": "# Day 01\n\n本文です。\n",

@@ -39,6 +39,19 @@ SAMPLE_CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
         "#### Before（改善前のコード）\n\n### Step 2: 書く\n\n```tsx\n// filepath: src/app/page.tsx\n```",
         [],
     ),
+    (
+        "Bash の # filepath 行は見出しではないので節から抜けない",
+        "#### Before（改善前のコード）\n\n```bash\n# filepath: scripts/foo.sh\nls\n```",
+        [(4, "scripts/foo.sh")],
+    ),
+    (
+        "4連で開いたブロックは3連では閉じない",
+        (
+            "#### Before（改善前のコード）\n\n"
+            "````md\n```\nx\n```\n// filepath: src/app/page.tsx\n````\n"
+        ),
+        [(7, "src/app/page.tsx")],
+    ),
 ]
 
 REPO = Path(__file__).resolve().parents[2]
