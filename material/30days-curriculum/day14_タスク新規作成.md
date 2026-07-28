@@ -1094,7 +1094,12 @@ return (
       render={({ field }) => (
         <Select
           value={field.value}
-          onValueChange={field.onChange}
+          onValueChange={(value) => {
+            if (value !== field.value) {
+              setValue('assigneeId', '');
+            }
+            field.onChange(value);
+          }}
           disabled={!projects.length}>
           <SelectTrigger id="project"
             aria-label="プロジェクトを選択">
@@ -1104,6 +1109,8 @@ return (
 ```
 
 プロジェクトだけは、選択肢の出どころが定数ではなく親から渡される `projects` です。`disabled={!projects.length}` を付けたのは、プロジェクトが1件も無いときに選べない見た目へ変えるためです。ここが空のままだと `projectId` も空で、Step 1 のスキーマが送信を止めます。タスクは必ずどれかのプロジェクトへ属するので、未選択のまま先へは進めません。
+
+プロジェクトを選び直したときに `setValue('assigneeId', '')` で担当者を未割当へ戻すのは、担当者がそのプロジェクトのメンバーかどうかをサーバーが確かめるからです。前のプロジェクトのメンバーを選んだまま送信すると、サーバーがエラーを返して保存できません。
 
 プロジェクトの選択肢とエラー表示です。
 
@@ -1657,7 +1664,7 @@ const priorityOptions = Object.entries(
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。`task.ts` と `page.tsx` は Day 13 で書いた部分も含めた、今日の終了時点の姿です。
+今日は5つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。`task.ts` と `page.tsx` は Day 13 で書いた部分も含めた、今日の終了時点の姿です。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2645,7 +2652,12 @@ export function TaskDialog({
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        if (value !== field.value) {
+                          setValue('assigneeId', '');
+                        }
+                        field.onChange(value);
+                      }}
                       disabled={!projects.length}>
                       <SelectTrigger id="project"
                         aria-label="プロジェクトを選択">

@@ -425,7 +425,11 @@ const {
 // filepath: src/app/project/page.tsx
 // ProjectPageContent内、returnの前に追加
 if (projectsLoading) {
-  return <PageLoadingSpinner />;
+  return (
+    <AppLayout>
+      <PageLoadingSpinner />
+    </AppLayout>
+  );
 }
 ```
 
@@ -438,7 +442,7 @@ if (projectsLoading) {
 
 ![ローディングスピナーの表示](./screenshots/day09-loading.png)
 
-> ここでの `<PageLoadingSpinner />` は `ProjectPageContent` の内側で使うため、`AppLayout` の中で呼ばれます。`AppLayout` のラップはこの `if` ブロックの外側（`return` の中）で行うので、スピナーを `AppLayout` で二重に囲む必要はありません。
+> スピナーも `AppLayout` で囲みます。`AppLayout` を書いているのはこの下の `return` の中なので、ここで早く `return` すると読み込み中だけサイドバーとログイン確認が画面から消えます。
 
 ---
 
@@ -1224,7 +1228,11 @@ function ProjectPageContent() {
   };
 
   if (projectsLoading) {
-    return <PageLoadingSpinner />;
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 ```
 

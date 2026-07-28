@@ -727,19 +727,7 @@ import {
 
 `MyTasksPage` 内の `useQuery` の**下に**以下を追加します。
 
-まず、比較に使う「今日」のキーを用意します。
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// 今日を YYYY-MM-DD にそろえる
-const todayKey = localDateOnly(new Date());
-```
-
-`localDateOnly(new Date())` は、いまのブラウザの日付を `2026-04-17` のような文字列にそろえて返します。時刻を落として日付だけにするのがねらいです。`new Date()` のまま比べると、同じ「今日」でも 9時00分 と 18時30分 は別物として扱われ、今日が期限のタスクは1件も一致しません。文字列にそろえてしまえば、比較は普通の文字列の大小で足ります。`2026-04-16` は `2026-04-17` より小さい、という並びが日付の前後とそのまま一致するからです。
-
-この値は画面を開いたときに1回決まるだけです。日付をまたいで開いたままにしていると、`todayKey` は古い日のままになります。ページを開き直せば正しくなりますが、開きっぱなしを前提にするなら、日付の変わり目で計算し直す仕組みが別に要ります。
-
-続けて、`useMemo` で4グループに分類するロジックを追加します。
+`useMemo` で4グループに分類するロジックを追加します。比較に使う「今日」のキーも、この中で作ります。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -749,6 +737,7 @@ const groupedTasks = useMemo(() => {
   const today: typeof tasks = [];
   const upcoming: typeof tasks = [];
   const noDueDate: typeof tasks = [];
+  const todayKey = localDateOnly(new Date());
 
   for (const t of tasks ?? []) {
     if (!t.dueDate) {
@@ -767,6 +756,10 @@ const groupedTasks = useMemo(() => {
     }
   }
 ```
+
+`localDateOnly(new Date())` は、いまのブラウザの日付を `2026-04-17` のような文字列にそろえて返します。時刻を落として日付だけにするのがねらいです。`new Date()` のまま比べると、同じ「今日」でも 9時00分 と 18時30分 は別物として扱われ、今日が期限のタスクは1件も一致しません。文字列にそろえてしまえば、比較は普通の文字列の大小で足ります。`2026-04-16` は `2026-04-17` より小さい、という並びが日付の前後とそのまま一致するからです。
+
+`todayKey` を `useMemo` の外ではなく中で作るのは、外に置くと画面を開いた時刻の日付が居座り続けるからです。中で作れば、振り分けをやり直すたびに今の日付から取り直します。
 
 振り分けの順番には意味があります。先に `!t.dueDate` を見て期限なしを抜き、そのあとで期限ありのタスクだけを3つに分けます。こうすると以降の比較では `dueDate` が必ず存在するので、値が無い場合を毎回確かめずに済みます。`continue` は「この1件はここまで、次のタスクへ」という合図です。比較そのものは `dateOnlyFromValue()` で `YYYY-MM-DD` にそろえてから行うため、時刻やタイムゾーンの違いに振り回されません。等しければ今日、小さければ期限切れ、それ以外が今後の予定になります。
 
@@ -1073,6 +1066,7 @@ const handleSubmit = (data: TaskFormData) => {
         : null,
       estimatedHours:
         data.estimatedHours ?? null,
+      projectId: data.projectId,
       assigneeId: data.assigneeId ?? null,
       expectedUpdatedAt:
         data.expectedUpdatedAt,
@@ -1082,6 +1076,8 @@ const handleSubmit = (data: TaskFormData) => {
 ```
 
 > `expectedUpdatedAt` は Day 15 と同じ楽観ロック用の値です。編集画面を開いてから保存するまでの間に、他の人が同じタスクを更新していたらサーバーが CONFLICT エラーで知らせてくれます。
+
+`projectId` も一緒に送るのは、ダイアログでプロジェクトを選び直せるからです。ここに含めないと、画面上では移動できたように見えても、保存後の一覧では元のプロジェクトのままになります。
 
 JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskDialog` を配置します。
 
@@ -1715,6 +1711,7 @@ export default function MyTasksPage() {
           : null,
         estimatedHours:
           data.estimatedHours ?? null,
+        projectId: data.projectId,
         assigneeId: data.assigneeId ?? null,
         expectedUpdatedAt:
           data.expectedUpdatedAt,
@@ -1724,16 +1721,6 @@ export default function MyTasksPage() {
 ```
 
 `if (data.id)` で囲ってあるのは、この画面が編集だけを扱うためです。IDの無いデータは新規作成なので、ここでは何もしません。`expectedUpdatedAt` を渡すと、編集画面を開いてから保存するまでに他の人が同じタスクを更新していた場合、サーバーが競合として知らせます。
-
-**今日の日付キー**:
-
-```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 今日の日付キー
-  const todayKey = localDateOnly(new Date());
-```
-
-`localDateOnly(new Date())` は、いまのブラウザの日付を `2026-04-17` のような文字列にそろえて返します。この値は画面を開いたときに1回決まるだけなので、日付をまたいで開いたままにすると古い日のまま残ります。開き直せば正しくなります。
 
 **期限別の振り分け**:
 
@@ -1745,6 +1732,7 @@ export default function MyTasksPage() {
     const today: typeof tasks = [];
     const upcoming: typeof tasks = [];
     const noDueDate: typeof tasks = [];
+    const todayKey = localDateOnly(new Date());
 
     for (const t of tasks ?? []) {
       if (!t.dueDate) {
@@ -1764,7 +1752,7 @@ export default function MyTasksPage() {
     }
 ```
 
-先に期限なしを抜いてから3つに分けているので、後の比較では `dueDate` が必ず存在します。日付を `YYYY-MM-DD` の文字列にそろえてあるため、比較は文字列の大小で足ります。`new Date()` のまま比べると、同じ日でも時刻が違えば別物として扱われ、今日が期限のタスクが1件も一致しません。
+先に期限なしを抜いてから3つに分けているので、後の比較では `dueDate` が必ず存在します。日付を `YYYY-MM-DD` の文字列にそろえてあるため、比較は文字列の大小で足ります。`new Date()` のまま比べると、同じ日でも時刻が違えば別物として扱われ、今日が期限のタスクが1件も一致しません。`todayKey` を `useMemo` の中で作るのは、外に置くと画面を開いた時刻の日付が居座り、日付が変わっても古い日で振り分け続けるからです。
 
 **振り分けの結果とローディング**:
 

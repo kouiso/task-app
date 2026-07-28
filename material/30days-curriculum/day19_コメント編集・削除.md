@@ -649,8 +649,26 @@ const handleDeleteComment =
 `DeleteConfirmDialog` は Day 11 で
 タスク削除にも使った再利用コンポーネントです。
 
+その前に、ダイアログを閉じる処理を1か所にまとめます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+const handleClose = () => {
+  commentForm.reset();
+  editCommentForm.reset();
+  setEditingCommentId(null);
+  setDeleteCommentDialogOpen(false);
+  setDeleteCommentTargetId(null);
+  onClose();
+};
+```
+
+`onClose` だけを呼ぶと、書きかけのコメントと編集中のコメント ID が残ったままになります。
+次に同じタスクを開いたとき、前回の下書きとテキストエリアがそのまま現れ、読者は今どの操作の途中なのか分からなくなります。
+片付けを `onClose` の手前へ集めておけば、閉じ方が増えても同じ初期状態へ戻せます。
+
 タスク詳細と削除確認の2つのダイアログを並べるため、
-まず `return` 直後の既存コードを次の形に変えます。
+`return` 直後の既存コードを次の形に変えます。
 `<>` と `</>` は、複数の要素をまとめる Fragment です。
 
 ```typescript
@@ -658,7 +676,19 @@ const handleDeleteComment =
 return (
   <>
     <Dialog open={open}
-      onOpenChange={(isOpen) => !isOpen && onClose()}>
+      onOpenChange={(isOpen) =>
+        !isOpen && handleClose()}>
+```
+
+`onOpenChange` は、背景をクリックしたときや Esc キーを押したときにも呼ばれます。ここを `onClose` のままにすると、閉じ方によって片付けが行われたり行われなかったりします。同じ理由で、`閉じる` ボタンも `handleClose` に差し替えます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+<DialogFooter>
+  <Button onClick={handleClose}>
+    閉じる
+  </Button>
+</DialogFooter>
 ```
 
 コンポーネントが `return` で返せる要素は1つだけ、というルールがあります。
@@ -768,7 +798,7 @@ Day 12 で同じプロジェクトに追加したメンバーのアカウント�
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。Step 1 でサーバー側へ編集と削除の手続きを足し、Step 2 から Step 6 でタスク詳細ダイアログへ本人チェックと編集モードを組み込んでいます。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。
+今日は2つのファイルを触りました。Step 1 でサーバー側へ編集と削除の手続きを足し、Step 2 から Step 6 でタスク詳細ダイアログへ本人チェックと編集モードを組み込んでいます。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1055,6 +1085,7 @@ type TaskDetailDialogProps = {
   open: boolean;
   taskId: string | null;
   onClose: () => void;
+  canEditProject: (projectId: string) => boolean;
 };
 
 const commentSchema = z.object({
@@ -1075,7 +1106,12 @@ type EditCommentFormValues = z.infer<typeof editCommentSchema>;
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
 // 完成版: 編集と削除の state
-export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProps) {
+export function TaskDetailDialog({
+  open,
+  taskId,
+  onClose,
+  canEditProject,
+}: TaskDetailDialogProps) {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [deleteCommentDialogOpen, setDeleteCommentDialogOpen] = useState(false);
   const [deleteCommentTargetId, setDeleteCommentTargetId] = useState<string | null>(null);
@@ -1193,6 +1229,23 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 
 `handleStartEdit` の引数の型を `{ id: string; content: string }` と直接書いているのは、コメント全体の型を持ち込まずに済ませるためです。この関数が使うのは2つの項目だけなので、必要な形だけを求めています。`setValue` で既存の本文を入れておかないと、編集を始めた瞬間に空のテキストエリアが出て、読者は元の文章を打ち直すことになります。
 
+**閉じるときの片付け**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 閉じるときの片付け
+  const handleClose = () => {
+    commentForm.reset();
+    editCommentForm.reset();
+    setEditingCommentId(null);
+    setDeleteCommentDialogOpen(false);
+    setDeleteCommentTargetId(null);
+    onClose();
+  };
+```
+
+片付けてから `onClose` を呼ぶのは、書きかけのコメントと編集中の ID を残したまま閉じると、次に同じタスクを開いたときに前回の途中の状態が現れるためです。閉じ方は背景クリック、Esc キー、`閉じる` ボタンの3通りありますが、どれもこの1つの関数を通ります。
+
 **保存と削除のハンドラー**:
 
 ```typescript
@@ -1222,7 +1275,7 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 // 完成版: ダイアログの外枠と見出し
   return (
     <>
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
         <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl break-words">
@@ -1467,6 +1520,7 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
 // 完成版: コメント投稿フォーム
+                {canEditProject(taskDetail.projectId) && (
                 <form
                   onSubmit={commentForm.handleSubmit(handleCommentSubmit)}
                   className="space-y-2"
@@ -1478,6 +1532,15 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
                     className="resize-none"
                     rows={2}
                   />
+```
+
+フォーム全体を `canEditProject` で囲ってあるのは、閲覧者が押しても必ずサーバーに弾かれる操作を、そもそも画面へ出さないためです。
+
+**投稿ボタン**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 投稿ボタン
                   <div className="flex justify-end">
                     <Button
                       type="submit"
@@ -1490,6 +1553,7 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
                     </Button>
                   </div>
                 </form>
+                )}
 ```
 
 Day 18 のまま残しています。投稿フォームは一覧の外に1つだけあり、編集用のテキストエリアはコメント1件ごとに現れます。置き場所を分けてあるので、編集中でも新しいコメントを書き始められます。1つの入力欄を使い回すと、どちらの操作をしているのか読者が見失います。
@@ -1504,7 +1568,7 @@ Day 18 のまま残しています。投稿フォームは一覧の外に1つだ
           )}
 
           <DialogFooter>
-            <Button onClick={onClose}>閉じる</Button>
+            <Button onClick={handleClose}>閉じる</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

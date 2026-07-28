@@ -1566,7 +1566,7 @@ import { Alert, AlertDescription, AlertTitle }
         id: userId,
         name: values.name,
         avatar: values.avatar
-          || undefined,
+          || null,
         ...(canManageAccount
           ? { role: values.role,
               isActive: values.isActive }
@@ -1577,7 +1577,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 **確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くので、この時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が指している2つがそろいました。実際に動くかどうかは、`</form>` を書き終えた Step 10 の最後で確かめます。
 
-サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `undefined` に変換しています。
+サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `null` に変換しています。`undefined` にすると Step 0 の `if (data.avatar !== undefined)` を通らず、すでに登録されている画像を消せません。
 
 エラー表示ブロックをチェックボックスの下に追加します。
 
@@ -2723,7 +2723,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
         id: userId,
         name: values.name,
         avatar: values.avatar
-          || undefined,
+          || null,
         ...(canManageAccount
           ? { role: values.role,
               isActive: values.isActive }
@@ -2732,7 +2732,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     };
 ```
 
-`canManageAccount` で分岐して項目ごと落としているのは、Step 0 の `update` が本人編集で `role` を受け取ると `FORBIDDEN` を返すからです。値を `undefined` にするのではなく、項目そのものを送らない形にします。`avatar` が空文字のときも `undefined` へ寄せます。空文字をそのまま送ると、サーバー側の `.url()` が不正な値として断ります。
+`canManageAccount` で分岐して項目ごと落としているのは、Step 0 の `update` が本人編集で `role` を受け取ると `FORBIDDEN` を返すからです。値を `undefined` にするのではなく、項目そのものを送らない形にします。`avatar` が空文字のときは `null` へ寄せます。空文字をそのまま送るとサーバー側の `.url()` が断り、`undefined` にすると Step 0 の `if (data.avatar !== undefined)` を通らず、登録済みの画像が消せません。
 
 **現在ユーザーを待つ早期リターン**:
 

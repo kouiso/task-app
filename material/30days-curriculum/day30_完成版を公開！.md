@@ -301,12 +301,13 @@ npm run db:push
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value:
+              'camera=(), microphone=(), geolocation=(), browsing-topics=()',
           },
           { key: 'X-DNS-Prefetch-Control', value: 'off' },
 ```
 
-`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`Permissions-Policy` はカメラ・マイク・位置情報を一切使わないと宣言するものです。このアプリはどれも使わないので、閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` は、リンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
+`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`Permissions-Policy` はカメラ・マイク・位置情報と、閲覧履歴から興味を推定する `browsing-topics` を一切使わないと宣言するものです。このアプリはどれも使わないので、閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` は、リンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
 
 **確認ポイント**:
 - `next.config.ts` に `async headers()` を追加した
@@ -908,7 +909,8 @@ App Router では Server Component を標準にして、
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value:
+              'camera=(), microphone=(), geolocation=(), browsing-topics=()',
           },
           { key: 'X-DNS-Prefetch-Control', value: 'off' },
         ],

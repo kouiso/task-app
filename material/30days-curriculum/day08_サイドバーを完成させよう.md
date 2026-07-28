@@ -520,7 +520,7 @@ export function AppLayout({
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（続き）
 
-      {/* メインコンテンツ */}
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
       <main className="flex-1 overflow-y-auto p-6">
         {children}
       </main>
@@ -1044,7 +1044,7 @@ export function AppLayout({
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
 // 完成版: 本文の置き場所
-      {/* メインコンテンツ */}
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
       <main className="flex-1 overflow-y-auto p-6">
         {children}
       </main>

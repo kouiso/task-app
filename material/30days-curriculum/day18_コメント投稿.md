@@ -743,6 +743,45 @@ Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り�
 **確認ポイント**:
 - Day 14 と同じ `zodResolver` パターンを使っている
 
+フォームを書く前に、props を1つ増やします。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// props に権限判定を追加
+type TaskDetailDialogProps = {
+  open: boolean;
+  taskId: string | null;
+  onClose: () => void;
+  canEditProject:
+    (projectId: string) => boolean;
+};
+
+export function TaskDetailDialog({
+  open, taskId, onClose,
+  canEditProject,
+}: TaskDetailDialogProps) {
+```
+
+Step 0 で書いた `comment.create` は、編集できる役割かどうかをサーバー側で確かめます。
+閲覧者（VIEWER）が投稿ボタンを押すとサーバーに弾かれるので、押せる見た目のまま残すと理由の分からない無反応に見えます。
+Day 13 で作った `canEditProject` をそのまま受け取り、投稿できる人にだけフォームを出します。
+
+呼び出し側の `/task` ページにも同じ名前で渡します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 権限判定を詳細ダイアログへ渡す
+<TaskDetailDialog
+  open={detailOpen}
+  taskId={selectedTask}
+  onClose={handleDetailClose}
+  canEditProject={canEditProject}
+/>
+```
+
+判定をダイアログの中で組み立て直さず関数のまま渡すのは、Day 13 の一覧カードと同じ基準を使うためです。
+基準が2か所に分かれると、カードには編集ボタンが出るのにコメントは投稿できない、というずれが起きます。
+
 コメント一覧の下にテキストエリアと投稿ボタンが
 縦並びで配置されています。
 ボタンは右寄せです。
@@ -750,6 +789,7 @@ Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り�
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
 // コメント投稿フォーム（useForm管理）
+{canEditProject(taskDetail.projectId) && (
 <form onSubmit={commentForm.handleSubmit(
   handleCommentSubmit)}
   className="space-y-2">
@@ -770,9 +810,10 @@ Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り�
     </Button>
   </div>
 </form>
+)}
 ```
 
-入力欄に `aria-label` を付けているのは、`placeholder` が1文字打つと消えるためです。消えたあとは何の欄か確かめる手段がなくなります。
+入力欄に `aria-label` を付けているのは、`placeholder` が1文字打つと消えるためです。消えたあとは何の欄か確かめる手段がなくなります。フォーム全体を `canEditProject` で囲ってあるのは、閲覧者が押しても必ずサーバーに弾かれる操作を、そもそも画面へ出さないためです。
 
 ここで使っている `handleCommentSubmit` は、このあとの Step で定義します。
 定義するまでこの画面は表示できないので、動きの確認はそのあとに行います。
@@ -997,7 +1038,7 @@ JSX の中に全部詰めると条件分岐が深くなります。
 
 ## 完成コード全体
 
-今日は3つのファイルを触りました。Step 0 でサーバー側の手続きを2つ書いて登録し、Step 2 から Step 5 でタスク詳細ダイアログへコメント欄を足しています。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。
+今日は3つのファイルを触りました。Step 0 でサーバー側の手続きを2つ書いて登録し、Step 2 から Step 5 でタスク詳細ダイアログへコメント欄を足しています。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1208,6 +1249,7 @@ type TaskDetailDialogProps = {
   open: boolean;
   taskId: string | null;
   onClose: () => void;
+  canEditProject: (projectId: string) => boolean;
 };
 
 const commentSchema = z.object({
@@ -1216,14 +1258,19 @@ const commentSchema = z.object({
 type CommentFormValues = z.infer<typeof commentSchema>;
 ```
 
-`taskId` の型が `string | null` なのは、どのタスクも開いていない状態を表すためです。この `null` があるおかげで、問い合わせを止める判断と送信を止める判断の両方を同じ値でできます。`commentSchema` にはサーバー側と違って `taskId` が入っていません。入力欄に打ち込む値ではなく、開いているダイアログが持っている値だからです。
+`canEditProject` を props で受け取るのは、コメントを投稿できる役割かどうかの基準を、Day 13 の一覧カードと1つに保つためです。`taskId` の型が `string | null` なのは、どのタスクも開いていない状態を表すためです。この `null` があるおかげで、問い合わせを止める判断と送信を止める判断の両方を同じ値でできます。`commentSchema` にはサーバー側と違って `taskId` が入っていません。入力欄に打ち込む値ではなく、開いているダイアログが持っている値だからです。
 
 **フォームとタスク詳細の取得**:
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
 // 完成版: フォームとタスク詳細の取得
-export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProps) {
+export function TaskDetailDialog({
+  open,
+  taskId,
+  onClose,
+  canEditProject,
+}: TaskDetailDialogProps) {
   const commentForm = useForm<CommentFormValues>({
     resolver: zodResolver(commentSchema),
     defaultValues: { content: '' },
@@ -1428,6 +1475,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
 // 完成版: コメント投稿フォーム
+              {canEditProject(taskDetail.projectId) && (
               <form onSubmit={commentForm.handleSubmit(handleCommentSubmit)} className="space-y-2">
                 <Textarea
                   placeholder="コメントを追加..."
@@ -1446,9 +1494,10 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                   </Button>
                 </div>
               </form>
+              )}
 ```
 
-`aria-label` を付けている理由は、`placeholder` が1文字打つと消えるためです。消えたあとは何を書く欄なのか確かめる手段がなくなります。`disabled` の条件を2つ並べているのは、空欄での送信と、送信中の二重投稿を同じ1か所で止めるためです。
+`aria-label` を付けている理由は、`placeholder` が1文字打つと消えるためです。消えたあとは何を書く欄なのか確かめる手段がなくなります。`disabled` の条件を2つ並べているのは、空欄での送信と、送信中の二重投稿を同じ1か所で止めるためです。フォーム全体を `canEditProject` で囲ってあるのは、閲覧者が押しても必ずサーバーに弾かれる操作を、そもそも画面へ出さないためです。
 
 **末尾の閉じるボタン**:
 
