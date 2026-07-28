@@ -995,6 +995,481 @@ JSX の中に全部詰めると条件分岐が深くなります。
 
 **覚えておきたいこと**: 例外状態は early return で先に返します。
 
+## 完成コード全体
+
+今日は3つのファイルを触りました。Step 0 でサーバー側の手続きを2つ書いて登録し、Step 2 から Step 5 でタスク詳細ダイアログへコメント欄を足しています。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/comment.ts` | コメントの取得と投稿の手続き | Step 0 |
+| `src/server/api/root.ts` | 手続きの一覧表 | Step 0 |
+| `src/component/task/task-detail-dialog.tsx` | タスク詳細とコメント欄 | Step 2 から Step 5 |
+
+`task-detail-dialog.tsx` は Day 13 から配布されていたファイルです。今日はそこへコメント欄を書き足したので、Day 13 から引き継いだ部分もあわせて全文を載せます。
+
+### `src/server/api/routers/comment.ts`
+
+**インポートと入力スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// 完成版: インポートと入力スキーマ
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import type { PermissionKey } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { assertMemberPermission } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+
+const commentCreateSchema = z.object({
+  content: z.string().trim().min(1, 'コメント内容は必須です'),
+  taskId: z.string().cuid(),
+});
+```
+
+スキーマをファイルの先頭側へ置いてあるのは、この形が `create` の入口を決めているからです。`trim()` を先に、`min(1)` を後ろに書く順番が要点で、逆にすると空白だけの本文が長さの検査を通り抜けます。`PermissionKey` を `import type` で取り込んでいるのは、この名前を型としてしか使わないためです。型だけの取り込みは、完成したアプリの中身から消えます。
+
+**タスクと自分のメンバー行の取得**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: タスクと自分のメンバー行の取得
+const findTaskAndAssertMembership = async (
+  taskId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      project: {
+        include: {
+          members: { where: { userId } },
+        },
+      },
+    },
+  });
+```
+
+`permission` に `?` が付いているので、この引数は省略できます。省略した呼び出しは「メンバーであればよい」、`'canEdit'` を渡した呼び出しは「編集できる役割であること」を求めます。1つの関数で2種類の厳しさを表せるため、読む側と書く側の手続きで別々の関数を用意せずに済みます。`members: { where: { userId } }` でログイン中の本人の行だけへ絞っているので、判定に使う材料はこの1回の問い合わせで揃います。
+
+**存在確認と権限確認**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: 存在確認と権限確認
+  if (!task) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'タスクが見つかりません',
+    });
+  }
+
+  assertMemberPermission(task.project.members, permission);
+
+  return task;
+};
+```
+
+順番が決まっています。先に `task` が `null` かどうかを見るのは、次の行で `task.project` を読むためです。`null` のまま進むと実行時エラーになり、読者には英語のエラーだけが残ります。存在確認を通ったあとに権限を確かめ、最後に `task` を返します。呼び出し側はこの1行を書くだけで、存在と権限の両方を通過したタスクを受け取れます。
+
+**getByTaskId によるコメント一覧**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: getByTaskId によるコメント一覧
+export const commentRouter = createTRPCRouter({
+  getByTaskId: protectedProcedure
+    .input(z.object({ taskId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
+
+      return await prisma.comment.findMany({
+        where: { taskId: input.taskId },
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+```
+
+`await` を付けた権限確認が、データを取る行より上に置いてあります。この上下関係が守りの本体です。下に置くと、権限の無い人にもコメント本文がいったん読み込まれます。`include` の `user` に `USER_SELECT` を挟むのは、パスワードのように返してはいけない列を毎回書かずに外すためです。返す列の決まりを1か所へ集めておくと、あとで列が増えたときの直し漏れが起きません。
+
+**create によるコメントの保存**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: create によるコメントの保存
+  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
+    await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+
+    return await prisma.comment.create({
+      data: {
+        content: input.content,
+        taskId: input.taskId,
+        userId: ctx.session.userId,
+      },
+      include: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+    });
+  }),
+});
+```
+
+`userId` に入れているのは `ctx.session.userId` で、`input` からは取りません。入力スキーマに `userId` が無いため、ブラウザ側から投稿者を指定する手段そのものがありません。なりすまし投稿を防ぐいちばん確実な方法は、client に選ばせないことです。第3引数の `'canEdit'` が `getByTaskId` との違いで、読むだけなら参加者全員、書き込みは編集権限を持つ役割だけに絞れます。
+
+### `src/server/api/root.ts`
+
+**登録済みの router 一覧**:
+
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: 登録済みの router 一覧
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+`comment: commentRouter` の左側が、画面側で書く `api.comment` の綴りを決めています。import だけ書いて登録を忘れると、ファイルは存在するのに `api.comment` が型エラーになります。エラーはコメント画面側に出ますが、原因はこのファイルです。赤い波線を見たら、まず `appRouter` の中に名前が並んでいるかを確かめてください。
+
+### `src/component/task/task-detail-dialog.tsx`
+
+**ブラウザ側で動かす宣言と外部ライブラリ**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// 完成版: ブラウザ側で動かす宣言と外部ライブラリ
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+```
+
+`'use client'` が無いと、この部品はサーバー側だけで動く扱いになります。`useForm` を書いた時点でエラーになるため、1行目は消せません。`date-fns` から `format` と `ja` を分けて取り込んでいるのは、日本語の表記ルールだけを持ってくるためです。他の言語のデータまで配信せずに済みます。
+
+**プロジェクト内の部品の取り込み**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: プロジェクト内の部品の取り込み
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/component/ui/dialog';
+import { Separator } from '@/component/ui/separator';
+import { Textarea } from '@/component/ui/textarea';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { formatDateOnly } from '@/lib/date';
+import { api } from '@/trpc/react';
+import { StatusBadge } from './status-badge';
+```
+
+`Dialog` から始まる6つは、Day 13 で配布された時点から使われていた部品です。今日新しく足したのは `Avatar`・`Badge`・`Textarea` の3つで、コメント欄の表示と入力に使います。並び順が手元と違っていても `npm run fix` が並べ替えます。
+
+**props の型とコメント用スキーマ**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: props の型とコメント用スキーマ
+type TaskDetailDialogProps = {
+  open: boolean;
+  taskId: string | null;
+  onClose: () => void;
+};
+
+const commentSchema = z.object({
+  content: z.string().trim().min(1, 'コメントを入力してください'),
+});
+type CommentFormValues = z.infer<typeof commentSchema>;
+```
+
+`taskId` の型が `string | null` なのは、どのタスクも開いていない状態を表すためです。この `null` があるおかげで、問い合わせを止める判断と送信を止める判断の両方を同じ値でできます。`commentSchema` にはサーバー側と違って `taskId` が入っていません。入力欄に打ち込む値ではなく、開いているダイアログが持っている値だからです。
+
+**フォームとタスク詳細の取得**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: フォームとタスク詳細の取得
+export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProps) {
+  const commentForm = useForm<CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: '' },
+  });
+
+  const utils = api.useUtils();
+
+  const { data: taskDetail } = api.task.getById.useQuery(
+    { id: taskId ?? '' },
+    { enabled: !!taskId },
+  );
+```
+
+`defaultValues` を書いておくと `content` は最初から空文字になります。省くと `undefined` から始まり、投稿ボタンの有効と無効を切り替える `watch('content').trim()` がその場でエラーになります。`enabled: !!taskId` は、ダイアログを開く前に問い合わせが走らないよう止めるスイッチです。`{ id: taskId ?? '' }` の空文字は型をそろえるための保険で、この `enabled` があるためサーバーへは届きません。
+
+**投稿の mutation と送信ハンドラー**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 投稿の mutation と送信ハンドラー
+  const createCommentMutation = api.comment.create.useMutation({
+    onSuccess: () => {
+      if (taskId) {
+        utils.task.getById.invalidate({ id: taskId });
+      }
+      commentForm.reset();
+    },
+  });
+
+  const handleCommentSubmit = (values: CommentFormValues) => {
+    if (!taskId) return;
+    createCommentMutation.mutate({
+      content: values.content,
+      taskId,
+    });
+  };
+```
+
+`onSuccess` はサーバーが成功を返したときだけ動きます。投稿に失敗したのに入力欄だけ空になる事故を、この置き場所が防いでいます。`handleCommentSubmit` に空文字の判定が無いのは、`handleSubmit` が zod の検査に落ちた入力をここまで通さないからです。残っている `if (!taskId) return;` が見ているのは入力値ではなく画面の状態で、ダイアログを閉じた直後の送信を手前で止めます。
+
+**ダイアログの外枠と見出し**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: ダイアログの外枠と見出し
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl break-words">
+            {taskDetail?.title || 'タスク詳細'}
+          </DialogTitle>
+          <DialogDescription>
+            プロジェクト:{' '}
+            <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
+          </DialogDescription>
+        </DialogHeader>
+```
+
+`taskDetail?.title` に `?.` が付いているのは、データが届く前の一瞬もこの見出しが描かれるためです。届く前は `undefined` になり、`||` の右側にある「タスク詳細」が表示されます。`onOpenChange` に `!isOpen &&` を挟んでいるのは、閉じる向きの変化だけを拾うためです。開く向きは親が `open` で決めるので、ここで反応させると二重に切り替わります。
+
+**説明とタスク情報の前半**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 説明とタスク情報の前半
+        {taskDetail && (
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {taskDetail.description || '説明はありません。'}
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground block mb-1">ステータス</span>
+                <StatusBadge status={taskDetail.status} />
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">優先度</span>
+                <Badge variant={getPriorityBadgeVariant(taskDetail.priority)}>
+                  {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
+                </Badge>
+              </div>
+```
+
+`{taskDetail && (` で全体を包んでいるおかげで、この中では `?.` を使わずに `taskDetail.status` と書けます。データが届くまでこの中身は1行も描かれないためです。`whitespace-pre-wrap` は、説明文に入れた改行をそのまま表示させる指定です。これが無いと、複数行で書いた説明が1行につながって読めなくなります。
+
+**担当者の表示**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 担当者の表示
+              <div>
+                <span className="text-muted-foreground block mb-1">担当者</span>
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    {taskDetail.assignee?.avatar && (
+                      <AvatarImage src={taskDetail.assignee.avatar} alt="" />
+                    )}
+                    <AvatarFallback className="text-[10px]">
+                      {(taskDetail.assignee?.name ||
+                        taskDetail.assignee?.email ||
+                        '?')[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>
+                    {taskDetail.assignee?.name || taskDetail.assignee?.email || '未割当'}
+                  </span>
+                </div>
+              </div>
+```
+
+担当者は未割当のこともあるため、`assignee` そのものに `?.` が付いています。頭文字と表示名で `||` のたどる順番をそろえてあるので、アイコンの文字と名前が別人になることはありません。`alt=""` は読み上げ不要の指定で、隣に名前が文字で出ているため画像まで読み上げると同じ名前を二度聞くことになります。
+
+**期限とコメント欄の見出し**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 期限とコメント欄の見出し
+              <div>
+                <span className="text-muted-foreground block mb-1">期限</span>
+                <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-semibold">コメント</h3>
+                <Badge variant="secondary" className="rounded-full px-2">
+                  {taskDetail.comments?.length ?? 0}
+                </Badge>
+              </div>
+```
+
+件数を見出しへ出しておくと、コメント欄を下までたどらなくてもやりとりの有無が分かります。1件も無いタスクと20件たまったタスクを一目で見分けられます。`Separator` は情報の区切り線で、タスクの属性とコメントという性質の違う塊を視覚的に分けます。
+
+**コメント一覧の枠と0件の案内**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: コメント一覧の枠と0件の案内
+              <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
+                {taskDetail.comments?.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    コメントはまだありません。
+                  </p>
+                )}
+```
+
+`max-h-[200px]` と `overflow-y-auto` を組にしてあるのは、コメントが増えてもダイアログの高さが伸び続けないようにするためです。これが無いと、20件たまったタスクでは投稿フォームが画面の外へ押し出されます。空の状態に言葉を置く理由は、何も無い画面が読者にとって壊れた画面と見分けられないからです。
+
+**1件ごとのアバター**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 1件ごとのアバター
+                {taskDetail.comments?.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 text-sm">
+                    <Avatar className="h-8 w-8 mt-1">
+                      {comment.user.avatar && <AvatarImage src={comment.user.avatar} alt="" />}
+                      <AvatarFallback>
+                        {(comment.user.name || comment.user.email || '?')[0]?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+```
+
+`key={comment.id}` は、React が並び替えや追加を追いかけるための目印です。ここを配列の番号にすると、新しいコメントが先頭へ入ったときに全行が別物として描き直されます。`AvatarFallback` を必ず置いてあるのは、投稿者が全員アバター画像を登録しているとは限らないからです。
+
+**名前と日時と本文**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 名前と日時と本文
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">
+                          {comment.user.name || comment.user.email || '?'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(comment.createdAt), 'yyyy/MM/dd HH:mm', {
+                            locale: ja,
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+```
+
+`flex-1` はアイコンの右側の残り幅をすべて使う指定、`justify-between` は名前を左端へ日時を右端へ寄せる指定です。日時を `text-xs` で小さく薄くしてあるのは、読者に追ってほしい主役が本文だからです。`))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じています。
+
+**コメント投稿フォーム**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: コメント投稿フォーム
+              <form onSubmit={commentForm.handleSubmit(handleCommentSubmit)} className="space-y-2">
+                <Textarea
+                  placeholder="コメントを追加..."
+                  aria-label="コメント本文"
+                  {...commentForm.register('content')}
+                  className="resize-none"
+                  rows={2}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!commentForm.watch('content').trim() || createCommentMutation.isPending}
+                  >
+                    {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
+                  </Button>
+                </div>
+              </form>
+```
+
+`aria-label` を付けている理由は、`placeholder` が1文字打つと消えるためです。消えたあとは何を書く欄なのか確かめる手段がなくなります。`disabled` の条件を2つ並べているのは、空欄での送信と、送信中の二重投稿を同じ1か所で止めるためです。
+
+**末尾の閉じるボタン**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 末尾の閉じるボタン
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button onClick={onClose}>閉じる</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+`DialogFooter` を `{taskDetail && (` の外側へ置いてあるのが要点です。中へ入れると、データが届くまで閉じるボタンが描かれません。通信が遅い環境や失敗したときに、読者はダイアログから抜け出せなくなります。
+
 ## 今日のまとめ
 
 - [ ] タスク詳細にコメント一覧を表示できた

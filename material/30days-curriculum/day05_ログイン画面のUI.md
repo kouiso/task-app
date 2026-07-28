@@ -1019,6 +1019,344 @@ console.log(readLoginForm(demoFormData));
 `as` は型を黙らせる道具で、zod は入力を確かめる道具です。
 ログインみたいに外から値が入る場所では、**信じる前に検査する** ほうが強いです。
 
+## 完成コード全体
+
+今日は2つのファイルを触りました。Step 6 で `<form>` をまるごと消して書き直した箇所があるので、手元のファイルがどこまで進んだ状態なのか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、Step 1 から Step 9 で書いた断片がどう1つのファイルになったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/app/login/page.tsx` | ログイン画面の入力欄・検査・送信 | Step 1〜6、Step 8〜9 |
+| `src/lib/redirect.ts` | ログイン後の遷移先が安全かの判定 | Step 7 |
+
+### `src/app/login/page.tsx`
+
+**`'use client'` と外部ライブラリの import**:
+
+```typescript
+// filepath: src/app/login/page.tsx
+// 完成版: 'use client' と外部ライブラリの import
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+```
+
+1枚目は外部ライブラリの取り込みです。`useState` は Step 7、`Suspense` は Step 9 で別々に足しましたが、ここでは `react` の1行にまとまっています。同じ取り込み元を2行に分けて書いても動きますが、`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が1行へ束ね、並びもアルファベット順に直します。手元が2行のままでも間違いではありません。
+
+**プロジェクト内の部品の import**:
+
+```typescript
+// filepath: src/app/login/page.tsx
+// 完成版: プロジェクト内の部品の import
+import {
+  Alert, AlertDescription, AlertTitle,
+} from '@/component/ui/alert';
+import { Button } from '@/component/ui/button';
+import {
+  Card, CardContent,
+  CardDescription, CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { isValidRedirectUrl } from '@/lib/redirect';
+import { api } from '@/trpc/react';
+```
+
+2枚目は自分のプロジェクトの中にあるものです。`@/` で始まる書き方は `src/` を指す近道で、ファイルの置き場所が深くなっても `../../` を数えずに済みます。`@/component/ui/...` が単数形になっている点に注意してください。ここを `components` と複数形で書くと、そんなファイルは無いというエラーが起動時に出ます。
+
+**バリデーションのルールと型**:
+
+```typescript
+// filepath: src/app/login/page.tsx
+// 完成版: バリデーションのルールと型
+const loginSchema = z.object({
+  email: z.string()
+    .email('有効なメールアドレスを入力してください'),
+  password: z.string()
+    .min(1, 'パスワードを入力してください'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+```
+
+`loginSchema` と `LoginFormData` が関数の外に置かれているのは、このルールが画面の状態と無関係だからです。中に入れても動きますが、文字を1つ打つたびに同じルールを組み立て直すことになります。パスワードの条件が `.min(1)` にとどまっているのは、文字数の下限をログイン画面で上げると、その規則ができる前に登録した人が自分のパスワードで入れなくなるからです。文字数の規則は Day 06 の登録画面が持ちます。
+
+**遷移先とエラーの置き場**:
+
+```typescript
+// filepath: src/app/login/page.tsx
+// 完成版: 遷移先とエラーの置き場
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const rawCallbackUrl =
+    searchParams?.get('callbackUrl')
+    || '/dashboard';
+  const callbackUrl =
+    isValidRedirectUrl(rawCallbackUrl)
+      ? rawCallbackUrl : '/dashboard';
+  const [error, setError] =
+    useState<string | null>(null);
+```
+
+この4つが、あとに続く `loginMutation` の材料です。使う側より先に用意しておく必要があるので、関数の先頭に並びます。`rawCallbackUrl` と `callbackUrl` を2段に分けてあるのは、URL から読み取った生の値と、検査を通した値を別の名前で持ちたいからです。1つの変数に上書きしてしまうと、あとから読んだ人には「この値は検査済みなのか」が読み取れません。名前が違えば、`isValidRedirectUrl` を通っていない値を間違えて使う余地がなくなります。
+
+**フォーム管理の道具**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: フォーム管理の道具
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+```
+
+`useForm<LoginFormData>` の山かっこと、`resolver` に渡した `zodResolver(loginSchema)` の2つが、上のスキーマとこの行を結びつけています。山かっこが型を、`resolver` が検査そのものを運んでいます。`resolver` の行だけを消しても画面はそのまま表示されるので、書き忘れに気づきにくい場所です。空欄で送信してもエラー文言が出ないときは、まずこの行を見てください。
+
+**ログイン通信の登録**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: ログイン通信の登録
+  const loginMutation =
+    api.auth.login.useMutation({
+      onSuccess: (data) => {
+        toast.success(
+          `おかえりなさい、${data.user.name}さん`
+        );
+        window.location
+          .replace(callbackUrl);
+      },
+      onError: (error) => {
+        setError(
+          error.message
+          ?? 'ログイン中にエラーが発生しました'
+        );
+      },
+    });
+```
+
+成功と失敗の行き先を、送信の手前で1回だけ決めている部分です。`onSuccess` と `onError` をここに書いておけば、送信のたびに同じ分岐を書き直す必要がありません。`window.location.replace` を使っているのは、ログイン情報がブラウザへ収まる前に次の画面を取りに行くと、サーバー側からは未ログインに見えてログイン画面へ戻されるためです。ページ全体を読み込み直す `replace` なら、この行き違いが起きません。
+
+**送信処理**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: 送信処理
+  const onSubmit = async (
+    data: LoginFormData
+  ) => {
+    setError(null);
+    loginMutation.mutate(data);
+  };
+```
+
+Step 3 で仮に置いた `console.log` は、ここには残っていません。残したままだと、入力されたパスワードがブラウザのコンソールに読める文字のまま並びます。`setError(null)` を先に呼んでいるのは、前回の失敗で出した赤い帯を消すためです。この1行が無いと、2回目の送信が成功しても古いエラーが画面に残り続けます。
+
+**return の外枠と CardHeader**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: return の外枠と CardHeader
+  return (
+    <div className="flex min-h-screen
+      items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader
+          className="space-y-1 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="rounded-full
+              bg-gradient-to-r from-blue-500
+              to-indigo-500 p-3 shadow-lg">
+              <Lock className="h-6 w-6
+                text-white" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl">
+            ログイン
+          </CardTitle>
+          <CardDescription>
+            アカウントにログインしてください
+          </CardDescription>
+        </CardHeader>
+```
+
+中央寄せは外側の `<div>` が持ち、枠線と影と余白は `Card` が持ちます。役割が重なっていないので、`Card` の幅を変えても中央寄せは崩れません。`w-full max-w-sm` の2つを並べているのは、狭い画面では横幅いっぱいに広がってほしいけれど、広い画面で伸びきってほしくはないからです。`max-w-sm` だけにすると、スマートフォンで左右に無駄な余白が出ます。
+
+**フォームの開始とサーバーエラーの帯**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: フォームの開始とサーバーエラーの帯
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>エラー</AlertTitle>
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+```
+
+`Alert` が入力欄の下ではなく `<form>` の先頭に来ているのは、サーバーから返る理由が欄ごとではなく送信全体に対するものだからです。画面を下から読む人はいないので、いちばん上に置けば見落とされません。`onSubmit={handleSubmit(onSubmit)}` の二重の名前が読みにくく見えますが、外側が react-hook-form の検査係で、中身が検査を通ったあとに走る自分の処理です。
+
+**メールアドレス入力欄**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: メールアドレス入力欄
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                メールアドレス
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                autoComplete="email"
+                autoFocus
+                {...register('email')}
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+```
+
+`htmlFor="email"` と `id="email"` が同じ文字で対になっています。この対があると、ラベルの文字をクリックしただけで入力欄にカーソルが入り、読み上げソフトを使う人にもその欄が何を尋ねているかが伝わります。`register('email')` の文字列は別の役目で、こちらは Step 2 のスキーマの項目名とそろえます。3か所が同じ `email` なのは偶然ではありませんが、揃える相手はそれぞれ違います。
+
+**パスワード入力欄**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: パスワード入力欄
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                パスワード
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+```
+
+メール欄との違いは3つだけです。`type="password"` で打った文字を黒丸に隠し、`autoComplete` を `current-password` にして保存済みのパスワードを出してもらい、`placeholder` は置きません。パスワードに見本を出すと、それを入力すればよいと受け取られる恐れがあります。隠れるのは画面上の見た目だけで、送信される値は打ったままの文字列です。
+
+**送信ボタン**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: 送信ボタン
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r
+                from-blue-600 to-indigo-600
+                hover:from-blue-700
+                hover:to-indigo-700 shadow-md"
+              disabled={loginMutation.isPending}>
+              {loginMutation.isPending
+                ? 'ログイン中...'
+                : 'ログイン'}
+            </Button>
+```
+
+`loginMutation.isPending` を `disabled` と表示の文字の2か所で使っています。押せなくするだけだと、利用者にはボタンが壊れたように見えます。文字も一緒に変えると、待たされている理由が伝わります。押せない時間を作るのは見た目のためではなく、通信の2秒のあいだに3回押されるとログインの問い合わせが3回飛ぶのを止めるためです。
+
+**登録リンクと閉じタグ**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: 登録リンクと閉じタグ
+            <div className="text-center text-sm
+              text-muted-foreground">
+              アカウントをお持ちでない方は{' '}
+              <Link
+                href="/register"
+                className="text-blue-600 underline
+                  underline-offset-4
+                  hover:text-blue-800">
+                こちら
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+
+閉じタグが `</form>`、`</CardContent>`、`</Card>`、`</div>` の順に4つ並びます。開いた順の逆から閉じるので、この並びが1つでも入れ替わると保存した時点で構文エラーになります。`{' '}` は中かっこで囲んだ半角スペース1つで、これが無いと JSX が行の折り返しの空白を詰めて「方は」と「こちら」がくっつきます。飛び先の `/register` は Day 06 で作るので、いまクリックすると 404 になります。
+
+**ページ本体**:
+
+```typescript
+// filepath: src/app/login/page.tsx（同じファイルの続き）
+// 完成版: ページ本体
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen
+        items-center justify-center">
+        読み込み中...
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}
+```
+
+`LoginPage` と `LoginForm` を2つに分けた見返りが、この数行に出ます。`useSearchParams` は URL の中身が確定するまで待つ必要があり、待つ側と待たれる側が同じ関数だと `Suspense` で包めません。Step 1 で中身を別の関数として切り出しておいたので、ここで書き換えるのは入口の `LoginPage` だけで済みました。
+
+### `src/lib/redirect.ts`
+
+**ファイル全体**:
+
+```typescript
+// filepath: src/lib/redirect.ts
+// 完成版: ファイル全体
+export function isValidRedirectUrl(
+  url: string
+): boolean {
+  if (!url) return false;
+  // ブラウザが解釈前に取り除く空白文字
+  if (url.includes('\t')
+    || url.includes('\n')
+    || url.includes('\r')) return false;
+  // 円記号はブラウザが / と同じに扱う
+  if (url.includes('\\')) return false;
+  // プロトコル相対URL（//example.com）
+  if (url.startsWith('//')) return false;
+  return url.startsWith('/');
+}
+```
+
+4つの `return false` が、どれも「見た目は相対パスなのに外部サイトを指す書き方」を1つずつ塞いでいます。タブ・改行・復帰の3種類はブラウザが URL を解釈する前に取り除くので、`/%09/偽サイト` は検査には `/` で始まる文字列として届き、取り除いたあとに `//偽サイト` へ変わります。円記号も解釈上は `/` と同じ扱いなので、`/\偽サイト` は最後の行だけでは通り抜けます。最後の1行を残して上の3つを消すと、この関数は検査しているつもりで何も止めていない状態になります。
+
 ## 今日のまとめ
 
 - [ ] react-hook-form でフォームを管理できた

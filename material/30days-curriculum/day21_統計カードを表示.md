@@ -114,14 +114,13 @@ flowchart TD
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
-import { TASK_PRIORITY } from '@/lib/constant/priority';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { getUserProjectIds } from './_helpers/permission';
 ```
 
-`TASK_STATUS` と `TASK_PRIORITY` は、後でステータス別・優先度別の集計を作るために使います。`getUserProjectIds` は Day 13 でも使った共有ヘルパーで、「ログイン中のユーザーが参加中のプロジェクト id 一覧」を返します。Day 23 で初めて使う `TRPCError`・`z`・`USER_ROLE` は、未使用 import にしないため今日はまだ追加しません。
+`TASK_STATUS` は、この後でステータス別に件数を数えるために使います。`getUserProjectIds` は Day 13 でも使った共有ヘルパーで、「ログイン中のユーザーが参加中のプロジェクト id 一覧」を返します。Day 23 で初めて使う `TRPCError`・`z`・`USER_ROLE` は、未使用 import にしないため今日はまだ追加しません。
 
 #### 0-2. 空配列のとき先に返す
 
@@ -1092,6 +1091,592 @@ export function ReportContent() {
 #### 覚えておきたいエッセンス
 
 ページコンポーネントはなるべく Server Component にして、データ取得する部分だけを "use client" の子コンポーネントに切り出します。
+
+## 完成コード全体
+
+今日は3つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/report.ts` | 集計済みの数値を返す `getOverview` | Step 0 |
+| `src/server/api/root.ts` | 手続きの一覧表への `report` の登録 | Step 0 |
+| `src/app/report/page.tsx` | 統計カードとプロジェクト統計の画面 | Step 2〜Step 8 |
+
+### `src/server/api/routers/report.ts`
+
+**インポート**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts
+// 完成版: インポート
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
+```
+
+`TASK_STATUS` を取り込んでいるので、集計の条件に `'DONE'` という文字列を直接書かずに済みます。文字列で書くと、打ち間違えても動いてしまい、完了件数が常に0になる不具合として現れます。定数なら打ち間違いは編集中に分かります。
+
+`getUserProjectIds` は Day 20 の検索と同じ関数です。集計の対象を自分が参加しているプロジェクトへ絞るために使います。
+
+**getOverview の入口と空のときの戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: getOverview の入口と空のときの戻り値
+export const reportRouter = createTRPCRouter({
+  getOverview: protectedProcedure.query(async ({ ctx }) => {
+    const projectIds = await getUserProjectIds(ctx.session.userId);
+
+    if (projectIds.length === 0) {
+      return {
+        totalProjects: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        inReviewTasks: 0,
+        todoTasks: 0,
+        completionRate: 0,
+        totalTimeSpent: 0,
+        averageTimePerTask: 0,
+        recentTasks: [],
+        statusData: [],
+        priorityData: [],
+        projectStats: [],
+      };
+    }
+```
+
+参加しているプロジェクトが0件のときに、13項目すべてを埋めて返しています。ここを `return null` や `return {}` にすると、画面側は `overview.totalTasks` を読めず、登録した直後のユーザーだけ画面が落ちます。項目の形をそろえておけば、画面は分岐を1本も増やさずに済みます。
+
+`recentTasks` などの配列を `[]` にしているのも同じ理由です。`undefined` を返すと、画面の `.map()` がそこで止まります。
+
+**集計の土台となる条件**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 集計の土台となる条件
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
+    // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      ...projectScope,
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+```
+
+2つの条件を変数にしてあるのが、この手続きの数字を合わせている部分です。この後に12本の問い合わせが並びますが、全部がこの2つのどちらかを使います。条件を毎回書き写すと、1か所だけ書き漏らした問い合わせが別の母数で数え、画面上で合計が合わなくなります。
+
+`activeTasksFilter` が `projectScope` を展開してから `NOT` を足しているので、「アーカイブ済みを除く」と「取り消し済みを除く」が積み重なります。`as const` を付けているのは、この条件を書き換えられない形で固定するためです。
+
+**Promise.all の受け取り**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: Promise.all の受け取り
+    const [
+      projects,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      totalTimeAggregate,
+      recentTasks,
+      statusGroups,
+      priorityGroups,
+      projectTaskGroups,
+      projectDoneGroups,
+    ] = await Promise.all([
+```
+
+左側の12個の名前と、この後に並ぶ12本の問い合わせは、書いた順番どおりに対応します。名前を1つ入れ替えると、件数の変数に作業時間が入り、型が合う場合はエラーも出ません。数字だけが静かに入れ替わるので、追加や並べ替えのときは上下を見比べてください。
+
+`Promise.all` にしているので、12本は同時に走ります。順番に `await` すると、1本ずつの待ち時間が積み上がります。
+
+**プロジェクトと件数の集計・前半**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: プロジェクトと件数の集計・前半
+      prisma.project.findMany({
+        where: { id: { in: projectIds }, isArchived: false },
+        select: { id: true, name: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.task.count({ where: activeTasksFilter }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_PROGRESS,
+        },
+      }),
+```
+
+`select: { id: true, name: true }` で2列だけ取っているのは、この後の表示に id と名前しか使わないからです。`select` を書かないと全列が返り、使わない説明文や日時まで通信に載ります。
+
+完了件数の条件が `activeTasksFilter` ではなく `projectScope` になっている点に注目してください。取り消し済みのタスクは完了ではないので、`NOT` の除外があっても件数は変わりません。母数の側だけが `activeTasksFilter` です。
+
+**件数の集計・後半と作業時間の合計**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 件数の集計・後半と作業時間の合計
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_REVIEW,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.TODO,
+        },
+      }),
+      prisma.task.aggregate({
+        where: activeTasksFilter,
+        _sum: { timeSpentMinutes: true },
+      }),
+```
+
+`aggregate` は合計値を返し、`count` は行数を返します。作業時間は1件ごとの分数を足し合わせる必要があるので、`_sum` を使います。`findMany` で全件を取ってから画面で足す書き方もできますが、その場合はタスクの全行が通信に載ります。
+
+**直近のタスクとステータス別の集計**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 直近のタスクとステータス別の集計
+      prisma.task.findMany({
+        where: activeTasksFilter,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.task.groupBy({
+        by: ['status'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+```
+
+`take: 5` で5件に切っているのは、直近の動きを見せるための一覧だからです。上限を付けないと、タスクが1000件あるユーザーの画面で1000行が届きます。
+
+`groupBy` は、ステータスの種類ごとに件数を数えて返します。`count` を5回並べても同じ結果になりますが、ステータスが増えたときに問い合わせも増えます。`groupBy` なら、データベースにある種類の分だけ自動で並びます。
+
+**優先度別とプロジェクト別の集計**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 優先度別とプロジェクト別の集計
+      prisma.task.groupBy({
+        by: ['priority'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+        _sum: { timeSpentMinutes: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+        _count: { _all: true },
+      }),
+    ]);
+```
+
+プロジェクト別の `groupBy` が2本ある理由は、条件が違うからです。1本目は母数の件数と作業時間、2本目は完了だけの件数を数えます。1本にまとめる書き方もありますが、条件の違う数を1回の集計で分けて出すには、もっと複雑な指定が必要になります。
+
+`_count` と `_sum` を同じ集計で一緒に頼めるので、1本目は件数と分数を1回で取っています。
+
+**割合と平均の計算**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 割合と平均の計算
+    const totalTimeSpent = totalTimeAggregate._sum.timeSpentMinutes ?? 0;
+    const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+```
+
+3行すべてに `?? 0` か `totalTasks > 0` の確認が入っています。`_sum` は対象が1件も無いとき `null` を返し、割り算は分母が0のとき `NaN` になります。どちらも画面には「null」や「NaN」という文字として出るので、サーバー側で0に寄せています。
+
+`Math.round` で整数に丸めているのは、完了率をパーセントの整数として見せるためです。丸める場所を画面側にすると、他の画面で違う桁数になります。
+
+**プロジェクト別の集計の対応表**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: プロジェクト別の集計の対応表
+    const doneCountByProject = new Map(
+      projectDoneGroups.map((group) => [group.projectId, group._count._all]),
+    );
+    const taskStatsByProject = new Map(
+      projectTaskGroups.map((group) => [
+        group.projectId,
+        {
+          totalTasks: group._count._all,
+          totalTimeSpent: group._sum.timeSpentMinutes ?? 0,
+        },
+      ]),
+    );
+```
+
+`groupBy` が返すのは配列なので、そのままではプロジェクトごとの値を引けません。`Map` に組み替えておくと、この後の `projects.map()` の中で id を渡すだけで引けます。配列のまま `find` を呼ぶと、プロジェクトの数だけ全体を探し直します。
+
+**戻り値の前半**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 戻り値の前半
+    return {
+      totalProjects: projects.length,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      completionRate,
+      totalTimeSpent,
+      averageTimePerTask,
+      recentTasks,
+      statusData: statusGroups.map((group) => ({
+        key: group.status,
+        value: group._count._all,
+      })),
+      priorityData: priorityGroups.map((group) => ({
+        key: group.priority,
+        value: group._count._all,
+      })),
+```
+
+`statusData` と `priorityData` を `key` と `value` という名前に置き換えているのは、Day 22 でグラフに渡すときの形をそろえるためです。`status` と `priority` のまま返すと、グラフの部品をステータス用と優先度用で2つ作ることになります。
+
+項目の並びが空のときの戻り値と同じ順になっている点も確かめてください。並びをそろえておくと、項目の足し忘れを目で見つけられます。
+
+**projectStats の組み立て**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: projectStats の組み立て
+      projectStats: projects.map((project) => {
+        const taskStats = taskStatsByProject.get(project.id) ?? {
+          totalTasks: 0,
+          totalTimeSpent: 0,
+        };
+        const completedTaskCount = doneCountByProject.get(project.id) ?? 0;
+
+        return {
+          id: project.id,
+          name: project.name,
+          totalTasks: taskStats.totalTasks,
+          completedTasks: completedTaskCount,
+          progress:
+            taskStats.totalTasks > 0 ? (completedTaskCount / taskStats.totalTasks) * 100 : 0,
+          totalTimeHours: taskStats.totalTimeSpent / 60,
+        };
+      }),
+    };
+  }),
+});
+```
+
+`?? { totalTasks: 0, totalTimeSpent: 0 }` が効くのは、タスクが1件も無いプロジェクトです。`groupBy` はタスクのある分だけ行を返すので、空のプロジェクトは対応表に載りません。この既定値が無いと、そのプロジェクトの行で `undefined` を読んで画面が落ちます。
+
+`totalTimeHours` で60で割っているのは、データベースが分で持っている値を時間に直すためです。画面側で割ると、表示する場所ごとに単位の扱いが分かれます。
+
+### `src/server/api/root.ts`
+
+**ルーターの取り込み**:
+
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: ルーターの取り込み
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { reportRouter } from './routers/report';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+```
+
+今日足したのは `reportRouter` の1行だけです。並びがアルファベット順になっているのは Biome が整えるからで、追加した位置は気にしなくて大丈夫です。
+
+**手続きの一覧表**:
+
+```typescript
+// filepath: src/server/api/root.ts（同じファイルの続き）
+// 完成版: 手続きの一覧表
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+  report: reportRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+左に書いたキーが、そのまま画面側の呼び名になります。`report: reportRouter` と書いたので `api.report.getOverview` で呼べます。ここを書き忘れると、ルーターのファイルは正しく書けているのに画面側で `api.report` が見つからないというエラーが出ます。
+
+こちらの並びは Day 18 で決めた時系列順で、アルファベット順ではありません。作った順に読めるほうが、どの機能がどの Day で入ったかを追えるからです。
+
+### `src/app/report/page.tsx`
+
+**画面の import**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: 画面の import
+'use client';
+
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+import { api } from '@/trpc/react';
+```
+
+1行目の `'use client'` が要ります。`api.report.getOverview.useQuery()` はブラウザ側で動く仕組みなので、この宣言が無いとサーバー側で実行されてエラーになります。
+
+`Table` から始まる6つの部品を一度に取り込んでいるのは、テーブルの1行1列がそれぞれ別の部品になっているからです。`<table>` を直接書く方法でも表は作れますが、その場合は枠線や余白の指定を自分で書くことになります。
+
+**データ取得と表示用の値**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: データ取得と表示用の値
+export default function ReportPage() {
+  const { data: overview, isLoading } =
+    api.report.getOverview.useQuery();
+
+  const totalTasks = overview?.totalTasks ?? 0;
+  const completionRate =
+    overview?.completionRate ?? 0;
+  const totalTimeHours =
+    ((overview?.totalTimeSpent ?? 0) / 60)
+      .toFixed(1);
+  const averageTimeHours =
+    ((overview?.averageTimePerTask ?? 0) / 60)
+      .toFixed(1);
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+```
+
+`useQuery()` に引数が無いのは、この手続きが入力を取らないからです。誰の集計を返すかは、サーバー側が Cookie から取り出したユーザーで決まります。画面から id を送る形にすると、書き換えて他人の集計を見る道ができます。
+
+4つの値を `return` の前で用意しているのは、JSX の中に計算を書かないためです。JSX の中に `((overview?.totalTimeSpent ?? 0) / 60).toFixed(1)` を直接書くと、どこが表示でどこが計算か読み分けにくくなります。
+
+`isLoading` の判定を値の準備より後に置いているのは、`overview` が未定義のあいだも `?? 0` で受け止められるからです。判定を先に置いても動きますが、この並びだと値の定義が1か所にまとまります。
+
+**JSX — 見出し**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: JSX — 見出し
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl
+            font-bold tracking-tight">
+            レポート・統計
+          </h1>
+          <p className=
+            "text-muted-foreground">
+            プロジェクトの進捗とタスクの
+            状況を確認できます。
+          </p>
+        </div>
+```
+
+`<h1>` はページに1つだけ置きます。読み上げソフトや検索エンジンが、そのページの主題として扱う見出しだからです。この後のカードやテーブルの見出しに `<h1>` を重ねると、主題が複数あることになります。
+
+`text-muted-foreground` は文字を薄い色にする指定です。見出しと説明文で濃さを変えると、どちらが主かが色だけで伝わります。
+
+**JSX — 統計カードの前半2枚**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: JSX — 統計カードの前半2枚
+        <div className="grid grid-cols-1
+          sm:grid-cols-2 lg:grid-cols-4
+          gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                タスク数</p>
+              <p className="text-3xl font-bold">
+                {totalTasks}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了率</p>
+              <p className="text-3xl font-bold">
+                {completionRate}%</p>
+            </CardContent>
+          </Card>
+```
+
+`grid-cols-1` から `lg:grid-cols-4` まで3段の指定があるので、幅に応じて1列・2列・4列へ切り替わります。スマートフォンで4列にすると、数字の桁が折り返して読めなくなります。
+
+各カードで項目名を `text-sm` の薄い色、数字を `text-3xl font-bold` にしています。見せたいのは数字なので、大きさと太さの差で目が先に数字へ行きます。両方を同じ大きさにすると、4枚のカードがどれも同じ見た目になり、読者は数字を探すことになります。
+
+**JSX — 統計カードの後半2枚**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: JSX — 統計カードの後半2枚
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                合計作業時間</p>
+              <p className="text-3xl font-bold">
+                {totalTimeHours}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                平均作業時間/タスク</p>
+              <p className="text-3xl font-bold">
+                {averageTimeHours}h</p>
+            </CardContent>
+          </Card>
+        </div>
+```
+
+数字の後ろに `h` を付けているのは、単位が無いと 12 という数字を12時間とも12分とも読めるからです。完了率の側に `%` を付けているのも同じ考えです。
+
+`平均作業時間/タスク` という項目名にしてあるのは、何あたりの平均かを示すためです。「平均作業時間」だけでは、1日あたりとも1人あたりとも読めます。
+
+**JSX — テーブルの見出し**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: JSX — テーブルの見出し
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              プロジェクト統計</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">
+                    プロジェクト</TableHead>
+                  <TableHead className="text-right">
+                    タスク数</TableHead>
+                  <TableHead className="text-right">
+                    完了</TableHead>
+                  <TableHead className="text-right">
+                    進捗</TableHead>
+                  <TableHead className="text-right">
+                    作業時間</TableHead>
+                </TableRow>
+              </TableHeader>
+```
+
+プロジェクト名の列だけ `w-[200px]` で幅を固定し、残りの4列を `text-right` で右へ寄せています。数字は桁の位置がそろっていると比べやすく、左寄せだと桁数の違いで数の大小が読み取りにくくなります。
+
+名前の列に幅を決めておくと、プロジェクト名の長さで表の形が変わりません。長い名前が1つ入るだけで数字の列が押しつぶされる状態を防げます。
+
+**JSX — テーブルの行・前半**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: JSX — テーブルの行・前半
+              <TableBody>
+                {overview?.projectStats.map((stat) => (
+                  <TableRow key={stat.id}>
+                    <TableCell
+                      className="font-medium">
+                      {stat.name}</TableCell>
+                    <TableCell
+                      className="text-right">
+                      {stat.totalTasks}</TableCell>
+                    <TableCell
+                      className="text-right">
+                      {stat.completedTasks}
+                    </TableCell>
+```
+
+`overview?.` の `?.` が、データが届く前の状態を受け止めています。`isLoading` の判定を通っているので通常はここへ `undefined` が来ませんが、通信が失敗した場合は `overview` が `undefined` のまま描画されます。この1文字が無いと、その場面で画面が落ちます。
+
+`key={stat.id}` は React が行を見分けるための目印です。プロジェクトの id を渡しているので、並び順が変わっても行の中身が入れ替わりません。
+
+**JSX — テーブルの行・後半と閉じタグ**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: JSX — テーブルの行・後半と閉じタグ
+                    <TableCell
+                      className="text-right">
+                      {stat.progress.toFixed(1)}%</TableCell>
+                    <TableCell
+                      className="text-right">
+                      {stat.totalTimeHours.toFixed(1)}h
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+`toFixed(1)` で小数第1位までに丸めています。`progress` はサーバー側で `(完了 / 全体) * 100` を計算しただけの値なので、丸めないと `33.33333333333333%` のような表示になります。丸める桁を画面側に置いてあるのは、同じ数値を別の画面では違う桁数で見せたくなる場合があるからです。
+
+閉じタグは `</TableBody>`、`</Table>`、`</CardContent>`、`</Card>`、`</div>`、`</AppLayout>` の順で、開いた順の逆になっています。1つでも抜けるとブラウザに赤いエラー画面が出て、足りない場所が書かれています。
+
+> **完成形の参考コード**: 完成版には `src/app/report/page.tsx` と `src/server/api/routers/report.ts` があります。ただし今日書いたコードと1文字まで同じではありません。違いは3つです。1つ目は、完成版の画面に円グラフと棒グラフが並んでいる点です。これは Day 22 で足します。2つ目は、完成版の画面に週次レポートへのリンクがある点です。これは Day 23 で足します。3つ目は、完成版の `report.ts` に `getOverview` 以外の手続きも入っていて、`root.ts` には Day 24 で追加する `user` も登録されている点です。この3か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは、完成版がどう書かれているかの説明として読んでください）。
 
 ## 今日のまとめ
 

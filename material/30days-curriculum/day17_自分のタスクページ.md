@@ -1343,6 +1343,628 @@ function buildStatusSections(
 `switch` は少数分岐なら分かりやすいです。でも「キーごとに入れ物を持つ」処理なら `Map` のほうが意図に近いです。
 グループ化は分岐ではなく、対応表として考えると読みやすくなります。
 
+## 完成コード全体
+
+今日触ったファイルは `src/app/my-task/page.tsx` の1つだけです。12個の Step でこの1ファイルへ書き足し続けたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードと手元のファイルを見比べてください。上から順に並べてあり、これが Day 17 終了時点の全文です。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/app/my-task/page.tsx` | 自分のタスクを絞り込み、期限別に並べる画面 | Step 1 から Step 11 |
+
+### `src/app/my-task/page.tsx`
+
+**画面部品のインポート**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 完成版: 画面部品のインポート
+'use client';
+
+import { useCallback, useMemo, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+import {
+  PageLoadingSpinner,
+} from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import {
+  Tabs, TabsList, TabsTrigger,
+} from '@/component/ui/tabs';
+```
+
+`TaskCard` は Day 13、`TaskDialog` と `DeleteConfirmDialog` は Day 15 で作った部品をそのまま呼んでいます。マイタスク専用のカードや編集画面を新しく作らないのは、入力欄を1つ足すたびに画面の数だけ直す作業が生まれるためです。並び順が手元と違っていても `npm run fix` が並べ替えます。
+
+**判定と変換のインポート**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 判定と変換のインポート
+import type { TaskPriority }
+  from '@/lib/constant/priority';
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
+import {
+  isTaskStatus, TASK_STATUS,
+  TASK_STATUS_LABELS, type TaskStatus,
+} from '@/lib/constant/status';
+import {
+  dateOnlyFromValue,
+  dateOnlyToUtcStartIso,
+  localDateOnly,
+} from '@/lib/date';
+import { taskToFormData }
+  from '@/lib/task-form';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+```
+
+`isTaskStatus` と `isProjectMemberRole` は型ガードです。サーバーやタブから来た文字列を `as` で型へ押し込まず、実行時に確かめてから使います。`localDateOnly` と `dateOnlyFromValue` は日付を `YYYY-MM-DD` へそろえる関数です。期限の比較が時刻の違いで狂わなくなります。
+
+**タブの定義**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 完成版: タブの定義
+const ACTIVE_STATUSES: TaskStatus[] = [
+  TASK_STATUS.TODO,
+  TASK_STATUS.IN_PROGRESS,
+  TASK_STATUS.IN_REVIEW,
+  TASK_STATUS.DONE,
+];
+const STATUS_TABS: {
+  label: string;
+  value: TaskStatus | 'all';
+}[] = [
+  { label: 'すべて', value: 'all' },
+  ...ACTIVE_STATUSES.map((status) => ({
+    label: TASK_STATUS_LABELS[status],
+    value: status,
+  })),
+];
+```
+
+2つとも `MyTasksPage` の外に置きます。中に置くと、画面が描き直されるたびに同じ配列を作り直すためです。`STATUS_TABS` を手で書き並べず `ACTIVE_STATUSES` から組み立てているので、表示する日本語を変えたいときは `TASK_STATUS_LABELS` だけを直せば済みます。
+
+**グループ表示に渡す値の型**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 完成版: グループ表示に渡す値の型
+interface TaskGroupSectionProps {
+  title: string;
+  titleClassName?: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: Date | null;
+    assignee: {
+      name: string | null;
+      email: string;
+      avatar: string | null;
+    } | null;
+    projectId: string;
+    timeSpentMinutes: number;
+  }>;
+```
+
+`tasks` の中身を `api.task.getAll` が返す形にそろえてあります。ここが1項目でもずれると、取得した配列をそのまま渡せず、詰め替える処理を書く必要が出ます。`projectId` を含めているのは、次のブロックの権限判定がプロジェクト単位で行われるためです。
+
+**グループ表示が受け取る関数**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: グループ表示が受け取る関数
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onTimeLogSuccess: () => void;
+  canEditProject: (projectId: string) => boolean;
+  canDeleteProject: (projectId: string) => boolean;
+}
+```
+
+権限を判定する関数を親から受け取る形にしてあります。`TaskGroupSection` の中でロールを調べる作りにすると、判定が画面の中に2か所できて、片方だけ直したときに食い違います。渡し忘れると `TaskCard` の既定値が使われ、閲覧者にも編集ボタンが出ます。
+
+**グループ表示の見出し**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 完成版: グループ表示の見出し
+const TaskGroupSection = ({
+  title, titleClassName,
+  tasks, onEdit, onDelete,
+  onTimeLogSuccess,
+  canEditProject, canDeleteProject,
+}: TaskGroupSectionProps) => {
+  if (tasks.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <h2 className={cn(
+        'text-xl font-semibold flex items-center gap-2',
+        titleClassName,
+      )}>
+        {title} ({tasks.length})
+      </h2>
+```
+
+`if (tasks.length === 0) return null;` がこの部品で一番効いている1行です。`null` を返すと見出しごと画面から消えるので、呼び出す側は4つのグループをただ並べるだけで済みます。件数を見出しに添えているのは、開かずに量を判断できるようにするためです。
+
+**グループ表示のカード生成**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: グループ表示のカード生成
+      <div className="grid gap-6 sm:grid-cols-2
+        lg:grid-cols-3 xl:grid-cols-4">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            id={task.id}
+            title={task.title}
+            description={task.description}
+            status={task.status}
+            priority={task.priority}
+            dueDate={task.dueDate}
+            assignee={task.assignee}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onTimeLogSuccess={onTimeLogSuccess}
+            canEdit={canEditProject(task.projectId)}
+            canDelete={canDeleteProject(task.projectId)}
+            timeSpentMinutes={task.timeSpentMinutes}
+          />
+        ))}
+```
+
+`canEdit` と `canDelete` に、受け取った関数へ `task.projectId` を渡した結果を入れています。マイタスクには複数のプロジェクトのタスクが混ざるので、判定は画面単位ではなくカード1枚ごとに行う必要があります。`timeSpentMinutes` を渡さないと、記録済みのタスクでも `0m` と表示されます。
+
+**グループ表示の閉じタグ**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: グループ表示の閉じタグ
+      </div>
+    </div>
+  );
+};
+```
+
+開いた順と逆に閉じます。`map` を `))}` で閉じ、グリッドと外枠の `</div>` を順に閉じ、`);` で `return` を閉じ、最後の `};` で `TaskGroupSection` そのものを閉じます。閉じる数が合わないと、この行より下すべてが構文エラーとして報告されます。
+
+**画面の状態**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 完成版: 画面の状態
+export default function MyTasksPage() {
+  const [activeTab, setActiveTab] =
+    useState<TaskStatus | 'all'>('all');
+  const [filterProject, setFilterProject] =
+    useState<string>('all');
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+  const [editingTask, setEditingTask] =
+    useState<TaskFormData | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] =
+    useState(false);
+  const [deleteTargetId, setDeleteTargetId] =
+    useState<string | null>(null);
+```
+
+6つの状態を先頭にまとめてあります。hooks は呼び出す順番が毎回同じでなければならないので、`if` や `return` より前に置く必要があるからです。`dialogOpen` と `editingTask` を分けているのは、1つにまとめると閉じる途中で中身が消え、ダイアログが一瞬空になるためです。
+
+**サーバーからの取得**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: サーバーからの取得
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    api.auth.getCurrentUser.useQuery();
+  const { data: projects } =
+    api.project.getAll.useQuery();
+  const { data: tasks, isLoading } =
+    api.task.getAll.useQuery(
+      {
+        assigneeId: currentUser?.id,
+        status: activeTab === 'all'
+          ? undefined : activeTab,
+        projectId: filterProject === 'all'
+          ? undefined : filterProject,
+      },
+      { enabled: !!currentUser },
+    );
+
+  const utils = api.useUtils();
+```
+
+`'all'` を選んだ場合に項目ごと `undefined` へ変えるのが、絞り込みを外す書き方です。`'all'` をそのまま送ると、`status` は決まった値しか受け取らないため入力チェックで弾かれ、0件ではなくエラーが返ります。`enabled: !!currentUser` は、自分のIDが届く前に他人のタスクまで取ってしまうのを防ぎます。
+
+**プロジェクトごとの自分のロール**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: プロジェクトごとの自分のロール
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = currentUser?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find(
+        (member) => member.userId === userId,
+      );
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, currentUser?.id]);
+```
+
+プロジェクトIDから自分のロールを引ける対応表を先に作っています。カードを描くたびに `projects` の配列を端から探すと、タスクの件数だけ探し直しが起きるためです。`useMemo` の依存に挙げた2つが変わったときだけ作り直され、それ以外の描き直しでは前の対応表を使い回します。
+
+**編集と削除の可否**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 編集と削除の可否
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role
+        ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role
+        ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+```
+
+ロールが引けなかったときに `false` を返すのが要点です。メンバーではないプロジェクトのタスクが混ざった場合に、判定が抜けて編集できてしまう事故を防げます。権限の中身は `hasPermission` が持っているので、この画面はロールと操作名を渡すだけで済みます。
+
+**記録の成功と保存の通信**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 記録の成功と保存の通信
+  const handleTimeLogSuccess =
+    useCallback(() => {
+      utils.task.getAll.invalidate();
+    }, [utils.task.getAll]);
+
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const deleteMutation =
+    api.task.delete.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDeleteDialogOpen(false);
+        setDeleteTargetId(null);
+      },
+    });
+```
+
+3つとも成功したら `invalidate` を呼びます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。削除のあとに `setDeleteTargetId(null)` まで戻しているのは、消した相手のIDを残したままだと、次の削除で前の対象が使われる余地も残るためです。
+
+**編集と削除のハンドラー**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 編集と削除のハンドラー
+  const handleEdit = (taskId: string) => {
+    const task =
+      tasks?.find((t) => t.id === taskId);
+    if (task) {
+      setEditingTask(taskToFormData(task));
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+```
+
+削除は押した時点では消さず、IDを控えてダイアログを開くだけにしています。取り消せない操作では、対象を覚える処理と実行する処理を分けます。編集側の `taskToFormData` は、`Date` 型の期限を入力欄が受け取れる形へ詰め替える関数で、Day 15 で作ったものを使い回しています。
+
+**保存の中身**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 保存の中身
+  const handleSubmit = (data: TaskFormData) => {
+    if (data.id) {
+      updateMutation.mutate({
+        id: data.id,
+        title: data.title,
+        description: data.description ?? null,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate
+          ? dateOnlyToUtcStartIso(
+              data.dueDate
+            )
+          : null,
+        estimatedHours:
+          data.estimatedHours ?? null,
+        assigneeId: data.assigneeId ?? null,
+        expectedUpdatedAt:
+          data.expectedUpdatedAt,
+      });
+    }
+  };
+```
+
+`if (data.id)` で囲ってあるのは、この画面が編集だけを扱うためです。IDの無いデータは新規作成なので、ここでは何もしません。`expectedUpdatedAt` を渡すと、編集画面を開いてから保存するまでに他の人が同じタスクを更新していた場合、サーバーが競合として知らせます。
+
+**今日の日付キー**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 今日の日付キー
+  const todayKey = localDateOnly(new Date());
+```
+
+`localDateOnly(new Date())` は、いまのブラウザの日付を `2026-04-17` のような文字列にそろえて返します。この値は画面を開いたときに1回決まるだけなので、日付をまたいで開いたままにすると古い日のまま残ります。開き直せば正しくなります。
+
+**期限別の振り分け**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 期限別の振り分け
+  const groupedTasks = useMemo(() => {
+    const overdue: typeof tasks = [];
+    const today: typeof tasks = [];
+    const upcoming: typeof tasks = [];
+    const noDueDate: typeof tasks = [];
+
+    for (const t of tasks ?? []) {
+      if (!t.dueDate) {
+        noDueDate.push(t);
+        continue;
+      }
+
+      const dueDateKey = dateOnlyFromValue(t.dueDate);
+
+      if (dueDateKey === todayKey) {
+        today.push(t);
+      } else if (dueDateKey < todayKey) {
+        overdue.push(t);
+      } else {
+        upcoming.push(t);
+      }
+    }
+```
+
+先に期限なしを抜いてから3つに分けているので、後の比較では `dueDate` が必ず存在します。日付を `YYYY-MM-DD` の文字列にそろえてあるため、比較は文字列の大小で足ります。`new Date()` のまま比べると、同じ日でも時刻が違えば別物として扱われ、今日が期限のタスクが1件も一致しません。
+
+**振り分けの結果とローディング**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 振り分けの結果とローディング
+    return { overdue, today, upcoming, noDueDate };
+  }, [tasks]);
+
+  if (isCurrentUserLoading || isLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+`return` を `useMemo` の中に置いたので、4つの配列は `tasks` が変わったときだけ作り直されます。ローディングの分岐をここまで下げてあるのは、hooks より前で処理を打ち切ると呼び出しの順番が変わり、React がエラーを出すからです。スピナーを `AppLayout` の中に置くと、サイドバーを残したまま中身だけが差し替わります。
+
+**画面の外枠と見出し**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 画面の外枠と見出し
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          マイタスク
+        </h1>
+```
+
+`AppLayout` で包むと、サイドバーとログイン確認が自動で付きます。Day 08 で作った枠をここでも使うので、この画面には見出しから下だけを書けば済みます。`flex flex-col gap-6` は、中に並べる要素の間隔をまとめて決めるための指定です。
+
+**ステータスタブ**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: ステータスタブ
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              if (v === 'all' || isTaskStatus(v))
+                setActiveTab(v);
+            }}
+            className="w-full sm:w-auto"
+          >
+            <TabsList>
+              {STATUS_TABS.map((tab) => (
+                <TabsTrigger
+                  key={tab.label}
+                  value={tab.value}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+```
+
+`onValueChange` が渡してくるのは `string` なので、`isTaskStatus(v)` を通してから `setActiveTab` に渡します。`as TaskStatus` で押し込むと、想定外の文字列がそのまま state に入り、次の取得でサーバーから弾かれます。`sm:flex-row` があるので、幅の狭い画面ではタブとドロップダウンが縦に並びます。
+
+**プロジェクトの絞り込み**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: プロジェクトの絞り込み
+          <div className="ml-auto w-full sm:w-[200px]">
+            <Select
+              value={filterProject}
+              onValueChange={setFilterProject}>
+              <SelectTrigger>
+                <SelectValue
+                  placeholder="すべてのプロジェクト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのプロジェクト
+                </SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+```
+
+`value="all"` の項目を自分で先頭へ置いています。絞り込みを外す選択肢は、取得したプロジェクトの一覧には含まれないためです。`onValueChange={setFilterProject}` と直に渡せるのは、`filterProject` が文字列で、`'all'` とプロジェクトIDが同じ型に収まるからです。
+
+**期限が近い2グループ**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 期限が近い2グループ
+        <TaskGroupSection
+          title="期限切れ"
+          titleClassName="text-destructive"
+          tasks={groupedTasks.overdue ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+
+        <TaskGroupSection
+          title="今日が期限"
+          titleClassName="text-orange-500"
+          tasks={groupedTasks.today ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+```
+
+色を渡しているのはこの2つだけです。4つ全部を目立たせると、どれから手を付ければよいか判断できなくなるためです。末尾の `?? []` は、取得が終わるまで `tasks` が `undefined` になりうるので、空の配列へ寄せて型を合わせています。
+
+**急がない2グループ**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 急がない2グループ
+        <TaskGroupSection
+          title="今後の予定"
+          tasks={groupedTasks.upcoming ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+
+        <TaskGroupSection
+          title="期限なし"
+          tasks={groupedTasks.noDueDate ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+```
+
+`titleClassName` を渡していないので、見出しは通常の色になります。並べる順番を「期限切れ・今日・今後・期限なし」にしてあるのは、画面を開いた人の目が最初に届く場所へ、いちばん急ぐタスクを置くためです。順番は呼び出す側が決めるので、入れ替えたいときはこの4つの位置を動かします。
+
+**1件も無いときの案内**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 1件も無いときの案内
+        {tasks && tasks.length === 0 && (
+          <div className="col-span-full flex flex-col
+            items-center justify-center py-12
+            text-center text-muted-foreground">
+            <p>あなたに割り当てられたタスクはありません</p>
+          </div>
+        )}
+      </div>
+```
+
+条件の先頭が `tasks &&` になっているのが要点です。`tasks` が `undefined` の間に件数を見ると、まだ届いていないだけなのに0件の案内が出ます。4つのグループは空なら自分で消えるので、全部が空のときだけこの案内が残ります。
+
+**2つのダイアログ**:
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+// 完成版: 2つのダイアログ
+      <TaskDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={handleSubmit}
+        initialData={editingTask}
+        projects={projects ?? []}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            deleteMutation.mutate({
+              id: deleteTargetId,
+            });
+          }
+        }}
+        isPending={deleteMutation.isPending}
+      />
+    </AppLayout>
+  );
+}
+```
+
+2つとも、タスクを並べる `</div>` の外側に置いてあります。カードの並びの中に入れると、グリッドの1マスとして扱われて位置が崩れるためです。`isPending` を渡しているので、削除の返事を待つ間は確認ボタンが押せなくなり、同じタスクを2回消しに行く事故を防げます。
+
 ## 今日のまとめ
 
 Day 17 おつかれさまでした。これで自分専用のタスクダッシュボードが完成しました。プロジェクトマネージャーが使うような機能を自分で作れるようになりました。

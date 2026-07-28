@@ -644,6 +644,374 @@ const statusData =
 
 集計はデータの近くにあるサーバー側で1回だけ行い、クライアントは受け取った結果をそのまま描きます。型は tRPC が推論するので、同じ形の型を手書きで二重に持たないよう気をつけます。
 
+## 完成コード全体
+
+今日触ったファイルは1つだけです。ただし Day 21 で書いたコードの上へ、インポート・定数・データ加工・JSX を別々の場所に貼り重ねました。どこへ何を入れたか分からなくなった場合は、以下のコードで `src/app/report/page.tsx` を丸ごと置き換えてください。上から順に読むと、Step 2 から Step 8 で書いた断片が1つのファイルへどう収まったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/app/report/page.tsx` | レポート画面。統計カード・円グラフ2枚・プロジェクト統計テーブルを1ページに並べる | Step 2〜Step 8 |
+
+### `src/app/report/page.tsx`
+
+**画面部品の取り込み**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: 画面部品の取り込み
+'use client';
+
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
+import { AppLayout } from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+```
+
+`recharts` が先頭に来て `@/` で始まる自分のプロジェクトの部品が後ろに続くのは、Biome が外部ライブラリを先に並べる決まりだからです。手元の並びが違っても `npm run fix` で同じ形に直るので、写経のときに順番を気にする必要はありません。並びより大事なのは中身のほうで、`recharts` の6つのうち1つでも欠けると、その部品を書いた行で名前が見つからないというエラーになります。
+
+**色とラベルの定数**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 色とラベルの定数、通信の入口
+import {
+  isTaskPriority,
+  TASK_PRIORITY_COLORS,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+const CHART_FALLBACK_COLOR = '#9e9e9e';
+```
+
+優先度とステータスで、型ガード・色・ラベルの3点セットをそろえて取り込みます。色とラベルを画面側に書き写さないのは、あとで定数を直したときにこのページだけ古い色で取り残されるのを防ぐためです。`CHART_FALLBACK_COLOR` はファイルの一番外側に置きます。コンポーネント関数の中へ入れても動きますが、描き直しのたびに同じ文字列を作り直すことになります。
+
+**取得と表示用の値づくり**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: 取得と表示用の値づくり
+export default function ReportPage() {
+  const { data: overview, isLoading } =
+    api.report.getOverview.useQuery();
+
+  const totalTasks = overview?.totalTasks ?? 0;
+  const completionRate =
+    overview?.completionRate ?? 0;
+  const totalTimeHours =
+    ((overview?.totalTimeSpent ?? 0) / 60)
+      .toFixed(1);
+  const averageTimeHours =
+    ((overview?.averageTimePerTask ?? 0) / 60)
+      .toFixed(1);
+```
+
+サーバーから届く数字を、画面へ出す形に整えるのがこの4行です。時間の2つだけ `/ 60` を挟んでいるのは、サーバーが分で返すからです。割り算を JSX の中へ書かず先に済ませておくと、表示部分は変数名を置くだけになり、カードのどれが何の値かを目で追えます。`?? 0` は `undefined / 60` が `NaN` になるのを防ぐ守りです。
+
+**円グラフへ渡す2つの配列**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 円グラフへ渡す2つの配列
+  const statusData =
+    overview?.statusData.map((entry) => ({
+      ...entry,
+      name: isTaskStatus(entry.key)
+        ? TASK_STATUS_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  const priorityData =
+    overview?.priorityData.map((entry) => ({
+      ...entry,
+      name: isTaskPriority(entry.key)
+        ? TASK_PRIORITY_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+```
+
+2つの配列は、読み込み判定より前に置きます。`if (isLoading)` の下へ移しても画面は動きますが、`return` を挟んだ先で `const` を書くことになり、値を用意する場所が読み込み判定の前後に散らばります。`?? []` があるので、まだ何も届いていない一瞬でも `statusData` は配列のままです。型を書いていないのは、tRPC が `getOverview` の戻り値から `key` と `value` の形を推論するからです。
+
+**return の外枠と見出し**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: return の外枠と見出し
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl
+            font-bold tracking-tight">
+            レポート・統計
+          </h1>
+          <p className="text-muted-foreground">
+            プロジェクトの進捗とタスクの
+            状況を確認できます。
+          </p>
+        </div>
+```
+
+`AppLayout` で囲んでいるので、サイドバーとヘッダーはこのファイルに書かなくても付いてきます。`space-y-6` を持つ `div` が、このあと並べる統計カード・グラフ・テーブルの間隔をまとめて決めます。カードごとに余白を書かずに済むのは、縦に積む要素の間隔を親が1か所で持っているからです。
+
+**統計カードの前半**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 統計カード（タスク数・完了率）
+        <div className="grid grid-cols-1
+          sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                タスク数</p>
+              <p className="text-3xl font-bold">
+                {totalTasks}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了率</p>
+              <p className="text-3xl font-bold">
+                {completionRate}%</p>
+            </CardContent>
+          </Card>
+```
+
+グリッドの列数を画面幅で3段階に変えているのは、`text-3xl` の数字が折り返さない幅を保つためです。4枚を横一列に並べたまま画面を狭めると、1枚あたりの幅が数字の桁数を下回り、`120` のような値が2行に割れます。カードの中身が2枚とも同じ形なのは、見出しの文字と数字の大きさをそろえて、4枚を1つのまとまりとして読ませるためです。
+
+**統計カードの後半**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 統計カード（作業時間の合計と平均）
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                合計作業時間</p>
+              <p className="text-3xl font-bold">
+                {totalTimeHours}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                平均作業時間/タスク</p>
+              <p className="text-3xl font-bold">
+                {averageTimeHours}h</p>
+            </CardContent>
+          </Card>
+        </div>
+```
+
+時間の2枚は、変数の中身がすでに文字列なので `h` を後ろに足すだけです。末尾の `</div>` は、前のブロックで開いたグリッドを閉じるタグになります。ここを書き忘れると、このあとのグラフ2枚までグリッドの中へ入り、4列のうちの1マスに押し込まれた細いグラフが並びます。
+
+**ステータス円グラフの枠**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: ステータス円グラフの枠
+        <div className="grid grid-cols-1
+          md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>ステータス別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+```
+
+`h-[300px]` を持つ `div` が、`ResponsiveContainer` の `height="100%"` の基準になります。この `div` を外すと基準の高さが決まらず、100% は 0 と計算されて扇が1枚も描かれません。グラフのグリッドを統計カードとは別の `div` にしてあるのは、カードは4列、グラフは2列と、ちょうどよい列数が違うからです。
+
+**ステータス円グラフの色付け**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: ステータス円グラフの色と閉じタグ
+                      {statusData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskStatus(entry.key)
+                              ? TASK_STATUS_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+```
+
+`Cell` はデータ1件につき1つ作り、その扇の色だけを受け持ちます。`isTaskStatus` を挟んでから対応表を引いているのは、サーバーから届く `key` の中身を TypeScript が文字列としてしか知らないからです。型ガードを通さずに `TASK_STATUS_COLORS[entry.key]` と書くと、どの文字列でも引ける保証が無いという型エラーになります。`Tooltip` と `Legend` を `Pie` の外に置くのは、この2つが扇そのものではなくグラフ全体に付く表示だからです。
+
+**優先度円グラフの枠**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 優先度円グラフの枠
+          <Card>
+            <CardHeader>
+              <CardTitle>優先度別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={priorityData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+```
+
+ステータス側と変えたのは `CardTitle` の文言と `data` に渡す配列だけです。`dataKey` と `nameKey` を書き換えずに済むのは、Step 3 と Step 6 で2つの配列を `value` と `name` という同じプロパティ名にそろえたからです。形をそろえておくと、グラフを増やすたびに設定を読み直す手間が減ります。
+
+**優先度円グラフの色付け**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 優先度円グラフの色と閉じタグ
+                      {priorityData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskPriority(entry.key)
+                              ? TASK_PRIORITY_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+```
+
+最後の `</div>` でグラフ用のグリッドを閉じます。ここまでで `<Card>` が2つ入った状態になり、画面幅が `md` 以上なら横並び、それより狭ければ縦積みになります。閉じ忘れると、次のプロジェクト統計テーブルまでグリッドの中へ入り、グラフの隣に半分の幅の表が置かれます。
+
+**プロジェクト統計テーブルの見出し**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: プロジェクト統計テーブルの見出し
+        <Card>
+          <CardHeader>
+            <CardTitle>プロジェクト統計</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">
+                    プロジェクト</TableHead>
+                  <TableHead className="text-right">
+                    タスク数</TableHead>
+                  <TableHead className="text-right">
+                    完了</TableHead>
+                  <TableHead className="text-right">
+                    進捗</TableHead>
+                  <TableHead className="text-right">
+                    作業時間</TableHead>
+                </TableRow>
+              </TableHeader>
+```
+
+数字の列に `text-right` を付けているのは、桁数の違う値を右端でそろえるためです。`7` と `123` を左寄せで並べると一の位の位置がずれ、大小を見比べるのに時間がかかります。先頭の列だけ `w-[200px]` で幅を固定してあるのは、プロジェクト名の長さで右側の列がずれないようにするためです。
+
+**プロジェクト統計テーブルの行**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: プロジェクト統計テーブルの行
+              <TableBody>
+                {overview?.projectStats.map((stat) => (
+                  <TableRow key={stat.id}>
+                    <TableCell className="font-medium">
+                      {stat.name}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.completedTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.progress.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTimeHours.toFixed(1)}h
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+```
+
+`key` に `stat.id` を渡すのは、React が描き直しのときにどの行がどのプロジェクトかを見分けるためです。配列の番号を渡すと、プロジェクトを新しく作って並び順が変わったときに、前の行の表示を別のプロジェクトへ流用します。`toFixed(1)` は表示のときだけ小数を1桁へ丸める指定で、サーバーが返す `71.42857142857143` をそのまま出さないための処理です。
+
+**ファイル末尾の閉じタグ**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 閉じタグと関数の終わり
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+開いたタグを内側から順に閉じて、ファイルが終わります。`Table` から `AppLayout` まで、開いた順の逆にたどるのが JSX の決まりです。順番を入れ違えると、保存した瞬間に構文エラーが出ます。ブラウザに映るのはグラフではなくエラー画面です。画面が真っ白になったときは、まずこの閉じタグの並びを上から数えてください。
+
 ## 今日のまとめ
 
 - [ ] Recharts で円グラフを表示できた

@@ -1206,6 +1206,1134 @@ export async function fetchWeeklyReportTasks(
 一覧やレポートで relation を使うなら、1 件ずつ取得する前に
 Prisma の `select` / `include` でまとめて取れないかを考えます。
 
+## 完成コード全体
+
+今日は3つのファイルを触りました。サーバーへ手続きを1本足し、新しいページを1枚作り、すでにあるページへリンクを1つ差し込む、という3方向の作業が混ざっています。どこへ何を貼ったか分からなくなった場合は、以下のコードで各ファイルを丸ごと置き換えてください。ファイルごとに、上から順に読めば Step 0 から Step 6 で書いた断片がどう1つにまとまったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/report.ts` | レポート集計 API。`getOverview` の下に `getWeeklyReport` を足す | Step 0 |
+| `src/app/report/weekly/page.tsx` | 週次レポート画面。サマリーカード3枚とグラフ3枚 | Step 4〜Step 6 |
+| `src/app/report/page.tsx` | レポート画面。週次レポートへのリンクを足す | Step 4 |
+
+### `src/server/api/routers/report.ts`
+
+**import 群**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts
+// 完成版: import 群
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
+```
+
+Day 21 の時点では上の5行しかありませんでした。今日足したのは `TRPCError`・`z`・`USER_ROLE` の3つで、どれも `getWeeklyReport` だけが使います。使う予定の無い import を先に書かないのは、Biome が未使用の名前をエラーとして報告するからです。実際に使う日まで待って足せば、警告を抱えたまま次の日へ進まずに済みます。
+
+**プロジェクトが無いときの戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: getOverview の入口
+export const reportRouter = createTRPCRouter({
+  getOverview: protectedProcedure.query(async ({ ctx }) => {
+    const projectIds = await getUserProjectIds(ctx.session.userId);
+
+    if (projectIds.length === 0) {
+      return {
+        totalProjects: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        inReviewTasks: 0,
+        todoTasks: 0,
+        completionRate: 0,
+        totalTimeSpent: 0,
+        averageTimePerTask: 0,
+        recentTasks: [],
+        statusData: [],
+        priorityData: [],
+        projectStats: [],
+      };
+    }
+```
+
+参加中のプロジェクトが1件も無い人には、この先の集計を走らせる意味がありません。ここで 0 と空配列を返しておくと、画面側は「データが無い場合」の分岐を書かずに済みます。返す形をあとの `return` とそろえてあるのが要点で、片方だけ項目を足すと、プロジェクトが無い人の画面でだけ値が欠けます。
+
+**集計範囲を決める2つの条件**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 集計範囲を決める2つの条件
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
+    // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      ...projectScope,
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+```
+
+条件を変数にしておくと、このあとの12本の問い合わせで同じ絞り込みを使い回せます。1本ずつ条件を書き写す形にすると、あとで除外の決まりを変えたときに直し漏れが出て、カードの合計と表の内訳が合わなくなります。`as const` を付けているのは、この2つを書き換えないと決めた印です。
+
+**Promise.all の受け取り側**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 12個の集計結果を受け取る
+    const [
+      projects,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      totalTimeAggregate,
+      recentTasks,
+      statusGroups,
+      priorityGroups,
+      projectTaskGroups,
+      projectDoneGroups,
+    ] = await Promise.all([
+```
+
+左辺の12個の名前は、このあと並べる問い合わせと同じ順番で受け取ります。件数どうしを入れ替えても型は合ってしまうので、間違えてもエラーは出ません。画面には形だけ正しい別の数字が並びます。集計を足すときは、左辺と問い合わせの両方の末尾へ足してください。
+
+**問い合わせの前半**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: プロジェクト一覧と件数の集計
+      prisma.project.findMany({
+        where: { id: { in: projectIds }, isArchived: false },
+        select: { id: true, name: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.task.count({ where: activeTasksFilter }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_PROGRESS,
+        },
+      }),
+```
+
+総タスク数だけ `activeTasksFilter` を使い、ステータス別の件数は `projectScope` を使います。母数からは中止したタスクを外し、内訳では実際のステータスをそのまま数える分担です。`select` で `id` と `name` だけを取るのは、画面で使う項目がこの2つに限られるからです。
+
+**問い合わせの中盤**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 残りの件数と作業時間の合計
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_REVIEW,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.TODO,
+        },
+      }),
+      prisma.task.aggregate({
+        where: activeTasksFilter,
+        _sum: { timeSpentMinutes: true },
+      }),
+```
+
+`aggregate` は合計や平均をデータベース側で出す関数です。全タスクを取り出してから足し算する書き方でも答えは同じですが、その場合は件数ぶんのデータがサーバーのメモリへ載ります。合計だけが欲しいので、数える仕事はデータベースに任せます。
+
+**直近タスクとステータス別集計**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 直近5件とステータス・優先度の集計
+      prisma.task.findMany({
+        where: activeTasksFilter,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.task.groupBy({
+        by: ['status'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+      prisma.task.groupBy({
+        by: ['priority'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+```
+
+`groupBy` は「同じ値ごとにまとめて数える」関数で、ステータス別と優先度別の件数をここで作ります。Day 22 の円グラフが受け取っているのは、この2本の結果です。`take: 5` を付けた `findMany` だけが実際の行を返しますが、それも直近5件に限っているので、返るデータ量は件数が増えても変わりません。
+
+**プロジェクト別集計と問い合わせの締め**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: プロジェクト別の集計2本
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+        _sum: { timeSpentMinutes: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+        _count: { _all: true },
+      }),
+    ]);
+```
+
+プロジェクト別の集計を2本に分けているのは、絞り込みの条件が違うからです。1本目は母数と作業時間、2本目は完了数だけを数えます。1本にまとめて完了かどうかも軸に加えると、完了が0件のプロジェクトの行が結果から消え、あとで組み立てるときに扱いが増えます。
+
+**表示用の値と Map の組み立て**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 合計値の計算と辞書づくり
+    const totalTimeSpent = totalTimeAggregate._sum.timeSpentMinutes ?? 0;
+    const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const doneCountByProject = new Map(
+      projectDoneGroups.map((group) => [group.projectId, group._count._all]),
+    );
+    const taskStatsByProject = new Map(
+      projectTaskGroups.map((group) => [
+        group.projectId,
+        {
+          totalTasks: group._count._all,
+          totalTimeSpent: group._sum.timeSpentMinutes ?? 0,
+        },
+      ]),
+    );
+```
+
+平均と完了率で `totalTasks > 0` を先に見ているのは、0 で割った答えが `NaN` になるからです。画面には数字ではなく「NaN%」という文字が出ます。`Map` に変えているのは、次のブロックでプロジェクト1件ずつに集計を引き当てるためです。配列のまま毎回 `find` を回すと、プロジェクトが増えるほど探す回数が掛け算で増えます。
+
+**getOverview の戻り値の前半**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 画面へ返す値の前半
+    return {
+      totalProjects: projects.length,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      completionRate,
+      totalTimeSpent,
+      averageTimePerTask,
+      recentTasks,
+      statusData: statusGroups.map((group) => ({
+        key: group.status,
+        value: group._count._all,
+      })),
+      priorityData: priorityGroups.map((group) => ({
+        key: group.priority,
+        value: group._count._all,
+      })),
+```
+
+`groupBy` の結果は `_count._all` という深い形をしています。それをそのまま返すと、画面側が Prisma の都合に合わせて書かれてしまいます。ここで `{ key, value }` へ並べ替えておくと、Day 22 の円グラフは受け取った配列に `name` を足すだけで済みます。
+
+**projectStats の組み立て**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: プロジェクト別統計と getOverview の締め
+      projectStats: projects.map((project) => {
+        const taskStats = taskStatsByProject.get(project.id) ?? {
+          totalTasks: 0,
+          totalTimeSpent: 0,
+        };
+        const completedTaskCount = doneCountByProject.get(project.id) ?? 0;
+
+        return {
+          id: project.id,
+          name: project.name,
+          totalTasks: taskStats.totalTasks,
+          completedTasks: completedTaskCount,
+          progress:
+            taskStats.totalTasks > 0 ? (completedTaskCount / taskStats.totalTasks) * 100 : 0,
+          totalTimeHours: taskStats.totalTimeSpent / 60,
+        };
+      }),
+    };
+  }),
+```
+
+起点をプロジェクト一覧にしているので、タスクが1件も無いプロジェクトの行が残ります。集計結果の側から作ると、その行は結果に現れず、作ったばかりのプロジェクトが表から消えます。`?? { totalTasks: 0, totalTimeSpent: 0 }` は、そのタスクが無いプロジェクトのための受け皿です。
+
+**getWeeklyReport の入力と認可**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: getWeeklyReport の入力検証と権限確認
+  getWeeklyReport: protectedProcedure
+    .input(
+      z.object({
+        weeks: z.number().int().min(1).max(12).default(4),
+        userId: z.string().cuid().optional(),
+      }).default({}),
+    )
+    .query(async ({ ctx, input }) => {
+      if (input.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+```
+
+入力の範囲をここで決めてしまうと、画面側は値の確かめ方を持たずに済みます。`.min(1).max(12)` を通らない値は tRPC が先に弾き、データベースまで届きません。権限の確認も入口に置きます。取得したあとで確かめる形にすると、返さないと決めたデータを一度は読み出すことになります。
+
+**集計期間の決め方**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 週バケットの上端と下端
+      const targetUserId = input.userId ?? ctx.session.userId;
+      const now = new Date();
+      // 週バケットは「今日で終わる直近7日間」を最終週として7日刻みで遡る。
+      // 旧実装は最終週が「今日0時〜現在」だけの進行中バケットで、「4週間」表示の
+      // 実カバー範囲が3週間+今日に縮んでいた（PR#285 レビュー指摘）。排他的上端を
+      // 明日0時に固定した完全な7日バケット×weeks本にすることで、ラベル・週平均の
+      // 分母と実際の集計範囲が一致し、範囲内タスクは必ずいずれかの週に入る。
+      // 日付ラベルは toISOString()（UTC）で出すため、バケット境界も UTC で刻む。
+      // ローカル時刻メソッドで刻むと、JST などのサーバーでラベルが1日ずれる。
+      const rangeEnd = new Date(now);
+      rangeEnd.setUTCHours(0, 0, 0, 0);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
+      const startDate = new Date(rangeEnd);
+      startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
+```
+
+上端を明日の 0 時に固定してから、そこから週数ぶん遡って下端を決めます。今この瞬間を上端にすると最後の週だけが数時間ぶんになり、「4週間」と書いてある画面が3週間と少ししか集めていない状態になります。長いコメントを残してあるのは、この境界がいちど間違えて直された箇所だからです。理由を消すと、次の人が元の書き方へ戻します。
+
+**絞り込み条件と1回の取得**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 対象タスクをまとめて取る
+      const where = {
+        completedAt: { gte: startDate, lte: now },
+        assigneeId: targetUserId,
+      };
+
+      const tasks = await prisma.task.findMany({
+        where,
+        select: {
+          id: true,
+          completedAt: true,
+          status: true,
+          priority: true,
+          project: { select: { id: true, name: true } },
+        },
+      });
+```
+
+期間全体を1回で取り、週への仕分けはこのあとの `filter` に任せます。週ごとに問い合わせる書き方だと、12週間を選んだときに12往復します。読み込む行数は変わらないのに、往復の回数だけが週数に比例して増えます。`where` を1か所にまとめてあるので、週ごとの絞り込みは日付の比較だけで済みます。
+
+**週ごとのバケットとステータス集計**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 週ごとの箱づくりとステータス別件数
+      const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
+        const weekStart = new Date(startDate);
+        weekStart.setUTCDate(weekStart.getUTCDate() + i * 7);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+        const weekTasks = tasks.filter(
+          (task) => task.completedAt && task.completedAt >= weekStart && task.completedAt < weekEnd,
+        );
+
+        return {
+          week: `${i + 1}週目`,
+          weekStart: weekStart.toISOString().split('T')[0],
+          totalCompleted: weekTasks.length,
+          byStatus: Object.fromEntries(
+            Object.values(TASK_STATUS).map((status) => [
+              status,
+              weekTasks.filter((t) => t.status === status).length,
+            ]),
+          ),
+```
+
+終わりを `< weekEnd` にしてあるので、境界ちょうどに完了したタスクが2つの週で二重に数えられません。`Array.from` で先に週数ぶんの箱を作るのは、完了が0件の週も配列へ残すためです。実際にあった週だけを作る書き方にすると、グラフの横軸から静かな週が抜け落ち、推移が実際より詰まって見えます。
+
+**優先度集計と getWeeklyReport の戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/report.ts（同じファイルの続き）
+// 完成版: 優先度別件数と返す値
+          byPriority: Object.fromEntries(
+            Object.values(TASK_PRIORITY).map((priority) => [
+              priority,
+              weekTasks.filter((t) => t.priority === priority).length,
+            ]),
+          ),
+        };
+      });
+
+      return {
+        weeks: input.weeks,
+        startDate: startDate.toISOString(),
+        endDate: now.toISOString(),
+        weeklyData,
+        totalCompleted: tasks.length,
+      };
+    }),
+});
+```
+
+`Object.values(TASK_STATUS)` と `Object.values(TASK_PRIORITY)` を回しているので、あとで種類を1つ増やしても、この集計は定数を直すだけで追従します。ここで `'DONE'` などを直に並べると、増えた種類がグラフから静かに抜けます。最後の `});` で `reportRouter` 全体が閉じ、手続きは `getOverview` と `getWeeklyReport` の2本立てになります。
+
+### `src/app/report/weekly/page.tsx`
+
+**日付とページ枠の取り込み**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// 完成版: 日付とページ枠の取り込み
+'use client';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { useState } from 'react';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+```
+
+先頭の `'use client'` が無いと、`useState` を書いた行でフックはサーバー側で使えないというエラーになります。`date-fns` の `format` と `ja` は対象期間カードの日付整形だけに使います。日付を `toLocaleDateString` で組む道はありますが、書式の指定が環境の設定に左右されるため、書式を文字で指定できる `format` を使います。
+
+**選択欄とグラフ部品の取り込み**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 選択欄とグラフ部品の取り込み
+import {
+  Select, SelectContent,
+  SelectItem, SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import {
+  Bar, BarChart, CartesianGrid,
+  Legend, Line, LineChart,
+  ResponsiveContainer,
+  Tooltip, XAxis, YAxis,
+} from 'recharts';
+import {
+  TASK_PRIORITY, TASK_PRIORITY_COLORS,
+} from '@/lib/constant/priority';
+import {
+  TASK_STATUS, TASK_STATUS_COLORS,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+const CHART_PRIMARY_COLOR = '#8884d8';
+```
+
+Recharts から取り込む10個のうち、`CartesianGrid`・`XAxis`・`YAxis` は今日が初登場です。円グラフには軸が無かったので、Day 22 では要りませんでした。優先度とステータスの定数を色つきで取り込むのは、Day 22 の円グラフと同じ色で棒を塗るためです。`CHART_PRIMARY_COLOR` だけは対応表を持たない折れ線1本ぶんの色なので、この画面の定数として1か所に置きます。
+
+**関数の入口とデータ取得**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 関数の入口とデータ取得
+export default function WeeklyReportPage() {
+  const [weeks, setWeeks] = useState('4');
+
+  const {
+    data: reportData,
+    isLoading,
+  } = api.report.getWeeklyReport.useQuery({
+    weeks: Number.parseInt(weeks, 10),
+  });
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+```
+
+`weeks` を文字列で持つのは、`Select` が文字列でしか値をやり取りしないからです。サーバー側の `weeks` は数値なので、`useQuery` へ渡すところで `Number.parseInt` を挟みます。`weeks` が変わると `useQuery` は新しい引数として扱い、自動でもう一度取りに行きます。取得の指示をどこにも書かずに済むのは、この仕組みのおかげです。
+
+**グラフへ渡す2つの配列**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: グラフへ渡す2つの配列
+  const chartData =
+    reportData?.weeklyData.map((week) => ({
+      name: week.week,
+      completed: week.totalCompleted,
+      high:
+        week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+      urgent:
+        week.byPriority[TASK_PRIORITY.URGENT]
+        ?? 0,
+    }));
+
+  const statusData =
+    reportData?.weeklyData.map((week) => ({
+      name: week.week,
+      done:
+        week.byStatus[TASK_STATUS.DONE] ?? 0,
+      inProgress:
+        week.byStatus[TASK_STATUS.IN_PROGRESS]
+        ?? 0,
+      inReview:
+        week.byStatus[TASK_STATUS.IN_REVIEW]
+        ?? 0,
+    }));
+```
+
+Recharts は「1週分が1オブジェクト、系列名がそのキー」という形の配列を求めます。サーバーが返す `byStatus` は入れ物が1段深いので、ここで平らな形へ組み替えます。2つの配列で `name` というキーをそろえてあるのは、3枚のグラフが同じ `XAxis dataKey="name"` を使えるようにするためです。
+
+**見出しの行**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 見出しの行
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center
+          justify-between">
+          <h1 className="text-3xl font-bold">
+            週次レポート
+          </h1>
+```
+
+見出しの行を `flex` にして `justify-between` を付けると、中の要素が左端と右端に分かれます。だから見出しの次に置く週数の選択欄が、自動で右端へ寄ります。この指定が無いと選択欄は見出しの真下へ回り込み、縦に2行ぶんの場所を取ります。
+
+**週数の選択欄**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 週数の選択欄
+          <div className="w-[150px]">
+            <Select
+              value={weeks}
+              onValueChange={setWeeks}>
+              <SelectTrigger>
+                <SelectValue placeholder="期間" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="4">
+                  4週間
+                </SelectItem>
+                <SelectItem value="8">
+                  8週間
+                </SelectItem>
+                <SelectItem value="12">
+                  12週間
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+```
+
+`onValueChange` に `setWeeks` をそのまま渡しているので、選んだ値が状態へ入り、`useQuery` の引数が変わって取り直しが始まります。選択肢を4・8・12の3つに絞ってあるのは、サーバー側の `.min(1).max(12)` の範囲に収めるためです。自由に数字を入れる欄にすると、13 を入れた読者が入力エラーだけを受け取ります。
+
+**完了タスク合計のカード**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 完了タスク合計のカード
+        <div className="grid grid-cols-1
+          md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了タスク合計
+              </p>
+              <p className="text-3xl font-bold">
+                {reportData?.totalCompleted ?? 0}
+              </p>
+            </CardContent>
+          </Card>
+```
+
+`?? 0` は、数字の場所が空欄になるのを防ぐだけの守りです。取得が失敗したときもここは 0 と表示されるので、「完了0件」との区別は付きません。区別を付けたい場合は `useQuery` から `error` も受け取り、失敗したときだけ別の文言を出す形にします。
+
+**週平均のカード**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 週平均のカード
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                週平均
+              </p>
+              <p className="text-3xl font-bold">
+                {reportData?.totalCompleted
+                  ? Math.round(
+                      reportData.totalCompleted
+                      / Number.parseInt(weeks, 10)
+                    )
+                  : 0}
+              </p>
+            </CardContent>
+          </Card>
+```
+
+割る数に使っているのは、API が返した週数ではなく画面が持っている `weeks` です。2つがずれると、合計は正しいのに平均だけが違う数字になります。ずれないのは、Step 0 で最終週を「今日を含む7日間」に固定したからです。`Math.round` で丸めているのは、`3.6666` のような値をカードに出さないためです。
+
+**対象期間のカード**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 対象期間のカード
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                対象期間</p>
+              <p className="text-lg font-semibold">
+                {reportData?.startDate
+                  && reportData?.endDate
+                  ? `${format(
+                      new Date(reportData.startDate),
+                      'yyyy/MM/dd', { locale: ja }
+                    )} - ${format(
+                      new Date(reportData.endDate),
+                      'yyyy/MM/dd', { locale: ja }
+                    )}`
+                  : '-'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+```
+
+2つの日付がそろっているときだけ期間を組み立て、片方でも無ければ `'-'` を出します。片方だけで組むと `Invalid Date` という文字が画面に出ます。このカードだけ `text-lg` にしてあるのは、日付2つを並べた文字列が `text-3xl` では折り返すからです。
+
+**週別完了タスク数の折れ線グラフ**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 週別完了タスク数の折れ線グラフ
+        <div className="grid grid-cols-1
+          lg:grid-cols-2 gap-6">
+          <Card className="col-span-1 lg:col-span-2">
+            <CardHeader>
+              <CardTitle>週別完了タスク数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis /><Tooltip /><Legend />
+                    <Line type="monotone"
+                      dataKey="completed"
+                      stroke={CHART_PRIMARY_COLOR}
+                      name="完了数" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+```
+
+このカードだけ `lg:col-span-2` で2列ぶんの幅を取っています。折れ線で見せたいのは件数そのものではなく増減の向きなので、横に長いほうが向きを読み取りやすくなります。`chartData ?? []` の `?? []` は、`chartData` が `undefined` のときに `LineChart` へ何も渡らない状態を避けるための既定値です。
+
+**優先度別分布の棒グラフ**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 優先度別分布の棒グラフ
+          <Card>
+            <CardHeader>
+              <CardTitle>優先度別分布</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis /><Tooltip /><Legend />
+                    <Bar dataKey="urgent" name="緊急"
+                      fill={TASK_PRIORITY_COLORS.URGENT} />
+                    <Bar dataKey="high" name="高"
+                      fill={TASK_PRIORITY_COLORS.HIGH} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+```
+
+`Bar` が2本だけなのは、`chartData` に `urgent` と `high` しか入れていないからです。週次レポートで確かめたいのは急ぎの仕事の片づき方なので、低と中の件数は落としてあります。4段階すべての内訳は、Day 22 の円グラフのほうで見られます。`fill` を定数から引くのは、色を1か所で管理するためです。
+
+**ステータス別内訳の枠**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: ステータス別内訳の枠
+          <Card>
+            <CardHeader>
+              <CardTitle>ステータス別内訳</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={statusData ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis /><Tooltip /><Legend />
+```
+
+外側の作りは優先度グラフとそろえ、`data` だけを `statusData` に変えます。2つの配列はどちらも週ラベルを `name` へ入れてあります。だから `XAxis` の指定は書き換えずに済みます。`h-[300px]` は3枚とも同じ値です。3枚を横へ並べても高さがそろいます。
+
+**ステータス別内訳の積み上げと閉じタグ**:
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
+// 完成版: 積み上げの3本と閉じタグ
+                    <Bar dataKey="done"
+                      stackId="status" name="完了"
+                      fill={TASK_STATUS_COLORS.DONE} />
+                    <Bar dataKey="inProgress"
+                      stackId="status" name="進行中"
+                      fill={TASK_STATUS_COLORS.IN_PROGRESS} />
+                    <Bar dataKey="inReview"
+                      stackId="status" name="レビュー中"
+                      fill={TASK_STATUS_COLORS.IN_REVIEW} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+3本の `Bar` に同じ `stackId` を付けると、横に並ばず1本の棒として積み上がります。週ごとの合計と内訳を同時に読ませたいので、並べるのではなく積みます。`stackId` を1つでも書き忘れると、その系列だけが隣に独立した棒として立ちます。最後の閉じタグは `BarChart` から `AppLayout` まで、開いた順の逆にたどります。
+
+### `src/app/report/page.tsx`
+
+このファイルで今日書き換えたのは、先頭の import 2行と見出しの行だけです。ただし見出しの行はタグの入れ子が1段深くなるため、貼る場所を間違えると統計カードまで巻き込みます。以下は Day 22 の終わりの状態にリンクを足した全文で、ブロックの区切りは Day 22 の「完成コード全体」とそろえてあります。2つを並べると、どこが増えたかを行単位で見比べられます。
+
+**画面部品の取り込み**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: 画面部品の取り込み
+'use client';
+
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
+import { AppLayout } from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+```
+
+今日足したのは `ArrowRight` と `Link` の2行です。`recharts` より前に並ぶのは、Biome が外部ライブラリをアルファベット順に置く決まりだからです。手元で末尾に足していても `npm run fix` でここへ移るので、差分を見て驚かないでください。
+
+**色とラベルの定数**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 色とラベルの定数、通信の入口
+import {
+  isTaskPriority,
+  TASK_PRIORITY_COLORS,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+const CHART_FALLBACK_COLOR = '#9e9e9e';
+```
+
+ここは Day 22 のままです。週次ページも同じ定数から色を引くので、2つの画面で同じステータスが同じ色になります。片方の画面だけ色を直に書くと、行き来したときに同じ「完了」が違う色で出て、読者は別のものを見ていると受け取ります。
+
+**取得と表示用の値づくり**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: 取得と表示用の値づくり
+export default function ReportPage() {
+  const { data: overview, isLoading } =
+    api.report.getOverview.useQuery();
+
+  const totalTasks = overview?.totalTasks ?? 0;
+  const completionRate =
+    overview?.completionRate ?? 0;
+  const totalTimeHours =
+    ((overview?.totalTimeSpent ?? 0) / 60)
+      .toFixed(1);
+  const averageTimeHours =
+    ((overview?.averageTimePerTask ?? 0) / 60)
+      .toFixed(1);
+```
+
+呼んでいるのは `getOverview` だけで、今日足した `getWeeklyReport` はこのページから呼びません。1つの画面に両方の集計を載せると、週次のためだけに待ち時間が伸びます。見たい人だけがリンクをたどる形にして、レポート画面の表示は Day 22 と同じ速さのまま保ちます。
+
+**円グラフへ渡す2つの配列**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 円グラフへ渡す2つの配列
+  const statusData =
+    overview?.statusData.map((entry) => ({
+      ...entry,
+      name: isTaskStatus(entry.key)
+        ? TASK_STATUS_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  const priorityData =
+    overview?.priorityData.map((entry) => ({
+      ...entry,
+      name: isTaskPriority(entry.key)
+        ? TASK_PRIORITY_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+```
+
+この2つも Day 22 のままです。週次ページの `chartData` とは形が違います。こちらは1件が1つのステータス、あちらは1件が1週を表します。同じ `statusData` という名前が両方の画面に出てきますが、中身が違うことを頭に入れておくと、グラフが空のときにどちらの組み替えを見ればよいか迷いません。
+
+**見出しとリンクの行**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: 見出しと週次レポートへのリンク
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4
+          items-start sm:flex-row
+          sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              レポート・統計
+            </h1>
+            <p className="text-muted-foreground">
+              プロジェクトの進捗とタスクの状況を確認できます。
+            </p>
+          </div>
+          <Link
+            href="/report/weekly"
+            className="inline-flex items-center gap-2
+              text-sm font-medium text-primary hover:underline"
+          >
+            週次レポートを見る
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+```
+
+今日の変更はここだけです。Day 22 では見出しと説明文を包む `div` が1つでしたが、リンクを右へ置くために外側の `div` を1つ増やし、見出しの組と `Link` を横に並べています。狭い画面では `flex-col` で縦積みになり、`sm` 以上で横並びに切り替わります。リンクを見出しの組の中へ入れてしまうと、説明文の下に潜って気づかれません。
+
+**統計カードの前半**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 統計カード（タスク数・完了率）
+        <div className="grid grid-cols-1
+          sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                タスク数</p>
+              <p className="text-3xl font-bold">
+                {totalTasks}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了率</p>
+              <p className="text-3xl font-bold">
+                {completionRate}%</p>
+            </CardContent>
+          </Card>
+```
+
+このグリッドは、前のブロックで閉じた見出しの `div` の外側に並びます。リンクを足すときに閉じタグを1つ落とすと、カードのグリッドが見出しの `div` の中へ入り、右端のリンクの隣に4枚のカードが押し込まれます。カードが急に細くなったときは、見出しの `</div>` の位置を確かめてください。
+
+**統計カードの後半**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 統計カード（作業時間の合計と平均）
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                合計作業時間</p>
+              <p className="text-3xl font-bold">
+                {totalTimeHours}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                平均作業時間/タスク</p>
+              <p className="text-3xl font-bold">
+                {averageTimeHours}h</p>
+            </CardContent>
+          </Card>
+        </div>
+```
+
+作業時間の2枚が持っている値は、期間で切らない全部の合計です。週次ページの「完了タスク合計」とは数え方が違います。2つの画面で数字が食い違うのは正しい状態です。同じ数を並べたい場合は、2つの画面を同じ期間で切る必要があります。
+
+**ステータス円グラフの枠**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: ステータス円グラフの枠
+        <div className="grid grid-cols-1
+          md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>ステータス別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+```
+
+`h-[300px]` の `div` が高さの基準になる形は、週次ページの3枚のグラフと同じです。高さの数字までそろえてあるので、2つの画面を行き来してもグラフの大きさが変わりません。この基準の `div` を外すと `height="100%"` が 0 と計算され、扇は1枚も描かれません。
+
+**ステータス円グラフの色付け**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: ステータス円グラフの色と閉じタグ
+                      {statusData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskStatus(entry.key)
+                              ? TASK_STATUS_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+```
+
+型ガードを挟んでから対応表を引く形は、週次ページの `fill={TASK_STATUS_COLORS.DONE}` とは書き方が違います。あちらは書く時点でステータスが決まっているので、確認が要りません。こちらはサーバーから届いた文字列で引くため、その文字列が対応表のキーだと確かめる手順が入ります。
+
+**優先度円グラフの枠**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 優先度円グラフの枠
+          <Card>
+            <CardHeader>
+              <CardTitle>優先度別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={priorityData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+```
+
+この円グラフは優先度4段階すべてを扇にします。週次ページの棒グラフが緊急と高の2本だけなのは、あちらが急ぎの仕事の推移を見る画面だからです。全体の割合はこちら、週ごとの推移はあちらと役割を分けてあるので、どちらかへ寄せる必要はありません。
+
+**優先度円グラフの色付け**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 優先度円グラフの色と閉じタグ
+                      {priorityData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskPriority(entry.key)
+                              ? TASK_PRIORITY_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+```
+
+末尾の `</div>` でグラフ用のグリッドが閉じます。ここを閉じ忘れると、次のプロジェクト統計テーブルがグリッドの2列目に入り、円グラフの隣に半分の幅で置かれます。表の列が窮屈になったときは、この行の有無を先に確かめてください。
+
+**プロジェクト統計テーブルの見出し**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: プロジェクト統計テーブルの見出し
+        <Card>
+          <CardHeader>
+            <CardTitle>プロジェクト統計</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">
+                    プロジェクト</TableHead>
+                  <TableHead className="text-right">
+                    タスク数</TableHead>
+                  <TableHead className="text-right">
+                    完了</TableHead>
+                  <TableHead className="text-right">
+                    進捗</TableHead>
+                  <TableHead className="text-right">
+                    作業時間</TableHead>
+                </TableRow>
+              </TableHeader>
+```
+
+Step 2 で読んだ見出しの定義は、この5列と同じ形です。あちらは読み比べ用なので、貼ると同じ表が2つ並びます。表が二重になったときは、こちらの1組だけを残してください。
+
+**プロジェクト統計テーブルの行**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: プロジェクト統計テーブルの行
+              <TableBody>
+                {overview?.projectStats.map((stat) => (
+                  <TableRow key={stat.id}>
+                    <TableCell className="font-medium">
+                      {stat.name}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.completedTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.progress.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTimeHours.toFixed(1)}h
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+```
+
+`projectStats` は `getOverview` が組み立てた配列で、Step 1 で確かめたとおり画面側では数え直しません。`toFixed(1)` は表示のときだけ小数を1桁へ丸める処理です。サーバーが返す `71.42857142857143` をそのまま出すと、列の幅が行ごとに変わって表が読みにくくなります。
+
+**ファイル末尾の閉じタグ**:
+
+```typescript
+// filepath: src/app/report/page.tsx（同じファイルの続き）
+// 完成版: 閉じタグと関数の終わり
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+開いたタグを内側から順に閉じて、ファイルが終わります。今日の作業でリンクを足した位置はこの上のほうなので、末尾の並びは Day 22 と変わりません。画面が真っ白になったときは、増やした見出しの `div` の閉じタグが足りているかを先に数えてください。
+
 ## 今日のまとめ
 
 - [ ] プロジェクト別統計を計算できた

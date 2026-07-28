@@ -1171,6 +1171,1135 @@ const handleSubmit = (data: TaskFormData) => {
 `invalidate()` だけでも正しいです。でも編集UIでは、先にキャッシュを更新してから最後に再同期すると体験が一段よくなります。
 楽観的更新は「先に見せる」「失敗したら戻す」「最後に確認する」の3点セットで考えます。
 
+## 完成コード全体
+
+今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、Step 0 から Step 10 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` は、この節に載せていません。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/task.ts` | タスクの取得・作成・更新・削除の手続き | Step 0 |
+| `src/app/task/page.tsx` | 一覧ページへの編集・削除の組み込み | Step 2 から Step 10 |
+
+### `src/server/api/routers/task.ts`
+
+**インポート**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: インポート
+import { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import {
+  assertMemberPermission,
+  findTaskWithPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+```
+
+`_helpers/permission` から借りている3つが、権限のかかる処理の入口です。今日足したのは真ん中の `findTaskWithPermission` だけで、新しい `import` 文を増やさず同じ中括弧の中へ並べます。同じファイルを指す `import` が2本並んでも動きますが、`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が1本へまとめ直します。
+
+**create の入力スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: create の入力スキーマ
+const taskCreateSchema = z.object({
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: taskStatusSchema.default(TASK_STATUS.TODO),
+  priority: taskPrioritySchema.default(TASK_PRIORITY.MEDIUM),
+  dueDate: z.string().datetime().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().cuid(),
+  assigneeId: z.string().cuid().optional(),
+});
+```
+
+作成のスキーマには `.nullable()` が1つもありません。まだ存在しない行を作る手続きなので、「この項目を空にする」という指示そのものが要らないからです。この違いが、次の更新のスキーマとの見分けどころになります。
+
+**update の入力スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update の入力スキーマ
+const taskUpdateSchema = z.object({
+  id: z.string().cuid(),
+  expectedUpdatedAt: z.string().datetime().optional(),
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  status: taskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  dueDate: z.string().datetime().optional().nullable(),
+  completedAt: z.string().datetime().optional().nullable(),
+  estimatedHours: z.number().min(0).optional().nullable(),
+  actualHours: z.number().min(0).optional(),
+  projectId: z.string().cuid().optional(),
+  assigneeId: z.string().cuid().optional().nullable(),
+});
+```
+
+`id` 以外がすべて `.optional()` なのは、編集では変えたい項目だけを送るからです。そこへ `.nullable()` が重なっている項目は、「送らない」と「空にする」の2つを区別します。この2つを分けておかないと、担当者を外す操作と担当者を触らない操作を同じ形で表すことになり、サーバー側はどちらか一方しか実現できません。
+
+**並び順の採番ヘルパー**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: position の採番
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+  );
+  if (lockedProjects.length === 0) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'プロジェクトが見つかりません',
+    });
+  }
+
+  const maxPosition = await tx.task.findFirst({
+    where: { projectId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  return (maxPosition?.position ?? -1) + 1;
+};
+```
+
+今日この関数の出番が増えます。作成のときだけでなく、タスクを別のプロジェクトへ移すときも新しい並び番号が要るからです。第1引数が `tx` に固定してあるので、トランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の外から呼ぶ書き方は型の時点で通りません。
+
+**担当者の所属チェック**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: 担当者の所属チェック
+async function assertTaskAssigneeBelongsToProject(
+  projectId: string,
+  assigneeId: string,
+): Promise<void> {
+  const member = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: assigneeId,
+        projectId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!member) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '担当者にはこのプロジェクトのメンバーを指定してください',
+    });
+  }
+}
+```
+
+第1引数を `projectId` にしてあるおかげで、この関数は更新でもそのまま使えます。更新では、移動先のプロジェクトを渡して確認します。対象のタスクではなくプロジェクトを受け取る形にしておくと、まだ移動していない時点の確認にも使えます。
+
+**getAll の入力**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: getAll の入力
+export const taskRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          projectId: z.string().cuid().optional(),
+          status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
+          assigneeId: z.string().cuid().optional(),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.TaskWhereInput = {};
+      const limit = input?.limit ?? 100;
+      const offset = input?.offset ?? 0;
+```
+
+`limit` と `offset` に `??` の既定値が二重に書いてあるのは、`input` そのものが `undefined` のときにスキーマの `.default(...)` が働かないからです。スキーマの既定値は「オブジェクトは来たが項目が無い」場合にだけ効きます。
+
+**getAll の絞り込み**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: getAll の絞り込み
+      const projectIds = await getUserProjectIds(ctx.session.userId);
+
+      where.projectId = { in: projectIds };
+
+      if (input?.projectId) {
+        if (!projectIds.includes(input.projectId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'このプロジェクトへのアクセス権限がありません',
+          });
+        }
+        where.projectId = input.projectId;
+      }
+
+      if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
+      if (input?.assigneeId) where.assigneeId = input.assigneeId;
+```
+
+`where.projectId` を先に自分のプロジェクトへ固定してから、指定があれば1つに狭める順番が要点です。逆順で書くと、指定されたプロジェクトが自分の一覧に無くても素通りします。
+
+**getAll の取得**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: getAll の取得
+      return await prisma.task.findMany({
+        where,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+```
+
+`include` で関連を一緒に取っておくと、画面側は追加の通信なしでカードを描けます。`createdBy` と `assignee` に `USER_SELECT` を挟んであるのは、`true` と書くとハッシュ化済みパスワードを含む全項目が画面まで運ばれるためです。
+
+**getAll の並び順**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: getAll の並び順
+        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+        take: limit,
+        skip: offset,
+      });
+    }),
+```
+
+第1条件が `position` の昇順なので、採番した番号がそのまま画面の並びになります。今日の更新でタスクを別のプロジェクトへ移すと新しい番号が振られ、移動先の末尾へ並びます。
+
+**getById の取得**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: getById の取得
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+```
+
+`project` の中で `members` を自分だけに絞って取っているので、この1件を見るだけで閲覧してよい相手かが分かります。絞り込みを外すと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。
+
+**getById の権限確認**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: getById の権限確認
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'タスクが見つかりません',
+        });
+      }
+
+      assertMemberPermission(task.project.members);
+
+      return task;
+    }),
+```
+
+`assertMemberPermission` に第2引数を渡していないのは、閲覧に必要な権限がメンバーであること自体だからです。今日書く更新と削除では、ここへ `'canEdit'` と `'canDelete'` を渡して要求を1段上げます。
+
+**create の権限確認**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: create の権限確認
+  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
+    const project = await prisma.project.findUnique({
+      where: { id: input.projectId },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
+
+    assertMemberPermission(project.members, 'canEdit');
+
+    if (input.assigneeId) {
+      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
+    }
+```
+
+権限の確認を保存より先に置いてあるのは、弾かれる場合に DB へ1行も書かないためです。作成の対象はまだ存在しないタスクなので、確認の相手はプロジェクトになります。この点が、対象のタスクから確認を始める更新との違いです。
+
+**create のデータ組み立て**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: create のデータ組み立て
+    return await prisma.$transaction(async (tx) => {
+      const createData: Prisma.TaskCreateInput = {
+        title: input.title,
+        status: input.status,
+        priority: input.priority,
+        dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        position: await getNextTaskPosition(tx, input.projectId),
+        project: {
+          connect: { id: input.projectId },
+        },
+        createdBy: {
+          connect: { id: ctx.session.userId },
+        },
+      };
+
+      if (input.description !== undefined) {
+        createData.description = input.description;
+      }
+      if (input.estimatedHours !== undefined) {
+        createData.estimatedHours = input.estimatedHours;
+      }
+```
+
+`createdBy` を `ctx.session.userId` から取っているのは、作成者を画面に決めさせないためです。画面から送られた値を使うと、他人の名前でタスクを作る送信を止められません。
+
+**create の保存**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: create の保存
+      if (input.assigneeId) {
+        createData.assignee = {
+          connect: { id: input.assigneeId },
+        };
+      }
+
+      return await tx.task.create({
+        data: createData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+        },
+      });
+    });
+  }),
+```
+
+`prisma.task.create` ではなく `tx.task.create` を呼ぶところが、この部分でいちばん間違えやすい箇所です。`prisma` のまま書くとトランザクションの外で保存され、採番のロックが効きません。
+
+**update の下ごしらえ**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update の下ごしらえ
+  update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, expectedUpdatedAt, ...data } = input;
+
+    const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
+
+    const updateData: Prisma.TaskUpdateInput = {};
+    if (data.title !== undefined) {
+      updateData.title = data.title;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+```
+
+`const { id, expectedUpdatedAt, ...data } = input` で3つに分けているのは、この3つの使い道が違うからです。`id` は対象を指す値、`expectedUpdatedAt` はぶつかりの判定に使う値、`data` は書き換える中身です。同じ `input` のまま扱うと、書き換え項目を詰める処理へ `id` まで紛れ込みます。
+
+**update のステータスと完了日時**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update のステータスと完了日時
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+      if (data.completedAt === undefined) {
+        if (data.status === TASK_STATUS.DONE) {
+          updateData.completedAt = new Date();
+        } else {
+          updateData.completedAt = null;
+        }
+      }
+    }
+```
+
+完了日時を自動で動かすのは、画面がその値を送ってこなかったときだけです。送られてきた値を尊重しないと、あとで完了日時を手で直す機能を足せなくなります。ステータスと完了日時を同じ場所で決めておくと、「完了なのに完了日時が空」という食い違いが生まれません。
+
+**update の残りの項目**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update の残りの項目
+    if (data.priority !== undefined) {
+      updateData.priority = data.priority;
+    }
+    if (data.estimatedHours !== undefined) {
+      updateData.estimatedHours = data.estimatedHours;
+    }
+    if (data.actualHours !== undefined) {
+      updateData.actualHours = data.actualHours;
+    }
+    if (data.dueDate !== undefined) {
+      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    }
+    if (data.completedAt !== undefined) {
+      updateData.completedAt = data.completedAt ? new Date(data.completedAt) : null;
+    }
+
+    const isProjectChanging =
+      data.projectId !== undefined && data.projectId !== existingTask.projectId;
+    const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+```
+
+判定に `!== undefined` を使い、`if (data.priority)` と書いていないのが要点です。後者だと `0` や空文字が偽と見なされ、`estimatedHours` を0時間へ直す編集が黙って無視されます。日付の2つが `? :` で分かれているのは、値があれば `Date` へ、空なら `null` へ、と行き先が2つあるためです。
+
+**update のプロジェクト移動**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update のプロジェクト移動
+    if (isProjectChanging) {
+      const destinationMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: targetProjectId,
+          },
+        },
+      });
+      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+      updateData.project = { connect: { id: targetProjectId } };
+    }
+```
+
+移動元で編集できることは、移動先で編集できることを意味しません。だから移動先でも `'canEdit'` を確認します。ここを飛ばすと、自分が入っていないプロジェクトへタスクを送り込めてしまいます。`destinationMember ? [destinationMember] : []` と配列に包むのは、`assertMemberPermission` が一覧を受け取る形だからです。
+
+**update の担当者**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update の担当者
+    if (data.assigneeId !== undefined) {
+      if (data.assigneeId === null) {
+        updateData.assignee = { disconnect: true };
+      } else {
+        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
+        updateData.assignee = { connect: { id: data.assigneeId } };
+      }
+    } else if (isProjectChanging && existingTask.assigneeId) {
+      const assigneeStillMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: existingTask.assigneeId,
+            projectId: targetProjectId,
+          },
+        },
+        select: { id: true },
+      });
+      if (!assigneeStillMember) {
+        updateData.assignee = { disconnect: true };
+      }
+    }
+```
+
+`null` と `undefined` の使い分けが、ここでいちばん効いています。`null` なら担当を外し、値があれば所属を確かめて付け替えます。`undefined` は「触らない」なので、ふつうは何もしません。ただしプロジェクトを移した結果、今までの担当者が移動先のメンバーでなくなることがあるため、その場合だけ後半の `else if` で自動的に外します。
+
+**update の保存**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update の保存
+    try {
+      // 比較と更新の間に他の更新が割り込む余地をなくすため、
+      // updatedAt を where に含めて1回のクエリにまとめる
+      return await prisma.$transaction(async (tx) => {
+        if (isProjectChanging) {
+          updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        }
+
+        return await tx.task.update({
+          where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
+          data: updateData,
+          include: {
+            project: true,
+            createdBy: {
+              select: USER_SELECT,
+            },
+            assignee: {
+              select: USER_SELECT,
+            },
+          },
+        });
+      });
+```
+
+`where` に `updatedAt` を混ぜているのが楽観ロックの本体です。先に読んで比べてから書く形にすると、比べた後・書く前の隙間に別の書き換えが入れます。条件を `where` へ入れて1回の問い合わせにまとめると、その隙間そのものが無くなります。`expectedUpdatedAt` が送られてこなければ `id` だけで書き換えます。
+
+**update の競合エラー**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: update の競合エラー
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
+  }),
+```
+
+`P2025` だけを `CONFLICT` へ変え、それ以外は `throw err` でそのまま上へ渡します。全部を `CONFLICT` にすると、接続エラーや書式の誤りまで「誰かが先に更新しました」と表示され、読者は直しようのない案内を受け取ります。文言で「他の人」と断定していないのは、自分の別の操作でも更新時刻が動くからです。
+
+**delete**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完成版: delete
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await findTaskWithPermission(input.id, ctx.session.userId);
+      assertMemberPermission(task.project.members, 'canDelete');
+
+      await prisma.task.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+});
+```
+
+`findTaskWithPermission` に第3引数を渡さず、その後で `'canDelete'` を確かめているのが更新との違いです。編集はできても削除はできない権限があるため、要求する権限を分けます。最後の `});` で `taskRouter` 全体が閉じます。
+
+### `src/app/task/page.tsx`
+
+**React と部品のインポート**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: React と部品のインポート
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useSearchParams }
+  from 'next/navigation';
+import {
+  Suspense, useCallback,
+  useEffect, useMemo, useState,
+} from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { TaskDetailDialog }
+  from '@/component/task/task-detail-dialog';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+```
+
+今日足したのは `toast` の行です。`react-hot-toast` だけ中括弧が付いていないのは、この取り込みが既定の書き出しを受け取る形だからです。中括弧を付けて `import { toast }` と書くと、そんな名前は無いというエラーになります。取り込み方は借りる側ではなく、借りられる側のファイルが決めています。
+
+**選択欄と定数のインポート**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 選択欄と定数のインポート
+import { Button }
+  from '@/component/ui/button';
+import { DeleteConfirmDialog } from
+  '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+```
+
+今日足したのは `DeleteConfirmDialog` の行です。すでにある部品を借りているだけで、新しくは作りません。削除の確認画面をプロジェクトの編集画面と共有すると、ボタンの並びと文言がそろいます。同じ役目のものを画面ごとに作ると、見た目と挙動が少しずつずれていきます。
+
+**定数と道具のインポート**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 定数と道具のインポート
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
+import {
+  isTaskStatus,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
+import { taskToFormData }
+  from '@/lib/task-form';
+import { api } from '@/trpc/react';
+```
+
+こちらで今日足したのは `taskToFormData` です。編集ボタンから受け取れるのは id の文字列だけなので、タスクをフォーム用の形へ直す変換が要ります。日付を `YYYY-MM-DD` へ直す処理も中に入っているため、画面ごとに手で書き直さずに済みます。
+
+**画面の状態**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 画面の状態
+function TaskPageContent() {
+  const [filterProject, setFilterProject] =
+    useState<string>('all');
+  const [filterStatus, setFilterStatus] =
+    useState<TaskStatus | 'all'>('all');
+  const [selectedTask, setSelectedTask] =
+    useState<string | null>(null);
+  const [detailOpen, setDetailOpen] =
+    useState(false);
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+  const [editingTask, setEditingTask] =
+    useState<TaskFormData | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen]
+    = useState(false);
+  const [deleteTargetId, setDeleteTargetId]
+    = useState<string | null>(null);
+```
+
+今日増えたのは下の2つです。消す相手の id を `useState` で覚えるのは、確認ダイアログが開いている間ずっと保つ必要があるからです。ふつうの変数に入れると、ダイアログが開いた再描画のときに消えます。開いているかどうかと、どれを消すかを別々に持つのも同じ理由で、閉じる動きの途中で id を消すと表示が一瞬崩れます。
+
+**URL と取得**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: URL と取得
+  const searchParams = useSearchParams();
+  const taskIdParam =
+    searchParams.get('taskId');
+
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+  } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all'
+        ? undefined : filterProject,
+      status: filterStatus === 'all'
+        ? undefined : filterStatus,
+    },
+    { refetchOnWindowFocus: false },
+  );
+  const { data: projects } =
+    api.project.getAll.useQuery();
+  const { data: session } =
+    api.auth.getSession.useQuery();
+  const { data: users } =
+    api.search.getProjectMembers.useQuery();
+  const utils = api.useUtils();
+```
+
+`'all'` のときに `undefined` を渡すのは、その条件を使わないという合図です。サーバー側は `if (input?.status)` で受けているので、`undefined` なら絞り込みません。`utils` は取得済みのデータを操作する入口で、この後の3つの mutation から呼びます。
+
+**権限の判定**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 権限の判定
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find(
+        (member) => member.userId === userId,
+      );
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+```
+
+取れないときに空の Map を返すのは、この後の `.get()` が `undefined` に対して呼ばれて落ちるのを防ぐためです。`useMemo` の第2引数を `[projects, session?.user?.id]` にしてあるので、表を作り直すのはこの2つが変わったときだけです。
+
+**編集と削除の可否**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 編集と削除の可否
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+```
+
+`hasPermission` はサーバー側と共通の判定関数です。基準を画面へ書き写すと、権限の表を直したときに片方だけ古いまま残ります。ロールが取れないときに `false` を返すのは、判定できない相手へボタンを見せないためです。
+
+**URL からの詳細表示**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: URL からの詳細表示
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [taskIdParam]);
+```
+
+第2引数の `[taskIdParam]` が見張る値です。空配列にすると最初の1回しか動かず、他の画面から `/task?taskId=...` へ移動しても詳細が開きません。第2引数ごと省くと描画のたびに走り、閉じても値がすぐ戻る画面になります。
+
+**作成と更新の通信**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 作成と更新の通信
+  const createMutation =
+    api.task.create.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        if (selectedTask) {
+          utils.task.getById.invalidate(
+            { id: selectedTask }
+          );
+        }
+        setDialogOpen(false);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+```
+
+更新にだけ `onError` が付いているのは、更新が自分の入力ミス以外でも失敗するからです。誰かが先に保存していれば、サーバーは競合の合図を返します。`toast.error(error.message)` はその文言を画面の隅へ出すので、保存されなかったことに気づけます。詳細を `selectedTask` があるときだけ取り直すのは、開いていない画面のために通信を増やさないためです。
+
+**削除の通信**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 削除の通信
+  const deleteMutation =
+    api.task.delete.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+      },
+    });
+```
+
+削除では `setDialogOpen(false)` を呼びません。閉じる相手が入力ダイアログではなく確認ダイアログで、そちらは `DeleteConfirmDialog` が自分で閉じるからです。`invalidate()` を忘れると、DB からは消えているのにカードが残り、再読み込みするまで消えたことが分かりません。
+
+**3つのハンドラー**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 3つのハンドラー
+  const handleCreate = () => {
+    setEditingTask(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (taskId: string) => {
+    const task =
+      tasks?.find((t) => t.id === taskId);
+    if (task) {
+      setEditingTask(taskToFormData(task));
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+```
+
+作成と編集の違いは、`editingTask` に何を入れるかだけです。`undefined` を入れれば空のフォーム、変換したタスクを入れれば値の入ったフォームになります。`handleDelete` が削除そのものを実行しないのは、実行の合図を確認ボタン側へ預けるためです。押し間違いは確認画面で止まります。
+
+**送信ハンドラーの更新分岐**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 送信ハンドラーの更新分岐
+  const handleSubmit =
+    (data: TaskFormData) => {
+      if (data.id) {
+        updateMutation.mutate({
+          id: data.id,
+          title: data.title,
+          description:
+            data.description || null,
+          status: data.status,
+          priority: data.priority,
+          dueDate: data.dueDate
+            ? dateOnlyToUtcStartIso(data.dueDate)
+            : null,
+          estimatedHours:
+            data.estimatedHours ?? null,
+          projectId: data.projectId,
+          assigneeId:
+            data.assigneeId || null,
+          expectedUpdatedAt:
+            data.expectedUpdatedAt,
+        });
+        return;
+      }
+```
+
+空の値を `null` にそろえているのは、更新のスキーマで `.nullable()` にした項目へ「空にする」と伝えるためです。空文字のまま送ると、説明を空文字という内容へ書き換える意味になります。`expectedUpdatedAt` をそのまま渡しているので、編集を始めた時点から内容が変わっていれば、サーバーが競合として止めます。
+
+**送信ハンドラーの作成分岐**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 送信ハンドラーの作成分岐
+      if (!session?.user?.id) return;
+      createMutation.mutate({
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        projectId: data.projectId,
+        dueDate: data.dueDate
+          ? dateOnlyToUtcStartIso(
+              data.dueDate
+            )
+          : undefined,
+        estimatedHours:
+          data.estimatedHours ?? undefined,
+        assigneeId:
+          data.assigneeId || undefined,
+      });
+    };
+```
+
+`data.id` が無いときだけこの行に届くので、ここから下は新規作成の道です。空の値に `null` ではなく `undefined` を使うのは、作成がまだ存在しない行を作る手続きで、「この項目を空にする」という指示が要らないからです。先頭の確認は、ログイン情報を読み込めていないうちの送信を止める門番です。
+
+**カードのハンドラー**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: カードのハンドラー
+  const handleTaskClick =
+    (taskId: string) => {
+      setSelectedTask(taskId);
+      setDetailOpen(true);
+    };
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+  };
+
+  if (tasksLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+閉じる側で `selectedTask` を `null` へ戻すのは、次に別のカードを押したとき前のタスクが一瞬見えるのを防ぐためです。`tasksLoading` の早期 return を置くのは、読み込み中の `tasks` が `undefined` で、この後の `tasks.map(...)` が落ちるためです。
+
+**見出しとフィルター**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 見出しとフィルター
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold
+          tracking-tight">
+          タスク
+        </h1>
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          新規タスク
+        </Button>
+        <div className="flex gap-2 w-full
+          sm:w-auto ml-auto">
+          <div className="w-[200px]">
+            <Select value={filterProject}
+              onValueChange={setFilterProject}>
+              <SelectTrigger
+                aria-label="プロジェクトで絞り込み">
+                <SelectValue placeholder=
+                  "すべてのプロジェクト" />
+              </SelectTrigger>
+```
+
+`SelectTrigger` に `aria-label` を付けているのは、この絞り込みに画面上の見出しが無いためです。`placeholder` は値を選んだ時点で消えるので、読み上げソフトを使う人には選んだ値だけが読まれます。
+
+**プロジェクトの絞り込み**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: プロジェクトの絞り込み
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのプロジェクト
+                </SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+```
+
+先頭の「すべてのプロジェクト」だけ手で書いているのは、この値が `projects` の中に無いからです。`projects?.` の `?.` は、まだ取得できていない `undefined` の状態で `.map()` を呼んで落ちるのを防ぐ書き方です。
+
+**ステータスの絞り込み**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: ステータスの絞り込み
+          <div className="w-[200px]">
+            <Select value={filterStatus}
+              onValueChange={(value) => {
+                if (value === 'all'
+                  || isTaskStatus(value))
+                  setFilterStatus(value);
+              }}>
+              <SelectTrigger>
+                <SelectValue placeholder=
+                  "すべてのステータス" />
+              </SelectTrigger>
+```
+
+`onValueChange` が受け取る値は、shadcn/ui の都合でただの `string` です。`isTaskStatus(value)` を通してから代入するのは、確かめずに `as TaskStatus` と書くと、想定外の文字列がそのままサーバーへ飛ぶからです。
+
+**ステータスの選択肢**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: ステータスの選択肢
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのステータス
+                </SelectItem>
+                {Object.entries(
+                  TASK_STATUS_LABELS
+                ).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+```
+
+選択肢を定数から作るので、ステータスが増えたときに直す場所は `status.ts` の1か所で済みます。末尾の `</div>` が2つ続くのは、内側が幅を決める枠、外側が2つの絞り込みを横に並べる枠だからです。
+
+**カードの一覧**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: カードの一覧
+        <div className="grid gap-6
+          sm:grid-cols-2 lg:grid-cols-3
+          xl:grid-cols-4">
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
+            ))
+```
+
+`onEdit` と `onDelete` に今日の関数を渡したので、カード内のボタンが押されると `task.id` を受け取って呼ばれます。ボタンの見た目は `TaskCard`、実際の処理は親ページ、と役割が分かれます。`canEdit` と `canDelete` を渡し忘れると既定の `true` が使われ、閲覧者にも両方のボタンを見せてしまいます。
+
+**空のときの表示**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 空のときの表示
+          ) : (
+            <div className="col-span-full flex
+              flex-col items-center
+              justify-center py-12
+              text-center
+              text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              <p>最初のタスクを作成しましょう!</p>
+            </div>
+          )}
+        </div>
+```
+
+`col-span-full` は、グリッドの全列にまたがって表示するクラスです。外すとメッセージが1列分の幅へ押し込まれ、4列表示のときに左端へ寄って見えます。今日は削除も作ったので、最後の1件を消したあとにこの表示へ切り替わります。
+
+**3つのダイアログ**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 3つのダイアログ
+        <TaskDetailDialog
+          open={detailOpen}
+          taskId={selectedTask}
+          onClose={handleDetailClose}
+        />
+
+        <TaskDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+          initialData={editingTask}
+          projects={projects ?? []}
+        />
+```
+
+2つとも並べて置いてあるのは、どちらも画面の最前面へ重なる部品で、カードの並びに影響されないためです。`projects ?? []` は、まだ取得できていない `undefined` を空の配列として渡す書き方で、ダイアログ側の `projects.map()` が落ちません。
+
+**削除の確認ダイアログ**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 削除の確認ダイアログ
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={() => {
+            if (deleteTargetId) {
+              deleteMutation.mutate(
+                { id: deleteTargetId }
+              );
+            }
+          }}
+          isPending={deleteMutation.isPending}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+`isPending={deleteMutation.isPending}` を渡すと、通信の最中は確認ボタンが押せなくなります。これが無いと、待ちきれずに2回押した人が同じ削除を2回送ります。`onConfirm` の中で `deleteTargetId` を確かめているのは、対象が決まっていない状態で通信を始めないためです。
+
+**ページ本体**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: ページ本体
+export default function TaskPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
+```
+
+`export default` を付けた関数が、そのファイルのページ本体です。`TaskPageContent` をそのまま default にせず `Suspense` で包むのは、中で `useSearchParams` を使っているからです。境界の外に置くと、ビルド時にエラーで止まります。
+
 ## 今日のまとめ
 
 - [ ] TaskDialog を編集モードで再利用できた

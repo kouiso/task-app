@@ -1198,6 +1198,564 @@ const { label, color } = STATUS_CONFIG[status];
 
 switch 文は「設定オブジェクト + lookup」に置き換えられることが多いです。データと振る舞いを1か所にまとめると、追加・変更が楽になります。
 
+## 完成コード全体
+
+今日は4つのファイルを触りました。Step 0 でサーバー側の手続きを2つ書いて登録し、Step 1 でサイドバーへ導線を足し、Step 1 から Step 7 で一覧ページを組み立てています。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードをそのままコピーして各ファイルを置き換えてください。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/task.ts` | タスクを取得する手続き | Step 0 |
+| `src/server/api/root.ts` | 手続きの一覧表 | Step 0 |
+| `src/component/layout/app-layout.tsx` | サイドバーのタスク導線 | Step 1 |
+| `src/app/task/page.tsx` | タスク一覧ページ本体 | Step 1〜Step 7 |
+
+`app-layout.tsx` だけは、Day 08 で作った土台のうち今日書き換えた2か所を載せます。残りの部分に今日は触っていないので、手元のファイルをそのまま残してください。
+
+### `src/server/api/routers/task.ts`
+
+**インポート**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: インポート
+import { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import {
+  assertMemberPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+```
+
+取り込んでいる道具は役割ごとに分かれます。`Prisma` は検索条件の型注釈、`prisma` はデータベースへの問い合わせ、`z` は入力の検査です。`getUserProjectIds` と `assertMemberPermission` は、他の router でも使う共有のヘルパーで、権限の判定をこのファイルの中へ書き写さないために取り込んでいます。判定の中身を各 router へ書き写すと、直すときに全部を探して回ることになります。
+
+**getAll の入力**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: getAll の入力
+export const taskRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          projectId: z.string().cuid().optional(),
+          status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
+          assigneeId: z.string().cuid().optional(),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.TaskWhereInput = {};
+      const limit = input?.limit ?? 100;
+      const offset = input?.offset ?? 0;
+```
+
+`createTRPCRouter({` から始まるオブジェクトが、このファイルの本体です。入力の各項目に `.optional()` が付いているので、絞り込みを渡さずに呼び出せます。`limit` と `offset` に既定値を持たせているのは、条件を渡さずに呼ばれたときも取得件数に上限がかかるようにするためです。
+
+**getAll の権限による絞り込み**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: getAll の権限による絞り込み
+      const projectIds = await getUserProjectIds(ctx.session.userId);
+
+      where.projectId = { in: projectIds };
+
+      if (input?.projectId) {
+        if (!projectIds.includes(input.projectId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'このプロジェクトへのアクセス権限がありません',
+          });
+        }
+        where.projectId = input.projectId;
+      }
+      if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
+      if (input?.assigneeId) where.assigneeId = input.assigneeId;
+```
+
+ここが `getAll` で最も気をつける部分です。`where.projectId = { in: projectIds }` を先に置くので、以降の条件がどう積まれても対象は自分のプロジェクトの中に留まります。`input.projectId` を受け取ったときに `includes` で確かめているのは、通信を書き換えて他人のプロジェクトの id を送られても中身を見せないためです。下の3行の絞り込みが権限を見ていないのは、この時点で範囲が閉じているからです。
+
+**getAll の関連データ**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: getAll の関連データ
+      return await prisma.task.findMany({
+        where,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+```
+
+`include` は関連するデータも一緒に取る指定です。`createdBy` と `assignee` に `USER_SELECT` を挟んでいるのは、`true` と書くとハッシュ化済みパスワードを含む全項目が画面まで返るからです。今日のカードが使うのは担当者だけですが、`getAll` は Day 17 のマイタスクや Day 20 の検索からも呼ばれるので、取る範囲をここでそろえてあります。
+
+**getAll の並び順と件数**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: getAll の並び順と件数
+        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+        take: limit,
+        skip: offset,
+      });
+    }),
+```
+
+並び順を指定しないと、データベースが返す順序は保証されません。読み込むたびにカードの位置が入れ替わって見えるので、`orderBy` は必ず付けます。`take` で上限を置くのは、タスクが数千件へ育ったときに全件をまとめて送って画面が固まるのを防ぐためです。
+
+**getById の取得**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: getById の取得
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+```
+
+`getAll` との違いは `project` の取り方です。`members` を `ctx.session.userId` で絞って一緒に取るので、この1件を見るだけで自分がそのプロジェクトに入っているかが分かります。判定の材料をタスクと同じ問い合わせで取れば、データベースへの往復は1回で済みます。`where` を落とすと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。
+
+**getById のコメント**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: getById のコメント
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+```
+
+コメントも投稿者と一緒に、新しい順で取ります。詳細ダイアログはコメント欄を持つので、ここで取っておけば表示のために追加の通信が要りません。`});` で `findUnique` の呼び出しが閉じ、結果が `task` に入ります。
+
+**getById の存在確認と権限確認**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: getById の存在確認と権限確認
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'タスクが見つかりません',
+        });
+      }
+
+      assertMemberPermission(task.project.members);
+
+      return task;
+    }),
+});
+```
+
+`findUnique` は見つからないときに例外ではなく `null` を返すため、`NOT_FOUND` は自分で投げます。`assertMemberPermission` に渡しているのは、上で自分に絞って取った `members` です。空の配列が渡ればそこで止まるので、他人のタスクの id を直接指定されても中身は返りません。最後の `});` が `taskRouter` 全体を閉じる行です。
+
+
+### `src/server/api/root.ts`
+
+**登録済みの router 一覧**:
+
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: 登録済みの router 一覧
+import { authRouter } from './routers/auth';
+import { projectRouter } from './routers/project';
+import { taskRouter } from './routers/task';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+router を書いただけでは画面から呼べません。この一覧へ `task: taskRouter` を並べたことで、`api.task.getAll` と `api.task.getById` という呼び名が生まれます。`AppRouter` 型を書き出しているのが要点で、画面側はこの型をたどって引数と戻り値を知ります。`comment` や `search` は、それを使う Day で1行ずつ足していきます。
+
+
+### `src/component/layout/app-layout.tsx`
+
+**アイコンのインポート**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: アイコンのインポート
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+```
+
+今日足したのは `ClipboardList` の1行です。サイドバーに置くタスク項目のアイコンで、すでにある `FolderOpen` などと同じ `lucide-react` からまとめて読み込みます。この行を足し忘れると `ClipboardList is not defined` というエラーになり、サイドバーごと表示されなくなります。
+
+**サイドバーのメニュー項目**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: サイドバーのメニュー項目
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+];
+```
+
+項目をコードの中へ直接書かず配列にまとめてあるので、要素を1つ足すだけでリンクが1本増えます。Day 08 で作った描画の仕組みには手を入れません。`path` の `/task` は `src/app/task/page.tsx` の置き場所と一致している必要があります。App Router はフォルダの並びをそのまま URL にするため、`/tasks` と書き間違えるとクリックしても404ページに飛びます。
+
+
+### `src/app/task/page.tsx`
+
+**クライアント宣言とインポートの前半**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: クライアント宣言とインポートの前半
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+```
+
+`'use client'` は、このファイルをブラウザ側で動く部品として扱う宣言です。App Router のページは既定でサーバー側だけで動くので、この1行が無いと `useState` を書いた時点でエラーになります。`TaskCard` と `TaskDetailDialog` は前の Day までに用意した表示部品で、今日は呼び出す側だけを書きました。
+
+**インポートの後半**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: インポートの後半
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
+import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+```
+
+ステータスとロールを `@/lib/constant/...` から取り込んでいるのが要点です。`hasPermission` と `isProjectMemberRole` は Day 12 でサーバー側の判定に使ったものと同じで、画面とサーバーで基準を分けないための選択です。基準が分かれると、画面ではボタンが見えるのにサーバーは拒む、というちぐはぐな状態になります。
+
+**state と URL パラメータ**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: state と URL パラメータ
+function TaskPageContent() {
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const searchParams = useSearchParams();
+  const taskIdParam = searchParams.get('taskId');
+
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [taskIdParam]);
+```
+
+絞り込みの初期値を `'all'` にしているのは、開いた直後は全件を見せたいからです。`selectedTask` と `detailOpen` を分けているのは、閉じる動きの途中で id を消すと中身が一瞬空になるためです。`useEffect` の第2引数 `[taskIdParam]` が見張る値で、URL の `taskId` が変わったときだけ中身が動きます。ここを `[]` にすると最初の1回しか動かず、他の画面から `/task?taskId=...` へ移動しても詳細が開きません。
+
+**データ取得**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: データ取得
+  const { data: session } = api.auth.getSession.useQuery();
+  const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all' ? undefined : filterProject,
+      status: filterStatus === 'all' ? undefined : filterStatus,
+    },
+    { refetchOnWindowFocus: false },
+  );
+  const { data: projects } = api.project.getAll.useQuery();
+```
+
+`'all'` のときに `undefined` を渡すと、サーバーはその条件を足さず全件を返します。三項演算子で書き分けているのは、画面の「すべて」という選択肢と、サーバーの「条件を使わない」という状態を結ぶためです。`data: tasks` と名前を付け替えているのは、プロジェクトも取得するので `data` のままでは名前がぶつかるからです。
+
+**プロジェクトごとのロールの表**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: プロジェクトごとのロールの表
+  // プロジェクトごとのログインユーザー自身のロールを引けるようにする
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find((member) => member.userId === userId);
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+```
+
+プロジェクトの id から自分のロールを引ける表を作ります。`session` を取れていないときや `projects` が空のときは、空の Map をそのまま返します。ここで `undefined` を返すと、後ろの `.get()` を呼んだ時点で落ちます。`useMemo` の第2引数を `[projects, session?.user?.id]` にしているので、表を作り直すのはこの2つが変わったときだけです。カードが1枚描かれるたびに全プロジェクトを走査し直すと、件数が増えたときに操作の反応が鈍くなります。
+
+**編集と削除の権限判定**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: 編集と削除の権限判定
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+```
+
+ロールが引けなかったときは `false` を返します。判定できない状態を「たぶん許可」に倒すと、権限の無い人にボタンが見えます。閲覧者のロールでは両方とも `false` になり、カードの編集ボタンと削除ボタンが消えます。
+
+**ハンドラーと読み込み中の表示**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: ハンドラーと読み込み中の表示
+  const handleTaskClick = (taskId: string) => {
+    setSelectedTask(taskId);
+    setDetailOpen(true);
+  };
+
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleEdit = (taskId: string) => {};
+
+  const handleDelete = (taskId: string) => {};
+
+  if (tasksLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+`handleEdit` と `handleDelete` が空のままなのは、編集と削除を Day 15 で作るからです。押しても何も起きませんが、`TaskCard` が受け取る形はここで決まります。読み込み中の早期 `return` を置いているのは、`tasks` がまだ `undefined` の状態で下の `.map()` へ進むと画面が落ちるためです。
+
+**見出しとプロジェクトの絞り込み**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: 見出しとプロジェクトの絞り込み
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
+
+        <div className="flex gap-2 w-full sm:w-auto ml-auto">
+          <div className="w-[200px]">
+            <Select value={filterProject} onValueChange={setFilterProject}>
+              <SelectTrigger aria-label="プロジェクトで絞り込み">
+                <SelectValue placeholder="すべてのプロジェクト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+```
+
+`aria-label` を付けているのは、この絞り込みに画面上の見出しが無いためです。`placeholder` は値を選んだ時点で消えるので、読み上げソフトを使う人には選んだ値だけが読まれます。選択肢は `projects` から `.map()` で作るため、プロジェクトが増えても手で書き足す必要がありません。
+
+**ステータスの絞り込み**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: ステータスの絞り込み
+          <div className="w-[200px]">
+            <Select
+              value={filterStatus}
+              onValueChange={(value) => {
+                if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="すべてのステータス" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのステータス</SelectItem>
+                {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+```
+
+`onValueChange` が受け取る値はただの文字列なので、`isTaskStatus` を通ったものだけを state へ入れます。`as TaskStatus` で黙らせると、中身を確かめないまま正しいと言い張ることになり、想定外の文字列がそのままサーバーへ飛びます。選択肢を `TASK_STATUS_LABELS` から作っているので、ステータスが増えたときは `status.ts` へ1行足すだけで反映されます。
+
+**タスクカードの一覧**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: タスクカードの一覧
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
+            ))
+          ) : (
+```
+
+`canEdit` と `canDelete` を必ず渡すのは、省くと `TaskCard` 側の既定値である `true` が使われ、閲覧者にも編集ボタンと削除ボタンが見えるからです。押してもサーバー側の権限確認で弾かれますが、押せないはずのボタンを見せること自体が利用者を迷わせます。`key={task.id}` は React がどのカードがどれかを見分けるための印です。
+
+**0件のときの表示と詳細ダイアログ**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: 0件のときの表示と詳細ダイアログ
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              <p>最初のタスクを作成しましょう!</p>
+            </div>
+          )}
+        </div>
+
+        <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+`col-span-full` を外すと、メッセージが1列分の幅へ押し込まれ、4列表示のときに左端へ寄って見えます。0件のときに何も出さないと、読者は読み込み中なのか本当に0件なのかを判断できません。`TaskDetailDialog` をグリッドの外へ置くのは、カードの並びに影響されず画面の最前面へ重ねるためです。
+
+**Suspense で包んだページ本体**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: Suspense で包んだページ本体
+export default function TaskPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
+```
+
+`useSearchParams` を使う部品は `Suspense` の内側に置く決まりがあります。外へ出すと、境界が無いというエラーでビルドが止まります。`export default` を付けたこの関数が、`/task` を開いたときに読まれるページ本体です。
+
 ## 今日のまとめ
 
 - [ ] `api.task.getAll` でタスク一覧を取得できた
