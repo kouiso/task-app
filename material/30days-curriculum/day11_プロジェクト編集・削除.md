@@ -1311,6 +1311,897 @@ console.log(
 編集画面では「値がないかもしれない」が何度も出てきます。
 多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになります。
 
+## 完成コード全体
+
+今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。どちらも Day 09 と Day 10 で書き始めたファイルなので、前の日に書いた部分もあわせて載せています。`delete-confirm-dialog.tsx` は配布済みで中身に手を入れていないため、ここには載せていません。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/project.ts` | 更新・削除・アーカイブを受け持つサーバー側の手続き | Step 0（Day 09 と Day 10 の分を含む） |
+| `src/app/project/page.tsx` | 編集・削除・アーカイブの配線 | Step 1 から Step 9（Day 09 と Day 10 の分を含む） |
+
+### `src/server/api/routers/project.ts`
+
+**import**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: import
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
+import { PROJECT_MEMBER_ROLE, USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { assertMemberPermission } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+```
+
+今日足したのは最後から2行目の `assertMemberPermission` だけです。権限の判定をこのファイルへ書かず外から取り込んでいるのは、同じ判定を `update` と `setArchiveStatus` の2か所から呼ぶからです。判定の中身を直したいときに、直す場所が1つで済みます。
+
+**作成用スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: 作成用スキーマ
+const projectCreateSchema = z.object({
+  name: z.string().min(1, 'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .default(DEFAULT_PROJECT_COLOR),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+```
+
+これは Day 10 で書いたスキーマで、今日は手を入れていません。載せてあるのは、次の更新用スキーマと並べて読むためです。作成では `name` に `.min(1, ...)` が付いていて、名前の無いプロジェクトを作れません。
+
+**更新用スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: 更新用スキーマ
+const projectUpdateSchema = z.object({
+  id: z.string().cuid(),
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .optional(),
+  isArchived: z.boolean().optional(),
+  startDate: z.string().datetime().optional().nullable(),
+  endDate: z.string().datetime().optional().nullable(),
+});
+```
+
+`description` と日付の2つに `.nullable()` を足してあるのは、「値を消す」という指示を受け取るためです。`.optional()` だけでは、項目を送らないという選び方しかできません。項目そのものを送らないと、Prisma は「この項目には何もしない」と読みます。すでに入っている説明文を空へ戻したいときに、`null` を送れる形が必要です。
+
+**アーカイブ切り替えの共通関数**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: アーカイブ切り替えの共通関数
+const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
+  const userMember = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: { userId, projectId },
+    },
+  });
+
+  assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
+
+  return await prisma.project.update({
+    where: { id: projectId },
+    data: { isArchived },
+  });
+};
+```
+
+`assertMemberPermission` は配列を受け取る形なので、1件だけ引いた `userMember` を `[userMember]` に包んで渡します。見つからなかったときは空の配列を渡します。空の配列は「このプロジェクトのメンバーではない」を表すので、権限の判定はそこで断ります。ルーターの外へ出してあるのは、`archive` と `unarchive` の両方から呼ぶためです。
+
+**getAll の入口と権限チェック**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getAll の入口と権限チェック
+export const projectRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          userId: z.string().cuid().optional(),
+          isArchived: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.ProjectWhereInput = {};
+
+      if (input?.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+```
+
+Day 09 で書いた部分で、今日は変更していません。今日の `update` や `delete` と読み比べると、守り方の違いが見えます。`getAll` は誰の一覧かを `ctx.session` と突き合わせるだけですが、更新と削除は先にプロジェクトを1件引いて、その中の自分のメンバー情報を見ます。読むだけの手続きと、書き換える手続きで確かめる材料が違うためです。
+
+**getAll の検索条件**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getAll の検索条件
+      if (!input?.userId) {
+        where.members = {
+          some: { userId: ctx.session.userId },
+        };
+      } else {
+        where.members = {
+          some: { userId: input.userId },
+        };
+      }
+
+      if (input?.isArchived !== undefined) {
+        where.isArchived = input.isArchived;
+      }
+```
+
+今日のアーカイブ機能が効くのは、この最後の3行があるからです。`archive` が `isArchived` を `true` に書き換えると、スイッチを切っている画面の `where.isArchived` は `false` なので、そのプロジェクトは一覧から外れます。アーカイブが「消えたように見えて残っている」のは、この条件のおかげです。
+
+**getAll が返すデータ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getAll が返すデータ
+      return await prisma.project.findMany({
+        where,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+```
+
+今日の Step 1 の `handleEdit` がサーバーを呼ばずに済むのは、この戻り値に名前・色・日付がそろっているからです。編集ボタンを押した時点で必要な値は手元にあるので、探すのは配列の中だけです。取ってくる項目を絞りすぎると、編集のたびに追加の通信が必要になります。
+
+**create の作成データ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: create の作成データ
+  create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
+    const createData: Prisma.ProjectCreateInput = {
+      name: input.name,
+      color: input.color,
+      startDate: input.startDate ? new Date(input.startDate) : null,
+      endDate: input.endDate ? new Date(input.endDate) : null,
+      members: {
+        create: {
+          userId: ctx.session.userId,
+          role: PROJECT_MEMBER_ROLE.OWNER,
+        },
+      },
+    };
+```
+
+Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` を付けていたことが、今日の `delete` につながります。作成者にオーナー権限が入っているので、自分で作ったプロジェクトは自分で消せます。この1行が抜けたプロジェクトは、あとから誰も削除できません。
+
+**create の保存と戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: create の保存と戻り値
+    if (input.description) {
+      createData.description = input.description;
+    }
+
+    return await prisma.project.create({
+      data: createData,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        },
+      },
+    });
+  }),
+```
+
+説明文を値があるときだけ足す書き方も Day 10 のままです。今日の `update` では、この判定が `if (data.description !== undefined)` という別の形になります。作成では「空欄なら入れない」で足りますが、更新では「空欄にした」という指示そのものを届ける必要があるためです。
+
+**update の入口と存在チェック**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: update の入口と存在チェック
+  update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, ...data } = input;
+
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
+```
+
+`members` を `where: { userId: ctx.session.userId }` で絞っているのは、必要なのが自分の1件だけだからです。全メンバーを取ると、100人のプロジェクトでは100行を運んで1行だけ使う形になります。存在しない `id` をここで止めておくと、この先の権限チェックは「プロジェクトは実在する」という前提で書けます。
+
+**update の権限チェックと更新データ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: update の権限チェックと更新データ
+    assertMemberPermission(project.members, 'canManageMembers');
+
+    const updateData: Prisma.ProjectUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    if (data.color !== undefined) {
+      updateData.color = data.color;
+    }
+    if (data.isArchived !== undefined) {
+      updateData.isArchived = data.isArchived;
+    }
+    if (data.startDate !== undefined) {
+      updateData.startDate = data.startDate ? new Date(data.startDate) : null;
+    }
+    if (data.endDate !== undefined) {
+      updateData.endDate = data.endDate ? new Date(data.endDate) : null;
+    }
+```
+
+判定を `!== undefined` にしてあるのは、`null` を素通りさせるためです。`if (data.description)` と書くと、`null` と空文字がどちらも偽として扱われ、説明を消す指示が消えます。日付だけ `? ... : null` の三項演算子が入っているのは、届く値が文字列なので `new Date(...)` へ通す必要があり、`null` はそのまま `null` として書き込むためです。
+
+**update の保存と戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: update の保存と戻り値
+    return await prisma.project.update({
+      where: { id },
+      data: updateData,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        },
+      },
+    });
+  }),
+```
+
+`tasks` を取っていないのは、更新の返り値を使う場面が一覧の再取得ではないからです。画面側は `onSuccess` で `invalidate()` を呼び、一覧を別の通信で取り直します。更新の返り値までタスク付きで運ぶと、使われないデータを毎回送ることになります。
+
+**delete の入口と存在チェック**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: delete の入口と存在チェック
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            where: { userId: ctx.session.userId },
+          },
+        },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+```
+
+入力が `id` の1項目だけなので、スキーマを外へ出さずその場に書いてあります。使う場所が1か所なら、名前を付けて離れた場所へ置くより近くにあるほうが読みやすいためです。`.cuid()` を付けてあるので、`id` の形をしていない文字列は手続きの中へ入る前に弾かれます。
+
+**delete の権限チェックと実行**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: delete の権限チェックと実行
+      // canDeleteはタスク削除の権限でADMINにも付与されているため、プロジェクト削除はOWNER限定で明示チェック
+      const userMember = project.members[0];
+      if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を実行する権限がありません',
+        });
+      }
+
+      await prisma.project.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+```
+
+`!userMember` の判定を先に置いてあるのは、メンバーではない相手が `project.members[0]` で `undefined` を受けるからです。この確認を飛ばして `userMember.role` を読むと、権限の判定へ進む前に実行が止まります。戻り値を `{ success: true }` にしてあるのは、消えたデータそのものを返せないためです。
+
+**archive と unarchive**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: archive と unarchive
+  archive: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      return await setArchiveStatus(ctx.session.userId, input.id, true);
+    }),
+
+  unarchive: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      return await setArchiveStatus(ctx.session.userId, input.id, false);
+    }),
+});
+```
+
+2つを1つの手続きにまとめず、名前を分けてあるのは、画面側から見て何をするのかがはっきりするからです。`setArchive({ id, value: true })` の形にすると、呼ぶ側が毎回 `true` か `false` を書くことになり、書き間違いが起きます。最後の `});` で `projectRouter` 全体を閉じます。
+
+### `src/app/project/page.tsx`
+
+**React と画面の部品の import**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: React と画面の部品の import
+'use client';
+
+import { Plus } from 'lucide-react';
+import {
+  useRouter, useSearchParams,
+} from 'next/navigation';
+import {
+  Suspense, useEffect, useState,
+} from 'react';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { ProjectCard }
+  from '@/component/project/project-card';
+import { ProjectDetailView } from
+  '@/component/project/project-detail-view';
+import {
+  ProjectDialog,
+  type ProjectFormData,
+} from
+  '@/component/project/project-dialog';
+```
+
+今日足したのは `useRouter`、`useSearchParams`、`useEffect`、`ProjectDetailView` の4つです。`useRouter` と `useSearchParams` を `next/navigation` から取っているのは、URL を読む側と書き換える側で担当が分かれているためです。読むのが `useSearchParams`、書き換えるのが `useRouter` です。
+
+**UI部品と定数の import**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: UI部品と定数の import
+import { Button }
+  from '@/component/ui/button';
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+import { Label }
+  from '@/component/ui/label';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import { Switch }
+  from '@/component/ui/switch';
+import { TASK_STATUS }
+  from '@/lib/constant/status';
+import {
+  dateOnlyFromValue,
+  dateOnlyToUtcStartIso,
+} from '@/lib/date';
+import { api } from '@/trpc/react';
+```
+
+`@/lib/date` から2つ取り込んでいるのは、日付を運ぶ向きが今日から2方向になったからです。`dateOnlyFromValue` は保存済みの値を入力欄が読める形へ戻す向き、`dateOnlyToUtcStartIso` は入力欄の値を保存できる形へ送る向きです。片方だけだと、編集ダイアログの日付欄が空のまま開きます。
+
+**画面が覚えておく値**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 画面が覚えておく値
+function ProjectPageContent() {
+  const [showArchived, setShowArchived] =
+    useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen]
+    = useState(false);
+  const [deleteTargetId, setDeleteTargetId]
+    = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+  const [selectedProject, setSelectedProject] =
+    useState<string | null>(null);
+  const [editingProject, setEditingProject] =
+    useState<ProjectFormData | undefined>(
+      undefined
+    );
+```
+
+削除の状態を `deleteDialogOpen` と `deleteTargetId` の2つに分けてあるのは、確認ダイアログを開くことと、どれを消すかを覚えることが別の話だからです。1つにまとめて `deleteTargetId` の有無で開閉を決めると、削除が終わって `null` へ戻した瞬間にダイアログが消え、処理中の表示を出せません。
+
+**URL の値と選択状態の対応**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: URL の値と選択状態の対応
+  const searchParams = useSearchParams();
+  const projectIdParam =
+    searchParams.get('projectId');
+  const router = useRouter();
+
+  useEffect(() => {
+    if (projectIdParam) {
+      setSelectedProject(projectIdParam);
+    } else {
+      setSelectedProject(null);
+    }
+  }, [projectIdParam]);
+```
+
+`else` で `null` を入れ直しているのは、詳細から一覧へ戻ったときに選択を消すためです。`projectId` が消えても `selectedProject` が残っていると、一覧に戻ったつもりで詳細が出たままになります。依存配列に `projectIdParam` だけを置いてあるので、URL が変わった瞬間だけこの処理が動きます。
+
+**一覧とログインユーザーの取得**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 一覧とログインユーザーの取得
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+  } = api.project.getAll.useQuery({
+    isArchived: showArchived,
+  });
+
+  const { data: currentUser } =
+    api.auth.getCurrentUser.useQuery();
+
+  const utils = api.useUtils();
+```
+
+`currentUser` を取っているのは、送信ハンドラーの新規作成側で足止めに使うためです。この値は画面の判断にだけ使い、持ち主を決めるのには使いません。持ち主を決めるのはサーバー側の `ctx.session.userId` で、画面から書き換えられない場所にあります。
+
+**作成と更新の mutation**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 作成と更新の mutation
+  const createMutation =
+    api.project.create.useMutation({
+      onSuccess: () => {
+        utils.project.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const updateMutation =
+    api.project.update.useMutation({
+      onSuccess: () => {
+        utils.project.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+```
+
+2つの `onSuccess` が同じ中身なのは、作成と更新で起こしたいことがそろっているからです。どちらも一覧を取り直し、ダイアログを閉じます。1つの mutation にまとめられないのは、呼ぶサーバー側の手続きが別で、送る項目の形も違うためです。
+
+**削除とアーカイブの mutation**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 削除とアーカイブの mutation
+  const deleteMutation =
+    api.project.delete.useMutation({
+      onSuccess: () => {
+        utils.project.getAll.invalidate();
+        router.push('/project');
+      },
+    });
+
+  const archiveMutation =
+    api.project.archive.useMutation({
+      onSuccess: () => {
+        utils.project.getAll.invalidate();
+        router.push('/project');
+      },
+    });
+
+  const unarchiveMutation =
+    api.project.unarchive.useMutation({
+      onSuccess: () => {
+        utils.project.getAll.invalidate();
+        router.push('/project');
+      },
+    });
+```
+
+この3つが `setDialogOpen(false)` ではなく `router.push('/project')` を呼ぶのは、操作の起点が詳細画面だからです。削除とアーカイブは、対象のプロジェクトを開いた状態から実行します。`?projectId=...` を付けたまま残ると、もう見られないプロジェクトの詳細を開こうとします。一覧の URL へ戻せば、その状態を作らずに済みます。
+
+**Day 12 で本実装する仮定義**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: Day 12 で本実装する仮定義
+  const projectDetail = undefined;
+  const handleDetailClose = () => {
+    router.push('/project');
+  };
+  const [memberDialogOpen, setMemberDialogOpen] =
+    useState(false);
+  const handleRemoveMember = (
+    _userId: string
+  ) => {
+    // Day 12 Step 6 で本実装に置き換える
+  };
+```
+
+この4つは Day 12 で本実装に差し替えます。中身を空にしてあるのは、動くように見せないためです。半端に動く仮の処理を置くと、差し替えを忘れても画面が動いてしまい、忘れたことに気付けません。`projectDetail` が `undefined` のままなら、詳細画面を開いた時点で中身の無さが目に見えます。
+
+**新規作成と編集開始のハンドラー**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 新規作成と編集開始のハンドラー
+  const handleCreate = () => {
+    setEditingProject(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (projectId: string) => {
+    const project = projects?.find(
+      (p) => p.id === projectId
+    );
+    if (!project) return;
+    const startDate = project.startDate
+      ? dateOnlyFromValue(project.startDate)
+      : undefined;
+    const endDate = project.endDate
+      ? dateOnlyFromValue(project.endDate)
+      : undefined;
+```
+
+`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは、直前に編集を開いていた場合の値を捨てるためです。この1行が無いと、編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき、前のプロジェクトの名前が入ったまま開きます。`handleEdit` が `find` で手元の配列を探しているので、押した瞬間の通信は起きません。
+
+**編集ダイアログへ渡す値の組み立て**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 編集ダイアログへ渡す値の組み立て
+    setEditingProject({
+      id: project.id,
+      name: project.name,
+      description: project.description || '',
+      color: project.color,
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (projectId: string) => {
+    setDeleteTargetId(projectId);
+    setDeleteDialogOpen(true);
+  };
+```
+
+`description` に `|| ''` を付けているのは、データベースの `null` をそのまま入力欄へ渡せないからです。日付の2つを条件付きスプレッドで足しているのは、`ProjectFormData` の型が「値があるか、項目が無いか」の2択で書かれているためです。`handleDelete` が state を置くだけなのは、実際の削除を確認ダイアログの `onConfirm` に任せるからです。
+
+**送信ハンドラーの更新側**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 送信ハンドラーの更新側
+  const handleSubmit = (
+    data: ProjectFormData
+  ) => {
+    if (data.id) {
+      updateMutation.mutate({
+        id: data.id,
+        name: data.name,
+        description:
+          data.description || null,
+        color: data.color,
+        startDate: data.startDate
+          ? dateOnlyToUtcStartIso(
+              data.startDate
+            )
+          : null,
+        endDate: data.endDate
+          ? dateOnlyToUtcStartIso(
+              data.endDate
+            )
+          : null,
+      });
+```
+
+分岐の目印を `data.id` にしてあるのは、保存済みのデータだけが ID を持つからです。ダイアログの側は自分が作成なのか編集なのかを知らず、預かった値をそのまま返してきます。空欄に `null` を送っているので、説明や日付を消す操作もサーバーへ届きます。
+
+**送信ハンドラーの新規作成側**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 送信ハンドラーの新規作成側
+    } else {
+      if (!currentUser?.id) return;
+      createMutation.mutate({
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        startDate: data.startDate
+          ? dateOnlyToUtcStartIso(
+              data.startDate
+            )
+          : undefined,
+        endDate: data.endDate
+          ? dateOnlyToUtcStartIso(
+              data.endDate
+            )
+          : undefined,
+      });
+    }
+  };
+```
+
+こちらが `undefined` を渡しているのは、作成用スキーマの日付に `.nullable()` を付けていないからです。`null` を送ると検証で落ちて、作成そのものが断られます。同じ「空」を表す値でも、手続きごとに受け取れる形が違います。
+
+**アーカイブのハンドラーと読み込み中の表示**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: アーカイブのハンドラーと読み込み中の表示
+  const handleArchive = (
+    projectId: string,
+    isArchived: boolean
+  ) => {
+    const mutation = isArchived
+      ? unarchiveMutation
+      : archiveMutation;
+    mutation.mutate({ id: projectId });
+  };
+
+  if (projectsLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+引数の `isArchived` は「今アーカイブされているか」を表します。すでにアーカイブ済みなら押したときの意味は解除なので、`unarchiveMutation` を選びます。mutation そのものを変数へ入れてから `mutate` を呼ぶ形にしてあるので、送る値を書くのは1回で済みます。
+
+**詳細表示への分岐**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 詳細表示への分岐
+  if (projectIdParam && selectedProject) {
+    return (
+      <AppLayout>
+        <ProjectDetailView
+          projectDetail={projectDetail}
+          onBack={handleDetailClose}
+          onAddMemberClick={
+            () => setMemberDialogOpen(true)
+          }
+          onRemoveMember={handleRemoveMember}
+          onArchive={handleArchive}
+        />
+      </AppLayout>
+    );
+  }
+```
+
+条件を2つ並べてあるのは、URL の値が `selectedProject` へ写るまでに描画が1回はさまるからです。`projectIdParam` だけで判定すると、`/project?projectId=...` を直接開いた1回目に中身の無い詳細が出ます。この分岐を一覧の `return` より前へ置いてあるので、詳細を出すときに一覧を組み立てずに済みます。
+
+**ページ見出しと操作エリア**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: ページ見出しと操作エリア
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center
+          justify-between">
+          <h1 className="text-3xl font-bold
+            tracking-tight">
+            プロジェクト
+          </h1>
+          <div className="flex items-center
+            gap-4">
+            <div className="flex
+              items-center space-x-2">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={
+                  setShowArchived} />
+              <Label
+                htmlFor="show-archived">
+                アーカイブ表示
+              </Label>
+            </div>
+```
+
+Day 09 で作った部分です。今日は変更していません。このスイッチが今日から意味を持ちます。アーカイブしたプロジェクトを見たいときは、ここを入れて一覧を取り直します。スイッチを `showArchived` につないであるので、切り替えるだけで `getAll` の条件が変わります。
+
+**新規作成ボタンとグリッドの開始**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 新規作成ボタンとグリッドの開始
+            <Button onClick={handleCreate}>
+              <Plus
+                className="mr-2 h-4 w-4" />
+              新規プロジェクト
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6
+          sm:grid-cols-2 lg:grid-cols-3
+          xl:grid-cols-4">
+          {projects && projects.length > 0
+            ? (projects.map((project) => {
+              const taskCount =
+                project.tasks?.length ?? 0;
+              const doneCount =
+                project.tasks?.filter(
+                  (t) => t.status ===
+                    TASK_STATUS.DONE
+                ).length ?? 0;
+```
+
+`handleCreate` の中身が今日変わったので、このボタンの動きも変わります。押すと編集用の値を捨ててからダイアログを開くため、必ず空のフォームが出ます。グリッドの中身は Day 09 のままで、件数の数え方にも手を入れていません。
+
+**プロジェクトカードの描画**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: プロジェクトカードの描画
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={
+                    project.description}
+                  color={project.color}
+                  memberCount={
+                    project.members?.length
+                      ?? 0}
+                  taskStats={{
+                    total: taskCount,
+                    done: doneCount }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={
+                    handleProjectClick}
+                  isArchived={
+                    project.isArchived}
+                />);
+            })
+```
+
+`onEdit` と `onDelete` に渡す関数の中身が、今日から本物になりました。Day 09 では `void projectId` と書いた受け皿だったので、押しても何も起きませんでした。カードの側は渡された関数を呼ぶだけなので、この部分のコードは1文字も変えずに動きが変わります。
+
+**空状態と2つのダイアログ**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 空状態と2つのダイアログ
+            ) : (
+              <div className="col-span-full
+                flex flex-col items-center
+                justify-center py-12
+                text-center
+                text-muted-foreground">
+                <p>プロジェクトが
+                  見つかりません。</p>
+                <p>最初のプロジェクトを
+                  作成しましょう！</p>
+              </div>
+            )}
+        </div>
+
+        <ProjectDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+          initialData={editingProject}
+        />
+      </div>
+```
+
+`initialData={editingProject}` の1行が、今日ダイアログへ足した唯一の変更です。`editingProject` が `undefined` なら空のフォーム、値が入っていれば埋まったフォームになります。ダイアログの中身を書き換えずに編集へ使い回せるのは、Day 10 の時点で `initialData` を受け取れる形にしておいたからです。
+
+**削除確認ダイアログと閉じタグ**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 削除確認ダイアログと閉じタグ
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            deleteMutation.mutate({
+              id: deleteTargetId,
+            });
+          }
+        }}
+        isPending={deleteMutation.isPending}
+        title="プロジェクトを削除しますか？"
+      />
+    </AppLayout>
+  );
+}
+```
+
+`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは、`id` の無いリクエストをサーバーへ送らないためです。`isPending` を渡してあるので、削除中はボタンが押せなくなります。この指定が無いと、通信が終わる前に何度も押せて、同じ削除が重なって飛びます。
+
+**ページのエクスポート**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: ページのエクスポート
+export default function ProjectPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <ProjectPageContent />
+    </Suspense>
+  );
+}
+```
+
+`Suspense` で包む形は Day 09 から変わっていません。今日 `useSearchParams` を使ったので、この包みがいっそう要ります。Next.js はこのフックを使う部分を `Suspense` の中に置くよう求めており、外へ出すとビルドの時点で警告が出ます。
+
 ## 今日のまとめ
 
 - [ ] 必要なインポート（`ProjectFormData`, `DeleteConfirmDialog`）を追加できた

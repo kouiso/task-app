@@ -505,13 +505,21 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   if (!user) {
     return (
       <AppLayout>
-        <PageLoadingSpinner />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              ユーザー情報を取得できませんでした
+            </p>
+          </CardContent>
+        </Card>
       </AppLayout>
     );
   }
 ```
 
 `if (!user)` の早期リターンを通過した後に権限変数を宣言します。`user` が確実に存在する状態でないと `user.id` に触れないためです。
+
+ここでスピナーではなく文章を出しているのは、`isLoading` がすでに `false` になっているからです。`getById` が失敗した場合も `user` は `undefined` のままここへ来ます。スピナーを出すと読み込みが続いているように見え、読者は待ち続けます。トーストは数秒で消えるので、画面に残る手がかりがなくなります。
 
 > 存在しないIDへの404は Step 2 の
 > `page.tsx` が担当します。
@@ -1365,9 +1373,8 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
                   {...form.register('avatar')}
                   disabled={
                     updateUser.isPending}
-                  placeholder=
-                    "https://example.com/
-                      avatar.png" />
+                  placeholder="https://example.com/avatar.png"
+                />
               </div>
 ```
 
@@ -1567,7 +1574,7 @@ import { Alert, AlertDescription, AlertTitle }
         id: userId,
         name: values.name,
         avatar: values.avatar
-          || undefined,
+          || null,
         ...(canManageAccount
           ? { role: values.role,
               isActive: values.isActive }
@@ -1578,7 +1585,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 **確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くので、この時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が指している2つがそろいました。実際に動くかどうかは、`</form>` を書き終えた Step 10 の最後で確かめます。
 
-サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `undefined` に変換しています。
+サーバー側の `update` ルーターは、自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `null` に変換しています。`undefined` にすると Step 0 の `if (data.avatar !== undefined)` を通らず、すでに登録されている画像を消せません。
 
 エラー表示ブロックをチェックボックスの下に追加します。
 
@@ -1818,6 +1825,1238 @@ submitUserEditForm(
 
 `as` は型チェックを黙らせる道具であって、値を守る道具ではありません。
 ユーザー入力や API 境界では zod で実際の値を検証します。
+
+## 完成コード全体
+
+今日は5つのファイルを触りました。断片を貼り重ねる作業が11個の Step にまたがったので、途中でどこへ貼ったか分からなくなった場合は、以下のコードと手元のファイルを見比べてください。`user.ts` は Day 24 と Day 25 で書いた中身がそのまま残るため、今日足した部分だけを載せます。残り4つは今日作ったファイルなので、Day 29 終了時点の全文です。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/user.ts` | 詳細を返す入口と、更新を受け取る出口 | Step 0 |
+| `src/app/user/[id]/page.tsx` | 詳細ページの存在確認と404 | Step 2 |
+| `src/app/user/[id]/user-detail-client.tsx` | 詳細画面の表示本体 | Step 3 から Step 6 |
+| `src/app/user/[id]/edit/page.tsx` | 編集ページの存在確認と404 | Step 7 |
+| `src/app/user/[id]/edit/user-edit-client.tsx` | 編集フォームの本体 | Step 7 から Step 10 |
+
+### `src/server/api/routers/user.ts`
+
+**import 群の完成形**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: import 群
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/session';
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+```
+
+今日の追加は `TASK_STATUS` の1行だけです。`getById` が担当タスクを絞り込むときに使います。ここを取り込まずに `'DONE'` と文字列で書くと、綴りを間違えても TypeScript は黙ったままで、絞り込みだけが効かなくなります。他の9行は Day 24 と Day 25 で入れたものなので、手元に無い行があればその日の Step へ戻ってください。
+
+**userUpdateSchema**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: userUpdateSchema
+const userUpdateSchema = z
+  .object({
+    id: z.string().cuid(),
+    name: z.string().min(1, '名前を入力してください').optional(),
+    avatar: z.string().url().optional().nullable(),
+    role: z.nativeEnum(USER_ROLE).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    ({ name, avatar, role, isActive }) =>
+      name !== undefined ||
+      avatar !== undefined ||
+      role !== undefined ||
+      isActive !== undefined,
+    '更新する項目を1つ以上指定してください',
+  );
+```
+
+`id` 以外の4項目すべてに `.optional()` が付いているので、項目ごとの検査だけでは `{ id }` だけの送信も通ってしまいます。それを許すと、何も変えない更新が DB まで届き、`updatedAt` だけが動いたレコードが残ります。末尾の `.refine` は、項目単位では表せない「4つのうち1つは入っていること」を最後に足すための書き方です。
+
+**getById の権限判定**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: getById の権限判定
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.session.userId !== input.id && ctx.session.role !== USER_ROLE.ADMIN) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を行う権限がありません',
+        });
+      }
+```
+
+`adminProcedure` を使わず `protectedProcedure` の中で判定しているのは、本人なら自分の詳細を見られる必要があるからです。管理者専用にすると、一般ユーザーは自分のページさえ開けません。判定に使うのが `ctx.session` の中身であるところも要点です。`input` の値で判定すると、送信内容を書き換えるだけで誰でも管理者を名乗れます。
+
+**getById が返す基本情報とプロジェクト**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: getById が返す基本情報とプロジェクト
+      const user = await prisma.user.findUnique({
+        where: { id: input.id },
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+          projects: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: true,
+                },
+              },
+            },
+          },
+```
+
+`select` に列を並べる形にしてあるので、パスワードのハッシュのような返してはいけない列が混ざりません。`USER_DETAIL_SELECT` を展開しているのは、一覧と詳細で同じ列の組み合わせを使い回すためです。`projects` の下がもう1段深いのは、参加情報の中間テーブルを経由してプロジェクト本体へたどる形になっているからです。
+
+**getById が返す担当タスク**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: getById が返す担当タスク
+          assignedTasks: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true,
+              dueDate: true,
+            },
+            where: {
+              status: {
+                notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
+              },
+            },
+            orderBy: { dueDate: 'asc' },
+          },
+        },
+      });
+```
+
+完了とキャンセルを `notIn` で外しているのは、詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと、長く使っている人のページだけ表が何百行にもなります。`orderBy` で期限の近い順に並べてあるので、画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと、表示する場所が増えても順番がそろいます。
+
+**getById の見つからない場合**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: getById の見つからない場合
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+
+      return user;
+    }),
+```
+
+`findUnique` は見つからないとき例外ではなく `null` を返します。そのまま返すと、画面側は「読み込み中」と「存在しない」を区別できません。`NOT_FOUND` へ変換しておくと、画面側は届いたエラーの種類で分岐できます。
+
+**update の他人を更新するときの権限判定**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: update の権限判定
+  update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, ...data } = input;
+
+    if (id !== ctx.session.userId) {
+      if (ctx.session.role !== USER_ROLE.ADMIN) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: '管理者権限が必要です',
+        });
+      }
+```
+
+`getById` と判定の材料をそろえてあるので、閲覧できる相手と更新できる相手の基準がずれません。片方だけ `input` の値で判定していると、見ることはできないのに更新だけ通る、という抜け道が生まれます。`const { id, ...data } = input` で `id` を切り離しているのは、次のブロックで残りの4項目だけを扱いたいからです。
+
+**update の自分を更新するときの制限**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: 自分を更新するときの制限
+    } else {
+      if (data.role !== undefined || data.isActive !== undefined) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'roleとisActiveは変更できません',
+        });
+      }
+    }
+```
+
+本人の更新では、名前とアバターだけを許して `role` と `isActive` を断ります。ここが無いと、一般ユーザーが送信内容へ `role` を足すだけで管理者になれます。画面側の Step 9 でも入力欄そのものを出さない作りにしていますが、画面に出ていないことは送れないことと違います。最後に断るのはこの4行です。
+
+**update が更新する項目の組み立て**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: 更新する項目の組み立て
+    const updateData: Prisma.UserUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.avatar !== undefined) {
+      updateData.avatar = data.avatar;
+    }
+    if (data.role !== undefined) {
+      updateData.role = data.role;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+```
+
+`data` をそのまま `update` へ渡さず、届いた項目だけを1本ずつ足しています。まとめて渡すと、送られてこなかった項目が `undefined` として扱われ、Prisma の版によっては列を空で上書きします。名前だけ変えたつもりでアバターが消える、という直しにくい不具合の入口です。判定を `!== undefined` にそろえてあるので、`isActive` の `false` も変更として正しく通ります。
+
+**update の書き込みと戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: update の書き込みと戻り値
+    return await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        ...USER_DETAIL_SELECT,
+        updatedAt: true,
+      },
+    });
+  }),
+```
+
+更新した中身をそのまま返しているので、画面側は保存の直後に新しい値を持てます。もう一度取りに行く必要がありません。`updatedAt` を含めているのは、詳細ページの最終更新日をこの値で描き替えられるようにするためです。ここで全列を返さず `select` で絞るのは、`getById` と返す形をそろえて画面側の型を1つに保つためです。
+
+### `src/app/user/[id]/page.tsx`
+
+**存在確認までの部分**:
+
+```tsx
+// filepath: src/app/user/[id]/page.tsx
+// 完成版: 存在確認までの部分
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { UserDetailClient } from './user-detail-client';
+
+interface UserDetailPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function UserDetailPage({
+  params,
+}: UserDetailPageProps) {
+  const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+```
+
+`params` の型が `Promise` になっているのは、Next.js 15 から動的ルーティングの値が非同期で渡されるためです。`await` を付け忘れると、`id` には文字列ではなく待機中の入れ物が入り、`where` が誰にも一致しません。`select: { id: true }` に絞っているのは、ここで知りたいのが存在の有無だけだからです。名前やメールを取っても使う場所がなく、通信の量だけが増えます。
+
+**client 部品への受け渡し**:
+
+```tsx
+// filepath: src/app/user/[id]/page.tsx
+// 完成版: client 部品への受け渡し
+
+  return <UserDetailClient userId={id} />;
+}
+```
+
+`notFound()` の下に `return` が続きますが、この行へ届くのは `user` が見つかったときだけです。`notFound()` はその場で描画を打ち切るからです。取り出した `id` を `userId` として渡しているので、client 側はURLをもう一度読み直す必要がありません。存在の確認を server 側へ置いたので、存在しないIDでブラウザが詳細画面を描き始めることもありません。
+
+### `src/app/user/[id]/user-detail-client.tsx`
+
+**外部ライブラリの import**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 外部ライブラリの import
+'use client';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import toast from 'react-hot-toast';
+```
+
+`'use client'` が1行目にあることが、このファイルがブラウザ側で動く部品だという宣言です。この行が無いと `useEffect` と `useRouter` が使えません。アイコンを4つとも1行にまとめてあるのは、`lucide-react` からの取り込みを2行に分けると Biome が1行へ直すからです。`Pencil` は Step 6 で足した4つ目です。
+
+**プロジェクト内の部品の import**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: プロジェクト内の部品の import
+import { AppLayout } from '@/component/layout/app-layout';
+import { StatusBadge } from '@/component/task/status-badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import {
+  Card, CardContent, CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { Separator } from '@/component/ui/separator';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { formatDateOnly } from '@/lib/date';
+import { api } from '@/trpc/react';
+```
+
+日付の道具が `format` と `formatDateOnly` の2つある理由が、ここで一番大事です。`format` は時刻を持つ値へ使い、`formatDateOnly` は期限のような日付だけの値へ使います。取り違えると、期限の表示が地域によって1日ずれます。バッジ類を自作せず取り込んでいるのは、Day 24 の一覧と同じ色と文言をそのまま使うためです。
+
+**props と2つのデータ取得**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: props と2つのデータ取得
+interface UserDetailClientProps {
+  userId: string;
+}
+
+export function UserDetailClient({ userId }: UserDetailClientProps) {
+  const router = useRouter();
+
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    api.auth.getCurrentUser.useQuery();
+
+  const { data: user, isLoading, error } =
+    api.user.getById.useQuery(
+      { id: userId },
+      { enabled: userId.length > 0 },
+    );
+```
+
+取得が2本あるのは、見ている本人と表示する相手が別物だからです。`currentUser` は編集ボタンを出すかどうかの判断に使い、`user` は画面に描く中身です。`enabled` を付けているのは、`userId` が空文字のまま無駄な通信を投げないためです。読み込み中の状態に別名を付けているのは、次のブロックで2本の到着をまとめて待つからです。
+
+**エラーのトースト表示**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: エラーのトースト表示
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message || 'ユーザー情報の取得に失敗しました');
+    }
+  }, [error]);
+```
+
+エラーの表示を `useEffect` に入れているのは、描画の途中で通知を出すと React が同じ描画を何度も繰り返すからです。依存配列の `[error]` は、`error` が変わったときだけ中身を走らせるという指定です。`||` で既定の文言を用意してあるのは、サーバーから文言が届かない種類の失敗でも、読者に空の通知を見せないためです。
+
+**読み込み中と未取得の早期リターン**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 読み込み中と未取得の早期リターン
+  if (isLoading || isCurrentUserLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              ユーザー情報を取得できませんでした
+            </p>
+          </CardContent>
+        </Card>
+      </AppLayout>
+    );
+  }
+```
+
+2本の取得が両方そろうまで待つのは、片方だけで描き始めると編集ボタンが出たり消えたりするからです。`!user` の分岐を別に置いてあるのは、この行から下で `user.name` へ直接触るためです。ここを通さずに書くと、値が無い可能性を型が指摘し続けます。スピナーを `AppLayout` で包んであるので、読み込み中もサイドバーが消えません。
+
+下の分岐だけスピナーではなく文章にしてあるのは、ここへ来た時点で `isLoading` が `false` だからです。管理者でない人が他人のURLを開くと `getById` が失敗し、`user` が `undefined` のままこの分岐に入ります。スピナーを出すと読み込みが続いているように見えて、読者は待ち続けます。
+
+**権限を表す2つの真偽値**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 権限を表す2つの真偽値
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile = currentUser?.id === user.id;
+```
+
+比べる相手が `userId` ではなく `user.id` になっているところが要点です。`userId` はURLに打ち込まれた文字列で、まだ誰のものとも決まっていません。`user.id` はサーバーが `getById` で認めた本物のIDです。名前を2つ付けておくと、Step 6 の表示条件が `(isAdmin || isOwnProfile)` の1行で読めます。
+
+**戻るボタンとグリッドの開始**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 戻るボタンとグリッドの開始
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-6xl py-8">
+        <Button
+          variant="ghost"
+          className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
+          onClick={() => router.push('/user')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          ユーザー一覧に戻る
+        </Button>
+
+        <div className="grid gap-6 md:grid-cols-12">
+```
+
+戻るボタンを自分で置いているのは、この詳細ページがURLを直接開いても表示できるからです。一覧を経由せずに来た人は、ブラウザの戻るボタンでは一覧へ行けません。`md:grid-cols-12` に `md:` が付いているので、狭い画面では左右に割らず上下へ積まれます。スマートフォンの幅で12列を横に割ると、1列がどちらも読めない幅になります。
+
+**左カラムのアバターとバッジ**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 左カラムのアバターとバッジ
+          <div className="md:col-span-4 space-y-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center mb-6">
+                  <Avatar className="w-24 h-24 mx-auto mb-4">
+                    {user.avatar && <AvatarImage
+                      src={user.avatar}
+                      alt={user.name || ''} />}
+                    <AvatarFallback className="text-3xl">
+                      {user.name?.[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <h2 className="text-xl font-bold mb-2">
+                    {user.name}
+                  </h2>
+                  <div className="flex justify-center gap-2 mb-4">
+                    <UserRoleBadge role={user.role} />
+                    <ActiveStatusBadge isActive={user.isActive} />
+                  </div>
+                </div>
+```
+
+`user.avatar` と `user.name` は、どちらもデータベース側で空を許している列です。`{user.avatar && ...}` で囲まないと、URLの無い人のページで行き先の無い画像を読み込もうとして枠が壊れます。`user.name?.[0]` の `?.` を外すと、名前未設定のユーザーのページが Day 26 で作ったエラー画面へ切り替わります。`AvatarFallback` は、画像の無い人の丸が空白にならないための受け皿です。
+
+**左カラムのメールアドレス**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 左カラムのメールアドレス
+                <Separator className="my-4" />
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground text-xs">
+                        メールアドレス
+                      </p>
+                      <p>{user.email}</p>
+                    </div>
+                  </div>
+```
+
+`Separator` を1本挟むのは、線の上と下で情報の性質が変わるからです。上は名前とバッジで誰かを示し、下はメールと日付でその人の属性を並べます。線が無いと縦に9行続くだけになり、目の休む場所がありません。ここで決めた「アイコン・小さい見出し・値」の形を、下の2つがそのまま繰り返します。
+
+**左カラムの登録日**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 左カラムの登録日
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground text-xs">
+                        登録日
+                      </p>
+                      <p>
+                        {user.createdAt
+                          ? format(
+                              new Date(user.createdAt),
+                              'yyyy年MM月dd日',
+                              { locale: ja }
+                            )
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+```
+
+表示の形から時刻を落としているのは、登録日で知りたいのが「いつからいる人か」だけだからです。値が無いときに `-` を出すのは、見出しだけが値なしで残る状態を避けるためです。空欄だと、読み込みが終わっていないのか、そもそも値が無いのかを読者が判断できません。`-` は「確かめたうえで空だった」という返事になります。
+
+**左カラムの最終更新日**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 左カラムの最終更新日
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground text-xs">
+                        最終更新日
+                      </p>
+                      <p>
+                        {user.updatedAt
+                          ? format(
+                              new Date(user.updatedAt),
+                              'yyyy年MM月dd日',
+                              { locale: ja }
+                            )
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+```
+
+最終更新日を画面に出しておくと、Step 10 の保存が本当に届いたかを自分で確かめられます。`updatedAt` はレコードが更新されるたびに DB 側で書き換わる列だからです。トーストは数秒で消えるので、通知が出ただけでは証拠になりません。末尾の `</div>` は、メールから最終更新日までを囲んでいた枠を閉じています。
+
+**左カラムの編集ボタン**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 左カラムの編集ボタン
+                {(isAdmin || isOwnProfile) && (
+                  <>
+                    <Separator className="my-4" />
+                    <Button
+                      className="w-full"
+                      onClick={() =>
+                        router.push(`/user/${user.id}/edit`)
+                      }
+                    >
+                      <Pencil className="mr-2 h-4 w-4" /> 編集
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+```
+
+ボタンを左カラムの下端へ置いたのは、プロフィールを読んでから操作へ進む順番にするためです。`<>` で `Separator` とボタンをまとめてあるので、権限が無い人には線も出ません。条件を外すと、一般ユーザーにも他人のページの編集ボタンが見えます。押した先はサーバーが断りますが、押せると思わせる表示そのものが誤解の元です。
+
+**右カラムの参加プロジェクトのバッジ**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 参加プロジェクトのバッジ
+          <div className="md:col-span-8 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">参加プロジェクト</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user.projects && user.projects.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {user.projects.map((member) => (
+                      <Badge
+                        key={member.id}
+                        className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
+                        style={{ backgroundColor: member.project.color }}
+                        onClick={() =>
+                          router.push(
+                            `/project?projectId=${member.project.id}`
+                          )
+                        }
+                      >
+```
+
+背景色を `className` ではなく `style` で当てているのは、Tailwind CSS がその場で決まる色をクラス名として作れないからです。クラス名は事前に決まっている必要があります。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトのバッジは文字が読みにくくなります。`md:col-span-8` の `8` は、左の `4` と足して12になる数です。
+
+**右カラムのプロジェクトが無い場合**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: プロジェクトが無い場合
+                        {member.project.name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    参加しているプロジェクトはありません
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+```
+
+`) : (` から下が、参加プロジェクトが0件の人に出る表示です。ここを書かないと、入ったばかりの人のページだけ見出しの下が空白になります。空白は「読み込みに失敗した」とも読めるので、確かめた結果として文章を1行置きます。
+
+**右カラムの担当タスクの見出し**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 担当タスクの見出し
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">担当中のタスク</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {user.assignedTasks && user.assignedTasks.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>タイトル</TableHead>
+                        <TableHead>ステータス</TableHead>
+                        <TableHead>優先度</TableHead>
+                        <TableHead>期限</TableHead>
+                      </TableRow>
+                    </TableHeader>
+```
+
+プロジェクトをバッジで、タスクを表で出しているのは、比べる項目の数が違うからです。プロジェクトは名前だけなので横へ流し、タスクは4つの項目を並べて縦に読ませます。`CardContent` へ `p-0` を付けてあるのは、表の枠線とカードの内側の余白が二重になるのを防ぐためです。
+
+**右カラムのタスク行**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: タスク行
+                    <TableBody>
+                      {user.assignedTasks.map((task) => (
+                        <TableRow
+                          key={task.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() =>
+                            router.push(`/task?taskId=${task.id}`)
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            {task.title}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={task.status} />
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getPriorityBadgeVariant(task.priority)}>
+                              {TASK_PRIORITY_LABELS[task.priority]}
+                            </Badge>
+                          </TableCell>
+```
+
+`onClick` を `TableRow` そのものへ付けているので、行のどこを押してもタスク詳細へ移動します。タイトルの文字だけを押せる形にすると、押せる場所が細くなって当てにくくなります。`hover:bg-muted/50` で色が変わるのは、押せる場所だと目で分かるようにするためです。ステータスの見た目を `StatusBadge` に任せているので、この画面で色を決める処理は書きません。
+
+**右カラムの期限列とテーブルの閉じタグ**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 期限列と表の閉じ
+                          <TableCell>
+                            {task.dueDate
+                              ? formatDateOnly(task.dueDate)
+                              : '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="p-6 text-muted-foreground text-sm">
+                    担当中のタスクはありません
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+```
+
+期限だけ `format` を使わず `formatDateOnly` に任せている理由は、はっきりしています。`dueDate` は時刻を UTC の0時にそろえて保存してあります。これを `new Date()` で読み直して各自の時計へ合わせると、UTC より西の地域では前日にずれます。5月10日締切のタスクが5月9日と表示され、期限切れの判定まで1日早まります。
+
+**全体の閉じタグ**:
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: 全体の閉じタグ
+          </div>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+閉じタグが4段続くのは、右カラム・グリッド・中央寄せの箱・全体のレイアウトを順にたたんでいるからです。数を1つ間違えると、エラーはこの行ではなくファイルの末尾に出ます。写経した結果が動かないときは、ここの段の数だけを先に数え直してください。
+
+### `src/app/user/[id]/edit/page.tsx`
+
+**存在確認までの部分**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/page.tsx
+// 完成版: 存在確認までの部分
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { UserEditClient } from './user-edit-client';
+
+interface UserEditPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function UserEditPage({
+  params,
+}: UserEditPageProps) {
+  const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+```
+
+詳細ページの `page.tsx` と見比べると、違うのは最後に返す部品の名前だけです。存在確認をここでもう一度書くのは、`/user/存在しないid/edit` を直接開かれる場合があるからです。詳細ページを通らないと編集ページへ入れない、という前提は、URLを手で打てる以上は成り立ちません。入口ごとに404を確かめます。
+
+**client 部品への受け渡し**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/page.tsx
+// 完成版: client 部品への受け渡し
+
+  return <UserEditClient userId={id} />;
+}
+```
+
+フォームの中身をこのファイルへ直接書かず、別のファイルへ渡しているのには理由があります。`page.tsx` は `await` と Prisma を使う server 側のファイルで、フォームは入力に反応する client 側の部品です。役割の違う2つを1ファイルへ混ぜると `'use client'` の境目が引けません。ファイルを分けて、境目をそのままファイルの境目にします。
+
+### `src/app/user/[id]/edit/user-edit-client.tsx`
+
+**外部ライブラリの import**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 外部ライブラリの import
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+```
+
+`zodResolver` は、zod で書いた検査ルールを `useForm` へつなぐ継ぎ手です。これが無いと `useForm` は実際の入力を検査せず、名前を空のまま送信してもその場で止まりません。サーバーへ届いてから断られるので、押した場所と赤字の出る場所が離れます。読者は原因を追いにくくなります。アイコンは Step 6 の `ArrowLeft` と Step 10 の `AlertCircle` を1行にまとめます。
+
+**プロジェクト内の部品の import**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: プロジェクト内の部品の import
+import { AppLayout } from '@/component/layout/app-layout';
+import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import {
+  Card, CardContent, CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { Checkbox } from '@/component/ui/checkbox';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import { isUserRole, USER_ROLE, USER_ROLE_LABELS } from '@/lib/constant/roles';
+import { api } from '@/trpc/react';
+```
+
+`@/lib/constant/roles` からの3つを1行に集めているのは、同じ場所からの取り込みを何本も並べるとエラーになるからです。`isUserRole` は Step 9 の型ガード、`USER_ROLE` は初期値、`USER_ROLE_LABELS` は選択肢の文言に使います。ロールに関わる3つが同じ行にそろっていると、値を1つ増やすときに直す場所が分かります。
+
+**zod スキーマと型**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: zod スキーマと型
+const userEditSchema = z.object({
+  name: z.string()
+    .min(1, '名前は必須です'),
+  avatar: z.string().url().or(
+    z.literal('')),
+  role: z.enum(["USER", "ADMIN"]),
+  isActive: z.boolean(),
+});
+type UserEditFormValues =
+  z.infer<typeof userEditSchema>;
+```
+
+`avatar` に `.or(z.literal(''))` を足してあるのは、任意の項目として空欄も許すためです。`.url()` だけにすると、何も入れていない人が保存できません。`z.infer` で型を作っているので、入力の形を2か所に書く必要がありません。スキーマを直せば型も追いかけて変わるため、検査と型の食い違いが起きません。
+
+**props と useForm の初期値**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: props と useForm の初期値
+interface UserEditClientProps {
+  userId: string;
+}
+
+export function UserEditClient({ userId }: UserEditClientProps) {
+  const router = useRouter();
+  const utils = api.useUtils();
+
+  const form = useForm<UserEditFormValues>({
+    resolver: zodResolver(userEditSchema),
+    defaultValues: {
+      name: '',
+      avatar: '',
+      role: USER_ROLE.USER,
+      isActive: true,
+    },
+  });
+```
+
+`defaultValues` を埋めておくのは、サーバーからデータが届く前にフォームが1度描かれるからです。ここを省くと初期状態が定まらず、入力欄が管理下に入ったかどうかの判定が期待どおりになりません。中身は下の `form.reset` で本物のデータへ差し替わるので、この値が使われるのは最初の一瞬だけです。
+
+**権限フラグと編集対象の取得**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 権限フラグと編集対象の取得
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    api.auth.getCurrentUser.useQuery();
+  const isAdmin =
+    currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile =
+    currentUser?.id === userId;
+  const canEditUser =
+    isAdmin || isOwnProfile;
+  const canManageAccount =
+    isAdmin && !isOwnProfile;
+
+  const { data: user, isLoading } = api.user.getById.useQuery(
+    { id: userId },
+    {
+      enabled:
+        !!currentUser
+        && canEditUser
+        && userId.length > 0,
+    },
+  );
+```
+
+真偽値を2段に分けてあるのが要点です。`canEditUser` はページへ入れる権限、`canManageAccount` はロールとアクティブ状態を触れる権限です。後者に `!isOwnProfile` が入っているので、管理者が自分の権限を自分で下げる操作が塞がれます。`enabled` で権限を確かめてから取得するため、入れない人の画面では通信そのものが起きません。
+
+**保存する mutation**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 保存する mutation
+  const updateUser =
+    api.user.update.useMutation({
+      onSuccess: async () => {
+        await Promise.allSettled([
+          utils.user.getById.invalidate(
+            { id: userId }),
+          utils.user.getAll.invalidate(),
+          utils.auth.getCurrentUser.invalidate(),
+          utils.auth.getSession.invalidate(),
+        ]);
+        toast.success(
+          'ユーザー情報を更新しました');
+        router.push(`/user/${userId}`);
+        router.refresh();
+      },
+      onError: (error) => {
+        toast.error(error.message
+          ?? 'ユーザー情報の更新に'
+          + '失敗しました');
+      },
+    });
+```
+
+`invalidate` が4つ並ぶのは、同じ人の情報を4か所が別々に覚えているからです。詳細の `getById`、一覧の `getAll`、サイドバーへ名前を出す `getCurrentUser`、そしてセッションです。1つ書き忘れると、名前を変えたのにサイドバーだけ古いまま残ります。`Promise.allSettled` でまとめてあるので、どれか1つが失敗しても残りの取り直しは進み、通知と画面の移動までたどり着きます。
+
+**フォームへ値を流し込む useEffect**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: フォームへ値を流し込む useEffect
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.name ?? '',
+        avatar: user.avatar ?? '',
+        role: user.role,
+        isActive: user.isActive,
+      });
+    }
+  }, [user, form]);
+```
+
+`form.reset` を `useEffect` の中へ入れているのは、`user` の到着が最初の描画より後になるからです。描画の途中で値を書き換えると、React が同じ描画を繰り返します。`?? ''` で空を空文字へ寄せているのは、入力欄に `null` を渡すとブラウザが警告を出すからです。`reset` は初期値そのものを置き換えるので、この後の取り消し操作もサーバーの値へ戻ります。
+
+**送信する値の組み立て**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 送信する値の組み立て
+  const onSubmit =
+    (values: UserEditFormValues) => {
+      updateUser.mutate({
+        id: userId,
+        name: values.name,
+        avatar: values.avatar
+          || null,
+        ...(canManageAccount
+          ? { role: values.role,
+              isActive: values.isActive }
+          : {}),
+      });
+    };
+```
+
+`canManageAccount` で分岐して項目ごと落としているのは、Step 0 の `update` が本人編集で `role` を受け取ると `FORBIDDEN` を返すからです。値を `undefined` にするのではなく、項目そのものを送らない形にします。`avatar` が空文字のときは `null` へ寄せます。空文字をそのまま送るとサーバー側の `.url()` が断り、`undefined` にすると Step 0 の `if (data.avatar !== undefined)` を通らず、登録済みの画像が消せません。
+
+**現在ユーザーを待つ早期リターン**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 現在ユーザーを待つ早期リターン
+  if (isCurrentUserLoading || !currentUser) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+読み込み中を表す `isCurrentUserLoading` だけでなく `!currentUser` も見ています。読み込みが終わっても中身が空の場合があり、そのまま下へ進むと `currentUser?.role` がずっと `undefined` のままです。すると権限の判定が必ず「権限なし」へ倒れ、ログイン済みの本人にまで拒否画面が出ます。それを止める1行です。
+
+**権限が無い場合の拒否画面**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 権限が無い場合の拒否画面
+  if (!canEditUser) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto max-w-md mt-8">
+          <Card>
+            <CardContent className="pt-6">
+              <h1 className="text-xl font-bold mb-2">
+                アクセス権限がありません
+              </h1>
+              <p className="text-muted-foreground">
+                管理者または本人のみユーザー編集が可能です
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+```
+
+サーバーのエラーを見せずに、自分でこの画面を返しています。`getById` は `enabled` の条件を満たしていないため通信が起きず、待っていてもエラーは届きません。読者にとっても、白い画面の後に通知が出るより、入れない理由が書いてある画面のほうが迷いません。
+
+**編集対象を待つ早期リターン**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 編集対象を待つ早期リターン
+  if (isLoading || !user) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+3つの早期リターンは並び順に意味があります。先に現在ユーザー、次に権限、最後に編集対象です。権限より先に `user` の到着を待つ形にすると、そもそも入れない人の画面が読み込み中のまま止まります。この順にしておけば、断る相手には待ち時間なしで拒否画面が出ます。
+
+**戻るボタンとカードの枠**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 戻るボタンとカードの枠
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-md mt-8 mb-8">
+        <Button
+          variant="ghost"
+          className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
+          onClick={() => router.push(`/user/${userId}`)}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          戻る
+        </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>ユーザー編集</CardTitle>
+          </CardHeader>
+          <CardContent>
+```
+
+横幅を `max-w-md` に絞ってあるのは、入力欄が横に伸びすぎると視線の動く距離が長くなるからです。詳細ページは一覧を並べるので `max-w-6xl` でしたが、フォームは1列で読ませます。戻る先を `/user/${userId}` にしているので、編集をやめた人は一覧ではなく元の詳細ページへ帰ります。
+
+**フォームの開始とアバターのプレビュー**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: フォームの開始とアバターのプレビュー
+            <form onSubmit={
+              form.handleSubmit(onSubmit)}
+              className="space-y-6">
+              <div className="flex
+                justify-center mb-6">
+                <Avatar className="w-24 h-24">
+                  {form.watch('avatar') && (
+                    <AvatarImage
+                      src={form.watch('avatar')}
+                      alt="" />
+                  )}
+                  <AvatarFallback
+                    className="text-2xl">
+                    {form.watch('name')
+                      ?.[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+```
+
+`form.watch` は、その項目の今の値を読み出して変わるたびに描き直させる書き方です。だからURLを1文字打つごとにプレビューが差し替わります。`form.handleSubmit(onSubmit)` を挟んでいるので、`onSubmit` が呼ばれるのは zod の検査を全部通った後だけです。この関数の中で値を確かめ直す必要はありません。
+
+**名前の入力欄**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 名前の入力欄
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  名前
+                  <span className=
+                    "text-destructive">*
+                  </span>
+                </Label>
+                <Input id="name"
+                  {...form.register('name')}
+                  disabled={
+                    updateUser.isPending} />
+                {form.formState.errors
+                  .name && (
+                  <p className="text-sm
+                    text-destructive">
+                    {form.formState.errors
+                      .name.message}
+                  </p>)}
+              </div>
+```
+
+`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下へ入ります。`value` と `onChange` を自分で書かずに済むのは、`register` が両方を作って渡すからです。エラーの文言を `form.formState.errors` から読んでいるので、文章はスキーマ側にだけ置けます。検査の条件と画面の表示が2か所に散らばりません。
+
+**メールアドレスとアバターURLの入力欄**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: メールアドレスとアバターURLの入力欄
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  メールアドレス</Label>
+                <Input id="email"
+                  value={user.email}
+                  disabled />
+                <p className="text-xs
+                  text-muted-foreground">
+                  メールアドレスは変更できません
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="avatar">
+                  アバターURL（任意）</Label>
+                <Input id="avatar" type="url"
+                  {...form.register('avatar')}
+                  disabled={
+                    updateUser.isPending}
+                  placeholder="https://example.com/avatar.png"
+                />
+              </div>
+```
+
+メールの欄だけ `register` を使わず `disabled` にしてあるのは、送信の対象から外しているからです。ログインに使う値なので、ここで気軽に書き換えられると本人が締め出されます。それでも欄ごと消さないのは、いま誰を編集しているのかを画面で確かめられるようにするためです。開くページを間違えたことに、その場で気付けます。
+
+**ロール選択の入口**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: ロール選択の入口
+              {canManageAccount && (
+                <>
+              <div className="space-y-2">
+                <Label htmlFor="role">
+                  ロール</Label>
+                <Select
+                  value={form.watch('role')}
+                  onValueChange={(value) => {
+                    if (isUserRole(value)) {
+                      form.setValue(
+                        'role', value);
+                    }
+                  }}
+                  disabled={
+                    updateUser.isPending}>
+                  <SelectTrigger id="role">
+                    <SelectValue
+                      placeholder=
+                        "ロールを選択" />
+                  </SelectTrigger>
+```
+
+ここだけ `register` を使わず、`value` と `onValueChange` の2つでつないでいます。`Select` は素の `<select>` タグではなく、ボタンと一覧を組み合わせて作られた部品なので、`register` が待っている `onChange` が起きないからです。`isUserRole` で確かめてから渡すのは、`onValueChange` が渡す値の型が `string` までしか絞られないためです。
+
+**ロールの選択肢**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: ロールの選択肢
+                  <SelectContent>
+                    {Object.entries(
+                      USER_ROLE_LABELS
+                    ).map(([value, label]) => (
+                      <SelectItem
+                        key={value}
+                        value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+```
+
+選択肢を `USER_ROLE_LABELS` から作っているので、ロールを1つ増やしたときにこの画面を直す必要がありません。文言も定数側にあるため、一覧の表示とこの選択肢で呼び名が食い違いません。ここへ `<SelectItem value="USER">ユーザー</SelectItem>` と手書きすると、増やしたロールだけ選べない状態になります。
+
+**アクティブ状態の切り替え**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: アクティブ状態の切り替え
+              <div className="flex
+                items-center space-x-2">
+                <Checkbox id="isActive"
+                  checked={form.watch(
+                    'isActive')}
+                  onCheckedChange={
+                    (checked) =>
+                      form.setValue(
+                        'isActive',
+                        checked === true)}
+                  disabled={
+                    updateUser.isPending} />
+                <Label htmlFor="isActive">
+                  アクティブ</Label>
+              </div>
+                </>
+              )}
+```
+
+`checked === true` と書くのは、`onCheckedChange` が `'indeterminate'` という文字列を渡す場合があるからです。この文字列は真として扱われるので、比較を省くと中途半端な状態が「オン」として保存されます。すべての入力欄に `disabled={updateUser.isPending}` を付けているのは、保存中に値を変えられると、送った内容と画面の見た目が食い違うからです。
+
+**保存の失敗を残すアラート**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 保存の失敗を残すアラート
+              {updateUser.error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>エラー</AlertTitle>
+                  <AlertDescription>
+                    {updateUser.error.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+```
+
+トーストと同じ内容をここへも出すのは、トーストが数秒で消えるからです。目を離している間に失敗すると、通知を見逃した読者には何も起きなかったように見えます。`Alert` はフォームの中に残り続けるので、後から画面へ戻っても理由が読めます。
+
+**送信ボタンとキャンセルボタン**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 送信ボタンとキャンセルボタン
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={updateUser.isPending}
+                >
+                  {updateUser.isPending ? '更新中...' : '更新'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push(`/user/${userId}`)}
+                  disabled={updateUser.isPending}
+                >
+                  キャンセル
+                </Button>
+              </div>
+            </form>
+```
+
+キャンセル側の `type="button"` は、書き忘れると事故になる1行です。`<button>` はフォームの中に置くと、指定が無ければ送信ボタンとして扱われます。つまり `type` を省くと、キャンセルを押した瞬間に保存が走ります。取り消すつもりの操作が保存になるので、読者は自分が何をしたのか分かりません。
+
+**全体の閉じタグ**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: 全体の閉じタグ
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+`</form>` を閉じた後、カードの中身・カード・中央寄せの箱・全体のレイアウトを順にたたみます。Step 9 と Step 10 の途中では「閉じタグが足りない」というエラーが出続けていましたが、この6行でそれが消えます。エラーが残る場合は、`</>` と `)}` の組が1つ足りていないところを探してください。
 
 ## つまずきポイント
 

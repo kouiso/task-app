@@ -301,12 +301,13 @@ npm run db:push
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value:
+              'camera=(), microphone=(), geolocation=(), browsing-topics=()',
           },
           { key: 'X-DNS-Prefetch-Control', value: 'off' },
 ```
 
-`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`Permissions-Policy` はカメラ・マイク・位置情報を一切使わないと宣言するものです。このアプリはどれも使わないので、閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` は、リンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
+`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`Permissions-Policy` はカメラ・マイク・位置情報と、閲覧履歴から興味を推定する `browsing-topics` を一切使わないと宣言するものです。このアプリはどれも使わないので、閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` は、リンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
 
 **確認ポイント**:
 - `next.config.ts` に `async headers()` を追加した
@@ -865,6 +866,62 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
 
 App Router では Server Component を標準にして、
 クリック・入力・ブラウザ API が必要な小さな部品だけを Client Component に切り出します。
+
+## 完成コード全体
+
+今日コードを書き足したファイルは1つだけです。Step 1 と Step 3 から Step 8 で打ったのはターミナルのコマンドで、環境変数の登録は Vercel の画面での作業でした。`.env.example` と `docker-compose.yml` は中身を読んで確かめただけなので、書き換えていません。だから完成状態を並べる対象は Step 2.5 の `next.config.ts` に絞られます。ヘッダーの入れ子が深く、どの階層へ貼るか迷いやすい場所なので、以下のコードで手元と見比べてください。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `next.config.ts` | ブラウザへ渡すセキュリティヘッダーの設定 | Step 2.5 |
+
+### `next.config.ts`
+
+このファイルは丸ごと置き換えません。もとから書かれている設定はそのまま残し、`const nextConfig` の中へ以下の `headers` を足した状態が完成形です。
+
+**ヘッダー設定の開始部分**:
+
+```typescript
+// filepath: next.config.ts
+// 完成版: ヘッダー設定の開始部分
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options',
+            value: 'nosniff' },
+          { key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin' },
+```
+
+入れ子が3段になっている理由は、この形が「どのURLに、どのヘッダーを配るか」の組を何通りでも書けるようにしてあるからです。いちばん外の配列が組の一覧、その中の `source` が対象のURL、内側の `headers` が配る中身です。今回は組が1つしかないので冗長に見えますが、あとから管理画面だけ別の指示を配りたくなったときに、2つ目の組を並べるだけで済みます。`async` が付いているのは、Next.js がこの関数の結果を待つ前提で呼び出すためです。外すとビルド時に読み取ってもらえません。
+
+**通信と権限のヘッダーと閉じかっこ**:
+
+```typescript
+// filepath: next.config.ts（同じファイルの続き）
+// 完成版: 通信と権限のヘッダーと閉じかっこ
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'Permissions-Policy',
+            value:
+              'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+          },
+          { key: 'X-DNS-Prefetch-Control', value: 'off' },
+        ],
+      },
+    ];
+  },
+```
+
+前半の3つと違って、こちらは1つずつ改行して書いています。`value` が長いので1行に収めると読みにくく、`npm run fix` を実行しても Biome がこの形に整えます。閉じかっこが `]`、`}`、`]`、`}` の順に4段ぶん並ぶので、貼り付けたあとは `const nextConfig` の閉じかっこが1つ余っていないかを確かめてください。ここが合っていないと、`npm run build` は設定を読む前に構文エラーで止まります。最後の `,` は、この `headers` のうしろに別の設定が並んでも壊れないようにするためのものです。
+
+`Content-Security-Policy` はここに入っていません。Step 2.5 で触れたとおり、書き方を誤ると自分のアプリの画像やスクリプトまで止まるので、公開を先に成立させるほうを取っています。上の6つで動く状態を確かめてから、次の課題として足してください。
 
 ## 今日のまとめ
 

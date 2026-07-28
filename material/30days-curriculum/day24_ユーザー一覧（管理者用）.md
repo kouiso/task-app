@@ -933,6 +933,388 @@ PORT=3001 npm run dev
 
 **覚えておきたいこと**: 表示部品には必要な情報だけ渡します。
 
+## 完成コード全体
+
+今日は4つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/user.ts` | ユーザー一覧を返す管理者専用の入口 | Step 0 |
+| `src/server/api/root.ts` | 手続きの一覧表 | Step 0 |
+| `src/app/user/page.tsx` | ユーザー管理の画面 | Step 2 から Step 9 |
+| `src/component/layout/app-layout.tsx` | 管理者だけに出すサイドバーのリンク | Step 9 |
+
+最後の `app-layout.tsx` は Day 08 で作った長いファイルなので、今日足した2か所だけを載せます。それ以外の行は Day 08 のまま触りません。
+
+### `src/server/api/routers/user.ts`
+
+**import**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: import
+import type { Prisma } from '@prisma/client';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { adminProcedure, createTRPCRouter } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+```
+
+取り込むのは今日の `getAll` が使う6つだけです。手元のファイルに `bcrypt` や `protectedProcedure` が並んでいたら、それは先の Day で足す道具を早く書きすぎています。使っていない取り込みが残っていると、保存のたびに未使用の警告が出続け、本当に直すべき警告が混ざって見えなくなります。
+
+**getAll の入口と入力の定義**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: getAll の入口と入力の定義
+export const userRouter = createTRPCRouter({
+  // adminProcedureによりセッションのroleを参照してADMIN判定するためDBクエリ不要
+  getAll: adminProcedure
+    .input(
+      z
+        .object({
+          isActive: z.boolean().optional(),
+          role: z.nativeEnum(USER_ROLE).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const where: Prisma.UserWhereInput = {};
+```
+
+`adminProcedure` で始まっているかを最初に確かめてください。ここが `protectedProcedure` になっていると、ログインさえしていれば誰でも全員のメールアドレスを受け取れます。画面側の `if (!isAdmin)` は書き換えられる場所で動くので、他人の情報を守っているのはこの1語だけです。`.optional()` が2つ付いているのは、絞り込みの条件をまだ画面から渡していないためです。
+
+**絞り込みと取得**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: 絞り込みと取得
+      if (input?.isActive !== undefined) {
+        where.isActive = input.isActive;
+      }
+
+      if (input?.role) {
+        where.role = input.role;
+      }
+
+      return await prisma.user.findMany({
+        where,
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+});
+```
+
+`isActive` の判定だけ `!== undefined` になっているのは、`false` が意味を持つ値だからです。`if (input?.isActive)` と書くと、無効なアカウントだけを見たいという指定が「指定なし」として捨てられます。`select` を書かずに `findMany` を呼ぶと、パスワードのハッシュまで画面へ送られます。返してよい列を並べておけば、テーブルに列を足したときも勝手に外へ出ません。
+
+### `src/server/api/root.ts`
+
+**import**:
+
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: import
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { reportRouter } from './routers/report';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { userRouter } from './routers/user';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+```
+
+この並びはファイル名のアルファベット順で、保存すると整形ツールが自動でこの形へ直します。手で並べ替える必要はありません。`userRouter` の1行が抜けていると、次のブロックの `user: userRouter` で名前が見つからないという型エラーが出ます。
+
+**ルーターの登録と書き出し**:
+
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: ルーターの登録と書き出し
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+  report: reportRouter,
+  user: userRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+こちらの並びは教材で作った時系列に従い、`user` が最後に来ます。上の import 側と順番が違って見えますが、動作は変わりません。時系列を保っておくと、`root.ts` を開いたときにどの Day で何が増えたのかを上から順にたどれます。下2行は前の Day から置いてあるもので、今日は触りません。
+
+### `src/app/user/page.tsx`
+
+**外部ライブラリの import**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: 外部ライブラリの import
+'use client';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Eye, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import toast from 'react-hot-toast';
+```
+
+先頭の `'use client'` は、`useRouter` と `useEffect` をこのページで使うための宣言です。この1行が無いと、Next.js はページをサーバー側で組み立てようとして、ブラウザにしか無い仕組みを呼んだところで止まります。並びがアルファベット順になっているのは、保存すると整形ツールが並べ替えるからです。書いた順番と違っていても、手で直す必要はありません。
+
+**プロジェクト内の import**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: プロジェクト内の import
+import { AppLayout } from '@/component/layout/app-layout';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/component/ui/table';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { api } from '@/trpc/react';
+```
+
+`@/component/ui/...` が単数形になっている点は Step 3 の注意書きのとおりで、複数形で書くとファイルが見つからないというエラーが起動時に出ます。`Table` の6つをまとめて取り込んでいるのは、表の外枠・見出し行・本体・行・セルがそれぞれ別の部品として分かれているからです。1つでも欠けると、その部分だけタグが見つからないと言われます。
+
+**データ取得とエラー処理**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: データ取得とエラー処理
+export default function UsersPage() {
+  const router = useRouter();
+
+  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+
+  const {
+    data: users,
+    isLoading,
+    error,
+  } = api.user.getAll.useQuery(undefined, {
+    enabled: isAdmin,
+  });
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message || 'ユーザー一覧の取得に失敗しました');
+    }
+  }, [error]);
+```
+
+`enabled: isAdmin` が抜けやすい部分です。これが無いと、一般ユーザーがページを開いた瞬間にも `getAll` へリクエストが飛びます。サーバーは管理者権限が必要ですと返すため情報は漏れませんが、開くたびに赤いトーストが出て、画面が壊れているように見えます。`isAdmin` は `currentUser` から作る値なので、取得の開始そのものを後ろへずらせます。
+
+**ローディングと権限チェック**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: ローディングと権限チェック
+  if (isCurrentUserLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  if (!isAdmin) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto max-w-6xl mt-8">
+          <Card>
+            <CardContent className="pt-6">
+              <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
+              <p className="text-muted-foreground">この機能は管理者のみ利用できます</p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+```
+
+3つの判定は、この順番でなければ正しく動きません。`isAdmin` は `currentUser` から作られるので、届く前は必ず `false` です。1つ目のスピナーを外すと、管理者がページを開いた一瞬だけアクセス権限がありませんのカードが出て、そのあと一覧へ切り替わります。3つ目の `isLoading` を権限チェックより後ろに置いているのは、リクエストを送っていない人のためにスピナーを回す必要が無いからです。
+
+**ページヘッダーと列の定義**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: ページヘッダーと列の定義
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-6xl py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">ユーザー管理</h1>
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ユーザー</TableHead>
+                  <TableHead>メールアドレス</TableHead>
+                  <TableHead>ロール</TableHead>
+                  <TableHead>ステータス</TableHead>
+                  <TableHead>登録日</TableHead>
+                  <TableHead className="text-right">アクション</TableHead>
+                </TableRow>
+              </TableHeader>
+```
+
+ここまで届くのは、上の3つの判定を通り抜けた場合だけです。だから本体では `isAdmin` を確かめ直しません。`TableHead` の個数と、次のブロックから並べる `TableCell` の個数はそろえます。片方だけ増やすと、その行から下の列がすべて1つずつ横にずれます。エラーは出ないので、見た目のずれで気づくしかありません。
+
+**行の描画とバッジ**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: 行の描画とバッジ
+              <TableBody>
+                {users?.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
+                          <AvatarFallback>{user.name?.[0]?.toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{user.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <UserRoleBadge role={user.role} />
+                    </TableCell>
+                    <TableCell>
+                      <ActiveStatusBadge isActive={user.isActive} />
+                    </TableCell>
+```
+
+`user.name?.[0]?.toUpperCase()` の `?.` を2回はさむのは、名前が未設定のユーザーが1人いるだけで式が例外を投げ、一覧全体が真っ白になるのを防ぐためです。バッジの2つは値を見た目へ翻訳する仕事を引き受ける部品です。`user.role` をそのまま置くと画面には `ADMIN` という文字が出るので、管理者を探すたびに1行ずつ読む作業が発生します。
+
+**登録日と詳細ボタン**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: 登録日と詳細ボタン
+                    <TableCell>
+                      {user.createdAt
+                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                            locale: ja,
+                          })
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => router.push(`/user/${user.id}`)}
+                          title="詳細"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+```
+
+`user.createdAt ? ... : '-'` の分岐は、値が無いまま `format` を呼んで例外が起きるのを防ぐためのものです。`title="詳細"` は、アイコンしか置いていないボタンに名前を与える指定です。この指定が無いと、読み上げソフトを使う人には名前のないボタンとして届き、押してよいものかどうかを判断できません。
+
+**編集ボタンとテーブルの閉じタグ**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: 編集ボタンとテーブルの閉じタグ
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => router.push(`/user/${user.id}/edit`)}
+                          title="編集"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+```
+
+`))}` の3文字は別のものを閉じています。内側の丸括弧は `map` に渡した関数が返す JSX の囲み、外側の丸括弧は `map` の呼び出し、波括弧は JSX の中に JavaScript を書くための入れ物です。数が合わないとエラーの行番号はこの近くではなくファイルの末尾を指すので、開いた順の逆にたどって数えてください。
+
+**空状態と最後の閉じタグ**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: 空状態と最後の閉じタグ
+        {users && users.length === 0 && (
+          <div className="text-center py-10 text-muted-foreground">
+            ユーザーが見つかりませんでした
+          </div>
+        )}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+条件を `users.length === 0` だけにせず `users &&` を前に置いているのは、取得前の `users` が `undefined` だからです。前置きが無いと、読み込み中にも0件のメッセージが一瞬出ます。件数が0のときに何も描かないと、読者は表が壊れたのかデータが無いのかを区別できません。
+
+### `src/component/layout/app-layout.tsx`
+
+**追加する import**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: 今日足した import
+import { USER_ROLE } from '@/lib/constant/roles';
+```
+
+このファイルはログイン中のセッションをすでに読んでいるので、今日足すのはロールの定数だけです。文字列の `'ADMIN'` を直接書かないのは、綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと、間違いが画面の表示ではなく保存の時点で分かります。
+
+**管理者だけに出すリンク**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: 今日足したリンク
+{session.user.role === USER_ROLE.ADMIN && (
+  <li>
+    <Link
+      href="/user"
+      className="flex items-center gap-3
+        rounded-md px-3 py-2 text-sm"
+    >
+      ユーザー管理
+    </Link>
+  </li>
+)}
+```
+
+`条件 && (...)` は、条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないと式の値は `false` になり、React は `false` を何も描かない値として扱います。一般ユーザーのサイドバーには空の行すら残りません。ただしこのリンクを消しても `/user` は開けます。他人のメールアドレスを守っているのは、`user.ts` の `adminProcedure` のほうです。
+
 ## 今日のまとめ
 
 - [ ] api.auth.getCurrentUser で権限チェックした

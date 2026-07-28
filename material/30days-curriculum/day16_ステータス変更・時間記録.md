@@ -766,15 +766,17 @@ const handleOpenTimeLog = (e: React.MouseEvent) => {
   <p className="text-sm text-muted-foreground">
     合計作業時間: {formatMinutes(timeSpentMinutes)}
   </p>
-  <Button
-    variant="outline"
-    size="sm"
-    className="w-full text-xs h-8"
-    onClick={handleOpenTimeLog}
-    aria-label={`${title}の時間を記録`}>
-    <Clock className="mr-2 h-3 w-3" />
-    時間記録
-  </Button>
+  {canEdit && (
+    <Button
+      variant="outline"
+      size="sm"
+      className="w-full text-xs h-8"
+      onClick={handleOpenTimeLog}
+      aria-label={`${title}の時間を記録`}>
+      <Clock className="mr-2 h-3 w-3" />
+      時間記録
+    </Button>
+  )}
 </div>
 ```
 
@@ -782,6 +784,12 @@ const handleOpenTimeLog = (e: React.MouseEvent) => {
 空欄にしないのは、記録できる場所だと気づいてもらうため
 です。数字が `0m` から `1h 30m` へ変われば、保存が届いた
 ことも一目で分かります。
+
+ボタンだけを `canEdit &&` で囲んであるのは、Step 0 の
+`addTime` が `canEdit` を確かめてから足し算するためです。
+閲覧者だけのロールで押すと必ずエラーで戻ってくるので、
+入力させる前に隠します。合計作業時間の表示は囲みません。
+読むだけの人にも見えていて困らない情報だからです。
 
 `aria-label` を省くと、読み上げでは「時間記録」という
 同じ名前のボタンが並ぶだけになります。カードが10枚あれば
@@ -798,15 +806,20 @@ return (
     <Card>
       {/* ...カードの中身... */}
     </Card>
-    <TimeLogDialog
-      open={timeLogDialogOpen}
-      onClose={() => setTimeLogDialogOpen(false)}
-      taskId={id}
-      onSuccess={onTimeLogSuccess}
-    />
+    {canEdit && (
+      <TimeLogDialog
+        open={timeLogDialogOpen}
+        onClose={() => setTimeLogDialogOpen(false)}
+        taskId={id}
+        onSuccess={onTimeLogSuccess}
+      />
+    )}
   </>
 );
 ```
+
+小窓も同じ `canEdit` で囲みます。ボタンだけ隠しても小窓が
+残ると、別の場所から開く道ができたとき、閲覧者の画面へ出ます。
 
 `<>` と `</>` で囲むのは、カードとダイアログを
 1つの要素として返すためです。
@@ -1140,6 +1153,655 @@ export function StatusActionButton({
 
 同じ条件の `if` が何度も出てきたら、配列にしてデータとして扱えないか考えます。
 ルールをコードの分岐に埋めるより、一覧できる形にすると変更に強くなります。
+
+## 完成コード全体
+
+今日は4つのファイルを触りました。断片を貼り重ねる作業が続いたので、どこへ貼ったか分からなくなった場合は、以下のコードと手元のファイルを見比べてください。`time-log-dialog.tsx` と `task-card.tsx` は今日の終了時点の全文です。`task.ts` と `page.tsx` は Day 13 から Day 15 で書いた中身がそのまま残るため、今日足した部分だけを載せます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/task.ts` | 作業時間をサーバー側で足し込む手続き | Step 0 |
+| `src/component/task/time-log-dialog.tsx` | 時間と分を入力して記録する小窓 | Step 2 |
+| `src/component/task/task-card.tsx` | 合計作業時間の表示と記録ボタン | Step 3 |
+| `src/app/task/page.tsx` | 記録の成功を受けて一覧を取り直す | Step 3 |
+
+### `src/server/api/routers/task.ts`
+
+**addTime の入力スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: addTime の入力スキーマ
+const taskTimeUpdateSchema = z.object({
+  id: z.string().cuid(),
+  minutesToAdd: z.number().int().min(0),
+});
+```
+
+このスキーマは `taskRouter` の前、Day 15 で足したスキーマの近くに置きます。手続きの中ではなく外に置くのは、入口の検査を型と一緒に1か所へ集めるためです。`.min(0)` が入口に無いと、マイナスの分数がそのまま加算へ流れ、合計が減った理由を後から追えなくなります。
+
+**addTime 手続き**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: addTime 手続き
+  addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
+    await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
+
+    return await prisma.task.update({
+      where: { id: input.id },
+      data: {
+        timeSpentMinutes: {
+          increment: input.minutesToAdd,
+        },
+      },
+    });
+  }),
+```
+
+置き場所は Day 15 で書いた `delete` の直後です。合計の足し算をここへ集めたので、画面側は増えたあとの数字を受け取るだけで済みます。`increment` を使うのは、読み出してから書き戻す形だと、2回の記録がほぼ同時に届いたときに片方が消えるからです。
+
+### `src/component/task/time-log-dialog.tsx`
+
+**インポート**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: インポート
+'use client';
+
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Button } from '@/component/ui/button';
+import {
+  Dialog, DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/component/ui/dialog';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { api } from '@/trpc/react';
+```
+
+先頭の `'use client'` は、この部品がブラウザ側で動くという宣言です。入力欄の値を持つ画面なので、サーバーだけで組み立てるわけにはいきません。並び順が手元と違っていても直す必要はありません。`npm run fix` を実行すると Biome が並べ替えます。
+
+**バリデーションスキーマ**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: バリデーションスキーマ
+const timeLogSchema = z.object({
+  hours: z.number().int().min(0),
+  minutes: z.number().int().min(0).max(59),
+}).refine(
+  (data) => data.hours * 60 + data.minutes > 0,
+  { message: '1分以上入力してください',
+    path: ['minutes'] },
+);
+type TimeLogFormData =
+  z.infer<typeof timeLogSchema>;
+```
+
+このスキーマをコンポーネント関数の外に置いてあるのは、画面が描き直されるたびにルールを組み立て直さないためです。欄をまたぐ判定である `refine` をここへ入れたので、時間と分のどちらか片方だけを見る検査では拾えない「両方0」を、送信の直前に1回で弾けます。
+
+**Props とフォームの初期化**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: Props とフォームの初期化
+interface TimeLogDialogProps {
+  open: boolean;
+  onClose: () => void;
+  taskId: string;
+  onSuccess?: () => void;
+}
+
+export function TimeLogDialog({
+  open, onClose, taskId, onSuccess,
+}: TimeLogDialogProps) {
+  const {
+    register, handleSubmit, reset,
+    formState: { errors },
+  } = useForm<TimeLogFormData>({
+    resolver: zodResolver(timeLogSchema),
+    defaultValues: { hours: 0, minutes: 0 },
+  });
+```
+
+`taskId` を親から受け取る形にしたので、この小窓はどのカードからでも使い回せます。`defaultValues` に0を入れてあるのは、初期値が無いと両方の欄が `undefined` から始まり、`refine` の足し算が `NaN` になって検証そのものが成り立たなくなるからです。
+
+**閉じる処理と通信**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: 閉じる処理と通信
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const addTimeMutation =
+    api.task.addTime.useMutation({
+      onSuccess: () => {
+        onSuccess?.();
+        handleClose();
+      },
+    });
+```
+
+閉じる経路は、記録の成功後・キャンセル・右上の×・背景クリックの4つあります。`reset()` と `onClose()` を `handleClose` に1つへまとめてあるので、どの経路をたどっても入力欄は空に戻ります。この画面は足し算なので、前の入力が残ったまま次のタスクで開くと、身に覚えのない分数が合計へ乗ります。
+
+**送信ハンドラー**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: 送信ハンドラー
+  const onSubmit = async (
+    data: TimeLogFormData,
+  ) => {
+    const totalMinutes =
+      data.hours * 60 + data.minutes;
+    try {
+      await addTimeMutation.mutateAsync({
+        id: taskId,
+        minutesToAdd: totalMinutes,
+      });
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : '作業時間の追加に失敗しました',
+      );
+    }
+  };
+```
+
+時間と分を1つの数へ直す係を、この1か所だけに置いてあります。`addTime` は分しか受け取らないので、変換をあちこちに散らすと片方だけ直し忘れたときに足りない記録が残ります。`mutate` ではなく `mutateAsync` を選んだのは、`await` で待たないと失敗を `catch` で受け止められず、通信が落ちても画面が黙ってしまうからです。
+
+**ダイアログの見出し**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: ダイアログの見出し
+  return (
+    <Dialog open={open}
+      onOpenChange={handleClose}>
+      <DialogContent className="space-y-4">
+        <DialogHeader>
+          <DialogTitle>
+            作業時間の記録
+          </DialogTitle>
+          <DialogDescription>
+            タスクに作業時間を記録します
+          </DialogDescription>
+        </DialogHeader>
+```
+
+`onOpenChange` に `onClose` を直接渡さず `handleClose` を挟んであるのは、Esc キーと背景クリックもここを通るためです。`DialogDescription` を省くと、画面読み上げでは見出しの「作業時間の記録」しか読まれず、時間を足す画面なのか消す画面なのかが伝わりません。
+
+**時間の入力欄**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: 時間の入力欄
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <Label htmlFor="hours">時間</Label>
+            <Input id="hours"
+              inputMode="numeric"
+              {...register('hours',
+                { valueAsNumber: true })} />
+            {errors.hours && (
+              <p className="text-sm
+                text-destructive">
+                {errors.hours.message}
+              </p>
+            )}
+          </div>
+```
+
+`valueAsNumber: true` が要るのは、入力欄の返す値が文字列で、スキーマ側は `z.number()` を求めているためです。付け忘れると型が合わず、正しい数字を打っても検証で弾かれます。`inputMode="numeric"` は数字のキーボードを先に出すための指定で、値が正しいかどうかの判定は zod 側に寄せてあります。
+
+**分の入力欄**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: 分の入力欄
+          <div className="flex-1">
+            <Label htmlFor="minutes">分</Label>
+            <Input id="minutes"
+              inputMode="numeric"
+              {...register('minutes',
+                { valueAsNumber: true })} />
+            {errors.minutes && (
+              <p className="text-sm
+                text-destructive">
+                {errors.minutes.message}
+              </p>
+            )}
+          </div>
+        </div>
+```
+
+`errors.minutes` の表示がこの位置にあるので、`refine` の `path` に `['minutes']` を指定した「合計0分」のエラーも分欄の下に出ます。表示先を決めずに `refine` だけを足すと、エラーはどの欄にも結び付かず、利用者にはボタンが効かない画面として見えます。
+
+**フッターのボタン**:
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: フッターのボタン
+        <DialogFooter>
+          <Button variant="outline"
+            onClick={handleClose}>
+            キャンセル
+          </Button>
+          <Button
+            onClick={handleSubmit(onSubmit)}
+            disabled={addTimeMutation.isPending}>
+            {addTimeMutation.isPending
+              ? '追加中...' : '時間を追加'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+`handleSubmit(onSubmit)` という包み方をしているので、検証を通らないかぎり `onSubmit` は呼ばれません。通信中にボタンを押せなくしているのは、返事が来る前にもう一度押されると、同じ分数が2回足されて合計が狂うからです。
+
+### `src/component/task/task-card.tsx`
+
+**インポート**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: インポート
+'use client';
+
+import { AlertTriangle, CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
+import { formatDateOnly, isOverdue } from '@/lib/date';
+import { cn } from '@/lib/utils';
+import { StatusBadge } from './status-badge';
+import { TimeLogDialog } from './time-log-dialog';
+```
+
+今日この行に足したのは `Clock`、`useState`、`TimeLogDialog` の3つです。`TimeLogDialog` だけ `./time-log-dialog` という書き方なのは、同じフォルダに置いた部品だからです。`Clock` は時計の絵ですが計測は始まりません。押すと入力用の小窓が開くだけです。
+
+**分を読みやすい形に直す関数**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 分を読みやすい形に直す関数
+const formatMinutes = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.floor(minutes % 60);
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+};
+```
+
+サーバーが持っているのは分の合計だけなので、`150` をそのまま出すとどれくらいか直感で分かりません。`Math.floor` が2回あるのは、`150 / 60` が `2.5` を返すためです。切り捨ててから `%` の余りを足すと `2h 30m` になります。保存される値は分のままで、この文字は残りません。
+
+**Props の型**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: Props の型
+interface TaskCardProps {
+  id: string;
+  title: string;
+  description?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: Date | null;
+  assignee?: {
+    name: string | null;
+    email: string;
+    avatar: string | null;
+  } | null;
+  timeSpentMinutes?: number;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onClick?: (id: string) => void;
+  onTimeLogSuccess?: (() => void) | undefined;
+  canEdit?: boolean;
+  canDelete?: boolean;
+}
+```
+
+今日足した口は `timeSpentMinutes` と `onTimeLogSuccess` の2つです。どちらも `?` を付けてあるのは、Day 13 から Day 15 で書いた呼び出し側を直さなくても型が通るようにするためです。必須にすると、この2つを渡していないすべての画面が同時に型エラーになります。
+
+**関数の宣言と受け取り**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 関数の宣言と受け取り
+export function TaskCard({
+  id,
+  title,
+  description,
+  status,
+  priority,
+  dueDate,
+  assignee,
+  timeSpentMinutes = 0,
+  onEdit,
+  onDelete,
+  onClick,
+  onTimeLogSuccess,
+  canEdit = true,
+  canDelete = true,
+}: TaskCardProps) {
+```
+
+`timeSpentMinutes = 0` の既定値がここでの要点です。オプショナルにした口は渡されなければ `undefined` になり、そのまま `formatMinutes` へ入ると `NaN` が表示されます。0を入れておけば、まだ記録の無いタスクは `0m` と出ます。
+
+**状態とカードのクリック**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 状態とカードのクリック
+  const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
+  const overdue =
+    isOverdue(dueDate) && status !== TASK_STATUS.DONE && status !== TASK_STATUS.CANCELLED;
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick(id);
+    }
+  };
+```
+
+開閉の状態をカードの内側に持たせてあるので、一覧に10枚並んでも開くのは押した1枚だけです。`overdue` の判定から完了と取り消しを外しているのは、終わったタスクに期限切れの赤を付けても、読む人がやることは何も増えないからです。
+
+**3つのボタンのハンドラー**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 3つのボタンのハンドラー
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(id);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(id);
+  };
+
+  const handleOpenTimeLog = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTimeLogDialogOpen(true);
+  };
+```
+
+3つとも先頭で `e.stopPropagation()` を呼びます。HTML のクリックは内側の要素から外側へ順に届く決まりなので、これが無いとボタンを押しただけでカード全体のクリックまで走り、詳細と小窓が一度に立ち上がります。押した本人には何が起きたのか判断がつきません。
+
+**カードの外枠**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: カードの外枠
+  return (
+    <>
+      <Card
+        className={cn(
+          'transition-all h-full flex flex-col',
+          onClick && 'cursor-pointer hover:shadow-md',
+          overdue && 'border-destructive/60 bg-destructive/5',
+        )}
+        onClick={handleCardClick}
+      >
+```
+
+`<>` で始まっているのは、この後ろに `TimeLogDialog` を並べて返すためです。React は要素を2つ並べて返せないので、空タグでまとめます。`cn()` に条件を渡すと、`onClick` がある場合だけ手のひらカーソルになり、期限切れの場合だけ枠が赤くなります。
+
+**タイトル**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: タイトル
+        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+          <CardTitle
+            className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
+            title={title}
+          >
+            {onClick ? (
+              <button
+                type="button"
+                className="w-full text-left truncate cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCardClick();
+                }}
+              >
+                {title}
+              </button>
+            ) : (
+              title
+            )}
+          </CardTitle>
+```
+
+`onClick` がある場合だけタイトルを `<button>` で包みます。カード全体が押せても、キーボードだけで操作する人には押せる場所が伝わりません。ボタンにしておくと Tab キーで移動でき、`focus-visible` の枠でどこにいるかも見えます。
+
+**編集ボタン**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 編集ボタン
+          <div className="flex gap-0">
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleEdit}
+                aria-label="タスクを編集"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+```
+
+`canEdit &&` で囲ってあるので、権限の無い人にはボタンそのものが出ません。中身が鉛筆の絵だけなので `aria-label` を付けています。これが無いと、読み上げでは「ボタン」としか伝わらず、押すと何が起きるのか分かりません。
+
+**削除ボタン**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 削除ボタン
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={handleDelete}
+                aria-label="タスクを削除"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+```
+
+削除だけ `text-destructive` で赤くしてあります。取り消せない操作を編集と見分けがつかない見た目にすると、押し間違いがそのまま消失につながります。色は警告であって確認ではないので、実際の確認は Day 15 で作ったダイアログが受け持ちます。
+
+**説明文とバッジ**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 説明文とバッジ
+        <CardContent className="flex-1 flex flex-col gap-3">
+          {description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
+          )}
+
+          <div className="flex gap-2 flex-wrap">
+            <StatusBadge status={status} />
+            <Badge variant={getPriorityBadgeVariant(priority)}>
+              {TASK_PRIORITY_LABELS[priority]}
+            </Badge>
+            {overdue && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                期限切れ
+              </Badge>
+            )}
+          </div>
+```
+
+`line-clamp-2` で説明文を2行に切っています。長さの違う説明が並ぶとカードの高さがそろわず、一覧が読みにくくなるためです。ステータスと優先度の日本語は定数から引くので、表記を変えたいときにこの画面へ手を入れる必要はありません。
+
+**担当者**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 担当者
+          <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
+            <div className="flex justify-between items-center">
+              {assignee ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    {assignee.avatar && <AvatarImage src={assignee.avatar} alt="" />}
+                    <AvatarFallback className="text-[10px]">
+                      {(assignee.name || assignee.email || '?')[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                    {assignee.name || assignee.email}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">未割当</span>
+              )}
+```
+
+外側の `mt-auto` が、この一帯をカードの下端へ押し下げています。説明文の長さが違ってもボタンの位置がそろうので、続けて押すときに手が迷いません。担当者がいない場合に「未割当」と出すのは、空欄のままでは読み込み中と未設定を区別できないからです。
+
+**期限**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 期限
+              {dueDate && (
+                <div
+                  className={cn(
+                    'flex items-center gap-1 text-xs',
+                    overdue ? 'text-destructive font-semibold' : 'text-muted-foreground',
+                  )}
+                >
+                  <CalendarDays className="h-3 w-3" />
+                  <span>
+                    {overdue && <span className="sr-only">期限切れ </span>}
+                    {formatDateOnly(dueDate)}
+                  </span>
+                </div>
+              )}
+            </div>
+```
+
+`sr-only` を付けた「期限切れ」は、画面には出ないまま読み上げにだけ届きます。期限切れを赤い文字でしか示していないと、色を見分けられない人には日付が並んでいるだけに見えます。色で伝える情報は、言葉でも用意しておきます。
+
+**合計作業時間と時間記録ボタン**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: 合計作業時間と時間記録ボタン
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                合計作業時間: {formatMinutes(timeSpentMinutes)}
+              </p>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8"
+                  onClick={handleOpenTimeLog}
+                  aria-label={`${title}の時間を記録`}
+                >
+                  <Clock className="mr-2 h-3 w-3" />
+                  時間記録
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+```
+
+まだ記録の無いタスクにも `0m` と出しているのは、記録できる場所だと気づいてもらうためです。`aria-label` にタスク名を入れているのは、これが無いと読み上げで「時間記録」というボタンがカードの枚数だけ並び、どれを押しているのか分からなくなるからです。ボタンを `canEdit &&` で囲んでいるのは、編集ボタンと同じ理由です。`addTime` は `canEdit` を確かめてから足し算するので、閲覧者が押しても必ずエラーで戻ります。合計の表示だけは囲まず、読むだけの人にも見えるようにしています。
+
+**ダイアログの設置**:
+
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: ダイアログの設置
+      {canEdit && (
+        <TimeLogDialog
+          open={timeLogDialogOpen}
+          onClose={() => setTimeLogDialogOpen(false)}
+          taskId={id}
+          onSuccess={onTimeLogSuccess}
+        />
+      )}
+    </>
+  );
+}
+```
+
+小窓を `<Card>` の外に置いてあるのは、カードの枠や `overflow` の影響を受けずに画面の中央へ出すためです。ボタンと同じ `canEdit` で囲ってあるので、閲覧者の画面には小窓そのものが置かれません。`onSuccess={onTimeLogSuccess}` の受け渡しが1本つながっているので、記録が成功すると親のコールバックが呼ばれ、一覧の取り直しを通じて合計作業時間が新しい値に置き換わります。
+
+### `src/app/task/page.tsx`
+
+**記録の成功を受け取るハンドラー**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: 記録の成功を受け取るハンドラー
+  const handleTimeLogSuccess = useCallback(() => {
+    void utils.task.getAll.invalidate();
+  }, [utils.task.getAll]);
+```
+
+`utils` の宣言のすぐ下に置きます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。だから `refetch` を重ねて呼ぶ必要はありません。先頭の `void` は戻り値を使わないことを読み手へ示す書き方で、動きは変わりません。
+
+**TaskCard へ渡す2つの props**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: TaskCard へ渡す2つの props
+                      <TaskCard
+                        id={task.id}
+                        title={task.title}
+                        description={task.description}
+                        status={task.status}
+                        priority={task.priority}
+                        dueDate={task.dueDate}
+                        assignee={task.assignee}
+                        timeSpentMinutes={task.timeSpentMinutes}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onClick={handleTaskClick}
+                        onTimeLogSuccess={handleTimeLogSuccess}
+                        canEdit={taskCanEdit}
+                        canDelete={taskCanDelete}
+                      />
+```
+
+Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると、記録は保存されているのに数字が `0m` のまま止まります。
 
 ## 今日のまとめ
 

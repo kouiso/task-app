@@ -776,6 +776,106 @@ npm run lint:fix
 
 **覚えておきたいこと**: 状態が多い画面は early return で先に返します。
 
+## 完成コード全体
+
+今日アプリに残るファイルは2つです。バグAとバグBは教材の中で読むだけの練習用コードで、バグCで足した `console.log` は Step 5 で消しました。Step 2 でダッシュボードに入れた `throw` の行も削除済みです。手元の2つのファイルを開いて、以下と見比べてください。行が足りない場合は、その部分だけを書き足せば追いつきます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/app/error.tsx` | 描画の途中で投げられたエラーを受け止める画面 | Step 1 |
+| `src/app/not-found.tsx` | 存在しない URL を開いたときに出る画面 | Step 2 |
+
+### `src/app/error.tsx`
+
+**エラーを受け取って記録するところ**:
+
+```typescript
+// filepath: src/app/error.tsx
+// 完成版: エラーを受け取って記録するところ
+'use client';
+
+import { useEffect } from 'react';
+import { Button } from '@/component/ui/button';
+
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+```
+
+Step 1 では `import { Button }` と `from '@/component/ui/button';` を2行に分けて載せましたが、ここでは1行になっています。`npm run fix` を実行すると Biome が短い import を1行にまとめるためで、どちらで書いても動きは変わりません。手元が2行のままでも直す必要はありません。
+
+引数の型を `{ error: ...; reset: ... }` と波括弧の中に直接書いているのは、この形をこのファイル以外で使わないからです。`interface ErrorPageProps` として名前を付けても動きますが、名前が増えるぶん読む側は「どこか別の場所でも使うのか」と探すことになります。1か所でしか使わない形は、その場に書いておくほうが読み手の手間が減ります。
+
+**フォールバック UI**:
+
+```typescript
+// filepath: src/app/error.tsx
+// 完成版: フォールバック UI
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl font-bold">エラーが発生しました</h2>
+        <p className="text-muted-foreground">
+          予期しないエラーが発生しました。もう一度お試しください。
+        </p>
+        <Button onClick={reset}>もう一度試す</Button>
+      </div>
+    </div>
+  );
+}
+```
+
+見出しが `<h1>` ではなく `<h2>` になっているのは、この画面が独立したページではなく、壊れたページの中身と差し替わる部品だからです。ページ全体の見出しは `layout.tsx` の側に残っているので、ここで `<h1>` を出すと1ページに `<h1>` が2つ並びます。
+
+`error` の中身を画面に出していない点も、そのままにしておいてください。本番ではテーブル名やファイルのパスがエラーの文言に混じることがあり、それをそのまま出すと、アプリの内部構造を訪問者全員へ見せることになります。読者が中身を確かめる先は、`console.error(error)` が書き込んだ Console のほうです。
+
+### `src/app/not-found.tsx`
+
+**404 の見出しと本文**:
+
+```tsx
+// filepath: src/app/not-found.tsx
+// 完成版: 404 の見出しと本文
+import Link from 'next/link';
+
+export default function NotFound() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4">
+      <h1 className="text-6xl font-bold text-muted-foreground">404</h1>
+      <p className="text-xl text-muted-foreground">ページが見つかりません</p>
+```
+
+こちらのファイルには `'use client'` がありません。`error.tsx` に必要だったのは `reset` と `useEffect` を使うためで、この画面はどちらも使わないからです。書き足しても動きますが、その1行があるとブラウザへ送る JavaScript が増えます。要らないなら書かないほうが軽くなります。
+
+`px-4` を付けているのは、スマートフォンの幅で文字が画面の端に貼り付くのを防ぐためです。この画面は中央に置いた文字しか無いので、余白が無いと窮屈に見えます。
+
+**戻り道のリンク**:
+
+```tsx
+// filepath: src/app/not-found.tsx
+// 完成版: 戻り道のリンク
+      <Link
+        href="/dashboard"
+        className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        ダッシュボードに戻る
+      </Link>
+    </div>
+  );
+}
+```
+
+見た目はボタンですが、中身は `<Link>` です。押したときに起きるのは画面の移動だけなので、リンクで書くのが本来の形になります。`<Button onClick={...}>` にすると、右クリックで新しいタブに開く操作や、キーボードでリンクだけを拾う読み上げソフトの動きが使えなくなります。
+
+`href` を `/dashboard` にしてあるのは、404 に来た人がログイン済みとは限らないためです。存在しないページから、そのアプリで最初に見るべき画面へ1回で戻せます。`bg-primary` などの色名を直接の色コードで書いていない点も見ておいてください。これは Day 05 で入れた配色の名前で、テーマを変えるとこのボタンの色も一緒に変わります。
+
 ## 今日のまとめ
 
 - [ ] error.tsxの動作を確認した（意図的にエラーを起こして表示確認）

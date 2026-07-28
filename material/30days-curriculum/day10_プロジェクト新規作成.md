@@ -968,6 +968,766 @@ export function useCreateProjectSubmit(onClose: () => void) {
 データを変えた後は、ページを丸ごとリロードするより **変わった一覧だけ再取得する** ほうが自然です。
 tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚えておきましょう。
 
+## 完成コード全体
+
+今日は3つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。`project.ts` と `page.tsx` は Day 09 で作り始めたファイルなので、Day 09 で書いた部分もあわせて載せています。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/project.ts` | プロジェクトの取得と作成を受け持つサーバー側の手続き | Step 0（Day 09 の `getAll` を含む） |
+| `src/component/project/project-dialog.tsx` | 作成フォームを載せるダイアログ本体 | Step 1 から Step 6 |
+| `src/app/project/page.tsx` | 一覧ページとダイアログの配線 | Step 7（Day 09 の一覧を含む） |
+
+### `src/server/api/routers/project.ts`
+
+**import と作成用スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: import と作成用スキーマ
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
+import { PROJECT_MEMBER_ROLE, USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_SELECT } from './_helpers/select';
+
+const projectCreateSchema = z.object({
+  name: z.string().min(1, 'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .default(DEFAULT_PROJECT_COLOR),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+```
+
+Step 0 では `PROJECT_MEMBER_ROLE` を別の行で取り込みましたが、ここでは Day 09 の `USER_ROLE` と1行にまとめてあります。`npm run fix` を実行すると、Biome（このプロジェクトのコード整形ツール）が同じファイルからの取り込みを1行へ寄せるためです。手元が2行のままでも中身は変わりません。スキーマをルーターの外に置いてあるのは、`create` の `.input(...)` から名前で参照するだけで足りるからです。
+
+**getAll の入口と権限チェック**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getAll の入口と権限チェック
+export const projectRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          userId: z.string().cuid().optional(),
+          isArchived: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.ProjectWhereInput = {};
+
+      if (input?.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+```
+
+`where` を空のオブジェクトから始めているのは、条件を後から足していく形にするためです。条件の有無で `findMany` の呼び出しを何通りも書き分けずに済みます。権限の確認を検索条件の組み立てより前に置いてあるのは、弾く判断を先に済ませるためです。あとに回すと、断るはずの相手のために検索条件を組み立てる無駄が生まれます。
+
+**getAll の検索条件**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getAll の検索条件
+      if (!input?.userId) {
+        where.members = {
+          some: { userId: ctx.session.userId },
+        };
+      } else {
+        where.members = {
+          some: { userId: input.userId },
+        };
+      }
+
+      if (input?.isArchived !== undefined) {
+        where.isArchived = input.isArchived;
+      }
+```
+
+`isArchived` の判定を `!== undefined` にしてあるのは、`false` が渡された場合と何も渡されなかった場合を分けるためです。`if (input?.isArchived)` と書くと、`false` は偽として扱われて条件が足されません。その結果、アーカイブ済みを外したいのに全件が返ります。この一覧ページのスイッチは `false` を送る場面が普通にあるので、この書き分けが効きます。
+
+**getAll が返すデータ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getAll が返すデータ
+      return await prisma.project.findMany({
+        where,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+```
+
+`tasks` に `select` を付けて `id` と `status` だけに絞っているのは、画面で使うのは件数と完了数だけだからです。全項目を取ると、本文や期日まで毎回運ぶことになります。ユーザー側を `USER_SELECT` に任せているのも同じ理由で、パスワードのように返してはいけない項目を毎回書き並べずに済みます。
+
+**create の作成データ**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: create の作成データ
+  create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
+    const createData: Prisma.ProjectCreateInput = {
+      name: input.name,
+      color: input.color,
+      startDate: input.startDate ? new Date(input.startDate) : null,
+      endDate: input.endDate ? new Date(input.endDate) : null,
+      members: {
+        create: {
+          userId: ctx.session.userId,
+          role: PROJECT_MEMBER_ROLE.OWNER,
+        },
+      },
+    };
+```
+
+持ち主になる `userId` を `input` からではなく `ctx.session.userId` から取っている点が、この手続きの要です。画面から送られてきた値を持ち主にすると、他人の ID を書いたリクエストで他人名義のプロジェクトを作れてしまいます。`ctx.session` はサーバーが Cookie から組み立てた情報なので、画面側から書き換えられません。
+
+**create の保存と戻り値**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: create の保存と戻り値
+    if (input.description) {
+      createData.description = input.description;
+    }
+
+    return await prisma.project.create({
+      data: createData,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        },
+      },
+    });
+  }),
+});
+```
+
+`include` の形を `getAll` とそろえてあるのは、呼び出す側の扱いを1通りにするためです。作成直後に返るデータと一覧のデータで形が違うと、画面側は受け取り先ごとに読み方を変える必要が出ます。最後の `}),` が `create` を閉じ、`});` が `projectRouter` 全体を閉じます。この2行が1つでも欠けると、英語のエラーで起動が止まります。
+
+### `src/component/project/project-dialog.tsx`
+
+**import**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: import
+'use client';
+
+import { useEffect } from 'react';
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Button }
+  from '@/component/ui/button';
+import {
+  Dialog, DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/component/ui/dialog';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
+import { Textarea }
+  from '@/component/ui/textarea';
+import { DEFAULT_PROJECT_COLOR }
+  from '@/lib/constant/project';
+```
+
+先頭の `'use client'` が要るのは、このファイルが `useForm` と `useEffect` を使うからです。この宣言が無いとサーバー側で描こうとして、フックが使えないというエラーになります。`@/component/ui/...` が単数形である点は Step 1 の注意書きのとおりで、複数形で書くとファイルが見つからないという英語のエラーが起動時に出ます。
+
+**Props とフォームデータの型**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: Props とフォームデータの型
+interface ProjectDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: ProjectFormData) => void;
+  initialData?:
+    ProjectFormData | undefined;
+}
+
+export interface ProjectFormData {
+  id?: string;
+  name: string;
+  description?: string;
+  color: string;
+  startDate?: string;
+  endDate?: string;
+}
+```
+
+`ProjectFormData` にだけ `export` が付いているのは、この型を `page.tsx` が取り込むからです。`ProjectDialogProps` はこのファイルの中でしか使わないので、外へ出していません。外へ出す範囲を絞っておくと、あとから型を直すときに影響の届く先がファイルの中だけに収まります。
+
+**zodスキーマと型**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: zodスキーマと型
+const projectFormSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1,
+    'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z.string(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+type ProjectFormValues =
+  z.infer<typeof projectFormSchema>;
+```
+
+`ProjectFormValues` を手で書かずに `z.infer` から起こしているのは、スキーマと型が食い違う余地を消すためです。手書きだと、スキーマに項目を足したときに型の更新を忘れられます。`color` を `z.string()` だけにしてあるのは、色コードの形を確かめる仕事をサーバー側の `.regex(...)` が持っているからです。
+
+**初期値を作る関数**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: 初期値を作る関数
+function buildProjectFormValues(
+  initialData: ProjectFormData | undefined,
+): ProjectFormValues {
+  return {
+    id: initialData?.id,
+    name: initialData?.name ?? '',
+    description:
+      initialData?.description ?? '',
+    color: initialData?.color
+      ?? DEFAULT_PROJECT_COLOR,
+    startDate:
+      initialData?.startDate ?? '',
+    endDate: initialData?.endDate ?? '',
+  };
+}
+```
+
+空文字を埋めているのは、`undefined` を `<input>` の値として渡せないからです。`undefined` のまま渡すと、React は「値を持たない入力欄」として扱い、途中から値を入れた瞬間に警告を出します。既定色だけ `DEFAULT_PROJECT_COLOR` にしてあるのは、カラーピッカーには空という状態が無いためです。
+
+**useForm の設定と reset**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: useForm の設定と reset
+export function ProjectDialog({
+  open, onClose, onSubmit, initialData,
+}: ProjectDialogProps) {
+  const {
+    register, handleSubmit, reset,
+    formState: { errors },
+  } = useForm<ProjectFormValues>({
+    resolver: zodResolver(
+      projectFormSchema),
+    defaultValues:
+      buildProjectFormValues(initialData),
+  });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    reset(
+      buildProjectFormValues(initialData)
+    );
+  }, [initialData, open, reset]);
+```
+
+`defaultValues` と `reset(...)` の両方に同じ関数を渡してあるのは、初期値の作り方を1か所に集めるためです。片方だけ書き換えると、最初に開いたときと開き直したときで値が変わります。依存配列に `initialData` と `open` を並べてあるのは、この2つが変わった瞬間だけ入れ直したいからです。
+
+**閉じる処理と送信データの組み立て**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: 閉じる処理と送信データの組み立て
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleFormSubmit =
+    (data: ProjectFormValues) => {
+      const submitData: ProjectFormData = {
+        ...(data.id !== undefined
+          && { id: data.id }),
+        name: data.name,
+        color: data.color,
+        ...(data.description
+          && { description:
+            data.description }),
+        ...(data.startDate
+          && { startDate: data.startDate }),
+        ...(data.endDate
+          && { endDate: data.endDate }),
+      };
+      onSubmit(submitData);
+    };
+```
+
+`name` と `color` だけを条件なしで詰めているのは、この2つが必ず値を持つからです。`name` は zod が空を弾き、`color` は既定色が最初から入っています。残りの4項目は空欄のまま送られる場面があるので、値があるときだけキーを足す形にしてあります。
+
+**ダイアログの外枠と見出し**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: ダイアログの外枠と見出し
+  return (
+    <Dialog open={open}
+      onOpenChange={(isOpen) =>
+        !isOpen && handleClose()}>
+      <DialogContent
+        className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData?.id
+              ? 'プロジェクト編集'
+              : 'プロジェクト作成'}
+          </DialogTitle>
+          <DialogDescription>
+            {initialData?.id
+              ? 'プロジェクトの詳細を更新します。'
+              : '新しいプロジェクトを作成します。'}
+          </DialogDescription>
+        </DialogHeader>
+```
+
+見出しの切り替えを `initialData?.id` で判定しているのは、`initialData` そのものの有無で見ると足りない場面があるからです。編集の入口を作る Day 11 では、値の一部が欠けた `initialData` を渡すことも起こり得ます。ID が入っているかどうかで見れば、保存済みのデータを開いたときだけ編集の文言になります。
+
+**プロジェクト名の入力欄**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: プロジェクト名の入力欄
+        <form onSubmit={
+          handleSubmit(handleFormSubmit)}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">
+                プロジェクト名
+              </Label>
+              <Input id="name"
+                placeholder=
+                  "プロジェクト名を入力"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
+                {...register('name')} />
+              {errors.name && (
+                <p id="name-error"
+                  className=
+                  "text-sm text-destructive">
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
+```
+
+`onSubmit` に `handleSubmit(handleFormSubmit)` を渡しているのは、検証を通った値だけを受け取るためです。`handleFormSubmit` を直接つなぐと、名前が空でもサーバーへ飛びます。`aria-describedby` をエラーのあるときだけ付けているのは、`id="name-error"` の要素がエラーの無いあいだは描かれないからです。存在しない相手を指したままにしません。
+
+**説明欄とカラー欄**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: 説明欄とカラー欄
+            <div className="grid gap-2">
+              <Label htmlFor="description">
+                説明
+              </Label>
+              <Textarea
+                id="description"
+                placeholder=
+                  "プロジェクトの説明..."
+                rows={4}
+                {...register('description')}
+              />
+            </div>
+            <div className=
+              "grid grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="color">
+                  カラー
+                </Label>
+                <Input id="color"
+                  type="color"
+                  className="h-10"
+                  {...register('color')} />
+              </div>
+```
+
+説明欄に赤字の表示を付けていないのは、この項目が任意だからです。検証で落ちる条件を持たないので、`errors.description` に値の入る場面はありません。カラー欄に `className="h-10"` を足してあるのは、`type="color"` の入力欄がブラウザごとに違う既定の高さを持つためです。そのままだと隣の日付欄と高さがそろいません。
+
+**開始日と終了日の欄**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: 開始日と終了日の欄
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">
+                  開始日
+                </Label>
+                <Input id="startDate"
+                  type="date"
+                  {...register('startDate')}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endDate">
+                  終了日
+                </Label>
+                <Input id="endDate"
+                  type="date"
+                  {...register('endDate')}
+                />
+              </div>
+            </div>
+          </div>
+```
+
+日付の2つを `type="date"` にしてあるので、フォームに入る値は `2026-04-01` のような日付だけの文字列です。時刻を持たないため、そのまま `new Date(...)` へ渡すと読まれ方が場面によって変わります。この変換を画面側でやらず、`page.tsx` の `dateOnlyToUtcStartIso` に任せているのは、変換の作法を1か所へ集めておくためです。末尾の `</div>` 2つで、3列の枠と入力欄全体の枠を順に閉じます。
+
+**足元のボタンと閉じタグ**:
+
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: 足元のボタンと閉じタグ
+          <DialogFooter>
+            <Button type="button"
+              variant="outline"
+              onClick={handleClose}>
+              キャンセル
+            </Button>
+            <Button type="submit">
+              {initialData?.id
+                ? '更新' : '作成'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+キャンセルの `type="button"` は、押しても送信を起こさないための指定です。`<form>` の中のボタンは、指定しないかぎり送信ボタンとして扱われます。この1語を落とすと、閉じたいだけなのに検証まで走ります。名前が空なら赤字も出ます。
+
+### `src/app/project/page.tsx`
+
+**React と画面の部品の import**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: React と画面の部品の import
+'use client';
+
+import { Plus } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { ProjectCard }
+  from '@/component/project/project-card';
+import {
+  ProjectDialog,
+  type ProjectFormData,
+} from
+  '@/component/project/project-dialog';
+```
+
+`ProjectFormData` の前だけ `type` が付いているのは、これが型の情報しか持たないからです。`type` を付けておくと、ビルドの時点で取り込みごと消えます。並びがアルファベット順になっているのは Biome が並べ替えるためで、自分が書いた順番と違っていても手で直す必要はありません。
+
+**UI部品と定数の import**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: UI部品と定数の import
+import { Button }
+  from '@/component/ui/button';
+import { Label }
+  from '@/component/ui/label';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import { Switch }
+  from '@/component/ui/switch';
+import { TASK_STATUS }
+  from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
+import { api } from '@/trpc/react';
+```
+
+`TASK_STATUS` を取り込んでいるのは、完了件数を数えるときに `'DONE'` という文字列を直接書かないためです。定数にしておくと、打ち間違いをエディタが赤い波線で教えてくれます。`dateOnlyToUtcStartIso` は Step 7 で使う日付の変換で、`api` はサーバー側のルーターへつながる入口です。
+
+**state とデータ取得**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: state とデータ取得
+function ProjectPageContent() {
+  const [showArchived, setShowArchived] =
+    useState(false);
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+  } = api.project.getAll.useQuery({
+    isArchived: showArchived,
+  });
+
+  const utils = api.useUtils();
+```
+
+`useQuery` に `showArchived` をそのまま渡してあるので、スイッチを切り替えると tRPC が別の問い合わせとして扱って取り直します。取り直す関数を自分で呼ぶ形にすると、呼び忘れた場所だけ古い一覧が残ります。`isLoading` を別に受け取っているのは、返事が届く前の `undefined` と、届いたけれど0件だった場合を分けて扱うためです。
+
+**作成 mutation とボタンのハンドラー**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 作成 mutation とボタンのハンドラー
+  const createMutation =
+    api.project.create.useMutation({
+      onSuccess: () => {
+        utils.project.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const handleCreate = () => {
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (projectId: string) => {
+    void projectId;
+  };
+  const handleDelete = (projectId: string) => {
+    void projectId;
+  };
+  const handleProjectClick = (id: string) => {
+    void id;
+  };
+```
+
+ダイアログを閉じる処理を `onSuccess` の中に置いてあるのは、保存が通ったときだけ閉じたいからです。`mutate` の直後に閉じると、サーバーが断った場合でも閉じてしまい、保存できていないのに終わったように見えます。`handleEdit` から下の3つは Day 09 で置いた受け皿で、中身は Day 11 と Day 12 で埋めます。
+
+**送信ハンドラーと読み込み中の表示**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 送信ハンドラーと読み込み中の表示
+  const handleSubmit = (
+    data: ProjectFormData
+  ) => {
+    createMutation.mutate({
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate
+        ? dateOnlyToUtcStartIso(
+            data.startDate)
+        : undefined,
+      endDate: data.endDate
+        ? dateOnlyToUtcStartIso(
+            data.endDate)
+        : undefined,
+    });
+  };
+```
+
+日付が空のときに `undefined` を渡しているのは、Step 0 のサーバー側が「送られてこなかった項目には何もしない」と決めてあるからです。空文字を渡すと `z.string().datetime()` の検証に落ちて、作成そのものが断られます。
+
+**読み込み中の表示**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: 読み込み中の表示
+  if (projectsLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+この分岐をここへ置いてあるのは、`projects` がまだ `undefined` の状態で下の描画へ進ませないためです。スピナーも `AppLayout` で囲むのは、読み込み中だけサイドバーとログイン確認が画面から消えないようにするためです。
+
+**ページ見出しと操作エリア**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: ページ見出しと操作エリア
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center
+          justify-between">
+          <h1 className="text-3xl font-bold
+            tracking-tight">
+            プロジェクト
+          </h1>
+          <div className="flex items-center
+            gap-4">
+            <div className="flex
+              items-center space-x-2">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={
+                  setShowArchived} />
+              <Label
+                htmlFor="show-archived">
+                アーカイブ表示
+              </Label>
+            </div>
+```
+
+`justify-between` を使って見出しと操作エリアを両端へ寄せてあるのは、画面幅が変わっても見出しが左、操作が右という位置関係を保つためです。`Switch` の `id` と `Label` の `htmlFor` をそろえてあるので、文字をクリックしてもスイッチが切り替わります。
+
+**新規作成ボタンとグリッドの開始**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 新規作成ボタンとグリッドの開始
+            <Button onClick={handleCreate}>
+              <Plus
+                className="mr-2 h-4 w-4" />
+              新規プロジェクト
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6
+          sm:grid-cols-2 lg:grid-cols-3
+          xl:grid-cols-4">
+          {projects && projects.length > 0
+            ? (projects.map((project) => {
+              const taskCount =
+                project.tasks?.length ?? 0;
+              const doneCount =
+                project.tasks?.filter(
+                  (t) => t.status ===
+                    TASK_STATUS.DONE
+                ).length ?? 0;
+```
+
+`projects && projects.length > 0` と2つ並べてあるのは、確かめたいことが2つあるからです。手前の `projects &&` が無いと、中身の無い `undefined` から `length` を読みに行って画面が真っ白になります。件数を `?? 0` で受けているのは、タスクが1件も無いプロジェクトでも0として数えるためです。
+
+**プロジェクトカードの描画**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: プロジェクトカードの描画
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={
+                    project.description}
+                  color={project.color}
+                  memberCount={
+                    project.members?.length
+                      ?? 0}
+                  taskStats={{
+                    total: taskCount,
+                    done: doneCount }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={
+                    handleProjectClick}
+                  isArchived={
+                    project.isArchived}
+                />);
+            })
+```
+
+`key` に `project.id` を渡しているのは、React がどのカードがどれかを追いかけられるようにするためです。並び順が変わったときに、印が無いと React は中身を差し替える形で描き直します。ID を印にしておけば、増えた1枚だけを足す形で済みます。
+
+**空状態とダイアログの配置**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 空状態とダイアログの配置
+            ) : (
+              <div className="col-span-full
+                flex flex-col items-center
+                justify-center py-12
+                text-center
+                text-muted-foreground">
+                <p>プロジェクトが
+                  見つかりません。</p>
+                <p>最初のプロジェクトを
+                  作成しましょう！</p>
+              </div>
+            )}
+        </div>
+
+        <ProjectDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+空状態の入れ物に `col-span-full` を付けてあるのは、この要素がグリッドの中にいるからです。付けないと1列分の幅に押し込まれ、文字が縦に折り返します。`ProjectDialog` をグリッドの外へ出してあるのは、ダイアログが一覧の1枚として並ぶものではないためです。
+
+**ページのエクスポート**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: ページのエクスポート
+export default function ProjectPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <ProjectPageContent />
+    </Suspense>
+  );
+}
+```
+
+本体を `Suspense` で包んでいるのは、準備が終わるまでの表示を1か所で受け止めるためです。`ProjectPageContent` の側にも読み込み中の分岐がありますが、そちらはデータ待ち、こちらは部品そのものの読み込み待ちを担当します。役割が違うので、両方を残してあります。
+
 ## 今日のまとめ
 
 - [ ] Dialog コンポーネントでモーダルフォームを作れた

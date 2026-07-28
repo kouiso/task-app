@@ -649,8 +649,26 @@ const handleDeleteComment =
 `DeleteConfirmDialog` は Day 11 で
 タスク削除にも使った再利用コンポーネントです。
 
+その前に、ダイアログを閉じる処理を1か所にまとめます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+const handleClose = () => {
+  commentForm.reset();
+  editCommentForm.reset();
+  setEditingCommentId(null);
+  setDeleteCommentDialogOpen(false);
+  setDeleteCommentTargetId(null);
+  onClose();
+};
+```
+
+`onClose` だけを呼ぶと、書きかけのコメントと編集中のコメント ID が残ったままになります。
+次に同じタスクを開いたとき、前回の下書きとテキストエリアがそのまま現れ、読者は今どの操作の途中なのか分からなくなります。
+片付けを `onClose` の手前へ集めておけば、閉じ方が増えても同じ初期状態へ戻せます。
+
 タスク詳細と削除確認の2つのダイアログを並べるため、
-まず `return` 直後の既存コードを次の形に変えます。
+`return` 直後の既存コードを次の形に変えます。
 `<>` と `</>` は、複数の要素をまとめる Fragment です。
 
 ```typescript
@@ -658,7 +676,19 @@ const handleDeleteComment =
 return (
   <>
     <Dialog open={open}
-      onOpenChange={(isOpen) => !isOpen && onClose()}>
+      onOpenChange={(isOpen) =>
+        !isOpen && handleClose()}>
+```
+
+`onOpenChange` は、背景をクリックしたときや Esc キーを押したときにも呼ばれます。ここを `onClose` のままにすると、閉じ方によって片付けが行われたり行われなかったりします。同じ理由で、`閉じる` ボタンも `handleClose` に差し替えます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+<DialogFooter>
+  <Button onClick={handleClose}>
+    閉じる
+  </Button>
+</DialogFooter>
 ```
 
 コンポーネントが `return` で返せる要素は1つだけ、というルールがあります。
@@ -765,6 +795,809 @@ Day 12 で同じプロジェクトに追加したメンバーのアカウント�
 | `session?.user?.id` | 途中がなければ `undefined` |
 
 **覚えておきたいこと**: 途中がないかもしれない値には `?.` を使います。
+
+## 完成コード全体
+
+今日は2つのファイルを触りました。Step 1 でサーバー側へ編集と削除の手続きを足し、Step 2 から Step 6 でタスク詳細ダイアログへ本人チェックと編集モードを組み込んでいます。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/comment.ts` | コメントの取得・投稿・編集・削除の手続き | Step 1 |
+| `src/component/task/task-detail-dialog.tsx` | タスク詳細とコメント欄 | Step 2 から Step 6 |
+
+どちらも Day 18 で書いたものへ足す形なので、Day 18 の分もあわせた全文を載せます。
+
+### `src/server/api/routers/comment.ts`
+
+**インポートと2つの入力スキーマ**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// 完成版: インポートと2つの入力スキーマ
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import type { PermissionKey } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { assertMemberPermission } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+
+const commentCreateSchema = z.object({
+  content: z.string().trim().min(1, 'コメント内容は必須です'),
+  taskId: z.string().cuid(),
+});
+
+const commentUpdateSchema = z.object({
+  id: z.string().cuid(),
+  content: z.string().trim().min(1, 'コメント内容は必須です'),
+});
+```
+
+2つのスキーマの違いは、`taskId` を持つか `id` を持つかだけです。投稿はどのタスクへぶら下げるかを決める必要があり、編集はどのコメントを書き換えるかを決める必要があります。`content` のルールをそろえてあるので、投稿では通るのに編集では弾かれる、という食い違いは起きません。
+
+**タスクと自分のメンバー行の取得**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: タスクと自分のメンバー行の取得
+const findTaskAndAssertMembership = async (
+  taskId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      project: {
+        include: {
+          members: { where: { userId } },
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'タスクが見つかりません',
+    });
+  }
+```
+
+Day 18 で書いた関数をそのまま残します。今日足す `update` と `delete` はコメントの ID を受け取るため、この関数ではなく次の関数を使います。同じ役割の関数を2つ並べているように見えますが、入口が task か comment かで探す対象が違います。先に `task` の `null` を弾くのは、続く行で `task.project` を読むためです。
+
+**メンバー確認の締めくくり**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: メンバー確認の締めくくり
+  assertMemberPermission(task.project.members, permission);
+
+  return task;
+};
+```
+
+`assertMemberPermission` が見ているのは、1つ前のブロックで本人分だけに絞った `members` の1件目です。本人がメンバーでなければ配列は空になり、1件目は `undefined` になるため `FORBIDDEN` を投げます。確認を通ったタスクをそのまま返すので、呼び出し側は1行書くだけで存在と権限の両方を済ませられます。
+
+**コメントと作者情報の取得**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: コメントと作者情報の取得
+const findCommentAndAssertOwnership = async (
+  commentId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: {
+      userId: true,
+      task: {
+        include: {
+          project: {
+            include: {
+              members: { where: { userId } },
+            },
+          },
+        },
+      },
+    },
+  });
+```
+
+判定に必要な材料は、コメントの作者、置き場所のプロジェクト、そして自分がそこのメンバーかどうかの3つです。3回に分けて問い合わせると、その合間に誰かがメンバーから外れるような食い違いが起きます。1回でまとめて取れば、判定に使う材料はすべて同じ瞬間のものになります。外側の `select` でコメント自身の列を `userId` だけに絞っているのは、本文の中身を判定に使わないためです。
+
+**存在確認と作者確認**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: 存在確認と作者確認
+  if (!comment) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'コメントが見つかりません',
+    });
+  }
+
+  assertMemberPermission(comment.task.project.members, permission);
+
+  if (comment.userId !== userId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '自分のコメントのみ編集・削除できます',
+    });
+  }
+
+  return comment;
+};
+```
+
+確認は3段です。コメントが存在するか、その人がプロジェクトのメンバーか、そのコメントの作者本人か、の順で見ます。メンバー確認だけで済ませると、同じプロジェクトの別の人が他人のコメントを書き換えられてしまいます。逆に作者確認だけにすると、プロジェクトから外れた人が過去の自分のコメントを操作できてしまいます。2つは別のことを守っているため、片方だけでは足りません。
+
+**getByTaskId によるコメント一覧**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: getByTaskId によるコメント一覧
+export const commentRouter = createTRPCRouter({
+  getByTaskId: protectedProcedure
+    .input(z.object({ taskId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
+
+      return await prisma.comment.findMany({
+        where: { taskId: input.taskId },
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+```
+
+読み取りだけの手続きなので、権限キーを渡していません。参加者であれば誰でもコメントを読めます。編集権限まで求めると、閲覧だけを任されたメンバーがやりとりの経緯を追えなくなります。守りの強さは手続きごとに変えるもので、いちばん厳しい設定を全部へ当てはめると使えない画面ができあがります。
+
+**create によるコメントの保存**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: create によるコメントの保存
+  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
+    await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+
+    return await prisma.comment.create({
+      data: {
+        content: input.content,
+        taskId: input.taskId,
+        userId: ctx.session.userId,
+      },
+      include: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+    });
+  }),
+```
+
+投稿者を `ctx.session.userId` から取るのは、フォーム経由で他人の ID を送られても信用しないためです。入力スキーマに `userId` が無いので、ブラウザ側から投稿者を指定する手段そのものがありません。この1行が、今日書いた作者チェックの土台になります。作者が信用できる値で保存されていなければ、あとから本人かどうかを確かめても意味がありません。
+
+**update による本文の書き換え**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: update による本文の書き換え
+  update: protectedProcedure.input(commentUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, ...data } = input;
+    await findCommentAndAssertOwnership(id, ctx.session.userId, 'canEdit');
+
+    return await prisma.comment.update({
+      where: { id },
+      data,
+      include: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+    });
+  }),
+```
+
+`const { id, ...data } = input;` で `id` だけを取り出し、残りを `data` にまとめています。`where` には探すための `id`、`data` には書き換える中身が入るので、2つは行き先が違います。この書き方にしておくと、あとで編集できる項目が増えたときも `data` の中身が自動で追随します。1つずつ書き写すと、項目を足すたびにこの行を直す必要が出てきます。
+
+**delete によるコメントの削除**:
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: delete によるコメントの削除
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await findCommentAndAssertOwnership(input.id, ctx.session.userId, 'canEdit');
+
+      await prisma.comment.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+});
+```
+
+削除は消したものを返せないので、`{ success: true }` という短い返事だけを返します。返り値なしの書き方もできますが、画面側が「返事が来た」と「通信が終わっていない」を見分けにくくなります。`update` と同じ作者チェックを通しているため、他人のコメントは削除できません。ボタンを隠すだけでは守りになりません。ここで止めています。
+
+### `src/component/task/task-detail-dialog.tsx`
+
+**ブラウザ側で動かす宣言と外部ライブラリ**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// 完成版: ブラウザ側で動かす宣言と外部ライブラリ
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+```
+
+今日足したのは `Pencil`・`Trash2`・`useState` の3つです。アイコン2つはボタンの見た目、`useState` は「いまどのコメントを編集中か」を部品へ覚えさせるために使います。この3つが揃わないと、Step 2 で書いた state とボタンが型エラーになります。
+
+**プロジェクト内の部品の取り込み**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: プロジェクト内の部品の取り込み
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/component/ui/dialog';
+import { Separator } from '@/component/ui/separator';
+import { Textarea } from '@/component/ui/textarea';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { formatDateOnly } from '@/lib/date';
+import { api } from '@/trpc/react';
+import { StatusBadge } from './status-badge';
+```
+
+今日足したのは `DeleteConfirmDialog` の1行だけです。タスク削除で使ったものをそのまま読み込んでいます。削除は取り消せない操作なので、確認を挟む部品は作り直さず共有します。同じ見た目と同じ操作感になり、読者は初めて押すボタンでも次に何が起きるかを予測できます。
+
+**props の型と2つのスキーマ**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: props の型と2つのスキーマ
+type TaskDetailDialogProps = {
+  open: boolean;
+  taskId: string | null;
+  onClose: () => void;
+  canEditProject: (projectId: string) => boolean;
+};
+
+const commentSchema = z.object({
+  content: z.string().trim().min(1, 'コメントを入力してください'),
+});
+type CommentFormValues = z.infer<typeof commentSchema>;
+
+const editCommentSchema = z.object({
+  content: z.string().trim().min(1, 'コメントを入力してください'),
+});
+type EditCommentFormValues = z.infer<typeof editCommentSchema>;
+```
+
+中身の同じスキーマを2つ並べているのは、投稿と編集のルールが将来別々に変わる余地を残すためです。編集にだけ文字数の上限を足したくなったとき、片方を直せば済みます。1つにまとめてしまうと、どちらへの変更なのかを毎回考える必要が出てきます。名前の付け方も揃えてあり、画面側のフォーム用は「操作 + 対象 + Schema」の順です。
+
+**編集と削除の state**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 編集と削除の state
+export function TaskDetailDialog({
+  open,
+  taskId,
+  onClose,
+  canEditProject,
+}: TaskDetailDialogProps) {
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [deleteCommentDialogOpen, setDeleteCommentDialogOpen] = useState(false);
+  const [deleteCommentTargetId, setDeleteCommentTargetId] = useState<string | null>(null);
+```
+
+3つに分けた理由があります。編集中の1件が、削除しようとしている1件に一致するとは限りません。削除の確認ダイアログを出しているあいだ、別のコメントを編集中でも構わないからです。開閉フラグと対象 ID を分けているのも同じ考え方で、まとめてしまうと「削除する」を押した瞬間にどれを消すのか分からなくなります。
+
+**2つのフォームとキャッシュ操作盤**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 2つのフォームとキャッシュ操作盤
+  const commentForm = useForm<CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: '' },
+  });
+
+  const editCommentForm = useForm<EditCommentFormValues>({
+    resolver: zodResolver(editCommentSchema),
+  });
+
+  const utils = api.useUtils();
+```
+
+フォームも2つに分けています。1つにすると、編集中のテキストを書き換えた瞬間に下の投稿欄まで同じ文字へ変わります。`editCommentForm` に `defaultValues` が無いのは、編集を始めるときに `setValue` で既存の本文を入れるためです。`utils` は tRPC が裏で持っているキャッシュの操作盤で、投稿・編集・削除の3か所から呼びます。
+
+**セッションとタスク詳細の取得**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: セッションとタスク詳細の取得
+  const { data: session } = api.auth.getSession.useQuery();
+  const { data: taskDetail } = api.task.getById.useQuery(
+    { id: taskId ?? '' },
+    { enabled: !!taskId },
+  );
+```
+
+ログイン中の人が誰かは、ブラウザ側だけでは分かりません。`api.auth.getSession` でサーバーへ問い合わせて、はじめて自分の ID が手に入ります。この ID とコメントの `userId` を突き合わせるのが本人判定の中身です。`enabled: !!taskId` はタスク詳細だけに付いていて、セッションの問い合わせはダイアログを開く前から動きます。
+
+**投稿の mutation**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 投稿の mutation
+  const createCommentMutation = api.comment.create.useMutation({
+    onSuccess: () => {
+      if (taskId) {
+        utils.task.getById.invalidate({ id: taskId });
+      }
+      commentForm.reset();
+    },
+  });
+```
+
+Day 18 で書いたものをそのまま残します。`onSuccess` の中で `invalidate` を呼び、続いて入力欄を空へ戻します。この2つを成功時にだけ動かしているので、通信に失敗したときは入力した文章が残ります。書き直しをやり直させないための置き場所です。
+
+**編集の mutation**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 編集の mutation
+  const updateCommentMutation = api.comment.update.useMutation({
+    onSuccess: () => {
+      if (taskId) {
+        utils.task.getById.invalidate({ id: taskId });
+      }
+      setEditingCommentId(null);
+      editCommentForm.reset();
+    },
+  });
+```
+
+`invalidate` は「手元に持っているタスク詳細はもう古い」という印を付ける命令です。印が付くと tRPC が `task.getById` を取り直し、保存後の本文で一覧を描き直します。この行を落とすと、保存自体は成功しているのに画面の文字が変わりません。続く2行で編集モードを閉じており、無ければ保存後もテキストエリアが開いたまま残ります。
+
+**削除の mutation**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 削除の mutation
+  const deleteCommentMutation = api.comment.delete.useMutation({
+    onSuccess: () => {
+      if (taskId) {
+        utils.task.getById.invalidate({ id: taskId });
+      }
+    },
+  });
+```
+
+削除後にやることは `invalidate` ひとつです。編集では state のクリアも必要でしたが、削除では編集モードに入っていないので要りません。消えたコメントはサーバーから返ってこなくなるため、取り直した一覧から自然に姿を消します。ここで `invalidate` を落とすと、消したはずのコメントが画面に残り続けます。
+
+**投稿と編集開始のハンドラー**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 投稿と編集開始のハンドラー
+  const handleCommentSubmit = (values: CommentFormValues) => {
+    if (!taskId) return;
+    createCommentMutation.mutate({
+      content: values.content,
+      taskId,
+    });
+  };
+
+  const handleStartEdit = (comment: { id: string; content: string }) => {
+    setEditingCommentId(comment.id);
+    editCommentForm.setValue('content', comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    editCommentForm.reset();
+  };
+```
+
+`handleStartEdit` の引数の型を `{ id: string; content: string }` と直接書いているのは、コメント全体の型を持ち込まずに済ませるためです。この関数が使うのは2つの項目だけなので、必要な形だけを求めています。`setValue` で既存の本文を入れておかないと、編集を始めた瞬間に空のテキストエリアが出て、読者は元の文章を打ち直すことになります。
+
+**閉じるときの片付け**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 閉じるときの片付け
+  const handleClose = () => {
+    commentForm.reset();
+    editCommentForm.reset();
+    setEditingCommentId(null);
+    setDeleteCommentDialogOpen(false);
+    setDeleteCommentTargetId(null);
+    onClose();
+  };
+```
+
+片付けてから `onClose` を呼ぶのは、書きかけのコメントと編集中の ID を残したまま閉じると、次に同じタスクを開いたときに前回の途中の状態が現れるためです。閉じ方は背景クリック、Esc キー、`閉じる` ボタンの3通りありますが、どれもこの1つの関数を通ります。
+
+**保存と削除のハンドラー**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 保存と削除のハンドラー
+  const handleSaveEdit = (commentId: string) => {
+    const content = editCommentForm.getValues('content').trim();
+    if (!content) return;
+    updateCommentMutation.mutate({
+      id: commentId,
+      content,
+    });
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setDeleteCommentTargetId(commentId);
+    setDeleteCommentDialogOpen(true);
+  };
+```
+
+`handleSaveEdit` は `handleSubmit` を通らないので、空白だけの入力を自分で弾きます。投稿フォームでこの判定が要らなかったのは、`handleSubmit` が zod の検査に落ちた入力を関数まで届けないからです。`handleDeleteComment` が押された時点で ID を控えるのも同じ考え方で、押してから対象を探すのでは遅すぎます。
+
+**ダイアログの外枠と見出し**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: ダイアログの外枠と見出し
+  return (
+    <>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl break-words">
+              {taskDetail?.title || 'タスク詳細'}
+            </DialogTitle>
+            <DialogDescription>
+              プロジェクト:{' '}
+              <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+```
+
+`return` の直後が `<>` に変わりました。部品が返せる要素は1つだけというルールがあるため、タスク詳細と削除確認の2つを並べるには包む必要があります。`div` で包んでも同じ効果は得られますが、`<>` なら画面に余計な入れ物を増やしません。この変更で、以下の行はすべて字下げが1段深くなります。
+
+**説明とタスク情報の前半**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 説明とタスク情報の前半
+          {taskDetail && (
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {taskDetail.description || '説明はありません。'}
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground block mb-1">ステータス</span>
+                  <StatusBadge status={taskDetail.status} />
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-1">優先度</span>
+                  <Badge variant={getPriorityBadgeVariant(taskDetail.priority)}>
+                    {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
+                  </Badge>
+                </div>
+```
+
+ここは Day 18 から中身が変わっていません。今日の変更は字下げが1段深くなったところだけです。`{taskDetail && (` で全体を包んでいるおかげで、この中では `?.` を使わずに `taskDetail.status` と書けます。データが届くまで、この中身は1行も描かれません。
+
+**担当者の表示**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 担当者の表示
+                <div>
+                  <span className="text-muted-foreground block mb-1">担当者</span>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      {taskDetail.assignee?.avatar && (
+                        <AvatarImage src={taskDetail.assignee.avatar} alt="" />
+                      )}
+                      <AvatarFallback className="text-[10px]">
+                        {(taskDetail.assignee?.name ||
+                          taskDetail.assignee?.email ||
+                          '?')[0]?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>
+                      {taskDetail.assignee?.name || taskDetail.assignee?.email || '未割当'}
+                    </span>
+                  </div>
+                </div>
+```
+
+担当者は未割当のこともあるため、`assignee` そのものに `?.` が付いています。頭文字と表示名で `||` のたどる順番をそろえてあるので、アイコンの文字と名前が別人になることはありません。コメントの投稿者と同じ書き方に揃えてあり、片方の書き方を覚えれば両方読めます。
+
+**期限とコメント欄の見出し**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 期限とコメント欄の見出し
+                <div>
+                  <span className="text-muted-foreground block mb-1">期限</span>
+                  <span>
+                    {taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}
+                  </span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="font-semibold">コメント</h3>
+                  <Badge variant="secondary" className="rounded-full px-2">
+                    {taskDetail.comments?.length ?? 0}
+                  </Badge>
+                </div>
+```
+
+件数の表示は、コメントを削除したときにも効いてきます。削除が成功して一覧が取り直されると、この数字も一緒に減ります。数字だけ古いまま残ると、読者は削除が本当に済んだのか判断できません。同じ問い合わせの結果を見ているので、一覧と件数がずれることはありません。
+
+**コメント一覧の枠と0件の案内**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: コメント一覧の枠と0件の案内
+                <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
+                  {taskDetail.comments?.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      コメントはまだありません。
+                    </p>
+                  )}
+```
+
+最後の1件を削除すると、この案内が自動で出ます。削除の分岐をここへ書き足す必要はありません。件数が `0` になったかどうかだけを見ているので、コメントが減った理由を知らなくても正しく切り替わります。条件を1つの値に集めておくと、機能を足しても分岐が増えません。
+
+**1件ごとのアバター**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 1件ごとのアバター
+                  {taskDetail.comments?.map((comment) => (
+                    <div key={comment.id} className="flex gap-3 text-sm">
+                      <Avatar className="h-8 w-8 mt-1">
+                        {comment.user.avatar && <AvatarImage src={comment.user.avatar} alt="" />}
+                        <AvatarFallback>
+                          {(comment.user.name || comment.user.email || '?')[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+```
+
+`key={comment.id}` は、React が並び替えや削除を追いかけるための目印です。ここを配列の番号にすると、1件消したときに残りの行がずれて別物として描き直されます。編集中のテキストエリアが別のコメントへ移って見える、という分かりにくい不具合の原因になります。ID を使えばその心配はありません。
+
+**名前と日時**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 名前と日時
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">
+                            {comment.user.name || comment.user.email || '?'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(comment.createdAt), 'yyyy/MM/dd HH:mm', {
+                                locale: ja,
+                              })}
+                            </span>
+```
+
+Day 18 では日時が右端に1つ置かれていました。今日はその右へボタンが2つ並ぶため、日時とボタンをまとめる箱を1つ増やしています。`gap-2` で間隔を空けているので、日時とアイコンがくっついて読みにくくなることはありません。この箱が無いと、`justify-between` が日時とボタンを画面の両端へ引き離します。
+
+**編集と削除のボタン**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 編集と削除のボタン
+                            {comment.userId === session?.user?.id && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  aria-label="自分のコメントを編集"
+                                  onClick={() => handleStartEdit(comment)}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+```
+
+`session?.user?.id` に `?.` を2つ重ねているのは、問い合わせの返事が届く前とログアウト後の両方で `undefined` になるためです。`comment.userId` が `undefined` と一致することはないので、判定は自然に「表示しない」へ倒れます。`aria-label` を付けているのは、アイコンだけのボタンに名前が無いためです。コメントが並ぶと名前の無いボタンが2個ずつ続き、押す前にどちらが削除か分かりません。
+
+**削除ボタンと本人判定の終端**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 削除ボタンと本人判定の終端
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive hover:text-destructive"
+                                  aria-label="自分のコメントを削除"
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+```
+
+削除ボタンにだけ `text-destructive` を付けて赤くしています。取り消せない操作を、押す前に色で知らせるためです。この判定はボタンを描くかどうかを決めるだけで、守りの役目は持っていません。ブラウザで動くコードは書き換えられるので、この行を消せばボタンは出せてしまいます。それでも他人のコメントを変えられないのは、サーバー側の作者チェックが止めるからです。
+
+**編集モードと本文の切り替え**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 編集モードと本文の切り替え
+                        {editingCommentId === comment.id ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              {...editCommentForm.register('content')}
+                              className="resize-none"
+                              rows={2}
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                                キャンセル
+                              </Button>
+```
+
+`editingCommentId === comment.id` で比べているのは、編集中の1件だけをテキストエリアへ切り替えるためです。真偽値1つで管理すると、編集ボタンを押した瞬間に全部のコメントがテキストエリアへ変わります。どのコメントかを ID で覚えておくのが要点です。
+
+**更新ボタンと通常表示**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 更新ボタンと通常表示
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveEdit(comment.id)}
+                                disabled={
+                                  !editCommentForm.watch('content').trim() ||
+                                  updateCommentMutation.isPending
+                                }
+                              >
+                                {updateCommentMutation.isPending ? '更新中...' : '更新'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground">{comment.content}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+```
+
+`? (` から `)}` までが1つの式です。編集中なら上のテキストエリア、そうでなければ下の本文が描かれます。`disabled` に条件を2つ並べているのは、空欄での更新と送信中の二重送信を同じ1か所で止めるためです。`isPending` を文字とボタンの状態の両方に使っているので、押せない理由が画面にも出ます。
+
+**コメント投稿フォーム**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: コメント投稿フォーム
+                {canEditProject(taskDetail.projectId) && (
+                <form
+                  onSubmit={commentForm.handleSubmit(handleCommentSubmit)}
+                  className="space-y-2"
+                >
+                  <Textarea
+                    placeholder="コメントを追加..."
+                    aria-label="コメント本文"
+                    {...commentForm.register('content')}
+                    className="resize-none"
+                    rows={2}
+                  />
+```
+
+フォーム全体を `canEditProject` で囲ってあるのは、閲覧者が押しても必ずサーバーに弾かれる操作を、そもそも画面へ出さないためです。
+
+**投稿ボタン**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 投稿ボタン
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={
+                        !commentForm.watch('content').trim() || createCommentMutation.isPending
+                      }
+                    >
+                      {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
+                    </Button>
+                  </div>
+                </form>
+                )}
+```
+
+Day 18 のまま残しています。投稿フォームは一覧の外に1つだけあり、編集用のテキストエリアはコメント1件ごとに現れます。置き場所を分けてあるので、編集中でも新しいコメントを書き始められます。1つの入力欄を使い回すと、どちらの操作をしているのか読者が見失います。
+
+**末尾の閉じるボタン**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 末尾の閉じるボタン
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={handleClose}>閉じる</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+```
+
+`DialogFooter` を `{taskDetail && (` の外側へ置いてあるのが要点です。中へ入れると、データが届くまで閉じるボタンが描かれません。通信が遅い環境や失敗したときに、読者はダイアログから抜け出せなくなります。`</Dialog>` で閉じたあとも `<>` は開いたままで、次のブロックの確認ダイアログがその中へ並びます。
+
+**削除確認ダイアログ**:
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: 削除確認ダイアログ
+      <DeleteConfirmDialog
+        open={deleteCommentDialogOpen}
+        onOpenChange={setDeleteCommentDialogOpen}
+        onConfirm={() => {
+          if (deleteCommentTargetId) {
+            deleteCommentMutation.mutate({ id: deleteCommentTargetId });
+          }
+        }}
+        isPending={deleteCommentMutation.isPending}
+        title="コメントを削除しますか？"
+      />
+    </>
+  );
+}
+```
+
+`DeleteConfirmDialog` を `</Dialog>` の外へ置いてあるのが要点です。タスク詳細の内側に入れると、詳細ダイアログを閉じた瞬間に確認ダイアログまで消えます。`onConfirm` の中で `if (deleteCommentTargetId)` を確かめているのは、対象が決まっていない状態で確定を押されても壊れないようにするためです。`onOpenChange` へ `setDeleteCommentDialogOpen` をそのまま渡しているので、キャンセルと外側のクリックのどちらでも閉じます。
 
 ## 今日のまとめ
 

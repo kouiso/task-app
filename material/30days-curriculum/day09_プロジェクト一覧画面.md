@@ -425,7 +425,11 @@ const {
 // filepath: src/app/project/page.tsx
 // ProjectPageContent内、returnの前に追加
 if (projectsLoading) {
-  return <PageLoadingSpinner />;
+  return (
+    <AppLayout>
+      <PageLoadingSpinner />
+    </AppLayout>
+  );
 }
 ```
 
@@ -438,7 +442,7 @@ if (projectsLoading) {
 
 ![ローディングスピナーの表示](./screenshots/day09-loading.png)
 
-> ここでの `<PageLoadingSpinner />` は `ProjectPageContent` の内側で使うため、`AppLayout` の中で呼ばれます。`AppLayout` のラップはこの `if` ブロックの外側（`return` の中）で行うので、スピナーを `AppLayout` で二重に囲む必要はありません。
+> スピナーも `AppLayout` で囲みます。`AppLayout` を書いているのはこの下の `return` の中なので、ここで早く `return` すると読み込み中だけサイドバーとログイン確認が画面から消えます。
 
 ---
 
@@ -1021,6 +1025,339 @@ export function ProjectListPanel() {
 
 一覧取得は `useEffect`（画面の表示が終わった後に処理を実行する React の機能）で手作りするより、**データ取得専用のフックに任せる** ほうが安定します。
 tRPCの `useQuery` は、取得・状態・型をまとめて引き受けてくれるのです。
+
+## 完成コード全体
+
+今日は3つのファイルを触りました。ページ側は Step 1 から Step 9 まで少しずつ足していったので、途中でどこへ貼ったか分からなくなった場合は、以下のコードと自分のファイルを見比べてください。上から順に読めば、断片がどう1つのファイルになったかを確かめられます。
+
+| ファイル | 役割 | 対応する Step |
+|---------|------|--------------|
+| `src/server/api/routers/project.ts` | プロジェクト一覧を返す手続き | Step 0 |
+| `src/server/api/root.ts` | 手続きの一覧表 | Step 0 |
+| `src/app/project/page.tsx` | プロジェクト一覧画面 | Step 1 〜 Step 9 |
+
+### `src/server/api/routers/project.ts`
+
+**取り込み**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: 取り込み
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_SELECT } from './_helpers/select';
+```
+
+`import type` で始まる1行目だけ書き方が違うのは、`Prisma` を値としてではなく型の注釈にしか使わないからです。この書き方にしておくと、出来上がったコードから消えます。並び順は `npm run fix` で Biome（このプロジェクトのコード整形ツール）が決めるので、自分が書いた順番と違っていても手で直す必要はありません。
+
+**手続きの骨組みと入力**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+// 完成版: 手続きの骨組みと入力
+export const projectRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          userId: z.string().cuid().optional(),
+          isArchived: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.ProjectWhereInput = {};
+```
+
+`protectedProcedure` から書き始めているので、ログインしていない人はこの先へ進めません。認証の確認をここに置いておけば、手続きを増やすたびに同じ判定を書かずに済みます。`.optional()` が入れ子で2か所に付いているのは、項目だけ省く呼び方と、条件そのものを渡さない呼び方の両方を許すためです。
+
+**他人の一覧を守る判定**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+// 完成版: 他人の一覧を守る判定
+      if (input?.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+```
+
+この判定を検索条件の組み立てより前に置いてあるのが要点です。後ろへ動かすと、弾かれるはずの呼び出しでも問い合わせが1回走ります。`throw` は処理をその場で打ち切る命令なので、ここを通れなかった呼び出しは以降の行に届きません。
+
+**検索条件の組み立て**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+// 完成版: 検索条件の組み立て
+      if (!input?.userId) {
+        where.members = {
+          some: { userId: ctx.session.userId },
+        };
+      } else {
+        where.members = {
+          some: { userId: input.userId },
+        };
+      }
+
+      if (input?.isArchived !== undefined) {
+        where.isArchived = input.isArchived;
+      }
+```
+
+`where` を空の入れ物として用意しておき、決まった条件だけを足していく形にしています。条件の組み合わせが増えても、`findMany` の呼び出しは1つのままで済みます。`isArchived` を `!== undefined` で見ているのは、`false` を渡された場合と、渡されなかった場合を分けるためです。`if (input?.isArchived)` と書くと、`false` は未指定と区別できません。
+
+**取得と返却**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+// 完成版: 取得と返却
+      return await prisma.project.findMany({
+        where,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+});
+```
+
+メンバーとタスクを一緒に取っておくと、画面側は追加の通信なしで人数と進捗を出せます。いちばん内側で `select` を使い、返す項目を絞っているのは、パスワードのような返してはいけない値を通さないためです。末尾の `}),` が `getAll` を、`});` が `projectRouter` 全体を閉じます。ここが1つでも足りないと、開発サーバーは起動の時点で止まります。
+
+### `src/server/api/root.ts`
+
+**手続きの一覧表**:
+
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: 手続きの一覧表
+import { authRouter } from './routers/auth';
+import { projectRouter } from './routers/project';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+ここに並べた名前が、そのまま画面側の呼び名になります。`project: projectRouter` と書いたので `api.project.getAll` が使えます。左側の名前を `projects` にすると、画面側も `api.projects.getAll` に変わります。`export type AppRouter` の行があるおかげで、画面側は関数名も引数の形もサーバー側の定義から受け取れます。
+
+### `src/app/project/page.tsx`
+
+**取り込み**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 取り込み
+'use client';
+
+import { Plus } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { ProjectCard } from '@/component/project/project-card';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { Switch } from '@/component/ui/switch';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+```
+
+Step 1・Step 2・Step 4・Step 8 で少しずつ足した取り込みが、最後にはこの10行に落ち着きます。`react` からの取り込みが1行にまとまっているのは、同じ取り寄せ元を2行に分けても意味が変わらないからです。`'use client'` はファイルの1行目に置きます。取り込みの後ろへ動かすと、`useState` の行でエラーになります。
+
+**状態とサーバーへの問い合わせ**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: 状態とサーバーへの問い合わせ
+function ProjectPageContent() {
+  const [showArchived, setShowArchived] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+  } = api.project.getAll.useQuery({
+    isArchived: showArchived,
+  });
+```
+
+`showArchived` を `useQuery` の引数に渡してあるので、スイッチを切り替えるだけで一覧が取り直されます。取り直す関数を自分で呼ぶ書き方にすると、呼び忘れた場所だけ古い一覧が残ります。`data: projects` と名前を付け替えているのは、この画面に問い合わせが増えたときに、どの `data` なのかを見分けられるようにするためです。
+
+**ボタンの受け皿と読み込み中の表示**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: ボタンの受け皿と読み込み中の表示
+  const handleEdit = (projectId: string) => {
+    void projectId;
+  };
+  const handleDelete = (projectId: string) => {
+    void projectId;
+  };
+  const handleProjectClick = (id: string) => {
+    void id;
+  };
+  const handleCreate = () => {
+    setDialogOpen(true);
+  };
+
+  if (projectsLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+```
+
+3つの受け皿が何もしないのは、行き先の画面をまだ作っていないからです。中身が空でも用意しておくと、カードに渡す値の形が今日のうちに決まります。`if (projectsLoading)` を `return` より前に置いたので、この行より下では読み込み中の場合を考えずに済みます。
+
+**見出しの部分**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: 見出しまで
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">
+            プロジェクト
+          </h1>
+```
+
+`AppLayout` がいちばん外側にあるので、このページにもサイドバーと認証の判定が付きます。ページ側で認証を確かめる行が1つも無いのは、その仕事を囲みへ預けたからです。`justify-between` を付けた `<div>` が、見出しと操作部品を左右の端へ振り分けます。
+
+**スイッチとボタン**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: スイッチとボタン
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={setShowArchived} />
+              <Label htmlFor="show-archived">
+                アーカイブ表示
+              </Label>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新規プロジェクト
+            </Button>
+          </div>
+        </div>
+```
+
+`Switch` の `id` と `Label` の `htmlFor` に、同じ `show-archived` を書いてあります。この2つが揃っていると、文字のほうを押してもスイッチが切り替わります。片方だけ書き換えると見た目は変わらないまま、文字を押しても反応しない状態になります。`onCheckedChange` に `setShowArchived` を直接渡しているので、切り替えた値がそのまま問い合わせの条件になります。
+
+**カードを並べる枠**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: カードを並べる枠
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {projects && projects.length > 0
+            ? (projects.map((project) => {
+              const taskCount = project.tasks?.length ?? 0;
+              const doneCount = project.tasks?.filter(
+                (t) => t.status === TASK_STATUS.DONE
+              ).length ?? 0;
+```
+
+`projects &&` を手前に置いてあるのは、届く前の `projects` から `length` を読むと画面が真っ白になるからです。件数を数える2行を `map` の中に置いているので、プロジェクトごとに自分のタスクだけを数えます。完了の判定に `TASK_STATUS.DONE` を使うと、打ち間違えたときに画面を開く前に気づけます。
+
+**1件ぶんのカード**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: 1件ぶんのカード
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={project.description}
+                  color={project.color}
+                  memberCount={project.members?.length ?? 0}
+                  taskStats={{
+                    total: taskCount,
+                    done: doneCount,
+                  }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={handleProjectClick}
+                  isArchived={project.isArchived}
+                />);
+            })
+```
+
+渡している値のうち `name` から `isArchived` までは、Step 0 の `getAll` が返してきたものです。`memberCount` と `taskStats` だけ、この場で数えた値を渡します。`key` に `project.id` を使うのは、並びが変わったときにどのカードが動いたかを React へ伝えるためです。手元で `key` を消すと表示自体は出ますが、開発サーバーのターミナルに警告が残ります。
+
+**0件のときの表示と閉じタグ**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: 0件のときの表示と閉じタグ
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>プロジェクトが見つかりません。</p>
+              <p>最初のプロジェクトを作成しましょう！</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+`col-span-full` を付けているのは、この枠を格子の1列ぶんの幅で終わらせないためです。付け忘れると、メッセージが左端の細い列だけに押し込まれます。閉じタグは内側から順に、格子・縦並びの入れ物・`AppLayout` と続きます。手元で括弧が合わないときは、`) : (` と `)}` の2行の位置を先に確かめてください。
+
+**画面として書き出す部分**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 完成版: 画面として書き出す部分
+export default function ProjectPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <ProjectPageContent />
+    </Suspense>
+  );
+}
+```
+
+画面として読まれるのはこちらで、本体は `ProjectPageContent` に分けてあります。分けておくと、準備が終わるまでの仮表示を `Suspense` の1か所で受け止められます。`export default` を付けた関数がページの入口になるので、この行を本体の側へ移すと、囲みが働かないまま本体だけが表示されます。
 
 ## 今日のまとめ
 
