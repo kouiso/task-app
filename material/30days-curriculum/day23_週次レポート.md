@@ -277,14 +277,16 @@ import { getUserProjectIds } from './_helpers/permission';
         totalCompleted: tasks.length,
       };
     }),
-});
 ```
+
+最後の `}),` は `getWeeklyReport` 1本を閉じる行です。ルーター全体を閉じる `});` は Day 21 で書いた最終行がそのまま使えるので、ここでは足しません。0-1 から 0-6 を貼る位置は、その `});` の1行前です。
 
 これで `reportRouter` は `getOverview` と `getWeeklyReport` の2本立てになりました。`root.ts` は Day 21 で `report: reportRouter` を登録済みなので、今日は追加の登録作業は不要です。
 
 **確認ポイント**:
 - `src/server/api/routers/report.ts` の `getOverview` の直後に `getWeeklyReport` を追記できた
 - `weeks` / `userId` の入力検証、管理者チェック、週バケット生成まで 完成版と同じ順序で書けた
+- ファイルの最終行の `});` は Day 21 のまま1つで、増えていない
 - `root.ts` は Day 21 時点の `report: reportRouter` のままでよいと理解できた
 - `npm run dev` で型エラーが出ていない
 

@@ -880,7 +880,7 @@ flowchart TD
 
 #### 3-3. 登録・ログアウト・セッション取得
 
-ここから先の「（続き）」のブロックは、`auth.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+ここから先の「（続き）」のブロックは、`auth.ts` の**末尾に続けて**貼ります。いまの `auth.ts` は Step 3-2 で書いた `  }),` で終わっていて、`createTRPCRouter({` はまだ閉じていません。閉じ括弧の `});` は Step 3-3 の最後のブロックで書くので、それまでは自分で足さないでください。
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts（続き）
@@ -1347,7 +1347,7 @@ npm run db:seed
 
 ブラウザで `http://localhost:3000/login` を開きます。
 
-![ログイン失敗時の表示](./screenshots/login-error.png)
+![ログイン画面](./screenshots/login.png)
 
 **seed データのログイン情報**:
 

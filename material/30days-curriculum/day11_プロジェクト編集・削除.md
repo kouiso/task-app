@@ -309,7 +309,7 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 };
 ```
 
-`isArchived` を引数で受け取り、それをそのまま DB に書き込むだけの単純な関数です。呼び出す側が `true` を渡せばアーカイブ、`false` を渡せば解除になります。`delete` の下に、この関数を呼ぶ2つの手続きを追加します。
+`isArchived` を引数で受け取り、それをそのまま DB に書き込むだけの単純な関数です。呼び出す側が `true` を渡せばアーカイブ、`false` を渡せば解除になります。`delete` の下に、この関数を呼ぶ2つの手続きを追加します。このブロックだけは最後の `});` を含みます。ファイルの一番下にある `});` の1行を先に消してから、その場所へ貼ってください。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -449,13 +449,13 @@ const { data: currentUser } =
 
 `getCurrentUser` はサーバーが持つログイン情報を返します。ここで取った `currentUser` は、あくまで画面の表示やボタンの出し分けに使う値です。なりすましを防ぐのは、ブラウザで動くこの値ではなく、サーバー側の各手続きが参照する `ctx.session.userId` の役割です。Day 12 では、このユーザーがプロジェクト内でどのロールかを調べて、ボタンの表示可否も決めます。
 
-次に、Day 09 で定義した `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
+次に、Day 09 で置いた受け皿の `handleEdit` を中身のある処理に書き換えます。`const handleEdit = (projectId: string) => {` から、その2行下の `};` までの3行を消してください。消した場所へ次のコードを貼ります。位置は動かしません。Day 09 の Step 5 で `handleEdit` → `handleDelete` → `handleProjectClick` の順に3つ並べたので、`handleEdit` はその先頭のままです。
 
 日付は `dateOnlyFromValue()` で `"2024-12-31"` 形式に変換します。保存済みの ISO 文字列から `<input type="date">` 用の date-only 値を安全に取り出せます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// handleCreateの直下に追加: 編集ボタンのハンドラー
+// 消した受け皿と同じ場所: 中身を入れた編集ボタンのハンドラー
 const handleEdit = (projectId: string) => {
   const project = projects?.find(
     (p) => p.id === projectId
@@ -486,7 +486,7 @@ const handleEdit = (projectId: string) => {
 日付の変換を飛ばすと、名前と色は埋まっているのに開始日と終了日だけが空のダイアログになります。`2026-05-01T00:00:00.000Z` は `<input type="date">` が読める形ではなく、ブラウザが値を捨てるためです。
 
 **確認ポイント**:
-- `handleEdit` が `handleCreate` の直下に配置されている
+- `handleEdit` が Day 09 の受け皿と同じ場所にあり、`handleDelete` の直上にある
 - `description` に `|| ''` を使って null を空文字に変換している
 - 日付変換のロジックが正しく書けた
 
@@ -526,11 +526,11 @@ const [deleteTargetId, setDeleteTargetId]
 - `deleteDialogOpen` と `deleteTargetId` の2つの state が追加された
 - `deleteTargetId` の型が `string | null` になっている
 
-次に、削除用の mutation を定義します。実際のコードでは mutation の定義順は `createMutation` → `updateMutation` → `deleteMutation` です。`updateMutation` の直下に追加してください。
+次に、削除用の mutation を定義します。Day 10 で書いた `createMutation` の直下に追加してください。`updateMutation` は Step 3 でこの2つの間に足すので、最終的な並びは `createMutation` → `updateMutation` → `deleteMutation` になります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// updateMutationの直下に追加
+// createMutationの直下に追加
 const deleteMutation =
   api.project.delete.useMutation({
     onSuccess: () => {
@@ -541,14 +541,14 @@ const deleteMutation =
 ```
 
 **確認ポイント**:
-- `deleteMutation` が `updateMutation` の直下に定義できた
+- `deleteMutation` が `createMutation` の直下に定義できた
 - 成功時に `invalidate()` で一覧を更新し、`router.push` で一覧画面に戻る
 
-`handleDelete` は **state を設定するだけ** で、削除の実行は確認ダイアログ内で行います。`handleEdit` の直下に追加してください。実際のコードでは `handleCreate` → `handleEdit` → `handleDelete` の順番です。
+`handleDelete` は **state を設定するだけ** で、削除の実行は確認ダイアログ内で行います。これも Day 09 で置いた受け皿があるので、`const handleDelete = (projectId: string) => {` から2行下の `};` までの3行を消してから貼ってください。位置は動かしません。`handleDelete` は `handleEdit` の直下、`handleProjectClick` の直上にあります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// handleEditの直下に追加
+// handleEditの直下: 受け皿を書き換えた削除ボタンのハンドラー
 const handleDelete = (projectId: string) => {
   setDeleteTargetId(projectId);
   setDeleteDialogOpen(true);
@@ -592,15 +592,15 @@ Day 12 で `getById` を追加したあとに、この `onSuccess` へ1行足し
 - `onSuccess` で `invalidate()` を呼んでいる
 - `npm run dev` で型エラーが出ていない
 
-次に送信ハンドラーを作ります。実際のコードでは `handleDelete` の直下に `handleSubmit` が定義されています。`data.id` の有無で更新と新規作成を `if/else` で分岐します。
+次に送信ハンドラーを作ります。Day 10 で書いた `handleSubmit` を、`data.id` の有無で更新と新規作成を `if/else` で分岐する形に書き換えます。
 
-> **配置の注意**: `handleSubmit` は `handleDelete` の直下に配置してください。コードの並び順は `handleCreate` → `handleEdit` → `handleDelete` → `handleSubmit` です。
+> **配置の注意**: Day 10 の `const handleSubmit = (` から、対応する閉じの `};` までをまるごと消してください。消した跡へ、この後の2つのブロックを続けて貼ります。位置は動かしません。Day 10 で `createMutation` の下に置いた場所が、そのまま `handleSubmit` の位置です。
 
 更新の場合（`data.id` がある場合）のコードです。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// handleDeleteの直下に追加: 送信ハンドラー
+// 消した handleSubmit と同じ場所: Day 10 から書き換えた送信ハンドラー
 const handleSubmit = (
   data: ProjectFormData
 ) => {
@@ -675,7 +675,7 @@ const handleSubmit = (
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
-プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。Step 5 の更新ハンドラー（`src/app/project/page.tsx`）で `description || null` を使ったのは、説明欄を空にして保存したときに `null` を送るためです。
+プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。Step 3 の更新ハンドラー（`src/app/project/page.tsx`）で `description || null` を使ったのは、説明欄を空にして保存したときに `null` を送るためです。
 
 | 式 | `description` が `''`（空文字）の場合 | このアプリでの結果 |
 |-----|--------------------------------------|------|
@@ -699,6 +699,8 @@ const handleSubmit = (
 Day 09 の `handleCreate` はダイアログを開くだけでした。
 編集機能を追加したので、「新規作成」では
 `editingProject` を必ず `undefined` に戻すように更新します。
+`const handleCreate = () => {` から2行下の `};` までの3行を消して、
+同じ場所へ次の4行を貼ってください。位置は動かしません。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -712,11 +714,11 @@ const handleCreate = () => {
 - `handleCreate` で `setEditingProject(undefined)` を呼んでいる
 - 新規作成ボタンでダイアログが空の状態で開く
 
-JSX 内のプロジェクトカード一覧グリッド（`<div className="grid gap-6 sm:grid-cols-2 ...">...</div>`）の閉じタグ直後に `ProjectDialog` を配置します。
+`ProjectDialog` は Day 10 で JSX 内へ置いてあります。プロジェクトカード一覧グリッド（`<div className="grid gap-6 sm:grid-cols-2 ...">...</div>`）の閉じタグ直後を見てください。そこにある `<ProjectDialog` のタグへ `initialData` の1行を足します。新しくもう1つ置くのではありません。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// グリッドの閉じ</div>直後に配置
+// グリッドの閉じ</div>直後にある既存タグへ initialData を追加
 <ProjectDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
@@ -897,11 +899,11 @@ const unarchiveMutation =
 
 **実装**:
 
-実際のコードでは、ハンドラーの並び順は `handleCreate` → `handleEdit` → `handleDelete` → `handleSubmit` → ... → `handleArchive` です。`handleRemoveMember`（Day 12 で追加予定）の直下、または現時点のハンドラー一覧の末尾に `handleArchive` を追加してください。
+`handleArchive` は、Step 3 で書き換えた `handleSubmit` の閉じ `};` の直下に追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ハンドラー一覧の末尾に追加
+// handleSubmit の直下に追加
 const handleArchive = (
   projectId: string,
   isArchived: boolean
@@ -930,7 +932,7 @@ const handleArchive = (
 
 まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1・3・6 で本実装に置き換えます**。TypeScript エラーを出さずに Day 11 を完了させるための一時定義です。
 
-> **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleProjectClick` と `handleDetailClose` を、Step 3 で `memberDialogOpen` state を、Step 6 で `handleRemoveMember` を本実装したときに、それぞれこの仮定義を削除してください。
+> **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleDetailClose` を、Step 3 で `memberDialogOpen` state を、Step 6 で `handleRemoveMember` を本実装したときに、それぞれこの仮定義を削除してください。`handleProjectClick` は Day 09 で置いた受け皿がそのまま残っているので、Day 12 の Step 1 ではその受け皿を書き換えます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -1881,16 +1883,11 @@ function ProjectPageContent() {
 
 この4つは Day 12 で本実装に差し替えます。中身を空にしてあるのは、動くように見せないためです。半端に動く仮の処理を置くと、差し替えを忘れても画面が動いてしまい、忘れたことに気付けません。`projectDetail` が `undefined` のままなら、詳細画面を開いた時点で中身の無さが目に見えます。
 
-**新規作成と編集開始のハンドラー**:
+**編集開始のハンドラー**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: 新規作成と編集開始のハンドラー
-  const handleCreate = () => {
-    setEditingProject(undefined);
-    setDialogOpen(true);
-  };
-
+// 完成版: 編集開始のハンドラー
   const handleEdit = (projectId: string) => {
     const project = projects?.find(
       (p) => p.id === projectId
@@ -1904,7 +1901,7 @@ function ProjectPageContent() {
       : undefined;
 ```
 
-`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは、直前に編集を開いていた場合の値を捨てるためです。この1行が無いと、編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき、前のプロジェクトの名前が入ったまま開きます。`handleEdit` が `find` で手元の配列を探しているので、押した瞬間の通信は起きません。
+`handleEdit` が `find` で手元の配列を探しているので、押した瞬間の通信は起きません。Day 09 で置いた受け皿と同じ場所にあり、中身だけが入れ替わっています。
 
 **編集ダイアログへ渡す値の組み立て**:
 
@@ -1929,6 +1926,23 @@ function ProjectPageContent() {
 ```
 
 `description` に `|| ''` を付けているのは、データベースの `null` をそのまま入力欄へ渡せないからです。日付の2つを条件付きスプレッドで足しているのは、`ProjectFormData` の型が「値があるか、項目が無いか」の2択で書かれているためです。`handleDelete` が state を置くだけなのは、実際の削除を確認ダイアログの `onConfirm` に任せるからです。
+
+**詳細表示の受け皿と新規作成のハンドラー**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: 詳細表示の受け皿と新規作成のハンドラー
+  const handleProjectClick = (id: string) => {
+    void id;
+  };
+
+  const handleCreate = () => {
+    setEditingProject(undefined);
+    setDialogOpen(true);
+  };
+```
+
+`handleProjectClick` が空のままなのは、行き先の詳細画面を Day 12 で作るからです。Day 09 で置いた受け皿を、そのままの場所に残してあります。`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは、直前に編集を開いていた場合の値を捨てるためです。この1行が無いと、編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき、前のプロジェクトの名前が入ったまま開きます。
 
 **送信ハンドラーの更新側**:
 

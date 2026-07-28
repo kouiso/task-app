@@ -738,8 +738,7 @@ const [filterStatus, setFilterStatus] =
 
 **確認ポイント**:
 - プロジェクトとステータスの2つのドロップダウンが並んで表示される
-
-![フィルターUIが2つ並んで表示されている画面](./screenshots/task-list.png)
+- タスクのカードはまだ1枚も出ない（カードを並べるのは Step 6）
 
 ---
 

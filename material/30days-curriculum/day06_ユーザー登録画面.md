@@ -498,7 +498,13 @@ const onSubmit = async (
 const router = useRouter();
 const [error, setError] =
   useState<string | null>(null);
+```
 
+続いて、Step 3 で書いた `useForm` の設定の閉じ括弧 `});` の**後**（仮の `onSubmit` の前）に、以下を追加します。
+
+```typescript
+// filepath: src/app/register/page.tsx
+// useFormの設定の後、仮のonSubmitの前に追加
 // tRPCの登録API呼び出し
 const registerMutation =
   api.auth.register.useMutation({
@@ -711,7 +717,9 @@ const onSubmit = async (
 - リンクをクリックするとログインページに遷移する
 - 登録成功でダッシュボードに遷移する
 
-いま登録したアカウントは一般ユーザーで、初期データのプロジェクトには参加していません。そのままだと Day 09 のプロジェクト一覧が空になります。Day 07 からは `admin@example.com` でログインし直して進めます。ブラウザのアドレス欄に `http://localhost:3000/login` と直接入力し、`admin@example.com` / `password123` でログインしてください。ログアウトのボタンを作るのは Day 08 なので、それまではこの方法で切り替えます。
+いま登録したアカウントは一般ユーザーで、初期データのプロジェクトには参加していません。初期データとは、Day 01 の初期セットアップで「シードデータを投入しています...」と表示されたときにデータベースへ入った、練習用のユーザーとプロジェクトのことです。自分で作った覚えがなくても、そのときに `admin@example.com` というアカウントとプロジェクトが2つ作られています。いま登録したアカウントはそのプロジェクトのメンバーではないので、そのままだと Day 09 のプロジェクト一覧が空になります。
+
+そこで Day 07 からは `admin@example.com` でログインし直して進めます。ブラウザのアドレス欄に `http://localhost:3000/login` と直接入力し、`admin@example.com` / `password123` でログインしてください。ログアウトのボタンを作るのは Day 08 なので、それまではこの方法で切り替えます。パスワードを正しく打ってもログインできない場合は、シードデータがまだ入っていません。開発サーバーとは別のターミナルで `npm run db:seed` を実行してから、もう一度ログインしてください。
 
 スクリーンショット: デザインが整った登録画面の完成形です。
 

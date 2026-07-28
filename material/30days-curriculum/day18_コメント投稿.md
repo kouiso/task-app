@@ -239,7 +239,7 @@ export const commentRouter = createTRPCRouter({
 `USER_SELECT` を挟むと、パスワードなど返してはいけない項目が自動で外れます。
 Day 09 の `getAll` で使ったのと同じ道具です。
 
-ここから先の「（続き）」のブロックは、`comment.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+ここから先の「（続き）」のブロックは、いま書いた `getByTaskId` の最後の行 `}),` の下へ続けて貼ります。このブロックの最後の `});` が `createTRPCRouter({` を閉じる行なので、貼り終えた時点でそれが `comment.ts` の最終行になります。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（続き）
@@ -373,7 +373,7 @@ tRPC で「サーバーに書いた関数をそのまま client から呼べる�
 | `delete` | mutation | コメント削除（Day 19） |
 
 **確認ポイント**:
-- 既存の `getByTaskId` を残して `create` を追加した
+- Step 0 で書いた `getByTaskId` と `create` が、上の表の 2 行と一致している
 - 4 つのメソッドの名前と種別を把握した
 
 ---
@@ -388,11 +388,13 @@ Day 13 の Step 7 で配置した `TaskDetailDialog`
 内部で `api.task.getById` を呼んでいます。
 このレスポンスにコメントも含まれています。
 
-**実装**:
+**この Step は読むだけです。** 次のコードは配布ファイルの 27 行目あたりにすでに書いてあります。同じものを貼り足すと `taskDetail` が二重に宣言され、ビルドが止まります。エディタで開いて、同じ行があることを目で確かめてください。
+
+**配布ファイルにすでにある行**:
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// TaskDetailDialog 内でタスク詳細データを取得
+// TaskDetailDialog 内でタスク詳細データを取得（配布済み・書き足し不要）
 const { data: taskDetail } =
   api.task.getById.useQuery(
     { id: taskId ?? '' },
@@ -435,17 +437,21 @@ Step 0 で書いた server 側と違い、画面側に権限チェックはあ�
 
 ### Step 3: コメント一覧の表示コードを書く（7分）
 
-配布されている `task-detail-dialog.tsx` にコメント欄はありません。ここから先は、ダイアログの中へ自分で書き足していきます。
+配布されている `task-detail-dialog.tsx` にコメント欄はありません。ここから先は、ダイアログの中へ自分で書き足していきます。ただし、コメント欄で使う `Avatar` と `Badge` のインポートは、配布ファイルにすでに書いてあります。
 
 **ゴール**: コメントをアバター・日時付きの
 リストで表示する部分を作ります。
 
-`task-detail-dialog.tsx` にコメント一覧セクションを追加します。
-まずインポートを追加します。
+`task-detail-dialog.tsx` にコメント一覧セクションを書き足します。
+まず、そこで使う部品のインポートを確かめます。
+
+**次の 2 行は読むだけです。** 配布ファイルの 3 行目と 4 行目にすでに書いてあります。同じものを貼り足すと `Avatar` と `Badge` が二重に宣言され、ビルドが止まります。エディタで開いて、同じ行があることを目で確かめてください。
+
+**配布ファイルにすでにある行**:
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// Avatar 関連のインポート元
+// Avatar と Badge のインポート元（配布済み・書き足し不要）
 import { Avatar, AvatarFallback, AvatarImage }
   from '@/component/ui/avatar';
 import { Badge }
@@ -463,8 +469,9 @@ import { Badge }
 自分のプロジェクト内へファイルとして置いてあるため、色や角丸を変えたくなったら直接編集できます。
 
 **確認ポイント**:
-- Avatar は `@/component/ui/avatar` からインポート
-- Badge は `@/component/ui/badge` からインポート
+- 配布ファイルの 3 行目に `Avatar, AvatarFallback, AvatarImage` のインポートがある
+- 配布ファイルの 4 行目に `Badge` のインポートがある
+- どちらも書き足していない
 
 コメントセクションのヘッダー部分を確認しましょう。
 
@@ -493,20 +500,24 @@ import { Badge }
 - Badge でコメント件数が表示される
 - コメントが1件も無いタスクでは `0` と表示される
 
-コメントが 0 件のときは案内メッセージを表示し、
+次に、コメント一覧を包む外側の箱を開きます。
+その中で、0 件のときは案内メッセージを表示し、
 1 件以上あればリストを描画します。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// TaskDetailDialog の return 内: 0 件時の案内
-{taskDetail.comments?.length === 0 && (
-  <p className="text-sm text-muted-foreground
-    text-center py-2">
-    コメントはまだありません。
-  </p>
-)}
+// TaskDetailDialog の return 内: 一覧を包む箱と 0 件時の案内
+<div className="space-y-4 mb-4
+  max-h-[200px] overflow-y-auto pr-2">
+  {taskDetail.comments?.length === 0 && (
+    <p className="text-sm text-muted-foreground
+      text-center py-2">
+      コメントはまだありません。
+    </p>
+  )}
 ```
 
+この `<div>` は開いたままにしておきます。この Step の最後に閉じます。
 `comments` は必ず配列で届くので、`length` が `0` かどうかだけを見れば足ります。
 空の状態へ言葉を置く理由は、Day 09 の一覧画面で空状態を作ったときと変わりません。
 何も無い画面は、読者にとって「壊れている画面」と見分けが付きません。
@@ -638,16 +649,17 @@ import { ja } from 'date-fns/locale';
     </div>
   </div>
 ))}
+</div>
 ```
 
 `</div>` の3つは、内側から順に「名前と日時の箱」「アイコンの右側の箱」「1件分の箱」を閉じます。
 `))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じます。
-コメント欄を包む外側の箱はこのあと閉じるので、この時点ではまだ構文エラーが残ります。
+いちばん下の `</div>` は、0 件の案内の前で開いた外側の箱を閉じます。これでコメント一覧は閉じ切ります。
 
 **確認ポイント**:
 - `.map` の中身を、閉じるところまで書けた
-- `</div>` が3つ、`))}` が1つ並んでいる
-- この時点ではまだ構文エラーが残る（コメント欄を包む外側の箱は、このあと閉じる）
+- `</div>` が3つ、`))}` が1つ、いちばん下にもう1つ `</div>` が並んでいる
+- 構文エラーが消え、コメント一覧が画面に出る
 
 スクリーンショット: コメント一覧がタスク詳細に並んだ画面の表示を確認してください。
 
