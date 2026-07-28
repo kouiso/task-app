@@ -58,7 +58,6 @@ Default source for the following PNG files is self-captured TaskApp output gener
 | `material/30days-curriculum/screenshots/day01-env-pasted.png` | Local editor/terminal capture | May include editor UI only | OK |
 | `material/30days-curriculum/screenshots/day01-success.png` | Local browser capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day01-vscode-open.png` | VS Code UI capture | Third-party product UI reference | Reference use; replace if stricter clearance is required |
-| `material/30days-curriculum/screenshots/day01/first-render.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day02-before.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day02-card-full.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
 | `material/30days-curriculum/screenshots/day02-card-title.png` | TaskApp app capture | No third-party UI detected from path/name | OK |
