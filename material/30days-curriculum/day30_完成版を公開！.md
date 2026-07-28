@@ -475,11 +475,13 @@ npx vercel link
 # Production の接続情報を一時ファイルへ取り出し、教材用の新規 DB へ反映する
 npx vercel env pull .env.production.local --environment=production
 
-# 取り出した値を読み込んでから実行する
-set -a
-. ./.env.production.local
-set +a
-npx prisma db push
+# 括弧の中だけで読み込んでから実行する
+(
+  set -a
+  . ./.env.production.local
+  set +a
+  npx prisma db push
+)
 
 # 接続情報を手元に残さないよう、終わったら消す
 rm .env.production.local
@@ -495,7 +497,12 @@ rm .env.production.local
 > `set -a` は「このあと読み込む値をコマンドへ渡す」という指定、
 > `. ./.env.production.local` はそのファイルを読み込む書き方です。
 > `set +a` で元に戻します。
-> `DATABASE_URL` をターミナルの履歴へ残さないための方法です。
+> ここで `( )` を使うのは、括弧の中が別のシェルとして動くからです。
+> `set +a` は自動で渡す指定を解除するだけで、読み込んだ
+> `DATABASE_URL` の値そのものは消えません。括弧なしで実行すると、
+> そのあと同じターミナルで打った Prisma やシードのコマンドが
+> 本番 DB を見に行ってしまいます。括弧で囲めば、読み込んだ値は
+> 括弧を抜けた時点で消えます。
 > 取り出したファイルには本番の接続情報が入っているので、
 > 使い終わったら必ず `rm` で消します。
 >

@@ -994,7 +994,7 @@ if (projectIdParam && selectedProject) {
 }
 ```
 
-条件が `projectIdParam && selectedProject` の2つになっているのは、URL に id が付いていても、その id のプロジェクトが手元の一覧に無い場合があるからです。他人のプロジェクトの URL を開いたときや、id を打ち間違えたときがこれに当たります。片方だけの判定にすると、中身の無い詳細画面が開きます。
+条件が `projectIdParam && selectedProject` の2つになっているのは、URL の値が `selectedProject` に写るまでに描画が1回はさまるからです。`/project?projectId=...` を直接開いた1回目では `useEffect` がまだ走っておらず、`selectedProject` は `null` のままです。`projectIdParam` だけで判定すると、この1回だけ中身の無い詳細画面が出ます。なお、この2つの条件は id のプロジェクトが実在するかまでは見ていません。存在しない id を開いたときの扱いは、Day 12 で `getById` が `NOT_FOUND` を返す形で決めます。
 
 この分岐を一覧の `return` 文の直前に置くのは、詳細を表示するときは一覧を描かないためです。あとに置くと、一覧を組み立ててから捨てることになります。
 

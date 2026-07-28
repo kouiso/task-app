@@ -276,7 +276,7 @@ if (projectIdParam && selectedProject) {
 }
 ```
 
-肝心なのは、この分岐が `if` の中の `return` になっている点です。ここで `return` すると、この下に書いてある一覧の JSX には一切進みません。条件を満たすときだけ詳細を返す形なので、一覧と詳細が同時に描かれる状態になりません。条件に `projectIdParam && selectedProject` と2つ並べているのにも理由があります。URL が変わった直後の1回目の描画では `useEffect` がまだ走っておらず、`selectedProject` には前の値が残っています。`projectIdParam` だけで判定すると、その一瞬だけ前のプロジェクトの詳細が見えてしまいます。Props を8つも渡しているのは、`ProjectDetailView` が自分ではデータを取りに行かないためです。
+肝心なのは、この分岐が `if` の中の `return` になっている点です。ここで `return` すると、この下に書いてある一覧の JSX には一切進みません。条件を満たすときだけ詳細を返す形なので、一覧と詳細が同時に描かれる状態になりません。条件に `projectIdParam && selectedProject` と2つ並べているのにも理由があります。`/project?projectId=...` を直接開いた1回目の描画では `useEffect` がまだ走っておらず、`selectedProject` は `null` のままです。詳細データを取りに行くクエリは `selectedProject` を使うので、この時点ではまだ動いていません。`projectIdParam` だけで判定すると、この1回だけ中身の無い詳細画面が出ます。ただし、詳細から別の詳細へ URL を直接切り替えたときは、この2つでは前の内容を止められません。両方に値が入ったままなので、切り替え直後の1回は前のプロジェクトの詳細が残ります。Props を8つも渡しているのは、`ProjectDetailView` が自分ではデータを取りに行かないためです。
 
 **確認ポイント**
 
