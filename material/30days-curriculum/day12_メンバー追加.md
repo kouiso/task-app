@@ -1113,6 +1113,11 @@ const addMemberMutation =
           .invalidate(
             { id: selectedProject }
           );
+        utils.project
+          .getAvailableUsers
+          .invalidate(
+            { projectId: selectedProject }
+          );
       }
       setMemberDialogOpen(false);
       setNewMemberUserId('');
@@ -1124,10 +1129,10 @@ const addMemberMutation =
 ```
 
 **確認ポイント**:
-- 成功時に `getById` のキャッシュを更新している
+- 成功時に `getById` と `getAvailableUsers` のキャッシュを更新している
 - `setNewMemberUserId('')` と `setNewMemberRole()` でフォームを初期値に戻している
 
-`onSuccess` で `invalidate` を呼ぶと、`getById` が持っている古いデータに印が付き、tRPC が裏で取り直します。追加したメンバーは、この取り直しの結果として一覧に現れます。`invalidate` を書き忘れると、サーバーには追加できているのに画面のメンバー一覧が増えず、手で再読み込みするまで誰も気づけません。フォームの初期化を同じ `onSuccess` に置いているのは、次にダイアログを開いたとき前回選んだユーザーが残っていると、押し間違いで同じ人をもう一度追加しようとするからです。
+`onSuccess` で `invalidate` を呼ぶと、`getById` が持っている古いデータに印が付き、tRPC が裏で取り直します。追加したメンバーは、この取り直しの結果として一覧に現れます。`invalidate` を書き忘れると、サーバーには追加できているのに画面のメンバー一覧が増えず、手で再読み込みするまで誰も気づけません。`getAvailableUsers` にも印を付けているのは、Step 3 で取得した候補一覧が古いままだと、いま追加した人がもう一度候補に並び、選んで送信すると `addMember` の重複チェックに引っかかってエラーになるからです。フォームの初期化を同じ `onSuccess` に置いているのは、次にダイアログを開いたとき前回選んだユーザーが残っていると、押し間違いで同じ人をもう一度追加しようとするからです。
 
 ハンドラーを追加します。`handleArchive` の下に追加してください。
 
@@ -1190,6 +1195,11 @@ const removeMemberMutation =
           .invalidate(
             { id: selectedProject }
           );
+        utils.project
+          .getAvailableUsers
+          .invalidate(
+            { projectId: selectedProject }
+          );
       }
     },
   });
@@ -1197,8 +1207,9 @@ const removeMemberMutation =
 
 **確認ポイント**:
 - 成功時に `getById` キャッシュを更新してメンバー一覧を再取得している
+- `getAvailableUsers` も更新して、外した人を候補一覧へ戻している
 
-追加のときと同じ `getById.invalidate` を呼んでいるのは、メンバー一覧の出どころが `getById` の1か所だからです。Step 1 で `projectDetail` を `getById` から受け取ると決めたので、メンバーの増減があっても取り直す相手はここだけになります。`removeMember` が返すのは Step 0 で書いた `{ success: true }` だけですが、画面が欲しいのは更新後のメンバー一覧なので、返り値を使わず取り直す形にしています。
+追加のときと同じ `getById.invalidate` を呼んでいるのは、メンバー一覧の出どころが `getById` の1か所だからです。追加のときと同じく `getAvailableUsers` にも印を付けます。外した人はもう未参加なので候補へ戻るはずですが、印を付けないと候補一覧が古いままで、外した人をもう一度追加できません。Step 1 で `projectDetail` を `getById` から受け取ると決めたので、メンバーの増減があっても取り直す相手はここだけになります。`removeMember` が返すのは Step 0 で書いた `{ success: true }` だけですが、画面が欲しいのは更新後のメンバー一覧なので、返り値を使わず取り直す形にしています。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -2362,32 +2373,46 @@ Step 2 で `updateMutation` の `onSuccess` に `getById.invalidate` を足し�
 
 プロジェクトを消したあとは `/project` へ戻します。詳細画面のままだと、消えたプロジェクトを `getById` が探しに行って `NOT_FOUND` を返します。
 
-**メンバー追加と削除の mutation**:
+**メンバー追加の mutation**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: メンバー追加と削除の mutation
+// 完成版: メンバー追加の mutation
   const addMemberMutation = api.project.addMember.useMutation({
     onSuccess: () => {
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
+        utils.project.getAvailableUsers.invalidate({
+          projectId: selectedProject,
+        });
       }
       setMemberDialogOpen(false);
       setNewMemberUserId('');
       setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
     },
   });
+```
 
+Step 5 で書いたものです。メンバー一覧の出どころは `getById` なので、追加が成功したらここを取り直します。あわせて `getAvailableUsers` にも印を付けます。候補一覧が古いままだと、いま追加した人がまた候補に並び、選んで送信するとサーバー側の重複チェックでエラーになります。フォームを初期値へ戻しているのは、次に開いたとき前回選んだ人が残っていると押し間違いで同じ人を足そうとするからです。
+
+**メンバー削除の mutation**:
+
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: メンバー削除の mutation
   const removeMemberMutation = api.project.removeMember.useMutation({
     onSuccess: () => {
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
+        utils.project.getAvailableUsers.invalidate({
+          projectId: selectedProject,
+        });
       }
     },
   });
 ```
 
-Step 5 と Step 6 で書いた2つです。どちらも成功したら `getById` を取り直します。メンバー一覧の出どころが `getById` の1か所だからです。メンバーの増減があっても、取り直す相手はここだけです。追加側でフォームを初期値へ戻しているのは、次に開いたとき前回選んだ人が残っていると押し間違いで同じ人を足そうとするからです。
+Step 6 で書いたものです。取り直す相手は追加のときと同じ2つになります。`getById` はメンバー一覧を減らすため、`getAvailableUsers` は外した人を候補一覧へ戻すためです。片方だけにすると、外したはずの人をもう一度追加しようとしたときに候補へ出てきません。
 
 **ロール変更とアーカイブの mutation**:
 

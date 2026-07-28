@@ -505,13 +505,21 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   if (!user) {
     return (
       <AppLayout>
-        <PageLoadingSpinner />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              ユーザー情報を取得できませんでした
+            </p>
+          </CardContent>
+        </Card>
       </AppLayout>
     );
   }
 ```
 
 `if (!user)` の早期リターンを通過した後に権限変数を宣言します。`user` が確実に存在する状態でないと `user.id` に触れないためです。
+
+ここでスピナーではなく文章を出しているのは、`isLoading` がすでに `false` になっているからです。`getById` が失敗した場合も `user` は `undefined` のままここへ来ます。スピナーを出すと読み込みが続いているように見え、読者は待ち続けます。トーストは数秒で消えるので、画面に残る手がかりがなくなります。
 
 > 存在しないIDへの404は Step 2 の
 > `page.tsx` が担当します。
@@ -2188,13 +2196,21 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   if (!user) {
     return (
       <AppLayout>
-        <PageLoadingSpinner />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              ユーザー情報を取得できませんでした
+            </p>
+          </CardContent>
+        </Card>
       </AppLayout>
     );
   }
 ```
 
 2本の取得が両方そろうまで待つのは、片方だけで描き始めると編集ボタンが出たり消えたりするからです。`!user` の分岐を別に置いてあるのは、この行から下で `user.name` へ直接触るためです。ここを通さずに書くと、値が無い可能性を型が指摘し続けます。スピナーを `AppLayout` で包んであるので、読み込み中もサイドバーが消えません。
+
+下の分岐だけスピナーではなく文章にしてあるのは、ここへ来た時点で `isLoading` が `false` だからです。管理者でない人が他人のURLを開くと `getById` が失敗し、`user` が `undefined` のままこの分岐に入ります。スピナーを出すと読み込みが続いているように見えて、読者は待ち続けます。
 
 **権限を表す2つの真偽値**:
 

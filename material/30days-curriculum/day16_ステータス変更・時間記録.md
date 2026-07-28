@@ -766,15 +766,17 @@ const handleOpenTimeLog = (e: React.MouseEvent) => {
   <p className="text-sm text-muted-foreground">
     合計作業時間: {formatMinutes(timeSpentMinutes)}
   </p>
-  <Button
-    variant="outline"
-    size="sm"
-    className="w-full text-xs h-8"
-    onClick={handleOpenTimeLog}
-    aria-label={`${title}の時間を記録`}>
-    <Clock className="mr-2 h-3 w-3" />
-    時間記録
-  </Button>
+  {canEdit && (
+    <Button
+      variant="outline"
+      size="sm"
+      className="w-full text-xs h-8"
+      onClick={handleOpenTimeLog}
+      aria-label={`${title}の時間を記録`}>
+      <Clock className="mr-2 h-3 w-3" />
+      時間記録
+    </Button>
+  )}
 </div>
 ```
 
@@ -782,6 +784,12 @@ const handleOpenTimeLog = (e: React.MouseEvent) => {
 空欄にしないのは、記録できる場所だと気づいてもらうため
 です。数字が `0m` から `1h 30m` へ変われば、保存が届いた
 ことも一目で分かります。
+
+ボタンだけを `canEdit &&` で囲んであるのは、Step 0 の
+`addTime` が `canEdit` を確かめてから足し算するためです。
+閲覧者だけのロールで押すと必ずエラーで戻ってくるので、
+入力させる前に隠します。合計作業時間の表示は囲みません。
+読むだけの人にも見えていて困らない情報だからです。
 
 `aria-label` を省くと、読み上げでは「時間記録」という
 同じ名前のボタンが並ぶだけになります。カードが10枚あれば
@@ -798,15 +806,20 @@ return (
     <Card>
       {/* ...カードの中身... */}
     </Card>
-    <TimeLogDialog
-      open={timeLogDialogOpen}
-      onClose={() => setTimeLogDialogOpen(false)}
-      taskId={id}
-      onSuccess={onTimeLogSuccess}
-    />
+    {canEdit && (
+      <TimeLogDialog
+        open={timeLogDialogOpen}
+        onClose={() => setTimeLogDialogOpen(false)}
+        taskId={id}
+        onSuccess={onTimeLogSuccess}
+      />
+    )}
   </>
 );
 ```
+
+小窓も同じ `canEdit` で囲みます。ボタンだけ隠しても小窓が
+残ると、別の場所から開く道ができたとき、閲覧者の画面へ出ます。
 
 `<>` と `</>` で囲むのは、カードとダイアログを
 1つの要素として返すためです。
@@ -1711,41 +1724,45 @@ export function TaskCard({
               <p className="text-sm text-muted-foreground">
                 合計作業時間: {formatMinutes(timeSpentMinutes)}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-8"
-                onClick={handleOpenTimeLog}
-                aria-label={`${title}の時間を記録`}
-              >
-                <Clock className="mr-2 h-3 w-3" />
-                時間記録
-              </Button>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8"
+                  onClick={handleOpenTimeLog}
+                  aria-label={`${title}の時間を記録`}
+                >
+                  <Clock className="mr-2 h-3 w-3" />
+                  時間記録
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 ```
 
-まだ記録の無いタスクにも `0m` と出しているのは、記録できる場所だと気づいてもらうためです。`aria-label` にタスク名を入れているのは、これが無いと読み上げで「時間記録」というボタンがカードの枚数だけ並び、どれを押しているのか分からなくなるからです。
+まだ記録の無いタスクにも `0m` と出しているのは、記録できる場所だと気づいてもらうためです。`aria-label` にタスク名を入れているのは、これが無いと読み上げで「時間記録」というボタンがカードの枚数だけ並び、どれを押しているのか分からなくなるからです。ボタンを `canEdit &&` で囲んでいるのは、編集ボタンと同じ理由です。`addTime` は `canEdit` を確かめてから足し算するので、閲覧者が押しても必ずエラーで戻ります。合計の表示だけは囲まず、読むだけの人にも見えるようにしています。
 
 **ダイアログの設置**:
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
 // 完成版: ダイアログの設置
-      <TimeLogDialog
-        open={timeLogDialogOpen}
-        onClose={() => setTimeLogDialogOpen(false)}
-        taskId={id}
-        onSuccess={onTimeLogSuccess}
-      />
+      {canEdit && (
+        <TimeLogDialog
+          open={timeLogDialogOpen}
+          onClose={() => setTimeLogDialogOpen(false)}
+          taskId={id}
+          onSuccess={onTimeLogSuccess}
+        />
+      )}
     </>
   );
 }
 ```
 
-小窓を `<Card>` の外に置いてあるのは、カードの枠や `overflow` の影響を受けずに画面の中央へ出すためです。`onSuccess={onTimeLogSuccess}` の受け渡しが1本つながっているので、記録が成功すると親のコールバックが呼ばれ、一覧の取り直しを通じて合計作業時間が新しい値に置き換わります。
+小窓を `<Card>` の外に置いてあるのは、カードの枠や `overflow` の影響を受けずに画面の中央へ出すためです。ボタンと同じ `canEdit` で囲ってあるので、閲覧者の画面には小窓そのものが置かれません。`onSuccess={onTimeLogSuccess}` の受け渡しが1本つながっているので、記録が成功すると親のコールバックが呼ばれ、一覧の取り直しを通じて合計作業時間が新しい値に置き換わります。
 
 ### `src/app/task/page.tsx`
 

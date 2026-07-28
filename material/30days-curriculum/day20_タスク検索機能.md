@@ -1682,11 +1682,11 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 
 検索結果でも `TaskCard` をそのまま使い回しているのは、タスク一覧と見た目をそろえるためです。カードを別々に作ると、片方だけ表示が古いまま取り残されます。
 
-TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
+TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// TaskCardに権限フラグを追加
+// TaskCardに権限フラグと作業時間を追加
 <TaskCard key={task.id}
   id={task.id}
   title={task.title}
@@ -1696,10 +1696,15 @@ TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard key={tas
   priority={task.priority}
   dueDate={task.dueDate}
   assignee={task.assignee}
+  timeSpentMinutes={
+    task.timeSpentMinutes}
   onEdit={handleTaskEdit}
   onDelete={handleTaskDelete}
   onClick={
     handleTaskClick}
+  onTimeLogSuccess={() =>
+    utils.search.search
+      .invalidate()}
   canEdit={canEditProject(
     task.projectId)}
   canDelete={canDeleteProject(
@@ -1707,6 +1712,8 @@ TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard key={tas
 ```
 
 > `canEdit` / `canDelete` を渡さないと、TaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため、`task.projectId` ごとに個別に権限を判定します。
+
+`timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に足した2つです。前者を渡さないと既定値の 0 が使われ、すでに時間を記録したタスクでも `0m` と出ます。後者を渡さないと、この画面から時間を記録しても検索結果に古いという印が付きません。合計は前の数字のまま止まります。
 
 **確認ポイント**:
 - Day 13 で作った `TaskCard` をそのまま再利用している
@@ -3244,7 +3251,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — タスクカードの一覧
+// 完成版: JSX — タスクカードの一覧（表示する値）
                 <div className="grid gap-6
                   sm:grid-cols-2 lg:grid-cols-3
                   xl:grid-cols-4">
@@ -3257,9 +3264,21 @@ function SearchPageContent() {
                       priority={task.priority}
                       dueDate={task.dueDate}
                       assignee={task.assignee}
+                      timeSpentMinutes={task.timeSpentMinutes}
+```
+
+ここまでがカードに映す値です。`key={task.id}` は React が並び替えを追うための目印で、配列の番号を使うと削除したあとにカードの中身が1つずれます。`timeSpentMinutes` は Day 16 で足した口で、渡さないと既定値の 0 が使われ、時間を記録済みのタスクでも `0m` と出ます。
+
+**JSX — タスクカードの操作と権限の props**:
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: JSX — タスクカードの操作と権限の props
                       onEdit={handleTaskEdit}
                       onDelete={handleTaskDelete}
                       onClick={handleTaskClick}
+                      onTimeLogSuccess={() =>
+                        utils.search.search.invalidate()}
                       canEdit={canEditProject(
                         task.projectId)}
                       canDelete={canDeleteProject(
@@ -3272,7 +3291,7 @@ function SearchPageContent() {
 
 `canEdit` と `canDelete` に渡しているのが `task.projectId` である点を確かめてください。権限はタスクごとではなくプロジェクトごとに決まるので、ここに `task.id` を渡すと対応表から何も引けず、すべてのボタンが消えます。
 
-`key={task.id}` は React が並び替えを追うための目印です。`key` に配列の番号を使うと、削除したあとにカードの中身が1つずれて表示されます。
+`onTimeLogSuccess` で渡しているのは、削除のときと同じ `utils.search.search.invalidate()` です。時間を記録すると DB の合計は増えますが、画面が持っている検索結果は古いままです。ここで印を付けておくと取り直しが走り、カードの合計作業時間が新しい値に置き換わります。
 
 **JSX — プロジェクト結果の見出し**:
 
