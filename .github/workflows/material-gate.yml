@@ -11,7 +11,15 @@ on:
       - '.mise.toml'
       - '.node-version'
       # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
+      # 拡張子は check_unused_image.py の IMAGE_SUFFIX に揃える。png だけに絞っていると、
+      # 未参照の webp を1枚足すだけのPRでワークフローが起動せず、Gate 4 の未参照画像検査が
+      # そのPRを一度も見ない。
       - 'material/**/*.png'
+      - 'material/**/*.jpg'
+      - 'material/**/*.jpeg'
+      - 'material/**/*.gif'
+      - 'material/**/*.webp'
+      - 'material/**/*.svg'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
       # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを
@@ -57,7 +65,15 @@ on:
       - '.mise.toml'
       - '.node-version'
       # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
+      # 拡張子は check_unused_image.py の IMAGE_SUFFIX に揃える。png だけに絞っていると、
+      # 未参照の webp を1枚足すだけのPRでワークフローが起動せず、Gate 4 の未参照画像検査が
+      # そのPRを一度も見ない。
       - 'material/**/*.png'
+      - 'material/**/*.jpg'
+      - 'material/**/*.jpeg'
+      - 'material/**/*.gif'
+      - 'material/**/*.webp'
+      - 'material/**/*.svg'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
       # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを
@@ -257,6 +273,14 @@ jobs:
           procorder_status=0
           stepref_status=0
           scan_status=0
+          tagbal_status=0
+          falsesuccess_status=0
+          zipref_status=0
+          unusedimg_status=0
+          salepkg_status=0
+          echo "::group::test_sale_package.py — 配布物一覧そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?
+          echo "::endgroup::"
           echo "::group::test_markdown_scan.py — フェンス解釈そのものの退行テスト"
           python3 scripts/curriculum-qa/test_markdown_scan.py || scan_status=$?
           echo "::endgroup::"
@@ -293,6 +317,30 @@ jobs:
           echo "::group::check_step_ref.py — 本文が指す Step が実在するか"
           python3 scripts/curriculum-qa/check_step_ref.py material/30days-curriculum || stepref_status=$?
           echo "::endgroup::"
+          echo "::group::test_check_tag_balance.py — 閉じタグ検査そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_tag_balance.py || tagbal_status=$?
+          echo "::endgroup::"
+          echo "::group::check_tag_balance.py — 開いた JSX タグが30日のどこかで閉じるか"
+          python3 scripts/curriculum-qa/check_tag_balance.py material/30days-curriculum || tagbal_status=$?
+          echo "::endgroup::"
+          echo "::group::test_check_false_success.py — 偽の完了宣言検査そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_false_success.py || falsesuccess_status=$?
+          echo "::endgroup::"
+          echo "::group::check_false_success.py — 閉じていないのに完了を宣言していないか"
+          python3 scripts/curriculum-qa/check_false_success.py material/30days-curriculum || falsesuccess_status=$?
+          echo "::endgroup::"
+          echo "::group::test_check_zip_reference.py — 照合先検査そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_zip_reference.py || zipref_status=$?
+          echo "::endgroup::"
+          echo "::group::check_zip_reference.py — 販売ZIPに無いものと見比べさせていないか"
+          python3 scripts/curriculum-qa/check_zip_reference.py material/30days-curriculum || zipref_status=$?
+          echo "::endgroup::"
+          echo "::group::test_check_unused_image.py — 未参照画像検査そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_unused_image.py || unusedimg_status=$?
+          echo "::endgroup::"
+          echo "::group::check_unused_image.py — どこからも参照されない画像が無いか"
+          python3 scripts/curriculum-qa/check_unused_image.py material/30days-curriculum || unusedimg_status=$?
+          echo "::endgroup::"
           echo "::group::test_check_why.py — 説明の分量検査そのものの退行テスト"
           python3 scripts/curriculum-qa/test_check_why.py || why_status=$?
           echo "::endgroup::"
@@ -305,8 +353,8 @@ jobs:
           echo "::group::check_crossref.py — 前の日を指す参照の先が実在するか"
           python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum || crossref_status=$?
           echo "::endgroup::"
-          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ] || [ "$scan_status" -ne 0 ]; then
-            echo "::error::Gate 4 失敗 (check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status / test_markdown_scan.py=$scan_status)"
+          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ] || [ "$scan_status" -ne 0 ] || [ "$tagbal_status" -ne 0 ] || [ "$falsesuccess_status" -ne 0 ] || [ "$zipref_status" -ne 0 ] || [ "$unusedimg_status" -ne 0 ] || [ "$salepkg_status" -ne 0 ]; then
+            echo "::error::Gate 4 失敗 (test_sale_package.py=$salepkg_status / check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status / test_markdown_scan.py=$scan_status / check_tag_balance.py=$tagbal_status / check_false_success.py=$falsesuccess_status / check_zip_reference.py=$zipref_status / check_unused_image.py=$unusedimg_status)"
             exit 1
           fi
 
