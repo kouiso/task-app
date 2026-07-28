@@ -127,4 +127,80 @@ Step 0 で `getByTaskId` と `create` を同時に新規作成したのに「既
 
 ## 反証で消えた件
 
-1 件。消えた理由の型は判定の記録に残っていないため、ここには件数だけを書く。
+1 件。挙がった内容と、反証側が示した根拠を全件残す。
+
+### 消えた件 1. 行475 配布済みの task-detail-dialog.tsx を開くと、return の中に Dialog / Dialog
+
+**逐語引用**
+
+```
+// TaskDetailDialog の return 内: コメントヘッダー
+<div className="flex items-center gap-2 mb-4">
+  <h3 className="font-semibold">コメント</h3>
+```
+
+**初心者役が挙げた詰まり**
+
+配布済みの task-detail-dialog.tsx を開くと、return の中に Dialog / DialogContent / DialogHeader / 情報のグリッド / DialogFooter が入れ子で並んでいる。「return 内」しか指定が無いので、この div を何行目に貼るのかが決まらない。DialogFooter より後ろに貼ると閉じるボタンの下にコメントが出る。
+
+**初心者役が挙げた不足**
+
+Day 16 の「`DialogHeader` の閉じタグの直後に書きます」のような1点特定の指示が無く、貼り付け先が既存ファイルの構造を読んで自分で決める形になっている。
+
+**反証側が示した、成立しない根拠**
+
+1) 引用は実在する。day18_コメント投稿.md L473-483:
+```
+473 ```typescript
+474 // filepath: src/component/task/task-detail-dialog.tsx
+475 // TaskDetailDialog の return 内: コメントヘッダー
+476 <div className="flex items-center gap-2 mb-4">
+477   <h3 className="font-semibold">コメント</h3>
+478   <Badge variant="secondary"
+...
+482 </div>
+```
+確かにこの断片単体には「何行目に貼るか」の1点指定が無い。
+
+2) しかし同じファイル内で埋まっている。L1040（「今日のコード全文」節の導入文）逐語:
+「断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、書いた断片が1つのファイルへどう収まったかを確かめられます。」
+L1047 逐語:「`task-detail-dialog.tsx` は Day 13 から配布されていたファイルです。今日はそこへコメント欄を書き足したので、Day 13 から引き継いだ部分もあわせて全文を載せます。」
+
+3) その全文の中で、当該 div の位置が一意に確定している。「完成版: 期限とコメント欄の見出し」ブロック（L1394 付近〜、逐語）:
+```
+              <div>
+                <span className="text-muted-foreground block mb-1">期限</span>
+                <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-semibold">コメント</h3>
+                <Badge variant="secondary" className="rounded-full px-2">
+                  {taskDetail.comments?.length ?? 0}
+                </Badge>
+              </div>
+```
+すなわち「情報グリッドを閉じた直後の `<Separator />` の後」とインデント込みで示されている。
+
+4) 指摘が懸念する「DialogFooter より後ろに貼ると閉じるボタンの下に出る」も、同ファイル L1511-1520 の「完成版: 末尾の閉じるボタン」で潰されている。逐語:
+```
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button onClick={onClose}>閉じる</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+```
+および L1520 逐語:「`DialogFooter` を `{taskDetail && (` の外側へ置いてあるのが要点です。」
+コメント欄が `{taskDetail && (` の内側、DialogFooter の手前であることが全文から確定する。
+
+5) 同ファイルは他の箇所でも貼り付け位置を明示しており（L242 逐語:「ここから先の「（続き）」のブロックは、`comment.ts` の**末尾にある `});` の1行上**へ貼ります。」）、位置指定を省く方針のファイルではない。tsx 側は断片ごとの1点指定ではなく全文照合で位置を確定させる設計になっている。
+
+以上より、読者は同じ day18 のファイル内で貼り付け先を確定できる。survives: false。

@@ -108,4 +108,59 @@ TaskDetailDialog の後、グリッドの外側の末尾に置かれている。
 
 ## 反証で消えた件
 
-1 件。消えた理由の型は判定の記録に残っていないため、ここには件数だけを書く。
+1 件。挙がった内容と、反証側が示した根拠を全件残す。
+
+### 消えた件 1. 行115 コードブロックをそのまま task.ts の import へ貼ると、Day 13 で書いた `_helpers/per
+
+**逐語引用**
+
+```
+// filepath: src/server/api/routers/task.ts（import を追記。permission の行は Day 13 の行と統合した完成形）
+```
+
+**初心者役が挙げた詰まり**
+
+コードブロックをそのまま task.ts の import へ貼ると、Day 13 で書いた `_helpers/permission` の import 文が2本並ぶ。同じ名前を2回読み込む形になり、赤い波線が出て「どちらを消すのか」で止まる。
+
+**初心者役が挙げた不足**
+
+本文(L124)は「重ねて import を書かず同じ行を保ちます」と説明しているが、コードブロックには permission の4行がそのまま入っている。貼るのは上2行（priority と status）だけで、下は既存行と同じ、という区別がブロック内で示されていない。
+
+**反証側が示した、成立しない根拠**
+
+確認したファイル: /Users/kouiso/ghq/kouiso/task-app-worktrees/gate3/material/30days-curriculum/day14_タスク新規作成.md
+
+1) 引用の実在確認（L114-122）
+```
+114 ```typescript
+115 // filepath: src/server/api/routers/task.ts（import を追記。permission の行は Day 13 の行と統合した完成形）
+116 import { TASK_PRIORITY } from '@/lib/constant/priority';
+117 import { TASK_STATUS } from '@/lib/constant/status';
+118 import {
+119   assertMemberPermission,
+120   getUserProjectIds,
+121 } from './_helpers/permission';
+122 ```
+```
+引用は L115 に逐語で実在する。指摘のとおり permission の4行（L118-121）がブロック内に含まれる。
+
+2) 同じ箇所の直前で埋まっている（L112、ブロックの直前の行）
+逐語: 「まず、受け取るデータの形を zod で定義します。`task.ts` の import に次を足します。`_helpers/permission` の行は Day 13 で完成しているため、そのまま残します。」
+→ ブロックを読む前に「permission の行は Day13 のものをそのまま残す＝新たに書き足す対象ではない」と明示されている。
+
+3) ブロック内のヘッダーコメント自身で埋まっている（L115 逐語）
+「（import を追記。permission の行は Day 13 の行と統合した完成形）」
+→ このブロックが「貼り足す差分」ではなく「統合後の完成形」であることを、コードブロックの中で宣言している。指摘の「区別がブロック内で示されていない」は L115 の括弧書きにより成立しない。
+
+4) 同じ箇所の直後でも埋まっている（L124 逐語）
+「`TASK_STATUS` と `TASK_PRIORITY` は、入力スキーマの既定値に使う定数です。`assertMemberPermission` と `getUserProjectIds` は Day 13 で足したものなので、重ねて import を書かず同じ行を保ちます。」
+
+5) 同じファイルの完成版セクションでも埋まっている（L1681-1695、および L1699）
+L1681-1695 に `// 完成版: インポート` として task.ts の import 全体（Prisma / TRPCError / z / TASK_PRIORITY / query / TASK_STATUS / prisma / trpc / permission 2名 / USER_SELECT）が1本化された形で提示されている。
+L1699 逐語: 「`_helpers/permission` からの取り込みが1つの `import` 文にまとまっているのは、同じファイルから2つの名前を借りているからです。Day 13 の `getUserProjectIds` と別に `assertMemberPermission` の行を足すと、同じファイルを指す `import` が2本並びます。それでも動きますが、`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が1本にまとめ直します。並び順が手元と違っていても、手で直す必要はありません。」
+→ 万一2本並べてしまった場合の復旧手段（npm run fix で自動統合）まで同一ファイル内に書かれており、「どちらを消すのか」で止まる状態にはならない。
+
+6) 前日側の確認（day13_タスク一覧画面.md L150-162）
+Day13 の import ブロックに `import {\n  assertMemberPermission,\n  getUserProjectIds,\n} from './_helpers/permission';`（L158-162）が既に存在することを確認済み。読者はこの形を書いた状態で Day14 に入る。したがって L112 の「Day 13 で完成している」という記述は現物と一致する。
+
+結論: 指摘が言う「区別が示されていない」は、ブロック直前(L112)・ブロック内ヘッダー(L115)・ブロック直後(L124)・完成版と復旧手段(L1681-1699) の4箇所で埋まっている。survives: false。
