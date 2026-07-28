@@ -18,6 +18,7 @@ CommonMark に合わせた判定:
 
 from __future__ import annotations
 
+import bisect
 import re
 from typing import Iterator, NamedTuple
 
@@ -29,6 +30,9 @@ __all__ = [
     "iter_prose",
     "mask_html_comments",
     "mask_inline_code",
+    "paragraph_line",
+    "paragraph_text",
+    "paragraphs",
     "strip_fences",
 ]
 
@@ -125,6 +129,71 @@ def strip_fences(text: str, *, require_closed: bool = False) -> str:
     if require_closed and last_state in ("open", "inside"):
         raise UnclosedFence("閉じていないコードブロックがあります")
     return "\n".join(out)
+
+
+# 段落の切れ目になる行。箇条書き・表・見出しは、隣り合っていても別の文である。
+# ここで切らないと、手順の箇条書きと次の項目の文が1つの段落に入り、
+# 別々の項目に散っている語が同居したことになる。
+BLOCK_START = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|\||#{1,6}\s|>)")
+
+
+def paragraphs(text: str) -> list[list[tuple[int, str]]]:
+    """地の文を段落へまとめる。段落は (行番号, 行) の並び。
+
+    Markdown は物理行の折り返しで意味が変わらない。禁止したい言い回しが折り返しで
+    2行に割れると、行単位の判定はどちらの行でも語の片方しか見えないため、
+    そのまま通ってしまう。
+
+    コードブロックも段落の切れ目として扱う。`iter_prose` はフェンスの行を黙って
+    落とすので、フェンスだけで隔てられた前後の地の文をそのまま繋ぐと、1つの段落に
+    なる。前の文が挙げた置き場と、後ろの文の「見比べて確認してください」が同居した
+    ことになり、書いた人が別々の話として書いた2つが1件の指摘になる。
+
+    HTML コメントは中身を消して返す。`<!-- 見比べてください -->` は Markdown が
+    読者に表示しないので、書かれていない案内として検査に引っかかる。消し方は
+    桁を保つ塗りつぶしにする。一致位置から行番号を引く検査があるため、
+    詰めると別の行を指した報告になる。フェンスの中を先に空行へ落としてから塗る。
+    コードブロックの中で開いた `<!--` が、その先の地の文まで巻き込むのを防ぐ。
+    """
+    masked = mask_html_comments(blank_fences(text)).split("\n")
+    out: list[list[tuple[int, str]]] = []
+    current: list[tuple[int, str]] | None = None
+    for lineno, line, state, _ in fence_states(text):
+        if state != "outside":
+            current = None
+            continue
+        line = masked[lineno - 1]
+        if not line.strip():
+            current = None
+            continue
+        if current is None or BLOCK_START.match(line):
+            current = []
+            out.append(current)
+        current.append((lineno, line))
+    return out
+
+
+def paragraph_text(para: list[tuple[int, str]], *, sep: str = "\n") -> str:
+    """段落を1つの文字列へ連結する。
+
+    sep="" は折り返しの改行そのものを消す。日本語の本文は折り返しの位置に区切りが
+    無いので、`エラーが` と `出なくなります` のように語の途中で折り返された文は、
+    改行を残したままでは語として照合できない。行の位置を保ちたい検査は既定のまま
+    使い、paragraph_line へ同じ sep を渡す。
+    """
+    return sep.join(line for _, line in para)
+
+
+def paragraph_line(
+    para: list[tuple[int, str]], offset: int, *, sep: str = "\n"
+) -> tuple[int, str]:
+    """paragraph_text 上の位置から、その位置を含む (行番号, 行) を返す。"""
+    starts: list[int] = []
+    pos = 0
+    for _, line in para:
+        starts.append(pos)
+        pos += len(line) + len(sep)
+    return para[bisect.bisect_right(starts, offset) - 1]
 
 
 def mask_inline_code(line: str, fill: str = " ") -> str:

@@ -134,7 +134,29 @@ def main() -> int:
     check("HTML コメントで文字数が変わらない", len(src), len(masked))
     check("HTML コメント外は残る", True, masked.startswith("前\n") and masked.endswith("\n後"))
 
-    # 15. blank_fences は行数を保ったままコードを消す。
+    # 15. コードブロックは段落の切れ目になる。フェンスだけで隔てられた前後の地の文を
+    #     繋ぐと、書いた人が別々に書いた2文が1つの段落として判定される。
+    check(
+        "フェンスで段落が切れる",
+        [[(1, "前の文")], [(5, "後ろの文")]],
+        ms.paragraphs("前の文\n```bash\nnpm run dev\n```\n後ろの文"),
+    )
+
+    # 15b. HTML コメントは段落の走査に出てこない。読者に表示されない文言を
+    #      検査が地の文として読むと、書かれていない案内が指摘される。
+    check(
+        "HTML コメントは段落に出てこない",
+        [[(1, "前の文")], [(3, "後ろの文")]],
+        ms.paragraphs("前の文\n<!-- 見比べてください -->\n後ろの文"),
+    )
+
+    # 15c. 行の途中の HTML コメントは、桁を保ったまま消える。位置から行番号を
+    #      引く検査があるので、詰めると別の行を指した報告になる。
+    para = ms.paragraphs("前<!-- 隠し -->後")[0]
+    check("行内 HTML コメントの中身が消える", True, "隠し" not in para[0][1])
+    check("行内 HTML コメントで桁が変わらない", len("前<!-- 隠し -->後"), len(para[0][1]))
+
+    # 16. blank_fences は行数を保ったままコードを消す。
     blanked = ms.blank_fences("a\n```\nx\n```\nb")
     check("blank_fences", ["a", "", "", "", "b"], blanked.split("\n"))
 
