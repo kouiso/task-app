@@ -74,6 +74,16 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, int]]]] = [
         [],
     ),
     (
+        "折り返しで2行に割れた宣言も止める",
+        {"day29_x.md": block("  <form>") + "\n保存すればエラーが\n出なくなります。\n"},
+        [("day29_x.md", 6)],
+    ),
+    (
+        "折り返しで2行に割れた打ち消しは止めない",
+        {"day29_x.md": block("  <form>") + "\nこの時点ではエラーが\n消えません。\n"},
+        [],
+    ),
+    (
         "他の日の破損を巻き添えにしない",
         {
             "day29_x.md": block("  <form>"),

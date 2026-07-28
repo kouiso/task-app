@@ -18,6 +18,7 @@ CommonMark に合わせた判定:
 
 from __future__ import annotations
 
+import bisect
 import re
 from typing import Iterator, NamedTuple
 
@@ -29,6 +30,9 @@ __all__ = [
     "iter_prose",
     "mask_html_comments",
     "mask_inline_code",
+    "paragraph_line",
+    "paragraph_text",
+    "paragraphs",
     "strip_fences",
 ]
 
@@ -125,6 +129,55 @@ def strip_fences(text: str, *, require_closed: bool = False) -> str:
     if require_closed and last_state in ("open", "inside"):
         raise UnclosedFence("閉じていないコードブロックがあります")
     return "\n".join(out)
+
+
+# 段落の切れ目になる行。箇条書き・表・見出しは、隣り合っていても別の文である。
+# ここで切らないと、手順の箇条書きと次の項目の文が1つの段落に入り、
+# 別々の項目に散っている語が同居したことになる。
+BLOCK_START = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|\||#{1,6}\s|>)")
+
+
+def paragraphs(text: str) -> list[list[tuple[int, str]]]:
+    """地の文を段落へまとめる。段落は (行番号, 行) の並び。
+
+    Markdown は物理行の折り返しで意味が変わらない。禁止したい言い回しが折り返しで
+    2行に割れると、行単位の判定はどちらの行でも語の片方しか見えないため、
+    そのまま通ってしまう。
+    """
+    out: list[list[tuple[int, str]]] = []
+    current: list[tuple[int, str]] | None = None
+    for lineno, line in iter_prose(text):
+        if not line.strip():
+            current = None
+            continue
+        if current is None or BLOCK_START.match(line):
+            current = []
+            out.append(current)
+        current.append((lineno, line))
+    return out
+
+
+def paragraph_text(para: list[tuple[int, str]], *, sep: str = "\n") -> str:
+    """段落を1つの文字列へ連結する。
+
+    sep="" は折り返しの改行そのものを消す。日本語の本文は折り返しの位置に区切りが
+    無いので、`エラーが` と `出なくなります` のように語の途中で折り返された文は、
+    改行を残したままでは語として照合できない。行の位置を保ちたい検査は既定のまま
+    使い、paragraph_line へ同じ sep を渡す。
+    """
+    return sep.join(line for _, line in para)
+
+
+def paragraph_line(
+    para: list[tuple[int, str]], offset: int, *, sep: str = "\n"
+) -> tuple[int, str]:
+    """paragraph_text 上の位置から、その位置を含む (行番号, 行) を返す。"""
+    starts: list[int] = []
+    pos = 0
+    for _, line in para:
+        starts.append(pos)
+        pos += len(line) + len(sep)
+    return para[bisect.bisect_right(starts, offset) - 1]
 
 
 def mask_inline_code(line: str, fill: str = " ") -> str:

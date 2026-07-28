@@ -17,12 +17,11 @@ ZIP に何が入るかは `sale_package` が `build-zip.sh` から読む。梱�
 
 from __future__ import annotations
 
-import bisect
 import re
 import sys
 from pathlib import Path
 
-from markdown_scan import iter_prose
+from markdown_scan import paragraph_line, paragraph_text, paragraphs
 from sale_package import comparable_src_paths, zip_top_level
 
 # 「手元の物と突き合わせろ」と読者に言う語。
@@ -35,6 +34,14 @@ LOCATION = re.compile(
 # 「ZIP には入っていません」と断ってある文は、読者を存在しない物へ送らない。
 # 30周目の修正はこの断りを添える形で入れたので、断りごと赤くしては直した意味が消える。
 DISCLAIMED = re.compile(r"ZIP\s*(?:に|には)[^。]{0,40}(?:入って?い?ません|入りません|含まれ(?:て?い?)?ません)")
+# 照合を打ち消す語。「`src/app/page.tsx` と見比べる必要はありません」は、読者を
+# 存在しない照合先へ送らないための正しい案内である。照合の語だけで一致を取ると、
+# 30周目の修正で足したこの案内ごと赤くなる。語の直後に続く形だけを見る。
+NEGATED = re.compile(
+    r"\n?(?:する|し|せ|る|す|て|た)?[はをも]?\n?"
+    r"(?:必要(?:は)?(?:あり|ござい)?ませ[んぬ]|必要(?:は)?な(?:い|く)|不要"
+    r"|ないで|なくて|ずに|ません)"
+)
 
 
 def not_in_zip(location: str) -> bool:
@@ -52,54 +59,26 @@ def not_in_zip(location: str) -> bool:
     return location.startswith(("src/", "prisma/")) or location == "package.json"
 
 
-# 段落の切れ目になる行。箇条書き・表・見出しは、隣り合っていても別の文である。
-# ここで切らないと、`src/app/error.tsx` を作る手順の箇条書きと、その次の項目に
-# ある「見比べて確認する」が1つの段落に入り、正しい手順表が赤くなる。
-BLOCK_START = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|\||#{1,6}\s|>)")
-
-
-def _paragraphs(text: str) -> list[list[tuple[int, str]]]:
-    """地の文を段落へまとめる。段落は (行番号, 行) の並び。
-
-    Markdown は物理行の折り返しで意味が変わらない。`src/app/page.tsx` と`
-    の次の行に `見比べて確認してください。` が来ると、行単位の判定では
-    どちらの行も片方の語しか持たないので、禁止している指示がそのまま通る。
-    """
-    out: list[list[tuple[int, str]]] = []
-    current: list[tuple[int, str]] | None = None
-    for lineno, line in iter_prose(text):
-        if not line.strip():
-            current = None
-            continue
-        if current is None or BLOCK_START.match(line):
-            current = []
-            out.append(current)
-        current.append((lineno, line))
-    return out
+def _demands_compare(joined: str) -> bool:
+    """その段落が照合を指示しているなら True。打ち消しで続く言い回しは数えない。"""
+    return any(not NEGATED.match(joined, m.end()) for m in COMPARE.finditer(joined))
 
 
 def find_refs(paths: list[Path]) -> list[tuple[str, int, str, str]]:
     """(ファイル名, 行番号, 置き場, 該当行) を返す。"""
     hits: list[tuple[str, int, str, str]] = []
     for path in paths:
-        for para in _paragraphs(path.read_text(encoding="utf-8")):
-            joined = "\n".join(line for _, line in para)
-            if not COMPARE.search(joined) or DISCLAIMED.search(joined):
+        for para in paragraphs(path.read_text(encoding="utf-8")):
+            joined = paragraph_text(para)
+            if not _demands_compare(joined) or DISCLAIMED.search(joined):
                 continue
-            # 一致位置から行番号を引くための、各行の開始オフセット。
-            starts: list[int] = []
-            pos = 0
-            for _, line in para:
-                starts.append(pos)
-                pos += len(line) + 1
             seen: set[str] = set()
             for m in LOCATION.finditer(joined):
                 loc = m.group(1)
                 if loc in seen or not not_in_zip(loc):
                     continue
                 seen.add(loc)
-                idx = bisect.bisect_right(starts, m.start()) - 1
-                lineno, line = para[idx]
+                lineno, line = paragraph_line(para, m.start())
                 hits.append((path.name, lineno, loc, line.strip()))
     return hits
 

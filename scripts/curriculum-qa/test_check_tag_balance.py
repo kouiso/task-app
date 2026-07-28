@@ -142,6 +142,27 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, str]]]] = [
         {"day08_x.md": block("src/app/providers.tsx", "  <QueryClientProvider>")},
         [],
     ),
+    (
+        ".ts の型アサーションは開始タグではない",
+        {
+            "day07_x.md": block(
+                "src/lib/foo.ts",
+                "const value = <Foo>raw;\nconst other = <Bar>input;",
+                lang="typescript",
+            )
+        },
+        [],
+    ),
+    (
+        ".tsx なら同じ書き方をこれまでどおり開始タグとして数える",
+        {"day07_x.md": block("src/app/foo/page.tsx", "  const el = <Foo>raw;")},
+        [("src/app/foo/page.tsx", "Foo")],
+    ),
+    (
+        ".ts でも tsx ブロックなら JSX として読む",
+        {"day07_x.md": block("src/lib/foo.ts", "  return <form>;", lang="tsx")},
+        [("src/lib/foo.ts", "form")],
+    ),
 ]
 
 # (説明, ファイル, 期待する day 一覧)

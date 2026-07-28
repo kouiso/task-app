@@ -11,7 +11,15 @@ on:
       - '.mise.toml'
       - '.node-version'
       # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
+      # 拡張子は check_unused_image.py の IMAGE_SUFFIX に揃える。png だけに絞っていると、
+      # 未参照の webp を1枚足すだけのPRでワークフローが起動せず、Gate 4 の未参照画像検査が
+      # そのPRを一度も見ない。
       - 'material/**/*.png'
+      - 'material/**/*.jpg'
+      - 'material/**/*.jpeg'
+      - 'material/**/*.gif'
+      - 'material/**/*.webp'
+      - 'material/**/*.svg'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
       # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを
@@ -57,7 +65,15 @@ on:
       - '.mise.toml'
       - '.node-version'
       # スクショだけを差し替えるPRでも Gate 2.5（md5重複検査）を起動させる（Codexレビュー指摘）。
+      # 拡張子は check_unused_image.py の IMAGE_SUFFIX に揃える。png だけに絞っていると、
+      # 未参照の webp を1枚足すだけのPRでワークフローが起動せず、Gate 4 の未参照画像検査が
+      # そのPRを一度も見ない。
       - 'material/**/*.png'
+      - 'material/**/*.jpg'
+      - 'material/**/*.jpeg'
+      - 'material/**/*.gif'
+      - 'material/**/*.webp'
+      - 'material/**/*.svg'
       - '.claude/skills/material-writing/**'
       - '.gitmodules'
       # ルール側を変えたら corpus 全体を再検査する（ルール変更で既存日が赤くなるのを

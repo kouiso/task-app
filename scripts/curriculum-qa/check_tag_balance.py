@@ -52,10 +52,27 @@ TAG_NAME = re.compile(r"[A-Za-z][\w.\-]*")
 # ここに載っている語なら JSX の開始とみなす。載せない語（`Array` `interface ... extends`）
 # の後ろに来る `<` はジェネリクスか比較演算子なので、これまでどおり落とす。
 EXPR_KEYWORDS = frozenset({"return", "yield", "await", "throw", "else", "case", "do"})
+# JSX を書ける書き込み先とブロック。`.ts` では `<Foo>raw` は型アサーションであり、
+# 開始タグではない。`concat_by_file` は JSX でない TypeScript のブロックも集めるので、
+# 書き込み先と言語を見ないと、アサーションのぶんだけ閉じタグ不足を報告してしまう。
+JSX_SUFFIXES = (".tsx", ".jsx")
+JSX_LANGS = frozenset({"tsx", "jsx"})
 
 
-def scan_tags(code: str) -> tuple[Counter, Counter]:
+def allows_jsx(target: str, langs: frozenset[str] | set[str]) -> bool:
+    """その書き込み先で `<Foo>` を開始タグとして読んでよいなら True。
+
+    拡張子を主に見る。`.ts` へ書くブロックがわざわざ ```tsx で囲まれている場合だけ、
+    著者の意図を汲んで JSX として読む。
+    """
+    return target.endswith(JSX_SUFFIXES) or bool(langs & JSX_LANGS)
+
+
+def scan_tags(code: str, *, jsx: bool = True) -> tuple[Counter, Counter]:
     """(開いたタグ, 閉じたタグ) の出現数を返す。code は mask_code 済みを渡す。
+
+    jsx=False のときは開始タグを数えない。JSX を書けない書き込み先での `<Foo>` は
+    型アサーションなので、対応する `</Foo>` は最初から存在しない。
 
     `useState<string>()` や `a < b` を数えないため、開始タグは直前の非空白文字が
     識別子・`)`・`]` でないことを条件にする。ジェネリクスと比較は必ず識別子か
@@ -76,6 +93,9 @@ def scan_tags(code: str) -> tuple[Counter, Counter]:
             break
         is_close = code[i + 1 : i + 2] == "/"
         if not is_close:
+            if not jsx:
+                i += 1
+                continue
             j = i - 1
             while j >= 0 and code[j] in " \t\n":
                 j -= 1
@@ -138,11 +158,12 @@ def find_unclosed(paths: list[Path]) -> list[tuple[str, str, list[int]]]:
         if target in provided:
             continue
         masked = [mask_code("\n".join(b.lines)) for b in blocks]
-        opened, closed = scan_tags("\n".join(masked))
+        jsx = allows_jsx(target, {b.lang for b in blocks})
+        opened, closed = scan_tags("\n".join(masked), jsx=jsx)
         unclosed = [name for name in sorted(opened) if name not in closed]
         if not unclosed:
             continue
-        per_block = [(b.day, scan_tags(code)[0]) for b, code in zip(blocks, masked)]
+        per_block = [(b.day, scan_tags(code, jsx=jsx)[0]) for b, code in zip(blocks, masked)]
         for name in unclosed:
             days = sorted({day for day, op in per_block if name in op})
             # ブロック単体では開始タグを取れない書き方（タグがブロックを跨ぐ）が

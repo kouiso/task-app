@@ -18,10 +18,11 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import Iterator
 
 from check_tag_balance import collect, find_unclosed
 from curriculum_blocks import day_number, iter_blocks
-from markdown_scan import iter_prose
+from markdown_scan import paragraph_line, paragraph_text, paragraphs
 
 # 28周目に corpus 全体から抽出した言い回しを、語幹でまとめ直したもの。
 CLAIM = re.compile(
@@ -42,9 +43,9 @@ CLAIM = re.compile(
 NEGATED = re.compile(r"(?:て|で)?(?:い|お)?(?:ませ|ない|なく|なかっ|ず|ぬ|られ(?:ませ|ない))")
 
 
-def _claims_in(line: str) -> bool:
-    """完了を宣言している行なら True。打ち消しで終わる言い回しは数えない。"""
-    return any(not NEGATED.match(line, m.end()) for m in CLAIM.finditer(line))
+def _claims_in(text: str) -> Iterator[re.Match[str]]:
+    """完了を宣言している一致を返す。打ち消しで終わる言い回しは数えない。"""
+    return (m for m in CLAIM.finditer(text) if not NEGATED.match(text, m.end()))
 
 
 def find_claims(paths: list[Path]) -> list[tuple[str, int, str, str]]:
@@ -69,8 +70,13 @@ def find_claims(paths: list[Path]) -> list[tuple[str, int, str, str]]:
         reasons = [r for r in broken[day] if r.split(" の <")[0] in touched]
         if not reasons:
             continue
-        for lineno, line in iter_prose(text):
-            if _claims_in(line):
+        # 段落へまとめてから照合する。`保存すればエラーが` の次の行に
+        # `出なくなります。` が来る折り返しでは、行単位の一致はどちらの行でも
+        # 語幹が途切れているため、宣言がそのまま通る。
+        for para in paragraphs(text):
+            joined = paragraph_text(para, sep="")
+            for m in _claims_in(joined):
+                lineno, line = paragraph_line(para, m.start(), sep="")
                 hits.append((path.name, lineno, "／".join(reasons), line.strip()))
     return hits
 

@@ -16,6 +16,8 @@ import re
 import sys
 from pathlib import Path
 
+from markdown_scan import strip_fences
+
 IMAGE_REF = re.compile(r"!\[[^\]]*\]\(([^)\s]+)[^)]*\)|<img[^>]+src=[\"']([^\"']+)[\"']")
 IMAGE_SUFFIX = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"})
 
@@ -30,12 +32,17 @@ def referenced_names(md_files: list[Path], root: Path) -> tuple[set[str], set[st
     root の外を指す参照や、URL のように解けない参照はパスにならない。それらは
     ファイル名だけを持って戻す。ここで捨てると、参照されている画像を
     「未参照」として消させることになる。誤検知の側へは倒さない。
+
+    コードブロックの中は数えない。書き方の例として見せている `![](...)` や
+    `<img>` は読者に markup のまま表示されるので、画像は1枚も描画されない。
+    それを参照として数えると、本当にどこにも出てこない画像がゲートを通る。
     """
     paths: set[str] = set()
     loose: set[str] = set()
     base = root.resolve()
     for p in md_files:
-        for m in IMAGE_REF.finditer(p.read_text(encoding="utf-8")):
+        prose = strip_fences(p.read_text(encoding="utf-8"))
+        for m in IMAGE_REF.finditer(prose):
             value = (m.group(1) or m.group(2)).split("#")[0].split("?")[0]
             if not value:
                 continue

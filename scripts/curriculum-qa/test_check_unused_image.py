@@ -65,7 +65,43 @@ CASES: list[tuple[str, str, list[str], list[str]]] = [
         ["a.png"],
         [],
     ),
+    (
+        "コードブロックの中の書き方の例は参照ではない",
+        "画像はこう書きます。\n\n```markdown\n![a](./screenshots/a.png)\n```\n",
+        ["a.png"],
+        ["a.png"],
+    ),
+    (
+        "コードブロックの中の img タグも参照ではない",
+        '```html\n<img src="screenshots/a.png" alt="a">\n```\n',
+        ["a.png"],
+        ["a.png"],
+    ),
+    (
+        "コードブロックの外に参照があれば通す",
+        "![a](./screenshots/a.png)\n\n```markdown\n![b](./screenshots/b.png)\n```\n",
+        ["a.png"],
+        [],
+    ),
 ]
+
+# ワークフローの起動条件が、この検査の見る拡張子を全部覆っているか。
+# png だけに絞られていると、未参照の webp を足すPRでゲートが一度も走らない。
+WORKFLOW = Path(__file__).resolve().parents[2] / ".github/workflows/material-gate.yml"
+
+
+def check_workflow_paths() -> tuple[int, int]:
+    from check_unused_image import IMAGE_SUFFIX
+
+    text = WORKFLOW.read_text(encoding="utf-8")
+    # `pull_request` と `push` で別々に書くため、両方に在ることを件数で見る。
+    failed = 0
+    for suffix in sorted(IMAGE_SUFFIX):
+        got = text.count(f"- 'material/**/*{suffix}'")
+        if got < 2:
+            failed += 1
+            print(f"  ❌ material-gate.yml の起動条件に {suffix} が {got} 箇所しかない（期待 2）")
+    return failed, len(IMAGE_SUFFIX)
 
 
 def build(d: Path, md: str, images: list[str]) -> None:
@@ -115,7 +151,9 @@ def main_test() -> int:
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
     exit_failed, exit_total = check_exit_code()
     failed += exit_failed
-    total = len(CASES) + exit_total
+    workflow_failed, workflow_total = check_workflow_paths()
+    failed += workflow_failed
+    total = len(CASES) + exit_total + workflow_total
     if failed:
         print(f"❌ check_unused_image 自己テスト {failed}/{total} 失敗")
         return 1
