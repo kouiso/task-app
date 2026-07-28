@@ -46,6 +46,25 @@ CASES: list[tuple[str, str, list[str], list[str]]] = [
         ["a.png", "notes.txt"],
         [],
     ),
+    (
+        "同名でもディレクトリが違えば別の画像として見る",
+        "![a](./screenshots/day01/result.png)\n",
+        ["day01/result.png", "day02/result.png"],
+        ["day02/result.png"],
+    ),
+    (
+        "入れ子のディレクトリの参照を認める",
+        "![a](./screenshots/day01/result.png)\n"
+        '<img src="screenshots/day02/result.png" alt="b">\n',
+        ["day01/result.png", "day02/result.png"],
+        [],
+    ),
+    (
+        "教材の外を指す参照はファイル名で拾って未参照にしない",
+        "![a](../../shared/a.png)\n",
+        ["a.png"],
+        [],
+    ),
 ]
 
 
@@ -53,7 +72,9 @@ def build(d: Path, md: str, images: list[str]) -> None:
     (d / "screenshots").mkdir()
     (d / "day01_x.md").write_text(md, encoding="utf-8")
     for name in images:
-        (d / "screenshots" / name).write_bytes(b"x")
+        target = d / "screenshots" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"x")
 
 
 def check_exit_code() -> tuple[int, int]:
@@ -88,7 +109,7 @@ def main_test() -> int:
         with tempfile.TemporaryDirectory() as d:
             build(Path(d), md, images)
             unused, _, _ = find_unused(Path(d))
-            got = [f.name for f in unused]
+            got = [str(f.relative_to(Path(d) / "screenshots")) for f in unused]
         if sorted(got) != sorted(expected):
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")

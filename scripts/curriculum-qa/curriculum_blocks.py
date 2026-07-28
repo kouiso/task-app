@@ -30,6 +30,8 @@ __all__ = [
 ]
 
 FILEPATH = re.compile(r"^\s*(?://|#)\s*filepath:\s*(.+?)\s*$")
+# 値の末尾に付く注記1つ。入れ子は取らない（注記は `（続き）` 程度の平坦な語）。
+TRAILING_NOTE = re.compile(r"^(.*?)\s*([（(][^（()）]*[）)])\s*$")
 REAL_PREFIXES = ("src/", "prisma/", "scripts/")
 # 写経対象として扱う言語。bash は同じ `# filepath:` の書式を使うが、
 # 波括弧の意味が違う（`${VAR}` や関数定義）ので構文の収支検査には載せない。
@@ -59,9 +61,28 @@ def day_number(name: str) -> int:
 
 
 def _split_target(value: str) -> tuple[str, str]:
-    """`src/x.ts（続き）` を ("src/x.ts", "（続き）") に割る。"""
-    m = re.match(r"^([^（(]*)(.*)$", value)
-    return (m.group(1).strip(), m.group(2).strip()) if m else (value.strip(), "")
+    """`src/x.ts（続き）` を ("src/x.ts", "（続き）") に割る。
+
+    注記は必ず値の末尾に付く。末尾の括弧だけを剥がし、途中の括弧はパスの一部として
+    残す。最初の `(` で切る形だと、App Router のルートグループ
+    `src/app/(auth)/login/page.tsx` が `src/app/` へ潰れる。潰れた先には別の
+    ルートグループのファイルも集まるので、片方の閉じタグがもう片方の
+    開きっぱなしを隠してしまう。
+    """
+    base = value.strip()
+    notes: list[str] = []
+    while True:
+        m = TRAILING_NOTE.match(base)
+        if not m:
+            break
+        head, note = m.group(1).strip(), m.group(2)
+        # 括弧を剥がした残りがパスの途中で終わるなら、それは注記ではなく
+        # ルートグループそのもの（`src/app/(auth)`）。剥がさずに置く。
+        if "/" in note or head.endswith("/") or not head:
+            break
+        base = head
+        notes.insert(0, note)
+    return base, "".join(notes)
 
 
 def iter_blocks(text: str, source: str) -> Iterator[Block]:

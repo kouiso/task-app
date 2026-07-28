@@ -32,6 +32,20 @@ CLAIM = re.compile(
     r"|構文エラーは(?:解消|なくなり|消え)"
 )
 
+# 語幹の直後に来る打ち消し。「まだエラーが消えません」「ここですべてのタグを
+# 閉じていません」は完了宣言ではなく、むしろ著者に足してほしい正確な断りである。
+# 語幹だけで一致を取ると、この断りごと赤くなる。docstring が言う
+# 「逆向きの文は対象にしない」を、語幹一致の後ろまで効かせる。
+# `エラーが出なくなります` の `なく` は語幹側に含まれているので、ここには来ない。
+# `^` は付けない。`Pattern.match(s, pos)` は pos に固定して照合するが、
+# `^` は pos ではなく文字列の先頭を見るため、付けると必ず外れる。
+NEGATED = re.compile(r"(?:て|で)?(?:い|お)?(?:ませ|ない|なく|なかっ|ず|ぬ|られ(?:ませ|ない))")
+
+
+def _claims_in(line: str) -> bool:
+    """完了を宣言している行なら True。打ち消しで終わる言い回しは数えない。"""
+    return any(not NEGATED.match(line, m.end()) for m in CLAIM.finditer(line))
+
 
 def find_claims(paths: list[Path]) -> list[tuple[str, int, str, str]]:
     """(ファイル名, 行番号, 開いたままのタグ, 該当行) を返す。"""
@@ -56,7 +70,7 @@ def find_claims(paths: list[Path]) -> list[tuple[str, int, str, str]]:
         if not reasons:
             continue
         for lineno, line in iter_prose(text):
-            if CLAIM.search(line):
+            if _claims_in(line):
                 hits.append((path.name, lineno, "／".join(reasons), line.strip()))
     return hits
 

@@ -48,6 +48,10 @@ from sale_package import scaffold_src_paths
 
 IDENT = re.compile(r"[A-Za-z0-9_$]")
 TAG_NAME = re.compile(r"[A-Za-z][\w.\-]*")
+# 直後に式が来る予約語。`return <form>` のように識別子で終わる語の後ろでも、
+# ここに載っている語なら JSX の開始とみなす。載せない語（`Array` `interface ... extends`）
+# の後ろに来る `<` はジェネリクスか比較演算子なので、これまでどおり落とす。
+EXPR_KEYWORDS = frozenset({"return", "yield", "await", "throw", "else", "case", "do"})
 
 
 def scan_tags(code: str) -> tuple[Counter, Counter]:
@@ -57,6 +61,11 @@ def scan_tags(code: str) -> tuple[Counter, Counter]:
     識別子・`)`・`]` でないことを条件にする。ジェネリクスと比較は必ず識別子か
     閉じ括弧の後に来るので、この1条件で落ちる。閉じタグ `</Foo>` は他の構文と
     衝突しないので、直前の文字は見ない。
+
+    ただし `return <form>` は直前が `return` の `n` なので、この1条件だけだと
+    開始タグを取り逃す。取り逃すと `</form>` がどこにも無くても
+    「開いたタグが無い」ことになり、ゲートは静かに緑になる。直前が識別子のときは
+    その語を見て、式が続く予約語（EXPR_KEYWORDS）なら開始タグとして数える。
     """
     opened: Counter = Counter()
     closed: Counter = Counter()
@@ -70,9 +79,16 @@ def scan_tags(code: str) -> tuple[Counter, Counter]:
             j = i - 1
             while j >= 0 and code[j] in " \t\n":
                 j -= 1
-            if j >= 0 and (IDENT.match(code[j]) or code[j] in ")]"):
+            if j >= 0 and code[j] in ")]":
                 i += 1
                 continue
+            if j >= 0 and IDENT.match(code[j]):
+                k = j
+                while k >= 0 and IDENT.match(code[k]):
+                    k -= 1
+                if code[k + 1 : j + 1] not in EXPR_KEYWORDS:
+                    i += 1
+                    continue
         m = TAG_NAME.match(code, i + 2 if is_close else i + 1)
         if not m:
             i += 1
@@ -103,17 +119,35 @@ def scan_tags(code: str) -> tuple[Counter, Counter]:
 
 
 def find_unclosed(paths: list[Path]) -> list[tuple[str, str, list[int]]]:
-    """(書き込み先, 閉じられていないタグ名, 出てくる day) を返す。"""
+    """(書き込み先, 閉じられていないタグ名, そのタグを開いている day) を返す。
+
+    mask_code はブロックごとに掛ける。連結してから1回で掛けると、ある day の
+    断片に閉じていない `/*` が1つあるだけで、そこから後ろの day のコードが
+    まるごと空白になる。mask_code は文字列については行末で打ち切る安全策を
+    持つが、ブロックコメントには無い（curriculum_blocks.py の該当分岐は
+    `*/` が無ければ末尾までを潰す）。ブロック単位で掛ければ、文字列と同じく
+    ブロックの境目でマスクが止まる。
+
+    day はブロック単位で数え直す。その書き込み先に触っただけの day まで挙げると、
+    `check_false_success.py` が「day10 は正しく閉じている」という記述を、
+    day29 が後から開きっぱなしにしたせいで偽と判定してしまう。
+    """
     provided = scaffold_src_paths()
     hits: list[tuple[str, str, list[int]]] = []
     for target, blocks in sorted(concat_by_file(paths).items()):
         if target in provided:
             continue
-        code = mask_code("\n".join(l for b in blocks for l in b.lines))
-        opened, closed = scan_tags(code)
-        for name in sorted(opened):
-            if name not in closed:
-                hits.append((target, name, sorted({b.day for b in blocks})))
+        masked = [mask_code("\n".join(b.lines)) for b in blocks]
+        opened, closed = scan_tags("\n".join(masked))
+        unclosed = [name for name in sorted(opened) if name not in closed]
+        if not unclosed:
+            continue
+        per_block = [(b.day, scan_tags(code)[0]) for b, code in zip(blocks, masked)]
+        for name in unclosed:
+            days = sorted({day for day, op in per_block if name in op})
+            # ブロック単体では開始タグを取れない書き方（タグがブロックを跨ぐ）が
+            # 残りうる。その場合だけ、これまでどおり触った day を全部挙げる。
+            hits.append((target, name, days or sorted({b.day for b in blocks})))
     return hits
 
 

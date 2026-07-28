@@ -17,12 +17,13 @@ ZIP に何が入るかは `sale_package` が `build-zip.sh` から読む。梱�
 
 from __future__ import annotations
 
+import bisect
 import re
 import sys
 from pathlib import Path
 
 from markdown_scan import iter_prose
-from sale_package import scaffold_src_paths, zip_top_level
+from sale_package import comparable_src_paths, zip_top_level
 
 # 「手元の物と突き合わせろ」と読者に言う語。
 COMPARE = re.compile(r"見比べ|見くらべ|照合|突き合わせ|突合|比較して(?:確認|見)|と比べて(?:確認|み)")
@@ -41,25 +42,64 @@ def not_in_zip(location: str) -> bool:
 
     `src/` 配下でも、scaffold が最初から配るファイルは読者の手元に在る。
     `src/server/api/routers/_helpers/select.ts` がその例で、照合先として正しい。
+
+    ただし「手元に在る」だけでは足りない。配る版とこのリポジトリの版が違えば、
+    読者は自分が持っていない版を見に行かされる。`prisma/schema.prisma` が
+    それで、配る版と完成版は別物である。中身まで一致するものだけを通す。
     """
-    if location in zip_top_level() or location in scaffold_src_paths():
+    if location in zip_top_level() or location in comparable_src_paths():
         return False
     return location.startswith(("src/", "prisma/")) or location == "package.json"
+
+
+# 段落の切れ目になる行。箇条書き・表・見出しは、隣り合っていても別の文である。
+# ここで切らないと、`src/app/error.tsx` を作る手順の箇条書きと、その次の項目に
+# ある「見比べて確認する」が1つの段落に入り、正しい手順表が赤くなる。
+BLOCK_START = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|\||#{1,6}\s|>)")
+
+
+def _paragraphs(text: str) -> list[list[tuple[int, str]]]:
+    """地の文を段落へまとめる。段落は (行番号, 行) の並び。
+
+    Markdown は物理行の折り返しで意味が変わらない。`src/app/page.tsx` と`
+    の次の行に `見比べて確認してください。` が来ると、行単位の判定では
+    どちらの行も片方の語しか持たないので、禁止している指示がそのまま通る。
+    """
+    out: list[list[tuple[int, str]]] = []
+    current: list[tuple[int, str]] | None = None
+    for lineno, line in iter_prose(text):
+        if not line.strip():
+            current = None
+            continue
+        if current is None or BLOCK_START.match(line):
+            current = []
+            out.append(current)
+        current.append((lineno, line))
+    return out
 
 
 def find_refs(paths: list[Path]) -> list[tuple[str, int, str, str]]:
     """(ファイル名, 行番号, 置き場, 該当行) を返す。"""
     hits: list[tuple[str, int, str, str]] = []
     for path in paths:
-        for lineno, line in iter_prose(path.read_text(encoding="utf-8")):
-            if not COMPARE.search(line) or DISCLAIMED.search(line):
+        for para in _paragraphs(path.read_text(encoding="utf-8")):
+            joined = "\n".join(line for _, line in para)
+            if not COMPARE.search(joined) or DISCLAIMED.search(joined):
                 continue
+            # 一致位置から行番号を引くための、各行の開始オフセット。
+            starts: list[int] = []
+            pos = 0
+            for _, line in para:
+                starts.append(pos)
+                pos += len(line) + 1
             seen: set[str] = set()
-            for m in LOCATION.finditer(line):
+            for m in LOCATION.finditer(joined):
                 loc = m.group(1)
                 if loc in seen or not not_in_zip(loc):
                     continue
                 seen.add(loc)
+                idx = bisect.bisect_right(starts, m.start()) - 1
+                lineno, line = para[idx]
                 hits.append((path.name, lineno, loc, line.strip()))
     return hits
 

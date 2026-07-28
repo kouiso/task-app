@@ -224,6 +224,7 @@ SELF_TESTS=(
   test_check_anchor
   test_check_procedure_order
   test_check_step_ref
+  test_sale_package
   test_check_tag_balance
   test_check_false_success
   test_check_zip_reference

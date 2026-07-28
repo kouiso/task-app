@@ -20,14 +20,31 @@ IMAGE_REF = re.compile(r"!\[[^\]]*\]\(([^)\s]+)[^)]*\)|<img[^>]+src=[\"']([^\"']
 IMAGE_SUFFIX = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"})
 
 
-def referenced_names(md_files: list[Path]) -> set[str]:
-    """教材が参照している画像のファイル名。"""
-    names: set[str] = set()
+def referenced_names(md_files: list[Path], root: Path) -> tuple[set[str], set[str]]:
+    """教材が参照している画像を (root からの相対パス, 解けなかった参照のファイル名) で返す。
+
+    ファイル名だけで突き合わせると、`day01/result.png` への参照が
+    `day02/result.png` まで参照済みにしてしまう。画像は入れ子のディレクトリから
+    再帰的に拾っているので、突き合わせる側も相対パスへ揃える。
+
+    root の外を指す参照や、URL のように解けない参照はパスにならない。それらは
+    ファイル名だけを持って戻す。ここで捨てると、参照されている画像を
+    「未参照」として消させることになる。誤検知の側へは倒さない。
+    """
+    paths: set[str] = set()
+    loose: set[str] = set()
+    base = root.resolve()
     for p in md_files:
         for m in IMAGE_REF.finditer(p.read_text(encoding="utf-8")):
-            value = m.group(1) or m.group(2)
-            names.add(Path(value.split("#")[0].split("?")[0]).name)
-    return names
+            value = (m.group(1) or m.group(2)).split("#")[0].split("?")[0]
+            if not value:
+                continue
+            try:
+                resolved = (p.parent / value).resolve()
+                paths.add(str(resolved.relative_to(base)))
+            except (ValueError, OSError):
+                loose.add(Path(value).name)
+    return paths, loose
 
 
 def find_unused(root: Path) -> tuple[list[Path], int, int]:
@@ -39,8 +56,13 @@ def find_unused(root: Path) -> tuple[list[Path], int, int]:
     images = sorted(
         f for f in shots.rglob("*") if f.is_file() and f.suffix.lower() in IMAGE_SUFFIX
     )
-    used = referenced_names(md_files)
-    return [f for f in images if f.name not in used], len(images), len(md_files)
+    used, loose = referenced_names(md_files, root)
+    unused = [
+        f
+        for f in images
+        if str(f.resolve().relative_to(root.resolve())) not in used and f.name not in loose
+    ]
+    return unused, len(images), len(md_files)
 
 
 def main(argv: list[str]) -> int:

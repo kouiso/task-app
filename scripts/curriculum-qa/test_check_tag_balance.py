@@ -111,7 +111,74 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, str]]]] = [
         {"day03_x.md": block("scripts/foo.sh", "echo '<form>'", lang="bash")},
         [],
     ),
+    (
+        "return の直後の JSX を開始タグとして数える",
+        {"day29_x.md": block("src/app/foo/page.tsx", "  return <form>;")},
+        [("src/app/foo/page.tsx", "form")],
+    ),
+    (
+        "return の直後でも閉じていれば通す",
+        {"day29_x.md": block("src/app/foo/page.tsx", "  return <form></form>;")},
+        [],
+    ),
+    (
+        "閉じていないブロックコメントが後続 day を隠さない",
+        {
+            "day18_x.md": block("src/app/foo/page.tsx", "  /* 途中で切れた説明"),
+            "day29_x.md": block("src/app/foo/page.tsx", "  <form>"),
+        },
+        [("src/app/foo/page.tsx", "form")],
+    ),
+    (
+        "ルートグループの括弧でパスを切り詰めない",
+        {
+            "day18_x.md": block("src/app/(auth)/login/page.tsx", "  <form>"),
+            "day19_x.md": block("src/app/(shop)/cart/page.tsx", "  </form>"),
+        },
+        [("src/app/(auth)/login/page.tsx", "form")],
+    ),
+    (
+        "scaffold が名指しで配るファイルも対象外",
+        {"day08_x.md": block("src/app/providers.tsx", "  <QueryClientProvider>")},
+        [],
+    ),
 ]
+
+# (説明, ファイル, 期待する day 一覧)
+DAY_CASES: list[tuple[str, dict[str, str], list[int]]] = [
+    (
+        "開いた day だけを挙げる（触っただけの day は挙げない）",
+        {
+            "day10_x.md": block("src/app/foo/page.tsx", "  <div>\n  </div>"),
+            "day29_x.md": block("src/app/foo/page.tsx", "  <form>"),
+        },
+        [29],
+    ),
+    (
+        "複数の day が同じタグを開くなら両方挙げる",
+        {
+            "day10_x.md": block("src/app/foo/page.tsx", "  <form>"),
+            "day29_x.md": block("src/app/foo/page.tsx", "  <form>"),
+        },
+        [10, 29],
+    ),
+]
+
+
+def check_days() -> int:
+    failed = 0
+    for name, files, expected in DAY_CASES:
+        with tempfile.TemporaryDirectory() as d:
+            paths = []
+            for fname, body in files.items():
+                p = Path(d) / fname
+                p.write_text(body, encoding="utf-8")
+                paths.append(p)
+            got = [days for _, _, days in find_unclosed(paths)]
+        if got != [expected]:
+            failed += 1
+            print(f"  ❌ {name}: 期待 [{expected}] / 実際 {got}")
+    return failed
 
 MASK_CASES: list[tuple[str, str, str]] = [
     ("行コメントを潰す", "a // } ) \nb", "a" + " " * 8 + "\nb"),
@@ -188,10 +255,10 @@ def main_test() -> int:
         if sorted(got) != sorted(expected):
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
-    failed += check_masking() + check_scan()
+    failed += check_masking() + check_scan() + check_days()
     exit_failed, exit_total = check_exit_code()
     failed += exit_failed
-    total = len(CASES) + len(MASK_CASES) + 1 + exit_total
+    total = len(CASES) + len(MASK_CASES) + len(DAY_CASES) + 1 + exit_total
     if failed:
         print(f"❌ check_tag_balance 自己テスト {failed}/{total} 失敗")
         return 1
