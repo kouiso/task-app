@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import re
+from functools import cache
 from pathlib import Path
 
 __all__ = [
@@ -52,37 +53,49 @@ EXTRA_COPY_MAP: dict[str, tuple[str, frozenset[str] | None]] = {
 ROOT_LEVEL_SCAFFOLD_DIRS = frozenset({"_docker"})
 
 
+# 返り値はどれも1プロセスの中で変わらない。`build-zip.sh` も `scripts/_*` も
+# 走っている最中に書き換わらないためである。それでも毎回ディレクトリを歩き直すと、
+# check_zip_reference が段落ごと・一致ごとに not_in_zip() を呼ぶため、
+# 同じ全走査が教材1本あたり数百回走る。ここで1回に畳む。
+#
+# 畳んだ値は呼び出し側で共有される。集合やリストのまま返すと、受け取った側が
+# 足したり消したりした結果が次の呼び出しへそのまま残り、以降の判定が狂う。
+# 変更できない型（frozenset / tuple）で返して、その事故を型の側で塞ぐ。
+@cache
 def _build_zip_text() -> str:
     return BUILD_ZIP.read_text(encoding="utf-8")
 
 
-def _array(name: str) -> list[str]:
+@cache
+def _array(name: str) -> tuple[str, ...]:
     """build-zip.sh の bash 配列リテラルを読む。"""
     m = re.search(rf"^{re.escape(name)}=\(\s*(.*?)^\)", _build_zip_text(), re.M | re.S)
     if not m:
         raise ValueError(f"build-zip.sh に {name} 配列がありません")
-    return re.findall(r'"([^"]+)"', m.group(1))
+    return tuple(re.findall(r'"([^"]+)"', m.group(1)))
 
 
-def zip_top_level() -> list[str]:
+def zip_top_level() -> tuple[str, ...]:
     """ZIP へ個別に入れるファイル（required_files）。"""
     return _array("required_files")
 
 
-def zip_scaffold_dirs() -> list[str]:
+def zip_scaffold_dirs() -> tuple[str, ...]:
     """ZIP へ入る scaffold 補助ディレクトリ（support_directories）。"""
     return _array("support_directories")
 
 
-def excluded_routers() -> set[str]:
+@cache
+def excluded_routers() -> frozenset[str]:
     """`_server-routers` から意図的に外すファイル名。
 
     この6本は読者が30日かけて自分で書くので、完成版を配らない。
     """
-    return set(re.findall(r'--exclude="([^"]+)"', _build_zip_text()))
+    return frozenset(re.findall(r'--exclude="([^"]+)"', _build_zip_text()))
 
 
-def uncovered_scaffold_dirs() -> set[str]:
+@cache
+def uncovered_scaffold_dirs() -> frozenset[str]:
     """配布されるのに、置かれる先が分かっていない補助ディレクトリ。
 
     scaffold の配布物が増えたとき、ここが空でなくなる。空でないまま放置すると、
@@ -90,14 +103,15 @@ def uncovered_scaffold_dirs() -> set[str]:
     自己テストがこの集合の空を見張る。
     """
     known = {d.split("/")[0] for d in SCAFFOLD_COPY_MAP} | set(EXTRA_COPY_MAP)
-    return {
+    return frozenset(
         d
         for d in zip_scaffold_dirs()
         if d not in known and d not in ROOT_LEVEL_SCAFFOLD_DIRS
-    }
+    )
 
 
-def _scaffold_copies() -> list[tuple[str, Path]]:
+@cache
+def _scaffold_copies() -> tuple[tuple[str, Path], ...]:
     """(読者の手元での置き場, 配られる現物) の組を全部返す。
 
     ディレクトリ丸ごとのコピー（SCAFFOLD_COPY_MAP）と、ファイル名指しのコピー
@@ -129,10 +143,11 @@ def _scaffold_copies() -> list[tuple[str, Path]]:
                 continue
             tail = rel.name if key in SCAFFOLD_COPY_MAP and key != directory else str(rel)
             out.append((f"{dest}/{tail}", f))
-    return out
+    return tuple(out)
 
 
-def scaffold_src_paths() -> set[str]:
+@cache
+def scaffold_src_paths() -> frozenset[str]:
     """読者の手元に「最初から書かれた状態」で届く `src/` `prisma/` 配下のパス。
 
     scaffold-from-scratch.sh がコピーするので、読者はこれらを写経しない。
@@ -142,10 +157,11 @@ def scaffold_src_paths() -> set[str]:
     ここで見るのは「読者の手元に在るか」だけで、中身が完成版と同じかは見ない。
     照合先として使えるかは別の問いなので `comparable_src_paths()` が答える。
     """
-    return {dest for dest, _ in _scaffold_copies()}
+    return frozenset(dest for dest, _ in _scaffold_copies())
 
 
-def comparable_src_paths() -> set[str]:
+@cache
+def comparable_src_paths() -> frozenset[str]:
     """「このリポジトリの ◯◯ と見比べて」の照合先として成立するパス。
 
     scaffold が配る現物が、このリポジトリの同じ位置のファイルと1バイト違わない
@@ -154,9 +170,8 @@ def comparable_src_paths() -> set[str]:
     4ファイルは、配る版とこのリポジトリの版が違う。手元に在ることと、
     照合先として使えることは別である。
     """
-    out: set[str] = set()
-    for dest, src in _scaffold_copies():
-        repo_file = REPO_ROOT / dest
-        if repo_file.is_file() and repo_file.read_bytes() == src.read_bytes():
-            out.add(dest)
-    return out
+    return frozenset(
+        dest
+        for dest, src in _scaffold_copies()
+        if (REPO_ROOT / dest).is_file() and (REPO_ROOT / dest).read_bytes() == src.read_bytes()
+    )

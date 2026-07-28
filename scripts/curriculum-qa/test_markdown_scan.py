@@ -134,7 +134,15 @@ def main() -> int:
     check("HTML コメントで文字数が変わらない", len(src), len(masked))
     check("HTML コメント外は残る", True, masked.startswith("前\n") and masked.endswith("\n後"))
 
-    # 15. blank_fences は行数を保ったままコードを消す。
+    # 15. コードブロックは段落の切れ目になる。フェンスだけで隔てられた前後の地の文を
+    #     繋ぐと、書いた人が別々に書いた2文が1つの段落として判定される。
+    check(
+        "フェンスで段落が切れる",
+        [[(1, "前の文")], [(5, "後ろの文")]],
+        ms.paragraphs("前の文\n```bash\nnpm run dev\n```\n後ろの文"),
+    )
+
+    # 16. blank_fences は行数を保ったままコードを消す。
     blanked = ms.blank_fences("a\n```\nx\n```\nb")
     check("blank_fences", ["a", "", "", "", "b"], blanked.split("\n"))
 

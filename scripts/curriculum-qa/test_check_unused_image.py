@@ -83,6 +83,36 @@ CASES: list[tuple[str, str, list[str], list[str]]] = [
         ["a.png"],
         [],
     ),
+    (
+        "HTML コメントの中に残った参照は参照ではない",
+        "![a](./screenshots/a.png)\n\n<!-- ![old](./screenshots/b.png) -->\n",
+        ["a.png", "b.png"],
+        ["b.png"],
+    ),
+    (
+        "複数行の HTML コメントの中も同じく数えない",
+        "<!--\n![old](./screenshots/a.png)\n-->\n",
+        ["a.png"],
+        ["a.png"],
+    ),
+    (
+        "参照形式の画像を参照として認める",
+        "![結果][shot]\n\n[shot]: ./screenshots/a.png\n",
+        ["a.png"],
+        [],
+    ),
+    (
+        "ラベルを省いた参照形式も認める",
+        "![shot][]\n\n[shot]: ./screenshots/a.png\n",
+        ["a.png"],
+        [],
+    ),
+    (
+        "定義の無いラベルは参照にならない",
+        "![結果][missing]\n",
+        ["a.png"],
+        ["a.png"],
+    ),
 ]
 
 # ワークフローの起動条件が、この検査の見る拡張子を全部覆っているか。

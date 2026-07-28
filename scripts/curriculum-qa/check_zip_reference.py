@@ -28,12 +28,31 @@ from sale_package import comparable_src_paths, zip_top_level
 COMPARE = re.compile(r"見比べ|見くらべ|照合|突き合わせ|突合|比較して(?:確認|見)|と比べて(?:確認|み)")
 # 文中に現れる置き場。バッククォート内でも地の文でも拾いたいので、
 # インラインコードは潰さずに走査する。`src/` だけの言及は置き場を指さないので取らない。
+#
+# 教材はリポジトリ直下からの相対でも同じ置き場を書く（`./src/app/page.tsx`、
+# `/src/app/page.tsx`、`task-app/src/app/page.tsx`）。前置きを取らずに直前の文字だけを
+# 見ていると、`.` や `/` に続く形が全部この判定の外へ出る。買った人の手元に無い
+# 照合先を指しているのは同じなので、前置きを剥がしてから同じ判定へ掛ける。
+REPO_PREFIX = r"(?:\.{1,2}/|/|task-app/)?"
 LOCATION = re.compile(
-    r"(?<![\w/.-])((?:src|prisma)/[\w.\[\]-]+(?:/[\w.\[\]-]+)*|package\.json)"
+    rf"(?<![\w/.-]){REPO_PREFIX}"
+    r"((?:src|prisma)/[\w.\[\]-]+(?:/[\w.\[\]-]+)*|package\.json)"
+)
+# 断りの及ぶ範囲を決めるために拾う語。LOCATION と違い、末尾の階層が無い
+# `src/` `prisma/` も取る。断り書きは個別のファイルではなく
+# 「完成版の `src/` は入っていません」と大きく書くのが普通なので、
+# ここを取らないと断りがどのファイルにも結び付かない。
+DISCLAIM_SCOPE = re.compile(
+    rf"(?<![\w/.-]){REPO_PREFIX}"
+    r"((?:src|prisma)/(?:[\w.\[\]-]+(?:/[\w.\[\]-]+)*)?|package\.json)"
 )
 # 「ZIP には入っていません」と断ってある文は、読者を存在しない物へ送らない。
 # 30周目の修正はこの断りを添える形で入れたので、断りごと赤くしては直した意味が消える。
 DISCLAIMED = re.compile(r"ZIP\s*(?:に|には)[^。]{0,40}(?:入って?い?ません|入りません|含まれ(?:て?い?)?ません)")
+# 断りの効く範囲を切る区切り。段落まるごとを免除にすると、
+# 「`src/a.tsx` は ZIP に入っていません。一方 `src/b.tsx` と見比べてください。」の
+# 後半まで一緒に免除され、実害のある指示が黙って通る。
+SENTENCE_END = "。"
 # 照合を打ち消す語。「`src/app/page.tsx` と見比べる必要はありません」は、読者を
 # 存在しない照合先へ送らないための正しい案内である。照合の語だけで一致を取ると、
 # 30周目の修正で足したこの案内ごと赤くなる。語の直後に続く形だけを見る。
@@ -64,18 +83,57 @@ def _demands_compare(joined: str) -> bool:
     return any(not NEGATED.match(joined, m.end()) for m in COMPARE.finditer(joined))
 
 
+def _sentences(joined: str) -> list[str]:
+    """段落を句点で切る。切れ目の句点は前の文に残す。"""
+    out: list[str] = []
+    start = 0
+    while True:
+        i = joined.find(SENTENCE_END, start)
+        if i < 0:
+            break
+        out.append(joined[start : i + 1])
+        start = i + 1
+    if joined[start:]:
+        out.append(joined[start:])
+    return out
+
+
+def disclaimed_locations(joined: str) -> set[str]:
+    """断りが効いている置き場を返す。
+
+    断りは、それを書いた文が名指ししている置き場にだけ効かせる。段落まるごとを
+    免除にすると、断った置き場の隣に並んだ別の置き場まで一緒に免除される。
+
+    断り書きは個別のファイル名ではなく「完成版の `src/` は入っていません」と
+    大きく書くことが多い。末尾が `/` の語はその配下すべてを指す断りとして扱う。
+    """
+    out: set[str] = set()
+    for sentence in _sentences(joined):
+        if not DISCLAIMED.search(sentence):
+            continue
+        out.update(m.group(1) for m in DISCLAIM_SCOPE.finditer(sentence))
+    return out
+
+
+def _is_disclaimed(location: str, disclaimed: set[str]) -> bool:
+    return any(
+        location == d or (d.endswith("/") and location.startswith(d)) for d in disclaimed
+    )
+
+
 def find_refs(paths: list[Path]) -> list[tuple[str, int, str, str]]:
     """(ファイル名, 行番号, 置き場, 該当行) を返す。"""
     hits: list[tuple[str, int, str, str]] = []
     for path in paths:
         for para in paragraphs(path.read_text(encoding="utf-8")):
             joined = paragraph_text(para)
-            if not _demands_compare(joined) or DISCLAIMED.search(joined):
+            if not _demands_compare(joined):
                 continue
+            disclaimed = disclaimed_locations(joined)
             seen: set[str] = set()
             for m in LOCATION.finditer(joined):
                 loc = m.group(1)
-                if loc in seen or not not_in_zip(loc):
+                if loc in seen or not not_in_zip(loc) or _is_disclaimed(loc, disclaimed):
                     continue
                 seen.add(loc)
                 lineno, line = paragraph_line(para, m.start())

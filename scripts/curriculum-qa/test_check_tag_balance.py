@@ -163,6 +163,52 @@ CASES: list[tuple[str, dict[str, str], list[tuple[str, str]]]] = [
         {"day07_x.md": block("src/lib/foo.ts", "  return <form>;", lang="tsx")},
         [("src/lib/foo.ts", "form")],
     ),
+    (
+        ".tsx の型引数（末尾カンマ）は開始タグではない",
+        {
+            "day07_x.md": block(
+                "src/app/foo/page.tsx",
+                "const identity = <T,>(value: T) => value;",
+            )
+        },
+        [],
+    ),
+    (
+        ".tsx の型引数（extends 付き）も開始タグではない",
+        {
+            "day07_x.md": block(
+                "src/app/foo/page.tsx",
+                "const pick = <T extends object>(value: T) => value;\n"
+                "const pair = <T, U>(a: T, b: U) => [a, b];",
+            )
+        },
+        [],
+    ),
+    (
+        "括弧が続くだけの開始タグはこれまでどおり数える",
+        {"day07_x.md": block("src/app/foo/page.tsx", "  <p>(注) 保存してください")},
+        [("src/app/foo/page.tsx", "p")],
+    ),
+    (
+        "JSX テキストのアポストロフィで閉じタグを消さない",
+        {
+            "day07_x.md": block(
+                "src/app/foo/page.tsx",
+                "  <DialogTitle>Don't panic</DialogTitle>",
+            )
+        },
+        [],
+    ),
+    (
+        "アポストロフィがあっても本当の閉じ忘れは見つける",
+        {
+            "day07_x.md": block(
+                "src/app/foo/page.tsx",
+                "  <DialogTitle>Don't panic</DialogTitle>\n  <form>",
+            )
+        },
+        [("src/app/foo/page.tsx", "form")],
+    ),
 ]
 
 # (説明, ファイル, 期待する day 一覧)

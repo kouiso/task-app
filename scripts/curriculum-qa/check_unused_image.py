@@ -16,9 +16,18 @@ import re
 import sys
 from pathlib import Path
 
-from markdown_scan import strip_fences
+from markdown_scan import mask_html_comments, strip_fences
 
-IMAGE_REF = re.compile(r"!\[[^\]]*\]\(([^)\s]+)[^)]*\)|<img[^>]+src=[\"']([^\"']+)[\"']")
+# 画像の書き方は3通りある。inline（`![a](path)`）、`<img src=...>`、そして
+# 参照形式（`![a][label]` と `[label]: path` の組）。参照形式を取り落とすと、
+# 読者の画面には確かに出ている画像を「未参照」として消させることになる。
+# 参照形式のラベルは group(3)、省略形（`![a][]` / `![a]`）は alt がラベルを兼ねる。
+IMAGE_REF = re.compile(
+    r"!\[([^\]]*)\](?:\(([^)\s]+)[^)]*\)|\[([^\]]*)\])?"
+    r"|<img[^>]+src=[\"']([^\"']+)[\"']"
+)
+# 参照形式の定義行。`[label]: ./screenshots/a.png "title"` の形を取る。
+LINK_DEF = re.compile(r"^\s{0,3}\[([^\]]+)\]:\s*<?([^\s>]+)>?", re.M)
 IMAGE_SUFFIX = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"})
 
 
@@ -36,14 +45,27 @@ def referenced_names(md_files: list[Path], root: Path) -> tuple[set[str], set[st
     コードブロックの中は数えない。書き方の例として見せている `![](...)` や
     `<img>` は読者に markup のまま表示されるので、画像は1枚も描画されない。
     それを参照として数えると、本当にどこにも出てこない画像がゲートを通る。
+
+    HTML コメントの中も同じく数えない。`<!-- ![old](...) -->` は Markdown が
+    読者に表示しないので、そこに残った古い参照は画像を1枚も出さない。数えると、
+    本文から消えたまま ZIP に入り続ける画像がゲートを通る。
     """
     paths: set[str] = set()
     loose: set[str] = set()
     base = root.resolve()
     for p in md_files:
-        prose = strip_fences(p.read_text(encoding="utf-8"))
+        prose = mask_html_comments(strip_fences(p.read_text(encoding="utf-8")))
+        labels = {m.group(1).lower(): m.group(2) for m in LINK_DEF.finditer(prose)}
         for m in IMAGE_REF.finditer(prose):
-            value = (m.group(1) or m.group(2)).split("#")[0].split("?")[0]
+            alt, inline, label, img = m.groups()
+            if inline is not None:
+                value = inline
+            elif img is not None:
+                value = img
+            else:
+                # `![a][b]` は b、`![a][]` と `![a]` は alt をラベルとして引く。
+                value = labels.get((label or alt or "").lower(), "")
+            value = value.split("#")[0].split("?")[0]
             if not value:
                 continue
             try:

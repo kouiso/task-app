@@ -143,10 +143,18 @@ def paragraphs(text: str) -> list[list[tuple[int, str]]]:
     Markdown は物理行の折り返しで意味が変わらない。禁止したい言い回しが折り返しで
     2行に割れると、行単位の判定はどちらの行でも語の片方しか見えないため、
     そのまま通ってしまう。
+
+    コードブロックも段落の切れ目として扱う。`iter_prose` はフェンスの行を黙って
+    落とすので、フェンスだけで隔てられた前後の地の文をそのまま繋ぐと、1つの段落に
+    なる。前の文が挙げた置き場と、後ろの文の「見比べて確認してください」が同居した
+    ことになり、書いた人が別々の話として書いた2つが1件の指摘になる。
     """
     out: list[list[tuple[int, str]]] = []
     current: list[tuple[int, str]] | None = None
-    for lineno, line in iter_prose(text):
+    for lineno, line, state, _ in fence_states(text):
+        if state != "outside":
+            current = None
+            continue
         if not line.strip():
             current = None
             continue

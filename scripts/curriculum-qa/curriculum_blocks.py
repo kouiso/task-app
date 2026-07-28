@@ -125,6 +125,24 @@ def concat_by_file(paths: list[Path]) -> dict[str, list[Block]]:
     return out
 
 
+def _in_jsx_text(src: str, pos: int) -> bool:
+    """pos が JSX のテキスト部分（タグとタグの間）に居るなら True。
+
+    その行で最後に現れた構造文字が `>` なら、そこから先は要素の中身である。
+    `<` `{` `}` のいずれかが後に来ていれば、もうテキストではない。
+    `=>` と `>=` の `>` は演算子なので数えない。
+    """
+    i = pos - 1
+    while i >= 0 and src[i] != "\n":
+        c = src[i]
+        if c in "<{}":
+            return False
+        if c == ">" and (i == 0 or src[i - 1] != "=") and src[i + 1 : i + 2] != "=":
+            return True
+        i -= 1
+    return False
+
+
 def mask_code(src: str) -> str:
     """文字列・コメント・テンプレートリテラルを空白へ潰す。行数と桁は変えない。
 
@@ -157,18 +175,28 @@ def mask_code(src: str) -> str:
             continue
         if c in "'\"`":
             j = i + 1
+            closed = False
             while j < n:
                 if src[j] == "\\":
                     j += 2
                     continue
                 if src[j] == c:
                     j += 1
+                    closed = True
                     break
                 if src[j] == "\n" and c != "`":
                     # 引用符が行内で閉じていない。断片コードでは起きうるので、
                     # そこで打ち切って次の行から数え直す。
                     break
                 j += 1
+            if not closed and c != "`" and _in_jsx_text(src, i):
+                # 行内で閉じない引用符が JSX のテキストの中に在る。
+                # `<DialogTitle>Don't panic</DialogTitle>` のアポストロフィがこれで、
+                # 文字列の開始として潰すと同じ行の `</DialogTitle>` まで消える。
+                # 消えた閉じタグは誰にも見えないので、正しい JSX が
+                # 「閉じていない」として報告される。ここでは1文字の地の文として置く。
+                i += 1
+                continue
             blank(i, j)
             i = j
             continue

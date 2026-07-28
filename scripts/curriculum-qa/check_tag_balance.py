@@ -57,6 +57,31 @@ EXPR_KEYWORDS = frozenset({"return", "yield", "await", "throw", "else", "case", 
 # 書き込み先と言語を見ないと、アサーションのぶんだけ閉じタグ不足を報告してしまう。
 JSX_SUFFIXES = (".tsx", ".jsx")
 JSX_LANGS = frozenset({"tsx", "jsx"})
+# `.tsx` の中で `<` が型引数の宣言になる書き方。`const identity = <T,>(v: T) => v` は
+# 正しい TypeScript で、`</T>` はどこにも要らない。`jsx=False` では逃げられない。
+# その書き込み先は本当に JSX を書くファイルであり、開始タグの判定を止めると
+# 本物の閉じ忘れまで見えなくなるためである。
+# 型引数の並びだけを見分ける。決め手は3つ:
+#   - 末尾のカンマ（`<T,>`）。JSX の属性はカンマで終わらない。
+#   - `extends` の制約（`<T extends object>`）。JSX の属性名にはならない。
+#   - 識別子をカンマで並べただけの形（`<T, U>`）。
+# いずれも `>` の直後が `(` であることを必ず条件に足す。開始タグの直後に `(` が
+# 来ることもある（`<p>(注)...`）が、その中身は上の3つの形にならない。
+GENERIC_PARAMS = re.compile(
+    r"[A-Za-z_$][\w$]*(?:\s+extends\s[^<>]*)?"
+    r"(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+extends\s[^<>]*)?)*\s*,?\s*$"
+)
+GENERIC_MARK = re.compile(r",\s*$|\sextends\s|,")
+
+
+def is_generic_params(inner: str, after: str) -> bool:
+    """`<...>` の中身が JSX タグではなく型引数の並びなら True。
+
+    inner は `<` と `>` の間、after は `>` から後ろ。
+    """
+    if not after.lstrip().startswith("("):
+        return False
+    return bool(GENERIC_MARK.search(inner)) and bool(GENERIC_PARAMS.fullmatch(inner.strip()))
 
 
 def allows_jsx(target: str, langs: frozenset[str] | set[str]) -> bool:
@@ -129,6 +154,9 @@ def scan_tags(code: str, *, jsx: bool = True) -> tuple[Counter, Counter]:
             p += 1
         if end < 0:
             i += 1
+            continue
+        if not is_close and is_generic_params(code[i + 1 : end], code[end + 1 : end + 16]):
+            i = end + 1
             continue
         if is_close:
             closed[m.group(0)] += 1
