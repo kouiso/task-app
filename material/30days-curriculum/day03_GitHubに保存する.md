@@ -571,7 +571,7 @@ git log --oneline --decorate -3
 ```
 
 `git status -sb` に残るのは、add しなかったものの `??` の行だけになります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? .node-version` `?? doc/` `?? material/` `?? scripts/` が並びます。
-これらは GitHub へ送らないので、残っていて正常です。行の数が説明と違っていても、`.env` の行が無ければ問題ありません。
+これらは GitHub へ送らないので、残っていて正常です。上に挙げた5つ以外の行が残っていたら、送るはずのファイルが送られていません。その行のファイルを `git add` してから、もう一度コミットしてください。
 `git log` の1行目に、いま付けたメッセージが出ていれば成功です。
 
 ![コミット成功後の状態](./screenshots/day03-commit-success.png)
