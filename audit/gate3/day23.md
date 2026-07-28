@@ -56,14 +56,14 @@ Step 0 の冒頭（行106）は「`getOverview` の直後に足します」と�
 
 **逐語引用**
 
-```
+````
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
 // グラフ用データの変換処理（完了数・優先度）
 const chartData =
   reportData?.weeklyData.map((week) => ({
     name: week.week,
-```
+````
 
 **初心者役が挙げた詰まり**
 
@@ -91,7 +91,7 @@ day23 の `chartData` / `statusData` は変数名（`statusData` は完全一致
 
 **逐語引用**
 
-```
+````
 レポート見出しの右側へリンクを置きます。`Link` は Next.js が用意したページ移動用の部品で
 
 ```typescript
@@ -99,7 +99,7 @@ day23 の `chartData` / `statusData` は変数名（`statusData` は完全一致
 <Link
   href="/report/weekly"
   className="inline-flex items-center gap-2
-```
+````
 
 **初心者役が挙げた詰まり**
 
@@ -129,7 +129,7 @@ Day 22 で書いた `/report` の見出しは `<div>` の中に `<h1>` と `<p>`
 
 **逐語引用**
 
-```
+````
 Day 21 で表示済みのテーブルを確認します。
 以下のコードを2つ目のテーブルとして
 貼り付けないでください。
@@ -139,7 +139,7 @@ Day 21 で表示済みのテーブルを確認します。
 // Table 関連のインポートを追加
 import {
   Table, TableBody, TableCell,
-```
+````
 
 **初心者役が挙げた詰まり**
 

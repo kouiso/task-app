@@ -17,7 +17,7 @@
 
 **逐語引用**
 
-```
+````
 取得した `session?.user?.id` を使って、
 各コメントの作者と一致するときだけ
 編集・削除ボタンを表示します。
@@ -26,7 +26,7 @@
 // filepath: src/component/task/task-detail-dialog.tsx
 // 本人チェックで編集・削除ボタンを表示
 {comment.userId === session?.user?.id && (
-```
+````
 
 **初心者役が挙げた詰まり**
 

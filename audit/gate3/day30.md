@@ -17,14 +17,14 @@
 
 **逐語引用**
 
-```
+````
 続けて、通信と権限に関する3つを足します。
 
 ```typescript
 // filepath: next.config.ts（headers の配列に追加）
           {
             key: 'Strict-Transport-Security',
-```
+````
 
 **初心者役が挙げた詰まり**
 
