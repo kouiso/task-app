@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
 JSX 内の `</div>` 閉じタグの後、`</AppLayout>` の直前（`AppLayout` 内の一番最後）に `DeleteConfirmDialog` を配置します。
 ```
 
@@ -40,7 +40,7 @@ Step 8 のシナリオ2「メンバーの削除ボタンをクリック、確認
 
 **逐語引用**
 
-```
+```text
 `ProjectDetailView` コンポーネントのインポートを追加します。
 
 // filepath: src/app/project/page.tsx
@@ -73,7 +73,7 @@ Day 11 の行958から965でまったく同じ import 文を追加済みだが�
 
 **逐語引用**
 
-```
+```text
 } from '@/component/ui/dialog';
 import { Label } from '@/component/ui/label';
 import {
@@ -104,7 +104,7 @@ Step 4 は Dialog 系や Select 系と同じ扱いで `Label` も新規追加と
 
 **逐語引用**
 
-```
+```text
 // Day 11 Step 9 の分岐内に配置する
 <ProjectDetailView
   projectDetail={projectDetail}
@@ -136,7 +136,7 @@ Day 11 Step 9 の分岐にはすでに `<ProjectDetailView ... />` が置いて�
 
 **逐語引用**
 
-```
+```text
     // showArchived が true のとき isArchived フィルターを外して進行中・アーカイブ両方を取得する
     isArchived: showArchived ? undefined : false,
 ```
@@ -167,4 +167,36 @@ Day 11 Step 9 の分岐にはすでに `<ProjectDetailView ... />` が置いて�
 
 ## 反証で消えた件
 
-1 件。消えた理由の型は判定の記録に残っていないため、ここには件数だけを書く。
+1 件。挙がった内容と、反証側が示した根拠を全件残す。
+
+### 消えた件 1. 行1226 確認ポイントに従って「Step 2 で書いた console.log 入りの handleRemoveMember」を探…
+
+**逐語引用**
+
+```text
+- Step 2 の仮実装（`console.log` の版）が削除されている
+- 直接 `mutate` を呼ばず、まず確認ダイアログを開いている
+```
+
+**初心者役が挙げた詰まり**
+
+確認ポイントに従って「Step 2 で書いた console.log 入りの handleRemoveMember」を探すが、Step 2 にはコードの追加が無く（706行に「コードの追加は不要です」と明記）、console.log を含む版もどこにも存在しない。何を消せばよいのか分からず止まる。
+
+**初心者役が挙げた不足**
+
+実際に消す対象は Day 11 Step 9 で置いた `const handleRemoveMember = (_userId: string) => {}`（空実装、944〜946行）で、console.log は使っていない。1185行の「Step 2 で追加した仮実装を削除」も出所の Step 番号が違う。
+
+**反証側が示した、成立しない根拠**
+
+【引用の実在確認】day12_メンバー追加.md:1226 に逐語で「- Step 2 の仮実装（`console.log` の版）が削除されている」、1185 に「まず **Step 2 で追加した仮実装を削除**してから、以下の本実装を書いてください。」、1216 のコードブロック直前コメントに「// Step 2の仮実装を削除してここに書き換える」が実在する。指摘どおり console.log 版はファイル内に存在せず（grep で day12 に console.log 一致ゼロ）、実際の削除対象は day11_プロジェクト編集・削除.md:944 の `const handleRemoveMember = (_userId: string) => {` （中身は「// Day 12 Step 6 で本実装に置き換え」のみの空実装）。よって「console.log の版」「Step 2 で追加」は文言として不正確。
+
+【しかし読者は止まらない】同じ day12 の Step 2 内、706〜712 行で削除対象が名指しで説明済み。
+
+- 706行: 「Day 11 Step 9 で `handleRemoveMember` の仮定義（何もしない空実装）を追加済みです。Step 6 で本実装に差し替えます。**ここでは仮定義がすでにあることを確認するだけで、コードの追加は不要です。**」
+- 708行: 「> Day 11 の仮定義 `const handleRemoveMember = (_userId: string) => {}` は、**Step 6 で削除して本実装に**書き換えます。同名の `const` を2つ書くとエラーになるため、Step 6 では「Day 11 の仮実装を削除 → 本実装を書く」の順で進めてください。」
+- 712行: 「- `handleRemoveMember` は仮実装であり、Step 6 で削除することを覚えておく」
+
+さらに前日の day11:933 でも「Step 6 で `handleRemoveMember` を本実装したときに、それぞれこの仮定義を削除してください。」と予告済み。
+ファイル全体で `handleRemoveMember` の定義は day11:944 の1個だけ（day12 の grep 一致は 706/708/712/818/1217/2633/2758 で、定義は 1217 の本実装のみ）なので、削除対象は一意に決まり、探し当てられずに止まる状況にならない。
+
+判定: Step 番号と「console.log の版」という表現の誤りは事実だが、同一ファイル 706〜712 行および前日 day11:933 で削除対象が逐語で示されているため、読者が止まる指摘としては成立しない。

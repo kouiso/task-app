@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
   unarchive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
@@ -47,7 +47,7 @@
 
 **逐語引用**
 
-```
+```text
 次に、Day 09 で定義した `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
 ```
 
@@ -75,7 +75,7 @@ Step 9 だけは「仮定義を削除してから」と明記されているの�
 
 **逐語引用**
 
-```
+```text
 次に、削除用の mutation を定義します。実際のコードでは mutation の定義順は `createMutation` → `updateMutation` → `deleteMutation` です。`updateMutation` の直下に追加してください。
 ```
 
@@ -102,7 +102,7 @@ Step 2 の時点で `page.tsx` を開いても `updateMutation` がどこにも�
 
 **逐語引用**
 
-```
+```text
 > **配置の注意**: `handleSubmit` は `handleDelete` の直下に配置してください。コードの並び順は `handleCreate` → `handleEdit` → `handleDelete` → `handleSubmit` です。
 ```
 
@@ -130,7 +130,7 @@ Day 11 の版は if と else に作り替えたものなので本来は置き換
 
 **逐語引用**
 
-```
+```text
 JSX 内のプロジェクトカード一覧グリッド（`<div className="grid gap-6 sm:grid-cols-2 ...">...</div>`）の閉じタグ直後に `ProjectDialog` を配置します。
 ```
 
@@ -158,7 +158,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 
 **逐語引用**
 
-```
+```text
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onClick={
@@ -192,7 +192,7 @@ Day 11 の完成コード全体に `handleProjectClick` の定義が1か所も�
 
 **逐語引用**
 
-```
+```text
 プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。Step 5 の更新ハンドラー（`src/app/project/page.tsx`）で `description || null` を使ったのは、
 ```
 
@@ -216,4 +216,32 @@ Day 11 の完成コード全体に `handleProjectClick` の定義が1か所も�
 
 ## 反証で消えた件
 
-1 件。消えた理由の型は判定の記録に残っていないため、ここには件数だけを書く。
+1 件。挙がった内容と、反証側が示した根拠を全件残す。
+
+### 消えた件 1. 行153 「getAll の下」と「末尾の `});` の1行上」は、Day 10 まで書き終えたファイルでは別の場所（getAl…
+
+**逐語引用**
+
+```text
+続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。
+
+ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。
+```
+
+**初心者役が挙げた詰まり**
+
+「getAll の下」と「末尾の `});` の1行上」は、Day 10 まで書き終えたファイルでは別の場所（getAll と create の間 / create の後ろ）を指す。どちらに貼るか決められないまま止まる。
+
+**初心者役が挙げた不足**
+
+直前の1文と直後の1文で貼り付け先が2通り提示されており、どちらが正しいかの説明が無い。同じ問題は292行の setArchiveStatus でも起きていて、そこでは「`export const projectRouter` の上」と書かれているのに、ブロックの見出しは「（続き）」＝ルーター内部を指している。
+
+**反証側が示した、成立しない根拠**
+
+【引用の実在確認】day11_プロジェクト編集・削除.md の 153行「続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。」、155行「ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。」、292行「…`project.ts` の `projectUpdateSchema` の下、`export const projectRouter` の上に追加します。」— 3箇所とも指摘どおり実在する。
+
+【Day10 時点のファイル形状】day10_プロジェクト新規作成.md:195「- `projectCreateSchema` と `create` を追加し、`getAll` の直後に `}),` `});` まで閉じた」、同1773「Day 10 終了時点の状態は、完成版の `src/server/api/routers/project.ts` の `getAll` と `create` の部分と同じです。」→ Day11 開始時の並びは getAll → create → `});`。よって「getAll の下」と「末尾 `});` の1行上」は確かに別位置を指す（指摘の前提自体は正しい）。
+
+【同一ファイル内で埋まっている】day11 の 1316行「今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。」— まさに「どこへ貼るか決められない」読者向けの復旧経路が同日中に明示されている。1320行の表に `src/server/api/routers/project.ts`（Day 09/10 分を含む）が挙がり、1336行から完成版全文が並ぶ。1388行に `const setArchiveStatus = ...` がルーター外、1411行に `export const projectRouter = createTRPCRouter({` が続く形で、setArchiveStatus の正しい位置が現物のコードで確定している。さらに 1404行「…ルーターの外へ出してあるのは、`archive` と `unarchive` の両方から呼ぶためです。」で、292行のヘルパーがルーター内部ではないことが明文で説明されている。
+
+【実害の程度】tRPC ルーターの手続きの並び順（getAll の下 vs create の下）は動作に影響せず、どちらへ貼っても `api.project.update` は動く。判断がつかない読者は 1316行の指示で完成版全文へ置き換えられる。よって読者がそこで止まり切るとは言えない。
