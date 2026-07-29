@@ -414,7 +414,7 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 メンバーカードは `Card` と `Avatar` を使って構成します。
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
+{/* filepath: src/component/project/project-detail-view.tsx */}
 <Card>
   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
     <CardTitle className="text-lg">
@@ -480,7 +480,7 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 タスクカードは 0 件のときの表示も入れておくのがポイントです。
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
+{/* filepath: src/component/project/project-detail-view.tsx */}
 <Card>
   <CardHeader className="space-y-0 pb-4">
     <div className="flex items-center gap-2">
@@ -545,7 +545,7 @@ Day 11 で作った mutation と handler があれば、
 `ProjectDetailView` 側では「どちらを呼ぶか」は判断せず、現在状態だけを親へ渡します。
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
+{/* filepath: src/component/project/project-detail-view.tsx */}
 <Button
   variant="outline"
   onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
@@ -639,7 +639,7 @@ const handleRemoveMember = (userId: string) => {
 この関数は削除そのものを行いません。誰を消すのかを `removeMemberTargetId` に覚えて、ダイアログを開くところまでです。実際に消すのは、次に置く `DeleteConfirmDialog` の `onConfirm` の中です。ここで即座に mutation を呼ぶ形にすると、押し間違いがそのままメンバーの削除になります。取り消せない操作では「対象を覚える」と「実行する」を2段に分ける、という形を覚えてください。`ProjectDetailView` 側が `onRemoveMember` を呼ぶだけで済んでいるのも、この2段を親が引き受けているからです。
 
 ```tsx
-// filepath: src/app/project/page.tsx
+{/* filepath: src/app/project/page.tsx */}
 <DeleteConfirmDialog
   open={removeMemberDialogOpen}
   onOpenChange={setRemoveMemberDialogOpen}

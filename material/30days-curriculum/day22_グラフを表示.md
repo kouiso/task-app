@@ -307,7 +307,7 @@ Card とグラフ枠を作ります。
 **実装**:
 
 ```tsx
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Card>
   <CardHeader>
     <CardTitle>ステータス別タスク</CardTitle>
@@ -348,7 +348,7 @@ Card とグラフ枠を作ります。
 以下を `<PieChart>` の先頭に追加します。
 
 ```tsx
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Pie
   data={statusData}
   dataKey="value"
@@ -454,7 +454,7 @@ const priorityData =
 Card 枠と `Pie` の設定です。
 
 ```tsx
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Card>
   <CardHeader>
     <CardTitle>優先度別タスク</CardTitle>

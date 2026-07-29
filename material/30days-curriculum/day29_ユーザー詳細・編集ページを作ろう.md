@@ -801,7 +801,7 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 右カラムに「参加プロジェクト」カードを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
+{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
 {/* 参加プロジェクト一覧（バッジ形式） */}
 <Card>
   <CardHeader>
@@ -1420,7 +1420,7 @@ import { isUserRole, USER_ROLE_LABELS }
 `canManageAccount` が `true` の場合だけ表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+{/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
 {canManageAccount && (
   <>
 ```

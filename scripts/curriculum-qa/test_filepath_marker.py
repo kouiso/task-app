@@ -11,10 +11,17 @@
 """
 
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from curriculum_blocks import FILEPATH, filepath_value  # noqa: E402
+from curriculum_blocks import (  # noqa: E402
+    FILEPATH,
+    filepath_value,
+    has_filepath_marker,
+    iter_blocks,
+)
+from check_procedure_order import ROUTER_FILE  # noqa: E402
 
 
 CASES = [
@@ -31,7 +38,50 @@ NOT_MARKERS = [
     "const filepath = 'src/app/page.tsx';",
     "{/* ナビゲーション */}",
     "// 完成版: 送信ボタン",
+    # 閉じの `*/}` が無い。貼ると構文エラーになるので、目印として数えてはいけない。
+    "{/* filepath: src/app/page.tsx",
 ]
+
+MARKDOWN = """# 見出し
+
+```tsx
+{/* filepath: src/app/login/page.tsx */}
+<form>
+  <button type="submit">ログイン</button>
+</form>
+```
+
+```ts
+{/* filepath: src/server/api/routers/task.ts */}
+export const taskRouter = createTRPCRouter({});
+```
+"""
+
+
+def check_extraction() -> list[str]:
+    """抽出と収集の実経路でも、JSX の書き方の目印が効くことを確かめる。"""
+    fails = []
+    with tempfile.TemporaryDirectory() as d:
+        source = str(Path(d) / "day13_タスク一覧画面.md")
+        blocks = list(iter_blocks(MARKDOWN, source))
+
+    targets = [b.target for b in blocks]
+    if targets != ["src/app/login/page.tsx", "src/server/api/routers/task.ts"]:
+        fails.append(f"❌ iter_blocks が貼り先を取れていない: {targets}")
+
+    if blocks and any("filepath:" in line for line in blocks[0].lines):
+        fails.append("❌ iter_blocks が目印の行を写経対象へ混ぜている")
+
+    router = ROUTER_FILE.match("{/* filepath: src/server/api/routers/task.ts */}")
+    if router is None or router.group(1) != "task":
+        fails.append("❌ ROUTER_FILE が JSX の書き方の目印を読めていない")
+
+    for code, want in (("{/* filepath: src/app/page.tsx */}\n<div />", True),
+                       ("{/* filepath: src/app/page.tsx\n<div />", False)):
+        if has_filepath_marker(code) is not want:
+            fails.append(f"❌ has_filepath_marker の判定が違う: {code!r}")
+
+    return fails
 
 
 def main() -> int:
@@ -53,7 +103,12 @@ def main() -> int:
             print(f"❌ 目印でない行を目印として拾った: {line!r}")
             failed += 1
 
-    total = len(CASES) + len(NOT_MARKERS)
+    extraction_fails = check_extraction()
+    for msg in extraction_fails:
+        print(msg)
+    failed += len(extraction_fails)
+
+    total = len(CASES) + len(NOT_MARKERS) + 5
     if failed:
         print(f"❌ 貼り先の目印 {total - failed}/{total} 合格")
         return 1

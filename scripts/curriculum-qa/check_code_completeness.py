@@ -8,6 +8,10 @@
 
 import sys
 import re
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from curriculum_blocks import has_filepath_marker  # noqa: E402
 
 
 def check_code_completeness(filepath: str) -> bool:
@@ -38,7 +42,7 @@ def check_code_completeness(filepath: str) -> bool:
             continue
 
         # filepath: コメントのチェック
-        if '// filepath:' in code or '# filepath:' in code or '{/* filepath:' in code:
+        if has_filepath_marker(code):
             blocks_with_filepath += 1
         else:
             # TypeScript/JavaScript/TSXのコードブロックはfilepathが必要

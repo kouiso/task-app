@@ -21,7 +21,8 @@ FILEPATH = re.compile(r"^\s*(?:\{/\*\s*filepath:\s*(.+?)\s*\*/\}|(?://|#)\s*file
 
 
 def filepath_value(match):
-    """`// filepath:` と `{/* filepath: */}` のどちらでも値を返す。"""
+    # 2つの書き方を1つの正規表現で受けるため捕獲群が2本になる。どちらが埋まるかは
+    # 書き方で決まるので、呼び出し側に群番号を意識させず値だけを返す。
     return match.group(1) if match.group(1) is not None else match.group(2)
 # 「続き」「同上」だけで、どのファイルなのかを名乗っていない値。
 # 「読み比べ用サンプル」は実ファイルを持たないと明言しているので通す。

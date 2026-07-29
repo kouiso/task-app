@@ -518,7 +518,7 @@ export function AppLayout({
 - [ ] ログアウト前に確認ダイアログを表示している
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（続き）
+{/* filepath: src/component/layout/app-layout.tsx（続き） */}
 
       {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
       <main className="flex-1 overflow-y-auto p-6">
@@ -1142,8 +1142,8 @@ export default function DashboardPage() {
 **残りのカードと外枠の開始**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 残りのカードと外枠の開始
+{/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+{/* 完成版: 残りのカードと外枠の開始 */}
     {
       label: 'Today',
       value: 'Day 02',
