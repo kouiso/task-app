@@ -1,1 +1,0 @@
-../../prompt/agents/go-reviewer.md
