@@ -30,13 +30,22 @@ SLASH = re.compile(r"^(\s*)//\s?(.*?)\s*$")
 # 文字の側を列挙すると `Welcome (back)` のような普通の句読点で漏れるためである。
 CODE_LINE = re.compile(
     r"[=<>{}]"
-    r"|[(,;]\s*$"
+    # オブジェクトの項目。末尾のカンマは省けるので、キーの形で見る。
+    r"|^\s*[A-Za-z_$][\w$]*\s*:"
+    # 引数や配列の要素。識別子だけの行にカンマが付く形。
+    r"|^\s*[A-Za-z_$][\w$.]*\s*,\s*$"
+    # 式が続く合図。行末のカンマやセミコロンは、文字の側にも出る（`Welcome&nbsp;`）ので見ない。
+    r"|\(\s*$"
     r"|^\s*(?:return|if|else|for|while|switch|case|default|const|let|var|function"
     r"|export|import|await|async|try|catch|finally|throw|new|delete|typeof)\b"
     r"|^\s*[)\]}]"
 )
-OPEN_TAG = re.compile(r"<([A-Za-z][\w.]*)")
-CLOSE_TAG = re.compile(r"</([A-Za-z][\w.]*)\s*>")
+# 自分で閉じるタグは開きっぱなしにならない。数えると外側の閉じタグと
+# 対応してしまい、開いていない閉じタグを見落とす。
+OPEN_TAG = re.compile(r"<([A-Za-z][\w.]*)(?![^>]*/>)")
+SELF_CLOSING = re.compile(r"<([A-Za-z][\w.]*)[^>]*/>")
+# 断片の短縮形 `</>` も閉じタグである。名前が無いので別に拾う。
+CLOSE_TAG = re.compile(r"</([A-Za-z][\w.]*)?\s*>")
 
 
 def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
@@ -87,11 +96,16 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
                     opened: list[str] = []
                     for b in body[k:]:
                         line = lines[b]
+                        selfclosed = set(SELF_CLOSING.findall(line))
+                        if re.search(r"<>", line):
+                            opened.append("<>")
                         for name in OPEN_TAG.findall(line):
-                            opened.append(name)
+                            if name not in selfclosed:
+                                opened.append(name)
                         for name in CLOSE_TAG.findall(line):
-                            if name in opened:
-                                opened.remove(name)
+                            key = name or "<>"
+                            if key in opened:
+                                opened.remove(key)
                             else:
                                 text_child = True
                                 break
