@@ -72,6 +72,90 @@ EOF
 ```
 """
 
+BAD_TEXT_CHILD = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                Day 02 では、ここから入れる場所を足していく。
+              </p>
+            </article>
+```
+"""
+
+# 開始タグの途中。ここでは `//` が正しいコメントで、`{/* */}` を置くと構文エラーになる。
+# 実測(2026-07-29, typescript の transpile): attr-slash はエラー0、
+# attr-jsxcomment は「'...' expected.」で失敗する。
+OK_ATTRIBUTE = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                >
+                  ダッシュボードへ入る
+                </Link>
+```
+"""
+
+# 属性に渡すオブジェクトの途中。`color: "red",` は文字に見えるが JS の式の中で、
+# `//` が正しいコメントになる（codex 指摘）。
+OK_PROP_OBJECT = """```tsx
+// filepath: src/component/ui/button.tsx（同じファイルの続き）
+    color: "red",
+  }}>
+    送信
+  </Button>
+```
+"""
+
+# 閉じタグまで4行より遠い文字の断片。窓で見ていると取り落とす（codex 指摘）。
+BAD_FAR_CLOSING = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                一行目のテキスト
+                二行目のテキスト
+                三行目のテキスト
+                四行目のテキスト
+              </p>
+```
+"""
+
+# 句読点を含む普通の文字。`(` や `)` で弾いていると取り落とす（codex 指摘）。
+BAD_PUNCTUATED_TEXT = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                Welcome (back)
+              </h1>
+```
+"""
+
+# 末尾がセミコロンの文字（HTML の実体参照）。行末の記号でコードと決めつけると漏れる。
+BAD_ENTITY_TEXT = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                Welcome&nbsp;
+              </h1>
+```
+"""
+
+# 末尾にカンマが無いオブジェクトの項目。キーの形で見ないと文字と誤認する。
+OK_PROP_NO_COMMA = """```tsx
+// filepath: src/component/ui/button.tsx（同じファイルの続き）
+    color: "red"
+  }}>
+    送信
+  </Button>
+```
+"""
+
+# 断片の短縮形で閉じる。`</>` を拾えないと見落とす。
+BAD_FRAGMENT_CLOSE = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                今日のまとめ
+              </>
+```
+"""
+
+# 自分で閉じるタグが外側と同じ名前。開きとして数えると外側の閉じタグと対応してしまう。
+BAD_SELF_CLOSING_SAME_NAME = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                今日のまとめ
+                <Panel />
+              </Panel>
+```
+"""
+
 CASES = [
     ("tsx の JSX 断片", BAD_TSX, 1),
     ("typescript 表記の JSX 断片", BAD_TYPESCRIPT, 2),
@@ -80,6 +164,15 @@ CASES = [
     ("ファイル全体", OK_WHOLE_FILE, 0),
     ("既に JSX の書き方", OK_JSX_COMMENT, 0),
     ("bash", OK_BASH, 0),
+    ("文字で始まる続きの断片", BAD_TEXT_CHILD, 1),
+    ("開始タグの途中", OK_ATTRIBUTE, 0),
+    ("属性に渡すオブジェクトの途中", OK_PROP_OBJECT, 0),
+    ("閉じタグが遠い文字の断片", BAD_FAR_CLOSING, 1),
+    ("句読点を含む文字の断片", BAD_PUNCTUATED_TEXT, 1),
+    ("実体参照で終わる文字", BAD_ENTITY_TEXT, 1),
+    ("末尾カンマ無しの項目", OK_PROP_NO_COMMA, 0),
+    ("断片の短縮形で閉じる", BAD_FRAGMENT_CLOSE, 1),
+    ("同名の自己終了タグを含む", BAD_SELF_CLOSING_SAME_NAME, 1),
 ]
 
 
