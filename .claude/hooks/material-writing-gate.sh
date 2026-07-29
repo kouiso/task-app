@@ -11,6 +11,9 @@
 # Bash も見る理由: Write/Edit だけを塞いでも、python3 や printf で同じファイルへ書ける。
 #   実際にこのリポジトリでは python3 のワンライナーで教材を一括置換した実績がある。
 #   塞いだつもりで一番使う抜け道が空いている状態は、無いより悪い。
+#   書き込み手段を列挙する方式は取らない。node -e や自作スクリプトのように名前を
+#   挙げきれない経路があり、列挙は必ず漏れる。教材のパスに触れるコマンドは既定で
+#   拒否し、明らかに読むだけの入り口だけを通す。
 #
 # 判定材料は material-writing-skill-marker.sh がセッションIDごとに置く印だけ。
 # 印が無ければ deny する。逃げ道は「スキルを読む」1つだけなので、詰まることはない。
@@ -64,12 +67,23 @@ case "$TOOL" in
   Bash)
     CMD="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
     [[ -n "$CMD" ]] || exit 0
-    # 読み取りだけの経路は通す。書き込みの語が無ければ素通り。
-    # ここは網羅ではなく、実際に使われる書き込み手段を塞ぐことを狙う。
-    if printf '%s' "$CMD" | grep -qE '(>|>>|\bsed\b[^|]*-i|\btee\b|\bcp\b|\bmv\b|\bpython3?\b|\bperl\b|\bawk\b[^|]*>|\bcat\b[^|]*>)'; then
-      if printf '%s' "$CMD" | grep -qE '(^|[^A-Za-z0-9_/.-])(\./)?material/[^ ]*\.md|'"$ROOT"'/material/[^ ]*\.md|material/30days-curriculum'; then
-        TARGETED=1
+    # 教材のパスに触れていなければ関係ない。
+    if printf '%s' "$CMD" | grep -qE '(^|[^A-Za-z0-9_/.-])(\./)?material/[^ "'"'"']*\.md|'"$ROOT"'/material/[^ "'"'"']*\.md|material/30days-curriculum'; then
+      # 書き込みの手段を列挙する方式はやめた。node -e や自作スクリプトのように
+      # 名前を挙げきれない経路がいくらでもあり、列挙は必ず漏れる（codex 指摘）。
+      # 既定を拒否にして、明らかに読むだけの入り口だけを通す。
+      # 誤って止めても逃げ道は「スキルを読む」1つなので、漏れるより厳しい側へ倒す。
+      FIRST="$(printf '%s' "$CMD" | sed -E 's/^[[:space:]]*//; s/^\(//; s/^[A-Za-z_][A-Za-z0-9_]*=[^ ]*[[:space:]]+//' | awk '{print $1}' | xargs -n1 basename 2>/dev/null || true)"
+      READONLY=0
+      case "$FIRST" in
+        grep|rg|egrep|fgrep|cat|head|tail|less|more|wc|ls|find|file|stat|diff|git|md5|md5sum|shasum|sha256sum|awk|cut|sort|uniq|nl|column)
+          READONLY=1 ;;
+      esac
+      # リダイレクトがあれば読むだけではない。sed の上書きも同じ。
+      if printf '%s' "$CMD" | grep -qE '>|\btee\b|\bsed\b[^|]*-i'; then
+        READONLY=0
       fi
+      [[ "$READONLY" -eq 1 ]] || TARGETED=1
     fi
     ;;
   *)
