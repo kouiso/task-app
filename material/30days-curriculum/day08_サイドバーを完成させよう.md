@@ -618,7 +618,11 @@ AppLayout がサイドバーと認証チェックを担当し、
 npm run dev
 ```
 
-ブラウザで `http://localhost:3000` を開きます。
+ここで一度ログアウトした状態に戻します。Day 07 でログインしたときの Cookie（ブラウザに保存された合言葉）は7日間有効なので、続けて進めた人はまだログイン済みです。そのままだと手順1のリダイレクトが起きません。
+
+ブラウザのシークレットウィンドウ（Cookie を持ち込まない別ウィンドウ）を開いてください。Chrome なら Mac は `Command + Shift + N`、Windows は `Ctrl + Shift + N` です。以降の確認はこのウィンドウで行います。
+
+シークレットウィンドウで `http://localhost:3000` を開きます。
 
 ![ログイン画面](./screenshots/login.png)
 
@@ -1307,8 +1311,8 @@ export default function DashboardPage() {
 
 ## 今日のまとめ
 
-- [ ] `src/app/providers.tsx` — tRPC Provider を作った
-- [ ] `src/app/layout.tsx` — Provider を組み込んだ
+- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider の中身を確認した
+- [ ] `src/app/layout.tsx` — `<Providers>` が組み込まれていることを確認した
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー付きレイアウトを作った
 - [ ] `src/app/dashboard/page.tsx` — AppLayout で囲んだ
 - [ ] ログイン → サイドバー表示 → ログアウトの一連の流れを確認した

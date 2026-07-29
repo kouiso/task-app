@@ -587,17 +587,17 @@ const projectMemberSchema = z.object({
 
 **実装**:
 
-`ProjectDetailView` コンポーネントのインポートを追加します。
+`ProjectDetailView` のインポートは Day 11 Step 9 で追加済みです。ここでは追加せず、次の行が `page.tsx` の先頭にあることを確認するだけにしてください。同じ名前をもう一度書くとエラーになります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectDetailViewのインポートを追加
+// Day 11 Step 9 で追加済み。書き足さず、在ることを確認する
 import { ProjectDetailView } from
   '@/component/project/project-detail-view';
 ```
 
 **確認ポイント**:
-- `@/component/project/project-detail-view` からインポートしている
+- `@/component/project/project-detail-view` からのインポートが1行だけある
 
 > プロジェクト詳細はダイアログではなく、URLパラメータ（`?projectId=xxx`）によるページ内表示です。`useSearchParams` で URLから選択IDを取得します。
 
@@ -805,14 +805,15 @@ const canArchiveProject = currentMemberRole
 
 権限判定を `ProjectDetailView` の内部ではなく `page.tsx` で行うのは、サーバーと同じ `hasPermission` を使って「見せてよいボタンか」を1か所で決めるためです。コンポーネントは受け取った `boolean` に従って表示を切り替えるだけになり、権限ロジックが画面のあちこちに散らばりません。
 
-`ProjectDetailView` は Day 11 の Step 9 で作った
-URL ルーティングの分岐内に配置します。
-`projectIdParam && selectedProject` が `true` のとき
-表示される構造にします。
+`<ProjectDetailView ... />` のタグは、Day 11 Step 9 で
+`projectIdParam && selectedProject` の分岐内にすでに置いてあります。
+新しく貼り足すのではなく、`<ProjectDetailView` から `/>` までを消して、
+次の形に書き換えてください。`onUpdateMemberRole`、`canManageMembers`、
+`canArchive` の3つが今日の追加分です。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// Day 11 Step 9 の分岐内に配置する
+// Day 11 Step 9 の分岐内にあるタグを、この形に書き換える
 <ProjectDetailView
   projectDetail={projectDetail}
   onBack={handleDetailClose}
@@ -829,6 +830,7 @@ URL ルーティングの分岐内に配置します。
 
 **確認ポイント**:
 - `ProjectDetailView` に8つのpropsを渡している
+- `<ProjectDetailView` で始まるタグがファイル内に1つだけである
 - URLパラメータがある場合のみ表示される
 
 > メンバー一覧の表示は `ProjectDetailView` の内部で行われます。`page.tsx` はデータ取得・権限計算・イベントハンドラーの定義を担当し、UIの詳細は独立コンポーネントに任せます。`handleUpdateMemberRole` は上で定義済みなので、この描画で型エラーは出ません。
@@ -909,7 +911,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/component/ui/dialog';
-import { Label } from '@/component/ui/label';
 import {
   Select,
   SelectContent,
@@ -919,9 +920,12 @@ import {
 } from '@/component/ui/select';
 ```
 
+`Label` はこのダイアログでも使いますが、Day 09 でアーカイブ切り替えのスイッチ用にインポート済みです。もう一度書かず、そのまま使ってください。
+
 **確認ポイント**:
 - `@/component/ui/dialog` から Dialog 系コンポーネントを一括インポートしている
-- `Label` と `Select` 系も同じく `@/component/ui/` から取得している
+- `Select` 系も同じく `@/component/ui/` から取得している
+- `@/component/ui/label` からのインポートが1行だけある
 
 メンバー追加ダイアログは `ProjectDetailView` の分岐内に配置します。まずダイアログのヘッダー部分です。
 
@@ -1230,11 +1234,11 @@ const handleRemoveMember = (
 - Step 2 の仮実装（`console.log` の版）が削除されている
 - 直接 `mutate` を呼ばず、まず確認ダイアログを開いている
 
-JSX 内の `</div>` 閉じタグの後、`</AppLayout>` の直前（`AppLayout` 内の一番最後）に `DeleteConfirmDialog` を配置します。
+`if (projectIdParam && selectedProject)` の分岐の中に `DeleteConfirmDialog` を配置します。Step 4 で置いたメンバー追加ダイアログの `</Dialog>` の直後、この分岐の `</AppLayout>` の直前です。一覧側の `</AppLayout>` の直前には Day 11 のプロジェクト削除ダイアログがあるので、そちらと間違えないでください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// </div>閉じタグの後、</AppLayout>の直前に配置
+// 詳細画面の分岐内、メンバー追加ダイアログの</Dialog>の直後に配置
 <DeleteConfirmDialog
   open={removeMemberDialogOpen}
   onOpenChange={
@@ -1259,6 +1263,7 @@ JSX 内の `</div>` 閉じタグの後、`</AppLayout>` の直前（`AppLayout` 
 **確認ポイント**:
 - `onConfirm` で `selectedProject` と `removeMemberTargetId` の両方を確認している
 - `title` でメンバー削除専用のメッセージを表示している
+- 貼った場所が `if (projectIdParam && selectedProject)` の分岐の中である
 
 | `window.confirm()` | `DeleteConfirmDialog` |
 |--------------------|-----------------------|
@@ -2243,7 +2248,7 @@ import { Label } from '@/component/ui/label';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 ```
 
-Step 1 で足したのが `ProjectDetailView`、Step 4 で足したのが `Dialog` 系と `Label` です。並びがアルファベット順になっているのは、`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が並べ替えるからです。自分が書いた順番と違っていても、手で直す必要はありません。
+`ProjectDetailView` は Day 11 Step 9 で、`Label` は Day 09 で足したものです。Step 4 で足したのが `Dialog` 系です。並びがアルファベット順になっているのは、`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が並べ替えるからです。自分が書いた順番と違っていても、手で直す必要はありません。
 
 **自作コンポーネントのインポートの後半**:
 
@@ -2322,8 +2327,7 @@ Step 3 で `memberDialogOpen` の仮定義を本実装へ置き換え、`newMemb
 
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
-    // showArchived が true のとき isArchived フィルターを外して進行中・アーカイブ両方を取得する
-    isArchived: showArchived ? undefined : false,
+    isArchived: showArchived,
   });
   const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
     { projectId: selectedProject ?? '' },
@@ -2797,19 +2801,13 @@ URL に `projectId` があるときは、一覧を描かずに詳細だけを返
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
-              // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）。
-              // 総数と完了数を1回のループで同時に集計する。
-              let taskCount = 0;
-              let doneCount = 0;
-              for (const t of project.tasks ?? []) {
-                if (t.status === TASK_STATUS.CANCELLED) continue;
-                taskCount++;
-                if (t.status === TASK_STATUS.DONE) doneCount++;
-              }
+              const taskCount = project.tasks?.length ?? 0;
+              const doneCount =
+                project.tasks?.filter((t) => t.status === TASK_STATUS.DONE).length ?? 0;
 
 ```
 
-進捗の割合を出すために、タスクの総数と完了数を1回のループで数えます。キャンセル済みを母数から外しているのは、取りやめた作業まで残件として数えると進捗が実態より低く見えるからです。
+進捗の割合を出すために、タスクの総数と完了数を数えます。Day 09 で書いた形のままで、今日は数え方に手を入れていません。
 
 **プロジェクトカードの一覧**:
 

@@ -311,7 +311,7 @@ async function assertTaskAssigneeBelongsToProject(
 
 タスクを作るとき、担当者は「選択中のプロジェクトのメンバー」から選びます。全プロジェクトのメンバーを混ぜると、所属していない人を担当者に指定して送信し、サーバー側で拒否されます。この後 Step 6 で作る担当者の選択欄は `api.search.getMembersByProject` を使い、選択中のプロジェクトだけに候補を絞ります。
 
-タスク一覧の担当者フィルターには、参加中の全プロジェクトを横断する `getProjectMembers` も必要です。まだ `search` ルーターが無いので、ここで2つを新規に作ります。`search`・`quickSearch` など検索画面用の残り3手続きは、Day 20 で足します。
+タスク一覧の担当者フィルターには、参加中の全プロジェクトを横断する `getProjectMembers` を使います。このフィルター自体は Day 20 で作りますが、2つの手続きは形が似ているので、ここでまとめて書きます。まだ `search` ルーターが無いので、ここで2つを新規に作ります。`search`・`quickSearch` など検索画面用の残り3手続きは、Day 20 で足します。
 
 `src/server/api/routers/search.ts` を新規作成し、まず import を書きます。
 
@@ -371,7 +371,7 @@ export const searchRouter = createTRPCRouter({
 
 続けて、選択中のプロジェクトに絞る手続きを書きます。最初に、呼び出した人自身がそのプロジェクトのメンバーかを確認します。
 
-ここから先の「（続き）」のブロックは、`search.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+ここから先の「（続き）」のブロックは、`search.ts` の**末尾へ続けて**貼ります。いま末尾にあるのは `getProjectMembers` を閉じる `  }),` の行です。`createTRPCRouter({` を閉じる `});` はまだ書いていないので、この先の最後のブロックで1度だけ書きます。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -1312,22 +1312,20 @@ const handleCreate = () => {
 };
 ```
 
-続けて、既存の `useQuery` 群の末尾に一覧フィルター用のユーザー一覧を追加し、あわせてキャッシュ操作用の `utils` を用意します。セッションは Day 13 で取得済みなので追加しません。ダイアログの担当者候補は、TaskDialog 内で選択中のプロジェクトに絞って取得済みです。
+続けて、既存の `useQuery` 群の末尾に、キャッシュ操作用の `utils` を用意します。セッションは Day 13 で取得済みなので追加しません。ダイアログの担当者候補は、TaskDialog 内で選択中のプロジェクトに絞って取得済みです。
 
-#### 追加するAPI
+#### ここでは追加しないAPI
 
-| API | 戻り値 | 用途 |
+| API | 戻り値 | 追加しない理由 |
 |-----|-------|------|
-| `api.search.getProjectMembers` | ユーザー一覧 | タスク一覧の担当者フィルター |
-| `api.auth.getSession` | ログイン中のセッション | Day 13 で取得済み。ここでは追加しない |
+| `api.search.getProjectMembers` | ユーザー一覧 | 一覧の担当者フィルターで使う。フィルターは Day 20 で作る |
+| `api.auth.getSession` | ログイン中のセッション | Day 13 で取得済み |
 
-これらはすでに実装済みのAPIです。
+どちらもすでに実装済みですが、`page.tsx` で呼ぶのは今日ではありません。
 
 ```typescript
 // filepath: src/app/task/page.tsx
 // 既存のuseQuery群の末尾に追加
-const { data: users } =
-  api.search.getProjectMembers.useQuery();
 const utils = api.useUtils();
 ```
 
@@ -1335,10 +1333,10 @@ const utils = api.useUtils();
 ページ全体が英語のエラーで止まります。`utils` は取得したデータの控えを操作するための入口で、
 このあとの `createMutation` で使います。
 
-`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので、一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは、他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうは、送信の直前にログインが切れていないかを確かめるために使います。作成者のIDはサーバーがセッションから決めるので、画面側が送る値ではありません。
+`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので、Day 20 で作る一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは、他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうは、送信の直前にログインが切れていないかを確かめるために使います。作成者のIDはサーバーがセッションから決めるので、画面側が送る値ではありません。
 
 **確認ポイント**:
-- `users` の取得と `const utils = api.useUtils();` が追加できた
+- `const utils = api.useUtils();` が追加できた
 - `session` は増やしていない（Day 13 で書いたものをそのまま使う）
 - `npm run dev` で型エラーが出ていない
 
@@ -1422,7 +1420,13 @@ const handleSubmit =
   <Plus className="mr-2 h-4 w-4" />
   新規タスク
 </Button>
+```
 
+`TaskDialog` の貼り先はここではありません。Day 13 で置いた `TaskDetailDialog` の直後、カードのグリッドを閉じる `</div>` より後ろへ貼ります。グリッドの中に入れるとカードの並びに巻き込まれ、完成版と構造が食い違います。
+
+```typescript
+// filepath: src/app/task/page.tsx
+// TaskDetailDialog の直後、カードのグリッドの外側に追加
 <TaskDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
@@ -1437,6 +1441,7 @@ const handleSubmit =
 > フロントエンドから渡す必要はありません。
 
 **確認ポイント**:
+- 「新規タスク」ボタンが `<h1>` の直後、`TaskDialog` が `TaskDetailDialog` の直後にある
 - TaskDialogに `initialData` と `projects` が渡されている
 - `createdById` をフロントから渡していない
 
@@ -2907,12 +2912,10 @@ function TaskPageContent() {
     api.project.getAll.useQuery();
   const { data: session } =
     api.auth.getSession.useQuery();
-  const { data: users } =
-    api.search.getProjectMembers.useQuery();
   const utils = api.useUtils();
 ```
 
-`'all'` のときに `undefined` を渡すのは、その条件を使わないという合図です。サーバーの `getAll` は `if (input?.status)` で受けているので、`undefined` なら絞り込みません。`data:` の後ろで名前を付け替えているのは、4つとも `data` のままでは名前がぶつかるからです。`utils` は取得済みのデータを操作する入口で、この後の `createMutation` で使います。
+`'all'` のときに `undefined` を渡すのは、その条件を使わないという合図です。サーバーの `getAll` は `if (input?.status)` で受けているので、`undefined` なら絞り込みません。`data:` の後ろで名前を付け替えているのは、3つとも `data` のままでは名前がぶつかるからです。`utils` は取得済みのデータを操作する入口で、この後の `createMutation` で使います。
 
 **権限の判定**:
 

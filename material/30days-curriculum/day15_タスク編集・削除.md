@@ -401,7 +401,7 @@ function buildTaskFormValues(
   projects: Array<{
     id: string; name: string;
   }>,
-) {
+): TaskFormValues {
   return {
     id: initialData?.id,
     title: initialData?.title ?? '',
@@ -411,6 +411,12 @@ function buildTaskFormValues(
       ?? TASK_STATUS.TODO,
     priority: initialData?.priority
       ?? TASK_PRIORITY.MEDIUM,
+```
+
+ここまでが `buildTaskFormValues` の前半です。戻り値に `TaskFormValues` と型を書いてあるので、項目を1つ書き忘れるとこの関数の中でエラーになります。残りの項目は同じ関数の続きにあります。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
     dueDate: initialData?.dueDate ?? '',
     estimatedHours:
       initialData?.estimatedHours,
@@ -418,46 +424,66 @@ function buildTaskFormValues(
       ?? (projects[0]?.id || ''),
     assigneeId:
       initialData?.assigneeId ?? '',
+    expectedUpdatedAt:
+      initialData?.expectedUpdatedAt,
   };
 }
 ```
 
-`buildTaskFormValues` は、タスクのデータをフォームが扱える形にそろえる関数です。`initialData?.title ?? ''` のように、値が無いときの代わりを全項目に用意しています。入力欄に `undefined` を渡すと、React はその欄を「値を管理していない欄」と見なし、あとから値を入れた時点で警告を出します。空文字を初期値にしておけば、作成モードと編集モードで同じ入力欄をそのまま使い回せます。`projects[0]?.id` を既定にしているのは、プロジェクトが未選択のまま保存へ進めないようにするためです。
+`buildTaskFormValues` は、タスクのデータをフォームが扱える形にそろえる関数です。`initialData?.title ?? ''` のように、値が無いときの代わりを文字入力の項目に用意しています。`estimatedHours` と `expectedUpdatedAt` に代わりを置いていないのは、数値と日時を空文字で表せないためです。`expectedUpdatedAt` は編集画面を開いた時点の更新日時で、Step 4 の送信処理がこの値をそのまま `update` へ渡します。入力欄に `undefined` を渡すと、React はその欄を「値を管理していない欄」と見なし、あとから値を入れた時点で警告を出します。空文字を初期値にしておけば、作成モードと編集モードで同じ入力欄をそのまま使い回せます。`projects[0]?.id` を既定にしているのは、プロジェクトが未選択のまま保存へ進めないようにするためです。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// useForm の初期値と reset 同期
-const { register, handleSubmit, control,
-  reset, formState: { errors },
-} = useForm<TaskFormValues>({
-  resolver: zodResolver(taskFormSchema),
-  defaultValues:
-    buildTaskFormValues(
-      initialData,
-      projects
-    ),
-});
-
-useEffect(() => {
-  if (!open) return;
-  reset(buildTaskFormValues(
-    initialData,
-    projects
-  ));
-}, [initialData, open, projects, reset]);
+// Day 14 で書いた useForm の初期値
+  const {
+    register, handleSubmit, control,
+    watch, reset, setValue,
+    formState: { errors },
+  } = useForm<TaskFormValues>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues:
+      buildTaskFormValues(
+        initialData, projects),
+  });
 ```
 
+この下には `watch('projectId')` で選択中のプロジェクトを見張る行、`projectsRef`、担当者候補を取り直す処理が続きます。ここでは間を飛ばし、`reset` に関わる2つの `useEffect` だけを再掲します。
+
+```typescript
+// filepath: src/component/task/task-dialog.tsx
+// 同じファイルの続き。間は省略しています
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    reset(
+      buildTaskFormValues(
+        initialData, projectsRef.current),
+    );
+  }, [initialData, open, reset]);
+```
+
+この2つの `useEffect` の下には、候補一覧が遅れて届いたときに `projectId` だけを `setValue` で補う3つ目の `useEffect` があります。今日は触らないので、手元のファイルから消さないでください。
+
 > 現在の `TaskDialog` は `useForm({ defaultValues })`
-> で初期値を作り、`initialData` や `projects` が
+> で初期値を作り、`initialData` や `open` が
 > 変わった時だけ `useEffect(reset(...))` で
 > フォームを同期します。`useForm({ values })` は
 > 使っていません。
 >
-> `useEffect` の末尾にある
-> `[initialData, open, projects, reset]` が依存配列
+> 2つ目の `useEffect` の末尾にある
+> `[initialData, open, reset]` が依存配列
 > （useEffectを再実行する条件の配列）です。この中の
 > 値が変わったときだけ、`reset` でフォームを
-> 作り直します。
+> 作り直します。`projects` を依存配列へ入れないのは、
+> 候補一覧が取り直されるたびに `reset` が走り、
+> 入力途中のタイトルが消えるためです。最新の一覧は
+> 1つ目の `useEffect` が `projectsRef.current` へ
+> 写しておきます。
 
 **作成モード vs 編集モードの比較**
 

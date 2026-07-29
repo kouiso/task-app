@@ -523,7 +523,15 @@ rm .env.production.local
 # filepath: ターミナル
 # デプロイURLをブラウザで開く（macOS）
 open https://your-app-name.vercel.app
+
+# Ubuntu の場合
+xdg-open https://your-app-name.vercel.app
+
+# Windows (WSL2) の場合
+explorer.exe https://your-app-name.vercel.app
 ```
+
+うまく開かないときは、この URL をコピーして、ブラウザのアドレス欄に自分で貼っても構いません。ここでやりたいのは「その URL でアプリが見えること」の確認だけで、開き方は何でもよいからです。
 
 この `open` は自分のパソコンのブラウザを開くだけなので、「インターネット越しに届いている」ことまでは確かめてくれません。手元では開発サーバーもまだ動いていて、見た目は `localhost` のときとほとんど変わらないので見分けが付きにくいところです。外から届いているかを確かめる一番早い方法は、Wi-Fi を切ってモバイル回線にしたスマートフォンで同じ URL を開くことです。自分の家の回線を1つも通らない端末で画面が出たなら、そのアプリはもう自分のパソコンに依存していません。ここで初めて、人に URL を渡せる状態になります。
 

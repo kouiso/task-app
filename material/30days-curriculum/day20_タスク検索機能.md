@@ -70,6 +70,8 @@ flowchart TD
 | `src/server/api/routers/search.ts` | search ルーターの残り3手続きを追記し、完成版の並びに揃える |
 | `src/app/search/page.tsx` | 検索ページ本体（新規作成） |
 | `src/app/search/loading.tsx` | ローディング画面（新規作成） |
+| `src/component/layout/app-layout.tsx` | サイドバーへ検索の導線を足す |
+| `src/app/task/page.tsx` | 検索からの編集リンクを受け取る |
 
 ### 新しく学ぶ概念
 
@@ -1008,9 +1010,12 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
 
 `{...form.register('keyword')}` は、この入力欄をフォームの `keyword` へ結び付ける書き方です。Day 14 と同じで、入力された値の保持も変更の受け取りも react-hook-form の側が引き受けます。`onKeyDown` を別に足したのは、Enter を押したときにボタンと同じ `handleSearch` を呼びたいからです。この行が無いと、キーワードを打ってEnterを押しても何も起きず、読者は「検索が壊れている」と感じます。
 
+ここで呼んでいる `handleSearch` は、あとの Step 6 で定義します。
+定義するまでこの画面は表示できないので、Enter キーの動きを確かめるのは Step 6 のあとです。
+
 **確認ポイント**:
 - `register('keyword')` でフォームに登録している
-- Enter キーで検索が実行される
+- `onKeyDown` の中で `handleSearch()` を呼ぶ行を書けた
 
 > `Search` アイコンを `absolute` で左に配置し、Input の `pl-8` で左パディングを確保します。これでアイコン付き入力欄になります。
 
@@ -1981,13 +1986,17 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 ## 完成コード全体
 
-今日は3つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は5つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/server/api/routers/search.ts` | 検索・簡易検索・プロジェクト一覧を返す手続き | Step 0 |
 | `src/app/search/loading.tsx` | 検索ページへ移動している間の仮表示 | Step 0 |
 | `src/app/search/page.tsx` | 検索フォームと検索結果の画面 | Step 2〜Step 9 |
+| `src/component/layout/app-layout.tsx` | サイドバーの検索導線 | Step 2 |
+| `src/app/task/page.tsx` | 検索からの編集リンクの受け取り | Step 8 |
+
+`app-layout.tsx` と `task/page.tsx` は今日の分だけを載せます。それ以外の部分に今日は触っていないので、手元のファイルをそのまま残してください。
 
 ### `src/server/api/routers/search.ts`
 
@@ -3422,6 +3431,165 @@ export default function SearchPage() {
 `SearchPageContent` を別の関数へ分けているのは、この決まりを守るためです。1つの関数に全部書くと、包む相手がいなくなります。
 
 > **完成形の参考コード**: 完成版には `src/app/search/page.tsx` と `src/server/api/routers/search.ts` があります。ただし今日書いたコードと1文字まで同じではありません。画面側の違いは3つです。1つ目は、完成版が検索ボタンを持たず、条件を変えた時点で検索が走る形になっている点です。2つ目は、キーワードだけ 300 ミリ秒待ってから条件に渡す `debouncedKeyword` がある点です。3つ目は、URL とフォームの行き来を `src/lib/search-filters.ts` の関数へ切り出している点です。ルーター側は今日のコードと同じ並びで、違いはありません。この3か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは、完成版がどう書かれているかの説明として読んでください）。
+
+### `src/component/layout/app-layout.tsx`
+
+**アイコンのインポート**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: アイコンのインポート
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Search,
+} from 'lucide-react';
+```
+
+今日足したのは `Search` の1行です。Day 13 までに入れた4つのアイコンはそのまま残します。
+
+**サイドバーのメニュー項目**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: サイドバーのメニュー項目
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+```
+
+ここまでの4項目は Day 13 までに書いたものです。今日は1文字も変えないので、手元のコードをそのまま残してください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx（同じ配列の続き）
+// 完成版: 今日足したメニュー項目
+  {
+    text: '検索',
+    icon: <Search className="h-5 w-5" />,
+    path: '/search',
+  },
+];
+```
+
+今日足したのは末尾の「検索」だけです。`path: '/search'` が `src/app/search/page.tsx` の置き場所と対応します。
+
+### `src/app/task/page.tsx`
+
+**編集リンクの読み取り**:
+
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: 編集リンクの読み取り
+const taskIdParam = searchParams.get('taskId');
+const isEditLink =
+  searchParams.get('edit') === 'true';
+const { data: linkedTask } =
+  api.task.getById.useQuery(
+    { id: taskIdParam ?? '' },
+    { enabled: !!taskIdParam && isEditLink },
+  );
+
+useEffect(() => {
+  if (taskIdParam && !isEditLink) {
+    setSelectedTask(taskIdParam);
+    setDetailOpen(true);
+  }
+}, [isEditLink, taskIdParam]);
+```
+
+Day 13 で書いた `taskIdParam` とその下の `useEffect` を、今日この形へ置き換えました。
+
+**編集ダイアログを開く処理**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 編集ダイアログを開く処理
+useEffect(() => {
+  if (!isEditLink || !linkedTask) return;
+  setEditingTask(
+    taskToFormData(linkedTask),
+  );
+  setDetailOpen(false);
+  setDialogOpen(true);
+}, [isEditLink, linkedTask]);
+```
+
+上の `useEffect` の下へ今日足したものです。編集リンクで来たときだけ、詳細を閉じて編集を開きます。
+
+**ダイアログを閉じる処理**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: ダイアログを閉じる処理
+const closeTaskDialog = () => {
+  setDialogOpen(false);
+  setEditingTask(undefined);
+  if (!isEditLink) return;
+
+  const params = new URLSearchParams(
+    searchParams.toString(),
+  );
+  params.delete('taskId');
+  params.delete('edit');
+  const query = params.toString();
+  router.replace(
+    query ? `/task?${query}` : '/task',
+  );
+};
+```
+
+`createMutation` / `updateMutation` より前へ今日足した関数です。
+
+**呼び出し側の差し替え**:
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 呼び出し側の差し替え
+const createMutation =
+  api.task.create.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+      closeTaskDialog();
+    },
+  });
+```
+
+保存できたあとの後片付けを `closeTaskDialog` の1か所へ寄せたので、閉じ方が増えても直す場所は1つで済みます。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 編集ダイアログの onClose
+<TaskDialog
+  open={dialogOpen}
+  onClose={closeTaskDialog}
+  onSubmit={handleSubmit}
+  initialData={editingTask}
+  projects={projects ?? []}
+/>
+```
+
+Day 15 で書いた `setDialogOpen(false)` を `closeTaskDialog()` へ替えた箇所です。`updateMutation` の `onSuccess` にある `setDialogOpen(false)` も `closeTaskDialog()` へ替えます。
 
 ## 今日のまとめ
 
