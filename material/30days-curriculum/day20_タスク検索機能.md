@@ -3526,6 +3526,11 @@ const menuItems: MenuItem[] = [
 ```typescript
 // filepath: src/app/task/page.tsx
 // 完成版: 編集リンクの読み取り
+import { useRouter, useSearchParams }
+  from 'next/navigation';
+
+const searchParams = useSearchParams();
+const router = useRouter();
 const taskIdParam = searchParams.get('taskId');
 const isEditLink =
   searchParams.get('edit') === 'true';

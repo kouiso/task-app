@@ -829,6 +829,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
+import { Users } from 'lucide-react';
 import { USER_ROLE }
   from '@/lib/constant/roles';
 ```
@@ -848,9 +849,14 @@ Day 08 のデスクトップ用のナビゲーション内で、
   <li>
     <Link
       href="/user"
-      className="flex items-center gap-3
-        rounded-md px-3 py-2 text-sm"
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+        pathname === '/user'
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+      )}
     >
+      <Users className="h-5 w-5" />
       ユーザー管理
     </Link>
   </li>
@@ -1315,9 +1321,14 @@ import { USER_ROLE } from '@/lib/constant/roles';
   <li>
     <Link
       href="/user"
-      className="flex items-center gap-3
-        rounded-md px-3 py-2 text-sm"
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+        pathname === '/user'
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+      )}
     >
+      <Users className="h-5 w-5" />
       ユーザー管理
     </Link>
   </li>
