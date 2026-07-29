@@ -231,6 +231,7 @@ SELF_TESTS=(
   test_check_zip_reference
   test_check_unused_image
   test_check_jsx_marker
+  test_check_scaffold_alignment
   test_check_why
   test_filepath_marker
 )
