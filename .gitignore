@@ -133,3 +133,6 @@ task-app-curriculum-*.zip
 
 # Claude skill replay stimuli (local work logs, not versioned)
 .claude/skills/bad/
+
+# 教材編集ゲートの緊急停止スイッチ（各自の手元だけで使う）
+.claude/disable-material-writing-gate
