@@ -91,6 +91,36 @@ OK_ATTRIBUTE = """```tsx
 ```
 """
 
+# 属性に渡すオブジェクトの途中。`color: "red",` は文字に見えるが JS の式の中で、
+# `//` が正しいコメントになる（codex 指摘）。
+OK_PROP_OBJECT = """```tsx
+// filepath: src/component/ui/button.tsx（同じファイルの続き）
+    color: "red",
+  }}>
+    送信
+  </Button>
+```
+"""
+
+# 閉じタグまで4行より遠い文字の断片。窓で見ていると取り落とす（codex 指摘）。
+BAD_FAR_CLOSING = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                一行目のテキスト
+                二行目のテキスト
+                三行目のテキスト
+                四行目のテキスト
+              </p>
+```
+"""
+
+# 句読点を含む普通の文字。`(` や `)` で弾いていると取り落とす（codex 指摘）。
+BAD_PUNCTUATED_TEXT = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                Welcome (back)
+              </h1>
+```
+"""
+
 CASES = [
     ("tsx の JSX 断片", BAD_TSX, 1),
     ("typescript 表記の JSX 断片", BAD_TYPESCRIPT, 2),
@@ -101,6 +131,9 @@ CASES = [
     ("bash", OK_BASH, 0),
     ("文字で始まる続きの断片", BAD_TEXT_CHILD, 1),
     ("開始タグの途中", OK_ATTRIBUTE, 0),
+    ("属性に渡すオブジェクトの途中", OK_PROP_OBJECT, 0),
+    ("閉じタグが遠い文字の断片", BAD_FAR_CLOSING, 1),
+    ("句読点を含む文字の断片", BAD_PUNCTUATED_TEXT, 1),
 ]
 
 
