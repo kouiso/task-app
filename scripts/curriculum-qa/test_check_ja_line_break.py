@@ -196,6 +196,25 @@ OK_LINE_COMMENT = """```tsx
 """
 
 
+# 情報文字列つきの囲い。開始と認めないと、閉じの ``` を開始と読み違えて対応がずれる。
+BAD_INFO_STRING = """```tsx title="src/app/page.tsx"
+<p>
+  プロジェクトの進捗と
+  タスクの状況を確認できます。
+</p>
+```
+"""
+
+# テンプレート文字列の中の改行は、書いたとおりに残る。JSX の畳み込みは起きない。
+OK_TEMPLATE_LITERAL = """```typescript
+const message = `
+日本語の
+改行を保ちます。
+`;
+```
+"""
+
+
 CASES = [
     ("tsx の途中改行", BAD_SPLIT, 1),
     ("typescript 表記の途中改行", BAD_TYPESCRIPT, 1),
@@ -203,6 +222,8 @@ CASES = [
     ("開きタグと同じ行の前半", BAD_INLINE_TAG, 1),
     ("逆クォートとハイフンを含む文", BAD_BACKTICK, 1),
     ("スラッシュを含む画面の文", BAD_SLASH, 1),
+    ("情報文字列つきの囲い", BAD_INFO_STRING, 1),
+    ("テンプレート文字列", OK_TEMPLATE_LITERAL, 0),
     ("閉じかっこで終わる行", BAD_CLOSING_BRACKET, 1),
     ("空行を挟んだ折り返し", BAD_BLANK_BETWEEN, 1),
     ("行コメント", OK_LINE_COMMENT, 0),

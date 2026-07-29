@@ -23,7 +23,9 @@ from pathlib import Path
 
 # JSX を書きうる言語表記。ここに無い表記（bash, json 等）は最初から対象外。
 JSX_LANGS = {"tsx", "jsx", "typescript", "javascript", "ts", "js"}
-FENCE = re.compile(r"^(\s*)(`{3,})(\w*)\s*$")
+# 情報文字列（```tsx title="x"）付きの囲いも開始として認める。認めないと、
+# その閉じの ``` を開始と読み違えて、以降の対応が1つずつずれる。
+FENCE = re.compile(r"^(\s*)(`{3,})(\w*)[^`]*$")
 SLASH = re.compile(r"^(\s*)//\s?(.*?)\s*$")
 # コードの行。JSX の記号を含むか、式の途中で終わるか、JS の語で始まるもの。
 # ここに当たらない行だけを「画面に出る文字」とみなす。数え方を反転させているのは、
@@ -52,7 +54,7 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
     hits: list[tuple[str, int, str]] = []
     scanned = 0
 
-    for path in sorted(root.glob("*.md")):
+    for path in sorted(root.rglob("*.md")):
         lines = path.read_text(encoding="utf-8").split("\n")
         i = 0
         while i < len(lines):

@@ -21,7 +21,9 @@ import sys
 from pathlib import Path
 
 JSX_LANGS = {"tsx", "jsx", "typescript", "javascript", "ts", "js"}
-FENCE = re.compile(r"^(\s*)(`{3,})(\w*)\s*$")
+# 情報文字列（```tsx title="x"）付きの囲いも開始として認める。認めないと、
+# その閉じの ``` を開始と読み違えて、以降の対応が1つずつずれる。
+FENCE = re.compile(r"^(\s*)(`{3,})(\w*)[^`]*$")
 # 画面に出る文字の行かどうか。日本語を含み、かつコードにしか出ない記号を含まない行に限る。
 #
 # 「ASCII を1つも含まない」で絞ると、半角数字を含む文を丸ごと取り落とす。
@@ -67,7 +69,7 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
     hits: list[tuple[str, int, str, str]] = []
     scanned = 0
 
-    for path in sorted(root.glob("*.md")):
+    for path in sorted(root.rglob("*.md")):
         lines = path.read_text(encoding="utf-8").split("\n")
         i = 0
         while i < len(lines):
@@ -84,7 +86,12 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
                 body.append(j)
                 j += 1
 
-            if lang in JSX_LANGS:
+            # テンプレート文字列や複数行コメントの中の日本語を、JSX の子要素と
+            # 取り違えないようにする。要素が1つも無いブロックは対象外。
+            has_element = any(
+                re.match(r"^\s*</?[A-Za-z]", lines[b]) for b in body
+            )
+            if lang in JSX_LANGS and has_element:
                 scanned += 1
                 for k in range(len(body) - 1):
                     nk = k + 1
