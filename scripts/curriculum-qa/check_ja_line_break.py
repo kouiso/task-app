@@ -38,11 +38,16 @@ TAG = re.compile(r"<[^<>]*>")
 EXPR = re.compile(r"\{[^{}]*\}")
 # 取り除いたあとに残ってはいけない記号。式・呼び出し・文字列・コメントの目印だけを挙げる。
 # 逆クォート・ハイフン・句点は画面に出る文にも普通に現れるので、ここには入れない。
-CODE_CHAR = re.compile(r"""[=;()'"/:,$|&<>{}\[\]\\_]""")
+CODE_CHAR = re.compile(r"""[=;()'":,$|&<>{}\[\]\\_]""")
+# スラッシュは `/dashboard` のように画面に出る文へ普通に現れるので、
+# 記号そのものでは弾かない。代わりにコメントの形だけを外す。
+COMMENT = re.compile(r"^\s*(//|/\*|\*)")
 # 文の切れ目。ここで終わっていれば、次の行は別の文なので折り返しではない。
 # 読点（、）と中黒（・）は文を終わらせない。「一つ目、」の次の行は同じ文の続きで、
 # 画面では「一つ目、 二つ目」と空白が入る。だから切れ目に数えない。
-SENTENCE_END = re.compile(r"[。！？」』）]$")
+# 閉じかっこ（」』）) は文を終わらせない。「管理者」の次の行が
+# 「を選択してください。」なら同じ文の続きで、画面では空白が入る。
+SENTENCE_END = re.compile(r"[。！？]$")
 
 
 def screen_text(line: str) -> str:
@@ -50,8 +55,10 @@ def screen_text(line: str) -> str:
 
     画面の文でなければ空文字を返す。
     """
+    if COMMENT.match(line.strip()):
+        return ""
     text = EXPR.sub("", TAG.sub("", line)).strip()
-    if not JA.search(text) or CODE_CHAR.search(text):
+    if not JA.search(text) or CODE_CHAR.search(text) or "*/" in text:
         return ""
     return text
 
@@ -80,8 +87,13 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
             if lang in JSX_LANGS:
                 scanned += 1
                 for k in range(len(body) - 1):
+                    nk = k + 1
+                    while nk < len(body) and not lines[body[nk]].strip():
+                        nk += 1
+                    if nk >= len(body):
+                        break
                     cur_raw = lines[body[k]].rstrip()
-                    nxt_raw = lines[body[k + 1]].lstrip()
+                    nxt_raw = lines[body[nk]].lstrip()
                     # 行の終わりで要素が閉じている、または次の行が要素で始まるなら、
                     # 2つは別の要素であって1つの文の折り返しではない。
                     # 例: <TableHead>ユーザー</TableHead> と <TableHead>メール…</TableHead>。
