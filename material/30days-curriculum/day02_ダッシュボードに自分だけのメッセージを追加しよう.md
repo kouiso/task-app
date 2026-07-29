@@ -229,8 +229,7 @@ export default function DashboardPage() {
                 今日の狙い
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                ただの見出しではなく、
-                開いた瞬間に「これは自分の画面や」と分かるメッセージを置く。
+                ただの見出しではなく、開いた瞬間に「これは自分の画面や」と分かるメッセージを置く。
               </p>
             </article>
 
@@ -432,8 +431,7 @@ export default function DashboardPage() {
                 時間帯で変わる理由
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                同じダッシュボードでも、
-                開く時間でひと言の空気が変わると、画面に体温が出る。
+                同じダッシュボードでも、開く時間でひと言の空気が変わると、画面に体温が出る。
               </p>
             </article>
 
@@ -442,8 +440,7 @@ export default function DashboardPage() {
                 今日の学び
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                値を並べるだけでなく、
-                関数にして意味を持たせると読みやすさが一段上がる。
+                値を並べるだけでなく、関数にして意味を持たせると読みやすさが一段上がる。
               </p>
             </article>
 ```
@@ -621,8 +618,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
                 を意識して進める。
-                ただ文字を置くのではなくて、
-                ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
 ```
 
 `<h2>` に `max-w-4xl` が増えているのが Step 2 との違いです。あいさつの文は名前と集中テーマを含むので長くなりやすく、幅を決めずに置くと画面の端まで1行で伸びます。上限を決めておけば、長い文でも決まった幅で折り返します。
@@ -670,8 +666,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
                 今日のワンフレーズ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                自分の名前が入るだけでも、
-                ダッシュボードは急に「使う画面」に変わる。
+                自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
               </p>
             </article>
 
@@ -680,8 +675,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
                 ここで増えた価値
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                画面の主役が明確になって、
-                次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
               </p>
             </article>
 
@@ -696,8 +690,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
                 次につながる視点
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 ではこの変化を失わないように、
-                ちゃんと履歴として残していく段階へ進む。
+                Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
               </p>
             </article>
           </aside>
@@ -900,8 +893,7 @@ export default function DashboardPage() {
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
                 を意識して進める。
-                ただ文字を置くのではなくて、
-                ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -943,8 +935,7 @@ export default function DashboardPage() {
                 今日のワンフレーズ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                自分の名前が入るだけでも、
-                ダッシュボードは急に「使う画面」に変わる。
+                自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
               </p>
             </article>
 
@@ -961,8 +952,7 @@ export default function DashboardPage() {
 ```tsx
               {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                画面の主役が明確になって、
-                次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
               </p>
             </article>
 
@@ -971,8 +961,7 @@ export default function DashboardPage() {
                 次につながる視点
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 ではこの変化を失わないように、
-                ちゃんと履歴として残していく段階へ進む。
+                Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
               </p>
             </article>
           </aside>
@@ -1111,8 +1100,7 @@ export default function DashboardPage() {
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
                 を意識して進める。
-                ただ文字を置くのではなくて、
-                ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
@@ -1162,8 +1150,7 @@ export default function DashboardPage() {
                 今日のワンフレーズ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                自分の名前が入るだけでも、
-                ダッシュボードは急に「使う画面」に変わる。
+                自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
               </p>
             </article>
 
@@ -1172,8 +1159,7 @@ export default function DashboardPage() {
                 ここで増えた価値
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                画面の主役が明確になって、
-                次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
               </p>
             </article>
 
@@ -1190,8 +1176,7 @@ export default function DashboardPage() {
                 次につながる視点
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 ではこの変化を失わないように、
-                ちゃんと履歴として残していく段階へ進む。
+                Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
               </p>
             </article>
           </aside>

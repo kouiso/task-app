@@ -22,10 +22,22 @@ from pathlib import Path
 
 JSX_LANGS = {"tsx", "jsx", "typescript", "javascript", "ts", "js"}
 FENCE = re.compile(r"^(\s*)(`{3,})(\w*)\s*$")
-# 画面に出る文字だけ。ASCII の記号が1つでもあればコードとみなして外す。
-SCREEN_TEXT = re.compile(r"^[ぁ-んァ-ヶ一-龥ーａ-ｚＡ-Ｚ０-９、。・「」『』（）〜]+$")
+# 画面に出る文字の行かどうか。日本語を含み、かつコードにしか出ない記号を含まない行に限る。
+#
+# 「ASCII を1つも含まない」で絞ると、半角数字を含む文を丸ごと取り落とす。
+# 実例: day25 の「8文字以上で、大文字・小文字・数字・」は、8 と 1 があるだけで
+# 検査をすり抜けていた。数字は画面に出る文にごく普通に現れるので、除外の根拠にできない。
+# 代わりに、コードにしか出ない記号の有無で分ける。
+JA = re.compile(r"[ぁ-んァ-ヶ一-龥]")
+CODE_CHAR = re.compile(r"""[<>{}=;()\[\]'"`/:,.$&|!?@#%^*\\_~+-]""")
 # 文の切れ目。ここで終わっていれば、次の行は別の文なので折り返しではない。
-SENTENCE_END = re.compile(r"[。、！？」』）]$")
+# 読点（、）と中黒（・）は文を終わらせない。「一つ目、」の次の行は同じ文の続きで、
+# 画面では「一つ目、 二つ目」と空白が入る。だから切れ目に数えない。
+SENTENCE_END = re.compile(r"[。！？」』）]$")
+
+
+def is_screen_text(line: str) -> bool:
+    return bool(JA.search(line)) and not CODE_CHAR.search(line)
 
 
 def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
@@ -55,8 +67,8 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
                     cur = lines[body[k]].strip()
                     nxt = lines[body[k + 1]].strip()
                     if (
-                        SCREEN_TEXT.match(cur)
-                        and SCREEN_TEXT.match(nxt)
+                        is_screen_text(cur)
+                        and is_screen_text(nxt)
                         and not SENTENCE_END.search(cur)
                     ):
                         hits.append((path.name, body[k] + 1, cur, nxt))
