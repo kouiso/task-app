@@ -342,6 +342,26 @@ DB セットアップが完了しました。
 このスクリプトは `.env.example` も置いてくれます。
 中身はこんな感じです。
 
+この先、コードの先頭に `filepath:` を含む行が出てきます。
+これは「このコードをどのファイルへ書くか」を示す目印で、
+この教材のための表示です。**書き写さなくて構いません。**
+
+目印の書き方は、置かれる場所によって3つに分かれます。
+
+| 書き方 | 出てくる場所 |
+|---|---|
+| `# filepath:` | 設定ファイルやターミナルのコード |
+| `// filepath:` | TypeScript のコード |
+| `{/* filepath: */}` | 画面の見た目を書く部分（JSX）の中 |
+
+3つとも、その言語で「コメント」として扱われる書き方です。
+コメントは、書いても画面には出ませんし、動きも変わりません。
+
+ただし、書き方を取り違えると画面に文字として出てしまいます。
+たとえば画面の見た目を書く部分に `// filepath:` を置くと、
+その言語ではコメントにならず、そのまま表示されます。
+迷ったときは、目印の行を書かないのがいちばん安全です。
+
 ```env
 # filepath: .env.example
 _DOCKER_COMPOSE_HOST_PORT_DB=25532
@@ -807,7 +827,7 @@ export default function HomePage() {
 **確認ポイント**: `export default function HomePage()` と、その中の `<header>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）
+            {/* filepath: src/app/page.tsx（同じファイルの続き） */}
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -871,7 +891,7 @@ export default function HomePage() {
 **確認ポイント**: 「今日の進捗」のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）
+                {/* filepath: src/app/page.tsx（同じファイルの続き） */}
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -935,7 +955,7 @@ export default function HomePage() {
 **確認ポイント**: `<ul>` の中に4つの `<li>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）
+              {/* filepath: src/app/page.tsx（同じファイルの続き） */}
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればいいわけではない。

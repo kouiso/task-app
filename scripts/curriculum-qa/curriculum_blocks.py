@@ -29,7 +29,20 @@ __all__ = [
     "mask_code",
 ]
 
-FILEPATH = re.compile(r"^\s*(?://|#)\s*filepath:\s*(.+?)\s*$")
+FILEPATH = re.compile(r"^\s*(?:\{/\*\s*filepath:\s*(.+?)\s*\*/\}|(?://|#)\s*filepath:\s*(.+?))\s*$")
+
+
+def filepath_value(match):
+    # 2つの書き方を1つの正規表現で受けるため捕獲群が2本になる。どちらが埋まるかは
+    # 書き方で決まるので、呼び出し側に群番号を意識させず値だけを返す。
+    return match.group(1) if match.group(1) is not None else match.group(2)
+
+
+def has_filepath_marker(code: str) -> bool:
+    # 「`{/* filepath:` を含むか」で数えると、閉じの `*/}` が無い壊れた目印まで
+    # 有効として通る。そのまま貼ると構文エラーになるので、抽出側と同じ
+    # FILEPATH で行ごとに判定して、検査と抽出の判定を1つに揃える。
+    return any(FILEPATH.match(line) for line in code.split("\n"))
 # 値の末尾に付く注記1つ。入れ子は取らない（注記は `（続き）` 程度の平坦な語）。
 TRAILING_NOTE = re.compile(r"^(.*?)\s*([（(][^（()）]*[）)])\s*$")
 REAL_PREFIXES = ("src/", "prisma/", "scripts/")
@@ -117,7 +130,7 @@ def iter_blocks(text: str, source: str) -> Iterator[Block]:
         if state == "inside":
             m = FILEPATH.match(line)
             if m and value is None:
-                value = m.group(1)
+                value = filepath_value(m)
                 continue
             buf.append(line)
             continue

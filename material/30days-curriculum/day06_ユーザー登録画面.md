@@ -327,8 +327,8 @@ const onSubmit = async (
 `return` 文の中にある `<CardHeader>...</CardHeader>` の直後に `<CardContent>` を追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// </CardHeader> の直後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* </CardHeader> の直後に追加 */}
 <CardContent>
   <form onSubmit={handleSubmit(onSubmit)}
     className="space-y-4">
@@ -363,8 +363,8 @@ const onSubmit = async (
 次に、`<form>` の中で名前入力欄（`</div>` の後）にメール入力欄を追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form>内、名前入力欄の </div> の後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form>内、名前入力欄の </div> の後に追加 */}
 <div className="space-y-2">
   <Label htmlFor="email">
     メールアドレス
@@ -406,8 +406,8 @@ const onSubmit = async (
 `<form>` の中で、メール入力欄の `</div>` の後に追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form>内、メール入力欄の </div> の後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form>内、メール入力欄の </div> の後に追加 */}
 <div className="space-y-2">
   <Label htmlFor="password">
     パスワード
@@ -449,8 +449,8 @@ const onSubmit = async (
 `<form>` の中で、パスワード入力欄の `</div>` の後に追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form>内、パスワード入力欄の </div> の後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form>内、パスワード入力欄の </div> の後に追加 */}
 <div className="space-y-2">
   <Label htmlFor="confirmPassword">
     パスワード(確認)
@@ -593,8 +593,8 @@ const onSubmit = async (
 `return` 文の中にある `<CardHeader>` を以下のコードに丸ごと書き換えます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 既存の <CardHeader>...</CardHeader> を書き換え
+{/* filepath: src/app/register/page.tsx */}
+{/* 既存の <CardHeader>...</CardHeader> を書き換え */}
 <CardHeader
   className="space-y-1 text-center">
   <div className="flex justify-center mb-2">
@@ -635,8 +635,8 @@ const onSubmit = async (
 `<form>` タグの直後（最初の入力欄の前）にサーバーエラー表示を追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form ...> の直後、名前入力欄の前に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form ...> の直後、名前入力欄の前に追加 */}
 {error && (
   <Alert variant="destructive">
     <AlertCircle className="h-4 w-4" />
@@ -659,8 +659,8 @@ const onSubmit = async (
 次に、パスワード確認欄の `</div>` の後（`</form>` の前）に送信ボタンを追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// パスワード確認欄の後、</form> の前に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* パスワード確認欄の後、</form> の前に追加 */}
 <Button
   type="submit"
   className="w-full bg-gradient-to-r
@@ -693,8 +693,8 @@ const onSubmit = async (
 `<Button>` の直後（`</form>` の前）にリンクを追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// Buttonの後、</form> の前に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* Buttonの後、</form> の前に追加 */}
 <div className="text-center text-sm
   text-muted-foreground">
   すでにアカウントをお持ちの方は{' '}
@@ -1042,8 +1042,8 @@ export default function RegisterPage() {
 `return` の前半は、画面の外枠とカードの見出しです。`min-h-screen` で高さを画面いっぱいに取り、`items-center justify-center` で縦横の中央にカードを置きます。`max-w-sm` があるので、横に広いモニターでもカードは間延びしません。ここまでは Step 1 と Step 8 で書いた内容が、そのまま並んでいます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: CardContent - 名前・メール欄
+        {/* filepath: src/app/register/page.tsx */}
+        {/* 完成版: CardContent - 名前・メール欄 */}
         <CardContent>
           <form
             onSubmit={handleSubmit(onSubmit)}
@@ -1074,8 +1074,8 @@ export default function RegisterPage() {
 サーバーエラーの `<Alert>` を入力欄より前に置いているのは、失敗したときに読者の目が最初に届く位置だからです。ボタンの下に置くと、入力欄が長い画面では画面外に隠れます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: メール・パスワード欄
+            {/* filepath: src/app/register/page.tsx */}
+            {/* 完成版: メール・パスワード欄 */}
             <div className="space-y-2">
               <Label htmlFor="email">
                 メールアドレス</Label>
@@ -1102,8 +1102,8 @@ export default function RegisterPage() {
 メール欄とパスワード欄では、`register` に渡す名前と `errors` から読むキーが対になっています。`register('email')` と `errors.email`、`register('password')` と `errors.password` のように、必ず同じ名前で組にします。片方だけ書き換えると、打ち間違えた欄とは違う場所に赤い文字が出ます。読者はエラーの出ていない欄を直そうとして、時間だけを使います。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: パスワード確認欄
+            {/* filepath: src/app/register/page.tsx */}
+            {/* 完成版: パスワード確認欄 */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">
                 パスワード(確認)</Label>
@@ -1121,8 +1121,8 @@ export default function RegisterPage() {
 確認欄も書き方は同じですが、ここに出るメッセージだけは出どころが違います。他の3欄は自分の入力を見て判定されるのに対し、この欄の「パスワードが一致しません」は `.refine()` が2つの欄を見比べた結果です。`path` の指定でこの場所へ届いている、という関係をもう一度確かめておきます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: ボタン・リンク・閉じタグ
+            {/* filepath: src/app/register/page.tsx */}
+            {/* 完成版: ボタン・リンク・閉じタグ */}
             <Button type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600
                 hover:from-blue-700 hover:to-indigo-700 shadow-md"

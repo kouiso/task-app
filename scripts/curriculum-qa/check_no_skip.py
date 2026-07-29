@@ -8,6 +8,11 @@
 
 import sys
 import re
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from curriculum_blocks import has_filepath_marker  # noqa: E402
+
 
 def check_step_completeness(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -48,8 +53,7 @@ def check_step_completeness(filepath):
                 if lang and lang.lower() in filepath_required_langs
             ]
             if needs_filepath and not any(
-                '// filepath:' in code or '# filepath:' in code
-                for _, code in needs_filepath
+                has_filepath_marker(code) for _, code in needs_filepath
             ):
                 step_errors.append("filepathコメントなし")
 

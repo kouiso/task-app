@@ -717,8 +717,8 @@ const handleCreate = () => {
 `ProjectDialog` は Day 10 で JSX 内へ置いてあります。プロジェクトカード一覧グリッド（`<div className="grid gap-6 sm:grid-cols-2 ...">...</div>`）の閉じタグ直後を見てください。そこにある `<ProjectDialog` のタグへ `initialData` の1行を足します。新しくもう1つ置くのではありません。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// グリッドの閉じ</div>直後にある既存タグへ initialData を追加
+{/* filepath: src/app/project/page.tsx */}
+{/* グリッドの閉じ</div>直後にある既存タグへ initialData を追加 */}
 <ProjectDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
@@ -754,8 +754,8 @@ const handleCreate = () => {
 `DeleteConfirmDialog` は `</AppLayout>` の直前に配置します。`ProjectDialog` よりも後ろの位置です。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// </AppLayout>の直前に配置
+{/* filepath: src/app/project/page.tsx */}
+{/* </AppLayout>の直前に配置 */}
 <DeleteConfirmDialog
   open={deleteDialogOpen}
   onOpenChange={setDeleteDialogOpen}
@@ -2087,8 +2087,8 @@ Day 09 で作った部分です。今日は変更していません。このス�
 **新規作成ボタンとグリッドの開始**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 新規作成ボタンとグリッドの開始
+            {/* filepath: src/app/project/page.tsx */}
+            {/* 完成版: 新規作成ボタンとグリッドの開始 */}
             <Button onClick={handleCreate}>
               <Plus
                 className="mr-2 h-4 w-4" />
@@ -2177,8 +2177,8 @@ Day 09 で作った部分です。今日は変更していません。このス�
 **削除確認ダイアログと閉じタグ**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 削除確認ダイアログと閉じタグ
+      {/* filepath: src/app/project/page.tsx */}
+      {/* 完成版: 削除確認ダイアログと閉じタグ */}
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

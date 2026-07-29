@@ -211,6 +211,7 @@ CORPUS_CHECKS=(
   check_false_success
   check_zip_reference
   check_unused_image
+  check_jsx_marker
   check_why
   check_terms
   check_crossref
@@ -229,7 +230,9 @@ SELF_TESTS=(
   test_check_false_success
   test_check_zip_reference
   test_check_unused_image
+  test_check_jsx_marker
   test_check_why
+  test_filepath_marker
 )
 
 run_corpus_checks() {

@@ -344,8 +344,8 @@ const { data: tasks, isLoading } =
 JSXの `<h1>` タグの**下に**タブUIを追加します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// フィルターエリアのコンテナ
+{/* filepath: src/app/my-task/page.tsx */}
+{/* フィルターエリアのコンテナ */}
 <div className="flex flex-col sm:flex-row gap-4 items-center">
   <Tabs
     value={activeTab}
@@ -488,8 +488,8 @@ const { data: tasks, isLoading } =
 Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を追加します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// プロジェクトフィルターのSelect UI
+{/* filepath: src/app/my-task/page.tsx */}
+{/* プロジェクトフィルターのSelect UI */}
 <div className="ml-auto w-full sm:w-[200px]">
   <Select
     value={filterProject}
@@ -637,8 +637,8 @@ const TaskGroupSection = ({
 続けて、タスクカードのグリッド表示部分です。上のコードブロックの `</h2>` の**直後に**追加してください。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// TaskGroupSection のグリッド表示部分
+{/* filepath: src/app/my-task/page.tsx */}
+{/* TaskGroupSection のグリッド表示部分 */}
       <div className="grid gap-6 sm:grid-cols-2
         lg:grid-cols-3 xl:grid-cols-4">
         {tasks.map((task) => (
@@ -664,7 +664,7 @@ const TaskGroupSection = ({
 `))}` で `map` を閉じ、`</div>` を2つ、`);` で `return` を閉じ、最後の `};` で `TaskGroupSection` そのものを閉じます。開いた順と逆に閉じるのは、この教材で何度も出てくる決まりです。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
       </div>
     </div>
   );
@@ -827,8 +827,8 @@ const handleDelete = (_taskId: string) => {};
 Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つのグループを順番に追加します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 期限切れグループ（赤色タイトル）
+{/* filepath: src/app/my-task/page.tsx */}
+{/* 期限切れグループ（赤色タイトル） */}
 <TaskGroupSection
   title="期限切れ"
   titleClassName="text-destructive"
@@ -856,8 +856,8 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
 `titleClassName` に渡している色が、この2つの違いです。期限切れは `text-destructive` で赤、今日が期限は `text-orange-500` でオレンジにします。同じ `TaskGroupSection` を色違いで使い回せるのは、Step 6 で見出しの色をコンポーネントの中に固定せず、外から受け取る形にしておいたからです。末尾の `?? []` にも理由があります。`tasks` は取得が終わるまで `undefined` になりうるので、`typeof tasks` で宣言した4つの配列も `undefined` を含む型です。`?? []` を挟むと、その型が空の配列に寄り、`TaskGroupSection` は必ず配列を受け取れます。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 今後の予定グループ
+{/* filepath: src/app/my-task/page.tsx */}
+{/* 今後の予定グループ */}
 <TaskGroupSection
   title="今後の予定"
   tasks={groupedTasks.upcoming ?? []}
@@ -885,8 +885,8 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
 タスクが0件の場合のメッセージも追加します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// タスクが0件の場合のメッセージ表示
+{/* filepath: src/app/my-task/page.tsx */}
+{/* タスクが0件の場合のメッセージ表示 */}
 {tasks && tasks.length === 0 && (
   <div className="col-span-full flex flex-col
     items-center justify-center py-12
@@ -1082,8 +1082,8 @@ const handleSubmit = (data: TaskFormData) => {
 JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskDialog` を配置します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 編集ダイアログの配置
+{/* filepath: src/app/my-task/page.tsx */}
+{/* 編集ダイアログの配置 */}
 <TaskDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
@@ -1100,8 +1100,8 @@ JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskD
 `TaskDialog` の**下に** `DeleteConfirmDialog` を配置します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 削除確認ダイアログの配置
+{/* filepath: src/app/my-task/page.tsx */}
+{/* 削除確認ダイアログの配置 */}
 <DeleteConfirmDialog
   open={deleteDialogOpen}
   onOpenChange={setDeleteDialogOpen}
@@ -1501,8 +1501,8 @@ const TaskGroupSection = ({
 **グループ表示のカード生成**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: グループ表示のカード生成
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      {/* 完成版: グループ表示のカード生成 */}
       <div className="grid gap-6 sm:grid-cols-2
         lg:grid-cols-3 xl:grid-cols-4">
         {tasks.map((task) => (
@@ -1530,8 +1530,8 @@ const TaskGroupSection = ({
 **グループ表示の閉じタグ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: グループ表示の閉じタグ
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      {/* 完成版: グループ表示の閉じタグ */}
       </div>
     </div>
   );
@@ -1791,8 +1791,8 @@ export default function MyTasksPage() {
 **ステータスタブ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: ステータスタブ
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: ステータスタブ */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Tabs
             value={activeTab}
@@ -1819,8 +1819,8 @@ export default function MyTasksPage() {
 **プロジェクトの絞り込み**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: プロジェクトの絞り込み
+          {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          {/* 完成版: プロジェクトの絞り込み */}
           <div className="ml-auto w-full sm:w-[200px]">
             <Select
               value={filterProject}
@@ -1849,8 +1849,8 @@ export default function MyTasksPage() {
 **期限が近い2グループ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 期限が近い2グループ
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 期限が近い2グループ */}
         <TaskGroupSection
           title="期限切れ"
           titleClassName="text-destructive"
@@ -1879,8 +1879,8 @@ export default function MyTasksPage() {
 **急がない2グループ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 急がない2グループ
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 急がない2グループ */}
         <TaskGroupSection
           title="今後の予定"
           tasks={groupedTasks.upcoming ?? []}
@@ -1907,8 +1907,8 @@ export default function MyTasksPage() {
 **1件も無いときの案内**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 1件も無いときの案内
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 1件も無いときの案内 */}
         {tasks && tasks.length === 0 && (
           <div className="col-span-full flex flex-col
             items-center justify-center py-12
@@ -1924,8 +1924,8 @@ export default function MyTasksPage() {
 **2つのダイアログ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 2つのダイアログ
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      {/* 完成版: 2つのダイアログ */}
       <TaskDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

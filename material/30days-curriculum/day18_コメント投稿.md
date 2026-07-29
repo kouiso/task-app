@@ -478,8 +478,8 @@ import { Badge }
 **実装**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// TaskDetailDialog の return 内: コメントヘッダー
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* TaskDetailDialog の return 内: コメントヘッダー */}
 <div className="flex items-center gap-2 mb-4">
   <h3 className="font-semibold">コメント</h3>
   <Badge variant="secondary"
@@ -505,8 +505,8 @@ import { Badge }
 1 件以上あればリストを描画します。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// TaskDetailDialog の return 内: 一覧を包む箱と 0 件時の案内
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* TaskDetailDialog の return 内: 一覧を包む箱と 0 件時の案内 */}
 <div className="space-y-4 mb-4
   max-h-[200px] overflow-y-auto pr-2">
   {taskDetail.comments?.length === 0 && (
@@ -529,8 +529,8 @@ import { Badge }
 表示する部分です。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// TaskDetailDialog return 内: コメント .map ループ
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* TaskDetailDialog return 内: コメント .map ループ */}
 {taskDetail.comments?.map((comment) => (
   <div key={comment.id}
     className="flex gap-3 text-sm">
@@ -589,8 +589,8 @@ import { ja } from 'date-fns/locale';
 月名などが日本語表記で扱われます。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// .map ループ内: 名前と日時を包む2つの箱を開く
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* .map ループ内: 名前と日時を包む2つの箱を開く */}
 <div className="flex-1 space-y-1">
   <div className="flex items-center
     justify-between">
@@ -601,8 +601,8 @@ import { ja } from 'date-fns/locale';
 この2つはあとで閉じるので、いまは開いたままにしておきます。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// .map ループ内: ユーザー名と投稿日時
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* .map ループ内: ユーザー名と投稿日時 */}
 <span className="font-medium">
   {comment.user.name
     || comment.user.email
@@ -633,8 +633,8 @@ import { ja } from 'date-fns/locale';
 最後に、コメント本文の表示部分です。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// .map ループ内: コメント本文
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* .map ループ内: コメント本文 */}
 <p className="text-muted-foreground">
   {comment.content}
 </p>
@@ -644,7 +644,7 @@ import { ja } from 'date-fns/locale';
 `{comment.content}` の `</p>` の下へ続けてください。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+      {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
       </div>
     </div>
   </div>
@@ -781,8 +781,8 @@ Day 13 で作った `canEditProject` をそのまま受け取り、投稿でき�
 呼び出し側の `/task` ページにも同じ名前で渡します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 権限判定を詳細ダイアログへ渡す
+{/* filepath: src/app/task/page.tsx */}
+{/* 権限判定を詳細ダイアログへ渡す */}
 <TaskDetailDialog
   open={detailOpen}
   taskId={selectedTask}
@@ -799,8 +799,8 @@ Day 13 で作った `canEditProject` をそのまま受け取り、投稿でき�
 ボタンは右寄せです。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// コメント投稿フォーム（useForm管理）
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* コメント投稿フォーム（useForm管理） */}
 {canEditProject(taskDetail.projectId) && (
 <form onSubmit={commentForm.handleSubmit(
   handleCommentSubmit)}
@@ -1347,8 +1347,8 @@ export function TaskDetailDialog({
 **説明とタスク情報の前半**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 説明とタスク情報の前半
+        {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+        {/* 完成版: 説明とタスク情報の前半 */}
         {taskDetail && (
           <div className="space-y-6">
             <div>
@@ -1377,8 +1377,8 @@ export function TaskDetailDialog({
 **担当者の表示**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 担当者の表示
+              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: 担当者の表示 */}
               <div>
                 <span className="text-muted-foreground block mb-1">担当者</span>
                 <div className="flex items-center gap-2">
@@ -1404,8 +1404,8 @@ export function TaskDetailDialog({
 **期限とコメント欄の見出し**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 期限とコメント欄の見出し
+              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: 期限とコメント欄の見出し */}
               <div>
                 <span className="text-muted-foreground block mb-1">期限</span>
                 <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
@@ -1428,8 +1428,8 @@ export function TaskDetailDialog({
 **コメント一覧の枠と0件の案内**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: コメント一覧の枠と0件の案内
+              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: コメント一覧の枠と0件の案内 */}
               <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
                 {taskDetail.comments?.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
@@ -1443,8 +1443,8 @@ export function TaskDetailDialog({
 **1件ごとのアバター**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 1件ごとのアバター
+                {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                {/* 完成版: 1件ごとのアバター */}
                 {taskDetail.comments?.map((comment) => (
                   <div key={comment.id} className="flex gap-3 text-sm">
                     <Avatar className="h-8 w-8 mt-1">
@@ -1460,8 +1460,8 @@ export function TaskDetailDialog({
 **名前と日時と本文**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 名前と日時と本文
+                    {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                    {/* 完成版: 名前と日時と本文 */}
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">
@@ -1485,8 +1485,8 @@ export function TaskDetailDialog({
 **コメント投稿フォーム**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: コメント投稿フォーム
+              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: コメント投稿フォーム */}
               {canEditProject(taskDetail.projectId) && (
               <form onSubmit={commentForm.handleSubmit(handleCommentSubmit)} className="space-y-2">
                 <Textarea
@@ -1514,8 +1514,8 @@ export function TaskDetailDialog({
 **末尾の閉じるボタン**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 末尾の閉じるボタン
+            {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+            {/* 完成版: 末尾の閉じるボタン */}
             </div>
           </div>
         )}

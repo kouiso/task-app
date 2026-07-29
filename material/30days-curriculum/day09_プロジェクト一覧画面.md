@@ -528,8 +528,8 @@ const handleProjectClick = (id: string) => {
 `ProjectPageContent` の `return` 内にある `<h1>` タグの後に、以下のグリッド表示を追加します。これは完成形のコードブロックです。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// return内、</h1>の後にグリッド開始
+{/* filepath: src/app/project/page.tsx */}
+{/* return内、</h1>の後にグリッド開始 */}
 <div className="grid gap-6 sm:grid-cols-2
   lg:grid-cols-3 xl:grid-cols-4">
   {projects?.map((project) => {
@@ -613,8 +613,8 @@ Step 6 で書いたグリッドの `<div>` の中身を、三項演算子（条�
 削除したあと、`<div className="grid ...">` と `</div>` の間に、次の3つのブロックを上から順に貼ります。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// グリッドdiv内を修正（mapの前に条件分岐追加）
+{/* filepath: src/app/project/page.tsx */}
+{/* グリッドdiv内を修正（mapの前に条件分岐追加） */}
 {projects && projects.length > 0 ? (
   projects.map((project) => {
     const taskCount =
@@ -779,8 +779,8 @@ Step 1 で作った骨組みに、ヘッダーの中身を足していきます�
 続けて、ボタンとヘッダーの閉じタグを追加します。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// ヘッダーの続き（ボタンと閉じタグ）
+{/* filepath: src/app/project/page.tsx */}
+{/* ヘッダーの続き（ボタンと閉じタグ） */}
           <Button onClick={handleCreate}>
             <Plus
               className="mr-2 h-4 w-4" />
@@ -798,8 +798,8 @@ Step 1 で作った骨組みに、ヘッダーの中身を足していきます�
 続けて、グリッド部分を追加します。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// グリッド開始〜map処理
+{/* filepath: src/app/project/page.tsx */}
+{/* グリッド開始〜map処理 */}
       <div className="grid gap-6
         sm:grid-cols-2 lg:grid-cols-3
         xl:grid-cols-4">
@@ -874,8 +874,8 @@ map の中身は Step 6 と同じで、1件ずつ `ProjectCard` に変換しま�
 最後に、空状態のメッセージと全体の閉じタグです。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 空メッセージ〜全体の閉じタグ
+{/* filepath: src/app/project/page.tsx */}
+{/* 空メッセージ〜全体の閉じタグ */}
             <p>プロジェクトが
               見つかりません。</p>
             <p>最初のプロジェクトを
@@ -1257,8 +1257,8 @@ function ProjectPageContent() {
 **スイッチとボタン**:
 
 ```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: スイッチとボタン
+          {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+          {/* 完成版: スイッチとボタン */}
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Switch
@@ -1282,8 +1282,8 @@ function ProjectPageContent() {
 **カードを並べる枠**:
 
 ```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: カードを並べる枠
+        {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+        {/* 完成版: カードを並べる枠 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0
             ? (projects.map((project) => {

@@ -351,8 +351,8 @@ const projectStats = overview?.projectStats ?? [];
 - `projectStats` が配列として扱える
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// 描画時だけ小数第1位へ整える
+{/* filepath: src/app/report/page.tsx */}
+{/* 描画時だけ小数第1位へ整える */}
 {projectStats.map((stat) => (
   <TableRow key={stat.id}>
     <TableCell className="font-medium">{stat.name}</TableCell>
@@ -409,8 +409,8 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 | TableCell | データセル | `<td>` |
 
 ```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-// テーブルのヘッダー定義
+{/* filepath: 読み比べ用サンプル（実ファイルには対応しません） */}
+{/* テーブルのヘッダー定義 */}
 <Card>
   <CardHeader>
     <CardTitle>プロジェクト統計</CardTitle>
@@ -441,8 +441,8 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 > この入れ子は、ブラウザに「ここが表の見出し行」と伝えるための形です。
 
 ```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-// テーブル本体（mapで各行を生成）
+{/* filepath: 読み比べ用サンプル（実ファイルには対応しません） */}
+{/* テーブル本体（mapで各行を生成） */}
 <TableBody>
   {projectStats?.map((stat) => (
     <TableRow key={stat.id}>
@@ -623,8 +623,8 @@ export default function WeeklyReportPage() {
 - `isLoading` のときスピナーを表示している
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 週数選択のSelectコンポーネント
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 週数選択のSelectコンポーネント */}
 <div className="w-[150px]">
   <Select
     value={weeks}
@@ -720,7 +720,7 @@ import Link from 'next/link';
 レポート見出しの右側へリンクを置きます。`Link` は Next.js が用意したページ移動用の部品で、`<a>` タグと違って移動先の中身だけを差し替えます。だからサイドバーやヘッダーは表示されたまま残り、画面が一度白くなってから描き直される動きになりません。`ArrowRight` は右向き矢印のアイコンで、押した先へ進むことを文字より速く伝えます。
 
 ```typescript
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Link
   href="/report/weekly"
   className="inline-flex items-center gap-2
@@ -748,8 +748,8 @@ import Link from 'next/link';
 対象期間の3枚のカードを表示します。
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 完了タスク合計カード
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 完了タスク合計カード */}
 <div className="grid grid-cols-1
   md:grid-cols-3 gap-4">
   <Card>
@@ -776,8 +776,8 @@ import Link from 'next/link';
 - 完了タスク合計の数値が表示される
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 週平均カード
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 週平均カード */}
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -805,8 +805,8 @@ import Link from 'next/link';
 - `Number.parseInt` で文字列の `weeks` を数値に変換している
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 対象期間カード（date-fns で整形）
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 対象期間カード（date-fns で整形） */}
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -900,8 +900,8 @@ const statusData =
 - `statusData` はステータス別データを持つ
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 週別完了タスク数の折れ線グラフ
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 週別完了タスク数の折れ線グラフ */}
 <Card className="col-span-1 lg:col-span-2">
   <CardHeader>
     <CardTitle>週別完了タスク数</CardTitle>
@@ -937,8 +937,8 @@ const statusData =
 - `col-span-2` で横幅いっぱいに表示される
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 優先度別分布の棒グラフ
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 優先度別分布の棒グラフ */}
 <Card>
   <CardHeader>
     <CardTitle>優先度別分布</CardTitle>
@@ -971,8 +971,8 @@ const statusData =
 - `TASK_PRIORITY_COLORS` で色分けしている
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// ステータス別積み上げ棒グラフのCard部分
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* ステータス別積み上げ棒グラフのCard部分 */}
 <Card>
   <CardHeader>
     <CardTitle>ステータス別内訳</CardTitle>
@@ -995,8 +995,8 @@ const statusData =
 - `statusData` を `BarChart` に渡している
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 3つのBarで積み上げ表示
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 3つのBarで積み上げ表示 */}
           <Bar dataKey="done"
             stackId="status" name="完了"
             fill={TASK_STATUS_COLORS.DONE} />
@@ -1751,8 +1751,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **週数の選択欄**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 週数の選択欄
+          {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 週数の選択欄 */}
           <div className="w-[150px]">
             <Select
               value={weeks}
@@ -1781,8 +1781,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **完了タスク合計のカード**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 完了タスク合計のカード
+        {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 完了タスク合計のカード */}
         <div className="grid grid-cols-1
           md:grid-cols-3 gap-4">
           <Card>
@@ -1803,8 +1803,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **週平均のカード**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 週平均のカード
+          {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 週平均のカード */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -1828,8 +1828,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **対象期間のカード**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 対象期間のカード
+          {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 対象期間のカード */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -1857,8 +1857,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **週別完了タスク数の折れ線グラフ**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 週別完了タスク数の折れ線グラフ
+        {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 週別完了タスク数の折れ線グラフ */}
         <div className="grid grid-cols-1
           lg:grid-cols-2 gap-6">
           <Card className="col-span-1 lg:col-span-2">
@@ -1888,8 +1888,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **優先度別分布の棒グラフ**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 優先度別分布の棒グラフ
+          {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 優先度別分布の棒グラフ */}
           <Card>
             <CardHeader>
               <CardTitle>優先度別分布</CardTitle>
@@ -1917,8 +1917,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **ステータス別内訳の枠**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: ステータス別内訳の枠
+          {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+          {/* 完成版: ステータス別内訳の枠 */}
           <Card>
             <CardHeader>
               <CardTitle>ステータス別内訳</CardTitle>
@@ -1937,8 +1937,8 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 **ステータス別内訳の積み上げと閉じタグ**:
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 積み上げの3本と閉じタグ
+                    {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
+                    {/* 完成版: 積み上げの3本と閉じタグ */}
                     <Bar dataKey="done"
                       stackId="status" name="完了"
                       fill={TASK_STATUS_COLORS.DONE} />
@@ -2100,8 +2100,8 @@ export default function ReportPage() {
 **統計カードの前半**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 統計カード（タスク数・完了率）
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 統計カード（タスク数・完了率） */}
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -2129,8 +2129,8 @@ export default function ReportPage() {
 **統計カードの後半**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 統計カード（作業時間の合計と平均）
+          {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 統計カード（作業時間の合計と平均） */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -2157,8 +2157,8 @@ export default function ReportPage() {
 **ステータス円グラフの枠**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: ステータス円グラフの枠
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: ステータス円グラフの枠 */}
         <div className="grid grid-cols-1
           md:grid-cols-2 gap-6">
           <Card>
@@ -2186,8 +2186,8 @@ export default function ReportPage() {
 **ステータス円グラフの色付け**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: ステータス円グラフの色と閉じタグ
+                      {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+                      {/* 完成版: ステータス円グラフの色と閉じタグ */}
                       {statusData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -2213,8 +2213,8 @@ export default function ReportPage() {
 **優先度円グラフの枠**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 優先度円グラフの枠
+          {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 優先度円グラフの枠 */}
           <Card>
             <CardHeader>
               <CardTitle>優先度別タスク</CardTitle>
@@ -2240,8 +2240,8 @@ export default function ReportPage() {
 **優先度円グラフの色付け**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 優先度円グラフの色と閉じタグ
+                      {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+                      {/* 完成版: 優先度円グラフの色と閉じタグ */}
                       {priorityData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -2268,8 +2268,8 @@ export default function ReportPage() {
 **プロジェクト統計テーブルの見出し**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: プロジェクト統計テーブルの見出し
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: プロジェクト統計テーブルの見出し */}
         <Card>
           <CardHeader>
             <CardTitle>プロジェクト統計</CardTitle>
@@ -2297,8 +2297,8 @@ Step 2 で読んだ見出しの定義は、この5列と同じ形です。あち
 **プロジェクト統計テーブルの行**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: プロジェクト統計テーブルの行
+              {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+              {/* 完成版: プロジェクト統計テーブルの行 */}
               <TableBody>
                 {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
@@ -2323,8 +2323,8 @@ Step 2 で読んだ見出しの定義は、この5列と同じ形です。あち
 **ファイル末尾の閉じタグ**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 閉じタグと関数の終わり
+            {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+            {/* 完成版: 閉じタグと関数の終わり */}
             </Table>
           </CardContent>
         </Card>

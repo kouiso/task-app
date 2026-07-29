@@ -514,7 +514,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+        {/* filepath: src/app/task/page.tsx */}
         <div className="flex-1 min-w-0 h-full">
           <TaskCard
             id={task.id}
@@ -542,7 +542,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 カード行と一覧の条件分岐を閉じます。
 
 ```typescript
-// filepath: src/app/task/page.tsx（続き）
+      {/* filepath: src/app/task/page.tsx（続き） */}
       </div>
       );
     })
@@ -680,8 +680,8 @@ const selectAllState =
 JSX 側の `checked` に渡す値を差し替えます。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// Step 3 で書いた Checkbox の checked を差し替える
+{/* filepath: src/app/task/page.tsx */}
+{/* Step 3 で書いた Checkbox の checked を差し替える */}
 <Checkbox
   id="select-all"
   checked={selectAllState}
@@ -721,8 +721,8 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 ![一括操作ボタンがページヘッダーの右側に表示されている状態](./screenshots/bulk-operation-header.png)
 ```typescript
-// filepath: src/app/task/page.tsx
-// ページのタイトル行（h1 と操作ボタンが並ぶ行）
+{/* filepath: src/app/task/page.tsx */}
+{/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}
 <div className="flex items-center justify-between">
   <div className="flex items-center gap-3">
     <h1 className="text-3xl font-bold tracking-tight">
@@ -812,8 +812,8 @@ const handleBulkComplete = () => {
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 一括操作ボタン領域に「完了にする」ボタンを追加
+{/* filepath: src/app/task/page.tsx */}
+{/* 一括操作ボタン領域に「完了にする」ボタンを追加 */}
 {canCompleteSelected && (
   <Button
     variant="outline"
@@ -899,8 +899,8 @@ import { CheckSquare, Plus, Trash2 }
 ヘッダーにボタンとダイアログを追加します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 削除ボタン（赤色のテキスト）
+{/* filepath: src/app/task/page.tsx */}
+{/* 削除ボタン（赤色のテキスト） */}
 {canDeleteSelected && (
   <Button
     variant="outline"
@@ -923,8 +923,8 @@ import { CheckSquare, Plus, Trash2 }
 ページの JSX 末尾に `DeleteConfirmDialog` を配置します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 確認ダイアログ（JSXの末尾に配置）
+{/* filepath: src/app/task/page.tsx */}
+{/* 確認ダイアログ（JSXの末尾に配置） */}
 <DeleteConfirmDialog
   open={bulkDeleteDialogOpen}
   onOpenChange={setBulkDeleteDialogOpen}
@@ -1013,8 +1013,8 @@ const handleBulkUpdateStatus = (
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// ステータス変更ドロップダウン
+{/* filepath: src/app/task/page.tsx */}
+{/* ステータス変更ドロップダウン */}
 {canCompleteSelected && (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
@@ -1532,8 +1532,8 @@ const handleBulkUpdateStatus = (
 **ページ見出しと選択件数の表示**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: ページ見出しと選択件数の表示
+{/* filepath: src/app/task/page.tsx */}
+{/* 完成版: ページ見出しと選択件数の表示 */}
 <div className="flex items-center justify-between">
   <div className="flex items-center gap-3">
     <h1 className="text-3xl font-bold tracking-tight">
@@ -1555,8 +1555,8 @@ const handleBulkUpdateStatus = (
 **「完了にする」ボタン**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 「完了にする」ボタン
+{/* filepath: src/app/task/page.tsx */}
+{/* 完成版: 「完了にする」ボタン */}
 {canCompleteSelected && (
   <Button
     variant="outline"
@@ -1574,8 +1574,8 @@ const handleBulkUpdateStatus = (
 **ステータス変更のドロップダウン**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: ステータス変更のドロップダウン
+{/* filepath: src/app/task/page.tsx */}
+{/* 完成版: ステータス変更のドロップダウン */}
 {canCompleteSelected && (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
@@ -1606,8 +1606,8 @@ const handleBulkUpdateStatus = (
 **「削除」ボタン**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 「削除」ボタン
+{/* filepath: src/app/task/page.tsx */}
+{/* 完成版: 「削除」ボタン */}
 {canDeleteSelected && (
   <Button
     variant="outline"
@@ -1625,8 +1625,8 @@ const handleBulkUpdateStatus = (
 **全選択チェックボックス**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 全選択チェックボックス
+{/* filepath: src/app/task/page.tsx */}
+{/* 完成版: 全選択チェックボックス */}
 <div className="flex items-center space-x-2">
   <Checkbox
     id="select-all"
@@ -1644,8 +1644,8 @@ const handleBulkUpdateStatus = (
 **タスク一覧のチェックボックス**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: タスク一覧のチェックボックス部分
+{/* filepath: src/app/task/page.tsx */}
+{/* 完成版: タスク一覧のチェックボックス部分 */}
 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
   {tasks && tasks.length > 0 ? (
     tasks.map((task) => {
@@ -1673,8 +1673,8 @@ const handleBulkUpdateStatus = (
 **タスクカード本体**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: タスクカード本体
+        {/* filepath: src/app/task/page.tsx */}
+        {/* 完成版: タスクカード本体 */}
         <div className="flex-1 min-w-0 h-full">
           <TaskCard
             id={task.id}
@@ -1700,8 +1700,8 @@ const handleBulkUpdateStatus = (
 **タスク一覧の閉じタグと空メッセージ**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: タスク一覧の閉じタグと空メッセージ
+      {/* filepath: src/app/task/page.tsx */}
+      {/* 完成版: タスク一覧の閉じタグと空メッセージ */}
       </div>
       );
     })
@@ -1716,8 +1716,8 @@ const handleBulkUpdateStatus = (
 **削除確認ダイアログ**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 削除確認ダイアログ
+{/* filepath: src/app/task/page.tsx */}
+{/* 完成版: 削除確認ダイアログ */}
 <DeleteConfirmDialog
   open={bulkDeleteDialogOpen}
   onOpenChange={setBulkDeleteDialogOpen}

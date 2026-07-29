@@ -307,7 +307,7 @@ Card とグラフ枠を作ります。
 **実装**:
 
 ```tsx
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Card>
   <CardHeader>
     <CardTitle>ステータス別タスク</CardTitle>
@@ -348,7 +348,7 @@ Card とグラフ枠を作ります。
 以下を `<PieChart>` の先頭に追加します。
 
 ```tsx
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Pie
   data={statusData}
   dataKey="value"
@@ -454,7 +454,7 @@ const priorityData =
 Card 枠と `Pie` の設定です。
 
 ```tsx
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Card>
   <CardHeader>
     <CardTitle>優先度別タスク</CardTitle>
@@ -483,7 +483,7 @@ Card 枠と `Pie` の設定です。
 続けて、`Cell` で色を付けて閉じます。
 
 ```tsx
-// filepath: src/app/report/page.tsx
+            {/* filepath: src/app/report/page.tsx */}
             {priorityData.map((entry) => (
               <Cell
                 key={entry.key}
@@ -529,8 +529,8 @@ Card 枠と `Pie` の設定です。
 まず、その外枠になる開始タグと閉じタグだけを追加します。
 
 ```tsx
-// filepath: src/app/report/page.tsx
-// グリッドの外枠（この2行の間に Card を移す）
+{/* filepath: src/app/report/page.tsx */}
+{/* グリッドの外枠（この2行の間に Card を移す） */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 </div>
 ```
@@ -774,8 +774,8 @@ export default function ReportPage() {
 **統計カードの前半**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 統計カード（タスク数・完了率）
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 統計カード（タスク数・完了率） */}
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -803,8 +803,8 @@ export default function ReportPage() {
 **統計カードの後半**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 統計カード（作業時間の合計と平均）
+          {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 統計カード（作業時間の合計と平均） */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -831,8 +831,8 @@ export default function ReportPage() {
 **ステータス円グラフの枠**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: ステータス円グラフの枠
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: ステータス円グラフの枠 */}
         <div className="grid grid-cols-1
           md:grid-cols-2 gap-6">
           <Card>
@@ -860,8 +860,8 @@ export default function ReportPage() {
 **ステータス円グラフの色付け**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: ステータス円グラフの色と閉じタグ
+                      {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+                      {/* 完成版: ステータス円グラフの色と閉じタグ */}
                       {statusData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -887,8 +887,8 @@ export default function ReportPage() {
 **優先度円グラフの枠**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 優先度円グラフの枠
+          {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 優先度円グラフの枠 */}
           <Card>
             <CardHeader>
               <CardTitle>優先度別タスク</CardTitle>
@@ -914,8 +914,8 @@ export default function ReportPage() {
 **優先度円グラフの色付け**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 優先度円グラフの色と閉じタグ
+                      {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+                      {/* 完成版: 優先度円グラフの色と閉じタグ */}
                       {priorityData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -942,8 +942,8 @@ export default function ReportPage() {
 **プロジェクト統計テーブルの見出し**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: プロジェクト統計テーブルの見出し
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: プロジェクト統計テーブルの見出し */}
         <Card>
           <CardHeader>
             <CardTitle>プロジェクト統計</CardTitle>
@@ -971,8 +971,8 @@ export default function ReportPage() {
 **プロジェクト統計テーブルの行**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: プロジェクト統計テーブルの行
+              {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+              {/* 完成版: プロジェクト統計テーブルの行 */}
               <TableBody>
                 {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
@@ -997,8 +997,8 @@ export default function ReportPage() {
 **ファイル末尾の閉じタグ**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 閉じタグと関数の終わり
+            {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+            {/* 完成版: 閉じタグと関数の終わり */}
             </Table>
           </CardContent>
         </Card>

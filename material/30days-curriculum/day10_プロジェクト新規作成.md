@@ -497,7 +497,7 @@ return (
 プロジェクト名の入力欄です。`{...register('name')}` でフォームに登録します。
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
+      {/* filepath: src/component/project/project-dialog.tsx */}
       <form onSubmit={
         handleSubmit(handleFormSubmit)}>
         <div className="grid gap-4 py-4">
@@ -535,7 +535,7 @@ return (
 説明欄を追加します。
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
+          {/* filepath: src/component/project/project-dialog.tsx */}
           <div className="grid gap-2">
             <Label htmlFor="description">
               説明
@@ -571,7 +571,7 @@ return (
 カラー・開始日・終了日を横並び3列で配置します。
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
+          {/* filepath: src/component/project/project-dialog.tsx */}
           <div className=
             "grid grid-cols-3 gap-4">
             <div className="grid gap-2">
@@ -595,7 +595,7 @@ return (
 選んだ色は、あとで Day 29 のユーザー詳細ページでバッジの背景になります。そのバッジは文字を白で描くので、明るい色を選ぶと白い文字が背景に溶けて読めなくなります。`#1E3A8A`（濃い青）、`#166534`（濃い緑）、`#7C2D12`（濃い茶）のように、暗めの色を選んでください。既定値の `#1976d2` も白文字が読める明るさですが、余裕はわずかです。
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
+            {/* filepath: src/component/project/project-dialog.tsx */}
             <div className="grid gap-2">
               <Label htmlFor="startDate">
                 開始日
@@ -617,7 +617,7 @@ return (
 続いて、終了日フィールドとフォーム全体の閉じタグを追加します。
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
+            {/* filepath: src/component/project/project-dialog.tsx */}
             <div className="grid gap-2">
               <Label htmlFor="endDate">
                 終了日
@@ -649,7 +649,7 @@ return (
 **実装**:
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
+        {/* filepath: src/component/project/project-dialog.tsx */}
         <DialogFooter>
           <Button type="button"
             variant="outline"
@@ -781,8 +781,8 @@ const handleSubmit = (
 最後に JSX 内へ `ProjectDialog` を組み込みます。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// JSX内（AppLayoutの閉じタグの前）
+{/* filepath: src/app/project/page.tsx */}
+{/* JSX内（AppLayoutの閉じタグの前） */}
 <ProjectDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
@@ -1333,8 +1333,8 @@ export function ProjectDialog({
 **プロジェクト名の入力欄**:
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
-// 完成版: プロジェクト名の入力欄
+        {/* filepath: src/component/project/project-dialog.tsx */}
+        {/* 完成版: プロジェクト名の入力欄 */}
         <form onSubmit={
           handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
@@ -1363,8 +1363,8 @@ export function ProjectDialog({
 **説明欄とカラー欄**:
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
-// 完成版: 説明欄とカラー欄
+            {/* filepath: src/component/project/project-dialog.tsx */}
+            {/* 完成版: 説明欄とカラー欄 */}
             <div className="grid gap-2">
               <Label htmlFor="description">
                 説明
@@ -1395,8 +1395,8 @@ export function ProjectDialog({
 **開始日と終了日の欄**:
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
-// 完成版: 開始日と終了日の欄
+              {/* filepath: src/component/project/project-dialog.tsx */}
+              {/* 完成版: 開始日と終了日の欄 */}
               <div className="grid gap-2">
                 <Label htmlFor="startDate">
                   開始日
@@ -1424,8 +1424,8 @@ export function ProjectDialog({
 **足元のボタンと閉じタグ**:
 
 ```typescript
-// filepath: src/component/project/project-dialog.tsx
-// 完成版: 足元のボタンと閉じタグ
+          {/* filepath: src/component/project/project-dialog.tsx */}
+          {/* 完成版: 足元のボタンと閉じタグ */}
           <DialogFooter>
             <Button type="button"
               variant="outline"
@@ -1622,8 +1622,8 @@ function ProjectPageContent() {
 **新規作成ボタンとグリッドの開始**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 新規作成ボタンとグリッドの開始
+            {/* filepath: src/app/project/page.tsx */}
+            {/* 完成版: 新規作成ボタンとグリッドの開始 */}
             <Button onClick={handleCreate}>
               <Plus
                 className="mr-2 h-4 w-4" />

@@ -402,7 +402,7 @@ export function AppLayout({
 - [ ] ロゴとして `Task App` を表示している
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（続き）
+        {/* filepath: src/component/layout/app-layout.tsx（続き） */}
         {/* ナビゲーション */}
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
@@ -435,7 +435,7 @@ export function AppLayout({
 - [ ] 現在ページは背景色で強調している
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（続き）
+        {/* filepath: src/component/layout/app-layout.tsx（続き） */}
         {/* ユーザー情報 + ログアウト */}
         <div className="border-t border-sidebar-border p-4">
           <div className="mb-3 flex items-center gap-3">
@@ -463,7 +463,7 @@ export function AppLayout({
 - [ ] サイドバー下部にユーザー名と権限を表示している
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（続き）
+          {/* filepath: src/component/layout/app-layout.tsx（続き） */}
           {/* ログアウトボタン（確認ダイアログ付き） */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -486,7 +486,7 @@ export function AppLayout({
 - [ ] ボタンを押すと確認ダイアログが開く
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（続き）
+            {/* filepath: src/component/layout/app-layout.tsx（続き） */}
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
@@ -518,7 +518,7 @@ export function AppLayout({
 - [ ] ログアウト前に確認ダイアログを表示している
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（続き）
+{/* filepath: src/component/layout/app-layout.tsx（続き） */}
 
       {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
       <main className="flex-1 overflow-y-auto p-6">
@@ -939,8 +939,8 @@ export function AppLayout({
 **ナビゲーション**:
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: ナビゲーション
+        {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+        {/* 完成版: ナビゲーション */}
         {/* ナビゲーション */}
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
@@ -969,8 +969,8 @@ export function AppLayout({
 **ユーザー情報**:
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: ユーザー情報
+        {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+        {/* 完成版: ユーザー情報 */}
         {/* ユーザー情報 + ログアウト */}
         <div className="border-t border-sidebar-border p-4">
           <div className="mb-3 flex items-center gap-3">
@@ -995,8 +995,8 @@ export function AppLayout({
 **ログアウトボタン**:
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: ログアウトボタン
+          {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+          {/* 完成版: ログアウトボタン */}
           {/* ログアウトボタン（確認ダイアログ付き） */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -1016,8 +1016,8 @@ export function AppLayout({
 **ログアウトの確認ダイアログ**:
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: ログアウトの確認ダイアログ
+            {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+            {/* 完成版: ログアウトの確認ダイアログ */}
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
@@ -1046,8 +1046,8 @@ export function AppLayout({
 **本文の置き場所**:
 
 ```tsx
-// filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: 本文の置き場所
+      {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+      {/* 完成版: 本文の置き場所 */}
       {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
       <main className="flex-1 overflow-y-auto p-6">
         {children}
@@ -1142,8 +1142,8 @@ export default function DashboardPage() {
 **残りのカードと外枠の開始**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 残りのカードと外枠の開始
+{/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+{/* 完成版: 残りのカードと外枠の開始 */}
     {
       label: 'Today',
       value: 'Day 02',
@@ -1167,8 +1167,8 @@ export default function DashboardPage() {
 **ヘッダー**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: ヘッダー
+          {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+          {/* 完成版: ヘッダー */}
           <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
@@ -1190,8 +1190,8 @@ export default function DashboardPage() {
 **主役のメッセージ**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 主役のメッセージ
+          {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+          {/* 完成版: 主役のメッセージ */}
           <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
               <div className="border-b border-border px-8 py-6">
@@ -1209,8 +1209,8 @@ export default function DashboardPage() {
 **説明文と集中テーマの帯**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 説明文と集中テーマの帯
+                {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+                {/* 完成版: 説明文と集中テーマの帯 */}
                 <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                   今日は
                   <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
@@ -1230,8 +1230,8 @@ export default function DashboardPage() {
 **下段の3枚のカード**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 下段の3枚のカード
+              {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+              {/* 完成版: 下段の3枚のカード */}
               <div className="grid gap-4 bg-secondary px-8 py-6 md:grid-cols-3">
                 {focusCards.map((card) => (
                   <article
@@ -1258,8 +1258,8 @@ export default function DashboardPage() {
 **右側の補助カード**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 右側の補助カード
+            {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+            {/* 完成版: 右側の補助カード */}
             <aside className="space-y-4">
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
@@ -1287,8 +1287,8 @@ export default function DashboardPage() {
 **最後のカードと閉じタグ**:
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 最後のカードと閉じタグ
+              {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
+              {/* 完成版: 最後のカードと閉じタグ */}
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
                   次につながる視点

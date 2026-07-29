@@ -530,8 +530,8 @@ return (
 横並びにするのがポイントです。
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// アバターと名前の表示（flex gap-4 で横並び）
+{/* filepath: src/app/profile/page.tsx */}
+{/* アバターと名前の表示（flex gap-4 で横並び） */}
 <div className="flex gap-4">
   <Avatar className="w-20 h-20
     rounded-lg">
@@ -557,8 +557,8 @@ return (
 - `currentUser.avatar && (...)` で、アバターがあるときだけ画像を表示している
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 名前とバッジ（flex gap-4 の右側）
+{/* filepath: src/app/profile/page.tsx */}
+{/* 名前とバッジ（flex gap-4 の右側） */}
   <div className="flex-1">
     <h1 className="text-2xl font-bold">
       {currentUser.name}
@@ -586,8 +586,8 @@ return (
 - `</div>` で `flex gap-4` を閉じている
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// メールアドレスの表示
+{/* filepath: src/app/profile/page.tsx */}
+{/* メールアドレスの表示 */}
 <Separator />
 <div className="space-y-4">
   <div className="flex
@@ -616,8 +616,8 @@ return (
 **確認ポイント**: ブラウザでプロフィールページを開き、メールアドレスが表示されていることを確認しましょう。
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 登録日の表示
+{/* filepath: src/app/profile/page.tsx */}
+{/* 登録日の表示 */}
 <div className="flex items-start gap-4">
   <div className="flex items-center
     justify-center w-10 h-10
@@ -645,8 +645,8 @@ return (
 **確認ポイント**: 登録日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 最終更新日の表示
+{/* filepath: src/app/profile/page.tsx */}
+{/* 最終更新日の表示 */}
 <div className="flex items-start gap-4">
   <div className="flex items-center
     justify-center w-10 h-10
@@ -698,8 +698,8 @@ return (
 **実装**:
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 編集・パスワード変更ボタン
+{/* filepath: src/app/profile/page.tsx */}
+{/* 編集・パスワード変更ボタン */}
 <Separator />
 <div className="flex flex-col gap-3">
   <Button className="w-full"
@@ -720,8 +720,8 @@ return (
 2つのボタンがやっているのは、`router.push(...)` で行き先を変えることだけです。`<a href="...">` で書くとページ全体が読み込み直されますが、`router.push` なら今のページの中で必要な部分だけが差し替わります。見た目の違いは `variant` で付けていて、塗りつぶしの既定と枠線だけの `outline` を使い分けます。押してほしい順に濃さを変える、という考え方です。
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 管理者用ユーザー管理ボタン
+{/* filepath: src/app/profile/page.tsx */}
+{/* 管理者用ユーザー管理ボタン */}
   {currentUser.role === USER_ROLE.ADMIN && (
     <Button variant="outline"
       className="w-full"
@@ -740,7 +740,7 @@ return (
 最後に、開いたタグと関数を閉じます。
 
 ```typescript
-// filepath: src/app/profile/page.tsx（同じファイルの続き）
+      {/* filepath: src/app/profile/page.tsx（同じファイルの続き） */}
       </div>
     </AppLayout>
   );
@@ -778,7 +778,7 @@ Day 08 の `app-layout.tsx` も更新します。
 次の `Link` に置き換え、中の表示は残します。
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
+{/* filepath: src/component/layout/app-layout.tsx */}
 <Link
   href="/profile"
   className="mb-3 flex items-center gap-3
@@ -795,7 +795,7 @@ Day 08 の末尾にあるメインコンテンツ部分は、
 モバイル用ナビゲーションを持つ形へ置き換えます。
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
+{/* filepath: src/component/layout/app-layout.tsx */}
 <div className="flex min-w-0 flex-1 flex-col">
   <nav className="flex gap-2 overflow-x-auto
     border-b p-2 md:hidden">
@@ -819,7 +819,7 @@ Day 08 の末尾にあるメインコンテンツ部分は、
 `md:hidden` が付いた `<nav>` は、画面が広いときは消えてサイドバーに任せ、狭いときだけ現れます。中では `menuItems` を `map` で回してリンクへ変えるので、メニューが増えてもこの部分は書き直しません。管理者向けの「ユーザー管理」だけは `session.user.role === USER_ROLE.ADMIN` で囲み、一般ユーザーの画面には出しません。ただしリンクを隠すのは、押しても行けない場所を見せない配慮にすぎません。`/user` を直接開かれたときに止めるのは、Day 24 で使ったサーバー側の `adminProcedure` のほうです。
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx（続き）
+    {/* filepath: src/component/layout/app-layout.tsx（続き） */}
     <Link href="/profile"
       className="whitespace-nowrap
         rounded-md px-3 py-2 text-sm">
@@ -1189,8 +1189,8 @@ export default function
 `register` で各入力をフォームに登録します。
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 現在のパスワード入力
+{/* filepath: src/app/profile/change-password/page.tsx */}
+{/* 現在のパスワード入力 */}
 <div className="space-y-2">
   <Label htmlFor="currentPassword">
     現在のパスワード
@@ -1223,8 +1223,8 @@ export default function
 - 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 新しいパスワード入力（Label + PasswordInput）
+{/* filepath: src/app/profile/change-password/page.tsx */}
+{/* 新しいパスワード入力（Label + PasswordInput） */}
 <div className="space-y-2">
   <Label htmlFor="newPassword">
     新しいパスワード
@@ -1247,8 +1247,8 @@ export default function
 入力欄の下に置いた灰色の文章は、エラーではなく最初から出しておくヒントです。条件を満たせない理由をあとから見せるより、何を入力すればよいかを先に見せるほうが、直す回数を減らせます。`disabled={changePassword.isPending}` は送信中に入力を止める指定で、返事を待つあいだの二重送信を防ぎます。
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 新しいパスワードのエラー表示
+{/* filepath: src/app/profile/change-password/page.tsx */}
+{/* 新しいパスワードのエラー表示 */}
   {form.formState.errors
     .newPassword && (
     <p className="text-sm
@@ -1268,8 +1268,8 @@ export default function
 - 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 確認用パスワード入力
+{/* filepath: src/app/profile/change-password/page.tsx */}
+{/* 確認用パスワード入力 */}
 <div className="space-y-2">
   <Label htmlFor="confirmPassword">
     新しいパスワード（確認）
@@ -1321,8 +1321,8 @@ export default function
 **実装**:
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// APIエラーのAlert表示
+{/* filepath: src/app/profile/change-password/page.tsx */}
+{/* APIエラーのAlert表示 */}
 {changePassword.error && (
   <Alert variant="destructive">
     <AlertCircle className="h-4 w-4" />
@@ -1341,8 +1341,8 @@ export default function
 - 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 送信ボタンとキャンセルボタン
+{/* filepath: src/app/profile/change-password/page.tsx */}
+{/* 送信ボタンとキャンセルボタン */}
 <div className="flex gap-2 pt-2">
   <Button type="submit"
     className="w-full"
@@ -1374,8 +1374,8 @@ export default function
 閉じタグを忘れずに書きます。
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 閉じタグ
+{/* filepath: src/app/profile/change-password/page.tsx */}
+{/* 閉じタグ */}
             </form>
           </CardContent>
         </Card>
@@ -1792,8 +1792,8 @@ export default function ProfileEditPage() {
 フォームとアバター表示の部分です。
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// フォームとアバタープレビュー
+{/* filepath: src/app/profile/edit/page.tsx */}
+{/* フォームとアバタープレビュー */}
             <form onSubmit={
               form.handleSubmit(
                 handleSubmit)}
@@ -1825,8 +1825,8 @@ export default function ProfileEditPage() {
 名前の入力欄です。
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 名前の入力欄（Label + Input）
+{/* filepath: src/app/profile/edit/page.tsx */}
+{/* 名前の入力欄（Label + Input） */}
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前
@@ -1855,8 +1855,8 @@ export default function ProfileEditPage() {
 メールアドレスの入力欄です。
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// メールアドレスの入力欄
+{/* filepath: src/app/profile/edit/page.tsx */}
+{/* メールアドレスの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="email">
                   メールアドレス
@@ -1884,8 +1884,8 @@ export default function ProfileEditPage() {
 アバターURLの入力欄です。
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// アバターURLの入力欄
+{/* filepath: src/app/profile/edit/page.tsx */}
+{/* アバターURLの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="avatar">
                   アバターURL（任意）
@@ -1915,8 +1915,8 @@ export default function ProfileEditPage() {
 エラー表示と送信ボタンの部分です。
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// APIエラーの表示
+{/* filepath: src/app/profile/edit/page.tsx */}
+{/* APIエラーの表示 */}
               {updateProfile.error && (
                 <Alert
                   variant="destructive">
@@ -1940,8 +1940,8 @@ export default function ProfileEditPage() {
 - 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 送信・キャンセルボタン
+{/* filepath: src/app/profile/edit/page.tsx */}
+{/* 送信・キャンセルボタン */}
               <div className=
                 "flex gap-2 pt-2">
                 <Button type="submit"
@@ -1975,8 +1975,8 @@ Step 8 のパスワード変更画面と同じ形にそろえています。`dis
 最後に閉じタグです。
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 閉じタグ
+{/* filepath: src/app/profile/edit/page.tsx */}
+{/* 閉じタグ */}
             </form>
           </CardContent>
         </Card>
@@ -2526,8 +2526,8 @@ export default function ProfilePage() {
 **名前とバッジ**:
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 完成版: 名前とバッジ
+              {/* filepath: src/app/profile/page.tsx */}
+              {/* 完成版: 名前とバッジ */}
               <div className="flex-1">
                 <h1 className="text-2xl font-bold">
                   {currentUser.name}
@@ -2547,8 +2547,8 @@ export default function ProfilePage() {
 **メールアドレスの行**:
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 完成版: メールアドレスの行
+            {/* filepath: src/app/profile/page.tsx */}
+            {/* 完成版: メールアドレスの行 */}
             <Separator />
 
             <div className="space-y-4">
@@ -2568,8 +2568,8 @@ export default function ProfilePage() {
 **登録日の行**:
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 完成版: 登録日の行
+              {/* filepath: src/app/profile/page.tsx */}
+              {/* 完成版: 登録日の行 */}
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
                   <Calendar className="w-5 h-5 text-primary" />
@@ -2592,8 +2592,8 @@ export default function ProfilePage() {
 **最終更新日の行**:
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 完成版: 最終更新日の行
+              {/* filepath: src/app/profile/page.tsx */}
+              {/* 完成版: 最終更新日の行 */}
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
                   <Calendar className="w-5 h-5 text-primary" />
@@ -2617,8 +2617,8 @@ export default function ProfilePage() {
 **編集とパスワード変更のボタン**:
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 完成版: 編集とパスワード変更のボタン
+            {/* filepath: src/app/profile/page.tsx */}
+            {/* 完成版: 編集とパスワード変更のボタン */}
             <Separator />
 
             <div className="flex flex-col gap-3">
@@ -2641,8 +2641,8 @@ export default function ProfilePage() {
 **管理者向けのボタンと閉じタグ**:
 
 ```typescript
-// filepath: src/app/profile/page.tsx
-// 完成版: 管理者向けのボタンと閉じタグ
+              {/* filepath: src/app/profile/page.tsx */}
+              {/* 完成版: 管理者向けのボタンと閉じタグ */}
               {currentUser.role === USER_ROLE.ADMIN && (
                 <Button variant="outline" className="w-full" onClick={() => router.push('/user')}>
                   <Shield className="w-4 h-4 mr-2" />
@@ -2665,8 +2665,8 @@ export default function ProfilePage() {
 **サイドバーのユーザー情報**:
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
-// 完成版: サイドバーのユーザー情報
+{/* filepath: src/component/layout/app-layout.tsx */}
+{/* 完成版: サイドバーのユーザー情報 */}
 <Link
   href="/profile"
   className="mb-3 flex items-center gap-3
@@ -2682,8 +2682,8 @@ export default function ProfilePage() {
 **モバイル用のナビゲーション**:
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
-// 完成版: モバイル用のナビゲーション
+{/* filepath: src/component/layout/app-layout.tsx */}
+{/* 完成版: モバイル用のナビゲーション */}
 <div className="flex min-w-0 flex-1 flex-col">
   <nav className="flex gap-2 overflow-x-auto
     border-b p-2 md:hidden">
@@ -2709,8 +2709,8 @@ export default function ProfilePage() {
 **本文の枠**:
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
-// 完成版: 本文の枠
+    {/* filepath: src/component/layout/app-layout.tsx */}
+    {/* 完成版: 本文の枠 */}
     <Link href="/profile"
       className="whitespace-nowrap
         rounded-md px-3 py-2 text-sm">
@@ -2871,8 +2871,8 @@ export default function ChangePasswordPage() {
 **現在のパスワードの入力欄**:
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 完成版: 現在のパスワードの入力欄
+              {/* filepath: src/app/profile/change-password/page.tsx */}
+              {/* 完成版: 現在のパスワードの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">
                   現在のパスワード
@@ -2896,8 +2896,8 @@ export default function ChangePasswordPage() {
 **新しいパスワードの入力欄**:
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 完成版: 新しいパスワードの入力欄
+              {/* filepath: src/app/profile/change-password/page.tsx */}
+              {/* 完成版: 新しいパスワードの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="newPassword">
                   新しいパスワード
@@ -2924,8 +2924,8 @@ export default function ChangePasswordPage() {
 **確認用パスワードの入力欄**:
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 完成版: 確認用パスワードの入力欄
+              {/* filepath: src/app/profile/change-password/page.tsx */}
+              {/* 完成版: 確認用パスワードの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">
                   新しいパスワード（確認）
@@ -2949,8 +2949,8 @@ export default function ChangePasswordPage() {
 **サーバーエラーの表示**:
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 完成版: サーバーエラーの表示
+              {/* filepath: src/app/profile/change-password/page.tsx */}
+              {/* 完成版: サーバーエラーの表示 */}
               {changePassword.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -2965,8 +2965,8 @@ export default function ChangePasswordPage() {
 **送信とキャンセルのボタン**:
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 完成版: 送信とキャンセルのボタン
+              {/* filepath: src/app/profile/change-password/page.tsx */}
+              {/* 完成版: 送信とキャンセルのボタン */}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="w-full" disabled={changePassword.isPending}>
                   {changePassword.isPending ? '変更中...' : '変更'}
@@ -2988,8 +2988,8 @@ export default function ChangePasswordPage() {
 **閉じタグ**:
 
 ```typescript
-// filepath: src/app/profile/change-password/page.tsx
-// 完成版: 閉じタグ
+            {/* filepath: src/app/profile/change-password/page.tsx */}
+            {/* 完成版: 閉じタグ */}
             </form>
           </CardContent>
         </Card>
@@ -3168,8 +3168,8 @@ export default function ProfileEditPage() {
 **名前の入力欄**:
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 完成版: 名前の入力欄
+              {/* filepath: src/app/profile/edit/page.tsx */}
+              {/* 完成版: 名前の入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前
@@ -3193,8 +3193,8 @@ export default function ProfileEditPage() {
 **メールアドレスの入力欄**:
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 完成版: メールアドレスの入力欄
+              {/* filepath: src/app/profile/edit/page.tsx */}
+              {/* 完成版: メールアドレスの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="email">
                   メールアドレス
@@ -3219,8 +3219,8 @@ export default function ProfileEditPage() {
 **アバターURLの入力欄**:
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 完成版: アバターURLの入力欄
+              {/* filepath: src/app/profile/edit/page.tsx */}
+              {/* 完成版: アバターURLの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="avatar">アバターURL（任意）</Label>
                 <Input
@@ -3241,8 +3241,8 @@ export default function ProfileEditPage() {
 **サーバーエラーの表示**:
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 完成版: サーバーエラーの表示
+              {/* filepath: src/app/profile/edit/page.tsx */}
+              {/* 完成版: サーバーエラーの表示 */}
               {updateProfile.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -3257,8 +3257,8 @@ export default function ProfileEditPage() {
 **送信とキャンセルのボタン**:
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 完成版: 送信とキャンセルのボタン
+              {/* filepath: src/app/profile/edit/page.tsx */}
+              {/* 完成版: 送信とキャンセルのボタン */}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="w-full" disabled={updateProfile.isPending}>
                   {updateProfile.isPending ? '更新中...' : '更新'}
@@ -3280,8 +3280,8 @@ export default function ProfileEditPage() {
 **閉じタグ**:
 
 ```typescript
-// filepath: src/app/profile/edit/page.tsx
-// 完成版: 閉じタグ
+            {/* filepath: src/app/profile/edit/page.tsx */}
+            {/* 完成版: 閉じタグ */}
             </form>
           </CardContent>
         </Card>

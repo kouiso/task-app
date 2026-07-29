@@ -479,7 +479,7 @@ export default function UsersPage() {
 - `USER_ROLE.ADMIN` を使っている（文字列 `'ADMIN'` ではない）
 
 ```typescript
-// filepath: src/app/user/page.tsx
+              {/* filepath: src/app/user/page.tsx */}
               <p className=
                 "text-muted-foreground">
                 この機能は管理者のみ
@@ -558,7 +558,7 @@ export default function UsersPage() {
 - `<AppLayout>` の中に `<h1>` で「ユーザー管理」を書けた
 
 ```typescript
-// filepath: src/app/user/page.tsx
+        {/* filepath: src/app/user/page.tsx */}
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -583,7 +583,7 @@ export default function UsersPage() {
 - `<TableHeader>` の中に `<TableHead>` を3つ書けた
 
 ```typescript
-// filepath: src/app/user/page.tsx
+                  {/* filepath: src/app/user/page.tsx */}
                   <TableHead>
                     ステータス
                   </TableHead>
@@ -615,7 +615,7 @@ export default function UsersPage() {
 **実装**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
+              {/* filepath: src/app/user/page.tsx */}
               <TableBody>
                 {users?.map((user) => (
                   <TableRow key={user.id}>
@@ -642,7 +642,7 @@ export default function UsersPage() {
 - 条件付きレンダリングを使っている
 
 ```typescript
-// filepath: src/app/user/page.tsx
+                          {/* filepath: src/app/user/page.tsx */}
                           <AvatarFallback>
                             {user.name
                               ?.[0]
@@ -668,7 +668,7 @@ export default function UsersPage() {
 - `{user.name}` を1列目、`{user.email}` を2列目の `<TableCell>` に書けた
 
 ```typescript
-// filepath: src/app/user/page.tsx
+                    {/* filepath: src/app/user/page.tsx */}
                     <TableCell>
                       <UserRoleBadge
                         role={user.role} />
@@ -716,7 +716,7 @@ export default function UsersPage() {
 **実装**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
+                    {/* filepath: src/app/user/page.tsx */}
                     <TableCell>
                       {user.createdAt
                         ? format(
@@ -737,7 +737,7 @@ export default function UsersPage() {
 - `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡している
 
 ```typescript
-// filepath: src/app/user/page.tsx
+                    {/* filepath: src/app/user/page.tsx */}
                     <TableCell
                       className="text-right">
                       <div className="flex
@@ -764,7 +764,7 @@ export default function UsersPage() {
 - 詳細ボタンの中に `<Eye />` を置き、`title="詳細"` を付けている
 
 ```typescript
-// filepath: src/app/user/page.tsx
+                        {/* filepath: src/app/user/page.tsx */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -791,7 +791,7 @@ export default function UsersPage() {
 - 2つとも `variant="ghost"` と `size="icon"` を指定している
 
 ```typescript
-// filepath: src/app/user/page.tsx
+                  {/* filepath: src/app/user/page.tsx */}
                   </TableRow>
                 ))}
               </TableBody>
@@ -840,7 +840,7 @@ Day 08 のデスクトップ用 `<ul>` 内で、
 `menuItems.map(...)` の直後へ追加します。
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
+{/* filepath: src/component/layout/app-layout.tsx */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
@@ -867,7 +867,7 @@ Day 08 のデスクトップ用 `<ul>` 内で、
 **実装**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
+        {/* filepath: src/app/user/page.tsx */}
         {users && users.length === 0 && (
           <div className="text-center py-10
             text-muted-foreground">
@@ -1197,8 +1197,8 @@ export default function UsersPage() {
 **行の描画とバッジ**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
-// 完成版: 行の描画とバッジ
+              {/* filepath: src/app/user/page.tsx */}
+              {/* 完成版: 行の描画とバッジ */}
               <TableBody>
                 {users?.map((user) => (
                   <TableRow key={user.id}>
@@ -1225,8 +1225,8 @@ export default function UsersPage() {
 **登録日と詳細ボタン**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
-// 完成版: 登録日と詳細ボタン
+                    {/* filepath: src/app/user/page.tsx */}
+                    {/* 完成版: 登録日と詳細ボタン */}
                     <TableCell>
                       {user.createdAt
                         ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
@@ -1251,8 +1251,8 @@ export default function UsersPage() {
 **編集ボタンとテーブルの閉じタグ**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
-// 完成版: 編集ボタンとテーブルの閉じタグ
+                        {/* filepath: src/app/user/page.tsx */}
+                        {/* 完成版: 編集ボタンとテーブルの閉じタグ */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1276,8 +1276,8 @@ export default function UsersPage() {
 **空状態と最後の閉じタグ**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
-// 完成版: 空状態と最後の閉じタグ
+        {/* filepath: src/app/user/page.tsx */}
+        {/* 完成版: 空状態と最後の閉じタグ */}
         {users && users.length === 0 && (
           <div className="text-center py-10 text-muted-foreground">
             ユーザーが見つかりませんでした
@@ -1306,8 +1306,8 @@ import { USER_ROLE } from '@/lib/constant/roles';
 **管理者だけに出すリンク**:
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
-// 完成版: 今日足したリンク
+{/* filepath: src/component/layout/app-layout.tsx */}
+{/* 完成版: 今日足したリンク */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link

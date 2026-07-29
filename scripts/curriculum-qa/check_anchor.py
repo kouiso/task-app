@@ -17,7 +17,13 @@ from pathlib import Path
 
 from markdown_scan import fence_states
 
-FILEPATH = re.compile(r"^\s*(?://|#)\s*filepath:\s*(.+?)\s*$")
+FILEPATH = re.compile(r"^\s*(?:\{/\*\s*filepath:\s*(.+?)\s*\*/\}|(?://|#)\s*filepath:\s*(.+?))\s*$")
+
+
+def filepath_value(match):
+    # 2つの書き方を1つの正規表現で受けるため捕獲群が2本になる。どちらが埋まるかは
+    # 書き方で決まるので、呼び出し側に群番号を意識させず値だけを返す。
+    return match.group(1) if match.group(1) is not None else match.group(2)
 # 「続き」「同上」だけで、どのファイルなのかを名乗っていない値。
 # 「読み比べ用サンプル」は実ファイルを持たないと明言しているので通す。
 VAGUE = re.compile(r"^(続き|同上|前の続き|上記の続き|同じファイル)[（(]?[^）)]*[）)]?$")
@@ -34,8 +40,8 @@ def find(text: str) -> list[tuple[int, str]]:
         if state != "inside":
             continue
         fp = FILEPATH.match(line)
-        if fp and (VAGUE.match(fp.group(1)) or REPEATED.search(fp.group(1))):
-            hits.append((i, fp.group(1)))
+        if fp and (VAGUE.match(filepath_value(fp)) or REPEATED.search(filepath_value(fp))):
+            hits.append((i, filepath_value(fp)))
     return hits
 
 
@@ -63,7 +69,7 @@ def find_sample_with_real_path(text: str) -> list[tuple[int, str]]:
         fp = FILEPATH.match(line)
         if not fp:
             continue
-        value = fp.group(1)
+        value = filepath_value(fp)
         if value.startswith(("src/", "prisma/", "scripts/")):
             hits.append((i, value))
     return hits
@@ -83,7 +89,7 @@ def find_missing(text: str, root: Path) -> list[tuple[int, str]]:
         fp = FILEPATH.match(line)
         if not fp:
             continue
-        value = fp.group(1).split("（")[0].split("(")[0].strip()
+        value = filepath_value(fp).split("（")[0].split("(")[0].strip()
         if not value.startswith(("src/", "prisma/", "scripts/")):
             continue
         if not (root / value).exists():
