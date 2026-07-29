@@ -1772,7 +1772,7 @@ export default function TaskPage() {
 | タスクが表示されない | フィルター条件が厳しすぎる | 「すべて」を選択してデータがあるか確認 |
 | カードが表示されない | TaskCard の import ミス | `@/component/task/task-card` を確認 |
 | フィルターが効かない | `useQuery` のパラメータが渡っていない | 三項演算子の構文を確認 |
-| 詳細が取得できない | `enabled` 条件が間違っている | `!!selectedTask` を確認 |
+| 詳細が取得できない | `TaskDetailDialog` に渡す `taskId` が空 | 自分の `page.tsx` の `taskId={selectedTask}` と、その上の `setSelectedTask` を確認 |
 | ステータスフィルターで型エラー | `as` キャストを使っている | `isTaskStatus()` 型ガードを使う |
 
 ## 今日学んだ用語
