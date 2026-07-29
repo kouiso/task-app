@@ -243,6 +243,9 @@ jobs:
       #   自分の責任範囲に含めること。今は緑（EXIT 0 / All @/ imports are covered）。
       - name: Gate 3 — 教材importの解決チェック (順序込み)
         run: |
+          echo "::group::test_check_scaffold_alignment.py — 目印の読み取りそのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_scaffold_alignment.py
+          echo "::endgroup::"
           echo "::group::check_scaffold_curriculum_alignment.py"
           python3 scripts/curriculum-qa/check_scaffold_curriculum_alignment.py
           echo "::endgroup::"

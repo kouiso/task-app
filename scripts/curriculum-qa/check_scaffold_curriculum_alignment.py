@@ -17,6 +17,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from curriculum_blocks import FILEPATH, filepath_value  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATERIAL_DIR = REPO_ROOT / "material" / "30days-curriculum"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
@@ -79,9 +82,13 @@ def curriculum_creates_by_day() -> dict[int, set[str]]:
         for block in re.finditer(r"```(?:\w+)?\n(.*?)```", content, re.DOTALL):
             lines = block.group(1).split("\n")
             if lines:
-                m = re.match(r"//\s*filepath:\s*(.+)", lines[0].strip())
+                # 目印は `// filepath:` と `{/* filepath: */}` の2通りある。JSX の
+                # 子要素の位置では `//` がコメントにならないためで、片方しか読めないと
+                # 「その日にそのファイルを作った」ことを取り落とす。判定は抽出側と
+                # 共通の FILEPATH に寄せて、2つの判定が割れないようにする。
+                m = FILEPATH.match(lines[0])
                 if m:
-                    by_day[n].add(m.group(1).strip())
+                    by_day[n].add(filepath_value(m))
     return dict(by_day)
 
 
