@@ -29,7 +29,12 @@ __all__ = [
     "mask_code",
 ]
 
-FILEPATH = re.compile(r"^\s*(?://|#)\s*filepath:\s*(.+?)\s*$")
+FILEPATH = re.compile(r"^\s*(?:\{/\*\s*filepath:\s*(.+?)\s*\*/\}|(?://|#)\s*filepath:\s*(.+?))\s*$")
+
+
+def filepath_value(match):
+    """`// filepath:` と `{/* filepath: */}` のどちらでも値を返す。"""
+    return match.group(1) if match.group(1) is not None else match.group(2)
 # 値の末尾に付く注記1つ。入れ子は取らない（注記は `（続き）` 程度の平坦な語）。
 TRAILING_NOTE = re.compile(r"^(.*?)\s*([（(][^（()）]*[）)])\s*$")
 REAL_PREFIXES = ("src/", "prisma/", "scripts/")
@@ -117,7 +122,7 @@ def iter_blocks(text: str, source: str) -> Iterator[Block]:
         if state == "inside":
             m = FILEPATH.match(line)
             if m and value is None:
-                value = m.group(1)
+                value = filepath_value(m)
                 continue
             buf.append(line)
             continue

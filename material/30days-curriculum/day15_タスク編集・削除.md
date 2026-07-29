@@ -2150,8 +2150,8 @@ function TaskPageContent() {
 **プロジェクトの絞り込み**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: プロジェクトの絞り込み
+              {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+              {/* 完成版: プロジェクトの絞り込み */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのプロジェクト
@@ -2171,8 +2171,8 @@ function TaskPageContent() {
 **ステータスの絞り込み**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: ステータスの絞り込み
+          {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+          {/* 完成版: ステータスの絞り込み */}
           <div className="w-[200px]">
             <Select value={filterStatus}
               onValueChange={(value) => {
@@ -2191,8 +2191,8 @@ function TaskPageContent() {
 **ステータスの選択肢**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: ステータスの選択肢
+              {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+              {/* 完成版: ステータスの選択肢 */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのステータス
@@ -2215,8 +2215,8 @@ function TaskPageContent() {
 **カードの一覧**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: カードの一覧
+        {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: カードの一覧 */}
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -2265,8 +2265,8 @@ function TaskPageContent() {
 **3つのダイアログ**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 3つのダイアログ
+        {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 3つのダイアログ */}
         <TaskDetailDialog
           open={detailOpen}
           taskId={selectedTask}
@@ -2287,8 +2287,8 @@ function TaskPageContent() {
 **削除の確認ダイアログ**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 削除の確認ダイアログ
+        {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 削除の確認ダイアログ */}
         <DeleteConfirmDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}

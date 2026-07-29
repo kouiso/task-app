@@ -38,7 +38,7 @@ def check_code_completeness(filepath: str) -> bool:
             continue
 
         # filepath: コメントのチェック
-        if '// filepath:' in code or '# filepath:' in code:
+        if '// filepath:' in code or '# filepath:' in code or '{/* filepath:' in code:
             blocks_with_filepath += 1
         else:
             # TypeScript/JavaScript/TSXのコードブロックはfilepathが必要

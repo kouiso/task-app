@@ -190,7 +190,7 @@ export default function DashboardPage() {
 続く `<main>` と `<div>` は Day 01 のダッシュボードと同じ骨組みです。`bg-background` や `text-foreground` も、Day 01 で `globals.css` に入れた色の名前をそのまま使っています。最後の `<section>` はまだ開いたままです。`lg:grid-cols-[1.2fr_0.8fr]` は画面が広いときだけ左右2列に分ける指定で、左に主役のカード、右に補助カードを置く場所を先に用意しています。ここで保存すると閉じタグが足りずエラーになるので、次のブロックまで続けて書いてください。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+          {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
           <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
             <div className="border-b border-border px-8 py-6">
               <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
@@ -222,7 +222,7 @@ export default function DashboardPage() {
 `{ownerName}`・`{focusTheme}`・`{encouragement}` の3か所が、`src/app/dashboard/page.tsx` の先頭で `const` として定義した値の出口です。文字を直接書いていないので、名前を変えるときに触るのはファイル先頭の1行だけで済みます。`overflow-hidden` は、角を丸めた枠から下の段の背景色がはみ出すのを防いでいます。これを外すと、カードの下側の角だけ四角く見えます。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+          {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
           <aside className="space-y-4">
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
@@ -253,7 +253,7 @@ export default function DashboardPage() {
 2枚とも主役と同じ `rounded-3xl border border-border bg-card` を使い、文字だけ `text-sm` で小さくしています。枠と色をそろえて文字の大きさだけで差を付けると、主役の邪魔をせずに同じアプリの部品として見えます。ここで `bg-white` のような色を直接書くと、Day 01 で用意した配色から外れて、あとで暗い配色へ切り替えたときにこの2枚だけ白く浮きます。最後の `</section>` と `</div>` は、1つ目のブロックで開けた入れ物を閉じています。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+    {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
     </main>
   );
 }
@@ -359,7 +359,7 @@ export default function DashboardPage() {
 `DashboardPage` の中の `new Date().getHours()` は、いまの時刻の「時」だけを0から23の数字で取り出します。その数字を渡した結果を `mainMessage` に入れておき、JSX からは1回受け取るだけにします。先に組み立てておかないと、画面の形と文の組み立てが JSX の中で混ざります。そうなると、文言を直したい人はタグの海から該当箇所を探すことになります。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+          {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
             Day 02 Progress
           </div>
@@ -390,7 +390,7 @@ export default function DashboardPage() {
 下の `<p>` では `{dashboardOwner.todayGoal}` を `<span>` で囲み、文のなかで1か所だけ濃く見せています。まわりが `text-muted-foreground` の薄い文字なので、濃い文字が混ざると読者の目はそこで止まります。強調のために色の名前を直接書いていないのは、Day 01 で決めた配色から外れないためです。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+            {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
             <div className="grid gap-4 bg-secondary px-8 py-6 sm:grid-cols-2">
               <div className="rounded-2xl bg-background px-4 py-4 shadow-xs">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
@@ -421,7 +421,7 @@ export default function DashboardPage() {
 `Owner` や `Focus` のような小さなラベルには、`text-xs` と `tracking-[0.18em]` を当てています。後者は文字の間隔を少し広げる指定です。小さな英字は詰まって読みにくいので、間隔を空けるとラベルより値のほうが主役に見えます。この `<div>` はまだ閉じていないので、次のブロックへ続けます。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+              {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
               </div>
             </div>
           </article>
@@ -451,7 +451,7 @@ export default function DashboardPage() {
 Step 1 との違いは、`<article>` の入れ物と `className` を1つも触っていない点です。カードの並べ方は Step 1 で決めた形をそのまま使い、変えたのは文章と、左側で使う値の作り方だけです。骨組みが動いていなければ、表示が崩れたときに疑う場所を今日書き足した関数のあたりへ絞れます。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+          {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
           </aside>
         </section>
       </div>
@@ -598,7 +598,7 @@ Step 3 で新しく出てくるのは `focusCards` です。`FocusCard[]` は「
 Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていました。いまは同じ形のカードを配列の要素として持っているので、4枚目が必要になっても増やすのは要素1つだけで、`<div>` を書き足す必要はありません。`return` から下のヘッダーは Step 2 と変わりません。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+          {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
@@ -628,7 +628,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
 `<h2>` に `max-w-4xl` が増えているのが Step 2 との違いです。あいさつの文は名前と集中テーマを含むので長くなりやすく、幅を決めずに置くと画面の端まで1行で伸びます。上限を決めておけば、長い文でも決まった幅で折り返します。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+              {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -660,7 +660,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
 `key={card.label}` は、React がどのカードがどれなのかを見分けるための目印です。付け忘れても表示はされますが、`npm run dev` を動かしているターミナルに警告が残ります。中で読んでいるのは `card.label`・`card.value`・`card.description` の3つで、`FocusCard` 型で決めた3項目とそろっています。だから表示する項目を増やしたいときは、型・配列・この中身の3か所を合わせて直します。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+            {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
             </div>
           </article>
 
@@ -690,7 +690,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
 右の列も主役と同じ `<section>` の中にあるので、画面が狭いときは `lg:grid-cols-[1.2fr_0.8fr]` が効かず、主役の下へ縦に続きます。スマートフォンで見て右の列が下に回るのは、崩れではなくこの指定どおりの動きです。
 
 ```tsx
-// filepath: src/app/dashboard/page.tsx（同じファイルの続き）
+            {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
                 次につながる視点
@@ -863,7 +863,7 @@ export default function DashboardPage() {
 その下の `focusCards` は `useMemo` で包まれていません。同じファイルの中に、覚えておくものと毎回作り直すものが混ざっている状態です。どちらが正しいのかはコードに書かれていないので、あとから読む人は両方を疑うところから始めます。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+            {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
               Task App
             </p>
@@ -895,7 +895,7 @@ export default function DashboardPage() {
 ここから先は、見た目を組み立てる JSX が続きます。押す場所も、値が変わって表示が動く場所もありません。それでも1行目に `'use client'` があるので、この部分の JavaScript もブラウザへ送る対象に入ります。このコンポーネントの実装コードと、そこから読み込んでいる部品が、まとめてブラウザへ届く側に含まれます。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+              {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
@@ -927,7 +927,7 @@ export default function DashboardPage() {
 `focusCards.map(...)` も Step 3 で書いたものと同じです。配列を回してカードを作る処理は、サーバー側で動かしてもブラウザ側で動かしても結果が変わりません。つまりこの部分をブラウザで動かす理由はありません。Before の問題は書き方の誤りではなく、ブラウザで動かす必要のないコードまで、1行目の宣言によってまとめてブラウザ側へ寄せてしまった点です。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+                  {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
                   </p>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">
                     {card.description}
@@ -959,7 +959,7 @@ export default function DashboardPage() {
 右側の補助カードも中身は決まった文章です。ここまで6つのブロックを読みましたが、`'use client'` が必要になる処理は1つも出てきませんでした。クリックや入力に反応する場所は無く、覚えておきたい値もありません。それでも宣言だけが先に付いている状態です。次のブロックで Before は終わり、そのあとに問題点をまとめます。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+              {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 画面の主役が明確になって、
                 次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
@@ -1088,7 +1088,7 @@ export default function DashboardPage() {
 `focusCards` の中身も Before と同じです。ここで確かめたいのは、サーバー側に置いたからといって書き方を変える必要は無いという点です。配列を作り、値を差し込み、タグを並べるところまでは、サーバー側で組み立てても書き方は変わりません。書き方が変わるのは、ブラウザ側で値を覚えたり、クリックに反応したくなったときです。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+          {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
@@ -1120,7 +1120,7 @@ export default function DashboardPage() {
 見た目の部分は Before から変わりません。同じタグ、同じ `className`、同じ差し込みです。それでも読者のブラウザへ届くものは違います。組み立て終わった HTML はどちらも届きますが、Before ではそれに加えて、この JSX を動かすための JavaScript も送られます。見え方が同じだからといって、送られている中身まで同じではありません。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+              {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -1152,7 +1152,7 @@ export default function DashboardPage() {
 `map` でカードを3枚作る処理も、そのまま置いています。この配列はサーバー側だけで回るので、3枚のカードを作る JavaScript はブラウザへ送られません。Day 02 のように出す内容が決まっている画面では、この差がそのまま読み込むファイルの軽さに出ます。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+            {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
             </div>
           </article>
 
@@ -1184,7 +1184,7 @@ export default function DashboardPage() {
 右側の補助カードも同じです。ここまで見てきて、After で消えたのは `'use client'` と `useMemo` に関わる数行だけでした。裏を返せば、Before で増えていた負担も、その数行が呼び込んでいたものだけだったということです。ページ全体を書き直す話ではありません。
 
 ```tsx
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+            {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
                 次につながる視点

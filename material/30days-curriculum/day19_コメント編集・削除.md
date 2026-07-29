@@ -1293,8 +1293,8 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 **説明とタスク情報の前半**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 説明とタスク情報の前半
+          {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+          {/* 完成版: 説明とタスク情報の前半 */}
           {taskDetail && (
             <div className="space-y-6">
               <div>
@@ -1323,8 +1323,8 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 **担当者の表示**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 担当者の表示
+                {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                {/* 完成版: 担当者の表示 */}
                 <div>
                   <span className="text-muted-foreground block mb-1">担当者</span>
                   <div className="flex items-center gap-2">
@@ -1350,8 +1350,8 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 **期限とコメント欄の見出し**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 期限とコメント欄の見出し
+                {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                {/* 完成版: 期限とコメント欄の見出し */}
                 <div>
                   <span className="text-muted-foreground block mb-1">期限</span>
                   <span>
@@ -1376,8 +1376,8 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 **コメント一覧の枠と0件の案内**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: コメント一覧の枠と0件の案内
+                {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                {/* 完成版: コメント一覧の枠と0件の案内 */}
                 <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
                   {taskDetail.comments?.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-2">
@@ -1391,8 +1391,8 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 **1件ごとのアバター**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 1件ごとのアバター
+                  {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                  {/* 完成版: 1件ごとのアバター */}
                   {taskDetail.comments?.map((comment) => (
                     <div key={comment.id} className="flex gap-3 text-sm">
                       <Avatar className="h-8 w-8 mt-1">
@@ -1408,8 +1408,8 @@ Day 18 で書いたものをそのまま残します。`onSuccess` の中で `in
 **名前と日時**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 名前と日時
+                      {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                      {/* 完成版: 名前と日時 */}
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">
@@ -1428,8 +1428,8 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
 **編集と削除のボタン**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 編集と削除のボタン
+                            {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                            {/* 完成版: 編集と削除のボタン */}
                             {comment.userId === session?.user?.id && (
                               <div className="flex gap-1">
                                 <Button
@@ -1448,8 +1448,8 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
 **削除ボタンと本人判定の終端**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 削除ボタンと本人判定の終端
+                                {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                                {/* 完成版: 削除ボタンと本人判定の終端 */}
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1470,8 +1470,8 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
 **編集モードと本文の切り替え**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 編集モードと本文の切り替え
+                        {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                        {/* 完成版: 編集モードと本文の切り替え */}
                         {editingCommentId === comment.id ? (
                           <div className="space-y-2">
                             <Textarea
@@ -1490,8 +1490,8 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
 **更新ボタンと通常表示**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 更新ボタンと通常表示
+                              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                              {/* 完成版: 更新ボタンと通常表示 */}
                               <Button
                                 size="sm"
                                 onClick={() => handleSaveEdit(comment.id)}
@@ -1518,8 +1518,8 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
 **コメント投稿フォーム**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: コメント投稿フォーム
+                {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                {/* 完成版: コメント投稿フォーム */}
                 {canEditProject(taskDetail.projectId) && (
                 <form
                   onSubmit={commentForm.handleSubmit(handleCommentSubmit)}
@@ -1539,8 +1539,8 @@ Day 18 では日時が右端に1つ置かれていました。今日はその右
 **投稿ボタン**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 投稿ボタン
+                  {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+                  {/* 完成版: 投稿ボタン */}
                   <div className="flex justify-end">
                     <Button
                       type="submit"
@@ -1561,8 +1561,8 @@ Day 18 のまま残しています。投稿フォームは一覧の外に1つだ
 **末尾の閉じるボタン**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 末尾の閉じるボタン
+              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: 末尾の閉じるボタン */}
               </div>
             </div>
           )}
@@ -1579,8 +1579,8 @@ Day 18 のまま残しています。投稿フォームは一覧の外に1つだ
 **削除確認ダイアログ**:
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 削除確認ダイアログ
+      {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+      {/* 完成版: 削除確認ダイアログ */}
       <DeleteConfirmDialog
         open={deleteCommentDialogOpen}
         onOpenChange={setDeleteCommentDialogOpen}

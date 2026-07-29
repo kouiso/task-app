@@ -859,8 +859,8 @@ export default function NotFound() {
 **戻り道のリンク**:
 
 ```tsx
-// filepath: src/app/not-found.tsx
-// 完成版: 戻り道のリンク
+      {/* filepath: src/app/not-found.tsx */}
+      {/* 完成版: 戻り道のリンク */}
       <Link
         href="/dashboard"
         className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"

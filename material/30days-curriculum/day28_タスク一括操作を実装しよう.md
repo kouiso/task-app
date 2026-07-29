@@ -514,7 +514,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+        {/* filepath: src/app/task/page.tsx */}
         <div className="flex-1 min-w-0 h-full">
           <TaskCard
             id={task.id}
@@ -542,7 +542,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 カード行と一覧の条件分岐を閉じます。
 
 ```typescript
-// filepath: src/app/task/page.tsx（続き）
+      {/* filepath: src/app/task/page.tsx（続き） */}
       </div>
       );
     })
@@ -1673,8 +1673,8 @@ const handleBulkUpdateStatus = (
 **タスクカード本体**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: タスクカード本体
+        {/* filepath: src/app/task/page.tsx */}
+        {/* 完成版: タスクカード本体 */}
         <div className="flex-1 min-w-0 h-full">
           <TaskCard
             id={task.id}
@@ -1700,8 +1700,8 @@ const handleBulkUpdateStatus = (
 **タスク一覧の閉じタグと空メッセージ**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: タスク一覧の閉じタグと空メッセージ
+      {/* filepath: src/app/task/page.tsx */}
+      {/* 完成版: タスク一覧の閉じタグと空メッセージ */}
       </div>
       );
     })

@@ -1042,8 +1042,8 @@ export default function RegisterPage() {
 `return` の前半は、画面の外枠とカードの見出しです。`min-h-screen` で高さを画面いっぱいに取り、`items-center justify-center` で縦横の中央にカードを置きます。`max-w-sm` があるので、横に広いモニターでもカードは間延びしません。ここまでは Step 1 と Step 8 で書いた内容が、そのまま並んでいます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: CardContent - 名前・メール欄
+        {/* filepath: src/app/register/page.tsx */}
+        {/* 完成版: CardContent - 名前・メール欄 */}
         <CardContent>
           <form
             onSubmit={handleSubmit(onSubmit)}
@@ -1074,8 +1074,8 @@ export default function RegisterPage() {
 サーバーエラーの `<Alert>` を入力欄より前に置いているのは、失敗したときに読者の目が最初に届く位置だからです。ボタンの下に置くと、入力欄が長い画面では画面外に隠れます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: メール・パスワード欄
+            {/* filepath: src/app/register/page.tsx */}
+            {/* 完成版: メール・パスワード欄 */}
             <div className="space-y-2">
               <Label htmlFor="email">
                 メールアドレス</Label>
@@ -1102,8 +1102,8 @@ export default function RegisterPage() {
 メール欄とパスワード欄では、`register` に渡す名前と `errors` から読むキーが対になっています。`register('email')` と `errors.email`、`register('password')` と `errors.password` のように、必ず同じ名前で組にします。片方だけ書き換えると、打ち間違えた欄とは違う場所に赤い文字が出ます。読者はエラーの出ていない欄を直そうとして、時間だけを使います。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: パスワード確認欄
+            {/* filepath: src/app/register/page.tsx */}
+            {/* 完成版: パスワード確認欄 */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">
                 パスワード(確認)</Label>
@@ -1121,8 +1121,8 @@ export default function RegisterPage() {
 確認欄も書き方は同じですが、ここに出るメッセージだけは出どころが違います。他の3欄は自分の入力を見て判定されるのに対し、この欄の「パスワードが一致しません」は `.refine()` が2つの欄を見比べた結果です。`path` の指定でこの場所へ届いている、という関係をもう一度確かめておきます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 完成版: ボタン・リンク・閉じタグ
+            {/* filepath: src/app/register/page.tsx */}
+            {/* 完成版: ボタン・リンク・閉じタグ */}
             <Button type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600
                 hover:from-blue-700 hover:to-indigo-700 shadow-md"

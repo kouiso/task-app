@@ -2651,8 +2651,8 @@ URL に `projectId` があるときは、一覧を描かずに詳細だけを返
 **メンバー追加ダイアログの見出し**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加ダイアログの見出し
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: メンバー追加ダイアログの見出し */}
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -2666,8 +2666,8 @@ URL に `projectId` があるときは、一覧を描かずに詳細だけを返
 **メンバー追加ダイアログのユーザー選択**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加ダイアログのユーザー選択
+            {/* filepath: src/app/project/page.tsx */}
+            {/* 完成版: メンバー追加ダイアログのユーザー選択 */}
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="user">ユーザー</Label>
@@ -2691,8 +2691,8 @@ URL に `projectId` があるときは、一覧を描かずに詳細だけを返
 **メンバー追加ダイアログのロール選択**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加ダイアログのロール選択
+              {/* filepath: src/app/project/page.tsx */}
+              {/* 完成版: メンバー追加ダイアログのロール選択 */}
               <div className="grid gap-2">
                 <Label htmlFor="role">ロール</Label>
                 <Select
@@ -2723,8 +2723,8 @@ URL に `projectId` があるときは、一覧を描かずに詳細だけを返
 **メンバー追加ダイアログのフッター**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加ダイアログのフッター
+            {/* filepath: src/app/project/page.tsx */}
+            {/* 完成版: メンバー追加ダイアログのフッター */}
             <DialogFooter>
               <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
                 キャンセル
@@ -2742,8 +2742,8 @@ URL に `projectId` があるときは、一覧を描かずに詳細だけを返
 **メンバー削除の確認ダイアログ**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー削除の確認ダイアログ
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: メンバー削除の確認ダイアログ */}
         <DeleteConfirmDialog
           open={removeMemberDialogOpen}
           onOpenChange={setRemoveMemberDialogOpen}
@@ -2796,8 +2796,8 @@ URL に `projectId` があるときは、一覧を描かずに詳細だけを返
 **プロジェクトカードの集計**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクトカードの集計
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: プロジェクトカードの集計 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
@@ -2844,8 +2844,8 @@ Step 1 で `onClick` に `handleProjectClick` をつなぎ、カードから詳�
 **プロジェクト作成・編集ダイアログ**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクト作成・編集ダイアログ
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: プロジェクト作成・編集ダイアログ */}
         <ProjectDialog
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
@@ -2860,8 +2860,8 @@ Day 10 と Day 11 で作ったダイアログです。作成と編集で同じ�
 **プロジェクト削除の確認ダイアログ**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクト削除の確認ダイアログ
+      {/* filepath: src/app/project/page.tsx */}
+      {/* 完成版: プロジェクト削除の確認ダイアログ */}
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

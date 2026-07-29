@@ -1533,8 +1533,8 @@ export default function ReportPage() {
 **JSX — 統計カードの前半2枚**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: JSX — 統計カードの前半2枚
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — 統計カードの前半2枚 */}
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4
           gap-4">
@@ -1565,8 +1565,8 @@ export default function ReportPage() {
 **JSX — 統計カードの後半2枚**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: JSX — 統計カードの後半2枚
+          {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+          {/* 完成版: JSX — 統計カードの後半2枚 */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -1595,8 +1595,8 @@ export default function ReportPage() {
 **JSX — テーブルの見出し**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: JSX — テーブルの見出し
+        {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — テーブルの見出し */}
         <Card>
           <CardHeader>
             <CardTitle>
@@ -1627,8 +1627,8 @@ export default function ReportPage() {
 **JSX — テーブルの行・前半**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: JSX — テーブルの行・前半
+              {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+              {/* 完成版: JSX — テーブルの行・前半 */}
               <TableBody>
                 {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
@@ -1651,8 +1651,8 @@ export default function ReportPage() {
 **JSX — テーブルの行・後半と閉じタグ**:
 
 ```typescript
-// filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: JSX — テーブルの行・後半と閉じタグ
+                    {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
+                    {/* 完成版: JSX — テーブルの行・後半と閉じタグ */}
                     <TableCell
                       className="text-right">
                       {stat.progress.toFixed(1)}%</TableCell>

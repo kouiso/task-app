@@ -1662,8 +1662,8 @@ function TaskPageContent() {
 **ステータスの絞り込み**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: ステータスの絞り込み
+          {/* filepath: src/app/task/page.tsx */}
+          {/* 完成版: ステータスの絞り込み */}
           <div className="w-[200px]">
             <Select
               value={filterStatus}
@@ -1692,8 +1692,8 @@ function TaskPageContent() {
 **タスクカードの一覧**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: タスクカードの一覧
+        {/* filepath: src/app/task/page.tsx */}
+        {/* 完成版: タスクカードの一覧 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
@@ -1721,8 +1721,8 @@ function TaskPageContent() {
 **0件のときの表示と詳細ダイアログ**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 0件のときの表示と詳細ダイアログ
+            {/* filepath: src/app/task/page.tsx */}
+            {/* 完成版: 0件のときの表示と詳細ダイアログ */}
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
               <p>タスクが見つかりません。</p>
               <p>最初のタスクを作成しましょう!</p>

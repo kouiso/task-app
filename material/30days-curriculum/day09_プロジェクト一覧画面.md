@@ -1257,8 +1257,8 @@ function ProjectPageContent() {
 **スイッチとボタン**:
 
 ```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: スイッチとボタン
+          {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+          {/* 完成版: スイッチとボタン */}
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Switch
@@ -1282,8 +1282,8 @@ function ProjectPageContent() {
 **カードを並べる枠**:
 
 ```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: カードを並べる枠
+        {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+        {/* 完成版: カードを並べる枠 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0
             ? (projects.map((project) => {

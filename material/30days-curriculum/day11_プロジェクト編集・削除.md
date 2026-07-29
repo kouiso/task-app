@@ -2087,8 +2087,8 @@ Day 09 で作った部分です。今日は変更していません。このス�
 **新規作成ボタンとグリッドの開始**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 新規作成ボタンとグリッドの開始
+            {/* filepath: src/app/project/page.tsx */}
+            {/* 完成版: 新規作成ボタンとグリッドの開始 */}
             <Button onClick={handleCreate}>
               <Plus
                 className="mr-2 h-4 w-4" />
@@ -2177,8 +2177,8 @@ Day 09 で作った部分です。今日は変更していません。このス�
 **削除確認ダイアログと閉じタグ**:
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 削除確認ダイアログと閉じタグ
+      {/* filepath: src/app/project/page.tsx */}
+      {/* 完成版: 削除確認ダイアログと閉じタグ */}
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

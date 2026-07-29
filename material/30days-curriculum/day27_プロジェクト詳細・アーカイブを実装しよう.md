@@ -387,7 +387,7 @@ return (
 なお最後の `<div className="grid ...">` は開いたままです。閉じタグが足りない状態なので、この時点では保存してもエラーが出ます。続きを次のブロックで書きます。
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx（同じファイルの続き）
+      {/* filepath: src/component/project/project-detail-view.tsx（同じファイルの続き） */}
       {/* Step 4 でメンバー一覧とタスク一覧を入れる */}
     </div>
   </div>
@@ -445,7 +445,7 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 `<Avatar>` を閉じた直後で切れているので、続きを次のブロックで書きます。
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx（同じファイルの続き）
+            {/* filepath: src/component/project/project-detail-view.tsx（同じファイルの続き） */}
             <div>
               <p className="font-medium">{member.user?.name || member.user?.email || '不明'}</p>
               <Badge variant="outline" className="text-xs">
@@ -512,7 +512,7 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 こちらも `<div>` の途中で切れています。続きを次のブロックで書きます。
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx（同じファイルの続き）
+              {/* filepath: src/component/project/project-detail-view.tsx（同じファイルの続き） */}
               <Badge variant={getPriorityBadgeVariant(task.priority)}>
                 {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
               </Badge>
@@ -1316,8 +1316,8 @@ function ProjectPageContent() {
 **メンバー追加ダイアログのユーザー選択欄**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加ダイアログ（ユーザー選択）
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: メンバー追加ダイアログ（ユーザー選択） */}
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -1349,8 +1349,8 @@ function ProjectPageContent() {
 **メンバー追加ダイアログのロール選択欄**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加ダイアログ（ロール選択）
+              {/* filepath: src/app/project/page.tsx */}
+              {/* 完成版: メンバー追加ダイアログ（ロール選択） */}
               <div className="grid gap-2">
                 <Label htmlFor="role">ロール</Label>
                 <Select
@@ -1383,8 +1383,8 @@ function ProjectPageContent() {
 **メンバー追加ダイアログの操作ボタン**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加ダイアログの操作ボタン
+            {/* filepath: src/app/project/page.tsx */}
+            {/* 完成版: メンバー追加ダイアログの操作ボタン */}
             <DialogFooter>
               <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
                 キャンセル
@@ -1404,8 +1404,8 @@ function ProjectPageContent() {
 **詳細画面のメンバー削除確認**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 詳細画面のメンバー削除確認
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: 詳細画面のメンバー削除確認 */}
         <DeleteConfirmDialog
           open={removeMemberDialogOpen}
           onOpenChange={setRemoveMemberDialogOpen}
@@ -1462,8 +1462,8 @@ function ProjectPageContent() {
 **カードに渡す件数の集計**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: カードに渡す件数の集計
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: カードに渡す件数の集計 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
@@ -1530,8 +1530,8 @@ function ProjectPageContent() {
 **作成・編集ダイアログ**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 作成・編集ダイアログ
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: 作成・編集ダイアログ */}
         <ProjectDialog
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
@@ -1545,8 +1545,8 @@ function ProjectPageContent() {
 **一覧側のメンバー追加ダイアログのユーザー選択欄**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 一覧側のメンバー追加ダイアログ（ユーザー選択）
+        {/* filepath: src/app/project/page.tsx */}
+        {/* 完成版: 一覧側のメンバー追加ダイアログ（ユーザー選択） */}
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -1578,8 +1578,8 @@ function ProjectPageContent() {
 **一覧側のメンバー追加ダイアログのロール選択欄**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 一覧側のメンバー追加ダイアログ（ロール選択）
+              {/* filepath: src/app/project/page.tsx */}
+              {/* 完成版: 一覧側のメンバー追加ダイアログ（ロール選択） */}
               <div className="grid gap-2">
                 <Label htmlFor="role">ロール</Label>
                 <Select
@@ -1610,8 +1610,8 @@ function ProjectPageContent() {
 **一覧側ダイアログの操作ボタン**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 一覧側ダイアログの操作ボタン
+            {/* filepath: src/app/project/page.tsx */}
+            {/* 完成版: 一覧側ダイアログの操作ボタン */}
             <DialogFooter>
               <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
                 キャンセル
@@ -1630,8 +1630,8 @@ function ProjectPageContent() {
 **プロジェクト削除の確認**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクト削除の確認
+      {/* filepath: src/app/project/page.tsx */}
+      {/* 完成版: プロジェクト削除の確認 */}
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -1650,8 +1650,8 @@ function ProjectPageContent() {
 **一覧側のメンバー削除確認とページの出口**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 一覧側のメンバー削除確認とページの出口
+      {/* filepath: src/app/project/page.tsx */}
+      {/* 完成版: 一覧側のメンバー削除確認とページの出口 */}
       <DeleteConfirmDialog
         open={removeMemberDialogOpen}
         onOpenChange={setRemoveMemberDialogOpen}
@@ -1845,8 +1845,8 @@ Step 3 では戻るボタンとプロジェクト名を横1列に並べていま
 **ヘッダー右側のアーカイブ操作**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: ヘッダーの右側（アーカイブ操作）
+          {/* filepath: src/component/project/project-detail-view.tsx */}
+          {/* 完成版: ヘッダーの右側（アーカイブ操作） */}
           {canArchive && (
             <Button
               variant="outline"
@@ -1875,8 +1875,8 @@ Step 5 のコードには無かった `canArchive &&` が、完成版では付�
 **タイトル行**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: タイトル行
+        {/* filepath: src/component/project/project-detail-view.tsx */}
+        {/* 完成版: タイトル行 */}
         {/* タイトル行: 長い名前も省略せず全文表示する。アーカイブバッジはタイトルの下に置く */}
         <div className="flex items-start gap-3">
           <div
@@ -1902,8 +1902,8 @@ Step 5 のコードには無かった `canArchive &&` が、完成版では付�
 **説明文と2列の入れ物**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: 説明文と2列の入れ物
+      {/* filepath: src/component/project/project-detail-view.tsx */}
+      {/* 完成版: 説明文と2列の入れ物 */}
       {/* 説明 */}
       {projectDetail.description && (
         <p className="text-muted-foreground">{projectDetail.description}</p>
@@ -1919,8 +1919,8 @@ Step 5 のコードには無かった `canArchive &&` が、完成版では付�
 **メンバーカードの見出し**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: メンバーカードの見出し
+        {/* filepath: src/component/project/project-detail-view.tsx */}
+        {/* 完成版: メンバーカードの見出し */}
         {/* メンバーセクション */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -1942,8 +1942,8 @@ Step 4 では常に出していたメンバー追加ボタンが、完成版で�
 **メンバー1人ぶんの枠とアイコン**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: メンバー1人ぶんの枠とアイコン
+          {/* filepath: src/component/project/project-detail-view.tsx */}
+          {/* 完成版: メンバー1人ぶんの枠とアイコン */}
           <CardContent>
             <div className="grid gap-2">
               {projectDetail.members?.map((member) => (
@@ -1971,8 +1971,8 @@ Step 4 では常に出していたメンバー追加ボタンが、完成版で�
 **変更できない場合の役割表示**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: 役割の表示（変更できない場合）
+                      {/* filepath: src/component/project/project-detail-view.tsx */}
+                      {/* 完成版: 役割の表示（変更できない場合） */}
                       {member.role === PROJECT_MEMBER_ROLE.OWNER || !canManageMembers ? (
                         // オーナーは権限変更対象外。加えて、メンバー管理権限を持たないユーザーには
                         // 読み取り専用で表示する（操作してもバックエンドで弾かれるため誤操作を防ぐ）
@@ -1991,8 +1991,8 @@ Step 4 では常に出していたメンバー追加ボタンが、完成版で�
 **役割を変える Select**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: 役割の変更（Select）
+                        {/* filepath: src/component/project/project-detail-view.tsx */}
+                        {/* 完成版: 役割の変更（Select） */}
                         <Select
                           value={member.role}
                           onValueChange={(value) => {
@@ -2016,8 +2016,8 @@ Step 4 の形にはこの `Select` がありませんでした。役割を選び
 **役割の選択肢**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: 役割の選択肢
+                          {/* filepath: src/component/project/project-detail-view.tsx */}
+                          {/* 完成版: 役割の選択肢 */}
                           <SelectContent>
                             {Object.entries(PROJECT_MEMBER_ROLE_LABELS)
                               .filter(([value]) => value !== PROJECT_MEMBER_ROLE.OWNER)
@@ -2040,8 +2040,8 @@ Step 4 の形にはこの `Select` がありませんでした。役割を選び
 **メンバーを外すボタン**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: メンバーを外すボタン
+                  {/* filepath: src/component/project/project-detail-view.tsx */}
+                  {/* 完成版: メンバーを外すボタン */}
                   {canManageMembers && (
                     <Button
                       variant="ghost"
@@ -2067,8 +2067,8 @@ Step 4 の形にはこの `Select` がありませんでした。役割を選び
 **タスクカードの見出し**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: タスクカードの見出し
+        {/* filepath: src/component/project/project-detail-view.tsx */}
+        {/* 完成版: タスクカードの見出し */}
         {/* タスクセクション */}
         <Card>
           <CardHeader className="space-y-0 pb-4">
@@ -2093,8 +2093,8 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が、完成�
 **タスク0件のときの表示**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: タスク0件のときの表示
+          {/* filepath: src/component/project/project-detail-view.tsx */}
+          {/* 完成版: タスク0件のときの表示 */}
           <CardContent>
             <div className="grid gap-2">
               {projectDetail.tasks?.length === 0 ? (
@@ -2116,8 +2116,8 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が、完成�
 **タスク1件ぶんの中身**:
 
 ```tsx
-// filepath: src/component/project/project-detail-view.tsx
-// 完成版: タスク1件ぶんの中身
+                    {/* filepath: src/component/project/project-detail-view.tsx */}
+                    {/* 完成版: タスク1件ぶんの中身 */}
                     <p className="font-medium">{task.title}</p>
                     <div className="flex gap-2">
                       <StatusBadge status={task.status} />

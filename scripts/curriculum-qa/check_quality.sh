@@ -230,6 +230,7 @@ SELF_TESTS=(
   test_check_zip_reference
   test_check_unused_image
   test_check_why
+  test_filepath_marker
 )
 
 run_corpus_checks() {

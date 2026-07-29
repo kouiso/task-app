@@ -26,7 +26,7 @@ DEFINE = re.compile(r"^\s*(\w+):\s*(?:protected|public|admin|member)\w*Procedure
 # どのルーターを書いているのかを取る。手続き名だけでは、どのルーターに生えたのかが
 # 分からない。実例では project.getById と task.getById が別の日に定義されており、
 # 名前だけで索引すると day12 の `api.task.getById` が通ってしまっていた。
-ROUTER_FILE = re.compile(r"^\s*//\s*filepath:\s*src/server/api/routers/(\w+)\.ts")
+ROUTER_FILE = re.compile(r"^\s*(?://|\{/\*)\s*filepath:\s*src/server/api/routers/(\w+)\.ts")
 # `api.project.getAll.useQuery` / `utils.project.getById.invalidate` の呼び出し。
 CALL = re.compile(r"(?:api|utils)\.(\w+)\.(\w+)\.")
 # scaffold が最初から配布するルーター。読者が書く前から呼んでよい。

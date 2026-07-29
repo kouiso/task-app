@@ -48,7 +48,7 @@ def check_step_completeness(filepath):
                 if lang and lang.lower() in filepath_required_langs
             ]
             if needs_filepath and not any(
-                '// filepath:' in code or '# filepath:' in code
+                '// filepath:' in code or '# filepath:' in code or '{/* filepath:' in code
                 for _, code in needs_filepath
             ):
                 step_errors.append("filepathコメントなし")

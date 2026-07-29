@@ -877,7 +877,7 @@ return (
 `onOpenChange` に `!isOpen && handleClose()` を渡したのは、閉じ方が「キャンセル」ボタンだけではないからです。背景をクリックしても Esc キーを押しても閉じますが、どの経路も `handleClose` を通れば、入力内容のリセットは1か所で済みます。タイトルと説明文を `initialData?.id` で切り替えてあるのは、この同じ部品を Day 15 の編集でも使い回すためです。今日は `initialData` を渡さないので、必ず「タスク作成」と表示されます。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
+      {/* filepath: src/component/task/task-dialog.tsx */}
       <form onSubmit={
         handleSubmit(handleFormSubmit)}>
         <div className="grid gap-4 py-4">
@@ -906,7 +906,7 @@ return (
 説明欄を追加します。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
+          {/* filepath: src/component/task/task-dialog.tsx */}
           <div className="grid gap-2">
             <Label htmlFor="description">
               説明
@@ -969,7 +969,7 @@ return (
 続けて、ステータスの選択肢を `TASK_STATUS_LABELS` から生成します。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
+          {/* filepath: src/component/task/task-dialog.tsx */}
           <SelectContent>
             {Object.entries(
               TASK_STATUS_LABELS
@@ -1015,7 +1015,7 @@ return (
 優先度の作りはステータスと同じで、変わるのは `name` と参照する定数だけです。同じ形をもう一度書いてもらうのは、`Controller` の3点セット（`name`・`control`・`render`）が身に付けば、Select が何個増えても同じ手順で足せると確かめるためです。`aria-label` を付けてあるのは、画面読み上げを使う人へどちらの選択欄かを伝えるためで、見た目には出ません。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
+          {/* filepath: src/component/task/task-dialog.tsx */}
           <SelectContent>
             {Object.entries(
               TASK_PRIORITY_LABELS
@@ -1115,7 +1115,7 @@ return (
 プロジェクトの選択肢とエラー表示です。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
+          {/* filepath: src/component/task/task-dialog.tsx */}
           <SelectContent>
             {projects.map((project) => (
               <SelectItem
@@ -1168,7 +1168,7 @@ return (
 担当者の選択肢です。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
+          {/* filepath: src/component/task/task-dialog.tsx */}
           <SelectContent>
             <SelectItem
               value="unassigned">
@@ -2496,8 +2496,8 @@ export function TaskDialog({
 **タイトルの入力欄**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: タイトルの入力欄
+        {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+        {/* 完成版: タイトルの入力欄 */}
         <form onSubmit={
           handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
@@ -2526,8 +2526,8 @@ export function TaskDialog({
 **説明の入力欄**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: 説明の入力欄
+            {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+            {/* 完成版: 説明の入力欄 */}
             <div className="grid gap-2">
               <Label htmlFor="description">
                 説明
@@ -2546,8 +2546,8 @@ export function TaskDialog({
 **ステータスの選択欄**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: ステータスの選択欄
+            {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+            {/* 完成版: ステータスの選択欄 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="status">
@@ -2573,8 +2573,8 @@ export function TaskDialog({
 **ステータスの選択肢**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: ステータスの選択肢
+                      {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+                      {/* 完成版: ステータスの選択肢 */}
                       <SelectContent>
                         {Object.entries(
                           TASK_STATUS_LABELS
@@ -2596,8 +2596,8 @@ export function TaskDialog({
 **優先度の選択欄**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: 優先度の選択欄
+              {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: 優先度の選択欄 */}
               <div className="grid gap-2">
                 <Label htmlFor="priority">
                   優先度
@@ -2622,8 +2622,8 @@ export function TaskDialog({
 **優先度の選択肢**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: 優先度の選択肢
+                      {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+                      {/* 完成版: 優先度の選択肢 */}
                       <SelectContent>
                         {Object.entries(
                           TASK_PRIORITY_LABELS
@@ -2645,8 +2645,8 @@ export function TaskDialog({
 **プロジェクトの選択欄**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: プロジェクトの選択欄
+              {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: プロジェクトの選択欄 */}
               <div className="grid gap-2">
                 <Label htmlFor="project">
                   プロジェクト
@@ -2676,8 +2676,8 @@ export function TaskDialog({
 **プロジェクトの選択肢とエラー表示**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: プロジェクトの選択肢とエラー表示
+                      {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+                      {/* 完成版: プロジェクトの選択肢とエラー表示 */}
                       <SelectContent>
                         {projects.map((project) => (
                           <SelectItem
@@ -2703,8 +2703,8 @@ export function TaskDialog({
 **担当者の選択欄**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: 担当者の選択欄
+              {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: 担当者の選択欄 */}
               <div className="grid gap-2">
                 <Label htmlFor="assignee">
                   担当者
@@ -2732,8 +2732,8 @@ export function TaskDialog({
 **担当者の選択肢**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: 担当者の選択肢
+                      {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+                      {/* 完成版: 担当者の選択肢 */}
                       <SelectContent>
                         <SelectItem
                           value="unassigned">
@@ -2757,8 +2757,8 @@ export function TaskDialog({
 **期限と見積時間**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: 期限と見積時間
+              {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+              {/* 完成版: 期限と見積時間 */}
               <div className="grid gap-2">
                 <Label htmlFor="dueDate">期限</Label>
                 <Input id="dueDate" type="date"
@@ -2785,8 +2785,8 @@ export function TaskDialog({
 **送信ボタン**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
-// 完成版: 送信ボタン
+          {/* filepath: src/component/task/task-dialog.tsx（同じファイルの続き） */}
+          {/* 完成版: 送信ボタン */}
           <DialogFooter>
             <Button type="button"
               variant="outline"
@@ -3094,8 +3094,8 @@ function TaskPageContent() {
 **プロジェクトの絞り込み**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: プロジェクトの絞り込み
+              {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+              {/* 完成版: プロジェクトの絞り込み */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのプロジェクト
@@ -3115,8 +3115,8 @@ function TaskPageContent() {
 **ステータスの絞り込み**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: ステータスの絞り込み
+          {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+          {/* 完成版: ステータスの絞り込み */}
           <div className="w-[200px]">
             <Select value={filterStatus}
               onValueChange={(value) => {
@@ -3135,8 +3135,8 @@ function TaskPageContent() {
 **ステータスの選択肢**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: ステータスの選択肢
+              {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+              {/* 完成版: ステータスの選択肢 */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのステータス
@@ -3159,8 +3159,8 @@ function TaskPageContent() {
 **カードの一覧**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: カードの一覧
+        {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: カードの一覧 */}
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -3209,8 +3209,8 @@ function TaskPageContent() {
 **2つのダイアログ**:
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 2つのダイアログ
+        {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 2つのダイアログ */}
         <TaskDetailDialog
           open={detailOpen}
           taskId={selectedTask}

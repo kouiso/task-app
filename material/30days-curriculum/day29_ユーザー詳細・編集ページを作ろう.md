@@ -642,7 +642,7 @@ import { formatDateOnly } from '@/lib/date';
 左カラムにアバターとユーザー基本情報を置きます。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
+          {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
           {/* 左カラム: アバター・基本情報 */}
           <div className="md:col-span-4 space-y-6">
             <Card>
@@ -755,7 +755,7 @@ import { formatDateOnly } from '@/lib/date';
 左カラムの `div` を閉じた後、右カラムの枠を書きます。中身は Step 5 で追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
+          {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
           {/* 右カラム: Step 5で中身を追加 */}
           <div className="md:col-span-8 space-y-6">
             {/* Step 5 でプロジェクト・タスクを追加 */}
@@ -861,7 +861,7 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 「担当中のタスク」カードをテーブル形式で追加します。テーブルのヘッダー部分です。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
+            {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
             {/* 担当中タスクのテーブル表示 */}
             <Card>
               <CardHeader>
@@ -964,7 +964,7 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 アイコンはすべて `lucide-react` から取り込むので、行を増やさず Step 4 で書いた行へ `Pencil` を足します。まとめて1行にしておくと、このファイルが使うアイコンを1か所で見渡せます。ボタンを置く場所は左カラムの下端です。プロフィールを読んでから操作へ進む順番になります。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
+                {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
                 {(isAdmin || isOwnProfile) && (
                   <>
                     <Separator className="my-4" />
@@ -1353,7 +1353,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 メールアドレスとアバターURL入力欄を追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
               <div className="space-y-2">
                 <Label htmlFor="email">
                   メールアドレス</Label>
@@ -1477,7 +1477,7 @@ import { isUserRole, USER_ROLE_LABELS }
 アクティブ状態を切り替えるチェックボックスを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
               <div className="flex
                 items-center space-x-2">
                 <Checkbox id="isActive"
@@ -1498,7 +1498,7 @@ import { isUserRole, USER_ROLE_LABELS }
 `checked` と `onCheckedChange` の組み方は、上の `Select` とそろえてあります。`form.watch('isActive')` で今の値を映し、切り替わったら `form.setValue` で書き戻す形です。どの入力欄にも `disabled={updateUser.isPending}` を付けているのは、保存中に値を変えられると、送った内容と画面に見えている内容が食い違うからです。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+  {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
   </>
 )}
 ```
@@ -1590,7 +1590,7 @@ import { Alert, AlertDescription, AlertTitle }
 エラー表示ブロックをチェックボックスの下に追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
               {updateUser.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -1609,7 +1609,7 @@ import { Alert, AlertDescription, AlertTitle }
 フォームの送信ボタンとキャンセルボタンを追加します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
               <div className="flex gap-2 pt-2">
                 <Button
                   type="submit"
@@ -2248,8 +2248,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **左カラムのアバターとバッジ**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 左カラムのアバターとバッジ
+          {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+          {/* 完成版: 左カラムのアバターとバッジ */}
           <div className="md:col-span-4 space-y-6">
             <Card>
               <CardContent className="pt-6">
@@ -2277,8 +2277,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **左カラムのメールアドレス**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 左カラムのメールアドレス
+                {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+                {/* 完成版: 左カラムのメールアドレス */}
                 <Separator className="my-4" />
                 <div className="space-y-4 text-sm">
                   <div className="flex items-center gap-3">
@@ -2297,8 +2297,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **左カラムの登録日**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 左カラムの登録日
+                  {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+                  {/* 完成版: 左カラムの登録日 */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -2323,8 +2323,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **左カラムの最終更新日**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 左カラムの最終更新日
+                  {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+                  {/* 完成版: 左カラムの最終更新日 */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -2350,8 +2350,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **左カラムの編集ボタン**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 左カラムの編集ボタン
+                {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+                {/* 完成版: 左カラムの編集ボタン */}
                 {(isAdmin || isOwnProfile) && (
                   <>
                     <Separator className="my-4" />
@@ -2375,8 +2375,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **右カラムの参加プロジェクトのバッジ**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 参加プロジェクトのバッジ
+          {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+          {/* 完成版: 参加プロジェクトのバッジ */}
           <div className="md:col-span-8 space-y-6">
             <Card>
               <CardHeader>
@@ -2403,8 +2403,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **右カラムのプロジェクトが無い場合**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: プロジェクトが無い場合
+                        {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+                        {/* 完成版: プロジェクトが無い場合 */}
                         {member.project.name}
                       </Badge>
                     ))}
@@ -2423,8 +2423,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **右カラムの担当タスクの見出し**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 担当タスクの見出し
+            {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+            {/* 完成版: 担当タスクの見出し */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">担当中のタスク</CardTitle>
@@ -2447,8 +2447,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **右カラムのタスク行**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: タスク行
+                    {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+                    {/* 完成版: タスク行 */}
                     <TableBody>
                       {user.assignedTasks.map((task) => (
                         <TableRow
@@ -2476,8 +2476,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **右カラムの期限列とテーブルの閉じタグ**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 期限列と表の閉じ
+                          {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+                          {/* 完成版: 期限列と表の閉じ */}
                           <TableCell>
                             {task.dueDate
                               ? formatDateOnly(task.dueDate)
@@ -2501,8 +2501,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 **全体の閉じタグ**:
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 全体の閉じタグ
+          {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+          {/* 完成版: 全体の閉じタグ */}
           </div>
         </div>
       </div>
@@ -2837,8 +2837,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **フォームの開始とアバターのプレビュー**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: フォームの開始とアバターのプレビュー
+            {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+            {/* 完成版: フォームの開始とアバターのプレビュー */}
             <form onSubmit={
               form.handleSubmit(onSubmit)}
               className="space-y-6">
@@ -2864,8 +2864,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **名前の入力欄**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: 名前の入力欄
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+              {/* 完成版: 名前の入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前
@@ -2892,8 +2892,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **メールアドレスとアバターURLの入力欄**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: メールアドレスとアバターURLの入力欄
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+              {/* 完成版: メールアドレスとアバターURLの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="email">
                   メールアドレス</Label>
@@ -2923,8 +2923,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **ロール選択の入口**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: ロール選択の入口
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+              {/* 完成版: ロール選択の入口 */}
               {canManageAccount && (
                 <>
               <div className="space-y-2">
@@ -2952,8 +2952,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **ロールの選択肢**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: ロールの選択肢
+                  {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+                  {/* 完成版: ロールの選択肢 */}
                   <SelectContent>
                     {Object.entries(
                       USER_ROLE_LABELS
@@ -2974,8 +2974,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **アクティブ状態の切り替え**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: アクティブ状態の切り替え
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+              {/* 完成版: アクティブ状態の切り替え */}
               <div className="flex
                 items-center space-x-2">
                 <Checkbox id="isActive"
@@ -3000,8 +3000,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **保存の失敗を残すアラート**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: 保存の失敗を残すアラート
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+              {/* 完成版: 保存の失敗を残すアラート */}
               {updateUser.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -3018,8 +3018,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **送信ボタンとキャンセルボタン**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: 送信ボタンとキャンセルボタン
+              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+              {/* 完成版: 送信ボタンとキャンセルボタン */}
               <div className="flex gap-2 pt-2">
                 <Button
                   type="submit"
@@ -3046,8 +3046,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 **全体の閉じタグ**:
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: 全体の閉じタグ
+          {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+          {/* 完成版: 全体の閉じタグ */}
           </CardContent>
         </Card>
       </div>

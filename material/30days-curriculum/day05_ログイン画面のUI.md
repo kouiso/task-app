@@ -1195,8 +1195,8 @@ Step 3 で仮に置いた `console.log` は、ここには残っていません�
 **フォームの開始とサーバーエラーの帯**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: フォームの開始とサーバーエラーの帯
+        {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
+        {/* 完成版: フォームの開始とサーバーエラーの帯 */}
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)}
             className="space-y-4">
@@ -1216,8 +1216,8 @@ Step 3 で仮に置いた `console.log` は、ここには残っていません�
 **メールアドレス入力欄**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: メールアドレス入力欄
+            {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
+            {/* 完成版: メールアドレス入力欄 */}
             <div className="space-y-2">
               <Label htmlFor="email">
                 メールアドレス
@@ -1243,8 +1243,8 @@ Step 3 で仮に置いた `console.log` は、ここには残っていません�
 **パスワード入力欄**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: パスワード入力欄
+            {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
+            {/* 完成版: パスワード入力欄 */}
             <div className="space-y-2">
               <Label htmlFor="password">
                 パスワード
@@ -1268,8 +1268,8 @@ Step 3 で仮に置いた `console.log` は、ここには残っていません�
 **送信ボタン**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: 送信ボタン
+            {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
+            {/* 完成版: 送信ボタン */}
             <Button
               type="submit"
               className="w-full bg-gradient-to-r
@@ -1288,8 +1288,8 @@ Step 3 で仮に置いた `console.log` は、ここには残っていません�
 **登録リンクと閉じタグ**:
 
 ```typescript
-// filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: 登録リンクと閉じタグ
+            {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
+            {/* 完成版: 登録リンクと閉じタグ */}
             <div className="text-center text-sm
               text-muted-foreground">
               アカウントをお持ちでない方は{' '}

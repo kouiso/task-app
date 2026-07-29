@@ -342,6 +342,8 @@ DB セットアップが完了しました。
 このスクリプトは `.env.example` も置いてくれます。
 中身はこんな感じです。
 
+この先、コードの先頭に `# filepath:` や `// filepath:`、`{/* filepath: */}` で始まる行が出てきます。これは「このコードをどのファイルへ書くか」を示す目印で、この教材のための表示です。そのまま書き写しても動きは変わりませんし、書かなくても構いません。
+
 ```env
 # filepath: .env.example
 _DOCKER_COMPOSE_HOST_PORT_DB=25532
@@ -807,7 +809,7 @@ export default function HomePage() {
 **確認ポイント**: `export default function HomePage()` と、その中の `<header>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）
+            {/* filepath: src/app/page.tsx（同じファイルの続き） */}
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
                 Hello, my first task app
@@ -871,7 +873,7 @@ export default function HomePage() {
 **確認ポイント**: 「今日の進捗」のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）
+                {/* filepath: src/app/page.tsx（同じファイルの続き） */}
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   今見えているもの
                 </p>
@@ -935,7 +937,7 @@ export default function HomePage() {
 **確認ポイント**: `<ul>` の中に4つの `<li>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
 ```tsx
-// filepath: src/app/page.tsx（同じファイルの続き）
+              {/* filepath: src/app/page.tsx（同じファイルの続き） */}
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
                 最初の一枚目は、ただ映えればいいわけではない。

@@ -664,7 +664,7 @@ const TaskGroupSection = ({
 `))}` で `map` を閉じ、`</div>` を2つ、`);` で `return` を閉じ、最後の `};` で `TaskGroupSection` そのものを閉じます。開いた順と逆に閉じるのは、この教材で何度も出てくる決まりです。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
       </div>
     </div>
   );
@@ -1501,8 +1501,8 @@ const TaskGroupSection = ({
 **グループ表示のカード生成**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: グループ表示のカード生成
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      {/* 完成版: グループ表示のカード生成 */}
       <div className="grid gap-6 sm:grid-cols-2
         lg:grid-cols-3 xl:grid-cols-4">
         {tasks.map((task) => (
@@ -1530,8 +1530,8 @@ const TaskGroupSection = ({
 **グループ表示の閉じタグ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: グループ表示の閉じタグ
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      {/* 完成版: グループ表示の閉じタグ */}
       </div>
     </div>
   );
@@ -1791,8 +1791,8 @@ export default function MyTasksPage() {
 **ステータスタブ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: ステータスタブ
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: ステータスタブ */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Tabs
             value={activeTab}
@@ -1819,8 +1819,8 @@ export default function MyTasksPage() {
 **プロジェクトの絞り込み**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: プロジェクトの絞り込み
+          {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          {/* 完成版: プロジェクトの絞り込み */}
           <div className="ml-auto w-full sm:w-[200px]">
             <Select
               value={filterProject}
@@ -1849,8 +1849,8 @@ export default function MyTasksPage() {
 **期限が近い2グループ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 期限が近い2グループ
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 期限が近い2グループ */}
         <TaskGroupSection
           title="期限切れ"
           titleClassName="text-destructive"
@@ -1879,8 +1879,8 @@ export default function MyTasksPage() {
 **急がない2グループ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 急がない2グループ
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 急がない2グループ */}
         <TaskGroupSection
           title="今後の予定"
           tasks={groupedTasks.upcoming ?? []}
@@ -1907,8 +1907,8 @@ export default function MyTasksPage() {
 **1件も無いときの案内**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 1件も無いときの案内
+        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        {/* 完成版: 1件も無いときの案内 */}
         {tasks && tasks.length === 0 && (
           <div className="col-span-full flex flex-col
             items-center justify-center py-12
@@ -1924,8 +1924,8 @@ export default function MyTasksPage() {
 **2つのダイアログ**:
 
 ```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 2つのダイアログ
+      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      {/* 完成版: 2つのダイアログ */}
       <TaskDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

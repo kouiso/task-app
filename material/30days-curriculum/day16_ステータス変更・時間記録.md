@@ -521,7 +521,7 @@ Day 15 の編集ダイアログは、開いたときに今の値が入ってい�
 `DialogHeader` の閉じタグの直後に書きます。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
+        {/* filepath: src/component/task/time-log-dialog.tsx */}
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours">時間</Label>
@@ -1134,7 +1134,7 @@ export function StatusActionButton({
 `updateMutation.isPending` を `disabled` に混ぜているのは、送信中の二度押しを止めるためです。Step 2 の時間記録ダイアログで `isPending` を使ったのと同じ考え方が、ここでも効いています。
 
 ```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+      {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
       {transition?.label ?? '変更なし'}
     </Button>
   );
@@ -1345,8 +1345,8 @@ export function TimeLogDialog({
 **時間の入力欄**:
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: 時間の入力欄
+        {/* filepath: src/component/task/time-log-dialog.tsx */}
+        {/* 完成版: 時間の入力欄 */}
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours">時間</Label>
@@ -1368,8 +1368,8 @@ export function TimeLogDialog({
 **分の入力欄**:
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: 分の入力欄
+          {/* filepath: src/component/task/time-log-dialog.tsx */}
+          {/* 完成版: 分の入力欄 */}
           <div className="flex-1">
             <Label htmlFor="minutes">分</Label>
             <Input id="minutes"
@@ -1391,8 +1391,8 @@ export function TimeLogDialog({
 **フッターのボタン**:
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: フッターのボタン
+        {/* filepath: src/component/task/time-log-dialog.tsx */}
+        {/* 完成版: フッターのボタン */}
         <DialogFooter>
           <Button variant="outline"
             onClick={handleClose}>
@@ -1570,8 +1570,8 @@ export function TaskCard({
 **タイトル**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: タイトル
+        {/* filepath: src/component/task/task-card.tsx */}
+        {/* 完成版: タイトル */}
         <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
           <CardTitle
             className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
@@ -1599,8 +1599,8 @@ export function TaskCard({
 **編集ボタン**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: 編集ボタン
+          {/* filepath: src/component/task/task-card.tsx */}
+          {/* 完成版: 編集ボタン */}
           <div className="flex gap-0">
             {canEdit && (
               <Button
@@ -1620,8 +1620,8 @@ export function TaskCard({
 **削除ボタン**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: 削除ボタン
+            {/* filepath: src/component/task/task-card.tsx */}
+            {/* 完成版: 削除ボタン */}
             {canDelete && (
               <Button
                 variant="ghost"
@@ -1642,8 +1642,8 @@ export function TaskCard({
 **説明文とバッジ**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: 説明文とバッジ
+        {/* filepath: src/component/task/task-card.tsx */}
+        {/* 完成版: 説明文とバッジ */}
         <CardContent className="flex-1 flex flex-col gap-3">
           {description && (
             <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
@@ -1668,8 +1668,8 @@ export function TaskCard({
 **担当者**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: 担当者
+          {/* filepath: src/component/task/task-card.tsx */}
+          {/* 完成版: 担当者 */}
           <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
             <div className="flex justify-between items-center">
               {assignee ? (
@@ -1694,8 +1694,8 @@ export function TaskCard({
 **期限**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: 期限
+              {/* filepath: src/component/task/task-card.tsx */}
+              {/* 完成版: 期限 */}
               {dueDate && (
                 <div
                   className={cn(
@@ -1718,8 +1718,8 @@ export function TaskCard({
 **合計作業時間と時間記録ボタン**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: 合計作業時間と時間記録ボタン
+            {/* filepath: src/component/task/task-card.tsx */}
+            {/* 完成版: 合計作業時間と時間記録ボタン */}
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
                 合計作業時間: {formatMinutes(timeSpentMinutes)}
@@ -1747,8 +1747,8 @@ export function TaskCard({
 **ダイアログの設置**:
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 完成版: ダイアログの設置
+      {/* filepath: src/component/task/task-card.tsx */}
+      {/* 完成版: ダイアログの設置 */}
       {canEdit && (
         <TimeLogDialog
           open={timeLogDialogOpen}
@@ -1781,8 +1781,8 @@ export function TaskCard({
 **TaskCard へ渡す2つの props**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: TaskCard へ渡す2つの props
+                      {/* filepath: src/app/task/page.tsx */}
+                      {/* 完成版: TaskCard へ渡す2つの props */}
                       <TaskCard
                         id={task.id}
                         title={task.title}

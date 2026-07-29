@@ -2965,8 +2965,8 @@ function SearchPageContent() {
 **JSX — キーワード入力**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — キーワード入力
+        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — キーワード入力 */}
         <Card>
           <CardContent className="pt-6">
             <div className="grid gap-4">
@@ -2998,8 +2998,8 @@ function SearchPageContent() {
 **JSX — プロジェクトの選択・前半**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — プロジェクトの選択（前半）
+              {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+              {/* 完成版: JSX — プロジェクトの選択（前半） */}
               <div className="grid grid-cols-1
                 md:grid-cols-2 lg:grid-cols-3
                 gap-4">
@@ -3023,8 +3023,8 @@ function SearchPageContent() {
 **JSX — プロジェクトの選択・後半**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — プロジェクトの選択（後半）
+                    {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                    {/* 完成版: JSX — プロジェクトの選択（後半） */}
                     <SelectContent>
                       <SelectItem value="all">
                         すべてのプロジェクト
@@ -3046,8 +3046,8 @@ function SearchPageContent() {
 **JSX — ステータスの選択**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — ステータスの選択
+                {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                {/* 完成版: JSX — ステータスの選択 */}
                 <div className="grid gap-2">
                   <Label htmlFor="status">
                     ステータス</Label>
@@ -3080,8 +3080,8 @@ function SearchPageContent() {
 **JSX — 優先度の選択**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 優先度の選択
+                {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                {/* 完成版: JSX — 優先度の選択 */}
                 <div className="grid gap-2">
                   <Label htmlFor="priority">
                     優先度</Label>
@@ -3112,8 +3112,8 @@ function SearchPageContent() {
 **JSX — 担当者の選択・前半**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 担当者の選択（前半）
+                {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                {/* 完成版: JSX — 担当者の選択（前半） */}
                 <div className="grid gap-2">
                   <Label htmlFor="assignedTo">
                     担当者
@@ -3133,8 +3133,8 @@ function SearchPageContent() {
 **JSX — 担当者の選択・後半**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 担当者の選択（後半）
+                    {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                    {/* 完成版: JSX — 担当者の選択（後半） */}
                     <SelectContent>
                       <SelectItem value="all">
                         すべての担当者
@@ -3154,8 +3154,8 @@ function SearchPageContent() {
 **JSX — 期限の範囲**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 期限の範囲
+                {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                {/* 完成版: JSX — 期限の範囲 */}
                 <div className="grid gap-2">
                   <Label htmlFor="dateFrom">
                     期限：開始日</Label>
@@ -3178,8 +3178,8 @@ function SearchPageContent() {
 **JSX — 検索とクリアのボタン**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 検索とクリアのボタン
+              {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+              {/* 完成版: JSX — 検索とクリアのボタン */}
               <div className="flex
                 justify-end gap-2 pt-2">
                 <Button variant="outline"
@@ -3204,8 +3204,8 @@ function SearchPageContent() {
 **JSX — 結果の見出しと件数**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 結果の見出しと件数
+        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — 結果の見出しと件数 */}
         {isLoading ? (
           <PageLoadingSpinner />
         ) : shouldSearch && searchResults ? (
@@ -3235,8 +3235,8 @@ function SearchPageContent() {
 **JSX — タスク結果の見出し**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — タスク結果の見出し
+            {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+            {/* 完成版: JSX — タスク結果の見出し */}
             {searchResults.tasks.length > 0
               && (
               <div className="space-y-4">
@@ -3259,8 +3259,8 @@ function SearchPageContent() {
 **JSX — タスクカードの一覧**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — タスクカードの一覧（表示する値）
+                {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                {/* 完成版: JSX — タスクカードの一覧（表示する値） */}
                 <div className="grid gap-6
                   sm:grid-cols-2 lg:grid-cols-3
                   xl:grid-cols-4">
@@ -3305,8 +3305,8 @@ function SearchPageContent() {
 **JSX — プロジェクト結果の見出し**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — プロジェクト結果の見出し
+            {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+            {/* 完成版: JSX — プロジェクト結果の見出し */}
             {searchResults.projects.length
               > 0 && (
               <div className="space-y-4">
@@ -3328,8 +3328,8 @@ function SearchPageContent() {
 **JSX — プロジェクトカードの一覧**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — プロジェクトカードの一覧
+                {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                {/* 完成版: JSX — プロジェクトカードの一覧 */}
                 <div className="grid gap-6
                   sm:grid-cols-2 lg:grid-cols-3
                   xl:grid-cols-4">
@@ -3362,8 +3362,8 @@ function SearchPageContent() {
 **JSX — 0件と未入力の案内**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 0件と未入力の案内
+            {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+            {/* 完成版: JSX — 0件と未入力の案内 */}
             {searchResults.totalCount === 0 && (
               <div className="text-center py-12
                 text-muted-foreground">
@@ -3383,8 +3383,8 @@ function SearchPageContent() {
 **JSX — 削除の確認画面と閉じタグ**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 削除の確認画面と閉じタグ
+        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — 削除の確認画面と閉じタグ */}
         <DeleteConfirmDialog
           open={deleteTaskConfirm.open}
           onOpenChange={(open) =>

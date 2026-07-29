@@ -771,7 +771,7 @@ export default function GraduationPage() {
 ここまでで目を留めてほしいのは、1行目の `'use client'` がファイル全体にかかっている点です。この宣言は行や関数ではなく、ファイル単位で効きます。だから下に続く振り返りカードも、動きを持たない見出しも、まとめてブラウザ側へ送られます。
 
 ```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+        {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
         {CURRICULUM_SUMMARY.map((item) => (
           <section key={item.label} className="rounded-lg border p-4">
             <p className="text-sm text-muted-foreground">{item.label}</p>
