@@ -705,8 +705,9 @@ const formatMinutes = (minutes: number) => {
 // filepath: src/component/task/task-card.tsx
 // TaskCardPropsに追加する2つのprops
 interface TaskCardProps {
-  // ...既存のprops...
+  // ...既存のpropsのうち onEdit より前...
   timeSpentMinutes?: number;
+  // ...onEdit 以降の既存のprops...
   onTimeLogSuccess?: (() => void) | undefined;
 }
 ```
@@ -756,7 +757,8 @@ const handleOpenTimeLog = (e: React.MouseEvent) => {
 判断がつきません。カードの中にボタンを置くときは、外側の
 処理を止めるかどうかを毎回考えます。
 
-カード内に合計作業時間の表示と
+`CardContent` の中、担当者と期限を並べた行の
+すぐ下に、合計作業時間の表示と
 「時間記録」ボタンを置きます。
 
 ```typescript

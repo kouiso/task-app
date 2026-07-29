@@ -397,6 +397,13 @@ Step 1 の `findCommentAndAssertOwnership` が、届いたリクエストごと�
 各コメントの作者と一致するときだけ
 編集・削除ボタンを表示します。
 
+先に、Day 18 で書いた日時の `<span>` を
+`<div className="flex items-center gap-2">` で
+包んでください。この箱が無いと、外側の
+`justify-between` が日時とボタンを画面の両端へ
+引き離します。次のコードは、その箱の中、
+日時の下へ貼ります。
+
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
 {/* 本人チェックで編集・削除ボタンを表示 */}
