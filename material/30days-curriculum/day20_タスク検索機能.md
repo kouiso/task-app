@@ -1570,6 +1570,31 @@ useEffect(() => {
 URL の編集指定も取り除きます。この関数を
 `createMutation` / `updateMutation` より前へ追加します。
 
+先に `task/page.tsx` の import を書き換えます。Day 13 で
+`useSearchParams` だけを読み込んだ行を、次の形にします。
+
+```typescript
+// filepath: src/app/task/page.tsx
+import { useRouter, useSearchParams }
+  from 'next/navigation';
+```
+
+`useRouter` は、プログラムから URL を書き換えるための
+フックです。Day 13 では URL を読むだけだったので
+`useSearchParams` しか要りませんでしたが、今日は閉じるときに
+URL から編集指定を消すので、書き込む側も必要になります。
+
+そのうえで、`const searchParams = useSearchParams();` の
+下に1行足します。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+const router = useRouter();
+```
+
+この2つが無いと、次の `router.replace` で
+`router is not defined` というエラーで止まります。
+
 ```typescript
 // filepath: src/app/task/page.tsx（続き）
 const closeTaskDialog = () => {

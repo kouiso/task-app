@@ -128,7 +128,7 @@ src/
 
 #### 0-1. getById（1件だけ取得する）
 
-`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。`project.ts` の `getAll` の下に追加します。
+`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。貼り先はこのすぐ下に書いてあります。
 
 先頭の `protectedProcedure`（ログイン必須の入口）に `.query`（読み取り用の手続き）をつなげて、ログイン済みの人だけが呼べる読み取りAPIにします。データを書き換えるときは `.query` の代わりに `.mutation`（書き込み用の手続き）を使い分けます。入力の `id` は `.cuid()`（cuid形式のID検証）で、決まった形式のIDだけを受け付けます。
 
@@ -601,14 +601,14 @@ import { ProjectDetailView } from
 
 > プロジェクト詳細はダイアログではなく、URLパラメータ（`?projectId=xxx`）によるページ内表示です。`useSearchParams` で URLから選択IDを取得します。
 
-ハンドラーを追加します。Day 11 Step 9 で仮定義した `handleDetailClose` を **削除して**、`handleArchive` の下に本実装を書いてください。あわせて `handleProjectClick` も追加します。
+ハンドラーを追加します。Day 11 Step 9 で仮定義した `handleDetailClose` を **削除して**、`handleArchive` の下に本実装を書いてください。あわせて、Day 09 で置いた受け皿の `handleProjectClick` も **削除して** 本実装に書き換えてください。
 
-> Day 11 の仮定義（`// Day 12 Step 1 で本実装に置き換え` とコメントされた箇所）を先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
+> Day 11 の仮定義（`// Day 12 Step 1 で本実装に置き換え` とコメントされた箇所）と、Day 09 で書いた `handleProjectClick` の受け皿を、先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // handleArchiveの下に追加
-// （Day 11 の仮定義 handleDetailClose を削除してからここに書く）
+// （Day 11 の handleDetailClose と Day 09 の handleProjectClick を削除してからここに書く）
 const handleProjectClick = (
   projectId: string
 ) => {

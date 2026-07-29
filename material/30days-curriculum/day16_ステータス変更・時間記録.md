@@ -1796,8 +1796,8 @@ export function TaskCard({
                         onDelete={handleDelete}
                         onClick={handleTaskClick}
                         onTimeLogSuccess={handleTimeLogSuccess}
-                        canEdit={taskCanEdit}
-                        canDelete={taskCanDelete}
+                        canEdit={canEditProject(task.projectId)}
+                        canDelete={canDeleteProject(task.projectId)}
                       />
 ```
 
