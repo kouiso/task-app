@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
 ここから先の「（続き）」のブロックは、`search.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
 ```
 
@@ -41,7 +41,7 @@
 
 **逐語引用**
 
-```
+```text
 // 既存のuseQuery群の末尾に追加
 const { data: users } =
   api.search.getProjectMembers.useQuery();
@@ -74,7 +74,7 @@ const utils = api.useUtils();
 
 **逐語引用**
 
-```
+```text
 // return の中、ページ見出し <h1> の直後に追加
 <Button onClick={handleCreate}>
   <Plus className="mr-2 h-4 w-4" />
@@ -110,11 +110,11 @@ TaskDetailDialog の後、グリッドの外側の末尾に置かれている。
 
 1 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行115 コードブロックをそのまま task.ts の import へ貼ると、Day 13 で書いた `_helpers/per
+### 消えた件 1. 行115 コードブロックをそのまま task.ts の import へ貼ると、Day 13 で書いた `_helpers/per…
 
 **逐語引用**
 
-```
+```text
 // filepath: src/server/api/routers/task.ts（import を追記。permission の行は Day 13 の行と統合した完成形）
 ```
 
@@ -128,10 +128,11 @@ TaskDetailDialog の後、グリッドの外側の末尾に置かれている。
 
 **反証側が示した、成立しない根拠**
 
-確認したファイル: /Users/kouiso/ghq/kouiso/task-app-worktrees/gate3/material/30days-curriculum/day14_タスク新規作成.md
+確認したファイル: material/30days-curriculum/day14_タスク新規作成.md
 
 1) 引用の実在確認（L114-122）
-```
+
+```text
 114 ```typescript
 115 // filepath: src/server/api/routers/task.ts（import を追記。permission の行は Day 13 の行と統合した完成形）
 116 import { TASK_PRIORITY } from '@/lib/constant/priority';
@@ -142,6 +143,7 @@ TaskDetailDialog の後、グリッドの外側の末尾に置かれている。
 121 } from './_helpers/permission';
 122 ```
 ```
+
 引用は L115 に逐語で実在する。指摘のとおり permission の4行（L118-121）がブロック内に含まれる。
 
 2) 同じ箇所の直前で埋まっている（L112、ブロックの直前の行）

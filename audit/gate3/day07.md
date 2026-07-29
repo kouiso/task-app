@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
 ここから先の「（続き）」のブロックは、`auth.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。
 ```
 
@@ -39,7 +39,7 @@ Step 3-2 までに写経した `auth.ts` の末尾は login の `  }),` で終�
 
 **逐語引用**
 
-```
+```text
 ブラウザで `http://localhost:3000/login` を開きます。
 
 ![ログイン失敗時の表示](./screenshots/login-error.png)
@@ -70,11 +70,11 @@ Step 3-2 までに写経した `auth.ts` の末尾は login の `  }),` で終�
 
 2 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行659 auth.ts の中身を全部消してから import を写経した直後、`Cannot find module '@/li
+### 消えた件 1. 行659 auth.ts の中身を全部消してから import を写経した直後、`Cannot find module '@/li…
 
 **逐語引用**
 
-```
+```text
 import {
   checkLoginRateLimit,
   extractClientIp,
@@ -101,6 +101,7 @@ auth.ts の中身を全部消してから import を写経した直後、`Cannot
 659: `} from '@/lib/rate-limit';`
 
 【しかし「Cannot find module で止まる」は起きない】
+
 1) 足場が実際に配布している。`scripts/scaffold-from-scratch.sh:448-450` に
    `if [ -d "${script_dir}/_lib-base" ]; then` … `cp "${script_dir}/_lib-base"/*.ts src/lib/`
    があり、`scripts/_lib-base/rate-limit.ts`（実在をfindで確認）が `src/lib/rate-limit.ts` として学習者の手元へコピーされる。現物 `src/lib/rate-limit.ts`（5.2K）も存在する。
@@ -121,11 +122,11 @@ auth.ts の中身を全部消してから import を写経した直後、`Cannot
 
 以上より、読者がその行でコンパイルエラーに遭遇して止まる、という詰まりは発生しない。「出どころの一文がもう少し明示的だと親切」という程度の話であり、指摘が主張する詰まりは成立しない。
 
-### 消えた件 2. 行112 Step 3-0 の `_helpers/select.ts` や Step 4-2 の `route.ts` を貼り間
+### 消えた件 2. 行112 Step 3-0 の `_helpers/select.ts` や Step 4-2 の `route.ts` を貼り間…
 
 **逐語引用**
 
-```
+```text
 cp src/lib/session.ts src/server/api/trpc.ts \
    src/server/api/routers/auth.ts src/server/api/root.ts \
    ~/day07-backup/
@@ -144,13 +145,15 @@ Step 0 は「今日は動いている4つのファイルを、いったん空に
 現物確認（material/30days-curriculum/day07_ログイン体験を改善しよう.md）:
 
 1) 引用は実在。111-115行:
-```
+
+```text
 mkdir -p ~/day07-backup
 cp src/lib/session.ts src/server/api/trpc.ts \
    src/server/api/routers/auth.ts src/server/api/root.ts \
    ~/day07-backup/
 ls ~/day07-backup
 ```
+
 118-119行「`ls` で4つのファイル名が出れば控えが取れています。書き直しに失敗したときは、たとえば `cp ~/day07-backup/session.ts src/lib/` のように書き戻せば元の状態に戻ります。」
 122行「- `ls ~/day07-backup` に `session.ts` `trpc.ts` `auth.ts` `root.ts` の4つが出る」
 

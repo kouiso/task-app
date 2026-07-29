@@ -13,11 +13,11 @@
 
 3 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行70 すでに中身の入っている project-dialog.tsx を開いて、Step 1 の import から書き始めよう
+### 消えた件 1. 行70 すでに中身の入っている project-dialog.tsx を開いて、Step 1 の import から書き始めよう…
 
 **逐語引用**
 
-```
+```text
 `project-dialog.tsx` は配布済みですが、今日は Step 1 から Step 6 で中身を自分の手で書き直します。そのあと `page.tsx` と連携させます。
 ```
 
@@ -34,26 +34,29 @@
 【引用の実在確認】day10_プロジェクト新規作成.md:70 に逐語で存在。「> 今日は Day 09 で作った `src/app/project/page.tsx` に、プロジェクト作成・編集機能を追加します。`project-dialog.tsx` は配布済みですが、今日は Step 1 から Step 6 で中身を自分の手で書き直します。そのあと `page.tsx` と連携させます。」 同ファイル64行「│       └── project-dialog.tsx    ← 配布済み。今日 Step 1〜6 で中身を書き直す」。Step 1 の最初のコードブロックは day10:210「// filepath: src/component/project/project-dialog.tsx」で（続き）表記なし、次のブロックは day10:226「// filepath: src/component/project/project-dialog.tsx（続き）」。
 
 【前の日で埋まっている点1: 「書き直す」＝中身を消してから書く、という語の定義】
+
 - day05_ログイン画面のUI.md:672「…中身を消して自分の手で書き直すのは Day 07 です。」— 「書き直す」＝「中身を消して」書くことだと、day05 の時点で本文が明示的に等式で結んでいる。
 - day07_ログイン体験を改善しよう.md:106「今日は動いている4つのファイルを、いったん空にしてから書き直します。途中で貼り間違えても」
 - day07:136「`src/lib/session.ts` を開き、中身をすべて削除してから作り直します。」／day07:407「`src/server/api/trpc.ts` を開き、中身をすべて削除してから作り直します。」／day07:644「`src/server/api/routers/auth.ts` を開き、中身をすべて削除してから作り直します。」
   → 読者は day07 で「配布済みの動いているファイルを、中身を全削除してから Step 順に貼る」作業を4ファイル分すでに手で通している。
 
 【前の日で埋まっている点2: 直前日 day09 が同じ状況を明文化】
+
 - day09_プロジェクト一覧画面.md:70「> 今日は `src/app/project/page.tsx` を **ゼロから書いていく** 方式で進めます。すでにファイルがある場合は一旦中身を空にして、ステップごとにコピペしてください。」
   → day10 の1日前に、まさに「既存の中身がある/上に足すのか消すのか」の手順が指示済み。
 
 【同じファイルの別箇所で埋まっている点: 追記か置換かの判別手段】
+
 - day10:142「ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。」— （続き）付きブロックは追記、という規約を当日中に明示。
 - day10:973「…途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。」— day10:1146 以降に project-dialog.tsx の完成全文があり、二重定義で詰まっても復帰経路が同一ファイル内に用意されている。
 
 以上より、「既存の中身を消してから貼る」は day05:672・day07:106/136 と直前の day09:70 で読者に既習であり、追記か置換かの判別も day10:142 と day10:973 で当日内に閉じている。読者がそこで止まるとは言えない。
 
-### 消えた件 2. 行711 `@/lib/date` を import した瞬間にモジュールが見つからないエラーが出た場合、このファイルを自分で作る
+### 消えた件 2. 行711 `@/lib/date` を import した瞬間にモジュールが見つからないエラーが出た場合、このファイルを自分で作る…
 
 **逐語引用**
 
-````
+````text
 import {
   dateOnlyToUtcStartIso,
 } from '@/lib/date';
@@ -77,14 +80,17 @@ import {
 【指摘が前提とする「モジュールが見つからないエラー」は発生しない】
 scripts/_lib-utils/ に date.ts が実在する（`ls scripts/_lib-utils` → badge-variant.ts / date.ts / env.ts / prisma.ts / rate-limit.ts / session.ts / task-form.ts / utils.ts）。
 scripts/scaffold-from-scratch.sh 431行 `local utils_src="${script_dir}/_lib-utils"`、438-440行:
-```
+
+```text
   mkdir -p src/lib
   cp -r "$utils_src"/* src/lib/
   echo "lib ユーティリティを src/lib/ にコピーしました。"
 ```
+
 つまり Day 01 の scaffold 実行時点で `src/lib/date.ts` は読者の手元に配置済み。Day 10 で import しても解決できず止まる、という事象自体が起きない。
 
 【「配布される」ことは教材本文に書かれている（前の日で埋まっている）】
+
 1) day01 264-266行「chmod +x scripts/scaffold-from-scratch.sh / bash scripts/scaffold-from-scratch.sh」を Step 2 で必ず実行させる。271行「Day 10 以降にもう一度実行すると、`src/component/` に自分で書いたファイルが配布版で上書きされます」と、scaffold が配布物を置くものだと明記。
 2) day03_GitHubに保存する.md 476-483行の git status 出力例に、Day 01 が生成したものとして `?? src/lib/` が実物として提示されている。484行「数が多いのは、Day 01 のセットアップで置いたファイルが、まるごと未保存のまま残っているためです。」＝ `src/lib/` は Day 01 が置いたもの、と本文で名指しされている。
 3) day07 136行「`src/lib/session.ts` を開き、中身をすべて削除してから作り直します。」— session.ts も同じ `_lib-utils` からコピーされる（同じ cp -r 1行で date.ts と一緒に入る）。読者は Day 07 の時点で「src/lib/ 配下には自分が作っていないファイルが最初から入っている」を実地で体験済み。同様に day07 1200行も `src/lib/env.ts` を既存物として参照している。
@@ -97,11 +103,11 @@ day10 56-68行の「今日触るファイル」は 70行の注記どおり「今
 
 以上より、指摘が想定する「エラーが出て、作るのか配布済みか分からず手が止まる」は成立しない。
 
-### 消えた件 3. 行837 Step 8 の6手順をやり終えて「完成した作成フロー」の見本と自分の画面を見比べようとするが、表示される画像が Ste
+### 消えた件 3. 行837 Step 8 の6手順をやり終えて「完成した作成フロー」の見本と自分の画面を見比べようとするが、表示される画像が Ste…
 
 **逐語引用**
 
-```
+```text
 スクリーンショット: 完成した作成フローの表示を確認してください。
 
 ![完成した作成フロー](./screenshots/project-create-dialog.png)
@@ -117,9 +123,10 @@ Step 8 の6手順をやり終えて「完成した作成フロー」の見本と
 
 **反証側が示した、成立しない根拠**
 
-【現物確認】/Users/kouiso/ghq/kouiso/task-app-worktrees/gate3/material/30days-curriculum/day10_プロジェクト新規作成.md
+【現物確認】material/30days-curriculum/day10_プロジェクト新規作成.md
 
 引用は実在する。grep 結果は4件:
+
 - 15行目: `![プロジェクト作成ダイアログ](./screenshots/project-create-dialog.png)`
 - 642行目: `![フォーム入力中のダイアログ](./screenshots/project-create-dialog.png)`
 - 806行目: `![作成後に一覧へ追加されたポートフォリオサイトのカード](./screenshots/project-list-after-create.png)`

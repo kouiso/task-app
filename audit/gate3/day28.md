@@ -13,11 +13,11 @@
 
 5 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行401 Step 1 の指示どおり page.tsx に selectableTasks / selectedTaskList 
+### 消えた件 1. 行401 Step 1 の指示どおり page.tsx に selectableTasks / selectedTaskList …
 
 **逐語引用**
 
-```
+```text
 const selectableTasks = useMemo(
   () => tasks?.filter(
     (task) =>
@@ -37,7 +37,8 @@ Step 1 の指示どおり page.tsx に selectableTasks / selectedTaskList を貼
 **反証側が示した、成立しない根拠**
 
 1) 引用は実在する。day28_タスク一括操作を実装しよう.md 401-408行:
-```
+
+```text
 401: const selectableTasks = useMemo(
 402:   () => tasks?.filter(
 403:     (task) =>
@@ -47,20 +48,24 @@ Step 1 の指示どおり page.tsx に selectableTasks / selectedTaskList を貼
 407:   [tasks, canEditProject, canDeleteProject],
 408: );
 ```
+
 また 1327-1341行の「**今日足った import**」ブロックに react の行が無いことも確認した(1332行 lucide-react / 1333行 checkbox / 1334-1339行 dropdown-menu / 1340行 label のみ)。
 
 2) しかし「useMemo の import 指示がどこにもない」は成立しない。読者の `src/app/task/page.tsx` には Day 13 の時点で既に useMemo が入っている。
 day13_タスク一覧画面.md:
-```
+
+```text
 1475: ### `src/app/task/page.tsx`
 1481: // 完成版: クライアント宣言とインポートの前半
 1485: import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 ```
+
 Day 13 本文 827行でも `import { useCallback, useMemo }` を足す指示があり、835行で「`useMemo`（計算した結果を覚えておく仕組み）と `useCallback`…」と説明済み。
 
 3) Day 15 の完成版でも同ファイルの react import に useMemo が残っている。
 day15_タスク編集・削除.md:
-```
+
+```text
 1741: ### `src/app/task/page.tsx`
 1747: // 完成版: React と部品のインポート
 1753: import {
@@ -75,11 +80,11 @@ day15_タスク編集・削除.md:
 
 補足(この指摘とは別の軽微な点): 356行「実際のコードを確認しましょう。`useState` だけを使います（`useCallback` は不要です）。」は Step 1 の state 追加についての記述で、直後に useMemo が出るため言い回しが紛らわしいが、import 不足という詰まりは発生しない。
 
-### 消えた件 2. 行128 `_helpers/permission` から `findTasksWithPermission` を import 
+### 消えた件 2. 行128 `_helpers/permission` から `findTasksWithPermission` を import …
 
 **逐語引用**
 
-```
+```text
 3つの手続きは、渡された id の配列をまとめて権限つきで取る共有ヘルパー `findTasksWithPermission`（複数形）を使います。Day 15 までに書いた `_helpers/permission` の import 文に、この1行を足して次の形にします。
 ```
 
@@ -96,6 +101,7 @@ day15_タスク編集・削除.md:
 【引用の実在確認】day28_タスク一括操作を実装しよう.md:128 は指摘どおり実在。「3つの手続きは、渡された id の配列をまとめて権限つきで取る共有ヘルパー `findTasksWithPermission`（複数形）を使います。Day 15 までに書いた `_helpers/permission` の import 文に、この1行を足して次の形にします。」
 
 【前の Day で埋まっている】
+
 1) day11_プロジェクト編集・削除.md:129「これは `_helpers/permission.ts` にまとまっている権限チェックの共通関数です。Day 07 で作った `_helpers/select.ts` と同じ場所にあり、こちらは配布済みの既存ファイルです。」— 読者は permission.ts を自分で書かない。配布済みであることが本文に明記されている。
 2) day15_タスク編集・削除.md:123「`update` と `delete` は、対象のタスクを取りつつ『自分が触ってよいタスクか』を確認する共有ヘルパー `findTaskWithPermission` を使います。…この1行を足して次の形にします。」／同:135「`findTaskWithPermission` は『id でタスクを1件取り、…』共有ヘルパーです。」— 単数形も読者は実装しておらず、import を1行足すだけ。つまり day28 の複数形も同じ扱いで、「自分で書いた記憶が無い」ことは詰まりの根拠にならない（単数形も書いていない）。
 
@@ -106,11 +112,11 @@ scripts/_server-routers/_helpers/permission.ts:77「export const findTasksWithPe
 
 指摘が言う「複数形ヘルパーの中身も、それを作る手順も書かれていない」は、単数形と同じく『書く対象ではない』ため不足ではない。survives: false。
 
-### 消えた件 3. 行976 status.ts に `isTaskStatus` が無かった場合、import 行を足しても解決しない。本文は 10
+### 消えた件 3. 行976 status.ts に `isTaskStatus` が無かった場合、import 行を足しても解決しない。本文は 10…
 
 **逐語引用**
 
-```
+```text
 `TASK_STATUS_LABELS` は過去の Day で import 済みです。
 同じ `@/lib/constant/status` の import 文に
 `isTaskStatus` と `type TaskStatus` が無い場合だけ
@@ -154,11 +160,11 @@ status.ts に `isTaskStatus` が無かった場合、import 行を足しても�
 
 よって「関数本体が存在しない場合の手順が無い」という不足は、そもそも発生しない場面についての指摘であり成立しない。
 
-### 消えた件 4. 行489 page.tsx には Day 13 以降で書いた同じ grid の一覧が既にある。新しいブロックを追記すべきか、既存の
+### 消えた件 4. 行489 page.tsx には Day 13 以降で書いた同じ grid の一覧が既にある。新しいブロックを追記すべきか、既存の…
 
 **逐語引用**
 
-```
+```text
 // タスク一覧の grid レイアウト
 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
   {tasks && tasks.length > 0 ? (
@@ -175,7 +181,7 @@ page.tsx には Day 13 以降で書いた同じ grid の一覧が既にある。
 
 **反証側が示した、成立しない根拠**
 
-現物確認: /Users/kouiso/ghq/kouiso/task-app-worktrees/gate3/material/30days-curriculum/day28_タスク一括操作を実装しよう.md
+現物確認: material/30days-curriculum/day28_タスク一括操作を実装しよう.md
 
 1. 引用は実在。489-492行「// タスク一覧の grid レイアウト」「<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">」「  {tasks && tasks.length > 0 ? (」「    tasks.map((task) => {」。481行も「実際のコードでは `TaskCard` コンポーネントをグリッドで並べています。`TaskCard`・`handleEdit`・`handleDelete`・`handleTaskClick`・`handleCreate` は過去の Day で作成済みです。」で確認。
 
@@ -194,11 +200,11 @@ page.tsx には Day 13 以降で書いた同じ grid の一覧が既にある。
 
 以上より、「追記して一覧が二重に出る」は34-37行の明示指示・481/514/538行の文脈・1648行の完成版突合で埋まっている。Step 4 (684行「// Step 3 で書いた Checkbox の checked を差し替える」)のような一行注記が無いのは事実だが、読者が実際にそこで止まるとは言えない。
 
-### 消えた件 5. 行610 「フィルター行」が page.tsx のどのブロックを指すのか分からず、全選択チェックボックスの貼り付け先を決められない
+### 消えた件 5. 行610 「フィルター行」が page.tsx のどのブロックを指すのか分からず、全選択チェックボックスの貼り付け先を決められない…
 
 **逐語引用**
 
-```
+```text
 import { Label } from '@/component/ui/label';
 
 // フィルター行の先頭に配置

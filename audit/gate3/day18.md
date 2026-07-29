@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
 ここから先の「（続き）」のブロックは、`comment.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
 ```
 
@@ -40,7 +40,7 @@ Step 0-3 の最初のコードブロックはルーターを閉じずに終わ�
 
 **逐語引用**
 
-```
+```text
 コメント欄を包む外側の箱はこのあと閉じるので、この時点ではまだ構文エラーが残ります。
 ```
 
@@ -68,7 +68,7 @@ Step 3 が外側の箱を開くコードを一度も提示していないのに�
 
 **逐語引用**
 
-```
+```text
 Day 13 の Step 7 で配置した `TaskDetailDialog`
 （`src/component/task/task-detail-dialog.tsx`）は、
 内部で `api.task.getById` を呼んでいます。
@@ -100,7 +100,7 @@ Day 13 の Step 7 で配置した `TaskDetailDialog`
 
 **逐語引用**
 
-```
+```text
 **確認ポイント**:
 - 既存の `getByTaskId` を残して `create` を追加した
 - 4 つのメソッドの名前と種別を把握した
@@ -129,11 +129,11 @@ Step 0 で `getByTaskId` と `create` を同時に新規作成したのに「既
 
 1 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行475 配布済みの task-detail-dialog.tsx を開くと、return の中に Dialog / Dialog
+### 消えた件 1. 行475 配布済みの task-detail-dialog.tsx を開くと、return の中に Dialog / Dialog…
 
 **逐語引用**
 
-```
+```text
 // TaskDetailDialog の return 内: コメントヘッダー
 <div className="flex items-center gap-2 mb-4">
   <h3 className="font-semibold">コメント</h3>
@@ -150,7 +150,8 @@ Day 16 の「`DialogHeader` の閉じタグの直後に書きます」のよう�
 **反証側が示した、成立しない根拠**
 
 1) 引用は実在する。day18_コメント投稿.md L473-483:
-```
+
+```text
 473 ```typescript
 474 // filepath: src/component/task/task-detail-dialog.tsx
 475 // TaskDetailDialog の return 内: コメントヘッダー
@@ -160,6 +161,7 @@ Day 16 の「`DialogHeader` の閉じタグの直後に書きます」のよう�
 ...
 482 </div>
 ```
+
 確かにこの断片単体には「何行目に貼るか」の1点指定が無い。
 
 2) しかし同じファイル内で埋まっている。L1040（「今日のコード全文」節の導入文）逐語:
@@ -167,7 +169,8 @@ Day 16 の「`DialogHeader` の閉じタグの直後に書きます」のよう�
 L1047 逐語:「`task-detail-dialog.tsx` は Day 13 から配布されていたファイルです。今日はそこへコメント欄を書き足したので、Day 13 から引き継いだ部分もあわせて全文を載せます。」
 
 3) その全文の中で、当該 div の位置が一意に確定している。「完成版: 期限とコメント欄の見出し」ブロック（L1394 付近〜、逐語）:
-```
+
+```text
               <div>
                 <span className="text-muted-foreground block mb-1">期限</span>
                 <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
@@ -184,10 +187,12 @@ L1047 逐語:「`task-detail-dialog.tsx` は Day 13 から配布されていた�
                 </Badge>
               </div>
 ```
+
 すなわち「情報グリッドを閉じた直後の `<Separator />` の後」とインデント込みで示されている。
 
 4) 指摘が懸念する「DialogFooter より後ろに貼ると閉じるボタンの下に出る」も、同ファイル L1511-1520 の「完成版: 末尾の閉じるボタン」で潰されている。逐語:
-```
+
+```text
             </div>
           </div>
         )}
@@ -198,6 +203,7 @@ L1047 逐語:「`task-detail-dialog.tsx` は Day 13 から配布されていた�
       </DialogContent>
     </Dialog>
 ```
+
 および L1520 逐語:「`DialogFooter` を `{taskDetail && (` の外側へ置いてあるのが要点です。」
 コメント欄が `{taskDetail && (` の内側、DialogFooter の手前であることが全文から確定する。
 

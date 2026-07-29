@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
   unarchive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
@@ -47,7 +47,7 @@
 
 **逐語引用**
 
-```
+```text
 次に、Day 09 で定義した `handleCreate` の直下に `handleEdit` を追加します。実際のコードでは `handleCreate` → `handleEdit` の順番で並んでいます。
 ```
 
@@ -75,7 +75,7 @@ Step 9 だけは「仮定義を削除してから」と明記されているの�
 
 **逐語引用**
 
-```
+```text
 次に、削除用の mutation を定義します。実際のコードでは mutation の定義順は `createMutation` → `updateMutation` → `deleteMutation` です。`updateMutation` の直下に追加してください。
 ```
 
@@ -102,7 +102,7 @@ Step 2 の時点で `page.tsx` を開いても `updateMutation` がどこにも�
 
 **逐語引用**
 
-```
+```text
 > **配置の注意**: `handleSubmit` は `handleDelete` の直下に配置してください。コードの並び順は `handleCreate` → `handleEdit` → `handleDelete` → `handleSubmit` です。
 ```
 
@@ -130,7 +130,7 @@ Day 11 の版は if と else に作り替えたものなので本来は置き換
 
 **逐語引用**
 
-```
+```text
 JSX 内のプロジェクトカード一覧グリッド（`<div className="grid gap-6 sm:grid-cols-2 ...">...</div>`）の閉じタグ直後に `ProjectDialog` を配置します。
 ```
 
@@ -158,7 +158,7 @@ JSX 内のプロジェクトカード一覧グリッド（`<div className="grid 
 
 **逐語引用**
 
-```
+```text
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onClick={
@@ -192,7 +192,7 @@ Day 11 の完成コード全体に `handleProjectClick` の定義が1か所も�
 
 **逐語引用**
 
-```
+```text
 プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。Step 5 の更新ハンドラー（`src/app/project/page.tsx`）で `description || null` を使ったのは、
 ```
 
@@ -218,11 +218,11 @@ Day 11 の完成コード全体に `handleProjectClick` の定義が1か所も�
 
 1 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行153 「getAll の下」と「末尾の `});` の1行上」は、Day 10 まで書き終えたファイルでは別の場所（getAl
+### 消えた件 1. 行153 「getAll の下」と「末尾の `});` の1行上」は、Day 10 まで書き終えたファイルでは別の場所（getAl…
 
 **逐語引用**
 
-```
+```text
 続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。
 
 ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。

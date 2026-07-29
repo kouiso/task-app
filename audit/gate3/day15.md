@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
   reset(buildTaskFormValues(
     initialData,
     projects
@@ -46,11 +46,11 @@ Day 15 はその避けた形を「書きました」として提示している�
 
 4 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行606 指示どおり page.tsx へ追加すると、Day 14 の Step 8 で書いた `const handleSubm
+### 消えた件 1. 行606 指示どおり page.tsx へ追加すると、Day 14 の Step 8 で書いた `const handleSubm…
 
 **逐語引用**
 
-```
+```text
 // filepath: src/app/task/page.tsx
 const handleSubmit =
   (data: TaskFormData) => {
@@ -71,7 +71,8 @@ Step 2 の `handleEdit`(L494)、Step 7 の `handleDelete`(L773)、Step 8 の `ha
 【引用の実在確認】day15_タスク編集・削除.md L587-589「### Step 4: update用の送信ハンドラー（5分）」「**ゴール**: 既存タスクの更新処理を実装します。」、L605-609「// filepath: src/app/task/page.tsx」「const handleSubmit =」「  (data: TaskFormData) => {」「    if (data.id) {」「      updateMutation.mutate({」。指摘の引用は実在する。またL494「Day 13 で置いた仮の `handleEdit` は、この中身へ**丸ごと置き換え**ます。2つ並べると同じ名前を2回宣言することになり、ページ全体が止まります。」、L773「Day 13 で置いた仮の `handleDelete` を**置き換え**ます。仮のほうは残しません。」、L832「Day 14 で書いた `handleCreate` を**置き換え**ます。増やさず、中身だけ差し替えます。」も実在し、Step 4 の handleSubmit だけ同種の文言が無いのも事実。
 
 【前の日で埋まっているか → 埋まっている】day14_タスク新規作成.md L1361-1368 で、読者は自分の src/app/task/page.tsx に次を書いている:
-```
+
+```text
 ```typescript
 // filepath: src/app/task/page.tsx
 // createMutationの下に追加
@@ -81,17 +82,18 @@ Step 2 の `handleEdit`(L494)、Step 7 の `handleDelete`(L773)、Step 8 の `ha
 const handleSubmit =
   (data: TaskFormData) => {
 ```
+
 L1365「// 送信ハンドラー（新規作成のみ）」・L1366「// Day 15で編集モード（data.id分岐）を追加します」は、読者自身が page.tsx に打ち込んだコメントであり、宣言のすぐ真上に残っている。Day 15 Step 4 が書かせるのは、まさにその「data.id 分岐」そのもの（L608-609「if (data.id) {」）。つまり読者は、自分のファイルの当該行に「ここへ Day 15 で data.id 分岐を足す」と書いてあるのを見ながら、同じ関数へ手を入れることになる。新しく2つ目の `const handleSubmit` を隣に並べる読み方は、この予告コメントと矛盾する。
 
 【同ファイル内の別箇所でも補強されている】day15 L683「// handleSubmitの続き: 新規作成分岐」および L674「`handleSubmit` を完成させます。」が、Step 4 と Step 5 が1つの関数を作り上げる流れであることを示す。Step 5 が足す新規作成分岐（L685-701）は Day 14 版 handleSubmit の中身とほぼ同一で、Day 14 版を残したままでは同じ処理が二重に存在することになり、「続き」「完成させます」という記述と整合しない。さらに day15 L1176 以降に「途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて」とファイル全文が置かれ、L1137 の全文版 page.tsx では `const handleSubmit = (data: TaskFormData) => {` が1つだけである。
 
 【結論】Step 4 に「置き換え」の明文が無いのは事実だが、Day 14 の宣言直上の予告コメント（L1365-1366）が読者の手元ファイルに残っており、それが同じ関数への追記であることを示している。読者が同名2重宣言に至る経路は塞がれている。
 
-### 消えた件 2. 行535 この行を書いた時点で `react-hot-toast` が入っていなければ Module not found で止まる
+### 消えた件 2. 行535 この行を書いた時点で `react-hot-toast` が入っていなければ Module not found で止まる…
 
 **逐語引用**
 
-```
+```text
 import toast from 'react-hot-toast';
 
 `toast` は画面の隅に短い通知を出す道具です。更新は自分の入力ミス以外でも失敗するので、失敗を伝える先を先に用意しておきます。
@@ -112,10 +114,12 @@ material/30days-curriculum/day15_タスク編集・削除.md:535 は逐語で `i
 
 【前の日で埋まっている（Day 05）】
 day05_ログイン画面のUI.md:598-599 逐語:
-```
+
+```text
 // トースト通知ライブラリ（画面上部にメッセージを表示）
 import toast from 'react-hot-toast';
 ```
+
 day05 L606 逐語: 「> `react-hot-toast` はログイン成功時に通知メッセージを表示するライブラリです。Day 01の初期セットアップでインストール済みなので、import するだけで使えます。」
 → 指摘が言う「どの日に入れたかの記載がない／前提の明示がない」は成立しない。Day 01 scaffold 同梱であることが Day 05 で明示済み。
 
@@ -131,11 +135,11 @@ day08_サイドバーを完成させよう.md:115 逐語 `import { Toaster } fro
 【結論】
 Day 15 L535 で `react-hot-toast` が未インストールで Module not found になる前提自体が、Day 05 L606 の「Day 01の初期セットアップでインストール済み」と Day 05 L1377 の復旧コマンド、Day 08 L115-122 の Toaster 設置によって否定される。読者はここで止まらない。
 
-### 消えた件 3. 行786 page.tsx の末尾は `</div>` `</AppLayout>` `);` `}` と閉じタグが続く。「閉じタ
+### 消えた件 3. 行786 page.tsx の末尾は `</div>` `</AppLayout>` `);` `}` と閉じタグが続く。「閉じタ…
 
 **逐語引用**
 
-```
+```text
 続いて、JSXの閉じタグ付近に
 `DeleteConfirmDialog` を配置します。
 ```
@@ -165,11 +169,11 @@ day14_タスク新規作成.md L1420「// return の中、ページ見出し <h1
 
 【残る差分】「閉じタグ付近」が day13「グリッドの直下」・day14「`<h1>` の直後」に比べて曖昧なのは事実で、表現の改善余地はある。ただし判定基準2（前日で規範が埋まっている）と基準3（同ファイル L2263-2282 に貼り先が逐語で存在）の両方で埋まっているため、指摘は成立しない。
 
-### 消えた件 4. 行914 Step 10 のコードは Day 14 の Step 8 で貼った `<TaskDialog ... />` と完全に
+### 消えた件 4. 行914 Step 10 のコードは Day 14 の Step 8 で貼った `<TaskDialog ... />` と完全に…
 
 **逐語引用**
 
-```
+```text
 // ダイアログにeditingTaskを渡す
 <TaskDialog
   open={dialogOpen}
@@ -187,7 +191,7 @@ Step 2・7・8 では「置き換えます」と明記しているのに、Step 
 
 **反証側が示した、成立しない根拠**
 
-【現物確認】/Users/kouiso/ghq/kouiso/task-app-worktrees/gate3/material/30days-curriculum/day15_タスク編集・削除.md
+【現物確認】material/30days-curriculum/day15_タスク編集・削除.md
 
 引用の存在: L910-918 に確かにある。
 L904「### Step 10: TaskDialogにeditingTaskを渡す（3分）」

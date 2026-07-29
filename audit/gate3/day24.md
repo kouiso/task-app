@@ -11,7 +11,7 @@
 
 **逐語引用**
 
-```
+```text
 アバターとバッジの表示を確認してください。
 
 ![アバターとロールのバッジが並んだ一覧。右端のアクション列は次の Step で追加する](./screenshots/user-list.png)
@@ -44,11 +44,11 @@ Day 24 の Step 7 には同じ断りが無い。
 
 1 件。挙がった内容と、反証側が示した根拠を全件残す。
 
-### 消えた件 1. 行132 `src/server/api/routers/user.ts` を新規作成してこの import を写経したところで、
+### 消えた件 1. 行132 `src/server/api/routers/user.ts` を新規作成してこの import を写経したところで、…
 
 **逐語引用**
 
-```
+```text
 import { adminProcedure, createTRPCRouter } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
