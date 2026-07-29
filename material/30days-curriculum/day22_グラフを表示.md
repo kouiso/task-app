@@ -529,8 +529,8 @@ Card 枠と `Pie` の設定です。
 まず、その外枠になる開始タグと閉じタグだけを追加します。
 
 ```tsx
-// filepath: src/app/report/page.tsx
-// グリッドの外枠（この2行の間に Card を移す）
+{/* filepath: src/app/report/page.tsx */}
+{/* グリッドの外枠（この2行の間に Card を移す） */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 </div>
 ```

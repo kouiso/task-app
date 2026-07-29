@@ -629,8 +629,8 @@ const handleDetailClose = () => {
 プロジェクトカードの `onClick` に `handleProjectClick` を接続します。`ProjectCard` は個別のpropsでデータを受け取ります。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// プロジェクトカードの配置（Day 09実装済み）
+{/* filepath: src/app/project/page.tsx */}
+{/* プロジェクトカードの配置（Day 09実装済み） */}
 <ProjectCard
   key={project.id}
   id={project.id}
@@ -812,8 +812,8 @@ const canArchiveProject = currentMemberRole
 `canArchive` の3つが今日の追加分です。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// Day 11 Step 9 の分岐内にあるタグを、この形に書き換える
+{/* filepath: src/app/project/page.tsx */}
+{/* Day 11 Step 9 の分岐内にあるタグを、この形に書き換える */}
 <ProjectDetailView
   projectDetail={projectDetail}
   onBack={handleDetailClose}
@@ -930,8 +930,8 @@ import {
 メンバー追加ダイアログは `ProjectDetailView` の分岐内に配置します。まずダイアログのヘッダー部分です。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// ProjectDetailViewの直後に配置
+{/* filepath: src/app/project/page.tsx */}
+{/* ProjectDetailViewの直後に配置 */}
 <Dialog open={memberDialogOpen}
   onOpenChange={setMemberDialogOpen}>
   <DialogContent
@@ -955,8 +955,8 @@ import {
 ユーザー選択のドロップダウンを追加します。`useState` の `newMemberUserId` で値を直接管理します。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// ダイアログのbody部分: ユーザー選択
+{/* filepath: src/app/project/page.tsx */}
+{/* ダイアログのbody部分: ユーザー選択 */}
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
         <Label htmlFor="user">
@@ -983,8 +983,8 @@ import {
 SelectContent 内にユーザー候補を表示します。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// ユーザー選択の候補リスト
+{/* filepath: src/app/project/page.tsx */}
+{/* ユーザー選択の候補リスト */}
           <SelectContent>
             {availableUsers?.map(
               (user) => (
@@ -1009,8 +1009,8 @@ SelectContent 内にユーザー候補を表示します。
 ロール選択も `useState` の `newMemberRole` で管理します。`isProjectMemberRole` 型ガードで値を安全に検証してからstateに設定します。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// ロール選択UI: Select + useState
+{/* filepath: src/app/project/page.tsx */}
+{/* ロール選択UI: Select + useState */}
       <div className="grid gap-2">
         <Label htmlFor="role">ロール</Label>
         <Select
@@ -1035,8 +1035,8 @@ SelectContent 内にユーザー候補を表示します。
 ロール選択肢はOWNERを除外して生成します。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// ロール選択の候補リスト
+{/* filepath: src/app/project/page.tsx */}
+{/* ロール選択の候補リスト */}
           <SelectContent>
             {Object.entries(
               PROJECT_MEMBER_ROLE_LABELS
@@ -1067,8 +1067,8 @@ SelectContent 内にユーザー候補を表示します。
 フッターボタンを追加してダイアログを完成させます。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// ダイアログのフッター
+{/* filepath: src/app/project/page.tsx */}
+{/* ダイアログのフッター */}
     <DialogFooter>
       <Button variant="outline"
         onClick={() =>
@@ -1237,8 +1237,8 @@ const handleRemoveMember = (
 `if (projectIdParam && selectedProject)` の分岐の中に `DeleteConfirmDialog` を配置します。Step 4 で置いたメンバー追加ダイアログの `</Dialog>` の直後、この分岐の `</AppLayout>` の直前です。一覧側の `</AppLayout>` の直前には Day 11 のプロジェクト削除ダイアログがあるので、そちらと間違えないでください。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// 詳細画面の分岐内、メンバー追加ダイアログの</Dialog>の直後に配置
+{/* filepath: src/app/project/page.tsx */}
+{/* 詳細画面の分岐内、メンバー追加ダイアログの</Dialog>の直後に配置 */}
 <DeleteConfirmDialog
   open={removeMemberDialogOpen}
   onOpenChange={

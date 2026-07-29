@@ -69,7 +69,7 @@ def check_extraction() -> list[str]:
     if targets != ["src/app/login/page.tsx", "src/server/api/routers/task.ts"]:
         fails.append(f"❌ iter_blocks が貼り先を取れていない: {targets}")
 
-    if blocks and any("filepath:" in line for line in blocks[0].lines):
+    if any(FILEPATH.match(line) for block in blocks for line in block.lines):
         fails.append("❌ iter_blocks が目印の行を写経対象へ混ぜている")
 
     router = ROUTER_FILE.match("{/* filepath: src/server/api/routers/task.ts */}")

@@ -327,8 +327,8 @@ const onSubmit = async (
 `return` 文の中にある `<CardHeader>...</CardHeader>` の直後に `<CardContent>` を追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// </CardHeader> の直後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* </CardHeader> の直後に追加 */}
 <CardContent>
   <form onSubmit={handleSubmit(onSubmit)}
     className="space-y-4">
@@ -363,8 +363,8 @@ const onSubmit = async (
 次に、`<form>` の中で名前入力欄（`</div>` の後）にメール入力欄を追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form>内、名前入力欄の </div> の後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form>内、名前入力欄の </div> の後に追加 */}
 <div className="space-y-2">
   <Label htmlFor="email">
     メールアドレス
@@ -406,8 +406,8 @@ const onSubmit = async (
 `<form>` の中で、メール入力欄の `</div>` の後に追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form>内、メール入力欄の </div> の後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form>内、メール入力欄の </div> の後に追加 */}
 <div className="space-y-2">
   <Label htmlFor="password">
     パスワード
@@ -449,8 +449,8 @@ const onSubmit = async (
 `<form>` の中で、パスワード入力欄の `</div>` の後に追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form>内、パスワード入力欄の </div> の後に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form>内、パスワード入力欄の </div> の後に追加 */}
 <div className="space-y-2">
   <Label htmlFor="confirmPassword">
     パスワード(確認)
@@ -593,8 +593,8 @@ const onSubmit = async (
 `return` 文の中にある `<CardHeader>` を以下のコードに丸ごと書き換えます。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// 既存の <CardHeader>...</CardHeader> を書き換え
+{/* filepath: src/app/register/page.tsx */}
+{/* 既存の <CardHeader>...</CardHeader> を書き換え */}
 <CardHeader
   className="space-y-1 text-center">
   <div className="flex justify-center mb-2">
@@ -635,8 +635,8 @@ const onSubmit = async (
 `<form>` タグの直後（最初の入力欄の前）にサーバーエラー表示を追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// <form ...> の直後、名前入力欄の前に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* <form ...> の直後、名前入力欄の前に追加 */}
 {error && (
   <Alert variant="destructive">
     <AlertCircle className="h-4 w-4" />
@@ -659,8 +659,8 @@ const onSubmit = async (
 次に、パスワード確認欄の `</div>` の後（`</form>` の前）に送信ボタンを追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// パスワード確認欄の後、</form> の前に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* パスワード確認欄の後、</form> の前に追加 */}
 <Button
   type="submit"
   className="w-full bg-gradient-to-r
@@ -693,8 +693,8 @@ const onSubmit = async (
 `<Button>` の直後（`</form>` の前）にリンクを追加します。
 
 ```typescript
-// filepath: src/app/register/page.tsx
-// Buttonの後、</form> の前に追加
+{/* filepath: src/app/register/page.tsx */}
+{/* Buttonの後、</form> の前に追加 */}
 <div className="text-center text-sm
   text-muted-foreground">
   すでにアカウントをお持ちの方は{' '}

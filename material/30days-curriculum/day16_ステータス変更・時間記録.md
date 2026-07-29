@@ -556,8 +556,8 @@ Day 15 の編集ダイアログは、開いたときに今の値が入ってい�
 判定は zod 側に寄せます。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 分入力フィールドとエラー表示
+{/* filepath: src/component/task/time-log-dialog.tsx */}
+{/* 分入力フィールドとエラー表示 */}
           <div className="flex-1">
             <Label htmlFor="minutes">分</Label>
             <Input id="minutes"
@@ -595,8 +595,8 @@ Day 15 の編集ダイアログは、開いたときに今の値が入ってい�
 1つの入力だと見せるためです。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// フッターボタンとダイアログ終了
+{/* filepath: src/component/task/time-log-dialog.tsx */}
+{/* フッターボタンとダイアログ終了 */}
         <DialogFooter>
           <Button variant="outline"
             onClick={handleClose}>
@@ -760,8 +760,8 @@ const handleOpenTimeLog = (e: React.MouseEvent) => {
 「時間記録」ボタンを置きます。
 
 ```typescript
-// filepath: src/component/task/task-card.tsx
-// 合計作業時間の表示と時間記録ボタン
+{/* filepath: src/component/task/task-card.tsx */}
+{/* 合計作業時間の表示と時間記録ボタン */}
 <div className="space-y-2">
   <p className="text-sm text-muted-foreground">
     合計作業時間: {formatMinutes(timeSpentMinutes)}
@@ -860,8 +860,8 @@ const handleTimeLogSuccess = useCallback(() => {
 次に、Day 15 で置いた `<TaskCard>` に2つの props を足します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// Day 15 の <TaskCard> に2つの props を追加
+{/* filepath: src/app/task/page.tsx */}
+{/* Day 15 の <TaskCard> に2つの props を追加 */}
 <TaskCard
   // ...Day 15 で渡した props...
   timeSpentMinutes={task.timeSpentMinutes}

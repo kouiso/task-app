@@ -942,8 +942,8 @@ return (
 **実装**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
-// ステータスSelect（Controller使用）
+{/* filepath: src/component/task/task-dialog.tsx */}
+{/* ステータスSelect（Controller使用） */}
 <div className="grid grid-cols-2 gap-4">
   <div className="grid gap-2">
     <Label htmlFor="status">
@@ -991,8 +991,8 @@ return (
 優先度Selectも同じパターンで作ります。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
-// 優先度Select（Controllerで同じパターン）
+{/* filepath: src/component/task/task-dialog.tsx */}
+{/* 優先度Select（Controllerで同じパターン） */}
   <div className="grid gap-2">
     <Label htmlFor="priority">
       優先度
@@ -1082,8 +1082,8 @@ return (
 **実装**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
-// プロジェクトSelect
+{/* filepath: src/component/task/task-dialog.tsx */}
+{/* プロジェクトSelect */}
   <div className="grid gap-2">
     <Label htmlFor="project">
       プロジェクト
@@ -1139,8 +1139,8 @@ return (
 エラー表示をタイトルと同じ形でここにも置くのは、必須の項目が画面に2つあるからです。プロジェクトが未選択でも「作成」ボタンは押せてしまいますが、押した先でこの赤い文字が理由を伝えます。押しても無反応な作りにすると、読者は何が足りないのか分からず、入力欄を順に見直すことになります。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
-// 担当者Select
+{/* filepath: src/component/task/task-dialog.tsx */}
+{/* 担当者Select */}
   <div className="grid gap-2">
     <Label htmlFor="assignee">
       担当者
@@ -1206,8 +1206,8 @@ return (
 **実装**:
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
-// 期限と見積時間
+{/* filepath: src/component/task/task-dialog.tsx */}
+{/* 期限と見積時間 */}
   <div className="grid gap-2">
     <Label htmlFor="dueDate">期限</Label>
     <Input id="dueDate" type="date"
@@ -1235,8 +1235,8 @@ return (
 > 文字列なので、この変換が必要です。
 
 ```typescript
-// filepath: src/component/task/task-dialog.tsx
-// 送信・キャンセルボタン
+{/* filepath: src/component/task/task-dialog.tsx */}
+{/* 送信・キャンセルボタン */}
         <DialogFooter>
           <Button type="button"
             variant="outline"
@@ -1414,8 +1414,8 @@ const handleSubmit =
 > サーバー側のスキーマでは `status` と `priority` にデフォルト値（TODO / MEDIUM）が設定されていますが、フロントエンドからは常にフォームの選択値を送信します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// return の中、ページ見出し <h1> の直後に追加
+{/* filepath: src/app/task/page.tsx */}
+{/* return の中、ページ見出し <h1> の直後に追加 */}
 <Button onClick={handleCreate}>
   <Plus className="mr-2 h-4 w-4" />
   新規タスク
@@ -1425,8 +1425,8 @@ const handleSubmit =
 `TaskDialog` の貼り先はここではありません。Day 13 で置いた `TaskDetailDialog` の直後、カードのグリッドを閉じる `</div>` より後ろへ貼ります。グリッドの中に入れるとカードの並びに巻き込まれ、完成版と構造が食い違います。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// TaskDetailDialog の直後、カードのグリッドの外側に追加
+{/* filepath: src/app/task/page.tsx */}
+{/* TaskDetailDialog の直後、カードのグリッドの外側に追加 */}
 <TaskDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}

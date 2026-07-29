@@ -813,8 +813,8 @@ const handleDelete = (taskId: string) => {
 `DeleteConfirmDialog` を配置します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 確認ダイアログの配置
+{/* filepath: src/app/task/page.tsx */}
+{/* 確認ダイアログの配置 */}
 <DeleteConfirmDialog
   open={deleteDialogOpen}
   onOpenChange={setDeleteDialogOpen}
@@ -886,8 +886,8 @@ const handleCreate = () => {
 **実装**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// TaskCardにハンドラーを接続
+{/* filepath: src/app/task/page.tsx */}
+{/* TaskCardにハンドラーを接続 */}
 <TaskCard
   key={task.id}
   id={task.id}
@@ -935,8 +935,8 @@ const handleCreate = () => {
 **実装**:
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// ダイアログにeditingTaskを渡す
+{/* filepath: src/app/task/page.tsx */}
+{/* ダイアログにeditingTaskを渡す */}
 <TaskDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}

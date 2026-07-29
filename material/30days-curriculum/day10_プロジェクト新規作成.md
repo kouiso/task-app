@@ -781,8 +781,8 @@ const handleSubmit = (
 最後に JSX 内へ `ProjectDialog` を組み込みます。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// JSX内（AppLayoutの閉じタグの前）
+{/* filepath: src/app/project/page.tsx */}
+{/* JSX内（AppLayoutの閉じタグの前） */}
 <ProjectDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}

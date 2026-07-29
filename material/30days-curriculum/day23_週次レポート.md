@@ -351,8 +351,8 @@ const projectStats = overview?.projectStats ?? [];
 - `projectStats` が配列として扱える
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// 描画時だけ小数第1位へ整える
+{/* filepath: src/app/report/page.tsx */}
+{/* 描画時だけ小数第1位へ整える */}
 {projectStats.map((stat) => (
   <TableRow key={stat.id}>
     <TableCell className="font-medium">{stat.name}</TableCell>
@@ -409,8 +409,8 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 | TableCell | データセル | `<td>` |
 
 ```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-// テーブルのヘッダー定義
+{/* filepath: 読み比べ用サンプル（実ファイルには対応しません） */}
+{/* テーブルのヘッダー定義 */}
 <Card>
   <CardHeader>
     <CardTitle>プロジェクト統計</CardTitle>
@@ -441,8 +441,8 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 > この入れ子は、ブラウザに「ここが表の見出し行」と伝えるための形です。
 
 ```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-// テーブル本体（mapで各行を生成）
+{/* filepath: 読み比べ用サンプル（実ファイルには対応しません） */}
+{/* テーブル本体（mapで各行を生成） */}
 <TableBody>
   {projectStats?.map((stat) => (
     <TableRow key={stat.id}>
@@ -623,8 +623,8 @@ export default function WeeklyReportPage() {
 - `isLoading` のときスピナーを表示している
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 週数選択のSelectコンポーネント
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 週数選択のSelectコンポーネント */}
 <div className="w-[150px]">
   <Select
     value={weeks}
@@ -720,7 +720,7 @@ import Link from 'next/link';
 レポート見出しの右側へリンクを置きます。`Link` は Next.js が用意したページ移動用の部品で、`<a>` タグと違って移動先の中身だけを差し替えます。だからサイドバーやヘッダーは表示されたまま残り、画面が一度白くなってから描き直される動きになりません。`ArrowRight` は右向き矢印のアイコンで、押した先へ進むことを文字より速く伝えます。
 
 ```typescript
-// filepath: src/app/report/page.tsx
+{/* filepath: src/app/report/page.tsx */}
 <Link
   href="/report/weekly"
   className="inline-flex items-center gap-2
@@ -748,8 +748,8 @@ import Link from 'next/link';
 対象期間の3枚のカードを表示します。
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 完了タスク合計カード
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 完了タスク合計カード */}
 <div className="grid grid-cols-1
   md:grid-cols-3 gap-4">
   <Card>
@@ -776,8 +776,8 @@ import Link from 'next/link';
 - 完了タスク合計の数値が表示される
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 週平均カード
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 週平均カード */}
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -805,8 +805,8 @@ import Link from 'next/link';
 - `Number.parseInt` で文字列の `weeks` を数値に変換している
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 対象期間カード（date-fns で整形）
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 対象期間カード（date-fns で整形） */}
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -900,8 +900,8 @@ const statusData =
 - `statusData` はステータス別データを持つ
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 週別完了タスク数の折れ線グラフ
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 週別完了タスク数の折れ線グラフ */}
 <Card className="col-span-1 lg:col-span-2">
   <CardHeader>
     <CardTitle>週別完了タスク数</CardTitle>
@@ -937,8 +937,8 @@ const statusData =
 - `col-span-2` で横幅いっぱいに表示される
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 優先度別分布の棒グラフ
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 優先度別分布の棒グラフ */}
 <Card>
   <CardHeader>
     <CardTitle>優先度別分布</CardTitle>
@@ -971,8 +971,8 @@ const statusData =
 - `TASK_PRIORITY_COLORS` で色分けしている
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// ステータス別積み上げ棒グラフのCard部分
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* ステータス別積み上げ棒グラフのCard部分 */}
 <Card>
   <CardHeader>
     <CardTitle>ステータス別内訳</CardTitle>
@@ -995,8 +995,8 @@ const statusData =
 - `statusData` を `BarChart` に渡している
 
 ```typescript
-// filepath: src/app/report/weekly/page.tsx
-// 3つのBarで積み上げ表示
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* 3つのBarで積み上げ表示 */}
           <Bar dataKey="done"
             stackId="status" name="完了"
             fill={TASK_STATUS_COLORS.DONE} />

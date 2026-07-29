@@ -398,8 +398,8 @@ Step 1 の `findCommentAndAssertOwnership` が、届いたリクエストごと�
 編集・削除ボタンを表示します。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// 本人チェックで編集・削除ボタンを表示
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* 本人チェックで編集・削除ボタンを表示 */}
 {comment.userId === session?.user?.id && (
   <div className="flex gap-1">
     <Button variant="ghost" size="icon"
@@ -478,7 +478,7 @@ const handleCancelEdit = () => {
 表示します。`? (` から `)}` までが 1 つの式です。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
 {editingCommentId === comment.id ? (
   <div className="space-y-2">
     <Textarea
@@ -683,7 +683,7 @@ return (
 `onOpenChange` は、背景をクリックしたときや Esc キーを押したときにも呼ばれます。ここを `onClose` のままにすると、閉じ方によって片付けが行われたり行われなかったりします。同じ理由で、`閉じる` ボタンも `handleClose` に差し替えます。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
 <DialogFooter>
   <Button onClick={handleClose}>
     閉じる
@@ -701,8 +701,8 @@ return (
 `</>` の前に削除確認ダイアログを配置します。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// 既存の </Dialog> の直後に配置
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{/* 既存の </Dialog> の直後に配置 */}
     <DeleteConfirmDialog
       open={deleteCommentDialogOpen}
       onOpenChange={setDeleteCommentDialogOpen}

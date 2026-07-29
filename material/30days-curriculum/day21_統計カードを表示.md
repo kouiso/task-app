@@ -598,8 +598,8 @@ export default function ReportPage() {
 - `AppLayout` で囲んだ
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// 骨組み続き: 説明文と閉じタグ
+{/* filepath: src/app/report/page.tsx */}
+{/* 骨組み続き: 説明文と閉じタグ */}
           <p className=
             "text-muted-foreground">
             プロジェクトの進捗とタスクの
@@ -754,8 +754,8 @@ if (isLoading) {
 **実装**:
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// 統計カード: タスク数と完了率
+{/* filepath: src/app/report/page.tsx */}
+{/* 統計カード: タスク数と完了率 */}
 <div className="grid grid-cols-1
   sm:grid-cols-2 lg:grid-cols-4
   gap-4">
@@ -777,8 +777,8 @@ if (isLoading) {
 - 1枚目のカードが表示される
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// 統計カード: 完了率カード
+{/* filepath: src/app/report/page.tsx */}
+{/* 統計カード: 完了率カード */}
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -797,8 +797,8 @@ if (isLoading) {
 - 保存してエラーが出ないこと
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// 統計カード: 合計と平均の作業時間
+{/* filepath: src/app/report/page.tsx */}
+{/* 統計カード: 合計と平均の作業時間 */}
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -817,8 +817,8 @@ if (isLoading) {
 - `toFixed(1)` で小数1桁に丸めている
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// 統計カード: 平均作業時間 + grid閉じ
+{/* filepath: src/app/report/page.tsx */}
+{/* 統計カード: 平均作業時間 + grid閉じ */}
   <Card>
     <CardContent className="pt-6">
       <p className="text-sm
@@ -855,8 +855,8 @@ if (isLoading) {
 実際に書く場所は、このあと作る `<TableBody>` の中です。
 
 ```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-// projectStats は server 側で集計済み
+{/* filepath: 読み比べ用サンプル（実ファイルには対応しません） */}
+{/* projectStats は server 側で集計済み */}
 {overview?.projectStats.map((stat) => (
   <TableRow key={stat.id}>
     <TableCell className="font-medium">
@@ -888,8 +888,8 @@ if (isLoading) {
 直後にテーブルの JSX を追加します。
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// テーブル: ヘッダー部分
+{/* filepath: src/app/report/page.tsx */}
+{/* テーブル: ヘッダー部分 */}
 <Card>
   <CardHeader>
     <CardTitle>
@@ -912,8 +912,8 @@ if (isLoading) {
 - ヘッダー行を書いた
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// テーブル: ヘッダー残りと閉じタグ
+{/* filepath: src/app/report/page.tsx */}
+{/* テーブル: ヘッダー残りと閉じタグ */}
           <TableHead className="text-right">
             完了</TableHead>
           <TableHead className="text-right">
@@ -931,8 +931,8 @@ if (isLoading) {
 - 次のブロックで行データを追加する
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// テーブル: 行データと閉じタグ
+{/* filepath: src/app/report/page.tsx */}
+{/* テーブル: 行データと閉じタグ */}
       <TableBody>
         {overview?.projectStats.map((stat) => (
           <TableRow key={stat.id}>
@@ -955,8 +955,8 @@ if (isLoading) {
 - `key` にプロジェクトIDを指定
 
 ```typescript
-// filepath: src/app/report/page.tsx
-// テーブル: 残り列と全閉じタグ
+{/* filepath: src/app/report/page.tsx */}
+{/* テーブル: 残り列と全閉じタグ */}
             <TableCell
               className="text-right">
               {stat.progress.toFixed(1)}%</TableCell>

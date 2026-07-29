@@ -982,8 +982,8 @@ const canDeleteProject = useCallback(
 Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコードに置き換えます。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// フィルターフォーム開始
+{/* filepath: src/app/search/page.tsx */}
+{/* フィルターフォーム開始 */}
 <Card>
   <CardContent className="pt-6">
     <div className="grid gap-4">
@@ -1022,8 +1022,8 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
 6つのフィルターを Grid レイアウトで配置します。まずプロジェクトです。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 6列グリッド開始 + プロジェクトSelect
+{/* filepath: src/app/search/page.tsx */}
+{/* 6列グリッド開始 + プロジェクトSelect */}
 <div className="grid grid-cols-1
   md:grid-cols-2 lg:grid-cols-3 gap-4">
   <div className="grid gap-2">
@@ -1046,8 +1046,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 - `form.setValue` で Select の値をフォームに反映している
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// プロジェクト SelectContent
+{/* filepath: src/app/search/page.tsx */}
+{/* プロジェクト SelectContent */}
       <SelectContent>
         <SelectItem value="all">
           すべてのプロジェクト
@@ -1076,8 +1076,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 ステータスフィルターです。型ガードで不正な値を防ぎます。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// ステータスフィルター（型ガード付き）
+{/* filepath: src/app/search/page.tsx */}
+{/* ステータスフィルター（型ガード付き） */}
   <div className="grid gap-2">
     <Label htmlFor="status">ステータス</Label>
     <Select value={formValues.status}
@@ -1111,8 +1111,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 優先度もステータスと同じパターンです。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 優先度フィルター（型ガード付き）
+{/* filepath: src/app/search/page.tsx */}
+{/* 優先度フィルター（型ガード付き） */}
   <div className="grid gap-2">
     <Label htmlFor="priority">優先度</Label>
     <Select value={formValues.priority}
@@ -1145,8 +1145,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 担当者フィルターを追加します。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 担当者フィルター
+{/* filepath: src/app/search/page.tsx */}
+{/* 担当者フィルター */}
   <div className="grid gap-2">
     <Label htmlFor="assignedTo">
       担当者
@@ -1167,8 +1167,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 - 担当者も `form.setValue` で管理している
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 担当者 SelectContent
+{/* filepath: src/app/search/page.tsx */}
+{/* 担当者 SelectContent */}
       <SelectContent>
         <SelectItem value="all">
           すべての担当者
@@ -1191,8 +1191,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 期限範囲フィルターと検索ボタンを追加します。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 期限範囲 + 検索ボタン
+{/* filepath: src/app/search/page.tsx */}
+{/* 期限範囲 + 検索ボタン */}
   <div className="grid gap-2">
     <Label htmlFor="dateFrom">
       期限：開始日</Label>
@@ -1214,8 +1214,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 - 日付入力欄が `type="date"` で表示される
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 検索・クリアボタン
+{/* filepath: src/app/search/page.tsx */}
+{/* 検索・クリアボタン */}
       <div className="flex
         justify-end gap-2 pt-2">
         <Button variant="outline"
@@ -1602,8 +1602,8 @@ const closeTaskDialog = () => {
 Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ローディング表示と結果件数です。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// ローディング・結果件数・タスク見出し
+{/* filepath: src/app/search/page.tsx */}
+{/* ローディング・結果件数・タスク見出し */}
 {isLoading ? (
   <PageLoadingSpinner />
 ) : shouldSearch && searchResults ? (
@@ -1636,8 +1636,8 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 タスク結果をカード形式で表示します。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// タスク結果セクション
+{/* filepath: src/app/search/page.tsx */}
+{/* タスク結果セクション */}
     {searchResults.tasks.length > 0
       && (
       <div className="space-y-4">
@@ -1659,8 +1659,8 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 - セクション見出しに件数が表示される
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// タスクカード一覧
+{/* filepath: src/app/search/page.tsx */}
+{/* タスクカード一覧 */}
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -1690,8 +1690,8 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// TaskCardに権限フラグと作業時間を追加
+{/* filepath: src/app/search/page.tsx */}
+{/* TaskCardに権限フラグと作業時間を追加 */}
 <TaskCard key={task.id}
   id={task.id}
   title={task.title}
@@ -1737,8 +1737,8 @@ TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key
 プロジェクト検索結果を表示します。キーワード検索時にプロジェクト名もヒットします。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// プロジェクト結果セクション
+{/* filepath: src/app/search/page.tsx */}
+{/* プロジェクト結果セクション */}
     {searchResults.projects.length
       > 0 && (
       <div className="space-y-4">
@@ -1761,8 +1761,8 @@ TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key
 - プロジェクト件数が見出しに表示される
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// プロジェクトカード一覧（グリッド）
+{/* filepath: src/app/search/page.tsx */}
+{/* プロジェクトカード一覧（グリッド） */}
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -1782,8 +1782,8 @@ TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key
 - カードクリックで `handleProjectClick` が呼ばれる
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// プロジェクトカード内容
+{/* filepath: src/app/search/page.tsx */}
+{/* プロジェクトカード内容 */}
               <CardContent
                 className="pt-6">
                 <h4 className=
@@ -1808,8 +1808,8 @@ TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key
 結果0件と条件未入力時の表示を追加します。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 0件メッセージと未入力案内
+{/* filepath: src/app/search/page.tsx */}
+{/* 0件メッセージと未入力案内 */}
     {searchResults.totalCount === 0 && (
       <div className="text-center py-12
         text-muted-foreground">
@@ -1867,8 +1867,8 @@ const handleTaskDelete =
 削除確認ダイアログのJSXです。検索結果の下に配置します。
 
 ```typescript
-// filepath: src/app/search/page.tsx
-// 削除確認ダイアログ
+{/* filepath: src/app/search/page.tsx */}
+{/* 削除確認ダイアログ */}
 <DeleteConfirmDialog
   open={deleteTaskConfirm.open}
   onOpenChange={(open) =>
@@ -3578,8 +3578,8 @@ const createMutation =
 保存できたあとの後片付けを `closeTaskDialog` の1か所へ寄せたので、閉じ方が増えても直す場所は1つで済みます。
 
 ```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 編集ダイアログの onClose
+{/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
+{/* 完成版: 編集ダイアログの onClose */}
 <TaskDialog
   open={dialogOpen}
   onClose={closeTaskDialog}

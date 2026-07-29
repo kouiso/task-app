@@ -673,8 +673,8 @@ import { formatDateOnly } from '@/lib/date';
 次にセパレーターとメールアドレスを表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// セパレーターとメールアドレス表示
+{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+{/* セパレーターとメールアドレス表示 */}
                 <Separator className="my-4" />
                 <div className="space-y-4 text-sm">
                   <div className="flex items-center gap-3">
@@ -695,8 +695,8 @@ import { formatDateOnly } from '@/lib/date';
 登録日も同じレイアウトパターンで表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 登録日の表示
+{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+{/* 登録日の表示 */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -723,8 +723,8 @@ import { formatDateOnly } from '@/lib/date';
 最終更新日も同じパターンで表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 最終更新日と左カラムの閉じタグ
+{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+{/* 最終更新日と左カラムの閉じタグ */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -885,8 +885,8 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 `TableHeader` の直後に `TableBody` を追加します。各タスク行はクリックでタスク詳細に遷移します。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// タスクテーブルのボディ部分
+{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+{/* タスクテーブルのボディ部分 */}
                     <TableBody>
                       {user.assignedTasks.map((task) => (
                         <TableRow
@@ -914,8 +914,8 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 期限列の表示とカードの閉じタグを追加します。日付がない場合は `-` を表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// 期限列とテーブル・カードの閉じタグ
+{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+{/* 期限列とテーブル・カードの閉じタグ */}
                           <TableCell>
                             {task.dueDate
                               ? formatDateOnly(task.dueDate)
@@ -1300,8 +1300,8 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 > 先に書き、Step 10 の完了後に動作確認します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// フォーム開始 + アバタープレビュー
+{/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+{/* フォーム開始 + アバタープレビュー */}
             <form onSubmit={
               form.handleSubmit(onSubmit)}
               className="space-y-6">
@@ -1325,8 +1325,8 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 `form.watch('avatar')` は、その項目の今の入力値を読み出して、変わるたびに描き直させる書き方です。だからURLを1文字打つごとにプレビューが差し替わります。`AvatarImage` を `form.watch('avatar') &&` で囲むのは、空欄のときに `src=""` の画像を出さないためです。空欄なら下の `AvatarFallback` が名前の頭文字を表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 名前入力（register版）
+{/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+{/* 名前入力（register版） */}
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前
@@ -1428,8 +1428,8 @@ import { isUserRole, USER_ROLE_LABELS }
 `canManageAccount` は Step 7 で `isAdmin && !isOwnProfile` として作った値です。管理者が自分自身を編集しているときは `false` になるので、この囲みの中は画面に出ません。管理者が自分の権限を自分で下げてしまい、誰も管理できないアプリになる事故を防ぐためです。`<>` は画面に何も残さない囲みで、条件が成り立つときだけ中の2つをまとめて出します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// ロール選択（form.setValue版）
+{/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+{/* ロール選択（form.setValue版） */}
               <div className="space-y-2">
                 <Label htmlFor="role">
                   ロール</Label>
@@ -1453,8 +1453,8 @@ import { isUserRole, USER_ROLE_LABELS }
 ここだけ `register` を使わず、`value` と `onValueChange` の2つで `useForm` へつないでいます。`Select` は素の `<select>` タグではなく、ボタンと一覧を組み合わせて作られた部品なので、`register` が待っている `onChange` が発生しないからです。代わりに `form.setValue` で値を書き戻します。選択肢の中身は次のブロックで足すので、いまは開いたままにしておきます。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// ロール選択肢（SelectContent）
+{/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
+{/* ロール選択肢（SelectContent） */}
                   <SelectContent>
                     {Object.entries(
                       USER_ROLE_LABELS

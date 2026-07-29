@@ -298,8 +298,8 @@ import { Label } from '@/component/ui/label';
 `LoginForm` の `return (` の中身を書き換えます。Step 1 で書いた外側の `<div>` は残し、その内側にある `<div className="w-full max-w-sm">` と `<h1>ログイン</h1>` を消して、代わりに次の `<form>` を丸ごと置きます。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// LoginFormのreturn部分
+{/* filepath: src/app/login/page.tsx */}
+{/* LoginFormのreturn部分 */}
 <form onSubmit={handleSubmit(onSubmit)}
   className="space-y-4">
   <div className="space-y-2">
@@ -355,8 +355,8 @@ import { Button } from '@/component/ui/button';
 メール入力欄の `</div>` の下に追加します。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// メール入力欄の下に追加
+{/* filepath: src/app/login/page.tsx */}
+{/* メール入力欄の下に追加 */}
 <div className="space-y-2">
   <Label htmlFor="password">
     パスワード
@@ -462,8 +462,8 @@ Step 1 で書いた外側の `<div>` はそのまま残し、その内側にあ�
 続いて、CardContent の開始とメールアドレス入力欄を追加します。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// CardContentとメールアドレス入力欄
+{/* filepath: src/app/login/page.tsx */}
+{/* CardContentとメールアドレス入力欄 */}
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)}
           className="space-y-4">
@@ -495,8 +495,8 @@ Step 1 で書いた外側の `<div>` はそのまま残し、その内側にあ�
 次に、パスワード入力欄を追加します。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// パスワード入力欄
+{/* filepath: src/app/login/page.tsx */}
+{/* パスワード入力欄 */}
           {/* パスワード入力欄 */}
           <div className="space-y-2">
             <Label htmlFor="password">
@@ -523,8 +523,8 @@ Step 1 で書いた外側の `<div>` はそのまま残し、その内側にあ�
 最後に、送信ボタンとCardの閉じタグを追加して完成させます。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// 送信ボタン・CardContent・Cardの閉じタグ
+{/* filepath: src/app/login/page.tsx */}
+{/* 送信ボタン・CardContent・Cardの閉じタグ */}
           {/* 送信ボタン */}
           <Button
             type="submit"
@@ -726,8 +726,8 @@ Step 3 で仮に置いた `console.log` は、この書き換えで消えます�
 > `destructive` は shadcn/ui のテーマカラーで、エラーや警告を示す赤系の色を指します。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// <form>開始タグの直後に追加
+{/* filepath: src/app/login/page.tsx */}
+{/* <form>開始タグの直後に追加 */}
 {error && (
   <Alert variant="destructive">
     <AlertCircle className="h-4 w-4" />
@@ -748,8 +748,8 @@ Step 3 で仮に置いた `console.log` は、この書き換えで消えます�
 送信ボタンをローディング対応に更新します。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// Buttonを以下に書き換え
+{/* filepath: src/app/login/page.tsx */}
+{/* Buttonを以下に書き換え */}
 <Button
   type="submit"
   className="w-full bg-gradient-to-r
@@ -803,8 +803,8 @@ import { Suspense } from 'react';
 ボタンの下にリンクを追加します。
 
 ```typescript
-// filepath: src/app/login/page.tsx
-// Buttonの下に追加（新規登録ページへのリンク）
+{/* filepath: src/app/login/page.tsx */}
+{/* Buttonの下に追加（新規登録ページへのリンク） */}
 <div className="text-center text-sm
   text-muted-foreground">
   アカウントをお持ちでない方は{' '}

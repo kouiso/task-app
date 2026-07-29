@@ -641,8 +641,8 @@ const [filterStatus, setFilterStatus] =
 `<h1>` タグの直下に追加します。プロジェクト選択のドロップダウンです。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// h1タグの直下に追加: フィルター外枠
+{/* filepath: src/app/task/page.tsx */}
+{/* h1タグの直下に追加: フィルター外枠 */}
 <div className="flex gap-2 w-full
   sm:w-auto ml-auto">
   <div className="w-[200px]">
@@ -669,8 +669,8 @@ const [filterStatus, setFilterStatus] =
 プロジェクト選択の `SelectContent` を `SelectTrigger` の直後に追加します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// SelectTriggerの直後に追加
+{/* filepath: src/app/task/page.tsx */}
+{/* SelectTriggerの直後に追加 */}
 <SelectContent>
   <SelectItem value="all">
     すべてのプロジェクト
@@ -692,8 +692,8 @@ const [filterStatus, setFilterStatus] =
 続いてステータス選択です。プロジェクト選択の `</div>` の直後に2つ目の `<div>` を追加します。`isTaskStatus` 型ガードを使って安全に値を設定します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// ステータス選択
+{/* filepath: src/app/task/page.tsx */}
+{/* ステータス選択 */}
 <div className="w-[200px]">
   <Select value={filterStatus}
     onValueChange={(value) => {
@@ -718,8 +718,8 @@ const [filterStatus, setFilterStatus] =
 ステータスの `SelectContent` を `SelectTrigger` の直後に追加します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// ステータスSelectTriggerの直後に追加
+{/* filepath: src/app/task/page.tsx */}
+{/* ステータスSelectTriggerの直後に追加 */}
 <SelectContent>
   <SelectItem value="all">
     すべてのステータス
@@ -895,8 +895,8 @@ const canDeleteProject = useCallback(
 フィルターUIの直下にグリッドを追加します。タスクがある場合のカード表示です。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// フィルターUIの直下: タスクグリッド
+{/* filepath: src/app/task/page.tsx */}
+{/* フィルターUIの直下: タスクグリッド */}
 <div className="grid gap-6
   sm:grid-cols-2 lg:grid-cols-3
   xl:grid-cols-4">
@@ -927,8 +927,8 @@ const canDeleteProject = useCallback(
 TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` を以下に**置き換えて**ください。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// TaskCardに権限フラグを追加
+{/* filepath: src/app/task/page.tsx */}
+{/* TaskCardに権限フラグを追加 */}
 <TaskCard
   key={task.id}
   id={task.id}
@@ -955,8 +955,8 @@ TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` 
 タスクが0件のときの表示です。`src/app/task/page.tsx` にある `<div />`（1つ前のブロックの三項演算子の else 側）を、以下に差し替えてください。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// 空状態のメッセージ（<div /> を差し替え）
+{/* filepath: src/app/task/page.tsx */}
+{/* 空状態のメッセージ（<div /> を差し替え） */}
 <div className="col-span-full flex
   flex-col items-center
   justify-center py-12
@@ -1080,8 +1080,8 @@ Step 6 では空の関数を置いていました。あの時点でダイアロ�
 JSX のグリッド `</div>` の直下に詳細ダイアログを追加します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
-// グリッドの直下に追加
+{/* filepath: src/app/task/page.tsx */}
+{/* グリッドの直下に追加 */}
 <TaskDetailDialog
   open={detailOpen}
   taskId={selectedTask}

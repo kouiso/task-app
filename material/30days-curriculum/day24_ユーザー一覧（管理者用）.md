@@ -840,7 +840,7 @@ Day 08 のデスクトップ用 `<ul>` 内で、
 `menuItems.map(...)` の直後へ追加します。
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
+{/* filepath: src/component/layout/app-layout.tsx */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
@@ -1306,8 +1306,8 @@ import { USER_ROLE } from '@/lib/constant/roles';
 **管理者だけに出すリンク**:
 
 ```typescript
-// filepath: src/component/layout/app-layout.tsx
-// 完成版: 今日足したリンク
+{/* filepath: src/component/layout/app-layout.tsx */}
+{/* 完成版: 今日足したリンク */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
