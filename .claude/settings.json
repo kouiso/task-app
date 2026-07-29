@@ -46,6 +46,15 @@
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/material-writing-reminder.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/material-writing-gate.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [

@@ -27,8 +27,11 @@ SKILL="$(printf '%s' "$INPUT" | jq -r '.tool_input.skill // .tool_input.command 
 SESSION="$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)"
 [[ -n "$SESSION" ]] || exit 0
 
-MARKER_DIR="${TMPDIR:-/tmp}/task-app-material-writing-loaded"
+# 実行ユーザーごとに分ける。共有ホストで /tmp を直に使うと、先に作った利用者の
+# 0755 ディレクトリへ後の利用者が書けず、印を置けないまま deny され続ける。
+MARKER_DIR="${TMPDIR:-/tmp}/task-app-material-writing-loaded-$(id -u)"
 mkdir -p "$MARKER_DIR" 2>/dev/null || exit 0
+chmod 700 "$MARKER_DIR" 2>/dev/null || true
 : > "$MARKER_DIR/$SESSION" 2>/dev/null || true
 
 exit 0

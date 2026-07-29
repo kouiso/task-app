@@ -8,7 +8,7 @@
 Skill ツールで `material-writing` を読み込む。これが本来の逃げ道で、
 読み込んだセッションでは以後の教材編集が通る。
 
-## 2. このセッションだけ、ゲートごと切りたい
+## 2. このチェックアウトで、ゲートごと切りたい
 
 リポジトリ直下に空ファイルを置く。
 
@@ -19,10 +19,14 @@ touch .claude/disable-material-writing-gate
 置いてある間、ゲートは何も判定せずに通す。消せば元に戻る。
 このファイルは `.gitignore` に入れてあるのでコミットされない。
 
+**これはセッション単位ではなくチェックアウト単位で効く。** 同じチェックアウトで
+動いている他のセッションや、あとから始まるセッションも一緒に素通りする。
+用が済んだらすぐ消すこと。1セッションだけ通したいなら手段1を使う。
+
 ## 3. ゲート自体を外したい
 
-`.claude/settings.json` の `hooks.PreToolUse` から、`matcher` が `Write` と `Edit` の
-それぞれについて、次の1行を含む要素を消す。
+`.claude/settings.json` の `hooks.PreToolUse` から、`matcher` が `Write` `Edit` `Bash` の
+それぞれについて、次の1行を含む要素を消す。`Bash` は要素ごと消してよい。
 
 ```json
 {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/material-writing-gate.sh"}
@@ -49,7 +53,8 @@ rm .claude/hooks/material-writing-gate.sh .claude/hooks/material-writing-skill-m
 
 3つが同時に成り立ったときだけ拒否する。
 
-1. 書き込み先が `material/` 配下の `.md`
+1. 書き込み先がこのリポジトリの `material/` 配下の `.md`
+   （`Write` / `Edit` のパス、または `Bash` の書き込みコマンドの中に現れるパス）
 2. そのセッションで `material-writing` を一度も読み込んでいない
 3. `.claude/disable-material-writing-gate` が置かれていない
 
@@ -59,10 +64,11 @@ rm .claude/hooks/material-writing-gate.sh .claude/hooks/material-writing-skill-m
 
 ## 印の置き場所
 
-`${TMPDIR:-/tmp}/task-app-material-writing-loaded/<セッションID>` に空ファイルを置く。
+`${TMPDIR:-/tmp}/task-app-material-writing-loaded-<uid>/<セッションID>` に空ファイルを置く。
+`<uid>` は `id -u` の値で、共有ホストで他の利用者と衝突しないよう分けてある。
 リポジトリの中には何も書かない。手で印を置いてゲートを通すこともできる。
 
 ```bash
-mkdir -p "${TMPDIR:-/tmp}/task-app-material-writing-loaded"
-touch "${TMPDIR:-/tmp}/task-app-material-writing-loaded/<セッションID>"
+mkdir -p "${TMPDIR:-/tmp}/task-app-material-writing-loaded-$(id -u)"
+touch "${TMPDIR:-/tmp}/task-app-material-writing-loaded-$(id -u)/<セッションID>"
 ```
