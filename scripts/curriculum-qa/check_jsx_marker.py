@@ -25,6 +25,10 @@ from pathlib import Path
 JSX_LANGS = {"tsx", "jsx", "typescript", "javascript", "ts", "js"}
 FENCE = re.compile(r"^(\s*)(`{3,})(\w*)\s*$")
 SLASH = re.compile(r"^(\s*)//\s?(.*?)\s*$")
+# JSX の文字そのもの。コードの記号を1つも含まない行を、閉じタグが直後に続く形で見る。
+# `<` や `{` で始まらないので、要素でも埋め込みでもない。つまり画面に出る文字である。
+PLAIN_TEXT = re.compile(r"^\s*[^<>{}();=\[\]]+$")
+CLOSING_TAG = re.compile(r"^\s*</[A-Za-z]")
 
 
 def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
@@ -61,8 +65,21 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
                     k += 1
 
                 first = lines[body[k]].strip() if k < len(body) else ""
-                in_jsx = first.startswith("<") or (
-                    first.startswith("{") and first != "{"
+                # 画面に出る文字が続く形。`<p>` の途中から始まる続きのブロックは、
+                # 最初の行が要素でも埋め込みでもなく、ただの文字になる。閉じタグが
+                # 数行のうちに来ることを合図にする。ここを見ないと、day01 の
+                # 「Day 02 では〜」のように文字で始まる続きブロックを取り落とす。
+                text_child = False
+                if k < len(body) and PLAIN_TEXT.match(lines[body[k]]):
+                    for b in body[k : k + 4]:
+                        if CLOSING_TAG.match(lines[b]):
+                            text_child = True
+                            break
+
+                in_jsx = (
+                    first.startswith("<")
+                    or (first.startswith("{") and first != "{")
+                    or text_child
                 )
                 if in_jsx:
                     for ln in lead:

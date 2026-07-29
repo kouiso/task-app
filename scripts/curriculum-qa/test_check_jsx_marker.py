@@ -72,6 +72,25 @@ EOF
 ```
 """
 
+BAD_TEXT_CHILD = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                Day 02 では、ここから入れる場所を足していく。
+              </p>
+            </article>
+```
+"""
+
+# 開始タグの途中。ここでは `//` が正しいコメントで、`{/* */}` を置くと構文エラーになる。
+# 実測(2026-07-29, typescript の transpile): attr-slash はエラー0、
+# attr-jsxcomment は「'...' expected.」で失敗する。
+OK_ATTRIBUTE = """```tsx
+// filepath: src/app/page.tsx（同じファイルの続き）
+                >
+                  ダッシュボードへ入る
+                </Link>
+```
+"""
+
 CASES = [
     ("tsx の JSX 断片", BAD_TSX, 1),
     ("typescript 表記の JSX 断片", BAD_TYPESCRIPT, 2),
@@ -80,6 +99,8 @@ CASES = [
     ("ファイル全体", OK_WHOLE_FILE, 0),
     ("既に JSX の書き方", OK_JSX_COMMENT, 0),
     ("bash", OK_BASH, 0),
+    ("文字で始まる続きの断片", BAD_TEXT_CHILD, 1),
+    ("開始タグの途中", OK_ATTRIBUTE, 0),
 ]
 
 
