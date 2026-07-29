@@ -28,16 +28,32 @@ FENCE = re.compile(r"^(\s*)(`{3,})(\w*)\s*$")
 # 実例: day25 の「8文字以上で、大文字・小文字・数字・」は、8 と 1 があるだけで
 # 検査をすり抜けていた。数字は画面に出る文にごく普通に現れるので、除外の根拠にできない。
 # 代わりに、コードにしか出ない記号の有無で分ける。
+# さらに、行にタグや記号が1つでもあると外していたのも狭すぎた。
+# 実例: `<p>プロジェクトが` は `<p>` があるだけで、
+# `` `Hello Task-App` から、`` は逆クォートとハイフンがあるだけで外れていた。
+# どちらも画面に出る文で、次の行との間に空白が入る。
+# タグと埋め込みを先に取り除いてから、残った文字を見る。
 JA = re.compile(r"[ぁ-んァ-ヶ一-龥]")
-CODE_CHAR = re.compile(r"""[<>{}=;()\[\]'"`/:,.$&|!?@#%^*\\_~+-]""")
+TAG = re.compile(r"<[^<>]*>")
+EXPR = re.compile(r"\{[^{}]*\}")
+# 取り除いたあとに残ってはいけない記号。式・呼び出し・文字列・コメントの目印だけを挙げる。
+# 逆クォート・ハイフン・句点は画面に出る文にも普通に現れるので、ここには入れない。
+CODE_CHAR = re.compile(r"""[=;()'"/:,$|&<>{}\[\]\\_]""")
 # 文の切れ目。ここで終わっていれば、次の行は別の文なので折り返しではない。
 # 読点（、）と中黒（・）は文を終わらせない。「一つ目、」の次の行は同じ文の続きで、
 # 画面では「一つ目、 二つ目」と空白が入る。だから切れ目に数えない。
 SENTENCE_END = re.compile(r"[。！？」』）]$")
 
 
-def is_screen_text(line: str) -> bool:
-    return bool(JA.search(line)) and not CODE_CHAR.search(line)
+def screen_text(line: str) -> str:
+    """行からタグと埋め込みを取り除き、画面に出る文字だけを返す。
+
+    画面の文でなければ空文字を返す。
+    """
+    text = EXPR.sub("", TAG.sub("", line)).strip()
+    if not JA.search(text) or CODE_CHAR.search(text):
+        return ""
+    return text
 
 
 def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
@@ -64,13 +80,16 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
             if lang in JSX_LANGS:
                 scanned += 1
                 for k in range(len(body) - 1):
-                    cur = lines[body[k]].strip()
-                    nxt = lines[body[k + 1]].strip()
-                    if (
-                        is_screen_text(cur)
-                        and is_screen_text(nxt)
-                        and not SENTENCE_END.search(cur)
-                    ):
+                    cur_raw = lines[body[k]].rstrip()
+                    nxt_raw = lines[body[k + 1]].lstrip()
+                    # 行の終わりで要素が閉じている、または次の行が要素で始まるなら、
+                    # 2つは別の要素であって1つの文の折り返しではない。
+                    # 例: <TableHead>ユーザー</TableHead> と <TableHead>メール…</TableHead>。
+                    if cur_raw.endswith(">") or nxt_raw.startswith("<"):
+                        continue
+                    cur = screen_text(cur_raw)
+                    nxt = screen_text(nxt_raw)
+                    if cur and nxt and not SENTENCE_END.search(cur):
                         hits.append((path.name, body[k] + 1, cur, nxt))
 
             i = j + 1

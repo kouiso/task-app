@@ -121,10 +121,51 @@ OK_EXCLAM_END = """```tsx
 """
 
 
+# 開きタグと同じ行に文の前半が来る形。タグがあるだけで外していたので取り落としていた。
+BAD_INLINE_TAG = """```tsx
+<div>
+  <p>プロジェクトが
+    見つかりません。</p>
+</div>
+```
+"""
+
+# 逆クォートとハイフンを含む画面の文。どちらも表示される文字なので除外の根拠にならない。
+BAD_BACKTICK = """```tsx
+<p>
+  `Hello Task-App` から、
+  自分の名前が見える画面へ進んだ。
+</p>
+```
+"""
+
+# 別々の要素が並んでいるだけ。1つの文の折り返しではないので検出してはいけない。
+OK_SIBLING_ELEMENTS = """```tsx
+<TableRow>
+  <TableHead>ユーザー</TableHead>
+  <TableHead>メールアドレス</TableHead>
+</TableRow>
+```
+"""
+
+# 見出しと説明文。別の要素なので折り返しではない。
+OK_TITLE_AND_DESC = """```tsx
+<DialogHeader>
+  <DialogTitle>メンバー追加</DialogTitle>
+  <DialogDescription>このプロジェクトに追加します。</DialogDescription>
+</DialogHeader>
+```
+"""
+
+
 CASES = [
     ("tsx の途中改行", BAD_SPLIT, 1),
     ("typescript 表記の途中改行", BAD_TYPESCRIPT, 1),
     ("半角数字を含む画面の文", BAD_WITH_DIGITS, 1),
+    ("開きタグと同じ行の前半", BAD_INLINE_TAG, 1),
+    ("逆クォートとハイフンを含む文", BAD_BACKTICK, 1),
+    ("並んだ別要素", OK_SIBLING_ELEMENTS, 0),
+    ("見出しと説明文", OK_TITLE_AND_DESC, 0),
     ("読点で終わる行", BAD_COMMA, 1),
     ("全角の感嘆符を含む行", BAD_EXCLAM, 1),
     ("全角の疑問符で終わる次の行", BAD_QUESTION, 1),

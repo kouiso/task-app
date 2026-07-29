@@ -238,8 +238,7 @@ export default function DashboardPage() {
                 今の変化
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                `Hello Task-App` から、
-                自分の名前と今日のテーマが見えるダッシュボードへ進んだ。
+                `Hello Task-App` から、自分の名前と今日のテーマが見えるダッシュボードへ進んだ。
               </p>
             </article>
           </aside>

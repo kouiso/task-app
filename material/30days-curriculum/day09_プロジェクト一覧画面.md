@@ -666,10 +666,8 @@ props の並びは Step 6 とまったく同じです。書き換えたのは前
     flex-col items-center justify-center
     py-12 text-center
     text-muted-foreground">
-    <p>プロジェクトが
-      見つかりません。</p>
-    <p>最初のプロジェクトを
-      作成しましょう！</p>
+    <p>プロジェクトが見つかりません。</p>
+    <p>最初のプロジェクトを作成しましょう！</p>
   </div>
 )}
 ```
@@ -876,10 +874,8 @@ map の中身は Step 6 と同じで、1件ずつ `ProjectCard` に変換しま�
 ```typescript
 {/* filepath: src/app/project/page.tsx */}
 {/* 空メッセージ〜全体の閉じタグ */}
-            <p>プロジェクトが
-              見つかりません。</p>
-            <p>最初のプロジェクトを
-              作成しましょう！</p>
+            <p>プロジェクトが見つかりません。</p>
+            <p>最初のプロジェクトを作成しましょう！</p>
           </div>
         )}
       </div>
