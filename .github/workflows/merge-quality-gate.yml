@@ -1,0 +1,142 @@
+name: Merge Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  check-quality:
+    name: Post-merge quality check
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: read
+      checks: read
+      pull-requests: read
+    steps:
+      - name: Check for unresolved quality issues
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+
+            // PRコメントを取得してLighthouseスコアを確認
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const issues = [];
+
+            // Lighthouseスコア確認
+            const lhComment = comments.find(c => c.body?.includes('<!-- lighthouse-ci -->'));
+            if (lhComment) {
+              // 🔴🟠のみマッチ（🟢=良好スコアは品質問題として検出しない）
+              const perfMatch = lhComment.body.match(/Performance\s*\|\s*(?:🔴|🟠)\s*(\d+)/);
+              if (perfMatch) {
+                const perfScore = parseInt(perfMatch[1]);
+                issues.push({
+                  type: 'lighthouse',
+                  message: `Lighthouse Performance: ${perfScore}/100`,
+                  score: perfScore,
+                });
+              }
+            }
+
+            // protect-main警告が残っていないか確認
+            const protectComment = comments.find(c => c.body?.includes('<!-- protect-main-bot -->'));
+            if (protectComment) {
+              issues.push({
+                type: 'protect-main',
+                message: 'mainブランチ保護ポリシー警告が未解消',
+              });
+            }
+
+            // チェック結果を出力
+            if (issues.length > 0) {
+              core.setOutput('has_issues', 'true');
+              core.setOutput('issues', JSON.stringify(issues));
+              core.info(`未解消の品質問題: ${issues.length}件`);
+            } else {
+              core.setOutput('has_issues', 'false');
+              core.info('品質問題なし');
+            }
+
+      - name: Notify Slack if unresolved issues
+        if: steps.check.outputs.has_issues == 'true'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          ISSUES_JSON: ${{ steps.check.outputs.issues }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ACTOR: ${{ github.event.pull_request.merged_by.login }}
+        run: |
+          ISSUE_LIST=$(echo "$ISSUES_JSON" | jq -r '[.[] | "• " + .message] | join("\n")')
+
+          PAYLOAD=$(jq -n \
+            --arg channel "$SLACK_CHANNEL_ID" \
+            --arg text "⚠️ 品質問題が未解消のままマージされました: #${PR_NUMBER}" \
+            --arg pr_url "$PR_URL" \
+            --arg pr_number "$PR_NUMBER" \
+            --arg pr_title "$PR_TITLE" \
+            --arg actor "$ACTOR" \
+            --arg issues "$ISSUE_LIST" \
+            '{
+              channel: $channel,
+              text: $text,
+              blocks: [
+                {
+                  type: "header",
+                  text: {
+                    type: "plain_text",
+                    text: "⚠️ 品質問題未解消マージ通知",
+                    emoji: true
+                  }
+                },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: ("*PR:*\n<" + $pr_url + "|#" + $pr_number + " " + $pr_title + ">") },
+                    { type: "mrkdwn", text: ("*マージ実行者:*\n" + $actor) }
+                  ]
+                },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: ("*未解消の問題:*\n" + $issues)
+                  }
+                },
+                {
+                  type: "actions",
+                  elements: [
+                    {
+                      type: "button",
+                      text: { type: "plain_text", text: "📋 PRを確認", emoji: true },
+                      url: $pr_url
+                    }
+                  ]
+                }
+              ]
+            }')
+
+          RESPONSE=$(curl -sf -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD") || true
+
+          if [ -z "$RESPONSE" ]; then
+            echo "::error::Slack API request failed (network error or empty response)"
+            exit 1
+          fi
+
+          if ! echo "$RESPONSE" | jq -e '.ok == true' > /dev/null; then
+            ERROR=$(echo "$RESPONSE" | jq -r '.error // "unknown_error"')
+            echo "::error::Slack API error: ${ERROR}"
+            exit 1
+          fi
