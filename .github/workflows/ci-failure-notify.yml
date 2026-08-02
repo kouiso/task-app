@@ -1,0 +1,90 @@
+name: CI Failure Slack Notify
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Playwright E2E Tests
+      - TruffleHog Secret Scan
+      - Lighthouse CI
+    types: [completed]
+    branches: [main]
+
+jobs:
+  notify-failure:
+    name: Notify Slack on failure
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Send Slack notification
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          ACTOR: ${{ github.event.workflow_run.actor.login }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          COMMIT_URL="${SERVER_URL}/${REPOSITORY}/commit/${COMMIT_SHA}"
+
+          PAYLOAD=$(jq -n \
+            --arg channel "$SLACK_CHANNEL_ID" \
+            --arg text "🚨 ${WORKFLOW_NAME} が main ブランチで失敗しました" \
+            --arg workflow "$WORKFLOW_NAME" \
+            --arg actor "$ACTOR" \
+            --arg commit_url "$COMMIT_URL" \
+            --arg short_sha "$SHORT_SHA" \
+            --arg run_url "$RUN_URL" \
+            '{
+              channel: $channel,
+              text: $text,
+              blocks: [
+                {
+                  type: "header",
+                  text: {
+                    type: "plain_text",
+                    text: "🚨 CI/CD 失敗通知（main ブランチ）",
+                    emoji: true
+                  }
+                },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: ("*ワークフロー:*\n" + $workflow) },
+                    { type: "mrkdwn", text: "*ブランチ:*\n`main`" },
+                    { type: "mrkdwn", text: ("*実行者:*\n" + $actor) },
+                    { type: "mrkdwn", text: ("*コミット:*\n<" + $commit_url + "|" + $short_sha + ">") }
+                  ]
+                },
+                {
+                  type: "actions",
+                  elements: [
+                    {
+                      type: "button",
+                      text: { type: "plain_text", text: "📋 ログを確認", emoji: true },
+                      url: $run_url,
+                      style: "danger"
+                    }
+                  ]
+                }
+              ]
+            }')
+
+          RESPONSE=$(curl -sf -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD") || true
+
+          if [ -z "$RESPONSE" ]; then
+            echo "::error::Slack API request failed (network error or empty response)"
+            exit 1
+          fi
+
+          if ! echo "$RESPONSE" | jq -e '.ok == true' > /dev/null; then
+            ERROR=$(echo "$RESPONSE" | jq -r '.error // "unknown_error"')
+            echo "::error::Slack API error: ${ERROR}"
+            exit 1
+          fi
