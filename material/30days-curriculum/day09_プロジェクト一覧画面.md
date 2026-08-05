@@ -731,6 +731,10 @@ const handleCreate = () => {
 
 > **ボタンの動作について**: 「新規プロジェクト」ボタンをクリックすると `dialogOpen` が `true` になりますが、ダイアログ本体は Day 10 で実装します。今日の時点ではボタンを押しても画面に変化はありません。それで正常です。
 
+> **`npm run fix` を今日は実行しないでください**: `dialogOpen` は値を入れるだけで、読み出すのは Day 10 のダイアログです。今日の時点では「代入しているのに一度も読んでいない変数」に見えるので、`npm run lint` を実行すると `lint/correctness/noUnusedVariables` が出ます。写経の間違いではありません。
+>
+> 問題は `npm run fix` の方です。この指摘は自動修正の対象なので、実行すると `dialogOpen` が消えます。消えたことに気づかないまま Day 10 へ進むと、ダイアログに値を渡す行で `dialogOpen is not defined` になり、原因を Day 09 まで遡って探すことになります。Day 10 でダイアログを作れば読み出しが増えて、この指摘は自然に消えます。
+
 ---
 
 ### Step 9 : ページ全体を組み立てる（5分）
@@ -1372,7 +1376,8 @@ export default function ProjectPage() {
 | TypeScript の型エラー | ハンドラーの型不一致 | `(id: string) => void` になっているか確認 |
 | `PageLoadingSpinner` が見つからない | importパスの間違い | `@/component/ui/loading-spinner` を確認 |
 | `TASK_STATUS` が見つからない | importパスの間違い | `@/lib/constant/status` を確認 |
-| サイドバーが二重に表示される | `AppLayout` を二重にネストしている | `ProjectPageContent` の `return` で `AppLayout` を使っていれば、`<PageLoadingSpinner />` をさらに `AppLayout` で囲まない |
+| サイドバーが二重に表示される | `AppLayout` を二重にネストしている | `ProjectPage` の `Suspense` の `fallback` を確認する。ここは `<PageLoadingSpinner />` だけを置き、`AppLayout` で囲まない。`ProjectPageContent` の側が囲むので、両方で囲むと二重になる |
+| 読み込み中だけサイドバーが消える | `ProjectPageContent` の `if (projectsLoading)` が `AppLayout` を囲んでいない | こちらのスピナーは `AppLayout` で囲む。`Suspense` の `fallback` とは逆になるので、2箇所を混同しないよう気をつける |
 
 ## 今日学んだ用語
 
