@@ -690,7 +690,8 @@ const TaskGroupSection = ({
 
 | インポート元 | インポート内容 | 追加Step |
 |-------------|---------------|---------|
-| `react` | `useMemo`, `useState` | Step 1 |
+| `react` | `useCallback`, `useMemo`, `useState` | Step 1・2 |
+| `@/lib/constant/roles` | `hasPermission`, `isProjectMemberRole`, `ProjectMemberRole`（type） | Step 2 |
 | `@/component/layout/app-layout` | `AppLayout` | Step 1 |
 | `@/component/ui/loading-spinner` | `PageLoadingSpinner` | Step 2 |
 | `@/trpc/react` | `api` | Step 1 |

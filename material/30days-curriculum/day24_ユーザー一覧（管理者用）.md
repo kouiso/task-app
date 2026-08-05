@@ -829,14 +829,19 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
+import { Users } from 'lucide-react';
 import { USER_ROLE }
   from '@/lib/constant/roles';
 ```
 
 `/user` はサイドバーのどこにも出てこないので、いまはURLを手で打たないとたどり着けません。管理者にだけリンクを出して、通常の操作で開けるようにします。`app-layout.tsx` はログイン中のセッションをすでに読んでいるため、足すのはロールの定数だけで済みます。ここでも文字列の `'ADMIN'` は書かず、Step 5 と共通の `USER_ROLE.ADMIN` を使います。比べる側と比べられる側で書き方をそろえておけば、綴りを間違えた瞬間に型エラーで気づけます。
 
-Day 08 のデスクトップ用 `<ul>` 内で、
+Day 08 のデスクトップ用のナビゲーション内で、
 `menuItems.map(...)` の直後へ追加します。
+見た目は既存の項目にそろえます。現在のページを
+強調する `cn(...)` と、左に置くアイコンを
+既存の6項目と揃った形で付けてください。付けないと
+この項目だけ色が変わらず、並んだときに浮きます。
 
 ```typescript
 {/* filepath: src/component/layout/app-layout.tsx */}
@@ -844,9 +849,14 @@ Day 08 のデスクトップ用 `<ul>` 内で、
   <li>
     <Link
       href="/user"
-      className="flex items-center gap-3
-        rounded-md px-3 py-2 text-sm"
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+        pathname === '/user'
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+      )}
     >
+      <Users className="h-5 w-5" />
       ユーザー管理
     </Link>
   </li>
@@ -1311,9 +1321,14 @@ import { USER_ROLE } from '@/lib/constant/roles';
   <li>
     <Link
       href="/user"
-      className="flex items-center gap-3
-        rounded-md px-3 py-2 text-sm"
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+        pathname === '/user'
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+      )}
     >
+      <Users className="h-5 w-5" />
       ユーザー管理
     </Link>
   </li>

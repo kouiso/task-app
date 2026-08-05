@@ -805,11 +805,17 @@ import { TaskCard }
 // filepath: src/app/task/page.tsx
 // TaskPageContent内に仮ハンドラーを追加
 const handleTaskClick =
-  (taskId: string) => {};
+  (taskId: string) => {
+    void taskId;
+  };
 const handleEdit =
-  (taskId: string) => {};
+  (taskId: string) => {
+    void taskId;
+  };
 const handleDelete =
-  (taskId: string) => {};
+  (taskId: string) => {
+    void taskId;
+  };
 ```
 
 **確認ポイント**:
@@ -823,7 +829,8 @@ TaskCardには編集・削除ボタンが付いています。ボタンを表示
 ```typescript
 // filepath: src/app/task/page.tsx
 // import群に追加（権限判定用）
-import { useCallback, useMemo }
+// react は Step 1 で書いた行に足します。新しい行は増やしません。
+import { Suspense, useCallback, useMemo, useState }
   from 'react';
 import {
   hasPermission, isProjectMemberRole,
@@ -1006,7 +1013,11 @@ import { TaskDetailDialog }
   from '@/component/task/task-detail-dialog';
 import { useSearchParams }
   from 'next/navigation';
-import { useEffect } from 'react';
+// react はここでも既にある行に足します。
+import {
+  Suspense, useCallback, useEffect,
+  useMemo, useState,
+} from 'react';
 ```
 
 `useSearchParams` は、URL の `?` 以降を読み取る Next.js のフックです。`useEffect` は、指定した値が変わった後に処理を走らせる React の仕組みで、ここでは URL の変化を拾うために使います。`TaskDetailDialog` は Day 09 以降で作ってきたダイアログと同じ形の部品で、開くかどうかと、どのタスクを見せるかを親から受け取ります。

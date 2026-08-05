@@ -479,7 +479,8 @@ import { Badge }
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* TaskDetailDialog の return 内: コメントヘッダー */}
+{/* TaskDetailDialog の return 内、{taskDetail && ( の中。 */}
+{/* 担当者と期限のグリッドの下に <Separator /> を1つ置いてから貼る */}
 <div className="flex items-center gap-2 mb-4">
   <h3 className="font-semibold">コメント</h3>
   <Badge variant="secondary"

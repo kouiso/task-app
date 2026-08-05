@@ -128,7 +128,7 @@ src/
 
 #### 0-1. getById（1件だけ取得する）
 
-`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。`project.ts` の `getAll` の下に追加します。
+`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。貼り先はこのすぐ下に書いてあります。
 
 先頭の `protectedProcedure`（ログイン必須の入口）に `.query`（読み取り用の手続き）をつなげて、ログイン済みの人だけが呼べる読み取りAPIにします。データを書き換えるときは `.query` の代わりに `.mutation`（書き込み用の手続き）を使い分けます。入力の `id` は `.cuid()`（cuid形式のID検証）で、決まった形式のIDだけを受け付けます。
 
@@ -247,7 +247,7 @@ src/
 import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
 ```
 
-同じファイルから2回に分けて取り込まず1行へまとめるのは、後から読む人が「どちらの行が生きているのか」を毎回確かめなくて済むようにするためです。`projectMemberRoleSchema` は `_helpers/select.ts` にある、ロールとして許される4つの文字列を表す zod スキーマです。画面側の `isProjectMemberRole` も同じ4つを指しているので、選択肢に出る値とサーバーが受け付ける値はずれません。続けて、この行を使う入力の形を決めます。
+同じファイルから2回に分けて取り込まず1行へまとめるのは、後から読む人が「どちらの行が生きているのか」を毎回確かめなくて済むようにするためです。`projectMemberRoleSchema` は `_helpers/select.ts` にある、ロールとして許される4つの文字列を表す zod スキーマです。画面側の `isProjectMemberRole` も同じ4つを指しているので、選択肢に出る値とサーバーが受け付ける値はずれません。続けて、この行を使う入力の形を決めます。次のブロックだけは「（続き）」と書いてありますが、ルーターの**外**、`projectUpdateSchema` の下へ貼ります。`});` の1行上へ入れるとルーターの中に入ってしまい、英語のエラーで止まります。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -601,14 +601,14 @@ import { ProjectDetailView } from
 
 > プロジェクト詳細はダイアログではなく、URLパラメータ（`?projectId=xxx`）によるページ内表示です。`useSearchParams` で URLから選択IDを取得します。
 
-ハンドラーを追加します。Day 11 Step 9 で仮定義した `handleDetailClose` を **削除して**、`handleArchive` の下に本実装を書いてください。あわせて `handleProjectClick` も追加します。
+ハンドラーを追加します。Day 11 Step 9 で仮定義した `handleDetailClose` を **削除して**、`handleArchive` の下に本実装を書いてください。あわせて、Day 09 で置いた受け皿の `handleProjectClick` も **削除して** 本実装に書き換えてください。
 
-> Day 11 の仮定義（`// Day 12 Step 1 で本実装に置き換え` とコメントされた箇所）を先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
+> Day 11 の仮定義（`// Day 12 Step 1 で本実装に置き換え` とコメントされた箇所）と、Day 09 で書いた `handleProjectClick` の受け皿を、先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
 // handleArchiveの下に追加
-// （Day 11 の仮定義 handleDetailClose を削除してからここに書く）
+// （Day 11 の handleDetailClose と Day 09 の handleProjectClick を削除してからここに書く）
 const handleProjectClick = (
   projectId: string
 ) => {
@@ -1189,7 +1189,7 @@ const [removeMemberTargetId,
 - Day 11 のプロジェクト削除と同じパターンを使っている
 - `removeMemberTargetId` に削除対象のuserIdを保持する
 
-mutation と handler を追加します。まず **Step 2 で追加した仮実装を削除**してから、以下の本実装を書いてください。
+mutation と handler を追加します。まず **Day 11 Step 9 で書いた仮定義（何もしない空実装）を削除**してから、以下の本実装を書いてください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -1230,7 +1230,7 @@ const handleRemoveMember = (
 ```
 
 **確認ポイント**:
-- Step 2 の仮実装（`console.log` の版）が削除されている
+- Day 11 Step 9 の仮定義（何もしない空実装）が削除されている
 - 直接 `mutate` を呼ばず、まず確認ダイアログを開いている
 
 `if (projectIdParam && selectedProject)` の分岐の中に `DeleteConfirmDialog` を配置します。Step 4 で置いたメンバー追加ダイアログの `</Dialog>` の直後、この分岐の `</AppLayout>` の直前です。一覧側の `</AppLayout>` の直前には Day 11 のプロジェクト削除ダイアログがあるので、そちらと間違えないでください。
@@ -1369,7 +1369,7 @@ PORT=3001 npm run dev
 
 ![メンバー一覧に3人が並び、それぞれにロールが付いている画面](./screenshots/project-detail-tasks.png)
 
-初期データの「Webサイトリニューアル」には最初から3人が参加しています。追加の候補に出るのは「新人 太郎」1人だけです。追加が終わると一覧は4人になります。
+初期データの「Webサイトリニューアル」には最初から3人が参加しています。追加の候補には「新人 太郎」と、Day 06 で自分で登録したアカウントが並びます。1人追加すると一覧は4人になります。
 **確認ポイント**:
 - 全2シナリオが期待通りに動作する
 - メンバー追加後、メンバー一覧が自動更新される

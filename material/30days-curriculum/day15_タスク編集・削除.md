@@ -1887,8 +1887,6 @@ function TaskPageContent() {
     api.project.getAll.useQuery();
   const { data: session } =
     api.auth.getSession.useQuery();
-  const { data: users } =
-    api.search.getProjectMembers.useQuery();
   const utils = api.useUtils();
 ```
 

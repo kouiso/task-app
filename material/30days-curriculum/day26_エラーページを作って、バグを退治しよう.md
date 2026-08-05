@@ -174,8 +174,7 @@ JavaScript が読み込まれたところで、はじめてこの `ErrorPage` �
           エラーが発生しました
         </h2>
         <p className="text-muted-foreground">
-          予期しないエラーが発生しました。
-          もう一度お試しください。
+          予期しないエラーが発生しました。もう一度お試しください。
         </p>
         <Button onClick={reset}>
           もう一度試す

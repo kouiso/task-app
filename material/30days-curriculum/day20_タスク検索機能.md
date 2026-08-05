@@ -513,7 +513,7 @@ Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード�
 
 ---
 
-完成版は同じ4行を dashboard・my-task・project・report・task の各フォルダにも置いています。今日は検索ページの1枚だけ作ります。ほかの画面にも同じ表示を出したくなったら、同じ内容のファイルをそのフォルダへ置いてください。
+#### 0-9. 検索ページの読み込み表示を作る
 
 `src/app/search/loading.tsx` を新規作成します。ページと同じフォルダに `loading.tsx` を置くと、Next.js はそのページの読み込み中に自動でこれを表示します。
 
@@ -527,7 +527,7 @@ export default function Loading() {
 }
 ```
 
-これが出るのはページへ移動したときだけです。検索結果そのものの読み込み表示は、Step 8 で `isLoading` を見て切り替えます。役割が分かれている点に注意してください。中身は配布済みの `PageSkeleton` をそのまま返すだけです。この部品を使うのは今日がはじめてです。
+これが出るのはページへ移動したときだけです。検索結果そのものの読み込み表示は、Step 8 で `isLoading` を見て切り替えます。役割が分かれている点に注意してください。中身は配布済みの `PageSkeleton` をそのまま返すだけです。この部品を使うのは今日がはじめてです。完成版は同じ4行を dashboard・my-task・project・report・task の各フォルダにも置いています。今日は検索ページの1枚だけ作ります。ほかの画面にも同じ表示を出したくなったら、同じ内容のファイルをそのフォルダへ置いてください。
 
 ### Step 1: 検索画面から使うAPIを確認する（3分）
 
@@ -1569,6 +1569,31 @@ useEffect(() => {
 ダイアログを閉じたあとに再び開かないよう、
 URL の編集指定も取り除きます。この関数を
 `createMutation` / `updateMutation` より前へ追加します。
+
+先に `task/page.tsx` の import を書き換えます。Day 13 で
+`useSearchParams` だけを読み込んだ行を、次の形にします。
+
+```typescript
+// filepath: src/app/task/page.tsx
+import { useRouter, useSearchParams }
+  from 'next/navigation';
+```
+
+`useRouter` は、プログラムから URL を書き換えるための
+フックです。Day 13 では URL を読むだけだったので
+`useSearchParams` しか要りませんでしたが、今日は閉じるときに
+URL から編集指定を消すので、書き込む側も必要になります。
+
+そのうえで、`const searchParams = useSearchParams();` の
+下に1行足します。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+const router = useRouter();
+```
+
+この2つが無いと、次の `router.replace` で
+`router is not defined` というエラーで止まります。
 
 ```typescript
 // filepath: src/app/task/page.tsx（続き）
@@ -3501,6 +3526,11 @@ const menuItems: MenuItem[] = [
 ```typescript
 // filepath: src/app/task/page.tsx
 // 完成版: 編集リンクの読み取り
+import { useRouter, useSearchParams }
+  from 'next/navigation';
+
+const searchParams = useSearchParams();
+const router = useRouter();
 const taskIdParam = searchParams.get('taskId');
 const isEditLink =
   searchParams.get('edit') === 'true';
