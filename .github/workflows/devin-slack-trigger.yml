@@ -1,0 +1,84 @@
+name: Devin Slack Trigger
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  trigger-devin:
+    name: Trigger Devin via Slack
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    # Slack への通知トリガのみの小さなジョブなので短めに打ち切る
+    timeout-minutes: 10
+    if: github.event.label.name == 'devin'
+    concurrency:
+      group: devin-trigger-${{ github.event.issue.number }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Check for duplicate trigger
+        id: duplicate-check
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+              }
+            );
+            const alreadyTriggered = comments.some(c =>
+              c.body?.includes('<!-- devin-slack-triggered -->')
+            );
+            if (alreadyTriggered) {
+              core.notice('Devin session already triggered for this issue. Skipping.');
+            }
+            core.setOutput('skip', String(alreadyTriggered));
+
+      - name: Post message to Slack
+        if: steps.duplicate-check.outputs.skip == 'false'
+        id: slack-post
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          DEVIN_USER_ID: ${{ vars.SLACK_DEVIN_USER_ID }}
+        with:
+          script: |
+            const issue = context.payload.issue;
+
+            const message = `<@${process.env.DEVIN_USER_ID}>\n!swe\n${issue.title}\n${issue.html_url}\nPlease handle this issue. First, create a plan and share it before implementing. Think in English, respond in Japanese.`;
+
+            const resp = await fetch('https://slack.com/api/chat.postMessage', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+                'Content-Type': 'application/json; charset=utf-8',
+              },
+              body: JSON.stringify({
+                channel: process.env.SLACK_CHANNEL_ID,
+                text: message,
+              }),
+            });
+
+            const data = await resp.json();
+            if (!data.ok) {
+              core.setFailed(`Slack API error: ${data.error || 'unknown'}`);
+            }
+
+      - name: Post marker comment
+        if: success() && steps.duplicate-check.outputs.skip == 'false'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: ':robot_face: Devin session triggered via Slack <!-- devin-slack-triggered -->',
+            });

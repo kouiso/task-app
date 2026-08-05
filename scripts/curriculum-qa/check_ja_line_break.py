@@ -20,10 +20,9 @@ import re
 import sys
 from pathlib import Path
 
+from markdown_scan import code_blocks
+
 JSX_LANGS = {"tsx", "jsx", "typescript", "javascript", "ts", "js"}
-# 情報文字列（```tsx title="x"）付きの囲いも開始として認める。認めないと、
-# その閉じの ``` を開始と読み違えて、以降の対応が1つずつずれる。
-FENCE = re.compile(r"^(\s*)(`{3,})(\w*)[^`]*$")
 # 画面に出る文字の行かどうか。日本語を含み、かつコードにしか出ない記号を含まない行に限る。
 #
 # 「ASCII を1つも含まない」で絞ると、半角数字を含む文を丸ごと取り落とす。
@@ -50,6 +49,8 @@ COMMENT = re.compile(r"^\s*(//|/\*|\*)")
 # 閉じかっこ（」』）) は文を終わらせない。「管理者」の次の行が
 # 「を選択してください。」なら同じ文の続きで、画面では空白が入る。
 SENTENCE_END = re.compile(r"[。！？]$")
+# 要素の始まりの行。これが1行も無いブロックは JSX ではない。
+ELEMENT_HEAD = re.compile(r"^\s*</?[A-Za-z]")
 
 
 def screen_text(line: str) -> str:
@@ -70,48 +71,32 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str, str]], int]:
     scanned = 0
 
     for path in sorted(root.rglob("*.md")):
-        lines = path.read_text(encoding="utf-8").split("\n")
-        i = 0
-        while i < len(lines):
-            opener = FENCE.match(lines[i])
-            if opener is None:
-                i += 1
-                continue
-
-            fence, lang = opener.group(2), opener.group(3).lower()
-            closer = re.compile(r"^\s*`{%d,}\s*$" % len(fence))
-            body: list[int] = []
-            j = i + 1
-            while j < len(lines) and not closer.match(lines[j]):
-                body.append(j)
-                j += 1
-
+        for lang, body in code_blocks(path.read_text(encoding="utf-8")):
             # テンプレート文字列や複数行コメントの中の日本語を、JSX の子要素と
             # 取り違えないようにする。要素が1つも無いブロックは対象外。
-            has_element = any(
-                re.match(r"^\s*</?[A-Za-z]", lines[b]) for b in body
-            )
-            if lang in JSX_LANGS and has_element:
-                scanned += 1
-                for k in range(len(body) - 1):
-                    nk = k + 1
-                    while nk < len(body) and not lines[body[nk]].strip():
-                        nk += 1
-                    if nk >= len(body):
-                        break
-                    cur_raw = lines[body[k]].rstrip()
-                    nxt_raw = lines[body[nk]].lstrip()
-                    # 行の終わりで要素が閉じている、または次の行が要素で始まるなら、
-                    # 2つは別の要素であって1つの文の折り返しではない。
-                    # 例: <TableHead>ユーザー</TableHead> と <TableHead>メール…</TableHead>。
-                    if cur_raw.endswith(">") or nxt_raw.startswith("<"):
-                        continue
-                    cur = screen_text(cur_raw)
-                    nxt = screen_text(nxt_raw)
-                    if cur and nxt and not SENTENCE_END.search(cur):
-                        hits.append((path.name, body[k] + 1, cur, nxt))
+            if lang not in JSX_LANGS:
+                continue
+            if not any(ELEMENT_HEAD.match(line) for _, line in body):
+                continue
 
-            i = j + 1
+            scanned += 1
+            for k in range(len(body) - 1):
+                nk = k + 1
+                while nk < len(body) and not body[nk][1].strip():
+                    nk += 1
+                if nk >= len(body):
+                    break
+                cur_raw = body[k][1].rstrip()
+                nxt_raw = body[nk][1].lstrip()
+                # 行の終わりで要素が閉じている、または次の行が要素で始まるなら、
+                # 2つは別の要素であって1つの文の折り返しではない。
+                # 例: <TableHead>ユーザー</TableHead> と <TableHead>メール…</TableHead>。
+                if cur_raw.endswith(">") or nxt_raw.startswith("<"):
+                    continue
+                cur = screen_text(cur_raw)
+                nxt = screen_text(nxt_raw)
+                if cur and nxt and not SENTENCE_END.search(cur):
+                    hits.append((str(path.relative_to(root)), body[k][0], cur, nxt))
 
     return hits, scanned
 
