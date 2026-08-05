@@ -1,0 +1,50 @@
+name: Dependabot自動マージ
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot-automerge:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+      - name: Dependabotメタデータ取得
+        id: metadata
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: 更新タイプをチェック
+        id: check-update-type
+        run: |
+          # グループ化PRの場合、updated-dependencies-jsonから各依存関係の更新タイプを確認
+          DEPENDENCIES='${{ steps.metadata.outputs.updated-dependencies-json }}'
+          
+          # 依存関係が空の場合はスキップ
+          if [ -z "$DEPENDENCIES" ] || [ "$DEPENDENCIES" = "[]" ]; then
+            echo "can-automerge=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # すべての依存関係がpatchまたはminorかチェック
+          CAN_MERGE=$(echo "$DEPENDENCIES" | jq -r '
+            if length == 0 then
+              false
+            else
+              all(.[]; .["update-type"] == "version-update:semver-patch" or .["update-type"] == "version-update:semver-minor")
+            end
+          ')
+          
+          echo "can-automerge=$CAN_MERGE" >> $GITHUB_OUTPUT
+          echo "依存関係の更新タイプ確認完了: can-automerge=$CAN_MERGE"
+
+      - name: minor/patchを自動マージ
+        if: steps.check-update-type.outputs.can-automerge == 'true'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
