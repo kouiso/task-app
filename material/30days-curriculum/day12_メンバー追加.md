@@ -941,8 +941,7 @@ import {
         メンバー追加
       </DialogTitle>
       <DialogDescription>
-        このプロジェクトに
-        新しいメンバーを追加します。
+        このプロジェクトに新しいメンバーを追加します。
       </DialogDescription>
     </DialogHeader>
 ```

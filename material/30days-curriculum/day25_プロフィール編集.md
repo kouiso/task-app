@@ -1239,8 +1239,7 @@ export default function
   />
   <p className="text-sm
     text-muted-foreground">
-    8文字以上で、大文字・小文字・数字・
-    特殊文字をそれぞれ1文字以上含めてください
+    8文字以上で、大文字・小文字・数字・特殊文字をそれぞれ1文字以上含めてください
   </p>
 ```
 

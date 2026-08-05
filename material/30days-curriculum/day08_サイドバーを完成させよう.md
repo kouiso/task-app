@@ -1215,8 +1215,7 @@ export default function DashboardPage() {
                   今日は
                   <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
                   を意識して進める。
-                  ただ文字を置くのではなくて、
-                  ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                  ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
                 </p>
 
                 <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -1266,8 +1265,7 @@ export default function DashboardPage() {
                   今日のワンフレーズ
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  自分の名前が入るだけでも、
-                  ダッシュボードは急に「使う画面」に変わる。
+                  自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
                 </p>
               </article>
 
@@ -1276,8 +1274,7 @@ export default function DashboardPage() {
                   ここで増えた価値
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  画面の主役が明確になって、
-                  次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                  画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
                 </p>
               </article>
 ```
@@ -1294,8 +1291,7 @@ export default function DashboardPage() {
                   次につながる視点
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  Day 03 ではこの変化を失わないように、
-                  ちゃんと履歴として残していく段階へ進む。
+                  Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
                 </p>
               </article>
             </aside>

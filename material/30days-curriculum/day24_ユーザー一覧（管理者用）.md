@@ -482,8 +482,7 @@ export default function UsersPage() {
               {/* filepath: src/app/user/page.tsx */}
               <p className=
                 "text-muted-foreground">
-                この機能は管理者のみ
-                利用できます
+                この機能は管理者のみ利用できます
               </p>
             </CardContent>
           </Card>

@@ -26,6 +26,7 @@ __all__ = [
     "Fence",
     "UnclosedFence",
     "blank_fences",
+    "code_blocks",
     "fence_states",
     "iter_prose",
     "mask_html_comments",
@@ -105,6 +106,30 @@ def iter_prose(text: str) -> Iterator[tuple[int, str]]:
     for lineno, line, state, _ in fence_states(text):
         if state == "outside":
             yield lineno, line
+
+
+def code_blocks(text: str) -> Iterator[tuple[str, list[tuple[int, str]]]]:
+    """フェンスで囲まれた塊を (言語, [(行番号, 行), ...]) で返す。行番号は1始まり。
+
+    中身を1ブロックずつ見たい検査が、自前でフェンスを数え直さずに済むようにする。
+    数え直すとチルダのフェンスを取り落とし、その中のバッククォートを本物の開始と
+    読み違える。day03 の `~~~md` には ``` のフェンスが入れ子で入っており、
+    中の本数が奇数になった時点で以降の対応が1つずつずれて、検査が黙って素通りする。
+    """
+    lang: str | None = None
+    body: list[tuple[int, str]] = []
+    for lineno, line, state, fence in fence_states(text):
+        if state == "open":
+            lang, body = fence.lang, []
+        elif state == "inside":
+            body.append((lineno, line))
+        elif state == "close" and lang is not None:
+            yield lang, body
+            lang, body = None, []
+    # 閉じ忘れたフェンスも、そこまでの中身は見る。落とすと、その範囲の欠陥が
+    # 誰にも見えないまま緑になる。
+    if lang is not None:
+        yield lang, body
 
 
 def blank_fences(text: str) -> str:

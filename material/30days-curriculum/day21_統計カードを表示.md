@@ -602,8 +602,7 @@ export default function ReportPage() {
 {/* 骨組み続き: 説明文と閉じタグ */}
           <p className=
             "text-muted-foreground">
-            プロジェクトの進捗とタスクの
-            状況を確認できます。
+            プロジェクトの進捗とタスクの状況を確認できます。
           </p>
         </div>
         {/* Step 7〜8 でカード等を追加 */}
@@ -1520,8 +1519,7 @@ export default function ReportPage() {
           </h1>
           <p className=
             "text-muted-foreground">
-            プロジェクトの進捗とタスクの
-            状況を確認できます。
+            プロジェクトの進捗とタスクの状況を確認できます。
           </p>
         </div>
 ```

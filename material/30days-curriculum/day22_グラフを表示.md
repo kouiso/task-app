@@ -763,8 +763,7 @@ export default function ReportPage() {
             レポート・統計
           </h1>
           <p className="text-muted-foreground">
-            プロジェクトの進捗とタスクの
-            状況を確認できます。
+            プロジェクトの進捗とタスクの状況を確認できます。
           </p>
         </div>
 ```

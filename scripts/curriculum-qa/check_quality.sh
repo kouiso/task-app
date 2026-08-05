@@ -212,6 +212,7 @@ CORPUS_CHECKS=(
   check_zip_reference
   check_unused_image
   check_jsx_marker
+  check_ja_line_break
   check_why
   check_terms
   check_crossref
@@ -231,6 +232,7 @@ SELF_TESTS=(
   test_check_zip_reference
   test_check_unused_image
   test_check_jsx_marker
+  test_check_ja_line_break
   test_check_scaffold_alignment
   test_check_why
   test_filepath_marker

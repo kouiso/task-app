@@ -1690,10 +1690,8 @@ function ProjectPageContent() {
                 justify-center py-12
                 text-center
                 text-muted-foreground">
-                <p>プロジェクトが
-                  見つかりません。</p>
-                <p>最初のプロジェクトを
-                  作成しましょう！</p>
+                <p>プロジェクトが見つかりません。</p>
+                <p>最初のプロジェクトを作成しましょう！</p>
               </div>
             )}
         </div>

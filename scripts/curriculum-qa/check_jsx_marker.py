@@ -21,9 +21,10 @@ import re
 import sys
 from pathlib import Path
 
+from markdown_scan import code_blocks
+
 # JSX を書きうる言語表記。ここに無い表記（bash, json 等）は最初から対象外。
 JSX_LANGS = {"tsx", "jsx", "typescript", "javascript", "ts", "js"}
-FENCE = re.compile(r"^(\s*)(`{3,})(\w*)\s*$")
 SLASH = re.compile(r"^(\s*)//\s?(.*?)\s*$")
 # コードの行。JSX の記号を含むか、式の途中で終わるか、JS の語で始まるもの。
 # ここに当たらない行だけを「画面に出る文字」とみなす。数え方を反転させているのは、
@@ -52,76 +53,59 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
     hits: list[tuple[str, int, str]] = []
     scanned = 0
 
-    for path in sorted(root.glob("*.md")):
-        lines = path.read_text(encoding="utf-8").split("\n")
-        i = 0
-        while i < len(lines):
-            opener = FENCE.match(lines[i])
-            if opener is None:
-                i += 1
+    for path in sorted(root.rglob("*.md")):
+        for lang, body in code_blocks(path.read_text(encoding="utf-8")):
+            if lang not in JSX_LANGS:
                 continue
 
-            fence, lang = opener.group(2), opener.group(3).lower()
-            # CommonMark では、開いた囲いと同じ長さ以上の囲いでしか閉じられない。
-            closer = re.compile(r"^\s*`{%d,}\s*$" % len(fence))
-            body: list[int] = []
-            j = i + 1
-            while j < len(lines) and not closer.match(lines[j]):
-                body.append(j)
-                j += 1
+            scanned += 1
+            lead: list[tuple[int, str]] = []
+            k = 0
+            while k < len(body) and (
+                body[k][1].strip() == "" or SLASH.match(body[k][1])
+            ):
+                if body[k][1].strip():
+                    lead.append(body[k])
+                k += 1
 
-            if lang in JSX_LANGS:
-                scanned += 1
-                lead: list[int] = []
-                k = 0
-                while k < len(body) and (
-                    lines[body[k]].strip() == "" or SLASH.match(lines[body[k]])
-                ):
-                    if lines[body[k]].strip():
-                        lead.append(body[k])
-                    k += 1
-
-                first = lines[body[k]].strip() if k < len(body) else ""
-                # 画面に出る文字が続く形。`<p>` の途中から始まる続きのブロックは、
-                # 最初の行が要素でも埋め込みでもなく、ただの文字になる。閉じタグが
-                # 数行のうちに来ることを合図にする。ここを見ないと、day01 の
-                # 「Day 02 では〜」のように文字で始まる続きブロックを取り落とす。
-                # 最初の行がコードでないなら、画面に出る文字かもしれない。
-                # 確定させるのは、そのブロックの中に「開いていないのに閉じるタグ」が
-                # あるとき。開いていない閉じタグは、ブロックの外で開いた要素の中に
-                # 自分がいることの証拠になる。行数の窓では、閉じタグが遠い断片を
-                # 取り落とす（codex 指摘）ので、ブロック全体を走る。
-                text_child = False
-                if k < len(body) and not CODE_LINE.search(lines[body[k]]):
-                    opened: list[str] = []
-                    for b in body[k:]:
-                        line = lines[b]
-                        selfclosed = set(SELF_CLOSING.findall(line))
-                        if re.search(r"<>", line):
-                            opened.append("<>")
-                        for name in OPEN_TAG.findall(line):
-                            if name not in selfclosed:
-                                opened.append(name)
-                        for name in CLOSE_TAG.findall(line):
-                            key = name or "<>"
-                            if key in opened:
-                                opened.remove(key)
-                            else:
-                                text_child = True
-                                break
-                        if text_child:
+            first = body[k][1].strip() if k < len(body) else ""
+            # 画面に出る文字が続く形。`<p>` の途中から始まる続きのブロックは、
+            # 最初の行が要素でも埋め込みでもなく、ただの文字になる。閉じタグが
+            # 数行のうちに来ることを合図にする。ここを見ないと、day01 の
+            # 「Day 02 では〜」のように文字で始まる続きブロックを取り落とす。
+            # 最初の行がコードでないなら、画面に出る文字かもしれない。
+            # 確定させるのは、そのブロックの中に「開いていないのに閉じるタグ」が
+            # あるとき。開いていない閉じタグは、ブロックの外で開いた要素の中に
+            # 自分がいることの証拠になる。行数の窓では、閉じタグが遠い断片を
+            # 取り落とす（codex 指摘）ので、ブロック全体を走る。
+            text_child = False
+            if k < len(body) and not CODE_LINE.search(body[k][1]):
+                opened: list[str] = []
+                for _, line in body[k:]:
+                    selfclosed = set(SELF_CLOSING.findall(line))
+                    if re.search(r"<>", line):
+                        opened.append("<>")
+                    for name in OPEN_TAG.findall(line):
+                        if name not in selfclosed:
+                            opened.append(name)
+                    for name in CLOSE_TAG.findall(line):
+                        key = name or "<>"
+                        if key in opened:
+                            opened.remove(key)
+                        else:
+                            text_child = True
                             break
+                    if text_child:
+                        break
 
-                in_jsx = (
-                    first.startswith("<")
-                    or (first.startswith("{") and first != "{")
-                    or text_child
-                )
-                if in_jsx:
-                    for ln in lead:
-                        hits.append((path.name, ln + 1, lines[ln].strip()))
-
-            i = j + 1
+            in_jsx = (
+                first.startswith("<")
+                or (first.startswith("{") and first != "{")
+                or text_child
+            )
+            if in_jsx:
+                for lineno, line in lead:
+                    hits.append((str(path.relative_to(root)), lineno, line.strip()))
 
     return hits, scanned
 
