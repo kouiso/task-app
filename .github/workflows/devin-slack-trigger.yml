@@ -69,6 +69,8 @@ jobs:
             const data = await resp.json();
             if (!data.ok) {
               core.setFailed(`Slack API error: ${data.error || 'unknown'}`);
+            } else {
+              core.info(`Slack message posted: ts=${data.ts} text=${data.message?.text}`);
             }
 
       - name: Post marker comment
