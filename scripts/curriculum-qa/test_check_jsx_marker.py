@@ -156,6 +156,16 @@ BAD_SELF_CLOSING_SAME_NAME = """```tsx
 ```
 """
 
+# チルダの囲いも CommonMark のフェンスである。バッククォートしか見ないと、
+# このブロックごと検査の外に落ちる。
+BAD_TILDE_FENCE = """~~~tsx
+// filepath: src/app/login/page.tsx
+<form>
+  <button>送信</button>
+</form>
+~~~
+"""
+
 CASES = [
     ("tsx の JSX 断片", BAD_TSX, 1),
     ("typescript 表記の JSX 断片", BAD_TYPESCRIPT, 2),
@@ -173,6 +183,7 @@ CASES = [
     ("末尾カンマ無しの項目", OK_PROP_NO_COMMA, 0),
     ("断片の短縮形で閉じる", BAD_FRAGMENT_CLOSE, 1),
     ("同名の自己終了タグを含む", BAD_SELF_CLOSING_SAME_NAME, 1),
+    ("チルダの囲い", BAD_TILDE_FENCE, 1),
 ]
 
 
