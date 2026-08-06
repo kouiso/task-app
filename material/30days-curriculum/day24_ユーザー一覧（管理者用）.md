@@ -116,7 +116,7 @@ flowchart TD
 
 **ゴール**: `src/server/api/routers/user.ts` を新規作成し、まず `getAll` を写経して `api.user.getAll` を自分で生やします。管理者一覧ページの入口はここです。Day 21 の `report.ts` と同じく、ファイルを「登録するだけ」ではなく、最初の procedure から自分で作ります。
 
-一覧ページが必要としているのは、全ユーザーの詳細全部ではありません。名前・メール・ロール・状態・登録日など、表示に使う項目だけです。そこで完成版のコード では、`USER_DETAIL_SELECT` を再利用しつつ `createdAt` と `updatedAt` を足して返します。
+一覧ページが必要としているのは、全ユーザーの詳細全部ではありません。名前・メール・ロール・状態・登録日など、表示に使う項目だけです。そこで完成版のコードでは、`USER_DETAIL_SELECT` を再利用しつつ `createdAt` と `updatedAt` を足して返します。
 
 #### 0-1. import を並べる
 
@@ -191,7 +191,7 @@ export const userRouter = createTRPCRouter({
 
 #### 0-5. root.ts に時系列順で登録する
 
-最後に `userRouter` を `root.ts` に登録します。完成版のコード と同じく、`user` は `report` のあとです。
+最後に `userRouter` を `root.ts` に登録します。完成版のコードと同じく、`user` は `report` のあとです。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -834,7 +834,7 @@ import { USER_ROLE }
   from '@/lib/constant/roles';
 ```
 
-`/user` はサイドバーのどこにも出てこないので、いまはURLを手で打たないとたどり着けません。管理者にだけリンクを出して、通常の操作で開けるようにします。`app-layout.tsx` はログイン中のセッションをすでに読んでいるため、足すのはロールの定数だけで済みます。ここでも文字列の `'ADMIN'` は書かず、Step 5 と共通の `USER_ROLE.ADMIN` を使います。比べる側と比べられる側で書き方をそろえておけば、綴りを間違えた瞬間に型エラーで気づけます。
+`/user` はサイドバーのどこにも出てこないので、いまはURLを手で打たないとたどり着けません。管理者にだけリンクを出して、通常の操作で開けるようにします。`app-layout.tsx` はログイン中のセッションをすでに読んでいるため、足すのはこの2つだけで済みます。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。ここでも文字列の `'ADMIN'` は書かず、Step 5 と共通の `USER_ROLE.ADMIN` を使います。比べる側と比べられる側で書き方をそろえておけば、綴りを間違えた瞬間に型エラーで気づけます。
 
 Day 08 のデスクトップ用のナビゲーション内で、
 `menuItems.map(...)` の直後へ追加します。
@@ -1307,10 +1307,11 @@ export default function UsersPage() {
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: 今日足した import
+import { Users } from 'lucide-react';
 import { USER_ROLE } from '@/lib/constant/roles';
 ```
 
-このファイルはログイン中のセッションをすでに読んでいるので、今日足すのはロールの定数だけです。文字列の `'ADMIN'` を直接書かないのは、綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと、間違いが画面の表示ではなく保存の時点で分かります。
+今日足すのはこの2つです。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。文字列の `'ADMIN'` を直接書かないのは、綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと、間違いが画面の表示ではなく保存の時点で分かります。
 
 **管理者だけに出すリンク**:
 

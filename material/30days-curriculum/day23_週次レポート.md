@@ -296,7 +296,7 @@ import { getUserProjectIds } from './_helpers/permission';
 
 **ゴール**: レポートページ（`/report`）に
 表示するプロジェクト統計の構造を理解します。
-完成版のコード では Day 21 で導入した
+完成版のコードでは Day 21 で導入した
 `api.report.getOverview` の `projectStats` を
 そのまま描画し、ここで再集計はしません。
 

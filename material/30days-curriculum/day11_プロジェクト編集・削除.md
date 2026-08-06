@@ -499,9 +499,11 @@ const handleEdit = (projectId: string) => {
 | ❌ `{ startDate: startDate }` | `{ startDate: undefined }` | `undefined` がオブジェクトに入る |
 | ✅ `...(startDate && { startDate })` | `{}` | プロパティ自体が存在しない |
 
-`{ startDate: undefined }` と書くと、`startDate?: string` と宣言された `ProjectFormData` の型と合わず、型エラーが出ます。生成される `tsconfig.json` では、省略できる項目へ `undefined` を入れても型エラーにはなりません。それでも、値があるときだけキーを足す書き方にそろえておきます。条件付きスプレッドなら、値があるときだけ項目が増えるので、型のとおりに書けます。
+`{ startDate: undefined }` と書くと、キーは残ったまま中身が `undefined` になります。Day 01 で生成される `tsconfig.json` は `exactOptionalPropertyTypes` を有効にしていません。そのため `startDate?: string` は3つの形を受け取ります。キーが無い、文字列が入っている、キーはあって中身が `undefined`、の3つです。この書き方でも型エラーは出ません。
 
-> **注文書の例え**: 注文書の「お届け日」欄は、日付を書くか、欄そのものを使わないかのどちらかです。「未定」とだけ書かれた欄は受け付けてもらえません。`startDate` も同じで、日付が入っているか、項目が無いかの2択です。
+それでも条件付きスプレッドにそろえるのは、`editingProject` へ入れる形を「日付が入っているか、項目そのものが無いか」の2つに決めておくためです。型が許す形と、こちらが作ると決めた形は別物です。作る側をそろえておけば、`editingProject` の中に、中身が `undefined` のキーは現れません。
+
+> **注文書の例え**: 注文書の「お届け日」欄は、日付を書くか、欄そのものを使わないかのどちらかです。「未定」とだけ書かれた欄は、受け取った側がどう扱うか迷います。`editingProject` の日付も同じで、値を入れるか、項目ごと作らないかの2つにそろえます。
 
 ---
 
@@ -1925,7 +1927,7 @@ function ProjectPageContent() {
   };
 ```
 
-`description` に `|| ''` を付けているのは、データベースの `null` をそのまま入力欄へ渡せないからです。日付の2つを条件付きスプレッドで足しているのは、`ProjectFormData` の型が「値があるか、項目が無いか」の2択で書かれているためです。`handleDelete` が state を置くだけなのは、実際の削除を確認ダイアログの `onConfirm` に任せるからです。
+`description` に `|| ''` を付けているのは、データベースの `null` をそのまま入力欄へ渡せないからです。日付の2つを条件付きスプレッドで足しているのは、`editingProject` へ入れる値を「値があるか、項目が無いか」のどちらかにそろえるためです。`handleDelete` が state を置くだけなのは、実際の削除を確認ダイアログの `onConfirm` に任せるからです。
 
 **詳細表示の受け皿と新規作成のハンドラー**:
 

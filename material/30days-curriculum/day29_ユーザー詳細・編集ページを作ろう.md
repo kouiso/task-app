@@ -146,7 +146,7 @@ const userUpdateSchema = z
 
 #### 0-1. getAll の直後に getById を足す
 
-完成版のコード では `getAll` の次が `getById` です。まずそこへ追記します。
+完成版のコードでは `getAll` の次が `getById` です。まずそこへ追記します。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（getAll の直後に追加）
@@ -526,7 +526,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 > ブラウザ側の部品にある `!user` は、
 > 取り直しの最中に備える保険です。
 >
-> 期限列の完成版のコード は
+> 期限列の完成版のコードは
 > `format(new Date(task.dueDate), ...)` ではなく
 > `formatDateOnly(task.dueDate)` を使います。
 > User 詳細だけ違う日付処理にすると、
@@ -798,42 +798,40 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 
 ステータス表示は `StatusBadge` に任せます。このコンポーネントが status に応じたラベルと色を内部で決めるため、この画面でバッジの見た目を組み立てる必要はありません。優先度は `getPriorityBadgeVariant` で色の種類だけを選び、ラベルは `TASK_PRIORITY_LABELS` から引きます。
 
-右カラムに「参加プロジェクト」カードを追加します。
+右カラムに「参加プロジェクト」カードを追加します。バッジを押すと、そのプロジェクトのページへ移動できるようにします。所属を見て気になったプロジェクトへ、URL を打ち直さずに行けます。
 
 ```tsx
-{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
-{/* 参加プロジェクト一覧（バッジ形式） */}
-<Card>
-  <CardHeader>
-    <CardTitle className="text-lg">参加プロジェクト</CardTitle>
-  </CardHeader>
-  <CardContent>
-    {user.projects && user.projects.length > 0 ? (
-      <div className="flex flex-wrap gap-2">
-        {user.projects.map((member) => (
-          <Badge
-            key={member.id}
-            className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
-            style={{ backgroundColor: member.project.color }}
+            {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+            {/* 参加プロジェクト一覧（バッジ形式） */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">参加プロジェクト</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user.projects && user.projects.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {user.projects.map((member) => (
+                      <Badge
+                        key={member.id}
+                        className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
+                        style={{ backgroundColor: member.project.color }}
 ```
 
-各バッジにクリックイベントを付けて、プロジェクトページへ遷移できるようにしています。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトは、このバッジの文字が読みにくくなります。暗めの色を選んでおくと、この画面でも文字が残ります。上のコードブロック内の `<Badge` に以下の属性が含まれています。
+クリックイベントはバッジ1つずつに付けます。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトは、このバッジの文字が読みにくくなります。暗めの色を選んでおくと、この画面でも文字が残ります。上のコードブロックは `<Badge` のタグを開いたまま終わっています。続けて次の属性を書きます。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
 // Badge のクリックでプロジェクトページに遷移
-onClick={() =>
-  router.push(
-    `/project?projectId=${member.project.id}`
-  )
-}
+                        onClick={() =>
+                          router.push(
+                            `/project?projectId=${member.project.id}`
+                          )
+                        }
 ```
 
 `router.push` は、ページを読み込み直さずに URL だけを切り替える移動のしかたです。`?projectId=` にプロジェクトの ID を付けているので、移動先のプロジェクト画面はどれを開けばよいかを URL から読み取れます。
 
-**確認ポイント**: プロジェクトバッジにカーソルを合わせるとポインターカーソルになることを確認してください。
-
-残りは閉じるところまでを一気に書きます。`onClick` の下へ続けてください。
+この時点では `<Badge` のタグがまだ閉じていないので、画面は出ません。残りを閉じるところまで一気に書きます。`onClick` の下へ続けてください。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
@@ -852,8 +850,12 @@ onClick={() =>
 ```
 
 `) : (` から下が、プロジェクトが1件も無い人に出る表示です。`user.projects.length > 0`
-の判定が false のときにこちらが描かれます。参加プロジェクトのカードはこれで閉じましたが、
-その外側の箱と `return (` はまだ開いたままなので、構文エラーは残ります。
+の判定が false のときにこちらが描かれます。ここでカードが閉じました。外側の箱と
+`return (` は Step 4 で閉じてあるため、ファイルはこの時点で通ります。
+
+**確認ポイント**:
+- 右カラムに「参加プロジェクト」のカードが出る
+- バッジにカーソルを合わせると指の形のポインターに変わる
 
 
 Tailwind CSS では動的な色をクラスで指定できないため、`style={{ backgroundColor: member.project.color }}` でプロジェクトカラーを適用しています。
@@ -1638,13 +1640,16 @@ import { Alert, AlertDescription, AlertTitle }
 - 保存成功後、詳細ページへ戻り変更内容が反映されている
 - 保存中はボタンが「更新中...」に変わりグレーアウトする
 - 「キャンセル」をクリックすると詳細ページに戻る（変更は保存されない）
-- 一般ユーザーが自分のロールや isActive を変更しようとすると FORBIDDEN エラーが `Alert` で表示される
 - `npm run dev` でエラーが出ない
 - 編集ページを開くとフォームにユーザーの名前が自動入力されている
 - アバターURLを入力するとプレビューがリアルタイムで変わる
 - メールアドレスの入力欄がグレーアウトして編集できない
-- ロール選択のドロップダウンを開くと「ユーザー」「管理者」の2つが出て、現在のロールが選ばれている
-- アクティブのチェックボックスの ON/OFF が切り替えられる
+- 自分のページを開いたときは、ロールとアクティブの欄が出ない
+- 管理者で他人のページを開くと、ロールとアクティブの欄が出る
+- ロール選択には「ユーザー」「管理者」が並ぶ
+- アクティブのチェックボックスは ON/OFF を切り替えられる
+
+ロールとアクティブの欄は `canManageAccount`（`isAdmin && !isOwnProfile`）の中にあります。一般ユーザーには欄そのものが出ず、送信データにも `role` と `isActive` が入りません。サーバーの `FORBIDDEN` は最後の守りで、画面からは届かない形になっています。
 
 
 ---

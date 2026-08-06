@@ -916,10 +916,11 @@ const handleCreate = () => {
 > 編集・削除ボタンが表示されません。渡し忘れるとデフォルトの
 > `true` が使われ、ボタンを押しても403エラーになるので注意してください。
 >
-> `TaskCard` には作業時間まわりの optional な props も
-> あります。`timeSpentMinutes`（合計作業時間）と
-> `onTimeLogSuccess`（記録成功時のコールバック）の 2 つです。
-> これらは Day 16 で扱います。
+> 作業時間まわりの props は、いまの `TaskCard` にはまだ
+> ありません。`timeSpentMinutes`（合計作業時間）と
+> `onTimeLogSuccess`（記録成功時のコールバック）の 2 つは、
+> Day 16 で `TaskCard` 側へ追加してから渡します。今日の時点で
+> 渡すと、受け取る側が無いため型エラーになります。
 
 **確認ポイント**:
 - `onEdit` に `handleEdit` を渡している
