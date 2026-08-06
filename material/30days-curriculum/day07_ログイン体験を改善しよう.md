@@ -1287,7 +1287,8 @@ export const config = {
 ```
 
 `config.matcher` は、middleware を動かす URL を絞り込む指定です。
-`_next/static` や画像、`favicon.ico` を外しているのは、画像 1 枚を読むたびに JWT の検証を走らせても得るものが無く、表示が遅くなるだけだからです。
+`_next/static` と `_next/image`、`favicon.ico` を外しているのは、画像 1 枚を読むたびに JWT の検証を走らせても得るものが無く、表示が遅くなるだけだからです。
+`_next/image` は Next.js が変換して配る画像の置き場で、`public/` に自分で置いた画像はここに入りません。
 `(?!...)` は「ここに並べた語で始まらない URL にだけ一致する」という書き方です。
 つまり、ここへ並べたパスは middleware を通らず、JWT の検証を受けません。
 並べる数を増やしすぎると、守りたいページまで middleware を素通りします。
