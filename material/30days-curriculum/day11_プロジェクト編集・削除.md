@@ -499,7 +499,7 @@ const handleEdit = (projectId: string) => {
 | ❌ `{ startDate: startDate }` | `{ startDate: undefined }` | `undefined` がオブジェクトに入る |
 | ✅ `...(startDate && { startDate })` | `{}` | プロパティ自体が存在しない |
 
-`{ startDate: undefined }` と書くと、`startDate?: string` と宣言された `ProjectFormData` の型と合わず、型エラーが出ます。生成される `tsconfig.json` では、省略できる項目へ `undefined` を入れても型エラーにはなりません。それでも、値があるときだけキーを足す書き方にそろえておきます。条件付きスプレッドなら、値があるときだけ項目が増えるので、型のとおりに書けます。
+`{ startDate: undefined }` と書くと、`startDate?: string` と宣言された `ProjectFormData` の型と合わず、型エラーが出ます。このプロジェクトの `tsconfig.json` は `exactOptionalPropertyTypes` を有効にしているため、省略できる項目へ `undefined` を入れることを許していません。条件付きスプレッドなら、値があるときだけ項目が増えるので、型のとおりに書けます。
 
 > **注文書の例え**: 注文書の「お届け日」欄は、日付を書くか、欄そのものを使わないかのどちらかです。「未定」とだけ書かれた欄は受け付けてもらえません。`startDate` も同じで、日付が入っているか、項目が無いかの2択です。
 
