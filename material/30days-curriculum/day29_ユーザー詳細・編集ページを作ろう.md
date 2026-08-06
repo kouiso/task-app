@@ -146,7 +146,7 @@ const userUpdateSchema = z
 
 #### 0-1. getAll の直後に getById を足す
 
-完成版のコード では `getAll` の次が `getById` です。まずそこへ追記します。
+完成版のコードでは `getAll` の次が `getById` です。まずそこへ追記します。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（getAll の直後に追加）
@@ -526,7 +526,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 > ブラウザ側の部品にある `!user` は、
 > 取り直しの最中に備える保険です。
 >
-> 期限列の完成版のコード は
+> 期限列の完成版のコードは
 > `format(new Date(task.dueDate), ...)` ではなく
 > `formatDateOnly(task.dueDate)` を使います。
 > User 詳細だけ違う日付処理にすると、

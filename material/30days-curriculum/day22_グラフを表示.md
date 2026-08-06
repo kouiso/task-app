@@ -287,7 +287,9 @@ const statusData =
 - `overview.statusData` を `map` で加工している
 - `isTaskStatus` でラベルに変換している
 - クライアント側で件数を数え直していない
-- ブラウザで `/report` を開くと、円グラフの凡例が「未対応」「進行中」などの日本語になっている
+- `npm run dev` でエラーが出ていない
+
+> この時点では画面に変化はありません。円グラフを描く `<Pie>` は Step 5 で追加するので、凡例が日本語で並ぶのを確かめられるのはそのあとです。
 
 #### なぜ map だけで済むのか
 
@@ -440,7 +442,9 @@ const priorityData =
 - `overview.priorityData` を `map` で加工している
 - `isTaskPriority` で型ガードしている
 - Step 3 の `statusData` と同じ場所に書いた
-- ブラウザで `/report` を開くと、円グラフの凡例が「高」「中」「低」の日本語になっている
+- `npm run dev` でエラーが出ていない
+
+> ここでも画面はまだ変わりません。優先度の円グラフは Step 7 で追加します。
 
 ---
 
