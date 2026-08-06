@@ -1307,10 +1307,11 @@ export default function UsersPage() {
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: 今日足した import
+import { Users } from 'lucide-react';
 import { USER_ROLE } from '@/lib/constant/roles';
 ```
 
-このファイルはログイン中のセッションをすでに読んでいるので、今日足すのはロールの定数だけです。文字列の `'ADMIN'` を直接書かないのは、綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと、間違いが画面の表示ではなく保存の時点で分かります。
+今日足すのはこの2つです。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。文字列の `'ADMIN'` を直接書かないのは、綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと、間違いが画面の表示ではなく保存の時点で分かります。
 
 **管理者だけに出すリンク**:
 
