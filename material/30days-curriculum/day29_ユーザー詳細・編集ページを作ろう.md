@@ -798,7 +798,7 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 
 ステータス表示は `StatusBadge` に任せます。このコンポーネントが status に応じたラベルと色を内部で決めるため、この画面でバッジの見た目を組み立てる必要はありません。優先度は `getPriorityBadgeVariant` で色の種類だけを選び、ラベルは `TASK_PRIORITY_LABELS` から引きます。
 
-右カラムに「参加プロジェクト」カードを追加します。
+右カラムに「参加プロジェクト」カードを追加します。バッジを押すと、そのプロジェクトのページへ移動できるようにします。所属を見て気になったプロジェクトへ、URL を打ち直さずに行けます。
 
 ```tsx
             {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
@@ -817,7 +817,7 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
                         style={{ backgroundColor: member.project.color }}
 ```
 
-各バッジにクリックイベントを付けて、プロジェクトページへ遷移できるようにしています。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトは、このバッジの文字が読みにくくなります。暗めの色を選んでおくと、この画面でも文字が残ります。上のコードブロックは `<Badge` のタグを開いたまま終わっています。続けて次の属性を書きます。
+クリックイベントはバッジ1つずつに付けます。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトは、このバッジの文字が読みにくくなります。暗めの色を選んでおくと、この画面でも文字が残ります。上のコードブロックは `<Badge` のタグを開いたまま終わっています。続けて次の属性を書きます。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
