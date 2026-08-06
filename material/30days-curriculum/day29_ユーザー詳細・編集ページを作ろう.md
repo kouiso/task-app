@@ -801,39 +801,37 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 右カラムに「参加プロジェクト」カードを追加します。
 
 ```tsx
-{/* filepath: src/app/user/[id]/user-detail-client.tsx */}
-{/* 参加プロジェクト一覧（バッジ形式） */}
-<Card>
-  <CardHeader>
-    <CardTitle className="text-lg">参加プロジェクト</CardTitle>
-  </CardHeader>
-  <CardContent>
-    {user.projects && user.projects.length > 0 ? (
-      <div className="flex flex-wrap gap-2">
-        {user.projects.map((member) => (
-          <Badge
-            key={member.id}
-            className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
-            style={{ backgroundColor: member.project.color }}
+            {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
+            {/* 参加プロジェクト一覧（バッジ形式） */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">参加プロジェクト</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user.projects && user.projects.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {user.projects.map((member) => (
+                      <Badge
+                        key={member.id}
+                        className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
+                        style={{ backgroundColor: member.project.color }}
 ```
 
-各バッジにクリックイベントを付けて、プロジェクトページへ遷移できるようにしています。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトは、このバッジの文字が読みにくくなります。暗めの色を選んでおくと、この画面でも文字が残ります。上のコードブロック内の `<Badge` に以下の属性が含まれています。
+各バッジにクリックイベントを付けて、プロジェクトページへ遷移できるようにしています。文字色を `text-white` で固定しているので、Day 10 で明るい色を選んだプロジェクトは、このバッジの文字が読みにくくなります。暗めの色を選んでおくと、この画面でも文字が残ります。上のコードブロックは `<Badge` のタグを開いたまま終わっています。続けて次の属性を書きます。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
 // Badge のクリックでプロジェクトページに遷移
-onClick={() =>
-  router.push(
-    `/project?projectId=${member.project.id}`
-  )
-}
+                        onClick={() =>
+                          router.push(
+                            `/project?projectId=${member.project.id}`
+                          )
+                        }
 ```
 
 `router.push` は、ページを読み込み直さずに URL だけを切り替える移動のしかたです。`?projectId=` にプロジェクトの ID を付けているので、移動先のプロジェクト画面はどれを開けばよいかを URL から読み取れます。
 
-**確認ポイント**: プロジェクトバッジにカーソルを合わせるとポインターカーソルになることを確認してください。
-
-残りは閉じるところまでを一気に書きます。`onClick` の下へ続けてください。
+この時点では `<Badge` のタグがまだ閉じていないので、画面は出ません。残りを閉じるところまで一気に書きます。`onClick` の下へ続けてください。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
@@ -852,8 +850,12 @@ onClick={() =>
 ```
 
 `) : (` から下が、プロジェクトが1件も無い人に出る表示です。`user.projects.length > 0`
-の判定が false のときにこちらが描かれます。参加プロジェクトのカードはこれで閉じましたが、
-その外側の箱と `return (` はまだ開いたままなので、構文エラーは残ります。
+の判定が false のときにこちらが描かれます。ここでカードが閉じました。外側の箱と
+`return (` は Step 4 で閉じてあるため、ファイルはこの時点で通ります。
+
+**確認ポイント**:
+- 右カラムに「参加プロジェクト」のカードが出る
+- バッジにカーソルを合わせると指の形のポインターに変わる
 
 
 Tailwind CSS では動的な色をクラスで指定できないため、`style={{ backgroundColor: member.project.color }}` でプロジェクトカラーを適用しています。
