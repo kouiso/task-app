@@ -235,8 +235,11 @@ def mui_lines(lines: list[str]) -> list[str]:
     return [line[len(MUI_PREFIX):] for line in lines if line.startswith(MUI_PREFIX)]
 
 
-def run_cli(text: str) -> int:
-    """CLI として起動したときの終了コードを返す。
+def run_cli(text: str) -> tuple[int, str]:
+    """CLI として起動したときの (終了コード, 標準エラー出力) を返す。
+
+    終了コードだけでは、違反を検出しての exit 1 と、import エラーや未捕捉の例外で
+    落ちた exit 1 を見分けられない。壊れ方を取り違えないよう stderr も返す。
 
     check_tech_stack() を直接呼ぶだけでは __main__ の sys.exit が一度も動かない。
     教材の一括チェックは終了コードで合否を見ているので、ここが常に 0 になる
@@ -249,7 +252,7 @@ def run_cli(text: str) -> int:
             [sys.executable, str(CHECKER_PATH), str(path)],
             capture_output=True, text=True,
         )
-    return proc.returncode
+    return proc.returncode, proc.stderr
 
 
 def source_tree() -> ast.Module:
@@ -377,12 +380,14 @@ def main() -> int:
         print(f'  ❌ 違反なしのバナーが異常です: {ok_lines}')
 
     # 7. CLI の終了コード。教材の一括チェックはここだけを見ている。
-    if run_cli(fence('tsx', MUI_IMPORT)) != 1:
+    code, err = run_cli(fence('tsx', MUI_IMPORT))
+    if code != 1 or err:
         failed += 1
-        print('  ❌ 違反ありなのに CLI が exit 1 を返していません')
-    if run_cli(fence('tsx', SHADCN_IMPORT)) != 0:
+        print(f'  ❌ 違反ありなのに CLI が exit 1 を返していません: 終了コード {code} / stderr {err!r}')
+    code, err = run_cli(fence('tsx', SHADCN_IMPORT))
+    if code != 0 or err:
         failed += 1
-        print('  ❌ 違反なしなのに CLI が exit 0 を返していません')
+        print(f'  ❌ 違反なしなのに CLI が exit 0 を返していません: 終了コード {code} / stderr {err!r}')
 
     total = (
         1 + len(declared) + len(MUI_SAMPLES) + len(MUI_EXTRA_SAMPLES)

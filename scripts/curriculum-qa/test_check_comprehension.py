@@ -89,7 +89,11 @@ UNANNOTATED_CASES: list[tuple[str, str, list[tuple[str, int]]]] = [
     ),
     (
         f'初出から{ANNOTATION_WINDOW_LINES}行以内の注釈は有効',
-        'Next.js を使います。\n' + '\n' * 10 + 'Next.js（Webアプリを作る土台）です。\n',
+        # 注釈が窓の内側ぎりぎり（初出＋窓の行数ちょうど）に来るよう定数から導く。
+        # 固定値にするとケース名と本文がずれ、落ちたときに原因を読み取れない。
+        'Next.js を使います。\n'
+        + '\n' * (ANNOTATION_WINDOW_LINES - 1)
+        + 'Next.js（Webアプリを作る土台）です。\n',
         [],
     ),
     (
@@ -301,9 +305,11 @@ def main() -> int:
         print(message)
 
     # 11. しきい値と対象リストがこっそり緩められていないか見る。
-    if ANNOTATION_WINDOW_LINES > 50:
+    # 上の境界ケースは本文を定数から導くので、窓が動いてもケース自体は通ってしまう。
+    # 窓の増減はどちらも仕様変更なので、値そのものをここで固定する。
+    if ANNOTATION_WINDOW_LINES != 50:
         failed += 1
-        print(f'  ❌ ANNOTATION_WINDOW_LINES が {ANNOTATION_WINDOW_LINES} に広げられています')
+        print(f'  ❌ ANNOTATION_WINDOW_LINES が {ANNOTATION_WINDOW_LINES} に変えられています')
     required_terms = {'Next.js', 'React', 'TypeScript', 'Prisma', 'API', 'コンポーネント'}
     missing_terms = required_terms - set(TECH_TERMS)
     if missing_terms:

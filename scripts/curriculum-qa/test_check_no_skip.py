@@ -135,10 +135,16 @@ FILEPATH_REQUIRED_LANGS_MIXED_CASE: list[str] = ["TSX", "TypeScript", "JS", "Tsx
 # 写経先を持たない言語。ここに filepath を求めると、正しい教材が落ちる。
 FILEPATH_FREE_LANGS: list[str] = ["bash", "shell", "sh", "zsh", "mermaid", "text", "json"]
 
-# GUI 語を探す窓は本文の冒頭500字。窓の内側と外側の両方を固定して、
-# 広げても狭めても落ちるようにする。
-PADDING_INSIDE_WINDOW = "あ" * 430
-PADDING_OUTSIDE_WINDOW = "あ" * 600
+# GUI 語を探す窓は本体が step[:500] と直書きしているので、テスト側でも 500 を持つ。
+# 本体の数字が動いたらここと食い違って落ちる。
+GUI_WINDOW = 500
+GUI_KEYWORD = "ブラウザ"
+STEP_PREFIX_LENGTH = len(step(body="", check_point=""))
+
+# 語の末尾がちょうど窓の最後の文字（index 499）に来る位置。1字でも窓を狭めると外れる。
+PADDING_INSIDE_WINDOW = "あ" * (GUI_WINDOW - STEP_PREFIX_LENGTH - len(GUI_KEYWORD))
+# 語の先頭がちょうど窓の次の文字（index 500）に来る位置。1字でも窓を広げると入る。
+PADDING_OUTSIDE_WINDOW = "あ" * (GUI_WINDOW - STEP_PREFIX_LENGTH)
 
 
 def check_cases() -> int:
@@ -195,14 +201,14 @@ def check_langs() -> int:
 def check_gui_window() -> int:
     """冒頭500字の窓が両側から動いていないか見る。"""
     failed = 0
-    _code, _steps, inside = run(step(body=PADDING_INSIDE_WINDOW + "ブラウザで確認します。\n"))
+    _code, _steps, inside = run(step(body=PADDING_INSIDE_WINDOW + GUI_KEYWORD + "で確認します。\n"))
     if inside:
         failed += 1
-        print(f"  ❌ 窓が狭められています（430字先の GUI 語で免除されない）→ {inside}")
-    _code, _steps, outside = run(step(body=PADDING_OUTSIDE_WINDOW + "ブラウザで確認します。\n"))
+        print(f"  ❌ 窓が狭められています（{GUI_WINDOW}字目で終わる GUI 語で免除されない）→ {inside}")
+    _code, _steps, outside = run(step(body=PADDING_OUTSIDE_WINDOW + GUI_KEYWORD + "で確認します。\n"))
     if outside.get(1) != ("コードブロックなし",):
         failed += 1
-        print(f"  ❌ 窓が広げられています（600字先の GUI 語で免除された）→ {outside}")
+        print(f"  ❌ 窓が広げられています（{GUI_WINDOW + 1}字目から始まる GUI 語で免除された）→ {outside}")
     return failed
 
 
