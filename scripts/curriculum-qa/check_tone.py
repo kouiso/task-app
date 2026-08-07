@@ -51,7 +51,10 @@ KANSAI_PATTERNS = compile_specs([
     (r'日や(?:[。！!？?\s]|$)', '関西弁語尾「日や」', '「日です」に変更'),
     (r'ちゃう(?:[。！!？?か\s]|$)', '関西弁「ちゃう」', '「ではありません」「違います」に変更'),
     (r'ええわけやない', '関西弁「ええわけやない」', '「ではありません」「よくありません」に変更'),
-    (r'\bワイ\b', '関西弁一人称「ワイ」', '「私」「筆者」または削除'),
+    # `\b` は日本語では一度も成立しない。カタカナも助詞も等しく単語構成文字なので、
+    # 「ワイが」「ワイも」の境界がどこにも無く、このパターンは長らく素通りしていた。
+    # 代わりに前後の文字で「ホワイト」「ワイド」「ワイヤー」等を除く。
+    (r'(?<![ホファ])ワイ(?![ドヤンパ])', '関西弁一人称「ワイ」', '「私」「筆者」または削除'),
     (r'やんか(?:[。！!？?\s]|$)', '関西弁「やんか」', '「じゃないですか」「ですよね」に変更'),
     (r'あかん(?:で)?(?:[。！!？?\s]|$)', '関西弁「あかん」', '「いけません」「避けましょう」に変更'),
     # 「だけど」を勧めない。あれも常体なので、そのまま直すと敬体の教材に常体が残る。
@@ -69,6 +72,13 @@ CASUAL_PATTERNS = compile_specs([
     (r'(?:(?<![まで])した|作った|起きない|できてる|合ってる|超える)[。！!？?]', 'タメ口の常体語尾', '「しました」「起きません」など敬体に変更'),
     (r'(?:である|ではない|じゃない|ない)[。！!？?]', 'タメ口の常体語尾', '「です」「ではありません」など敬体に変更'),
     (r'(?:必要はない|全部になる)[。！!？?]', 'タメ口の常体語尾', '「必要はありません」「全部になります」に変更'),
+    # SKILL.md の文体表にある「だ / だぞ / だろ / しろ」と命令形単体は、上の動詞の並びに
+    # 入っておらず素通りしていた。textlint の no-mix-dearu-desumasu も、実測では
+    # 「である」しか捕まえず「だ。」「だった。」「使え。」はどれも通してしまう。
+    (r'だ[。！!？?]', 'タメ口の常体語尾', '「です」に変更'),
+    (r'(?:だった|だろう|だろ|だぞ)[。！!？?]', 'タメ口の常体語尾', '「でした」「でしょう」に変更'),
+    (r'(?:しろ|せよ)[。！!？?]', '命令形単体', '「してください」「しましょう」に変更'),
+    (r'(?:書け|使え|開け|押せ|直せ|消せ|見よ)(?:よ)?[。！!？?]', '命令形単体', '「書いてください」など依頼の形に変更'),
 ])
 
 AI_PHRASE_PATTERNS = compile_specs([
@@ -91,10 +101,43 @@ TRANSLATION_PATTERNS = compile_specs([
     (r'について言及', '直訳調「について言及」', '「について」「を紹介」に変更'),
     (r'に関しても同様です', '直訳調「に関しても同様です」', '「も同じです」に変更'),
     (r'を実施することができます', '直訳調「を実施することができます」', '「できます」に変更'),
+    # SKILL.md の直訳調の表にありながら、ここに無いせいで素通りしていた形。
+    # 「を実施することができます」だけを見ていたので「を実施します」は捕まらなかった。
+    (r'を実施し(?:ます|た|て)', '直訳調「を実施します」', '「します」「を行います」に変更'),
+    (r'という点に注意', '直訳調「という点に注意」', '「に注意」に変更'),
+    (r'行うことが必要です', '直訳調「行うことが必要です」', '「必要です」に変更'),
 ])
 
-def check_tone(filepath: str) -> bool:
-    content = Path(filepath).read_text(encoding='utf-8')
+# SKILL.md 手順6「重言・翻訳調を消す」の表。同じ意味を2回言っている形を捕まえる。
+REDUNDANCY_PATTERNS = compile_specs([
+    (r'まず最初に', '重言「まず最初に」', '「まず」に変更'),
+    (r'約[^。、]{1,8}程度', '重言「約〜程度」', '「約〜」に変更'),
+    # 敬体の教材では「返り値を返します」と活用して現れるので、語幹で見る。
+    (r'返り値を返[すし]', '重言「返り値を返す」', '「返す」に変更'),
+])
+
+# 理由を述べる文末。同じものが1行に何度も並ぶとリズムが単調になる。
+# SKILL.md「5つの不在」4番（リズムの不在）に当たる症状で、textlint の
+# sentence-length は1文ずつしか見ないため、この重なりは検出できない。
+REASON_ENDINGS = ('ためです', 'からです')
+MAX_SAME_REASON_PER_LINE = 2
+
+
+def find_repeated_reason(line: str) -> list[tuple[str, str]]:
+    """同じ理由の語尾が1行に許容回数を超えて並んでいたら (説明, 直し方) を返す。"""
+    found: list[tuple[str, str]] = []
+    for ending in REASON_ENDINGS:
+        count = line.count(ending)
+        if count > MAX_SAME_REASON_PER_LINE:
+            found.append((
+                f'同じ理由の語尾「{ending}」が1行に {count} 回',
+                'ひとつを別の言い方へ変えるか、段落を分ける',
+            ))
+    return found
+
+
+def collect_findings(content: str) -> list[Finding]:
+    """本文から検出結果を集める。ファイル読み込みと分けてあるのはテストのため。"""
     findings: list[Finding] = []
 
     for lineno, line in strip_code_blocks(content):
@@ -105,14 +148,25 @@ def check_tone(filepath: str) -> bool:
             ('|', '- ', '- [ ]', '#', '**ゴール**', '**学んだこと**'),
         ) or bool(re.match(r'^\d+\.\s', stripped))
 
-        for pattern, description, fix in KANSAI_PATTERNS + AI_PHRASE_PATTERNS + TRANSLATION_PATTERNS:
+        for pattern, description, fix in (
+            KANSAI_PATTERNS + AI_PHRASE_PATTERNS + TRANSLATION_PATTERNS + REDUNDANCY_PATTERNS
+        ):
             if pattern.search(line):
                 findings.append((lineno, description, fix, stripped))
+
+        for description, fix in find_repeated_reason(line):
+            findings.append((lineno, description, fix, stripped))
 
         if not casual_exempt:
             for pattern, description, fix in CASUAL_PATTERNS:
                 if pattern.search(line):
                     findings.append((lineno, description, fix, stripped))
+
+    return findings
+
+
+def check_tone(filepath: str) -> bool:
+    findings = collect_findings(Path(filepath).read_text(encoding='utf-8'))
 
     if findings:
         print(f"❌ 文体チェックFAIL: {filepath}")

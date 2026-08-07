@@ -235,6 +235,7 @@ SELF_TESTS=(
   test_check_ja_line_break
   test_check_scaffold_alignment
   test_check_why
+  test_check_tone
   test_filepath_marker
 )
 
