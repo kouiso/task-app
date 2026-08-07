@@ -236,6 +236,13 @@ SELF_TESTS=(
   test_check_scaffold_alignment
   test_check_why
   test_check_tone
+  test_check_code_completeness
+  test_check_comprehension
+  test_check_no_skip
+  test_check_step_length
+  test_check_tech_stack
+  test_check_terms
+  test_check_visualization
   test_filepath_marker
 )
 
