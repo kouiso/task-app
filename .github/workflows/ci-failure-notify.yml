@@ -3,24 +3,47 @@ name: CI Failure Slack Notify
 on:
   workflow_run:
     workflows:
-      - CI
-      - Playwright E2E Tests
-      - TruffleHog Secret Scan
-      - Lighthouse CI
+      - ".github/workflows/claudecode-implementation.yml"
+      - "AI Rules Drift Check"
+      - "CI"
+      - "Claudecode Review"
+      - "Codex"
+      - "Codex Code Review"
+      - "Codex Security Review"
+      - "Common Setup"
+      - "Fix Issue Headings"
+      - "License Check"
+      - "Material Quality Gate"
+      - "Merge Quality Gate"
+      - "Naming Convention Check"
+      - "PR Auto Setting"
+      - "PR Labeler"
+      - "Performance"
+      - "Pr Auto Setting"
+      - "Protect main branch"
+      - "Semgrep Code Scan"
+      - "TruffleHog \u30b7\u30fc\u30af\u30ec\u30c3\u30c8\u30b9\u30ad\u30e3\u30f3"
+      - "Unused Packages Check"
+      - "ZIP Export & Environment Setup CI"
+      - "destroy-container-image-and-cloudrun"
+      - "development-container-image-deploy"
+      - "npm audit"
+      - "\u4f9d\u5b58\u95a2\u4fc2\u30ec\u30d3\u30e5\u30fc"
     types: [completed]
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   notify-failure:
     name: Notify Slack on failure
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.name != github.workflow
     steps:
       - name: Send Slack notification
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           ACTOR: ${{ github.event.workflow_run.actor.login }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -32,8 +55,9 @@ jobs:
 
           PAYLOAD=$(jq -n \
             --arg channel "$SLACK_CHANNEL_ID" \
-            --arg text "🚨 ${WORKFLOW_NAME} が main ブランチで失敗しました" \
+            --arg text "🚨 ${WORKFLOW_NAME} が ${HEAD_BRANCH} ブランチで失敗しました" \
             --arg workflow "$WORKFLOW_NAME" \
+            --arg branch "$HEAD_BRANCH" \
             --arg actor "$ACTOR" \
             --arg commit_url "$COMMIT_URL" \
             --arg short_sha "$SHORT_SHA" \
@@ -46,7 +70,7 @@ jobs:
                   type: "header",
                   text: {
                     type: "plain_text",
-                    text: "🚨 CI/CD 失敗通知（main ブランチ）",
+                    text: ("🚨 CI/CD 失敗通知（" + $branch + " ブランチ）"),
                     emoji: true
                   }
                 },
@@ -54,7 +78,7 @@ jobs:
                   type: "section",
                   fields: [
                     { type: "mrkdwn", text: ("*ワークフロー:*\n" + $workflow) },
-                    { type: "mrkdwn", text: "*ブランチ:*\n`main`" },
+                    { type: "mrkdwn", text: ("*ブランチ:*\n`" + $branch + "`") },
                     { type: "mrkdwn", text: ("*実行者:*\n" + $actor) },
                     { type: "mrkdwn", text: ("*コミット:*\n<" + $commit_url + "|" + $short_sha + ">") }
                   ]
