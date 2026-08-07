@@ -1,22 +1,34 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:base"],
+  "extends": ["config:recommended"],
+  "enabledManagers": ["npm", "github-actions", "dockerfile", "docker-compose"],
   "labels": ["dependencies", "renovate"],
+  "minimumReleaseAge": "7 days",
+  "automergeStrategy": "squash",
+  "platformAutomerge": true,
   "packageRules": [
     {
       "matchDepTypes": ["dependencies"],
-      "groupName": "production dependencies",
-      "minimumReleaseAge": "7 days"
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "production dependencies"
     },
     {
       "matchDepTypes": ["devDependencies"],
-      "groupName": "development dependencies",
-      "minimumReleaseAge": "7 days"
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "development dependencies"
     },
     {
       "matchManagers": ["github-actions"],
-      "labels": ["dependencies", "renovate", "github-actions"],
-      "minimumReleaseAge": "7 days"
+      "labels": ["dependencies", "renovate", "github-actions"]
+    },
+    {
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "labels": ["dependencies", "renovate", "docker"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
     }
   ],
   "prHourlyLimit": 2,

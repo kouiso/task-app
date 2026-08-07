@@ -26,7 +26,9 @@ concurrency:
 jobs:
   auto-merge:
     runs-on: ${{ vars.RUNNER_LINUX }}
+    # 移行期間中は Dependabot PR (#356 / #357) が open のまま残るため、両 bot を除外して既存 PR の挙動を変えない
     if: |
+      github.actor != 'renovate[bot]' &&
       github.actor != 'dependabot[bot]' &&
       (github.event_name != 'check_suite' || github.event.check_suite.conclusion == 'success') &&
       (github.event_name != 'status' || github.event.state == 'success')
