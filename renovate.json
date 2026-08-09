@@ -1,78 +1,39 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "enabledManagers": [
-    "npm",
-    "github-actions",
-    "dockerfile",
-    "docker-compose"
-  ],
-  "labels": [
-    "dependencies",
-    "renovate"
-  ],
+  "extends": ["config:recommended"],
+  "enabledManagers": ["npm", "github-actions", "dockerfile", "docker-compose"],
+  "labels": ["dependencies", "renovate"],
   "minimumReleaseAge": "7 days",
   "automergeStrategy": "squash",
   "platformAutomerge": true,
   "packageRules": [
     {
       "description": "公開直後の不安定・悪意あるバージョンを掴まないよう、どのルールにも待機期間を明示する。Semgrep の renovate-missing-minimum-release-age は継承を解釈せず各エントリを直接見るため、トップレベル指定だけでは通らない",
-      "matchDepTypes": [
-        "dependencies"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
       "groupName": "production dependencies",
-      "minimumReleaseAge": "7 days",
-      "automerge": true
+      "minimumReleaseAge": "7 days"
     },
     {
-      "matchDepTypes": [
-        "devDependencies"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
       "groupName": "development dependencies",
       "minimumReleaseAge": "7 days"
     },
     {
-      "matchManagers": [
-        "github-actions"
-      ],
-      "labels": [
-        "dependencies",
-        "renovate",
-        "github-actions"
-      ],
+      "matchManagers": ["github-actions"],
+      "labels": ["dependencies", "renovate", "github-actions"],
       "minimumReleaseAge": "7 days"
     },
     {
-      "matchManagers": [
-        "dockerfile",
-        "docker-compose"
-      ],
-      "labels": [
-        "dependencies",
-        "renovate",
-        "docker"
-      ],
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "labels": ["dependencies", "renovate", "docker"],
       "minimumReleaseAge": "7 days"
     },
     {
       "description": "旧 dependabot-automerge.yml が自動マージしていた範囲は github-actions の minor/patch のみ。npm の本番依存まで無人マージへ広げない",
-      "matchManagers": [
-        "github-actions"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
       "minimumReleaseAge": "7 days"
     }

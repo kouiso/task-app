@@ -14,6 +14,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from curriculum_blocks import has_confirmation_point  # noqa: E402
+
 # 機械チェック対象の専門用語 (初出時に注釈が期待されるもの)
 TECH_TERMS = [
     # Framework / ツール
@@ -262,22 +265,7 @@ def check_confirmation_points(content: str) -> dict:
         section = content[start:end]
         section = section.split("\n", 1)[1] if "\n" in section else ""
 
-        # ✅・チェックボックス・確認系マーカーに加え、リライト後のdayが使う
-        # 検証見出し（「期待する結果」「ここで見たい表示」「成功判定」等）も
-        # 確認ポイントとして数える。判定したい実体はマーカーの字面ではなく
-        # 「そのStepに検証手段が書かれているか」のため。
-        has_checkpoint = bool(
-            re.search(r'✅', section) or
-            re.search(r'- \[[ x]\]', section) or
-            re.search(r'確認[：:]', section) or
-            re.search(r'\*\*確認ポイント\*\*', section) or
-            re.search(
-                r'^#{2,4}\s+.*(確認|期待|チェック|成功|OK|見えたら|見ておき|見たい|見てほしい)',
-                section,
-                re.MULTILINE,
-            )
-        )
-        if not has_checkpoint:
+        if not has_confirmation_point(section):
             without_checkpoints += 1
 
     return {

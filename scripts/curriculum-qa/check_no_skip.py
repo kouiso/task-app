@@ -11,16 +11,35 @@ import re
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from curriculum_blocks import has_filepath_marker  # noqa: E402
+from curriculum_blocks import has_confirmation_point, has_filepath_marker  # noqa: E402
+
+
+# day01〜day04 は `## Step`、day05 以降は `### Step` で書かれている。h3 だけを
+# 見ていた頃、h2 の日はステップ0件として素通りし「✅ 全0ステップが完全」と表示
+# されていた。h4 まで広げるとステップ内の小見出しを二重に数えるので上限は h3。
+STEP_HEADING = re.compile(r'^#{2,3} Step \d+[^:\n]*:', re.MULTILINE)
+SECTION_HEADING = re.compile(r'^## (?!#)', re.MULTILINE)
+
+
+def find_steps(content):
+    """ステップ見出しから次の区切りまでを1ステップとして切り出す。"""
+    heads = list(STEP_HEADING.finditer(content))
+    steps = []
+    for i, head in enumerate(heads):
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(content)
+        # h2 のステップは自分の見出し自体が節の開始なので、本文以降から次の節を探す。
+        following_section = SECTION_HEADING.search(content, head.end())
+        if following_section and following_section.start() < end:
+            end = following_section.start()
+        steps.append(content[head.start():end])
+    return steps
 
 
 def check_step_completeness(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # ステップセクションを抽出
-    step_pattern = r'### Step \d+[^:\n]*:.*?(?=\n### Step \d+[^:\n]*:|\n## [^#]|\Z)'
-    steps = re.findall(step_pattern, content, re.DOTALL)
+    steps = find_steps(content)
 
     print(f"検出されたステップ数: {len(steps)}")
 
@@ -32,9 +51,11 @@ def check_step_completeness(filepath):
     for i, step in enumerate(steps, 1):
         step_errors = []
 
-        # ステップタイトル抽出
-        step_title_match = re.match(r'### Step \d+.*?:(.*?)(?:\n|$)', step)
-        step_title = step_title_match.group(1).strip() if step_title_match else ''
+        # ステップ番号とタイトル抽出。番号は見出しから読む。並び順で採番すると、
+        # Step 0 から始まる日で全部1つずれて、存在しない番号を指した報告になる。
+        step_title_match = re.match(r'#{2,3} Step (\d+).*?:(.*?)(?:\n|$)', step)
+        step_number = step_title_match.group(1) if step_title_match else str(i)
+        step_title = step_title_match.group(2).strip() if step_title_match else ''
 
         # GUI操作ステップはコードブロック不要（タイトルまたは本文冒頭200文字で判定）
         step_head = step[:500]
@@ -57,12 +78,13 @@ def check_step_completeness(filepath):
             ):
                 step_errors.append("filepathコメントなし")
 
-        # 確認ポイントの有無
-        if '✅' not in step and '確認ポイント' not in step:
+        # 確認ポイントの有無。見出し行だけで合格しないよう本文だけを渡す。
+        body = step.split("\n", 1)[1] if "\n" in step else ""
+        if not has_confirmation_point(body):
             step_errors.append("確認ポイントなし")
 
         if step_errors:
-            errors.append(f"❌ Step {i}: {', '.join(step_errors)}")
+            errors.append(f"❌ Step {step_number}: {', '.join(step_errors)}")
 
     if errors:
         print("\nステップ不備:")

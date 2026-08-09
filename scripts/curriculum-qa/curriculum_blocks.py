@@ -26,8 +26,33 @@ __all__ = [
     "day_number",
     "iter_blocks",
     "concat_by_file",
+    "has_confirmation_point",
     "mask_code",
 ]
+
+# 読者が「次へ進んでよいか」を確かめる手段。教材は日によって書き方が違い、
+# `**確認ポイント**` の日もあれば `### 期待する結果` の見出しで書く日もある。
+# check_comprehension.py と check_no_skip.py が別々の定義を持っていた頃は、
+# 片方が合格・片方が不合格という食い違いが起きていたので、定義はここ1箇所に置く。
+CONFIRMATION_MARKERS = (
+    re.compile(r"✅"),
+    re.compile(r"- \[[ x]\]"),
+    re.compile(r"確認[：:]"),
+    re.compile(r"\*\*確認ポイント\*\*"),
+    re.compile(
+        r"^#{2,4}\s+.*(確認|期待|チェック|成功|OK|見えたら|見ておき|見たい|見てほしい)",
+        re.MULTILINE,
+    ),
+)
+
+
+def has_confirmation_point(section: str) -> bool:
+    """節の本文に、読者が動作を確かめる手段が書かれているかを返す。
+
+    見出し行そのものは呼び出し側で落としてから渡す。「〜を確認する」という
+    ステップ名だけで合格させると、本文に検証手段が無いまま通ってしまう。
+    """
+    return any(marker.search(section) for marker in CONFIRMATION_MARKERS)
 
 FILEPATH = re.compile(r"^\s*(?:\{/\*\s*filepath:\s*(.+?)\s*\*/\}|(?://|#)\s*filepath:\s*(.+?))\s*$")
 

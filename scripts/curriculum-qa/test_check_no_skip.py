@@ -57,9 +57,14 @@ def run(text: str) -> Result:
     return code, steps, errors
 
 
-def step(title: str = "実装する", body: str = "", check_point: str = "\n**確認ポイント**: 画面が出た\n") -> str:
+def step(
+    title: str = "実装する",
+    body: str = "",
+    check_point: str = "\n**確認ポイント**: 画面が出た\n",
+    level: str = "###",
+) -> str:
     """検査対象を1つだけ変えられるよう、ステップの雛形を組む。"""
-    return f"### Step 1: {title}\n\n{body}{check_point}"
+    return f"{level} Step 1: {title}\n\n{body}{check_point}"
 
 
 CODE_OK = "```tsx\n// filepath: src/app/page.tsx\nconst a = 1;\n```\n"
@@ -102,6 +107,49 @@ CASES: list[tuple[str, str, tuple[int, dict[int, tuple[str, ...]]]]] = [
     ("次の Step 見出しでステップが切れる", step(body=CODE_OK) + "\n### Step 2: 続き\n\n本文だけです。\n", (2, {2: ("コードブロックなし", "確認ポイントなし")})),
     ("コロンの無い見出しはステップとして数えない", "### Step 1 実装する\n\n本文だけです。\n", (0, {})),
     ("ステップが無いファイルは通る", "## まとめ\n\n本文だけです。\n", (0, {})),
+    # 見出しレベル。day01〜day04 は `## Step`、day05 以降は `### Step` で書かれている。
+    # h3 だけを見ていた頃、h2 の日はステップ0件として素通りし、`✅ 全0ステップが完全`
+    # と表示されていた。実 Step 33本のうち検査が届いていたのは1本だけだった。
+    ("h2 のステップも数える", step(body=CODE_OK, level="##"), (1, {})),
+    ("h2 のステップでも不備は落ちる", step(body="本文だけです。\n", level="##"), (1, {1: ("コードブロックなし",)})),
+    (
+        "h2 のステップが次の h2 の節で切れる",
+        step(body="本文だけです。\n", check_point="", level="##")
+        + "\n## まとめ\n\n"
+        + CODE_OK
+        + "\n**確認ポイント**: 画面が出た\n",
+        (1, {1: ("コードブロックなし", "確認ポイントなし")}),
+    ),
+    (
+        "h2 のステップが次の h2 のステップで切れる",
+        step(body=CODE_OK, level="##") + "\n## Step 2: 続き\n\n本文だけです。\n",
+        (2, {2: ("コードブロックなし", "確認ポイントなし")}),
+    ),
+    # day03 は `## Step` 11本と `### Step` 1本が混在している。片方だけ数えると
+    # どちらに寄せても取りこぼす。
+    (
+        "h2 と h3 が混在していても両方数える",
+        step(body=CODE_OK, level="##") + "\n### Step 2: 続き\n\n本文だけです。\n",
+        (2, {2: ("コードブロックなし", "確認ポイントなし")}),
+    ),
+    # 対象を広げすぎない歯止め。h4 まで拾うと、ステップの中の小見出しが
+    # 独立したステップとして二重に数えられる。
+    ("h4 の見出しはステップとして数えない", step(body=CODE_OK) + "\n#### Step 2: 補足\n\n本文だけです。\n", (1, {})),
+    # 番号は見出しから読む。並び順で採番すると、Step 0 から始まる日（day03 等）で
+    # 全部1つずれて、ファイルに存在しない番号を指した報告になる。
+    (
+        "Step 0 から始まっても見出しの番号で報告する",
+        "### Step 0: 準備\n\n" + CODE_OK + "\n✅ 出た\n\n### Step 1: 実装\n\n本文だけです。\n",
+        (2, {1: ("コードブロックなし", "確認ポイントなし")}),
+    ),
+    # 確認ポイントの定義は curriculum_blocks.has_confirmation_point に1本化してある。
+    # check_comprehension.py と別々の定義を持っていた頃は、`### 期待する結果` で
+    # 書かれた day01〜day04 が片方だけ落ちるという食い違いが起きていた。
+    ("`### 期待する結果` の見出しも確認ポイントとして通る", step(body=CODE_OK, check_point="\n### 期待する結果\n\n画面が出た\n"), (1, {})),
+    ("チェックボックスも確認ポイントとして通る", step(body=CODE_OK, check_point="\n- [ ] 画面が出た\n"), (1, {})),
+    ("`確認:` も確認ポイントとして通る", step(body=CODE_OK, check_point="\n確認: 画面が出た\n"), (1, {})),
+    # 見出し行だけで合格させると、本文に検証手段が無いまま通る。
+    ("見出しに「確認」があるだけでは確認ポイントにならない", step(title="動作を確認する", body=CODE_OK, check_point=""), (1, {1: ("確認ポイントなし",)})),
 ]
 
 # GUI 操作ステップとしてコードブロックを免除する語。本体の gui_keywords と対で、
