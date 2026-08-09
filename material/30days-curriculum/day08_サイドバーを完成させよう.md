@@ -75,7 +75,7 @@ flowchart TD
 | ステップ | 作業内容 | 所要時間 | 作成ファイル |
 |---------|---------|---------|-------------|
 | Step 1 | providers.tsx の中身を読む（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
-| Step 2 | ルートレイアウトに Provider を組み込む | 5分 | `src/app/layout.tsx` 編集 |
+| Step 2 | ルートレイアウトのどこで Provider が囲んでいるか読む | 5分 | `src/app/layout.tsx` 確認 |
 | Step 3 | AppLayout を作る（サイドバーの骨格） | 15分 | `src/component/layout/app-layout.tsx` |
 | Step 4 | ダッシュボードに AppLayout を適用する | 5分 | `src/app/dashboard/page.tsx` |
 | Step 5 | ログインして全体の動作を確認する | 5分 | なし |
@@ -91,8 +91,9 @@ flowchart TD
 **ゴール**: フロントエンドから tRPC API を呼べるようにします。
 
 Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
-「クライアント」が必要です。scaffold が `src/trpc/` に設定ファイルを配布済みなので、
-それをアプリ全体に適用する Provider は配布済みなので、中身を読んで仕組みを掴みます。
+「クライアント」が必要です。scaffold は `src/trpc/` の設定ファイルと、
+それをアプリ全体に適用する Provider の両方を配布済みです。
+今日はどちらも書き足さず、中身を読んで仕組みを掴みます。
 
 ```mermaid
 flowchart LR
@@ -141,9 +142,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 ---
 
-### Step 2: ルートレイアウトに Provider を組み込む（5分）
+### Step 2: ルートレイアウトのどこで Provider が囲んでいるか読む（5分）
 
-**ゴール**: アプリ全体で tRPC が使えるように、ルートレイアウトを編集します。
+**ゴール**: アプリ全体で tRPC が使える理由を、ルートレイアウトを読んで掴みます。
 
 `src/app/layout.tsx` を開きます。こちらも scaffold が配布済みで、Provider はすでに組み込まれています。書き換えずに、どこで囲んでいるかを確認します。
 
