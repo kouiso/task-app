@@ -94,6 +94,19 @@ CASES: list[tuple[str, str, tuple[int, dict[int, tuple[str, ...]]]]] = [
     ("GUI ステップでもコードがあれば filepath は要る", step(title="ブラウザで開く", body=CODE_NO_PATH), (1, {1: ("filepathコメントなし",)})),
     # 目印は閉じまで含めて1行として読む。閉じの無い `{/* filepath:` は貼ると構文エラーになる。
     ("閉じの無い JSX 目印は目印として数えない", step(body="```tsx\n{/* filepath: src/app/page.tsx\nconst a = 1;\n```\n"), (1, {1: ("filepathコメントなし",)})),
+    # 属性付きフェンス（#369 ②）。自前の ```` ```(\w+)?\n ```` では開きフェンスが
+    # 本文扱いになって以降の対がずれ、後ろの tsx ブロックが tsx として見えなくなる。
+    # 見えなくなれば filepath も要求されず、写経先の分からないコードが通る。
+    (
+        "属性付きフェンスの後ろでも tsx の filepath 欠落を見つける",
+        step(body='```text title="post"\nメモ\n```\n\n' + CODE_NO_PATH),
+        (1, {1: ("filepathコメントなし",)}),
+    ),
+    (
+        "属性付きフェンスの後ろの filepath 付き tsx は通る",
+        step(body='```text title="post"\nメモ\n```\n\n' + CODE_OK),
+        (1, {}),
+    ),
     ("閉じのある JSX 目印は通る", step(body="```tsx\n{/* filepath: src/app/page.tsx */}\nconst a = 1;\n```\n"), (1, {})),
     # 節の切れ目。`## ` でステップが終わらないと、後ろの節のコードと確認ポイントを
     # 吸い込んで、中身が空のステップが「完全」として通る。

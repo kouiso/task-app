@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from curriculum_blocks import FILEPATH, filepath_value  # noqa: E402
+from markdown_scan import code_blocks  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATERIAL_DIR = REPO_ROOT / "material" / "30days-curriculum"
@@ -79,8 +80,12 @@ def curriculum_creates_by_day() -> dict[int, set[str]]:
     for md in MATERIAL_DIR.glob("day*.md"):
         n = day_number(md)
         content = md.read_text(encoding="utf-8")
-        for block in re.finditer(r"```(?:\w+)?\n(.*?)```", content, re.DOTALL):
-            lines = block.group(1).split("\n")
+        # フェンスの抽出は markdown_scan に寄せる。自前の ```` ```(?:\w+)?\n ```` は
+        # ```` ```tsx title="..." ```` のような属性付きフェンスに一致せず、以降の対が
+        # ずれる。ずれた先の filepath 目印は「その日に作られていない」ことになり、
+        # 順序の検査が黙って素通りする。
+        for _lang, body in code_blocks(content):
+            lines = [line for _lineno, line in body]
             if lines:
                 # 目印は `// filepath:` と `{/* filepath: */}` の2通りある。JSX の
                 # 子要素の位置では `//` がコメントにならないためで、片方しか読めないと
