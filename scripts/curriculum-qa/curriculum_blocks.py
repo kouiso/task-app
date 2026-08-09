@@ -26,8 +26,78 @@ __all__ = [
     "day_number",
     "iter_blocks",
     "concat_by_file",
+    "has_confirmation_point",
+    "heading_scan_view",
     "mask_code",
+    "section_end",
 ]
+
+# 読者が「次へ進んでよいか」を確かめる手段。教材は日によって書き方が違い、
+# `**確認ポイント**` の日もあれば `### 期待する結果` の見出しで書く日もある。
+# check_comprehension.py と check_no_skip.py が別々の定義を持っていた頃は、
+# 片方が合格・片方が不合格という食い違いが起きていたので、定義はここ1箇所に置く。
+CONFIRMATION_MARKERS = (
+    re.compile(r"✅"),
+    re.compile(r"- \[[ x]\]"),
+    re.compile(r"確認[：:]"),
+    re.compile(r"\*\*確認ポイント\*\*"),
+)
+
+CONFIRMATION_HEADING = re.compile(
+    r"^#{2,4}\s+.*(確認|期待|チェック|成功|OK|見えたら|見ておき|見たい|見てほしい)"
+)
+# 「〜を確認する」で終わる見出しは、確かめる手段ではなく作業の指示である。
+# 「README を開いて確認する」は何が出れば正しいのかを何も言っていないので、
+# これを確認ポイントとして数えると、期待結果ゼロの節が緑のまま通る。
+# 「ここで確認」「作成後に確認すること」は確認の提示なので残す。
+ACTION_HEADING_TAIL = re.compile(r"確認(?:する|しよう|しましょう|してください|しておく)\s*$")
+
+
+# ステップ節の終わりになる h2 見出し。`## まとめ` のような後続の節を節内に
+# 取り込むと、そこに置かれた確認ポイントで手前のステップが合格してしまう。
+# check_no_skip.py と check_comprehension.py で切り出し位置がずれると、
+# 同じ教材に対して2つの検査が逆の判定を出すので、境界もここに1本化する。
+SECTION_HEADING = re.compile(r"^## (?!#)", re.MULTILINE)
+
+
+def heading_scan_view(content: str) -> str:
+    """見出しを探すための、コードフェンスの中身を空白で潰した同じ長さの文字列。
+
+    生の Markdown を見ると、コード例の中の `## main`（git status の出力）や
+    README 例の `## 現在できること` が節の見出しに見える。そこでステップを
+    切ると、以降の本文が検査されないまま通る。長さを変えずに潰すので、
+    ここで得た位置はそのまま元の文字列の切り出しに使える。
+    """
+    return "\n".join(
+        " " * len(line) if state != "outside" else line
+        for _lineno, line, state, _fence in fence_states(content)
+    )
+
+
+def section_end(view: str, body_start: int, next_step_start: int) -> int:
+    """ステップ節の終わりを返す。次のステップと次の h2 節の早いほうで切る。
+
+    view には heading_scan_view の結果を渡す。元の文字列と長さが同じなので、
+    返る位置はそのまま切り出しに使える。
+    """
+    following_section = SECTION_HEADING.search(view, body_start)
+    if following_section and following_section.start() < next_step_start:
+        return following_section.start()
+    return next_step_start
+
+
+def has_confirmation_point(section: str) -> bool:
+    """節の本文に、読者が動作を確かめる手段が書かれているかを返す。
+
+    見出し行そのものは呼び出し側で落としてから渡す。「〜を確認する」という
+    ステップ名だけで合格させると、本文に検証手段が無いまま通ってしまう。
+    """
+    if any(marker.search(section) for marker in CONFIRMATION_MARKERS):
+        return True
+    return any(
+        CONFIRMATION_HEADING.match(line) and not ACTION_HEADING_TAIL.search(line.strip())
+        for line in section.split("\n")
+    )
 
 FILEPATH = re.compile(r"^\s*(?:\{/\*\s*filepath:\s*(.+?)\s*\*/\}|(?://|#)\s*filepath:\s*(.+?))\s*$")
 
