@@ -11,27 +11,34 @@ import re
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from curriculum_blocks import has_confirmation_point, has_filepath_marker  # noqa: E402
+from curriculum_blocks import (  # noqa: E402
+    has_confirmation_point,
+    has_filepath_marker,
+    heading_scan_view,
+    section_end,
+)
 
 
 # day01〜day04 は `## Step`、day05 以降は `### Step` で書かれている。h3 だけを
 # 見ていた頃、h2 の日はステップ0件として素通りし「✅ 全0ステップが完全」と表示
 # されていた。h4 まで広げるとステップ内の小見出しを二重に数えるので上限は h3。
-STEP_HEADING = re.compile(r'^#{2,3} Step \d+[^:\n]*:', re.MULTILINE)
-SECTION_HEADING = re.compile(r'^## (?!#)', re.MULTILINE)
+STEP_HEADING = re.compile(r'^#{2,3} Step [\d.]+[^:\n]*:', re.MULTILINE)
 
 
 def find_steps(content):
-    """ステップ見出しから次の区切りまでを1ステップとして切り出す。"""
-    heads = list(STEP_HEADING.finditer(content))
+    """ステップ見出しから次の区切りまでを1ステップとして切り出す。
+
+    見出しの探索はコードフェンスを潰した写しに対して行う。コード例の中の
+    `## main` や `### Step 1: ...` を見出しとして拾うと、節が途中で切れたり
+    存在しないステップが増えたりする。
+    """
+    view = heading_scan_view(content)
+    heads = list(STEP_HEADING.finditer(view))
     steps = []
     for i, head in enumerate(heads):
-        end = heads[i + 1].start() if i + 1 < len(heads) else len(content)
+        next_step = heads[i + 1].start() if i + 1 < len(heads) else len(content)
         # h2 のステップは自分の見出し自体が節の開始なので、本文以降から次の節を探す。
-        following_section = SECTION_HEADING.search(content, head.end())
-        if following_section and following_section.start() < end:
-            end = following_section.start()
-        steps.append(content[head.start():end])
+        steps.append(content[head.start():section_end(view, head.end(), next_step)])
     return steps
 
 
@@ -53,7 +60,9 @@ def check_step_completeness(filepath):
 
         # ステップ番号とタイトル抽出。番号は見出しから読む。並び順で採番すると、
         # Step 0 から始まる日で全部1つずれて、存在しない番号を指した報告になる。
-        step_title_match = re.match(r'#{2,3} Step (\d+).*?:(.*?)(?:\n|$)', step)
+        # 番号は小数も取る。day30 の `Step 2.5` を `2` として報告すると、
+        # 手前の Step 2 に不備があるように読めてしまう。
+        step_title_match = re.match(r'#{2,3} Step ([\d.]+).*?:(.*?)(?:\n|$)', step)
         step_number = step_title_match.group(1) if step_title_match else str(i)
         step_title = step_title_match.group(2).strip() if step_title_match else ''
 

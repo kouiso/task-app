@@ -53,7 +53,8 @@ def run(text: str) -> Result:
             steps = int(line.split(": ", 1)[1])
         elif line.startswith("❌ Step "):
             head, body = line[len("❌ Step "):].split(": ", 1)
-            errors[int(head)] = tuple(body.split(", "))
+            # 番号は整数のまま持つが、`Step 2.5` のような小数はそのまま文字列で持つ。
+            errors[int(head) if head.isdigit() else head] = tuple(body.split(", "))
     return code, steps, errors
 
 
@@ -150,6 +151,38 @@ CASES: list[tuple[str, str, tuple[int, dict[int, tuple[str, ...]]]]] = [
     ("`確認:` も確認ポイントとして通る", step(body=CODE_OK, check_point="\n確認: 画面が出た\n"), (1, {})),
     # 見出し行だけで合格させると、本文に検証手段が無いまま通る。
     ("見出しに「確認」があるだけでは確認ポイントにならない", step(title="動作を確認する", body=CODE_OK, check_point=""), (1, {1: ("確認ポイントなし",)})),
+    # 「〜を確認する」で終わる小見出しは作業の指示であって、期待結果を言っていない。
+    # ここを確認ポイントとして数えていた頃、day03 の Step 2/3 が期待結果ゼロのまま
+    # 緑で通っていた。「ここで確認」「確認すること」は確認の提示なので残す。
+    (
+        "「〜を確認する」で終わる小見出しは確認ポイントにならない",
+        step(body=CODE_OK, check_point="\n### いまの README を開いて確認する\n\n本文です。\n"),
+        (1, {1: ("確認ポイントなし",)}),
+    ),
+    ("「ここで確認」は確認ポイントとして残す", step(body=CODE_OK, check_point="\n### ここで確認\n\n画面が出た\n"), (1, {})),
+    ("「確認すること」は確認ポイントとして残す", step(body=CODE_OK, check_point="\n### 作成後に確認すること\n\n画面が出た\n"), (1, {})),
+    # コードフェンスの中の `## ` は節の見出しではない。ここで切ると、以降の
+    # 本文が検査されないまま通る。day03 のコード例に `## main`（git status の
+    # 出力）や README 例の `## 現在できること` が実在する。
+    (
+        "コードフェンス内の `## ` でステップを切らない",
+        "### Step 1: 実装する\n\n```bash\ngit status -sb\n## main\n```\n\n"
+        + CODE_OK
+        + "\n**確認ポイント**: 出た\n",
+        (1, {}),
+    ),
+    (
+        "コードフェンス内の Step 見出しをステップとして数えない",
+        step(body="```text\n### Step 9: これは例の中\n```\n\n" + CODE_OK),
+        (1, {}),
+    ),
+    # 小数の番号。day30 に `Step 2.5` が実在する。`2` として報告すると、
+    # 手前の Step 2 に不備があるように読めてしまう。
+    (
+        "小数の番号をそのまま報告する",
+        "### Step 2: 作る\n\n" + CODE_OK + "\n✅ 出た\n\n### Step 2.5: 足す\n\n本文だけです。\n",
+        (2, {"2.5": ("コードブロックなし", "確認ポイントなし")}),
+    ),
 ]
 
 # GUI 操作ステップとしてコードブロックを免除する語。本体の gui_keywords と対で、

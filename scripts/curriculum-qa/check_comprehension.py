@@ -15,7 +15,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from curriculum_blocks import has_confirmation_point  # noqa: E402
+from curriculum_blocks import (  # noqa: E402
+    has_confirmation_point,
+    heading_scan_view,
+    section_end,
+)
 
 # 機械チェック対象の専門用語 (初出時に注釈が期待されるもの)
 TECH_TERMS = [
@@ -249,9 +253,11 @@ def check_forbidden_phrases(content: str, lines: list[str]) -> list[dict]:
 
 def check_confirmation_points(content: str) -> dict:
     """Stepごとの確認ポイント(✅)存在チェック"""
-    # ## Step X: ... 形式のステップを抽出
-    step_pattern = re.compile(r'^#{1,3}\s+(?:Step\s+\d+|ステップ\s*\d+|手順\s*\d+)', re.MULTILINE | re.IGNORECASE)
-    steps = list(step_pattern.finditer(content))
+    # ## Step X: ... 形式のステップを抽出。見出しの探索はコードフェンスを
+    # 潰した写しに対して行う（コード例の中の見出しをステップと数えないため）。
+    step_pattern = re.compile(r'^#{1,3}\s+(?:Step\s+[\d.]+|ステップ\s*[\d.]+|手順\s*[\d.]+)', re.MULTILINE | re.IGNORECASE)
+    view = heading_scan_view(content)
+    steps = list(step_pattern.finditer(view))
 
     if not steps:
         return {"steps": 0, "without_checkpoints": 0}
@@ -259,11 +265,14 @@ def check_confirmation_points(content: str) -> dict:
     without_checkpoints = 0
     for i, step_match in enumerate(steps):
         start = step_match.start()
-        end = steps[i + 1].start() if i + 1 < len(steps) else len(content)
+        next_step = steps[i + 1].start() if i + 1 < len(steps) else len(content)
         # Step自身のタイトル行（「〜を確認する」等）だけで合格になるのを防ぐため、
-        # 判定対象は本文のみとする
-        section = content[start:end]
-        section = section.split("\n", 1)[1] if "\n" in section else ""
+        # 判定対象は本文のみとする。あわせて、次の h2 節が次の Step より手前に
+        # あればそこで切る。切らないと `## まとめ` に置かれた確認ポイントで
+        # 手前の Step が合格する。
+        heading = content[start:next_step].split("\n", 1)[0]
+        body_start = min(start + len(heading) + 1, next_step)
+        section = content[body_start:section_end(view, body_start, next_step)]
 
         if not has_confirmation_point(section):
             without_checkpoints += 1
