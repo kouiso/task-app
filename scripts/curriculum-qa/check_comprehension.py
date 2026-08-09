@@ -45,9 +45,44 @@ TECH_TERMS = [
 # 注釈が必ずその用語に結び付いていることを保証する。
 
 
+_ASCII_WORD = re.compile(r"[A-Za-z0-9]")
+_KATAKANA = re.compile(r"[ァ-ヶー]")
+
+
+def term_regex(term: str) -> str:
+    """語の区切りを付けた正規表現を返す。
+
+    `re.escape(term)` だけで照合すると、別の語の一部に当たる。実測では
+    `ErrorPageProps` が `Props` の初出、`CSRF` が `CSR` の初出、
+    `サーバーサイドレンダリング` が `レンダリング` の初出として報告されていた。
+
+    日本語には `\\b` が使えない（#367 で `\\bワイ\\b` が一度も成立しなかった）ので、
+    語の端の文字種で見る。英数で始まる語の手前に英数が続けば別の識別子、
+    カタカナで終わる語の後ろにカタカナが続けば別の複合語である。
+    ひらがなと漢字は助詞や修飾なので、区切りとして扱う。
+
+    英数で終わる語の後ろのカタカナは**遮断しない**。遮断すると
+    `Reactコンポーネント` が React の出現から外れ、`APIルート` が API の出現から
+    外れる。どちらもその語が実際に読者の前に出ているので、見逃しになる。
+    """
+    left = ""
+    if _ASCII_WORD.match(term[0]):
+        left = r"(?<![A-Za-z0-9])"
+    elif _KATAKANA.match(term[0]):
+        left = r"(?<![ァ-ヶー])"
+
+    right = ""
+    if _ASCII_WORD.match(term[-1]):
+        right = r"(?![A-Za-z0-9])"
+    elif _KATAKANA.match(term[-1]):
+        right = r"(?![ァ-ヶー])"
+
+    return left + re.escape(term) + right
+
+
 def annotation_patterns_for(term: str) -> list[re.Pattern]:
     """用語に結び付いた注釈だけを検出するパターン群を動的に生成する"""
-    t = re.escape(term)
+    t = term_regex(term)
     # 閉じ記号のほか、`shadcn/ui` や `Tailwind CSS` のような短いASCII接尾辞まで許容
     deco = r'[」』`＊*）)]{0,2}[A-Za-z0-9/._ -]{0,6}'
     return [
@@ -152,7 +187,7 @@ def check_unannotated_terms(content: str, lines: list[str]) -> list[dict]:
     code_lines = code_block_lines(lines)
 
     for term in TECH_TERMS:
-        pattern = re.compile(re.escape(term))
+        pattern = re.compile(term_regex(term))
         for m in pattern.finditer(content):
             line_idx = content[:m.start()].count('\n')
             if line_idx in code_lines:

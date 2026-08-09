@@ -17,6 +17,7 @@ from curriculum_blocks import (  # noqa: E402
     heading_scan_view,
     section_end,
 )
+from markdown_scan import code_blocks  # noqa: E402
 
 
 # day01〜day04 は `## Step`、day05 以降は `### Step` で書かれている。h3 だけを
@@ -70,17 +71,23 @@ def check_step_completeness(filepath):
         step_head = step[:500]
         is_gui_step = any(kw in step_title or kw in step_head for kw in gui_keywords)
 
+        # フェンスの解釈は markdown_scan に寄せて1回だけ行う。自前の
+        # ```` ```(\w+)?\n ```` は属性付きフェンスに一致せず、以降の対がずれて
+        # ずれた先の tsx ブロックの filepath 欠落を見落とす。有無の判定を
+        # `'```' in step` で別に持つと、`~~~tsx` だけのステップが
+        # 「コードブロックなし」になる。判定は1つにする。
+        blocks = list(code_blocks(step))
+
         # コードブロックの有無（GUIステップは除外）
-        if '```' not in step and not is_gui_step:
+        if not blocks and not is_gui_step:
             step_errors.append("コードブロックなし")
         else:
             # filepathコメントの有無（TypeScript/JavaScript系のみ対象、bash/shell/mermaid等は除外）
-            skip_langs = ('bash', 'shell', 'sh', 'zsh', 'mermaid')
             filepath_required_langs = ('typescript', 'javascript', 'tsx', 'jsx', 'ts', 'js')
-            code_blocks = re.findall(r'```(\w+)?\n(.*?)```', step, re.DOTALL)
             needs_filepath = [
-                (lang, code) for lang, code in code_blocks
-                if lang and lang.lower() in filepath_required_langs
+                (lang, "\n".join(line for _lineno, line in body))
+                for lang, body in blocks
+                if lang in filepath_required_langs
             ]
             if needs_filepath and not any(
                 has_filepath_marker(code) for _, code in needs_filepath

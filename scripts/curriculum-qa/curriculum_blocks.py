@@ -108,11 +108,25 @@ def filepath_value(match):
     return match.group(1) if match.group(1) is not None else match.group(2)
 
 
+def first_filepath_match(code: str) -> "re.Match[str] | None":
+    """ブロックの中で最初に見つかった目印の Match を返す。無ければ None。
+
+    「目印があるか」と「その値は何か」を別々の判定で持つと、片方だけが
+    書き方の追加に追従して割れる。実際に、有無は全行を見るのに値の取り出しは
+    先頭行だけ、という食い違いが起きていた（#369）。両方をここから作る。
+    """
+    for line in code.split("\n"):
+        m = FILEPATH.match(line)
+        if m:
+            return m
+    return None
+
+
 def has_filepath_marker(code: str) -> bool:
     # 「`{/* filepath:` を含むか」で数えると、閉じの `*/}` が無い壊れた目印まで
     # 有効として通る。そのまま貼ると構文エラーになるので、抽出側と同じ
     # FILEPATH で行ごとに判定して、検査と抽出の判定を1つに揃える。
-    return any(FILEPATH.match(line) for line in code.split("\n"))
+    return first_filepath_match(code) is not None
 # 値の末尾に付く注記1つ。入れ子は取らない（注記は `（続き）` 程度の平坦な語）。
 TRAILING_NOTE = re.compile(r"^(.*?)\s*([（(][^（()）]*[）)])\s*$")
 REAL_PREFIXES = ("src/", "prisma/", "scripts/")

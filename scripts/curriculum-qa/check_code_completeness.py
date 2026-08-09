@@ -12,6 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from curriculum_blocks import has_filepath_marker  # noqa: E402
+from markdown_scan import code_blocks as iter_code_blocks  # noqa: E402
+
+# filepath 目印を求めない言語。求めないのはこの検査だけで、省略コメントと
+# パート分割は言語に関わらず見る。`bash` に「// 省略」と書いても素通りしていた。
+FILEPATH_EXEMPT_LANGS = ('bash', 'shell', 'sh', 'zsh', 'mermaid')
+FILEPATH_REQUIRED_LANGS = ('typescript', 'javascript', 'tsx', 'jsx', 'ts', 'js')
 
 
 def check_code_completeness(filepath: str) -> bool:
@@ -21,32 +27,26 @@ def check_code_completeness(filepath: str) -> bool:
     errors = []
     warnings = []
 
-    # コードブロックを抽出
-    code_block_pattern = r'```(\w+)?\n(.*?)```'
-    code_blocks = re.findall(code_block_pattern, content, re.DOTALL)
+    # フェンスの解釈は markdown_scan に寄せる。自前の ```` ```(\w+)?\n ```` は
+    # ```` ```text title="post" ```` のような属性付きフェンスに一致せず、その開き
+    # フェンスが本文扱いになって以降の対がずれる。ずれた先のブロックは丸ごと
+    # 検査されないまま緑になる。
+    blocks = [(lang, "\n".join(line for _lineno, line in body))
+              for lang, body in iter_code_blocks(content)]
 
-    if not code_blocks:
+    if not blocks:
         print("⚠️ コードブロックが見つかりません")
         return True
 
-    total_blocks = len(code_blocks)
+    total_blocks = len(blocks)
     blocks_with_filepath = 0
 
-    for i, (lang, code) in enumerate(code_blocks, 1):
-        # mermaidブロックはスキップ
-        if lang and lang.lower() == 'mermaid':
-            continue
-
-        # bashやshellブロックはfilepathチェックをスキップ
-        if lang and lang.lower() in ('bash', 'shell', 'sh', 'zsh'):
-            continue
-
-        # filepath: コメントのチェック
-        if has_filepath_marker(code):
-            blocks_with_filepath += 1
-        else:
-            # TypeScript/JavaScript/TSXのコードブロックはfilepathが必要
-            if lang and lang.lower() in ('typescript', 'javascript', 'tsx', 'jsx', 'ts', 'js'):
+    for i, (lang, code) in enumerate(blocks, 1):
+        if lang not in FILEPATH_EXEMPT_LANGS:
+            # filepath: コメントのチェック
+            if has_filepath_marker(code):
+                blocks_with_filepath += 1
+            elif lang in FILEPATH_REQUIRED_LANGS:
                 warnings.append(f"⚠️ コードブロック {i}: filepath: コメントがありません")
 
         # パート分割の禁止チェック
