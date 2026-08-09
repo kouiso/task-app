@@ -18,7 +18,7 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from curriculum_blocks import FILEPATH, filepath_value  # noqa: E402
+from curriculum_blocks import filepath_value, first_filepath_match  # noqa: E402
 from markdown_scan import code_blocks  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -91,13 +91,11 @@ def curriculum_creates_by_day() -> dict[int, set[str]]:
             # 共通の FILEPATH に寄せて、2つの判定が割れないようにする。
             #
             # 先頭行だけを見ると、`'use client';` のような行が上に来たブロックの
-            # 目印を取り落とす。`curriculum_blocks.has_filepath_marker` は全行を
-            # 見ており、そちらと判定が割れていた。同じく全行から最初の目印を採る。
-            for _lineno, line in body:
-                m = FILEPATH.match(line)
-                if m:
-                    by_day[n].add(filepath_value(m))
-                    break
+            # 目印を取り落とす。`has_filepath_marker` と同じ `first_filepath_match`
+            # から採り、有無の判定と値の取り出しが割れないようにする。
+            m = first_filepath_match("\n".join(line for _lineno, line in body))
+            if m:
+                by_day[n].add(filepath_value(m))
     return dict(by_day)
 
 
