@@ -29,30 +29,60 @@ SEPARATOR = re.compile(r" {0,3}-{3,}[ \t]*$")
 # 見出し・引用・箇条書き（`-` `*` `+`）・順序付き箇条書き（`1.` `1)`）・
 # フェンス・生の HTML を並べる。1つでも落とすと、正しい教材が赤くなる。
 #
+# ATX 見出しは `#` の直後に空白が要る。`#hashtag` は見出しではなく段落なので、
+# その直後の `---` は setext 見出しになる（mdast で実測）。空白を省くと見逃す。
+#
 # 表の行（`|` 始まり）は入れていない。GFM の区切り行は列数が合ったときだけ
 # 表になり、合わなければ段落として setext の対象になるからである。
 # 除外に加えても全30日で検出は0件のままだったので、見逃しを作らない側を採った。
-BLOCK_START = re.compile(r" {0,3}(?:#|>|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|`{3,}|~{3,}|<)")
+BLOCK_START = re.compile(
+    r" {0,3}(?:#{1,6}(?:[ \t]|$)|>|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|`{3,}|~{3,}|<)"
+)
+
+# 水平線そのもの。`---` の手前がまた水平線なら、手前は段落ではない。
+THEMATIC_BREAK = re.compile(r" {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$")
+
+# 4スペース以上の字下げ。ただし字下げコードブロックになるのは、直前が空行か
+# 文書の先頭のときだけである。段落の途中に現れた字下げ行は段落の継続なので、
+# その直後の `---` は setext 見出しになる（mdast で実測）。
+INDENTED = re.compile(r" {4,}\S")
+
+
+def _looks_like_frontmatter(body: list[str]) -> bool:
+    """frontmatter の中身として妥当かを返す。
+
+    `:` の有無だけで見ると、`description: |` のような複数行 scalar や
+    コメントだけの frontmatter を弾いてしまう。YAML として読めるかで判定する。
+    PyYAML が無い環境でも検査そのものは動かしたいので、その場合は
+    「`---` で開いて閉じていれば frontmatter とみなす」側に倒す。
+    """
+    text = "\n".join(body)
+    try:
+        import yaml
+    except ImportError:
+        return True
+    try:
+        parsed = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return False
+    # コメントだけの frontmatter は None になる。本文が1行あるだけの
+    # `---\n本文です。\n---` は文字列になるので、これは frontmatter ではない。
+    return parsed is None or isinstance(parsed, dict)
 
 
 def _frontmatter_end(lines: list[str]) -> int:
     """先頭の YAML frontmatter の次の行の添字を返す。frontmatter が無ければ 0。
 
     先頭の `---` を見ただけで frontmatter と決めると、水平線で始まる文書の
-    「本文 + `---`」を丸ごと読み飛ばして、見出し化を見逃す。中身が YAML に
-    見えるときだけ frontmatter として扱う。
+    「本文 + `---`」を丸ごと読み飛ばして、見出し化を見逃す。閉じ位置の候補を
+    順に試し、中身が YAML として読めた最初の位置を採る。scalar の中に
+    字下げされた `---` があっても、そこで打ち切らずに次の候補へ進む。
     """
     if not lines or lines[0].strip() != "---":
         return 0
     for index in range(1, len(lines)):
-        if lines[index].strip() != "---":
-            continue
-        body = lines[1:index]
-        looks_like_yaml = body and all(
-            not line.strip() or ":" in line or line.lstrip().startswith("- ")
-            for line in body
-        )
-        return index + 1 if looks_like_yaml else 0
+        if lines[index].strip() == "---" and _looks_like_frontmatter(lines[1:index]):
+            return index + 1
     return 0
 
 
@@ -62,22 +92,34 @@ def find_accidental_headings(text: str) -> list[tuple[int, str]]:
     lines = [line for _lineno, line, _state, _fence in rows]
     states = [state for _lineno, _line, state, _fence in rows]
 
+    def is_paragraph(index: int) -> bool:
+        """`lines[index]` が段落の行か（＝直後の `---` が見出しを作るか）。"""
+        line = lines[index]
+        if not line.strip() or states[index] != "outside":
+            return False
+        if BLOCK_START.match(line) or THEMATIC_BREAK.fullmatch(line.rstrip()):
+            return False
+        # 字下げコードブロックになるのは、直前が空行か文書の先頭のときだけ。
+        # 段落の途中に現れた字下げ行は段落の継続なので、ここでは除外しない。
+        starts_indented_code = INDENTED.match(line) and (
+            index == 0 or not lines[index - 1].strip()
+        )
+        return not starts_indented_code
+
     return [
         (index + 1, lines[index - 1])
         for index in range(max(_frontmatter_end(lines), 1), len(lines))
-        # 手前の行がフェンスの中や閉じ行なら、そこはコードブロックの一部で段落ではない。
         if states[index] == "outside"
-        and states[index - 1] == "outside"
         and SEPARATOR.fullmatch(lines[index])
-        and lines[index - 1].strip()
-        and not BLOCK_START.match(lines[index - 1])
+        and is_paragraph(index - 1)
     ]
 
 
 def check(path: Path) -> int:
     hits = find_accidental_headings(path.read_text(encoding="utf-8"))
     for lineno, previous in hits:
-        print(f"❌ {path.name}:{lineno} 手前の行が見出しになります: {previous[:60]}")
+        # 再帰走査では別ディレクトリに同名のファイルが在りうるので、名前ではなくパスを出す。
+        print(f"❌ {path}:{lineno} 手前の行が見出しになります: {previous[:60]}")
     return len(hits)
 
 
@@ -92,6 +134,11 @@ def main(argv: list[str]) -> int:
     for arg in argv[1:]:
         path = Path(arg)
         targets.extend(sorted(path.rglob("*.md")) if path.is_dir() else [path])
+
+    # 対象が0件のまま成功で返すと、パスを間違えたときに「検査していない緑」になる。
+    if not targets:
+        print("❌ 対象の Markdown ファイルがありません", file=sys.stderr)
+        return 1
 
     total = sum(check(path) for path in targets)
     if total:
