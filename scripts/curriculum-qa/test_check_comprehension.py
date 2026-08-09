@@ -137,6 +137,14 @@ UNANNOTATED_CASES: list[tuple[str, str, list[tuple[str, int]]]] = [
         'サーバーサイドレンダリングの話をします。\n',
         [],
     ),
+    # 区切りは注釈側（annotation_patterns_for）にも要る。無いと
+    # `ComponentProps（型の説明です）` が `Props` の注釈として数えられ、
+    # 未注釈の初出が「注釈済み」になって消える（逆向きの見逃し）。
+    (
+        '部分一致の注釈は先行する単独語を注釈済みにしない',
+        'Props を使います。\nComponentProps（型の説明です）\n',
+        [('Props', 1)],
+    ),
     # 逆方向の歯止め。区切りを厳しくし過ぎると、本物の初出まで消える。
     (
         '単独で出た英数の用語は従来どおり挙げる',

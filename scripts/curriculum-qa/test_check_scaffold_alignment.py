@@ -57,6 +57,17 @@ export const format = () => "";
 """
 
 
+# 目印は先頭行とは限らない。`'use client';` のような行が上に来る書き方があり、
+# 先頭行だけを見ると、その日にファイルを作ったことを取り落とす。
+# `curriculum_blocks.has_filepath_marker` は全行を見ており、判定が割れていた。
+DAY_MARKER_NOT_FIRST = """```tsx
+'use client';
+// filepath: src/app/task/page.tsx
+export default function Page() { return null; }
+```
+"""
+
+
 def main() -> int:
     fails = []
     original = target.MATERIAL_DIR
@@ -68,6 +79,7 @@ def main() -> int:
             (root / "day07_三つ目.md").write_text(DAY_NOT_MARKER, encoding="utf-8")
             (root / "day08_四つ目.md").write_text(DAY_HASH, encoding="utf-8")
             (root / "day09_五つ目.md").write_text(DAY_ATTR_FENCE, encoding="utf-8")
+            (root / "day10_六つ目.md").write_text(DAY_MARKER_NOT_FIRST, encoding="utf-8")
             target.MATERIAL_DIR = root
             by_day = target.curriculum_creates_by_day()
     finally:
@@ -83,8 +95,10 @@ def main() -> int:
         fails.append(f"❌ # 形式の目印を読めていない: {by_day.get(8)}")
     if by_day.get(9) != {"src/lib/format.ts"}:
         fails.append(f"❌ 属性付きフェンスの後ろの目印を読めていない: {by_day.get(9)}")
+    if by_day.get(10) != {"src/app/task/page.tsx"}:
+        fails.append(f"❌ 先頭行以外の目印を読めていない: {by_day.get(10)}")
 
-    total = 5
+    total = 6
     if fails:
         for msg in fails:
             print(msg)

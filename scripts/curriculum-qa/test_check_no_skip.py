@@ -107,6 +107,18 @@ CASES: list[tuple[str, str, tuple[int, dict[int, tuple[str, ...]]]]] = [
         step(body='```text title="post"\nメモ\n```\n\n' + CODE_OK),
         (1, {}),
     ),
+    # コードブロックの有無を `'```' in step` で別に判定すると、チルダのフェンスだけの
+    # ステップが「コードブロックなし」になる。抽出と有無の判定は同じものを使う。
+    (
+        "チルダのフェンスもコードブロックとして数える",
+        step(body="~~~tsx\n// filepath: src/app/page.tsx\nconst a = 1;\n~~~\n"),
+        (1, {}),
+    ),
+    (
+        "チルダのフェンスでも filepath 欠落は見つける",
+        step(body="~~~tsx\nconst a = 1;\n~~~\n"),
+        (1, {1: ("filepathコメントなし",)}),
+    ),
     ("閉じのある JSX 目印は通る", step(body="```tsx\n{/* filepath: src/app/page.tsx */}\nconst a = 1;\n```\n"), (1, {})),
     # 節の切れ目。`## ` でステップが終わらないと、後ろの節のコードと確認ポイントを
     # 吸い込んで、中身が空のステップが「完全」として通る。

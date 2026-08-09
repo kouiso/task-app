@@ -85,15 +85,19 @@ def curriculum_creates_by_day() -> dict[int, set[str]]:
         # ずれる。ずれた先の filepath 目印は「その日に作られていない」ことになり、
         # 順序の検査が黙って素通りする。
         for _lang, body in code_blocks(content):
-            lines = [line for _lineno, line in body]
-            if lines:
-                # 目印は `// filepath:` と `{/* filepath: */}` の2通りある。JSX の
-                # 子要素の位置では `//` がコメントにならないためで、片方しか読めないと
-                # 「その日にそのファイルを作った」ことを取り落とす。判定は抽出側と
-                # 共通の FILEPATH に寄せて、2つの判定が割れないようにする。
-                m = FILEPATH.match(lines[0])
+            # 目印は `// filepath:` と `{/* filepath: */}` の2通りある。JSX の
+            # 子要素の位置では `//` がコメントにならないためで、片方しか読めないと
+            # 「その日にそのファイルを作った」ことを取り落とす。判定は抽出側と
+            # 共通の FILEPATH に寄せて、2つの判定が割れないようにする。
+            #
+            # 先頭行だけを見ると、`'use client';` のような行が上に来たブロックの
+            # 目印を取り落とす。`curriculum_blocks.has_filepath_marker` は全行を
+            # 見ており、そちらと判定が割れていた。同じく全行から最初の目印を採る。
+            for _lineno, line in body:
+                m = FILEPATH.match(line)
                 if m:
                     by_day[n].add(filepath_value(m))
+                    break
     return dict(by_day)
 
 
