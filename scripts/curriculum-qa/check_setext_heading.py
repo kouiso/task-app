@@ -35,8 +35,38 @@ SEPARATOR = re.compile(r" {0,3}-{3,}[ \t]*$")
 # 表の行（`|` 始まり）は入れていない。GFM の区切り行は列数が合ったときだけ
 # 表になり、合わなければ段落として setext の対象になるからである。
 # 除外に加えても全30日で検出は0件のままだったので、見逃しを作らない側を採った。
+#
+# 生の HTML もここには入れていない。`<` で始まる行を一律に除外すると、
+# `<span>本文</span>` のようなインライン HTML の段落まで飛ばして見逃す
+# （mdast では heading h2 になる）。HTML は下の HTML_BLOCK_* で判定する。
 BLOCK_START = re.compile(
-    r" {0,3}(?:#{1,6}(?:[ \t]|$)|>|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|`{3,}|~{3,}|<)"
+    r" {0,3}(?:#{1,6}(?:[ \t]|$)|>|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|`{3,}|~{3,})"
+)
+
+# CommonMark の HTML ブロック type 6 のタグ名。これで始まる行はブロックになる。
+HTML_BLOCK_TAG = (
+    "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup"
+    "|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame"
+    "|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu"
+    "|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table"
+    "|tbody|td|tfoot|th|thead|title|tr|track|ul"
+)
+
+# type 1〜6。段落の途中でも HTML ブロックを開始できる。
+HTML_BLOCK_INTERRUPTING = re.compile(
+    r" {0,3}(?:"
+    r"</?(?:script|pre|style|textarea)(?:[ \t>]|$)"
+    r"|<!--|<\?|<!\[CDATA\[|<![A-Za-z]"
+    rf"|</?(?:{HTML_BLOCK_TAG})(?:[ \t]|/?>|$)"
+    r")",
+    re.IGNORECASE,
+)
+
+# type 7（それ以外のタグが単独で1行を占める形）。こちらは段落を中断できないので、
+# 直前が空行か文書の先頭のときだけブロックになる。
+HTML_ATTRIBUTE = r"[a-zA-Z_:][\w.:-]*(?:[ \t]*=[ \t]*(?:[^\s\"'=<>`]+|'[^']*'|\"[^\"]*\"))?"
+HTML_BLOCK_STANDALONE = re.compile(
+    rf" {{0,3}}(?:<[a-zA-Z][\w-]*(?:[ \t]+{HTML_ATTRIBUTE})*[ \t]*/?>|</[a-zA-Z][\w-]*[ \t]*>)[ \t]*$"
 )
 
 # 水平線そのもの。`---` の手前がまた水平線なら、手前は段落ではない。
@@ -48,26 +78,24 @@ THEMATIC_BREAK = re.compile(r" {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t
 INDENTED = re.compile(r" {4,}\S")
 
 
+# frontmatter の中身として通る行。ここで YAML を解釈し切る必要はなく、
+# 「先頭の `---` が frontmatter の開きか、ただの水平線か」が分かれば足りる。
+# 字下げ行（継続行・ブロック scalar の中身）・コメント・配列要素・
+# `key:` / `key: value` の4種を通し、それ以外が1行でもあれば地の文とみなす。
+FRONTMATTER_BODY = re.compile(r"[ \t]|#|-(?:[ \t]|$)|[^\s#][^:]*:(?:[ \t]|$)")
+
+
 def _looks_like_frontmatter(body: list[str]) -> bool:
     """frontmatter の中身として妥当かを返す。
 
-    `:` の有無だけで見ると、`description: |` のような複数行 scalar や
-    コメントだけの frontmatter を弾いてしまう。YAML として読めるかで判定する。
-    PyYAML が無い環境でも検査そのものは動かしたいので、その場合は
-    「`---` で開いて閉じていれば frontmatter とみなす」側に倒す。
+    PyYAML には頼らない。このリポジトリの教材チェッカーは全て標準ライブラリだけで
+    動いており、`material-gate.yml` も `python3` を素で叩くだけで依存を入れない。
+    ここだけ外部パッケージを前提にすると、PyYAML の無い環境で判定が総崩れになり、
+    水平線で始まる文書の見出し化を丸ごと見逃す。
     """
-    text = "\n".join(body)
-    try:
-        import yaml
-    except ImportError:
-        return True
-    try:
-        parsed = yaml.safe_load(text)
-    except yaml.YAMLError:
-        return False
-    # コメントだけの frontmatter は None になる。本文が1行あるだけの
-    # `---\n本文です。\n---` は文字列になるので、これは frontmatter ではない。
-    return parsed is None or isinstance(parsed, dict)
+    return all(
+        not line.strip() or FRONTMATTER_BODY.match(line) for line in body
+    )
 
 
 def _frontmatter_end(lines: list[str]) -> int:
@@ -75,13 +103,14 @@ def _frontmatter_end(lines: list[str]) -> int:
 
     先頭の `---` を見ただけで frontmatter と決めると、水平線で始まる文書の
     「本文 + `---`」を丸ごと読み飛ばして、見出し化を見逃す。閉じ位置の候補を
-    順に試し、中身が YAML として読めた最初の位置を採る。scalar の中に
-    字下げされた `---` があっても、そこで打ち切らずに次の候補へ進む。
+    順に試し、中身が frontmatter として通った最初の位置を採る。
+    区切りは桁0に置く決まりなので、字下げされた `---` は閉じ候補にしない。
+    これで scalar の中に `---` があっても手前で打ち切らずに済む。
     """
-    if not lines or lines[0].strip() != "---":
+    if not lines or lines[0].rstrip() != "---":
         return 0
     for index in range(1, len(lines)):
-        if lines[index].strip() == "---" and _looks_like_frontmatter(lines[1:index]):
+        if lines[index].rstrip() == "---" and _looks_like_frontmatter(lines[1:index]):
             return index + 1
     return 0
 
@@ -99,12 +128,14 @@ def find_accidental_headings(text: str) -> list[tuple[int, str]]:
             return False
         if BLOCK_START.match(line) or THEMATIC_BREAK.fullmatch(line.rstrip()):
             return False
-        # 字下げコードブロックになるのは、直前が空行か文書の先頭のときだけ。
-        # 段落の途中に現れた字下げ行は段落の継続なので、ここでは除外しない。
-        starts_indented_code = INDENTED.match(line) and (
-            index == 0 or not lines[index - 1].strip()
-        )
-        return not starts_indented_code
+        if HTML_BLOCK_INTERRUPTING.match(line):
+            return False
+        # 字下げコードブロックと HTML ブロック type 7 は段落を中断できない。
+        # ブロックになるのは直前が空行か文書の先頭のときだけで、段落の途中に
+        # 現れた同じ形の行は段落の継続なので、ここでは除外しない。
+        if index == 0 or not lines[index - 1].strip():
+            return not (INDENTED.match(line) or HTML_BLOCK_STANDALONE.match(line))
+        return True
 
     return [
         (index + 1, lines[index - 1])
@@ -116,7 +147,14 @@ def find_accidental_headings(text: str) -> list[tuple[int, str]]:
 
 
 def check(path: Path) -> int:
-    hits = find_accidental_headings(path.read_text(encoding="utf-8"))
+    # 読めないファイル（切れた symlink 等）を traceback で落とすと、CI 上では
+    # 検査の失敗と区別が付かない。1件の失敗として数え、原因を出す。
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as error:
+        print(f"❌ {path} を読めませんでした: {error}")
+        return 1
+    hits = find_accidental_headings(text)
     for lineno, previous in hits:
         # 再帰走査では別ディレクトリに同名のファイルが在りうるので、名前ではなくパスを出す。
         print(f"❌ {path}:{lineno} 手前の行が見出しになります: {previous[:60]}")
