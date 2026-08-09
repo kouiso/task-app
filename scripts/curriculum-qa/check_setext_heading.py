@@ -21,10 +21,39 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from markdown_scan import fence_states  # noqa: E402
 
-SEPARATOR = re.compile(r"-{3,}\s*$")
-# 手前がこれらで始まる行なら setext にならない。`-` は箇条書き、`|` は表の行、
-# `#` は既に見出し、`>` は引用、`` ` `` はフェンスの開始。
-NOT_A_PARAGRAPH = ("#", "|", ">", "-", "*", "`")
+# setext の下線は3スペースまでの字下げが許される。4スペース入ると
+# 字下げコードブロックになって見出しにならない（mdast で実測）。
+SEPARATOR = re.compile(r" {0,3}-{3,}[ \t]*$")
+
+# 手前がこれで始まる行なら、その行は段落ではないので setext にならない。
+# 見出し・引用・箇条書き（`-` `*` `+`）・順序付き箇条書き（`1.` `1)`）・
+# フェンス・生の HTML を並べる。1つでも落とすと、正しい教材が赤くなる。
+#
+# 表の行（`|` 始まり）は入れていない。GFM の区切り行は列数が合ったときだけ
+# 表になり、合わなければ段落として setext の対象になるからである。
+# 除外に加えても全30日で検出は0件のままだったので、見逃しを作らない側を採った。
+BLOCK_START = re.compile(r" {0,3}(?:#|>|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|`{3,}|~{3,}|<)")
+
+
+def _frontmatter_end(lines: list[str]) -> int:
+    """先頭の YAML frontmatter の次の行の添字を返す。frontmatter が無ければ 0。
+
+    先頭の `---` を見ただけで frontmatter と決めると、水平線で始まる文書の
+    「本文 + `---`」を丸ごと読み飛ばして、見出し化を見逃す。中身が YAML に
+    見えるときだけ frontmatter として扱う。
+    """
+    if not lines or lines[0].strip() != "---":
+        return 0
+    for index in range(1, len(lines)):
+        if lines[index].strip() != "---":
+            continue
+        body = lines[1:index]
+        looks_like_yaml = body and all(
+            not line.strip() or ":" in line or line.lstrip().startswith("- ")
+            for line in body
+        )
+        return index + 1 if looks_like_yaml else 0
+    return 0
 
 
 def find_accidental_headings(text: str) -> list[tuple[int, str]]:
@@ -33,21 +62,15 @@ def find_accidental_headings(text: str) -> list[tuple[int, str]]:
     lines = [line for _lineno, line, _state, _fence in rows]
     states = [state for _lineno, _line, state, _fence in rows]
 
-    # 先頭の YAML frontmatter は `---` で開いて `---` で閉じるので対象外。
-    start = 1
-    if lines and lines[0].strip() == "---":
-        for index in range(1, len(lines)):
-            if lines[index].strip() == "---":
-                start = index + 1
-                break
-
     return [
         (index + 1, lines[index - 1])
-        for index in range(start, len(lines))
+        for index in range(max(_frontmatter_end(lines), 1), len(lines))
+        # 手前の行がフェンスの中や閉じ行なら、そこはコードブロックの一部で段落ではない。
         if states[index] == "outside"
+        and states[index - 1] == "outside"
         and SEPARATOR.fullmatch(lines[index])
         and lines[index - 1].strip()
-        and not lines[index - 1].startswith(NOT_A_PARAGRAPH)
+        and not BLOCK_START.match(lines[index - 1])
     ]
 
 
@@ -63,10 +86,12 @@ def main(argv: list[str]) -> int:
         print("使用法: python3 check_setext_heading.py <ファイルまたはディレクトリ>")
         return 1
 
+    # ディレクトリは入れ子まで見る。check_quality.sh 側は find で再帰的に集めるので、
+    # ここだけ直下に限ると、track を切って置いた教材が無検査で通る。
     targets: list[Path] = []
     for arg in argv[1:]:
         path = Path(arg)
-        targets.extend(sorted(path.glob("*.md")) if path.is_dir() else [path])
+        targets.extend(sorted(path.rglob("*.md")) if path.is_dir() else [path])
 
     total = sum(check(path) for path in targets)
     if total:
