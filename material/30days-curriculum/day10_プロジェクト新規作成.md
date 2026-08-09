@@ -640,6 +640,7 @@ return (
 スクリーンショット: フォーム入力中のダイアログの表示を確認してください。
 
 ![フォーム入力中のダイアログ](./screenshots/project-create-dialog.png)
+
 ---
 
 ### Step 6: 送信処理を実装する（5分）
@@ -804,6 +805,7 @@ const handleSubmit = (
 スクリーンショット: 作成後の一覧に追加されたプロジェクトの表示を確認してください。
 
 ![作成後に一覧へ追加されたポートフォリオサイトのカード](./screenshots/project-list-after-create.png)
+
 ---
 
 ### Step 8: 動作確認（3分）

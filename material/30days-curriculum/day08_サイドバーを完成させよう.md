@@ -18,7 +18,7 @@ Day 07 で認証バックエンドを作りました。
 サイドバー付きのレイアウトを自分で作って、
 まずダッシュボードにこのレイアウトを適用します。Day 09 以降のページには、作るたびに同じレイアウトを巻いていきます。
 
-- [ ] `src/app/providers.tsx` — tRPC クライアントをアプリ全体に提供する
+- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider を読んで、どこまで届くか確認する
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー + メインコンテンツ
 - [ ] `src/app/dashboard/page.tsx` — AppLayout の中で動くダッシュボード
 - [ ] ログアウトが動作することを確認する
@@ -57,7 +57,7 @@ flowchart TD
 
 | やること | やらないこと |
 |---------|-------------|
-| tRPC クライアントを設定してフロントから API を呼べるようにする | tRPC サーバー側の追加（Day 07 済み） |
+| 配布済みの tRPC クライアント設定を読んで、フロントから API を呼べる理由を掴む | tRPC クライアント設定の自作（scaffold で配布済み） |
 | サイドバー + レイアウトを自分の手で書く | モバイル対応のサイドバー（このカリキュラムでは扱いません） |
 | ログアウトを AlertDialog 付きで実装する | ユーザー編集機能 |
 
@@ -75,7 +75,7 @@ flowchart TD
 | ステップ | 作業内容 | 所要時間 | 作成ファイル |
 |---------|---------|---------|-------------|
 | Step 1 | providers.tsx の中身を読む（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
-| Step 2 | ルートレイアウトに Provider を組み込む | 5分 | `src/app/layout.tsx` 編集 |
+| Step 2 | ルートレイアウトのどこで Provider が囲んでいるか読む | 5分 | `src/app/layout.tsx` 確認 |
 | Step 3 | AppLayout を作る（サイドバーの骨格） | 15分 | `src/component/layout/app-layout.tsx` |
 | Step 4 | ダッシュボードに AppLayout を適用する | 5分 | `src/app/dashboard/page.tsx` |
 | Step 5 | ログインして全体の動作を確認する | 5分 | なし |
@@ -88,11 +88,12 @@ flowchart TD
 
 ### Step 1: providers.tsx を読む（tRPC クライアント設定・8分）
 
-**ゴール**: フロントエンドから tRPC API を呼べるようにします。
+**ゴール**: 配布済みの設定を読んで、フロントエンドから tRPC API を呼べる仕組みを掴みます。
 
 Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
-「クライアント」が必要です。scaffold が `src/trpc/` に設定ファイルを配布済みなので、
-それをアプリ全体に適用する Provider は配布済みなので、中身を読んで仕組みを掴みます。
+「クライアント」が必要です。scaffold は `src/trpc/` の設定ファイルと、
+それをアプリ全体に適用する Provider の両方を配布済みです。
+今日はどちらも書き足さず、中身を読んで仕組みを掴みます。
 
 ```mermaid
 flowchart LR
@@ -141,9 +142,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 ---
 
-### Step 2: ルートレイアウトに Provider を組み込む（5分）
+### Step 2: ルートレイアウトのどこで Provider が囲んでいるか読む（5分）
 
-**ゴール**: アプリ全体で tRPC が使えるように、ルートレイアウトを編集します。
+**ゴール**: アプリ全体で tRPC が使える理由を、ルートレイアウトを読んで掴みます。
 
 `src/app/layout.tsx` を開きます。こちらも scaffold が配布済みで、Provider はすでに組み込まれています。書き換えずに、どこで囲んでいるかを確認します。
 

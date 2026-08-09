@@ -216,6 +216,7 @@ CORPUS_CHECKS=(
   check_why
   check_terms
   check_crossref
+  check_setext_heading
 )
 # 検査そのものの退行テスト。Gate 4 は本体とセットでこれも走らせる。
 SELF_TESTS=(
@@ -243,6 +244,7 @@ SELF_TESTS=(
   test_check_tech_stack
   test_check_terms
   test_check_visualization
+  test_check_setext_heading
   test_filepath_marker
 )
 
