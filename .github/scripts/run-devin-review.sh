@@ -8,7 +8,17 @@ OUTPUT_FILE="${DEVIN_OUTPUT_FILE:-devin-review.md}"
 MODEL="${DEVIN_MODEL:-swe-1-7}"
 
 if ! command -v devin >/dev/null 2>&1; then
-  curl -fsSL https://cli.devin.ai/install.sh | bash
+  # curl の出力を直接 bash に流すと、取得したものが何か確認できないまま実行することになる。
+  # 配布側がバージョンごとに更新するスクリプトなので checksum は固定できず、
+  # せめて一旦ファイルへ落として中身の存在を確かめてから実行する。
+  INSTALLER="$(mktemp)"
+  curl -fsSL https://cli.devin.ai/install.sh -o "${INSTALLER}"
+  if [ ! -s "${INSTALLER}" ]; then
+    echo "::error::Devin CLI のインストーラを取得できませんでした"
+    exit 1
+  fi
+  bash "${INSTALLER}"
+  rm -f "${INSTALLER}"
 
   # install.sh は shell rc に PATH を追記するだけで、Actions の非対話 shell には効かん
   for dir in "${HOME}/.local/bin" "${HOME}/.devin/bin" "${HOME}/bin" /usr/local/bin; do
