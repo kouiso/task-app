@@ -1,0 +1,74 @@
+name: Devin Review
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  devin:
+    # 他2本（devin-code-review.yml / devin-security-review.yml）と同じガード。
+    # これが無いと、レビューを無効にしていてもメンションだけでジョブが起動して CI が赤くなる。
+    # 赤が常態になるとレビューの信号が読めなくなるので、3本で条件を揃える。
+    # DEVIN_REVIEW_ENABLED へ移行するまでの間、旧 CODEX_REVIEW_ENABLED でも動くようにしている。
+    if: |
+      (vars.DEVIN_REVIEW_ENABLED == 'true' || vars.CODEX_REVIEW_ENABLED == 'true') &&
+      !endsWith(github.actor, '[bot]') &&
+      (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@devin')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@devin')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@devin')) ||
+        (github.event_name == 'issues' && contains(github.event.issue.body, '@devin'))
+      )
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Run Devin
+        id: devin
+        continue-on-error: true
+        env:
+          COGNITION_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          WINDSURF_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_OUTPUT_FILE: devin-review.md
+          DEVIN_PROMPT: |
+            対象の issue または pull request の内容を読み、質問に日本語で答えてください。
+
+            必ず守ること:
+            - ファイルの書き換え、push、PR 作成は行わない（読むだけ）
+            - 利用者に影響する点を具体的なファイル名と理由つきで書く
+            - 確認できたことと確認できないことを分けて書く
+        run: bash .github/scripts/run-devin-review.sh
+
+      # レビューは補助なので、落ちても CI を赤にせず警告だけ残す（失敗通知で埋もれさせない）
+      - name: Warn on Devin failure
+        if: steps.devin.outcome == 'failure'
+        run: echo "::warning::Devin CLI の実行に失敗しました。ログを確認してください"
+
+      - name: Comment Devin result
+        if: steps.devin.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('node:fs');
+            const body = fs.readFileSync('devin-review.md', 'utf8').trim();
+            if (!body) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
