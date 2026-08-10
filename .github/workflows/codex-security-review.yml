@@ -28,6 +28,8 @@ jobs:
           fetch-depth: 0
 
       - name: Run Codex Security Review
+        id: codex
+        continue-on-error: true
         uses: openai/codex-action@52fe01ec70a42f454c9d2ebd47598f9fd6893d56 # v1.11
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -48,7 +50,17 @@ jobs:
             - エラー表示で余計な情報を出していないか
             - 依存パッケージ変更に危険がないか
 
+      # 課金上限は開発側で直せる不具合ではないので、赤にしても失敗通知が鳴るだけで対処に繋がらん。
+      # 上限起因かどうかを OpenAI API に問い合わせて切り分け、上限なら緑で終える。
+      - name: Classify Codex failure
+        if: steps.codex.outcome == 'failure'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PROBE_MODEL: gpt-5.5
+        run: bash .github/scripts/classify-codex-failure.sh
+
       - name: Comment security review result
+        if: steps.codex.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
