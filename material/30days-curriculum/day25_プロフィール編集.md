@@ -31,13 +31,13 @@ Day 24 では管理者専用のユーザー一覧ページを実装し、`api.au
 
 ```mermaid
 flowchart TD
-    A[/profile] --> B[プロフィール表示]
+    A["/profile"] --> B[プロフィール表示]
     B --> C[プロフィール編集ボタン]
     B --> D[パスワード変更ボタン]
     B --> E[ユーザー管理ボタン]
-    C --> F[/profile/edit]
-    D --> G[/profile/change-password]
-    E --> H[/user]
+    C --> F["/profile/edit"]
+    D --> G["/profile/change-password"]
+    E --> H["/user"]
     G --> I[バリデーション]
     I -->|成功| J[toast.success]
     I -->|失敗| K[toast.error]
@@ -1487,7 +1487,7 @@ flowchart LR
     D --> E[form.handleSubmit]
     E --> F[updateProfile.mutate]
     F --> G[toast で結果通知]
-    G --> H[/profile に戻る]
+    G --> H["/profile に戻る"]
 ```
 
 この図で足を止めてほしいのは、A から C までの流れです。フォームの初期値は、画面を書いた時点では決められません。名前とメールはサーバーが持っているので、届いてから入れ替える必要があります。`useForm` の `defaultValues` に空文字を置いておき、データが届いた時点で `form.reset` が中身を差し替える、という2段構えになっているのはそのためです。

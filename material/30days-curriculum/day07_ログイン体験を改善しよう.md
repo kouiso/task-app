@@ -1302,7 +1302,7 @@ flowchart TD
     B -->|No| D{tRPC API？}
     D -->|Yes| C
     D -->|No| E{Cookie あり？}
-    E -->|No| F[/login にリダイレクト]
+    E -->|No| F["/login にリダイレクト"]
     E -->|Yes| G{JWT 有効？}
     G -->|Yes| C
     G -->|No| H[Cookie 削除 + /login]

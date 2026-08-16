@@ -720,6 +720,7 @@ JSX 側の `checked` に渡す値を差し替えます。
 スクリーンショット: 一括操作ボタンがヘッダーに表示される様子の表示を確認してください。
 
 ![一括操作ボタンがページヘッダーの右側に表示されている状態](./screenshots/bulk-operation-header.png)
+
 ```typescript
 {/* filepath: src/app/task/page.tsx */}
 {/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}

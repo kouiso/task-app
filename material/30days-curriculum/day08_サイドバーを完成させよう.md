@@ -207,7 +207,7 @@ flowchart TD
     A[AppLayout マウント] --> B{セッション取得中？}
     B -->|Yes| C[ローディング表示]
     B -->|No| D{ログイン済み？}
-    D -->|No| E[/login にリダイレクト]
+    D -->|No| E["/login にリダイレクト"]
     D -->|Yes| F[サイドバー + コンテンツ表示]
 
     style C fill:#fff3e0
