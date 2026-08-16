@@ -49,12 +49,15 @@ BOOK_CSS = REPO_ROOT / "material" / "style" / "book.css"
 OUT_DIR = REPO_ROOT / "dist" / "pdf"
 WORK_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 
-THEME = "@vivliostyle/theme-techbook"
-VIVLIOSTYLE_BIN = REPO_ROOT / "node_modules" / ".bin" / "vivliostyle"
-
-# mermaid-cli は puppeteer(フル版)を連れてきて Chrome を約650MB ダウンロードする。
-# devDependencies に入れると npm ci が走る CI と Vercel まで巻き込むため、
-# ここでバージョンを固定して npx で都度呼ぶ。
+# 組版と作図の道具は devDependencies に入れず、バージョンを固定して npx で都度呼ぶ。
+#
+# @vivliostyle/cli は依存ツリーに high 3件（vfm → remark-parse → trim の ReDoS）を
+# 持ち込み、`npm audit --audit-level=high` の CI を通らない。
+# @mermaid-js/mermaid-cli は puppeteer(フル版)を連れてきて Chrome を約650MB 落とす。
+# どちらも教材PDFを組むときだけ要る道具で、`npm ci` が走る CI と Vercel には要らない。
+# 再現性はここのバージョン固定で担保する。
+VIVLIOSTYLE_CLI = "@vivliostyle/cli@11.1.0"
+THEME = "@vivliostyle/theme-techbook@2.0.2"
 MERMAID_CLI = "@mermaid-js/mermaid-cli@11.16.0"
 
 # 埋め込むフォント (npmパッケージ, パッケージ内のパス, @font-face の family, weight, format)。
@@ -370,7 +373,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     output = OUT_DIR / f"{stem}.pdf"
     command = [
-        str(VIVLIOSTYLE_BIN), "build", document.name,
+        "npx", "--yes", VIVLIOSTYLE_CLI, "build", document.name,
         # -T を並べる。自前CSSの @import でテーマを読むと解決されず、
         # テーマ由来の @page 定義ごと失われて柱とノンブルが全ページから消える。
         # パスは作業ディレクトリからの相対にする（絶対パスは無視される）。
@@ -414,11 +417,6 @@ def main(argv: list[str]) -> int:
     if missing:
         print("見つからない: " + ", ".join(str(m) for m in missing), file=sys.stderr)
         return 2
-    if not VIVLIOSTYLE_BIN.exists():
-        print("node_modules/.bin/vivliostyle が無い。npm install を先に実行する",
-              file=sys.stderr)
-        return 2
-
     browser = find_browser()
     env = dict(os.environ)
     if browser:
