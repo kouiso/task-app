@@ -1,0 +1,251 @@
+/*
+ * 教材PDF（1日1冊の分冊）の紙面スタイル。Vivliostyle + @vivliostyle/theme-techbook 用。
+ *
+ * PDFは商品そのものなので、生成した機械によって見た目が変わってはいけない。
+ *
+ * 方針: テーマが用意した CSS 変数に値を入れる。セレクタで上書きしない。
+ * theme-base は表紙のノンブル抑止・目次のリーダーとページ番号・コード行の
+ * 折り返しをすでに実装しており、自前セレクタで書くとテーマ側の実装と二重に
+ * 掛かって壊れる（実測で「柱とノンブルが全ページから消える」「空白ページが挟まる」
+ * を踏んだ）。テーマ側が担当している範囲はここでは触らない:
+ *   - 表紙       .cover に page: cover が当たり @page cover でマージンボックスが hidden
+ *   - 目次       #toc / [role=doc-toc] に leader('.') と target-counter
+ *   - コード折返し --vs--pre-white-space-on-print: pre-wrap / --vs--pre-word-break: break-all
+ *
+ * 使い方: -T を並べて渡す。@import でテーマを読むと解決されず、@page 定義ごと失われる。
+ *   -T @vivliostyle/theme-techbook -T material/style/book.css -T <1冊分の生成CSS>
+ *
+ * 配色・級数の出典は Claude Design「教材 紙面デザイン 3案」の 2a（1b 可読性向上版）。
+ */
+
+:root {
+  /* ── 書体 ─────────────────────────────────────────────
+     実体は npm の TTF / woff2 を、1冊分の生成CSSが @font-face で読む。
+     スタックにシステム導入フォントを混ぜない。混ぜると mac と CI で別の書体になり、
+     どちらが正なのか分からなくなる。埋め込んだ4書体だけで教材の全文字を賄う。
+
+     Noto Emoji は ✅ ❌ ⚠ ▪ 用（カラー絵文字だと環境ごとに絵柄が変わる）。
+     DejaVu Sans は ☐ 用で、同時に取りこぼしの受け皿でもある。 */
+  --vs-font-family: "BIZ UDPGothic", "Noto Emoji", "DejaVu Sans", sans-serif;
+
+  /* 等幅にも日本語を持たせる。持たせないと code / pre の中の日本語だけ
+     Chromium が中国語フォント(WenQuanYi Zen Hei)へ落ちて字形が中国語になる。
+     試作では day01 の53ページ中17ページがこれで汚染されていた。 */
+  --vs--monospace-font-family:
+    "JetBrains Mono", "BIZ UDPGothic", "Noto Emoji", "DejaVu Sans", monospace;
+
+  /* 柱とノンブルが入るマージンボックスは、テーマが専用変数で font-family を掛ける。
+     その変数には既定値が無いので明示する。 */
+  --vs-page--mbox-font-family: "BIZ UDPGothic", "DejaVu Sans", sans-serif;
+
+  /* ── 級数と行間 ───────────────────────────────────────
+     テーマの余白は --vs-spacing-rlh = calc(--vs-line-height * 1rem) で root に連動する。
+     body に font-size を直接書くと本文だけ大きくなり、余白・字下げ・図の間隔が
+     元の級数のまま取り残されて縦のリズムが崩れる。root ごと動かす。 */
+  --vs-font-size-on-print: 12.75pt;
+  --vs-line-height: 2.05;
+
+  /* 段落やリストの間隔は既定で calc(--vs-line-height * 1rem) になる。
+     2a の 2.05 は「行間」の指定であって「段落の間隔」ではない。そのまま連動させると
+     段落間が本文2行ぶん開き、同じ内容で3割ページが増える。間隔だけ切り離す。 */
+  --vs-spacing-rlh: 1.25rem;
+
+  /* 2a の指定は h2 13pt / h3 14pt だが、これはモックの見出し階層が
+     Markdown の ## / ### と1対1で対応していなかったことによる。
+     そのまま当てると小見出しが大見出しより大きくなるので、降順に整えた。 */
+  --vs--h1-font-size: 1.9em;
+  --vs--h2-font-size: 1.35em;
+  --vs--h3-font-size: 1.1em;
+  --vs--h4-font-size: 1em;
+
+  /* ── 改ページ ─────────────────────────────────────────
+     theme-base 既定は table に break-inside: avoid が掛かっている。1ページに
+     収まらない表が丸ごと次ページへ送られ、手前が空白ページになる。教材には
+     1ページを超える表がある。行単位（tr）で avoid を掛け直すのは下の方。
+
+     図は avoid のままにする。分割された図は読めないため。代わりに版面を超えない
+     よう高さを抑える（下の figure img）。 */
+  --vs--table-break-inside: auto;
+
+  /* 表の列は和文なので、テーマ既定の 1rem 両側パディングだと
+     一番狭い列で1行あたり5文字しか入らなくなる。base 既定の 0.5rem に戻す。 */
+  --vs--table-cell-padding-inline: 0.5rem;
+
+  /* 図表番号は theme-base が :root:lang(ja) で「図N:」「表N:」を持っている。
+     ここで content を上書きすると counter() ごと消えて番号が出なくなるので触らない。
+     lang は組版時に -l ja で渡す。 */
+
+  /* ── 配色（2a） ───────────────────────────────────── */
+  --vs-theme--blockquote-color-bg: #f6f8fa;
+  --vs-theme--blockquote-color-body: #3c4650;
+  --vs-theme--inline-code-color-bg: #eef1f4;
+  --vs-theme--inline-code-color-body: #b4405f;
+  --vs-theme--anchor-color-body: #1e4d7b;
+
+  /* コードブロックはテーマが prism okaidia (#272822) を読む。One Dark 系へ寄せる */
+  --vs-prism--background: #282c34;
+  --vs-prism--color: #abb2bf;
+  --vs-prism--block-code-border-radius: 5px;
+
+  /* 自前セレクタで使う色。上の変数と値を二重管理しないための別名 */
+  --book-ink: #25303a;
+  --book-head: #12212e;
+  --book-accent: #1e4d7b;
+  --book-muted: #5d6771;
+  --book-rule: #dde3e9;
+}
+
+html,
+body {
+  background: #fff;
+  color: var(--book-ink);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--book-head);
+}
+
+h1 {
+  border-bottom: 1px solid var(--book-head);
+  padding-bottom: 0.4em;
+}
+
+/* 和文の行末を整える */
+p {
+  text-wrap: pretty;
+}
+
+/* インラインコードは教材に12,595回出る最頻出の装飾要素 */
+:not(pre) > code {
+  border-radius: 2px;
+}
+
+/* 囲み記事。blockquote は教材に812回出る */
+blockquote {
+  border: 1px solid var(--book-rule);
+}
+
+/* ── 表 ─────────────────────────────────────────────────
+   table-layout: auto だと「読み方」のような短い和文の列が1文字ずつに潰れる。
+   fixed にして列幅を宣言する。比率は Claude Design の列幅仕様(2b)。
+   列数が4と違う表では指定分が按分されるだけで破綻しない。 */
+table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+th:nth-child(1) {
+  width: 20%;
+}
+th:nth-child(2) {
+  width: 21%;
+}
+th:nth-child(3) {
+  width: 25%;
+}
+th:nth-child(4) {
+  width: 34%;
+}
+
+td,
+th {
+  overflow-wrap: anywhere;
+}
+
+th {
+  background: var(--book-accent);
+  color: #fff;
+}
+
+/* 表が改ページを跨いだとき、続きのページにも見出し行を出す */
+thead {
+  display: table-header-group;
+}
+
+tr {
+  break-inside: avoid;
+}
+
+/* ── 図 ─────────────────────────────────────────────────
+   テーマは figure の中身に max-inline-size: 100% しか掛けず、高さは無制限。
+   さらに techbook の image-resolution: 300dpi はラスタ拡張子のみを対象にするため、
+   mermaid の SVG だけが 1SVG単位=1px の等倍で出て版面(247mm)を超える。
+   figure は break-inside: avoid なので、超えると手前が空白ページになる。
+   % の max-height は高さ auto の親に対して無効になるため絶対値で抑える。 */
+figure img {
+  max-block-size: 200mm;
+  block-size: auto;
+}
+
+/* ── 表紙 ───────────────────────────────────────────────
+   .cover には theme-base が page: cover を当て、@page cover で
+   柱とノンブルを hidden にする。改ページも名前付きページの切り替わりで起きるので、
+   ここで break-after を足すと二重になって空白ページが挟まる。足さない。
+
+   紙面での縦センタリング(height:100%+flex)は組版後の高さが確定しないため効かない。
+   天からの距離で置く。本の表紙は上寄せが定石でもある。 */
+.cover {
+  border-top: 6px solid var(--book-accent);
+  padding-block-start: 55mm;
+}
+
+.cover .series {
+  font-size: 0.8em;
+  letter-spacing: 0.2em;
+  color: var(--book-muted);
+  margin: 0;
+}
+
+.cover .day {
+  font-family: var(--vs--monospace-font-family);
+  font-size: 3.4em;
+  font-weight: 700;
+  color: var(--book-accent);
+  margin: 0.3em 0 0;
+  line-height: 1;
+}
+
+.cover .title {
+  font-size: 1.6em;
+  font-weight: 700;
+  margin: 0.4em 0 0;
+  line-height: 1.5;
+  color: var(--book-head);
+}
+
+.cover .meta {
+  font-size: 0.72em;
+  color: var(--book-muted);
+  margin-top: 2.5em;
+  border-top: 1px solid var(--book-rule);
+  padding-top: 0.8em;
+}
+
+/* ── 目次 ───────────────────────────────────────────────
+   リーダー点とページ番号は theme-base が #toc / [role=doc-toc] に対して
+   leader('.') + target-counter で実装済み。自前の ::after は書かない。
+   （leader() は組版器のプリミティブで、ページ番号の手前でちょうど止まる。
+     ドットを並べる自作の ::after では止められず行からはみ出す。）
+   目次の手前の改ページは techbook が #toc に break-before: page を掛けているが、
+   目次の後ろは掛かっていない。足さないと本文が目次と同じページから始まる。 */
+#toc {
+  break-after: page;
+}
+
+#toc h2 {
+  border-bottom: 2px solid var(--book-accent);
+  padding-bottom: 0.4em;
+}
+
+#toc li {
+  font-size: 0.85em;
+}
+
+#toc a::after {
+  color: var(--book-muted);
+}

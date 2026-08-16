@@ -87,7 +87,12 @@ done
 # ---- ZIP 作成（前回の残骸があれば上書き） ----
 rm -f "${OUTPUT_ZIP}"
 cd "${BUILD_PARENT}"
-zip -qr "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store"
+# material/pdf/ は旧 make pdf-all の出力置き場。商品ではないので同梱しない。
+# rsync 側ではなく zip 側で外している。sale_package.py が、このファイル全文から
+# rsync の除外指定を正規表現で拾って「読者が自分で書くルーター」の一覧を組み立てて
+# いるため、上の rsync に除外を足すとその一覧に紛れ込んで検査が壊れる。
+# 同じ理由で、このコメントにも rsync の除外指定の書式を書いてはいけない。
+zip -qr "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store" -x "*/material/pdf/*"
 
 bash "${PROJECT_ROOT}/scripts/curriculum-qa/check-sale-package.sh" "${OUTPUT_ZIP}"
 

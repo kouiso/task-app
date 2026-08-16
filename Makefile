@@ -1,7 +1,28 @@
-.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean
+.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-verify book-pdf-clean
 
 # ============================================
-# PDF生成
+# 商品PDF生成（Vivliostyle・1日1冊の分冊）
+# ============================================
+
+# 全36本を組む（day 30本 + 目次・ロードマップ・付録4本）
+book-pdf:
+	@python3 scripts/pdf-book/build_pdf_book.py
+
+# 1本だけ組む
+# 使用例: make book-pdf-one FILE="material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md"
+book-pdf-one:
+	@python3 scripts/pdf-book/build_pdf_book.py "$(FILE)"
+
+# 出力が商品として出せる状態かを見る（空白ページ・書体・目次・コード欠け）
+book-pdf-verify:
+	@python3 scripts/pdf-book/check_pdf_book.py
+
+book-pdf-clean:
+	rm -rf dist/pdf/ dist/.pdf-book-build/
+	@echo "✅ 商品PDF削除完了"
+
+# ============================================
+# PDF生成（旧経路・当面併存）
 # ============================================
 
 # 単一MarkdownをPDF化
