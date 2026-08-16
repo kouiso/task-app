@@ -14,6 +14,7 @@ jobs:
       contents: read
       checks: read
       pull-requests: read
+      issues: read
     steps:
       - name: Check for unresolved quality issues
         id: check

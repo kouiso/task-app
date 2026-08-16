@@ -43,6 +43,30 @@ services: {}
 ```
 """
 
+# 属性付きフェンス（#369 ②）。自前の ```` ```(?:\\w+)?\\n ```` はこの開きフェンスに
+# 一致せず、以降のフェンスの対がずれる。ずれた先の目印は「その日に作られていない」
+# ことになり、後の日の import が誤って未充足と判定される。
+DAY_ATTR_FENCE = """```text title="メモ"
+このブロックは貼り先ではありません。
+```
+
+```typescript
+// filepath: src/lib/format.ts
+export const format = () => "";
+```
+"""
+
+
+# 目印は先頭行とは限らない。`'use client';` のような行が上に来る書き方があり、
+# 先頭行だけを見ると、その日にファイルを作ったことを取り落とす。
+# `curriculum_blocks.has_filepath_marker` は全行を見ており、判定が割れていた。
+DAY_MARKER_NOT_FIRST = """```tsx
+'use client';
+// filepath: src/app/task/page.tsx
+export default function Page() { return null; }
+```
+"""
+
 
 def main() -> int:
     fails = []
@@ -54,6 +78,8 @@ def main() -> int:
             (root / "day06_二つ目.md").write_text(DAY_JSX, encoding="utf-8")
             (root / "day07_三つ目.md").write_text(DAY_NOT_MARKER, encoding="utf-8")
             (root / "day08_四つ目.md").write_text(DAY_HASH, encoding="utf-8")
+            (root / "day09_五つ目.md").write_text(DAY_ATTR_FENCE, encoding="utf-8")
+            (root / "day10_六つ目.md").write_text(DAY_MARKER_NOT_FIRST, encoding="utf-8")
             target.MATERIAL_DIR = root
             by_day = target.curriculum_creates_by_day()
     finally:
@@ -67,8 +93,12 @@ def main() -> int:
         fails.append(f"❌ 目印でない行を貼り先として拾った: {by_day.get(7)}")
     if by_day.get(8) != {"docker-compose.yml"}:
         fails.append(f"❌ # 形式の目印を読めていない: {by_day.get(8)}")
+    if by_day.get(9) != {"src/lib/format.ts"}:
+        fails.append(f"❌ 属性付きフェンスの後ろの目印を読めていない: {by_day.get(9)}")
+    if by_day.get(10) != {"src/app/task/page.tsx"}:
+        fails.append(f"❌ 先頭行以外の目印を読めていない: {by_day.get(10)}")
 
-    total = 4
+    total = 6
     if fails:
         for msg in fails:
             print(msg)

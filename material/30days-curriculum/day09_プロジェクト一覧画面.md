@@ -731,6 +731,12 @@ const handleCreate = () => {
 
 > **ボタンの動作について**: 「新規プロジェクト」ボタンをクリックすると `dialogOpen` が `true` になりますが、ダイアログ本体は Day 10 で実装します。今日の時点ではボタンを押しても画面に変化はありません。それで正常です。
 
+> **今日は `npm run lint` に `dialogOpen` の指摘が出ます**: `dialogOpen` は値を入れるだけで、読み出すのは Day 10 のダイアログです。今日の時点では「代入しているのに一度も読んでいない変数」に見えるので、`lint/correctness/noUnusedVariables` が出ます。写経の間違いではないので、そのまま進めてください。Day 10 でダイアログを作れば読み出しが増えて、この指摘は消えます。
+>
+> 並ぶ件数は1件とは限りません。Day 05 で断ったとおり、`npm run fix` をまだ実行していなければ、整形の差分も一緒に出ます。数ではなく、`dialogOpen` の行があるかどうかを見てください。
+>
+> `npm run fix` を実行してもこの指摘は直りません。変数名の書き換えで黙らせる修正になるため、Biome はこれを「安全でない修正」に分類しており、`--unsafe` を付けたときだけ適用されるからです。`npm run fix` は `--unsafe` を付けていないので、`dialogOpen` が勝手に書き換わることはありません。
+
 ---
 
 ### Step 9 : ページ全体を組み立てる（5分）
@@ -1316,7 +1322,7 @@ function ProjectPageContent() {
             })
 ```
 
-渡している値のうち `name` から `isArchived` までは、Step 0 の `getAll` が返してきたものです。`memberCount` と `taskStats` だけ、この場で数えた値を渡します。`key` に `project.id` を使うのは、並びが変わったときにどのカードが動いたかを React へ伝えるためです。手元で `key` を消すと表示自体は出ますが、開発サーバーのターミナルに警告が残ります。
+渡している値のうち `name` から `isArchived` までは、Step 0 の `getAll` が返してきたものです。`memberCount` と `taskStats` だけ、この場で数えた値を渡します。`key` に `project.id` を使うのは、並びが変わったときにどのカードが動いたかを React へ伝えるためです。手元で `key` を消すと表示自体は出ますが、ブラウザの開発者ツールのコンソールに警告が残ります。この一覧はデータが届いてからブラウザ側で組み立てるので、警告もブラウザ側に出ます。
 
 **0件のときの表示と閉じタグ**:
 
@@ -1372,7 +1378,8 @@ export default function ProjectPage() {
 | TypeScript の型エラー | ハンドラーの型不一致 | `(id: string) => void` になっているか確認 |
 | `PageLoadingSpinner` が見つからない | importパスの間違い | `@/component/ui/loading-spinner` を確認 |
 | `TASK_STATUS` が見つからない | importパスの間違い | `@/lib/constant/status` を確認 |
-| サイドバーが二重に表示される | `AppLayout` を二重にネストしている | `ProjectPageContent` の `return` で `AppLayout` を使っていれば、`<PageLoadingSpinner />` をさらに `AppLayout` で囲まない |
+| サイドバーが二重に表示される | 同時に描画される2箇所へ `AppLayout` を置いている | `ProjectPage` の `return` を `AppLayout` で囲んでいないか確認する。`ProjectPageContent` がすでに囲んでいるので、その外側でも囲むと二重になる |
+| 読み込み中だけサイドバーが消える | `ProjectPageContent` の `if (projectsLoading)` が `AppLayout` で囲まれていない | この分岐のスピナーも `AppLayout` で囲む。`Suspense` の `fallback` は本体と入れ替わりで表示されるので、そちらは囲まなくても二重にはならない |
 
 ## 今日学んだ用語
 

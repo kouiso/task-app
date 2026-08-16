@@ -55,7 +55,7 @@ ci/cd:
   - changed-files:
       - any-glob-to-any-file:
           - '.github/workflows/**/*'
-          - '.github/dependabot.yml'
+          - 'renovate.json'
           - '.github/labeler.yml'
 
 # Infrastructure / DevOps

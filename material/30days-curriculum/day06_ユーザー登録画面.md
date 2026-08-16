@@ -395,6 +395,7 @@ const onSubmit = async (
 スクリーンショット: 名前とメールアドレスの入力欄が表示された状態です。
 
 ![名前とメールアドレスの入力欄が表示された状態](./screenshots/register_step4.png)
+
 ---
 
 ### Step 5: パスワード入力欄を作る（5分）
@@ -480,6 +481,7 @@ const onSubmit = async (
 スクリーンショット: 名前・メール・パスワード・パスワード確認の4つの入力欄が揃ったフォームです。
 
 ![名前・メール・パスワード・パスワード確認の4つの入力欄が揃ったフォーム](./screenshots/register_step6.png)
+
 ---
 
 ### Step 7: tRPCで登録APIを呼ぶ（7分）
@@ -724,6 +726,7 @@ const onSubmit = async (
 スクリーンショット: デザインが整った登録画面の完成形です。
 
 ![デザインが整った登録画面の完成形](./screenshots/register_complete.png)
+
 ---
 
 ### Pro パターンで書こう（登録APIの結果は判別共用体で受け取る）

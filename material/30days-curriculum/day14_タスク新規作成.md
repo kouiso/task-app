@@ -932,6 +932,7 @@ return (
 スクリーンショット: タイトルと説明の入力欄が並んだ画面を確認してください。
 
 ![タイトルと説明の入力欄が表示されている画面](./screenshots/task-create-dialog.png)
+
 ---
 
 ### Step 5: ステータス・優先度のSelectを作る（7分）
@@ -964,7 +965,7 @@ return (
           </SelectTrigger>
 ```
 
-ここで `register` ではなく `Controller` を使うのは、shadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体（`ref`）を受け取って値を読みますが、`Select` はボタンとメニューの組み合わせで、渡せる `ref` を持ちません。代わりに `Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。`name="status"` は、フォームのどの項目とつなぐかの指定です。
+ここで `register` ではなく `Controller` を使うのは、shadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体を `ref` で受け取り、その `value` と、値が変わったときの `change` イベントから中身を読みます。`Select` の引き金は `<button>` なので、`ref` そのものは受け取れても `value` を持たず、`change` も出ません。代わりに `Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。`name="status"` は、フォームのどの項目とつなぐかの指定です。
 
 続けて、ステータスの選択肢を `TASK_STATUS_LABELS` から生成します。
 
@@ -1048,8 +1049,8 @@ return (
 
 | 対象 | 使う関数 | 理由 |
 |------|---------|------|
-| Input, Textarea | `register` | `ref` を直接渡せるため |
-| Select (shadcn/ui) | `Controller` | 独自の `onValueChange` を使うため |
+| Input, Textarea | `register` | `ref` の先に `value` と `change` があるため |
+| Select (shadcn/ui) | `Controller` | 引き金が `<button>` で、独自の `onValueChange` から受け取るため |
 
 #### ステータスと優先度の選択肢
 
@@ -1196,6 +1197,7 @@ return (
 スクリーンショット: プロジェクトと担当者のSelect欄が並んだ画面を確認してください。
 
 ![プロジェクト・担当者のSelect欄が表示されている画面](./screenshots/task-create-dialog.png)
+
 ---
 
 ### Step 7: 期限・見積時間・ボタンを作る（5分）
@@ -2568,7 +2570,7 @@ export function TaskDialog({
                       </SelectTrigger>
 ```
 
-`register` ではなく `Controller` を使うのは、shadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体を受け取って値を読みますが、`Select` はボタンとメニューの組み合わせで、渡せる実体を持ちません。`Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。
+`register` ではなく `Controller` を使うのは、shadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体を `ref` で受け取り、その `value` と `change` イベントから中身を読みます。`Select` の引き金は `<button>` なので、`value` を持たず `change` も出ません。`Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。
 
 **ステータスの選択肢**:
 

@@ -1153,7 +1153,7 @@ function ProjectPageContent() {
 
 `handleCreate` の1行目で `undefined` を入れ直しているのは、直前に編集を開いていた場合に前のプロジェクトの内容が残るのを防ぐためです。
 
-`...(startDate && { startDate })` という書き方は、日付が入っているときだけその項目を作ります。`startDate: undefined` と書いても近い形になりますが、その場合はキーだけが存在する状態になり、`ProjectFormData` の型が「日付は無くてもよい」と決めている形と食い違います。
+`...(startDate && { startDate })` という書き方は、日付が入っているときだけその項目を作ります。`startDate: undefined` と書いてもエラーにはなりませんが、その場合はキーだけが残ります。Day 11 で決めたとおり、`editingProject` へ入れる値は「日付が入っているか、項目が無いか」のどちらかにそろえます。
 
 **保存の送信先の振り分け**:
 

@@ -822,7 +822,7 @@ const handleDelete =
 - 3つのハンドラーが定義できた
 - Step 7 で `handleTaskClick` を本実装に差し替える
 
-> TaskCardは `timeSpentMinutes`（合計作業時間）という作業時間まわりのpropも受け取れますが、作業時間の記録はDay 16で扱うので今日は渡しません。
+> `timeSpentMinutes`（合計作業時間）という作業時間まわりの prop は、いまの `TaskCard` にはまだありません。作業時間の記録は Day 16 で扱い、そのときに `TaskCard` 側へ追加します。
 
 TaskCardには編集・削除ボタンが付いています。ボタンを表示するかどうかは、ログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。まずログインユーザーの情報を取得し、import群に追加してください。
 
