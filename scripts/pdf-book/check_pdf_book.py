@@ -20,6 +20,7 @@ scripts/curriculum-qa/ ではなく scripts/pdf-book/ に置いている）。
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -33,6 +34,9 @@ SRC_DIR = REPO_ROOT / "material" / "30days-curriculum"
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
 
 A4_SIZE = "595.276 x 841.89 pts"
+# 検査に使う poppler のコマンド。1本でも欠けると全冊が読めないので先に確かめる
+REQUIRED_TOOLS = ("pdftotext", "pdfinfo", "pdffonts")
+TOOL_TIMEOUT = 120
 # 商品として埋め込んでよい書体。ここを許可リストにしているのは、WenQuanYi だけを
 # 弾いても足りないため。生成した機械にたまたま入っていた DejaVu や Liberation が
 # 混ざれば、別の機械で組んだPDFと見た目が変わる。
@@ -244,24 +248,33 @@ def find_truncated_code(source: str, body_text: str) -> list[str]:
     return missing
 
 
+def run_tool(command: list[str]) -> str:
+    """poppler のコマンドを1つ動かして標準出力を返す。
+
+    応答が返らんまま固まると36冊ぶんの検査ごと止まるので上限を切る。
+    超えたときは戻り値を空にして、呼び出し側の「読めなかった」経路へ流す。
+    """
+    try:
+        return subprocess.run(
+            command, capture_output=True, text=True, timeout=TOOL_TIMEOUT
+        ).stdout
+    except subprocess.TimeoutExpired:
+        return ""
+
+
 def read_pages(pdf: Path, count: int) -> list[str]:
     """ページごとの本文を返す。
 
     pdftotext はページの区切りに改ページ文字を入れる。ページ単位で呼び分けると
     36冊で2500回プロセスを起こすことになるので、1冊1回で取って割る。
     """
-    output = subprocess.run(
-        ["pdftotext", str(pdf), "-"], capture_output=True, text=True
-    ).stdout
-    pages = output.split("\f")
+    pages = run_tool(["pdftotext", str(pdf), "-"]).split("\f")
     # 末尾の改ページ文字の後ろに空文字が1つ残る
     return pages[:count]
 
 
 def read_info(pdf: Path) -> dict[str, str]:
-    output = subprocess.run(
-        ["pdfinfo", str(pdf)], capture_output=True, text=True
-    ).stdout
+    output = run_tool(["pdfinfo", str(pdf)])
     info: dict[str, str] = {}
     for line in output.split("\n"):
         if ":" in line:
@@ -270,19 +283,44 @@ def read_info(pdf: Path) -> dict[str, str]:
     return info
 
 
-def read_fonts(pdf: Path) -> list[tuple[str, str, str]]:
-    output = subprocess.run(
-        ["pdffonts", str(pdf)], capture_output=True, text=True
-    ).stdout
+def parse_font_table(output: str) -> list[tuple[str, str, str]]:
+    """pdffonts の表を (書体名, 種別, 埋め込み) にほどく。
+
+    列は固定位置で数えん。区切り線の `-` の並びから列の範囲を読み、見出し行と
+    突き合わせて名前で引く。pdffonts は実装で列構成が違い、poppler は
+    `name type encoding emb sub uni object ID`、xpdf は encoding が無く代わりに
+    prob が入る。端から数える書き方だと、片方で emb ではなく隣の列を読む。
+    """
+    lines = output.split("\n")
+    ruler = next(
+        (n for n, line in enumerate(lines)
+         if "-" in line and set(line) <= {"-", " "}),
+        -1,
+    )
+    if ruler < 1:
+        return []
+    spans: list[tuple[int, int]] = []
+    start: int | None = None
+    for index, char in enumerate(lines[ruler] + " "):
+        if char == "-" and start is None:
+            start = index
+        elif char != "-" and start is not None:
+            spans.append((start, index))
+            start = None
+    header = [lines[ruler - 1][a:b].strip() for a, b in spans]
     rows: list[tuple[str, str, str]] = []
-    for line in output.split("\n")[2:]:
-        fields = line.split()
-        # 末尾5列は emb / sub / uni / object / ID で固定。種別は「CID TrueType」のように
-        # 空白を含むので、列位置ではなく両端から数える。書体名にも空白が入りうる。
-        if len(fields) < 7:
+    for line in lines[ruler + 1:]:
+        if not line.strip():
             continue
-        rows.append((fields[0], " ".join(fields[1:-6]), fields[-5]))
+        cells = dict(zip(header, (line[a:b].strip() for a, b in spans)))
+        # 読めなかった列は空文字で残す。埋め込み判定は「yes 以外は不合格」なので、
+        # 取り違えたときは黙って通さず必ず落ちる側へ倒れる。
+        rows.append((cells.get("name", ""), cells.get("type", ""), cells.get("emb", "")))
     return rows
+
+
+def read_fonts(pdf: Path) -> list[tuple[str, str, str]]:
+    return parse_font_table(run_tool(["pdffonts", str(pdf)]))
 
 
 def check_one(pdf: Path) -> list[str]:
@@ -330,6 +368,13 @@ def check_one(pdf: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
+    missing = [tool for tool in REQUIRED_TOOLS if shutil.which(tool) is None]
+    if missing:
+        print(f"❌ poppler のコマンドが見つかりません: {', '.join(missing)}", file=sys.stderr)
+        print("   macOS: brew install poppler / Debian系: apt install poppler-utils",
+              file=sys.stderr)
+        return 2
+
     args = argv[1:] or [str(DEFAULT_PDF_DIR)]
     if len(args) != 1 or not Path(args[0]).is_dir():
         print("❌ PDF のディレクトリを1つ指定してください", file=sys.stderr)

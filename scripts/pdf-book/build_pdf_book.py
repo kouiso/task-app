@@ -59,6 +59,9 @@ WORK_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 VIVLIOSTYLE_CLI = "@vivliostyle/cli@11.1.0"
 THEME = "@vivliostyle/theme-techbook@2.0.2"
 MERMAID_CLI = "@mermaid-js/mermaid-cli@11.16.0"
+# 外部プロセスが返らんときの上限。36本を通しで回すので、1本の停止で全体を落とさない
+BUILD_TIMEOUT = 900
+MERMAID_TIMEOUT = 180
 
 # 埋め込むフォント (npmパッケージ, パッケージ内のパス, @font-face の family, weight, format)。
 #
@@ -104,8 +107,12 @@ def find_browser() -> str | None:
     見つからない場合は Vivliostyle が自前で取得するので、失敗にはしない。
     """
     explicit = os.environ.get("PDF_BOOK_BROWSER")
-    if explicit and Path(explicit).exists():
-        return explicit
+    if explicit:
+        if Path(explicit).exists():
+            return explicit
+        # 黙って別のブラウザへ落ちると、指定したつもりの環境と別の字形で組まれる
+        print(f"⚠️  PDF_BOOK_BROWSER のパスが見つかりません: {explicit}", file=sys.stderr)
+        print("   指定を無視して探索を続けます", file=sys.stderr)
     roots = [Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers"))]
     roots.append(Path.home() / "Library" / "Caches" / "ms-playwright")
     for root in roots:
@@ -216,13 +223,21 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
         svg = work / f"{stem}-{count}.svg"
         source = work / f"{stem}-{count}.mmd"
         source.write_text("\n".join(buffer) + "\n", encoding="utf-8")
-        result = subprocess.run(
-            ["npx", "--yes", MERMAID_CLI,
-             "-i", str(source), "-o", str(svg), "-b", "transparent",
-             "-c", str(work / "mermaid.json"),
-             "-p", str(work / "puppeteer.json")],
-            capture_output=True, text=True, cwd=work, env=env,
-        )
+        try:
+            result = subprocess.run(
+                ["npx", "--yes", MERMAID_CLI,
+                 "-i", str(source), "-o", str(svg), "-b", "transparent",
+                 "-c", str(work / "mermaid.json"),
+                 "-p", str(work / "puppeteer.json")],
+                capture_output=True, text=True, cwd=work, env=env,
+                timeout=MERMAID_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            # 図が出ないだけで本文は組める。既存の失敗経路に合流させ、原文を残す
+            result = subprocess.CompletedProcess(
+                args=[], returncode=1, stdout="",
+                stderr=f"{MERMAID_TIMEOUT}秒を超えても描画が返りませんでした",
+            )
         if svg.exists():
             embed_font(svg)
             out += ["", f"![{caption}]({svg.name})", ""]
@@ -391,18 +406,28 @@ def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]
 
     if output.exists():
         output.unlink()
-    result = subprocess.run(
-        command, capture_output=True, text=True, cwd=WORK_DIR, env=env, timeout=900
-    )
+    try:
+        result = subprocess.run(
+            command, capture_output=True, text=True, cwd=WORK_DIR, env=env,
+            timeout=BUILD_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        # 例外のまま抜けると、ここまでに集めた他の冊の問題ごと落ちる
+        problems.append(f"{path.name}: 組版が{BUILD_TIMEOUT}秒を超えました")
+        return problems
     if not output.exists():
         problems.append(
             f"{path.name}: 組版に失敗: {(result.stderr or result.stdout).strip()[-300:]}"
         )
         return problems
 
-    pages = subprocess.run(
-        ["pdfinfo", str(output)], capture_output=True, text=True
-    ).stdout
+    # ページ数は進捗表示のためだけに読む。poppler が無い環境でも組版は続ける
+    try:
+        pages = subprocess.run(
+            ["pdfinfo", str(output)], capture_output=True, text=True, timeout=60
+        ).stdout
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pages = ""
     page_count = pages.split("Pages:")[1].split()[0] if "Pages:" in pages else "?"
     print(f"  {stem}  {page_count}ページ / 見出し{len(toc)} / 図{figures}", flush=True)
     return problems

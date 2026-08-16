@@ -24,6 +24,7 @@ from check_pdf_book import (  # noqa: E402
     find_toc_problems,
     find_truncated_code,
     page_residue,
+    parse_font_table,
 )
 
 HEADER = "Day 01: 開発環境を整えて、初めてのアプリを動かそう"
@@ -164,6 +165,31 @@ def main() -> int:
         if len(got) != expected:
             failures.append(f"柱・ノンブル／{label}: 期待 {expected}件 実際 {got}")
 
+    # pdffonts の列構成は実装で違う。poppler は encoding 列があり、xpdf は代わりに
+    # prob 列が入る。どちらでも emb 列を読めること、特に emb=no / sub=yes の書体を
+    # 「埋め込み済み」と取り違えないことを固定する。取り違えると、埋め込みが欠けた
+    # PDF を検査が緑で通してしまう。
+    poppler_table = (
+        "name                         type          encoding    emb sub uni object ID\n"
+        "---------------------------- ------------- ----------- --- --- --- ---------\n"
+        "AAAAAA+BIZUDPGothic-Regular  CID TrueType  Identity-H  yes yes yes      4  0\n"
+        "BBBBBB+Fallback-Regular      CID TrueType  Identity-H  no  yes yes      5  0\n"
+    )
+    xpdf_table = (
+        "name                         type          emb sub uni prob object ID\n"
+        "---------------------------- ------------- --- --- --- ---- ---------\n"
+        "AAAAAA+BIZUDPGothic-Regular  CID TrueType  yes yes yes no        4  0\n"
+        "BBBBBB+Fallback-Regular      CID TrueType  no  yes yes no        5  0\n"
+    )
+    for label, table in (("poppler", poppler_table), ("xpdf", xpdf_table)):
+        rows = parse_font_table(table)
+        if [row[2] for row in rows] != ["yes", "no"]:
+            failures.append(f"書体表({label}): emb 列を読めていない {rows}")
+        if [row[1] for row in rows] != ["CID TrueType", "CID TrueType"]:
+            failures.append(f"書体表({label}): 種別を読めていない {rows}")
+        if not find_font_problems(rows):
+            failures.append(f"書体表({label}): 埋め込みが欠けた書体を通してしまう")
+
     # 柱を引かずに数えると空白ページは1件も見つからない。この前提が崩れると
     # 検査全体が緑のまま素通りするので、単体で固定しておく。
     if page_residue(f"{HEADER}\n\n7\n", HEADER, 7) != "":
@@ -185,7 +211,7 @@ def main() -> int:
         return 1
 
     total = (len(BLANK_CASES) + len(MERMAID_CASES) + len(FONT_CASES)
-             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES) + 3)
+             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES) + 9)
     print(f"✅ {total} ケースすべて通過")
     return 0
 

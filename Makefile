@@ -1,4 +1,4 @@
-.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-verify book-pdf-clean
+.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-test book-pdf-verify book-pdf-clean
 
 # ============================================
 # 商品PDF生成（Vivliostyle・1日1冊の分冊）
@@ -11,10 +11,17 @@ book-pdf:
 # 1本だけ組む
 # 使用例: make book-pdf-one FILE="material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md"
 book-pdf-one:
+ifndef FILE
+	$(error FILE を指定してください。例: make book-pdf-one FILE="material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md")
+endif
 	@python3 scripts/pdf-book/build_pdf_book.py "$(FILE)"
 
+# 検査の判定境界を固定する退行テスト（PDF も poppler も要らない）
+book-pdf-test:
+	@python3 scripts/pdf-book/test_check_pdf_book.py
+
 # 出力が商品として出せる状態かを見る（空白ページ・書体・目次・コード欠け）
-book-pdf-verify:
+book-pdf-verify: book-pdf-test
 	@python3 scripts/pdf-book/check_pdf_book.py
 
 book-pdf-clean:

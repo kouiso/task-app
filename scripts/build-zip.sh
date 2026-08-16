@@ -97,7 +97,11 @@ zip -qr "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store" -x "*/material/pdf/*"
 bash "${PROJECT_ROOT}/scripts/curriculum-qa/check-sale-package.sh" "${OUTPUT_ZIP}"
 
 ZIP_SIZE=$(du -sh "${OUTPUT_ZIP}" | cut -f1)
-FILE_COUNT=$(find "${BUILD_DIR}" -type f | wc -l | tr -d " ")
+# 数える対象を zip の除外条件に揃える。揃えんと material/pdf/ に旧PDFが残っている
+# 環境で、表示だけが実際の同梱数より多くなる
+FILE_COUNT=$(find "${BUILD_DIR}" -type f \
+  ! -path "${BUILD_DIR}/material/pdf/*" \
+  ! -name ".DS_Store" | wc -l | tr -d " ")
 echo ""
 echo "=== ビルド完了 ==="
 echo "出力ファイル: ${OUTPUT_ZIP}"
