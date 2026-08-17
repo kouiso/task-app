@@ -133,6 +133,7 @@
     "postcss": "8.5.23",
     "sharp": "0.35.3",
     "tmp": "0.2.7",
-    "@radix-ui/react-presence": "1.1.5"
+    "@radix-ui/react-presence": "1.1.5",
+    "@puppeteer/browsers": "3.2.0"
   }
 }
