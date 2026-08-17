@@ -384,8 +384,12 @@ def work_slug(stem: str) -> str:
     先頭の ASCII 部分だけでは appendix_* の4本が衝突する。元の名前のハッシュを足して
     一意にする。1本だけ組む経路でも同じ名前が出るよう、ハッシュはバッチ全体ではなく
     ファイル名だけから決める。
+
+    頭を6文字で切るのは、`day03_GitHub` のように題名側にも ASCII が続く名前があるため。
+    切らないと ID が 128 バイトに達して上限を1バイト超える。ID には URL とタイムスタンプと
+    見出しアンカーで約110バイトが先に埋まっており、名前に使えるのは残りだけになる。
     """
-    head = re.match(r"[A-Za-z0-9_-]*", stem).group(0).strip("_-") or "book"
+    head = re.match(r"[A-Za-z0-9_-]*", stem).group(0)[:6].strip("_-") or "book"
     return f"{head}-{hashlib.sha256(stem.encode('utf-8')).hexdigest()[:6]}"
 
 

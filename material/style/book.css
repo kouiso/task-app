@@ -71,12 +71,6 @@
      一番狭い列で1行あたり5文字しか入らなくなる。base 既定の 0.5rem に戻す。 */
   --vs--table-cell-padding-inline: 0.5rem;
 
-  /* テーマ既定の break-all は文字単位で無条件に折るため、行末に1〜3文字だけ
-     残る折返しが 285行 出る（`;` だけが次行に落ちる等）。写経の妨げになる。
-     normal にすると区切り位置を優先して折る。ただし normal 単独では区切りの無い
-     長いトークンが版面から溢れて末尾が消えるため、下の pre で
-     overflow-wrap による退避を必ず併せて掛ける。 */
-  --vs--pre-word-break: normal;
 
   /* 図表番号は theme-base が :root:lang(ja) で「図N:」「表N:」を持っている。
      ここで content を上書きすると counter() ごと消えて番号が出なくなるので触らない。
@@ -140,11 +134,13 @@ code {
   font-variant-ligatures: none;
 }
 
-/* word-break を normal に戻した分の退避。区切りの無い長いトークンはここで折らないと
-   版面を溢れ、紙はスクロールできないので末尾が黙って消える（Issue #379 の本丸）。 */
-pre {
-  overflow-wrap: anywhere;
-}
+/* コード行の折返し位置は CSS では動かせない。行末に1〜3文字だけ残る折返し
+   （`;` だけが次行に落ちる等、36冊で44行）を直そうとして、word-break と
+   overflow-wrap を 変数経由 / 要素直接 / pre と code の両方 / 詳細度を上げた形の
+   5通りで試したが、折返しはどれも1バイトも動かず、常に56文字ちょうどで切れる。
+   同じ要素への font-variant-ligatures は効いているのでセレクタは届いており、
+   Vivliostyle の行分割がこれらのプロパティを見ていないと判断した。
+   効かない指定を残すと次に読む人が同じ試行を繰り返すので、CSS は入れない。 */
 
 /* 囲み記事。blockquote は教材に812回出る */
 blockquote {
