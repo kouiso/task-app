@@ -71,6 +71,13 @@
      一番狭い列で1行あたり5文字しか入らなくなる。base 既定の 0.5rem に戻す。 */
   --vs--table-cell-padding-inline: 0.5rem;
 
+  /* テーマ既定の break-all は文字単位で無条件に折るため、行末に1〜3文字だけ
+     残る折返しが 285行 出る（`;` だけが次行に落ちる等）。写経の妨げになる。
+     normal にすると区切り位置を優先して折る。ただし normal 単独では区切りの無い
+     長いトークンが版面から溢れて末尾が消えるため、下の pre で
+     overflow-wrap による退避を必ず併せて掛ける。 */
+  --vs--pre-word-break: normal;
+
   /* 図表番号は theme-base が :root:lang(ja) で「図N:」「表N:」を持っている。
      ここで content を上書きすると counter() ごと消えて番号が出なくなるので触らない。
      lang は組版時に -l ja で渡す。 */
@@ -123,6 +130,20 @@ p {
 /* インラインコードは教材に12,595回出る最頻出の装飾要素 */
 :not(pre) > code {
   border-radius: 2px;
+}
+
+/* JetBrains Mono は合字を持ち、`=>` を1グリフの `⇒` に合成して描く。教材は写経が
+   前提なので、キーボードに無い字形を読者に見せると打てずに手が止まる。36冊で
+   `=>` は 972 箇所出る。テキスト層は `=>` のままなので描画だけを止める。 */
+pre,
+code {
+  font-variant-ligatures: none;
+}
+
+/* word-break を normal に戻した分の退避。区切りの無い長いトークンはここで折らないと
+   版面を溢れ、紙はスクロールできないので末尾が黙って消える（Issue #379 の本丸）。 */
+pre {
+  overflow-wrap: anywhere;
 }
 
 /* 囲み記事。blockquote は教材に812回出る */
@@ -180,6 +201,17 @@ tr {
 figure img {
   max-block-size: 200mm;
   block-size: auto;
+}
+
+/* 画面写真は techbook の image-resolution: 300dpi で実寸に置かれるため、版面166mm に
+   対して横長で110〜120mm、縦長のモバイル画面に至っては24〜33mm にしかならない。
+   図中のUI文字が3.8pt相当まで縮んで紙では読めない。幅を版面いっぱいに使う。
+   縦長は高さで頭打ちにし、object-fit で縦横比を保つ（伸びると図として読めなくなる）。
+   mermaid の SVG は上の figure img 側（200mm）に任せる。拡大対象は写真だけ。 */
+figure img[src$=".png"] {
+  inline-size: 100%;
+  max-block-size: 150mm;
+  object-fit: contain;
 }
 
 /* ── 表紙 ───────────────────────────────────────────────

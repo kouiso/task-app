@@ -26,6 +26,7 @@ Google Docs に手で貼り付けて体裁を整えてから書き出してい�
 from __future__ import annotations
 
 import base64
+import hashlib
 import html
 import json
 import os
@@ -370,9 +371,28 @@ def prepare_work_dir() -> None:
     )
 
 
+def work_slug(stem: str) -> str:
+    """作業ディレクトリ側で使う短い ASCII 名を返す。
+
+    Vivliostyle は中間ファイルの URL から要素 ID（viv-id-...）を組み立て、それをそのまま
+    PDF の name token に書く。日本語のファイル名はここでパーセントエンコードされて
+    1文字あたり7バイトに膨らみ、`day05_ログイン画面のUI` で 263 バイトに達する。
+    PDF 仕様の name token 上限 127 バイトを超えるため、poppler は読むたびに
+    「name token is longer than what the specification says」を出し続ける。
+    出力 PDF の名前は日本語のまま残したいので、作業側だけを ASCII に落とす。
+
+    先頭の ASCII 部分だけでは appendix_* の4本が衝突する。元の名前のハッシュを足して
+    一意にする。1本だけ組む経路でも同じ名前が出るよう、ハッシュはバッチ全体ではなく
+    ファイル名だけから決める。
+    """
+    head = re.match(r"[A-Za-z0-9_-]*", stem).group(0).strip("_-") or "book"
+    return f"{head}-{hashlib.sha256(stem.encode('utf-8')).hexdigest()[:6]}"
+
+
 def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]:
     """1本を PDF にする。問題があれば説明の一覧を返す（空なら成功）。"""
     stem = path.stem
+    slug = work_slug(stem)
     # U+FE0F（異体字セレクタ16）は「絵文字として描け」という指定。付いていると
     # Chromium が単色の Noto Emoji を無視してシステムのカラー絵文字フォントを呼び、
     # 生成機械に依存する上に Type 3 で埋め込まれる。紙面では単色でよいので外す。
@@ -382,13 +402,13 @@ def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]
     if not title:
         return [f"{path.name}: H1 が無い"]
 
-    body, figures, problems = convert_mermaid(body, stem, WORK_DIR, env)
+    body, figures, problems = convert_mermaid(body, slug, WORK_DIR, env)
 
-    document = WORK_DIR / f"{stem}.md"
+    document = WORK_DIR / f"{slug}.md"
     document.write_text(
         build_front_matter(title, toc) + "\n".join(body), encoding="utf-8"
     )
-    per_book_css = WORK_DIR / f"{stem}.css"
+    per_book_css = WORK_DIR / f"{slug}.css"
     per_book_css.write_text(build_book_css(title), encoding="utf-8")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
