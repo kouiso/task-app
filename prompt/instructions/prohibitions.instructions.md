@@ -357,6 +357,15 @@ NEVER re-surface the same unmet item in report after report as a pending user de
 
 **The standard the user set**: 「終わってる？」に Yes と答えられない状態を放置しない。Yes と言えないなら、言えるようにするか、何が塞いでいるかを1回で分かる形にする。
 
+**This rule does NOT override the permission requirements defined elsewhere in this file.** The following still require explicit user permission every time, and stating them once as a blocker is the correct behavior — not a violation of this rule:
+
+- Destructive git operations (`--force`, `git reset`, branch deletion) and pushing to a branch other than the designated one
+- Merging a PR / closing an Issue
+- Production DB changes, billing operations, external publishing (Slack, email, app store submission)
+- Killing a service the user is running
+
+For these, the boundary was drawn by the repository or the user, not by the AI. The rule above targets the opposite case: a limit the AI invented for itself (「紙面デザインだから」「影響が大きそうだから」) that no instruction actually imposes.
+
 ```
 ❌ 毎ターンの報告に「残り1件：級数を下げる案がありますが紙面デザインの変更なので判断待ちです」を載せ続ける
    → 一度きりの報告が常設の判断待ち項目に化け、作業が永久に終わらなく見える
