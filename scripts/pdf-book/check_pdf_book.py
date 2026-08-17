@@ -248,18 +248,29 @@ def find_truncated_code(source: str, body_text: str) -> list[str]:
     return missing
 
 
+class ToolFailure(RuntimeError):
+    """poppler のコマンドが結果を返せんかった。"""
+
+
 def run_tool(command: list[str]) -> str:
     """poppler のコマンドを1つ動かして標準出力を返す。
 
-    応答が返らんまま固まると36冊ぶんの検査ごと止まるので上限を切る。
-    超えたときは戻り値を空にして、呼び出し側の「読めなかった」経路へ流す。
+    失敗を空文字で返してはいけない。「読めなかった」と「問題が無かった」が
+    区別できなくなり、書体を1行も読めなかったPDFが合格として出てしまう。
+    検査が見逃す形の失敗が一番たちが悪いので、必ず例外にして問題一覧へ載せる。
     """
     try:
-        return subprocess.run(
+        done = subprocess.run(
             command, capture_output=True, text=True, timeout=TOOL_TIMEOUT
-        ).stdout
+        )
     except subprocess.TimeoutExpired:
-        return ""
+        raise ToolFailure(f"{command[0]} が{TOOL_TIMEOUT}秒を超えても返らない") from None
+    except OSError as error:
+        raise ToolFailure(f"{command[0]} を起動できない: {error}") from error
+    if done.returncode != 0:
+        detail = done.stderr.strip()[:200] or "詳細なし"
+        raise ToolFailure(f"{command[0]} が異常終了({done.returncode}): {detail}")
+    return done.stdout
 
 
 def read_pages(pdf: Path, count: int) -> list[str]:
@@ -343,7 +354,12 @@ def check_one(pdf: Path) -> list[str]:
     problems += [f"p{n}: 中身が無い" for n in find_blank_pages(pages, header)]
     problems += [f"p{n}: mermaid の原文が出ている" for n in find_mermaid_leaks(pages)]
     problems += find_furniture_problems(pages, header)
-    problems += find_font_problems(read_fonts(pdf))
+    fonts = read_fonts(pdf)
+    # 表が空でも書体検査は「問題なし」を返す。読めなかったのか本当に無いのかを
+    # 区別できんまま通すと、埋め込みを一度も見ていないPDFが合格になる。
+    if not fonts:
+        problems.append("書体を1つも読み取れない")
+    problems += find_font_problems(fonts)
 
     source = SRC_DIR / f"{pdf.stem}.md"
     if source.is_file():
@@ -386,7 +402,11 @@ def main(argv: list[str]) -> int:
 
     problems: list[str] = []
     for pdf in pdfs:
-        problems += check_one(pdf)
+        try:
+            problems += check_one(pdf)
+        except ToolFailure as failure:
+            # 1冊が読めんかっただけで残りの検査ごと落とさない
+            problems.append(f"{pdf.name}: 検査できない: {failure}")
 
     if problems:
         print(f"❌ {len(pdfs)}冊中に {len(problems)} 件の問題があります")

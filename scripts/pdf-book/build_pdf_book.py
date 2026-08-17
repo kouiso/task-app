@@ -238,6 +238,12 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
                 args=[], returncode=1, stdout="",
                 stderr=f"{MERMAID_TIMEOUT}秒を超えても描画が返りませんでした",
             )
+        except OSError as error:
+            # npx が無い環境でも、図を諦めれば本文は組める
+            result = subprocess.CompletedProcess(
+                args=[], returncode=1, stdout="",
+                stderr=f"mermaid-cli を起動できません: {error}",
+            )
         if svg.exists():
             embed_font(svg)
             out += ["", f"![{caption}]({svg.name})", ""]
@@ -414,6 +420,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]
     except subprocess.TimeoutExpired:
         # 例外のまま抜けると、ここまでに集めた他の冊の問題ごと落ちる
         problems.append(f"{path.name}: 組版が{BUILD_TIMEOUT}秒を超えました")
+        return problems
+    except OSError as error:
+        problems.append(f"{path.name}: 組版コマンドを起動できません: {error}")
         return problems
     if not output.exists():
         problems.append(

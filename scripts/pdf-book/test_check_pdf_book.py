@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from check_pdf_book import ToolFailure  # noqa: E402
 from check_pdf_book import (  # noqa: E402
     find_blank_pages,
     find_font_problems,
@@ -25,6 +26,7 @@ from check_pdf_book import (  # noqa: E402
     find_truncated_code,
     page_residue,
     parse_font_table,
+    run_tool,
 )
 
 HEADER = "Day 01: 開発環境を整えて、初めてのアプリを動かそう"
@@ -173,13 +175,13 @@ def main() -> int:
         "name                         type          encoding    emb sub uni object ID\n"
         "---------------------------- ------------- ----------- --- --- --- ---------\n"
         "AAAAAA+BIZUDPGothic-Regular  CID TrueType  Identity-H  yes yes yes      4  0\n"
-        "BBBBBB+Fallback-Regular      CID TrueType  Identity-H  no  yes yes      5  0\n"
+        "BBBBBB+BIZUDPGothic-Bold     CID TrueType  Identity-H  no  yes yes      5  0\n"
     )
     xpdf_table = (
         "name                         type          emb sub uni prob object ID\n"
         "---------------------------- ------------- --- --- --- ---- ---------\n"
         "AAAAAA+BIZUDPGothic-Regular  CID TrueType  yes yes yes no        4  0\n"
-        "BBBBBB+Fallback-Regular      CID TrueType  no  yes yes no        5  0\n"
+        "BBBBBB+BIZUDPGothic-Bold     CID TrueType  no  yes yes no        5  0\n"
     )
     for label, table in (("poppler", poppler_table), ("xpdf", xpdf_table)):
         rows = parse_font_table(table)
@@ -187,8 +189,23 @@ def main() -> int:
             failures.append(f"書体表({label}): emb 列を読めていない {rows}")
         if [row[1] for row in rows] != ["CID TrueType", "CID TrueType"]:
             failures.append(f"書体表({label}): 種別を読めていない {rows}")
-        if not find_font_problems(rows):
+        # 許可リスト外の名前で試すと、埋め込み判定を消しても許可リスト側で引っかかって
+        # テストが通ってしまう。埋め込みだけを見るために許可済みの書体を使う。
+        if not any(p.startswith("埋め込まれていない:") for p in find_font_problems(rows)):
             failures.append(f"書体表({label}): 埋め込みが欠けた書体を通してしまう")
+
+    # 外部コマンドの失敗を空の出力で返すと、「読めなかった」と「問題が無かった」が
+    # 同じ結果になる。書体を一度も見ていないPDFが合格として出るのが最悪の形なので、
+    # 起動失敗と異常終了のどちらも例外になることを固定する。
+    for label, command in (
+        ("起動できない", ["definitely-not-a-real-command-xyz"]),
+        ("異常終了", ["python3", "-c", "import sys; sys.exit(3)"]),
+    ):
+        try:
+            run_tool(command)
+            failures.append(f"外部コマンド({label}): 例外にならず素通りする")
+        except ToolFailure:
+            pass
 
     # 柱を引かずに数えると空白ページは1件も見つからない。この前提が崩れると
     # 検査全体が緑のまま素通りするので、単体で固定しておく。
@@ -211,7 +228,7 @@ def main() -> int:
         return 1
 
     total = (len(BLANK_CASES) + len(MERMAID_CASES) + len(FONT_CASES)
-             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES) + 9)
+             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES) + 11)
     print(f"✅ {total} ケースすべて通過")
     return 0
 
