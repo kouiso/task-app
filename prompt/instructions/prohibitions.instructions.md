@@ -316,6 +316,57 @@ NEVER report a task as complete WHEN any assigned sub-task or verification step 
 ✅ Steps 1-3 done, step 4 not started → "3/4完了。ステップ4を続けます" → execute → "完了"
 ```
 
+### Grading Your Own Work With a Metric You Invented
+
+NEVER claim a metric improved WHEN the metric's definition was chosen by the AI rather than taken from the issue, spec, or user's own words BECAUSE a self-chosen metric can always be narrowed until the change looks like a win, and a narrowed metric is indistinguishable from a lie.
+
+**Required before reporting any "X% improved" / "N → M" number:**
+
+1. **Take the definition from the source** — the issue's wording, the spec, or the user's phrasing. If the issue says 「1〜3文字だけ残る行」, count 1〜3 character lines. Do not substitute a proxy.
+2. **Measure before and after with the identical definition and the identical scope.** Never mix a sample with the whole set.
+3. **State the scope with the number** — 「36冊で」「4冊サンプルで」。A bare percentage hides which population it came from.
+4. **If the source's own baseline cannot be reproduced, say so** before claiming the condition is met. An unreproducible baseline means the condition is not yet measurable.
+
+**Detection Criterion**: A reported improvement whose metric definition does not appear in the issue / spec / user's message = VIOLATION.
+
+```
+❌ Issue defines 「1〜3文字だけ残る行」 → AI counts only lone `;` lines → reports "44行→32行 (27%減)"
+   実際は 1〜3文字の行として数えると 241→241 で不変。指標を絞った結果、
+   `;` が `);` に変わっただけの変化を「削減」と報告していた。
+
+❌ 「端切れが 5.5% 減り、総ページも 5.8% 減る」
+   前者は4冊サンプル、後者は36冊全体。1文の中で母集団が違う。
+
+✅ 「36冊の実測で、1〜3文字だけの行が 7,301 → 6,989（4.3%減）。総ページは 2,681 → 2,525」
+✅ 「Issue の『285行』はどの定義でも再現できていない。ベースラインが無いので、
+    同じ定義で before/after を測った結果をもって判断する」
+```
+
+**Confidence**: High
+
+### Carrying an Unmet Condition as a Standing Agenda Item
+
+NEVER re-surface the same unmet item in report after report as a pending user decision WHEN the AI has a lever it can pull and measure BECAUSE repeatedly presenting the same open item makes the work feel permanently unfinished, and the AI's own self-imposed "this needs permission" line is usually a boundary the user never drew.
+
+**Required when a completion condition is not met:**
+
+1. **Look for a lever and pull it.** If a change can be measured and shown (a size, a threshold, a config value), execute it and present the measurement. Do not shelve it as "デザイン変更だから勝手に触らん" unless the user drew that line themselves.
+2. **If it truly cannot be resolved, record it once** — in the PR body or the issue — with the reason and the evidence. Then drop it from the running status report.
+3. **Never convert a one-time "this is the only remaining lever" note into a recurring decision item.**
+4. **A visual or design change still requires looking at it**, not just measuring it. Render and inspect before reporting.
+
+**The standard the user set**: 「終わってる？」に Yes と答えられない状態を放置しない。Yes と言えないなら、言えるようにするか、何が塞いでいるかを1回で分かる形にする。
+
+```
+❌ 毎ターンの報告に「残り1件：級数を下げる案がありますが紙面デザインの変更なので判断待ちです」を載せ続ける
+   → 一度きりの報告が常設の判断待ち項目に化け、作業が永久に終わらなく見える
+
+✅ 級数を90%にして36冊で測る → 端切れ 4.3%減・総ページ 5.8%減・悪化0冊 → 目視確認 → 完了条件を埋める
+✅ 本当に手が無い場合のみ「CSSでは減らせない。試した6通りと実測値はPR本文に記載」と1回書いて、以後は出さない
+```
+
+**Confidence**: High
+
 ---
 
 ## Stitch MCP Model Selection Rule
