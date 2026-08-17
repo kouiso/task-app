@@ -44,8 +44,8 @@ flowchart TD
     E -->|いいえ| G[空状態メッセージ]
     F --> H[詳細ボタン]
     F --> I[編集ボタン]
-    H --> J[/user/ユーザーID]
-    I --> K[/user/ユーザーID/edit]
+    H --> J["/user/ユーザーID"]
+    I --> K["/user/ユーザーID/edit"]
 
     style A fill:#e3f2fd
     style B fill:#fff3e0

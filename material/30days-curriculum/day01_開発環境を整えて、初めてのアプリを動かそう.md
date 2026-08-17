@@ -123,6 +123,7 @@ Docker が起動していれば進められます。PostgreSQL は Docker の上
 数字が足りなければ、先に更新してから戻ってくるのが早いです。
 
 **ターミナル（どこでもOK）**
+
 ```bash
 node -v
 npm -v
@@ -140,6 +141,7 @@ npm -v
 PostgreSQL は Docker 上で起動します。次のコマンドで Docker が動いているかを確認しておきましょう。`docker ok` と表示されれば準備完了です。
 
 **ターミナル（どこでもOK）**
+
 ```bash
 docker info >/dev/null 2>&1 && echo "docker ok"
 ```
@@ -170,6 +172,7 @@ Ubuntu で `docker info` に権限エラーが出た場合は、Docker 公式の
 ここでは例として、ホームディレクトリの中の `workspace` というフォルダに配布 ZIP を展開します。
 
 **ターミナル（`~/workspace`）**
+
 ```bash
 mkdir -p ~/workspace
 cd ~/workspace
@@ -226,6 +229,7 @@ pwd
 今いる場所が配布物ルートになっているか確認しておきましょう。
 
 **ターミナル（`~/workspace/task-app`）**
+
 ```bash
 ls
 ```
@@ -263,6 +267,7 @@ Next.js アプリの土台は、本来 `npx create-next-app` というコマン�
 スクリプト（`.sh` ファイル）は、そのままでは「実行してよいファイル」として扱われないことがあります。そこで最初に `chmod +x` というコマンドで「このファイルは実行してよい」という印（実行権限）を付けます。そのうえで `bash` コマンドにファイルを渡して実行します。`bash` は、スクリプトに書かれた命令を上から順番に処理してくれるプログラムです。
 
 **ターミナル（`~/workspace/task-app`）**
+
 ```bash
 chmod +x scripts/scaffold-from-scratch.sh
 bash scripts/scaffold-from-scratch.sh
@@ -279,6 +284,7 @@ bash scripts/scaffold-from-scratch.sh
 下のログは、流れが分かるように一部を省略した例です。`added ... packages` の数字や秒数は環境によって変わります。なお、ここに表示されるのはスクリプトが自動で出力するログなので、自分で入力（写経）する必要はありません。
 
 **ターミナル出力（`~/workspace/task-app`）**
+
 ```text
 教材用の初期土台を /Users/you/workspace/task-app に作成します。
 
@@ -400,6 +406,7 @@ NODE_ENV="development"
 ### 開発サーバーを起動する
 
 **ターミナル（`~/workspace/task-app`）**
+
 ```bash
 npm run dev
 ```
@@ -409,6 +416,7 @@ npm run dev
 ### 期待される出力
 
 **ターミナル出力（`~/workspace/task-app`）**
+
 ```text
 > task-app@0.1.0 dev
 > next dev
@@ -1204,6 +1212,7 @@ export default function HomePage() {
 止めていたら、もう1回起動しましょう。
 
 **ターミナル（`~/workspace/task-app`）**
+
 ```bash
 npm run dev
 ```

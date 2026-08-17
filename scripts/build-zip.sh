@@ -87,12 +87,21 @@ done
 # ---- ZIP 作成（前回の残骸があれば上書き） ----
 rm -f "${OUTPUT_ZIP}"
 cd "${BUILD_PARENT}"
-zip -qr "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store"
+# material/pdf/ は旧 make pdf-all の出力置き場。商品ではないので同梱しない。
+# rsync 側ではなく zip 側で外している。sale_package.py が、このファイル全文から
+# rsync の除外指定を正規表現で拾って「読者が自分で書くルーター」の一覧を組み立てて
+# いるため、上の rsync に除外を足すとその一覧に紛れ込んで検査が壊れる。
+# 同じ理由で、このコメントにも rsync の除外指定の書式を書いてはいけない。
+zip -qr "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store" -x "*/material/pdf/*"
 
 bash "${PROJECT_ROOT}/scripts/curriculum-qa/check-sale-package.sh" "${OUTPUT_ZIP}"
 
 ZIP_SIZE=$(du -sh "${OUTPUT_ZIP}" | cut -f1)
-FILE_COUNT=$(find "${BUILD_DIR}" -type f | wc -l | tr -d " ")
+# 数える対象を zip の除外条件に揃える。揃えんと material/pdf/ に旧PDFが残っている
+# 環境で、表示だけが実際の同梱数より多くなる
+FILE_COUNT=$(find "${BUILD_DIR}" -type f \
+  ! -path "${BUILD_DIR}/material/pdf/*" \
+  ! -name ".DS_Store" | wc -l | tr -d " ")
 echo ""
 echo "=== ビルド完了 ==="
 echo "出力ファイル: ${OUTPUT_ZIP}"
