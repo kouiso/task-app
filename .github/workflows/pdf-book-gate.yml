@@ -196,6 +196,13 @@ jobs:
         timeout-minutes: 15
         run: |
           npx playwright install --with-deps chromium
+          # Ubuntu 24.04 は AppArmor で非特権 user namespace を止めとる。
+          # build_pdf_book.py は非rootではサンドボックスを外さん方針なので、
+          # これが有効なままやと mermaid の puppeteer が起動直後に死んで図が全滅する。
+          # サンドボックスを外すのやのうて、張れるようにする
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
           # find_browser() は「見つからなければ黙って None」で、そのまま組むと
           # mermaid-cli の puppeteer が図ごとに約650MBの Chrome を取りに行く。
           # ここで実体を突き止めて PDF_BOOK_BROWSER に渡す。見つからんかったら
