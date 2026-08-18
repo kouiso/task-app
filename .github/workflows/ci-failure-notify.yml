@@ -29,6 +29,8 @@ on:
       - "development-container-image-deploy"
       - "npm audit"
       - "\u4f9d\u5b58\u95a2\u4fc2\u30ec\u30d3\u30e5\u30fc"
+      - "\u6559\u6750PDF\u516836\u518a\u691c\u67fb"
+      - "\u6559\u6750PDF\u691c\u67fb"
     types: [completed]
     branches: [main, develop]
 

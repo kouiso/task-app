@@ -1,0 +1,86 @@
+# 全36冊を組んで検査する。Issue #385。
+#
+# PRゲート(pdf-book-gate.yml)は、36冊全部の見た目が変わりうる変更を見つけたら
+# その場で全冊組む。こっちの役目は、どのパス指定でも表せんドリフトを拾うこと:
+#  - npx で都度取る @vivliostyle/cli / @mermaid-js/mermaid-cli の推移的依存
+#  - runner イメージ側の poppler / Chromium の更新
+# どちらもリポジトリの差分に現れんので、週次で組んで初めて分かる。
+name: 教材PDF全36冊検査
+
+on:
+  push:
+    branches:
+      - main
+    # PDFを変えうるものだけに絞る。material/**/*.md にすると本でない3ファイル
+    # (dev-guide / onboarding / pr-reviewer-rule) でも起動し、package.json を入れると
+    # squash merge のたびに全冊ビルドを買うことになる
+    paths:
+      - 'material/30days-curriculum/*.md'
+      - 'material/30days-curriculum/screenshots/**'
+      - 'material/style/book.css'
+      - 'scripts/pdf-book/**'
+      - 'scripts/curriculum-qa/markdown_scan.py'
+      - 'Makefile'
+      - '.github/workflows/pdf-book-full.yml'
+  schedule:
+    # 毎週月曜 03:00 JST
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
+
+jobs:
+  full:
+    name: 教材PDF全36冊検査
+    # 判定が描画環境に依存するので、PRゲートと同じイメージに固定する
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Node.js を用意
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 依存をインストール
+        run: npm ci
+
+      - name: poppler を用意
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+
+      - name: Chromium をキャッシュから復元
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
+
+      - name: Chromium を用意
+        run: |
+          npx playwright install --with-deps chromium
+          # find_browser() は見つからんかったら黙って None を返し、mermaid が図ごとに
+          # 約650MBの Chrome を取りに行く。同じ条件を先に確かめて失敗として出す
+          browser="$(find "$PLAYWRIGHT_BROWSERS_PATH" -path '*/chromium-*/chrome-linux/chrome' \
+            -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "$browser" ]; then
+            echo "::error::Chromium が $PLAYWRIGHT_BROWSERS_PATH に見つからん"
+            exit 1
+          fi
+          echo "Chromium: $browser"
+
+      - name: 全36冊を組む
+        run: |
+          # npx 経由のレジストリ解決はリトライを持たんので、1回だけやり直す
+          make book-pdf || { echo "::warning::組版に失敗したので1回だけやり直す"; make book-pdf; }
+
+      - name: 出力を検査
+        run: make book-pdf-verify

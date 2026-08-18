@@ -1,0 +1,220 @@
+# 教材PDF（商品）の組版と検査をPRで強制する。Issue #385。
+#
+# scripts/pdf-book/ の検査は #379 で作ったが CI から一度も呼ばれておらず、
+# 誰かが手で make book-pdf-verify を打った時だけ動く状態やった。#384 の紙面崩れは
+# その隙間から出荷された。
+#
+# 【pull_request に paths: を付けてへん理由】
+# path filter に当たったPRはワークフローごとスキップされ、チェックを1件も報告せん。
+# このジョブを必須チェックにすると、そういうPRが Expected — waiting for status のまま
+# 永久にマージ不能になる。だから起動は常にさせて、何を組むかはジョブの中で差分から決める。
+#
+# 【組版と検査が走らない変更パターン】(完了条件5)
+#  - material/dev-guide.md / material/onboarding.md / material/pr-reviewer-rule.md
+#    material/**/*.md やが本ではない。build_pdf_book.py:46 の SRC_DIR は
+#    material/30days-curriculum のみを見る
+#  - material/style/tutorial.css — prepare_work_dir() が複写するのは book.css だけ
+#  - npx で都度取る @vivliostyle/cli / @mermaid-js/mermaid-cli の推移的依存のドリフト
+#  - runner イメージ側の poppler / Chromium 更新
+#    最後の2つはどのパス指定でも表せんので、pdf-book-full.yml の週次実行が受け持つ
+#
+# 【この検査が見ていないもの】
+# #383 で見つかった4件（`=>` の合字が1グリフの `⇒` になる／行末に1〜3文字だけ残る
+# 折返し／画面写真が小さくUI文字が読めん／poppler の name token 警告）は、
+# 全36冊を組んでも検知できん。#384 のコミット本文が「make book-pdf は成功し
+# book-pdf-verify も通っていた」と書いとる通りで、検査は空白ページ・書体埋め込み・
+# コード欠け・mermaid漏れしか見ていない。総ページ数と冊をまたぐ一貫性も対象外
+# （check_pdf_book.py の main() は check_one() の結果を足すだけで集約検査が無い）。
+# ここが緑でも「機械検査の4項目が退行してへん」までで、「紙面が商品水準」ではない。
+name: 教材PDF検査
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # find_browser() が既定で見る PLAYWRIGHT_BROWSERS_PATH をここへ寄せる。
+  # 揃えておかんと Chromium が見つからず、mermaid 1図ごとに約650MBの Chrome を取りに行く。
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
+
+jobs:
+  pdf-check-selftest:
+    # 判定境界の退行テスト。件数はジョブ名に入れん — 45件目を足した瞬間に必須チェック名が
+    # 変わって、Ruleset が要求する名前を誰も報告せんくなりPRが全部止まる。
+    name: 教材PDF検査の退行テスト
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 判定境界の退行テスト（44ケース）
+        run: |
+          make book-pdf-test | tee "$RUNNER_TEMP/selftest.log"
+          # 件数はスクリプト側で動的に算出しとる。減った時に緑で通さんよう突き合わせる
+          grep -q '✅ 44 ケースすべて通過' "$RUNNER_TEMP/selftest.log"
+
+  pdf-book-inspection:
+    name: 教材PDF検査
+    # 判定が描画環境に依存する（check_pdf_book.py の ALLOWED_FONTS は閉じた許可リストで、
+    # pdffonts の列レイアウトも poppler の版で変わる）。イメージが転がると無関係に赤くなるので固定する。
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # PR の checkout はマージコミットなので、親2つ分あれば base 先端に届く
+          fetch-depth: 2
+
+      - name: 組む対象を差分から決める
+        id: select
+        run: |
+          books="$RUNNER_TEMP/books.txt"
+          : > "$books"
+          blast=0
+
+          parents="$(git rev-list --parents -n 1 HEAD | wc -w)"
+          if [ "$parents" -ne 3 ]; then
+            # コンフリクトでマージコミットが作れんかった場合。差分を狭く誤るより全冊組む
+            echo "::warning::マージコミットが無いため差分を特定できん。全36冊を組む"
+            echo "scope=all" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="$(git rev-parse HEAD^1)"
+
+          # -z は「NUL区切りにする」だけやのうて、パスのクォートを止める役目も持つ。
+          # これを外して --name-only だけにすると、core.quotePath の既定 true が
+          # 非ASCIIのパスを8進エスケープ＋二重引用符で返す。36冊すべてファイル名が
+          # 日本語なので、本の検出が丸ごと空振りして「対象0冊」で緑になる。
+          # quotePath=false は -z を将来外された時の保険。外れた事故はこの下の
+          # トリップワイヤが検知する。
+          git -c core.quotePath=false diff -z --name-only --diff-filter=d "$base" HEAD \
+            > "$RUNNER_TEMP/changed.z"
+
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              # 36冊すべての見た目が変わりうる変更。markdown_scan.py は build_pdf_book.py と
+              # check_pdf_book.py の両方が import しとるので、フェンス解釈が変われば全冊変わる
+              material/style/*.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml)
+                blast=1
+                ;;
+              material/30days-curriculum/screenshots/*)
+                # 画面写真は、それを貼っとる冊だけ組み直せば足りる
+                grep -rl --fixed-strings "${file##*/}" material/30days-curriculum \
+                  --include='*.md' >> "$books" || true
+                ;;
+              material/30days-curriculum/*/*)
+                : # _meta/ の json 等。紙面には出ん
+                ;;
+              material/30days-curriculum/*.md)
+                if [ -f "$file" ]; then
+                  printf '%s\n' "$file" >> "$books"
+                else
+                  echo "::notice::改名または移動のため組めん: $file"
+                fi
+                ;;
+            esac
+          done < "$RUNNER_TEMP/changed.z"
+
+          # フォントは node_modules から直接読んどるので、版が動くと全冊の字形が変わる。
+          # ここを `git diff | grep -q` にすると、lock の diff がパイプバッファ(64KB)を
+          # 超えた時に producer が SIGPIPE で死に、pipefail が rc=141 を返して if が偽になる。
+          # 差分を必ずファイルへ落としてから引く。
+          git -c core.quotePath=false diff "$base" HEAD -- package.json package-lock.json \
+            > "$RUNNER_TEMP/dep.diff"
+          if grep -qE '@expo-google-fonts/|@fontsource/' "$RUNNER_TEMP/dep.diff"; then
+            blast=1
+          fi
+
+          if [ "$blast" -eq 1 ]; then
+            scope=all
+          elif [ -s "$books" ]; then
+            scope=subset
+          else
+            scope=none
+          fi
+
+          # 教材の差分があるのに0冊になったら、パス解析が壊れとる。緑で通さん
+          if [ "$scope" = "none" ] \
+            && grep -qzE '^material/30days-curriculum/[^/]+\.md$' "$RUNNER_TEMP/changed.z"; then
+            echo "::error::教材mdの差分があるのに対象0冊になった。パス解析が壊れとる"
+            exit 1
+          fi
+
+          echo "scope=$scope" >> "$GITHUB_OUTPUT"
+          case "$scope" in
+            all)    echo "全36冊を組む（36冊全部の見た目が変わりうる変更）" ;;
+            subset) echo "変更のあった冊だけ組む:"; sort -u "$books" | sed 's/^/  - /' ;;
+            none)   echo "PDFの出力に影響する変更が無いため、組版と検査は行わん" ;;
+          esac
+
+      - name: Node.js を用意
+        if: steps.select.outputs.scope != 'none'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 依存をインストール
+        if: steps.select.outputs.scope != 'none'
+        run: npm ci
+
+      - name: poppler を用意
+        if: steps.select.outputs.scope != 'none'
+        # pdftotext / pdfinfo / pdffonts が無いと check_pdf_book.py は exit 2 で止まる
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+
+      - name: Chromium をキャッシュから復元
+        if: steps.select.outputs.scope != 'none'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
+
+      - name: Chromium を用意
+        if: steps.select.outputs.scope != 'none'
+        run: |
+          npx playwright install --with-deps chromium
+          # find_browser() は「見つからなければ黙って None」で、そのまま組むと
+          # mermaid-cli の puppeteer が図ごとに約650MBの Chrome を取りに行く。
+          # 同じ条件をここで先に確かめて、静かな劣化やのうて失敗として出す。
+          browser="$(find "$PLAYWRIGHT_BROWSERS_PATH" -path '*/chromium-*/chrome-linux/chrome' \
+            -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "$browser" ]; then
+            echo "::error::Chromium が $PLAYWRIGHT_BROWSERS_PATH に見つからん"
+            exit 1
+          fi
+          echo "Chromium: $browser"
+
+      - name: PDFを組む
+        if: steps.select.outputs.scope != 'none'
+        env:
+          SCOPE: ${{ steps.select.outputs.scope }}
+        run: |
+          build() {
+            if [ "$SCOPE" = "all" ]; then
+              make book-pdf
+            else
+              mapfile -t targets < <(sort -u "$RUNNER_TEMP/books.txt")
+              # Makefile の book-pdf-one は FILE 1本ずつなので、冊数分だけ
+              # インタプリタ起動と作業ディレクトリの作り直しが走る。まとめて1回で呼ぶ
+              python3 scripts/pdf-book/build_pdf_book.py "${targets[@]}"
+            fi
+          }
+          # mermaid と vivliostyle は npx 経由で毎回レジストリを引き、リトライを持たん。
+          # 回線の揺れで必須チェックが赤くなるのを防ぐ
+          build || { echo "::warning::組版に失敗したので1回だけやり直す"; build; }
+
+      - name: 出力を検査
+        if: steps.select.outputs.scope != 'none'
+        # dist は gitignore なので、dist/pdf にはこの実行で組んだ分しか入らん。
+        # check_pdf_book.py は1冊単位の検査だけで冊をまたがんため、部分的でも成立する
+        run: make book-pdf-verify
