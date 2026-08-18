@@ -11,7 +11,7 @@
 #
 # 【組版と検査が走らない変更パターン】(完了条件5)
 #  - material/dev-guide.md / material/onboarding.md / material/pr-reviewer-rule.md
-#    material/**/*.md やが本ではない。build_pdf_book.py:46 の SRC_DIR は
+#    material/**/*.md やが本ではない。build_pdf_book.py:48 の SRC_DIR は
 #    material/30days-curriculum のみを見る
 #  - material/style/tutorial.css — prepare_work_dir() が複写するのは book.css だけ
 #  - npx で都度取る @vivliostyle/cli / @mermaid-js/mermaid-cli の推移的依存のドリフト
@@ -34,6 +34,10 @@
 #  - private にした後: Free では Ruleset もブランチ保護も使えんくなるので
 #    マージブロックは消える。残るのは CI が赤くなることと ci-failure-notify.yml の
 #    Slack 通知だけ。気づかんまま「守られとる」と思い込むのが一番あかんので明記しとく
+#  - ci-failure-notify.yml は workflow_run に branches: [main, develop] が付いとるので、
+#    pull_request でしか起動せんこのワークフローの失敗は Slack に飛ばん（head_branch が
+#    PRのブランチになるため）。PRの赤は画面で見える前提。マージ後に効く
+#    「教材PDF全36冊検査」だけを通知一覧に載せとる
 #  - auto-merge.yml の MERGE_REQUIRE_CHECKS は automerge-action v0.16.4 に存在せん設定で、
 #    あの action は「ブランチ保護で required 指定されたチェック」しか待たん。
 #    つまり automerge 経路も保護頼みで、保護が無ければ止まらん
@@ -114,7 +118,7 @@ jobs:
             case "$file" in
               # 36冊すべての見た目が変わりうる変更。markdown_scan.py は build_pdf_book.py と
               # check_pdf_book.py の両方が import しとるので、フェンス解釈が変われば全冊変わる
-              material/style/*.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml)
+              material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml)
                 blast=1
                 ;;
               material/30days-curriculum/screenshots/*)
@@ -235,11 +239,24 @@ jobs:
         env:
           SCOPE: ${{ steps.select.outputs.scope }}
         run: |
+          targets=()
+          if [ "$SCOPE" != "all" ]; then
+            # build_pdf_book.py:473 は引数0本やと全36冊にフォールバックする。
+            # `mapfile < <(sort ...)` はプロセス置換の失敗を握り潰して 0 を返すので、
+            # sort を先に走らせて状態を -e に見せ、空になった時は落とす
+            sort -u "$RUNNER_TEMP/books.txt" > "$RUNNER_TEMP/books.sorted"
+            mapfile -t targets < "$RUNNER_TEMP/books.sorted"
+            if [ "${#targets[@]}" -eq 0 ]; then
+              echo "::error::組む対象が空や。選定の結果と食い違っとる"
+              exit 1
+            fi
+          fi
+          # 関数を `||` の左に置くと -e が本体全体で無効になる。分岐ごとに1コマンドだけ
+          # 置いて、関数の戻り値がそのコマンドの結果になるようにしとく
           build() {
             if [ "$SCOPE" = "all" ]; then
               make book-pdf
             else
-              mapfile -t targets < <(sort -u "$RUNNER_TEMP/books.txt")
               # Makefile の book-pdf-one は FILE 1本ずつなので、冊数分だけ
               # インタプリタ起動と作業ディレクトリの作り直しが走る。まとめて1回で呼ぶ
               python3 scripts/pdf-book/build_pdf_book.py "${targets[@]}"
