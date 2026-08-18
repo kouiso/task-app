@@ -8,20 +8,12 @@
 name: 教材PDF全36冊検査
 
 on:
-  push:
-    branches:
-      - main
-    # PDFを変えうるものだけに絞る。material/**/*.md にすると本でない3ファイル
-    # (dev-guide / onboarding / pr-reviewer-rule) でも起動し、package.json を入れると
-    # squash merge のたびに全冊ビルドを買うことになる
-    paths:
-      - 'material/30days-curriculum/*.md'
-      - 'material/30days-curriculum/screenshots/**'
-      - 'material/style/book.css'
-      - 'scripts/pdf-book/**'
-      - 'scripts/curriculum-qa/markdown_scan.py'
-      - 'Makefile'
-      - '.github/workflows/pdf-book-full.yml'
+  # push: main では起動させん。PRゲートが「36冊全部の見た目が変わりうる変更」では
+  # 既に全36冊を組んどるので、マージ後に同じものを組み直しても情報が増えん。
+  # 実測18分/回で、教材mdのPRがマージされる度に払うと月200分を超える。
+  # private にすると GitHub Actions は月2,000分の枠に入る（public は無制限）ので、
+  # ここを残したままやと公開設定を変えた時に効いてくる。
+  # 直接 main へ push された場合の取りこぼしは、下の週次実行が7日以内に拾う。
   schedule:
     # 毎週月曜 03:00 JST
     - cron: '0 18 * * 0'
