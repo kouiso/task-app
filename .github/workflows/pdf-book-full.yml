@@ -68,13 +68,16 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           # find_browser() は見つからんかったら黙って None を返し、mermaid が図ごとに
-          # 約650MBの Chrome を取りに行く。同じ条件を先に確かめて失敗として出す
-          browser="$(find "$PLAYWRIGHT_BROWSERS_PATH" -path '*/chromium-*/chrome-linux/chrome' \
-            -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          # 約650MBの Chrome を取りに行く。実体を突き止めて PDF_BOOK_BROWSER に渡す
+          browser="$(find "$PLAYWRIGHT_BROWSERS_PATH" -type f -regextype posix-extended \
+            -regex '.*/chromium-[0-9]+/chrome-linux(64)?/chrome' 2>/dev/null \
+            | sort -V | tail -n 1 || true)"
           if [ -z "$browser" ]; then
             echo "::error::Chromium が $PLAYWRIGHT_BROWSERS_PATH に見つからん"
+            find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 2 -type d 2>/dev/null || true
             exit 1
           fi
+          echo "PDF_BOOK_BROWSER=$browser" >> "$GITHUB_ENV"
           echo "Chromium: $browser"
 
       - name: 全36冊を組む
