@@ -26,6 +26,17 @@
 # コード欠け・mermaid漏れしか見ていない。総ページ数と冊をまたぐ一貫性も対象外
 # （check_pdf_book.py の main() は check_one() の結果を足すだけで集約検査が無い）。
 # ここが緑でも「機械検査の4項目が退行してへん」までで、「紙面が商品水準」ではない。
+#
+# 【マージブロックの前提】(局長判断 2026-08-18: A + C)
+# このワークフローは赤緑を出すだけで、赤いPRのマージを止めるのは別の仕組みや。
+#  - public の間: main の Ruleset に必須チェックとして
+#    「教材PDF検査の退行テスト」「教材PDF検査」を登録して止める
+#  - private にした後: Free では Ruleset もブランチ保護も使えんくなるので
+#    マージブロックは消える。残るのは CI が赤くなることと ci-failure-notify.yml の
+#    Slack 通知だけ。気づかんまま「守られとる」と思い込むのが一番あかんので明記しとく
+#  - auto-merge.yml の MERGE_REQUIRE_CHECKS は automerge-action v0.16.4 に存在せん設定で、
+#    あの action は「ブランチ保護で required 指定されたチェック」しか待たん。
+#    つまり automerge 経路も保護頼みで、保護が無ければ止まらん
 name: 教材PDF検査
 
 on:
