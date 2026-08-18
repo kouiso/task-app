@@ -39,7 +39,7 @@ jobs:
     name: 教材PDF全36冊検査
     # 判定が描画環境に依存するので、PRゲートと同じイメージに固定する
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -54,9 +54,17 @@ jobs:
         run: npm ci
 
       - name: poppler を用意
+        # 既定の apt は dpkg のロックを無期限に待つので、待ち上限を切らんと
+        # runner 起動直後のロック競合でジョブの持ち時間を丸ごと食う
+        timeout-minutes: 10
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq poppler-utils
+          apt_opts="-y -qq -o DPkg::Lock::Timeout=120"
+          # shellcheck disable=SC2086
+          sudo apt-get $apt_opts install poppler-utils || {
+            sudo apt-get -qq -o DPkg::Lock::Timeout=120 update
+            sudo apt-get $apt_opts install poppler-utils
+          }
+          pdftotext -v
 
       - name: Chromium をキャッシュから復元
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -65,6 +73,8 @@ jobs:
           key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
 
       - name: Chromium を用意
+        # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る
+        timeout-minutes: 15
         run: |
           npx playwright install --with-deps chromium
           # find_browser() は見つからんかったら黙って None を返し、mermaid が図ごとに
