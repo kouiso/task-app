@@ -58,12 +58,13 @@ jobs:
         # runner 起動直後のロック競合でジョブの持ち時間を丸ごと食う
         timeout-minutes: 10
         run: |
-          apt_opts="-y -qq -o DPkg::Lock::Timeout=120"
-          # shellcheck disable=SC2086
-          sudo apt-get $apt_opts install poppler-utils || {
-            sudo apt-get -qq -o DPkg::Lock::Timeout=120 update
-            sudo apt-get $apt_opts install poppler-utils
-          }
+          # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
+          # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
+          # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
+          # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる
+          echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
+          sudo apt-get install -y -qq poppler-utils \
+            || { sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils; }
           pdftotext -v
 
       - name: Chromium をキャッシュから復元
@@ -76,7 +77,10 @@ jobs:
         # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る
         timeout-minutes: 15
         run: |
-          npx playwright install --with-deps chromium
+          # --with-deps も内部で apt を叩く。ロック競合は上の設定で上限が付いとるが、
+          # 掴み損ねた時のために1回だけやり直す
+          npx playwright install --with-deps chromium \
+            || npx playwright install --with-deps chromium
           # Ubuntu 24.04 は AppArmor で非特権 user namespace を止めとる。
           # build_pdf_book.py は非rootではサンドボックスを外さん方針なので、
           # これが有効なままやと mermaid の puppeteer が起動直後に死んで図が全滅する。
