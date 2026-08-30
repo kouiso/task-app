@@ -232,22 +232,6 @@
       ]
     },
     {
-      "name": "day09/responsive.png",
-      "day": 9,
-      "path": "/project",
-      "login": {
-        "email": "admin@example.com",
-        "password": "password123"
-      },
-      "wait_for": "h1:text-is('プロジェクト')",
-      "note": "Step 10 の確認表『ブラウザ幅を変える→カードの列数が変わる』の1枚。既存の day09-responsive.png は 1440 幅のままで、幅を変えた証拠になっていない。",
-      "viewport": {
-        "width": 430,
-        "height": 900
-      },
-      "full_page": true
-    },
-    {
       "name": "day09/empty.png",
       "day": 9,
       "path": "/project",
@@ -263,6 +247,133 @@
           "label": "0件のときの表示"
         }
       ]
+    },
+    {
+      "name": "day10/project-create-dialog.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規プロジェクト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "既存の project-create-dialog.png は Day 10 に3回使われている。実画像は必須マーク * が付き、カラーと日付の列の分け方も教材の grid-cols-3 と違う（scan-day09-16.md (g) Day 10）。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 48
+      }
+    },
+    {
+      "name": "day10/create-form-filled.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規プロジェクト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        },
+        {
+          "kind": "fill",
+          "selector": "#name",
+          "value": "ポートフォリオサイト"
+        },
+        {
+          "kind": "fill",
+          "selector": "#description",
+          "value": "自分の作品をまとめるサイト"
+        },
+        {
+          "kind": "fill",
+          "selector": "#startDate",
+          "value": "2026-04-01"
+        },
+        {
+          "kind": "fill",
+          "selector": "#endDate",
+          "value": "2026-06-30"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "Step 5 のキャプションは『フォーム入力中のダイアログ』だが、貼られていたのは空のフォームだった（scan-day09-16.md (g) day10:642）。入力済みの状態を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 48
+      }
+    },
+    {
+      "name": "day10/create-validation-error.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規プロジェクト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "#name-error"
+        }
+      ],
+      "wait_for": "#name-error",
+      "marks": [
+        {
+          "selector": "#name-error",
+          "label": "zod が返した文言"
+        }
+      ],
+      "note": "Step 8 の確認表 手順2『プロジェクト名を空のまま作成→エラーメッセージが表示される』の1枚。ここにも同じ完成イメージが3枚目として貼られていた。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 48
+      }
+    },
+    {
+      "name": "day10/project-list-after-create.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(> div > h3:text-is('ポートフォリオサイト'))",
+          "label": "Step 8 で作ったプロジェクト"
+        }
+      ],
+      "note": "Step 7 の確認ポイント『一覧に新しいプロジェクトが表示される』。既存画像は未検証のまま Day 10 に置かれていた。",
+      "full_page": true
     }
   ]
 }

@@ -220,6 +220,9 @@ async function shoot(page, job, shot) {
 
 async function main() {
   const job = JSON.parse(await readStdin());
+  // 既知の差: <input type="date"> の空欄が `mm/dd/yyyy` と出る。日本語環境のブラウザは
+  // `年/月/日` と出すので、日付欄のある画像（Day 10・Day 14 のダイアログ）だけ読者の画面と
+  // 並びが違う。context の locale でも起動時の --lang でも変わらないことを実測で確かめた。
   const browser = await chromium.launch();
   const context = await browser.newContext({
     viewport: job.viewport,
