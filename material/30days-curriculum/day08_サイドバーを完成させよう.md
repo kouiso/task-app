@@ -1124,10 +1124,10 @@ Day 02 のこのファイルには取り込みが1行もありませんでした
 // 完成版: 表示する値とあいさつの組み立て
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'タスク管理アプリを作る人',
-  todayFocus: 'ダッシュボードに自分の名前を出す',
-  todayGoal: '名前と今日やることを画面に出す',
-  nextAction: 'Day 03 で GitHub に保存する',
+  role: 'Web エンジニア',
+  todayFocus: 'ポートフォリオの企画',
+  todayGoal: 'トップページのラフを決める',
+  nextAction: 'レビューをもらう',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -1153,7 +1153,7 @@ function getGreetingByHour(hour: number): string {
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}に取り組みます。`;
 }
 
 export default function DashboardPage() {
@@ -1161,7 +1161,7 @@ export default function DashboardPage() {
   const mainMessage = buildMainMessage(dashboardOwner, currentHour);
   const focusCards: FocusCard[] = [
     {
-      label: 'Owner',
+      label: '担当',
       value: dashboardOwner.name,
       description: dashboardOwner.role,
     },
@@ -1175,14 +1175,14 @@ export default function DashboardPage() {
 {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
 {/* 完成版: 残りのカードと外枠の開始 */}
     {
-      label: 'Today',
-      value: 'Day 02',
-      description: dashboardOwner.todayGoal,
+      label: '今日',
+      value: dashboardOwner.todayGoal,
+      description: dashboardOwner.todayFocus,
     },
     {
-      label: 'Next',
-      value: 'Day 03',
-      description: dashboardOwner.nextAction,
+      label: '次',
+      value: dashboardOwner.nextAction,
+      description: '明日いちばんに動く',
     },
   ];
 
@@ -1210,7 +1210,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
-              Personalized Message Ready
+              作業中
             </div>
           </header>
 ```
@@ -1226,7 +1226,7 @@ export default function DashboardPage() {
             <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
               <div className="border-b border-border px-8 py-6">
                 <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                  Personal Message
+                  今日のフォーカス
                 </span>
 
                 <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
@@ -1244,11 +1244,11 @@ export default function DashboardPage() {
                 <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                   今日は
                   <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                  。画面に出ている文字は、全部このファイルの上のほうで決めている。
+                  まで進めます。
                 </p>
 
                 <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
-                  Focus: {dashboardOwner.todayFocus}
+                  進行中: {dashboardOwner.todayFocus}
                 </div>
               </div>
 ```
@@ -1294,16 +1294,16 @@ export default function DashboardPage() {
                   メモ
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  名前が出るだけで、他人のサンプルではなく自分の画面になる。
+                  午前は集中して作業。夕方に振り返りを入れる。
                 </p>
               </article>
 
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
-                  まだ無いもの
+                  今週の予定
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
+                  金曜までにトップページのラフを固める。
                 </p>
               </article>
 ```
@@ -1320,7 +1320,7 @@ export default function DashboardPage() {
                   明日やること
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  Day 03 で、ここまで書いたコードを GitHub に保存する。
+                  レビューの指摘をまとめて、直す順番を決める。
                 </p>
               </article>
             </aside>

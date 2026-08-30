@@ -13,13 +13,13 @@
 
 ## 前回の振り返り
 
-Day 01 では、空のディレクトリから `task-app` の土台を立ち上げ、design token を入れた最初の画面と、`Hello Task-App` とだけ表示する `/dashboard` まで作りました。今日はその `/dashboard` を、自分専用のダッシュボードへ育てます。
+Day 01 では、空のディレクトリから `task-app` の土台を立ち上げ、design token を入れた最初の画面と、「ダッシュボード」とだけ表示する `/dashboard` まで作りました。今日はその `/dashboard` を、自分専用のダッシュボードへ育てます。
 
 ---
 
 ## 今日のゴール
 
-Day 01 の最後に作った最小ダッシュボードをベースにして、「Hello Task-App」だけだった画面を自分専用のダッシュボードへ育てます。画面の主役になるメッセージカードを置き、そこへ自分の名前・時刻から選ばれるあいさつ・今日の集中テーマを添えます。見た目は Day 01 で入れた design token をそのまま使って整えるので、色の指定を新しく足す必要はありません。
+Day 01 の最後に作った最小ダッシュボードをベースにして、見出しだけだった画面を自分専用のダッシュボードへ育てます。画面の主役になるメッセージカードを置き、そこへ自分の名前・時刻から選ばれるあいさつ・今日の集中テーマを添えます。見た目は Day 01 で入れた design token をそのまま使って整えるので、色の指定を新しく足す必要はありません。
 
 ここまでやると、次の Day で GitHub に保存するときも「ちゃんと自分で開発している」と実感しやすくなります。
 
@@ -41,7 +41,7 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、�
 
 ## なぜこれを作るのか
 
-ダッシュボードは、アプリを開いた人がいちばん最初に見る場所です。ここが `Hello Task-App` のままだと、誰が開いても同じ画面で、自分のアプリという感じがしません。
+ダッシュボードは、アプリを開いた人がいちばん最初に見る場所です。ここが 見出しだけのままだと、誰が開いても同じ画面で、自分のアプリという感じがしません。
 
 今日やることは、画面に文字を足すことではありません。**表示する値をどこに置くか**を決めることです。名前や集中テーマを JSX の中へ直接打ち込むと、同じ文字が画面のあちこちに散らばり、名前を変えたいときに全部を探して直すことになります。そこで値は `const` にまとめ、文の組み立ては関数に任せ、並べる順番は配列に持たせます。この3つの置き場所を決めておくと、Day 09 以降でデータベースから本物の値が届くようになったときも、差し替えるのは値を作る側だけで済みます。
 
@@ -69,7 +69,7 @@ Day 01 の最後に作った最小ダッシュボードをベースにして、�
 - `npm install` 済みで、`npm run dev` が動く
 - `src/app/globals.css` に token ベースの色や radius が入っている
 - `src/app/page.tsx` から `/dashboard` に入れる
-- ダッシュボードに `Hello Task-App` と出る最初の画面がある
+- ダッシュボードに 「ダッシュボード」と出る最初の画面がある
 
 まだこの状態になっていなければ、
 先に Day 01 を完了させてから戻ってきてください。
@@ -121,11 +121,11 @@ export default function DashboardPage() {
             Dashboard
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
-            Hello Task-App
+            ダッシュボード
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-            Day 01 で用意した最初のダッシュボードです。
-            ここから少しずつ、自分専用の画面にしていきます。
+            まだ表示するデータがありません。
+            プロジェクトとタスクを作れるようになると、ここに出ます。
           </p>
         </section>
       </div>
@@ -176,8 +176,8 @@ Day 01 と同じで、
 ```tsx
 // filepath: src/app/dashboard/page.tsx
 const ownerName = 'Taro';
-const focusTheme = 'Day 02 のダッシュボードづくり';
-const encouragement = '今日の一歩が、そのまま自分のアプリの顔になる。';
+const focusTheme = 'ポートフォリオの企画';
+const todayNote = '午前は集中して作業。夕方に振り返りを入れる。';
 
 export default function DashboardPage() {
   return (
@@ -194,7 +194,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
-            Day 02 Progress
+            作業中
           </div>
         </header>
 
@@ -210,7 +210,7 @@ export default function DashboardPage() {
           <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
             <div className="border-b border-border px-8 py-6">
               <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                Personal Message
+                今日のフォーカス
               </span>
 
               <h2 className="mt-6 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
@@ -220,14 +220,13 @@ export default function DashboardPage() {
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日の集中テーマは
                 <span className="font-semibold text-foreground"> {focusTheme}</span>
-                だ。
-                この1枚から、自分だけのダッシュボードを育てていこう。
+                です。
               </p>
             </div>
 
             <div className="bg-secondary px-8 py-6">
               <p className="text-sm leading-8 text-secondary-foreground">
-                {encouragement}
+                {todayNote}
               </p>
             </div>
           </article>
@@ -235,26 +234,26 @@ export default function DashboardPage() {
 
 ここが今日の主役です。段ごとに背景色を変えているのは、同じカードの中でも見出しと添え書きが別の役目だと目で分かるようにするためです。
 
-`{ownerName}`・`{focusTheme}`・`{encouragement}` の3か所が、`src/app/dashboard/page.tsx` の先頭で `const` として定義した値の出口です。文字を直接書いていないので、名前を変えるときに触るのはファイル先頭の1行だけで済みます。`overflow-hidden` は、角を丸めた枠から下の段の背景色がはみ出すのを防いでいます。これを外すと、カードの下側の角だけ四角く見えます。
+`{ownerName}`・`{focusTheme}`・`{todayNote}` の3か所が、`src/app/dashboard/page.tsx` の先頭で `const` として定義した値の出口です。文字を直接書いていないので、名前を変えるときに触るのはファイル先頭の1行だけで済みます。`overflow-hidden` は、角を丸めた枠から下の段の背景色がはみ出すのを防いでいます。これを外すと、カードの下側の角だけ四角く見えます。
 
 ```tsx
           {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
           <aside className="space-y-4">
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今日の狙い
+                メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                ただの見出しではなく、開いた瞬間に「これは自分の画面や」と分かるメッセージを置く。
+                午前は企画のたたき台を作る。夕方に一度見直す。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今の変化
+                今週の予定
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Hello Task-App から、自分の名前と今日のテーマが見えるダッシュボードへ進んだ。
+                金曜までにトップページのラフを固める。
               </p>
             </article>
           </aside>
@@ -288,7 +287,7 @@ export default function DashboardPage() {
 
 #### ブラウザ確認
 
-- 見出しが `Hello Task-App` から変わっている
+- 見出しが 見出しだけの状態から変わっている
 - `こんにちは、Taroさん。` が主役として見える
 - 右側に小さな補助カードが2枚並ぶ
 
@@ -319,9 +318,9 @@ type DashboardOwner = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'タスク管理アプリを作る人',
-  todayFocus: 'ダッシュボードに自分の名前を出す',
-  todayGoal: '画面に出す文字をコードの1か所にまとめる',
+  role: 'Web エンジニア',
+  todayFocus: 'ポートフォリオの企画',
+  todayGoal: 'トップページのラフを決める',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -347,7 +346,7 @@ Step 1 では文字を3つの `const` へばらばらに置いていました。
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}に取り組みます。`;
 }
 
 export default function DashboardPage() {
@@ -375,7 +374,7 @@ export default function DashboardPage() {
 ```tsx
           {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
-            Day 02 Progress
+            作業中
           </div>
         </header>
 
@@ -383,7 +382,7 @@ export default function DashboardPage() {
           <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
             <div className="border-b border-border px-8 py-6">
               <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                Personal Message
+                今日のフォーカス
               </span>
 
               <h2 className="mt-6 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
@@ -393,7 +392,7 @@ export default function DashboardPage() {
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日やるのは
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                。この文も名前も、下のオブジェクトに書いた値から出ている。
+                に取りかかります。
               </p>
             </div>
 ```
@@ -422,7 +421,7 @@ export default function DashboardPage() {
                   Focus
                 </p>
                 <p className="mt-3 text-lg font-semibold text-foreground">
-                  Day 02
+                  {dashboardOwner.todayGoal}
                 </p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
                   {dashboardOwner.todayFocus}
@@ -442,19 +441,19 @@ export default function DashboardPage() {
           <aside className="space-y-4">
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                時間帯で変わる理由
+                メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                同じダッシュボードでも、開く時間でひと言の空気が変わると、画面に体温が出る。
+                午前は集中して作業。夕方に振り返りを入れる。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今日の学び
+                明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                値を並べるだけでなく、関数にして意味を持たせると読みやすさが一段上がる。
+                レビューの指摘をまとめて、直す順番を決める。
               </p>
             </article>
 ```
@@ -573,10 +572,10 @@ type FocusCard = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'タスク管理アプリを作る人',
-  todayFocus: 'ダッシュボードに自分の名前を出す',
-  todayGoal: '名前と今日やることを画面に出す',
-  nextAction: 'Day 03 で GitHub に保存する',
+  role: 'Web エンジニア',
+  todayFocus: 'ポートフォリオの企画',
+  todayGoal: 'トップページのラフを決める',
+  nextAction: 'レビューをもらう',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -602,7 +601,7 @@ Step 2 の型に `nextAction` を1つ足し、あわせて `FocusCard` という
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}に取り組みます。`;
 }
 
 export default function DashboardPage() {
@@ -610,7 +609,7 @@ export default function DashboardPage() {
   const mainMessage = buildMainMessage(dashboardOwner, currentHour);
   const focusCards: FocusCard[] = [
     {
-      label: 'Owner',
+      label: '担当',
       value: dashboardOwner.name,
       description: dashboardOwner.role,
 ```
@@ -623,14 +622,14 @@ Step 3 で新しく出てくるのは `focusCards` です。`FocusCard[]` は「
 // filepath: src/app/dashboard/page.tsx（同じファイルの続き）
     },
     {
-      label: 'Today',
-      value: 'Day 02',
-      description: dashboardOwner.todayGoal,
+      label: '今日',
+      value: dashboardOwner.todayGoal,
+      description: dashboardOwner.todayFocus,
     },
     {
-      label: 'Next',
-      value: 'Day 03',
-      description: dashboardOwner.nextAction,
+      label: '次',
+      value: dashboardOwner.nextAction,
+      description: '明日いちばんに動く',
     },
   ];
 
@@ -656,7 +655,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
-            Personalized Message Ready
+            作業中
           </div>
         </header>
 
@@ -664,7 +663,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
           <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
             <div className="border-b border-border px-8 py-6">
               <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                Personal Message
+                今日のフォーカス
               </span>
 
               <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
@@ -674,7 +673,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                。画面に出ている文字は、全部このファイルの上のほうで決めている。
+                まで進めます。
 ```
 
 `<h2>` に `max-w-4xl` が増えているのが Step 2 との違いです。あいさつの文は名前と集中テーマを含むので長くなりやすく、幅を決めずに置くと画面の端まで1行で伸びます。上限を決めておけば、長い文でも決まった幅で折り返します。
@@ -684,7 +683,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
-                Focus: {dashboardOwner.todayFocus}
+                進行中: {dashboardOwner.todayFocus}
               </div>
             </div>
 
@@ -722,16 +721,16 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
                 メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                名前が出るだけで、他人のサンプルではなく自分の画面になる。
+                午前は集中して作業。夕方に振り返りを入れる。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                まだ無いもの
+                今週の予定
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
+                金曜までにトップページのラフを固める。
               </p>
             </article>
 
@@ -746,7 +745,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
                 明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 で、ここまで書いたコードを GitHub に保存する。
+                レビューの指摘をまとめて、直す順番を決める。
               </p>
             </article>
           </aside>
@@ -772,7 +771,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
 - 色は token 名で読めるようにしている
 - 動きがない画面なので Server Component のまま保っている
 
-型と関数と配列という3つの道具が、今日はじめて1つのファイルにそろいました。`DashboardOwner` が持たせる情報の形を決め、`buildMainMessage` が文の組み立てを引き受け、`focusCards` が並べる順番を持っています。Step 1 の状態と見比べると、人によって変わる値（名前、肩書き、集中テーマ、カードの中身）はどれも JSX の外側で決まっていて、JSX 側には `{ }` で受け取る場所しか残っていません。`My Dashboard` のような見出しや説明文は、変わらない文字なので JSX に直接書いたままです。この分かれ方ができていれば、明日以降ここへタスク件数のような本物のデータを流し込むときも、差し替えるのは値を作る側だけで済みます。
+型と関数と配列という3つの道具が、今日はじめて1つのファイルにそろいました。`DashboardOwner` が持たせる情報の形を決め、`buildMainMessage` が文の組み立てを引き受け、`focusCards` が並べる順番を持っています。Step 1 の状態と見比べると、人によって変わる値（名前、肩書き、集中テーマ、カードの中身）はどれも JSX の外側で決まっていて、JSX 側には `{ }` で受け取る場所しか残っていません。`My Dashboard` のような見出しや説明文は、変わらない文字なので JSX に直接書いたままです。この分かれ方ができていれば、あとから中身を差し替えるときに触るのは値を作る側だけで済みます。いま並んでいるのは、自分で打ち込んだ文字です。データベースから取ってきた本物の値を並べるのは Day 09 のプロジェクト一覧からで、集計を出すのは Day 21 のレポート画面です。
 
 ここまで来たら、Day 02 の狙いはちゃんと達成できています。
 
@@ -788,14 +787,14 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
 npm run dev
 ```
 
-`Ctrl` と `C` で止めていた場合は、これで開発サーバーが戻ってきます。起動したまま保存を続けていたなら、この操作は要りません。ブラウザで `http://localhost:3000/dashboard` を開き、Day 01 の `Hello Task-App` ではなく自分の名前を含む見出しが出ていれば、今日書いたものは画面まで届いています。
+`Ctrl` と `C` で止めていた場合は、これで開発サーバーが戻ってきます。起動したまま保存を続けていたなら、この操作は要りません。ブラウザで `http://localhost:3000/dashboard` を開き、Day 01 の 見出しだけではなく自分の名前を含む文が出ていれば、今日書いたものは画面まで届いています。
 
 #### チェックポイント
 
 - メイン見出しのあいさつが、いま開発サーバーで見ている時刻に合っている
 - `Taro` の名前が画面に出る
-- `Focus:` のバッジが `bg-primary`（メインカラー）で表示されている
-- 下段に `Owner` `Today` `Next` の3カードがある
+- `進行中:` のバッジが `bg-primary`（メインカラー）で表示されている
+- 下段に「担当」「今日」「次」の3カードがある
 - 右側の補助カードまで含めて、画面全体が「ダッシュボード」として見える
 
 #### うまくいかないときの見直し順
@@ -854,10 +853,10 @@ type FocusCard = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'タスク管理アプリを作る人',
-  todayFocus: 'ダッシュボードに自分の名前を出す',
-  todayGoal: '名前と今日やることを画面に出す',
-  nextAction: 'Day 03 で GitHub に保存する',
+  role: 'Web エンジニア',
+  todayFocus: 'ポートフォリオの企画',
+  todayGoal: 'トップページのラフを決める',
+  nextAction: 'レビューをもらう',
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
@@ -883,7 +882,7 @@ function getGreetingByHour(hour: number): string {
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}に取り組みます。`;
 }
 
 export default function DashboardPage() {
@@ -901,19 +900,19 @@ export default function DashboardPage() {
   }, [currentHour]);
   const focusCards: FocusCard[] = [
     {
-      label: 'Owner',
+      label: '担当',
       value: dashboardOwner.name,
       description: dashboardOwner.role,
     },
     {
-      label: 'Today',
-      value: 'Day 02',
-      description: dashboardOwner.todayGoal,
+      label: '今日',
+      value: dashboardOwner.todayGoal,
+      description: dashboardOwner.todayFocus,
     },
     {
-      label: 'Next',
-      value: 'Day 03',
-      description: dashboardOwner.nextAction,
+      label: '次',
+      value: dashboardOwner.nextAction,
+      description: '明日いちばんに動く',
     },
   ];
 
@@ -941,7 +940,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
-            Personalized Message Ready
+            作業中
           </div>
         </header>
 
@@ -949,7 +948,7 @@ export default function DashboardPage() {
           <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
             <div className="border-b border-border px-8 py-6">
               <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                Personal Message
+                今日のフォーカス
               </span>
 
               <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
@@ -967,11 +966,11 @@ export default function DashboardPage() {
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                。画面に出ている文字は、全部このファイルの上のほうで決めている。
+                まで進めます。
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
-                Focus: {dashboardOwner.todayFocus}
+                進行中: {dashboardOwner.todayFocus}
               </div>
             </div>
 
@@ -1009,13 +1008,13 @@ export default function DashboardPage() {
                 メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                名前が出るだけで、他人のサンプルではなく自分の画面になる。
+                午前は集中して作業。夕方に振り返りを入れる。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                まだ無いもの
+                今週の予定
               </p>
 ```
 
@@ -1026,7 +1025,7 @@ export default function DashboardPage() {
 ```tsx
               {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
+                金曜までにトップページのラフを固める。
               </p>
             </article>
 
@@ -1035,7 +1034,7 @@ export default function DashboardPage() {
                 明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 で、ここまで書いたコードを GitHub に保存する。
+                レビューの指摘をまとめて、直す順番を決める。
               </p>
             </article>
           </aside>
@@ -1072,10 +1071,10 @@ type FocusCard = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'タスク管理アプリを作る人',
-  todayFocus: 'ダッシュボードに自分の名前を出す',
-  todayGoal: '名前と今日やることを画面に出す',
-  nextAction: 'Day 03 で GitHub に保存する',
+  role: 'Web エンジニア',
+  todayFocus: 'ポートフォリオの企画',
+  todayGoal: 'トップページのラフを決める',
+  nextAction: 'レビューをもらう',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -1101,7 +1100,7 @@ After の1行目に `'use client'` はありません。`useMemo` の取り込�
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}に取り組みます。`;
 }
 
 export default function DashboardPage() {
@@ -1109,7 +1108,7 @@ export default function DashboardPage() {
   const mainMessage = buildMainMessage(dashboardOwner, currentHour);
   const focusCards: FocusCard[] = [
     {
-      label: 'Owner',
+      label: '担当',
       value: dashboardOwner.name,
       description: dashboardOwner.role,
 ```
@@ -1122,14 +1121,14 @@ export default function DashboardPage() {
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     },
     {
-      label: 'Today',
-      value: 'Day 02',
-      description: dashboardOwner.todayGoal,
+      label: '今日',
+      value: dashboardOwner.todayGoal,
+      description: dashboardOwner.todayFocus,
     },
     {
-      label: 'Next',
-      value: 'Day 03',
-      description: dashboardOwner.nextAction,
+      label: '次',
+      value: dashboardOwner.nextAction,
+      description: '明日いちばんに動く',
     },
   ];
 
@@ -1155,7 +1154,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
-            Personalized Message Ready
+            作業中
           </div>
         </header>
 
@@ -1163,7 +1162,7 @@ export default function DashboardPage() {
           <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
             <div className="border-b border-border px-8 py-6">
               <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                Personal Message
+                今日のフォーカス
               </span>
 
               <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
@@ -1173,7 +1172,7 @@ export default function DashboardPage() {
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                。画面に出ている文字は、全部このファイルの上のほうで決めている。
+                まで進めます。
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
@@ -1185,7 +1184,7 @@ export default function DashboardPage() {
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
-                Focus: {dashboardOwner.todayFocus}
+                進行中: {dashboardOwner.todayFocus}
               </div>
             </div>
 
@@ -1223,16 +1222,16 @@ export default function DashboardPage() {
                 メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                名前が出るだけで、他人のサンプルではなく自分の画面になる。
+                午前は集中して作業。夕方に振り返りを入れる。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                まだ無いもの
+                今週の予定
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
+                金曜までにトップページのラフを固める。
               </p>
             </article>
 
@@ -1249,7 +1248,7 @@ export default function DashboardPage() {
                 明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 で、ここまで書いたコードを GitHub に保存する。
+                レビューの指摘をまとめて、直す順番を決める。
               </p>
             </article>
           </aside>

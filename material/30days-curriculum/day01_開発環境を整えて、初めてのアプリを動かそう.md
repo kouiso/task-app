@@ -107,7 +107,7 @@ PostgreSQL（データベース）は、このあと Docker という仕組み�
 
 1. [Docker Desktop 公式サイト](https://www.docker.com/products/docker-desktop/) を開き、自分の OS 用のインストーラをダウンロードする
 2. 案内どおりにインストールし、Docker Desktop を起動する
-3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備完了
+3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備プロジェクト
 
 **Ubuntu の場合**
 
@@ -855,7 +855,7 @@ export default function HomePage() {
         <header className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              Getting Started
+              タスク管理
             </p>
             <h1 className="text-sm font-semibold text-card-foreground">
               My Task App
@@ -864,7 +864,7 @@ export default function HomePage() {
 
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            Day 01 Ready
+            作りかけ
           </div>
         </header>
 
@@ -880,16 +880,16 @@ export default function HomePage() {
             {/* filepath: src/app/page.tsx（同じファイルの続き） */}
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                Hello, my first task app
+                タスク管理
               </div>
 
               <h2 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
-                自分専用のタスク管理アプリが、今日ここから動き出す。
+                プロジェクトとタスクを、ひとつの画面で。
               </h2>
 
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-                今日つくるのは、30日後の完成版へつながる最初の画面だ。
-                機能はまだ無い。色と余白だけ先に決めておく。
+                担当と期限を決めて、いまやることだけを取り出す。
+                まだ作りかけで、画面は入口だけ。
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -897,7 +897,7 @@ export default function HomePage() {
                   className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-transform duration-200 hover:-translate-y-0.5"
                   href="#today-goals"
                 >
-                  今日のゴールを見る
+                  これから足すものを見る
                 </a>
                 <Link
                   className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
@@ -917,7 +917,7 @@ export default function HomePage() {
                   className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
                   href="#next-step"
                 >
-                  明日の予告を見る
+                  次にやることを見る
                 </a>
               </div>
             </div>
@@ -925,11 +925,11 @@ export default function HomePage() {
             <div className="grid gap-4 bg-secondary/60 px-8 py-6 md:grid-cols-3">
               <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  今日の進捗
+                  これから
                 </p>
-                <p className="mt-3 text-3xl font-semibold text-foreground">01</p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">プロジェクト</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  空のディレクトリから、ちゃんと動く土台を自分で立ち上げた。
+                  案件ごとにタスクを分けて置けるようにする。
                 </p>
               </article>
 
@@ -938,26 +938,26 @@ export default function HomePage() {
 
 ボタンの並びを閉じたあと、大きなカードの下半分に小さなカードを3枚並べ始めました。`md:grid-cols-3` は「画面幅が中くらい以上なら3列に並べる」という指定で、スマホでは縦積み、広い画面では横並びになります。1枚ずつを `<article>` で囲んでいるのは、それぞれが独立したひとかたまりの内容だと構造で示すためです。ここでも色はすべて token 名で指定しています。
 
-**確認ポイント**: 「今日の進捗」のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
+**確認ポイント**: 1枚目のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
 
 ```tsx
                 {/* filepath: src/app/page.tsx（同じファイルの続き） */}
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  今できること
+                  これから
                 </p>
-                <p className="mt-3 text-3xl font-semibold text-foreground">UI</p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">タスク</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  ダッシュボードへのリンクが動く。中身は Day 02 で足す。
+                  担当と期限を1行で決められるようにする。
                 </p>
               </article>
 
               <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  次にやること
+                  これから
                 </p>
-                <p className="mt-3 text-3xl font-semibold text-foreground">Next</p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">レポート</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  Day 02 でダッシュボードに自分の名前を出す。
+                  終わった数と残りを数えられるようにする。
                 </p>
               </article>
             </div>
@@ -977,20 +977,20 @@ export default function HomePage() {
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
-                今日のゴール
+                これから足すもの
               </p>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-muted-foreground">
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  空のディレクトリから task-app を始める
+                  プロジェクトを作って、タスクを登録する
                 </li>
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  スキャフォールド用スクリプトで土台を作る
+                  期限と優先度で並べ替える
                 </li>
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  npm run dev でローカル起動を確認する
+                  進み具合をレポートで見る
                 </li>
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  design token を使って最初の画面をつくる
+                  メンバーを招いて一緒に使う
                 </li>
               </ul>
             </article>
@@ -1000,7 +1000,7 @@ export default function HomePage() {
                 メモ
 ```
 
-「今日のゴール」カードの中身です。`<ul>` と `<li>` は箇条書きを表す HTML のタグで、ここでは `<li>` の1つずつに `rounded-2xl bg-secondary` を付けて、角丸の面に乗ったチェック項目のような見た目にしています。JSX では、表示したい日本語のテキストをタグの中へそのまま書けます。最後の `メモ` は次のカードの見出しで、ブロックの区切りの都合で途中まで書いている状態なので、そのまま次へ進んでください。
+「これから足すもの」カードの中身です。`<ul>` と `<li>` は箇条書きを表す HTML のタグで、ここでは `<li>` の1つずつに `rounded-2xl bg-secondary` を付けて、角丸の面に乗ったチェック項目のような見た目にしています。JSX では、表示したい日本語のテキストをタグの中へそのまま書けます。最後の `メモ` は次のカードの見出しで、ブロックの区切りの都合で途中まで書いている状態なので、そのまま次へ進んでください。
 
 **確認ポイント**: `<ul>` の中に4つの `<li>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
@@ -1008,16 +1008,16 @@ export default function HomePage() {
               {/* filepath: src/app/page.tsx（同じファイルの続き） */}
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                ここで決めた色と角丸と余白を、30日ずっと使い回す。
-                途中で変えると、前に作った画面と揃わなくなる。
+                ここで決めた色と角丸と余白は、あとから変えない。
+                途中で変えると、画面ごとに見た目がばらつく。
               </p>
 
               <div className="mt-5 rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-sm">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary-foreground/80">
-                  Today&apos;s theme
+                  いまの状態
                 </p>
                 <p className="mt-2 text-lg font-semibold">
-                  空のフォルダから、動く画面を1枚出す
+                  入口の画面が1枚できた
                 </p>
               </div>
             </article>
@@ -1027,7 +1027,7 @@ export default function HomePage() {
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
-                明日やること
+                次にやること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
 ```
@@ -1038,8 +1038,7 @@ export default function HomePage() {
 
 ```tsx
 {/* filepath: src/app/page.tsx（同じファイルの続き） */}
-                Day 02 では、ここから入れる /dashboard に自分の名前を出す。
-                今日はこのページから /dashboard へ移動できれば十分。
+                ダッシュボードを開くと、いまの状況がまとまって見えるようにする。
               </p>
             </article>
           </div>
@@ -1073,11 +1072,11 @@ export default function DashboardPage() {
             Dashboard
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
-            Hello Task-App
+            ダッシュボード
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-            Day 01 で用意した最初のダッシュボードです。
-            ここから少しずつ、自分専用の画面にしていきます。
+            まだ表示するデータがありません。
+            プロジェクトとタスクを作れるようになると、ここに出ます。
           </p>
         </section>
       </div>
@@ -1086,7 +1085,7 @@ export default function DashboardPage() {
 }
 ```
 
-このファイルは、`src/app/dashboard/` というフォルダの中に `page.tsx` という名前で置いたことに意味があります。Next.js はフォルダの名前をそのまま URL の一部として扱うので、これで `/dashboard` という住所ができました。中身はトップページと同じ token 名だけで組んであるため、今日そろえた配色がこちらの画面にもそのまま効きます。保存したら `http://localhost:3000/dashboard` を開いて、`Hello Task-App` の見出しが出るか確かめましょう。`404` と表示されるときは、フォルダ名かファイル名が1文字違っています。
+このファイルは、`src/app/dashboard/` というフォルダの中に `page.tsx` という名前で置いたことに意味があります。Next.js はフォルダの名前をそのまま URL の一部として扱うので、これで `/dashboard` という住所ができました。中身はトップページと同じ token 名だけで組んであるため、今日そろえた配色がこちらの画面にもそのまま効きます。保存したら `http://localhost:3000/dashboard` を開いて、「ダッシュボード」の見出しが出るか確かめましょう。`404` と表示されるときは、フォルダ名かファイル名が1文字違っています。
 
 ```mermaid
 flowchart LR
@@ -1102,7 +1101,7 @@ flowchart LR
 
 - ルートの `src/app/page.tsx` は、アプリの入口となるトップページ
 - `src/app/dashboard/page.tsx` は、これから機能を追加していくダッシュボード本体
-- Day 02 では、この `Hello Task-App` のダッシュボードに自分のメッセージを追加していく
+- Day 02 では、このダッシュボードに自分のメッセージを追加していく
 
 #### できあがる見た目のポイント
 
@@ -1140,21 +1139,21 @@ function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-[#25273f] bg-[#0f1021] px-[32px] py-[28px] shadow-[0_24px_80px_-32px_rgba(99,102,241,0.45)]">
       <span className="inline-flex items-center rounded-full bg-[#16172d] px-[12px] py-[6px] text-[13px] font-medium text-[#9aa2c3]">
-        Hello, my first task app
+        タスク管理
       </span>
       <h2 className="mt-[24px] text-[44px] font-semibold leading-[1.08] tracking-[-0.04em] text-white">
-        自分専用のタスク管理アプリが、今日ここから動き出す。
+        プロジェクトとタスクを、ひとつの画面で。
       </h2>
       <p className="mt-[18px] max-w-[620px] text-[16px] leading-[1.9] text-[#b0b7d3]">
-        今日つくるのは、30日後の完成版へつながる最初の画面だ。
-        機能はまだ無い。色と余白だけ先に決めておく。
+        担当と期限を決めて、いまやることだけを取り出す。
+        まだ作りかけで、画面は入口だけ。
       </p>
       <div className="mt-[32px] flex gap-[12px]">
         <a
           className="inline-flex items-center justify-center rounded-[12px] bg-[#6d5dfc] px-[20px] py-[12px] text-[14px] font-semibold text-white"
           href="#today-goals"
         >
-          今日のゴールを見る
+          これから足すものを見る
         </a>
         <a
           className="inline-flex items-center justify-center rounded-[12px] border border-[#2d314b] bg-[#151729] px-[20px] py-[12px] text-[14px] font-semibold text-white"
@@ -1168,7 +1167,7 @@ function WelcomeHero() {
 
 ```tsx
 {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
-          明日の予告を見る
+          これから足すものを見る
         </a>
       </div>
     </section>
@@ -1194,21 +1193,21 @@ function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-border bg-card px-8 py-7 shadow-md">
       <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-        Hello, my first task app
+        タスク管理
       </span>
       <h2 className="mt-6 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
-        自分専用のタスク管理アプリが、今日ここから動き出す。
+        プロジェクトとタスクを、ひとつの画面で。
       </h2>
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-        今日つくるのは、30日後の完成版へつながる最初の画面だ。
-        機能はまだ無い。色と余白だけ先に決めておく。
+        担当と期限を決めて、いまやることだけを取り出す。
+        まだ作りかけで、画面は入口だけ。
       </p>
       <div className="mt-8 flex gap-3">
         <a
           className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm"
           href="#today-goals"
         >
-          今日のゴールを見る
+          これから足すものを見る
         </a>
         <a
           className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground"
@@ -1222,7 +1221,7 @@ function WelcomeHero() {
 
 ```tsx
 {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
-          明日の予告を見る
+          これから足すものを見る
         </a>
       </div>
     </section>
@@ -1272,16 +1271,16 @@ npm run dev
 
 Step 3 でポート番号が `3001` などに読み替わっていた場合は、以下の `3000` を自分の画面に出ている番号に置き換えて確認してください。
 
-- 上に `Getting Started` と `My Task App` が見える
+- 上に「タスク管理」と `My Task App` が見える
 - `Day 01 Ready` の小さなバッジが見える
-- メインカードに「自分専用のタスク管理アプリが、今日ここから動き出す。」が見える
+- メインカードに「プロジェクトとタスクを、ひとつの画面で。」が見える
 - ボタンが `bg-primary` の主役色で表示されている
 - `ダッシュボードへ入る` ボタンが見える
-- 右側に「今日のゴール」「メモ」「明日やること」のカードが見える
+- 右側に「これから足すもの」「メモ」「次にやること」のカードが見える
 - `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開く
-- `/dashboard` で `Hello Task-App` が見える
+- `/dashboard` で 「ダッシュボード」の見出しが見える
 
-![トップページ。上部に Getting Started と My Task App、左に大きな見出しと3つのボタン、右に今日のゴール・メモ・明日やることのカードが並んでいる](./screenshots/day01/top-page.png)
+![トップページ。上部に「タスク管理」と My Task App、左に大きな見出しと3つのボタン、右にこれから足すもの・メモ・次にやることのカードが並んでいる](./screenshots/day01/top-page.png)
 
 赤い枠が `ダッシュボードへ入る` ボタンです。ここを押すと `/dashboard` へ移動します。
 
@@ -1344,7 +1343,7 @@ A. Tailwind に「`bg-primary` と書かれたら `--primary` の色を使って
 
 A. 画面じゅうの角丸がまとめて大きくなります。`--radius-sm` から `--radius-xl` までの4つが、どれも `--radius` を見て決まるためです。`--radius-lg` はその値をそのまま使い、残りの3つは `calc()` で増減させています。カード・ボタン・入力欄は、どれもこの1行の下にぶら下がっています。
 
-**Q3. 「今日のゴールを見る」は `<a href="#today-goals">`、「ダッシュボードへ入る」は `<Link href="/dashboard">` と書き分けました。なぜ2つの書き方が要るのですか。**
+**Q3. 「これから足すものを見る」は `<a href="#today-goals">`、「ダッシュボードへ入る」は `<Link href="/dashboard">` と書き分けました。なぜ2つの書き方が要るのですか。**
 
 A. 移動先の性質が違うためです。前者は同じページの中に置いた `id="today-goals"` へスクロールする移動で、ページは読み込み直されません。後者は別のページへの移動です。Next.js の `Link` はページ全体を取り直さずに表示だけを差し替えるので、アプリの中のページ移動には `Link` を使います。
 
