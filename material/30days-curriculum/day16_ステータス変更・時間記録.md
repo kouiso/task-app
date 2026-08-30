@@ -852,7 +852,7 @@ Reactは複数の要素を並べて返せないので、
 まず、記録成功後に一覧を取り直すハンドラーを追加します。`useCallback`（同じ関数を毎回作り直さないように覚えておく React の機能）を使うので、`react` からのインポートに `useCallback` を足しておきます。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（const utils の直後に追加）
 // 時間記録の成功後に一覧を取り直す（useCallback は react から import）
 const handleTimeLogSuccess = useCallback(() => {
   void utils.task.getAll.invalidate();

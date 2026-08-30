@@ -473,6 +473,12 @@ def check_element_replacement() -> list[str]:
         fails.append("❌ 知らない名前を見つけられていない")
     if target.introduces_unknown_names("const detailOpen = 1;", "<X open={detailOpen} />"):
         fails.append("❌ 既にある名前まで知らない名前として弾いている")
+    # `a.b` の `b` は `a` の持ち物で、そのファイルに宣言が要る名前やない。
+    # ここを数えると API が返す値の欄名で抜粋が落ちる（day16 の `task.timeSpentMinutes`）。
+    if target.introduces_unknown_names("const task = 1;", "<X v={task.timeSpentMinutes} />"):
+        fails.append("❌ ドットの後ろの欄名を、宣言の要る名前として弾いている")
+    if not target.introduces_unknown_names("const a = 1;", "<X v={zzz.field} />"):
+        fails.append("❌ ドットの前が未知でも見逃している")
 
     # 採った版より後の日の書き換えだけを当てる。
     blocks = [

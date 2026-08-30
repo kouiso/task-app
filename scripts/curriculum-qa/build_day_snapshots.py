@@ -191,6 +191,10 @@ IMPORT_ONLY = re.compile(r"^\s*(?:import\b|//|/\*|\{/\*|$)")
 # 参照しとる名前はここに出る。属性の名前（`open=`）は括弧の外なので拾わない。
 BRACED = re.compile(r"\{([^{}]*)\}")
 IDENTIFIER = re.compile(r"[A-Za-z_$][\w$]*")
+# 参照として数える名前。`a.b` の `b` は `a` の持ち物であって、そのファイルに宣言が
+# 要る名前やない。ドットの後ろを数えると、API が返す値の欄名まで「まだ無い名前」に
+# なって、当てられるはずの抜粋が落ちる（day16 の `task.timeSpentMinutes`）。
+REFERENCE = re.compile(r"(?<![.\w$])[A-Za-z_$][\w$]*")
 # 名前やのうて構文の一部。参照の有無を数える対象から外す。
 NOT_A_REFERENCE = frozenset(
     {"true", "false", "null", "undefined", "new", "await", "typeof", "return", "of", "in"}
@@ -628,7 +632,7 @@ def introduces_unknown_names(text: str, fragment: str) -> bool:
     referenced = {
         name
         for expr in BRACED.findall(mask_code(fragment))
-        for name in IDENTIFIER.findall(expr)
+        for name in REFERENCE.findall(expr)
         if name not in NOT_A_REFERENCE
     }
     return any(name not in known for name in referenced)
@@ -717,14 +721,14 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             continue
         head = operation_head(b.lines)
         element = None if m else ELEMENT_HEAD.match(head)
-        # 宣言の書き直しと配列への1要素追加は、`完成版` の目印が付いていても当てる。
+        # 要素の書き換え・宣言の書き直し・配列への1要素追加は、`完成版` の目印が付いていても
+        # 当てる。要素だけを外していたが、Step の節が省略記号（`// ...` の類）を含む日は
+        # そちらが落ち、全文が `完成版` の側にしか無い（day16 の `<TaskCard>`）。
         # ここまで来た時点で「採った版の日より後」に絞れており、採られなかった `完成版` は
         # その日の全文ではなく抜粋である。抜粋なら当てるのが実物に近い
         # （day20 の `menuItems` は `完成版` の側にしか全文が無い）。
         declaration = None if (m or element) else DECL_HEAD.match(head)
         is_element_add = not (m or element or declaration) and bool(OBJECT_ELEMENT_HEAD.match(head))
-        if not m and element is not None and is_marked_final(b):
-            continue
         if not m and (b.note or not (element or declaration or is_element_add)):
             continue
         # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
