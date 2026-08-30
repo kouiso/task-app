@@ -1,6 +1,16 @@
 # 30日教材 商品化 進捗
 
-**次にやること**: 36冊の組版が終わったら `check_page_layout.py` を全冊に当て、崩れが残る冊を潰す。並行して写真70枚を撮り切る。
+**次にやること**: `build_day_snapshots.py --all --verify` の30日通し結果を読み、落ちた日を1件ずつ「教材の欠陥」か「道具の限界」かに切り分ける。並行して day01/day02 の写真3枚の撮り直しを取り込む。
+
+**いま同時に走らせとるもの**（2026-08-30 15:40 UTC 時点）
+
+| 中身 | 出口 |
+|---|---|
+| `build_day_snapshots.py --all --verify` 30日通し | `scratchpad/verify-all-30.log` → 結果を `day-snapshots-result.md` へ反映 |
+| dockerd 起動 → 撮影DB → day01/day02 の3枚を撮り直し | `screenshots/day01/top-page.png` ほか2枚 |
+| 変更7日分の PDF 再組版 → 機械検査 → 紙面を目視 | 崩れが出たら `book.css` を直す |
+| 10本のワークフロー journal から実指摘を抽出 | 重複除去した指摘リスト |
+| 36本の textlint ＋ check_quality 全走査 | 0件・全 PASS を実測 |
 
 計画: `/root/.claude/plans/task-app-30-10-000-deep-iverson.md`
 PR: **https://github.com/kouiso/task-app/pull/388**（draft）
