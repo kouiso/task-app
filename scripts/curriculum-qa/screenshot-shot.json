@@ -916,6 +916,387 @@
         "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
         "padding": 0
       }
+    },
+    {
+      "name": "day18/task-detail-dialog.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭のゴール。本文は「コメント付きのタスク詳細ダイアログ」と書いているのに、貼られていたのは着手前の task-detail-dialog.png で、alt が「今日ここへ足す」と断りを入れていた（scan-day17-24.md 18-a4）。Day 18 を終えたツリーで、一覧と投稿欄が並んだ実物を撮る。初期データの「デザインモックアップ作成」には admin のコメントが1件ある。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day18/comments-list.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] div.space-y-4.mb-4.overflow-y-auto",
+          "label": "Step 3 で書いたコメント一覧"
+        }
+      ],
+      "note": "Step 3 の「コメント一覧がタスク詳細に並んだ画面」。旧画像は Day 19 で足すペンとゴミ箱のアイコンが写っており、本文が2行かけて断っていた。Day 18 のツリーで撮ればアイコンは出ないので、断りごと不要になる。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day18/comment-form.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] form",
+          "label": "Step 4 で書いた投稿フォーム"
+        }
+      ],
+      "note": "Step 4 の「テキストエリアと投稿ボタンが並んだ画面」。フォームだけを切り抜くと幅が版面の下限（720px）を割るので、ダイアログを切り抜いて赤枠で指す。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day18/comment-before-post.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        },
+        {
+          "kind": "fill",
+          "selector": "[role='dialog'] textarea[aria-label='コメント本文']",
+          "value": "モックの配色を1案だけ差し替えました。確認をお願いします。"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] form button[type='submit']",
+          "label": "これから押すボタン"
+        }
+      ],
+      "note": "Step 7 の「投稿ボタンを押す直前」。本文が押した後に起きる3つ（一覧の先頭に加わる・件数が1つ増える・入力欄が空に戻る）を文章で書いているので、直前の状態を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/comment-edit-mode.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button:has-text('キャンセル')"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭のゴール「コメント編集モードの画面」。既存の task-comment-edit.png は同じ日に2回貼られていた。Day 19 のツリーで、自分のコメントの行だけがテキストエリアへ変わった実物を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/own-comment-actions.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] div.flex.items-center.gap-2:has(button[aria-label='自分のコメントを編集'])",
+          "label": "自分のコメントにだけ出る2つのボタン"
+        }
+      ],
+      "note": "Step 4 のキャプションは「本人のコメントにだけ編集・削除ボタンが並ぶ表示」なのに、貼られていたのはコメント0件のダイアログで、本文が「画像はコメントが1件も無いときの姿です」と断っていた。初期データの「デザインモックアップ作成」には admin 自身のコメントが1件あるので、ボタンが並んだ実物を撮れる。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/comment-edit-actions.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button:has-text('キャンセル')"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] div.flex.gap-2.justify-end",
+          "label": "Step 5 で動くようになる2つのボタン"
+        }
+      ],
+      "note": "Step 5 の「編集モードでテキストエリアが表示されている」。冒頭のゴールと同じ画面なので、こちらは本文が言う『キャンセルを押せば元の表示へ戻ります』の2つのボタンを赤枠で指して区別する。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/comment-delete-confirm.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを削除']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "Step 6 のキャプションは「タスク詳細ダイアログのコメントセクション完成」で、貼られていたのはコメント0件のダイアログだった。Step 6 の成果物は title を「コメントを削除しますか？」に変えた確認ダイアログなので、その実物を撮る。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day20/search.png",
+      "day": 20,
+      "path": "/search",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('検索')",
+      "note": "冒頭のゴール。既存の search-results.png は同じ日に2回。本文が『画像の案内文は完成版のもので、今日書くコードでは「検索条件を入力してください」になります』と断っていたが、Day 20 のツリーで撮ればその文言そのものが写る。",
+      "full_page": true
+    },
+    {
+      "name": "day20/search-form.png",
+      "day": 20,
+      "path": "/search",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('検索')",
+      "note": "Step 5 の「入力欄が7つそろったフォーム」。旧画像には『クリア』しか写っておらず、本文が2行かけて『いま書いたコードではその右隣に検索ボタンも並びます』と補っていた。Day 20 のツリーでは2つとも写る。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(#keyword)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day20/search-before-query.png",
+      "day": 20,
+      "path": "/search",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('検索')",
+      "marks": [
+        {
+          "selector": "div.text-center.py-12:has(p:text-is('検索条件を入力してください'))",
+          "label": "結果のカードが並ぶ場所"
+        }
+      ],
+      "note": "Step 10 の動作確認。冒頭のゴールと同じ画面なので、本文が言う『キーワードを入れると、この空きスペースに結果のカードが並びます』の場所を赤枠で指して区別する。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "note": "冒頭の完成イメージ。既存の report.png は Day 21 に5回・Day 22 に3回・Day 23 に2回。実画像は Day 22 の円グラフまで写っており、本文が『下に写っている円グラフは Day 22 の成果物』と断っていた。Day 21 のツリーで撮ればグラフは無い。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report-heading.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "marks": [
+        {
+          "selector": "div.space-y-6 > div:has(> h1)",
+          "label": "Step 3 で書いた見出しと説明文"
+        }
+      ],
+      "note": "Step 3 の骨組み確認。Step 3 の時点の画面は JSX が閉じていないので描画できず、この道具では撮れない。完成後の画面で、この Step までに出るところを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report-loading.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["report.getOverview"],
+      "wait_for": "div.animate-spin",
+      "note": "Step 5 のローディング確認。本文が『読み込んでいる間は画面の中央にスピナーだけが出ます』『ここでスピナーだけを返すと読み込み中はサイドバーも消えます』と書いているとおりの絵。手元の DB は速すぎて撮る隙が無いので、getOverview の返事だけを止めて撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report-stat-cards.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "marks": [
+        {
+          "selector": "div.grid.grid-cols-1.gap-4",
+          "label": "Step 7 で書いた4枚のカード"
+        }
+      ],
+      "note": "Step 7 のカード確認。旧画像は完成版でカードの下に円グラフが写っており、本文が『グラフを作るのは Day 22 なので今日の画面ではカードの下は空のままです』と断っていた。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report-narrow.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "note": "Step 9 のレスポンシブ確認。旧画像は PC 幅の4列で、本文が『モバイル幅の姿はブラウザの幅を実際に縮めて確かめてください』と読者へ投げていた。幅 900px で撮れば 2 列に折り返した実物を見せられる（`sm:grid-cols-2` が効き、`lg:grid-cols-4` が外れる幅）。",
+      "full_page": true
     }
   ]
 }

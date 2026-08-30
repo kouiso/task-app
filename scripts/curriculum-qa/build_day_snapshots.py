@@ -164,6 +164,19 @@ EXPORT_LIST = re.compile(r"^export\s*\{([^}]*)\}", re.M)
 # 差し込めないと、day16 が足す `addTime` 手続きが落ちて、day16 以降の
 # `time-log-dialog.tsx` が `api.task.addTime` を呼べずに型検査で落ちる。
 INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[）)]$")
+# 抜粋の先頭がトップレベルの宣言なら、それは「その宣言をこの形へ書き直す」という指示である。
+# day13 と day20 の `app-layout.tsx` は `const menuItems: MenuItem[] = [...]` を、項目を1つ
+# 増やした形で丸ごと出し直す。当てられんと、サイドバーが Day 08 の3項目のまま止まり、
+# 読者が自分で足した「タスク」「検索」が写真から消える。
+DECL_HEAD = re.compile(
+    r"^(?:export\s+)?(?:const|let|var|function|async\s+function)\s+([A-Za-z_$][\w$]*)\b"
+)
+# 抜粋そのものがオブジェクトの1要素なら、それは「この要素をどこかの配列へ足す」という指示である。
+# day21 の `app-layout.tsx` は `{ text: 'レポート', icon: ..., path: ... },` だけを出す。
+OBJECT_ELEMENT_HEAD = re.compile(r"^\s*\{\s*$")
+# オブジェクトの欄名。`text:` `icon:` `path:` を拾う。文字列の中の `:` は mask_code が消す。
+OBJECT_KEY = re.compile(r"^\s*([A-Za-z_$][\w$]*)\s*:", re.M)
+
 # 抜粋の先頭が JSX 要素なら、それは「その要素をこの形へ書き換える」という指示である。
 # day18 の `src/app/task/page.tsx` は `<TaskDetailDialog ... canEditProject={canEditProject} />`
 # だけを出して、呼び出し側へ引数を1本足す。差し込みでも丸ごとの書き直しでもないので、
@@ -197,6 +210,9 @@ CONTINUATION = re.compile(r"続き")
 # 差し込み先の目印になる行。オブジェクトの要素（`delete: protectedProcedure`）と
 # トップレベルの宣言（`export const taskRouter`）の両方を受ける。
 ANCHOR = "^(\\s*)(?:{name}\\s*:|(?:export\\s+)?(?:const|let|function|async\\s+function)\\s+{name}\\b)"
+# 差し込み先の名前が識別子1つか。`menuItems.map` のような式はここで外れ、行の中の
+# 文字列として探す側へ回る。
+IDENTIFIER_ONLY = re.compile(r"^[A-Za-z_$][\w$]*$")
 
 # 表へ載せるエラー1行の長さ。
 ERROR_LINE_WIDTH = 160
@@ -436,15 +452,29 @@ def insert_fragment(text: str, name: str, where: str, fragment: str) -> str | No
 
     見つからないときに黙って足さない。位置の分からない差し込みを末尾へ付けると、
     閉じ括弧の外へ手続きが1本出た壊れたファイルになる。
+
+    名前が識別子1つでないとき（`menuItems.map` のような式）は、その文字列を含む行を
+    差し込み先と見る。JSX の中へ1項目足す指示がこの形になる（day24 のサイドバーの
+    管理者リンク）。式の終わりは括弧の収支で見る。`))}` は `,` でも `;` でも終わらないので、
+    要素を切る `_member_end` では次の宣言まで飲み込んでしまう。
     """
-    pattern = re.compile(ANCHOR.format(name=re.escape(name)))
     lines = text.split("\n")
-    for i, line in enumerate(lines):
-        if not pattern.match(line):
-            continue
-        at = i if where == "前に追加" else _member_end(lines, i)
-        return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
-    return None
+    if IDENTIFIER_ONLY.match(name):
+        pattern = re.compile(ANCHOR.format(name=re.escape(name)))
+        for i, line in enumerate(lines):
+            if not pattern.match(line):
+                continue
+            at = i if where == "前に追加" else _member_end(lines, i)
+            return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
+        return None
+    # 式で指された差し込み先は、1つに決まるときだけ使う。同じ式が2箇所にあると
+    # 教材が指していない側へ入れてしまい、型検査は通っても画面が別物になる。
+    hits = [i for i, line in enumerate(lines) if name in mask_code(line)]
+    if len(hits) != 1:
+        return None
+    i = hits[0]
+    at = i if where == "前に追加" else _declaration_end(lines, i)
+    return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
 
 
 def operation_head(lines: tuple[str, ...]) -> str:
@@ -475,6 +505,75 @@ def replace_element(text: str, name: str, fragment: str) -> str | None:
     if end is None:
         return None
     return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def _declaration_end(lines: list[str], start: int) -> int:
+    """start 行から始まる宣言が終わる行の次を返す。
+
+    `_member_end` は使えない。あちらはオブジェクトの要素を切る道具で、深さが0へ戻った行が
+    `,` か `;` で終わっているかを見る。関数宣言の終わりは `}` だけなので当たらず、次に来る
+    空行まで走る。空行が無ければ次の宣言まで飲み込む（`buildTaskFormValues` の置き換えが
+    後ろの `export function TaskDialog` ごと消して、day15 以降が丸ごとビルドできなくなった）。
+    宣言は括弧の収支が0へ戻ったところで終わる。見るのはそれだけでよい。
+    """
+    depth = 0
+    for i in range(start, len(lines)):
+        masked = mask_code(lines[i])
+        depth += sum(masked.count(c) for c in "{([") - sum(masked.count(c) for c in "})]")
+        if depth <= 0:
+            return i + 1
+    return len(lines)
+
+
+def replace_declaration(text: str, name: str, fragment: str) -> str | None:
+    """トップレベルの `name` の宣言を fragment へ丸ごと置き換える。決まらなければ None。
+
+    教材はその日の変更を「増やした項目まで含めた宣言の全文」で出すことがある。差し込みでも
+    要素の書き換えでもないので、宣言そのものを差し替える。行頭で始まる宣言だけを見るのは、
+    関数の中の `const` まで拾うと、同じ名前の局所変数を書き換えてしまうため。
+    見つかる宣言が1つに決まらないときは触らない。
+    """
+    pattern = re.compile(rf"^(?:export\s+)?(?:const|let|var|function|async\s+function)\s+{re.escape(name)}\b")
+    lines = text.split("\n")
+    starts = [i for i, line in enumerate(lines) if pattern.match(line)]
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    end = _declaration_end(lines, start)
+    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def object_keys(text: str) -> frozenset[str]:
+    """オブジェクトリテラルの欄名の集合。"""
+    return frozenset(OBJECT_KEY.findall(mask_code(text)))
+
+
+def append_array_element(text: str, fragment: str) -> str | None:
+    """オブジェクト1件の抜粋を、同じ形の要素が並ぶ配列の末尾へ足す。決まらなければ None。
+
+    day21 の `app-layout.tsx` は `{ text: 'レポート', icon: ..., path: ... },` だけを出し、
+    どの配列へ入れるかは本文の散文でしか言わない。散文はブロックに残らないので、
+    **要素の形**で行き先を決める。欄名の集合が同じ要素で埋まっている配列が1つだけなら、
+    そこへ入れる。0個でも2個以上でも触らない。
+    """
+    keys = object_keys(fragment)
+    if not keys:
+        return None
+    lines = text.split("\n")
+    hits: list[tuple[int, int]] = []
+    for i, line in enumerate(lines):
+        if not (DECL_HEAD.match(line) and line.rstrip().endswith("[")):
+            continue
+        end = _declaration_end(lines, i)
+        body = "\n".join(lines[i + 1 : end - 1])
+        elements = [e for e in re.findall(r"^  \{$.*?^  \},$", body, re.M | re.S)]
+        if elements and all(object_keys(e) == keys for e in elements):
+            hits.append((i, end))
+    if len(hits) != 1:
+        return None
+    _, end = hits[0]
+    # 閉じの `];` の1行前へ入れる。要素の並びは教材が書いた順のまま後ろへ伸びる。
+    return "\n".join(lines[: end - 1] + fragment.split("\n") + lines[end - 1 :])
 
 
 def _tag_open_end(lines: list[str], start: int) -> tuple[int | None, bool]:
@@ -523,9 +622,12 @@ def introduces_unknown_names(text: str, fragment: str) -> bool:
     参照する半端なファイルになる。片方しか当てられんときは、両方とも当てない。
     """
     known = set(IDENTIFIER.findall(text))
+    # 文字列の中身は名前ではない。潰さずに数えると `path: '/search'` の `search` を
+    # 「まだ無い名前」と見て、当てられるはずの抜粋を落とす（day20 のサイドバーがこれで
+    # 「検索」を落としていた）。中身を消しても桁と行は変わらないので、位置はずれない。
     referenced = {
         name
-        for expr in BRACED.findall(fragment)
+        for expr in BRACED.findall(mask_code(fragment))
         for name in IDENTIFIER.findall(expr)
         if name not in NOT_A_REFERENCE
     }
@@ -613,8 +715,17 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             # import だけのチャンクは、差し込み先の指示が無くても置き場所が決まる。
             text = imports
             continue
-        element = None if m else ELEMENT_HEAD.match(operation_head(b.lines))
-        if not m and (element is None or b.note or is_marked_final(b)):
+        head = operation_head(b.lines)
+        element = None if m else ELEMENT_HEAD.match(head)
+        # 宣言の書き直しと配列への1要素追加は、`完成版` の目印が付いていても当てる。
+        # ここまで来た時点で「採った版の日より後」に絞れており、採られなかった `完成版` は
+        # その日の全文ではなく抜粋である。抜粋なら当てるのが実物に近い
+        # （day20 の `menuItems` は `完成版` の側にしか全文が無い）。
+        declaration = None if (m or element) else DECL_HEAD.match(head)
+        is_element_add = not (m or element or declaration) and bool(OBJECT_ELEMENT_HEAD.match(head))
+        if not m and element is not None and is_marked_final(b):
+            continue
+        if not m and (b.note or not (element or declaration or is_element_add)):
             continue
         # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
         # 続きは `（同じファイルの続き）` になる。続きを落とすと手続きが途中で切れる
@@ -625,16 +736,24 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
                 break
             piece.append(nxt)
         body = render(piece)
+        # 同じ断片が2度出る日がある。Step の節と「完成コード全体」の両方に同じものを
+        # 載せる書き方で、どちらにも差し込み先の注記が付く（day24 のサイドバーの
+        # 管理者リンク）。2度入れるとリンクが2本並ぶので、既に入っていれば飛ばす。
+        if body.strip() and body in text:
+            continue
         if not m and (
             any(ELISION.match(line) for line in body.split("\n"))
             or introduces_unknown_names(text, body)
         ):
             continue
-        merged = (
-            insert_fragment(text, m.group(1), m.group(2), body)
-            if m
-            else replace_element(text, element.group(1), body)
-        )
+        if m:
+            merged = insert_fragment(text, m.group(1), m.group(2), body)
+        elif element is not None:
+            merged = replace_element(text, element.group(1), body)
+        elif declaration is not None:
+            merged = replace_declaration(text, declaration.group(1), body)
+        else:
+            merged = append_array_element(text, body)
         if merged is not None:
             text = merged
     return text

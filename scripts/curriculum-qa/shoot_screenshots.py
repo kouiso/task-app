@@ -45,6 +45,7 @@ import socket
 import subprocess
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -116,6 +117,7 @@ class Shot(NamedTuple):
     full_page: bool
     clip: Clip | None
     viewport: dict[str, int] | None
+    stall: tuple[str, ...]
 
 
 class Config(NamedTuple):
@@ -334,6 +336,60 @@ DAY15_TASKS = replace_one(SEED_TASKS, "api", priority="HIGH")
 DAY16_TASKS = replace_one(DAY15_TASKS, "api", status="IN_PROGRESS", timeSpentMinutes=75)
 
 
+def recent_iso(days_ago: int) -> str:
+    """今から `days_ago` 日前の時刻。週次レポートの集計はサーバーの現在時刻で刻む。
+
+    `report.getWeeklyReport`（`src/server/api/routers/report.ts:207-224`）は `new Date()` を
+    起点に7日刻みのバケットを作り、`completedAt` がその範囲に入る行だけを数える。固定日付を
+    書き込むと撮る日によって範囲から外れ、読者が Day 23 の手順どおりに完了させた直後の画面
+    （直近の週に件数が立つ）と食い違う。ブラウザ側の時計（FIXED_CLOCK）はページの描画にだけ
+    効くもので、この集計には届かない。
+    """
+    return (datetime.now(timezone.utc) - timedelta(days=days_ago)).isoformat()
+
+
+# Day 23 の「始める前の前提」（`day23_...md:28`）が読者へ作らせる練習用タスク。
+# 「`/task` で自分を担当者にしたタスクを2〜3件作り、Day 16 の手順で「完了」にしてから開く」。
+# 件数は 2〜3 の下限ではなく上限の3件を採る。前提のもう1行（`:27`）が「数字が少ない場合は
+# 練習用データを追加してから確認する」と言っており、多いほうが本文の想定に近い。
+#
+# 教材が決めていない欄は、読者が既定のまま送ったときの値にする。
+#   - 優先度: タスク作成ダイアログの既定は MEDIUM（`src/component/task/task-dialog.tsx:77`）。
+#     ここを HIGH や URGENT にすると Day 23 の優先度棒グラフが埋まるが、それは
+#     「読者の画面」ではなく「絵になる画面」を作ることになる。
+#   - プロジェクト: admin がメンバーなのは「Webサイトリニューアル」だけ
+#     （`scripts/_seed/seed.ts:107-165`）。他は選べない。
+#   - 完了日時: Day 23 を進めている今日。手順が「作ってから完了にする」なので、
+#     3件とも同じ週に入る。
+DAY23_EXTRA_TASKS: tuple[dict[str, Any], ...] = tuple(
+    {
+        "key": f"practice{i}",
+        "title": title,
+        "description": description,
+        "status": "DONE",
+        "priority": "MEDIUM",
+        "dueDate": None,
+        "completedAt": recent_iso(i),
+        "estimatedHours": None,
+        "actualHours": 0,
+        "timeSpentMinutes": 0,
+        "position": 4 + i,
+        "projectKey": "website",
+        "createdByEmail": "admin@example.com",
+        "assigneeEmail": "admin@example.com",
+    }
+    for i, (title, description) in enumerate(
+        (
+            ("お問い合わせフォームの文言を整える", "送信後の案内文を分かりやすく書き直す"),
+            ("トップページの画像を差し替える", "解像度の低い写真を新しいものへ入れ替える"),
+            ("利用規約ページを追加する", "既存の文面を1ページにまとめて置く"),
+        )
+    )
+)
+
+DAY23_TASKS = DAY16_TASKS + DAY23_EXTRA_TASKS
+
+
 # 変わった日だけ書く。書いていない日は直前の記述を引き継ぐ（読者の手元も同じで、
 # 何もしなければ前日のまま）。根拠は各 scan の (f) と、そこから引いた教材の行。
 #
@@ -348,6 +404,17 @@ DAY16_TASKS = replace_one(DAY15_TASKS, "api", status="IN_PROGRESS", timeSpentMin
 #   day16: scan-day09-16.md (f) Day 16 — Step 4 でステータス1件と作業時間を2回記録する。
 #   day17: `day17_...md:919` が「初期データのままなら期限切れに1枚」と書くとおり、
 #          この日は読者がデータを作らない。day16 の記述をそのまま引き継ぐ。
+#   day23: `day23_...md:28` — 前提が「自分を担当者にしたタスクを2〜3件作り、完了にしてから開く」。
+#          この日までデータは増えない（Day 18〜22 の 動作確認 は投稿と削除が打ち消し合う。
+#          `day19_...md:830` が Day 19 の時点の手元を「初期データでは……1件ずつ」と名指しで
+#          書いており、そこが day16 の記述と一致する）。
+#
+# 教材が件数や中身を決めていない変更は写さない。写せば読者の画面ではなく、こちらが
+# 作った画面になる。該当するのは次の3つで、いずれも報告へ回す:
+#   - Day 25 Step 14（`day25_...md:2016`）「名前を変更して更新」— 変更後の名前を指定していない。
+#   - Day 25 Step 9（`day25_...md:1429`）のパスワード変更 — 画面に写らないので撮影には効かない。
+#   - Day 28 の前提（`day28_...md:31`）「消えてもよい練習用タスクを用意している」— 件数が無い。
+#     Step 9 の表（`day28_...md:1096-1099`）は最低7件を要求するが、前提がそれを保証していない。
 DAY_SEEDS: dict[int, DaySeed] = {
     1: DaySeed(SEED_USERS, SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     6: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
@@ -356,11 +423,12 @@ DAY_SEEDS: dict[int, DaySeed] = {
     14: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS + (READER_TASK,), SEED_COMMENTS),
     15: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY15_TASKS, SEED_COMMENTS),
     16: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY16_TASKS, SEED_COMMENTS),
+    23: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY23_TASKS, SEED_COMMENTS),
 }
 
-# (f) を読んで裏を取れている最後の日。ここから先は `scan-day17-24.md` 以降の (f) を
-# 読んで DAY_SEEDS へ足すまで撮らない。
-MAX_SEEDED_DAY = 17
+# (f) を読んで裏を取れている最後の日。ここから先は scan の (f) を読んで
+# DAY_SEEDS へ足すまで撮らない。
+MAX_SEEDED_DAY = 30
 
 
 def seed_for_day(day: int) -> DaySeed:
@@ -465,6 +533,25 @@ def validate_viewport(raw: Any, where: str) -> dict[str, int] | None:
     return size
 
 
+def validate_stall(raw: Any, where: str) -> tuple[str, ...]:
+    """読み込み中を撮るために止める通信の宣言を確かめる。
+
+    教材はローディング表示を「その日の成果物」として見せる回がある（Day 21 Step 5、
+    Day 29 Step 3）。手元の DB は速すぎて撮る隙が無いので、名指しした通信だけを
+    返さないまま待たせる。全部止めると画面そのものが出ないので、名指しを必須にする。
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"{where}: stall は空でない配列で書いてください")
+    out = []
+    for i, v in enumerate(raw):
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError(f"{where}: stall[{i}] は空でない文字列にしてください")
+        out.append(v)
+    return tuple(out)
+
+
 def validate_shot(raw: Any, index: int) -> Shot:
     """1枚ぶんの宣言を確かめる。"""
     where = f"shots[{index}]"
@@ -508,6 +595,7 @@ def validate_shot(raw: Any, index: int) -> Shot:
         full_page=full_page,
         clip=clip,
         viewport=validate_viewport(raw.get("viewport"), where),
+        stall=validate_stall(raw.get("stall"), where),
     )
 
 
@@ -766,6 +854,7 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
                     "clip": None if s.clip is None else {"selector": s.clip.selector, "padding": s.clip.padding},
                     "marks": [{"selector": m.selector, "label": m.label} for m in s.marks],
                     "viewport": s.viewport,
+                    "stall": list(s.stall),
                 }
                 for s in shots
             ],

@@ -104,9 +104,29 @@ def check_day_seed_boundary() -> list[str]:
         if counts != (2, 5, 2):
             fails.append(f"❌ day{day:02d} の件数が (2, 5, 2) でない: {counts}")
 
+    # Day 18〜22 は読者がデータを作らない。`day19_...md:830` が Day 19 の時点の手元を
+    # 「初期データでは……1件ずつ」と名指しで書いており、day16 の記述と一致する。
+    for day in (18, 19, 20, 21, 22):
+        seed = target.seed_for_day(day)
+        counts = (len(seed.users), len(seed.projects), len(seed.tasks), len(seed.comments))
+        if counts != (5, 2, 5, 2):
+            fails.append(f"❌ day{day:02d} の件数が (5, 2, 5, 2) でない: {counts}")
+
+    # Day 23 の前提（`day23_...md:28`）が、自分を担当者にした完了タスクを作らせる。
+    # ここが欠けると週次レポートが「完了0件」になり、本文の説明と画面が食い違う。
+    for day in (23, 24, 30):
+        seed = target.seed_for_day(day)
+        if len(seed.tasks) != 8:
+            fails.append(f"❌ day{day:02d} のタスクが8件でない: {len(seed.tasks)}")
+        done = [t for t in seed.tasks if t["status"] == "DONE" and t["assigneeEmail"] == "admin@example.com"]
+        if len(done) != 3:
+            fails.append(f"❌ day{day:02d} に admin 担当の完了タスクが3件ない: {len(done)}")
+
     # 裏を取っていない日は撮らせない。足りないデータで撮った画像は、
     # 完成版で撮った画像と同じで「読者の画面ではないもの」を教材へ載せることになる。
-    for day in (0, target.MAX_SEEDED_DAY + 1, 30):
+    # 上限そのものを書かずに `MAX_SEEDED_DAY` から起こすのは、裏を取った日が増えた回に
+    # 「実際は撮れる日」を撮れないことにして落ちるテストにしないため。
+    for day in (0, -1, target.MAX_SEEDED_DAY + 1, target.MAX_SEEDED_DAY + 10):
         try:
             target.seed_for_day(day)
         except ValueError:
@@ -128,6 +148,8 @@ def check_config_loading() -> list[str]:
         "fill に value が無い": {**BASE_SHOT, "actions": [{"kind": "fill", "selector": ".a"}]},
         "full_page が真偽値でない": {**BASE_SHOT, "full_page": "yes"},
         "clip の padding が負": {**BASE_SHOT, "clip": {"selector": ".a", "padding": -1}},
+        "stall が空の配列": {**BASE_SHOT, "stall": []},
+        "stall の中身が文字列でない": {**BASE_SHOT, "stall": [1]},
         # 画角の指定は1つだけ。両方書けると、思っている画角と出てくる画像が食い違う。
         "full_page と clip の同時指定": {**BASE_SHOT, "full_page": True, "clip": {"selector": ".a"}},
     }

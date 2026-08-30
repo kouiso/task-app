@@ -1108,13 +1108,14 @@ export function ReportContent() {
 
 ## 完成コード全体
 
-今日は3つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は4つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/server/api/routers/report.ts` | 集計済みの数値を返す `getOverview` | Step 0 |
 | `src/server/api/root.ts` | 手続きの一覧表への `report` の登録 | Step 0 |
 | `src/app/report/page.tsx` | 統計カードとプロジェクト統計の画面 | Step 2〜Step 8 |
+| `src/component/layout/app-layout.tsx` | サイドバーからレポートページへの入口 | Step 2 |
 
 ### `src/server/api/routers/report.ts`
 
@@ -1688,6 +1689,76 @@ export default function ReportPage() {
 `toFixed(1)` で小数第1位までに丸めています。`progress` はサーバー側で `(完了 / 全体) * 100` を計算しただけの値なので、丸めないと `33.33333333333333%` のような表示になります。丸める桁を画面側に置いてあるのは、同じ数値を別の画面では違う桁数で見せたくなる場合があるからです。
 
 閉じタグは `</TableBody>`、`</Table>`、`</CardContent>`、`</Card>`、`</div>`、`</AppLayout>` の順で、開いた順の逆になっています。1つでも抜けるとブラウザに赤いエラー画面が出て、足りない場所が書かれています。
+
+### `src/component/layout/app-layout.tsx`
+
+Day 08 で作った長いファイルなので、今日触った2か所だけを載せます。それ以外の行は Day 08 のまま残してください。
+
+**アイコンの取り込み**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: アイコンの取り込み
+import {
+  BarChart,
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Search,
+} from 'lucide-react';
+```
+
+今日足したのは `BarChart` の1語です。他の6つは Day 08 から Day 20 までに並べたもので、消すとサイドバーのアイコンがその項目だけ出なくなります。名前をアルファベット順に並べてあるのは Biome の並べ替えに合わせるためで、順番が違うと保存した瞬間に並べ替えられ、触っていない行まで差分に入ります。
+
+**サイドバーのメニュー項目**:
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: Day 20 までに並べたメニュー項目
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+```
+
+ここまでの4件は Day 08 と Day 13 で足したものです。配列を途中で切って載せているので、この時点では閉じかっこがありません。続きは次のブロックです。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx（同じ配列の続き）
+// 完成版: 検索と、今日足したレポート
+  {
+    text: '検索',
+    icon: <Search className="h-5 w-5" />,
+    path: '/search',
+  },
+  {
+    text: 'レポート',
+    icon: <BarChart className="h-5 w-5" />,
+    path: '/report',
+  },
+];
+```
+
+末尾の「レポート」1件が今日の追加です。前の5件は Day 08・Day 13・Day 20 で足したものがそのまま残ります。並べた順がそのまま画面の上から下の順になるので、途中へ差し込むとメニューの並びが教材の画面と変わります。`path` の `/report` は `src/app/report/page.tsx` の置き場所と対応していて、綴りがずれるとメニューは出るのに押した先が404になります。
 
 > **完成形の参考コード**: 完成版には `src/app/report/page.tsx` と `src/server/api/routers/report.ts` があります。ただし今日書いたコードと1文字まで同じではありません。違いは3つです。1つ目は、完成版の画面に円グラフと棒グラフが並んでいる点です。これは Day 22 で足します。2つ目は、完成版の画面に週次レポートへのリンクがある点です。これは Day 23 で足します。3つ目は、完成版の `report.ts` に `getOverview` 以外の手続きも入っていて、`root.ts` には Day 24 で追加する `user` も登録されている点です。この3か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは、完成版がどう書かれているかの説明として読んでください）。
 

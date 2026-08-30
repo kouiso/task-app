@@ -14,6 +14,20 @@ import { chromium } from 'playwright';
 
 const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 
+// 読み込み中の画面を撮るために、名指しした通信を返さないまま待たせる秒数。
+// 教材はローディング表示を「その日の成果物」として何度も見せるのに、返事が速すぎて
+// 撮る隙が無い。ここで止めると、読者が回線の遅い環境で見るのと同じ絵になる。
+// 撮り終えたら解除するので、次の1枚には効かない。
+const STALL_MS = 20000;
+
+// ページ全体を撮るときに、窓の高さを中身の高さへ合わせる範囲（CSS px）。
+// アプリの外枠は `h-screen` なので、窓の高さがそのまま画像の高さになる。中身が短い日は
+// 下半分が白場になり、中身が長い日は `main` の中でスクロールするため下が切れる
+// （`fullPage` は文書のスクロールしか追わない）。窓の高さを中身へ合わせると両方直る。
+// 下限は、中身がほとんど無い画面で帯のように潰れるのを防ぐため。
+const MIN_CONTENT_HEIGHT = 420;
+const MAX_CONTENT_HEIGHT = 4000;
+
 /** stdin を最後まで読む。 */
 async function readStdin() {
   const chunks = [];
@@ -185,15 +199,66 @@ async function login(page, baseUrl, account) {
   await page.waitForURL(`${baseUrl}/dashboard`, { timeout: 20000 });
 }
 
+/**
+ * 名指しした通信を返さないまま待たせる。読み込み中の画面を撮るために要る。
+ *
+ * 止めるのは URL に指定の文字列を含むものだけ。全部止めると画面そのものが出ない。
+ * 返事を捨てずに待たせるのは、失敗の表示（エラー画面）ではなく読み込み中の表示を
+ * 撮りたいため。読者が見るのも「まだ返ってきていない」状態である。
+ */
+async function stallRoutes(page, patterns) {
+  await page.route(
+    (url) => patterns.some((p) => url.href.includes(p)),
+    async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, STALL_MS));
+      await route.continue().catch(() => {});
+    },
+  );
+}
+
+/**
+ * 窓の高さを、いま出ている中身の高さへ合わせる。返り値は合わせる前の高さ。
+ *
+ * 測るのは `main` の中身。アプリの外枠（`div.h-screen` とサイドバー）は窓の高さに
+ * 追従するので、窓を縮めればサイドバーの下端（ログアウト）も一緒に上がってくる。
+ * `main` が無い画面（ログイン・登録・エラー）は文書の高さを使う。
+ */
+async function fitToContent(page, current) {
+  const wanted = await page.evaluate(() => {
+    const main = document.querySelector('main');
+    if (main) {
+      return Math.ceil(main.getBoundingClientRect().top + window.scrollY + main.scrollHeight);
+    }
+    const root = document.documentElement;
+    return Math.ceil(Math.max(root.scrollHeight, document.body.scrollHeight));
+  });
+  const height = Math.min(MAX_CONTENT_HEIGHT, Math.max(MIN_CONTENT_HEIGHT, wanted));
+  if (height === current.height) {
+    return current.height;
+  }
+  await page.setViewportSize({ width: current.width, height });
+  // 高さが変わると折り返しと遅延読み込みが動く。落ち着いてから測り直す。
+  await page.waitForTimeout(300);
+  return current.height;
+}
+
 async function shoot(page, job, shot) {
   // 幅の指定がある1枚だけ窓を狭める。列数が幅で変わることを見せる回に要る。
   // 撮り終えたら宣言表の既定へ戻す。戻し忘れると、以降の1枚が黙って別の幅で撮れる。
   if (shot.viewport) {
     await page.setViewportSize(shot.viewport);
   }
+  const stall = shot.stall ?? [];
+  if (stall.length > 0) {
+    await stallRoutes(page, stall);
+  }
   // networkidle は使わない。tRPC の getSession が react-query で回り続ける画面（Day 08 以降の
   // AppLayout）では通信が止まらず、待ち切れずに落ちる。出ているべきものは wait_for で名指しする。
-  await page.goto(`${job.baseUrl}${shot.path}`, { waitUntil: 'load' });
+  // 止めた通信があると `load` は返ってこない。読み込み中を撮る回だけ、
+  // 文書が来た時点で進める。止めていない回の待ち方は変えない。
+  await page.goto(`${job.baseUrl}${shot.path}`, {
+    waitUntil: stall.length > 0 ? 'commit' : 'load',
+  });
   // 前の1枚で押したところにポインタが残ったままだと、次の画面の同じ位置にある部品が
   // hover の見た目で写る（day15 の一覧でゴミ箱アイコンだけ色が付いていた）。
   // 画面の外へ逃がしてから撮る。
@@ -206,6 +271,11 @@ async function shoot(page, job, shot) {
   }
   // アニメーションの途中で撮ると、同じ指定でも回ごとに違う絵になる。
   await page.waitForTimeout(400);
+  // ページ全体を撮る回だけ、窓の高さを中身へ合わせる。切り抜く回は要らない
+  // （切り抜きの矩形が中身の実寸から起きるので、余白も切れ落ちも起きない）。
+  const sizeBefore = shot.full_page === true
+    ? await fitToContent(page, shot.viewport ?? job.viewport)
+    : null;
   // ダイアログが開くと中の入力欄へ焦点が移り、数値欄では中身が選択状態になる。
   // 青い反転が写った画像は、読者が何もしていない画面と違って見える。焦点と選択を外す。
   await page.evaluate(() => {
@@ -234,7 +304,10 @@ async function shoot(page, job, shot) {
   if (rects.length > 0) {
     await clearMarks(page);
   }
-  if (shot.viewport) {
+  if (stall.length > 0) {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  }
+  if (sizeBefore !== null || shot.viewport) {
     await page.setViewportSize(job.viewport);
   }
   return {

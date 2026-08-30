@@ -844,7 +844,7 @@ Day 08 のデスクトップ用のナビゲーション内で、
 この項目だけ色が変わらず、並んだときに浮きます。
 
 ```typescript
-{/* filepath: src/component/layout/app-layout.tsx */}
+{/* filepath: src/component/layout/app-layout.tsx（menuItems.map の直後に追加） */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
@@ -1326,7 +1326,7 @@ import { USER_ROLE } from '@/lib/constant/roles';
 **管理者だけに出すリンク**:
 
 ```typescript
-{/* filepath: src/component/layout/app-layout.tsx */}
+{/* filepath: src/component/layout/app-layout.tsx（menuItems.map の直後に追加） */}
 {/* 完成版: 今日足したリンク */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
