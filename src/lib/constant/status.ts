@@ -16,13 +16,15 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   CANCELLED: 'キャンセル',
 };
 
-// ダッシュボードヒーロー/統計カードと統一した Tailwind -400/-500 系パレット
+// globals.css のセマンティックトークンから引いた値。Recharts が hex しか受け取らないので
+// ここで一度だけ実体化する。トークンを変えたときはこの表も合わせること
+// muted-foreground / accent(chart-2) / warning / success / destructive の順に対応する
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  TODO: '#64748b',
-  IN_PROGRESS: '#60a5fa',
-  IN_REVIEW: '#fbbf24',
-  DONE: '#34d399',
-  CANCELLED: '#f87171',
+  TODO: '#5f6777',
+  IN_PROGRESS: '#1e9cb8',
+  IN_REVIEW: '#f69e23',
+  DONE: '#26ab7a',
+  CANCELLED: '#dc3848',
 };
 
 export function isTaskStatus(value: unknown): value is TaskStatus {
