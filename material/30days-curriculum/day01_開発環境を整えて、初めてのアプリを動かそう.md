@@ -858,7 +858,7 @@ export default function HomePage() {
               タスク管理
             </p>
             <h1 className="text-sm font-semibold text-card-foreground">
-              My Task App
+              TaskApp
             </h1>
           </div>
 
@@ -1271,7 +1271,7 @@ npm run dev
 
 Step 3 でポート番号が `3001` などに読み替わっていた場合は、以下の `3000` を自分の画面に出ている番号に置き換えて確認してください。
 
-- 上に「タスク管理」と `My Task App` が見える
+- 上に「タスク管理」と `TaskApp` が見える
 - `Day 01 Ready` の小さなバッジが見える
 - メインカードに「プロジェクトとタスクを、ひとつの画面で。」が見える
 - ボタンが `bg-primary` の主役色で表示されている
@@ -1280,7 +1280,7 @@ Step 3 でポート番号が `3001` などに読み替わっていた場合は�
 - `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開く
 - `/dashboard` で 「ダッシュボード」の見出しが見える
 
-![トップページ。上部に「タスク管理」と My Task App、左に大きな見出しと3つのボタン、右にこれから足すもの・メモ・次にやることのカードが並んでいる](./screenshots/day01/top-page.png)
+![トップページ。上部に「タスク管理」と TaskApp、左に大きな見出しと3つのボタン、右にこれから足すもの・メモ・次にやることのカードが並んでいる](./screenshots/day01/top-page.png)
 
 赤い枠が `ダッシュボードへ入る` ボタンです。ここを押すと `/dashboard` へ移動します。
 
