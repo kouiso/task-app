@@ -76,16 +76,49 @@ python3 scripts/pdf-book/check_pdf_book.py → ✅ 1冊すべて商品として�
 
 ---
 
-## 進行中
+## Gate 1 — ✅ 通過（36本を読了）
 
-| 項目 | 状態 |
-|---|---|
-| day01-08 走査 | 実行中 → `doc/review-handoff/scan-day01-08.md` |
-| day09-16 走査 | 実行中 → `doc/review-handoff/scan-day09-16.md` |
-| day17-24 走査 | 実行中 → `doc/review-handoff/scan-day17-24.md` |
-| day25-30+付録 走査 | 実行中 → `doc/review-handoff/scan-day25-30-appendix.md` |
-| `build_day_snapshots.py` 新設 | 実行中 |
+集計は `gate1-summary.md`、日別の詳細は `scan-day01-08.md` / `scan-day09-16.md` / `scan-day17-24.md` / `scan-day25-30-appendix.md`（計3,278行）。
 
-## 未着手
+| 項目 | 数 |
+|---|---:|
+| 事実の誤り・矛盾 | **112件**（うち致命11件） |
+| 図が要る節 | 66箇所 |
+| 理解チェック（起案ずみ） | 90問 |
+| 撮り直しが要るスクショ | **63枚**（＋新規7枚） |
 
-`doc/ZIP_CONTENTS.md` の全面改訂 / 事実の誤り / 規格統一 / 理解チェック / 図 / 写真の作り直し / 30日再構成ビルド / 紙面 / #386 マージ / 添え状
+**ワイが自分で裏取りした3件**は `gate1-summary.md` の「ワイが自分で裏取りした分」を見ること。
+
+**局長へ出した判断**: 図66箇所は多すぎるので**30枚程度に絞る**（day01〜03 の環境構築を最優先、各日1枚を上限）。残りは post-release。異論が無ければこの方針。
+
+---
+
+## PR
+
+**https://github.com/kouiso/task-app/pull/388** — draft。CI は 16 success / 0 failure。
+`販売用ZIP初期状態チェック` も success。
+
+---
+
+## Wave 2 — 進行中（5体並列）
+
+| 担当 | 中身 | 出力先 |
+|---|---|---|
+| day01-04 | 規格統一（6節追加・Step を H3 へ・所要時間の新設）＋ 事実の誤り ＋ 理解チェック | `fix-day01-04.md` |
+| day05-12 | 事実の誤り（props欠落・アーカイブ手順・rate limit の回数）＋ 用語節(day07/08) ＋ 理解チェック | `fix-day05-12.md` |
+| day13-21 | 事実の誤り（handleSubmit の置き換え漏れ・シード実測との食い違い）＋ 理解チェック | `fix-day13-21.md` |
+| day22-30 | **lint矛盾**・day29 ステップ表・day28 既存関数・day27 立場割れ ＋ 用語節(day26-29) ＋ 節名統一 ＋ 理解チェック | `fix-day22-30.md` |
+| 再構成ビルド | 連結ロジックを置換対応へ（現在 1/30 → 改善中） | `day-snapshots-result.md` |
+
+## 次にやること（Wave 2 の後）
+
+1. Wave 2 の成果をワイが裏取り → textlint / check_quality / build_day_snapshots を通す
+2. **写真の作り直し 70枚** — `build_day_snapshots.py` で「その日のコード × その日のデータ」を組んで起動 → Playwright で撮影 → 対象要素の `boundingBox()` に赤枠 → 1枚ずつ目視
+3. `check_visualization.py` に同一日の画像重複検査を追加
+4. 図を約30枚（day01-03 優先）
+5. 36冊組版 → `check_page_layout.py` 新設 → 目視 → CSS修正
+6. #386 マージ／添え状／成果物3点を SendUserFile
+
+## 未着手のまま残っとるもの
+
+`doc/post-release-backlog.md`（コードの実務水準レビュー結果・#386以外のPR/Issue・branch protection・npm audit 赤・分量の休止点）はまだ作ってへん。
