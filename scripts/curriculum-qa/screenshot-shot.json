@@ -1267,7 +1267,7 @@
         "height": 420
       },
       "clip": {
-        "selector": "div.flex.items-center.justify-center",
+        "selector": "div:has(> div.animate-spin)",
         "padding": 0
       }
     },
@@ -1403,7 +1403,7 @@
         "height": 420
       },
       "clip": {
-        "selector": "div.flex.items-center.justify-center",
+        "selector": "div:has(> div.animate-spin)",
         "padding": 0
       }
     },
@@ -1630,7 +1630,7 @@
       "full_page": true
     },
     {
-      "name": "day27/project-archived.png",
+      "name": "day27/project-detail-members.png",
       "day": 27,
       "path": "/project",
       "login": {
@@ -1644,25 +1644,17 @@
         },
         {
           "kind": "wait_for",
-          "selector": "button:has-text('アーカイブ')"
-        },
-        {
-          "kind": "click",
-          "selector": "button:has-text('アーカイブ')"
-        },
-        {
-          "kind": "wait_for",
-          "selector": "button:has-text('アーカイブ解除')"
+          "selector": "h1:has-text('Webサイトリニューアル')"
         }
       ],
-      "wait_for": "button:has-text('アーカイブ解除')",
+      "wait_for": "h3:has-text('メンバー (')",
       "marks": [
         {
-          "selector": "button:has-text('アーカイブ解除')",
-          "label": "押すと元へ戻る"
+          "selector": "div.rounded-lg.border.bg-card:has(> div > h3:has-text('メンバー ('))",
+          "label": "メンバーの権限と削除"
         }
       ],
-      "note": "Step の締めくくり『プロジェクト詳細でアーカイブ操作ができる状態』。押したあとの姿を撮る。ボタンが「アーカイブ解除」に変わり、タイトルの下に「アーカイブ済み」のバッジが出る。DB を変えるので、この日の最後に撮る。",
+      "note": "Step の締めくくり『メンバー削除は確認ダイアログを挟んで実行される／詳細表示そのものはインライン表示のままになっている』。 アーカイブした後の姿は撮らない。読者に見えるプロジェクトは「Webサイトリニューアル」1件だけで、 それをアーカイブした画像を載せると、Day 12 の「このプロジェクトはアーカイブしてはいけません」と食い違うため。",
       "full_page": true
     },
     {
@@ -1713,7 +1705,7 @@
         "height": 420
       },
       "clip": {
-        "selector": "div.flex.items-center.justify-center",
+        "selector": "div:has(> div.animate-spin)",
         "padding": 0
       }
     },
@@ -1910,22 +1902,32 @@
     {
       "name": "day09/project-loading.png",
       "day": 9,
-      "path": "/project",
+      "path": "/dashboard",
       "login": {
         "email": "admin@example.com",
         "password": "password123"
       },
       "stall": ["project.getAll"],
       "wait_for": "div.animate-spin",
-      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。 入口をダッシュボードにしてサイドバーから移るのは、`/project` を直に開くと tRPC が `auth.getSession` と `project.getAll` を1本の通信へまとめてしまい、止めた側に引きずられて `AppLayout` ごと出てこなくなるため。画面を移ってから撮れば、セッションは取得済みなので 止まるのは一覧の取得だけになる。読者がサイドバーから移るのと同じ動きでもある。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。",
       "viewport": {
         "width": 1440,
         "height": 420
       },
       "clip": {
-        "selector": "div.flex.items-center.justify-center",
+        "selector": "div:has(> div.animate-spin)",
         "padding": 0
-      }
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "a[href='/project']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "div.animate-spin"
+        }
+      ]
     },
     {
       "name": "day09/project-cards.png",
@@ -1960,6 +1962,202 @@
       },
       "note": "Step 10 のレスポンシブ確認。幅 430px ではサイドバーが隠れ、ヘッダーが縦に折り返す。カードは1件しか無いので列数そのものは変わらない。そのことは本文で断る。",
       "full_page": true
+    },
+    {
+      "name": "day11/project-edit-dialog.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭のゴール『編集モードの ProjectDialog』。旧 project-detail-dialog.png は完成版アプリの写真で、同じ日に2回貼られていた。編集する相手は Day 10 で読者が作った練習用プロジェクトにする（初期データの Webサイトリニューアル は Day 13 以降で使うので、本文が触らせない）。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day11/project-list-after-edit.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:has-text('ポートフォリオサイト'))",
+          "label": "Day 10 で作った練習用プロジェクト"
+        }
+      ],
+      "note": "Step 3 の『編集後に一覧が更新された画面』。旧 project-list.png は完成版アプリの写真で、読者が参加していないプロジェクトまで写っていた。読者に見えるのは Webサイトリニューアル と、Day 10 で自分が作った1件の計2枚。",
+      "full_page": true
+    },
+    {
+      "name": "day11/project-delete-confirm.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "Step 5 の『削除確認ダイアログ』。title を渡していないので、見出しは既定値の「本当に削除しますか？」になる。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day11/project-edit-dialog-update.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] button[type='submit']",
+          "label": "編集で開くと「更新」"
+        }
+      ],
+      "note": "Step 10 の動作確認 手順3・4『既存の名前が入っている／タイトルがプロジェクト編集になっている』。冒頭のゴールと同じ画面なので、作成モードとの違いが出るボタンを赤枠で指す。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day12/project-detail-archive.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('アーカイブの練習')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('アーカイブ')"
+        }
+      ],
+      "wait_for": "h1:has-text('アーカイブの練習')",
+      "marks": [
+        {
+          "selector": "button:has-text('アーカイブ')",
+          "label": "Day 11 で書いた handleArchive を押すボタン"
+        }
+      ],
+      "note": "Day 12 の動作確認 手順1。開くのは テストシナリオ3でその日に作る使い捨てのプロジェクト。初期データの「Webサイトリニューアル」は Day 13 以降でタスクの舞台になるので、本文がアーカイブさせない。",
+      "full_page": true
+    },
+    {
+      "name": "day12/archived-project-list.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('アーカイブの練習')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('アーカイブ')"
+        },
+        {
+          "kind": "click",
+          "selector": "button:has-text('アーカイブ')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('プロジェクト')"
+        },
+        {
+          "kind": "click",
+          "selector": "#show-archived"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:has-text('アーカイブの練習')"
+        }
+      ],
+      "wait_for": "h3:has-text('アーカイブの練習')",
+      "note": "Day 12 の動作確認 手順2『アーカイブ表示スイッチを ON にする』。スイッチは `isArchived: true` の等値検索を送るので、アーカイブ済みの1枚だけが並ぶ。DB を変えるので、この日の最後に撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day11/project-delete-confirm-action.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "marks": [
+        {
+          "selector": "[role='alertdialog'] button:has-text('削除')",
+          "label": "押すと元へ戻せない"
+        }
+      ],
+      "note": "Step 10 の削除フロー。Step 5 と同じダイアログなので、押すと取り消せないボタンを赤枠で指して区別する。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
     }
   ]
 }

@@ -218,6 +218,7 @@ CORPUS_CHECKS=(
   check_crossref
   check_setext_heading
   check_quiz
+  check_scaffold_src_sync
 )
 # 検査そのものの退行テスト。Gate 4 は本体とセットでこれも走らせる。
 SELF_TESTS=(
@@ -250,6 +251,7 @@ SELF_TESTS=(
   test_filepath_marker
   test_build_day_snapshots
   test_shoot_screenshots
+  test_check_scaffold_src_sync
 )
 
 run_corpus_checks() {

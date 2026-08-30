@@ -10,9 +10,9 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 
 プロジェクト一覧から1件を選ぶと、同じ `/project` ページの中で **一覧表示から詳細表示へ切り替わる UI** を、完成形と照合して仕上げます。詳細画面では次の情報を扱います。
 
-![プロジェクト詳細画面の完成イメージ](./screenshots/project-detail-tasks.png)
+![プロジェクト詳細画面。左にメンバー一覧、右にタスク一覧が並び、上にプロジェクト名と説明が出ている](./screenshots/day27/project-detail.png)
 
-![別のプロジェクトの詳細画面。右上にアーカイブボタンがある](./screenshots/project-detail-archive-action.png)
+![同じ詳細画面。赤枠の中に、右上のアーカイブボタンが出ている](./screenshots/day27/project-detail-archive.png)
 
 - プロジェクト名・色・説明
 - メンバー一覧
@@ -678,7 +678,7 @@ const handleRemoveMember = (userId: string) => {
 - メンバー削除は確認ダイアログを挟んで実行される
 - 詳細表示そのものはインライン表示のままになっている
 
-![プロジェクト詳細でアーカイブ操作ができる状態](./screenshots/project-detail-archive-action.png)
+![プロジェクト詳細。赤枠の中がメンバーカードで、各行の右に権限の選択欄と削除ボタンが並んでいる](./screenshots/day27/project-detail-members.png)
 
 ---
 

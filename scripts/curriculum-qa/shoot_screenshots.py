@@ -334,6 +334,20 @@ READER_PROJECT: dict[str, Any] = {
     "members": [{"email": "admin@example.com", "role": "OWNER"}],
 }
 
+# Day 12 のテストシナリオ3（`day12_...md:1401-1402`）で読者がその日に1件作る。
+# 「新規プロジェクト」から名前だけ決めて作るので、説明も期間も空になる。
+# 手順5でその日のうちに消すが、写真を撮るのは消す前の手順1〜4の途中である。
+DAY12_PRACTICE_PROJECT: dict[str, Any] = {
+    "key": "archive-practice",
+    "name": "アーカイブの練習",
+    "description": "",
+    "color": "#1976d2",
+    "startDate": None,
+    "endDate": None,
+    "isArchived": False,
+    "members": [{"email": "admin@example.com", "role": "OWNER"}],
+}
+
 # Day 14 Step 9 の動作確認で読者が1件作る（`day14_...md:1408-1420`）。
 # 「Webサイトリニューアル」に作ると position が 4 になり、本文 `:1414` の
 # 「一覧のいちばん下に足されます」と並びが一致する。
@@ -428,8 +442,11 @@ DAY23_TASKS = DAY16_TASKS + DAY23_EXTRA_TASKS
 #   day11: Day 10 の記述をそのまま引き継ぐ。この日の画面（編集ダイアログ・削除確認・
 #          アーカイブ表示）は、どれも Day 10 で作った練習用プロジェクトを相手に撮るもので、
 #          消すのは Step 10 のいちばん最後だからである（`day11_...md:1132-1140`）。
-#   day12: Day 11 Step 10 の削除フローで練習用プロジェクトが消え、読者に見えるのは
-#          「Webサイトリニューアル」1件へ戻る（`day11_...md:1144` 手順5）。
+#   day12: Day 11 の削除フローで Day 10 の練習用が消え、代わりにこの日のテストシナリオ3が
+#          使い捨ての「アーカイブの練習」を1件作る（`day12_...md:1401`）。手順5でその日の
+#          うちに消すので、翌日へは持ち越さない。
+#   day13: 使い捨ても消えて、読者に見えるのは「Webサイトリニューアル」1件へ戻る。
+#          `day13_...md:790` の「初期データでは参加プロジェクトが1つ」がここで成り立つ。
 #   day14: scan-day09-16.md (f) Day 14 — Step 9 の動作確認でタスクを1件作る。
 #   day15: scan-day09-16.md (f) Day 15 — Step 11 で1件消し、1件の優先度を変える。
 #   day16: scan-day09-16.md (f) Day 16 — Step 4 でステータス1件と作業時間を2回記録する。
@@ -450,7 +467,8 @@ DAY_SEEDS: dict[int, DaySeed] = {
     1: DaySeed(SEED_USERS, SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     6: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     10: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS + (READER_PROJECT,), SEED_TASKS, SEED_COMMENTS),
-    12: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
+    12: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS + (DAY12_PRACTICE_PROJECT,), SEED_TASKS, SEED_COMMENTS),
+    13: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     14: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS + (READER_TASK,), SEED_COMMENTS),
     15: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY15_TASKS, SEED_COMMENTS),
     16: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY16_TASKS, SEED_COMMENTS),

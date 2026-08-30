@@ -541,7 +541,7 @@ explorer.exe https://your-app-name.vercel.app
 
 【スクリーンショット】本番環境のログイン画面の表示を確認してください。
 
-![本番環境のログイン画面](./screenshots/login.png)
+![ログイン画面。鍵アイコンの下に見出しと、メールアドレス・パスワードの入力欄、ログインボタン、登録リンクが並んでいる](./screenshots/day30/login.png)
 
 #### 本番環境チェックリスト
 
@@ -575,7 +575,7 @@ explorer.exe https://your-app-name.vercel.app
 
 【スクリーンショット】完成版のダッシュボード画面の表示を確認してください。
 
-![完成版のダッシュボード画面](./screenshots/dashboard.png)
+![完成したダッシュボード。左のサイドバーに7項目のメニューが並び、右に見出しとカードが出ている](./screenshots/day30/dashboard.png)
 
 ---
 

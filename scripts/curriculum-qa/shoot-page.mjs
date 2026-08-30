@@ -285,9 +285,8 @@ async function shoot(page, job, shot) {
   await page.waitForTimeout(400);
   // ページ全体を撮る回だけ、窓の高さを中身へ合わせる。切り抜く回は要らない
   // （切り抜きの矩形が中身の実寸から起きるので、余白も切れ落ちも起きない）。
-  const sizeBefore = shot.full_page === true
-    ? await fitToContent(page, shot.viewport ?? job.viewport)
-    : null;
+  const sizeBefore =
+    shot.full_page === true ? await fitToContent(page, shot.viewport ?? job.viewport) : null;
   // ダイアログが開くと中の入力欄へ焦点が移り、数値欄では中身が選択状態になる。
   // 青い反転が写った画像は、読者が何もしていない画面と違って見える。焦点と選択を外す。
   await page.evaluate(() => {
