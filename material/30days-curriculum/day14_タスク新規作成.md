@@ -1439,7 +1439,9 @@ const handleSubmit =
 ```typescript
 {/* filepath: src/app/task/page.tsx */}
 {/* return の中、ページ見出し <h1> の直後に追加 */}
-<Button onClick={handleCreate}>
+<Button size="sm"
+  className="w-full sm:w-auto"
+  onClick={handleCreate}>
   <Plus className="mr-2 h-4 w-4" />
   新規タスク
 </Button>
@@ -3108,7 +3110,9 @@ function TaskPageContent() {
           tracking-tight">
           タスク
         </h1>
-        <Button onClick={handleCreate}>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
           新規タスク
         </Button>
