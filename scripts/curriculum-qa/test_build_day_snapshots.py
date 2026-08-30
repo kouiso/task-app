@@ -562,6 +562,22 @@ def check_triage_section() -> list[str]:
     if "day09" not in section or "判定不能（未調査）" not in section:
         fails.append(f"❌ 未調査の日が「判定不能（未調査）」になっていない: {section!r}")
 
+    # 教材が先に断っとる赤を「教材の欠陥」と書かない。day11 で一度やって覆された。
+    expected_day = next(iter(target.EXPECTED_RED), None)
+    if expected_day is None:
+        fails.append("❌ EXPECTED_RED が空で、想定内の赤の扱いを確かめられない")
+    else:
+        section = target.triage_section(
+            [target.DayResult(expected_day, 80, True, "NG", "NG", ("x",))]
+        )
+        row = next(
+            (l for l in section.split("\n") if l.startswith(f"| day{expected_day:02d} ")), ""
+        )
+        if "想定内" not in row:
+            fails.append(f"❌ 想定内の赤が想定内として出ていない: {row!r}")
+        if "教材の欠陥" in row or "判定不能" in row:
+            fails.append(f"❌ 想定内の赤を欠陥や未調査として出している: {row!r}")
+
     original = dict(target.TRIAGE)
     try:
         target.TRIAGE[9] = ("ツールの限界", "day13 と同じ、完成版が抜粋")

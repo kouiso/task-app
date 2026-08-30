@@ -115,20 +115,11 @@ MODULE_HEAD = re.compile(
 # 書き直しとして扱って前の版を捨てる。かといって追記にすると import と定義が
 # 二重になるので、置き換えでも追記でも復元できない。教材の欠陥ではない。
 TRIAGE: dict[int, tuple[str, str]] = {
-    11: ('教材の欠陥', 'day11 の src/app/project/page.tsx が配布物 src/component/project/project-detail-view.tsx を import しており、その配布物は api.project.getById を呼ぶ。しかし教材が project.ts へ getById を書くのは day12（教材の全ブロックを検索した実測）。読者も day11 で同じ型エラーに当たる。教材側の担当が直す範囲なので、ここでは触っていない'),
-    18: ('ツールの限界', 'src/app/task/page.tsx が day15 の版で止まる（day16 以降その日の完成版が抜粋しかない）。day18 で src/component/task/task-detail-dialog.tsx だけが canEditProject を必須にする版へ進み、呼ぶ側と呼ばれる側の版がずれる'),
-    19: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    20: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    21: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    22: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    23: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    24: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    25: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    26: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    27: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
-    28: ('ツールの限界', 'day18 に加え、src/server/api/routers/task.ts も day15 止まり（94ブロック中22）で PermissionKey が無い'),
-    29: ('ツールの限界', 'day28 と同じ。task/page.tsx と routers/task.ts が day15 止まり'),
-    30: ('ツールの限界', 'day28 と同じ。task/page.tsx と routers/task.ts が day15 止まり'),
+    # 2026-08-30 時点、EXPECTED_RED の day11 以外はすべて通る。ここに残す行は無い。
+    # 「教材の欠陥」と書く前に、その日の本文がその赤を先に断っとらんかを必ず読むこと。
+    # day11 を一度ここへ「教材の欠陥」として書いて覆された。本文が
+    # 「今日は失敗して正常です」と断っとった。断りがある日は EXPECTED_RED の担当で、
+    # この表の担当ではない。
 }
 
 # チャンクの見出し行。教材は長いファイルを分けて出すとき、各チャンクの先頭へ
@@ -812,7 +803,12 @@ def triage_section(results: list[DayResult]) -> str:
         "| --- | --- | --- |",
     ]
     for r in ng:
-        kind, why = TRIAGE.get(r.day, ("判定不能（未調査）", "現物と突き合わせていない"))
+        # 教材が先に断っとる赤は、切り分けの対象やのうて想定内。ここを TRIAGE より
+        # 先に見るのは、断りのある日を「教材の欠陥」と書いてしまう事故を機械で塞ぐため。
+        if r.day in EXPECTED_RED:
+            kind, why = "想定内（教材が本文で断っている）", EXPECTED_RED[r.day]
+        else:
+            kind, why = TRIAGE.get(r.day, ("判定不能（未調査）", "現物と突き合わせていない"))
         rows.append(f"| day{r.day:02d} | {_cell(kind)} | {_cell(why)} |")
     return "\n".join(rows) + "\n"
 
