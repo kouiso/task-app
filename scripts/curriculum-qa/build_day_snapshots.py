@@ -24,13 +24,23 @@ day N までの写経ブロックを `concat_by_file` で書き込み先ごと�
   `paths` と `strict` 系の設定で、そこは同じものが入る。`tsconfig.json` の exclude だけは
   scaffold が足す分があるので、`scaffold-from-scratch.sh` から読んで再現する。
 
-## 連結だけでは再現できない書き方がある
+## 書き直しは連結でなく置き換えになる
 
-教材のブロックは「追記」だけでなく「既存行の書き換え」も含み、両者を見分ける印が無い。
-書き換えの断片をそのまま連結すると、閉じ括弧の足りないファイルが出来上がる
-（`check_tag_balance.py` が括弧の収支を検査に載せなかったのと同じ理由）。
-だから tsc の NG は「教材の欠陥」と「連結では再現できない書き方」の両方を含む。
-NG を1件ずつ現物と突き合わせるまでは、教材の欠陥とは言えない。
+同じ書き込み先へ何度もブロックが来る。全部繋ぐと `export default` が何度も現れて
+`TS2323 Cannot redeclare exported variable 'default'` になる。読者は書き直すのだから、
+後から来た完全版は前を置き換えるのが正しい。判定は `restarts_file` に置いた。
+規則は現物から決めた（`material/30days-curriculum/day02` の
+`src/app/dashboard/page.tsx` は同じ日に4つの版を出し、版の先頭だけが注記を持たない）。
+
+`concat_by_file` そのものは触っていない。もう1つの呼び出し元 `check_tag_balance.py` は
+「開いたタグが30日のどこかで閉じているか」を見るので、途中の版も含めて全部繋ぐ側が正しい。
+共通処理の意味を変えるとあちらが壊れるので、置き換えはここでの後処理にする。
+
+## それでも連結では再現できない書き方が残る
+
+教材のブロックは「追記」だけでなく「既存行の一部の書き換え」も含み、置き換えの単位に
+ならない断片がある。だから tsc の NG は「教材の欠陥」と「連結では再現できない書き方」の
+両方を含む。NG を1件ずつ現物と突き合わせるまでは、教材の欠陥とは言えない。
 
 ## エラーの扱い
 
@@ -51,7 +61,7 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from curriculum_blocks import concat_by_file, day_number  # noqa: E402
+from curriculum_blocks import Block, concat_by_file, day_number  # noqa: E402
 from sale_package import scaffold_copies, scaffold_src_paths  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -77,6 +87,20 @@ BORROWED_FILES = (
 # 表の状態欄。実行しなかったことと落ちたことを同じ記号で書くと、
 # `--verify` を付け忘れた回が「全部通った」ように読める。
 NOT_RUN = "未実行"
+
+# その日の最終形に教材が付ける目印。読者はここに書いてあるものを最後に持つ。
+FINAL_MARK = "完成版"
+
+# 貼る位置の説明から始まるブロックは断片である。`// LoginFormの先頭に追加` や
+# `{/* メール入力欄の下に追加 */}` がこれで、ファイルの先頭には来られない。
+COMMENT_HEAD = re.compile(r"^\s*(?://|/\*|\{/\*)")
+# ファイルの1行目に来られる構文。ここから始まる注記なしのブロックは、
+# 途中への追記ではなくファイルの書き直し版である。
+MODULE_HEAD = re.compile(
+    r"^\s*(?:['\"]use (?:client|server)['\"]|"
+    r"import\b|export\b|type\b|interface\b|enum\b|declare\b|"
+    r"const\b|let\b|var\b|function\b|async\s+function\b)"
+)
 
 # エラーらしい行の目印。tsc は `error TS2304`、Next.js は `Failed to compile.` と
 # `Module not found:`、npm は `npm ERR!` を出す。
@@ -170,8 +194,54 @@ def copy_scaffold(dest: Path) -> int:
     return count + 2
 
 
+def first_code_line(block: Block) -> str:
+    """ブロックの最初の空でない行。"""
+    return next((line for line in block.lines if line.strip()), "")
+
+
+def is_marked_final(block: Block) -> bool:
+    """その日の最終形として示されたブロックか。"""
+    return any(FINAL_MARK in line for line in block.lines)
+
+
+def restarts_file(block: Block, previous: Block | None) -> bool:
+    """このブロックから書き込み先が書き直されるなら True。
+
+    判定の根拠は3つで、どれも教材の書き方そのものである。
+
+    1. 注記（`（同じファイルの続き）` `（import に追加）` 等）が付いていれば、
+       教材が「これは前の続き・一部だ」と言っている。必ず追記。
+    2. `完成版` の run の先頭。教材はその日の最終形をこの語で示し、以降のチャンクへも
+       同じ語を付ける。run の途中では書き直さない。
+    3. 注記が無く、貼る位置の説明でもなく、ファイルの1行目に来られる構文で始まる。
+       day02 の `src/app/dashboard/page.tsx` は同じ日に4つの版を出すが、版の先頭だけが
+       この形をしており、続きのチャンクには必ず注記が付いている。
+    """
+    if block.note:
+        return False
+    if is_marked_final(block):
+        return previous is None or not is_marked_final(previous)
+    head = first_code_line(block)
+    return bool(head) and not COMMENT_HEAD.match(head) and bool(MODULE_HEAD.match(head))
+
+
+def latest_version(blocks: list[Block]) -> list[Block]:
+    """読者の手元に最後に残るブロックだけを、順番のまま返す。"""
+    parts: list[Block] = []
+    previous: Block | None = None
+    for b in blocks:
+        parts = [b] if restarts_file(b, previous) else [*parts, b]
+        previous = b
+    return parts
+
+
+def render(blocks: list[Block]) -> str:
+    """ブロックの並びを1つのファイルの中身にする。"""
+    return "\n".join("\n".join(b.lines).strip("\n") for b in blocks)
+
+
 def apply_blocks(dest: Path, paths: list[Path]) -> int:
-    """写経ブロックを書き込み先ごとに連結して置く。返り値は書いたファイル数。"""
+    """写経ブロックを書き込み先ごとに置く。返り値は書いたファイル数。"""
     provided = scaffold_src_paths()
     count = 0
     for target, blocks in sorted(concat_by_file(paths).items()):
@@ -179,8 +249,7 @@ def apply_blocks(dest: Path, paths: list[Path]) -> int:
             continue
         out = dest / target
         out.parent.mkdir(parents=True, exist_ok=True)
-        body = "\n".join("\n".join(b.lines).strip("\n") for b in blocks)
-        out.write_text(f"{body}\n", encoding="utf-8")
+        out.write_text(f"{render(latest_version(blocks))}\n", encoding="utf-8")
         count += 1
     return count
 
