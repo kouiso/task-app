@@ -71,12 +71,31 @@ FOLIO_BAND_TOP_MM = 278.0
 # 実測の最大が右 188.0mm（版面の縁ちょうど）なので、1mm を超えたぶんだけを見る
 EDGE_TOLERANCE_MM = 1.0
 
+# ぶら下げ組。和文では行末の句読点や閉じ括弧を版面の外へ出すのが正しい組み方で、
+# 崩れではない。実測（36冊）でも、右へ 2.2mm 出ている本文の行はどれもこれだった。
+# 出てよいのは1文字ぶんまでで、それを超えたら別の原因なので報告する。
+HANGING_PUNCTUATION = "、。，．,.」』）〕】〉》〟’”!?！？：；:;"
+# 行頭の始め括弧も同じ。和文では行の先頭に来た `（` `「` を左へ半角ぶん出して組む。
+# 実測（36冊）で左へ 2.3mm 出ていた行は、どれも `（` で始まっていた。
+LINE_HEAD_BRACKETS = "（(「『［〔【〈《“‘"
+HANGING_MAX_MM = 3.5
+
 # 描画の解像度。72dpi にすると 1px = 1pt = PDF の座標そのものになり、
 # 画素と座標の対応を計算で歪めずに済む。1px = 0.353mm で、上の許容 1mm の1/3
 RENDER_DPI = 72
 # 紙は白（255）。淡い地色（引用の #f6f8fa、インラインコードの #eef1f4）は 240 前後で、
 # これを墨に数えると版面いっぱいの地色で全ページが引っかかる。間を取って 230
 INK_LEVEL = 230
+
+# コードブロックは地色が濃いので、行のほとんどの画素が墨として数えられる。
+# 地の文は白地に字なので、同じ行でも墨は一部にしか出ない。この差で見分ける。
+CODE_BAND_DARK_RATIO = 0.6
+# 版面の上端・下端からこの範囲に濃い帯があれば、そこで途切れているとみなす。
+CODE_BAND_EDGE_MM = 3.0
+# 表の罫線も版面いっぱいに横へ伸びる濃い線なので、1行だけ見るとコードの地色と
+# 区別が付かない（実測: day28 p55 の表の下罫が拾われた）。地色は必ず厚みを持つので、
+# 端から内側へこの厚みぶん濃い行が続いていることを条件にする。
+CODE_BAND_MIN_THICK_MM = 3.0
 
 # ── 表の潰れ ────────────────────────────────────────────────
 # 潰れた列は「1文字だけの行」が行送りの間隔でびっしり縦に積まれる。
@@ -86,6 +105,15 @@ COLLAPSED_MIN_STACK = 8
 # 行送りは本文 12.75pt × 2.05 ≒ 9.2mm。表の行が変わる間隔（実測 16〜21mm）とは
 # 倍近く離れるので、12mm で切ると「同じセルの中で折り返された」ものだけが残る
 COLLAPSED_MAX_PITCH_MM = 12.0
+
+# 潰れた列は、縦に積まれた文字を読むと元の語になる（実測: 「成功状態ErrorBoun」）。
+# 一方、○×だけの「必須」列や、木構造図の `│` が並ぶコードブロックは、
+# 同じ形に見えても字の種類が少ない。種類の数で分ける。
+COLLAPSED_MIN_DISTINCT = 4
+
+# 端切れとして数える塊の条件。表のセルを外すためのもの。
+ORPHAN_BLOCK_MIN_RATIO = 0.6
+ORPHAN_PREV_MIN_RATIO = 0.9
 
 # ── 重なり ──────────────────────────────────────────────────
 # 別々のブロックの行同士が重なったら組版の事故。同じブロックの中の行は
@@ -98,6 +126,10 @@ OVERLAP_MIN_RATIO = 0.5
 # 戻ると、横長で 110〜120mm、縦長のモバイル画面で 24〜33mm まで縮む（book.css の記録）。
 # 130mm で切ると、その両方を拾い、今の実測（最小 152.4mm）には掛からない
 MIN_IMAGE_WIDTH_MM = 130.0
+# 縦長の写真は、幅ではなく高さで頭打ちになる（book.css の max-block-size: 150mm）。
+# 携帯の画面（390×844）や中央寄せのカードは、紙の上で幅が 70〜110mm になるが、
+# それは崩れではなく元の画面の形。高さが十分にあるかで見る。
+MIN_IMAGE_HEIGHT_MM = 120.0
 # 紙で図中のUI文字が読める下限。1440px を版面幅いっぱいに置くと 220ppi になる
 MIN_IMAGE_PPI = 120
 # object-fit: contain が外れて引き伸ばされたら、縦横の実効解像度がずれる
@@ -160,6 +192,36 @@ def ink_rows(width: int, height: int, pixels: bytes) -> list[tuple[int, int, int
     return rows
 
 
+def code_band_at_edges(width: int, height: int, pixels: bytes) -> tuple[bool, bool]:
+    """コードブロックの濃い帯が版面の上端・下端に接しているかを返す。
+
+    写経が前提の教材で、1つのコードブロックがページの境で切れると、読者は
+    打ちながら紙をめくることになる。`book.css` は pre に break-inside: avoid を
+    掛けてこれを防いでいるが、掛け忘れや theme の更新で戻ることがあるので、
+    出来上がった紙面の側から見張る。
+
+    返すのは (上端に接している, 下端に接している)。前のページの下端と
+    次のページの上端が両方 True なら、そこで1つの塊が切れている。
+    """
+    marked = pixels.translate(INK_TABLE)
+    left_px = int(TEXT_LEFT_MM * RENDER_DPI / 25.4)
+    right_px = int(TEXT_RIGHT_MM * RENDER_DPI / 25.4)
+    span = max(1, right_px - left_px)
+
+    def is_code_row(y: int) -> bool:
+        if not 0 <= y < height:
+            return False
+        row = marked[y * width + left_px:y * width + right_px]
+        return sum(row) >= span * CODE_BAND_DARK_RATIO
+
+    thick_px = max(1, int(CODE_BAND_MIN_THICK_MM * RENDER_DPI / 25.4))
+    top_y = int((TEXT_TOP_MM + CODE_BAND_EDGE_MM / 2) * RENDER_DPI / 25.4)
+    bottom_y = int((TEXT_BOTTOM_MM - CODE_BAND_EDGE_MM / 2) * RENDER_DPI / 25.4)
+    starts = all(is_code_row(top_y + n) for n in range(thick_px))
+    ends = all(is_code_row(bottom_y - n) for n in range(thick_px))
+    return starts, ends
+
+
 def find_ink_overflow(rows: list[tuple[int, int, int]]) -> list[str]:
     """版面からはみ出した墨を挙げる。人が見に行けるよう位置を mm で書く。"""
     if not rows:
@@ -167,12 +229,15 @@ def find_ink_overflow(rows: list[tuple[int, int, int]]) -> list[str]:
     problems: list[str] = []
     left = min(mm_from_px(row[1]) for row in rows)
     right = max(mm_from_px(row[2]) for row in rows)
-    if left < TEXT_LEFT_MM - EDGE_TOLERANCE_MM:
+    # 左右は1文字ぶんまで見逃す。ぶら下げた句読点や行頭の始め括弧が
+    # 版面の外へ出るのは正しい組み方で、墨の位置だけでは区別が付かない。
+    # どの字が出ているかを見る find_text_overflow が、その範囲を受け持つ。
+    if left < TEXT_LEFT_MM - HANGING_MAX_MM:
         problems.append(
             f"左余白へ {TEXT_LEFT_MM - left:.1f}mm はみ出す墨がある"
             f"（x={left:.1f}mm / 版面左端 {TEXT_LEFT_MM:.1f}mm）"
         )
-    if right > TEXT_RIGHT_MM + EDGE_TOLERANCE_MM:
+    if right > TEXT_RIGHT_MM + HANGING_MAX_MM:
         problems.append(
             f"右余白へ {right - TEXT_RIGHT_MM:.1f}mm はみ出す墨がある"
             f"（x={right:.1f}mm / 版面右端 {TEXT_RIGHT_MM:.1f}mm）"
@@ -269,9 +334,23 @@ def find_text_overflow(lines: list[Line]) -> list[str]:
         if not line.text.strip():
             continue
         if line.right > TEXT_RIGHT_MM + EDGE_TOLERANCE_MM:
-            key, over = (line.page, "右"), line.right - TEXT_RIGHT_MM
+            over_right = line.right - TEXT_RIGHT_MM
+            # ぶら下げた句読点は正しい組み方なので数えない。
+            if (
+                over_right <= HANGING_MAX_MM
+                and line.text.rstrip()[-1:] in HANGING_PUNCTUATION
+            ):
+                continue
+            key, over = (line.page, "右"), over_right
         elif line.left < TEXT_LEFT_MM - EDGE_TOLERANCE_MM:
-            key, over = (line.page, "左"), TEXT_LEFT_MM - line.left
+            over_left = TEXT_LEFT_MM - line.left
+            # 行頭へ出した始め括弧は正しい組み方なので数えない。
+            if (
+                over_left <= HANGING_MAX_MM
+                and line.text.lstrip()[:1] in LINE_HEAD_BRACKETS
+            ):
+                continue
+            key, over = (line.page, "左"), over_left
         else:
             continue
         previous = worst.get(key)
@@ -343,6 +422,9 @@ def find_collapsed_columns(lines: list[Line]) -> list[str]:
         if statistics.median(pitches) > COLLAPSED_MAX_PITCH_MM:
             # 表の行が変わる間隔で並んどるだけ（1文字の値が入った普通の列）
             continue
+        if len({line.text.strip() for line in stack}) < COLLAPSED_MIN_DISTINCT:
+            # ○×だけの列や、木構造図の `│` の並び。潰れた列なら語が読めるはず。
+            continue
         width = max(line.width for line in stack)
         problems.append(
             f"p{page}: 列が幅 {width:.1f}mm に潰れ、{len(stack)}行が1文字ずつ縦に積まれている"
@@ -352,22 +434,48 @@ def find_collapsed_columns(lines: list[Line]) -> list[str]:
 
 
 def count_orphan_lines(lines: list[Line]) -> tuple[int, int, list[tuple[int, int]]]:
-    """端切れ（1〜3文字だけの行）を数える。
+    """端切れ（折返しの結果、行末に1〜3文字だけ残った行）を数える。
 
     返すのは (端切れの行数, 版面の中の行数, ページごとの多い順)。柱とノンブルは
     版面の外なので数えない。ノンブルを入れると全ページが1件ずつ端切れになる。
+
+    数える相手は「折返しの結果」に限る。短いだけの行は端切れではない。
+    実測（day12 p8）では、5列の権限表に並ぶ `✅` `✖` のセルが1文字の行として
+    33行数えられ、それだけで1冊の率を押し上げていた。表のセルは折返しの
+    結果ではないので、次の2つを満たす行だけを端切れとする。
+
+      1. その塊（block）が版面の幅の 60% 以上を使っている
+         → 表のセルは列の幅しか無いので外れる。地の文とコードだけが残る
+      2. 同じ塊の中で、直前の行が塊いっぱいまで伸びている
+         → 折返して溢れた行だけが残る。段落の最終行が短いだけの場合は
+           直前の行も短いことがあり、そこは数えない
     """
     total = 0
     orphans = 0
     per_page: dict[int, int] = {}
-    for line in lines:
-        if line.top < TEXT_TOP_MM - EDGE_TOLERANCE_MM or line.bottom > TEXT_BOTTOM_MM:
-            continue
-        text = line.text.strip()
-        if not text:
-            continue
-        total += 1
-        if len(text) <= ORPHAN_MAX_CHARS:
+
+    inside = [
+        line for line in lines
+        if not (line.top < TEXT_TOP_MM - EDGE_TOLERANCE_MM or line.bottom > TEXT_BOTTOM_MM)
+        and line.text.strip()
+    ]
+    blocks: dict[tuple[int, int], list[Line]] = {}
+    for line in inside:
+        blocks.setdefault((line.page, line.block), []).append(line)
+
+    text_width = TEXT_RIGHT_MM - TEXT_LEFT_MM
+    for block_lines in blocks.values():
+        block_lines.sort(key=lambda line: line.top)
+        widest = max(line.width for line in block_lines)
+        wide_enough = widest >= text_width * ORPHAN_BLOCK_MIN_RATIO
+        for index, line in enumerate(block_lines):
+            total += 1
+            if len(line.text.strip()) > ORPHAN_MAX_CHARS or not wide_enough:
+                continue
+            if index == 0:
+                continue
+            if block_lines[index - 1].width < widest * ORPHAN_PREV_MIN_RATIO:
+                continue
             orphans += 1
             per_page[line.page] = per_page.get(line.page, 0) + 1
     worst = sorted(per_page.items(), key=lambda item: (-item[1], item[0]))
@@ -431,7 +539,15 @@ def find_image_problems(rows: list[dict[str, float | int | str]]) -> list[str]:
             continue
         width_mm = int(row["width"]) / x_ppi * 25.4
         height_mm = int(row["height"]) / y_ppi * 25.4
-        if width_mm < MIN_IMAGE_WIDTH_MM:
+        # 幅で見るのは横長の写真だけ。縦長は高さで頭打ちになるので、
+        # 幅が足りないのは当たり前で、そこを咎めても直しようがない。
+        if height_mm > width_mm:
+            if height_mm < MIN_IMAGE_HEIGHT_MM:
+                problems.append(
+                    f"p{page}: 縦長の写真が高さ {height_mm:.1f}mm しかない"
+                    f"（下限 {MIN_IMAGE_HEIGHT_MM:.0f}mm）"
+                )
+        elif width_mm < MIN_IMAGE_WIDTH_MM:
             problems.append(
                 f"p{page}: 写真が幅 {width_mm:.1f}mm しかない"
                 f"（版面 {TEXT_RIGHT_MM - TEXT_LEFT_MM:.0f}mm / 下限 {MIN_IMAGE_WIDTH_MM:.0f}mm）"
@@ -470,10 +586,18 @@ def render_problems(pdf: Path, total: int) -> list[str]:
         if len(images) != total:
             raise ToolFailure(f"{total} ページ中 {len(images)} ページしか描画できない")
         problems: list[str] = []
+        previous_ends_in_code = False
         for number, image in enumerate(images, start=1):
             width, height, pixels = read_pgm(image.read_bytes())
             for problem in find_ink_overflow(ink_rows(width, height, pixels)):
                 problems.append(f"p{number}: {problem}")
+            starts, ends = code_band_at_edges(width, height, pixels)
+            if previous_ends_in_code and starts:
+                problems.append(
+                    f"p{number - 1}〜p{number}: コードブロックがページの境で切れている。"
+                    "写経しながら紙をめくることになる"
+                )
+            previous_ends_in_code = ends
         return problems
 
 
