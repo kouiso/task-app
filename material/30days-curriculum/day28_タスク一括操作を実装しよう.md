@@ -18,7 +18,7 @@ Day 27 では、`/project?projectId=...` で
 
 スクリーンショット: タスク一括操作の完成画面の表示を確認してください。
 
-![タスク一括操作の完成画面の表示を確認してください。](./screenshots/bulk-operations-complete.png)
+![2件のタスクを選び、見出しの右に「完了にする」「削除」「ステータス変更」が並んだ画面](./screenshots/day28/bulk-operations-complete.png)
 
 > **今日のゴールライン**: Setで選択中タスクを管理し、完了・削除・ステータス変更をまとめて動かせれば大丈夫です。
 
@@ -496,14 +496,14 @@ Set に詰め、`false` なら空の Set で上書きします。
 
 スクリーンショット: チェックボックス付きタスクカードの表示を確認してください。
 
-![チェックボックス付きタスクカードの表示を確認してください。](./screenshots/task-row-with-checkbox.png)
+![タスクカードの左端に付いたチェックボックス（赤枠）](./screenshots/day28/task-row-with-checkbox.png)
 
 実際のコードでは `TaskCard` コンポーネントをグリッドで並べています。`TaskCard`・`handleEdit`・`handleDelete`・`handleTaskClick`・`handleCreate` は過去の Day で作成済みです。
 
 チェックボックスはカードの左側に配置します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（className="grid gap-6 の要素を書き直す）
 import { Checkbox } from '@/component/ui/checkbox';
 
 // タスク一覧の grid レイアウト
@@ -534,7 +534,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 
 ```typescript
-        {/* filepath: src/app/task/page.tsx */}
+        {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
         <div className="flex-1 min-w-0 h-full">
           <TaskCard
             id={task.id}
@@ -609,7 +609,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 スクリーンショット: ヘッダーに全選択・全解除のチェックボックスが表示された画面を確認してください。
 
-![ヘッダーに全選択・全解除のチェックボックスが表示された画面](./screenshots/select-all-checkbox.png)
+![ヘッダーに全選択・全解除のチェックボックスが表示された画面](./screenshots/day28/select-all-checkbox.png)
 
 いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なので、まずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
@@ -627,7 +627,7 @@ const isAllSelected =
 この値をチェックボックスに渡します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（className="flex gap-2 w-full の前に追加）
 import { Label } from '@/component/ui/label';
 
 // フィルター行の先頭に配置
@@ -740,10 +740,10 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 スクリーンショット: 一括操作ボタンがヘッダーに表示される様子の表示を確認してください。
 
-![一括操作ボタンがページヘッダーの右側に表示されている状態](./screenshots/bulk-operation-header.png)
+![1件だけ選んだ状態。見出しに「(1件選択中)」が出て、右側に一括操作ボタンが現れる](./screenshots/day28/bulk-operation-header.png)
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（className="text-3xl font-bold から onClick={handleCreate}> までを書き直す） */}
 {/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}
 <div className="flex items-center justify-between">
   <div className="flex items-center gap-3">
@@ -834,7 +834,7 @@ const handleBulkComplete = () => {
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
 {/* 一括操作ボタン領域に「完了にする」ボタンを追加 */}
 {canCompleteSelected && (
   <Button
@@ -921,7 +921,7 @@ import { CheckSquare, Plus, Trash2 }
 ヘッダーにボタンとダイアログを追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
 {/* 削除ボタン（赤色のテキスト） */}
 {canDeleteSelected && (
   <Button
@@ -1035,7 +1035,7 @@ const handleBulkUpdateStatus = (
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
 {/* ステータス変更ドロップダウン */}
 {canCompleteSelected && (
   <DropdownMenu>
@@ -1109,7 +1109,7 @@ export function isTaskStatus(
 
 スクリーンショット: 完成した一括操作機能の表示を確認してください。
 
-![完成した一括操作機能の表示を確認してください。](./screenshots/bulk-task-operations.png)
+![「すべて選択」で6件すべてを選び、見出しに「(6件選択中)」が出た画面](./screenshots/day28/bulk-task-operations.png)
 
 以下のチェックリストで動作確認をしましょう。
 

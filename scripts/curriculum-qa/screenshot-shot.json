@@ -2155,6 +2155,133 @@
           "selector": "h3:text-is('ポートフォリオ（改）')"
         }
       ]
+    },
+    {
+      "name": "day16/task-list.png",
+      "day": 16,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=合計作業時間",
+      "note": "Step の締めくくり『カードの下段に合計作業時間の行が増えたことを確認』。旧参照は screenshots/task-list.png（完成版の画面）で、作業時間が 0m の別データやった。Day 16 のツリーと初期データで撮り直す。",
+      "full_page": true
+    },
+    {
+      "name": "day28/bulk-operations-complete.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "[aria-label='デザインモックアップ作成を選択']"
+        },
+        {
+          "kind": "click",
+          "selector": "[aria-label='データベース設計を選択']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('完了にする')"
+        }
+      ],
+      "wait_for": "button:has-text('完了にする')",
+      "note": "冒頭のゴール。旧参照は screenshots/bulk-operations-complete.png（完成版アプリ）。2件選んでヘッダーに一括操作ボタンが出た状態を Day 28 のツリーで撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day28/task-row-with-checkbox.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "[aria-label='デザインモックアップ作成を選択']",
+      "marks": [
+        {
+          "selector": "[aria-label='デザインモックアップ作成を選択']",
+          "label": "カードの左に付くチェックボックス"
+        }
+      ],
+      "note": "Step 2 の1枚。まだ何も選んでいない状態で撮る。選ぶとヘッダーに一括操作ボタンが出てしまい、Step 4 で作るものが先に映るため。",
+      "clip": {
+        "selector": "div.flex.gap-2.items-start:has(h3:has-text('デザインモックアップ作成'))",
+        "padding": 12
+      }
+    },
+    {
+      "name": "day28/select-all-checkbox.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "#select-all",
+      "marks": [
+        {
+          "selector": "#select-all",
+          "label": "すべて選択のチェックボックス"
+        }
+      ],
+      "note": "Step 3 の1枚。未選択のまま撮る（Step 4 の一括操作ボタンを写さんため）。赤枠は入れ物やのうてチェックボックス本体を指す。再構成ツリーでは「すべて選択」がフィルター行の上の独立した行に入るので、入れ物を指すと画面幅いっぱいの枠になって、どれを見ればええか分からんくなる。",
+      "full_page": true
+    },
+    {
+      "name": "day28/bulk-operation-header.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "[aria-label='デザインモックアップ作成を選択']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('完了にする')"
+        }
+      ],
+      "wait_for": "button:has-text('完了にする')",
+      "marks": [
+        {
+          "selector": "button:has-text('完了にする')",
+          "label": "ヘッダー右側に出る一括操作ボタン"
+        }
+      ],
+      "note": "Step 4 の1枚。1件だけ選んだ状態にして、ボタンが『1件以上選択されているときだけ』出ることを見せる。",
+      "full_page": true
+    },
+    {
+      "name": "day28/bulk-task-operations.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "#select-all"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('完了にする')"
+        }
+      ],
+      "wait_for": "button:has-text('完了にする')",
+      "note": "Step 9 の動作確認。すべて選択した状態で、操作ボタンが揃っていることを見せる。選択件数の表示は Day 28 の再構成ツリーには入らん（見出し行の書き直しだけ当てられていない）ので、件数ではなくボタンの出現を待つ。",
+      "full_page": true
     }
   ]
 }

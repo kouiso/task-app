@@ -164,6 +164,15 @@ EXPORT_LIST = re.compile(r"^export\s*\{([^}]*)\}", re.M)
 # 差し込めないと、day16 が足す `addTime` 手続きが落ちて、day16 以降の
 # `time-log-dialog.tsx` が `api.task.addTime` を呼べずに型検査で落ちる。
 INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[）)]$")
+# `（className="grid gap-6 …" の要素を書き直す）` の形。同じ名前のタグが何個も並ぶ所を
+# 指すため、タグ名やのうて行の中の文字列で1つに絞る。`<div>` の書き直しは名前では
+# 決められん（day28 の一覧グリッドと見出し行がどちらも `<div>` から始まる）。
+REWRITE_NOTE = re.compile(r"^[（(](.+?)\s*の要素を書き直す[）)]$")
+# `（A から B までを書き直す）` の形。並んだ2つの要素をまとめて1つへ包み直すときに使う。
+# 片方だけを書き直すと、もう片方が二重に残る（day28 の見出しと「新規タスク」ボタンを
+# `justify-between` の1行へ包む書き直しがこれ）。
+REWRITE_SPAN_NOTE = re.compile(r"^[（(](.+?)\s*から\s*(.+?)\s*までを書き直す[）)]$")
+TAG_NAME = re.compile(r"<([A-Za-z][\w.]*)")
 # 抜粋の先頭がトップレベルの宣言なら、それは「その宣言をこの形へ書き直す」という指示である。
 # day13 と day20 の `app-layout.tsx` は `const menuItems: MenuItem[] = [...]` を、項目を1つ
 # 増やした形で丸ごと出し直す。当てられんと、サイドバーが Day 08 の3項目のまま止まり、
@@ -171,6 +180,15 @@ INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[�
 DECL_HEAD = re.compile(
     r"^(?:export\s+)?(?:const|let|var|function|async\s+function)\s+([A-Za-z_$][\w$]*)\b"
 )
+# `const [selectedTasks, setSelectedTasks] = useState(...)` の形。束ねる名前が複数あるので
+# 「その宣言を書き直す」には使えん。足す側だけを見る。
+DESTRUCTURE_HEAD = re.compile(r"^(?:export\s+)?(?:const|let|var)\s*[\[{]")
+# 部品の本体で最初に来る「抜けるかもしれん行」。まだ無い宣言はこの直前へ足す。
+# `return (` だけを見ると、`if (tasksLoading) {` の中の早い return が先に当たって、
+# hook を条件分岐の内側へ入れてしまう。どの `if` が本体直下かは字下げでは決まらん
+# （差し込んだ抜粋は字下げ0で入るので、その中の `if` が字下げ2つになる）ので、
+# 波括弧の深さで見る。
+COMPONENT_GUARD = re.compile(r"^\s*(?:if \(|return \()")
 # 抜粋そのものがオブジェクトの1要素なら、それは「この要素をどこかの配列へ足す」という指示である。
 # day21 の `app-layout.tsx` は `{ text: 'レポート', icon: ..., path: ... },` だけを出す。
 OBJECT_ELEMENT_HEAD = re.compile(r"^\s*\{\s*$")
@@ -474,6 +492,11 @@ def insert_fragment(text: str, name: str, where: str, fragment: str) -> str | No
     # 式で指された差し込み先は、1つに決まるときだけ使う。同じ式が2箇所にあると
     # 教材が指していない側へ入れてしまい、型検査は通っても画面が別物になる。
     hits = [i for i, line in enumerate(lines) if name in mask_code(line)]
+    if not hits:
+        # 教材が指す目印にクラス名が入ることがある（`className="flex gap-2 w-full`）。
+        # マスクすると文字列の中身が消えて当たらんので、そのときだけ生の行で探す。
+        # 1つに決まるときだけ使う条件は同じ。
+        hits = [i for i, line in enumerate(lines) if name in line]
     if len(hits) != 1:
         return None
     i = hits[0]
@@ -511,6 +534,77 @@ def replace_element(text: str, name: str, fragment: str) -> str | None:
     return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
 
 
+def rewrite_element(text: str, mark: str, fragment: str) -> str | None:
+    """`mark` を含む行から始まる要素を fragment へ丸ごと置き換える。決まらなければ None。
+
+    `replace_element` はタグ名で探すので、`<div>` のように何十個もある要素は指せん。
+    こちらは行の中の文字列で1つに絞ってから、同じ要素の終わりの見つけ方を借りる。
+    """
+    lines = text.split("\n")
+    hits = [i for i, line in enumerate(lines) if mark in line]
+    if len(hits) != 1:
+        return None
+    start = hits[0]
+    name = TAG_NAME.search(lines[start])
+    if name is None:
+        return None
+    end = _element_end(lines, start, name.group(1))
+    if end is None:
+        return None
+    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def rewrite_span(text: str, start_mark: str, end_mark: str, fragment: str) -> str | None:
+    """`start_mark` の行から `end_mark` の要素の終わりまでを fragment へ置き換える。
+
+    並んだ2つの要素を1つの入れ物へ包み直す書き直しに使う。片方だけを対象にすると、
+    もう片方が新しい入れ物の外に残って二重になる。どちらの目印も1つに決まらなければ触らない。
+    """
+    lines = text.split("\n")
+    starts = [i for i, line in enumerate(lines) if start_mark in line]
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    ends = [i for i, line in enumerate(lines) if i >= start and end_mark in line]
+    if len(ends) != 1:
+        return None
+    name = TAG_NAME.search(lines[ends[0]])
+    if name is None:
+        return None
+    end = _element_end(lines, ends[0], name.group(1))
+    if end is None:
+        return None
+    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def split_leading_imports(lines: tuple[str, ...]) -> tuple[list[str], list[str]]:
+    """先頭に固まった import と、その後ろの本体に切り分ける。
+
+    教材は「持ち込みを1行足して、その下に JSX を書き直す」を1枚のブロックへ載せる
+    ことがある（day28 の Step 2 と Step 3）。丸ごと import と見なすと JSX が落ち、
+    丸ごと本体と見なすと import 行が JSX の中へ紛れ込む。先頭だけ剥がして別に扱う。
+    """
+    body = strip_chunk_label(lines)
+    joined = join_imports("\n".join(body))
+    cut = 0
+    seen_import = False
+    for i, line in enumerate(joined):
+        stripped = line.strip()
+        if stripped.startswith("import "):
+            seen_import, cut = True, i + 1
+            continue
+        # 持ち込みの後ろに続く `//` の覚え書きも一緒に剥がす。残すと JSX の中へ
+        # `// タスク一覧の grid レイアウト` がそのまま出て、構文として通らん。
+        if not stripped or LEAD_COMMENT.match(line):
+            if seen_import:
+                cut = i + 1
+            continue
+        break
+    if not seen_import:
+        return [], list(body)
+    return joined[:cut], joined[cut:]
+
+
 def _declaration_end(lines: list[str], start: int) -> int:
     """start 行から始まる宣言が終わる行の次を返す。
 
@@ -545,6 +639,47 @@ def replace_declaration(text: str, name: str, fragment: str) -> str | None:
     start = starts[0]
     end = _declaration_end(lines, start)
     return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def declares(text: str, name: str) -> bool:
+    """その名前の宣言が、字下げされていても既にあるか。"""
+    return re.search(ANCHOR.format(name=re.escape(name)), text, re.M) is not None
+
+
+def fragment_declares(fragment: str) -> list[str]:
+    """その抜粋が新しく作る、行頭の宣言の名前。"""
+    return [m.group(1) for m in (DECL_HEAD.match(line) for line in fragment.split("\n")) if m]
+
+
+def add_declaration(text: str, fragment: str) -> str | None:
+    """まだ無い宣言を、部品の本体で最初に抜ける行の直前へ足す。置き場が無ければ None。
+
+    教材は Day ごとに「その日から使う値」を1つずつ増やす。増やす側は書き直しではないので
+    `replace_declaration` では当たらず、黙って落ちていた。day28 の一括操作は、選択中の集合から
+    数え方・一括更新まで22箇所が全部これで落ち、Day 28 を終えたはずのツリーにチェックボックスが
+    1つも無かった（写真も完成版アプリのものを流用したままになっていた）。
+
+    足す先を「本体で最初に抜けるかもしれん行の直前」に決めると、教材が並べた順のまま
+    後ろへ伸びるので、後の宣言が前の宣言を参照する並び（`canCompleteSelected` が
+    `selectableTasks` を見る）がそのまま保たれる。早い return の手前なので、
+    hook が条件分岐の内側で呼ばれる形にもならん。
+    """
+    # 1つの抜粋が宣言を2本足すことがある（mutation とそれを呼ぶハンドラー）。
+    # 先頭の名前だけを見て足すと、`完成版` 側の同じ抜粋が2本目を二重に置く。
+    if any(declares(text, name) for name in fragment_declares(fragment)):
+        return None
+    lines = text.split("\n")
+    at, depth = None, 0
+    for i, line in enumerate(lines):
+        # 深さ1 = 部品の本体。0 はモジュールの直下、2 以上はハンドラーの中。
+        if depth == 1 and COMPONENT_GUARD.match(line):
+            at = i
+            break
+        masked = mask_code(line)
+        depth += masked.count("{") - masked.count("}")
+    if at is None:
+        return None
+    return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
 
 
 def object_keys(text: str) -> frozenset[str]:
@@ -585,17 +720,30 @@ def _tag_open_end(lines: list[str], start: int) -> tuple[int | None, bool]:
 
     属性の中の `>` は数えない。`onClick={() => x}` の `>` は波括弧の内側にあるので、
     深さを見れば開始タグの終わりと区別できる。
+
+    引用符は行をまたいで持ち回る。`mask_code` は1行ずつしか見んので、
+    `className="grid gap-6` から `xl:grid-cols-4">` まで3行に折り返した開始タグでは、
+    最後の行が文字列の途中から始まっとることが分からず `>` を消してしまう。
+    開始タグが閉じん判定になり、要素の終わりが後ろの `</div>` まで伸びて、
+    書き直しが関係の無い所まで飲み込む（day28 の一覧グリッドが後ろのダイアログ2つを
+    巻き込んで消した）。
     """
     depth = 0
+    quote = ""
     for i in range(start, len(lines)):
-        masked = mask_code(lines[i])
-        for j, c in enumerate(masked):
-            if c == "{":
+        line = lines[i]
+        for j, c in enumerate(line):
+            if quote:
+                if c == quote and (j == 0 or line[j - 1] != "\\"):
+                    quote = ""
+            elif c in "\"'`":
+                quote = c
+            elif c == "{":
                 depth += 1
             elif c == "}":
                 depth -= 1
             elif c == ">" and depth == 0:
-                return i, j > 0 and masked[j - 1] == "/"
+                return i, j > 0 and line[j - 1] == "/"
     return None, False
 
 
@@ -616,6 +764,34 @@ def _element_end(lines: list[str], start: int, name: str) -> int | None:
     return None
 
 
+# 抜粋が自分で束ねる名前を拾う道具。引数と、抜粋の中の宣言。ここを数えんと
+# `setSelectedTasks((prev) => ...)` の `prev` や `mutationFn: (ids: string[]) => ...` の
+# `ids` が「まだファイルに無い名前」に見えて、当てられるはずの抜粋が落ちる
+# （day28 の一括操作は22箇所が全部これで消え、Day 28 を終えたツリーに
+# チェックボックスが1つも無かった）。
+ARROW_PARAMS = re.compile(r"\(([^()]*)\)\s*(?::[^=]*?)?=>")
+FUNCTION_PARAMS = re.compile(r"\bfunction\s*[A-Za-z_$][\w$]*\s*\(([^()]*)\)")
+LOCAL_BINDING = re.compile(r"\b(?:const|let|var)\s+([^=;\n]+?)\s*=")
+CATCH_PARAM = re.compile(r"\bcatch\s*\(\s*([A-Za-z_$][\w$]*)")
+FOR_BINDING = re.compile(r"\bfor\s*\(\s*(?:const|let|var)\s+([^;\n]+?)\s+(?:of|in)\b")
+
+
+# `mutate({ ids: selectedTaskList.map(...) })` の `ids` は渡す先の欄名であって、
+# そのファイルに宣言が要る名前やない。`{` `,` `(` `=>` の直後に来る `名前:` だけを欄名と見る。
+# 三項演算子の `a ? b : c` の `b` は `?` の後ろなので当たらん。
+OBJECT_KEY_REF = re.compile(r"(?:^|[{,(]|=>)\s*([A-Za-z_$][\w$]*)\s*:", re.M)
+
+
+def bound_names(fragment: str) -> set[str]:
+    """その抜粋が自分の中で束ねる名前。引数・局所宣言・catch・for の変数。"""
+    masked = mask_code(fragment)
+    out: set[str] = set()
+    for pattern in (ARROW_PARAMS, FUNCTION_PARAMS, LOCAL_BINDING, CATCH_PARAM, FOR_BINDING):
+        for group in pattern.findall(masked):
+            out.update(IDENTIFIER.findall(group))
+    return out
+
+
 def introduces_unknown_names(text: str, fragment: str) -> bool:
     """その抜粋が、今のファイルに無い名前を持ち込むなら True。
 
@@ -625,15 +801,16 @@ def introduces_unknown_names(text: str, fragment: str) -> bool:
     貼る位置の指示が無いので当てられない。書き換えだけ当てると、宣言の無い名前を
     参照する半端なファイルになる。片方しか当てられんときは、両方とも当てない。
     """
-    known = set(IDENTIFIER.findall(text))
+    known = set(IDENTIFIER.findall(text)) | bound_names(fragment)
     # 文字列の中身は名前ではない。潰さずに数えると `path: '/search'` の `search` を
     # 「まだ無い名前」と見て、当てられるはずの抜粋を落とす（day20 のサイドバーがこれで
     # 「検索」を落としていた）。中身を消しても桁と行は変わらないので、位置はずれない。
+    keys = set(OBJECT_KEY_REF.findall(mask_code(fragment)))
     referenced = {
         name
         for expr in BRACED.findall(mask_code(fragment))
         for name in REFERENCE.findall(expr)
-        if name not in NOT_A_REFERENCE
+        if name not in NOT_A_REFERENCE and name not in keys
     }
     return any(name not in known for name in referenced)
 
@@ -714,22 +891,38 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         if b.day <= after_day:
             continue
         m = INSERT_NOTE.match(b.note)
+        rewrite = None if m else REWRITE_NOTE.match(b.note)
+        span = None if (m or rewrite) else REWRITE_SPAN_NOTE.match(b.note)
         imports = merge_imports(text, render([b]))
         if imports is not None:
             # import だけのチャンクは、差し込み先の指示が無くても置き場所が決まる。
             text = imports
             continue
+        # 持ち込みと本体が同じチャンクに同居しとるときは、先頭の import だけ先に足す。
+        lead, rest = split_leading_imports(b.lines)
+        if lead and rest:
+            partial = merge_imports(text, "\n".join(lead))
+            if partial is not None:
+                text = partial
+            b = b._replace(lines=tuple(rest))
         head = operation_head(b.lines)
-        element = None if m else ELEMENT_HEAD.match(head)
+        element = None if (m or rewrite or span) else ELEMENT_HEAD.match(head)
         # 要素の書き換え・宣言の書き直し・配列への1要素追加は、`完成版` の目印が付いていても
         # 当てる。要素だけを外していたが、Step の節が省略記号（`// ...` の類）を含む日は
         # そちらが落ち、全文が `完成版` の側にしか無い（day16 の `<TaskCard>`）。
         # ここまで来た時点で「採った版の日より後」に絞れており、採られなかった `完成版` は
         # その日の全文ではなく抜粋である。抜粋なら当てるのが実物に近い
         # （day20 の `menuItems` は `完成版` の側にしか全文が無い）。
-        declaration = None if (m or element) else DECL_HEAD.match(head)
-        is_element_add = not (m or element or declaration) and bool(OBJECT_ELEMENT_HEAD.match(head))
-        if not m and (b.note or not (element or declaration or is_element_add)):
+        declaration = None if (m or rewrite or span or element) else DECL_HEAD.match(head)
+        is_new_binding = not (m or rewrite or span or element or declaration) and bool(
+            DESTRUCTURE_HEAD.match(head)
+        )
+        is_element_add = not (
+            m or rewrite or span or element or declaration or is_new_binding
+        ) and bool(OBJECT_ELEMENT_HEAD.match(head))
+        if not (m or rewrite or span) and (
+            b.note or not (element or declaration or is_new_binding or is_element_add)
+        ):
             continue
         # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
         # 続きは `（同じファイルの続き）` になる。続きを落とすと手続きが途中で切れる
@@ -745,17 +938,31 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         # 管理者リンク）。2度入れるとリンクが2本並ぶので、既に入っていれば飛ばす。
         if body.strip() and body in text:
             continue
-        if not m and (
+        if not (m or rewrite or span) and (
             any(ELISION.match(line) for line in body.split("\n"))
             or introduces_unknown_names(text, body)
         ):
             continue
         if m:
             merged = insert_fragment(text, m.group(1), m.group(2), body)
+        elif rewrite is not None:
+            merged = rewrite_element(text, rewrite.group(1), body)
+        elif span is not None:
+            merged = rewrite_span(text, span.group(1), span.group(2), body)
         elif element is not None:
             merged = replace_element(text, element.group(1), body)
         elif declaration is not None:
-            merged = replace_declaration(text, declaration.group(1), body)
+            # 1つの抜粋が宣言を2本足すことがある（mutation とそれを呼ぶハンドラー）。
+            # 書き直しが届くのは先頭の1本だけなので、2本目が既にあると二重になる。
+            extra = [n for n in fragment_declares(body) if n != declaration.group(1)]
+            if any(declares(text, name) for name in extra):
+                merged = None
+            else:
+                merged = replace_declaration(text, declaration.group(1), body)
+                if merged is None and not declares(text, declaration.group(1)):
+                    merged = add_declaration(text, body)
+        elif is_new_binding:
+            merged = add_declaration(text, body)
         else:
             merged = append_array_element(text, body)
         if merged is not None:

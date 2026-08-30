@@ -666,6 +666,120 @@ def check_expected_red_is_grounded() -> list[str]:
     return fails
 
 
+def check_new_declaration() -> list[str]:
+    """まだ無い宣言を足す道と、その置き場の決め方。"""
+    fails: list[str] = []
+    body = (
+        "function Page() {\n"
+        "  const a = 1;\n"
+        "  const handle = () => {\n"
+        "    if (a) {\n"
+        "      return;\n"
+        "    }\n"
+        "  };\n"
+        "  if (loading) {\n"
+        "    return (<p>...</p>);\n"
+        "  }\n"
+        "  return (\n"
+        "    <div />\n"
+        "  );\n"
+        "}"
+    )
+    out = target.add_declaration(body, "const b = 2;")
+    if out is None:
+        fails.append("❌ 置き場が決まるはずやのに足せていない")
+    else:
+        lines = out.split("\n")
+        at = lines.index("const b = 2;")
+        # ハンドラーの中の `if` やのうて、本体直下の `if (loading)` の直前に入ること。
+        if lines[at + 1].strip() != "if (loading) {":
+            fails.append(f"❌ 足す位置が本体直下でない: {lines[at + 1]!r}")
+        if "  const handle = () => {" not in out or out.count("if (a) {") != 1:
+            fails.append("❌ ハンドラーの中を割っている")
+
+    # 続けて足したときも、前に足した抜粋の中へ入り込まないこと。
+    twice = target.add_declaration(out, "const c = 3;")
+    if twice is None or twice.split("\n").index("const c = 3;") != twice.split("\n").index("const b = 2;") + 1:
+        fails.append("❌ 2本目が1本目の直後に並んでいない")
+
+    # 同じ名前が既にあるなら足さない（`完成版` 側の同じ抜粋で二重にせん）。
+    if target.add_declaration(body, "const a = 9;") is not None:
+        fails.append("❌ 既にある名前を二重に足している")
+
+    # 抜粋が2本の宣言を持つとき、2本目が既にあっても足さない。
+    if target.add_declaration(body, "const b = 2;\nconst a = 3;") is not None:
+        fails.append("❌ 2本目が既にあるのに足している")
+
+    # 置き場が無いファイル（router 等）は触らない。
+    if target.add_declaration("export const x = 1;\n", "const y = 2;") is not None:
+        fails.append("❌ 置き場が無いのに足している")
+    return fails
+
+
+def check_local_binding_names() -> list[str]:
+    """抜粋が自分で束ねる名前と、渡す先の欄名は「まだ無い名前」に数えん。"""
+    fails: list[str] = []
+    text = "const setX = 1;\nconst list = [];\n"
+    # `(prev) => ...` の prev は引数。数えると抜粋が丸ごと落ちる。
+    if target.introduces_unknown_names(text, "<A on={() => setX((prev) => prev + 1)} />"):
+        fails.append("❌ 引数を、宣言の要る名前として弾いている")
+    # `mutate({ ids: ... })` の ids は渡す先の欄名。
+    if target.introduces_unknown_names(text, "<A on={() => run({ ids: list })} />"):
+        fails.append("❌ 欄名を、宣言の要る名前として弾いている")
+    # 本当に無い名前は弾く。
+    if not target.introduces_unknown_names(text, "<A v={missingThing} />"):
+        fails.append("❌ 本当に無い名前を見逃している")
+    return fails
+
+
+def check_rewrite_element() -> list[str]:
+    """行の中の文字列で指した要素の書き換えと、折り返した開始タグの終わり。"""
+    fails: list[str] = []
+    text = (
+        '<div className="wrap">\n'
+        '  <div className="grid gap-6\n'
+        '    sm:grid-cols-2">\n'
+        "    <p>old</p>\n"
+        "  </div>\n"
+        "  <Dialog />\n"
+        "</div>\n"
+    )
+    out = target.rewrite_element(text, 'className="grid gap-6', '<div>new</div>')
+    if out is None:
+        fails.append("❌ 折り返した開始タグの要素を書き換えられていない")
+    elif "<Dialog />" not in out or "old" in out:
+        fails.append(f"❌ 書き換えが後ろの要素まで飲み込んでいる: {out!r}")
+    # 1つに決まらんときは触らん。
+    if target.rewrite_element(text, "div", "<span />") is not None:
+        fails.append("❌ 2つ以上当たるのに書き換えている")
+    return fails
+
+
+def check_leading_imports() -> list[str]:
+    """持ち込みと本体が同じブロックに同居するときの切り分け。"""
+    fails: list[str] = []
+    lines = (
+        "// filepath: src/a.tsx",
+        "import { Checkbox } from '@/component/ui/checkbox';",
+        "",
+        "// 一覧の grid レイアウト",
+        '<div className="grid">',
+        "</div>",
+    )
+    lead, rest = target.split_leading_imports(lines)
+    if not any("import " in line for line in lead):
+        fails.append("❌ 先頭の import を剥がせていない")
+    if any(line.strip().startswith("//") for line in rest):
+        fails.append("❌ JSX の側へ `//` の覚え書きが残っている（構文として通らん）")
+    if not any("<div" in line for line in rest):
+        fails.append("❌ 本体まで剥がしている")
+    # import が無いブロックはそのまま返す。
+    lead2, rest2 = target.split_leading_imports(("<div />",))
+    if lead2 or rest2 != ["<div />"]:
+        fails.append("❌ import の無いブロックを切り分けている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -681,6 +795,10 @@ CHECKS = (
     ("NG の切り分け", check_triage_section),
     ("tsconfig の exclude", check_tsconfig_excludes),
     ("想定内の赤は教材の断りが根拠", check_expected_red_is_grounded),
+    ("まだ無い宣言を足す", check_new_declaration),
+    ("自分で束ねる名前と欄名", check_local_binding_names),
+    ("文字列で指した要素の書き換え", check_rewrite_element),
+    ("持ち込みと本体の同居", check_leading_imports),
 )
 
 
