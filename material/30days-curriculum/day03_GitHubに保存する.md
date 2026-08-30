@@ -482,6 +482,15 @@ origin  https://github.com/<your-user-name>/task-app.git (push)
 
 ここが今日の本質です。GitHub に保存する日は、とりあえず全部送る日ではありません。**今日の状態として残したいものだけを、自分で選ぶ**日です。
 
+```mermaid
+flowchart TB
+    W["作業ツリー<br/>いま編集したファイル"] -->|"git add"| S["ステージ<br/>今回残すものの控え室"]
+    S -->|"git commit"| L["ローカルの履歴<br/>.git の中"]
+    L -->|"git push"| R["GitHub"]
+```
+
+ファイルの置き場所は4つあり、3つのコマンドはその間の移動です。`commit` が届く先はパソコンの中の履歴までで、GitHub には何も送られません。GitHub まで運ぶのは `push` だけです。この日の後半で「コミットしたのに GitHub に出ない」と感じたら、いま自分がどの矢印まで進んだのかを見てください。
+
 Day 02 からの文脈で言うと、主役はこのあたりです。
 
 - `src/app/dashboard/page.tsx`

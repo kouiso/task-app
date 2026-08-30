@@ -176,6 +176,17 @@ Day 12 で作ったプロジェクトメンバーの一覧が、ここまで効�
 参加者がすでにそこへ登録されているからです。
 配列が空だったときに何が起きるかは、次のブロックで決めます。
 
+```mermaid
+flowchart TB
+    Q["findUnique: taskId で1件だけ引く"] --> T["Task"]
+    T --> P["Project"]
+    P --> M["members（where userId は本人だけ）"]
+    M -->|"1件ある"| OK["メンバーなので通す"]
+    M -->|"0件"| NG["メンバーでないので FORBIDDEN"]
+```
+
+コメントしてよい人かどうかの判定が、この1回の問い合わせの中に入っています。`include` の中の `where` で本人の行だけに絞るため、返ってきた配列の長さがそのまま答えになります。コメント用の権限テーブルを別に作らずに済むのは、この形のおかげです。
+
 ```typescript
 // filepath: src/server/api/routers/comment.ts（続き）
   if (!task) {

@@ -764,6 +764,18 @@ const groupedTasks = useMemo(() => {
 
 振り分けの順番には意味があります。先に `!t.dueDate` を見て期限なしを抜き、そのあとで期限ありのタスクだけを3つに分けます。こうすると以降の比較では `dueDate` が必ず存在するので、値が無い場合を毎回確かめずに済みます。`continue` は「この1件はここまで、次のタスクへ」という合図です。比較そのものは `dateOnlyFromValue()` で `YYYY-MM-DD` にそろえてから行うため、時刻やタイムゾーンの違いに振り回されません。等しければ今日、小さければ期限切れ、それ以外が今後の予定になります。
 
+```mermaid
+flowchart TB
+    T["tasks: 1本の配列"] --> Q1{"dueDate はあるか"}
+    Q1 -->|"無い"| N["noDueDate"]
+    Q1 -->|"有る"| Q2{"todayKey と比べる"}
+    Q2 -->|"同じ"| TD["today"]
+    Q2 -->|"小さい"| OV["overdue"]
+    Q2 -->|"大きい"| UP["upcoming"]
+```
+
+1本の配列が4つの箱へ割れます。上の分岐を先に置くのは、ここから下では `dueDate` が必ず存在すると決まるからです。順番を入れ替えると、期限なしのタスクを日付として比べることになります。
+
 ```typescript
 // filepath: src/app/my-task/page.tsx
 // 同じ useMemo の続き

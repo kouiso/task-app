@@ -68,13 +68,13 @@ flowchart TD
 ```
 src/
 ├── app/project/
-│   └── page.tsx              ← メンバー追加ダイアログ・state管理
+│   └── page.tsx              ← 追加ダイアログと state 管理
 ├── component/project/
-│   └── project-detail-view.tsx  ← メンバー一覧表示（独立コンポーネント）
+│   └── project-detail-view.tsx  ← メンバー一覧の表示
 ├── lib/constant/
 │   └── roles.ts              ← ロール定義・権限・型ガード
 └── server/api/routers/
-    └── project.ts            ← getById/getAvailableUsers/addMember/removeMember/updateMemberRole を追加（Step 0）
+    └── project.ts            ← Step 0 で手続きを5本追加
 ```
 
 この4つのうち、今日ゼロから書き足すのは `project.ts` の手続きです。`roles.ts` にはロールの一覧と権限の対応表がすでに入っています。`project-detail-view.tsx` にはメンバー一覧の見た目が用意されています。だから今日の作業は「並べる部品はそろっている、それを動かす配線とサーバー側の許可判定を自分で書く」という形になります。`page.tsx` はその配線を置く場所で、Day 09 から続けて書き足しているファイルです。どこに何を足すのか分からなくなったら、この一覧に戻ってきてください。
@@ -237,6 +237,20 @@ src/
 ```
 
 `projects: { none: { projectId: input.projectId } }` は「このプロジェクトのメンバーに1件も該当しないユーザー」という条件です。Day 09 の `getAll` では `some`（1件でも該当すれば対象）を使いました。`none` はその逆で、1件も該当しない場合を対象にします。これで、まだ参加していない人だけが候補として残ります。
+
+```mermaid
+flowchart TB
+    subgraph ALL["登録ユーザー全員"]
+      subgraph MEM["このプロジェクトのメンバー"]
+        M1["佐藤"]
+        M2["鈴木"]
+      end
+      C1["田中"]
+      C2["高橋"]
+    end
+```
+
+内側の枠が `some` で取れる人、内側を外した残りが `none` で取れる人です。追加の候補として出したいのは外側の残りなので、`none` を使います。`some` と書き間違えると、すでに参加している人だけが候補に並びます。
 
 #### 0-3. addMember（ここが一番のヤマ場、重複チェック）
 

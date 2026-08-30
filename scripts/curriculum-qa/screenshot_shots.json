@@ -11,83 +11,165 @@
     "  wait_for 撮る直前に出ているのを待つセレクタ。",
     "  marks   赤枠。selector で指す。座標は書けない（boundingBox() から取る）。",
     "          複数書くと書いた順に ①②③ の番号バッジが付く。",
+    "  full_page ページ全体を撮るか。省略でビューポートのみ。",
+    "  clip    切り抜く範囲。{selector, padding}。full_page とは同時に書けない。",
     "  note    なぜこの1枚が要るかの覚え書き。出力には出ない。"
   ],
-  "viewport": { "width": 1440, "height": 900 },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
   "shots": [
     {
       "name": "day01/top-page.png",
       "day": 1,
       "path": "/",
       "note": "Day 01 の主成果はトップページなのに、教材には1枚も無い（scan-day01-08.md 01-A4）。",
-      "marks": [{ "selector": "a[href='/dashboard']", "label": "ダッシュボードへ入る" }]
+      "marks": [
+        {
+          "selector": "a[href='/dashboard']",
+          "label": "ダッシュボードへ入る"
+        }
+      ],
+      "full_page": true
     },
     {
       "name": "day01/dashboard-hello.png",
       "day": 1,
       "path": "/dashboard",
-      "note": "中身は現行コードと一致している既存画像。実画面で撮り直して素性を揃える。"
+      "note": "中身は現行コードと一致している既存画像。実画面で撮り直して素性を揃える。",
+      "full_page": true
     },
     {
       "name": "day02/dashboard-message.png",
       "day": 2,
       "path": "/dashboard",
-      "note": "既存画像は別ビルド（G0 FOUNDATION / taskapp demo / 関西弁の旧文面）。"
+      "note": "既存画像は別ビルド（G0 FOUNDATION / taskapp demo / 関西弁の旧文面）。",
+      "full_page": true
     },
     {
       "name": "day04/public-url.png",
       "day": 4,
-      "path": "/",
-      "note": "既存画像は Day 02 と同一画面の再掲。Day 04 のツリーで撮り直す。"
+      "path": "/dashboard",
+      "note": "既存画像は Day 02 と同一画面の再掲。撮り直すのは day04_*.md:565 のキャプションが『ローカル本番モードで開いたダッシュボード』、:562 の確認ポイントが『Day 02 で作った自分用メッセージが見える』で、どちらもトップページでは満たせないため。",
+      "full_page": true
     },
     {
       "name": "day05/login.png",
       "day": 5,
       "path": "/login",
       "wait_for": "#password",
-      "note": "共有の login.png は Day 05/07/08 で6回使われている。日ごとに分ける。"
+      "note": "共有の login.png は Day 05/07/08 で6回使われている。日ごとに分ける。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
     },
     {
       "name": "day05/login-error.png",
       "day": 5,
       "path": "/login",
       "actions": [
-        { "kind": "fill", "selector": "#email", "value": "not-an-email" },
-        { "kind": "click", "selector": "button[type='submit']" },
-        { "kind": "wait_for", "selector": "p.text-destructive" }
+        {
+          "kind": "fill",
+          "selector": "#email",
+          "value": "admin@example.com"
+        },
+        {
+          "kind": "click",
+          "selector": "button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "p.text-destructive"
+        }
       ],
       "wait_for": "p.text-destructive",
-      "marks": [{ "selector": "p.text-destructive", "label": "欄の下に赤字で出る" }],
-      "note": "既存画像はブラウザ標準の英語ツールチップで、本文が言う『欄の下の赤字』が写っていない。"
+      "marks": [
+        {
+          "selector": "p.text-destructive",
+          "label": "欄の下に赤字で出る"
+        }
+      ],
+      "note": "既存画像はブラウザ標準の英語ツールチップで、本文が言う『欄の下の赤字』が写っていない。メール欄を空にすると type=email のブラウザ検証が submit を止めてしまい、zod の赤字まで辿り着かない（それが既存画像の正体）。メールは正しく埋め、パスワードだけ空にして zod の検証を通す。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
     },
     {
       "name": "day06/register.png",
       "day": 6,
       "path": "/register",
       "wait_for": "#password",
-      "note": "既存の register*.png 4枚は同じ完成フォームで、* 印など現行 UI と食い違う。"
+      "note": "既存の register*.png 4枚は同じ完成フォームで、* 印など現行 UI と食い違う。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
     },
     {
-      "name": "day07/dashboard.png",
+      "name": "day07/login-failed.png",
       "day": 7,
-      "path": "/dashboard",
-      "login": { "email": "admin@example.com", "password": "password123" },
-      "note": "共有の dashboard.png は Day 20-21 の完成画面。Day 07 の /dashboard は Day 02 の静的カードのまま。"
+      "path": "/login",
+      "actions": [
+        {
+          "kind": "fill",
+          "selector": "#email",
+          "value": "admin@example.com"
+        },
+        {
+          "kind": "fill",
+          "selector": "#password",
+          "value": "wrong-password"
+        },
+        {
+          "kind": "click",
+          "selector": "button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alert']"
+        }
+      ],
+      "wait_for": "[role='alert']",
+      "marks": [
+        {
+          "selector": "[role='alert']",
+          "label": "バックエンドが返した文言"
+        }
+      ],
+      "note": "Day 07 だけが撮れる画面。Day 05 の時点では認証バックエンドが無いのでこの赤いアラートは出せず、Day 07 で auth ルーターが動いて初めて出る。middleware のリダイレクト先も撮ってみたが、出てくる絵は day05/login.png と同じログイン画面で、違いは URL の callbackUrl だけ。ヘッドレスの撮影では URL 欄が写らず見分けが付かないので、そちらは持たない（day07 の本文からは day05/login.png を指す）。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
     },
     {
       "name": "day08/sidebar.png",
       "day": 8,
       "path": "/dashboard",
-      "login": { "email": "admin@example.com", "password": "password123" },
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
       "wait_for": "aside",
-      "marks": [{ "selector": "aside", "label": "今日つくるサイドバー" }],
+      "marks": [
+        {
+          "selector": "aside",
+          "label": "今日つくるサイドバー"
+        }
+      ],
       "note": "既存画像はメニュー7項目。Day 08 の menuItems は3項目で、同じ日の確認ポイントと矛盾していた。"
     },
     {
       "name": "day08/dashboard.png",
       "day": 8,
       "path": "/dashboard",
-      "login": { "email": "admin@example.com", "password": "password123" },
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
       "wait_for": "aside",
       "note": "Step 5『ダッシュボードが表示される（サイドバー付き）』の直後に置く1枚。"
     },
@@ -95,14 +177,32 @@
       "name": "day08/logout-confirm.png",
       "day": 8,
       "path": "/dashboard",
-      "login": { "email": "admin@example.com", "password": "password123" },
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
       "actions": [
-        { "kind": "click", "selector": "aside button:has-text('ログアウト')" },
-        { "kind": "wait_for", "selector": "[role='alertdialog']" }
+        {
+          "kind": "click",
+          "selector": "aside button:has-text('ログアウト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
       ],
       "wait_for": "[role='alertdialog']",
-      "marks": [{ "selector": "[role='alertdialog']", "label": "確認ダイアログ" }],
-      "note": "Day 08 の主要成果物なのに確認ダイアログの画像が無い（scan-day01-08.md (g) Day 08）。"
+      "marks": [
+        {
+          "selector": "[role='alertdialog']",
+          "label": "確認ダイアログ"
+        }
+      ],
+      "note": "Day 08 の主要成果物なのに確認ダイアログの画像が無い（scan-day01-08.md (g) Day 08）。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 48
+      }
     }
   ]
 }

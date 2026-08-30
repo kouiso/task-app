@@ -48,6 +48,9 @@ async function runAction(page, action) {
  * 「撮れた」と言うと、操作指示の付いていない画像が黙って教材へ入る。
  */
 async function collectRects(page, marks) {
+  // boundingBox() はビューポート基準で返る。ページ全体を撮る指定でも枠が合うよう、
+  // ここで文書基準へ直しておく。
+  const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
   const rects = [];
   for (const mark of marks) {
     const target = page.locator(mark.selector).first();
@@ -56,41 +59,58 @@ async function collectRects(page, marks) {
     if (box === null) {
       throw new Error(`赤枠の対象が画面に出ていません: ${mark.selector}`);
     }
-    rects.push({ ...box, label: mark.label ?? '' });
+    rects.push({ ...box, x: box.x + scroll.x, y: box.y + scroll.y, label: mark.label ?? '' });
   }
   return rects;
 }
 
-/** 集めた矩形を画面へ重ねる。撮り終わったら消せるように id を付ける。 */
+/**
+ * 集めた矩形を画面へ重ねる。撮り終わったら消せるように id を付ける。
+ *
+ * 枠は矩形の外側 4px に置くが、画面の端に接している要素（サイドバー等）では
+ * その 4px が画像の外へ出て、辺が1本消える。はみ出すぶんだけ内側へ寄せる。
+ * 座標そのものは boundingBox() の値のままで、動かすのは余白の分だけ。
+ */
 async function drawMarks(page, rects) {
   await page.evaluate(
     ({ rects, badges }) => {
+      const pad = 4;
+      const badgeSize = 28;
+      const pageW = Math.max(document.documentElement.scrollWidth, window.innerWidth);
+      const pageH = Math.max(document.documentElement.scrollHeight, window.innerHeight);
       const layer = document.createElement('div');
       layer.id = '__curriculum_marks__';
-      layer.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none;';
+      layer.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
       rects.forEach((rect, i) => {
+        const left = Math.max(0, rect.x - pad);
+        const top = Math.max(0, rect.y - pad);
+        const width = Math.min(rect.x + rect.width + pad, pageW) - left;
+        const height = Math.min(rect.y + rect.height + pad, pageH) - top;
         const box = document.createElement('div');
         box.style.cssText = [
-          'position:fixed',
-          `left:${rect.x - 4}px`,
-          `top:${rect.y - 4}px`,
-          `width:${rect.width + 8}px`,
-          `height:${rect.height + 8}px`,
+          'position:absolute',
+          `left:${left}px`,
+          `top:${top}px`,
+          `width:${width}px`,
+          `height:${height}px`,
           'border:3px solid #e11d48',
           'border-radius:6px',
           'box-sizing:border-box',
         ].join(';');
         const badge = document.createElement('div');
         badge.textContent = badges[i] ?? String(i + 1);
+        // 枠の左上角に重ねる。角が画像の端に来るときは枠の内側へ入れる。
+        const badgeLeft = Math.min(Math.max(0, left - badgeSize / 2), pageW - badgeSize);
+        const badgeTop = Math.min(Math.max(0, top - badgeSize / 2), pageH - badgeSize);
         badge.style.cssText = [
-          'position:fixed',
-          `left:${rect.x - 18}px`,
-          `top:${rect.y - 18}px`,
-          'width:28px',
-          'height:28px',
-          'line-height:28px',
+          'position:absolute',
+          `left:${badgeLeft}px`,
+          `top:${badgeTop}px`,
+          `width:${badgeSize}px`,
+          `height:${badgeSize}px`,
+          `line-height:${badgeSize}px`,
           'text-align:center',
-          'border-radius:14px',
+          `border-radius:${badgeSize / 2}px`,
           'background:#e11d48',
           'color:#fff',
           'font-size:16px',
@@ -113,9 +133,38 @@ async function clearMarks(page) {
   });
 }
 
+/**
+ * 切り抜く矩形を返す。指定した要素の boundingBox() へ padding を足したもの。
+ *
+ * ページの外へはみ出す分は詰める。はみ出したまま渡すと Playwright が
+ * 切り抜きに失敗するか、余った側に何も無い帯が付く。
+ */
+async function clipRect(page, spec) {
+  const target = page.locator(spec.selector).first();
+  await target.waitFor({ state: 'visible' });
+  const box = await target.boundingBox();
+  if (box === null) {
+    throw new Error(`切り抜きの対象が画面に出ていません: ${spec.selector}`);
+  }
+  const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
+  const size = await page.evaluate(() => ({
+    w: Math.max(document.documentElement.scrollWidth, window.innerWidth),
+    h: Math.max(document.documentElement.scrollHeight, window.innerHeight),
+  }));
+  const pad = spec.padding ?? 0;
+  const x = Math.max(0, box.x + scroll.x - pad);
+  const y = Math.max(0, box.y + scroll.y - pad);
+  return {
+    x,
+    y,
+    width: Math.min(box.x + scroll.x + box.width + pad, size.w) - x,
+    height: Math.min(box.y + scroll.y + box.height + pad, size.h) - y,
+  };
+}
+
 /** ログインを1回だけ通す。以降は同じ context の Cookie を使い回す。 */
 async function login(page, baseUrl, account) {
-  await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/login`, { waitUntil: 'load' });
   await page.locator('#email').fill(account.email);
   await page.locator('#password').fill(account.password);
   await page.locator("button[type='submit']").first().click();
@@ -123,7 +172,9 @@ async function login(page, baseUrl, account) {
 }
 
 async function shoot(page, job, shot) {
-  await page.goto(`${job.baseUrl}${shot.path}`, { waitUntil: 'networkidle' });
+  // networkidle は使わない。tRPC の getSession が react-query で回り続ける画面（Day 08 以降の
+  // AppLayout）では通信が止まらず、待ち切れずに落ちる。出ているべきものは wait_for で名指しする。
+  await page.goto(`${job.baseUrl}${shot.path}`, { waitUntil: 'load' });
   for (const action of shot.actions ?? []) {
     await runAction(page, action);
   }
@@ -139,7 +190,14 @@ async function shoot(page, job, shot) {
   }
   const out = join(job.outDir, shot.name);
   await mkdir(dirname(out), { recursive: true });
-  const png = await page.screenshot({ type: 'png' });
+  // 切り抜きの矩形も boundingBox() から起こす。中央寄せのカード画面をそのまま撮ると
+  // 画像の大半が白場になり、紙面へ載せたときにフォーム本体が読めない大きさまで縮む。
+  const clip = shot.clip ? await clipRect(page, shot.clip) : undefined;
+  const png = await page.screenshot({
+    type: 'png',
+    fullPage: shot.full_page === true || clip !== undefined,
+    ...(clip ? { clip } : {}),
+  });
   await writeFile(out, png);
   if (rects.length > 0) {
     await clearMarks(page);
@@ -159,6 +217,10 @@ async function main() {
     reducedMotion: 'reduce',
   });
   const page = await context.newPage();
+  // 時計を止めずに開始時刻だけ固定する。Day 02 の挨拶は時間帯で「おはよう／こんばんは」が
+  // 変わるので、固定しないと撮り直すたびに文面が変わり、教材の本文と食い違う回が出る。
+  await page.clock.install({ time: new Date(job.clock) });
+  await page.clock.resume();
   const done = [];
   try {
     let loggedIn = false;

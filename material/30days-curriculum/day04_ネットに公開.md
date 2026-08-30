@@ -386,6 +386,19 @@ Vercel 上でも同じ検証が走るため、
 
 新語の表で「環境変数＝店の裏の金庫」と例えました。今日はその金庫に、鍵を2本だけ入れます。それ以外の値は、本番公開を仕上げる Day 30 で扱います。
 
+```mermaid
+flowchart TB
+    ENV[".env<br/>手元の本物の値<br/>GitHub へは送らない"]
+    EX[".env.example<br/>名前だけの見本<br/>GitHub へ送る"]
+    VER["Vercel の Environment Variables<br/>公開版の本物の値"]
+    NEON[("Neon の PostgreSQL")]
+    ENV -.->|"名前だけ写す"| EX
+    EX -.->|"同じ名前で登録する"| VER
+    VER -->|"DATABASE_URL"| NEON
+```
+
+同じ名前の設定値が3か所に分かれて置かれます。本物の値が入るのは `.env` と Vercel の2か所だけで、GitHub に載るのは名前だけの見本です。実線は値が実際に使われる向き、点線は名前をそろえる作業を表します。
+
 #### JWT_SECRET を用意する
 
 手元のターミナルで、次のコマンドを実行します。

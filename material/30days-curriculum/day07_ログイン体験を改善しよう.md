@@ -1,6 +1,6 @@
 # Day 07: 認証バックエンドを作って、ログインを動かそう
 
-![ログイン画面](./screenshots/login.png)
+![ログイン画面。メールアドレスとパスワードの入力欄、ログインボタン、登録リンクが並んでいる](./screenshots/day05/login.png)
 
 ## 前回の振り返り
 
@@ -876,6 +876,10 @@ flowchart TD
     G --> H[JWT 生成 + Cookie 保存]
 ```
 
+![ログイン画面の上に「エラー メールアドレスまたはパスワードが正しくありません」という赤いメッセージが出ている状態](./screenshots/day07/login-failed.png)
+
+赤い枠が、いま書いた `login` の返した文言です。Day 05 まではサーバー側が無かったので、この文言は画面に出せませんでした。
+
 > **なぜ同じエラーメッセージ？** 「メールが存在しない」と「パスワードが違う」を区別すると、攻撃者に「このメールは登録済み」と教えてしまいます。セキュリティのために同じメッセージを返します。
 >
 > `checkLoginRateLimit` は、同じメールや IP から短時間に
@@ -1282,6 +1286,17 @@ export async function middleware(request: NextRequest) {
 署名を見ずに中身のデコードだけで通す作りにすると、期限切れのトークンでも、自作のトークンでも入れてしまいます。
 middleware が守っているのはページの表示だけで、API 側の守りは Step 2 の `protectedProcedure` が受け持ちます。
 
+```mermaid
+flowchart TB
+    REQ["ブラウザからのアクセス"] --> K{"何を取りに来たか"}
+    K -->|"ページ /dashboard など"| MW["middleware<br/>Cookie を検証し、駄目ならログイン画面へ送る"]
+    K -->|"API /api/trpc/..."| PP["protectedProcedure<br/>Cookie を検証し、駄目なら UNAUTHORIZED を返す"]
+    MW --> PAGE["ページを表示する"]
+    PP --> DATA["データを返す"]
+```
+
+守りは2枚あり、担当する入口が違います。middleware を通らずに API を直接叩く経路があるため、片方だけでは足りません。ページは見えないのにデータは取れる、という穴を防ぐのが右側の枝です。
+
 **確認ポイント**:
 - [ ] JWT が有効なら通し、無効なら Cookie を削除している
 
@@ -1383,9 +1398,7 @@ npm run db:seed
 
 `npm run db:seed` は初期データの2つのプロジェクトを削除して作り直します。Day 07 の時点では、消えて困るものはまだありません。Day 06 で登録した自分のアカウントも残ります。Day 09 以降、初期データの2つのプロジェクトの中にタスクやコメントを足したあとは、同じ操作でそれらが消えます。自分で新しく作ったプロジェクトは消えません。
 
-ブラウザで `http://localhost:3000/login` を開きます。
-
-![ログイン画面](./screenshots/login.png)
+ブラウザで `http://localhost:3000/login` を開きます。冒頭に載せた画面と同じものが出ます。
 
 **seed データのログイン情報**:
 
@@ -1403,7 +1416,9 @@ npm run db:seed
 2. 「おかえりなさい、管理者さん」トーストが表示される
 3. ダッシュボードに遷移する
 
-![ログイン後のダッシュボード](./screenshots/dashboard.png)
+![ダッシュボード。Personal Message のカードに大きな見出しが出て、下に OWNER・TODAY・NEXT の3枚のカードが並んでいる](./screenshots/day02/dashboard-message.png)
+
+ダッシュボードの中身は Day 02 で作ったままです。今日変わったのは、ログインを通らないとここへ来られなくなったことです。
 
 **確認ポイント**:
 - [ ] `npm run dev` でエラーが出ない

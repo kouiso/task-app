@@ -58,10 +58,10 @@ flowchart TD
 src/
 ├── app/
 │   └── project/
-│       └── page.tsx              ← 編集（Day 09 で作ったページに機能を追加）
+│       └── page.tsx              ← Day 09 のページに追加
 ├── component/
 │   └── project/
-│       └── project-dialog.tsx    ← 配布済み。今日 Step 1〜6 で中身を書き直す
+│       └── project-dialog.tsx    ← Step 1〜6 で中身を書き直す
 └── lib/
     └── constant/
         └── project.ts            ← 既存（定数を利用する）
@@ -794,6 +794,16 @@ const handleSubmit = (
 渡している値は3つだけです。`open` に `dialogOpen` をつなぐと、Day 09 で置いた「新規プロジェクト」ボタンが今日から本当にダイアログを開きます。`onClose` はダイアログ側の `handleClose` から呼ばれて `dialogOpen` を `false` に戻し、`onSubmit` は入力済みのデータを `handleSubmit` へ運びます。Day 09 では受け皿だけ作って何も起きなかった部分が、これで最後までつながります。
 
 一覧の取り直しが要る理由も、この形から見えます。`useQuery` が返している `projects` は、ページを開いた時点でサーバーから受け取った配列の控えです。`create` の返り値はその控えに自動では足されません。だから `invalidate()` を呼ばないと、保存は済んでいるのに一覧は作成前のまま止まります。読者からは「作成ボタンが効いていない」ように見えて、ページを再読み込みすると新しいカードが現れます。この症状が出たら、まず `onSuccess` の中身を疑ってください。
+
+```mermaid
+flowchart TB
+    A["1. ページを開いた直後<br/>手元の控え 3件 / DB 3件"]
+    B["2. create が成功した直後<br/>手元の控え 3件 / DB 4件"]
+    C["3. invalidate のあと<br/>手元の控え 4件 / DB 4件"]
+    A --> B --> C
+```
+
+2コマ目だけ数が食い違います。保存は終わっているのに画面が変わらないのはこの状態で、ブラウザを再読み込みすると3コマ目に飛ぶため直ったように見えます。`invalidate()` は、この食い違いを待たずに解消する呼び出しです。
 
 > `utils.project.getAll.invalidate()` はキャッシュの無効化です。これを呼ぶと、作成後に一覧が自動で取り直され、新しいプロジェクトが表示されます。Day 11 では `initialData` に編集対象のプロジェクトを渡して、同じダイアログを編集にも再利用します。
 

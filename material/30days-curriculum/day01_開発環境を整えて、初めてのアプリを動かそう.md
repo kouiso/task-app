@@ -121,6 +121,19 @@ PostgreSQL（データベース）は、このあと Docker という仕組み�
 
 Docker が起動していれば進められます。PostgreSQL は Docker の上で自動的に立ち上がるので、パソコンへ個別にインストールする必要はありません。
 
+```mermaid
+flowchart TB
+    PC["あなたのパソコン"]
+    PC --> NODE["Node.js 22"]
+    PC --> DOCKER["Docker"]
+    NODE --> NPM["npm"]
+    NODE --> APP["task-app<br/>npm run dev"]
+    DOCKER --> PG[("PostgreSQL")]
+    APP -->|"DATABASE_URL"| PG
+```
+
+パソコンへ直接入れるのは Node.js と Docker の2つだけです。npm は Node.js に付いてきます。PostgreSQL は Docker の中で動くので、単体でインストールする場面はありません。`docker info` を先に確かめるのは、この図の右下が立ち上がっていないと、あとでアプリがデータベースにつなげないからです。
+
 ### 先に確認しておくコマンド
 
 `Node.js` と `npm` のバージョンはここで見ておきましょう。
@@ -1074,6 +1087,16 @@ export default function DashboardPage() {
 
 このファイルは、`src/app/dashboard/` というフォルダの中に `page.tsx` という名前で置いたことに意味があります。Next.js はフォルダの名前をそのまま URL の一部として扱うので、これで `/dashboard` という住所ができました。中身はトップページと同じ token 名だけで組んであるため、今日そろえた配色がこちらの画面にもそのまま効きます。保存したら `http://localhost:3000/dashboard` を開いて、`Hello Task-App` の見出しが出るか確かめましょう。`404` と表示されるときは、フォルダ名かファイル名が1文字違っています。
 
+```mermaid
+flowchart LR
+    A["src/app/page.tsx"] --> X["/"]
+    B["src/app/dashboard/page.tsx"] --> Y["/dashboard"]
+    C["src/app/login/page.tsx<br/>Day 05 で作る"] --> Z["/login"]
+```
+
+フォルダの名前がそのまま住所になり、その中の `page.tsx` が中身になります。この規則は Day 05 のログイン画面でも Day 06 の登録画面でも同じです。`404` が出たときは、フォルダ名かファイル名のどちらかが図の左側とずれています。
+
+
 #### ここで押さえたいこと
 
 - ルートの `src/app/page.tsx` は、アプリの入口となるトップページ
@@ -1257,6 +1280,10 @@ Step 3 でポート番号が `3001` などに読み替わっていた場合は�
 - `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開く
 - `/dashboard` で `Hello Task-App` が見える
 
+![トップページ。上部に Getting Started と My Task App、左に大きな見出しと3つのボタン、右に今日のゴール・今日のひとこと・明日につながる入口のカードが並んでいる](./screenshots/day01/top-page.png)
+
+赤い枠が `ダッシュボードへ入る` ボタンです。ここを押すと `/dashboard` へ移動します。
+
 #### 見た目が近いか確認する用の画像
 
 今日はここまで来られたら十分です。
@@ -1314,7 +1341,7 @@ A. Tailwind に「`bg-primary` と書かれたら `--primary` の色を使って
 
 **Q2. `:root` の `--radius: 10px;` を `20px` に書き換えると、画面はどう変わりますか。**
 
-A. 画面じゅうの角丸がまとめて大きくなります。`--radius-sm` から `--radius-xl` までの4つが、すべて `calc()` で `--radius` から計算されているためです。カード・ボタン・入力欄は、どれもこの1行の下にぶら下がっています。
+A. 画面じゅうの角丸がまとめて大きくなります。`--radius-sm` から `--radius-xl` までの4つが、どれも `--radius` を見て決まるためです。`--radius-lg` はその値をそのまま使い、残りの3つは `calc()` で増減させています。カード・ボタン・入力欄は、どれもこの1行の下にぶら下がっています。
 
 **Q3. 「今日のゴールを見る」は `<a href="#today-goals">`、「ダッシュボードへ入る」は `<Link href="/dashboard">` と書き分けました。なぜ2つの書き方が要るのですか。**
 

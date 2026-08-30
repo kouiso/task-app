@@ -1400,6 +1400,14 @@ useEffect(() => {
 
 依存配列に `searchParams` を入れてあるため、この処理はURLが変わるたびに走ります。`handleSearch` でURLを書き換えると、その変化を受けてここが動き、フォームの値がURLに追いつく、という一方向の流れになります。
 
+```mermaid
+flowchart LR
+    F["フォームの入力欄"] -->|"handleSearch<br/>exclude の項目は書き出さない"| U["URL のクエリ"]
+    U -->|"useEffect<br/>載っていない項目は empty に戻す"| F
+```
+
+書き出しと読み戻しは同じ輪の上にあり、`exclude` と `empty` が対になっています。`status` を「すべて」にすると `exclude` でURLから消え、次に読み戻すときは載っていないので `empty` の `'all'` が入ります。片方だけ直すと、消したはずの条件が画面に残ります。
+
 **確認ポイント**:
 - 依存配列に `searchParams` と `form` を指定している
 - 7つの項目すべてに `form.setValue` を呼んでいる

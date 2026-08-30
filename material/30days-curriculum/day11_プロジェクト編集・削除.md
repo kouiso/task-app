@@ -77,14 +77,14 @@ flowchart TD
 src/
 ├── app/
 │   └── project/
-│       └── page.tsx          ← 編集・削除・アーカイブのハンドラーを追加
+│       └── page.tsx          ← 編集・削除・アーカイブの処理
 ├── component/
 │   └── ui/
-│       └── delete-confirm-dialog.tsx  ← 削除確認ダイアログ（既存・変更なし）
+│       └── delete-confirm-dialog.tsx  ← 削除確認ダイアログ
 └── server/
     └── api/
         └── routers/
-            └── project.ts    ← update/delete/archive/unarchive を追加（Step 0）
+            └── project.ts    ← Step 0 で手続きを4本追加
 ```
 
 今日コードを書き足すのは `project.ts` と `page.tsx` の2つだけです。`delete-confirm-dialog.tsx` は配布済みで、中身には手を入れません。
@@ -674,6 +674,15 @@ const handleSubmit = (
 | 新規作成 | `undefined`（= プロパティを含めない） | 「日付は指定しない」 |
 
 > **注文書の例え**: 注文変更で「お届け日: なし」と書けば、配送日をキャンセルする意味になります。新規注文でお届け日欄を空けたままなら、「指定なし」の意味です。Prisma はこの2つを区別するので、使い分けが必要です。
+
+```mermaid
+flowchart LR
+    BEFORE["更新前の1行<br/>dueDate: 2026-09-01"]
+    BEFORE -->|"null を送る"| AFTER1["dueDate: 空<br/>列の中身が消える"]
+    BEFORE -->|"項目そのものを送らない"| AFTER2["dueDate: 2026-09-01<br/>列は変わらない"]
+```
+
+同じ「空」でも、送り方でデータベースの1行が違う姿になります。左の四角が変更前、右の2つが送ったあとの姿です。日付を消したいのに `undefined` を送ると、右下のように何も起きません。
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 

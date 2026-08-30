@@ -172,6 +172,17 @@ export const reportRouter = createTRPCRouter({
 
 `projectScope` は「自分が参加中で、しかもアーカイブされていないプロジェクトの範囲」です。`project: { isArchived: false }` があるため、参加しているプロジェクトを全部アーカイブしていると、この範囲に入るタスクが1件も無くなります。Day 11 のアーカイブ操作で「Webサイトリニューアル」をアーカイブしたまま解除していない場合がこれに当たります。エラーは出ず、カードの数字だけが全部 0 になります。心当たりがあれば、`/project` でアーカイブ表示を ON にして解除してから先へ進んでください。`activeTasksFilter` はそこにさらに `CANCELLED` 除外を足した条件で、カードの母数に使います。こうして条件を変数にまとめておくと、同じ条件を `count`・`groupBy` の全部で使い回せます。
 
+```mermaid
+flowchart TB
+    P["projectScope<br/>参加中 かつ アーカイブしていない"]
+    P --> A["activeTasksFilter<br/>projectScope に CANCELLED 除外を足す"]
+    P --> S["ステータス別の件数<br/>完了・進行中・レビュー中・未着手"]
+    A --> TT["総タスク数（母数）"]
+    A --> G["作業時間の合計・直近5件・groupBy 3本"]
+```
+
+外側の条件を内側が取り込む入れ子です。完了件数が `projectScope` のままなのは、取り消し済みのタスクはそもそも完了ではなく、除外しても件数が変わらないためです。母数の側だけが `CANCELLED` を外した条件を使います。
+
 #### 0-4. Promise.all で集計をまとめて取る
 
 ```typescript

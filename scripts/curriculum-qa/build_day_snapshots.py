@@ -61,7 +61,7 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from curriculum_blocks import Block, concat_by_file, day_number  # noqa: E402
+from curriculum_blocks import Block, concat_by_file, day_number, mask_code  # noqa: E402
 from sale_package import scaffold_copies, scaffold_src_paths  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -145,6 +145,27 @@ TRIAGE: dict[int, tuple[str, str]] = {
 # （day08 `src/app/dashboard/page.tsx` の focusCards がこれ）。
 CHUNK_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成版[:：]")
 
+# 読者の tsconfig.json には入らない厳しめの設定。scaffold の `configure_tsconfig` は
+# `exclude` しか触らず、残りは `create-next-app` が置いた雛形のままである。
+# 教材自身も day11 で「Day 01 で生成される tsconfig.json は exactOptionalPropertyTypes を
+# 有効にしていません」と書いている。このリポジトリの tsconfig を借りたまま検査すると、
+# 読者の手元では出ないエラー（未使用の引数 TS6133 等）で赤くなり、教材の欠陥に見えてしまう。
+STRICTER_THAN_READER = (
+    "noUnusedLocals",
+    "noUnusedParameters",
+    "noImplicitReturns",
+    "noFallthroughCasesInSwitch",
+    "noUncheckedIndexedAccess",
+    "exactOptionalPropertyTypes",
+    "noPropertyAccessFromIndexSignature",
+)
+
+# 行頭の `export`。ファイルまるごとの版なら、そのファイルが外へ出すものが必ず入っている。
+# 抜粋（変更箇所だけの提示）には入らない。ここが全体と抜粋を分ける一番強い手掛かりで、
+# day13 の `app-layout.tsx` の抜粋（アイコンの import とメニュー項目だけ）は
+# 括弧の収支が合っていて先頭も `import` なので、この条件でしか落とせない。
+TOP_LEVEL_EXPORT = re.compile(r"^export\s", re.M)
+
 # 表へ載せるエラー1行の長さ。
 ERROR_LINE_WIDTH = 160
 
@@ -210,6 +231,8 @@ def tsconfig_excludes() -> tuple[str, ...]:
 def write_reader_tsconfig(dest: Path) -> None:
     """読者の手元と同じ tsconfig.json を置く。"""
     config = json.loads((REPO_ROOT / "tsconfig.json").read_text(encoding="utf-8"))
+    for option in STRICTER_THAN_READER:
+        config["compilerOptions"].pop(option, None)
     excludes = list(config.get("exclude", []))
     for entry in tsconfig_excludes():
         if entry not in excludes:
@@ -264,29 +287,86 @@ def starts_module(block: Block) -> bool:
     return bool(head) and not COMMENT_HEAD.match(head) and bool(MODULE_HEAD.match(head))
 
 
-def latest_version(blocks: list[Block]) -> list[Block]:
-    """読者の手元に最後に残るブロックだけを、順番のまま返す。
+def version_groups(blocks: list[Block]) -> list[list[Block]]:
+    """ブロックの並びを、書き直しの候補ごとの塊へ切る。
 
-    `完成版` はその日の最終形なので、run の先頭で前を捨て、その日の残りは全部その run に
-    属する。run の途中には注記なしのチャンクも混ざる（day06 の
-    `src/app/register/page.tsx` は import と スキーマの間に `（同じファイルの続き）` を挟む）。
-    ブロック単体では run の内か外かを決められないので、日をまたぐまで状態で持つ。
+    切れ目は2つ。`完成版` run の先頭と、ファイルの1行目から始まる注記なしのブロック。
+    `完成版` はその日の最終形なので、run が始まったらその日の残りは全部その run に属する。
+    run の途中には注記なしのチャンクも混ざる（day06 の `src/app/register/page.tsx` は
+    import とスキーマの間に `（同じファイルの続き）` を挟む）ので、日をまたぐまで状態で持つ。
     """
-    parts: list[Block] = []
+    out: list[list[Block]] = []
+    current: list[Block] = []
     day: int | None = None
     in_final = False
     for b in blocks:
         if b.day != day:
-            day, in_final = b.day, False
-        if in_final or b.note:
-            parts.append(b)
+            # 版は日をまたがない。翌日の `（delete の直後に追加）` のような差し込みを
+            # 前の日の完全な版へ足すと、閉じ括弧の後ろへ手続きが1本入った壊れた版になる
+            # （day15 の `src/server/api/routers/task.ts` がこれで 375 行目に落ちていた）。
+            # 差し込みは道具ではマージできないので、別の塊にして落とす側へ回す。
+            if current:
+                out.append(current)
+            current, day, in_final = [], b.day, False
+        if b.note:
+            current.append(b)
         elif is_marked_final(b):
-            parts, in_final = [b], True
+            # run の途中の `完成版` チャンクは同じ塊。先頭なら新しい塊を起こす。
+            if in_final:
+                current.append(b)
+            else:
+                if current:
+                    out.append(current)
+                current, in_final = [b], True
         elif starts_module(b):
-            parts = [b]
+            # `完成版` run の中でも、注記も目印も無いファイル先頭は別の版である。
+            # day09 の `src/server/api/root.ts` は完成版の後ろにもう1つ全体版を出しており、
+            # 同じ塊に入れると import が二重になる。
+            if current:
+                out.append(current)
+            current, in_final = [b], False
         else:
-            parts.append(b)
-    return parts
+            current.append(b)
+    if current:
+        out.append(current)
+    return out
+
+
+def is_complete_file(blocks: list[Block]) -> bool:
+    """その塊だけでファイルまるごとになっているなら True。
+
+    教材はその日の `完成版` として、ファイル全体を出す日と変更箇所の抜粋だけを出す日の
+    両方がある。抜粋を丸ごとの書き直しとして扱うと前の版が消え、追記にすると import と
+    定義が二重になる。どちらでも復元できないので、抜粋だと分かった塊は使わない。
+
+    見分けは3つとも満たすこと。現物で確かめた形は次のとおり:
+      - 先頭がファイルの1行目に来られる構文。day25 の `app-layout.tsx` の抜粋は
+        `<Link` から始まっており、ここで落ちる。
+      - 行頭の `export` がある。day13 の同ファイルの抜粋はアイコンの import と
+        メニュー項目だけで、外へ出すものが無い。
+      - 括弧の収支が合っている。途中で切れた塊を全体と見なさないための保険。
+    """
+    text = render(blocks)
+    head = next((line for line in text.split("\n") if line.strip()), "")
+    if not head or COMMENT_HEAD.match(head) or not MODULE_HEAD.match(head):
+        return False
+    if not TOP_LEVEL_EXPORT.search(text):
+        return False
+    masked = mask_code(text)
+    return all(masked.count(o) == masked.count(c) for o, c in ("{}", "()", "[]"))
+
+
+def latest_version(blocks: list[Block]) -> list[Block]:
+    """読者の手元に最後に残るブロックだけを、順番のまま返す。
+
+    まるごと1ファイルになる塊のうち、いちばん後ろのものを採る。そのあとに続く抜粋は
+    落とす。落とした日の変更は反映されないが、道具は抜粋をマージできないので、
+    直前の完全な版をその日の手元とみなすのがいちばん実物に近い。
+    まるごとの塊が1つも無いときは、最後の塊をそのまま返す（従来どおりの最善努力）。
+    """
+    groups = version_groups(blocks)
+    complete = [g for g in groups if is_complete_file(g)]
+    return complete[-1] if complete else (groups[-1] if groups else [])
 
 
 def strip_chunk_label(lines: tuple[str, ...]) -> list[str]:
@@ -304,15 +384,24 @@ def render(blocks: list[Block]) -> str:
 
 
 def apply_blocks(dest: Path, paths: list[Path]) -> int:
-    """写経ブロックを書き込み先ごとに置く。返り値は書いたファイル数。"""
+    """写経ブロックを書き込み先ごとに置く。返り値は書いたファイル数。
+
+    scaffold が配るファイルへは、教材がまるごとの書き直しを出したときだけ上書きする。
+    `src/server/api/root.ts` がこれで、配布物は auth だけを登録した版なのに、教材は
+    day09 以降その日までの router を全部登録した完成版を出す。上書きしないと
+    `api.project` が無い版のまま残り、day10 以降の画面が軒並み型検査で落ちる。
+    逆に抜粋しか無いファイル（`src/lib/utils.ts` 等）は配布物のままが正しい。
+    読者が写経していない行がそこに在るためである。
+    """
     provided = scaffold_src_paths()
     count = 0
     for target, blocks in sorted(concat_by_file(paths).items()):
-        if target in provided:
+        version = latest_version(blocks)
+        if target in provided and not is_complete_file(version):
             continue
         out = dest / target
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(f"{render(latest_version(blocks))}\n", encoding="utf-8")
+        out.write_text(f"{render(version)}\n", encoding="utf-8")
         count += 1
     return count
 

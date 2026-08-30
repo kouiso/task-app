@@ -1,11 +1,9 @@
 # Day 08: サイドバー付きのアプリレイアウトを作ろう
 
-![サイドバー完成画面](./screenshots/sidebar.png)
+![Day 08 のサイドバー。上にロゴ、メニューが「ダッシュボード」「プロジェクト」「マイタスク」の3つ、下にログイン中のユーザー名とログアウトボタンが並んでいる](./screenshots/day08/sidebar.png)
 
-この写真はカリキュラムを最後まで進めたあとのサイドバーで、メニューが7つ並んでいます。
-今日作るメニューは「ダッシュボード」「プロジェクト」「マイタスク」の3つです。
-残る4つは Day 13 以降で画面を作るたびに1つずつ足していくので、今日の時点で
-自分の画面のメニューが3つでも間違いではありません。
+赤い枠が今日作るサイドバーです。メニューは「ダッシュボード」「プロジェクト」「マイタスク」の3つになります。
+残りのメニューは Day 13 以降で画面を作るたびに1つずつ足していきます。
 
 ## 前回の振り返り
 
@@ -383,6 +381,20 @@ export function AppLayout({
 
 > `hasMounted` が必要な理由: Next.js はサーバーで HTML を生成してからブラウザに送ります（SSR）。session Cookie には Day 07 で `httpOnly` を付けたので、ブラウザ側の JavaScript からは中身を読めません。ログイン状態を知る道は、`api.auth.getSession.useQuery()` でサーバーに聞くことだけです。このとき Cookie はリクエストへ自動で付いて飛び、中身を開いて誰なのかを判定するのはサーバー側です。答えが返ってくるのは画面が出たあとなので、このフラグで「ブラウザ側の準備ができてから判定する」ようにして、チラつきを防ぎます。
 
+```mermaid
+sequenceDiagram
+    participant B as ブラウザ
+    participant S as サーバー
+    S->>B: HTML を送る
+    Note over B: hasMounted はまだ false
+    B->>B: マウントが終わり hasMounted が true になる
+    B->>S: getSession（Cookie は自動で付く）
+    S->>B: ログイン状態の返事
+    Note over B: ここで初めて判定する
+```
+
+時間の流れは上から下です。ログイン状態が分かるのは、いちばん下の返事が届いたあとだけです。`hasMounted` は「まだ返事が来ていない時間帯」に判定させないための印で、これを外すと画面が一瞬ログイン画面へ飛びます。
+
 #### 3-3. レイアウト JSX（サイドバー + コンテンツ）
 
 ```tsx
@@ -638,7 +650,7 @@ npm run dev
 
 シークレットウィンドウで `http://localhost:3000` を開きます。
 
-![ログイン画面](./screenshots/login.png)
+![ログイン画面。メールアドレスとパスワードの入力欄、ログインボタン、登録リンクが並んでいる](./screenshots/day05/login.png)
 
 **確認フロー**:
 
@@ -646,11 +658,14 @@ npm run dev
 2. `admin@example.com` / `password123` でログイン。
 3. ダッシュボードが表示される（サイドバー付き）。
 
-![ダッシュボードとサイドバー](./screenshots/dashboard.png)
+![左に3項目のサイドバー、右に Day 02 で作ったダッシュボードのカードが並んでいる画面](./screenshots/day08/dashboard.png)
 4. サイドバーに「ダッシュボード」「プロジェクト」「マイタスク」の3つのメニューが見える。
    （「プロジェクト」と「マイタスク」を押すと 404 になりますが正常です。ページは Day 09 と Day 17 で作ります）
 5. サイドバー下部に「管理者」の名前とロールが表示される。
 6. 「ログアウト」ボタンを押す → 確認ダイアログが出る。
+
+![「ログアウトしますか？」の見出しと「ログアウトすると、再度ログインが必要になります。」の説明、キャンセルとログアウトの2つのボタンが並んだ確認ダイアログ](./screenshots/day08/logout-confirm.png)
+
 7. 「ログアウト」を押す → `/login` に戻る。
 
 **確認ポイント**:
@@ -1137,7 +1152,7 @@ function getGreetingByHour(hour: number): string {
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
 }
 
 export default function DashboardPage() {

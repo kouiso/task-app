@@ -345,7 +345,7 @@ Step 1 では文字を3つの `const` へばらばらに置いていました。
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
 }
 
 export default function DashboardPage() {
@@ -597,7 +597,7 @@ Step 2 の型に `nextAction` を1つ足し、あわせて `FocusCard` という
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
 }
 
 export default function DashboardPage() {
@@ -807,6 +807,21 @@ npm run dev
 なのに最初から `"use client"` を付けると、
 必要のない JavaScript までブラウザへ送ることになります。
 
+```mermaid
+flowchart TB
+    subgraph SRV["サーバー側"]
+      S1["page.tsx を実行する"] --> S2["最初の HTML を作る"]
+    end
+    subgraph BRW["ブラウザ側"]
+      B1["HTML を表示する"]
+      B2["JavaScript を受け取って動かす"]
+    end
+    S2 --> B1
+    S2 -.->|"'use client' のときだけ"| B2
+```
+
+`'use client'` が付いていても、最初の HTML はサーバーで組み立てられます。変わるのは点線の矢印だけです。今日のダッシュボードはクリックや入力に反応しないので、点線の先が要りません。
+
 #### Before（改善前のコード）
 
 ```tsx
@@ -860,7 +875,7 @@ function getGreetingByHour(hour: number): string {
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
 }
 
 export default function DashboardPage() {
@@ -1079,7 +1094,7 @@ After の1行目に `'use client'` はありません。`useMemo` の取り込�
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}日だ。`;
 }
 
 export default function DashboardPage() {

@@ -16,6 +16,7 @@
 
 import contextlib
 import io
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -241,11 +242,109 @@ def check_result_table() -> list[str]:
 
 def check_tsconfig_excludes() -> list[str]:
     """読者の tsconfig が scaffold の現物から作られていることを確かめる。"""
+    fails = []
     excludes = target.tsconfig_excludes()
     missing = [e for e in ("scripts", "material", "src/server", "src/trpc") if e not in excludes]
     if missing:
-        return [f"❌ scaffold が足す exclude を読めていない: {missing}"]
-    return []
+        fails.append(f"❌ scaffold が足す exclude を読めていない: {missing}")
+
+    # 読者の手元より厳しい設定で検査すると、読者には出ないエラーで赤くなる。
+    # 教材 day11 が「Day 01 で生成される tsconfig.json は exactOptionalPropertyTypes を
+    # 有効にしていません」と書いており、scaffold も exclude しか触らない。
+    with tempfile.TemporaryDirectory() as d:
+        target.write_reader_tsconfig(Path(d))
+        written = json.loads((Path(d) / "tsconfig.json").read_text(encoding="utf-8"))
+    left = [o for o in target.STRICTER_THAN_READER if o in written["compilerOptions"]]
+    if left:
+        fails.append(f"❌ 読者に無い厳しめの設定が残っている: {left}")
+    if written["compilerOptions"].get("strict") is not True:
+        fails.append("❌ create-next-app が置く strict まで落としている")
+    return fails
+
+
+# まるごと1ファイルか抜粋か。どれも material/30days-curriculum の現物から採った形である。
+FULL_APP_LAYOUT = (
+    "'use client';",
+    "import { Home } from 'lucide-react';",
+    "export function AppLayout({ children }: Props) {",
+    "  return <div>{children}</div>;",
+    "}",
+)
+# day13 src/component/layout/app-layout.tsx の完成版。アイコンの import とメニュー項目だけで
+# 外へ出すものが無い。括弧は合っており先頭も import なので、export の有無でしか落とせない。
+EXCERPT_ICONS = (
+    "import {",
+    "  ClipboardList,",
+    "} from 'lucide-react';",
+    "const menuItems: MenuItem[] = [",
+    "  { href: '/task', label: 'タスク' },",
+    "];",
+)
+# day25 の同ファイルの完成版。JSX の途中から始まる。
+EXCERPT_JSX = ("<Link href=\"/profile\">", "  <span>プロフィール</span>", "</Link>")
+# 途中で切れた塊。括弧が閉じていない。
+EXCERPT_TRUNCATED = ("export function AppLayout() {", "  return (")
+
+
+def check_complete_file() -> list[str]:
+    """まるごと1ファイルの塊と、変更箇所の抜粋を見分ける境界を固定する。"""
+    fails = []
+    cases = [
+        ("ファイルまるごと", FULL_APP_LAYOUT, True),
+        ("抜粋（export が無い）", EXCERPT_ICONS, False),
+        ("抜粋（JSX の途中から）", EXCERPT_JSX, False),
+        ("抜粋（括弧が閉じていない）", EXCERPT_TRUNCATED, False),
+    ]
+    for name, lines, want in cases:
+        if target.is_complete_file([blk(8, "", *lines)]) is not want:
+            fails.append(f"❌ {name}: まるごとかの判定が {not want} になっている")
+
+    # 後から来た抜粋は、前のまるごとの版を置き換えない（day13〜27 の app-layout.tsx）。
+    kept = target.latest_version([
+        blk(8, "", *FULL_APP_LAYOUT),
+        blk(13, "", "// 完成版: アイコンのインポート", *EXCERPT_ICONS),
+    ])
+    if [b.day for b in kept] != [8]:
+        fails.append(f"❌ 抜粋が前のまるごとの版を捨てている: {[b.day for b in kept]}")
+
+    # 後から来たまるごとの版は、前のまるごとの版を置き換える。
+    kept = target.latest_version([
+        blk(8, "", *FULL_APP_LAYOUT),
+        blk(21, "", "// 完成版: 全体", *FULL_APP_LAYOUT),
+    ])
+    if [b.day for b in kept] != [21]:
+        fails.append(f"❌ 新しいまるごとの版が採られていない: {[b.day for b in kept]}")
+
+    # まるごとの塊が1つも無ければ、最後の塊を返す（従来どおりの最善努力）。
+    kept = target.latest_version([blk(9, "", *EXCERPT_JSX), blk(9, "", *EXCERPT_ICONS)])
+    if not kept:
+        fails.append("❌ まるごとの塊が無いときに空を返している")
+
+    # 塊の切り方そのもの。完成版 run の途中に注記なしのチャンクが混ざっても切れない。
+    groups = target.version_groups([
+        blk(6, "", "// 完成版: import部分", "import { z } from 'zod';"),
+        blk(6, "（同じファイルの続き）", "  },"),
+        blk(6, "", "// 完成版: 関数の前半", "export default function P() {}"),
+        blk(7, "", "// 完成版: 別の日", "export default function Q() {}"),
+    ])
+    if [len(g) for g in groups] != [3, 1]:
+        fails.append(f"❌ 版の切り方が違う: {[len(g) for g in groups]}")
+
+    # 版は日をまたがない。翌日の差し込みを前の日の完全な版へ足すと壊れる
+    # （day15 `src/server/api/routers/task.ts` に day16 の `（delete の直後に追加）` が付いていた）。
+    groups = target.version_groups([
+        blk(15, "", *FULL_APP_LAYOUT),
+        blk(16, "（delete の直後に追加）", "  addTime: protectedProcedure", "  }),"),
+    ])
+    if [len(g) for g in groups] != [1, 1]:
+        fails.append(f"❌ 翌日の差し込みが前の日の版へ入っている: {[len(g) for g in groups]}")
+    kept = target.latest_version([
+        blk(15, "", *FULL_APP_LAYOUT),
+        blk(16, "（delete の直後に追加）", "  addTime: protectedProcedure", "  }),"),
+    ])
+    if [b.day for b in kept] != [15]:
+        fails.append(f"❌ 翌日の差し込みが採られている: {[b.day for b in kept]}")
+    return fails
 
 
 def check_triage_section() -> list[str]:
@@ -280,6 +379,7 @@ CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
     ("置き換えと追記の境界", check_version_boundary),
+    ("まるごとか抜粋か", check_complete_file),
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),
     ("NG の切り分け", check_triage_section),

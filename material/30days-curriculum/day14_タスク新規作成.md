@@ -171,6 +171,21 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 
 `FOR UPDATE` は、同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため、同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメータとして渡され、文字列連結で SQL を作らない安全な書き方です。
 
+```mermaid
+sequenceDiagram
+    participant A as 先に届いた作成
+    participant P as projects の1行
+    participant B as 同時に届いた作成
+    A->>P: FOR UPDATE でロックを取る
+    B->>P: 同じ行のロックを待つ
+    A->>A: 最大値 3 を読み、position に 4 を付ける
+    A->>P: 保存を終えてロックを離す
+    P->>B: 待ちが解ける
+    B->>B: 最大値 4 を読み、position に 5 を付ける
+```
+
+時間は上から下へ進みます。ロックが無いと、2本目が待たずに同じ「最大値 3」を読み、両方が 4 を付けます。待たせる相手を作るのが `FOR UPDATE` の役目です。
+
 次に、指定した担当者がプロジェクトのメンバーかを確認するヘルパーを続けます。
 
 ```typescript
