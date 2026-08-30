@@ -1,16 +1,23 @@
 # 30日教材 商品化 進捗
 
-**次にやること**: `build_day_snapshots.py --all --verify` の30日通し結果を読み、落ちた日を1件ずつ「教材の欠陥」か「道具の限界」かに切り分ける。並行して day01/day02 の写真3枚の撮り直しを取り込む。
+**次にやること**: day01 の写真2枚（`top-page.png` `dashboard-hello.png`）の撮り直しが終わったら、Read で1枚ずつ見て `TaskApp` に変わったことを確かめてからコミットする。続けて `build_day_snapshots.py --all --verify` の30日通し結果を読み、落ちた日を「教材の欠陥」か「道具の限界」かに切り分ける。
 
-**いま同時に走らせとるもの**（2026-08-30 15:40 UTC 時点）
+**このターンで確定したこと**
 
-| 中身 | 出口 |
-|---|---|
-| `build_day_snapshots.py --all --verify` 30日通し | `scratchpad/verify-all-30.log` → 結果を `day-snapshots-result.md` へ反映 |
-| dockerd 起動 → 撮影DB → day01/day02 の3枚を撮り直し | `screenshots/day01/top-page.png` ほか2枚 |
-| 変更7日分の PDF 再組版 → 機械検査 → 紙面を目視 | 崩れが出たら `book.css` を直す |
-| 10本のワークフロー journal から実指摘を抽出 | 重複除去した指摘リスト |
-| 36本の textlint ＋ check_quality 全走査 | 0件・全 PASS を実測 |
+| 中身 | 実測 | コミット |
+|---|---|---|
+| Day 01〜03 の画面文言を製品の言い回しへ | `Hello Task-App` 系 13件 → 0件 | `4a408a7` |
+| day28 の lint 完了条件の言い切り | 矛盾 2件 → 0件 | `8d3e480` |
+| Day 01/02 の空の強調7件を具体へ | 7件すべて現物確認のうえ修正 | `dc87a2b` |
+| 36本 textlint | 0件 | — |
+| `check_quality.sh` 全走査 | ALL CHECKS PASS（34ファイル） | — |
+| day02 の写真2枚 | 目視合格（新文言・旧文面なし・未実装UIなし） | — |
+| `My Task App` → `TaskApp` | 製品名は `src/app/layout.tsx` の `title` が正 | 撮り直し待ち |
+
+**判断して直さんかったもの**
+
+- `My Dashboard`（day02/04/08）は製品名やのうて画面名。Day 02 の主題「自分だけの画面」と一致しとるので残す
+- Day 01 の着地ページが製品の `page.tsx`（redirect 10行）と別物な件 → `post-release-backlog.md` の 11番へ。「ダッシュボードへ入る」ボタンがあるので行き止まりにはならん
 
 計画: `/root/.claude/plans/task-app-30-10-000-deep-iverson.md`
 PR: **https://github.com/kouiso/task-app/pull/388**（draft）
