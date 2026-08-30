@@ -888,7 +888,7 @@ export default function HomePage() {
 
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日つくるのは、30日後の完成版へつながる最初の画面だ。
-                まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+                機能はまだ無い。色と余白だけ先に決めておく。
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -942,21 +942,21 @@ export default function HomePage() {
 ```tsx
                 {/* filepath: src/app/page.tsx（同じファイルの続き） */}
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  今見えているもの
+                  今できること
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-foreground">UI</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  初期画面ではなく、自分のアプリの一枚目として見せられる見た目。
+                  ダッシュボードへのリンクが動く。中身は Day 02 で足す。
                 </p>
               </article>
 
               <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  次につながる土台
+                  次にやること
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-foreground">Next</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  明日からメッセージやカードを足しても、見た目の芯がぶれにくい。
+                  Day 02 でダッシュボードに自分の名前を出す。
                 </p>
               </article>
             </div>
@@ -996,10 +996,10 @@ export default function HomePage() {
 
             <article className="rounded-[28px] border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今日のひとこと
+                メモ
 ```
 
-「今日のゴール」カードの中身です。`<ul>` と `<li>` は箇条書きを表す HTML のタグで、ここでは `<li>` の1つずつに `rounded-2xl bg-secondary` を付けて、角丸の面に乗ったチェック項目のような見た目にしています。JSX では、表示したい日本語のテキストをタグの中へそのまま書けます。最後の `今日のひとこと` は次のカードの見出しで、ブロックの区切りの都合で途中まで書いている状態なので、そのまま次へ進んでください。
+「今日のゴール」カードの中身です。`<ul>` と `<li>` は箇条書きを表す HTML のタグで、ここでは `<li>` の1つずつに `rounded-2xl bg-secondary` を付けて、角丸の面に乗ったチェック項目のような見た目にしています。JSX では、表示したい日本語のテキストをタグの中へそのまま書けます。最後の `メモ` は次のカードの見出しで、ブロックの区切りの都合で途中まで書いている状態なので、そのまま次へ進んでください。
 
 **確認ポイント**: `<ul>` の中に4つの `<li>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
@@ -1007,8 +1007,8 @@ export default function HomePage() {
               {/* filepath: src/app/page.tsx（同じファイルの続き） */}
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                最初の一枚目は、ただ映えればいいわけではない。
-                これから30日育てる画面の、空気感の基準になる。
+                ここで決めた色と角丸と余白を、30日ずっと使い回す。
+                途中で変えると、前に作った画面と揃わなくなる。
               </p>
 
               <div className="mt-5 rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-sm">
@@ -1016,7 +1016,7 @@ export default function HomePage() {
                   Today&apos;s theme
                 </p>
                 <p className="mt-2 text-lg font-semibold">
-                  自分のアプリの最初の一枚を、自分の手で立ち上げる
+                  空のフォルダから、動く画面を1枚出す
                 </p>
               </div>
             </article>
@@ -1026,19 +1026,19 @@ export default function HomePage() {
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
-                明日につながる入口
+                明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
 ```
 
-「今日のひとこと」カードの続きです。途中にある `bg-primary px-4 py-4 text-primary-foreground` の箱は、主役の面色とその上に乗せる文字色をペアで使う実例になっています。この2つをセットで使うと、背景と文字の色の役割が揃い、読みやすい配色にしやすくなります。最後に `id="next-step"` のカードを開きました。これも、最初のブロックで書いたボタンの `href="#next-step"` から飛んでくるための目印です。
+「メモ」カードの続きです。途中にある `bg-primary px-4 py-4 text-primary-foreground` の箱は、主役の面色とその上に乗せる文字色をペアで使う実例になっています。この2つをセットで使うと、背景と文字の色の役割が揃い、読みやすい配色にしやすくなります。最後に `id="next-step"` のカードを開きました。これも、最初のブロックで書いたボタンの `href="#next-step"` から飛んでくるための目印です。
 
 **確認ポイント**: `id="next-step"` の `<article>` を開いたところまで書けていることを確認できたら、最後のブロックを続けて書きます。
 
 ```tsx
 {/* filepath: src/app/page.tsx（同じファイルの続き） */}
-                Day 02 では、ここから入れる /dashboard に自分だけのメッセージや情報を足していく。
-                今日のページは入口として、ダッシュボードは明日の土台として整えておく。
+                Day 02 では、ここから入れる /dashboard に自分の名前を出す。
+                今日はこのページから /dashboard へ移動できれば十分。
               </p>
             </article>
           </div>
@@ -1146,7 +1146,7 @@ function WelcomeHero() {
       </h2>
       <p className="mt-[18px] max-w-[620px] text-[16px] leading-[1.9] text-[#b0b7d3]">
         今日つくるのは、30日後の完成版へつながる最初の画面だ。
-        まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+        機能はまだ無い。色と余白だけ先に決めておく。
       </p>
       <div className="mt-[32px] flex gap-[12px]">
         <a
@@ -1181,7 +1181,7 @@ export default function HomePage() {
 
 **このコードの問題点**:
 
-- 色や角丸や余白が全部その場の値なので、別画面でも同じ空気感を出したくなった瞬間にコピペが始まる
+- 色や角丸や余白が全部その場の値なので、別の画面で同じ見た目にしたくなるとコピペが始まる
 - `#6d5dfc` と `#0f1021` が何の役割の色か名前から分からず、レビュー時に意図を読み取りづらい
 - 後で配色を少し変えたいとき、画面全体を検索して直す必要が出やすい
 
@@ -1200,7 +1200,7 @@ function WelcomeHero() {
       </h2>
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
         今日つくるのは、30日後の完成版へつながる最初の画面だ。
-        まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+        機能はまだ無い。色と余白だけ先に決めておく。
       </p>
       <div className="mt-8 flex gap-3">
         <a
@@ -1276,11 +1276,11 @@ Step 3 でポート番号が `3001` などに読み替わっていた場合は�
 - メインカードに「自分専用のタスク管理アプリが、今日ここから動き出す。」が見える
 - ボタンが `bg-primary` の主役色で表示されている
 - `ダッシュボードへ入る` ボタンが見える
-- 右側に「今日のゴール」「今日のひとこと」「明日につながる入口」のカードが見える
+- 右側に「今日のゴール」「メモ」「明日やること」のカードが見える
 - `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開く
 - `/dashboard` で `Hello Task-App` が見える
 
-![トップページ。上部に Getting Started と My Task App、左に大きな見出しと3つのボタン、右に今日のゴール・今日のひとこと・明日につながる入口のカードが並んでいる](./screenshots/day01/top-page.png)
+![トップページ。上部に Getting Started と My Task App、左に大きな見出しと3つのボタン、右に今日のゴール・メモ・明日やることのカードが並んでいる](./screenshots/day01/top-page.png)
 
 赤い枠が `ダッシュボードへ入る` ボタンです。ここを押すと `/dashboard` へ移動します。
 
@@ -1351,10 +1351,10 @@ A. 移動先の性質が違うためです。前者は同じページの中に�
 
 Day 02 では、
 今日つないだ `src/app/dashboard/page.tsx` に、
-自分だけのメッセージや情報を足していきます。
+自分の名前と今日やることを出します。
 
-ルートの入口はそのままに、
-中のダッシュボードが少しずつ「自分のプロダクト」っぽくなってくる日です。
+トップページはそのままで、
+ダッシュボードの中身だけを書き換える日です。
 
 今日の `bg-card` や `bg-primary` が効いてくるのも、
 まさにここからです。

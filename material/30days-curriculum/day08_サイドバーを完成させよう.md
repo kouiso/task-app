@@ -1123,10 +1123,10 @@ Day 02 のこのファイルには取り込みが1行もありませんでした
 // 完成版: 表示する値とあいさつの組み立て
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'Builder of Task App',
-  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
-  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
-  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+  role: 'タスク管理アプリを作る人',
+  todayFocus: 'ダッシュボードに自分の名前を出す',
+  todayGoal: '名前と今日やることを画面に出す',
+  nextAction: 'Day 03 で GitHub に保存する',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -1243,8 +1243,7 @@ export default function DashboardPage() {
                 <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                   今日は
                   <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                  を意識して進める。
-                  ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                  。画面に出ている文字は、全部このファイルの上のほうで決めている。
                 </p>
 
                 <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -1291,19 +1290,19 @@ export default function DashboardPage() {
             <aside className="space-y-4">
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
-                  今日のワンフレーズ
+                  メモ
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
+                  名前が出るだけで、他人のサンプルではなく自分の画面になる。
                 </p>
               </article>
 
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
-                  ここで増えた価値
+                  まだ無いもの
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                  タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
                 </p>
               </article>
 ```
@@ -1317,10 +1316,10 @@ export default function DashboardPage() {
               {/* 完成版: 最後のカードと閉じタグ */}
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
-                  次につながる視点
+                  明日やること
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
+                  Day 03 で、ここまで書いたコードを GitHub に保存する。
                 </p>
               </article>
             </aside>

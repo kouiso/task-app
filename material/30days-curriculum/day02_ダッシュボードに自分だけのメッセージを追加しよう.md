@@ -317,9 +317,9 @@ type DashboardOwner = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'Builder of Task App',
-  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
-  todayGoal: 'Day 02 のうちに、自分の言葉が乗った画面にする',
+  role: 'タスク管理アプリを作る人',
+  todayFocus: 'ダッシュボードに自分の名前を出す',
+  todayGoal: '画面に出す文字をコードの1か所にまとめる',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -389,10 +389,9 @@ export default function DashboardPage() {
               </h2>
 
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-                今の役目は
+                今日やるのは
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                。
-                小さくても、自分の言葉が乗った画面は一気にプロダクトらしくなる。
+                。この文も名前も、下のオブジェクトに書いた値から出ている。
               </p>
             </div>
 ```
@@ -494,7 +493,7 @@ Step 1 との違いは、`<article>` の入れ物と `className` を1つも触�
 
 いま `npm run dev` で見ているあいさつは、ページを開いた時刻で決まります。開発サーバーは、画面を開くたびにこのページを描き直すからです。ただし Day 04 でネットへ公開すると、この決まり方が変わります。このページはサーバーから何も取ってこないので、Next.js は公開用のビルドのときに一度だけ描いて、その HTML を全員へ配ります。つまり公開後のあいさつは、ビルドした瞬間の時刻のまま止まります。しかもビルドを走らせるのは公開先の機械なので、その時刻は手元のパソコンの時刻とはかぎりません。開いた人ごとに時刻で変えたい画面は、ブラウザ側で計算して出す書き方を覚えてから作ります。境目の動きまで確かめたいときは、`const currentHour = new Date().getHours();` の行を一時的に `const currentHour = 20;` へ書き換えて保存してください。あいさつが「こんばんは」に変われば、`getGreetingByHour` の分かれ道が働いています。確かめたら元の行に戻します。
 
-![Day 02 メッセージカードを追加した途中状態](./screenshots/day02/step2-greeting-card.png)
+![あいさつ文と Focus のバッジが入ったメッセージカード。下段に OWNER / TODAY / NEXT の3枚が並ぶ](./screenshots/day02/step2-greeting-card.png)
 スクリーンショット: Step 2 まで書き終えた `/dashboard` です。あいさつのあとに `Owner` と `Focus` の2枚が並んでいれば、ここまでの写経は通っています。
 
 #### 型と変数を、その場で確かめる
@@ -568,10 +567,10 @@ type FocusCard = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'Builder of Task App',
-  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
-  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
-  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+  role: 'タスク管理アプリを作る人',
+  todayFocus: 'ダッシュボードに自分の名前を出す',
+  todayGoal: '名前と今日やることを画面に出す',
+  nextAction: 'Day 03 で GitHub に保存する',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -669,8 +668,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                を意識して進める。
-                ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                。画面に出ている文字は、全部このファイルの上のほうで決めている。
 ```
 
 `<h2>` に `max-w-4xl` が増えているのが Step 2 との違いです。あいさつの文は名前と集中テーマを含むので長くなりやすく、幅を決めずに置くと画面の端まで1行で伸びます。上限を決めておけば、長い文でも決まった幅で折り返します。
@@ -715,19 +713,19 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
           <aside className="space-y-4">
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今日のワンフレーズ
+                メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
+                名前が出るだけで、他人のサンプルではなく自分の画面になる。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                ここで増えた価値
+                まだ無いもの
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
               </p>
             </article>
 
@@ -739,10 +737,10 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
             {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                次につながる視点
+                明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
+                Day 03 で、ここまで書いたコードを GitHub に保存する。
               </p>
             </article>
           </aside>
@@ -846,10 +844,10 @@ type FocusCard = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'Builder of Task App',
-  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
-  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
-  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+  role: 'タスク管理アプリを作る人',
+  todayFocus: 'ダッシュボードに自分の名前を出す',
+  todayGoal: '名前と今日やることを画面に出す',
+  nextAction: 'Day 03 で GitHub に保存する',
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
@@ -959,8 +957,7 @@ export default function DashboardPage() {
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                を意識して進める。
-                ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                。画面に出ている文字は、全部このファイルの上のほうで決めている。
               </p>
 
               <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
@@ -999,16 +996,16 @@ export default function DashboardPage() {
           <aside className="space-y-4">
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今日のワンフレーズ
+                メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
+                名前が出るだけで、他人のサンプルではなく自分の画面になる。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                ここで増えた価値
+                まだ無いもの
               </p>
 ```
 
@@ -1019,16 +1016,16 @@ export default function DashboardPage() {
 ```tsx
               {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                次につながる視点
+                明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
+                Day 03 で、ここまで書いたコードを GitHub に保存する。
               </p>
             </article>
           </aside>
@@ -1065,10 +1062,10 @@ type FocusCard = {
 
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'Builder of Task App',
-  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
-  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
-  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+  role: 'タスク管理アプリを作る人',
+  todayFocus: 'ダッシュボードに自分の名前を出す',
+  todayGoal: '名前と今日やることを画面に出す',
+  nextAction: 'Day 03 で GitHub に保存する',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -1166,8 +1163,7 @@ export default function DashboardPage() {
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                 今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                を意識して進める。
-                ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                。画面に出ている文字は、全部このファイルの上のほうで決めている。
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
@@ -1214,19 +1210,19 @@ export default function DashboardPage() {
           <aside className="space-y-4">
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今日のワンフレーズ
+                メモ
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
+                名前が出るだけで、他人のサンプルではなく自分の画面になる。
               </p>
             </article>
 
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                ここで増えた価値
+                まだ無いもの
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
               </p>
             </article>
 
@@ -1240,10 +1236,10 @@ export default function DashboardPage() {
             {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
             <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                次につながる視点
+                明日やること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
+                Day 03 で、ここまで書いたコードを GitHub に保存する。
               </p>
             </article>
           </aside>
