@@ -549,6 +549,47 @@ def check_scaffold_replacement() -> list[str]:
     return fails
 
 
+def check_provenance() -> list[str]:
+    """結果ドキュメントに「どのコマンドで、いつ、何日ぶん」が必ず載ることを確かめる。
+
+    単日の走行が同じファイルを上書きするので、出どころが無いと、30日ぶんの実測が
+    1行に置き換わっても気づけない。実際に一度それで証拠を消した。
+    """
+    fails = []
+    if target.command_line(["/a/b/build_day_snapshots.py", "--all", "--verify"]) != (
+        "python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify"
+    ):
+        fails.append("❌ 再現できるコマンド文字列になっていない")
+
+    full = [
+        target.DayResult(d, 80, True, "OK", "OK", ()) for d in target.available_days()
+    ]
+    original = target.RESULT_DOC
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            target.RESULT_DOC = Path(d) / "out.md"
+            target.write_result_doc(full, True, "python3 x --all --verify")
+            whole = target.RESULT_DOC.read_text(encoding="utf-8")
+            target.write_result_doc(full[:1], False, "python3 x --day 1")
+            partial = target.RESULT_DOC.read_text(encoding="utf-8")
+    finally:
+        target.RESULT_DOC = original
+
+    if "出どころ" not in whole or "python3 x --all --verify" not in whole:
+        fails.append(f"❌ 通し走行に出どころが無い: {whole[:160]!r}")
+    if "UTC" not in whole:
+        fails.append("❌ いつ出したかが書かれていない")
+    if "⚠" in whole:
+        fails.append("❌ 通し走行なのに部分走行の警告が出ている")
+
+    # 単日の走行は、通しの実測を上書きしたかもしれんことが一目で分かること。
+    if "⚠" not in partial:
+        fails.append(f"❌ 部分走行に警告が出ていない: {partial[:200]!r}")
+    if "1 日ぶん" not in partial:
+        fails.append("❌ 何日ぶんかが書かれていない")
+    return fails
+
+
 def check_triage_section() -> list[str]:
     """NG の日の切り分けが、調べていないものを勝手に断定しないことを確かめる。"""
     fails = []
@@ -630,6 +671,7 @@ CHECKS = (
     ("配布物の置き換え", check_scaffold_replacement),
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),
+    ("結果の出どころ", check_provenance),
     ("NG の切り分け", check_triage_section),
     ("tsconfig の exclude", check_tsconfig_excludes),
     ("想定内の赤は教材の断りが根拠", check_expected_red_is_grounded),
