@@ -40,6 +40,7 @@ import http.client
 import json
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -734,6 +735,10 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
 
     port = free_port(BASE_PORT)
     env["PORT"] = str(port)
+    # `npx next start` は自分の下に next-server を産む。親だけ terminate すると子が
+    # 親無しで生き残り、ポートを掴んだまま残る。撮るたびに1つずつ溜まり、50 個で
+    # `free_port` が枯れて撮れなくなる（実際にそこまで溜めた）。
+    # 別のプロセスグループで起こし、終わるときはグループごと落とす。
     proc = subprocess.Popen(
         ["npx", "next", "start", "-p", str(port)],
         cwd=dest,
@@ -741,6 +746,7 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        start_new_session=True,
     )
     try:
         wait_ready(port, proc)
@@ -766,11 +772,22 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
         }
         return run_worker(job)
     finally:
-        proc.terminate()
+        stop_server(proc)
+
+
+def stop_server(proc: subprocess.Popen[str]) -> None:
+    """起動したサーバーを子ごと止める。"""
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
         try:
-            proc.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
 
 def main(argv: list[str]) -> int:

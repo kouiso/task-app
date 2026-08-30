@@ -12,7 +12,7 @@ Day 09 では tRPC の `useQuery` を使ってサーバーからプロジェク�
 
 スクリーンショット: プロジェクト作成ダイアログの表示を確認してください。
 
-![プロジェクト作成ダイアログ](./screenshots/project-create-dialog.png)
+![空のプロジェクト作成ダイアログ。プロジェクト名と説明の下に、カラー・開始日・終了日が3列で並ぶ](./screenshots/day10/project-create-dialog.png)
 
 ## なぜこれを作るのか
 
@@ -639,7 +639,7 @@ return (
 
 スクリーンショット: フォーム入力中のダイアログの表示を確認してください。
 
-![フォーム入力中のダイアログ](./screenshots/project-create-dialog.png)
+![プロジェクト名・説明・開始日・終了日を入力した状態の作成ダイアログ](./screenshots/day10/create-form-filled.png)
 
 ---
 
@@ -814,7 +814,7 @@ flowchart TB
 
 スクリーンショット: 作成後の一覧に追加されたプロジェクトの表示を確認してください。
 
-![作成後に一覧へ追加されたポートフォリオサイトのカード](./screenshots/project-list-after-create.png)
+![作成した「ポートフォリオサイト」のカードが一覧に増えた画面](./screenshots/day10/project-list-after-create.png)
 
 ---
 
@@ -846,7 +846,7 @@ PORT=3001 npm run dev
 
 スクリーンショット: 完成した作成フローの表示を確認してください。
 
-![完成した作成フロー](./screenshots/project-create-dialog.png)
+![プロジェクト名を空のまま「作成」を押し、名前欄の下に赤字で「プロジェクト名は必須です」が出ているダイアログ](./screenshots/day10/create-validation-error.png)
 **確認ポイント**:
 - プロジェクトが作成できる
 - 一覧が自動で更新される（ページリロードなし）

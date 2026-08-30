@@ -177,6 +177,15 @@ INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[�
 # だけを出して、呼び出し側へ引数を1本足す。差し込みでも丸ごとの書き直しでもないので、
 # 要素の置き換えとして扱わんと day18 以降がずっと古い版のままになる。
 ELEMENT_HEAD = re.compile(r"^\s*<([A-Z][\w.]*)\b")
+# 波括弧の中の式。JSX は `canEditProject={canEditProject}` の形で値を渡すので、
+# 参照しとる名前はここに出る。属性の名前（`open=`）は括弧の外なので拾わない。
+BRACED = re.compile(r"\{([^{}]*)\}")
+IDENTIFIER = re.compile(r"[A-Za-z_$][\w$]*")
+# 名前やのうて構文の一部。参照の有無を数える対象から外す。
+NOT_A_REFERENCE = frozenset(
+    {"true", "false", "null", "undefined", "new", "await", "typeof", "return", "of", "in"}
+)
+
 # 「ここは前に書いたものがそのまま入る」を表す省略記号。`// ...Day 15 で渡した props...` の形。
 # これが入った抜粋は、そこだけでは元の中身を復元できない。要素ごと置き換えると
 # 前に渡していた props が消え、しかも `//` が JSX の属性の位置に残って構文エラーになる
@@ -507,6 +516,25 @@ def _element_end(lines: list[str], start: int, name: str) -> int | None:
     return None
 
 
+def introduces_unknown_names(text: str, fragment: str) -> bool:
+    """その抜粋が、今のファイルに無い名前を持ち込むなら True。
+
+    要素の書き換えは、その日の変更のうち画面に出る一部でしかないことがある。
+    day28 の `src/app/task/page.tsx` は `<DeleteConfirmDialog>` の書き換えと一緒に
+    `bulkDeleteDialogOpen` や `bulkDeleteMutation` の宣言も足すが、宣言のほうは
+    貼る位置の指示が無いので当てられない。書き換えだけ当てると、宣言の無い名前を
+    参照する半端なファイルになる。片方しか当てられんときは、両方とも当てない。
+    """
+    known = set(IDENTIFIER.findall(text))
+    referenced = {
+        name
+        for expr in BRACED.findall(fragment)
+        for name in IDENTIFIER.findall(expr)
+        if name not in NOT_A_REFERENCE
+    }
+    return any(name not in known for name in referenced)
+
+
 def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
     """採った版より後の日の「どこへ入れるか」付きの抜粋を、順に差し込む。
 
@@ -530,7 +558,10 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
                 break
             piece.append(nxt)
         body = render(piece)
-        if not m and any(ELISION.match(line) for line in body.split("\n")):
+        if not m and (
+            any(ELISION.match(line) for line in body.split("\n"))
+            or introduces_unknown_names(text, body)
+        ):
             continue
         merged = (
             insert_fragment(text, m.group(1), m.group(2), body)

@@ -100,9 +100,22 @@ async function drawMarks(page, rects) {
         ].join(';');
         const badge = document.createElement('div');
         badge.textContent = badges[i] ?? String(i + 1);
-        // 枠の左上角に重ねる。角が画像の端に来るときは枠の内側へ入れる。
-        const badgeLeft = Math.min(Math.max(0, left - badgeSize / 2), pageW - badgeSize);
-        const badgeTop = Math.min(Math.max(0, top - badgeSize / 2), pageH - badgeSize);
+        // 既定は枠の左上角にバッジの中心を重ねる。ただし枠が画面の端に接していると、
+        // その位置は画像の外へ出る。単に 0 へ寄せると枠の中の文字に丸ごと乗り、
+        // day08/sidebar.png ではロゴが「①ask App」に見えていた。
+        // 出られない側は反対の角へ回し、両側とも無理なときだけ画像の中へ寄せる。
+        const half = badgeSize / 2;
+        const place = (near, far, limit) => {
+          if (near - half >= 0) {
+            return near - half;
+          }
+          if (far - half + badgeSize <= limit) {
+            return far - half;
+          }
+          return Math.min(Math.max(0, near - half), limit - badgeSize);
+        };
+        const badgeLeft = place(left, left + width, pageW);
+        const badgeTop = place(top, top + height, pageH);
         badge.style.cssText = [
           'position:absolute',
           `left:${badgeLeft}px`,
@@ -181,6 +194,10 @@ async function shoot(page, job, shot) {
   // networkidle は使わない。tRPC の getSession が react-query で回り続ける画面（Day 08 以降の
   // AppLayout）では通信が止まらず、待ち切れずに落ちる。出ているべきものは wait_for で名指しする。
   await page.goto(`${job.baseUrl}${shot.path}`, { waitUntil: 'load' });
+  // 前の1枚で押したところにポインタが残ったままだと、次の画面の同じ位置にある部品が
+  // hover の見た目で写る（day15 の一覧でゴミ箱アイコンだけ色が付いていた）。
+  // 画面の外へ逃がしてから撮る。
+  await page.mouse.move(0, 0);
   for (const action of shot.actions ?? []) {
     await runAction(page, action);
   }

@@ -13,6 +13,8 @@
     "          複数書くと書いた順に ①②③ の番号バッジが付く。",
     "  full_page ページ全体を撮るか。省略でビューポートのみ。",
     "  clip    切り抜く範囲。{selector, padding}。full_page とは同時に書けない。",
+    "          ダイアログは padding 0。余白を取ると、暗くした背景の日本語が字の高さの",
+    "          途中で切れて、壊れた画像に見える。",
     "  note    なぜこの1枚が要るかの覚え書き。出力には出ない。",
     "  viewport この1枚だけ窓の大きさを変える。省略で先頭の viewport。"
   ],
@@ -40,6 +42,17 @@
       "path": "/dashboard",
       "note": "中身は現行コードと一致している既存画像。実画面で撮り直して素性を揃える。",
       "full_page": true
+    },
+    {
+      "name": "day02/step2-greeting-card.png",
+      "day": 2,
+      "path": "/dashboard",
+      "wait_for": "article.overflow-hidden",
+      "note": "day02:497 が参照している1枚。宣言表から漏れていたため撮り直しの対象にならず、旧版の文面（『〜する を前に進める日だ』）と Next.js の dev バッジが残っていた。あいさつの1文が読める大きさにするためカードだけを切り出す。",
+      "clip": {
+        "selector": "article.overflow-hidden",
+        "padding": 0
+      }
     },
     {
       "name": "day02/dashboard-message.png",
@@ -192,11 +205,8 @@
           "label": "確認ダイアログ"
         }
       ],
-      "note": "Day 08 の主要成果物なのに確認ダイアログの画像が無い（scan-day01-08.md (g) Day 08）。",
-      "clip": {
-        "selector": "[role='alertdialog']",
-        "padding": 48
-      }
+      "note": "Day 08 の主要成果物なのに確認ダイアログの画像が無い（scan-day01-08.md (g) Day 08）。 切り抜きにすると 48px の余白へ背景の日本語が字の高さの途中で入り、壊れた画像に見えた。同じ日の他の2枚と同じく全画面で撮り、位置は赤枠で示す。",
+      "full_page": true
     },
     {
       "name": "day09/project-list.png",
@@ -270,7 +280,7 @@
       "note": "既存の project-create-dialog.png は Day 10 に3回使われている。実画像は必須マーク * が付き、カラーと日付の列の分け方も教材の grid-cols-3 と違う（scan-day09-16.md (g) Day 10）。",
       "clip": {
         "selector": "[role='dialog']",
-        "padding": 48
+        "padding": 0
       }
     },
     {
@@ -315,7 +325,7 @@
       "note": "Step 5 のキャプションは『フォーム入力中のダイアログ』だが、貼られていたのは空のフォームだった（scan-day09-16.md (g) day10:642）。入力済みの状態を撮る。",
       "clip": {
         "selector": "[role='dialog']",
-        "padding": 48
+        "padding": 0
       }
     },
     {
@@ -354,7 +364,7 @@
       "note": "Step 8 の確認表 手順2『プロジェクト名を空のまま作成→エラーメッセージが表示される』の1枚。ここにも同じ完成イメージが3枚目として貼られていた。",
       "clip": {
         "selector": "[role='dialog']",
-        "padding": 48
+        "padding": 0
       }
     },
     {
@@ -368,7 +378,7 @@
       "wait_for": "h1:text-is('プロジェクト')",
       "marks": [
         {
-          "selector": "div.rounded-lg:has(> div > h3:text-is('ポートフォリオサイト'))",
+          "selector": "div.rounded-lg:has(> div > h3:has-text('ポートフォリオサイト'))",
           "label": "Step 8 で作ったプロジェクト"
         }
       ],
@@ -386,7 +396,7 @@
       "actions": [
         {
           "kind": "click",
-          "selector": "h3:text-is('Webサイトリニューアル')"
+          "selector": "h3:has-text('Webサイトリニューアル')"
         },
         {
           "kind": "wait_for",
@@ -408,7 +418,7 @@
       "actions": [
         {
           "kind": "click",
-          "selector": "h3:text-is('Webサイトリニューアル')"
+          "selector": "h3:has-text('Webサイトリニューアル')"
         },
         {
           "kind": "wait_for",
@@ -425,7 +435,7 @@
       ],
       "clip": {
         "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
-        "padding": 40
+        "padding": 0
       }
     },
     {
@@ -439,7 +449,7 @@
       "actions": [
         {
           "kind": "click",
-          "selector": "h3:text-is('Webサイトリニューアル')"
+          "selector": "h3:has-text('Webサイトリニューアル')"
         },
         {
           "kind": "wait_for",
@@ -458,7 +468,7 @@
       "note": "Step 4 のダイアログ。本文は『ユーザーを1人選ぶまでメンバー追加ボタンは押せません』と書くので、未選択の状態で撮る。",
       "clip": {
         "selector": "[role='dialog']",
-        "padding": 48
+        "padding": 0
       }
     },
     {
@@ -472,7 +482,7 @@
       "actions": [
         {
           "kind": "click",
-          "selector": "h3:text-is('Webサイトリニューアル')"
+          "selector": "h3:has-text('Webサイトリニューアル')"
         },
         {
           "kind": "wait_for",
@@ -491,7 +501,7 @@
       "note": "Step 7 に貼られていたのはプロジェクト削除の画像で、教材自身が5行かけて『この画像で見出しの文字を照らし合わせても意味がありません』と断っていた。メンバー削除の実物を撮る。 OWNER の行の削除ボタンは disabled なので、MEMBER の行から開く。",
       "clip": {
         "selector": "[role='alertdialog']",
-        "padding": 48
+        "padding": 0
       }
     },
     {
@@ -525,14 +535,14 @@
         },
         {
           "kind": "wait_for",
-          "selector": "h3:text-is('データベース設計')"
+          "selector": "button:has-text('完了')"
         }
       ],
       "wait_for": "h1:text-is('タスク')",
       "marks": [
         {
-          "selector": "button:has-text('すべてのステータス')",
-          "label": "完了だけに絞る"
+          "selector": "button:has-text('完了')",
+          "label": "完了だけに絞った状態"
         }
       ],
       "note": "Step 5 のキャプション『ステータスを完了に絞った状態』。初期データで DONE は「データベース設計」1件だけなので、絞ると1枚になる。",
@@ -549,7 +559,7 @@
       "actions": [
         {
           "kind": "click",
-          "selector": "h3:text-is('デザインモックアップ作成')"
+          "selector": "h3:has-text('デザインモックアップ作成')"
         },
         {
           "kind": "wait_for",
@@ -560,7 +570,348 @@
       "note": "Step 7 の確認『カードクリックで詳細ダイアログが開く／説明・担当者・期限が表示される』。既存画像は Day 16 と共有していた。",
       "clip": {
         "selector": "[role='dialog']",
-        "padding": 48
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-create-dialog.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規タスク')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "既存の task-create-dialog.png は Day 14 に3回・Day 15 に1回。実画像は必須マーク * が付き、背景に Day 16・Day 20 の UI とシードに無いタスクが写る（scan-day09-16.md (g) Day 14）。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-dialog-title-description.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規タスク')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "div.grid.gap-2:has(> label[for='title'])",
+          "label": "Step 4 で書くタイトル欄"
+        },
+        {
+          "selector": "div.grid.gap-2:has(> label[for='description'])",
+          "label": "同じく説明欄"
+        }
+      ],
+      "note": "Step 4 の『タイトルと説明の入力欄が並んだ画面』。Step 4 だけを写した絵はこの道具では作れない（ツリーはその日の終わりの形しか組めない）ので、完成したダイアログの中で該当の2欄を指す。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-dialog-project-assignee.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規タスク')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "div.grid.gap-2:has(> label[for='project'])",
+          "label": "Step 6 で書くプロジェクト欄"
+        },
+        {
+          "selector": "div.grid.gap-2:has(> label[for='assignee'])",
+          "label": "同じく担当者欄"
+        }
+      ],
+      "note": "Step 6 の『プロジェクト・担当者の Select 欄』。同上の理由で、完成したダイアログの中で該当の2欄を指す。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-list-after-create.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('タスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(h3:has-text('トップページの文言を見直す'))",
+          "label": "Step 9 で作ったタスク"
+        }
+      ],
+      "note": "Step 9 の確認『一覧に新しいタスクが表示される』。本文が『いちばん下に足されます』と書くとおり、position が最後になる。",
+      "full_page": true
+    },
+    {
+      "name": "day15/task-edit-dialog.png",
+      "day": 15,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "div.rounded-lg:has(h3:has-text('デザインモックアップ作成')) button[aria-label='タスクを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] button[type='submit']",
+          "label": "編集で開くと「更新」"
+        }
+      ],
+      "note": "Day 15 の主題は編集モードなのに、教材には作成モードの画像しか無く、冒頭で2行かけて『編集で開くと見出しがタスク編集、ボタンが更新に変わります』と言葉で補っていた（scan-day09-16.md (g) Day 15）。編集で開いた実物を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day15/task-delete-confirm.png",
+      "day": 15,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "div.rounded-lg:has(h3:has-text('API仕様書作成')) button[aria-label='タスクを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "貼られていたのはプロジェクト削除の画像で、教材が『見出しが違います』と断っていた。タスク削除は title を渡さないので見出しは既定値の「本当に削除しますか？」になる。その実物を撮る。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day15/task-list-after-edit.png",
+      "day": 15,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('タスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(h3:has-text('API仕様書作成'))",
+          "label": "Step 11 で優先度を変えたタスク"
+        }
+      ],
+      "note": "Step 10 の確認『カードの編集ボタンで編集モードが開く』のあとに置く1枚。動作確認で優先度を上げた1件が「高」に変わっている。",
+      "full_page": true
+    },
+    {
+      "name": "day16/task-detail-dialog.png",
+      "day": 16,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭の完成イメージ。Day 13 と同じ画像を共有していたので、Day 16 のツリーで撮り直して素性を分ける。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day16/task-timer.png",
+      "day": 16,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "div.rounded-lg:has(h3:has-text('デザインモックアップ作成')) button[aria-label='デザインモックアップ作成の時間を記録']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "今日の主役のダイアログ。時間と分の2欄があることを見せる。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day17/my-task.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('マイタスク')",
+      "note": "既存の my-task.png は Day 17 に4回。うち Step 4 と Step 8 は途中経過のはずが完成画面だった（scan-day17-24.md (g) Day 17）。",
+      "full_page": true
+    },
+    {
+      "name": "day17/status-tabs.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "[role='tablist']",
+      "note": "Step 4 の『ステータス Tabs が表示されている画面』。Tabs だけを切り出すと、5つのタブが横並びであることが紙面でも読める。",
+      "clip": {
+        "selector": "[role='tablist']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day17/task-groups.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('マイタスク')",
+      "marks": [
+        {
+          "selector": "h2:has-text('期限切れ')",
+          "label": "期限で分かれた見出し"
+        }
+      ],
+      "note": "Step 8 の『グループ別タスク表示』。本文 :919 が『初期データのままなら期限切れに1枚』『残り3グループは中身が無いので非表示になる』と書いており、実際そのとおりの絵になる。",
+      "full_page": true
+    },
+    {
+      "name": "day17/my-task-in-progress.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "[role='tab']:has-text('進行中')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='tab'][data-state='active']:has-text('進行中')"
+        }
+      ],
+      "wait_for": "h1:text-is('マイタスク')",
+      "marks": [
+        {
+          "selector": "[role='tab'][data-state='active']",
+          "label": "選んだタブ"
+        }
+      ],
+      "note": "Step 12 の動作確認 手順4『ステータスタブで絞り込みできる』。タブを切り替えた状態を1枚だけ持つ。",
+      "full_page": true
+    },
+    {
+      "name": "day12/member-count.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー (')) h3:has-text('メンバー (')",
+          "label": "1人足すと (4) に変わる"
+        }
+      ],
+      "note": "day12:1395 は day12:17 と同じメンバーカードを求めている（教材側の重複）。本文がそれぞれ読者に見せたい所が違うので、指す先を赤枠で分けた。ここは見出しの人数。",
+      "clip": {
+        "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+        "padding": 0
       }
     }
   ]

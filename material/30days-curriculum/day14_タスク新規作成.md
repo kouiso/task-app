@@ -17,7 +17,7 @@ TaskDialogコンポーネントで、新しいタスクを作成
 
 スクリーンショット: タスク作成ダイアログの完成イメージを確認してください。
 
-![タスク作成ダイアログの完成画面](./screenshots/task-create-dialog.png)
+![タスク作成ダイアログ。タイトル・説明・ステータス・優先度・プロジェクト・担当者・期限・見積時間の8欄が並ぶ](./screenshots/day14/task-create-dialog.png)
 
 > **今日のゴールライン**: TaskDialogにフォーム管理とバリデーションを組み込み、新しいタスクが一覧へ反映される流れを体験できればOK。
 
@@ -950,7 +950,7 @@ return (
 
 スクリーンショット: タイトルと説明の入力欄が並んだ画面を確認してください。
 
-![タイトルと説明の入力欄が表示されている画面](./screenshots/task-create-dialog.png)
+![タスク作成ダイアログ。赤枠がタイトル欄と説明欄を指している](./screenshots/day14/task-dialog-title-description.png)
 
 ---
 
@@ -1215,7 +1215,7 @@ return (
 
 スクリーンショット: プロジェクトと担当者のSelect欄が並んだ画面を確認してください。
 
-![プロジェクト・担当者のSelect欄が表示されている画面](./screenshots/task-create-dialog.png)
+![タスク作成ダイアログ。赤枠がプロジェクト欄と担当者欄を指している。担当者の初期値は「未割当」](./screenshots/day14/task-dialog-project-assignee.png)
 
 ---
 
@@ -1419,7 +1419,7 @@ const handleSubmit =
 
 スクリーンショット: タスク一覧に新しい行が増えた画面を確認してください。
 
-![タスク一覧に作成したタスクが並んでいる画面](./screenshots/task-list-after-create.png)
+![タスク一覧の最後に、作成した「トップページの文言を見直す」のカードが増えた画面](./screenshots/day14/task-list-after-create.png)
 
 #### createMutationに渡すパラメータ
 

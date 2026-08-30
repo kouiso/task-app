@@ -23,7 +23,7 @@ Day 14 で学んだことは次のとおりです。
 スクリーンショット: 今日さわるタスクダイアログです。下の画像は新規作成のときの姿で、
 編集で開くと見出しが「タスク編集」、ボタンが「更新」に変わり、各欄には今の値が入ります。
 
-![タイトルや説明、ステータスなどの入力欄が並んだタスクダイアログ](./screenshots/task-create-dialog.png)
+![見出しが「タスク編集」、ボタンが「更新」のタスクダイアログ。各欄に編集前の値が入っている](./screenshots/day15/task-edit-dialog.png)
 
 ## 始める前の前提
 
@@ -864,7 +864,7 @@ const handleDelete = (taskId: string) => {
 
 スクリーンショット: 削除確認ダイアログの表示を確認してください。
 
-![削除の確認ダイアログ。キャンセルと削除のボタンが並ぶ](./screenshots/project-delete-confirm.png)
+![見出しが「本当に削除しますか？」の確認ダイアログ。キャンセルと削除のボタンが並ぶ](./screenshots/day15/task-delete-confirm.png)
 
 画像はプロジェクトを消すときのものなので見出しが違います。
 タスクの削除では `title` を渡していないため、見出しは `delete-confirm-dialog.tsx` の既定値である `本当に削除しますか？` になります。
@@ -983,7 +983,7 @@ const handleCreate = () => {
 
 スクリーンショット: 編集後のタスク一覧の表示を確認してください。
 
-![編集後のタスク一覧（先頭のタスクの優先度が高に変わっている）](./screenshots/task-list-after-edit.png)
+![編集したタスクの優先度バッジが「高」に変わっている一覧画面](./screenshots/day15/task-list-after-edit.png)
 
 ---
 

@@ -404,6 +404,7 @@ def check_insertion() -> list[str]:
 
 
 PAGE_WITH_DIALOG = """export default function TaskPage() {
+  const canEditProject = () => true;
   return (
     <div>
       <TaskDetailDialog
@@ -419,9 +420,9 @@ def check_element_replacement() -> list[str]:
     """既にある JSX 要素を、その形へ書き換える抜粋を当てられることを確かめる。"""
     fails = []
     got = target.replace_element(
-        PAGE_WITH_DIALOG, "TaskDetailDialog", "<TaskDetailDialog canEditProject={f} />"
+        PAGE_WITH_DIALOG, "TaskDetailDialog", "<TaskDetailDialog canEditProject={canEditProject} />"
     )
-    if got is None or "canEditProject={f}" not in got:
+    if got is None or "canEditProject={canEditProject}" not in got:
         fails.append(f"❌ 要素の置き換えが効いていない: {got!r}")
     elif got.count("<TaskDetailDialog") != 1 or "open={detailOpen}" in got:
         fails.append(f"❌ 古い要素が残っている: {got!r}")
@@ -458,15 +459,31 @@ def check_element_replacement() -> list[str]:
     if "open={detailOpen}" not in merged:
         fails.append("❌ 省略記号の抜粋で元の props を消している")
 
+    # その日の変更の片割れしか当てられんときは、当てない。day28 の
+    # `<DeleteConfirmDialog>` の書き換えは `bulkDeleteDialogOpen` の宣言と対で、
+    # 宣言のほうは貼る位置の指示が無いので当てられない。
+    half = [
+        blk(15, "", *PAGE_WITH_DIALOG.split("\n")),
+        blk(28, "", "<TaskDetailDialog open={bulkDeleteDialogOpen} />"),
+    ]
+    merged = target.apply_insertions(target.render(half[:1]), half, 15)
+    if "bulkDeleteDialogOpen" in merged:
+        fails.append("❌ 宣言の無い名前を持ち込む書き換えを当てている")
+    if not target.introduces_unknown_names("const a = 1;", "<X v={zzz} />"):
+        fails.append("❌ 知らない名前を見つけられていない")
+    if target.introduces_unknown_names("const detailOpen = 1;", "<X open={detailOpen} />"):
+        fails.append("❌ 既にある名前まで知らない名前として弾いている")
+
     # 採った版より後の日の書き換えだけを当てる。
     blocks = [
         blk(15, "", *PAGE_WITH_DIALOG.split("\n")),
-        blk(18, "", "{/* 権限判定を渡す */}", "<TaskDetailDialog canEditProject={f} />"),
+        blk(18, "", "{/* 権限判定を渡す */}", "<TaskDetailDialog canEditProject={canEditProject} />"),
     ]
     merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
-    if "canEditProject={f}" not in merged:
+    if "canEditProject={canEditProject}" not in merged:
         fails.append("❌ 後の日の要素の書き換えが当たっていない")
-    if "canEditProject" in target.apply_insertions(target.render(blocks[:1]), blocks, 18):
+    same_day = target.apply_insertions(target.render(blocks[:1]), blocks, 18)
+    if "open={detailOpen}" not in same_day:
         fails.append("❌ 採った版と同じ日以前の書き換えまで当てている")
     return fails
 
