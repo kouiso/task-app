@@ -269,6 +269,10 @@ async function shoot(page, job, shot) {
   if (shot.wait_for) {
     await page.locator(shot.wait_for).first().waitFor({ state: 'visible' });
   }
+  // 開発サーバーが出す Next.js の目印を消す。読者が書いた画面ではないうえ、
+  // 本番ビルドで撮った他の日の写真と見た目がそろわなくなる。
+  // 本番ビルドの回にはこの要素そのものが無いので、指定しても何も起きない。
+  await page.addStyleTag({ content: 'nextjs-portal{display:none !important;}' });
   // アニメーションの途中で撮ると、同じ指定でも回ごとに違う絵になる。
   await page.waitForTimeout(400);
   // ページ全体を撮る回だけ、窓の高さを中身へ合わせる。切り抜く回は要らない

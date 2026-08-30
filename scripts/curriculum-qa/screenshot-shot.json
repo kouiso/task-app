@@ -1297,6 +1297,641 @@
       },
       "note": "Step 9 のレスポンシブ確認。旧画像は PC 幅の4列で、本文が『モバイル幅の姿はブラウザの幅を実際に縮めて確かめてください』と読者へ投げていた。幅 900px で撮れば 2 列に折り返した実物を見せられる（`sm:grid-cols-2` が効き、`lg:grid-cols-4` が外れる幅）。",
       "full_page": true
+    },
+    {
+      "name": "day22/report.png",
+      "day": 22,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('優先度別タスク')",
+      "note": "冒頭のゴール。Day 22 のツリーで撮ると、統計カードの下に円グラフが2つ並ぶ。初期データではステータスが TODO・進行中・完了の3切れ、優先度が高・中の2切れになる（`scan-day17-24.md` (f) Day 22 の実測）。",
+      "full_page": true
+    },
+    {
+      "name": "day22/report-pie-charts.png",
+      "day": 22,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('優先度別タスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('ステータス別タスク'))",
+          "label": "ステータス別"
+        },
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('優先度別タスク'))",
+          "label": "優先度別"
+        }
+      ],
+      "note": "Step 7 の「ステータスと優先度の2つの円グラフが表示される」。2枚それぞれを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day22/report-chart-grid.png",
+      "day": 22,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('優先度別タスク')",
+      "marks": [
+        {
+          "selector": "div.grid.grid-cols-1.gap-6",
+          "label": "Step 8 で横並びにしたグリッド"
+        }
+      ],
+      "note": "Step 8・9 の「統計カード4枚の下に円グラフ2つがグリッド配置された完成画面」。並べたグリッドそのものを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report.png",
+      "day": 23,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロジェクト統計')",
+      "note": "冒頭のゴール。Day 23 のツリーでは、Day 21 のカードと Day 22 の円グラフに加えて週次レポートへのリンクが出る。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report-project-table.png",
+      "day": 23,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロジェクト統計')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('プロジェクト統計'))",
+          "label": "Step 2 で書いたテーブル"
+        }
+      ],
+      "note": "Step 2 のキャプションは「プロジェクト統計テーブルの表示を確認してください」なのに、旧画像の alt は『テーブルはこの下に続く』で、肝心のテーブルが写っていなかった。テーブルを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report-weekly-loading.png",
+      "day": 23,
+      "path": "/report/weekly",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["report.getWeeklyReport"],
+      "wait_for": "div.animate-spin",
+      "note": "Step 5 のローディング確認。旧画像は読み込みが終わったあとの姿で、本文が『下の画像は読み込みが終わったあとの姿です』と断っていた。getWeeklyReport の返事だけを止めて、スピナーそのものを撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report-weekly-charts.png",
+      "day": 23,
+      "path": "/report/weekly",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('週別完了タスク数')",
+      "marks": [
+        {
+          "selector": "div.grid.grid-cols-1.gap-6",
+          "label": "Step 6 で書いた3つのグラフ"
+        }
+      ],
+      "note": "Step 6 の「週次レポートのグラフ表示」。折れ線と棒グラフのグリッドを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report-weekly.png",
+      "day": 23,
+      "path": "/report/weekly",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('週別完了タスク数')",
+      "note": "Step 7 の動作確認「週次レポートページ全体」。Day 23 の前提が読者へ作らせる完了タスク3件が、直近の週に立つ。",
+      "full_page": true
+    },
+    {
+      "name": "day24/user-list.png",
+      "day": 24,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('ユーザー管理')",
+      "note": "冒頭のゴール。既存の user-list.png は同じ日に2回。Day 24 のツリーで撮ると、サイドバーに今日足した「ユーザー管理」が入った状態になる。",
+      "full_page": true
+    },
+    {
+      "name": "day24/user-list-table.png",
+      "day": 24,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('ユーザー管理')",
+      "marks": [
+        {
+          "selector": "th:text-is('ロール')",
+          "label": "ロールのバッジが並ぶ列"
+        },
+        {
+          "selector": "th:text-is('アクション')",
+          "label": "右端のアクション列"
+        }
+      ],
+      "note": "Step 9 の「アバターとロールのバッジが並び、右端にアクション列が出ていること」。本文が名指しする2つの列を赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day25/profile.png",
+      "day": 25,
+      "path": "/profile",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロフィール')",
+      "note": "冒頭のゴール。既存の profile.png は同じ日に3回。",
+      "full_page": true
+    },
+    {
+      "name": "day25/profile-info.png",
+      "day": 25,
+      "path": "/profile",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロフィール')",
+      "marks": [
+        {
+          "selector": "div.space-y-4:has(p:text-is('メールアドレス'))",
+          "label": "Step 3 で書いたメール・登録日・最終更新日"
+        }
+      ],
+      "note": "Step 3 の確認『メール・登録日・最終更新日が表示される』。3行そろっているところを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day25/profile-buttons.png",
+      "day": 25,
+      "path": "/profile",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロフィール')",
+      "marks": [
+        {
+          "selector": "div.flex.flex-col.gap-3",
+          "label": "Step 4 で並べた3つのボタン"
+        }
+      ],
+      "note": "Step 4 の確認『3つのボタンが縦に並ぶ／管理者にだけユーザー管理ボタンが出る』。読者は admin で入っているので3つとも出る。",
+      "full_page": true
+    },
+    {
+      "name": "day25/change-password.png",
+      "day": 25,
+      "path": "/profile/change-password",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "form",
+      "note": "Step 8 の『現在のパスワード・新しいパスワード・確認用の3つの入力欄が並んだ画面』。中央寄せのカードなので切り抜く。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day25/profile-edit.png",
+      "day": 25,
+      "path": "/profile/edit",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "form",
+      "note": "Step 14 の『名前・メールアドレス・アバターURLの入力欄が並んだ編集ページ』。名前とメールには今の値が入った状態で開く。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day26/error-page.png",
+      "day": 26,
+      "path": "/this-page-does-not-exist",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=ページが見つかりません",
+      "note": "冒頭のゴール。既存の error-page.png は同じ日に2回。Day 26 のツリーで `not-found.tsx` が返す画面を撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day26/not-found-action.png",
+      "day": 26,
+      "path": "/this-page-does-not-exist",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=ページが見つかりません",
+      "marks": [
+        {
+          "selector": "a:has-text('ダッシュボード')",
+          "label": "ここから戻れる"
+        }
+      ],
+      "note": "Step の手順2『「404」と「ページが見つかりません」を確認する』のあとの1枚。行き止まりにならないことを示すため、戻る導線を赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day27/project-detail.png",
+      "day": 27,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:has-text('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "h3:has-text('メンバー')",
+      "note": "冒頭のゴール1枚目。既存の project-detail-tasks.png は Day 12 でも使っていた完成版。Day 27 のツリーで、一覧から1件開いたインライン詳細を撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day27/project-detail-archive.png",
+      "day": 27,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:has-text('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "button:has-text('アーカイブ')",
+      "marks": [
+        {
+          "selector": "button:has-text('アーカイブ')",
+          "label": "右上のアーカイブボタン"
+        }
+      ],
+      "note": "冒頭のゴール2枚目。旧 alt は『別のプロジェクトの詳細画面』だが、読者がメンバーになっているプロジェクトは「Webサイトリニューアル」1件だけ（`scripts/_seed/seed.ts:107-165`）。別のプロジェクトは開けないので、同じ画面でアーカイブボタンの位置を指す。",
+      "full_page": true
+    },
+    {
+      "name": "day27/project-archived.png",
+      "day": 27,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('アーカイブ')"
+        },
+        {
+          "kind": "click",
+          "selector": "button:has-text('アーカイブ')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('アーカイブ解除')"
+        }
+      ],
+      "wait_for": "button:has-text('アーカイブ解除')",
+      "marks": [
+        {
+          "selector": "button:has-text('アーカイブ解除')",
+          "label": "押すと元へ戻る"
+        }
+      ],
+      "note": "Step の締めくくり『プロジェクト詳細でアーカイブ操作ができる状態』。押したあとの姿を撮る。ボタンが「アーカイブ解除」に変わり、タイトルの下に「アーカイブ済み」のバッジが出る。DB を変えるので、この日の最後に撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day29/user-detail.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='詳細']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:text-is('参加プロジェクト')"
+        }
+      ],
+      "wait_for": "h3:text-is('担当中のタスク')",
+      "note": "冒頭のゴール。田中太郎はプロジェクトにもタスクにもひもづいているので、2枚のカードが両方とも埋まる。",
+      "full_page": true
+    },
+    {
+      "name": "day29/user-detail-loading.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["user.getById"],
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='詳細']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "div.animate-spin"
+        }
+      ],
+      "wait_for": "div.animate-spin",
+      "note": "Step 3 の『読み込み中はスピナーだけが表示されます』。getById の返事だけを止めて撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day29/user-detail-projects-tasks.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='詳細']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:text-is('参加プロジェクト')"
+        }
+      ],
+      "wait_for": "h3:text-is('担当中のタスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('参加プロジェクト'))",
+          "label": "参加プロジェクト"
+        },
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('担当中のタスク'))",
+          "label": "担当中のタスク"
+        }
+      ],
+      "note": "Step の『プロジェクト一覧とタスクテーブル』。2枚のカードをそれぞれ赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day29/user-edit-form.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "form"
+        }
+      ],
+      "wait_for": "form",
+      "note": "Step の『完成後の編集フォーム（ロール選択とアクティブのチェックボックスが並んだ状態）』。中央寄せのカードなので切り抜く。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day30/login.png",
+      "day": 30,
+      "path": "/login",
+      "note": "Day 30 Step 5 の本番動作確認。既存の login.png は完成版アプリの古い写真で、教材の他の写真と見た目がそろっていない。Day 30 のツリー（＝完成した手元のアプリ）で撮り直す。本番の DB は空なので、写るのはログイン画面そのもの。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day30/dashboard.png",
+      "day": 30,
+      "path": "/dashboard",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1",
+      "note": "Day 30 Step 5 の『完成版のダッシュボード画面』。30日ぶんを積み上げたサイドバー（管理者は7項目）が入った状態を撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day05/login-card.png",
+      "day": 5,
+      "path": "/login",
+      "wait_for": "form",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(form)",
+          "label": "Step 6 で整えた Card"
+        }
+      ],
+      "note": "Step 6 の『Card で囲まれたログインフォームが画面中央に並んだ状態』。ゴールと Step 9 が同じ day05/login.png を指しており、1冊で3回の貼り回しになっていた。Step 6 の時点では登録リンクがまだ無いので、完成後の画面であることを本文で断ったうえで Card を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day05/login-register-link.png",
+      "day": 5,
+      "path": "/login",
+      "wait_for": "a[href='/register']",
+      "marks": [
+        {
+          "selector": "div.text-center.text-sm:has(a[href='/register'])",
+          "label": "Step 9 で足した登録リンク"
+        }
+      ],
+      "note": "Step 9 の『登録リンク付きの完成したログイン画面』。Step 6 の1枚と分けるため、今日いちばん最後に足した行を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day06/register-name-email.png",
+      "day": 6,
+      "path": "/register",
+      "wait_for": "#confirmPassword",
+      "marks": [
+        {
+          "selector": "div.space-y-2:has(#name)",
+          "label": "名前の欄"
+        },
+        {
+          "selector": "div.space-y-2:has(#email)",
+          "label": "メールアドレスの欄"
+        }
+      ],
+      "note": "Step 4 の『名前とメールアドレスの入力欄が表示された状態』。旧 register_step4.png は4欄そろった完成版で、キャプションと写っているものが食い違っていた。Step 4 の時点のフォームは JSX が閉じていないので描画できず、この道具では撮れない。完成後の画面であることを本文で断ったうえで、この Step で足す2欄を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day06/register-password-confirm.png",
+      "day": 6,
+      "path": "/register",
+      "wait_for": "#confirmPassword",
+      "marks": [
+        {
+          "selector": "div.space-y-2:has(#password)",
+          "label": "パスワードの欄"
+        },
+        {
+          "selector": "div.space-y-2:has(#confirmPassword)",
+          "label": "確認用の欄"
+        }
+      ],
+      "note": "Step 6 の『4つの入力欄が揃ったフォーム』。Step 4 の1枚と分けるため、この Step で足す2欄を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day06/register-complete.png",
+      "day": 6,
+      "path": "/register",
+      "wait_for": "a[href='/login']",
+      "marks": [
+        {
+          "selector": "div.text-center.text-sm:has(a[href='/login'])",
+          "label": "ログイン画面へ戻るリンク"
+        }
+      ],
+      "note": "Step 9 の『デザインが整った登録画面の完成形』。冒頭のゴール（day06/register.png）と同じ画面なので、この日の最後に足したリンクを赤枠で指して区別する。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day09/project-page-heading.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "h1:text-is('プロジェクト')",
+          "label": "Step 1 で書いた見出し"
+        }
+      ],
+      "note": "Step 1 の『「プロジェクト」タイトルだけが表示された初期画面』。旧 day09-step1.png は完成版アプリの写真で、サイドバー7項目・上部検索バーが写っていた。Step 1 の時点の画面はこの道具では撮れない（ツリーはその日の終わりの形しか組めない）ので、完成後の画面であることを本文で断ったうえで見出しを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-loading.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["project.getAll"],
+      "wait_for": "div.animate-spin",
+      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-cards.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "div.grid.gap-6",
+          "label": "Step 6 で書いたカードのグリッド"
+        }
+      ],
+      "note": "Step 6 の『ヘッダー実装前のプロジェクトカードのグリッド表示』。旧 day09-cards.png は完成版アプリの写真で、読者が参加していない『社内データ分析基盤』『モバイルアプリ開発』まで写っていた。読者に見えるプロジェクトは『Webサイトリニューアル』1件だけ（`scripts/_seed/seed.ts:107-165`）。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-narrow.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "viewport": {
+        "width": 430,
+        "height": 900
+      },
+      "note": "Step 10 のレスポンシブ確認。幅 430px ではサイドバーが隠れ、ヘッダーが縦に折り返す。カードは1件しか無いので列数そのものは変わらない。そのことは本文で断る。",
+      "full_page": true
     }
   ]
 }

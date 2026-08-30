@@ -77,6 +77,16 @@ BASE_PORT = 3401
 # `next start` が応えるまでの待ち上限（秒）。
 SERVER_TIMEOUT = 90
 
+# 本番ビルドではなく `next dev` で起こす日。
+#
+# day11 は `npm run build` が通らない。`project.getById` を書く前に配布物の
+# `project-detail-view.tsx` を取り込むためで、教材自身が本文で「今日は通りません」と
+# 断っている（`build_day_snapshots.py` の EXPECTED_RED も同じ扱い）。
+# ただし読者がその日に動かすのは `npm run dev` のほうで、開発サーバーは型検査を
+# 通さずにページを返す。つまり dev で撮るのは代用ではなく、読者と同じ動かし方である。
+# 開発サーバーが右下へ出す Next.js の目印は、読者が書いた画面ではないので撮る側で隠す。
+DEV_SERVER_DAYS = frozenset({11})
+
 # ブラウザの開始時刻。Day 02 の挨拶が時間帯で変わるため、固定しないと撮るたびに
 # 「おはよう」「こんばんは」が入れ替わり、本文の説明と食い違う回が出る。
 FIXED_CLOCK = "2026-04-01T09:00:00+09:00"
@@ -396,9 +406,11 @@ DAY23_TASKS = DAY16_TASKS + DAY23_EXTRA_TASKS
 #   day01: scan-day01-08.md (f) Day 01 — scaffold の db:seed 直後。読者が作ったものは0件。
 #   day06: scan-day01-08.md (f) Day 06 — 読者が Step 10 で自分のアカウントを1件登録する。
 #   day10: scan-day09-16.md (f) Day 10 — Step 8 の動作確認でプロジェクトを1件作る。
-#   day11: `day11_...md:1101-1105` — Day 10 で作った1件を消す。`:1140-1145` の手順5で
-#          アーカイブを解除させるので、この日の終わりに隠れているプロジェクトは無い
-#          （scan の (f) は「1件アーカイブされたまま」と書くが、現在の本文と食い違う）。
+#   day11: Day 10 の記述をそのまま引き継ぐ。この日の画面（編集ダイアログ・削除確認・
+#          アーカイブ表示）は、どれも Day 10 で作った練習用プロジェクトを相手に撮るもので、
+#          消すのは Step 10 のいちばん最後だからである（`day11_...md:1132-1140`）。
+#   day12: Day 11 Step 10 の削除フローで練習用プロジェクトが消え、読者に見えるのは
+#          「Webサイトリニューアル」1件へ戻る（`day11_...md:1144` 手順5）。
 #   day14: scan-day09-16.md (f) Day 14 — Step 9 の動作確認でタスクを1件作る。
 #   day15: scan-day09-16.md (f) Day 15 — Step 11 で1件消し、1件の優先度を変える。
 #   day16: scan-day09-16.md (f) Day 16 — Step 4 でステータス1件と作業時間を2回記録する。
@@ -419,7 +431,7 @@ DAY_SEEDS: dict[int, DaySeed] = {
     1: DaySeed(SEED_USERS, SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     6: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     10: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS + (READER_PROJECT,), SEED_TASKS, SEED_COMMENTS),
-    11: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
+    12: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     14: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS + (READER_TASK,), SEED_COMMENTS),
     15: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY15_TASKS, SEED_COMMENTS),
     16: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY16_TASKS, SEED_COMMENTS),
@@ -816,7 +828,11 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
         return []
     dest = ensure_tree_fresh(day)
     env = read_env(dest)
-    ensure_build(dest, env)
+    if day in DEV_SERVER_DAYS:
+        # 型検査を通らない日は本番ビルドを作れない。dev は依存を辿るので node_modules だけ用意する。
+        link_node_modules(dest)
+    else:
+        ensure_build(dest, env)
     ensure_schema(dest, env)
     counts = apply_seed(dest, day, env)
     print(f"  シード: ユーザー{counts['users']} / プロジェクト{counts['projects']} / タスク{counts['tasks']} / コメント{counts['comments']}")
@@ -827,8 +843,9 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
     # 親無しで生き残り、ポートを掴んだまま残る。撮るたびに1つずつ溜まり、50 個で
     # `free_port` が枯れて撮れなくなる（実際にそこまで溜めた）。
     # 別のプロセスグループで起こし、終わるときはグループごと落とす。
+    command = ["npx", "next", "dev", "-p", str(port)] if day in DEV_SERVER_DAYS else ["npx", "next", "start", "-p", str(port)]
     proc = subprocess.Popen(
-        ["npx", "next", "start", "-p", str(port)],
+        command,
         cwd=dest,
         env=env,
         stdout=subprocess.PIPE,
