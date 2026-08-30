@@ -403,6 +403,74 @@ def check_insertion() -> list[str]:
     return fails
 
 
+PAGE_WITH_DIALOG = """export default function TaskPage() {
+  return (
+    <div>
+      <TaskDetailDialog
+        open={detailOpen}
+        onClose={handleDetailClose}
+      />
+    </div>
+  );
+}"""
+
+
+def check_element_replacement() -> list[str]:
+    """既にある JSX 要素を、その形へ書き換える抜粋を当てられることを確かめる。"""
+    fails = []
+    got = target.replace_element(
+        PAGE_WITH_DIALOG, "TaskDetailDialog", "<TaskDetailDialog canEditProject={f} />"
+    )
+    if got is None or "canEditProject={f}" not in got:
+        fails.append(f"❌ 要素の置き換えが効いていない: {got!r}")
+    elif got.count("<TaskDetailDialog") != 1 or "open={detailOpen}" in got:
+        fails.append(f"❌ 古い要素が残っている: {got!r}")
+
+    # 同じ名前が複数あるときは、どれを指すか決められないので触らない。
+    if target.replace_element("<Card />\n<Card />", "Card", "<Card x />") is not None:
+        fails.append("❌ 置き換え先が複数あるのに書き換えている")
+    if target.replace_element(PAGE_WITH_DIALOG, "NotThere", "x") is not None:
+        fails.append("❌ 置き換え先が無いのに書き換えている")
+
+    # 自己終了しない要素は、対応する閉じタグまでを1つとして数える。
+    closed = "<Table>\n  <Row />\n</Table>\n<p>後ろ</p>"
+    got = target.replace_element(closed, "Table", "<Table new />")
+    if got is None or "<p>後ろ</p>" not in got or "</Table>" in got:
+        fails.append(f"❌ 閉じタグまでを1つとして数えていない: {got!r}")
+    # 同じ名前が入れ子になっているときは、どちらを指すか決められないので触らない。
+    if target.replace_element("<Table>\n  <Table />\n</Table>", "Table", "x") is not None:
+        fails.append("❌ 同名の入れ子があるのに書き換えている")
+
+    # 貼る位置の説明1行は指示の一部で、中身ではない。
+    head = target.operation_head(("{/* 権限判定を詳細ダイアログへ渡す */}", "<TaskDetailDialog"))
+    if not head.startswith("<TaskDetailDialog"):
+        fails.append(f"❌ 位置の説明を飛ばせていない: {head!r}")
+
+    # 省略記号の入った抜粋は、そこだけでは元の中身を復元できないので当てない。
+    elided = [
+        blk(15, "", *PAGE_WITH_DIALOG.split("\n")),
+        blk(17, "", "{/* TaskDetailDialog に props を追加 */}", "<TaskDetailDialog",
+            "  // ...Day 15 で渡した props...", "  extra={1}", "/>"),
+    ]
+    merged = target.apply_insertions(target.render(elided[:1]), elided, 15)
+    if "extra={1}" in merged:
+        fails.append("❌ 省略記号の入った抜粋を当ててしまっている")
+    if "open={detailOpen}" not in merged:
+        fails.append("❌ 省略記号の抜粋で元の props を消している")
+
+    # 採った版より後の日の書き換えだけを当てる。
+    blocks = [
+        blk(15, "", *PAGE_WITH_DIALOG.split("\n")),
+        blk(18, "", "{/* 権限判定を渡す */}", "<TaskDetailDialog canEditProject={f} />"),
+    ]
+    merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
+    if "canEditProject={f}" not in merged:
+        fails.append("❌ 後の日の要素の書き換えが当たっていない")
+    if "canEditProject" in target.apply_insertions(target.render(blocks[:1]), blocks, 18):
+        fails.append("❌ 採った版と同じ日以前の書き換えまで当てている")
+    return fails
+
+
 def check_scaffold_replacement() -> list[str]:
     """scaffold の配布物を、教材の抜粋で上書きしてしまわないことを確かめる。"""
     fails = []
@@ -493,6 +561,7 @@ CHECKS = (
     ("置き換えと追記の境界", check_version_boundary),
     ("まるごとか抜粋か", check_complete_file),
     ("差し込みの適用", check_insertion),
+    ("要素の書き換え", check_element_replacement),
     ("配布物の置き換え", check_scaffold_replacement),
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),

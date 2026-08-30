@@ -48,13 +48,6 @@
       "full_page": true
     },
     {
-      "name": "day04/public-url.png",
-      "day": 4,
-      "path": "/dashboard",
-      "note": "既存画像は Day 02 と同一画面の再掲。撮り直すのは day04_*.md:565 のキャプションが『ローカル本番モードで開いたダッシュボード』、:562 の確認ポイントが『Day 02 で作った自分用メッセージが見える』で、どちらもトップページでは満たせないため。",
-      "full_page": true
-    },
-    {
       "name": "day05/login.png",
       "day": 5,
       "path": "/login",

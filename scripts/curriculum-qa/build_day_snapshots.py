@@ -172,6 +172,20 @@ EXPORT_LIST = re.compile(r"^export\s*\{([^}]*)\}", re.M)
 # 差し込めないと、day16 が足す `addTime` 手続きが落ちて、day16 以降の
 # `time-log-dialog.tsx` が `api.task.addTime` を呼べずに型検査で落ちる。
 INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[）)]$")
+# 抜粋の先頭が JSX 要素なら、それは「その要素をこの形へ書き換える」という指示である。
+# day18 の `src/app/task/page.tsx` は `<TaskDetailDialog ... canEditProject={canEditProject} />`
+# だけを出して、呼び出し側へ引数を1本足す。差し込みでも丸ごとの書き直しでもないので、
+# 要素の置き換えとして扱わんと day18 以降がずっと古い版のままになる。
+ELEMENT_HEAD = re.compile(r"^\s*<([A-Z][\w.]*)\b")
+# 「ここは前に書いたものがそのまま入る」を表す省略記号。`// ...Day 15 で渡した props...` の形。
+# これが入った抜粋は、そこだけでは元の中身を復元できない。要素ごと置き換えると
+# 前に渡していた props が消え、しかも `//` が JSX の属性の位置に残って構文エラーになる
+# （day16 の `src/app/task/page.tsx` の `<TaskCard>` がこれ）。
+ELISION = re.compile(r"^\s*(?://|\{?/\*)\s*\.{2,}")
+
+# チャンクの先頭に1行だけ置かれる、貼る位置の説明。`{/* 権限判定を詳細ダイアログへ渡す */}` 等。
+LEAD_COMMENT = re.compile(r"^\s*(?://|\{/\*)")
+
 # 差し込む1本が複数チャンクに割れたときの、2つ目以降の注記。
 CONTINUATION = re.compile(r"続き")
 # 差し込み先の目印になる行。オブジェクトの要素（`delete: protectedProcedure`）と
@@ -427,6 +441,72 @@ def insert_fragment(text: str, name: str, where: str, fragment: str) -> str | No
     return None
 
 
+def operation_head(lines: tuple[str, ...]) -> str:
+    """そのチャンクが何をする指示かを表す最初の行。
+
+    チャンクの見出しと、貼る位置の説明1行を飛ばす。どちらも教材のメタ情報で、
+    その下から本当の中身が始まる。
+    """
+    body = [line for line in strip_chunk_label(lines) if line.strip()]
+    if body and LEAD_COMMENT.match(body[0]):
+        body = body[1:]
+    return body[0] if body else ""
+
+
+def replace_element(text: str, name: str, fragment: str) -> str | None:
+    """`<name ...>` を fragment へ丸ごと置き換える。置き換え先が1つに決まらなければ None。
+
+    同じ名前の要素が複数あるときは、どれを指しているか決められない。`<Card>` が7つある
+    画面で最初の1つを書き換えると、教材が指していない場所を壊す。決められないときは
+    触らずに返す。
+    """
+    lines = text.split("\n")
+    starts = [i for i, line in enumerate(lines) if re.match(rf"^\s*<{re.escape(name)}\b", line)]
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    end = _element_end(lines, start, name)
+    if end is None:
+        return None
+    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def _tag_open_end(lines: list[str], start: int) -> tuple[int | None, bool]:
+    """開始タグが閉じる行と、それが自己終了（`/>`）かを返す。
+
+    属性の中の `>` は数えない。`onClick={() => x}` の `>` は波括弧の内側にあるので、
+    深さを見れば開始タグの終わりと区別できる。
+    """
+    depth = 0
+    for i in range(start, len(lines)):
+        masked = mask_code(lines[i])
+        for j, c in enumerate(masked):
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+            elif c == ">" and depth == 0:
+                return i, j > 0 and masked[j - 1] == "/"
+    return None, False
+
+
+def _element_end(lines: list[str], start: int, name: str) -> int | None:
+    """`<name` が始まる行から、その要素が終わる行の次を返す。閉じが無ければ None。"""
+    opened, self_closing = _tag_open_end(lines, start)
+    if opened is None:
+        return None
+    if self_closing:
+        return opened + 1
+    depth = 1
+    for k in range(opened + 1, len(lines)):
+        masked = mask_code(lines[k])
+        depth += len(re.findall(rf"<{re.escape(name)}\b", masked))
+        depth -= len(re.findall(rf"</{re.escape(name)}\s*>", masked))
+        if depth <= 0:
+            return k + 1
+    return None
+
+
 def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
     """採った版より後の日の「どこへ入れるか」付きの抜粋を、順に差し込む。
 
@@ -438,7 +518,8 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         if b.day <= after_day:
             continue
         m = INSERT_NOTE.match(b.note)
-        if not m:
+        element = None if m else ELEMENT_HEAD.match(operation_head(b.lines))
+        if not m and (element is None or b.note or is_marked_final(b)):
             continue
         # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
         # 続きは `（同じファイルの続き）` になる。続きを落とすと手続きが途中で切れる
@@ -448,7 +529,14 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             if nxt.day != b.day or not CONTINUATION.search(nxt.note):
                 break
             piece.append(nxt)
-        merged = insert_fragment(text, m.group(1), m.group(2), render(piece))
+        body = render(piece)
+        if not m and any(ELISION.match(line) for line in body.split("\n")):
+            continue
+        merged = (
+            insert_fragment(text, m.group(1), m.group(2), body)
+            if m
+            else replace_element(text, element.group(1), body)
+        )
         if merged is not None:
             text = merged
     return text
