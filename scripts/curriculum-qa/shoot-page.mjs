@@ -173,6 +173,11 @@ async function login(page, baseUrl, account) {
 }
 
 async function shoot(page, job, shot) {
+  // 幅の指定がある1枚だけ窓を狭める。列数が幅で変わることを見せる回に要る。
+  // 撮り終えたら宣言表の既定へ戻す。戻し忘れると、以降の1枚が黙って別の幅で撮れる。
+  if (shot.viewport) {
+    await page.setViewportSize(shot.viewport);
+  }
   // networkidle は使わない。tRPC の getSession が react-query で回り続ける画面（Day 08 以降の
   // AppLayout）では通信が止まらず、待ち切れずに落ちる。出ているべきものは wait_for で名指しする。
   await page.goto(`${job.baseUrl}${shot.path}`, { waitUntil: 'load' });
@@ -203,6 +208,9 @@ async function shoot(page, job, shot) {
   if (rects.length > 0) {
     await clearMarks(page);
   }
+  if (shot.viewport) {
+    await page.setViewportSize(job.viewport);
+  }
   return {
     name: shot.name,
     path: out,
@@ -228,11 +236,15 @@ async function main() {
   await page.clock.resume();
   const done = [];
   try {
-    let loggedIn = false;
+    // 同じ日でも見る人が変わる回がある（Day 09 の空状態はどのプロジェクトにも
+    // 属さないアカウントで開いた画面）。前の Cookie が残ったままだと、指定した
+    // アカウントではなく前の1枚の続きが撮れるので、変わったら入り直す。
+    let signedInAs = null;
     for (const shot of job.shots) {
-      if (shot.login && !loggedIn) {
+      if (shot.login && shot.login.email !== signedInAs) {
+        await context.clearCookies();
         await login(page, job.baseUrl, shot.login);
-        loggedIn = true;
+        signedInAs = shot.login.email;
       }
       done.push(await shoot(page, job, shot));
     }

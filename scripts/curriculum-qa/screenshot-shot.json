@@ -13,7 +13,8 @@
     "          複数書くと書いた順に ①②③ の番号バッジが付く。",
     "  full_page ページ全体を撮るか。省略でビューポートのみ。",
     "  clip    切り抜く範囲。{selector, padding}。full_page とは同時に書けない。",
-    "  note    なぜこの1枚が要るかの覚え書き。出力には出ない。"
+    "  note    なぜこの1枚が要るかの覚え書き。出力には出ない。",
+    "  viewport この1枚だけ窓の大きさを変える。省略で先頭の viewport。"
   ],
   "viewport": {
     "width": 1440,
@@ -196,6 +197,72 @@
         "selector": "[role='alertdialog']",
         "padding": 48
       }
+    },
+    {
+      "name": "day09/project-list.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "note": "共有の project-list.png は Day 09 に2回・Day 11 に1回使われている。実画像はサイドバー7項目・上部検索バー・シードに無い『社内データ分析基盤』が写る（scan-day09-16.md (g) Day 09）。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-list-header.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "note": "Step 9 の確認ポイントは『新規プロジェクトボタンが右上にある』『アーカイブ表示スイッチを押すと一覧が空になる』の2点。どちらも画像のどこを見るかの指示が無かった（(g) の③視覚指示 0件）。",
+      "marks": [
+        {
+          "selector": "button:has-text('新規プロジェクト')",
+          "label": "今日つけたボタン"
+        },
+        {
+          "selector": "div:has(> #show-archived)",
+          "label": "アーカイブ表示スイッチ"
+        }
+      ]
+    },
+    {
+      "name": "day09/responsive.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "note": "Step 10 の確認表『ブラウザ幅を変える→カードの列数が変わる』の1枚。既存の day09-responsive.png は 1440 幅のままで、幅を変えた証拠になっていない。",
+      "viewport": {
+        "width": 430,
+        "height": 900
+      },
+      "full_page": true
+    },
+    {
+      "name": "day09/empty.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "empty@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=プロジェクトが見つかりません",
+      "note": "Step 7 の空状態。読者が自分で見るには、どのプロジェクトにも属さないアカウントで入ればよい。シードの『新人 太郎』がそれに当たる。",
+      "marks": [
+        {
+          "selector": "div:has(> p:text-is('プロジェクトが見つかりません。'))",
+          "label": "0件のときの表示"
+        }
+      ]
     }
   ]
 }

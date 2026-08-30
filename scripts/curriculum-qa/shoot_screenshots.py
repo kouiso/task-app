@@ -114,6 +114,7 @@ class Shot(NamedTuple):
     marks: tuple[Mark, ...]
     full_page: bool
     clip: Clip | None
+    viewport: dict[str, int] | None
 
 
 class Config(NamedTuple):
@@ -276,19 +277,89 @@ class DaySeed(NamedTuple):
     comments: tuple[dict[str, str], ...]
 
 
+def replace_one(items: tuple[dict[str, Any], ...], key: str, **changes: Any) -> tuple[dict[str, Any], ...]:
+    """`key` の1件だけを書き換えた並びを返す。
+
+    読者はその日に1件しか触らないことが多い。全文を書き写すと、書き写し損ねた欄が
+    そのまま画像の間違いになるので、変える欄だけを名指しする。
+    """
+    if not any(i["key"] == key for i in items):
+        raise KeyError(f"{key} がありません")
+    return tuple({**i, **changes} if i["key"] == key else i for i in items)
+
+
+# Day 10 Step 8 の動作確認で読者が1件作る（`day10_...md:838-848` の表 手順1〜6）。
+# 名前は教材が指定していないが、`day10_...md:817` の alt が「ポートフォリオサイト」と
+# 呼んでいるのでそれに合わせる。作成者が OWNER として1人だけ入る（`day10_...md:161-163`）。
+READER_PROJECT: dict[str, Any] = {
+    "key": "portfolio",
+    "name": "ポートフォリオサイト",
+    "description": "自分の作品をまとめるサイト",
+    "color": "#9c27b0",
+    "startDate": None,
+    "endDate": None,
+    "isArchived": False,
+    "members": [{"email": "admin@example.com", "role": "OWNER"}],
+}
+
+# Day 14 Step 9 の動作確認で読者が1件作る（`day14_...md:1408-1420`）。
+# 「Webサイトリニューアル」に作ると position が 4 になり、本文 `:1414` の
+# 「一覧のいちばん下に足されます」と並びが一致する。
+READER_TASK: dict[str, Any] = {
+    "key": "reader",
+    "title": "トップページの文言を見直す",
+    "description": "公開前に伝わりにくい言い回しを直す",
+    "status": "TODO",
+    "priority": "MEDIUM",
+    "dueDate": None,
+    "completedAt": None,
+    "estimatedHours": None,
+    "actualHours": 0,
+    "timeSpentMinutes": 0,
+    "position": 4,
+    "projectKey": "website",
+    "createdByEmail": "admin@example.com",
+    "assigneeEmail": None,
+}
+
+# Day 15 Step 11 の動作確認で優先度を1件上げる（`day15_...md:997-999`）。
+# 消すのは Day 14 で自分が作ったものにする（`day15_...md` は対象を指定していないが、
+# `day11_...md:1101` が初期データを消すなと同じ理由で断っているのに揃える）。
+DAY15_TASKS = replace_one(SEED_TASKS, "api", priority="HIGH")
+
+# Day 16 Step 4 の動作確認（`day16_...md:900-905`）。ステータスを1件変え、
+# 30分と45分を続けて記録する。本文 `:933` が「合計が 1h 15m になるか」と書いているので、
+# 0分から始まる「API仕様書作成」に足すと画面の数字が本文とそのまま一致する。
+DAY16_TASKS = replace_one(DAY15_TASKS, "api", status="IN_PROGRESS", timeSpentMinutes=75)
+
+
 # 変わった日だけ書く。書いていない日は直前の記述を引き継ぐ（読者の手元も同じで、
-# 何もしなければ前日のまま）。根拠は各 scan の (f)。
+# 何もしなければ前日のまま）。根拠は各 scan の (f) と、そこから引いた教材の行。
 #
 #   day01: scan-day01-08.md (f) Day 01 — scaffold の db:seed 直後。読者が作ったものは0件。
 #   day06: scan-day01-08.md (f) Day 06 — 読者が Step 10 で自分のアカウントを1件登録する。
+#   day10: scan-day09-16.md (f) Day 10 — Step 8 の動作確認でプロジェクトを1件作る。
+#   day11: `day11_...md:1101-1105` — Day 10 で作った1件を消す。`:1140-1145` の手順5で
+#          アーカイブを解除させるので、この日の終わりに隠れているプロジェクトは無い
+#          （scan の (f) は「1件アーカイブされたまま」と書くが、現在の本文と食い違う）。
+#   day14: scan-day09-16.md (f) Day 14 — Step 9 の動作確認でタスクを1件作る。
+#   day15: scan-day09-16.md (f) Day 15 — Step 11 で1件消し、1件の優先度を変える。
+#   day16: scan-day09-16.md (f) Day 16 — Step 4 でステータス1件と作業時間を2回記録する。
+#   day17: `day17_...md:919` が「初期データのままなら期限切れに1枚」と書くとおり、
+#          この日は読者がデータを作らない。day16 の記述をそのまま引き継ぐ。
 DAY_SEEDS: dict[int, DaySeed] = {
     1: DaySeed(SEED_USERS, SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
     6: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
+    10: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS + (READER_PROJECT,), SEED_TASKS, SEED_COMMENTS),
+    11: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS, SEED_COMMENTS),
+    14: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, SEED_TASKS + (READER_TASK,), SEED_COMMENTS),
+    15: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY15_TASKS, SEED_COMMENTS),
+    16: DaySeed(SEED_USERS + (READER_USER,), SEED_PROJECTS, DAY16_TASKS, SEED_COMMENTS),
 }
 
-# (f) を読んで裏を取れている最後の日。ここから先は `scan-day09-16.md` 以降の (f) を
+# (f) を読んで裏を取れている最後の日。ここから先は `scan-day17-24.md` 以降の (f) を
 # 読んで DAY_SEEDS へ足すまで撮らない。
-MAX_SEEDED_DAY = 8
+MAX_SEEDED_DAY = 17
 
 
 def seed_for_day(day: int) -> DaySeed:
@@ -374,6 +445,25 @@ def validate_clip(raw: Any, where: str) -> Clip | None:
     return Clip(selector, padding)
 
 
+def validate_viewport(raw: Any, where: str) -> dict[str, int] | None:
+    """1枚だけ窓の大きさを変える指定を確かめる。
+
+    幅で列数が変わることを見せる回だけに使う。既定は宣言表の先頭の `viewport` で、
+    そこを動かすと全冊の画像がまとめて変わるので、1枚ぶんはここで受ける。
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or not {"width", "height"} <= set(raw):
+        raise ValueError(f"{where}: viewport には width と height が要ります")
+    size = {}
+    for k in ("width", "height"):
+        v = raw[k]
+        if not isinstance(v, int) or isinstance(v, bool) or v < 320:
+            raise ValueError(f"{where}: viewport の {k} は 320 以上の整数にしてください: {v!r}")
+        size[k] = v
+    return size
+
+
 def validate_shot(raw: Any, index: int) -> Shot:
     """1枚ぶんの宣言を確かめる。"""
     where = f"shots[{index}]"
@@ -416,6 +506,7 @@ def validate_shot(raw: Any, index: int) -> Shot:
         marks=validate_marks(raw.get("marks"), where),
         full_page=full_page,
         clip=clip,
+        viewport=validate_viewport(raw.get("viewport"), where),
     )
 
 
@@ -668,6 +759,7 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
                     "full_page": s.full_page,
                     "clip": None if s.clip is None else {"selector": s.clip.selector, "padding": s.clip.padding},
                     "marks": [{"selector": m.selector, "label": m.label} for m in s.marks],
+                    "viewport": s.viewport,
                 }
                 for s in shots
             ],
