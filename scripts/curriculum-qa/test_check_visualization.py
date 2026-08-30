@@ -8,6 +8,10 @@
   1. 表の数（3本以上のパイプを含む行を数え、'---' を含む行は除く / 4以上）
   2. スクショ位置（5パターンのどれかに当たる行を数える / 3以上）
   3. Mermaid 図（Day 4,7,9,13,16,21,27 だけ必須）
+  4. 同一ファイル内の画像重複（既定は WARNING、フラグ/環境変数で FAIL）
+
+4 は既定と FAIL 化の両モードを固定する。既定が黙って FAIL に変わると corpus 全体が
+落ちるし、逆に FAIL 化の経路が壊れると撮り直し完了後に切り替えられなくなる。
 
 check_visualization は純粋関数を切り出していないので、一時ファイルに書いて
 本体を丸ごと動かし、標準出力の件数と終了コードの両方を突き合わせる。
@@ -16,6 +20,7 @@ check_visualization は純粋関数を切り出していないので、一時フ
 """
 
 import io
+import os
 import re
 import shutil
 import sys
@@ -25,7 +30,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from check_visualization import check_visualization  # noqa: E402
+from check_visualization import (  # noqa: E402
+    FAIL_ON_DUPLICATE_IMAGE_ENV,
+    check_visualization,
+    duplicate_image_is_fatal,
+)
 
 REQUIRED_MERMAID_DAYS = {4, 7, 9, 13, 16, 21, 27}
 
@@ -56,8 +65,10 @@ def make_tempdir() -> str:
         shutil.rmtree(directory)
 
 
-def run_checker(filename: str, content: str) -> tuple[int, tuple[int, int, int]]:
-    """(終了コード, (表, スクショ, Mermaid)) を返す。"""
+def run_checker(
+    filename: str, content: str, fail_on_duplicate_image: bool = False
+) -> tuple[int, tuple[int, int, int], int]:
+    """(終了コード, (表, スクショ, Mermaid), 重複画像件数) を返す。"""
     directory = make_tempdir()
     try:
         path = Path(directory) / filename
@@ -66,10 +77,11 @@ def run_checker(filename: str, content: str) -> tuple[int, tuple[int, int, int]]
         exit_code = 0
         with redirect_stdout(buffer):
             try:
-                check_visualization(str(path))
+                check_visualization(str(path), fail_on_duplicate_image=fail_on_duplicate_image)
             except SystemExit as exc:
                 exit_code = exc.code if isinstance(exc.code, int) else 1
-        return exit_code, parse_counts(buffer.getvalue())
+        output = buffer.getvalue()
+        return exit_code, parse_counts(output), parse_duplicate_count(output)
     finally:
         shutil.rmtree(directory)
 
@@ -82,6 +94,12 @@ def parse_counts(output: str) -> tuple[int, int, int]:
         # 件数の出力自体が消えたら、以降の突き合わせが全部無意味になるので即失敗させる。
         values.append(int(found.group(1)) if found else -1)
     return tuple(values)
+
+
+def parse_duplicate_count(output: str) -> int:
+    """重複画像の件数。出力が消えたら -1 を返して必ず失敗させる。"""
+    found = re.search(r'重複画像: (\d+)', output)
+    return int(found.group(1)) if found else -1
 
 
 # (テスト名, ファイル名, 本文, 期待する終了コード, 期待する (表, スクショ, Mermaid))
