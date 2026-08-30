@@ -29,15 +29,25 @@ type SeedProject = {
   name: string;
   description: string;
   color: string;
+  startDate: string | null;
+  endDate: string | null;
+  isArchived: boolean;
   members: SeedMember[];
 };
 
+// 期限・見積・合計作業時間は Day 13 以降のカードと詳細ダイアログに出る。
+// 欠けたまま撮ると、読者の画面には出ている行が画像から消える。
 type SeedTask = {
   key: string;
   title: string;
   description: string;
   status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  dueDate: string | null;
+  completedAt: string | null;
+  estimatedHours: number | null;
+  actualHours: number;
+  timeSpentMinutes: number;
   position: number;
   projectKey: string;
   createdByEmail: string;
@@ -108,6 +118,9 @@ async function apply(payload: SeedPayload): Promise<void> {
         name: p.name,
         description: p.description,
         color: p.color,
+        startDate: toDate(p.startDate),
+        endDate: toDate(p.endDate),
+        isArchived: p.isArchived,
         members: {
           create: p.members.map((m) => ({
             userId: requireId(userIds, m.email, `project ${p.key} のメンバー`),
@@ -128,6 +141,11 @@ async function apply(payload: SeedPayload): Promise<void> {
         description: t.description,
         status: t.status,
         priority: t.priority,
+        dueDate: toDate(t.dueDate),
+        completedAt: toDate(t.completedAt),
+        estimatedHours: t.estimatedHours,
+        actualHours: t.actualHours,
+        timeSpentMinutes: t.timeSpentMinutes,
         position: t.position,
         projectId: requireId(projectIds, t.projectKey, `task ${t.key} の project`),
         createdById: requireId(userIds, t.createdByEmail, `task ${t.key} の作成者`),
@@ -149,6 +167,11 @@ async function apply(payload: SeedPayload): Promise<void> {
       },
     });
   }
+}
+
+/** 日付は JSON を跨げないので文字列で受け取る。 */
+function toDate(value: string | null): Date | null {
+  return value === null ? null : new Date(value);
 }
 
 /** 参照先が無いまま進むと、原因の分からない空の画面が撮れる。ここで止める。 */

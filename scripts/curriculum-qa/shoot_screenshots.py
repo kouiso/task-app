@@ -145,12 +145,16 @@ READER_USER: dict[str, str] = {
     "password": "password123",
 }
 
+# 期間・アーカイブ状態は `scripts/_seed/seed.ts:118-165` の実測。
 SEED_PROJECTS: tuple[dict[str, Any], ...] = (
     {
         "key": "website",
         "name": "Webサイトリニューアル",
         "description": "企業サイトの全面リニューアルプロジェクト",
         "color": "#1976d2",
+        "startDate": "2025-01-01",
+        "endDate": "2025-06-30",
+        "isArchived": False,
         "members": [
             {"email": "admin@example.com", "role": "OWNER"},
             {"email": "user1@example.com", "role": "MEMBER"},
@@ -162,6 +166,9 @@ SEED_PROJECTS: tuple[dict[str, Any], ...] = (
         "name": "モバイルアプリ開発",
         "description": "iOS/Android向けアプリ開発",
         "color": "#4caf50",
+        "startDate": "2025-02-01",
+        "endDate": "2025-08-31",
+        "isArchived": False,
         "members": [
             {"email": "user1@example.com", "role": "OWNER"},
             {"email": "user2@example.com", "role": "ADMIN"},
@@ -169,6 +176,8 @@ SEED_PROJECTS: tuple[dict[str, Any], ...] = (
     },
 )
 
+# 期限・見積・合計作業時間は `scripts/_seed/seed.ts:178-252` の実測。Day 13 のカードは期限を、
+# Day 16 のカードは合計作業時間を出すので、ここが欠けると読者の画面から行が1本消えた絵になる。
 SEED_TASKS: tuple[dict[str, Any], ...] = (
     {
         "key": "mock",
@@ -176,6 +185,11 @@ SEED_TASKS: tuple[dict[str, Any], ...] = (
         "description": "新デザインのモックアップをFigmaで作成する",
         "status": "IN_PROGRESS",
         "priority": "HIGH",
+        "dueDate": "2025-02-15",
+        "completedAt": None,
+        "estimatedHours": 40,
+        "actualHours": 12,
+        "timeSpentMinutes": 720,
         "position": 1,
         "projectKey": "website",
         "createdByEmail": "admin@example.com",
@@ -187,6 +201,11 @@ SEED_TASKS: tuple[dict[str, Any], ...] = (
         "description": "ER図の作成とテーブル定義",
         "status": "DONE",
         "priority": "HIGH",
+        "dueDate": "2025-01-31",
+        "completedAt": "2025-01-28",
+        "estimatedHours": 24,
+        "actualHours": 20,
+        "timeSpentMinutes": 1200,
         "position": 2,
         "projectKey": "website",
         "createdByEmail": "admin@example.com",
@@ -198,6 +217,11 @@ SEED_TASKS: tuple[dict[str, Any], ...] = (
         "description": "RESTful APIの仕様書を作成",
         "status": "TODO",
         "priority": "MEDIUM",
+        "dueDate": "2025-02-28",
+        "completedAt": None,
+        "estimatedHours": 16,
+        "actualHours": 0,
+        "timeSpentMinutes": 0,
         "position": 3,
         "projectKey": "website",
         "createdByEmail": "admin@example.com",
@@ -209,6 +233,11 @@ SEED_TASKS: tuple[dict[str, Any], ...] = (
         "description": "基本機能のプロトタイプを実装",
         "status": "TODO",
         "priority": "HIGH",
+        "dueDate": "2025-03-15",
+        "completedAt": None,
+        "estimatedHours": 80,
+        "actualHours": 0,
+        "timeSpentMinutes": 0,
         "position": 1,
         "projectKey": "mobile",
         "createdByEmail": "user1@example.com",
@@ -220,6 +249,11 @@ SEED_TASKS: tuple[dict[str, Any], ...] = (
         "description": "ターゲットユーザーでのテスト",
         "status": "TODO",
         "priority": "MEDIUM",
+        "dueDate": "2025-04-30",
+        "completedAt": None,
+        "estimatedHours": 24,
+        "actualHours": 0,
+        "timeSpentMinutes": 0,
         "position": 2,
         "projectKey": "mobile",
         "createdByEmail": "user1@example.com",
