@@ -28,7 +28,12 @@ Day 27 では、`/project?projectId=...` で
 
 - Day 27 のプロジェクト詳細とアーカイブ機能が動いている
 - `/task` に複数のタスクが表示されている
-- 一括削除を試すため、消えてもよい練習用タスクを用意している
+- 一括削除を試すため、消えてもよい練習用タスクを 7 件以上用意している
+
+> 7 件という数には理由があります。Step 9 の動作確認は「3 件を完了」「2 件を削除」
+> 「5 件のステータスを変更」の順に進めます。削除で 2 件減ったあとに 5 件を選ぶので、
+> 始める時点で 7 件が同じ画面に並んでいる必要があります。初期データは 3 件しか見えないので、
+> `/task` から練習用のタスクを足してから始めてください。
 - `src/server/api/routers/task.ts` と `src/app/task/page.tsx` を編集できる
 
 > Day 13〜16 で作った import、`TaskCard`、
@@ -96,7 +101,7 @@ flowchart TD
 
 ---
 
-### 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
@@ -1045,9 +1050,14 @@ const handleBulkUpdateStatus = (
 
 `Object.entries(TASK_STATUS_LABELS)` の `value` は TypeScript では `string` 型として推論されます。しかし `handleBulkUpdateStatus` は `TaskStatus`（`'TODO' | 'IN_PROGRESS' | ...`）を期待しています。`isTaskStatus(value)` で「この文字列は確かに有効なステータスか」を確認することで、型安全に呼び出せます。
 
+この関数は写経の土台に最初から入っています。置き場所は `src/lib/constant/status.ts` です。
+下は中身を確かめるための引用です。**書き写すと同じ名前の関数が2つ並び、
+`Duplicate function implementation` でビルドが止まります。** 読むだけにしてください。
+
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
 ```typescript
-// filepath: src/lib/constant/status.ts
-// isTaskStatus 型ガード関数
+// filepath: src/lib/constant/status.ts（配布済み・写経しません）
 export function isTaskStatus(
   value: unknown
 ): value is TaskStatus {
@@ -1056,7 +1066,7 @@ export function isTaskStatus(
 }
 ```
 
-**確認ポイント**: `isTaskStatus` は `value in TASK_STATUS` で有効なステータスかを判定しています。
+**確認ポイント**: `src/lib/constant/status.ts` を開くと、上と同じ `isTaskStatus` がすでにあります。
 
 この関数は `value in TASK_STATUS` で「`TASK_STATUS` オブジェクトにこのキーが存在するか」をチェックし、型ガードとして機能します。
 
@@ -1105,11 +1115,14 @@ export function isTaskStatus(
 npm run lint
 ```
 
-エラーがなければ完成です。
+ここで整形の差分が並んでも、写経の間違いではありません。Day 05 で断ったとおり、
+この教材のコードは行の幅を狭く保つために Biome の整形前の形で載せています。
+`npm run fix` を実行すると Biome の形にそろい、差分は消えます。
+そのあともう一度 `npm run lint` を走らせて、残った指摘を読んでください。
 
 **確認ポイント**:
 - 上記のテスト項目がすべてパスする
-- `npm run lint` でエラーが出ない
+- `npm run fix` のあとの `npm run lint` でエラーが出ない
 - `npm run dev` でブラウザにエラーが出ない
 
 
@@ -1741,6 +1754,16 @@ const handleBulkUpdateStatus = (
 
 `title` に件数を差し込んでいるのは、承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので、通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
 
+## 今日のまとめ
+
+- [ ] `Set<string>` で選択中のタスク ID を管理できた
+- [ ] 全選択・全解除・部分選択（`indeterminate`）の3状態を作れた
+- [ ] 一括完了・一括削除・一括ステータス変更の3つを動かせた
+- [ ] 削除だけ確認ダイアログをはさむ理由を説明できる
+- [ ] `updateMany` で複数レコードを1回の DB アクセスで更新できた
+
+---
+
 ## つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
@@ -1750,25 +1773,6 @@ const handleBulkUpdateStatus = (
 | 一括操作後にチェックが残る | 操作成功後に`selectedTasks`をクリアしていない | `onSuccess`内で`setSelectedTasks(new Set())`を呼ぶ |
 | `updateMany`で型エラーが出る | `status`に文字列をそのまま渡している | `isTaskStatus`型ガードで検証してから渡す |
 | 全選択チェックボックスが常にON | `selectedTasks.size === tasks.length`の比較で`tasks`が`undefined`になる場合がある | `tasks?.length ?? 0`でnullチェックする |
-
----
-
-## Day 28 完了
-
-### 今日学んだこと
-
-| 概念 | 意味 | 使い場面 |
-|------|------|---------|
-| `Set<string>` | 重複なしの集合 | チェックボックスの選択 ID 管理 |
-| `indeterminate` | チェックボックスの「部分選択」状態 | 全選択ヘッダーで一部選択を表現 |
-| `updateMany` | 複数レコードを 1 回の DB アクセスで更新 | 一括操作・バッチ処理全般 |
-| `isTaskStatus` 型ガード | 文字列が `TaskStatus` か実行時に確認 | DropdownMenu の値を型安全に扱う |
-| `completedAt` の同時更新 | 完了日時も一緒に記録する | 完了操作で status と completedAt をセット |
-| `DropdownMenu` vs `Select` | 操作トリガー vs フォーム入力 | ステータス変更には DropdownMenu が適切 |
-| `Array.from(set)` | Set を API に渡せる配列に変換 | tRPC の mutation に渡すとき |
-| `invalidate()` | キャッシュを無効化して再取得 | データ変更後の画面更新 |
-
----
 
 ### 詰まりやすいポイントまとめ
 
@@ -1783,7 +1787,40 @@ const handleBulkUpdateStatus = (
 
 ---
 
-### 次回予告
+## 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| `Set<string>` | 重複しない集合。チェックボックスで選んだ ID の置き場に使う |
+| `indeterminate` | チェックボックスの「一部だけ選んでいる」状態 |
+| `updateMany` | 複数レコードを1回の DB アクセスでまとめて更新する Prisma のメソッド |
+| `isTaskStatus` | 文字列が `TaskStatus` かを実行時に確かめる型ガード |
+| `completedAt` | 完了した日時。完了操作で `status` と一緒に記録する |
+| `DropdownMenu` | 選んだ瞬間に処理を走らせる操作用の部品。`Select` は入力欄なので用途が違う |
+| `Array.from(set)` | `Set` を配列へ変換する。tRPC の mutation に渡すときに使う |
+| `invalidate()` | tRPC のキャッシュを捨てて取り直させる。一括操作のあとの画面更新に使う |
+
+---
+
+## 理解チェック
+
+今日の内容が身についたかを3問で確かめます。答えはそれぞれの問いの下にあります。
+
+**Q1**: 権限の確認に `every` を使い、`some` を使わないのはなぜですか。
+
+> **答え**: 権限の無いタスクが1件でも混ざったら、操作そのものを止めたいためです。選択は複数のプロジェクトをまたげるので、「編集はできるが削除はできない」タスクが紛れる場面が実際に起きます。`some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
+
+**Q2**: 全選択チェックボックスの分母を `tasks` ではなく `selectableTasks` にしているのはなぜですか。
+
+> **答え**: 閲覧しかできないタスクまで分母に入れると、選べるものを全部選んでも数が足りず、部分選択のままになるためです。読者からは「全部選んだのに全チェックにならない」という不可解な動きに見えます。
+
+**Q3**: 一括完了とステータス変更には確認ダイアログが無く、一括削除にだけあるのはなぜですか。
+
+> **答え**: 完了とステータス変更は元に戻せるのに対し、削除は DB から消えて元に戻せないためです。ボタンの見た目も、押した瞬間に走る赤い塗りつぶしと、確認をはさむボタンで区別してあります。
+
+---
+
+## 次回予告
 
 Day 29 では、ユーザー詳細・編集ページを作ります。Next.js の動的ルーティング `[id]` を使って、ユーザーごとの専用ページを実装します。
 

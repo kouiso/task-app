@@ -103,7 +103,7 @@ def check_apply_blocks() -> list[str]:
 
 
 # 置き換えと追記の境界。どれも material/30days-curriculum の現物から採った形である。
-# 左が「そのブロックだけを取り出した中身」、右が「書き直しの先頭か」。
+# (名前, 注記, 最初の行, ファイルの書き直しの先頭か)
 BOUNDARY_CASES: list[tuple[str, str, str, bool]] = [
     # day02 src/app/dashboard/page.tsx。版の先頭は注記を持たず、コードで始まる。
     ("版の先頭（export default）", "", "export default function DashboardPage() {", True),
@@ -120,42 +120,61 @@ BOUNDARY_CASES: list[tuple[str, str, str, bool]] = [
     ("JSX コメントの断片", "", "{/* メール入力欄の下に追加 */}", False),
     ("行コメントの断片", "", "// LoginFormコンポーネント内の先頭に追加", False),
     # 途中の行そのもの。JSX の途中や閉じ括弧だけのチャンク。
-    ("JSX の途中", "", "  <article className=\"card\">", False),
+    ("JSX の途中", "", '  <article className="card">', False),
     ("閉じ括弧だけ", "", "    </main>", False),
 ]
+
+
+def blk(day: int, note: str, *lines: str) -> "target.Block":
+    return target.Block(day, f"day{day:02d}_x.md", 1, "src/app/page.tsx", note, "tsx", lines)
 
 
 def check_version_boundary() -> list[str]:
     """置き換えと追記の境界を固定する。"""
     fails = []
     for name, note, first, want in BOUNDARY_CASES:
-        b = target.Block(1, "day01_x.md", 1, "src/app/page.tsx", note, "tsx", (first,))
-        if target.restarts_file(b, None) is not want:
+        if target.starts_module(blk(1, note, first)) is not want:
             fails.append(f"❌ {name}: 書き直しの先頭かの判定が {not want} になっている")
 
-    # `完成版` の run は先頭だけが書き直しで、続くチャンクは追記である。
-    def marked(text: str, note: str = "") -> target.Block:
-        return target.Block(5, "day05_x.md", 1, "src/app/login/page.tsx", note, "tsx", (text,))
+    # 最後の版とその続きだけが残る（day02 src/app/dashboard/page.tsx の形）。
+    kept = target.latest_version([
+        blk(1, "", "export default function A() {}"),
+        blk(2, "", "export default function B() {}"),
+        blk(2, "（同じファイルの続き）", "// B の続き"),
+    ])
+    if [b.lines[0] for b in kept] != ["export default function B() {}", "// B の続き"]:
+        fails.append(f"❌ 最後の版とその続きだけが残っていない: {[b.lines[0] for b in kept]}")
 
-    plain = marked("// onSubmit を書き換え")
-    head = marked("// 完成版: 'use client' と外部ライブラリの import")
-    tail = marked("// 完成版: プロジェクト内の部品の import")
-    if not target.restarts_file(head, plain):
-        fails.append("❌ 完成版の run の先頭で書き直しになっていない")
-    if target.restarts_file(tail, head):
-        fails.append("❌ 完成版の run の途中で書き直してしまっている")
-    if target.restarts_file(marked("// 完成版: 続き", "（同じファイルの続き）"), plain):
-        fails.append("❌ 注記付きの完成版チャンクで書き直してしまっている")
+    # `完成版` の run。途中に注記なしのチャンクが混ざっても run は切れない
+    # （day06 src/app/register/page.tsx は import とスキーマの間に続きを挟む）。
+    kept = target.latest_version([
+        blk(6, "", "// 進める前の断片"),
+        blk(6, "", "// 完成版: import部分", "import { z } from 'zod';"),
+        blk(6, "（同じファイルの続き）", "  },"),
+        blk(6, "", "// 完成版: 関数の前半", "export default function P() {}"),
+    ])
+    heads = [b.lines[0] for b in kept]
+    if heads != ["// 完成版: import部分", "  },", "// 完成版: 関数の前半"]:
+        fails.append(f"❌ 完成版の run が途中で切れている: {heads}")
 
-    # 並び全体を通したときに、最後の版とその続きだけが残ること。
-    blocks = [
-        marked("export default function A() {}"),
-        marked("export default function B() {}"),
-        marked("// B の続き", "（同じファイルの続き）"),
-    ]
-    kept = [b.lines[0] for b in target.latest_version(blocks)]
-    if kept != ["export default function B() {}", "// B の続き"]:
-        fails.append(f"❌ 最後の版とその続きだけが残っていない: {kept}")
+    # run はその日のもの。日が変われば次の日の完成版が改めて置き換える。
+    kept = target.latest_version([
+        blk(6, "", "// 完成版: 古い版", "export default function Old() {}"),
+        blk(7, "", "// 完成版: 新しい版", "export default function New() {}"),
+    ])
+    if [b.day for b in kept] != [7]:
+        fails.append(f"❌ 日をまたいだ完成版が前の日を置き換えていない: {[b.day for b in kept]}")
+
+    # チャンクの見出しは教材のメタ情報なので写経の中身へ入れない。
+    # `{/* 完成版: ... */}` が配列リテラルへ入ると構文エラーになる（day08 の focusCards）。
+    body = target.render([blk(8, "", "{/* 完成版: 残りのカード */}", "    { label: 'Today' },")])
+    if "完成版" in body:
+        fails.append(f"❌ チャンクの見出しを写経の中身へ混ぜている: {body!r}")
+    if "label: 'Today'" not in body:
+        fails.append(f"❌ 見出しを落とすときに中身まで落としている: {body!r}")
+    kept_label = target.render([blk(8, "", "const x = 1; // 完成版ではない普通の行")])
+    if "完成版ではない" not in kept_label:
+        fails.append("❌ 見出しでないコメントまで落としている")
     return fails
 
 
@@ -229,12 +248,41 @@ def check_tsconfig_excludes() -> list[str]:
     return []
 
 
+def check_triage_section() -> list[str]:
+    """NG の日の切り分けが、調べていないものを勝手に断定しないことを確かめる。"""
+    fails = []
+    results = [
+        target.DayResult(1, 70, True, "OK", "OK", ()),
+        target.DayResult(9, 80, True, "NG", "NG", ("x.ts(1,1): error TS1005",)),
+    ]
+    section = target.triage_section(results)
+    if "day01" in section:
+        fails.append("❌ 通った日を切り分けの表へ載せている")
+    if "day09" not in section or "判定不能（未調査）" not in section:
+        fails.append(f"❌ 未調査の日が「判定不能（未調査）」になっていない: {section!r}")
+
+    original = dict(target.TRIAGE)
+    try:
+        target.TRIAGE[9] = ("ツールの限界", "day13 と同じ、完成版が抜粋")
+        section = target.triage_section(results)
+    finally:
+        target.TRIAGE.clear()
+        target.TRIAGE.update(original)
+    if "ツールの限界" not in section:
+        fails.append("❌ 書いた切り分けが表へ出ていない")
+
+    if not target.triage_section([target.DayResult(1, 70, True, "OK", "OK", ())]) == "":
+        fails.append("❌ NG が無いのに切り分けの節を書いている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
     ("置き換えと追記の境界", check_version_boundary),
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),
+    ("NG の切り分け", check_triage_section),
     ("tsconfig の exclude", check_tsconfig_excludes),
 )
 

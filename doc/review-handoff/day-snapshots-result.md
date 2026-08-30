@@ -10,4 +10,12 @@
 
 | Day | ツリー構築 | tsc | build | 最初のエラー3行 |
 | --- | --- | --- | --- | --- |
-| day05 | OK（78 ファイル） | OK | OK | - |
+| day13 | OK（86 ファイル） | NG | NG | src/app/dashboard/page.tsx(1,10): error TS2305: Module '"@/component/layout/app-layout"' has no exported member 'AppLayout'.<br>src/app/project/page.tsx(6,10): error TS2305: Module '"@/component/layout/app-layout"' has no exported member 'AppLayout'.<br>src/app/project/page.tsx(66,62): error TS2339: Property 'project' does not exist on type 'CreateTRPCReactBase<BuiltRouter<{ ctx: { headers: Headers; session: SessionPayload \| null; }; meta: object; errorShape: { data: { zodError: typeToFlattenedError<any, string> \| null; code: "TOO_MANY_REQUESTS" \| ... 19 more ... \| "CLIENT_CLOSED_REQUEST"; httpStatus: number; path?: string; stack?: string; }; message: s...'. |
+
+## NG の日の切り分け
+
+「教材の欠陥」は現物を読んで確かめたものだけ。読んでいない日は「判定不能（未調査）」。
+
+| Day | 分類 | 根拠 |
+| --- | --- | --- |
+| day13 | 判定不能（未調査） | 現物と突き合わせていない |

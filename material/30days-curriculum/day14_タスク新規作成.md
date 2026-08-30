@@ -167,6 +167,8 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 ```
 
+ここだけ Prisma のメソッドではなく `$queryRaw` で SQL を直接書いています。行ロックを取る `FOR UPDATE` に当たるメソッドを Prisma が持っていないためで、この教材で生の SQL を書くのはここ1か所だけです。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
+
 `FOR UPDATE` は、同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため、同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメータとして渡され、文字列連結で SQL を作らない安全な書き方です。
 
 次に、指定した担当者がプロジェクトのメンバーかを確認するヘルパーを続けます。
@@ -677,7 +679,7 @@ export function TaskDialog({
   });
 ```
 
-`useForm` から受け取った7つは、すべてこのあとの入力欄で使います。`register` は Input と Textarea をフォームへつなぐ道具、`control` は Select をつなぐ道具で、この使い分けが Step 5 の山場になります。いちばん効いているのは `resolver: zodResolver(taskFormSchema)` の1行です。Step 1 で書いたスキーマが、ここで送信前の検問として組み込まれます。この行が抜けるとスキーマは書いただけの存在になり、タイトルが空でも送信が通ります。関数はまだ続くので、次のブロックへ進みます。
+`useForm` から受け取った7つのうち、`register` `handleSubmit` `control` `reset` `errors` の5つはこのあとの入力欄で使います。残る `watch` と `setValue` は入力欄ではなく、Step 3 で書く `useEffect` の中で使います。`register` は Input と Textarea をフォームへつなぐ道具、`control` は Select をつなぐ道具で、この使い分けが Step 5 の山場になります。いちばん効いているのは `resolver: zodResolver(taskFormSchema)` の1行です。Step 1 で書いたスキーマが、ここで送信前の検問として組み込まれます。この行が抜けるとスキーマは書いただけの存在になり、タイトルが空でも送信が通ります。関数はまだ続くので、次のブロックへ進みます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
@@ -771,6 +773,8 @@ export function TaskDialog({
 | `handleSubmit` | バリデーション後に送信 |
 | `control` | Controllerに渡してSelectを制御 |
 | `reset` | フォームの値をリセット |
+| `watch` | いま選ばれている値を読む（Step 3 で使用） |
+| `setValue` | 特定の項目だけ書き換える（Step 3 で使用） |
 | `errors` | バリデーションエラー情報 |
 
 **確認ポイント**:
@@ -1335,7 +1339,7 @@ const utils = api.useUtils();
 ページ全体が英語のエラーで止まります。`utils` は取得したデータの控えを操作するための入口で、
 このあとの `createMutation` で使います。
 
-`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので、Day 20 で作る一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは、他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうは、送信の直前にログインが切れていないかを確かめるために使います。作成者のIDはサーバーがセッションから決めるので、画面側が送る値ではありません。
+`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので、Day 20 で作る一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは、他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうは、いまログインしている本人が誰かを知るために使います。Step 8 の送信ハンドラーは、ここで受け取った `session?.user?.id` があるかどうかだけを見ます。値はDay 13 で一度取ったものをそのまま読むので、送信のたびにサーバーへ問い合わせ直すわけではありません。作成者のIDはサーバーがセッションから決めるので、画面側が送る値ではありません。
 
 **確認ポイント**:
 - `const utils = api.useUtils();` が追加できた
@@ -3048,10 +3052,22 @@ function TaskPageContent() {
     setSelectedTask(null);
   };
   const handleEdit =
-    (taskId: string) => {};
+    (taskId: string) => {
+      void taskId;
+    };
   const handleDelete =
-    (taskId: string) => {};
+    (taskId: string) => {
+      void taskId;
+    };
+```
 
+`handleEdit` と `handleDelete` の中身が `void taskId;` だけなのは、編集と削除を Day 15 で作るからです。`void taskId;` は「この引数を今は使わない」と書き残す形で、Day 09 と Day 13 でも同じ書き方をしました。空の `{}` にすると、使っていない引数として lint の警告が出ます。中身を入れる場所を先に決めておけば、明日は関数を差し替えるだけで済みます。
+
+続けて、読み込み中の早期 return を書きます。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 読み込み中の早期 return
   if (tasksLoading) {
     return (
       <AppLayout>
@@ -3061,7 +3077,7 @@ function TaskPageContent() {
   }
 ```
 
-`handleEdit` と `handleDelete` が空のままなのは、編集と削除を Day 15 で作るからです。中身を入れる場所を先に決めておくと、明日は関数を差し替えるだけで済みます。`tasksLoading` の早期 return を置くのは、読み込み中の `tasks` が `undefined` で、この後の `tasks.map(...)` が落ちるためです。
+`tasksLoading` の早期 return を置くのは、読み込み中の `tasks` が `undefined` で、この後の `tasks.map(...)` が落ちるためです。
 
 **見出しとフィルター**:
 
@@ -3281,6 +3297,22 @@ export default function TaskPage() {
 | setValueAs | register のオプションで入力値を型変換する関数 |
 | getProjectMembers | プロジェクトメンバー一覧を取得するAPI |
 | getMembersByProject | 選択したプロジェクトのメンバーだけを取得するAPI |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId)` は、何を確かめていますか。**
+
+A. 指定された担当者が、そのプロジェクトのメンバーとして登録されているかを確かめています。登録が無ければ `BAD_REQUEST` を返して保存しません。画面の担当者候補は選んだプロジェクトのメンバーだけに絞ってありますが、通信を書き換えれば別の人の id も送れます。断るのはサーバーの役目です。
+
+**Q2. ステータスの `Select` を `control` ではなく `register('status')` で登録すると、どうなりますか。**
+
+A. 値がフォームに入りません。shadcn/ui の `Select` は引き金が `<button>` で、`value` を持たず `change` も出さないためです。`register` はその2つを頼りに値を集めるので、見た目は選べているのに送信時は空のままになります。`Controller` と `control` を使うと、選択のたびに値をフォームへ書き戻せます。
+
+**Q3. 担当者の「未選択」を空文字ではなく `'unassigned'` という文字列で持つのは、なぜですか。**
+
+A. shadcn/ui の `Select` が空文字を「選択済みの値」として扱えず、選んでも placeholder が出たままになるためです。画面の上だけ `'unassigned'` という別の値を使い、送信するときに空文字へ戻します。DB に `'unassigned'` という担当者が保存されることはありません。
 
 ## 次回予告
 

@@ -231,6 +231,8 @@ const taskUpdateSchema = z.object({
 
 前半は 0-3 と同じで、送られてきた項目だけを詰めます。`dueDate` と `completedAt` は、値があれば `new Date(...)` で日付に変換し、空なら `null` にします。最後の2行は、プロジェクトの移動が起きるかどうかを判定しています。`isProjectChanging` は「新しい `projectId` が送られていて、しかも今のプロジェクトと違う」ときだけ真になります。`targetProjectId` は、移動するなら移動先、しないなら今のプロジェクトを指します。
 
+ここには `as string` が付いています。Day 13 では `as` を「中身を確かめずに正しいと言い張る書き方」として避けました。この行で使えるのは、直前の `isProjectChanging` が `data.projectId !== undefined` を確かめ済みだからです。ただし TypeScript はその確認が別の変数に入ったことまでは追えず、`as` で人間が保証する形になっています。判定と使用を1つの条件式にまとめれば `as` は消せます。自分で書くときは、まず条件の中で直接使えないかを試してください。
+
 #### 0-6. プロジェクトを移すときの確認
 
 プロジェクトを移す場合は、移動先でも編集権限があるかを確認します。並び順の採番は、Day 14 のロックを使い、実際の保存と同じトランザクション内で 0-9 に行います。
@@ -628,8 +630,11 @@ import { dateOnlyToUtcStartIso }
 
 入力欄が持っている期限は `2026-07-26` という日付だけの文字列ですが、Step 0 で書いた `update` が受け取るのは時刻まで含んだ形です。`dateOnlyToUtcStartIso` はその変換を1か所にまとめた関数で、Day 14 の作成処理でも同じものを使いました。ここを自前の `new Date(...)` で済ませると、渡す文字列の形で読まれ方が変わります。日付だけなら世界共通の基準時刻（UTC）の0時、時刻まで書いて末尾に `Z` が無ければブラウザの時間帯の0時です。この差を取り違えると、期限が前日として保存されます。
 
+Day 14 で書いた `handleSubmit`（新規作成だけを扱っていたもの）を**置き換え**ます。2つ並べると同じ名前を2回宣言することになり、`Cannot redeclare block-scoped variable 'handleSubmit'` でページ全体が止まります。次のブロックから最後まで、これ1つで作成と編集の両方を受け持ちます。
+
 ```typescript
 // filepath: src/app/task/page.tsx
+// Day 14 の handleSubmit を、この中身へ丸ごと置き換えます
 const handleSubmit =
   (data: TaskFormData) => {
     if (data.id) {
@@ -761,6 +766,8 @@ import { DeleteConfirmDialog } from
 
 削除の確認はブラウザ標準の `window.confirm()` でも出せますが、見た目はブラウザ任せになり、通信中にボタンを押せなくする指定もできません。Day 11 のプロジェクト削除で使った `DeleteConfirmDialog` は同じ用途の共通部品なので、タスク側でも取り込むだけで済みます。新しく作る必要はありません。
 
+state と mutation は、Step 4 で書いた `handleSubmit` の下に追加してください。
+
 ```typescript
 // filepath: src/app/task/page.tsx
 // 削除用のstateとmutation
@@ -846,7 +853,7 @@ const handleDelete = (taskId: string) => {
 ![削除の確認ダイアログ。キャンセルと削除のボタンが並ぶ](./screenshots/project-delete-confirm.png)
 
 画像はプロジェクトを消すときのものなので見出しが違います。
-タスクの削除では `title` を渡していないため、見出しは `本当に削除しますか` の形になります。
+タスクの削除では `title` を渡していないため、見出しは `delete-confirm-dialog.tsx` の既定値である `本当に削除しますか？` になります。
 
 ---
 
@@ -2354,6 +2361,22 @@ export default function TaskPage() {
 | null vs undefined | nullは「クリア」、undefinedは「変更なし」 |
 | dateOnlyToUtcStartIso() | `YYYY-MM-DD` を UTC の 00:00:00.000Z に変換 |
 | invalidate | キャッシュを無効化して最新データを再取得 |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `update` の `where` に `updatedAt: new Date(expectedUpdatedAt)` を足すと、何が起きますか。**
+
+A. 「編集を開いた時点から更新時刻が変わっていないときだけ書き換える」という条件になります。誰かが先に保存していれば `updatedAt` が動いているので、条件に合う行が見つからず更新は失敗します。あとから保存した人が、先の人の変更を黙って上書きする事故を防げます。
+
+**Q2. `description: data.description || null` を `data.description ?? null` に変えると、どうなりますか。**
+
+A. 説明を空にしたつもりが、空文字のまま保存されます。`??` が `null` に置き換えるのは値が `null` か `undefined` のときだけで、空文字はそのまま通り抜けるためです。`||` は空文字も「無い」とみなして `null` に置き換えるので、説明を消す操作が意図どおりになります。
+
+**Q3. 期限が空のとき、更新では `null` を送り、新規作成では `undefined` を送るのは、なぜですか。**
+
+A. Prisma がこの2つを別の指示として読むためです。`null` は「入っている日付を消す」、`undefined` は「この項目には何もしない」という意味になります。新規作成には消す対象が無いため `undefined` で足ります。更新では、消したいのか触らないのかを区別します。
 
 ## 次回予告
 

@@ -481,6 +481,7 @@ import { Badge }
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
 {/* TaskDetailDialog の return 内、{taskDetail && ( の中。 */}
 {/* 担当者と期限のグリッドの下に <Separator /> を1つ置いてから貼る */}
+<div>
 <div className="flex items-center gap-2 mb-4">
   <h3 className="font-semibold">コメント</h3>
   <Badge variant="secondary"
@@ -491,6 +492,8 @@ import { Badge }
 ```
 
 `taskDetail.comments?.length ?? 0` の `?.` と `?? 0` は保険です。
+いちばん外側の `<div>` は、見出し・一覧・投稿フォームをまとめて包む箱です。ここで開いたまま Step 4 まで進み、Step 4 の最後に閉じます。この箱が無いと、`<Separator />` の下に置いた3つの部品が親のレイアウトへ直接並び、間隔の指定が効かなくなります。
+
 このコメント欄は `taskDetail` が届いたあとだけ描かれ、`task.getById` は `comments` を必ず含めて返します。
 つまりここでの `comments` は常に配列で、1件も無ければ空の配列です。
 今日のコードで `?.` と `?? 0` が実際に働く場面はありませんが、この式を `taskDetail` の判定の外へ移しても壊れない書き方になっています。
@@ -828,8 +831,16 @@ Day 13 で作った `canEditProject` をそのまま受け取り、投稿でき�
 
 入力欄に `aria-label` を付けているのは、`placeholder` が1文字打つと消えるためです。消えたあとは何の欄か確かめる手段がなくなります。フォーム全体を `canEditProject` で囲ってあるのは、閲覧者が押しても必ずサーバーに弾かれる操作を、そもそも画面へ出さないためです。
 
-ここで使っている `handleCommentSubmit` は、このあとの Step で定義します。
+ここで使っている `handleCommentSubmit` と `createCommentMutation` は、Step 5 で定義します。
+どちらも「見つからない」という型エラーが2種類出ますが、この時点では正常です。
 定義するまでこの画面は表示できないので、動きの確認はそのあとに行います。
+
+最後に、Step 3 の先頭で開いたコメント欄全体の箱を閉じます。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+</div>
+```
 
 **確認ポイント**:
 - `<form className="space-y-2">` でレイアウトする
@@ -1556,6 +1567,22 @@ export function TaskDetailDialog({
 | AvatarFallback | アバター画像がない時の代替表示 |
 | invalidate | キャッシュを無効化して再取得させる |
 | isPending | mutation が実行中かどうかのフラグ |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `comment.create` の入力スキーマに `userId` が入っていないのは、なぜですか。**
+
+A. 投稿者を画面側から指定させないためです。`userId` はサーバーが `ctx.session.userId` から入れます。入力に受け口が無ければ、他人になりすまして投稿する手段そのものが存在しません。誰が書いたかのように、本人しか決められない値はサーバーで決めます。
+
+**Q2. `z.string().trim().min(1)` を `z.string().min(1).trim()` の順に書き替えると、何が通ってしまいますか。**
+
+A. 半角スペースだけの本文が通ります。`min(1)` が先だと「長さ3」として合格し、そのあとの `trim()` で空文字になってから保存されるためです。画面にはアバターと日時だけが並んだ、中身の無い吹き出しが増えます。`trim()` を先に置けば、空白を落としたあとの長さで判定できます。
+
+**Q3. 投稿の成功後に呼ぶ `commentForm.reset()` を、`mutate()` の直後ではなく `onSuccess` の中に置くのは、なぜですか。**
+
+A. `onSuccess` はサーバーが成功を返したときだけ動くためです。`mutate()` の直後に置くと、通信が失敗しても入力欄だけが空になり、書いた文章が消えます。長いコメントを書いたあとで消えると、読者は最初から書き直すことになります。
 
 ## 次回予告
 

@@ -664,8 +664,8 @@ export default function WeeklyReportPage() {
 | 1 | `<AppLayout>` | 共通レイアウト |
 | 2 | `<div className="space-y-6">` | 縦方向の余白 |
 | 3 | ヘッダー（h1 + Select） | タイトルと期間選択 |
-| 3 | `grid grid-cols-3` | 3枚のサマリーカード |
-| 3 | `grid grid-cols-2` | グラフ3枚 |
+| 3 | `grid grid-cols-1 md:grid-cols-3` | 3枚のサマリーカード |
+| 3 | `grid grid-cols-1 lg:grid-cols-2` | グラフ3枚 |
 
 #### ページの骨格を完成させる
 
@@ -853,6 +853,9 @@ import Link from 'next/link';
 **ゴール**: Recharts で折れ線グラフと
 棒グラフを表示して、週次推移を可視化します。
 
+**実装**: Step 4 で書いた `if (isLoading)` の下、`return` 文の前に追加してください。
+`return` の中に書くと、JSX の途中に `const` を置くことになって構文エラーになります。
+
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
 // グラフ用データの変換処理（完了数・優先度）
@@ -874,6 +877,8 @@ const chartData =
 
 > Recharts のグラフは、1週分を1オブジェクトにまとめ、各系列の値をキーに持つ配列を受け取ります。
 > `weeklyData` はこの形と違うので、`name` や `completed` をキーに持つ形へ組み替えています。
+
+**実装**: `chartData` のすぐ下、`return` 文の前に続けて書きます。
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
@@ -901,34 +906,48 @@ const statusData =
 **確認ポイント**:
 - `statusData` はステータス別データを持つ
 
+**実装**: Step 4 の骨格に置いた `{/* Step 6: グラフ3枚のグリッド */}` の行を、
+次の外枠と置き換えます。3枚のカードはこの `<div>` の中に入ります。
+
+```typescript
+{/* filepath: src/app/report/weekly/page.tsx */}
+{/* グラフ3枚を包む外枠 */}
+<div className="grid grid-cols-1
+  lg:grid-cols-2 gap-6">
+```
+
+開いたままの `<div>` を先に置きます。閉じタグは3枚目のカードの後ろに書くので、ここで保存すると閉じタグ不足のエラーが出ます。続きを書けば消えます。
+
+外枠を `grid` にしておくと、この中に置いたカードが横に並びます。外枠が無いままカードだけを書くと、`col-span` の指定は効く相手がいないので無視されます。その結果、グラフ3枚が縦へ積まれます。エラーは出ないので、並び方だけが完成形と違う状態に気づけません。`grid-cols-1 lg:grid-cols-2` は、スマートフォンの幅では1列、`lg`（横幅 1024px 以上）から2列という意味です。
+
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
 {/* 週別完了タスク数の折れ線グラフ */}
-<Card className="col-span-1 lg:col-span-2">
-  <CardHeader>
-    <CardTitle>週別完了タスク数</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="h-[300px]">
-      <ResponsiveContainer width="100%"
-        height="100%">
-        <LineChart data={chartData ?? []}>
-          <CartesianGrid
-            strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis /><Tooltip /><Legend />
-          <Line type="monotone"
-            dataKey="completed"
-            stroke={CHART_PRIMARY_COLOR}
-            name="完了数" strokeWidth={2} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
+  <Card className="col-span-1 lg:col-span-2">
+    <CardHeader>
+      <CardTitle>週別完了タスク数</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="h-[300px]">
+        <ResponsiveContainer width="100%"
+          height="100%">
+          <LineChart data={chartData ?? []}>
+            <CartesianGrid
+              strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis /><Tooltip /><Legend />
+            <Line type="monotone"
+              dataKey="completed"
+              stroke={CHART_PRIMARY_COLOR}
+              name="完了数" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </CardContent>
+  </Card>
 ```
 
-折れ線を選んだのは、このカードで見せたいものが件数そのものではなく増減の向きだからです。棒でも件数は読めますが、週から週への向きは線のほうが速く目に入ります。だから `col-span-2` で横幅を2つぶん取り、時間の流れを長く見せています。
+折れ線を選んだのは、このカードで見せたいものが件数そのものではなく増減の向きだからです。棒でも件数は読めますが、週から週への向きは線のほうが速く目に入ります。だから `col-span-1 lg:col-span-2` で横幅を2つぶん取り、時間の流れを長く見せています。
 
 `<div className="h-[300px]">` で高さを固定しているのは、`ResponsiveContainer` に `height="100%"` を指定しているためです。親に高さが無いと 100% は 0 と計算され、グラフは1本も描かれません。Day 22 の円グラフでも、この高さ指定と `ResponsiveContainer` を組にして使いました。
 
@@ -936,32 +955,32 @@ const statusData =
 
 **確認ポイント**:
 - `LineChart` で折れ線グラフを描画している
-- `col-span-2` で横幅いっぱいに表示される
+- `col-span-1 lg:col-span-2` で、画面が広いとき横幅いっぱいに表示される
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
 {/* 優先度別分布の棒グラフ */}
-<Card>
-  <CardHeader>
-    <CardTitle>優先度別分布</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="h-[300px]">
-      <ResponsiveContainer width="100%"
-        height="100%">
-        <BarChart data={chartData ?? []}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis /><Tooltip /><Legend />
-          <Bar dataKey="urgent" name="緊急"
-            fill={TASK_PRIORITY_COLORS.URGENT} />
-          <Bar dataKey="high" name="高"
-            fill={TASK_PRIORITY_COLORS.HIGH} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
+  <Card>
+    <CardHeader>
+      <CardTitle>優先度別分布</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="h-[300px]">
+        <ResponsiveContainer width="100%"
+          height="100%">
+          <BarChart data={chartData ?? []}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis /><Tooltip /><Legend />
+            <Bar dataKey="urgent" name="緊急"
+              fill={TASK_PRIORITY_COLORS.URGENT} />
+            <Bar dataKey="high" name="高"
+              fill={TASK_PRIORITY_COLORS.HIGH} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </CardContent>
+  </Card>
 ```
 
 `Bar` を2本しか置いていないのは、`chartData` に `urgent` と `high` しか入れなかったからです。週次レポートで確かめたいのは「急ぎの仕事をどれだけ片づけたか」なので、低と中の件数は落としてあります。優先度4段階すべての内訳は、Day 22 で作った円グラフのほうで見られます。数を全部出さない判断も、グラフを読みやすくするための仕事です。
@@ -975,18 +994,18 @@ const statusData =
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
 {/* ステータス別積み上げ棒グラフのCard部分 */}
-<Card>
-  <CardHeader>
-    <CardTitle>ステータス別内訳</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="h-[300px]">
-      <ResponsiveContainer width="100%"
-        height="100%">
-        <BarChart data={statusData ?? []}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis /><Tooltip /><Legend />
+  <Card>
+    <CardHeader>
+      <CardTitle>ステータス別内訳</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="h-[300px]">
+        <ResponsiveContainer width="100%"
+          height="100%">
+          <BarChart data={statusData ?? []}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis /><Tooltip /><Legend />
 ```
 
 外側の作りは優先度グラフとそろえてありますが、`data` に渡すのが `chartData` から `statusData` へ変わっています。`XAxis` の `dataKey="name"` を書き換えずに済むのは、2つの配列のどちらも `name` に「1週目」のような週ラベルを入れてあるからです。Step 6 の冒頭で形をそろえておいた効き目が、ここで出ます。
@@ -999,25 +1018,27 @@ const statusData =
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
 {/* 3つのBarで積み上げ表示 */}
-          <Bar dataKey="done"
-            stackId="status" name="完了"
-            fill={TASK_STATUS_COLORS.DONE} />
-          <Bar dataKey="inProgress"
-            stackId="status" name="進行中"
-            fill={TASK_STATUS_COLORS.IN_PROGRESS} />
-          <Bar dataKey="inReview"
-            stackId="status" name="レビュー中"
-            fill={TASK_STATUS_COLORS.IN_REVIEW} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
+            <Bar dataKey="done"
+              stackId="status" name="完了"
+              fill={TASK_STATUS_COLORS.DONE} />
+            <Bar dataKey="inProgress"
+              stackId="status" name="進行中"
+              fill={TASK_STATUS_COLORS.IN_PROGRESS} />
+            <Bar dataKey="inReview"
+              stackId="status" name="レビュー中"
+              fill={TASK_STATUS_COLORS.IN_REVIEW} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </CardContent>
+  </Card>
+</div>
 ```
 
 **確認ポイント**:
 - `stackId="status"` で積み上げ棒グラフになっている
 - 3つのステータスが色分けで表示される
+- 3枚のグラフが `lg` 幅で2列に並び、折れ線グラフだけが横2つぶんを占める
 
 > `stackId` は今日初登場の指定です。同じ `stackId` を持つ
 > `Bar` 同士は、横に並ばず1本の棒として積み上がります。
@@ -2367,6 +2388,24 @@ Step 2 で読んだ見出しの定義は、この5列と同じ形です。あち
 | LineChart | Recharts の折れ線グラフ |
 | BarChart | Recharts の棒グラフ |
 | stackId | 積み上げグラフにするための識別子 |
+
+## 理解チェック
+
+今日の内容が身についたかを3問で確かめます。答えはそれぞれの問いの下にあります。
+
+**Q1**: `getWeeklyReport` の `where` は、どんな行を集計から落としていますか。3つ挙げてください。
+
+> **答え**: 1つ目は `completedAt` が `null` の行、つまりまだ終わっていないタスクです。2つ目は `assigneeId` が対象のユーザーと違う行、つまり他の人が片づけた仕事です。3つ目は `startDate` より前に完了した行、つまり指定した週数の外です。週次レポートは「この人がこの期間に終わらせた量」を出す画面なので、残っているタスクの件数は扱いません。
+
+**Q2**: `rangeEnd` を「明日の 00:00 UTC」ではなく「今この瞬間」にすると、週平均カードの数字はどう変わりますか。
+
+> **答え**: 本当より低く出ます。最終週が「今日の0時から現在まで」という途中の週になり、4週間と表示しながら実際は3週間と数時間ぶんしか集めていない状態で 4 で割ることになるためです。
+
+**Q3**: 週の範囲判定を `>= weekStart && < weekEnd` と書き、終了側だけ「未満」にしているのはなぜですか。
+
+> **答え**: 境界ちょうどに完了したタスクが、前の週と次の週の両方で数えられるのを防ぐためです。「開始以上・終了未満」でそろえておけば、どのタスクもどれか1つの週にだけ入ります。
+
+---
 
 ## 次回予告
 

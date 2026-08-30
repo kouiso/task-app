@@ -901,9 +901,11 @@ const handleTimeLogSuccess = useCallback(() => {
 - 時間を記録すると合計作業時間が増える
 - 続けて記録すると合計に加算される
 
-スクリーンショット: 時間記録後の合計作業時間の表示を確認してください。
+スクリーンショット: カードの下段に合計作業時間の行が増えたことを確認してください。
 
-![時間記録後の合計作業時間の表示](./screenshots/task-list.png)
+![タスクカードの下段に「合計作業時間」と「時間記録」ボタンが並んだ一覧画面](./screenshots/task-list.png)
+
+画像はまだ1件も記録していない状態なので、どのカードも `0m` のままです。自分の画面では、記録したカードだけ数字が増えます。
 
 ---
 
@@ -1786,6 +1788,7 @@ export function TaskCard({
                       {/* filepath: src/app/task/page.tsx */}
                       {/* 完成版: TaskCard へ渡す2つの props */}
                       <TaskCard
+                        key={task.id}
                         id={task.id}
                         title={task.title}
                         description={task.description}
@@ -1803,7 +1806,7 @@ export function TaskCard({
                       />
 ```
 
-Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると、記録は保存されているのに数字が `0m` のまま止まります。
+Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 と Day 13 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると、記録は保存されているのに数字が `0m` のまま止まります。
 
 ## 今日のまとめ
 
@@ -1830,6 +1833,22 @@ Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `o
 | refine | 複数項目をまたぐ独自ルールを足すzodの機能 |
 | zodResolver | zodのルールをreact-hook-formの検証につなぐ部品 |
 | invalidate | キャッシュを古い印にして再取得させる命令 |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `addTime` が `timeSpentMinutes` を `increment: input.minutesToAdd` で更新しているのは、何をしているコードですか。**
+
+A. 今の値を読み出さずに、DB へ「この分だけ増やしてほしい」と直接頼んでいます。読み出して足してから書き戻す形にすると、同じタスクへほぼ同時に2回記録したとき、あとの書き込みが先の記録を消します。`increment` なら DB の側で足すので、両方の記録が残ります。
+
+**Q2. 時間記録の入力スキーマから `refine`（合計が0分より大きい）を外すと、何が通ってしまいますか。**
+
+A. 時間と分の両方が0のまま送信できてしまいます。`hours` は0以上、`minutes` は0〜59を許すので、単体では0を弾けません。0分の記録が保存されると、作業していない記録が一覧に増え、合計作業時間は変わらないまま履歴だけが伸びます。2つの値を合わせて見る確認は `refine` にしか書けません。
+
+**Q3. 記録の成功後に `utils.task.getAll.invalidate()` を呼ぶのは、なぜですか。**
+
+A. 一覧が持っているキャッシュに「古い」という印を付けるためです。印を見つけたクエリは自動で取り直すので、記録した分がその場でカードの合計作業時間へ反映されます。呼ばないと DB の値は増えているのに画面の数字が変わらず、読者には保存できていないように見えます。
 
 ## 次回予告
 

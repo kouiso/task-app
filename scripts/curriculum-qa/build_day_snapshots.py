@@ -28,7 +28,7 @@ day N までの写経ブロックを `concat_by_file` で書き込み先ごと�
 
 同じ書き込み先へ何度もブロックが来る。全部繋ぐと `export default` が何度も現れて
 `TS2323 Cannot redeclare exported variable 'default'` になる。読者は書き直すのだから、
-後から来た完全版は前を置き換えるのが正しい。判定は `restarts_file` に置いた。
+後から来た完全版は前を置き換えるのが正しい。判定は `starts_module` と `latest_version` に置いた。
 規則は現物から決めた（`material/30days-curriculum/day02` の
 `src/app/dashboard/page.tsx` は同じ日に4つの版を出し、版の先頭だけが注記を持たない）。
 
@@ -106,6 +106,13 @@ MODULE_HEAD = re.compile(
 # 現物を読んだ結果を人がここへ書く。書いていない日は「判定不能（未調査）」と出る。
 # 推測で「教材の欠陥」と書かない。根拠は必ず現物の行を指すこと。
 TRIAGE: dict[int, tuple[str, str]] = {}
+
+# チャンクの見出し行。教材は長いファイルを分けて出すとき、各チャンクの先頭へ
+# `// 完成版: 取り込みと型定義` のような見出しを置く。すぐ上の `filepath:` の目印と
+# 同じ教材側のメタ情報であり、`iter_blocks` はその目印を落としている。見出しも同じ扱いにする。
+# 落とさないと、`{/* 完成版: 残りのカード */}` が配列リテラルの中へ入って構文エラーになる
+# （day08 `src/app/dashboard/page.tsx` の focusCards がこれ）。
+CHUNK_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成版[:：]")
 
 # エラーらしい行の目印。tsc は `error TS2304`、Next.js は `Failed to compile.` と
 # `Module not found:`、npm は `npm ERR!` を出す。
@@ -209,40 +216,57 @@ def is_marked_final(block: Block) -> bool:
     return any(FINAL_MARK in line for line in block.lines)
 
 
-def restarts_file(block: Block, previous: Block | None) -> bool:
-    """このブロックから書き込み先が書き直されるなら True。
+def starts_module(block: Block) -> bool:
+    """このブロックがファイルの1行目から始まる書き直し版なら True。
 
-    判定の根拠は3つで、どれも教材の書き方そのものである。
-
-    1. 注記（`（同じファイルの続き）` `（import に追加）` 等）が付いていれば、
-       教材が「これは前の続き・一部だ」と言っている。必ず追記。
-    2. `完成版` の run の先頭。教材はその日の最終形をこの語で示し、以降のチャンクへも
-       同じ語を付ける。run の途中では書き直さない。
-    3. 注記が無く、貼る位置の説明でもなく、ファイルの1行目に来られる構文で始まる。
-       day02 の `src/app/dashboard/page.tsx` は同じ日に4つの版を出すが、版の先頭だけが
-       この形をしており、続きのチャンクには必ず注記が付いている。
+    注記（`（同じファイルの続き）` `（import に追加）` 等）が付いていれば、教材が
+    「これは前の続き・一部だ」と言っているので違う。貼る位置の説明から始まる断片も違う。
+    day02 の `src/app/dashboard/page.tsx` は同じ日に4つの版を出すが、版の先頭だけが
+    注記を持たずコードで始まり、続きのチャンクには必ず注記が付いている。
     """
     if block.note:
         return False
-    if is_marked_final(block):
-        return previous is None or not is_marked_final(previous)
     head = first_code_line(block)
     return bool(head) and not COMMENT_HEAD.match(head) and bool(MODULE_HEAD.match(head))
 
 
 def latest_version(blocks: list[Block]) -> list[Block]:
-    """読者の手元に最後に残るブロックだけを、順番のまま返す。"""
+    """読者の手元に最後に残るブロックだけを、順番のまま返す。
+
+    `完成版` はその日の最終形なので、run の先頭で前を捨て、その日の残りは全部その run に
+    属する。run の途中には注記なしのチャンクも混ざる（day06 の
+    `src/app/register/page.tsx` は import と スキーマの間に `（同じファイルの続き）` を挟む）。
+    ブロック単体では run の内か外かを決められないので、日をまたぐまで状態で持つ。
+    """
     parts: list[Block] = []
-    previous: Block | None = None
+    day: int | None = None
+    in_final = False
     for b in blocks:
-        parts = [b] if restarts_file(b, previous) else [*parts, b]
-        previous = b
+        if b.day != day:
+            day, in_final = b.day, False
+        if in_final or b.note:
+            parts.append(b)
+        elif is_marked_final(b):
+            parts, in_final = [b], True
+        elif starts_module(b):
+            parts = [b]
+        else:
+            parts.append(b)
     return parts
+
+
+def strip_chunk_label(lines: tuple[str, ...]) -> list[str]:
+    """先頭のチャンク見出しを落とす。見出しが無ければそのまま返す。"""
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue
+        return list(lines[i + 1 :]) if CHUNK_LABEL.match(line) else list(lines[i:])
+    return []
 
 
 def render(blocks: list[Block]) -> str:
     """ブロックの並びを1つのファイルの中身にする。"""
-    return "\n".join("\n".join(b.lines).strip("\n") for b in blocks)
+    return "\n".join("\n".join(strip_chunk_label(b.lines)).strip("\n") for b in blocks)
 
 
 def apply_blocks(dest: Path, paths: list[Path]) -> int:

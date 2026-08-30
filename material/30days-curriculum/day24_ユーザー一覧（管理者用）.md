@@ -1368,6 +1368,24 @@ import { USER_ROLE } from '@/lib/constant/roles';
 | UserRoleBadge | ロール表示用の専用バッジコンポーネント |
 | variant="ghost" | 背景なしの控えめなボタンスタイル |
 
+## 理解チェック
+
+今日の内容が身についたかを3問で確かめます。答えはそれぞれの問いの下にあります。
+
+**Q1**: `api.user.getAll.useQuery(undefined, { enabled: isAdmin })` の `enabled: isAdmin` は何をしていますか。
+
+> **答え**: 管理者のときだけ、ユーザー一覧を取りに行くリクエストを送ります。これが無いと一般ユーザーがページを開いた瞬間にもリクエストが飛び、サーバーに「管理者権限が必要です」と弾かれて赤いトーストが出ます。情報は漏れませんが、画面が壊れているように見えます。
+
+**Q2**: 1つ目の `if (isCurrentUserLoading)` による early return を消すと、管理者がページを開いたとき何が起きますか。
+
+> **答え**: 管理者なのに一瞬だけ「アクセス権限がありません」のカードが出て、そのあと一覧へ切り替わります。`currentUser` が届く前は `undefined` なので、`isAdmin` も `false` になるためです。
+
+**Q3**: `getAll` を `protectedProcedure` ではなく `adminProcedure` で書くのはなぜですか。画面側に `if (!isAdmin)` があるのに、サーバー側でも判定するのはなぜですか。
+
+> **答え**: 画面側の JavaScript は読者の手元で動くので、書き換えれば `if (!isAdmin)` は通り抜けられます。`protectedProcedure` にすると、ログインさえしていれば誰でも全員のメールアドレスを受け取れます。他人の情報を守っているのは `adminProcedure` の1語だけで、画面の判定は表示を整えるためにあります。
+
+---
+
 ## 次回予告
 
 Day 25 では、プロフィールページとパスワード変更機能を実装します。

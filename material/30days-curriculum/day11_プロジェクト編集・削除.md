@@ -932,7 +932,7 @@ const handleArchive = (
 
 **実装**:
 
-まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1・3・6 で本実装に置き換えます**。TypeScript エラーを出さずに Day 11 を完了させるための一時定義です。
+まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1・3・6 で本実装に置き換えます**。`ProjectDetailView` に渡す値の置き場所を先に作っておくための一時定義です。なお、この仮定義を置いても Day 11 は型エラーが残ったまま終わります。理由はこの Step の後半で説明します。
 
 > **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleDetailClose` を、Step 3 で `memberDialogOpen` state を、Step 6 で `handleRemoveMember` を本実装したときに、それぞれこの仮定義を削除してください。`handleProjectClick` は Day 09 で置いた受け皿がそのまま残っているので、Day 12 の Step 1 ではその受け皿を書き換えます。
 
@@ -956,7 +956,7 @@ const handleRemoveMember = (_userId: string) => {
 `const projectDetail = undefined;` のように中身を空にしてあるのは、動くように見せないためです。中途半端に動く仮実装を置くと、Day 12 で本実装に差し替えるのを忘れても気付けません。
 
 **確認ポイント**:
-- `npm run dev` でTypeScript エラーが出ていない
+- 仮定義を4つとも書いた
 - これらは仮定義なので、Day 12 で削除することを覚えておく
 
 次に、`ProjectDetailView` コンポーネントのインポートを追加します。
@@ -969,12 +969,24 @@ import { ProjectDetailView } from
 ```
 
 この部品の型は `project.getById` の戻り値を参照しています。その手続きを書くのは Day 12 なので、
-この時点ではエディタに `getById` が無いという型エラーの出ることがあります。
-Day 12 Step 0 で `getById` を足すと消えます。写し間違いではありません。
+この時点ではエディタに `getById` が無いという型エラーが出ます。写し間違いではありません。
+
+**ここで出るエラーは1件にとどまりません。** 実際に数えると5件出ます。
+直接の原因は `getById` が無いことの1件だけです。残りの4件は、そこから連鎖して起きます。
+`getById` の戻り値が決まらないと `projectDetail` の型も決まらず、
+`project-detail-view.tsx` の中でその値を受けている箇所の型が芋づる式に決まらなくなるからです。
+5件とも Day 12 Step 0 で `getById` を足した時点でまとめて消えます。
+
+もう1つ、今日のうちに知っておいてほしいことがあります。
+**Day 11 を終えた時点で `npm run build` は通りません。** `npm run dev` は型を検査しないので
+画面は動きますが、`build` は型を見るのでここで止まります。Day 04 で「公開する前に必ず
+`npm run build`」と決めたので、今日ここで試すと失敗します。今日は失敗して正常です。
+`build` が通る状態に戻るのは Day 12 です。
 
 **確認ポイント**:
 - `@/component/project/project-detail-view` からインポートしている
-- `getById` に関する型エラーが出ても、そのまま次へ進む
+- 型エラーが5件出ても、そのまま次へ進む
+- `npm run build` が今日は落ちることを知っている
 
 プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`ProjectPageContent` 関数の return 直前（`if` 分岐の形）に以下を追加してください。
 
@@ -991,12 +1003,33 @@ if (projectIdParam && selectedProject) {
           () => setMemberDialogOpen(true)
         }
         onRemoveMember={handleRemoveMember}
+        onUpdateMemberRole={() => {}}
         onArchive={handleArchive}
+        canManageMembers={false}
+        canArchive={true}
       />
     </AppLayout>
   );
 }
 ```
+
+`ProjectDetailView` が求める props は8つで、どれも省略できません。今日の主役は
+`onArchive` です。ただし、ほかの props も値を渡さないと型が合いません。
+その状態では `npm run dev` が止まります。そこで今日の時点では、次のように仮の値を置いています。
+
+`onUpdateMemberRole={() => {}}` は、何も引数を受け取らず何もしない関数です。ロールを
+変える処理を書くのは Day 12 なので、今日は「呼ばれても何も起きない」形にしておきます。
+引数を書かない関数を渡せるのは、受け取る側が求める形より引数の少ない関数なら
+TypeScript が受け付けるからです。おかげで `ProjectMemberRole` 型を今日わざわざ
+読み込まずに済みます。
+
+`canManageMembers={false}` は、メンバーの追加・削除ボタンを今日は出さないという意味です。
+その機能を作るのは Day 12 なので、押せるボタンだけ先に見せても行き止まりになります。
+
+`canArchive={true}` は、今日作ったアーカイブボタンを出すためです。本来はログイン中の人の
+ロールから計算する値で、その計算は Day 12 で書きます。今日ログインしているのは初期データの
+プロジェクトの OWNER なので、計算しても結果は `true` になります。だから今日は答えを
+直接書いておき、Day 12 で計算に置き換えます。
 
 条件が `projectIdParam && selectedProject` の2つになっているのは、URL の値が `selectedProject` に写るまでに描画が1回はさまるからです。`/project?projectId=...` を直接開いた1回目では `useEffect` がまだ走っておらず、`selectedProject` は `null` のままです。`projectIdParam` だけで判定すると、この1回だけ中身の無い詳細画面が出ます。なお、この2つの条件は id のプロジェクトが実在するかまでは見ていません。存在しない id を開いたときの扱いは、Day 12 で `getById` が `NOT_FOUND` を返す形で決めます。
 
@@ -1015,7 +1048,10 @@ if (projectIdParam && selectedProject) {
 | `onBack` | `handleDetailClose` | `/project` に戻るだけ（仮） | Step 1 で本実装に置換 |
 | `onAddMemberClick` | `setMemberDialogOpen(true)` | state は仮定義済み | Step 3 で本実装に置換 |
 | `onRemoveMember` | `handleRemoveMember` | 何もしない（仮） | Step 6 で本実装に置換 |
+| `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleUpdateMemberRole` に置換 |
 | `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
+| `canManageMembers` | `false` を直接指定（仮） | ボタンを出さない | Step 2 で `hasPermission` の計算に置換 |
+| `canArchive` | `true` を直接指定（仮） | ボタンを出す | Step 2 で `hasPermission` の計算に置換 |
 
 スクリーンショット: プロジェクト詳細画面のアーカイブボタンの表示を確認してください。
 
@@ -1070,10 +1106,25 @@ PORT=3001 npm run dev
 
 #### アーカイブフローの確認
 
-1. プロジェクト詳細画面でアーカイブボタンをクリック
-2. 一覧からプロジェクトが非表示になることを確認
+アーカイブするのは「モバイルアプリ開発」にしてください。
+初期データのもう1つ「Webサイトリニューアル」は、Day 13 以降でタスクを作る舞台になります。
+そちらをアーカイブしたまま先へ進むと、一覧から消えてタスクを追加できなくなります。
+
+そして、**この確認の最後に必ずアーカイブを解除してください**。アーカイブしたままだと、
+Day 21 の統計カード、Day 22 のグラフ、Day 23 の週次レポートが、
+3日続けて数字ゼロのまま出ます。数え方が壊れているのではなく、数える対象が
+隠れているだけなのですが、画面を見ただけでは区別が付きません。
+
+1. プロジェクト一覧から「モバイルアプリ開発」のカードを開き、詳細画面のアーカイブボタンをクリック
+2. 一覧から「モバイルアプリ開発」が非表示になることを確認
 3. 「アーカイブ表示」スイッチをONにする
 4. アーカイブしたプロジェクトが表示されることを確認
+5. その状態でもう一度カードを開き、アーカイブボタンをクリックして解除する
+6. 「アーカイブ表示」スイッチをOFFに戻し、一覧にプロジェクトが2件そろっていることを確認
+
+手順5で同じボタンが解除として働くのは、`handleArchive` が今の `isArchived` を見て
+`archive` と `unarchive` を選び分けているからです。ボタンは1つでも、
+押したときの意味は今の状態で決まります。
 
 > スクリーンショット: アーカイブ表示を ON にした一覧画面
 >
@@ -1088,6 +1139,7 @@ PORT=3001 npm run dev
 - 更新後に一覧が自動更新される（`invalidate()` が動作している）
 - 削除前にshadcn/uiの確認ダイアログが表示される
 - アーカイブと解除が正しく動作する
+- 最後に解除まで済ませ、一覧にプロジェクトが2件そろっている
 
 ### Day 11 終了時点の完成コード
 
@@ -2049,7 +2101,10 @@ function ProjectPageContent() {
             () => setMemberDialogOpen(true)
           }
           onRemoveMember={handleRemoveMember}
+          onUpdateMemberRole={() => {}}
           onArchive={handleArchive}
+          canManageMembers={false}
+          canArchive={true}
         />
       </AppLayout>
     );
@@ -2260,6 +2315,22 @@ export default function ProjectPage() {
 | アーカイブ | データを削除せずに非表示にすること。復元が可能 |
 | キャッシュ無効化（invalidate） | tRPC のキャッシュを破棄して最新データを再取得させること |
 | assertMemberPermission | サーバー側で権限をチェックするヘルパー関数 |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `update` の `updateData` を空のオブジェクトから始めて、`if (data.name !== undefined)` で1つずつ足しているのは、何をしている処理ですか。**
+
+A. 送られてきた項目だけを更新の対象にしています。送られなかった項目は `updateData` に入りません。Prisma は受け取ったオブジェクトに書いてある列しか触らないので、残りの列は元の値のままになります。全項目をまとめて渡す書き方だと、変えるつもりのない列まで上書きしてしまいます。
+
+**Q2. `delete` の権限チェックを `assertMemberPermission(project.members, 'canDelete')` に書き換えると、何が起きますか。**
+
+A. ADMIN のメンバーが、プロジェクトごと削除できるようになります。`canDelete` はタスクを削除するための権限で、ADMIN にも与えてあるからです。プロジェクトの削除は中のタスクとコメントまで消える操作です。だから `delete` だけは共通の関数を使わず、OWNER かどうかを直接比べています。
+
+**Q3. `handleDelete` が `deleteMutation.mutate` を直接呼ばないのは、なぜですか。**
+
+A. 削除は取り消せない操作だからです。押した瞬間に消えると、間違えた人に打つ手が残りません。そこで `deleteTargetId` にどれを消すかだけ控えて、確認ダイアログを開きます。実際に実行する合図は `onConfirm` に預けます。押す動作を2回に分けることで、1回目と2回目のあいだに考え直す余地が生まれます。
 
 ## 次回予告
 

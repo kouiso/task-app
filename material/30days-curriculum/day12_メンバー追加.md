@@ -809,8 +809,9 @@ const canArchiveProject = currentMemberRole
 `<ProjectDetailView ... />` のタグは、Day 11 Step 9 で
 `projectIdParam && selectedProject` の分岐内にすでに置いてあります。
 新しく貼り足すのではなく、`<ProjectDetailView` から `/>` までを消して、
-次の形に書き換えてください。`onUpdateMemberRole`、`canManageMembers`、
-`canArchive` の3つが今日の追加分です。
+次の形に書き換えてください。渡す props の数は8つのままで、変わるのは中身です。
+Day 11 で仮の値を置いた `onUpdateMemberRole`、`canManageMembers`、`canArchive` の3つが、
+今日ここで本実装に変わります。
 
 ```typescript
 {/* filepath: src/app/project/page.tsx */}
@@ -831,6 +832,7 @@ const canArchiveProject = currentMemberRole
 
 **確認ポイント**:
 - `ProjectDetailView` に8つのpropsを渡している
+- `onUpdateMemberRole` `canManageMembers` `canArchive` の3つが、Day 11 の仮の値から変数に変わっている
 - `<ProjectDetailView` で始まるタグがファイル内に1つだけである
 - URLパラメータがある場合のみ表示される
 
@@ -2904,8 +2906,30 @@ export default function ProjectPage() {
 
 `useSearchParams` を使う部品は `Suspense` の内側に置く決まりがあります。外へ出すと、境界が無いというエラーでビルドが止まります。`export default` を付けたこの関数が、`/project` を開いたときに読まれるページ本体です。
 
+### Day 11 に残した型エラーの後始末
+
+Day 11 は型エラーを5件残したまま終わりました。今日 Step 0 で `getById` を書き、
+Step 2 で `ProjectDetailView` に8つの props をそろえたので、5件とも消えているはずです。
+最後にそれを確かめます。
+
+```bash
+# filepath: ターミナル
+npm run build
+```
+
+`Compiled successfully` と出れば、Day 11 から持ち越した型エラーは全部片づいています。
+Day 11 で `build` が落ちたのは、まだ書いていない `getById` を参照していたからでした。
+参照される側を書いた今日、その理由が無くなりました。
+まだエラーが残る場合は、Day 11 Step 9 で置いた仮定義の消し忘れを疑ってください。
+同じ名前の `const` が2つあると、この段階でまとめて表に出ます。
+
+**確認ポイント**:
+- `npm run build` が成功する
+- Day 11 で見た5件の型エラーが消えている
+
 ## 今日のまとめ
 
+- [ ] `npm run build` が通り、Day 11 の型エラーが解消したことを確認した
 - [ ] `ProjectDetailView` コンポーネントでメンバー一覧を表示できた
 - [ ] `addMember` でメンバーを追加できた
 - [ ] `DeleteConfirmDialog` 経由で `removeMember` を実行できた
@@ -2932,6 +2956,22 @@ export default function ProjectPage() {
 | canManageMembers | メンバー追加・削除、ロール変更、プロジェクト更新ができる権限（OWNER/ADMINが持つ） |
 | canArchive | アーカイブ / アーカイブ解除ができる権限（OWNERだけが持つ） |
 | 二重防御 | フロントエンド（UI制御）とバックエンド（API制御）の両方で権限チェックすること |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `getAvailableUsers` の `projects: { none: { projectId: input.projectId } }` は、どんな利用者を選ぶ条件ですか。**
+
+A. そのプロジェクトのメンバー行を1件も持たない利用者を選びます。つまり、まだ参加していない人だけが残ります。Day 09 で使った `some` が「1件でも当てはまる」なら、`none` はその裏返しで「1件も当てはまらない」です。追加の候補一覧に、すでにメンバーの人を並べても選べないので、あらかじめ外しています。
+
+**Q2. `addMember` の重複チェック `if (existing)` を消すと、何が起きますか。**
+
+A. 同じ人をもう一度追加したときに、`userId_projectId` の一意制約に当たります。Prisma が投げた例外は、そのまま画面まで届きます。利用者が目にするのは、日本語の説明が付かないデータベースのエラーです。自分で先に確かめてエラーを返せば、何が起きたかを言葉で伝えられます。
+
+**Q3. `canManageMembers` を持つ ADMIN でも、OWNER としては追加できないようにしているのは、なぜですか。**
+
+A. ADMIN が自分の別アカウントを OWNER として追加できてしまうからです。そのあと元の OWNER を外せば、プロジェクトを丸ごと乗っ取れます。`canManageMembers` はメンバーを管理する権限であって、新しいオーナーを作ってよい権限ではありません。同じ考えで、`removeMember` と `updateMemberRole` にも OWNER を守る判定を置いています。
 
 ## 次回予告
 

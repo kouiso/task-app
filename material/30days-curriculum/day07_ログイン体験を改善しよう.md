@@ -103,7 +103,7 @@ sequenceDiagram
 
 ### Step 0: 書き直す前に控えを取る（3分）
 
-今日は動いている4つのファイルを、いったん空にしてから書き直します。途中で貼り間違えても
+今日は、すでに動いている6つのファイルの中身を書き直します。途中で貼り間違えても
 戻せるように、先に控えを取ります。ターミナルで次を実行してください。
 
 ```bash
@@ -111,15 +111,23 @@ sequenceDiagram
 mkdir -p ~/day07-backup
 cp src/lib/session.ts src/server/api/trpc.ts \
    src/server/api/routers/auth.ts src/server/api/root.ts \
+   src/server/api/routers/_helpers/select.ts \
+   "src/app/api/trpc/[trpc]/route.ts" \
    ~/day07-backup/
 ls ~/day07-backup
 ```
 
-`ls` で4つのファイル名が出れば控えが取れています。書き直しに失敗したときは、たとえば
+`ls` で6つのファイル名が出れば控えが取れています。書き直しに失敗したときは、たとえば
 `cp ~/day07-backup/session.ts src/lib/` のように書き戻せば元の状態に戻ります。
 
+控えを6つ取るのは、今日この6つすべてを中身ごと置き換えるためです。内訳は2種類あります。
+Step 1 から Step 4 で順に書き直すのが `session.ts` `trpc.ts` `auth.ts` `root.ts` の4つです。
+Step 3 と Step 4 で「中身を教材のコードへ置き換える」と指示するのが `select.ts` と `route.ts` の2つです。
+今日触るファイルは、もう1つあります。Step 5 で作る `src/middleware.ts` です。
+これは今日はじめて作るファイルなので、控えは要りません。
+
 **確認ポイント**:
-- `ls ~/day07-backup` に `session.ts` `trpc.ts` `auth.ts` `root.ts` の4つが出る
+- `ls ~/day07-backup` に `session.ts` `trpc.ts` `auth.ts` `root.ts` `select.ts` `route.ts` の6つが出る
 
 ---
 
@@ -1294,6 +1302,11 @@ export const config = {
 並べる数を増やしすぎると、守りたいページまで middleware を素通りします。
 足すのは画像やスタイルのような表示用ファイルだけにとどめます。
 
+**この書き方は「除外したもの以外はすべて」なので、トップページの `/` も対象に入ります。**
+今日から、ログインしていない状態で `/` を開くとログイン画面へ送られます。
+Day 01 で作ったあの画面は、ログインしたあとでないと見られなくなります。
+壊したわけではありません。次の Step 6 で動作を確認するとき、`/` が開かないのは正常な結果です。
+
 #### コラム: middleware は「どこ」で動くのか
 
 matcher に当てはまった URL へのリクエストが、middleware を通ります。ただし通ったもの全部が JWT の検証まで進むわけではありません。`/login` と `/register`、`/api/trpc` は手前で通します。Cookie が無いリクエストは、検証の前に `/login` へ送ります。検証まで進むのは、Cookie を持った保護対象のリクエストだけです。
@@ -1522,7 +1535,7 @@ export function AuthGuard({
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/lib/session.ts` | JWT の発行・検証と Cookie の出し入れ | Step 1 |
-| `src/server/api/trpc.ts` | tRPC の土台と4種類の入口 | Step 2 |
+| `src/server/api/trpc.ts` | tRPC の土台と3種類の入口 | Step 2 |
 | `src/server/api/routers/_helpers/select.ts` | Prisma で取り出す列の定型 | Step 3 |
 | `src/server/api/routers/auth.ts` | ログイン・登録・ログアウトの手続き | Step 3 |
 | `src/server/api/root.ts` | 手続きの一覧表 | Step 4 |
@@ -2447,8 +2460,41 @@ export const config = {
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
 | `relation "User" does not exist` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
-| `ログイン試行回数が上限に達しました` | 同じメールで10回失敗したための一時ロック | 15分待つか、別のメールアドレスで試す。コードの問題ではない |
+| `ログイン試行回数が上限に達しました` | 同じメールで5回失敗したための一時ロック | 15分待つか、別のメールアドレスで試す。コードの問題ではない |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
+
+## 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| JWT | 利用者の情報に署名を付けた文字列。中身は読めるが、書き換えると署名が合わなくなる |
+| 署名 | 秘密の鍵で作る封印。中身が途中で書き換えられていないかを確かめるために使う |
+| exp | JWT の中に書く有効期限。秒で数える |
+| bcrypt | パスワードを元に戻せない形へ変換する仕組み |
+| HttpOnly Cookie | JavaScript から読めない Cookie。盗み見の被害を狭める |
+| maxAge | Cookie 自体の寿命。ブラウザ側が持つので、JWT の `exp` とは別に必要 |
+| publicProcedure | ログインしていなくても呼べる tRPC の入口 |
+| protectedProcedure | ログイン済みの人だけが呼べる tRPC の入口 |
+| adminProcedure | 管理者だけが呼べる tRPC の入口 |
+| middleware | ページが表示される前に毎回動く処理。ログインの有無で行き先を振り分ける |
+| matcher | middleware を動かす URL を絞り込む指定 |
+| rate limit | 短時間に失敗が続いたとき、一時的に受け付けを止める仕組み |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `isAuthenticated` の中で `prisma.user.findUnique` を引き直し、`role: currentUser.role` で上書きしているのは、何をしている処理ですか。**
+
+A. JWT に入っている `role` は、ログインした瞬間の値のまま固定されています。7日間そのままです。そこでリクエストのたびにデータベースから今の権限を取り直し、古い値を差し替えています。この1行が無いと、管理者権限を外された相手が、トークンの期限が切れるまで管理者として動けます。
+
+**Q2. `createSession` の `Math.floor(Date.now() / 1000)` から `/ 1000` を消すと、何が起きますか。**
+
+A. JWT の `exp` は秒で数える決まりです。ところが `Date.now()` が返すのはミリ秒です。`/ 1000` を消すと、ミリ秒の数値をそのまま秒として書き込みます。その結果、有効期限が1000倍先になります。実質的に期限切れしないトークンができあがります。
+
+**Q3. `login` で「そのメールアドレスは存在しない」と「パスワードが違う」を、同じ文言で返しているのはなぜですか。**
+
+A. 区別して返すと、どのメールアドレスが登録済みかを外から調べられるからです。総当たりで問い合わせれば、利用者の一覧を作れてしまいます。同じ理由で、`isActive` の判定もパスワードの照合より後ろに置いています。判定の順番そのものが、守りの一部になっています。
 
 ## 次回予告
 
