@@ -56,6 +56,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
 from typing import NamedTuple
@@ -813,19 +814,46 @@ def triage_section(results: list[DayResult]) -> str:
     return "\n".join(rows) + "\n"
 
 
-def write_result_doc(results: list[DayResult], verify: bool) -> None:
-    """判定を doc/review-handoff/day-snapshots-result.md へ書き出す。"""
+def command_line(argv: list[str]) -> str:
+    """この走行を再現できるコマンド文字列。"""
+    return " ".join(["python3", f"scripts/curriculum-qa/{Path(argv[0]).name}", *argv[1:]])
+
+
+def write_result_doc(
+    results: list[DayResult], verify: bool, command: str = "（不明）"
+) -> None:
+    """判定を doc/review-handoff/day-snapshots-result.md へ書き出す。
+
+    先頭に「どのコマンドで、いつ、何日ぶん出したか」を必ず書く。この書き出しは
+    単日の走行でも同じファイルを上書きするので、出どころが無いと、30日ぶんの実測が
+    `--day 1` の1行に置き換わっても誰も気づけない。実際に一度それをやって、
+    報告の数字を裏付ける成果物を消してしまった。
+    """
     RESULT_DOC.parent.mkdir(parents=True, exist_ok=True)
     passed = sum(r.tsc == "OK" and r.build == "OK" for r in results)
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    total = len(available_days())
     head = [
         "# Day スナップショットの検査結果",
         "",
         "`scripts/curriculum-qa/build_day_snapshots.py` の出力。Day N を終えた読者の",
         "手元を組み直して、型検査とビルドが通るかを見た結果である。",
         "",
+        f"- 出どころ: `{command}`（{stamp} / {len(results)} 日ぶん）",
         f"- 型検査とビルド: {'実行した' if verify else '実行していない（--verify なし）'}",
         f"- tsc・build とも OK: {passed} / {len(results)} 日",
         f"- ツリーの置き場: `{SNAPSHOT_ROOT.relative_to(REPO_ROOT)}/dayNN/`",
+        *(
+            []
+            if len(results) >= total and verify
+            else [
+                f"",
+                f"> ⚠ この結果は全 {total} 日の通し走行ではない"
+                f"（{len(results)} 日ぶん / --verify {'あり' if verify else 'なし'}）。",
+                "> 通しの実測を上書きした可能性がある。証拠として出す前に",
+                "> `--all --verify` を回し直して、この行が消えたことを確かめること。",
+            ]
+        ),
         "- tsc の NG は教材の欠陥とは限らない。教材がその日の `完成版` として",
         "  変更箇所の抜粋だけを出す日があり、道具はそれを丸ごとの書き直しとして扱う。",
         "  1件ずつ現物と突き合わせてから判断すること。下の切り分けの表を見ること。",
@@ -885,7 +913,7 @@ def main(argv: list[str]) -> int:
         for line in r.errors:
             print(f"    {line}")
 
-    write_result_doc(results, verify)
+    write_result_doc(results, verify, command_line(argv))
     print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
 
     # build の失敗では止めない。DB の無い機械でも赤くなるので、教材の欠陥を指さない。
