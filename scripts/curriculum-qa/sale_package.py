@@ -19,6 +19,7 @@ __all__ = [
     "REPO_ROOT",
     "comparable_src_paths",
     "excluded_routers",
+    "scaffold_copies",
     "scaffold_src_paths",
     "uncovered_scaffold_dirs",
     "zip_scaffold_dirs",
@@ -144,6 +145,16 @@ def _scaffold_copies() -> tuple[tuple[str, Path], ...]:
             tail = rel.name if key in SCAFFOLD_COPY_MAP and key != directory else str(rel)
             out.append((f"{dest}/{tail}", f))
     return tuple(out)
+
+
+def scaffold_copies() -> tuple[tuple[str, Path], ...]:
+    """(読者の手元での置き場, 配られる現物) の組。
+
+    `scaffold_src_paths()` は置き場しか返さないので、配布物の中身を実際に
+    並べ直したい呼び出し側（build_day_snapshots.py）が現物へ辿れない。
+    対応表を写し取られると scaffold の変更に追従しなくなるので、ここから配る。
+    """
+    return _scaffold_copies()
 
 
 @cache

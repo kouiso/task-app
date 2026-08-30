@@ -92,7 +92,18 @@ cd "${BUILD_PARENT}"
 # rsync の除外指定を正規表現で拾って「読者が自分で書くルーター」の一覧を組み立てて
 # いるため、上の rsync に除外を足すとその一覧に紛れ込んで検査が壊れる。
 # 同じ理由で、このコメントにも rsync の除外指定の書式を書いてはいけない。
-zip -qr "${OUTPUT_ZIP}" "task-app" -x "*.DS_Store" -x "*/material/pdf/*"
+# 商品は「教材PDF」と「写経用 scaffold ZIP」の2点。ZIP に入れてよいのは読者が使うものだけで、
+# 別商品の見本 PDF・社内向けの手引き・組版や検査に使う内部ファイルは買い手には無関係やから外す。
+zip -qr "${OUTPUT_ZIP}" "task-app" \
+  -x "*.DS_Store" \
+  -x "*/material/pdf/*" \
+  -x "*/material/sample/*" \
+  -x "*/material/pr-reviewer-rule.md" \
+  -x "*/material/dev-guide.md" \
+  -x "*/material/onboarding.md" \
+  -x "*/material/style/*" \
+  -x "*/material/30days-curriculum/_meta/*" \
+  -x "*/material/30days-curriculum/style/*"
 
 bash "${PROJECT_ROOT}/scripts/curriculum-qa/check-sale-package.sh" "${OUTPUT_ZIP}"
 
@@ -101,6 +112,13 @@ ZIP_SIZE=$(du -sh "${OUTPUT_ZIP}" | cut -f1)
 # 環境で、表示だけが実際の同梱数より多くなる
 FILE_COUNT=$(find "${BUILD_DIR}" -type f \
   ! -path "${BUILD_DIR}/material/pdf/*" \
+  ! -path "${BUILD_DIR}/material/sample/*" \
+  ! -path "${BUILD_DIR}/material/pr-reviewer-rule.md" \
+  ! -path "${BUILD_DIR}/material/dev-guide.md" \
+  ! -path "${BUILD_DIR}/material/onboarding.md" \
+  ! -path "${BUILD_DIR}/material/style/*" \
+  ! -path "${BUILD_DIR}/material/30days-curriculum/_meta/*" \
+  ! -path "${BUILD_DIR}/material/30days-curriculum/style/*" \
   ! -name ".DS_Store" | wc -l | tr -d " ")
 echo ""
 echo "=== ビルド完了 ==="

@@ -246,6 +246,7 @@ SELF_TESTS=(
   test_check_visualization
   test_check_setext_heading
   test_filepath_marker
+  test_build_day_snapshots
 )
 
 run_corpus_checks() {

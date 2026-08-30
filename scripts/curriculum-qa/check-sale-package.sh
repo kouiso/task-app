@@ -178,4 +178,25 @@ for entry in "${forbidden_entries[@]}"; do
   fi
 done
 
+# 商品は「教材PDF」と「写経用 scaffold ZIP」の2点。買い手が開いたときに
+# 別商品の見本 PDF や社内向けの手引きが出てくると、それだけで商品の信用が落ちる。
+non_product_entries=(
+  "task-app/material/sample/"
+  "task-app/material/pr-reviewer-rule.md"
+  "task-app/material/dev-guide.md"
+  "task-app/material/onboarding.md"
+  "task-app/material/style/"
+  "task-app/material/30days-curriculum/_meta/"
+  "task-app/material/30days-curriculum/style/"
+)
+
+for entry in "${non_product_entries[@]}"; do
+  if has_entry_prefix "${entry}"; then
+    echo "販売用 ZIP に商品外のファイルが混入しています: ${entry}" >&2
+    echo "買い手には無関係な内部ファイルです。scripts/build-zip.sh の zip 除外を確認してください。" >&2
+    exit 1
+  fi
+done
+
 echo "販売用 ZIP の初期状態を確認しました: 完成アプリ本体の混入なし"
+echo "販売用 ZIP の初期状態を確認しました: 商品外ファイルの混入なし"

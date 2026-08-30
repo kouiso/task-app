@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+"""Day N を終えた読者の手元を組み立てて、型検査とビルドが通るかを見る。
+
+教材の点検はこれまで「書いてあることが揃っているか」しか見ていない。揃っていても、
+写経した結果が TypeScript として通るかは別の問いである。読者が最初に気づくのは
+そこで、そこで詰まると教材は使われなくなる。ここでは実際にソースツリーを組んで、
+機械に判定させる。
+
+## 何を組むか
+
+土台は `scaffold-from-scratch.sh` の配布物（`scripts/_*`）。その上に day01 から
+day N までの写経ブロックを `concat_by_file` で書き込み先ごとに連結して置く。
+出来上がりは `dist/day-snapshots/dayNN/`。
+
+## 意図的に組まない部分
+
+- scaffold が配るファイル（`sale_package.scaffold_src_paths()`）は上書きしない。
+  教材のブロックはその中の一部を書き換える断片であり、丸ごと置き換えると読者の
+  手元より壊れた状態になる。`check_tag_balance.py` がこれらを対象外にするのと同じ理由。
+- `concat_by_file` は TypeScript/JavaScript のブロックだけを集める（`CODE_LANGS`）。
+  `prisma/schema.prisma` と `scripts/*.sh` は scaffold の配布物をそのまま使う。
+- リポジトリ直下の設定ファイルは、このリポジトリの現物を借りる。scaffold は
+  `create-next-app` の出力へ `npm pkg set` を掛けて作るので現物が無い。型検査に効くのは
+  `paths` と `strict` 系の設定で、そこは同じものが入る。`tsconfig.json` の exclude だけは
+  scaffold が足す分があるので、`scaffold-from-scratch.sh` から読んで再現する。
+
+## 連結だけでは再現できない書き方がある
+
+教材のブロックは「追記」だけでなく「既存行の書き換え」も含み、両者を見分ける印が無い。
+書き換えの断片をそのまま連結すると、閉じ括弧の足りないファイルが出来上がる
+（`check_tag_balance.py` が括弧の収支を検査に載せなかったのと同じ理由）。
+だから tsc の NG は「教材の欠陥」と「連結では再現できない書き方」の両方を含む。
+NG を1件ずつ現物と突き合わせるまでは、教材の欠陥とは言えない。
+
+## エラーの扱い
+
+`npx tsc --noEmit` は必須。`npm run build` は DB 接続を要求することがあり、DB の
+無い機械で赤くしても教材の欠陥を指していない。失敗したら理由を記録して続行する。
+握り潰しではない。表に NG として残す。
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import NamedTuple
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from curriculum_blocks import concat_by_file, day_number  # noqa: E402
+from sale_package import scaffold_copies, scaffold_src_paths  # noqa: E402
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+MATERIAL_DIR = REPO_ROOT / "material" / "30days-curriculum"
+SNAPSHOT_ROOT = REPO_ROOT / "dist" / "day-snapshots"
+RESULT_DOC = REPO_ROOT / "doc" / "review-handoff" / "day-snapshots-result.md"
+SCAFFOLD_SH = REPO_ROOT / "scripts" / "scaffold-from-scratch.sh"
+
+# 読者の手元にあって、scaffold が現物を配らないファイル。設定ファイルは
+# `create-next-app` の出力へ `npm pkg set` を掛けて作られ、`src/app/globals.css` は
+# `create-next-app` がそのまま置く。どちらも配布物として scripts/_* に無いので、
+# このリポジトリの同じ位置の現物を借りる。globals.css は scaffold が配る
+# `_app-base/layout.tsx` が import しており、欠けるとビルドがそこで止まる。
+BORROWED_FILES = (
+    "next.config.ts",
+    "postcss.config.js",
+    "tailwind.config.js",
+    "package.json",
+    "src/app/globals.css",
+    ".env.example",
+)
+
+# 表の状態欄。実行しなかったことと落ちたことを同じ記号で書くと、
+# `--verify` を付け忘れた回が「全部通った」ように読める。
+NOT_RUN = "未実行"
+
+# エラーらしい行の目印。tsc は `error TS2304`、Next.js は `Failed to compile.` と
+# `Module not found:`、npm は `npm ERR!` を出す。
+ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)
+
+USAGE = "使い方: build_day_snapshots.py (--day N | --all) [--verify]"
+
+
+class DayResult(NamedTuple):
+    """1日ぶんの判定。"""
+
+    day: int
+    files: int
+    tree_ok: bool
+    tsc: str
+    build: str
+    errors: tuple[str, ...]
+
+
+def available_days() -> list[int]:
+    """教材に存在する day 番号を昇順で返す。"""
+    return sorted({day_number(p.name) for p in MATERIAL_DIR.glob("day[0-9][0-9]_*.md")})
+
+
+def day_sources(upto: int) -> list[Path]:
+    """day01 から day{upto} までの教材ファイルを day 順で返す。"""
+    return sorted(
+        (p for p in MATERIAL_DIR.glob("day[0-9][0-9]_*.md") if 1 <= day_number(p.name) <= upto),
+        key=lambda p: (day_number(p.name), p.name),
+    )
+
+
+def select_days(day: int | None, want_all: bool, days: list[int]) -> list[int]:
+    """CLI の指定から、組み立てる day の並びを返す。
+
+    範囲外の指定は ValueError。黙って空の結果を返すと、存在しない日を指定した回が
+    「対象0件で全部緑」に見えてしまう。
+    """
+    if want_all == (day is not None):
+        raise ValueError("--day か --all のどちらか一方を指定してください")
+    if want_all:
+        return days
+    if day not in days:
+        raise ValueError(f"day{day} は教材にありません（{days[0]}〜{days[-1]}）")
+    return [day]
+
+
+def tsconfig_excludes() -> tuple[str, ...]:
+    """scaffold が tsconfig.json へ足す exclude を scaffold-from-scratch.sh から読む。
+
+    値をここへ写し取ると、scaffold を変えたときに写した側が古くなる。古い exclude で
+    型検査を回すと、読者の手元では検査されない範囲まで赤くなり、教材の欠陥でない赤が出る。
+    `sale_package` が build-zip.sh の配列を読むのと同じやり方で、現物から取る。
+    """
+    m = re.search(r"for \(const entry of \[(.*?)\]\)", SCAFFOLD_SH.read_text(encoding="utf-8"), re.S)
+    if m is None:
+        raise ValueError("scaffold-from-scratch.sh の configure_tsconfig を読めません")
+    return tuple(re.findall(r"'([^']+)'", m.group(1)))
+
+
+def write_reader_tsconfig(dest: Path) -> None:
+    """読者の手元と同じ tsconfig.json を置く。"""
+    config = json.loads((REPO_ROOT / "tsconfig.json").read_text(encoding="utf-8"))
+    excludes = list(config.get("exclude", []))
+    for entry in tsconfig_excludes():
+        if entry not in excludes:
+            excludes.append(entry)
+    config["exclude"] = excludes
+    (dest / "tsconfig.json").write_text(f"{json.dumps(config, indent=2, ensure_ascii=False)}\n", encoding="utf-8")
+
+
+def copy_scaffold(dest: Path) -> int:
+    """scaffold の配布物を読者の置き場へ並べる。返り値は置いたファイル数。"""
+    count = 0
+    for rel, src in scaffold_copies():
+        out = dest / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, out)
+        count += 1
+    for name in BORROWED_FILES:
+        src = REPO_ROOT / name
+        if not src.is_file():
+            raise FileNotFoundError(f"読者の土台に要るファイルがありません: {name}")
+        out = dest / name
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, out)
+        count += 1
+    # scaffold の setup_database と同じ。置き場所だけの雛形なので秘密は入っていない。
+    shutil.copyfile(dest / ".env.example", dest / ".env")
+    write_reader_tsconfig(dest)
+    return count + 2
+
+
+def apply_blocks(dest: Path, paths: list[Path]) -> int:
+    """写経ブロックを書き込み先ごとに連結して置く。返り値は書いたファイル数。"""
+    provided = scaffold_src_paths()
+    count = 0
+    for target, blocks in sorted(concat_by_file(paths).items()):
+        if target in provided:
+            continue
+        out = dest / target
+        out.parent.mkdir(parents=True, exist_ok=True)
+        body = "\n".join("\n".join(b.lines).strip("\n") for b in blocks)
+        out.write_text(f"{body}\n", encoding="utf-8")
+        count += 1
+    return count
+
+
+def build_tree(day: int) -> tuple[Path, int]:
+    """Day N を終えた読者のソースツリーを組んで、(置き場, ファイル数) を返す。"""
+    dest = SNAPSHOT_ROOT / f"day{day:02d}"
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    files = copy_scaffold(dest) + apply_blocks(dest, day_sources(day))
+    return dest, files
+
+
+def error_lines(output: str) -> tuple[str, ...]:
+    """出力から、最初のエラー3行を抜く。
+
+    先頭3行をそのまま採ると `> task-app@1.0.0 build` のような npm の前口上しか
+    残らない。読んだ人が原因へ辿れないので、エラーらしい行を先に探す。
+    見つからないときだけ先頭から採る。
+    """
+    lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
+    hits = [ln for ln in lines if ERROR_MARK.search(ln)]
+    return tuple((hits or lines)[:3])
+
+
+def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...]]:
+    """コマンドを走らせて (成功したか, 最初のエラー3行) を返す。"""
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    if proc.returncode == 0:
+        return True, ()
+    return False, error_lines(f"{proc.stdout}\n{proc.stderr}")
+
+
+def link_node_modules(dest: Path) -> None:
+    """このリポジトリの node_modules を借りる。
+
+    Day ごとに `npm install` を走らせると30回ぶんの時間とディスクを食う。型検査に
+    要るのは型定義と生成済みの Prisma クライアントで、どちらも共有して差し支えない。
+    """
+    link = dest / "node_modules"
+    if link.exists() or link.is_symlink():
+        link.unlink()
+    link.symlink_to(REPO_ROOT / "node_modules", target_is_directory=True)
+
+
+def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...]]:
+    """組んだツリーへ型検査とビルドを掛けて (tsc, build, エラー行) を返す。"""
+    link_node_modules(dest)
+    tsc_ok, tsc_errors = run_step(["npx", "tsc", "--noEmit"], dest)
+    build_ok, build_errors = run_step(["npm", "run", "build"], dest)
+    return (
+        "OK" if tsc_ok else "NG",
+        "OK" if build_ok else "NG",
+        tsc_errors or build_errors,
+    )
+
+
+def snapshot_day(day: int, verify: bool) -> DayResult:
+    """1日ぶんを組んで判定する。"""
+    try:
+        dest, files = build_tree(day)
+    except (OSError, ValueError) as e:
+        return DayResult(day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",))
+    if not verify:
+        return DayResult(day, files, True, NOT_RUN, NOT_RUN, ())
+    tsc, build, errors = verify_tree(dest)
+    return DayResult(day, files, True, tsc, build, errors)
+
+
+def _cell(text: str) -> str:
+    """表のセルへ入れられる形へ直す。`|` は列の区切りなので潰す。"""
+    return text.replace("|", "\\|").replace("`", "'")
+
+
+def result_table(results: list[DayResult]) -> str:
+    """判定を Markdown の表にする。"""
+    rows = [
+        "| Day | ツリー構築 | tsc | build | 最初のエラー3行 |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for r in results:
+        tree = f"OK（{r.files} ファイル）" if r.tree_ok else "NG"
+        errors = "<br>".join(_cell(e) for e in r.errors) or "-"
+        rows.append(f"| day{r.day:02d} | {tree} | {r.tsc} | {r.build} | {errors} |")
+    return "\n".join(rows)
+
+
+def write_result_doc(results: list[DayResult], verify: bool) -> None:
+    """判定を doc/review-handoff/day-snapshots-result.md へ書き出す。"""
+    RESULT_DOC.parent.mkdir(parents=True, exist_ok=True)
+    head = [
+        "# Day スナップショットの検査結果",
+        "",
+        "`scripts/curriculum-qa/build_day_snapshots.py` の出力。Day N を終えた読者の",
+        "手元を組み直して、型検査とビルドが通るかを見た結果である。",
+        "",
+        f"- 型検査とビルド: {'実行した' if verify else '実行していない（--verify なし）'}",
+        f"- ツリーの置き場: `{SNAPSHOT_ROOT.relative_to(REPO_ROOT)}/dayNN/`",
+        "- tsc の NG は教材の欠陥とは限らない。書き換えの断片を連結した結果が",
+        "  構文として壊れる場合がある。1件ずつ現物と突き合わせてから判断すること。",
+        "",
+        "",
+    ]
+    RESULT_DOC.write_text("\n".join(head) + result_table(results) + "\n", encoding="utf-8")
+
+
+def main(argv: list[str]) -> int:
+    args = argv[1:]
+    verify = "--verify" in args
+    rest = [a for a in args if a != "--verify"]
+    day: int | None = None
+    want_all = "--all" in rest
+    rest = [a for a in rest if a != "--all"]
+    if rest[:1] == ["--day"]:
+        if len(rest) != 2 or not rest[1].isdigit():
+            print(f"❌ --day には数字が要ります\n{USAGE}", file=sys.stderr)
+            return 2
+        day, rest = int(rest[1]), []
+    if rest:
+        print(f"❌ 知らない引数: {' '.join(rest)}\n{USAGE}", file=sys.stderr)
+        return 2
+
+    days = available_days()
+    if not days:
+        print(f"❌ 教材が見つかりません: {MATERIAL_DIR}", file=sys.stderr)
+        return 2
+    try:
+        targets = select_days(day, want_all, days)
+    except ValueError as e:
+        print(f"❌ {e}\n{USAGE}", file=sys.stderr)
+        return 2
+
+    results = []
+    for n in targets:
+        r = snapshot_day(n, verify)
+        results.append(r)
+        print(f"day{n:02d}: ツリー {'OK' if r.tree_ok else 'NG'}（{r.files} ファイル） tsc {r.tsc} build {r.build}")
+        for line in r.errors:
+            print(f"    {line}")
+
+    write_result_doc(results, verify)
+    print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
+
+    # build の失敗では止めない。DB の無い機械でも赤くなるので、教材の欠陥を指さない。
+    broken = [r for r in results if not r.tree_ok or r.tsc == "NG"]
+    if broken:
+        print(f"❌ ツリー構築または型検査が通らない {len(broken)} 日")
+        return 1
+    print(f"✅ {len(results)} 日ぶんを組み立てました")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
