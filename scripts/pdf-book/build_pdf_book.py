@@ -117,7 +117,10 @@ def find_browser() -> str | None:
     roots = [Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers"))]
     roots.append(Path.home() / "Library" / "Caches" / "ms-playwright")
     for root in roots:
+        # 近年の Playwright が入れる Chrome for Testing は chrome-linux64 に置かれる。
+        # 旧レイアウト(chrome-linux)も残るので両方見る
         for pattern in ("chromium-*/chrome-linux/chrome",
+                        "chromium-*/chrome-linux64/chrome",
                         "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium"):
             hits = sorted(root.glob(pattern)) if root.is_dir() else []
             if hits:
