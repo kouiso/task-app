@@ -251,6 +251,133 @@ CASES: list[tuple[str, str, str, int, tuple[int, int, int]]] = [
 ]
 
 
+# 同じ画像を貼り回していないかの検査。既定は WARNING、フラグ有効時は FAIL。
+# (テスト名, ファイル名, 本文, FAIL化フラグ, 期待する終了コード,
+#  期待する (表, スクショ, Mermaid), 期待する重複画像件数)
+DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]] = [
+    (
+        'スクショ3枚が別画像なら重複ゼロ',
+        'day01_setup.md',
+        table_rows(4) + ''.join(f'![一覧](./screenshots/list{i}.png)\n' for i in range(3)),
+        True,
+        0,
+        (4, 3, 0),
+        0,
+    ),
+    (
+        '同じ画像を3回貼るとフラグ有効時は落ちる',
+        'day01_setup.md',
+        table_rows(4) + '![一覧](./screenshots/list.png)\n' * 3,
+        True,
+        1,
+        (4, 3, 0),
+        1,
+    ),
+    (
+        '同じ画像を3回貼っても既定では落ちない（撮り直し中の暫定運用）',
+        'day01_setup.md',
+        table_rows(4) + '![一覧](./screenshots/list.png)\n' * 3,
+        False,
+        0,
+        (4, 3, 0),
+        1,
+    ),
+    (
+        '2回目から重複とみなす（境界）',
+        'day01_setup.md',
+        table_rows(4)
+        + '![一覧](./screenshots/list.png)\n' * 2
+        + '![詳細](./screenshots/detail.png)\n',
+        True,
+        1,
+        (4, 3, 0),
+        1,
+    ),
+    (
+        '別々の画像が2組重複していれば2件と数える',
+        'day01_setup.md',
+        table_rows(4)
+        + '![一覧](./screenshots/list.png)\n' * 2
+        + '![詳細](./screenshots/detail.png)\n' * 2,
+        True,
+        1,
+        (4, 4, 0),
+        2,
+    ),
+    (
+        'jpg も重複の対象',
+        'day01_setup.md',
+        table_rows(4) + '![一覧](./screenshots/list.jpg)\n' * 3,
+        True,
+        1,
+        (4, 3, 0),
+        1,
+    ),
+    (
+        'パスに screenshot を含む拡張子違いも重複の対象',
+        'day01_setup.md',
+        table_rows(4) + '![一覧](./assets/screenshot-list.webp)\n' * 3,
+        True,
+        1,
+        (4, 3, 0),
+        1,
+    ),
+    (
+        'png/jpg/screenshot 以外の画像は重複に数えない（スクショ位置と母集団を揃える）',
+        'day01_setup.md',
+        table_rows(4)
+        + camera_lines(3)
+        + '![図](./assets/diagram.svg)\n' * 3,
+        True,
+        0,
+        (4, 3, 0),
+        0,
+    ),
+    (
+        '📸 や【スクリーンショット】だけの日は画像パスが無いので重複ゼロ',
+        'day01_setup.md',
+        BASE,
+        True,
+        0,
+        (4, 3, 0),
+        0,
+    ),
+    (
+        '重複が唯一の違反なら、フラグ無効時は exit 0 のまま',
+        'day05_form.md',
+        table_rows(4) + '![一覧](./screenshots/list.png)\n' * 4,
+        False,
+        0,
+        (4, 4, 0),
+        1,
+    ),
+]
+
+
+def default_is_warning() -> bool:
+    """本体の既定が「重複は WARNING」のままかを見る。
+
+    ここが黙って True に変わると corpus 全体が落ちて全員が止まる。逆に FAIL 化の
+    経路（環境変数 / CLI フラグ）が壊れると、撮り直し完了後に切り替えられない。
+    """
+    default_ok = run_checker(
+        'day01_setup.md', table_rows(4) + '![一覧](./screenshots/list.png)\n' * 3
+    )[0] == 0
+    flag_ok = duplicate_image_is_fatal(['--fail-on-duplicate-image', 'x.md'])
+    saved = os.environ.get(FAIL_ON_DUPLICATE_IMAGE_ENV)
+    try:
+        os.environ[FAIL_ON_DUPLICATE_IMAGE_ENV] = '1'
+        env_ok = duplicate_image_is_fatal(['x.md'])
+        os.environ[FAIL_ON_DUPLICATE_IMAGE_ENV] = '0'
+        env_off_ok = not duplicate_image_is_fatal(['x.md'])
+    finally:
+        if saved is None:
+            os.environ.pop(FAIL_ON_DUPLICATE_IMAGE_ENV, None)
+        else:
+            os.environ[FAIL_ON_DUPLICATE_IMAGE_ENV] = saved
+    return default_ok and flag_ok and env_ok and env_off_ok
+
+
 def required_days_in_source() -> set[int]:
     """本体の必須 Day リストを読み出す。関数内のローカル変数なので import できない。"""
     source = Path(__file__).with_name('check_visualization.py').read_text(encoding='utf-8')
@@ -264,13 +391,29 @@ def main() -> int:
     failed = 0
 
     for name, filename, content, expected_code, expected_counts in CASES:
-        code, counts = run_checker(filename, content)
-        if (code, counts) != (expected_code, expected_counts):
+        code, counts, duplicates = run_checker(filename, content)
+        # 既存ケースは全て別画像なので、重複0が崩れたら重複判定の母集団がずれている。
+        if (code, counts, duplicates) != (expected_code, expected_counts, 0):
             failed += 1
             print(
-                f'  ❌ {name}: 期待 exit={expected_code} {expected_counts} / '
-                f'実際 exit={code} {counts}'
+                f'  ❌ {name}: 期待 exit={expected_code} {expected_counts} 重複0 / '
+                f'実際 exit={code} {counts} 重複{duplicates}'
             )
+
+    for name, filename, content, fatal, expected_code, expected_counts, expected_dup in (
+        DUPLICATE_CASES
+    ):
+        code, counts, duplicates = run_checker(filename, content, fail_on_duplicate_image=fatal)
+        if (code, counts, duplicates) != (expected_code, expected_counts, expected_dup):
+            failed += 1
+            print(
+                f'  ❌ {name}: 期待 exit={expected_code} {expected_counts} '
+                f'重複{expected_dup} / 実際 exit={code} {counts} 重複{duplicates}'
+            )
+
+    if not default_is_warning():
+        failed += 1
+        print('  ❌ 重複判定の既定が WARNING でない、または FAIL 化の切り替えが壊れています')
 
     # 必須 Day がこっそり削られると、図の抜けた教材が黙って通るようになる。
     days = required_days_in_source()
@@ -278,7 +421,7 @@ def main() -> int:
         failed += 1
         print(f'  ❌ required_mermaid_days が {sorted(days)} に変えられています')
 
-    total = len(CASES) + 1
+    total = len(CASES) + len(DUPLICATE_CASES) + 2
     if failed:
         print(f'❌ check_visualization 自己テスト {failed}/{total} 失敗')
         return 1

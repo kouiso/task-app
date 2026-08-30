@@ -105,7 +105,38 @@ MODULE_HEAD = re.compile(
 # NG の日の切り分け。機械には「教材の欠陥か、道具の限界か」を決められないので、
 # 現物を読んだ結果を人がここへ書く。書いていない日は「判定不能（未調査）」と出る。
 # 推測で「教材の欠陥」と書かない。根拠は必ず現物の行を指すこと。
-TRIAGE: dict[int, tuple[str, str]] = {}
+# NG の日の切り分け。機械には「教材の欠陥か、道具の限界か」を決められないので、
+# 現物を読んだ結果を人がここへ書く。書いていない日は「判定不能（未調査）」と出る。
+# 推測で「教材の欠陥」と書かない。根拠は必ず現物の行か実測の数を指すこと。
+#
+# 2026-08-30 時点の22件は全部同じ機構である。教材はその日の `完成版` として
+# ファイル全体ではなく変更箇所の抜粋だけを出す日があり、道具はそれを丸ごとの
+# 書き直しとして扱って前の版を捨てる。かといって追記にすると import と定義が
+# 二重になるので、置き換えでも追記でも復元できない。教材の欠陥ではない。
+TRIAGE: dict[int, tuple[str, str]] = {
+    9: ('ツールの限界', 'src/app/project/page.tsx が 30 ブロック中 9（118/353 行）しか残らない。TS6133 の dialogOpen は捨てたブロックの中で使われている'),
+    10: ('ツールの限界', 'src/server/api/root.ts が 7 ブロック中 1 しか残らず authRouter だけの版になる。api.project が無いのはそのため'),
+    11: ('ツールの限界', 'day10 と同じ。root.ts が authRouter だけの版になる（src/app/project/page.tsx も 86 ブロック中 21）'),
+    12: ('ツールの限界', 'day10 と同じ。root.ts が authRouter だけの版になる（src/app/project/page.tsx も 141 ブロック中 31）'),
+    13: ('ツールの限界', 'src/component/layout/app-layout.tsx が 27 ブロック中 2（31/362 行）しか残らず AppLayout の export が落ちる'),
+    14: ('ツールの限界', 'day13 と同じ。app-layout.tsx の AppLayout が落ちる'),
+    15: ('ツールの限界', 'day13 と同じ。app-layout.tsx の AppLayout が落ちる'),
+    16: ('ツールの限界', 'day13 と同じ。app-layout.tsx の AppLayout が落ちる'),
+    17: ('ツールの限界', 'day13 と同じ app-layout.tsx に加え、src/app/my-task/page.tsx も 68 ブロック中 24（412/869 行）しか残らない'),
+    18: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
+    19: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
+    20: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
+    21: ('ツールの限界', 'src/component/layout/app-layout.tsx が 34 ブロック中 2（14/487 行）しか残らず、その断片が構文として閉じていない'),
+    22: ('ツールの限界', 'day21 と同じ。app-layout.tsx が 14/487 行しか残らない'),
+    23: ('ツールの限界', 'day21 と同じ。app-layout.tsx が 14/487 行しか残らない'),
+    24: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
+    25: ('ツールの限界', 'src/component/layout/app-layout.tsx が 44 ブロック中 3（39/601 行）しか残らない'),
+    26: ('ツールの限界', 'day25 と同じ。app-layout.tsx が 39/601 行しか残らない'),
+    27: ('ツールの限界', 'day25 と同じ。app-layout.tsx が 39/601 行しか残らない'),
+    28: ('ツールの限界', 'src/app/task/page.tsx が 160 ブロック中 19（259/2044 行）しか残らず、div の閉じタグが捨てたブロックの中にある'),
+    29: ('ツールの限界', 'day28 と同じ。task/page.tsx が 259/2044 行しか残らない'),
+    30: ('ツールの限界', 'day28 と同じ。task/page.tsx が 259/2044 行しか残らない'),
+}
 
 # チャンクの見出し行。教材は長いファイルを分けて出すとき、各チャンクの先頭へ
 # `// 完成版: 取り込みと型定義` のような見出しを置く。すぐ上の `filepath:` の目印と
@@ -113,6 +144,9 @@ TRIAGE: dict[int, tuple[str, str]] = {}
 # 落とさないと、`{/* 完成版: 残りのカード */}` が配列リテラルの中へ入って構文エラーになる
 # （day08 `src/app/dashboard/page.tsx` の focusCards がこれ）。
 CHUNK_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成版[:：]")
+
+# 表へ載せるエラー1行の長さ。
+ERROR_LINE_WIDTH = 160
 
 # エラーらしい行の目印。tsc は `error TS2304`、Next.js は `Failed to compile.` と
 # `Module not found:`、npm は `npm ERR!` を出す。
@@ -302,7 +336,9 @@ def error_lines(output: str) -> tuple[str, ...]:
     """
     lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
     hits = [ln for ln in lines if ERROR_MARK.search(ln)]
-    return tuple((hits or lines)[:3])
+    # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
+    # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
+    return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines)[:3])
 
 
 def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...]]:
@@ -390,6 +426,7 @@ def triage_section(results: list[DayResult]) -> str:
 def write_result_doc(results: list[DayResult], verify: bool) -> None:
     """判定を doc/review-handoff/day-snapshots-result.md へ書き出す。"""
     RESULT_DOC.parent.mkdir(parents=True, exist_ok=True)
+    passed = sum(r.tsc == "OK" and r.build == "OK" for r in results)
     head = [
         "# Day スナップショットの検査結果",
         "",
@@ -397,9 +434,11 @@ def write_result_doc(results: list[DayResult], verify: bool) -> None:
         "手元を組み直して、型検査とビルドが通るかを見た結果である。",
         "",
         f"- 型検査とビルド: {'実行した' if verify else '実行していない（--verify なし）'}",
+        f"- tsc・build とも OK: {passed} / {len(results)} 日",
         f"- ツリーの置き場: `{SNAPSHOT_ROOT.relative_to(REPO_ROOT)}/dayNN/`",
-        "- tsc の NG は教材の欠陥とは限らない。書き換えの断片を連結した結果が",
-        "  構文として壊れる場合がある。1件ずつ現物と突き合わせてから判断すること。",
+        "- tsc の NG は教材の欠陥とは限らない。教材がその日の `完成版` として",
+        "  変更箇所の抜粋だけを出す日があり、道具はそれを丸ごとの書き直しとして扱う。",
+        "  1件ずつ現物と突き合わせてから判断すること。下の切り分けの表を見ること。",
         "",
         "",
     ]

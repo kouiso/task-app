@@ -24,6 +24,7 @@ Step 9 の完成形と同じになっている箇所があり、買い手から�
 合わせて更新する。経緯は doc/review-handoff/ の記録を参照。
 """
 
+import glob
 import os
 import sys
 import re
@@ -151,10 +152,49 @@ def duplicate_image_is_fatal(argv):
     return os.environ.get(FAIL_ON_DUPLICATE_IMAGE_ENV, '') not in ('', '0', 'false', 'False')
 
 
-if __name__ == '__main__':
-    args = [a for a in sys.argv[1:] if a != '--fail-on-duplicate-image']
-    if len(args) < 1:
-        print("使用法: python check_visualization.py [--fail-on-duplicate-image] <filepath>")
-        sys.exit(1)
+def collect_targets(target):
+    """ディレクトリを渡された場合は配下の教材 md を対象にする。
 
-    check_visualization(args[0], fail_on_duplicate_image=duplicate_image_is_fatal(sys.argv[1:]))
+    corpus 全体の重複状況を一度に見たい（撮り直しの進み具合を測る）ため、
+    他の corpus 系チェッカーと同じくディレクトリ引数を受ける。
+    """
+    if not os.path.isdir(target):
+        return [target]
+    patterns = ('day[0-9][0-9]_*.md', 'appendix_*.md')
+    files = []
+    for pattern in patterns:
+        files.extend(glob.glob(os.path.join(target, pattern)))
+    return sorted(files)
+
+
+def main(argv):
+    fail_on_duplicate_image = duplicate_image_is_fatal(argv)
+    args = [a for a in argv if a != '--fail-on-duplicate-image']
+    if len(args) < 1:
+        print("使用法: python check_visualization.py [--fail-on-duplicate-image] <filepath|dir>")
+        return 1
+
+    targets = collect_targets(args[0])
+    if not targets:
+        print(f"❌ 対象ファイルが見つかりません: {args[0]}")
+        return 1
+
+    failed = []
+    for target in targets:
+        if len(targets) > 1:
+            print(f"\n--- {target} ---")
+        try:
+            check_visualization(target, fail_on_duplicate_image=fail_on_duplicate_image)
+        except SystemExit as exc:
+            if exc.code:
+                failed.append(target)
+
+    if len(targets) > 1:
+        print(f"\n対象 {len(targets)} 件 / FAIL {len(failed)} 件")
+        for target in failed:
+            print(f"  ❌ {target}")
+    return 1 if failed else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
