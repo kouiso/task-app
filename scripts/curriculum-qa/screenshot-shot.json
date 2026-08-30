@@ -376,18 +376,192 @@
       "full_page": true
     },
     {
-      "name": "day04/public-top.png",
-      "day": 4,
-      "path": "/",
-      "note": "Day 04 が実際に公開するトップページ。本番ビルドで起動して撮るので、Vercel が配るものと同じ絵になる。",
+      "name": "day12/project-detail.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "h1:text-is('Webサイトリニューアル')",
+      "note": "Step 1 の確認『プロジェクトカードをクリックして詳細ページが表示される』。既存の project-detail-tasks.png は同じ日に2回使われ、うち1回はメンバー一覧の説明に流用されていた。",
       "full_page": true
     },
     {
-      "name": "day04/public-dashboard.png",
-      "day": 4,
-      "path": "/dashboard",
-      "note": "Day 04 の確認ポイント『Day 02 で作った自分用メッセージが見える』の1枚。",
+      "name": "day12/project-detail-members.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+      "note": "冒頭の完成イメージ。左のメンバーカードだけを切り出す。3人それぞれのロールが読める大きさにするため。",
+      "marks": [
+        {
+          "selector": "button:has-text('メンバー追加')",
+          "label": "今日つけるボタン"
+        }
+      ],
+      "clip": {
+        "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day12/add-member-dialog.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "click",
+          "selector": "button:has-text('メンバー追加')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "Step 4 のダイアログ。本文は『ユーザーを1人選ぶまでメンバー追加ボタンは押せません』と書くので、未選択の状態で撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 48
+      }
+    },
+    {
+      "name": "day12/member-remove-confirm.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "click",
+          "selector": "button[aria-label='田中太郎をプロジェクトから削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "Step 7 に貼られていたのはプロジェクト削除の画像で、教材自身が5行かけて『この画像で見出しの文字を照らし合わせても意味がありません』と断っていた。メンバー削除の実物を撮る。 OWNER の行の削除ボタンは disabled なので、MEMBER の行から開く。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 48
+      }
+    },
+    {
+      "name": "day13/task-list.png",
+      "day": 13,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('タスク')",
+      "note": "既存の task-list.png は Day 13 と Day 16 で共有され、実画像はサイドバー7項目・上部検索バー・合計作業時間・シードに無いタスク8枚が写る（scan-day09-16.md (g) Day 13）。",
       "full_page": true
+    },
+    {
+      "name": "day13/task-list-filtered.png",
+      "day": 13,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('すべてのステータス')"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='option']:has-text('完了')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:text-is('データベース設計')"
+        }
+      ],
+      "wait_for": "h1:text-is('タスク')",
+      "marks": [
+        {
+          "selector": "button:has-text('すべてのステータス')",
+          "label": "完了だけに絞る"
+        }
+      ],
+      "note": "Step 5 のキャプション『ステータスを完了に絞った状態』。初期データで DONE は「データベース設計」1件だけなので、絞ると1枚になる。",
+      "full_page": true
+    },
+    {
+      "name": "day13/task-detail-dialog.png",
+      "day": 13,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:text-is('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "Step 7 の確認『カードクリックで詳細ダイアログが開く／説明・担当者・期限が表示される』。既存画像は Day 16 と共有していた。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 48
+      }
     }
   ]
 }
