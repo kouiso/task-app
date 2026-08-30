@@ -227,7 +227,15 @@ async function fitToContent(page, current) {
   const wanted = await page.evaluate(() => {
     const main = document.querySelector('main');
     if (main) {
-      return Math.ceil(main.getBoundingClientRect().top + window.scrollY + main.scrollHeight);
+      // `scrollHeight` は使えない。`main` は `h-screen` の中の `flex-1` なので、中身が
+      // 短くても窓の高さより小さくならず、縮める判断ができない。中身そのものの
+      // いちばん下を測る。`main` は読み込み直後で先頭にいるので、窓基準の値で足りる。
+      const padBottom = Number.parseFloat(getComputedStyle(main).paddingBottom) || 0;
+      let bottom = main.getBoundingClientRect().top;
+      for (const child of main.children) {
+        bottom = Math.max(bottom, child.getBoundingClientRect().bottom);
+      }
+      return Math.ceil(bottom + padBottom);
     }
     const root = document.documentElement;
     return Math.ceil(Math.max(root.scrollHeight, document.body.scrollHeight));

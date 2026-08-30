@@ -1261,8 +1261,15 @@
       },
       "stall": ["report.getOverview"],
       "wait_for": "div.animate-spin",
-      "note": "Step 5 のローディング確認。本文が『読み込んでいる間は画面の中央にスピナーだけが出ます』『ここでスピナーだけを返すと読み込み中はサイドバーも消えます』と書いているとおりの絵。手元の DB は速すぎて撮る隙が無いので、getOverview の返事だけを止めて撮る。",
-      "full_page": true
+      "note": "Step 5 のローディング確認。本文が『読み込んでいる間は画面の中央にスピナーだけが出ます』『ここでスピナーだけを返すと読み込み中はサイドバーも消えます』と書いているとおりの絵。手元の DB は速すぎて撮る隙が無いので、getOverview の返事だけを止めて撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "viewport": {
+        "width": 1440,
+        "height": 420
+      },
+      "clip": {
+        "selector": "div.flex.items-center.justify-center",
+        "padding": 0
+      }
     },
     {
       "name": "day21/report-stat-cards.png",
@@ -1390,8 +1397,15 @@
       },
       "stall": ["report.getWeeklyReport"],
       "wait_for": "div.animate-spin",
-      "note": "Step 5 のローディング確認。旧画像は読み込みが終わったあとの姿で、本文が『下の画像は読み込みが終わったあとの姿です』と断っていた。getWeeklyReport の返事だけを止めて、スピナーそのものを撮る。",
-      "full_page": true
+      "note": "Step 5 のローディング確認。旧画像は読み込みが終わったあとの姿で、本文が『下の画像は読み込みが終わったあとの姿です』と断っていた。getWeeklyReport の返事だけを止めて、スピナーそのものを撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "viewport": {
+        "width": 1440,
+        "height": 420
+      },
+      "clip": {
+        "selector": "div.flex.items-center.justify-center",
+        "padding": 0
+      }
     },
     {
       "name": "day23/report-weekly-charts.png",
@@ -1693,8 +1707,15 @@
         }
       ],
       "wait_for": "div.animate-spin",
-      "note": "Step 3 の『読み込み中はスピナーだけが表示されます』。getById の返事だけを止めて撮る。",
-      "full_page": true
+      "note": "Step 3 の『読み込み中はスピナーだけが表示されます』。getById の返事だけを止めて撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "viewport": {
+        "width": 1440,
+        "height": 420
+      },
+      "clip": {
+        "selector": "div.flex.items-center.justify-center",
+        "padding": 0
+      }
     },
     {
       "name": "day29/user-detail-projects-tasks.png",
@@ -1896,8 +1917,15 @@
       },
       "stall": ["project.getAll"],
       "wait_for": "div.animate-spin",
-      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。",
-      "full_page": true
+      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "viewport": {
+        "width": 1440,
+        "height": 420
+      },
+      "clip": {
+        "selector": "div.flex.items-center.justify-center",
+        "padding": 0
+      }
     },
     {
       "name": "day09/project-cards.png",

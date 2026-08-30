@@ -39,12 +39,15 @@ from __future__ import annotations
 import http.client
 import json
 import os
+import re
 import shutil
 import signal
 import socket
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -52,6 +55,7 @@ from typing import Any, NamedTuple
 sys.path.insert(0, str(Path(__file__).parent))
 
 from build_day_snapshots import build_tree, day_sources, link_node_modules  # noqa: E402
+from sale_package import scaffold_copies  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_ROOT = REPO_ROOT / "dist" / "day-snapshots"
@@ -73,6 +77,21 @@ ACTION_KINDS = ("click", "fill", "wait_for")
 
 # 起動に使うポート。読者の 3000 とぶつけない。
 BASE_PORT = 3401
+
+# 1つのワーカーが使うポートの幅。ワーカーごとに帯を分ける。
+# 空きを探してから `next` が握るまでの間に別のワーカーが同じ番号を取ると、
+# 片方が起動に失敗する。帯を分ければその隙が無くなる。
+PORT_SPAN = 50
+
+# 同時に走らせるワーカーの数の上限。
+# `next build` が CPU を食い切るので、コア数を超えて増やすと逆に遅くなる。
+# 4コアの機械で 3 までが実測の頭打ちだった。
+MAX_WORKERS = 3
+
+# ワーカーごとの DB 名の頭。`apply_seed` は日ごとに中身を入れ替えるので、
+# 2つのワーカーが同じ DB を見ると互いのデータを壊す。Postgres は1つの
+# インスタンスで複数の DB を持てるので、ワーカーの数だけ分ける。
+WORKER_DB_PREFIX = "shoot_w"
 
 # `next start` が応えるまでの待ち上限（秒）。
 SERVER_TIMEOUT = 90
@@ -673,15 +692,21 @@ NOT_FOR_PROCESS_ENV = ("NODE_ENV",)
 
 
 def ensure_tree_fresh(day: int) -> Path:
-    """教材より古いツリーは組み直してから返す。
+    """教材か配布物より古いツリーは組み直してから返す。
 
     教材の文面を直しても、`dist/day-snapshots/dayNN/` は自動では追いつかない。古いツリーの
     まま撮ると、直したはずの文面が画像に残る。実際 day02 の挨拶文を直した回に、day04 の
     ツリーだけ古いままで、旧文面のダッシュボードが撮れた。撮る側が気づける事実なので、
     人の記憶に頼らずここで見る。
+
+    見るのは教材だけでは足りない。ツリーの中身の半分は `scripts/_*` の配布物で、
+    読者が最初に受け取るのもそちらである。配布物だけを直した回（ステータスと優先度の色を
+    トークンから引き直した回がこれ）は教材の更新時刻が動かないので、古い色のまま
+    撮れてしまう。撮れてしまうから誰も気づけない。両方を見る。
     """
     dest = snapshot_dir(day)
-    newest = max(p.stat().st_mtime for p in day_sources(day))
+    sources = list(day_sources(day)) + [src for _, src in scaffold_copies()]
+    newest = max(p.stat().st_mtime for p in sources)
     if newest <= dest.stat().st_mtime:
         return dest
     print(f"  教材のほうが新しいのでツリーを組み直します: {dest.name}")
@@ -704,13 +729,18 @@ def read_env(dest: Path) -> dict[str, str]:
     return env
 
 
-def free_port(start: int) -> int:
-    """空いているポートを1つ返す。"""
-    for port in range(start, start + 50):
+def free_port(start: int, span: int = PORT_SPAN) -> int:
+    """空いているポートを1つ返す。
+
+    探す範囲はワーカーごとに分けて呼ぶ。空きを見つけてから `next` が握るまでには隙が
+    あり、同じ範囲を2つのワーカーが探すと同じ番号を掴んで片方が起動に失敗する。
+    範囲を分ければその隙は無くなる。
+    """
+    for port in range(start, start + span):
         with socket.socket() as s:
             if s.connect_ex(("127.0.0.1", port)) != 0:
                 return port
-    raise OSError(f"{start} から 50 個のポートが全部埋まっています")
+    raise OSError(f"{start} から {span} 個のポートが全部埋まっています")
 
 
 def ensure_schema(dest: Path, env: dict[str, str]) -> None:
@@ -821,13 +851,34 @@ def run_worker(job: dict[str, Any]) -> list[dict[str, Any]]:
     return result["shots"]
 
 
-def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
-    """1日ぶんを撮る。"""
+DB_NAME_IN_URL = re.compile(r"^(?P<head>postgresql://[^/]+/)(?P<name>[^?]+)(?P<tail>.*)$")
+
+
+def worker_env(env: dict[str, str], worker: int) -> dict[str, str]:
+    """そのワーカー専用の DB を指す環境変数を返す。
+
+    `apply_seed` はその日のデータを入れる前に前の日のデータを消す。2つのワーカーが
+    同じ DB を見ていると、片方が撮っている最中にもう片方が中身を入れ替えてしまい、
+    出てくる画像が別の日のデータになる。しかも撮れてしまうので誰も気づけない。
+    Postgres は1つのインスタンスで複数の DB を持てるので、名前だけ差し替える。
+    DB そのものは `prisma db push` が無ければ作る。
+    """
+    url = env.get("DATABASE_URL", "")
+    m = DB_NAME_IN_URL.match(url)
+    if m is None:
+        raise ValueError(f"DATABASE_URL の形が読めません: {url!r}")
+    out = dict(env)
+    out["DATABASE_URL"] = f"{m.group('head')}{WORKER_DB_PREFIX}{worker}{m.group('tail')}"
+    return out
+
+
+def shoot_day(config: Config, day: int, out_dir: Path, worker: int = 0) -> list[dict[str, Any]]:
+    """1日ぶんを撮る。`worker` は同時に走る他の走行と DB とポートを分けるための番号。"""
     shots = shots_for_day(config, day)
     if not shots:
         return []
     dest = ensure_tree_fresh(day)
-    env = read_env(dest)
+    env = worker_env(read_env(dest), worker)
     if day in DEV_SERVER_DAYS:
         # 型検査を通らない日は本番ビルドを作れない。dev は依存を辿るので node_modules だけ用意する。
         link_node_modules(dest)
@@ -837,7 +888,7 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
     counts = apply_seed(dest, day, env)
     print(f"  シード: ユーザー{counts['users']} / プロジェクト{counts['projects']} / タスク{counts['tasks']} / コメント{counts['comments']}")
 
-    port = free_port(BASE_PORT)
+    port = free_port(BASE_PORT + worker * PORT_SPAN, PORT_SPAN)
     env["PORT"] = str(port)
     # `npx next start` は自分の下に next-server を産む。親だけ terminate すると子が
     # 親無しで生き残り、ポートを掴んだまま残る。撮るたびに1つずつ溜まり、50 個で
@@ -896,6 +947,44 @@ def stop_server(proc: subprocess.Popen[str]) -> None:
             pass
 
 
+def day_report(config: Config, day: int, out_dir: Path, worker: int) -> tuple[list[str], int, bool]:
+    """1日ぶんを撮って、まとめて出す行と、撮れた枚数と、成否を返す。
+
+    並べて走らせると print が混ざり、どの行がどの日のものか読めなくなる。
+    1日ぶんを1つの塊にして返し、出すのは呼び出し側の1か所にする。
+    """
+    lines = [f"day{day:02d}: {len(shots_for_day(config, day))} 枚"]
+    try:
+        done = shoot_day(config, day, out_dir, worker)
+    except (OSError, RuntimeError, ValueError) as e:
+        lines.append(f"  ❌ {e}")
+        return lines, 0, False
+    for d in done:
+        marks = f"（赤枠 {len(d['marks'])}）" if d["marks"] else ""
+        lines.append(f"  ✅ {d['name']}{marks}")
+    return lines, len(done), True
+
+
+def run_days(config: Config, days: list[int], out_dir: Path) -> Iterator[tuple[list[str], int, bool]]:
+    """日をワーカーへ配って撮る。結果は終わった順に返す。
+
+    1日ぶんの中でいちばん時間を食うのは `next build` で、そこは CPU を使い切る。
+    日は互いに独立しているので、DB とポートさえ分ければ並べて走らせられる。
+    上限を機械のコア数より小さく抑えるのは、超えた分だけ待ち行列が伸びて全体が遅くなるため。
+    """
+    workers = max(1, min(MAX_WORKERS, len(days)))
+    if workers == 1:
+        for day in days:
+            yield day_report(config, day, out_dir, 0)
+        return
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        # 日をワーカーへ順番に配る。同じワーカーに当たった日は同じ DB を使い回すので、
+        # `prisma db push` が2回目以降は速く済む。
+        futures = [pool.submit(day_report, config, day, out_dir, i % workers) for i, day in enumerate(days)]
+        for future in as_completed(futures):
+            yield future.result()
+
+
 def main(argv: list[str]) -> int:
     args = argv[1:]
     if "--list" in args:
@@ -940,18 +1029,11 @@ def main(argv: list[str]) -> int:
         return 2
 
     total, failed = 0, 0
-    for n in targets:
-        print(f"day{n:02d}: {len(shots_for_day(config, n))} 枚")
-        try:
-            done = shoot_day(config, n, out_dir)
-        except (OSError, RuntimeError, ValueError) as e:
+    for lines, count, ok in run_days(config, targets, out_dir):
+        print("\n".join(lines))
+        total += count
+        if not ok:
             failed += 1
-            print(f"  ❌ {e}")
-            continue
-        for d in done:
-            marks = f"（赤枠 {len(d['marks'])}）" if d["marks"] else ""
-            print(f"  ✅ {d['name']}{marks}")
-        total += len(done)
 
     if failed:
         print(f"❌ {failed} 日が撮れませんでした（撮れた {total} 枚）")

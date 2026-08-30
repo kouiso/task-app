@@ -200,11 +200,45 @@ def check_shipped_config() -> list[str]:
     return fails
 
 
+def check_worker_isolation() -> list[str]:
+    """並べて撮るときに、ワーカー同士が DB とポートを取り合わないことを固定する。
+
+    ここが崩れると、片方が撮っている最中にもう片方が DB の中身を入れ替える。
+    出てくる画像は別の日のデータになるが、撮影自体は成功するので誰も気づけない。
+    """
+    fails = []
+    base = {"DATABASE_URL": "postgresql://user:password@localhost:25532/taskapp?schema=public"}
+    urls = {target.worker_env(base, w)["DATABASE_URL"] for w in range(target.MAX_WORKERS)}
+    if len(urls) != target.MAX_WORKERS:
+        fails.append(f"❌ ワーカーごとの DATABASE_URL が重なっている: {sorted(urls)}")
+    for url in urls:
+        if "localhost:25532" not in url or "schema=public" not in url:
+            fails.append(f"❌ DB 名以外まで書き換えている: {url}")
+    try:
+        target.worker_env({"DATABASE_URL": "mysql://x/y"}, 1)
+    except ValueError:
+        pass
+    else:
+        fails.append("❌ 読めない DATABASE_URL が素通りする")
+
+    # ポートの帯が重なると、空きを見つけてから next が握るまでの隙に取り合う。
+    bands = [range(target.BASE_PORT + w * target.PORT_SPAN, target.BASE_PORT + (w + 1) * target.PORT_SPAN)
+             for w in range(target.MAX_WORKERS)]
+    for i, a in enumerate(bands):
+        for b in bands[i + 1 :]:
+            if max(a.start, b.start) < min(a.stop, b.stop):
+                fails.append(f"❌ ポートの帯が重なっている: {a} と {b}")
+    if target.MAX_WORKERS < 1:
+        fails.append("❌ ワーカー数が 1 未満")
+    return fails
+
+
 CHECKS = (
     ("赤枠と切り抜きの座標の出どころ", check_mark_rect_source),
     ("日別シードの境界", check_day_seed_boundary),
     ("宣言表の読み込み", check_config_loading),
     ("同梱の宣言表", check_shipped_config),
+    ("ワーカーの分離", check_worker_isolation),
 )
 
 
