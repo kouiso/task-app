@@ -831,11 +831,14 @@
         "password": "password123"
       },
       "wait_for": "[role='tablist']",
-      "note": "Step 4 の『ステータス Tabs が表示されている画面』。Tabs だけを切り出すと、5つのタブが横並びであることが紙面でも読める。",
-      "clip": {
-        "selector": "[role='tablist']",
-        "padding": 0
-      }
+      "note": "Step 4 の『ステータス Tabs が表示されている画面』。Tabs だけを切り抜くと 700x72px にしかならず、紙面（版面 152.4mm）へ広げたときの実効解像度が 117ppi で下限の 120ppi を割る。画面全体を撮って、位置は赤枠で示す。",
+      "full_page": true,
+      "marks": [
+        {
+          "selector": "[role='tablist']",
+          "label": "今日つけるステータスタブ"
+        }
+      ]
     },
     {
       "name": "day17/task-groups.png",

@@ -497,6 +497,7 @@ Set に詰め、`false` なら空の Set で上書きします。
 スクリーンショット: チェックボックス付きタスクカードの表示を確認してください。
 
 ![チェックボックス付きタスクカードの表示を確認してください。](./screenshots/task-row-with-checkbox.png)
+
 実際のコードでは `TaskCard` コンポーネントをグリッドで並べています。`TaskCard`・`handleEdit`・`handleDelete`・`handleTaskClick`・`handleCreate` は過去の Day で作成済みです。
 
 チェックボックスはカードの左側に配置します。
@@ -609,6 +610,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 スクリーンショット: ヘッダーに全選択・全解除のチェックボックスが表示された画面を確認してください。
 
 ![ヘッダーに全選択・全解除のチェックボックスが表示された画面](./screenshots/select-all-checkbox.png)
+
 いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なので、まずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
 ```typescript
@@ -1108,6 +1110,7 @@ export function isTaskStatus(
 スクリーンショット: 完成した一括操作機能の表示を確認してください。
 
 ![完成した一括操作機能の表示を確認してください。](./screenshots/bulk-task-operations.png)
+
 以下のチェックリストで動作確認をしましょう。
 
 | テスト項目 | 操作 | 期待結果 |

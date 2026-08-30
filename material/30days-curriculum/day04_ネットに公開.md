@@ -28,9 +28,11 @@ Day 03 で GitHub へ保存した自分の `task-app` を Vercel につなぎ、
 Day 01 からここまで進めてきた作業が、今日の公開でひととおりつながります。Phase 1 の区切りとなる日です。
 
 ![Day 04 公開前の準備パネル](./screenshots/day04-prep-panel.png)
+
 スクリーンショット: 公開の前に手元でそろえておくものをまとめた図です。GitHub への push、`npm run build` の成功、Vercel に渡す環境変数の3つが今日の準備物になります。
 
 ![Day 04 公開URLの例](./screenshots/day04-sample-url.png)
+
 スクリーンショット: 公開すると `https://task-app-<自分のユーザー名>.vercel.app` の形で URL が発行されます。数字や記号が混じることもあります。この URL を今日の終わりに人へ送ります。
 
 - [ ] Day 03 の完成状態から作業を再開する

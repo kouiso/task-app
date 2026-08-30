@@ -246,10 +246,15 @@ async function shoot(page, job, shot) {
 
 async function main() {
   const job = JSON.parse(await readStdin());
-  // 既知の差: <input type="date"> の空欄が `mm/dd/yyyy` と出る。日本語環境のブラウザは
-  // `年/月/日` と出すので、日付欄のある画像（Day 10・Day 14 のダイアログ）だけ読者の画面と
-  // 並びが違う。context の locale でも起動時の --lang でも変わらないことを実測で確かめた。
-  const browser = await chromium.launch();
+  // `<input type="date">` の書式は context の locale では決まらない。見ているのは
+  // プロセスのロケールで、`LANG` / `LC_ALL` を渡すと `mm/dd/yyyy` が `yyyy/mm/dd` になる
+  // （`--lang` だけでは変わらないことも実測で確かめた）。日本語版のブラウザが出す
+  // `年/月/日` までは届かない。このコンテナに Chromium の日本語リソースが無いため。
+  // 並びは読者の画面と同じになるので、残る差は文字だけ。
+  const browser = await chromium.launch({
+    args: ['--lang=ja-JP'],
+    env: { ...process.env, LANG: 'ja_JP.UTF-8', LC_ALL: 'ja_JP.UTF-8' },
+  });
   const context = await browser.newContext({
     viewport: job.viewport,
     deviceScaleFactor: 2,
