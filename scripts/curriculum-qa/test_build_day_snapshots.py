@@ -488,6 +488,31 @@ def check_element_replacement() -> list[str]:
     return fails
 
 
+def check_import_merge() -> list[str]:
+    """import だけの抜粋が、今の import へ足し合わされることを確かめる。"""
+    fails = []
+    text = "import { Prisma } from '@prisma/client';\nimport { z } from 'zod';\n\nconst a = 1;"
+    got = target.merge_imports(text, "import { Prisma, ProjectMemberRole } from '@prisma/client';")
+    if got is None or "ProjectMemberRole" not in got:
+        fails.append(f"❌ 同じ持ち込み元へ名前を足せていない: {got!r}")
+    elif "Prisma," not in got or got.count("@prisma/client") != 1:
+        fails.append(f"❌ 既にある名前を消したか行が増えている: {got!r}")
+
+    # 持ち込み元が無ければ import の並びの下へ足す。
+    got = target.merge_imports(text, "import { hasPermission } from '@/lib/constant/roles';")
+    if got is None or "hasPermission" not in got:
+        fails.append(f"❌ 新しい持ち込み元を足せていない: {got!r}")
+    elif got.split("\n").index("import { hasPermission } from '@/lib/constant/roles';") > 2:
+        fails.append(f"❌ import が並びの外へ入っている: {got!r}")
+
+    # import 以外が混ざっとるチャンクは対象外（差し込みや書き換えの経路へ回す）。
+    if target.merge_imports(text, "import { a } from 'm';\nconst b = 2;") is not None:
+        fails.append("❌ import 以外が混ざったチャンクを import 合成として扱っている")
+    if target.merge_imports(text, "") is not None:
+        fails.append("❌ 空のチャンクを import 合成として扱っている")
+    return fails
+
+
 def check_scaffold_replacement() -> list[str]:
     """scaffold の配布物を、教材の抜粋で上書きしてしまわないことを確かめる。"""
     fails = []
@@ -579,6 +604,7 @@ CHECKS = (
     ("まるごとか抜粋か", check_complete_file),
     ("差し込みの適用", check_insertion),
     ("要素の書き換え", check_element_replacement),
+    ("import の足し合わせ", check_import_merge),
     ("配布物の置き換え", check_scaffold_replacement),
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),

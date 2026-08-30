@@ -177,6 +177,11 @@ INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[�
 # だけを出して、呼び出し側へ引数を1本足す。差し込みでも丸ごとの書き直しでもないので、
 # 要素の置き換えとして扱わんと day18 以降がずっと古い版のままになる。
 ELEMENT_HEAD = re.compile(r"^\s*<([A-Z][\w.]*)\b")
+# import 文1本。`import { a, type B } from 'mod';` の名前部分と持ち込み元を取る。
+IMPORT_LINE = re.compile(r"^import\s+\{([^}]*)\}\s*from\s*(['\"])([^'\"]+)\2\s*;?\s*$")
+# import と、コメントと、空行だけでできとるチャンクか。
+IMPORT_ONLY = re.compile(r"^\s*(?:import\b|//|/\*|\{/\*|$)")
+
 # 波括弧の中の式。JSX は `canEditProject={canEditProject}` の形で値を渡すので、
 # 参照しとる名前はここに出る。属性の名前（`open=`）は括弧の外なので拾わない。
 BRACED = re.compile(r"\{([^{}]*)\}")
@@ -535,6 +540,45 @@ def introduces_unknown_names(text: str, fragment: str) -> bool:
     return any(name not in known for name in referenced)
 
 
+def merge_imports(text: str, fragment: str) -> str | None:
+    """import だけの抜粋を、今のファイルの import へ足し合わせる。
+
+    同じ持ち込み元の import が既にあれば名前を足し合わせる。消さずに足すだけにするのは、
+    抜粋が「その日の完成形」でも、こちらが採っとる版のほうが後ろの名前を持っとる場合が
+    あるためである。持ち込み元が無ければ、最後の import の下へ1行足す。
+
+    day28 の `src/server/api/routers/task.ts` は `（既存の Prisma import を置き換える）` として
+    `ProjectMemberRole` と `PermissionKey` を持ち込む。これを当てんと、同じ日の
+    差し込みが入れた `buildBulkPermissionWhere` が名前を解決できずに落ちる。
+    """
+    lines = fragment.split("\n")
+    if not any(line.strip() for line in lines) or not all(IMPORT_ONLY.match(l) for l in lines):
+        return None
+    out = text.split("\n")
+    changed = False
+    for line in lines:
+        m = IMPORT_LINE.match(line.strip())
+        if not m:
+            continue
+        names = [n.strip() for n in m.group(1).split(",") if n.strip()]
+        source = m.group(3)
+        for i, existing in enumerate(out):
+            e = IMPORT_LINE.match(existing.strip())
+            if e and e.group(3) == source:
+                have = [n.strip() for n in e.group(1).split(",") if n.strip()]
+                merged = have + [n for n in names if n not in have]
+                out[i] = f"import {{ {', '.join(merged)} }} from '{source}';"
+                changed = True
+                break
+        else:
+            last = max(
+                (i for i, l in enumerate(out) if l.startswith("import ")), default=-1
+            )
+            out.insert(last + 1, line.strip())
+            changed = True
+    return "\n".join(out) if changed else None
+
+
 def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
     """採った版より後の日の「どこへ入れるか」付きの抜粋を、順に差し込む。
 
@@ -546,6 +590,11 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         if b.day <= after_day:
             continue
         m = INSERT_NOTE.match(b.note)
+        imports = merge_imports(text, render([b]))
+        if imports is not None:
+            # import だけのチャンクは、差し込み先の指示が無くても置き場所が決まる。
+            text = imports
+            continue
         element = None if m else ELEMENT_HEAD.match(operation_head(b.lines))
         if not m and (element is None or b.note or is_marked_final(b)):
             continue

@@ -12,7 +12,7 @@
 
 | Day | ツリー構築 | tsc | build | 最初のエラー3行 |
 | --- | --- | --- | --- | --- |
-| day28 | OK（116 ファイル） | NG | NG | src/server/api/routers/task.ts(92,15): error TS2552: Cannot find name 'PermissionKey'. Did you mean 'Permissions'?<br>src/server/api/routers/task.ts(93,4): error TS2304: Cannot find name 'ProjectMemberRole'.<br>src/server/api/routers/task.ts(94,17): error TS2304: Cannot find name 'ProjectMemberRole'. |
+| day28 | OK（116 ファイル） | NG | NG | src/server/api/routers/task.ts(417,27): error TS2552: Cannot find name 'findTasksWithPermission'. Did you mean 'findTaskWithPermission'?<br>src/server/api/routers/task.ts(435,27): error TS2552: Cannot find name 'findTasksWithPermission'. Did you mean 'findTaskWithPermission'?<br>src/server/api/routers/task.ts(456,27): error TS2552: Cannot find name 'findTasksWithPermission'. Did you mean 'findTaskWithPermission'? |
 
 ## NG の日の切り分け
 
