@@ -102,6 +102,11 @@ MODULE_HEAD = re.compile(
     r"const\b|let\b|var\b|function\b|async\s+function\b)"
 )
 
+# NG の日の切り分け。機械には「教材の欠陥か、道具の限界か」を決められないので、
+# 現物を読んだ結果を人がここへ書く。書いていない日は「判定不能（未調査）」と出る。
+# 推測で「教材の欠陥」と書かない。根拠は必ず現物の行を指すこと。
+TRIAGE: dict[int, tuple[str, str]] = {}
+
 # エラーらしい行の目印。tsc は `error TS2304`、Next.js は `Failed to compile.` と
 # `Module not found:`、npm は `npm ERR!` を出す。
 ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)
@@ -338,6 +343,26 @@ def result_table(results: list[DayResult]) -> str:
     return "\n".join(rows)
 
 
+def triage_section(results: list[DayResult]) -> str:
+    """NG の日の切り分けを書く。"""
+    ng = [r for r in results if not r.tree_ok or r.tsc == "NG" or r.build == "NG"]
+    if not ng:
+        return ""
+    rows = [
+        "",
+        "## NG の日の切り分け",
+        "",
+        "「教材の欠陥」は現物を読んで確かめたものだけ。読んでいない日は「判定不能（未調査）」。",
+        "",
+        "| Day | 分類 | 根拠 |",
+        "| --- | --- | --- |",
+    ]
+    for r in ng:
+        kind, why = TRIAGE.get(r.day, ("判定不能（未調査）", "現物と突き合わせていない"))
+        rows.append(f"| day{r.day:02d} | {_cell(kind)} | {_cell(why)} |")
+    return "\n".join(rows) + "\n"
+
+
 def write_result_doc(results: list[DayResult], verify: bool) -> None:
     """判定を doc/review-handoff/day-snapshots-result.md へ書き出す。"""
     RESULT_DOC.parent.mkdir(parents=True, exist_ok=True)
@@ -354,7 +379,8 @@ def write_result_doc(results: list[DayResult], verify: bool) -> None:
         "",
         "",
     ]
-    RESULT_DOC.write_text("\n".join(head) + result_table(results) + "\n", encoding="utf-8")
+    body = "\n".join(head) + result_table(results) + "\n"
+    RESULT_DOC.write_text(body + triage_section(results), encoding="utf-8")
 
 
 def main(argv: list[str]) -> int:

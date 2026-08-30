@@ -38,8 +38,11 @@ DAY01 = (
     + "```bash\nnpm run dev\n```\n"
 )
 
-# 2日目に同じ書き込み先へ追記する。連結は day 順であること。
-DAY02 = block("src/app/page.tsx", "export const revalidate = 0;")
+# 2日目は同じ書き込み先を書き直す。day02 の src/app/dashboard/page.tsx と同じ形で、
+# 版の先頭には注記が無く、続きのチャンクにだけ注記が付く。
+DAY02 = block("src/app/page.tsx", "const owner = 'Taro';\n\nexport default function Page() {") + block(
+    "src/app/page.tsx（同じファイルの続き）", "  return null;\n}"
+)
 
 # scaffold が配る側のファイル。教材はここへ断片を書くが、ツリーには配布物が残る。
 DAY03 = block("src/lib/utils.ts", "// 既存ファイルへの追記の断片")
@@ -67,8 +70,8 @@ def check_block_selection() -> list[str]:
             fails.append("❌ ターミナルを実ファイルとして拾った")
 
         days = [b.day for b in by_file.get("src/app/page.tsx", [])]
-        if days != [1, 2]:
-            fails.append(f"❌ 同じ書き込み先が day 順に連結されていない: {days}")
+        if days != [1, 2, 2]:
+            fails.append(f"❌ 同じ書き込み先が day 順に集まっていない: {days}")
     return fails
 
 
@@ -90,10 +93,69 @@ def check_apply_blocks() -> list[str]:
             fails.append(f"❌ 書いたファイル数が違う: {written}")
 
         body = (dest / "src/app/page.tsx").read_text(encoding="utf-8")
-        if "export default function Page" not in body or "export const revalidate" not in body:
-            fails.append(f"❌ day をまたぐ連結が落ちている: {body!r}")
+        if body.count("export default function Page") != 1:
+            fails.append(f"❌ 書き直し版が前の版を置き換えていない: {body!r}")
+        if "const owner" not in body or "return null;" not in body:
+            fails.append(f"❌ 書き直し版とその続きが揃っていない: {body!r}")
         if "filepath:" in body:
             fails.append("❌ 目印の行を写経対象へ混ぜている")
+    return fails
+
+
+# 置き換えと追記の境界。どれも material/30days-curriculum の現物から採った形である。
+# 左が「そのブロックだけを取り出した中身」、右が「書き直しの先頭か」。
+BOUNDARY_CASES: list[tuple[str, str, str, bool]] = [
+    # day02 src/app/dashboard/page.tsx。版の先頭は注記を持たず、コードで始まる。
+    ("版の先頭（export default）", "", "export default function DashboardPage() {", True),
+    ("版の先頭（const）", "", "const ownerName = 'Taro';", True),
+    ("版の先頭（type）", "", "type DashboardOwner = {", True),
+    # day05 src/app/login/page.tsx。
+    ("版の先頭（use client）", "", "'use client';", True),
+    ("版の先頭（import）", "", "import { z } from 'zod';", True),
+    # 注記が付いていれば、教材が「続き・一部だ」と言っている。必ず追記。
+    ("同じファイルの続き", "（同じファイルの続き）", "import { z } from 'zod';", False),
+    ("import に追加", "（import に追加）", "import Link from 'next/link';", False),
+    ("getAll の直後に追加", "（getAll の直後に追加）", "const x = 1;", False),
+    # 貼る位置の説明から始まる断片。ファイルの1行目には来られない。
+    ("JSX コメントの断片", "", "{/* メール入力欄の下に追加 */}", False),
+    ("行コメントの断片", "", "// LoginFormコンポーネント内の先頭に追加", False),
+    # 途中の行そのもの。JSX の途中や閉じ括弧だけのチャンク。
+    ("JSX の途中", "", "  <article className=\"card\">", False),
+    ("閉じ括弧だけ", "", "    </main>", False),
+]
+
+
+def check_version_boundary() -> list[str]:
+    """置き換えと追記の境界を固定する。"""
+    fails = []
+    for name, note, first, want in BOUNDARY_CASES:
+        b = target.Block(1, "day01_x.md", 1, "src/app/page.tsx", note, "tsx", (first,))
+        if target.restarts_file(b, None) is not want:
+            fails.append(f"❌ {name}: 書き直しの先頭かの判定が {not want} になっている")
+
+    # `完成版` の run は先頭だけが書き直しで、続くチャンクは追記である。
+    def marked(text: str, note: str = "") -> target.Block:
+        return target.Block(5, "day05_x.md", 1, "src/app/login/page.tsx", note, "tsx", (text,))
+
+    plain = marked("// onSubmit を書き換え")
+    head = marked("// 完成版: 'use client' と外部ライブラリの import")
+    tail = marked("// 完成版: プロジェクト内の部品の import")
+    if not target.restarts_file(head, plain):
+        fails.append("❌ 完成版の run の先頭で書き直しになっていない")
+    if target.restarts_file(tail, head):
+        fails.append("❌ 完成版の run の途中で書き直してしまっている")
+    if target.restarts_file(marked("// 完成版: 続き", "（同じファイルの続き）"), plain):
+        fails.append("❌ 注記付きの完成版チャンクで書き直してしまっている")
+
+    # 並び全体を通したときに、最後の版とその続きだけが残ること。
+    blocks = [
+        marked("export default function A() {}"),
+        marked("export default function B() {}"),
+        marked("// B の続き", "（同じファイルの続き）"),
+    ]
+    kept = [b.lines[0] for b in target.latest_version(blocks)]
+    if kept != ["export default function B() {}", "// B の続き"]:
+        fails.append(f"❌ 最後の版とその続きだけが残っていない: {kept}")
     return fails
 
 
@@ -170,6 +232,7 @@ def check_tsconfig_excludes() -> list[str]:
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
+    ("置き換えと追記の境界", check_version_boundary),
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),
     ("tsconfig の exclude", check_tsconfig_excludes),
