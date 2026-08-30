@@ -619,15 +619,15 @@
       "wait_for": "[role='dialog']",
       "marks": [
         {
-          "selector": "div.grid.gap-2:has(> label[for='title'])",
+          "selector": "#title",
           "label": "Step 4 で書くタイトル欄"
         },
         {
-          "selector": "div.grid.gap-2:has(> label[for='description'])",
+          "selector": "#description",
           "label": "同じく説明欄"
         }
       ],
-      "note": "Step 4 の『タイトルと説明の入力欄が並んだ画面』。Step 4 だけを写した絵はこの道具では作れない（ツリーはその日の終わりの形しか組めない）ので、完成したダイアログの中で該当の2欄を指す。",
+      "note": "Step 4 の『タイトルと説明の入力欄が並んだ画面』。Step 4 だけを写した絵はこの道具では作れない（ツリーはその日の終わりの形しか組めない）ので、完成したダイアログの中で該当の2欄を指す。 赤枠は入力欄そのものを指す。ラベルまで囲むと番号バッジがラベルの1文字目に乗る。",
       "clip": {
         "selector": "[role='dialog']",
         "padding": 0
@@ -654,15 +654,15 @@
       "wait_for": "[role='dialog']",
       "marks": [
         {
-          "selector": "div.grid.gap-2:has(> label[for='project'])",
+          "selector": "#project",
           "label": "Step 6 で書くプロジェクト欄"
         },
         {
-          "selector": "div.grid.gap-2:has(> label[for='assignee'])",
+          "selector": "#assignee",
           "label": "同じく担当者欄"
         }
       ],
-      "note": "Step 6 の『プロジェクト・担当者の Select 欄』。同上の理由で、完成したダイアログの中で該当の2欄を指す。",
+      "note": "Step 6 の『プロジェクト・担当者の Select 欄』。同上の理由で、完成したダイアログの中で該当の2欄を指す。 赤枠は入力欄そのものを指す。ラベルまで囲むと番号バッジがラベルの1文字目に乗る。",
       "clip": {
         "selector": "[role='dialog']",
         "padding": 0

@@ -540,6 +540,32 @@ def introduces_unknown_names(text: str, fragment: str) -> bool:
     return any(name not in known for name in referenced)
 
 
+def join_imports(text: str) -> list[str]:
+    """複数行に折り返された import 文を1行へ畳んだ行の並びを返す。
+
+    教材は `import {` で改行して名前を縦に並べる書き方をよく使う。1行ずつ見る判定では
+    2行目以降が import に見えず、import だけのチャンクを見落とす。
+    """
+    lines = text.split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.lstrip().startswith("import ") and "{" in line and "}" not in line:
+            buf = [line.strip()]
+            i += 1
+            while i < len(lines):
+                buf.append(lines[i].strip())
+                if "}" in lines[i]:
+                    break
+                i += 1
+            out.append(re.sub(r"\s+", " ", " ".join(buf)))
+        else:
+            out.append(line)
+        i += 1
+    return out
+
+
 def merge_imports(text: str, fragment: str) -> str | None:
     """import だけの抜粋を、今のファイルの import へ足し合わせる。
 
@@ -551,10 +577,10 @@ def merge_imports(text: str, fragment: str) -> str | None:
     `ProjectMemberRole` と `PermissionKey` を持ち込む。これを当てんと、同じ日の
     差し込みが入れた `buildBulkPermissionWhere` が名前を解決できずに落ちる。
     """
-    lines = fragment.split("\n")
+    lines = join_imports(fragment)
     if not any(line.strip() for line in lines) or not all(IMPORT_ONLY.match(l) for l in lines):
         return None
-    out = text.split("\n")
+    out = join_imports(text)
     changed = False
     for line in lines:
         m = IMPORT_LINE.match(line.strip())

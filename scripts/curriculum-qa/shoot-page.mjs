@@ -206,6 +206,15 @@ async function shoot(page, job, shot) {
   }
   // アニメーションの途中で撮ると、同じ指定でも回ごとに違う絵になる。
   await page.waitForTimeout(400);
+  // ダイアログが開くと中の入力欄へ焦点が移り、数値欄では中身が選択状態になる。
+  // 青い反転が写った画像は、読者が何もしていない画面と違って見える。焦点と選択を外す。
+  await page.evaluate(() => {
+    const el = document.activeElement;
+    if (el instanceof HTMLElement) {
+      el.blur();
+    }
+    window.getSelection()?.removeAllRanges();
+  });
 
   const rects = await collectRects(page, shot.marks ?? []);
   if (rects.length > 0) {

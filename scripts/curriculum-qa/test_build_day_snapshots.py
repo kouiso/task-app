@@ -505,6 +505,12 @@ def check_import_merge() -> list[str]:
     elif got.split("\n").index("import { hasPermission } from '@/lib/constant/roles';") > 2:
         fails.append(f"❌ import が並びの外へ入っている: {got!r}")
 
+    # 縦に並べて書いた import も1本として読む（教材はこの書き方をよく使う）。
+    multiline = "import {\n  assertMemberPermission,\n  findTasksWithPermission,\n} from './_helpers/permission';"
+    got = target.merge_imports("import { assertMemberPermission } from './_helpers/permission';", multiline)
+    if got is None or "findTasksWithPermission" not in got:
+        fails.append(f"❌ 折り返した import を読めていない: {got!r}")
+
     # import 以外が混ざっとるチャンクは対象外（差し込みや書き換えの経路へ回す）。
     if target.merge_imports(text, "import { a } from 'm';\nconst b = 2;") is not None:
         fails.append("❌ import 以外が混ざったチャンクを import 合成として扱っている")
