@@ -374,6 +374,20 @@
       ],
       "note": "Step 7 の確認ポイント『一覧に新しいプロジェクトが表示される』。既存画像は未検証のまま Day 10 に置かれていた。",
       "full_page": true
+    },
+    {
+      "name": "day04/public-top.png",
+      "day": 4,
+      "path": "/",
+      "note": "Day 04 が実際に公開するトップページ。本番ビルドで起動して撮るので、Vercel が配るものと同じ絵になる。",
+      "full_page": true
+    },
+    {
+      "name": "day04/public-dashboard.png",
+      "day": 4,
+      "path": "/dashboard",
+      "note": "Day 04 の確認ポイント『Day 02 で作った自分用メッセージが見える』の1枚。",
+      "full_page": true
     }
   ]
 }
