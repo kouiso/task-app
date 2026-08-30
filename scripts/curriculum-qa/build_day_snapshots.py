@@ -56,6 +56,7 @@ import re
 import shutil
 import subprocess
 import sys
+from functools import cache
 from pathlib import Path
 from typing import NamedTuple
 
@@ -114,28 +115,20 @@ MODULE_HEAD = re.compile(
 # 書き直しとして扱って前の版を捨てる。かといって追記にすると import と定義が
 # 二重になるので、置き換えでも追記でも復元できない。教材の欠陥ではない。
 TRIAGE: dict[int, tuple[str, str]] = {
-    9: ('ツールの限界', 'src/app/project/page.tsx が 30 ブロック中 9（118/353 行）しか残らない。TS6133 の dialogOpen は捨てたブロックの中で使われている'),
-    10: ('ツールの限界', 'src/server/api/root.ts が 7 ブロック中 1 しか残らず authRouter だけの版になる。api.project が無いのはそのため'),
-    11: ('ツールの限界', 'day10 と同じ。root.ts が authRouter だけの版になる（src/app/project/page.tsx も 86 ブロック中 21）'),
-    12: ('ツールの限界', 'day10 と同じ。root.ts が authRouter だけの版になる（src/app/project/page.tsx も 141 ブロック中 31）'),
-    13: ('ツールの限界', 'src/component/layout/app-layout.tsx が 27 ブロック中 2（31/362 行）しか残らず AppLayout の export が落ちる'),
-    14: ('ツールの限界', 'day13 と同じ。app-layout.tsx の AppLayout が落ちる'),
-    15: ('ツールの限界', 'day13 と同じ。app-layout.tsx の AppLayout が落ちる'),
-    16: ('ツールの限界', 'day13 と同じ。app-layout.tsx の AppLayout が落ちる'),
-    17: ('ツールの限界', 'day13 と同じ app-layout.tsx に加え、src/app/my-task/page.tsx も 68 ブロック中 24（412/869 行）しか残らない'),
-    18: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
-    19: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
-    20: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
-    21: ('ツールの限界', 'src/component/layout/app-layout.tsx が 34 ブロック中 2（14/487 行）しか残らず、その断片が構文として閉じていない'),
-    22: ('ツールの限界', 'day21 と同じ。app-layout.tsx が 14/487 行しか残らない'),
-    23: ('ツールの限界', 'day21 と同じ。app-layout.tsx が 14/487 行しか残らない'),
-    24: ('ツールの限界', 'day17 と同じ。app-layout.tsx と my-task/page.tsx が欠ける'),
-    25: ('ツールの限界', 'src/component/layout/app-layout.tsx が 44 ブロック中 3（39/601 行）しか残らない'),
-    26: ('ツールの限界', 'day25 と同じ。app-layout.tsx が 39/601 行しか残らない'),
-    27: ('ツールの限界', 'day25 と同じ。app-layout.tsx が 39/601 行しか残らない'),
-    28: ('ツールの限界', 'src/app/task/page.tsx が 160 ブロック中 19（259/2044 行）しか残らず、div の閉じタグが捨てたブロックの中にある'),
-    29: ('ツールの限界', 'day28 と同じ。task/page.tsx が 259/2044 行しか残らない'),
-    30: ('ツールの限界', 'day28 と同じ。task/page.tsx が 259/2044 行しか残らない'),
+    11: ('教材の欠陥', 'day11 の src/app/project/page.tsx が配布物 src/component/project/project-detail-view.tsx を import しており、その配布物は api.project.getById を呼ぶ。しかし教材が project.ts へ getById を書くのは day12（教材の全ブロックを検索した実測）。読者も day11 で同じ型エラーに当たる。教材側の担当が直す範囲なので、ここでは触っていない'),
+    18: ('ツールの限界', 'src/app/task/page.tsx が day15 の版で止まる（day16 以降その日の完成版が抜粋しかない）。day18 で src/component/task/task-detail-dialog.tsx だけが canEditProject を必須にする版へ進み、呼ぶ側と呼ばれる側の版がずれる'),
+    19: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    20: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    21: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    22: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    23: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    24: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    25: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    26: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    27: ('ツールの限界', 'day18 と同じ。task/page.tsx が day15 止まりで dialog と版がずれる'),
+    28: ('ツールの限界', 'day18 に加え、src/server/api/routers/task.ts も day15 止まり（94ブロック中22）で PermissionKey が無い'),
+    29: ('ツールの限界', 'day28 と同じ。task/page.tsx と routers/task.ts が day15 止まり'),
+    30: ('ツールの限界', 'day28 と同じ。task/page.tsx と routers/task.ts が day15 止まり'),
 }
 
 # チャンクの見出し行。教材は長いファイルを分けて出すとき、各チャンクの先頭へ
@@ -165,6 +158,25 @@ STRICTER_THAN_READER = (
 # day13 の `app-layout.tsx` の抜粋（アイコンの import とメニュー項目だけ）は
 # 括弧の収支が合っていて先頭も `import` なので、この条件でしか落とせない。
 TOP_LEVEL_EXPORT = re.compile(r"^export\s", re.M)
+
+# 外へ出す名前。`export const X` `export function X` `export type X` `export { a, b }`。
+EXPORT_NAME = re.compile(
+    r"^export\s+(?:default\s+)?(?:async\s+)?"
+    r"(?:const|let|var|function|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)",
+    re.M,
+)
+EXPORT_LIST = re.compile(r"^export\s*\{([^}]*)\}", re.M)
+
+# 差し込み先を名指しした注記。`（delete の直後に追加）` `（taskRouter の前に追加）` の形で、
+# 教材が「どこへ入れるか」を書いている。ここを読めば抜粋を前の完全な版へ差し込める。
+# 差し込めないと、day16 が足す `addTime` 手続きが落ちて、day16 以降の
+# `time-log-dialog.tsx` が `api.task.addTime` を呼べずに型検査で落ちる。
+INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[）)]$")
+# 差し込む1本が複数チャンクに割れたときの、2つ目以降の注記。
+CONTINUATION = re.compile(r"続き")
+# 差し込み先の目印になる行。オブジェクトの要素（`delete: protectedProcedure`）と
+# トップレベルの宣言（`export const taskRouter`）の両方を受ける。
+ANCHOR = "^(\\s*)(?:{name}\\s*:|(?:export\\s+)?(?:const|let|function|async\\s+function)\\s+{name}\\b)"
 
 # 表へ載せるエラー1行の長さ。
 ERROR_LINE_WIDTH = 160
@@ -383,6 +395,100 @@ def render(blocks: list[Block]) -> str:
     return "\n".join("\n".join(strip_chunk_label(b.lines)).strip("\n") for b in blocks)
 
 
+def _member_end(lines: list[str], start: int) -> int:
+    """start 行から始まる要素が終わる行の次を返す。
+
+    括弧の深さで見る。深さが0へ戻って、その行が `,` か `;` で終わったところが切れ目。
+    """
+    depth = 0
+    for i in range(start, len(lines)):
+        masked = mask_code(lines[i])
+        depth += sum(masked.count(c) for c in "{([") - sum(masked.count(c) for c in "})]")
+        if depth <= 0 and i > start and masked.rstrip().endswith((",", ";")):
+            return i + 1
+        if depth <= 0 and i > start and not masked.strip():
+            return i
+    return len(lines)
+
+
+def insert_fragment(text: str, name: str, where: str, fragment: str) -> str | None:
+    """`name` の直後／前へ fragment を差し込む。差し込み先が無ければ None。
+
+    見つからないときに黙って足さない。位置の分からない差し込みを末尾へ付けると、
+    閉じ括弧の外へ手続きが1本出た壊れたファイルになる。
+    """
+    pattern = re.compile(ANCHOR.format(name=re.escape(name)))
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if not pattern.match(line):
+            continue
+        at = i if where == "前に追加" else _member_end(lines, i)
+        return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
+    return None
+
+
+def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
+    """採った版より後の日の「どこへ入れるか」付きの抜粋を、順に差し込む。
+
+    採った版が day15 で day21 を組むとき、day16〜21 が足した手続きはどの版にも入っていない。
+    注記が差し込み先を名指ししているものだけを、日の順に入れる。
+    """
+    ordered = sorted(blocks, key=lambda x: (x.day, x.lineno))
+    for i, b in enumerate(ordered):
+        if b.day <= after_day:
+            continue
+        m = INSERT_NOTE.match(b.note)
+        if not m:
+            continue
+        # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
+        # 続きは `（同じファイルの続き）` になる。続きを落とすと手続きが途中で切れる
+        # （day28 の `src/server/api/routers/task.ts` が 439 行目で閉じずに落ちていた）。
+        piece = [b]
+        for nxt in ordered[i + 1 :]:
+            if nxt.day != b.day or not CONTINUATION.search(nxt.note):
+                break
+            piece.append(nxt)
+        merged = insert_fragment(text, m.group(1), m.group(2), render(piece))
+        if merged is not None:
+            text = merged
+    return text
+
+
+def exported_names(text: str) -> set[str]:
+    """そのソースが外へ出す名前を返す。"""
+    names = set(EXPORT_NAME.findall(text))
+    for group in EXPORT_LIST.findall(text):
+        for item in group.split(","):
+            head = item.strip().split(" as ")[-1].strip()
+            if head:
+                names.add(head)
+    return names
+
+
+@cache
+def scaffold_exports() -> dict[str, frozenset[str]]:
+    """scaffold が配るファイルが、それぞれ外へ出す名前。"""
+    out: dict[str, frozenset[str]] = {}
+    for dest, src in scaffold_copies():
+        if src.suffix in {".ts", ".tsx"}:
+            out[dest] = frozenset(exported_names(src.read_text(encoding="utf-8")))
+    return out
+
+
+def replaces_scaffold_file(target: str, text: str) -> bool:
+    """教材のこの版で、scaffold の配布物を置き換えてよいか。
+
+    配布物が外へ出す名前を全部含んでいるときだけ置き換える。教材はこの手のファイルへ
+    関数1本だけの抜粋も出しており、それを丸ごとの書き直しと見なすと、配布物にしか
+    無い名前が消える。`src/lib/constant/status.ts` がこれで、教材の抜粋は
+    `isTaskStatus` 1本しか無いのに `TASK_STATUS` まで持っていってしまっていた。
+    """
+    required = scaffold_exports().get(target)
+    if not required:
+        return False
+    return required <= exported_names(text)
+
+
 def apply_blocks(dest: Path, paths: list[Path]) -> int:
     """写経ブロックを書き込み先ごとに置く。返り値は書いたファイル数。
 
@@ -397,11 +503,16 @@ def apply_blocks(dest: Path, paths: list[Path]) -> int:
     count = 0
     for target, blocks in sorted(concat_by_file(paths).items()):
         version = latest_version(blocks)
-        if target in provided and not is_complete_file(version):
+        body = render(version)
+        if target in provided and not (
+            is_complete_file(version) and replaces_scaffold_file(target, body)
+        ):
             continue
         out = dest / target
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(f"{render(version)}\n", encoding="utf-8")
+        if version:
+            body = apply_insertions(body, blocks, version[-1].day)
+        out.write_text(f"{body}\n", encoding="utf-8")
         count += 1
     return count
 
@@ -535,6 +646,21 @@ def write_result_doc(results: list[DayResult], verify: bool) -> None:
     RESULT_DOC.write_text(body + triage_section(results), encoding="utf-8")
 
 
+# 型検査が赤になることを教材が先に断っている日。
+# day11 は `project-detail-view.tsx`（配布物）が `api.project.getById` を呼ぶが、
+# その手続きを読者が書くのは day12。教材はこれを隠さず、day11 本文で
+# 「この時点ではエディタに `getById` が無いという型エラーが出ます。写し間違いでは
+# ありません」「実際に数えると5件出ます」「Day 11 を終えた時点で `npm run build` は
+# 通りません。今日は失敗して正常です」と書いている（day11 の Step 7 付近）。
+# 読者の手元と道具の結果が一致しているので、これは教材の欠陥ではない。
+#
+# ただし緑になったら、それはそれで報告する。教材が「落ちる」と断っているのに
+# 落ちなくなったなら、本文の断りが嘘になっているということなので、直す先は本文になる。
+EXPECTED_RED = {
+    11: "day11 は `getById` を書く前に配布物を取り込むため型エラーが5件出る。教材が本文で明示している",
+}
+
+
 def main(argv: list[str]) -> int:
     args = argv[1:]
     verify = "--verify" in args
@@ -573,7 +699,24 @@ def main(argv: list[str]) -> int:
     print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
 
     # build の失敗では止めない。DB の無い機械でも赤くなるので、教材の欠陥を指さない。
-    broken = [r for r in results if not r.tree_ok or r.tsc == "NG"]
+    broken = [
+        r for r in results
+        if not r.tree_ok or (r.tsc == "NG" and r.day not in EXPECTED_RED)
+    ]
+    # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
+    unexpected_green = [
+        r for r in results if r.day in EXPECTED_RED and r.tsc == "OK"
+    ]
+    for r in results:
+        if r.day in EXPECTED_RED and r.tsc == "NG":
+            print(f"  day{r.day:02d} の型エラーは想定どおり: {EXPECTED_RED[r.day]}")
+    if unexpected_green:
+        for r in unexpected_green:
+            print(
+                f"❌ day{r.day:02d} は教材が「型エラーが出る」と断っているのに通りました。"
+                "本文の断りを見直してください"
+            )
+        return 1
     if broken:
         print(f"❌ ツリー構築または型検査が通らない {len(broken)} 日")
         return 1

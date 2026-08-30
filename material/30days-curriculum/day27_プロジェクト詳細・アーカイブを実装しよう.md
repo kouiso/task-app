@@ -168,7 +168,7 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 `prisma.project` を引いても、そのユーザーがそのプロジェクトの何なのかは分かりません。役割が載っているのは `ProjectMember` の行のほうです。
 
 ```mermaid
-flowchart LR
+flowchart TB
     U["User<br/>名前・メール"] --- M["ProjectMember<br/>userId / projectId / role"]
     P["Project<br/>name / description / isArchived<br/>役割は載っていない"] --- M
     M --> Q{"role の canArchive は true か"}
@@ -176,7 +176,7 @@ flowchart LR
     Q -->|"行が無い / 他の役割"| NG["FORBIDDEN"]
 ```
 
-役割が載っているのは真ん中の `ProjectMember` だけで、左右の2つには入っていません。行が1つも見つからない人は、そのプロジェクトに参加していない人です。
+役割が載っているのは `ProjectMember` だけで、上の2つには入っていません。行が1つも見つからない人は、そのプロジェクトに参加していない人です。
 
 `assertMemberPermission` は渡された配列の先頭を見て、行が1つも無ければ `FORBIDDEN` を返します。だから `findUnique` が `null` を返す「そもそも参加していない人」は、ここで止まります。第2引数の `'canArchive'` を渡すと、役割の中身まで見ます。`canArchive` が `true` の役割は `OWNER` だけなので、管理者でもアーカイブはできません。この引数を省くと「メンバーなら誰でもアーカイブできる」に意味が変わってしまいます。
 

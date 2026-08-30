@@ -347,6 +347,92 @@ def check_complete_file() -> list[str]:
     return fails
 
 
+ROUTER = """export const taskRouter = createTRPCRouter({
+  delete: protectedProcedure
+    .mutation(async () => {
+      return 1;
+    }),
+});"""
+
+
+def check_insertion() -> list[str]:
+    """差し込み先を名指しした抜粋が、前の完全な版へ入ることを確かめる。"""
+    fails = []
+    got = target.insert_fragment(ROUTER, "delete", "直後に追加", "  addTime: x,")
+    if got is None or "  }),\n  addTime: x,\n});" not in got:
+        fails.append(f"❌ 直後への差し込みが効いていない: {got!r}")
+
+    got = target.insert_fragment(ROUTER, "taskRouter", "前に追加", "const schema = 1;")
+    if got is None or not got.startswith("const schema = 1;\nexport const taskRouter"):
+        fails.append(f"❌ 前への差し込みが効いていない: {got!r}")
+
+    # 差し込み先が無いときに末尾へ足さない。閉じ括弧の外へ出た壊れた版になるため。
+    if target.insert_fragment(ROUTER, "notThere", "直後に追加", "x") is not None:
+        fails.append("❌ 差し込み先が無いのに足している")
+
+    # 採った版より後の日の抜粋だけを、日の順に入れる。
+    blocks = [
+        blk(15, "", "export const taskRouter = createTRPCRouter({", "  delete: x,", "});"),
+        blk(16, "（delete の直後に追加）", "  addTime: y,"),
+        blk(20, "（addTime の直後に追加）", "  bulkDelete: z,"),
+    ]
+    merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
+    if merged.index("addTime") > merged.index("bulkDelete"):
+        fails.append(f"❌ 差し込みの順番が違う: {merged!r}")
+    # 採った版と同じ日以前の注記は、その版へ既に入っているので二重に足さない。
+    if "addTime" in target.apply_insertions(target.render(blocks[:1]), blocks, 20):
+        fails.append("❌ 採った版より前の日の注記まで差し込んでいる")
+
+    # 差し込む1本が複数チャンクに割れていても、続きまで一緒に入れる。
+    split = [
+        blk(15, "", "export const taskRouter = createTRPCRouter({", "  delete: x,", "});"),
+        blk(28, "（delete の直後に追加）", "  bulkComplete: protectedProcedure"),
+        blk(28, "（同じファイルの続き）", "    .mutation(async () => {}),"),
+    ]
+    merged = target.apply_insertions(target.render(split[:1]), split, 15)
+    if ".mutation(async () => {})," not in merged:
+        fails.append(f"❌ 差し込みの続きが落ちている: {merged!r}")
+    if merged.index("bulkComplete") > merged.index(".mutation"):
+        fails.append("❌ 差し込みの続きが本体より前に入っている")
+
+    # 差し込み先を名指ししていない注記は対象外（`（同じファイルの続き）` 等）。
+    if target.INSERT_NOTE.match("（同じファイルの続き）"):
+        fails.append("❌ 続きの注記を差し込み指示として読んでいる")
+    if not target.INSERT_NOTE.match("（getAll の直後に追加）"):
+        fails.append("❌ 差し込みの注記を読めていない")
+    return fails
+
+
+def check_scaffold_replacement() -> list[str]:
+    """scaffold の配布物を、教材の抜粋で上書きしてしまわないことを確かめる。"""
+    fails = []
+    if target.exported_names("export const A = 1;\nexport function B() {}") != {"A", "B"}:
+        fails.append("❌ export の名前を読めていない")
+    if "C" not in target.exported_names("export { C as D };") and "D" not in target.exported_names(
+        "export { C as D };"
+    ):
+        fails.append("❌ export { } の形を読めていない")
+
+    # root.ts は教材が全体を出し直すので置き換える。
+    root = "src/server/api/root.ts"
+    required = target.scaffold_exports().get(root)
+    if not required:
+        fails.append("❌ 配布物の export を読めていない（root.ts）")
+    else:
+        full = "\n".join(f"export const {n} = 1;" for n in required)
+        if not target.replaces_scaffold_file(root, full):
+            fails.append("❌ 全部の名前を持つ版で置き換えられていない")
+        if target.replaces_scaffold_file(root, "export const appRouter = 1;"):
+            fails.append("❌ 名前が足りない版で配布物を置き換えている")
+
+    # status.ts の抜粋（isTaskStatus 1本）で配布物を消さない。
+    if target.replaces_scaffold_file(
+        "src/lib/constant/status.ts", "export function isTaskStatus() {}"
+    ):
+        fails.append("❌ 抜粋で scaffold の status.ts を置き換えている")
+    return fails
+
+
 def check_triage_section() -> list[str]:
     """NG の日の切り分けが、調べていないものを勝手に断定しないことを確かめる。"""
     fails = []
@@ -375,15 +461,44 @@ def check_triage_section() -> list[str]:
     return fails
 
 
+def check_expected_red_is_grounded() -> list[str]:
+    """EXPECTED_RED に挙げた日が、本当に教材で断られているかを確かめる。
+
+    ここを台帳だけで持つと、あとから「落ちるから」という理由で日を足して
+    赤を隠す抜け道になる。教材の本文に断りがある日だけを許す。
+    """
+    from build_day_snapshots import EXPECTED_RED, MATERIAL_DIR
+
+    fails = []
+    if not EXPECTED_RED:
+        return ["EXPECTED_RED が空です。day11 の断りが本文から消えたのなら別途確認が要ります"]
+    for day in EXPECTED_RED:
+        found = sorted(MATERIAL_DIR.glob(f"day{day:02d}_*.md"))
+        if not found:
+            fails.append(f"❌ EXPECTED_RED の day{day:02d} に対応する教材がありません")
+            continue
+        text = found[0].read_text(encoding="utf-8")
+        # 「読者の画面でも同じことが起きる」と本文が言っているかどうか。
+        if "写し間違いではありません" not in text:
+            fails.append(
+                f"❌ day{day:02d} の本文に型エラーの断りが見つかりません。"
+                "断りが無い日を EXPECTED_RED に置くと、教材の欠陥を隠すことになります"
+            )
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
     ("置き換えと追記の境界", check_version_boundary),
     ("まるごとか抜粋か", check_complete_file),
+    ("差し込みの適用", check_insertion),
+    ("配布物の置き換え", check_scaffold_replacement),
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),
     ("NG の切り分け", check_triage_section),
     ("tsconfig の exclude", check_tsconfig_excludes),
+    ("想定内の赤は教材の断りが根拠", check_expected_red_is_grounded),
 )
 
 

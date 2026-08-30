@@ -90,6 +90,13 @@ fontconfig は `$XDG_DATA_HOME/fonts` を見るので、`prepare_work_dir()` で
 
 この欠陥は**既存39枚にも同じように出ていた**ので、直したぶんは全冊に効く。
 
+### 縦横の向き（LR で組むと紙面で潰れる）
+
+`flowchart LR` は横に伸びる。ノードが4つ以上つながると図の横幅が紙幅を超え、
+Vivliostyle が縮めるので文字が本文より小さくなる。Day 03（4ノード）と Day 16（5ノード）は
+初回の組版でこれが起きたため `flowchart TB` へ変えた。Day 27 も3段の関係で横に広がったので TB にした。
+LR のまま残したのは、ノードが3つ以下で横幅が収まるもの（Day 01 の2枚目、Day 05、Day 11、Day 20、Day 22、Day 23）。
+
 ### 実測値
 
 | 項目 | before | after |
@@ -107,6 +114,16 @@ fontconfig は `$XDG_DATA_HOME/fonts` を見るので、`prepare_work_dir()` で
 | `npx textlint "material/30days-curriculum/day*.md"` | exit 0 |
 | `check_visualization.py`（day01–30 全ファイル） | 全ファイル exit 0 |
 | `check_quality.sh` の Step 1〜8（day01–30 全ファイル） | 全ファイル PASS |
+
+### 目視
+
+**追加した30枚すべて**を PDF に組んでから `pdftoppm` で画像に起こし、1枚ずつ開いて確かめた。
+判定は「文字が切れていないか」「箱からはみ出していないか」「本文より極端に小さくないか」の3点。
+30枚とも切れ・はみ出しは無し。文字の大きさは、上記の TB 変換3枚を直した時点で全枚数が読める大きさになった。
+
+途中で PDF ビルドが2本同時に走り、`dist/.pdf-book-build` を共有していたため
+Day 16〜Day 20 の図が一度クリップされた状態で出た。もう一方のビルドを止めてから組み直し、
+15冊を再確認して解消を確認している。
 
 `check_quality.sh` 全体は corpus 検査の `check_unused_image`（参照の無いスクリーンショット8枚）で FAIL するが、これは本作業の前から出ているもので、画像の参照は1行も足しても消してもいない。
 
