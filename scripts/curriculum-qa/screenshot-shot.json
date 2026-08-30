@@ -1261,14 +1261,10 @@
       },
       "stall": ["report.getOverview"],
       "wait_for": "div.animate-spin",
-      "note": "Step 5 のローディング確認。本文が『読み込んでいる間は画面の中央にスピナーだけが出ます』『ここでスピナーだけを返すと読み込み中はサイドバーも消えます』と書いているとおりの絵。手元の DB は速すぎて撮る隙が無いので、getOverview の返事だけを止めて撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "note": "Step 5 のローディング確認。本文が『読み込んでいる間は画面の中央にスピナーだけが出ます』『ここでスピナーだけを返すと読み込み中はサイドバーも消えます』と書いているとおりの絵。手元の DB は速すぎて撮る隙が無いので、getOverview の返事だけを止めて撮る。 切り抜かずにページの枠ごと撮る。窓の高さは同じ日の完成画面（day21/report.png）にそろえた 434。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。この日の読み込み中は `AppLayout` の外で返すので、写るのは白い画面とスピナーだけになる。それが読者の画面そのもので、本文もサイドバーが消えると書いている。",
       "viewport": {
         "width": 1440,
-        "height": 420
-      },
-      "clip": {
-        "selector": "div:has(> div.animate-spin)",
-        "padding": 0
+        "height": 434
       }
     },
     {
@@ -1397,14 +1393,10 @@
       },
       "stall": ["report.getWeeklyReport"],
       "wait_for": "div.animate-spin",
-      "note": "Step 5 のローディング確認。旧画像は読み込みが終わったあとの姿で、本文が『下の画像は読み込みが終わったあとの姿です』と断っていた。getWeeklyReport の返事だけを止めて、スピナーそのものを撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "note": "Step 5 のローディング確認。旧画像は読み込みが終わったあとの姿で、本文が『下の画像は読み込みが終わったあとの姿です』と断っていた。getWeeklyReport の返事だけを止めて、スピナーそのものを撮る。 切り抜かずにページの枠ごと撮る。窓の高さは640。同じ日の完成画面（day23/report-weekly.png）は 1022 だが、この日の読み込み中は `AppLayout` の外で `return <PageLoadingSpinner />` するので画面に枠が無く、縦に伸ばしても白場が増えるだけなので頭打ちにした。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。この日の読み込み中は `AppLayout` の外で返すので、写るのは白い画面とスピナーだけになる。それが読者の画面そのもので、本文もサイドバーが消えると書いている。",
       "viewport": {
         "width": 1440,
-        "height": 420
-      },
-      "clip": {
-        "selector": "div:has(> div.animate-spin)",
-        "padding": 0
+        "height": 640
       }
     },
     {
@@ -1699,14 +1691,10 @@
         }
       ],
       "wait_for": "div.animate-spin",
-      "note": "Step 3 の『読み込み中はスピナーだけが表示されます』。getById の返事だけを止めて撮る。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。既定の窓のまま撮ると、紙面の 9 割が白場のページが1枚できる。",
+      "note": "Step 3 の『読み込み中はスピナーだけが表示されます』。getById の返事だけを止めて撮る。 切り抜かずにページの枠ごと撮る。窓の高さは同じ日の完成画面（day29/user-detail.png）にそろえた 610。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。枠ごと撮ればサイドバーと見出しが入るので、読者は自分がどの画面の読み込みを見ているか判定できる。",
       "viewport": {
         "width": 1440,
-        "height": 420
-      },
-      "clip": {
-        "selector": "div:has(> div.animate-spin)",
-        "padding": 0
+        "height": 610
       }
     },
     {
@@ -1764,16 +1752,6 @@
       "clip": {
         "selector": "div.rounded-lg.border.bg-card:has(form)",
         "padding": 0
-      }
-    },
-    {
-      "name": "day30/login.png",
-      "day": 30,
-      "path": "/login",
-      "note": "Day 30 Step 5 の本番動作確認。既存の login.png は完成版アプリの古い写真で、教材の他の写真と見た目がそろっていない。Day 30 のツリー（＝完成した手元のアプリ）で撮り直す。本番の DB は空なので、写るのはログイン画面そのもの。",
-      "clip": {
-        "selector": "div.rounded-lg.border.bg-card:has(form)",
-        "padding": 40
       }
     },
     {
@@ -1909,14 +1887,10 @@
       },
       "stall": ["project.getAll"],
       "wait_for": "div.animate-spin",
-      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。 入口をダッシュボードにしてサイドバーから移るのは、`/project` を直に開くと tRPC が `auth.getSession` と `project.getAll` を1本の通信へまとめてしまい、止めた側に引きずられて `AppLayout` ごと出てこなくなるため。画面を移ってから撮れば、セッションは取得済みなので 止まるのは一覧の取得だけになる。読者がサイドバーから移るのと同じ動きでもある。 窓は 1440x420 に縮めて、スピナーの入れ物（高さ 60vh）だけを切り抜く。",
+      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。 入口をダッシュボードにしてサイドバーから移るのは、`/project` を直に開くと tRPC が `auth.getSession` と `project.getAll` を1本の通信へまとめてしまい、止めた側に引きずられて `AppLayout` ごと出てこなくなるため。画面を移ってから撮れば、セッションは取得済みなので 止まるのは一覧の取得だけになる。読者がサイドバーから移るのと同じ動きでもある。 切り抜かずにページの枠ごと撮る。窓の高さは同じ日の完成画面（day09/project-cards.png）にそろえた 420。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。枠ごと撮ればサイドバーと見出しが入るので、読者は自分がどの画面の読み込みを見ているか判定できる。",
       "viewport": {
         "width": 1440,
         "height": 420
-      },
-      "clip": {
-        "selector": "div:has(> div.animate-spin)",
-        "padding": 0
       },
       "actions": [
         {
@@ -1987,24 +1961,6 @@
         "selector": "[role='dialog']",
         "padding": 0
       }
-    },
-    {
-      "name": "day11/project-list-after-edit.png",
-      "day": 11,
-      "path": "/project",
-      "login": {
-        "email": "admin@example.com",
-        "password": "password123"
-      },
-      "wait_for": "h1:text-is('プロジェクト')",
-      "marks": [
-        {
-          "selector": "div.rounded-lg.border.bg-card:has(h3:has-text('ポートフォリオサイト'))",
-          "label": "Day 10 で作った練習用プロジェクト"
-        }
-      ],
-      "note": "Step 3 の『編集後に一覧が更新された画面』。旧 project-list.png は完成版アプリの写真で、読者が参加していないプロジェクトまで写っていた。読者に見えるのは Webサイトリニューアル と、Day 10 で自分が作った1件の計2枚。",
-      "full_page": true
     },
     {
       "name": "day11/project-delete-confirm.png",
@@ -2158,6 +2114,47 @@
         "selector": "[role='alertdialog']",
         "padding": 0
       }
+    },
+    {
+      "name": "day11/project-list-after-edit.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('ポートフォリオ（改）'))",
+          "label": "名前を変えたプロジェクト"
+        }
+      ],
+      "note": "Step 3 の『編集後に一覧が更新された画面』。Step 10 の編集フロー 手順5・6「名前を変更して『更新』をクリック→一覧が自動的に更新されることを確認」を実際に通してから撮る。通さずに撮ると Day 10 の作成直後と1バイトも同じ画像になり、本文が言う「編集後に更新された一覧」を示せない。変更後の名前 ポートフォリオ（改） は本文が指定していないのでこちらで決めた値。読者の手元は違う名前になるため、キャプションでその旨を断る。編集する相手は Day 10 で読者が作った練習用プロジェクトにする（初期データの Webサイトリニューアル はDay 13 以降で使うので、本文が触らせない）。 変更後の名前を短くしてあるのは、カードの見出しが幅で切り詰められるため。長い名前にすると画像の中で「ポートフォリオサイト（...」と欠け、変わったことが読み取れない。",
+      "full_page": true,
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        },
+        {
+          "kind": "fill",
+          "selector": "#name",
+          "value": "ポートフォリオ（改）"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:text-is('ポートフォリオ（改）')"
+        }
+      ]
     }
   ]
 }
