@@ -866,7 +866,6 @@ const handleDelete = (taskId: string) => {
 
 ![見出しが「本当に削除しますか？」の確認ダイアログ。キャンセルと削除のボタンが並ぶ](./screenshots/day15/task-delete-confirm.png)
 
-画像はプロジェクトを消すときのものなので見出しが違います。
 タスクの削除では `title` を渡していないため、見出しは `delete-confirm-dialog.tsx` の既定値である `本当に削除しますか？` になります。
 
 ---
