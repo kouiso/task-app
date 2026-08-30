@@ -23,9 +23,9 @@
 
 ## 赤枠
 
-操作を指す赤枠は `locator.boundingBox()` から起こす（描画は `shoot_page.mjs`）。
+操作を指す赤枠は `locator.boundingBox()` から起こす（描画は `shoot-page.mjs`）。
 手で座標を書くと、フォントやウィンドウ幅が少し変われば枠がずれ、しかも次に撮り直すまで
-誰も気づけない。宣言表（`screenshot_shots.json`）は座標を書く欄を持たず、
+誰も気づけない。宣言表（`screenshot-shot.json`）は座標を書く欄を持たず、
 `validate_marks` が座標らしいキーを弾く。
 
 ## 撮れる日の範囲
@@ -36,6 +36,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import shutil
@@ -43,8 +44,6 @@ import socket
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -54,9 +53,9 @@ from build_day_snapshots import build_tree, day_sources, link_node_modules  # no
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_ROOT = REPO_ROOT / "dist" / "day-snapshots"
-SHOTS_CONFIG = Path(__file__).with_name("screenshot_shots.json")
-WORKER = Path(__file__).with_name("shoot_page.mjs")
-SEED_RUNNER = Path(__file__).with_name("day_seed_runner.ts")
+SHOTS_CONFIG = Path(__file__).with_name("screenshot-shot.json")
+WORKER = Path(__file__).with_name("shoot-page.mjs")
+SEED_RUNNER = Path(__file__).with_name("day-seed-runner.ts")
 OUT_DIR = REPO_ROOT / "material" / "30days-curriculum" / "screenshots"
 PLAN_DOC = REPO_ROOT / "doc" / "review-handoff" / "screenshots-plan.md"
 
@@ -551,21 +550,31 @@ def ensure_build(dest: Path, env: dict[str, str]) -> None:
         raise RuntimeError(f"{dest.name} のビルドに失敗しました:\n{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}")
 
 
-def wait_ready(url: str, proc: subprocess.Popen[str]) -> None:
-    """サーバーが応えるまで待つ。落ちていたらログを付けて止める。"""
+def wait_ready(port: int, proc: subprocess.Popen[str]) -> None:
+    """サーバーが応えるまで待つ。落ちていたらログを付けて止める。
+
+    URL 文字列ではなくポート番号を受け取り、宛先を 127.0.0.1 に固定する。
+    urllib は `file://` も開けるため、組み立てた URL を渡す形だと
+    ローカルのファイルを読みに行かせる余地が残る（semgrep
+    dynamic-urllib-use-detected）。ここで要るのは「その口が HTTP を返すか」
+    だけなので、宛先を固定できる HTTPConnection で足りる。
+    """
     deadline = time.time() + SERVER_TIMEOUT
     while time.time() < deadline:
         if proc.poll() is not None:
             # 終了コードだけ出しても原因へ辿れない。落ちた理由はサーバーの出力にある。
             log = proc.stdout.read() if proc.stdout is not None else ""
             raise RuntimeError(f"サーバーが起動前に終了しました（終了コード {proc.returncode}）\n{log[-2000:]}")
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=3)
         try:
-            with urllib.request.urlopen(url, timeout=3) as res:
-                if res.status < 500:
-                    return
-        except (urllib.error.URLError, OSError):
+            conn.request("GET", "/")
+            if conn.getresponse().status < 500:
+                return
+        except OSError:
             time.sleep(0.5)
-    raise TimeoutError(f"{SERVER_TIMEOUT} 秒待っても {url} が応えません")
+        finally:
+            conn.close()
+    raise TimeoutError(f"{SERVER_TIMEOUT} 秒待っても 127.0.0.1:{port} が応えません")
 
 
 def run_worker(job: dict[str, Any]) -> list[dict[str, Any]]:
@@ -609,7 +618,7 @@ def shoot_day(config: Config, day: int, out_dir: Path) -> list[dict[str, Any]]:
         text=True,
     )
     try:
-        wait_ready(f"http://127.0.0.1:{port}/", proc)
+        wait_ready(port, proc)
         job = {
             "baseUrl": f"http://127.0.0.1:{port}",
             "outDir": str(out_dir),

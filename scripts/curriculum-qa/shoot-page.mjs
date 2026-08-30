@@ -80,7 +80,8 @@ async function drawMarks(page, rects) {
       const pageH = Math.max(document.documentElement.scrollHeight, window.innerHeight);
       const layer = document.createElement('div');
       layer.id = '__curriculum_marks__';
-      layer.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
+      layer.style.cssText =
+        'position:absolute;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
       rects.forEach((rect, i) => {
         const left = Math.max(0, rect.x - pad);
         const top = Math.max(0, rect.y - pad);
@@ -202,7 +203,11 @@ async function shoot(page, job, shot) {
   if (rects.length > 0) {
     await clearMarks(page);
   }
-  return { name: shot.name, path: out, marks: rects.map((r) => ({ x: r.x, y: r.y, width: r.width, height: r.height })) };
+  return {
+    name: shot.name,
+    path: out,
+    marks: rects.map((r) => ({ x: r.x, y: r.y, width: r.width, height: r.height })),
+  };
 }
 
 async function main() {

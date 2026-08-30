@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import shoot_screenshots as target  # noqa: E402
 
-WORKER = Path(__file__).with_name("shoot_page.mjs")
+WORKER = Path(__file__).with_name("shoot-page.mjs")
 
 
 def write_config(root: Path, shots: list[dict], viewport: dict | None = None) -> Path:

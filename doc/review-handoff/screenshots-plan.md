@@ -4,7 +4,7 @@
 Day 01–08 でそれを実際に通した記録。
 
 - 撮る道具: `scripts/curriculum-qa/shoot_screenshots.py`
-- 撮る対象の宣言: `scripts/curriculum-qa/screenshot_shots.json`
+- 撮る対象の宣言: `scripts/curriculum-qa/screenshot-shot.json`
 - 退行テスト: `scripts/curriculum-qa/test_shoot_screenshots.py`（`check_quality.sh` の Gate 4 に登録済み）
 
 ---
@@ -55,7 +55,7 @@ Day 01–08 でそれを実際に通した記録。
 | Day 01–05 | 4 | 2 | 5 | 2 | `scan-day01-08.md` (f) Day 01 |
 | Day 06–08 | 5 | 2 | 5 | 2 | `scan-day01-08.md` (f) Day 06（読者の登録分 +1） |
 
-投入は `day_seed_runner.ts`（Prisma + bcryptjs）が受け持つ。パスワードのハッシュがアプリと
+投入は `day-seed-runner.ts`（Prisma + bcryptjs）が受け持つ。パスワードのハッシュがアプリと
 同じでないとログインできないので、SQL を直接書かずにこの層を挟んでいる。
 `LoginAttempt` は毎回消す。Day 05 でログイン失敗を試すと記録が積まれ、同一メール5回で
 15分ロックされる（`src/lib/rate-limit.ts`）。ロックに当たった状態で撮ると、その日の画面ではなくなる。
@@ -74,7 +74,7 @@ Day 02 の挨拶は時間帯で「おはよう／こんばんは」が変わる�
 
 ## 宣言表の書き方
 
-`screenshot_shots.json` に1件足せば1枚増える。Python 側は触らない。
+`screenshot-shot.json` に1件足せば1枚増える。Python 側は触らない。
 
 | 欄 | 意味 |
 |---|---|
@@ -181,7 +181,7 @@ Day 02 の挨拶は時間帯で「おはよう／こんばんは」が変わる�
 1. その日の scan の (f) を読み、`DAY_SEEDS` へ足す。変わった日だけ書けばよい。
 2. `MAX_SEEDED_DAY` を上げる。
 3. `build_day_snapshots.py --day N --verify` が通ることを確かめる。
-4. `screenshot_shots.json` へ足して `shoot_screenshots.py --day N`。
+4. `screenshot-shot.json` へ足して `shoot_screenshots.py --day N`。
 5. **撮れた画像を1枚ずつ開いて見る。** その日までに作っていないものが写っていないかを目で確かめる。
 6. その日の教材から参照する。alt は写っているものを書く。
 
