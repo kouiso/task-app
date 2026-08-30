@@ -406,7 +406,7 @@ sequenceDiagram
         {/* ロゴ */}
         <div className="border-b border-sidebar-border p-4">
           <h1 className="text-lg font-bold text-sidebar-foreground">
-            Task App
+            タスク管理
           </h1>
         </div>
 ```
@@ -424,7 +424,7 @@ Day 04 で公開した URL をスマートフォンから開くと、ログイ�
 
 **確認ポイント**:
 - [ ] 左側にサイドバーを作っている
-- [ ] ロゴとして `Task App` を表示している
+- [ ] ヘッダーの小さな文字として `タスク管理` を表示している
 - [ ] 画面幅を 768px より狭くすると、サイドバーごと消えることを確認した（仕様どおりの動き）
 
 ```tsx
@@ -959,7 +959,7 @@ export function AppLayout({
         {/* ロゴ */}
         <div className="border-b border-sidebar-border p-4">
           <h1 className="text-lg font-bold text-sidebar-foreground">
-            Task App
+            タスク管理
           </h1>
         </div>
 ```
@@ -1202,7 +1202,7 @@ export default function DashboardPage() {
           <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-                Task App
+                タスク管理
               </p>
               <h1 className="text-lg font-semibold text-card-foreground">
                 My Dashboard

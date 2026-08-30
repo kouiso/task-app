@@ -186,7 +186,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              Task App
+              タスク管理
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -359,7 +359,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              Task App
+              タスク管理
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -639,7 +639,7 @@ Step 3 で新しく出てくるのは `focusCards` です。`FocusCard[]` は「
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              Task App
+              タスク管理
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -932,7 +932,7 @@ export default function DashboardPage() {
 ```tsx
             {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              Task App
+              タスク管理
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
@@ -1138,7 +1138,7 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              Task App
+              タスク管理
             </p>
             <h1 className="text-lg font-semibold text-card-foreground">
               My Dashboard
