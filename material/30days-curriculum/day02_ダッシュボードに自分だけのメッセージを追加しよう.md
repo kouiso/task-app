@@ -514,7 +514,7 @@ Step 1 との違いは、`<article>` の入れ物と `className` を1つも触�
 
 次は型を確かめます。`currentHour` に入っているのは `9` や `20` のような数で、この種類を `number` と呼びます。名前の `'Taro'` のような文字は `string`、`hour < 12` の判定結果のような「はい / いいえ」の2択は `boolean` です。`getGreetingByHour` の中では、この3つが順番に登場しています。数（`number`）を受け取り、`hour < 12` で真偽（`boolean`）を出し、その結果に応じて文字（`string`）を返しています。
 
-種類が合わない値を入れると、保存する前にエディタが止めてくれます。試しに `getGreetingByHour(currentHour)` を `getGreetingByHour('9')` に書き換えて保存してください。
+種類が合わない値を入れると、保存する前にエディタが止めてくれます。試しに `buildMainMessage` の中の `const greeting = getGreetingByHour(hour);` を、次の形に書き換えて保存してください。
 
 ```tsx
 // filepath: src/app/dashboard/page.tsx（一時的に書き換える行）
@@ -523,7 +523,14 @@ Step 1 との違いは、`<article>` の入れ物と `className` を1つも触�
 
 赤い線とともに `Argument of type 'string' is not assignable to parameter of type 'number'.` と出ます。「`string` の値を `number` の引数には渡せません」という意味です。`getGreetingByHour(hour: number)` と書いた `: number` が、この関数へ渡してよいのは数だけだと宣言しているためです。`'9'` は見た目こそ数字ですが、引用符で囲むと文字になります。文字のままでは `hour < 12` の大小比較が意図どおりに働かないので、TypeScript は画面を開く前に止めます。
 
-確かめたら `getGreetingByHour(currentHour)` に戻してください。赤い線が消えて、あいさつが元どおり表示されれば大丈夫です。
+確かめたら `getGreetingByHour(hour)` に戻してください。赤い線が消えて、あいさつが元どおり表示されれば大丈夫です。
+
+```tsx
+// filepath: src/app/dashboard/page.tsx（戻したあとの行）
+  const greeting = getGreetingByHour(hour);
+```
+
+`hour` は `buildMainMessage` が受け取る引数の名前です。画面の側にある `currentHour` は、この関数の中からは見えません。戻す先を取り違えると、今度は「`currentHour` という名前が見つからない」という別のエラーが出ます。
 
 **確認ポイント**:
 - `const` に代入し直そうとするとエラーが出ることを、自分の目で見た
@@ -724,7 +731,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
                 まだ無いもの
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
+                タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
               </p>
             </article>
 
@@ -1019,7 +1026,7 @@ export default function DashboardPage() {
 ```tsx
               {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
+                タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
               </p>
             </article>
 
@@ -1225,7 +1232,7 @@ export default function DashboardPage() {
                 まだ無いもの
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
+                タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
               </p>
             </article>
 

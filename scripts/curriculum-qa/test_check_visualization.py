@@ -387,6 +387,39 @@ def required_days_in_source() -> set[int]:
     return {int(value) for value in re.findall(r'\d+', found.group(1))}
 
 
+def check_screenshot_exemption() -> list[str]:
+    """写真の下限を免除する日の扱い。
+
+    免除は「視覚化そのものを免除する」やない。図の下限は課したままで、
+    しかも理由の文言を必ず持たせる。空の理由で骨抜きにされんため。
+    """
+    from check_visualization import MIN_MERMAID_WHEN_EXEMPT, SCREENSHOT_EXEMPT
+
+    fails: list[str] = []
+    if not SCREENSHOT_EXEMPT:
+        return ['❌ 免除の表が空になっている（day04 の登録が消えている）']
+    for name, reason in SCREENSHOT_EXEMPT.items():
+        if not isinstance(reason, str) or len(reason.strip()) < 8:
+            fails.append(f'❌ {name} の免除に理由が書かれていない')
+
+    target = next(iter(SCREENSHOT_EXEMPT))
+    tables = '\n'.join('| a | b |' for _ in range(5))
+    figures = '\n'.join('```mermaid\nflowchart LR\n  A --> B\n```' for _ in range(MIN_MERMAID_WHEN_EXEMPT))
+    # 図が足りていれば、写真1枚でも通る。
+    code, counts, _ = run_checker(target, f'{tables}\n\n{figures}\n\n![a](./screenshots/x.png)\n')
+    if code != 0:
+        fails.append(f'❌ 免除した日が落ちている（{counts}）')
+    # 図が足りなければ、免除していても落ちる。
+    code, _, _ = run_checker(target, f'{tables}\n\n```mermaid\nflowchart LR\n  A --> B\n```\n')
+    if code == 0:
+        fails.append('❌ 図が足りんのに免除だけで通している')
+    # 登録の無い日は、これまでどおり写真3箇所を要求する。
+    code, _, _ = run_checker('day99_未登録.md', f'{tables}\n\n{figures}\n\n![a](./screenshots/x.png)\n')
+    if code == 0:
+        fails.append('❌ 登録の無い日まで免除している')
+    return fails
+
+
 def main() -> int:
     failed = 0
 
@@ -421,7 +454,11 @@ def main() -> int:
         failed += 1
         print(f'  ❌ required_mermaid_days が {sorted(days)} に変えられています')
 
-    total = len(CASES) + len(DUPLICATE_CASES) + 2
+    for message in check_screenshot_exemption():
+        failed += 1
+        print(f'  {message}')
+
+    total = len(CASES) + len(DUPLICATE_CASES) + 3
     if failed:
         print(f'❌ check_visualization 自己テスト {failed}/{total} 失敗')
         return 1

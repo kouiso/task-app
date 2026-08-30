@@ -60,6 +60,23 @@ def find_duplicate_images(content):
     return sorted((path, n) for path, n in counts.items() if n > 1)
 
 
+# 画面写真を3箇所そろえられん日と、その理由。
+#
+# 「スクショ位置3箇所以上」は「その日には新しいアプリの画面がある」を前提にしとる。
+# day04 はデプロイの日で、主役は Vercel の管理画面（この環境からは撮れん）であり、
+# アプリの画面は Day 02 から1ドットも変わらん。撮っても Day 01・02 の写真と
+# md5 が一致するだけで、貼り回しの検査と正面からぶつかる。
+# 以前はここを手描きのモックで埋めとったが、そのモックが「今日はやらない: 本番公開」と
+# 書いてあるのに本文は「実際の URL で公開します」で、真っ向から食い違っていた。
+# モックをやめて図2枚へ置き換え、代わりにこの表へ理由つきで登録する。
+#
+# 免除しても図の下限（2枚）は課す。視覚化そのものを免除するわけやない。
+SCREENSHOT_EXEMPT = {
+    'day04_ネットに公開.md': 'デプロイの日。主役は Vercel の管理画面で撮れず、アプリの画面は Day 02 から変わらん',
+}
+MIN_MERMAID_WHEN_EXEMPT = 2
+
+
 def check_visualization(filepath, fail_on_duplicate_image=False):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -108,7 +125,15 @@ def check_visualization(filepath, fail_on_duplicate_image=False):
     else:
         print("✅ 表の数OK")
 
-    if screenshot_count < 3:
+    exempt_reason = SCREENSHOT_EXEMPT.get(os.path.basename(filepath))
+    if exempt_reason:
+        if mermaid_count < MIN_MERMAID_WHEN_EXEMPT:
+            errors.append(
+                f"❌ 写真の下限を免除しとる日やのに図が不足（{mermaid_count}/{MIN_MERMAID_WHEN_EXEMPT}以上）"
+            )
+        else:
+            print(f"✅ スクショ位置は免除（{exempt_reason}）")
+    elif screenshot_count < 3:
         errors.append(f"❌ スクショ位置が不足（{screenshot_count}/3以上）")
     else:
         print("✅ スクショ位置OK")

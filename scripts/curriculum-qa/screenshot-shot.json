@@ -1354,18 +1354,6 @@
       "full_page": true
     },
     {
-      "name": "day23/report.png",
-      "day": 23,
-      "path": "/report",
-      "login": {
-        "email": "admin@example.com",
-        "password": "password123"
-      },
-      "wait_for": "h3:text-is('プロジェクト統計')",
-      "note": "冒頭のゴール。Day 23 のツリーでは、Day 21 のカードと Day 22 の円グラフに加えて週次レポートへのリンクが出る。",
-      "full_page": true
-    },
-    {
       "name": "day23/report-project-table.png",
       "day": 23,
       "path": "/report",
@@ -1759,11 +1747,11 @@
       "day": 30,
       "path": "/dashboard",
       "login": {
-        "email": "admin@example.com",
+        "email": "user1@example.com",
         "password": "password123"
       },
       "wait_for": "h1",
-      "note": "Day 30 Step 5 の『完成版のダッシュボード画面』。30日ぶんを積み上げたサイドバー（管理者は7項目）が入った状態を撮る。",
+      "note": "Day 30 Step 5 の『完成版のダッシュボード画面』。本番では `prisma db push` だけでシードを流さず、読者は `/register` で自分のアカウントを作る。`register` が付ける役割は`USER` なので、サイドバーは「ユーザー管理」の無い6項目になる。管理者で撮ると本番の読者が見る画面と食い違うので、一般ユーザーで撮る。",
       "full_page": true
     },
     {

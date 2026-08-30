@@ -27,13 +27,35 @@ Day 03 で GitHub へ保存した自分の `task-app` を Vercel につなぎ、
 
 Day 01 からここまで進めてきた作業が、今日の公開でひととおりつながります。Phase 1 の区切りとなる日です。
 
-![Day 04 公開前の準備パネル](./screenshots/day04-prep-panel.png)
+### 公開の前にそろえておくもの
 
-スクリーンショット: 公開の前に手元でそろえておくものをまとめた図です。GitHub への push、`npm run build` の成功、Vercel に渡す環境変数の3つが今日の準備物になります。
+```mermaid
+flowchart LR
+    A[GitHub に push 済み<br/>Day 03 で完了] --> D[Vercel が Deploy]
+    B[npm run build が<br/>手元で通る] --> D
+    C[環境変数 2本<br/>DATABASE_URL と JWT_SECRET] --> D
+    D --> E[公開 URL が発行される]
 
-![Day 04 公開URLの例](./screenshots/day04-sample-url.png)
+    style A fill:#e3f2fd
+    style B fill:#e3f2fd
+    style C fill:#fff3e0
+    style E fill:#e8f5e9
+```
 
-スクリーンショット: 公開すると `https://task-app-<自分のユーザー名>.vercel.app` の形で URL が発行されます。数字や記号が混じることもあります。この URL を今日の終わりに人へ送ります。
+3つのうち1つでも欠けると Deploy が途中で止まります。Step 1 と Step 2 で最初の2つを、Step 5 で3つ目をそろえます。
+
+### 発行される URL の形
+
+```mermaid
+flowchart LR
+    A[Project Name<br/>Step 5 で自分が決める] --> C[公開 URL]
+    B[.vercel.app<br/>Vercel が付ける] --> C
+    C --> D[Step 8 で別の端末から開いて<br/>本当に公開できたかを確かめる]
+
+    style C fill:#e8f5e9
+```
+
+`https://task-app-<自分のユーザー名>.vercel.app` の形になります。数字や記号が混じることもあります。この URL を今日の終わりに人へ送ります。
 
 - [ ] Day 03 の完成状態から作業を再開する
 - [ ] GitHub に `task-app` が push 済みであることを確認する

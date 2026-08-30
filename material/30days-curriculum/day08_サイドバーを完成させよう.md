@@ -1303,7 +1303,7 @@ export default function DashboardPage() {
                   まだ無いもの
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  タスクの件数とプロジェクト一覧。Day 09 以降でここへ足す。
+                  タスクの件数とプロジェクト一覧。一覧は Day 09、件数の集計は Day 21 のレポート画面で作る。
                 </p>
               </article>
 ```
