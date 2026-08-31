@@ -1072,7 +1072,7 @@ def build_tree(day: int) -> tuple[Path, int]:
 def error_line_pool(output: str) -> tuple[str, ...]:
     """出力から、エラーらしい行を全部抜く。件数で切らない。
 
-    切らんのは、赤の理由を判定する側（`build_failure_is_db_less`）がここを読むため。
+    切らんのは、赤の理由を判定する側（`build_failure_needs_database`）がここを読むため。
     3行に切った標本で判定すると、DB のエラーが先に並んだ回に後ろの prerender の
     失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
     """
@@ -1280,18 +1280,41 @@ DB_LESS_BUILD_MARKERS = (
 )
 
 
-def build_failure_is_db_less(errors: tuple[str, ...]) -> bool:
-    """build の赤が DB の不在だけで説明できるか。
+BUILD_SKIPPED = "SKIP"
 
-    1行でも DB 以外の理由が混じっとったら False を返す。「どれか1つでも DB っぽい」で
-    通すと、DB のエラーに紛れた本物の失敗がそのまま緑になる。
+
+def build_failure_needs_database(errors: tuple[str, ...]) -> bool:
+    """build の赤に DB の不在が絡んどるか（＝この機械では build を判定できんか）。
+
+    以前はここで「DB だけで説明できる赤か」を行ごとに当てにいっとった。それは3回直して
+    3回とも別の文言で破れた。`next build` は根本原因を Next.js のラッパー行
+    （`Failed to collect page data for /dashboard` 等）で包んで出すので、行の文言から
+    「DB か、それ以外か」を当てる限り、ラッパーが1つ増えるたびに判定が壊れる。
+
+    せやから判定を放棄する側へ倒した。DB のマーカーが1つでもあれば、この機械では
+    build の結果に意味が無い。**通す（OK 扱い）のではなく、判定せんかったこと自体を
+    SKIP として残して数える。**「検証した」と言わんので、DB の赤に紛れた本物の失敗を
+    緑と report してしまう事故は起きん。DB のある機械ではマーカーが出んので、
+    本物の失敗はこれまでどおり止まる。
     """
-    if not errors:
-        return False
-    return all(
+    return any(
         any(marker in line for marker in DB_LESS_BUILD_MARKERS)
         for line in errors
     )
+
+
+def triage_build_results(results: list[DayResult]) -> list[DayResult]:
+    """DB が要る赤を SKIP へ振り替えた一覧を返す。
+
+    振り替えるだけで、通した扱いにはせん。SKIP は `broken` から外れるが、
+    成功の行に件数と日付が出るので「検証した」とは読めん形で残る。
+    """
+    return [
+        r._replace(build=BUILD_SKIPPED)
+        if r.build == "NG" and build_failure_needs_database(r.build_errors)
+        else r
+        for r in results
+    ]
 
 
 def main(argv: list[str]) -> int:
@@ -1333,15 +1356,13 @@ def main(argv: list[str]) -> int:
 
     # build の赤は理由で切り分ける。DB の無い機械では必ず赤くなるのでそれは通すが、
     # prerender や server/client 境界の失敗は tsc が見つけられんので、ここで止める。
+    results = triage_build_results(results)
+    skipped = [r for r in results if r.build == BUILD_SKIPPED]
     broken = [
         r for r in results
         if not r.tree_ok
         or (r.tsc == "NG" and r.day not in EXPECTED_RED)
-        or (
-            r.build == "NG"
-            and r.day not in EXPECTED_RED
-            and not build_failure_is_db_less(r.build_errors)
-        )
+        or (r.build == "NG" and r.day not in EXPECTED_RED)
     ]
     # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
     unexpected_green = [
@@ -1366,6 +1387,15 @@ def main(argv: list[str]) -> int:
                     "DB の不在では説明できないので、prerender か server/client 境界を疑ってください"
                 )
         return 1
+    if skipped:
+        # 「全部緑」と読ませたらアカン。判定してへん日があることを、成功の行そのものに書く。
+        days = "・".join(f"day{r.day:02d}" for r in skipped)
+        print(
+            f"⚠️ {len(results)} 日ぶんを組み立てましたが、build を判定できんかった日が "
+            f"{len(skipped)} 件あります（この機械に DB が無い）: {days}"
+        )
+        print("   この走行は build を検証していません。DB のある機械で流し直してください")
+        return 0
     print(f"✅ {len(results)} 日ぶんを組み立てました")
     return 0
 

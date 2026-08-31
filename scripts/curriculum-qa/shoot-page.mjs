@@ -288,6 +288,17 @@ async function settleAnimations(page) {
     }
     console.warn(`アニメーションが ${ANIMATION_SETTLE_MS}ms で止まりませんでした`);
   }
+  // 待つ相手から外した無限アニメーション（スピナー等）は、止めんと撮るたびに別の角度で
+  // 写る。待たへんことと、位相を決めることは別の仕事や。ここを飛ばすと、同じ回を2度撮って
+  // 違う画像が出る — 決め打ちの待ちを外した目的そのものが果たせん。
+  await page.evaluate(() => {
+    for (const animation of document.getAnimations()) {
+      if (animation.effect?.getComputedTiming?.().iterations === Infinity) {
+        animation.currentTime = 0;
+        animation.pause();
+      }
+    }
+  });
   // 最後の1フレームが画面へ出るのを待つ。
   await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done())));
 }

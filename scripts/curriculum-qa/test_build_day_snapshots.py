@@ -807,38 +807,30 @@ def check_tree_inputs() -> list[str]:
 
 
 def check_build_failure_triage() -> list[str]:
-    """ビルドの赤を DB の不在で説明できるかの切り分け。
+    """ビルドの赤を、この機械で判定できるかどうかの切り分け。
 
     昔は build の赤を丸ごと無視しとった。DB を持たん機械で必ず赤くなるからやが、
     それやと prerender や server/client 境界の失敗まで一緒に通る。tsc は見つけられん
     種類なので、ここが緩むと壊れた日が緑で出荷される。
+
+    次に「DB だけで説明できる赤か」を行ごとに当てにいったが、`next build` が根本原因を
+    ラッパー行で包んで出すので、文言が1つ増えるたびに壊れた。いまは当てにいくのをやめ、
+    DB が絡む赤は SKIP（判定してへん）として残す。**通した扱いにはせん**のが要点。
     """
     fails = []
     db_less = (
         "Error: P1001: Can't reach database server at `localhost:5432`",
         "PrismaClientInitializationError: Can't reach database server",
     )
-    if not target.build_failure_is_db_less(db_less):
-        fails.append("❌ DB へ届かんだけの赤を、教材の欠陥として数えている")
+    if not target.build_failure_needs_database(db_less):
+        fails.append("❌ DB へ届かんだけの赤を、この機械で判定できるものとして扱っている")
 
     real = (
         "Error occurred prerendering page \"/project\"",
         "TypeError: Cannot read properties of undefined",
     )
-    if target.build_failure_is_db_less(real):
-        fails.append("❌ prerender の失敗を DB のせいにして見逃している")
 
-    # DB の赤に本物が1行紛れたら、通してはいけない。
-    mixed = (db_less[0], real[0])
-    if target.build_failure_is_db_less(mixed):
-        fails.append("❌ DB の赤に紛れた本物の失敗を見逃している")
-
-    # 理由が1行も取れんかった赤は、説明できていないので通さない。
-    if target.build_failure_is_db_less(()):
-        fails.append("❌ 理由の分からん赤を DB のせいにしている")
-
-    # 判定へ渡す材料が3行で切られていないこと。DB のエラーが先に何行も並んだ回に
-    # 後ろの prerender の失敗が視界から落ちると、壊れた日が通る。
+    # 判定へ渡す材料が3行で切られていないこと。表示用の3行と別物であること。
     noisy = "\n".join(
         ["Error: P1001: Can't reach database server"] * 5
         + ["Error occurred prerendering page \"/project\""]
@@ -846,16 +838,10 @@ def check_build_failure_triage() -> list[str]:
     pool = target.error_line_pool(noisy)
     if len(pool) != 6:
         fails.append(f"❌ 判定用のエラー行が {len(pool)} 行に切られている（6行あるはず）")
-    if target.build_failure_is_db_less(pool):
-        fails.append("❌ DB のエラーの後ろに並んだ本物の失敗を見逃している")
-
-    # 表示用のほうは3行のままであること。長い出力をそのまま表へ入れると読めん。
     if len(target.error_lines(noisy)) != 3:
         fails.append("❌ 表示用のエラー行が3行になっていない")
 
-    # Prisma は例外名とマーカーを別の行に吐く。マーカーの行には error / failed の語が
-    # 無いので、ERROR_MARK だけで拾うと証拠が消え、DB だけの失敗が「DB 以外」に化ける。
-    # これは黙って通す向きやのうて、DB の無い機械で止まる向きの壊れ方。
+    # マーカーだけの行（error / failed の語が無い）がプールから落ちんこと。
     multiline = "\n".join(
         [
             "PrismaClientInitializationError:",
@@ -863,16 +849,60 @@ def check_build_failure_triage() -> list[str]:
             "Please make sure your database server is running",
         ]
     )
-    multi_pool = target.error_line_pool(multiline)
-    if not any("Can't reach database server" in line for line in multi_pool):
+    if not any("Can't reach database server" in ln for ln in target.error_line_pool(multiline)):
         fails.append("❌ 単独行の DB マーカーが判定用のプールから落ちている")
-    if not target.build_failure_is_db_less(multi_pool):
-        fails.append("❌ 複数行で来た DB だけの失敗を、教材の欠陥として止めている")
 
-    # 上の緩和が効きすぎて、DB の行が混じっただけで全部通るようになっていないこと。
-    multiline_mixed = multiline + "\nError occurred prerendering page \"/project\""
-    if target.build_failure_is_db_less(target.error_line_pool(multiline_mixed)):
-        fails.append("❌ 複数行の DB エラーに紛れた本物の失敗を見逃している")
+    # Next.js のラッパー行が混じっても、DB が絡む赤は「判定できん」と見なすこと。
+    # 行ごとに DB か否かを当てにいくと、ラッパーの文言が増えるたびに壊れる。
+    wrapped = "\n".join(
+        [
+            "Error: Failed to collect page data for /dashboard",
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+        ]
+    )
+    if not target.build_failure_needs_database(target.error_line_pool(wrapped)):
+        fails.append("❌ Next.js のラッパーに包まれた DB の赤を、判定できるものとして扱っている")
+
+    # DB がまったく絡まん赤は、これまでどおり本物の失敗として扱うこと。
+    if target.build_failure_needs_database(real):
+        fails.append("❌ DB と関係ない赤まで判定できんものとして扱っている")
+    if target.build_failure_needs_database(()):
+        fails.append("❌ 理由が1行も無い赤を DB のせいにしている")
+
+    # SKIP は「通した」やない。実際に振り替えを動かして、状態が変わることを見る。
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Error: Failed to collect page data for /dashboard",),
+        build_errors=(
+            "Error: Failed to collect page data for /dashboard",
+            "Can't reach database server at `localhost`:`5432`",
+        ),
+    )
+    real_day = target.DayResult(
+        day=8, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=real, build_errors=real,
+    )
+    green_day = target.DayResult(
+        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
+    )
+    triaged = target.triage_build_results([db_day, real_day, green_day])
+    if triaged[0].build != target.BUILD_SKIPPED:
+        fails.append("❌ DB が要る赤が SKIP へ振り替わっていない")
+    if triaged[1].build != "NG":
+        fails.append("❌ DB と関係ない赤まで SKIP にしている")
+    if triaged[2].build != "OK":
+        fails.append("❌ 通ったビルドの状態を書き換えている")
+    if target.BUILD_SKIPPED in ("OK", "NG"):
+        fails.append("❌ SKIP が OK か NG と同じ値になっている（区別が消えている）")
+
+    # 成功の行に、判定してへん日があることを必ず出す。ここが消えると全部緑に読める。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    tail = source.split("if skipped:", 1)
+    if len(tail) != 2:
+        fails.append("❌ 判定できんかった日があっても、成功の行に何も出していない")
+    elif "検証していません" not in tail[1].split("return 0", 1)[0]:
+        fails.append("❌ 判定してへん日があるのに「検証していない」と書いていない")
     return fails
 
 

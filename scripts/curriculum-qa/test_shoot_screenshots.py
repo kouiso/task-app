@@ -337,6 +337,13 @@ def check_animation_settle() -> list[str]:
             fails.append("❌ settleAnimations が例外を種類を見ずに握り潰している")
         if "errors.TimeoutError" not in helper[1].split("\n}", 1)[0]:
             fails.append("❌ 待ち時間切れ以外の例外を再送出していない")
+        # 無限アニメーションは「待たん」だけでは足りん。止めて位相を固定せんと、
+        # ローディング画面（day09 / day21 / day23 / day29 の *-loading.png は
+        # `animate-spin` のスピナーを写す）は撮るたびに別の角度になる。
+        if "animation.pause()" not in waiter:
+            fails.append("❌ 無限アニメーションを止めずに撮っている（毎回別の角度で写る）")
+        if "animation.currentTime = 0" not in waiter:
+            fails.append("❌ 無限アニメーションの位相を固定していない")
     if "import { chromium, errors } from 'playwright';" not in source:
         fails.append("❌ playwright の errors を取り込んでいない（TimeoutError を見分けられない）")
     return fails

@@ -137,3 +137,20 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 根拠: `ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)` を実際に当てて確かめた。`Can't reach database server at \`localhost\`:\`5432\`` → False、`P1001` → False、`Please make sure your database server is running` → False、`PrismaClientInitializationError:` → True。Prisma は例外名とマーカーを別の行に吐くので、マーカー側の行が `hits` から落ちる。残るのは例外名の行だけで、その行は `DB_LESS_BUILD_MARKERS` のどれも含まんため `all()` が False を返し、DB だけの失敗が「DB 以外の失敗」に化ける。二巡目で足したテストは `Error: P1001: Can't reach database server` と1行に詰めとったので、この形を踏んでいなかった。
 - 壊れる向き: 黙って通す側やのうて、DB の無い機械で `--verify` が止まる側。うるさいが安全な向きではある。ただしこの変更は「DB の無い機械を通す」ために入れたものなので、目的を果たせていない。
 - 直し方（適用済み・次のコミット）: (1) `error_line_pool` の抽出条件を `ERROR_MARK.search(ln) or any(m in ln for m in DB_LESS_BUILD_MARKERS)` にして、マーカーを持つ行を必ず残す。(2) `DB_LESS_BUILD_MARKERS` に `PrismaClientInitializationError` を足す（接続失敗の例外名そのものであって、汎用のラッパーではない）。回帰テストは複数行の Prisma 失敗を DB 専用と判定できること、その後ろに prerender の失敗を1行足したら通さんことの両方を見る。2つの直しを別々に戻して、それぞれ別のメッセージで落ちることを確認済み。
+
+## [PR #389 四巡目] scripts/curriculum-qa/build_day_snapshots.py:1294  (bug・採用／設計変更)
+- 指摘: Next.js のラッパー行が混じると、DB だけの失敗を通せない（Codex P1）
+- 根拠: 手元で再現した。`['Error: Failed to collect page data for /dashboard', 'PrismaClientInitializationError:', "Can't reach database server"]` を `error_line_pool` へ通すと3行とも残り、`build_failure_is_db_less` は `False` を返す。1行目は `ERROR_MARK` に当たるがマーカーを持たんため `all()` が落ちる。結果、DB の無い機械で `--verify` が exit 1 になる。
+- なぜパッチを重ねんかったか: これは同じ述語への4回目の指摘（丸ごと無視 → 3行の標本で分類 → 単独行のマーカー落ち → ラッパー行）。`next build` は根本原因をラッパー行で包んで出すので、行の文言から「DB か、それ以外か」を当てにいく限り、ラッパーの語彙が1つ増えるたびに壊れる。文言の追加でイタチごっこを続けるより、当てにいくのをやめるほうが正しい。
+- 直し方（適用済み）: 判定を「DB だけで説明できるか」から「DB が絡むか（＝この機械では判定できんか）」へ変え、`build_failure_needs_database` に改名。DB のマーカーが1つでもあれば `build` を `SKIP` へ振り替える。**通した扱いにはせん** — `broken` からは外れるが、成功の行に「build を判定できんかった日が N 件」「この走行は build を検証していません」と出るので、緑と読めん。DB のある機械ではマーカーが出んので、本物の失敗はこれまでどおり止まる。
+- テスト: 振り替えを `triage_build_results` として切り出し、実際に `DayResult` を通して SKIP / NG / OK の3通りが正しく分かれることを見る。**最初に書いたのは文字列一致の飾りやった**（`skipped = [` を探すだけなので、中身を `[]` に潰しても緑のまま通った）。挙動で見る形へ直してから、骨抜きにすると落ちることを確認した。
+
+## [PR #389 四巡目] scripts/curriculum-qa/shoot-page.mjs:278  (bug・採用)
+- 指摘: 無限アニメーションを待つ相手から外しただけで、止めてへん（Codex P2）
+- 根拠: `screenshot-shot.json` に `day09/project-loading.png` `day21/report-loading.png` `day23/report-weekly-loading.png` `day29/user-detail-loading.png` の4枚があり、写すのは `src/component/ui/loading-spinner.tsx:4` と `page-skeleton.tsx:5` の `animate-spin`（無限回転）。`settleAnimations` は無限アニメーションを待つ相手から外すので即座に返り、撮影はその瞬間の回転角を写す。同じ回を2度撮ると別の画像になる。決め打ちの待ちを外した目的（決定性）が果たせていない。
+- 直し方（適用済み）: 待ち終えたあとに `document.getAnimations()` を回して、`iterations === Infinity` のものだけ `currentTime = 0` にして `pause()` する。待たへんことと位相を決めることは別の仕事、という切り分け。退行テストは助け関数の本体に `animation.pause()` と `animation.currentTime = 0` があることを見る。
+
+## [PR #389 四巡目] doc/review-handoff/duplicate-image-gate.md:26-29, 68-69  (doc・採用)
+- 指摘: WARNING 時代の記述が残っていて、同じページが自分と矛盾しとる（Codex P2）
+- 根拠: 1行目の見出しが「今は WARNING、撮り直し後に FAIL へ上げる」、26行目に「## 今は WARNING（既定）」がある一方、36行目には「## 既定は FAIL（2026-08-31 に切り替え済み）」がある。68行目は存在せん `default_is_warning()` を指しとる（`default_is_fatal()` へ改名済み）。70行目の「## 現在の重複一覧」は切り替え前の17ファイルの表で、いまは0件。読んだ人が現在の状態を判断できん。
+- 直し方（適用済み）: 見出しを現状（既定 FAIL）に直し、WARNING 時代の節を「当初は WARNING だった（履歴・2026-08-30 時点）」として履歴と明示。`default_is_warning()` を `default_is_fatal()` に訂正し、一時的に落とす手段はフラグと環境変数であることを先に書いた。重複一覧は「当時の重複一覧（履歴）」に改め、現在は0件である旨を表の直前に置いた。
