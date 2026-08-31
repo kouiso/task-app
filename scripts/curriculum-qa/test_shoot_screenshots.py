@@ -14,11 +14,13 @@
     画角と出てくる画像が食い違う。
 """
 
+import io
 import json
 import queue
 import sys
 import time
 import tempfile
+from contextlib import redirect_stderr
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -329,6 +331,46 @@ def check_animation_settle() -> list[str]:
             fails.append("❌ 待つ相手を getAnimations() で見ていない")
         if "iterations === Infinity" not in waiter:
             fails.append("❌ 無限に回るアニメーションを待つ相手から外していない")
+        # 待ち時間切れ以外まで握り潰すと、評価エラーやページ破棄が「警告つきで撮れた」に
+        # 化ける。撮れた画像は残るので、誰も失敗に気づけん。
+        if "catch {" in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ settleAnimations が例外を種類を見ずに握り潰している")
+        if "errors.TimeoutError" not in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ 待ち時間切れ以外の例外を再送出していない")
+    if "import { chromium, errors } from 'playwright';" not in source:
+        fails.append("❌ playwright の errors を取り込んでいない（TimeoutError を見分けられない）")
+    return fails
+
+
+def check_worker_warning_forwarding() -> list[str]:
+    """ワーカーの警告が、撮影が成功した回にも表へ出ること。
+
+    アニメーションが止まらんかった等の警告は stderr にしか出ん。成功時に捨てると、
+    残るのは「撮れた」の一言だけになり、途中の絵が保存されたことに誰も気づけん。
+    """
+    fails = []
+    captured = io.StringIO()
+    with redirect_stderr(captured):
+        target.forward_worker_warnings("アニメーションが 2000ms で止まりませんでした\n\n", "day07")
+    out = captured.getvalue()
+    if "day07" not in out:
+        fails.append("❌ 警告にどの日のものか出ていない")
+    if "止まりませんでした" not in out:
+        fails.append("❌ ワーカーの警告が表へ出ていない")
+    if out.count("\n") != 1:
+        fails.append("❌ 空行まで流している（警告だけを出すこと）")
+
+    # 呼び出しが消えたら、助け関数が残っていても意味が無い。成功して返す経路に
+    # 挟まっとることまで見る。
+    body = Path(target.__file__).read_text(encoding="utf-8").split(
+        "def run_worker(job: dict[str, Any], label: str)", 1
+    )
+    if len(body) != 2:
+        fails.append("❌ run_worker が見つからない（この検査が対象を見失っている）")
+    else:
+        run_body = body[1].split("\ndef ", 1)[0]
+        if "forward_worker_warnings(proc.stderr, label)" not in run_body:
+            fails.append("❌ run_worker が成功時に stderr を捨てている")
     return fails
 
 
@@ -340,6 +382,7 @@ CHECKS = (
     ("ワーカーの分離", check_worker_isolation),
     ("スロットの排他", check_slot_exclusivity),
     ("アニメーションの収束待ち", check_animation_settle),
+    ("ワーカーの警告の転送", check_worker_warning_forwarding),
 )
 
 

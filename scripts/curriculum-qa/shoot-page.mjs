@@ -10,7 +10,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { chromium } from 'playwright';
+import { chromium, errors } from 'playwright';
 
 const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 
@@ -279,9 +279,13 @@ async function settleAnimations(page) {
       undefined,
       { timeout: ANIMATION_SETTLE_MS },
     );
-  } catch {
+  } catch (err) {
     // 上限まで待っても止まらんかった回はそのまま撮る。ここで落とすと、常時動いとる
     // 装飾がある画面が1枚も撮れんようになる。黙って通さんように warn は残す。
+    // ただし待ち時間切れ以外（評価エラー・ページ破棄）は本物の失敗なので握り潰さん。
+    if (!(err instanceof errors.TimeoutError)) {
+      throw err;
+    }
     console.warn(`アニメーションが ${ANIMATION_SETTLE_MS}ms で止まりませんでした`);
   }
   // 最後の1フレームが画面へ出るのを待つ。

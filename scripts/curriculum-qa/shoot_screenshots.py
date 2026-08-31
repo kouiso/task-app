@@ -855,7 +855,7 @@ def wait_ready(port: int, proc: subprocess.Popen[str]) -> None:
     raise TimeoutError(f"{SERVER_TIMEOUT} 秒待っても 127.0.0.1:{port} が応えません")
 
 
-def run_worker(job: dict[str, Any]) -> list[dict[str, Any]]:
+def run_worker(job: dict[str, Any], label: str) -> list[dict[str, Any]]:
     """ワーカーへ仕事を渡して、撮れた一覧を受け取る。"""
     proc = subprocess.run(
         ["node", str(WORKER)],
@@ -870,7 +870,17 @@ def run_worker(job: dict[str, Any]) -> list[dict[str, Any]]:
     result = json.loads(proc.stdout)
     if not result.get("ok"):
         raise RuntimeError(f"撮影に失敗しました: {result.get('error')}\n{proc.stderr[-2000:]}")
+    # 成功しても stderr は捨てん。アニメーションが止まらんかった等の警告はここにしか
+    # 出ず、黙って捨てると「撮れた」の一言だけが残って誰も気づけん。
+    forward_worker_warnings(proc.stderr, label)
     return result["shots"]
+
+
+def forward_worker_warnings(stderr: str, label: str) -> None:
+    """ワーカーの警告を、どの日のものか分かる形でこちらの stderr へ流す。"""
+    for line in stderr.splitlines():
+        if line.strip():
+            print(f"[{label}] {line}", file=sys.stderr)
 
 
 DB_NAME_IN_URL = re.compile(r"^(?P<head>postgresql://[^/]+/)(?P<name>[^?]+)(?P<tail>.*)$")
@@ -949,7 +959,7 @@ def shoot_day(config: Config, day: int, out_dir: Path, worker: int = 0) -> list[
                 for s in shots
             ],
         }
-        return run_worker(job)
+        return run_worker(job, f"day{day:02d}")
     finally:
         stop_server(proc)
 

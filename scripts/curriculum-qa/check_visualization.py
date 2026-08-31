@@ -174,7 +174,10 @@ def duplicate_image_is_fatal(argv):
     """重複を FAIL 扱いにするか。既定は FAIL で、明示的に落としたときだけ WARNING。"""
     if '--warn-on-duplicate-image' in argv:
         return False
-    return os.environ.get(WARN_ON_DUPLICATE_IMAGE_ENV, '') in ('', '0', 'false', 'False')
+    # 大文字小文字と前後の空白を落としてから見る。`FALSE` を渡した人が、
+    # 落としたつもりのない WARNING へ黙って落ちるのを防ぐ。
+    raw = os.environ.get(WARN_ON_DUPLICATE_IMAGE_ENV, '').strip().lower()
+    return raw in ('', '0', 'false')
 
 
 def collect_targets(target):
