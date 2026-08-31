@@ -520,7 +520,7 @@ Step 1 との違いは、`<article>` の入れ物と `className` を1つも触�
   const greeting = getGreetingByHour('9');
 ```
 
-赤い線とともに `Argument of type 'string' is not assignable to parameter of type 'number'.` と出ます。「`string` の値を `number` の引数には渡せません」という意味です。`getGreetingByHour(hour: number)` と書いた `: number` が、この関数へ渡してよいのは数だけだと宣言しているためです。`'9'` は見た目こそ数字ですが、引用符で囲むと文字になります。文字のままでは `hour < 12` の大小比較が意図どおりに働かないので、TypeScript は画面を開く前に止めます。
+赤い線とともに `Argument of type 'string' is not assignable to parameter of type 'number'.` と出ます。「`string` の値を `number` の引数（関数へ渡す値）には渡せません」という意味です。`getGreetingByHour(hour: number)` と書いた `: number` が、この関数へ渡してよいのは数だけだと宣言しているためです。`'9'` は見た目こそ数字ですが、引用符で囲むと文字になります。文字のままでは `hour < 12` の大小比較が意図どおりに働かないので、TypeScript は画面を開く前に止めます。
 
 確かめたら `getGreetingByHour(hour)` に戻してください。赤い線が消えて、あいさつが元どおり表示されれば大丈夫です。
 
@@ -706,7 +706,7 @@ Step 2 では `Owner` と `Focus` の枠を JSX に2つ手で書いていまし�
               ))}
 ```
 
-ここが Step 3 の中心です。`{focusCards.map((card) => (...))}` が配列を1周し、要素1つからカード1枚を作ります。要素が3つあるのでカードも3枚出ます。`md:grid-cols-3` は画面が広いときだけ横3列に並べる指定で、狭い画面では縦に積まれます。
+ここが Step 3 の中心です。`{focusCards.map((card) => (...))}` が配列を1周し、要素1つからカード1枚を作ります。`(card) => (...)` は「`card` を1つ受け取って、かっこの中を返す」という関数の短い書き方で、アロー関数と呼びます。要素が3つあるのでカードも3枚出ます。`md:grid-cols-3` は画面が広いときだけ横3列に並べる指定で、狭い画面では縦に積まれます。
 
 `key={card.label}` は、React がどのカードがどれなのかを見分けるための目印です。付け忘れても表示はされますが、`npm run dev` を動かしているターミナルに警告が残ります。中で読んでいるのは `card.label`・`card.value`・`card.description` の3つで、`FocusCard` 型で決めた3項目とそろっています。だから表示する項目を増やしたいときは、型・配列・この中身の3か所を合わせて直します。
 
@@ -792,7 +792,7 @@ npm run dev
 #### チェックポイント
 
 - メイン見出しのあいさつが、いま開発サーバーで見ている時刻に合っている
-- `Taro` の名前が画面に出る
+- `dashboardOwner.name` に入れた名前（既定は `Taro`）が画面に出る
 - `進行中:` のバッジが `bg-primary`（メインカラー）で表示されている
 - 下段に「担当」「今日」「次」の3カードがある
 - 右側の補助カードまで含めて、画面全体が「ダッシュボード」として見える
