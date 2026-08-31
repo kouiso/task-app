@@ -1297,6 +1297,56 @@ def check_unclassified_error_blocks_skip() -> list[str]:
     return fails
 
 
+def check_expected_red_rejects_unknown_error() -> list[str]:
+    """免除の判定でも、説明の付かん行を捨てんこと。
+
+    マーカーで絞ってから見ると `REAL_BUILD_FAILURE_MARKERS` に載ってへん失敗が
+    黙って消え、断り書きどおりの型エラーだけが残って day11 が免除される。
+    SKIP 側で潰したのと同じ「絞ってから判定する」型が、免除の側にも残っとった。
+    """
+    known = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
+        errors=(),
+        build_errors=(
+            "Failed to compile.",
+            "Type error: Property 'getById' does not exist on type ...",
+        ),
+    )
+    if not target.build_failure_is_expected(known):
+        return ["❌ 断り書きどおりの型エラーまで免除せんようになっている"]
+    mixed = known._replace(
+        build_errors=known.build_errors + ("Error: Unauthorized while prerendering /admin",)
+    )
+    if target.build_failure_is_expected(mixed):
+        return ["❌ 説明の付かん失敗が混ざった day11 を免除している"]
+    return []
+
+
+def check_econnrefused_alone_is_not_database() -> list[str]:
+    """`ECONNREFUSED` 単独を DB の不在と見なさんこと。
+
+    OS が返す汎用の接続拒否なので、Redis や別の localhost 依存でも出る。
+    単独で DB マーカーに数えると、その1行だけの出力が SKIP へ落ちて exit 0 になる。
+    """
+    fails: list[str] = []
+    redis = target.error_line_pool("Error: connect ECONNREFUSED 127.0.0.1:6379")
+    if target.build_failure_is_database_only(redis):
+        fails.append("❌ DB と関係のない ECONNREFUSED を DB だけの失敗にしている")
+
+    # Prisma の印が同じ出力に居るときは、裏付けとして数えて SKIP のままにすること。
+    postgres = target.error_line_pool(
+        "\n".join(
+            [
+                "Can't reach database server at `localhost`:`5432`",
+                "Error: connect ECONNREFUSED 127.0.0.1:5432",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(postgres):
+        fails.append("❌ Prisma の印つきの ECONNREFUSED まで本物の失敗にしている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1322,7 +1372,8 @@ CHECKS = (
     ("成果物への SKIP の記録", check_result_doc_records_skip),
     ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
-    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),
+    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
+    ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
 )
 
 

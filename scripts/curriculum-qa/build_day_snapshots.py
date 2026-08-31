@@ -1090,7 +1090,7 @@ def error_line_pool(output: str) -> tuple[str, ...]:
         ln
         for ln in lines
         if ERROR_MARK.search(ln)
-        or any(m in ln for m in DB_LESS_BUILD_MARKERS)
+        or any(m in ln for m in DB_LESS_PRIMARY_MARKERS + DB_LESS_CORROBORATING_MARKERS)
         or any(m in ln for m in REAL_BUILD_FAILURE_MARKERS)
     ]
     # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
@@ -1339,13 +1339,29 @@ def tsc_failure_is_expected(result: DayResult) -> bool:
 #   その2つが SKIP へ落ちて exit 0 になる。DB へ届かんかった回は必ず
 #   `Can't reach database server` か `P1001` を一緒に吐くので、そっちで拾えば足りる
 #   （判定用のプールは ERROR_MARK に当たらん行も、この一覧の語を含む行なら残す）。
-DB_LESS_BUILD_MARKERS = (
+# それ1行で「DB へ届いてへん」と言い切れる印。
+DB_LESS_PRIMARY_MARKERS = (
     "Can't reach database server",
     # DB へ届かんことを指す Prisma のエラーコード。
     "P1001",
-    # OS が返す接続拒否。DB が起動してへん機械で出る。
-    "ECONNREFUSED",
+    # Prisma が DB へ繋げんかったことを直接指す。
+    "the database server at",
 )
+
+# それ単独では DB と言えん印。`ECONNREFUSED` は OS が返す汎用の接続拒否で、
+# Redis や別の localhost 依存でも出る（例: `Error: connect ECONNREFUSED 127.0.0.1:6379`）。
+# 単独で DB マーカーに数えると、その1行だけの出力が「DB だけの失敗」に見えて SKIP へ落ち、
+# 壊れた日が exit 0 で出ていく。上の印が同じ出力に居るときだけ、裏付けとして数える。
+DB_LESS_CORROBORATING_MARKERS = ("ECONNREFUSED",)
+
+
+def db_less_markers(errors: tuple[str, ...]) -> tuple[str, ...]:
+    """この出力で DB の不在の印として数えてよいものを返す。"""
+    if any(
+        any(marker in line for marker in DB_LESS_PRIMARY_MARKERS) for line in errors
+    ):
+        return DB_LESS_PRIMARY_MARKERS + DB_LESS_CORROBORATING_MARKERS
+    return DB_LESS_PRIMARY_MARKERS
 
 
 BUILD_SKIPPED = "SKIP"
@@ -1398,16 +1414,14 @@ def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
     # 「無罪」やない以上、無罪の証拠が要る側はこっち。
     if has_real_build_failure(errors):
         return False
-    if not any(
-        any(marker in line for marker in DB_LESS_BUILD_MARKERS)
-        for line in errors
-    ):
+    markers = db_less_markers(errors)
+    if not any(any(m in line for m in markers) for line in errors):
         return False
     # DB のマーカーが在るだけでは足りん。**全部の行**が DB か包み紙で説明できて初めて
     # 「この機械では判定でけへん」と言える。説明の付かん行が混ざっとるのは、
     # 中身の分からん失敗が DB の赤に隠れとるということ。
     return all(
-        any(marker in line for marker in DB_LESS_BUILD_MARKERS)
+        any(m in line for m in markers)
         or any(marker in line for marker in BUILD_NOISE_MARKERS)
         for line in errors
     )
@@ -1421,6 +1435,8 @@ def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
 # DB の赤に紛れて SKIP へ落ち、壊れた日が exit 0 で出ていく。
 BUILD_NOISE_MARKERS = (
     "Failed to collect page data",
+    # 型エラーの直前に必ず出る Next.js の見出し行。原因は次の `Type error:` の行。
+    "Failed to compile",
     # Prisma は例外のクラス名だけの行を先に吐く。原因は次の `Can't reach ...` の行。
     "PrismaClientInitializationError",
     "Build error occurred",
@@ -1441,10 +1457,14 @@ def build_failure_is_expected(result: DayResult) -> bool:
     signature = EXPECTED_RED_SIGNATURE.get(result.day)
     if signature is None:
         return False
+    # 包み紙は原因やないので除く。**残りは捨てずに全部見る。**
+    # マーカーで絞ってから判定すると、`REAL_BUILD_FAILURE_MARKERS` に載ってへん失敗
+    # （例: `Error: Unauthorized while prerendering /admin`）が黙って消えて、
+    # 断り書きどおりの型エラーだけが残り、別の欠陥を抱えた日が免除されてまう。
     real = [
         line
         for line in result.build_errors
-        if any(marker in line for marker in REAL_BUILD_FAILURE_MARKERS)
+        if not any(marker in line for marker in BUILD_NOISE_MARKERS)
     ]
     # 型エラーの証拠が1行も無いなら、断り書きで説明できたことにせん。
     if not real:
