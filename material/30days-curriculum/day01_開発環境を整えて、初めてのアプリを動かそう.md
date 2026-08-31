@@ -16,7 +16,7 @@
 
 スクリーンショット: Day 01 の最後に作る `/dashboard` の画面が、ブラウザに表示されています。完全一致でなくてよいです。「自分のアプリ開発が始まった」と思える見た目を今日つくるのが狙いです。
 
-- [ ] 配布 ZIP を展開して、`scripts` と `material` が見える場所を `task-app` の作業場所にする
+- [ ] 配布 ZIP を展開して、`README.md` と `scripts` が見える場所を `task-app` の作業場所にする
 - [ ] `scripts/scaffold-from-scratch.sh` を実行して、土台を一発で作る
 - [ ] `npm run dev` で Next.js（React の画面を動かすための土台一式）の初期画面を表示する
 - [ ] `src/app/globals.css` に Linear 風 design token を入れる
@@ -244,7 +244,7 @@ pwd
 
 - `pwd` の結果が `/Users/あなたのユーザー名/workspace/task-app` のような形になっている（`pwd` は `~` を使わず、先頭からの完全なパスで表示する。先頭部分は使っているパソコンによって変わる）
 - Windows の WSL2 で進めている場合は、`/home/あなたのユーザー名/workspace/task-app` のような形になる
-- `scripts` と `material` が見える配布物ルートにいる
+- `README.md` と `scripts` が見える配布物ルートにいる
 
 #### ここで置いておく配布物
 
@@ -254,7 +254,7 @@ pwd
 見えていてほしい主なファイルとフォルダは以下の通りです。
 
 - `README.md`
-- `material`
+- `doc`
 - `scripts`
 - `scripts/scaffold-from-scratch.sh`
 - `.env.example`
@@ -270,7 +270,7 @@ pwd
 ls
 ```
 
-`ls` は、いまいるフォルダの中身を並べて見せるだけのコマンドです。ファイルを作ったり消したりしないので、迷子になったと感じたときは何度でも実行できます。一覧に `scripts` と `material` が出てこないときは、展開先の1つ外側か1つ内側にいます。表示の中に `task-app` というフォルダ名が見えていれば `cd task-app` で中に入り、見覚えのない一覧が出たときは `cd ~/workspace/task-app` と打てば戻ってこられます。
+`ls` は、いまいるフォルダの中身を並べて見せるだけのコマンドです。ファイルを作ったり消したりしないので、迷子になったと感じたときは何度でも実行できます。一覧に `README.md` と `scripts` が出てこないときは、展開先の1つ外側か1つ内側にいます。表示の中に `task-app` というフォルダ名が見えていれば `cd task-app` で中に入り、見覚えのない一覧が出たときは `cd ~/workspace/task-app` と打てば戻ってこられます。
 
 #### 期待する結果
 

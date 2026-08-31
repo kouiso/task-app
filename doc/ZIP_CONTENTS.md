@@ -14,7 +14,7 @@
 ## この ZIP に入るもの
 
 `build-zip.sh` は**許可リスト方式**です。下に挙げたものだけを集めて固めます。
-「あとから除外する」という処理はありません。
+名指しで挙げていないものは、除外条件を書かなくても入りません。
 
 ### ルート直下（`required_files`）
 
@@ -37,11 +37,22 @@
 `_server-routers` からは6本（`project.ts` `task.ts` `search.ts` `comment.ts` `report.ts` `user.ts`）を外しています。
 **この6本は読者が教材を写経して自分で書くもの**だからです。
 
-### 教材本体
-
-`material/30days-curriculum/` — Markdown 36本 ＋ `screenshots/` の画面写真。
-
 ## この ZIP に入らないもの
+
+### 教材そのもの
+
+`material/` は丸ごと入りません。教材は PDF 36冊として別に渡します。
+
+**理由**: 読者は PDF を開いて読みながら、この ZIP を展開したフォルダへ写経します。
+PDF と同じ中身の原稿 Markdown を並べても使い道がなく、画面写真（13MB）は PDF へ
+焼き込み済みで二重持ちになります。`material/` の下には他に、別商品の見本 PDF
+（`sample/`）・社内向けの手引き（`pr-reviewer-rule.md` `dev-guide.md` `onboarding.md`）・
+組版用の CSS（`style/`）・内部メタ（`30days-curriculum/_meta/`）も入っており、
+買い手が ZIP を開いた瞬間にこれらが出てくると、それだけで商品の信用が落ちます。
+
+`build-zip.sh` は `material/` を build ディレクトリへ集めません。集めた後に外すのではなく
+最初から集めないので、混入の経路そのものがありません。`check-sale-package.sh` の
+`non_product_entries` が `task-app/material/` を1つでも見つけたら失敗します。
 
 ### 完成アプリ本体（意図的に入れていません）
 
@@ -50,14 +61,6 @@
 **理由**: `scaffold-from-scratch.sh` は `create-next-app` から始めます。`package.json` が先にあると
 その工程を飛ばしてしまい、読者は「自分で作った」という手応えを得られません。
 `check-sale-package.sh` がこれらの混入を検出して失敗させます。
-
-### 商品外のファイル（買い手には無関係）
-
-`material/sample/`（別商品の見本 PDF）／`material/pr-reviewer-rule.md`（社内のレビュー規則）／
-`material/dev-guide.md`／`material/onboarding.md`（開発者向け）／`material/style/`（PDF 組版用の CSS）／
-`material/30days-curriculum/_meta/`（内部メタ）／`material/30days-curriculum/style/`／`material/pdf/`。
-
-`build-zip.sh` の zip 除外と `check-sale-package.sh` の `non_product_entries` の2箇所で止めています。
 
 ### その他
 

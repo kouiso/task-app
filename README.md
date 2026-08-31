@@ -48,9 +48,13 @@ task-app/
   .env.example      <- 環境変数の見本
   .mise.toml        <- mise を使う場合の Node.js バージョン設定
   README.md         <- セットアップ案内
-  material/          <- 教材（Day 01 〜 Day 30 の Markdown）
+  doc/               <- 動作環境の詳細
   scripts/           <- セットアップスクリプトとスターター素材
 ```
+
+この ZIP は写経の土台だけで、教材そのものは入っていません。
+教材は PDF 36冊として別に配られます。PDF を開いて読みながら、
+この ZIP を展開したフォルダへ手を動かしていく形になります。
 
 展開直後には `package.json` や `src` はありません。
 Day 01 で公式の `create-next-app` を実行し、教材用スターターを配置します。
@@ -60,9 +64,9 @@ mise を使っている場合は、展開後の `task-app` で
 
 ### 2. Day 01 を開く
 
-最初に、次の教材を開いてください。
+最初に、配られた PDF のうち次の1冊を開いてください。
 
-`material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md`
+`day01_開発環境を整えて、初めてのアプリを動かそう.pdf`
 
 Day 01 では、必要なツールの確認から順番に進めます。
 README の段階では `npm run dev` や scaffold をまだ実行しません。
@@ -161,7 +165,7 @@ API の一部は、後の日の画面を先に動かせるスターターです�
 
 よくある問題と解決方法は付録を参照してください。
 
-- `material/30days-curriculum/appendix_トラブルシューティング.md`
+- PDF の `appendix_トラブルシューティング.pdf`
 
 主な確認ポイントは次のとおりです。
 

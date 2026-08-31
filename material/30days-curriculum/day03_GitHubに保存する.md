@@ -526,7 +526,6 @@ git status --short
 ?? .mise.toml
 ?? .node-version
 ?? doc/
-?? material/
 ?? scripts/
 ```
 
@@ -538,7 +537,7 @@ git status --short
 
 この Day では、Vercel が GitHub 上で build できるように、アプリ実行に必要なファイルを名前で指定して add します。
 
-`material/` は教材本文、`scripts/` は初期セットアップ用なので、GitHub に上げなくてもアプリのデプロイ（作ったアプリをサーバーに置いて公開する作業）には要りません。一方で `package.json` や `src/` や `prisma/` は、Day 04 の Vercel build に欠かせないファイルです。すでに履歴に入っていて変更のないファイルは、add しても何も起きないだけで害はありません。それでも名前を挙げておくと、デプロイに必要なものがそろっていることを自分の目で確認できます。
+`scripts/` は初期セットアップ用なので、GitHub に上げなくてもアプリのデプロイ（作ったアプリをサーバーに置いて公開する作業）には要りません。一方で `package.json` や `src/` や `prisma/` は、Day 04 の Vercel build に欠かせないファイルです。すでに履歴に入っていて変更のないファイルは、add しても何も起きないだけで害はありません。それでも名前を挙げておくと、デプロイに必要なものがそろっていることを自分の目で確認できます。
 
 ```bash
 git add README.md
@@ -579,7 +578,7 @@ A  src/app/dashboard/page.tsx
 - `README.md` の `M` が左側（1文字目）に付いている
 - どの行にも `.env` が出ていない
 
-いちばん下には、add しなかったものが `??` の行として残ります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? material/` `?? scripts/` の4行が並びます。
+いちばん下には、add しなかったものが `??` の行として残ります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? scripts/` の3行が並びます。
 どれも add していないので正しい状態です。`.node-version` はさきほど add したので、ここには出てきません。
 
 #### 初回だけ、自分の名前とメールアドレスを Git へ登録する
@@ -619,7 +618,7 @@ git status -sb
 git log --oneline --decorate -3
 ```
 
-`git status -sb` に残るのは、add しなかったものの `??` の行だけになります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? material/` `?? scripts/` の4行が並びます。
+`git status -sb` に残るのは、add しなかったものの `??` の行だけになります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? scripts/` の3行が並びます。
 これらは GitHub へ送らないので、残っていて正常です。上に挙げた4つ以外の行が残っていたら、その行が何のファイルかで対応が分かれます。`src/` や `prisma/` のように、このカリキュラムで作ってきたファイルなら、送るはずのものが送られていません。`git add` してから、もう一度コミットしてください。`.vscode/` や `.DS_Store` のように、自分のエディタやパソコンが勝手に作ったファイル、あるいは自分用のメモなら、GitHub へ送る必要はありません。`git add` せずにそのまま置いておいてください。判断が付かないときは送らないほうが安全です。いったんインターネットに出したファイルは、あとから消しても記録に残ります。
 `git log` の1行目に、いま付けたメッセージが出ていれば成功です。
 
@@ -869,7 +868,7 @@ git branch --show-current
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `.node-version` `doc/` `material/` `scripts/` の5件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、`.env` の行が出ていないことの2点だけ確認する |
+| Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `.node-version` `doc/` `scripts/` の4件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、`.env` の行が出ていないことの2点だけ確認する |
 | `git add` が `fatal: pathspec '...' did not match any files` で止まる | 指定したファイルが手元に無い | その行から無いファイル名だけを外して、同じコマンドをもう一度実行する。同じ行に書いた実在するファイルも一緒に失敗しているので、実行し直しが要る |
 | `git add .env.example` が何も起きない | `.gitignore` の `.env*` がこのファイルも除外している | `git add -f .env.example` と `-f` を付けて、除外をこのファイルだけ上書きする |
 | `git commit` が `*** Please tell me who you are.` で止まる | `user.name` と `user.email` を登録していない | `git config --global user.name` と `git config --global user.email` を1回だけ実行する。パソコンごとに1回で済む |
