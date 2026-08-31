@@ -405,3 +405,11 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - **本当の穴は改名と新規追加。** `browser_qa` の判定が**完全一致の allowlist** やったので、ワーカーと検査を両方新しい名前へ改名すると、検査自体は動くのに `browser_qa=0` になり、**Chromium 付きの走行が一度も無いまま material-gate の SKIP で緑**になる。別名の検査を新しく足した場合も同じ。十三巡目に足した配線が、名前に依存しとった。
 - 直し: 2点。(a) `browser_qa` の判定専用に**削除を落とさん一覧** `changed-with-deletes.z` を作る（`--diff-filter=d` 無し）。(b) 判定を完全一致から `scripts/curriculum-qa/` のディレクトリ前置へ広げる。名前に依存せんくなるので、改名も新規追加も拾う。
 - 検証: パターンを9通りの入力で実測（既存の検査／改名後の名前／同ディレクトリの別ファイル／`package.json`／`.node-version`／この workflow → 1、ディレクトリ名だけ／無関係／別ディレクトリ → 0）。削除を含むかは擬似的な削除を stage して実演し、**旧一覧 0件・新一覧 1件**を確認した。`yaml.safe_load` で構文 OK。
+
+## [PR #389 二十一巡目] Codex 1件（採用）
+
+`test_shoot_screenshots.py:325` **`shoot()` の中身を見とるつもりで、モジュールの残り全部を見とった**（P2・採用）
+
+- 根拠: `body = source.split("async function shoot(page, job, shot) {", 1)` の `body[1]` は開き括弧以降の**ファイルの残り全部**。コメントは「`shoot()` の中身だけを見る」と謳っとるのに閉じ括弧で切ってへんかったので、`await settleAnimations(page);` を `shoot()` の外（あとの助け関数や `main()`）へ移しても字面が残り、緑のまま通る。撮り終えた後に待っても意味が無いのに検査が気づかん。同じ理由で `waitForTimeout` の禁止も、`shoot()` の外の決め打ちの待ちを誤検知する側にズレとった。
+- 直し: 桁0の `\n}` で切って `shoot()` の本体だけを対象にした。同ファイル内の `settleAnimations` の取り出しが既に採っとる流儀に合わせた。
+- 検証: `shoot-page.mjs` の呼び出しを `shoot()` から外して後続関数 `afterShoot()` へ移した状態で実測。**直した検査は `❌ shoot() がアニメーションの収束を待っていない`（11/12）で落ち、直す前の検査は同じ状態で 12/12 の緑**やった。切り出しの実測は 82行・`settleAnimations` の呼び出しを含む・`waitForTimeout` を含まん・後続の `main` と `fitToContent` を含まん。
