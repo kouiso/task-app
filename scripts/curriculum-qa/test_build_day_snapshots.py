@@ -914,8 +914,13 @@ def check_build_failure_triage() -> list[str]:
     ]))
     if target.build_failure_is_database_only(mixed_real):
         fails.append("❌ DB のエラーに紛れた本物の失敗を SKIP へ落として exit 0 にしている")
-    if not target.has_real_build_failure(("Error occurred prerendering page \"/x\"",)):
-        fails.append("❌ prerender の失敗を本物の失敗として数えていない")
+    # prerender の見出しは DB の判定でだけ包み紙に数える。単独で来た回は DB の印が
+    # 無いので、これまでどおり本物の失敗のまま止まらんとアカン。内部の述語やのうて
+    # 外から見える結果で見る。
+    if target.build_failure_is_database_only(
+        target.error_line_pool("Error occurred prerendering page \"/x\"")
+    ):
+        fails.append("❌ prerender の失敗だけの赤を DB のせいにして SKIP へ落としている")
     if target.has_real_build_failure(("Error: Failed to collect page data for /dashboard",)):
         fails.append("❌ Next.js のラッパー行を本物の失敗に数えている（DB だけの失敗が止まる）")
 
@@ -1426,6 +1431,77 @@ def check_stack_frames_do_not_block_skip() -> list[str]:
     return fails
 
 
+def check_prerender_wrapper_does_not_hide_db() -> list[str]:
+    """prerender の見出しが、DB だけの失敗を本物の失敗に化けさせんこと。
+
+    Prisma の問い合わせが prerender の最中に落ちると、`Error occurred prerendering page`
+    と `Can't reach database server` が同じ出力に並ぶ。見出しを本物の失敗に数えると
+    `has_real_build_failure()` が先に効いて、DB を持たん機械で `--verify` が exit 1 になる。
+    """
+    fails: list[str] = []
+    with_db = target.error_line_pool(
+        "\n".join(
+            [
+                "Error occurred prerendering page \"/dashboard\"",
+                "PrismaClientInitializationError:",
+                "Can't reach database server at `localhost`:`5432`",
+                "Build error occurred",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(with_db):
+        fails.append("❌ prerender の見出しで DB だけの失敗を本物の失敗にしている")
+
+    # 見出しを包み紙に数えるのは DB の問いのときだけ。原因の行が居たら本物の失敗のまま。
+    with_cause = target.error_line_pool(
+        "\n".join(
+            [
+                "TypeError: Cannot read properties of undefined (reading 'map')",
+                "Error occurred prerendering page \"/dashboard\"",
+                "Can't reach database server at `localhost`:`5432`",
+            ]
+        )
+    )
+    if target.build_failure_is_database_only(with_cause):
+        fails.append("❌ prerender の原因の行まで包み紙に数えている")
+
+    # 想定内の赤の免除は別の問い。見出しが混ざったら day11 でも免除せんこと。
+    if "Error occurred prerendering page" in target.BUILD_NOISE_MARKERS:
+        fails.append("❌ 免除の判定まで prerender の見出しを見逃す一覧へ入れている")
+    return fails
+
+
+def check_reachable_server_failure_is_not_db_absence() -> list[str]:
+    """`the database server at` を DB の不在の印に数えんこと。
+
+    この語は Prisma の**認証失敗**の文面に入っとる（実測: `@prisma/client` の中に
+    `provide valid database credentials for the database server at the configured address`）。
+    届いた上で資格情報が違う話なので、DB の不在やない。数えると設定ミスが SKIP へ落ちて
+    exit 0 になる。下の1行は、その実測の文面に `next build` が付ける `Error:` を足した形。
+    """
+    fails: list[str] = []
+    credentials = target.error_line_pool(
+        "Error: Please provide valid database credentials for "
+        "the database server at the configured address."
+    )
+    if target.build_failure_is_database_only(credentials):
+        fails.append("❌ 資格情報の失敗（DB へは届いとる）を DB の不在として SKIP へ落としている")
+
+    # 本物の「届かん」回はこれまでどおり SKIP のままであること。実測の P1001 出力。
+    unreachable = target.error_line_pool(
+        "\n".join(
+            [
+                "PrismaClientInitializationError:",
+                "Can't reach database server at `127.0.0.1:59999`",
+                "Failed to collect page data for /dashboard",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(unreachable):
+        fails.append("❌ 本物の P1001 まで本物の失敗として止めている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1453,7 +1529,9 @@ CHECKS = (
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
     ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
     ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
-    ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
+    ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),
+    ("prerender の見出しは DB を隠さん", check_prerender_wrapper_does_not_hide_db),
+    ("届いた上での失敗は DB 不在やない", check_reachable_server_failure_is_not_db_absence),    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 
