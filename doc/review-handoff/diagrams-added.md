@@ -1,7 +1,11 @@
-# 30days-curriculum に mermaid 図を30枚足した記録
+# 30days-curriculum に mermaid 図を足した記録
 
 対象: `material/30days-curriculum/day01_*.md` 〜 `day29_*.md`
-既存 39枚 → **69枚**（+30）。日ごとの内訳と、選んだ／落とした理由を残す。
+この表に載っとるのは**この作業で足した30枚**。日ごとの内訳と、選んだ／落とした理由を残す。
+
+corpus 全体では 39枚 → **71枚**（+32）になっとる。差の2枚はこの表の外で、
+`day04` の手描きモック2枚を図へ置き換えた分（`cover-letter.md` 9-3 節）。
+数え直しは `grep -c '^\`\`\`mermaid' material/30days-curriculum/*.md` の合計で取れる。
 
 ---
 

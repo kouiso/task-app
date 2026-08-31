@@ -37,40 +37,60 @@
 
 | # | 不満 | 状態 | 証拠 |
 |---|---|---|---|
-| ① | ZIPを開いたら商品外が入っとる | ✅ | 12.1MB/221ファイル → **86.6KB/74ファイル**。`material/` 丸ごと0件 |
+| ① | ZIPを開いたら商品外が入っとる | ✅ | 12.1MB/221ファイル → **88,757バイト（86.7KB）/74ファイル**。`material/` 丸ごと0件 |
 | ② | Day01 で環境構築に失敗して進めん | ✅ | つまずき節・所要時間・環境図を追加 |
 | ③ | **写経したのに動かん** | ✅ | `build_day_snapshots.py --all --verify` で **29/30**。day11 は教材が「ここは赤くなります」と断っとる想定どおり |
 | ④ | 誤字・矛盾 | ✅ | 70件＋走査95件の裏取りで29件 |
 | ⑤ | 紙面が崩れる | ✅ | `check_pdf_book.py` / `check_page_layout.py` とも **36冊 exit 0** |
-| ⑥ | スクショと自分の画面が違う | 🔶 **未完** | 撮り直したのは day01/02/08 の**7枚だけ** |
-| ⑦ | コードだけ並んで説明が無い | 🔶 **未完** | mermaid 39枚のまま。day01/02/03 は 0図 |
+| ⑥ | スクショと自分の画面が違う | ✅ | 実画像111枚のうち**101枚**をその日のツリーで撮影（新規98・撮り直し3）。残る10枚はアプリ外の画面か付録専用の完成版 |
+| ⑦ | コードだけ並んで説明が無い | ✅ | mermaid **39 → 71枚**（+32）。図が0枚の日は無くなった |
 | ⑧ | 30日終わって理解が残らん | ✅ | 理解チェック 3問×30日 = 90問 |
-| ⑨ | Step ごとに撮ってへん（同じ画像の使い回し） | 🔶 **未完** | **21箇所・のべ50回**が使い回し。うち7枚だけ解消 |
-| ⑩ | 写真に「まだ作ってへんもの」が映る | 🔶 **未完** | ⑨と同じ作業で一緒に潰す |
+| ⑨ | Step ごとに撮ってへん（同じ画像の使い回し） | ✅ | 同一ファイル内の重複参照が**余剰31 → 0**（36本・参照のべ125箇所） |
+| ⑩ | 写真に「まだ作ってへんもの」が映る | ✅ | その日のツリーで撮った101枚を1枚ずつ開いて確認（`cover-letter.md` 9-2 節） |
 
-**出荷を止めるものはゼロ。**残る⑥⑦⑨⑩は「壊れとるのを直す」やのうて「足りん分を足す」側。
-ただし ¥10,000 の商品として見られたら弱点になる、と局長へは伝えてある。
+**10類型すべて片付いとる。**⑥⑦⑨⑩ は #388 で潰した。この表は 2026-08-31 に
+一次データから数え直した値で、数え方は次のとおり（母集団はどれも `material/30days-curriculum/*.md` の36本）。
+
+```bash
+# ⑥⑨: 画像の実数・参照のべ・同一ファイル内の重複
+python3 - <<'PY'
+import glob, re, os, collections
+refs = []
+for f in sorted(glob.glob('material/30days-curriculum/*.md')):
+    refs += [(f, os.path.normpath(m)) for m in re.findall(r'!\[[^\]]*\]\(([^)]+\.png)\)', open(f).read())]
+extra = sum(v - 1 for f in {a for a, _ in refs}
+            for v in collections.Counter(m for a, m in refs if a == f).values() if v > 1)
+print('参照のべ', len(refs), '/ 実画像', len({m for _, m in refs}), '/ 同一ファイル内の余剰', extra)
+PY
+
+# ⑥: そのうち何枚を #388 でその日のツリーから撮ったか（新規 + 撮り直し）
+git diff --name-status 26c53e0^ 26c53e0 -- material/30days-curriculum/screenshots | cut -c1 | sort | uniq -c
+
+# ⑦: 図の枚数
+grep -c '^```mermaid' material/30days-curriculum/*.md | awk -F: '{s+=$2} END{print s}'
+```
 
 ---
 
-## 残作業① — 写真の撮り直し（⑥⑨⑩・最優先）
+## 済んだ作業① — 写真の撮り直し（⑥⑨⑩・#388 で完了）
 
-### 何が問題か
+### 何が問題やったか
 
 `check_visualization.py` が「スクショ位置3箇所以上」を機械で強制しとる。**それを通すために
 同じ画像を貼って数を稼いどった。**検査が品質を下げる方向に効いとった。
 
-参照のべ114回に対して実画像64枚。**21箇所・のべ50回が使い回し。**
-day21 が `report.png` を5回、day17 が `my-task.png` を4回。
+before は参照のべ125箇所に対して実画像64枚（同一ファイル内の余剰31参照）。
+after は実画像111枚・余剰0参照。101枚をその日のツリーで撮り直した。
 
-### 基盤は全部動く状態で置いてある
+**この節は「終わった作業の記録」やけど消さん。**撮影の道具立てとハマりどころは、
+写真を1枚足すたびに要る。次に撮る人はここから読む。
 
 | 道具 | 場所 | 役割 |
 |---|---|---|
 | 日別ツリー再構成 | `scripts/curriculum-qa/build_day_snapshots.py` | 「その日のコード状態」を組む |
 | 撮影 | `scripts/curriculum-qa/shoot_screenshots.py` | Playwright で撮る。赤枠は `boundingBox()` 基準なので座標がズレん |
 | 撮影表 | `scripts/curriculum-qa/screenshot-shot.json` | `name/day/path/login/actions/wait_for/marks/full_page/clip/note/viewport` の宣言 |
-| 撮り直し計画 | `doc/review-handoff/screenshots-plan.md` | 21箇所の内訳と、各カットで赤枠にすべき要素 |
+| 撮り直し計画 | `doc/review-handoff/screenshots-plan.md` | 撮り直しが要った21箇所の内訳と、各カットで赤枠にすべき要素 |
 | 重複ゲート | `check_visualization.py`（同一日の画像重複を落とす検査を追加済み） | 水増しの再発を止める |
 
 ### 手順（実測済み・そのまま踏める）
@@ -104,17 +124,16 @@ python3 scripts/curriculum-qa/shoot_screenshots.py --day 6
 
 ---
 
-## 残作業② — 図の追加（⑦）
+## 済んだ作業② — 図の追加（⑦・#388 で完了）
 
-`doc/review-handoff/diagrams-added.md` に「どの節に図が要るか」の判定結果がある。
-判定は1問だけ: **「この節を読んだ人が紙に描いて確かめたくなるか」**。
+39枚 → **71枚**（+32）。図が0枚の日は無くなった。判定は1問だけ:
+**「この節を読んだ人が紙に描いて確かめたくなるか」**。判定結果は
+`doc/review-handoff/diagrams-added.md` にある。
 
-描かんもの3類型。水増しを防ぐため。
+描かんもの3類型。水増しを防ぐため、次に足すときも同じ線で切る。
 - 手順の羅列を四角で囲んだだけの図
 - 箇条書きをそのまま絵にした図
 - 画面写真がある所の重複
-
-day01/02/03 が 0図。Docker / Node / Postgres の繋がりが最優先。
 
 ---
 
@@ -197,7 +216,7 @@ bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/  # ALL C
 python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify      # 29/30
 
 # 配布物
-bash scripts/build-zip.sh                                                # 74ファイル / 86.6KB
+bash scripts/build-zip.sh                                                # 74ファイル / 88,757バイト
 python3 scripts/curriculum-qa/test_sale_package.py                       # 31/31
 
 # 紙面
@@ -230,8 +249,8 @@ python3 scripts/pdf-book/check_page_layout.py                            # 36冊
 | `fix-day01-04.md` 〜 `fix-day22-30.md` | 実際に直した内容 |
 | `day-snapshots-result.md` | 30日再構成ビルドの結果 |
 | `page-layout-check.md` | 紙面検査の結果 |
-| `screenshots-plan.md` | **残作業①の作業指示書** |
-| `diagrams-added.md` | **残作業②の判定結果** |
+| `screenshots-plan.md` | 撮影の作業指示書（済んだ作業①の元になった表） |
+| `diagrams-added.md` | 図を足すか落とすかの判定結果（済んだ作業②の根拠） |
 | `duplicate-image-gate.md` | 画像重複ゲートの設計 |
 | `gate1-summary.md` | Gate 1 で確定した件数 |
 
