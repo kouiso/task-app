@@ -616,9 +616,20 @@ def check_triage_section() -> list[str]:
     if expected_day is None:
         fails.append("❌ EXPECTED_RED が空で、想定内の赤の扱いを確かめられない")
     else:
-        section = target.triage_section(
-            [target.DayResult(expected_day, 80, True, "NG", "NG", ("x",))]
+        signature = target.EXPECTED_RED_SIGNATURE[expected_day]
+        documented_errors = tuple(
+            f"src/component/project/{signature['path']}({n},4): error TS2339: "
+            f"Property '{signature['marker']}' does not exist"
+            if n == 29 else
+            f"src/component/project/{signature['path']}({n},4): error TS7006: "
+            f"Parameter 'member' implicitly has an 'any' type."
+            for n in (29, 144, 167, 168, 169)
+        )[: signature["count"]]
+        documented = target.DayResult(
+            expected_day, 80, True, "NG", "OK",
+            errors=documented_errors[:3], tsc_errors=documented_errors,
         )
+        section = target.triage_section([documented])
         row = next(
             (l for l in section.split("\n") if l.startswith(f"| day{expected_day:02d} ")), ""
         )
@@ -626,6 +637,22 @@ def check_triage_section() -> list[str]:
             fails.append(f"❌ 想定内の赤が想定内として出ていない: {row!r}")
         if "教材の欠陥" in row or "判定不能" in row:
             fails.append(f"❌ 想定内の赤を欠陥や未調査として出している: {row!r}")
+
+        # 断り書きと合わん赤まで「想定内」と書いたら、走行は exit 1 やのに成果物だけが
+        # 「想定どおり」と言い張る状態になる。走行の判定と文書の判定を同じ線で動かす。
+        unrelated = documented._replace(
+            tsc_errors=documented.tsc_errors + (
+                "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
+            ),
+        )
+        unrelated_row = next(
+            (l for l in target.triage_section([unrelated]).split("\n")
+             if l.startswith(f"| day{expected_day:02d} ")), ""
+        )
+        if "想定内" in unrelated_row:
+            fails.append(f"❌ 断り書きと合わん赤まで成果物が想定内と書いている: {unrelated_row!r}")
+        if not target.broken_days([unrelated]):
+            fails.append("❌ 断り書きと合わん赤を異常日に数えていない（文書との食い違いの元）")
 
     original = dict(target.TRIAGE)
     try:

@@ -235,6 +235,16 @@ jobs:
           echo "PDF_BOOK_BROWSER=$browser" >> "$GITHUB_ENV"
           echo "Chromium: $browser"
 
+      # 撮影の収束待ちを実物のブラウザで確かめる検査は、Chromium が無いと自分から
+      # 退ける（SKIP・exit 0）。material-gate 側は Chromium を入れてへんので、そこだけに
+      # 置いとくと**実ブラウザの主張が一度も走らんまま**マージできてしまう。
+      # ブラウザを用意しとるこの job で、退けたこと自体を失敗にして走らせる。
+      - name: 撮影の収束待ちを実ブラウザで検査
+        if: steps.select.outputs.scope != 'none'
+        env:
+          CURRICULUM_QA_REQUIRE_BROWSER: '1'
+        run: python3 scripts/curriculum-qa/test_shoot_screenshots.py
+
       - name: PDFを組む
         if: steps.select.outputs.scope != 'none'
         env:

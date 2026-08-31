@@ -16,6 +16,7 @@
 
 import io
 import json
+import os
 import queue
 import subprocess
 import sys
@@ -51,6 +52,10 @@ def load_error(shots: list[dict]) -> str:
 
 
 BASE_SHOT = {"name": "day01/a.png", "day": 1, "path": "/"}
+
+
+# 立てるとブラウザ不在の SKIP を失敗にする。Chromium を用意しとる job だけが立てる。
+REQUIRE_BROWSER_ENV = "CURRICULUM_QA_REQUIRE_BROWSER"
 
 
 def check_mark_rect_source() -> list[str]:
@@ -417,8 +422,49 @@ def check_drawn_frame_settle() -> list[str]:
     if proc.returncode != 0:
         return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]
     if out.startswith("SKIP:") or "\nSKIP:" in out:
-        print(f"  ⏭️ 実ブラウザ検査を退けた: {out.splitlines()[0]}")
+        reason = out.splitlines()[0]
+        # ブラウザのある機械では、退けたこと自体を失敗にできる。ここを付けんと、
+        # Chromium を入れてへん CI では毎回 SKIP が緑で通り、**実ブラウザの主張が
+        # 一度も走らんまま**マージできてしまう。ブラウザを用意しとる job だけが
+        # この環境変数を立てる。
+        if require_browser_check():
+            return [f"❌ ブラウザ必須の走行なのに実ブラウザ検査を退けた: {reason}"]
+        print(f"  ⏭️ 実ブラウザ検査を退けた: {reason}")
     return []
+
+
+def require_browser_check(env: dict[str, str] | None = None) -> bool:
+    """実ブラウザ検査の SKIP を失敗として扱うか。
+
+    許可値だけを見る。「これ以外は無効」にせんと、綴り間違い（`ture` 等）で
+    静かに緩む側へ倒れる。既定は「立てん」で、ブラウザのある job だけが立てる。
+    """
+    raw = (env if env is not None else os.environ).get(REQUIRE_BROWSER_ENV, "").strip().lower()
+    return raw in ("1", "true", "yes")
+
+
+def check_require_browser_switch() -> list[str]:
+    """ブラウザ必須の走行では、SKIP を緑にせんこと。
+
+    Chromium を入れてへん CI では実ブラウザ検査が毎回 SKIP になる。そこが黙って
+    緑のままやと、この PR で足した rAF の収束待ちが**一度も実測されんまま**マージできる。
+    ブラウザを用意しとる job だけが環境変数を立てて、退けたこと自体を失敗にする。
+    """
+    fails = []
+    cases = {
+        "1": True, "true": True, "TRUE": True, "yes": True, " 1 ": True,
+        "": False, "0": False, "false": False, "no": False,
+        # 綴り間違いは「緩む側」やのうて既定（立てん）へ倒す。ここを拒否リストで
+        # 書くと、想定してへん値が全部「必須」になって CI が理由なく赤くなる。
+        "ture": False,
+    }
+    for raw, expected in cases.items():
+        actual = require_browser_check({REQUIRE_BROWSER_ENV: raw})
+        if actual is not expected:
+            fails.append(f"❌ {REQUIRE_BROWSER_ENV}={raw!r} の判定が {actual}（期待 {expected}）")
+    if require_browser_check({}):
+        fails.append("❌ 環境変数が無い走行までブラウザ必須にしている")
+    return fails
 
 
 CHECKS = (
@@ -431,6 +477,7 @@ CHECKS = (
     ("アニメーションの収束待ち", check_animation_settle),
     ("ワーカーの警告の転送", check_worker_warning_forwarding),
     ("描画の収束待ち（実ブラウザ）", check_drawn_frame_settle),
+    ("ブラウザ必須の切り替え", check_require_browser_switch),
 )
 
 
