@@ -2,7 +2,7 @@
 
 最終更新: 2026-08-31 / ブランチ `claude/30days-material-product-ready-hor18z` / PR **#389**（#388 はマージ済み）
 
-PR #389 の対応記録は `coderabbit-verdicts.md` に19件（`grep -c '^## \[PR #389' doc/review-handoff/coderabbit-verdicts.md`）。**これは記録の本数**で、1本に複数の指摘をまとめとる回がある（例: 七巡目の `duplicate-image-gate.md` は「CodeRabbit Minor ×3」を1本にしとる）。個別の指摘として数えると下の「残作業」節に書いた21件になる。異議はゼロで、全部採用して直しとる。
+PR #389 の対応記録は `coderabbit-verdicts.md` にある。**本数はここに書かん**（書くと必ず古くなる。十二・十四巡目で二度その指摘を受けとる）。数えるなら `grep -c '^## \[PR #389' doc/review-handoff/coderabbit-verdicts.md` が記録の本数を返す。**これは記録の本数**であって指摘の件数やない。1本に複数の指摘をまとめとる回がある（例: 七巡目の `duplicate-image-gate.md` は「CodeRabbit Minor ×3」を1本にしとる）。異議はゼロで、全部採用して直しとる。
 **マージは局長の明示指示待ち。**
 
 ---
