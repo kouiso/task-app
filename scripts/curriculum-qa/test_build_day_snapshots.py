@@ -617,13 +617,17 @@ def check_triage_section() -> list[str]:
         fails.append("❌ EXPECTED_RED が空で、想定内の赤の扱いを確かめられない")
     else:
         signature = target.EXPECTED_RED_SIGNATURE[expected_day]
-        documented_errors = tuple(
-            f"src/component/project/{signature['path']}({n},4): error TS2339: "
-            f"Property '{signature['marker']}' does not exist"
-            if n == 29 else
-            f"src/component/project/{signature['path']}({n},4): error TS7006: "
-            f"Parameter 'member' implicitly has an 'any' type."
-            for n in (29, 144, 167, 168, 169)
+        documented_errors = (
+            f"src/component/project/{signature['path']}(29,4): error TS2339: "
+            f"Property '{signature['marker']}' does not exist",
+            f"src/component/project/{signature['path']}(144,4): error TS7006: "
+            "Parameter 'member' implicitly has an 'any' type.",
+            f"src/component/project/{signature['path']}(167,4): error TS7006: "
+            "Parameter 'member' implicitly has an 'any' type.",
+            f"src/component/project/{signature['path']}(237,4): error TS7053: "
+            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
+            f"src/component/project/{signature['path']}(246,4): error TS7053: "
+            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
         )[: signature["count"]]
         documented = target.DayResult(
             expected_day, 80, True, "NG", "OK",
@@ -1096,12 +1100,17 @@ def check_expected_red_build_exemption() -> list[str]:
     documented = target.DayResult(
         day=11, files=92, tree_ok=True, tsc="NG", build="OK",
         errors=(),
-        tsc_errors=tuple(
-            f"src/component/project/project-detail-view.tsx({n},4): error TS2339: "
-            f"Property 'getById' does not exist" if n == 29 else
-            f"src/component/project/project-detail-view.tsx({n},4): error TS7006: "
-            f"Parameter 'member' implicitly has an 'any' type."
-            for n in (29, 144, 167, 168, 169)
+        tsc_errors=(
+            f"src/component/project/project-detail-view.tsx(29,4): error TS2339: "
+            "Property 'getById' does not exist",
+            "src/component/project/project-detail-view.tsx(144,4): error TS7006: "
+            "Parameter 'member' implicitly has an 'any' type.",
+            "src/component/project/project-detail-view.tsx(167,4): error TS7006: "
+            "Parameter 'member' implicitly has an 'any' type.",
+            "src/component/project/project-detail-view.tsx(237,4): error TS7053: "
+            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
+            "src/component/project/project-detail-view.tsx(246,4): error TS7053: "
+            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
         ),
     )
     if not target.tsc_failure_is_expected(documented):
@@ -1141,6 +1150,13 @@ def check_expected_red_build_exemption() -> list[str]:
     ))
     if target.build_failure_is_expected(other_type_error):
         fails.append("❌ 断り書きと無関係な型エラーによる build 落ちを免除している")
+
+    # 根っこの getById が残っていても、追加の型エラーまで同居したら免除せん。
+    mixed_type_errors = known._replace(build_errors=known.build_errors + (
+        "Type error: Type 'number' is not assignable to type 'string'.",
+    ))
+    if target.build_failure_is_expected(mixed_type_errors):
+        fails.append("❌ getById と別の型エラーが同居した build を免除している")
 
     # 免除の判断が異常日の判定に効いとること。関数だけ足しても意味が無いので、
     # 実際に `broken_days` を通して数える。
@@ -1390,10 +1406,10 @@ def check_expected_red_rejects_unknown_code() -> list[str]:
         day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
         tsc_errors=(
             f"{path}(29,4): error TS2339: Property 'getById' does not exist",
-            f"{path}(31,4): error TS7006: Parameter implicitly has an 'any' type",
-            f"{path}(32,4): error TS7006: Parameter implicitly has an 'any' type",
-            f"{path}(33,4): error TS7053: Element implicitly has an 'any' type",
-            f"{path}(34,4): error TS7053: Element implicitly has an 'any' type",
+            f"{path}(31,4): error TS7006: Parameter 'member' implicitly has an 'any' type.",
+            f"{path}(32,4): error TS7006: Parameter 'member' implicitly has an 'any' type.",
+            f"{path}(33,4): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
+            f"{path}(34,4): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
         ),
     )
     if not target.tsc_failure_is_expected(documented):
@@ -1407,6 +1423,21 @@ def check_expected_red_rejects_unknown_code() -> list[str]:
     )
     if target.tsc_failure_is_expected(smuggled):
         return ["❌ 断り書きに無いコードが混ざった day11 を免除している"]
+
+    # 許可されたコードでも、別の implicit-any / indexing 診断へ差し替えたら通さない。
+    swapped = documented._replace(
+        tsc_errors=(
+            documented.tsc_errors[0],
+            documented.tsc_errors[1],
+            documented.tsc_errors[2],
+            documented.tsc_errors[3].replace(
+                "expression of type 'any'", "expression of type 'string'"
+            ),
+            documented.tsc_errors[4],
+        )
+    )
+    if target.tsc_failure_is_expected(swapped):
+        return ["❌ 許可コードでも別の診断へ差し替えた day11 を免除している"]
     return []
 
 
