@@ -3,7 +3,7 @@
 `scripts/curriculum-qa/build_day_snapshots.py` の出力。Day N を終えた読者の
 手元を組み直して、型検査とビルドが通るかを見た結果である。
 
-- 出どころ: `python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify`（2026-08-31 07:30 UTC / 30 日ぶん）
+- 出どころ: `python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify`（2026-08-31 12:17 UTC / 30 日ぶん）
 - 型検査とビルド: 実行した
 - tsc・build とも OK: 29 / 30 日
 - ツリーの置き場: `dist/day-snapshots/dayNN/`

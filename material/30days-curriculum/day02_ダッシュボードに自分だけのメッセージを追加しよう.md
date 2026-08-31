@@ -288,7 +288,7 @@ export default function DashboardPage() {
 #### ブラウザ確認
 
 - 見出しが 見出しだけの状態から変わっている
-- `こんにちは、Taroさん。` が主役として見える
+- `こんにちは、Taroさん。` が主役として見える（`ownerName` を自分の名前へ書き換えた人は、その名前で出る）
 - 右側に小さな補助カードが2枚並ぶ
 
 > `Taro` はサンプルの名前です。`ownerName`（このあとの Step では `dashboardOwner.name`）の値を自分の名前に書き換えると、あいさつもその名前で表示されます。
@@ -390,9 +390,9 @@ export default function DashboardPage() {
               </h2>
 
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-                今日やるのは
+                今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                に取りかかります。
+                まで進めます。
               </p>
             </div>
 ```
@@ -428,7 +428,7 @@ export default function DashboardPage() {
                 </p>
 ```
 
-カードの下段を `sm:grid-cols-2` で2つに割り、`Owner` と `Focus` の小さな枠を並べます。中身は `{dashboardOwner.name}` と `{dashboardOwner.todayFocus}` で、どちらも見出しと同じ1つのまとまりから読んでいます。名前を書き換えるときに触るのは `dashboardOwner` の1か所だけで、見出しと下段の表示が同時に変わります。
+カードの下段を `sm:grid-cols-2` で2つに割り、`Owner` と `Focus` の小さな枠を並べます。中身は `dashboardOwner` の `name`・`role`・`todayGoal`・`todayFocus` の4つで、どれも見出しと同じ1つのまとまりから読んでいます。名前を書き換えるときに触るのは `dashboardOwner` の1か所だけで、見出しと下段の表示が同時に変わります。
 
 `Owner` や `Focus` のような小さなラベルには、`text-xs` と `tracking-[0.18em]` を当てています。後者は文字の間隔を少し広げる指定です。小さな英字は詰まって読みにくいので、間隔を空けるとラベルより値のほうが主役に見えます。この `<div>` はまだ閉じていないので、次のブロックへ続けます。
 
@@ -1290,9 +1290,11 @@ export default function DashboardPage() {
 - 値はその場に直接書き散らすより、型（`type`）や関数にまとめて意味を持たせたほうが、あとから変更しやすい
 - クリックなどの操作がない画面は、無理に Client Component にせず、Server Component のままにしておく
 
-この3つが入っていれば、名前や集中テーマを変えたくなったときに
-触るのはファイル先頭の1行だけで、
-`{ownerName}`・`{focusTheme}`・`{todayNote}` の3か所が同時に変わります。
+この3つが入っていれば、名前や集中テーマを変えたくなったときに触るのは
+`dashboardOwner` の該当する行だけです。変わるのは、その値を読んでいる表示だけです。
+`name` は見出しと「担当」カード、`todayFocus` は見出しと「今日」カードの説明、
+`todayGoal` は「今日」カード、`nextAction` は「次」カードに出ます。
+
 ## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |

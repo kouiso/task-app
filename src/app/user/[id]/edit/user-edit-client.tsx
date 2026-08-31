@@ -59,7 +59,11 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   const isOwnProfile = currentUser?.id === userId;
   const canEditUser = isAdmin || isOwnProfile;
   const canManageAccount = isAdmin && !isOwnProfile;
-  const { data: user, isLoading } = api.user.getById.useQuery(
+  const {
+    data: user,
+    isLoading,
+    error,
+  } = api.user.getById.useQuery(
     { id: userId },
     { enabled: !!currentUser && canEditUser && userId.length > 0 },
   );
@@ -120,6 +124,25 @@ export function UserEditClient({ userId }: UserEditClientProps) {
             <CardContent className="pt-6">
               <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
               <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto max-w-md mt-8">
+          <Card>
+            <CardContent className="pt-6">
+              <h1 className="text-xl font-bold mb-2">ユーザー情報を取得できません</h1>
+              <p className="text-muted-foreground">
+                {error.data?.code === 'NOT_FOUND'
+                  ? 'ユーザーが見つかりません'
+                  : '時間をおいて再度お試しください'}
+              </p>
             </CardContent>
           </Card>
         </div>

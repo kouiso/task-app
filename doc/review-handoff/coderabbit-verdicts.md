@@ -1,6 +1,26 @@
-# CodeRabbit 41件の裏取り結果（journal から復元）
+# CodeRabbit の指摘の裏取り結果
 
-判定: {'false': 20, 'real': 17}  反証: 5/17 が refuted
+## 件数の内訳（2026-08-31 時点の最終状態）
+
+CodeRabbit が PR #388 に立てたレビュースレッドは **41本**。処理の結果は次のとおり。
+
+| 区分 | 本数 |
+|---|---:|
+| この裏取りより前に対応済み（記録不整合5件・cbf82ca） | 5 |
+| 本物と判定して直した | 22 |
+| 成立せんと判定して根拠つきで返信した（markdownlint 系の見送り8本を含む） | 14 |
+| **合計** | **41** |
+
+## 下の一覧が持つ範囲
+
+以下は並列の裏取りを journal から復元した分で、**37本ぶん**の判定（real 17 / false 20）しか入っていない。
+41本との差の4本は、裏取りの並列が上限に当たって判定が残らんかったもの。その4本は最終的に
+1本ずつ手で開いて処理し、上の表へ数え入れてある（下の一覧には出てこない）。
+
+`real 17` のうち **5本は反証（adversarial pass）を通したあとも残った**もの。反証で落ちた分は
+`false 20` の側へ入っている。つまり `5/17 refuted` ではなく、**17本はすべて反証後に生き残った本物**。
+
+---
 
 ## [day02_ダッシュボードに自分だけのメッセージを追加しよう.md] material/30days-curriculum/day02_ダッシュボードに自分だけのメッセージを追加しよう.md:323  (quality)
 - 指摘: :321-323 todayGoal の値と後続文がつながらない
@@ -96,3 +116,127 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 指摘: src/lib/constant/priority.ts と status.ts、scripts/_constants/ のグラフ用の色を10pxのラベルへ使っていてコントラストが足りない
 - 根拠: 指摘された定数ファイル自体は色の定義だけで、priority.ts のコメントは逆に `// グラフ以外で優先度に色を割り当てないのは、1枚のカードに色が積み上がるのを避けるため` と書いている。実際に文字色へ流しているのは dashboard で、259: `className="text-[10px] font-medium"` / 260: `style={{ color: TASK_STATUS_COLORS[task.status] }}`、266-268 が同じ形で `TASK_PRIORITY_COLORS[task.priority]`。カード地は globals.css:124 `--card: 0 0% 100%;`（dark は 177 `--card: 228 20% 12%;`）。10px・font-medium は WCAG の大きい文字に当たらず 4.5:1 が要る。実測コントラスト（白地 / 暗地 #181b25）: HIGH・IN_REVIEW #f69e23 = 2.14 / 8.04、DONE #26ab7a = 2.92 / 5.88、MEDIUM・IN_PROGRESS #1e9cb8 = 3.23 / 5.32、URGENT・CANCELLED #dc3848 = 4.47 / 3.85、LOW・TODO #5f6777 = 5.69 / 3.02。明色モードで4色が 4.5 未満、暗色モードでも2色が 4.5 未満。なお教材側は grep 上この色を `Cell fill` / `Bar fill` にしか使っておらず（day22:376,514 / day23:581,584）、`style={{ color: TASK_` は material に0件。読者が写経する範囲には出てこないので blocker ではない。
 - 直し方: 文字は `text-muted-foreground` 等のテキスト用トークンで描き、色は 245-254 の 10px ドット（`backgroundColor`）に任せる。ラベルにも色を残すなら chart トークンとは別に、両モードで 4.5:1 を満たすテキスト用の濃淡を status.ts / priority.ts に別表として持たせ、scripts/_constants/ 側も同時に更新する。
+
+## [PR #389 二巡目] scripts/curriculum-qa/check_visualization.py:177  (bug・採用)
+- 指摘: `CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE=FALSE` を渡すと WARNING へ落ちる
+- 根拠: 177 の判定は `os.environ.get(...) in ('', '0', 'false', 'False')`。`FALSE` はこの4つに無いので False が返り、`fail_on_duplicate_image=False` で本体が走る。`FALSE` は「落とさん」の意思表示なので、意図と逆の結果になる。重複画像だけが違反の回は exit 0 になり、ゲートが素通りする。
+- 直し方（適用済み・9043c13）: `raw = os.environ.get(...).strip().lower()` にしてから `('', '0', 'false')` と突き合わせる。`default_is_fatal()` に `FALSE` が FAIL のままであること、`' 1 '` が WARNING へ落ちることの2件を追加。正規化を戻すと落ちることを確認済み。
+
+## [PR #389 二巡目] scripts/curriculum-qa/shoot-page.mjs:282  (bug・採用)
+- 指摘: `page.waitForFunction` の無条件 `catch` が、評価エラーもページ破棄も警告に変えて撮影を続ける
+- 根拠: 282 の `} catch {` は例外の種類を見ていない。待ち時間切れ以外（predicate の評価失敗・ページ破棄）でも `console.warn` を出して先へ進み、画像は保存される。撮れてしまうので誰も失敗に気づけない。このリポジトリの「空 catch / エラー握り潰し禁止」にも当たる。
+- 直し方（適用済み・9043c13）: `import { chromium, errors } from 'playwright'` を取り込み、`catch (err)` で `err instanceof errors.TimeoutError` でなければ再送出する。`check_animation_settle` に「ヘルパー本体に `catch {` が戻っていない」「`errors.TimeoutError` を見ている」「`errors` を import している」の3点を追加。広い catch へ戻すと3件とも落ちることを確認済み。
+
+## [PR #389 二巡目] scripts/curriculum-qa/shoot_screenshots.py:858-873  (bug・採用)
+- 指摘: 撮影が成功した回に、ワーカーの `stderr` を捨てている
+- 根拠: `run_worker` は失敗時だけ `proc.stderr[-2000:]` を例外文へ載せ、成功時は `result["shots"]` を返すだけで `proc.stderr` に触れない。`shoot-page.mjs` の収束タイムアウト警告は Node の `console.warn`（stderr）にしか出ないため、途中の絵が保存された回でも「撮れた」の一言しか残らない。
+- 直し方（適用済み・9043c13）: `forward_worker_warnings(stderr, label)` を新設し、`run_worker` の成功パスで `[day07] …` の形へ前置きして自分の stderr へ流す。`shoot_day` は `run_worker(job, f"day{day:02d}")` で呼ぶ。`check_worker_warning_forwarding` で、関数の出力（日付ラベル付き・空行を流さない）と、`run_worker` 本体に呼び出しが残っていることの両方を見る。転送を消すと落ちることを確認済み。
+
+## [PR #389 三巡目] scripts/curriculum-qa/build_day_snapshots.py:1080  (bug・採用)
+- 指摘: 単独行の DB マーカーが判定用のプールから落ちる（Codex P1）
+- 根拠: `ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)` を実際に当てて確かめた。`Can't reach database server at \`localhost\`:\`5432\`` → False、`P1001` → False、`Please make sure your database server is running` → False、`PrismaClientInitializationError:` → True。Prisma は例外名とマーカーを別の行に吐くので、マーカー側の行が `hits` から落ちる。残るのは例外名の行だけで、その行は `DB_LESS_BUILD_MARKERS` のどれも含まんため `all()` が False を返し、DB だけの失敗が「DB 以外の失敗」に化ける。二巡目で足したテストは `Error: P1001: Can't reach database server` と1行に詰めとったので、この形を踏んでいなかった。
+- 壊れる向き: 黙って通す側やのうて、DB の無い機械で `--verify` が止まる側。うるさいが安全な向きではある。ただしこの変更は「DB の無い機械を通す」ために入れたものなので、目的を果たせていない。
+- 直し方（適用済み・次のコミット）: (1) `error_line_pool` の抽出条件を `ERROR_MARK.search(ln) or any(m in ln for m in DB_LESS_BUILD_MARKERS)` にして、マーカーを持つ行を必ず残す。(2) `DB_LESS_BUILD_MARKERS` に `PrismaClientInitializationError` を足す（接続失敗の例外名そのものであって、汎用のラッパーではない）。回帰テストは複数行の Prisma 失敗を DB 専用と判定できること、その後ろに prerender の失敗を1行足したら通さんことの両方を見る。2つの直しを別々に戻して、それぞれ別のメッセージで落ちることを確認済み。
+
+## [PR #389 四巡目] scripts/curriculum-qa/build_day_snapshots.py:1294  (bug・採用／設計変更)
+- 指摘: Next.js のラッパー行が混じると、DB だけの失敗を通せない（Codex P1）
+- 根拠: 手元で再現した。`['Error: Failed to collect page data for /dashboard', 'PrismaClientInitializationError:', "Can't reach database server"]` を `error_line_pool` へ通すと3行とも残り、`build_failure_is_db_less` は `False` を返す。1行目は `ERROR_MARK` に当たるがマーカーを持たんため `all()` が落ちる。結果、DB の無い機械で `--verify` が exit 1 になる。
+- なぜパッチを重ねんかったか: これは同じ述語への4回目の指摘（丸ごと無視 → 3行の標本で分類 → 単独行のマーカー落ち → ラッパー行）。`next build` は根本原因をラッパー行で包んで出すので、行の文言から「DB か、それ以外か」を当てにいく限り、ラッパーの語彙が1つ増えるたびに壊れる。文言の追加でイタチごっこを続けるより、当てにいくのをやめるほうが正しい。
+- 直し方（適用済み）: 判定を「DB だけで説明できるか」から「DB が絡むか（＝この機械では判定できんか）」へ変え、`build_failure_needs_database` に改名。DB のマーカーが1つでもあれば `build` を `SKIP` へ振り替える。**通した扱いにはせん** — `broken` からは外れるが、成功の行に「build を判定できんかった日が N 件」「この走行は build を検証していません」と出るので、緑と読めん。DB のある機械ではマーカーが出んので、本物の失敗はこれまでどおり止まる。
+- テスト: 振り替えを `triage_build_results` として切り出し、実際に `DayResult` を通して SKIP / NG / OK の3通りが正しく分かれることを見る。**最初に書いたのは文字列一致の飾りやった**（`skipped = [` を探すだけなので、中身を `[]` に潰しても緑のまま通った）。挙動で見る形へ直してから、骨抜きにすると落ちることを確認した。
+
+## [PR #389 四巡目] scripts/curriculum-qa/shoot-page.mjs:278  (bug・採用)
+- 指摘: 無限アニメーションを待つ相手から外しただけで、止めてへん（Codex P2）
+- 根拠: `screenshot-shot.json` に `day09/project-loading.png` `day21/report-loading.png` `day23/report-weekly-loading.png` `day29/user-detail-loading.png` の4枚があり、写すのは `src/component/ui/loading-spinner.tsx:4` と `page-skeleton.tsx:5` の `animate-spin`（無限回転）。`settleAnimations` は無限アニメーションを待つ相手から外すので即座に返り、撮影はその瞬間の回転角を写す。同じ回を2度撮ると別の画像になる。決め打ちの待ちを外した目的（決定性）が果たせていない。
+- 直し方（適用済み）: 待ち終えたあとに `document.getAnimations()` を回して、`iterations === Infinity` のものだけ `currentTime = 0` にして `pause()` する。待たへんことと位相を決めることは別の仕事、という切り分け。退行テストは助け関数の本体に `animation.pause()` と `animation.currentTime = 0` があることを見る。
+
+## [PR #389 四巡目] doc/review-handoff/duplicate-image-gate.md:26-29, 68-69  (doc・採用)
+- 指摘: WARNING 時代の記述が残っていて、同じページが自分と矛盾しとる（Codex P2）
+- 根拠: 1行目の見出しが「今は WARNING、撮り直し後に FAIL へ上げる」、26行目に「## 今は WARNING（既定）」がある一方、36行目には「## 既定は FAIL（2026-08-31 に切り替え済み）」がある。68行目は存在せん `default_is_warning()` を指しとる（`default_is_fatal()` へ改名済み）。70行目の「## 現在の重複一覧」は切り替え前の17ファイルの表で、いまは0件。読んだ人が現在の状態を判断できん。
+- 直し方（適用済み）: 見出しを現状（既定 FAIL）に直し、WARNING 時代の節を「当初は WARNING だった（履歴・2026-08-30 時点）」として履歴と明示。`default_is_warning()` を `default_is_fatal()` に訂正し、一時的に落とす手段はフラグと環境変数であることを先に書いた。重複一覧は「当時の重複一覧（履歴）」に改め、現在は0件である旨を表の直前に置いた。
+
+## [PR #389 六巡目] scripts/curriculum-qa/build_day_snapshots.py:1278  (bug・採用／自分が作った見逃し)
+- 指摘: `P1012` を DB 不在の印として扱っとる（Codex P1）
+- 根拠: P1012 は Prisma のスキーマ検証エラー全般の番号であって、DB へ届かんことの印やない。生成されたスナップショットにリレーションの書き間違いがあれば `prisma generate` が P1012 を出す。SKIP 設計に変えたことで、この番号が1つ混じるだけで**本物のビルド欠陥が SKIP へ落ちて exit 0 になる**。前の `all()` 設計では他の行が非 DB なら止まっとったので、SKIP へ変えた副作用として新しく開いた穴。**いちばんやったらアカン向き（黙って通す側）の見逃し。**
+- 直し方（適用済み）: `DB_LESS_BUILD_MARKERS` から `P1012` を落とす。DB 由来の P1012（環境変数の欠落）は `Environment variable not found: DB_URL` / `DATABASE_URL` と `Error validating datasource` が文言で拾うので、取りこぼしはない。回帰テストは、リレーションの書き間違いを含む P1012 の3行が DB 扱いされんこと、環境変数の欠落は DB 扱いされることの両方を見る。`P1012` を戻すと落ちることを確認済み。
+
+## [PR #389 六巡目] scripts/curriculum-qa/build_day_snapshots.py:1359  (bug・採用)
+- 指摘: 結果ドキュメントを切り分けより先に書き出しとる（Codex P2）
+- 根拠: `main` の 1354 で `write_result_doc(results, ...)` を呼び、1359 で `triage_build_results` を当てとった。DB の無い機械では、画面は「SKIP・検証していません」と言うのに、証拠として出すファイルは `build NG` のまま残り、さらに `triage_section` が「判定不能（未調査）」の行を生やす。読んだ人はファイルのほうを信じるので、教材の欠陥を疑わせる嘘の行が残る。
+- 直し方（適用済み）: 切り分けを書き出しの前へ移した。回帰テストは `RESULT_DOC` を一時ディレクトリへ差し替えて実際に書き出し、本文に `SKIP` が残ること・「判定不能（未調査）」の行が無いことを見る。あわせて `main` の中での呼び出し順そのものも固定した。順序を戻すと `❌ 結果ドキュメントを切り分けより先に書き出している` で落ちることを確認済み。
+
+## [PR #389 六巡目] doc/review-handoff/progress.md:317  (doc・採用)
+- 指摘: 引き継ぎの件数が古い（Codex P2）
+- 根拠: 317行目が「7件とも直して返信・resolve 済み」のまま。実際は五巡目3件・六巡目3件を足して13件。このファイルはマージ可否を判断する土台やと自分で書いとるので、件数が古いと次の担当者が最終状態を確認でけへん。
+- 直し方（適用済み）: 五巡目・六巡目の中身を追記し、件数を13件・6ラウンドへ更新。あわせて「次の担当者へ」の節に、`git checkout <file>` で自分の未コミットの直しが消える件（このセッションで3回踏んだ）と、文字列一致のテストは飾りになりうる件を足した。
+
+## [PR #389 七巡目] scripts/curriculum-qa/build_day_snapshots.py:1308  (bug・採用／Codex と逆向きの穴)
+- 指摘: DB マーカーだけで SKIP に分類するな（CodeRabbit Major）
+- 根拠: `any()` にしたので、DB 接続失敗と `TypeError` や prerender の失敗が同じ build 出力に居ると True を返す。`triage_build_results` が SKIP へ振り替え、`broken` から外れ、**壊れた日を含む走行が exit 0 になる**。「SKIP は通した扱いやない」と書いたが、CI が見るのは終了コードなので、exit 0 は事実上「通した」と同じ。ここは自分の言い分のほうが弱い。
+- Codex との関係: 四〜六巡目で Codex が突いたのは逆向き（`all()` やと Next.js のラッパー行が非 DB に数えられて、DB だけの失敗が止まる）。**両方成立する。**片側だけで判定する限りどちらかが壊れる。
+- 直し方（適用済み）: 片側判定をやめ、両側で見る。`REAL_BUILD_FAILURE_MARKERS`（prerender / TypeError / Module not found / Type error: 等、**DB の有無に関係なく壊れとると言い切れるものだけ**）を新設し、`has_real_build_failure` が真なら SKIP にせん。ラッパー行（`Failed to collect page data`）は原因やのうて包み紙なので入れん — 入れると Codex の指摘した穴が開き直る。関数名も `build_failure_is_database_only` へ改めた。回帰テストは (a) DB＋ラッパー＋TypeError が SKIP にならんこと (b) prerender が本物の失敗に数えられること (c) ラッパー行が本物の失敗に数えられんこと の3方向を見る。
+
+## [PR #389 七巡目] scripts/curriculum-qa/build_day_snapshots.py:1362  (bug・採用)
+- 指摘: 画面の日別行が切り分け前の状態を出しとる（CodeRabbit Minor）
+- 根拠: 六巡目で書き出しの順は直したが、その手前にある日別の `print` は直してへんかった。DB の無い機械では、画面の日別行だけ `build NG`、成果物と最終行は SKIP になり、**同じ走行が3通りの状態を名乗る**。
+- 直し方（適用済み）: 切り分けを `snapshot_day` の直後・`print` の前へ移した（`triage_build_results([r])[0]`）。回帰テストは、切り分けが日別 print と `write_result_doc` の両方より前に来ることを見る。
+
+## [PR #389 七巡目] scripts/curriculum-qa/check_visualization.py:187  (bug・採用／症状だけ直しとった)
+- 指摘: 想定してへん環境変数値で FAIL を維持せよ（CodeRabbit Major）
+- 根拠: 三巡目で `FALSE` を直したとき、大文字小文字の正規化だけを足して**判定の形（拒否リスト）はそのままにした**。`('', '0', 'false')` に無い値はすべて False を返すので、`ture` のような綴り間違いが WARNING へ落ちる。症状を直して原因を残した典型。
+- 直し方（適用済み）: 許可リストへ反転。`return raw not in ('1', 'true', 'yes')`。落とす側だけを明示し、それ以外は FAIL。回帰テストに `ture` が FAIL のままである行を追加。
+
+## [PR #389 七巡目] doc/review-handoff/duplicate-image-gate.md:32,35,70  (doc・採用)
+- 指摘: 言語なしコードフェンス（MD040）／履歴の節に現在の結果が混ざっとる／`DUPLICATE_CASES` の False ケース数が実装と違う（CodeRabbit Minor ×3）
+- 根拠: 32行目のフェンスに言語なし。35行目は「当時の記録」の例の中で「既定で FAIL。いまは重複が0件」と現在を語っとる（六巡目で節を履歴化したときの取りこぼし）。69行目は「フラグ `False` の3ケース」やが、実装の `DUPLICATE_CASES` に `False` は2件（`grep -c '        False,'` → 2）。
+- 直し方（適用済み）: フェンスへ `text` を付け、履歴の例は当時の出力（重複17件・WARNING で exit 0）へ書き直し、現在の実測は別の段落へ分けた。件数を2ケースへ訂正。
+
+## [PR #389 八巡目] scripts/curriculum-qa/build_day_snapshots.py:1276  (bug・採用／P1012 と同じ形)
+- 指摘: `Error validating datasource` も DB 不在の印やない（Codex P1）
+- 根拠: 手元で再現した。`` ['Error: Prisma schema validation - (get-dmmf wasm)', 'Error validating datasource `db`: the provider is invalid'] `` を通すと `build_failure_is_database_only` が True を返す。`npm run build` は `prisma generate` から始まるので、provider の書き間違いがそのまま「DB の不在」に化けて SKIP → exit 0。六巡目で `P1012` を落としたときに、同じ性質の隣の行を残しとった。回帰テストも `Error validating field` しか踏んでへんかったので、この形を通していた。
+- 直し方（適用済み）: `Error validating datasource` を落とす。環境変数の欠落は `Environment variable not found: DB_URL` / `DATABASE_URL` が文言で拾うので取りこぼしはない。回帰テストに datasource の変種を追加。戻すと `❌ datasource のスキーマ欠陥を DB の不在として見逃している` で落ちる。
+
+## [PR #389 八巡目] scripts/curriculum-qa/build_day_snapshots.py:1398  (bug・採用)
+- 指摘: `EXPECTED_RED` が day11 の build 落ちを丸ごと免除しとる（Codex P1）
+- 根拠: `broken` の build 節が `r.day not in EXPECTED_RED` で判定しとる。`EXPECTED_RED[11]` が断っとるのは `getById` の型エラーだけやのに、day11 に prerender や server/client 境界の失敗が紛れても day 番号だけで免除され、exit 0 で出ていく。
+- 直し方（適用済み）: `build_failure_is_expected(result)` を新設。EXPECTED_RED の日に限り、**build の失敗行のうち本物の失敗（`REAL_BUILD_FAILURE_MARKERS`）が全部型エラー（`Type error:` / `TS####`）で説明できるときだけ**免除する。型エラーの証拠が1行も無い場合は免除せん。回帰テストは (a) 断り書きどおりの型エラーは免除される (b) prerender が1行紛れたら免除されん (c) 型エラーの証拠が無ければ免除されん (d) EXPECTED_RED に無い日は免除されん (e) 判定が `broken` の側で使われとる、の5方向。
+- 実機での確認: `--day 11 --verify` を実際に流して exit 0・「想定どおり」のまま通ることを確かめた（結果ファイルは事前に退避して復元。`--day` は30日ぶんの記録を上書きするため）。
+
+## [PR #389 九巡目] scripts/curriculum-qa/build_day_snapshots.py:1281  (bug・採用／自分が置いた逃げ道)
+- 指摘: 環境変数の欠落を build の失敗のまま残せ（Codex P1）
+- 根拠: 自分でファイルを開いて確かめた。`copy_scaffold()` は `.env.example` を**無条件で** `.env` へ複写しとる（`build_day_snapshots.py:357` の `shutil.copyfile(dest / ".env.example", dest / ".env")`）。その `.env.example` は `DATABASE_URL` を定義しとる（`.env.example:24`）。さらに `DB_URL` はこのリポジトリのどこにも無い（`grep -rn "DB_URL" --include=*.ts --include=*.prisma --include=*.example --include=*.yml --include=*.sh .` が0件。別リポジトリの流儀を写し間違えとった）。つまり DB の無い機械でも変数は在る。「変数が無い」と言われたのなら、それは組んだツリーか schema が壊れとる印で、DB の不在やない。八巡目の直しで「環境変数の欠落は文言で拾うので取りこぼしはない」と書いた行が、そのまま逃げ道になっとった。
+- 直し方（適用済み）: `Environment variable not found: *` の2行を `DB_LESS_BUILD_MARKERS` から落とし、`Environment variable not found` を `REAL_BUILD_FAILURE_MARKERS` へ入れた。Prisma は変数の欠落も接続の失敗も `PrismaClientInitializationError` で包むので、**例外名だけでは SKIP に倒れんように、本物の失敗の判定が先に効く形**にした（`has_real_build_failure` の短絡）。回帰テストは (a) 両方の変数名で SKIP に落ちん (b) 本物の失敗に数える (c) 例外名と一緒に来ても SKIP に落ちん (d) `triage_build_results` を通しても NG のまま (e) `.env` を書く経路が消えたら気づく（前提そのものの見張り）、の5方向。戻すと `❌ 環境変数の欠落を SKIP へ振り替えて exit 0 にしている` ほか5件で落ちる。
+
+## [PR #389 九巡目] scripts/curriculum-qa/shoot-page.mjs:278  (bug・採用／直しが別の不安定を生んどった)
+- 指摘: JS で描くグラフのアニメーションを待てていない（Codex P2）
+- 根拠: 自分で確かめた。`screenshot-shot.json` の day22・day23 の6枚は `wait_for` が `h3:text-is('優先度別タスク')` のような見出しだけで、その見出しは Recharts の `Pie` / `Line` / `Bar` と同じ描画で出る。Recharts は react-smooth が `requestAnimationFrame` で属性を書き換えて動かすので `document.getAnimations()` には**1つも出てこん**（`grep -rn "isAnimationActive" src` も0件で、アニメーションは既定のまま有効）。つまり収束待ちが即座に明けて、描きかけのグラフが保存され得る。決め打ちの 400ms を外した目的は「毎回同じ絵になること」やったのに、この6枚だけ逆に不安定にしとった。
+- 直し方（適用済み）: `settleDrawnFrames()` を足した。SVG の中の座標・形・不透明度をつないだ文字列を毎フレーム作り、3フレーム続けて同じなら描き終わりとみなす（`polling: 'raf'`・上限は既存の 2000ms・待ち時間切れ以外は再送出・状態は毎回捨てる）。特定のライブラリの内部に依存せんので、Recharts 以外の JS 駆動にも効く。
+- 検査: 「ソースの文字列を見るだけでは足りん」という指摘そのものを受けて、**実物のブラウザで動かす退行テスト**を足した（`settle-drawn-frames-check.mjs`）。rAF で 600ms かけて `d` を書き換えるページを本物の Chromium で開き、`settleAnimations()` を通した後の `d` が最終形であることを見る。待つ前は途中の形であることも同時に確かめて、「もともと最終形やった」で通るのを塞いだ。終わらん動きでも上限で戻ること、状態が次の1枚へ残らんことも見る。`shoot()` が呼ぶ `settleAnimations` の側を叩くので、**呼び出しごと消した場合も赤くなる**。実際に外して確かめた: `❌ rAF で描くアニメーションの途中で撮っている（d=M0 9 L9 100 / 期待 M0 100 L100 100）`。ブラウザが無い機械では `SKIP:` を出力に残して退ける（黙って通さん）。
+- 残る限界: 実物の `/report` を撮って確かめたわけやない。あれには DB とその日のツリーの起動が要る。**確かめたのは「JS で描く動きを待てるようになったこと」までで、day22・day23 の6枚が実際に撮り直されたわけやない**（撮り直しは #388 で済んでおり、この直しは次に撮るときから効く）。
+
+## [PR #389 十巡目] scripts/curriculum-qa/build_day_snapshots.py:1398  (bug・採用／八巡目の直しがまだ緩かった)
+- 指摘: day11 の免除は「断り書きが名指しした型エラー」だけに合わせよ（Codex P1）
+- 根拠: 八巡目で `build_failure_is_expected()` を足したが、見とるのは「型エラーかどうか」だけで、`getById` も件数も場所も見てへんかった。加えて `main()` の `broken` は tsc を `r.day not in EXPECTED_RED` で日ごと免除しとる。つまり day11 に無関係な型の欠陥が入ると、tsc も build も両方免除されて `--verify` が exit 0 を返す。八巡目の直しは「build の赤の種類」を絞っただけで、「その日の赤かどうか」は絞れてへんかった。
+- 直し方（適用済み）: 断り書きの中身を機械が照合できる形にした（`EXPECTED_RED_SIGNATURE = {11: {"marker": "getById", "count": 5, "path": "project-detail-view.tsx"}}`）。tsc は「型エラーが5件」「全部が配布物の1ファイル」「どれかが `getById` に触れる」の3つが揃ったときだけ免除する。build も「本物の失敗が全部型エラー」に加えて「どれかが `getById` に触れる」を課す。`DayResult` に `tsc_errors`（表示用3行やのうて全部）を足して件数を数えられるようにした。`main()` の異常日の判定は `broken_days()` として切り出し、免除の線を実際に通して確かめられるようにした（八巡目の「`broken = [` を文字列で探す」検査は飾りやったので捨てた）。
+- 波及の注意: `TS7006` / `TS7053` は識別子の名を含まん（`getById` が解決でけへんことで型が any へ落ちた結果）。せやから marker は「全行」やのうて「どれか1行」に課し、代わりに件数と場所で範囲を締めた。
+- 回帰テスト: (a) 断り書きどおりの5件は免除 (b) 6件目が増えたら免除せん (c) `getById` に1行も触れん5件は免除せん (d) 別ファイルへ広がったら免除せん (e) EXPECTED_RED に無い日は免除せん (f) build 側も無関係な型エラーは免除せん (g) `broken_days()` を実際に通して、健全な日・断り書きどおりの day11・無関係な赤が紛れた day11 の3つが正しく分かれる。戻すと `❌ 断り書きの件数を超える型エラーまで想定内にしている` ほか3件で落ちる。
+- 実機での確認: `--day 11 --verify` を実際に流して **exit 0**・`day11 の型エラーは想定どおり` が出ることを確かめた。実物の tsc は `project-detail-view.tsx` の29行目（`TS2339` `getById`）・144行目（`TS7006`）・167行目（`TS7053`）ほかで、**5件・同一ファイル・`getById` あり**。つまり教材本文が書いとる「5件出ます」は実測と一致しとる。結果ファイルは事前に退避して復元した（`--day` は30日ぶんの記録を上書きするため）。
+
+## [PR #389 十一巡目] scripts/curriculum-qa/settle-drawn-frames-check.mjs  (bug・採用／自分の逃げ道が塞がっとった)
+- 指摘: ブラウザが無いときの退避が動いてへん（Codex）
+- 根拠: 自分で再現した。`import { chromium } from 'playwright'` を頭に書いとったので、playwright が入ってへん機械では**その行に来る前に**読み込みが落ちる。`node_modules/playwright` を一時的に退けて走らせると `ERR_MODULE_NOT_FOUND` で exit 1。`./shoot-page.mjs` も playwright を取り込むので同じ経路で落ちる。「ブラウザが無い機械では SKIP と出して退ける」と書いておきながら、その道が塞がっとった。
+- 直し方（適用済み）: 取り込みを `try` の中の動的 `import()` へ移した。`chromium` も `shoot-page.mjs` も同じ扱い。
+- 実測（両方向）:
+  - playwright を退けた状態 → `SKIP: ブラウザを用意できんかった（Cannot find package 'playwright' ...）` / exit 0。python 側の検査も `⏭️ 実ブラウザ検査を退けた` を出して 9/9 合格
+  - 戻した状態 → `✅ settle_drawn_frames 実ブラウザ検査 4/4 合格`
+  - 直す前（静的 import）に退けた状態 → `ERR_MODULE_NOT_FOUND` で exit 1。つまり指摘どおり壊れとった
+
+## [PR #389 十二巡目] CodeRabbit 7件（採用5・対応済み2）
+- 指摘と判定:
+  1. `test_shoot_screenshots.py:399` 時間切れを検査失敗として返せ（Minor）→ **採用**。180秒を超えると `subprocess.TimeoutExpired` が `main()` まで抜けて、件数も理由も出さずに落ちる。「検査が黙って終わる」はこの PR が潰しとる型そのもの。捕まえて途中出力を添えた失敗として返す。`timeout` を 0.001 秒にして実際にこの枝を通し、`❌ 実ブラウザ検査が 0.001 秒で終わらんかった: 出力なし` を確認した
+  2. `build_day_snapshots.py:1316-1330` 除外理由のコメントが収録要素の直上に並んどる（Trivial）→ **採用**。中身は変えず、理由をタプルの外へまとめた。`P1001` / `ECONNREFUSED` を除外対象と誤読する余地を消す
+  3. `coderabbit-verdicts.md:196` 入れ子バッククォートでコードスパンが壊れとる（Minor）→ **採用**。外側を二重バッククォートにした。markdownlint の MD038 がこの行から消えたことを確認（残る13件は67行ほかの既存分）
+  4. `diagrams-added.md:6` mermaid の総数が文書内で食い違う（Minor）→ **採用**。実測値表が 69 のままやった。数え直すと day01〜day29 が 37 → 69、`day30` が 2 で前後とも不変、corpus 全体が 39 → 71。表の before も 39 → 37 へ訂正（day30 の2枚を含めた値を書いてしもとった）。**指摘は「69 を 71 に直せ」やったが、実測すると集計範囲が違うだけで両方正しい。**範囲を明記する側で直した
+  5. `progress.md:5` 19件と21件の集計単位が違う（Minor）→ **採用**。19 は対応記録の本数、21 は個別の指摘数（1本に複数の指摘をまとめた回がある）と書き足した
+  6. `test_settle_drawn_frames.mjs` の名前が命名規約に合わん（Major）→ **`bad6191` で対応済み**。ただし提案の `test-settle-drawn-frame.mjs` は使えん。`.gitignore:99` が `test-*.mjs` を落とすのでリポジトリに入らんくなる。`settle-drawn-frames-check.mjs` にした
+  7. `console.log` が biome の `noConsole` を落とす（Major）→ **`bad6191` で対応済み**。`process.stdout.write` と `console.error` へ置換済み

@@ -15,8 +15,10 @@
 """
 
 import contextlib
+import inspect
 import io
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -697,10 +699,12 @@ def check_new_declaration() -> list[str]:
         if "  const handle = () => {" not in out or out.count("if (a) {") != 1:
             fails.append("❌ ハンドラーの中を割っている")
 
-    # 続けて足したときも、前に足した抜粋の中へ入り込まないこと。
-    twice = target.add_declaration(out, "const c = 3;")
-    if twice is None or twice.split("\n").index("const c = 3;") != twice.split("\n").index("const b = 2;") + 1:
-        fails.append("❌ 2本目が1本目の直後に並んでいない")
+        # 続けて足したときも、前に足した抜粋の中へ入り込まないこと。
+        # out が None のまま渡すと、失敗を一覧で返す設計なのにここで例外が出て
+        # 残りの検証が走らんようになる。
+        twice = target.add_declaration(out, "const c = 3;")
+        if twice is None or twice.split("\n").index("const c = 3;") != twice.split("\n").index("const b = 2;") + 1:
+            fails.append("❌ 2本目が1本目の直後に並んでいない")
 
     # 同じ名前が既にあるなら足さない（`完成版` 側の同じ抜粋で二重にせん）。
     if target.add_declaration(body, "const a = 9;") is not None:
@@ -780,6 +784,345 @@ def check_leading_imports() -> list[str]:
     return fails
 
 
+def check_tree_inputs() -> list[str]:
+    """ツリーの古さを測る材料が、実際にツリーへ入るもの全部を覆っていること。
+
+    教材と配布物だけを見た時期があり、借り物や組み立て方を直した回は更新時刻が
+    動かんので古いツリーのまま撮れていた。覆いが痩せても撮影は成功するため、
+    ここが落ちん限り誰も気づけない。
+    """
+    fails = []
+    got = {p.resolve() for p in target.tree_inputs(3)}
+    for name in target.BORROWED_FILES:
+        if (target.REPO_ROOT / name).resolve() not in got:
+            fails.append(f"❌ 借り物を見ていない: {name}")
+    for src in target.BUILDER_SOURCES:
+        if src.resolve() not in got:
+            fails.append(f"❌ 組み立て方そのものを見ていない: {src.name}")
+    if not any(p.name.startswith("day03_") for p in got):
+        fails.append("❌ その日までの教材を見ていない")
+    if any(p.name.startswith("day04_") for p in got):
+        fails.append("❌ その日より後の教材まで見ている")
+    if not all(p.is_file() for p in got):
+        fails.append("❌ 存在せんファイルを材料に数えている")
+    return fails
+
+
+def check_build_failure_triage() -> list[str]:
+    """ビルドの赤を、この機械で判定できるかどうかの切り分け。
+
+    昔は build の赤を丸ごと無視しとった。DB を持たん機械で必ず赤くなるからやが、
+    それやと prerender や server/client 境界の失敗まで一緒に通る。tsc は見つけられん
+    種類なので、ここが緩むと壊れた日が緑で出荷される。
+
+    次に「DB だけで説明できる赤か」を行ごとに当てにいったが、`next build` が根本原因を
+    ラッパー行で包んで出すので、文言が1つ増えるたびに壊れた。いまは当てにいくのをやめ、
+    DB が絡む赤は SKIP（判定してへん）として残す。**通した扱いにはせん**のが要点。
+    """
+    fails = []
+    db_less = (
+        "Error: P1001: Can't reach database server at `localhost:5432`",
+        "PrismaClientInitializationError: Can't reach database server",
+    )
+    if not target.build_failure_is_database_only(db_less):
+        fails.append("❌ DB へ届かんだけの赤を、この機械で判定できるものとして扱っている")
+
+    real = (
+        "Error occurred prerendering page \"/project\"",
+        "TypeError: Cannot read properties of undefined",
+    )
+
+    # 判定へ渡す材料が3行で切られていないこと。表示用の3行と別物であること。
+    noisy = "\n".join(
+        ["Error: P1001: Can't reach database server"] * 5
+        + ["Error occurred prerendering page \"/project\""]
+    )
+    pool = target.error_line_pool(noisy)
+    if len(pool) != 6:
+        fails.append(f"❌ 判定用のエラー行が {len(pool)} 行に切られている（6行あるはず）")
+    if len(target.error_lines(noisy)) != 3:
+        fails.append("❌ 表示用のエラー行が3行になっていない")
+
+    # マーカーだけの行（error / failed の語が無い）がプールから落ちんこと。
+    multiline = "\n".join(
+        [
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+            "Please make sure your database server is running",
+        ]
+    )
+    if not any("Can't reach database server" in ln for ln in target.error_line_pool(multiline)):
+        fails.append("❌ 単独行の DB マーカーが判定用のプールから落ちている")
+
+    # Next.js のラッパー行が混じっても、DB が絡む赤は「判定できん」と見なすこと。
+    # 行ごとに DB か否かを当てにいくと、ラッパーの文言が増えるたびに壊れる。
+    wrapped = "\n".join(
+        [
+            "Error: Failed to collect page data for /dashboard",
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+        ]
+    )
+    if not target.build_failure_is_database_only(target.error_line_pool(wrapped)):
+        fails.append("❌ Next.js のラッパーに包まれた DB の赤を、判定できるものとして扱っている")
+
+    # DB のエラーと本物の失敗が同じ出力に居たら、SKIP にせん。DB の赤に隠れて
+    # 壊れた日が exit 0 で出ていくのを防ぐ。ラッパー行（原因やのうて包み紙）は
+    # 本物の失敗に数えん — そこを混ぜると DB だけの失敗まで止めてまう。
+    mixed_real = target.error_line_pool("\n".join([
+        "Error: Failed to collect page data for /dashboard",
+        "Can't reach database server at `localhost`:`5432`",
+        "TypeError: Cannot read properties of undefined (reading 'map')",
+    ]))
+    if target.build_failure_is_database_only(mixed_real):
+        fails.append("❌ DB のエラーに紛れた本物の失敗を SKIP へ落として exit 0 にしている")
+    if not target.has_real_build_failure(("Error occurred prerendering page \"/x\"",)):
+        fails.append("❌ prerender の失敗を本物の失敗として数えていない")
+    if target.has_real_build_failure(("Error: Failed to collect page data for /dashboard",)):
+        fails.append("❌ Next.js のラッパー行を本物の失敗に数えている（DB だけの失敗が止まる）")
+
+    # DB がまったく絡まん赤は、これまでどおり本物の失敗として扱うこと。
+    if target.build_failure_is_database_only(real):
+        fails.append("❌ DB と関係ない赤まで判定できんものとして扱っている")
+    if target.build_failure_is_database_only(()):
+        fails.append("❌ 理由が1行も無い赤を DB のせいにしている")
+
+    # SKIP は「通した」やない。実際に振り替えを動かして、状態が変わることを見る。
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Error: Failed to collect page data for /dashboard",),
+        build_errors=(
+            "Error: Failed to collect page data for /dashboard",
+            "Can't reach database server at `localhost`:`5432`",
+        ),
+    )
+    real_day = target.DayResult(
+        day=8, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=real, build_errors=real,
+    )
+    green_day = target.DayResult(
+        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
+    )
+    triaged = target.triage_build_results([db_day, real_day, green_day])
+    if triaged[0].build != target.BUILD_SKIPPED:
+        fails.append("❌ DB が要る赤が SKIP へ振り替わっていない")
+    if triaged[1].build != "NG":
+        fails.append("❌ DB と関係ない赤まで SKIP にしている")
+    if triaged[2].build != "OK":
+        fails.append("❌ 通ったビルドの状態を書き換えている")
+    if target.BUILD_SKIPPED in ("OK", "NG"):
+        fails.append("❌ SKIP が OK か NG と同じ値になっている（区別が消えている）")
+
+    # P1012 は Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
+    # これを DB 扱いすると、壊れたリレーションのビルド欠陥が SKIP へ落ちて exit 0 になる。
+    schema_error = (
+        "Error: Prisma schema validation - (get-dmmf wasm)",
+        "Error code: P1012",
+        'error: Error validating field `owner` in model `Project`: The relation field is missing.',
+    )
+    if target.build_failure_is_database_only(schema_error):
+        fails.append("❌ P1012 のスキーマ検証エラーを DB の不在として見逃している")
+
+    # datasource ブロックの書き間違いも DB へ届かんこととは別。`npm run build` は
+    # `prisma generate` から始まるので、ここを DB 扱いにすると provider の書き間違いが
+    # SKIP へ落ちて exit 0 になる。
+    datasource_error = target.error_line_pool("\n".join([
+        "Error: Prisma schema validation - (get-dmmf wasm)",
+        "Error validating datasource `db`: the provider is invalid",
+    ]))
+    if target.build_failure_is_database_only(datasource_error):
+        fails.append("❌ datasource のスキーマ欠陥を DB の不在として見逃している")
+    # 環境変数の欠落は「DB が無い機械」の印やない。`copy_scaffold()` が `.env.example` を
+    # 必ず `.env` へ複写し、その `.env.example` が `DATABASE_URL` を定義しとるので、
+    # DB の無い機械でも変数は在る。無いと言われたのなら組んだツリーか schema が壊れとる。
+    for missing in (
+        "Environment variable not found: DATABASE_URL.",
+        "Environment variable not found: DB_URL.",
+    ):
+        if target.build_failure_is_database_only((missing,)):
+            fails.append(f"❌ 環境変数の欠落（{missing}）を DB の不在として見逃している")
+        if not target.has_real_build_failure((missing,)):
+            fails.append(f"❌ 環境変数の欠落（{missing}）を本物の失敗に数えていない")
+
+    # Prisma は変数の欠落も接続の失敗も同じ例外名で包む。例外名だけで SKIP に倒すと
+    # 変数の欠落が exit 0 で通る。本物の失敗の判定が先に効くことを、振り替えまで通して見る。
+    env_wrapped = target.error_line_pool("\n".join([
+        "Error: Failed to collect page data for /dashboard",
+        "PrismaClientInitializationError:",
+        "error: Environment variable not found: DATABASE_URL.",
+    ]))
+    if target.build_failure_is_database_only(env_wrapped):
+        fails.append("❌ 例外名に紛れた環境変数の欠落を DB の不在として見逃している")
+    env_day = target.DayResult(
+        day=12, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=env_wrapped[:3], build_errors=env_wrapped,
+    )
+    if target.triage_build_results([env_day])[0].build != "NG":
+        fails.append("❌ 環境変数の欠落を SKIP へ振り替えて exit 0 にしている")
+
+    # 上の判断は「`.env` は必ず書かれる」という前提に乗っとる。前提が消えたら判断も無効に
+    # なるので、複写の経路そのものを見張る。
+    scaffold = inspect.getsource(target.copy_scaffold)
+    if ".env.example" not in scaffold or '".env"' not in scaffold:
+        fails.append("❌ `.env.example` を `.env` へ複写する経路が消えている（環境変数の判断の前提）")
+
+    # 成功の行に、判定してへん日があることを必ず出す。ここが消えると全部緑に読める。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    tail = source.split("if skipped:", 1)
+    if len(tail) != 2:
+        fails.append("❌ 判定できんかった日があっても、成功の行に何も出していない")
+    elif "検証していません" not in tail[1].split("return 0", 1)[0]:
+        fails.append("❌ 判定してへん日があるのに「検証していない」と書いていない")
+    return fails
+
+
+def check_expected_red_build_exemption() -> list[str]:
+    """EXPECTED_RED の日の build 免除が、断り書きの範囲に収まっとること。
+
+    day 番号だけで build を丸ごと免除すると、断ってへん失敗（prerender や
+    server/client 境界）がその日に紛れても exit 0 で出ていく。断ってあるのは
+    型エラーだけなので、免除もそこまで。
+    """
+    fails = []
+    known = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
+        errors=("src/x.tsx(29,47): error TS2339: Property 'getById' does not exist",),
+        build_errors=(
+            "Failed to compile.",
+            "Type error: Property 'getById' does not exist on type ...",
+        ),
+    )
+    if not target.build_failure_is_expected(known):
+        fails.append("❌ 断り書きどおりの型エラーによる build 落ちまで異常扱いしている")
+
+    extra = known._replace(build_errors=known.build_errors + (
+        "Error occurred prerendering page \"/project\"",
+    ))
+    if target.build_failure_is_expected(extra):
+        fails.append("❌ 断り書きに無い失敗が day11 に紛れても免除している")
+
+    silent = known._replace(build_errors=("Failed to compile.",))
+    if target.build_failure_is_expected(silent):
+        fails.append("❌ 型エラーの証拠が1行も無いのに断り書きで説明できたことにしている")
+
+    other = known._replace(day=12)
+    if target.build_failure_is_expected(other):
+        fails.append("❌ EXPECTED_RED に無い日まで免除している")
+
+    # tsc の側も、日付やのうて断り書きの中身と突き合わせること。本文は識別子・件数・場所まで
+    # 書いとるので、そこが合わん赤は「別の欠陥が紛れた」と見なす。
+    documented = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="OK",
+        errors=(),
+        tsc_errors=tuple(
+            f"src/component/project/project-detail-view.tsx({n},4): error TS2339: "
+            f"Property 'getById' does not exist" if n == 29 else
+            f"src/component/project/project-detail-view.tsx({n},4): error TS7006: "
+            f"Parameter 'member' implicitly has an 'any' type."
+            for n in (29, 144, 167, 168, 169)
+        ),
+    )
+    if not target.tsc_failure_is_expected(documented):
+        fails.append("❌ 断り書きどおりの型エラー5件まで異常扱いしている")
+
+    # 件数が増えたら、断り書きで説明でけへん赤が混ざっとる。
+    if target.tsc_failure_is_expected(
+        documented._replace(tsc_errors=documented.tsc_errors + (
+            "src/component/project/project-detail-view.tsx(200,4): error TS2345: "
+            "Argument of type 'string' is not assignable",
+        ))
+    ):
+        fails.append("❌ 断り書きの件数を超える型エラーまで想定内にしている")
+
+    # 名指しされた識別子に1行も触れてへん赤は、別の欠陥。
+    unrelated = documented._replace(tsc_errors=tuple(
+        line.replace("Property 'getById' does not exist", "Type 'number' is not assignable to type 'string'")
+        for line in documented.tsc_errors
+    ))
+    if target.tsc_failure_is_expected(unrelated):
+        fails.append("❌ `getById` と無関係な型エラー5件を day11 の想定内として通している")
+
+    # 場所が広がったら、配布物1ファイルに閉じるという前提が崩れとる。
+    spread = documented._replace(tsc_errors=documented.tsc_errors[:-1] + (
+        "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
+    ))
+    if target.tsc_failure_is_expected(spread):
+        fails.append("❌ 断り書きの場所を外れた型エラーまで想定内にしている")
+
+    if target.tsc_failure_is_expected(documented._replace(day=12)):
+        fails.append("❌ EXPECTED_RED に無い日の型エラーまで免除している")
+
+    # build 側も、名指しされた識別子に触れてへん型エラーは免除せん。
+    other_type_error = known._replace(build_errors=(
+        "Failed to compile.",
+        "Type error: Type 'number' is not assignable to type 'string'.",
+    ))
+    if target.build_failure_is_expected(other_type_error):
+        fails.append("❌ 断り書きと無関係な型エラーによる build 落ちを免除している")
+
+    # 免除の判断が異常日の判定に効いとること。関数だけ足しても意味が無いので、
+    # 実際に `broken_days` を通して数える。
+    healthy = target.DayResult(
+        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
+    )
+    exempt = documented._replace(build="NG", build_errors=known.build_errors)
+    unrelated_day11 = unrelated._replace(build="NG", build_errors=(
+        "Failed to compile.",
+        "Error occurred prerendering page \"/project\"",
+    ))
+    broken = target.broken_days([healthy, exempt, unrelated_day11])
+    if any(r is healthy for r in broken):
+        fails.append("❌ 通った日を異常日に数えている")
+    if any(r is exempt for r in broken):
+        fails.append("❌ 断り書きどおりの day11 を異常日に数えている")
+    if not any(r is unrelated_day11 for r in broken):
+        fails.append("❌ 断り書きと無関係な赤が紛れた day11 を異常日に数えていない")
+    return fails
+
+
+def check_result_doc_records_skip() -> list[str]:
+    """成果物のほうにも SKIP が残ること。
+
+    画面が SKIP と言うとるのに、証拠として出すファイルが NG のままやと、
+    読んだ人はそっちを信じる。しかも切り分けの表に「判定不能（未調査）」の行が生えて、
+    教材の欠陥を疑わせる。書き出しは切り分けのあとに走らなあかん。
+    """
+    fails = []
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Can't reach database server at `localhost`:`5432`",),
+        build_errors=("Can't reach database server at `localhost`:`5432`",),
+    )
+    triaged = target.triage_build_results([db_day])
+    directory = tempfile.mkdtemp()
+    saved = target.RESULT_DOC
+    try:
+        target.RESULT_DOC = Path(directory) / "day-snapshots-result.md"
+        target.write_result_doc(triaged, True, "python3 build_day_snapshots.py --all --verify")
+        body = target.RESULT_DOC.read_text(encoding="utf-8")
+    finally:
+        target.RESULT_DOC = saved
+        shutil.rmtree(directory)
+    if target.BUILD_SKIPPED not in body:
+        fails.append("❌ 成果物に SKIP が残っていない（NG のまま書かれている）")
+    if "判定不能（未調査）" in body:
+        fails.append("❌ 判定してへん日を「判定不能（未調査）」として切り分けの表へ入れている")
+
+    # 呼ぶ順番そのものも固定する。切り分けが後ろへ戻ると、同じ走行の中で
+    # 画面の日別行・成果物・最終行が別々の状態を名乗る。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    main_body = source.split("def main(argv: list[str]) -> int:", 1)[1]
+    if "triage_build_results([r])" not in main_body:
+        fails.append("❌ 日別の結果を、表示より前に切り分けていない")
+    else:
+        cut = main_body.index("triage_build_results([r])")
+        if cut > main_body.index('print(f"day{n:02d}'):
+            fails.append("❌ 画面の日別行を切り分けより先に出している")
+        if cut > main_body.index("write_result_doc(results"):
+            fails.append("❌ 結果ドキュメントを切り分けより先に書き出している")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -799,6 +1142,10 @@ CHECKS = (
     ("自分で束ねる名前と欄名", check_local_binding_names),
     ("文字列で指した要素の書き換え", check_rewrite_element),
     ("持ち込みと本体の同居", check_leading_imports),
+    ("ツリーの古さを測る材料", check_tree_inputs),
+    ("ビルドの赤の切り分け", check_build_failure_triage),
+    ("成果物への SKIP の記録", check_result_doc_records_skip),
+    ("想定内の日の build 免除", check_expected_red_build_exemption),
 )
 
 

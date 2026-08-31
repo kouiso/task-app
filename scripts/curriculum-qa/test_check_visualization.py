@@ -8,10 +8,11 @@
   1. 表の数（3本以上のパイプを含む行を数え、'---' を含む行は除く / 4以上）
   2. スクショ位置（5パターンのどれかに当たる行を数える / 3以上）
   3. Mermaid 図（Day 4,7,9,13,16,21,27 だけ必須）
-  4. 同一ファイル内の画像重複（既定は WARNING、フラグ/環境変数で FAIL）
+  4. 同一ファイル内の画像重複（既定は FAIL、フラグ/環境変数で WARNING へ落とせる）
 
-4 は既定と FAIL 化の両モードを固定する。既定が黙って FAIL に変わると corpus 全体が
-落ちるし、逆に FAIL 化の経路が壊れると撮り直し完了後に切り替えられなくなる。
+4 は既定と WARNING 化の両モードを固定する。既定が黙って WARNING へ戻ると、検査は
+動いているのにゲートが素通りする。逆に WARNING 化の経路が壊れると、撮り直しの途中で
+一時的に落とせなくなって作業が止まる。
 
 check_visualization は純粋関数を切り出していないので、一時ファイルに書いて
 本体を丸ごと動かし、標準出力の件数と終了コードの両方を突き合わせる。
@@ -31,7 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from check_visualization import (  # noqa: E402
-    FAIL_ON_DUPLICATE_IMAGE_ENV,
+    WARN_ON_DUPLICATE_IMAGE_ENV,
     check_visualization,
     duplicate_image_is_fatal,
 )
@@ -66,7 +67,7 @@ def make_tempdir() -> str:
 
 
 def run_checker(
-    filename: str, content: str, fail_on_duplicate_image: bool = False
+    filename: str, content: str, fail_on_duplicate_image: bool = True
 ) -> tuple[int, tuple[int, int, int], int]:
     """(終了コード, (表, スクショ, Mermaid), 重複画像件数) を返す。"""
     directory = make_tempdir()
@@ -251,7 +252,7 @@ CASES: list[tuple[str, str, str, int, tuple[int, int, int]]] = [
 ]
 
 
-# 同じ画像を貼り回していないかの検査。既定は WARNING、フラグ有効時は FAIL。
+# 同じ画像を貼り回していないかの検査。既定は FAIL、フラグを落とすと WARNING。
 # (テスト名, ファイル名, 本文, FAIL化フラグ, 期待する終了コード,
 #  期待する (表, スクショ, Mermaid), 期待する重複画像件数)
 DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]] = [
@@ -274,7 +275,7 @@ DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]
         1,
     ),
     (
-        '同じ画像を3回貼っても既定では落ちない（撮り直し中の暫定運用）',
+        '同じ画像を3回貼ってもフラグを落とせば通る（撮り直し中の暫定運用）',
         'day01_setup.md',
         table_rows(4) + '![一覧](./screenshots/list.png)\n' * 3,
         False,
@@ -354,28 +355,52 @@ DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]
 ]
 
 
-def default_is_warning() -> bool:
-    """本体の既定が「重複は WARNING」のままかを見る。
+def default_is_fatal() -> bool:
+    """本体の既定が「重複は FAIL」のままかを見る。
 
-    ここが黙って True に変わると corpus 全体が落ちて全員が止まる。逆に FAIL 化の
-    経路（環境変数 / CLI フラグ）が壊れると、撮り直し完了後に切り替えられない。
+    ここが黙って WARNING へ戻ると、検査は動いているのにゲートが素通りする。防ぐために
+    作った退行が、誰にも気づかれずに戻ってこられる状態になる。逆に、撮り直しの途中で
+    一時的に落とす経路（環境変数 / CLI フラグ）が壊れると、作業中に全体が止まる。
     """
-    default_ok = run_checker(
-        'day01_setup.md', table_rows(4) + '![一覧](./screenshots/list.png)\n' * 3
-    )[0] == 0
-    flag_ok = duplicate_image_is_fatal(['--fail-on-duplicate-image', 'x.md'])
-    saved = os.environ.get(FAIL_ON_DUPLICATE_IMAGE_ENV)
+    # 引数を渡さずに呼ぶ。run_checker の既定ではなく、本体の既定を見たいので
+    # ここだけは直接呼ぶ。run_checker 経由やと本体を戻しても落ちん飾りになる。
+    directory = make_tempdir()
     try:
-        os.environ[FAIL_ON_DUPLICATE_IMAGE_ENV] = '1'
-        env_ok = duplicate_image_is_fatal(['x.md'])
-        os.environ[FAIL_ON_DUPLICATE_IMAGE_ENV] = '0'
-        env_off_ok = not duplicate_image_is_fatal(['x.md'])
+        path = Path(directory) / 'day01_setup.md'
+        path.write_text(
+            table_rows(4) + '![一覧](./screenshots/list.png)\n' * 3, encoding='utf-8'
+        )
+        default_fails = False
+        with redirect_stdout(io.StringIO()):
+            try:
+                check_visualization(str(path))
+            except SystemExit as exc:
+                default_fails = bool(exc.code)
+    finally:
+        shutil.rmtree(directory)
+    flag_ok = not duplicate_image_is_fatal(['--warn-on-duplicate-image', 'x.md'])
+    saved = os.environ.get(WARN_ON_DUPLICATE_IMAGE_ENV)
+    try:
+        os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = '1'
+        env_ok = not duplicate_image_is_fatal(['x.md'])
+        os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = '0'
+        env_off_ok = duplicate_image_is_fatal(['x.md'])
+        # `FALSE` は「落とさん」の意思表示なので FAIL のままでないとあかん。
+        # 大文字を弾いて WARNING へ落ちると、落としたつもりのない人がゲートを失う。
+        os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = 'FALSE'
+        env_upper_ok = duplicate_image_is_fatal(['x.md'])
+        os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = ' 1 '
+        env_pad_ok = not duplicate_image_is_fatal(['x.md'])
+        # 想定してへん値は FAIL のまま。綴り間違いを WARNING 扱いにすると、
+        # 落としたつもりのない人がゲートを失う。
+        os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = 'ture'
+        env_typo_ok = duplicate_image_is_fatal(['x.md'])
     finally:
         if saved is None:
-            os.environ.pop(FAIL_ON_DUPLICATE_IMAGE_ENV, None)
+            os.environ.pop(WARN_ON_DUPLICATE_IMAGE_ENV, None)
         else:
-            os.environ[FAIL_ON_DUPLICATE_IMAGE_ENV] = saved
-    return default_ok and flag_ok and env_ok and env_off_ok
+            os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = saved
+    return default_fails and flag_ok and env_ok and env_off_ok and env_upper_ok and env_pad_ok and env_typo_ok
 
 
 def required_days_in_source() -> set[int]:
@@ -444,9 +469,9 @@ def main() -> int:
                 f'重複{expected_dup} / 実際 exit={code} {counts} 重複{duplicates}'
             )
 
-    if not default_is_warning():
+    if not default_is_fatal():
         failed += 1
-        print('  ❌ 重複判定の既定が WARNING でない、または FAIL 化の切り替えが壊れています')
+        print('  ❌ 重複判定の既定が FAIL でない、または警告へ落とす切り替えが壊れています')
 
     # 必須 Day がこっそり削られると、図の抜けた教材が黙って通るようになる。
     days = required_days_in_source()

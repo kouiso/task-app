@@ -338,7 +338,7 @@ export default function ProjectPage() {
 }
 ```
 
-この `ProjectPage` が、実際に画面へ表示されるコンポーネントです。本体の `ProjectPageContent` を `Suspense` で包むのは、次のステップでデータ取得を足したときに、読み込み中の表示を1か所で受け止められるようにするためです。
+この `ProjectPage` が、実際に画面へ表示されるコンポーネントです。本体の `ProjectPageContent` を `Suspense` で包むのは、Day 05 のログイン画面と同じ形をここでも作っておくためです。このページがあとで URL の値を読むようになったとき、包む場所を作り直さずに済みます。
 
 **確認ポイント**:
 - `npm run dev` でエラーが出ていない
@@ -349,7 +349,7 @@ export default function ProjectPage() {
 
 ![完成後のプロジェクト一覧。赤枠の中に「プロジェクト」の見出しが出ている](./screenshots/day09/project-page-heading.png)
 
-> `Suspense` は子コンポーネント（`ProjectPageContent`）が準備完了するまで、代わりに `fallback` に指定した `PageLoadingSpinner` を表示します。ローディング中はスピナーが表示され、準備が完了すると `ProjectPageContent`（`AppLayout` でラップされた本体）が表示されます。
+> `Suspense` は、中身が宙づりになったときだけ `fallback` の `PageLoadingSpinner` を代わりに出します。今日の `ProjectPageContent` は宙づりにならないので、この `fallback` は実際には出ません。読み込み中の見た目は、次の Step で足す `projectsLoading` の分岐が作ります。
 
 ---
 
@@ -446,14 +446,12 @@ if (projectsLoading) {
 
 ```mermaid
 flowchart TB
-    A["/project を開く"] --> B{"ページの部品は届いたか"}
-    B -->|"まだ"| C["Suspense の fallback<br/>部品を待つ間の表示"]
-    B -->|"届いた"| D{"一覧のデータは届いたか"}
-    D -->|"まだ"| E["if projectsLoading<br/>データを待つ間の表示"]
+    A["/project を開く"] --> D{"一覧のデータは届いたか"}
+    D -->|"まだ"| E["if projectsLoading<br/>スピナーを出す"]
     D -->|"届いた"| F["カードを並べる"]
 ```
 
-読み込み中の表示が2か所あるのは、待っている相手が違うからです。上は画面を組み立てる部品を待ち、下はサーバーから返るデータを待ちます。片方だけを直しても、もう片方の待ち時間の見た目は変わりません。
+読み込み中の表示を受け持つのは、この `projectsLoading` の分岐だけです。Step 1 で置いた `Suspense` の `fallback` は、いまの `ProjectPageContent` では出番がありません。`useQuery` はデータを待つ間も普通に描画を返すので、中身が宙づり（suspend）にならないからです。`Suspense` が仕事をするのは、あとから読み込む部品を包んだときや、URL の値が確定するまで待つ `useSearchParams` を包んだときで、Day 05 のログイン画面がその形でした。
 
 ---
 
@@ -946,9 +944,9 @@ PORT=3001 npm run dev
 
 > ※「新規プロジェクト」ボタン・カードの「編集」「削除」ボタン・カードクリック時の遷移は、Day 10-12 で本実装します。今日の時点ではクリックしても何も起きませんが、正常な動作です。
 
-スクリーンショット: ブラウザの幅を 430px まで縮めたときの姿です。サイドバーが隠れ、見出しとヘッダーの部品が縦に折り返します。
+スクリーンショット: ブラウザの幅を 430px まで縮めたときの姿です。サイドバーが隠れ、見出しと操作部品は横1列のまま幅だけが詰まります。今日書いた `flex items-center justify-between` には折り返しの指定が無いので、見出しが2行になり、スイッチのラベルが縦書きのように潰れます。狭い画面で縦に積み直す形は Day 27 で入れます。
 
-![幅を狭めたプロジェクト一覧。サイドバーが消え、見出しの下にアーカイブ表示スイッチと新規プロジェクトボタンが縦に並んでいる](./screenshots/day09/project-narrow.png)
+![幅を狭めたプロジェクト一覧。サイドバーが消え、2行に折り返した見出しの右にアーカイブ表示スイッチと新規プロジェクトボタンが横1列で詰まって並んでいる](./screenshots/day09/project-narrow.png)
 
 カードが1枚しか無いので、列数そのものは変わりません。カードを増やすと、幅に応じて2列・3列・4列と並びが変わります。
 

@@ -551,7 +551,7 @@ git add -f .env.example
 git status --short
 ```
 
-`.node-version` は中身が `22` の1行だけのファイルですが、これを送る理由があります。Day 04 で使う Vercel は、公開用のビルドを走らせるときに Node のバージョンをこのファイルから読み取ります。送っていないと Vercel 側の既定のバージョンで組み立てられるので、手元で通ったビルドが公開先で通らないことがあります。手元と公開先で同じバージョンをそろえるための1行です。
+`.node-version` は中身が `22` の1行だけのファイルで、手元の Node をこのバージョンにそろえる目的で置いてあります。`mise` のようなバージョン管理ツールがこのファイルを読みます。公開先の Vercel が使う Node のバージョンは、このファイルではなく `package.json` の `engines.node`（このプロジェクトでは `"22.x"`）で決まります。`package.json` はこの Step で add するので、手元と公開先のバージョンはそろいます。
 
 `.env.example` にだけ `-f` を付けているのは、`.gitignore` の `.env*` がこのファイルも除外しているためです。見本ファイルだけは意図的に例外として加えます。`-f` を付けずに実行すると `The following paths are ignored by one of your .gitignore files` と表示され、追加されません。
 
@@ -619,7 +619,7 @@ git log --oneline --decorate -3
 ```
 
 `git status -sb` に残るのは、add しなかったものの `??` の行だけになります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? scripts/` の3行が並びます。
-これらは GitHub へ送らないので、残っていて正常です。上に挙げた4つ以外の行が残っていたら、その行が何のファイルかで対応が分かれます。`src/` や `prisma/` のように、このカリキュラムで作ってきたファイルなら、送るはずのものが送られていません。`git add` してから、もう一度コミットしてください。`.vscode/` や `.DS_Store` のように、自分のエディタやパソコンが勝手に作ったファイル、あるいは自分用のメモなら、GitHub へ送る必要はありません。`git add` せずにそのまま置いておいてください。判断が付かないときは送らないほうが安全です。いったんインターネットに出したファイルは、あとから消しても記録に残ります。
+これらは GitHub へ送らないので、残っていて正常です。上に挙げた3つ以外の行が残っていたら、その行が何のファイルかで対応が分かれます。`src/` や `prisma/` のように、このカリキュラムで作ってきたファイルなら、送るはずのものが送られていません。`git add` してから、もう一度コミットしてください。`.vscode/` や `.DS_Store` のように、自分のエディタやパソコンが勝手に作ったファイル、あるいは自分用のメモなら、GitHub へ送る必要はありません。`git add` せずにそのまま置いておいてください。判断が付かないときは送らないほうが安全です。いったんインターネットに出したファイルは、あとから消しても記録に残ります。
 `git log` の1行目に、いま付けたメッセージが出ていれば成功です。
 
 ![コミット成功後の状態](./screenshots/day03-commit-success.png)
@@ -868,7 +868,7 @@ git branch --show-current
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `.node-version` `doc/` `scripts/` の4件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、`.env` の行が出ていないことの2点だけ確認する |
+| Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `doc/` `scripts/` の3件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、`.env` の行が出ていないことの2点だけ確認する |
 | `git add` が `fatal: pathspec '...' did not match any files` で止まる | 指定したファイルが手元に無い | その行から無いファイル名だけを外して、同じコマンドをもう一度実行する。同じ行に書いた実在するファイルも一緒に失敗しているので、実行し直しが要る |
 | `git add .env.example` が `The following paths are ignored by one of your .gitignore files` で止まる | `.gitignore` の `.env*` がこのファイルも除外している | `git add -f .env.example` と `-f` を付けて、除外をこのファイルだけ上書きする |
 | `git commit` が `*** Please tell me who you are.` で止まる | `user.name` と `user.email` を登録していない | `git config --global user.name "あなたの名前"` と `git config --global user.email "GitHubに登録したメールアドレス"` を1回だけ実行する。名前とメールアドレスは自分のものに置き換える |

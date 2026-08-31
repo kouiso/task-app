@@ -14,11 +14,14 @@
     画角と出てくる画像が食い違う。
 """
 
+import io
 import json
 import queue
+import subprocess
 import sys
 import time
 import tempfile
+from contextlib import redirect_stderr
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -59,8 +62,13 @@ def check_mark_rect_source() -> list[str]:
     if target.MARK_RECT_SOURCE != "boundingBox":
         fails.append(f"❌ 座標の出どころが boundingBox でない: {target.MARK_RECT_SOURCE}")
 
+    # 一覧そのものが痩せていないことを先に見る。本体からキーを1つ消したときに
+    # 下のループも一緒に緩んで無検知になるのを防ぐ。
+    if set(target.FORBIDDEN_MARK_KEYS) != {"x", "y", "width", "height", "rect", "left", "top", "box"}:
+        fails.append(f"❌ 弾くキーの一覧が変わっている: {target.FORBIDDEN_MARK_KEYS}")
+
     # 手で座標を書いた宣言は、どの綴りでも弾く。
-    for key in ("x", "y", "width", "height", "rect", "left", "top", "box"):
+    for key in target.FORBIDDEN_MARK_KEYS:
         shot = {**BASE_SHOT, "marks": [{"selector": ".a", key: 10}]}
         msg = load_error([shot])
         if not msg:
@@ -290,6 +298,129 @@ def check_slot_exclusivity() -> list[str]:
     return fails
 
 
+def check_animation_settle() -> list[str]:
+    """撮る直前の待ちが、決め打ちの秒数やのうてアニメーションの終了に紐づいていること。
+
+    決め打ちの待ちへ戻すと、その秒数より長い遷移や、並列撮影で遅れた回が途中の絵のまま
+    保存される。撮影自体は成功するので、あとから誰も気づけん種類の壊れ方になる。
+    """
+    fails = []
+    source = WORKER.read_text(encoding="utf-8")
+
+    # 見るのは `shoot()` の中身だけにする。ファイル全体を見ると、呼び出しを消しても
+    # `async function settleAnimations(page)` という宣言の字面に当たって緑のまま通る。
+    # 死んだ助け関数が残っとることの証明にしかならん。
+    body = source.split("async function shoot(page, job, shot) {", 1)
+    if len(body) != 2:
+        return ["❌ shoot() が見つからない（この検査が対象を見失っている）"]
+    shoot_body = body[1]
+
+    if "await settleAnimations(page);" not in shoot_body:
+        fails.append("❌ shoot() がアニメーションの収束を待っていない")
+    # 決め打ちの待ちが戻ってきたら弾く。窓の高さを変えたあとの測り直し（fitToContent）は
+    # 別の話なので、`shoot()` の外にあるぶんは対象にせん。
+    if "waitForTimeout" in shoot_body:
+        fails.append("❌ shoot() の中に決め打ちの待ちが戻っている")
+
+    # 待ち方そのものは助け関数の側にある。中身が空になっていないかを見る。
+    helper = source.split("async function settleAnimations(page) {", 1)
+    if len(helper) != 2:
+        fails.append("❌ settleAnimations が見つからない")
+    else:
+        waiter = helper[1].split("\n}", 1)[0]
+        if "getAnimations()" not in waiter:
+            fails.append("❌ 待つ相手を getAnimations() で見ていない")
+        if "iterations === Infinity" not in waiter:
+            fails.append("❌ 無限に回るアニメーションを待つ相手から外していない")
+        # 待ち時間切れ以外まで握り潰すと、評価エラーやページ破棄が「警告つきで撮れた」に
+        # 化ける。撮れた画像は残るので、誰も失敗に気づけん。
+        if "catch {" in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ settleAnimations が例外を種類を見ずに握り潰している")
+        if "errors.TimeoutError" not in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ 待ち時間切れ以外の例外を再送出していない")
+        # 無限アニメーションは「待たん」だけでは足りん。止めて位相を固定せんと、
+        # ローディング画面（day09 / day21 / day23 / day29 の *-loading.png は
+        # `animate-spin` のスピナーを写す）は撮るたびに別の角度になる。
+        if "animation.pause()" not in waiter:
+            fails.append("❌ 無限アニメーションを止めずに撮っている（毎回別の角度で写る）")
+        if "animation.currentTime = 0" not in waiter:
+            fails.append("❌ 無限アニメーションの位相を固定していない")
+    if "import { chromium, errors } from 'playwright';" not in source:
+        fails.append("❌ playwright の errors を取り込んでいない（TimeoutError を見分けられない）")
+    return fails
+
+
+def check_worker_warning_forwarding() -> list[str]:
+    """ワーカーの警告が、撮影が成功した回にも表へ出ること。
+
+    アニメーションが止まらんかった等の警告は stderr にしか出ん。成功時に捨てると、
+    残るのは「撮れた」の一言だけになり、途中の絵が保存されたことに誰も気づけん。
+    """
+    fails = []
+    captured = io.StringIO()
+    with redirect_stderr(captured):
+        target.forward_worker_warnings("アニメーションが 2000ms で止まりませんでした\n\n", "day07")
+    out = captured.getvalue()
+    if "day07" not in out:
+        fails.append("❌ 警告にどの日のものか出ていない")
+    if "止まりませんでした" not in out:
+        fails.append("❌ ワーカーの警告が表へ出ていない")
+    if out.count("\n") != 1:
+        fails.append("❌ 空行まで流している（警告だけを出すこと）")
+
+    # 呼び出しが消えたら、助け関数が残っていても意味が無い。成功して返す経路に
+    # 挟まっとることまで見る。
+    body = Path(target.__file__).read_text(encoding="utf-8").split(
+        "def run_worker(job: dict[str, Any], label: str)", 1
+    )
+    if len(body) != 2:
+        fails.append("❌ run_worker が見つからない（この検査が対象を見失っている）")
+    else:
+        run_body = body[1].split("\ndef ", 1)[0]
+        if "forward_worker_warnings(proc.stderr, label)" not in run_body:
+            fails.append("❌ run_worker が成功時に stderr を捨てている")
+    return fails
+
+
+
+def check_drawn_frame_settle() -> list[str]:
+    """JS で1フレームずつ描くアニメーションの収束待ちを、実物のブラウザで確かめる。
+
+    Recharts（day22・day23 のグラフ）は react-smooth が `requestAnimationFrame` で
+    属性を書き換えて動かすので、`document.getAnimations()` には出てこん。せやから
+    ソースの文字列を見るだけの検査では「描き終わるまで待てとるか」を言えん。ここだけは
+    実際にブラウザで動かして、描きかけの形で止まらんことを見る。
+
+    ブラウザが無い機械では退けるが、**黙って通さん**。退けたことを出力に残す。
+    """
+    script = Path(__file__).resolve().parent / "settle-drawn-frames-check.mjs"
+    if not script.exists():
+        return ["❌ 実ブラウザ検査（settle-drawn-frames-check.mjs）が見当たらない"]
+    try:
+        proc = subprocess.run(
+            ["node", str(script)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=script.parent,
+        )
+    except subprocess.TimeoutExpired as expired:
+        # 時間切れをそのまま投げると main() まで抜けて、自己テストが件数も理由も出さずに
+        # 落ちる。「検査が黙って終わる」のはこの PR が潰しとる型そのものなので、
+        # 失敗として数えられる形で返す。途中まで出た分も添える。
+        partial = "".join(
+            stream.decode(errors="replace") if isinstance(stream, bytes) else (stream or "")
+            for stream in (expired.stdout, expired.stderr)
+        ).strip()
+        return [f"❌ 実ブラウザ検査が {expired.timeout} 秒で終わらんかった: {partial[-300:] or '出力なし'}"]
+    out = (proc.stdout + proc.stderr).strip()
+    if proc.returncode != 0:
+        return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]
+    if out.startswith("SKIP:") or "\nSKIP:" in out:
+        print(f"  ⏭️ 実ブラウザ検査を退けた: {out.splitlines()[0]}")
+    return []
+
+
 CHECKS = (
     ("赤枠と切り抜きの座標の出どころ", check_mark_rect_source),
     ("日別シードの境界", check_day_seed_boundary),
@@ -297,6 +428,9 @@ CHECKS = (
     ("同梱の宣言表", check_shipped_config),
     ("ワーカーの分離", check_worker_isolation),
     ("スロットの排他", check_slot_exclusivity),
+    ("アニメーションの収束待ち", check_animation_settle),
+    ("ワーカーの警告の転送", check_worker_warning_forwarding),
+    ("描画の収束待ち（実ブラウザ）", check_drawn_frame_settle),
 )
 
 

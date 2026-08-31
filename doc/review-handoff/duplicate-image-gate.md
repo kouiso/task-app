@@ -1,4 +1,4 @@
-# 同一日での画像重複検査 — 今は WARNING、撮り直し後に FAIL へ上げる
+# 同一日での画像重複検査 — 既定は FAIL（2026-08-31 に切り替え済み）
 
 対象: `scripts/curriculum-qa/check_visualization.py`
 退行テスト: `scripts/curriculum-qa/test_check_visualization.py`
@@ -23,46 +23,65 @@ Step 3 の結果として貼った画像が Step 9 の完成形と同じなら�
 
 既存の「スクショ位置3箇所以上」はそのまま残している。下限は下限で要る。
 
-## 今は WARNING（既定）
+## 当初は WARNING だった（履歴・2026-08-30 時点）
 
-今この検査を FAIL にすると、上の17ファイルが全部落ちて corpus 全体が止まる。
-撮り直しは別担当が進行中なので、**既定は警告に留めてある**。
+切り替え前は、この検査を FAIL にすると下の17ファイルが全部落ちて corpus 全体が止まる
+状態だった。撮り直しが進行中だったため、**既定を警告に留めていた**。
+以下はその当時の記録であり、現在の状態ではない。
 
-```
+```text
 $ python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculum/
 ...
-対象 34 件 / FAIL 0 件      ← 既定。重複は ⚠️ で出るが落ちない
+対象 34 件 / 重複画像 17 件      ← 当時は WARNING なので exit 0 で通っていた
 ```
 
-## FAIL への切り替え方（撮り直しが終わったら）
+現在の実測は次のとおりである（2026-08-31）。
 
-どちらか片方で切り替わる。
+```text
+$ python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculum/
+...
+対象 34 件 / FAIL 0 件      ← 既定で FAIL。重複が0件なので通る
+```
 
-1. **環境変数**（CI / `check_quality.sh` からまとめて有効化する場合）
+## 既定は FAIL（2026-08-31 に切り替え済み）
+
+この記録を書いた時点では既定を WARNING にしていた。撮り直しが終わるまで FAIL にすると
+corpus 全体が落ちて作業が止まるためである。36本すべてで同一ファイル内の重複が0件に
+なったのを実測したうえで、既定を FAIL へ上げた。
+
+警告のまま置いておくと、検査は完成しているのにゲートが素通りする。防ぐために作った退行が、
+黙って戻ってこられる状態になる。
+
+撮り直しの途中で一時的に警告へ落としたいときだけ、どちらかを使う。
+
+1. **環境変数**
 
    ```bash
-   CURRICULUM_QA_FAIL_ON_DUPLICATE_IMAGE=1 \
+   CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE=1 \
      python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculum/
    ```
 
-2. **CLI フラグ**（手元で一時的に確かめる場合）
+2. **CLI フラグ**
 
    ```bash
    python3 scripts/curriculum-qa/check_visualization.py \
-     --fail-on-duplicate-image material/30days-curriculum/
+     --warn-on-duplicate-image material/30days-curriculum/
    ```
 
-   現時点でどちらも `対象 34 件 / FAIL 17 件` を返す。残件数の計測にそのまま使える。
+なお、一時的に WARNING へ落とすときは実行時のフラグ（`--warn-on-duplicate-image`）か
+環境変数（`CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE=1`）を使う。コードの既定値そのものを
+WARNING へ戻す必要が出た場合は、次を揃える。
 
-3. **恒久的に FAIL へ上げる**とき
+   - `check_visualization()` の引数 `fail_on_duplicate_image` の既定値を `False` にする
+   - `test_check_visualization.py` の `default_is_fatal()` を対応させる
+   - `test_check_visualization.py` の `DUPLICATE_CASES` のうち、フラグ `False` の2ケース
+     （フラグを落としたときの系）の期待終了コードを合わせて更新する
+   - `default_is_fatal()` は既定が FAIL であることを固定しているので、この関数も
+     同時に書き換える。書き換え忘れると自己テストが落ちて気づける
 
-   - `check_visualization()` の引数 `fail_on_duplicate_image` の既定値を `True` にする
-   - `test_check_visualization.py` の `DUPLICATE_CASES` のうち、フラグ `False` の3ケース
-     （「既定では落ちない」系）の期待終了コードを合わせて更新する
-   - `default_is_warning()` は既定が WARNING であることを固定しているので、
-     この関数も同時に書き換える。書き換え忘れると自己テストが落ちて気づける
+## 当時の重複一覧（2026-08-30 実測・履歴）
 
-## 現在の重複一覧（2026-08-30 実測）
+**この表は切り替え前の記録である。2026-08-31 の実測では36本すべてで重複0件。**
 
 | Day | 画像 | 回数 |
 |---|---|---|
@@ -88,5 +107,5 @@ $ python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculu
 
 ```bash
 python3 scripts/curriculum-qa/check_visualization.py \
-  --fail-on-duplicate-image material/30days-curriculum/ | tail -20
+  material/30days-curriculum/ | tail -20
 ```

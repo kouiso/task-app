@@ -55,8 +55,7 @@ from typing import Any, NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from build_day_snapshots import build_tree, day_sources, link_node_modules  # noqa: E402
-from sale_package import scaffold_copies  # noqa: E402
+from build_day_snapshots import build_tree, link_node_modules, tree_inputs  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_ROOT = REPO_ROOT / "dist" / "day-snapshots"
@@ -721,10 +720,12 @@ def ensure_tree_fresh(day: int) -> Path:
     見るのは教材だけでは足りない。ツリーの中身の半分は `scripts/_*` の配布物で、
     読者が最初に受け取るのもそちらである。配布物だけを直した回（ステータスと優先度の色を
     トークンから引き直した回がこれ）は教材の更新時刻が動かないので、古い色のまま
-    撮れてしまう。撮れてしまうから誰も気づけない。両方を見る。
+    撮れてしまう。撮れてしまうから誰も気づけない。借り物（`globals.css` や
+    `package.json`）と組み立て方そのものも同じ理由で見る。何を見るかは組み立てる側が
+    知っているので、一覧は `build_day_snapshots.tree_inputs` が持つ。
     """
     dest = snapshot_dir(day)
-    sources = list(day_sources(day)) + [src for _, src in scaffold_copies()]
+    sources = tree_inputs(day)
     newest = max(p.stat().st_mtime for p in sources)
     if newest <= dest.stat().st_mtime:
         return dest
@@ -846,13 +847,15 @@ def wait_ready(port: int, proc: subprocess.Popen[str]) -> None:
             if conn.getresponse().status < 500:
                 return
         except OSError:
-            time.sleep(0.5)
+            pass
         finally:
             conn.close()
+        # 500 が返る間も待つ。待たずに回すと、起動中のサーバーへ無待機で撃ち続ける。
+        time.sleep(0.5)
     raise TimeoutError(f"{SERVER_TIMEOUT} 秒待っても 127.0.0.1:{port} が応えません")
 
 
-def run_worker(job: dict[str, Any]) -> list[dict[str, Any]]:
+def run_worker(job: dict[str, Any], label: str) -> list[dict[str, Any]]:
     """ワーカーへ仕事を渡して、撮れた一覧を受け取る。"""
     proc = subprocess.run(
         ["node", str(WORKER)],
@@ -867,7 +870,17 @@ def run_worker(job: dict[str, Any]) -> list[dict[str, Any]]:
     result = json.loads(proc.stdout)
     if not result.get("ok"):
         raise RuntimeError(f"撮影に失敗しました: {result.get('error')}\n{proc.stderr[-2000:]}")
+    # 成功しても stderr は捨てん。アニメーションが止まらんかった等の警告はここにしか
+    # 出ず、黙って捨てると「撮れた」の一言だけが残って誰も気づけん。
+    forward_worker_warnings(proc.stderr, label)
     return result["shots"]
+
+
+def forward_worker_warnings(stderr: str, label: str) -> None:
+    """ワーカーの警告を、どの日のものか分かる形でこちらの stderr へ流す。"""
+    for line in stderr.splitlines():
+        if line.strip():
+            print(f"[{label}] {line}", file=sys.stderr)
 
 
 DB_NAME_IN_URL = re.compile(r"^(?P<head>postgresql://[^/]+/)(?P<name>[^?]+)(?P<tail>.*)$")
@@ -946,7 +959,7 @@ def shoot_day(config: Config, day: int, out_dir: Path, worker: int = 0) -> list[
                 for s in shots
             ],
         }
-        return run_worker(job)
+        return run_worker(job, f"day{day:02d}")
     finally:
         stop_server(proc)
 

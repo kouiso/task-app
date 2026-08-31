@@ -40,6 +40,7 @@ from check_page_layout import (  # noqa: E402
     find_text_overflow,
     ink_rows,
     parse_image_table,
+    page_image_number,
     parse_line_boxes,
     read_pgm,
 )
@@ -439,6 +440,19 @@ def main() -> int:
     try:
         parse_line_boxes("pdftotext: command produced no xhtml")
         failures.append("行の座標: <html> が無くても素通りする")
+    except ToolFailure:
+        pass
+
+    # 文字列順では page-10 が page-2 より前に並び、ページ番号と検査結果がずれる。
+    # ページ数が2桁になったPDFでも数値順を保つ。
+    if sorted(
+        [Path("page-10.pgm"), Path("page-2.pgm"), Path("page-1.pgm")],
+        key=page_image_number,
+    ) != [Path("page-1.pgm"), Path("page-2.pgm"), Path("page-10.pgm")]:
+        failures.append("ページ画像: 数値順に並んでいない")
+    try:
+        page_image_number(Path("page-final.pgm"))
+        failures.append("ページ画像: 不正な名前を素通りする")
     except ToolFailure:
         pass
 

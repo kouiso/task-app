@@ -984,7 +984,7 @@ Day 05 からの G1 Auth も、
 | Vercel の Import 画面に `task-app` が出てこない | Vercel の GitHub App に、そのリポジトリを見る権限を渡していない | `Adjust GitHub App Permissions` から `task-app` を選んで許可する。Private リポジトリの場合は特に起きやすい |
 | Vercel の Deploy がビルドエラーで止まる | 手元で通っていないコードを送っている、または環境変数が足りない | まず Step 2 の `npm run build` が手元で通るか確かめる。通るなら、Environment Variables に `DATABASE_URL` と `JWT_SECRET` が入っているかを見る |
 | 公開 URL の画面が、手元で直したはずの内容になっていない | GitHub へ push していない。Vercel はコードを手元ではなく GitHub から取りに行く | `git status` で未コミットの差分を確かめ、`git add` → `git commit` → `git push` まで進めてから、もう一度 Deploy する |
-| 公開先だけビルドの結果が手元と違う | Node のバージョンが手元と公開先でそろっていない | Day 03 の Step 7 で `.node-version` を add したか確認する。送っていなければ add して push し直す |
+| 公開先だけビルドの結果が手元と違う | Node のバージョンが手元と公開先でそろっていない | Day 03 の Step 7 で `package.json` を add・push したか確認する。公開先の Node のバージョンは `package.json` の `engines.node` で決まる。それでも違うなら Vercel の Settings から Build and Deployment の Node.js Version を見る |
 | 公開 URL をスマホで開くと表示が崩れる | 画面幅の狭いときの指定が入っていない | 今日は直さなくてよい。崩れた場所をメモしておいて、以降の Day でレイアウトを作るときに直す |
 | `DATABASE_URL` を GitHub に置いてしまった | 本物の値と見本の区別が付いていない | 本物は Vercel の Environment Variables にだけ置く。GitHub には `.env.example` の見本だけを送る。すでに送っていたら、Day 03 の Step 10 の手順で鍵を作り直す |
 

@@ -3,6 +3,9 @@
 `material/30days-curriculum/screenshots/` の画像を、**その日の読者の手元**で撮り直すための道具立てと、
 Day 01–08 でそれを実際に通した記録。
 
+> 現行監査（2026-08-31）では、画像111枚・未参照0枚・同一日の画像重複0件です。
+> この文書の下の「残した問題」や途中経過は撮影時点の記録であり、現在の残作業一覧ではありません。
+
 - 撮る道具: `scripts/curriculum-qa/shoot_screenshots.py`
 - 撮る対象の宣言: `scripts/curriculum-qa/screenshot-shot.json`
 - 退行テスト: `scripts/curriculum-qa/test_shoot_screenshots.py`（`check_quality.sh` の Gate 4 に登録済み）
@@ -304,9 +307,11 @@ Day 09・12・13・17 は読者がデータを作らない日なので、直前�
 5. **Day 09 Step 10 の「ブラウザ幅を変える → カードの列数が変わる」は読者の手元では確かめられない。**
    カードが1枚しか無いため（1 の帰結）。幅 430px で撮ってみると、ヘッダーの
    「アーカイブ表示」のラベルが縦書きに折れる崩れも出る。
-6. **Day 05 と Day 11 は同じ画像を同じ日に貼り回している。** `check_visualization.py
-   --fail-on-duplicate-image` で FAIL する（`day05/login.png` 3回、`project-delete-confirm.png` 2回、
+6. **Day 05 と Day 11 は同じ画像を同じ日に貼り回している。** `check_visualization.py` で
+   FAIL する（`day05/login.png` 3回、`project-delete-confirm.png` 2回、
    `project-detail-dialog.png` 2回）。Day 09–17 の範囲は0件にした。
+   （この記録を書いた時点の話。2026-08-31 時点では corpus 全体で重複0件になり、
+   検査の既定も FAIL へ上げてある）
 
 ---
 
