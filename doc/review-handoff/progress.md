@@ -1,108 +1,230 @@
-# 30日教材 商品化 進捗
+# 30日教材 商品化 — 引き継ぎ
 
-**次にやること**: 裏取りワークフロー `wf_7c6ece7b-33e` の残り8日（day21・day23〜30）を回収して real を潰す。並行して `wf_4b8bac19-76b` が新設中の `check_unclosed_screen.py` を、反証結果ごと受け取って採否を決める。
-
-## 走査95件の裏取り結果（15/23日 時点）
-
-| 判定 | 件数 |
-|---|---:|
-| real（全て修正・push 済み） | **20**（うち blocker 4） |
-| false（走査の誤り） | **37** |
-| unclear | 1 |
-
-**誤り率 65%。**反証を1体ずつ噛ませてへんかったら、正しい教材を37箇所壊しとった。
-
-### 潰した20件で重かったもの
-
-1. **day07 が嘘の因果を教えとった** — 理解チェックの答え(2508)と地の文(338)が「`/ 1000` を消すと期限切れせんトークンができる」と教えとったが、`src/lib/session.ts` を読むと `encrypt` が `.setExpirationTime('7d')` で `exp` を上書きし(47行)、Cookie も `maxAge: COOKIE_MAX_AGE` の定数(27/91行)。**実際には何も起きひん**
-2. **day04 Step 7** — `/` を開くだけやのに `/dashboard` のメッセージを要求（到達不能）
-3. **day10 Step 5** — `</Dialog>` が Step 6(669行)、組み込みが Step 7(789行)。その時点では構文エラーで描画でけへん
-4. **day19 Step 5** — `handleDeleteComment` の定義が Step 6(702行)。JSX が未定義を参照してエラー
-5. **day06 つまずき表** — 「登録後にページが変わらない」の処方箋が `router.refresh()`。遷移は `router.push`(520行)で、533行が「refresh を消しても見た目は変わらんことがある」と自分で書いとる
-
-### 繰り返し出た型（4件）
-
-**「その Step にはまだ存在せんUIを、確認ポイントやスクショが触らせようとする」** — day04 / day06 / day10 / day19。
-単発の事故やのうて書き方の癖。だから機械検査を仕込む価値がある。
-
-ただし**3つの型のうち機械で捕まるんは1つだけ**やと判断した:
-- day10 型（画像を見せる時点でファイルが閉じ切ってへん）→ 括弧の収支で機械判定できる → `check_unclosed_screen.py` を新設中
-- day04 型（該当コードが1行も無い＝導線の欠落）→ 語彙では出ん
-- day06 型（「送信」と `type="submit"` の意味的対応）→ 辞書に頼ると誤検知が出る
-
-誤検知の出る検査を入れて「守れとる」ことにするんが最悪なので、確実に効く1つだけに絞った。残り2型は人が読むしかない、と正直に残す。
-
-計画: `/root/.claude/plans/task-app-30-10-000-deep-iverson.md`
-PR: **https://github.com/kouiso/task-app/pull/388**（draft）
-ブランチ: `claude/30days-material-product-ready-hor18z`
+最終更新: 2026-08-31 / ブランチ `claude/30days-material-product-ready-hor18z` / PR **#388**（draft・CI全緑）
 
 ---
 
-## 背骨 — 買い手が不満を持つ10の瞬間
+## 次のAIが最初に読むもの
 
-| # | 不満 | 状態 |
+1. このファイル（現在地）
+2. `/root/.claude/plans/task-app-30-10-000-deep-iverson.md` — 計画の全文。§1 の「不満10類型」が判断の背骨
+3. `doc/review-handoff/cover-letter.md` — 局長への添え状。潰した不満の before/after が全部入っとる
+4. `doc/post-release-backlog.md` — リリース後へ回した13件
+
+---
+
+## ゴールと判定基準（ここを外したら全部無駄）
+
+**¥10,000 の商品として出荷する。** 局長の要求は2つ。
+
+1. この商品を売りたい
+2. **買った人が次の商品も買ってくれる** = 品質の不満が出て見放される状態を防ぐ
+
+局長が置いた線。この一文が優先順位を全部決める。
+
+> 次買ってもらえる観点での品質は落とさない、クソみたいなものは売らない。
+> ただ**いつまでも終わらない無限ループでリリースにたどり着けないのはそれはそれで違う**。
+
+だから作業は「リリースブロッカー」と「リリース後」に切る。8類型に効かん作業は
+`doc/post-release-backlog.md` へ回す。
+
+**商品の形**: 36冊のバラPDF（`dist/pdf/`）＋ 写経用 scaffold ZIP の2点。
+1冊綴じは作らん。ZIP に教材は入れん（2026-08-31 に局長判断で外した）。
+
+---
+
+## 現在地 — 不満10類型の消化状況
+
+| # | 不満 | 状態 | 証拠 |
+|---|---|---|---|
+| ① | ZIPを開いたら商品外が入っとる | ✅ | 12.1MB/221ファイル → **86.6KB/74ファイル**。`material/` 丸ごと0件 |
+| ② | Day01 で環境構築に失敗して進めん | ✅ | つまずき節・所要時間・環境図を追加 |
+| ③ | **写経したのに動かん** | ✅ | `build_day_snapshots.py --all --verify` で **29/30**。day11 は教材が「ここは赤くなります」と断っとる想定どおり |
+| ④ | 誤字・矛盾 | ✅ | 70件＋走査95件の裏取りで29件 |
+| ⑤ | 紙面が崩れる | ✅ | `check_pdf_book.py` / `check_page_layout.py` とも **36冊 exit 0** |
+| ⑥ | スクショと自分の画面が違う | 🔶 **未完** | 撮り直したのは day01/02/08 の**7枚だけ** |
+| ⑦ | コードだけ並んで説明が無い | 🔶 **未完** | mermaid 39枚のまま。day01/02/03 は 0図 |
+| ⑧ | 30日終わって理解が残らん | ✅ | 理解チェック 3問×30日 = 90問 |
+| ⑨ | Step ごとに撮ってへん（同じ画像の使い回し） | 🔶 **未完** | **21箇所・のべ50回**が使い回し。うち7枚だけ解消 |
+| ⑩ | 写真に「まだ作ってへんもの」が映る | 🔶 **未完** | ⑨と同じ作業で一緒に潰す |
+
+**出荷を止めるものはゼロ。**残る⑥⑦⑨⑩は「壊れとるのを直す」やのうて「足りん分を足す」側。
+ただし ¥10,000 の商品として見られたら弱点になる、と局長へは伝えてある。
+
+---
+
+## 残作業① — 写真の撮り直し（⑥⑨⑩・最優先）
+
+### 何が問題か
+
+`check_visualization.py` が「スクショ位置3箇所以上」を機械で強制しとる。**それを通すために
+同じ画像を貼って数を稼いどった。**検査が品質を下げる方向に効いとった。
+
+参照のべ114回に対して実画像64枚。**21箇所・のべ50回が使い回し。**
+day21 が `report.png` を5回、day17 が `my-task.png` を4回。
+
+### 基盤は全部動く状態で置いてある
+
+| 道具 | 場所 | 役割 |
 |---|---|---|
-| ① | ZIPを開いたら商品外が入っとる | ✅ **完了**（11ファイル/930.8KB → 0） |
-| ② | Day01 で環境構築に失敗して進めん | ✅ **完了**（規格統一・つまずき・所要時間・実装ステップ一覧） |
-| ③ | 写経したのに動かん | ✅ **完了**（30日通しで tsc・build とも OK 29/30。落ちた day11 は教材が本文で「型エラーが5件残る」と断って理由も説明しとる想定どおりの状態で、現物を読んで確認ずみ） |
-| ④ | 誤字・矛盾を1個見つける | ✅ **70件修正** |
-| ⑤ | 紙面が崩れとる | ✅ **機械検査は完了**（変更7日を再組版したうえで `check_pdf_book.py` `check_page_layout.py` とも 36冊すべて緑）。目視は166ページぶんで崩れゼロ、残りはセッション上限で中断 |
-| ⑥ | スクショと自分の画面が違う | 🔄 撮影基盤が稼働。4枚をワイが目視 → 赤枠は合格・2件差し戻し |
-| ⑦ | 説明が無い | 🔶 用語節10本 ✅／図30枚は作図中 |
-| ⑧ | 30日終わって理解が残らん | ✅ **完了**（90問／30日） |
-| ⑨ | Step ごとに撮ってへん | 🔄 重複検査を新設（既定 WARNING）。実測 参照のべ125回／実64枚／17ファイル20組が重複 |
-| ⑩ | 写真にまだ作ってへんものが映る | 🔄 「その日のコード × その日のデータ」で撮り直し |
+| 日別ツリー再構成 | `scripts/curriculum-qa/build_day_snapshots.py` | 「その日のコード状態」を組む |
+| 撮影 | `scripts/curriculum-qa/shoot_screenshots.py` | Playwright で撮る。赤枠は `boundingBox()` 基準なので座標がズレん |
+| 撮影表 | `scripts/curriculum-qa/screenshot-shot.json` | `name/day/path/login/actions/wait_for/marks/full_page/clip/note/viewport` の宣言 |
+| 撮り直し計画 | `doc/review-handoff/screenshots-plan.md` | 21箇所の内訳と、各カットで赤枠にすべき要素 |
+| 重複ゲート | `check_visualization.py`（同一日の画像重複を落とす検査を追加済み） | 水増しの再発を止める |
 
----
+### 手順（実測済み・そのまま踏める）
 
-## 環境（全部解決ずみ）
+```bash
+# 1. Docker を起こす（コンテナ内では毎回要る）
+setsid nohup dockerd --iptables=false --ip6tables=false > /tmp/dockerd.log 2>&1 < /dev/null &
+until docker info >/dev/null 2>&1; do sleep 2; done
 
-Docker 29.3.1（`setsid nohup dockerd --iptables=false` で常駐）／poppler 5本／npm install／rsync・zip・unzip／Chromium は `/opt/pw-browsers`。
+# 2. 撮影用DBを立てる（ホスト側 25532 番）
+docker compose up -d db
 
-**Vivliostyle の組版はこの環境で通る**（day01 が62ページ・`check_pdf_book.py` exit 0）。
-
----
-
-## Wave 2 の成果（コミット `bfa38a1` / 37ファイル・2,295行追加）
-
-| 担当 | 事実の誤り | 新設節 |
-|---|---:|---:|
-| day01-04 | 20 | 24 |
-| day05-12 | 16 | 11 |
-| day13-21 | 23 | 9 |
-| day22-30 | 6＋構造5 | 13 |
-| **計** | **70** | **57** |
-
-詳細は `fix-day01-04.md` / `fix-day05-12.md` / `fix-day13-21.md` / `fix-day22-30.md`。
-
-**特に重かったもの**
-- lint 完了条件の矛盾 — `day05:356` が正しいと確定（根拠 `scaffold-from-scratch.sh:316` の `biome check` は formatter も走る）。day26/28 と巻き添え2件を直した
-- `ProjectDetailViewProps` が `project-detail-view.tsx:31-40` で必須8個・`?` ゼロやのに教材は5個 → Day11 のビルド失敗の主因
-- rate limit「10回」→ `rate-limit.ts:5` の `EMAIL_IP_LIMIT = 5`
-- day27 の立場割れ → 実ファイルを diff して「読者が新しく書くコードは1行も無い」と確定 → **照合日に一本化**
-- day01〜04 の所要時間を32 Step 全部に付与（`分 ≒ ceil(コード行数÷20)+3` を day05/06 の全19 Step から実測で導出）
-
-**走査を現物で覆して「直さんかった」判断が2件** — `seed.ts:126-165` の実測で `scan-day09-16` の指摘が誤りと判明（seed の変数名 `user1`/`user2` が1つズレた命名で、走査が取り違えとった）。**鵜呑みで直しとったら正しい教材を壊しとった。**
-
----
-
-## ローカル検算（コミット後に実行）
-
-```
-check_crossref  → ✅ day間の参照 OK（36 ファイル）
-check_step_time → ✅ 所要時間の合計 OK（30 ファイル）※ 26→30 に増えた
-check_why       → ✅ コード直後の説明 OK（1762 ブロック / 30 ファイル）
+# 3. 1日ずつ撮る。--day は数字1つだけ。複数日を1回で渡すと弾かれる
+python3 scripts/curriculum-qa/shoot_screenshots.py --day 5
+python3 scripts/curriculum-qa/shoot_screenshots.py --day 6
 ```
 
+### ハマりどころ（全部踏んだ）
+
+- `--day day05` は通らん。**数字のみ・1日ずつ**（引数解析が `rest[1].isdigit()` を見る）
+- `project_members_user_id_fkey` でシードが落ちたら、たいてい**DBコンテナが途中で止まっとる**。
+  シードのバグやない。`docker compose up -d db` で立て直す
+- `nohup ... &` のラッパーは即座に終了するので「終わった」と誤読しやすい。
+  **`until <条件>; do sleep N; done` で待つ**
+- `material/**/screenshots/*.png` は Read が拒否される。**scratchpad へコピーしてから Read**
+
+### 撮ったあと必ずやること
+
+**1枚ずつ Read で目視する。**「まだ作ってへんナビ・メニュー・データが映ってへんか」は
+機械では拾えん。見た枚数を報告に書く。
+
 ---
 
-## 判断の記録
+## 残作業② — 図の追加（⑦）
 
-- **図は66箇所→30枚に絞る**（局長へ提案・異議なしで着手）。day01〜03 に最低1枚ずつ（現状0枚・環境構築の詰まりに直結）、あとは各日1枚上限
-- **画像重複検査は既定 WARNING で入れる。**今21箇所が引っかかるので、いきなり FAIL にすると corpus 全体が落ちて全員止まる。撮り直しが済んでから FAIL へ上げる
+`doc/review-handoff/diagrams-added.md` に「どの節に図が要るか」の判定結果がある。
+判定は1問だけ: **「この節を読んだ人が紙に描いて確かめたくなるか」**。
+
+描かんもの3類型。水増しを防ぐため。
+- 手順の羅列を四角で囲んだだけの図
+- 箇条書きをそのまま絵にした図
+- 画面写真がある所の重複
+
+day01/02/03 が 0図。Docker / Node / Postgres の繋がりが最優先。
 
 ---
 
-## 未着手
+## 絶対に踏んだらアカン地雷
 
-写真70枚の撮影本番／36冊組版と約400ページの目視／#386 マージ／添え状／成果物3点の `SendUserFile`。
+### ZIP の除外を rsync に書くな
+
+`sale_package.py:94` が `build-zip.sh` の**全文**から `--exclude="..."` を正規表現で拾って
+「読者が自分で書くルーター」の一覧を組んどる。`build-zip.sh` の rsync に除外を足すと
+その一覧が汚れて `check_zip_reference` と `check_tag_balance` が壊れる。
+**コメントにもその書式を書いたらアカン**（ファイル内にその旨が書いてある）。
+
+除外が要るときは `zip -qr ... -x` 側に足し、`FILE_COUNT` の `find` も同じ条件に揃える。
+
+### 教材を触る前に必ずスキルを読む
+
+`material/**` を編集する前に `.claude/skills/material-writing/SKILL.md` を読む。任意やない。
+外部レビューで「AI独特の言い回しと翻訳文感」を指摘され、**商品として通用しないと判断された実績**がある。
+
+- 教材本文は**ですます体**。関西弁は会話用であって本文に持ち込まん
+- コードブロックの後には必ず「なぜこう動くか」を書く。手順の羅列は教材やない
+
+### 節の存在チェックは素の grep でやるな
+
+day03 の `## main` `## 現在できること` 等は README サンプルの**コードブロック内の文字列**。
+`curriculum_blocks.py` の `mask_code` / `heading_scan_view` を通す。
+
+### 新しい検査は4点セットで1本
+
+4点セットの内訳は次のとおり。
+
+1. `check_X.py` 本体
+2. `test_check_X.py`
+3. `check_quality.sh` の `CORPUS_CHECKS`(L204-220) と `SELF_TESTS`(L222-249) に登録
+4. `material-gate.yml` Gate 4 の `*_status` 集計（L401 のロールアップ）
+
+どれか1つ欠けると「検査を足したのにゲートが見てへん」状態になる。
+
+### 子分の報告を鵜呑みにするな
+
+走査95件を裏取りしたら **real 25 / false 42 / unclear 1 = 誤り率62%**。
+反証を噛ませてへんかったら**正しい教材を42箇所壊しとった**。逆に、走査が**見落とした**件も
+自分の grep で見つかっとる（day29 の `名前は必須です` 4件目）。
+
+必ず自分でファイルを開いて裏を取る。子分には「反証しろ・既定は間違っとる」と投げる。
+
+### 数字の報告
+
+定義は**局長の言葉から取る**。before/after を同一定義・同一母集団で測り、母集団を必ず添える。
+定義を自分で狭めた数字は出さん。
+
+### GitHub 操作
+
+**PR の作成・更新・マージ、Issue の close は明示指示なしには触れん**（リポジトリのルール）。
+PR #388 の本文は古い（「6.2M / 174ファイル」で止まっとる）が、局長の一言が無いと直せん。
+
+### Git
+
+- `git reset --hard/--soft/--mixed` 禁止
+- `--no-verify` 禁止。提案すること自体が違反
+- `--force` 禁止。`--force-with-lease` のみ
+- develop・main への直接 push 禁止
+
+---
+
+## 検証コマンド一覧（全部この環境で通る）
+
+```bash
+# 原稿
+npx textlint "material/**/*.md"                                          # 0件
+bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/  # ALL CHECKS PASS
+
+# 写経したら動くか
+python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify      # 29/30
+
+# 配布物
+bash scripts/build-zip.sh                                                # 74ファイル / 86.6KB
+python3 scripts/curriculum-qa/test_sale_package.py                       # 31/31
+
+# 紙面
+python3 scripts/pdf-book/build_pdf_book.py <変更した.md>                 # 焼き直し
+python3 scripts/pdf-book/check_pdf_book.py                               # 36冊 exit 0
+python3 scripts/pdf-book/check_page_layout.py                            # 36冊 exit 0
+```
+
+---
+
+## 環境の状態
+
+| 前提 | 状態 |
+|---|---|
+| Docker | ✅ `dockerd --iptables=false` で起動する。**コンテナ再起動のたびに立て直しが要る** |
+| npm registry | ✅ 到達する |
+| poppler | ✅ `pdftotext` `pdfinfo` `pdffonts` `pdftoppm` `pdfimages` 全部ある |
+| Chromium | ✅ `/opt/pw-browsers/chromium`。Vivliostyle と撮影の両方で使う |
+| 撮影用DB | postgres 16-alpine / ホスト 25532 / user:user@localhost:25532/taskapp |
+
+---
+
+## これまでの記録（詳細が要るとき）
+
+| ファイル | 中身 |
+|---|---|
+| `cover-letter.md` | 局長への添え状。潰した不満の before/after、見たページ枚数、リリース後へ回した一覧 |
+| `scan-day01-08.md` 〜 `scan-day25-30-appendix.md` | 36本の走査結果（生・未検証） |
+| `sweep-findings-raw.md` | 走査95件の生データ。**62%が誤り**なので単体で信用せん |
+| `fix-day01-04.md` 〜 `fix-day22-30.md` | 実際に直した内容 |
+| `day-snapshots-result.md` | 30日再構成ビルドの結果 |
+| `page-layout-check.md` | 紙面検査の結果 |
+| `screenshots-plan.md` | **残作業①の作業指示書** |
+| `diagrams-added.md` | **残作業②の判定結果** |
+| `duplicate-image-gate.md` | 画像重複ゲートの設計 |
+| `gate1-summary.md` | Gate 1 で確定した件数 |
