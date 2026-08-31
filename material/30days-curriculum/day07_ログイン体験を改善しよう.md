@@ -335,7 +335,7 @@ export async function createSession(
 }
 ```
 
-`exp` を秒で数えているのは、JWT の決まりが秒を使うためです。`Date.now()` はミリ秒を返すので、1000 で割らずに入れると有効期限が1000倍先になり、実質的に期限切れしないトークンができます。
+`exp` を秒で数えているのは、JWT の決まりが秒を使うためです。`Date.now()` はミリ秒を返すので 1000 で割ります。ただし、この値がそのままトークンの期限になるわけではありません。`encrypt` は最後に `.setExpirationTime('7d')` を呼んでおり、これがトークンの `exp` を7日後で上書きします。ここで計算した値は、アプリが手元で持っておくための記録です。
 
 期限をトークンの中と Cookie の両方に持たせているのは、片方だけでは足りないからです。Cookie の期限だけだと、利用者が手元で Cookie の期限を書き換えて延命できます。トークンの中にも `exp` を入れておけば、署名で守られているので書き換えられません。
 
@@ -2474,7 +2474,7 @@ export const config = {
 | ログインしてもトーストが出ない | auth ルーターが root.ts に登録されていない | root.ts で `auth: authRouter` を確認 |
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
-| `relation "User" does not exist` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
+| `The table \`public.users\` does not exist in the current database.` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
 | `ログイン試行回数が上限に達しました` | 同じメールで5回失敗したための一時ロック | 15分待つか、別のメールアドレスで試す。コードの問題ではない |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
 
@@ -2505,7 +2505,7 @@ A. JWT に入っている `role` は、ログインした瞬間の値のまま�
 
 **Q2. `createSession` の `Math.floor(Date.now() / 1000)` から `/ 1000` を消すと、何が起きますか。**
 
-A. JWT の `exp` は秒で数える決まりです。ところが `Date.now()` が返すのはミリ秒です。`/ 1000` を消すと、ミリ秒の数値をそのまま秒として書き込みます。その結果、有効期限が1000倍先になります。実質的に期限切れしないトークンができあがります。
+A. トークンの期限は変わりません。`encrypt` の `.setExpirationTime('7d')` が `exp` を7日後で上書きするので、`createSession` で計算した値はトークンには残らないためです。Cookie の寿命も `maxAge: COOKIE_MAX_AGE` という定数で決まっていて、この計算とは別です。`/ 1000` を消すと、`SessionPayload` が持つ数字だけが1000倍ずれます。期限を判断しているのがどの1行なのかを、ここで確かめてください。
 
 **Q3. `login` で「そのメールアドレスは存在しない」と「パスワードが違う」を、同じ文言で返しているのはなぜですか。**
 
