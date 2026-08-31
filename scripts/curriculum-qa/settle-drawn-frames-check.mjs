@@ -6,10 +6,6 @@
 // 動かして、描きかけの形で止まらんことを見る。
 //
 // ブラウザが無い機械（CI の一部）では SKIP と出して 0 で抜ける。挙動が違うときだけ落ちる。
-import { chromium } from 'playwright';
-// shoot() が実際に呼ぶのは settleAnimations のほうや。そちらを叩くことで、
-// 「収束待ちを呼ぶ経路ごと消した」場合もこの検査が赤くなる。
-import { settleAnimations } from './shoot-page.mjs';
 
 const FINAL_D = 'M0 100 L100 100';
 
@@ -39,11 +35,19 @@ const SPINNING = `<!doctype html><html><body>
 
 const fails = [];
 let browser;
+let settleAnimations;
 try {
+  // 取り込みも try の中でやる。`import` を頭に書くと、playwright が入ってへん機械では
+  // **この行に来る前に**読み込みが落ちて、下の SKIP へ入れん。`shoot-page.mjs` も
+  // playwright を取り込むので同じ扱いにする。
+  // shoot() が実際に呼ぶのは settleAnimations のほうや。そちらを叩くことで、
+  // 「収束待ちを呼ぶ経路ごと消した」場合もこの検査が赤くなる。
+  const { chromium } = await import('playwright');
+  ({ settleAnimations } = await import('./shoot-page.mjs'));
   browser = await chromium.launch();
 } catch (err) {
   // 進捗の出力に console は使えん（biome の noConsole は warn / error だけ許す）。
-  process.stdout.write(`SKIP: ブラウザを起動できんかった（${err.message.split('\n')[0]}）\n`);
+  process.stdout.write(`SKIP: ブラウザを用意できんかった（${err.message.split('\n')[0]}）\n`);
   process.exit(0);
 }
 

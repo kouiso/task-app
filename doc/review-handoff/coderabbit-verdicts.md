@@ -221,3 +221,12 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 波及の注意: `TS7006` / `TS7053` は識別子の名を含まん（`getById` が解決でけへんことで型が any へ落ちた結果）。せやから marker は「全行」やのうて「どれか1行」に課し、代わりに件数と場所で範囲を締めた。
 - 回帰テスト: (a) 断り書きどおりの5件は免除 (b) 6件目が増えたら免除せん (c) `getById` に1行も触れん5件は免除せん (d) 別ファイルへ広がったら免除せん (e) EXPECTED_RED に無い日は免除せん (f) build 側も無関係な型エラーは免除せん (g) `broken_days()` を実際に通して、健全な日・断り書きどおりの day11・無関係な赤が紛れた day11 の3つが正しく分かれる。戻すと `❌ 断り書きの件数を超える型エラーまで想定内にしている` ほか3件で落ちる。
 - 実機での確認: `--day 11 --verify` を実際に流して **exit 0**・`day11 の型エラーは想定どおり` が出ることを確かめた。実物の tsc は `project-detail-view.tsx` の29行目（`TS2339` `getById`）・144行目（`TS7006`）・167行目（`TS7053`）ほかで、**5件・同一ファイル・`getById` あり**。つまり教材本文が書いとる「5件出ます」は実測と一致しとる。結果ファイルは事前に退避して復元した（`--day` は30日ぶんの記録を上書きするため）。
+
+## [PR #389 十一巡目] scripts/curriculum-qa/settle-drawn-frames-check.mjs  (bug・採用／自分の逃げ道が塞がっとった)
+- 指摘: ブラウザが無いときの退避が動いてへん（Codex）
+- 根拠: 自分で再現した。`import { chromium } from 'playwright'` を頭に書いとったので、playwright が入ってへん機械では**その行に来る前に**読み込みが落ちる。`node_modules/playwright` を一時的に退けて走らせると `ERR_MODULE_NOT_FOUND` で exit 1。`./shoot-page.mjs` も playwright を取り込むので同じ経路で落ちる。「ブラウザが無い機械では SKIP と出して退ける」と書いておきながら、その道が塞がっとった。
+- 直し方（適用済み）: 取り込みを `try` の中の動的 `import()` へ移した。`chromium` も `shoot-page.mjs` も同じ扱い。
+- 実測（両方向）:
+  - playwright を退けた状態 → `SKIP: ブラウザを用意できんかった（Cannot find package 'playwright' ...）` / exit 0。python 側の検査も `⏭️ 実ブラウザ検査を退けた` を出して 9/9 合格
+  - 戻した状態 → `✅ settle_drawn_frames 実ブラウザ検査 4/4 合格`
+  - 直す前（静的 import）に退けた状態 → `ERR_MODULE_NOT_FOUND` で exit 1。つまり指摘どおり壊れとった
