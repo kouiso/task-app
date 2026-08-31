@@ -1303,26 +1303,39 @@ EXPECTED_RED = {
 #
 # 波及して出る `TS7006` / `TS7053` は識別子の名を含まん（`getById` が解決でけへんことで
 # 型が any へ落ちた結果や）。せやから marker は「全行」やのうて「どれか1行」に課す。
-# ただしコードの集合だけでは、同じコードの無関係な診断へ差し替えても通ってまう。
-# `diagnostics` はファイル位置を除いた診断コードとメッセージの接頭辞を、重複込みで
-# 正本として持つ。行番号や TypeScript が付ける後半の型情報は版で変わりうるので比較せん。
+# 代わりに件数と場所を効かせて、範囲が広がったら気づけるようにしてある。
+# 診断1件を「どこで・どのコードが」まで縮めた形。メッセージの尻尾は型の中身を丸ごと
+# 吐くので長さで切られる。位置とコードなら切られん上に、1件でも入れ替われば必ず変わる。
+DIAGNOSTIC_HEAD = re.compile(r"^(.*?\(\d+,\d+\)): error (TS\d+):")
+
+
+def diagnostic_heads(errors: tuple[str, ...]) -> tuple[str, ...] | None:
+    """エラー行を「位置＋コード」の多重集合へ縮める。1行でも診断の形やなければ None。"""
+    heads = []
+    for line in errors:
+        m = DIAGNOSTIC_HEAD.match(line)
+        if m is None:
+            return None
+        heads.append(f"{m.group(1)}:{m.group(2)}")
+    return tuple(sorted(heads))
+
+
 EXPECTED_RED_SIGNATURE = {
+    # `diagnostics` は day11 のツリーで `npx tsc --noEmit` を実際に流して採った5件
+    # （2026-08-31 実測）。**件数・場所・コードの3つでは足りん。**「TS7006 が1件消えて、
+    # 同じファイルの別の場所に無関係な TS7006 が1件入る」と、件数も場所もコードも
+    # 揃うたまま別の欠陥が想定内で通ってまう。位置まで名指しして、**多重集合が
+    # 丸ごと一致した時だけ**免除する。教材を直して診断が変わったら、ここも実測で
+    # 採り直す（＝人が断り書きを見直す機会になる）。
     11: {
         "marker": "getById",
-        "count": 5,
         "path": "project-detail-view.tsx",
         "diagnostics": (
-            ("TS2339", "Property 'getById' does not exist"),
-            ("TS7006", "Parameter 'member' implicitly has an 'any' type."),
-            ("TS7006", "Parameter 'member' implicitly has an 'any' type."),
-            (
-                "TS7053",
-                "Element implicitly has an 'any' type because expression of type 'any' can't be used to index",
-            ),
-            (
-                "TS7053",
-                "Element implicitly has an 'any' type because expression of type 'any' can't be used to index",
-            ),
+            "src/component/project/project-detail-view.tsx(144,44):TS7006",
+            "src/component/project/project-detail-view.tsx(167,31):TS7053",
+            "src/component/project/project-detail-view.tsx(237,43):TS7006",
+            "src/component/project/project-detail-view.tsx(246,26):TS7053",
+            "src/component/project/project-detail-view.tsx(29,47):TS2339",
         ),
         # `next build` は最初の型エラー1件で止まる。包み紙を除いたあとに、本文で
         # 断っている根っこの診断だけが残ることも固定する。
@@ -1346,32 +1359,13 @@ def tsc_failure_is_expected(result: DayResult) -> bool:
     if signature is None:
         return False
     errors = expected_red_errors(result)
-    if len(errors) != signature["count"]:
-        return False
     if not any(signature["marker"] in line for line in errors):
         return False
     if not all(signature["path"] in line for line in errors):
         return False
-    # 断り書きに載っとらんコードやメッセージが1行でも混ざったら、それは別の欠陥。
-    # 行番号は比較せず、同じ診断が何件あるかを重複込みで照合する。
-    remaining = list(signature["diagnostics"])
-    for line in errors:
-        match = re.search(r"\b(TS\d{4}):\s*(.*)$", line)
-        if match is None:
-            return False
-        code, message = match.groups()
-        matched = next(
-            (
-                index
-                for index, (expected_code, expected_message) in enumerate(remaining)
-                if code == expected_code and message.startswith(expected_message)
-            ),
-            None,
-        )
-        if matched is None:
-            return False
-        remaining.pop(matched)
-    return not remaining
+    # 位置まで名指しした多重集合が丸ごと一致した時だけ免除する。件数・コードの一致では
+    # 「1件消えて別の場所に1件入る」入れ替わりを見逃す。
+    return diagnostic_heads(errors) == tuple(sorted(signature["diagnostics"]))
 
 # `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
 # これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は

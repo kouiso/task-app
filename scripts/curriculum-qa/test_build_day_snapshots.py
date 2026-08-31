@@ -598,6 +598,25 @@ def check_provenance() -> list[str]:
     return fails
 
 
+def documented_day11_errors() -> tuple[str, ...]:
+    """断り書きの現物（`EXPECTED_RED_SIGNATURE[11]["diagnostics"]`）から tsc の行を組む。
+
+    位置を手で並べると、断り書きを更新した時にここだけ古いまま緑になる。
+    `getById` は本文が名指ししとる識別子なので、TS2339 の行にだけ載せる。
+    """
+    signature = target.EXPECTED_RED_SIGNATURE[11]
+    lines = []
+    for head in signature["diagnostics"]:
+        where, code = head.rsplit(":", 1)
+        tail = (
+            f"Property '{signature['marker']}' does not exist"
+            if code == "TS2339"
+            else "Parameter implicitly has an 'any' type"
+        )
+        lines.append(f"{where}: error {code}: {tail}")
+    return tuple(lines)
+
+
 def check_triage_section() -> list[str]:
     """NG の日の切り分けが、調べていないものを勝手に断定しないことを確かめる。"""
     fails = []
@@ -617,18 +636,7 @@ def check_triage_section() -> list[str]:
         fails.append("❌ EXPECTED_RED が空で、想定内の赤の扱いを確かめられない")
     else:
         signature = target.EXPECTED_RED_SIGNATURE[expected_day]
-        documented_errors = (
-            f"src/component/project/{signature['path']}(29,4): error TS2339: "
-            f"Property '{signature['marker']}' does not exist",
-            f"src/component/project/{signature['path']}(144,4): error TS7006: "
-            "Parameter 'member' implicitly has an 'any' type.",
-            f"src/component/project/{signature['path']}(167,4): error TS7006: "
-            "Parameter 'member' implicitly has an 'any' type.",
-            f"src/component/project/{signature['path']}(237,4): error TS7053: "
-            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
-            f"src/component/project/{signature['path']}(246,4): error TS7053: "
-            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
-        )[: signature["count"]]
+        documented_errors = documented_day11_errors()
         documented = target.DayResult(
             expected_day, 80, True, "NG", "OK",
             errors=documented_errors[:3], tsc_errors=documented_errors,
@@ -1100,18 +1108,7 @@ def check_expected_red_build_exemption() -> list[str]:
     documented = target.DayResult(
         day=11, files=92, tree_ok=True, tsc="NG", build="OK",
         errors=(),
-        tsc_errors=(
-            f"src/component/project/project-detail-view.tsx(29,4): error TS2339: "
-            "Property 'getById' does not exist",
-            "src/component/project/project-detail-view.tsx(144,4): error TS7006: "
-            "Parameter 'member' implicitly has an 'any' type.",
-            "src/component/project/project-detail-view.tsx(167,4): error TS7006: "
-            "Parameter 'member' implicitly has an 'any' type.",
-            "src/component/project/project-detail-view.tsx(237,4): error TS7053: "
-            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
-            "src/component/project/project-detail-view.tsx(246,4): error TS7053: "
-            "Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
-        ),
+        tsc_errors=documented_day11_errors(),
     )
     if not target.tsc_failure_is_expected(documented):
         fails.append("❌ 断り書きどおりの型エラー5件まで異常扱いしている")
@@ -1404,13 +1401,7 @@ def check_expected_red_rejects_unknown_code() -> list[str]:
     path = "src/component/project/project-detail-view.tsx"
     documented = target.DayResult(
         day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
-        tsc_errors=(
-            f"{path}(29,4): error TS2339: Property 'getById' does not exist",
-            f"{path}(31,4): error TS7006: Parameter 'member' implicitly has an 'any' type.",
-            f"{path}(32,4): error TS7006: Parameter 'member' implicitly has an 'any' type.",
-            f"{path}(33,4): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
-            f"{path}(34,4): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index an object",
-        ),
+        tsc_errors=documented_day11_errors(),
     )
     if not target.tsc_failure_is_expected(documented):
         return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
@@ -1424,20 +1415,6 @@ def check_expected_red_rejects_unknown_code() -> list[str]:
     if target.tsc_failure_is_expected(smuggled):
         return ["❌ 断り書きに無いコードが混ざった day11 を免除している"]
 
-    # 許可されたコードでも、別の implicit-any / indexing 診断へ差し替えたら通さない。
-    swapped = documented._replace(
-        tsc_errors=(
-            documented.tsc_errors[0],
-            documented.tsc_errors[1],
-            documented.tsc_errors[2],
-            documented.tsc_errors[3].replace(
-                "expression of type 'any'", "expression of type 'string'"
-            ),
-            documented.tsc_errors[4],
-        )
-    )
-    if target.tsc_failure_is_expected(swapped):
-        return ["❌ 許可コードでも別の診断へ差し替えた day11 を免除している"]
     return []
 
 
@@ -1549,6 +1526,37 @@ def check_reachable_server_failure_is_not_db_absence() -> list[str]:
     return fails
 
 
+def check_expected_red_rejects_swapped_diagnostic() -> list[str]:
+    """件数もコードも場所も揃うたまま**入れ替わった**診断を免除せんこと。
+
+    断り書きの1件が消えて、同じファイルの別の場所に同じコードの別の欠陥が入ると、
+    件数（5）・場所（1ファイル）・コード（許された3種）・識別子（`getById`）が
+    全部そのまま揃う。所属だけを見とると、新しい欠陥が想定内で通って `--verify` が
+    exit 0 になる。位置まで名指しした多重集合の一致で初めて弾ける。
+    """
+    documented = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
+        tsc_errors=documented_day11_errors(),
+    )
+    if not target.tsc_failure_is_expected(documented):
+        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
+
+    # 断り書きの TS7006 を1件落として、同じファイルの別の行の TS7006 を1件足す。
+    dropped = [ln for ln in documented.tsc_errors if "(144,44)" not in ln]
+    swapped = documented._replace(
+        tsc_errors=tuple(dropped)
+        + (
+            "src/component/project/project-detail-view.tsx(311,12): error TS7006: "
+            "Parameter implicitly has an 'any' type",
+        )
+    )
+    if len(swapped.tsc_errors) != len(documented.tsc_errors):
+        return ["❌ 入れ替えの fixture が件数を変えてしまっている（検査が成立せん）"]
+    if target.tsc_failure_is_expected(swapped):
+        return ["❌ 入れ替わった診断の day11 を想定内として免除している"]
+    return []
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1574,11 +1582,15 @@ CHECKS = (
     ("成果物への SKIP の記録", check_result_doc_records_skip),
     ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
-    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
+    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),
+    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),
+    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
     ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
     ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),
     ("prerender の見出しは DB を隠さん", check_prerender_wrapper_does_not_hide_db),
-    ("届いた上での失敗は DB 不在やない", check_reachable_server_failure_is_not_db_absence),    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
+    ("届いた上での失敗は DB 不在やない", check_reachable_server_failure_is_not_db_absence),
+    ("入れ替わった診断は免除せん", check_expected_red_rejects_swapped_diagnostic),
+    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 
