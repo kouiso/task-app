@@ -324,3 +324,18 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 6. `diagrams-added.md:9` 集計コマンドが再現でけへん（Minor・採用）→ 単引用符内のバックスラッシュでフェンスに当たらず、`eval` すら `unexpected EOF` で落ちとった。`grep -c` を複数ファイルへ当てると合計にならんことも併記。差し替え後のコマンドを実行して corpus 71・day01〜29 が 69 を再現した。**数字自体は正しかったので本文の値は動かしてへん。**
 7. `progress.md:5` 採用と不採用の区別が無い（Minor・採用）→「全部採用して直しとる」が306行の「取らんと決めたもの（返信済み）」と食い違う。「成立した指摘は全部採用」に直し、不採用分の置き場も書いた。
 8. `diagrams-added.md:142` 解消済みの問題が残存問題に残っとる（Minor・採用）→ 136行が「未参照の画像なし・ALL CHECKS PASS」と書いた直後の §5 に、同じ8枚が残課題として並んどった。落とした。
+
+## [PR #389 十六巡目] Codex 2件（全部採用）
+
+1. `build_day_snapshots.py:1404` **説明の付かん赤が DB の赤に紛れて SKIP へ落ちる**（P1・採用／ただし直し方は指摘と逆向き）
+
+   - 根拠: 本物の失敗の印は `REAL_BUILD_FAILURE_MARKERS` という allowlist なので、**載せてへん文言は必ず出る**。Codex の挙げた `Error: Unauthorized while prerendering /admin` が `P1001` と同じ出力に混ざると、`error_line_pool()` は両方残すのに `has_real_build_failure()` が拾えず、DB マーカーが在るだけで `build_failure_is_database_only()` が真になる。`--verify` は壊れた日を持ったまま exit 0。十四巡目・十五巡目と同じ「allowlist の穴」の、いちばん深いところ。
+   - **指摘の直し方はそのまま採れん。** Codex は「未分類の行は失敗として扱え」と言うが、`next build` は根本原因を包み紙（`Failed to collect page data` 等）で包んで出すので、それをやると包み紙自体が失敗扱いになり、**DB の無い機械では毎回赤くなって SKIP が死ぬ**。docstring がその経緯（3回直して3回破れた）を残しとる。
+   - 直し: 包み紙の一覧 `BUILD_NOISE_MARKERS` を新設し、判定を「**SKIP を名乗るには、出とる全部のエラー行が DB マーカーか包み紙で説明できること**」へ倒した。allowlist で「本物か」を当てにいくのをやめて、無罪の側に立証責任を置く形。既存25本はそのまま通る（＝DB だけの回を止めてへん）。
+   - 回帰テスト `check_unclassified_error_blocks_skip` は2方向を見る。(a) 包み紙＋DB＋説明の付かん行 → SKIP にせん (b) 包み紙＋DB だけ → これまでどおり SKIP。戻すと `❌ 説明の付かんエラーを DB だけの失敗として SKIP に落としている` で落ちる（26 → 25/26）。
+
+2. `shoot-page.mjs:408` **窓を付け替えたあとの収束を待ってへん**（P2・採用）
+
+   - 根拠: `settleAnimations()` は 408行、`fitToContent()` が窓を付け替えるのは 412行。付け替えは `ResponsiveContainer` と Recharts に描き直しをさせるので、**408行で待った収束はその時点で無効**。`fitToContent()` が持っとるのは `waitForTimeout(300)` の決め打ちだけで、これはこの PR が他所で潰した型がそのまま残っとった箇所。全ページ撮影（day21 の統計カード等）で描き直しの途中が写る。
+   - 直し: `fitToContent()` の中、窓を付け替えた直後の 300ms のあとに `settleAnimations()` を呼ぶ。呼び出し側やのうて付け替えた場所で待つので、`fitToContent()` を使う経路は全部直る。
+   - 検証: `shoot-page.mjs` の読み込みが通ること（`settleAnimations` / `settleDrawnFrames` の export を確認）と、実ブラウザ検査 4/4 合格。

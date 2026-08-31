@@ -1259,6 +1259,44 @@ def check_tree_failure_is_never_expected() -> list[str]:
     return []
 
 
+def check_unclassified_error_blocks_skip() -> list[str]:
+    """説明の付かんエラー行が DB の赤に紛れとったら SKIP にせんこと。
+
+    本物の失敗のマーカーは allowlist なので、載せてへん文言は必ず出る。
+    `Error: Unauthorized while prerendering /admin` のような行が `P1001` と同じ出力に
+    混ざったとき、マーカーだけを見とったら「DB だけの失敗」に見えて SKIP へ落ち、
+    壊れた日が exit 0 で出ていく。SKIP を名乗る条件を「全行が DB か包み紙で説明できる」
+    に倒してあるので、説明の付かん行が1つでもあれば止まる。
+    """
+    fails: list[str] = []
+    unknown = target.error_line_pool(
+        "\n".join(
+            [
+                "Error: Failed to collect page data for /admin",
+                "Can't reach database server at `localhost`:`5432`",
+                "Error: Unauthorized while prerendering /admin",
+            ]
+        )
+    )
+    if target.build_failure_is_database_only(unknown):
+        fails.append("❌ 説明の付かんエラーを DB だけの失敗として SKIP に落としている")
+
+    # 包み紙と DB だけで構成された回は、これまでどおり SKIP のままであること。
+    # ここが赤くなると、DB の無い機械で全日が異常扱いになって検査が使えんくなる。
+    explained = target.error_line_pool(
+        "\n".join(
+            [
+                "Error: Failed to collect page data for /dashboard",
+                "PrismaClientInitializationError:",
+                "Can't reach database server at `localhost`:`5432`",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(explained):
+        fails.append("❌ 包み紙と DB だけの回まで判定できるものとして扱っている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1284,7 +1322,7 @@ CHECKS = (
     ("成果物への SKIP の記録", check_result_doc_records_skip),
     ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
-    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),
+    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),
 )
 
 

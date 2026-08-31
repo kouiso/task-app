@@ -266,6 +266,10 @@ async function fitToContent(page, current) {
   await page.setViewportSize({ width: current.width, height });
   // 高さが変わると折り返しと遅延読み込みが動く。落ち着いてから測り直す。
   await page.waitForTimeout(300);
+  // 窓の付け替えは ResponsiveContainer と Recharts に描き直しをさせる。呼び出し側が
+  // 撮る前に待った収束は、この時点で無効になっとる。決め打ちの 300ms だけやと遅い回で
+  // 描き直しの途中が写るので、ここでもう一度、形が止まるまで待つ。
+  await settleAnimations(page);
   return current.height;
 }
 
