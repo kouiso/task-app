@@ -337,5 +337,15 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 2. `shoot-page.mjs:408` **窓を付け替えたあとの収束を待ってへん**（P2・採用）
 
    - 根拠: `settleAnimations()` は 408行、`fitToContent()` が窓を付け替えるのは 412行。付け替えは `ResponsiveContainer` と Recharts に描き直しをさせるので、**408行で待った収束はその時点で無効**。`fitToContent()` が持っとるのは `waitForTimeout(300)` の決め打ちだけで、これはこの PR が他所で潰した型がそのまま残っとった箇所。全ページ撮影（day21 の統計カード等）で描き直しの途中が写る。
-   - 直し: `fitToContent()` の中、窓を付け替えた直後の 300ms のあとに `settleAnimations()` を呼ぶ。呼び出し側やのうて付け替えた場所で待つので、`fitToContent()` を使う経路は全部直る。
-   - 検証: `shoot-page.mjs` の読み込みが通ること（`settleAnimations` / `settleDrawnFrames` の export を確認）と、実ブラウザ検査 4/4 合格。
+- 直し: `fitToContent()` の中、窓を付け替えた直後の 300ms のあとに `settleAnimations()` を呼ぶ。呼び出し側やのうて付け替えた場所で待つので、`fitToContent()` を使う経路は全部直る。
+- 検証: `shoot-page.mjs` の読み込みが通ること（`settleAnimations` / `settleDrawnFrames` の export を確認）と、実ブラウザ検査 4/4 合格。
+
+## [PR #389 十七巡目] Codex 2件（全部採用）
+
+1. `test_shoot_screenshots.py:438` **実ブラウザ検査の成功センチネルを必須にする**（P2・採用）
+   - 根拠: `settle-drawn-frames-check.mjs` が何もせず exit 0 になっても、Python側は空出力や無関係な出力を成功として返しとった。実ブラウザの4アサーションを通った証拠が無いままCIが緑になる。
+   - 直し: `✅ settle_drawn_frames 実ブラウザ検査 4/4 合格` が出ん成功を失敗にする。ブラウザ不在のSKIPは従来どおり別経路で扱い、成功センチネル無しの偽成功だけを止める。成功終了＋無関係な出力の回帰テストを追加した。
+
+2. `pdf-book-gate.yml:220` **browser-only走行でもaptロック待ち上限を設定する**（P2・採用）
+   - 根拠: 撮影スクリプトだけの変更では `scope=none` のためpoppler stepが退けられる一方、Chromium stepの `playwright install --with-deps` はaptを呼ぶ。poppler stepだけに置いた `DPkg::Lock::Timeout` が効かず、runnerのdpkgロック待ちで15分を使い切る可能性がある。
+   - 直し: Chromium stepの冒頭にも同じapt設定を書き、browser-onlyでもロック待ちを180秒に制限する。

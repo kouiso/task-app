@@ -221,6 +221,8 @@ jobs:
         # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る
         timeout-minutes: 15
         run: |
+          # browser-only の変更では poppler step を退けるため、ここでも apt のロック待ち上限を設定する。
+          echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
           # --with-deps も内部で apt を叩く。ロック競合は上の設定で上限が付いとるが、
           # 掴み損ねた時のために1回だけやり直す
           npx playwright install --with-deps chromium \

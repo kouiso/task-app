@@ -435,6 +435,9 @@ def check_drawn_frame_settle() -> list[str]:
         if require_browser_check():
             return [f"❌ ブラウザ必須の走行なのに実ブラウザ検査を退けた: {reason}"]
         print(f"  ⏭️ 実ブラウザ検査を退けた: {reason}")
+        return []
+    if "✅ settle_drawn_frames 実ブラウザ検査 4/4 合格" not in out:
+        return ["❌ 実ブラウザ検査が4/4の成功結果を出していない"]
     return []
 
 
@@ -452,6 +455,29 @@ def check_node_missing_is_reported() -> list[str]:
         target.subprocess.run = original_run
     if len(failures) != 1 or "起動できんかった" not in failures[0] or "'node'" not in failures[0]:
         return [f"❌ Node 不在の理由が失敗として返っていない: {failures!r}"]
+    return []
+
+
+def check_browser_success_requires_sentinel() -> list[str]:
+    """ブラウザ検査が成功終了しても、4/4の実測結果が無ければ通さないこと。"""
+    original_run = target.subprocess.run
+    original_env = os.environ.get(REQUIRE_BROWSER_ENV)
+
+    def successful_noop(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["node"], 0, stdout="success", stderr="")
+
+    try:
+        target.subprocess.run = successful_noop
+        os.environ[REQUIRE_BROWSER_ENV] = "1"
+        failures = check_drawn_frame_settle()
+    finally:
+        target.subprocess.run = original_run
+        if original_env is None:
+            os.environ.pop(REQUIRE_BROWSER_ENV, None)
+        else:
+            os.environ[REQUIRE_BROWSER_ENV] = original_env
+    if len(failures) != 1 or "4/4" not in failures[0]:
+        return [f"❌ 4/4センチネルの無い成功を失敗にできていない: {failures!r}"]
     return []
 
 
@@ -500,6 +526,7 @@ CHECKS = (
     ("ワーカーの警告の転送", check_worker_warning_forwarding),
     ("描画の収束待ち（実ブラウザ）", check_drawn_frame_settle),
     ("Node 不在時のエラー", check_node_missing_is_reported),
+    ("実ブラウザ検査の成功結果", check_browser_success_requires_sentinel),
     ("ブラウザ必須の切り替え", check_require_browser_switch),
 )
 
