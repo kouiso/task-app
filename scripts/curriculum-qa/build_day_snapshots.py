@@ -1138,10 +1138,14 @@ def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...],
     link_node_modules(dest)
     tsc_ok, tsc_shown, tsc_all = run_step(["npx", "tsc", "--noEmit"], dest)
     build_ok, build_shown, build_all = run_step(["npm", "run", "build"], dest)
+    # 両方赤い日は両方見せる。`tsc_shown or build_shown` にすると、tsc が赤い時点で
+    # build の行が丸ごと消える。day11 のように tsc の赤が想定内の日で build 側に別の
+    # 欠陥が入ると、走行は exit 1 なのに画面と成果物には「知っとる型エラー」しか出ず、
+    # 落ちた本当の理由が読めん。
     return (
         "OK" if tsc_ok else "NG",
         "OK" if build_ok else "NG",
-        tsc_shown or build_shown,
+        tsc_shown + build_shown,
         build_all,
         tsc_all,
     )
@@ -1325,11 +1329,13 @@ def tsc_failure_is_expected(result: DayResult) -> bool:
 #   逆向きに `REAL_BUILD_FAILURE_MARKERS` へ入れて、必ず赤で止めとる。
 # - `P1012`: Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
 #   壊れたリレーションや型の書き間違いでも出る。
+# - `PrismaClientInitializationError`: 接続でけへんときにも出るが、接続文字列が不正なとき
+#   や query engine が欠けとるときにも同じ例外名が出る。名前だけで DB の不在に倒すと、
+#   その2つが SKIP へ落ちて exit 0 になる。DB へ届かんかった回は必ず
+#   `Can't reach database server` か `P1001` を一緒に吐くので、そっちで拾えば足りる
+#   （判定用のプールは ERROR_MARK に当たらん行も、この一覧の語を含む行なら残す）。
 DB_LESS_BUILD_MARKERS = (
     "Can't reach database server",
-    # Prisma が接続失敗のときに出す例外名そのもの。この行には DB の語が無いので、
-    # 名前で拾わんと「DB 以外の失敗」に数えられて、DB の無い機械で止まる。
-    "PrismaClientInitializationError",
     # DB へ届かんことを指す Prisma のエラーコード。
     "P1001",
     # OS が返す接続拒否。DB が起動してへん機械で出る。

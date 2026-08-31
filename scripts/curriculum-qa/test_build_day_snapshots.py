@@ -959,6 +959,26 @@ def check_build_failure_triage() -> list[str]:
     ]))
     if target.build_failure_is_database_only(datasource_error):
         fails.append("❌ datasource のスキーマ欠陥を DB の不在として見逃している")
+    # 例外名だけで DB の不在に倒さんこと。Prisma は接続文字列が不正なときや query engine が
+    # 欠けとるときにも `PrismaClientInitializationError` を出す。名前だけで SKIP にすると、
+    # その2つが exit 0 で通る。
+    if target.build_failure_is_database_only((
+        "PrismaClientInitializationError:",
+        "error: Invalid `prisma.project.findMany()` invocation: the URL must start with postgresql://",
+    )):
+        fails.append("❌ 接続文字列の不正まで DB の不在として見逃している")
+    if target.build_failure_is_database_only((
+        "PrismaClientInitializationError:",
+        "Query engine library for current platform could not be found.",
+    )):
+        fails.append("❌ query engine の欠落まで DB の不在として見逃している")
+    # 本物の接続失敗は、届かんかったことを言う行が必ず一緒に出る。そっちで拾える。
+    if not target.build_failure_is_database_only(target.error_line_pool("\n".join([
+        "PrismaClientInitializationError:",
+        "Can't reach database server at `localhost`:`5432`",
+    ]))):
+        fails.append("❌ 本物の接続失敗を DB の不在として拾えていない")
+
     # 環境変数の欠落は「DB が無い機械」の印やない。`copy_scaffold()` が `.env.example` を
     # 必ず `.env` へ複写し、その `.env.example` が `DATABASE_URL` を定義しとるので、
     # DB の無い機械でも変数は在る。無いと言われたのなら組んだツリーか schema が壊れとる。
@@ -1107,6 +1127,47 @@ def check_expected_red_build_exemption() -> list[str]:
     return fails
 
 
+def check_both_red_shows_both() -> list[str]:
+    """tsc と build が両方赤い日は、画面と成果物に両方の行を出すこと。
+
+    `tsc_shown or build_shown` にすると tsc が赤い時点で build の行が丸ごと消える。
+    day11 のように tsc の赤が想定内の日で build 側に別の欠陥が入ると、走行は exit 1 なのに
+    出とるのは「知っとる型エラー」だけになり、落ちた本当の理由が読めん。
+    """
+    fails = []
+    tsc_lines = ("src/x.tsx(29,47): error TS2339: Property 'getById' does not exist",)
+    build_lines = ("Error occurred prerendering page \"/project\"",)
+    calls = []
+
+    def fake_run_step(cmd, dest):
+        calls.append(cmd)
+        if "tsc" in " ".join(cmd):
+            return False, tsc_lines, tsc_lines
+        return False, build_lines, build_lines + ("Failed to compile.",)
+
+    original_run_step = target.run_step
+    original_link = target.link_node_modules
+    try:
+        target.run_step = fake_run_step
+        target.link_node_modules = lambda dest: None
+        tsc, build, shown, build_all, tsc_all = target.verify_tree(Path("/nonexistent"))
+    finally:
+        target.run_step = original_run_step
+        target.link_node_modules = original_link
+
+    if (tsc, build) != ("NG", "NG"):
+        fails.append(f"❌ 両方赤い日の状態が ({tsc}, {build}) になっている")
+    if not any("getById" in line for line in shown):
+        fails.append(f"❌ 表示用のエラーから tsc の行が落ちている: {shown!r}")
+    if not any("prerendering" in line for line in shown):
+        fails.append(f"❌ 表示用のエラーから build の行が落ちている（落ちた本当の理由が読めん）: {shown!r}")
+    if "Failed to compile." not in build_all:
+        fails.append("❌ 判定用の build エラーが表示用に差し替わっている")
+    if tsc_all != tsc_lines:
+        fails.append("❌ 判定用の tsc エラーが取れていない")
+    return fails
+
+
 def check_result_doc_records_skip() -> list[str]:
     """成果物のほうにも SKIP が残ること。
 
@@ -1171,6 +1232,7 @@ CHECKS = (
     ("持ち込みと本体の同居", check_leading_imports),
     ("ツリーの古さを測る材料", check_tree_inputs),
     ("ビルドの赤の切り分け", check_build_failure_triage),
+    ("両方赤い日の表示", check_both_red_shows_both),
     ("成果物への SKIP の記録", check_result_doc_records_skip),
     ("想定内の日の build 免除", check_expected_red_build_exemption),
 )
