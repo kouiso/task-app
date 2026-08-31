@@ -78,6 +78,13 @@ MIN_MERMAID_WHEN_EXEMPT = 2
 
 
 def check_visualization(filepath, fail_on_duplicate_image=True):
+    """1本の教材を見て、表・写真・図・画像の重複を数える。違反があれば exit 1。
+
+    `fail_on_duplicate_image` の既定が True であることに意味がある。同じ画像を貼り回して
+    「スクショ3箇所以上」を満たす抜け道を塞ぐのがこの検査の目的なので、既定が False へ
+    戻ると検査は動いたままゲートだけが素通りする。撮り直しの途中で一時的に落としたい
+    ときだけ、呼び出し側（CLI フラグと環境変数）から False を渡す。
+    """
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
