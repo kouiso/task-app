@@ -223,6 +223,7 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 実機での確認: `--day 11 --verify` を実際に流して **exit 0**・`day11 の型エラーは想定どおり` が出ることを確かめた。実物の tsc は `project-detail-view.tsx` の29行目（`TS2339` `getById`）・144行目（`TS7006`）・167行目（`TS7053`）ほかで、**5件・同一ファイル・`getById` あり**。つまり教材本文が書いとる「5件出ます」は実測と一致しとる。結果ファイルは事前に退避して復元した（`--day` は30日ぶんの記録を上書きするため）。
 
 ## [PR #389 十一巡目] scripts/curriculum-qa/settle-drawn-frames-check.mjs  (bug・採用／自分の逃げ道が塞がっとった)
+
 - 指摘: ブラウザが無いときの退避が動いてへん（Codex）
 - 根拠: 自分で再現した。`import { chromium } from 'playwright'` を頭に書いとったので、playwright が入ってへん機械では**その行に来る前に**読み込みが落ちる。`node_modules/playwright` を一時的に退けて走らせると `ERR_MODULE_NOT_FOUND` で exit 1。`./shoot-page.mjs` も playwright を取り込むので同じ経路で落ちる。「ブラウザが無い機械では SKIP と出して退ける」と書いておきながら、その道が塞がっとった。
 - 直し方（適用済み）: 取り込みを `try` の中の動的 `import()` へ移した。`chromium` も `shoot-page.mjs` も同じ扱い。
@@ -232,6 +233,7 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
   - 直す前（静的 import）に退けた状態 → `ERR_MODULE_NOT_FOUND` で exit 1。つまり指摘どおり壊れとった
 
 ## [PR #389 十二巡目] CodeRabbit 7件（採用5・対応済み2）
+
 - 指摘と判定:
   1. `test_shoot_screenshots.py:399` 時間切れを検査失敗として返せ（Minor）→ **採用**。180秒を超えると `subprocess.TimeoutExpired` が `main()` まで抜けて、件数も理由も出さずに落ちる。「検査が黙って終わる」はこの PR が潰しとる型そのもの。捕まえて途中出力を添えた失敗として返す。`timeout` を 0.001 秒にして実際にこの枝を通し、`❌ 実ブラウザ検査が 0.001 秒で終わらんかった: 出力なし` を確認した
   2. `build_day_snapshots.py:1316-1330` 除外理由のコメントが収録要素の直上に並んどる（Trivial）→ **採用**。中身は変えず、理由をタプルの外へまとめた。`P1001` / `ECONNREFUSED` を除外対象と誤読する余地を消す
@@ -242,6 +244,7 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
   7. `console.log` が biome の `noConsole` を落とす（Major）→ **`bad6191` で対応済み**。`process.stdout.write` と `console.error` へ置換済み
 
 ## [PR #389 十三巡目] Codex 3件（全部採用）
+
 1. `build_day_snapshots.py:1490` **成果物の文書だけが「想定内」と言い張る**（P2・採用）
    - 根拠: `broken_days()` は署名照合で異常と判定するのに、`triage_section()`（`write_result_doc` が呼ぶ）は `r.day in EXPECTED_RED` のままやった。day11 に断り書きと合わん赤が入ると、**走行は exit 1 やのに `day-snapshots-result.md` は「想定内（教材が本文で断っている）」と書く**。次に読む人は文書のほうを信じる。
    - 直し: `expected_red_holds()` を切り出して、走行の判定と文書の判定を同じ線に乗せた。回帰テストは (a) 断り書きどおりなら文書も「想定内」 (b) 6件目が混ざったら文書が「想定内」と書かん (c) 同じ入力を `broken_days()` が異常に数える、の3点。戻すと `❌ 断り書きと合わん赤まで成果物が想定内と書いている` で落ちる。
@@ -254,6 +257,7 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
    - 直し: playwright の取り込みと `chromium.launch()` だけを SKIP の対象にし、ワーカーの取り込みはその外へ出した（playwright が在る以上、そこで落ちるのは本物の失敗）。実測: playwright を退けると `SKIP … exit 0`、ワーカーに `throw` を仕込むと **exit 1**。
 
 ## [PR #389 十四巡目] Codex 3件（全部採用）
+
 1. `build_day_snapshots.py:1332` **例外名だけで DB の不在に倒しとった**（P1・採用）
    - 根拠: `PrismaClientInitializationError` は接続でけへんときだけやのうて、接続文字列が不正なときや query engine が欠けとるときにも出る。名前だけを DB マーカーに入れとったので、その2つが `SKIP` へ落ちて exit 0 になる。六巡目に「この行には DB の語が無いので名前で拾う」と入れた行やが、あれは判定が `all()`（全行が DB 由来か）やった頃の話で、いまは「DB の語がある行が1つでもあり、本物の失敗の語が無い」に変わっとる。**前提が変わったのにマーカーだけ残っとった。**
    - 直し: マーカーから落とした。本物の接続失敗は `Can't reach database server` か `P1001` を必ず一緒に吐くので取りこぼさん（判定用のプールは `ERROR_MARK` に当たらん行も、マーカーの語を含む行なら残す作りにしてある）。回帰テストは (a) 接続文字列の不正 (b) query engine の欠落 の2つが SKIP に落ちんこと、(c) 本物の接続失敗はこれまでどおり拾えること。戻すと (a)(b) で落ちる。

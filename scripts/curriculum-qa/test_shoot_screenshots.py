@@ -418,6 +418,8 @@ def check_drawn_frame_settle() -> list[str]:
             for stream in (expired.stdout, expired.stderr)
         ).strip()
         return [f"❌ 実ブラウザ検査が {expired.timeout} 秒で終わらんかった: {partial[-300:] or '出力なし'}"]
+    except FileNotFoundError as exc:
+        return [f"❌ 実ブラウザ検査を実行できない（Node）: {exc}"]
     out = (proc.stdout + proc.stderr).strip()
     if proc.returncode != 0:
         return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]
@@ -430,6 +432,23 @@ def check_drawn_frame_settle() -> list[str]:
         if require_browser_check():
             return [f"❌ ブラウザ必須の走行なのに実ブラウザ検査を退けた: {reason}"]
         print(f"  ⏭️ 実ブラウザ検査を退けた: {reason}")
+    return []
+
+
+def check_node_missing_is_reported() -> list[str]:
+    """Node を起動できないとき、例外を自己テストの失敗へ変換すること。"""
+    original_run = target.subprocess.run
+
+    def missing_node(*args: object, **kwargs: object) -> None:
+        raise FileNotFoundError(2, "No such file or directory", "node")
+
+    try:
+        target.subprocess.run = missing_node
+        failures = check_drawn_frame_settle()
+    finally:
+        target.subprocess.run = original_run
+    if len(failures) != 1 or "Node" not in failures[0]:
+        return [f"❌ Node 不在の理由が失敗として返っていない: {failures!r}"]
     return []
 
 
@@ -477,6 +496,7 @@ CHECKS = (
     ("アニメーションの収束待ち", check_animation_settle),
     ("ワーカーの警告の転送", check_worker_warning_forwarding),
     ("描画の収束待ち（実ブラウザ）", check_drawn_frame_settle),
+    ("Node 不在時のエラー", check_node_missing_is_reported),
     ("ブラウザ必須の切り替え", check_require_browser_switch),
 )
 

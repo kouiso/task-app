@@ -6,7 +6,7 @@
 corpus 全体では 39枚 → **71枚**（+32）。内訳は day01〜day29 が 37 → 69（+32）、
 `day30` が 2 で前後とも変わらん。この表の30枚に加えて、`day04` の手描きモック2枚を
 図へ置き換えた分（`cover-letter.md` 9-3 節）が入って +32 になる。
-数え直しは `grep -c '^\`\`\`mermaid' material/30days-curriculum/*.md` の合計で取れる。
+数え直しは ``grep -h '^```mermaid' material/30days-curriculum/*.md | wc -l`` で取れる。
 
 ---
 

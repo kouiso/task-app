@@ -1039,6 +1039,9 @@ def check_expected_red_build_exemption() -> list[str]:
             "Type error: Property 'getById' does not exist on type ...",
         ),
     )
+    tree_failed = known._replace(tree_ok=False, tsc=target.NOT_RUN, build=target.NOT_RUN)
+    if target.expected_red_holds(tree_failed):
+        fails.append("❌ ツリー構築に失敗した day11 を想定内の赤として扱っている")
     if not target.build_failure_is_expected(known):
         fails.append("❌ 断り書きどおりの型エラーによる build 落ちまで異常扱いしている")
 

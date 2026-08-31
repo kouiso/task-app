@@ -1433,6 +1433,9 @@ def expected_red_holds(result: DayResult) -> bool:
     `broken_days()` と同じ線を、成果物の文書でも使うために切り出してある。
     ここが緩むと「走行は exit 1 やのに文書は想定内と書いてある」状態が生まれる。
     """
+    # ツリーを組めてへん日は tsc と build が未実行でも、日付だけで免除せん。
+    if not result.tree_ok:
+        return False
     if result.day not in EXPECTED_RED:
         return False
     if result.tsc == "NG" and not tsc_failure_is_expected(result):

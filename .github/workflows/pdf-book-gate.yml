@@ -170,7 +170,7 @@ jobs:
           # ここを scope だけに任せると、`scripts/curriculum-qa/` だけを触った PR で
           # 検査が自分から退けて（SKIP）、実ブラウザの主張が一度も走らんまま通る。
           browser_qa=0
-          if grep -qzE '^(scripts/curriculum-qa/(shoot-page\.mjs|settle-drawn-frames-check\.mjs|shoot_screenshots\.py|test_shoot_screenshots\.py)|\.github/workflows/pdf-book-gate\.yml)$' "$RUNNER_TEMP/changed.z"; then
+          if grep -qzE '^(scripts/curriculum-qa/(shoot-page\.mjs|settle-drawn-frames-check\.mjs|shoot_screenshots\.py|test_shoot_screenshots\.py)|\.github/workflows/pdf-book-gate\.yml|package\.json|package-lock\.json|\.node-version)$' "$RUNNER_TEMP/changed.z"; then
             browser_qa=1
           fi
 
