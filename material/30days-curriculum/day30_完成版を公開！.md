@@ -101,16 +101,13 @@ flowchart TD
 >
 > 本番用の `DATABASE_URL` は、クラウド DB
 > サービスで用意します。Vercel なら、管理画面で
-> 対象プロジェクトを開き、Integrations の
-> Browse Marketplace から Neon や Supabase などの
-> Postgres 連携を Install します。データベースを
-> プロジェクトへ接続すると、連携先の接続情報が
-> 環境変数へ追加されます。アプリが参照する名前が
-> `DATABASE_URL` になっていることを確認します。
-> Supabase などを Vercel 外で用意する場合は、発行
-> された接続文字列を `DATABASE_URL` に登録します。
-> Day 04 の初回デプロイ時に設定済みなら、その値を
-> そのまま使います。
+> 対象プロジェクトを開きます。Storage タブから
+> Postgres データベースを作成すると、接続文字列が
+> 発行されます。この文字列は環境変数にも自動で
+> 追加されます。Supabase など外部サービスで作る
+> 場合は、発行された接続文字列をこの `DATABASE_URL`
+> に設定します。Day 04 の初回デプロイ時に設定済み
+> なら、その接続文字列をそのまま使います。
 >
 > 環境変数は、まず公開先の Production に登録します。
 > ブランチの Preview デプロイも使う場合は、Preview

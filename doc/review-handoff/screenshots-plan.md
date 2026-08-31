@@ -3,9 +3,6 @@
 `material/30days-curriculum/screenshots/` の画像を、**その日の読者の手元**で撮り直すための道具立てと、
 Day 01–08 でそれを実際に通した記録。
 
-> 現行監査（2026-08-31）では、画像111枚・未参照0枚・同一日の画像重複0件です。
-> この文書の下の「残した問題」や途中経過は撮影時点の記録であり、現在の残作業一覧ではありません。
-
 - 撮る道具: `scripts/curriculum-qa/shoot_screenshots.py`
 - 撮る対象の宣言: `scripts/curriculum-qa/screenshot-shot.json`
 - 退行テスト: `scripts/curriculum-qa/test_shoot_screenshots.py`（`check_quality.sh` の Gate 4 に登録済み）

@@ -22,7 +22,6 @@ export default defineConfig({
     testTimeout: 15000,
     setupFiles: ['./src/test/setup.ts'],
     include: ['**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '**/.git/**', '**/.claude/worktrees/**'],
     pool: 'forks',
     poolOptions: {
       forks: {

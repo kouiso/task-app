@@ -40,21 +40,19 @@ Day 28 では **タスク一括操作**を実装しました。チェックボ�
 ```mermaid
 flowchart TD
     A["URL: /user/abc123"] --> B["server page.tsx"]
-    B --> C["params から id を取得"]
-    C --> D["client component に userId を渡す"]
-    D --> E["api.user.getById.useQuery()"]
-    E --> F["認証・権限を確認"]
-    F -->|拒否| G["FORBIDDENエラー"]
-    F -->|許可| H["Prisma で詳細を取得"]
-    H -->|見つからない| I["NOT_FOUNDエラー"]
-    H -->|見つかる| J["詳細ページを描画"]
-    J --> K["管理者 or 本人？"]
-    K -->|Yes| L["編集ボタンを表示"]
-    L --> M["/user/abc123/edit"]
-    M --> N["server wrapper + client form"]
+    B --> C["Prisma で存在確認"]
+    C -->|見つからない| D["notFound()"]
+    C -->|見つかる| E["client component に userId を渡す"]
+    E --> F["api.user.getById.useQuery()"]
+    F --> G["詳細ページを描画"]
+    G --> H["管理者 or 本人？"]
+    H -->|Yes| I["編集ボタンを表示"]
+    H -->|No| J["FORBIDDENエラー（アクセス拒否）"]
+    I --> K["/user/abc123/edit"]
+    K --> L["server wrapper + client form"]
 ```
 
-この図で見てほしいのは、対象ユーザーの問い合わせを `getById` に集めているところです。`page.tsx` は URL の `id` を読み取り、client component へ渡すだけです。`getById` は `protectedProcedure` なので、ログイン状態とアカウントの有効性を先に確認します。その後で「本人または管理者か」を判定し、許可されたときだけ対象ユーザーを Prisma で検索します。一般ユーザーが他人のIDを指定しても、対象ユーザーを検索せず `FORBIDDEN` を返します。これで、存在するIDと存在しないIDの返り方から、IDの存在を推測されません。
+この図で見てほしいのは、B と F で2回サーバーに問い合わせているところです。B の `page.tsx` が Prisma（データベースを読み書きする道具）で確かめるのは「その ID のユーザーが居るか」だけで、名前やメールは取りません。居なければ D の `notFound()` に進み、画面が1度も描かれないまま404になります。居たときだけ F の `getById` が本物の詳細データを取りに行き、そこで「見る権限があるか」を確かめます。存在の確認と権限の確認が別々になっているので、他人のIDを打ち込まれたときの返り方も別々になります。居ないIDなら404、居るIDなら権限エラーです。これは裏を返すと、返り方の違いから「そのIDのユーザーが実在するか」を外から言い当てられるということでもあります。Day 07 でログインの文言をそろえたのと同じ考え方でいくなら、どちらも同じ404に見せるほうが安全です。今日は動的ルーティングと権限判定を追うことを優先して、この形のまま進みます。
 
 ### やること / やらないこと
 
@@ -71,8 +69,8 @@ flowchart TD
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
 | 動的ルーティング `[id]` | どうてきルーティング | URLのID部分を変数として受け取る | 「社員番号001の名簿ページ」→ URLの001が変数 |
-| `NOT_FOUND` | ノットファウンド | 許可された検索で対象が見つからないことを表す | 名簿を確認して該当者がいないと分かる |
-| server wrapper | — | URLの値を受け取りclient componentへ渡す | 受付で整理番号を担当者へ渡す |
+| `notFound()` | ノットファウンド | そのIDが存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
+| server wrapper | — | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
 | `await params` | アウェイト パラムズ | URLのパラメータ（変数）を server 側で受け取る | 受付で渡された整理番号を開いて読む |
 | `useEffect` | ユーズエフェクト | コンポーネント外部の変化に反応して副作用を実行するフック | 荷物が届いたら自動で棚に並べる係 |
 | useForm + zod（復習） | — | フォーム管理＋バリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
@@ -382,11 +380,13 @@ src/app/user/
 
 `[id]` の下にさらに `edit/` を置くのは、URLの入れ子とフォルダの入れ子を同じ形にそろえるためです。`/user/abc123` は `[id]/page.tsx` が受け持ち、`/user/abc123/edit` は `[id]/edit/page.tsx` が受け持ちます。編集ページ側でも同じ `[id]` の値を読めるので、詳細から編集へIDを持ち回す仕組みを別に作る必要はありません。
 
-まずは、URLの `[id]` を受け取って client component へ渡す入口を作ります。
-この入口のことを、この教材では server wrapper と呼びます。対象ユーザーの検索と権限判定は、認証済みの `getById` に集めます。
+まずは、その ID の人が居ないときに404を返す役目のファイルを作ります。
+この役目を持つ入口のことを、この教材では server wrapper と呼びます。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import { UserDetailClient } from './user-detail-client';
 
 interface UserDetailPageProps {
@@ -399,13 +399,39 @@ export default async function UserDetailPage({
   params,
 }: UserDetailPageProps) {
   const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+```
+
+`params` が `Promise` になっているのは、Next.js 15 から動的ルーティングの値が非同期で渡されるようになったためです。だから `await params` で中身を開いてから `id` を取り出します。`select: { id: true }` として名前やメールを取っていないのは、この段階で知りたいのが「その ID のユーザーが居るかどうか」だけだからです。`notFound()` は下の行へ進まず、`src/app/not-found.tsx` の404画面に切り替えます。この確認を server 側に置くと、存在しないIDのときブラウザは一瞬も詳細画面を描きません。
+
+続きを次のブロックで書きます。
+
+```tsx
+// filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
+
   return <UserDetailClient userId={id} />;
 }
 ```
 
-`params` が `Promise` になっているのは、Next.js 15 から動的ルーティングの値が非同期で渡されるためです。`await params` で中身を開いてから `id` を取り出します。ここで Prisma を呼ばないのは、対象ユーザーの存在確認と権限判定を `getById` の1か所に集めるためです。存在確認を先に行うと、存在するIDと存在しないIDで返り方が変わり、一般ユーザーにユーザーの有無を推測されます。
+`notFound()` の後に `return` が続きますが、この行に届くのは `user` が見つかったときだけです。`notFound()` はその場で描画を打ち切るため、下の `return` は実行されません。取り出した `id` を `userId` として渡すので、client 側はURLをもう一度読み直さずに済みます。
 
-ここでブラウザを開くのは、まだ早いです。1行目で読み込んでいる `./user-detail-client` を、次の Step 3 で作るためです。この時点で `/user/...` を開くと、`Module not found: Can't resolve './user-detail-client'` と表示されます。これは書き間違いではなく、まだファイルが無いだけです。動作確認は Step 3 でそのファイルを作ってから行います。
+ここでブラウザを開くのは、まだ早いです。
+1行目で読み込んでいる `./user-detail-client` を、次の Step 3 で作るためです。
+この時点で `/user/...` を開くと、画面いっぱいに
+`Module not found: Can't resolve './user-detail-client'` と表示されます。
+これは書き間違いではなく、まだファイルが無いだけです。
+
+動作確認は Step 3 でそのファイルを作ってから行います。
+そのときに使う実在のユーザーIDは、Day 24 のユーザー一覧、
+または DB の `users` テーブルで確認できます。
 
 **確認ポイント**:
 - `src/app/user/[id]/page.tsx` ファイルが作成できた
@@ -500,10 +526,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ここでスピナーではなく文章を出しているのは、`isLoading` がすでに `false` になっているからです。`getById` が失敗した場合も `user` は `undefined` のままここへ来ます。スピナーを出すと読み込みが続いているように見え、読者は待ち続けます。トーストは数秒で消えるので、画面に残る手がかりがなくなります。
 
-> 対象ユーザーの検索結果は `getById` が返します。
-> 一般ユーザーが他人のIDを指定すると、対象の存在を検索する前に
-> `FORBIDDEN` になります。
-> `!user` は取得失敗後の画面を出すために使います。
+> 存在しないIDへの404は Step 2 の
+> `page.tsx` が担当します。
+> ブラウザ側の部品にある `!user` は、
+> 取り直しの最中に備える保険です。
 >
 > 期限列の完成版のコードは
 > `format(new Date(task.dueDate), ...)` ではなく
@@ -521,7 +547,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 比較の相手が `userId` ではなく `user.id` になっているところが要点です。`userId` はURLに打ち込まれた文字列で、まだ誰のものとも決まっていません。`user.id` はサーバーが `getById` で返してきた本物のIDです。本人かどうかの判定は、サーバーが認めたIDを基準にします。ここで2つの真偽値に名前を付けておくと、Step 6 の表示条件が `(isAdmin || isOwnProfile)` の1行で読めます。
 
-**確認ポイント**: 存在するユーザーIDでアクセスすると詳細画面が表示され、一般ユーザーが他人のIDを指定すると権限エラーが表示されます。
+**確認ポイント**: 存在しないIDにアクセスすると server wrapper から `notFound()` が呼ばれ、`src/app/not-found.tsx` の404画面が表示されます。
 
 正常系の表示を書きます。次のステップで内容を充実させます。
 
@@ -557,7 +583,7 @@ URL から `getById` までの経路がつながっています。
 
 **確認ポイント**:
 - 存在するユーザーIDでアクセスするとユーザー名が表示される
-- 一般ユーザーが他人のIDを指定すると、詳細データを受け取らず権限エラーになる
+- 完成版では、存在しないIDは Step 2 の `page.tsx` が404へ流す
 - 読み込み中はスピナーが表示される
 
 ---
@@ -982,11 +1008,13 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 
 **ゴール**: `/user/[id]/edit` の骨組みを作り、権限チェックを実装します。
 
-まずは、URLの `[id]` を受け取ってフォームへ渡す入口を作ります。
-この入口のことを、この教材では server wrapper と呼びます。対象ユーザーの検索と権限判定は、認証済みの `getById` に集めます。
+まずは、その ID の人が居ないときに404を返す役目のファイルを作ります。
+この役目を持つ入口のことを、この教材では server wrapper と呼びます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import { UserEditClient } from './user-edit-client';
 
 interface UserEditPageProps {
@@ -999,11 +1027,29 @@ export default async function UserEditPage({
   params,
 }: UserEditPageProps) {
   const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+```
+
+詳細ページの `page.tsx` と見比べると、違うのは最後に返す部品の名前だけです。編集ページでも同じ存在確認をもう一度書くのは、`/user/存在しないid/edit` を直接開かれる場合があるからです。詳細ページを通らないと編集ページに入れない、という前提は、URLを手打ちできる以上は成り立ちません。入口ごとに404を確かめます。
+
+続きを次のブロックで書きます。
+
+```tsx
+// filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
+
   return <UserEditClient userId={id} />;
 }
 ```
 
-`params` を開いて `id` を渡すだけにしているのは、詳細ページと同じ理由です。対象ユーザーの存在確認と権限判定を `getById` に集めると、一般ユーザーが他人のIDを指定しても、存在するかどうかを返り方から推測できません。フォームの中身をこのファイルに直接書かず、`UserEditClient` という別ファイルに渡しているのは、`page.tsx` を server 側、フォームを client 側に分けるためです。
+フォームの中身をこのファイルに直接書かず、`UserEditClient` という別ファイルに渡しているのには理由があります。`page.tsx` は `await` と Prisma を使う server 側のファイルで、フォームは入力に反応する client 側の部品です。役割の違う2つを1ファイルに混ぜると `'use client'` の境目が引けません。ファイルを分けて、境目をそのままファイルの境目にします。
 
 次に、実際のフォーム本体となる
 `user-edit-client.tsx` のインポートを書きます。
@@ -1204,10 +1250,10 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 }
 ```
 
-フォームを1つも置かない状態でいったん止めるのは、直前に書いた3つの早期リターンを先に検証するためです。ここまでで確かめられることは3つあります。他人のIDを開いた一般ユーザーに拒否画面が出ること、管理者に「ユーザー編集」の見出しが出ること、管理者が存在しないIDを開くと「ユーザーが見つかりません」と出ることです。この3つが通れば、権限の判定はもう終わりです。あとで入力欄が動かなくても、原因は権限ではなくフォーム側だと切り分けられます。
+フォームを1つも置かない状態でいったん止めるのは、直前に書いた3つの早期リターンを先に検証するためです。ここまでで確かめられることは3つあります。他人のIDを開いた一般ユーザーに拒否画面が出ること、管理者に「ユーザー編集」の見出しが出ること、存在しないIDでは404になることです。この3つが通れば、権限の判定はもう終わりです。あとで入力欄が動かなくても、原因は権限ではなくフォーム側だと切り分けられます。
 
 **確認ポイント**:
-- 管理者が存在しないユーザーIDを開くと「ユーザーが見つかりません」と表示される
+- 存在しないユーザーIDでは `page.tsx` 側で `notFound()` になる
 - 権限のないユーザーで `/user/他人のid/edit` にアクセスすると「権限がありません」と表示される
 - 管理者でアクセスすると「ユーザー編集」が表示される
 - 自分のIDでアクセスすると「ユーザー編集」が表示される
@@ -1809,9 +1855,9 @@ submitUserEditForm(
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/server/api/routers/user.ts` | 詳細を返す入口と、更新を受け取る出口 | Step 0 |
-| `src/app/user/[id]/page.tsx` | URLのIDを詳細画面へ渡す入口 | Step 2 |
+| `src/app/user/[id]/page.tsx` | 詳細ページの存在確認と404 | Step 2 |
 | `src/app/user/[id]/user-detail-client.tsx` | 詳細画面の表示本体 | Step 3 から Step 6 |
-| `src/app/user/[id]/edit/page.tsx` | URLのIDを編集フォームへ渡す入口 | Step 7 |
+| `src/app/user/[id]/edit/page.tsx` | 編集ページの存在確認と404 | Step 7 |
 | `src/app/user/[id]/edit/user-edit-client.tsx` | 編集フォームの本体 | Step 7 から Step 10 |
 
 ### `src/server/api/routers/user.ts`
@@ -2026,11 +2072,13 @@ const userUpdateSchema = z
 
 ### `src/app/user/[id]/page.tsx`
 
-**URLパラメータを受け取る部分**:
+**存在確認までの部分**:
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
-// 完成版: URLパラメータを受け取る部分
+// 完成版: 存在確認までの部分
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import { UserDetailClient } from './user-detail-client';
 
 interface UserDetailPageProps {
@@ -2043,11 +2091,30 @@ export default async function UserDetailPage({
   params,
 }: UserDetailPageProps) {
   const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+```
+
+`params` の型が `Promise` になっているのは、Next.js 15 から動的ルーティングの値が非同期で渡されるためです。`await` を付け忘れると、`id` には文字列ではなく待機中の入れ物が入り、`where` が誰にも一致しません。`select: { id: true }` に絞っているのは、ここで知りたいのが存在の有無だけだからです。名前やメールを取っても使う場所がなく、通信の量だけが増えます。
+
+**client 部品への受け渡し**:
+
+```tsx
+// filepath: src/app/user/[id]/page.tsx
+// 完成版: client 部品への受け渡し
+
   return <UserDetailClient userId={id} />;
 }
 ```
 
-`params` の型が `Promise` になっているのは、Next.js 15 から動的ルーティングの値が非同期で渡されるためです。`await params` で中身を開いてから `id` を取り出します。ここで対象ユーザーを検索しないのは、認証・認可・対象ユーザーの検索を `getById` に集めるためです。一般ユーザーが他人のIDを指定した場合、`getById` は対象ユーザーを検索する前に `FORBIDDEN` を返します。
+`notFound()` の下に `return` が続きますが、この行へ届くのは `user` が見つかったときだけです。`notFound()` はその場で描画を打ち切るからです。取り出した `id` を `userId` として渡しているので、client 側はURLをもう一度読み直す必要がありません。存在の確認を server 側へ置いたので、存在しないIDでブラウザが詳細画面を描き始めることもありません。
 
 ### `src/app/user/[id]/user-detail-client.tsx`
 
@@ -2470,11 +2537,13 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ### `src/app/user/[id]/edit/page.tsx`
 
-**URLパラメータを受け取る部分**:
+**存在確認までの部分**:
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
-// 完成版: URLパラメータを受け取る部分
+// 完成版: 存在確認までの部分
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import { UserEditClient } from './user-edit-client';
 
 interface UserEditPageProps {
@@ -2487,11 +2556,30 @@ export default async function UserEditPage({
   params,
 }: UserEditPageProps) {
   const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+```
+
+詳細ページの `page.tsx` と見比べると、違うのは最後に返す部品の名前だけです。存在確認をここでもう一度書くのは、`/user/存在しないid/edit` を直接開かれる場合があるからです。詳細ページを通らないと編集ページへ入れない、という前提は、URLを手で打てる以上は成り立ちません。入口ごとに404を確かめます。
+
+**client 部品への受け渡し**:
+
+```tsx
+// filepath: src/app/user/[id]/edit/page.tsx
+// 完成版: client 部品への受け渡し
+
   return <UserEditClient userId={id} />;
 }
 ```
 
-`params` を開いて `id` を渡すだけにしているのは、詳細ページと同じ理由です。対象ユーザーの存在確認と権限判定を `getById` に集めると、一般ユーザーが他人のIDを指定しても、存在するかどうかを返り方から推測できません。フォームの中身をこのファイルへ直接書かず、別のファイルへ渡しているのは、`page.tsx` を server 側、フォームを client 側に分けるためです。
+フォームの中身をこのファイルへ直接書かず、別のファイルへ渡しているのには理由があります。`page.tsx` は `await` と Prisma を使う server 側のファイルで、フォームは入力に反応する client 側の部品です。役割の違う2つを1ファイルへ混ぜると `'use client'` の境目が引けません。ファイルを分けて、境目をそのままファイルの境目にします。
 
 ### `src/app/user/[id]/edit/user-edit-client.tsx`
 
@@ -3067,9 +3155,9 @@ sequenceDiagram
 
 今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
 
-**Q1. なぜ `page.tsx` で対象ユーザーを検索せず、`getById` にまとめますか。**
+**Q1. `page.tsx` が Prisma で存在を確かめ、そのあと `getById` がもう一度サーバーへ行きます。2回問い合わせるのはなぜで、どんな副作用がありますか。**
 
-A. 認証・認可より先に検索すると、存在するIDと存在しないIDで返り方が分かれます。`getById` は `protectedProcedure` で認証を済ませ、本人または管理者かを判定します。一般ユーザーが他人のIDを指定しても、対象ユーザーを検索せず `FORBIDDEN` を返します。これでIDの存在を返り方から推測できません。
+A. `page.tsx` が確かめるのは「その ID のユーザーが居るか」だけで、居なければ `notFound()` を呼んで画面を1度も描きません。居たときだけ `getById` が本物のデータを取りに行き、そこで見る権限を確かめます。副作用として、居ない ID は 404、居る ID は権限エラーと返り方が分かれるので、外から「その ID のユーザーが実在するか」を言い当てられます。
 
 **Q2. 一般ユーザーが他人の `/user/他人のid` を開くと、編集ボタンが消えるだけですか。**
 
@@ -3093,6 +3181,8 @@ Day 30では、いよいよ完成版をVercelに公開します。30日間コツ
 
 ```typescript
 // filepath: src/app/user/[id]/page.tsx
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import { UserDetailClient } from './user-detail-client';
 
 interface UserDetailPageProps {
@@ -3104,16 +3194,27 @@ interface UserDetailPageProps {
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { id } = await params;
 
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+
   return <UserDetailClient userId={id} />;
 }
 ```
 
-この server wrapper が短いのは、担当を URL パラメータの受け渡しに絞ったからです。認証・認可と表示に必要なデータの取得は、client 側から呼ぶ保護された `getById` が担当します。wrapper で先に存在確認をしないので、一般ユーザーへIDの有無を漏らしません。
+この server wrapper が短いのは、担当を存在確認と404だけに絞ったからです。表示に必要なデータは client 側の `getById` が取りに行くので、ここで名前やタスクまで読む必要はありません。
 
 ### `src/app/user/[id]/edit/page.tsx`
 
 ```typescript
 // filepath: src/app/user/[id]/edit/page.tsx
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import { UserEditClient } from './user-edit-client';
 
 interface UserEditPageProps {
@@ -3125,11 +3226,20 @@ interface UserEditPageProps {
 export default async function UserEditPage({ params }: UserEditPageProps) {
   const { id } = await params;
 
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!user) {
+    notFound();
+  }
+
   return <UserEditClient userId={id} />;
 }
 ```
 
-編集ページの wrapper は、返す部品が `UserEditClient` になっている以外は詳細ページと同じ形です。どちらも `id` を渡すだけにして、検索と権限判定は `getById` へ集めます。認証・認可より前に存在確認を置かないので、一般ユーザーは他人のIDの有無を返り方から推測できません。
+編集ページの wrapper は、返す部品が `UserEditClient` になっている以外は詳細ページと同じ形です。似た形が2つ並ぶのは無駄に見えますが、URLごとに404の判定を独立させておくためです。片方を消すと、消したほうのURLだけ存在しないIDでも画面が描かれ始めます。
 
 ### `src/app/user/[id]/user-detail-client.tsx`（完成版との違いの説明）
 

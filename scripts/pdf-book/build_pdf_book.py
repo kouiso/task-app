@@ -54,14 +54,12 @@ WORK_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 #
 # @vivliostyle/cli は依存ツリーに high 3件（vfm → remark-parse → trim の ReDoS）を
 # 持ち込み、`npm audit --audit-level=high` の CI を通らない。
-# @mermaid-js/mermaid-cli は puppeteer を peer dependency にしているため、
-# npx でCLIだけを指定すると図の変換時にモジュールが見つからない。
-# Puppeteer も明示して同じ一時環境へ入れる。どちらも教材PDFを組むときだけ要る道具で、
-# `npm ci` が走る CI と Vercel には要らない。再現性はここのバージョン固定で担保する。
+# @mermaid-js/mermaid-cli は puppeteer(フル版)を連れてきて Chrome を約650MB 落とす。
+# どちらも教材PDFを組むときだけ要る道具で、`npm ci` が走る CI と Vercel には要らない。
+# 再現性はここのバージョン固定で担保する。
 VIVLIOSTYLE_CLI = "@vivliostyle/cli@11.1.0"
 THEME = "@vivliostyle/theme-techbook@2.0.2"
 MERMAID_CLI = "@mermaid-js/mermaid-cli@11.16.0"
-MERMAID_PUPPETEER = "puppeteer@24.43.1"
 # 外部プロセスが返らんときの上限。36本を通しで回すので、1本の停止で全体を落とさない
 BUILD_TIMEOUT = 900
 MERMAID_TIMEOUT = 180
@@ -231,8 +229,7 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
         source.write_text("\n".join(buffer) + "\n", encoding="utf-8")
         try:
             result = subprocess.run(
-                ["npx", "--yes", "--package", MERMAID_PUPPETEER,
-                 "--package", MERMAID_CLI, "mmdc",
+                ["npx", "--yes", MERMAID_CLI,
                  "-i", str(source), "-o", str(svg), "-b", "transparent",
                  "-c", str(work / "mermaid.json"),
                  "-p", str(work / "puppeteer.json")],

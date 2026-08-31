@@ -71,14 +71,6 @@ describe('userRouter', () => {
       );
     });
 
-    it('一般ユーザーは存在しないIDの有無も推測できない', async () => {
-      const user = await createTestUser({ email: uniqueEmail('u-view-oracle'), role: 'USER' });
-      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
-      await expect(caller.user.getById({ id: NON_EXISTENT_ID })).rejects.toThrow(
-        'この操作を行う権限がありません',
-      );
-    });
-
     it('存在しないユーザーは NOT_FOUND', async () => {
       const { caller } = await adminCaller();
       await expect(caller.user.getById({ id: NON_EXISTENT_ID })).rejects.toThrow(
