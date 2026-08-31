@@ -1398,10 +1398,34 @@ def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
     # 「無罪」やない以上、無罪の証拠が要る側はこっち。
     if has_real_build_failure(errors):
         return False
-    return any(
+    if not any(
         any(marker in line for marker in DB_LESS_BUILD_MARKERS)
         for line in errors
+    ):
+        return False
+    # DB のマーカーが在るだけでは足りん。**全部の行**が DB か包み紙で説明できて初めて
+    # 「この機械では判定でけへん」と言える。説明の付かん行が混ざっとるのは、
+    # 中身の分からん失敗が DB の赤に隠れとるということ。
+    return all(
+        any(marker in line for marker in DB_LESS_BUILD_MARKERS)
+        or any(marker in line for marker in BUILD_NOISE_MARKERS)
+        for line in errors
     )
+
+
+# 原因やのうて「包み紙」の行。`next build` は根本原因をこれで包んで出す。
+# DB だけの失敗を SKIP と名乗るには、出とる全部のエラー行が DB のマーカーか
+# ここに載っとる包み紙で説明できんとアカン。**ここに無い行が1つでも混ざったら、
+# 中身の分からん失敗なので SKIP にせん。**マーカーの allowlist だけで「本物か」を
+# 当てにいくと、載せてへん文言（例: `Error: Unauthorized while prerendering /admin`）が
+# DB の赤に紛れて SKIP へ落ち、壊れた日が exit 0 で出ていく。
+BUILD_NOISE_MARKERS = (
+    "Failed to collect page data",
+    # Prisma は例外のクラス名だけの行を先に吐く。原因は次の `Can't reach ...` の行。
+    "PrismaClientInitializationError",
+    "Build error occurred",
+    "Collecting page data",
+)
 
 
 TYPE_ERROR_MARK = re.compile(r"Type error:|TS\d{4}")
