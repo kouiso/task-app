@@ -1,6 +1,11 @@
 # 30日教材 商品化 — 引き継ぎ
 
-最終更新: 2026-08-31 / ブランチ `claude/30days-material-product-ready-hor18z` / PR **#388**（draft・CI全緑）
+最終更新: 2026-08-31 / ブランチ `claude/30days-material-product-ready-hor18z` / PR **#389**（#388 はマージ済み）
+
+PR #389 の対応記録は `coderabbit-verdicts.md` にある。**本数はここに書かん**（書くと必ず古くなる。十二・十四巡目で二度その指摘を受けとる）。数えるなら `grep -c '^## \[PR #389' doc/review-handoff/coderabbit-verdicts.md` が記録の本数を返す。**これは記録の本数**であって指摘の件数やない。1本に複数の指摘をまとめとる回がある（例: 七巡目の `duplicate-image-gate.md` は「CodeRabbit Minor ×3」を1本にしとる）。成立した指摘は全部採用して直しとる。成立せんかった分は「取らんと決めたもの（返信済み）」節に理由つきで残しとる。
+**マージは局長の明示指示を受けて実行する。**
+
+CI の確認手段は環境に合わせる。`command -v gh` が通る機械では `gh api` / `gh pr checks` を使い、無い機械では GitHub MCP の `pull_request_read`（`get_check_runs` / `get_status`）を使う。監視を始める前に `command -v gh` で決めること。
 
 ---
 
@@ -37,40 +42,60 @@
 
 | # | 不満 | 状態 | 証拠 |
 |---|---|---|---|
-| ① | ZIPを開いたら商品外が入っとる | ✅ | 12.1MB/221ファイル → **86.6KB/74ファイル**。`material/` 丸ごと0件 |
+| ① | ZIPを開いたら商品外が入っとる | ✅ | 12.1MB/221ファイル → **88,757バイト（86.7KB）/74ファイル**。`material/` 丸ごと0件 |
 | ② | Day01 で環境構築に失敗して進めん | ✅ | つまずき節・所要時間・環境図を追加 |
 | ③ | **写経したのに動かん** | ✅ | `build_day_snapshots.py --all --verify` で **29/30**。day11 は教材が「ここは赤くなります」と断っとる想定どおり |
 | ④ | 誤字・矛盾 | ✅ | 70件＋走査95件の裏取りで29件 |
 | ⑤ | 紙面が崩れる | ✅ | `check_pdf_book.py` / `check_page_layout.py` とも **36冊 exit 0** |
-| ⑥ | スクショと自分の画面が違う | 🔶 **未完** | 撮り直したのは day01/02/08 の**7枚だけ** |
-| ⑦ | コードだけ並んで説明が無い | 🔶 **未完** | mermaid 39枚のまま。day01/02/03 は 0図 |
+| ⑥ | スクショと自分の画面が違う | ✅ | 実画像111枚のうち**101枚**をその日のツリーで撮影（新規98・撮り直し3）。残る10枚はアプリ外の画面か付録専用の完成版 |
+| ⑦ | コードだけ並んで説明が無い | ✅ | mermaid **39 → 71枚**（+32）。図が0枚の日は無くなった |
 | ⑧ | 30日終わって理解が残らん | ✅ | 理解チェック 3問×30日 = 90問 |
-| ⑨ | Step ごとに撮ってへん（同じ画像の使い回し） | 🔶 **未完** | **21箇所・のべ50回**が使い回し。うち7枚だけ解消 |
-| ⑩ | 写真に「まだ作ってへんもの」が映る | 🔶 **未完** | ⑨と同じ作業で一緒に潰す |
+| ⑨ | Step ごとに撮ってへん（同じ画像の使い回し） | ✅ | 同一ファイル内の重複参照が**余剰31 → 0**（36本・参照のべ125箇所） |
+| ⑩ | 写真に「まだ作ってへんもの」が映る | ✅ | その日のツリーで撮った101枚を1枚ずつ開いて確認（`cover-letter.md` 9-2 節） |
 
-**出荷を止めるものはゼロ。**残る⑥⑦⑨⑩は「壊れとるのを直す」やのうて「足りん分を足す」側。
-ただし ¥10,000 の商品として見られたら弱点になる、と局長へは伝えてある。
+**10類型すべて片付いとる。**⑥⑦⑨⑩ は #388 で潰した。この表は 2026-08-31 に
+一次データから数え直した値で、数え方は次のとおり（母集団はどれも `material/30days-curriculum/*.md` の36本）。
+
+```bash
+# ⑥⑨: 画像の実数・参照のべ・同一ファイル内の重複
+python3 - <<'PY'
+import glob, re, os, collections
+refs = []
+for f in sorted(glob.glob('material/30days-curriculum/*.md')):
+    refs += [(f, os.path.normpath(m)) for m in re.findall(r'!\[[^\]]*\]\(([^)]+\.png)\)', open(f).read())]
+extra = sum(v - 1 for f in {a for a, _ in refs}
+            for v in collections.Counter(m for a, m in refs if a == f).values() if v > 1)
+print('参照のべ', len(refs), '/ 実画像', len({m for _, m in refs}), '/ 同一ファイル内の余剰', extra)
+PY
+
+# ⑥: そのうち何枚を #388 でその日のツリーから撮ったか（新規 + 撮り直し）
+git diff --name-status 26c53e0^ 26c53e0 -- material/30days-curriculum/screenshots | cut -c1 | sort | uniq -c
+
+# ⑦: 図の枚数
+grep -c '^```mermaid' material/30days-curriculum/*.md | awk -F: '{s+=$2} END{print s}'
+```
 
 ---
 
-## 残作業① — 写真の撮り直し（⑥⑨⑩・最優先）
+## 済んだ作業① — 写真の撮り直し（⑥⑨⑩・#388 で完了）
 
-### 何が問題か
+### 何が問題やったか
 
 `check_visualization.py` が「スクショ位置3箇所以上」を機械で強制しとる。**それを通すために
 同じ画像を貼って数を稼いどった。**検査が品質を下げる方向に効いとった。
 
-参照のべ114回に対して実画像64枚。**21箇所・のべ50回が使い回し。**
-day21 が `report.png` を5回、day17 が `my-task.png` を4回。
+before は参照のべ125箇所に対して実画像64枚（同一ファイル内の余剰31参照）。
+after は実画像111枚・余剰0参照。101枚をその日のツリーで撮り直した。
 
-### 基盤は全部動く状態で置いてある
+**この節は「終わった作業の記録」やけど消さん。**撮影の道具立てとハマりどころは、
+写真を1枚足すたびに要る。次に撮る人はここから読む。
 
 | 道具 | 場所 | 役割 |
 |---|---|---|
 | 日別ツリー再構成 | `scripts/curriculum-qa/build_day_snapshots.py` | 「その日のコード状態」を組む |
 | 撮影 | `scripts/curriculum-qa/shoot_screenshots.py` | Playwright で撮る。赤枠は `boundingBox()` 基準なので座標がズレん |
 | 撮影表 | `scripts/curriculum-qa/screenshot-shot.json` | `name/day/path/login/actions/wait_for/marks/full_page/clip/note/viewport` の宣言 |
-| 撮り直し計画 | `doc/review-handoff/screenshots-plan.md` | 21箇所の内訳と、各カットで赤枠にすべき要素 |
+| 撮り直し計画 | `doc/review-handoff/screenshots-plan.md` | 撮り直しが要った21箇所の内訳と、各カットで赤枠にすべき要素 |
 | 重複ゲート | `check_visualization.py`（同一日の画像重複を落とす検査を追加済み） | 水増しの再発を止める |
 
 ### 手順（実測済み・そのまま踏める）
@@ -104,17 +129,16 @@ python3 scripts/curriculum-qa/shoot_screenshots.py --day 6
 
 ---
 
-## 残作業② — 図の追加（⑦）
+## 済んだ作業② — 図の追加（⑦・#388 で完了）
 
-`doc/review-handoff/diagrams-added.md` に「どの節に図が要るか」の判定結果がある。
-判定は1問だけ: **「この節を読んだ人が紙に描いて確かめたくなるか」**。
+39枚 → **71枚**（+32）。図が0枚の日は無くなった。判定は1問だけ:
+**「この節を読んだ人が紙に描いて確かめたくなるか」**。判定結果は
+`doc/review-handoff/diagrams-added.md` にある。
 
-描かんもの3類型。水増しを防ぐため。
+描かんもの3類型。水増しを防ぐため、次に足すときも同じ線で切る。
 - 手順の羅列を四角で囲んだだけの図
 - 箇条書きをそのまま絵にした図
 - 画面写真がある所の重複
-
-day01/02/03 が 0図。Docker / Node / Postgres の繋がりが最優先。
 
 ---
 
@@ -136,6 +160,27 @@ day01/02/03 が 0図。Docker / Node / Postgres の繋がりが最優先。
 
 - 教材本文は**ですます体**。関西弁は会話用であって本文に持ち込まん
 - コードブロックの後には必ず「なぜこう動くか」を書く。手順の羅列は教材やない
+
+### Node 側の検査ファイルの名前は挟み撃ちになっとる
+
+3つの規則が同時に効く。1つずつ踏んだので順に書いとく。
+
+1. `.gitignore:99` が `test-*.mjs` と `*-test.mjs` を落とす → `test-なんとか.mjs` は
+   手元で緑でも**リポジトリに入らん**
+2. `scripts/check-naming-convention.sh` は `.mjs` に kebab-case を強制する
+   （`.py` は PEP 8 で免除されとるが `.mjs` は免除に無い）→ `test_なんとか.mjs` は CI で落ちる
+3. 結果、通るのは `なんとか-check.mjs` のような**ハイフンで、`test-` で始まらず
+   `-test.mjs` で終わらん**名前だけ
+
+`settle-drawn-frames-check.mjs` がその形。名前を決めたら
+`bash scripts/check-naming-convention.sh` と `git check-ignore -v <path>` の両方を通す。
+
+### Node の検査は `console.log` を書けん
+
+`biome.json` の `noConsole` は `warn` と `error` しか許さん（`level: error`）。
+進捗の1行は `process.stdout.write(...)` で出す。`shoot-page.mjs` も同じ理由で
+`process.stdout.write` を使っとる。`window.x ??= {}` のような
+**式の中の代入**も `noAssignInExpressions` で落ちるので、`if` で分けて書く。
 
 ### 節の存在チェックは素の grep でやるな
 
@@ -197,7 +242,7 @@ bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/  # ALL C
 python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify      # 29/30
 
 # 配布物
-bash scripts/build-zip.sh                                                # 74ファイル / 86.6KB
+bash scripts/build-zip.sh                                                # 74ファイル / 88,757バイト
 python3 scripts/curriculum-qa/test_sale_package.py                       # 31/31
 
 # 紙面
@@ -230,8 +275,8 @@ python3 scripts/pdf-book/check_page_layout.py                            # 36冊
 | `fix-day01-04.md` 〜 `fix-day22-30.md` | 実際に直した内容 |
 | `day-snapshots-result.md` | 30日再構成ビルドの結果 |
 | `page-layout-check.md` | 紙面検査の結果 |
-| `screenshots-plan.md` | **残作業①の作業指示書** |
-| `diagrams-added.md` | **残作業②の判定結果** |
+| `screenshots-plan.md` | 撮影の作業指示書（済んだ作業①の元になった表） |
+| `diagrams-added.md` | 図を足すか落とすかの判定結果（済んだ作業②の根拠） |
 | `duplicate-image-gate.md` | 画像重複ゲートの設計 |
 | `gate1-summary.md` | Gate 1 で確定した件数 |
 
@@ -274,6 +319,72 @@ markdownlint の MD040/MD018/MD024/MD038 系。`doc/` には既存で MD060 が2
 - day08 の MD029 → 出荷する PDF を `pdftotext` で確かめたら `4.` `5.` のまま出る
 - day18・day25 の「画像の到達 Step」→ 本文が完成画像であることと、いま自分の画面に何が無いかを名指しで断っとる
 
+### #388 のマージで出した手落ち（PR #389 で回収）
+
+**Codex が #388 の head へ3件を出した6分後に、それを見んままマージした。** 直前に
+「ボット指摘は全部片付いた」と宣言しとったのに、着いたばかりの指摘を読まずに閉じたわけで、
+これは完全にワイの手落ち。3件は #388 のスレッドで名指しで謝った上で、追いの PR #389 で直した。
+
+3件はどれも同じ形をしとった。**検査は動いとるのに噛んでへん。**
+
+| 指摘 | 中身 |
+|---|---|
+| Codex P1 | `build_failure_is_db_less` が表示用に切った3行で判定しとった。DB のエラーが先頭に並ぶと、その後ろの本物の失敗を見逃す |
+| Codex P2 | フラグ名を変えたのに `duplicate-image-gate.md` の手順が旧名のまま。なぞると `FileNotFoundError` で止まる |
+| Codex P2 | `"settleAnimations(page)" in source` がヘルパーの宣言に当たる。呼び出しを消しても緑のまま通る飾りのテスト |
+
+さらに CodeRabbit が #389 の head へ3件を出した。これも全部実在した。
+
+| 指摘 | 中身 |
+|---|---|
+| `check_visualization.py:177` | `CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE=FALSE` が黙って WARNING へ落ちる |
+| `shoot-page.mjs:282` | `catch` が例外の種類を見ず、評価エラーもページ破棄も「警告つきで撮れた」に化ける |
+| `shoot_screenshots.py:858` | 撮影が成功した回にワーカーの `stderr` を捨てとって、収束タイムアウトの警告が消える |
+
+さらに、その直しへ Codex がもう1件（P1）を返してきた。`ERROR_MARK` が
+`Can't reach database server` にも `P1001` にも当たらんので、Prisma が例外名とマーカーを
+別の行に吐いた回に、証拠の行ごとプールから落ちとった。**二巡目で足したテストが両方を
+1行に詰めとったせいで、この形を踏んでいなかった。**`d796006` で直した。
+
+そこからさらに Codex が2巡した。五巡目は3件 — Next.js のラッパー行が混じると DB だけの
+失敗を通せん（`build_failure_needs_database` へ設計変更・`7868bb6`）／無限スピナーを
+待つ相手から外しただけで止めてへん（撮るたびに別の角度）／`duplicate-image-gate.md` に
+WARNING 時代の記述が残って自分と矛盾。六巡目も3件 — `P1012` を DB の印にしとった
+（Prisma のスキーマ検証エラー全般の番号なので、本物のビルド欠陥が SKIP へ落ちて exit 0 になる）
+／結果ドキュメントを切り分けより先に書き出しとって画面と成果物が食い違う／このファイル自身の
+件数が古い。**七巡目は CodeRabbit が6件 — DB マーカーだけで SKIP にすると本物の失敗が exit 0 で出ていく（Codex と逆向きの穴。両側判定へ変更）／画面の日別行が切り分け前の状態／環境変数の判定が拒否リストのままで綴り間違いが WARNING へ落ちる／`duplicate-image-gate.md` の doc 3件。八巡目は Codex が2件 — `Error validating datasource` が P1012 と同じ形で残っとった／`EXPECTED_RED` が day11 の build 落ちを中身を見ずに丸ごと免除しとった。ここまでで8ラウンド。
+
+**九巡目から先も続いとる。この節に一件ずつ書き足すのはやめる**（2回続けて数字が古くなって
+指摘された。数えるのは記録の側の仕事で、要約の側でやると必ずずれる）。最新は必ず
+`doc/review-handoff/coderabbit-verdicts.md` の末尾を見る。数えるならこれで取れる。
+
+```bash
+grep -c '^## \[PR #389' doc/review-handoff/coderabbit-verdicts.md   # 記録の本数
+grep -o '巡目' doc/review-handoff/coderabbit-verdicts.md | wc -l     # 巡の延べ数（参考）
+```
+
+九巡目以降の見出しだけ挙げとく（中身は記録の側）。九巡目: 環境変数の欠落を DB 扱いしとった／
+Recharts の描画待ち。十巡目: day11 の免除が中身を見てへん。十一巡目: ブラウザ不在の退避が
+そもそも動いてへん。十二巡目: 時間切れが黙って落ちる ほか CodeRabbit 5件。十三巡目: 成果物の
+文書だけが「想定内」と言い張る／実ブラウザ検査が CI で一度も走らん／ワーカーの読み込み失敗まで
+SKIP に混ざる。十四巡目: 例外名だけで DB 扱いしとった／両方赤い日に build の行が消える。
+
+**どの件も退行テストを足し、直しを戻すと落ちることを1件ずつ確かめた**（`rm -rf __pycache__` を
+先に打つ。キャッシュが残ると戻したはずの挙動が古いまま報告されて、テストが嘘をつく）。
+
+### この回で学んだこと（次の担当者へ）
+
+1. **マージの直前にもう一度スレッドを取り直す。** 「片付いた」と言った時点から数分で増える。
+2. **退行テストは、直しを戻して落ちることを見るまで書けたと言わん。** ラッパー越しに呼ぶと
+   ラッパーの既定が効いて本体を戻しても緑のまま通る。本体を直接呼ぶ。
+3. **`__pycache__` を消してから戻す。** 消さんとテストが古い挙動を報告する。
+4. **`git checkout <file>` で戻さん。** HEAD に戻るので、まだコミットしてへん自分の直しごと
+   消える。このセッションで3回踏んだ。戻すときは python でその行だけ書き換える。
+5. **文字列一致で書いたテストは飾りになりうる。** `skipped = [` を探すだけやと、中身を
+   `return list(results)` に潰しても通る。関数へ切り出して実際に値を通す。
+
 ### 残っとること
 
-なし。CI 緑・衝突なしを確かめてマージへ進む。
+PR #389 のボット指摘は、**受けた分は全部**直して返信・resolve 済み（件数は
+`coderabbit-verdicts.md` を数える。ここに書くと必ず古くなる）。異議はゼロ。
+マージは局長の指示待ち。

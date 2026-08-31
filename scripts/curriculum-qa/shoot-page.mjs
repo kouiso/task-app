@@ -9,8 +9,9 @@
 // セレクタ基準なら要素が動いても枠が追いかける。
 
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { chromium } from 'playwright';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium, errors } from 'playwright';
 
 const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 
@@ -24,6 +25,17 @@ const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '�
 // 下半分が白場になり、中身が長い日は `main` の中でスクロールするため下が切れる
 // （`fullPage` は文書のスクロールしか追わない）。窓の高さを中身へ合わせると両方直る。
 // 下限は、中身がほとんど無い画面で帯のように潰れるのを防ぐため。
+// アニメーションの収束を待つ上限。装飾で常時動いとる画面があっても撮影を止めん。
+const ANIMATION_SETTLE_MS = 5000;
+// 何ミリ秒続けて同じ形なら「描き終わった」と見なすか。
+//
+// フレーム数で数えたらアカン。3フレームは 60fps で約50ms、20fps では150msになって、
+// 基準そのものが機械の速さでブレる。それ以上に効くのが**開始の遅延**で、Recharts の
+// `<Pie>` は既定で暫く待ってから動き出す（`src/app/report/` は animation の指定を
+// 持たんので既定が効く）。その待ちの間は形が動かんので、3フレーム基準やと
+// **アニメが始まる前に「止まった」と判定して撮ってまう**。開始の遅延より長い窓を
+// 要求して、動き出す前の絵を掴まんようにする。
+const DRAWN_FRAME_STABLE_MS = 600;
 const MIN_CONTENT_HEIGHT = 420;
 const MAX_CONTENT_HEIGHT = 4000;
 
@@ -261,7 +273,128 @@ async function fitToContent(page, current) {
   await page.setViewportSize({ width: current.width, height });
   // 高さが変わると折り返しと遅延読み込みが動く。落ち着いてから測り直す。
   await page.waitForTimeout(300);
+  // 窓の付け替えは ResponsiveContainer と Recharts に描き直しをさせる。呼び出し側が
+  // 撮る前に待った収束は、この時点で無効になっとる。決め打ちの 300ms だけやと遅い回で
+  // 描き直しの途中が写るので、ここでもう一度、形が止まるまで待つ。
+  await settleAnimations(page);
   return current.height;
+}
+
+/** 走っているアニメーションと遷移が終わるまで待つ。上限つき。 */
+async function settleAnimations(page) {
+  try {
+    await page.waitForFunction(
+      () =>
+        document
+          .getAnimations()
+          .filter((a) => a.playState === 'running')
+          // 無限に回るもの（スピナー）は終わりが来ないので、待つ相手から外す。
+          .every((a) => a.effect?.getComputedTiming?.().iterations === Infinity),
+      undefined,
+      { timeout: ANIMATION_SETTLE_MS },
+    );
+  } catch (err) {
+    // 上限まで待っても止まらんかった回はそのまま撮る。ここで落とすと、常時動いとる
+    // 装飾がある画面が1枚も撮れんようになる。黙って通さんように warn は残す。
+    // ただし待ち時間切れ以外（評価エラー・ページ破棄）は本物の失敗なので握り潰さん。
+    if (!(err instanceof errors.TimeoutError)) {
+      throw err;
+    }
+    console.warn(`アニメーションが ${ANIMATION_SETTLE_MS}ms で止まりませんでした`);
+  }
+  // 待つ相手から外した無限アニメーション（スピナー等）は、止めんと撮るたびに別の角度で
+  // 写る。待たへんことと、位相を決めることは別の仕事や。ここを飛ばすと、同じ回を2度撮って
+  // 違う画像が出る — 決め打ちの待ちを外した目的そのものが果たせん。
+  await page.evaluate(() => {
+    for (const animation of document.getAnimations()) {
+      if (animation.effect?.getComputedTiming?.().iterations === Infinity) {
+        animation.currentTime = 0;
+        animation.pause();
+      }
+    }
+  });
+  await settleDrawnFrames(page);
+  // 最後の1フレームが画面へ出るのを待つ。
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done())));
+}
+
+/**
+ * JS で1フレームずつ描くアニメーションが描き終わるまで待つ。上限つき。
+ *
+ * `document.getAnimations()` は Web Animations（CSS の transition / animation）しか返さん。
+ * Recharts の Pie / Line / Bar は react-smooth が requestAnimationFrame で属性を書き換えて
+ * 動かすので、あの一覧には**1つも出てこん**。せやから見出しが出た時点で待ちが明けて、
+ * 描きかけのグラフがそのまま保存される（day22 の3枚と day23 の3枚が該当）。
+ * 決め打ちの 400ms を外した目的は「毎回同じ絵になること」やったのに、この経路だけ
+ * 逆に不安定になっとった。
+ *
+ * 合図が無いので、形が変わらんくなったことをもって描き終わりとみなす。SVG の中の
+ * 座標・形・不透明度をつないだ文字列を毎フレーム作り、続けて同じ値が出たら止まったと判断する。
+ */
+async function settleDrawnFrames(page) {
+  try {
+    await page.waitForFunction(
+      (needed) => {
+        const shape = [];
+        for (const el of document.querySelectorAll('svg *')) {
+          shape.push(
+            el.getAttribute('d') ?? '',
+            el.getAttribute('points') ?? '',
+            el.getAttribute('transform') ?? '',
+            // 円は cx/cy だけで動く。ここを見んと、移動しとるのに「止まっとる」と
+            // 誤読して途中の絵を撮る。線も同じ理由で端点を見る。
+            el.getAttribute('cx') ?? '',
+            el.getAttribute('cy') ?? '',
+            el.getAttribute('x1') ?? '',
+            el.getAttribute('y1') ?? '',
+            el.getAttribute('x2') ?? '',
+            el.getAttribute('y2') ?? '',
+            el.getAttribute('x') ?? '',
+            el.getAttribute('y') ?? '',
+            el.getAttribute('width') ?? '',
+            el.getAttribute('height') ?? '',
+            el.getAttribute('r') ?? '',
+            el.getAttribute('opacity') ?? '',
+            // Recharts の `<Line>` は線の出現を **`d` を固定したまま** 破線の刻みで
+            // 描く（`stroke-dasharray` を伸ばして見せる）。ここを見んと、動いとる最中に
+            // 「形が変わってへん」と読んで描きかけの折れ線を撮る。属性と inline style の
+            // 両方を見るのは、react-smooth の版によって書き込み先が違うため。
+            el.getAttribute('stroke-dasharray') ?? '',
+            el.getAttribute('stroke-dashoffset') ?? '',
+            el.style?.strokeDasharray ?? '',
+            el.style?.strokeDashoffset ?? '',
+          );
+        }
+        const drawn = shape.join('|');
+        // 前フレームとの比較なので、状態を窓に置いて持ち越す。
+        if (!window.__shotDrawnFrames) {
+          window.__shotDrawnFrames = { drawn: null, since: performance.now() };
+        }
+        const state = window.__shotDrawnFrames;
+        const now = performance.now();
+        if (drawn === state.drawn) {
+          return now - state.since >= needed;
+        }
+        state.drawn = drawn;
+        state.since = now;
+        return false;
+      },
+      DRAWN_FRAME_STABLE_MS,
+      { timeout: ANIMATION_SETTLE_MS, polling: 'raf' },
+    );
+  } catch (err) {
+    // 待ち時間切れ以外（評価エラー・ページ破棄）は本物の失敗なので握り潰さん。
+    if (!(err instanceof errors.TimeoutError)) {
+      throw err;
+    }
+    console.warn(`描画が ${ANIMATION_SETTLE_MS}ms で落ち着きませんでした`);
+  } finally {
+    // 1ページで何枚も撮るので、持ち越した状態は毎回捨てる。残すと次の1枚が
+    // 「もう止まっとる」と誤判定する。
+    await page.evaluate(() => {
+      delete window.__shotDrawnFrames;
+    });
+  }
 }
 
 async function shoot(page, job, shot) {
@@ -296,8 +429,10 @@ async function shoot(page, job, shot) {
   // 本番ビルドで撮った他の日の写真と見た目がそろわなくなる。
   // 本番ビルドの回にはこの要素そのものが無いので、指定しても何も起きない。
   await page.addStyleTag({ content: 'nextjs-portal{display:none !important;}' });
-  // アニメーションの途中で撮ると、同じ指定でも回ごとに違う絵になる。
-  await page.waitForTimeout(400);
+  // アニメーションの途中で撮ると、同じ指定でも回ごとに違う絵になる。決め打ちの待ちやと、
+  // 400ms より長い遷移や、並列撮影で遅れた回がそのまま途中の絵で保存される。走っとる
+  // アニメーションが無くなるまで待つ。上限を置くのは、無限に回るスピナーで止まらんため。
+  await settleAnimations(page);
   // ページ全体を撮る回だけ、窓の高さを中身へ合わせる。切り抜く回は要らない
   // （切り抜きの矩形が中身の実寸から起きるので、余白も切れ落ちも起きない）。
   const sizeBefore =
@@ -392,7 +527,14 @@ async function main() {
   process.stdout.write(JSON.stringify({ ok: true, shots: done }));
 }
 
-main().catch((e) => {
-  process.stdout.write(JSON.stringify({ ok: false, error: `${e}` }));
-  process.exitCode = 1;
-});
+// このファイルを直接叩いたときだけ撮影を始める。読み込んだだけで走ると、
+// 収束待ちだけを実物のブラウザで確かめる退行テスト（settle-drawn-frames-check.mjs）が
+// stdin を待って止まる。
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((e) => {
+    process.stdout.write(JSON.stringify({ ok: false, error: `${e}` }));
+    process.exitCode = 1;
+  });
+}
+
+export { settleAnimations, settleDrawnFrames };

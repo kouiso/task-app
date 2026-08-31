@@ -15,8 +15,10 @@
 """
 
 import contextlib
+import inspect
 import io
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -596,6 +598,25 @@ def check_provenance() -> list[str]:
     return fails
 
 
+def documented_day11_errors() -> tuple[str, ...]:
+    """断り書きの現物（`EXPECTED_RED_SIGNATURE[11]["diagnostics"]`）から tsc の行を組む。
+
+    位置を手で並べると、断り書きを更新した時にここだけ古いまま緑になる。
+    `getById` は本文が名指ししとる識別子なので、TS2339 の行にだけ載せる。
+    """
+    signature = target.EXPECTED_RED_SIGNATURE[11]
+    lines = []
+    for head in signature["diagnostics"]:
+        where, code = head.rsplit(":", 1)
+        tail = (
+            f"Property '{signature['marker']}' does not exist"
+            if code == "TS2339"
+            else "Parameter implicitly has an 'any' type"
+        )
+        lines.append(f"{where}: error {code}: {tail}")
+    return tuple(lines)
+
+
 def check_triage_section() -> list[str]:
     """NG の日の切り分けが、調べていないものを勝手に断定しないことを確かめる。"""
     fails = []
@@ -614,9 +635,13 @@ def check_triage_section() -> list[str]:
     if expected_day is None:
         fails.append("❌ EXPECTED_RED が空で、想定内の赤の扱いを確かめられない")
     else:
-        section = target.triage_section(
-            [target.DayResult(expected_day, 80, True, "NG", "NG", ("x",))]
+        signature = target.EXPECTED_RED_SIGNATURE[expected_day]
+        documented_errors = documented_day11_errors()
+        documented = target.DayResult(
+            expected_day, 80, True, "NG", "OK",
+            errors=documented_errors[:3], tsc_errors=documented_errors,
         )
+        section = target.triage_section([documented])
         row = next(
             (l for l in section.split("\n") if l.startswith(f"| day{expected_day:02d} ")), ""
         )
@@ -624,6 +649,22 @@ def check_triage_section() -> list[str]:
             fails.append(f"❌ 想定内の赤が想定内として出ていない: {row!r}")
         if "教材の欠陥" in row or "判定不能" in row:
             fails.append(f"❌ 想定内の赤を欠陥や未調査として出している: {row!r}")
+
+        # 断り書きと合わん赤まで「想定内」と書いたら、走行は exit 1 やのに成果物だけが
+        # 「想定どおり」と言い張る状態になる。走行の判定と文書の判定を同じ線で動かす。
+        unrelated = documented._replace(
+            tsc_errors=documented.tsc_errors + (
+                "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
+            ),
+        )
+        unrelated_row = next(
+            (l for l in target.triage_section([unrelated]).split("\n")
+             if l.startswith(f"| day{expected_day:02d} ")), ""
+        )
+        if "想定内" in unrelated_row:
+            fails.append(f"❌ 断り書きと合わん赤まで成果物が想定内と書いている: {unrelated_row!r}")
+        if not target.broken_days([unrelated]):
+            fails.append("❌ 断り書きと合わん赤を異常日に数えていない（文書との食い違いの元）")
 
     original = dict(target.TRIAGE)
     try:
@@ -806,6 +847,716 @@ def check_tree_inputs() -> list[str]:
     return fails
 
 
+def check_build_failure_triage() -> list[str]:
+    """ビルドの赤を、この機械で判定できるかどうかの切り分け。
+
+    昔は build の赤を丸ごと無視しとった。DB を持たん機械で必ず赤くなるからやが、
+    それやと prerender や server/client 境界の失敗まで一緒に通る。tsc は見つけられん
+    種類なので、ここが緩むと壊れた日が緑で出荷される。
+
+    次に「DB だけで説明できる赤か」を行ごとに当てにいったが、`next build` が根本原因を
+    ラッパー行で包んで出すので、文言が1つ増えるたびに壊れた。いまは当てにいくのをやめ、
+    DB が絡む赤は SKIP（判定してへん）として残す。**通した扱いにはせん**のが要点。
+    """
+    fails = []
+    db_less = (
+        "Error: P1001: Can't reach database server at `localhost:5432`",
+        "PrismaClientInitializationError: Can't reach database server",
+    )
+    if not target.build_failure_is_database_only(db_less):
+        fails.append("❌ DB へ届かんだけの赤を、この機械で判定できるものとして扱っている")
+
+    real = (
+        "Error occurred prerendering page \"/project\"",
+        "TypeError: Cannot read properties of undefined",
+    )
+
+    # 判定へ渡す材料が3行で切られていないこと。表示用の3行と別物であること。
+    noisy = "\n".join(
+        ["Error: P1001: Can't reach database server"] * 5
+        + ["Error occurred prerendering page \"/project\""]
+    )
+    pool = target.error_line_pool(noisy)
+    if len(pool) != 6:
+        fails.append(f"❌ 判定用のエラー行が {len(pool)} 行に切られている（6行あるはず）")
+    if len(target.error_lines(noisy)) != 3:
+        fails.append("❌ 表示用のエラー行が3行になっていない")
+
+    # マーカーだけの行（error / failed の語が無い）がプールから落ちんこと。
+    multiline = "\n".join(
+        [
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+            "Please make sure your database server is running",
+        ]
+    )
+    if not any("Can't reach database server" in ln for ln in target.error_line_pool(multiline)):
+        fails.append("❌ 単独行の DB マーカーが判定用のプールから落ちている")
+
+    # Prisma のスタックフレームはメソッド名に `Error` が含まれるため、ERROR_MARK だけで
+    # 拾うと DB の赤へ説明の付かん行が混ざったように見える。呼び出し経路は判定材料にせん。
+    prisma_stack = target.error_line_pool("\n".join([
+        "PrismaClientInitializationError:",
+        "Can't reach database server at `localhost`:`5432`",
+        "    at Mn.handleRequestError (/workspace/node_modules/@prisma/client/runtime/library.js:121:1)",
+        "    at Mn.handleAndLogRequestError (/workspace/node_modules/@prisma/client/runtime/library.js:125:1)",
+    ]))
+    if not target.build_failure_is_database_only(prisma_stack):
+        fails.append("❌ Prisma のスタックフレームを DB の赤へ混ぜている")
+
+    # Next.js のラッパー行が混じっても、DB が絡む赤は「判定できん」と見なすこと。
+    # 行ごとに DB か否かを当てにいくと、ラッパーの文言が増えるたびに壊れる。
+    wrapped = "\n".join(
+        [
+            "Error: Failed to collect page data for /dashboard",
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+        ]
+    )
+    if not target.build_failure_is_database_only(target.error_line_pool(wrapped)):
+        fails.append("❌ Next.js のラッパーに包まれた DB の赤を、判定できるものとして扱っている")
+
+    # DB のエラーと本物の失敗が同じ出力に居たら、SKIP にせん。DB の赤に隠れて
+    # 壊れた日が exit 0 で出ていくのを防ぐ。ラッパー行（原因やのうて包み紙）は
+    # 本物の失敗に数えん — そこを混ぜると DB だけの失敗まで止めてまう。
+    mixed_real = target.error_line_pool("\n".join([
+        "Error: Failed to collect page data for /dashboard",
+        "Can't reach database server at `localhost`:`5432`",
+        "TypeError: Cannot read properties of undefined (reading 'map')",
+    ]))
+    if target.build_failure_is_database_only(mixed_real):
+        fails.append("❌ DB のエラーに紛れた本物の失敗を SKIP へ落として exit 0 にしている")
+    # prerender の見出しは DB の判定でだけ包み紙に数える。単独で来た回は DB の印が
+    # 無いので、これまでどおり本物の失敗のまま止まらんとアカン。内部の述語やのうて
+    # 外から見える結果で見る。
+    if target.build_failure_is_database_only(
+        target.error_line_pool("Error occurred prerendering page \"/x\"")
+    ):
+        fails.append("❌ prerender の失敗だけの赤を DB のせいにして SKIP へ落としている")
+    if target.has_real_build_failure(("Error: Failed to collect page data for /dashboard",)):
+        fails.append("❌ Next.js のラッパー行を本物の失敗に数えている（DB だけの失敗が止まる）")
+
+    # DB がまったく絡まん赤は、これまでどおり本物の失敗として扱うこと。
+    if target.build_failure_is_database_only(real):
+        fails.append("❌ DB と関係ない赤まで判定できんものとして扱っている")
+    if target.build_failure_is_database_only(()):
+        fails.append("❌ 理由が1行も無い赤を DB のせいにしている")
+
+    # SKIP は「通した」やない。実際に振り替えを動かして、状態が変わることを見る。
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Error: Failed to collect page data for /dashboard",),
+        build_errors=(
+            "Error: Failed to collect page data for /dashboard",
+            "Can't reach database server at `localhost`:`5432`",
+        ),
+    )
+    real_day = target.DayResult(
+        day=8, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=real, build_errors=real,
+    )
+    green_day = target.DayResult(
+        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
+    )
+    triaged = target.triage_build_results([db_day, real_day, green_day])
+    if triaged[0].build != target.BUILD_SKIPPED:
+        fails.append("❌ DB が要る赤が SKIP へ振り替わっていない")
+    if triaged[1].build != "NG":
+        fails.append("❌ DB と関係ない赤まで SKIP にしている")
+    if triaged[2].build != "OK":
+        fails.append("❌ 通ったビルドの状態を書き換えている")
+    if target.BUILD_SKIPPED in ("OK", "NG"):
+        fails.append("❌ SKIP が OK か NG と同じ値になっている（区別が消えている）")
+
+    # P1012 は Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
+    # これを DB 扱いすると、壊れたリレーションのビルド欠陥が SKIP へ落ちて exit 0 になる。
+    schema_error = (
+        "Error: Prisma schema validation - (get-dmmf wasm)",
+        "Error code: P1012",
+        'error: Error validating field `owner` in model `Project`: The relation field is missing.',
+    )
+    if target.build_failure_is_database_only(schema_error):
+        fails.append("❌ P1012 のスキーマ検証エラーを DB の不在として見逃している")
+
+    # datasource ブロックの書き間違いも DB へ届かんこととは別。`npm run build` は
+    # `prisma generate` から始まるので、ここを DB 扱いにすると provider の書き間違いが
+    # SKIP へ落ちて exit 0 になる。
+    datasource_error = target.error_line_pool("\n".join([
+        "Error: Prisma schema validation - (get-dmmf wasm)",
+        "Error validating datasource `db`: the provider is invalid",
+    ]))
+    if target.build_failure_is_database_only(datasource_error):
+        fails.append("❌ datasource のスキーマ欠陥を DB の不在として見逃している")
+
+    # P1003 はサーバーへ到達した後の「データベースが存在せん」なので、P1001 の
+    # 接続不能とは別物。「the database server at」だけを印にするとここを SKIP へ落とす。
+    database_missing = target.error_line_pool(
+        "Error: P1003: Database `task_app` does not exist on the database server at `localhost`"
+    )
+    if target.build_failure_is_database_only(database_missing):
+        fails.append("❌ P1003 のデータベース不在を接続不能として見逃している")
+    # 例外名だけで DB の不在に倒さんこと。Prisma は接続文字列が不正なときや query engine が
+    # 欠けとるときにも `PrismaClientInitializationError` を出す。名前だけで SKIP にすると、
+    # その2つが exit 0 で通る。
+    if target.build_failure_is_database_only((
+        "PrismaClientInitializationError:",
+        "error: Invalid `prisma.project.findMany()` invocation: the URL must start with postgresql://",
+    )):
+        fails.append("❌ 接続文字列の不正まで DB の不在として見逃している")
+    if target.build_failure_is_database_only((
+        "PrismaClientInitializationError:",
+        "Query engine library for current platform could not be found.",
+    )):
+        fails.append("❌ query engine の欠落まで DB の不在として見逃している")
+    # 本物の接続失敗は、届かんかったことを言う行が必ず一緒に出る。そっちで拾える。
+    if not target.build_failure_is_database_only(target.error_line_pool("\n".join([
+        "PrismaClientInitializationError:",
+        "Can't reach database server at `localhost`:`5432`",
+    ]))):
+        fails.append("❌ 本物の接続失敗を DB の不在として拾えていない")
+
+    # 環境変数の欠落は「DB が無い機械」の印やない。`copy_scaffold()` が `.env.example` を
+    # 必ず `.env` へ複写し、その `.env.example` が `DATABASE_URL` を定義しとるので、
+    # DB の無い機械でも変数は在る。無いと言われたのなら組んだツリーか schema が壊れとる。
+    for missing in (
+        "Environment variable not found: DATABASE_URL.",
+        "Environment variable not found: DB_URL.",
+    ):
+        if target.build_failure_is_database_only((missing,)):
+            fails.append(f"❌ 環境変数の欠落（{missing}）を DB の不在として見逃している")
+        if not target.has_real_build_failure((missing,)):
+            fails.append(f"❌ 環境変数の欠落（{missing}）を本物の失敗に数えていない")
+
+    # Prisma は変数の欠落も接続の失敗も同じ例外名で包む。例外名だけで SKIP に倒すと
+    # 変数の欠落が exit 0 で通る。本物の失敗の判定が先に効くことを、振り替えまで通して見る。
+    env_wrapped = target.error_line_pool("\n".join([
+        "Error: Failed to collect page data for /dashboard",
+        "PrismaClientInitializationError:",
+        "error: Environment variable not found: DATABASE_URL.",
+    ]))
+    if target.build_failure_is_database_only(env_wrapped):
+        fails.append("❌ 例外名に紛れた環境変数の欠落を DB の不在として見逃している")
+    env_day = target.DayResult(
+        day=12, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=env_wrapped[:3], build_errors=env_wrapped,
+    )
+    if target.triage_build_results([env_day])[0].build != "NG":
+        fails.append("❌ 環境変数の欠落を SKIP へ振り替えて exit 0 にしている")
+
+    # 上の判断は「`.env` は必ず書かれる」という前提に乗っとる。前提が消えたら判断も無効に
+    # なるので、複写の経路そのものを見張る。
+    scaffold = inspect.getsource(target.copy_scaffold)
+    if ".env.example" not in scaffold or '".env"' not in scaffold:
+        fails.append("❌ `.env.example` を `.env` へ複写する経路が消えている（環境変数の判断の前提）")
+
+    # 成功の行に、判定してへん日があることを必ず出す。ここが消えると全部緑に読める。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    tail = source.split("if skipped:", 1)
+    if len(tail) != 2:
+        fails.append("❌ 判定できんかった日があっても、成功の行に何も出していない")
+    elif "検証していません" not in tail[1].split("return 0", 1)[0]:
+        fails.append("❌ 判定してへん日があるのに「検証していない」と書いていない")
+    return fails
+
+
+def check_expected_red_build_exemption() -> list[str]:
+    """EXPECTED_RED の日の build 免除が、断り書きの範囲に収まっとること。
+
+    day 番号だけで build を丸ごと免除すると、断ってへん失敗（prerender や
+    server/client 境界）がその日に紛れても exit 0 で出ていく。断ってあるのは
+    型エラーだけなので、免除もそこまで。
+    """
+    fails = []
+    known = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
+        errors=("src/x.tsx(29,47): error TS2339: Property 'getById' does not exist",),
+        build_errors=(
+            "Failed to compile.",
+            "Type error: Property 'getById' does not exist on type ...",
+        ),
+    )
+    tree_failed = known._replace(tree_ok=False, tsc=target.NOT_RUN, build=target.NOT_RUN)
+    if target.expected_red_holds(tree_failed):
+        fails.append("❌ ツリー構築に失敗した day11 を想定内の赤として扱っている")
+    if not target.build_failure_is_expected(known):
+        fails.append("❌ 断り書きどおりの型エラーによる build 落ちまで異常扱いしている")
+
+    extra = known._replace(build_errors=known.build_errors + (
+        "Error: Unauthorized while prerendering /project",
+    ))
+    if target.build_failure_is_expected(extra):
+        fails.append("❌ 断り書きに無い失敗が day11 に紛れても免除している")
+
+    # prerender の見出しは DB の問いでだけ包み紙。免除の問いでは「型エラーやない行」
+    # なので、これが混ざったら免除せんこと。
+    wrapped = known._replace(build_errors=known.build_errors + (
+        "Error occurred prerendering page \"/project\"",
+    ))
+    if target.build_failure_is_expected(wrapped):
+        fails.append("❌ prerender の見出しが混ざった day11 を免除している")
+
+    silent = known._replace(build_errors=("Failed to compile.",))
+    if target.build_failure_is_expected(silent):
+        fails.append("❌ 型エラーの証拠が1行も無いのに断り書きで説明できたことにしている")
+
+    other = known._replace(day=12)
+    if target.build_failure_is_expected(other):
+        fails.append("❌ EXPECTED_RED に無い日まで免除している")
+
+    # tsc の側も、日付やのうて断り書きの中身と突き合わせること。本文は識別子・件数・場所まで
+    # 書いとるので、そこが合わん赤は「別の欠陥が紛れた」と見なす。
+    documented = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="OK",
+        errors=(),
+        tsc_errors=documented_day11_errors(),
+    )
+    if not target.tsc_failure_is_expected(documented):
+        fails.append("❌ 断り書きどおりの型エラー5件まで異常扱いしている")
+
+    # 件数が増えたら、断り書きで説明でけへん赤が混ざっとる。
+    if target.tsc_failure_is_expected(
+        documented._replace(tsc_errors=documented.tsc_errors + (
+            "src/component/project/project-detail-view.tsx(200,4): error TS2345: "
+            "Argument of type 'string' is not assignable",
+        ))
+    ):
+        fails.append("❌ 断り書きの件数を超える型エラーまで想定内にしている")
+
+    # 名指しされた識別子に1行も触れてへん赤は、別の欠陥。
+    unrelated = documented._replace(tsc_errors=tuple(
+        line.replace("Property 'getById' does not exist", "Type 'number' is not assignable to type 'string'")
+        for line in documented.tsc_errors
+    ))
+    if target.tsc_failure_is_expected(unrelated):
+        fails.append("❌ `getById` と無関係な型エラー5件を day11 の想定内として通している")
+
+    # 場所が広がったら、配布物1ファイルに閉じるという前提が崩れとる。
+    spread = documented._replace(tsc_errors=documented.tsc_errors[:-1] + (
+        "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
+    ))
+    if target.tsc_failure_is_expected(spread):
+        fails.append("❌ 断り書きの場所を外れた型エラーまで想定内にしている")
+
+    if target.tsc_failure_is_expected(documented._replace(day=12)):
+        fails.append("❌ EXPECTED_RED に無い日の型エラーまで免除している")
+
+    # build 側も、名指しされた識別子に触れてへん型エラーは免除せん。
+    other_type_error = known._replace(build_errors=(
+        "Failed to compile.",
+        "Type error: Type 'number' is not assignable to type 'string'.",
+    ))
+    if target.build_failure_is_expected(other_type_error):
+        fails.append("❌ 断り書きと無関係な型エラーによる build 落ちを免除している")
+
+    # 根っこの getById が残っていても、追加の型エラーまで同居したら免除せん。
+    mixed_type_errors = known._replace(build_errors=known.build_errors + (
+        "Type error: Type 'number' is not assignable to type 'string'.",
+    ))
+    if target.build_failure_is_expected(mixed_type_errors):
+        fails.append("❌ getById と別の型エラーが同居した build を免除している")
+
+    # 免除の判断が異常日の判定に効いとること。関数だけ足しても意味が無いので、
+    # 実際に `broken_days` を通して数える。
+    healthy = target.DayResult(
+        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
+    )
+    exempt = documented._replace(build="NG", build_errors=known.build_errors)
+    unrelated_day11 = unrelated._replace(build="NG", build_errors=(
+        "Failed to compile.",
+        "Error occurred prerendering page \"/project\"",
+    ))
+    broken = target.broken_days([healthy, exempt, unrelated_day11])
+    if any(r is healthy for r in broken):
+        fails.append("❌ 通った日を異常日に数えている")
+    if any(r is exempt for r in broken):
+        fails.append("❌ 断り書きどおりの day11 を異常日に数えている")
+    if not any(r is unrelated_day11 for r in broken):
+        fails.append("❌ 断り書きと無関係な赤が紛れた day11 を異常日に数えていない")
+    return fails
+
+
+def check_both_red_shows_both() -> list[str]:
+    """tsc と build が両方赤い日は、画面と成果物に両方の行を出すこと。
+
+    `tsc_shown or build_shown` にすると tsc が赤い時点で build の行が丸ごと消える。
+    day11 のように tsc の赤が想定内の日で build 側に別の欠陥が入ると、走行は exit 1 なのに
+    出とるのは「知っとる型エラー」だけになり、落ちた本当の理由が読めん。
+    """
+    fails = []
+    tsc_lines = ("src/x.tsx(29,47): error TS2339: Property 'getById' does not exist",)
+    build_lines = ("Error occurred prerendering page \"/project\"",)
+    calls = []
+
+    def fake_run_step(cmd, dest):
+        calls.append(cmd)
+        if "tsc" in " ".join(cmd):
+            return False, tsc_lines, tsc_lines
+        return False, build_lines, build_lines + ("Failed to compile.",)
+
+    original_run_step = target.run_step
+    original_link = target.link_node_modules
+    try:
+        target.run_step = fake_run_step
+        target.link_node_modules = lambda dest: None
+        tsc, build, shown, build_all, tsc_all = target.verify_tree(Path("/nonexistent"))
+    finally:
+        target.run_step = original_run_step
+        target.link_node_modules = original_link
+
+    if (tsc, build) != ("NG", "NG"):
+        fails.append(f"❌ 両方赤い日の状態が ({tsc}, {build}) になっている")
+    if not any("getById" in line for line in shown):
+        fails.append(f"❌ 表示用のエラーから tsc の行が落ちている: {shown!r}")
+    if not any("prerendering" in line for line in shown):
+        fails.append(f"❌ 表示用のエラーから build の行が落ちている（落ちた本当の理由が読めん）: {shown!r}")
+    if "Failed to compile." not in build_all:
+        fails.append("❌ 判定用の build エラーが表示用に差し替わっている")
+    if tsc_all != tsc_lines:
+        fails.append("❌ 判定用の tsc エラーが取れていない")
+    return fails
+
+
+def check_result_doc_records_skip() -> list[str]:
+    """成果物のほうにも SKIP が残ること。
+
+    画面が SKIP と言うとるのに、証拠として出すファイルが NG のままやと、
+    読んだ人はそっちを信じる。しかも切り分けの表に「判定不能（未調査）」の行が生えて、
+    教材の欠陥を疑わせる。書き出しは切り分けのあとに走らなあかん。
+    """
+    fails = []
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Can't reach database server at `localhost`:`5432`",),
+        build_errors=("Can't reach database server at `localhost`:`5432`",),
+    )
+    triaged = target.triage_build_results([db_day])
+    directory = tempfile.mkdtemp()
+    saved = target.RESULT_DOC
+    try:
+        target.RESULT_DOC = Path(directory) / "day-snapshots-result.md"
+        target.write_result_doc(triaged, True, "python3 build_day_snapshots.py --all --verify")
+        body = target.RESULT_DOC.read_text(encoding="utf-8")
+    finally:
+        target.RESULT_DOC = saved
+        shutil.rmtree(directory)
+    if target.BUILD_SKIPPED not in body:
+        fails.append("❌ 成果物に SKIP が残っていない（NG のまま書かれている）")
+    if "判定不能（未調査）" in body:
+        fails.append("❌ 判定してへん日を「判定不能（未調査）」として切り分けの表へ入れている")
+
+    # 呼ぶ順番そのものも固定する。切り分けが後ろへ戻ると、同じ走行の中で
+    # 画面の日別行・成果物・最終行が別々の状態を名乗る。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    main_body = source.split("def main(argv: list[str]) -> int:", 1)[1]
+    if "triage_build_results([r])" not in main_body:
+        fails.append("❌ 日別の結果を、表示より前に切り分けていない")
+    else:
+        cut = main_body.index("triage_build_results([r])")
+        if cut > main_body.index('print(f"day{n:02d}'):
+            fails.append("❌ 画面の日別行を切り分けより先に出している")
+        if cut > main_body.index("write_result_doc(results"):
+            fails.append("❌ 結果ドキュメントを切り分けより先に書き出している")
+    return fails
+
+
+def check_boundary_error_survives_db_noise() -> list[str]:
+    """DB の赤に紛れた Server Component 境界エラーを SKIP へ落とさんこと。
+
+    `You're importing a component that needs` は REAL_BUILD_FAILURE_MARKERS の中で
+    唯一 ERROR_MARK（error|failed|not found|Cannot find）のどの語も含まん。判定用の
+    プールがこの行を落とすと、残るのは DB の行だけになり、本物の build 欠陥が SKIP で
+    素通りする。この PR が潰しとる型そのものなので、経路を実際に通して確かめる。
+    """
+    output = "\n".join(
+        [
+            "PrismaClientInitializationError:",
+            "Can't reach database server at localhost:5432",
+            "You're importing a component that needs \"next/headers\".",
+        ]
+    )
+    pool = target.error_line_pool(output)
+    if not any("You're importing a component that needs" in ln for ln in pool):
+        return [f"❌ 境界エラーが判定用プールから落ちている: {pool}"]
+
+    if target.build_failure_is_database_only(tuple(pool)):
+        return ["❌ 本物の境界エラーがあるのに DB だけの失敗と判定している"]
+    return []
+
+
+def check_tree_failure_is_never_expected() -> list[str]:
+    """ツリーを組めてへん日を「想定内」と書かんこと。
+
+    tsc も build も走っとらんので `== "NG"` の枝は素通りする。tree_ok を見んかったら、
+    走行は broken_days() で exit 1 になるのに、成果物だけ「想定内」と書く。十三巡目に
+    潰したのと同じ「文書だけが言い張る」型。
+    """
+    day = sorted(target.EXPECTED_RED)[0]
+    broken = target.DayResult(
+        day, 0, False, target.NOT_RUN, target.NOT_RUN, ("OSError: 置けません",)
+    )
+    if target.expected_red_holds(broken):
+        return ["❌ ツリーを組めてへん日を想定内として扱っている"]
+    if broken not in target.broken_days([broken]):
+        return ["❌ ツリー失敗が異常として数えられていない"]
+    doc = target.triage_section([broken])
+    if "想定内" in doc:
+        return [f"❌ 成果物がツリー失敗を想定内と書いている:\n{doc}"]
+    return []
+
+
+def check_unclassified_error_blocks_skip() -> list[str]:
+    """説明の付かんエラー行が DB の赤に紛れとったら SKIP にせんこと。
+
+    本物の失敗のマーカーは allowlist なので、載せてへん文言は必ず出る。
+    `Error: Unauthorized while prerendering /admin` のような行が `P1001` と同じ出力に
+    混ざったとき、マーカーだけを見とったら「DB だけの失敗」に見えて SKIP へ落ち、
+    壊れた日が exit 0 で出ていく。SKIP を名乗る条件を「全行が DB か包み紙で説明できる」
+    に倒してあるので、説明の付かん行が1つでもあれば止まる。
+    """
+    fails: list[str] = []
+    unknown = target.error_line_pool(
+        "\n".join(
+            [
+                "Error: Failed to collect page data for /admin",
+                "Can't reach database server at `localhost`:`5432`",
+                "Error: Unauthorized while prerendering /admin",
+            ]
+        )
+    )
+    if target.build_failure_is_database_only(unknown):
+        fails.append("❌ 説明の付かんエラーを DB だけの失敗として SKIP に落としている")
+
+    # 包み紙と DB だけで構成された回は、これまでどおり SKIP のままであること。
+    # ここが赤くなると、DB の無い機械で全日が異常扱いになって検査が使えんくなる。
+    explained = target.error_line_pool(
+        "\n".join(
+            [
+                "Error: Failed to collect page data for /dashboard",
+                "PrismaClientInitializationError:",
+                "Can't reach database server at `localhost`:`5432`",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(explained):
+        fails.append("❌ 包み紙と DB だけの回まで判定できるものとして扱っている")
+    return fails
+
+
+def check_expected_red_rejects_unknown_error() -> list[str]:
+    """免除の判定でも、説明の付かん行を捨てんこと。
+
+    マーカーで絞ってから見ると `REAL_BUILD_FAILURE_MARKERS` に載ってへん失敗が
+    黙って消え、断り書きどおりの型エラーだけが残って day11 が免除される。
+    SKIP 側で潰したのと同じ「絞ってから判定する」型が、免除の側にも残っとった。
+    """
+    known = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
+        errors=(),
+        build_errors=(
+            "Failed to compile.",
+            "Type error: Property 'getById' does not exist on type ...",
+        ),
+    )
+    if not target.build_failure_is_expected(known):
+        return ["❌ 断り書きどおりの型エラーまで免除せんようになっている"]
+    mixed = known._replace(
+        build_errors=known.build_errors + ("Error: Unauthorized while prerendering /admin",)
+    )
+    if target.build_failure_is_expected(mixed):
+        return ["❌ 説明の付かん失敗が混ざった day11 を免除している"]
+    return []
+
+
+def check_econnrefused_alone_is_not_database() -> list[str]:
+    """`ECONNREFUSED` 単独を DB の不在と見なさんこと。
+
+    OS が返す汎用の接続拒否なので、Redis や別の localhost 依存でも出る。
+    単独で DB マーカーに数えると、その1行だけの出力が SKIP へ落ちて exit 0 になる。
+    """
+    fails: list[str] = []
+    redis = target.error_line_pool("Error: connect ECONNREFUSED 127.0.0.1:6379")
+    if target.build_failure_is_database_only(redis):
+        fails.append("❌ DB と関係のない ECONNREFUSED を DB だけの失敗にしている")
+
+    # Prisma の印が同じ出力に居るときは、裏付けとして数えて SKIP のままにすること。
+    postgres = target.error_line_pool(
+        "\n".join(
+            [
+                "Can't reach database server at `localhost`:`5432`",
+                "Error: connect ECONNREFUSED 127.0.0.1:5432",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(postgres):
+        fails.append("❌ Prisma の印つきの ECONNREFUSED まで本物の失敗にしている")
+    return fails
+
+
+def check_expected_red_rejects_unknown_code() -> list[str]:
+    """件数と場所が合っても、断り書きに無いコードが混ざったら免除せんこと。
+
+    識別子は波及行に載らんので `any` でしか見られん。件数と場所だけを見とると、
+    同じファイルの無関係な型エラー4件＋想定内の1件で「想定内」が成立してまう。
+    """
+    path = "src/component/project/project-detail-view.tsx"
+    documented = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
+        tsc_errors=documented_day11_errors(),
+    )
+    if not target.tsc_failure_is_expected(documented):
+        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
+    smuggled = documented._replace(
+        tsc_errors=(documented.tsc_errors[0],)
+        + tuple(
+            f"{path}({n},4): error TS2322: Type 'string' is not assignable"
+            for n in (41, 42, 43, 44)
+        )
+    )
+    if target.tsc_failure_is_expected(smuggled):
+        return ["❌ 断り書きに無いコードが混ざった day11 を免除している"]
+
+    return []
+
+
+def check_stack_frames_do_not_block_skip() -> list[str]:
+    """Prisma の stack frame が DB だけの失敗を本物の失敗に化けさせんこと。
+
+    `at ei.handleRequestError (...)` はメソッド名に `Error` が入るので ERROR_MARK に
+    当たる。中身は失敗の場所であって種類やない。残ると「説明の付かん行」に数えられて、
+    DB を持たん機械で `--verify` が exit 1 になる。下の出力は Prisma 6.19.3 の実測。
+    """
+    fails: list[str] = []
+    db_less = "\n".join(
+        [
+            "PrismaClientInitializationError: ",
+            "Can't reach database server at `127.0.0.1:59999`",
+            "    at ei.handleRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:7568)",
+            "    at ei.handleAndLogRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:6593)",
+            "    at async a (/app/node_modules/@prisma/client/runtime/library.js:130:9551)",
+            "Failed to collect page data for /dashboard",
+            "Build error occurred",
+        ]
+    )
+    if not target.build_failure_is_database_only(target.error_line_pool(db_less)):
+        fails.append("❌ Prisma の stack frame を本物の失敗として数えている")
+
+    # 落としてええのは frame だけ。メッセージの行は残さんとアカン。
+    with_real = db_less.replace(
+        "Failed to collect page data for /dashboard",
+        "TypeError: x is not a function\n"
+        "    at Object.<anonymous> (/app/src/x.ts:3:1)\n"
+        "Failed to collect page data for /dashboard",
+    )
+    pool = target.error_line_pool(with_real)
+    if not any("TypeError" in line for line in pool):
+        fails.append("❌ frame と一緒にメッセージの行まで落としている")
+    if target.build_failure_is_database_only(pool):
+        fails.append("❌ frame を落とした結果、本物の失敗まで DB だけの失敗にしている")
+    return fails
+
+
+def check_prerender_wrapper_does_not_hide_db() -> list[str]:
+    """prerender の見出しが、DB だけの失敗を本物の失敗に化けさせんこと。
+
+    Prisma の問い合わせが prerender の最中に落ちると、`Error occurred prerendering page`
+    と `Can't reach database server` が同じ出力に並ぶ。見出しを本物の失敗に数えると
+    `has_real_build_failure()` が先に効いて、DB を持たん機械で `--verify` が exit 1 になる。
+    """
+    fails: list[str] = []
+    with_db = target.error_line_pool(
+        "\n".join(
+            [
+                "Error occurred prerendering page \"/dashboard\"",
+                "PrismaClientInitializationError:",
+                "Can't reach database server at `localhost`:`5432`",
+                "Build error occurred",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(with_db):
+        fails.append("❌ prerender の見出しで DB だけの失敗を本物の失敗にしている")
+
+    # 見出しを包み紙に数えるのは DB の問いのときだけ。原因の行が居たら本物の失敗のまま。
+    with_cause = target.error_line_pool(
+        "\n".join(
+            [
+                "TypeError: Cannot read properties of undefined (reading 'map')",
+                "Error occurred prerendering page \"/dashboard\"",
+                "Can't reach database server at `localhost`:`5432`",
+            ]
+        )
+    )
+    if target.build_failure_is_database_only(with_cause):
+        fails.append("❌ prerender の原因の行まで包み紙に数えている")
+
+    # 想定内の赤の免除は別の問い。見出しが混ざったら day11 でも免除せんこと。
+    if "Error occurred prerendering page" in target.BUILD_NOISE_MARKERS:
+        fails.append("❌ 免除の判定まで prerender の見出しを見逃す一覧へ入れている")
+    return fails
+
+
+def check_reachable_server_failure_is_not_db_absence() -> list[str]:
+    """`the database server at` を DB の不在の印に数えんこと。
+
+    この語は Prisma の**認証失敗**の文面に入っとる（実測: `@prisma/client` の中に
+    `provide valid database credentials for the database server at the configured address`）。
+    届いた上で資格情報が違う話なので、DB の不在やない。数えると設定ミスが SKIP へ落ちて
+    exit 0 になる。下の1行は、その実測の文面に `next build` が付ける `Error:` を足した形。
+    """
+    fails: list[str] = []
+    credentials = target.error_line_pool(
+        "Error: Please provide valid database credentials for "
+        "the database server at the configured address."
+    )
+    if target.build_failure_is_database_only(credentials):
+        fails.append("❌ 資格情報の失敗（DB へは届いとる）を DB の不在として SKIP へ落としている")
+
+    # 本物の「届かん」回はこれまでどおり SKIP のままであること。実測の P1001 出力。
+    unreachable = target.error_line_pool(
+        "\n".join(
+            [
+                "PrismaClientInitializationError:",
+                "Can't reach database server at `127.0.0.1:59999`",
+                "Failed to collect page data for /dashboard",
+            ]
+        )
+    )
+    if not target.build_failure_is_database_only(unreachable):
+        fails.append("❌ 本物の P1001 まで本物の失敗として止めている")
+    return fails
+
+
+def check_expected_red_rejects_swapped_diagnostic() -> list[str]:
+    """件数もコードも場所も揃うたまま**入れ替わった**診断を免除せんこと。
+
+    断り書きの1件が消えて、同じファイルの別の場所に同じコードの別の欠陥が入ると、
+    件数（5）・場所（1ファイル）・コード（許された3種）・識別子（`getById`）が
+    全部そのまま揃う。所属だけを見とると、新しい欠陥が想定内で通って `--verify` が
+    exit 0 になる。位置まで名指しした多重集合の一致で初めて弾ける。
+    """
+    documented = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
+        tsc_errors=documented_day11_errors(),
+    )
+    if not target.tsc_failure_is_expected(documented):
+        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
+
+    # 断り書きの TS7006 を1件落として、同じファイルの別の行の TS7006 を1件足す。
+    dropped = [ln for ln in documented.tsc_errors if "(144,44)" not in ln]
+    swapped = documented._replace(
+        tsc_errors=tuple(dropped)
+        + (
+            "src/component/project/project-detail-view.tsx(311,12): error TS7006: "
+            "Parameter implicitly has an 'any' type",
+        )
+    )
+    if len(swapped.tsc_errors) != len(documented.tsc_errors):
+        return ["❌ 入れ替えの fixture が件数を変えてしまっている（検査が成立せん）"]
+    if target.tsc_failure_is_expected(swapped):
+        return ["❌ 入れ替わった診断の day11 を想定内として免除している"]
+    return []
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -826,6 +1577,20 @@ CHECKS = (
     ("文字列で指した要素の書き換え", check_rewrite_element),
     ("持ち込みと本体の同居", check_leading_imports),
     ("ツリーの古さを測る材料", check_tree_inputs),
+    ("ビルドの赤の切り分け", check_build_failure_triage),
+    ("両方赤い日の表示", check_both_red_shows_both),
+    ("成果物への SKIP の記録", check_result_doc_records_skip),
+    ("想定内の日の build 免除", check_expected_red_build_exemption),
+    ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
+    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),
+    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),
+    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
+    ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
+    ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),
+    ("prerender の見出しは DB を隠さん", check_prerender_wrapper_does_not_hide_db),
+    ("届いた上での失敗は DB 不在やない", check_reachable_server_failure_is_not_db_absence),
+    ("入れ替わった診断は免除せん", check_expected_red_rejects_swapped_diagnostic),
+    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 

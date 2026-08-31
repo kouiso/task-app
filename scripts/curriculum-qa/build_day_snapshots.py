@@ -243,6 +243,13 @@ ERROR_LINE_WIDTH = 160
 # `Module not found:`、npm は `npm ERR!` を出す。
 ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)
 
+# Node の stack frame。`    at ei.handleRequestError (...）` のようにメソッド名へ
+# `Error` が入るので ERROR_MARK に当たってまう。中身は失敗の**場所**であって種類やない。
+# 判定側は「説明の付かん行が1つでも混ざったら SKIP にせん」ので、この行が残ると
+# DB だけの失敗が必ず本物の失敗に見え、DB を持たん機械で `--verify` が exit 1 になる。
+# 落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行が出て、そっちは残る。
+STACK_FRAME_MARK = re.compile(r"^\s+at \S")
+
 USAGE = "使い方: build_day_snapshots.py (--day N | --all) [--verify]"
 
 
@@ -255,6 +262,9 @@ class DayResult(NamedTuple):
     tsc: str
     build: str
     errors: tuple[str, ...]
+    build_errors: tuple[str, ...] = ()
+    # 表示用の3行やのうて、tsc が出した全部。件数と中身で「断り書きどおりの赤か」を見るのに要る。
+    tsc_errors: tuple[str, ...] = ()
 
 
 def available_days() -> list[int]:
@@ -1068,26 +1078,58 @@ def build_tree(day: int) -> tuple[Path, int]:
     return dest, files
 
 
+def error_line_pool(output: str) -> tuple[str, ...]:
+    """出力から、エラーらしい行を全部抜く。件数で切らない。
+
+    切らんのは、赤の理由を判定する側（`build_failure_is_database_only`）がここを読むため。
+    3行に切った標本で判定すると、DB のエラーが先に並んだ回に後ろの prerender の
+    失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
+    """
+    # stack frame は判定の前に落とす。理由は STACK_FRAME_MARK の定義に書いた。
+    lines = [
+        ln.rstrip()
+        for ln in output.split("\n")
+        if ln.strip() and not STACK_FRAME_MARK.match(ln)
+    ]
+    # DB マーカーを持つ行は ERROR_MARK に当たらんでも拾う。Prisma は
+    # `PrismaClientInitializationError:` と `Can't reach database server ...` を
+    # 別の行に吐く。マーカー側の行に error / failed の語が無いので、ERROR_MARK だけで
+    # 拾うと証拠の行が消え、DB だけの失敗を DB 以外の失敗として止めてまう。
+    # 本物の失敗のマーカーも拾う。`You're importing a component that needs` は
+    # REAL_BUILD_FAILURE_MARKERS の中で唯一 ERROR_MARK のどの語も含まん。DB の赤と
+    # 同じ出力に混ざると、この行だけプールから落ちて DB だけの失敗に見え、SKIP へ倒れる。
+    hits = [
+        ln
+        for ln in lines
+        if ERROR_MARK.search(ln)
+        or any(m in ln for m in DB_LESS_PRIMARY_MARKERS + DB_LESS_CORROBORATING_MARKERS)
+        or any(m in ln for m in REAL_BUILD_FAILURE_MARKERS)
+    ]
+    # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
+    # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
+    return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines))
+
+
 def error_lines(output: str) -> tuple[str, ...]:
-    """出力から、最初のエラー3行を抜く。
+    """出力から、表示用に最初のエラー3行を抜く。
 
     先頭3行をそのまま採ると `> task-app@1.0.0 build` のような npm の前口上しか
     残らない。読んだ人が原因へ辿れないので、エラーらしい行を先に探す。
-    見つからないときだけ先頭から採る。
     """
-    lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
-    hits = [ln for ln in lines if ERROR_MARK.search(ln)]
-    # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
-    # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
-    return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines)[:3])
+    return error_line_pool(output)[:3]
 
 
-def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...]]:
-    """コマンドを走らせて (成功したか, 最初のエラー3行) を返す。"""
+def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...], tuple[str, ...]]:
+    """コマンドを走らせて (成功したか, 表示用の3行, 判定用の全エラー行) を返す。
+
+    表示用と判定用を分けるのは、3行に切った標本で赤の理由を判定すると、
+    後ろに並んだ本物の失敗が視界から落ちるため。
+    """
     proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
     if proc.returncode == 0:
-        return True, ()
-    return False, error_lines(f"{proc.stdout}\n{proc.stderr}")
+        return True, (), ()
+    pool = error_line_pool(f"{proc.stdout}\n{proc.stderr}")
+    return False, pool[:3], pool
 
 
 def link_node_modules(dest: Path) -> None:
@@ -1102,15 +1144,27 @@ def link_node_modules(dest: Path) -> None:
     link.symlink_to(REPO_ROOT / "node_modules", target_is_directory=True)
 
 
-def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...]]:
-    """組んだツリーへ型検査とビルドを掛けて (tsc, build, エラー行) を返す。"""
+def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build の全行, tsc の全行) を返す。
+
+    build のエラー行を「全部」別で返すのは、落ちた理由を判定に使うため。表示用の3行で
+    判定すると、DB のエラーが先に並んだ回に後ろの prerender の失敗が落ちる。DB の無い機械では
+    `next build` が必ず赤くなるので昔は build の赤を丸ごと無視しとったが、それやと
+    prerender や server/client 境界の失敗まで一緒に見逃す。理由で切り分ける。
+    """
     link_node_modules(dest)
-    tsc_ok, tsc_errors = run_step(["npx", "tsc", "--noEmit"], dest)
-    build_ok, build_errors = run_step(["npm", "run", "build"], dest)
+    tsc_ok, tsc_shown, tsc_all = run_step(["npx", "tsc", "--noEmit"], dest)
+    build_ok, build_shown, build_all = run_step(["npm", "run", "build"], dest)
+    # 両方赤い日は両方見せる。`tsc_shown or build_shown` にすると、tsc が赤い時点で
+    # build の行が丸ごと消える。day11 のように tsc の赤が想定内の日で build 側に別の
+    # 欠陥が入ると、走行は exit 1 なのに画面と成果物には「知っとる型エラー」しか出ず、
+    # 落ちた本当の理由が読めん。
     return (
         "OK" if tsc_ok else "NG",
         "OK" if build_ok else "NG",
-        tsc_errors or build_errors,
+        tsc_shown + build_shown,
+        build_all,
+        tsc_all,
     )
 
 
@@ -1122,8 +1176,8 @@ def snapshot_day(day: int, verify: bool) -> DayResult:
         return DayResult(day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",))
     if not verify:
         return DayResult(day, files, True, NOT_RUN, NOT_RUN, ())
-    tsc, build, errors = verify_tree(dest)
-    return DayResult(day, files, True, tsc, build, errors)
+    tsc, build, errors, build_errors, tsc_errors = verify_tree(dest)
+    return DayResult(day, files, True, tsc, build, errors, build_errors, tsc_errors)
 
 
 def _cell(text: str) -> str:
@@ -1146,6 +1200,8 @@ def result_table(results: list[DayResult]) -> str:
 
 def triage_section(results: list[DayResult]) -> str:
     """NG の日の切り分けを書く。"""
+    # SKIP は「判定してへん」であって NG やない。切り分けの表へ入れると
+    # 「判定不能（未調査）」として並び、教材の欠陥を疑わせる行が生える。
     ng = [r for r in results if not r.tree_ok or r.tsc == "NG" or r.build == "NG"]
     if not ng:
         return ""
@@ -1161,7 +1217,11 @@ def triage_section(results: list[DayResult]) -> str:
     for r in ng:
         # 教材が先に断っとる赤は、切り分けの対象やのうて想定内。ここを TRIAGE より
         # 先に見るのは、断りのある日を「教材の欠陥」と書いてしまう事故を機械で塞ぐため。
-        if r.day in EXPECTED_RED:
+        #
+        # ただし day 番号だけで「想定内」と書いたらアカン。断り書きと中身が合わん赤は
+        # `broken_days()` が異常として止めるので、そちらは exit 1 やのに**成果物だけが
+        # 「想定内」と言い張る**状態になる。走行の判定と文書の判定は同じ関数を使う。
+        if expected_red_holds(r):
             kind, why = "想定内（教材が本文で断っている）", EXPECTED_RED[r.day]
         else:
             kind, why = TRIAGE.get(r.day, ("判定不能（未調査）", "現物と突き合わせていない"))
@@ -1233,6 +1293,305 @@ EXPECTED_RED = {
     11: "day11 は `getById` を書く前に配布物を取り込むため型エラーが5件出る。教材が本文で明示している",
 }
 
+# 断り書きが名指ししとる中身。day 番号だけで免除すると、断ってへん欠陥がその日に紛れても
+# 素通りする（型エラーの1行があるだけで「想定内」に化ける）。本文が名指ししとるものと
+# 突き合わせて、合わんかったら免除せん。
+#
+# - marker: 本文が名指しする識別子。根っこのエラーがこれに触れとること
+# - count:  本文が「実際に数えると5件出ます」と書いた件数。ここがずれたら別の欠陥が混ざっとる
+# - path:   赤くなる場所。配布物の1ファイルに閉じとることが断り書きの前提
+#
+# 波及して出る `TS7006` / `TS7053` は識別子の名を含まん（`getById` が解決でけへんことで
+# 型が any へ落ちた結果や）。せやから marker は「全行」やのうて「どれか1行」に課す。
+# 代わりに件数と場所を効かせて、範囲が広がったら気づけるようにしてある。
+# 診断1件を「どこで・どのコードが」まで縮めた形。メッセージの尻尾は型の中身を丸ごと
+# 吐くので長さで切られる。位置とコードなら切られん上に、1件でも入れ替われば必ず変わる。
+DIAGNOSTIC_HEAD = re.compile(r"^(.*?\(\d+,\d+\)): error (TS\d+):")
+
+
+def diagnostic_heads(errors: tuple[str, ...]) -> tuple[str, ...] | None:
+    """エラー行を「位置＋コード」の多重集合へ縮める。1行でも診断の形やなければ None。"""
+    heads = []
+    for line in errors:
+        m = DIAGNOSTIC_HEAD.match(line)
+        if m is None:
+            return None
+        heads.append(f"{m.group(1)}:{m.group(2)}")
+    return tuple(sorted(heads))
+
+
+EXPECTED_RED_SIGNATURE = {
+    # `diagnostics` は day11 のツリーで `npx tsc --noEmit` を実際に流して採った5件
+    # （2026-08-31 実測）。**件数・場所・コードの3つでは足りん。**「TS7006 が1件消えて、
+    # 同じファイルの別の場所に無関係な TS7006 が1件入る」と、件数も場所もコードも
+    # 揃うたまま別の欠陥が想定内で通ってまう。位置まで名指しして、**多重集合が
+    # 丸ごと一致した時だけ**免除する。教材を直して診断が変わったら、ここも実測で
+    # 採り直す（＝人が断り書きを見直す機会になる）。
+    11: {
+        "marker": "getById",
+        "path": "project-detail-view.tsx",
+        "diagnostics": (
+            "src/component/project/project-detail-view.tsx(144,44):TS7006",
+            "src/component/project/project-detail-view.tsx(167,31):TS7053",
+            "src/component/project/project-detail-view.tsx(237,43):TS7006",
+            "src/component/project/project-detail-view.tsx(246,26):TS7053",
+            "src/component/project/project-detail-view.tsx(29,47):TS2339",
+        ),
+        # `next build` は最初の型エラー1件で止まる。包み紙を除いたあとに、本文で
+        # 断っている根っこの診断だけが残ることも固定する。
+        "build_count": 1,
+    },
+}
+
+
+def expected_red_errors(result: DayResult) -> list[str]:
+    """その日の tsc の赤のうち、型エラーとして数える行。"""
+    return [line for line in result.tsc_errors if TYPE_ERROR_MARK.search(line)]
+
+
+def tsc_failure_is_expected(result: DayResult) -> bool:
+    """tsc の赤が、教材の断り書きが名指ししとるものと一致するか。
+
+    day 番号だけで免除すると、day11 に無関係な型の欠陥が入っても「想定内」で通る。
+    本文は識別子・件数・場所まで書いとるので、そこまで見て初めて免除する。
+    """
+    signature = EXPECTED_RED_SIGNATURE.get(result.day)
+    if signature is None:
+        return False
+    errors = expected_red_errors(result)
+    if not any(signature["marker"] in line for line in errors):
+        return False
+    if not all(signature["path"] in line for line in errors):
+        return False
+    # 位置まで名指しした多重集合が丸ごと一致した時だけ免除する。件数・コードの一致では
+    # 「1件消えて別の場所に1件入る」入れ替わりを見逃す。
+    return diagnostic_heads(errors) == tuple(sorted(signature["diagnostics"]))
+
+# `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
+# これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は
+# prerender や server/client 境界の失敗なので、見逃したら壊れた日を通してしまう。
+#
+# ここへ入れんもの（どれも「DB が無い」の印に見えて、実際は壊れとる側の印。入れると
+# 本物の欠陥が SKIP へ落ちて exit 0 になる — いちばんやったらアカン向きの見逃し）:
+#
+# - `Error validating datasource`: DB へ届かんことやのうて、スキーマの datasource
+#   ブロックが不正でも出る。`npm run build` は `prisma generate` から始まるので、
+#   provider の書き間違いがそのまま「DB の不在」に化ける。
+# - `Environment variable not found: ...`: `copy_scaffold()` が `.env.example` を必ず
+#   `.env` へ複写しており、その `.env.example` は `DATABASE_URL` を定義しとる。つまり
+#   DB の無い機械でも変数は在る。無いと言われたのなら組んだツリーか schema が壊れとる印。
+#   逆向きに `REAL_BUILD_FAILURE_MARKERS` へ入れて、必ず赤で止めとる。
+# - `the database server at`: Prisma の**認証失敗**（P1000）の文面にも入っとる
+#   （実測: `@prisma/client` の中に
+#   `provide valid database credentials for the database server at the configured address`）。
+#   あれは届いた上で資格情報が違う話なので、DB の不在やない。数えると資格情報の設定ミスが
+#   SKIP へ落ちて exit 0 になる。届かんかった回の文面は
+#   `Can't reach database server at ...` で、上の印で拾えるので要らん。
+# - `P1012`: Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
+#   壊れたリレーションや型の書き間違いでも出る。
+# - `PrismaClientInitializationError`: 接続でけへんときにも出るが、接続文字列が不正なとき
+#   や query engine が欠けとるときにも同じ例外名が出る。名前だけで DB の不在に倒すと、
+#   その2つが SKIP へ落ちて exit 0 になる。DB へ届かんかった回は必ず
+#   `Can't reach database server` か `P1001` を一緒に吐くので、そっちで拾えば足りる
+#   （判定用のプールは ERROR_MARK に当たらん行も、この一覧の語を含む行なら残す）。
+# それ1行で「DB へ届いてへん」と言い切れる印。
+DB_LESS_PRIMARY_MARKERS = (
+    "Can't reach database server",
+    # DB へ届かんことを指す Prisma のエラーコード。
+    "P1001",
+)
+
+# それ単独では DB と言えん印。`ECONNREFUSED` は OS が返す汎用の接続拒否で、
+# Redis や別の localhost 依存でも出る（例: `Error: connect ECONNREFUSED 127.0.0.1:6379`）。
+# 単独で DB マーカーに数えると、その1行だけの出力が「DB だけの失敗」に見えて SKIP へ落ち、
+# 壊れた日が exit 0 で出ていく。上の印が同じ出力に居るときだけ、裏付けとして数える。
+DB_LESS_CORROBORATING_MARKERS = ("ECONNREFUSED",)
+
+
+def db_less_markers(errors: tuple[str, ...]) -> tuple[str, ...]:
+    """この出力で DB の不在の印として数えてよいものを返す。"""
+    if any(
+        any(marker in line for marker in DB_LESS_PRIMARY_MARKERS) for line in errors
+    ):
+        return DB_LESS_PRIMARY_MARKERS + DB_LESS_CORROBORATING_MARKERS
+    return DB_LESS_PRIMARY_MARKERS
+
+
+BUILD_SKIPPED = "SKIP"
+
+
+# build が本当に壊れとることの印。Next.js の一般的なラッパー行は
+# `BUILD_NOISE_MARKERS` へ置く。あれは原因やのうて包み紙で、DB の失敗も同じ言葉で包まれる。
+# ここに入れてええのは「これが出とったら DB の有無に関係なく壊れとる」と言い切れるものだけ。
+REAL_BUILD_FAILURE_MARKERS = (
+    "TypeError",
+    "ReferenceError",
+    "SyntaxError",
+    "Module not found",
+    "Type error:",
+    "You're importing a component that needs",
+    "Cannot find module",
+    # 環境変数の欠落。`.env` は `copy_scaffold()` が毎回書くので、無いと言われた時点で
+    # 組んだツリーか schema の側が壊れとる。`PrismaClientInitializationError` と一緒に
+    # 出るため、ここへ入れて DB マーカーより先に赤で止める（`has_real_build_failure` が
+    # 先に効く）。
+    "Environment variable not found",
+)
+
+
+def has_real_build_failure(errors: tuple[str, ...]) -> bool:
+    """DB の有無に関係なく壊れとると言い切れる行があるか。"""
+    return any(
+        any(marker in line for marker in REAL_BUILD_FAILURE_MARKERS)
+        for line in errors
+    )
+
+
+def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
+    """build の赤に DB の不在が絡んどるか（＝この機械では build を判定できんか）。
+
+    以前はここで「DB だけで説明できる赤か」を行ごとに当てにいっとった。それは3回直して
+    3回とも別の文言で破れた。`next build` は根本原因を Next.js のラッパー行
+    （`Failed to collect page data for /dashboard` 等）で包んで出すので、行の文言から
+    「DB か、それ以外か」を当てる限り、ラッパーが1つ増えるたびに判定が壊れる。
+
+    せやから判定を放棄する側へ倒した。DB のマーカーが1つでもあれば、この機械では
+    build の結果に意味が無い。**通す（OK 扱い）のではなく、判定せんかったこと自体を
+    SKIP として残して数える。**「検証した」と言わんので、DB の赤に紛れた本物の失敗を
+    緑と report してしまう事故は起きん。DB のある機械ではマーカーが出んので、
+    本物の失敗はこれまでどおり止まる。
+    """
+    # 本物の失敗の印が1行でもあったら SKIP にせん。DB のエラーが同じ出力に居るだけで
+    # 通してしまうと、壊れた日が exit 0 で出ていく。SKIP は「判定してへん」であって
+    # 「無罪」やない以上、無罪の証拠が要る側はこっち。
+    if has_real_build_failure(errors):
+        return False
+    markers = db_less_markers(errors)
+    if not any(any(m in line for m in markers) for line in errors):
+        return False
+    # DB のマーカーが在るだけでは足りん。**全部の行**が DB か包み紙で説明できて初めて
+    # 「この機械では判定でけへん」と言える。説明の付かん行が混ざっとるのは、
+    # 中身の分からん失敗が DB の赤に隠れとるということ。
+    return all(
+        any(m in line for m in markers)
+        or any(
+            marker in line
+            for marker in BUILD_NOISE_MARKERS + DB_TRIAGE_NOISE_MARKERS
+        )
+        for line in errors
+    )
+
+
+# 原因やのうて「包み紙」の行。`next build` は根本原因をこれで包んで出す。
+# DB だけの失敗を SKIP と名乗るには、出とる全部のエラー行が DB のマーカーか
+# ここに載っとる包み紙で説明できんとアカン。**ここに無い行が1つでも混ざったら、
+# 中身の分からん失敗なので SKIP にせん。**マーカーの allowlist だけで「本物か」を
+# 当てにいくと、載せてへん文言（例: `Error: Unauthorized while prerendering /admin`）が
+# DB の赤に紛れて SKIP へ落ち、壊れた日が exit 0 で出ていく。
+BUILD_NOISE_MARKERS = (
+    "Failed to collect page data",
+    # 型エラーの直前に必ず出る Next.js の見出し行。原因は次の `Type error:` の行。
+    "Failed to compile",
+    # Prisma は例外のクラス名だけの行を先に吐く。原因は次の `Can't reach ...` の行。
+    "PrismaClientInitializationError",
+    "Build error occurred",
+    "Collecting page data",
+)
+
+# **DB の判定のときだけ**包み紙に数える行。`Error occurred prerendering page` は
+# 「これが出とったら DB の有無に関係なく壊れとる」を満たさん（DB へ届かん回も同じ言葉で
+# 包まれる）ので `REAL_BUILD_FAILURE_MARKERS` には置けん。かというて素の
+# `BUILD_NOISE_MARKERS` へ入れると、想定内の赤の免除（`build_failure_is_expected`）まで
+# この行を見逃す。**問いが別なので一覧も別にする。**
+# - 「DB だけの失敗か？」→ 原因は DB 側にあるので包み紙。ここに入れる
+# - 「day11 の断り書きどおりの型エラーだけか？」→ 型エラーやないので通したらアカン。入れん
+# 本物の prerender の失敗は原因の行（`TypeError: ...` 等）を必ず一緒に吐き、そっちが
+# プールに残って赤で止まる。包み紙1行だけの出力も DB の印が無いので本物の失敗のままや。
+DB_TRIAGE_NOISE_MARKERS = ("Error occurred prerendering page",)
+
+
+TYPE_ERROR_MARK = re.compile(r"Type error:|TS\d{4}")
+
+
+def build_failure_is_expected(result: DayResult) -> bool:
+    """EXPECTED_RED の日の build 落ちを、断り書きどおりの型エラーだけで説明できるか。
+
+    day 番号が EXPECTED_RED に載っとるだけで build を丸ごと免除すると、断り書きに無い
+    失敗（prerender や server/client 境界）がその日に紛れても素通りする。断ってあるのは
+    型エラーだけなので、免除するのも型エラーで説明できる範囲だけにする。
+    """
+    signature = EXPECTED_RED_SIGNATURE.get(result.day)
+    if signature is None:
+        return False
+    # 包み紙は原因やないので除く。**残りは捨てずに全部見る。**
+    # マーカーで絞ってから判定すると、`REAL_BUILD_FAILURE_MARKERS` に載ってへん失敗
+    # （例: `Error: Unauthorized while prerendering /admin`）が黙って消えて、
+    # 断り書きどおりの型エラーだけが残り、別の欠陥を抱えた日が免除されてまう。
+    real = [
+        line
+        for line in result.build_errors
+        if not any(marker in line for marker in BUILD_NOISE_MARKERS)
+    ]
+    # 型エラーの証拠が1行も無いなら、断り書きで説明できたことにせん。
+    if not real:
+        return False
+    if len(real) != signature["build_count"]:
+        return False
+    if not all(TYPE_ERROR_MARK.search(line) for line in real):
+        return False
+    # `next build` は最初の型エラーで止まるので、出てくる行は根っこのほうや。
+    # 断り書きが名指しした識別子に触れてへんのなら、それは別の欠陥。
+    return sum(signature["marker"] in line for line in real) == 1
+
+
+def expected_red_holds(result: DayResult) -> bool:
+    """その日の赤が、教材の断り書きどおりのものだけで説明できるか。
+
+    `broken_days()` と同じ線を、成果物の文書でも使うために切り出してある。
+    ここが緩むと「走行は exit 1 やのに文書は想定内と書いてある」状態が生まれる。
+    """
+    # ツリーを組めてへん日は、断り書きの対象外。tsc も build も走っとらんので
+    # 下の2つは素通りするが、broken_days() は異常として止める。ここで False を
+    # 返さんと、走行が exit 1 やのに成果物だけ「想定内」と書く。
+    if not result.tree_ok:
+        return False
+    if result.day not in EXPECTED_RED:
+        return False
+    if result.tsc == "NG" and not tsc_failure_is_expected(result):
+        return False
+    if result.build == "NG" and not build_failure_is_expected(result):
+        return False
+    return True
+
+
+def broken_days(results: list[DayResult]) -> list[DayResult]:
+    """教材の欠陥として止めるべき日だけを返す。
+
+    免除は「断り書きが名指ししとるものと一致したとき」だけ。日付だけで免除すると、
+    その日に紛れた別の欠陥が一緒に通る。ここを関数へ出してあるのは、main() を動かさんでも
+    免除の線を実際に通して確かめられるようにするため。
+    """
+    return [
+        r for r in results
+        if not r.tree_ok
+        or (r.tsc == "NG" and not tsc_failure_is_expected(r))
+        or (r.build == "NG" and not build_failure_is_expected(r))
+    ]
+
+
+def triage_build_results(results: list[DayResult]) -> list[DayResult]:
+    """DB が要る赤を SKIP へ振り替えた一覧を返す。
+
+    振り替えるだけで、通した扱いにはせん。SKIP は `broken` から外れるが、
+    成功の行に件数と日付が出るので「検証した」とは読めん形で残る。
+    """
+    return [
+        r._replace(build=BUILD_SKIPPED)
+        if r.build == "NG" and build_failure_is_database_only(r.build_errors)
+        else r
+        for r in results
+    ]
+
 
 def main(argv: list[str]) -> int:
     args = argv[1:]
@@ -1263,25 +1622,25 @@ def main(argv: list[str]) -> int:
     results = []
     for n in targets:
         r = snapshot_day(n, verify)
+        # 表示の前に切り分ける。あとに回すと、画面の日別行だけ NG のまま残り、
+        # 成果物と最終行だけ SKIP になって、同じ走行が3通りの状態を名乗る。
+        r = triage_build_results([r])[0]
         results.append(r)
         print(f"day{n:02d}: ツリー {'OK' if r.tree_ok else 'NG'}（{r.files} ファイル） tsc {r.tsc} build {r.build}")
         for line in r.errors:
             print(f"    {line}")
 
+    skipped = [r for r in results if r.build == BUILD_SKIPPED]
+
     write_result_doc(results, verify, command_line(argv))
     print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
-
-    # build の失敗では止めない。DB の無い機械でも赤くなるので、教材の欠陥を指さない。
-    broken = [
-        r for r in results
-        if not r.tree_ok or (r.tsc == "NG" and r.day not in EXPECTED_RED)
-    ]
+    broken = broken_days(results)
     # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
     unexpected_green = [
         r for r in results if r.day in EXPECTED_RED and r.tsc == "OK"
     ]
     for r in results:
-        if r.day in EXPECTED_RED and r.tsc == "NG":
+        if r.day in EXPECTED_RED and r.tsc == "NG" and tsc_failure_is_expected(r):
             print(f"  day{r.day:02d} の型エラーは想定どおり: {EXPECTED_RED[r.day]}")
     if unexpected_green:
         for r in unexpected_green:
@@ -1291,8 +1650,23 @@ def main(argv: list[str]) -> int:
             )
         return 1
     if broken:
-        print(f"❌ ツリー構築または型検査が通らない {len(broken)} 日")
+        print(f"❌ ツリー構築・型検査・ビルドのどれかが通らない {len(broken)} 日")
+        for r in broken:
+            if r.build == "NG" and r.tsc == "OK":
+                print(
+                    f"  day{r.day:02d} は tsc が通ってビルドだけ落ちています。"
+                    "DB の不在では説明できないので、prerender か server/client 境界を疑ってください"
+                )
         return 1
+    if skipped:
+        # 「全部緑」と読ませたらアカン。判定してへん日があることを、成功の行そのものに書く。
+        days = "・".join(f"day{r.day:02d}" for r in skipped)
+        print(
+            f"⚠️ {len(results)} 日ぶんを組み立てましたが、build を判定できんかった日が "
+            f"{len(skipped)} 件あります（この機械に DB が無い）: {days}"
+        )
+        print("   この走行は build を検証していません。DB のある機械で流し直してください")
+        return 0
     print(f"✅ {len(results)} 日ぶんを組み立てました")
     return 0
 

@@ -114,6 +114,10 @@ jobs:
           # トリップワイヤが検知する。
           git -c core.quotePath=false diff -z --name-only --diff-filter=d "$base" HEAD \
             > "$RUNNER_TEMP/changed.z"
+          # browser_qa の判定にはこっちを使う。上の一覧は --diff-filter=d で削除を落としとるが、
+          # 撮影まわりのファイルを消した・改名した PR こそ実ブラウザ検査を走らせなアカン。
+          git -c core.quotePath=false diff -z --name-only "$base" HEAD \
+            > "$RUNNER_TEMP/changed-with-deletes.z"
 
           while IFS= read -r -d '' file; do
             case "$file" in
@@ -165,7 +169,23 @@ jobs:
             exit 1
           fi
 
+          # 撮影の収束待ちを実ブラウザで確かめる検査は、この job の Chromium に相乗りしとる。
+          # PDF の対象が0冊でも、撮影まわりを触った PR ではブラウザを用意して走らせる。
+          # ここを scope だけに任せると、`scripts/curriculum-qa/` だけを触った PR で
+          # 検査が自分から退けて（SKIP）、実ブラウザの主張が一度も走らんまま通る。
+          # Playwright を持つ package.json / package-lock.json と .node-version も対象。
+          # 撮影スクリプトを1行も触らんバージョン更新で収束待ちが壊れても、走らんかったら気づけん。
+          # ファイル名の完全一致では拾えん。撮影まわりを別の名前へ改名したり、別名の検査を
+          # 新しく足したりすると allowlist から外れて `browser_qa=0` になり、**Chromium 付きの
+          # 走行が一度も無いまま material-gate の SKIP で緑になる**。`scripts/curriculum-qa/` の
+          # 中を触ったら走らせる、へ広げてある（削除・改名も拾う一覧を見る）。
+          browser_qa=0
+          if grep -qzE '^(scripts/curriculum-qa/.+|\.github/workflows/pdf-book-gate\.yml|package(-lock)?\.json|\.node-version)$' "$RUNNER_TEMP/changed-with-deletes.z"; then
+            browser_qa=1
+          fi
+
           echo "scope=$scope" >> "$GITHUB_OUTPUT"
+          echo "browser_qa=$browser_qa" >> "$GITHUB_OUTPUT"
           case "$scope" in
             all)    echo "全36冊を組む（36冊全部の見た目が変わりうる変更）" ;;
             subset) echo "変更のあった冊だけ組む:"; sort -u "$books" | sed 's/^/  - /' ;;
@@ -173,39 +193,44 @@ jobs:
           esac
 
       - name: Node.js を用意
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
           cache: npm
 
       - name: 依存をインストール
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         run: npm ci
+
+      - name: apt のロック待ち上限を設定
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
+        # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
+        # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
+        # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
+        # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる。
+        # poppler の step に置いとくと、撮影まわりだけを触った PR（scope=none かつ
+        # browser_qa=1）であの step が飛ぶので、apt を叩く step の手前へ独立させる。
+        run: echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
 
       - name: poppler を用意
         if: steps.select.outputs.scope != 'none'
         # pdftotext / pdfinfo / pdffonts が無いと check_pdf_book.py は exit 2 で止まる
         timeout-minutes: 10
         run: |
-          # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
-          # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
-          # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
-          # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる
-          echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
           sudo apt-get install -y -qq poppler-utils \
             || { sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils; }
           pdftotext -v
 
       - name: Chromium をキャッシュから復元
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
 
       - name: Chromium を用意
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る
         timeout-minutes: 15
         run: |
@@ -234,6 +259,16 @@ jobs:
           fi
           echo "PDF_BOOK_BROWSER=$browser" >> "$GITHUB_ENV"
           echo "Chromium: $browser"
+
+      # 撮影の収束待ちを実物のブラウザで確かめる検査は、Chromium が無いと自分から
+      # 退ける（SKIP・exit 0）。material-gate 側は Chromium を入れてへんので、そこだけに
+      # 置いとくと**実ブラウザの主張が一度も走らんまま**マージできてしまう。
+      # ブラウザを用意しとるこの job で、退けたこと自体を失敗にして走らせる。
+      - name: 撮影の収束待ちを実ブラウザで検査
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
+        env:
+          CURRICULUM_QA_REQUIRE_BROWSER: '1'
+        run: python3 scripts/curriculum-qa/test_shoot_screenshots.py
 
       - name: PDFを組む
         if: steps.select.outputs.scope != 'none'

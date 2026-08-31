@@ -14,11 +14,16 @@
     画角と出てくる画像が食い違う。
 """
 
+import io
 import json
+import os
 import queue
+import re
+import subprocess
 import sys
 import time
 import tempfile
+from contextlib import redirect_stderr
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -48,6 +53,13 @@ def load_error(shots: list[dict]) -> str:
 
 
 BASE_SHOT = {"name": "day01/a.png", "day": 1, "path": "/"}
+
+
+# 立てるとブラウザ不在の SKIP を失敗にする。Chromium を用意しとる job だけが立てる。
+# 実ブラウザ検査が「実際に主張を通した」ことの合図。exit 0 だけでは空回りと区別が付かん。
+DRAWN_FRAME_PASS_MARK = re.compile(r"settle_drawn_frames 実ブラウザ検査 (\d+)/(\d+) 合格")
+
+REQUIRE_BROWSER_ENV = "CURRICULUM_QA_REQUIRE_BROWSER"
 
 
 def check_mark_rect_source() -> list[str]:
@@ -295,6 +307,230 @@ def check_slot_exclusivity() -> list[str]:
     return fails
 
 
+def check_animation_settle() -> list[str]:
+    """撮る直前の待ちが、決め打ちの秒数やのうてアニメーションの終了に紐づいていること。
+
+    決め打ちの待ちへ戻すと、その秒数より長い遷移や、並列撮影で遅れた回が途中の絵のまま
+    保存される。撮影自体は成功するので、あとから誰も気づけん種類の壊れ方になる。
+    """
+    fails = []
+    source = WORKER.read_text(encoding="utf-8")
+
+    # 見るのは `shoot()` の中身だけにする。ファイル全体を見ると、呼び出しを消しても
+    # `async function settleAnimations(page)` という宣言の字面に当たって緑のまま通る。
+    # 死んだ助け関数が残っとることの証明にしかならん。
+    body = source.split("async function shoot(page, job, shot) {", 1)
+    if len(body) != 2:
+        return ["❌ shoot() が見つからない（この検査が対象を見失っている）"]
+    # **閉じ括弧まで切る。** ここを切らんと `body[1]` はモジュールの残り全部になり、
+    # `settleAnimations` の呼び出しを shoot() の外（あとの助け関数や main()）へ移しても
+    # 字面が残って緑のまま通る。撮り終えた後に待っても意味が無いのに検査が気づかん。
+    # 桁0の `\n}` で切るのは、このファイルのトップレベル関数がその形で終わるため
+    # （下の settleAnimations の取り出しと同じ流儀）。
+    shoot_body = body[1].split("\n}", 1)[0]
+
+    if "await settleAnimations(page);" not in shoot_body:
+        fails.append("❌ shoot() がアニメーションの収束を待っていない")
+    # 決め打ちの待ちが戻ってきたら弾く。窓の高さを変えたあとの測り直し（fitToContent）は
+    # 別の話なので、`shoot()` の外にあるぶんは対象にせん。
+    if "waitForTimeout" in shoot_body:
+        fails.append("❌ shoot() の中に決め打ちの待ちが戻っている")
+
+    # 待ち方そのものは助け関数の側にある。中身が空になっていないかを見る。
+    helper = source.split("async function settleAnimations(page) {", 1)
+    if len(helper) != 2:
+        fails.append("❌ settleAnimations が見つからない")
+    else:
+        waiter = helper[1].split("\n}", 1)[0]
+        if "getAnimations()" not in waiter:
+            fails.append("❌ 待つ相手を getAnimations() で見ていない")
+        if "iterations === Infinity" not in waiter:
+            fails.append("❌ 無限に回るアニメーションを待つ相手から外していない")
+        # 待ち時間切れ以外まで握り潰すと、評価エラーやページ破棄が「警告つきで撮れた」に
+        # 化ける。撮れた画像は残るので、誰も失敗に気づけん。
+        if "catch {" in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ settleAnimations が例外を種類を見ずに握り潰している")
+        if "errors.TimeoutError" not in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ 待ち時間切れ以外の例外を再送出していない")
+        # 無限アニメーションは「待たん」だけでは足りん。止めて位相を固定せんと、
+        # ローディング画面（day09 / day21 / day23 / day29 の *-loading.png は
+        # `animate-spin` のスピナーを写す）は撮るたびに別の角度になる。
+        if "animation.pause()" not in waiter:
+            fails.append("❌ 無限アニメーションを止めずに撮っている（毎回別の角度で写る）")
+        if "animation.currentTime = 0" not in waiter:
+            fails.append("❌ 無限アニメーションの位相を固定していない")
+    if "import { chromium, errors } from 'playwright';" not in source:
+        fails.append("❌ playwright の errors を取り込んでいない（TimeoutError を見分けられない）")
+    return fails
+
+
+def check_worker_warning_forwarding() -> list[str]:
+    """ワーカーの警告が、撮影が成功した回にも表へ出ること。
+
+    アニメーションが止まらんかった等の警告は stderr にしか出ん。成功時に捨てると、
+    残るのは「撮れた」の一言だけになり、途中の絵が保存されたことに誰も気づけん。
+    """
+    fails = []
+    captured = io.StringIO()
+    with redirect_stderr(captured):
+        target.forward_worker_warnings("アニメーションが 2000ms で止まりませんでした\n\n", "day07")
+    out = captured.getvalue()
+    if "day07" not in out:
+        fails.append("❌ 警告にどの日のものか出ていない")
+    if "止まりませんでした" not in out:
+        fails.append("❌ ワーカーの警告が表へ出ていない")
+    if out.count("\n") != 1:
+        fails.append("❌ 空行まで流している（警告だけを出すこと）")
+
+    # 呼び出しが消えたら、助け関数が残っていても意味が無い。成功して返す経路に
+    # 挟まっとることまで見る。
+    body = Path(target.__file__).read_text(encoding="utf-8").split(
+        "def run_worker(job: dict[str, Any], label: str)", 1
+    )
+    if len(body) != 2:
+        fails.append("❌ run_worker が見つからない（この検査が対象を見失っている）")
+    else:
+        run_body = body[1].split("\ndef ", 1)[0]
+        if "forward_worker_warnings(proc.stderr, label)" not in run_body:
+            fails.append("❌ run_worker が成功時に stderr を捨てている")
+    return fails
+
+
+
+def check_drawn_frame_settle() -> list[str]:
+    """JS で1フレームずつ描くアニメーションの収束待ちを、実物のブラウザで確かめる。
+
+    Recharts（day22・day23 のグラフ）は react-smooth が `requestAnimationFrame` で
+    属性を書き換えて動かすので、`document.getAnimations()` には出てこん。せやから
+    ソースの文字列を見るだけの検査では「描き終わるまで待てとるか」を言えん。ここだけは
+    実際にブラウザで動かして、描きかけの形で止まらんことを見る。
+
+    ブラウザが無い機械では退けるが、**黙って通さん**。退けたことを出力に残す。
+    """
+    script = Path(__file__).resolve().parent / "settle-drawn-frames-check.mjs"
+    if not script.exists():
+        return ["❌ 実ブラウザ検査（settle-drawn-frames-check.mjs）が見当たらない"]
+    try:
+        proc = subprocess.run(
+            ["node", str(script)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=script.parent,
+        )
+    except subprocess.TimeoutExpired as expired:
+        # 時間切れをそのまま投げると main() まで抜けて、自己テストが件数も理由も出さずに
+        # 落ちる。「検査が黙って終わる」のはこの PR が潰しとる型そのものなので、
+        # 失敗として数えられる形で返す。途中まで出た分も添える。
+        partial = "".join(
+            stream.decode(errors="replace") if isinstance(stream, bytes) else (stream or "")
+            for stream in (expired.stdout, expired.stderr)
+        ).strip()
+        return [f"❌ 実ブラウザ検査が {expired.timeout} 秒で終わらんかった: {partial[-300:] or '出力なし'}"]
+    except FileNotFoundError as missing:
+        # node が PATH に無いと subprocess.run が送出する。そのまま抜けると main() が
+        # 件数も理由も出さずに落ちる。ブラウザの不在（SKIP）とは別物で、走らせる道具が
+        # 無いのは検査の失敗として数える。
+        return [f"❌ 実ブラウザ検査を起動できんかった: {missing}"]
+    out = (proc.stdout + proc.stderr).strip()
+    if proc.returncode != 0:
+        return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]
+    if out.startswith("SKIP:") or "\nSKIP:" in out:
+        reason = out.splitlines()[0]
+        # ブラウザのある機械では、退けたこと自体を失敗にできる。ここを付けんと、
+        # Chromium を入れてへん CI では毎回 SKIP が緑で通り、**実ブラウザの主張が
+        # 一度も走らんまま**マージできてしまう。ブラウザを用意しとる job だけが
+        # この環境変数を立てる。
+        if require_browser_check():
+            return [f"❌ ブラウザ必須の走行なのに実ブラウザ検査を退けた: {reason}"]
+        print(f"  ⏭️ 実ブラウザ検査を退けた: {reason}")
+        return []
+    # exit 0 だけでは「4本の主張が実際に走った」ことにならん。ワーカーが空回りする
+    # 実装へ縮んでも黙って緑になる。合格の合図を必ず要求する。件数を決め打ちにせんのは、
+    # 主張を足したときにここが嘘になるため。合格数と総数が一致することだけを見る。
+    passed = DRAWN_FRAME_PASS_MARK.search(out)
+    if passed is None:
+        return [f"❌ 実ブラウザ検査の合格の合図が出ていない: {out.splitlines()[-3:] or '出力なし'}"]
+    done, total = int(passed.group(1)), int(passed.group(2))
+    if total == 0 or done != total:
+        return [f"❌ 実ブラウザ検査が全部は通っていない: {done}/{total}"]
+    return []
+
+
+def check_node_missing_is_reported() -> list[str]:
+    """Node を起動できないとき、例外を自己テストの失敗へ変換すること。"""
+    original_run = target.subprocess.run
+
+    def missing_node(*args: object, **kwargs: object) -> None:
+        raise FileNotFoundError(2, "No such file or directory", "node")
+
+    try:
+        target.subprocess.run = missing_node
+        failures = check_drawn_frame_settle()
+    finally:
+        target.subprocess.run = original_run
+    if len(failures) != 1 or "起動できんかった" not in failures[0] or "'node'" not in failures[0]:
+        return [f"❌ Node 不在の理由が失敗として返っていない: {failures!r}"]
+    return []
+
+
+def check_browser_success_requires_sentinel() -> list[str]:
+    """ブラウザ検査が成功終了しても、4/4の実測結果が無ければ通さないこと。"""
+    original_run = target.subprocess.run
+    original_env = os.environ.get(REQUIRE_BROWSER_ENV)
+
+    def successful_noop(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["node"], 0, stdout="success", stderr="")
+
+    try:
+        target.subprocess.run = successful_noop
+        os.environ[REQUIRE_BROWSER_ENV] = "1"
+        failures = check_drawn_frame_settle()
+    finally:
+        target.subprocess.run = original_run
+        if original_env is None:
+            os.environ.pop(REQUIRE_BROWSER_ENV, None)
+        else:
+            os.environ[REQUIRE_BROWSER_ENV] = original_env
+    if len(failures) != 1 or "合格の合図が出ていない" not in failures[0]:
+        return [f"❌ 合格の合図の無い成功を失敗にできていない: {failures!r}"]
+    return []
+
+
+def require_browser_check(env: dict[str, str] | None = None) -> bool:
+    """実ブラウザ検査の SKIP を失敗として扱うか。
+
+    許可値だけを見る。「これ以外は無効」にせんと、綴り間違い（`ture` 等）で
+    静かに緩む側へ倒れる。既定は「立てん」で、ブラウザのある job だけが立てる。
+    """
+    raw = (env if env is not None else os.environ).get(REQUIRE_BROWSER_ENV, "").strip().lower()
+    return raw in ("1", "true", "yes")
+
+
+def check_require_browser_switch() -> list[str]:
+    """ブラウザ必須の走行では、SKIP を緑にせんこと。
+
+    Chromium を入れてへん CI では実ブラウザ検査が毎回 SKIP になる。そこが黙って
+    緑のままやと、この PR で足した rAF の収束待ちが**一度も実測されんまま**マージできる。
+    ブラウザを用意しとる job だけが環境変数を立てて、退けたこと自体を失敗にする。
+    """
+    fails = []
+    cases = {
+        "1": True, "true": True, "TRUE": True, "yes": True, " 1 ": True,
+        "": False, "0": False, "false": False, "no": False,
+        # 綴り間違いは「緩む側」やのうて既定（立てん）へ倒す。ここを拒否リストで
+        # 書くと、想定してへん値が全部「必須」になって CI が理由なく赤くなる。
+        "ture": False,
+    }
+    for raw, expected in cases.items():
+        actual = require_browser_check({REQUIRE_BROWSER_ENV: raw})
+        if actual is not expected:
+            fails.append(f"❌ {REQUIRE_BROWSER_ENV}={raw!r} の判定が {actual}（期待 {expected}）")
+    if require_browser_check({}):
+        fails.append("❌ 環境変数が無い走行までブラウザ必須にしている")
+    return fails
+
+
 CHECKS = (
     ("赤枠と切り抜きの座標の出どころ", check_mark_rect_source),
     ("日別シードの境界", check_day_seed_boundary),
@@ -302,6 +538,12 @@ CHECKS = (
     ("同梱の宣言表", check_shipped_config),
     ("ワーカーの分離", check_worker_isolation),
     ("スロットの排他", check_slot_exclusivity),
+    ("アニメーションの収束待ち", check_animation_settle),
+    ("ワーカーの警告の転送", check_worker_warning_forwarding),
+    ("描画の収束待ち（実ブラウザ）", check_drawn_frame_settle),
+    ("Node 不在時のエラー", check_node_missing_is_reported),
+    ("実ブラウザ検査の成功結果", check_browser_success_requires_sentinel),
+    ("ブラウザ必須の切り替え", check_require_browser_switch),
 )
 
 
