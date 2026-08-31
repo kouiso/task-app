@@ -39,6 +39,7 @@ from __future__ import annotations
 import http.client
 import json
 import os
+import queue
 import re
 import shutil
 import signal
@@ -995,10 +996,23 @@ def run_days(config: Config, days: list[int], out_dir: Path) -> Iterator[tuple[l
         for day in days:
             yield day_report(config, day, out_dir, 0)
         return
+    # スロットは貸し出しで管理する。`i % workers` で配ると、ThreadPoolExecutor が
+    # ID をスレッドへ固定せんせいで、同じ ID の日が同時に走り得る。走った2日は
+    # 同じ `shoot_wN` を seed し合い、片方の撮影中にもう片方が clearAll() を呼ぶ。
+    # 出てくるのは「別の日のデータが写った写真」で、しかも撮影は成功と報告する。
+    slots: queue.Queue[int] = queue.Queue()
+    for slot in range(workers):
+        slots.put(slot)
+
+    def run(day: int) -> tuple[list[str], int, bool]:
+        slot = slots.get()
+        try:
+            return day_report(config, day, out_dir, slot)
+        finally:
+            slots.put(slot)
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        # 日をワーカーへ順番に配る。同じワーカーに当たった日は同じ DB を使い回すので、
-        # `prisma db push` が2回目以降は速く済む。
-        futures = [pool.submit(day_report, config, day, out_dir, i % workers) for i, day in enumerate(days)]
+        futures = [pool.submit(run, day) for day in days]
         for future in as_completed(futures):
             yield future.result()
 

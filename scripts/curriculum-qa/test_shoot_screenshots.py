@@ -15,7 +15,9 @@
 """
 
 import json
+import queue
 import sys
+import time
 import tempfile
 from pathlib import Path
 
@@ -233,12 +235,68 @@ def check_worker_isolation() -> list[str]:
     return fails
 
 
+def check_slot_exclusivity() -> list[str]:
+    """同時に走っとる日が同じスロットを掴まんことを見る。
+
+    以前は `i % workers` でスロットを配っとった。ThreadPoolExecutor は ID を
+    スレッドへ固定せんので、先に終わった日の後ろに同じ ID の日が入り込み、
+    2つの日が同時に `shoot_wN` を seed し合う。片方の撮影中にもう片方が
+    clearAll() を呼ぶので、別の日のデータが写った写真が出て、しかも成功と報告される。
+    ここでは実際に走らせて、同じスロットが二重に貸し出されんことを確かめる。
+    """
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    fails: list[str] = []
+    src = (Path(__file__).parent / "shoot_screenshots.py").read_text(encoding="utf-8")
+    # 説明コメントにも同じ字面が出るので、コードの行だけを見る
+    code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("#"))
+    if "% workers" in code:
+        fails.append("❌ スロットを剰余で配る書き方が戻っとる（同時実行で衝突する）")
+    if "slots.get()" not in code or "slots.put(" not in code:
+        fails.append("❌ スロットの貸し出し（slots.get / slots.put）が無くなっとる")
+
+    # 本体と同じ貸し出しの形を組んで、重複が起きひんことを実測する
+    workers = 3
+    slots: "queue.Queue[int]" = queue.Queue()
+    for slot in range(workers):
+        slots.put(slot)
+    live: dict[int, int] = {}
+    lock = threading.Lock()
+    seen_overlap: list[int] = []
+
+    def job(day: int) -> int:
+        slot = slots.get()
+        try:
+            with lock:
+                live[slot] = live.get(slot, 0) + 1
+                if live[slot] > 1:
+                    seen_overlap.append(slot)
+            # 日ごとに長さを変える。短い日が先に終わって次が滑り込む形を作る
+            time.sleep(0.01 * (1 + day % 4))
+            return slot
+        finally:
+            with lock:
+                live[slot] -= 1
+            slots.put(slot)
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(job, d) for d in range(30)]
+        for f in as_completed(futures):
+            f.result()
+
+    if seen_overlap:
+        fails.append(f"❌ 同じスロットが同時に2つの日へ貸し出された: {sorted(set(seen_overlap))}")
+    return fails
+
+
 CHECKS = (
     ("赤枠と切り抜きの座標の出どころ", check_mark_rect_source),
     ("日別シードの境界", check_day_seed_boundary),
     ("宣言表の読み込み", check_config_loading),
     ("同梱の宣言表", check_shipped_config),
     ("ワーカーの分離", check_worker_isolation),
+    ("スロットの排他", check_slot_exclusivity),
 )
 
 

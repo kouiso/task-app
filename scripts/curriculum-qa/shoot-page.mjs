@@ -18,7 +18,6 @@ const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '�
 // 教材はローディング表示を「その日の成果物」として何度も見せるのに、返事が速すぎて
 // 撮る隙が無い。ここで止めると、読者が回線の遅い環境で見るのと同じ絵になる。
 // 撮り終えたら解除するので、次の1枚には効かない。
-const STALL_MS = 20000;
 
 // ページ全体を撮るときに、窓の高さを中身の高さへ合わせる範囲（CSS px）。
 // アプリの外枠は `h-screen` なので、窓の高さがそのまま画像の高さになる。中身が短い日は
@@ -207,13 +206,28 @@ async function login(page, baseUrl, account) {
  * 撮りたいため。読者が見るのも「まだ返ってきていない」状態である。
  */
 async function stallRoutes(page, patterns) {
+  // 時間で流すと、撮影がその時間を超えた回だけ読み込み中の表示が消える。
+  // 消えても撮影自体は成功するので、完成した画面が「読み込み中の写真」として
+  // 黙って残る。だから待たせるのは時計やのうて撮影の完了に紐づける。
+  const held = [];
+  let released = false;
   await page.route(
     (url) => patterns.some((p) => url.href.includes(p)),
     async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, STALL_MS));
-      await route.continue().catch(() => {});
+      if (released) {
+        await route.continue().catch(() => {});
+        return;
+      }
+      held.push(route);
     },
   );
+  return async () => {
+    released = true;
+    const pending = held.splice(0);
+    for (const route of pending) {
+      await route.continue().catch(() => {});
+    }
+  };
 }
 
 /**
@@ -257,8 +271,9 @@ async function shoot(page, job, shot) {
     await page.setViewportSize(shot.viewport);
   }
   const stall = shot.stall ?? [];
+  let releaseStalled = null;
   if (stall.length > 0) {
-    await stallRoutes(page, stall);
+    releaseStalled = await stallRoutes(page, stall);
   }
   // networkidle は使わない。tRPC の getSession が react-query で回り続ける画面（Day 08 以降の
   // AppLayout）では通信が止まらず、待ち切れずに落ちる。出ているべきものは wait_for で名指しする。
@@ -306,12 +321,16 @@ async function shoot(page, job, shot) {
   // 切り抜きの矩形も boundingBox() から起こす。中央寄せのカード画面をそのまま撮ると
   // 画像の大半が白場になり、紙面へ載せたときにフォーム本体が読めない大きさまで縮む。
   const clip = shot.clip ? await clipRect(page, shot.clip) : undefined;
+  // clip があるときは fullPage を立てん。この版の Playwright は両方渡しても clip を
+  // 優先して落ちんが、指定として意味が無く、読む人に「どっちが効くのか」を考えさせる。
   const png = await page.screenshot({
     type: 'png',
-    fullPage: shot.full_page === true || clip !== undefined,
-    ...(clip ? { clip } : {}),
+    ...(clip ? { clip } : { fullPage: shot.full_page === true }),
   });
   await writeFile(out, png);
+  if (releaseStalled) {
+    await releaseStalled();
+  }
   if (rects.length > 0) {
     await clearMarks(page);
   }
