@@ -738,9 +738,9 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 実際のコードでは、一括操作ボタンは **画面下部の固定バーではなく、ページヘッダーの右側** に配置されています。
 
-スクリーンショット: 一括操作ボタンがヘッダーに表示される様子の表示を確認してください。
+スクリーンショット: 下の画像は Step 8 まで書き終えた完成後のヘッダーです。この Step 5 の時点で出るのは「(1件選択中)」の文字までで、右側のボタンは Step 6・7・8 で足していきます。
 
-![1件だけ選んだ状態。見出しに「(1件選択中)」が出て、右側に一括操作ボタンが現れる](./screenshots/day28/bulk-operation-header.png)
+![Step 8 まで終えた状態。1件だけ選ぶと見出しに「(1件選択中)」が出て、右側に一括操作ボタンが並ぶ](./screenshots/day28/bulk-operation-header.png)
 
 ```typescript
 {/* filepath: src/app/task/page.tsx（className="text-3xl font-bold から onClick={handleCreate}> までを書き直す） */}
