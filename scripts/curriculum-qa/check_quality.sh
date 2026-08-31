@@ -208,6 +208,7 @@ CORPUS_CHECKS=(
   check_procedure_order
   check_step_ref
   check_tag_balance
+  check_unclosed_screen
   check_false_success
   check_zip_reference
   check_unused_image
@@ -231,6 +232,7 @@ SELF_TESTS=(
   test_check_step_ref
   test_sale_package
   test_check_tag_balance
+  test_check_unclosed_screen
   test_check_false_success
   test_check_zip_reference
   test_check_unused_image

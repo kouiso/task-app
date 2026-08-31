@@ -277,6 +277,7 @@ jobs:
           stepref_status=0
           scan_status=0
           tagbal_status=0
+          unclosedscreen_status=0
           falsesuccess_status=0
           zipref_status=0
           unusedimg_status=0
@@ -330,6 +331,12 @@ jobs:
           echo "::endgroup::"
           echo "::group::check_tag_balance.py — 開いた JSX タグが30日のどこかで閉じるか"
           python3 scripts/curriculum-qa/check_tag_balance.py material/30days-curriculum || tagbal_status=$?
+          echo "::endgroup::"
+          echo "::group::test_check_unclosed_screen.py — 未完成画面検査そのものの退行テスト"
+          python3 scripts/curriculum-qa/test_check_unclosed_screen.py || unclosedscreen_status=$?
+          echo "::endgroup::"
+          echo "::group::check_unclosed_screen.py — 閉じ切っていないファイルの画面を見せていないか"
+          python3 scripts/curriculum-qa/check_unclosed_screen.py material/30days-curriculum || unclosedscreen_status=$?
           echo "::endgroup::"
           echo "::group::test_check_false_success.py — 偽の完了宣言検査そのものの退行テスト"
           python3 scripts/curriculum-qa/test_check_false_success.py || falsesuccess_status=$?
@@ -391,8 +398,8 @@ jobs:
           echo "::group::check_crossref.py — 前の日を指す参照の先が実在するか"
           python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum || crossref_status=$?
           echo "::endgroup::"
-          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ] || [ "$scan_status" -ne 0 ] || [ "$tagbal_status" -ne 0 ] || [ "$falsesuccess_status" -ne 0 ] || [ "$zipref_status" -ne 0 ] || [ "$unusedimg_status" -ne 0 ] || [ "$salepkg_status" -ne 0 ] || [ "$jsxmarker_status" -ne 0 ] || [ "$jalinebreak_status" -ne 0 ] || [ "$setext_status" -ne 0 ] || [ "$quiz_status" -ne 0 ] || [ "$scaffoldsync_status" -ne 0 ]; then
-            echo "::error::Gate 4 失敗 (test_sale_package.py=$salepkg_status / check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status / test_markdown_scan.py=$scan_status / check_tag_balance.py=$tagbal_status / check_false_success.py=$falsesuccess_status / check_zip_reference.py=$zipref_status / check_unused_image.py=$unusedimg_status / check_jsx_marker.py=$jsxmarker_status / check_ja_line_break.py=$jalinebreak_status / check_setext_heading.py=$setext_status / check_quiz.py=$quiz_status / check_scaffold_src_sync.py=$scaffoldsync_status)"
+          if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ] || [ "$scan_status" -ne 0 ] || [ "$tagbal_status" -ne 0 ] || [ "$unclosedscreen_status" -ne 0 ] || [ "$falsesuccess_status" -ne 0 ] || [ "$zipref_status" -ne 0 ] || [ "$unusedimg_status" -ne 0 ] || [ "$salepkg_status" -ne 0 ] || [ "$jsxmarker_status" -ne 0 ] || [ "$jalinebreak_status" -ne 0 ] || [ "$setext_status" -ne 0 ] || [ "$quiz_status" -ne 0 ] || [ "$scaffoldsync_status" -ne 0 ]; then
+            echo "::error::Gate 4 失敗 (test_sale_package.py=$salepkg_status / check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status / test_markdown_scan.py=$scan_status / check_tag_balance.py=$tagbal_status / check_unclosed_screen.py=$unclosedscreen_status / check_false_success.py=$falsesuccess_status / check_zip_reference.py=$zipref_status / check_unused_image.py=$unusedimg_status / check_jsx_marker.py=$jsxmarker_status / check_ja_line_break.py=$jalinebreak_status / check_setext_heading.py=$setext_status / check_quiz.py=$quiz_status / check_scaffold_src_sync.py=$scaffoldsync_status)"
             exit 1
           fi
 
