@@ -418,8 +418,11 @@ def check_drawn_frame_settle() -> list[str]:
             for stream in (expired.stdout, expired.stderr)
         ).strip()
         return [f"❌ 実ブラウザ検査が {expired.timeout} 秒で終わらんかった: {partial[-300:] or '出力なし'}"]
-    except FileNotFoundError as exc:
-        return [f"❌ 実ブラウザ検査を実行できない（Node）: {exc}"]
+    except FileNotFoundError as missing:
+        # node が PATH に無いと subprocess.run が送出する。そのまま抜けると main() が
+        # 件数も理由も出さずに落ちる。ブラウザの不在（SKIP）とは別物で、走らせる道具が
+        # 無いのは検査の失敗として数える。
+        return [f"❌ 実ブラウザ検査を起動できんかった: {missing}"]
     out = (proc.stdout + proc.stderr).strip()
     if proc.returncode != 0:
         return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]

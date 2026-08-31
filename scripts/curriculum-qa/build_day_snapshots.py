@@ -1083,10 +1083,15 @@ def error_line_pool(output: str) -> tuple[str, ...]:
     # `PrismaClientInitializationError:` と `Can't reach database server ...` を
     # 別の行に吐く。マーカー側の行に error / failed の語が無いので、ERROR_MARK だけで
     # 拾うと証拠の行が消え、DB だけの失敗を DB 以外の失敗として止めてまう。
+    # 本物の失敗のマーカーも拾う。`You're importing a component that needs` は
+    # REAL_BUILD_FAILURE_MARKERS の中で唯一 ERROR_MARK のどの語も含まん。DB の赤と
+    # 同じ出力に混ざると、この行だけプールから落ちて DB だけの失敗に見え、SKIP へ倒れる。
     hits = [
         ln
         for ln in lines
-        if ERROR_MARK.search(ln) or any(m in ln for m in DB_LESS_BUILD_MARKERS)
+        if ERROR_MARK.search(ln)
+        or any(m in ln for m in DB_LESS_BUILD_MARKERS)
+        or any(m in ln for m in REAL_BUILD_FAILURE_MARKERS)
     ]
     # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
     # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
@@ -1437,6 +1442,11 @@ def expected_red_holds(result: DayResult) -> bool:
     if not result.tree_ok:
         return False
     if result.day not in EXPECTED_RED:
+        return False
+    # ツリーを組めてへん日は、断り書きの対象外。tsc も build も走っとらんので
+    # 下の2つは素通りするが、broken_days() は異常として止める。ここで False を
+    # 返さんと、走行が exit 1 やのに成果物だけ「想定内」と書く。
+    if not result.tree_ok:
         return False
     if result.tsc == "NG" and not tsc_failure_is_expected(result):
         return False

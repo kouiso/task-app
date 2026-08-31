@@ -6,7 +6,7 @@
 corpus 全体では 39枚 → **71枚**（+32）。内訳は day01〜day29 が 37 → 69（+32）、
 `day30` が 2 で前後とも変わらん。この表の30枚に加えて、`day04` の手描きモック2枚を
 図へ置き換えた分（`cover-letter.md` 9-3 節）が入って +32 になる。
-数え直しは ``grep -h '^```mermaid' material/30days-curriculum/*.md | wc -l`` で取れる。
+数え直しは ``grep -h '^```mermaid' material/30days-curriculum/*.md | wc -l`` で 71、``grep -h '^```mermaid' material/30days-curriculum/day{0,1,2}*.md | wc -l`` で day01〜29 の 69 が取れる（`grep -c` を複数ファイルへ当てるとファイル別の件数が並ぶだけで合計にならん）。
 
 ---
 
@@ -139,5 +139,4 @@ Day 16〜Day 20 の図が一度クリップされた状態で出た。もう一�
 
 ## 5. 残した問題
 
-- `check_unused_image` の8枚（`screenshots/day01`, `day05`〜`day08`）。本作業の範囲外。
 - 図のキャプションは `build_pdf_book.py` が直前の見出しを流用する。Day 01 の1枚目は `図1: PostgreSQL はどういう状態ならOKか` になる。図の中身と大きくはずれてはいないが、キャプションを図ごとに書ける仕組みは無い。
