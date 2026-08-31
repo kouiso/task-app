@@ -428,5 +428,6 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
   ```
 
   `ERROR_MARK` は位置を固定してへん大文字小文字無視なので、**メソッド名に `Error` が入っとる frame の2行が拾われる**。この2行は DB マーカーでも `BUILD_NOISE_MARKERS` でもないため `build_failure_is_database_only()` が `False` を返す。実測で `db_only: False`。DB を持たん機械で `--verify` が exit 1 になる。指摘のとおり（frame 名は Codex の挙げた `Mn.` やのうて、こっちの Prisma 6.19.3 では `ei.` やった。minify の割り当てが版で違うだけで、構造は同じ）。
-- 直し: `STACK_FRAME_MARK = re.compile(r"^\s+at (async )?\S")` を足して、判定に入る前に落とす。**frame は失敗の「場所」であって「種類」やない。**落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行（`TypeError: …`）が出て、そっちは ERROR_MARK に当たって残るため。
+- 直し: `STACK_FRAME_MARK = re.compile(r"^\s+at \S")` を足して、判定に入る前に落とす。**frame は失敗の「場所」であって「種類」やない。**落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行（`TypeError: …`）が出て、そっちは ERROR_MARK に当たって残るため。
+- 同じ指摘に対して**並行の走行が別の直し（`STACK_FRAME_MARKER = r"^\s*at\s+"`）を先に push しとった**（`c00015d`）。突き合わせて、行頭に空白を要求する側（`^\s+`）を残した。`\s*` やと桁0で `at ` から始まる本物のメッセージ行まで落ちるが、Node の frame は必ず字下げされとるため。向こうが `check_build_failure_triage` へ足した表明はそのまま残しとる。
 - 回帰テスト `check_stack_frames_do_not_block_skip` が2方向を見る。上の実測どおりの出力は `db_only: True`／`TypeError` を混ぜたら `False` のまま、かつ `TypeError` の行がプールに残っとること。戻すと `❌ Prisma の stack frame を本物の失敗として数えている`（30 → 29/30）。
