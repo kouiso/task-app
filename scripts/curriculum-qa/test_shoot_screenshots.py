@@ -322,7 +322,12 @@ def check_animation_settle() -> list[str]:
     body = source.split("async function shoot(page, job, shot) {", 1)
     if len(body) != 2:
         return ["❌ shoot() が見つからない（この検査が対象を見失っている）"]
-    shoot_body = body[1]
+    # **閉じ括弧まで切る。** ここを切らんと `body[1]` はモジュールの残り全部になり、
+    # `settleAnimations` の呼び出しを shoot() の外（あとの助け関数や main()）へ移しても
+    # 字面が残って緑のまま通る。撮り終えた後に待っても意味が無いのに検査が気づかん。
+    # 桁0の `\n}` で切るのは、このファイルのトップレベル関数がその形で終わるため
+    # （下の settleAnimations の取り出しと同じ流儀）。
+    shoot_body = body[1].split("\n}", 1)[0]
 
     if "await settleAnimations(page);" not in shoot_body:
         fails.append("❌ shoot() がアニメーションの収束を待っていない")
