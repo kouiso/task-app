@@ -45,6 +45,7 @@ CSS の値だけを信じると、テーマが余白を変えたときに検査�
 from __future__ import annotations
 
 import shutil
+import re
 import statistics
 import sys
 import tempfile
@@ -58,6 +59,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
 
 REQUIRED_TOOLS = ("pdftoppm", "pdfimages", "pdftotext", "pdfinfo")
+PAGE_IMAGE_NAME = re.compile(r"^page-(\d+)\.pgm$")
 
 # ── 版面（上の docstring 参照） ──────────────────────────────
 TEXT_LEFT_MM = 22.0
@@ -577,12 +579,20 @@ def page_count(pdf: Path) -> int:
     raise ToolFailure("pdfinfo がページ数を返さない")
 
 
+def page_image_number(path: Path) -> int:
+    """pdftoppm のページ画像名から数値のページ番号を取り出す。"""
+    match = PAGE_IMAGE_NAME.fullmatch(path.name)
+    if match is None:
+        raise ToolFailure(f"ページ画像の名前が不正です: {path.name}")
+    return int(match.group(1))
+
+
 def render_problems(pdf: Path, total: int) -> list[str]:
     """全ページを描画して、版面からはみ出した墨を挙げる。"""
     with tempfile.TemporaryDirectory() as work:
         run_tool(["pdftoppm", "-gray", "-r", str(RENDER_DPI), str(pdf),
                   str(Path(work) / "page")])
-        images = sorted(Path(work).glob("page-*.pgm"))
+        images = sorted(Path(work).glob("page-*.pgm"), key=page_image_number)
         if len(images) != total:
             raise ToolFailure(f"{total} ページ中 {len(images)} ページしか描画できない")
         problems: list[str] = []

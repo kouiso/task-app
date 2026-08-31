@@ -75,13 +75,13 @@ src/
 |------|--------|------|------|
 | useQuery（Day 08 の復習） | ユーズ・クエリ | サーバーからデータを取得するフック | 図書館の検索端末。リクエストすると結果が返ってくる |
 | グリッドレイアウト | — | 要素を格子状に並べるCSS | 本棚の棚板。横に何冊並べるかを画面幅で変える |
-| Suspense | サスペンス | コンポーネントの準備が終わるまで代わりの画面を表示するReactの仕組み | レストランの「ただいま準備中」の看板 |
+| Suspense | サスペンス | 子コンポーネントが描画を一時停止したとき代わりの画面を表示するReactの仕組み | レストランの「ただいま準備中」の看板 |
 
 ### Suspenseの役割を理解する
 
 | 用語 | 何をするか | 今日の使い方 |
 |------|-----------|-------------|
-| `Suspense` | 子コンポーネントが準備完了するまで `fallback` を表示する | ページ全体のローディングガード |
+| `Suspense` | 子コンポーネントが描画を一時停止したとき `fallback` を表示する | `useSearchParams` を使う本体を境界で包む |
 | `fallback` | 準備中に表示するUI | `<PageLoadingSpinner />` |
 | `PageLoadingSpinner` | スピナー付きのローディング表示 | `Suspense` の `fallback` や `isLoading` 時に使う |
 
@@ -338,7 +338,7 @@ export default function ProjectPage() {
 }
 ```
 
-この `ProjectPage` が、実際に画面へ表示されるコンポーネントです。本体の `ProjectPageContent` を `Suspense` で包むのは、次のステップでデータ取得を足したときに、読み込み中の表示を1か所で受け止められるようにするためです。
+この `ProjectPage` が、実際に画面へ表示されるコンポーネントです。本体の `ProjectPageContent` を `Suspense` で包むのは、`useSearchParams` を使う本体に、Next.js が要求する描画の境界を置くためです。API のデータ取得中に表示するスピナーは、`projectsLoading` の分岐で別に扱います。
 
 **確認ポイント**:
 - `npm run dev` でエラーが出ていない
@@ -349,7 +349,7 @@ export default function ProjectPage() {
 
 ![完成後のプロジェクト一覧。赤枠の中に「プロジェクト」の見出しが出ている](./screenshots/day09/project-page-heading.png)
 
-> `Suspense` は子コンポーネント（`ProjectPageContent`）が準備完了するまで、代わりに `fallback` に指定した `PageLoadingSpinner` を表示します。ローディング中はスピナーが表示され、準備が完了すると `ProjectPageContent`（`AppLayout` でラップされた本体）が表示されます。
+> `Suspense` は、子コンポーネント（`ProjectPageContent`）が描画を一時停止したとき、`fallback` の `PageLoadingSpinner` を表示します。API の問い合わせ中に表示するスピナーは、`ProjectPageContent` 内の `projectsLoading` が担当します。
 
 ---
 
@@ -608,10 +608,10 @@ map の中で、各プロジェクトの値を `ProjectCard` に渡してカー�
 
 | 画面幅 | クラス | 列数 |
 |--------|-------|------|
-| スマホ（~640px） | デフォルト（`grid-cols-1`） | 1列 |
-| タブレット（640px~） | `sm:grid-cols-2` | 2列 |
-| PC（1024px~） | `lg:grid-cols-3` | 3列 |
-| ワイド（1280px~） | `xl:grid-cols-4` | 4列 |
+| スマホ（640px未満） | デフォルト（`grid-cols-1`） | 1列 |
+| タブレット（640px以上） | `sm:grid-cols-2` | 2列 |
+| PC（1024px以上） | `lg:grid-cols-3` | 3列 |
+| ワイド（1280px以上） | `xl:grid-cols-4` | 4列 |
 
 ---
 
@@ -1376,7 +1376,7 @@ export default function ProjectPage() {
 }
 ```
 
-画面として読まれるのはこちらで、本体は `ProjectPageContent` に分けてあります。分けておくと、準備が終わるまでの仮表示を `Suspense` の1か所で受け止められます。`export default` を付けた関数がページの入口になるので、この行を本体の側へ移すと、囲みが働かないまま本体だけが表示されます。
+画面として読まれるのはこちらで、本体は `ProjectPageContent` に分けてあります。`useSearchParams` を使う本体を `Suspense` の境界で包むことで、Next.js のビルド時に必要な境界を置けます。API の読み込み中の表示は、本体の `projectsLoading` の分岐が担当します。`export default` を付けた関数がページの入口になるので、この行を本体の側へ移すと、境界を置かないまま本体だけが表示されます。
 
 ## 今日のまとめ
 
@@ -1403,7 +1403,7 @@ export default function ProjectPage() {
 | 用語 | 意味 |
 |------|------|
 | useQuery | tRPC/React Query のデータ取得フック |
-| Suspense | 子コンポーネントの準備中に代わりのUIを表示するReactの仕組み |
+| Suspense | 子コンポーネントが描画を一時停止したとき代わりのUIを表示するReactの仕組み |
 | グリッドレイアウト | CSS Grid で要素を格子状に配置する仕組み |
 | レスポンシブ | 画面幅に応じてレイアウトを変えるデザイン手法 |
 

@@ -147,6 +147,8 @@
 
     --warning: 35 92% 55%;
     --warning-foreground: 223 20% 12%;
+    --warning-text: 35 90% 34%;
+    --success-text: 158 64% 31%;
 
     --border: 225 20% 89%;
     --input: 225 20% 89%;
@@ -200,6 +202,8 @@
 
     --warning: 38 92% 60%;
     --warning-foreground: 223 20% 12%;
+    --warning-text: 38 92% 68%;
+    --success-text: 158 60% 62%;
 
     --border: 224 15% 22%;
     --input: 224 15% 22%;

@@ -1290,9 +1290,10 @@ export default function DashboardPage() {
 - 値はその場に直接書き散らすより、型（`type`）や関数にまとめて意味を持たせたほうが、あとから変更しやすい
 - クリックなどの操作がない画面は、無理に Client Component にせず、Server Component のままにしておく
 
-この3つが入っていれば、名前や集中テーマを変えたくなったときに
-触るのはファイル先頭の1行だけで、
-`{ownerName}`・`{focusTheme}`・`{todayNote}` の3か所が同時に変わります。
+この3つが入っていれば、名前や集中テーマを変えたいときは、
+ファイル先頭の `dashboardOwner` にある該当プロパティだけを変えます。
+名前は `dashboardOwner.name`、集中テーマは `dashboardOwner.todayFocus` を参照している場所へ反映されます。
+
 ## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |

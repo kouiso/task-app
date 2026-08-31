@@ -551,7 +551,7 @@ git add -f .env.example
 git status --short
 ```
 
-`.node-version` は中身が `22` の1行だけのファイルですが、これを送る理由があります。Day 04 で使う Vercel は、公開用のビルドを走らせるときに Node のバージョンをこのファイルから読み取ります。送っていないと Vercel 側の既定のバージョンで組み立てられるので、手元で通ったビルドが公開先で通らないことがあります。手元と公開先で同じバージョンをそろえるための1行です。
+`.node-version` は中身が `22` の1行だけのファイルですが、これを送る理由があります。これは mise や nvm などのローカルのバージョン管理ツールに、使う Node.js を伝えるファイルです。Vercel のビルドで使う Node.js は、この教材では `package.json` の `engines.node` または Vercel の Project Settings で指定します。ローカルと公開先のバージョンを同じにするため、両方を確認します。
 
 `.env.example` にだけ `-f` を付けているのは、`.gitignore` の `.env*` がこのファイルも除外しているためです。見本ファイルだけは意図的に例外として加えます。`-f` を付けずに実行すると `The following paths are ignored by one of your .gitignore files` と表示され、追加されません。
 
@@ -578,8 +578,7 @@ A  src/app/dashboard/page.tsx
 - `README.md` の `M` が左側（1文字目）に付いている
 - どの行にも `.env` が出ていない
 
-いちばん下には、add しなかったものが `??` の行として残ります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? scripts/` の3行が並びます。
-どれも add していないので正しい状態です。`.node-version` はさきほど add したので、ここには出てきません。
+いちばん下には、add しなかったものが `??` の行として残ります。配布 ZIP をそのまま使った場合は、たとえば `?? .mise.toml`、`?? doc/`、`?? scripts/` が残ります。環境や途中の操作で行数は変わりますが、`.node-version` はさきほど add したので、ここには出てきません。
 
 #### 初回だけ、自分の名前とメールアドレスを Git へ登録する
 

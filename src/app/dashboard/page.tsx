@@ -12,8 +12,13 @@ import {
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
-import { TASK_PRIORITY_COLORS, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { TASK_STATUS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { TASK_PRIORITY_LABELS, TASK_PRIORITY_TEXT_COLORS } from '@/lib/constant/priority';
+import {
+  TASK_STATUS,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+  TASK_STATUS_TEXT_COLORS,
+} from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
@@ -257,14 +262,14 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <span
                           className="text-[10px] font-medium"
-                          style={{ color: TASK_STATUS_COLORS[task.status] }}
+                          style={{ color: TASK_STATUS_TEXT_COLORS[task.status] }}
                         >
                           {TASK_STATUS_LABELS[task.status] ?? task.status}
                         </span>
                         <span className="text-muted-foreground text-[10px]">·</span>
                         <span
                           className="text-[10px] font-medium"
-                          style={{ color: TASK_PRIORITY_COLORS[task.priority] }}
+                          style={{ color: TASK_PRIORITY_TEXT_COLORS[task.priority] }}
                         >
                           {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
                         </span>

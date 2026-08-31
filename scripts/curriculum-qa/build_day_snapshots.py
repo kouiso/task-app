@@ -255,6 +255,7 @@ class DayResult(NamedTuple):
     tsc: str
     build: str
     errors: tuple[str, ...]
+    build_errors: tuple[str, ...] = ()
 
 
 def available_days() -> list[int]:
@@ -268,6 +269,31 @@ def day_sources(upto: int) -> list[Path]:
         (p for p in MATERIAL_DIR.glob("day[0-9][0-9]_*.md") if 1 <= day_number(p.name) <= upto),
         key=lambda p: (day_number(p.name), p.name),
     )
+
+
+# ツリーの中身を決めているファイルのうち、教材でも配布物でもないもの。
+# 組み立て方を変えた回は教材の更新時刻が動かないので、これを見ないと古いツリーが残る。
+BUILDER_SOURCES = (
+    Path(__file__).resolve(),
+    Path(__file__).resolve().parent / "curriculum_blocks.py",
+    Path(__file__).resolve().parent / "sale_package.py",
+)
+
+
+def tree_inputs(upto: int) -> list[Path]:
+    """その日のツリーの中身を決める入力を全部返す。
+
+    撮影側がツリーの古さを測るのに使う。教材と配布物だけを見ると、借り物
+    （`globals.css` や `package.json`）と、組み立て方そのもの（このファイル）の
+    変更を取りこぼす。取りこぼすと古いツリーのまま撮れて、画像だけが前の
+    アプリのまま残る。撮れてしまうから、あとから誰も気づけない。
+    """
+    return [
+        *day_sources(upto),
+        *(src for _, src in scaffold_copies()),
+        *(REPO_ROOT / name for name in BORROWED_FILES),
+        *BUILDER_SOURCES,
+    ]
 
 
 def select_days(day: int | None, want_all: bool, days: list[int]) -> list[int]:
@@ -1043,26 +1069,48 @@ def build_tree(day: int) -> tuple[Path, int]:
     return dest, files
 
 
+def error_line_pool(output: str) -> tuple[str, ...]:
+    """出力から、エラーらしい行を全部抜く。件数で切らない。
+
+    切らんのは、赤の理由を判定する側（`build_failure_is_db_less`）がここを読むため。
+    3行に切った標本で判定すると、DB のエラーが先に並んだ回に後ろの prerender の
+    失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
+    """
+    lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
+    # DB マーカーを持つ行は ERROR_MARK に当たらんでも拾う。Prisma は
+    # `PrismaClientInitializationError:` と `Can't reach database server ...` を
+    # 別の行に吐く。マーカー側の行に error / failed の語が無いので、ERROR_MARK だけで
+    # 拾うと証拠の行が消え、DB だけの失敗を DB 以外の失敗として止めてまう。
+    hits = [
+        ln
+        for ln in lines
+        if ERROR_MARK.search(ln) or any(m in ln for m in DB_LESS_BUILD_MARKERS)
+    ]
+    # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
+    # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
+    return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines))
+
+
 def error_lines(output: str) -> tuple[str, ...]:
-    """出力から、最初のエラー3行を抜く。
+    """出力から、表示用に最初のエラー3行を抜く。
 
     先頭3行をそのまま採ると `> task-app@1.0.0 build` のような npm の前口上しか
     残らない。読んだ人が原因へ辿れないので、エラーらしい行を先に探す。
-    見つからないときだけ先頭から採る。
     """
-    lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
-    hits = [ln for ln in lines if ERROR_MARK.search(ln)]
-    # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
-    # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
-    return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines)[:3])
+    return error_line_pool(output)[:3]
 
 
-def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...]]:
-    """コマンドを走らせて (成功したか, 最初のエラー3行) を返す。"""
+def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...], tuple[str, ...]]:
+    """コマンドを走らせて (成功したか, 表示用の3行, 判定用の全エラー行) を返す。
+
+    表示用と判定用を分けるのは、3行に切った標本で赤の理由を判定すると、
+    後ろに並んだ本物の失敗が視界から落ちるため。
+    """
     proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
     if proc.returncode == 0:
-        return True, ()
-    return False, error_lines(f"{proc.stdout}\n{proc.stderr}")
+        return True, (), ()
+    pool = error_line_pool(f"{proc.stdout}\n{proc.stderr}")
+    return False, pool[:3], pool
 
 
 def link_node_modules(dest: Path) -> None:
@@ -1077,15 +1125,22 @@ def link_node_modules(dest: Path) -> None:
     link.symlink_to(REPO_ROOT / "node_modules", target_is_directory=True)
 
 
-def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...]]:
-    """組んだツリーへ型検査とビルドを掛けて (tsc, build, エラー行) を返す。"""
+def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
+    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build の全エラー行) を返す。
+
+    build のエラー行を「全部」別で返すのは、落ちた理由を判定に使うため。表示用の3行で
+    判定すると、DB のエラーが先に並んだ回に後ろの prerender の失敗が落ちる。DB の無い機械では
+    `next build` が必ず赤くなるので昔は build の赤を丸ごと無視しとったが、それやと
+    prerender や server/client 境界の失敗まで一緒に見逃す。理由で切り分ける。
+    """
     link_node_modules(dest)
-    tsc_ok, tsc_errors = run_step(["npx", "tsc", "--noEmit"], dest)
-    build_ok, build_errors = run_step(["npm", "run", "build"], dest)
+    tsc_ok, tsc_shown, _ = run_step(["npx", "tsc", "--noEmit"], dest)
+    build_ok, build_shown, build_all = run_step(["npm", "run", "build"], dest)
     return (
         "OK" if tsc_ok else "NG",
         "OK" if build_ok else "NG",
-        tsc_errors or build_errors,
+        tsc_shown or build_shown,
+        build_all,
     )
 
 
@@ -1097,8 +1152,8 @@ def snapshot_day(day: int, verify: bool) -> DayResult:
         return DayResult(day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",))
     if not verify:
         return DayResult(day, files, True, NOT_RUN, NOT_RUN, ())
-    tsc, build, errors = verify_tree(dest)
-    return DayResult(day, files, True, tsc, build, errors)
+    tsc, build, errors, build_errors = verify_tree(dest)
+    return DayResult(day, files, True, tsc, build, errors, build_errors)
 
 
 def _cell(text: str) -> str:
@@ -1121,6 +1176,8 @@ def result_table(results: list[DayResult]) -> str:
 
 def triage_section(results: list[DayResult]) -> str:
     """NG の日の切り分けを書く。"""
+    # SKIP は「判定してへん」であって NG やない。切り分けの表へ入れると
+    # 「判定不能（未調査）」として並び、教材の欠陥を疑わせる行が生える。
     ng = [r for r in results if not r.tree_ok or r.tsc == "NG" or r.build == "NG"]
     if not ng:
         return ""
@@ -1208,6 +1265,49 @@ EXPECTED_RED = {
     11: "day11 は `getById` を書く前に配布物を取り込むため型エラーが5件出る。教材が本文で明示している",
 }
 
+# `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
+# これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は
+# prerender や server/client 境界の失敗なので、見逃したら壊れた日を通してしまう。
+DB_LESS_BUILD_MARKERS = (
+    "Can't reach database server",
+    # Prisma が接続失敗のときに出す例外名そのもの。この行には DB の語が無いので、
+    # 名前で拾わんと「DB 以外の失敗」に数えられて、DB の無い機械で止まる。
+    "PrismaClientInitializationError",
+    "Error validating datasource",
+    "Environment variable not found: DB_URL",
+    "Environment variable not found: DATABASE_URL",
+    "P1001",
+    # P1012 は Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
+    # 環境変数の欠落（DB 由来の P1012）は上の文言で拾う。
+    "ECONNREFUSED",
+)
+
+
+BUILD_SKIPPED = "SKIP"
+
+
+def build_failure_needs_database(errors: tuple[str, ...]) -> bool:
+    """build の赤に DB の不在が絡んどるか（＝この機械では build を判定できんか）。
+
+    `next build` は根本原因を Next.js のラッパー行で包んで出すため、行の文言から
+    「DB だけ」と断定するのは危険。DB のマーカーが1つでもあれば、結果を SKIP として
+    残す。通した扱いにはしないので、DB のある機械で流し直す必要がある。
+    """
+    return any(
+        any(marker in line for marker in DB_LESS_BUILD_MARKERS)
+        for line in errors
+    )
+
+
+def triage_build_results(results: list[DayResult]) -> list[DayResult]:
+    """DB が要る赤を SKIP へ振り替えた一覧を返す。"""
+    return [
+        r._replace(build=BUILD_SKIPPED)
+        if r.build == "NG" and build_failure_needs_database(r.build_errors)
+        else r
+        for r in results
+    ]
+
 
 def main(argv: list[str]) -> int:
     args = argv[1:]
@@ -1243,13 +1343,19 @@ def main(argv: list[str]) -> int:
         for line in r.errors:
             print(f"    {line}")
 
+    # 切り分けを書き出しより先にやる。あとに回すと、画面は SKIP と言うとるのに
+    # 成果物のほうは NG のまま残り、しかも「判定不能（未調査）」の行まで生える。
+    results = triage_build_results(results)
+    skipped = [r for r in results if r.build == BUILD_SKIPPED]
+
     write_result_doc(results, verify, command_line(argv))
     print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
 
-    # build の失敗では止めない。DB の無い機械でも赤くなるので、教材の欠陥を指さない。
     broken = [
         r for r in results
-        if not r.tree_ok or (r.tsc == "NG" and r.day not in EXPECTED_RED)
+        if not r.tree_ok
+        or (r.tsc == "NG" and r.day not in EXPECTED_RED)
+        or (r.build == "NG" and r.day not in EXPECTED_RED)
     ]
     # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
     unexpected_green = [
@@ -1266,8 +1372,22 @@ def main(argv: list[str]) -> int:
             )
         return 1
     if broken:
-        print(f"❌ ツリー構築または型検査が通らない {len(broken)} 日")
+        print(f"❌ ツリー構築・型検査・ビルドのどれかが通らない {len(broken)} 日")
+        for r in broken:
+            if r.build == "NG" and r.tsc == "OK":
+                print(
+                    f"  day{r.day:02d} は tsc が通ってビルドだけ落ちています。"
+                    "DB の不在では説明できないので、prerender か server/client 境界を疑ってください"
+                )
         return 1
+    if skipped:
+        days = "・".join(f"day{r.day:02d}" for r in skipped)
+        print(
+            f"⚠️ {len(results)} 日ぶんを組み立てましたが、build を判定できんかった日が "
+            f"{len(skipped)} 件あります（この機械に DB が無い）: {days}"
+        )
+        print("   この走行は build を検証していません。DB のある機械で流し直してください")
+        return 0
     print(f"✅ {len(results)} 日ぶんを組み立てました")
     return 0
 

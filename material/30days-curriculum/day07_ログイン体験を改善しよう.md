@@ -752,9 +752,9 @@ export const authRouter = createTRPCRouter({
 
 ログイン処理の最初の仕事は、データベースを引くことではなく回数を数えることです。
 `checkLoginRateLimit` を `prisma.user.findUnique` より前に置くのは、当てずっぽうのパスワードを何万回も試す攻撃を、照合へ届く前に止めるためです。
-数える軸は、`extractClientIp` で取り出した接続元 IP と、送られてきたメールアドレスの両方です。
+数える軸は3つあります。直近15分について、同じメールアドレスと IP の組み合わせは5回、同じメールアドレス全体は10回、同じ IP アドレス全体は20回までです。
 IP だけで数えると、接続元を変えながら同じアカウントを狙う手口を数え落とします。
-逆にメールだけで数えると、1 つの IP から大量のアカウントを試す手口が素通りします。
+逆にメールだけで数えると、1つの IP から大量のアカウントを試す手口が素通りします。3つを同時に見ることで、片方の条件を変える攻撃も別のアカウントを大量に試す攻撃も止められます。
 
 **確認ポイント**:
 - [ ] IP を取り出し、ログイン試行回数を先に確認している
@@ -2475,7 +2475,7 @@ export const config = {
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
 | `The table \`public.users\` does not exist in the current database.` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
-| `ログイン試行回数が上限に達しました` | 同じメールで5回失敗したための一時ロック | 15分待つか、別のメールアドレスで試す。コードの問題ではない |
+| `ログイン試行回数が上限に達しました` | 直近15分の失敗回数が、同じメール×IPで5回、同じメール全体で10回、または既知のIP全体で20回に達した | 15分待ってから1回だけ再試行する。別のメールやIPに変えても、メール全体またはIP全体の上限に達していれば通らない |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
 
 ## 今日学んだ用語

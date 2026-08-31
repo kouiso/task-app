@@ -37,6 +37,7 @@
 from __future__ import annotations
 
 import http.client
+import hashlib
 import json
 import os
 import queue
@@ -65,6 +66,7 @@ WORKER = Path(__file__).with_name("shoot-page.mjs")
 SEED_RUNNER = Path(__file__).with_name("day-seed-runner.ts")
 OUT_DIR = REPO_ROOT / "material" / "30days-curriculum" / "screenshots"
 PLAN_DOC = REPO_ROOT / "doc" / "review-handoff" / "screenshots-plan.md"
+SNAPSHOT_INPUT_MANIFEST = ".snapshot-inputs.json"
 
 USAGE = "使い方: shoot_screenshots.py (--day N | --all | --list) [--out DIR]"
 
@@ -711,26 +713,95 @@ NOT_FOR_PROCESS_ENV = ("NODE_ENV",)
 
 
 def ensure_tree_fresh(day: int) -> Path:
-    """教材か配布物より古いツリーは組み直してから返す。
+    """生成入力の指紋が違うツリーを組み直してから返す。
 
     教材の文面を直しても、`dist/day-snapshots/dayNN/` は自動では追いつかない。古いツリーの
     まま撮ると、直したはずの文面が画像に残る。実際 day02 の挨拶文を直した回に、day04 の
     ツリーだけ古いままで、旧文面のダッシュボードが撮れた。撮る側が気づける事実なので、
     人の記憶に頼らずここで見る。
 
-    見るのは教材だけでは足りない。ツリーの中身の半分は `scripts/_*` の配布物で、
-    読者が最初に受け取るのもそちらである。配布物だけを直した回（ステータスと優先度の色を
-    トークンから引き直した回がこれ）は教材の更新時刻が動かないので、古い色のまま
-    撮れてしまう。撮れてしまうから誰も気づけない。両方を見る。
+    見るのは教材だけでは足りません。ツリーの中身の半分は `scripts/_*` の配布物で、
+    読者が最初に受け取るのもそちらです。配布物だけを直した回は教材の更新時刻が動かないので、
+    古い状態のまま撮れてしまいます。さらに、ツリーを組む Python や設定ファイルだけを直した
+    回も、生成結果へ反映しなければなりません。生成入力全体の指紋を保存して比較します。
+
+    更新時刻だけで比較しないのは、同じ秒に保存された変更や、削除された入力を見逃すためです。
+    指紋には相対パスと SHA-256 を入れるので、入力の追加・削除・内容変更をすべて検出できます。
     """
     dest = snapshot_dir(day)
-    sources = list(day_sources(day)) + [src for _, src in scaffold_copies()]
-    newest = max(p.stat().st_mtime for p in sources)
-    if newest <= dest.stat().st_mtime:
+    expected = snapshot_input_fingerprint(day)
+    manifest = dest / SNAPSHOT_INPUT_MANIFEST
+    try:
+        actual = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        actual = None
+    if actual == expected:
         return dest
-    print(f"  教材のほうが新しいのでツリーを組み直します: {dest.name}")
+    print(f"  生成入力が変わったのでツリーを組み直します: {dest.name}")
     build_tree(day)
+    (dest / SNAPSHOT_INPUT_MANIFEST).write_text(
+        f"{json.dumps(expected, ensure_ascii=False, indent=2)}\n",
+        encoding="utf-8",
+    )
     return dest
+
+
+def _snapshot_input_paths(day: int) -> tuple[Path, ...]:
+    """その日のツリーを決める入力ファイルを重複なく返す。"""
+    paths = list(day_sources(day))
+    paths.extend(src for _, src in scaffold_copies())
+    paths.extend(
+        REPO_ROOT / name
+        for name in (
+            "next.config.ts",
+            "postcss.config.js",
+            "tailwind.config.js",
+            "package.json",
+            "src/app/globals.css",
+            ".env.example",
+            "tsconfig.json",
+        )
+    )
+    paths.extend(
+        Path(__file__).with_name(name)
+        for name in (
+            "build_day_snapshots.py",
+            "curriculum_blocks.py",
+            "sale_package.py",
+            "check_scaffold_curriculum_alignment.py",
+            "day-seed-runner.ts",
+        )
+    )
+    paths.extend(
+        REPO_ROOT / name
+        for name in ("scripts/scaffold-from-scratch.sh",)
+    )
+    unique = {path.resolve() for path in paths}
+    return tuple(sorted(unique, key=lambda path: str(path.relative_to(REPO_ROOT))))
+
+
+def _file_digest(path: Path) -> str:
+    """入力ファイルを SHA-256 で識別する。"""
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def snapshot_input_fingerprint(day: int) -> dict[str, object]:
+    """その日のスナップショットを生成する入力の指紋を作る。"""
+    inputs: list[dict[str, str]] = []
+    for path in _snapshot_input_paths(day):
+        if not path.is_file():
+            raise FileNotFoundError(f"スナップショットの入力がありません: {path}")
+        inputs.append(
+            {
+                "path": str(path.relative_to(REPO_ROOT)),
+                "sha256": _file_digest(path),
+            }
+        )
+    return {"day": day, "inputs": inputs}
 
 
 def read_env(dest: Path) -> dict[str, str]:
@@ -843,8 +914,10 @@ def wait_ready(port: int, proc: subprocess.Popen[str]) -> None:
         conn = http.client.HTTPConnection("127.0.0.1", port, timeout=3)
         try:
             conn.request("GET", "/")
-            if conn.getresponse().status < 500:
+            response = conn.getresponse()
+            if response.status < 500:
                 return
+            time.sleep(0.5)
         except OSError:
             time.sleep(0.5)
         finally:

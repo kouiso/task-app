@@ -17,6 +17,7 @@
 import contextlib
 import io
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -698,9 +699,9 @@ def check_new_declaration() -> list[str]:
             fails.append("❌ ハンドラーの中を割っている")
 
     # 続けて足したときも、前に足した抜粋の中へ入り込まないこと。
-    twice = target.add_declaration(out, "const c = 3;")
-    if twice is None or twice.split("\n").index("const c = 3;") != twice.split("\n").index("const b = 2;") + 1:
-        fails.append("❌ 2本目が1本目の直後に並んでいない")
+        twice = target.add_declaration(out, "const c = 3;")
+        if twice is None or twice.split("\n").index("const c = 3;") != twice.split("\n").index("const b = 2;") + 1:
+            fails.append("❌ 2本目が1本目の直後に並んでいない")
 
     # 同じ名前が既にあるなら足さない（`完成版` 側の同じ抜粋で二重にせん）。
     if target.add_declaration(body, "const a = 9;") is not None:
@@ -780,6 +781,166 @@ def check_leading_imports() -> list[str]:
     return fails
 
 
+def check_tree_inputs() -> list[str]:
+    """ツリーの古さを測る材料が、実際にツリーへ入るもの全部を覆っていること。
+
+    教材と配布物だけを見た時期があり、借り物や組み立て方を直した回は更新時刻が
+    動かんので古いツリーのまま撮れていた。覆いが痩せても撮影は成功するため、
+    ここが落ちん限り誰も気づけない。
+    """
+    fails = []
+    got = {p.resolve() for p in target.tree_inputs(3)}
+    for name in target.BORROWED_FILES:
+        if (target.REPO_ROOT / name).resolve() not in got:
+            fails.append(f"❌ 借り物を見ていない: {name}")
+    for src in target.BUILDER_SOURCES:
+        if src.resolve() not in got:
+            fails.append(f"❌ 組み立て方そのものを見ていない: {src.name}")
+    if not any(p.name.startswith("day03_") for p in got):
+        fails.append("❌ その日までの教材を見ていない")
+    if any(p.name.startswith("day04_") for p in got):
+        fails.append("❌ その日より後の教材まで見ている")
+    if not all(p.is_file() for p in got):
+        fails.append("❌ 存在せんファイルを材料に数えている")
+    return fails
+
+
+def check_build_failure_triage() -> list[str]:
+    """ビルドの赤を、この機械で判定できるかどうかの切り分け。
+
+    昔は build の赤を丸ごと無視しとった。DB を持たん機械で必ず赤くなるからやが、
+    それやと prerender や server/client 境界の失敗まで一緒に通る。tsc は見つけられん
+    種類なので、ここが緩むと壊れた日が緑で出荷される。
+
+    次に「DB だけで説明できる赤か」を行ごとに当てにいったが、`next build` が根本原因を
+    ラッパー行で包んで出すので、文言が1つ増えるたびに壊れた。いまは当てにいくのをやめ、
+    DB が絡む赤は SKIP（判定してへん）として残す。通した扱いにはせん。
+    """
+    fails = []
+    db_less = (
+        "Error: P1001: Can't reach database server at `localhost:5432`",
+        "PrismaClientInitializationError: Can't reach database server",
+    )
+    if not target.build_failure_needs_database(db_less):
+        fails.append("❌ DB へ届かんだけの赤を、この機械で判定できるものとして扱っている")
+
+    real = (
+        "Error occurred prerendering page \"/project\"",
+        "TypeError: Cannot read properties of undefined",
+    )
+    if target.build_failure_needs_database(real):
+        fails.append("❌ DB と関係ない赤まで判定できんものとして扱っている")
+    if target.build_failure_needs_database(()):
+        fails.append("❌ 理由が1行も無い赤を DB のせいにしている")
+
+    # 判定へ渡す材料が3行で切られていないこと。表示用の3行と別物であること。
+    noisy = "\n".join(
+        ["Error: P1001: Can't reach database server"] * 5
+        + ["Error occurred prerendering page \"/project\""]
+    )
+    pool = target.error_line_pool(noisy)
+    if len(pool) != 6:
+        fails.append(f"❌ 判定用のエラー行が {len(pool)} 行に切られている（6行あるはず）")
+    if len(target.error_lines(noisy)) != 3:
+        fails.append("❌ 表示用のエラー行が3行になっていない")
+
+    # Prisma は例外名とマーカーを別の行に吐く。マーカーの行には error / failed の語が
+    # 無いので、ERROR_MARK だけで拾うと証拠が消え、DB だけの失敗が「DB 以外」に化ける。
+    # これは黙って通す向きやのうて、DB の無い機械で止まる向きの壊れ方。
+    multiline = "\n".join(
+        [
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+            "Please make sure your database server is running",
+        ]
+    )
+    multi_pool = target.error_line_pool(multiline)
+    if not any("Can't reach database server" in ln for ln in multi_pool):
+        fails.append("❌ 単独行の DB マーカーが判定用のプールから落ちている")
+    if not target.build_failure_needs_database(multi_pool):
+        fails.append("❌ 複数行で来た DB の赤を判定できるものとして扱っている")
+
+    # Next.js のラッパー行が混じっても、DB が絡む赤は「判定できん」と見なすこと。
+    wrapped = "\n".join(
+        [
+            "Error: Failed to collect page data for /dashboard",
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+        ]
+    )
+    if not target.build_failure_needs_database(target.error_line_pool(wrapped)):
+        fails.append("❌ Next.js のラッパーに包まれた DB の赤を判定できるものとして扱っている")
+
+    # SKIP は「通した」やない。実際に振り替えを動かして、状態が変わることを見る。
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Error: Failed to collect page data for /dashboard",),
+        build_errors=(
+            "Error: Failed to collect page data for /dashboard",
+            "Can't reach database server at `localhost`:`5432`",
+        ),
+    )
+    real_day = target.DayResult(
+        day=8, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=real, build_errors=real,
+    )
+    green_day = target.DayResult(
+        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
+    )
+    triaged = target.triage_build_results([db_day, real_day, green_day])
+    if triaged[0].build != target.BUILD_SKIPPED:
+        fails.append("❌ DB が要る赤が SKIP へ振り替わっていない")
+    if triaged[1].build != "NG":
+        fails.append("❌ DB と関係ない赤まで SKIP にしている")
+    if triaged[2].build != "OK":
+        fails.append("❌ 通ったビルドの状態を書き換えている")
+    if target.BUILD_SKIPPED in ("OK", "NG"):
+        fails.append("❌ SKIP が OK か NG と同じ値になっている（区別が消えている）")
+
+    # P1012 は Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
+    schema_error = (
+        "Error: Prisma schema validation - (get-dmmf wasm)",
+        "Error code: P1012",
+        'error: Error validating field `owner` in model `Project`: The relation field is missing.',
+    )
+    if target.build_failure_needs_database(schema_error):
+        fails.append("❌ P1012 のスキーマ検証エラーを DB の不在として見逃している")
+    if not target.build_failure_needs_database(("Environment variable not found: DB_URL.",)):
+        fails.append("❌ 環境変数の欠落を DB の不在として拾えていない")
+    return fails
+
+
+def check_result_doc_records_skip() -> list[str]:
+    """成果物のほうにも SKIP が残ること。"""
+    fails = []
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Can't reach database server at `localhost`:`5432`",),
+        build_errors=("Can't reach database server at `localhost`:`5432`",),
+    )
+    triaged = target.triage_build_results([db_day])
+    directory = tempfile.mkdtemp()
+    saved = target.RESULT_DOC
+    try:
+        target.RESULT_DOC = Path(directory) / "day-snapshots-result.md"
+        target.write_result_doc(triaged, True, "python3 build_day_snapshots.py --all --verify")
+        body = target.RESULT_DOC.read_text(encoding="utf-8")
+    finally:
+        target.RESULT_DOC = saved
+        shutil.rmtree(directory)
+    if target.BUILD_SKIPPED not in body:
+        fails.append("❌ 成果物に SKIP が残っていない（NG のまま書かれている）")
+    if "判定不能（未調査）" in body:
+        fails.append("❌ 判定してへん日を「判定不能（未調査）」として切り分けの表へ入れている")
+
+    # 呼ぶ順番そのものも固定する。書き出しが切り分けより先に戻ったら意味が無い。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    main_body = source.split("def main(argv: list[str]) -> int:", 1)[1]
+    if main_body.index("triage_build_results(results)") > main_body.index("write_result_doc(results"):
+        fails.append("❌ 結果ドキュメントを切り分けより先に書き出している")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -799,6 +960,9 @@ CHECKS = (
     ("自分で束ねる名前と欄名", check_local_binding_names),
     ("文字列で指した要素の書き換え", check_rewrite_element),
     ("持ち込みと本体の同居", check_leading_imports),
+    ("ツリーの古さを測る材料", check_tree_inputs),
+    ("ビルドの赤の切り分け", check_build_failure_triage),
+    ("成果物への SKIP の記録", check_result_doc_records_skip),
 )
 
 
