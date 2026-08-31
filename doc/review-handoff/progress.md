@@ -3,9 +3,9 @@
 最終更新: 2026-08-31 / ブランチ `claude/30days-material-product-ready-hor18z` / PR **#389**（#388 はマージ済み）
 
 PR #389 の対応記録は `coderabbit-verdicts.md` にある。**本数はここに書かん**（書くと必ず古くなる。十二・十四巡目で二度その指摘を受けとる）。数えるなら `grep -c '^## \[PR #389' doc/review-handoff/coderabbit-verdicts.md` が記録の本数を返す。**これは記録の本数**であって指摘の件数やない。1本に複数の指摘をまとめとる回がある（例: 七巡目の `duplicate-image-gate.md` は「CodeRabbit Minor ×3」を1本にしとる）。成立した指摘は全部採用して直しとる。成立せんかった分は「取らんと決めたもの（返信済み）」節に理由つきで残しとる。
-**マージは局長の明示指示待ち。**
+**マージは局長の明示指示を受けて実行する。**
 
-この機械には `gh` が入っとらん（`command -v gh` が空）。CI の確認は GitHub MCP の `pull_request_read`（`get_check_runs` / `get_status`）を使う。`gh` を呼ぶ監視は 無言で空回りするだけなので組まんこと。
+CI の確認手段は環境に合わせる。`command -v gh` が通る機械では `gh api` / `gh pr checks` を使い、無い機械では GitHub MCP の `pull_request_read`（`get_check_runs` / `get_status`）を使う。監視を始める前に `command -v gh` で決めること。
 
 ---
 
