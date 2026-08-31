@@ -5,6 +5,8 @@
 PR #389 の対応記録は `coderabbit-verdicts.md` にある。**本数はここに書かん**（書くと必ず古くなる。十二・十四巡目で二度その指摘を受けとる）。数えるなら `grep -c '^## \[PR #389' doc/review-handoff/coderabbit-verdicts.md` が記録の本数を返す。**これは記録の本数**であって指摘の件数やない。1本に複数の指摘をまとめとる回がある（例: 七巡目の `duplicate-image-gate.md` は「CodeRabbit Minor ×3」を1本にしとる）。成立した指摘は全部採用して直しとる。成立せんかった分は「取らんと決めたもの（返信済み）」節に理由つきで残しとる。
 **マージは局長の明示指示待ち。**
 
+この機械には `gh` が入っとらん（`command -v gh` が空）。CI の確認は GitHub MCP の `pull_request_read`（`get_check_runs` / `get_status`）を使う。`gh` を呼ぶ監視は 無言で空回りするだけなので組まんこと。
+
 ---
 
 ## 次のAIが最初に読むもの
