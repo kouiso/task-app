@@ -501,7 +501,7 @@ async function main() {
 }
 
 // このファイルを直接叩いたときだけ撮影を始める。読み込んだだけで走ると、
-// 収束待ちだけを実物のブラウザで確かめる退行テスト（test-settle-drawn-frames.mjs）が
+// 収束待ちだけを実物のブラウザで確かめる退行テスト（settle-drawn-frames-check.mjs）が
 // stdin を待って止まる。
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((e) => {
