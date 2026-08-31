@@ -31,32 +31,38 @@ Step 3 の結果として貼った画像が Step 9 の完成形と同じなら�
 ```
 $ python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculum/
 ...
-対象 34 件 / FAIL 0 件      ← 既定。重複は ⚠️ で出るが落ちない
+対象 34 件 / FAIL 0 件      ← 既定で FAIL。いまは重複が0件なので通る
 ```
 
-## FAIL への切り替え方（撮り直しが終わったら）
+## 既定は FAIL（2026-08-31 に切り替え済み）
 
-どちらか片方で切り替わる。
+この記録を書いた時点では既定を WARNING にしていた。撮り直しが終わるまで FAIL にすると
+corpus 全体が落ちて作業が止まるためである。36本すべてで同一ファイル内の重複が0件に
+なったのを実測したうえで、既定を FAIL へ上げた。
 
-1. **環境変数**（CI / `check_quality.sh` からまとめて有効化する場合）
+警告のまま置いておくと、検査は完成しているのにゲートが素通りする。防ぐために作った退行が、
+黙って戻ってこられる状態になる。
+
+撮り直しの途中で一時的に警告へ落としたいときだけ、どちらかを使う。
+
+1. **環境変数**
 
    ```bash
-   CURRICULUM_QA_FAIL_ON_DUPLICATE_IMAGE=1 \
+   CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE=1 \
      python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculum/
    ```
 
-2. **CLI フラグ**（手元で一時的に確かめる場合）
+2. **CLI フラグ**
 
    ```bash
    python3 scripts/curriculum-qa/check_visualization.py \
-     --fail-on-duplicate-image material/30days-curriculum/
+     --warn-on-duplicate-image material/30days-curriculum/
    ```
 
-   現時点でどちらも `対象 34 件 / FAIL 17 件` を返す。残件数の計測にそのまま使える。
+なお、既定へ戻す（WARNING を既定にする）ときは次を揃える。
 
-3. **恒久的に FAIL へ上げる**とき
-
-   - `check_visualization()` の引数 `fail_on_duplicate_image` の既定値を `True` にする
+   - `check_visualization()` の引数 `fail_on_duplicate_image` の既定値を `False` にする
+   - `test_check_visualization.py` の `default_is_fatal()` を対応させる
    - `test_check_visualization.py` の `DUPLICATE_CASES` のうち、フラグ `False` の3ケース
      （「既定では落ちない」系）の期待終了コードを合わせて更新する
    - `default_is_warning()` は既定が WARNING であることを固定しているので、
@@ -88,5 +94,5 @@ $ python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculu
 
 ```bash
 python3 scripts/curriculum-qa/check_visualization.py \
-  --fail-on-duplicate-image material/30days-curriculum/ | tail -20
+  material/30days-curriculum/ | tail -20
 ```

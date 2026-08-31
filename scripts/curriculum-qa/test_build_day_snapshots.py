@@ -836,6 +836,22 @@ def check_build_failure_triage() -> list[str]:
     # 理由が1行も取れんかった赤は、説明できていないので通さない。
     if target.build_failure_is_db_less(()):
         fails.append("❌ 理由の分からん赤を DB のせいにしている")
+
+    # 判定へ渡す材料が3行で切られていないこと。DB のエラーが先に何行も並んだ回に
+    # 後ろの prerender の失敗が視界から落ちると、壊れた日が通る。
+    noisy = "\n".join(
+        ["Error: P1001: Can't reach database server"] * 5
+        + ["Error occurred prerendering page \"/project\""]
+    )
+    pool = target.error_line_pool(noisy)
+    if len(pool) != 6:
+        fails.append(f"❌ 判定用のエラー行が {len(pool)} 行に切られている（6行あるはず）")
+    if target.build_failure_is_db_less(pool):
+        fails.append("❌ DB のエラーの後ろに並んだ本物の失敗を見逃している")
+
+    # 表示用のほうは3行のままであること。長い出力をそのまま表へ入れると読めん。
+    if len(target.error_lines(noisy)) != 3:
+        fails.append("❌ 表示用のエラー行が3行になっていない")
     return fails
 
 

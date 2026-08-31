@@ -1069,26 +1069,40 @@ def build_tree(day: int) -> tuple[Path, int]:
     return dest, files
 
 
-def error_lines(output: str) -> tuple[str, ...]:
-    """出力から、最初のエラー3行を抜く。
+def error_line_pool(output: str) -> tuple[str, ...]:
+    """出力から、エラーらしい行を全部抜く。件数で切らない。
 
-    先頭3行をそのまま採ると `> task-app@1.0.0 build` のような npm の前口上しか
-    残らない。読んだ人が原因へ辿れないので、エラーらしい行を先に探す。
-    見つからないときだけ先頭から採る。
+    切らんのは、赤の理由を判定する側（`build_failure_is_db_less`）がここを読むため。
+    3行に切った標本で判定すると、DB のエラーが先に並んだ回に後ろの prerender の
+    失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
     """
     lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
     hits = [ln for ln in lines if ERROR_MARK.search(ln)]
     # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
     # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
-    return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines)[:3])
+    return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines))
 
 
-def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...]]:
-    """コマンドを走らせて (成功したか, 最初のエラー3行) を返す。"""
+def error_lines(output: str) -> tuple[str, ...]:
+    """出力から、表示用に最初のエラー3行を抜く。
+
+    先頭3行をそのまま採ると `> task-app@1.0.0 build` のような npm の前口上しか
+    残らない。読んだ人が原因へ辿れないので、エラーらしい行を先に探す。
+    """
+    return error_line_pool(output)[:3]
+
+
+def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...], tuple[str, ...]]:
+    """コマンドを走らせて (成功したか, 表示用の3行, 判定用の全エラー行) を返す。
+
+    表示用と判定用を分けるのは、3行に切った標本で赤の理由を判定すると、
+    後ろに並んだ本物の失敗が視界から落ちるため。
+    """
     proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
     if proc.returncode == 0:
-        return True, ()
-    return False, error_lines(f"{proc.stdout}\n{proc.stderr}")
+        return True, (), ()
+    pool = error_line_pool(f"{proc.stdout}\n{proc.stderr}")
+    return False, pool[:3], pool
 
 
 def link_node_modules(dest: Path) -> None:
@@ -1104,20 +1118,21 @@ def link_node_modules(dest: Path) -> None:
 
 
 def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
-    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build のエラー) を返す。
+    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build の全エラー行) を返す。
 
-    build のエラー行を別で返すのは、落ちた理由を判定に使うため。DB の無い機械では
+    build のエラー行を「全部」別で返すのは、落ちた理由を判定に使うため。表示用の3行で
+    判定すると、DB のエラーが先に並んだ回に後ろの prerender の失敗が落ちる。DB の無い機械では
     `next build` が必ず赤くなるので昔は build の赤を丸ごと無視しとったが、それやと
     prerender や server/client 境界の失敗まで一緒に見逃す。理由で切り分ける。
     """
     link_node_modules(dest)
-    tsc_ok, tsc_errors = run_step(["npx", "tsc", "--noEmit"], dest)
-    build_ok, build_errors = run_step(["npm", "run", "build"], dest)
+    tsc_ok, tsc_shown, _ = run_step(["npx", "tsc", "--noEmit"], dest)
+    build_ok, build_shown, build_all = run_step(["npm", "run", "build"], dest)
     return (
         "OK" if tsc_ok else "NG",
         "OK" if build_ok else "NG",
-        tsc_errors or build_errors,
-        build_errors,
+        tsc_shown or build_shown,
+        build_all,
     )
 
 

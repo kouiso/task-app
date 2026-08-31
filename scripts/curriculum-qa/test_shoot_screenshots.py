@@ -303,20 +303,32 @@ def check_animation_settle() -> list[str]:
     """
     fails = []
     source = WORKER.read_text(encoding="utf-8")
-    if "settleAnimations(page)" not in source:
-        fails.append("❌ 撮る前にアニメーションの収束を待っていない")
-    if "getAnimations()" not in source:
-        fails.append("❌ 待つ相手を getAnimations() で見ていない")
-    if "iterations === Infinity" not in source:
-        fails.append("❌ 無限に回るアニメーションを待つ相手から外していない")
 
-    # `shoot()` の中に決め打ちの待ちが戻ってきたら弾く。窓の高さを変えたあとの
-    # 測り直し（fitToContent）は別の話なので、そちらは対象から外す。
+    # 見るのは `shoot()` の中身だけにする。ファイル全体を見ると、呼び出しを消しても
+    # `async function settleAnimations(page)` という宣言の字面に当たって緑のまま通る。
+    # 死んだ助け関数が残っとることの証明にしかならん。
     body = source.split("async function shoot(page, job, shot) {", 1)
     if len(body) != 2:
-        fails.append("❌ shoot() が見つからない（この検査が対象を見失っている）")
-    elif "waitForTimeout" in body[1]:
+        return ["❌ shoot() が見つからない（この検査が対象を見失っている）"]
+    shoot_body = body[1]
+
+    if "await settleAnimations(page);" not in shoot_body:
+        fails.append("❌ shoot() がアニメーションの収束を待っていない")
+    # 決め打ちの待ちが戻ってきたら弾く。窓の高さを変えたあとの測り直し（fitToContent）は
+    # 別の話なので、`shoot()` の外にあるぶんは対象にせん。
+    if "waitForTimeout" in shoot_body:
         fails.append("❌ shoot() の中に決め打ちの待ちが戻っている")
+
+    # 待ち方そのものは助け関数の側にある。中身が空になっていないかを見る。
+    helper = source.split("async function settleAnimations(page) {", 1)
+    if len(helper) != 2:
+        fails.append("❌ settleAnimations が見つからない")
+    else:
+        waiter = helper[1].split("\n}", 1)[0]
+        if "getAnimations()" not in waiter:
+            fails.append("❌ 待つ相手を getAnimations() で見ていない")
+        if "iterations === Infinity" not in waiter:
+            fails.append("❌ 無限に回るアニメーションを待つ相手から外していない")
     return fails
 
 
