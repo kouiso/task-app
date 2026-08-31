@@ -59,8 +59,13 @@ def check_mark_rect_source() -> list[str]:
     if target.MARK_RECT_SOURCE != "boundingBox":
         fails.append(f"❌ 座標の出どころが boundingBox でない: {target.MARK_RECT_SOURCE}")
 
+    # 一覧そのものが痩せていないことを先に見る。本体からキーを1つ消したときに
+    # 下のループも一緒に緩んで無検知になるのを防ぐ。
+    if set(target.FORBIDDEN_MARK_KEYS) != {"x", "y", "width", "height", "rect", "left", "top", "box"}:
+        fails.append(f"❌ 弾くキーの一覧が変わっている: {target.FORBIDDEN_MARK_KEYS}")
+
     # 手で座標を書いた宣言は、どの綴りでも弾く。
-    for key in ("x", "y", "width", "height", "rect", "left", "top", "box"):
+    for key in target.FORBIDDEN_MARK_KEYS:
         shot = {**BASE_SHOT, "marks": [{"selector": ".a", key: 10}]}
         msg = load_error([shot])
         if not msg:

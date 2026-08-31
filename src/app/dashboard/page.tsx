@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
-import { TASK_PRIORITY_COLORS, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { TASK_STATUS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
@@ -255,17 +255,13 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm truncate">{task.title}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span
-                          className="text-[10px] font-medium"
-                          style={{ color: TASK_STATUS_COLORS[task.status] }}
-                        >
+                        {/* グラフ用の色は 10px の文字に載せると明色モードで 4.5:1 を切る。
+                            状態の色は左の丸が持っているので、文字はテキスト用トークンで描く。 */}
+                        <span className="text-[10px] font-medium text-muted-foreground">
                           {TASK_STATUS_LABELS[task.status] ?? task.status}
                         </span>
                         <span className="text-muted-foreground text-[10px]">·</span>
-                        <span
-                          className="text-[10px] font-medium"
-                          style={{ color: TASK_PRIORITY_COLORS[task.priority] }}
-                        >
+                        <span className="text-[10px] font-medium text-muted-foreground">
                           {TASK_PRIORITY_LABELS[task.priority] ?? task.priority}
                         </span>
                       </div>

@@ -390,9 +390,9 @@ export default function DashboardPage() {
               </h2>
 
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-                今日やるのは
+                今日は
                 <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                に取りかかります。
+                まで進めます。
               </p>
             </div>
 ```
@@ -428,7 +428,7 @@ export default function DashboardPage() {
                 </p>
 ```
 
-カードの下段を `sm:grid-cols-2` で2つに割り、`Owner` と `Focus` の小さな枠を並べます。中身は `{dashboardOwner.name}` と `{dashboardOwner.todayFocus}` で、どちらも見出しと同じ1つのまとまりから読んでいます。名前を書き換えるときに触るのは `dashboardOwner` の1か所だけで、見出しと下段の表示が同時に変わります。
+カードの下段を `sm:grid-cols-2` で2つに割り、`Owner` と `Focus` の小さな枠を並べます。中身は `dashboardOwner` の `name`・`role`・`todayGoal`・`todayFocus` の4つで、どれも見出しと同じ1つのまとまりから読んでいます。名前を書き換えるときに触るのは `dashboardOwner` の1か所だけで、見出しと下段の表示が同時に変わります。
 
 `Owner` や `Focus` のような小さなラベルには、`text-xs` と `tracking-[0.18em]` を当てています。後者は文字の間隔を少し広げる指定です。小さな英字は詰まって読みにくいので、間隔を空けるとラベルより値のほうが主役に見えます。この `<div>` はまだ閉じていないので、次のブロックへ続けます。
 
@@ -1291,8 +1291,8 @@ export default function DashboardPage() {
 - クリックなどの操作がない画面は、無理に Client Component にせず、Server Component のままにしておく
 
 この3つが入っていれば、名前や集中テーマを変えたくなったときに
-触るのはファイル先頭の1行だけで、
-`{ownerName}`・`{focusTheme}`・`{todayNote}` の3か所が同時に変わります。
+触るのは `dashboardOwner` の該当する行だけで、
+見出しの `{mainMessage}` と下段の `focusCards` の表示が同時に変わります。
 ## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |

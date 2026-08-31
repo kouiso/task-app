@@ -270,6 +270,31 @@ def day_sources(upto: int) -> list[Path]:
     )
 
 
+# ツリーの中身を決めているファイルのうち、教材でも配布物でもないもの。
+# 組み立て方を変えた回は教材の更新時刻が動かないので、これを見ないと古いツリーが残る。
+BUILDER_SOURCES = (
+    Path(__file__).resolve(),
+    Path(__file__).resolve().parent / "curriculum_blocks.py",
+    Path(__file__).resolve().parent / "sale_package.py",
+)
+
+
+def tree_inputs(upto: int) -> list[Path]:
+    """その日のツリーの中身を決める入力を全部返す。
+
+    撮影側がツリーの古さを測るのに使う。教材と配布物だけを見ると、借り物
+    （`globals.css` や `package.json`）と、組み立て方そのもの（このファイル）の
+    変更を取りこぼす。取りこぼすと古いツリーのまま撮れて、画像だけが前の
+    アプリのまま残る。撮れてしまうから、あとから誰も気づけない。
+    """
+    return [
+        *day_sources(upto),
+        *(src for _, src in scaffold_copies()),
+        *(REPO_ROOT / name for name in BORROWED_FILES),
+        *BUILDER_SOURCES,
+    ]
+
+
 def select_days(day: int | None, want_all: bool, days: list[int]) -> list[int]:
     """CLI の指定から、組み立てる day の並びを返す。
 

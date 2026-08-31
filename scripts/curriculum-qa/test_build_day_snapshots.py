@@ -697,10 +697,12 @@ def check_new_declaration() -> list[str]:
         if "  const handle = () => {" not in out or out.count("if (a) {") != 1:
             fails.append("❌ ハンドラーの中を割っている")
 
-    # 続けて足したときも、前に足した抜粋の中へ入り込まないこと。
-    twice = target.add_declaration(out, "const c = 3;")
-    if twice is None or twice.split("\n").index("const c = 3;") != twice.split("\n").index("const b = 2;") + 1:
-        fails.append("❌ 2本目が1本目の直後に並んでいない")
+        # 続けて足したときも、前に足した抜粋の中へ入り込まないこと。
+        # out が None のまま渡すと、失敗を一覧で返す設計なのにここで例外が出て
+        # 残りの検証が走らんようになる。
+        twice = target.add_declaration(out, "const c = 3;")
+        if twice is None or twice.split("\n").index("const c = 3;") != twice.split("\n").index("const b = 2;") + 1:
+            fails.append("❌ 2本目が1本目の直後に並んでいない")
 
     # 同じ名前が既にあるなら足さない（`完成版` 側の同じ抜粋で二重にせん）。
     if target.add_declaration(body, "const a = 9;") is not None:
@@ -780,6 +782,30 @@ def check_leading_imports() -> list[str]:
     return fails
 
 
+def check_tree_inputs() -> list[str]:
+    """ツリーの古さを測る材料が、実際にツリーへ入るもの全部を覆っていること。
+
+    教材と配布物だけを見た時期があり、借り物や組み立て方を直した回は更新時刻が
+    動かんので古いツリーのまま撮れていた。覆いが痩せても撮影は成功するため、
+    ここが落ちん限り誰も気づけない。
+    """
+    fails = []
+    got = {p.resolve() for p in target.tree_inputs(3)}
+    for name in target.BORROWED_FILES:
+        if (target.REPO_ROOT / name).resolve() not in got:
+            fails.append(f"❌ 借り物を見ていない: {name}")
+    for src in target.BUILDER_SOURCES:
+        if src.resolve() not in got:
+            fails.append(f"❌ 組み立て方そのものを見ていない: {src.name}")
+    if not any(p.name.startswith("day03_") for p in got):
+        fails.append("❌ その日までの教材を見ていない")
+    if any(p.name.startswith("day04_") for p in got):
+        fails.append("❌ その日より後の教材まで見ている")
+    if not all(p.is_file() for p in got):
+        fails.append("❌ 存在せんファイルを材料に数えている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -799,6 +825,7 @@ CHECKS = (
     ("自分で束ねる名前と欄名", check_local_binding_names),
     ("文字列で指した要素の書き換え", check_rewrite_element),
     ("持ち込みと本体の同居", check_leading_imports),
+    ("ツリーの古さを測る材料", check_tree_inputs),
 )
 
 

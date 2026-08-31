@@ -107,7 +107,7 @@ PostgreSQL（データベース）は、このあと Docker という仕組み�
 
 1. [Docker Desktop 公式サイト](https://www.docker.com/products/docker-desktop/) を開き、自分の OS 用のインストーラをダウンロードする
 2. 案内どおりにインストールし、Docker Desktop を起動する
-3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備プロジェクト
+3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備完了
 
 **Ubuntu の場合**
 
