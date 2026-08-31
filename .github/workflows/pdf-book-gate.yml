@@ -169,8 +169,10 @@ jobs:
           # PDF の対象が0冊でも、撮影まわりを触った PR ではブラウザを用意して走らせる。
           # ここを scope だけに任せると、`scripts/curriculum-qa/` だけを触った PR で
           # 検査が自分から退けて（SKIP）、実ブラウザの主張が一度も走らんまま通る。
+          # Playwright を持つ package.json / package-lock.json と .node-version も対象。
+          # 撮影スクリプトを1行も触らんバージョン更新で収束待ちが壊れても、走らんかったら気づけん。
           browser_qa=0
-          if grep -qzE '^(scripts/curriculum-qa/(shoot-page\.mjs|settle-drawn-frames-check\.mjs|shoot_screenshots\.py|test_shoot_screenshots\.py)|\.github/workflows/pdf-book-gate\.yml)$' "$RUNNER_TEMP/changed.z"; then
+          if grep -qzE '^(scripts/curriculum-qa/(shoot-page\.mjs|settle-drawn-frames-check\.mjs|shoot_screenshots\.py|test_shoot_screenshots\.py)|\.github/workflows/pdf-book-gate\.yml|package(-lock)?\.json|\.node-version)$' "$RUNNER_TEMP/changed.z"; then
             browser_qa=1
           fi
 

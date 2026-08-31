@@ -1211,6 +1211,51 @@ def check_result_doc_records_skip() -> list[str]:
     return fails
 
 
+def check_boundary_error_survives_db_noise() -> list[str]:
+    """DB の赤に紛れた Server Component 境界エラーを SKIP へ落とさんこと。
+
+    `You're importing a component that needs` は REAL_BUILD_FAILURE_MARKERS の中で
+    唯一 ERROR_MARK（error|failed|not found|Cannot find）のどの語も含まん。判定用の
+    プールがこの行を落とすと、残るのは DB の行だけになり、本物の build 欠陥が SKIP で
+    素通りする。この PR が潰しとる型そのものなので、経路を実際に通して確かめる。
+    """
+    output = "\n".join(
+        [
+            "PrismaClientInitializationError:",
+            "Can't reach database server at localhost:5432",
+            "You're importing a component that needs \"next/headers\".",
+        ]
+    )
+    pool = target.error_line_pool(output)
+    if not any("You're importing a component that needs" in ln for ln in pool):
+        return [f"❌ 境界エラーが判定用プールから落ちている: {pool}"]
+
+    if target.build_failure_is_database_only(tuple(pool)):
+        return ["❌ 本物の境界エラーがあるのに DB だけの失敗と判定している"]
+    return []
+
+
+def check_tree_failure_is_never_expected() -> list[str]:
+    """ツリーを組めてへん日を「想定内」と書かんこと。
+
+    tsc も build も走っとらんので `== "NG"` の枝は素通りする。tree_ok を見んかったら、
+    走行は broken_days() で exit 1 になるのに、成果物だけ「想定内」と書く。十三巡目に
+    潰したのと同じ「文書だけが言い張る」型。
+    """
+    day = sorted(target.EXPECTED_RED)[0]
+    broken = target.DayResult(
+        day, 0, False, target.NOT_RUN, target.NOT_RUN, ("OSError: 置けません",)
+    )
+    if target.expected_red_holds(broken):
+        return ["❌ ツリーを組めてへん日を想定内として扱っている"]
+    if broken not in target.broken_days([broken]):
+        return ["❌ ツリー失敗が異常として数えられていない"]
+    doc = target.triage_section([broken])
+    if "想定内" in doc:
+        return [f"❌ 成果物がツリー失敗を想定内と書いている:\n{doc}"]
+    return []
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1235,6 +1280,8 @@ CHECKS = (
     ("両方赤い日の表示", check_both_red_shows_both),
     ("成果物への SKIP の記録", check_result_doc_records_skip),
     ("想定内の日の build 免除", check_expected_red_build_exemption),
+    ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
+    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),
 )
 
 
