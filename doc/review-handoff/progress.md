@@ -2,7 +2,7 @@
 
 最終更新: 2026-08-31 / ブランチ `claude/30days-material-product-ready-hor18z` / PR **#389**（#388 はマージ済み）
 
-PR #389 は9ラウンド・15件対応済み（Codex 14 / CodeRabbit 9・重複含む）。異議はゼロ。
+PR #389 の対応記録は `coderabbit-verdicts.md` に19件（`grep -c '^## \[PR #389' doc/review-handoff/coderabbit-verdicts.md`）。異議はゼロで、全部採用して直しとる。
 **マージは局長の明示指示待ち。**
 
 ---
