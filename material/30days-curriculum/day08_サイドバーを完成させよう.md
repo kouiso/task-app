@@ -387,13 +387,13 @@ sequenceDiagram
     participant S as サーバー
     S->>B: HTML を送る
     Note over B: hasMounted はまだ false
-    B->>B: マウントが終わり hasMounted が true になる
-    B->>S: getSession（Cookie は自動で付く）
+    B->>S: マウントと同時に getSession が飛ぶ（Cookie は自動で付く）
+    B->>B: hasMounted が true になる
     S->>B: ログイン状態の返事
     Note over B: ここで初めて判定する
 ```
 
-時間の流れは上から下です。ログイン状態が分かるのは、いちばん下の返事が届いたあとだけです。`hasMounted` は「まだ返事が来ていない時間帯」に判定させないための印で、これを外すと画面が一瞬ログイン画面へ飛びます。
+時間の流れは上から下です。ログイン状態が分かるのは、いちばん下の返事が届いたあとだけです。ここで気をつけたいのは、`hasMounted` が問い合わせを止める印ではないことです。`api.auth.getSession.useQuery()` には `enabled` を渡していないので、問い合わせはマウントと同時に飛びます。`hasMounted` が押さえるのは判定のほう、つまり `useEffect` の中の画面移動と `if (!hasMounted || isLoading)` の表示切り替えです。これを外すと、返事が来ていない時間帯に判定が走って、画面が一瞬ログイン画面へ飛びます。
 
 #### 3-3. レイアウト JSX（サイドバー + コンテンツ）
 

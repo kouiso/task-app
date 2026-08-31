@@ -338,7 +338,7 @@ export default function ProjectPage() {
 }
 ```
 
-この `ProjectPage` が、実際に画面へ表示されるコンポーネントです。本体の `ProjectPageContent` を `Suspense` で包むのは、次のステップでデータ取得を足したときに、読み込み中の表示を1か所で受け止められるようにするためです。
+この `ProjectPage` が、実際に画面へ表示されるコンポーネントです。本体の `ProjectPageContent` を `Suspense` で包むのは、Day 05 のログイン画面と同じ形をここでも作っておくためです。このページがあとで URL の値を読むようになったとき、包む場所を作り直さずに済みます。
 
 **確認ポイント**:
 - `npm run dev` でエラーが出ていない
@@ -349,7 +349,7 @@ export default function ProjectPage() {
 
 ![完成後のプロジェクト一覧。赤枠の中に「プロジェクト」の見出しが出ている](./screenshots/day09/project-page-heading.png)
 
-> `Suspense` は子コンポーネント（`ProjectPageContent`）が準備完了するまで、代わりに `fallback` に指定した `PageLoadingSpinner` を表示します。ローディング中はスピナーが表示され、準備が完了すると `ProjectPageContent`（`AppLayout` でラップされた本体）が表示されます。
+> `Suspense` は、中身が宙づりになったときだけ `fallback` の `PageLoadingSpinner` を代わりに出します。今日の `ProjectPageContent` は宙づりにならないので、この `fallback` は実際には出ません。読み込み中の見た目は、次の Step で足す `projectsLoading` の分岐が作ります。
 
 ---
 
@@ -446,14 +446,12 @@ if (projectsLoading) {
 
 ```mermaid
 flowchart TB
-    A["/project を開く"] --> B{"ページの部品は届いたか"}
-    B -->|"まだ"| C["Suspense の fallback<br/>部品を待つ間の表示"]
-    B -->|"届いた"| D{"一覧のデータは届いたか"}
-    D -->|"まだ"| E["if projectsLoading<br/>データを待つ間の表示"]
+    A["/project を開く"] --> D{"一覧のデータは届いたか"}
+    D -->|"まだ"| E["if projectsLoading<br/>スピナーを出す"]
     D -->|"届いた"| F["カードを並べる"]
 ```
 
-読み込み中の表示が2か所あるのは、待っている相手が違うからです。上は画面を組み立てる部品を待ち、下はサーバーから返るデータを待ちます。片方だけを直しても、もう片方の待ち時間の見た目は変わりません。
+読み込み中の表示を受け持つのは、この `projectsLoading` の分岐だけです。Step 1 で置いた `Suspense` の `fallback` は、いまの `ProjectPageContent` では出番がありません。`useQuery` はデータを待つ間も普通に描画を返すので、中身が宙づり（suspend）にならないからです。`Suspense` が仕事をするのは、あとから読み込む部品を包んだときや、URL の値が確定するまで待つ `useSearchParams` を包んだときで、Day 05 のログイン画面がその形でした。
 
 ---
 

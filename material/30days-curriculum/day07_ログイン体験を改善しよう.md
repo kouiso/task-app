@@ -2475,7 +2475,7 @@ export const config = {
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
 | `The table \`public.users\` does not exist in the current database.` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
-| `ログイン試行回数が上限に達しました` | 同じメールで5回失敗したための一時ロック | 15分待つか、別のメールアドレスで試す。コードの問題ではない |
+| `ログイン試行回数が上限に達しました` | 同じメールを同じ回線から5回失敗したための一時ロック | 15分待つ。別のメールアドレスでも試せるが、同じ回線からの失敗が合計20回に達すると、そちらも止まる。コードの問題ではない |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
 
 ## 今日学んだ用語
