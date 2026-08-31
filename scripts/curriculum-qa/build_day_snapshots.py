@@ -243,6 +243,13 @@ ERROR_LINE_WIDTH = 160
 # `Module not found:`、npm は `npm ERR!` を出す。
 ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)
 
+# Node の stack frame。`    at ei.handleRequestError (...）` のようにメソッド名へ
+# `Error` が入るので ERROR_MARK に当たってまう。中身は失敗の**場所**であって種類やない。
+# 判定側は「説明の付かん行が1つでも混ざったら SKIP にせん」ので、この行が残ると
+# DB だけの失敗が必ず本物の失敗に見え、DB を持たん機械で `--verify` が exit 1 になる。
+# 落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行が出て、そっちは残る。
+STACK_FRAME_MARK = re.compile(r"^\s+at \S")
+
 USAGE = "使い方: build_day_snapshots.py (--day N | --all) [--verify]"
 
 
@@ -1071,12 +1078,6 @@ def build_tree(day: int) -> tuple[Path, int]:
     return dest, files
 
 
-# Node / Prisma のスタックフレームはメソッド名に `Error` が含まれることがある。
-# これは失敗の説明やのうて呼び出し経路なので、判定材料へ混ぜると DB 不在だけの赤を
-# 「説明の付かん行あり」と誤って止める。行頭の `at` 形式だけを落とす。
-STACK_FRAME_MARKER = re.compile(r"^\s*at\s+")
-
-
 def error_line_pool(output: str) -> tuple[str, ...]:
     """出力から、エラーらしい行を全部抜く。件数で切らない。
 
@@ -1084,10 +1085,11 @@ def error_line_pool(output: str) -> tuple[str, ...]:
     3行に切った標本で判定すると、DB のエラーが先に並んだ回に後ろの prerender の
     失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
     """
+    # stack frame は判定の前に落とす。理由は STACK_FRAME_MARK の定義に書いた。
     lines = [
         ln.rstrip()
         for ln in output.split("\n")
-        if ln.strip() and not STACK_FRAME_MARKER.match(ln)
+        if ln.strip() and not STACK_FRAME_MARK.match(ln)
     ]
     # DB マーカーを持つ行は ERROR_MARK に当たらんでも拾う。Prisma は
     # `PrismaClientInitializationError:` と `Can't reach database server ...` を
