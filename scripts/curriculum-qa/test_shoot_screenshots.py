@@ -450,7 +450,7 @@ def check_node_missing_is_reported() -> list[str]:
         failures = check_drawn_frame_settle()
     finally:
         target.subprocess.run = original_run
-    if len(failures) != 1 or "Node" not in failures[0]:
+    if len(failures) != 1 or "起動できんかった" not in failures[0] or "'node'" not in failures[0]:
         return [f"❌ Node 不在の理由が失敗として返っていない: {failures!r}"]
     return []
 
