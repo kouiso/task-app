@@ -945,7 +945,7 @@ export function AppLayout({
   }
 ```
 
-ここが今日のいちばんの要点です。2つの `if` を `return` より前に置いてあるので、この行より下は「ログイン済みの人だけが通る場所」になります。だから後ろのサイドバーでは `session.user.name` を確かめずに読めます。判定を後ろへ動かすと、未ログインの人にサイドバーが一瞬見えてしまいます。`return null` は何も描かずに終わる書き方で、`/login` への移動が終わるまでの短い間だけ働きます。
+ここが今日のいちばんの要点です。2つの `if` を `return` より前に置いてあるので、この行より下は「ログイン済みの人だけが通る場所」になります。だから後ろのサイドバーでは `session?.user?.name` と書かずに `session.user.name` と読めます。ただし名前そのものは未設定があり得るので、頭文字を取り出す `?.[0] || 'U'` は残します。判定を後ろへ動かすと、未ログインの人にサイドバーが一瞬見えてしまいます。`return null` は何も描かずに終わる書き方で、`/login` への移動が終わるまでの短い間だけ働きます。
 
 **サイドバーの外枠とロゴ**:
 
@@ -1349,9 +1349,9 @@ export default function DashboardPage() {
 | `api is not defined` | `@/trpc/react` からの import 漏れ | `import { api } from '@/trpc/react'` を確認 |
 | `Cannot find module '@/component/ui/alert-dialog'` | UI コンポーネント未配置 | scaffold の `_ui-components/` が `src/component/ui/` にあるか確認 |
 | サイドバーが表示されない | `dashboard/page.tsx` を `AppLayout` で囲んでいない | Step 4 の import と return を確認 |
-| ログイン後に白い画面 | `providers.tsx` が `layout.tsx` に組み込まれていない | Step 2 を確認 |
+| ログイン後に白い画面 | `AppLayout` の `if (!session?.user) { return null; }` に入ったまま。セッションが取れていない | Step 3 の `getSession` の呼び出しと、ログインが済んでいるかを確認する |
 | `useQuery` でエラー | tRPC サーバー側が動いていない | Day 07 の `src/server/api/root.ts` が存在するか確認 |
-| ログアウトしてもリダイレクトされない | `router.refresh()` の呼び忘れ | `onSuccess` 内に `router.push('/login'); router.refresh();` |
+| ログアウトしてもリダイレクトされない | `onSuccess` 内の `router.push('/login')` の書き漏れ | `onSuccess` 内に `router.push('/login'); router.refresh();` の2行があるか確認する。`refresh()` だけを忘れた場合は、移動はするのに古いユーザー名が残る |
 
 ## 今日学んだ用語
 
@@ -1372,7 +1372,7 @@ export default function DashboardPage() {
 
 **Q1. `AppLayout` の `if (!hasMounted || isLoading)` と `if (!session?.user) { return null; }` は、何をしている2つですか。**
 
-A. 前者は、セッションの問い合わせが終わるまで「読み込み中...」を出します。後者は、問い合わせが終わってもログインしていなければ、何も描かずに終わります。どちらも `return` で処理を打ち切ります。その結果、この2つより下の行は「ログイン済みの人だけが通る場所」になります。だからサイドバーでは `session.user.name` の有無を確かめずに書けます。
+A. 前者は、セッションの問い合わせが終わるまで「読み込み中...」を出します。後者は、問い合わせが終わってもログインしていなければ、何も描かずに終わります。どちらも `return` で処理を打ち切ります。その結果、この2つより下の行は「ログイン済みの人だけが通る場所」になります。だからサイドバーでは `session?.user?.name` と書かずに `session.user.name` と書けます。ただし名前そのものは未設定があり得るので、頭文字を取り出す `?.[0] || 'U'` は残します。
 
 **Q2. `menuItems` に4件目を足すと、画面はどうなりますか。**
 

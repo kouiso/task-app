@@ -63,7 +63,7 @@ Day 02 までで作った `task-app` を、自分の GitHub リポジトリへ�
 
 ## 今日の見どころ
 
-GitHub へ保存できるようになると、自分のコードにインターネット上の置き場所ができます。今日の終わりには、ブラウザで `https://github.com/<自分のユーザー名>/task-app` のような URL を開いて、Day 01 から Day 03 までの変更履歴を確認できるようになります。
+GitHub へ保存できるようになると、自分のコードにインターネット上の置き場所ができます。今日の終わりには、ブラウザで `https://github.com/<自分のユーザー名>/task-app` のような URL を開いて、Day 01 から Day 03 までに作ったファイル一式を確認できるようになります。
 
 ローカルにしか無いコードは、うっかり壊してしまったり、別の端末へ移せなかったりします。GitHub へ履歴を残しておけば、過去の状態へ戻せますし、次の Day で進める土台になります。Day 04 の公開も、この保存先があることを前提としています。
 
@@ -397,7 +397,7 @@ brew install gh
 
 `zsh: command not found: brew` と出た場合は、Homebrew がまだ入っていません。
 Homebrew は macOS へソフトを入れるための道具です。`https://brew.sh` の先頭にある
-インストール用のコマンドをコピーして実行し、終わってから `brew install gh` をもう一度実行します。
+インストール用のコマンドをコピーして実行し、終わってから `brew install gh` をもう一度実行します。Homebrew を初めて入れるときは開発者向けの部品もまとめて取り寄せるため、この Step だけで30分を超えることがあります。止まっているわけではないので、そのまま待ってください。
 
 Windows で WSL2（Ubuntu）を使っている場合は、[GitHub CLI 公式の Linux インストール手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) に沿って Ubuntu のターミナルで入れます。
 
@@ -609,7 +609,7 @@ git config --global user.email
 git commit -m "feat: save initial dashboard project to GitHub"
 ```
 
-このコマンドで、ステージングした内容が1つのセーブポイントとしてローカルの履歴に刻まれます。まだ GitHub には何も送られていません。増えたのは手元の履歴だけです。`nothing to commit, working tree clean` と出たら、add が終わっていないか、そもそも変更が無い状態です。1つ前の `git add` からやり直してください。
+このコマンドで、ステージングした内容が1つのセーブポイントとしてローカルの履歴に刻まれます。まだ GitHub には何も送られていません。増えたのは手元の履歴だけです。`nothing added to commit but untracked files present` と出たら、add が終わっていない状態です。1つ前の `git add` からやり直してください。
 
 #### コミット後の確認
 
@@ -797,7 +797,7 @@ git ls-files .env
 
 **3. すでに push していたら、まず鍵を作り直す。** 一度 push した値は過去のコミットに残り、GitHub からも読めます。パスワードやアクセストークンを新しい値に作り直すのが最優先です。履歴の掃除より先にこちらをやってください。
 
-**4. そのうえで、過去のコミットから値を消す。** `git filter-repo` などで履歴を書き換える作業が要ります。書き換えた結果を送るときは `git push --force-with-lease` を使います。リモートの最新を確かめてから上書きするコマンドです。条件なしの `git push --force` は、その間に他の人が入れた変更ごと消してしまいます。共同で作業している相手がいれば、取り直してもらう連絡も要ります。
+**4. そのうえで、過去のコミットから値を消す。** `git filter-repo` などで履歴を書き換える作業が要ります。`git filter-repo` は Git に最初から入っている道具ではありません。macOS なら `brew install git-filter-repo` で入れてから使います。書き換えた結果を送るときは `git push --force-with-lease` を使います。リモートの最新を確かめてから上書きするコマンドです。条件なしの `git push --force` は、その間に他の人が入れた変更ごと消してしまいます。共同で作業している相手がいれば、取り直してもらう連絡も要ります。
 
 `.env.example` は値の入っていない見本なので、追跡したままで問題ありません。
 
@@ -870,9 +870,9 @@ git branch --show-current
 |--------------|------|---------|
 | Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `.node-version` `doc/` `scripts/` の4件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、`.env` の行が出ていないことの2点だけ確認する |
 | `git add` が `fatal: pathspec '...' did not match any files` で止まる | 指定したファイルが手元に無い | その行から無いファイル名だけを外して、同じコマンドをもう一度実行する。同じ行に書いた実在するファイルも一緒に失敗しているので、実行し直しが要る |
-| `git add .env.example` が何も起きない | `.gitignore` の `.env*` がこのファイルも除外している | `git add -f .env.example` と `-f` を付けて、除外をこのファイルだけ上書きする |
-| `git commit` が `*** Please tell me who you are.` で止まる | `user.name` と `user.email` を登録していない | `git config --global user.name` と `git config --global user.email` を1回だけ実行する。パソコンごとに1回で済む |
-| `git commit` が `nothing to commit, working tree clean` と言う | ステージングが空。`git add` が終わっていないか、そもそも変更が無い | `git add` からやり直す。`git status --short` で行頭に `M` や `A` が付いているかを見る |
+| `git add .env.example` が `The following paths are ignored by one of your .gitignore files` で止まる | `.gitignore` の `.env*` がこのファイルも除外している | `git add -f .env.example` と `-f` を付けて、除外をこのファイルだけ上書きする |
+| `git commit` が `*** Please tell me who you are.` で止まる | `user.name` と `user.email` を登録していない | `git config --global user.name "あなたの名前"` と `git config --global user.email "GitHubに登録したメールアドレス"` を1回だけ実行する。名前とメールアドレスは自分のものに置き換える |
+| `git commit` が `nothing added to commit but untracked files present` と言う | ステージングが空。`git add` が終わっていないか、そもそも変更が無い | `git add` からやり直す。`git status --short` で行頭に `M` や `A` が付いているかを見る |
 | `git push` が認証で止まる | `gh auth login` が終わっていない、または別アカウントで認証している | `gh auth status` で誰として認証しているかを確認し、必要なら `gh auth login` をやり直す |
 | GitHub のページに反映されていない | `commit` までで止まっていて `push` していない | `git log --oneline -3` でコミットがあることを確かめてから `git push` する。ブラウザ側は再読み込みする |
 | `.env` が `git status` に出てきた | `.gitignore` の設定漏れ、またはすでに追跡されている | この Step の「`.env` が出てきてしまった」を上から順に読む。追跡されていた場合は、鍵の作り直しが最優先 |

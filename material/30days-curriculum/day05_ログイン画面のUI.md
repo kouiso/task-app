@@ -330,7 +330,7 @@ import { Label } from '@/component/ui/label';
 - ブラウザでメール入力欄が表示されている
 - npm run dev でエラーが出ていない
 
-スクリーンショット: 下の画像は Step 9 まで書き終えた完成後の画面です。赤枠が、入力の誤りを知らせる赤い文字です。いまの自分の画面には、メールアドレス欄しか出ていません。パスワード欄は Step 5、カードの枠は Step 6、下の登録リンクは Step 9 で足します。
+スクリーンショット: 下の画像は Step 9 まで書き終えた完成後の画面です。赤枠が、入力の誤りを知らせる赤い文字です。いまの自分の画面には、メールアドレス欄しか出ていません。パスワード欄は Step 5、カードの枠は Step 6、下の登録リンクは Step 9 で足します。なお完成版は背景に淡いぼかしを置き、配色をテーマ色に寄せてあります。写経した自分の画面とは色と背景の印象が違いますが、フォームの中身が合っていれば問題ありません。
 
 ![完成後のログイン画面。赤枠の中に「パスワードを入力してください」という赤い文字が出ている](./screenshots/day05/login-error.png)
 
@@ -1383,7 +1383,7 @@ export function isValidRedirectUrl(
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| `zodResolver is not a function` | `@hookform/resolvers` が未インストール | `npm i @hookform/resolvers` を実行 |
+| `zodResolver is not a function` | import 元の綴りが違う。または依存が入っていない | まず `from '@hookform/resolvers/zod'` の綴りを確認する。Day 01 の初期セットアップで導入済みのはず。見つからない場合は `npm i @hookform/resolvers` を実行する |
 | `register is not a function` | useForm の呼び出しが間違っている | `useForm<LoginFormData>({resolver: ...})` を確認 |
 | バリデーションが効かない | `resolver` の設定忘れ | `useForm` に `resolver: zodResolver(loginSchema)` を渡す |
 | `useSearchParams` エラー | Suspense が不足 | LoginPage を `<Suspense>` でラップする |
