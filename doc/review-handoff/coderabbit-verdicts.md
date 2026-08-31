@@ -116,3 +116,18 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 指摘: src/lib/constant/priority.ts と status.ts、scripts/_constants/ のグラフ用の色を10pxのラベルへ使っていてコントラストが足りない
 - 根拠: 指摘された定数ファイル自体は色の定義だけで、priority.ts のコメントは逆に `// グラフ以外で優先度に色を割り当てないのは、1枚のカードに色が積み上がるのを避けるため` と書いている。実際に文字色へ流しているのは dashboard で、259: `className="text-[10px] font-medium"` / 260: `style={{ color: TASK_STATUS_COLORS[task.status] }}`、266-268 が同じ形で `TASK_PRIORITY_COLORS[task.priority]`。カード地は globals.css:124 `--card: 0 0% 100%;`（dark は 177 `--card: 228 20% 12%;`）。10px・font-medium は WCAG の大きい文字に当たらず 4.5:1 が要る。実測コントラスト（白地 / 暗地 #181b25）: HIGH・IN_REVIEW #f69e23 = 2.14 / 8.04、DONE #26ab7a = 2.92 / 5.88、MEDIUM・IN_PROGRESS #1e9cb8 = 3.23 / 5.32、URGENT・CANCELLED #dc3848 = 4.47 / 3.85、LOW・TODO #5f6777 = 5.69 / 3.02。明色モードで4色が 4.5 未満、暗色モードでも2色が 4.5 未満。なお教材側は grep 上この色を `Cell fill` / `Bar fill` にしか使っておらず（day22:376,514 / day23:581,584）、`style={{ color: TASK_` は material に0件。読者が写経する範囲には出てこないので blocker ではない。
 - 直し方: 文字は `text-muted-foreground` 等のテキスト用トークンで描き、色は 245-254 の 10px ドット（`backgroundColor`）に任せる。ラベルにも色を残すなら chart トークンとは別に、両モードで 4.5:1 を満たすテキスト用の濃淡を status.ts / priority.ts に別表として持たせ、scripts/_constants/ 側も同時に更新する。
+
+## [PR #389 二巡目] scripts/curriculum-qa/check_visualization.py:177  (bug・採用)
+- 指摘: `CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE=FALSE` を渡すと WARNING へ落ちる
+- 根拠: 177 の判定は `os.environ.get(...) in ('', '0', 'false', 'False')`。`FALSE` はこの4つに無いので False が返り、`fail_on_duplicate_image=False` で本体が走る。`FALSE` は「落とさん」の意思表示なので、意図と逆の結果になる。重複画像だけが違反の回は exit 0 になり、ゲートが素通りする。
+- 直し方（適用済み・9043c13）: `raw = os.environ.get(...).strip().lower()` にしてから `('', '0', 'false')` と突き合わせる。`default_is_fatal()` に `FALSE` が FAIL のままであること、`' 1 '` が WARNING へ落ちることの2件を追加。正規化を戻すと落ちることを確認済み。
+
+## [PR #389 二巡目] scripts/curriculum-qa/shoot-page.mjs:282  (bug・採用)
+- 指摘: `page.waitForFunction` の無条件 `catch` が、評価エラーもページ破棄も警告に変えて撮影を続ける
+- 根拠: 282 の `} catch {` は例外の種類を見ていない。待ち時間切れ以外（predicate の評価失敗・ページ破棄）でも `console.warn` を出して先へ進み、画像は保存される。撮れてしまうので誰も失敗に気づけない。このリポジトリの「空 catch / エラー握り潰し禁止」にも当たる。
+- 直し方（適用済み・9043c13）: `import { chromium, errors } from 'playwright'` を取り込み、`catch (err)` で `err instanceof errors.TimeoutError` でなければ再送出する。`check_animation_settle` に「ヘルパー本体に `catch {` が戻っていない」「`errors.TimeoutError` を見ている」「`errors` を import している」の3点を追加。広い catch へ戻すと3件とも落ちることを確認済み。
+
+## [PR #389 二巡目] scripts/curriculum-qa/shoot_screenshots.py:858-873  (bug・採用)
+- 指摘: 撮影が成功した回に、ワーカーの `stderr` を捨てている
+- 根拠: `run_worker` は失敗時だけ `proc.stderr[-2000:]` を例外文へ載せ、成功時は `result["shots"]` を返すだけで `proc.stderr` に触れない。`shoot-page.mjs` の収束タイムアウト警告は Node の `console.warn`（stderr）にしか出ないため、途中の絵が保存された回でも「撮れた」の一言しか残らない。
+- 直し方（適用済み・9043c13）: `forward_worker_warnings(stderr, label)` を新設し、`run_worker` の成功パスで `[day07] …` の形へ前置きして自分の stderr へ流す。`shoot_day` は `run_worker(job, f"day{day:02d}")` で呼ぶ。`check_worker_warning_forwarding` で、関数の出力（日付ラベル付き・空行を流さない）と、`run_worker` 本体に呼び出しが残っていることの両方を見る。転送を消すと落ちることを確認済み。
