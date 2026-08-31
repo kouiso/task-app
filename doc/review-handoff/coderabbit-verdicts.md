@@ -353,3 +353,24 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
    - 根拠: `DPkg::Lock::Timeout` を書いとるのは poppler の step だけで、あれは `scope != 'none'` 限定。十三巡目に足した `browser_qa` で Chromium の step は `scope=none` でも走るようになったのに、**その経路ではロック上限が未設定のまま `playwright install --with-deps` が apt を叩く**。同じ workflow のコメントが「--with-deps が15分ハングした」実績を記録しとるので、step の持ち時間15分を丸ごと食う。配線を広げたときに前提を一緒に運ばんかった。
    - 直し: ロック設定を独立した step へ出し、`scope != 'none' || browser_qa == '1'` で起動するようにした。apt を叩く step（poppler / Chromium）の**両方より前**に置いてある。poppler 側からは重複を消した。
    - 検証: `yaml.safe_load` で構文 OK。step の並びが `依存をインストール → apt のロック待ち上限を設定(198) → poppler を用意(208) → Chromium をキャッシュから復元(217)` になっとることを確認。
+
+## [PR #389 十八巡目] Codex 3件（全部採用）
+
+1. `build_day_snapshots.py:1448` **免除の判定でも未分類の行を捨てとった**（P1・採用）
+
+   - 根拠: `build_failure_is_expected()` は `REAL_BUILD_FAILURE_MARKERS` に載っとる行だけを残してから判定しとった。day11 が断り書きどおりの `getById` 型エラーと一緒に `Error: Unauthorized while prerendering /admin` を吐くと、後者が絞り込みで**黙って消えて**型エラーだけが残り、免除されて `broken_days()` を素通りする。**十六巡目に SKIP 側で潰した「絞ってから判定する」型が、免除の側に残っとった。**
+   - 直し: 絞り込みを反転して、包み紙（`BUILD_NOISE_MARKERS`）以外の行を**全部**残し、その全部が型エラーであることを要求する。この変更で既存 fixture が落ちたので原因を追うと、`Failed to compile.`（型エラーの直前に必ず出る Next.js の見出し行）が包み紙の一覧から漏れとった。実測に基づいて追加した。
+   - 回帰テスト `check_expected_red_rejects_unknown_error`。戻すと `❌ 説明の付かん失敗が混ざった day11 を免除している`（28 → 27/28）。
+
+2. `build_day_snapshots.py:1347` **`ECONNREFUSED` 単独を DB の不在と見なしとった**（P1・採用）
+
+   - 根拠: OS が返す汎用の接続拒否なので Redis 等でも出る。`Error: connect ECONNREFUSED 127.0.0.1:6379` の1行だけの出力が、DB マーカーの条件も全行説明の条件も満たして SKIP へ落ち、`--verify` が exit 0 になる。
+   - 直し: マーカーを2段に分けた。単独で言い切れる `DB_LESS_PRIMARY_MARKERS`（`Can't reach database server` / `P1001` / `the database server at`）と、裏付けとしてしか数えん `DB_LESS_CORROBORATING_MARKERS`（`ECONNREFUSED`）。`db_less_markers()` が、primary が同じ出力に居るときだけ後者を有効にする。判定用のプールは取りこぼさんことが目的なので両方を見る。
+   - 回帰テスト `check_econnrefused_alone_is_not_database` が2方向（Redis 単独は止める／Prisma の印つきは SKIP のまま）。戻すと `❌ DB と関係のない ECONNREFUSED を DB だけの失敗にしている`（28 → 27/28）。
+
+3. `shoot-page.mjs:357` **アニメが動き出す前に「止まった」と判定しとった**（P2・採用）
+
+   - 根拠: 収束の基準が「3フレーム連続で同じ形」やった。Recharts の `<Pie>` は既定で暫く待ってから動き出す（`src/app/report/` に animation の指定は無いので既定が効く）。その待ちの間は形が動かんので、**3フレーム＝60fps で約50ms の窓は待ちの中で満たされ、動き出す前の絵を撮る**。フレーム数という基準自体も機械の速さでブレる（20fps なら150ms）。
+   - 直し: 時間の窓へ変えた（`DRAWN_FRAME_STABLE_MS = 600`、開始の遅延より長い）。上限も 2000 → 5000ms へ上げた（遅延＋描画が終わってから窓を満たすまで入るように）。
+   - **検査の作りの欠陥も一緒に見つかった。** 新しい fixture が通らんので追うと、`settleAnimations` とは無関係に **Playwright/Chromium は同じページへ `setContent` を重ねると2枚目以降の有限 rAF アニメーションを走らせん**（新しいページなら走る、を実測で確認）。つまり既存の検査は「2つ目の有限アニメ」を一度も踏んでへんかった。fixture ごとに新しいページを開く `withPage()` を入れて、各主張を独立させた。
+   - 実ブラウザ検査は 4本 → **5本**。3フレーム基準へ戻すと `❌ 遅れて動き出す描画を、動き出す前に撮っている` で落ちる（5/5 → 4/5）。

@@ -24,6 +24,28 @@ const PAGE = `<!doctype html><html><body>
   requestAnimationFrame(frame);
 </script></body></html>`;
 
+// Recharts の `<Pie>` は既定で暫く待ってから動き出す。その待ちの間は形が動かんので、
+// フレーム数で数える判定は「もう止まっとる」と誤読して**動き出す前の絵**を撮る。
+// 実物と同じ形を作って、そこを踏まんことを確かめる。
+const DELAYED_START_MS = 400;
+const DELAYED_FINAL_D = 'M0 100 L100 100';
+const DELAYED = `<!doctype html><html><body>
+<svg width="200" height="200"><path id="p" d="M0 0 L0 0"></path></svg>
+<script>
+  const path = document.getElementById('p');
+  const DURATION = 300;
+  let started = null;
+  function frame(now) {
+    if (started === null) started = now;
+    // 開始の遅延。ここでは形を一切触らんので、短い窓やと収束したように見える。
+    if (now - started < ${DELAYED_START_MS}) { requestAnimationFrame(frame); return; }
+    const ratio = Math.min(1, (now - started - ${DELAYED_START_MS}) / DURATION);
+    path.setAttribute('d', 'M0 ' + Math.round(ratio * 100) + ' L' + Math.round(ratio * 100) + ' 100');
+    if (ratio < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script></body></html>`;
+
 const SPINNING = `<!doctype html><html><body>
 <svg width="200" height="200"><circle id="c" r="10" cx="10" cy="10"></circle></svg>
 <script>
@@ -70,35 +92,60 @@ try {
   skip(`ブラウザを起動できんかった（${firstLine(err)}）`);
 }
 
-try {
+// fixture ごとに新しいページを開く。同じページへ `setContent` を重ねると、2枚目以降の
+// 有限アニメーションが走らんことがある（Chromium が描画を要求されるまで rAF を回さん）。
+// 使い回すと「動き出す前に撮った」のか「そもそも動いてへん」のか区別が付かんくなり、
+// 検査が何も見てへんのに緑になる。
+async function withPage(html, body) {
   const page = await browser.newPage();
+  try {
+    await page.setContent(html);
+    return await body(page);
+  } finally {
+    await page.close();
+  }
+}
 
+try {
   // 1. rAF で描くアニメーションが終わるまで待てること。
-  await page.setContent(PAGE);
-  await settleAnimations(page);
-  const drawn = await page.getAttribute('#p', 'd');
+  const drawn = await withPage(PAGE, async (page) => {
+    await settleAnimations(page);
+    return page.getAttribute('#p', 'd');
+  });
   if (drawn !== FINAL_D) {
     fails.push(`❌ rAF で描くアニメーションの途中で撮っている（d=${drawn} / 期待 ${FINAL_D}）`);
   }
 
   // 2. 待つ前は途中の形やと確かめる。1 が「もともと最終形やった」で通るのを防ぐ。
-  await page.setContent(PAGE);
-  const early = await page.getAttribute('#p', 'd');
+  const early = await withPage(PAGE, (page) => page.getAttribute('#p', 'd'));
   if (early === FINAL_D) {
     fails.push('❌ 待たんでも最終形が出ている（この検査は何も見ていない）');
   }
 
   // 3. 終わらん動きでも、上限で戻ってくること（撮影が止まらんこと）。
-  await page.setContent(SPINNING);
   const startedAt = Date.now();
-  await settleAnimations(page);
+  await withPage(SPINNING, (page) => settleAnimations(page));
   const elapsed = Date.now() - startedAt;
   if (elapsed > 6000) {
     fails.push(`❌ 終わらん動きで待ち続けている（${elapsed}ms）`);
   }
 
-  // 4. 持ち越した状態が次の1枚へ残らんこと。残ると「もう止まっとる」と誤判定する。
-  const leftover = await page.evaluate(() => '__shotDrawnFrames' in window);
+  // 4. 遅れて動き出すアニメーションを、動き出す前に「止まった」と誤読せんこと。
+  const delayedDrawn = await withPage(DELAYED, async (page) => {
+    await settleAnimations(page);
+    return page.getAttribute('#p', 'd');
+  });
+  if (delayedDrawn !== DELAYED_FINAL_D) {
+    fails.push(
+      `❌ 遅れて動き出す描画を、動き出す前に撮っている（d=${delayedDrawn} / 期待 ${DELAYED_FINAL_D}）`,
+    );
+  }
+
+  // 5. 持ち越した状態が次の1枚へ残らんこと。残ると「もう止まっとる」と誤判定する。
+  const leftover = await withPage(PAGE, async (page) => {
+    await settleAnimations(page);
+    return page.evaluate(() => '__shotDrawnFrames' in window);
+  });
   if (leftover) {
     fails.push('❌ 収束判定の状態がページに残っている（次の1枚が誤判定する）');
   }
@@ -108,7 +155,7 @@ try {
 
 if (fails.length > 0) {
   for (const f of fails) console.error(f);
-  console.error(`❌ settle_drawn_frames 実ブラウザ検査 ${4 - fails.length}/4 合格`);
+  console.error(`❌ settle_drawn_frames 実ブラウザ検査 ${5 - fails.length}/5 合格`);
   process.exit(1);
 }
-process.stdout.write('✅ settle_drawn_frames 実ブラウザ検査 4/4 合格\n');
+process.stdout.write('✅ settle_drawn_frames 実ブラウザ検査 5/5 合格\n');

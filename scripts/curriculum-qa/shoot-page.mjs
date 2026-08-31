@@ -26,9 +26,16 @@ const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '�
 // （`fullPage` は文書のスクロールしか追わない）。窓の高さを中身へ合わせると両方直る。
 // 下限は、中身がほとんど無い画面で帯のように潰れるのを防ぐため。
 // アニメーションの収束を待つ上限。装飾で常時動いとる画面があっても撮影を止めん。
-const ANIMATION_SETTLE_MS = 2000;
-// 何フレーム続けて同じ形なら「描き終わった」と見なすか。
-const DRAWN_FRAME_SAMPLES = 3;
+const ANIMATION_SETTLE_MS = 5000;
+// 何ミリ秒続けて同じ形なら「描き終わった」と見なすか。
+//
+// フレーム数で数えたらアカン。3フレームは 60fps で約50ms、20fps では150msになって、
+// 基準そのものが機械の速さでブレる。それ以上に効くのが**開始の遅延**で、Recharts の
+// `<Pie>` は既定で暫く待ってから動き出す（`src/app/report/` は animation の指定を
+// 持たんので既定が効く）。その待ちの間は形が動かんので、3フレーム基準やと
+// **アニメが始まる前に「止まった」と判定して撮ってまう**。開始の遅延より長い窓を
+// 要求して、動き出す前の絵を掴まんようにする。
+const DRAWN_FRAME_STABLE_MS = 600;
 const MIN_CONTENT_HEIGHT = 420;
 const MAX_CONTENT_HEIGHT = 4000;
 
@@ -345,18 +352,18 @@ async function settleDrawnFrames(page) {
         const drawn = shape.join('|');
         // 前フレームとの比較なので、状態を窓に置いて持ち越す。
         if (!window.__shotDrawnFrames) {
-          window.__shotDrawnFrames = { drawn: null, same: 0 };
+          window.__shotDrawnFrames = { drawn: null, since: performance.now() };
         }
         const state = window.__shotDrawnFrames;
+        const now = performance.now();
         if (drawn === state.drawn) {
-          state.same += 1;
-        } else {
-          state.drawn = drawn;
-          state.same = 0;
+          return now - state.since >= needed;
         }
-        return state.same >= needed;
+        state.drawn = drawn;
+        state.since = now;
+        return false;
       },
-      DRAWN_FRAME_SAMPLES,
+      DRAWN_FRAME_STABLE_MS,
       { timeout: ANIMATION_SETTLE_MS, polling: 'raf' },
     );
   } catch (err) {
