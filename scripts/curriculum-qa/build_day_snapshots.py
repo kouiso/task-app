@@ -1077,7 +1077,15 @@ def error_line_pool(output: str) -> tuple[str, ...]:
     失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
     """
     lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
-    hits = [ln for ln in lines if ERROR_MARK.search(ln)]
+    # DB マーカーを持つ行は ERROR_MARK に当たらんでも拾う。Prisma は
+    # `PrismaClientInitializationError:` と `Can't reach database server ...` を
+    # 別の行に吐く。マーカー側の行に error / failed の語が無いので、ERROR_MARK だけで
+    # 拾うと証拠の行が消え、DB だけの失敗を DB 以外の失敗として止めてまう。
+    hits = [
+        ln
+        for ln in lines
+        if ERROR_MARK.search(ln) or any(m in ln for m in DB_LESS_BUILD_MARKERS)
+    ]
     # tsc の型不一致は型の中身を丸ごと吐くので、1行が数百文字になる。原因を指すのは
     # 行頭のファイル位置とエラー番号なので、そこが読める長さで切る。
     return tuple(ln[:ERROR_LINE_WIDTH] for ln in (hits or lines))
@@ -1260,6 +1268,9 @@ EXPECTED_RED = {
 # prerender や server/client 境界の失敗なので、見逃したら壊れた日を通してしまう。
 DB_LESS_BUILD_MARKERS = (
     "Can't reach database server",
+    # Prisma が接続失敗のときに出す例外名そのもの。この行には DB の語が無いので、
+    # 名前で拾わんと「DB 以外の失敗」に数えられて、DB の無い機械で止まる。
+    "PrismaClientInitializationError",
     "Error validating datasource",
     "Environment variable not found: DB_URL",
     "Environment variable not found: DATABASE_URL",

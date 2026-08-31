@@ -852,6 +852,27 @@ def check_build_failure_triage() -> list[str]:
     # 表示用のほうは3行のままであること。長い出力をそのまま表へ入れると読めん。
     if len(target.error_lines(noisy)) != 3:
         fails.append("❌ 表示用のエラー行が3行になっていない")
+
+    # Prisma は例外名とマーカーを別の行に吐く。マーカーの行には error / failed の語が
+    # 無いので、ERROR_MARK だけで拾うと証拠が消え、DB だけの失敗が「DB 以外」に化ける。
+    # これは黙って通す向きやのうて、DB の無い機械で止まる向きの壊れ方。
+    multiline = "\n".join(
+        [
+            "PrismaClientInitializationError:",
+            "Can't reach database server at `localhost`:`5432`",
+            "Please make sure your database server is running",
+        ]
+    )
+    multi_pool = target.error_line_pool(multiline)
+    if not any("Can't reach database server" in line for line in multi_pool):
+        fails.append("❌ 単独行の DB マーカーが判定用のプールから落ちている")
+    if not target.build_failure_is_db_less(multi_pool):
+        fails.append("❌ 複数行で来た DB だけの失敗を、教材の欠陥として止めている")
+
+    # 上の緩和が効きすぎて、DB の行が混じっただけで全部通るようになっていないこと。
+    multiline_mixed = multiline + "\nError occurred prerendering page \"/project\""
+    if target.build_failure_is_db_less(target.error_line_pool(multiline_mixed)):
+        fails.append("❌ 複数行の DB エラーに紛れた本物の失敗を見逃している")
     return fails
 
 

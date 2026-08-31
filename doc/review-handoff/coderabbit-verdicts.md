@@ -131,3 +131,9 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 指摘: 撮影が成功した回に、ワーカーの `stderr` を捨てている
 - 根拠: `run_worker` は失敗時だけ `proc.stderr[-2000:]` を例外文へ載せ、成功時は `result["shots"]` を返すだけで `proc.stderr` に触れない。`shoot-page.mjs` の収束タイムアウト警告は Node の `console.warn`（stderr）にしか出ないため、途中の絵が保存された回でも「撮れた」の一言しか残らない。
 - 直し方（適用済み・9043c13）: `forward_worker_warnings(stderr, label)` を新設し、`run_worker` の成功パスで `[day07] …` の形へ前置きして自分の stderr へ流す。`shoot_day` は `run_worker(job, f"day{day:02d}")` で呼ぶ。`check_worker_warning_forwarding` で、関数の出力（日付ラベル付き・空行を流さない）と、`run_worker` 本体に呼び出しが残っていることの両方を見る。転送を消すと落ちることを確認済み。
+
+## [PR #389 三巡目] scripts/curriculum-qa/build_day_snapshots.py:1080  (bug・採用)
+- 指摘: 単独行の DB マーカーが判定用のプールから落ちる（Codex P1）
+- 根拠: `ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)` を実際に当てて確かめた。`Can't reach database server at \`localhost\`:\`5432\`` → False、`P1001` → False、`Please make sure your database server is running` → False、`PrismaClientInitializationError:` → True。Prisma は例外名とマーカーを別の行に吐くので、マーカー側の行が `hits` から落ちる。残るのは例外名の行だけで、その行は `DB_LESS_BUILD_MARKERS` のどれも含まんため `all()` が False を返し、DB だけの失敗が「DB 以外の失敗」に化ける。二巡目で足したテストは `Error: P1001: Can't reach database server` と1行に詰めとったので、この形を踏んでいなかった。
+- 壊れる向き: 黙って通す側やのうて、DB の無い機械で `--verify` が止まる側。うるさいが安全な向きではある。ただしこの変更は「DB の無い機械を通す」ために入れたものなので、目的を果たせていない。
+- 直し方（適用済み・次のコミット）: (1) `error_line_pool` の抽出条件を `ERROR_MARK.search(ln) or any(m in ln for m in DB_LESS_BUILD_MARKERS)` にして、マーカーを持つ行を必ず残す。(2) `DB_LESS_BUILD_MARKERS` に `PrismaClientInitializationError` を足す（接続失敗の例外名そのものであって、汎用のラッパーではない）。回帰テストは複数行の Prisma 失敗を DB 専用と判定できること、その後ろに prerender の失敗を1行足したら通さんことの両方を見る。2つの直しを別々に戻して、それぞれ別のメッセージで落ちることを確認済み。
