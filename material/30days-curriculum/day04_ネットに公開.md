@@ -136,7 +136,7 @@ GitHub に保存しただけでは、まだコードが置かれているだけ�
 Day 03 完了時点では、次の状態になっているはずです。
 
 - GitHub に `task-app` リポジトリがある
-- `main` ブランチに Day 02 までのコードが入っている
+- Day 03 で push したブランチに Day 02 までのコードが入っている
 - `README.md` がリポジトリの顔として見えている
 - `.env` は送らず、公開していいファイルだけが保存されている
 
@@ -188,7 +188,7 @@ git log --oneline --decorate -3
 
 - `pwd` が `task-app` のルートを指している
 - `git status -sb` で大きな未保存差分が残っていない
-- `git branch --show-current` が `main` になっている
+- `git branch --show-current` が Day 03 で push したブランチ名と一致している
 - `git remote -v` で GitHub の `origin` が見えている
 - `git log --oneline --decorate -3` に Day 03 までの履歴がある
 
@@ -199,7 +199,7 @@ git log --oneline --decorate -3
 - `README.md` が表示されている
 - `src` ディレクトリがある
 - `src/app/dashboard/page.tsx` が存在する
-- 一番上に表示されているブランチが `main` になっている
+- 一番上に表示されているブランチが Day 03 で push したブランチ名と一致している
 
 GitHub 側で見えているものが、今日 Vercel が読み込む対象になります。
 
@@ -593,7 +593,7 @@ https://task-app-kouiso.vercel.app
 
 ![Day 02 で作ったダッシュボード。ヘッダーに My Dashboard、本文に自分あてのメッセージ、右側に3つのカードが並んでいる](./screenshots/day02/dashboard-message.png)
 
-デプロイの前に手元で `npm run build` を実行してから `npm start` で立ち上げると、ビルド済みのアプリを本番と同じモードで動かせます。`npm run dev` が開発中の確認用なのに対して、`npm start` は「ビルドが通るか、ビルド後も動くか」を先に確かめる予行演習です。ここで動けば、Vercel 上のビルドエラーの多くを事前に潰せます。
+次のデプロイからは、手元で `npm run build` を実行してから `npm start` で立ち上げると、ビルド済みのアプリを本番と同じモードで動かせます。`npm run dev` が開発中の確認用なのに対して、`npm start` は「ビルドが通るか、ビルド後も動くか」を先に確かめる予行演習です。ここで動けば、Vercel 上のビルドエラーの多くを事前に潰せます。`npm start` は `npm run dev` と同じ 3000 番を使うので、先に `npm run dev` を Ctrl+C で止めてから実行します。
 
 ただし、これで確認できるのはビルドが通ることまでです。Vercel 側の設定・環境変数・外から届くかどうかは、ローカルでは何も証明されません。今日のゴールは「ネットに公開」なので、完了の判定は必ず実際の公開 URL で行います。とくに、自分のパソコンと同じ Wi-Fi ではない回線（スマホのモバイル回線など）から URL を開けたら、本当に公開できた証拠になります。次の Step 8 でそれを確かめます。
 
@@ -979,7 +979,7 @@ Day 05 からの G1 Auth も、
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| `npm run build` が `Type error:` で止まる | 型の書き間違いが、開いていないページに残っていた。`npm run dev` は開いたページしか確認しないので気付けない | 赤い行のうち**いちばん上**だけを読む。`Type error:` の後ろに理由、その下にファイル名と行番号が出る。そこを直して `npm run build` をやり直す |
+| `npm run build` が `Type error:` で止まる | 型の書き間違いが、開いていないページに残っていた。`npm run dev` は開いたページしか確認しないので気付けない | 赤い行のうち**いちばん上**だけを読む。`Type error:` の1つ上の行にファイル名と行番号、`Type error:` の後ろに理由、その下にコードの抜粋が出る。そこを直して `npm run build` をやり直す |
 | ページ数が教材の `(6/6)` と違う | 作ったページの数はその時点の状態で変わる | 数字は合っていなくてよい。`Collecting build traces` まで止まらずに進んでいれば成功 |
 | Vercel の Import 画面に `task-app` が出てこない | Vercel の GitHub App に、そのリポジトリを見る権限を渡していない | `Adjust GitHub App Permissions` から `task-app` を選んで許可する。Private リポジトリの場合は特に起きやすい |
 | Vercel の Deploy がビルドエラーで止まる | 手元で通っていないコードを送っている、または環境変数が足りない | まず Step 2 の `npm run build` が手元で通るか確かめる。通るなら、Environment Variables に `DATABASE_URL` と `JWT_SECRET` が入っているかを見る |
