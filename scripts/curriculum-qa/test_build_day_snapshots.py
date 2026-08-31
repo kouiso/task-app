@@ -881,6 +881,17 @@ def check_build_failure_triage() -> list[str]:
     if not any("Can't reach database server" in ln for ln in target.error_line_pool(multiline)):
         fails.append("❌ 単独行の DB マーカーが判定用のプールから落ちている")
 
+    # Prisma のスタックフレームはメソッド名に `Error` が含まれるため、ERROR_MARK だけで
+    # 拾うと DB の赤へ説明の付かん行が混ざったように見える。呼び出し経路は判定材料にせん。
+    prisma_stack = target.error_line_pool("\n".join([
+        "PrismaClientInitializationError:",
+        "Can't reach database server at `localhost`:`5432`",
+        "    at Mn.handleRequestError (/workspace/node_modules/@prisma/client/runtime/library.js:121:1)",
+        "    at Mn.handleAndLogRequestError (/workspace/node_modules/@prisma/client/runtime/library.js:125:1)",
+    ]))
+    if not target.build_failure_is_database_only(prisma_stack):
+        fails.append("❌ Prisma のスタックフレームを DB の赤へ混ぜている")
+
     # Next.js のラッパー行が混じっても、DB が絡む赤は「判定できん」と見なすこと。
     # 行ごとに DB か否かを当てにいくと、ラッパーの文言が増えるたびに壊れる。
     wrapped = "\n".join(

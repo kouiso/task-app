@@ -406,6 +406,14 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 直し: 2点。(a) `browser_qa` の判定専用に**削除を落とさん一覧** `changed-with-deletes.z` を作る（`--diff-filter=d` 無し）。(b) 判定を完全一致から `scripts/curriculum-qa/` のディレクトリ前置へ広げる。名前に依存せんくなるので、改名も新規追加も拾う。
 - 検証: パターンを9通りの入力で実測（既存の検査／改名後の名前／同ディレクトリの別ファイル／`package.json`／`.node-version`／この workflow → 1、ディレクトリ名だけ／無関係／別ディレクトリ → 0）。削除を含むかは擬似的な削除を stage して実演し、**旧一覧 0件・新一覧 1件**を確認した。`yaml.safe_load` で構文 OK。
 
+## [PR #389 二十二巡目] Codex 1件（採用）
+
+`build_day_snapshots.py:1092` **Prisma のスタックフレームが DB だけの判定を邪魔する**（P1・採用）
+
+- 根拠: `ERROR_MARK` は行頭に限定してへんので、通常の Prisma P1001 出力に含まれる `at Mn.handleRequestError(...)` までエラー行として拾う。DB の印とスタックフレームだけの出力が `BUILD_NOISE_MARKERS` で説明できず、DB 不在の機械でも `--verify` が赤になる。
+- 直し: 行頭の `at` 形式のスタックフレームを `error_line_pool()` の判定材料から除外した。スタックは呼び出し経路で、失敗理由ではないため。代表的な `handleRequestError` / `handleAndLogRequestError` の複数行を回帰テストへ追加した。
+- 検証: `build_day_snapshots` 自己テスト29/29、Biome、Python構文検査が成功。
+
 ## [PR #389 二十一巡目] Codex 1件（採用）
 
 `test_shoot_screenshots.py:325` **`shoot()` の中身を見とるつもりで、モジュールの残り全部を見とった**（P2・採用）

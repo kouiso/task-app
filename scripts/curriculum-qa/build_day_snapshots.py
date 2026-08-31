@@ -1071,6 +1071,12 @@ def build_tree(day: int) -> tuple[Path, int]:
     return dest, files
 
 
+# Node / Prisma のスタックフレームはメソッド名に `Error` が含まれることがある。
+# これは失敗の説明やのうて呼び出し経路なので、判定材料へ混ぜると DB 不在だけの赤を
+# 「説明の付かん行あり」と誤って止める。行頭の `at` 形式だけを落とす。
+STACK_FRAME_MARKER = re.compile(r"^\s*at\s+")
+
+
 def error_line_pool(output: str) -> tuple[str, ...]:
     """出力から、エラーらしい行を全部抜く。件数で切らない。
 
@@ -1078,7 +1084,11 @@ def error_line_pool(output: str) -> tuple[str, ...]:
     3行に切った標本で判定すると、DB のエラーが先に並んだ回に後ろの prerender の
     失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
     """
-    lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
+    lines = [
+        ln.rstrip()
+        for ln in output.split("\n")
+        if ln.strip() and not STACK_FRAME_MARKER.match(ln)
+    ]
     # DB マーカーを持つ行は ERROR_MARK に当たらんでも拾う。Prisma は
     # `PrismaClientInitializationError:` と `Can't reach database server ...` を
     # 別の行に吐く。マーカー側の行に error / failed の語が無いので、ERROR_MARK だけで
