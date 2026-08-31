@@ -288,7 +288,7 @@ export default function DashboardPage() {
 #### ブラウザ確認
 
 - 見出しが 見出しだけの状態から変わっている
-- `こんにちは、Taroさん。` が主役として見える
+- `こんにちは、Taroさん。` が主役として見える（`ownerName` を自分の名前へ書き換えた人は、その名前で出る）
 - 右側に小さな補助カードが2枚並ぶ
 
 > `Taro` はサンプルの名前です。`ownerName`（このあとの Step では `dashboardOwner.name`）の値を自分の名前に書き換えると、あいさつもその名前で表示されます。
@@ -1293,6 +1293,7 @@ export default function DashboardPage() {
 この3つが入っていれば、名前や集中テーマを変えたくなったときに
 触るのは `dashboardOwner` の該当する行だけで、
 見出しの `{mainMessage}` と下段の `focusCards` の表示が同時に変わります。
+
 ## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |

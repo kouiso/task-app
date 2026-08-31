@@ -167,7 +167,7 @@ Step 0（22分／424行）は据え置いた。上げると合計が目次の上
 |---|---|---|---|
 | 13 | `where.projectId = { in: projectIds }` の役目 | `isTaskStatus` を外して `as TaskStatus` | `canEdit`/`canDelete` を毎回渡す理由 |
 | 14 | `assertTaskAssigneeBelongsToProject` | `Select` を `register('status')` で登録 | 未選択を `'unassigned'` で持つ理由 |
-| 15 | `where` の `updatedAt`（楽観ロック） | `|| null` を `?? null` へ | 更新は `null`、作成は `undefined` |
+| 15 | `where` の `updatedAt`（楽観ロック） | `\|\| null` を `?? null` へ | 更新は `null`、作成は `undefined` |
 | 16 | `increment: input.minutesToAdd` | `refine`（合計>0分）を外す | 成功後に `invalidate()` を呼ぶ理由 |
 | 17 | `{ enabled: !!currentUser }` | `useMemo` の依存を `[]` へ | 日付を `YYYY-MM-DD` にそろえる理由 |
 | 18 | 入力スキーマに `userId` が無い理由 | `.min(1).trim()` の順に入れ替え | `reset()` を `onSuccess` に置く理由 |
