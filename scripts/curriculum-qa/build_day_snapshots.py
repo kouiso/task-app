@@ -1276,14 +1276,17 @@ DB_LESS_BUILD_MARKERS = (
     # `Error validating datasource` は入れん。あれは DB へ届かんことやのうて、
     # スキーマの datasource ブロックが不正でも出る。`npm run build` は `prisma generate`
     # から始まるので、provider の書き間違いがそのまま「DB の不在」に化けて exit 0 になる。
-    # 環境変数の欠落は下の2行が文言で拾うので、取りこぼしはない。
-    "Environment variable not found: DB_URL",
-    "Environment variable not found: DATABASE_URL",
+    #
+    # `Environment variable not found: ...` も入れん。`copy_scaffold()` が
+    # `.env.example` を必ず `.env` へ複写しており（このファイルの `copy_scaffold` 参照）、
+    # その `.env.example` は `DATABASE_URL` を定義しとる。つまりこの機械に DB が無くても
+    # 変数は在る。変数が無いと言われたのなら、それは組んだツリーか schema が壊れとる印で、
+    # DB の不在やない。SKIP へ落としたら本物の欠陥が exit 0 で通る。
+    # 逆向きに `REAL_BUILD_FAILURE_MARKERS` へ入れて、必ず赤で止める。
     "P1001",
     # P1012 は入れん。あれは Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの
     # 印やない。壊れたリレーションや型の書き間違いでも出る。入れると本物のビルド欠陥が
     # SKIP へ落ちて exit 0 になる — いちばんやったらアカン向きの見逃しになる。
-    # 環境変数の欠落（DB 由来の P1012）は上の2行が文言で拾う。
     "ECONNREFUSED",
 )
 
@@ -1303,6 +1306,11 @@ REAL_BUILD_FAILURE_MARKERS = (
     "Type error:",
     "You're importing a component that needs",
     "Cannot find module",
+    # 環境変数の欠落。`.env` は `copy_scaffold()` が毎回書くので、無いと言われた時点で
+    # 組んだツリーか schema の側が壊れとる。`PrismaClientInitializationError` と一緒に
+    # 出るため、ここへ入れて DB マーカーより先に赤で止める（`has_real_build_failure` が
+    # 先に効く）。
+    "Environment variable not found",
 )
 
 

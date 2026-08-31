@@ -9,7 +9,8 @@
 // セレクタ基準なら要素が動いても枠が追いかける。
 
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium, errors } from 'playwright';
 
 const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
@@ -26,6 +27,8 @@ const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '�
 // 下限は、中身がほとんど無い画面で帯のように潰れるのを防ぐため。
 // アニメーションの収束を待つ上限。装飾で常時動いとる画面があっても撮影を止めん。
 const ANIMATION_SETTLE_MS = 2000;
+// 何フレーム続けて同じ形なら「描き終わった」と見なすか。
+const DRAWN_FRAME_SAMPLES = 3;
 const MIN_CONTENT_HEIGHT = 420;
 const MAX_CONTENT_HEIGHT = 4000;
 
@@ -299,8 +302,69 @@ async function settleAnimations(page) {
       }
     }
   });
+  await settleDrawnFrames(page);
   // 最後の1フレームが画面へ出るのを待つ。
   await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done())));
+}
+
+/**
+ * JS で1フレームずつ描くアニメーションが描き終わるまで待つ。上限つき。
+ *
+ * `document.getAnimations()` は Web Animations（CSS の transition / animation）しか返さん。
+ * Recharts の Pie / Line / Bar は react-smooth が requestAnimationFrame で属性を書き換えて
+ * 動かすので、あの一覧には**1つも出てこん**。せやから見出しが出た時点で待ちが明けて、
+ * 描きかけのグラフがそのまま保存される（day22 の3枚と day23 の3枚が該当）。
+ * 決め打ちの 400ms を外した目的は「毎回同じ絵になること」やったのに、この経路だけ
+ * 逆に不安定になっとった。
+ *
+ * 合図が無いので、形が変わらんくなったことをもって描き終わりとみなす。SVG の中の
+ * 座標・形・不透明度をつないだ文字列を毎フレーム作り、続けて同じ値が出たら止まったと判断する。
+ */
+async function settleDrawnFrames(page) {
+  try {
+    await page.waitForFunction(
+      (needed) => {
+        const shape = [];
+        for (const el of document.querySelectorAll('svg *')) {
+          shape.push(
+            el.getAttribute('d') ?? '',
+            el.getAttribute('points') ?? '',
+            el.getAttribute('transform') ?? '',
+            el.getAttribute('x') ?? '',
+            el.getAttribute('y') ?? '',
+            el.getAttribute('width') ?? '',
+            el.getAttribute('height') ?? '',
+            el.getAttribute('r') ?? '',
+            el.getAttribute('opacity') ?? '',
+          );
+        }
+        const drawn = shape.join('|');
+        // 前フレームとの比較なので、状態を窓に置いて持ち越す。
+        const state = (window.__shotDrawnFrames ??= { drawn: null, same: 0 });
+        if (drawn === state.drawn) {
+          state.same += 1;
+        } else {
+          state.drawn = drawn;
+          state.same = 0;
+        }
+        return state.same >= needed;
+      },
+      DRAWN_FRAME_SAMPLES,
+      { timeout: ANIMATION_SETTLE_MS, polling: 'raf' },
+    );
+  } catch (err) {
+    // 待ち時間切れ以外（評価エラー・ページ破棄）は本物の失敗なので握り潰さん。
+    if (!(err instanceof errors.TimeoutError)) {
+      throw err;
+    }
+    console.warn(`描画が ${ANIMATION_SETTLE_MS}ms で落ち着きませんでした`);
+  } finally {
+    // 1ページで何枚も撮るので、持ち越した状態は毎回捨てる。残すと次の1枚が
+    // 「もう止まっとる」と誤判定する。
+    await page.evaluate(() => {
+      delete window.__shotDrawnFrames;
+    });
+  }
 }
 
 async function shoot(page, job, shot) {
@@ -433,7 +497,14 @@ async function main() {
   process.stdout.write(JSON.stringify({ ok: true, shots: done }));
 }
 
-main().catch((e) => {
-  process.stdout.write(JSON.stringify({ ok: false, error: `${e}` }));
-  process.exitCode = 1;
-});
+// このファイルを直接叩いたときだけ撮影を始める。読み込んだだけで走ると、
+// 収束待ちだけを実物のブラウザで確かめる退行テスト（test-settle-drawn-frames.mjs）が
+// stdin を待って止まる。
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((e) => {
+    process.stdout.write(JSON.stringify({ ok: false, error: `${e}` }));
+    process.exitCode = 1;
+  });
+}
+
+export { settleAnimations, settleDrawnFrames };

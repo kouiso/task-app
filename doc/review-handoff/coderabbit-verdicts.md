@@ -201,3 +201,15 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 根拠: `broken` の build 節が `r.day not in EXPECTED_RED` で判定しとる。`EXPECTED_RED[11]` が断っとるのは `getById` の型エラーだけやのに、day11 に prerender や server/client 境界の失敗が紛れても day 番号だけで免除され、exit 0 で出ていく。
 - 直し方（適用済み）: `build_failure_is_expected(result)` を新設。EXPECTED_RED の日に限り、**build の失敗行のうち本物の失敗（`REAL_BUILD_FAILURE_MARKERS`）が全部型エラー（`Type error:` / `TS####`）で説明できるときだけ**免除する。型エラーの証拠が1行も無い場合は免除せん。回帰テストは (a) 断り書きどおりの型エラーは免除される (b) prerender が1行紛れたら免除されん (c) 型エラーの証拠が無ければ免除されん (d) EXPECTED_RED に無い日は免除されん (e) 判定が `broken` の側で使われとる、の5方向。
 - 実機での確認: `--day 11 --verify` を実際に流して exit 0・「想定どおり」のまま通ることを確かめた（結果ファイルは事前に退避して復元。`--day` は30日ぶんの記録を上書きするため）。
+
+## [PR #389 九巡目] scripts/curriculum-qa/build_day_snapshots.py:1281  (bug・採用／自分が置いた逃げ道)
+- 指摘: 環境変数の欠落を build の失敗のまま残せ（Codex P1）
+- 根拠: 自分でファイルを開いて確かめた。`copy_scaffold()` は `.env.example` を**無条件で** `.env` へ複写しとる（`build_day_snapshots.py:357` の `shutil.copyfile(dest / ".env.example", dest / ".env")`）。その `.env.example` は `DATABASE_URL` を定義しとる（`.env.example:24`）。さらに `DB_URL` はこのリポジトリのどこにも無い（`grep -rn "DB_URL" --include=*.ts --include=*.prisma --include=*.example --include=*.yml --include=*.sh .` が0件。別リポジトリの流儀を写し間違えとった）。つまり DB の無い機械でも変数は在る。「変数が無い」と言われたのなら、それは組んだツリーか schema が壊れとる印で、DB の不在やない。八巡目の直しで「環境変数の欠落は文言で拾うので取りこぼしはない」と書いた行が、そのまま逃げ道になっとった。
+- 直し方（適用済み）: `Environment variable not found: *` の2行を `DB_LESS_BUILD_MARKERS` から落とし、`Environment variable not found` を `REAL_BUILD_FAILURE_MARKERS` へ入れた。Prisma は変数の欠落も接続の失敗も `PrismaClientInitializationError` で包むので、**例外名だけでは SKIP に倒れんように、本物の失敗の判定が先に効く形**にした（`has_real_build_failure` の短絡）。回帰テストは (a) 両方の変数名で SKIP に落ちん (b) 本物の失敗に数える (c) 例外名と一緒に来ても SKIP に落ちん (d) `triage_build_results` を通しても NG のまま (e) `.env` を書く経路が消えたら気づく（前提そのものの見張り）、の5方向。戻すと `❌ 環境変数の欠落を SKIP へ振り替えて exit 0 にしている` ほか5件で落ちる。
+
+## [PR #389 九巡目] scripts/curriculum-qa/shoot-page.mjs:278  (bug・採用／直しが別の不安定を生んどった)
+- 指摘: JS で描くグラフのアニメーションを待てていない（Codex P2）
+- 根拠: 自分で確かめた。`screenshot-shot.json` の day22・day23 の6枚は `wait_for` が `h3:text-is('優先度別タスク')` のような見出しだけで、その見出しは Recharts の `Pie` / `Line` / `Bar` と同じ描画で出る。Recharts は react-smooth が `requestAnimationFrame` で属性を書き換えて動かすので `document.getAnimations()` には**1つも出てこん**（`grep -rn "isAnimationActive" src` も0件で、アニメーションは既定のまま有効）。つまり収束待ちが即座に明けて、描きかけのグラフが保存され得る。決め打ちの 400ms を外した目的は「毎回同じ絵になること」やったのに、この6枚だけ逆に不安定にしとった。
+- 直し方（適用済み）: `settleDrawnFrames()` を足した。SVG の中の座標・形・不透明度をつないだ文字列を毎フレーム作り、3フレーム続けて同じなら描き終わりとみなす（`polling: 'raf'`・上限は既存の 2000ms・待ち時間切れ以外は再送出・状態は毎回捨てる）。特定のライブラリの内部に依存せんので、Recharts 以外の JS 駆動にも効く。
+- 検査: 「ソースの文字列を見るだけでは足りん」という指摘そのものを受けて、**実物のブラウザで動かす退行テスト**を足した（`test_settle_drawn_frames.mjs`）。rAF で 600ms かけて `d` を書き換えるページを本物の Chromium で開き、`settleAnimations()` を通した後の `d` が最終形であることを見る。待つ前は途中の形であることも同時に確かめて、「もともと最終形やった」で通るのを塞いだ。終わらん動きでも上限で戻ること、状態が次の1枚へ残らんことも見る。`shoot()` が呼ぶ `settleAnimations` の側を叩くので、**呼び出しごと消した場合も赤くなる**。実際に外して確かめた: `❌ rAF で描くアニメーションの途中で撮っている（d=M0 9 L9 100 / 期待 M0 100 L100 100）`。ブラウザが無い機械では `SKIP:` を出力に残して退ける（黙って通さん）。
+- 残る限界: 実物の `/report` を撮って確かめたわけやない。あれには DB とその日のツリーの起動が要る。**確かめたのは「JS で描く動きを待てるようになったこと」までで、day22・day23 の6枚が実際に撮り直されたわけやない**（撮り直しは #388 で済んでおり、この直しは次に撮るときから効く）。

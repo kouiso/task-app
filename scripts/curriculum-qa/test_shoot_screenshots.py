@@ -17,6 +17,7 @@
 import io
 import json
 import queue
+import subprocess
 import sys
 import time
 import tempfile
@@ -381,6 +382,35 @@ def check_worker_warning_forwarding() -> list[str]:
     return fails
 
 
+
+def check_drawn_frame_settle() -> list[str]:
+    """JS で1フレームずつ描くアニメーションの収束待ちを、実物のブラウザで確かめる。
+
+    Recharts（day22・day23 のグラフ）は react-smooth が `requestAnimationFrame` で
+    属性を書き換えて動かすので、`document.getAnimations()` には出てこん。せやから
+    ソースの文字列を見るだけの検査では「描き終わるまで待てとるか」を言えん。ここだけは
+    実際にブラウザで動かして、描きかけの形で止まらんことを見る。
+
+    ブラウザが無い機械では退けるが、**黙って通さん**。退けたことを出力に残す。
+    """
+    script = Path(__file__).resolve().parent / "test_settle_drawn_frames.mjs"
+    if not script.exists():
+        return ["❌ 実ブラウザ検査（test_settle_drawn_frames.mjs）が見当たらない"]
+    proc = subprocess.run(
+        ["node", str(script)],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        cwd=script.parent,
+    )
+    out = (proc.stdout + proc.stderr).strip()
+    if proc.returncode != 0:
+        return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]
+    if out.startswith("SKIP:") or "\nSKIP:" in out:
+        print(f"  ⏭️ 実ブラウザ検査を退けた: {out.splitlines()[0]}")
+    return []
+
+
 CHECKS = (
     ("赤枠と切り抜きの座標の出どころ", check_mark_rect_source),
     ("日別シードの境界", check_day_seed_boundary),
@@ -390,6 +420,7 @@ CHECKS = (
     ("スロットの排他", check_slot_exclusivity),
     ("アニメーションの収束待ち", check_animation_settle),
     ("ワーカーの警告の転送", check_worker_warning_forwarding),
+    ("描画の収束待ち（実ブラウザ）", check_drawn_frame_settle),
 )
 
 

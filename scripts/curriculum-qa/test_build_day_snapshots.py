@@ -15,11 +15,12 @@
 """
 
 import contextlib
+import inspect
 import io
 import json
 import shutil
-import tempfile
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -931,9 +932,39 @@ def check_build_failure_triage() -> list[str]:
     ]))
     if target.build_failure_is_database_only(datasource_error):
         fails.append("❌ datasource のスキーマ欠陥を DB の不在として見逃している")
-    # DB 由来の P1012（環境変数の欠落）は文言で拾えること。
-    if not target.build_failure_is_database_only(("Environment variable not found: DB_URL.",)):
-        fails.append("❌ 環境変数の欠落を DB の不在として拾えていない")
+    # 環境変数の欠落は「DB が無い機械」の印やない。`copy_scaffold()` が `.env.example` を
+    # 必ず `.env` へ複写し、その `.env.example` が `DATABASE_URL` を定義しとるので、
+    # DB の無い機械でも変数は在る。無いと言われたのなら組んだツリーか schema が壊れとる。
+    for missing in (
+        "Environment variable not found: DATABASE_URL.",
+        "Environment variable not found: DB_URL.",
+    ):
+        if target.build_failure_is_database_only((missing,)):
+            fails.append(f"❌ 環境変数の欠落（{missing}）を DB の不在として見逃している")
+        if not target.has_real_build_failure((missing,)):
+            fails.append(f"❌ 環境変数の欠落（{missing}）を本物の失敗に数えていない")
+
+    # Prisma は変数の欠落も接続の失敗も同じ例外名で包む。例外名だけで SKIP に倒すと
+    # 変数の欠落が exit 0 で通る。本物の失敗の判定が先に効くことを、振り替えまで通して見る。
+    env_wrapped = target.error_line_pool("\n".join([
+        "Error: Failed to collect page data for /dashboard",
+        "PrismaClientInitializationError:",
+        "error: Environment variable not found: DATABASE_URL.",
+    ]))
+    if target.build_failure_is_database_only(env_wrapped):
+        fails.append("❌ 例外名に紛れた環境変数の欠落を DB の不在として見逃している")
+    env_day = target.DayResult(
+        day=12, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=env_wrapped[:3], build_errors=env_wrapped,
+    )
+    if target.triage_build_results([env_day])[0].build != "NG":
+        fails.append("❌ 環境変数の欠落を SKIP へ振り替えて exit 0 にしている")
+
+    # 上の判断は「`.env` は必ず書かれる」という前提に乗っとる。前提が消えたら判断も無効に
+    # なるので、複写の経路そのものを見張る。
+    scaffold = inspect.getsource(target.copy_scaffold)
+    if ".env.example" not in scaffold or '".env"' not in scaffold:
+        fails.append("❌ `.env.example` を `.env` へ複写する経路が消えている（環境変数の判断の前提）")
 
     # 成功の行に、判定してへん日があることを必ず出す。ここが消えると全部緑に読める。
     source = Path(target.__file__).read_text(encoding="utf-8")
