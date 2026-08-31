@@ -413,3 +413,20 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 根拠: `body = source.split("async function shoot(page, job, shot) {", 1)` の `body[1]` は開き括弧以降の**ファイルの残り全部**。コメントは「`shoot()` の中身だけを見る」と謳っとるのに閉じ括弧で切ってへんかったので、`await settleAnimations(page);` を `shoot()` の外（あとの助け関数や `main()`）へ移しても字面が残り、緑のまま通る。撮り終えた後に待っても意味が無いのに検査が気づかん。同じ理由で `waitForTimeout` の禁止も、`shoot()` の外の決め打ちの待ちを誤検知する側にズレとった。
 - 直し: 桁0の `\n}` で切って `shoot()` の本体だけを対象にした。同ファイル内の `settleAnimations` の取り出しが既に採っとる流儀に合わせた。
 - 検証: `shoot-page.mjs` の呼び出しを `shoot()` から外して後続関数 `afterShoot()` へ移した状態で実測。**直した検査は `❌ shoot() がアニメーションの収束を待っていない`（11/12）で落ち、直す前の検査は同じ状態で 12/12 の緑**やった。切り出しの実測は 82行・`settleAnimations` の呼び出しを含む・`waitForTimeout` を含まん・後続の `main` と `fitToContent` を含まん。
+
+## [PR #389 二十二巡目] Codex 1件（採用）
+
+`build_day_snapshots.py:1092` **Prisma の stack frame が DB だけの失敗を本物の失敗に化けさせとった**（P1・採用）
+
+- 根拠を自分で実測した。DB を落とした状態で `DATABASE_URL` を届かん先へ向け、day30 のツリーで Prisma を叩いた実出力がこれ:
+
+  ```
+  PrismaClientInitializationError:
+  Can't reach database server at `127.0.0.1:59999`
+      at ei.handleRequestError (/…/@prisma/client/runtime/library.js:121:7568)
+      at ei.handleAndLogRequestError (/…/@prisma/client/runtime/library.js:121:6593)
+  ```
+
+  `ERROR_MARK` は位置を固定してへん大文字小文字無視なので、**メソッド名に `Error` が入っとる frame の2行が拾われる**。この2行は DB マーカーでも `BUILD_NOISE_MARKERS` でもないため `build_failure_is_database_only()` が `False` を返す。実測で `db_only: False`。DB を持たん機械で `--verify` が exit 1 になる。指摘のとおり（frame 名は Codex の挙げた `Mn.` やのうて、こっちの Prisma 6.19.3 では `ei.` やった。minify の割り当てが版で違うだけで、構造は同じ）。
+- 直し: `STACK_FRAME_MARK = re.compile(r"^\s+at (async )?\S")` を足して、判定に入る前に落とす。**frame は失敗の「場所」であって「種類」やない。**落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行（`TypeError: …`）が出て、そっちは ERROR_MARK に当たって残るため。
+- 回帰テスト `check_stack_frames_do_not_block_skip` が2方向を見る。上の実測どおりの出力は `db_only: True`／`TypeError` を混ぜたら `False` のまま、かつ `TypeError` の行がプールに残っとること。戻すと `❌ Prisma の stack frame を本物の失敗として数えている`（30 → 29/30）。

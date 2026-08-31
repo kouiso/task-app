@@ -1378,6 +1378,43 @@ def check_expected_red_rejects_unknown_code() -> list[str]:
     return []
 
 
+def check_stack_frames_do_not_block_skip() -> list[str]:
+    """Prisma の stack frame が DB だけの失敗を本物の失敗に化けさせんこと。
+
+    `at ei.handleRequestError (...)` はメソッド名に `Error` が入るので ERROR_MARK に
+    当たる。中身は失敗の場所であって種類やない。残ると「説明の付かん行」に数えられて、
+    DB を持たん機械で `--verify` が exit 1 になる。下の出力は Prisma 6.19.3 の実測。
+    """
+    fails: list[str] = []
+    db_less = "\n".join(
+        [
+            "PrismaClientInitializationError: ",
+            "Can't reach database server at `127.0.0.1:59999`",
+            "    at ei.handleRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:7568)",
+            "    at ei.handleAndLogRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:6593)",
+            "    at async a (/app/node_modules/@prisma/client/runtime/library.js:130:9551)",
+            "Failed to collect page data for /dashboard",
+            "Build error occurred",
+        ]
+    )
+    if not target.build_failure_is_database_only(target.error_line_pool(db_less)):
+        fails.append("❌ Prisma の stack frame を本物の失敗として数えている")
+
+    # 落としてええのは frame だけ。メッセージの行は残さんとアカン。
+    with_real = db_less.replace(
+        "Failed to collect page data for /dashboard",
+        "TypeError: x is not a function\n"
+        "    at Object.<anonymous> (/app/src/x.ts:3:1)\n"
+        "Failed to collect page data for /dashboard",
+    )
+    pool = target.error_line_pool(with_real)
+    if not any("TypeError" in line for line in pool):
+        fails.append("❌ frame と一緒にメッセージの行まで落としている")
+    if target.build_failure_is_database_only(pool):
+        fails.append("❌ frame を落とした結果、本物の失敗まで DB だけの失敗にしている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1404,7 +1441,8 @@ CHECKS = (
     ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
     ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
-    ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
+    ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
+    ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 

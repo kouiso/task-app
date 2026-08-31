@@ -243,6 +243,13 @@ ERROR_LINE_WIDTH = 160
 # `Module not found:`、npm は `npm ERR!` を出す。
 ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)
 
+# Node の stack frame。`    at ei.handleRequestError (...）` のようにメソッド名へ
+# `Error` が入るので ERROR_MARK に当たってまう。中身は失敗の**場所**であって種類やない。
+# 判定側は「説明の付かん行が1つでも混ざったら SKIP にせん」ので、この行が残ると
+# DB だけの失敗が必ず本物の失敗に見え、DB を持たん機械で `--verify` が exit 1 になる。
+# 落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行が出て、そっちは残る。
+STACK_FRAME_MARK = re.compile(r"^\s+at (async )?\S")
+
 USAGE = "使い方: build_day_snapshots.py (--day N | --all) [--verify]"
 
 
@@ -1079,6 +1086,8 @@ def error_line_pool(output: str) -> tuple[str, ...]:
     失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
     """
     lines = [ln.rstrip() for ln in output.split("\n") if ln.strip()]
+    # stack frame は判定の前に落とす。理由は STACK_FRAME_MARK の定義に書いた。
+    lines = [ln for ln in lines if not STACK_FRAME_MARK.match(ln)]
     # DB マーカーを持つ行は ERROR_MARK に当たらんでも拾う。Prisma は
     # `PrismaClientInitializationError:` と `Can't reach database server ...` を
     # 別の行に吐く。マーカー側の行に error / failed の語が無いので、ERROR_MARK だけで
