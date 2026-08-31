@@ -165,7 +165,17 @@ jobs:
             exit 1
           fi
 
+          # 撮影の収束待ちを実ブラウザで確かめる検査は、この job の Chromium に相乗りしとる。
+          # PDF の対象が0冊でも、撮影まわりを触った PR ではブラウザを用意して走らせる。
+          # ここを scope だけに任せると、`scripts/curriculum-qa/` だけを触った PR で
+          # 検査が自分から退けて（SKIP）、実ブラウザの主張が一度も走らんまま通る。
+          browser_qa=0
+          if grep -qzE '^(scripts/curriculum-qa/(shoot-page\.mjs|settle-drawn-frames-check\.mjs|shoot_screenshots\.py|test_shoot_screenshots\.py)|\.github/workflows/pdf-book-gate\.yml)$' "$RUNNER_TEMP/changed.z"; then
+            browser_qa=1
+          fi
+
           echo "scope=$scope" >> "$GITHUB_OUTPUT"
+          echo "browser_qa=$browser_qa" >> "$GITHUB_OUTPUT"
           case "$scope" in
             all)    echo "全36冊を組む（36冊全部の見た目が変わりうる変更）" ;;
             subset) echo "変更のあった冊だけ組む:"; sort -u "$books" | sed 's/^/  - /' ;;
@@ -173,14 +183,14 @@ jobs:
           esac
 
       - name: Node.js を用意
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
           cache: npm
 
       - name: 依存をインストール
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         run: npm ci
 
       - name: poppler を用意
@@ -198,14 +208,14 @@ jobs:
           pdftotext -v
 
       - name: Chromium をキャッシュから復元
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
 
       - name: Chromium を用意
-        if: steps.select.outputs.scope != 'none'
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る
         timeout-minutes: 15
         run: |
@@ -234,6 +244,16 @@ jobs:
           fi
           echo "PDF_BOOK_BROWSER=$browser" >> "$GITHUB_ENV"
           echo "Chromium: $browser"
+
+      # 撮影の収束待ちを実物のブラウザで確かめる検査は、Chromium が無いと自分から
+      # 退ける（SKIP・exit 0）。material-gate 側は Chromium を入れてへんので、そこだけに
+      # 置いとくと**実ブラウザの主張が一度も走らんまま**マージできてしまう。
+      # ブラウザを用意しとるこの job で、退けたこと自体を失敗にして走らせる。
+      - name: 撮影の収束待ちを実ブラウザで検査
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
+        env:
+          CURRICULUM_QA_REQUIRE_BROWSER: '1'
+        run: python3 scripts/curriculum-qa/test_shoot_screenshots.py
 
       - name: PDFを組む
         if: steps.select.outputs.scope != 'none'

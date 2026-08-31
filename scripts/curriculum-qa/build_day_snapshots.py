@@ -1196,7 +1196,11 @@ def triage_section(results: list[DayResult]) -> str:
     for r in ng:
         # 教材が先に断っとる赤は、切り分けの対象やのうて想定内。ここを TRIAGE より
         # 先に見るのは、断りのある日を「教材の欠陥」と書いてしまう事故を機械で塞ぐため。
-        if r.day in EXPECTED_RED:
+        #
+        # ただし day 番号だけで「想定内」と書いたらアカン。断り書きと中身が合わん赤は
+        # `broken_days()` が異常として止めるので、そちらは exit 1 やのに**成果物だけが
+        # 「想定内」と言い張る**状態になる。走行の判定と文書の判定は同じ関数を使う。
+        if expected_red_holds(r):
             kind, why = "想定内（教材が本文で断っている）", EXPECTED_RED[r.day]
         else:
             kind, why = TRIAGE.get(r.day, ("判定不能（未調査）", "現物と突き合わせていない"))
@@ -1415,6 +1419,21 @@ def build_failure_is_expected(result: DayResult) -> bool:
     # `next build` は最初の型エラーで止まるので、出てくる行は根っこのほうや。
     # 断り書きが名指しした識別子に触れてへんのなら、それは別の欠陥。
     return any(signature["marker"] in line for line in real)
+
+
+def expected_red_holds(result: DayResult) -> bool:
+    """その日の赤が、教材の断り書きどおりのものだけで説明できるか。
+
+    `broken_days()` と同じ線を、成果物の文書でも使うために切り出してある。
+    ここが緩むと「走行は exit 1 やのに文書は想定内と書いてある」状態が生まれる。
+    """
+    if result.day not in EXPECTED_RED:
+        return False
+    if result.tsc == "NG" and not tsc_failure_is_expected(result):
+        return False
+    if result.build == "NG" and not build_failure_is_expected(result):
+        return False
+    return True
 
 
 def broken_days(results: list[DayResult]) -> list[DayResult]:

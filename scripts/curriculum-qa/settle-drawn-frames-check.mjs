@@ -34,21 +34,40 @@ const SPINNING = `<!doctype html><html><body>
 </script></body></html>`;
 
 const fails = [];
-let browser;
-let settleAnimations;
+
+/** 退ける。ブラウザが用意でけへんときだけ通る道。 */
+function skip(reason) {
+  // 進捗の出力に console は使えん（biome の noConsole は warn / error だけ許す）。
+  process.stdout.write(`SKIP: ${reason}\n`);
+  process.exit(0);
+}
+
+/** 例外の1行目だけ取る。stack まで出すと SKIP の理由が読めん。 */
+function firstLine(err) {
+  return String(err?.message ?? err).split('\n')[0];
+}
+
+// 取り込みを try の中でやるのは、`import` を頭に書くと playwright が入ってへん機械で
+// **この行に来る前に**読み込みが落ちて、下の SKIP へ入れんため。
+let chromium;
 try {
-  // 取り込みも try の中でやる。`import` を頭に書くと、playwright が入ってへん機械では
-  // **この行に来る前に**読み込みが落ちて、下の SKIP へ入れん。`shoot-page.mjs` も
-  // playwright を取り込むので同じ扱いにする。
-  // shoot() が実際に呼ぶのは settleAnimations のほうや。そちらを叩くことで、
-  // 「収束待ちを呼ぶ経路ごと消した」場合もこの検査が赤くなる。
-  const { chromium } = await import('playwright');
-  ({ settleAnimations } = await import('./shoot-page.mjs'));
+  ({ chromium } = await import('playwright'));
+} catch (err) {
+  skip(`playwright が入っとらん（${firstLine(err)}）`);
+}
+
+// ここから先の取り込みの失敗は退けん。playwright が在る以上、`shoot-page.mjs` が
+// 読み込みで落ちるのは**撮影ワーカーそのものが壊れとる**ということで、ブラウザの
+// 有無とは関係がない。ここも SKIP に混ぜると、ワーカーが動かんのに検査だけ緑になる。
+// shoot() が実際に呼ぶのは settleAnimations のほうや。そちらを叩くことで、
+// 「収束待ちを呼ぶ経路ごと消した」場合もこの検査が赤くなる。
+const { settleAnimations } = await import('./shoot-page.mjs');
+
+let browser;
+try {
   browser = await chromium.launch();
 } catch (err) {
-  // 進捗の出力に console は使えん（biome の noConsole は warn / error だけ許す）。
-  process.stdout.write(`SKIP: ブラウザを用意できんかった（${err.message.split('\n')[0]}）\n`);
-  process.exit(0);
+  skip(`ブラウザを起動できんかった（${firstLine(err)}）`);
 }
 
 try {
