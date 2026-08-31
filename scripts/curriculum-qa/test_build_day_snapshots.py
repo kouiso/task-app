@@ -1148,6 +1148,13 @@ def check_expected_red_build_exemption() -> list[str]:
     if target.build_failure_is_expected(other_type_error):
         fails.append("❌ 断り書きと無関係な型エラーによる build 落ちを免除している")
 
+    # 根っこの getById が残っていても、追加の型エラーまで同居したら免除せん。
+    mixed_type_errors = known._replace(build_errors=known.build_errors + (
+        "Type error: Type 'number' is not assignable to type 'string'.",
+    ))
+    if target.build_failure_is_expected(mixed_type_errors):
+        fails.append("❌ getById と別の型エラーが同居した build を免除している")
+
     # 免除の判断が異常日の判定に効いとること。関数だけ足しても意味が無いので、
     # 実際に `broken_days` を通して数える。
     healthy = target.DayResult(
@@ -1407,6 +1414,7 @@ def check_expected_red_rejects_unknown_code() -> list[str]:
     )
     if target.tsc_failure_is_expected(smuggled):
         return ["❌ 断り書きに無いコードが混ざった day11 を免除している"]
+
     return []
 
 
@@ -1574,12 +1582,15 @@ CHECKS = (
     ("成果物への SKIP の記録", check_result_doc_records_skip),
     ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
-    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
+    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),
+    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),
+    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
     ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
     ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),
     ("prerender の見出しは DB を隠さん", check_prerender_wrapper_does_not_hide_db),
     ("届いた上での失敗は DB 不在やない", check_reachable_server_failure_is_not_db_absence),
-    ("入れ替わった診断は免除せん", check_expected_red_rejects_swapped_diagnostic),    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
+    ("入れ替わった診断は免除せん", check_expected_red_rejects_swapped_diagnostic),
+    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 

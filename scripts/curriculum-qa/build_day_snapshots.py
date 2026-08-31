@@ -1337,6 +1337,9 @@ EXPECTED_RED_SIGNATURE = {
             "src/component/project/project-detail-view.tsx(246,26):TS7053",
             "src/component/project/project-detail-view.tsx(29,47):TS2339",
         ),
+        # `next build` は最初の型エラー1件で止まる。包み紙を除いたあとに、本文で
+        # 断っている根っこの診断だけが残ることも固定する。
+        "build_count": 1,
     },
 }
 
@@ -1532,11 +1535,13 @@ def build_failure_is_expected(result: DayResult) -> bool:
     # 型エラーの証拠が1行も無いなら、断り書きで説明できたことにせん。
     if not real:
         return False
+    if len(real) != signature["build_count"]:
+        return False
     if not all(TYPE_ERROR_MARK.search(line) for line in real):
         return False
     # `next build` は最初の型エラーで止まるので、出てくる行は根っこのほうや。
     # 断り書きが名指しした識別子に触れてへんのなら、それは別の欠陥。
-    return any(signature["marker"] in line for line in real)
+    return sum(signature["marker"] in line for line in real) == 1
 
 
 def expected_red_holds(result: DayResult) -> bool:
