@@ -1072,7 +1072,7 @@ def build_tree(day: int) -> tuple[Path, int]:
 def error_line_pool(output: str) -> tuple[str, ...]:
     """出力から、エラーらしい行を全部抜く。件数で切らない。
 
-    切らんのは、赤の理由を判定する側（`build_failure_needs_database`）がここを読むため。
+    切らんのは、赤の理由を判定する側（`build_failure_is_database_only`）がここを読むため。
     3行に切った標本で判定すると、DB のエラーが先に並んだ回に後ろの prerender の
     失敗が視界から落ちて、壊れた日が通る。表示用に短くするのは別の仕事。
     """
@@ -1288,7 +1288,30 @@ DB_LESS_BUILD_MARKERS = (
 BUILD_SKIPPED = "SKIP"
 
 
-def build_failure_needs_database(errors: tuple[str, ...]) -> bool:
+# build が本当に壊れとることの印。Next.js のラッパー行（`Failed to collect page data`）は
+# 入れん。あれは原因やのうて包み紙で、DB の失敗も同じ言葉で包まれる。ここに入れてええのは
+# 「これが出とったら DB の有無に関係なく壊れとる」と言い切れるものだけ。
+REAL_BUILD_FAILURE_MARKERS = (
+    "Error occurred prerendering page",
+    "TypeError",
+    "ReferenceError",
+    "SyntaxError",
+    "Module not found",
+    "Type error:",
+    "You're importing a component that needs",
+    "Cannot find module",
+)
+
+
+def has_real_build_failure(errors: tuple[str, ...]) -> bool:
+    """DB の有無に関係なく壊れとると言い切れる行があるか。"""
+    return any(
+        any(marker in line for marker in REAL_BUILD_FAILURE_MARKERS)
+        for line in errors
+    )
+
+
+def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
     """build の赤に DB の不在が絡んどるか（＝この機械では build を判定できんか）。
 
     以前はここで「DB だけで説明できる赤か」を行ごとに当てにいっとった。それは3回直して
@@ -1302,6 +1325,11 @@ def build_failure_needs_database(errors: tuple[str, ...]) -> bool:
     緑と report してしまう事故は起きん。DB のある機械ではマーカーが出んので、
     本物の失敗はこれまでどおり止まる。
     """
+    # 本物の失敗の印が1行でもあったら SKIP にせん。DB のエラーが同じ出力に居るだけで
+    # 通してしまうと、壊れた日が exit 0 で出ていく。SKIP は「判定してへん」であって
+    # 「無罪」やない以上、無罪の証拠が要る側はこっち。
+    if has_real_build_failure(errors):
+        return False
     return any(
         any(marker in line for marker in DB_LESS_BUILD_MARKERS)
         for line in errors
@@ -1316,7 +1344,7 @@ def triage_build_results(results: list[DayResult]) -> list[DayResult]:
     """
     return [
         r._replace(build=BUILD_SKIPPED)
-        if r.build == "NG" and build_failure_needs_database(r.build_errors)
+        if r.build == "NG" and build_failure_is_database_only(r.build_errors)
         else r
         for r in results
     ]
@@ -1351,15 +1379,14 @@ def main(argv: list[str]) -> int:
     results = []
     for n in targets:
         r = snapshot_day(n, verify)
+        # 表示の前に切り分ける。あとに回すと、画面の日別行だけ NG のまま残り、
+        # 成果物と最終行だけ SKIP になって、同じ走行が3通りの状態を名乗る。
+        r = triage_build_results([r])[0]
         results.append(r)
         print(f"day{n:02d}: ツリー {'OK' if r.tree_ok else 'NG'}（{r.files} ファイル） tsc {r.tsc} build {r.build}")
         for line in r.errors:
             print(f"    {line}")
 
-    # 切り分けを書き出しより先にやる。あとに回すと、画面は SKIP と言うとるのに
-    # 成果物のほうは NG のまま残り、しかも「判定不能（未調査）」の行まで生える。
-    # 証拠として出すのはこのファイルなので、食い違ったらそっちが嘘になる。
-    results = triage_build_results(results)
     skipped = [r for r in results if r.build == BUILD_SKIPPED]
 
     write_result_doc(results, verify, command_line(argv))

@@ -391,12 +391,16 @@ def default_is_fatal() -> bool:
         env_upper_ok = duplicate_image_is_fatal(['x.md'])
         os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = ' 1 '
         env_pad_ok = not duplicate_image_is_fatal(['x.md'])
+        # 想定してへん値は FAIL のまま。綴り間違いを WARNING 扱いにすると、
+        # 落としたつもりのない人がゲートを失う。
+        os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = 'ture'
+        env_typo_ok = duplicate_image_is_fatal(['x.md'])
     finally:
         if saved is None:
             os.environ.pop(WARN_ON_DUPLICATE_IMAGE_ENV, None)
         else:
             os.environ[WARN_ON_DUPLICATE_IMAGE_ENV] = saved
-    return default_fails and flag_ok and env_ok and env_off_ok and env_upper_ok and env_pad_ok
+    return default_fails and flag_ok and env_ok and env_off_ok and env_upper_ok and env_pad_ok and env_typo_ok
 
 
 def required_days_in_source() -> set[int]:

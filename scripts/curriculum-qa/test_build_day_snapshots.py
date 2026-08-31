@@ -823,7 +823,7 @@ def check_build_failure_triage() -> list[str]:
         "Error: P1001: Can't reach database server at `localhost:5432`",
         "PrismaClientInitializationError: Can't reach database server",
     )
-    if not target.build_failure_needs_database(db_less):
+    if not target.build_failure_is_database_only(db_less):
         fails.append("❌ DB へ届かんだけの赤を、この機械で判定できるものとして扱っている")
 
     real = (
@@ -862,13 +862,28 @@ def check_build_failure_triage() -> list[str]:
             "Can't reach database server at `localhost`:`5432`",
         ]
     )
-    if not target.build_failure_needs_database(target.error_line_pool(wrapped)):
+    if not target.build_failure_is_database_only(target.error_line_pool(wrapped)):
         fails.append("❌ Next.js のラッパーに包まれた DB の赤を、判定できるものとして扱っている")
 
+    # DB のエラーと本物の失敗が同じ出力に居たら、SKIP にせん。DB の赤に隠れて
+    # 壊れた日が exit 0 で出ていくのを防ぐ。ラッパー行（原因やのうて包み紙）は
+    # 本物の失敗に数えん — そこを混ぜると DB だけの失敗まで止めてまう。
+    mixed_real = target.error_line_pool("\n".join([
+        "Error: Failed to collect page data for /dashboard",
+        "Can't reach database server at `localhost`:`5432`",
+        "TypeError: Cannot read properties of undefined (reading 'map')",
+    ]))
+    if target.build_failure_is_database_only(mixed_real):
+        fails.append("❌ DB のエラーに紛れた本物の失敗を SKIP へ落として exit 0 にしている")
+    if not target.has_real_build_failure(("Error occurred prerendering page \"/x\"",)):
+        fails.append("❌ prerender の失敗を本物の失敗として数えていない")
+    if target.has_real_build_failure(("Error: Failed to collect page data for /dashboard",)):
+        fails.append("❌ Next.js のラッパー行を本物の失敗に数えている（DB だけの失敗が止まる）")
+
     # DB がまったく絡まん赤は、これまでどおり本物の失敗として扱うこと。
-    if target.build_failure_needs_database(real):
+    if target.build_failure_is_database_only(real):
         fails.append("❌ DB と関係ない赤まで判定できんものとして扱っている")
-    if target.build_failure_needs_database(()):
+    if target.build_failure_is_database_only(()):
         fails.append("❌ 理由が1行も無い赤を DB のせいにしている")
 
     # SKIP は「通した」やない。実際に振り替えを動かして、状態が変わることを見る。
@@ -904,10 +919,10 @@ def check_build_failure_triage() -> list[str]:
         "Error code: P1012",
         'error: Error validating field `owner` in model `Project`: The relation field is missing.',
     )
-    if target.build_failure_needs_database(schema_error):
+    if target.build_failure_is_database_only(schema_error):
         fails.append("❌ P1012 のスキーマ検証エラーを DB の不在として見逃している")
     # DB 由来の P1012（環境変数の欠落）は文言で拾えること。
-    if not target.build_failure_needs_database(("Environment variable not found: DB_URL.",)):
+    if not target.build_failure_is_database_only(("Environment variable not found: DB_URL.",)):
         fails.append("❌ 環境変数の欠落を DB の不在として拾えていない")
 
     # 成功の行に、判定してへん日があることを必ず出す。ここが消えると全部緑に読める。
@@ -948,11 +963,18 @@ def check_result_doc_records_skip() -> list[str]:
     if "判定不能（未調査）" in body:
         fails.append("❌ 判定してへん日を「判定不能（未調査）」として切り分けの表へ入れている")
 
-    # 呼ぶ順番そのものも固定する。書き出しが切り分けより先に戻ったら意味が無い。
+    # 呼ぶ順番そのものも固定する。切り分けが後ろへ戻ると、同じ走行の中で
+    # 画面の日別行・成果物・最終行が別々の状態を名乗る。
     source = Path(target.__file__).read_text(encoding="utf-8")
     main_body = source.split("def main(argv: list[str]) -> int:", 1)[1]
-    if main_body.index("triage_build_results(results)") > main_body.index("write_result_doc(results"):
-        fails.append("❌ 結果ドキュメントを切り分けより先に書き出している")
+    if "triage_build_results([r])" not in main_body:
+        fails.append("❌ 日別の結果を、表示より前に切り分けていない")
+    else:
+        cut = main_body.index("triage_build_results([r])")
+        if cut > main_body.index('print(f"day{n:02d}'):
+            fails.append("❌ 画面の日別行を切り分けより先に出している")
+        if cut > main_body.index("write_result_doc(results"):
+            fails.append("❌ 結果ドキュメントを切り分けより先に書き出している")
     return fails
 
 

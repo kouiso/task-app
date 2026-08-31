@@ -29,10 +29,18 @@ Step 3 の結果として貼った画像が Step 9 の完成形と同じなら�
 状態だった。撮り直しが進行中だったため、**既定を警告に留めていた**。
 以下はその当時の記録であり、現在の状態ではない。
 
-```
+```text
 $ python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculum/
 ...
-対象 34 件 / FAIL 0 件      ← 既定で FAIL。いまは重複が0件なので通る
+対象 34 件 / 重複画像 17 件      ← 当時は WARNING なので exit 0 で通っていた
+```
+
+現在の実測は次のとおりである（2026-08-31）。
+
+```text
+$ python3 scripts/curriculum-qa/check_visualization.py material/30days-curriculum/
+...
+対象 34 件 / FAIL 0 件      ← 既定で FAIL。重複が0件なので通る
 ```
 
 ## 既定は FAIL（2026-08-31 に切り替え済み）
@@ -66,8 +74,8 @@ WARNING へ戻す必要が出た場合は、次を揃える。
 
    - `check_visualization()` の引数 `fail_on_duplicate_image` の既定値を `False` にする
    - `test_check_visualization.py` の `default_is_fatal()` を対応させる
-   - `test_check_visualization.py` の `DUPLICATE_CASES` のうち、フラグ `False` の3ケース
-     （「既定では落ちない」系）の期待終了コードを合わせて更新する
+   - `test_check_visualization.py` の `DUPLICATE_CASES` のうち、フラグ `False` の2ケース
+     （フラグを落としたときの系）の期待終了コードを合わせて更新する
    - `default_is_fatal()` は既定が FAIL であることを固定しているので、この関数も
      同時に書き換える。書き換え忘れると自己テストが落ちて気づける
 

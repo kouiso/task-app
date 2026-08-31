@@ -169,3 +169,24 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 指摘: 引き継ぎの件数が古い（Codex P2）
 - 根拠: 317行目が「7件とも直して返信・resolve 済み」のまま。実際は五巡目3件・六巡目3件を足して13件。このファイルはマージ可否を判断する土台やと自分で書いとるので、件数が古いと次の担当者が最終状態を確認でけへん。
 - 直し方（適用済み）: 五巡目・六巡目の中身を追記し、件数を13件・6ラウンドへ更新。あわせて「次の担当者へ」の節に、`git checkout <file>` で自分の未コミットの直しが消える件（このセッションで3回踏んだ）と、文字列一致のテストは飾りになりうる件を足した。
+
+## [PR #389 七巡目] scripts/curriculum-qa/build_day_snapshots.py:1308  (bug・採用／Codex と逆向きの穴)
+- 指摘: DB マーカーだけで SKIP に分類するな（CodeRabbit Major）
+- 根拠: `any()` にしたので、DB 接続失敗と `TypeError` や prerender の失敗が同じ build 出力に居ると True を返す。`triage_build_results` が SKIP へ振り替え、`broken` から外れ、**壊れた日を含む走行が exit 0 になる**。「SKIP は通した扱いやない」と書いたが、CI が見るのは終了コードなので、exit 0 は事実上「通した」と同じ。ここは自分の言い分のほうが弱い。
+- Codex との関係: 四〜六巡目で Codex が突いたのは逆向き（`all()` やと Next.js のラッパー行が非 DB に数えられて、DB だけの失敗が止まる）。**両方成立する。**片側だけで判定する限りどちらかが壊れる。
+- 直し方（適用済み）: 片側判定をやめ、両側で見る。`REAL_BUILD_FAILURE_MARKERS`（prerender / TypeError / Module not found / Type error: 等、**DB の有無に関係なく壊れとると言い切れるものだけ**）を新設し、`has_real_build_failure` が真なら SKIP にせん。ラッパー行（`Failed to collect page data`）は原因やのうて包み紙なので入れん — 入れると Codex の指摘した穴が開き直る。関数名も `build_failure_is_database_only` へ改めた。回帰テストは (a) DB＋ラッパー＋TypeError が SKIP にならんこと (b) prerender が本物の失敗に数えられること (c) ラッパー行が本物の失敗に数えられんこと の3方向を見る。
+
+## [PR #389 七巡目] scripts/curriculum-qa/build_day_snapshots.py:1362  (bug・採用)
+- 指摘: 画面の日別行が切り分け前の状態を出しとる（CodeRabbit Minor）
+- 根拠: 六巡目で書き出しの順は直したが、その手前にある日別の `print` は直してへんかった。DB の無い機械では、画面の日別行だけ `build NG`、成果物と最終行は SKIP になり、**同じ走行が3通りの状態を名乗る**。
+- 直し方（適用済み）: 切り分けを `snapshot_day` の直後・`print` の前へ移した（`triage_build_results([r])[0]`）。回帰テストは、切り分けが日別 print と `write_result_doc` の両方より前に来ることを見る。
+
+## [PR #389 七巡目] scripts/curriculum-qa/check_visualization.py:187  (bug・採用／症状だけ直しとった)
+- 指摘: 想定してへん環境変数値で FAIL を維持せよ（CodeRabbit Major）
+- 根拠: 三巡目で `FALSE` を直したとき、大文字小文字の正規化だけを足して**判定の形（拒否リスト）はそのままにした**。`('', '0', 'false')` に無い値はすべて False を返すので、`ture` のような綴り間違いが WARNING へ落ちる。症状を直して原因を残した典型。
+- 直し方（適用済み）: 許可リストへ反転。`return raw not in ('1', 'true', 'yes')`。落とす側だけを明示し、それ以外は FAIL。回帰テストに `ture` が FAIL のままである行を追加。
+
+## [PR #389 七巡目] doc/review-handoff/duplicate-image-gate.md:32,35,70  (doc・採用)
+- 指摘: 言語なしコードフェンス（MD040）／履歴の節に現在の結果が混ざっとる／`DUPLICATE_CASES` の False ケース数が実装と違う（CodeRabbit Minor ×3）
+- 根拠: 32行目のフェンスに言語なし。35行目は「当時の記録」の例の中で「既定で FAIL。いまは重複が0件」と現在を語っとる（六巡目で節を履歴化したときの取りこぼし）。69行目は「フラグ `False` の3ケース」やが、実装の `DUPLICATE_CASES` に `False` は2件（`grep -c '        False,'` → 2）。
+- 直し方（適用済み）: フェンスへ `text` を付け、履歴の例は当時の出力（重複17件・WARNING で exit 0）へ書き直し、現在の実測は別の段落へ分けた。件数を2ケースへ訂正。
