@@ -1009,10 +1009,74 @@ def check_expected_red_build_exemption() -> list[str]:
     if target.build_failure_is_expected(other):
         fails.append("❌ EXPECTED_RED に無い日まで免除している")
 
-    # 免除の判断が `broken` の側で使われとること。関数だけ足しても意味が無い。
-    source = Path(target.__file__).read_text(encoding="utf-8")
-    if "build_failure_is_expected(r)" not in source.split("broken = [", 1)[1].split("]", 1)[0]:
-        fails.append("❌ 異常日の判定が day 番号だけで build を免除している")
+    # tsc の側も、日付やのうて断り書きの中身と突き合わせること。本文は識別子・件数・場所まで
+    # 書いとるので、そこが合わん赤は「別の欠陥が紛れた」と見なす。
+    documented = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="OK",
+        errors=(),
+        tsc_errors=tuple(
+            f"src/component/project/project-detail-view.tsx({n},4): error TS2339: "
+            f"Property 'getById' does not exist" if n == 29 else
+            f"src/component/project/project-detail-view.tsx({n},4): error TS7006: "
+            f"Parameter 'member' implicitly has an 'any' type."
+            for n in (29, 144, 167, 168, 169)
+        ),
+    )
+    if not target.tsc_failure_is_expected(documented):
+        fails.append("❌ 断り書きどおりの型エラー5件まで異常扱いしている")
+
+    # 件数が増えたら、断り書きで説明でけへん赤が混ざっとる。
+    if target.tsc_failure_is_expected(
+        documented._replace(tsc_errors=documented.tsc_errors + (
+            "src/component/project/project-detail-view.tsx(200,4): error TS2345: "
+            "Argument of type 'string' is not assignable",
+        ))
+    ):
+        fails.append("❌ 断り書きの件数を超える型エラーまで想定内にしている")
+
+    # 名指しされた識別子に1行も触れてへん赤は、別の欠陥。
+    unrelated = documented._replace(tsc_errors=tuple(
+        line.replace("Property 'getById' does not exist", "Type 'number' is not assignable to type 'string'")
+        for line in documented.tsc_errors
+    ))
+    if target.tsc_failure_is_expected(unrelated):
+        fails.append("❌ `getById` と無関係な型エラー5件を day11 の想定内として通している")
+
+    # 場所が広がったら、配布物1ファイルに閉じるという前提が崩れとる。
+    spread = documented._replace(tsc_errors=documented.tsc_errors[:-1] + (
+        "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
+    ))
+    if target.tsc_failure_is_expected(spread):
+        fails.append("❌ 断り書きの場所を外れた型エラーまで想定内にしている")
+
+    if target.tsc_failure_is_expected(documented._replace(day=12)):
+        fails.append("❌ EXPECTED_RED に無い日の型エラーまで免除している")
+
+    # build 側も、名指しされた識別子に触れてへん型エラーは免除せん。
+    other_type_error = known._replace(build_errors=(
+        "Failed to compile.",
+        "Type error: Type 'number' is not assignable to type 'string'.",
+    ))
+    if target.build_failure_is_expected(other_type_error):
+        fails.append("❌ 断り書きと無関係な型エラーによる build 落ちを免除している")
+
+    # 免除の判断が異常日の判定に効いとること。関数だけ足しても意味が無いので、
+    # 実際に `broken_days` を通して数える。
+    healthy = target.DayResult(
+        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
+    )
+    exempt = documented._replace(build="NG", build_errors=known.build_errors)
+    unrelated_day11 = unrelated._replace(build="NG", build_errors=(
+        "Failed to compile.",
+        "Error occurred prerendering page \"/project\"",
+    ))
+    broken = target.broken_days([healthy, exempt, unrelated_day11])
+    if any(r is healthy for r in broken):
+        fails.append("❌ 通った日を異常日に数えている")
+    if any(r is exempt for r in broken):
+        fails.append("❌ 断り書きどおりの day11 を異常日に数えている")
+    if not any(r is unrelated_day11 for r in broken):
+        fails.append("❌ 断り書きと無関係な赤が紛れた day11 を異常日に数えていない")
     return fails
 
 

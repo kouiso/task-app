@@ -256,6 +256,8 @@ class DayResult(NamedTuple):
     build: str
     errors: tuple[str, ...]
     build_errors: tuple[str, ...] = ()
+    # 表示用の3行やのうて、tsc が出した全部。件数と中身で「断り書きどおりの赤か」を見るのに要る。
+    tsc_errors: tuple[str, ...] = ()
 
 
 def available_days() -> list[int]:
@@ -1125,8 +1127,8 @@ def link_node_modules(dest: Path) -> None:
     link.symlink_to(REPO_ROOT / "node_modules", target_is_directory=True)
 
 
-def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
-    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build の全エラー行) を返す。
+def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build の全行, tsc の全行) を返す。
 
     build のエラー行を「全部」別で返すのは、落ちた理由を判定に使うため。表示用の3行で
     判定すると、DB のエラーが先に並んだ回に後ろの prerender の失敗が落ちる。DB の無い機械では
@@ -1134,13 +1136,14 @@ def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]
     prerender や server/client 境界の失敗まで一緒に見逃す。理由で切り分ける。
     """
     link_node_modules(dest)
-    tsc_ok, tsc_shown, _ = run_step(["npx", "tsc", "--noEmit"], dest)
+    tsc_ok, tsc_shown, tsc_all = run_step(["npx", "tsc", "--noEmit"], dest)
     build_ok, build_shown, build_all = run_step(["npm", "run", "build"], dest)
     return (
         "OK" if tsc_ok else "NG",
         "OK" if build_ok else "NG",
         tsc_shown or build_shown,
         build_all,
+        tsc_all,
     )
 
 
@@ -1152,8 +1155,8 @@ def snapshot_day(day: int, verify: bool) -> DayResult:
         return DayResult(day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",))
     if not verify:
         return DayResult(day, files, True, NOT_RUN, NOT_RUN, ())
-    tsc, build, errors, build_errors = verify_tree(dest)
-    return DayResult(day, files, True, tsc, build, errors, build_errors)
+    tsc, build, errors, build_errors, tsc_errors = verify_tree(dest)
+    return DayResult(day, files, True, tsc, build, errors, build_errors, tsc_errors)
 
 
 def _cell(text: str) -> str:
@@ -1265,6 +1268,43 @@ EXPECTED_RED = {
     11: "day11 は `getById` を書く前に配布物を取り込むため型エラーが5件出る。教材が本文で明示している",
 }
 
+# 断り書きが名指ししとる中身。day 番号だけで免除すると、断ってへん欠陥がその日に紛れても
+# 素通りする（型エラーの1行があるだけで「想定内」に化ける）。本文が名指ししとるものと
+# 突き合わせて、合わんかったら免除せん。
+#
+# - marker: 本文が名指しする識別子。根っこのエラーがこれに触れとること
+# - count:  本文が「実際に数えると5件出ます」と書いた件数。ここがずれたら別の欠陥が混ざっとる
+# - path:   赤くなる場所。配布物の1ファイルに閉じとることが断り書きの前提
+#
+# 波及して出る `TS7006` / `TS7053` は識別子の名を含まん（`getById` が解決でけへんことで
+# 型が any へ落ちた結果や）。せやから marker は「全行」やのうて「どれか1行」に課す。
+# 代わりに件数と場所を効かせて、範囲が広がったら気づけるようにしてある。
+EXPECTED_RED_SIGNATURE = {
+    11: {"marker": "getById", "count": 5, "path": "project-detail-view.tsx"},
+}
+
+
+def expected_red_errors(result: DayResult) -> list[str]:
+    """その日の tsc の赤のうち、型エラーとして数える行。"""
+    return [line for line in result.tsc_errors if TYPE_ERROR_MARK.search(line)]
+
+
+def tsc_failure_is_expected(result: DayResult) -> bool:
+    """tsc の赤が、教材の断り書きが名指ししとるものと一致するか。
+
+    day 番号だけで免除すると、day11 に無関係な型の欠陥が入っても「想定内」で通る。
+    本文は識別子・件数・場所まで書いとるので、そこまで見て初めて免除する。
+    """
+    signature = EXPECTED_RED_SIGNATURE.get(result.day)
+    if signature is None:
+        return False
+    errors = expected_red_errors(result)
+    if len(errors) != signature["count"]:
+        return False
+    if not any(signature["marker"] in line for line in errors):
+        return False
+    return all(signature["path"] in line for line in errors)
+
 # `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
 # これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は
 # prerender や server/client 境界の失敗なので、見逃したら壊れた日を通してしまう。
@@ -1357,7 +1397,8 @@ def build_failure_is_expected(result: DayResult) -> bool:
     失敗（prerender や server/client 境界）がその日に紛れても素通りする。断ってあるのは
     型エラーだけなので、免除するのも型エラーで説明できる範囲だけにする。
     """
-    if result.day not in EXPECTED_RED:
+    signature = EXPECTED_RED_SIGNATURE.get(result.day)
+    if signature is None:
         return False
     real = [
         line
@@ -1367,7 +1408,26 @@ def build_failure_is_expected(result: DayResult) -> bool:
     # 型エラーの証拠が1行も無いなら、断り書きで説明できたことにせん。
     if not real:
         return False
-    return all(TYPE_ERROR_MARK.search(line) for line in real)
+    if not all(TYPE_ERROR_MARK.search(line) for line in real):
+        return False
+    # `next build` は最初の型エラーで止まるので、出てくる行は根っこのほうや。
+    # 断り書きが名指しした識別子に触れてへんのなら、それは別の欠陥。
+    return any(signature["marker"] in line for line in real)
+
+
+def broken_days(results: list[DayResult]) -> list[DayResult]:
+    """教材の欠陥として止めるべき日だけを返す。
+
+    免除は「断り書きが名指ししとるものと一致したとき」だけ。日付だけで免除すると、
+    その日に紛れた別の欠陥が一緒に通る。ここを関数へ出してあるのは、main() を動かさんでも
+    免除の線を実際に通して確かめられるようにするため。
+    """
+    return [
+        r for r in results
+        if not r.tree_ok
+        or (r.tsc == "NG" and not tsc_failure_is_expected(r))
+        or (r.build == "NG" and not build_failure_is_expected(r))
+    ]
 
 
 def triage_build_results(results: list[DayResult]) -> list[DayResult]:
@@ -1425,18 +1485,13 @@ def main(argv: list[str]) -> int:
 
     write_result_doc(results, verify, command_line(argv))
     print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
-    broken = [
-        r for r in results
-        if not r.tree_ok
-        or (r.tsc == "NG" and r.day not in EXPECTED_RED)
-        or (r.build == "NG" and not build_failure_is_expected(r))
-    ]
+    broken = broken_days(results)
     # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
     unexpected_green = [
         r for r in results if r.day in EXPECTED_RED and r.tsc == "OK"
     ]
     for r in results:
-        if r.day in EXPECTED_RED and r.tsc == "NG":
+        if r.day in EXPECTED_RED and r.tsc == "NG" and tsc_failure_is_expected(r):
             print(f"  day{r.day:02d} の型エラーは想定どおり: {EXPECTED_RED[r.day]}")
     if unexpected_green:
         for r in unexpected_green:
