@@ -1396,9 +1396,9 @@ def db_less_markers(errors: tuple[str, ...]) -> tuple[str, ...]:
 BUILD_SKIPPED = "SKIP"
 
 
-# build が本当に壊れとることの印。Next.js のラッパー行（`Failed to collect page data`）は
-# 入れん。あれは原因やのうて包み紙で、DB の失敗も同じ言葉で包まれる。ここに入れてええのは
-# 「これが出とったら DB の有無に関係なく壊れとる」と言い切れるものだけ。
+# build が本当に壊れとることの印。Next.js の一般的なラッパー行は
+# `BUILD_NOISE_MARKERS` へ置く。あれは原因やのうて包み紙で、DB の失敗も同じ言葉で包まれる。
+# ここに入れてええのは「これが出とったら DB の有無に関係なく壊れとる」と言い切れるものだけ。
 REAL_BUILD_FAILURE_MARKERS = (
     "TypeError",
     "ReferenceError",

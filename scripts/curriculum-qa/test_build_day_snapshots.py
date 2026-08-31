@@ -975,6 +975,14 @@ def check_build_failure_triage() -> list[str]:
     ]))
     if target.build_failure_is_database_only(datasource_error):
         fails.append("❌ datasource のスキーマ欠陥を DB の不在として見逃している")
+
+    # P1003 はサーバーへ到達した後の「データベースが存在せん」なので、P1001 の
+    # 接続不能とは別物。「the database server at」だけを印にするとここを SKIP へ落とす。
+    database_missing = target.error_line_pool(
+        "Error: P1003: Database `task_app` does not exist on the database server at `localhost`"
+    )
+    if target.build_failure_is_database_only(database_missing):
+        fails.append("❌ P1003 のデータベース不在を接続不能として見逃している")
     # 例外名だけで DB の不在に倒さんこと。Prisma は接続文字列が不正なときや query engine が
     # 欠けとるときにも `PrismaClientInitializationError` を出す。名前だけで SKIP にすると、
     # その2つが exit 0 で通る。
@@ -1062,10 +1070,18 @@ def check_expected_red_build_exemption() -> list[str]:
         fails.append("❌ 断り書きどおりの型エラーによる build 落ちまで異常扱いしている")
 
     extra = known._replace(build_errors=known.build_errors + (
-        "Error occurred prerendering page \"/project\"",
+        "Error: Unauthorized while prerendering /project",
     ))
     if target.build_failure_is_expected(extra):
         fails.append("❌ 断り書きに無い失敗が day11 に紛れても免除している")
+
+    # prerender の見出しは DB の問いでだけ包み紙。免除の問いでは「型エラーやない行」
+    # なので、これが混ざったら免除せんこと。
+    wrapped = known._replace(build_errors=known.build_errors + (
+        "Error occurred prerendering page \"/project\"",
+    ))
+    if target.build_failure_is_expected(wrapped):
+        fails.append("❌ prerender の見出しが混ざった day11 を免除している")
 
     silent = known._replace(build_errors=("Failed to compile.",))
     if target.build_failure_is_expected(silent):

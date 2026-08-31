@@ -450,3 +450,15 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - そもそもこの語は要らん。実測した本物の P1001 出力は `Can't reach database server at ...` で、既存の2つの印で拾える。落とした。
 - 回帰テスト `check_reachable_server_failure_is_not_db_absence`。戻すと `❌ 資格情報の失敗（DB へは届いとる）を DB の不在として SKIP へ落としている`（32 → 31/32）。
 - **最初に書いた回帰テストは飾りやった。** P1000 の2行を並べたが、1行目（`Authentication failed against database server at`）に `the` が無くて説明の付かん行として残るので、語を戻しても緑のままやった。1行に絞って、その行だけで判定が変わる形へ直した。
+
+### 並行の走行との突き合わせ（`f43c650`）
+
+同じ2件を、別の走行が独立に直して先に push しとった。突き合わせて**こっちの設計を残した**。
+
+- 向こうは見出しを**素の `BUILD_NOISE_MARKERS`** へ移した。それやと `build_failure_is_expected()`
+  も同じ一覧を読むので、day11 の免除が見出しを見逃す。向こうはそのぶん、免除の回帰テストの例を
+  見出しから `Error: Unauthorized while prerendering /project` へ差し替えて緑にしとった。
+  **検査を緩めて通す形になっとるので採らん。**こっちは一覧を2つに分けて、免除の側は
+  見出しが混ざったら落ちるまま保った（`check_expected_red_build_exemption` に表明を追加）。
+- 向こうが足した P1003 の表明は残した。ただし**この版の Prisma は `at` を付けん**ので、
+  現物の P1003 では発火せん。単体入力として語の緩さを押さえる役には立つ。
