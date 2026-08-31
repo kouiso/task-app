@@ -396,13 +396,23 @@ def check_drawn_frame_settle() -> list[str]:
     script = Path(__file__).resolve().parent / "settle-drawn-frames-check.mjs"
     if not script.exists():
         return ["❌ 実ブラウザ検査（settle-drawn-frames-check.mjs）が見当たらない"]
-    proc = subprocess.run(
-        ["node", str(script)],
-        capture_output=True,
-        text=True,
-        timeout=180,
-        cwd=script.parent,
-    )
+    try:
+        proc = subprocess.run(
+            ["node", str(script)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=script.parent,
+        )
+    except subprocess.TimeoutExpired as expired:
+        # 時間切れをそのまま投げると main() まで抜けて、自己テストが件数も理由も出さずに
+        # 落ちる。「検査が黙って終わる」のはこの PR が潰しとる型そのものなので、
+        # 失敗として数えられる形で返す。途中まで出た分も添える。
+        partial = "".join(
+            stream.decode(errors="replace") if isinstance(stream, bytes) else (stream or "")
+            for stream in (expired.stdout, expired.stderr)
+        ).strip()
+        return [f"❌ 実ブラウザ検査が {expired.timeout} 秒で終わらんかった: {partial[-300:] or '出力なし'}"]
     out = (proc.stdout + proc.stderr).strip()
     if proc.returncode != 0:
         return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]

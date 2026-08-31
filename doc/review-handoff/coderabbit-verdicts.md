@@ -193,7 +193,7 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 
 ## [PR #389 八巡目] scripts/curriculum-qa/build_day_snapshots.py:1276  (bug・採用／P1012 と同じ形)
 - 指摘: `Error validating datasource` も DB 不在の印やない（Codex P1）
-- 根拠: 手元で再現した。`['Error: Prisma schema validation - (get-dmmf wasm)', 'Error validating datasource `db`: the provider is invalid']` を通すと `build_failure_is_database_only` が True を返す。`npm run build` は `prisma generate` から始まるので、provider の書き間違いがそのまま「DB の不在」に化けて SKIP → exit 0。六巡目で `P1012` を落としたときに、同じ性質の隣の行を残しとった。回帰テストも `Error validating field` しか踏んでへんかったので、この形を通していた。
+- 根拠: 手元で再現した。`` ['Error: Prisma schema validation - (get-dmmf wasm)', 'Error validating datasource `db`: the provider is invalid'] `` を通すと `build_failure_is_database_only` が True を返す。`npm run build` は `prisma generate` から始まるので、provider の書き間違いがそのまま「DB の不在」に化けて SKIP → exit 0。六巡目で `P1012` を落としたときに、同じ性質の隣の行を残しとった。回帰テストも `Error validating field` しか踏んでへんかったので、この形を通していた。
 - 直し方（適用済み）: `Error validating datasource` を落とす。環境変数の欠落は `Environment variable not found: DB_URL` / `DATABASE_URL` が文言で拾うので取りこぼしはない。回帰テストに datasource の変種を追加。戻すと `❌ datasource のスキーマ欠陥を DB の不在として見逃している` で落ちる。
 
 ## [PR #389 八巡目] scripts/curriculum-qa/build_day_snapshots.py:1398  (bug・採用)

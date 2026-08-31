@@ -1308,25 +1308,27 @@ def tsc_failure_is_expected(result: DayResult) -> bool:
 # `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
 # これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は
 # prerender や server/client 境界の失敗なので、見逃したら壊れた日を通してしまう。
+#
+# ここへ入れんもの（どれも「DB が無い」の印に見えて、実際は壊れとる側の印。入れると
+# 本物の欠陥が SKIP へ落ちて exit 0 になる — いちばんやったらアカン向きの見逃し）:
+#
+# - `Error validating datasource`: DB へ届かんことやのうて、スキーマの datasource
+#   ブロックが不正でも出る。`npm run build` は `prisma generate` から始まるので、
+#   provider の書き間違いがそのまま「DB の不在」に化ける。
+# - `Environment variable not found: ...`: `copy_scaffold()` が `.env.example` を必ず
+#   `.env` へ複写しており、その `.env.example` は `DATABASE_URL` を定義しとる。つまり
+#   DB の無い機械でも変数は在る。無いと言われたのなら組んだツリーか schema が壊れとる印。
+#   逆向きに `REAL_BUILD_FAILURE_MARKERS` へ入れて、必ず赤で止めとる。
+# - `P1012`: Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
+#   壊れたリレーションや型の書き間違いでも出る。
 DB_LESS_BUILD_MARKERS = (
     "Can't reach database server",
     # Prisma が接続失敗のときに出す例外名そのもの。この行には DB の語が無いので、
     # 名前で拾わんと「DB 以外の失敗」に数えられて、DB の無い機械で止まる。
     "PrismaClientInitializationError",
-    # `Error validating datasource` は入れん。あれは DB へ届かんことやのうて、
-    # スキーマの datasource ブロックが不正でも出る。`npm run build` は `prisma generate`
-    # から始まるので、provider の書き間違いがそのまま「DB の不在」に化けて exit 0 になる。
-    #
-    # `Environment variable not found: ...` も入れん。`copy_scaffold()` が
-    # `.env.example` を必ず `.env` へ複写しており（このファイルの `copy_scaffold` 参照）、
-    # その `.env.example` は `DATABASE_URL` を定義しとる。つまりこの機械に DB が無くても
-    # 変数は在る。変数が無いと言われたのなら、それは組んだツリーか schema が壊れとる印で、
-    # DB の不在やない。SKIP へ落としたら本物の欠陥が exit 0 で通る。
-    # 逆向きに `REAL_BUILD_FAILURE_MARKERS` へ入れて、必ず赤で止める。
+    # DB へ届かんことを指す Prisma のエラーコード。
     "P1001",
-    # P1012 は入れん。あれは Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの
-    # 印やない。壊れたリレーションや型の書き間違いでも出る。入れると本物のビルド欠陥が
-    # SKIP へ落ちて exit 0 になる — いちばんやったらアカン向きの見逃しになる。
+    # OS が返す接続拒否。DB が起動してへん機械で出る。
     "ECONNREFUSED",
 )
 
