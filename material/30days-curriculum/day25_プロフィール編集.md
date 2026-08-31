@@ -1224,7 +1224,7 @@ export default function
 **確認ポイント**:
 - `register` でフォームに登録している
 - エラー表示の `<p>` が各欄の下に書けている
-- 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
+- 画面での確認は、`</form>` を書き終える Step 9 の動作確認で行う
 
 ```typescript
 {/* filepath: src/app/profile/change-password/page.tsx */}
@@ -1268,7 +1268,7 @@ export default function
 **確認ポイント**:
 - ヒントの文言に文字種の条件が書けている
 - エラーとヒントを別々の要素として書き分けている
-- 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
+- 画面での確認は、`</form>` を書き終える Step 9 の動作確認で行う
 
 ```typescript
 {/* filepath: src/app/profile/change-password/page.tsx */}
@@ -1306,7 +1306,7 @@ export default function
 - 3つの `PasswordInput` に `{...register(...)}` が入っている
 - 目のアイコンの切り替えは `PasswordInput` に任せているので、ここではコードに書けていることを確認する
 - 不一致の検査が zod スキーマ側に書けている
-- 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
+- 画面での確認は、`</form>` を書き終える Step 9 の動作確認で行う
 
 ![パスワード変更ページ。現在のパスワード・新しいパスワード・新しいパスワード（確認）の3つの入力欄が縦に並び、それぞれの右端に目のアイコンが出ている](./screenshots/day25/change-password.png)
 
@@ -1341,7 +1341,7 @@ export default function
 
 **確認ポイント**:
 - API 側のエラーを受ける `Alert` が書けている
-- 画面での確認は、`</form>` を書き終える Step 14 の動作確認で行う
+- 画面での確認は、`</form>` を書き終える Step 9 の動作確認で行う
 
 ```typescript
 {/* filepath: src/app/profile/change-password/page.tsx */}
