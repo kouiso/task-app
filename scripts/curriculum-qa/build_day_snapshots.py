@@ -1176,6 +1176,8 @@ def result_table(results: list[DayResult]) -> str:
 
 def triage_section(results: list[DayResult]) -> str:
     """NG の日の切り分けを書く。"""
+    # SKIP は「判定してへん」であって NG やない。切り分けの表へ入れると
+    # 「判定不能（未調査）」として並び、教材の欠陥を疑わせる行が生える。
     ng = [r for r in results if not r.tree_ok or r.tsc == "NG" or r.build == "NG"]
     if not ng:
         return ""
@@ -1275,7 +1277,10 @@ DB_LESS_BUILD_MARKERS = (
     "Environment variable not found: DB_URL",
     "Environment variable not found: DATABASE_URL",
     "P1001",
-    "P1012",
+    # P1012 は入れん。あれは Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの
+    # 印やない。壊れたリレーションや型の書き間違いでも出る。入れると本物のビルド欠陥が
+    # SKIP へ落ちて exit 0 になる — いちばんやったらアカン向きの見逃しになる。
+    # 環境変数の欠落（DB 由来の P1012）は上の2行が文言で拾う。
     "ECONNREFUSED",
 )
 
@@ -1351,13 +1356,14 @@ def main(argv: list[str]) -> int:
         for line in r.errors:
             print(f"    {line}")
 
-    write_result_doc(results, verify, command_line(argv))
-    print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
-
-    # build の赤は理由で切り分ける。DB の無い機械では必ず赤くなるのでそれは通すが、
-    # prerender や server/client 境界の失敗は tsc が見つけられんので、ここで止める。
+    # 切り分けを書き出しより先にやる。あとに回すと、画面は SKIP と言うとるのに
+    # 成果物のほうは NG のまま残り、しかも「判定不能（未調査）」の行まで生える。
+    # 証拠として出すのはこのファイルなので、食い違ったらそっちが嘘になる。
     results = triage_build_results(results)
     skipped = [r for r in results if r.build == BUILD_SKIPPED]
+
+    write_result_doc(results, verify, command_line(argv))
+    print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
     broken = [
         r for r in results
         if not r.tree_ok

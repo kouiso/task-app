@@ -17,8 +17,9 @@
 import contextlib
 import io
 import json
-import sys
+import shutil
 import tempfile
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -896,6 +897,19 @@ def check_build_failure_triage() -> list[str]:
     if target.BUILD_SKIPPED in ("OK", "NG"):
         fails.append("❌ SKIP が OK か NG と同じ値になっている（区別が消えている）")
 
+    # P1012 は Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
+    # これを DB 扱いすると、壊れたリレーションのビルド欠陥が SKIP へ落ちて exit 0 になる。
+    schema_error = (
+        "Error: Prisma schema validation - (get-dmmf wasm)",
+        "Error code: P1012",
+        'error: Error validating field `owner` in model `Project`: The relation field is missing.',
+    )
+    if target.build_failure_needs_database(schema_error):
+        fails.append("❌ P1012 のスキーマ検証エラーを DB の不在として見逃している")
+    # DB 由来の P1012（環境変数の欠落）は文言で拾えること。
+    if not target.build_failure_needs_database(("Environment variable not found: DB_URL.",)):
+        fails.append("❌ 環境変数の欠落を DB の不在として拾えていない")
+
     # 成功の行に、判定してへん日があることを必ず出す。ここが消えると全部緑に読める。
     source = Path(target.__file__).read_text(encoding="utf-8")
     tail = source.split("if skipped:", 1)
@@ -903,6 +917,42 @@ def check_build_failure_triage() -> list[str]:
         fails.append("❌ 判定できんかった日があっても、成功の行に何も出していない")
     elif "検証していません" not in tail[1].split("return 0", 1)[0]:
         fails.append("❌ 判定してへん日があるのに「検証していない」と書いていない")
+    return fails
+
+
+def check_result_doc_records_skip() -> list[str]:
+    """成果物のほうにも SKIP が残ること。
+
+    画面が SKIP と言うとるのに、証拠として出すファイルが NG のままやと、
+    読んだ人はそっちを信じる。しかも切り分けの表に「判定不能（未調査）」の行が生えて、
+    教材の欠陥を疑わせる。書き出しは切り分けのあとに走らなあかん。
+    """
+    fails = []
+    db_day = target.DayResult(
+        day=7, files=80, tree_ok=True, tsc="OK", build="NG",
+        errors=("Can't reach database server at `localhost`:`5432`",),
+        build_errors=("Can't reach database server at `localhost`:`5432`",),
+    )
+    triaged = target.triage_build_results([db_day])
+    directory = tempfile.mkdtemp()
+    saved = target.RESULT_DOC
+    try:
+        target.RESULT_DOC = Path(directory) / "day-snapshots-result.md"
+        target.write_result_doc(triaged, True, "python3 build_day_snapshots.py --all --verify")
+        body = target.RESULT_DOC.read_text(encoding="utf-8")
+    finally:
+        target.RESULT_DOC = saved
+        shutil.rmtree(directory)
+    if target.BUILD_SKIPPED not in body:
+        fails.append("❌ 成果物に SKIP が残っていない（NG のまま書かれている）")
+    if "判定不能（未調査）" in body:
+        fails.append("❌ 判定してへん日を「判定不能（未調査）」として切り分けの表へ入れている")
+
+    # 呼ぶ順番そのものも固定する。書き出しが切り分けより先に戻ったら意味が無い。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    main_body = source.split("def main(argv: list[str]) -> int:", 1)[1]
+    if main_body.index("triage_build_results(results)") > main_body.index("write_result_doc(results"):
+        fails.append("❌ 結果ドキュメントを切り分けより先に書き出している")
     return fails
 
 
@@ -927,6 +977,7 @@ CHECKS = (
     ("持ち込みと本体の同居", check_leading_imports),
     ("ツリーの古さを測る材料", check_tree_inputs),
     ("ビルドの赤の切り分け", check_build_failure_triage),
+    ("成果物への SKIP の記録", check_result_doc_records_skip),
 )
 
 
