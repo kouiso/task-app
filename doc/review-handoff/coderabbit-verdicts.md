@@ -339,3 +339,17 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
    - 根拠: `settleAnimations()` は 408行、`fitToContent()` が窓を付け替えるのは 412行。付け替えは `ResponsiveContainer` と Recharts に描き直しをさせるので、**408行で待った収束はその時点で無効**。`fitToContent()` が持っとるのは `waitForTimeout(300)` の決め打ちだけで、これはこの PR が他所で潰した型がそのまま残っとった箇所。全ページ撮影（day21 の統計カード等）で描き直しの途中が写る。
    - 直し: `fitToContent()` の中、窓を付け替えた直後の 300ms のあとに `settleAnimations()` を呼ぶ。呼び出し側やのうて付け替えた場所で待つので、`fitToContent()` を使う経路は全部直る。
    - 検証: `shoot-page.mjs` の読み込みが通ること（`settleAnimations` / `settleDrawnFrames` の export を確認）と、実ブラウザ検査 4/4 合格。
+
+## [PR #389 十七巡目] Codex 2件（全部採用）
+
+1. `test_shoot_screenshots.py:438` **exit 0 だけで実ブラウザ検査を合格にしとった**（P2・採用）
+
+   - 根拠: `check_drawn_frame_settle()` は `returncode == 0` かつ SKIP でなければ `[]` を返しとった。出力の中身を一切見てへんので、`settle-drawn-frames-check.mjs` が**空回りする実装へ縮んで exit 0 で終わっても黙って緑になる**。この PR が潰しとる「検査が緑やけど何も見てへん」型が、実ブラウザ検査そのものに残っとった。
+   - 直し: 合格の合図 `settle_drawn_frames 実ブラウザ検査 N/N 合格` を正規表現で要求し、合格数と総数が一致することを見る。**件数は決め打ちにせん**（主張を足したときにここが嘘になるため）。総数0も落とす。
+   - 検証: `subprocess.run` を「exit 0・無出力」に差し替えて経路を通し、`['❌ 実ブラウザ検査の合格の合図が出ていない: 出力なし']` が返ることを確認。実物の走行では 11/11 合格のまま。
+
+2. `pdf-book-gate.yml:220` **撮影だけ触った PR で apt のロック上限が設定されん**（P2・採用／**十三巡目でワイが作った穴**）
+
+   - 根拠: `DPkg::Lock::Timeout` を書いとるのは poppler の step だけで、あれは `scope != 'none'` 限定。十三巡目に足した `browser_qa` で Chromium の step は `scope=none` でも走るようになったのに、**その経路ではロック上限が未設定のまま `playwright install --with-deps` が apt を叩く**。同じ workflow のコメントが「--with-deps が15分ハングした」実績を記録しとるので、step の持ち時間15分を丸ごと食う。配線を広げたときに前提を一緒に運ばんかった。
+   - 直し: ロック設定を独立した step へ出し、`scope != 'none' || browser_qa == '1'` で起動するようにした。apt を叩く step（poppler / Chromium）の**両方より前**に置いてある。poppler 側からは重複を消した。
+   - 検証: `yaml.safe_load` で構文 OK。step の並びが `依存をインストール → apt のロック待ち上限を設定(198) → poppler を用意(208) → Chromium をキャッシュから復元(217)` になっとることを確認。

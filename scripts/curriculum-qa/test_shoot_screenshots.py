@@ -18,6 +18,7 @@ import io
 import json
 import os
 import queue
+import re
 import subprocess
 import sys
 import time
@@ -55,6 +56,9 @@ BASE_SHOT = {"name": "day01/a.png", "day": 1, "path": "/"}
 
 
 # 立てるとブラウザ不在の SKIP を失敗にする。Chromium を用意しとる job だけが立てる。
+# 実ブラウザ検査が「実際に主張を通した」ことの合図。exit 0 だけでは空回りと区別が付かん。
+DRAWN_FRAME_PASS_MARK = re.compile(r"settle_drawn_frames 実ブラウザ検査 (\d+)/(\d+) 合格")
+
 REQUIRE_BROWSER_ENV = "CURRICULUM_QA_REQUIRE_BROWSER"
 
 
@@ -435,6 +439,16 @@ def check_drawn_frame_settle() -> list[str]:
         if require_browser_check():
             return [f"❌ ブラウザ必須の走行なのに実ブラウザ検査を退けた: {reason}"]
         print(f"  ⏭️ 実ブラウザ検査を退けた: {reason}")
+        return []
+    # exit 0 だけでは「4本の主張が実際に走った」ことにならん。ワーカーが空回りする
+    # 実装へ縮んでも黙って緑になる。合格の合図を必ず要求する。件数を決め打ちにせんのは、
+    # 主張を足したときにここが嘘になるため。合格数と総数が一致することだけを見る。
+    passed = DRAWN_FRAME_PASS_MARK.search(out)
+    if passed is None:
+        return [f"❌ 実ブラウザ検査の合格の合図が出ていない: {out.splitlines()[-3:] or '出力なし'}"]
+    done, total = int(passed.group(1)), int(passed.group(2))
+    if total == 0 or done != total:
+        return [f"❌ 実ブラウザ検査が全部は通っていない: {done}/{total}"]
     return []
 
 

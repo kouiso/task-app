@@ -195,16 +195,21 @@ jobs:
         if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         run: npm ci
 
+      - name: apt のロック待ち上限を設定
+        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
+        # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
+        # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
+        # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
+        # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる。
+        # poppler の step に置いとくと、撮影まわりだけを触った PR（scope=none かつ
+        # browser_qa=1）であの step が飛ぶので、apt を叩く step の手前へ独立させる。
+        run: echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
+
       - name: poppler を用意
         if: steps.select.outputs.scope != 'none'
         # pdftotext / pdfinfo / pdffonts が無いと check_pdf_book.py は exit 2 で止まる
         timeout-minutes: 10
         run: |
-          # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
-          # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
-          # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
-          # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる
-          echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
           sudo apt-get install -y -qq poppler-utils \
             || { sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils; }
           pdftotext -v
