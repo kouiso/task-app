@@ -71,13 +71,13 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 ## [day09/day11 — Suspense説明・狭幅ヘッダー・削除ダイアログ alt・見出し空行] material/30days-curriculum/day09_プロジェクト一覧画面.md:949-951  (quality)
 
 - 指摘: 狭い画面で縦に並ぶと書いてあるが、ヘッダーに flex-wrap / flex-col の指定があるか
-- 根拠: day09:949 「スクリーンショット: ブラウザの幅を 430px まで縮めたときの姿です。サイドバーが隠れ、見出しとヘッダーの部品が縦に折り返します。」 day09:951 alt「…見出しの下にアーカイブ表示スイッチと新規プロジェクトボタンが縦に並んでいる」。ところが day09 が書かせるヘッダーは day09:771-772 `      <div className="flex items-center` / `        justify-between">`、完成版も day09:1268 `        <div className="flex items-center justify-between">` で、flex-col も flex-wrap も無い（子は折り返さず1行のまま縮むだけ）。縦積みになるのは後日の改訂版と最終ソース: day27_プロジェクト詳細・アーカイブを実装しよう.md:1454 `        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">`、day27:1472 「`flex-col` から始めて `sm:flex-row` を足しているのは、狭い画面では見出しと操作を縦に積むためです。」、src/app/project/page.tsx:348 `        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">`。つまり 951 のスクリーンショットは完成版アプリの姿で、Day 9 時点の読者の画面とは一致しない。
+- 根拠: day09:949 「スクリーンショット: ブラウザの幅を 430px まで縮めたときの姿です。サイドバーが隠れ、見出しとヘッダーの部品が縦に折り返します。」 day09:951 alt「…見出しの下にアーカイブ表示スイッチと新規プロジェクトボタンが縦に並んでいる」。ところが day09 が書かせるヘッダーは day09:771-772 `<div className="flex items-center` / `justify-between">`、完成版も day09:1268 `<div className="flex items-center justify-between">` で、flex-col も flex-wrap も無い（子は折り返さず1行のまま縮むだけ）。縦積みになるのは後日の改訂版と最終ソース: day27_プロジェクト詳細・アーカイブを実装しよう.md:1454 `<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">`、day27:1472 「`flex-col` から始めて `sm:flex-row` を足しているのは、狭い画面では見出しと操作を縦に積むためです。」、src/app/project/page.tsx:348 `<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">`。つまり 951 のスクリーンショットは完成版アプリの姿で、Day 9 時点の読者の画面とは一致しない。
 - 直し方: day09:949 と 951 の記述を Day 9 時点のコードに合わせる（例: 949「サイドバーが隠れ、見出しと操作部品は横1列のまま幅が詰まります。狭い画面で縦に積む形は Day 27 で入れます。」／alt も横1列の描写に差し替え、スクリーンショットも Day 9 状態で撮り直す）。あるいは day09:771-772 と 1268 のクラスを `flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between` に前倒しし、day27:1472 と同趣旨の説明を添える（ただし day27 で同じ説明が重複するため前者を推奨）。
 
 ## [day09/day11 — Suspense説明・狭幅ヘッダー・削除ダイアログ alt・見出し空行] material/30days-curriculum/day11_プロジェクト編集・削除.md:815  (quality)
 
 - 指摘: 削除確認の画像 alt と、実装の DeleteConfirmDialog に渡している title の文言が食い違う
-- 根拠: day11:815 alt「確認ダイアログ。見出しが「本当に削除しますか？」、その下に「この操作は取り消せません。」と、キャンセル・削除の2つのボタンが並んでいる」。しかし直前の Step 5 で読者が書くのは day11:785 `  title="プロジェクトを削除しますか？"`、完成版も day11:2246 `        title="プロジェクトを削除しますか？"`。src/app/project/page.tsx:474 も `        title="プロジェクトを削除しますか？"`。「本当に削除しますか？」は title 省略時の既定値で、src/component/ui/delete-confirm-dialog.tsx の `  title = '本当に削除しますか？',` にあたる（day11:808 の props 表でも「省略時は `本当に削除しますか？`」と説明済み）。title を渡している以上、読者の画面の見出しは「プロジェクトを削除しますか？」になり alt と食い違う。
+- 根拠: day11:815 alt「確認ダイアログ。見出しが「本当に削除しますか？」、その下に「この操作は取り消せません。」と、キャンセル・削除の2つのボタンが並んでいる」。しかし直前の Step 5 で読者が書くのは day11:785 `title="プロジェクトを削除しますか？"`、完成版も day11:2246 `title="プロジェクトを削除しますか？"`。src/app/project/page.tsx:474 も `title="プロジェクトを削除しますか？"`。「本当に削除しますか？」は title 省略時の既定値で、src/component/ui/delete-confirm-dialog.tsx の `title = '本当に削除しますか？',` にあたる（day11:808 の props 表でも「省略時は `本当に削除しますか？`」と説明済み）。title を渡している以上、読者の画面の見出しは「プロジェクトを削除しますか？」になり alt と食い違う。
 - 直し方: day11:815 の alt を「確認ダイアログ。見出しが「プロジェクトを削除しますか？」、その下に「この操作は取り消せません。」と、キャンセル・削除の2つのボタンが並んでいる」に直す（スクリーンショット画像自体が既定文言で撮られている場合は撮り直す）。
 
 ## [day23 / day25 / day26 review sweep] material/30days-curriculum/day23_週次レポート.md:906  (nit)
@@ -107,7 +107,7 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 ## [day01/day02 見出し重複・コードブロック長・文言] material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md:110  (quality)
 
 - 指摘: 「準備プロジェクト」という言い回しがおかしい
-- 根拠: day01:110 `3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備プロジェクト` — 日本語として成立していない。同一ファイルの同じ用法は day01:159 `…『docker ok』と表示されれば準備完了です。` と day01:519 `…`src` や `package.json` が並んでいれば準備完了です。` で、いずれも「準備完了です」。「準備プロジェクト」は corpus 全体でこの1箇所のみ（`grep -rn '準備プロジェクト' material/30days-curriculum/` → 1件）。commit 4a408a7 `fix(material): rewrite Day 01-03 UI copy to match the finished app` で混入した置換事故と見られる。Docker 導入手順の完了条件を示す行なので、読者は「これで終わりなのか」を文からは確認できない（直前の『クジラのアイコンが表示されれば』で意図は推測できるため blocker ではない）。
+- 根拠: day01:110 `3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備プロジェクト` — 日本語として成立していない。同一ファイルの同じ用法は day01:159 `…『docker ok』と表示されれば準備完了です。` と day01:519 `…`src`や`package.json`が並んでいれば準備完了です。` で、いずれも「準備完了です」。「準備プロジェクト」は corpus 全体でこの1箇所のみ（`grep -rn '準備プロジェクト' material/30days-curriculum/` → 1件）。commit 4a408a7 `fix(material): rewrite Day 01-03 UI copy to match the finished app` で混入した置換事故と見られる。Docker 導入手順の完了条件を示す行なので、読者は「これで終わりなのか」を文からは確認できない（直前の『クジラのアイコンが表示されれば』で意図は推測できるため blocker ではない）。
 - 直し方: day01:110 を `3. 画面上部（macOS はメニューバー）にクジラのアイコンが表示されれば準備完了です` に直す（:159 / :519 の表記に揃える）。
 
 ## [コード側の指摘（scripts/curriculum-qa, scripts/pdf-book, src/lib/constant）] scripts/curriculum-qa/shoot_screenshots.py:843-851  (nit)
@@ -155,7 +155,7 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 ## [PR #389 三巡目] scripts/curriculum-qa/build_day_snapshots.py:1080  (bug・採用)
 
 - 指摘: 単独行の DB マーカーが判定用のプールから落ちる（Codex P1）
-- 根拠: `ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)` を実際に当てて確かめた。`Can't reach database server at \`localhost\`:\`5432\`` → False、`P1001` → False、`Please make sure your database server is running` → False、`PrismaClientInitializationError:` → True。Prisma は例外名とマーカーを別の行に吐くので、マーカー側の行が `hits` から落ちる。残るのは例外名の行だけで、その行は `DB_LESS_BUILD_MARKERS` のどれも含まんため `all()` が False を返し、DB だけの失敗が「DB 以外の失敗」に化ける。二巡目で足したテストは `Error: P1001: Can't reach database server` と1行に詰めとったので、この形を踏んでいなかった。
+- 根拠: `ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)` を実際に当てて確かめた。`Can't reach database server at localhost:5432` → False、`P1001` → False、`Please make sure your database server is running` → False、`PrismaClientInitializationError:` → True。Prisma は例外名とマーカーを別の行に吐くので、マーカー側の行が `hits` から落ちる。残るのは例外名の行だけで、その行は `DB_LESS_BUILD_MARKERS` のどれも含まんため `all()` が False を返し、DB だけの失敗が「DB 以外の失敗」に化ける。二巡目で足したテストは `Error: P1001: Can't reach database server` と1行に詰めとったので、この形を踏んでいなかった。
 - 壊れる向き: 黙って通す側やのうて、DB の無い機械で `--verify` が止まる側。うるさいが安全な向きではある。ただしこの変更は「DB の無い機械を通す」ために入れたものなので、目的を果たせていない。
 - 直し方（適用済み・次のコミット）: (1) `error_line_pool` の抽出条件を `ERROR_MARK.search(ln) or any(m in ln for m in DB_LESS_BUILD_MARKERS)` にして、マーカーを持つ行を必ず残す。(2) `DB_LESS_BUILD_MARKERS` に `PrismaClientInitializationError` を足す（接続失敗の例外名そのものであって、汎用のラッパーではない）。回帰テストは複数行の Prisma 失敗を DB 専用と判定できること、その後ろに prerender の失敗を1行足したら通さんことの両方を見る。2つの直しを別々に戻して、それぞれ別のメッセージで落ちることを確認済み。
 
@@ -374,3 +374,24 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
    - 直し: 時間の窓へ変えた（`DRAWN_FRAME_STABLE_MS = 600`、開始の遅延より長い）。上限も 2000 → 5000ms へ上げた（遅延＋描画が終わってから窓を満たすまで入るように）。
    - **検査の作りの欠陥も一緒に見つかった。** 新しい fixture が通らんので追うと、`settleAnimations` とは無関係に **Playwright/Chromium は同じページへ `setContent` を重ねると2枚目以降の有限 rAF アニメーションを走らせん**（新しいページなら走る、を実測で確認）。つまり既存の検査は「2つ目の有限アニメ」を一度も踏んでへんかった。fixture ごとに新しいページを開く `withPage()` を入れて、各主張を独立させた。
    - 実ブラウザ検査は 4本 → **5本**。3フレーム基準へ戻すと `❌ 遅れて動き出す描画を、動き出す前に撮っている` で落ちる（5/5 → 4/5）。
+
+## [PR #389 十九巡目] CodeRabbit 4件（採用3・対応済み1）
+
+1. `build_day_snapshots.py:1317` **件数と場所が合えば、断り書きに無い型エラーまで免除しとった**（Major・採用）
+
+   - 根拠: `tsc_failure_is_expected()` は件数（5）・識別子（`any` で1行）・場所（`all`）しか見てへん。識別子は波及行に載らんので `any` でしか見られんが、そこを突くと **`getById` 1件＋同じファイルの無関係な `TS2322` 4件**でも条件が揃う。`broken_days()` が本物の欠陥を免除する。
+   - 直し: 断り書きの範囲を**エラーコードまで**名指しした。`day-snapshots-result.md` の実測で day11 に出たのは `TS2339` / `TS7006` / `TS7053` の3種だけなので、それを `EXPECTED_RED_SIGNATURE[11]["codes"]` に置き、全行がそのどれかであることを要求する。
+   - 回帰テスト `check_expected_red_rejects_unknown_code` が2方向（断り書きどおりの5行は免除／`TS2322` 4件が混ざったら免除せん）。戻すと `❌ 断り書きに無いコードが混ざった day11 を免除している`（29 → 28/29）。
+   - なお同じ指摘の後半（`build_failure_is_expected()` が未分類を除外する）は**十八巡目で対応済み**。
+
+2. `shoot-page.mjs:332` **収束判定が `cx` / `cy` を見てへんかった**（Minor・採用）
+
+   - 根拠: 円は座標だけで動く。`d` / `points` / `transform` / `r` しか見てへんので、移動しとる最中でも「形が変わってへん」と読んで途中の絵を撮る。
+   - 直し: `cx` / `cy` に加えて、線の端点 `x1` `y1` `x2` `y2` も見るようにした（同じ理由で座標だけが動く）。
+   - **足した検査が最初は飾りやった。** 移動の fixture を書いて `cx`/`cy` を外しても緑のままやったので調べると、動きが 300ms で収束の窓（600ms）より短く、**見てへん判定でも動きが終わってから返る**ためやった。動きを 1500ms へ延ばして、外すと `❌ 座標だけで動く描画を途中で撮っている（cx=72 / 期待 150）` で落ちることを確認。実ブラウザ検査は 5本 → **6本**。
+
+3. `coderabbit-verdicts.md:74` **コードスパン内の空白（MD038）**（Minor・採用）
+
+   - 直し: 引用の先頭にインデント空白が入っとった3行を、空白を落とす形へ直した。残った3件は別原因で、**単一バッククォートのスパンの中でバッククォートを `\` でエスケープしとった**のが元やった（Markdown では効かんので対が崩れ、後続の対がズレて誤検知になる）。Prisma の引用符を落として素直な形にした。実測 **13 → 0**。
+
+4. `test_build_day_snapshots.py:1325` **PR 説明に検証の根拠を書く**（Minor・採用）→ PR 本文の「検証」節を、コマンド・終了コード・実行時刻・CI の run 参照つきへ書き換えた。

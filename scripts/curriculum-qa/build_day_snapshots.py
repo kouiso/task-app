@@ -1293,7 +1293,15 @@ EXPECTED_RED = {
 # 型が any へ落ちた結果や）。せやから marker は「全行」やのうて「どれか1行」に課す。
 # 代わりに件数と場所を効かせて、範囲が広がったら気づけるようにしてある。
 EXPECTED_RED_SIGNATURE = {
-    11: {"marker": "getById", "count": 5, "path": "project-detail-view.tsx"},
+    # `codes` は実測（`day-snapshots-result.md`）で day11 に出た3種。件数と場所だけでは、
+    # 同じファイルに無関係な型エラーが5件入っても「想定内」で通ってまう（識別子は
+    # 波及行に載らんので `any` でしか見られん）。**出てよいコードまで名指しする。**
+    11: {
+        "marker": "getById",
+        "count": 5,
+        "path": "project-detail-view.tsx",
+        "codes": ("TS2339", "TS7006", "TS7053"),
+    },
 }
 
 
@@ -1316,7 +1324,12 @@ def tsc_failure_is_expected(result: DayResult) -> bool:
         return False
     if not any(signature["marker"] in line for line in errors):
         return False
-    return all(signature["path"] in line for line in errors)
+    if not all(signature["path"] in line for line in errors):
+        return False
+    # 断り書きに載っとらんコードが1行でも混ざったら、それは別の欠陥。
+    return all(
+        any(code in line for code in signature["codes"]) for line in errors
+    )
 
 # `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
 # これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は

@@ -1347,6 +1347,37 @@ def check_econnrefused_alone_is_not_database() -> list[str]:
     return fails
 
 
+def check_expected_red_rejects_unknown_code() -> list[str]:
+    """件数と場所が合っても、断り書きに無いコードが混ざったら免除せんこと。
+
+    識別子は波及行に載らんので `any` でしか見られん。件数と場所だけを見とると、
+    同じファイルの無関係な型エラー4件＋想定内の1件で「想定内」が成立してまう。
+    """
+    path = "src/component/project/project-detail-view.tsx"
+    documented = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
+        tsc_errors=(
+            f"{path}(29,4): error TS2339: Property 'getById' does not exist",
+            f"{path}(31,4): error TS7006: Parameter implicitly has an 'any' type",
+            f"{path}(32,4): error TS7006: Parameter implicitly has an 'any' type",
+            f"{path}(33,4): error TS7053: Element implicitly has an 'any' type",
+            f"{path}(34,4): error TS7053: Element implicitly has an 'any' type",
+        ),
+    )
+    if not target.tsc_failure_is_expected(documented):
+        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
+    smuggled = documented._replace(
+        tsc_errors=(documented.tsc_errors[0],)
+        + tuple(
+            f"{path}({n},4): error TS2322: Type 'string' is not assignable"
+            for n in (41, 42, 43, 44)
+        )
+    )
+    if target.tsc_failure_is_expected(smuggled):
+        return ["❌ 断り書きに無いコードが混ざった day11 を免除している"]
+    return []
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1373,7 +1404,7 @@ CHECKS = (
     ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
     ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),    ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
-    ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
+    ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 

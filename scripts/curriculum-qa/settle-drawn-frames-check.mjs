@@ -46,6 +46,26 @@ const DELAYED = `<!doctype html><html><body>
   requestAnimationFrame(frame);
 </script></body></html>`;
 
+// 円は cx/cy だけで動く。収束判定がその2つを見てへんと、動いとる最中でも
+// 「形が変わってへん」と読んで途中の絵を撮る。移動だけの動きで確かめる。
+const MOVING_FINAL_CX = '150';
+const MOVING = `<!doctype html><html><body>
+<svg width="200" height="200"><circle id="c" r="10" cx="10" cy="10"></circle></svg>
+<script>
+  // 収束の窓（DRAWN_FRAME_STABLE_MS）より長く動かす。短いと、cx/cy を見てへん判定でも
+  // 窓を満たす頃には動きが終わっとって最終形が撮れてまい、**検査が何も見てへんのに緑**になる。
+  const DURATION = 1500;
+  let started = null;
+  function frame(now) {
+    if (started === null) started = now;
+    const ratio = Math.min(1, (now - started) / DURATION);
+    c.setAttribute('cx', String(10 + Math.round(ratio * 140)));
+    c.setAttribute('cy', String(10 + Math.round(ratio * 140)));
+    if (ratio < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script></body></html>`;
+
 const SPINNING = `<!doctype html><html><body>
 <svg width="200" height="200"><circle id="c" r="10" cx="10" cy="10"></circle></svg>
 <script>
@@ -141,7 +161,18 @@ try {
     );
   }
 
-  // 5. 持ち越した状態が次の1枚へ残らんこと。残ると「もう止まっとる」と誤判定する。
+  // 5. 座標だけで動く SVG を、動いとる最中に「止まった」と読まんこと。
+  const movedCx = await withPage(MOVING, async (page) => {
+    await settleAnimations(page);
+    return page.getAttribute('#c', 'cx');
+  });
+  if (movedCx !== MOVING_FINAL_CX) {
+    fails.push(
+      `❌ 座標だけで動く描画を途中で撮っている（cx=${movedCx} / 期待 ${MOVING_FINAL_CX}）`,
+    );
+  }
+
+  // 6. 持ち越した状態が次の1枚へ残らんこと。残ると「もう止まっとる」と誤判定する。
   const leftover = await withPage(PAGE, async (page) => {
     await settleAnimations(page);
     return page.evaluate(() => '__shotDrawnFrames' in window);
@@ -155,7 +186,7 @@ try {
 
 if (fails.length > 0) {
   for (const f of fails) console.error(f);
-  console.error(`❌ settle_drawn_frames 実ブラウザ検査 ${5 - fails.length}/5 合格`);
+  console.error(`❌ settle_drawn_frames 実ブラウザ検査 ${6 - fails.length}/6 合格`);
   process.exit(1);
 }
-process.stdout.write('✅ settle_drawn_frames 実ブラウザ検査 5/5 合格\n');
+process.stdout.write('✅ settle_drawn_frames 実ブラウザ検査 6/6 合格\n');

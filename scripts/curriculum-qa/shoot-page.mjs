@@ -341,6 +341,14 @@ async function settleDrawnFrames(page) {
             el.getAttribute('d') ?? '',
             el.getAttribute('points') ?? '',
             el.getAttribute('transform') ?? '',
+            // 円は cx/cy だけで動く。ここを見んと、移動しとるのに「止まっとる」と
+            // 誤読して途中の絵を撮る。線も同じ理由で端点を見る。
+            el.getAttribute('cx') ?? '',
+            el.getAttribute('cy') ?? '',
+            el.getAttribute('x1') ?? '',
+            el.getAttribute('y1') ?? '',
+            el.getAttribute('x2') ?? '',
+            el.getAttribute('y2') ?? '',
             el.getAttribute('x') ?? '',
             el.getAttribute('y') ?? '',
             el.getAttribute('width') ?? '',
