@@ -1273,7 +1273,10 @@ DB_LESS_BUILD_MARKERS = (
     # Prisma が接続失敗のときに出す例外名そのもの。この行には DB の語が無いので、
     # 名前で拾わんと「DB 以外の失敗」に数えられて、DB の無い機械で止まる。
     "PrismaClientInitializationError",
-    "Error validating datasource",
+    # `Error validating datasource` は入れん。あれは DB へ届かんことやのうて、
+    # スキーマの datasource ブロックが不正でも出る。`npm run build` は `prisma generate`
+    # から始まるので、provider の書き間違いがそのまま「DB の不在」に化けて exit 0 になる。
+    # 環境変数の欠落は下の2行が文言で拾うので、取りこぼしはない。
     "Environment variable not found: DB_URL",
     "Environment variable not found: DATABASE_URL",
     "P1001",
@@ -1336,6 +1339,29 @@ def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
     )
 
 
+TYPE_ERROR_MARK = re.compile(r"Type error:|TS\d{4}")
+
+
+def build_failure_is_expected(result: DayResult) -> bool:
+    """EXPECTED_RED の日の build 落ちを、断り書きどおりの型エラーだけで説明できるか。
+
+    day 番号が EXPECTED_RED に載っとるだけで build を丸ごと免除すると、断り書きに無い
+    失敗（prerender や server/client 境界）がその日に紛れても素通りする。断ってあるのは
+    型エラーだけなので、免除するのも型エラーで説明できる範囲だけにする。
+    """
+    if result.day not in EXPECTED_RED:
+        return False
+    real = [
+        line
+        for line in result.build_errors
+        if any(marker in line for marker in REAL_BUILD_FAILURE_MARKERS)
+    ]
+    # 型エラーの証拠が1行も無いなら、断り書きで説明できたことにせん。
+    if not real:
+        return False
+    return all(TYPE_ERROR_MARK.search(line) for line in real)
+
+
 def triage_build_results(results: list[DayResult]) -> list[DayResult]:
     """DB が要る赤を SKIP へ振り替えた一覧を返す。
 
@@ -1395,7 +1421,7 @@ def main(argv: list[str]) -> int:
         r for r in results
         if not r.tree_ok
         or (r.tsc == "NG" and r.day not in EXPECTED_RED)
-        or (r.build == "NG" and r.day not in EXPECTED_RED)
+        or (r.build == "NG" and not build_failure_is_expected(r))
     ]
     # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
     unexpected_green = [

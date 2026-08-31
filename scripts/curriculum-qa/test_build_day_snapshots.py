@@ -921,6 +921,16 @@ def check_build_failure_triage() -> list[str]:
     )
     if target.build_failure_is_database_only(schema_error):
         fails.append("❌ P1012 のスキーマ検証エラーを DB の不在として見逃している")
+
+    # datasource ブロックの書き間違いも DB へ届かんこととは別。`npm run build` は
+    # `prisma generate` から始まるので、ここを DB 扱いにすると provider の書き間違いが
+    # SKIP へ落ちて exit 0 になる。
+    datasource_error = target.error_line_pool("\n".join([
+        "Error: Prisma schema validation - (get-dmmf wasm)",
+        "Error validating datasource `db`: the provider is invalid",
+    ]))
+    if target.build_failure_is_database_only(datasource_error):
+        fails.append("❌ datasource のスキーマ欠陥を DB の不在として見逃している")
     # DB 由来の P1012（環境変数の欠落）は文言で拾えること。
     if not target.build_failure_is_database_only(("Environment variable not found: DB_URL.",)):
         fails.append("❌ 環境変数の欠落を DB の不在として拾えていない")
@@ -932,6 +942,46 @@ def check_build_failure_triage() -> list[str]:
         fails.append("❌ 判定できんかった日があっても、成功の行に何も出していない")
     elif "検証していません" not in tail[1].split("return 0", 1)[0]:
         fails.append("❌ 判定してへん日があるのに「検証していない」と書いていない")
+    return fails
+
+
+def check_expected_red_build_exemption() -> list[str]:
+    """EXPECTED_RED の日の build 免除が、断り書きの範囲に収まっとること。
+
+    day 番号だけで build を丸ごと免除すると、断ってへん失敗（prerender や
+    server/client 境界）がその日に紛れても exit 0 で出ていく。断ってあるのは
+    型エラーだけなので、免除もそこまで。
+    """
+    fails = []
+    known = target.DayResult(
+        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
+        errors=("src/x.tsx(29,47): error TS2339: Property 'getById' does not exist",),
+        build_errors=(
+            "Failed to compile.",
+            "Type error: Property 'getById' does not exist on type ...",
+        ),
+    )
+    if not target.build_failure_is_expected(known):
+        fails.append("❌ 断り書きどおりの型エラーによる build 落ちまで異常扱いしている")
+
+    extra = known._replace(build_errors=known.build_errors + (
+        "Error occurred prerendering page \"/project\"",
+    ))
+    if target.build_failure_is_expected(extra):
+        fails.append("❌ 断り書きに無い失敗が day11 に紛れても免除している")
+
+    silent = known._replace(build_errors=("Failed to compile.",))
+    if target.build_failure_is_expected(silent):
+        fails.append("❌ 型エラーの証拠が1行も無いのに断り書きで説明できたことにしている")
+
+    other = known._replace(day=12)
+    if target.build_failure_is_expected(other):
+        fails.append("❌ EXPECTED_RED に無い日まで免除している")
+
+    # 免除の判断が `broken` の側で使われとること。関数だけ足しても意味が無い。
+    source = Path(target.__file__).read_text(encoding="utf-8")
+    if "build_failure_is_expected(r)" not in source.split("broken = [", 1)[1].split("]", 1)[0]:
+        fails.append("❌ 異常日の判定が day 番号だけで build を免除している")
     return fails
 
 
@@ -1000,6 +1050,7 @@ CHECKS = (
     ("ツリーの古さを測る材料", check_tree_inputs),
     ("ビルドの赤の切り分け", check_build_failure_triage),
     ("成果物への SKIP の記録", check_result_doc_records_skip),
+    ("想定内の日の build 免除", check_expected_red_build_exemption),
 )
 
 

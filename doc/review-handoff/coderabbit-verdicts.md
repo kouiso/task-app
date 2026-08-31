@@ -190,3 +190,14 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 指摘: 言語なしコードフェンス（MD040）／履歴の節に現在の結果が混ざっとる／`DUPLICATE_CASES` の False ケース数が実装と違う（CodeRabbit Minor ×3）
 - 根拠: 32行目のフェンスに言語なし。35行目は「当時の記録」の例の中で「既定で FAIL。いまは重複が0件」と現在を語っとる（六巡目で節を履歴化したときの取りこぼし）。69行目は「フラグ `False` の3ケース」やが、実装の `DUPLICATE_CASES` に `False` は2件（`grep -c '        False,'` → 2）。
 - 直し方（適用済み）: フェンスへ `text` を付け、履歴の例は当時の出力（重複17件・WARNING で exit 0）へ書き直し、現在の実測は別の段落へ分けた。件数を2ケースへ訂正。
+
+## [PR #389 八巡目] scripts/curriculum-qa/build_day_snapshots.py:1276  (bug・採用／P1012 と同じ形)
+- 指摘: `Error validating datasource` も DB 不在の印やない（Codex P1）
+- 根拠: 手元で再現した。`['Error: Prisma schema validation - (get-dmmf wasm)', 'Error validating datasource `db`: the provider is invalid']` を通すと `build_failure_is_database_only` が True を返す。`npm run build` は `prisma generate` から始まるので、provider の書き間違いがそのまま「DB の不在」に化けて SKIP → exit 0。六巡目で `P1012` を落としたときに、同じ性質の隣の行を残しとった。回帰テストも `Error validating field` しか踏んでへんかったので、この形を通していた。
+- 直し方（適用済み）: `Error validating datasource` を落とす。環境変数の欠落は `Environment variable not found: DB_URL` / `DATABASE_URL` が文言で拾うので取りこぼしはない。回帰テストに datasource の変種を追加。戻すと `❌ datasource のスキーマ欠陥を DB の不在として見逃している` で落ちる。
+
+## [PR #389 八巡目] scripts/curriculum-qa/build_day_snapshots.py:1398  (bug・採用)
+- 指摘: `EXPECTED_RED` が day11 の build 落ちを丸ごと免除しとる（Codex P1）
+- 根拠: `broken` の build 節が `r.day not in EXPECTED_RED` で判定しとる。`EXPECTED_RED[11]` が断っとるのは `getById` の型エラーだけやのに、day11 に prerender や server/client 境界の失敗が紛れても day 番号だけで免除され、exit 0 で出ていく。
+- 直し方（適用済み）: `build_failure_is_expected(result)` を新設。EXPECTED_RED の日に限り、**build の失敗行のうち本物の失敗（`REAL_BUILD_FAILURE_MARKERS`）が全部型エラー（`Type error:` / `TS####`）で説明できるときだけ**免除する。型エラーの証拠が1行も無い場合は免除せん。回帰テストは (a) 断り書きどおりの型エラーは免除される (b) prerender が1行紛れたら免除されん (c) 型エラーの証拠が無ければ免除されん (d) EXPECTED_RED に無い日は免除されん (e) 判定が `broken` の側で使われとる、の5方向。
+- 実機での確認: `--day 11 --verify` を実際に流して exit 0・「想定どおり」のまま通ることを確かめた（結果ファイルは事前に退避して復元。`--day` は30日ぶんの記録を上書きするため）。
