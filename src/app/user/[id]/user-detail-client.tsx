@@ -61,19 +61,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   if (!user) {
     return (
       <AppLayout>
-        <div className="container mx-auto max-w-md py-8">
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">
-                {error?.data?.code === 'FORBIDDEN'
-                  ? 'このユーザー情報を表示する権限がありません'
-                  : error?.data?.code === 'NOT_FOUND'
-                    ? 'ユーザーが見つかりません'
-                    : 'ユーザー情報を取得できませんでした'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <PageLoadingSpinner />
       </AppLayout>
     );
   }
