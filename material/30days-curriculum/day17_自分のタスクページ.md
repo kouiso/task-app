@@ -971,7 +971,7 @@ const updateMutation =
   });
 ```
 
-Step 8 の `const handleEdit = (_taskId: string) => {}` を**削除して**、以下で**置き換えて**ください。
+Step 8 で書いた `const handleEdit = (taskId: string) => {` から `};` までの3行を**削除して**、以下で**置き換えて**ください。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
