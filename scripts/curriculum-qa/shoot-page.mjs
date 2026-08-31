@@ -24,6 +24,8 @@ const MARK_BADGES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '�
 // 下半分が白場になり、中身が長い日は `main` の中でスクロールするため下が切れる
 // （`fullPage` は文書のスクロールしか追わない）。窓の高さを中身へ合わせると両方直る。
 // 下限は、中身がほとんど無い画面で帯のように潰れるのを防ぐため。
+// アニメーションの収束を待つ上限。装飾で常時動いとる画面があっても撮影を止めん。
+const ANIMATION_SETTLE_MS = 2000;
 const MIN_CONTENT_HEIGHT = 420;
 const MAX_CONTENT_HEIGHT = 4000;
 
@@ -264,6 +266,28 @@ async function fitToContent(page, current) {
   return current.height;
 }
 
+/** 走っているアニメーションと遷移が終わるまで待つ。上限つき。 */
+async function settleAnimations(page) {
+  try {
+    await page.waitForFunction(
+      () =>
+        document
+          .getAnimations()
+          .filter((a) => a.playState === 'running')
+          // 無限に回るもの（スピナー）は終わりが来ないので、待つ相手から外す。
+          .every((a) => a.effect?.getComputedTiming?.().iterations === Infinity),
+      undefined,
+      { timeout: ANIMATION_SETTLE_MS },
+    );
+  } catch {
+    // 上限まで待っても止まらんかった回はそのまま撮る。ここで落とすと、常時動いとる
+    // 装飾がある画面が1枚も撮れんようになる。黙って通さんように warn は残す。
+    console.warn(`アニメーションが ${ANIMATION_SETTLE_MS}ms で止まりませんでした`);
+  }
+  // 最後の1フレームが画面へ出るのを待つ。
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done())));
+}
+
 async function shoot(page, job, shot) {
   // 幅の指定がある1枚だけ窓を狭める。列数が幅で変わることを見せる回に要る。
   // 撮り終えたら宣言表の既定へ戻す。戻し忘れると、以降の1枚が黙って別の幅で撮れる。
@@ -296,8 +320,10 @@ async function shoot(page, job, shot) {
   // 本番ビルドで撮った他の日の写真と見た目がそろわなくなる。
   // 本番ビルドの回にはこの要素そのものが無いので、指定しても何も起きない。
   await page.addStyleTag({ content: 'nextjs-portal{display:none !important;}' });
-  // アニメーションの途中で撮ると、同じ指定でも回ごとに違う絵になる。
-  await page.waitForTimeout(400);
+  // アニメーションの途中で撮ると、同じ指定でも回ごとに違う絵になる。決め打ちの待ちやと、
+  // 400ms より長い遷移や、並列撮影で遅れた回がそのまま途中の絵で保存される。走っとる
+  // アニメーションが無くなるまで待つ。上限を置くのは、無限に回るスピナーで止まらんため。
+  await settleAnimations(page);
   // ページ全体を撮る回だけ、窓の高さを中身へ合わせる。切り抜く回は要らない
   // （切り抜きの矩形が中身の実寸から起きるので、余白も切れ落ちも起きない）。
   const sizeBefore =

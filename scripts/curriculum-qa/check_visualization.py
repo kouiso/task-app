@@ -5,23 +5,22 @@
 - 同一ファイル内で同じ画像を貼り回していないか
 - Mermaid図が適切か（該当Dayのみ）
 
-## 同一日での画像重複について（既定は WARNING）
+## 同一日での画像重複について（既定は FAIL）
 
 「スクショ位置3箇所以上」という下限だけを機械で要求すると、同じ画像を3回貼って
 数を満たす逃げ道が残る。実際にこの corpus では Step 3 の結果として貼られた画像が
 Step 9 の完成形と同じになっている箇所があり、買い手から見れば「Step ごとに
 撮っていない」と分かる。そのため「3箇所が別々の画像であること」も検査する。
 
-ただし撮り直しが済むまでは FAIL にすると corpus 全体が落ちて作業が止まるので、
-既定では警告に留める。撮り直し完了後は、次のどちらかで FAIL に切り替える。
+作り始めた時点では corpus に重複が残っていたので既定を WARNING にしていた。いまは
+36本すべてで同一ファイル内の重複が0件になったので、既定を FAIL へ上げた。警告のまま
+置いておくと、検査は完成しているのにゲートが素通りする。防ぐために作った退行が、
+黙って戻ってこられる状態になる。
 
-  1. 環境変数: CURRICULUM_QA_FAIL_ON_DUPLICATE_IMAGE=1
-     （check_quality.sh / CI からまとめて有効化する場合はこちら）
-  2. CLI フラグ: python3 check_visualization.py --fail-on-duplicate-image <file>
+撮り直しの途中で一時的に警告へ落としたいときだけ、次のどちらかを使う。
 
-恒久的に FAIL へ上げるときは、この関数の引数 fail_on_duplicate_image の
-既定値を True に変え、test_check_visualization.py の既定モードのケースを
-合わせて更新する。経緯は doc/review-handoff/ の記録を参照。
+  1. 環境変数: CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE=1
+  2. CLI フラグ: python3 check_visualization.py --warn-on-duplicate-image <file>
 """
 
 import glob
@@ -29,8 +28,9 @@ import os
 import sys
 import re
 
-# 重複判定を FAIL に格上げするための環境変数名。撮り直し完了後に CI 側で立てる。
-FAIL_ON_DUPLICATE_IMAGE_ENV = 'CURRICULUM_QA_FAIL_ON_DUPLICATE_IMAGE'
+# 重複判定を WARNING へ落とすための環境変数名。既定は FAIL なので、撮り直しの
+# 途中で一時的に緩めたいときだけ立てる。
+WARN_ON_DUPLICATE_IMAGE_ENV = 'CURRICULUM_QA_WARN_ON_DUPLICATE_IMAGE'
 
 # 重複を数える画像。スクショ位置の判定に使うパターンと同じ範囲に揃えてある
 # （「3箇所が別々の画像か」を見る検査なので、母集団がずれると意味が変わる）。
@@ -77,7 +77,7 @@ SCREENSHOT_EXEMPT = {
 MIN_MERMAID_WHEN_EXEMPT = 2
 
 
-def check_visualization(filepath, fail_on_duplicate_image=False):
+def check_visualization(filepath, fail_on_duplicate_image=True):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
@@ -146,7 +146,7 @@ def check_visualization(filepath, fail_on_duplicate_image=False):
         else:
             # 撮り直しが終わるまでは落とさない。切り替え方は本ファイル冒頭の docstring 参照。
             print(f"⚠️ {message}")
-            print(f"   （{FAIL_ON_DUPLICATE_IMAGE_ENV}=1 または --fail-on-duplicate-image で FAIL 化）")
+            print(f"   （{WARN_ON_DUPLICATE_IMAGE_ENV}=1 または --warn-on-duplicate-image で警告に落とした状態）")
     else:
         print("✅ 画像の重複なし")
 
@@ -171,10 +171,10 @@ def check_visualization(filepath, fail_on_duplicate_image=False):
 
 
 def duplicate_image_is_fatal(argv):
-    """CLI フラグと環境変数のどちらかが立っていれば重複を FAIL 扱いにする。"""
-    if '--fail-on-duplicate-image' in argv:
-        return True
-    return os.environ.get(FAIL_ON_DUPLICATE_IMAGE_ENV, '') not in ('', '0', 'false', 'False')
+    """重複を FAIL 扱いにするか。既定は FAIL で、明示的に落としたときだけ WARNING。"""
+    if '--warn-on-duplicate-image' in argv:
+        return False
+    return os.environ.get(WARN_ON_DUPLICATE_IMAGE_ENV, '') in ('', '0', 'false', 'False')
 
 
 def collect_targets(target):
@@ -194,9 +194,9 @@ def collect_targets(target):
 
 def main(argv):
     fail_on_duplicate_image = duplicate_image_is_fatal(argv)
-    args = [a for a in argv if a != '--fail-on-duplicate-image']
+    args = [a for a in argv if a != '--warn-on-duplicate-image']
     if len(args) < 1:
-        print("使用法: python check_visualization.py [--fail-on-duplicate-image] <filepath|dir>")
+        print("使用法: python check_visualization.py [--warn-on-duplicate-image] <filepath|dir>")
         return 1
 
     targets = collect_targets(args[0])

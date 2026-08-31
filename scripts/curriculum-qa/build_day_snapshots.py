@@ -255,6 +255,7 @@ class DayResult(NamedTuple):
     tsc: str
     build: str
     errors: tuple[str, ...]
+    build_errors: tuple[str, ...] = ()
 
 
 def available_days() -> list[int]:
@@ -1102,8 +1103,13 @@ def link_node_modules(dest: Path) -> None:
     link.symlink_to(REPO_ROOT / "node_modules", target_is_directory=True)
 
 
-def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...]]:
-    """組んだツリーへ型検査とビルドを掛けて (tsc, build, エラー行) を返す。"""
+def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
+    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build のエラー) を返す。
+
+    build のエラー行を別で返すのは、落ちた理由を判定に使うため。DB の無い機械では
+    `next build` が必ず赤くなるので昔は build の赤を丸ごと無視しとったが、それやと
+    prerender や server/client 境界の失敗まで一緒に見逃す。理由で切り分ける。
+    """
     link_node_modules(dest)
     tsc_ok, tsc_errors = run_step(["npx", "tsc", "--noEmit"], dest)
     build_ok, build_errors = run_step(["npm", "run", "build"], dest)
@@ -1111,6 +1117,7 @@ def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...]]:
         "OK" if tsc_ok else "NG",
         "OK" if build_ok else "NG",
         tsc_errors or build_errors,
+        build_errors,
     )
 
 
@@ -1122,8 +1129,8 @@ def snapshot_day(day: int, verify: bool) -> DayResult:
         return DayResult(day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",))
     if not verify:
         return DayResult(day, files, True, NOT_RUN, NOT_RUN, ())
-    tsc, build, errors = verify_tree(dest)
-    return DayResult(day, files, True, tsc, build, errors)
+    tsc, build, errors, build_errors = verify_tree(dest)
+    return DayResult(day, files, True, tsc, build, errors, build_errors)
 
 
 def _cell(text: str) -> str:
@@ -1233,6 +1240,33 @@ EXPECTED_RED = {
     11: "day11 は `getById` を書く前に配布物を取り込むため型エラーが5件出る。教材が本文で明示している",
 }
 
+# `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
+# これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は
+# prerender や server/client 境界の失敗なので、見逃したら壊れた日を通してしまう。
+DB_LESS_BUILD_MARKERS = (
+    "Can't reach database server",
+    "Error validating datasource",
+    "Environment variable not found: DB_URL",
+    "Environment variable not found: DATABASE_URL",
+    "P1001",
+    "P1012",
+    "ECONNREFUSED",
+)
+
+
+def build_failure_is_db_less(errors: tuple[str, ...]) -> bool:
+    """build の赤が DB の不在だけで説明できるか。
+
+    1行でも DB 以外の理由が混じっとったら False を返す。「どれか1つでも DB っぽい」で
+    通すと、DB のエラーに紛れた本物の失敗がそのまま緑になる。
+    """
+    if not errors:
+        return False
+    return all(
+        any(marker in line for marker in DB_LESS_BUILD_MARKERS)
+        for line in errors
+    )
+
 
 def main(argv: list[str]) -> int:
     args = argv[1:]
@@ -1271,10 +1305,17 @@ def main(argv: list[str]) -> int:
     write_result_doc(results, verify, command_line(argv))
     print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
 
-    # build の失敗では止めない。DB の無い機械でも赤くなるので、教材の欠陥を指さない。
+    # build の赤は理由で切り分ける。DB の無い機械では必ず赤くなるのでそれは通すが、
+    # prerender や server/client 境界の失敗は tsc が見つけられんので、ここで止める。
     broken = [
         r for r in results
-        if not r.tree_ok or (r.tsc == "NG" and r.day not in EXPECTED_RED)
+        if not r.tree_ok
+        or (r.tsc == "NG" and r.day not in EXPECTED_RED)
+        or (
+            r.build == "NG"
+            and r.day not in EXPECTED_RED
+            and not build_failure_is_db_less(r.build_errors)
+        )
     ]
     # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
     unexpected_green = [
@@ -1291,7 +1332,13 @@ def main(argv: list[str]) -> int:
             )
         return 1
     if broken:
-        print(f"❌ ツリー構築または型検査が通らない {len(broken)} 日")
+        print(f"❌ ツリー構築・型検査・ビルドのどれかが通らない {len(broken)} 日")
+        for r in broken:
+            if r.build == "NG" and r.tsc == "OK":
+                print(
+                    f"  day{r.day:02d} は tsc が通ってビルドだけ落ちています。"
+                    "DB の不在では説明できないので、prerender か server/client 境界を疑ってください"
+                )
         return 1
     print(f"✅ {len(results)} 日ぶんを組み立てました")
     return 0

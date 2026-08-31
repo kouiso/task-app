@@ -295,6 +295,31 @@ def check_slot_exclusivity() -> list[str]:
     return fails
 
 
+def check_animation_settle() -> list[str]:
+    """撮る直前の待ちが、決め打ちの秒数やのうてアニメーションの終了に紐づいていること。
+
+    決め打ちの待ちへ戻すと、その秒数より長い遷移や、並列撮影で遅れた回が途中の絵のまま
+    保存される。撮影自体は成功するので、あとから誰も気づけん種類の壊れ方になる。
+    """
+    fails = []
+    source = WORKER.read_text(encoding="utf-8")
+    if "settleAnimations(page)" not in source:
+        fails.append("❌ 撮る前にアニメーションの収束を待っていない")
+    if "getAnimations()" not in source:
+        fails.append("❌ 待つ相手を getAnimations() で見ていない")
+    if "iterations === Infinity" not in source:
+        fails.append("❌ 無限に回るアニメーションを待つ相手から外していない")
+
+    # `shoot()` の中に決め打ちの待ちが戻ってきたら弾く。窓の高さを変えたあとの
+    # 測り直し（fitToContent）は別の話なので、そちらは対象から外す。
+    body = source.split("async function shoot(page, job, shot) {", 1)
+    if len(body) != 2:
+        fails.append("❌ shoot() が見つからない（この検査が対象を見失っている）")
+    elif "waitForTimeout" in body[1]:
+        fails.append("❌ shoot() の中に決め打ちの待ちが戻っている")
+    return fails
+
+
 CHECKS = (
     ("赤枠と切り抜きの座標の出どころ", check_mark_rect_source),
     ("日別シードの境界", check_day_seed_boundary),
@@ -302,6 +327,7 @@ CHECKS = (
     ("同梱の宣言表", check_shipped_config),
     ("ワーカーの分離", check_worker_isolation),
     ("スロットの排他", check_slot_exclusivity),
+    ("アニメーションの収束待ち", check_animation_settle),
 )
 
 

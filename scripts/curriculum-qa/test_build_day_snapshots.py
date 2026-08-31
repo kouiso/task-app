@@ -806,6 +806,39 @@ def check_tree_inputs() -> list[str]:
     return fails
 
 
+def check_build_failure_triage() -> list[str]:
+    """ビルドの赤を DB の不在で説明できるかの切り分け。
+
+    昔は build の赤を丸ごと無視しとった。DB を持たん機械で必ず赤くなるからやが、
+    それやと prerender や server/client 境界の失敗まで一緒に通る。tsc は見つけられん
+    種類なので、ここが緩むと壊れた日が緑で出荷される。
+    """
+    fails = []
+    db_less = (
+        "Error: P1001: Can't reach database server at `localhost:5432`",
+        "PrismaClientInitializationError: Can't reach database server",
+    )
+    if not target.build_failure_is_db_less(db_less):
+        fails.append("❌ DB へ届かんだけの赤を、教材の欠陥として数えている")
+
+    real = (
+        "Error occurred prerendering page \"/project\"",
+        "TypeError: Cannot read properties of undefined",
+    )
+    if target.build_failure_is_db_less(real):
+        fails.append("❌ prerender の失敗を DB のせいにして見逃している")
+
+    # DB の赤に本物が1行紛れたら、通してはいけない。
+    mixed = (db_less[0], real[0])
+    if target.build_failure_is_db_less(mixed):
+        fails.append("❌ DB の赤に紛れた本物の失敗を見逃している")
+
+    # 理由が1行も取れんかった赤は、説明できていないので通さない。
+    if target.build_failure_is_db_less(()):
+        fails.append("❌ 理由の分からん赤を DB のせいにしている")
+    return fails
+
+
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -826,6 +859,7 @@ CHECKS = (
     ("文字列で指した要素の書き換え", check_rewrite_element),
     ("持ち込みと本体の同居", check_leading_imports),
     ("ツリーの古さを測る材料", check_tree_inputs),
+    ("ビルドの赤の切り分け", check_build_failure_triage),
 )
 
 
