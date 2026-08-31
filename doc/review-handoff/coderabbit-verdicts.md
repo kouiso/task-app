@@ -247,7 +247,8 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
    - 直し: `expected_red_holds()` を切り出して、走行の判定と文書の判定を同じ線に乗せた。回帰テストは (a) 断り書きどおりなら文書も「想定内」 (b) 6件目が混ざったら文書が「想定内」と書かん (c) 同じ入力を `broken_days()` が異常に数える、の3点。戻すと `❌ 断り書きと合わん赤まで成果物が想定内と書いている` で落ちる。
 2. `test_shoot_screenshots.py:421` **実ブラウザ検査が CI で一度も走らん**（P2・採用）
    - 根拠: この検査を呼ぶ CI は `material-gate.yml`（`check_quality.sh` 経由）だけで、あの job は Chromium を入れてへん。つまり毎回 SKIP で緑になり、rAF の収束待ちが**実測されんままマージできる**。PDF 系の workflow は Chromium を入れとるが `test_shoot_screenshots.py` を呼んでへん。
-   - 直し: `CURRICULUM_QA_REQUIRE_BROWSER` を足して、立っとる走行では SKIP 自体を失敗にした（許可値だけを見る。綴り間違いは既定＝立てん側へ倒す）。そのうえで、Chromium を用意しとる `pdf-book-gate.yml`（pull_request で起動）にこの検査を1ステップ足した。実測: ブラウザを退けて `REQUIRE=1` → 9/10 で赤、`REQUIRE` 無し → 10/10 で緑、ブラウザ有り＋`REQUIRE=1` → 10/10 で緑。
+   - 直し: `CURRICULUM_QA_REQUIRE_BROWSER` を足して、立っとる走行では SKIP 自体を失敗にした（許可値だけを見る。綴り間違いは既定＝立てん側へ倒す）。そのうえで、Chromium を用意しとる `pdf-book-gate.yml`（pull_request で起動）にこの検査を1ステップ足した。
+     **配線を足した直後に自分で穴を見つけて塞いだ。** あの job の各ステップは「PDF を組む対象が0冊か」で切られとるので、`scripts/curriculum-qa/` だけを触った PR では Chromium も検査も走らん。`select` に `browser_qa` を足して、撮影まわり4ファイルか この workflow を触った PR では、対象0冊でもブラウザを用意して走らせるようにした（パターンは NUL 区切りの `changed.z` に対して3通りの入力で実測）。実測: ブラウザを退けて `REQUIRE=1` → 9/10 で赤、`REQUIRE` 無し → 10/10 で緑、ブラウザ有り＋`REQUIRE=1` → 10/10 で緑。
 3. `settle-drawn-frames-check.mjs:47` **ワーカーの読み込み失敗まで SKIP に混ざる**（P2・採用）
    - 根拠: playwright とワーカー(`shoot-page.mjs`)の取り込みを1つの `try` で囲っとったので、ワーカーが読み込みで落ちても「ブラウザが無い」と同じ扱いで exit 0。撮影が壊れとるのに検査だけ緑になる。
    - 直し: playwright の取り込みと `chromium.launch()` だけを SKIP の対象にし、ワーカーの取り込みはその外へ出した（playwright が在る以上、そこで落ちるのは本物の失敗）。実測: playwright を退けると `SKIP … exit 0`、ワーカーに `throw` を仕込むと **exit 1**。
