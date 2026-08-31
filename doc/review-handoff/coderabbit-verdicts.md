@@ -431,3 +431,15 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 直し: `STACK_FRAME_MARK = re.compile(r"^\s+at \S")` を足して、判定に入る前に落とす。**frame は失敗の「場所」であって「種類」やない。**落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行（`TypeError: …`）が出て、そっちは ERROR_MARK に当たって残るため。
 - 同じ指摘に対して**並行の走行が別の直し（`STACK_FRAME_MARKER = r"^\s*at\s+"`）を先に push しとった**（`c00015d`）。突き合わせて、行頭に空白を要求する側（`^\s+`）を残した。`\s*` やと桁0で `at ` から始まる本物のメッセージ行まで落ちるが、Node の frame は必ず字下げされとるため。向こうが `check_build_failure_triage` へ足した表明はそのまま残しとる。
 - 回帰テスト `check_stack_frames_do_not_block_skip` が2方向を見る。上の実測どおりの出力は `db_only: True`／`TypeError` を混ぜたら `False` のまま、かつ `TypeError` の行がプールに残っとること。戻すと `❌ Prisma の stack frame を本物の失敗として数えている`（30 → 29/30）。
+
+## [PR #389 二十三巡目] Codex 2件（全部採用）
+
+1. `build_day_snapshots.py:1399` **prerender の包み紙を本物の失敗として扱っとった**（P1・採用）
+
+   - 根拠: `Error occurred prerendering page ...` はDBクエリ失敗でも出るNext.jsの一般的な包み紙やのに、`REAL_BUILD_FAILURE_MARKERS` に入っとった。P1001と同じ出力でも先に本物の失敗と判定され、DBを持たん機械で `--verify` が赤になる。
+   - 直し: 包み紙を `BUILD_NOISE_MARKERS` へ移した。TypeErrorなど中身の本物の失敗は従来どおり残る。回帰テストでも包み紙単独は本物扱いせず、TypeError混在は止める。
+
+2. `build_day_snapshots.py:1373` **P1003のデータベース不在をP1001の接続不能として扱っとった**（P1・採用）
+
+   - 根拠: `the database server at` だけをDB不在の印にしていたため、サーバーへ到達した後の `P1003: Database ... does not exist` までSKIPへ落ちる。壊れたDB名や環境設定を `--verify` が見逃す。
+   - 直し: 汎用の句をマーカーから削除し、接続不能を示す `P1001` と `Can't reach database server` に限定した。P1003の回帰テストを追加し、SKIPへ振り替わらんことを確認した。

@@ -1369,8 +1369,6 @@ DB_LESS_PRIMARY_MARKERS = (
     "Can't reach database server",
     # DB へ届かんことを指す Prisma のエラーコード。
     "P1001",
-    # Prisma が DB へ繋げんかったことを直接指す。
-    "the database server at",
 )
 
 # それ単独では DB と言えん印。`ECONNREFUSED` は OS が返す汎用の接続拒否で、
@@ -1392,11 +1390,10 @@ def db_less_markers(errors: tuple[str, ...]) -> tuple[str, ...]:
 BUILD_SKIPPED = "SKIP"
 
 
-# build が本当に壊れとることの印。Next.js のラッパー行（`Failed to collect page data`）は
-# 入れん。あれは原因やのうて包み紙で、DB の失敗も同じ言葉で包まれる。ここに入れてええのは
-# 「これが出とったら DB の有無に関係なく壊れとる」と言い切れるものだけ。
+# build が本当に壊れとることの印。Next.js の一般的なラッパー行は
+# `BUILD_NOISE_MARKERS` へ置く。あれは原因やのうて包み紙で、DB の失敗も同じ言葉で包まれる。
+# ここに入れてええのは「これが出とったら DB の有無に関係なく壊れとる」と言い切れるものだけ。
 REAL_BUILD_FAILURE_MARKERS = (
-    "Error occurred prerendering page",
     "TypeError",
     "ReferenceError",
     "SyntaxError",
@@ -1459,6 +1456,7 @@ def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
 # 当てにいくと、載せてへん文言（例: `Error: Unauthorized while prerendering /admin`）が
 # DB の赤に紛れて SKIP へ落ち、壊れた日が exit 0 で出ていく。
 BUILD_NOISE_MARKERS = (
+    "Error occurred prerendering page",
     "Failed to collect page data",
     # 型エラーの直前に必ず出る Next.js の見出し行。原因は次の `Type error:` の行。
     "Failed to compile",
