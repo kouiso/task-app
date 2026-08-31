@@ -66,6 +66,27 @@ const MOVING = `<!doctype html><html><body>
   requestAnimationFrame(frame);
 </script></body></html>`;
 
+// Recharts の `<Line>` は線の出現を `d` を固定したまま破線の刻みで描く。収束判定が
+// `stroke-dasharray` を見てへんと、初期フレームから形が変わらんように見えて、
+// 描きかけの折れ線を撮る。窓（DRAWN_FRAME_STABLE_MS）より長く動かすのは、短いと
+// 見てへん判定でも最終形が撮れてまい **検査が何も見てへんのに緑**になるため。
+const DASH_FINAL = '140';
+const DASHED = `<!doctype html><html><body>
+<svg width="200" height="200"><path id="p" d="M0 100 L140 100" stroke="black" stroke-dasharray="0"></path></svg>
+<script>
+  const path = document.getElementById('p');
+  const DURATION = 1500;
+  let started = null;
+  function frame(now) {
+    if (started === null) started = now;
+    const ratio = Math.min(1, (now - started) / DURATION);
+    // d 属性は最初から最終形。動くのは破線の刻みだけ。
+    path.setAttribute('stroke-dasharray', String(Math.round(ratio * 140)));
+    if (ratio < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script></body></html>`;
+
 const SPINNING = `<!doctype html><html><body>
 <svg width="200" height="200"><circle id="c" r="10" cx="10" cy="10"></circle></svg>
 <script>
@@ -172,7 +193,18 @@ try {
     );
   }
 
-  // 6. 持ち越した状態が次の1枚へ残らんこと。残ると「もう止まっとる」と誤判定する。
+  // 6. `d` を固定したまま破線の刻みだけで描く線を、途中で撮らんこと（Recharts の `<Line>`）。
+  const dash = await withPage(DASHED, async (page) => {
+    await settleAnimations(page);
+    return page.getAttribute('#p', 'stroke-dasharray');
+  });
+  if (dash !== DASH_FINAL) {
+    fails.push(
+      `❌ 破線の刻みだけで描く線を途中で撮っている（stroke-dasharray=${dash} / 期待 ${DASH_FINAL}）`,
+    );
+  }
+
+  // 7. 持ち越した状態が次の1枚へ残らんこと。残ると「もう止まっとる」と誤判定する。
   const leftover = await withPage(PAGE, async (page) => {
     await settleAnimations(page);
     return page.evaluate(() => '__shotDrawnFrames' in window);
@@ -186,7 +218,7 @@ try {
 
 if (fails.length > 0) {
   for (const f of fails) console.error(f);
-  console.error(`❌ settle_drawn_frames 実ブラウザ検査 ${6 - fails.length}/6 合格`);
+  console.error(`❌ settle_drawn_frames 実ブラウザ検査 ${7 - fails.length}/7 合格`);
   process.exit(1);
 }
-process.stdout.write('✅ settle_drawn_frames 実ブラウザ検査 6/6 合格\n');
+process.stdout.write('✅ settle_drawn_frames 実ブラウザ検査 7/7 合格\n');

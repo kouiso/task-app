@@ -355,6 +355,14 @@ async function settleDrawnFrames(page) {
             el.getAttribute('height') ?? '',
             el.getAttribute('r') ?? '',
             el.getAttribute('opacity') ?? '',
+            // Recharts の `<Line>` は線の出現を **`d` を固定したまま** 破線の刻みで
+            // 描く（`stroke-dasharray` を伸ばして見せる）。ここを見んと、動いとる最中に
+            // 「形が変わってへん」と読んで描きかけの折れ線を撮る。属性と inline style の
+            // 両方を見るのは、react-smooth の版によって書き込み先が違うため。
+            el.getAttribute('stroke-dasharray') ?? '',
+            el.getAttribute('stroke-dashoffset') ?? '',
+            el.style?.strokeDasharray ?? '',
+            el.style?.strokeDashoffset ?? '',
           );
         }
         const drawn = shape.join('|');

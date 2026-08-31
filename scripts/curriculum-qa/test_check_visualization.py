@@ -266,6 +266,20 @@ DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]
         0,
     ),
     (
+        # 綴り違いで同じ1枚を3回貼る。素の文字列で数えると別物に見えて、
+        # 「スクショ位置3箇所」を満たしつつ重複0で通ってまう。
+        '同じ画像を綴り違いで3回貼っても重複として落ちる',
+        'day01_setup.md',
+        table_rows(4)
+        + '![一覧](./screenshots/list.png)\n'
+        + '![一覧](screenshots/list.png)\n'
+        + '![一覧](screenshots/../screenshots/list.png)\n',
+        True,
+        1,
+        (4, 3, 0),
+        1,
+    ),
+    (
         '同じ画像を3回貼るとフラグ有効時は落ちる',
         'day01_setup.md',
         table_rows(4) + '![一覧](./screenshots/list.png)\n' * 3,

@@ -25,8 +25,9 @@ Step 9 の完成形と同じになっている箇所があり、買い手から�
 
 import glob
 import os
-import sys
+import posixpath
 import re
+import sys
 
 # 重複判定を WARNING へ落とすための環境変数名。既定は FAIL なので、撮り直しの
 # 途中で一時的に緩めたいときだけ立てる。
@@ -42,13 +43,26 @@ SCREENSHOT_IMAGE_PATTERNS = (
 )
 
 
+def normalize_image_target(target):
+    """同じファイルを指すリンクを1つの綴りへ寄せる。
+
+    `./screenshots/x.png` と `screenshots/x.png` と `screenshots/../screenshots/x.png` は
+    同じ1枚を指す。素の文字列で数えると別物に見えるので、**同じ画像を綴り違いで3回貼れば
+    「スクショ位置3箇所」を満たしつつ重複0で通ってまう**。数える前に寄せる。
+    外部 URL は寄せる意味が無いのでそのまま返す。
+    """
+    if "://" in target:
+        return target
+    return posixpath.normpath(target)
+
+
 def collect_screenshot_images(content):
     """本文中の画像リンクから、スクショとして数える画像パスを順に返す。"""
     images = []
     for path in re.findall(IMAGE_LINK_PATTERN, content):
         target = path.split()[0] if path.split() else path
         if any(re.search(p, target, re.IGNORECASE) for p in SCREENSHOT_IMAGE_PATTERNS):
-            images.append(target)
+            images.append(normalize_image_target(target))
     return images
 
 
