@@ -230,3 +230,13 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
   - playwright を退けた状態 → `SKIP: ブラウザを用意できんかった（Cannot find package 'playwright' ...）` / exit 0。python 側の検査も `⏭️ 実ブラウザ検査を退けた` を出して 9/9 合格
   - 戻した状態 → `✅ settle_drawn_frames 実ブラウザ検査 4/4 合格`
   - 直す前（静的 import）に退けた状態 → `ERR_MODULE_NOT_FOUND` で exit 1。つまり指摘どおり壊れとった
+
+## [PR #389 十二巡目] CodeRabbit 7件（採用5・対応済み2）
+- 指摘と判定:
+  1. `test_shoot_screenshots.py:399` 時間切れを検査失敗として返せ（Minor）→ **採用**。180秒を超えると `subprocess.TimeoutExpired` が `main()` まで抜けて、件数も理由も出さずに落ちる。「検査が黙って終わる」はこの PR が潰しとる型そのもの。捕まえて途中出力を添えた失敗として返す。`timeout` を 0.001 秒にして実際にこの枝を通し、`❌ 実ブラウザ検査が 0.001 秒で終わらんかった: 出力なし` を確認した
+  2. `build_day_snapshots.py:1316-1330` 除外理由のコメントが収録要素の直上に並んどる（Trivial）→ **採用**。中身は変えず、理由をタプルの外へまとめた。`P1001` / `ECONNREFUSED` を除外対象と誤読する余地を消す
+  3. `coderabbit-verdicts.md:196` 入れ子バッククォートでコードスパンが壊れとる（Minor）→ **採用**。外側を二重バッククォートにした。markdownlint の MD038 がこの行から消えたことを確認（残る13件は67行ほかの既存分）
+  4. `diagrams-added.md:6` mermaid の総数が文書内で食い違う（Minor）→ **採用**。実測値表が 69 のままやった。数え直すと day01〜day29 が 37 → 69、`day30` が 2 で前後とも不変、corpus 全体が 39 → 71。表の before も 39 → 37 へ訂正（day30 の2枚を含めた値を書いてしもとった）。**指摘は「69 を 71 に直せ」やったが、実測すると集計範囲が違うだけで両方正しい。**範囲を明記する側で直した
+  5. `progress.md:5` 19件と21件の集計単位が違う（Minor）→ **採用**。19 は対応記録の本数、21 は個別の指摘数（1本に複数の指摘をまとめた回がある）と書き足した
+  6. `test_settle_drawn_frames.mjs` の名前が命名規約に合わん（Major）→ **`bad6191` で対応済み**。ただし提案の `test-settle-drawn-frame.mjs` は使えん。`.gitignore:99` が `test-*.mjs` を落とすのでリポジトリに入らんくなる。`settle-drawn-frames-check.mjs` にした
+  7. `console.log` が biome の `noConsole` を落とす（Major）→ **`bad6191` で対応済み**。`process.stdout.write` と `console.error` へ置換済み
