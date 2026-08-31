@@ -159,12 +159,26 @@ python3 scripts/curriculum-qa/shoot_screenshots.py --day 6
 - 教材本文は**ですます体**。関西弁は会話用であって本文に持ち込まん
 - コードブロックの後には必ず「なぜこう動くか」を書く。手順の羅列は教材やない
 
-### `test-*.mjs` は .gitignore に食われる
+### Node 側の検査ファイルの名前は挟み撃ちになっとる
 
-`.gitignore:99` が `test-*.mjs` と `*-test.mjs` を落とす。Node 側の検査を
-`test-なんとか.mjs` で置くと、手元では緑やのに**リポジトリに入らん**。CI では
-ファイルごと無いので、参照しとる検査が落ちるか、黙って退けられる。
-検査は `test_なんとか.mjs`（アンダースコア）で置く。
+3つの規則が同時に効く。1つずつ踏んだので順に書いとく。
+
+1. `.gitignore:99` が `test-*.mjs` と `*-test.mjs` を落とす → `test-なんとか.mjs` は
+   手元で緑でも**リポジトリに入らん**
+2. `scripts/check-naming-convention.sh` は `.mjs` に kebab-case を強制する
+   （`.py` は PEP 8 で免除されとるが `.mjs` は免除に無い）→ `test_なんとか.mjs` は CI で落ちる
+3. 結果、通るのは `なんとか-check.mjs` のような**ハイフンで、`test-` で始まらず
+   `-test.mjs` で終わらん**名前だけ
+
+`settle-drawn-frames-check.mjs` がその形。名前を決めたら
+`bash scripts/check-naming-convention.sh` と `git check-ignore -v <path>` の両方を通す。
+
+### Node の検査は `console.log` を書けん
+
+`biome.json` の `noConsole` は `warn` と `error` しか許さん（`level: error`）。
+進捗の1行は `process.stdout.write(...)` で出す。`shoot-page.mjs` も同じ理由で
+`process.stdout.write` を使っとる。`window.x ??= {}` のような
+**式の中の代入**も `noAssignInExpressions` で落ちるので、`if` で分けて書く。
 
 ### 節の存在チェックは素の grep でやるな
 

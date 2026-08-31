@@ -393,9 +393,9 @@ def check_drawn_frame_settle() -> list[str]:
 
     ブラウザが無い機械では退けるが、**黙って通さん**。退けたことを出力に残す。
     """
-    script = Path(__file__).resolve().parent / "test_settle_drawn_frames.mjs"
+    script = Path(__file__).resolve().parent / "settle-drawn-frames-check.mjs"
     if not script.exists():
-        return ["❌ 実ブラウザ検査（test_settle_drawn_frames.mjs）が見当たらない"]
+        return ["❌ 実ブラウザ検査（settle-drawn-frames-check.mjs）が見当たらない"]
     proc = subprocess.run(
         ["node", str(script)],
         capture_output=True,

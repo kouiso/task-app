@@ -42,7 +42,8 @@ let browser;
 try {
   browser = await chromium.launch();
 } catch (err) {
-  console.log(`SKIP: ブラウザを起動できんかった（${err.message.split('\n')[0]}）`);
+  // 進捗の出力に console は使えん（biome の noConsole は warn / error だけ許す）。
+  process.stdout.write(`SKIP: ブラウザを起動できんかった（${err.message.split('\n')[0]}）\n`);
   process.exit(0);
 }
 
@@ -83,8 +84,8 @@ try {
 }
 
 if (fails.length > 0) {
-  for (const f of fails) console.log(f);
-  console.log(`❌ settle_drawn_frames 実ブラウザ検査 ${4 - fails.length}/4 合格`);
+  for (const f of fails) console.error(f);
+  console.error(`❌ settle_drawn_frames 実ブラウザ検査 ${4 - fails.length}/4 合格`);
   process.exit(1);
 }
-console.log('✅ settle_drawn_frames 実ブラウザ検査 4/4 合格');
+process.stdout.write('✅ settle_drawn_frames 実ブラウザ検査 4/4 合格\n');

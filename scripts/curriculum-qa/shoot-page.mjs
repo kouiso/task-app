@@ -340,7 +340,10 @@ async function settleDrawnFrames(page) {
         }
         const drawn = shape.join('|');
         // 前フレームとの比較なので、状態を窓に置いて持ち越す。
-        const state = (window.__shotDrawnFrames ??= { drawn: null, same: 0 });
+        if (!window.__shotDrawnFrames) {
+          window.__shotDrawnFrames = { drawn: null, same: 0 };
+        }
+        const state = window.__shotDrawnFrames;
         if (drawn === state.drawn) {
           state.same += 1;
         } else {
