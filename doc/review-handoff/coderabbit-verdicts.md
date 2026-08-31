@@ -432,14 +432,33 @@ Vercel は `.node-version` を読まない（上記 day03:554 の根拠と同じ
 - 同じ指摘に対して**並行の走行が別の直し（`STACK_FRAME_MARKER = r"^\s*at\s+"`）を先に push しとった**（`c00015d`）。突き合わせて、行頭に空白を要求する側（`^\s+`）を残した。`\s*` やと桁0で `at ` から始まる本物のメッセージ行まで落ちるが、Node の frame は必ず字下げされとるため。向こうが `check_build_failure_triage` へ足した表明はそのまま残しとる。
 - 回帰テスト `check_stack_frames_do_not_block_skip` が2方向を見る。上の実測どおりの出力は `db_only: True`／`TypeError` を混ぜたら `False` のまま、かつ `TypeError` の行がプールに残っとること。戻すと `❌ Prisma の stack frame を本物の失敗として数えている`（30 → 29/30）。
 
-## [PR #389 二十三巡目] Codex 2件（全部採用）
+## [PR #389 二十三巡目] Codex 2件（両方採用・ただし片方は指摘の例が再現せん）
 
-1. `build_day_snapshots.py:1399` **prerender の包み紙を本物の失敗として扱っとった**（P1・採用）
+### 1. `build_day_snapshots.py:1399` prerender の見出しが DB だけの失敗を止めとった（P1・採用）
 
-   - 根拠: `Error occurred prerendering page ...` はDBクエリ失敗でも出るNext.jsの一般的な包み紙やのに、`REAL_BUILD_FAILURE_MARKERS` に入っとった。P1001と同じ出力でも先に本物の失敗と判定され、DBを持たん機械で `--verify` が赤になる。
-   - 直し: 包み紙を `BUILD_NOISE_MARKERS` へ移した。TypeErrorなど中身の本物の失敗は従来どおり残る。回帰テストでも包み紙単独は本物扱いせず、TypeError混在は止める。
+- 根拠: `Error occurred prerendering page` が `REAL_BUILD_FAILURE_MARKERS` に入っとった。Prisma の問い合わせが prerender 中に落ちると、この見出しと `Can't reach database server` が同じ出力に並ぶ。`has_real_build_failure()` が先に効くので、DB を持たん機械で `--verify` が exit 1 になる。**このファイル自身が置いとる基準**（「ここに入れてええのは『これが出とったら DB の有無に関係なく壊れとる』と言い切れるものだけ」）に、この行は当てはまってへんかった。
+- 直し: **素の `BUILD_NOISE_MARKERS` へは移さん。** 移すと想定内の赤の免除（`build_failure_is_expected`）まで、この行を見逃す。問いが別なので一覧も別にした:
+  - 「DB だけの失敗か？」→ 原因は DB 側なので包み紙。新設した `DB_TRIAGE_NOISE_MARKERS` に入れる
+  - 「day11 の断り書きどおりの型エラーだけか？」→ 型エラーやないので通したらアカン。入れん
+- 安全側の確認: 見出し1行だけの出力は DB の印が無いので、これまでどおり本物の失敗のまま（実測 `False`）。原因の行（`TypeError: …`）が居る回も本物の失敗のまま（実測 `False`）。
+- 回帰テスト `check_prerender_wrapper_does_not_hide_db` が3方向。既存の表明1件は、内部の述語（`has_real_build_failure`）を見とったのを外から見える結果へ書き換えた。戻すと 31/32（見出しを本物の失敗へ戻した場合）、30/32（素の包み紙一覧へ入れた場合）。
 
-2. `build_day_snapshots.py:1373` **P1003のデータベース不在をP1001の接続不能として扱っとった**（P1・採用）
+### 2. `build_day_snapshots.py:1373` `the database server at` が緩すぎた（P1・採用。例は不成立）
 
-   - 根拠: `the database server at` だけをDB不在の印にしていたため、サーバーへ到達した後の `P1003: Database ... does not exist` までSKIPへ落ちる。壊れたDB名や環境設定を `--verify` が見逃す。
-   - 直し: 汎用の句をマーカーから削除し、接続不能を示す `P1001` と `Can't reach database server` に限定した。P1003の回帰テストを追加し、SKIPへ振り替わらんことを確認した。
+- **指摘の例は再現せんかった。** Codex は「P1003 が `does not exist on the database server at ...` を吐く」と言うたが、`@prisma/client` の中を実測すると P1003 の雛形は `` Database `${db}` does not exist on the database server `` で、**`at` が付かん**。
+- **ただし語が緩いこと自体は成立する。** 同じ実測で、この語は**資格情報の失敗**の文面に入っとった: `provide valid database credentials for the database server at the configured address`。届いた上で資格情報が違う話なので、DB の不在やない。
+- そもそもこの語は要らん。実測した本物の P1001 出力は `Can't reach database server at ...` で、既存の2つの印で拾える。落とした。
+- 回帰テスト `check_reachable_server_failure_is_not_db_absence`。戻すと `❌ 資格情報の失敗（DB へは届いとる）を DB の不在として SKIP へ落としている`（32 → 31/32）。
+- **最初に書いた回帰テストは飾りやった。** P1000 の2行を並べたが、1行目（`Authentication failed against database server at`）に `the` が無くて説明の付かん行として残るので、語を戻しても緑のままやった。1行に絞って、その行だけで判定が変わる形へ直した。
+
+### 並行の走行との突き合わせ（`f43c650`）
+
+同じ2件を、別の走行が独立に直して先に push しとった。突き合わせて**こっちの設計を残した**。
+
+- 向こうは見出しを**素の `BUILD_NOISE_MARKERS`** へ移した。それやと `build_failure_is_expected()`
+  も同じ一覧を読むので、day11 の免除が見出しを見逃す。向こうはそのぶん、免除の回帰テストの例を
+  見出しから `Error: Unauthorized while prerendering /project` へ差し替えて緑にしとった。
+  **検査を緩めて通す形になっとるので採らん。**こっちは一覧を2つに分けて、免除の側は
+  見出しが混ざったら落ちるまま保った（`check_expected_red_build_exemption` に表明を追加）。
+- 向こうが足した P1003 の表明は残した。ただし**この版の Prisma は `at` を付けん**ので、
+  現物の P1003 では発火せん。単体入力として語の緩さを押さえる役には立つ。

@@ -1357,6 +1357,12 @@ def tsc_failure_is_expected(result: DayResult) -> bool:
 #   `.env` へ複写しており、その `.env.example` は `DATABASE_URL` を定義しとる。つまり
 #   DB の無い機械でも変数は在る。無いと言われたのなら組んだツリーか schema が壊れとる印。
 #   逆向きに `REAL_BUILD_FAILURE_MARKERS` へ入れて、必ず赤で止めとる。
+# - `the database server at`: Prisma の**認証失敗**（P1000）の文面にも入っとる
+#   （実測: `@prisma/client` の中に
+#   `provide valid database credentials for the database server at the configured address`）。
+#   あれは届いた上で資格情報が違う話なので、DB の不在やない。数えると資格情報の設定ミスが
+#   SKIP へ落ちて exit 0 になる。届かんかった回の文面は
+#   `Can't reach database server at ...` で、上の印で拾えるので要らん。
 # - `P1012`: Prisma のスキーマ検証エラー全般の番号で、DB へ届かんことの印やない。
 #   壊れたリレーションや型の書き間違いでも出る。
 # - `PrismaClientInitializationError`: 接続でけへんときにも出るが、接続文字列が不正なとき
@@ -1444,7 +1450,10 @@ def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
     # 中身の分からん失敗が DB の赤に隠れとるということ。
     return all(
         any(m in line for m in markers)
-        or any(marker in line for marker in BUILD_NOISE_MARKERS)
+        or any(
+            marker in line
+            for marker in BUILD_NOISE_MARKERS + DB_TRIAGE_NOISE_MARKERS
+        )
         for line in errors
     )
 
@@ -1456,7 +1465,6 @@ def build_failure_is_database_only(errors: tuple[str, ...]) -> bool:
 # 当てにいくと、載せてへん文言（例: `Error: Unauthorized while prerendering /admin`）が
 # DB の赤に紛れて SKIP へ落ち、壊れた日が exit 0 で出ていく。
 BUILD_NOISE_MARKERS = (
-    "Error occurred prerendering page",
     "Failed to collect page data",
     # 型エラーの直前に必ず出る Next.js の見出し行。原因は次の `Type error:` の行。
     "Failed to compile",
@@ -1465,6 +1473,17 @@ BUILD_NOISE_MARKERS = (
     "Build error occurred",
     "Collecting page data",
 )
+
+# **DB の判定のときだけ**包み紙に数える行。`Error occurred prerendering page` は
+# 「これが出とったら DB の有無に関係なく壊れとる」を満たさん（DB へ届かん回も同じ言葉で
+# 包まれる）ので `REAL_BUILD_FAILURE_MARKERS` には置けん。かというて素の
+# `BUILD_NOISE_MARKERS` へ入れると、想定内の赤の免除（`build_failure_is_expected`）まで
+# この行を見逃す。**問いが別なので一覧も別にする。**
+# - 「DB だけの失敗か？」→ 原因は DB 側にあるので包み紙。ここに入れる
+# - 「day11 の断り書きどおりの型エラーだけか？」→ 型エラーやないので通したらアカン。入れん
+# 本物の prerender の失敗は原因の行（`TypeError: ...` 等）を必ず一緒に吐き、そっちが
+# プールに残って赤で止まる。包み紙1行だけの出力も DB の印が無いので本物の失敗のままや。
+DB_TRIAGE_NOISE_MARKERS = ("Error occurred prerendering page",)
 
 
 TYPE_ERROR_MARK = re.compile(r"Type error:|TS\d{4}")
