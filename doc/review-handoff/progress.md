@@ -234,3 +234,67 @@ python3 scripts/pdf-book/check_page_layout.py                            # 36冊
 | `diagrams-added.md` | **残作業②の判定結果** |
 | `duplicate-image-gate.md` | 画像重複ゲートの設計 |
 | `gate1-summary.md` | Gate 1 で確定した件数 |
+
+---
+
+## 【最優先】CodeRabbit の41件が未処理（2026-08-31 時点）
+
+PR #388 を ready にしたら CodeRabbit が **actionable 41件**を出した。局長の指示は
+「ボット指摘→返信・納得・resolve まで。異議は議論。したらマージ」なので、**これを片付けるまでマージせん**。
+
+対応済みは Codex の P1 3件（→4491fc1）と、CodeRabbit の記録不整合5件（→cbf82ca）だけ。
+
+### 中身の指摘（教材の欠陥。ここが本命）
+
+| 箇所 | 指摘 |
+|---|---|
+| day02:291 | 確認ポイントが `こんにちは、Taroさん。` 固定。294行で名前を自分のものに変えさせとるので、変えた読者は照合できん |
+| day02:321-323 | `todayGoal` の値と後続文がつながらん（「今日やるのはトップページのラフを決めるに取りかかります。」になる） |
+| day02:424 | `todayGoal` を表示しとるのに、説明は `name` と `todayFocus` を使うと書いてある |
+| day02:1293-1295 | まとめが Step 1 専用の `ownerName`/`focusTheme`/`todayNote` を指しとる。最終コードは `dashboardOwner`/`buildMainMessage`/`focusCards` |
+| day03:554, day04:987 | `.node-version` を Vercel が見ると読める書き方。実際は `package.json` の `engines.node` か Project Settings |
+| day03:622, :871 | 未追跡ファイルの件数が `.node-version` を含んだままの箇所が残っとる可能性（今回3件へ直した分と要突き合わせ） |
+| day05:788-789 | ロックアウト条件が `authRouter.login` の実装と違う（15分・同一メール+IPで5回／IP変えたら同一メールで10回） |
+| day07:2478 | 「ログイン試行回数が上限」の説明が、メール単独・メール+IP・IP単独の3経路を反映してへん |
+| day08:390-396 | `hasMounted` と `api.auth.getSession.useQuery` の説明が実装と食い違う |
+| day08:663-666 | 画像が番号付きリストを分断して番号が振り直される（MD029） |
+| day09:449-456 | Suspense の fallback がデータ待ちを受け持つと書いてあるが、実際は `projectsLoading` のスピナーだけ |
+| day09:949-953 | 狭い画面で縦に並ぶと書いてあるが、ヘッダーに `flex-wrap`/`flex-col` の指定が無い |
+| day11:815 | 削除確認の alt と、実装の `DeleteConfirmDialog` に渡しとる title の文言が食い違う |
+| day11:1398 | 見出し前の空行（MD022） |
+| day18:679, :861 / day20:1244 / day21:634, :849 | **画像の到達 Step が本文と食い違う**（未追加の状態を説明しながら完成後の画像を貼っとる）。今回潰した型と同じ |
+| day23:906 | 「Recharts は右の形しか読めない」は誤り。`dataKey` は関数も取れる |
+| day23:929-954 | グラフのコードブロックが26行超 |
+| day25:689 | 「Step 4 まで書き終えた」→ Step 3 |
+| day26:215 | `error.tsx` が `useEffect` 内の例外も受け止めるように読める。Error Boundary の対象外 |
+| day27:336-342 | `ProjectDetailViewProps` の optional 表記が完成実装と食い違う |
+| day29:3158-3160 | **page.tsx の事前 `findUnique` + `notFound()` で、認可前に ID の存在が外から分かる** |
+| day30:102-110 | Vercel の Storage タブから Postgres を作る手順が現行の提供方法と違う（Marketplace 経由） |
+| day01:275, :839 | 重複見出し（MD024） |
+| day01:1137 / day02:179-180 | コードブロックが26行超 |
+| day01:110 | 「準備プロジェクト」という言い回し |
+
+### コード側
+
+| 箇所 | 指摘 |
+|---|---|
+| `shoot_screenshots.py:845-848` | 再試行が HTTP 500 以上のとき 0.5 秒待たずに即再試行しとる |
+| `shoot-page.mjs:212-216` | （4491fc1 で setTimeout ごと消したので**要確認**。まだ言うとるなら反論する） |
+| `check_page_layout.py:585` | `page-*.pgm` を辞書順で並べとる。10ページ超で page-10 が page-2 より前に来る。**退行テストごと必要** |
+| `test_build_day_snapshots.py:701-703` | `out` が None のとき2つ目の検証へ渡してしまう |
+| `test_shoot_screenshots.py:61` | 禁止キーの一覧を手で二重管理しとる |
+| `src/lib/constant/priority.ts` ほか | グラフ用の色を10pxのラベルに使っとってコントラストが足りん |
+
+### 取らんと決めたもの（返信して resolve する）
+
+markdownlint の MD040/MD018/MD056 系（コードフェンスの言語指定・`#` のエスケープ・表の `|`）。
+`doc/` には既存で MD060 が2133件・MD013 が1245件あって、**markdownlint のゲート自体が無い**。
+リポジトリが強制しとるのは textlint で、そっちは通っとる。拾われた分だけ直しても何も片付かん。
+ただし **MD056（表の `|` でセルが欠ける）だけは中身が消える**ので、これは直す。
+
+### 進め方
+
+1. 上の「中身の指摘」を1件ずつ**自分でファイルを開いて**裏を取る。CodeRabbit も誤りを出す
+2. 本物は直す。違うと思たら根拠つきで返信して議論する
+3. スレッドごとに返信 → resolve
+4. CI 全緑 + 衝突なし → マージ
