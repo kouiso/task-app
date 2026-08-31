@@ -17,7 +17,9 @@ TaskDialogコンポーネントで、新しいタスクを作成
 
 スクリーンショット: タスク作成ダイアログの完成イメージを確認してください。
 
-![タスク作成ダイアログの完成画面](./screenshots/task-create-dialog.png)
+![タスク作成ダイアログ。タイトル・説明・ステータス・優先度・プロジェクト・担当者・期限・見積時間の8欄が並ぶ](./screenshots/day14/task-create-dialog.png)
+
+画像の日付欄には `yyyy/mm/dd` と出ていますが、日本語版のブラウザでは `年/月/日` と表示されます。並び順は同じで、書かれている文字だけが違います。
 
 > **今日のゴールライン**: TaskDialogにフォーム管理とバリデーションを組み込み、新しいタスクが一覧へ反映される流れを体験できればOK。
 
@@ -167,7 +169,24 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 ```
 
+ここだけ Prisma のメソッドではなく `$queryRaw` で SQL を直接書いています。行ロックを取る `FOR UPDATE` に当たるメソッドを Prisma が持っていないためで、この教材で生の SQL を書くのはここ1か所だけです。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
+
 `FOR UPDATE` は、同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため、同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメータとして渡され、文字列連結で SQL を作らない安全な書き方です。
+
+```mermaid
+sequenceDiagram
+    participant A as 先に届いた作成
+    participant P as projects の1行
+    participant B as 同時に届いた作成
+    A->>P: FOR UPDATE でロックを取る
+    B->>P: 同じ行のロックを待つ
+    A->>A: 最大値 3 を読み、position に 4 を付ける
+    A->>P: 保存を終えてロックを離す
+    P->>B: 待ちが解ける
+    B->>B: 最大値 4 を読み、position に 5 を付ける
+```
+
+時間は上から下へ進みます。ロックが無いと、2本目が待たずに同じ「最大値 3」を読み、両方が 4 を付けます。待たせる相手を作るのが `FOR UPDATE` の役目です。
 
 次に、指定した担当者がプロジェクトのメンバーかを確認するヘルパーを続けます。
 
@@ -677,7 +696,7 @@ export function TaskDialog({
   });
 ```
 
-`useForm` から受け取った7つは、すべてこのあとの入力欄で使います。`register` は Input と Textarea をフォームへつなぐ道具、`control` は Select をつなぐ道具で、この使い分けが Step 5 の山場になります。いちばん効いているのは `resolver: zodResolver(taskFormSchema)` の1行です。Step 1 で書いたスキーマが、ここで送信前の検問として組み込まれます。この行が抜けるとスキーマは書いただけの存在になり、タイトルが空でも送信が通ります。関数はまだ続くので、次のブロックへ進みます。
+`useForm` から受け取った7つのうち、`register` `handleSubmit` `control` `reset` `errors` の5つはこのあとの入力欄で使います。残る `watch` と `setValue` は入力欄ではなく、Step 3 で書く `useEffect` の中で使います。`register` は Input と Textarea をフォームへつなぐ道具、`control` は Select をつなぐ道具で、この使い分けが Step 5 の山場になります。いちばん効いているのは `resolver: zodResolver(taskFormSchema)` の1行です。Step 1 で書いたスキーマが、ここで送信前の検問として組み込まれます。この行が抜けるとスキーマは書いただけの存在になり、タイトルが空でも送信が通ります。関数はまだ続くので、次のブロックへ進みます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
@@ -771,6 +790,8 @@ export function TaskDialog({
 | `handleSubmit` | バリデーション後に送信 |
 | `control` | Controllerに渡してSelectを制御 |
 | `reset` | フォームの値をリセット |
+| `watch` | いま選ばれている値を読む（Step 3 で使用） |
+| `setValue` | 特定の項目だけ書き換える（Step 3 で使用） |
 | `errors` | バリデーションエラー情報 |
 
 **確認ポイント**:
@@ -926,12 +947,12 @@ return (
 > `errors.title` でバリデーションエラーを表示します。
 
 **確認ポイント**:
-- タイトルと説明の入力欄が表示される
-- タイトルが空のまま送信するとエラーメッセージが表示される
+- タイトルと説明の入力欄を書けた
+- `npm run dev` で型エラーが出ていない
 
-スクリーンショット: タイトルと説明の入力欄が並んだ画面を確認してください。
+スクリーンショット: 下の画像は Step 7 まで書き終えた完成後のダイアログです。赤枠の2欄が、この Step で足したところです。**このダイアログを画面へ出すのは Step 8 です。** ここまでは、書いたコードと `npm run dev` の型チェックだけで確かめてください。
 
-![タイトルと説明の入力欄が表示されている画面](./screenshots/task-create-dialog.png)
+![完成後のタスク作成ダイアログ。赤枠が、この Step で足したタイトル欄と説明欄を指している](./screenshots/day14/task-dialog-title-description.png)
 
 ---
 
@@ -1042,8 +1063,8 @@ return (
 > 構造になります。
 
 **確認ポイント**:
-- ステータスと優先度が選択できる
-- 選択肢が日本語で表示される
+- ステータスと優先度の `Controller` を書けた
+- 選択肢に `TASK_STATUS_LABELS` と `TASK_PRIORITY_LABELS` の日本語を使っている
 
 #### register vs Controller の使い分け
 
@@ -1070,8 +1091,8 @@ return (
 | `URGENT` | 緊急 |
 
 **確認ポイント**:
-- ステータスと優先度が選択できる
-- 2列グリッドで横並びになっている
+- ステータスと優先度を2列グリッドで囲んだ
+- `npm run dev` で型エラーが出ていない
 
 ---
 
@@ -1194,9 +1215,9 @@ return (
 - プロジェクト一覧が表示される
 - 担当者一覧に「未割当」がある
 
-スクリーンショット: プロジェクトと担当者のSelect欄が並んだ画面を確認してください。
+スクリーンショット: 下の画像は Step 7 まで書き終えた完成後のダイアログです。赤枠の2欄が、この Step で足したところです。いまの自分の画面には、その下の期限と見積時間がまだありません。Step 7 で足します。
 
-![プロジェクト・担当者のSelect欄が表示されている画面](./screenshots/task-create-dialog.png)
+![完成後のタスク作成ダイアログ。赤枠が、この Step で足したプロジェクト欄と担当者欄を指している。担当者の初期値は「未割当」](./screenshots/day14/task-dialog-project-assignee.png)
 
 ---
 
@@ -1335,7 +1356,7 @@ const utils = api.useUtils();
 ページ全体が英語のエラーで止まります。`utils` は取得したデータの控えを操作するための入口で、
 このあとの `createMutation` で使います。
 
-`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので、Day 20 で作る一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは、他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうは、送信の直前にログインが切れていないかを確かめるために使います。作成者のIDはサーバーがセッションから決めるので、画面側が送る値ではありません。
+`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので、Day 20 で作る一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは、他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうは、いまログインしている本人が誰かを知るために使います。Step 8 の送信ハンドラーは、ここで受け取った `session?.user?.id` があるかどうかだけを見ます。値はDay 13 で一度取ったものをそのまま読むので、送信のたびにサーバーへ問い合わせ直すわけではありません。作成者のIDはサーバーがセッションから決めるので、画面側が送る値ではありません。
 
 **確認ポイント**:
 - `const utils = api.useUtils();` が追加できた
@@ -1389,18 +1410,10 @@ const handleSubmit =
 `dueDate` をそのまま送らないのは、サーバーの入力スキーマが ISO 8601 形式の日時文字列を求めるからです。`<input type="date">` が返すのは `2026-04-17` のような日付だけの文字列なので、そのまま送ると検査で弾かれます。`dateOnlyToUtcStartIso()` はこれを UTC の 0 時に固定した文字列へ直し、時差で前日や翌日にずれる事故も一緒に防ぎます。`assigneeId` に `|| undefined` を付けているのは、担当者を選ばなかったときの値が空文字だからです。空文字はIDの形をしていないため、そのまま送ると「担当者なし」ではなく入力エラーとして扱われます。先頭の `session?.user?.id` の確認は、ログインが切れた状態で送信して失敗するのを手前で止めるための門番です。
 
 **確認ポイント**:
-- 「新規タスク」ボタンでダイアログが開く
-- フォーム送信でタスクが作成される
-- 一覧に新しいタスクが表示される
+- `createMutation` と `handleSubmit` を書けた
+- `npm run dev` で型エラーが出ていない
 
-作ったタスクは、一覧の**いちばん下**に足されます。
-`create` は「今ある番号のいちばん大きいもの + 1」を新しいタスクに付け、
-一覧はその番号の小さい順に並べるためです。
-画面の上のほうを探しても見つからないので、下までスクロールしてください。
-
-スクリーンショット: タスク一覧に新しい行が増えた画面を確認してください。
-
-![タスク一覧に作成したタスクが並んでいる画面](./screenshots/task-list-after-create.png)
+ダイアログを開くボタンと、ダイアログそのものを画面へ貼るのはこの下です。押して試せるのは、両方を貼り終えてからになります。
 
 #### createMutationに渡すパラメータ
 
@@ -1418,7 +1431,9 @@ const handleSubmit =
 ```typescript
 {/* filepath: src/app/task/page.tsx */}
 {/* return の中、ページ見出し <h1> の直後に追加 */}
-<Button onClick={handleCreate}>
+<Button size="sm"
+  className="w-full sm:w-auto"
+  onClick={handleCreate}>
   <Plus className="mr-2 h-4 w-4" />
   新規タスク
 </Button>
@@ -1446,6 +1461,18 @@ const handleSubmit =
 - 「新規タスク」ボタンが `<h1>` の直後、`TaskDialog` が `TaskDetailDialog` の直後にある
 - TaskDialogに `initialData` と `projects` が渡されている
 - `createdById` をフロントから渡していない
+- 「新規タスク」ボタンでダイアログが開く
+- フォーム送信でタスクが作成される
+- 一覧に新しいタスクが表示される
+
+作ったタスクは、一覧の**いちばん下**に足されます。
+`create` は「今ある番号のいちばん大きいもの + 1」を新しいタスクに付け、
+一覧はその番号の小さい順に並べるためです。
+画面の上のほうを探しても見つからないので、下までスクロールしてください。
+
+スクリーンショット: 下の画像は、タイトルに「トップページの文言を見直す」と入れて作ったときの一覧です。自分が入れたタイトルのカードが一覧の最後に増えていれば、同じ結果です。
+
+![タスク一覧の最後に「トップページの文言を見直す」のカードが増えた画面](./screenshots/day14/task-list-after-create.png)
 
 ---
 
@@ -3048,10 +3075,22 @@ function TaskPageContent() {
     setSelectedTask(null);
   };
   const handleEdit =
-    (taskId: string) => {};
+    (taskId: string) => {
+      void taskId;
+    };
   const handleDelete =
-    (taskId: string) => {};
+    (taskId: string) => {
+      void taskId;
+    };
+```
 
+`handleEdit` と `handleDelete` の中身が `void taskId;` だけなのは、編集と削除を Day 15 で作るからです。`void taskId;` は「この引数を今は使わない」と書き残す形で、Day 09 と Day 13 でも同じ書き方をしました。空の `{}` にすると、使っていない引数として lint の警告が出ます。中身を入れる場所を先に決めておけば、明日は関数を差し替えるだけで済みます。
+
+続けて、読み込み中の早期 return を書きます。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 読み込み中の早期 return
   if (tasksLoading) {
     return (
       <AppLayout>
@@ -3061,7 +3100,7 @@ function TaskPageContent() {
   }
 ```
 
-`handleEdit` と `handleDelete` が空のままなのは、編集と削除を Day 15 で作るからです。中身を入れる場所を先に決めておくと、明日は関数を差し替えるだけで済みます。`tasksLoading` の早期 return を置くのは、読み込み中の `tasks` が `undefined` で、この後の `tasks.map(...)` が落ちるためです。
+`tasksLoading` の早期 return を置くのは、読み込み中の `tasks` が `undefined` で、この後の `tasks.map(...)` が落ちるためです。
 
 **見出しとフィルター**:
 
@@ -3075,7 +3114,9 @@ function TaskPageContent() {
           tracking-tight">
           タスク
         </h1>
-        <Button onClick={handleCreate}>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
           新規タスク
         </Button>
@@ -3281,6 +3322,22 @@ export default function TaskPage() {
 | setValueAs | register のオプションで入力値を型変換する関数 |
 | getProjectMembers | プロジェクトメンバー一覧を取得するAPI |
 | getMembersByProject | 選択したプロジェクトのメンバーだけを取得するAPI |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId)` は、何を確かめていますか。**
+
+A. 指定された担当者が、そのプロジェクトのメンバーとして登録されているかを確かめています。登録が無ければ `BAD_REQUEST` を返して保存しません。画面の担当者候補は選んだプロジェクトのメンバーだけに絞ってありますが、通信を書き換えれば別の人の id も送れます。断るのはサーバーの役目です。
+
+**Q2. ステータスの `Select` を `control` ではなく `register('status')` で登録すると、どうなりますか。**
+
+A. 値がフォームに入りません。shadcn/ui の `Select` は引き金が `<button>` で、`value` を持たず `change` も出さないためです。`register` はその2つを頼りに値を集めるので、見た目は選べているのに送信時は空のままになります。`Controller` と `control` を使うと、選択のたびに値をフォームへ書き戻せます。
+
+**Q3. 担当者の「未選択」を空文字ではなく `'unassigned'` という文字列で持つのは、なぜですか。**
+
+A. shadcn/ui の `Select` が空文字を「選択済みの値」として扱えず、選んでも placeholder が出たままになるためです。画面の上だけ `'unassigned'` という別の値を使い、送信するときに空文字へ戻します。DB に `'unassigned'` という担当者が保存されることはありません。
 
 ## 次回予告
 

@@ -1,0 +1,2275 @@
+{
+  "_readme": [
+    "撮影する画面の宣言表。1件が1枚のスクリーンショットに対応する。",
+    "増やすときはこの配列へ足すだけでよく、Python 側は触らない。",
+    "",
+    "  name    出力ファイル名。material/30days-curriculum/screenshots/ からの相対。",
+    "  day     どの日の読者の手元で撮るか。dist/day-snapshots/dayNN/ を起動する。",
+    "  path    その日のアプリの中の URL パス。",
+    "  login   先にログインしてから撮る場合のアカウント。省略で未ログイン。",
+    "  actions 撮る前の操作。click / fill / wait_for のいずれか。",
+    "  wait_for 撮る直前に出ているのを待つセレクタ。",
+    "  marks   赤枠。selector で指す。座標は書けない（boundingBox() から取る）。",
+    "          複数書くと書いた順に ①②③ の番号バッジが付く。",
+    "  full_page ページ全体を撮るか。省略でビューポートのみ。",
+    "  clip    切り抜く範囲。{selector, padding}。full_page とは同時に書けない。",
+    "          ダイアログは padding 0。余白を取ると、暗くした背景の日本語が字の高さの",
+    "          途中で切れて、壊れた画像に見える。",
+    "  note    なぜこの1枚が要るかの覚え書き。出力には出ない。",
+    "  viewport この1枚だけ窓の大きさを変える。省略で先頭の viewport。"
+  ],
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "shots": [
+    {
+      "name": "day01/top-page.png",
+      "day": 1,
+      "path": "/",
+      "note": "Day 01 の主成果はトップページなのに、教材には1枚も無い（scan-day01-08.md 01-A4）。",
+      "marks": [
+        {
+          "selector": "a[href='/dashboard']",
+          "label": "ダッシュボードへ入る"
+        }
+      ],
+      "full_page": true
+    },
+    {
+      "name": "day01/dashboard-hello.png",
+      "day": 1,
+      "path": "/dashboard",
+      "note": "中身は現行コードと一致している既存画像。実画面で撮り直して素性を揃える。",
+      "full_page": true
+    },
+    {
+      "name": "day02/step2-greeting-card.png",
+      "day": 2,
+      "path": "/dashboard",
+      "wait_for": "article.overflow-hidden",
+      "note": "day02:497 が参照している1枚。宣言表から漏れていたため撮り直しの対象にならず、旧版の文面（『〜する を前に進める日だ』）と Next.js の dev バッジが残っていた。あいさつの1文が読める大きさにするためカードだけを切り出す。",
+      "clip": {
+        "selector": "article.overflow-hidden",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day02/dashboard-message.png",
+      "day": 2,
+      "path": "/dashboard",
+      "note": "既存画像は別ビルド（G0 FOUNDATION / taskapp demo / 関西弁の旧文面）。",
+      "full_page": true
+    },
+    {
+      "name": "day05/login.png",
+      "day": 5,
+      "path": "/login",
+      "wait_for": "#password",
+      "note": "共有の login.png は Day 05/07/08 で6回使われている。日ごとに分ける。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day05/login-error.png",
+      "day": 5,
+      "path": "/login",
+      "actions": [
+        {
+          "kind": "fill",
+          "selector": "#email",
+          "value": "admin@example.com"
+        },
+        {
+          "kind": "click",
+          "selector": "button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "p.text-destructive"
+        }
+      ],
+      "wait_for": "p.text-destructive",
+      "marks": [
+        {
+          "selector": "p.text-destructive",
+          "label": "欄の下に赤字で出る"
+        }
+      ],
+      "note": "既存画像はブラウザ標準の英語ツールチップで、本文が言う『欄の下の赤字』が写っていない。メール欄を空にすると type=email のブラウザ検証が submit を止めてしまい、zod の赤字まで辿り着かない（それが既存画像の正体）。メールは正しく埋め、パスワードだけ空にして zod の検証を通す。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day06/register.png",
+      "day": 6,
+      "path": "/register",
+      "wait_for": "#password",
+      "note": "既存の register*.png 4枚は同じ完成フォームで、* 印など現行 UI と食い違う。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day07/login-failed.png",
+      "day": 7,
+      "path": "/login",
+      "actions": [
+        {
+          "kind": "fill",
+          "selector": "#email",
+          "value": "admin@example.com"
+        },
+        {
+          "kind": "fill",
+          "selector": "#password",
+          "value": "wrong-password"
+        },
+        {
+          "kind": "click",
+          "selector": "button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alert']"
+        }
+      ],
+      "wait_for": "[role='alert']",
+      "marks": [
+        {
+          "selector": "[role='alert']",
+          "label": "バックエンドが返した文言"
+        }
+      ],
+      "note": "Day 07 だけが撮れる画面。Day 05 の時点では認証バックエンドが無いのでこの赤いアラートは出せず、Day 07 で auth ルーターが動いて初めて出る。middleware のリダイレクト先も撮ってみたが、出てくる絵は day05/login.png と同じログイン画面で、違いは URL の callbackUrl だけ。ヘッドレスの撮影では URL 欄が写らず見分けが付かないので、そちらは持たない（day07 の本文からは day05/login.png を指す）。",
+      "clip": {
+        "selector": ".max-w-sm",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day08/sidebar.png",
+      "day": 8,
+      "path": "/dashboard",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "aside",
+      "marks": [
+        {
+          "selector": "aside",
+          "label": "今日つくるサイドバー"
+        }
+      ],
+      "note": "既存画像はメニュー7項目。Day 08 の menuItems は3項目で、同じ日の確認ポイントと矛盾していた。"
+    },
+    {
+      "name": "day08/dashboard.png",
+      "day": 8,
+      "path": "/dashboard",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "aside",
+      "note": "Step 5『ダッシュボードが表示される（サイドバー付き）』の直後に置く1枚。"
+    },
+    {
+      "name": "day08/logout-confirm.png",
+      "day": 8,
+      "path": "/dashboard",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "aside button:has-text('ログアウト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "marks": [
+        {
+          "selector": "[role='alertdialog']",
+          "label": "確認ダイアログ"
+        }
+      ],
+      "note": "Day 08 の主要成果物なのに確認ダイアログの画像が無い（scan-day01-08.md (g) Day 08）。 切り抜きにすると 48px の余白へ背景の日本語が字の高さの途中で入り、壊れた画像に見えた。同じ日の他の2枚と同じく全画面で撮り、位置は赤枠で示す。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-list.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "note": "共有の project-list.png は Day 09 に2回・Day 11 に1回使われている。実画像はサイドバー7項目・上部検索バー・シードに無い『社内データ分析基盤』が写る（scan-day09-16.md (g) Day 09）。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-list-header.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "note": "Step 9 の確認ポイントは『新規プロジェクトボタンが右上にある』『アーカイブ表示スイッチを押すと一覧が空になる』の2点。どちらも画像のどこを見るかの指示が無かった（(g) の③視覚指示 0件）。",
+      "marks": [
+        {
+          "selector": "button:has-text('新規プロジェクト')",
+          "label": "今日つけたボタン"
+        },
+        {
+          "selector": "div:has(> #show-archived)",
+          "label": "アーカイブ表示スイッチ"
+        }
+      ]
+    },
+    {
+      "name": "day09/empty.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "empty@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=プロジェクトが見つかりません",
+      "note": "Step 7 の空状態。読者が自分で見るには、どのプロジェクトにも属さないアカウントで入ればよい。シードの『新人 太郎』がそれに当たる。",
+      "marks": [
+        {
+          "selector": "div:has(> p:text-is('プロジェクトが見つかりません。'))",
+          "label": "0件のときの表示"
+        }
+      ]
+    },
+    {
+      "name": "day10/project-create-dialog.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規プロジェクト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "既存の project-create-dialog.png は Day 10 に3回使われている。実画像は必須マーク * が付き、カラーと日付の列の分け方も教材の grid-cols-3 と違う（scan-day09-16.md (g) Day 10）。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day10/create-form-filled.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規プロジェクト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        },
+        {
+          "kind": "fill",
+          "selector": "#name",
+          "value": "ポートフォリオサイト"
+        },
+        {
+          "kind": "fill",
+          "selector": "#description",
+          "value": "自分の作品をまとめるサイト"
+        },
+        {
+          "kind": "fill",
+          "selector": "#startDate",
+          "value": "2026-04-01"
+        },
+        {
+          "kind": "fill",
+          "selector": "#endDate",
+          "value": "2026-06-30"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "Step 5 のキャプションは『フォーム入力中のダイアログ』だが、貼られていたのは空のフォームだった（scan-day09-16.md (g) day10:642）。入力済みの状態を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day10/create-validation-error.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規プロジェクト')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "#name-error"
+        }
+      ],
+      "wait_for": "#name-error",
+      "marks": [
+        {
+          "selector": "#name-error",
+          "label": "zod が返した文言"
+        }
+      ],
+      "note": "Step 8 の確認表 手順2『プロジェクト名を空のまま作成→エラーメッセージが表示される』の1枚。ここにも同じ完成イメージが3枚目として貼られていた。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day10/project-list-after-create.png",
+      "day": 10,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(> div > h3:has-text('ポートフォリオサイト'))",
+          "label": "Step 8 で作ったプロジェクト"
+        }
+      ],
+      "note": "Step 7 の確認ポイント『一覧に新しいプロジェクトが表示される』。既存画像は未検証のまま Day 10 に置かれていた。",
+      "full_page": true
+    },
+    {
+      "name": "day12/project-detail.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "h1:text-is('Webサイトリニューアル')",
+      "note": "Step 1 の確認『プロジェクトカードをクリックして詳細ページが表示される』。既存の project-detail-tasks.png は同じ日に2回使われ、うち1回はメンバー一覧の説明に流用されていた。",
+      "full_page": true
+    },
+    {
+      "name": "day12/project-detail-members.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+      "note": "冒頭の完成イメージ。左のメンバーカードだけを切り出す。3人それぞれのロールが読める大きさにするため。",
+      "marks": [
+        {
+          "selector": "button:has-text('メンバー追加')",
+          "label": "今日つけるボタン"
+        }
+      ],
+      "clip": {
+        "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day12/add-member-dialog.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "click",
+          "selector": "button:has-text('メンバー追加')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "Step 4 のダイアログ。本文は『ユーザーを1人選ぶまでメンバー追加ボタンは押せません』と書くので、未選択の状態で撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day12/member-remove-confirm.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        },
+        {
+          "kind": "click",
+          "selector": "button[aria-label='田中太郎をプロジェクトから削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "Step 7 に貼られていたのはプロジェクト削除の画像で、教材自身が5行かけて『この画像で見出しの文字を照らし合わせても意味がありません』と断っていた。メンバー削除の実物を撮る。 OWNER の行の削除ボタンは disabled なので、MEMBER の行から開く。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day13/task-list.png",
+      "day": 13,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('タスク')",
+      "note": "既存の task-list.png は Day 13 と Day 16 で共有され、実画像はサイドバー7項目・上部検索バー・合計作業時間・シードに無いタスク8枚が写る（scan-day09-16.md (g) Day 13）。",
+      "full_page": true
+    },
+    {
+      "name": "day13/task-list-filtered.png",
+      "day": 13,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('すべてのステータス')"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='option']:has-text('完了')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('完了')"
+        }
+      ],
+      "wait_for": "h1:text-is('タスク')",
+      "marks": [
+        {
+          "selector": "button:has-text('完了')",
+          "label": "完了だけに絞った状態"
+        }
+      ],
+      "note": "Step 5 のキャプション『ステータスを完了に絞った状態』。初期データで DONE は「データベース設計」1件だけなので、絞ると1枚になる。",
+      "full_page": true
+    },
+    {
+      "name": "day13/task-detail-dialog.png",
+      "day": 13,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "Step 7 の確認『カードクリックで詳細ダイアログが開く／説明・担当者・期限が表示される』。既存画像は Day 16 と共有していた。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-create-dialog.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規タスク')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "既存の task-create-dialog.png は Day 14 に3回・Day 15 に1回。実画像は必須マーク * が付き、背景に Day 16・Day 20 の UI とシードに無いタスクが写る（scan-day09-16.md (g) Day 14）。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-dialog-title-description.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規タスク')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "#title",
+          "label": "Step 4 で書くタイトル欄"
+        },
+        {
+          "selector": "#description",
+          "label": "同じく説明欄"
+        }
+      ],
+      "note": "Step 4 の『タイトルと説明の入力欄が並んだ画面』。Step 4 だけを写した絵はこの道具では作れない（ツリーはその日の終わりの形しか組めない）ので、完成したダイアログの中で該当の2欄を指す。 赤枠は入力欄そのものを指す。ラベルまで囲むと番号バッジがラベルの1文字目に乗る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-dialog-project-assignee.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button:has-text('新規タスク')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "#project",
+          "label": "Step 6 で書くプロジェクト欄"
+        },
+        {
+          "selector": "#assignee",
+          "label": "同じく担当者欄"
+        }
+      ],
+      "note": "Step 6 の『プロジェクト・担当者の Select 欄』。同上の理由で、完成したダイアログの中で該当の2欄を指す。 赤枠は入力欄そのものを指す。ラベルまで囲むと番号バッジがラベルの1文字目に乗る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day14/task-list-after-create.png",
+      "day": 14,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('タスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(h3:has-text('トップページの文言を見直す'))",
+          "label": "Step 9 で作ったタスク"
+        }
+      ],
+      "note": "Step 9 の確認『一覧に新しいタスクが表示される』。本文が『いちばん下に足されます』と書くとおり、position が最後になる。",
+      "full_page": true
+    },
+    {
+      "name": "day15/task-edit-dialog.png",
+      "day": 15,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "div.rounded-lg:has(h3:has-text('デザインモックアップ作成')) button[aria-label='タスクを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] button[type='submit']",
+          "label": "編集で開くと「更新」"
+        }
+      ],
+      "note": "Day 15 の主題は編集モードなのに、教材には作成モードの画像しか無く、冒頭で2行かけて『編集で開くと見出しがタスク編集、ボタンが更新に変わります』と言葉で補っていた（scan-day09-16.md (g) Day 15）。編集で開いた実物を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day15/task-delete-confirm.png",
+      "day": 15,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "div.rounded-lg:has(h3:has-text('API仕様書作成')) button[aria-label='タスクを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "貼られていたのはプロジェクト削除の画像で、教材が『見出しが違います』と断っていた。タスク削除は title を渡さないので見出しは既定値の「本当に削除しますか？」になる。その実物を撮る。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day15/task-list-after-edit.png",
+      "day": 15,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('タスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(h3:has-text('API仕様書作成'))",
+          "label": "Step 11 で優先度を変えたタスク"
+        }
+      ],
+      "note": "Step 10 の確認『カードの編集ボタンで編集モードが開く』のあとに置く1枚。動作確認で優先度を上げた1件が「高」に変わっている。",
+      "full_page": true
+    },
+    {
+      "name": "day16/task-detail-dialog.png",
+      "day": 16,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭の完成イメージ。Day 13 と同じ画像を共有していたので、Day 16 のツリーで撮り直して素性を分ける。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day16/task-timer.png",
+      "day": 16,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "div.rounded-lg:has(h3:has-text('デザインモックアップ作成')) button[aria-label='デザインモックアップ作成の時間を記録']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "今日の主役のダイアログ。時間と分の2欄があることを見せる。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day17/my-task.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('マイタスク')",
+      "note": "既存の my-task.png は Day 17 に4回。うち Step 4 と Step 8 は途中経過のはずが完成画面だった（scan-day17-24.md (g) Day 17）。",
+      "full_page": true
+    },
+    {
+      "name": "day17/status-tabs.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "[role='tablist']",
+      "note": "Step 4 の『ステータス Tabs が表示されている画面』。Tabs だけを切り抜くと 700x72px にしかならず、紙面（版面 152.4mm）へ広げたときの実効解像度が 117ppi で下限の 120ppi を割る。画面全体を撮って、位置は赤枠で示す。",
+      "full_page": true,
+      "marks": [
+        {
+          "selector": "[role='tablist']",
+          "label": "今日つけるステータスタブ"
+        }
+      ]
+    },
+    {
+      "name": "day17/task-groups.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('マイタスク')",
+      "marks": [
+        {
+          "selector": "h2:has-text('期限切れ')",
+          "label": "期限で分かれた見出し"
+        }
+      ],
+      "note": "Step 8 の『グループ別タスク表示』。本文 :919 が『初期データのままなら期限切れに1枚』『残り3グループは中身が無いので非表示になる』と書いており、実際そのとおりの絵になる。",
+      "full_page": true
+    },
+    {
+      "name": "day17/my-task-in-progress.png",
+      "day": 17,
+      "path": "/my-task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "[role='tab']:has-text('進行中')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='tab'][data-state='active']:has-text('進行中')"
+        }
+      ],
+      "wait_for": "h1:text-is('マイタスク')",
+      "marks": [
+        {
+          "selector": "[role='tab'][data-state='active']",
+          "label": "選んだタブ"
+        }
+      ],
+      "note": "Step 12 の動作確認 手順4『ステータスタブで絞り込みできる』。タブを切り替えた状態を1枚だけ持つ。",
+      "full_page": true
+    },
+    {
+      "name": "day12/member-count.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+      "marks": [
+        {
+          "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー (')) h3:has-text('メンバー (')",
+          "label": "1人足すと (4) に変わる"
+        }
+      ],
+      "note": "day12:1395 は day12:17 と同じメンバーカードを求めている（教材側の重複）。本文がそれぞれ読者に見せたい所が違うので、指す先を赤枠で分けた。ここは見出しの人数。",
+      "clip": {
+        "selector": "div.rounded-lg:has(> div > h3:has-text('メンバー ('))",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day18/task-detail-dialog.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭のゴール。本文は「コメント付きのタスク詳細ダイアログ」と書いているのに、貼られていたのは着手前の task-detail-dialog.png で、alt が「今日ここへ足す」と断りを入れていた（scan-day17-24.md 18-a4）。Day 18 を終えたツリーで、一覧と投稿欄が並んだ実物を撮る。初期データの「デザインモックアップ作成」には admin のコメントが1件ある。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day18/comments-list.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] div.space-y-4.mb-4.overflow-y-auto",
+          "label": "Step 3 で書いたコメント一覧"
+        }
+      ],
+      "note": "Step 3 の「コメント一覧がタスク詳細に並んだ画面」。旧画像は Day 19 で足すペンとゴミ箱のアイコンが写っており、本文が2行かけて断っていた。Day 18 のツリーで撮ればアイコンは出ないので、断りごと不要になる。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day18/comment-form.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] form",
+          "label": "Step 4 で書いた投稿フォーム"
+        }
+      ],
+      "note": "Step 4 の「テキストエリアと投稿ボタンが並んだ画面」。フォームだけを切り抜くと幅が版面の下限（720px）を割るので、ダイアログを切り抜いて赤枠で指す。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day18/comment-before-post.png",
+      "day": 18,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] form"
+        },
+        {
+          "kind": "fill",
+          "selector": "[role='dialog'] textarea[aria-label='コメント本文']",
+          "value": "モックの配色を1案だけ差し替えました。確認をお願いします。"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] form button[type='submit']",
+          "label": "これから押すボタン"
+        }
+      ],
+      "note": "Step 7 の「投稿ボタンを押す直前」。本文が押した後に起きる3つ（一覧の先頭に加わる・件数が1つ増える・入力欄が空に戻る）を文章で書いているので、直前の状態を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/comment-edit-mode.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button:has-text('キャンセル')"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭のゴール「コメント編集モードの画面」。既存の task-comment-edit.png は同じ日に2回貼られていた。Day 19 のツリーで、自分のコメントの行だけがテキストエリアへ変わった実物を撮る。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/own-comment-actions.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] div.flex.items-center.gap-2:has(button[aria-label='自分のコメントを編集'])",
+          "label": "自分のコメントにだけ出る2つのボタン"
+        }
+      ],
+      "note": "Step 4 のキャプションは「本人のコメントにだけ編集・削除ボタンが並ぶ表示」なのに、貼られていたのはコメント0件のダイアログで、本文が「画像はコメントが1件も無いときの姿です」と断っていた。初期データの「デザインモックアップ作成」には admin 自身のコメントが1件あるので、ボタンが並んだ実物を撮れる。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/comment-edit-actions.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button:has-text('キャンセル')"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] div.flex.gap-2.justify-end",
+          "label": "Step 5 で動くようになる2つのボタン"
+        }
+      ],
+      "note": "Step 5 の「編集モードでテキストエリアが表示されている」。冒頭のゴールと同じ画面なので、こちらは本文が言う『キャンセルを押せば元の表示へ戻ります』の2つのボタンを赤枠で指して区別する。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day19/comment-delete-confirm.png",
+      "day": 19,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('デザインモックアップ作成')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを削除']"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[aria-label='自分のコメントを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "Step 6 のキャプションは「タスク詳細ダイアログのコメントセクション完成」で、貼られていたのはコメント0件のダイアログだった。Step 6 の成果物は title を「コメントを削除しますか？」に変えた確認ダイアログなので、その実物を撮る。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day20/search.png",
+      "day": 20,
+      "path": "/search",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('検索')",
+      "note": "冒頭のゴール。既存の search-results.png は同じ日に2回。本文が『画像の案内文は完成版のもので、今日書くコードでは「検索条件を入力してください」になります』と断っていたが、Day 20 のツリーで撮ればその文言そのものが写る。",
+      "full_page": true
+    },
+    {
+      "name": "day20/search-form.png",
+      "day": 20,
+      "path": "/search",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('検索')",
+      "note": "Step 5 の「入力欄が7つそろったフォーム」。旧画像には『クリア』しか写っておらず、本文が2行かけて『いま書いたコードではその右隣に検索ボタンも並びます』と補っていた。Day 20 のツリーでは2つとも写る。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(#keyword)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day20/search-before-query.png",
+      "day": 20,
+      "path": "/search",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('検索')",
+      "marks": [
+        {
+          "selector": "div.text-center.py-12:has(p:text-is('検索条件を入力してください'))",
+          "label": "結果のカードが並ぶ場所"
+        }
+      ],
+      "note": "Step 10 の動作確認。冒頭のゴールと同じ画面なので、本文が言う『キーワードを入れると、この空きスペースに結果のカードが並びます』の場所を赤枠で指して区別する。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "note": "冒頭の完成イメージ。既存の report.png は Day 21 に5回・Day 22 に3回・Day 23 に2回。実画像は Day 22 の円グラフまで写っており、本文が『下に写っている円グラフは Day 22 の成果物』と断っていた。Day 21 のツリーで撮ればグラフは無い。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report-heading.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "marks": [
+        {
+          "selector": "div.space-y-6 > div:has(> h1)",
+          "label": "Step 3 で書いた見出しと説明文"
+        }
+      ],
+      "note": "Step 3 の骨組み確認。Step 3 の時点の画面は JSX が閉じていないので描画できず、この道具では撮れない。完成後の画面で、この Step までに出るところを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report-loading.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["report.getOverview"],
+      "wait_for": "div.animate-spin",
+      "note": "Step 5 のローディング確認。本文が『読み込んでいる間は画面の中央にスピナーだけが出ます』『ここでスピナーだけを返すと読み込み中はサイドバーも消えます』と書いているとおりの絵。手元の DB は速すぎて撮る隙が無いので、getOverview の返事だけを止めて撮る。 切り抜かずにページの枠ごと撮る。窓の高さは同じ日の完成画面（day21/report.png）にそろえた 434。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。この日の読み込み中は `AppLayout` の外で返すので、写るのは白い画面とスピナーだけになる。それが読者の画面そのもので、本文もサイドバーが消えると書いている。",
+      "viewport": {
+        "width": 1440,
+        "height": 434
+      }
+    },
+    {
+      "name": "day21/report-stat-cards.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "marks": [
+        {
+          "selector": "div.grid.grid-cols-1.gap-4",
+          "label": "Step 7 で書いた4枚のカード"
+        }
+      ],
+      "note": "Step 7 のカード確認。旧画像は完成版でカードの下に円グラフが写っており、本文が『グラフを作るのは Day 22 なので今日の画面ではカードの下は空のままです』と断っていた。",
+      "full_page": true
+    },
+    {
+      "name": "day21/report-narrow.png",
+      "day": 21,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('レポート・統計')",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "note": "Step 9 のレスポンシブ確認。旧画像は PC 幅の4列で、本文が『モバイル幅の姿はブラウザの幅を実際に縮めて確かめてください』と読者へ投げていた。幅 900px で撮れば 2 列に折り返した実物を見せられる（`sm:grid-cols-2` が効き、`lg:grid-cols-4` が外れる幅）。",
+      "full_page": true
+    },
+    {
+      "name": "day22/report.png",
+      "day": 22,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('優先度別タスク')",
+      "note": "冒頭のゴール。Day 22 のツリーで撮ると、統計カードの下に円グラフが2つ並ぶ。初期データではステータスが TODO・進行中・完了の3切れ、優先度が高・中の2切れになる（`scan-day17-24.md` (f) Day 22 の実測）。",
+      "full_page": true
+    },
+    {
+      "name": "day22/report-pie-charts.png",
+      "day": 22,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('優先度別タスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('ステータス別タスク'))",
+          "label": "ステータス別"
+        },
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('優先度別タスク'))",
+          "label": "優先度別"
+        }
+      ],
+      "note": "Step 7 の「ステータスと優先度の2つの円グラフが表示される」。2枚それぞれを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day22/report-chart-grid.png",
+      "day": 22,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('優先度別タスク')",
+      "marks": [
+        {
+          "selector": "div.grid.grid-cols-1.gap-6",
+          "label": "Step 8 で横並びにしたグリッド"
+        }
+      ],
+      "note": "Step 8・9 の「統計カード4枚の下に円グラフ2つがグリッド配置された完成画面」。並べたグリッドそのものを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report-project-table.png",
+      "day": 23,
+      "path": "/report",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロジェクト統計')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('プロジェクト統計'))",
+          "label": "Step 2 で書いたテーブル"
+        }
+      ],
+      "note": "Step 2 のキャプションは「プロジェクト統計テーブルの表示を確認してください」なのに、旧画像の alt は『テーブルはこの下に続く』で、肝心のテーブルが写っていなかった。テーブルを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report-weekly-loading.png",
+      "day": 23,
+      "path": "/report/weekly",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["report.getWeeklyReport"],
+      "wait_for": "div.animate-spin",
+      "note": "Step 5 のローディング確認。旧画像は読み込みが終わったあとの姿で、本文が『下の画像は読み込みが終わったあとの姿です』と断っていた。getWeeklyReport の返事だけを止めて、スピナーそのものを撮る。 切り抜かずにページの枠ごと撮る。窓の高さは640。同じ日の完成画面（day23/report-weekly.png）は 1022 だが、この日の読み込み中は `AppLayout` の外で `return <PageLoadingSpinner />` するので画面に枠が無く、縦に伸ばしても白場が増えるだけなので頭打ちにした。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。この日の読み込み中は `AppLayout` の外で返すので、写るのは白い画面とスピナーだけになる。それが読者の画面そのもので、本文もサイドバーが消えると書いている。",
+      "viewport": {
+        "width": 1440,
+        "height": 640
+      }
+    },
+    {
+      "name": "day23/report-weekly-charts.png",
+      "day": 23,
+      "path": "/report/weekly",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('週別完了タスク数')",
+      "marks": [
+        {
+          "selector": "div.grid.grid-cols-1.gap-6",
+          "label": "Step 6 で書いた3つのグラフ"
+        }
+      ],
+      "note": "Step 6 の「週次レポートのグラフ表示」。折れ線と棒グラフのグリッドを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day23/report-weekly.png",
+      "day": 23,
+      "path": "/report/weekly",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('週別完了タスク数')",
+      "note": "Step 7 の動作確認「週次レポートページ全体」。Day 23 の前提が読者へ作らせる完了タスク3件が、直近の週に立つ。",
+      "full_page": true
+    },
+    {
+      "name": "day24/user-list.png",
+      "day": 24,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('ユーザー管理')",
+      "note": "冒頭のゴール。既存の user-list.png は同じ日に2回。Day 24 のツリーで撮ると、サイドバーに今日足した「ユーザー管理」が入った状態になる。",
+      "full_page": true
+    },
+    {
+      "name": "day24/user-list-table.png",
+      "day": 24,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:has-text('ユーザー管理')",
+      "marks": [
+        {
+          "selector": "th:text-is('ロール')",
+          "label": "ロールのバッジが並ぶ列"
+        },
+        {
+          "selector": "th:text-is('アクション')",
+          "label": "右端のアクション列"
+        }
+      ],
+      "note": "Step 9 の「アバターとロールのバッジが並び、右端にアクション列が出ていること」。本文が名指しする2つの列を赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day25/profile.png",
+      "day": 25,
+      "path": "/profile",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロフィール')",
+      "note": "冒頭のゴール。既存の profile.png は同じ日に3回。",
+      "full_page": true
+    },
+    {
+      "name": "day25/profile-info.png",
+      "day": 25,
+      "path": "/profile",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロフィール')",
+      "marks": [
+        {
+          "selector": "div.space-y-4:has(p:text-is('メールアドレス'))",
+          "label": "Step 3 で書いたメール・登録日・最終更新日"
+        }
+      ],
+      "note": "Step 3 の確認『メール・登録日・最終更新日が表示される』。3行そろっているところを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day25/profile-buttons.png",
+      "day": 25,
+      "path": "/profile",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h3:text-is('プロフィール')",
+      "marks": [
+        {
+          "selector": "div.flex.flex-col.gap-3",
+          "label": "Step 4 で並べた3つのボタン"
+        }
+      ],
+      "note": "Step 4 の確認『3つのボタンが縦に並ぶ／管理者にだけユーザー管理ボタンが出る』。読者は admin で入っているので3つとも出る。",
+      "full_page": true
+    },
+    {
+      "name": "day25/change-password.png",
+      "day": 25,
+      "path": "/profile/change-password",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "form",
+      "note": "Step 8 の『現在のパスワード・新しいパスワード・確認用の3つの入力欄が並んだ画面』。中央寄せのカードなので切り抜く。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day25/profile-edit.png",
+      "day": 25,
+      "path": "/profile/edit",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "form",
+      "note": "Step 14 の『名前・メールアドレス・アバターURLの入力欄が並んだ編集ページ』。名前とメールには今の値が入った状態で開く。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day26/error-page.png",
+      "day": 26,
+      "path": "/this-page-does-not-exist",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=ページが見つかりません",
+      "note": "冒頭のゴール。既存の error-page.png は同じ日に2回。Day 26 のツリーで `not-found.tsx` が返す画面を撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day26/not-found-action.png",
+      "day": 26,
+      "path": "/this-page-does-not-exist",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=ページが見つかりません",
+      "marks": [
+        {
+          "selector": "a:has-text('ダッシュボード')",
+          "label": "ここから戻れる"
+        }
+      ],
+      "note": "Step の手順2『「404」と「ページが見つかりません」を確認する』のあとの1枚。行き止まりにならないことを示すため、戻る導線を赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day27/project-detail.png",
+      "day": 27,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:has-text('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "h3:has-text('メンバー')",
+      "note": "冒頭のゴール1枚目。既存の project-detail-tasks.png は Day 12 でも使っていた完成版。Day 27 のツリーで、一覧から1件開いたインライン詳細を撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day27/project-detail-archive.png",
+      "day": 27,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:has-text('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "button:has-text('アーカイブ')",
+      "marks": [
+        {
+          "selector": "button:has-text('アーカイブ')",
+          "label": "右上のアーカイブボタン"
+        }
+      ],
+      "note": "冒頭のゴール2枚目。旧 alt は『別のプロジェクトの詳細画面』だが、読者がメンバーになっているプロジェクトは「Webサイトリニューアル」1件だけ（`scripts/_seed/seed.ts:107-165`）。別のプロジェクトは開けないので、同じ画面でアーカイブボタンの位置を指す。",
+      "full_page": true
+    },
+    {
+      "name": "day27/project-detail-members.png",
+      "day": 27,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('Webサイトリニューアル')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:has-text('Webサイトリニューアル')"
+        }
+      ],
+      "wait_for": "h3:has-text('メンバー (')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(> div > h3:has-text('メンバー ('))",
+          "label": "メンバーの権限と削除"
+        }
+      ],
+      "note": "Step の締めくくり『メンバー削除は確認ダイアログを挟んで実行される／詳細表示そのものはインライン表示のままになっている』。 アーカイブした後の姿は撮らない。読者に見えるプロジェクトは「Webサイトリニューアル」1件だけで、 それをアーカイブした画像を載せると、Day 12 の「このプロジェクトはアーカイブしてはいけません」と食い違うため。",
+      "full_page": true
+    },
+    {
+      "name": "day29/user-detail.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='詳細']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:text-is('参加プロジェクト')"
+        }
+      ],
+      "wait_for": "h3:text-is('担当中のタスク')",
+      "note": "冒頭のゴール。田中太郎はプロジェクトにもタスクにもひもづいているので、2枚のカードが両方とも埋まる。",
+      "full_page": true
+    },
+    {
+      "name": "day29/user-detail-loading.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["user.getById"],
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='詳細']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "div.animate-spin"
+        }
+      ],
+      "wait_for": "div.animate-spin",
+      "note": "Step 3 の『読み込み中はスピナーだけが表示されます』。getById の返事だけを止めて撮る。 切り抜かずにページの枠ごと撮る。窓の高さは同じ日の完成画面（day29/user-detail.png）にそろえた 610。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。枠ごと撮ればサイドバーと見出しが入るので、読者は自分がどの画面の読み込みを見ているか判定できる。",
+      "viewport": {
+        "width": 1440,
+        "height": 610
+      }
+    },
+    {
+      "name": "day29/user-detail-projects-tasks.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='詳細']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:text-is('参加プロジェクト')"
+        }
+      ],
+      "wait_for": "h3:text-is('担当中のタスク')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('参加プロジェクト'))",
+          "label": "参加プロジェクト"
+        },
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('担当中のタスク'))",
+          "label": "担当中のタスク"
+        }
+      ],
+      "note": "Step の『プロジェクト一覧とタスクテーブル』。2枚のカードをそれぞれ赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day29/user-edit-form.png",
+      "day": 29,
+      "path": "/user",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "tr:has-text('田中太郎') button[title='編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "form"
+        }
+      ],
+      "wait_for": "form",
+      "note": "Step の『完成後の編集フォーム（ロール選択とアクティブのチェックボックスが並んだ状態）』。中央寄せのカードなので切り抜く。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day30/dashboard.png",
+      "day": 30,
+      "path": "/dashboard",
+      "login": {
+        "email": "user1@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1",
+      "note": "Day 30 Step 5 の『完成版のダッシュボード画面』。本番では `prisma db push` だけでシードを流さず、読者は `/register` で自分のアカウントを作る。`register` が付ける役割は`USER` なので、サイドバーは「ユーザー管理」の無い6項目になる。管理者で撮ると本番の読者が見る画面と食い違うので、一般ユーザーで撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day05/login-card.png",
+      "day": 5,
+      "path": "/login",
+      "wait_for": "form",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(form)",
+          "label": "Step 6 で整えた Card"
+        }
+      ],
+      "note": "Step 6 の『Card で囲まれたログインフォームが画面中央に並んだ状態』。ゴールと Step 9 が同じ day05/login.png を指しており、1冊で3回の貼り回しになっていた。Step 6 の時点では登録リンクがまだ無いので、完成後の画面であることを本文で断ったうえで Card を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day05/login-register-link.png",
+      "day": 5,
+      "path": "/login",
+      "wait_for": "a[href='/register']",
+      "marks": [
+        {
+          "selector": "div.text-center.text-sm:has(a[href='/register'])",
+          "label": "Step 9 で足した登録リンク"
+        }
+      ],
+      "note": "Step 9 の『登録リンク付きの完成したログイン画面』。Step 6 の1枚と分けるため、今日いちばん最後に足した行を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day06/register-name-email.png",
+      "day": 6,
+      "path": "/register",
+      "wait_for": "#confirmPassword",
+      "marks": [
+        {
+          "selector": "div.space-y-2:has(#name)",
+          "label": "名前の欄"
+        },
+        {
+          "selector": "div.space-y-2:has(#email)",
+          "label": "メールアドレスの欄"
+        }
+      ],
+      "note": "Step 4 の『名前とメールアドレスの入力欄が表示された状態』。旧 register_step4.png は4欄そろった完成版で、キャプションと写っているものが食い違っていた。Step 4 の時点のフォームは JSX が閉じていないので描画できず、この道具では撮れない。完成後の画面であることを本文で断ったうえで、この Step で足す2欄を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day06/register-password-confirm.png",
+      "day": 6,
+      "path": "/register",
+      "wait_for": "#confirmPassword",
+      "marks": [
+        {
+          "selector": "div.space-y-2:has(#password)",
+          "label": "パスワードの欄"
+        },
+        {
+          "selector": "div.space-y-2:has(#confirmPassword)",
+          "label": "確認用の欄"
+        }
+      ],
+      "note": "Step 6 の『4つの入力欄が揃ったフォーム』。Step 4 の1枚と分けるため、この Step で足す2欄を赤枠で指す。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day06/register-complete.png",
+      "day": 6,
+      "path": "/register",
+      "wait_for": "a[href='/login']",
+      "marks": [
+        {
+          "selector": "div.text-center.text-sm:has(a[href='/login'])",
+          "label": "ログイン画面へ戻るリンク"
+        }
+      ],
+      "note": "Step 9 の『デザインが整った登録画面の完成形』。冒頭のゴール（day06/register.png）と同じ画面なので、この日の最後に足したリンクを赤枠で指して区別する。",
+      "clip": {
+        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "padding": 40
+      }
+    },
+    {
+      "name": "day09/project-page-heading.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "h1:text-is('プロジェクト')",
+          "label": "Step 1 で書いた見出し"
+        }
+      ],
+      "note": "Step 1 の『「プロジェクト」タイトルだけが表示された初期画面』。旧 day09-step1.png は完成版アプリの写真で、サイドバー7項目・上部検索バーが写っていた。Step 1 の時点の画面はこの道具では撮れない（ツリーはその日の終わりの形しか組めない）ので、完成後の画面であることを本文で断ったうえで見出しを赤枠で指す。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-loading.png",
+      "day": 9,
+      "path": "/dashboard",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "stall": ["project.getAll"],
+      "wait_for": "div.animate-spin",
+      "note": "Step 3 のローディング表示。手元の DB は速すぎて撮る隙が無いので、project.getAll の返事だけを止めて撮る。 入口をダッシュボードにしてサイドバーから移るのは、`/project` を直に開くと tRPC が `auth.getSession` と `project.getAll` を1本の通信へまとめてしまい、止めた側に引きずられて `AppLayout` ごと出てこなくなるため。画面を移ってから撮れば、セッションは取得済みなので 止まるのは一覧の取得だけになる。読者がサイドバーから移るのと同じ動きでもある。 切り抜かずにページの枠ごと撮る。窓の高さは同じ日の完成画面（day09/project-cards.png）にそろえた 420。スピナーの入れ物だけを切り抜くと、どのページで撮っても同じ絵になって別々の日の写真の md5 が一致し、しかも紙面のほとんどが白場になる。枠ごと撮ればサイドバーと見出しが入るので、読者は自分がどの画面の読み込みを見ているか判定できる。",
+      "viewport": {
+        "width": 1440,
+        "height": 420
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "a[href='/project']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "div.animate-spin"
+        }
+      ]
+    },
+    {
+      "name": "day09/project-cards.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "div.grid.gap-6",
+          "label": "Step 6 で書いたカードのグリッド"
+        }
+      ],
+      "note": "Step 6 の『ヘッダー実装前のプロジェクトカードのグリッド表示』。旧 day09-cards.png は完成版アプリの写真で、読者が参加していない『社内データ分析基盤』『モバイルアプリ開発』まで写っていた。読者に見えるプロジェクトは『Webサイトリニューアル』1件だけ（`scripts/_seed/seed.ts:107-165`）。",
+      "full_page": true
+    },
+    {
+      "name": "day09/project-narrow.png",
+      "day": 9,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "viewport": {
+        "width": 430,
+        "height": 900
+      },
+      "note": "Step 10 のレスポンシブ確認。幅 430px ではサイドバーが隠れ、ヘッダーが縦に折り返す。カードは1件しか無いので列数そのものは変わらない。そのことは本文で断る。",
+      "full_page": true
+    },
+    {
+      "name": "day11/project-edit-dialog.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "note": "冒頭のゴール『編集モードの ProjectDialog』。旧 project-detail-dialog.png は完成版アプリの写真で、同じ日に2回貼られていた。編集する相手は Day 10 で読者が作った練習用プロジェクトにする（初期データの Webサイトリニューアル は Day 13 以降で使うので、本文が触らせない）。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day11/project-delete-confirm.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "note": "Step 5 の『削除確認ダイアログ』。title を渡していないので、見出しは既定値の「本当に削除しますか？」になる。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day11/project-edit-dialog-update.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        }
+      ],
+      "wait_for": "[role='dialog']",
+      "marks": [
+        {
+          "selector": "[role='dialog'] button[type='submit']",
+          "label": "編集で開くと「更新」"
+        }
+      ],
+      "note": "Step 10 の動作確認 手順3・4『既存の名前が入っている／タイトルがプロジェクト編集になっている』。冒頭のゴールと同じ画面なので、作成モードとの違いが出るボタンを赤枠で指す。",
+      "clip": {
+        "selector": "[role='dialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day12/project-detail-archive.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('アーカイブの練習')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('アーカイブ')"
+        }
+      ],
+      "wait_for": "h1:has-text('アーカイブの練習')",
+      "marks": [
+        {
+          "selector": "button:has-text('アーカイブ')",
+          "label": "Day 11 で書いた handleArchive を押すボタン"
+        }
+      ],
+      "note": "Day 12 の動作確認 手順1。開くのは テストシナリオ3でその日に作る使い捨てのプロジェクト。初期データの「Webサイトリニューアル」は Day 13 以降でタスクの舞台になるので、本文がアーカイブさせない。",
+      "full_page": true
+    },
+    {
+      "name": "day12/archived-project-list.png",
+      "day": 12,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "h3:has-text('アーカイブの練習')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('アーカイブ')"
+        },
+        {
+          "kind": "click",
+          "selector": "button:has-text('アーカイブ')"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h1:text-is('プロジェクト')"
+        },
+        {
+          "kind": "click",
+          "selector": "#show-archived"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:has-text('アーカイブの練習')"
+        }
+      ],
+      "wait_for": "h3:has-text('アーカイブの練習')",
+      "note": "Day 12 の動作確認 手順2『アーカイブ表示スイッチを ON にする』。スイッチは `isArchived: true` の等値検索を送るので、アーカイブ済みの1枚だけが並ぶ。DB を変えるので、この日の最後に撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day11/project-delete-confirm-action.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを削除']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='alertdialog']"
+        }
+      ],
+      "wait_for": "[role='alertdialog']",
+      "marks": [
+        {
+          "selector": "[role='alertdialog'] button:has-text('削除')",
+          "label": "押すと元へ戻せない"
+        }
+      ],
+      "note": "Step 10 の削除フロー。Step 5 と同じダイアログなので、押すと取り消せないボタンを赤枠で指して区別する。",
+      "clip": {
+        "selector": "[role='alertdialog']",
+        "padding": 0
+      }
+    },
+    {
+      "name": "day11/project-list-after-edit.png",
+      "day": 11,
+      "path": "/project",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('プロジェクト')",
+      "marks": [
+        {
+          "selector": "div.rounded-lg.border.bg-card:has(h3:text-is('ポートフォリオ（改）'))",
+          "label": "名前を変えたプロジェクト"
+        }
+      ],
+      "note": "Step 3 の『編集後に一覧が更新された画面』。Step 10 の編集フロー 手順5・6「名前を変更して『更新』をクリック→一覧が自動的に更新されることを確認」を実際に通してから撮る。通さずに撮ると Day 10 の作成直後と1バイトも同じ画像になり、本文が言う「編集後に更新された一覧」を示せない。変更後の名前 ポートフォリオ（改） は本文が指定していないのでこちらで決めた値。読者の手元は違う名前になるため、キャプションでその旨を断る。編集する相手は Day 10 で読者が作った練習用プロジェクトにする（初期データの Webサイトリニューアル はDay 13 以降で使うので、本文が触らせない）。 変更後の名前を短くしてあるのは、カードの見出しが幅で切り詰められるため。長い名前にすると画像の中で「ポートフォリオサイト（...」と欠け、変わったことが読み取れない。",
+      "full_page": true,
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "button[aria-label='ポートフォリオサイトを編集']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "[role='dialog']"
+        },
+        {
+          "kind": "fill",
+          "selector": "#name",
+          "value": "ポートフォリオ（改）"
+        },
+        {
+          "kind": "click",
+          "selector": "[role='dialog'] button[type='submit']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "h3:text-is('ポートフォリオ（改）')"
+        }
+      ]
+    },
+    {
+      "name": "day16/task-list.png",
+      "day": 16,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=合計作業時間",
+      "note": "Step の締めくくり『カードの下段に合計作業時間の行が増えたことを確認』。旧参照は screenshots/task-list.png（完成版の画面）で、作業時間が 0m の別データやった。Day 16 のツリーと初期データで撮り直す。",
+      "full_page": true
+    },
+    {
+      "name": "day28/bulk-operations-complete.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "[aria-label='デザインモックアップ作成を選択']"
+        },
+        {
+          "kind": "click",
+          "selector": "[aria-label='データベース設計を選択']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('完了にする')"
+        }
+      ],
+      "wait_for": "button:has-text('完了にする')",
+      "note": "冒頭のゴール。旧参照は screenshots/bulk-operations-complete.png（完成版アプリ）。2件選んでヘッダーに一括操作ボタンが出た状態を Day 28 のツリーで撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day28/task-row-with-checkbox.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "[aria-label='デザインモックアップ作成を選択']",
+      "marks": [
+        {
+          "selector": "[aria-label='デザインモックアップ作成を選択']",
+          "label": "カードの左に付くチェックボックス"
+        }
+      ],
+      "note": "Step 2 の1枚。まだ何も選んでいない状態で撮る。選ぶとヘッダーに一括操作ボタンが出てしまい、Step 4 で作るものが先に映るため。",
+      "clip": {
+        "selector": "div.flex.gap-2.items-start:has(h3:has-text('デザインモックアップ作成'))",
+        "padding": 12
+      }
+    },
+    {
+      "name": "day28/select-all-checkbox.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "#select-all",
+      "marks": [
+        {
+          "selector": "#select-all",
+          "label": "すべて選択のチェックボックス"
+        }
+      ],
+      "note": "Step 3 の1枚。未選択のまま撮る（Step 4 の一括操作ボタンを写さんため）。赤枠は入れ物やのうてチェックボックス本体を指す。再構成ツリーでは「すべて選択」がフィルター行の上の独立した行に入るので、入れ物を指すと画面幅いっぱいの枠になって、どれを見ればええか分からんくなる。",
+      "full_page": true
+    },
+    {
+      "name": "day28/bulk-operation-header.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "[aria-label='デザインモックアップ作成を選択']"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('完了にする')"
+        }
+      ],
+      "wait_for": "button:has-text('完了にする')",
+      "marks": [
+        {
+          "selector": "button:has-text('完了にする')",
+          "label": "ヘッダー右側に出る一括操作ボタン"
+        }
+      ],
+      "note": "Step 4 の1枚。1件だけ選んだ状態にして、ボタンが『1件以上選択されているときだけ』出ることを見せる。",
+      "full_page": true
+    },
+    {
+      "name": "day28/bulk-task-operations.png",
+      "day": 28,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "actions": [
+        {
+          "kind": "click",
+          "selector": "#select-all"
+        },
+        {
+          "kind": "wait_for",
+          "selector": "button:has-text('完了にする')"
+        }
+      ],
+      "wait_for": "button:has-text('完了にする')",
+      "note": "Step 9 の動作確認。すべて選択した状態で、操作ボタンが揃っていることを見せる。選択件数の表示は Day 28 の再構成ツリーには入らん（見出し行の書き直しだけ当てられていない）ので、件数ではなくボタンの出現を待つ。",
+      "full_page": true
+    }
+  ]
+}

@@ -6,25 +6,30 @@
 
 今日のゴールは、タスク管理ツール Linear を参考にした、整った見た目の画面を1枚目として用意することです。
 
-## この日でできるようになること
-
-- 空のディレクトリから `task-app` の土台を起動して、`http://localhost:3000` に最初の画面を表示できるようになる
-- 配色やフォントなどの見た目の設定（design token）を整えて、自分のアプリらしい画面まで仕上げられるようになる
-
-完成イメージの雰囲気は、次のスクリーンショットを眺めてもらうと掴みやすいです。
-![Day 01 の最後に作るダッシュボード画面](./screenshots/day01/dashboard-hello.png)
-スクリーンショット: Day 01 の最後に作る `/dashboard` の画面が、ブラウザに表示されています。
-完全一致でなくてよいです。
-「自分のアプリ開発が始まった」と思える見た目を今日つくるのが狙いです。
-
 ## 今日のゴール
 
-- [ ] 配布 ZIP を展開して、`scripts` と `material` が見える場所を `task-app` の作業場所にする
+空のディレクトリから `task-app` の土台を起動して、`http://localhost:3000` に最初の画面を表示します。そのうえで、配色やフォントなどの見た目の設定（design token）を整え、自分のアプリらしい画面まで仕上げます。
+
+今日つくるページは2枚です。1枚目はトップページ（`/`）で、ヘッダーと大きなカード、右側の小さなカード3枚が並びます。2枚目は `/dashboard` で、明日から育てていく入口になります。下のスクリーンショットは2枚目のほうです。
+
+![Day 01 の最後に作るダッシュボード画面](./screenshots/day01/dashboard-hello.png)
+
+スクリーンショット: Day 01 の最後に作る `/dashboard` の画面が、ブラウザに表示されています。完全一致でなくてよいです。「自分のアプリ開発が始まった」と思える見た目を今日つくるのが狙いです。
+
+- [ ] 配布 ZIP を展開して、`README.md` と `scripts` が見える場所を `task-app` の作業場所にする
 - [ ] `scripts/scaffold-from-scratch.sh` を実行して、土台を一発で作る
 - [ ] `npm run dev` で Next.js（React の画面を動かすための土台一式）の初期画面を表示する
 - [ ] `src/app/globals.css` に Linear 風 design token を入れる
 - [ ] `src/app/page.tsx` を自分専用の最初の画面に置き換える
 - [ ] `src/app/dashboard/page.tsx` を作って、明日の入口をつなぐ
+
+## なぜこれを作るのか
+
+初日に環境構築だけで終わらせると、手元に残るのは「動くらしい」という感触だけです。画面の見た目が変わった記憶のないまま2日目を迎えると、続ける理由は薄くなります。
+
+そこで今日は、土台を用意したあとに `globals.css` と `page.tsx` へ手を入れて、自分の目で違いが分かる画面まで持っていきます。ここで design token を先に整えておく理由は、あとの Day で色やボタンを足すときに毎回ゼロから配色を決めずに済むからです。`bg-primary` と書けば主役の色が出る状態を初日に作っておくと、Day 05 のログイン画面も Day 09 のプロジェクト一覧も、同じ言葉で見た目をそろえられます。
+
+> **例え話**: design token は、部屋の壁紙と家具の色を先に決めておく作業に似ています。1脚目の椅子を買うときに全体の色を決めておくと、2脚目からは迷いません。
 
 ### 新しく学ぶ概念
 
@@ -117,6 +122,19 @@ PostgreSQL（データベース）は、このあと Docker という仕組み�
 
 Docker が起動していれば進められます。PostgreSQL は Docker の上で自動的に立ち上がるので、パソコンへ個別にインストールする必要はありません。
 
+```mermaid
+flowchart TB
+    PC["あなたのパソコン"]
+    PC --> NODE["Node.js 22"]
+    PC --> DOCKER["Docker"]
+    NODE --> NPM["npm"]
+    NODE --> APP["task-app<br/>npm run dev"]
+    DOCKER --> PG[("PostgreSQL")]
+    APP -->|"DATABASE_URL"| PG
+```
+
+パソコンへ直接入れるのは Node.js と Docker の2つだけです。npm は Node.js に付いてきます。PostgreSQL は Docker の中で動くので、単体でインストールする場面はありません。`docker info` を先に確かめるのは、この図の右下が立ち上がっていないと、あとでアプリがデータベースにつなげないからです。
+
 ### 先に確認しておくコマンド
 
 `Node.js` と `npm` のバージョンはここで見ておきましょう。
@@ -157,17 +175,35 @@ Ubuntu で `docker info` に権限エラーが出た場合は、Docker 公式の
 
 それでも表示されない場合は、`docker info` を隠し指定なしで実行してください。表示されたエラーメッセージから、起動待ち、インストール不完全、権限の問題などを確認できます。
 
-## Step 1: 配布 ZIP を展開した場所から始める
+## 実装ステップ一覧
+
+| ステップ | 作業内容 | 所要時間 |
+|---------|---------|---------|
+| Step 1 | 配布 ZIP を展開した場所から始める | 5分 |
+| Step 2 | scaffold-from-scratch.sh を走らせる | 10分 |
+| Step 3 | npm run dev で初期画面を起動する | 3分 |
+| Step 4 | 自分専用の最初のページを作る | 25分 |
+| Step 5 | 仕上げた画面をブラウザで見る | 3分 |
+
+**合計時間**: 約46分です。
+
+Step 2 の10分には、npm が部品を取り寄せる待ち時間と、Docker が PostgreSQL を起動する待ち時間が入っています。手を動かす時間は1分ほどで、あとは画面が流れるのを見ているだけです。Step 4 の25分は、コードを16ブロックに分けて写す時間です。この時間はコードを読んで理解する目安なので、詰まって調べる時間は別に見てください。
+
+---
+
+
+### Step 1: 配布 ZIP を展開した場所から始める（5分）
 
 今日は完成済みプロジェクトをそのまま編集するのではなく、
 配布 ZIP を展開した作業場所から土台を作り直して始めます。
 
-この原則がとても大事です。
-「あとで配られる完成形を前提に読む」のと、
-「自分で土台を立ち上げて積み上げる」のでは、
-理解の深さが大きく変わります。
+完成形を開いて読むだけだと、
+`package.json` に何を入れるか、`.env` に何を書くかを
+自分で決める場面が一度も来ません。
+土台から作っておくと、後の Day で「動かない」となったときに、
+どのファイルが何のためにあるかを自分の手元からたどれます。
 
-### 作業用ディレクトリを用意して ZIP を展開する
+#### 作業用ディレクトリを用意して ZIP を展開する
 
 ここでは例として、ホームディレクトリの中の `workspace` というフォルダに配布 ZIP を展開します。
 
@@ -204,13 +240,13 @@ pwd
 > もし `cd task-app` で `No such file or directory` と出たら、展開先のフォルダ名が違います。
 > そのときは `ls` でいま作られたフォルダの名前を確認して、`cd そのフォルダ名` で中に入ってください。以降の説明では、この場所を `task-app` と呼びます。
 
-### 期待する結果
+#### 期待する結果
 
 - `pwd` の結果が `/Users/あなたのユーザー名/workspace/task-app` のような形になっている（`pwd` は `~` を使わず、先頭からの完全なパスで表示する。先頭部分は使っているパソコンによって変わる）
 - Windows の WSL2 で進めている場合は、`/home/あなたのユーザー名/workspace/task-app` のような形になる
-- `scripts` と `material` が見える配布物ルートにいる
+- `README.md` と `scripts` が見える配布物ルートにいる
 
-### ここで置いておく配布物
+#### ここで置いておく配布物
 
 この Day では、ZIP を展開した直後の
 配布物ルートで作業している前提で進めます。
@@ -218,7 +254,7 @@ pwd
 見えていてほしい主なファイルとフォルダは以下の通りです。
 
 - `README.md`
-- `material`
+- `doc`
 - `scripts`
 - `scripts/scaffold-from-scratch.sh`
 - `.env.example`
@@ -234,14 +270,14 @@ pwd
 ls
 ```
 
-`ls` は、いまいるフォルダの中身を並べて見せるだけのコマンドです。ファイルを作ったり消したりしないので、迷子になったと感じたときは何度でも実行できます。一覧に `scripts` と `material` が出てこないときは、展開先の1つ外側か1つ内側にいます。表示の中に `task-app` というフォルダ名が見えていれば `cd task-app` で中に入り、見覚えのない一覧が出たときは `cd ~/workspace/task-app` と打てば戻ってこられます。
+`ls` は、いまいるフォルダの中身を並べて見せるだけのコマンドです。ファイルを作ったり消したりしないので、迷子になったと感じたときは何度でも実行できます。一覧に `README.md` と `scripts` が出てこないときは、展開先の1つ外側か1つ内側にいます。表示の中に `task-app` というフォルダ名が見えていれば `cd task-app` で中に入り、見覚えのない一覧が出たときは `cd ~/workspace/task-app` と打てば戻ってこられます。
 
-### 期待する結果
+#### 期待する結果
 
 - `scripts` フォルダが見えている
 - `scripts/scaffold-from-scratch.sh` が見えている
 
-## Step 2: scaffold-from-scratch.sh を走らせる
+### Step 2: scaffold-from-scratch.sh を走らせる（10分）
 
 ここが Day 01 のいちばん大事なところです。
 
@@ -260,9 +296,10 @@ Next.js アプリの土台は、本来 `npx create-next-app` というコマン�
 9. Docker で PostgreSQL を起動して Prisma Client を生成
 
 「何が必要か」を毎回自分で思い出さなくてよくなるので、
-初日にかなり効きます。
+初日は設定をそろえることより先に、
+動く画面を見るところまで進めます。
 
-### 実行コマンド
+#### 実行コマンド
 
 スクリプト（`.sh` ファイル）は、そのままでは「実行してよいファイル」として扱われないことがあります。そこで最初に `chmod +x` というコマンドで「このファイルは実行してよい」という印（実行権限）を付けます。そのうえで `bash` コマンドにファイルを渡して実行します。`bash` は、スクリプトに書かれた命令を上から順番に処理してくれるプログラムです。
 
@@ -273,11 +310,11 @@ chmod +x scripts/scaffold-from-scratch.sh
 bash scripts/scaffold-from-scratch.sh
 ```
 
-このスクリプトを走らせてよいのは、この Day 01 の一度だけです。Day 10 以降にもう一度実行すると、`src/component/` に自分で書いたファイルが配布版で上書きされます。初期データのプロジェクトと、その中に自分で作ったタスクやコメントも消えます。うまくいかないときは、先に付録のトラブルシューティングを読んでください。
+このスクリプトを走らせてよいのは、この Day 01 の一度だけです。Day 02 以降にもう一度実行すると、`src/component/` に自分で書いたファイルが配布版で上書きされます。初期データのプロジェクトと、その中に自分で作ったタスクやコメントも消えます。うまくいかないときは、先に付録のトラブルシューティングを読んでください。
 
 この2行を実行すると、いまいるフォルダの中に `package.json` や `src` などが一気に作られ、データベース用のコンテナも起動します。インターネットから部品を取り寄せる時間があるので、終わるまで数分かかることもあります。文字が流れているあいだは動いているので、そのまま待ってください。`Permission denied` と出たときは、ファイルを直接指定して実行していないか確かめてください。`./scripts/scaffold-from-scratch.sh` のようにファイル名だけで動かす書き方は、実行権限が付いていないと止まります。ここでは `bash` にファイルを渡しているので、実行権限が付いていなくても動きます。それでも出るときは、書き込みできない場所にいる可能性があるので、`pwd` で `~/workspace/task-app` にいるか確認してください。`Cannot connect to the Docker daemon` と出たときは Docker が起動していないので、Docker Desktop を立ち上げてから実行し直してください。
 
-### 期待される出力
+#### 期待される出力
 
 スクリプトを実行すると、ターミナルに進行状況が次々と表示されます。表示される内容や順番はパソコンの環境によって多少前後しますが、だいたい次のような流れになります。
 
@@ -327,7 +364,7 @@ DB セットアップが完了しました。
 
 このログで見るべきなのは、最後の `初期セットアップは完了しました。` の行です。ここが出ていれば、データベースの準備まで含めて最後まで走りきっています。逆に `Docker で PostgreSQL を起動しています...` から先へ進まないときは、Docker 側で止まっています。Docker Desktop が起動しているか確かめてから、同じスクリプトをもう一度実行してください。Day 01 の時点なら、2回実行しても土台は壊れません。ただし Day 02 以降に自分で書いたコードは上書きされるので、このスクリプトは Day 01 でだけ使ってください。
 
-### 成功判定
+#### 成功判定
 
 次のファイルが見えていれば成功です。
 
@@ -343,10 +380,10 @@ DB セットアップが完了しました。
 - `src/app/globals.css`
 - `src/component/ui/button.tsx`
 
-### `.env.example`
+#### `.env.example`
 
 このスクリプトは `.env.example` も置いてくれます。
-中身はこんな感じです。
+下に載せるのは、今日いちばん関係のある行だけを抜き出した見本です。実ファイルはこれより長く、Docker のポート番号や本番用の URL など、まだ使わない行も並んでいます。Day 03 で実ファイルを開いたときに知らない行が出てきても、今日の時点では気にしなくて大丈夫です。
 
 この先、コードの先頭に `filepath:` を含む行が出てきます。
 これは「このコードをどのファイルへ書くか」を示す目印で、
@@ -389,21 +426,19 @@ NODE_ENV="development"
 
 この見本で今日いちばん大事なのは `DATABASE_URL` の行です。ここに書いた住所が、アプリからデータベースへ届くための道になります。末尾に近い `localhost:25532` の数字はポート番号（1台のパソコンの中で通信の入口を区別する番号）で、さきほどのスクリプトが Docker で起動した PostgreSQL と同じ番号にそろえてあります。だから今日はここを書き換えずに進めます。後の Day で「データが取れない」となったときは、まずこの行を見に来ると原因を絞り込めます。
 
-### 危ないアンチパターン
-
-ここで1つ、注意してほしい点を説明しておきます。
+#### 危ないアンチパターン
 
 `JWT_SECRET` は、JWT（ログイン状態を証明するために発行される通行証のようなデータ）の署名に使う「合言葉」にあたるシークレットキー（秘密の文字列）です。これが他人に知られると、本人になりすましてログインされてしまう恐れがあります。だからこそ、本番で使うシークレットキーを GitHub などの公開される場所に置いてはいけません。
 
 今日は `.env.example`（設定の見本ファイル）を眺めるだけで十分です。Step 2 で実行した `scripts/scaffold-from-scratch.sh` が、この見本をコピーして `.env` という実際の設定ファイルも作ってくれています。`.env` の中身は、当面のあいだ練習用の値のままで問題ありません。本物のシークレットキーを使う段階になったら、公開されない `.env` の側にだけ書き、自分のパソコンの中だけに置きます。
 
-## Step 3: npm run dev で初期画面を起動する
+### Step 3: npm run dev で初期画面を起動する（3分）
 
 土台ができたら、一度開発サーバーを起動して、ブラウザで画面を確認しましょう。
 
 「自分のパソコンで問題なく動く」と確認できていれば、このあとコードを編集するときも安心して進められます。
 
-### 開発サーバーを起動する
+#### 開発サーバーを起動する
 
 **ターミナル（`~/workspace/task-app`）**
 
@@ -413,7 +448,7 @@ npm run dev
 
 このコマンドは、書いたコードをブラウザへ届ける「開発サーバー」を起動します。ファイルは何も書き換わりませんが、パソコンの 3000 番の入口をこのサーバーが使いはじめます。`Missing script: "dev"` と出たときは、原因が2つあります。1つは `package.json` のないフォルダにいる場合です。もう1つは、`package.json` があるのに `scripts` の中に `dev` が書かれていない場合です。まず `pwd` で場所を確かめ、違っていれば `cd ~/workspace/task-app` で戻ってから打ち直してください。場所が合っているなら `cat package.json` を実行し、`scripts` の中に `"dev": "next dev"` の行があるか確認してください。`Port 3000 is in use` と出たときは、3000 番の入口を別のプログラムが先に使っています。この場合 Next.js は自動で 3001 などの空いている番号に移って起動するので、そのまま進めて大丈夫です。
 
-### 期待される出力
+#### 期待される出力
 
 **ターミナル出力（`~/workspace/task-app`）**
 
@@ -436,20 +471,20 @@ npm run dev
 >
 > このコマンドは「開発サーバー」を動かし続けるので、実行したあともターミナルには次の入力待ち（プロンプト）が戻ってきません。止まっているのではなく、動き続けている状態です。このターミナルは閉じずにそのままにしておきましょう。止めたいときは、このターミナルで `control + C` を押します。別のコマンドを打ちたくなったら、新しいターミナルをもう1つ開いて使います。
 
-### ブラウザで開くURL
+#### ブラウザで開くURL
 
 - `http://localhost:3000`
 
 ターミナルの `Local:` に別の番号が出ていたら、そちらの URL を開きます。
 
-### 何が見えたらOKか
+#### 何が見えたらOKか
 
 Next.js のロゴと、
 `Get started by editing src/app/page.tsx.`
 という「page.tsx を編集してね」という案内文が見えれば大丈夫です。
 （案内文の文言は Next.js のバージョンによって少し変わります。ロゴ入りの案内ページが出ていれば成功です。）
 
-### スクリーンショットの見本
+#### スクリーンショットの見本
 
 雰囲気の確認用に、
 次の2枚も見ておくとイメージしやすいです。
@@ -458,13 +493,13 @@ Next.js のロゴと、
 
 ![Next.jsの初期画面がブラウザに表示された状態](./screenshots/day01/nextjs-default.png)
 
-### この状態は「いつでも戻れる安全地帯」になる
+#### この状態は「いつでも戻れる安全地帯」になる
 
 この時点で、Node.js・npm・Next.js・Tailwind（色や余白を短い部品クラスの組み合わせで指定するCSSの仕組み）という土台が正しく動いています。
 
 つまり、このあとコードを編集して画面の表示がおかしくなっても、「最初は動いていた」この状態に戻ってこられます。地味に思えますが、安心して試行錯誤するための大事なポイントです。
 
-## Step 4: 自分専用の最初のページを作る
+### Step 4: 自分専用の最初のページを作る（25分）
 
 ここからが今日のいちばん面白いところです。
 
@@ -479,13 +514,13 @@ Next.js のロゴと、
 1. `src/app/globals.css` に Linear 風 design token を入れる
 2. `src/app/page.tsx` を、自分専用の最初の画面に置き換える
 
-### 編集を始める前に、VS Code でプロジェクトを開く
+#### 編集を始める前に、VS Code でプロジェクトを開く
 
 ファイルの編集にはエディタを使います。VS Code を起動して、メニューの「ファイル」から「フォルダを開く...」を選び、`workspace` の中の `task-app` フォルダを選んで開いてください。左側のファイル一覧（エクスプローラー）に `src` や `package.json` が並んでいれば準備完了です。以降「`src/app/globals.css` を開く」と書いてあったら、このファイル一覧で `src` フォルダ、`app` フォルダの順にクリックして中のファイルを開く、という意味です。
 
 `npm run dev` を動かしているターミナルは、そのまま動かし続けて大丈夫です。ファイルを保存するたびに、ブラウザの画面が自動で更新されます。
 
-### 4-1. `globals.css` を token ベースに差し替える
+#### 4-1. `globals.css` を token ベースに差し替える
 
 今の `globals.css` でも画面は出ます。ただ、まだ色に「意味の名前」が付いていません。
 
@@ -502,7 +537,7 @@ Next.js のロゴと、
 
 役割で呼べるようにするには、先に「その名前が実際どの色なのか」を1か所にまとめておく必要があります。その対応づけを `globals.css` に入れるのが、この節の作業です。
 
-### 編集アンカー
+#### 編集アンカー
 
 `src/app/globals.css` を開いて、
 **先頭の `@import "tailwindcss";` からファイルの最後まで全部置き換えます**。
@@ -614,7 +649,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
 
 ```
 
-ここからは色以外の見た目の設定です。`--radius-sm` などの角丸は、基準値 `--radius` から `calc(...)` で計算して作っています。こうしておくと、あとで基準値を1か所変えるだけで、画面中の角丸がまとめて揃って変わります。`--shadow-` 系は影の強さ、`--duration-` 系は動きの速さを名前で決めておく設定で、値を毎回手書きせず名前で呼ぶようにしておくと、画面全体の質感がばらつきにくくなります。
+ここからは色以外の見た目の設定です。`--radius-sm` などの角丸は、基準値 `--radius` から `calc(...)` で計算して作っています。こうしておくと、あとで基準値を1か所変えるだけで、`--radius-sm` などを使っている場所の角丸がまとめて揃って変わります。`--shadow-` 系は影の強さ、`--duration-` 系は動きの速さを名前で決めておく設定で、値を毎回手書きせず名前で呼ぶようにしておくと、画面全体の質感がばらつきにくくなります。
 
 **確認ポイント**: `--radius-sm` から `--animate-accordion-up` までの行が書けていることを確認できたら、次のブロックを続けて書きます。
 
@@ -707,7 +742,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
   }
 ```
 
-明るいテーマの値はここまでです。`--radius: 10px;` は、先ほど `calc(...)` の基準にしていた角丸の大元で、この1行を変えると画面全体の丸みがまとめて変わります。`--ring` はボタンや入力欄を選んだときに周りへ表示される輪の色で、主役の `--primary` と同じ値にしてあります。操作している場所が主役の色で光るように揃えるための工夫です。
+明るいテーマの値はここまでです。`--radius: 10px;` は、先ほど `calc(...)` の基準にしていた角丸の大元で、この1行を変えると `--radius-sm` などを使っている場所の丸みがまとめて変わります。`--ring` はボタンや入力欄を選んだときに周りへ表示される輪の色で、主役の `--primary` と同じ値にしてあります。操作している場所が主役の色で光るように揃えるための工夫です。
 
 **確認ポイント**: `:root { ... }` が `}` で閉じられていることを確認できたら、次のブロックを続けて書きます。
 
@@ -791,7 +826,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
 
 最後の `body { ... }` が、ここまで定義してきた変数を実際にページへ当てはめる場所です。背景色・文字色・フォントを `hsl(var(--background))` のように変数経由で指定しているので、テーマが切り替われば `body` の見た目も自動で追従します。`-webkit-font-smoothing` などの行は、文字の輪郭をなめらかに表示するためのブラウザ向けの設定です。ここまで書けたら、`globals.css` の置き換えは完了です。
 
-### 4-2. `page.tsx` を最初の画面に置き換える
+#### 4-2. `page.tsx` を最初の画面に置き換える
 
 次に、トップページを Next.js の初期画面から、自分のタスク管理アプリのトップページに置き換えます。
 
@@ -801,7 +836,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
 
 派手にする必要はありません。それでも Next.js の初期画面のままからは卒業して、自分のプロダクトらしい1枚目に仕上げます。
 
-### 編集アンカー
+#### 編集アンカー
 
 `src/app/page.tsx` を開いて、
 **`import Image from "next/image";` からファイルの最後まで全部置き換えます**。
@@ -820,16 +855,16 @@ export default function HomePage() {
         <header className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-              Getting Started
+              タスク管理
             </p>
             <h1 className="text-sm font-semibold text-card-foreground">
-              My Task App
+              TaskApp
             </h1>
           </div>
 
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            Day 01 Ready
+            作りかけ
           </div>
         </header>
 
@@ -845,16 +880,16 @@ export default function HomePage() {
             {/* filepath: src/app/page.tsx（同じファイルの続き） */}
             <div className="border-b border-border px-8 py-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                Hello, my first task app
+                タスク管理
               </div>
 
               <h2 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
-                自分専用のタスク管理アプリが、今日ここから動き出す。
+                プロジェクトとタスクを、ひとつの画面で。
               </h2>
 
               <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-                今日つくるのは、30日後の完成版へつながる最初の画面だ。
-                まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+                担当と期限を決めて、いまやることだけを取り出す。
+                まだ作りかけで、画面は入口だけ。
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -862,7 +897,7 @@ export default function HomePage() {
                   className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-transform duration-200 hover:-translate-y-0.5"
                   href="#today-goals"
                 >
-                  今日のゴールを見る
+                  これから足すものを見る
                 </a>
                 <Link
                   className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
@@ -882,7 +917,7 @@ export default function HomePage() {
                   className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
                   href="#next-step"
                 >
-                  明日の予告を見る
+                  次にやることを見る
                 </a>
               </div>
             </div>
@@ -890,11 +925,11 @@ export default function HomePage() {
             <div className="grid gap-4 bg-secondary/60 px-8 py-6 md:grid-cols-3">
               <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  今日の進捗
+                  これから
                 </p>
-                <p className="mt-3 text-3xl font-semibold text-foreground">01</p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">プロジェクト</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  空のディレクトリから、ちゃんと動く土台を自分で立ち上げた。
+                  案件ごとにタスクを分けて置けるようにする。
                 </p>
               </article>
 
@@ -903,26 +938,26 @@ export default function HomePage() {
 
 ボタンの並びを閉じたあと、大きなカードの下半分に小さなカードを3枚並べ始めました。`md:grid-cols-3` は「画面幅が中くらい以上なら3列に並べる」という指定で、スマホでは縦積み、広い画面では横並びになります。1枚ずつを `<article>` で囲んでいるのは、それぞれが独立したひとかたまりの内容だと構造で示すためです。ここでも色はすべて token 名で指定しています。
 
-**確認ポイント**: 「今日の進捗」のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
+**確認ポイント**: 1枚目のカードが書けて、2枚目の `<article>` を開いたところまで確認できたら、次のブロックを続けて書きます。
 
 ```tsx
                 {/* filepath: src/app/page.tsx（同じファイルの続き） */}
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  今見えているもの
+                  これから
                 </p>
-                <p className="mt-3 text-3xl font-semibold text-foreground">UI</p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">タスク</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  初期画面ではなく、自分のアプリの一枚目として見せられる見た目。
+                  担当と期限を1行で決められるようにする。
                 </p>
               </article>
 
               <article className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  次につながる土台
+                  これから
                 </p>
-                <p className="mt-3 text-3xl font-semibold text-foreground">Next</p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">レポート</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  明日からメッセージやカードを足しても、見た目の芯がぶれにくい。
+                  終わった数と残りを数えられるようにする。
                 </p>
               </article>
             </div>
@@ -942,30 +977,30 @@ export default function HomePage() {
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
-                今日のゴール
+                これから足すもの
               </p>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-muted-foreground">
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  空のディレクトリから `task-app` を始める
+                  プロジェクトを作って、タスクを登録する
                 </li>
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  スキャフォールド用スクリプトで土台を作る
+                  期限と優先度で並べ替える
                 </li>
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  `npm run dev` でローカル起動を確認する
+                  進み具合をレポートで見る
                 </li>
                 <li className="rounded-2xl bg-secondary px-4 py-3">
-                  design token を使って最初の画面をつくる
+                  メンバーを招いて一緒に使う
                 </li>
               </ul>
             </article>
 
             <article className="rounded-[28px] border border-border bg-card p-6 shadow-sm">
               <p className="text-sm font-semibold text-card-foreground">
-                今日のひとこと
+                メモ
 ```
 
-「今日のゴール」カードの中身です。`<ul>` と `<li>` は箇条書きを表す HTML のタグで、ここでは `<li>` の1つずつに `rounded-2xl bg-secondary` を付けて、角丸の面に乗ったチェック項目のような見た目にしています。JSX では、表示したい日本語のテキストをタグの中へそのまま書けます。最後の `今日のひとこと` は次のカードの見出しで、ブロックの区切りの都合で途中まで書いている状態なので、そのまま次へ進んでください。
+「これから足すもの」カードの中身です。`<ul>` と `<li>` は箇条書きを表す HTML のタグで、ここでは `<li>` の1つずつに `rounded-2xl bg-secondary` を付けて、角丸の面に乗ったチェック項目のような見た目にしています。JSX では、表示したい日本語のテキストをタグの中へそのまま書けます。最後の `メモ` は次のカードの見出しで、ブロックの区切りの都合で途中まで書いている状態なので、そのまま次へ進んでください。
 
 **確認ポイント**: `<ul>` の中に4つの `<li>` が書けていることを確認できたら、次のブロックを続けて書きます。
 
@@ -973,16 +1008,16 @@ export default function HomePage() {
               {/* filepath: src/app/page.tsx（同じファイルの続き） */}
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                最初の一枚目は、ただ映えればいいわけではない。
-                これから30日育てる画面の、空気感の基準になる。
+                ここで決めた色と角丸と余白は、あとから変えない。
+                途中で変えると、画面ごとに見た目がばらつく。
               </p>
 
               <div className="mt-5 rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-sm">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary-foreground/80">
-                  Today&apos;s theme
+                  いまの状態
                 </p>
                 <p className="mt-2 text-lg font-semibold">
-                  自分のアプリの最初の一枚を、自分の手で立ち上げる
+                  入口の画面が1枚できた
                 </p>
               </div>
             </article>
@@ -992,19 +1027,18 @@ export default function HomePage() {
               className="rounded-[28px] border border-border bg-card p-6 shadow-sm"
             >
               <p className="text-sm font-semibold text-card-foreground">
-                明日につながる入口
+                次にやること
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
 ```
 
-「今日のひとこと」カードの続きです。途中にある `bg-primary px-4 py-4 text-primary-foreground` の箱は、主役の面色とその上に乗せる文字色をペアで使う実例になっています。この2つをセットで使うと、背景と文字の色の役割が揃い、読みやすい配色にしやすくなります。最後に `id="next-step"` のカードを開きました。これも、最初のブロックで書いたボタンの `href="#next-step"` から飛んでくるための目印です。
+「メモ」カードの続きです。途中にある `bg-primary px-4 py-4 text-primary-foreground` の箱は、主役の面色とその上に乗せる文字色をペアで使う実例になっています。この2つをセットで使うと、背景と文字の色の役割が揃い、読みやすい配色にしやすくなります。最後に `id="next-step"` のカードを開きました。これも、最初のブロックで書いたボタンの `href="#next-step"` から飛んでくるための目印です。
 
 **確認ポイント**: `id="next-step"` の `<article>` を開いたところまで書けていることを確認できたら、最後のブロックを続けて書きます。
 
 ```tsx
 {/* filepath: src/app/page.tsx（同じファイルの続き） */}
-                Day 02 では、ここから入れる `/dashboard` に自分だけのメッセージや情報を足していく。
-                今日のページは入口として、ダッシュボードは明日の土台として整えておく。
+                ダッシュボードを開くと、いまの状況がまとまって見えるようにする。
               </p>
             </article>
           </div>
@@ -1017,7 +1051,7 @@ export default function HomePage() {
 
 締めのブロックです。Day 02 の予告文を置いたあと、`</section>` から `</main>` まで、開いたタグを外側へ向かって順番に閉じて、`HomePage` の `return` を終えています。JSX では開いたタグを必ず閉じる必要があるので、写経の最後はこの「閉じタグの並び」が乱れやすいポイントです。保存してターミナルにエラーが出ていなければ、トップページの置き換えは完了です。
 
-### 4-3. `dashboard/page.tsx` を作る
+#### 4-3. `dashboard/page.tsx` を作る
 
 Day 02 では、`src/app/dashboard/page.tsx` に機能を追加していきます。
 
@@ -1038,11 +1072,11 @@ export default function DashboardPage() {
             Dashboard
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
-            Hello Task-App
+            ダッシュボード
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-            Day 01 で用意した最初のダッシュボードです。
-            ここから少しずつ、自分専用の画面にしていきます。
+            まだ表示するデータがありません。
+            プロジェクトとタスクを作れるようになると、ここに出ます。
           </p>
         </section>
       </div>
@@ -1051,15 +1085,25 @@ export default function DashboardPage() {
 }
 ```
 
-このファイルは、`src/app/dashboard/` というフォルダの中に `page.tsx` という名前で置いたことに意味があります。Next.js はフォルダの名前をそのまま URL の一部として扱うので、これで `/dashboard` という住所ができました。中身はトップページと同じ token 名だけで組んであるため、今日そろえた配色がこちらの画面にもそのまま効きます。保存したら `http://localhost:3000/dashboard` を開いて、`Hello Task-App` の見出しが出るか確かめましょう。`404` と表示されるときは、フォルダ名かファイル名が1文字違っています。
+このファイルは、`src/app/dashboard/` というフォルダの中に `page.tsx` という名前で置いたことに意味があります。Next.js はフォルダの名前をそのまま URL の一部として扱うので、これで `/dashboard` という住所ができました。中身はトップページと同じ token 名だけで組んであるため、今日そろえた配色がこちらの画面にもそのまま効きます。保存したら `http://localhost:3000/dashboard` を開いて、「ダッシュボード」の見出しが出るか確かめましょう。`404` と表示されるときは、フォルダ名かファイル名が1文字違っています。
 
-### ここで押さえたいこと
+```mermaid
+flowchart LR
+    A["src/app/page.tsx"] --> X["/"]
+    B["src/app/dashboard/page.tsx"] --> Y["/dashboard"]
+    C["src/app/login/page.tsx<br/>Day 05 で作る"] --> Z["/login"]
+```
+
+フォルダの名前がそのまま住所になり、その中の `page.tsx` が中身になります。この規則は Day 05 のログイン画面でも Day 06 の登録画面でも同じです。`404` が出たときは、フォルダ名かファイル名のどちらかが図の左側とずれています。
+
+
+#### ここで押さえたいこと
 
 - ルートの `src/app/page.tsx` は、アプリの入口となるトップページ
 - `src/app/dashboard/page.tsx` は、これから機能を追加していくダッシュボード本体
-- Day 02 では、この `Hello Task-App` のダッシュボードに自分のメッセージを追加していく
+- Day 02 では、このダッシュボードに自分のメッセージを追加していく
 
-### できあがる見た目のポイント
+#### できあがる見た目のポイント
 
 このページでは、
 今日入れた token をそのまま使っています。
@@ -1072,7 +1116,7 @@ export default function DashboardPage() {
 - `text-muted-foreground` で説明文
 - `border-border` で面同士の境界線
 
-### もし色が乗らないとき
+#### もし色が乗らないとき
 
 だいたいこのどちらかです。
 
@@ -1082,12 +1126,12 @@ export default function DashboardPage() {
 1回落ち着いて、
 `@theme inline` と `:root` がちゃんと入っているか見直しましょう。
 
-### Pro パターンで書こう（arbitrary value 多用より design token を先に切る）
+#### Pro パターンで書こう（arbitrary value 多用より design token を先に切る）
 
 ここまでで動くコードは書けました。本編で書いた `page.tsx` は、すでに After 側（トークンで色を組む書き方）になっています。
 この部分は写経しません。もし生の値で色や余白を直接書いていたら（Before）どう困るのか、読み比べてみましょう。なぜトークンで書くのかが見えてきます。
 
-### Before（改善前のコード）
+#### Before（改善前のコード）
 
 ```tsx
 // filepath: 読み比べ用サンプル（比較用の一部・実ファイルには対応しません）
@@ -1095,21 +1139,21 @@ function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-[#25273f] bg-[#0f1021] px-[32px] py-[28px] shadow-[0_24px_80px_-32px_rgba(99,102,241,0.45)]">
       <span className="inline-flex items-center rounded-full bg-[#16172d] px-[12px] py-[6px] text-[13px] font-medium text-[#9aa2c3]">
-        Hello, my first task app
+        タスク管理
       </span>
       <h2 className="mt-[24px] text-[44px] font-semibold leading-[1.08] tracking-[-0.04em] text-white">
-        自分専用のタスク管理アプリが、今日ここから動き出す。
+        プロジェクトとタスクを、ひとつの画面で。
       </h2>
       <p className="mt-[18px] max-w-[620px] text-[16px] leading-[1.9] text-[#b0b7d3]">
-        今日つくるのは、30日後の完成版へつながる最初の画面だ。
-        まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+        担当と期限を決めて、いまやることだけを取り出す。
+        まだ作りかけで、画面は入口だけ。
       </p>
       <div className="mt-[32px] flex gap-[12px]">
         <a
           className="inline-flex items-center justify-center rounded-[12px] bg-[#6d5dfc] px-[20px] py-[12px] text-[14px] font-semibold text-white"
           href="#today-goals"
         >
-          今日のゴールを見る
+          これから足すものを見る
         </a>
         <a
           className="inline-flex items-center justify-center rounded-[12px] border border-[#2d314b] bg-[#151729] px-[20px] py-[12px] text-[14px] font-semibold text-white"
@@ -1123,7 +1167,7 @@ function WelcomeHero() {
 
 ```tsx
 {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
-          明日の予告を見る
+          これから足すものを見る
         </a>
       </div>
     </section>
@@ -1137,11 +1181,11 @@ export default function HomePage() {
 
 **このコードの問題点**:
 
-- 色や角丸や余白が全部その場の値なので、別画面でも同じ空気感を出したくなった瞬間にコピペが始まる
+- 色や角丸や余白が全部その場の値なので、別の画面で同じ見た目にしたくなるとコピペが始まる
 - `#6d5dfc` と `#0f1021` が何の役割の色か名前から分からず、レビュー時に意図を読み取りづらい
 - 後で配色を少し変えたいとき、画面全体を検索して直す必要が出やすい
 
-### After（プロが書くコード）
+#### After（プロが書くコード）
 
 ```tsx
 // filepath: 読み比べ用サンプル（比較用の一部・実ファイルには対応しません）
@@ -1149,21 +1193,21 @@ function WelcomeHero() {
   return (
     <section className="rounded-[28px] border border-border bg-card px-8 py-7 shadow-md">
       <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-        Hello, my first task app
+        タスク管理
       </span>
       <h2 className="mt-6 text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
-        自分専用のタスク管理アプリが、今日ここから動き出す。
+        プロジェクトとタスクを、ひとつの画面で。
       </h2>
       <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-        今日つくるのは、30日後の完成版へつながる最初の画面だ。
-        まだ機能は少ないけど、見た目の温度感はもうプロダクトに寄せていく。
+        担当と期限を決めて、いまやることだけを取り出す。
+        まだ作りかけで、画面は入口だけ。
       </p>
       <div className="mt-8 flex gap-3">
         <a
           className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm"
           href="#today-goals"
         >
-          今日のゴールを見る
+          これから足すものを見る
         </a>
         <a
           className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground"
@@ -1177,7 +1221,7 @@ function WelcomeHero() {
 
 ```tsx
 {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
-          明日の予告を見る
+          これから足すものを見る
         </a>
       </div>
     </section>
@@ -1197,11 +1241,11 @@ export default function HomePage() {
 
 #### 覚えておきたいポイント
 
-最初のページほど、色や余白をその場限りの値で指定するより、**意味のある token 名で見た目を組む**ほうが、あとから効いてきます。
+色や余白を `#3b82f6` のような値で直接書くと、配色を変えたくなったときに全ページを1か所ずつ探して回ることになります。`primary` `card` `accent` のような役割名で書いておけば、直すのは `globals.css` の1か所で済みます。
 
 「この色はきれいか」より先に、「この色は主役か、補助か、背景か」を考えて名前を付けておきましょう。そうしておくと、画面が増えても見た目のルールを保ちやすくなります。
 
-## Step 5: 動作確認（仕上げた画面をブラウザで見る）
+### Step 5: 仕上げた画面をブラウザで見る（3分）
 
 編集が終わったら、
 もう1回ブラウザを見ます。
@@ -1219,22 +1263,28 @@ npm run dev
 
 すでに開発サーバーが動いたままなら、この起動は要りません。止めていた場合は、`Ready` の行が出るまで待ってからブラウザを開きます。ここで赤い文字が出たときは、ブラウザではなくこのターミナルが原因を教えてくれています。`globals.css` や `page.tsx` のどのファイルの何行目でつまずいたかがそこに出るので、その場所を開いて、貼り付けが途中で切れていないか見てください。エラーの行番号を頼りに直せるのは、初日から使える強い武器です。
 
-### ブラウザ確認
+#### ブラウザ確認
 
 - `http://localhost:3000` を開く
 
-### チェックポイント
+#### チェックポイント
 
-- 上に `Getting Started` と `My Task App` が見える
-- `Day 01 Ready` の小さなバッジが見える
-- メインカードに「自分専用のタスク管理アプリが、今日ここから動き出す。」が見える
+Step 3 でポート番号が `3001` などに読み替わっていた場合は、以下の `3000` を自分の画面に出ている番号に置き換えて確認してください。
+
+- 上に「タスク管理」と `TaskApp` が見える
+- 「作りかけ」の小さなバッジが見える
+- メインカードに「プロジェクトとタスクを、ひとつの画面で。」が見える
 - ボタンが `bg-primary` の主役色で表示されている
 - `ダッシュボードへ入る` ボタンが見える
-- 右側に「今日のゴール」「今日のひとこと」「明日につながる入口」のカードが見える
+- 右側に「これから足すもの」「メモ」「次にやること」のカードが見える
 - `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開く
-- `/dashboard` で `Hello Task-App` が見える
+- `/dashboard` で 「ダッシュボード」の見出しが見える
 
-### 見た目が近いか確認する用の画像
+![トップページ。上部に「タスク管理」と TaskApp、左に大きな見出しと3つのボタン、右にこれから足すもの・メモ・次にやることのカードが並んでいる](./screenshots/day01/top-page.png)
+
+赤い枠が `ダッシュボードへ入る` ボタンです。ここを押すと `/dashboard` へ移動します。
+
+#### 見た目が近いか確認する用の画像
 
 今日はここまで来られたら十分です。
 雰囲気比較として、
@@ -1244,7 +1294,7 @@ npm run dev
 「完全一致」より、
 「自分の画面として立っているか」を見るのが大事です。
 
-### うまく表示されないときの見直し順
+#### うまく表示されないときの見直し順
 
 1. ターミナルにエラーが出ていないか見る
 2. `src/app/globals.css` の貼り付け漏れがないか見る
@@ -1259,14 +1309,53 @@ npm run dev
 
 Day 01 のポイントはここです。「動く」と「見た目が整っている」の両方を、初日のうちにそろえられました。
 
-## 明日のプレビュー
+## つまずきポイント
+
+| エラー / 問題 | 原因 | 解決方法 |
+|--------------|------|---------|
+| `Port 3000 is in use` と出て、`http://localhost:3001` で起動する | ポート 3000 が別のプログラムに使われている。Next.js 15 はエラーで止まらず、空いている番号へ自分で移る | 表示された番号をそのまま開く。ほかの開発サーバーを探して止める必要はない。以降の説明に出てくる `3000` は、自分の番号に読み替える |
+| Step 2 が `Cannot connect to the Docker daemon` で止まる | Docker が起動していない | Docker Desktop を立ち上げてから `bash scripts/scaffold-from-scratch.sh` をもう一度実行する。Day 01 なら2回実行しても土台は壊れない |
+| Step 2 が `Permission denied` で止まる | 実行権限の付いていないファイルを `./scripts/...` の形で直接呼んでいる | `bash scripts/scaffold-from-scratch.sh` の形で実行する。`bash` にファイルを渡す書き方なら実行権限は要らない |
+| `bash scripts/scaffold-from-scratch.sh` の形で実行しているのに `Permission denied` で止まる | 書き込みのできない場所でスクリプトを動かしている | `pwd` で `~/workspace/task-app` にいるか確認する。違う場所なら `cd ~/workspace/task-app` してから実行し直す |
+| Step 4 の途中でブラウザが赤いエラー画面になる | コードを16のブロックに分けて貼るため、途中の状態では括弧やタグが閉じていない | そのブロックの「確認ポイント」を読んで次のブロックへ進む。最後のブロックまで貼れば消える |
+| `.env.example` に教材が説明していない行が並んでいる | 実ファイルは見本より長く、後の Day で使う行も最初から入っている | 今日は `DATABASE_URL` の行だけ見れば十分。空欄の `_DEVELOPER_EMAIL` は埋めなくても管理者ユーザーは作られる |
+
+## 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| Next.js | React でページを作るためのフレームワーク。URL とファイルの置き場所を結び付ける仕組みが最初から入っている |
+| コンポーネント | 画面の部品を関数で定義したもの。`export default function Home()` の形で書く |
+| JSX | JavaScript の中に HTML のような書き方で画面を組み立てる構文 |
+| design token | 色や角丸などの値に名前を付けて1か所にまとめたもの。`--primary` がその1つ |
+| `scaffold-from-scratch.sh` | プロジェクトの土台一式を自動で組み立てる配布スクリプト。Day 01 で一度だけ実行する |
+| ポート番号 | 1台のパソコンの中で通信の入口を区別する番号。`localhost:3000` の `3000` がそれ |
+| 環境変数 | 接続先やパスワードなど、コードの外に置いておく設定値。`.env` に書く |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `globals.css` の `--color-primary: hsl(var(--primary));` は何をしている行ですか。**
+
+A. Tailwind に「`bg-primary` と書かれたら `--primary` の色を使ってよい」と教えるための対応表の1行です。色そのものの値はここでは決まりません。値を決めているのは `:root`（明るいテーマ）と `.dark`（暗いテーマ）の2か所で、そのどちらが使われるかは表示するテーマで切り替わります。
+
+**Q2. `:root` の `--radius: 10px;` を `20px` に書き換えると、画面はどう変わりますか。**
+
+A. `--radius` を見て決まっている場所の角丸が、まとめて大きくなります。`--radius-sm` から `--radius-xl` までの4つが、どれも `--radius` から計算されるためです。`--radius-lg` はその値をそのまま使い、残りの3つは `calc()` で増減させています。今日の画面では、ヘッダーの `rounded-xl` とボタンの `rounded-lg` が変わります。メインのカードは `rounded-[28px]` と数値を直接書いてあるので、この行を変えても変わりません。
+
+**Q3. 「これから足すものを見る」は `<a href="#today-goals">`、「ダッシュボードへ入る」は `<Link href="/dashboard">` と書き分けました。なぜ2つの書き方が要るのですか。**
+
+A. 移動先の性質が違うためです。前者は同じページの中に置いた `id="today-goals"` へスクロールする移動で、ページは読み込み直されません。後者は別のページへの移動です。Next.js の `Link` はページ全体を取り直さずに表示だけを差し替えるので、アプリの中のページ移動には `Link` を使います。
+
+## 次回予告
 
 Day 02 では、
 今日つないだ `src/app/dashboard/page.tsx` に、
-自分だけのメッセージや情報を足していきます。
+自分の名前と今日やることを出します。
 
-ルートの入口はそのままに、
-中のダッシュボードが少しずつ「自分のプロダクト」っぽくなってくる日です。
+トップページはそのままで、
+ダッシュボードの中身だけを書き換える日です。
 
 今日の `bg-card` や `bg-primary` が効いてくるのも、
 まさにここからです。

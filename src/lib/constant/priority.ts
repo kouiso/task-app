@@ -14,11 +14,13 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
   URGENT: '緊急',
 };
 
+// globals.css の chart トークンから引いた値。緊急へ向かって温度が上がる並びにしてある
+// グラフ以外で優先度に色を割り当てないのは、1枚のカードに色が積み上がるのを避けるため
 export const TASK_PRIORITY_COLORS: Record<TaskPriority, string> = {
-  LOW: '#9e9e9e',
-  MEDIUM: '#2196f3',
-  HIGH: '#ff9800',
-  URGENT: '#f44336',
+  LOW: '#5f6777',
+  MEDIUM: '#1e9cb8',
+  HIGH: '#f69e23',
+  URGENT: '#dc3848',
 };
 
 export const TASK_PRIORITY_ORDER: Record<TaskPriority, number> = {

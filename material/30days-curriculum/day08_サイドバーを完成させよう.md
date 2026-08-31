@@ -1,6 +1,9 @@
 # Day 08: サイドバー付きのアプリレイアウトを作ろう
 
-![サイドバー完成画面](./screenshots/sidebar.png)
+![Day 08 のサイドバー。上にロゴ、メニューが「ダッシュボード」「プロジェクト」「マイタスク」の3つ、下にログイン中のユーザー名とログアウトボタンが並んでいる](./screenshots/day08/sidebar.png)
+
+赤い枠が今日作るサイドバーです。メニューは「ダッシュボード」「プロジェクト」「マイタスク」の3つになります。
+残りのメニューは Day 13 以降で画面を作るたびに1つずつ足していきます。
 
 ## 前回の振り返り
 
@@ -378,6 +381,20 @@ export function AppLayout({
 
 > `hasMounted` が必要な理由: Next.js はサーバーで HTML を生成してからブラウザに送ります（SSR）。session Cookie には Day 07 で `httpOnly` を付けたので、ブラウザ側の JavaScript からは中身を読めません。ログイン状態を知る道は、`api.auth.getSession.useQuery()` でサーバーに聞くことだけです。このとき Cookie はリクエストへ自動で付いて飛び、中身を開いて誰なのかを判定するのはサーバー側です。答えが返ってくるのは画面が出たあとなので、このフラグで「ブラウザ側の準備ができてから判定する」ようにして、チラつきを防ぎます。
 
+```mermaid
+sequenceDiagram
+    participant B as ブラウザ
+    participant S as サーバー
+    S->>B: HTML を送る
+    Note over B: hasMounted はまだ false
+    B->>S: マウントと同時に getSession が飛ぶ（Cookie は自動で付く）
+    B->>B: hasMounted が true になる
+    S->>B: ログイン状態の返事
+    Note over B: ここで初めて判定する
+```
+
+時間の流れは上から下です。ログイン状態が分かるのは、いちばん下の返事が届いたあとだけです。ここで気をつけたいのは、`hasMounted` が問い合わせを止める印ではないことです。`api.auth.getSession.useQuery()` には `enabled` を渡していないので、問い合わせはマウントと同時に飛びます。`hasMounted` が押さえるのは判定のほう、つまり `useEffect` の中の画面移動と `if (!hasMounted || isLoading)` の表示切り替えです。これを外すと、返事が来ていない時間帯に判定が走って、画面が一瞬ログイン画面へ飛びます。
+
 #### 3-3. レイアウト JSX（サイドバー + コンテンツ）
 
 ```tsx
@@ -389,7 +406,7 @@ export function AppLayout({
         {/* ロゴ */}
         <div className="border-b border-sidebar-border p-4">
           <h1 className="text-lg font-bold text-sidebar-foreground">
-            Task App
+            タスク管理
           </h1>
         </div>
 ```
@@ -398,9 +415,17 @@ export function AppLayout({
 
 `hidden` と `md:flex` を並べているのは、画面が狭いときにサイドバーを隠すためです。`w-64` は幅 256px を指します。スマートフォンの画面にこの帯が居座ると、本文に残る幅が 100px ほどになり、文章が1文字ずつ折り返されて読めなくなります。
 
+ここで先に断っておくことがあります。消えるのはサイドバーの帯ごとなので、幅 768px 未満では
+**ナビゲーションのリンクとログアウトボタンが、まとめて画面から消えます**。
+代わりのハンバーガーメニューを、このカリキュラムでは作りません。
+Day 04 で公開した URL をスマートフォンから開くと、ログインした先に移動する手段の無い画面が出ます。
+動作確認はパソコンのブラウザで進めてください。
+スマートフォンで見るときは、ブラウザの幅を広げると帯が戻ります。自分の書き間違いではありません。
+
 **確認ポイント**:
 - [ ] 左側にサイドバーを作っている
-- [ ] ロゴとして `Task App` を表示している
+- [ ] ヘッダーの小さな文字として `タスク管理` を表示している
+- [ ] 画面幅を 768px より狭くすると、サイドバーごと消えることを確認した（仕様どおりの動き）
 
 ```tsx
         {/* filepath: src/component/layout/app-layout.tsx（続き） */}
@@ -625,7 +650,7 @@ npm run dev
 
 シークレットウィンドウで `http://localhost:3000` を開きます。
 
-![ログイン画面](./screenshots/login.png)
+![ログイン画面。メールアドレスとパスワードの入力欄、ログインボタン、登録リンクが並んでいる](./screenshots/day05/login.png)
 
 **確認フロー**:
 
@@ -633,11 +658,15 @@ npm run dev
 2. `admin@example.com` / `password123` でログイン。
 3. ダッシュボードが表示される（サイドバー付き）。
 
-![ダッシュボードとサイドバー](./screenshots/dashboard.png)
+![左に3項目のサイドバー、右に Day 02 で作ったダッシュボードのカードが並んでいる画面](./screenshots/day08/dashboard.png)
+
 4. サイドバーに「ダッシュボード」「プロジェクト」「マイタスク」の3つのメニューが見える。
-   （「プロジェクト」と「マイタスク」を押すと 404 になりますが正常です。ページは Day 09 と Day 17 で作ります）
+   （「プロジェクト」と「マイタスク」を押すと 404 になるが、これは正常。ページは Day 09 と Day 17 で作る）
 5. サイドバー下部に「管理者」の名前とロールが表示される。
 6. 「ログアウト」ボタンを押す → 確認ダイアログが出る。
+
+![「ログアウトしますか？」の見出しと「ログアウトすると、再度ログインが必要になります。」の説明、キャンセルとログアウトの2つのボタンが並んだ確認ダイアログ](./screenshots/day08/logout-confirm.png)
+
 7. 「ログアウト」を押す → `/login` に戻る。
 
 **確認ポイント**:
@@ -916,7 +945,7 @@ export function AppLayout({
   }
 ```
 
-ここが今日のいちばんの要点です。2つの `if` を `return` より前に置いてあるので、この行より下は「ログイン済みの人だけが通る場所」になります。だから後ろのサイドバーでは `session.user.name` を確かめずに読めます。判定を後ろへ動かすと、未ログインの人にサイドバーが一瞬見えてしまいます。`return null` は何も描かずに終わる書き方で、`/login` への移動が終わるまでの短い間だけ働きます。
+ここが今日のいちばんの要点です。2つの `if` を `return` より前に置いてあるので、この行より下は「ログイン済みの人だけが通る場所」になります。だから後ろのサイドバーでは `session?.user?.name` と書かずに `session.user.name` と読めます。ただし名前そのものは未設定があり得るので、頭文字を取り出す `?.[0] || 'U'` は残します。判定を後ろへ動かすと、未ログインの人にサイドバーが一瞬見えてしまいます。`return null` は何も描かずに終わる書き方で、`/login` への移動が終わるまでの短い間だけ働きます。
 
 **サイドバーの外枠とロゴ**:
 
@@ -930,7 +959,7 @@ export function AppLayout({
         {/* ロゴ */}
         <div className="border-b border-sidebar-border p-4">
           <h1 className="text-lg font-bold text-sidebar-foreground">
-            Task App
+            タスク管理
           </h1>
         </div>
 ```
@@ -1095,10 +1124,10 @@ Day 02 のこのファイルには取り込みが1行もありませんでした
 // 完成版: 表示する値とあいさつの組み立て
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
-  role: 'Builder of Task App',
-  todayFocus: 'ダッシュボードに自分だけのメッセージを追加する',
-  todayGoal: '教材の見本ではなく、自分の画面として立つ一枚にする',
-  nextAction: 'Day 03 で GitHub に保存できる状態まで持っていく',
+  role: 'Web エンジニア',
+  todayFocus: 'ポートフォリオの企画',
+  todayGoal: 'トップページのラフを決める',
+  nextAction: 'レビューをもらう',
 };
 
 function getGreetingByHour(hour: number): string {
@@ -1124,7 +1153,7 @@ function getGreetingByHour(hour: number): string {
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
-  return `${greeting}、${owner.name}さん。今日は ${owner.todayFocus} を前に進める日だ。`;
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}に取り組みます。`;
 }
 
 export default function DashboardPage() {
@@ -1132,7 +1161,7 @@ export default function DashboardPage() {
   const mainMessage = buildMainMessage(dashboardOwner, currentHour);
   const focusCards: FocusCard[] = [
     {
-      label: 'Owner',
+      label: '担当',
       value: dashboardOwner.name,
       description: dashboardOwner.role,
     },
@@ -1146,14 +1175,14 @@ export default function DashboardPage() {
 {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
 {/* 完成版: 残りのカードと外枠の開始 */}
     {
-      label: 'Today',
-      value: 'Day 02',
-      description: dashboardOwner.todayGoal,
+      label: '今日',
+      value: dashboardOwner.todayGoal,
+      description: dashboardOwner.todayFocus,
     },
     {
-      label: 'Next',
-      value: 'Day 03',
-      description: dashboardOwner.nextAction,
+      label: '次',
+      value: dashboardOwner.nextAction,
+      description: '明日いちばんに動く',
     },
   ];
 
@@ -1173,7 +1202,7 @@ export default function DashboardPage() {
           <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-                Task App
+                タスク管理
               </p>
               <h1 className="text-lg font-semibold text-card-foreground">
                 My Dashboard
@@ -1181,7 +1210,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
-              Personalized Message Ready
+              作業中
             </div>
           </header>
 ```
@@ -1197,7 +1226,7 @@ export default function DashboardPage() {
             <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
               <div className="border-b border-border px-8 py-6">
                 <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                  Personal Message
+                  今日のフォーカス
                 </span>
 
                 <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
@@ -1215,12 +1244,11 @@ export default function DashboardPage() {
                 <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                   今日は
                   <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
-                  を意識して進める。
-                  ただ文字を置くのではなくて、ダッシュボードに自分の意図が見える状態を作るのが狙いだ。
+                  まで進めます。
                 </p>
 
                 <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
-                  Focus: {dashboardOwner.todayFocus}
+                  進行中: {dashboardOwner.todayFocus}
                 </div>
               </div>
 ```
@@ -1263,19 +1291,19 @@ export default function DashboardPage() {
             <aside className="space-y-4">
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
-                  今日のワンフレーズ
+                  メモ
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  自分の名前が入るだけでも、ダッシュボードは急に「使う画面」に変わる。
+                  午前は集中して作業。夕方に振り返りを入れる。
                 </p>
               </article>
 
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
-                  ここで増えた価値
+                  今週の予定
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  画面の主役が明確になって、次にタスク数やプロジェクト情報を足す余地も見えやすくなった。
+                  金曜までにトップページのラフを固める。
                 </p>
               </article>
 ```
@@ -1289,10 +1317,10 @@ export default function DashboardPage() {
               {/* 完成版: 最後のカードと閉じタグ */}
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
-                  次につながる視点
+                  明日やること
                 </p>
                 <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                  Day 03 ではこの変化を失わないように、ちゃんと履歴として残していく段階へ進む。
+                  レビューの指摘をまとめて、直す順番を決める。
                 </p>
               </article>
             </aside>
@@ -1321,9 +1349,38 @@ export default function DashboardPage() {
 | `api is not defined` | `@/trpc/react` からの import 漏れ | `import { api } from '@/trpc/react'` を確認 |
 | `Cannot find module '@/component/ui/alert-dialog'` | UI コンポーネント未配置 | scaffold の `_ui-components/` が `src/component/ui/` にあるか確認 |
 | サイドバーが表示されない | `dashboard/page.tsx` を `AppLayout` で囲んでいない | Step 4 の import と return を確認 |
-| ログイン後に白い画面 | `providers.tsx` が `layout.tsx` に組み込まれていない | Step 2 を確認 |
+| ログイン後に白い画面 | `AppLayout` の `if (!session?.user) { return null; }` に入ったまま。セッションが取れていない | Step 3 の `getSession` の呼び出しと、ログインが済んでいるかを確認する |
 | `useQuery` でエラー | tRPC サーバー側が動いていない | Day 07 の `src/server/api/root.ts` が存在するか確認 |
-| ログアウトしてもリダイレクトされない | `router.refresh()` の呼び忘れ | `onSuccess` 内に `router.push('/login'); router.refresh();` |
+| ログアウトしてもリダイレクトされない | `onSuccess` 内の `router.push('/login')` の書き漏れ | `onSuccess` 内に `router.push('/login'); router.refresh();` の2行があるか確認する。`refresh()` だけを忘れた場合は、移動はするのに古いユーザー名が残る |
+
+## 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| Provider | 内側のすべての部品へ同じ値を配る囲み。どこに置くかで届く範囲が決まる |
+| useQuery | サーバーからデータを取ってくる tRPC のフック |
+| AppLayout | サイドバーとメインコンテンツに画面を分ける、自作の共通レイアウト |
+| aside | 「ここは本文ではなく脇の案内」という意味を持つ HTML のタグ |
+| hasMounted | ブラウザ側で描画が始まったかを表す目印。サーバー側の結果とのちらつきを防ぐ |
+| AlertDialog | 取り消せない操作の前に確認を求める、shadcn/ui のダイアログ |
+| asChild | ダイアログの引き金を、内側に書いた自分のボタンにそのまま任せる指定 |
+| md: | Tailwind CSS で「画面幅 768px 以上のときだけ効かせる」という接頭辞 |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `AppLayout` の `if (!hasMounted || isLoading)` と `if (!session?.user) { return null; }` は、何をしている2つですか。**
+
+A. 前者は、セッションの問い合わせが終わるまで「読み込み中...」を出します。後者は、問い合わせが終わってもログインしていなければ、何も描かずに終わります。どちらも `return` で処理を打ち切ります。その結果、この2つより下の行は「ログイン済みの人だけが通る場所」になります。だからサイドバーでは `session?.user?.name` と書かずに `session.user.name` と書けます。ただし名前そのものは未設定があり得るので、頭文字を取り出す `?.[0] || 'U'` は残します。
+
+**Q2. `menuItems` に4件目を足すと、画面はどうなりますか。**
+
+A. サイドバーのメニューが4つになります。JSX の側は1行も書き足す必要がありません。`menuItems.map` が配列をそのまま回してリンクを作っているからです。並ぶ順番は、配列に書いた順がそのまま上から下になります。
+
+**Q3. ダッシュボード側の外側の `<main>` を `<div>` に書き換えるのは、なぜですか。**
+
+A. `AppLayout` がすでに `<main>` を1つ持っているからです。そのまま残すと、本文の入れ物がページに2つ並びます。`<main>` は「ここがこのページの本文だ」という意味を持つタグです。2つあると、読み上げソフトはどちらを本文と判断すればよいか決められません。
 
 ## 次回予告
 

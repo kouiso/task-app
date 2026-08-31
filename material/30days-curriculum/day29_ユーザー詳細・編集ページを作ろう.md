@@ -14,7 +14,7 @@ Day 28 では **タスク一括操作**を実装しました。チェックボ�
 
 スクリーンショット: ユーザー詳細ページの完成イメージの表示を確認してください。
 
-![ユーザー詳細ページの完成イメージの表示を確認してください。](./screenshots/user-detail-page.png)
+![ユーザー詳細ページ。左にアバターと名前とロールのバッジ、右に参加プロジェクトと担当中のタスクのカードが並んでいる](./screenshots/day29/user-detail.png)
 
 > **今日のゴールライン**: 動的ルーティングでユーザーIDを受け取り、詳細表示から編集保存まで権限つきで動かせれば大丈夫です。
 
@@ -82,15 +82,20 @@ flowchart TD
 |---------|---------|---------|-------------|---------|
 | Step 0 | user.ts に getById / update を追記する | 16分 | `src/server/api/routers/user.ts` | 詳細取得と更新APIが生える |
 | Step 1 | 動的ルーティングの仕組みを理解する | 5分 | 概念説明のみ | 仕組みが頭に入る |
-| Step 2 | ユーザー詳細ページのファイルを作成 | 5分 | `src/app/user/[id]/page.tsx` | ファイルが存在する |
-| Step 3 | URLからユーザーIDを取得してデータを取得 | 7分 | `src/app/user/[id]/page.tsx` | ユーザー名が表示される |
-| Step 4 | グリッドレイアウトで詳細情報を表示 | 7分 | `src/app/user/[id]/page.tsx` | 2カラムレイアウトで表示 |
-| Step 5 | プロジェクト一覧とタスクテーブルを表示 | 7分 | `src/app/user/[id]/page.tsx` | バッジとテーブルが表示される |
-| Step 6 | 権限チェックで編集ボタンを出し分ける | 5分 | `src/app/user/[id]/page.tsx` | 管理者・本人のみ編集ボタンが見える |
-| Step 7 | 編集ページのファイルを作成 | 5分 | `src/app/user/[id]/edit/page.tsx` | ファイルが存在する |
-| Step 8 | zodスキーマとuseFormでデータを同期する | 7分 | `src/app/user/[id]/edit/page.tsx` | フォームにデータが入る |
-| Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/page.tsx` | ドロップダウンとチェックボックスが動く |
-| Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/page.tsx` | 保存ボタンでDBが更新される |
+| Step 2 | ユーザー詳細ページのファイルを作成 | 5分 | `src/app/user/[id]/page.tsx` | server wrapper のファイルが存在する |
+| Step 3 | URLからユーザーIDを取得してデータを取得 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | ユーザー名が表示される |
+| Step 4 | グリッドレイアウトで詳細情報を表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | 2カラムレイアウトで表示 |
+| Step 5 | プロジェクト一覧とタスクテーブルを表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | バッジとテーブルが表示される |
+| Step 6 | 権限チェックで編集ボタンを出し分ける | 5分 | `src/app/user/[id]/user-detail-client.tsx` | 管理者・本人のみ編集ボタンが見える |
+| Step 7 | 編集ページのファイルを作成 | 5分 | `src/app/user/[id]/edit/page.tsx` と `edit/user-edit-client.tsx` | 2ファイルが存在する |
+| Step 8 | zodスキーマとuseFormでデータを同期する | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | フォームにデータが入る |
+| Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | ドロップダウンとチェックボックスが動く |
+| Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/user-edit-client.tsx` | 保存ボタンでDBが更新される |
+
+表の Step 3 以降が `page.tsx` ではなく `user-detail-client.tsx` を指しているのは、
+`page.tsx` を server wrapper（サーバー側で動く入口）にしてあるためです。
+画面の状態を持つコードは `use client` の付いたファイルにしか書けません。
+`page.tsx` に `useQuery` を書くとサーバー側で実行され、必ずエラーになります。
 
 **合計時間**: 約76分です。
 
@@ -569,9 +574,9 @@ PORT=3001 npm run dev
 ```
 
 実在するユーザーIDを Day 24 のユーザー一覧で確認し、`/user/そのID` を開きます。
-データが届くまでの一瞬は、次のようにスピナーだけが出ます。
+データが届くまでの一瞬は、次のように本文の場所がスピナーだけになります。
 
-![読み込み中はスピナーだけが表示されます](./screenshots/user-detail-skeleton.png)
+![読み込み中のユーザー詳細ページ。左のサイドバーは出たままで、右の本文の場所に丸いスピナーだけが回っている](./screenshots/day29/user-detail-loading.png)
 
 スピナーが消えたあとにユーザー名と ID が出れば、
 URL から `getById` までの経路がつながっています。
@@ -942,7 +947,8 @@ Tailwind CSS では動的な色をクラスで指定できないため、`style=
 
 スクリーンショット: プロジェクト一覧とタスクテーブルの表示を確認してください。
 
-![プロジェクト一覧とタスクテーブルの表示を確認してください。](./screenshots/user-detail-projects-tasks.png)
+![ユーザー詳細ページ。赤枠①が参加プロジェクトのカード、赤枠②が担当中のタスクのカード](./screenshots/day29/user-detail-projects-tasks.png)
+
 **確認ポイント**:
 - プロジェクトバッジがカラフルに（テキストは白で）表示される
 - バッジをクリックするとプロジェクトページに遷移する
@@ -1089,7 +1095,7 @@ Step 7 の骨組みだけでも型検査が通る順序です。
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
 const userEditSchema = z.object({
   name: z.string()
-    .min(1, '名前は必須です'),
+    .min(1, '名前を入力してください'),
   avatar: z.string().url().or(
     z.literal('')),
   role: z.enum(["USER", "ADMIN"]),
@@ -1350,7 +1356,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
               </div>
 ```
 
-`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下に入ります。`value` と `onChange` を自分で書かずに済むのは、`register` が両方を作って渡してくれるからです。下の `form.formState.errors.name` は、Step 7 の zod スキーマに書いた「名前は必須です」を受け取る場所です。文言をスキーマ側だけに置けるので、検査の条件と画面の表示が食い違いません。
+`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下に入ります。`value` と `onChange` を自分で書かずに済むのは、`register` が両方を作って渡してくれるからです。下の `form.formState.errors.name` は、Step 7 の zod スキーマに書いた「名前を入力してください」を受け取る場所です。文言をスキーマ側だけに置けるので、検査の条件と画面の表示が食い違いません。
 
 メールアドレスとアバターURL入力欄を追加します。
 
@@ -1400,6 +1406,17 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 `isActive` を変更できません。
 Step 10 では `canManageAccount` を使い、
 管理者が他人を編集するときだけ送信します。
+
+```mermaid
+flowchart TB
+    A{"編集しているのは管理者か"}
+    A -->|"一般ユーザー"| N1["この編集画面をそもそも開けない"]
+    A -->|"管理者"| B{"編集の相手は誰か"}
+    B -->|"他人"| OK["role と isActive を送れる"]
+    B -->|"自分自身"| NG["role と isActive は送らない<br/>送ると FORBIDDEN"]
+```
+
+管理者かどうかだけでは決まらず、相手が誰かでもう一度分かれます。右下の枝があるのは、管理者が自分の権限を下げたり自分を停止したりして、誰も管理できなくなる状態を防ぐためです。
 
 インポートを追加します。
 
@@ -1511,7 +1528,7 @@ import { isUserRole, USER_ROLE_LABELS }
 
 スクリーンショット: 完成後の編集フォームはこのように表示されます（この時点ではまだ描画されません）。
 
-![完成後の編集フォーム（ロール選択とアクティブのチェックボックスが並んだ状態）](./screenshots/user-edit-form.png)
+![ユーザー編集フォーム。名前とメールアドレスの下に、ロールを選ぶ欄と「アクティブ」のチェックボックスが並んでいる](./screenshots/day29/user-edit-form.png)
 
 画面での確認は Step 10 の最後で行います。ここではコードを見ます。
 
@@ -1748,7 +1765,7 @@ import { z } from 'zod';
 import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
 const userEditSchema = z.object({
-  name: z.string().min(1, '名前は必須です'),
+  name: z.string().min(1, '名前を入力してください'),
   avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
   role: z.enum([USER_ROLE.USER, USER_ROLE.ADMIN]),
   isActive: z.boolean(),
@@ -2617,7 +2634,7 @@ import { api } from '@/trpc/react';
 // 完成版: zod スキーマと型
 const userEditSchema = z.object({
   name: z.string()
-    .min(1, '名前は必須です'),
+    .min(1, '名前を入力してください'),
   avatar: z.string().url().or(
     z.literal('')),
   role: z.enum(["USER", "ADMIN"]),
@@ -3063,6 +3080,19 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 `</form>` を閉じた後、カードの中身・カード・中央寄せの箱・全体のレイアウトを順にたたみます。Step 9 と Step 10 の途中では「閉じタグが足りない」というエラーが出続けていましたが、この6行でそれが消えます。エラーが残る場合は、`</>` と `)}` の組が1つ足りていないところを探してください。
 
+## 今日のまとめ
+
+今日で管理者向けのユーザー管理機能が完成しました。詳細表示・編集・権限チェックまで実装し、あなたのタスク管理アプリは本格的なチーム管理ツールになりました。
+動的ルーティングでURLから情報を読み取り、権限に基づいてUIを切り替える方法を学びました。
+
+- [ ] `[id]` の動的ルーティングで URL からユーザー ID を取り出せた
+- [ ] server wrapper と client component の役割を分けて書けた
+- [ ] `form.reset` でサーバーのデータをフォームの初期値にできた
+- [ ] 管理者と本人で編集できる項目が変わることを確かめた
+- [ ] 保存後に詳細ページへ戻り、更新後の値が出ることを確かめた
+
+---
+
 ## つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
@@ -3076,27 +3106,22 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ---
 
-## Day 29 完了
+## 今日学んだ用語
 
-今日で管理者向けのユーザー管理機能が完成しました。詳細表示・編集・権限チェックまで実装し、あなたのタスク管理アプリは本格的なチーム管理ツールになりました。
+| 用語 | 意味 |
+|------|------|
+| 動的ルーティング `[id]` | フォルダ名を変数にして、任意の URL を1つのページで受ける仕組み |
+| `await params` | server component で URL のパラメータを受け取る書き方。Next.js 15 から非同期になった |
+| `useEffect` の依存配列 | 指定した値が変わったときだけ処理を走らせるための指定 |
+| `zodResolver` | zod のスキーマを `useForm` のバリデーションにつなぐ関数 |
+| `form.reset` | フォームの値をまとめて入れ直す。サーバーのデータが届いたときに使う |
+| 早期リターン | 読み込み中・未発見・権限なしを先に返し、最後に本体を描く書き方 |
+| `isPending` | mutation が処理中かどうか。2重送信を止めるのに使う |
+| `md:grid-cols-12` | 画面が広いときだけ12列のグリッドにする指定 |
 
-動的ルーティングでURLから情報を読み取り、権限に基づいてUIを切り替える方法を学びました。
+---
 
-### 今日学んだこと
-
-| 概念 | 意味 | 使い場面 |
-|------|------|---------|
-| 動的ルーティング `[id]` | フォルダ名を変数にして任意のURLに対応 | ユーザー詳細、記事詳細など |
-| `await params` | server component で URL のパラメータを受け取る | 動的ルーティングとセットで使う |
-| `useEffect` + 依存配列 | 指定した値が変わったときに処理を実行 | サーバーデータをフォームに反映 |
-| `useForm` + `zodResolver` | フォーム状態管理とバリデーションをまとめて担当 | すべてのフォーム入力 |
-| `form.reset` / `register` / `watch` | データ到着時に初期化し、入力欄と現在値をつなぐ | react-hook-form のフォーム全般 |
-| 早期リターンの順序 | ローディング → 未発見 → 権限なし → 本体 | ページの安全な描画 |
-| `isAdmin \|\| isOwnProfile` | OR条件で権限チェック | ページやボタンの表示制御 |
-| `isPending` | mutationが処理中かどうか | 2重送信防止・入力無効化 |
-| `md:grid-cols-12` | レスポンシブなグリッドレイアウト | サイドバー+コンテンツ |
-
-### 全体のデータフロー振り返り
+## 全体のデータフロー振り返り
 
 ```mermaid
 sequenceDiagram
@@ -3124,7 +3149,27 @@ sequenceDiagram
 
 この図を上から下へたどると、今日書いたコードが1本の線でつながります。URLの文字列が `id` になり、`id` が SQL の `WHERE` に入り、返ってきたユーザーが `form.reset` でフォームの初期値になります。戻りも同じ線です。フォームの値が `update` に乗り、`UPDATE` 文になって DB に届き、`onSuccess` が画面を詳細ページへ送り返します。表示が変わらないときは、この線のどこで値が止まっているかを探すと原因に近づけます。
 
-### 次回予告
+---
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `page.tsx` が Prisma で存在を確かめ、そのあと `getById` がもう一度サーバーへ行きます。2回問い合わせるのはなぜで、どんな副作用がありますか。**
+
+A. `page.tsx` が確かめるのは「その ID のユーザーが居るか」だけで、居なければ `notFound()` を呼んで画面を1度も描きません。居たときだけ `getById` が本物のデータを取りに行き、そこで見る権限を確かめます。副作用として、居ない ID は 404、居る ID は権限エラーと返り方が分かれるので、外から「その ID のユーザーが実在するか」を言い当てられます。
+
+**Q2. 一般ユーザーが他人の `/user/他人のid` を開くと、編集ボタンが消えるだけですか。**
+
+A. 違います。`getById` の権限チェックで `FORBIDDEN` になり、データそのものを受け取れません。「ボタンが非表示になる」のではなく「ページ自体が出ない」という作りです。
+
+**Q3. 期限の列を `format(new Date(task.dueDate), ...)` ではなく `formatDateOnly(task.dueDate)` で書くのはなぜですか。**
+
+A. `dueDate` は「日付だけ」の値として、時刻を UTC の0時にそろえて保存してあるためです。`new Date()` で読み直して各自の時計に合わせると、UTC より西の時間帯では前日にずれます。5月10日締切のタスクが5月9日と表示され、期限切れの判定まで1日早まります。`formatDateOnly` は各自の時計へ直さず、UTC のまま日付の部分だけを取り出します。
+
+---
+
+## 次回予告
 
 Day 30では、いよいよ完成版をVercelに公開します。30日間コツコツ作ってきたタスク管理アプリを、世界中からアクセスできる状態にしましょう。
 

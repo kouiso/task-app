@@ -372,6 +372,16 @@ def prepare_work_dir() -> None:
         json.dumps({"themeVariables": {"fontFamily": FONT_SOURCES[0][2]}}),
         encoding="utf-8",
     )
+    # mermaid-cli は Chromium で図を描いてから箱の大きさを決める。その Chromium に
+    # BIZ UDPGothic が無いと、代わりの細い書体で幅を測って箱を作り、あとから
+    # embed_font が本物を差し込むので、文字が箱からはみ出して切れる（実測: Docker →
+    # 「Docke」）。fontconfig は $XDG_DATA_HOME/fonts を見るので、そこへ実体を置いて
+    # 測る側と描く側の書体をそろえる。
+    xdg_fonts = WORK_DIR / "xdg" / "fonts"
+    xdg_fonts.mkdir(parents=True)
+    for name in {Path(path).name for _, path, _, _, fmt in FONT_SOURCES
+                 if fmt == "truetype"}:
+        shutil.copy2(WORK_DIR / "fonts" / name, xdg_fonts / name)
 
 
 def work_slug(stem: str) -> str:
@@ -485,6 +495,8 @@ def main(argv: list[str]) -> int:
         # 約650MB の Chrome を毎回取りに行く。
         env["PUPPETEER_EXECUTABLE_PATH"] = browser
         env["PUPPETEER_SKIP_DOWNLOAD"] = "true"
+    # prepare_work_dir が置いた実体を mermaid-cli の Chromium から見えるようにする
+    env["XDG_DATA_HOME"] = str(WORK_DIR / "xdg")
 
     try:
         prepare_work_dir()

@@ -18,7 +18,7 @@ Day 27 では、`/project?projectId=...` で
 
 スクリーンショット: タスク一括操作の完成画面の表示を確認してください。
 
-![タスク一括操作の完成画面の表示を確認してください。](./screenshots/bulk-operations-complete.png)
+![2件のタスクを選び、見出しの右に「完了にする」「削除」「ステータス変更」が並んだ画面](./screenshots/day28/bulk-operations-complete.png)
 
 > **今日のゴールライン**: Setで選択中タスクを管理し、完了・削除・ステータス変更をまとめて動かせれば大丈夫です。
 
@@ -28,7 +28,12 @@ Day 27 では、`/project?projectId=...` で
 
 - Day 27 のプロジェクト詳細とアーカイブ機能が動いている
 - `/task` に複数のタスクが表示されている
-- 一括削除を試すため、消えてもよい練習用タスクを用意している
+- 一括削除を試すため、消えてもよい練習用タスクを 7 件以上用意している
+
+> 7 件という数には理由があります。Step 9 の動作確認は「3 件を完了」「2 件を削除」
+> 「5 件のステータスを変更」の順に進めます。削除で 2 件減ったあとに 5 件を選ぶので、
+> 始める時点で 7 件が同じ画面に並んでいる必要があります。初期データは 3 件しか見えないので、
+> `/task` から練習用のタスクを足してから始めてください。
 - `src/server/api/routers/task.ts` と `src/app/task/page.tsx` を編集できる
 
 > Day 13〜16 で作った import、`TaskCard`、
@@ -96,7 +101,7 @@ flowchart TD
 
 ---
 
-### 実装ステップ一覧
+## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
@@ -419,6 +424,20 @@ const selectedTaskList = useMemo(
 
 `selectedTaskList` のほうは、`selectedTasks` に id が残っていて、なおかつ今の一覧にも並んでいるタスクだけを取り出します。フィルターを切り替えると画面から消えるタスクがありますが、`Set` の中の id は消えません。ここで一覧と突き合わせておかないと、目に見えていないタスクまで一括操作の巻き添えになります。`useMemo` で包んだのは、`tasks` か `selectedTasks` が変わったときだけ計算し直せば足りるからです。
 
+```mermaid
+flowchart TB
+    subgraph T["tasks: 画面に並んでいるタスク"]
+      SE["selectableTasks<br/>編集か削除ができる"]
+      RO["閲覧しかできない"]
+      SL["selectedTaskList<br/>Set に id があり<br/>いまも並んでいる"]
+    end
+    ST["selectedTasks: id の Set<br/>消えた id も残る"]
+    ST -.->|"突き合わせる"| SL
+    SE -->|"全選択の分母"| CB["3つの状態を決める"]
+```
+
+名前の似た3つは、指しているものが別々です。`selectedTasks` だけ枠の外にあるのは、画面に並んでいないタスクの id も持ち続けるからです。分母を `tasks` にすると閲覧専用のタスクまで数に入り、選べるものを全部選んでも全チェックになりません。
+
 選択中タスクすべてに必要な権限があるかも
 操作ごとに判定します。
 
@@ -477,13 +496,14 @@ Set に詰め、`false` なら空の Set で上書きします。
 
 スクリーンショット: チェックボックス付きタスクカードの表示を確認してください。
 
-![チェックボックス付きタスクカードの表示を確認してください。](./screenshots/task-row-with-checkbox.png)
+![タスクカードの左端に付いたチェックボックス（赤枠）](./screenshots/day28/task-row-with-checkbox.png)
+
 実際のコードでは `TaskCard` コンポーネントをグリッドで並べています。`TaskCard`・`handleEdit`・`handleDelete`・`handleTaskClick`・`handleCreate` は過去の Day で作成済みです。
 
 チェックボックスはカードの左側に配置します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（className="grid gap-6 の要素を書き直す）
 import { Checkbox } from '@/component/ui/checkbox';
 
 // タスク一覧の grid レイアウト
@@ -514,7 +534,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 
 ```typescript
-        {/* filepath: src/app/task/page.tsx */}
+        {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
         <div className="flex-1 min-w-0 h-full">
           <TaskCard
             id={task.id}
@@ -589,7 +609,8 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 スクリーンショット: ヘッダーに全選択・全解除のチェックボックスが表示された画面を確認してください。
 
-![ヘッダーに全選択・全解除のチェックボックスが表示された画面](./screenshots/select-all-checkbox.png)
+![ヘッダーに全選択・全解除のチェックボックスが表示された画面](./screenshots/day28/select-all-checkbox.png)
+
 いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なので、まずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
 ```typescript
@@ -606,7 +627,7 @@ const isAllSelected =
 この値をチェックボックスに渡します。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（className="flex gap-2 w-full の前に追加）
 import { Label } from '@/component/ui/label';
 
 // フィルター行の先頭に配置
@@ -717,12 +738,12 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 実際のコードでは、一括操作ボタンは **画面下部の固定バーではなく、ページヘッダーの右側** に配置されています。
 
-スクリーンショット: 一括操作ボタンがヘッダーに表示される様子の表示を確認してください。
+スクリーンショット: 下の画像は Step 8 まで書き終えた完成後のヘッダーです。この Step 5 の時点で出るのは「(1件選択中)」の文字までで、右側のボタンは Step 6・7・8 で足していきます。
 
-![一括操作ボタンがページヘッダーの右側に表示されている状態](./screenshots/bulk-operation-header.png)
+![Step 8 まで終えた状態。1件だけ選ぶと見出しに「(1件選択中)」が出て、右側に一括操作ボタンが並ぶ](./screenshots/day28/bulk-operation-header.png)
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（className="text-3xl font-bold から onClick={handleCreate}> までを書き直す） */}
 {/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}
 <div className="flex items-center justify-between">
   <div className="flex items-center gap-3">
@@ -813,7 +834,7 @@ const handleBulkComplete = () => {
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
 {/* 一括操作ボタン領域に「完了にする」ボタンを追加 */}
 {canCompleteSelected && (
   <Button
@@ -900,7 +921,7 @@ import { CheckSquare, Plus, Trash2 }
 ヘッダーにボタンとダイアログを追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
 {/* 削除ボタン（赤色のテキスト） */}
 {canDeleteSelected && (
   <Button
@@ -1014,7 +1035,7 @@ const handleBulkUpdateStatus = (
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
 {/* ステータス変更ドロップダウン */}
 {canCompleteSelected && (
   <DropdownMenu>
@@ -1045,9 +1066,14 @@ const handleBulkUpdateStatus = (
 
 `Object.entries(TASK_STATUS_LABELS)` の `value` は TypeScript では `string` 型として推論されます。しかし `handleBulkUpdateStatus` は `TaskStatus`（`'TODO' | 'IN_PROGRESS' | ...`）を期待しています。`isTaskStatus(value)` で「この文字列は確かに有効なステータスか」を確認することで、型安全に呼び出せます。
 
+この関数は写経の土台に最初から入っています。置き場所は `src/lib/constant/status.ts` です。
+下は中身を確かめるための引用です。**書き写すと同じ名前の関数が2つ並び、
+`Duplicate function implementation` でビルドが止まります。** 読むだけにしてください。
+
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
 ```typescript
-// filepath: src/lib/constant/status.ts
-// isTaskStatus 型ガード関数
+// filepath: src/lib/constant/status.ts（配布済み・写経しません）
 export function isTaskStatus(
   value: unknown
 ): value is TaskStatus {
@@ -1056,7 +1082,7 @@ export function isTaskStatus(
 }
 ```
 
-**確認ポイント**: `isTaskStatus` は `value in TASK_STATUS` で有効なステータスかを判定しています。
+**確認ポイント**: `src/lib/constant/status.ts` を開くと、上と同じ `isTaskStatus` がすでにあります。
 
 この関数は `value in TASK_STATUS` で「`TASK_STATUS` オブジェクトにこのキーが存在するか」をチェックし、型ガードとして機能します。
 
@@ -1083,7 +1109,8 @@ export function isTaskStatus(
 
 スクリーンショット: 完成した一括操作機能の表示を確認してください。
 
-![完成した一括操作機能の表示を確認してください。](./screenshots/bulk-task-operations.png)
+![「すべて選択」で6件すべてを選び、見出しに「(6件選択中)」が出た画面](./screenshots/day28/bulk-task-operations.png)
+
 以下のチェックリストで動作確認をしましょう。
 
 | テスト項目 | 操作 | 期待結果 |
@@ -1105,11 +1132,14 @@ export function isTaskStatus(
 npm run lint
 ```
 
-エラーがなければ完成です。
+ここで整形の差分が並んでも、写経の間違いではありません。Day 05 で断ったとおり、
+この教材のコードは行の幅を狭く保つために Biome の整形前の形で載せています。
+`npm run fix` を実行すると Biome の形にそろい、差分は消えます。
+そのあともう一度 `npm run lint` を走らせて、今日書いたコードへの指摘が残っていないかを見てください。
 
 **確認ポイント**:
 - 上記のテスト項目がすべてパスする
-- `npm run lint` でエラーが出ない
+- `npm run fix` のあとの `npm run lint` で、今日書いたコードへの指摘が残っていない
 - `npm run dev` でブラウザにエラーが出ない
 
 
@@ -1741,6 +1771,16 @@ const handleBulkUpdateStatus = (
 
 `title` に件数を差し込んでいるのは、承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので、通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
 
+## 今日のまとめ
+
+- [ ] `Set<string>` で選択中のタスク ID を管理できた
+- [ ] 全選択・全解除・部分選択（`indeterminate`）の3状態を作れた
+- [ ] 一括完了・一括削除・一括ステータス変更の3つを動かせた
+- [ ] 削除だけ確認ダイアログをはさむ理由を説明できる
+- [ ] `updateMany` で複数レコードを1回の DB アクセスで更新できた
+
+---
+
 ## つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
@@ -1750,25 +1790,6 @@ const handleBulkUpdateStatus = (
 | 一括操作後にチェックが残る | 操作成功後に`selectedTasks`をクリアしていない | `onSuccess`内で`setSelectedTasks(new Set())`を呼ぶ |
 | `updateMany`で型エラーが出る | `status`に文字列をそのまま渡している | `isTaskStatus`型ガードで検証してから渡す |
 | 全選択チェックボックスが常にON | `selectedTasks.size === tasks.length`の比較で`tasks`が`undefined`になる場合がある | `tasks?.length ?? 0`でnullチェックする |
-
----
-
-## Day 28 完了
-
-### 今日学んだこと
-
-| 概念 | 意味 | 使い場面 |
-|------|------|---------|
-| `Set<string>` | 重複なしの集合 | チェックボックスの選択 ID 管理 |
-| `indeterminate` | チェックボックスの「部分選択」状態 | 全選択ヘッダーで一部選択を表現 |
-| `updateMany` | 複数レコードを 1 回の DB アクセスで更新 | 一括操作・バッチ処理全般 |
-| `isTaskStatus` 型ガード | 文字列が `TaskStatus` か実行時に確認 | DropdownMenu の値を型安全に扱う |
-| `completedAt` の同時更新 | 完了日時も一緒に記録する | 完了操作で status と completedAt をセット |
-| `DropdownMenu` vs `Select` | 操作トリガー vs フォーム入力 | ステータス変更には DropdownMenu が適切 |
-| `Array.from(set)` | Set を API に渡せる配列に変換 | tRPC の mutation に渡すとき |
-| `invalidate()` | キャッシュを無効化して再取得 | データ変更後の画面更新 |
-
----
 
 ### 詰まりやすいポイントまとめ
 
@@ -1783,7 +1804,40 @@ const handleBulkUpdateStatus = (
 
 ---
 
-### 次回予告
+## 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| `Set<string>` | 重複しない集合。チェックボックスで選んだ ID の置き場に使う |
+| `indeterminate` | チェックボックスの「一部だけ選んでいる」状態 |
+| `updateMany` | 複数レコードを1回の DB アクセスでまとめて更新する Prisma のメソッド |
+| `isTaskStatus` | 文字列が `TaskStatus` かを実行時に確かめる型ガード |
+| `completedAt` | 完了した日時。完了操作で `status` と一緒に記録する |
+| `DropdownMenu` | 選んだ瞬間に処理を走らせる操作用の部品。`Select` は入力欄なので用途が違う |
+| `Array.from(set)` | `Set` を配列へ変換する。tRPC の mutation に渡すときに使う |
+| `invalidate()` | tRPC のキャッシュを捨てて取り直させる。一括操作のあとの画面更新に使う |
+
+---
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. 権限の確認に `every` を使い、`some` を使わないのはなぜですか。**
+
+A. 権限の無いタスクが1件でも混ざったら、操作そのものを止めたいためです。選択は複数のプロジェクトをまたげます。そのため「編集はできても削除はできない」タスクが紛れる場面も実際に起きます。`some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
+
+**Q2. 全選択チェックボックスの分母を `tasks` ではなく `selectableTasks` にしているのはなぜですか。**
+
+A. 閲覧しかできないタスクまで分母に入れると、選べるものを全部選んでも数が足りず、部分選択のままになるためです。読者からは「全部選んだのに全チェックにならない」という不可解な動きに見えます。
+
+**Q3. 一括完了とステータス変更には確認ダイアログが無く、一括削除にだけあるのはなぜですか。**
+
+A. 完了とステータス変更は元に戻せるのに対し、削除は DB から消えて元に戻せないためです。ボタンの見た目も、押した瞬間に走る赤い塗りつぶしと、確認をはさむボタンで区別してあります。
+
+---
+
+## 次回予告
 
 Day 29 では、ユーザー詳細・編集ページを作ります。Next.js の動的ルーティング `[id]` を使って、ユーザーごとの専用ページを実装します。
 

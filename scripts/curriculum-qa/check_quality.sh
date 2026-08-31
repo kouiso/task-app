@@ -208,6 +208,7 @@ CORPUS_CHECKS=(
   check_procedure_order
   check_step_ref
   check_tag_balance
+  check_unclosed_screen
   check_false_success
   check_zip_reference
   check_unused_image
@@ -217,6 +218,8 @@ CORPUS_CHECKS=(
   check_terms
   check_crossref
   check_setext_heading
+  check_quiz
+  check_scaffold_src_sync
 )
 # 検査そのものの退行テスト。Gate 4 は本体とセットでこれも走らせる。
 SELF_TESTS=(
@@ -229,6 +232,7 @@ SELF_TESTS=(
   test_check_step_ref
   test_sale_package
   test_check_tag_balance
+  test_check_unclosed_screen
   test_check_false_success
   test_check_zip_reference
   test_check_unused_image
@@ -245,7 +249,11 @@ SELF_TESTS=(
   test_check_terms
   test_check_visualization
   test_check_setext_heading
+  test_check_quiz
   test_filepath_marker
+  test_build_day_snapshots
+  test_shoot_screenshots
+  test_check_scaffold_src_sync
 )
 
 run_corpus_checks() {

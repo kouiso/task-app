@@ -139,3 +139,6 @@ material/pdf/
 
 # 教材編集ゲートの緊急停止スイッチ（各自の手元だけで使う）
 .claude/disable-material-writing-gate
+
+# 読み取りガードの一時的な解除印。15分で失効する作業用ファイルで、履歴に残す意味がない
+.claude/tmp/

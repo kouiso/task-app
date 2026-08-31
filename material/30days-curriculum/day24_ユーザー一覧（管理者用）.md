@@ -15,7 +15,7 @@ Day 23 ではプロジェクト別統計テーブルの表示と、週次レポ�
 
 完成イメージ: 管理者がユーザーを一覧管理できるページです。
 
-![ユーザー管理ページの完成イメージ](./screenshots/user-list.png)
+![ユーザー管理ページ。ユーザー・メールアドレス・ロール・ステータス・登録日・アクションの6列のテーブルに5人が並んでいる](./screenshots/day24/user-list.png)
 
 ## なぜこれを作るのか
 
@@ -844,7 +844,7 @@ Day 08 のデスクトップ用のナビゲーション内で、
 この項目だけ色が変わらず、並んだときに浮きます。
 
 ```typescript
-{/* filepath: src/component/layout/app-layout.tsx */}
+{/* filepath: src/component/layout/app-layout.tsx（menuItems.map の直後に追加） */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
@@ -866,6 +866,16 @@ Day 08 のデスクトップ用のナビゲーション内で、
 `session.user.role === USER_ROLE.ADMIN && (...)` は、条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないときは式の値が `false` になり、React は `false` を何も描かない値として扱います。だから一般ユーザーのサイドバーには、空の行すら残りません。
 
 これで今日の守りは3枚になりました。いちばん外側がこのリンクの出し分けで、次が Step 5 の画面側の権限チェック、いちばん内側が Step 0 の `adminProcedure` です。外側の2枚は迷わせないための案内で、情報を守っているのは内側の1枚だけです。リンクを消しても `/user` 自体は開ける点を、もう一度確かめておいてください。
+
+```mermaid
+flowchart TB
+    U["一般ユーザー"] --> L["1枚目: サイドバーにリンクを出さない"]
+    L -->|"URL を直接打てば越える"| P["2枚目: 画面側の if !isAdmin"]
+    P -->|"JavaScript を書き換えれば越える"| S["3枚目: サーバーの adminProcedure"]
+    S --> E["管理者権限が必要です<br/>他人のメールアドレスは1件も返らない"]
+```
+
+上の2枚には「越える」と書いた矢印が付いています。この2枚は迷わせないための案内で、情報を止めているのはいちばん下の1枚だけです。画面の判定を消しても他人のデータは漏れませんが、サーバーの判定を消すと漏れます。
 
 **確認ポイント**:
 - `menuItems.map(...)` の直後に、`session.user.role === USER_ROLE.ADMIN &&` で囲んだ `<li>` を置けた
@@ -898,7 +908,9 @@ Day 08 のデスクトップ用のナビゲーション内で、
 
 【スクリーンショット】ここで初めて `/user` が開きます。アバターとロールのバッジが並び、右端にアクション列が出ていることを確認してください。
 
-![完成したユーザー管理ページ](./screenshots/user-list.png)
+![ユーザー管理ページ。赤枠①がロールのバッジが並ぶ列、赤枠②が右端のアクション列](./screenshots/day24/user-list-table.png)
+
+初期データのユーザーはアバター画像を持っていないので、いちばん左の丸には名前の頭文字だけが出ます。ロールのバッジは管理者が1人、それ以外が一般ユーザーになります。人数が違っても実装の誤りではありません。
 
 ```bash
 # filepath: ターミナル
@@ -1316,7 +1328,7 @@ import { USER_ROLE } from '@/lib/constant/roles';
 **管理者だけに出すリンク**:
 
 ```typescript
-{/* filepath: src/component/layout/app-layout.tsx */}
+{/* filepath: src/component/layout/app-layout.tsx（menuItems.map の直後に追加） */}
 {/* 完成版: 今日足したリンク */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
@@ -1367,6 +1379,24 @@ import { USER_ROLE } from '@/lib/constant/roles';
 | `?.` (オプショナルチェーン) | プロパティがnull/undefinedでもエラーにならない |
 | UserRoleBadge | ロール表示用の専用バッジコンポーネント |
 | variant="ghost" | 背景なしの控えめなボタンスタイル |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `api.user.getAll.useQuery(undefined, { enabled: isAdmin })` の `enabled: isAdmin` は何をしていますか。**
+
+A. 管理者のときだけ、ユーザー一覧を取りに行くリクエストを送ります。これが無いと一般ユーザーがページを開いた瞬間にもリクエストが飛び、サーバーに「管理者権限が必要です」と弾かれて赤いトーストが出ます。情報は漏れませんが、画面が壊れているように見えます。
+
+**Q2. 1つ目の `if (isCurrentUserLoading)` による early return を消すと、管理者がページを開いたとき何が起きますか。**
+
+A. 管理者なのに一瞬だけ「アクセス権限がありません」のカードが出て、そのあと一覧へ切り替わります。`currentUser` が届く前は `undefined` なので、`isAdmin` も `false` になるためです。
+
+**Q3. `getAll` を `protectedProcedure` ではなく `adminProcedure` で書くのはなぜですか。画面側に `if (!isAdmin)` があるのに、サーバー側でも判定するのはなぜですか。**
+
+A. 画面側の JavaScript は読者の手元で動くので、書き換えれば `if (!isAdmin)` は通り抜けられます。`protectedProcedure` にすると、ログインさえしていれば誰でも全員のメールアドレスを受け取れます。他人の情報を守っているのは `adminProcedure` の1語だけで、画面の判定は表示を整えるためにあります。
+
+---
 
 ## 次回予告
 

@@ -1,6 +1,6 @@
 # Day 07: 認証バックエンドを作って、ログインを動かそう
 
-![ログイン画面](./screenshots/login.png)
+![ログイン画面。メールアドレスとパスワードの入力欄、ログインボタン、登録リンクが並んでいる](./screenshots/day05/login.png)
 
 ## 前回の振り返り
 
@@ -103,7 +103,7 @@ sequenceDiagram
 
 ### Step 0: 書き直す前に控えを取る（3分）
 
-今日は動いている4つのファイルを、いったん空にしてから書き直します。途中で貼り間違えても
+今日は、すでに動いている6つのファイルの中身を書き直します。途中で貼り間違えても
 戻せるように、先に控えを取ります。ターミナルで次を実行してください。
 
 ```bash
@@ -111,15 +111,23 @@ sequenceDiagram
 mkdir -p ~/day07-backup
 cp src/lib/session.ts src/server/api/trpc.ts \
    src/server/api/routers/auth.ts src/server/api/root.ts \
+   src/server/api/routers/_helpers/select.ts \
+   "src/app/api/trpc/[trpc]/route.ts" \
    ~/day07-backup/
 ls ~/day07-backup
 ```
 
-`ls` で4つのファイル名が出れば控えが取れています。書き直しに失敗したときは、たとえば
+`ls` で6つのファイル名が出れば控えが取れています。書き直しに失敗したときは、たとえば
 `cp ~/day07-backup/session.ts src/lib/` のように書き戻せば元の状態に戻ります。
 
+控えを6つ取るのは、今日この6つすべてを中身ごと置き換えるためです。内訳は2種類あります。
+Step 1 から Step 4 で順に書き直すのが `session.ts` `trpc.ts` `auth.ts` `root.ts` の4つです。
+Step 3 と Step 4 で「中身を教材のコードへ置き換える」と指示するのが `select.ts` と `route.ts` の2つです。
+今日触るファイルは、もう1つあります。Step 5 で作る `src/middleware.ts` です。
+これは今日はじめて作るファイルなので、控えは要りません。
+
 **確認ポイント**:
-- `ls ~/day07-backup` に `session.ts` `trpc.ts` `auth.ts` `root.ts` の4つが出る
+- `ls ~/day07-backup` に `session.ts` `trpc.ts` `auth.ts` `root.ts` `select.ts` `route.ts` の6つが出る
 
 ---
 
@@ -327,7 +335,7 @@ export async function createSession(
 }
 ```
 
-`exp` を秒で数えているのは、JWT の決まりが秒を使うためです。`Date.now()` はミリ秒を返すので、1000 で割らずに入れると有効期限が1000倍先になり、実質的に期限切れしないトークンができます。
+`exp` を秒で数えているのは、JWT の決まりが秒を使うためです。`Date.now()` はミリ秒を返すので 1000 で割ります。ただし、この値がそのままトークンの期限になるわけではありません。`encrypt` は最後に `.setExpirationTime('7d')` を呼んでおり、これがトークンの `exp` を7日後で上書きします。ここで計算した値は、アプリが手元で持っておくための記録です。
 
 期限をトークンの中と Cookie の両方に持たせているのは、片方だけでは足りないからです。Cookie の期限だけだと、利用者が手元で Cookie の期限を書き換えて延命できます。トークンの中にも `exp` を入れておけば、署名で守られているので書き換えられません。
 
@@ -868,6 +876,10 @@ flowchart TD
     G --> H[JWT 生成 + Cookie 保存]
 ```
 
+![ログイン画面の上に「エラー メールアドレスまたはパスワードが正しくありません」という赤いメッセージが出ている状態](./screenshots/day07/login-failed.png)
+
+赤い枠が、いま書いた `login` の返した文言です。Day 05 まではサーバー側が無かったので、この文言は画面に出せませんでした。
+
 > **なぜ同じエラーメッセージ？** 「メールが存在しない」と「パスワードが違う」を区別すると、攻撃者に「このメールは登録済み」と教えてしまいます。セキュリティのために同じメッセージを返します。
 >
 > `checkLoginRateLimit` は、同じメールや IP から短時間に
@@ -1274,6 +1286,17 @@ export async function middleware(request: NextRequest) {
 署名を見ずに中身のデコードだけで通す作りにすると、期限切れのトークンでも、自作のトークンでも入れてしまいます。
 middleware が守っているのはページの表示だけで、API 側の守りは Step 2 の `protectedProcedure` が受け持ちます。
 
+```mermaid
+flowchart TB
+    REQ["ブラウザからのアクセス"] --> K{"何を取りに来たか"}
+    K -->|"ページ /dashboard など"| MW["middleware<br/>Cookie を検証し、駄目ならログイン画面へ送る"]
+    K -->|"API /api/trpc/..."| PP["protectedProcedure<br/>Cookie を検証し、駄目なら UNAUTHORIZED を返す"]
+    MW --> PAGE["ページを表示する"]
+    PP --> DATA["データを返す"]
+```
+
+守りは2枚あり、担当する入口が違います。middleware を通らずに API を直接叩く経路があるため、片方だけでは足りません。ページは見えないのにデータは取れる、という穴を防ぐのが右側の枝です。
+
 **確認ポイント**:
 - [ ] JWT が有効なら通し、無効なら Cookie を削除している
 
@@ -1293,6 +1316,11 @@ export const config = {
 つまり、ここへ並べたパスは middleware を通らず、JWT の検証を受けません。
 並べる数を増やしすぎると、守りたいページまで middleware を素通りします。
 足すのは画像やスタイルのような表示用ファイルだけにとどめます。
+
+**この書き方は「除外したもの以外はすべて」なので、トップページの `/` も対象に入ります。**
+今日から、ログインしていない状態で `/` を開くとログイン画面へ送られます。
+Day 01 で作ったあの画面は、ログインしたあとでないと見られなくなります。
+壊したわけではありません。次の Step 6 で動作を確認するとき、`/` が開かないのは正常な結果です。
 
 #### コラム: middleware は「どこ」で動くのか
 
@@ -1370,9 +1398,7 @@ npm run db:seed
 
 `npm run db:seed` は初期データの2つのプロジェクトを削除して作り直します。Day 07 の時点では、消えて困るものはまだありません。Day 06 で登録した自分のアカウントも残ります。Day 09 以降、初期データの2つのプロジェクトの中にタスクやコメントを足したあとは、同じ操作でそれらが消えます。自分で新しく作ったプロジェクトは消えません。
 
-ブラウザで `http://localhost:3000/login` を開きます。
-
-![ログイン画面](./screenshots/login.png)
+ブラウザで `http://localhost:3000/login` を開きます。冒頭に載せた画面と同じものが出ます。
 
 **seed データのログイン情報**:
 
@@ -1390,7 +1416,9 @@ npm run db:seed
 2. 「おかえりなさい、管理者さん」トーストが表示される
 3. ダッシュボードに遷移する
 
-![ログイン後のダッシュボード](./screenshots/dashboard.png)
+![ダッシュボード。Personal Message のカードに大きな見出しが出て、下に OWNER・TODAY・NEXT の3枚のカードが並んでいる](./screenshots/day02/dashboard-message.png)
+
+ダッシュボードの中身は Day 02 で作ったままです。今日変わったのは、ログインを通らないとここへ来られなくなったことです。
 
 **確認ポイント**:
 - [ ] `npm run dev` でエラーが出ない
@@ -1522,7 +1550,7 @@ export function AuthGuard({
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/lib/session.ts` | JWT の発行・検証と Cookie の出し入れ | Step 1 |
-| `src/server/api/trpc.ts` | tRPC の土台と4種類の入口 | Step 2 |
+| `src/server/api/trpc.ts` | tRPC の土台と3種類の入口 | Step 2 |
 | `src/server/api/routers/_helpers/select.ts` | Prisma で取り出す列の定型 | Step 3 |
 | `src/server/api/routers/auth.ts` | ログイン・登録・ログアウトの手続き | Step 3 |
 | `src/server/api/root.ts` | 手続きの一覧表 | Step 4 |
@@ -2446,9 +2474,42 @@ export const config = {
 | ログインしてもトーストが出ない | auth ルーターが root.ts に登録されていない | root.ts で `auth: authRouter` を確認 |
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
-| `relation "User" does not exist` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
-| `ログイン試行回数が上限に達しました` | 同じメールで10回失敗したための一時ロック | 15分待つか、別のメールアドレスで試す。コードの問題ではない |
+| `The table \`public.users\` does not exist in the current database.` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
+| `ログイン試行回数が上限に達しました` | 同じメールを同じ回線から5回、同じメールで回線を変えながら10回、または同じ回線から合計20回失敗したための一時ロック | 15分待つ。メールも回線も変えずに待つのがいちばん早い。コードの問題ではない |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
+
+## 今日学んだ用語
+
+| 用語 | 意味 |
+|------|------|
+| JWT | 利用者の情報に署名を付けた文字列。中身は読めるが、書き換えると署名が合わなくなる |
+| 署名 | 秘密の鍵で作る封印。中身が途中で書き換えられていないかを確かめるために使う |
+| exp | JWT の中に書く有効期限。秒で数える |
+| bcrypt | パスワードを元に戻せない形へ変換する仕組み |
+| HttpOnly Cookie | JavaScript から読めない Cookie。盗み見の被害を狭める |
+| maxAge | Cookie 自体の寿命。ブラウザ側が持つので、JWT の `exp` とは別に必要 |
+| publicProcedure | ログインしていなくても呼べる tRPC の入口 |
+| protectedProcedure | ログイン済みの人だけが呼べる tRPC の入口 |
+| adminProcedure | 管理者だけが呼べる tRPC の入口 |
+| middleware | ページが表示される前に毎回動く処理。ログインの有無で行き先を振り分ける |
+| matcher | middleware を動かす URL を絞り込む指定 |
+| rate limit | 短時間に失敗が続いたとき、一時的に受け付けを止める仕組み |
+
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. `isAuthenticated` の中で `prisma.user.findUnique` を引き直し、`role: currentUser.role` で上書きしているのは、何をしている処理ですか。**
+
+A. JWT に入っている `role` は、ログインした瞬間の値のまま固定されています。7日間そのままです。そこでリクエストのたびにデータベースから今の権限を取り直し、古い値を差し替えています。この1行が無いと、管理者権限を外された相手が、トークンの期限が切れるまで管理者として動けます。
+
+**Q2. `createSession` の `Math.floor(Date.now() / 1000)` から `/ 1000` を消すと、何が起きますか。**
+
+A. トークンの期限は変わりません。`encrypt` の `.setExpirationTime('7d')` が `exp` を7日後で上書きするので、`createSession` で計算した値はトークンには残らないためです。Cookie の寿命も `maxAge: COOKIE_MAX_AGE` という定数で決まっていて、この計算とは別です。`/ 1000` を消すと、`SessionPayload` が持つ数字だけが1000倍ずれます。期限を判断しているのがどの1行なのかを、ここで確かめてください。
+
+**Q3. `login` で「そのメールアドレスは存在しない」と「パスワードが違う」を、同じ文言で返しているのはなぜですか。**
+
+A. 区別して返すと、どのメールアドレスが登録済みかを外から調べられるからです。総当たりで問い合わせれば、利用者の一覧を作れてしまいます。同じ理由で、`isActive` の判定もパスワードの照合より後ろに置いています。判定の順番そのものが、守りの一部になっています。
 
 ## 次回予告
 

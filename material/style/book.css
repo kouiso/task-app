@@ -166,23 +166,14 @@ blockquote {
 /* ── 表 ─────────────────────────────────────────────────
    table-layout: auto だと「読み方」のような短い和文の列が1文字ずつに潰れる。
    fixed にして列幅を宣言する。比率は Claude Design の列幅仕様(2b)。
-   列数が4と違う表では指定分が按分されるだけで破綻しない。 */
+
+   比率は :nth-last-child() で「ちょうど4列の表」に限って当てる。列数を見ずに
+   th:nth-child(1..4) へ当てると、5列の表では1〜4列目が幅を100%使い切ってしまい、
+   5列目に幅が残らず1文字ずつ縦に潰れる（day12/26/27/28/29 の10表で発生していた）。
+   2列・3列の表は指定が無くても余りが等分されるだけで、比率はほぼ変わらない。 */
 table {
   table-layout: fixed;
   width: 100%;
-}
-
-th:nth-child(1) {
-  width: 20%;
-}
-th:nth-child(2) {
-  width: 21%;
-}
-th:nth-child(3) {
-  width: 25%;
-}
-th:nth-child(4) {
-  width: 34%;
 }
 
 td,
@@ -190,9 +181,45 @@ th {
   overflow-wrap: anywhere;
 }
 
+/* 表の中のインラインコードは、折返し先が無いと隣の列へ突き抜ける。
+   実測（36冊）では `src/server/api/routers/project.ts` のようなパスが
+   「触るファイル」列から「成功状態」列の文字に重なり、版面の右へ最大 24mm 出ていた。
+   セルへの overflow-wrap だけでは1行目が止まらんかったので、
+   セルの中の code に word-break を直接当てる。
+   コードブロック（pre）側では word-break が効かんことが分かっているが、
+   ここは表のセルの中の inline で、別の場面である。効いたかどうかは
+   check_page_layout.py の実測で確かめること。 */
+td code,
+th code {
+  word-break: break-all;
+  /* 語の途中で切れる回数は、入る文字数で決まる。実測で効いたのは級数だけなので
+     （下の端切れの覚え書きと同じ結論）、セルの中だけ少し落として切れ目を減らす。 */
+  font-size: 0.85em;
+}
+
 th {
   background: var(--book-accent);
   color: #fff;
+}
+
+th:first-child:nth-last-child(4) {
+  width: 20%;
+}
+th:first-child:nth-last-child(4) ~ th:nth-child(2) {
+  width: 21%;
+}
+th:first-child:nth-last-child(4) ~ th:nth-child(3) {
+  width: 25%;
+}
+th:first-child:nth-last-child(4) ~ th:nth-child(4) {
+  width: 34%;
+}
+
+/* 5列の表は等幅にする。「ステップ一覧」と「ロール別の権限」の2種類があり、
+   どちらか一方に寄せた比率を当てると、もう一方の列が読めなくなる。 */
+th:first-child:nth-last-child(5),
+th:first-child:nth-last-child(5) ~ th {
+  width: 20%;
 }
 
 /* 表が改ページを跨いだとき、続きのページにも見出し行を出す */
@@ -202,6 +229,23 @@ thead {
 
 tr {
   break-inside: avoid;
+}
+
+/* ── コードブロックの改ページ ─────────────────────────────
+   この教材は写経が前提なので、1つのコードブロックがページの境で切れると
+   読者は打ちながら紙をめくることになる。実測では day13 p12 の
+   `taskRouter` の宣言が `.input(` の途中で切れていた。
+
+   pre へ break-inside: avoid を掛けると、1ページに収まる塊は丸ごと次ページへ送られる。
+   収まらん塊は CSS の規定どおり分割されるので、長いブロックが消えることはない。
+   その代わりページ下部に空白が増えるが、写経が途切れるほうが商品としては重い。
+
+   分割される長い塊にも最低限の担保として orphans / widows を置く。
+   ページの境に1〜2行だけ残る形を防ぐ。 */
+pre {
+  break-inside: avoid;
+  orphans: 4;
+  widows: 4;
 }
 
 /* ── 図 ─────────────────────────────────────────────────
