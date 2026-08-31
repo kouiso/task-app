@@ -337,7 +337,7 @@ function getGreetingByHour(hour: number): string {
 
 Step 1 では文字を3つの `const` へばらばらに置いていました。ここでは `type` で `DashboardOwner` という形を先に決め、名前・肩書き・集中テーマ・今日の目標を1つのまとまりにします。`name: string` は、ここには文字が入るという約束です。`name: 123` と書いた時点でエディタが知らせてくれますし、項目名を `nmae` と打ち間違えたときも保存する前に気付けます。
 
-`getGreetingByHour` は、時刻の数字を受け取ってあいさつを返す関数です。`hour < 12` に当たれば `return` でその場を抜けるので、下の `if` は12時以降だけを考えれば済みます。`else` を重ねずに、朝と昼と夜の境目が上から順に読めます。関数の閉じかっこはまだ書いていないので、次のブロックへ続けます。
+`getGreetingByHour` は、時刻の数字を受け取ってあいさつを返す関数です。コロンが2か所に出てきますが、向きが逆です。かっこの中の `hour: number` は受け取る値の約束で、かっこの外の `): string` は返す値の約束です。`hour < 12` に当たれば `return` でその場を抜けるので、下の `if` は12時以降だけを考えれば済みます。`else` を重ねずに、朝と昼と夜の境目が上から順に読めます。関数の閉じかっこはまだ書いていないので、次のブロックへ続けます。
 
 ```tsx
 // filepath: src/app/dashboard/page.tsx（同じファイルの続き）
@@ -520,7 +520,7 @@ Step 1 との違いは、`<article>` の入れ物と `className` を1つも触�
   const greeting = getGreetingByHour('9');
 ```
 
-赤い線とともに `Argument of type 'string' is not assignable to parameter of type 'number'.` と出ます。「`string` の値を `number` の引数（関数へ渡す値）には渡せません」という意味です。`getGreetingByHour(hour: number)` と書いた `: number` が、この関数へ渡してよいのは数だけだと宣言しているためです。`'9'` は見た目こそ数字ですが、引用符で囲むと文字になります。文字のままでは `hour < 12` の大小比較が意図どおりに働かないので、TypeScript は画面を開く前に止めます。
+赤い線とともに `Argument of type 'string' is not assignable to parameter of type 'number'.` と出ます。「`string` の値を `number` の引数（関数へ渡す値）には渡せません」という意味です。`getGreetingByHour(hour: number): string` のうち、いま見ているのは前のコロンです。この `: number` が、この関数へ渡してよいのは数だけだと宣言しているためです。`'9'` は見た目こそ数字ですが、引用符で囲むと文字になります。文字のままでは `hour < 12` の大小比較が意図どおりに働かないので、TypeScript は画面を開く前に止めます。
 
 確かめたら `getGreetingByHour(hour)` に戻してください。赤い線が消えて、あいさつが元どおり表示されれば大丈夫です。
 
