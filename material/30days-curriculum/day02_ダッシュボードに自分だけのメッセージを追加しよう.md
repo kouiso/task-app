@@ -1290,9 +1290,10 @@ export default function DashboardPage() {
 - 値はその場に直接書き散らすより、型（`type`）や関数にまとめて意味を持たせたほうが、あとから変更しやすい
 - クリックなどの操作がない画面は、無理に Client Component にせず、Server Component のままにしておく
 
-この3つが入っていれば、名前や集中テーマを変えたくなったときに
-触るのは `dashboardOwner` の該当する行だけで、
-見出しの `{mainMessage}` と下段の `focusCards` の表示が同時に変わります。
+この3つが入っていれば、名前や集中テーマを変えたくなったときに触るのは
+`dashboardOwner` の該当する行だけです。変わるのは、その値を読んでいる表示だけです。
+`name` は見出しと「担当」カード、`todayFocus` は見出しと「今日」カードの説明、
+`todayGoal` は「今日」カード、`nextAction` は「次」カードに出ます。
 
 ## つまずきポイント
 
