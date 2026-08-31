@@ -1095,7 +1095,7 @@ Step 7 の骨組みだけでも型検査が通る順序です。
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
 const userEditSchema = z.object({
   name: z.string()
-    .min(1, '名前は必須です'),
+    .min(1, '名前を入力してください'),
   avatar: z.string().url().or(
     z.literal('')),
   role: z.enum(["USER", "ADMIN"]),
@@ -1356,7 +1356,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
               </div>
 ```
 
-`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下に入ります。`value` と `onChange` を自分で書かずに済むのは、`register` が両方を作って渡してくれるからです。下の `form.formState.errors.name` は、Step 7 の zod スキーマに書いた「名前は必須です」を受け取る場所です。文言をスキーマ側だけに置けるので、検査の条件と画面の表示が食い違いません。
+`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下に入ります。`value` と `onChange` を自分で書かずに済むのは、`register` が両方を作って渡してくれるからです。下の `form.formState.errors.name` は、Step 7 の zod スキーマに書いた「名前を入力してください」を受け取る場所です。文言をスキーマ側だけに置けるので、検査の条件と画面の表示が食い違いません。
 
 メールアドレスとアバターURL入力欄を追加します。
 
@@ -1765,7 +1765,7 @@ import { z } from 'zod';
 import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
 const userEditSchema = z.object({
-  name: z.string().min(1, '名前は必須です'),
+  name: z.string().min(1, '名前を入力してください'),
   avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
   role: z.enum([USER_ROLE.USER, USER_ROLE.ADMIN]),
   isActive: z.boolean(),
@@ -2634,7 +2634,7 @@ import { api } from '@/trpc/react';
 // 完成版: zod スキーマと型
 const userEditSchema = z.object({
   name: z.string()
-    .min(1, '名前は必須です'),
+    .min(1, '名前を入力してください'),
   avatar: z.string().url().or(
     z.literal('')),
   role: z.enum(["USER", "ADMIN"]),
