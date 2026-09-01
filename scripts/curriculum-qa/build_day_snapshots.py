@@ -288,6 +288,18 @@ BUILDER_SOURCES = (
     Path(__file__).resolve().parent / "sale_package.py",
 )
 
+# ツリーの中身を決めるのに「読まれるだけ」で、複写はされんファイル。
+# BORROWED_FILES に載せると中身がそのまま置かれてしまう。載せられんぶん
+# 材料からも落ちやすく、実際に3つとも落ちとった。
+#   tsconfig.json                   write_reader_tsconfig が読んで書き直す
+#   scripts/scaffold-from-scratch.sh  scaffold_tsconfig_excludes が exclude を読む
+#   scripts/build-zip.sh            sale_package が配布物の一覧を読む
+READ_ONLY_INPUTS = (
+    "tsconfig.json",
+    "scripts/scaffold-from-scratch.sh",
+    "scripts/build-zip.sh",
+)
+
 
 def tree_inputs(upto: int) -> list[Path]:
     """その日のツリーの中身を決める入力を全部返す。
@@ -301,10 +313,7 @@ def tree_inputs(upto: int) -> list[Path]:
         *day_sources(upto),
         *(src for _, src in scaffold_copies()),
         *(REPO_ROOT / name for name in BORROWED_FILES),
-        # 複写やのうて write_reader_tsconfig が読んで書き直す入力。借り物の一覧に
-        # 載せると中身がそのまま置かれて、読者の手元と違う設定で検査してしまう。
-        # だから一覧には入れず、古さを測る材料としてここだけで数える。
-        REPO_ROOT / "tsconfig.json",
+        *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
         *BUILDER_SOURCES,
     ]
 
