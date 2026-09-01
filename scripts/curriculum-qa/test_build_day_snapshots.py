@@ -19,6 +19,7 @@ import contextlib
 import inspect
 import io
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -900,6 +901,32 @@ def check_builder_import_closure() -> list[str]:
     return fails
 
 
+def check_gate_scope_covers_inputs() -> list[str]:
+    """CI が「回すかどうか」を決める一覧が、材料を1つ残らず覆っていること。
+
+    材料に足しても、ゲート側の一覧へ足し忘れると、そのファイルだけ動いた PR は
+    対象なしで素通りする。緑は出るのに1日も検証してへん、という形になる。
+    同じ一覧が Python と YAML の2箇所にあるのが原因なので、ここで突き合わせる。
+    """
+    gate = target.REPO_ROOT / ".github" / "workflows" / "snapshot-gate.yml"
+    if not gate.is_file():
+        return [f"❌ ゲートの定義が見つからない: {gate}"]
+    found = re.search(r"pattern='(.*?)'\n", gate.read_text(encoding="utf-8"), re.S)
+    if not found:
+        return ["❌ ゲートの pattern を読み取れない"]
+    # ワークフロー側の `tr -d '\n '` と同じ畳み方
+    pattern = re.compile(found.group(1).replace("\n", "").replace(" ", ""))
+    fails = []
+    for name in (
+        *target.BORROWED_FILES,
+        *target.READ_ONLY_INPUTS,
+        *(str(p.relative_to(target.REPO_ROOT)) for p in target.BUILDER_SOURCES),
+    ):
+        if not pattern.match(name):
+            fails.append(f"❌ ゲートの対象一覧が材料を覆えていない: {name}")
+    return fails
+
+
 def check_build_failure_triage() -> list[str]:
     """ビルドの赤を、この機械で判定できるかどうかの切り分け。
 
@@ -1631,6 +1658,7 @@ CHECKS = (
     ("持ち込みと本体の同居", check_leading_imports),
     ("ツリーの古さを測る材料", check_tree_inputs),
     ("組み立て側が読むモジュールの取りこぼし", check_builder_import_closure),
+    ("ゲートの対象一覧が材料を覆っとるか", check_gate_scope_covers_inputs),
     ("ビルドの赤の切り分け", check_build_failure_triage),
     ("両方赤い日の表示", check_both_red_shows_both),
     ("成果物への SKIP の記録", check_result_doc_records_skip),

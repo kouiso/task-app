@@ -116,7 +116,7 @@ jobs:
           |scripts/_[^/]+/
           |scripts/scaffold-from-scratch\.sh
           |scripts/build-zip\.sh
-          |scripts/curriculum-qa/(build_day_snapshots|curriculum_blocks|sale_package)\.py
+          |scripts/curriculum-qa/(build_day_snapshots|curriculum_blocks|sale_package|markdown_scan|check_scaffold_curriculum_alignment)\.py
           |next\.config\.ts
           |postcss\.config\.js
           |tailwind\.config\.js
