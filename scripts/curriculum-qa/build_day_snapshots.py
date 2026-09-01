@@ -326,7 +326,9 @@ def watched_dirs() -> list[Path]:
     """
     # 配布物の置き場は、いま複写しとるファイルやのうてディレクトリの並びから取る。
     # 中身から作ると、最後の1本を消した回にその置き場ごと監視から外れてしまう。
-    dirs = {MATERIAL_DIR, PATCH_DIR}
+    # `scripts` は無条件に入れる。いまある `scripts/_*` の親から作ると、最後の置き場を
+    # 消したコミットで glob が空になり、その削除を記録する時刻がどこにも残らん。
+    dirs = {MATERIAL_DIR, PATCH_DIR, REPO_ROOT / "scripts"}
     for top in (REPO_ROOT / "scripts").glob("_*"):
         if not top.is_dir():
             continue

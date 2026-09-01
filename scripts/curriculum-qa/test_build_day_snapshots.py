@@ -897,8 +897,14 @@ def check_tree_inputs() -> list[str]:
         scaffold_dirs.update(p.resolve() for p in top.rglob("*") if p.is_dir())
     for path in sorted(scaffold_dirs - got):
         fails.append(f"❌ 配布物の増減を見ていない: {path.name}")
-    # 置き場そのものが消えた回は、親の並びでしか分からん。
-    for path in sorted({p.parent for p in scaffold_dirs | {target.MATERIAL_DIR.resolve()}} - got):
+    # 置き場そのものが消えた回は、親の並びでしか分からん。`scripts` は固定で見る。
+    # いまある置き場から導くと、最後の1つを消したコミットで期待値ごと消える。
+    expected_parents = {
+        (target.REPO_ROOT / "scripts").resolve(),
+        target.MATERIAL_DIR.resolve().parent,
+        *(p.parent for p in scaffold_dirs),
+    }
+    for path in sorted(expected_parents - got):
         fails.append(f"❌ 置き場の増減を見ていない: {path.name}")
     return fails
 
