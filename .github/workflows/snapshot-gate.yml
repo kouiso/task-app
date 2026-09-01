@@ -95,21 +95,36 @@ jobs:
             exit 0
           fi
 
-          changed="$(git diff --name-only "$base" "$head")"
+          # -z は NUL 区切りにするだけやのうて、パスのクォートを止める役目を持つ。
+          # 素の --name-only は core.quotePath の既定 true で非ASCIIを8進エスケープし、
+          # `"material/30days-curriculum/day01_\351..."` を返す。教材30日ぶんは
+          # 全部ファイル名が日本語なので、下の `^material/` が丸ごと空振りして
+          # run=false、つまり1日も検証してへんのに緑で通る。pdf-book-gate.yml と同じ書き方。
+          changed="$(git -c core.quotePath=false diff -z --name-only "$base" "$head" | tr '\0' '\n')"
 
           # ツリーの中身を決める入力。build_day_snapshots.py の tree_inputs() と
           # BORROWED_FILES / BUILDER_SOURCES / scaffold_copies() に対応させとる。
           # scaffold の複写元は全部 scripts/_* の下にある。
+          #
+          # 下3つは tree_inputs() に名前が出てこん入力。列挙から漏らすと、
+          # そこだけ変えた PR が「対象なし」で緑になる。
+          #   tsconfig.json      … write_reader_tsconfig() が読んで、30日ぶん全部の
+          #                        tsconfig を作る元にしとる
+          #   scripts/build-zip.sh … sale_package.py が配布物の一覧をここから読む
+          #   .node-version      … このジョブの Node 版そのもの
           pattern='^(material/30days-curriculum/.*\.md
           |scripts/_[^/]+/
           |scripts/scaffold-from-scratch\.sh
+          |scripts/build-zip\.sh
           |scripts/curriculum-qa/(build_day_snapshots|curriculum_blocks|sale_package)\.py
           |next\.config\.ts
           |postcss\.config\.js
           |tailwind\.config\.js
+          |tsconfig\.json
           |package(-lock)?\.json
           |src/app/globals\.css
           |\.env\.example
+          |\.node-version
           |Makefile
           |\.github/workflows/snapshot-gate\.yml)'
           pattern="$(printf '%s' "$pattern" | tr -d '\n ')"
@@ -156,7 +171,7 @@ jobs:
         # 届かんまま本体へ入ると、30日ぶん回した末に全部 SKIP になって
         # 「何を検証したのか分からん緑」で終わる。先に落とす
         run: |
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if pg_isready -h 127.0.0.1 -p 25532 -U user -d taskapp >/dev/null 2>&1; then
               echo "25532 へ届いた"
               exit 0
@@ -166,12 +181,35 @@ jobs:
           echo "::error::25532 の Postgres へ届かん。ここで止めんと全日 SKIP で緑になる"
           exit 1
 
+      - name: 前回の結果表を消してから入る
+        if: steps.scope.outputs.run == 'true'
+        # 結果表はリポジトリに commit されとる。消さずに入ると、npm ci や退行テストで
+        # 落ちた回でも下の always() が「前に成功した回の表」を成果物として上げてしまう。
+        # 落ちた回を調べに来た人が、通った回の表を掴むことになる
+        run: rm -f doc/review-handoff/day-snapshots-result.md
+
       - name: 30日ぶんを組み直して型検査と build を回す
         if: steps.scope.outputs.run == 'true'
         id: verify
         run: |
           set -o pipefail
           make snapshot-verify 2>&1 | tee "$RUNNER_TEMP/snapshot.log"
+
+      - name: 30日ぶん揃っとるか確かめる
+        if: steps.scope.outputs.run == 'true'
+        # 道具の `--all` は「今ある教材ファイル」を数えて回る。day を1本消した PR では
+        # 29日ぶん回して全部通り、道具は 0 を返す。30日ゲートのつもりが29日ゲートに
+        # 化けても誰も気づけんので、日付の並びは道具やのうてここで固定する
+        run: |
+          missing=""
+          for n in $(seq -w 1 30); do
+            grep -q "^day${n}:" "$RUNNER_TEMP/snapshot.log" || missing="$missing day${n}"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::30日ぶん揃ってへん。判定されてへん日:$missing"
+            exit 1
+          fi
+          echo "day01〜day30 の30日ぶん、全部が判定されとる"
 
       - name: SKIP が混ざってへんか確かめる
         if: steps.scope.outputs.run == 'true'
