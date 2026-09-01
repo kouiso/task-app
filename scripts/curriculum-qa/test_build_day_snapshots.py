@@ -916,15 +916,17 @@ def check_gate_scope_covers_inputs() -> list[str]:
         return ["❌ ゲートの pattern を読み取れない"]
     # ワークフロー側の `tr -d '\n '` と同じ畳み方
     pattern = re.compile(found.group(1).replace("\n", "").replace(" ", ""))
-    fails = []
-    for name in (
-        *target.BORROWED_FILES,
-        *target.READ_ONLY_INPUTS,
-        *(str(p.relative_to(target.REPO_ROOT)) for p in target.BUILDER_SOURCES),
-    ):
-        if not pattern.match(name):
-            fails.append(f"❌ ゲートの対象一覧が材料を覆えていない: {name}")
-    return fails
+    # 手で並べた3つの一覧だけやのうて、材料そのものを全部当てる。教材も scaffold の
+    # 複写元も材料に入っとるので、どれか1つでも覆えてへんかったら素通りが起きる。
+    days = target.available_days()
+    materials = {
+        str(p.resolve().relative_to(target.REPO_ROOT)) for p in target.tree_inputs(days[-1])
+    }
+    return [
+        f"❌ ゲートの対象一覧が材料を覆えていない: {name}"
+        for name in sorted(materials)
+        if not pattern.match(name)
+    ]
 
 
 def check_build_failure_triage() -> list[str]:
