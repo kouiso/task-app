@@ -100,7 +100,9 @@ jobs:
           # `"material/30days-curriculum/day01_\351..."` を返す。教材30日ぶんは
           # 全部ファイル名が日本語なので、下の `^material/` が丸ごと空振りして
           # run=false、つまり1日も検証してへんのに緑で通る。pdf-book-gate.yml と同じ書き方。
-          changed="$(git -c core.quotePath=false diff -z --name-only "$base" "$head" | tr '\0' '\n')"
+          # --no-renames が無いと、改名は行き先だけが出る。教材や配布物を改名した回は
+          # 元のパスが差分に現れんので、判定を取りこぼす。手元で R100 の改名を作って確認済み。
+          changed="$(git -c core.quotePath=false diff -z --name-only --no-renames "$base" "$head" | tr '\0' '\n')"
 
           # ツリーの中身を決める入力。build_day_snapshots.py の tree_inputs() と
           # BORROWED_FILES / BUILDER_SOURCES / scaffold_copies() に対応させとる。
@@ -116,15 +118,18 @@ jobs:
           |scripts/_[^/]+/
           |scripts/scaffold-from-scratch\.sh
           |scripts/build-zip\.sh
-          |scripts/curriculum-qa/(build_day_snapshots|curriculum_blocks|sale_package)\.py
+          |scripts/curriculum-qa/(build_day_snapshots|curriculum_blocks|sale_package|markdown_scan|check_scaffold_curriculum_alignment)\.py
           |next\.config\.ts
           |postcss\.config\.js
           |tailwind\.config\.js
           |tsconfig\.json
           |package(-lock)?\.json
+          |patches/
           |src/app/globals\.css
           |\.env\.example
           |\.node-version
+          |\.npmrc
+          |\.mise\.toml
           |Makefile
           |\.github/workflows/snapshot-gate\.yml)'
           pattern="$(printf '%s' "$pattern" | tr -d '\n ')"

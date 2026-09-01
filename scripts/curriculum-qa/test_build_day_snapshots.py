@@ -14,10 +14,12 @@
     「型は通ったが DB が無かっただけ」と「そもそも組めなかった」を区別できない。
 """
 
+import ast
 import contextlib
 import inspect
 import io
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -823,6 +825,27 @@ def check_leading_imports() -> list[str]:
     return fails
 
 
+# 複写されず読まれるだけの入力。実装側の一覧が痩せた回を捕まえるため、
+# 期待値はここに固定で置く。減らすときは、なぜ材料でなくなったのかをここに書く。
+REQUIRED_READ_ONLY_INPUTS = (
+    "tsconfig.json",
+    "scripts/scaffold-from-scratch.sh",
+    "scripts/build-zip.sh",
+    "package-lock.json",
+    ".node-version",
+    ".npmrc",
+    ".mise.toml",
+)
+
+# ゲートだけが持つ対象。ツリーの中身には現れんが、動いたら組み直しが要る。
+# `tree_inputs()` から期待値を作ると、この行を YAML から消しても気づけん。
+GATE_ONLY_INPUTS = (
+    ".node-version",
+    "Makefile",
+    ".github/workflows/snapshot-gate.yml",
+)
+
+
 def check_tree_inputs() -> list[str]:
     """ツリーの古さを測る材料が、実際にツリーへ入るもの全部を覆っていること。
 
@@ -838,13 +861,126 @@ def check_tree_inputs() -> list[str]:
     for src in target.BUILDER_SOURCES:
         if src.resolve() not in got:
             fails.append(f"❌ 組み立て方そのものを見ていない: {src.name}")
+    # 期待値は実装の一覧やのうて、下の固定集合から取る。実装を回すと、一覧から
+    # 消した回にループも一緒に痩せて通ってしまう。借り物と組み立て側には別の
+    # 歯止めがある（前者は複写で落ち、後者は import を辿る検査が拾う）が、
+    # 読まれるだけの入力にはそれが無い。
+    for name in REQUIRED_READ_ONLY_INPUTS:
+        path = (target.REPO_ROOT / name).resolve()
+        # 置くかどうかが任意の入力もある。無い物を要求すると、消した回に落ちてしまう。
+        if path.exists() and path not in got:
+            fails.append(f"❌ 読まれるだけの入力を見ていない: {name}")
+    declared = {*target.READ_ONLY_INPUTS, *target.ENVIRONMENT_INPUTS}
+    for name in sorted(set(REQUIRED_READ_ONLY_INPUTS) - declared):
+        fails.append(f"❌ 複写されん入力が実装の一覧から消えとる: {name}")
     if not any(p.name.startswith("day03_") for p in got):
         fails.append("❌ その日までの教材を見ていない")
     if any(p.name.startswith("day04_") for p in got):
         fails.append("❌ その日より後の教材まで見ている")
-    if not all(p.is_file() for p in got):
-        fails.append("❌ 存在せんファイルを材料に数えている")
+    if not all(p.exists() for p in got):
+        fails.append("❌ 存在せんものを材料に数えている")
+    # 削除は残ったファイルの mtime に現れん。数を数える対象のディレクトリ自身を
+    # 見とかんと、教材や配布物を1本消した回に古いツリーが再利用される。
+    for label, path in (
+        ("教材", target.MATERIAL_DIR),
+        ("パッチ", target.PATCH_DIR),
+    ):
+        if path.resolve() not in got:
+            fails.append(f"❌ {label}の増減を見ていない: {path.name}")
+    # 置き場の時刻は中の増減でしか動かん。パッチの中身を1行直した回を拾うには、
+    # パッチ本体を1つずつ数えとかんとアカン。
+    for patch in sorted(target.PATCH_DIR.glob("*.patch")):
+        if patch.resolve() not in got:
+            fails.append(f"❌ パッチの中身を見ていない: {patch.name}")
+    scaffold_dirs = set()
+    for top in (target.REPO_ROOT / "scripts").glob("_*"):
+        if not top.is_dir():
+            continue
+        scaffold_dirs.add(top.resolve())
+        scaffold_dirs.update(p.resolve() for p in top.rglob("*") if p.is_dir())
+    for path in sorted(scaffold_dirs - got):
+        fails.append(f"❌ 配布物の増減を見ていない: {path.name}")
+    # 置き場そのものが消えた回は、親の並びでしか分からん。`scripts` は固定で見る。
+    # いまある置き場から導くと、最後の1つを消したコミットで期待値ごと消える。
+    expected_parents = {
+        (target.REPO_ROOT / "scripts").resolve(),
+        target.MATERIAL_DIR.resolve().parent,
+        *(p.parent for p in scaffold_dirs),
+    }
+    for path in sorted(expected_parents - got):
+        fails.append(f"❌ 置き場の増減を見ていない: {path.name}")
     return fails
+
+
+def check_builder_import_closure() -> list[str]:
+    """組み立て側が読んどるローカルモジュールが、1つ残らず材料に入っていること。
+
+    直接 import した分だけ並べても、その先で読まれるモジュールは抜ける。実際、
+    フェンスの解釈（`markdown_scan`）と配布物の対応表（`check_scaffold_curriculum_alignment`）は
+    1段奥に居って落ちていた。手で並べる限り同じ抜けが起きるので、import を辿って突き合わせる。
+    """
+    fails = []
+    listed = {p.resolve() for p in target.BUILDER_SOURCES}
+    # 入口は一覧やのうて実体から取る。一覧を起点にすると、入口自身を一覧から
+    # 消した回に辿る先ごと消えて、この検査を含む3つが揃って通ってしまう。
+    root = Path(target.__file__).resolve()
+    if root not in listed:
+        fails.append(f"❌ 組み立ての入口が材料に無い: {root.name}")
+    qa_dir = root.parent
+    seen: set[Path] = set()
+    queue = [root, *listed]
+    while queue:
+        mod = queue.pop()
+        if mod in seen or not mod.is_file():
+            continue
+        seen.add(mod)
+        names = set()
+        for node in ast.walk(ast.parse(mod.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                names.add(node.module.split(".")[0])
+            elif isinstance(node, ast.Import):
+                names.update(alias.name.split(".")[0] for alias in node.names)
+        for name in sorted(names):
+            local = (qa_dir / f"{name}.py").resolve()
+            if not local.is_file():
+                continue
+            if local not in listed:
+                fails.append(f"❌ 組み立て側が読んどるのに材料に無い: {name}.py（{mod.name} が import）")
+            queue.append(local)
+    return fails
+
+
+def check_gate_scope_covers_inputs() -> list[str]:
+    """CI が「回すかどうか」を決める一覧が、材料を1つ残らず覆っていること。
+
+    材料に足しても、ゲート側の一覧へ足し忘れると、そのファイルだけ動いた PR は
+    対象なしで素通りする。緑は出るのに1日も検証してへん、という形になる。
+    同じ一覧が Python と YAML の2箇所にあるのが原因なので、ここで突き合わせる。
+    """
+    gate = target.REPO_ROOT / ".github" / "workflows" / "snapshot-gate.yml"
+    if not gate.is_file():
+        return [f"❌ ゲートの定義が見つからない: {gate}"]
+    found = re.search(r"pattern='(.*?)'\n", gate.read_text(encoding="utf-8"), re.S)
+    if not found:
+        return ["❌ ゲートの pattern を読み取れない"]
+    # ワークフロー側の `tr -d '\n '` と同じ畳み方
+    pattern = re.compile(found.group(1).replace("\n", "").replace(" ", ""))
+    # 手で並べた3つの一覧だけやのうて、材料そのものを全部当てる。教材も scaffold の
+    # 複写元も材料に入っとるので、どれか1つでも覆えてへんかったら素通りが起きる。
+    days = target.available_days()
+    # 差分に出るのはファイルだけ。ディレクトリは材料に入っとるが、当てる相手やない。
+    materials = {
+        str(p.resolve().relative_to(target.REPO_ROOT))
+        for p in target.tree_inputs(days[-1])
+        if p.is_file()
+    }
+    # ゲートだけが持つ対象は材料に現れんので、固定集合から別に当てる。
+    # 材料から期待値を作るだけやと、その行を YAML から消しても緑のままになる。
+    return [
+        f"❌ ゲートの対象一覧が覆えていない: {name}"
+        for name in sorted(materials | set(GATE_ONLY_INPUTS))
+        if not pattern.match(name)
+    ]
 
 
 def check_build_failure_triage() -> list[str]:
@@ -1577,6 +1713,8 @@ CHECKS = (
     ("文字列で指した要素の書き換え", check_rewrite_element),
     ("持ち込みと本体の同居", check_leading_imports),
     ("ツリーの古さを測る材料", check_tree_inputs),
+    ("組み立て側が読むモジュールの取りこぼし", check_builder_import_closure),
+    ("ゲートの対象一覧が材料を覆っとるか", check_gate_scope_covers_inputs),
     ("ビルドの赤の切り分け", check_build_failure_triage),
     ("両方赤い日の表示", check_both_red_shows_both),
     ("成果物への SKIP の記録", check_result_doc_records_skip),

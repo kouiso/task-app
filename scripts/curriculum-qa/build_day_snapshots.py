@@ -282,11 +282,69 @@ def day_sources(upto: int) -> list[Path]:
 
 # ツリーの中身を決めているファイルのうち、教材でも配布物でもないもの。
 # 組み立て方を変えた回は教材の更新時刻が動かないので、これを見ないと古いツリーが残る。
+# 直接 import しとる分だけ並べると、その先で読まれるモジュールが抜ける。
+# markdown_scan はフェンスの解釈を、check_scaffold_curriculum_alignment は
+# 配布物の対応表を持っとって、どちらが動いてもツリーの中身が変わる。
+# 抜けを手で防ぐのは無理なので、test 側が import を辿ってこの一覧と突き合わせる。
 BUILDER_SOURCES = (
     Path(__file__).resolve(),
     Path(__file__).resolve().parent / "curriculum_blocks.py",
     Path(__file__).resolve().parent / "sale_package.py",
+    Path(__file__).resolve().parent / "markdown_scan.py",
+    Path(__file__).resolve().parent / "check_scaffold_curriculum_alignment.py",
 )
+
+# ツリーの中身を決めるのに「読まれるだけ」で、複写はされんファイル。
+# BORROWED_FILES に載せると中身がそのまま置かれてしまう。載せられんぶん
+# 材料からも落ちやすく、実際に3つとも落ちとった。
+#   tsconfig.json                   write_reader_tsconfig が読んで書き直す
+#   scripts/scaffold-from-scratch.sh  scaffold_tsconfig_excludes が exclude を読む
+#   scripts/build-zip.sh            sale_package が配布物の一覧を読む
+READ_ONLY_INPUTS = (
+    "tsconfig.json",
+    "scripts/scaffold-from-scratch.sh",
+    "scripts/build-zip.sh",
+)
+
+# ツリーの中身やのうて、ツリーが動く土台を決める入力。組んだツリーは node_modules を
+# このリポジトリから symlink で借りるので、ロックファイルだけ動いた回は
+# ツリーの中身が1バイトも変わらん。それでも中身の違う依存で build された
+# `.next` が残るため、古い bundle のまま撮れる。
+ENVIRONMENT_INPUTS = (
+    "package-lock.json",
+    ".node-version",
+    ".npmrc",
+    # doc/SUPPORTED_ENVIRONMENTS.md が Node の版の実体としてこれを指しとる。
+    ".mise.toml",
+)
+
+# `postinstall` の patch-package が node_modules を書き換える。パッチを1行直しても
+# ロックファイルは動かんので、ロックだけ見とると古い bundle のまま撮れる。
+PATCH_DIR = REPO_ROOT / "patches"
+
+
+def watched_dirs() -> list[Path]:
+    """中身の増減で古さが分かるディレクトリ。
+
+    ファイルの mtime は削除を記録せん。消えたファイルには mtime が無いからで、
+    教材や配布物を1本消した回は「一番新しい材料」が動かず、消したはずの中身が
+    残ったツリーを再利用してしまう。ディレクトリの mtime は中の増減で動く。
+    """
+    # 配布物の置き場は、いま複写しとるファイルやのうてディレクトリの並びから取る。
+    # 中身から作ると、最後の1本を消した回にその置き場ごと監視から外れてしまう。
+    # `scripts` は無条件に入れる。いまある `scripts/_*` の親から作ると、最後の置き場を
+    # 消したコミットで glob が空になり、その削除を記録する時刻がどこにも残らん。
+    dirs = {MATERIAL_DIR, PATCH_DIR, REPO_ROOT / "scripts"}
+    for top in (REPO_ROOT / "scripts").glob("_*"):
+        if not top.is_dir():
+            continue
+        # 入れ子も1つずつ見る。深い階層でファイルを消したとき、動くのはその階層の
+        # 時刻だけで、上の階層は変わらん。
+        dirs.add(top)
+        dirs.update(p for p in top.rglob("*") if p.is_dir())
+    # 置き場そのものが消えた回は、親の並びが動く。
+    dirs.update({p.parent for p in set(dirs)})
+    return sorted(p for p in dirs if p.is_dir() and REPO_ROOT in (p, *p.parents))
 
 
 def tree_inputs(upto: int) -> list[Path]:
@@ -297,11 +355,21 @@ def tree_inputs(upto: int) -> list[Path]:
     変更を取りこぼす。取りこぼすと古いツリーのまま撮れて、画像だけが前の
     アプリのまま残る。撮れてしまうから、あとから誰も気づけない。
     """
+    # 無い物は落とす。`.npmrc` のように置くかどうかが任意の入力があり、消した回に
+    # `stat()` で落ちる。その削除は置き場の時刻が拾うので、ここで数えんでも取り逃がさん。
     return [
-        *day_sources(upto),
-        *(src for _, src in scaffold_copies()),
-        *(REPO_ROOT / name for name in BORROWED_FILES),
-        *BUILDER_SOURCES,
+        p
+        for p in (
+            *day_sources(upto),
+            *(src for _, src in scaffold_copies()),
+            *(REPO_ROOT / name for name in BORROWED_FILES),
+            *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
+            *(REPO_ROOT / name for name in ENVIRONMENT_INPUTS),
+            *sorted(PATCH_DIR.glob("*.patch")),
+            *watched_dirs(),
+            *BUILDER_SOURCES,
+        )
+        if p.exists()
     ]
 
 
