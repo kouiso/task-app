@@ -282,10 +282,16 @@ def day_sources(upto: int) -> list[Path]:
 
 # ツリーの中身を決めているファイルのうち、教材でも配布物でもないもの。
 # 組み立て方を変えた回は教材の更新時刻が動かないので、これを見ないと古いツリーが残る。
+# 直接 import しとる分だけ並べると、その先で読まれるモジュールが抜ける。
+# markdown_scan はフェンスの解釈を、check_scaffold_curriculum_alignment は
+# 配布物の対応表を持っとって、どちらが動いてもツリーの中身が変わる。
+# 抜けを手で防ぐのは無理なので、test 側が import を辿ってこの一覧と突き合わせる。
 BUILDER_SOURCES = (
     Path(__file__).resolve(),
     Path(__file__).resolve().parent / "curriculum_blocks.py",
     Path(__file__).resolve().parent / "sale_package.py",
+    Path(__file__).resolve().parent / "markdown_scan.py",
+    Path(__file__).resolve().parent / "check_scaffold_curriculum_alignment.py",
 )
 
 # ツリーの中身を決めるのに「読まれるだけ」で、複写はされんファイル。

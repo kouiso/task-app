@@ -14,6 +14,7 @@
     「型は通ったが DB が無かっただけ」と「そもそも組めなかった」を区別できない。
 """
 
+import ast
 import contextlib
 import inspect
 import io
@@ -852,6 +853,39 @@ def check_tree_inputs() -> list[str]:
     return fails
 
 
+def check_builder_import_closure() -> list[str]:
+    """組み立て側が読んどるローカルモジュールが、1つ残らず材料に入っていること。
+
+    直接 import した分だけ並べても、その先で読まれるモジュールは抜ける。実際、
+    フェンスの解釈（`markdown_scan`）と配布物の対応表（`check_scaffold_curriculum_alignment`）は
+    1段奥に居って落ちていた。手で並べる限り同じ抜けが起きるので、import を辿って突き合わせる。
+    """
+    fails = []
+    listed = {p.resolve() for p in target.BUILDER_SOURCES}
+    qa_dir = Path(target.__file__).resolve().parent
+    seen: set[Path] = set()
+    queue = list(listed)
+    while queue:
+        mod = queue.pop()
+        if mod in seen or not mod.is_file():
+            continue
+        seen.add(mod)
+        names = set()
+        for node in ast.walk(ast.parse(mod.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                names.add(node.module.split(".")[0])
+            elif isinstance(node, ast.Import):
+                names.update(alias.name.split(".")[0] for alias in node.names)
+        for name in sorted(names):
+            local = (qa_dir / f"{name}.py").resolve()
+            if not local.is_file():
+                continue
+            if local not in listed:
+                fails.append(f"❌ 組み立て側が読んどるのに材料に無い: {name}.py（{mod.name} が import）")
+            queue.append(local)
+    return fails
+
+
 def check_build_failure_triage() -> list[str]:
     """ビルドの赤を、この機械で判定できるかどうかの切り分け。
 
@@ -1582,6 +1616,7 @@ CHECKS = (
     ("文字列で指した要素の書き換え", check_rewrite_element),
     ("持ち込みと本体の同居", check_leading_imports),
     ("ツリーの古さを測る材料", check_tree_inputs),
+    ("組み立て側が読むモジュールの取りこぼし", check_builder_import_closure),
     ("ビルドの赤の切り分け", check_build_failure_triage),
     ("両方赤い日の表示", check_both_red_shows_both),
     ("成果物への SKIP の記録", check_result_doc_records_skip),
