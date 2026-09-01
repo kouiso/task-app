@@ -312,6 +312,23 @@ READ_ONLY_INPUTS = (
 # `.next` が残るため、古い bundle のまま撮れる。
 ENVIRONMENT_INPUTS = ("package-lock.json",)
 
+# `postinstall` の patch-package が node_modules を書き換える。パッチを1行直しても
+# ロックファイルは動かんので、ロックだけ見とると古い bundle のまま撮れる。
+PATCH_DIR = REPO_ROOT / "patches"
+
+
+def watched_dirs() -> list[Path]:
+    """中身の増減で古さが分かるディレクトリ。
+
+    ファイルの mtime は削除を記録せん。消えたファイルには mtime が無いからで、
+    教材や配布物を1本消した回は「一番新しい材料」が動かず、消したはずの中身が
+    残ったツリーを再利用してしまう。ディレクトリの mtime は中の増減で動く。
+    """
+    dirs = {MATERIAL_DIR, PATCH_DIR}
+    for _, src in scaffold_copies():
+        dirs.add(src.parent)
+    return sorted(p for p in dirs if p.is_dir())
+
 
 def tree_inputs(upto: int) -> list[Path]:
     """その日のツリーの中身を決める入力を全部返す。
@@ -327,6 +344,8 @@ def tree_inputs(upto: int) -> list[Path]:
         *(REPO_ROOT / name for name in BORROWED_FILES),
         *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
         *(REPO_ROOT / name for name in ENVIRONMENT_INPUTS),
+        *sorted(PATCH_DIR.glob("*.patch")),
+        *watched_dirs(),
         *BUILDER_SOURCES,
     ]
 

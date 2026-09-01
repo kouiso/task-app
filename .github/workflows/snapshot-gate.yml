@@ -122,6 +122,7 @@ jobs:
           |tailwind\.config\.js
           |tsconfig\.json
           |package(-lock)?\.json
+          |patches/
           |src/app/globals\.css
           |\.env\.example
           |\.node-version

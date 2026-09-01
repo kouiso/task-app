@@ -872,8 +872,19 @@ def check_tree_inputs() -> list[str]:
         fails.append("❌ その日までの教材を見ていない")
     if any(p.name.startswith("day04_") for p in got):
         fails.append("❌ その日より後の教材まで見ている")
-    if not all(p.is_file() for p in got):
-        fails.append("❌ 存在せんファイルを材料に数えている")
+    if not all(p.exists() for p in got):
+        fails.append("❌ 存在せんものを材料に数えている")
+    # 削除は残ったファイルの mtime に現れん。数を数える対象のディレクトリ自身を
+    # 見とかんと、教材や配布物を1本消した回に古いツリーが再利用される。
+    for label, path in (
+        ("教材", target.MATERIAL_DIR),
+        ("パッチ", target.PATCH_DIR),
+    ):
+        if path.resolve() not in got:
+            fails.append(f"❌ {label}の増減を見ていない: {path.name}")
+    scaffold_dirs = {src.parent.resolve() for _, src in target.scaffold_copies()}
+    for path in sorted(scaffold_dirs - got):
+        fails.append(f"❌ 配布物の増減を見ていない: {path.name}")
     return fails
 
 
@@ -933,8 +944,11 @@ def check_gate_scope_covers_inputs() -> list[str]:
     # 手で並べた3つの一覧だけやのうて、材料そのものを全部当てる。教材も scaffold の
     # 複写元も材料に入っとるので、どれか1つでも覆えてへんかったら素通りが起きる。
     days = target.available_days()
+    # 差分に出るのはファイルだけ。ディレクトリは材料に入っとるが、当てる相手やない。
     materials = {
-        str(p.resolve().relative_to(target.REPO_ROOT)) for p in target.tree_inputs(days[-1])
+        str(p.resolve().relative_to(target.REPO_ROOT))
+        for p in target.tree_inputs(days[-1])
+        if p.is_file()
     }
     # ゲートだけが持つ対象は材料に現れんので、固定集合から別に当てる。
     # 材料から期待値を作るだけやと、その行を YAML から消しても緑のままになる。
