@@ -831,6 +831,15 @@ REQUIRED_READ_ONLY_INPUTS = (
     "tsconfig.json",
     "scripts/scaffold-from-scratch.sh",
     "scripts/build-zip.sh",
+    "package-lock.json",
+)
+
+# ゲートだけが持つ対象。ツリーの中身には現れんが、動いたら組み直しが要る。
+# `tree_inputs()` から期待値を作ると、この行を YAML から消しても気づけん。
+GATE_ONLY_INPUTS = (
+    ".node-version",
+    "Makefile",
+    ".github/workflows/snapshot-gate.yml",
 )
 
 
@@ -856,9 +865,9 @@ def check_tree_inputs() -> list[str]:
     for name in REQUIRED_READ_ONLY_INPUTS:
         if (target.REPO_ROOT / name).resolve() not in got:
             fails.append(f"❌ 読まれるだけの入力を見ていない: {name}")
-    dropped = set(REQUIRED_READ_ONLY_INPUTS) - set(target.READ_ONLY_INPUTS)
-    for name in sorted(dropped):
-        fails.append(f"❌ 読まれるだけの入力が実装の一覧から消えとる: {name}")
+    declared = {*target.READ_ONLY_INPUTS, *target.ENVIRONMENT_INPUTS}
+    for name in sorted(set(REQUIRED_READ_ONLY_INPUTS) - declared):
+        fails.append(f"❌ 複写されん入力が実装の一覧から消えとる: {name}")
     if not any(p.name.startswith("day03_") for p in got):
         fails.append("❌ その日までの教材を見ていない")
     if any(p.name.startswith("day04_") for p in got):
@@ -927,9 +936,11 @@ def check_gate_scope_covers_inputs() -> list[str]:
     materials = {
         str(p.resolve().relative_to(target.REPO_ROOT)) for p in target.tree_inputs(days[-1])
     }
+    # ゲートだけが持つ対象は材料に現れんので、固定集合から別に当てる。
+    # 材料から期待値を作るだけやと、その行を YAML から消しても緑のままになる。
     return [
-        f"❌ ゲートの対象一覧が材料を覆えていない: {name}"
-        for name in sorted(materials)
+        f"❌ ゲートの対象一覧が覆えていない: {name}"
+        for name in sorted(materials | set(GATE_ONLY_INPUTS))
         if not pattern.match(name)
     ]
 

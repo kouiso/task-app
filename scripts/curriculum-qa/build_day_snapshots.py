@@ -306,6 +306,12 @@ READ_ONLY_INPUTS = (
     "scripts/build-zip.sh",
 )
 
+# ツリーの中身やのうて、ツリーが動く土台を決める入力。組んだツリーは node_modules を
+# このリポジトリから symlink で借りるので、ロックファイルだけ動いた回は
+# ツリーの中身が1バイトも変わらん。それでも中身の違う依存で build された
+# `.next` が残るため、古い bundle のまま撮れる。
+ENVIRONMENT_INPUTS = ("package-lock.json",)
+
 
 def tree_inputs(upto: int) -> list[Path]:
     """その日のツリーの中身を決める入力を全部返す。
@@ -320,6 +326,7 @@ def tree_inputs(upto: int) -> list[Path]:
         *(src for _, src in scaffold_copies()),
         *(REPO_ROOT / name for name in BORROWED_FILES),
         *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
+        *(REPO_ROOT / name for name in ENVIRONMENT_INPUTS),
         *BUILDER_SOURCES,
     ]
 
