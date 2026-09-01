@@ -824,6 +824,15 @@ def check_leading_imports() -> list[str]:
     return fails
 
 
+# 複写されず読まれるだけの入力。実装側の一覧が痩せた回を捕まえるため、
+# 期待値はここに固定で置く。減らすときは、なぜ材料でなくなったのかをここに書く。
+REQUIRED_READ_ONLY_INPUTS = (
+    "tsconfig.json",
+    "scripts/scaffold-from-scratch.sh",
+    "scripts/build-zip.sh",
+)
+
+
 def check_tree_inputs() -> list[str]:
     """ツリーの古さを測る材料が、実際にツリーへ入るもの全部を覆っていること。
 
@@ -839,11 +848,16 @@ def check_tree_inputs() -> list[str]:
     for src in target.BUILDER_SOURCES:
         if src.resolve() not in got:
             fails.append(f"❌ 組み立て方そのものを見ていない: {src.name}")
-    # 複写されず読まれるだけの入力は、借り物の一覧に載らんぶん材料からも落ちやすい。
-    # 落ちると、その入力を直した回にツリーが古いまま撮れて、画像だけが前のアプリのまま残る。
-    for name in target.READ_ONLY_INPUTS:
+    # 期待値は実装の一覧やのうて、下の固定集合から取る。実装を回すと、一覧から
+    # 消した回にループも一緒に痩せて通ってしまう。借り物と組み立て側には別の
+    # 歯止めがある（前者は複写で落ち、後者は import を辿る検査が拾う）が、
+    # 読まれるだけの入力にはそれが無い。
+    for name in REQUIRED_READ_ONLY_INPUTS:
         if (target.REPO_ROOT / name).resolve() not in got:
             fails.append(f"❌ 読まれるだけの入力を見ていない: {name}")
+    dropped = set(REQUIRED_READ_ONLY_INPUTS) - set(target.READ_ONLY_INPUTS)
+    for name in sorted(dropped):
+        fails.append(f"❌ 読まれるだけの入力が実装の一覧から消えとる: {name}")
     if not any(p.name.startswith("day03_") for p in got):
         fails.append("❌ その日までの教材を見ていない")
     if any(p.name.startswith("day04_") for p in got):
