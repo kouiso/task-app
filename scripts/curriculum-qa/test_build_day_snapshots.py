@@ -838,6 +838,11 @@ def check_tree_inputs() -> list[str]:
     for src in target.BUILDER_SOURCES:
         if src.resolve() not in got:
             fails.append(f"❌ 組み立て方そのものを見ていない: {src.name}")
+    # tsconfig.json は複写されず、write_reader_tsconfig が読んで書き直す。
+    # 借り物の一覧に載らんので、材料からも落ちやすい。落ちると型検査の設定を
+    # 変えた回にツリーが古いまま撮れて、画像だけが前のアプリのまま残る。
+    if (target.REPO_ROOT / "tsconfig.json").resolve() not in got:
+        fails.append("❌ 読者の型設定を作る元を見ていない: tsconfig.json")
     if not any(p.name.startswith("day03_") for p in got):
         fails.append("❌ その日までの教材を見ていない")
     if any(p.name.startswith("day04_") for p in got):

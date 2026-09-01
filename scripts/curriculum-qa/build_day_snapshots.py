@@ -301,6 +301,10 @@ def tree_inputs(upto: int) -> list[Path]:
         *day_sources(upto),
         *(src for _, src in scaffold_copies()),
         *(REPO_ROOT / name for name in BORROWED_FILES),
+        # 複写やのうて write_reader_tsconfig が読んで書き直す入力。借り物の一覧に
+        # 載せると中身がそのまま置かれて、読者の手元と違う設定で検査してしまう。
+        # だから一覧には入れず、古さを測る材料としてここだけで数える。
+        REPO_ROOT / "tsconfig.json",
         *BUILDER_SOURCES,
     ]
 
