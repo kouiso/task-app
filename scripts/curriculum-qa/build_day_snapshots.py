@@ -310,7 +310,13 @@ READ_ONLY_INPUTS = (
 # このリポジトリから symlink で借りるので、ロックファイルだけ動いた回は
 # ツリーの中身が1バイトも変わらん。それでも中身の違う依存で build された
 # `.next` が残るため、古い bundle のまま撮れる。
-ENVIRONMENT_INPUTS = ("package-lock.json", ".node-version", ".npmrc")
+ENVIRONMENT_INPUTS = (
+    "package-lock.json",
+    ".node-version",
+    ".npmrc",
+    # doc/SUPPORTED_ENVIRONMENTS.md が Node の版の実体としてこれを指しとる。
+    ".mise.toml",
+)
 
 # `postinstall` の patch-package が node_modules を書き換える。パッチを1行直しても
 # ロックファイルは動かんので、ロックだけ見とると古い bundle のまま撮れる。
@@ -349,15 +355,21 @@ def tree_inputs(upto: int) -> list[Path]:
     変更を取りこぼす。取りこぼすと古いツリーのまま撮れて、画像だけが前の
     アプリのまま残る。撮れてしまうから、あとから誰も気づけない。
     """
+    # 無い物は落とす。`.npmrc` のように置くかどうかが任意の入力があり、消した回に
+    # `stat()` で落ちる。その削除は置き場の時刻が拾うので、ここで数えんでも取り逃がさん。
     return [
-        *day_sources(upto),
-        *(src for _, src in scaffold_copies()),
-        *(REPO_ROOT / name for name in BORROWED_FILES),
-        *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
-        *(REPO_ROOT / name for name in ENVIRONMENT_INPUTS),
-        *sorted(PATCH_DIR.glob("*.patch")),
-        *watched_dirs(),
-        *BUILDER_SOURCES,
+        p
+        for p in (
+            *day_sources(upto),
+            *(src for _, src in scaffold_copies()),
+            *(REPO_ROOT / name for name in BORROWED_FILES),
+            *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
+            *(REPO_ROOT / name for name in ENVIRONMENT_INPUTS),
+            *sorted(PATCH_DIR.glob("*.patch")),
+            *watched_dirs(),
+            *BUILDER_SOURCES,
+        )
+        if p.exists()
     ]
 
 

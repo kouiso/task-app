@@ -834,6 +834,7 @@ REQUIRED_READ_ONLY_INPUTS = (
     "package-lock.json",
     ".node-version",
     ".npmrc",
+    ".mise.toml",
 )
 
 # ゲートだけが持つ対象。ツリーの中身には現れんが、動いたら組み直しが要る。
@@ -865,7 +866,9 @@ def check_tree_inputs() -> list[str]:
     # 歯止めがある（前者は複写で落ち、後者は import を辿る検査が拾う）が、
     # 読まれるだけの入力にはそれが無い。
     for name in REQUIRED_READ_ONLY_INPUTS:
-        if (target.REPO_ROOT / name).resolve() not in got:
+        path = (target.REPO_ROOT / name).resolve()
+        # 置くかどうかが任意の入力もある。無い物を要求すると、消した回に落ちてしまう。
+        if path.exists() and path not in got:
             fails.append(f"❌ 読まれるだけの入力を見ていない: {name}")
     declared = {*target.READ_ONLY_INPUTS, *target.ENVIRONMENT_INPUTS}
     for name in sorted(set(REQUIRED_READ_ONLY_INPUTS) - declared):
