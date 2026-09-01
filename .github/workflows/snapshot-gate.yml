@@ -1,0 +1,235 @@
+# 「写経したのに動かん」を機械で見張る。不満10類型の③。
+#
+# 【なぜ足したか】
+# ①ZIP には zip-ci.yml、⑤紙面には pdf-book-gate.yml があるのに、③だけゲートが無かった。
+# check_quality.sh に載っとったのは test_build_day_snapshots（道具の自己テスト）で、
+# 「道具を走らせた結果」は誰も見てへん状態やった。つまり教材のコードブロックを1行直しても、
+# 誰かが手で --all --verify を打たん限り、写経が壊れたことに気づけんかった。
+# ③は買った人が最初に当たる壁で、ここが壊れたまま出ると次は買ってもらえん。
+#
+# 【pull_request に paths: を付けてへん理由】
+# pdf-book-gate.yml と同じ。path filter に当たった PR はワークフローごとスキップされ、
+# チェックを1件も報告せん。必須チェックにすると Expected — waiting for status のまま
+# 永久にマージ不能になる。起動は常にさせて、走らせるかどうかはジョブの中で差分から決める。
+#
+# 【DB のポートが 25532 でないとアカン理由 — いちばんの落とし穴】
+# build_day_snapshots.py の copy_scaffold() は、組んだツリーへ .env.example を
+# そのまま .env として複写する。その .env.example の DATABASE_URL は
+# localhost:25532 を指しとる。だから DB を別のポートで立てると build が届かず、
+# 道具はそれを「DB を持たん機械」と見なして build を SKIP にする。
+# **SKIP は exit 0 で返る。**つまりポートを間違えると、1日も検証してへんのに緑で通る。
+# 飾りのゲートになるので、下で「SKIP が1件でもあったら落とす」を別途入れとる。
+#
+# 【day11 が赤いのは想定内】
+# day11 は 'getById' を書く前に配布物を取り込むため型エラーが5件出る。教材が本文で
+# 断っとる。道具側の EXPECTED_RED がその日を持っとって、想定どおりの赤なら exit 0、
+# 逆に**通ってしまったら exit 1**（本文の断りのほうが古い、という意味）。
+# ここで「30日全部緑」を条件にしたらゲートが永久に赤いので、判定は道具に任せる。
+#
+# 【この検査が見ていないもの】
+# 通るのは tsc と next build まで。**画面が正しく動くかは見てへん。**
+# 写した通りに型が合ってビルドが通ることと、押したボタンが期待どおり動くことは別や。
+# 実行時の挙動と、教材の説明文が現物と合っとるかは、人が読むしかない。
+name: 写経ビルド検査
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  # npm の推移的依存と runner の Node 版はリポジトリの差分に現れん。
+  # pdf-book-full.yml と同じ理屈で、週次で回して初めて分かる。
+  # 月曜 04:00 JST（PDF週次の1時間後。runner の取り合いを避ける）
+  schedule:
+    - cron: '0 19 * * 0'
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  snapshot:
+    name: 写経ビルド検査
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    services:
+      # ポートは 25532 固定。理由は先頭のコメント参照（間違えると黙って緑になる）
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: taskapp
+        ports:
+          - 25532:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d taskapp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # 差分を取るので、PR の base まで辿れる深さが要る
+          fetch-depth: 0
+
+      - name: 走らせるかどうかを差分から決める
+        id: scope
+        run: |
+          # PR 以外（週次・手動）は無条件で回す。ドリフトを拾うのがその2つの役目やから
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "起動理由が ${{ github.event_name }} なので全30日を回す"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            # base が取れんかった回に「差分なし」へ倒すと、静かに素通りする。
+            # 判断でけへんときは回す側へ倒す
+            echo "::warning::base コミットが取れんかったので全30日を回す"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # -z は NUL 区切りにするだけやのうて、パスのクォートを止める役目を持つ。
+          # 素の --name-only は core.quotePath の既定 true で非ASCIIを8進エスケープし、
+          # `"material/30days-curriculum/day01_\351..."` を返す。教材30日ぶんは
+          # 全部ファイル名が日本語なので、下の `^material/` が丸ごと空振りして
+          # run=false、つまり1日も検証してへんのに緑で通る。pdf-book-gate.yml と同じ書き方。
+          changed="$(git -c core.quotePath=false diff -z --name-only "$base" "$head" | tr '\0' '\n')"
+
+          # ツリーの中身を決める入力。build_day_snapshots.py の tree_inputs() と
+          # BORROWED_FILES / BUILDER_SOURCES / scaffold_copies() に対応させとる。
+          # scaffold の複写元は全部 scripts/_* の下にある。
+          #
+          # 下3つは tree_inputs() に名前が出てこん入力。列挙から漏らすと、
+          # そこだけ変えた PR が「対象なし」で緑になる。
+          #   tsconfig.json      … write_reader_tsconfig() が読んで、30日ぶん全部の
+          #                        tsconfig を作る元にしとる
+          #   scripts/build-zip.sh … sale_package.py が配布物の一覧をここから読む
+          #   .node-version      … このジョブの Node 版そのもの
+          pattern='^(material/30days-curriculum/.*\.md
+          |scripts/_[^/]+/
+          |scripts/scaffold-from-scratch\.sh
+          |scripts/build-zip\.sh
+          |scripts/curriculum-qa/(build_day_snapshots|curriculum_blocks|sale_package)\.py
+          |next\.config\.ts
+          |postcss\.config\.js
+          |tailwind\.config\.js
+          |tsconfig\.json
+          |package(-lock)?\.json
+          |src/app/globals\.css
+          |\.env\.example
+          |\.node-version
+          |Makefile
+          |\.github/workflows/snapshot-gate\.yml)'
+          pattern="$(printf '%s' "$pattern" | tr -d '\n ')"
+
+          hits="$(printf '%s\n' "$changed" | grep -E "$pattern" || true)"
+
+          # 教材mdが動いとるのに1件も当たらんかったら、上の正規表現が壊れとる。
+          # 「対象なし」で緑にすると、壊れたことに誰も気づけん
+          if [ -z "$hits" ] && printf '%s\n' "$changed" | grep -q '^material/30days-curriculum/.*\.md$'; then
+            echo "::error::教材mdの差分があるのに対象0件になった。パス判定が壊れとる"
+            exit 1
+          fi
+
+          if [ -n "$hits" ]; then
+            echo "写経に効く変更を見つけたので全30日を回す:"
+            printf '%s\n' "$hits" | sed 's/^/  /'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "写経に効く変更なし。組み直しは省く"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Node.js を用意
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 依存をインストール
+        if: steps.scope.outputs.run == 'true'
+        # 組んだツリーは node_modules をこのリポジトリから symlink で借りる
+        # （link_node_modules）。だから入れるのはここ1回だけで足りる
+        run: npm ci
+
+      - name: 判定境界の退行テスト
+        if: steps.scope.outputs.run == 'true'
+        # 本体を回す前に道具の判定境界を固める。ここが崩れとると、
+        # 下の30日ぶんの結果そのものが信用でけへん
+        run: make snapshot-test
+
+      - name: DB へ届くことを先に確かめる
+        if: steps.scope.outputs.run == 'true'
+        # 届かんまま本体へ入ると、30日ぶん回した末に全部 SKIP になって
+        # 「何を検証したのか分からん緑」で終わる。先に落とす
+        run: |
+          for _ in $(seq 1 30); do
+            if pg_isready -h 127.0.0.1 -p 25532 -U user -d taskapp >/dev/null 2>&1; then
+              echo "25532 へ届いた"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::25532 の Postgres へ届かん。ここで止めんと全日 SKIP で緑になる"
+          exit 1
+
+      - name: 前回の結果表を消してから入る
+        if: steps.scope.outputs.run == 'true'
+        # 結果表はリポジトリに commit されとる。消さずに入ると、npm ci や退行テストで
+        # 落ちた回でも下の always() が「前に成功した回の表」を成果物として上げてしまう。
+        # 落ちた回を調べに来た人が、通った回の表を掴むことになる
+        run: rm -f doc/review-handoff/day-snapshots-result.md
+
+      - name: 30日ぶんを組み直して型検査と build を回す
+        if: steps.scope.outputs.run == 'true'
+        id: verify
+        run: |
+          set -o pipefail
+          make snapshot-verify 2>&1 | tee "$RUNNER_TEMP/snapshot.log"
+
+      - name: 30日ぶん揃っとるか確かめる
+        if: steps.scope.outputs.run == 'true'
+        # 道具の `--all` は「今ある教材ファイル」を数えて回る。day を1本消した PR では
+        # 29日ぶん回して全部通り、道具は 0 を返す。30日ゲートのつもりが29日ゲートに
+        # 化けても誰も気づけんので、日付の並びは道具やのうてここで固定する
+        run: |
+          missing=""
+          for n in $(seq -w 1 30); do
+            grep -q "^day${n}:" "$RUNNER_TEMP/snapshot.log" || missing="$missing day${n}"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::30日ぶん揃ってへん。判定されてへん日:$missing"
+            exit 1
+          fi
+          echo "day01〜day30 の30日ぶん、全部が判定されとる"
+
+      - name: SKIP が混ざってへんか確かめる
+        if: steps.scope.outputs.run == 'true'
+        # 道具は「DB が無い機械」では build を SKIP にして exit 0 を返す。
+        # CI には DB がある前提なので、SKIP が出たら配線が壊れとる。
+        # ここを入れんと、DB が落ちた回が「全部緑」に化ける
+        run: |
+          if grep -q 'build を判定できんかった日' "$RUNNER_TEMP/snapshot.log"; then
+            echo "::error::build を判定できんかった日がある。DB へ届いてへんので、この緑は何も保証せん"
+            grep -n 'build を判定できんかった日' -A 2 "$RUNNER_TEMP/snapshot.log"
+            exit 1
+          fi
+          echo "SKIP なし。30日ぶん全部を判定しとる"
+
+      - name: 結果表を残す
+        if: always() && steps.scope.outputs.run == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: day-snapshots-result
+          path: |
+            doc/review-handoff/day-snapshots-result.md
+          if-no-files-found: warn
+          retention-days: 14

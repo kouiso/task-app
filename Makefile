@@ -1,4 +1,26 @@
-.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-test book-pdf-verify book-pdf-clean
+.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-test book-pdf-verify book-pdf-clean snapshot-verify snapshot-test
+
+# ============================================
+# 写経ビルド検査（読者がその日まで写した手元を組み直す）
+# ============================================
+
+# 30日ぶんのツリーを組み直して、型検査と build が通るかを見る。
+#
+# Postgres が要る。しかも**待ち受けポートは 25532 でなければならない**。
+# build_day_snapshots.py は組んだツリーへ .env.example をそのまま .env として複写し、
+# そこに書いてある DATABASE_URL が localhost:25532 を指しとるからや。別のポートで
+# 立てると build が DB へ届かず、道具はそれを「DB の無い機械」と見なして SKIP にする。
+# SKIP は exit 0 で返るので、**何も検証してへんのに緑で通る。**
+#
+#   docker run -d --name snap-db -p 25532:5432 \
+#     -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=taskapp \
+#     postgres:16-alpine
+snapshot-verify:
+	@python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify
+
+# 判定境界を固定する退行テスト（DB も Node も要らない）
+snapshot-test:
+	@python3 scripts/curriculum-qa/test_build_day_snapshots.py
 
 # ============================================
 # 商品PDF生成（Vivliostyle・1日1冊の分冊）
