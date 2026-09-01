@@ -832,6 +832,7 @@ REQUIRED_READ_ONLY_INPUTS = (
     "scripts/scaffold-from-scratch.sh",
     "scripts/build-zip.sh",
     "package-lock.json",
+    ".node-version",
 )
 
 # ゲートだけが持つ対象。ツリーの中身には現れんが、動いたら組み直しが要る。
@@ -882,9 +883,14 @@ def check_tree_inputs() -> list[str]:
     ):
         if path.resolve() not in got:
             fails.append(f"❌ {label}の増減を見ていない: {path.name}")
-    scaffold_dirs = {src.parent.resolve() for _, src in target.scaffold_copies()}
+    scaffold_dirs = {
+        p.resolve() for p in (target.REPO_ROOT / "scripts").glob("_*") if p.is_dir()
+    }
     for path in sorted(scaffold_dirs - got):
         fails.append(f"❌ 配布物の増減を見ていない: {path.name}")
+    # 置き場そのものが消えた回は、親の並びでしか分からん。
+    for path in sorted({p.parent for p in scaffold_dirs | {target.MATERIAL_DIR.resolve()}} - got):
+        fails.append(f"❌ 置き場の増減を見ていない: {path.name}")
     return fails
 
 

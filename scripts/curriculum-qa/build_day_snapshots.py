@@ -310,7 +310,7 @@ READ_ONLY_INPUTS = (
 # このリポジトリから symlink で借りるので、ロックファイルだけ動いた回は
 # ツリーの中身が1バイトも変わらん。それでも中身の違う依存で build された
 # `.next` が残るため、古い bundle のまま撮れる。
-ENVIRONMENT_INPUTS = ("package-lock.json",)
+ENVIRONMENT_INPUTS = ("package-lock.json", ".node-version")
 
 # `postinstall` の patch-package が node_modules を書き換える。パッチを1行直しても
 # ロックファイルは動かんので、ロックだけ見とると古い bundle のまま撮れる。
@@ -324,10 +324,13 @@ def watched_dirs() -> list[Path]:
     教材や配布物を1本消した回は「一番新しい材料」が動かず、消したはずの中身が
     残ったツリーを再利用してしまう。ディレクトリの mtime は中の増減で動く。
     """
+    # 配布物の置き場は、いま複写しとるファイルやのうてディレクトリの並びから取る。
+    # 中身から作ると、最後の1本を消した回にその置き場ごと監視から外れてしまう。
     dirs = {MATERIAL_DIR, PATCH_DIR}
-    for _, src in scaffold_copies():
-        dirs.add(src.parent)
-    return sorted(p for p in dirs if p.is_dir())
+    dirs.update(p for p in (REPO_ROOT / "scripts").glob("_*") if p.is_dir())
+    # 置き場そのものが消えた回は、親の並びが動く。
+    dirs.update({p.parent for p in set(dirs)})
+    return sorted(p for p in dirs if p.is_dir() and REPO_ROOT in (p, *p.parents))
 
 
 def tree_inputs(upto: int) -> list[Path]:
