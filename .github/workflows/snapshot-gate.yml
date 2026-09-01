@@ -126,6 +126,7 @@ jobs:
           |src/app/globals\.css
           |\.env\.example
           |\.node-version
+          |\.npmrc
           |Makefile
           |\.github/workflows/snapshot-gate\.yml)'
           pattern="$(printf '%s' "$pattern" | tr -d '\n ')"

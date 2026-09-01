@@ -833,6 +833,7 @@ REQUIRED_READ_ONLY_INPUTS = (
     "scripts/build-zip.sh",
     "package-lock.json",
     ".node-version",
+    ".npmrc",
 )
 
 # ゲートだけが持つ対象。ツリーの中身には現れんが、動いたら組み直しが要る。
@@ -883,9 +884,12 @@ def check_tree_inputs() -> list[str]:
     ):
         if path.resolve() not in got:
             fails.append(f"❌ {label}の増減を見ていない: {path.name}")
-    scaffold_dirs = {
-        p.resolve() for p in (target.REPO_ROOT / "scripts").glob("_*") if p.is_dir()
-    }
+    scaffold_dirs = set()
+    for top in (target.REPO_ROOT / "scripts").glob("_*"):
+        if not top.is_dir():
+            continue
+        scaffold_dirs.add(top.resolve())
+        scaffold_dirs.update(p.resolve() for p in top.rglob("*") if p.is_dir())
     for path in sorted(scaffold_dirs - got):
         fails.append(f"❌ 配布物の増減を見ていない: {path.name}")
     # 置き場そのものが消えた回は、親の並びでしか分からん。

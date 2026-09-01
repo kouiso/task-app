@@ -310,7 +310,7 @@ READ_ONLY_INPUTS = (
 # このリポジトリから symlink で借りるので、ロックファイルだけ動いた回は
 # ツリーの中身が1バイトも変わらん。それでも中身の違う依存で build された
 # `.next` が残るため、古い bundle のまま撮れる。
-ENVIRONMENT_INPUTS = ("package-lock.json", ".node-version")
+ENVIRONMENT_INPUTS = ("package-lock.json", ".node-version", ".npmrc")
 
 # `postinstall` の patch-package が node_modules を書き換える。パッチを1行直しても
 # ロックファイルは動かんので、ロックだけ見とると古い bundle のまま撮れる。
@@ -327,7 +327,13 @@ def watched_dirs() -> list[Path]:
     # 配布物の置き場は、いま複写しとるファイルやのうてディレクトリの並びから取る。
     # 中身から作ると、最後の1本を消した回にその置き場ごと監視から外れてしまう。
     dirs = {MATERIAL_DIR, PATCH_DIR}
-    dirs.update(p for p in (REPO_ROOT / "scripts").glob("_*") if p.is_dir())
+    for top in (REPO_ROOT / "scripts").glob("_*"):
+        if not top.is_dir():
+            continue
+        # 入れ子も1つずつ見る。深い階層でファイルを消したとき、動くのはその階層の
+        # 時刻だけで、上の階層は変わらん。
+        dirs.add(top)
+        dirs.update(p for p in top.rglob("*") if p.is_dir())
     # 置き場そのものが消えた回は、親の並びが動く。
     dirs.update({p.parent for p in set(dirs)})
     return sorted(p for p in dirs if p.is_dir() and REPO_ROOT in (p, *p.parents))
