@@ -884,6 +884,11 @@ def check_tree_inputs() -> list[str]:
     ):
         if path.resolve() not in got:
             fails.append(f"❌ {label}の増減を見ていない: {path.name}")
+    # 置き場の時刻は中の増減でしか動かん。パッチの中身を1行直した回を拾うには、
+    # パッチ本体を1つずつ数えとかんとアカン。
+    for patch in sorted(target.PATCH_DIR.glob("*.patch")):
+        if patch.resolve() not in got:
+            fails.append(f"❌ パッチの中身を見ていない: {patch.name}")
     scaffold_dirs = set()
     for top in (target.REPO_ROOT / "scripts").glob("_*"):
         if not top.is_dir():
