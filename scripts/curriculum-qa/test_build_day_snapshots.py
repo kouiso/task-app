@@ -877,9 +877,14 @@ def check_builder_import_closure() -> list[str]:
     """
     fails = []
     listed = {p.resolve() for p in target.BUILDER_SOURCES}
-    qa_dir = Path(target.__file__).resolve().parent
+    # 入口は一覧やのうて実体から取る。一覧を起点にすると、入口自身を一覧から
+    # 消した回に辿る先ごと消えて、この検査を含む3つが揃って通ってしまう。
+    root = Path(target.__file__).resolve()
+    if root not in listed:
+        fails.append(f"❌ 組み立ての入口が材料に無い: {root.name}")
+    qa_dir = root.parent
     seen: set[Path] = set()
-    queue = list(listed)
+    queue = [root, *listed]
     while queue:
         mod = queue.pop()
         if mod in seen or not mod.is_file():
