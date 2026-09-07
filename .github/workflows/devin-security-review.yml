@@ -1,4 +1,4 @@
-name: Codex Security Review
+name: Devin Security Review
 
 on:
   pull_request:
@@ -13,7 +13,8 @@ on:
 
 jobs:
   security-review:
-    if: vars.CODEX_REVIEW_ENABLED == 'true'
+    # DEVIN_REVIEW_ENABLED へ移行するまでの間、旧 CODEX_REVIEW_ENABLED でも動くようにしている
+    if: vars.DEVIN_REVIEW_ENABLED == 'true' || vars.CODEX_REVIEW_ENABLED == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -27,19 +28,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Codex Security Review
-        uses: openai/codex-action@52fe01ec70a42f454c9d2ebd47598f9fd6893d56 # v1.11
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          model: gpt-5.5
-          safety-strategy: drop-sudo
-          sandbox: workspace-write
-          output-file: codex-security-review.md
-          prompt: |
-            この変更のセキュリティ面を確認してください。
+      - name: Run Devin Security Review
+        id: devin
+        continue-on-error: true
+        env:
+          COGNITION_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          WINDSURF_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_OUTPUT_FILE: devin-security-review.md
+          DEVIN_PROMPT: |
+            この変更のセキュリティ面を確認してください。ファイルの書き換えは行わないでください。
 
             必ず日本語で、利用者に影響する危険を平易に説明してください。
             問題がなければ「重大なセキュリティ問題は見つかりませんでした」と書いてください。
+            秘密の値、秘密鍵、パスワードは出力しないでください。
 
             確認すること:
             - ログインや権限の抜け道がないか
@@ -47,13 +48,20 @@ jobs:
             - 個人情報や秘密情報が漏れないか
             - エラー表示で余計な情報を出していないか
             - 依存パッケージ変更に危険がないか
+        run: bash .github/scripts/run-devin-review.sh
+
+      # レビューは補助なので、落ちても CI を赤にせず警告だけ残す（失敗通知で埋もれさせない）
+      - name: Warn on Devin failure
+        if: steps.devin.outcome == 'failure'
+        run: echo "::warning::Devin CLI の実行に失敗しました。ログを確認してください"
 
       - name: Comment security review result
+        if: steps.devin.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('node:fs');
-            const body = fs.readFileSync('codex-security-review.md', 'utf8').trim();
+            const body = fs.readFileSync('devin-security-review.md', 'utf8').trim();
             if (!body) return;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
