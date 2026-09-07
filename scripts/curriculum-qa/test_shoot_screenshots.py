@@ -1,0 +1,566 @@
+#!/usr/bin/env python3
+"""shoot_screenshots.py の退行テスト。
+
+この道具は「読者がその日に見る画面」を撮ることに全部を賭けている。境界が1つずれると、
+出てくる画像は今までと同じ「別の日の画面」に戻り、しかも撮れてしまうので誰も気づけない。
+ずれやすいのは次の4つで、ここで固定する。
+
+  - 赤枠と切り抜きの座標は `boundingBox()` から起こす。宣言表に手で座標を書けてしまうと、
+    UI が少し動いた回に枠がずれ、次に撮り直すまで誰も気づけない。
+  - 日別シードは day 番号で決まる。Day 06 で読者が自分のアカウントを1件足すので、
+    day05 と day06 の間に境界がある。裏を取っていない日は撮らせない。
+  - 宣言表の読み込みは、壊れた宣言で黙って0枚にならない。対象0件は「全部成功」に見える。
+  - 画角の指定は1つだけ。`full_page` と `clip` の両方を書けると、書いた人の思っている
+    画角と出てくる画像が食い違う。
+"""
+
+import io
+import json
+import os
+import queue
+import re
+import subprocess
+import sys
+import time
+import tempfile
+from contextlib import redirect_stderr
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+import shoot_screenshots as target  # noqa: E402
+
+WORKER = Path(__file__).with_name("shoot-page.mjs")
+
+
+def write_config(root: Path, shots: list[dict], viewport: dict | None = None) -> Path:
+    path = root / "shots.json"
+    path.write_text(
+        json.dumps({"viewport": viewport if viewport is not None else {"width": 1440, "height": 900}, "shots": shots}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return path
+
+
+def load_error(shots: list[dict]) -> str:
+    """壊れた宣言表を読ませて、返ってきた文言を返す。通ってしまったら空文字。"""
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            target.load_config(write_config(Path(d), shots))
+        except ValueError as e:
+            return str(e)
+    return ""
+
+
+BASE_SHOT = {"name": "day01/a.png", "day": 1, "path": "/"}
+
+
+# 立てるとブラウザ不在の SKIP を失敗にする。Chromium を用意しとる job だけが立てる。
+# 実ブラウザ検査が「実際に主張を通した」ことの合図。exit 0 だけでは空回りと区別が付かん。
+DRAWN_FRAME_PASS_MARK = re.compile(r"settle_drawn_frames 実ブラウザ検査 (\d+)/(\d+) 合格")
+
+REQUIRE_BROWSER_ENV = "CURRICULUM_QA_REQUIRE_BROWSER"
+
+
+def check_mark_rect_source() -> list[str]:
+    """赤枠の座標が boundingBox() 由来であることを固定する。"""
+    fails = []
+    source = WORKER.read_text(encoding="utf-8")
+    if "boundingBox()" not in source:
+        fails.append("❌ ワーカーが boundingBox() を呼んでいない")
+    if target.MARK_RECT_SOURCE != "boundingBox":
+        fails.append(f"❌ 座標の出どころが boundingBox でない: {target.MARK_RECT_SOURCE}")
+
+    # 一覧そのものが痩せていないことを先に見る。本体からキーを1つ消したときに
+    # 下のループも一緒に緩んで無検知になるのを防ぐ。
+    if set(target.FORBIDDEN_MARK_KEYS) != {"x", "y", "width", "height", "rect", "left", "top", "box"}:
+        fails.append(f"❌ 弾くキーの一覧が変わっている: {target.FORBIDDEN_MARK_KEYS}")
+
+    # 手で座標を書いた宣言は、どの綴りでも弾く。
+    for key in target.FORBIDDEN_MARK_KEYS:
+        shot = {**BASE_SHOT, "marks": [{"selector": ".a", key: 10}]}
+        msg = load_error([shot])
+        if not msg:
+            fails.append(f"❌ 赤枠に座標 {key} を書いた宣言が通ってしまう")
+        elif target.MARK_RECT_SOURCE not in msg:
+            fails.append(f"❌ {key} を弾いた説明が座標の出どころを指していない: {msg}")
+
+    # 切り抜きも同じ扱い。こちらだけ座標を書けると抜け道になる。
+    if not load_error([{**BASE_SHOT, "clip": {"selector": ".a", "x": 1}}]):
+        fails.append("❌ 切り抜きに座標を書いた宣言が通ってしまう")
+
+    # selector が無い赤枠は、何も指さない枠になる。
+    if not load_error([{**BASE_SHOT, "marks": [{"label": "ここ"}]}]):
+        fails.append("❌ selector の無い赤枠が通ってしまう")
+
+    # 正しい書き方は通り、座標を持たないこと。
+    with tempfile.TemporaryDirectory() as d:
+        config = target.load_config(write_config(Path(d), [{**BASE_SHOT, "marks": [{"selector": ".a", "label": "ここ"}]}]))
+    mark = config.shots[0].marks[0]
+    if tuple(mark._fields) != ("selector", "label"):
+        fails.append(f"❌ 赤枠が座標の欄を持っている: {mark._fields}")
+    return fails
+
+
+def check_day_seed_boundary() -> list[str]:
+    """日別シードが day 番号で決まることを固定する。"""
+    fails = []
+    # scan-day01-08.md (f): Day 01-05 はシードの4件だけ。読者が作ったものは0件。
+    for day in (1, 2, 3, 4, 5):
+        if len(target.seed_for_day(day).users) != 4:
+            fails.append(f"❌ day{day:02d} のユーザーが4件でない")
+    # Day 06 Step 10 で読者が自分のアカウントを1件登録する。
+    for day in (6, 7, 8):
+        seed = target.seed_for_day(day)
+        if len(seed.users) != 5:
+            fails.append(f"❌ day{day:02d} のユーザーが5件でない")
+        if target.READER_USER not in seed.users:
+            fails.append(f"❌ day{day:02d} に読者が登録したアカウントが入っていない")
+    # プロジェクト・タスク・コメントは Day 01-08 を通して変わらない。
+    for day in (1, 8):
+        seed = target.seed_for_day(day)
+        counts = (len(seed.projects), len(seed.tasks), len(seed.comments))
+        if counts != (2, 5, 2):
+            fails.append(f"❌ day{day:02d} の件数が (2, 5, 2) でない: {counts}")
+
+    # Day 18〜22 は読者がデータを作らない。`day19_...md:830` が Day 19 の時点の手元を
+    # 「初期データでは……1件ずつ」と名指しで書いており、day16 の記述と一致する。
+    for day in (18, 19, 20, 21, 22):
+        seed = target.seed_for_day(day)
+        counts = (len(seed.users), len(seed.projects), len(seed.tasks), len(seed.comments))
+        if counts != (5, 2, 5, 2):
+            fails.append(f"❌ day{day:02d} の件数が (5, 2, 5, 2) でない: {counts}")
+
+    # Day 23 の前提（`day23_...md:28`）が、自分を担当者にした完了タスクを作らせる。
+    # ここが欠けると週次レポートが「完了0件」になり、本文の説明と画面が食い違う。
+    for day in (23, 24, 30):
+        seed = target.seed_for_day(day)
+        if len(seed.tasks) != 8:
+            fails.append(f"❌ day{day:02d} のタスクが8件でない: {len(seed.tasks)}")
+        done = [t for t in seed.tasks if t["status"] == "DONE" and t["assigneeEmail"] == "admin@example.com"]
+        if len(done) != 3:
+            fails.append(f"❌ day{day:02d} に admin 担当の完了タスクが3件ない: {len(done)}")
+
+    # 裏を取っていない日は撮らせない。足りないデータで撮った画像は、
+    # 完成版で撮った画像と同じで「読者の画面ではないもの」を教材へ載せることになる。
+    # 上限そのものを書かずに `MAX_SEEDED_DAY` から起こすのは、裏を取った日が増えた回に
+    # 「実際は撮れる日」を撮れないことにして落ちるテストにしないため。
+    for day in (0, -1, target.MAX_SEEDED_DAY + 1, target.MAX_SEEDED_DAY + 10):
+        try:
+            target.seed_for_day(day)
+        except ValueError:
+            continue
+        fails.append(f"❌ 裏の無い day{day} のシードが取れてしまう")
+    return fails
+
+
+def check_config_loading() -> list[str]:
+    """壊れた宣言表で黙って0枚にならないことを固定する。"""
+    fails = []
+    cases = {
+        "名前が .png でない": {**BASE_SHOT, "name": "day01/a"},
+        "名前が外を指す": {**BASE_SHOT, "name": "../a.png"},
+        "day が数字でない": {**BASE_SHOT, "day": "1"},
+        "path が / で始まらない": {**BASE_SHOT, "path": "dashboard"},
+        "login に password が無い": {**BASE_SHOT, "login": {"email": "a@example.com"}},
+        "知らない操作": {**BASE_SHOT, "actions": [{"kind": "scroll", "selector": ".a"}]},
+        "fill に value が無い": {**BASE_SHOT, "actions": [{"kind": "fill", "selector": ".a"}]},
+        "full_page が真偽値でない": {**BASE_SHOT, "full_page": "yes"},
+        "clip の padding が負": {**BASE_SHOT, "clip": {"selector": ".a", "padding": -1}},
+        "stall が空の配列": {**BASE_SHOT, "stall": []},
+        "stall の中身が文字列でない": {**BASE_SHOT, "stall": [1]},
+        # 画角の指定は1つだけ。両方書けると、思っている画角と出てくる画像が食い違う。
+        "full_page と clip の同時指定": {**BASE_SHOT, "full_page": True, "clip": {"selector": ".a"}},
+    }
+    for why, shot in cases.items():
+        if not load_error([shot]):
+            fails.append(f"❌ {why} の宣言が通ってしまう")
+
+    # 同じ出力名を2度書くと、後から撮ったほうが前を黙って上書きする。
+    if not load_error([BASE_SHOT, {**BASE_SHOT, "path": "/dashboard"}]):
+        fails.append("❌ 同じ出力名を2度書いた宣言が通ってしまう")
+
+    # shots が空の宣言表は「対象0件で全部成功」に見える。
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            target.load_config(write_config(Path(d), []))
+            fails.append("❌ shots が空の宣言表が通ってしまう")
+        except ValueError:
+            pass
+
+    # 範囲外の day を指定したら止まる。黙って空を返すと全部成功に見える。
+    try:
+        target.select_days(99, False, [1, 2])
+        fails.append("❌ 宣言表に無い day の指定が通ってしまう")
+    except ValueError:
+        pass
+    try:
+        target.select_days(1, True, [1, 2])
+        fails.append("❌ --day と --all の同時指定が通ってしまう")
+    except ValueError:
+        pass
+    if target.select_days(None, True, [1, 4, 8]) != [1, 4, 8]:
+        fails.append("❌ --all が宣言表の day を全部返していない")
+    return fails
+
+
+def check_shipped_config() -> list[str]:
+    """同梱の宣言表が、いま撮れる範囲に収まっていることを確かめる。"""
+    fails = []
+    config = target.load_config()
+    for day in target.config_days(config):
+        try:
+            target.seed_for_day(day)
+        except ValueError as e:
+            fails.append(f"❌ 宣言表の day{day:02d} は撮れない: {e}")
+    for shot in config.shots:
+        if not shot.name.startswith(f"day{shot.day:02d}/"):
+            fails.append(f"❌ 出力名が day{shot.day:02d}/ で始まっていない: {shot.name}")
+    return fails
+
+
+def check_worker_isolation() -> list[str]:
+    """並べて撮るときに、ワーカー同士が DB とポートを取り合わないことを固定する。
+
+    ここが崩れると、片方が撮っている最中にもう片方が DB の中身を入れ替える。
+    出てくる画像は別の日のデータになるが、撮影自体は成功するので誰も気づけない。
+    """
+    fails = []
+    base = {"DATABASE_URL": "postgresql://user:password@localhost:25532/taskapp?schema=public"}
+    urls = {target.worker_env(base, w)["DATABASE_URL"] for w in range(target.MAX_WORKERS)}
+    if len(urls) != target.MAX_WORKERS:
+        fails.append(f"❌ ワーカーごとの DATABASE_URL が重なっている: {sorted(urls)}")
+    for url in urls:
+        if "localhost:25532" not in url or "schema=public" not in url:
+            fails.append(f"❌ DB 名以外まで書き換えている: {url}")
+    try:
+        target.worker_env({"DATABASE_URL": "mysql://x/y"}, 1)
+    except ValueError:
+        pass
+    else:
+        fails.append("❌ 読めない DATABASE_URL が素通りする")
+
+    # ポートの帯が重なると、空きを見つけてから next が握るまでの隙に取り合う。
+    bands = [range(target.BASE_PORT + w * target.PORT_SPAN, target.BASE_PORT + (w + 1) * target.PORT_SPAN)
+             for w in range(target.MAX_WORKERS)]
+    for i, a in enumerate(bands):
+        for b in bands[i + 1 :]:
+            if max(a.start, b.start) < min(a.stop, b.stop):
+                fails.append(f"❌ ポートの帯が重なっている: {a} と {b}")
+    if target.MAX_WORKERS < 1:
+        fails.append("❌ ワーカー数が 1 未満")
+    return fails
+
+
+def check_slot_exclusivity() -> list[str]:
+    """同時に走っとる日が同じスロットを掴まんことを見る。
+
+    以前は `i % workers` でスロットを配っとった。ThreadPoolExecutor は ID を
+    スレッドへ固定せんので、先に終わった日の後ろに同じ ID の日が入り込み、
+    2つの日が同時に `shoot_wN` を seed し合う。片方の撮影中にもう片方が
+    clearAll() を呼ぶので、別の日のデータが写った写真が出て、しかも成功と報告される。
+    ここでは実際に走らせて、同じスロットが二重に貸し出されんことを確かめる。
+    """
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    fails: list[str] = []
+    src = (Path(__file__).parent / "shoot_screenshots.py").read_text(encoding="utf-8")
+    # 説明コメントにも同じ字面が出るので、コードの行だけを見る
+    code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("#"))
+    if "% workers" in code:
+        fails.append("❌ スロットを剰余で配る書き方が戻っとる（同時実行で衝突する）")
+    if "slots.get()" not in code or "slots.put(" not in code:
+        fails.append("❌ スロットの貸し出し（slots.get / slots.put）が無くなっとる")
+
+    # 本体と同じ貸し出しの形を組んで、重複が起きひんことを実測する
+    workers = 3
+    slots: "queue.Queue[int]" = queue.Queue()
+    for slot in range(workers):
+        slots.put(slot)
+    live: dict[int, int] = {}
+    lock = threading.Lock()
+    seen_overlap: list[int] = []
+
+    def job(day: int) -> int:
+        slot = slots.get()
+        try:
+            with lock:
+                live[slot] = live.get(slot, 0) + 1
+                if live[slot] > 1:
+                    seen_overlap.append(slot)
+            # 日ごとに長さを変える。短い日が先に終わって次が滑り込む形を作る
+            time.sleep(0.01 * (1 + day % 4))
+            return slot
+        finally:
+            with lock:
+                live[slot] -= 1
+            slots.put(slot)
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(job, d) for d in range(30)]
+        for f in as_completed(futures):
+            f.result()
+
+    if seen_overlap:
+        fails.append(f"❌ 同じスロットが同時に2つの日へ貸し出された: {sorted(set(seen_overlap))}")
+    return fails
+
+
+def check_animation_settle() -> list[str]:
+    """撮る直前の待ちが、決め打ちの秒数やのうてアニメーションの終了に紐づいていること。
+
+    決め打ちの待ちへ戻すと、その秒数より長い遷移や、並列撮影で遅れた回が途中の絵のまま
+    保存される。撮影自体は成功するので、あとから誰も気づけん種類の壊れ方になる。
+    """
+    fails = []
+    source = WORKER.read_text(encoding="utf-8")
+
+    # 見るのは `shoot()` の中身だけにする。ファイル全体を見ると、呼び出しを消しても
+    # `async function settleAnimations(page)` という宣言の字面に当たって緑のまま通る。
+    # 死んだ助け関数が残っとることの証明にしかならん。
+    body = source.split("async function shoot(page, job, shot) {", 1)
+    if len(body) != 2:
+        return ["❌ shoot() が見つからない（この検査が対象を見失っている）"]
+    # **閉じ括弧まで切る。** ここを切らんと `body[1]` はモジュールの残り全部になり、
+    # `settleAnimations` の呼び出しを shoot() の外（あとの助け関数や main()）へ移しても
+    # 字面が残って緑のまま通る。撮り終えた後に待っても意味が無いのに検査が気づかん。
+    # 桁0の `\n}` で切るのは、このファイルのトップレベル関数がその形で終わるため
+    # （下の settleAnimations の取り出しと同じ流儀）。
+    shoot_body = body[1].split("\n}", 1)[0]
+
+    if "await settleAnimations(page);" not in shoot_body:
+        fails.append("❌ shoot() がアニメーションの収束を待っていない")
+    # 決め打ちの待ちが戻ってきたら弾く。窓の高さを変えたあとの測り直し（fitToContent）は
+    # 別の話なので、`shoot()` の外にあるぶんは対象にせん。
+    if "waitForTimeout" in shoot_body:
+        fails.append("❌ shoot() の中に決め打ちの待ちが戻っている")
+
+    # 待ち方そのものは助け関数の側にある。中身が空になっていないかを見る。
+    helper = source.split("async function settleAnimations(page) {", 1)
+    if len(helper) != 2:
+        fails.append("❌ settleAnimations が見つからない")
+    else:
+        waiter = helper[1].split("\n}", 1)[0]
+        if "getAnimations()" not in waiter:
+            fails.append("❌ 待つ相手を getAnimations() で見ていない")
+        if "iterations === Infinity" not in waiter:
+            fails.append("❌ 無限に回るアニメーションを待つ相手から外していない")
+        # 待ち時間切れ以外まで握り潰すと、評価エラーやページ破棄が「警告つきで撮れた」に
+        # 化ける。撮れた画像は残るので、誰も失敗に気づけん。
+        if "catch {" in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ settleAnimations が例外を種類を見ずに握り潰している")
+        if "errors.TimeoutError" not in helper[1].split("\n}", 1)[0]:
+            fails.append("❌ 待ち時間切れ以外の例外を再送出していない")
+        # 無限アニメーションは「待たん」だけでは足りん。止めて位相を固定せんと、
+        # ローディング画面（day09 / day21 / day23 / day29 の *-loading.png は
+        # `animate-spin` のスピナーを写す）は撮るたびに別の角度になる。
+        if "animation.pause()" not in waiter:
+            fails.append("❌ 無限アニメーションを止めずに撮っている（毎回別の角度で写る）")
+        if "animation.currentTime = 0" not in waiter:
+            fails.append("❌ 無限アニメーションの位相を固定していない")
+    if "import { chromium, errors } from 'playwright';" not in source:
+        fails.append("❌ playwright の errors を取り込んでいない（TimeoutError を見分けられない）")
+    return fails
+
+
+def check_worker_warning_forwarding() -> list[str]:
+    """ワーカーの警告が、撮影が成功した回にも表へ出ること。
+
+    アニメーションが止まらんかった等の警告は stderr にしか出ん。成功時に捨てると、
+    残るのは「撮れた」の一言だけになり、途中の絵が保存されたことに誰も気づけん。
+    """
+    fails = []
+    captured = io.StringIO()
+    with redirect_stderr(captured):
+        target.forward_worker_warnings("アニメーションが 2000ms で止まりませんでした\n\n", "day07")
+    out = captured.getvalue()
+    if "day07" not in out:
+        fails.append("❌ 警告にどの日のものか出ていない")
+    if "止まりませんでした" not in out:
+        fails.append("❌ ワーカーの警告が表へ出ていない")
+    if out.count("\n") != 1:
+        fails.append("❌ 空行まで流している（警告だけを出すこと）")
+
+    # 呼び出しが消えたら、助け関数が残っていても意味が無い。成功して返す経路に
+    # 挟まっとることまで見る。
+    body = Path(target.__file__).read_text(encoding="utf-8").split(
+        "def run_worker(job: dict[str, Any], label: str)", 1
+    )
+    if len(body) != 2:
+        fails.append("❌ run_worker が見つからない（この検査が対象を見失っている）")
+    else:
+        run_body = body[1].split("\ndef ", 1)[0]
+        if "forward_worker_warnings(proc.stderr, label)" not in run_body:
+            fails.append("❌ run_worker が成功時に stderr を捨てている")
+    return fails
+
+
+
+def check_drawn_frame_settle() -> list[str]:
+    """JS で1フレームずつ描くアニメーションの収束待ちを、実物のブラウザで確かめる。
+
+    Recharts（day22・day23 のグラフ）は react-smooth が `requestAnimationFrame` で
+    属性を書き換えて動かすので、`document.getAnimations()` には出てこん。せやから
+    ソースの文字列を見るだけの検査では「描き終わるまで待てとるか」を言えん。ここだけは
+    実際にブラウザで動かして、描きかけの形で止まらんことを見る。
+
+    ブラウザが無い機械では退けるが、**黙って通さん**。退けたことを出力に残す。
+    """
+    script = Path(__file__).resolve().parent / "settle-drawn-frames-check.mjs"
+    if not script.exists():
+        return ["❌ 実ブラウザ検査（settle-drawn-frames-check.mjs）が見当たらない"]
+    try:
+        proc = subprocess.run(
+            ["node", str(script)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=script.parent,
+        )
+    except subprocess.TimeoutExpired as expired:
+        # 時間切れをそのまま投げると main() まで抜けて、自己テストが件数も理由も出さずに
+        # 落ちる。「検査が黙って終わる」のはこの PR が潰しとる型そのものなので、
+        # 失敗として数えられる形で返す。途中まで出た分も添える。
+        partial = "".join(
+            stream.decode(errors="replace") if isinstance(stream, bytes) else (stream or "")
+            for stream in (expired.stdout, expired.stderr)
+        ).strip()
+        return [f"❌ 実ブラウザ検査が {expired.timeout} 秒で終わらんかった: {partial[-300:] or '出力なし'}"]
+    except FileNotFoundError as missing:
+        # node が PATH に無いと subprocess.run が送出する。そのまま抜けると main() が
+        # 件数も理由も出さずに落ちる。ブラウザの不在（SKIP）とは別物で、走らせる道具が
+        # 無いのは検査の失敗として数える。
+        return [f"❌ 実ブラウザ検査を起動できんかった: {missing}"]
+    out = (proc.stdout + proc.stderr).strip()
+    if proc.returncode != 0:
+        return [f"❌ 実ブラウザ検査が落ちた: {out.splitlines()[-3:]}"]
+    if out.startswith("SKIP:") or "\nSKIP:" in out:
+        reason = out.splitlines()[0]
+        # ブラウザのある機械では、退けたこと自体を失敗にできる。ここを付けんと、
+        # Chromium を入れてへん CI では毎回 SKIP が緑で通り、**実ブラウザの主張が
+        # 一度も走らんまま**マージできてしまう。ブラウザを用意しとる job だけが
+        # この環境変数を立てる。
+        if require_browser_check():
+            return [f"❌ ブラウザ必須の走行なのに実ブラウザ検査を退けた: {reason}"]
+        print(f"  ⏭️ 実ブラウザ検査を退けた: {reason}")
+        return []
+    # exit 0 だけでは「4本の主張が実際に走った」ことにならん。ワーカーが空回りする
+    # 実装へ縮んでも黙って緑になる。合格の合図を必ず要求する。件数を決め打ちにせんのは、
+    # 主張を足したときにここが嘘になるため。合格数と総数が一致することだけを見る。
+    passed = DRAWN_FRAME_PASS_MARK.search(out)
+    if passed is None:
+        return [f"❌ 実ブラウザ検査の合格の合図が出ていない: {out.splitlines()[-3:] or '出力なし'}"]
+    done, total = int(passed.group(1)), int(passed.group(2))
+    if total == 0 or done != total:
+        return [f"❌ 実ブラウザ検査が全部は通っていない: {done}/{total}"]
+    return []
+
+
+def check_node_missing_is_reported() -> list[str]:
+    """Node を起動できないとき、例外を自己テストの失敗へ変換すること。"""
+    original_run = target.subprocess.run
+
+    def missing_node(*args: object, **kwargs: object) -> None:
+        raise FileNotFoundError(2, "No such file or directory", "node")
+
+    try:
+        target.subprocess.run = missing_node
+        failures = check_drawn_frame_settle()
+    finally:
+        target.subprocess.run = original_run
+    if len(failures) != 1 or "起動できんかった" not in failures[0] or "'node'" not in failures[0]:
+        return [f"❌ Node 不在の理由が失敗として返っていない: {failures!r}"]
+    return []
+
+
+def check_browser_success_requires_sentinel() -> list[str]:
+    """ブラウザ検査が成功終了しても、4/4の実測結果が無ければ通さないこと。"""
+    original_run = target.subprocess.run
+    original_env = os.environ.get(REQUIRE_BROWSER_ENV)
+
+    def successful_noop(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["node"], 0, stdout="success", stderr="")
+
+    try:
+        target.subprocess.run = successful_noop
+        os.environ[REQUIRE_BROWSER_ENV] = "1"
+        failures = check_drawn_frame_settle()
+    finally:
+        target.subprocess.run = original_run
+        if original_env is None:
+            os.environ.pop(REQUIRE_BROWSER_ENV, None)
+        else:
+            os.environ[REQUIRE_BROWSER_ENV] = original_env
+    if len(failures) != 1 or "合格の合図が出ていない" not in failures[0]:
+        return [f"❌ 合格の合図の無い成功を失敗にできていない: {failures!r}"]
+    return []
+
+
+def require_browser_check(env: dict[str, str] | None = None) -> bool:
+    """実ブラウザ検査の SKIP を失敗として扱うか。
+
+    許可値だけを見る。「これ以外は無効」にせんと、綴り間違い（`ture` 等）で
+    静かに緩む側へ倒れる。既定は「立てん」で、ブラウザのある job だけが立てる。
+    """
+    raw = (env if env is not None else os.environ).get(REQUIRE_BROWSER_ENV, "").strip().lower()
+    return raw in ("1", "true", "yes")
+
+
+def check_require_browser_switch() -> list[str]:
+    """ブラウザ必須の走行では、SKIP を緑にせんこと。
+
+    Chromium を入れてへん CI では実ブラウザ検査が毎回 SKIP になる。そこが黙って
+    緑のままやと、この PR で足した rAF の収束待ちが**一度も実測されんまま**マージできる。
+    ブラウザを用意しとる job だけが環境変数を立てて、退けたこと自体を失敗にする。
+    """
+    fails = []
+    cases = {
+        "1": True, "true": True, "TRUE": True, "yes": True, " 1 ": True,
+        "": False, "0": False, "false": False, "no": False,
+        # 綴り間違いは「緩む側」やのうて既定（立てん）へ倒す。ここを拒否リストで
+        # 書くと、想定してへん値が全部「必須」になって CI が理由なく赤くなる。
+        "ture": False,
+    }
+    for raw, expected in cases.items():
+        actual = require_browser_check({REQUIRE_BROWSER_ENV: raw})
+        if actual is not expected:
+            fails.append(f"❌ {REQUIRE_BROWSER_ENV}={raw!r} の判定が {actual}（期待 {expected}）")
+    if require_browser_check({}):
+        fails.append("❌ 環境変数が無い走行までブラウザ必須にしている")
+    return fails
+
+
+CHECKS = (
+    ("赤枠と切り抜きの座標の出どころ", check_mark_rect_source),
+    ("日別シードの境界", check_day_seed_boundary),
+    ("宣言表の読み込み", check_config_loading),
+    ("同梱の宣言表", check_shipped_config),
+    ("ワーカーの分離", check_worker_isolation),
+    ("スロットの排他", check_slot_exclusivity),
+    ("アニメーションの収束待ち", check_animation_settle),
+    ("ワーカーの警告の転送", check_worker_warning_forwarding),
+    ("描画の収束待ち（実ブラウザ）", check_drawn_frame_settle),
+    ("Node 不在時のエラー", check_node_missing_is_reported),
+    ("実ブラウザ検査の成功結果", check_browser_success_requires_sentinel),
+    ("ブラウザ必須の切り替え", check_require_browser_switch),
+)
+
+
+def main() -> int:
+    failed = 0
+    for name, check in CHECKS:
+        fails = check()
+        for msg in fails:
+            print(f"  {msg}（{name}）")
+        failed += 1 if fails else 0
+    total = len(CHECKS)
+    if failed:
+        print(f"❌ shoot_screenshots 自己テスト {total - failed}/{total} 合格")
+        return 1
+    print(f"✅ shoot_screenshots 自己テスト {total}/{total} 合格")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

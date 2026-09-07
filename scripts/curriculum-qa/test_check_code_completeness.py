@@ -38,9 +38,10 @@ FP = '// filepath: src/app/page.tsx'
 
 # filepath: が無いと警告が出る言語。1つ外されると警告が消えて教材が素通りする。
 FILEPATH_REQUIRED_LANGS = ('typescript', 'javascript', 'tsx', 'jsx', 'ts', 'js')
-# ブロックごと検査を飛ばす言語。ここへ言語を足すと、その言語の省略コメントも
-# パート分割も一切見なくなる。増えていないことを見る。
-SKIPPED_LANGS = ('mermaid', 'bash', 'shell', 'sh', 'zsh')
+# filepath 目印を求めない言語。求めないのはその1点だけで、省略コメントと
+# パート分割は言語に関わらず見る。以前はここでブロックごと `continue` していて、
+# `bash` に `// 省略` と書いた教材が素通りしていた（#369 ①）。
+FILEPATH_EXEMPT_LANGS = ('mermaid', 'bash', 'shell', 'sh', 'zsh')
 
 # 本体に登録されている禁止パターンの数。減っていたら検出が緩められている。
 PART_PATTERN_COUNT = 4
@@ -194,6 +195,18 @@ CASES: list[tuple[str, str, Result]] = [
         block('tsx', FP, 'const a = 1;') + 'この節はパート1/2に分けています。\n',
         Result(True, 1, 1, 0, 0),
     ),
+    # 属性付きフェンス。自前の ```` ```(\w+)?\n ```` では開きフェンスが本文扱いになり、
+    # 以降の対がずれてブロック数が 1 に落ちていた。ずれた先は丸ごと無検査になる（#369 ②）。
+    (
+        '属性付きフェンスでもフェンスの対がずれない',
+        '```text title="post"\n// 省略\n```\n\n' + block('tsx', 'const a = 1;'),
+        Result(False, 2, 0, 1, 1),
+    ),
+    (
+        'チルダのフェンスも1ブロックとして数える',
+        '~~~text\n// 省略\n~~~\n',
+        Result(False, 1, 0, 1, 0),
+    ),
     (
         'JSX コメント形式の filepath も数える',
         block('tsx', '{/* filepath: src/app/page.tsx */}', 'const a = 1;'),
@@ -288,12 +301,21 @@ def main() -> int:
             failed += 1
             print(f'  ❌ {lang} で filepath 警告が出ていません → {got}')
 
-    # 5. 検査対象外の言語が増やされていないか。増えるとその言語は素通りする。
-    for lang in SKIPPED_LANGS:
+    # 5. filepath 目印を求めない言語が増やされていないか。増えるとその言語は
+    #    filepath 欠落を報告しなくなる。
+    for lang in FILEPATH_EXEMPT_LANGS:
         got = run(block(lang, '# filepath: scripts/setup.sh', 'echo hi'))
         if got.with_filepath != 0 or got.errors or got.warnings:
             failed += 1
-            print(f'  ❌ {lang} が検査対象外として扱われていません → {got}')
+            print(f'  ❌ {lang} で filepath 目印が要求されています → {got}')
+
+    # 5b. filepath を求めない言語でも、省略コメントは見る。ここを飛ばすと
+    #     `bash` に `// 省略` と書いた教材が緑のまま出荷される（#369 ①）。
+    for lang in FILEPATH_EXEMPT_LANGS:
+        got = run(block(lang, '// 省略'))
+        if got.ok or got.errors != 1:
+            failed += 1
+            print(f'  ❌ {lang} の省略コメントが見逃されています → {got}')
 
     # 6. 表駆動のふるまい確認。
     for name, text, expected in CASES:
@@ -315,7 +337,8 @@ def main() -> int:
         + len(DETECTION_SAMPLES)
         + len(NON_DETECTION_SAMPLES)
         + len(FILEPATH_REQUIRED_LANGS)
-        + len(SKIPPED_LANGS)
+        + len(FILEPATH_EXEMPT_LANGS)
+        + len(FILEPATH_EXEMPT_LANGS)
         + len(CASES)
         + 2
     )

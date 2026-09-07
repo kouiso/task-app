@@ -1,1 +1,2 @@
-../../prompt/instructions/core-mission.instructions.md
+作業量・複雑さを理由にタスクを縮小しない。影響範囲は「他にも似たファイルがあるかも」と疑って全検索してから直す。UI操作依頼・「確認してください」は禁止、プログラム的に自分で検証する。
+詳細: skill `rule-core-mission`

@@ -1,1 +1,0 @@
-../../prompt/instructions/quality.instructions.md

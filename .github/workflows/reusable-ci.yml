@@ -40,8 +40,14 @@ jobs:
           POSTGRES_DB: taskapp_test
         ports:
           - 5432:5432
+        # -d を書かんと pg_isready は接続先の DB 名をユーザー名で埋める。
+        # POSTGRES_DB は taskapp_test なので "user" という DB を探しに行き、
+        # FATAL: database "user" does not exist を繰り返してサービスが healthy に
+        # ならず、ジョブが落ちる（実測: 5s 間隔で20回。ci / setup が赤の原因）。
+        # なお options は折り畳みスカラーなので、この注記を中へ入れると
+        # `#` がコメントにならず docker への引数に混ざる。必ず外に置く。
         options: >-
-          --health-cmd "pg_isready -U user"
+          --health-cmd "pg_isready -U user -d taskapp_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5

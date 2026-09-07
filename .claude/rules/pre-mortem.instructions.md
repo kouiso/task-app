@@ -1,1 +1,0 @@
-../../prompt/instructions/pre-mortem.instructions.md

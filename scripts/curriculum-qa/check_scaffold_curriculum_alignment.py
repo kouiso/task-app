@@ -18,7 +18,8 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from curriculum_blocks import FILEPATH, filepath_value  # noqa: E402
+from curriculum_blocks import filepath_value, first_filepath_match  # noqa: E402
+from markdown_scan import code_blocks  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATERIAL_DIR = REPO_ROOT / "material" / "30days-curriculum"
@@ -79,16 +80,22 @@ def curriculum_creates_by_day() -> dict[int, set[str]]:
     for md in MATERIAL_DIR.glob("day*.md"):
         n = day_number(md)
         content = md.read_text(encoding="utf-8")
-        for block in re.finditer(r"```(?:\w+)?\n(.*?)```", content, re.DOTALL):
-            lines = block.group(1).split("\n")
-            if lines:
-                # 目印は `// filepath:` と `{/* filepath: */}` の2通りある。JSX の
-                # 子要素の位置では `//` がコメントにならないためで、片方しか読めないと
-                # 「その日にそのファイルを作った」ことを取り落とす。判定は抽出側と
-                # 共通の FILEPATH に寄せて、2つの判定が割れないようにする。
-                m = FILEPATH.match(lines[0])
-                if m:
-                    by_day[n].add(filepath_value(m))
+        # フェンスの抽出は markdown_scan に寄せる。自前の ```` ```(?:\w+)?\n ```` は
+        # ```` ```tsx title="..." ```` のような属性付きフェンスに一致せず、以降の対が
+        # ずれる。ずれた先の filepath 目印は「その日に作られていない」ことになり、
+        # 順序の検査が黙って素通りする。
+        for _lang, body in code_blocks(content):
+            # 目印は `// filepath:` と `{/* filepath: */}` の2通りある。JSX の
+            # 子要素の位置では `//` がコメントにならないためで、片方しか読めないと
+            # 「その日にそのファイルを作った」ことを取り落とす。判定は抽出側と
+            # 共通の FILEPATH に寄せて、2つの判定が割れないようにする。
+            #
+            # 先頭行だけを見ると、`'use client';` のような行が上に来たブロックの
+            # 目印を取り落とす。`has_filepath_marker` と同じ `first_filepath_match`
+            # から採り、有無の判定と値の取り出しが割れないようにする。
+            m = first_filepath_match("\n".join(line for _lineno, line in body))
+            if m:
+                by_day[n].add(filepath_value(m))
     return dict(by_day)
 
 

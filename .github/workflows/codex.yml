@@ -12,7 +12,12 @@ on:
 
 jobs:
   codex:
+    # 他2本（codex-code-review.yml / codex-security-review.yml）と同じガード。
+    # これが無いと、Codex を無効にしていてもメンションだけでジョブが起動し、
+    # openai/codex-action が read_server_info で必ず失敗して CI が赤くなる。
+    # 赤が常態になるとレビューの信号が読めなくなるので、3本で条件を揃える。
     if: |
+      vars.CODEX_REVIEW_ENABLED == 'true' &&
       !endsWith(github.actor, '[bot]') &&
       (
         (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@codex')) ||

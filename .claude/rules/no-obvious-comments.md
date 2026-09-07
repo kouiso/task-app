@@ -1,1 +1,0 @@
-../../prompt/instructions/no-obvious-comments.md

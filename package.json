@@ -86,6 +86,10 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
     "@biomejs/biome": "^2.4.15",
+    "@expo-google-fonts/biz-udpgothic": "0.4.2",
+    "@expo-google-fonts/jetbrains-mono": "0.4.1",
+    "@fontsource/dejavu-sans": "5.3.0",
+    "@fontsource/noto-emoji": "5.3.0",
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^16.2.6",
     "@playwright/test": "^1.56.1",
@@ -129,6 +133,7 @@
     "postcss": "8.5.23",
     "sharp": "0.35.3",
     "tmp": "0.2.7",
-    "@radix-ui/react-presence": "1.1.5"
+    "@radix-ui/react-presence": "1.1.5",
+    "@puppeteer/browsers": "3.2.0"
   }
 }

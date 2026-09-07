@@ -58,23 +58,28 @@
 ## 学習リソース
 
 ### JavaScript / TypeScript基礎
+
 - [MDN Web Docs](https://developer.mozilla.org/ja/) - Web技術の包括的なリファレンス（日本語対応）
 - [JavaScript Primer](https://jsprimer.net/) - JavaScript入門書（日本語、無料）
 - [サバイバルTypeScript](https://typescriptbook.jp/) - TypeScript入門書（日本語、無料）
 
 ### React / Next.js
+
 - [React公式チュートリアル](https://react.dev/learn) - 三目並べゲームを作りながら学ぶ
 - [Next.js公式チュートリアル](https://nextjs.org/learn) - ダッシュボードアプリを作りながら学ぶ
 
 ### データベース
+
 - [Prisma公式チュートリアル](https://www.prisma.io/docs/getting-started) - Prismaの基本操作
 - [SQLBolt](https://sqlbolt.com/) - SQLの基礎を対話的に学ぶ（英語）
 
 ### Git
+
 - [Git公式チュートリアル](https://git-scm.com/book/ja/v2) - Pro Git日本語版（無料）
 - [Learn Git Branching](https://learngitbranching.js.org/?locale=ja) - ブランチ操作を視覚的に学ぶ
 
 ### テスト
+
 - [Vitest公式ガイド](https://vitest.dev/guide/) - テストの基本的な書き方
 - [Testing Library](https://testing-library.com/docs/) - UIテストのベストプラクティス
 

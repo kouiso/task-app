@@ -8,11 +8,11 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 
 ## 今日のゴール
 
-プロジェクト一覧から1件を選ぶと、同じ `/project` ページの中で **一覧表示から詳細表示へ切り替わる UI** を実装します。詳細画面では次の情報を扱います。
+プロジェクト一覧から1件を選ぶと、同じ `/project` ページの中で **一覧表示から詳細表示へ切り替わる UI** を、完成形と照合して仕上げます。詳細画面では次の情報を扱います。
 
-![プロジェクト詳細画面の完成イメージ](./screenshots/project-detail-tasks.png)
+![プロジェクト詳細画面。左にメンバー一覧、右にタスク一覧が並び、上にプロジェクト名と説明が出ている](./screenshots/day27/project-detail.png)
 
-![別のプロジェクトの詳細画面。右上にアーカイブボタンがある](./screenshots/project-detail-archive-action.png)
+![同じ詳細画面。赤枠の中に、右上のアーカイブボタンが出ている](./screenshots/day27/project-detail-archive.png)
 
 - プロジェクト名・色・説明
 - メンバー一覧
@@ -29,9 +29,10 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 > handler、Props を追加し直してはいけません。
 > 不足がある場合だけ、該当箇所を補ってください。
 >
-> `project-detail-view.tsx` は Day 01 の配布物に完成した形で入っています。
+> `project-detail-view.tsx` は写経の土台に完成した形で含まれています。
+> Day 01 で `scaffold-from-scratch.sh` を走らせた時点で、手元に置かれています。
+> 販売用 ZIP に入るのはこの土台までで、完成版の `src/` 一式は入っていません。
 > この Day のコードブロックは**読んで見比べるためのもの**で、書き写す必要はありません。
-> 「保存できない」「エラーが出る」といった記述も、書き写した場合の話として読んでください。
 
 ## なぜこれを作るのか
 
@@ -68,7 +69,7 @@ flowchart TD
 | やること | やらないこと |
 |---------|-------------|
 | 一覧 ↔ 詳細の表示切り替え | 詳細モーダルの新規採用 |
-| 配布済みの `ProjectDetailView` に詳細表示を書き足す | タスクの編集機能 |
+| 配布済みの `ProjectDetailView` の中身を完成形と照合する | タスクの編集機能 |
 | アーカイブ / アーカイブ解除 | アーカイブ専用ページの新設 |
 | メンバー追加・削除の導線 | メンバー権限変更 UI |
 
@@ -95,12 +96,12 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
-| Step 1 | アーカイブ API を確認・実装する | 5分 | `src/server/api/routers/project.ts` | `archive` / `unarchive` が呼べる |
-| Step 2 | 一覧 ↔ 詳細の切り替えを作る | 8分 | `src/app/project/page.tsx` | カードクリックで詳細へ切り替わる |
-| Step 3 | `ProjectDetailView` の型と骨格を作る | 8分 | `src/component/project/project-detail-view.tsx` | 戻るボタン付きの詳細画面が出る |
-| Step 4 | メンバー一覧とタスク一覧を表示する | 10分 | `project-detail-view.tsx` | 主要情報が確認できる |
-| Step 5 | アーカイブ / アーカイブ解除をつなぐ | 5分 | `page.tsx`, `project-detail-view.tsx` | ボタンで状態が切り替わる |
-| Step 6 | 補助ダイアログと完成形を整える | 5分 | `src/app/project/page.tsx` | メンバー追加・削除確認も動く |
+| Step 1 | アーカイブ API の完成形を読む | 5分 | `src/server/api/routers/project.ts` | `archive` / `unarchive` が呼べる |
+| Step 2 | 一覧 ↔ 詳細の切り替えを読む | 8分 | `src/app/project/page.tsx` | カードクリックで詳細へ切り替わる |
+| Step 3 | `ProjectDetailView` の型と骨格を確かめる | 8分 | `src/component/project/project-detail-view.tsx` | 戻るボタン付きの詳細画面が出る |
+| Step 4 | メンバー一覧とタスク一覧の表示を確かめる | 10分 | `project-detail-view.tsx` | 主要情報が確認できる |
+| Step 5 | アーカイブのつなぎ込みを確かめる | 5分 | `page.tsx`, `project-detail-view.tsx` | ボタンで状態が切り替わる |
+| Step 6 | 補助ダイアログの置き場所を確かめる | 5分 | `src/app/project/page.tsx` | メンバー追加・削除確認も動く |
 
 **合計時間**: 約41分です。
 
@@ -108,7 +109,7 @@ flowchart TD
 
 ---
 
-### Step 1: アーカイブ API を確認・実装する (5分)
+### Step 1: アーカイブ API の完成形を読む (5分)
 
 **ゴール**: `project.archive` と `project.unarchive` で `isArchived` を切り替えられるようにします。
 
@@ -164,7 +165,20 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 - 権限確認は `prisma.project` ではなく `prisma.projectMember` で行う
 - `assertMemberPermission(..., 'canArchive')` でアーカイブ権限を明示する
 
-`prisma.project` を引いても、そのユーザーがそのプロジェクトの何なのかは分かりません。役割が載っているのは `ProjectMember` の行のほうです。`assertMemberPermission` は渡された配列の先頭を見て、行が1つも無ければ `FORBIDDEN` を返します。だから `findUnique` が `null` を返す「そもそも参加していない人」は、ここで止まります。第2引数の `'canArchive'` を渡すと、役割の中身まで見ます。`canArchive` が `true` の役割は `OWNER` だけなので、管理者でもアーカイブはできません。この引数を省くと「メンバーなら誰でもアーカイブできる」に意味が変わってしまいます。
+`prisma.project` を引いても、そのユーザーがそのプロジェクトの何なのかは分かりません。役割が載っているのは `ProjectMember` の行のほうです。
+
+```mermaid
+flowchart TB
+    U["User<br/>名前・メール"] --- M["ProjectMember<br/>userId / projectId / role"]
+    P["Project<br/>name / description / isArchived<br/>役割は載っていない"] --- M
+    M --> Q{"role の canArchive は true か"}
+    Q -->|"OWNER"| OK["アーカイブできる"]
+    Q -->|"行が無い / 他の役割"| NG["FORBIDDEN"]
+```
+
+役割が載っているのは `ProjectMember` だけで、上の2つには入っていません。行が1つも見つからない人は、そのプロジェクトに参加していない人です。
+
+`assertMemberPermission` は渡された配列の先頭を見て、行が1つも無ければ `FORBIDDEN` を返します。だから `findUnique` が `null` を返す「そもそも参加していない人」は、ここで止まります。第2引数の `'canArchive'` を渡すと、役割の中身まで見ます。`canArchive` が `true` の役割は `OWNER` だけなので、管理者でもアーカイブはできません。この引数を省くと「メンバーなら誰でもアーカイブできる」に意味が変わってしまいます。
 
 ルーター本体はシンプルです。
 
@@ -193,7 +207,7 @@ unarchive: protectedProcedure
 
 ---
 
-### Step 2: 一覧 ↔ 詳細の切り替えを作る (8分)
+### Step 2: 一覧 ↔ 詳細の切り替えを読む (8分)
 
 **ゴール**: 一覧カードをクリックしたら URL の `projectId` を更新し、同じ `/project` ページ内で詳細表示へ切り替えます。
 
@@ -286,9 +300,9 @@ if (projectIdParam && selectedProject) {
 
 ---
 
-### Step 3: `ProjectDetailView` の型と骨格を作る (8分)
+### Step 3: `ProjectDetailView` の型と骨格を確かめる (8分)
 
-**ゴール**: モーダルではなく、ページ内に表示する詳細ビューコンポーネントを作ります。
+**ゴール**: モーダルではなく、ページ内に表示する詳細ビューコンポーネントの中身を読みます。
 
 Day 12 で作成済みのファイルを削除したり、
 5 props の旧形式へ置き換えたりしないでください。
@@ -319,18 +333,17 @@ interface ProjectDetailViewProps {
   onBack: () => void;
   onAddMemberClick: () => void;
   onRemoveMember: (userId: string) => void;
-  onUpdateMemberRole?: (
+  onUpdateMemberRole: (
     userId: string,
     role: ProjectMemberRole,
   ) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
-  canManageMembers?: boolean;
-  canArchive?: boolean;
+  canManageMembers: boolean;
+  canArchive: boolean;
 }
 ```
 
-末尾の3つに `?` が付いているのは、Day 11 の呼び出しがこの3つを渡さないためです。
-必須にすると Day 11 で書いた記述が型エラーになります。
+8つとも `?` を付けていません。つまり全部必須です。`?` は「渡さなくてもよい」という意味で、渡し忘れても型検査が通ります。`canManageMembers` のような権限の値でそれをやると、渡し忘れがそのまま「ボタンが出ない」という不具合になり、しかもエラーは出ません。必須にしておけば、呼ぶ側が忘れた時点でエラーが出ます。Day 11 の呼び出し（`onUpdateMemberRole={() => {}}` など）はこの8つを全部渡しているので、必須にしても型エラーにはなりません。
 
 8つと聞くと多く感じますが、中身は2種類しかありません。`projectDetail` と `canManageMembers` / `canArchive` は「表示に必要な材料」、`on` で始まる5つは「押されたことを親に伝える窓口」です。裏を返すと、`ProjectDetailView` は mutation を1つも持ちません。通信も権限の判定もこの部品の仕事ではありません。Day 15 以降で使ってきたコールバック Props と同じ考え方で、判断は `page.tsx` に集めます。こう分けておくと、あとで詳細を別ページへ移したくなったときも、この部品はそのまま持っていけます。
 
@@ -384,7 +397,7 @@ return (
 
 先に外枠だけを置いています。上から順に、戻るボタンと色の丸と名前を1行に並べたヘッダー、説明文、そして下半分に来る2カラムの入れ物、という3段構えです。`projectDetail.description && (...)` としてあるので、説明が空のプロジェクトでは段落そのものが出ません。空の `<p>` が残って行間だけ空くのを防げます。`lg:grid-cols-2` は Day 09 のグリッドと同じ考え方で、画面が広いときだけ横2列にします。スマートフォンの幅ではメンバーとタスクが縦に積まれます。
 
-なお最後の `<div className="grid ...">` は開いたままです。閉じタグが足りない状態なので、この時点では保存してもエラーが出ます。続きを次のブロックで書きます。
+なお最後の `<div className="grid ...">` は開いたままです。閉じタグは次のブロックにあります。手元のファイルではすでに閉じているので、そちらと見比べてください。
 
 ```tsx
       {/* filepath: src/component/project/project-detail-view.tsx（同じファイルの続き） */}
@@ -394,7 +407,7 @@ return (
 );
 ```
 
-閉じタグが2つ並ぶだけのブロックですが、どれがどれを閉じるかを数えておいてください。1つ目の `</div>` が `grid gap-6 lg:grid-cols-2` を、2つ目が一番外側の `flex flex-col gap-6` を閉じます。JSX は開いたタグが閉じていないとビルドで止まるため、ここまで書いて初めてファイルが保存できる状態になります。中のコメント行は Step 4 で中身に置き換える目印で、このままでも表示は崩れません。2カラムの入れ物だけが先にあり、そこに入るカードがまだ無い状態です。
+閉じタグが2つ並ぶだけのブロックですが、どれがどれを閉じるかを数えておいてください。1つ目の `</div>` が `grid gap-6 lg:grid-cols-2` を、2つ目が一番外側の `flex flex-col gap-6` を閉じます。JSX は開いたタグが閉じていないとビルドで止まるので、この2行がそろって初めてファイルが成り立ちます。中のコメント行は Step 4 で読む中身の目印です。2カラムの入れ物があり、そこにカードが入る、という並びを頭に入れておいてください。
 
 **確認ポイント**
 
@@ -404,9 +417,9 @@ return (
 
 ---
 
-### Step 4: メンバー一覧とタスク一覧を表示する (10分)
+### Step 4: メンバー一覧とタスク一覧の表示を確かめる (10分)
 
-**ゴール**: `ProjectDetailView` の中に、メンバー一覧とタスク一覧の 2 つのカードを配置します。ここで作るのは完成版を少し削った形です。削ってある部分は、それぞれのカードを書き終えたところで説明します。
+**ゴール**: `ProjectDetailView` の中に並ぶ、メンバー一覧とタスク一覧の 2 つのカードを読みます。ここに載せるのは完成版を少し削った形です。削ってある部分は、それぞれのカードの後ろで説明します。
 
 Day 12 で実装済みなら、以下は読み比べだけ行います。
 既存の権限制御やロール変更 UI を残してください。
@@ -535,7 +548,7 @@ Day 12 で実装済みなら、以下は読み比べだけ行います。
 
 ---
 
-### Step 5: アーカイブ / アーカイブ解除をつなぐ (5分)
+### Step 5: アーカイブのつなぎ込みを確かめる (5分)
 
 **ゴール**: 詳細画面上部のボタンで `archive` / `unarchive` を切り替えられるようにします。
 
@@ -605,7 +618,7 @@ const handleArchive = (projectId: string, isArchived: boolean) => {
 
 ---
 
-### Step 6: 補助ダイアログと完成形を整える (5分)
+### Step 6: 補助ダイアログの置き場所を確かめる (5分)
 
 **ゴール**: 詳細表示はインラインのままにしつつ、補助的なモーダルだけ `page.tsx` 側で扱う現在構成を完成させます。
 
@@ -664,7 +677,7 @@ const handleRemoveMember = (userId: string) => {
 - メンバー削除は確認ダイアログを挟んで実行される
 - 詳細表示そのものはインライン表示のままになっている
 
-![プロジェクト詳細でアーカイブ操作ができる状態](./screenshots/project-detail-archive-action.png)
+![プロジェクト詳細。赤枠の中がメンバーカードで、各行の右に権限の選択欄と削除ボタンが並んでいる](./screenshots/day27/project-detail-members.png)
 
 ---
 
@@ -1763,7 +1776,7 @@ interface ProjectDetailViewProps {
 }
 ```
 
-Step 3 では末尾3つに `?` を付けた形を載せましたが、完成版はすべて必須です。`?` は「渡さなくてもよい」という意味で、渡し忘れても型検査が通ってしまいます。権限に関わる値では、渡し忘れがそのまま「ボタンが出ない」という不具合になります。必須にしておけば、呼ぶ側が忘れた時点でエラーが出ます。
+Step 3 で書いたものと同じで、8つとも必須です。
 
 `onUpdateMemberRole` が引数を2つ取るのは、誰の役割をどれに変えるかの両方が要るためです。
 
@@ -2141,6 +2154,16 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が、完成�
 
 `?? task.priority` を添えてあるのは、対応表に載っていない値が届いても札を空にしないためです。表示が消えると、データがおかしいことにも気付けません。
 
+## 今日のまとめ
+
+- [ ] `archive` / `unarchive` が `setArchiveStatus` を呼ぶ形になっていることを確かめた
+- [ ] `/project?projectId=...` で一覧と詳細が入れ替わることを確かめた
+- [ ] `ProjectDetailView` にメンバー一覧とタスク一覧が並ぶことを確かめた
+- [ ] アーカイブボタンで `isArchived` が変わり、一覧が更新されることを確かめた
+- [ ] 詳細表示がモーダルではなくインラインであることを確かめた
+
+---
+
 ## つまずきポイント
 
 | エラー/問題 | 原因 | 解決方法 |
@@ -2153,20 +2176,38 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が、完成�
 
 ---
 
-## Day 27 完了
+## 今日学んだ用語
 
-### 今日学んだこと
+| 用語 | 意味 |
+|------|------|
+| `useSearchParams` | URL クエリを読む。`/project?projectId=...` の解釈に使う |
+| `router.push()` | URL を変えて画面状態を切り替える。一覧 ↔ 詳細の行き来に使う |
+| `inferRouterOutputs` | tRPC の戻り値から型を自動で取る。`ProjectDetailView` の Props に使う |
+| アーカイブ | `isArchived` を立てて一覧から隠す。完了したプロジェクトの退避に使う |
+| `enabled` | 条件を満たしたときだけ `useQuery` を走らせる指定 |
+| `invalidate()` | tRPC のキャッシュを捨てて取り直させる。アーカイブ後の一覧更新に使う |
 
-| 概念 | 意味 | 使い場面 |
-|------|------|---------|
-| `useSearchParams` | URL クエリを読む | `/project?projectId=...` の解釈 |
-| `router.push()` | URL を変えて画面状態を切り替える | 一覧 ↔ 詳細の切り替え |
-| `inferRouterOutputs` | tRPC の戻り値型を自動で取る | `ProjectDetailView` の Props |
-| アーカイブ | `isArchived` で論理的に隠す | 完了済みプロジェクトの退避 |
-| `enabled` | 条件付きで `useQuery` を実行する | `selectedProject` があるときだけ詳細取得 |
-| `invalidate()` | tRPC キャッシュを再取得させる | アーカイブ後の一覧更新 |
+---
 
-### 次回予告
+## 理解チェック
+
+今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+
+**Q1. カードをクリックしたとき、`setSelectedProject` を直接呼ばずに `router.push` で URL だけを書き換えるのはなぜですか。**
+
+A. 画面の状態を決める大元を URL の1か所にそろえるためです。state も一緒に書き換えると更新の経路が2本になり、ブラウザの戻るボタンで URL だけ `/project` に戻ったのに詳細の表示が残る、といった食い違いが起きます。URL を唯一の起点にしておけば、`useEffect` が state を追いかけます。
+
+**Q2. `archive` と `unarchive` を1つにまとめて、「現在値を反転させる」作りにしないのはなぜですか。**
+
+A. 反転にすると、画面が送ってきた「今の状態」をサーバーが信じることになるためです。同じプロジェクトを2人が開いていると、お互いの結果がずれます。呼ぶ名前で結果を決めておけば、サーバーが受け取るのは「こうしたい」という最終状態だけになり、`archive` を2回呼んでも `isArchived` は `true` のままです。
+
+**Q3. メンバー一覧の削除ボタンは、相手がオーナーなら一律で押せません。サーバー側の `removeMember` も同じ厳しさですか。**
+
+A. 画面のほうが厳しいです。サーバーは2段構えで、オーナー以外がオーナーを外そうとしたら `FORBIDDEN`、オーナーが1人しか残っていなければ `BAD_REQUEST` で拒みます。つまりオーナーが2人いれば2人目以降を外せますが、画面からは外せません。
+
+---
+
+## 次回予告
 
 Day 28では、タスクの一括操作を実装します。複数選択したタスクをまとめて完了・削除・ステータス変更できるようにしていきます。
 

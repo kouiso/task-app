@@ -30,7 +30,6 @@ required_entries=(
   "task-app/.mise.toml"
   "task-app/.node-version"
   "task-app/doc/SUPPORTED_ENVIRONMENTS.md"
-  "task-app/material/30days-curriculum/"
   "task-app/scripts/scaffold-from-scratch.sh"
 )
 
@@ -151,11 +150,6 @@ for directory in "${support_directories[@]}"; do
   done < <(find "${PROJECT_ROOT}/scripts/${directory}" -type f | LC_ALL=C sort)
 done
 
-if ! LC_ALL=C grep -Eq '^task-app/material/30days-curriculum/day01_.*\.md$' "${ZIP_ENTRIES_FILE}"; then
-  echo "販売用 ZIP に Day 01 の教材がありません。" >&2
-  exit 1
-fi
-
 forbidden_entries=(
   "task-app/package.json"
   "task-app/src/"
@@ -178,4 +172,21 @@ for entry in "${forbidden_entries[@]}"; do
   fi
 done
 
+# 商品は「教材PDF」と「写経用 scaffold ZIP」の2点。教材は PDF で渡すので、
+# ZIP 側の material/ は丸ごと商品外になる。原稿 Markdown も画面写真も PDF と
+# 同じ中身の二重持ちで、別商品の見本 PDF や社内向けの手引きに至っては、
+# 買い手が開いた瞬間に商品の信用が落ちる。1つでも出たら失敗させる。
+non_product_entries=(
+  "task-app/material/"
+)
+
+for entry in "${non_product_entries[@]}"; do
+  if has_entry_prefix "${entry}"; then
+    echo "販売用 ZIP に商品外のファイルが混入しています: ${entry}" >&2
+    echo "買い手には無関係な内部ファイルです。scripts/build-zip.sh の zip 除外を確認してください。" >&2
+    exit 1
+  fi
+done
+
 echo "販売用 ZIP の初期状態を確認しました: 完成アプリ本体の混入なし"
+echo "販売用 ZIP の初期状態を確認しました: 商品外ファイルの混入なし"

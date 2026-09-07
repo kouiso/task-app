@@ -1,1 +1,0 @@
-../../prompt/instructions/prisma.instructions.md

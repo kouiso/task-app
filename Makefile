@@ -1,7 +1,60 @@
-.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean
+.PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-test book-pdf-verify book-pdf-clean snapshot-verify snapshot-test
 
 # ============================================
-# PDF生成
+# 写経ビルド検査（読者がその日まで写した手元を組み直す）
+# ============================================
+
+# 30日ぶんのツリーを組み直して、型検査と build が通るかを見る。
+#
+# Postgres が要る。しかも**待ち受けポートは 25532 でなければならない**。
+# build_day_snapshots.py は組んだツリーへ .env.example をそのまま .env として複写し、
+# そこに書いてある DATABASE_URL が localhost:25532 を指しとるからや。別のポートで
+# 立てると build が DB へ届かず、道具はそれを「DB の無い機械」と見なして SKIP にする。
+# SKIP は exit 0 で返るので、**何も検証してへんのに緑で通る。**
+#
+#   docker run -d --name snap-db -p 25532:5432 \
+#     -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=taskapp \
+#     postgres:16-alpine
+snapshot-verify:
+	@python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify
+
+# 判定境界を固定する退行テスト（DB も Node も要らない）
+snapshot-test:
+	@python3 scripts/curriculum-qa/test_build_day_snapshots.py
+
+# ============================================
+# 商品PDF生成（Vivliostyle・1日1冊の分冊）
+# ============================================
+
+# 全36本を組む（day 30本 + 目次・ロードマップ・付録4本）
+book-pdf:
+	@python3 scripts/pdf-book/build_pdf_book.py
+
+# 1本だけ組む
+# 使用例: make book-pdf-one FILE="material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md"
+book-pdf-one:
+ifndef FILE
+	$(error FILE を指定してください。例: make book-pdf-one FILE="material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md")
+endif
+	@python3 scripts/pdf-book/build_pdf_book.py "$(FILE)"
+
+# 検査の判定境界を固定する退行テスト（PDF も poppler も要らない）
+book-pdf-test:
+	@python3 scripts/pdf-book/test_check_pdf_book.py
+	@python3 scripts/pdf-book/test_check_page_layout.py
+
+# 出力が商品として出せる状態かを見る
+# 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）
+book-pdf-verify: book-pdf-test
+	@python3 scripts/pdf-book/check_pdf_book.py
+	@python3 scripts/pdf-book/check_page_layout.py
+
+book-pdf-clean:
+	rm -rf dist/pdf/ dist/.pdf-book-build/
+	@echo "✅ 商品PDF削除完了"
+
+# ============================================
+# PDF生成（旧経路・当面併存）
 # ============================================
 
 # 単一MarkdownをPDF化
