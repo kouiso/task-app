@@ -166,7 +166,29 @@ BAD_TILDE_FENCE = """~~~tsx
 ~~~
 """
 
+OK_CALLBACK_TAIL = """```tsx
+// filepath: src/app/user/page.tsx（同じファイルの続き）
+    refetchRequiredData();
+  }}
+>
+  再読み込み
+</Button>
+```
+"""
+
+# 関数呼び出しで始まる継続断片。`foo();` のあとに外側の閉じタグが来る形は
+# イベントハンドラ内の断片として正当で、`//` は JS のコメントになる（day29 実測）。
+# 裸の `foo();` が表示文字列という境界例は区別できないが、教材にその形は無い。
+OK_CALL_SHAPED_LINE = """```tsx
+// filepath: src/app/user/page.tsx（同じファイルの続き）
+  refetchRequiredData();
+</p>
+```
+"""
+
 CASES = [
+    ("イベントハンドラ内の関数呼び出し", OK_CALLBACK_TAIL, 0),
+    ("関数呼び出しで始まる継続断片", OK_CALL_SHAPED_LINE, 0),
     ("tsx の JSX 断片", BAD_TSX, 1),
     ("typescript 表記の JSX 断片", BAD_TYPESCRIPT, 2),
     ("JSX の埋め込みで始まる断片", BAD_EXPRESSION, 1),

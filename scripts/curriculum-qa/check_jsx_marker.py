@@ -37,6 +37,10 @@ CODE_LINE = re.compile(
     r"|^\s*[A-Za-z_$][\w$.]*\s*,\s*$"
     # 式が続く合図。行末のカンマやセミコロンは、文字の側にも出る（`Welcome&nbsp;`）ので見ない。
     r"|\(\s*$"
+    # 関数呼び出し。`refetchRequiredData();` は onClick の中に続く JS の文で、
+    # `//` が正しいコメントになる。`(` が識別子に直結する形だけを見るので、
+    # `Welcome (back)` のような空白を挟んだ文字の行には当たらない。
+    r"|^\s*[A-Za-z_$][\w$.]*\("
     r"|^\s*(?:return|if|else|for|while|switch|case|default|const|let|var|function"
     r"|export|import|await|async|try|catch|finally|throw|new|delete|typeof)\b"
     r"|^\s*[)\]}]"

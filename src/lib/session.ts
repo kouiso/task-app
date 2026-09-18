@@ -38,7 +38,7 @@ function isSessionPayload(payload: JWTPayload): payload is JWTPayload & SessionP
   );
 }
 
-export async function encrypt(payload: SessionPayload): Promise<string> {
+export async function signSessionToken(payload: SessionPayload): Promise<string> {
   // SignJWTのコンストラクタがRecord<string, unknown>を要求するため明示的に変換
   const jwtPayload: Record<string, unknown> = {
     userId: payload.userId,
@@ -54,7 +54,7 @@ export async function encrypt(payload: SessionPayload): Promise<string> {
     .sign(getKey());
 }
 
-export async function decrypt(token: string): Promise<SessionPayload | null> {
+export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getKey(), {
       algorithms: ['HS256'],
@@ -67,7 +67,7 @@ export async function decrypt(token: string): Promise<SessionPayload | null> {
 
     return payload;
   } catch {
-    console.error('Failed to decrypt token');
+    console.error('Failed to verify session token');
     return null;
   }
 }
@@ -81,7 +81,7 @@ export async function createSession(user: SessionUser): Promise<string> {
     exp: expiresAt,
   };
 
-  const token = await encrypt(payload);
+  const token = await signSessionToken(payload);
 
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
@@ -103,7 +103,7 @@ export async function getSession(): Promise<SessionPayload | null> {
     return null;
   }
 
-  return await decrypt(token);
+  return await verifySessionToken(token);
 }
 
 export async function deleteSession(): Promise<void> {

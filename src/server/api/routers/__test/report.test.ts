@@ -104,6 +104,23 @@ describe('reportRouter', () => {
       expect(report.totalCompleted).toBe(1);
     });
 
+    it('プロジェクトから外れた担当者の旧タスクを集計しない', async () => {
+      const owner = await createTestUser({ email: uniqueEmail('wk-owner') });
+      const user = await createTestUser({ email: uniqueEmail('wk-removed') });
+      const project = await createTestProject(owner.id);
+      await prisma.projectMember.create({
+        data: { projectId: project.id, userId: user.id, role: 'MEMBER' },
+      });
+      await createCompletedTask(project.id, user.id, new Date());
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      expect((await caller.report.getWeeklyReport()).totalCompleted).toBe(1);
+      const ownerCaller = await createAuthenticatedCaller(owner.id, owner.email, owner.role);
+      await ownerCaller.project.removeMember({ projectId: project.id, userId: user.id });
+      const report = await caller.report.getWeeklyReport();
+      expect(report.totalCompleted).toBe(0);
+      expect(report.weeklyData.every((week) => week.totalCompleted === 0)).toBe(true);
+    });
+
     it('引数を省略すると4週間分を返す', async () => {
       const user = await createTestUser({ email: uniqueEmail('wk-default') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);

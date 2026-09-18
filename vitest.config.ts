@@ -19,6 +19,7 @@ export default defineConfig({
     // Use 'node' environment by default for API tests, individual tests can override with @vitest-environment jsdom
     environment: 'node',
     globals: true,
+    bail: 1,
     testTimeout: 15000,
     setupFiles: ['./src/test/setup.ts'],
     include: ['**/*.test.{ts,tsx}'],

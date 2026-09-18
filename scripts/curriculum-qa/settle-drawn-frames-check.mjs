@@ -164,9 +164,12 @@ try {
   }
 
   // 3. 終わらん動きでも、上限で戻ってくること（撮影が止まらんこと）。
-  const startedAt = Date.now();
-  await withPage(SPINNING, (page) => settleAnimations(page));
-  const elapsed = Date.now() - startedAt;
+  // ページ作成・終了の所要時間は、収束待ちの上限とは別に扱う。
+  const elapsed = await withPage(SPINNING, async (page) => {
+    const startedAt = performance.now();
+    await settleAnimations(page);
+    return performance.now() - startedAt;
+  });
   if (elapsed > 6000) {
     fails.push(`❌ 終わらん動きで待ち続けている（${elapsed}ms）`);
   }

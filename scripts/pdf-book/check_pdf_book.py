@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -334,9 +335,28 @@ def read_fonts(pdf: Path) -> list[tuple[str, str, str]]:
     return parse_font_table(run_tool(["pdffonts", str(pdf)]))
 
 
+def find_link_problems(output: str) -> list[str]:
+    """pdfinfo -url の注釈から、ビルド機械にしかないリンクを見つける。"""
+    problems: list[str] = []
+    for line in output.splitlines():
+        match = re.match(r"\s*(\d+)\s+Annotation\s+(\S+)", line)
+        if not match:
+            continue
+        page, url = match.groups()
+        parsed = urlsplit(url)
+        path = unquote(parsed.path)
+        if ('/vivliostyle/' in path
+                or (parsed.hostname in {'localhost', '127.0.0.1', '::1'}
+                    and (parsed.port == 13000 or path.lower().endswith('.md')))
+                or (not parsed.scheme and path.lower().endswith('.md'))):
+            problems.append(f'p{page}: 配布先で開けないリンク: {url}')
+    return sorted(set(problems))
+
+
 def check_one(pdf: Path) -> list[str]:
     """1冊を見て、見つかった問題を並べる。"""
     problems: list[str] = []
+    problems += find_link_problems(run_tool(['pdfinfo', '-url', str(pdf)]))
     info = read_info(pdf)
     total = int(info.get("Pages", "0"))
     if total == 0:

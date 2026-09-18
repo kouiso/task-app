@@ -24,8 +24,12 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { isUserRole, USER_ROLE, USER_ROLE_LABELS } from '@/lib/constant/roles';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { normalizeAvatarValue } from '@/lib/utils';
 import { api } from '@/trpc/react';
+
+const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
+  httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
 const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
 
@@ -54,14 +58,31 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     },
   });
 
-  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
   const isOwnProfile = currentUser?.id === userId;
   const canEditUser = isAdmin || isOwnProfile;
   const canManageAccount = isAdmin && !isOwnProfile;
-  const { data: user, isLoading } = api.user.getById.useQuery(
+  const {
+    data: user,
+    isLoading: isUserLoading,
+    isError: isUserError,
+    isFetching: isUserFetching,
+    error: userError,
+    refetch: refetchUser,
+  } = api.user.getById.useQuery(
     { id: userId },
-    { enabled: !!currentUser && canEditUser && userId.length > 0 },
+    {
+      enabled: !!currentUser && canEditUser && userId.length > 0,
+      retry: shouldRetryUserQuery,
+    },
   );
 
   const utils = api.useUtils();
@@ -104,10 +125,84 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     });
   };
 
-  if (isCurrentUserLoading || !currentUser) {
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUserError ? userError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const notFound = isUserError && httpStatusOf(userError) === 404;
+  const hasFetchError = isCurrentUserError || isUserError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null) && (!isUserError || user != null);
+  const requiredLoading = isCurrentUserLoading || (canEditUser && isUserLoading);
+  const requiredFetching = isCurrentUserFetching || isUserFetching;
+
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    if (canEditUser) void refetchUser();
+  };
+
+  if (requiredLoading && !authFailed && !forbidden && !notFound) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (authFailed || forbidden || notFound || (hasFetchError && !hasRequiredData) || !currentUser) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このユーザーを編集する権限がありません'
+                : notFound
+                  ? 'ユーザーが見つかりません'
+                  : 'ユーザー情報を取得できませんでした'}
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '管理者または本人のみ編集できます。'
+                : notFound
+                  ? '削除されたか、URLが正しくない可能性があります。'
+                  : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/dashboard');
+                return;
+              }
+              if (notFound) {
+                router.push(isAdmin ? '/user' : '/dashboard');
+                return;
+              }
+              refetchRequiredData();
+            }}
+            disabled={requiredFetching}
+          >
+            {authFailed
+              ? 'ログイン画面へ'
+              : forbidden
+                ? 'ダッシュボードへ'
+                : notFound
+                  ? isAdmin
+                    ? 'ユーザー一覧へ'
+                    : 'ダッシュボードへ'
+                  : '再読み込み'}
+          </Button>
+        </div>
       </AppLayout>
     );
   }
@@ -127,10 +222,20 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     );
   }
 
-  if (isLoading || !user) {
+  if (!user) {
     return (
       <AppLayout>
-        <PageLoadingSpinner />
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            ユーザー情報を取得できませんでした
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            通信状況を確認して、再読み込みしてください。
+          </p>
+          <Button onClick={refetchRequiredData} disabled={requiredFetching}>
+            再読み込み
+          </Button>
+        </div>
       </AppLayout>
     );
   }
@@ -138,6 +243,23 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   return (
     <AppLayout>
       <div className="container mx-auto max-w-md mt-8 mb-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー情報を取得できませんでした。入力内容は保持されています。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"

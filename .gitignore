@@ -145,3 +145,4 @@ material/pdf/
 
 # Claude Codeツール実行時の一時状態（各自の手元だけで生成される、履歴に残す意味がない）
 .omc/
+.env*

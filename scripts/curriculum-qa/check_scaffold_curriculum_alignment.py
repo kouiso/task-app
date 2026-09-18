@@ -243,19 +243,19 @@ def main() -> int:
             'scripts.postinstall="prisma generate"' in scaffold_script
         ),
         "source production dependency audit overrides": (
-            dependencies.get("next") == "^15.5.21"
+            dependencies.get("next") == "^15.5.24"
             and dev_dependencies.get("postcss") == "8.5.23"
             and overrides.get("postcss") == "8.5.23"
-            and overrides.get("sharp") == "0.35.3"
+            and overrides.get("sharp") == "0.35.4"
         ),
         "scaffold production dependency audit overrides": (
             all(
                 token in scaffold_script
                 for token in (
-                    "next@15.5.21",
-                    "create-next-app@15.5.21",
+                    "next@15.5.24",
+                    "create-next-app@15.5.24",
                     'overrides.postcss="8.5.23"',
-                    'overrides.sharp="0.35.3"',
+                    'overrides.sharp="0.35.4"',
                 )
             )
             and 0

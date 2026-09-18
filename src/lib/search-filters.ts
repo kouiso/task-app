@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { isTaskPriority } from '@/lib/constant/priority';
 import { isTaskStatus } from '@/lib/constant/status';
 
@@ -21,12 +22,25 @@ const SEARCH_PARAM_KEYS: Array<keyof SearchFormValues> = [
   'dateTo',
 ];
 
+const cuidSchema = z.string().cuid();
+
+const normalizeCuidFilter = (value: string): string =>
+  value === 'all' || cuidSchema.safeParse(value).success ? value : 'all';
+
+const normalizeDate = (value: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : '';
+};
+
 const normalizeSearchFormValues = (values: SearchFormValues): SearchFormValues => ({
   ...values,
-  projectId: values.projectId || 'all',
+  projectId: normalizeCuidFilter(values.projectId),
   status: isTaskStatus(values.status) ? values.status : 'all',
   priority: isTaskPriority(values.priority) ? values.priority : 'all',
-  assignedTo: values.assignedTo || 'all',
+  assignedTo: normalizeCuidFilter(values.assignedTo),
+  dateFrom: normalizeDate(values.dateFrom),
+  dateTo: normalizeDate(values.dateTo),
 });
 
 export const applySearchParamsToValues = (

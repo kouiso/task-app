@@ -51,11 +51,13 @@ day N までの写経ブロックを `concat_by_file` で書き込み先ごと�
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
 import subprocess
 import sys
+import uuid
 from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
@@ -116,11 +118,8 @@ MODULE_HEAD = re.compile(
 # 書き直しとして扱って前の版を捨てる。かといって追記にすると import と定義が
 # 二重になるので、置き換えでも追記でも復元できない。教材の欠陥ではない。
 TRIAGE: dict[int, tuple[str, str]] = {
-    # 2026-08-30 時点、EXPECTED_RED の day11 以外はすべて通る。ここに残す行は無い。
+    # 2026-09-12 時点、30 日すべて通る。ここに残す行は無い。
     # 「教材の欠陥」と書く前に、その日の本文がその赤を先に断っとらんかを必ず読むこと。
-    # day11 を一度ここへ「教材の欠陥」として書いて覆された。本文が
-    # 「今日は失敗して正常です」と断っとった。断りがある日は EXPECTED_RED の担当で、
-    # この表の担当ではない。
 }
 
 # チャンクの見出し行。教材は長いファイルを分けて出すとき、各チャンクの先頭へ
@@ -265,6 +264,26 @@ class DayResult(NamedTuple):
     build_errors: tuple[str, ...] = ()
     # 表示用の3行やのうて、tsc が出した全部。件数と中身で「断り書きどおりの赤か」を見るのに要る。
     tsc_errors: tuple[str, ...] = ()
+    source_input_hash: str | None = None
+    source_input_hash_after: str | None = None
+    source_input_stable: bool = True
+    source_input_error: str | None = None
+    generation: str = NOT_RUN
+    generation_errors: tuple[str, ...] = ()
+    verification_error: str | None = None
+
+
+class TreeVerification(NamedTuple):
+    """依存準備・生成・型検査・ビルドを、未実行と失敗を混ぜずに返す。"""
+
+    generation: str
+    tsc: str
+    build: str
+    errors: tuple[str, ...] = ()
+    generation_errors: tuple[str, ...] = ()
+    build_errors: tuple[str, ...] = ()
+    tsc_errors: tuple[str, ...] = ()
+    verification_error: str | None = None
 
 
 def available_days() -> list[int]:
@@ -1201,51 +1220,149 @@ def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...], tuple[st
 
 
 def link_node_modules(dest: Path) -> None:
-    """このリポジトリの node_modules を借りる。
+    """依存を共有し、スキーマ依存の Prisma 生成物だけ各ツリーへ隔離する。"""
+    modules = dest / "node_modules"
+    if modules.is_symlink():
+        modules.unlink()
+    elif modules.exists():
+        shutil.rmtree(modules)
+    modules.mkdir()
+    source = REPO_ROOT / "node_modules"
+    for entry in source.iterdir():
+        if entry.name == ".prisma":
+            continue
+        if entry.name == "@prisma":
+            scope = modules / entry.name
+            scope.mkdir()
+            for package in entry.iterdir():
+                if package.name == "client":
+                    shutil.copytree(package, scope / package.name)
+                else:
+                    (scope / package.name).symlink_to(package, target_is_directory=package.is_dir())
+        else:
+            (modules / entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
 
-    Day ごとに `npm install` を走らせると30回ぶんの時間とディスクを食う。型検査に
-    要るのは型定義と生成済みの Prisma クライアントで、どちらも共有して差し支えない。
-    """
-    link = dest / "node_modules"
-    if link.exists() or link.is_symlink():
-        link.unlink()
-    link.symlink_to(REPO_ROOT / "node_modules", target_is_directory=True)
 
-
-def verify_tree(dest: Path) -> tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
-    """組んだツリーへ型検査とビルドを掛けて (tsc, build, 表示用エラー, build の全行, tsc の全行) を返す。
+def verify_tree(dest: Path) -> TreeVerification:
+    """組んだツリーへPrisma生成・型検査・ビルドを順に掛ける。
 
     build のエラー行を「全部」別で返すのは、落ちた理由を判定に使うため。表示用の3行で
     判定すると、DB のエラーが先に並んだ回に後ろの prerender の失敗が落ちる。DB の無い機械では
     `next build` が必ず赤くなるので昔は build の赤を丸ごと無視しとったが、それやと
     prerender や server/client 境界の失敗まで一緒に見逃す。理由で切り分ける。
     """
-    link_node_modules(dest)
-    tsc_ok, tsc_shown, tsc_all = run_step(["npx", "tsc", "--noEmit"], dest)
-    build_ok, build_shown, build_all = run_step(["npm", "run", "build"], dest)
+    try:
+        link_node_modules(dest)
+    except OSError as error:
+        message = f"依存の準備に失敗: {type(error).__name__}: {error}"
+        return TreeVerification(NOT_RUN, NOT_RUN, NOT_RUN, (message,), verification_error=message)
+
+    prisma = dest / "node_modules" / ".bin" / "prisma"
+    tsc = dest / "node_modules" / ".bin" / "tsc"
+    missing = [path for path in (prisma, tsc) if not path.is_file()]
+    if missing:
+        names = ", ".join(str(path.relative_to(dest)) for path in missing)
+        message = f"固定済みのローカルCLIがありません: {names}"
+        return TreeVerification(NOT_RUN, NOT_RUN, NOT_RUN, (message,), verification_error=message)
+
+    try:
+        generated, generation_shown, generation_all = run_step(
+            [str(prisma), "generate"], dest
+        )
+    except OSError as error:
+        message = f"Prisma生成を起動できません: {type(error).__name__}: {error}"
+        return TreeVerification(NOT_RUN, NOT_RUN, NOT_RUN, (message,), verification_error=message)
+    if not generated:
+        return TreeVerification(
+            "NG", NOT_RUN, NOT_RUN, generation_shown,
+            generation_errors=generation_all,
+        )
+    try:
+        tsc_ok, tsc_shown, tsc_all = run_step([str(tsc), "--noEmit"], dest)
+    except OSError as error:
+        message = f"tscを起動できません: {type(error).__name__}: {error}"
+        return TreeVerification(
+            "OK", NOT_RUN, NOT_RUN, (message,), verification_error=message
+        )
+    try:
+        build_ok, build_shown, build_all = run_step(["npm", "run", "build"], dest)
+    except OSError as error:
+        message = f"buildを起動できません: {type(error).__name__}: {error}"
+        return TreeVerification(
+            "OK", "OK" if tsc_ok else "NG", NOT_RUN,
+            tsc_shown + (message,), tsc_errors=tsc_all, verification_error=message,
+        )
     # 両方赤い日は両方見せる。`tsc_shown or build_shown` にすると、tsc が赤い時点で
-    # build の行が丸ごと消える。day11 のように tsc の赤が想定内の日で build 側に別の
-    # 欠陥が入ると、走行は exit 1 なのに画面と成果物には「知っとる型エラー」しか出ず、
+    # build の行が丸ごと消える。tsc が赤い日に build 側へ別の欠陥が入ると、
+    # 走行は exit 1 なのに画面と成果物には「知っとる型エラー」しか出ず、
     # 落ちた本当の理由が読めん。
-    return (
+    return TreeVerification(
+        "OK",
         "OK" if tsc_ok else "NG",
         "OK" if build_ok else "NG",
         tsc_shown + build_shown,
-        build_all,
-        tsc_all,
+        build_errors=build_all,
+        tsc_errors=tsc_all,
     )
 
 
 def snapshot_day(day: int, verify: bool) -> DayResult:
     """1日ぶんを組んで判定する。"""
     try:
+        input_hash = source_input_hash(day)
+    except (OSError, ValueError) as e:
+        error = f"ソース入力の事前ハッシュに失敗: {type(e).__name__}: {e}"
+        return DayResult(
+            day, 0, False, NOT_RUN, NOT_RUN, (error,),
+            source_input_stable=False, source_input_error=error,
+        )
+    try:
         dest, files = build_tree(day)
     except (OSError, ValueError) as e:
-        return DayResult(day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",))
-    if not verify:
-        return DayResult(day, files, True, NOT_RUN, NOT_RUN, ())
-    tsc, build, errors, build_errors, tsc_errors = verify_tree(dest)
-    return DayResult(day, files, True, tsc, build, errors, build_errors, tsc_errors)
+        return DayResult(
+            day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",),
+            source_input_hash=input_hash,
+        )
+    result = DayResult(day, files, True, NOT_RUN, NOT_RUN, (), source_input_hash=input_hash)
+    if verify:
+        try:
+            verification = verify_tree(dest)
+        except OSError as error:
+            message = f"検証を実行できません: {type(error).__name__}: {error}"
+            verification = TreeVerification(
+                NOT_RUN, NOT_RUN, NOT_RUN, (message,), verification_error=message
+            )
+        result = result._replace(
+            generation=verification.generation,
+            tsc=verification.tsc,
+            build=verification.build,
+            errors=verification.errors,
+            generation_errors=verification.generation_errors,
+            build_errors=verification.build_errors,
+            tsc_errors=verification.tsc_errors,
+            verification_error=verification.verification_error,
+        )
+    try:
+        input_hash_after = source_input_hash(day)
+    except (OSError, ValueError) as e:
+        error = f"ソース入力の事後ハッシュに失敗: {type(e).__name__}: {e}"
+        return result._replace(
+            errors=(*result.errors, error),
+            source_input_stable=False,
+            source_input_error=error,
+        )
+    if input_hash_after != input_hash:
+        error = (
+            "再構築・検証中にソース入力が変更されました: "
+            f"before={input_hash} after={input_hash_after}"
+        )
+        return result._replace(
+            errors=(*result.errors, error),
+            source_input_hash_after=input_hash_after,
+            source_input_stable=False,
+            source_input_error=error,
+        )
+    return result._replace(source_input_hash_after=input_hash_after)
 
 
 def _cell(text: str) -> str:
@@ -1256,21 +1373,128 @@ def _cell(text: str) -> str:
 def result_table(results: list[DayResult]) -> str:
     """判定を Markdown の表にする。"""
     rows = [
-        "| Day | ツリー構築 | tsc | build | 最初のエラー3行 |",
-        "| --- | --- | --- | --- | --- |",
+        "| Day | ツリー構築 | Prisma生成 | tsc | build | 最初のエラー3行 |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for r in results:
         tree = f"OK（{r.files} ファイル）" if r.tree_ok else "NG"
         errors = "<br>".join(_cell(e) for e in r.errors) or "-"
-        rows.append(f"| day{r.day:02d} | {tree} | {r.tsc} | {r.build} | {errors} |")
+        rows.append(
+            f"| day{r.day:02d} | {tree} | {r.generation} | {r.tsc} | {r.build} | {errors} |"
+        )
     return "\n".join(rows)
+
+
+def result_status(result: DayResult, verify: bool) -> str:
+    """1日分を、証拠記録用の排他的な状態へ畳む。"""
+    if (
+        not result.source_input_stable
+        or not result.tree_ok
+        or result.verification_error is not None
+        or result.generation == "NG"
+        or result.tsc == "NG"
+        or result.build == "NG"
+    ):
+        return "FAIL"
+    if (
+        not verify
+        or result.generation == NOT_RUN
+        or result.tsc == NOT_RUN
+        or result.build == NOT_RUN
+    ):
+        return "NOT_RUN"
+    if result.build == BUILD_SKIPPED:
+        return "BLOCKED_ENV"
+    return "PASS"
+
+
+def source_input_hash(day: int) -> str:
+    """その日のツリーを決める入力の名前・種類・内容をSHA-256へ畳む。"""
+    digest = hashlib.sha256()
+    for path in sorted(tree_inputs(day), key=lambda item: str(item.relative_to(REPO_ROOT))):
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        kind = "directory" if path.is_dir() else "file"
+        digest.update(f"{kind}\0{relative}\0".encode())
+        if path.is_dir() and path != REPO_ROOT:
+            # 入れ子の入力ディレクトリは watched_dirs が個別に列挙する。
+            # 親を再帰すると dist など検証自身の生成物まで入力になってしまう。
+            for child in sorted(path.iterdir(), key=lambda item: item.name):
+                child_relative = child.relative_to(path).as_posix()
+                child_kind = "directory" if child.is_dir() else "file"
+                digest.update(f"{child_kind}\0{child_relative}\0".encode())
+        if path.is_file():
+            with path.open("rb") as source:
+                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                    digest.update(chunk)
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def write_run_record(
+    results: list[DayResult], verify: bool, command: str = "（不明）"
+) -> Path:
+    """上書きしないJSONとして、今回の対象と判定材料を保存する。"""
+    recorded_at = datetime.now(timezone.utc)
+    run_id = f"{recorded_at.strftime('%Y%m%dT%H%M%S.%fZ')}-{uuid.uuid4().hex[:12]}"
+    target_days = [result.day for result in results]
+    all_days = available_days()
+    coverage = "full" if target_days == all_days else "partial"
+    record = {
+        "schemaVersion": 3,
+        "runId": run_id,
+        "recordedAt": recorded_at.isoformat(),
+        "command": command,
+        "verify": verify,
+        "coverage": coverage,
+        "targetDays": target_days,
+        "availableDays": all_days,
+        "days": [
+            {
+                "day": result.day,
+                "status": result_status(result, verify),
+                "sourceInputHash": result.source_input_hash,
+                "sourceInputHashAfter": result.source_input_hash_after,
+                "sourceInputStable": result.source_input_stable,
+                "tree": {"ok": result.tree_ok, "files": result.files},
+                "generation": result.generation,
+                "tsc": result.tsc,
+                "build": result.build,
+                "evidence": {
+                    "errors": list(result.errors),
+                    "generationErrors": list(result.generation_errors),
+                    "tscErrors": list(result.tsc_errors),
+                    "buildErrors": list(result.build_errors),
+                    "sourceInputError": result.source_input_error,
+                    "verificationError": result.verification_error,
+                },
+            }
+            for result in results
+        ],
+    }
+    record_dir = SNAPSHOT_ROOT / "result"
+    record_dir.mkdir(parents=True, exist_ok=True)
+    path = record_dir / f"{run_id}.json"
+    with path.open("x", encoding="utf-8") as output:
+        json.dump(record, output, ensure_ascii=False, indent=2)
+        output.write("\n")
+    return path
 
 
 def triage_section(results: list[DayResult]) -> str:
     """NG の日の切り分けを書く。"""
     # SKIP は「判定してへん」であって NG やない。切り分けの表へ入れると
     # 「判定不能（未調査）」として並び、教材の欠陥を疑わせる行が生える。
-    ng = [r for r in results if not r.tree_ok or r.tsc == "NG" or r.build == "NG"]
+    ng = [
+        r for r in results
+        if (
+            not r.source_input_stable
+            or not r.tree_ok
+            or r.verification_error is not None
+            or r.generation == "NG"
+            or r.tsc == "NG"
+            or r.build == "NG"
+        )
+    ]
     if not ng:
         return ""
     rows = [
@@ -1283,16 +1507,7 @@ def triage_section(results: list[DayResult]) -> str:
         "| --- | --- | --- |",
     ]
     for r in ng:
-        # 教材が先に断っとる赤は、切り分けの対象やのうて想定内。ここを TRIAGE より
-        # 先に見るのは、断りのある日を「教材の欠陥」と書いてしまう事故を機械で塞ぐため。
-        #
-        # ただし day 番号だけで「想定内」と書いたらアカン。断り書きと中身が合わん赤は
-        # `broken_days()` が異常として止めるので、そちらは exit 1 やのに**成果物だけが
-        # 「想定内」と言い張る**状態になる。走行の判定と文書の判定は同じ関数を使う。
-        if expected_red_holds(r):
-            kind, why = "想定内（教材が本文で断っている）", EXPECTED_RED[r.day]
-        else:
-            kind, why = TRIAGE.get(r.day, ("判定不能（未調査）", "現物と突き合わせていない"))
+        kind, why = TRIAGE.get(r.day, ("判定不能（未調査）", "現物と突き合わせていない"))
         rows.append(f"| day{r.day:02d} | {_cell(kind)} | {_cell(why)} |")
     return "\n".join(rows) + "\n"
 
@@ -1303,7 +1518,10 @@ def command_line(argv: list[str]) -> str:
 
 
 def write_result_doc(
-    results: list[DayResult], verify: bool, command: str = "（不明）"
+    results: list[DayResult],
+    verify: bool,
+    command: str = "（不明）",
+    run_record: Path | None = None,
 ) -> None:
     """判定を doc/review-handoff/day-snapshots-result.md へ書き出す。
 
@@ -1313,9 +1531,19 @@ def write_result_doc(
     報告の数字を裏付ける成果物を消してしまった。
     """
     RESULT_DOC.parent.mkdir(parents=True, exist_ok=True)
-    passed = sum(r.tsc == "OK" and r.build == "OK" for r in results)
+    passed = sum(
+        r.source_input_stable
+        and r.generation == "OK"
+        and r.tsc == "OK"
+        and r.build == "OK"
+        for r in results
+    )
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    total = len(available_days())
+    all_days = available_days()
+    total = len(all_days)
+    target_days = [result.day for result in results]
+    full_run = target_days == all_days and verify
+    target_label = "・".join(f"day{day:02d}" for day in target_days)
     head = [
         "# Day スナップショットの検査結果",
         "",
@@ -1323,12 +1551,20 @@ def write_result_doc(
         "手元を組み直して、型検査とビルドが通るかを見た結果である。",
         "",
         f"- 出どころ: `{command}`（{stamp} / {len(results)} 日ぶん）",
-        f"- 型検査とビルド: {'実行した' if verify else '実行していない（--verify なし）'}",
-        f"- tsc・build とも OK: {passed} / {len(results)} 日",
+        f"- 対象範囲: {'全件実行' if target_days == all_days else f'部分実行（{target_label}）'}",
+        f"- 検証: {'要求した（各段階の実行結果は表を参照）' if verify else '実行していない（--verify なし）'}",
+        f"- Prisma生成・tsc・build がすべて OK: {passed} / {len(results)} 日",
         f"- ツリーの置き場: `{SNAPSHOT_ROOT.relative_to(REPO_ROOT)}/dayNN/`",
         *(
+            [f"- 上書きしない実行記録: `{run_record.relative_to(REPO_ROOT)}`"]
+            if run_record is not None
+            else []
+        ),
+        "- これは教材から静的に復元したスナップショットの検査であり、",
+        "  初心者が教材だけで完走できたことの証明ではない。",
+        *(
             []
-            if len(results) >= total and verify
+            if full_run
             else [
                 f"",
                 f"> ⚠ この結果は全 {total} 日の通し走行ではない"
@@ -1347,93 +1583,6 @@ def write_result_doc(
     RESULT_DOC.write_text(body + triage_section(results), encoding="utf-8")
 
 
-# 型検査が赤になることを教材が先に断っている日。
-# day11 は `project-detail-view.tsx`（配布物）が `api.project.getById` を呼ぶが、
-# その手続きを読者が書くのは day12。教材はこれを隠さず、day11 本文で
-# 「この時点ではエディタに `getById` が無いという型エラーが出ます。写し間違いでは
-# ありません」「実際に数えると5件出ます」「Day 11 を終えた時点で `npm run build` は
-# 通りません。今日は失敗して正常です」と書いている（day11 の Step 7 付近）。
-# 読者の手元と道具の結果が一致しているので、これは教材の欠陥ではない。
-#
-# ただし緑になったら、それはそれで報告する。教材が「落ちる」と断っているのに
-# 落ちなくなったなら、本文の断りが嘘になっているということなので、直す先は本文になる。
-EXPECTED_RED = {
-    11: "day11 は `getById` を書く前に配布物を取り込むため型エラーが5件出る。教材が本文で明示している",
-}
-
-# 断り書きが名指ししとる中身。day 番号だけで免除すると、断ってへん欠陥がその日に紛れても
-# 素通りする（型エラーの1行があるだけで「想定内」に化ける）。本文が名指ししとるものと
-# 突き合わせて、合わんかったら免除せん。
-#
-# - marker: 本文が名指しする識別子。根っこのエラーがこれに触れとること
-# - count:  本文が「実際に数えると5件出ます」と書いた件数。ここがずれたら別の欠陥が混ざっとる
-# - path:   赤くなる場所。配布物の1ファイルに閉じとることが断り書きの前提
-#
-# 波及して出る `TS7006` / `TS7053` は識別子の名を含まん（`getById` が解決でけへんことで
-# 型が any へ落ちた結果や）。せやから marker は「全行」やのうて「どれか1行」に課す。
-# 代わりに件数と場所を効かせて、範囲が広がったら気づけるようにしてある。
-# 診断1件を「どこで・どのコードが」まで縮めた形。メッセージの尻尾は型の中身を丸ごと
-# 吐くので長さで切られる。位置とコードなら切られん上に、1件でも入れ替われば必ず変わる。
-DIAGNOSTIC_HEAD = re.compile(r"^(.*?\(\d+,\d+\)): error (TS\d+):")
-
-
-def diagnostic_heads(errors: tuple[str, ...]) -> tuple[str, ...] | None:
-    """エラー行を「位置＋コード」の多重集合へ縮める。1行でも診断の形やなければ None。"""
-    heads = []
-    for line in errors:
-        m = DIAGNOSTIC_HEAD.match(line)
-        if m is None:
-            return None
-        heads.append(f"{m.group(1)}:{m.group(2)}")
-    return tuple(sorted(heads))
-
-
-EXPECTED_RED_SIGNATURE = {
-    # `diagnostics` は day11 のツリーで `npx tsc --noEmit` を実際に流して採った5件
-    # （2026-08-31 実測）。**件数・場所・コードの3つでは足りん。**「TS7006 が1件消えて、
-    # 同じファイルの別の場所に無関係な TS7006 が1件入る」と、件数も場所もコードも
-    # 揃うたまま別の欠陥が想定内で通ってまう。位置まで名指しして、**多重集合が
-    # 丸ごと一致した時だけ**免除する。教材を直して診断が変わったら、ここも実測で
-    # 採り直す（＝人が断り書きを見直す機会になる）。
-    11: {
-        "marker": "getById",
-        "path": "project-detail-view.tsx",
-        "diagnostics": (
-            "src/component/project/project-detail-view.tsx(144,44):TS7006",
-            "src/component/project/project-detail-view.tsx(167,31):TS7053",
-            "src/component/project/project-detail-view.tsx(237,43):TS7006",
-            "src/component/project/project-detail-view.tsx(246,26):TS7053",
-            "src/component/project/project-detail-view.tsx(29,47):TS2339",
-        ),
-        # `next build` は最初の型エラー1件で止まる。包み紙を除いたあとに、本文で
-        # 断っている根っこの診断だけが残ることも固定する。
-        "build_count": 1,
-    },
-}
-
-
-def expected_red_errors(result: DayResult) -> list[str]:
-    """その日の tsc の赤のうち、型エラーとして数える行。"""
-    return [line for line in result.tsc_errors if TYPE_ERROR_MARK.search(line)]
-
-
-def tsc_failure_is_expected(result: DayResult) -> bool:
-    """tsc の赤が、教材の断り書きが名指ししとるものと一致するか。
-
-    day 番号だけで免除すると、day11 に無関係な型の欠陥が入っても「想定内」で通る。
-    本文は識別子・件数・場所まで書いとるので、そこまで見て初めて免除する。
-    """
-    signature = EXPECTED_RED_SIGNATURE.get(result.day)
-    if signature is None:
-        return False
-    errors = expected_red_errors(result)
-    if not any(signature["marker"] in line for line in errors):
-        return False
-    if not all(signature["path"] in line for line in errors):
-        return False
-    # 位置まで名指しした多重集合が丸ごと一致した時だけ免除する。件数・コードの一致では
-    # 「1件消えて別の場所に1件入る」入れ替わりを見逃す。
-    return diagnostic_heads(errors) == tuple(sorted(signature["diagnostics"]))
 
 # `next build` が DB へ届かんかったときだけ出る文言。DB を持たん機械では必ず出るので、
 # これに当たる赤は教材の欠陥を指さん。逆に、ここに当たらん build の赤は
@@ -1569,81 +1718,24 @@ BUILD_NOISE_MARKERS = (
 # **DB の判定のときだけ**包み紙に数える行。`Error occurred prerendering page` は
 # 「これが出とったら DB の有無に関係なく壊れとる」を満たさん（DB へ届かん回も同じ言葉で
 # 包まれる）ので `REAL_BUILD_FAILURE_MARKERS` には置けん。かというて素の
-# `BUILD_NOISE_MARKERS` へ入れると、想定内の赤の免除（`build_failure_is_expected`）まで
-# この行を見逃す。**問いが別なので一覧も別にする。**
-# - 「DB だけの失敗か？」→ 原因は DB 側にあるので包み紙。ここに入れる
-# - 「day11 の断り書きどおりの型エラーだけか？」→ 型エラーやないので通したらアカン。入れん
+# `BUILD_NOISE_MARKERS` へ入れると DB 切り分けの判定までこの行を見逃す。
 # 本物の prerender の失敗は原因の行（`TypeError: ...` 等）を必ず一緒に吐き、そっちが
 # プールに残って赤で止まる。包み紙1行だけの出力も DB の印が無いので本物の失敗のままや。
 DB_TRIAGE_NOISE_MARKERS = ("Error occurred prerendering page",)
 
 
-TYPE_ERROR_MARK = re.compile(r"Type error:|TS\d{4}")
-
-
-def build_failure_is_expected(result: DayResult) -> bool:
-    """EXPECTED_RED の日の build 落ちを、断り書きどおりの型エラーだけで説明できるか。
-
-    day 番号が EXPECTED_RED に載っとるだけで build を丸ごと免除すると、断り書きに無い
-    失敗（prerender や server/client 境界）がその日に紛れても素通りする。断ってあるのは
-    型エラーだけなので、免除するのも型エラーで説明できる範囲だけにする。
-    """
-    signature = EXPECTED_RED_SIGNATURE.get(result.day)
-    if signature is None:
-        return False
-    # 包み紙は原因やないので除く。**残りは捨てずに全部見る。**
-    # マーカーで絞ってから判定すると、`REAL_BUILD_FAILURE_MARKERS` に載ってへん失敗
-    # （例: `Error: Unauthorized while prerendering /admin`）が黙って消えて、
-    # 断り書きどおりの型エラーだけが残り、別の欠陥を抱えた日が免除されてまう。
-    real = [
-        line
-        for line in result.build_errors
-        if not any(marker in line for marker in BUILD_NOISE_MARKERS)
-    ]
-    # 型エラーの証拠が1行も無いなら、断り書きで説明できたことにせん。
-    if not real:
-        return False
-    if len(real) != signature["build_count"]:
-        return False
-    if not all(TYPE_ERROR_MARK.search(line) for line in real):
-        return False
-    # `next build` は最初の型エラーで止まるので、出てくる行は根っこのほうや。
-    # 断り書きが名指しした識別子に触れてへんのなら、それは別の欠陥。
-    return sum(signature["marker"] in line for line in real) == 1
-
-
-def expected_red_holds(result: DayResult) -> bool:
-    """その日の赤が、教材の断り書きどおりのものだけで説明できるか。
-
-    `broken_days()` と同じ線を、成果物の文書でも使うために切り出してある。
-    ここが緩むと「走行は exit 1 やのに文書は想定内と書いてある」状態が生まれる。
-    """
-    # ツリーを組めてへん日は、断り書きの対象外。tsc も build も走っとらんので
-    # 下の2つは素通りするが、broken_days() は異常として止める。ここで False を
-    # 返さんと、走行が exit 1 やのに成果物だけ「想定内」と書く。
-    if not result.tree_ok:
-        return False
-    if result.day not in EXPECTED_RED:
-        return False
-    if result.tsc == "NG" and not tsc_failure_is_expected(result):
-        return False
-    if result.build == "NG" and not build_failure_is_expected(result):
-        return False
-    return True
-
-
 def broken_days(results: list[DayResult]) -> list[DayResult]:
-    """教材の欠陥として止めるべき日だけを返す。
-
-    免除は「断り書きが名指ししとるものと一致したとき」だけ。日付だけで免除すると、
-    その日に紛れた別の欠陥が一緒に通る。ここを関数へ出してあるのは、main() を動かさんでも
-    免除の線を実際に通して確かめられるようにするため。
-    """
+    """教材の欠陥として止めるべき日だけを返す。"""
     return [
         r for r in results
-        if not r.tree_ok
-        or (r.tsc == "NG" and not tsc_failure_is_expected(r))
-        or (r.build == "NG" and not build_failure_is_expected(r))
+        if (
+            not r.source_input_stable
+            or not r.tree_ok
+            or r.verification_error is not None
+            or r.generation == "NG"
+            or r.tsc == "NG"
+            or r.build == "NG"
+        )
     ]
 
 
@@ -1694,31 +1786,23 @@ def main(argv: list[str]) -> int:
         # 成果物と最終行だけ SKIP になって、同じ走行が3通りの状態を名乗る。
         r = triage_build_results([r])[0]
         results.append(r)
-        print(f"day{n:02d}: ツリー {'OK' if r.tree_ok else 'NG'}（{r.files} ファイル） tsc {r.tsc} build {r.build}")
+        print(f"day{n:02d}: ツリー {'OK' if r.tree_ok else 'NG'}（{r.files} ファイル） "
+              f"Prisma生成 {r.generation} tsc {r.tsc} build {r.build}")
         for line in r.errors:
             print(f"    {line}")
 
     skipped = [r for r in results if r.build == BUILD_SKIPPED]
 
-    write_result_doc(results, verify, command_line(argv))
+    run_record = write_run_record(results, verify, command_line(argv))
+    write_result_doc(results, verify, command_line(argv), run_record)
+    print(f"不変の実行記録を書き出しました: {run_record.relative_to(REPO_ROOT)}")
     print(f"結果を書き出しました: {RESULT_DOC.relative_to(REPO_ROOT)}")
     broken = broken_days(results)
-    # 落ちると断ってある日が通ってしまったら、本文の断りのほうが古い。
-    unexpected_green = [
-        r for r in results if r.day in EXPECTED_RED and r.tsc == "OK"
-    ]
-    for r in results:
-        if r.day in EXPECTED_RED and r.tsc == "NG" and tsc_failure_is_expected(r):
-            print(f"  day{r.day:02d} の型エラーは想定どおり: {EXPECTED_RED[r.day]}")
-    if unexpected_green:
-        for r in unexpected_green:
-            print(
-                f"❌ day{r.day:02d} は教材が「型エラーが出る」と断っているのに通りました。"
-                "本文の断りを見直してください"
-            )
-        return 1
     if broken:
-        print(f"❌ ツリー構築・型検査・ビルドのどれかが通らない {len(broken)} 日")
+        print(
+            f"❌ ツリー構築・Prisma生成・型検査・ビルドのどれかが通らない "
+            f"{len(broken)} 日"
+        )
         for r in broken:
             if r.build == "NG" and r.tsc == "OK":
                 print(
@@ -1734,7 +1818,7 @@ def main(argv: list[str]) -> int:
             f"{len(skipped)} 件あります（この機械に DB が無い）: {days}"
         )
         print("   この走行は build を検証していません。DB のある機械で流し直してください")
-        return 0
+        return 1
     print(f"✅ {len(results)} 日ぶんを組み立てました")
     return 0
 

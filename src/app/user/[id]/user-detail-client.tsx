@@ -4,8 +4,6 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { StatusBadge } from '@/component/task/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -27,7 +25,11 @@ import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { formatDateOnly } from '@/lib/date';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
+
+const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
+  httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
 interface UserDetailClientProps {
   userId: string;
@@ -36,21 +38,46 @@ interface UserDetailClientProps {
 export function UserDetailClient({ userId }: UserDetailClientProps) {
   const router = useRouter();
 
-  const { data: currentUser } = api.auth.getCurrentUser.useQuery();
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
 
   const {
     data: user,
-    isLoading,
-    error,
-  } = api.user.getById.useQuery({ id: userId }, { enabled: userId.length > 0 });
+    isLoading: isUserLoading,
+    isError: isUserError,
+    isFetching: isUserFetching,
+    error: userError,
+    refetch: refetchUser,
+  } = api.user.getById.useQuery(
+    { id: userId },
+    { enabled: userId.length > 0, retry: shouldRetryUserQuery },
+  );
 
-  useEffect(() => {
-    if (error) {
-      toast.error(error.message || 'ユーザー情報の取得に失敗しました');
-    }
-  }, [error]);
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUserError ? userError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const notFound = isUserError && httpStatusOf(userError) === 404;
+  const hasFetchError = isCurrentUserError || isUserError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null) && (!isUserError || user != null);
+  const requiredLoading = isCurrentUserLoading || isUserLoading;
+  const requiredFetching = isCurrentUserFetching || isUserFetching;
 
-  if (isLoading) {
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    void refetchUser();
+  };
+
+  if (requiredLoading && !authFailed && !forbidden && !notFound) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
@@ -58,10 +85,65 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     );
   }
 
-  if (!user) {
+  if (
+    authFailed ||
+    forbidden ||
+    notFound ||
+    (hasFetchError && !hasRequiredData) ||
+    !currentUser ||
+    !user
+  ) {
     return (
       <AppLayout>
-        <PageLoadingSpinner />
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このユーザーを見る権限がありません'
+                : notFound
+                  ? 'ユーザーが見つかりません'
+                  : 'ユーザー情報を取得できませんでした'}
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '管理者または本人のみ表示できます。'
+                : notFound
+                  ? '削除されたか、URLが正しくない可能性があります。'
+                  : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/dashboard');
+                return;
+              }
+              if (notFound) {
+                router.push(currentUser?.role === USER_ROLE.ADMIN ? '/user' : '/dashboard');
+                return;
+              }
+              refetchRequiredData();
+            }}
+            disabled={requiredFetching}
+          >
+            {authFailed
+              ? 'ログイン画面へ'
+              : forbidden
+                ? 'ダッシュボードへ'
+                : notFound
+                  ? currentUser?.role === USER_ROLE.ADMIN
+                    ? 'ユーザー一覧へ'
+                    : 'ダッシュボードへ'
+                  : '再読み込み'}
+          </Button>
+        </div>
       </AppLayout>
     );
   }
@@ -72,6 +154,23 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   return (
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー情報を取得できませんでした。前回取得時の内容です。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"

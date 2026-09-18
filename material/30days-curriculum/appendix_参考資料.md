@@ -1,12 +1,12 @@
 # 参考資料リンク集
 
-このカリキュラムで使用している技術の公式ドキュメントと、学習に役立つリソースをまとめました。
+このカリキュラムで使用している技術の公式ドキュメントと学習に役立つリソースをまとめました。
 
-![完成後のダッシュボード(本カリキュラムで作る画面)](./screenshots/dashboard.png)
+![完成後のダッシュボード（本カリキュラムで作る画面）](./screenshots/day30/dashboard.png)
 
-![Next.js + shadcn/uiで作るプロジェクト一覧画面](./screenshots/project-list.png)
+![Next.js + shadcn/uiで作るプロジェクト一覧画面](./screenshots/day11/project-list-after-edit.png)
 
-![tRPCで実装するレポート画面](./screenshots/report.png)
+![tRPCで実装するレポート画面](./screenshots/day22/report.png)
 
 ---
 
@@ -17,14 +17,14 @@
 | 技術 | 公式ドキュメント | 概要 |
 |------|------------------|------|
 | React | https://react.dev/ | UIライブラリの公式ドキュメント。チュートリアルが充実 |
-| Next.js | https://nextjs.org/docs | App Router、API Routes、デプロイなど網羅的 |
+| Next.js | https://nextjs.org/docs | App Router、Route Handlers（`app/api` 配下のAPI）、デプロイなど網羅的 |
 | TypeScript | https://www.typescriptlang.org/docs/ | 型システムのハンドブックが充実 |
 | Tailwind CSS | https://tailwindcss.com/docs | ユーティリティクラスの全リファレンス |
 | shadcn/ui | https://ui.shadcn.com/ | コンポーネントのAPIドキュメントと使用例 |
 | Radix UI | https://www.radix-ui.com/primitives/docs/overview/introduction | shadcn/uiの基盤となるプリミティブコンポーネント |
 | Lucide Icons | https://lucide.dev/icons/ | アイコン一覧と検索 |
 | Recharts | https://recharts.org/ | グラフ・チャートコンポーネントのAPI |
-| TanStack Query | https://tanstack.com/query/latest | tRPC の `useQuery` / `useMutation` の土台。控えの持ち方と取り直しの挙動 |
+| TanStack Query | https://tanstack.com/query/latest | tRPC の `useQuery` / `useMutation` の土台。キャッシュの持ち方と再取得（refetch）の挙動 |
 | react-hook-form | https://react-hook-form.com/docs | フォームの値の管理とバリデーションの連携 |
 
 ### バックエンド
@@ -34,7 +34,7 @@
 | tRPC | https://trpc.io/docs | 型安全APIの構築方法 |
 | Prisma | https://www.prisma.io/docs | スキーマ定義、クエリAPI、マイグレーション（データベースの構造変更を履歴として管理する仕組み） |
 | PostgreSQL | https://www.postgresql.org/docs/ | SQLリファレンス、チューニングガイド |
-| Zod | https://zod.dev/ | バリデーションスキーマの定義方法。このカリキュラムは v3 系を使うので、公式が v4 の書き方を出している場合は v3 のドキュメントに切り替えて読んでください |
+| Zod | https://zod.dev/ | バリデーションスキーマの定義方法。このカリキュラムは v3 系を使います。[v3 のドキュメント](https://v3.zod.dev/)を読んでください |
 
 ### 認証
 
@@ -65,7 +65,7 @@
 
 ### React / Next.js
 
-- [React公式チュートリアル](https://react.dev/learn) - 三目並べゲームを作りながら学ぶ
+- [React公式チュートリアル](https://react.dev/learn/tutorial-tic-tac-toe) - 三目並べゲームを作りながら学ぶ
 - [Next.js公式チュートリアル](https://nextjs.org/learn) - ダッシュボードアプリを作りながら学ぶ
 
 ### データベース
@@ -87,17 +87,13 @@
 
 ## 便利なツール
 
-| ツール | URL | 用途 |
+| ツール | 入手先・起動方法 | 用途 |
 |--------|-----|------|
 | VS Code | https://code.visualstudio.com/ | コードエディタ |
-| ブラウザの開発者ツール（Networkタブ） | Chrome / Edge / Firefox に標準搭載 | このアプリの通信は tRPC を通るので、専用ツールより画面を操作して確認するほうが早い |
+| ブラウザの開発者ツール（Networkタブ） | Chrome / Edge / Firefox に標準搭載 | このアプリの tRPC 通信を画面の操作と合わせて確認する |
 | pgAdmin | https://www.pgadmin.org/ | PostgreSQL管理ツール |
 | Prisma Studio | `npx prisma studio` | データベースのGUI管理 |
-| React Developer Tools | Chrome拡張機能 | Reactコンポーネントのデバッグ |
-
----
-
-[← カリキュラム目次に戻る](./00_カリキュラム目次.md)
+| React Developer Tools | https://react.dev/learn/react-developer-tools | Chrome・Firefox・EdgeでReactコンポーネントをデバッグ |
 
 ---
 
