@@ -1,5 +1,10 @@
 .PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-test book-pdf-verify book-pdf-clean snapshot-verify snapshot-test
 
+# 商品PDFの章間リンクが指す配布先（PDF名→Drive URL）。リポジトリ管理下の
+# 正本を既定にして、CI や clone 直後でも make book-pdf がそのまま組めるようにする。
+# 環境変数で上書きすれば別の配布先JSONにも切り替えられる。
+export PDF_BOOK_LINK_MAP ?= scripts/pdf-book/pdf-link-map.json
+
 # ============================================
 # 写経ビルド検査（読者がその日まで写した手元を組み直す）
 # ============================================

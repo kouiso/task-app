@@ -11,6 +11,13 @@ Markdown のテキストだけを見ており、組版した結果は誰も見�
 判定は poppler（pdftotext / pdfinfo / pdffonts）だけで行う。追加の依存を増やすと、
 検査を動かすほうが面倒になって回されなくなる。
 
+見ないもの: 注釈リンクが Drive のどのファイルを指すか（配布先IDの照合は
+release_manifest.py の remote_check がやる）、本文の一字一句の再現性
+（長いコード行の折り返し破壊だけ verify_pdf_copy.py が見る）、
+画像そのものの見た目（check_page_layout.py は座標と比率だけ見る）。
+また冊数は「見つかった dayNN の範囲内の抜け」しか見ない。先頭や末尾の
+まるごと欠落は release_manifest.py の verify_pdf_inventory 側の責務。
+
 `material-gate.yml` の Gate 4 には**入れない**。この検査は先に PDF を組む必要があり、
 Chromium と10分前後のビルド時間を要求する。教材の文章を1行直すたびにそれを回すのは
 割に合わない。CI に載せるかどうかは別途判断する（だからこのファイルは
@@ -421,6 +428,17 @@ def main(argv: list[str]) -> int:
         return 2
 
     problems: list[str] = []
+
+    # dayNN の内側の抜けを見る。glob で見つかった分しか検査しないので、
+    # day07 だけ消えても今までは静かに緑だった。両端の欠落はここでは
+    # 見つけられない（冊数の保証は release_manifest.py の側でやる）。
+    day_numbers = {
+        int(m.group(1)) for p in pdfs
+        if (m := re.match(r"day(\d{2})_", p.name))
+    }
+    if day_numbers:
+        for d in sorted(set(range(min(day_numbers), max(day_numbers) + 1)) - day_numbers):
+            problems.append(f"day{d:02d} の PDF がありません")
     for pdf in pdfs:
         try:
             problems += check_one(pdf)
