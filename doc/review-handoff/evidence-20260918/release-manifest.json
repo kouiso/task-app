@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-18T15:48:07.972112+00:00",
+  "generated_at": "2026-09-18T17:03:01.567933+00:00",
   "git": {
-    "commit": "a40bfdac1b6b811c93e6e21e8a539ebc834fc214",
+    "commit": "eee732faee769af2db50001f93501f2a8a220120",
     "branch": "product/curriculum-v1-20260918",
-    "clean": true,
+    "clean": false,
     "worktree_identity": {
       "scope": "tracked-and-untracked-files; initialized-submodules-include-recursive-worktree-content; unavailable-submodules-are-bound-by-index-commit",
-      "file_count": 1003,
-      "regular_file_count": 949,
+      "file_count": 1005,
+      "regular_file_count": 951,
       "symlink_count": 53,
       "submodule_count": 1,
       "submodules": [
@@ -19,8 +19,14 @@
         }
       ],
       "missing_count": 0,
-      "aggregate_sha256": "d2a49f8e7e0054ee08ed042eb52910c7d36b6b68b1475a0a789f403532f29d26"
-    }
+      "aggregate_sha256": "617db247f0bfcbdcd0445e56d7c92a0e76a519c9ff5082481b1e34a1fe23f507"
+    },
+    "dirty_diagnostics": {
+      "scope": "partial-human-readable-summary-not-tree-identity",
+      "diff_sha256": "095d6d2df5f029a74501673025dd1cfb0b14864b05e064716721ad42d2351f6d",
+      "top_level_untracked_file_sha256": {}
+    },
+    "status_lines": 1
   },
   "tools": {
     "node": "v22.22.2",
@@ -80,7 +86,7 @@
   ],
   "generation_inputs": {
     "scope": "structural-current-state-only",
-    "observed_at": "2026-09-18T15:48:08.170232+00:00",
+    "observed_at": "2026-09-18T17:03:01.875498+00:00",
     "source_count": 36,
     "source_pdf_names": [
       "00-1_学びのロードマップ.pdf",
@@ -95,7 +101,7 @@
       "day04_ネットに公開.pdf",
       "day05_ログイン画面のUI.pdf",
       "day06_ユーザー登録画面.pdf",
-      "day07_ログイン体験を改善しよう.pdf",
+      "day07_認証バックエンドを作ろう.pdf",
       "day08_サイドバーを完成させよう.pdf",
       "day09_プロジェクト一覧画面.pdf",
       "day10_プロジェクト新規作成.pdf",
@@ -127,7 +133,7 @@
       },
       {
         "file": "material/30days-curriculum/00_カリキュラム目次.md",
-        "sha256": "6441e3716025cab896f68ce447046a967b0183781094090091aba6d93577a757"
+        "sha256": "05615427e2870027cba80d7697132e090cf82ac028de23892bcff5ece6a95057"
       },
       {
         "file": "material/30days-curriculum/appendix_トラブルシューティング.md",
@@ -167,15 +173,15 @@
       },
       {
         "file": "material/30days-curriculum/day06_ユーザー登録画面.md",
-        "sha256": "a8f565761ea51a51a72fdb65e803fd36a67a984d0b9122bc0b131b21da000e9d"
+        "sha256": "4685d2e09e47d621514ba92a0088c2d5c9a6ccf1a09d18166618903dd2ae3bf0"
       },
       {
-        "file": "material/30days-curriculum/day07_ログイン体験を改善しよう.md",
+        "file": "material/30days-curriculum/day07_認証バックエンドを作ろう.md",
         "sha256": "32975cc11b03032e5fcd016fddfa9a74a70c4ce5883a2269af0dbd3af5dc1f32"
       },
       {
         "file": "material/30days-curriculum/day08_サイドバーを完成させよう.md",
-        "sha256": "35c31c1a31f929ebde5b541f2f43ec01234c43ec2384cca79ad202b4ab07f515"
+        "sha256": "73b65a555b1ca3fd89deae2dc7e6897c9c38634653d603e561f9c68a48145f5b"
       },
       {
         "file": "material/30days-curriculum/day09_プロジェクト一覧画面.md",
@@ -278,7 +284,7 @@
         "sha256": "c8e28dc677e4bf0c1ffedc6414523ea1b60266912ad3f10f7b35818e196011b6"
       }
     ],
-    "aggregate_sha256": "6559424dae8119d193f722fdf9da8b156bacc49de5f9600f6cfbf7cc89d8253b"
+    "aggregate_sha256": "d4e3650a695c8e9f5f4103316e9676f289797f051bcb28f0874770487c97cba2"
   },
   "build_receipt": {
     "loaded": true,
@@ -286,7 +292,7 @@
     "receipt": {
       "version": 1,
       "scope": "full-36-book-build",
-      "built_at": "2026-09-18T15:41:18.513300+00:00",
+      "built_at": "2026-09-18T16:56:22.418127+00:00",
       "inputs": {
         "source_count": 36,
         "source_pdf_names": [
@@ -302,7 +308,7 @@
           "day04_ネットに公開.pdf",
           "day05_ログイン画面のUI.pdf",
           "day06_ユーザー登録画面.pdf",
-          "day07_ログイン体験を改善しよう.pdf",
+          "day07_認証バックエンドを作ろう.pdf",
           "day08_サイドバーを完成させよう.pdf",
           "day09_プロジェクト一覧画面.pdf",
           "day10_プロジェクト新規作成.pdf",
@@ -327,7 +333,7 @@
           "day29_ユーザー詳細・編集ページを作ろう.pdf",
           "day30_完成版を公開！.pdf"
         ],
-        "link_map_file": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/doc/review-handoff/evidence-20260918/pdf-link-map.json",
+        "link_map_file": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/scripts/pdf-book/pdf-link-map.json",
         "files": [
           {
             "file": "material/30days-curriculum/00-1_学びのロードマップ.md",
@@ -337,7 +343,7 @@
           {
             "file": "material/30days-curriculum/00_カリキュラム目次.md",
             "size": 15453,
-            "sha256": "6441e3716025cab896f68ce447046a967b0183781094090091aba6d93577a757"
+            "sha256": "05615427e2870027cba80d7697132e090cf82ac028de23892bcff5ece6a95057"
           },
           {
             "file": "material/30days-curriculum/appendix_トラブルシューティング.md",
@@ -387,17 +393,17 @@
           {
             "file": "material/30days-curriculum/day06_ユーザー登録画面.md",
             "size": 70257,
-            "sha256": "a8f565761ea51a51a72fdb65e803fd36a67a984d0b9122bc0b131b21da000e9d"
+            "sha256": "4685d2e09e47d621514ba92a0088c2d5c9a6ccf1a09d18166618903dd2ae3bf0"
           },
           {
-            "file": "material/30days-curriculum/day07_ログイン体験を改善しよう.md",
+            "file": "material/30days-curriculum/day07_認証バックエンドを作ろう.md",
             "size": 125727,
             "sha256": "32975cc11b03032e5fcd016fddfa9a74a70c4ce5883a2269af0dbd3af5dc1f32"
           },
           {
             "file": "material/30days-curriculum/day08_サイドバーを完成させよう.md",
             "size": 73831,
-            "sha256": "35c31c1a31f929ebde5b541f2f43ec01234c43ec2384cca79ad202b4ab07f515"
+            "sha256": "73b65a555b1ca3fd89deae2dc7e6897c9c38634653d603e561f9c68a48145f5b"
           },
           {
             "file": "material/30days-curriculum/day09_プロジェクト一覧画面.md",
@@ -1105,9 +1111,9 @@
             "sha256": "c3c7ca00b4538cc10906a5d4d921aab2369b2bee781168ef2ca695f3a5805760"
           },
           {
-            "file": "doc/review-handoff/evidence-20260918/pdf-link-map.json",
+            "file": "scripts/pdf-book/pdf-link-map.json",
             "size": 5830,
-            "sha256": "ade5d7b46d1e4ad9bef6417a0f358eca5cb77579a136622c61d65515022d1dd6"
+            "sha256": "6eaeb883f517db1159b117ab70f4515b4db7903288047c44798a28ecb62ccc5f"
           }
         ],
         "tools": [
@@ -1159,7 +1165,7 @@
         "resolved_toolchain": {
           "file_count": 44930,
           "size": 605531846,
-          "sha256": "fc5c991b5f7468e2b3623142b908908009c640b2c0ac6045bfcc2ec2819d9c18",
+          "sha256": "b39276bcc2d67f23157c31d0d7a91b9e4ab3fe617c77a3aea7b7bd2d2f31cbd3",
           "root": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/.pdf-book-toolchain"
         },
         "browser": {
@@ -1168,188 +1174,188 @@
           "sha256": "a75e953fc0fa6108e4fbe67fc9ab8ff8800b851f914b63504a4e26a431b7b22f",
           "path": "/opt/google/chrome/google-chrome"
         },
-        "aggregate_sha256": "da2e96a518711be14b8f0b35dddb8cf617b05aa7e232b90bf6c81adcec52e4f7"
+        "aggregate_sha256": "a30478557abe7c234afd789bf70d2beac78055727734bce06eaf8f8eba623968"
       },
       "outputs": [
         {
           "name": "00-1_学びのロードマップ.pdf",
           "size": 123240,
-          "sha256": "63e6c866b4d064cefa1bb5e1c9717b965483e5155efbaa2e5ee5f5a7e836c2d9"
+          "sha256": "b0eccb7c1bf9459e949d9479a4f0f3556214a43a3d143d15f9cc450eab27985d"
         },
         {
           "name": "00_カリキュラム目次.pdf",
-          "size": 275974,
-          "sha256": "a49000e347fc6ade15c68572eb62438740f9665cc308c9a6015d7c8cf2bd776c"
+          "size": 275975,
+          "sha256": "679bfcb9498aa748e9e8529154bb44d44bb5e0260d81f8bcb2b296d1963348e6"
         },
         {
           "name": "appendix_トラブルシューティング.pdf",
           "size": 685663,
-          "sha256": "3e496da36a9fb58cbcdacb2ee4bb08fc305fd10641915d16c3c3f37f3a8a9e72"
+          "sha256": "364572bb1c236a393a2fc272fe45ca2a9b06950f9c13b137d2a7a90864880931"
         },
         {
           "name": "appendix_参考資料.pdf",
-          "size": 702983,
-          "sha256": "5d91ac5fd86803293bb51a2f0f5c5d254635f91290e5b8c04f2ebed776ae72a7"
+          "size": 702985,
+          "sha256": "1b20554083d4260d3617ee1e85033236ba4306914a37c123472525e2765e8923"
         },
         {
           "name": "appendix_次のステップ.pdf",
           "size": 784564,
-          "sha256": "ee5e3a8f6c46f02395f2fe34005ffe9856e76be2e6d5ca6c68348e75004a4927"
+          "sha256": "e1d7176776538ed480f54f7741d64b24598b4e071a89f962396246a4dca9646b"
         },
         {
           "name": "appendix_用語集.pdf",
-          "size": 717972,
-          "sha256": "165c56a6d3c932d79a16d4ad0cf98b56c3a0649befc48982a110a0de991485ec"
+          "size": 717961,
+          "sha256": "91f01fd982eac168126bc28338bc83b874623f59a7856c79deadc12763401bc1"
         },
         {
           "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
-          "size": 1431123,
-          "sha256": "ea0d92047195e3ae2976de213ecbc19b5d5e58493eaf8c79744c2afd0764d4af"
+          "size": 1431125,
+          "sha256": "54fdfb99b53ad35d75321d0cbe458bfebbd461805e66cf393fa4cdb77438a9a2"
         },
         {
           "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
-          "size": 1254977,
-          "sha256": "30e6be714ba9784de4c5fff5c4edb5ce7afb037a53d70c2395953ec4591bcb0e"
+          "size": 1254976,
+          "sha256": "4a75f215469ab2f4f08e5207942007fa8c9bd84f094136078a4708356de28802"
         },
         {
           "name": "day03_GitHubに保存する.pdf",
           "size": 955674,
-          "sha256": "b744aad724fc54f707b0aa769bdae8d943cd2e0bbf3232f895e95625b36e2d4e"
+          "sha256": "b2c5cd91efe225ca82779e60abaddc85aff82939015de96a5476c85c477b9997"
         },
         {
           "name": "day04_ネットに公開.pdf",
-          "size": 943911,
-          "sha256": "ed73b29dfc53714cf1e3f9845a35974160ea884b13fdc80fd26af85918783081"
+          "size": 943916,
+          "sha256": "69bcd0b58e0897e3083aed7f4db96452b4f3ea5ee31f2e51f539edbb384af803"
         },
         {
           "name": "day05_ログイン画面のUI.pdf",
-          "size": 1264154,
-          "sha256": "baa97e35b3aa98a52c4255e793ce16090cd3e8caefb6a4b2690b749d7766a284"
+          "size": 1264150,
+          "sha256": "9b279a7b93df95539645a114dd5e008016a990bc9e1d291af3cc2bf30d91c093"
         },
         {
           "name": "day06_ユーザー登録画面.pdf",
-          "size": 1210386,
-          "sha256": "075e330a8fb9f2d49f5aa76a2de6253c2ab5ab853e0a139942ef921814031ec7"
+          "size": 1210348,
+          "sha256": "ff68612db2145bad9191c784f32650ff22904e037489432699e63298c0987dff"
         },
         {
-          "name": "day07_ログイン体験を改善しよう.pdf",
-          "size": 1889926,
-          "sha256": "be2a6025ebd937a44d354329f8d97c8d316a0a0a498bf69e107efb77f358255d"
+          "name": "day07_認証バックエンドを作ろう.pdf",
+          "size": 1889913,
+          "sha256": "384c8b8e31afa46926341573c116371439f3a37f6f83a9583891270ed202f6d4"
         },
         {
           "name": "day08_サイドバーを完成させよう.pdf",
           "size": 1821987,
-          "sha256": "80abfc36969599197573c7e6c19ba7a13401a7084fa4905fac457ba3dd94c011"
+          "sha256": "bc0819e59fa1d51a3a20d9f2d954eb988f942fe89bffc4ea774cc88439870722"
         },
         {
           "name": "day09_プロジェクト一覧画面.pdf",
-          "size": 1585102,
-          "sha256": "3548ec4155128e7f0e64574c336eb53298b210b0621e18c2c599de5ec9605267"
+          "size": 1585105,
+          "sha256": "fb79dde4d6430975d618aded73af6d54083dc63ca2f264a24afe1975330160bb"
         },
         {
           "name": "day10_プロジェクト新規作成.pdf",
           "size": 1427879,
-          "sha256": "273312b3ac96d3f4806222c086c4dbe5b1575576e1b5a15c6a35c4ed8cc9296b"
+          "sha256": "c34ba90c5e92ed73a5c3bef26bd40f1431c6b50075866873d521b6aecfdc6f3c"
         },
         {
           "name": "day11_プロジェクト編集・削除.pdf",
-          "size": 1877542,
-          "sha256": "c2afdecc78ee413ecb5bed934b85d9aa6c55a3d1f24c7bcfda8b59b46379cad5"
+          "size": 1877567,
+          "sha256": "c632df257e685d9a81c972a2b2a3a0e3567eaa9aef21fa80e033d6423d395e7e"
         },
         {
           "name": "day12_メンバー追加.pdf",
-          "size": 2071197,
-          "sha256": "477afce3c1a955a1edabb6afd5f441c14ba3aadab7593e2383d45d0d2819987e"
+          "size": 2071223,
+          "sha256": "f1f84ce245b13a945b0b45cc7ee1cd395f891aff4d7cbe041106a788b3bf9821"
         },
         {
           "name": "day13_タスク一覧画面.pdf",
-          "size": 1477621,
-          "sha256": "c3a3567b4c0a55231e90435e7e9f9628cafe907221e88fc4ca1d781a25b6437a"
+          "size": 1477606,
+          "sha256": "f3453f50ae65d9b90fe6aada508284af162505b0d04ca92c81d57656078901f7"
         },
         {
           "name": "day14_タスク新規作成.pdf",
-          "size": 2142647,
-          "sha256": "609943389d7dbf30edb9bb40cac97df9068cf728e62cd745562a88513a6838ae"
+          "size": 2142640,
+          "sha256": "e587496ed6e7af065d68b05e9c7939e92ef51ec8ce1b384b1219b18a2abf2fe9"
         },
         {
           "name": "day15_タスク編集・削除.pdf",
-          "size": 1599234,
-          "sha256": "f9cb0ddd4748965998281de423833422d7dae05e29ffb65aa49d4a7b48b3aea1"
+          "size": 1599241,
+          "sha256": "e78931d87e8e8d001592e3c1ad84cf65fcb195e35d487554ff8b91703572203d"
         },
         {
           "name": "day16_ステータス変更・時間記録.pdf",
-          "size": 1270421,
-          "sha256": "ce4aafb0c5f833399f23a64aaba319e1ba82e6cc8d68327ed900d49250162ac2"
+          "size": 1270434,
+          "sha256": "e86d3454804bde125c13eb48e333591bae0f403b5480979034f1a096bc6b7faf"
         },
         {
           "name": "day17_自分のタスクページ.pdf",
-          "size": 1672357,
-          "sha256": "c79d05d60f5986d3153ca8453490f5e8c5c6a30bc7e8e890cf6286913cb1c9be"
+          "size": 1672350,
+          "sha256": "b6eb1fc5c2af37ffe1952d95982c7273549c4706a2f60571e9069d0a41b8c346"
         },
         {
           "name": "day18_コメント投稿.pdf",
-          "size": 1375392,
-          "sha256": "3b3d802f639ce2b7ac5d5cfa6f6599eeb2a593102061c8ecaa0365c8068543a2"
+          "size": 1375396,
+          "sha256": "34fe198cb00028d583d1df43f26dbc32cdea4db38e3056c7ce74ea34f8a50c1f"
         },
         {
           "name": "day19_コメント編集・削除.pdf",
-          "size": 1304201,
-          "sha256": "c998141cbcff93d337d518261f7ff6e40d019f2ae514db9039c519b50a737feb"
+          "size": 1304210,
+          "sha256": "9451715cbca79ff39e5ac21bfbfe98f17ed293c48265f5b1d9afc6f02668d73c"
         },
         {
           "name": "day20_タスク検索機能.pdf",
-          "size": 2274986,
-          "sha256": "6f2684ca8de967801405728a098271052f16153e80b4c445f903dbb84b950657"
+          "size": 2274972,
+          "sha256": "6a106117f88dcd05a247de079ff7fd49644f8b0ea4546df33c6536ac2271bb48"
         },
         {
           "name": "day21_統計カードを表示.pdf",
           "size": 1544467,
-          "sha256": "14bcdb5c04b41ff56a4c772608ca6a98c8bd61a27c7934c12a4ea37dadfee7c4"
+          "sha256": "30ff6b06a82ad85babf3d358daa4da58f9c3a2d0b98279caed40822b2d8d025e"
         },
         {
           "name": "day22_グラフを表示.pdf",
-          "size": 1306294,
-          "sha256": "2d1a903a93f784c97de95f0cd357112ce6c536734a41e5ae595759a52075ce3c"
+          "size": 1306275,
+          "sha256": "daa53fcc6ff310d3dd89c61c441903c3a67103a2b231934f5da2474e212740ac"
         },
         {
           "name": "day23_週次レポート.pdf",
-          "size": 2071706,
-          "sha256": "fb5bfce787650b0e199ea754a54ab6dbbd956b37933b311cb3be429470c6d0f7"
+          "size": 2071689,
+          "sha256": "8ed2785f301137cd01e7dc9dcdca9d2bdc7cbeabd2311b6b251fe65d45553f8a"
         },
         {
           "name": "day24_ユーザー一覧（管理者用）.pdf",
-          "size": 1305879,
-          "sha256": "f84feea9444e22ca50b43e33ee287853d2e841ca196093946ea8211adc396905"
+          "size": 1305886,
+          "sha256": "7196a5fdb0ba5d0e37fcdc82273138d317e15fbad202209580f59e35f79b6387"
         },
         {
           "name": "day25_プロフィール編集.pdf",
-          "size": 2193461,
-          "sha256": "15081ea1c255cc1c3084b83a15cbaf5b35e7217d22814c9010fc88b675f0ffbe"
+          "size": 2193466,
+          "sha256": "1b2a1a07b8b36a0e0636a5db5a149e9be16d70f209c6e4d5107ff7b55e7f9599"
         },
         {
           "name": "day26_エラーページを作って、バグを退治しよう.pdf",
-          "size": 1471672,
-          "sha256": "6bfb8e3dfc332cdc83b12d52f45193c3fb1772328163bb687eae3ad43f4e0e46"
+          "size": 1471685,
+          "sha256": "d3f7db002e4298cd728b11f4aed5d8045d5aa92dff098c2e2a2d2e775fcefdb8"
         },
         {
           "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
-          "size": 2033093,
-          "sha256": "e668a3506ab269b1cd9f53fe87264f25cce009e5e3852f6b1ef79117c77e5765"
+          "size": 2033059,
+          "sha256": "324249460900f353488fd773501f372963cce6c15dce6275ad8d32a48c606ec2"
         },
         {
           "name": "day28_タスク一括操作を実装しよう.pdf",
-          "size": 2317355,
-          "sha256": "527decd90666268e8f5b0d81b4876dcb68834e7752dd6400dec5bd78b30b2ea5"
+          "size": 2317316,
+          "sha256": "8a560d64ae0ed21513d9f797db6695e7c291e38f66da7fbefc9beaf0e551ec18"
         },
         {
           "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
-          "size": 2301187,
-          "sha256": "94bc33cc5b132493177cb620ee57444a4ba8873fd2f4d040a0cea68937859f88"
+          "size": 2301185,
+          "sha256": "55dfe6bbb3d7b01874f29c35e22854d78b840042ae20a222562c1bcfc251cc42"
         },
         {
           "name": "day30_完成版を公開！.pdf",
-          "size": 1147441,
-          "sha256": "7df70e74fb860860e9a1f0e327b3a522296ec081c852c2347d28996ee254427b"
+          "size": 1147433,
+          "sha256": "07ce21139cd80df2f1c8362f1f070f96351eeb3a02f69d181ceb41673cf3c55e"
         }
       ]
     },
@@ -1368,7 +1374,7 @@
         "day04_ネットに公開.pdf",
         "day05_ログイン画面のUI.pdf",
         "day06_ユーザー登録画面.pdf",
-        "day07_ログイン体験を改善しよう.pdf",
+        "day07_認証バックエンドを作ろう.pdf",
         "day08_サイドバーを完成させよう.pdf",
         "day09_プロジェクト一覧画面.pdf",
         "day10_プロジェクト新規作成.pdf",
@@ -1393,7 +1399,7 @@
         "day29_ユーザー詳細・編集ページを作ろう.pdf",
         "day30_完成版を公開！.pdf"
       ],
-      "link_map_file": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/doc/review-handoff/evidence-20260918/pdf-link-map.json",
+      "link_map_file": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/scripts/pdf-book/pdf-link-map.json",
       "files": [
         {
           "file": "material/30days-curriculum/00-1_学びのロードマップ.md",
@@ -1403,7 +1409,7 @@
         {
           "file": "material/30days-curriculum/00_カリキュラム目次.md",
           "size": 15453,
-          "sha256": "6441e3716025cab896f68ce447046a967b0183781094090091aba6d93577a757"
+          "sha256": "05615427e2870027cba80d7697132e090cf82ac028de23892bcff5ece6a95057"
         },
         {
           "file": "material/30days-curriculum/appendix_トラブルシューティング.md",
@@ -1453,17 +1459,17 @@
         {
           "file": "material/30days-curriculum/day06_ユーザー登録画面.md",
           "size": 70257,
-          "sha256": "a8f565761ea51a51a72fdb65e803fd36a67a984d0b9122bc0b131b21da000e9d"
+          "sha256": "4685d2e09e47d621514ba92a0088c2d5c9a6ccf1a09d18166618903dd2ae3bf0"
         },
         {
-          "file": "material/30days-curriculum/day07_ログイン体験を改善しよう.md",
+          "file": "material/30days-curriculum/day07_認証バックエンドを作ろう.md",
           "size": 125727,
           "sha256": "32975cc11b03032e5fcd016fddfa9a74a70c4ce5883a2269af0dbd3af5dc1f32"
         },
         {
           "file": "material/30days-curriculum/day08_サイドバーを完成させよう.md",
           "size": 73831,
-          "sha256": "35c31c1a31f929ebde5b541f2f43ec01234c43ec2384cca79ad202b4ab07f515"
+          "sha256": "73b65a555b1ca3fd89deae2dc7e6897c9c38634653d603e561f9c68a48145f5b"
         },
         {
           "file": "material/30days-curriculum/day09_プロジェクト一覧画面.md",
@@ -2171,9 +2177,9 @@
           "sha256": "c3c7ca00b4538cc10906a5d4d921aab2369b2bee781168ef2ca695f3a5805760"
         },
         {
-          "file": "doc/review-handoff/evidence-20260918/pdf-link-map.json",
+          "file": "scripts/pdf-book/pdf-link-map.json",
           "size": 5830,
-          "sha256": "ade5d7b46d1e4ad9bef6417a0f358eca5cb77579a136622c61d65515022d1dd6"
+          "sha256": "6eaeb883f517db1159b117ab70f4515b4db7903288047c44798a28ecb62ccc5f"
         }
       ],
       "tools": [
@@ -2225,7 +2231,7 @@
       "resolved_toolchain": {
         "file_count": 44930,
         "size": 605531846,
-        "sha256": "fc5c991b5f7468e2b3623142b908908009c640b2c0ac6045bfcc2ec2819d9c18",
+        "sha256": "b39276bcc2d67f23157c31d0d7a91b9e4ab3fe617c77a3aea7b7bd2d2f31cbd3",
         "root": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/.pdf-book-toolchain"
       },
       "browser": {
@@ -2234,7 +2240,7 @@
         "sha256": "a75e953fc0fa6108e4fbe67fc9ab8ff8800b851f914b63504a4e26a431b7b22f",
         "path": "/opt/google/chrome/google-chrome"
       },
-      "aggregate_sha256": "da2e96a518711be14b8f0b35dddb8cf617b05aa7e232b90bf6c81adcec52e4f7"
+      "aggregate_sha256": "a30478557abe7c234afd789bf70d2beac78055727734bce06eaf8f8eba623968"
     }
   },
   "artifacts": {
@@ -2242,252 +2248,252 @@
       {
         "name": "00-1_学びのロードマップ.pdf",
         "size": 123240,
-        "sha256": "63e6c866b4d064cefa1bb5e1c9717b965483e5155efbaa2e5ee5f5a7e836c2d9",
+        "sha256": "b0eccb7c1bf9459e949d9479a4f0f3556214a43a3d143d15f9cc450eab27985d",
         "pages": 6,
         "parse_error": null
       },
       {
         "name": "00_カリキュラム目次.pdf",
-        "size": 275974,
-        "sha256": "a49000e347fc6ade15c68572eb62438740f9665cc308c9a6015d7c8cf2bd776c",
+        "size": 275975,
+        "sha256": "679bfcb9498aa748e9e8529154bb44d44bb5e0260d81f8bcb2b296d1963348e6",
         "pages": 16,
         "parse_error": null
       },
       {
         "name": "appendix_トラブルシューティング.pdf",
         "size": 685663,
-        "sha256": "3e496da36a9fb58cbcdacb2ee4bb08fc305fd10641915d16c3c3f37f3a8a9e72",
+        "sha256": "364572bb1c236a393a2fc272fe45ca2a9b06950f9c13b137d2a7a90864880931",
         "pages": 13,
         "parse_error": null
       },
       {
         "name": "appendix_参考資料.pdf",
-        "size": 702983,
-        "sha256": "5d91ac5fd86803293bb51a2f0f5c5d254635f91290e5b8c04f2ebed776ae72a7",
+        "size": 702985,
+        "sha256": "1b20554083d4260d3617ee1e85033236ba4306914a37c123472525e2765e8923",
         "pages": 10,
         "parse_error": null
       },
       {
         "name": "appendix_次のステップ.pdf",
         "size": 784564,
-        "sha256": "ee5e3a8f6c46f02395f2fe34005ffe9856e76be2e6d5ca6c68348e75004a4927",
+        "sha256": "e1d7176776538ed480f54f7741d64b24598b4e071a89f962396246a4dca9646b",
         "pages": 11,
         "parse_error": null
       },
       {
         "name": "appendix_用語集.pdf",
-        "size": 717972,
-        "sha256": "165c56a6d3c932d79a16d4ad0cf98b56c3a0649befc48982a110a0de991485ec",
+        "size": 717961,
+        "sha256": "91f01fd982eac168126bc28338bc83b874623f59a7856c79deadc12763401bc1",
         "pages": 15,
         "parse_error": null
       },
       {
         "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
-        "size": 1431123,
-        "sha256": "ea0d92047195e3ae2976de213ecbc19b5d5e58493eaf8c79744c2afd0764d4af",
+        "size": 1431125,
+        "sha256": "54fdfb99b53ad35d75321d0cbe458bfebbd461805e66cf393fa4cdb77438a9a2",
         "pages": 78,
         "parse_error": null
       },
       {
         "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
-        "size": 1254977,
-        "sha256": "30e6be714ba9784de4c5fff5c4edb5ce7afb037a53d70c2395953ec4591bcb0e",
+        "size": 1254976,
+        "sha256": "4a75f215469ab2f4f08e5207942007fa8c9bd84f094136078a4708356de28802",
         "pages": 83,
         "parse_error": null
       },
       {
         "name": "day03_GitHubに保存する.pdf",
         "size": 955674,
-        "sha256": "b744aad724fc54f707b0aa769bdae8d943cd2e0bbf3232f895e95625b36e2d4e",
+        "sha256": "b2c5cd91efe225ca82779e60abaddc85aff82939015de96a5476c85c477b9997",
         "pages": 50,
         "parse_error": null
       },
       {
         "name": "day04_ネットに公開.pdf",
-        "size": 943911,
-        "sha256": "ed73b29dfc53714cf1e3f9845a35974160ea884b13fdc80fd26af85918783081",
+        "size": 943916,
+        "sha256": "69bcd0b58e0897e3083aed7f4db96452b4f3ea5ee31f2e51f539edbb384af803",
         "pages": 46,
         "parse_error": null
       },
       {
         "name": "day05_ログイン画面のUI.pdf",
-        "size": 1264154,
-        "sha256": "baa97e35b3aa98a52c4255e793ce16090cd3e8caefb6a4b2690b749d7766a284",
+        "size": 1264150,
+        "sha256": "9b279a7b93df95539645a114dd5e008016a990bc9e1d291af3cc2bf30d91c093",
         "pages": 81,
         "parse_error": null
       },
       {
         "name": "day06_ユーザー登録画面.pdf",
-        "size": 1210386,
-        "sha256": "075e330a8fb9f2d49f5aa76a2de6253c2ab5ab853e0a139942ef921814031ec7",
+        "size": 1210348,
+        "sha256": "ff68612db2145bad9191c784f32650ff22904e037489432699e63298c0987dff",
         "pages": 72,
         "parse_error": null
       },
       {
-        "name": "day07_ログイン体験を改善しよう.pdf",
-        "size": 1889926,
-        "sha256": "be2a6025ebd937a44d354329f8d97c8d316a0a0a498bf69e107efb77f358255d",
+        "name": "day07_認証バックエンドを作ろう.pdf",
+        "size": 1889913,
+        "sha256": "384c8b8e31afa46926341573c116371439f3a37f6f83a9583891270ed202f6d4",
         "pages": 124,
         "parse_error": null
       },
       {
         "name": "day08_サイドバーを完成させよう.pdf",
         "size": 1821987,
-        "sha256": "80abfc36969599197573c7e6c19ba7a13401a7084fa4905fac457ba3dd94c011",
+        "sha256": "bc0819e59fa1d51a3a20d9f2d954eb988f942fe89bffc4ea774cc88439870722",
         "pages": 80,
         "parse_error": null
       },
       {
         "name": "day09_プロジェクト一覧画面.pdf",
-        "size": 1585102,
-        "sha256": "3548ec4155128e7f0e64574c336eb53298b210b0621e18c2c599de5ec9605267",
+        "size": 1585105,
+        "sha256": "fb79dde4d6430975d618aded73af6d54083dc63ca2f264a24afe1975330160bb",
         "pages": 80,
         "parse_error": null
       },
       {
         "name": "day10_プロジェクト新規作成.pdf",
         "size": 1427879,
-        "sha256": "273312b3ac96d3f4806222c086c4dbe5b1575576e1b5a15c6a35c4ed8cc9296b",
+        "sha256": "c34ba90c5e92ed73a5c3bef26bd40f1431c6b50075866873d521b6aecfdc6f3c",
         "pages": 101,
         "parse_error": null
       },
       {
         "name": "day11_プロジェクト編集・削除.pdf",
-        "size": 1877542,
-        "sha256": "c2afdecc78ee413ecb5bed934b85d9aa6c55a3d1f24c7bcfda8b59b46379cad5",
+        "size": 1877567,
+        "sha256": "c632df257e685d9a81c972a2b2a3a0e3567eaa9aef21fa80e033d6423d395e7e",
         "pages": 150,
         "parse_error": null
       },
       {
         "name": "day12_メンバー追加.pdf",
-        "size": 2071197,
-        "sha256": "477afce3c1a955a1edabb6afd5f441c14ba3aadab7593e2383d45d0d2819987e",
+        "size": 2071223,
+        "sha256": "f1f84ce245b13a945b0b45cc7ee1cd395f891aff4d7cbe041106a788b3bf9821",
         "pages": 155,
         "parse_error": null
       },
       {
         "name": "day13_タスク一覧画面.pdf",
-        "size": 1477621,
-        "sha256": "c3a3567b4c0a55231e90435e7e9f9628cafe907221e88fc4ca1d781a25b6437a",
+        "size": 1477606,
+        "sha256": "f3453f50ae65d9b90fe6aada508284af162505b0d04ca92c81d57656078901f7",
         "pages": 96,
         "parse_error": null
       },
       {
         "name": "day14_タスク新規作成.pdf",
-        "size": 2142647,
-        "sha256": "609943389d7dbf30edb9bb40cac97df9068cf728e62cd745562a88513a6838ae",
+        "size": 2142640,
+        "sha256": "e587496ed6e7af065d68b05e9c7939e92ef51ec8ce1b384b1219b18a2abf2fe9",
         "pages": 162,
         "parse_error": null
       },
       {
         "name": "day15_タスク編集・削除.pdf",
-        "size": 1599234,
-        "sha256": "f9cb0ddd4748965998281de423833422d7dae05e29ffb65aa49d4a7b48b3aea1",
+        "size": 1599241,
+        "sha256": "e78931d87e8e8d001592e3c1ad84cf65fcb195e35d487554ff8b91703572203d",
         "pages": 114,
         "parse_error": null
       },
       {
         "name": "day16_ステータス変更・時間記録.pdf",
-        "size": 1270421,
-        "sha256": "ce4aafb0c5f833399f23a64aaba319e1ba82e6cc8d68327ed900d49250162ac2",
+        "size": 1270434,
+        "sha256": "e86d3454804bde125c13eb48e333591bae0f403b5480979034f1a096bc6b7faf",
         "pages": 83,
         "parse_error": null
       },
       {
         "name": "day17_自分のタスクページ.pdf",
-        "size": 1672357,
-        "sha256": "c79d05d60f5986d3153ca8453490f5e8c5c6a30bc7e8e890cf6286913cb1c9be",
+        "size": 1672350,
+        "sha256": "b6eb1fc5c2af37ffe1952d95982c7273549c4706a2f60571e9069d0a41b8c346",
         "pages": 102,
         "parse_error": null
       },
       {
         "name": "day18_コメント投稿.pdf",
-        "size": 1375392,
-        "sha256": "3b3d802f639ce2b7ac5d5cfa6f6599eeb2a593102061c8ecaa0365c8068543a2",
+        "size": 1375396,
+        "sha256": "34fe198cb00028d583d1df43f26dbc32cdea4db38e3056c7ce74ea34f8a50c1f",
         "pages": 79,
         "parse_error": null
       },
       {
         "name": "day19_コメント編集・削除.pdf",
-        "size": 1304201,
-        "sha256": "c998141cbcff93d337d518261f7ff6e40d019f2ae514db9039c519b50a737feb",
+        "size": 1304210,
+        "sha256": "9451715cbca79ff39e5ac21bfbfe98f17ed293c48265f5b1d9afc6f02668d73c",
         "pages": 89,
         "parse_error": null
       },
       {
         "name": "day20_タスク検索機能.pdf",
-        "size": 2274986,
-        "sha256": "6f2684ca8de967801405728a098271052f16153e80b4c445f903dbb84b950657",
+        "size": 2274972,
+        "sha256": "6a106117f88dcd05a247de079ff7fd49644f8b0ea4546df33c6536ac2271bb48",
         "pages": 182,
         "parse_error": null
       },
       {
         "name": "day21_統計カードを表示.pdf",
         "size": 1544467,
-        "sha256": "14bcdb5c04b41ff56a4c772608ca6a98c8bd61a27c7934c12a4ea37dadfee7c4",
+        "sha256": "30ff6b06a82ad85babf3d358daa4da58f9c3a2d0b98279caed40822b2d8d025e",
         "pages": 87,
         "parse_error": null
       },
       {
         "name": "day22_グラフを表示.pdf",
-        "size": 1306294,
-        "sha256": "2d1a903a93f784c97de95f0cd357112ce6c536734a41e5ae595759a52075ce3c",
+        "size": 1306275,
+        "sha256": "daa53fcc6ff310d3dd89c61c441903c3a67103a2b231934f5da2474e212740ac",
         "pages": 54,
         "parse_error": null
       },
       {
         "name": "day23_週次レポート.pdf",
-        "size": 2071706,
-        "sha256": "fb5bfce787650b0e199ea754a54ab6dbbd956b37933b311cb3be429470c6d0f7",
+        "size": 2071689,
+        "sha256": "8ed2785f301137cd01e7dc9dcdca9d2bdc7cbeabd2311b6b251fe65d45553f8a",
         "pages": 118,
         "parse_error": null
       },
       {
         "name": "day24_ユーザー一覧（管理者用）.pdf",
-        "size": 1305879,
-        "sha256": "f84feea9444e22ca50b43e33ee287853d2e841ca196093946ea8211adc396905",
+        "size": 1305886,
+        "sha256": "7196a5fdb0ba5d0e37fcdc82273138d317e15fbad202209580f59e35f79b6387",
         "pages": 79,
         "parse_error": null
       },
       {
         "name": "day25_プロフィール編集.pdf",
-        "size": 2193461,
-        "sha256": "15081ea1c255cc1c3084b83a15cbaf5b35e7217d22814c9010fc88b675f0ffbe",
+        "size": 2193466,
+        "sha256": "1b2a1a07b8b36a0e0636a5db5a149e9be16d70f209c6e4d5107ff7b55e7f9599",
         "pages": 162,
         "parse_error": null
       },
       {
         "name": "day26_エラーページを作って、バグを退治しよう.pdf",
-        "size": 1471672,
-        "sha256": "6bfb8e3dfc332cdc83b12d52f45193c3fb1772328163bb687eae3ad43f4e0e46",
+        "size": 1471685,
+        "sha256": "d3f7db002e4298cd728b11f4aed5d8045d5aa92dff098c2e2a2d2e775fcefdb8",
         "pages": 125,
         "parse_error": null
       },
       {
         "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
-        "size": 2033093,
-        "sha256": "e668a3506ab269b1cd9f53fe87264f25cce009e5e3852f6b1ef79117c77e5765",
+        "size": 2033059,
+        "sha256": "324249460900f353488fd773501f372963cce6c15dce6275ad8d32a48c606ec2",
         "pages": 131,
         "parse_error": null
       },
       {
         "name": "day28_タスク一括操作を実装しよう.pdf",
-        "size": 2317355,
-        "sha256": "527decd90666268e8f5b0d81b4876dcb68834e7752dd6400dec5bd78b30b2ea5",
+        "size": 2317316,
+        "sha256": "8a560d64ae0ed21513d9f797db6695e7c291e38f66da7fbefc9beaf0e551ec18",
         "pages": 97,
         "parse_error": null
       },
       {
         "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
-        "size": 2301187,
-        "sha256": "94bc33cc5b132493177cb620ee57444a4ba8873fd2f4d040a0cea68937859f88",
+        "size": 2301185,
+        "sha256": "55dfe6bbb3d7b01874f29c35e22854d78b840042ae20a222562c1bcfc251cc42",
         "pages": 188,
         "parse_error": null
       },
       {
         "name": "day30_完成版を公開！.pdf",
-        "size": 1147441,
-        "sha256": "7df70e74fb860860e9a1f0e327b3a522296ec081c852c2347d28996ee254427b",
+        "size": 1147433,
+        "sha256": "07ce21139cd80df2f1c8362f1f070f96351eeb3a02f69d181ceb41673cf3c55e",
         "pages": 52,
         "parse_error": null
       }
@@ -2509,217 +2515,217 @@
       "id": "1brFAifMLznqc1jDyTDLukCIHgxL2JwXL",
       "name": "day30_完成版を公開！.pdf",
       "url": "https://drive.google.com/file/d/1brFAifMLznqc1jDyTDLukCIHgxL2JwXL/view?usp=drivesdk",
-      "uploaded_sha256": "7df70e74fb860860e9a1f0e327b3a522296ec081c852c2347d28996ee254427b"
+      "uploaded_sha256": "07ce21139cd80df2f1c8362f1f070f96351eeb3a02f69d181ceb41673cf3c55e"
     },
     {
       "id": "1jxIONgRWWgaENJ1d3oE2OwQmG_uF7KPI",
       "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
       "url": "https://drive.google.com/file/d/1jxIONgRWWgaENJ1d3oE2OwQmG_uF7KPI/view?usp=drivesdk",
-      "uploaded_sha256": "94bc33cc5b132493177cb620ee57444a4ba8873fd2f4d040a0cea68937859f88"
+      "uploaded_sha256": "55dfe6bbb3d7b01874f29c35e22854d78b840042ae20a222562c1bcfc251cc42"
     },
     {
       "id": "1gnCqq_w3xfJxrKoltDW7UMydml93Jy7v",
       "name": "day28_タスク一括操作を実装しよう.pdf",
       "url": "https://drive.google.com/file/d/1gnCqq_w3xfJxrKoltDW7UMydml93Jy7v/view?usp=drivesdk",
-      "uploaded_sha256": "527decd90666268e8f5b0d81b4876dcb68834e7752dd6400dec5bd78b30b2ea5"
+      "uploaded_sha256": "8a560d64ae0ed21513d9f797db6695e7c291e38f66da7fbefc9beaf0e551ec18"
     },
     {
       "id": "16zGgynKmh0LG4wF5u7p2xrkm5yunRZIX",
       "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
       "url": "https://drive.google.com/file/d/16zGgynKmh0LG4wF5u7p2xrkm5yunRZIX/view?usp=drivesdk",
-      "uploaded_sha256": "e668a3506ab269b1cd9f53fe87264f25cce009e5e3852f6b1ef79117c77e5765"
+      "uploaded_sha256": "324249460900f353488fd773501f372963cce6c15dce6275ad8d32a48c606ec2"
     },
     {
       "id": "1N8cjb_xZ4jPK8z5U95xMrRK7I3_Dzs_P",
       "name": "day26_エラーページを作って、バグを退治しよう.pdf",
       "url": "https://drive.google.com/file/d/1N8cjb_xZ4jPK8z5U95xMrRK7I3_Dzs_P/view?usp=drivesdk",
-      "uploaded_sha256": "6bfb8e3dfc332cdc83b12d52f45193c3fb1772328163bb687eae3ad43f4e0e46"
+      "uploaded_sha256": "d3f7db002e4298cd728b11f4aed5d8045d5aa92dff098c2e2a2d2e775fcefdb8"
     },
     {
       "id": "1ZxIG1alOFSR758Rak5knuSA7A15gwcAj",
       "name": "day25_プロフィール編集.pdf",
       "url": "https://drive.google.com/file/d/1ZxIG1alOFSR758Rak5knuSA7A15gwcAj/view?usp=drivesdk",
-      "uploaded_sha256": "15081ea1c255cc1c3084b83a15cbaf5b35e7217d22814c9010fc88b675f0ffbe"
+      "uploaded_sha256": "1b2a1a07b8b36a0e0636a5db5a149e9be16d70f209c6e4d5107ff7b55e7f9599"
     },
     {
       "id": "1gHKuQHaL0tBpTM9qESjUqg3sHlqaKgPv",
       "name": "day24_ユーザー一覧（管理者用）.pdf",
       "url": "https://drive.google.com/file/d/1gHKuQHaL0tBpTM9qESjUqg3sHlqaKgPv/view?usp=drivesdk",
-      "uploaded_sha256": "f84feea9444e22ca50b43e33ee287853d2e841ca196093946ea8211adc396905"
+      "uploaded_sha256": "7196a5fdb0ba5d0e37fcdc82273138d317e15fbad202209580f59e35f79b6387"
     },
     {
       "id": "1EaYyLRG4W8EmUULkkja5l_xFsfQJaSGc",
       "name": "day23_週次レポート.pdf",
       "url": "https://drive.google.com/file/d/1EaYyLRG4W8EmUULkkja5l_xFsfQJaSGc/view?usp=drivesdk",
-      "uploaded_sha256": "fb5bfce787650b0e199ea754a54ab6dbbd956b37933b311cb3be429470c6d0f7"
+      "uploaded_sha256": "8ed2785f301137cd01e7dc9dcdca9d2bdc7cbeabd2311b6b251fe65d45553f8a"
     },
     {
       "id": "1kA8jhIcg7LJ3EGTWygNnABUihixSCD_C",
       "name": "day22_グラフを表示.pdf",
       "url": "https://drive.google.com/file/d/1kA8jhIcg7LJ3EGTWygNnABUihixSCD_C/view?usp=drivesdk",
-      "uploaded_sha256": "2d1a903a93f784c97de95f0cd357112ce6c536734a41e5ae595759a52075ce3c"
+      "uploaded_sha256": "daa53fcc6ff310d3dd89c61c441903c3a67103a2b231934f5da2474e212740ac"
     },
     {
       "id": "1L0tDk42OVnMY5tsaTfXgfXfLao1j5Sy8",
       "name": "day21_統計カードを表示.pdf",
       "url": "https://drive.google.com/file/d/1L0tDk42OVnMY5tsaTfXgfXfLao1j5Sy8/view?usp=drivesdk",
-      "uploaded_sha256": "14bcdb5c04b41ff56a4c772608ca6a98c8bd61a27c7934c12a4ea37dadfee7c4"
+      "uploaded_sha256": "30ff6b06a82ad85babf3d358daa4da58f9c3a2d0b98279caed40822b2d8d025e"
     },
     {
       "id": "1ribgG0JH4lD0DAkaYd5VragjRzxn8wyX",
       "name": "day20_タスク検索機能.pdf",
       "url": "https://drive.google.com/file/d/1ribgG0JH4lD0DAkaYd5VragjRzxn8wyX/view?usp=drivesdk",
-      "uploaded_sha256": "6f2684ca8de967801405728a098271052f16153e80b4c445f903dbb84b950657"
+      "uploaded_sha256": "6a106117f88dcd05a247de079ff7fd49644f8b0ea4546df33c6536ac2271bb48"
     },
     {
       "id": "1fxqVw24Ib7a2g_AvXucqoAowi9aGtvnI",
       "name": "day19_コメント編集・削除.pdf",
       "url": "https://drive.google.com/file/d/1fxqVw24Ib7a2g_AvXucqoAowi9aGtvnI/view?usp=drivesdk",
-      "uploaded_sha256": "c998141cbcff93d337d518261f7ff6e40d019f2ae514db9039c519b50a737feb"
+      "uploaded_sha256": "9451715cbca79ff39e5ac21bfbfe98f17ed293c48265f5b1d9afc6f02668d73c"
     },
     {
       "id": "1_qYMzd0Ht6tQjuC3BU-ljYMNS2LYkTz6",
       "name": "day18_コメント投稿.pdf",
       "url": "https://drive.google.com/file/d/1_qYMzd0Ht6tQjuC3BU-ljYMNS2LYkTz6/view?usp=drivesdk",
-      "uploaded_sha256": "3b3d802f639ce2b7ac5d5cfa6f6599eeb2a593102061c8ecaa0365c8068543a2"
+      "uploaded_sha256": "34fe198cb00028d583d1df43f26dbc32cdea4db38e3056c7ce74ea34f8a50c1f"
     },
     {
       "id": "1qRiiBFzg4OOYrvWsOAi200gdQ5o0pajx",
       "name": "day17_自分のタスクページ.pdf",
       "url": "https://drive.google.com/file/d/1qRiiBFzg4OOYrvWsOAi200gdQ5o0pajx/view?usp=drivesdk",
-      "uploaded_sha256": "c79d05d60f5986d3153ca8453490f5e8c5c6a30bc7e8e890cf6286913cb1c9be"
+      "uploaded_sha256": "b6eb1fc5c2af37ffe1952d95982c7273549c4706a2f60571e9069d0a41b8c346"
     },
     {
       "id": "1q9jMr3kNR02op6lzz_Fl-wiLqYtoTWCx",
       "name": "day16_ステータス変更・時間記録.pdf",
       "url": "https://drive.google.com/file/d/1q9jMr3kNR02op6lzz_Fl-wiLqYtoTWCx/view?usp=drivesdk",
-      "uploaded_sha256": "ce4aafb0c5f833399f23a64aaba319e1ba82e6cc8d68327ed900d49250162ac2"
+      "uploaded_sha256": "e86d3454804bde125c13eb48e333591bae0f403b5480979034f1a096bc6b7faf"
     },
     {
       "id": "1JAo3xFRUdH6fxOz6YdkQQGQdGfihq9kl",
       "name": "day15_タスク編集・削除.pdf",
       "url": "https://drive.google.com/file/d/1JAo3xFRUdH6fxOz6YdkQQGQdGfihq9kl/view?usp=drivesdk",
-      "uploaded_sha256": "f9cb0ddd4748965998281de423833422d7dae05e29ffb65aa49d4a7b48b3aea1"
+      "uploaded_sha256": "e78931d87e8e8d001592e3c1ad84cf65fcb195e35d487554ff8b91703572203d"
     },
     {
       "id": "11QrPlqaJ9q0SfLFW7cqOpSbSvjCfzUCF",
       "name": "day14_タスク新規作成.pdf",
       "url": "https://drive.google.com/file/d/11QrPlqaJ9q0SfLFW7cqOpSbSvjCfzUCF/view?usp=drivesdk",
-      "uploaded_sha256": "609943389d7dbf30edb9bb40cac97df9068cf728e62cd745562a88513a6838ae"
+      "uploaded_sha256": "e587496ed6e7af065d68b05e9c7939e92ef51ec8ce1b384b1219b18a2abf2fe9"
     },
     {
       "id": "1ttfnXLvTLGIVg5FXNBrBJUVbnb1KUm2U",
       "name": "day13_タスク一覧画面.pdf",
       "url": "https://drive.google.com/file/d/1ttfnXLvTLGIVg5FXNBrBJUVbnb1KUm2U/view?usp=drivesdk",
-      "uploaded_sha256": "c3a3567b4c0a55231e90435e7e9f9628cafe907221e88fc4ca1d781a25b6437a"
+      "uploaded_sha256": "f3453f50ae65d9b90fe6aada508284af162505b0d04ca92c81d57656078901f7"
     },
     {
       "id": "1vgshhZNhNkdRYY7nENqT1C_gijcTs89C",
       "name": "day12_メンバー追加.pdf",
       "url": "https://drive.google.com/file/d/1vgshhZNhNkdRYY7nENqT1C_gijcTs89C/view?usp=drivesdk",
-      "uploaded_sha256": "477afce3c1a955a1edabb6afd5f441c14ba3aadab7593e2383d45d0d2819987e"
+      "uploaded_sha256": "f1f84ce245b13a945b0b45cc7ee1cd395f891aff4d7cbe041106a788b3bf9821"
     },
     {
       "id": "1QhgiE5y4b7-kG95TkrWuPRXFchQ3pxhO",
       "name": "day11_プロジェクト編集・削除.pdf",
       "url": "https://drive.google.com/file/d/1QhgiE5y4b7-kG95TkrWuPRXFchQ3pxhO/view?usp=drivesdk",
-      "uploaded_sha256": "c2afdecc78ee413ecb5bed934b85d9aa6c55a3d1f24c7bcfda8b59b46379cad5"
+      "uploaded_sha256": "c632df257e685d9a81c972a2b2a3a0e3567eaa9aef21fa80e033d6423d395e7e"
     },
     {
       "id": "1XswFwEDBx3muA4VnfHQz_Zd4YjrJVTRw",
       "name": "day10_プロジェクト新規作成.pdf",
       "url": "https://drive.google.com/file/d/1XswFwEDBx3muA4VnfHQz_Zd4YjrJVTRw/view?usp=drivesdk",
-      "uploaded_sha256": "273312b3ac96d3f4806222c086c4dbe5b1575576e1b5a15c6a35c4ed8cc9296b"
+      "uploaded_sha256": "c34ba90c5e92ed73a5c3bef26bd40f1431c6b50075866873d521b6aecfdc6f3c"
     },
     {
       "id": "1DXLAwz2qvGhQeFEbi3RdLKQgd6L3foRt",
       "name": "day09_プロジェクト一覧画面.pdf",
       "url": "https://drive.google.com/file/d/1DXLAwz2qvGhQeFEbi3RdLKQgd6L3foRt/view?usp=drivesdk",
-      "uploaded_sha256": "3548ec4155128e7f0e64574c336eb53298b210b0621e18c2c599de5ec9605267"
+      "uploaded_sha256": "fb79dde4d6430975d618aded73af6d54083dc63ca2f264a24afe1975330160bb"
     },
     {
       "id": "1Oj1x_743DXVEeRUK7Sgl_dRZ9LGe6O6Y",
       "name": "day08_サイドバーを完成させよう.pdf",
       "url": "https://drive.google.com/file/d/1Oj1x_743DXVEeRUK7Sgl_dRZ9LGe6O6Y/view?usp=drivesdk",
-      "uploaded_sha256": "80abfc36969599197573c7e6c19ba7a13401a7084fa4905fac457ba3dd94c011"
+      "uploaded_sha256": "bc0819e59fa1d51a3a20d9f2d954eb988f942fe89bffc4ea774cc88439870722"
     },
     {
       "id": "13-JuMAvw7EsJJJMYgyk5HayoeBiGqkTk",
-      "name": "day07_ログイン体験を改善しよう.pdf",
+      "name": "day07_認証バックエンドを作ろう.pdf",
       "url": "https://drive.google.com/file/d/13-JuMAvw7EsJJJMYgyk5HayoeBiGqkTk/view?usp=drivesdk",
-      "uploaded_sha256": "be2a6025ebd937a44d354329f8d97c8d316a0a0a498bf69e107efb77f358255d"
+      "uploaded_sha256": "384c8b8e31afa46926341573c116371439f3a37f6f83a9583891270ed202f6d4"
     },
     {
       "id": "1LeLRhUPR3F9sdG_1FVHD8QSXyiHTfUf6",
       "name": "day06_ユーザー登録画面.pdf",
       "url": "https://drive.google.com/file/d/1LeLRhUPR3F9sdG_1FVHD8QSXyiHTfUf6/view?usp=drivesdk",
-      "uploaded_sha256": "075e330a8fb9f2d49f5aa76a2de6253c2ab5ab853e0a139942ef921814031ec7"
+      "uploaded_sha256": "ff68612db2145bad9191c784f32650ff22904e037489432699e63298c0987dff"
     },
     {
       "id": "18Mq1zmBcLFNfxATqwHoeFrtzeGldT4UZ",
       "name": "day05_ログイン画面のUI.pdf",
       "url": "https://drive.google.com/file/d/18Mq1zmBcLFNfxATqwHoeFrtzeGldT4UZ/view?usp=drivesdk",
-      "uploaded_sha256": "baa97e35b3aa98a52c4255e793ce16090cd3e8caefb6a4b2690b749d7766a284"
+      "uploaded_sha256": "9b279a7b93df95539645a114dd5e008016a990bc9e1d291af3cc2bf30d91c093"
     },
     {
       "id": "1d6mA04G-nRf22zMPsnolyNfv1vN4hSXQ",
       "name": "day04_ネットに公開.pdf",
       "url": "https://drive.google.com/file/d/1d6mA04G-nRf22zMPsnolyNfv1vN4hSXQ/view?usp=drivesdk",
-      "uploaded_sha256": "ed73b29dfc53714cf1e3f9845a35974160ea884b13fdc80fd26af85918783081"
+      "uploaded_sha256": "69bcd0b58e0897e3083aed7f4db96452b4f3ea5ee31f2e51f539edbb384af803"
     },
     {
       "id": "1v0eZADJHtUknINZOudHy4oBMpfk4t_R0",
       "name": "day03_GitHubに保存する.pdf",
       "url": "https://drive.google.com/file/d/1v0eZADJHtUknINZOudHy4oBMpfk4t_R0/view?usp=drivesdk",
-      "uploaded_sha256": "b744aad724fc54f707b0aa769bdae8d943cd2e0bbf3232f895e95625b36e2d4e"
+      "uploaded_sha256": "b2c5cd91efe225ca82779e60abaddc85aff82939015de96a5476c85c477b9997"
     },
     {
       "id": "1RraPkjcsHivFHci_b9dl5mWZBZW2aIYA",
       "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
       "url": "https://drive.google.com/file/d/1RraPkjcsHivFHci_b9dl5mWZBZW2aIYA/view?usp=drivesdk",
-      "uploaded_sha256": "30e6be714ba9784de4c5fff5c4edb5ce7afb037a53d70c2395953ec4591bcb0e"
+      "uploaded_sha256": "4a75f215469ab2f4f08e5207942007fa8c9bd84f094136078a4708356de28802"
     },
     {
       "id": "1oPrxIr_OD9-MP6hwFoVCvj9Ra4cY_t_N",
       "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
       "url": "https://drive.google.com/file/d/1oPrxIr_OD9-MP6hwFoVCvj9Ra4cY_t_N/view?usp=drivesdk",
-      "uploaded_sha256": "ea0d92047195e3ae2976de213ecbc19b5d5e58493eaf8c79744c2afd0764d4af"
+      "uploaded_sha256": "54fdfb99b53ad35d75321d0cbe458bfebbd461805e66cf393fa4cdb77438a9a2"
     },
     {
       "id": "1RtElBpzkvoXsoTpj4CTKPko8jnQDcPsh",
       "name": "appendix_用語集.pdf",
       "url": "https://drive.google.com/file/d/1RtElBpzkvoXsoTpj4CTKPko8jnQDcPsh/view?usp=drivesdk",
-      "uploaded_sha256": "165c56a6d3c932d79a16d4ad0cf98b56c3a0649befc48982a110a0de991485ec"
+      "uploaded_sha256": "91f01fd982eac168126bc28338bc83b874623f59a7856c79deadc12763401bc1"
     },
     {
       "id": "1DiZbXgOxVjSz1PcymkWBF6GM9_Ewu2sV",
       "name": "appendix_次のステップ.pdf",
       "url": "https://drive.google.com/file/d/1DiZbXgOxVjSz1PcymkWBF6GM9_Ewu2sV/view?usp=drivesdk",
-      "uploaded_sha256": "ee5e3a8f6c46f02395f2fe34005ffe9856e76be2e6d5ca6c68348e75004a4927"
+      "uploaded_sha256": "e1d7176776538ed480f54f7741d64b24598b4e071a89f962396246a4dca9646b"
     },
     {
       "id": "1-eZIqilpBc8cKefb9h2Mp6DZmXbdag_O",
       "name": "appendix_参考資料.pdf",
       "url": "https://drive.google.com/file/d/1-eZIqilpBc8cKefb9h2Mp6DZmXbdag_O/view?usp=drivesdk",
-      "uploaded_sha256": "5d91ac5fd86803293bb51a2f0f5c5d254635f91290e5b8c04f2ebed776ae72a7"
+      "uploaded_sha256": "1b20554083d4260d3617ee1e85033236ba4306914a37c123472525e2765e8923"
     },
     {
       "id": "1OyjFWiGvZBm9QKcnKiougPZidjsn7kqR",
       "name": "appendix_トラブルシューティング.pdf",
       "url": "https://drive.google.com/file/d/1OyjFWiGvZBm9QKcnKiougPZidjsn7kqR/view?usp=drivesdk",
-      "uploaded_sha256": "3e496da36a9fb58cbcdacb2ee4bb08fc305fd10641915d16c3c3f37f3a8a9e72"
+      "uploaded_sha256": "364572bb1c236a393a2fc272fe45ca2a9b06950f9c13b137d2a7a90864880931"
     },
     {
       "id": "19g0cKLajEWi7s9LeWF804DB9j5kK1dt4",
       "name": "00_カリキュラム目次.pdf",
       "url": "https://drive.google.com/file/d/19g0cKLajEWi7s9LeWF804DB9j5kK1dt4/view?usp=drivesdk",
-      "uploaded_sha256": "a49000e347fc6ade15c68572eb62438740f9665cc308c9a6015d7c8cf2bd776c"
+      "uploaded_sha256": "679bfcb9498aa748e9e8529154bb44d44bb5e0260d81f8bcb2b296d1963348e6"
     },
     {
       "id": "10py_p-6ry4RDlxBSyzPn4rtzZe74ND-T",
       "name": "00-1_学びのロードマップ.pdf",
       "url": "https://drive.google.com/file/d/10py_p-6ry4RDlxBSyzPn4rtzZe74ND-T/view?usp=drivesdk",
-      "uploaded_sha256": "63e6c866b4d064cefa1bb5e1c9717b965483e5155efbaa2e5ee5f5a7e836c2d9"
+      "uploaded_sha256": "b0eccb7c1bf9459e949d9479a4f0f3556214a43a3d143d15f9cc450eab27985d"
     },
     {
       "id": "1JGcp9mhde-MOD97CcIjKacHgcD38OLkr",
@@ -2869,8 +2875,8 @@
           "day_snapshot": "dist/day-snapshots/day06"
         },
         {
-          "pdf": "day07_ログイン体験を改善しよう.pdf",
-          "source_md": "material/30days-curriculum/day07_ログイン体験を改善しよう.md",
+          "pdf": "day07_認証バックエンドを作ろう.pdf",
+          "source_md": "material/30days-curriculum/day07_認証バックエンドを作ろう.md",
           "day_snapshot": "dist/day-snapshots/day07"
         },
         {
@@ -3426,295 +3432,295 @@
     }
   },
   "remote_verification": {
-    "checked_at": "2026-09-18T15:53:36.400347+00:00",
+    "checked_at": "2026-09-18T17:09:50.975130+00:00",
     "results": [
       {
         "id": "10py_p-6ry4RDlxBSyzPn4rtzZe74ND-T",
         "name": "00-1_学びのロードマップ.pdf",
         "ok": true,
-        "remote_sha256": "63e6c866b4d064cefa1bb5e1c9717b965483e5155efbaa2e5ee5f5a7e836c2d9",
-        "local_sha256": "63e6c866b4d064cefa1bb5e1c9717b965483e5155efbaa2e5ee5f5a7e836c2d9",
-        "uploaded_sha256": "63e6c866b4d064cefa1bb5e1c9717b965483e5155efbaa2e5ee5f5a7e836c2d9"
+        "remote_sha256": "b0eccb7c1bf9459e949d9479a4f0f3556214a43a3d143d15f9cc450eab27985d",
+        "local_sha256": "b0eccb7c1bf9459e949d9479a4f0f3556214a43a3d143d15f9cc450eab27985d",
+        "uploaded_sha256": "b0eccb7c1bf9459e949d9479a4f0f3556214a43a3d143d15f9cc450eab27985d"
       },
       {
         "id": "19g0cKLajEWi7s9LeWF804DB9j5kK1dt4",
         "name": "00_カリキュラム目次.pdf",
         "ok": true,
-        "remote_sha256": "a49000e347fc6ade15c68572eb62438740f9665cc308c9a6015d7c8cf2bd776c",
-        "local_sha256": "a49000e347fc6ade15c68572eb62438740f9665cc308c9a6015d7c8cf2bd776c",
-        "uploaded_sha256": "a49000e347fc6ade15c68572eb62438740f9665cc308c9a6015d7c8cf2bd776c"
+        "remote_sha256": "679bfcb9498aa748e9e8529154bb44d44bb5e0260d81f8bcb2b296d1963348e6",
+        "local_sha256": "679bfcb9498aa748e9e8529154bb44d44bb5e0260d81f8bcb2b296d1963348e6",
+        "uploaded_sha256": "679bfcb9498aa748e9e8529154bb44d44bb5e0260d81f8bcb2b296d1963348e6"
       },
       {
         "id": "1OyjFWiGvZBm9QKcnKiougPZidjsn7kqR",
         "name": "appendix_トラブルシューティング.pdf",
         "ok": true,
-        "remote_sha256": "3e496da36a9fb58cbcdacb2ee4bb08fc305fd10641915d16c3c3f37f3a8a9e72",
-        "local_sha256": "3e496da36a9fb58cbcdacb2ee4bb08fc305fd10641915d16c3c3f37f3a8a9e72",
-        "uploaded_sha256": "3e496da36a9fb58cbcdacb2ee4bb08fc305fd10641915d16c3c3f37f3a8a9e72"
+        "remote_sha256": "364572bb1c236a393a2fc272fe45ca2a9b06950f9c13b137d2a7a90864880931",
+        "local_sha256": "364572bb1c236a393a2fc272fe45ca2a9b06950f9c13b137d2a7a90864880931",
+        "uploaded_sha256": "364572bb1c236a393a2fc272fe45ca2a9b06950f9c13b137d2a7a90864880931"
       },
       {
         "id": "1-eZIqilpBc8cKefb9h2Mp6DZmXbdag_O",
         "name": "appendix_参考資料.pdf",
         "ok": true,
-        "remote_sha256": "5d91ac5fd86803293bb51a2f0f5c5d254635f91290e5b8c04f2ebed776ae72a7",
-        "local_sha256": "5d91ac5fd86803293bb51a2f0f5c5d254635f91290e5b8c04f2ebed776ae72a7",
-        "uploaded_sha256": "5d91ac5fd86803293bb51a2f0f5c5d254635f91290e5b8c04f2ebed776ae72a7"
+        "remote_sha256": "1b20554083d4260d3617ee1e85033236ba4306914a37c123472525e2765e8923",
+        "local_sha256": "1b20554083d4260d3617ee1e85033236ba4306914a37c123472525e2765e8923",
+        "uploaded_sha256": "1b20554083d4260d3617ee1e85033236ba4306914a37c123472525e2765e8923"
       },
       {
         "id": "1DiZbXgOxVjSz1PcymkWBF6GM9_Ewu2sV",
         "name": "appendix_次のステップ.pdf",
         "ok": true,
-        "remote_sha256": "ee5e3a8f6c46f02395f2fe34005ffe9856e76be2e6d5ca6c68348e75004a4927",
-        "local_sha256": "ee5e3a8f6c46f02395f2fe34005ffe9856e76be2e6d5ca6c68348e75004a4927",
-        "uploaded_sha256": "ee5e3a8f6c46f02395f2fe34005ffe9856e76be2e6d5ca6c68348e75004a4927"
+        "remote_sha256": "e1d7176776538ed480f54f7741d64b24598b4e071a89f962396246a4dca9646b",
+        "local_sha256": "e1d7176776538ed480f54f7741d64b24598b4e071a89f962396246a4dca9646b",
+        "uploaded_sha256": "e1d7176776538ed480f54f7741d64b24598b4e071a89f962396246a4dca9646b"
       },
       {
         "id": "1RtElBpzkvoXsoTpj4CTKPko8jnQDcPsh",
         "name": "appendix_用語集.pdf",
         "ok": true,
-        "remote_sha256": "165c56a6d3c932d79a16d4ad0cf98b56c3a0649befc48982a110a0de991485ec",
-        "local_sha256": "165c56a6d3c932d79a16d4ad0cf98b56c3a0649befc48982a110a0de991485ec",
-        "uploaded_sha256": "165c56a6d3c932d79a16d4ad0cf98b56c3a0649befc48982a110a0de991485ec"
+        "remote_sha256": "91f01fd982eac168126bc28338bc83b874623f59a7856c79deadc12763401bc1",
+        "local_sha256": "91f01fd982eac168126bc28338bc83b874623f59a7856c79deadc12763401bc1",
+        "uploaded_sha256": "91f01fd982eac168126bc28338bc83b874623f59a7856c79deadc12763401bc1"
       },
       {
         "id": "1oPrxIr_OD9-MP6hwFoVCvj9Ra4cY_t_N",
         "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
         "ok": true,
-        "remote_sha256": "ea0d92047195e3ae2976de213ecbc19b5d5e58493eaf8c79744c2afd0764d4af",
-        "local_sha256": "ea0d92047195e3ae2976de213ecbc19b5d5e58493eaf8c79744c2afd0764d4af",
-        "uploaded_sha256": "ea0d92047195e3ae2976de213ecbc19b5d5e58493eaf8c79744c2afd0764d4af"
+        "remote_sha256": "54fdfb99b53ad35d75321d0cbe458bfebbd461805e66cf393fa4cdb77438a9a2",
+        "local_sha256": "54fdfb99b53ad35d75321d0cbe458bfebbd461805e66cf393fa4cdb77438a9a2",
+        "uploaded_sha256": "54fdfb99b53ad35d75321d0cbe458bfebbd461805e66cf393fa4cdb77438a9a2"
       },
       {
         "id": "1RraPkjcsHivFHci_b9dl5mWZBZW2aIYA",
         "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
         "ok": true,
-        "remote_sha256": "30e6be714ba9784de4c5fff5c4edb5ce7afb037a53d70c2395953ec4591bcb0e",
-        "local_sha256": "30e6be714ba9784de4c5fff5c4edb5ce7afb037a53d70c2395953ec4591bcb0e",
-        "uploaded_sha256": "30e6be714ba9784de4c5fff5c4edb5ce7afb037a53d70c2395953ec4591bcb0e"
+        "remote_sha256": "4a75f215469ab2f4f08e5207942007fa8c9bd84f094136078a4708356de28802",
+        "local_sha256": "4a75f215469ab2f4f08e5207942007fa8c9bd84f094136078a4708356de28802",
+        "uploaded_sha256": "4a75f215469ab2f4f08e5207942007fa8c9bd84f094136078a4708356de28802"
       },
       {
         "id": "1v0eZADJHtUknINZOudHy4oBMpfk4t_R0",
         "name": "day03_GitHubに保存する.pdf",
         "ok": true,
-        "remote_sha256": "b744aad724fc54f707b0aa769bdae8d943cd2e0bbf3232f895e95625b36e2d4e",
-        "local_sha256": "b744aad724fc54f707b0aa769bdae8d943cd2e0bbf3232f895e95625b36e2d4e",
-        "uploaded_sha256": "b744aad724fc54f707b0aa769bdae8d943cd2e0bbf3232f895e95625b36e2d4e"
+        "remote_sha256": "b2c5cd91efe225ca82779e60abaddc85aff82939015de96a5476c85c477b9997",
+        "local_sha256": "b2c5cd91efe225ca82779e60abaddc85aff82939015de96a5476c85c477b9997",
+        "uploaded_sha256": "b2c5cd91efe225ca82779e60abaddc85aff82939015de96a5476c85c477b9997"
       },
       {
         "id": "1d6mA04G-nRf22zMPsnolyNfv1vN4hSXQ",
         "name": "day04_ネットに公開.pdf",
         "ok": true,
-        "remote_sha256": "ed73b29dfc53714cf1e3f9845a35974160ea884b13fdc80fd26af85918783081",
-        "local_sha256": "ed73b29dfc53714cf1e3f9845a35974160ea884b13fdc80fd26af85918783081",
-        "uploaded_sha256": "ed73b29dfc53714cf1e3f9845a35974160ea884b13fdc80fd26af85918783081"
+        "remote_sha256": "69bcd0b58e0897e3083aed7f4db96452b4f3ea5ee31f2e51f539edbb384af803",
+        "local_sha256": "69bcd0b58e0897e3083aed7f4db96452b4f3ea5ee31f2e51f539edbb384af803",
+        "uploaded_sha256": "69bcd0b58e0897e3083aed7f4db96452b4f3ea5ee31f2e51f539edbb384af803"
       },
       {
         "id": "18Mq1zmBcLFNfxATqwHoeFrtzeGldT4UZ",
         "name": "day05_ログイン画面のUI.pdf",
         "ok": true,
-        "remote_sha256": "baa97e35b3aa98a52c4255e793ce16090cd3e8caefb6a4b2690b749d7766a284",
-        "local_sha256": "baa97e35b3aa98a52c4255e793ce16090cd3e8caefb6a4b2690b749d7766a284",
-        "uploaded_sha256": "baa97e35b3aa98a52c4255e793ce16090cd3e8caefb6a4b2690b749d7766a284"
+        "remote_sha256": "9b279a7b93df95539645a114dd5e008016a990bc9e1d291af3cc2bf30d91c093",
+        "local_sha256": "9b279a7b93df95539645a114dd5e008016a990bc9e1d291af3cc2bf30d91c093",
+        "uploaded_sha256": "9b279a7b93df95539645a114dd5e008016a990bc9e1d291af3cc2bf30d91c093"
       },
       {
         "id": "1LeLRhUPR3F9sdG_1FVHD8QSXyiHTfUf6",
         "name": "day06_ユーザー登録画面.pdf",
         "ok": true,
-        "remote_sha256": "075e330a8fb9f2d49f5aa76a2de6253c2ab5ab853e0a139942ef921814031ec7",
-        "local_sha256": "075e330a8fb9f2d49f5aa76a2de6253c2ab5ab853e0a139942ef921814031ec7",
-        "uploaded_sha256": "075e330a8fb9f2d49f5aa76a2de6253c2ab5ab853e0a139942ef921814031ec7"
+        "remote_sha256": "ff68612db2145bad9191c784f32650ff22904e037489432699e63298c0987dff",
+        "local_sha256": "ff68612db2145bad9191c784f32650ff22904e037489432699e63298c0987dff",
+        "uploaded_sha256": "ff68612db2145bad9191c784f32650ff22904e037489432699e63298c0987dff"
       },
       {
         "id": "13-JuMAvw7EsJJJMYgyk5HayoeBiGqkTk",
-        "name": "day07_ログイン体験を改善しよう.pdf",
+        "name": "day07_認証バックエンドを作ろう.pdf",
         "ok": true,
-        "remote_sha256": "be2a6025ebd937a44d354329f8d97c8d316a0a0a498bf69e107efb77f358255d",
-        "local_sha256": "be2a6025ebd937a44d354329f8d97c8d316a0a0a498bf69e107efb77f358255d",
-        "uploaded_sha256": "be2a6025ebd937a44d354329f8d97c8d316a0a0a498bf69e107efb77f358255d"
+        "remote_sha256": "384c8b8e31afa46926341573c116371439f3a37f6f83a9583891270ed202f6d4",
+        "local_sha256": "384c8b8e31afa46926341573c116371439f3a37f6f83a9583891270ed202f6d4",
+        "uploaded_sha256": "384c8b8e31afa46926341573c116371439f3a37f6f83a9583891270ed202f6d4"
       },
       {
         "id": "1Oj1x_743DXVEeRUK7Sgl_dRZ9LGe6O6Y",
         "name": "day08_サイドバーを完成させよう.pdf",
         "ok": true,
-        "remote_sha256": "80abfc36969599197573c7e6c19ba7a13401a7084fa4905fac457ba3dd94c011",
-        "local_sha256": "80abfc36969599197573c7e6c19ba7a13401a7084fa4905fac457ba3dd94c011",
-        "uploaded_sha256": "80abfc36969599197573c7e6c19ba7a13401a7084fa4905fac457ba3dd94c011"
+        "remote_sha256": "bc0819e59fa1d51a3a20d9f2d954eb988f942fe89bffc4ea774cc88439870722",
+        "local_sha256": "bc0819e59fa1d51a3a20d9f2d954eb988f942fe89bffc4ea774cc88439870722",
+        "uploaded_sha256": "bc0819e59fa1d51a3a20d9f2d954eb988f942fe89bffc4ea774cc88439870722"
       },
       {
         "id": "1DXLAwz2qvGhQeFEbi3RdLKQgd6L3foRt",
         "name": "day09_プロジェクト一覧画面.pdf",
         "ok": true,
-        "remote_sha256": "3548ec4155128e7f0e64574c336eb53298b210b0621e18c2c599de5ec9605267",
-        "local_sha256": "3548ec4155128e7f0e64574c336eb53298b210b0621e18c2c599de5ec9605267",
-        "uploaded_sha256": "3548ec4155128e7f0e64574c336eb53298b210b0621e18c2c599de5ec9605267"
+        "remote_sha256": "fb79dde4d6430975d618aded73af6d54083dc63ca2f264a24afe1975330160bb",
+        "local_sha256": "fb79dde4d6430975d618aded73af6d54083dc63ca2f264a24afe1975330160bb",
+        "uploaded_sha256": "fb79dde4d6430975d618aded73af6d54083dc63ca2f264a24afe1975330160bb"
       },
       {
         "id": "1XswFwEDBx3muA4VnfHQz_Zd4YjrJVTRw",
         "name": "day10_プロジェクト新規作成.pdf",
         "ok": true,
-        "remote_sha256": "273312b3ac96d3f4806222c086c4dbe5b1575576e1b5a15c6a35c4ed8cc9296b",
-        "local_sha256": "273312b3ac96d3f4806222c086c4dbe5b1575576e1b5a15c6a35c4ed8cc9296b",
-        "uploaded_sha256": "273312b3ac96d3f4806222c086c4dbe5b1575576e1b5a15c6a35c4ed8cc9296b"
+        "remote_sha256": "c34ba90c5e92ed73a5c3bef26bd40f1431c6b50075866873d521b6aecfdc6f3c",
+        "local_sha256": "c34ba90c5e92ed73a5c3bef26bd40f1431c6b50075866873d521b6aecfdc6f3c",
+        "uploaded_sha256": "c34ba90c5e92ed73a5c3bef26bd40f1431c6b50075866873d521b6aecfdc6f3c"
       },
       {
         "id": "1QhgiE5y4b7-kG95TkrWuPRXFchQ3pxhO",
         "name": "day11_プロジェクト編集・削除.pdf",
         "ok": true,
-        "remote_sha256": "c2afdecc78ee413ecb5bed934b85d9aa6c55a3d1f24c7bcfda8b59b46379cad5",
-        "local_sha256": "c2afdecc78ee413ecb5bed934b85d9aa6c55a3d1f24c7bcfda8b59b46379cad5",
-        "uploaded_sha256": "c2afdecc78ee413ecb5bed934b85d9aa6c55a3d1f24c7bcfda8b59b46379cad5"
+        "remote_sha256": "c632df257e685d9a81c972a2b2a3a0e3567eaa9aef21fa80e033d6423d395e7e",
+        "local_sha256": "c632df257e685d9a81c972a2b2a3a0e3567eaa9aef21fa80e033d6423d395e7e",
+        "uploaded_sha256": "c632df257e685d9a81c972a2b2a3a0e3567eaa9aef21fa80e033d6423d395e7e"
       },
       {
         "id": "1vgshhZNhNkdRYY7nENqT1C_gijcTs89C",
         "name": "day12_メンバー追加.pdf",
         "ok": true,
-        "remote_sha256": "477afce3c1a955a1edabb6afd5f441c14ba3aadab7593e2383d45d0d2819987e",
-        "local_sha256": "477afce3c1a955a1edabb6afd5f441c14ba3aadab7593e2383d45d0d2819987e",
-        "uploaded_sha256": "477afce3c1a955a1edabb6afd5f441c14ba3aadab7593e2383d45d0d2819987e"
+        "remote_sha256": "f1f84ce245b13a945b0b45cc7ee1cd395f891aff4d7cbe041106a788b3bf9821",
+        "local_sha256": "f1f84ce245b13a945b0b45cc7ee1cd395f891aff4d7cbe041106a788b3bf9821",
+        "uploaded_sha256": "f1f84ce245b13a945b0b45cc7ee1cd395f891aff4d7cbe041106a788b3bf9821"
       },
       {
         "id": "1ttfnXLvTLGIVg5FXNBrBJUVbnb1KUm2U",
         "name": "day13_タスク一覧画面.pdf",
         "ok": true,
-        "remote_sha256": "c3a3567b4c0a55231e90435e7e9f9628cafe907221e88fc4ca1d781a25b6437a",
-        "local_sha256": "c3a3567b4c0a55231e90435e7e9f9628cafe907221e88fc4ca1d781a25b6437a",
-        "uploaded_sha256": "c3a3567b4c0a55231e90435e7e9f9628cafe907221e88fc4ca1d781a25b6437a"
+        "remote_sha256": "f3453f50ae65d9b90fe6aada508284af162505b0d04ca92c81d57656078901f7",
+        "local_sha256": "f3453f50ae65d9b90fe6aada508284af162505b0d04ca92c81d57656078901f7",
+        "uploaded_sha256": "f3453f50ae65d9b90fe6aada508284af162505b0d04ca92c81d57656078901f7"
       },
       {
         "id": "11QrPlqaJ9q0SfLFW7cqOpSbSvjCfzUCF",
         "name": "day14_タスク新規作成.pdf",
         "ok": true,
-        "remote_sha256": "609943389d7dbf30edb9bb40cac97df9068cf728e62cd745562a88513a6838ae",
-        "local_sha256": "609943389d7dbf30edb9bb40cac97df9068cf728e62cd745562a88513a6838ae",
-        "uploaded_sha256": "609943389d7dbf30edb9bb40cac97df9068cf728e62cd745562a88513a6838ae"
+        "remote_sha256": "e587496ed6e7af065d68b05e9c7939e92ef51ec8ce1b384b1219b18a2abf2fe9",
+        "local_sha256": "e587496ed6e7af065d68b05e9c7939e92ef51ec8ce1b384b1219b18a2abf2fe9",
+        "uploaded_sha256": "e587496ed6e7af065d68b05e9c7939e92ef51ec8ce1b384b1219b18a2abf2fe9"
       },
       {
         "id": "1JAo3xFRUdH6fxOz6YdkQQGQdGfihq9kl",
         "name": "day15_タスク編集・削除.pdf",
         "ok": true,
-        "remote_sha256": "f9cb0ddd4748965998281de423833422d7dae05e29ffb65aa49d4a7b48b3aea1",
-        "local_sha256": "f9cb0ddd4748965998281de423833422d7dae05e29ffb65aa49d4a7b48b3aea1",
-        "uploaded_sha256": "f9cb0ddd4748965998281de423833422d7dae05e29ffb65aa49d4a7b48b3aea1"
+        "remote_sha256": "e78931d87e8e8d001592e3c1ad84cf65fcb195e35d487554ff8b91703572203d",
+        "local_sha256": "e78931d87e8e8d001592e3c1ad84cf65fcb195e35d487554ff8b91703572203d",
+        "uploaded_sha256": "e78931d87e8e8d001592e3c1ad84cf65fcb195e35d487554ff8b91703572203d"
       },
       {
         "id": "1q9jMr3kNR02op6lzz_Fl-wiLqYtoTWCx",
         "name": "day16_ステータス変更・時間記録.pdf",
         "ok": true,
-        "remote_sha256": "ce4aafb0c5f833399f23a64aaba319e1ba82e6cc8d68327ed900d49250162ac2",
-        "local_sha256": "ce4aafb0c5f833399f23a64aaba319e1ba82e6cc8d68327ed900d49250162ac2",
-        "uploaded_sha256": "ce4aafb0c5f833399f23a64aaba319e1ba82e6cc8d68327ed900d49250162ac2"
+        "remote_sha256": "e86d3454804bde125c13eb48e333591bae0f403b5480979034f1a096bc6b7faf",
+        "local_sha256": "e86d3454804bde125c13eb48e333591bae0f403b5480979034f1a096bc6b7faf",
+        "uploaded_sha256": "e86d3454804bde125c13eb48e333591bae0f403b5480979034f1a096bc6b7faf"
       },
       {
         "id": "1qRiiBFzg4OOYrvWsOAi200gdQ5o0pajx",
         "name": "day17_自分のタスクページ.pdf",
         "ok": true,
-        "remote_sha256": "c79d05d60f5986d3153ca8453490f5e8c5c6a30bc7e8e890cf6286913cb1c9be",
-        "local_sha256": "c79d05d60f5986d3153ca8453490f5e8c5c6a30bc7e8e890cf6286913cb1c9be",
-        "uploaded_sha256": "c79d05d60f5986d3153ca8453490f5e8c5c6a30bc7e8e890cf6286913cb1c9be"
+        "remote_sha256": "b6eb1fc5c2af37ffe1952d95982c7273549c4706a2f60571e9069d0a41b8c346",
+        "local_sha256": "b6eb1fc5c2af37ffe1952d95982c7273549c4706a2f60571e9069d0a41b8c346",
+        "uploaded_sha256": "b6eb1fc5c2af37ffe1952d95982c7273549c4706a2f60571e9069d0a41b8c346"
       },
       {
         "id": "1_qYMzd0Ht6tQjuC3BU-ljYMNS2LYkTz6",
         "name": "day18_コメント投稿.pdf",
         "ok": true,
-        "remote_sha256": "3b3d802f639ce2b7ac5d5cfa6f6599eeb2a593102061c8ecaa0365c8068543a2",
-        "local_sha256": "3b3d802f639ce2b7ac5d5cfa6f6599eeb2a593102061c8ecaa0365c8068543a2",
-        "uploaded_sha256": "3b3d802f639ce2b7ac5d5cfa6f6599eeb2a593102061c8ecaa0365c8068543a2"
+        "remote_sha256": "34fe198cb00028d583d1df43f26dbc32cdea4db38e3056c7ce74ea34f8a50c1f",
+        "local_sha256": "34fe198cb00028d583d1df43f26dbc32cdea4db38e3056c7ce74ea34f8a50c1f",
+        "uploaded_sha256": "34fe198cb00028d583d1df43f26dbc32cdea4db38e3056c7ce74ea34f8a50c1f"
       },
       {
         "id": "1fxqVw24Ib7a2g_AvXucqoAowi9aGtvnI",
         "name": "day19_コメント編集・削除.pdf",
         "ok": true,
-        "remote_sha256": "c998141cbcff93d337d518261f7ff6e40d019f2ae514db9039c519b50a737feb",
-        "local_sha256": "c998141cbcff93d337d518261f7ff6e40d019f2ae514db9039c519b50a737feb",
-        "uploaded_sha256": "c998141cbcff93d337d518261f7ff6e40d019f2ae514db9039c519b50a737feb"
+        "remote_sha256": "9451715cbca79ff39e5ac21bfbfe98f17ed293c48265f5b1d9afc6f02668d73c",
+        "local_sha256": "9451715cbca79ff39e5ac21bfbfe98f17ed293c48265f5b1d9afc6f02668d73c",
+        "uploaded_sha256": "9451715cbca79ff39e5ac21bfbfe98f17ed293c48265f5b1d9afc6f02668d73c"
       },
       {
         "id": "1ribgG0JH4lD0DAkaYd5VragjRzxn8wyX",
         "name": "day20_タスク検索機能.pdf",
         "ok": true,
-        "remote_sha256": "6f2684ca8de967801405728a098271052f16153e80b4c445f903dbb84b950657",
-        "local_sha256": "6f2684ca8de967801405728a098271052f16153e80b4c445f903dbb84b950657",
-        "uploaded_sha256": "6f2684ca8de967801405728a098271052f16153e80b4c445f903dbb84b950657"
+        "remote_sha256": "6a106117f88dcd05a247de079ff7fd49644f8b0ea4546df33c6536ac2271bb48",
+        "local_sha256": "6a106117f88dcd05a247de079ff7fd49644f8b0ea4546df33c6536ac2271bb48",
+        "uploaded_sha256": "6a106117f88dcd05a247de079ff7fd49644f8b0ea4546df33c6536ac2271bb48"
       },
       {
         "id": "1L0tDk42OVnMY5tsaTfXgfXfLao1j5Sy8",
         "name": "day21_統計カードを表示.pdf",
         "ok": true,
-        "remote_sha256": "14bcdb5c04b41ff56a4c772608ca6a98c8bd61a27c7934c12a4ea37dadfee7c4",
-        "local_sha256": "14bcdb5c04b41ff56a4c772608ca6a98c8bd61a27c7934c12a4ea37dadfee7c4",
-        "uploaded_sha256": "14bcdb5c04b41ff56a4c772608ca6a98c8bd61a27c7934c12a4ea37dadfee7c4"
+        "remote_sha256": "30ff6b06a82ad85babf3d358daa4da58f9c3a2d0b98279caed40822b2d8d025e",
+        "local_sha256": "30ff6b06a82ad85babf3d358daa4da58f9c3a2d0b98279caed40822b2d8d025e",
+        "uploaded_sha256": "30ff6b06a82ad85babf3d358daa4da58f9c3a2d0b98279caed40822b2d8d025e"
       },
       {
         "id": "1kA8jhIcg7LJ3EGTWygNnABUihixSCD_C",
         "name": "day22_グラフを表示.pdf",
         "ok": true,
-        "remote_sha256": "2d1a903a93f784c97de95f0cd357112ce6c536734a41e5ae595759a52075ce3c",
-        "local_sha256": "2d1a903a93f784c97de95f0cd357112ce6c536734a41e5ae595759a52075ce3c",
-        "uploaded_sha256": "2d1a903a93f784c97de95f0cd357112ce6c536734a41e5ae595759a52075ce3c"
+        "remote_sha256": "daa53fcc6ff310d3dd89c61c441903c3a67103a2b231934f5da2474e212740ac",
+        "local_sha256": "daa53fcc6ff310d3dd89c61c441903c3a67103a2b231934f5da2474e212740ac",
+        "uploaded_sha256": "daa53fcc6ff310d3dd89c61c441903c3a67103a2b231934f5da2474e212740ac"
       },
       {
         "id": "1EaYyLRG4W8EmUULkkja5l_xFsfQJaSGc",
         "name": "day23_週次レポート.pdf",
         "ok": true,
-        "remote_sha256": "fb5bfce787650b0e199ea754a54ab6dbbd956b37933b311cb3be429470c6d0f7",
-        "local_sha256": "fb5bfce787650b0e199ea754a54ab6dbbd956b37933b311cb3be429470c6d0f7",
-        "uploaded_sha256": "fb5bfce787650b0e199ea754a54ab6dbbd956b37933b311cb3be429470c6d0f7"
+        "remote_sha256": "8ed2785f301137cd01e7dc9dcdca9d2bdc7cbeabd2311b6b251fe65d45553f8a",
+        "local_sha256": "8ed2785f301137cd01e7dc9dcdca9d2bdc7cbeabd2311b6b251fe65d45553f8a",
+        "uploaded_sha256": "8ed2785f301137cd01e7dc9dcdca9d2bdc7cbeabd2311b6b251fe65d45553f8a"
       },
       {
         "id": "1gHKuQHaL0tBpTM9qESjUqg3sHlqaKgPv",
         "name": "day24_ユーザー一覧（管理者用）.pdf",
         "ok": true,
-        "remote_sha256": "f84feea9444e22ca50b43e33ee287853d2e841ca196093946ea8211adc396905",
-        "local_sha256": "f84feea9444e22ca50b43e33ee287853d2e841ca196093946ea8211adc396905",
-        "uploaded_sha256": "f84feea9444e22ca50b43e33ee287853d2e841ca196093946ea8211adc396905"
+        "remote_sha256": "7196a5fdb0ba5d0e37fcdc82273138d317e15fbad202209580f59e35f79b6387",
+        "local_sha256": "7196a5fdb0ba5d0e37fcdc82273138d317e15fbad202209580f59e35f79b6387",
+        "uploaded_sha256": "7196a5fdb0ba5d0e37fcdc82273138d317e15fbad202209580f59e35f79b6387"
       },
       {
         "id": "1ZxIG1alOFSR758Rak5knuSA7A15gwcAj",
         "name": "day25_プロフィール編集.pdf",
         "ok": true,
-        "remote_sha256": "15081ea1c255cc1c3084b83a15cbaf5b35e7217d22814c9010fc88b675f0ffbe",
-        "local_sha256": "15081ea1c255cc1c3084b83a15cbaf5b35e7217d22814c9010fc88b675f0ffbe",
-        "uploaded_sha256": "15081ea1c255cc1c3084b83a15cbaf5b35e7217d22814c9010fc88b675f0ffbe"
+        "remote_sha256": "1b2a1a07b8b36a0e0636a5db5a149e9be16d70f209c6e4d5107ff7b55e7f9599",
+        "local_sha256": "1b2a1a07b8b36a0e0636a5db5a149e9be16d70f209c6e4d5107ff7b55e7f9599",
+        "uploaded_sha256": "1b2a1a07b8b36a0e0636a5db5a149e9be16d70f209c6e4d5107ff7b55e7f9599"
       },
       {
         "id": "1N8cjb_xZ4jPK8z5U95xMrRK7I3_Dzs_P",
         "name": "day26_エラーページを作って、バグを退治しよう.pdf",
         "ok": true,
-        "remote_sha256": "6bfb8e3dfc332cdc83b12d52f45193c3fb1772328163bb687eae3ad43f4e0e46",
-        "local_sha256": "6bfb8e3dfc332cdc83b12d52f45193c3fb1772328163bb687eae3ad43f4e0e46",
-        "uploaded_sha256": "6bfb8e3dfc332cdc83b12d52f45193c3fb1772328163bb687eae3ad43f4e0e46"
+        "remote_sha256": "d3f7db002e4298cd728b11f4aed5d8045d5aa92dff098c2e2a2d2e775fcefdb8",
+        "local_sha256": "d3f7db002e4298cd728b11f4aed5d8045d5aa92dff098c2e2a2d2e775fcefdb8",
+        "uploaded_sha256": "d3f7db002e4298cd728b11f4aed5d8045d5aa92dff098c2e2a2d2e775fcefdb8"
       },
       {
         "id": "16zGgynKmh0LG4wF5u7p2xrkm5yunRZIX",
         "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
         "ok": true,
-        "remote_sha256": "e668a3506ab269b1cd9f53fe87264f25cce009e5e3852f6b1ef79117c77e5765",
-        "local_sha256": "e668a3506ab269b1cd9f53fe87264f25cce009e5e3852f6b1ef79117c77e5765",
-        "uploaded_sha256": "e668a3506ab269b1cd9f53fe87264f25cce009e5e3852f6b1ef79117c77e5765"
+        "remote_sha256": "324249460900f353488fd773501f372963cce6c15dce6275ad8d32a48c606ec2",
+        "local_sha256": "324249460900f353488fd773501f372963cce6c15dce6275ad8d32a48c606ec2",
+        "uploaded_sha256": "324249460900f353488fd773501f372963cce6c15dce6275ad8d32a48c606ec2"
       },
       {
         "id": "1gnCqq_w3xfJxrKoltDW7UMydml93Jy7v",
         "name": "day28_タスク一括操作を実装しよう.pdf",
         "ok": true,
-        "remote_sha256": "527decd90666268e8f5b0d81b4876dcb68834e7752dd6400dec5bd78b30b2ea5",
-        "local_sha256": "527decd90666268e8f5b0d81b4876dcb68834e7752dd6400dec5bd78b30b2ea5",
-        "uploaded_sha256": "527decd90666268e8f5b0d81b4876dcb68834e7752dd6400dec5bd78b30b2ea5"
+        "remote_sha256": "8a560d64ae0ed21513d9f797db6695e7c291e38f66da7fbefc9beaf0e551ec18",
+        "local_sha256": "8a560d64ae0ed21513d9f797db6695e7c291e38f66da7fbefc9beaf0e551ec18",
+        "uploaded_sha256": "8a560d64ae0ed21513d9f797db6695e7c291e38f66da7fbefc9beaf0e551ec18"
       },
       {
         "id": "1jxIONgRWWgaENJ1d3oE2OwQmG_uF7KPI",
         "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
         "ok": true,
-        "remote_sha256": "94bc33cc5b132493177cb620ee57444a4ba8873fd2f4d040a0cea68937859f88",
-        "local_sha256": "94bc33cc5b132493177cb620ee57444a4ba8873fd2f4d040a0cea68937859f88",
-        "uploaded_sha256": "94bc33cc5b132493177cb620ee57444a4ba8873fd2f4d040a0cea68937859f88"
+        "remote_sha256": "55dfe6bbb3d7b01874f29c35e22854d78b840042ae20a222562c1bcfc251cc42",
+        "local_sha256": "55dfe6bbb3d7b01874f29c35e22854d78b840042ae20a222562c1bcfc251cc42",
+        "uploaded_sha256": "55dfe6bbb3d7b01874f29c35e22854d78b840042ae20a222562c1bcfc251cc42"
       },
       {
         "id": "1brFAifMLznqc1jDyTDLukCIHgxL2JwXL",
         "name": "day30_完成版を公開！.pdf",
         "ok": true,
-        "remote_sha256": "7df70e74fb860860e9a1f0e327b3a522296ec081c852c2347d28996ee254427b",
-        "local_sha256": "7df70e74fb860860e9a1f0e327b3a522296ec081c852c2347d28996ee254427b",
-        "uploaded_sha256": "7df70e74fb860860e9a1f0e327b3a522296ec081c852c2347d28996ee254427b"
+        "remote_sha256": "07ce21139cd80df2f1c8362f1f070f96351eeb3a02f69d181ceb41673cf3c55e",
+        "local_sha256": "07ce21139cd80df2f1c8362f1f070f96351eeb3a02f69d181ceb41673cf3c55e",
+        "uploaded_sha256": "07ce21139cd80df2f1c8362f1f070f96351eeb3a02f69d181ceb41673cf3c55e"
       },
       {
         "id": "1JGcp9mhde-MOD97CcIjKacHgcD38OLkr",
