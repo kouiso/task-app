@@ -551,7 +551,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
 
 | まとまり | 書き出し | 役割 |
 |---------|---------|------|
-| 読み込みと切り替え | `@import` / `@custom-variant` | Tailwind CSS を読み込み、暗いテーマへ切り替える条件を決めます |
+| 読み込みと切り替え | `@import` / `@plugin` / `@custom-variant` | Tailwind CSS と拡張プラグインを読み込み、暗いテーマへ切り替える条件を決めます |
 | 対応表 | `@theme inline { ... }` | `bg-primary` などのクラス名と色の変数を結び付けます |
 | アニメーション | `@keyframes` | 折りたたみ部品が開閉するときの動きを決めます |
 | 明るいテーマの値 | `:root { ... }` | 明るい画面で使う `--primary` などの値を決めます |
@@ -565,6 +565,8 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
 ```css
 /* filepath: src/app/globals.css */
 @import "tailwindcss";
+
+@plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -604,7 +606,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
   --color-secondary: hsl(var(--secondary));
 ```
 
-`@import "tailwindcss";` は Tailwind CSS 本体を読み込む宣言です。`@custom-variant dark` は `.dark` クラスが付いたときのスタイルを指定する準備です。`@theme inline { ... }` にクラス名と変数の対応を書きます。`--color-primary: hsl(var(--primary));` は `bg-primary` などで使う色を `--primary` に結び付けます。
+`@import "tailwindcss";` は Tailwind CSS 本体を読み込む宣言です。`@plugin "tailwindcss-animate";` は部品の出し入れに使う `animate-in` や `fade-in` といったクラスを足す拡張の読み込みで、この1行が無いとそれらのクラスが働きません。`@custom-variant dark` は `.dark` クラスが付いたときのスタイルを指定する準備です。`@theme inline { ... }` にクラス名と変数の対応を書きます。`--color-primary: hsl(var(--primary));` は `bg-primary` などで使う色を `--primary` に結び付けます。
 
 **確認ポイント**: `@theme inline {` の中に `--color-` で始まる行が並んでいることを確認します。次のブロックを続けて書きます。
 
@@ -1364,7 +1366,7 @@ Step 3 で `3001` などのポートを使った場合は以下の `3000` をそ
 | ポート番号 | 1台のパソコンの中で通信の入口を区別する番号。`localhost:3000` の `3000` がそれ |
 | 環境変数 | コードの外に置く設定値。接続先やパスワードなどを `.env` に書く |
 
-## 応用課題: 角丸の変更が届く範囲を確かめる
+## 追加課題：角丸の変更が届く範囲を確かめる
 
 見た目の値を1か所変えて影響する部品を確かめます。値を直接指定する部品と変数を参照する部品の違いを確認する課題です。
 

@@ -523,7 +523,7 @@ git status --short
 ```bash
 git add README.md
 git add package.json package-lock.json
-git add tsconfig.json next.config.ts postcss.config.js biome.json
+git add tsconfig.json next.config.ts postcss.config.mjs biome.json
 git add prisma prisma.config.ts
 git add public src
 git add docker-compose.yml
@@ -531,7 +531,7 @@ git add .node-version
 git add -f .env.example
 git status --short
 git ls-files package.json package-lock.json
-git ls-files tsconfig.json next.config.ts postcss.config.js biome.json
+git ls-files tsconfig.json next.config.ts postcss.config.mjs biome.json
 git ls-files prisma prisma.config.ts public src
 git ls-files docker-compose.yml .node-version .env.example
 ```
@@ -881,7 +881,7 @@ git branch --show-current
 | `gh` | ターミナルから GitHub を操作するための公式コマンド |
 | ブランチ | 履歴の枝。今日は現在いるブランチ（多くは `main`）をそのまま GitHub へ送る |
 
-## 応用課題: READMEの変更を1件の履歴にする
+## 追加課題：READMEの変更を1件の履歴にする
 
 変更したファイルを選んで履歴へ残しましょう。保存とコミットが別の操作であることを確かめます。
 

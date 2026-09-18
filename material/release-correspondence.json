@@ -31,9 +31,9 @@
     },
     {
       "id": "distribution-zip",
-      "subject": "配布ZIP（dist/task-app.zip 等）",
+      "subject": "配布ZIP（task-app-curriculum-v1.1.zip）",
       "corresponds_to": {
-        "contents": "scripts/_app-base・_lib-base・_seed・scaffold-from-scratch.sh・material・README",
+        "contents": "scripts/scaffold-from-scratch.sh・scripts/_app-base・_app-api-trpc・_app-components・_constants・_docker・_lib-base・_lib-utils・_prisma・_seed・_server-base・_server-routers・_trpc-base・_ui-components・README・.env.example・doc/SUPPORTED_ENVIRONMENTS.md（material・src は含まない）",
         "scaffold_source": "src/ との同期は check_scaffold_src_sync.py で担保"
       },
       "basis": "ZIP同梱の scaffold ファイルと src/ の差分は意図的例外を除きゼロ",
@@ -42,12 +42,12 @@
     },
     {
       "id": "drive-delivery",
-      "subject": "gdrive フォルダ 1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU の36 PDF",
+      "subject": "gdrive フォルダ 1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU の36 PDF と写経ZIP",
       "corresponds_to": {
         "uploaded_from": "dist/pdf/",
         "recorded_in": "dist/drive-backup-9cff5605/metadata.json"
       },
-      "basis": "release_manifest.py --remote-check でファイルIDとsha256を照合",
+      "basis": "release_manifest.py --remote-check でファイルIDとsha256を照合（PDF36冊＋ZIP1件）",
       "approved_by": "devin",
       "at": "2026-09-12"
     }

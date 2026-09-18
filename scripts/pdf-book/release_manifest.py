@@ -585,6 +585,10 @@ def remote_check(manifest: dict) -> list[dict]:
     （同名の別ファイルを掴まないため）。
     """
     local = {p["name"]: p for p in manifest["artifacts"]["pdfs"]}
+    # ZIPも同じ規則で照合する（ID一致・再取得sha一致）
+    zip_item = manifest["artifacts"].get("zip")
+    if zip_item:
+        local[zip_item["name"]] = zip_item
     listing = run([
         "rclone", "lsjson",
         f"--drive-root-folder-id={DRIVE_FOLDER_ID}", "gdrive:",
@@ -691,6 +695,9 @@ def postupload_failures(manifest: dict, results: list[dict]) -> list[str]:
         manifest["correspondence"], {"drive-delivery"}
     )
     expected = [item["name"] for item in manifest["artifacts"]["pdfs"]]
+    zip_item = manifest["artifacts"].get("zip")
+    if zip_item:
+        expected.append(zip_item["name"])
     drive = manifest.get("drive", [])
     drive_names = [item.get("name") for item in drive]
     drive_ids = [item.get("id") for item in drive]
@@ -723,6 +730,8 @@ def postupload_failures(manifest: dict, results: list[dict]) -> list[str]:
     local_by_name = {
         item["name"]: item["sha256"] for item in manifest["artifacts"]["pdfs"]
     }
+    if zip_item:
+        local_by_name[zip_item["name"]] = zip_item["sha256"]
     for entry in drive:
         if not entry.get("id") or not entry.get("url"):
             failures.append(f"Drive metadata のIDまたはURLが無い: {entry.get('name')}")

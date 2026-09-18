@@ -218,6 +218,7 @@ class ReleaseManifestTest(unittest.TestCase):
 
     def test_complete_remote_results_are_accepted(self):
         manifest = self.valid_manifest(pdf_names=("a.pdf", "b.pdf"))
+        shipped = manifest["artifacts"]["pdfs"] + [manifest["artifacts"]["zip"]]
         manifest["drive"] = [
             {
                 "id": f"id-{index}",
@@ -225,11 +226,11 @@ class ReleaseManifestTest(unittest.TestCase):
                 "url": f"https://example.test/{index}",
                 "uploaded_sha256": item["sha256"],
             }
-            for index, item in enumerate(manifest["artifacts"]["pdfs"])
+            for index, item in enumerate(shipped)
         ]
         results = [
             {"name": item["name"], "ok": True}
-            for item in manifest["artifacts"]["pdfs"]
+            for item in shipped
         ]
         self.assertEqual(release_manifest.postupload_failures(manifest, results), [])
 

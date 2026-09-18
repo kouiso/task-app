@@ -1,0 +1,1070 @@
+{
+  "version": 1,
+  "scope": "full-36-book-build",
+  "built_at": "2026-09-18T09:56:14.233574+00:00",
+  "inputs": {
+    "source_count": 36,
+    "source_pdf_names": [
+      "00-1_学びのロードマップ.pdf",
+      "00_カリキュラム目次.pdf",
+      "appendix_トラブルシューティング.pdf",
+      "appendix_参考資料.pdf",
+      "appendix_次のステップ.pdf",
+      "appendix_用語集.pdf",
+      "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+      "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
+      "day03_GitHubに保存する.pdf",
+      "day04_ネットに公開.pdf",
+      "day05_ログイン画面のUI.pdf",
+      "day06_ユーザー登録画面.pdf",
+      "day07_ログイン体験を改善しよう.pdf",
+      "day08_サイドバーを完成させよう.pdf",
+      "day09_プロジェクト一覧画面.pdf",
+      "day10_プロジェクト新規作成.pdf",
+      "day11_プロジェクト編集・削除.pdf",
+      "day12_メンバー追加.pdf",
+      "day13_タスク一覧画面.pdf",
+      "day14_タスク新規作成.pdf",
+      "day15_タスク編集・削除.pdf",
+      "day16_ステータス変更・時間記録.pdf",
+      "day17_自分のタスクページ.pdf",
+      "day18_コメント投稿.pdf",
+      "day19_コメント編集・削除.pdf",
+      "day20_タスク検索機能.pdf",
+      "day21_統計カードを表示.pdf",
+      "day22_グラフを表示.pdf",
+      "day23_週次レポート.pdf",
+      "day24_ユーザー一覧（管理者用）.pdf",
+      "day25_プロフィール編集.pdf",
+      "day26_エラーページを作って、バグを退治しよう.pdf",
+      "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+      "day28_タスク一括操作を実装しよう.pdf",
+      "day29_ユーザー詳細・編集ページを作ろう.pdf",
+      "day30_完成版を公開！.pdf"
+    ],
+    "link_map_file": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/pdf-link-map.json",
+    "files": [
+      {
+        "file": "material/30days-curriculum/00-1_学びのロードマップ.md",
+        "size": 4822,
+        "sha256": "6dab6a2adbd77539590cd3d05233b751e18cdd2bd0dd5cb2b0a5898d52a05569"
+      },
+      {
+        "file": "material/30days-curriculum/00_カリキュラム目次.md",
+        "size": 15453,
+        "sha256": "6441e3716025cab896f68ce447046a967b0183781094090091aba6d93577a757"
+      },
+      {
+        "file": "material/30days-curriculum/appendix_トラブルシューティング.md",
+        "size": 12613,
+        "sha256": "f715fda5c48c39a76efcb63966cd9aba81f4efac4fb2d9272624df0bfa1f5d71"
+      },
+      {
+        "file": "material/30days-curriculum/appendix_参考資料.md",
+        "size": 5248,
+        "sha256": "d79820c71899b8b71251c9ec75d246a05bdb9a24b0795e30a93ea4ef8fc1d68b"
+      },
+      {
+        "file": "material/30days-curriculum/appendix_次のステップ.md",
+        "size": 8309,
+        "sha256": "3753322925efd8f363b3b913100bf8144ccc1000f59479896e1e2086c28e6b1f"
+      },
+      {
+        "file": "material/30days-curriculum/appendix_用語集.md",
+        "size": 14608,
+        "sha256": "436bf5ec0f0cf8da5c07ea6e313d4bec4ba957e866490c7d3c9ca47cb265a927"
+      },
+      {
+        "file": "material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md",
+        "size": 73607,
+        "sha256": "39b5b50469ef7abf78cf156f9d52a52dd7600ac8dc9d1554ff0a8feb0fc34c6a"
+      },
+      {
+        "file": "material/30days-curriculum/day02_ダッシュボードに自分だけのメッセージを追加しよう.md",
+        "size": 65452,
+        "sha256": "247a07cae32c9c864abcd5a12d19d2de59f05e6b0edbc1b9a18e6dcd38ed04d6"
+      },
+      {
+        "file": "material/30days-curriculum/day03_GitHubに保存する.md",
+        "size": 58947,
+        "sha256": "38c9f3a137c233c6a89d45374d6c93acd2371c5d2e1ce5ce172bb246b68f3568"
+      },
+      {
+        "file": "material/30days-curriculum/day04_ネットに公開.md",
+        "size": 58726,
+        "sha256": "dc7614d414bd14fd62c4455d3383982c174bf9d9655f81ea803c3ec088fcf5a6"
+      },
+      {
+        "file": "material/30days-curriculum/day05_ログイン画面のUI.md",
+        "size": 83437,
+        "sha256": "be0c608eba878a4a50d332a5e1f6757c4b3c09e9994753295cace2314e215565"
+      },
+      {
+        "file": "material/30days-curriculum/day06_ユーザー登録画面.md",
+        "size": 70257,
+        "sha256": "a8f565761ea51a51a72fdb65e803fd36a67a984d0b9122bc0b131b21da000e9d"
+      },
+      {
+        "file": "material/30days-curriculum/day07_ログイン体験を改善しよう.md",
+        "size": 125727,
+        "sha256": "32975cc11b03032e5fcd016fddfa9a74a70c4ce5883a2269af0dbd3af5dc1f32"
+      },
+      {
+        "file": "material/30days-curriculum/day08_サイドバーを完成させよう.md",
+        "size": 73831,
+        "sha256": "35c31c1a31f929ebde5b541f2f43ec01234c43ec2384cca79ad202b4ab07f515"
+      },
+      {
+        "file": "material/30days-curriculum/day09_プロジェクト一覧画面.md",
+        "size": 80589,
+        "sha256": "7d91e19486c487e9687062602fab1b579107b492151e0c593c521148713296ee"
+      },
+      {
+        "file": "material/30days-curriculum/day10_プロジェクト新規作成.md",
+        "size": 93914,
+        "sha256": "c0071eb25b98ff18ef550fef0fc5f89a1070442a90b80ca528b3ecc3d0a41573"
+      },
+      {
+        "file": "material/30days-curriculum/day11_プロジェクト編集・削除.md",
+        "size": 138994,
+        "sha256": "e307edc9ea9c1685eb36b0e949980ef74152f11d7b4f42a27c962841215be7f1"
+      },
+      {
+        "file": "material/30days-curriculum/day12_メンバー追加.md",
+        "size": 150562,
+        "sha256": "968107fa0c2da3ff3461fa867a9e1875b794f0b84955cf323b5c5024ad7a2d79"
+      },
+      {
+        "file": "material/30days-curriculum/day13_タスク一覧画面.md",
+        "size": 97416,
+        "sha256": "aea05d2ee1d8618aa7b7ff51b03b591117397adcce56a3573fe10cc8b033a612"
+      },
+      {
+        "file": "material/30days-curriculum/day14_タスク新規作成.md",
+        "size": 151968,
+        "sha256": "822e682f52b636a088756546ba330cce0c850c4582f2f83dcef2afa9cf0bec22"
+      },
+      {
+        "file": "material/30days-curriculum/day15_タスク編集・削除.md",
+        "size": 108940,
+        "sha256": "9b2e5181834ecf7664e98326099077d0b5f6c38c4a7034cc79d0bfa8efa410d8"
+      },
+      {
+        "file": "material/30days-curriculum/day16_ステータス変更・時間記録.md",
+        "size": 85719,
+        "sha256": "113e65695b586d7dfb1bd0beecbd854624667305612c513b1027a1cb3212d2aa"
+      },
+      {
+        "file": "material/30days-curriculum/day17_自分のタスクページ.md",
+        "size": 93743,
+        "sha256": "1fdde4c3588d6afdde20290a3f6af453a3e5cd85258f806a06c2fdcfe2107a4e"
+      },
+      {
+        "file": "material/30days-curriculum/day18_コメント投稿.md",
+        "size": 82131,
+        "sha256": "1990c81f199b8f4d4a01045fc622439303562e278f40901a5970093f47952a2d"
+      },
+      {
+        "file": "material/30days-curriculum/day19_コメント編集・削除.md",
+        "size": 86618,
+        "sha256": "516823149c4ac9ea05c112a66c747f5c7a7ab8b96bee5065e41941e655bbf4e8"
+      },
+      {
+        "file": "material/30days-curriculum/day20_タスク検索機能.md",
+        "size": 181684,
+        "sha256": "dcc973a3bb5f0de158e656610e0079378993bf03b5156cb919f16be75c75ff5d"
+      },
+      {
+        "file": "material/30days-curriculum/day21_統計カードを表示.md",
+        "size": 88393,
+        "sha256": "3df200e7f4abc76d49691b4555fbeef38716451171883f5acd47e1d7cd69e370"
+      },
+      {
+        "file": "material/30days-curriculum/day22_グラフを表示.md",
+        "size": 54201,
+        "sha256": "23593b44cadb49cf9f40054f8fe0b24c8f474c32d118369fdd05fae23f622922"
+      },
+      {
+        "file": "material/30days-curriculum/day23_週次レポート.md",
+        "size": 113632,
+        "sha256": "d3bab281fa9034eeb0a162b478299cb3a030a9218c7289b809271f39131cc711"
+      },
+      {
+        "file": "material/30days-curriculum/day24_ユーザー一覧（管理者用）.md",
+        "size": 76370,
+        "sha256": "9d5d79342899375f6d1093086eddd9dda5e4bf5e3424b848efde3a6286ad5b54"
+      },
+      {
+        "file": "material/30days-curriculum/day25_プロフィール編集.md",
+        "size": 161731,
+        "sha256": "59e23225b82b346baa50f33eb2fa0bebf9a33310813d1a6c0b37ad996397fa21"
+      },
+      {
+        "file": "material/30days-curriculum/day26_エラーページを作って、バグを退治しよう.md",
+        "size": 123746,
+        "sha256": "b6dab0c7cac6b15891e7b8fbdc3ecaf5c028b3f81d34deca82096323ff6d7af3"
+      },
+      {
+        "file": "material/30days-curriculum/day27_プロジェクト詳細・アーカイブを実装しよう.md",
+        "size": 129797,
+        "sha256": "ec79c508b0b2b53b0a46c6fbc69d0ff9b70bacda9bebdeaeb67cf06697013ff7"
+      },
+      {
+        "file": "material/30days-curriculum/day28_タスク一括操作を実装しよう.md",
+        "size": 95484,
+        "sha256": "5be0620128fa3ce899b6e882a3cb7f065e5af35d0da6c93d34709f776b4dcf86"
+      },
+      {
+        "file": "material/30days-curriculum/day29_ユーザー詳細・編集ページを作ろう.md",
+        "size": 183520,
+        "sha256": "de4a951b31f22453c260d109c6824914de7cf9b1351c4949c4b003ceb698c5b3"
+      },
+      {
+        "file": "material/30days-curriculum/day30_完成版を公開！.md",
+        "size": 53336,
+        "sha256": "4818f138043106e7a69088dbd7f8a396e431fd3e104745e5d8320f55252c6ef7"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day01/dashboard-hello.png",
+        "size": 78317,
+        "sha256": "194cf04c5544d4680b8c347f8ecbbde7eaffe6ea03c4c1c03cce5d0d28a87f46"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day01/nextjs-default.png",
+        "size": 30831,
+        "sha256": "fbac6044a43563c719facd61179bdfca13b9c14584bd5327ef7e2851a5bb8b85"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day01/top-page.png",
+        "size": 364653,
+        "sha256": "b74eddb5599aa68cdac8472269fb558262bdd3b5bd75efa1021566c07ed849b4"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day01-vscode-open.png",
+        "size": 72141,
+        "sha256": "5270d431124e2f25bb0f552741765e6731d11b6d5e9fc06add382309dbd6b876"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day02/dashboard-message.png",
+        "size": 263569,
+        "sha256": "609b29ebb3051d7a81b951effb7d7ab3249122ca562e3855ba97520f33f1d03c"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day02/step2-greeting-card.png",
+        "size": 141802,
+        "sha256": "0c8ab468db8d939724a3b7eadcec97d927201de83b1de9f2c4e4bc62a3ce050b"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day03-commit-success.png",
+        "size": 109679,
+        "sha256": "4f7bc741d42efa6267a866051d3fb129f71d5eb64fb92c3ab0ad8b5afab45c7a"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day03-git-status.png",
+        "size": 92083,
+        "sha256": "ed0d136dc052317ce9e6b6aeca121fd17c865c5b0bb6b42781046e98475fd301"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day03-github-history.png",
+        "size": 143687,
+        "sha256": "fb2bada64b19101d9aca71ef5b0d2a567b818a53dcf66621b541c56ece3d1ea8"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day05/login-card.png",
+        "size": 83582,
+        "sha256": "507842b6c8ab5d6916b22e06b51cb2eabdfa7e2aea6f3f7e79b974c91ccaf630"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day05/login-error.png",
+        "size": 92681,
+        "sha256": "413fb498b4dfb0f99ff2caefe1569accecd4fc6920c52a84771f366e9082cde2"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day05/login-register-link.png",
+        "size": 84244,
+        "sha256": "d967dad01880530ddbe9ab053fd277847a8c21825191ea822e5ee264af930032"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day05/login.png",
+        "size": 81475,
+        "sha256": "cb5bd1ff95557fe0344e667b473e8eb2fc5f308fbb93c6d9f65942255fb28bf5"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day06/register-complete.png",
+        "size": 102731,
+        "sha256": "e2ced31bd8b47dd5473073710814ff780d42f19c680651eb861d7f5f8994555f"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day06/register-name-email.png",
+        "size": 105956,
+        "sha256": "b375118f160d61bb4a433aad5140e0b2c3dc64a461902491f51f91140675c32e"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day06/register-password-confirm.png",
+        "size": 105939,
+        "sha256": "156e232312afb6033b2655c4ed0cd7ca91afd5e682d920565543e5c0b5a511d4"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day06/register.png",
+        "size": 100211,
+        "sha256": "ba308c1e4b610e17cb49308c487061d2d4ecae278412ca5f6c64e71f1a2a8529"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day07/login-failed.png",
+        "size": 103322,
+        "sha256": "051e3040a87e6a2e5f2691cdb47da1336e4a79b36faec3d507da57fe0756fd70"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day08/dashboard.png",
+        "size": 295271,
+        "sha256": "9ec8f88e392c6c8f3de35207cbbf60e5d0f57f5baa5c44f72f4dee7b895ef72d"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day08/logout-confirm.png",
+        "size": 250576,
+        "sha256": "5dd4ecd0534346c2e063434b1c5e041a0177c993aa28ddddc82d11676f9883ed"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day08/sidebar.png",
+        "size": 298240,
+        "sha256": "b61862d32681115ccc3fc05dd05d0fb8cfe7eace187ce406f4080f421e8d5e62"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day09/empty.png",
+        "size": 94749,
+        "sha256": "b113b5b8b18ca1ffa968d36a6fca85be1fc7152aa477f5faca1965e384cddeff"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day09/project-cards.png",
+        "size": 93502,
+        "sha256": "bd460a76f001ea0536fb9634960d4681ef711ab58b9caca2c4c29f48ac933973"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day09/project-list-header.png",
+        "size": 107519,
+        "sha256": "2ff9dc40fef50586f3e1dc9c076a857b780e8aa3e24fc71ff0231c58b8255ede"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day09/project-list.png",
+        "size": 92138,
+        "sha256": "c7b21987ca07fef6d79c040acdd4dd48ce80db3ad54f68a09b8646b1a7639d49"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day09/project-loading.png",
+        "size": 39161,
+        "sha256": "fdd825bfcb9156bec1aad2876f3749a58b07017621d982e755eda58c6f77a1bf"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day09/project-narrow.png",
+        "size": 54117,
+        "sha256": "34b227538cd9b4e2f5ea040487e5d63a3e63e9c5b06f2056a5b25686ec58ae18"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day09/project-page-heading.png",
+        "size": 94785,
+        "sha256": "55010b13434fef8702b9205656df91f46bcdadd9bfc2a5b7879e3db1f24be8cd"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day10/create-form-filled.png",
+        "size": 69547,
+        "sha256": "19bc411aa76ba324fca3c73faf89843611979c7268d244cf49026b806e2ad502"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day10/create-validation-error.png",
+        "size": 73870,
+        "sha256": "2c02f4e497cd33f9cc454f0ee74bb3a367b6826f143398731d956a64c43e307d"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day10/project-create-dialog.png",
+        "size": 65742,
+        "sha256": "c89811c2c600ab4aeedc878222c48d9dedabdc8e31621c7833c19365480a9e0b"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day10/project-list-after-create.png",
+        "size": 118249,
+        "sha256": "67bffdd9f1f45a3df2cd14f5112f9120438aec48dab2062830b28bfa9b462805"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day11/project-delete-confirm-action.png",
+        "size": 32620,
+        "sha256": "9dcaa77008804c6e87850e298969624025d6d26a7ddb5c5b2efe6b10f430f1ce"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day11/project-delete-confirm.png",
+        "size": 31090,
+        "sha256": "c655a73a60e299aeac3d64df928866753fad749c2b9573aafa59cc6997eaf7ef"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day11/project-edit-dialog-update.png",
+        "size": 70101,
+        "sha256": "0f6ebbdc6caee7d4ea9ed0741bfa9fdd125c7e6b10094dac903c03f1dfd2986a"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day11/project-edit-dialog.png",
+        "size": 68359,
+        "sha256": "4f4b841974354930a268fa68f54e37b32cb9b76e62084987f175b061a9eaa9ba"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day11/project-list-after-edit.png",
+        "size": 119038,
+        "sha256": "3fc4cd483ba0aa929aca052324d30602659623d26e7618586e2586ecd3cca251"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day12/add-member-dialog.png",
+        "size": 45404,
+        "sha256": "57ea70e4543118b0e62f80a6a575f970d87f798c5e2e871cc0e50df4d788a85a"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day12/archived-project-list.png",
+        "size": 87142,
+        "sha256": "32e20364b5632086fde0877ab24cab0014132b7e45b6e1db1593b3854a230cb8"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day12/member-count.png",
+        "size": 45178,
+        "sha256": "285b2acd6e14f9e37ee5428773b513c67be8ed5027cd5312a564a76c84a32a46"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day12/member-remove-confirm.png",
+        "size": 32023,
+        "sha256": "b93daf4c68c54c3b759ea22586dd60590c5a6a5907eac9a687ad4fc0699d8b27"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day12/project-detail-archive.png",
+        "size": 97181,
+        "sha256": "eea3e515145eef539e55bc8e680caf7de612db072ad8fa948a3660d01bc56941"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day12/project-detail-members.png",
+        "size": 44886,
+        "sha256": "23b08b1112a92e3b6a220efc6d95488e1ffe35a636e475109d67a71f1d559738"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day12/project-detail.png",
+        "size": 155666,
+        "sha256": "b714e6fdb5d736ed0bf336ae84296903156a0eedf3ee9d74bc479b0469d11eb9"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day13/task-detail-dialog.png",
+        "size": 59366,
+        "sha256": "47d8df1826cc481624554c4ae9e0090ef274b8331594a69980f591764d189326"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day13/task-list-filtered.png",
+        "size": 90514,
+        "sha256": "a8550ec3338be05299148cea96f837acf41582908463d9d84a6ae178ea0f56d8"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day13/task-list.png",
+        "size": 151770,
+        "sha256": "a794af7881c0368b4ea51c852a3a28f181f75534cc3786617ecdd5894ebb4006"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day14/task-create-dialog.png",
+        "size": 95551,
+        "sha256": "2ffcafbcd66008133c8d8bb9421c5e03d22d912a56d1ff2af24e7173eebaa7dc"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day14/task-dialog-project-assignee.png",
+        "size": 97688,
+        "sha256": "83264f8f37ffbe2c45859d478a01abf9cd20c5475e80b0e163db66dce13c0f20"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day14/task-dialog-title-description.png",
+        "size": 98815,
+        "sha256": "145fb97aceee0ff850fe63f5d3975f2753decf2f934c3b0dd804af7a761b9fb0"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day14/task-list-after-create.png",
+        "size": 182519,
+        "sha256": "94cdf4be3133b906422ae66f8220118907e4bf85b5d89b93ce79052e21e4b5dc"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day15/task-delete-confirm.png",
+        "size": 29041,
+        "sha256": "d74c6fd2d3aa2cbe9214d42e47cff176eab233b0165f9d9e2ac95a8215abbaa6"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day15/task-edit-dialog.png",
+        "size": 103794,
+        "sha256": "fa71c9e821171152eef638536a14e28b9ce3d62d7ba69097e1ec307793760d78"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day15/task-list-after-edit.png",
+        "size": 163088,
+        "sha256": "98c1c73a332d7d4758809185409cc3997a5f0658cc2693542a3e9257adce1303"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day16/task-detail-dialog.png",
+        "size": 59370,
+        "sha256": "5b19952410a3653a7cb2d47f528ebf81fbd411ffc72a90f3e19658f7be8df991"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day16/task-list.png",
+        "size": 181516,
+        "sha256": "a7ac916abdcdde5a514534fbb144242cea914442c91f268f1da9f9775c28925b"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day16/task-timer.png",
+        "size": 36785,
+        "sha256": "a979a95dc0248c3903a17af8912592b6393a60177fad2937d297bd8cf23d7911"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day17/my-task-in-progress.png",
+        "size": 133056,
+        "sha256": "baf9d598343ddcae7ed52f8da714e1b76a38be7e103774f0ee05996abb7033d8"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day17/my-task.png",
+        "size": 130400,
+        "sha256": "8462c9ba937d464a62d3ef7e1b0cdbc6d48856a8b7de16bc8d4dfcaf9db2de26"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day17/status-tabs.png",
+        "size": 132920,
+        "sha256": "314d5a21ab63d8198286b5b78a03a1fda1b21fbb5ef7c6a2ac9b16a8920ac7f3"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day17/task-groups.png",
+        "size": 133005,
+        "sha256": "52069ce48a607eecc706021b6ff5b438b352c64bc1d502cce3cd37fb636a668c"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day18/comment-before-post.png",
+        "size": 116502,
+        "sha256": "5a39f7486dbdec5301412ad39372b62aeca7d5b30603ea3b340339cd67c8a587"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day18/comment-form.png",
+        "size": 102869,
+        "sha256": "c56b5b3115cac5eb5ea453735d043ef05a63879ebd159696f3324314375f2b35"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day18/comments-list.png",
+        "size": 103713,
+        "sha256": "7e10865c7dab83595c02b993b975e31df746dd85cf969dc462537e191875237d"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day18/task-detail-dialog.png",
+        "size": 101242,
+        "sha256": "591fdd95be71299fddcf82c84c8b5fefbd171402bf1680fbf8e4d21d1a4e04dd"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day19/comment-delete-confirm.png",
+        "size": 29997,
+        "sha256": "ccfe1b084ed046c6c474666e4daa93ae6dc0193d32775600fe45142e974d4867"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day19/comment-edit-actions.png",
+        "size": 116104,
+        "sha256": "17f7e8f796543d9c9b07d2d17353581fe53f93748edd05b9fe4b0a496fb4ca97"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day19/comment-edit-mode.png",
+        "size": 114467,
+        "sha256": "79bcf02ca398b2b344769673074b8f989bf1fff799938dad5bb6d4d56430bc7f"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day19/own-comment-actions.png",
+        "size": 105370,
+        "sha256": "9bfe0930ac44536b2f6f96bff49f7dc81e936fb6b8d702e9f260d12e519a80c7"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day20/search-before-query.png",
+        "size": 153247,
+        "sha256": "7175d68cf16a012f7ce838a2dcf9e6dd2f919457d424c696599c40bfaaabcd01"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day20/search-form.png",
+        "size": 74340,
+        "sha256": "38d6181b20ba583b440b5501fe2de220c8bb2b929c93a4902861a21b0309ca54"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day20/search.png",
+        "size": 150730,
+        "sha256": "6f988c3b691699f34a21d836cc0461e3188e6214802771d3612f011318fcf0a8"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day21/report-heading.png",
+        "size": 132644,
+        "sha256": "e7153e857f608b3ef1594281d2092616c0ab42f409c27bbe8589fdefe231269d"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day21/report-loading.png",
+        "size": 10934,
+        "sha256": "145d853d03526144e27be949944ed7972be67fc7cc5e00d77c243bcc762a2b7a"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day21/report-narrow.png",
+        "size": 134228,
+        "sha256": "372858c7eecccbebba22196bdd2b600b1b6ee478cf203c7f51b2847b73f80360"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day21/report-stat-cards.png",
+        "size": 131828,
+        "sha256": "7b24a8599f7e2f2d4affe9ffe8897f25083667c0f8064c63cdf68e105ab04f10"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day21/report.png",
+        "size": 130006,
+        "sha256": "fa1f3a6314d7d8ed7df7495a0ab8d00ac43226d6ab980c63c12a099f8941de4b"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day22/report-chart-grid.png",
+        "size": 182159,
+        "sha256": "9416cb25eb777f449007f3cfb3999fd0b0f9762e329e904e2e82cb9655c35f7d"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day22/report-pie-charts.png",
+        "size": 181935,
+        "sha256": "f65f5d6e97f9c9e071319600398cce07850fc4c2f949ea58891929b4906c0eaa"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day22/report.png",
+        "size": 180179,
+        "sha256": "b6942377f713b2216e2a7e57ef4f41648ebd0cadb501a22ca8a7db437a647114"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day23/report-project-table.png",
+        "size": 194114,
+        "sha256": "d30073c7fcf92ea26de91f8dc23d3e4d23a73f825f2ea040221936a1219c6f6c"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day23/report-weekly-charts.png",
+        "size": 191718,
+        "sha256": "19da785556a4fb1f123dfa793fa94bd660fb562d25a4cb7c648a4b10b1982dc0"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day23/report-weekly-loading.png",
+        "size": 14908,
+        "sha256": "bd03f439775b81e8b328fecdc71268f344db48296db52119b7156fa54d6bde95"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day23/report-weekly.png",
+        "size": 190580,
+        "sha256": "af91abde38a5b06cc32be65519eabface9b8df06979a66333ce0a9542f616238"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day24/user-list-table.png",
+        "size": 195152,
+        "sha256": "7f885cc7348713cc234f1fffb3d882cd79ed60677f868cac8963e83318db34fc"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day24/user-list.png",
+        "size": 191236,
+        "sha256": "351aa9c4057e52325fbf52f3b250a41e1bd73c7527a9b6d7acad236b981d34e5"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day25/change-password.png",
+        "size": 62624,
+        "sha256": "3c29a6a411872359f81c884d1c9f764722a59b4e49d14955b29a3a423f56033e"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day25/profile-buttons.png",
+        "size": 134465,
+        "sha256": "8f07c1e85e9f87ca8fbeac08cbc537ed76b492d11b5e60a030a42bc94e968746"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day25/profile-edit.png",
+        "size": 62616,
+        "sha256": "f3297d5d0d6cb5c16f4d7c641ef87bf45d125e6f9b3f74fd21db6d5d789b7cf2"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day25/profile-info.png",
+        "size": 134919,
+        "sha256": "01dc015352a12f375d85c183e7eb207620689a71cf3ad011bf10370e717cc0f9"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day25/profile.png",
+        "size": 132416,
+        "sha256": "ca11718e67abb1433366bd5cd31be8b7a96b4cbf2962c04dac775dc88e712dcc"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day26/error-page.png",
+        "size": 41907,
+        "sha256": "f7eb061c8793aa77bb5a21176120f966b52ecbe9765095a0fd9d5dd5375d92f9"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day26/not-found-action.png",
+        "size": 44683,
+        "sha256": "db067b0016cd28116532cd583f6c29027bef78b5b8d215013038314fa937effc"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day27/project-detail-archive.png",
+        "size": 227384,
+        "sha256": "72f52938d18f4b65eec4dbdd191e059612afa3d4fc2addf7daa91d3799d155f2"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day27/project-detail-members.png",
+        "size": 227286,
+        "sha256": "f95cce7a978e848cfc12db7c6b794adb876633be55670be03aa2cbcdcf01de19"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day27/project-detail.png",
+        "size": 224980,
+        "sha256": "f1df58a4adc5f8a8b4e7c84e38b109bcce5d41c0fe67c7a1bc3ee4a9c4a3687e"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day28/bulk-operation-header.png",
+        "size": 307922,
+        "sha256": "2c72b71b955570bed35ea22328386f67856d1a0c0e6f2bb40c597413d62edb76"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day28/bulk-operations-complete.png",
+        "size": 305794,
+        "sha256": "193267142a01f4d0a0fb78865e020f65b83d9412da99e758e98f4833128d9ef2"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day28/bulk-task-operations.png",
+        "size": 306302,
+        "sha256": "35aac22020a8aa9d5d60fbe1ec000f3634925b67707e51e8ec0b65b2889534ab"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day28/select-all-checkbox.png",
+        "size": 292596,
+        "sha256": "26fbd283854d1796c5d60cd3c9b2a08f2632a98f8318a09e74b2a6dddf8caf99"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day28/task-row-with-checkbox.png",
+        "size": 53077,
+        "sha256": "f99087e3af9c67d5e9e9d00be0467fa37ca2ac69e535deb5dc939b8e3bce57d9"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day29/user-detail-loading.png",
+        "size": 55591,
+        "sha256": "ea2797e4dd284b45d92610d6d60032c65b92f8c576a0cc9e434f0335ce989ebf"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day29/user-detail-projects-tasks.png",
+        "size": 173908,
+        "sha256": "2f13283ce8644ecc513df858da48b07f2d78bcceae15474f32f814c0cc30f827"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day29/user-detail.png",
+        "size": 170601,
+        "sha256": "4b5836bce35ab84cc3cc3ef10226272bdb1db3660b84a5a0f77cfc5d88fe01f3"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day29/user-edit-form.png",
+        "size": 68725,
+        "sha256": "8174d31388d4c6f87f72560901a3d3aa06fb28f55c4fd3bfbf5506d507836230"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/day30/dashboard.png",
+        "size": 303615,
+        "sha256": "c8f4ae130dd656415f01d790a6e26e7ec3a88619e896f1a3164f848284bc2404"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/login.png",
+        "size": 56292,
+        "sha256": "53eeec74e842548e20714c3238b9e0f78f31c62efff07e626bbf906699a9271a"
+      },
+      {
+        "file": "material/30days-curriculum/screenshots/task-list.png",
+        "size": 109624,
+        "sha256": "a22018df3da767c93019985bc77e27f4159627b079a711d9513a190cb0b4e8aa"
+      },
+      {
+        "file": "scripts/pdf-book/build_pdf_book.py",
+        "size": 51783,
+        "sha256": "88e1d03a480ac1ea8911fe2b78df4a5b9d67e2c93f94130f7a2a8d7588c5e614"
+      },
+      {
+        "file": "scripts/pdf-book/code_wrap.py",
+        "size": 31577,
+        "sha256": "a8f86da49e4ac0ff0a4ad2d928cc97812249b1efd07756d067baedd467b4526d"
+      },
+      {
+        "file": "scripts/curriculum-qa/markdown_scan.py",
+        "size": 11260,
+        "sha256": "cc07eb66910e89a25f1ff40388da9fe8d03a4d0dd2a42d94f38771020eed8481"
+      },
+      {
+        "file": "material/style/book.css",
+        "size": 16738,
+        "sha256": "55dd08770a6e7cdbcb82febd02a2dd0fd87e1661cf9371f59a7fe7119ad9cbde"
+      },
+      {
+        "file": "package-lock.json",
+        "size": 737257,
+        "sha256": "c8e28dc677e4bf0c1ffedc6414523ea1b60266912ad3f10f7b35818e196011b6"
+      },
+      {
+        "file": "node_modules/@expo-google-fonts/biz-udpgothic/400Regular/BIZUDPGothic_400Regular.ttf",
+        "size": 4515260,
+        "sha256": "22f41ce68f1ce62477ca4ec1e2c0c400cc545ddff31d713e8edf87808614aeb2"
+      },
+      {
+        "file": "node_modules/@expo-google-fonts/biz-udpgothic/700Bold/BIZUDPGothic_700Bold.ttf",
+        "size": 4485780,
+        "sha256": "1a995936e0f9de8a7c142c97cdb679e7087e89c13e663f946cd047f4283cedf8"
+      },
+      {
+        "file": "node_modules/@expo-google-fonts/jetbrains-mono/400Regular/JetBrainsMono_400Regular.ttf",
+        "size": 114904,
+        "sha256": "b6b1ff4ddefe36d7f2a6174e1d001cab374e594519ee9049af028d577b64c5f5"
+      },
+      {
+        "file": "node_modules/@expo-google-fonts/jetbrains-mono/700Bold/JetBrainsMono_700Bold.ttf",
+        "size": 114828,
+        "sha256": "a2349098b9e45419e7bf0e2958d6c4937a049dded37387b08be725be4c7615f3"
+      },
+      {
+        "file": "node_modules/@fontsource/noto-emoji/files/noto-emoji-emoji-400-normal.woff2",
+        "size": 472344,
+        "sha256": "c0e96e499f872d4c60facc8093bad2b130fb0f1c47666f9c176b05366dc1d90f"
+      },
+      {
+        "file": "node_modules/@fontsource/dejavu-sans/files/dejavu-sans-latin-400-normal.woff2",
+        "size": 253844,
+        "sha256": "c3c7ca00b4538cc10906a5d4d921aab2369b2bee781168ef2ca695f3a5805760"
+      },
+      {
+        "file": "dist/pdf-link-map.json",
+        "size": 5830,
+        "sha256": "ade5d7b46d1e4ad9bef6417a0f358eca5cb77579a136622c61d65515022d1dd6"
+      }
+    ],
+    "tools": [
+      {
+        "name": "mermaid_cli",
+        "identifier": "@mermaid-js/mermaid-cli@11.16.0",
+        "identifier_sha256": "9eb0b568552254356190fd29070c8cc7295e0d22127562d43caf24467440f74b",
+        "resolved": {
+          "path": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/.pdf-book-toolchain/node_modules/@mermaid-js/mermaid-cli",
+          "file_count": 16,
+          "size": 52022,
+          "sha256": "8b0ccfdb8e31d037b5ec21b0997cc67fb987815d5adc7d25a8d38bb5fc01f7b1"
+        }
+      },
+      {
+        "name": "theme",
+        "identifier": "@vivliostyle/theme-techbook@2.0.2",
+        "identifier_sha256": "750131c9d2240defb501d59c892f43be0b6eee369ac999711a56cf1c7a238378",
+        "resolved": {
+          "path": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/.pdf-book-toolchain/node_modules/@vivliostyle/theme-techbook",
+          "file_count": 6,
+          "size": 16396,
+          "sha256": "5adb2ab1e2a0374a199c089ef3c600e00b5439407f5d7e892d20516d15109c3c"
+        }
+      },
+      {
+        "name": "vfm",
+        "identifier": "@vivliostyle/vfm@2.7.0",
+        "identifier_sha256": "42d8e84f9ff1f0669ba5fe2b8e642a27cb678c458a96453986f668a29d36bd9f",
+        "resolved": {
+          "path": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/.pdf-book-toolchain/node_modules/@vivliostyle/vfm",
+          "file_count": 133,
+          "size": 328270,
+          "sha256": "264b6d6c2575bd59a2b33e46b96792a8c4522c0d8be032523c30c76350d5f63b"
+        }
+      },
+      {
+        "name": "vivliostyle_cli",
+        "identifier": "@vivliostyle/cli@11.1.0",
+        "identifier_sha256": "15744350c5a8aa75172a9d1f21ae69c7e99152e7f1f870692608d4cd80071f61",
+        "resolved": {
+          "path": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/.pdf-book-toolchain/node_modules/@vivliostyle/cli",
+          "file_count": 80,
+          "size": 3234188,
+          "sha256": "ae1db4dab12bcb3df924bf2282c680e35cbb93d21401ccbc8ab498e372648957"
+        }
+      }
+    ],
+    "resolved_toolchain": {
+      "file_count": 44930,
+      "size": 605531846,
+      "sha256": "9dcc538b13c295684e8483de28397d8cce148962eed42d43f82c910c902e3e1f",
+      "root": "/home/kouiso/.devin/taskapp-resume-20260917T055337397756Z/candidate/dist/.pdf-book-toolchain"
+    },
+    "browser": {
+      "file": "tool:browser",
+      "size": 1585,
+      "sha256": "a75e953fc0fa6108e4fbe67fc9ab8ff8800b851f914b63504a4e26a431b7b22f",
+      "path": "/opt/google/chrome/google-chrome"
+    },
+    "aggregate_sha256": "1198dadb93f67743a845ca6cbf324ef0e19be9985213c573bc787e69dc5c1511"
+  },
+  "outputs": [
+    {
+      "name": "00-1_学びのロードマップ.pdf",
+      "size": 123240,
+      "sha256": "ff776b767a9606ebd40ffc08bfa1e3af33086268e158818474f7ef87dd3af149"
+    },
+    {
+      "name": "00_カリキュラム目次.pdf",
+      "size": 275973,
+      "sha256": "36253aef96958315b0fa36641b06d71f5173787ca40092068ddba80042bd0a61"
+    },
+    {
+      "name": "appendix_トラブルシューティング.pdf",
+      "size": 685663,
+      "sha256": "f0d167cd82c363b781f58886a8ea4d7f251940e616f37aa86935fa5e215d880b"
+    },
+    {
+      "name": "appendix_参考資料.pdf",
+      "size": 702990,
+      "sha256": "76ba6884b3570c7325a1d80f17e24e5d506bd22d5948b60068e84d000e8ae08a"
+    },
+    {
+      "name": "appendix_次のステップ.pdf",
+      "size": 784564,
+      "sha256": "6cb6a608b88d883c2564a037ee82cb0586280e7e68cef201d124bb44d95d9c1c"
+    },
+    {
+      "name": "appendix_用語集.pdf",
+      "size": 717958,
+      "sha256": "426cda1477705262277728ac8331f14b9d9568de301e9f75427d294633b071ba"
+    },
+    {
+      "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+      "size": 1431101,
+      "sha256": "dce13dbc376763143445beafcff4e00c4544a59a83c882479d8fa96be671638e"
+    },
+    {
+      "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
+      "size": 1254982,
+      "sha256": "c4c2fbc88ae51cc138bb3407c129088439c9bc99c3fb7a2fa2fe9336adee170f"
+    },
+    {
+      "name": "day03_GitHubに保存する.pdf",
+      "size": 955674,
+      "sha256": "dacdc4c97f36a707fe2452ab3fbf1056f8a4b3261c8a190f7fded6ed123fb4ad"
+    },
+    {
+      "name": "day04_ネットに公開.pdf",
+      "size": 943932,
+      "sha256": "0004119c1dcdc5185c80561977cca195d51c0ed36cc07f0285a53d055e9f9290"
+    },
+    {
+      "name": "day05_ログイン画面のUI.pdf",
+      "size": 1264154,
+      "sha256": "d7c56d69f52d73498324e0d93d778083b4b73858b2f7ab433e7a927b758869fa"
+    },
+    {
+      "name": "day06_ユーザー登録画面.pdf",
+      "size": 1210348,
+      "sha256": "ff94f897810170c4ed3a4b7581d2dc5544b2b96c638800244e2000f2c07beafe"
+    },
+    {
+      "name": "day07_ログイン体験を改善しよう.pdf",
+      "size": 1889909,
+      "sha256": "21555422cc5bd25539430ee25848a0e508a71d9cfa36a75627b4ebb6f6192b82"
+    },
+    {
+      "name": "day08_サイドバーを完成させよう.pdf",
+      "size": 1821987,
+      "sha256": "73b872ea9458d676f34e7b776ec373bdb6ada45a32b5e6391f4528e461c8fa2a"
+    },
+    {
+      "name": "day09_プロジェクト一覧画面.pdf",
+      "size": 1585102,
+      "sha256": "ab954efb9c7a8a89f7e292f309abca504e141640cf67367721fce626fc60ab43"
+    },
+    {
+      "name": "day10_プロジェクト新規作成.pdf",
+      "size": 1427868,
+      "sha256": "4bb936c57bd4e72ed30501b8bf56052e3fff4255d6949f59eefcddc427101163"
+    },
+    {
+      "name": "day11_プロジェクト編集・削除.pdf",
+      "size": 1877563,
+      "sha256": "e5e33f81f136d966b19ca347407f3958ce7fd417eca6b23b36c6e4954372f72c"
+    },
+    {
+      "name": "day12_メンバー追加.pdf",
+      "size": 2071197,
+      "sha256": "34002ce019197291980534caed7541eb1b7618490e7db42c0560e81fce3583a1"
+    },
+    {
+      "name": "day13_タスク一覧画面.pdf",
+      "size": 1477619,
+      "sha256": "3748b79f9a651b110dbb1ffb9617f8537f6a92bc07e2293bac378ea849fb6720"
+    },
+    {
+      "name": "day14_タスク新規作成.pdf",
+      "size": 2142617,
+      "sha256": "cfdcd168db35bd6c98d63b083aa28e4d7761cc5aab9cc851545c68082cfb590b"
+    },
+    {
+      "name": "day15_タスク編集・削除.pdf",
+      "size": 1599271,
+      "sha256": "dba09f0d46ca58fbc56e17128f131cb4bd4e962dc2e8b48c84950309ba20bce9"
+    },
+    {
+      "name": "day16_ステータス変更・時間記録.pdf",
+      "size": 1270657,
+      "sha256": "2dee9898cf25c4b04934fba5f2ceebda30a1dacede8d3fc964042b4dbfb10395"
+    },
+    {
+      "name": "day17_自分のタスクページ.pdf",
+      "size": 1672350,
+      "sha256": "1b3e1820c975c787b5b904cf9bf26e5aae70e4571515484eb296dffd2fa1d0fc"
+    },
+    {
+      "name": "day18_コメント投稿.pdf",
+      "size": 1375392,
+      "sha256": "349f02b849989a23c6d0e46af752260948991628e74645f007801255babff1be"
+    },
+    {
+      "name": "day19_コメント編集・削除.pdf",
+      "size": 1304214,
+      "sha256": "8c0d25c6e858b679d3fe4d36efbeda38262f0afe9f739efe9593e1add81fade5"
+    },
+    {
+      "name": "day20_タスク検索機能.pdf",
+      "size": 2274972,
+      "sha256": "fdae798bbcdc2e85a66b29a1154ae8d9dd1a110ddc3b1b10e3489d9b1d573d52"
+    },
+    {
+      "name": "day21_統計カードを表示.pdf",
+      "size": 1544467,
+      "sha256": "64329f717711fa05142aab823d4e825a5014abb3fcdb1298a1a2024c10c28630"
+    },
+    {
+      "name": "day22_グラフを表示.pdf",
+      "size": 1306314,
+      "sha256": "792c88007e40d5f38c19ff943fd97e6dbaee16efb733d5ddecfeb47ec073e82f"
+    },
+    {
+      "name": "day23_週次レポート.pdf",
+      "size": 2071696,
+      "sha256": "395b926546c5b23ca84d7fc112cb7f1a48343880c4d6703fe2bfadcda0e601cd"
+    },
+    {
+      "name": "day24_ユーザー一覧（管理者用）.pdf",
+      "size": 1305877,
+      "sha256": "52ad46c26c3bfb7878280439026bbd6d37aa4a18536b51a81f6623007d9fd6fd"
+    },
+    {
+      "name": "day25_プロフィール編集.pdf",
+      "size": 2193461,
+      "sha256": "1db97c7e5607d8556c5525f06e653f828a472f6a388823215a6469ab2f3e488f"
+    },
+    {
+      "name": "day26_エラーページを作って、バグを退治しよう.pdf",
+      "size": 1471684,
+      "sha256": "1f4751e38a48541a888cd4fb05bb3997d6b35830acc42d9e3eb95098b7f6b904"
+    },
+    {
+      "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+      "size": 2030755,
+      "sha256": "4b9524024c8268390da47b5a7289f468d2d1de7cc604ae53d2573d25e872613b"
+    },
+    {
+      "name": "day28_タスク一括操作を実装しよう.pdf",
+      "size": 2317322,
+      "sha256": "a0181bd475c777514d0f3c57ec79c9bd81b091b79c93d621bb8c4dd3ea695343"
+    },
+    {
+      "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+      "size": 2301185,
+      "sha256": "02d51f62fb5532de9ffdddb566327a85c2a9154bea2a42df4714deb4d56dfe22"
+    },
+    {
+      "name": "day30_完成版を公開！.pdf",
+      "size": 1147423,
+      "sha256": "55122524cd653915dea1690ce22ca1bbd7dcc3b516d18128aed1f25756de9411"
+    }
+  ]
+}

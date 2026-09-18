@@ -1787,7 +1787,7 @@ export default function ProjectPage() {
 | zodResolver | zod スキーマを react-hook-form に接続するアダプター |
 | register | 入力欄を react-hook-form に登録する関数 |
 
-## 応用課題: キャンセルで各入力を初期化する
+## 追加課題：キャンセルで各入力を初期化する
 
 名前以外の入力も、次の新規作成へ残らないか確かめましょう。フォーム全体を初期化する `reset` の対象を確認します。
 

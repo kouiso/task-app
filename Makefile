@@ -43,12 +43,16 @@ book-pdf-test:
 	@python3 -m unittest discover -s scripts/pdf-book -p test_book_links.py
 	@python3 scripts/pdf-book/test_check_pdf_book.py
 	@python3 scripts/pdf-book/test_check_page_layout.py
+	@python3 scripts/pdf-book/test_code_wrap.py
+	@python3 scripts/pdf-book/test_build_receipt.py
+	@python3 scripts/pdf-book/test_release_manifest.py
 
 # 出力が商品として出せる状態かを見る
-# 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）
+# 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）→ コードの写経安全性（長行の折り返しで文字が失われないか）
 book-pdf-verify: book-pdf-test
 	@python3 scripts/pdf-book/check_pdf_book.py
 	@python3 scripts/pdf-book/check_page_layout.py
+	@python3 scripts/pdf-book/verify_pdf_copy.py
 
 book-pdf-clean:
 	rm -rf dist/pdf/ dist/.pdf-book-build/
