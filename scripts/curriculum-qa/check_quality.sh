@@ -221,6 +221,7 @@ CORPUS_CHECKS=(
   check_quiz
   check_scaffold_src_sync
   check_version_split
+  check_complete_code
 )
 # 検査そのものの退行テスト。Gate 4 は本体とセットでこれも走らせる。
 SELF_TESTS=(
@@ -257,6 +258,7 @@ SELF_TESTS=(
   test_shoot_screenshots
   test_check_scaffold_src_sync
   test_check_version_split
+  test_check_complete_code
 )
 
 run_corpus_checks() {

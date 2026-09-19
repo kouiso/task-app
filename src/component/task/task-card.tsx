@@ -193,26 +193,30 @@ export function TaskCard({
               <p className="text-sm text-muted-foreground">
                 合計作業時間: {formatMinutes(timeSpentMinutes)}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-8"
-                onClick={handleOpenTimeLog}
-                aria-label={`${title}の時間を記録`}
-              >
-                <Clock className="mr-2 h-3 w-3" />
-                時間記録
-              </Button>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8"
+                  onClick={handleOpenTimeLog}
+                  aria-label={`${title}の時間を記録`}
+                >
+                  <Clock className="mr-2 h-3 w-3" />
+                  時間記録
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
-      <TimeLogDialog
-        open={timeLogDialogOpen}
-        onClose={() => setTimeLogDialogOpen(false)}
-        taskId={id}
-        onSuccess={onTimeLogSuccess}
-      />
+      {canEdit && (
+        <TimeLogDialog
+          open={timeLogDialogOpen}
+          onClose={() => setTimeLogDialogOpen(false)}
+          taskId={id}
+          onSuccess={onTimeLogSuccess}
+        />
+      )}
     </>
   );
 }
