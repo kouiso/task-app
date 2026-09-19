@@ -84,6 +84,19 @@ EXPECTED_DIFFERENT: dict[str, str] = {
     "src/app/page.tsx": "教材の / は Day 01 のランディングページ。src/ はセッション判定リダイレクト",
     # 教材は esbuild の jsx 変換だけの最小構成を教える。
     "vitest.config.ts": "教材は esbuild jsx の最小構成。src/ は react plugin + loadEnv の実運用構成",
+    # 以下、差分は各日の「完成形の参考コード」注記で読者にも説明済み。
+    "src/app/login/page.tsx": "day05 の注記で背景装飾・配色・aria 指定の差分を説明済み",
+    "src/app/register/page.tsx": "day06 の注記でスキーマ・遷移先・エラー配列・aria・装飾の差分を説明済み",
+    "src/app/profile/change-password/page.tsx": "day25 の注記でスキーマと aria の差分を説明済み",
+    "src/app/profile/edit/page.tsx": "day25 の注記で aria とアバター空欄ガードの差分を説明済み",
+    "src/app/profile/page.tsx": "day25 の注記で min-w-0/break-words/email 代替表示の差分を説明済み",
+    "src/app/search/page.tsx": "day20 の注記で search-filters.ts 切り出し等の差分を説明済み",
+    "src/app/report/weekly/page.tsx": "day23 の注記で URL パラメータ・エラー表示・CSV 出力の差分を説明済み",
+    "src/app/project/page.tsx": "day27 の注記で selectedProject 宣言順の差分を説明済み",
+    "src/component/project/project-dialog.tsx": "day10 の注記で必須マーク・列の分け方の差分を説明済み",
+    "src/component/task/task-detail-dialog.tsx": "day19 の注記で権限の確かめ方の差分を説明済み",
+    "src/lib/session.ts": "day07 の注記で saveSessionCookie 切り出しの差分を説明済み",
+    "src/server/api/routers/auth.ts": "day07 の注記で利用者確認の書き方の差分を説明済み",
 }
 
 # 実ドリフトの棚卸し。src/ が後から改良されて教材が追いついていない差分、
@@ -92,21 +105,7 @@ EXPECTED_DIFFERENT: dict[str, str] = {
 # 処置は「教材を src/ に追従させる（PDF 再生成が要る）」か
 # 「src/ を教材に合わせる」か「意図的として EXPECTED_DIFFERENT へ昇格」かの
 # 3択で、解決したものから順にこの表を空にする。
-KNOWN_DRIFT: dict[str, str] = {
-    "src/app/login/page.tsx": "src/ は必須マーク（aria-required）と背景装飾を足した版",
-    "src/app/my-task/page.tsx": "src/ は空状態の文言（あなた→条件）と col-span-full を更新した版",
-    "src/app/profile/change-password/page.tsx": "教材は厳しいパスワード規則（.regex 群）を教える。src/ は aria 属性を足した版",
-    "src/app/profile/edit/page.tsx": "src/ はアバタープレビューと aria 属性を足した版",
-    "src/app/profile/page.tsx": "src/ は min-w-0・break-words・email フォールバックを足した版",
-    "src/app/project/page.tsx": "src/ は selectedProject の代入位置と権限ヘルパー導入を変えた版",
-    "src/app/register/page.tsx": "教材は厳しいパスワード規則（.regex 群）を教える。src/ は最小限",
-    "src/app/report/weekly/page.tsx": "src/ は CSV ダウンロードと優先度チャートを足した版",
-    "src/app/search/page.tsx": "src/ は検索パラメータを lib ヘルパー経由へ作り替えた版",
-    "src/component/project/project-dialog.tsx": "src/ は必須マークとグリッド配置を変えた版",
-    "src/component/task/task-detail-dialog.tsx": "src/ は canEditProject prop を memberRole 判定へ作り替えた版",
-    "src/lib/session.ts": "src/ は saveSessionCookie を inline 化した版",
-    "src/server/api/routers/auth.ts": "src/ は optional chaining へ置き換えた版",
-}
+KNOWN_DRIFT: dict[str, str] = {}
 
 
 class FileReport(NamedTuple):

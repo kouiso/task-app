@@ -8,7 +8,9 @@
 |---|---|---|
 | ルート直下 | 現行版PDF（既存IDのまま上書き） | 36 |
 | ルート直下 | `task-app-curriculum-v1.1.zip`（写経ZIP）ID `1JGcp9mhde-MOD97CcIjKacHgcD38OLkr` | 1 |
-| `旧版-20260912/` | 上書き前の元版PDF（別ファイルとして保全）ID `1-F6Pe3X7dtgcKYf0999y5erpU0y8C2Pp` | 36 |
+
+※ `旧版-20260912/`（上書き前の元版PDF 36件、ID `1-F6Pe3X7dtgcKYf0999y5erpU0y8C2Pp`）は
+2026-09-19 に配布フォルダの外（チームドライブ直下）へ移動済み。購入者には現行版のみが見える。
 
 ## 検証記録
 

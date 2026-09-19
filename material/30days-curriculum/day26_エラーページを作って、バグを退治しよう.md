@@ -2074,7 +2074,7 @@ export default function MyTasksPage() {
       if (isUnknownResult(error)) {
         toast.error(
           '応答を確認できませんでした。' +
-            '一覧を更新して結果を確認してください。',
+            '一覧を更新して結果を確認してください。'
         );
         void utils.task.getAll.invalidate();
         return;
@@ -2093,7 +2093,7 @@ export default function MyTasksPage() {
       if (isUnknownResult(error)) {
         toast.error(
           '応答を確認できませんでした。' +
-            '一覧を更新して結果を確認してください。',
+            '一覧を更新して結果を確認してください。'
         );
         void utils.task.getAll.invalidate();
         return;
@@ -2321,8 +2321,8 @@ export default function MyTasksPage() {
           />
 
           {tasks && tasks.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>あなたに割り当てられたタスクはありません</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>条件に合うタスクはありません</p>
             </div>
           )}
 
