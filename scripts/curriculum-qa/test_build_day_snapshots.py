@@ -600,25 +600,6 @@ def check_provenance() -> list[str]:
     return fails
 
 
-def documented_day11_errors() -> tuple[str, ...]:
-    """断り書きの現物（`EXPECTED_RED_SIGNATURE[11]["diagnostics"]`）から tsc の行を組む。
-
-    位置を手で並べると、断り書きを更新した時にここだけ古いまま緑になる。
-    `getById` は本文が名指ししとる識別子なので、TS2339 の行にだけ載せる。
-    """
-    signature = target.EXPECTED_RED_SIGNATURE[11]
-    lines = []
-    for head in signature["diagnostics"]:
-        where, code = head.rsplit(":", 1)
-        tail = (
-            f"Property '{signature['marker']}' does not exist"
-            if code == "TS2339"
-            else "Parameter implicitly has an 'any' type"
-        )
-        lines.append(f"{where}: error {code}: {tail}")
-    return tuple(lines)
-
-
 def check_triage_section() -> list[str]:
     """NG の日の切り分けが、調べていないものを勝手に断定しないことを確かめる。"""
     fails = []
@@ -632,42 +613,6 @@ def check_triage_section() -> list[str]:
     if "day09" not in section or "判定不能（未調査）" not in section:
         fails.append(f"❌ 未調査の日が「判定不能（未調査）」になっていない: {section!r}")
 
-    # 教材が先に断っとる赤を「教材の欠陥」と書かない。day11 で一度やって覆された。
-    expected_day = next(iter(target.EXPECTED_RED), None)
-    if expected_day is None:
-        fails.append("❌ EXPECTED_RED が空で、想定内の赤の扱いを確かめられない")
-    else:
-        signature = target.EXPECTED_RED_SIGNATURE[expected_day]
-        documented_errors = documented_day11_errors()
-        documented = target.DayResult(
-            expected_day, 80, True, "NG", "OK",
-            errors=documented_errors[:3], tsc_errors=documented_errors,
-        )
-        section = target.triage_section([documented])
-        row = next(
-            (l for l in section.split("\n") if l.startswith(f"| day{expected_day:02d} ")), ""
-        )
-        if "想定内" not in row:
-            fails.append(f"❌ 想定内の赤が想定内として出ていない: {row!r}")
-        if "教材の欠陥" in row or "判定不能" in row:
-            fails.append(f"❌ 想定内の赤を欠陥や未調査として出している: {row!r}")
-
-        # 断り書きと合わん赤まで「想定内」と書いたら、走行は exit 1 やのに成果物だけが
-        # 「想定どおり」と言い張る状態になる。走行の判定と文書の判定を同じ線で動かす。
-        unrelated = documented._replace(
-            tsc_errors=documented.tsc_errors + (
-                "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
-            ),
-        )
-        unrelated_row = next(
-            (l for l in target.triage_section([unrelated]).split("\n")
-             if l.startswith(f"| day{expected_day:02d} ")), ""
-        )
-        if "想定内" in unrelated_row:
-            fails.append(f"❌ 断り書きと合わん赤まで成果物が想定内と書いている: {unrelated_row!r}")
-        if not target.broken_days([unrelated]):
-            fails.append("❌ 断り書きと合わん赤を異常日に数えていない（文書との食い違いの元）")
-
     original = dict(target.TRIAGE)
     try:
         target.TRIAGE[9] = ("ツールの限界", "day13 と同じ、完成版が抜粋")
@@ -680,32 +625,6 @@ def check_triage_section() -> list[str]:
 
     if not target.triage_section([target.DayResult(1, 70, True, "OK", "OK", ())]) == "":
         fails.append("❌ NG が無いのに切り分けの節を書いている")
-    return fails
-
-
-def check_expected_red_is_grounded() -> list[str]:
-    """EXPECTED_RED に挙げた日が、本当に教材で断られているかを確かめる。
-
-    ここを台帳だけで持つと、あとから「落ちるから」という理由で日を足して
-    赤を隠す抜け道になる。教材の本文に断りがある日だけを許す。
-    """
-    from build_day_snapshots import EXPECTED_RED, MATERIAL_DIR
-
-    fails = []
-    if not EXPECTED_RED:
-        return ["EXPECTED_RED が空です。day11 の断りが本文から消えたのなら別途確認が要ります"]
-    for day in EXPECTED_RED:
-        found = sorted(MATERIAL_DIR.glob(f"day{day:02d}_*.md"))
-        if not found:
-            fails.append(f"❌ EXPECTED_RED の day{day:02d} に対応する教材がありません")
-            continue
-        text = found[0].read_text(encoding="utf-8")
-        # 「読者の画面でも同じことが起きる」と本文が言っているかどうか。
-        if "写し間違いではありません" not in text:
-            fails.append(
-                f"❌ day{day:02d} の本文に型エラーの断りが見つかりません。"
-                "断りが無い日を EXPECTED_RED に置くと、教材の欠陥を隠すことになります"
-            )
     return fails
 
 
@@ -1195,127 +1114,11 @@ def check_build_failure_triage() -> list[str]:
     return fails
 
 
-def check_expected_red_build_exemption() -> list[str]:
-    """EXPECTED_RED の日の build 免除が、断り書きの範囲に収まっとること。
-
-    day 番号だけで build を丸ごと免除すると、断ってへん失敗（prerender や
-    server/client 境界）がその日に紛れても exit 0 で出ていく。断ってあるのは
-    型エラーだけなので、免除もそこまで。
-    """
-    fails = []
-    known = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
-        errors=("src/x.tsx(29,47): error TS2339: Property 'getById' does not exist",),
-        build_errors=(
-            "Failed to compile.",
-            "Type error: Property 'getById' does not exist on type ...",
-        ),
-    )
-    tree_failed = known._replace(tree_ok=False, tsc=target.NOT_RUN, build=target.NOT_RUN)
-    if target.expected_red_holds(tree_failed):
-        fails.append("❌ ツリー構築に失敗した day11 を想定内の赤として扱っている")
-    if not target.build_failure_is_expected(known):
-        fails.append("❌ 断り書きどおりの型エラーによる build 落ちまで異常扱いしている")
-
-    extra = known._replace(build_errors=known.build_errors + (
-        "Error: Unauthorized while prerendering /project",
-    ))
-    if target.build_failure_is_expected(extra):
-        fails.append("❌ 断り書きに無い失敗が day11 に紛れても免除している")
-
-    # prerender の見出しは DB の問いでだけ包み紙。免除の問いでは「型エラーやない行」
-    # なので、これが混ざったら免除せんこと。
-    wrapped = known._replace(build_errors=known.build_errors + (
-        "Error occurred prerendering page \"/project\"",
-    ))
-    if target.build_failure_is_expected(wrapped):
-        fails.append("❌ prerender の見出しが混ざった day11 を免除している")
-
-    silent = known._replace(build_errors=("Failed to compile.",))
-    if target.build_failure_is_expected(silent):
-        fails.append("❌ 型エラーの証拠が1行も無いのに断り書きで説明できたことにしている")
-
-    other = known._replace(day=12)
-    if target.build_failure_is_expected(other):
-        fails.append("❌ EXPECTED_RED に無い日まで免除している")
-
-    # tsc の側も、日付やのうて断り書きの中身と突き合わせること。本文は識別子・件数・場所まで
-    # 書いとるので、そこが合わん赤は「別の欠陥が紛れた」と見なす。
-    documented = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="OK",
-        errors=(),
-        tsc_errors=documented_day11_errors(),
-    )
-    if not target.tsc_failure_is_expected(documented):
-        fails.append("❌ 断り書きどおりの型エラー5件まで異常扱いしている")
-
-    # 件数が増えたら、断り書きで説明でけへん赤が混ざっとる。
-    if target.tsc_failure_is_expected(
-        documented._replace(tsc_errors=documented.tsc_errors + (
-            "src/component/project/project-detail-view.tsx(200,4): error TS2345: "
-            "Argument of type 'string' is not assignable",
-        ))
-    ):
-        fails.append("❌ 断り書きの件数を超える型エラーまで想定内にしている")
-
-    # 名指しされた識別子に1行も触れてへん赤は、別の欠陥。
-    unrelated = documented._replace(tsc_errors=tuple(
-        line.replace("Property 'getById' does not exist", "Type 'number' is not assignable to type 'string'")
-        for line in documented.tsc_errors
-    ))
-    if target.tsc_failure_is_expected(unrelated):
-        fails.append("❌ `getById` と無関係な型エラー5件を day11 の想定内として通している")
-
-    # 場所が広がったら、配布物1ファイルに閉じるという前提が崩れとる。
-    spread = documented._replace(tsc_errors=documented.tsc_errors[:-1] + (
-        "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
-    ))
-    if target.tsc_failure_is_expected(spread):
-        fails.append("❌ 断り書きの場所を外れた型エラーまで想定内にしている")
-
-    if target.tsc_failure_is_expected(documented._replace(day=12)):
-        fails.append("❌ EXPECTED_RED に無い日の型エラーまで免除している")
-
-    # build 側も、名指しされた識別子に触れてへん型エラーは免除せん。
-    other_type_error = known._replace(build_errors=(
-        "Failed to compile.",
-        "Type error: Type 'number' is not assignable to type 'string'.",
-    ))
-    if target.build_failure_is_expected(other_type_error):
-        fails.append("❌ 断り書きと無関係な型エラーによる build 落ちを免除している")
-
-    # 根っこの getById が残っていても、追加の型エラーまで同居したら免除せん。
-    mixed_type_errors = known._replace(build_errors=known.build_errors + (
-        "Type error: Type 'number' is not assignable to type 'string'.",
-    ))
-    if target.build_failure_is_expected(mixed_type_errors):
-        fails.append("❌ getById と別の型エラーが同居した build を免除している")
-
-    # 免除の判断が異常日の判定に効いとること。関数だけ足しても意味が無いので、
-    # 実際に `broken_days` を通して数える。
-    healthy = target.DayResult(
-        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
-    )
-    exempt = documented._replace(build="NG", build_errors=known.build_errors)
-    unrelated_day11 = unrelated._replace(build="NG", build_errors=(
-        "Failed to compile.",
-        "Error occurred prerendering page \"/project\"",
-    ))
-    broken = target.broken_days([healthy, exempt, unrelated_day11])
-    if any(r is healthy for r in broken):
-        fails.append("❌ 通った日を異常日に数えている")
-    if any(r is exempt for r in broken):
-        fails.append("❌ 断り書きどおりの day11 を異常日に数えている")
-    if not any(r is unrelated_day11 for r in broken):
-        fails.append("❌ 断り書きと無関係な赤が紛れた day11 を異常日に数えていない")
-    return fails
-
-
 def check_both_red_shows_both() -> list[str]:
     """tsc と build が両方赤い日は、画面と成果物に両方の行を出すこと。
 
     `tsc_shown or build_shown` にすると tsc が赤い時点で build の行が丸ごと消える。
-    day11 のように tsc の赤が想定内の日で build 側に別の欠陥が入ると、走行は exit 1 なのに
+    tsc が赤い日に build 側へ別の欠陥が入ると、走行は exit 1 なのに
     出とるのは「知っとる型エラー」だけになり、落ちた本当の理由が読めん。
     """
     fails = []
@@ -1420,25 +1223,20 @@ def check_boundary_error_survives_db_noise() -> list[str]:
 
 
 def check_tree_failure_is_never_expected() -> list[str]:
-    """ツリーを組めてへん日を「想定内」と書かんこと。
+    """ツリーを組めてへん日を成果物へ「通った」とは書かんこと。
 
-    tsc も build も走っとらんので `== "NG"` の枝は素通りする。tree_ok を見んかったら、
-    走行は broken_days() で exit 1 になるのに、成果物だけ「想定内」と書く。十三巡目に
-    潰したのと同じ「文書だけが言い張る」型。
+    tsc も build も走っとらんので tree_ok を見んかったら、走行は broken_days() で
+    exit 1 になるのに成果物だけ別の顔をする。文書だけが言い張る型の事故を塞ぐ。
     """
-    day = sorted(target.EXPECTED_RED)[0]
     broken = target.DayResult(
-        day, 0, False, target.NOT_RUN, target.NOT_RUN, ("OSError: 置けません",)
+        11, 0, False, target.NOT_RUN, target.NOT_RUN, ("OSError: 置けません",)
     )
-    if target.expected_red_holds(broken):
-        return ["❌ ツリーを組めてへん日を想定内として扱っている"]
     if broken not in target.broken_days([broken]):
         return ["❌ ツリー失敗が異常として数えられていない"]
     doc = target.triage_section([broken])
-    if "想定内" in doc:
-        return [f"❌ 成果物がツリー失敗を想定内と書いている:\n{doc}"]
+    if "判定不能（未調査）" not in doc:
+        return [f"❌ 未調査のツリー失敗が切り分けに出ていない:\n{doc}"]
     return []
-
 
 def check_unclassified_error_blocks_skip() -> list[str]:
     """説明の付かんエラー行が DB の赤に紛れとったら SKIP にせんこと。
@@ -1478,31 +1276,6 @@ def check_unclassified_error_blocks_skip() -> list[str]:
     return fails
 
 
-def check_expected_red_rejects_unknown_error() -> list[str]:
-    """免除の判定でも、説明の付かん行を捨てんこと。
-
-    マーカーで絞ってから見ると `REAL_BUILD_FAILURE_MARKERS` に載ってへん失敗が
-    黙って消え、断り書きどおりの型エラーだけが残って day11 が免除される。
-    SKIP 側で潰したのと同じ「絞ってから判定する」型が、免除の側にも残っとった。
-    """
-    known = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
-        errors=(),
-        build_errors=(
-            "Failed to compile.",
-            "Type error: Property 'getById' does not exist on type ...",
-        ),
-    )
-    if not target.build_failure_is_expected(known):
-        return ["❌ 断り書きどおりの型エラーまで免除せんようになっている"]
-    mixed = known._replace(
-        build_errors=known.build_errors + ("Error: Unauthorized while prerendering /admin",)
-    )
-    if target.build_failure_is_expected(mixed):
-        return ["❌ 説明の付かん失敗が混ざった day11 を免除している"]
-    return []
-
-
 def check_econnrefused_alone_is_not_database() -> list[str]:
     """`ECONNREFUSED` 単独を DB の不在と見なさんこと。
 
@@ -1526,32 +1299,6 @@ def check_econnrefused_alone_is_not_database() -> list[str]:
     if not target.build_failure_is_database_only(postgres):
         fails.append("❌ Prisma の印つきの ECONNREFUSED まで本物の失敗にしている")
     return fails
-
-
-def check_expected_red_rejects_unknown_code() -> list[str]:
-    """件数と場所が合っても、断り書きに無いコードが混ざったら免除せんこと。
-
-    識別子は波及行に載らんので `any` でしか見られん。件数と場所だけを見とると、
-    同じファイルの無関係な型エラー4件＋想定内の1件で「想定内」が成立してまう。
-    """
-    path = "src/component/project/project-detail-view.tsx"
-    documented = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
-        tsc_errors=documented_day11_errors(),
-    )
-    if not target.tsc_failure_is_expected(documented):
-        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
-    smuggled = documented._replace(
-        tsc_errors=(documented.tsc_errors[0],)
-        + tuple(
-            f"{path}({n},4): error TS2322: Type 'string' is not assignable"
-            for n in (41, 42, 43, 44)
-        )
-    )
-    if target.tsc_failure_is_expected(smuggled):
-        return ["❌ 断り書きに無いコードが混ざった day11 を免除している"]
-
-    return []
 
 
 def check_stack_frames_do_not_block_skip() -> list[str]:
@@ -1625,9 +1372,9 @@ def check_prerender_wrapper_does_not_hide_db() -> list[str]:
     if target.build_failure_is_database_only(with_cause):
         fails.append("❌ prerender の原因の行まで包み紙に数えている")
 
-    # 想定内の赤の免除は別の問い。見出しが混ざったら day11 でも免除せんこと。
+    # 見出しが混ざったら DB の判定からも外す（原因の行でしか判断しない）。
     if "Error occurred prerendering page" in target.BUILD_NOISE_MARKERS:
-        fails.append("❌ 免除の判定まで prerender の見出しを見逃す一覧へ入れている")
+        fails.append("❌ DB の判定まで prerender の見出しを見逃す一覧へ入れている")
     return fails
 
 
@@ -1662,37 +1409,6 @@ def check_reachable_server_failure_is_not_db_absence() -> list[str]:
     return fails
 
 
-def check_expected_red_rejects_swapped_diagnostic() -> list[str]:
-    """件数もコードも場所も揃うたまま**入れ替わった**診断を免除せんこと。
-
-    断り書きの1件が消えて、同じファイルの別の場所に同じコードの別の欠陥が入ると、
-    件数（5）・場所（1ファイル）・コード（許された3種）・識別子（`getById`）が
-    全部そのまま揃う。所属だけを見とると、新しい欠陥が想定内で通って `--verify` が
-    exit 0 になる。位置まで名指しした多重集合の一致で初めて弾ける。
-    """
-    documented = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
-        tsc_errors=documented_day11_errors(),
-    )
-    if not target.tsc_failure_is_expected(documented):
-        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
-
-    # 断り書きの TS7006 を1件落として、同じファイルの別の行の TS7006 を1件足す。
-    dropped = [ln for ln in documented.tsc_errors if "(144,44)" not in ln]
-    swapped = documented._replace(
-        tsc_errors=tuple(dropped)
-        + (
-            "src/component/project/project-detail-view.tsx(311,12): error TS7006: "
-            "Parameter implicitly has an 'any' type",
-        )
-    )
-    if len(swapped.tsc_errors) != len(documented.tsc_errors):
-        return ["❌ 入れ替えの fixture が件数を変えてしまっている（検査が成立せん）"]
-    if target.tsc_failure_is_expected(swapped):
-        return ["❌ 入れ替わった診断の day11 を想定内として免除している"]
-    return []
-
-
 CHECKS = (
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
@@ -1707,7 +1423,6 @@ CHECKS = (
     ("結果の出どころ", check_provenance),
     ("NG の切り分け", check_triage_section),
     ("tsconfig の exclude", check_tsconfig_excludes),
-    ("想定内の赤は教材の断りが根拠", check_expected_red_is_grounded),
     ("まだ無い宣言を足す", check_new_declaration),
     ("自分で束ねる名前と欄名", check_local_binding_names),
     ("文字列で指した要素の書き換え", check_rewrite_element),
@@ -1718,17 +1433,13 @@ CHECKS = (
     ("ビルドの赤の切り分け", check_build_failure_triage),
     ("両方赤い日の表示", check_both_red_shows_both),
     ("成果物への SKIP の記録", check_result_doc_records_skip),
-    ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
-    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),
+    ("ツリー失敗は異常として止まる", check_tree_failure_is_never_expected),
     ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),
-    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
     ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
     ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),
     ("prerender の見出しは DB を隠さん", check_prerender_wrapper_does_not_hide_db),
     ("届いた上での失敗は DB 不在やない", check_reachable_server_failure_is_not_db_absence),
-    ("入れ替わった診断は免除せん", check_expected_red_rejects_swapped_diagnostic),
-    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 

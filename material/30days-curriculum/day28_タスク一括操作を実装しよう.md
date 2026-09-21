@@ -2,11 +2,11 @@
 
 ## 前回の振り返り
 
-Day 27 では、`/project?projectId=...` で
+Day 27 では`/project?projectId=...` で
 一覧と詳細を切り替え、`isArchived` フラグによる
 アーカイブ機能を確認しました。
 
-今日はそこで学んだ「状態管理」の応用として、タスク一覧での **一括操作** に挑戦します。
+今日はそこで学んだ「状態管理」の応用としてタスク一覧での **一括操作** に挑戦します。
 
 ---
 
@@ -14,7 +14,7 @@ Day 27 では、`/project?projectId=...` で
 
 チェックボックスで複数のタスクを選択し、「まとめて完了」「ステータス一括変更」「まとめて削除（確認ダイアログあり）」ができる機能を実装します。
 
-この日は、まずサーバー側の一括操作 API（3種類）を自分で書きます。そのあと画面をつなぎます。
+この日はまずサーバー側の一括操作 API（3種類）を自分で書きます。そのあと画面をつなぎます。
 
 スクリーンショット: タスク一括操作の完成画面の表示を確認してください。
 
@@ -28,11 +28,11 @@ Day 27 では、`/project?projectId=...` で
 
 - Day 27 のプロジェクト詳細とアーカイブ機能が動いている
 - `/task` に複数のタスクが表示されている
-- 一括削除を試すため、消えてもよい練習用タスクを 7 件以上用意している
+- 一括削除を試すため消えてもよい練習用タスクを 7 件以上用意している
 
 > 7 件という数には理由があります。Step 9 の動作確認は「3 件を完了」「2 件を削除」
-> 「5 件のステータスを変更」の順に進めます。削除で 2 件減ったあとに 5 件を選ぶので、
-> 始める時点で 7 件が同じ画面に並んでいる必要があります。初期データは 3 件しか見えないので、
+> 「5 件のステータスを変更」の順に進めます。削除で 2 件減ったあとに 5 件を選ぶので
+> 始める時点で 7 件が同じ画面に並んでいる必要があります。初期データは 3 件しか見えないので
 > `/task` から練習用のタスクを足してから始めてください。
 - `src/server/api/routers/task.ts` と `src/app/task/page.tsx` を編集できる
 
@@ -45,9 +45,9 @@ Day 27 では、`/project?projectId=...` で
 
 ## なぜこれを作るのか
 
-タスクが 100 件あるとき、1 件ずつ「完了」ボタンを押すのは苦痛です。スーパーのセルフレジで商品を 1 個ずつ別々に会計するようなものです。まとめてカゴに入れて一度に精算できれば、操作は一気に減ります。
+タスクが 100 件あるとき1 件ずつ「完了」ボタンを押すのは苦痛です。スーパーのセルフレジで商品を 1 個ずつ別々に会計するようなものです。まとめてカゴに入れて一度に精算できれば操作は一気に減ります。
 
-> **例え話**: 一括操作は「まとめ買い」と同じです。スーパーで 1 個ずつレジに持っていくより、カゴにまとめてから一度に精算する方が速いです。データベースも同じで、100 回の更新コマンドより「この 100 件を一度にまとめて更新して」と伝える方が圧倒的に速いです。
+> **例え話**: 一括操作は「まとめ買い」と同じです。スーパーで 1 個ずつレジに持っていくよりカゴにまとめてから一度に精算する方が速いです。データベースも同じで、100 回の更新コマンドより「この 100 件を一度にまとめて更新して」と伝える方が圧倒的に速いです。
 
 ---
 
@@ -71,7 +71,7 @@ flowchart TD
     L --> M[selectedTasks を空に戻す]
 ```
 
-この図で目を留めてほしいのは、G・H・J の3本が K に合流するところです。完了・ステータス変更・削除のどれを選んでも、行き着く先は「DB へ1回だけ書き込む」「一覧を取り直す」「選択を空に戻す」という同じ3手です。だから Step 6 以降で操作を増やすときに新しく考えるのは、呼ぶ API の名前だけになります。
+この図で目を留めてほしいのはG・H・J の3本が K に合流するところです。完了・ステータス変更・削除のどれを選んでも、行き着く先は「DB へ1回だけ書き込む」「一覧を取り直す」「選択を空に戻す」という同じ3手です。だから Step 6 以降で操作を増やすときに新しく考えるのは呼ぶ API の名前だけになります。
 
 逆に L と M を落とすと何が起きるかも押さえてください。削除したはずのタスクが画面に残り、チェックも入ったままになります。サーバー側は正しく変わっているのに画面だけが古い、という一番気付きにくいずれ方です。
 
@@ -124,16 +124,17 @@ flowchart TD
 
 ### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（20 分）
 
-**ゴール**: 複数のタスクをまとめて処理する `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` を自分で書き、`api.task.bulkComplete` などを呼べる状態にします。この3つは、このあと Step 6〜8 で画面のボタンから呼び出します。
+**ゴール**: 複数のタスクをまとめて処理する `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` を自分で書き、`api.task.bulkComplete` などを呼べる状態にします。この3つはこのあと Step 6〜8 で画面のボタンから呼び出します。
 
-Day 13〜16 で `task.ts` に、1件ずつ扱う手続きを積み上げてきました。今日はそこへ、複数のタスクを一度に処理する3つの手続きを足します。骨組みはこれまでと同じ入力・処理・戻り値の3部品です。ちがうのは、入力が「タスク id の配列」になり、処理が「まとめて更新する」`updateMany` や「まとめて削除する」`deleteMany` になるところです。
+Day 13〜16 で `task.ts` に、1件ずつ扱う手続きを積み上げてきました。今日はそこへ、複数のタスクを一度に処理する3つの手続きを足します。骨組みはこれまでと同じ入力・処理・戻り値の3部品です。ちがうのは入力が「タスク id の配列」になり、処理が「まとめて更新する」`updateMany` や「まとめて削除する」`deleteMany` になるところです。
 
 #### 0-1. import に一括操作で使う道具を足す
 
-3つの手続きは、渡された id の配列をまとめて権限つきで取る共有ヘルパー `findTasksWithPermission`（複数形）を使います。Day 15 までに書いた `_helpers/permission` の import 文に、この1行を足して次の形にします。
+3つの手続きは渡された id の配列をまとめて権限つきで取る共有ヘルパー `findTasksWithPermission`（複数形）を使います。Day 15 までに書いた `_helpers/permission` の import 文に、この1行を足して次の形にします。
 
 ```typescript
-// filepath: src/server/api/routers/task.ts（permission の import に findTasksWithPermission を足した完成形）
+// filepath: src/server/api/routers/task.ts
+// （permission の import に findTasksWithPermission を足した完成形）
 import {
   assertMemberPermission,
   findTasksWithPermission,
@@ -142,9 +143,9 @@ import {
 } from './_helpers/permission';
 ```
 
-`findTasksWithPermission`（複数形）は、id の配列を受け取り、その全部のタスクを権限つきで取ってくるヘルパーです。Day 15 で使った `findTaskWithPermission`（単数形）の複数版と考えてください。名前が `s` の1文字だけ違うので、取り違えに注意します。`assertMemberPermission` などは前の Day で足したものなので、新しく行を増やさず同じ import 文の中に並べます。
+`findTasksWithPermission`（複数形）はid の配列を受け取り、その全部のタスクを権限つきで取ってくるヘルパーです。Day 15 で使った `findTaskWithPermission`（単数形）の複数版と考えてください。名前が `s` の1文字だけ違うので取り違えに注意します。`assertMemberPermission` などは前の Day で足したものなので新しく行を増やさず同じ import 文の中に並べます。
 
-Day 13 で書いた `import { Prisma } from '@prisma/client';` は、次の行へ置き換えます。`ProjectMemberRole` は、書き込み直前にも権限を確認するために使います。
+Day 13 で書いた `import { Prisma } from '@prisma/client';` は次の行へ置き換えます。`ProjectMemberRole` は書き込み直前にも権限を確認するために使います。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（既存の Prisma import を置き換える）
@@ -152,9 +153,9 @@ import { Prisma, ProjectMemberRole } from '@prisma/client';
 import { hasPermission, type PermissionKey } from '@/lib/constant/roles';
 ```
 
-`ProjectMemberRole` は、Prisma がスキーマの enum（決まった値だけを許す型）から自動で作ってくれる型です。`'OWNER'` のような文字列を自分で打ち込まずに済むので、綴り違いが型エラーとして先に見つかります。`hasPermission` はロールと権限名を受け取って可否を返す関数、`PermissionKey` は `'canEdit'` のような権限名だけを許す型です。
+`ProjectMemberRole` はPrisma がスキーマの enum（決まった値だけを許す型）から自動で作ってくれる型です。`'OWNER'` のような文字列を自分で打ち込まずに済むので綴り違いが型エラーとして先に見つかります。`hasPermission` はロールと権限名を受け取って可否を返す関数、`PermissionKey` は `'canEdit'` のような権限名だけを許す型です。
 
-この3つがそろうと、次の 0-2 で「編集できるロールはどれか」を権限マップから計算できます。ここを `['OWNER', 'ADMIN']` と手書きしてしまうと、あとで権限の決まりを直したときに一括操作だけが古い判定のまま取り残されます。
+この3つがそろうと次の 0-2 で「編集できるロールはどれか」を権限マップから計算できます。ここを `['OWNER', 'ADMIN']` と手書きしてしまうとあとで権限の決まりを直したときに一括操作だけが古い判定のまま取り残されます。
 
 #### 0-2. 件数上限と書き込み条件を作る
 
@@ -183,9 +184,9 @@ const TASK_DELETE_ROLES =
   getRolesWithPermission('canDelete');
 ```
 
-`MAX_BULK_TASKS` は巨大な id 配列による DB 負荷を防ぎ、`bulkTaskIdsSchema` は同じ id の二重指定を入力段階で拒否します。ロール配列は `hasPermission` が参照する権限マップから作るため、権限設定を変更しても読み取り側と書き込み側がずれません。
+`MAX_BULK_TASKS` は巨大な id 配列による DB 負荷を防ぎ、`bulkTaskIdsSchema` は同じ id の二重指定を入力段階で拒否します。ロール配列は `hasPermission` が参照する権限マップから作るため権限設定を変更しても読み取り側と書き込み側がずれません。
 
-続けて、タスク id と現在の権限を同じ `where` にまとめる部品を書きます。
+続けてタスク id と現在の権限を同じ `where` にまとめる部品を書きます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -203,11 +204,11 @@ const buildBulkPermissionWhere = (
 });
 ```
 
-この関数が返すのは、`updateMany` や `deleteMany` の `where` にそのまま渡せる条件です。`id: { in: ids }` で対象のタスクを選び、`project.members.some` で「そのプロジェクトに、必要なロールを持った自分が入っていること」も同時に要求します。
+この関数が返すのは`updateMany` や `deleteMany` の `where` にそのまま渡せる条件です。`id: { in: ids }` で対象のタスクを選び、`project.members.some` で「そのプロジェクトに、必要なロールを持った自分が入っていること」も同時に要求します。
 
-2つの条件を1つの `where` にまとめるのが肝心なところです。id だけで絞ると、他人のプロジェクトのタスク id を混ぜて送りつけられたとき、そのまま書き換わってしまいます。条件をこの関数1か所に置いておけば、これから書く3つの手続きが同じ守り方を共有できます。
+2つの条件を1つの `where` にまとめるのが肝心なところです。id だけで絞ると他人のプロジェクトのタスク id を混ぜて送りつけられたときそのまま書き換わってしまいます。条件をこの関数1か所に置いておけばこれから書く3つの手続きが同じ守り方を共有できます。
 
-最後に、書き込めた件数が入力件数と違った場合に処理を止める部品を追加します。
+最後に書き込めた件数が入力件数と違った場合に処理を止める部品を追加します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -221,11 +222,11 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 };
 ```
 
-一括操作は、最初の権限確認と DB への書き込みの間にロールが変わる可能性も考えます。書き込み側の `where` でも現在のロールを確認し、件数がずれたらトランザクション（途中で失敗した場合に変更全体を取り消すまとまり）を失敗させます。
+一括操作は最初の権限確認と DB への書き込みの間にロールが変わる可能性も考えます。書き込み側の `where` でも現在のロールを確認し、件数がずれたらトランザクション（途中で失敗した場合に変更全体を取り消すまとまり）を失敗させます。
 
 #### 0-3. bulkComplete を書く（まとめて完了にする）
 
-まず、選んだタスクをまとめて完了にする `bulkComplete` を、Day 16 で書いた `addTime` の直後に足します。
+まず選んだタスクをまとめて完了にする `bulkComplete` を、Day 16 で書いた `addTime` の直後に足します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（addTime の直後に追加）
@@ -239,28 +240,40 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.updateMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+```
+
+入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず入力全体の編集権限を確認します。書き込み時にも `where` で id と現在の編集権限を同時に絞ります。
+
+続けて完了済みと未完了のタスクを分けて更新します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+        const unchanged = await tx.task.updateMany({
+          where: { ...where, status: TASK_STATUS.DONE },
+          data: { status: TASK_STATUS.DONE },
+        });
+        const changed = await tx.task.updateMany({
+          where: { ...where, status: { not: TASK_STATUS.DONE } },
           data: { status: TASK_STATUS.DONE, completedAt },
         });
-        assertBulkWriteCount(result.count, input.ids.length);
-        return result;
+        const count = unchanged.count + changed.count;
+        assertBulkWriteCount(count, input.ids.length);
+        return { count };
       });
     }),
 ```
 
-入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず `findTasksWithPermission` と `assertMemberPermission` で入力全体を確認します。書き込み時にも `buildBulkPermissionWhere` で id と現在の編集権限を同時に絞ります。
+最初の更新は完了済みの日時を変えずに対象行をロックします。次の更新だけで新しい完了日時を入れるため完了済みのタスクを再選択しても Day 23 の週次集計が変わりません。件数は2回の更新を合計します。権限の変更で入力件数と合わなくなった場合はトランザクション全体を取り消します。
 
-`$transaction` の中で件数を確認するため、途中で権限が変わり `result.count` が入力件数より少なくなった場合は、更新全体が取り消されます。`status` と同時に `completedAt` へ現在時刻を入れるのは、Day 23 の週次レポートで完了件数を数えるためです。
-
-| 方法 | DB への問い合わせ回数 |
+| 方法 | 更新用のクエリ数（権限確認を除く） |
 |------|---------------------|
 | `for` ループ + `update` | タスク数と同じ（100件なら100回） |
-| `updateMany` | 1回 |
+| 今回の `updateMany` | 完了済みと未完了に分けて2回 |
 
 #### 0-4. bulkDelete を書く（まとめて削除する）
 
-次に、選んだタスクをまとめて消す `bulkDelete` を、`bulkComplete` の直後に足します。
+次に選んだタスクをまとめて消す `bulkDelete` を、`bulkComplete` の直後に足します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（bulkComplete の直後に追加）
@@ -282,11 +295,11 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-流れは `bulkComplete` とよく似ていますが、権限の確認と書き込み条件が削除用になっています。`TASK_DELETE_ROLES` を使うため、編集はできても削除はできない MEMBER を書き込み直前にも除外できます。件数がずれた場合は削除全体を取り消します。
+流れは `bulkComplete` とよく似ていますが権限の確認と書き込み条件が削除用になっています。`TASK_DELETE_ROLES` を使うため編集はできても削除はできない MEMBER を書き込み直前にも除外できます。件数がずれた場合は削除全体を取り消します。
 
 #### 0-5. bulkUpdateStatus を書く（まとめてステータス変更・前半）
 
-最後に、選んだタスクのステータスをまとめて変える `bulkUpdateStatus` を、`bulkDelete` の直後に足します。まず入力と権限確認までを書きます。
+最後に選んだタスクのステータスをまとめて変える `bulkUpdateStatus` を、`bulkDelete` の直後に足します。まず入力と権限確認までを書きます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（bulkDelete の直後に追加）
@@ -304,11 +317,11 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 ```
 
-入力は id の配列に加えて、変更後の `status`（`taskStatusSchema` で検証）も受け取ります。ここまでは `bulkComplete` と同じで、まとめてタスクを取り、`for` で1件ずつ `'canEdit'` 権限を確かめます。ステータスの変更は編集にあたるので、確認する権限は `'canEdit'` です。
+入力は id の配列に加えて変更後の `status`（`taskStatusSchema` で検証）も受け取ります。ここまでは `bulkComplete` と同じで、まとめてタスクを取り、`for` で1件ずつ `'canEdit'` 権限を確かめます。ステータスの変更は編集にあたるので確認する権限は `'canEdit'` です。
 
 #### 0-6. bulkUpdateStatus を書く（後半・完了日時の管理）
 
-続けて、更新するデータを組み立てて `updateMany` を呼びます。
+続けて更新するデータを組み立てて `updateMany` を呼びます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -322,18 +335,38 @@ const assertBulkWriteCount = (count: number, expected: number) => {
         data.completedAt = null;
       }
 
+```
+
+`data` に型を付けるとあとから追加する `completedAt` も検査できます。完了に変える場合は現在時刻を用意し、それ以外では `null` に戻します。
+
+続けて完了済みの日時を保ちながら更新します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.updateMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        const unchanged =
+          input.status === TASK_STATUS.DONE
+            ? await tx.task.updateMany({
+                where: { ...where, status: TASK_STATUS.DONE },
+                data: { status: TASK_STATUS.DONE },
+              })
+            : { count: 0 };
+        const changed = await tx.task.updateMany({
+          where:
+            input.status === TASK_STATUS.DONE
+              ? { ...where, status: { not: TASK_STATUS.DONE } }
+              : where,
           data,
         });
-        assertBulkWriteCount(result.count, input.ids.length);
-        return result;
+        const count = unchanged.count + changed.count;
+        assertBulkWriteCount(count, input.ids.length);
+        return { count };
       });
     }),
 ```
 
-`data` に `Prisma.TaskUpdateManyMutationInput` 型を付けているのは、あとから `completedAt` を足し引きするからです。変更後が `DONE` のときだけ現在時刻を入れ、それ以外では `null` に戻します。書き込みは編集用ロールを含む条件で再確認し、件数がずれた場合はトランザクション全体を取り消します。
+変更先が `DONE` の場合は完了済みの行を先に更新して日時を保ちます。その後、未完了の行だけに新しい完了日時を入れます。変更先が `DONE` 以外なら全対象を1回で更新し、完了日時を消します。どちらも書き込み件数で権限を再確認し、件数がずれた場合は全体を取り消します。
 
 **確認ポイント**:
 - `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` の3つを `addTime` の直後に順に足した
@@ -369,11 +402,11 @@ const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
   useState(false);
 ```
 
-`useState<Set<string>>(new Set())` の型注釈は、この箱にはタスク id の文字列しか入らないと宣言する意味です。空の `new Set()` から始めるので、画面を開いた直後は1件も選ばれていない状態になります。
+`useState<Set<string>>(new Set())` の型注釈はこの箱にはタスク id の文字列しか入らないと宣言する意味です。空の `new Set()` から始めるので画面を開いた直後は1件も選ばれていない状態になります。
 
-`bulkDeleteDialogOpen` を同じ場所で作っておくのは、Step 7 の削除確認ダイアログが開いているかどうかを覚える役目があるからです。削除だけは押し間違いを取り消せません。だから選択の中身とは別に「いま確認中かどうか」を覚えさせて、選択と実行のあいだにワンクッションを置きます。
+`bulkDeleteDialogOpen` を同じ場所で作っておくのはStep 7 の削除確認ダイアログが開いているかどうかを覚える役目があるからです。削除だけは押し間違いを取り消せません。だから選択の中身とは別に「いま確認中かどうか」を覚えさせて選択と実行のあいだにワンクッションを置きます。
 
-次に、1 件のチェック状態を変える関数を定義します。
+次に1 件のチェック状態を変える関数を定義します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -420,9 +453,9 @@ const selectedTaskList = useMemo(
 );
 ```
 
-`selectableTasks` は、編集か削除のどちらかができるタスクだけを残した一覧です。閲覧しかできないプロジェクトのタスクをここで外しておくと、このあと作る全選択がそれらを拾わなくなります。
+`selectableTasks` は編集か削除のどちらかができるタスクだけを残した一覧です。閲覧しかできないプロジェクトのタスクをここで外しておくとこのあと作る全選択がそれらを拾わなくなります。
 
-`selectedTaskList` のほうは、`selectedTasks` に id が残っていて、なおかつ今の一覧にも並んでいるタスクだけを取り出します。フィルターを切り替えると画面から消えるタスクがありますが、`Set` の中の id は消えません。ここで一覧と突き合わせておかないと、目に見えていないタスクまで一括操作の巻き添えになります。`useMemo` で包んだのは、`tasks` か `selectedTasks` が変わったときだけ計算し直せば足りるからです。
+`selectedTaskList` のほうは`selectedTasks` に id が残っていてなおかつ今の一覧にも並んでいるタスクだけを取り出します。フィルターを切り替えると画面から消えるタスクがありますが`Set` の中の id は消えません。ここで一覧と突き合わせておかないと目に見えていないタスクまで一括操作の巻き添えになります。`useMemo` で包んだのは`tasks` か `selectedTasks` が変わったときだけ計算し直せば足りるからです。
 
 ```mermaid
 flowchart TB
@@ -436,7 +469,7 @@ flowchart TB
     SE -->|"全選択の分母"| CB["3つの状態を決める"]
 ```
 
-名前の似た3つは、指しているものが別々です。`selectedTasks` だけ枠の外にあるのは、画面に並んでいないタスクの id も持ち続けるからです。分母を `tasks` にすると閲覧専用のタスクまで数に入り、選べるものを全部選んでも全チェックになりません。
+名前の似た3つは指しているものが別々です。`selectedTasks` だけ枠の外にあるのは画面に並んでいないタスクの id も持ち続けるからです。分母を `tasks` にすると閲覧専用のタスクまで数に入り、選べるものを全部選んでも全チェックになりません。
 
 選択中タスクすべてに必要な権限があるかも
 操作ごとに判定します。
@@ -455,13 +488,13 @@ const canDeleteSelected =
   );
 ```
 
-`every`（配列の全要素が条件を満たしたときだけ `true` を返すメソッド）を使うのは、権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので、「編集はできるが削除はできない」タスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると、権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
+`every`（配列の全要素が条件を満たしたときだけ `true` を返すメソッド）を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので「編集はできるが削除はできない」タスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
 
-ただし、この2つの変数が守っているのはボタンを出すかどうかまでです。Step 0 で書いた通り、サーバー側は `findTasksWithPermission` と `assertMemberPermission` でもう一度権限を確かめ、書き込み時の `where` でも現在のロールを見ます。件数が入力とずれれば、`$transaction` が書き込み全体をまとめて取り消します。
+ただしこの2つの変数が守っているのはボタンを出すかどうかまでです。Step 0 で書いた通り、サーバー側は `findTasksWithPermission` と `assertMemberPermission` でもう一度権限を確かめ、書き込み時の `where` でも現在のロールを見ます。件数が入力とずれれば`$transaction` が書き込み全体をまとめて取り消します。
 
-画面の判定だけを門番にはできません。ブラウザから送る中身は手元で書き換えられるので、id の配列を直接投げつけられたら `canDeleteSelected` は一度も評価されません。画面側の条件は誤操作を減らすための入口で、最後に本当に守っているのはサーバー側です。
+画面の判定だけを門番にはできません。ブラウザから送る中身は手元で書き換えられるのでid の配列を直接投げつけられたら `canDeleteSelected` は一度も評価されません。画面側の条件は誤操作を減らすための入口で、最後に本当に守っているのはサーバー側です。
 
-全選択・全解除は、操作できるタスクだけを対象に
+全選択・全解除は操作できるタスクだけを対象に
 1 つの関数で処理します。
 
 ```typescript
@@ -529,7 +562,7 @@ import { Checkbox } from '@/component/ui/checkbox';
         )}
 ```
 
-`aria-label` にタスク名を入れているのは、同じ形のチェックボックスがカードの数だけ並ぶためです。名前が無いと、読み上げでは「チェックボックス」が何個も続くだけになり、どのタスクを選んでいるのか分かりません。まとめて削除する操作なので、取り違えると戻せません。
+`aria-label` にタスク名を入れているのは同じ形のチェックボックスがカードの数だけ並ぶためです。名前が無いと読み上げでは「チェックボックス」が何個も続くだけになり、どのタスクを選んでいるのか分かりません。まとめて削除する操作なので取り違えると戻せません。
 
 上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 
@@ -555,9 +588,9 @@ import { Checkbox } from '@/component/ui/checkbox';
         </div>
 ```
 
-ここで `TaskCard` に渡している props は、Day 13〜16 で1つずつ増やしてきたものをそのまま並べただけです。今日の一括操作のために新しく足した props は1つもありません。チェックボックスをカードの外側へ置く形にしたので、カード本体は一行も書き換えずに済んでいます。
+ここで `TaskCard` に渡している props はDay 13〜16 で1つずつ増やしてきたものをそのまま並べただけです。今日の一括操作のために新しく足した props は1つもありません。チェックボックスをカードの外側へ置く形にしたのでカード本体は一行も書き換えずに済んでいます。
 
-`canEdit` と `canDelete` は、カードの中にある編集ボタンと削除ボタンを出し分けるための値です。1つ前のブロックでチェックボックスを出す条件に使ったのと同じ `taskCanEdit` / `taskCanDelete` を渡しています。同じ値を使い回すので、カードの中と外で操作できる範囲が食い違いません。
+`canEdit` と `canDelete` はカードの中にある編集ボタンと削除ボタンを出し分けるための値です。1つ前のブロックでチェックボックスを出す条件に使ったのと同じ `taskCanEdit` / `taskCanDelete` を渡しています。同じ値を使い回すのでカードの中と外で操作できる範囲が食い違いません。
 
 カード行と一覧の条件分岐を閉じます。
 
@@ -611,7 +644,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 ![ヘッダーに全選択・全解除のチェックボックスが表示された画面](./screenshots/day28/select-all-checkbox.png)
 
-いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なので、まずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
+いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なのでまずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -651,7 +684,7 @@ import { Label } from '@/component/ui/label';
 | もう一度クリック | 全タスクの選択が解除される（全解除） |
 | 一部だけ手動で選択 | ヘッダーは未チェック（□）のまま |
 
-3 行目の「一部だけ手動で選択」のとき、ヘッダーのチェックボックスが未チェックのままだと、いま何件選んでいるのかが見た目で分かりません。次の Step でこれを改善します。
+3 行目の「一部だけ手動で選択」のときヘッダーのチェックボックスが未チェックのままだといま何件選んでいるのかが見た目で分かりません。次の Step でこれを改善します。
 
 **確認ポイント**:
 - ヘッダーのチェックボックスをクリックすると全タスクが選択される
@@ -662,14 +695,14 @@ import { Label } from '@/component/ui/label';
 
 ### Step 4: 部分選択を `indeterminate` で表現する（4 分）
 
-**ゴール**: 一部だけ選択されているとき、ヘッダーのチェックボックスに「▪（部分チェック）」を表示します。
+**ゴール**: 一部だけ選択されているときヘッダーのチェックボックスに「横棒（部分チェック）」を表示します。
 
-前のステップでは 2 状態（全選択 / 全解除）しかないため、一部選択のときヘッダーが未チェック（□）のままでした。チェックボックスには実は **3 つ目の状態** があります。
+前のステップでは 2 状態（全選択 / 全解除）しかないため一部選択のときヘッダーが未チェック（□）のままでした。チェックボックスには実は **3 つ目の状態** があります。
 
 | 状態の値 | 表示 | 意味 |
 |---------|------|------|
 | `false` | □（未チェック） | 1 件も選択されていない |
-| `'indeterminate'` | ▪（部分チェック） | 一部のタスクだけ選択されている |
+| `'indeterminate'` | 横棒（部分チェック） | 一部のタスクだけ選択されている |
 | `true` | ✓（全チェック） | 全タスクが選択されている |
 
 Step 3 で書いた `isAllSelected`（boolean）を、3 状態を返す `selectAllState` に置き換えます。
@@ -688,15 +721,15 @@ const selectAllState =
     : false;
 ```
 
-入れ子になった三項演算子は読みづらく見えますが、やっているのは上から順に3つ問いかけることだけです。
+入れ子になった三項演算子は読みづらく見えますがやっているのは上から順に3つ問いかけることだけです。
 
 - 操作できるタスクが1件でもあるか
 - 選択が0件か
 - 選択の数が操作できるタスクの数と一致するか
 
-この順に絞り込むと、`false`・`true`・`'indeterminate'` のどれか1つに必ず決まります。
+この順に絞り込むと`false`・`true`・`'indeterminate'` のどれか1つに必ず決まります。
 
-分母を `tasks` ではなく `selectableTasks` にしているところが大事な点です。閲覧専用のタスクまで分母に入れると、選べるものを全部選んでも数が足りず、チェックボックスがいつまでも部分選択のままになります。読者から見ると「全部選んだのに全チェックにならない」という不可解な動きです。
+分母を `tasks` ではなく `selectableTasks` にしているところが大事な点です。閲覧専用のタスクまで分母に入れると選べるものを全部選んでも数が足りず、チェックボックスがいつまでも部分選択のままになります。読者から見ると「全部選んだのに全チェックにならない」という不可解な動きです。
 
 JSX 側の `checked` に渡す値を差し替えます。
 
@@ -718,16 +751,16 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 **`indeterminate` が重要な理由**
 
-ユーザーが「一部選択されている」ことを一目で把握できます。この状態がないと、ヘッダーのチェックボックスを見ただけでは「全未選択」と「全選択」しか判断できません。細かな UX の配慮が、使いやすさを大きく左右します。
+ユーザーが「一部選択されている」ことを一目で把握できます。この状態がないとヘッダーのチェックボックスを見ただけでは「全未選択」と「全選択」しか判断できません。細かな UX の配慮が使いやすさを大きく左右します。
 
 **`checked === true` にする理由**
 
-`onCheckedChange` は `boolean | 'indeterminate'` を渡してきます。`indeterminate` のときに `handleSelectAll` を呼ぶと意図しない動作をするため、明示的に `=== true` で絞り込みます。
+`onCheckedChange` は `boolean | 'indeterminate'` を渡してきます。`indeterminate` のときに `handleSelectAll` を呼ぶと意図しない動作をするため明示的に `=== true` で絞り込みます。
 
 **確認ポイント**:
-- 全未選択のとき、ヘッダーのチェックボックスが未チェック（□）
-- 一部選択のとき、ヘッダーのチェックボックスが `indeterminate`（▪）
-- 全選択のとき、ヘッダーのチェックボックスがチェック（✓）
+- 全未選択のときヘッダーのチェックボックスが未チェック（□）
+- 一部選択のときヘッダーのチェックボックスが `indeterminate`（横棒）
+- 全選択のときヘッダーのチェックボックスがチェック（✓）
 - ヘッダーのチェックボックスをクリックして全選択・全解除が切り替わる
 
 ---
@@ -736,11 +769,11 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 **ゴール**: 1 件以上選択されているときだけ、ページヘッダーに一括操作ボタンを表示します。
 
-実際のコードでは、一括操作ボタンは **画面下部の固定バーではなく、ページヘッダーの右側** に配置されています。
+実際のコードでは一括操作ボタンは **画面下部の固定バーではなく、ページヘッダーの右側** に配置されています。
 
 スクリーンショット: 下の画像は Step 8 まで書き終えた完成後のヘッダーです。この Step 5 の時点で出るのは「(1件選択中)」の文字までで、右側のボタンは Step 6・7・8 で足していきます。
 
-![Step 8 まで終えた状態。1件だけ選ぶと見出しに「(1件選択中)」が出て、右側に一括操作ボタンが並ぶ](./screenshots/day28/bulk-operation-header.png)
+![Step 8 まで終えた状態。1件だけ選ぶと見出しに「(1件選択中)」が出て右側に一括操作ボタンが並ぶ](./screenshots/day28/bulk-operation-header.png)
 
 ```typescript
 {/* filepath: src/app/task/page.tsx（className="text-3xl font-bold から onClick={handleCreate}> までを書き直す） */}
@@ -773,7 +806,7 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 | 配置場所 | 特徴 |
 |---------|------|
-| `fixed bottom-0`（固定バー） | どこにいても見えるが、コンテンツに重なることがある |
+| `fixed bottom-0`（固定バー） | どこにいても見えるがコンテンツに重なることがある |
 | ヘッダーの右側 | ページトップにいれば常に見えます。コンテンツを隠さない |
 
 今回のアプリではタスクカードがグリッド表示で、スクロール量がさほど多くないためヘッダーに配置しています。
@@ -787,7 +820,7 @@ React で「条件が真のときだけ描画する」
 選択タスクが1件以上のときだけ JSX を描画します。
 
 **確認ポイント**:
-- タスクを 1 件も選択していないとき、「新規タスク」ボタンだけが表示される
+- タスクを 1 件も選択していないとき「新規タスク」ボタンだけが表示される
 - タスクを 1 件以上選択すると「(N 件選択中)」の文字が現れる
 - 一括操作ボタンが追加される領域（`<>...</>` の中）が確保されている
 - `npm run dev` でエラーが出ない
@@ -796,7 +829,7 @@ React で「条件が真のときだけ描画する」
 
 ### Step 6: 一括完了を実装する（5 分）
 
-**ゴール**: 「完了にする」ボタンを押すと、選択したタスクの `status` と `completedAt` がまとめて更新されるようにします。
+**ゴール**: 「完了にする」ボタンを押すと選択したタスクの `status` と `completedAt` がまとめて更新されるようにします。
 
 まず mutation を定義します。
 
@@ -827,9 +860,9 @@ const handleBulkComplete = () => {
 };
 ```
 
-`useMutation` の形は、Day 10 で新規プロジェクトを保存したときと変わりません。違うのは、送るのが1件の id ではなく id の配列になった点だけです。Step 0 の `bulkComplete` が配列を受け取る作りになっているので、画面側は `map` で id を並べて渡すだけで済みます。
+`useMutation` の形はDay 10 で新規プロジェクトを保存したときと変わりません。違うのは送るのが1件の id ではなく id の配列になった点だけです。Step 0 の `bulkComplete` が配列を受け取る作りになっているので画面側は `map` で id を並べて渡すだけで済みます。
 
-`onSuccess` に2つの後始末を書いているのは、書き込みが本当に成功したという知らせをここでしか受け取れないからです。どちらか片方でも抜けると、画面と DB の中身がずれたまま残ります。`handleBulkComplete` が `canCompleteSelected` を確かめてから `mutate` を呼ぶのは、ボタンが消えている状況で誤って呼ばれても通信を起こさないためです。
+`onSuccess` に2つの後始末を書いているのは書き込みが本当に成功したという知らせをここでしか受け取れないからです。どちらか片方でも抜けると画面と DB の中身がずれたまま残ります。`handleBulkComplete` が `canCompleteSelected` を確かめてから `mutate` を呼ぶのはボタンが消えている状況で誤って呼ばれても通信を起こさないためです。
 
 ヘッダーの一括操作ボタン領域に追加します。
 
@@ -868,10 +901,10 @@ tRPC は一度取得したデータをキャッシュ（記憶）しています
 
 **`setSelectedTasks(new Set())` で選択状態をリセットする理由**
 
-操作が完了したあとも選択状態が残っていると、ユーザーが「さっきの操作は終わったのか」と混乱します。`onSuccess` でリセットすることで、「操作完了 → 選択が消える」という明確なフィードバックになります。
+操作が完了したあとも選択状態が残っているとユーザーが「さっきの操作は終わったのか」と混乱します。`onSuccess` でリセットすることで、「操作完了 → 選択が消える」という明確なフィードバックになります。
 
 **確認ポイント**:
-- 複数のタスクを選択して「完了にする」を押すと、対象タスクのステータスが「完了」に変わる
+- 複数のタスクを選択して「完了にする」を押すと対象タスクのステータスが「完了」に変わる
 - 操作後にタスク一覧が再取得される
 - 操作後、`selectedTasks` が空になりチェックも消える
 
@@ -881,7 +914,7 @@ tRPC は一度取得したデータをキャッシュ（記憶）しています
 
 **ゴール**: 「削除」ボタンを押すと確認ダイアログが開き、OK 後にまとめて削除します。
 
-削除は取り消せない操作のため、必ず確認ダイアログを挟みます。
+削除は取り消せない操作のため必ず確認ダイアログを挟みます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -913,10 +946,10 @@ import { CheckSquare, Plus, Trash2 }
   from 'lucide-react';
 ```
 
-取り込みを忘れると、一括削除ボタンを置いた瞬間に `Trash2 is not defined` が出て、
-タスク一覧の画面ごと表示されなくなります。`DeleteConfirmDialog` は Day 15 でこのファイルへ import 済みなので、追加は要りません。
+取り込みを忘れると一括削除ボタンを置いた瞬間に `Trash2 is not defined` が出て
+タスク一覧の画面ごと表示されなくなります。`DeleteConfirmDialog` は Day 15 でこのファイルへ import 済みなので追加は要りません。
 
-`handleBulkDelete` は **削除しない**点に注目してください。ダイアログを開くだけです。実際の削除は、ダイアログで OK を押したときに実行されます。
+`handleBulkDelete` は **削除しない**点に注目してください。ダイアログを開くだけです。実際の削除はダイアログで OK を押したときに実行されます。
 
 ヘッダーにボタンとダイアログを追加します。
 
@@ -935,9 +968,9 @@ import { CheckSquare, Plus, Trash2 }
 )}
 ```
 
-`canDeleteSelected` で囲んでいるのは、選んだタスクの中に削除権限の無いものが1つでもあれば、ボタン自体を出さないためです。押してから半分だけ失敗すると、どれが消えてどれが残ったのかを読者が追えません。
+`canDeleteSelected` で囲んでいるのは選んだタスクの中に削除権限の無いものが1つでもあればボタン自体を出さないためです。押してから半分だけ失敗するとどれが消えてどれが残ったのかを読者が追えません。
 
-色をクラスで指定して `variant="destructive"` にしていないのは、この操作が確認ダイアログを挟むためです。押した瞬間に消える赤い塗りつぶしのボタンと、確認をはさむボタンは、見た目で区別が付くようにしてあります。
+色をクラスで指定して `variant="destructive"` にしていないのはこの操作が確認ダイアログを挟むためです。押した瞬間に消える赤い塗りつぶしのボタンと、確認をはさむボタンは見た目で区別が付くようにしてあります。
 
 **確認ポイント**:
 - 「削除」ボタンが赤色で表示される
@@ -974,7 +1007,7 @@ import { CheckSquare, Plus, Trash2 }
 **確認ポイント**:
 - 「削除」ボタンをクリックすると確認ダイアログが開く
 - ダイアログをキャンセルするとタスクは削除されない
-- ダイアログで OK を押すと、選択したタスクが削除される
+- ダイアログで OK を押すと選択したタスクが削除される
 - 削除後にタスク一覧が再取得され、選択が解除される
 
 ---
@@ -1028,9 +1061,9 @@ const handleBulkUpdateStatus = (
 };
 ```
 
-`bulkComplete` との違いは、`mutate` に `status` を一緒に渡すところだけです。完了は「行き先が `DONE` に決まったステータス変更」なので、両者の中身はほとんど重なります。
+`bulkComplete` との違いは`mutate` に `status` を一緒に渡すところだけです。完了は「行き先が `DONE` に決まったステータス変更」なので両者の中身はほとんど重なります。
 
-権限の判定に `canCompleteSelected` を使い回しているのには理由があります。ステータスを変える操作は削除ではなく編集にあたるため、必要な権限は `'canEdit'` です。Step 0 の `bulkUpdateStatus` も `assertMemberPermission(task.project.members, 'canEdit')` で同じ権限を確かめていました。ここで画面側だけ削除権限に変えると、ボタンは出るのにサーバーが断る、という食い違いが生まれます。
+権限の判定に `canCompleteSelected` を使い回しているのには理由があります。ステータスを変える操作は削除ではなく編集にあたるため必要な権限は `'canEdit'` です。Step 0 の `bulkUpdateStatus` も `assertMemberPermission(task.project.members, 'canEdit')` で同じ権限を確かめていました。ここで画面側だけ削除権限に変えるとボタンは出るのにサーバーが断る、という食い違いが生まれます。
 
 ヘッダーの一括操作ボタン領域に追加します。
 
@@ -1082,7 +1115,7 @@ export function isTaskStatus(
 }
 ```
 
-**確認ポイント**: `src/lib/constant/status.ts` を開くと、上と同じ `isTaskStatus` がすでにあります。
+**確認ポイント**: `src/lib/constant/status.ts` を開くと上と同じ `isTaskStatus` がすでにあります。
 
 この関数は `value in TASK_STATUS` で「`TASK_STATUS` オブジェクトにこのキーが存在するか」をチェックし、型ガードとして機能します。
 
@@ -1093,7 +1126,7 @@ export function isTaskStatus(
 | `Select` | フォーム内の入力欄（選択後に値を保持したい） |
 | `DropdownMenu` | 操作のトリガー（選択後に値は保持しない） |
 
-ステータス変更は「選択 → 即実行」の操作なので、`DropdownMenu` が適しています。`Select` を使うと「選択した値を保持する」機能が邪魔になります。
+ステータス変更は「選択 → 即実行」の操作なので`DropdownMenu` が適しています。`Select` を使うと「選択した値を保持する」機能が邪魔になります。
 
 **確認ポイント**:
 - 「ステータス変更」をクリックするとドロップダウンが開く
@@ -1135,7 +1168,7 @@ npm run lint
 ここで整形の差分が並んでも、写経の間違いではありません。Day 05 で断ったとおり、
 この教材のコードは行の幅を狭く保つために Biome の整形前の形で載せています。
 `npm run fix` を実行すると Biome の形にそろい、差分は消えます。
-そのあともう一度 `npm run lint` を走らせて、今日書いたコードへの指摘が残っていないかを見てください。
+そのあともう一度 `npm run lint` を走らせて今日書いたコードへの指摘が残っていないかを見てください。
 
 **確認ポイント**:
 - 上記のテスト項目がすべてパスする
@@ -1147,12 +1180,12 @@ npm run lint
 
 ### Pro パターンで書こう（一括操作のハンドラーは Map で選ぶ）
 
-一括操作は、完了・削除・ステータス変更のように種類が増えやすいです。
+一括操作は完了・削除・ステータス変更のように種類が増えやすいです。
 今日は Step 6 から Step 8 で、この3つをそれぞれ別のハンドラーとして書きました。
-種類が3つのうちは、この形がいちばん追いやすいです。
+種類が3つのうちはこの形がいちばん追いやすいです。
 
 増えてくると事情が変わります。呼び出し口を1つにまとめたくなり、操作名で分ける
-`switch` が縦に伸びていきます。そこまで来たら、操作名と処理を1つの表にまとめて、
+`switch` が縦に伸びていきます。そこまで来たら操作名と処理を1つの表にまとめて
 その表から引く形に変えます。操作を足すときの変更が1行で済むようになります。
 
 | 書き方 | 向いている場面 |
@@ -1165,7 +1198,7 @@ npm run lint
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードと手元のファイルを見比べてください。どちらのファイルも Day 13 から Day 16 で書いた中身がそのまま残るため、今日足した部分だけを載せます。
+今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードと手元のファイルを見比べてください。どちらのファイルも Day 13 から Day 16 で書いた中身がそのまま残るため今日足した部分だけを載せます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1189,7 +1222,7 @@ import {
 } from './_helpers/permission';
 ```
 
-`findTasksWithPermission` と `findTaskWithPermission` が両方並んでいる形が正解です。複数形は今日足したもので、単数形は Day 15 で書いた1件用のヘルパーです。片方だけにすると、どちらかの手続きが動かなくなります。`ProjectMemberRole` と `hasPermission` を取り込むのは、次のブロックで編集できるロールを自分で並べずに権限マップから計算するためです。
+`findTasksWithPermission` と `findTaskWithPermission` が両方並んでいる形が正解です。複数形は今日足したもので単数形は Day 15 で書いた1件用のヘルパーです。片方だけにするとどちらかの手続きが動かなくなります。`ProjectMemberRole` と `hasPermission` を取り込むのは次のブロックで編集できるロールを自分で並べずに権限マップから計算するためです。
 
 **件数の上限と権限ロールの定数**:
 
@@ -1217,7 +1250,7 @@ const TASK_DELETE_ROLES =
   getRolesWithPermission('canDelete');
 ```
 
-3つの手続きが同じ `bulkTaskIdsSchema` を使うので、件数の上限と重複の拒否は1か所で決まります。手続きごとに書き分けると、あとから上限を変えたときに直し漏れた手続きだけが無防備に残ります。ロールの配列を `hasPermission` から計算しているのも同じ考え方です。`['OWNER', 'ADMIN']` と手で並べると、権限の決まりを変えたときに一括操作だけが古い判定のまま取り残されます。
+3つの手続きが同じ `bulkTaskIdsSchema` を使うので件数の上限と重複の拒否は1か所で決まります。手続きごとに書き分けるとあとから上限を変えたときに直し漏れた手続きだけが無防備に残ります。ロールの配列を `hasPermission` から計算しているのも同じ考え方です。`['OWNER', 'ADMIN']` と手で並べると権限の決まりを変えたときに一括操作だけが古い判定のまま取り残されます。
 
 **書き込み条件を組み立てる関数**:
 
@@ -1238,7 +1271,7 @@ const buildBulkPermissionWhere = (
 });
 ```
 
-id の指定と権限の確認を1つの `where` にまとめてあるのが要点です。分けて書くと、片方だけを使った手続きがいずれ紛れ込みます。id だけで絞る `where` を書いてしまうと、他人のプロジェクトのタスク id を混ぜて送りつけられたときにそのまま書き換わります。この関数を通す形にしておけば、3つの手続きが同じ守り方を共有します。
+id の指定と権限の確認を1つの `where` にまとめてあるのが要点です。分けて書くと片方だけを使った手続きがいずれ紛れ込みます。id だけで絞る `where` を書いてしまうと他人のプロジェクトのタスク id を混ぜて送りつけられたときにそのまま書き換わります。この関数を通す形にしておけば3つの手続きが同じ守り方を共有します。
 
 **件数のずれを検出する関数**:
 
@@ -1255,13 +1288,13 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 };
 ```
 
-入口で権限を確かめてから DB へ書き込むまでの間に、ロールが変わることもあります。そのとき `updateMany` は書き込めた分だけを処理し、エラーを出しません。件数を突き合わせて例外にすると、`$transaction` が中途半端な書き込みをまとめて取り消します。半分だけ完了したタスクが残る状態は、読者からは原因の見えない不具合になります。
+入口で権限を確かめてから DB へ書き込むまでの間に、ロールが変わることもあります。そのとき `updateMany` は書き込めた分だけを処理し、エラーを出しません。件数を突き合わせて例外にすると`$transaction` が中途半端な書き込みをまとめて取り消します。半分だけ完了したタスクが残る状態は読者からは原因の見えない不具合になります。
 
 **bulkComplete**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: bulkComplete
+// 完成版: bulkComplete の入力と権限確認
   bulkComplete: protectedProcedure
     .input(z.object({ ids: bulkTaskIdsSchema }))
     .mutation(async ({ ctx, input }) => {
@@ -1269,20 +1302,34 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       for (const task of tasks) {
         assertMemberPermission(task.project.members, 'canEdit');
       }
+```
 
+入力と権限の確認は Step の手順どおりです。ここまでで「誰が・どのタスクを」対象にするかが決まります。続きの書き込み部分では、完了済みと未完了を分けて更新します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: bulkComplete の書き込み
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.updateMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 完了済みの行を先に更新・ロックして
+        // 完了日時を保ったまま全対象の権限を再確認する。
+        const unchanged = await tx.task.updateMany({
+          where: { ...where, status: TASK_STATUS.DONE },
+          data: { status: TASK_STATUS.DONE },
+        });
+        const changed = await tx.task.updateMany({
+          where: { ...where, status: { not: TASK_STATUS.DONE } },
           data: { status: TASK_STATUS.DONE, completedAt },
         });
-        assertBulkWriteCount(result.count, input.ids.length);
-        return result;
+        const count = unchanged.count + changed.count;
+        assertBulkWriteCount(count, input.ids.length);
+        return { count };
       });
     }),
 ```
 
-権限の確認が入口と書き込み時の2回入っているのは、書き忘れではありません。入口の `assertMemberPermission` は、権限のないタスクが混ざっていたら1件も書き込まずに止めるための門です。書き込み時の `where` は、その門を通ったあとにロールが変わった場合を拾います。`completedAt` を `status` と一緒に入れているのは、Day 23 の週次レポートが完了件数をこの列から数えるためです。
+権限の確認が入口と書き込み時の2回入っているのは書き忘れではありません。入口の `assertMemberPermission` は権限のないタスクが混ざっていたら1件も書き込まずに止めるための門です。書き込み時の `where` はその門を通ったあとにロールが変わった場合を拾います。完了済みのタスクを先に `DONE` のまま更新しているのは、完了日時を保ったまま対象行をロックするためです。次の更新だけが新しい完了日時を入れるので、完了済みのタスクをもう一度選んでも Day 23 の週次集計が変わりません。
 
 **bulkDelete**:
 
@@ -1307,7 +1354,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-見比べるべき箇所は `'canDelete'` と `TASK_DELETE_ROLES` の2つです。ここを `'canEdit'` のままコピーすると、編集はできても削除はできない MEMBER が他人のタスクを消せてしまいます。削除は元に戻せないので、権限の取り違えが最も重い結果になる手続きです。写経したあとに、この2語だけを目で追い直してください。
+見比べるべき箇所は `'canDelete'` と `TASK_DELETE_ROLES` の2つです。ここを `'canEdit'` のままコピーすると編集はできても削除はできない MEMBER が他人のタスクを消せてしまいます。削除は元に戻せないので権限の取り違えが最も重い結果になる手続きです。写経したあとに、この2語だけを目で追い直してください。
 
 **bulkUpdateStatus の入力と権限の判定**:
 
@@ -1328,13 +1375,13 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 ```
 
-入力に `status` が増えた点だけが `bulkComplete` との違いです。確かめる権限が `'canEdit'` なのは、ステータスの変更が削除ではなく編集にあたるからです。ここを `'canDelete'` にすると、編集権限しか持たない人が自分の担当タスクの状態を動かせなくなります。画面側の Step 8 も同じ `canCompleteSelected` で判定しているので、両側の基準がそろいます。
+入力に `status` が増えた点だけが `bulkComplete` との違いです。確かめる権限が `'canEdit'` なのはステータスの変更が削除ではなく編集にあたるからです。ここを `'canDelete'` にすると編集権限しか持たない人が自分の担当タスクの状態を動かせなくなります。画面側の Step 8 も同じ `canCompleteSelected` で判定しているので両側の基準がそろいます。
 
 **bulkUpdateStatus の更新内容と書き込み条件**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: bulkUpdateStatus の更新内容と書き込み
+// 完成版: bulkUpdateStatus の更新内容
       const data: Prisma.TaskUpdateManyMutationInput = {
         status: input.status,
       };
@@ -1344,19 +1391,38 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       } else {
         data.completedAt = null;
       }
+```
 
+`data` の組み立ては Step の手順どおりです。完了へ変えるときだけ日時を入れ、それ以外へ動かすときは `null` に戻します。続きの書き込み条件とトランザクションです。
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: bulkUpdateStatus の書き込み
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.updateMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
+        const unchanged =
+          input.status === TASK_STATUS.DONE
+            ? await tx.task.updateMany({
+                where: { ...where, status: TASK_STATUS.DONE },
+                data: { status: TASK_STATUS.DONE },
+              })
+            : { count: 0 };
+        const changed = await tx.task.updateMany({
+          where:
+            input.status === TASK_STATUS.DONE
+              ? { ...where, status: { not: TASK_STATUS.DONE } }
+              : where,
           data,
         });
-        assertBulkWriteCount(result.count, input.ids.length);
-        return result;
+        const count = unchanged.count + changed.count;
+        assertBulkWriteCount(count, input.ids.length);
+        return { count };
       });
     }),
 ```
 
-`DONE` 以外へ動かしたときに `completedAt` を `null` へ戻しているのが、見落としやすい分岐です。完了から進行中へ差し戻したタスクに完了日時が残ったままだと、Day 23 の週次レポートが未完了のタスクを完了件数に数え続けます。`data` に型を付けてあるのは、あとから列を足し引きする書き方をしているためで、綴りを間違えた列名がその場で赤くなります。
+`DONE` 以外へ動かしたときに `completedAt` を `null` へ戻しているのが見落としやすい分岐です。完了から進行中へ差し戻したタスクに完了日時が残ったままだとDay 23 の週次レポートが未完了のタスクを完了件数に数え続けます。変更先が `DONE` のときは `bulkComplete` と同じく2段階に分け、完了済みの行の日時を上書きしません。`data` に型を付けてあるのはあとから列を足し引きする書き方をしているためで、綴りを間違えた列名がその場で赤くなります。
 
 ### `src/app/task/page.tsx`
 
@@ -1376,7 +1442,7 @@ import {
 import { Label } from '@/component/ui/label';
 ```
 
-`lucide-react` の行は Day 14 の `Plus` に `CheckSquare` と `Trash2` を足した1行です。取り込みを2行に分けると、Biome が1行へまとめ直すか、重複した取り込みとしてエラーになります。`Trash2` は Day 19 で `task-detail-dialog.tsx` へ書いたもので、このファイルには入っていません。抜けたまま削除ボタンを置くと、タスク一覧の画面ごと表示されなくなります。
+`lucide-react` の行は Day 14 の `Plus` に `CheckSquare` と `Trash2` を足した1行です。取り込みを2行に分けるとBiome が1行へまとめ直すか、重複した取り込みとしてエラーになります。`Trash2` は Day 19 で `task-detail-dialog.tsx` へ書いたものでこのファイルには入っていません。抜けたまま削除ボタンを置くとタスク一覧の画面ごと表示されなくなります。
 
 **選択状態の state**:
 
@@ -1389,7 +1455,7 @@ const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
   useState(false);
 ```
 
-チェックの有無を `Set` で持つのは、同じ id を二重に覚える心配が無くなるからです。配列だと追加のたびに入っているかどうかを自分で調べる必要があります。ダイアログの開閉を別の state にしてあるのは、削除だけが取り消せない操作だからです。選択の中身と「いま確認中かどうか」を分けておくと、選択と実行の間にひと呼吸を置けます。
+チェックの有無を `Set` で持つのは同じ id を二重に覚える心配が無くなるからです。配列だと追加のたびに入っているかどうかを自分で調べる必要があります。ダイアログの開閉を別の state にしてあるのは削除だけが取り消せない操作だからです。選択の中身と「いま確認中かどうか」を分けておくと選択と実行の間にひと呼吸を置けます。
 
 **1件のチェックを切り替える関数**:
 
@@ -1407,7 +1473,7 @@ const handleTaskSelect = (
 };
 ```
 
-`new Set(prev)` で作り直しているのは、React が変更を見つける方法が「前の値と同じ入れ物かどうか」だからです。`prev.add(taskId)` と書くと中身は変わりますが入れ物は同じままなので、React は変更が無かったと判断し、画面が描き直されません。チェックを押しても何も起きないという症状の正体は、たいていこの1行です。
+`new Set(prev)` で作り直しているのはReact が変更を見つける方法が「前の値と同じ入れ物かどうか」だからです。`prev.add(taskId)` と書くと中身は変わりますが入れ物は同じままなのでReact は変更が無かったと判断し、画面が描き直されません。チェックを押しても何も起きないという症状の正体はたいていこの1行です。
 
 **操作できるタスクと選択中タスクの絞り込み**:
 
@@ -1431,7 +1497,7 @@ const selectedTaskList = useMemo(
 );
 ```
 
-`selectedTasks` の中身をそのまま操作の対象にしない理由は、フィルターを切り替えても `Set` の中の id は消えないからです。画面から消えたタスクを一括削除の巻き添えにすると、読者は自分が何を消したのか追えません。`selectedTaskList` は、いま一覧に並んでいるタスクとだけ突き合わせた結果です。以降のボタンや件数の表示は、すべてこちらを見ます。
+`selectedTasks` の中身をそのまま操作の対象にしない理由はフィルターを切り替えても `Set` の中の id は消えないからです。画面から消えたタスクを一括削除の巻き添えにすると読者は自分が何を消したのか追えません。`selectedTaskList` はいま一覧に並んでいるタスクとだけ突き合わせた結果です。以降のボタンや件数の表示はすべてこちらを見ます。
 
 **操作ごとの権限の判定**:
 
@@ -1450,7 +1516,7 @@ const canDeleteSelected =
   );
 ```
 
-`every` を使うのは、権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので、削除できないタスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると、権限のあるタスクが1件でもあればボタンが出て、押した先でサーバーに断られます。この2つが守るのはボタンを出すかどうかまでで、最後に守るのは Step 0 のサーバー側です。
+`every` を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので削除できないタスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出て押した先でサーバーに断られます。この2つが守るのはボタンを出すかどうかまでで、最後に守るのは Step 0 のサーバー側です。
 
 **全選択・全解除の関数**:
 
@@ -1468,7 +1534,7 @@ const handleSelectAll = (checked: boolean) => {
 };
 ```
 
-対象が `tasks` ではなく `selectableTasks` になっている点が要点です。全選択で閲覧しかできないタスクまで拾うと、その直後に権限の判定が `false` へ倒れ、ボタンが1つも出なくなります。読者から見ると「全部選んだのに何もできない」という動きです。選べるものだけを選ぶ形にしておくと、この行き止まりが起きません。
+対象が `tasks` ではなく `selectableTasks` になっている点が要点です。全選択で閲覧しかできないタスクまで拾うとその直後に権限の判定が `false` へ倒れ、ボタンが1つも出なくなります。読者から見ると「全部選んだのに何もできない」という動きです。選べるものだけを選ぶ形にしておくとこの行き止まりが起きません。
 
 **全選択チェックボックスの3状態**:
 
@@ -1486,7 +1552,7 @@ const selectAllState =
     : false;
 ```
 
-分母を `selectableTasks` にそろえてあるのは、上の `handleSelectAll` が選ぶ範囲と一致させるためです。分母だけ `tasks` にすると、全選択を押しても数が足りず、チェックボックスが部分選択の表示から動きません。押した操作と見た目が食い違うので、読者は自分の操作が効いたのかどうか判断できなくなります。
+分母を `selectableTasks` にそろえてあるのは上の `handleSelectAll` が選ぶ範囲と一致させるためです。分母だけ `tasks` にすると全選択を押しても数が足りず、チェックボックスが部分選択の表示から動きません。押した操作と見た目が食い違うので読者は自分の操作が効いたのかどうか判断できなくなります。
 
 **一括完了の mutation とハンドラー**:
 
@@ -1512,7 +1578,7 @@ const handleBulkComplete = () => {
 };
 ```
 
-`onSuccess` の2行は、どちらが欠けても画面と DB がずれます。`invalidate` を忘れると完了したはずのタスクが未完了のまま並び、選択のリセットを忘れると終わった操作のチェックが残ります。`mutate` へ渡すのが `selectedTaskList` なのは、いま画面に並んでいるタスクだけを送るためです。
+`onSuccess` の2行はどちらが欠けても画面と DB がずれます。`invalidate` を忘れると完了したはずのタスクが未完了のまま並び、選択のリセットを忘れると終わった操作のチェックが残ります。`mutate` へ渡すのが `selectedTaskList` なのはいま画面に並んでいるタスクだけを送るためです。
 
 **一括削除の mutation とハンドラー**:
 
@@ -1534,7 +1600,7 @@ const handleBulkDelete = () => {
 };
 ```
 
-`handleBulkDelete` が削除まで進まないところが、完了処理との一番の違いです。この関数はダイアログを開くだけで、実際に消すのはダイアログで承諾を押したときです。押し間違いを取り消せない操作なので、ボタンと削除の間に1つ画面を挟みます。
+`handleBulkDelete` が削除まで進まないところが完了処理との一番の違いです。この関数はダイアログを開くだけで、実際に消すのはダイアログで承諾を押したときです。押し間違いを取り消せない操作なのでボタンと削除の間に1つ画面を挟みます。
 
 **ステータス一括変更の mutation とハンドラー**:
 
@@ -1563,7 +1629,7 @@ const handleBulkUpdateStatus = (
 };
 ```
 
-判定に `canCompleteSelected` を使い回しているのは、ステータスの変更が編集にあたるからです。Step 0 の `bulkUpdateStatus` も `'canEdit'` で確かめています。ここだけ削除権限に変えると、ボタンは出るのにサーバーが断るという食い違いが生まれます。画面側とサーバー側で、確かめる権限の名前をそろえてください。
+判定に `canCompleteSelected` を使い回しているのはステータスの変更が編集にあたるからです。Step 0 の `bulkUpdateStatus` も `'canEdit'` で確かめています。ここだけ削除権限に変えるとボタンは出るのにサーバーが断るという食い違いが生まれます。画面側とサーバー側で、確かめる権限の名前をそろえてください。
 
 **ページ見出しと選択件数の表示**:
 
@@ -1586,7 +1652,7 @@ const handleBulkUpdateStatus = (
       <>
 ```
 
-見出しの隣へ件数を出しているのは、これから押すボタンの効く範囲を押す前に確かめられるからです。ボタンの近くで数字が見えないと、選んだつもりの件数と実際の件数がずれていても気付けません。この `<>` の中に、次の3つのボタンが並びます。
+見出しの隣へ件数を出しているのはこれから押すボタンの効く範囲を押す前に確かめられるからです。ボタンの近くで数字が見えないと選んだつもりの件数と実際の件数がずれていても気付けません。この `<>` の中に、次の3つのボタンが並びます。
 
 **「完了にする」ボタン**:
 
@@ -1605,7 +1671,7 @@ const handleBulkUpdateStatus = (
 )}
 ```
 
-権限が無いときにボタンを薄く表示するのではなく、丸ごと出さない形にしています。押せないボタンが並んでいると、読者は自分の操作が失敗したのか、そもそも押せないのかを区別できません。表示されていなければ、この選択では使えない操作だと一目で分かります。
+権限が無いときにボタンを薄く表示するのではなく、丸ごと出さない形にしています。押せないボタンが並んでいると読者は自分の操作が失敗したのか、そもそも押せないのかを区別できません。表示されていなければこの選択では使えない操作だと一目で分かります。
 
 **ステータス変更のドロップダウン**:
 
@@ -1637,7 +1703,7 @@ const handleBulkUpdateStatus = (
 )}
 ```
 
-選択肢を `TASK_STATUS_LABELS` から作っているので、ステータスを1つ増やしたときにこの画面を直す必要がありません。`isTaskStatus` で確かめてから渡しているのは、`Object.entries` が返す `value` の型が `string` までしか絞られないためです。型を確かめずに渡すと `as` で無理やり通すことになり、綴りを間違えた文字列がそのままサーバーへ届きます。
+選択肢を `TASK_STATUS_LABELS` から作っているのでステータスを1つ増やしたときにこの画面を直す必要がありません。`isTaskStatus` で確かめてから渡しているのは`Object.entries` が返す `value` の型が `string` までしか絞られないためです。型を確かめずに渡すと `as` で無理やり通すことになり、綴りを間違えた文字列がそのままサーバーへ届きます。
 
 **「削除」ボタン**:
 
@@ -1656,7 +1722,7 @@ const handleBulkUpdateStatus = (
 )}
 ```
 
-赤い塗りつぶしの `variant="destructive"` を使わず、文字色だけを赤にしてあります。塗りつぶしのボタンは、このアプリでは押した瞬間に実行される操作へ使っています。確認を挟むボタンと挟まないボタンを見た目で描き分けておくと、読者は押す前に身構えるかどうかを判断できます。
+赤い塗りつぶしの `variant="destructive"` を使わず、文字色だけを赤にしてあります。塗りつぶしのボタンはこのアプリでは押した瞬間に実行される操作へ使っています。確認を挟むボタンと挟まないボタンを見た目で描き分けておくと読者は押す前に身構えるかどうかを判断できます。
 
 **全選択チェックボックス**:
 
@@ -1675,7 +1741,7 @@ const handleBulkUpdateStatus = (
 </div>
 ```
 
-`checked === true` と書いているのは、`onCheckedChange` が `'indeterminate'` という文字列を渡してくる場合があるためです。この文字列は真として扱われるので、比較を省くと部分選択の状態から全選択が走ります。`Label` に `htmlFor` を付けてあるのは、文字の側を押しても切り替わるようにするためです。
+`checked === true` と書いているのは`onCheckedChange` が `'indeterminate'` という文字列を渡してくる場合があるためです。この文字列は真として扱われるので比較を省くと部分選択の状態から全選択が走ります。`Label` に `htmlFor` を付けてあるのは文字の側を押しても切り替わるようにするためです。
 
 **タスク一覧のチェックボックス**:
 
@@ -1704,7 +1770,7 @@ const handleBulkUpdateStatus = (
         )}
 ```
 
-`aria-label` にタスク名を入れているのは、同じ形のチェックボックスがカードの数だけ並ぶからです。名前が無いと、読み上げでは「チェックボックス」が続くだけで、どれを選んでいるのか分かりません。まとめて削除できる画面では、取り違えると元へ戻せません。チェックボックスをカードの外側へ置いた形なので、`TaskCard` 本体は1行も書き換わりません。
+`aria-label` にタスク名を入れているのは同じ形のチェックボックスがカードの数だけ並ぶからです。名前が無いと読み上げでは「チェックボックス」が続くだけで、どれを選んでいるのか分かりません。まとめて削除できる画面では取り違えると元へ戻せません。チェックボックスをカードの外側へ置いた形なので`TaskCard` 本体は1行も書き換わりません。
 
 **タスクカード本体**:
 
@@ -1731,7 +1797,7 @@ const handleBulkUpdateStatus = (
         </div>
 ```
 
-`canEdit` と `canDelete` へ渡しているのは、1つ前のブロックでチェックボックスを出すかどうかに使った変数そのものです。値を共有しているので、カードの中にある編集ボタンと、カードの外にあるチェックボックスの出方が食い違いません。`min-w-0` を付けてあるのは、長いタスク名がカードの幅を押し広げてグリッドを崩さないようにするためです。
+`canEdit` と `canDelete` へ渡しているのは1つ前のブロックでチェックボックスを出すかどうかに使った変数そのものです。値を共有しているのでカードの中にある編集ボタンと、カードの外にあるチェックボックスの出方が食い違いません。`min-w-0` を付けてあるのは長いタスク名がカードの幅を押し広げてグリッドを崩さないようにするためです。
 
 **タスク一覧の閉じタグと空メッセージ**:
 
@@ -1747,7 +1813,7 @@ const handleBulkUpdateStatus = (
 </div>
 ```
 
-閉じタグが5段も続くのは、グリッドの箱・`map` の返り値・三項演算子の3つを同じ場所でたたんでいるからです。ここで数を1つ間違えると、エラーはこの行ではなくファイルの末尾に出ます。写経した結果が動かないときは、この段の数だけを先に数え直してください。`<p>` の空メッセージは、タスクが0件のときに画面が真っ白にならないための受け皿です。
+閉じタグが5段も続くのはグリッドの箱・`map` の返り値・三項演算子の3つを同じ場所でたたんでいるからです。ここで数を1つ間違えるとエラーはこの行ではなくファイルの末尾に出ます。写経した結果が動かないときはこの段の数だけを先に数え直してください。`<p>` の空メッセージはタスクが0件のときに画面が真っ白にならないための受け皿です。
 
 **削除確認ダイアログ**:
 
@@ -1769,7 +1835,7 @@ const handleBulkUpdateStatus = (
 />
 ```
 
-`title` に件数を差し込んでいるのは、承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので、通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
+`title` に件数を差し込んでいるのは承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
 
 ## 今日のまとめ
 
@@ -1825,11 +1891,11 @@ const handleBulkUpdateStatus = (
 
 **Q1. 権限の確認に `every` を使い、`some` を使わないのはなぜですか。**
 
-A. 権限の無いタスクが1件でも混ざったら、操作そのものを止めたいためです。選択は複数のプロジェクトをまたげます。そのため「編集はできても削除はできない」タスクが紛れる場面も実際に起きます。`some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
+A. 権限の無いタスクが1件でも混ざったら操作そのものを止めたいためです。選択は複数のプロジェクトをまたげます。そのため「編集はできても削除はできない」タスクが紛れる場面も実際に起きます。`some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
 
 **Q2. 全選択チェックボックスの分母を `tasks` ではなく `selectableTasks` にしているのはなぜですか。**
 
-A. 閲覧しかできないタスクまで分母に入れると、選べるものを全部選んでも数が足りず、部分選択のままになるためです。読者からは「全部選んだのに全チェックにならない」という不可解な動きに見えます。
+A. 閲覧しかできないタスクまで分母に入れると選べるものを全部選んでも数が足りず、部分選択のままになるためです。読者からは「全部選んだのに全チェックにならない」という不可解な動きに見えます。
 
 **Q3. 一括完了とステータス変更には確認ダイアログが無く、一括削除にだけあるのはなぜですか。**
 
@@ -1837,9 +1903,21 @@ A. 完了とステータス変更は元に戻せるのに対し、削除は DB �
 
 ---
 
+## 追加課題：選択した2件だけをステータス変更する
+
+選択集合が操作対象を決めることを確かめます。理解チェック Q2 の全選択と、1件ずつの選択を区別しましょう。
+
+前提は今日の一括操作が使えることです。自分が管理するプロジェクトに「課題28-A」「課題28-B」「課題28-C」を未対応で作成します。
+
+A と B だけのチェックを付け、C は選びません。一括の「ステータス変更」から「進行中」を選んでください。
+
+再読み込みし、A と B が進行中、C が未対応なら成功です。`src/app/task/page.tsx` の `selectedTasks` から API へ渡す ID の配列を作る箇所を探し、C が入らない理由を説明します。
+
+C も変わった場合は送信する ID が一覧全件から作られていないか確認してください。確認後は課題用3件だけを選んで一括削除します。確認ダイアログの件数が3件であることを確かめてから実行してください。
+
 ## 次回予告
 
-Day 29 では、ユーザー詳細・編集ページを作ります。Next.js の動的ルーティング `[id]` を使って、ユーザーごとの専用ページを実装します。
+Day 29 ではユーザー詳細・編集ページを作ります。Next.js の動的ルーティング `[id]` を使ってユーザーごとの専用ページを実装します。
 
 ---
 

@@ -97,14 +97,11 @@ WORKER_DB_PREFIX = "shoot_w"
 SERVER_TIMEOUT = 90
 
 # 本番ビルドではなく `next dev` で起こす日。
-#
-# day11 は `npm run build` が通らない。`project.getById` を書く前に配布物の
-# `project-detail-view.tsx` を取り込むためで、教材自身が本文で「今日は通りません」と
-# 断っている（`build_day_snapshots.py` の EXPECTED_RED も同じ扱い）。
-# ただし読者がその日に動かすのは `npm run dev` のほうで、開発サーバーは型検査を
+# 「build が通らないのが教材の仕様」という日が生まれたらここへ足す。
+# 読者がその日に動かすのは `npm run dev` のほうで、開発サーバーは型検査を
 # 通さずにページを返す。つまり dev で撮るのは代用ではなく、読者と同じ動かし方である。
 # 開発サーバーが右下へ出す Next.js の目印は、読者が書いた画面ではないので撮る側で隠す。
-DEV_SERVER_DAYS = frozenset({11})
+DEV_SERVER_DAYS = frozenset()
 
 # ブラウザの開始時刻。Day 02 の挨拶が時間帯で変わるため、固定しないと撮るたびに
 # 「おはよう」「こんばんは」が入れ替わり、本文の説明と食い違う回が出る。

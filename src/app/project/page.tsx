@@ -67,7 +67,8 @@ function ProjectPageContent() {
 
   const { data: currentUser } = api.auth.getCurrentUser.useQuery();
   const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
-    // showArchived が true のとき isArchived フィルターを外して進行中・アーカイブ両方を取得する
+    // showArchived が true のとき isArchived フィルターを外して
+    // 進行中・アーカイブ両方を取得する
     isArchived: showArchived ? undefined : false,
   });
   const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
@@ -133,6 +134,7 @@ function ProjectPageContent() {
   const archiveMutation = api.project.archive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      utils.project.getById.invalidate();
       router.push('/project');
     },
   });
@@ -140,6 +142,7 @@ function ProjectPageContent() {
   const unarchiveMutation = api.project.unarchive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      utils.project.getById.invalidate();
       router.push('/project');
     },
   });
@@ -242,7 +245,8 @@ function ProjectPageContent() {
     );
   }
 
-  // 詳細画面で操作ボタンの表示可否を決めるため、ログインユーザー自身のプロジェクト内ロールから権限を求める
+  // 詳細画面で操作ボタンの表示可否を決めるため、
+  // ログインユーザー自身のプロジェクト内ロールから権限を求める
   const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
   const currentMemberRole =
     currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
@@ -365,7 +369,8 @@ function ProjectPageContent() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
-              // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）。
+              // キャンセル済みは進捗の母数に含めない
+              // （アクティブな4ステータスのみを総数とする）。
               // 総数と完了数を1回のループで同時に集計する。
               let taskCount = 0;
               let doneCount = 0;

@@ -41,7 +41,7 @@ const changePasswordSchema = z.object({
 });
 
 export const userRouter = createTRPCRouter({
-  // adminProcedureによりセッションのroleを参照してADMIN判定するためDBクエリ不要
+  // adminProcedureが認証とADMIN判定を済ませるため、このクエリに権限チェックは不要
   getAll: adminProcedure
     .input(
       z

@@ -29,13 +29,15 @@ export const reportRouter = createTRPCRouter({
       };
     }
 
-    // アーカイブ済みプロジェクトのタスクは集計対象外にし、プロジェクト数・統計との整合を取る。
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、
+    // プロジェクト数・統計との整合を取る。
     const projectScope = {
       projectId: { in: projectIds },
       project: { isArchived: false },
     } as const;
 
-    // ダッシュボードの「アクティブな作業」を母数とするため、CANCELLED は集計から除外する。
+    // ダッシュボードの「アクティブな作業」を母数とするため、
+    // CANCELLED は集計から除外する。
     const activeTasksFilter = {
       ...projectScope,
       NOT: { status: TASK_STATUS.CANCELLED },
@@ -219,6 +221,10 @@ export const reportRouter = createTRPCRouter({
       startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
 
       const where = {
+        // 「完了」の条件は status=DONE かつ completedAt 非NULL の両方を満たすこと。
+        // completedAt 単独でも同等だが、再オープンで消える値だけに依存すると
+        // 不変条件が壊れた際に集計へ混入するため、status も明示する。
+        status: TASK_STATUS.DONE,
         completedAt: { gte: startDate, lte: now },
         assigneeId: targetUserId,
       };

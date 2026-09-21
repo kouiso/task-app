@@ -35,6 +35,8 @@ import shutil
 import subprocess
 import sys
 from functools import cache
+from html.parser import HTMLParser
+from urllib.parse import unquote, urlsplit
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -43,7 +45,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # チルダのフェンスや入れ子の4連フェンスで対応が1つずれる（あのモジュールが
 # 8本の検査から切り出された理由がそれ）。
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
+from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
 
 SRC_DIR = REPO_ROOT / "material" / "30days-curriculum"
 BOOK_CSS = REPO_ROOT / "material" / "style" / "book.css"
@@ -58,11 +62,15 @@ WORK_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 # どちらも教材PDFを組むときだけ要る道具で、`npm ci` が走る CI と Vercel には要らない。
 # 再現性はここのバージョン固定で担保する。
 VIVLIOSTYLE_CLI = "@vivliostyle/cli@11.1.0"
+# cli@11.1.0 が内部で使う vfm と同じ版。md→HTML を自前で回して実改行を挿入するため、
+# 別版で変換すると Prism の出力構造がずれ得るので版を合わせる
+VFM_CLI = "@vivliostyle/vfm@2.7.0"
 THEME = "@vivliostyle/theme-techbook@2.0.2"
 MERMAID_CLI = "@mermaid-js/mermaid-cli@11.16.0"
 # 外部プロセスが返らんときの上限。36本を通しで回すので、1本の停止で全体を落とさない
 BUILD_TIMEOUT = 900
 MERMAID_TIMEOUT = 180
+VFM_TIMEOUT = 120
 
 # 埋め込むフォント (npmパッケージ, パッケージ内のパス, @font-face の family, weight, format)。
 #
@@ -100,6 +108,146 @@ ANCHOR_SUFFIX_RE = re.compile(r"\s*\{#[^}]*\}\s*$")
 DAY_RE = re.compile(r"^(Day\s*\d+)\s*[:：]\s*(.+)$")
 # 目次の見出し文字列から、行内マークダウンの記号だけ落とす
 INLINE_MD_RE = re.compile(r"`([^`]*)`|\*\*([^*]*)\*\*|\[([^\]]*)\]\([^)]*\)")
+
+
+LINK_MAP_HELP = (
+    'PDF_BOOK_LINK_MAP に配布先JSONを指定してください。'
+    '例: PDF_BOOK_LINK_MAP=/absolute/path/metadata.json make book-pdf '
+    '（PDFファイル名→HTTPS URLの辞書、またはname/urlを持つ配列）'
+)
+
+
+def load_link_map(filename: str | None) -> dict[str, str]:
+    """IDを原稿へ埋めず、配布時に確定したURLだけを受け取る。"""
+    if not filename:
+        return {}
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f'リンクマップJSONのキーが重複しています: {key}')
+            result[key] = value
+        return result
+
+    with Path(filename).open(encoding='utf-8') as stream:
+        data = json.load(stream, object_pairs_hook=unique_object)
+    if isinstance(data, dict):
+        entries = list(data.items())
+    elif isinstance(data, list):
+        entries = [(entry.get('name'), entry.get('url')) for entry in data
+                   if isinstance(entry, dict)]
+        if len(entries) != len(data):
+            raise ValueError('リンクマップの各要素にはname/urlが必要です')
+    else:
+        raise ValueError('リンクマップは辞書またはname/urlを持つ配列にしてください')
+    mapping: dict[str, str] = {}
+    for name, url in entries:
+        if not isinstance(name, str) or Path(name).name != name or not name.endswith('.pdf'):
+            raise ValueError(f'リンクマップのキーはPDFファイル名にしてください: {name!r}')
+        if name in mapping:
+            raise ValueError(f'リンクマップに重複があります: {name}')
+        if not isinstance(url, str):
+            raise ValueError(f'リンク先URLが文字列ではありません: {name}')
+        parsed = urlsplit(url)
+        if (parsed.scheme != 'https' or not parsed.hostname
+                or parsed.hostname in {'localhost', '127.0.0.1', '::1'}
+                or parsed.username or parsed.password or parsed.fragment
+                or unquote(parsed.path).lower().endswith('.md')
+                or '/vivliostyle/' in unquote(parsed.path)
+                or any(char.isspace() or char in '<>"' for char in url)):
+            raise ValueError(f'配布用HTTPS URLではありません: {name}: {url}')
+        mapping[name] = url
+    return mapping
+
+
+# 既存のtextlintパーサーで実リンクだけを拾う。コードや画像を正規表現で巻き込まない。
+# rangeはUTF-16なので、Pythonへ渡す前にUnicodeコードポイント数へ換算する。
+LINK_SCAN_JS = r'''
+const fs = require('node:fs');
+const { parse } = require('@textlint/markdown-to-ast');
+const text = fs.readFileSync(0, 'utf8');
+const ast = parse(text);
+const definitions = new Map();
+const walk = (node, visit) => {
+  visit(node);
+  for (const child of node.children || []) walk(child, visit);
+};
+walk(ast, node => {
+  if (node.type === 'Definition' && !definitions.has(node.identifier)) {
+    definitions.set(node.identifier, node);
+  }
+});
+const links = [];
+const offset = index => Array.from(text.slice(0, index)).length;
+walk(ast, node => {
+  if (node.type === 'Html' || node.type === 'HtmlBlock') {
+    links.push({ html: node.raw });
+  }
+  if (node.type !== 'Link' && node.type !== 'LinkReference') return;
+  const definition = node.type === 'Link' ? node : definitions.get(node.identifier);
+  if (!definition) throw new Error(`未定義のリンク参照: ${node.identifier}`);
+  const children = node.children || [];
+  const label = children.length
+    ? text.slice(children[0].range[0], children[children.length - 1].range[1]) : '';
+  links.push({start: offset(node.range[0]), end: offset(node.range[1]),
+    label, url: definition.url, title: definition.title});
+});
+process.stdout.write(JSON.stringify(links));
+'''
+
+
+class HtmlLinks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == 'a':
+            self.links += [value for key, value in attrs if key == 'href' and value is not None]
+
+
+def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
+    """実在する同梱原稿へのリンクを、明示された配布先へ解決する。"""
+    result = subprocess.run(
+        ['node', '-e', LINK_SCAN_JS], input=text, text=True, capture_output=True,
+        cwd=REPO_ROOT, timeout=60,
+    )
+    if result.returncode:
+        raise ValueError(f'リンクを解析できません。npm installを確認してください: {result.stderr[-300:]}')
+    edits = []
+    for link in json.loads(result.stdout):
+        if 'html' in link:
+            parser = HtmlLinks()
+            parser.feed(link['html'])
+            for url in parser.links:
+                if not url.startswith('#') and urlsplit(url).scheme not in {'http', 'https', 'mailto', 'tel'}:
+                    raise ValueError(f'HTMLのローカルリンクはMarkdownリンクへ変更してください: {url}')
+            continue
+        url = link['url']
+        parsed = urlsplit(url)
+        if url.startswith('#') or parsed.scheme in {'https', 'http', 'mailto', 'tel'}:
+            continue
+        if parsed.scheme or parsed.netloc or not parsed.path or parsed.query:
+            raise ValueError(f'未対応のローカルリンクです: {url}')
+        target = (source.parent / unquote(parsed.path)).resolve()
+        if target.parent != source.parent.resolve() or target.suffix != '.md' or not target.is_file():
+            raise ValueError(f'配布対象の原稿に解決できません: {url}')
+        if target == source.resolve() and parsed.fragment:
+            destination = '#' + parsed.fragment
+        else:
+            if parsed.fragment:
+                raise ValueError(f'別冊の見出し位置はPDF配布先で保証できません: {url}')
+            filename = target.with_suffix('.pdf').name
+            if filename not in mapping:
+                raise ValueError(f'配布先が未登録です: {filename}。{LINK_MAP_HELP}')
+            destination = mapping[filename]
+        title = ''
+        if link.get('title') is not None:
+            title = ' "' + link['title'].replace('\\', '\\\\').replace('"', '\\"') + '"'
+        edits.append((link['start'], link['end'], f'[{link["label"]}](<{destination}>{title})'))
+    for start, end, replacement in sorted(edits, reverse=True):
+        text = text[:start] + replacement + text[end:]
+    return text
 
 
 def find_browser() -> str | None:
@@ -287,6 +435,19 @@ def diagram_font_face() -> str:
 def embed_font(svg: Path) -> None:
     """SVG の開始タグ直後に @font-face を差し込む。"""
     markup = svg.read_text(encoding="utf-8")
+    # mermaid が出す width="100%" は、<img> の固有サイズが viewBox ではなく
+    # 配置先の幅へ解決される。縦長の図は高さが版面を超えて下端で切れる
+    # （実測: 220×694 の図が5ノード目で切断）。viewBox の実寸を width/height へ
+    # 書き戻し、固有サイズを確定させる。book.css の max-block-size と
+    # object-fit: contain が効く形になる。
+    viewbox = re.search(
+        r'viewBox="[\d.]+\s[\d.]+\s([\d.]+)\s([\d.]+)"', markup)
+    if viewbox and 'width="100%"' in markup:
+        markup = markup.replace(
+            'width="100%"',
+            f'width="{viewbox.group(1)}px" height="{viewbox.group(2)}px"',
+            1,
+        )
     svg.write_text(
         re.sub(r"(<svg\b[^>]*>)", lambda m: m.group(1) + diagram_font_face(),
                markup, count=1),
@@ -406,16 +567,19 @@ def work_slug(stem: str) -> str:
     return f"{head}-{hashlib.sha256(stem.encode('utf-8')).hexdigest()[:6]}"
 
 
-def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]:
+def build_one(path: Path, browser: str | None, env: dict[str, str],
+              link_map: dict[str, str] | None = None) -> list[str]:
     """1本を PDF にする。問題があれば説明の一覧を返す（空なら成功）。"""
     stem = path.stem
     slug = work_slug(stem)
     # U+FE0F（異体字セレクタ16）は「絵文字として描け」という指定。付いていると
     # Chromium が単色の Noto Emoji を無視してシステムのカラー絵文字フォントを呼び、
     # 生成機械に依存する上に Type 3 で埋め込まれる。紙面では単色でよいので外す。
-    title, body, toc = parse_source(
-        path.read_text(encoding="utf-8").replace(EMOJI_VARIATION_SELECTOR, "")
-    )
+    try:
+        source = rewrite_book_links(path.read_text(encoding="utf-8"), path, link_map or {})
+    except (ValueError, OSError, subprocess.TimeoutExpired) as error:
+        return [f"{path.name}: {error}"]
+    title, body, toc = parse_source(source.replace(EMOJI_VARIATION_SELECTOR, ""))
     if not title:
         return [f"{path.name}: H1 が無い"]
 
@@ -427,23 +591,80 @@ def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]
     )
     per_book_css = WORK_DIR / f"{slug}.css"
     per_book_css.write_text(build_book_css(title), encoding="utf-8")
+    combined_css = WORK_DIR / f"{slug}-combined.css"
+    combined_css.write_text(
+        (WORK_DIR / "book.css").read_text(encoding="utf-8")
+        + "\n" + per_book_css.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    # Vivliostyle は行長だけで pre を割るため、空白があっても語の途中で折れる。
+    # 先に vfm で HTML へ変換し、長いコード行のトークン境界へ実改行を挿入してから
+    # 組版へ渡す。Vivliostyle は <wbr>・word-break を無視して行長位置で語を割る
+    # （実測済み）ため、折返し位置はこちらで物理的に決めるしかない。
+    try:
+        converted = subprocess.run(
+            ["npx", "--yes", VFM_CLI,
+             "--language", "ja", "--title", title, document.name],
+            capture_output=True, text=True, cwd=WORK_DIR, env=env,
+            timeout=VFM_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        problems.append(f"{path.name}: HTML変換が{VFM_TIMEOUT}秒を超えました")
+        return problems
+    except OSError as error:
+        problems.append(f"{path.name}: HTML変換コマンドを起動できません: {error}")
+        return problems
+    if converted.returncode != 0 or not converted.stdout.strip():
+        problems.append(
+            f"{path.name}: HTML変換に失敗: "
+            f"{(converted.stderr or converted.stdout).strip()[-300:]}"
+        )
+        return problems
+
+    residuals: list[str] = []
+    markup = wrap_code_in_html(converted.stdout, residuals)
+    if residuals:
+        # フォント縮小の下限も割る行＝コピー安全な見た目を作れない行。
+        # 出さずに止める。材料側のコード整形で対処する。
+        problems.append(
+            f"{path.name}: コピー安全に組版できないコード行: {residuals[0][:80]}"
+        )
+        return problems
+    unsafe = unsafe_runs(markup)
+    if unsafe:
+        # 折返し候補を作れなかった行が残る＝語の途中で切れる可能性が残る。
+        # 出さずに止める。材料のコードを変えずに済む範囲の限界。
+        problems.append(
+            f"{path.name}: コード行に折返し候補を作れません: {unsafe[0][:80]}"
+        )
+        return problems
+    html_doc = WORK_DIR / f"{slug}.html"
+    html_doc.write_text(markup, encoding="utf-8")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     output = OUT_DIR / f"{stem}.pdf"
-    command = [
-        "npx", "--yes", VIVLIOSTYLE_CLI, "build", document.name,
-        # -T を並べる。自前CSSの @import でテーマを読むと解決されず、
-        # テーマ由来の @page 定義ごと失われて柱とノンブルが全ページから消える。
-        # パスは作業ディレクトリからの相対にする（絶対パスは無視される）。
-        "-T", THEME, "-T", "./book.css", "-T", f"./{per_book_css.name}",
-        "-s", "A4",
-        # 図表番号の「図N:」「表N:」は theme-base の :root:lang(ja) に入っている。
-        # lang を渡さないと英語の "Figure N: " が出る。
-        "-l", "ja",
-        # 渡さないと Vivliostyle が最初の見出しを拾い、PDFのタイトル欄が「目次」になる
-        "--title", title,
-        "-o", str(output),
-    ]
+    # -T のローカルパス指定は実行環境によって静かに捨てられ、--style は
+    # テーマより前に挿入されて :root 変数の上書きが効かない（いずれも実測。
+    # WSL では本文書体がシステムフォントへ落ち、figure img 制約が死に
+    # 画面写真が版面を突き抜けた）。
+    # vivliostyle.config.js の theme 配列は宣言順に適用されるため、
+    # テーマの後に自前CSSを置ける確実な経路としてこれを使う。
+    vfm_config = WORK_DIR / "vivliostyle.config.js"
+    vfm_config.write_text(
+        "module.exports = {\n"
+        f"  title: {json.dumps(title)},\n"
+        f"  entry: {json.dumps(html_doc.name)},\n"
+        "  theme: [\n"
+        f"    {json.dumps(THEME)},\n"
+        f"    {json.dumps(combined_css.name)},\n"
+        "  ],\n"
+        "  size: 'A4',\n"
+        "  language: 'ja',\n"
+        f"  output: {json.dumps(str(output))},\n"
+        "};\n",
+        encoding="utf-8",
+    )
+    command = ["npx", "--yes", VIVLIOSTYLE_CLI, "build"]
     if browser:
         command += ["--executable-browser", browser]
 
@@ -488,8 +709,18 @@ def main(argv: list[str]) -> int:
     if missing:
         print("見つからない: " + ", ".join(str(m) for m in missing), file=sys.stderr)
         return 2
+    try:
+        link_map = load_link_map(os.environ.get('PDF_BOOK_LINK_MAP'))
+        # 1冊の未解決リンクで既存の全作業領域を消さないよう、準備前に全対象を検査する。
+        for target in targets:
+            rewrite_book_links(target.read_text(encoding='utf-8'), target, link_map)
+    except (ValueError, OSError, subprocess.TimeoutExpired) as error:
+        print(f'リンクを解決できません: {error}', file=sys.stderr)
+        return 2
     browser = find_browser()
     env = dict(os.environ)
+    # mermaid-cliはpuppeteerをpeer dependencyとして要求する。アプリ用npm設定で省略させない。
+    env['npm_config_legacy_peer_deps'] = 'false'
     if browser:
         # 手元の Chromium を使い回す。指定しないと mermaid-cli の puppeteer が
         # 約650MB の Chrome を毎回取りに行く。
@@ -507,7 +738,7 @@ def main(argv: list[str]) -> int:
 
     problems: list[str] = []
     for path in targets:
-        problems += build_one(path, browser, env)
+        problems += build_one(path, browser, env, link_map)
 
     if problems:
         print("\n以下が未解決:", file=sys.stderr)

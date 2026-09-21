@@ -177,7 +177,8 @@ export function TaskCard({
                 <div
                   className={cn(
                     'flex items-center gap-1 text-xs',
-                    overdue ? 'text-destructive font-semibold' : 'text-muted-foreground',
+                    overdue && 'text-destructive font-semibold',
+                    !overdue && 'text-muted-foreground',
                   )}
                 >
                   <CalendarDays className="h-3 w-3" />

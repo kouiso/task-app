@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import {
   BarChart,
   ClipboardList,
@@ -75,8 +76,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [hasMounted, isLoading, session, router]);
 
+  const queryClient = useQueryClient();
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: () => {
+      // 前の利用者の一覧を残すと、
+      // 別アカウントで入り直したときに見えてしまう
+      queryClient.clear();
       router.push('/login');
       router.refresh();
     },
@@ -129,7 +134,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
                       pathname === item.path
                         ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+                        : 'text-sidebar-foreground/60 ' +
+                            'hover:text-sidebar-foreground ' +
+                            'hover:bg-sidebar-accent',
                     )}
                   >
                     {item.icon}
@@ -196,7 +203,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         'mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2',
                         pathname === item.path
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+                          : 'text-sidebar-foreground/60 ' +
+                              'hover:text-sidebar-foreground ' +
+                              'hover:bg-sidebar-accent',
                       )}
                     >
                       {item.icon}

@@ -1,0 +1,77 @@
+{
+  "version": "1",
+  "curriculum": {
+    "name": "task-app 30日間カリキュラム",
+    "material_updated": "2026-09-12",
+    "note": "本文の更新日とPDFの生成日は別物。対応関係はこの台帳で追跡する"
+  },
+  "combinations": [
+    {
+      "id": "pdf-set",
+      "subject": "dist/pdf/*.pdf 全36冊",
+      "corresponds_to": {
+        "sources": "material/30days-curriculum/<同名>.md（stem一致）",
+        "day_snapshots": "dist/day-snapshots/dayNN（dayNN_*.pdfと対応）",
+        "code_reference": "worktree codex/material-refresh-9cff5605 のHEAD（manifest.git参照）"
+      },
+      "basis": "md→vfm→HTML→PDFを同一ツリー内の組版パイプラインで生成。教材コードとsrc/の一致は curriculum-qa の scaffold/src 同期チェックで担保",
+      "approved_by": "devin",
+      "at": "2026-09-12"
+    },
+    {
+      "id": "screenshots",
+      "subject": "material/30days-curriculum/screenshots/** 全108枚",
+      "corresponds_to": {
+        "captured_against": "dist/day-snapshots/dayNN の完成状態で起動したdevサーバ",
+        "note": "dayNN/配下は当該Day完成時点の画面。根のPNGは説明用の個別画面"
+      },
+      "basis": "各Dayの完成スナップショットに対して撮影。スナップショットのコードと教材記述の対応は scaffold 同期チェック済み",
+      "approved_by": "devin",
+      "at": "2026-09-12"
+    },
+    {
+      "id": "distribution-zip",
+      "subject": "配布ZIP（dist/task-app.zip 等）",
+      "corresponds_to": {
+        "contents": "scripts/_app-base・_lib-base・_seed・scaffold-from-scratch.sh・material・README",
+        "scaffold_source": "src/ との同期は check_scaffold_src_sync.py で担保"
+      },
+      "basis": "ZIP同梱の scaffold ファイルと src/ の差分は意図的例外を除きゼロ",
+      "approved_by": "devin",
+      "at": "2026-09-12"
+    },
+    {
+      "id": "drive-delivery",
+      "subject": "gdrive フォルダ 1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU の36 PDF",
+      "corresponds_to": {
+        "uploaded_from": "dist/pdf/",
+        "recorded_in": "dist/drive-backup-9cff5605/metadata.json"
+      },
+      "basis": "release_manifest.py --remote-check でファイルIDとsha256を照合",
+      "approved_by": "devin",
+      "at": "2026-09-12"
+    }
+  ],
+  "exceptions": [
+    {
+      "id": "EX-2026-09-12-r34",
+      "subject": "dashboard / my-task 画面写真",
+      "delta": "R34対応で dashboard・my-task に通信失敗時のエラーバナーと全面パネルを追加",
+      "disposition": "reuse_approved",
+      "basis": "変更は isError 分岐とmutation onErrorのみ。正常表示の描画（写真の撮影範囲）は変わらない",
+      "approved_by": "devin",
+      "at": "2026-09-12",
+      "evidence": "dist/r34-evidence/（verify-error-ui.mjs 全12項目PASS 2連続・verify-cache-leak.mjs A→B漏洩なし全PASS・r34-*.png 9枚）"
+    },
+    {
+      "id": "EX-2026-09-12-search",
+      "subject": "検索実装のコード写真・写経対象",
+      "delta": "R22対応で search.ts の説明を教材側で強化。実装コード自体は andConditions 構造を維持",
+      "disposition": "reuse_approved",
+      "basis": "教材が示すコードと src のコードは同一構造。説明文と図の追加のみ",
+      "approved_by": "devin",
+      "at": "2026-09-12",
+      "evidence": "src/server/api/routers/__test/search.test.ts（buildTaskWhere不変条件14テスト緑）・day20 A∩B図（PDF描画目視確認済み）"
+    }
+  ]
+}

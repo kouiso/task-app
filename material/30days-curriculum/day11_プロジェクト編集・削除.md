@@ -2,27 +2,27 @@
 
 ## 前回の振り返り
 
-Day 10 では react-hook-form・zod・tRPC の `useMutation`（データ変更API呼び出しのフック）を組み合わせて、ダイアログ形式のプロジェクト新規作成機能を実装しました。CRUD（作成 Create・読み取り Read・更新 Update・削除 Delete の4操作をまとめた呼び名）の「Create」ができたので、今日は「Update」と「Delete」に進みます。
+Day 10 では react-hook-form・zod・tRPC の `useMutation`（データ変更API呼び出しのフック）を組み合わせてダイアログ形式のプロジェクト新規作成機能を実装しました。CRUD（作成 Create・読み取り Read・更新 Update・削除 Delete の4操作をまとめた呼び名）の「Create」ができたので今日は「Update」と「Delete」に進みます。
 
 ---
 
 ## 今日のゴール
 
-Day 10 で作った ProjectDialog を「編集モード」で再利用し、プロジェクトの更新と削除を実装します。既存データをフォームに反映する方法と、削除前の確認ダイアログも学びます。
+Day 10 で作った ProjectDialog を「編集モード」で再利用してプロジェクトの更新と削除を実装します。既存データをフォームに反映する方法と削除前の確認ダイアログも学びます。
 
-この日は、まずサーバー側の `update` / `delete` / `archive` / `unarchive` の4つを自分で書きます。そのあと画面をつなぎます。
+この日はまずサーバー側の `update` / `delete` / `archive` / `unarchive` の4つを自分で書きます。そのあと画面をつなぎます。
 
 スクリーンショット: 編集モードの ProjectDialog の表示を確認してください。
 
-![プロジェクト編集ダイアログ。名前欄に「ポートフォリオサイト」、説明欄に既存の文章が入り、ボタンが「更新」になっている](./screenshots/day11/project-edit-dialog.png)
+![プロジェクト編集ダイアログ。名前欄に「ポートフォリオサイト」を表示。説明欄には既存の文章を表示。ボタンは「更新」になっている](./screenshots/day11/project-edit-dialog.png)
 
 ## なぜこれを作るのか
 
-Day 10 で「プロジェクト作成」ができるようになりました。しかし、名前の間違いを直したいときや、不要になったプロジェクトを整理したいときには、編集と削除の機能が必要です。
+Day 10 で「プロジェクト作成」ができるようになりました。名前の間違いを直したいときや不要になったプロジェクトを整理したいときには編集と削除の機能が必要です。
 
-今日は「編集」と「削除」を追加して、プロジェクト管理を完成させます。今日の作業が終わると、プロジェクトの作成・編集・削除・アーカイブという一連の管理操作がすべて揃います。
+今日は「編集」と「削除」を追加します。今日の作業が終わるとプロジェクトの作成・編集・削除・アーカイブという一連の管理操作がすべて揃います。
 
-> **例え話**: Day 10 で作ったダイアログは「万能な注文用紙」です。新規注文にも注文変更にも使え、変更時は元の内容を用紙に書いておくだけです。このように1つのコンポーネントで両方に対応する設計を「再利用性の高い設計」と言います。
+> **例え話**: Day 10 で作ったダイアログは「万能な注文用紙」です。新規注文にも注文変更にも使えます。変更時は元の内容を用紙に書いておくだけです。このように1つのコンポーネントで両方に対応する設計を「再利用性の高い設計」と言います。
 
 ### 編集・削除の処理フロー
 
@@ -46,9 +46,13 @@ flowchart TD
     style J fill:#ffcdd2
 ```
 
-図には道が2本あります。上の編集は、ボタンを押すとダイアログが開くだけで、サーバーを呼ぶのは保存ボタンを押した後です。下の削除は、押した時点では `deleteTargetId` に「どれを消すか」を控えるだけで、サーバーを呼ぶのは確認ダイアログの「削除」を押した後です。
+図には道が2本あります。上の編集ボタンはダイアログを開きます。サーバーを呼ぶのは保存ボタンを押した後です。下の削除ボタンは `deleteTargetId` に「どれを消すか」を控えます。サーバーを呼ぶのは確認ダイアログの「削除」を押した後です。
 
-削除にだけ寄り道を作るのは、押し間違いを取り消せないためです。編集なら名前を書き直せば元の状態に戻せますが、消えたプロジェクトは戻せません。2本の道が最後に `invalidate` へ合流するのは、どちらを実行しても Day 09 で作った一覧が古い内容のまま残らないようにするためです。
+削除前の確認は押し間違いを防ぐためです。編集なら名前を書き直せば元の状態に戻せます。削除済みのプロジェクトを戻す機能はありません。
+
+Day 09 ではプロジェクト一覧を作りました。今日は編集と削除の後で一覧を更新する処理を追加します。
+
+編集と削除の最後に `invalidate` を呼んでキャッシュを無効にすると一覧に変更が反映されます。
 
 ### やること / やらないこと
 
@@ -69,7 +73,7 @@ flowchart TD
 | キャッシュ無効化（invalidate） | 更新・削除後に tRPC のキャッシュを破棄して最新データを再取得させる処理 |
 | アーカイブ | データを削除せずに非表示にする方法。復元が可能 |
 
-> 「楽観的更新（Optimistic Update）」という手法もありますが、今回は使いません。楽観的更新はサーバーの応答を待たず先にUIを更新し、失敗したらロールバックする高度な手法です。今回はよりシンプルな `invalidate()`（キャッシュ無効化）で一覧を更新します。
+> 「楽観的更新（Optimistic Update）」という手法もあります。今回は使いません。楽観的更新はサーバーの応答を待たず先にUIを更新して失敗したらロールバックする高度な手法です。今回はよりシンプルな `invalidate()`（キャッシュ無効化）で一覧を更新します。
 
 ### 今日の作業ファイル
 
@@ -87,15 +91,15 @@ src/
             └── project.ts    ← Step 0 で手続きを4本追加
 ```
 
-今日コードを書き足すのは `project.ts` と `page.tsx` の2つだけです。`delete-confirm-dialog.tsx` は配布済みで、中身には手を入れません。
+今日コードを書き足すのは `project.ts` と `page.tsx` の2つだけです。`delete-confirm-dialog.tsx` は配布済みです。中身には手を入れません。
 
-作業はサーバー側の `project.ts` から始めます。カードに並ぶ編集ボタンと削除ボタンは、プロジェクトを見られる人全員の画面に出ていて、誰でも押せる状態です。押された操作を断れるのはサーバーだけなので、断る側を先に用意してから画面をつなぎます。逆の順番で進めると、権限のないアカウントで押した瞬間にデータが消え、後から気付いても戻せません。
+作業はサーバー側の `project.ts` から始めます。カードの編集ボタンと削除ボタンはプロジェクトを見られる人全員の画面に表示されます。操作する権限があるかをサーバー側で確認してから画面をつなぎます。ボタンを表示する条件だけでは不正なAPI呼び出しを防げないためです。
 
 ## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | project.ts に update/delete/archive/unarchive を自分で書く | 15分 |
+| Step 0 | project.ts に update/delete/archive/unarchive/getById を自分で書く | 18分 |
 | Step 1 | インポートと編集ボタンのハンドラーを作る | 7分 |
 | Step 2 | 削除の state と mutation を実装する | 5分 |
 | Step 3 | 送信ハンドラーを作る | 7分 |
@@ -107,28 +111,28 @@ src/
 | Step 9 | ProjectDetailView にアーカイブを渡す | 4分 |
 | Step 10 | 動作確認 | 7分 |
 
-**合計時間**: 約68分です。
+**合計時間**: 約71分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
 ---
 
-### Step 0: project.ts に update/delete/archive/unarchive を自分で書く（15分）
+### Step 0: project.ts に update/delete/archive/unarchive/getById を自分で書く（18分）
 
-**ゴール**: プロジェクトの更新・削除・アーカイブ・アーカイブ解除の4つの手続きを追加します。`api.project.update` / `api.project.delete` / `api.project.archive` / `api.project.unarchive` を呼べる状態にします。
+**ゴール**: プロジェクトの更新・削除・アーカイブ・アーカイブ解除・詳細取得の5つの手続きを追加します。`api.project.update` / `api.project.delete` / `api.project.archive` / `api.project.unarchive` / `api.project.getById` を呼べる状態にします。
 
 #### 0-1. update（送られてきた項目だけ更新する）
 
-今日書く `update` / `delete` / `archive` / `unarchive` は、どれも「自分にその操作をする権限があるか」を確認してから実行します。この確認をまとめて行うのが `assertMemberPermission` という関数です。渡されたメンバー情報と権限名（`canManageMembers` 等）を照合し、権限が無ければその場でエラーを発生させます。まず `project.ts` の import 群に追加します。
+今日書く `update` / `delete` / `archive` / `unarchive` はどれも「自分にその操作をする権限があるか」を確認してから実行します。この確認をまとめて行うのが `assertMemberPermission` という関数です。渡されたメンバー情報と権限名（`canManageMembers` 等）を照合して権限が無ければその場でエラーを発生させます。まず `project.ts` の import 群に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（import群を修正）
 import { assertMemberPermission } from './_helpers/permission';
 ```
 
-これは `_helpers/permission.ts` にまとまっている権限チェックの共通関数です。Day 07 で作った `_helpers/select.ts` と同じ場所にあり、こちらは配布済みの既存ファイルです。ここから先の手続きはこれを何度も呼びます。
+これは `_helpers/permission.ts` にまとまっている権限チェックの共通関数です。Day 07 で作った `_helpers/select.ts` と同じ場所にあります。こちらは配布済みの既存ファイルです。ここから先の手続きはこれを何度も呼びます。
 
-続けて、更新用の入力スキーマです。`project.ts` の `projectCreateSchema` の下に追加します。
+続けて更新用の入力スキーマを書きます。`project.ts` の `projectCreateSchema` の下に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -146,13 +150,13 @@ const projectUpdateSchema = z.object({
 });
 ```
 
-`create` のスキーマとの違いは、`id` 以外の全項目が `.optional()` になっていることです。更新は「送られてきた項目だけ書き換える」のが基本なので、名前だけ変えたいときに `description` や `color` まで毎回送る必要はありません。
+`create` のスキーマとの違いは `id` 以外の全項目が `.optional()` になっていることです。更新は「送られてきた項目だけ書き換える」のが基本なので名前だけ変えたいときに `description` や `color` まで毎回送る必要はありません。
 
-`startDate` と `endDate` に付けた `.datetime()`（ISO日時文字列の検証）は、`"2024-12-31T00:00:00Z"` のような形式の文字列だけを通します。日付として解釈できない値が入ってきたら、その時点でエラーにして弾けます。
+`startDate` と `endDate` に付けた `.datetime()`（ISO日時文字列の検証）は`"2024-12-31T00:00:00Z"` のような形式の文字列だけを通します。日付として解釈できない値が入ってきたらその時点でエラーにして弾けます。
 
-続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探し、無ければ止めます。
+続けて `update` の手続き本体です。`getAll` の下に追加します。まず対象のプロジェクトを探します。無ければ止めます。
 
-ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+ここから先の「（続き）」のブロックは`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまいます。その場合は構文エラーになります。`});` は増やしません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -178,9 +182,9 @@ const projectUpdateSchema = z.object({
 
 `{ id, ...data }` は `input` から `id` だけを取り出し、残りをまとめて `data` に入れる分割代入です。`id` は「どのプロジェクトを更新するか」を探すために使い、それ以外の項目（`data`）は更新内容として使います。
 
-対象は `findUnique`（条件に合う1件を取得）で1件だけ引きます。あわせてメンバー一覧を `ctx.session.userId`（サーバーが持つログインユーザーID）で絞り込み、ログイン本人の情報だけを取り出して、この後の権限チェックに使います。
+対象は `findUnique`（条件に合う1件を取得）で1件だけ引きます。あわせてメンバー一覧を `ctx.session.userId`（サーバーが持つログインユーザーID）で絞り込みます。ログイン本人の情報だけを取り出してこの後の権限チェックに使います。
 
-続けて、権限チェックと更新データの組み立てです。
+続けて権限チェックと更新データの組み立てを書きます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -197,6 +201,7 @@ const projectUpdateSchema = z.object({
       updateData.color = data.color;
     }
     if (data.isArchived !== undefined) {
+      assertMemberPermission(project.members, 'canArchive');
       updateData.isArchived = data.isArchived;
     }
     if (data.startDate !== undefined) {
@@ -207,11 +212,13 @@ const projectUpdateSchema = z.object({
     }
 ```
 
-`assertMemberPermission(project.members, 'canManageMembers')` は、自分がこのプロジェクトのメンバーで、かつ管理権限（`canManageMembers`）を持っているかを確認します。権限が無ければここで処理が止まります。
+`isArchived` の変更には `canArchive` も確認します。名前や説明を変更できる ADMIN でもアーカイブは許可されていないためです。
 
-`updateData` を空のオブジェクトから始めて、`data.name !== undefined` のように「送られてきた項目だけ」を1つずつ足しています。Day 10 の `create` で書いた `description` の条件付き代入と同じ考え方を、6項目すべてに広げた形です。
+`assertMemberPermission(project.members, 'canManageMembers')` は自分がこのプロジェクトのメンバーで管理権限（`canManageMembers`）を持っているかを確認します。権限が無ければここで処理が止まります。
 
-最後に、組み立てた `updateData` で実際に更新します。
+`updateData` を空のオブジェクトから始めて`data.name !== undefined` のように「送られてきた項目だけ」を1つずつ足しています。Day 10 の `create` で書いた `description` の条件付き代入と同じ考え方を6項目すべてに広げた形です。
+
+最後に組み立てた `updateData` で実際に更新します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -231,9 +238,9 @@ const projectUpdateSchema = z.object({
   }),
 ```
 
-`include`（関連データを一緒に取る指定）のうち、メンバー情報を `user` 付きで取る部分は `getAll` / `create` と共通です。`getAll` は一覧表示用にタスクの `id` と `status` も取りますが、`update` の返り値では不要なので付けていません。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
+`include`（関連データを一緒に取る指定）のうちメンバー情報を `user` 付きで取る部分は `getAll` / `create` と共通です。`getAll` は一覧表示用にタスクの `id` と `status` も取ります。`update` の返り値では不要なので付けていません。同じ `include` の形はこのあとの 0-4 で書く `getById` でも使います。
 
-#### 0-2. delete（ここが一番のヤマ場、削除だけは OWNER 限定）
+#### 0-2. delete（プロジェクト削除は OWNER 限定）
 
 `update` の下に `delete` を追加します。まずは `update` と同じく対象を探すところからです。
 
@@ -259,15 +266,16 @@ const projectUpdateSchema = z.object({
       }
 ```
 
-`delete` でも、いきなり `prisma.project.delete` を呼ばずに `findUnique` で対象を1件引いています。狙いは2つです。存在しない `id` が届いたときに `NOT_FOUND` で止めることと、`members` をログイン本人の1件だけに絞り、この次に書く権限チェックへ渡す材料をそろえることです。
+`delete` でもいきなり `prisma.project.delete` を呼ばずに `findUnique` で対象を1件引いています。狙いは2つです。存在しない `id` が届いたときは `NOT_FOUND` で止めます。また `members` をログイン本人の1件だけに絞って次の権限チェックで使います。
 
-この「探す → 権限を見る → 実行する」という3段の並びは `update` と共通です。同じ形を繰り返しているので、Day 12 で書く `addMember` も同じ順番で組み立てられます。
+この「探す → 権限を見る → 実行する」という3段の並びは `update` と共通です。同じ形を繰り返しているのでDay 12 で書く `addMember` も同じ順番で組み立てられます。
 
-続けて、権限チェックと削除の実行です。ここが `delete` で一番大事な部分です。
+続けて権限チェックと削除の処理を書きます。ここが `delete` で一番大事な部分です。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
-      // canDeleteはタスク削除の権限でADMINにも付与されているため、プロジェクト削除はOWNER限定で明示チェック
+      // canDeleteはタスク削除の権限でADMINにも付与されているため、
+      // プロジェクト削除はOWNER限定で明示チェック
       const userMember = project.members[0];
       if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
         throw new TRPCError({
@@ -285,11 +293,11 @@ const projectUpdateSchema = z.object({
 
 他の手続きは `assertMemberPermission(..., 'canManageMembers')` のような共通の権限チェック関数を使っています。しかし `delete` だけは `userMember.role !== PROJECT_MEMBER_ROLE.OWNER` と明示的に比べています。
 
-理由はコードのコメントの通りです。`canDelete` という権限名はタスク削除にも使われていて、ADMIN 権限にも与えられています。それをそのまま使うと、プロジェクト自体の削除まで ADMIN に許可されてしまいます。プロジェクトを消す操作はメンバー管理より重いので、共通の権限チェックに乗せず、あえてここだけ独自のチェックを書いています。
+理由はコードのコメントの通りです。`canDelete` という権限名はタスク削除にも使われていて ADMIN 権限にも与えられています。それをそのまま使うとプロジェクト自体の削除まで ADMIN に許可されてしまいます。このアプリではプロジェクト削除を OWNER に限定します。そのためここではロールを直接確認します。
 
 #### 0-3. archive / unarchive（同じ処理をヘルパー関数にまとめる）
 
-アーカイブとアーカイブ解除は「`isArchived` を true にするか false にするか」の違いしかありません。同じ処理を2回書かずに、共通のヘルパー関数にまとめます。`project.ts` の `projectUpdateSchema` の下、`export const projectRouter` の上に追加します。
+アーカイブとアーカイブ解除は「`isArchived` を true にするか false にするか」の違いしかありません。同じ処理を2回書かずに共通のヘルパー関数にまとめます。`project.ts` の `projectUpdateSchema` の直後に追加します。`export const projectRouter` より前に置いてください。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -309,7 +317,7 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 };
 ```
 
-`isArchived` を引数で受け取り、それをそのまま DB に書き込むだけの単純な関数です。呼び出す側が `true` を渡せばアーカイブ、`false` を渡せば解除になります。`delete` の下に、この関数を呼ぶ2つの手続きを追加します。このブロックだけは最後の `});` を含みます。ファイルの一番下にある `});` の1行を先に消してから、その場所へ貼ってください。
+`isArchived` を引数で受け取ります。操作する権限を確認してからその値を DB に書き込みます。呼び出す側が `true` を渡せばアーカイブになります。`false` を渡せば解除になります。`delete` の下にこの関数を呼ぶ2つの手続きを追加します。このブロックだけは最後の `});` を含みます。ファイルの一番下にある `});` の1行を先に消してからその場所へ貼ってください。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -327,7 +335,70 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 });
 ```
 
-`archive` は `true`、`unarchive` は `false` を渡しているだけで、中身の処理は同じ関数に任せています。同じロジックを2か所に書き写すと、片方だけ直して片方を直し忘れるバグが起きやすくなります。関数にまとめておくと、権限チェックのルールを直すときも1か所を直すだけで済みます。最後の `});` で `projectRouter` 全体を閉じます。
+`archive` は `true` を渡します。`unarchive` は `false` を渡します。どちらも処理は同じ関数に任せています。同じロジックを2か所に書き写すと片方だけ直して片方を直し忘れるバグが起きやすくなります。関数にまとめておくと権限チェックのルールを直すときも1か所を直すだけで済みます。最後の `});` で `projectRouter` 全体を閉じます。
+
+#### 0-4. getById（1件だけ取得する）
+
+Step 9 で詳細画面を出すときに使う「1件だけ取得する」手続きを先に用意します。`getAll` は複数件を `findMany` で取っていましたが`getById` は1件だけを `findUnique` で取ります。`unarchive` を書いたときと同じ要領で、ファイルの一番下にある `});` の1行を先に消してからその場所へ貼ってください。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { ...USER_SELECT, role: true },
+              },
+            },
+          },
+          tasks: {
+            include: {
+              assignee: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+          },
+        },
+      });
+```
+
+先頭の `protectedProcedure` に `.mutation` ではなく `.query`（読み取り用の手続き）をつなげています。データを書き換えないので読み取り専用の入口で十分です。`include` に `members` と `tasks` を並べているのは詳細画面がこの2つを同じ画面に出すからです。別々のAPIで取ると通信が2回になり、片方だけ古い内容のまま表示される瞬間ができます。`tasks` の中の `assignee`（担当者）も一緒に取るのは、詳細画面がタスクの担当者名を表示するためです。
+
+続けて見つからなかったときのチェックです。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+```
+
+`getAll` は一覧なので「見つからない」というケースがありませんでした。`getById` は違います。指定した `id` のプロジェクトは存在しないこともあるため`NOT_FOUND` チェックが必要です。
+
+続けて権限チェックと戻り値です。`ctx.session`（サーバーが持つログイン情報）にはいまログインしているユーザーの `userId` が入っています。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      assertMemberPermission(
+        project.members.filter((m) => m.userId === ctx.session.userId),
+        'canView',
+      );
+
+      return project;
+    }),
+});
+```
+
+`getAll` では `where` で「自分がメンバーのものだけ」を絞り込んでいましたが`getById` は先にプロジェクトを取得してから、取得した `members` の中に自分がいるかを `filter` で確認しています。他人のプロジェクトの `id` を直接指定されてもメンバーでなければ `canView` の権限チェックで弾かれます。最後の `});` で再び `projectRouter` 全体を閉じます。
 
 #### 今日書いた3つの権限チェックの使い分け
 
@@ -335,14 +406,14 @@ Step 0 では権限まわりの書き方が3パターン出てきました。表
 
 | 操作 | 権限チェックの書き方 | 選んだ理由 |
 |------|---------------------|-----------|
-| `update` | `assertMemberPermission(..., 'canManageMembers')` | 複数の権限で共通して使う、標準の書き方 |
-| `delete` | `role !== PROJECT_MEMBER_ROLE.OWNER` を直接比較 | 他の権限と間違って混ざると困る、特に重い操作だけの例外 |
-| `archive` / `unarchive` | `setArchiveStatus` にまとめて`assertMemberPermission(..., 'canArchive')`を1か所に | まったく同じ処理を2つの手続きが呼ぶので、関数化して重複を消す |
+| `update` | `assertMemberPermission(..., 'canManageMembers')` | 権限名を指定して共通の判定関数を使う |
+| `delete` | `role !== PROJECT_MEMBER_ROLE.OWNER` を直接比較 | ADMIN にも付与された `canDelete` では OWNER 限定の条件を表せないため |
+| `archive` / `unarchive` | `setArchiveStatus` にまとめて`assertMemberPermission(..., 'canArchive')`を1か所に | まったく同じ処理を2つの手続きが呼ぶので関数化して重複を消す |
 
-基本は `assertMemberPermission` を使います。他の権限と混ざると困る重い操作だけ、直接比較にします。まったく同じ処理を2手続き以上が呼ぶなら、関数にまとめます。この判断は Day 12 の `addMember` / `removeMember` でも使います。
+権限名で条件を表せる操作には `assertMemberPermission` を使います。プロジェクト削除は OWNER かどうかを直接比較します。同じ処理を2手続き以上が呼ぶ場合は関数にまとめます。この判断は Day 12 の `addMember` / `removeMember` でも使います。
 
 **確認ポイント**:
-- `projectUpdateSchema` と `update` / `delete` / `setArchiveStatus` / `archive` / `unarchive` を追加した
+- `projectUpdateSchema` と `update` / `delete` / `setArchiveStatus` / `archive` / `unarchive` / `getById` を追加した
 - `delete` の権限チェックが `assertMemberPermission` ではなく `role !== PROJECT_MEMBER_ROLE.OWNER` の直接比較になっている
 - `npm run dev` で型エラーが出ていない
 
@@ -350,12 +421,12 @@ Step 0 では権限まわりの書き方が3パターン出てきました。表
 
 ### Step 1: インポートと編集ボタンのハンドラーを作る（7分）
 
-**ゴール**: 必要なインポートを追加し、カードの編集ボタンで既存データを取得します。
+**ゴール**: 必要なインポートを追加してカードの編集ボタンで既存データを取得します。
 
 **実装**:
 
-まず、Day 10 で作成した `ProjectFormData` 型と、削除確認用の `DeleteConfirmDialog` をインポートします。
-すでに `useState` や `Suspense`（準備中に仮表示へ差し替える仕組み）の import がある場合は、
+まずDay 10 で作成した `ProjectFormData` 型と削除確認用の `DeleteConfirmDialog` をインポートします。
+すでに `useState` や `Suspense`（準備中に仮表示へ差し替える仕組み）の import がある場合は
 重複させずに以下の形へ揃えてください。
 
 ```typescript
@@ -383,13 +454,13 @@ import { DeleteConfirmDialog }
   from '@/component/ui/delete-confirm-dialog';
 ```
 
-この2つは Day 10 で作った資産を編集機能に持ち込むための import です。`ProjectFormData` 型を取り込むと、フォームに渡す値の形をコンパイラが検査してくれます。`DeleteConfirmDialog` は削除確認のUIを毎回書かずに済ませるための共通部品です。
+この2つは Day 10 で作った資産を編集機能に持ち込むための import です。`ProjectFormData` 型を取り込むとフォームに渡す値の形をコンパイラが検査してくれます。`DeleteConfirmDialog` は削除確認のUIを毎回書かずに済ませるための共通部品です。
 
 **確認ポイント**:
 - インポート文を追加してエラーが出ていない
 - `ProjectFormData` と `DeleteConfirmDialog` が正しくインポートされた
 
-次に、詳細表示と編集用の state を追加します。
+次に詳細表示と編集用の state を追加します。
 `ProjectPageContent` 関数の先頭にある state 一覧
 （`const [dialogOpen, ...]` の並び）に追加してください。
 
@@ -403,7 +474,7 @@ const [editingProject, setEditingProject] =
   );
 ```
 
-`selectedProject` は詳細表示の対象を、`editingProject` は編集ダイアログに流し込む既存データを覚えておくための state です。値を state に持たせておくと、ボタンを押した瞬間の選択を、後続の送信処理まで持ち運べます。
+`selectedProject` は詳細表示の対象を、`editingProject` は編集ダイアログに流し込む既存データを覚えておくための state です。値を state に持たせておくとボタンを押した瞬間の選択を後続の送信処理まで持ち運べます。
 
 **確認ポイント**:
 - `selectedProject` が `string | null` で定義されている
@@ -429,7 +500,7 @@ useEffect(() => {
 }, [projectIdParam]);
 ```
 
-リロードや戻る操作でずれるのは、URL ではなく手元の `selectedProject` のほうです。URL の `?projectId=...` は常に今の状態を持っています。`useEffect` で URL の値を写しておくと、`selectedProject` が URL に追いつきます。
+ブラウザの戻る操作でURLが変わっても `selectedProject` は自動では変わりません。`useEffect` でURLの `projectId` を読み直して画面の選択状態へ反映します。パラメータが無い場合は選択を解除します。
 
 **確認ポイント**:
 - `router.push(...)` を使う準備ができている
@@ -447,9 +518,9 @@ const { data: currentUser } =
 **確認ポイント**:
 - `currentUser` でログイン中のユーザーを取得できた
 
-`getCurrentUser` はサーバーが持つログイン情報を返します。ここで取った `currentUser` は、あくまで画面の表示やボタンの出し分けに使う値です。なりすましを防ぐのは、ブラウザで動くこの値ではなく、サーバー側の各手続きが参照する `ctx.session.userId` の役割です。Day 12 では、このユーザーがプロジェクト内でどのロールかを調べて、ボタンの表示可否も決めます。
+`getCurrentUser` はサーバーが持つログイン情報を返します。ここで取った `currentUser` は画面の表示やボタンの出し分けに使います。サーバー側の各手続きはセッションから取得した `ctx.session.userId` でログイン本人を識別します。Day 12 ではプロジェクト内のロールを調べてボタンの表示可否も決めます。
 
-次に、Day 09 で置いた受け皿の `handleEdit` を中身のある処理に書き換えます。`const handleEdit = (projectId: string) => {` から、その2行下の `};` までの3行を消してください。消した場所へ次のコードを貼ります。位置は動かしません。Day 09 の Step 5 で `handleEdit` → `handleDelete` → `handleProjectClick` の順に3つ並べたので、`handleEdit` はその先頭のままです。
+次にDay 09 で置いた受け皿の `handleEdit` を中身のある処理に書き換えます。`const handleEdit = (projectId: string) => {` からその2行下の `};` までの3行を消してください。消した場所へ次のコードを貼ります。位置は動かしません。Day 09 の Step 5 で `handleEdit` → `handleDelete` → `handleProjectClick` の順に3つ並べたので `handleEdit` はその先頭のままです。
 
 日付は `dateOnlyFromValue()` で `"2024-12-31"` 形式に変換します。保存済みの ISO 文字列から `<input type="date">` 用の date-only 値を安全に取り出せます。
 
@@ -479,31 +550,31 @@ const handleEdit = (projectId: string) => {
 };
 ```
 
-`handleEdit` はサーバーを呼びません。Day 09 の `getAll` で受け取り済みの `projects` から一致する1件を探し、その値を `editingProject` へ写すだけです。押すたびに通信を挟むと、ダイアログが開くまでの待ち時間が毎回発生します。
+`handleEdit` はサーバーを呼びません。Day 09 の `getAll` で受け取り済みの `projects` から一致する1件を探してその値を `editingProject` へ写すだけです。押すたびに通信を挟むとダイアログが開くまでの待ち時間が毎回発生します。
 
-`description` に `|| ''` を付けるのは、DB 上の `null` をそのまま `<input>` へ渡せないからです。`null` のまま渡すと、最初の描画の時点で「value に null を渡さないでください」という警告が出ます。空文字へ寄せておけば、最初から空欄の入力欄として扱えます。
+`description` に `|| ''` を付けるのは DB 上の `null` をそのまま `<input>` へ渡せないからです。`null` のまま渡すと最初の描画の時点で「value に null を渡さないでください」という警告が出ます。空文字へ寄せておけば最初から空欄の入力欄として扱えます。
 
-日付の変換を飛ばすと、名前と色は埋まっているのに開始日と終了日だけが空のダイアログになります。`2026-05-01T00:00:00.000Z` は `<input type="date">` が読める形ではなく、ブラウザが値を捨てるためです。
+日付の変換を飛ばすと名前と色は埋まっているのに開始日と終了日だけが空のダイアログになります。`2026-05-01T00:00:00.000Z` は `<input type="date">` が読める形式に合わないためブラウザで日付として表示できません。
 
 **確認ポイント**:
-- `handleEdit` が Day 09 の受け皿と同じ場所にあり、`handleDelete` の直上にある
+- `handleEdit` が Day 09 の受け皿と同じ場所にあって `handleDelete` の直上にある
 - `description` に `|| ''` を使って null を空文字に変換している
 - 日付変換のロジックが正しく書けた
 
 #### 条件付きスプレッド構文
 
-`...(startDate && { startDate })` という書き方は、「値が存在する場合のみオブジェクトに追加する」パターンです。`startDate: startDate` とそのまま書かない理由を見ていきます。
+`...(startDate && { startDate })` という書き方は「値が存在する場合のみオブジェクトに追加する」パターンです。`startDate: startDate` とそのまま書かない理由を見ていきます。
 
 | 書き方 | `startDate` が `undefined` の場合 | 結果 |
 |--------|----------------------------------|------|
 | ❌ `{ startDate: startDate }` | `{ startDate: undefined }` | `undefined` がオブジェクトに入る |
 | ✅ `...(startDate && { startDate })` | `{}` | プロパティ自体が存在しない |
 
-`{ startDate: undefined }` と書くと、キーは残ったまま中身が `undefined` になります。Day 01 で生成される `tsconfig.json` は `exactOptionalPropertyTypes` を有効にしていません。そのため `startDate?: string` は3つの形を受け取ります。キーが無い、文字列が入っている、キーはあって中身が `undefined`、の3つです。この書き方でも型エラーは出ません。
+`{ startDate: undefined }` と書くとキーは残ったまま中身が `undefined` になります。Day 01 で生成される `tsconfig.json` は `exactOptionalPropertyTypes` を有効にしていません。そのため `startDate?: string` は3つの形を受け取ります。「キーが無い」「文字列が入っている」「キーはあって中身が `undefined`」の3つです。この書き方でも型エラーは出ません。
 
-それでも条件付きスプレッドにそろえるのは、`editingProject` へ入れる形を「日付が入っているか、項目そのものが無いか」の2つに決めておくためです。型が許す形と、こちらが作ると決めた形は別物です。作る側をそろえておけば、`editingProject` の中に、中身が `undefined` のキーは現れません。
+それでも条件付きスプレッドにそろえるのは `editingProject` へ入れる形を「日付が入っている」「項目そのものが無い」の2つに決めておくためです。型が許す形とこちらが作ると決めた形は別物です。日付が無い場合は項目を作らないと決めておけば `editingProject` に値が `undefined` のキーは入りません。
 
-> **注文書の例え**: 注文書の「お届け日」欄は、日付を書くか、欄そのものを使わないかのどちらかです。「未定」とだけ書かれた欄は、受け取った側がどう扱うか迷います。`editingProject` の日付も同じで、値を入れるか、項目ごと作らないかの2つにそろえます。
+> **注文書の例え**: 注文書の「お届け日」欄は日付を書くか欄そのものを使わないかのどちらかです。「未定」とだけ書かれた欄は受け取った側がどう扱うか迷います。`editingProject` の日付も値を入れるか項目ごと作らないかの2つにそろえます。
 
 ---
 
@@ -513,7 +584,7 @@ const handleEdit = (projectId: string) => {
 
 **実装**:
 
-削除フローでは、2つの state で「どのプロジェクトを削除するか」「確認ダイアログを表示するか」を管理します。`ProjectPageContent` 関数の先頭にある state 一覧（`const [showArchived, ...]` の直下）に追加してください。
+削除フローでは2つの state で「どのプロジェクトを削除するか」「確認ダイアログを表示するか」を管理します。`ProjectPageContent` 関数の先頭にある state 一覧（`const [showArchived, ...]` の直下）に追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -528,7 +599,7 @@ const [deleteTargetId, setDeleteTargetId]
 - `deleteDialogOpen` と `deleteTargetId` の2つの state が追加された
 - `deleteTargetId` の型が `string | null` になっている
 
-次に、削除用の mutation を定義します。Day 10 で書いた `createMutation` の直下に追加してください。`updateMutation` は Step 3 でこの2つの間に足すので、最終的な並びは `createMutation` → `updateMutation` → `deleteMutation` になります。
+次に削除用の mutation を定義します。Day 10 で書いた `createMutation` の直下に追加してください。`updateMutation` は Step 3 でこの2つの間に足すので最終的な並びは `createMutation` → `updateMutation` → `deleteMutation` になります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -544,9 +615,9 @@ const deleteMutation =
 
 **確認ポイント**:
 - `deleteMutation` が `createMutation` の直下に定義できた
-- 成功時に `invalidate()` で一覧を更新し、`router.push` で一覧画面に戻る
+- 成功時に `invalidate()` で一覧を更新して `router.push` で一覧画面に戻る
 
-`handleDelete` は **state を設定するだけ** で、削除の実行は確認ダイアログ内で行います。これも Day 09 で置いた受け皿があるので、`const handleDelete = (projectId: string) => {` から2行下の `};` までの3行を消してから貼ってください。位置は動かしません。`handleDelete` は `handleEdit` の直下、`handleProjectClick` の直上にあります。
+`handleDelete` は state を設定します。実際に削除するのは確認ダイアログの削除ボタンを押したときです。これも Day 09 で置いた受け皿があるので`const handleDelete = (projectId: string) => {` から2行下の `};` までの3行を消してから貼ってください。位置は動かしません。`handleDelete` は `handleEdit` の直下にあります。後ろには `handleProjectClick` が続きます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -561,17 +632,17 @@ const handleDelete = (projectId: string) => {
 - `handleDelete` は `setDeleteTargetId` と `setDeleteDialogOpen` を呼ぶだけ
 - まだ削除は実行されない（確認ダイアログで実行する）
 
-> `handleDelete` では直接削除を実行しません。まず「どのプロジェクトを削除するか」を記録し、確認ダイアログを開きます。実際の削除は Step 5 で配置するダイアログの `onConfirm` で行います。
+> `handleDelete` では直接削除を実行しません。まず「どのプロジェクトを削除するか」を記録して確認ダイアログを開きます。実際の削除は Step 5 で配置するダイアログの `onConfirm` で行います。
 
 ---
 
 ### Step 3: 送信ハンドラーを作る（7分）
 
-**ゴール**: 更新用の mutation を定義し、1つの `handleSubmit` で新規作成と更新を分岐します。
+**ゴール**: 更新用の mutation を定義して1つの `handleSubmit` で新規作成と更新を分岐します。
 
 **実装**:
 
-まず、更新用の mutation を追加します。
+まず更新用の mutation を追加します。
 `createMutation` の直下に `updateMutation` を定義してください。
 
 ```typescript
@@ -581,22 +652,22 @@ const updateMutation =
   api.project.update.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      utils.project.getById.invalidate();
       setDialogOpen(false);
     },
   });
 ```
 
-完成版はここで詳細画面の取り直しも行っていますが、その `getById` はまだ書いていません。
-Day 12 で `getById` を追加したあとに、この `onSuccess` へ1行足します。
+`getById` も取り直しているのは、Step 9 で出す詳細画面がこの手続きの結果で描かれるためです。一覧（`getAll`）だけ取り直すと、詳細画面を開いている最中に名前を変えても古い表示のまま残ります。`invalidate` に引数を渡さないので開いている詳細があるときだけ効き、無駄な再取得は起きません。
 
 **確認ポイント**:
 - `updateMutation` が `createMutation` の直下に定義されている
-- `onSuccess` で `invalidate()` を呼んでいる
+- `onSuccess` で `getAll` と `getById` の `invalidate()` を呼んでいる
 - `npm run dev` で型エラーが出ていない
 
-次に送信ハンドラーを作ります。Day 10 で書いた `handleSubmit` を、`data.id` の有無で更新と新規作成を `if/else` で分岐する形に書き換えます。
+次に送信ハンドラーを作ります。Day 10 で書いた `handleSubmit` を `data.id` の有無で更新と新規作成を `if/else` で分岐する形に書き換えます。
 
-> **配置の注意**: Day 10 の `const handleSubmit = (` から、対応する閉じの `};` までをまるごと消してください。消した跡へ、この後の2つのブロックを続けて貼ります。位置は動かしません。Day 10 で `createMutation` の下に置いた場所が、そのまま `handleSubmit` の位置です。
+> **配置の注意**: Day 10 の `const handleSubmit = (` から対応する閉じの `};` までをまるごと消してください。消した跡へこの後の2つのブロックを続けて貼ります。位置は動かしません。Day 10 で `createMutation` の下に置いた場所がそのまま `handleSubmit` の位置です。
 
 更新の場合（`data.id` がある場合）のコードです。
 
@@ -628,7 +699,7 @@ const handleSubmit = (
 
 **確認ポイント**:
 - `data.id` がある場合に `updateMutation.mutate` を呼んでいる
-- `description` に `|| null` を使って、空欄のときは `null` に変換している
+- `description` に `|| null` を使って空欄のときは `null` に変換している
 
 同じ `handleSubmit` 関数の `else` 分岐です。`data.id` がない場合（新規作成）は Day 10 の `createMutation` を呼びます。
 
@@ -656,11 +727,11 @@ const handleSubmit = (
 };
 ```
 
-`if (!currentUser?.id) return;` は、ログイン情報がまだ届いていない状態で作成を走らせないための足止めです。`getCurrentUser` は通信で取ってくるので、画面を開いた直後の一瞬は `undefined` のことがあります。
+`if (!currentUser?.id) return;` はログイン情報の取得前に送信しないための条件です。`getCurrentUser` は通信で取得するので画面を開いた直後は `undefined` の場合があります。
 
-持ち主の決まらないプロジェクトができる心配はありません。`project.create` はログイン中のユーザーをサーバー側の情報から決めており、画面から送る中身に持ち主は入っていないためです。このガードは、ログイン済みかどうかを画面側で確かめられない間だけ送信を止める保険です。弱点もあります。`getCurrentUser` の取得に失敗すると、ボタンを押しても何も起きない画面になります。実務では、この状態を読者へ知らせる案内を別に用意します。
+`project.create` はサーバー側のセッションから持ち主を決めます。画面から送るデータには持ち主を含めません。この条件は画面側でログイン情報を取得できるまで送信を止めます。取得に失敗するとボタンを押しても送信されません。利用者向けに公開する際は取得失敗の表示も必要です。
 
-日付が空のときに更新は `null` を送り、新規作成は `undefined` を送っています。同じ「空」でもサーバーへの伝わり方が変わるので、次の表で並べて確かめます。
+日付が空のときに更新は `null` を送ります。新規作成は `undefined` を渡します。同じ「空」でもサーバーへの伝わり方が変わるので次の表で確認します。
 
 **確認ポイント**:
 - `data.id` がない場合に `createMutation.mutate` を呼んでいる
@@ -673,7 +744,7 @@ const handleSubmit = (
 | 更新 | `null` を送信 | 「既存の日付を消す」 |
 | 新規作成 | `undefined`（= プロパティを含めない） | 「日付は指定しない」 |
 
-> **注文書の例え**: 注文変更で「お届け日: なし」と書けば、配送日をキャンセルする意味になります。新規注文でお届け日欄を空けたままなら、「指定なし」の意味です。Prisma はこの2つを区別するので、使い分けが必要です。
+> **注文書の例え**: 注文変更で「お届け日: なし」と書けば配送日をキャンセルする意味になります。新規注文でお届け日欄を空けたままなら「指定なし」の意味です。Prisma はこの2つを区別するので使い分けが必要です。
 
 ```mermaid
 flowchart LR
@@ -682,31 +753,31 @@ flowchart LR
     BEFORE -->|"項目そのものを送らない"| AFTER2["dueDate: 2026-09-01<br/>列は変わらない"]
 ```
 
-同じ「空」でも、送り方でデータベースの1行が違う姿になります。左の四角が変更前、右の2つが送ったあとの姿です。日付を消したいのに `undefined` を送ると、右下のように何も起きません。
+日付を消したい場合は `null` を送ります。図の左側は変更前のデータです。右側で更新結果を比較しています。`undefined` を渡して項目が送信されなかった場合は既存の日付が残ります。
 
 #### `??`（Null合体演算子）と `||`（論理OR）の違い
 
-プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。Step 3 の更新ハンドラー（`src/app/project/page.tsx`）で `description || null` を使ったのは、説明欄を空にして保存したときに `null` を送るためです。
+プロジェクト編集では `description ?? null` と `description || null` の違いに注意してください。Step 3 の更新ハンドラー（`src/app/project/page.tsx`）で `description || null` を使ったのは説明欄を空にして保存したときに `null` を送るためです。
 
 | 式 | `description` が `''`（空文字）の場合 | このアプリでの結果 |
 |-----|--------------------------------------|------|
 | `description \|\| null` | `null`（空文字もfalsyとして扱う） | ✅ 説明を消したことが DB に残る |
-| `description ?? null` | `''`（空文字をそのまま返す） | ❌ 空文字が保存され、未入力と区別できない |
+| `description ?? null` | `''`（空文字をそのまま返す） | 空文字が保存されるため今回の「説明なし」を表す `null` とは異なる |
 
-`??` は `null` と `undefined` だけを判定し、`||` は `''`・`0`・`false` もfalsyとして扱います。ここでは空欄を「説明なし」として保存したいので `||` を使います。空文字そのものを意味のある値として残したい場面なら、`??` の方が合います。
+`??` は `null` と `undefined` だけを判定します。`||` は `''`・`0`・`false` もfalsyとして扱います。ここでは空欄を「説明なし」として保存したいので `||` を使います。空文字そのものを意味のある値として残したい場面なら`??` の方が合います。
 
 ---
 
 ### Step 4: ProjectDialog を配置する（5分）
 
-**ゴール**: ProjectDialog をJSXに配置し、新規作成・編集の両モードで動作させます。
+**ゴール**: ProjectDialog をJSXに配置して新規作成・編集の両モードで動作させます。
 
 **実装**:
 
 Day 09 の `handleCreate` はダイアログを開くだけでした。
-編集機能を追加したので、「新規作成」では
+編集機能を追加したので「新規作成」では
 `editingProject` を必ず `undefined` に戻すように更新します。
-`const handleCreate = () => {` から2行下の `};` までの3行を消して、
+`const handleCreate = () => {` から2行下の `};` までの3行を消して
 同じ場所へ次の4行を貼ってください。位置は動かしません。
 
 ```typescript
@@ -734,16 +805,16 @@ const handleCreate = () => {
 />
 ```
 
-`initialData` に `editingProject` を渡しているので、同じ `ProjectDialog` が新規作成と編集の両方で動きます。`editingProject` が `undefined` なら空のフォーム、既存データが入っていれば値の埋まったフォームになります。
+`initialData` に `editingProject` を渡しているので同じ `ProjectDialog` が新規作成と編集の両方で動きます。`editingProject` が `undefined` なら空のフォームになります。既存データが入っていればその値を表示します。
 
 **確認ポイント**:
 - 編集ボタンでダイアログを開くと既存の名前が入っている
 - 新規作成ボタンで空のダイアログが開く
-- 名前を変えて「更新」を押すと、一覧のカードの見出しが変わる
+- 名前を変えて「更新」を押すと一覧のカードの見出しが変わる
 
-Step 3 で書いた分岐は、`initialData` がそろったここで初めて `updateMutation` の側へ入ります。Step 3 の時点では `data.id` が `undefined` のままなので、押しても新規作成の側に落ちていました。
+Step 3 で書いた分岐は `initialData` がそろったここで初めて `updateMutation` の側へ入ります。Step 3 の時点では `data.id` が `undefined` のままなので新規作成の分岐に進みます。
 
-スクリーンショット: 編集後に更新された一覧の表示を確認してください。下の画像は、Day 10 で作ったプロジェクトの名前を「ポートフォリオ（改）」へ変えて「更新」を押したあとの一覧です。変更後の名前は本文で指定していないので、自分で付けた名前がそのまま出ていれば正しい状態です。
+スクリーンショット: 編集後に更新された一覧の表示を確認してください。下の画像はDay 10 で作ったプロジェクトの名前を「ポートフォリオ（改）」へ変えて「更新」を押したあとの一覧です。変更後の名前は本文で指定していないので自分で付けた名前がそのまま出ていれば正しい状態です。
 
 ![プロジェクト一覧。赤枠の中のカードは見出しが「ポートフォリオ（改）」に変わっている。左には初期データの「Webサイトリニューアル」が並ぶ](./screenshots/day11/project-list-after-edit.png)
 
@@ -756,13 +827,13 @@ Step 3 で書いた分岐は、`initialData` がそろったここで初めて `
 | タイトル | 「プロジェクト作成」 | 「プロジェクト編集」 |
 | ボタン文言 | 「作成」 | 「更新」 |
 
-> `handleCreate` で `setEditingProject(undefined)` を呼ぶことで、フォームが空の状態（新規作成モード）になります。`ProjectDialog` は `initialData` の `id` 有無でタイトルとボタン文言を自動で切り替えます。
+> `handleCreate` で `setEditingProject(undefined)` を呼ぶとフォームが空の状態（新規作成モード）になります。`ProjectDialog` は `initialData` の `id` 有無でタイトルとボタン文言を自動で切り替えます。
 
 ---
 
 ### Step 5: DeleteConfirmDialog を配置する（5分）
 
-**ゴール**: shadcn/ui ベースの確認ダイアログを配置し、削除フローを完成させます。
+**ゴール**: shadcn/ui ベースの確認ダイアログを配置して削除フローを完成させます。
 
 **実装**:
 
@@ -786,11 +857,11 @@ Step 3 で書いた分岐は、`initialData` がそろったここで初めて `
 />
 ```
 
-`onConfirm` の中で `deleteTargetId` が入っているかを先に確かめてから `mutate` を呼びます。ダイアログを開いたまま state が空に戻っても、`id` の無いリクエストをサーバーへ送らずに済みます。
+`onConfirm` の中で `deleteTargetId` が入っているかを先に確かめてから `mutate` を呼びます。ダイアログを開いたまま state が空に戻っても`id` の無いリクエストをサーバーへ送らずに済みます。
 
-ゴミ箱ボタンは、カードを見られる人全員の画面に出ます。役割による出し分けはしていません。それでも OWNER 以外がプロジェクトを消せないのは、Step 0 の `delete` が `role !== PROJECT_MEMBER_ROLE.OWNER` をサーバー側で毎回見直すからです。ADMIN のアカウントで押すと `FORBIDDEN` が返り、一覧からプロジェクトは消えません。ボタンを隠す処理は誤操作を減らすための工夫であって、守りの本体はサーバーにあります。
+ゴミ箱ボタンはカードを見られる人全員の画面に出ます。役割による出し分けはしていません。それでも OWNER 以外がプロジェクトを消せないのはStep 0 の `delete` が `role !== PROJECT_MEMBER_ROLE.OWNER` をサーバー側で毎回見直すからです。ADMIN のアカウントで押すと `FORBIDDEN` が返ります。一覧からプロジェクトは消えません。ボタンの表示を制限すると誤操作を減らせます。APIを直接呼び出された場合にも拒否できるよう権限はサーバーで確認します。
 
-削除が通ったときは、そのプロジェクトに属するタスクも一緒に消えます。`prisma/schema.prisma` の `Task` はプロジェクトへ `onDelete: Cascade` でつながっています。だから `prisma.project.delete` を1回呼ぶと、DB がタスク行とメンバー行まで落とします。これから作るタスクは、親のプロジェクトを消した時点で取り戻せません。Step 6 でアーカイブを先に覚えるのは、この取り返しのつかなさを避けるためです。
+プロジェクトを削除すると所属するタスクも削除されます。`prisma/schema.prisma` の `Task` はプロジェクトへ `onDelete: Cascade` でつながっています。そのため `prisma.project.delete` を呼ぶとDBが関連するタスク行とメンバー行も削除します。このアプリには削除したデータを戻す機能がありません。データを残して非表示にしたい場合はStep 6のアーカイブを使います。
 
 **確認ポイント**:
 - 削除ボタンでshadcn/uiスタイルの確認ダイアログが出る
@@ -808,32 +879,31 @@ Step 3 で書いた分岐は、`initialData` がそろったここで初めて `
 | `title?` | `string` | ダイアログのタイトル（省略時は `本当に削除しますか？`） |
 | `description?` | `string` | 補足説明文（省略時:「この操作は取り消せません。」） |
 
-> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違い、アプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending`（mutation実行中フラグ）を渡すことで、削除中にボタンが無効化され「削除中...」と表示されます。
+> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違ってアプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending`（mutation実行中フラグ）を渡すと削除中にボタンが無効化され「削除中...」と表示されます。
 
 スクリーンショット: 削除確認ダイアログの表示を確認してください。
 
-![確認ダイアログ。見出しが「プロジェクトを削除しますか？」、その下に「この操作は取り消せません。」と、キャンセル・削除の2つのボタンが並んでいる](./screenshots/day11/project-delete-confirm.png)
+![確認ダイアログ。見出しは「プロジェクトを削除しますか？」。その下に「この操作は取り消せません。」と表示。キャンセル・削除の2つのボタンが並んでいる](./screenshots/day11/project-delete-confirm.png)
 
 ---
 
 ### Step 6: 削除 vs アーカイブの違いを理解する（5分）
 
-**ゴール**: 完全削除ではなく「アーカイブ」する方法を理解し、実務での使い分けを学びます。
+**ゴール**: データを残して一覧から非表示にする「アーカイブ」と削除の使い分けを学びます。
 
-`archive` / `unarchive` の中身は Step 0 で書きました。ここではコードを追加せず、その2つが実務でなぜ必要かを整理します。
+`archive` / `unarchive` の中身は Step 0 で書きました。ここではコードを追加せずにアーカイブと解除を使う場面を確認します。
 
 #### なぜアーカイブが必要か
 
-実務のWebアプリでは、ユーザーが「削除」を選んでも内部的にはデータを残す設計が一般的です。その理由を表にまとめます。
+終了したプロジェクトを普段の一覧から隠しておきたい場合はアーカイブを使います。このアプリでは削除とアーカイブを次のように区別しています。
 
 | 観点 | 完全削除 | アーカイブ |
 |------|---------|-----------|
 | データの状態 | DBから消える | DBに残る（`isArchived = true`） |
-| 復元可能性 | 不可能 | 可能（`isArchived = false` に戻す） |
+| アプリからの復元 | 復元機能なし | `isArchived = false` に戻す |
 | 用途 | 本当に不要なデータ | 終了したプロジェクト |
-| 実務での頻度 | まれ | よく使う |
 
-> 実務では「削除」より「アーカイブ」が好まれます。間違えて消してもデータは残っているからです。GitHubのリポジトリにも「Archive」機能があります。
+> 後からタスクの記録を見返したいプロジェクトはアーカイブしてください。このアプリの「削除」はデータを消す操作です。アーカイブと同じ意味ではありません。
 
 ### アーカイブの処理フロー
 
@@ -853,10 +923,10 @@ flowchart TD
     style G fill:#e3f2fd
 ```
 
-バックエンドでは `setArchiveStatus` ヘルパー関数でアーカイブを処理しています。権限チェック（`canArchive`）も含まれています。Step 0 で書いた `setArchiveStatus` を見比べながら、`archive` と `unarchive` がなぜ同じ関数を呼んでいるかを振り返ってください。
+バックエンドでは `setArchiveStatus` ヘルパー関数でアーカイブを処理しています。権限チェック（`canArchive`）も含まれています。Step 0 で書いた `setArchiveStatus` を見比べながら`archive` と `unarchive` がなぜ同じ関数を呼んでいるかを振り返ってください。
 
 **確認ポイント**:
-- Step 0 で書いた `setArchiveStatus` を見て、アーカイブが `isArchived` フラグで管理されていることを確認した
+- Step 0 で書いた `setArchiveStatus` を見てアーカイブが `isArchived` フラグで管理されていることを確認した
 - 権限チェック（`canArchive`）が含まれていることを確認した
 - `archive` と `unarchive` の2つのルーターがこの関数を呼んでいる
 
@@ -868,7 +938,7 @@ flowchart TD
 
 **実装**:
 
-`deleteMutation` の直下にアーカイブ用の mutation を2つ追加してください。実際のコードでは `deleteMutation` → `addMemberMutation` の間にいくつか mutation がありますが、`deleteMutation` の直後に配置します。
+`deleteMutation` の直下にアーカイブ用の mutation を2つ追加してください。`archiveMutation` と `unarchiveMutation` の順に配置します。メンバー用の mutation は Day 12 で追加します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -882,7 +952,7 @@ const archiveMutation =
   });
 ```
 
-`onSuccess` で `invalidate()` を呼ぶと、アーカイブ後に一覧のキャッシュが捨てられ、最新の状態が取り直されます。`router.push('/project')` で詳細画面から一覧へ戻せば、アーカイブしたプロジェクトが画面から消えます。
+`onSuccess` で `invalidate()` を呼ぶと一覧のキャッシュが無効になって最新の状態を取得します。`router.push('/project')` で詳細画面から一覧へ戻ります。アーカイブ表示がOFFならそのプロジェクトは一覧に表示されません。
 
 **確認ポイント**:
 - `archiveMutation` が定義できた
@@ -900,7 +970,7 @@ const unarchiveMutation =
   });
 ```
 
-解除も成功後の流れは同じで、`invalidate()` で一覧を取り直します。呼ぶAPIはアーカイブと違いますが、画面を最新化する手順をそろえておくと、どちらを押しても同じ挙動になって迷いません。
+解除も成功後に `invalidate()` で一覧を取り直します。アーカイブとは呼び出すAPIが異なります。成功時にはどちらも一覧を更新して詳細画面から戻ります。
 
 **確認ポイント**:
 - `unarchiveMutation` が定義できた
@@ -914,7 +984,7 @@ const unarchiveMutation =
 
 **実装**:
 
-`handleArchive` は、Step 3 で書き換えた `handleSubmit` の閉じ `};` の直下に追加してください。
+`handleArchive` は Step 3 で書き換えた `handleSubmit` の閉じ `};` の直下に追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -941,38 +1011,56 @@ const handleArchive = (
 
 ### Step 9: ProjectDetailView にアーカイブを渡す（4分）
 
-**ゴール**: `ProjectDetailView` に `onArchive` props を渡して、アーカイブ機能を有効にします。Day 12 で追加するメンバー管理の土台も、この Step でプレースホルダーとして用意します。
+**ゴール**: `ProjectDetailView` に詳細データと `onArchive` props を渡して詳細画面とアーカイブ機能を有効にします。Day 12 で追加するメンバー管理の props は、ボタンを出さない設定のまま空の関数で埋めます。
 
 **実装**:
 
-まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1・3・6 で本実装に置き換えます**。`ProjectDetailView` に渡す値の置き場所を先に作っておくための一時定義です。なお、この仮定義を置いても Day 11 は型エラーが残ったまま終わります。理由はこの Step の後半で説明します。
-
-> **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleDetailClose` を、Step 3 で `memberDialogOpen` state を、Step 6 で `handleRemoveMember` を本実装したときに、それぞれこの仮定義を削除してください。`handleProjectClick` は Day 09 で置いた受け皿がそのまま残っているので、Day 12 の Step 1 ではその受け皿を書き換えます。
+まず詳細画面で使う2つを本実装します。`handleArchive` の下に `handleDetailClose` を、既存の `useQuery` 群の末尾に `projectDetail` のクエリを追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ── Day 12 で本実装する仮定義（Day 12 完了後に削除） ──
-const projectDetail = undefined; // Day 12 Step 1 で useQuery に置き換え
+// handleArchiveの下に追加
 const handleDetailClose = () => {
-  router.push('/project'); // Day 12 Step 1 で本実装に置き換え
+  router.push('/project');
 };
-const [memberDialogOpen, setMemberDialogOpen] =
-  useState(false); // Day 12 Step 3 で本実装に置き換え
-const handleRemoveMember = (_userId: string) => {
-  // Day 12 Step 6 で本実装に置き換え
-};
-// ── ここまで Day 12 仮定義 ──
 ```
 
-ここで仮の定義を置くのは、`ProjectDetailView` が要求する Props を今日の時点でそろえるためです。この部品は Day 12 の機能まで含んだ形で配布されているので、渡す値が足りないと型エラーになり、`npm run dev` が通りません。今日の学習内容は編集と削除なので、詳細表示に必要な値は箱だけ用意して先へ進みます。
+詳細画面の「戻る」は一覧のURLへ戻すだけです。`?projectId=xxx` が付いたURLを `/project` へ書き換えます。
 
-`const projectDetail = undefined;` のように中身を空にしてあるのは、動くように見せないためです。中途半端に動く仮実装を置くと、Day 12 で本実装に差し替えるのを忘れても気付けません。
+```typescript
+// filepath: src/app/project/page.tsx
+// 既存のuseQuery群の末尾に追加
+const { data: projectDetail } =
+  api.project.getById.useQuery(
+    { id: selectedProject ?? '' },
+    { enabled: !!selectedProject },
+  );
+```
+
+`enabled: !!selectedProject` は「`selectedProject` がある場合だけAPIを呼ぶ」という設定です。未選択時に不要なリクエストを防ぎます。`id` には `selectedProject ?? ''` を渡していますが `enabled` が `false` の間は実行されないため、空文字で呼ばれることはありません。
 
 **確認ポイント**:
-- 仮定義を4つとも書いた
-- これらは仮定義なので、Day 12 で削除することを覚えておく
+- `handleDetailClose` は `/project` に戻る（URLパラメータなし）
+- `useQuery` に `enabled` オプションを設定した
+- 未選択時はAPIを呼ばない設定になっている
 
-次に、`ProjectDetailView` コンポーネントのインポートを追加します。
+カードを押して詳細画面へ進む入口も今日のうちに本実装します。Day 09 で置いた受け皿 `const handleProjectClick = (id: string) => { void id; };` をまるごと消して、同じ場所に次を書いてください。
+
+```typescript
+// filepath: src/app/project/page.tsx
+// Day 09 の受け皿を消してから同じ場所に書く
+const handleProjectClick = (
+  projectId: string
+) => {
+  router.push(
+    `/project?projectId=${projectId}`
+  );
+};
+```
+
+受け皿は `void id` で引数を捨てるだけでした。本実装はカードの `id` をURLパラメータへ乗せて遷移します。カード側の `onClick={handleProjectClick}` は Day 10 で接続済みなので、中身を本実装に変えるだけで一覧から詳細へ進めるようになります。
+
+次に`ProjectDetailView` コンポーネントのインポートを追加します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -981,27 +1069,13 @@ import { ProjectDetailView } from
   '@/component/project/project-detail-view';
 ```
 
-この部品の型は `project.getById` の戻り値を参照しています。その手続きを書くのは Day 12 なので、
-この時点ではエディタに `getById` が無いという型エラーが出ます。写し間違いではありません。
-
-**ここで出るエラーは1件にとどまりません。** 実際に数えると5件出ます。
-直接の原因は `getById` が無いことの1件だけです。残りの4件は、そこから連鎖して起きます。
-`getById` の戻り値が決まらないと `projectDetail` の型も決まらず、
-`project-detail-view.tsx` の中でその値を受けている箇所の型が芋づる式に決まらなくなるからです。
-5件とも Day 12 Step 0 で `getById` を足した時点でまとめて消えます。
-
-もう1つ、今日のうちに知っておいてほしいことがあります。
-**Day 11 を終えた時点で `npm run build` は通りません。** `npm run dev` は型を検査しないので
-画面は動きますが、`build` は型を見るのでここで止まります。Day 04 で「公開する前に必ず
-`npm run build`」と決めたので、今日ここで試すと失敗します。今日は失敗して正常です。
-`build` が通る状態に戻るのは Day 12 です。
+この部品の型は `project.getById` の戻り値を参照しています。`getById` は Step 0 で追加済みなので型は解決します。`npm run dev` でも `npm run build` でも型エラーは出ません。エラーが出る場合は Step 0 の `getById` がルーターの内側に入っているか（最後の `});` の1行上に貼ったか）を確認してください。
 
 **確認ポイント**:
 - `@/component/project/project-detail-view` からインポートしている
-- 型エラーが5件出ても、そのまま次へ進む
-- `npm run build` が今日は落ちることを知っている
+- 型エラーが出ていない
 
-プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`ProjectPageContent` 関数の return 直前（`if` 分岐の形）に以下を追加してください。
+プロジェクト詳細はダイアログではなく URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`ProjectPageContent` 関数の return 直前（`if` 分岐の形）に以下を追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -1012,10 +1086,8 @@ if (projectIdParam && selectedProject) {
       <ProjectDetailView
         projectDetail={projectDetail}
         onBack={handleDetailClose}
-        onAddMemberClick={
-          () => setMemberDialogOpen(true)
-        }
-        onRemoveMember={handleRemoveMember}
+        onAddMemberClick={() => {}}
+        onRemoveMember={() => {}}
         onUpdateMemberRole={() => {}}
         onArchive={handleArchive}
         canManageMembers={false}
@@ -1026,30 +1098,16 @@ if (projectIdParam && selectedProject) {
 }
 ```
 
-`ProjectDetailView` が求める props は8つで、どれも省略できません。今日の主役は
-`onArchive` です。ただし、ほかの props も値を渡さないと型が合いません。
-その状態では `npm run dev` が止まります。そこで今日の時点では、次のように仮の値を置いています。
+`ProjectDetailView` が求める props は8つでどれも省略できません。今日の主役は `onArchive` と `projectDetail` です。メンバー管理に関する3つのコールバックは Day 12 の機能なので、今日は何もしない関数 `() => {}` を渡しています。`canManageMembers={false}` で追加・削除ボタン自体が出ないため、これらの関数が呼ばれることもありません。引数を書かない関数を渡せるのは、受け取る側が求める形より引数の少ない関数なら TypeScript が受け付けるからです。おかげで `ProjectMemberRole` 型を今日わざわざ読み込まずに済みます。
 
-`onUpdateMemberRole={() => {}}` は、何も引数を受け取らず何もしない関数です。ロールを
-変える処理を書くのは Day 12 なので、今日は「呼ばれても何も起きない」形にしておきます。
-引数を書かない関数を渡せるのは、受け取る側が求める形より引数の少ない関数なら
-TypeScript が受け付けるからです。おかげで `ProjectMemberRole` 型を今日わざわざ
-読み込まずに済みます。
+`canArchive={true}` は今日作ったアーカイブボタンを出すためです。本来はログイン中の人のロールから計算する値でその計算は Day 12 で書きます。今日ログインしているのは初期データのプロジェクトの OWNER なので計算しても結果は `true` になります。だから今日は答えを直接書いておき、Day 12 で計算に置き換えます。
 
-`canManageMembers={false}` は、メンバーの追加・削除ボタンを今日は出さないという意味です。
-その機能を作るのは Day 12 なので、押せるボタンだけ先に見せても行き止まりになります。
+条件が `projectIdParam && selectedProject` の2つになっているのはURL の値が `selectedProject` に写るまでに描画が1回はさまるからです。`/project?projectId=...` を直接開いた1回目では `useEffect` がまだ走っておらず、`selectedProject` は `null` のままです。`projectIdParam` だけで判定するとこの1回だけ中身の無い詳細画面が出ます。存在しない id を指定されたときは Step 0 の `getById` が `NOT_FOUND` を返すので `projectDetail` が `undefined` のままになり、`ProjectDetailView` 側の「プロジェクトが見つかりません。」表示に切り替わります。
 
-`canArchive={true}` は、今日作ったアーカイブボタンを出すためです。本来はログイン中の人の
-ロールから計算する値で、その計算は Day 12 で書きます。今日ログインしているのは初期データの
-プロジェクトの OWNER なので、計算しても結果は `true` になります。だから今日は答えを
-直接書いておき、Day 12 で計算に置き換えます。
-
-条件が `projectIdParam && selectedProject` の2つになっているのは、URL の値が `selectedProject` に写るまでに描画が1回はさまるからです。`/project?projectId=...` を直接開いた1回目では `useEffect` がまだ走っておらず、`selectedProject` は `null` のままです。`projectIdParam` だけで判定すると、この1回だけ中身の無い詳細画面が出ます。なお、この2つの条件は id のプロジェクトが実在するかまでは見ていません。存在しない id を開いたときの扱いは、Day 12 で `getById` が `NOT_FOUND` を返す形で決めます。
-
-この分岐を一覧の `return` 文の直前に置くのは、詳細を表示するときは一覧を描かないためです。あとに置くと、一覧を組み立ててから捨てることになります。
+この分岐を一覧の `return` 文の直前に置くのは詳細を表示するときは一覧を描かないためです。あとに置くと一覧を組み立ててから捨てることになります。
 
 **確認ポイント**:
-- `onArchive={handleArchive}` が渡されている
+- `projectDetail={projectDetail}` と `onArchive={handleArchive}` が渡されている
 - `ProjectDetailView` はダイアログではなくページ内にインライン表示される
 - `onBack` で一覧画面に戻る
 
@@ -1057,10 +1115,10 @@ TypeScript が受け付けるからです。おかげで `ProjectMemberRole` 型
 
 | prop | 由来 | Day 11 時点 | Day 12 で本実装 |
 |------|------|-------------|----------------|
-| `projectDetail` | `api.project.getById.useQuery` | `undefined`（仮） | Step 1 で `useQuery` に置換 |
-| `onBack` | `handleDetailClose` | `/project` に戻るだけ（仮） | Step 1 で本実装に置換 |
-| `onAddMemberClick` | `setMemberDialogOpen(true)` | state は仮定義済み | Step 3 で本実装に置換 |
-| `onRemoveMember` | `handleRemoveMember` | 何もしない（仮） | Step 6 で本実装に置換 |
+| `projectDetail` | `api.project.getById.useQuery` | ✅ 今日完成 | 変更なし |
+| `onBack` | `handleDetailClose` | ✅ 今日完成 | 変更なし |
+| `onAddMemberClick` | その場に書いた空の関数 | 何もしない（仮） | Step 3 で `setMemberDialogOpen(true)` に置換 |
+| `onRemoveMember` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleRemoveMember` に置換 |
 | `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleUpdateMemberRole` に置換 |
 | `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
 | `canManageMembers` | `false` を直接指定（仮） | ボタンを出さない | Step 2 で `hasPermission` の計算に置換 |
@@ -1078,7 +1136,7 @@ TypeScript が受け付けるからです。おかげで `ProjectMemberRole` 型
 PORT=3001 npm run dev
 ```
 
-`PORT=3001` を付けるのは、3000 番を別の作業で開いたままでも確認を始められるようにするためです。ここから先の3つのフローは、すべてこの起動中のサーバーを通ります。押したボタンが通るか弾かれるかを決めるのはブラウザではなく、Step 0 で書いた権限チェックです。
+`PORT=3001` を付けるのは3000 番を別の作業で開いたままでも確認を始められるようにするためです。ここから先の3つのフローはすべてこの起動中のサーバーを通ります。押したボタンが通るか弾かれるかを決めるのはブラウザではなく Step 0 で書いた権限チェックです。
 
 **確認ポイント**:
 - 開発サーバーが起動した
@@ -1095,39 +1153,38 @@ PORT=3001 npm run dev
 
 > スクリーンショット: 編集ダイアログに既存のプロジェクト名が表示されている画面
 >
-> ![プロジェクト編集ダイアログ。赤枠の中のボタンが、作成モードの「作成」ではなく「更新」になっている](./screenshots/day11/project-edit-dialog-update.png)
+> ![プロジェクト編集ダイアログ。赤枠の中のボタンが作成モードの「作成」ではなく「更新」になっている](./screenshots/day11/project-edit-dialog-update.png)
 
-#### アーカイブの確認は Day 12 で行います
+#### アーカイブフローの確認
 
-`handleArchive` を今日で書き終えましたが、**押すボタンはまだ画面に出ません**。
-アーカイブボタンは `ProjectDetailView` の中にあります。この部品は `projectDetail` が
-`undefined` のあいだ「プロジェクトが見つかりません。」だけを返します。
-上の表のとおり、今日の `projectDetail` は仮の `undefined` です。Day 12 の Step 1 で
-`useQuery` に置き換わります。詳細画面が出るのはそこからです。
+詳細画面は今日から本物のデータで開きます。一覧でプロジェクトカードをクリックすると
+`?projectId=xxx` のURLへ移り、メンバーとタスクを含む詳細が表示されます。
 
-そのため、アーカイブと解除の動きは Day 12 の動作確認でまとめて確かめます。
-今日はロジックが書けていれば十分です。押しても何も起きないのではなく、
-押す場所そのものがまだ出ていない、という状態です。
+1. プロジェクト一覧で「Webサイトリニューアル」のカードをクリック
+2. メンバーとタスクを含む詳細画面が表示されることを確認
+3. 右上のアーカイブボタンをクリック
+4. 一覧画面へ戻り、そのプロジェクトが一覧から消えていることを確認
+5. 一覧右上の「アーカイブ表示」スイッチをONにすると、アーカイブしたプロジェクトが再び表示されることを確認
 
-一覧の右上にある「アーカイブ表示」スイッチは Day 09 で作ってあるので、今日も押せます。
-ただしアーカイブしたプロジェクトが1つも無いので、ONにすると一覧は空になります。
-これで正常です。
+アーカイブ済みのプロジェクトをもう一度開いて「アーカイブ解除」ボタンを押すと元に戻ります。
+試したあとは解除しておいてください。アーカイブしたままだと Day 13 以降で使うプロジェクトが
+一覧に出なくなります。
 
 #### 削除フローの確認
 
-消すのは、Day 10 で自分が作った練習用のプロジェクトです。
+消すのはDay 10 で自分が作った練習用のプロジェクトです。
 初期データの「Webサイトリニューアル」は Day 13 以降でも使います。
-このプロジェクトを消すと、中のタスクとコメントも一緒に消えて元に戻せません。
+このプロジェクトを消すと中のタスクとコメントも一緒に消えて元に戻せません。
 
 1. Day 10 で自分が作ったプロジェクトの削除ボタン（ゴミ箱アイコン）をクリック
 2. shadcn/ui スタイルの確認ダイアログが表示されることを確認
 3. 「キャンセル」をクリック → 何も削除されない
 4. 再度削除ボタンをクリック → 「削除」をクリック
-5. 一覧からプロジェクトが消えて、「Webサイトリニューアル」の1件だけになることを確認
+5. 一覧からプロジェクトが消えて「Webサイトリニューアル」の1件だけになることを確認
 
 > スクリーンショット: 削除確認ダイアログが表示されている画面
 >
-> ![削除確認ダイアログ。赤枠の中が、押すと取り消せない「削除」ボタン](./screenshots/day11/project-delete-confirm-action.png)
+> ![削除確認ダイアログ。赤枠の中が押すと取り消せない「削除」ボタン](./screenshots/day11/project-delete-confirm-action.png)
 
 **確認ポイント**:
 - 編集で既存データが反映される
@@ -1135,14 +1192,25 @@ PORT=3001 npm run dev
 - 削除前にshadcn/uiの確認ダイアログが表示される
 - 削除後の一覧が「Webサイトリニューアル」の1件だけになる
 
+最後に型の状態を確認します。Day 04 で「公開する前に必ず `npm run build`」と決めました。
+今日のコードはそのまま公開できる状態まで来ているはずなので、開発サーバーとは別のターミナルで実行してください。
+
+```bash
+# filepath: ターミナル
+# 型エラーが無いことをビルドで確認
+npm run build
+```
+
+`npm run dev` は型を検査しないので動いていても型エラーが残っていることがあります。
+`build` は型を検査するのでここで初めて分かるエラーがあります。今日の終わりに
+`✓ Compiled successfully` と出れば、型エラーが0件の状態で明日へ進めます。
+エラーが出たときは「つまずきポイント」に対応表があります。
+
 ### Day 11 終了時点の完成コード
 
-Day 11 終了時点の `src/app/project/page.tsx` は、編集・削除・アーカイブの各ハンドラーと、
-Step 9 で置いた仮定義がそろっていれば正解です。完成版の `src/app/project/page.tsx` は
-Day 12 と Day 27 まで書き足したあとの姿なので、いまの時点で揃えてはいけません。
-先に写すと Step 9 の仮定義が消え、翌日の「仮定義を削除してから書く」手順が通らなくなります。
+Day 11 終了時点の `src/app/project/page.tsx` は編集・削除・アーカイブ・詳細表示の各ハンドラーがそろっていれば正解です。完成版の `src/app/project/page.tsx` は Day 12 と Day 27 まで書き足したあとの姿なのでいまの時点で揃えてはいけません。メンバー管理に関わる state・ハンドラー・ダイアログは Day 12 で追加します。
 
-`src/server/api/routers/project.ts` は、Day 11 終了時点で `getAll` / `create` / `update` / `delete` / `archive` / `unarchive` が揃った状態です。`getById` / `addMember` / `removeMember` は Day 12 で追加するので、まだ存在しません。
+`src/server/api/routers/project.ts` は Day 11 終了時点で `getAll` / `create` / `update` / `delete` / `archive` / `unarchive` / `getById` が揃った状態です。`getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` は Day 12 で追加するのでまだ存在しません。
 
 
 ---
@@ -1150,7 +1218,7 @@ Day 12 と Day 27 まで書き足したあとの姿なので、いまの時点�
 ### Pro パターンで書こう（編集フォームの optional な値は `?.` と `??` で整える）
 
 `?.` と `??` を使うと null チェックと代替値の指定が1行に収まり、変換の意図が読みやすくなります。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ直前の1文の書き方をするのかは **Before/After** で見比べると分かります。
 
 ### Before（改善前のコード）
 
@@ -1183,7 +1251,7 @@ function toDateInputValue(value: Date): string {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-ここまでは型の宣言だけで、後に出てくる After 版とまったく同じ内容です。目を留めてほしいのは、`ProjectFromApi` 側の `string | null` と `ProjectEditFormData` 側の `string` のずれです。API から届く「無いかもしれない値」を、フォームが扱える「必ずある値」へ寄せる作業が、この後の関数本体で始まります。
+ここまでは型の宣言だけで後に出てくる After 版とまったく同じ内容です。目を留めてほしいのは`ProjectFromApi` 側の `string | null` と `ProjectEditFormData` 側の `string` のずれです。API から届く「無いかもしれない値」をフォームが扱える「必ずある値」へ寄せる作業がこの後の関数本体で始まります。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -1215,7 +1283,7 @@ export function buildProjectEditForm(
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`description` と `color` で、`let` に初期値を置いてから `if` で上書きする形が2回続いています。扱う項目が増えるたびにこの塊も増えるので、フォームへ何が渡るのかは関数を最後まで読まないと分かりません。
+`description` と `color` で `let` に初期値を置いてから `if` で上書きする形が2回続いています。扱う項目が増えるたびにこの塊も増えるのでフォームへ何が渡るのかは関数を最後まで読まないと分かりません。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -1247,7 +1315,7 @@ export function buildProjectEditForm(
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`startDate` と `endDate` でも判定が2回続き、返す値は `formData` へ少しずつ足してから最後にまとめて返す形です。空欄だったときの初期値がどこで決まったのかを確かめるには、関数の先頭まで読み戻ることになります。
+`startDate` と `endDate` でも判定が2回続きます。返す値は `formData` へ少しずつ足してから最後にまとめて返します。空欄だったときの初期値がどこで決まったのかを確かめるには関数の先頭まで読み戻ることになります。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -1266,9 +1334,9 @@ console.log(
 
 **このコードの問題点**:
 
-- `null` と `undefined` の確認が何度も出てきて、編集フォームに必要な値が見えづらい
+- `null` と `undefined` の確認が何度も出てきて編集フォームに必要な値が見えづらい
 - optional な項目が増えるほど `let` と `if` が増え、変換処理の見通しが悪くなる
-- `owner.name` のようなネストした値を読むたびに、同じ形の null チェックが増えやすい
+- `owner.name` のようなネストした値を読むたびに同じ形の null チェックが増えやすい
 
 ### After（プロが書くコード）
 
@@ -1301,7 +1369,7 @@ function toDateInputValue(value: Date): string {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-型の宣言は Before から1文字も変えていません。書き換えるのは型ではなく、値を詰め替える手続きの側です。入り口と出口をそろえてあるので、途中の書き方だけを読み比べられます。
+型の宣言は Before から1文字も変えていません。書き換えるのは型ではなく値を詰め替える手続きの側です。入り口と出口をそろえてあるので途中の書き方だけを読み比べられます。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -1333,7 +1401,7 @@ export function buildProjectEditForm(
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-日付を条件付きスプレッドで足すのは、Step 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので、`startDate?` は「未設定」のまま残ります。
+日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -1356,18 +1424,18 @@ console.log(
 
 **このコードの強み**:
 
-- `??` で空欄時の初期値をその場で書けるので、フォームに渡す値が読みやすい
-- `project.owner?.name ?? project.owner?.email` のように、ネストした値も安全に辿れる
-- optional な日付が増えても、変換した値を条件付きスプレッドで自然に足せる
+- `??` で空欄時の初期値をその場で書けるのでフォームに渡す値が読みやすい
+- `project.owner?.name ?? project.owner?.email` のようにネストした値も安全に辿れる
+- optional な日付が増えても変換した値を条件付きスプレッドで自然に足せる
 
 #### 覚えておきたいエッセンス
 
 編集画面では「値がないかもしれない」が何度も出てきます。
-多段の null チェックで守るより、**`?.` で辿って `??` で決める** と読みやすいコードになります。
+多段の null チェックで守るより **`?.` で辿って `??` で決める** と読みやすいコードになります。
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。どちらも Day 09 と Day 10 で書き始めたファイルなので、前の日に書いた部分もあわせて載せています。`delete-confirm-dialog.tsx` は配布済みで中身に手を入れていないため、ここには載せていません。
+今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを出てくる順につなげたものが全文です。どちらも Day 09 と Day 10 で書き始めたファイルなので前の日に書いた部分もあわせて載せています。`delete-confirm-dialog.tsx` は配布済みで中身に手を入れていないためここには載せていません。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1392,7 +1460,7 @@ import { assertMemberPermission } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 ```
 
-今日足したのは最後から2行目の `assertMemberPermission` だけです。権限の判定をこのファイルへ書かず外から取り込んでいるのは、同じ判定を `update` と `setArchiveStatus` の2か所から呼ぶからです。判定の中身を直したいときに、直す場所が1つで済みます。
+今日足したのは最後から2行目の `assertMemberPermission` だけです。権限の判定をこのファイルへ書かず外から取り込んでいるのは同じ判定を `update` と `setArchiveStatus` の2か所から呼ぶからです。判定の中身を直したいときに直す場所が1つで済みます。
 
 **作成用スキーマ**:
 
@@ -1411,7 +1479,7 @@ const projectCreateSchema = z.object({
 });
 ```
 
-これは Day 10 で書いたスキーマで、今日は手を入れていません。載せてあるのは、次の更新用スキーマと並べて読むためです。作成では `name` に `.min(1, ...)` が付いていて、名前の無いプロジェクトを作れません。
+これは Day 10 で書いたスキーマで今日は手を入れていません。載せてあるのは次の更新用スキーマと並べて読むためです。作成では `name` に `.min(1, ...)` が付いていて名前の無いプロジェクトを作れません。
 
 **更新用スキーマ**:
 
@@ -1432,7 +1500,7 @@ const projectUpdateSchema = z.object({
 });
 ```
 
-`description` と日付の2つに `.nullable()` を足してあるのは、「値を消す」という指示を受け取るためです。`.optional()` だけでは、項目を送らないという選び方しかできません。項目そのものを送らないと、Prisma は「この項目には何もしない」と読みます。すでに入っている説明文を空へ戻したいときに、`null` を送れる形が必要です。
+`description` と日付の2つに `.nullable()` を足してあるのは「値を消す」という指示を受け取るためです。`.optional()` だけでは項目を送らないという選び方しかできません。項目そのものを送らないと Prisma は「この項目には何もしない」と読みます。すでに入っている説明文を空へ戻したいときに`null` を送れる形が必要です。
 
 **アーカイブ切り替えの共通関数**:
 
@@ -1455,7 +1523,7 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 };
 ```
 
-`assertMemberPermission` は配列を受け取る形なので、1件だけ引いた `userMember` を `[userMember]` に包んで渡します。見つからなかったときは空の配列を渡します。空の配列は「このプロジェクトのメンバーではない」を表すので、権限の判定はそこで断ります。ルーターの外へ出してあるのは、`archive` と `unarchive` の両方から呼ぶためです。
+`assertMemberPermission` は配列を受け取る形なので1件だけ引いた `userMember` を `[userMember]` に包んで渡します。見つからなかったときは空の配列を渡します。空の配列は「このプロジェクトのメンバーではない」を表すので権限の判定はそこで断ります。ルーターの外へ出してあるのは`archive` と `unarchive` の両方から呼ぶためです。
 
 **getAll の入口と権限チェック**:
 
@@ -1485,7 +1553,7 @@ export const projectRouter = createTRPCRouter({
       }
 ```
 
-Day 09 で書いた部分で、今日は変更していません。今日の `update` や `delete` と読み比べると、守り方の違いが見えます。`getAll` は誰の一覧かを `ctx.session` と突き合わせるだけですが、更新と削除は先にプロジェクトを1件引いて、その中の自分のメンバー情報を見ます。読むだけの手続きと、書き換える手続きで確かめる材料が違うためです。
+Day 09 で書いた部分で今日は変更していません。今日の `update` や `delete` と読み比べれば守り方の違いが見えます。`getAll` は誰の一覧かを `ctx.session` と突き合わせるだけですが更新と削除は先にプロジェクトを1件引いてその中の自分のメンバー情報を見ます。読むだけの手続きと書き換える手続きで確かめる材料が違うためです。
 
 **getAll の検索条件**:
 
@@ -1507,7 +1575,7 @@ Day 09 で書いた部分で、今日は変更していません。今日の `up
       }
 ```
 
-今日のアーカイブ機能が効くのは、この最後の3行があるからです。`archive` が `isArchived` を `true` に書き換えると、スイッチを切っている画面の `where.isArchived` は `false` なので、そのプロジェクトは一覧から外れます。アーカイブが「消えたように見えて残っている」のは、この条件のおかげです。
+今日のアーカイブ機能が効くのはこの最後の3行があるからです。`archive` が `isArchived` を `true` に書き換えるとスイッチを切っている画面の `where.isArchived` は `false` なので、そのプロジェクトは一覧から外れます。アーカイブが「消えたように見えて残っている」のはこの条件のおかげです。
 
 **getAll が返すデータ**:
 
@@ -1536,7 +1604,7 @@ Day 09 で書いた部分で、今日は変更していません。今日の `up
     }),
 ```
 
-今日の Step 1 の `handleEdit` がサーバーを呼ばずに済むのは、この戻り値に名前・色・日付がそろっているからです。編集ボタンを押した時点で必要な値は手元にあるので、探すのは配列の中だけです。取ってくる項目を絞りすぎると、編集のたびに追加の通信が必要になります。
+今日の Step 1 の `handleEdit` がサーバーを呼ばずに済むのはこの戻り値に名前・色・日付がそろっているからです。編集ボタンを押した時点で必要な値は手元にあるので探すのは配列の中だけです。取ってくる項目を絞りすぎると編集のたびに追加の通信が必要になります。
 
 **create の作成データ**:
 
@@ -1558,7 +1626,7 @@ Day 09 で書いた部分で、今日は変更していません。今日の `up
     };
 ```
 
-Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` を付けていたことが、今日の `delete` につながります。作成者にオーナー権限が入っているので、自分で作ったプロジェクトは自分で消せます。この1行が抜けたプロジェクトは、あとから誰も削除できません。
+Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` を付けていたことが今日の `delete` につながります。作成者にオーナー権限が入っているので自分で作ったプロジェクトは自分で消せます。この1行が抜けたプロジェクトはあとから誰も削除できません。
 
 **create の保存と戻り値**:
 
@@ -1584,7 +1652,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
   }),
 ```
 
-説明文を値があるときだけ足す書き方も Day 10 のままです。今日の `update` では、この判定が `if (data.description !== undefined)` という別の形になります。作成では「空欄なら入れない」で足りますが、更新では「空欄にした」という指示そのものを届ける必要があるためです。
+説明文を値があるときだけ足す書き方も Day 10 のままです。今日の `update` ではこの判定が `if (data.description !== undefined)` という別の形になります。作成では「空欄なら入れない」で足りますが更新では「空欄にした」という指示そのものを届ける必要があるためです。
 
 **update の入口と存在チェック**:
 
@@ -1611,7 +1679,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }
 ```
 
-`members` を `where: { userId: ctx.session.userId }` で絞っているのは、必要なのが自分の1件だけだからです。全メンバーを取ると、100人のプロジェクトでは100行を運んで1行だけ使う形になります。存在しない `id` をここで止めておくと、この先の権限チェックは「プロジェクトは実在する」という前提で書けます。
+`members` を `where: { userId: ctx.session.userId }` で絞っているのは必要なのが自分の1件だけだからです。全メンバーを取ると100人のプロジェクトでは100行を運んで1行だけ使う形になります。存在しない `id` をここで止めておくとこの先の権限チェックは「プロジェクトは実在する」という前提で書けます。
 
 **update の権限チェックと更新データ**:
 
@@ -1631,6 +1699,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
       updateData.color = data.color;
     }
     if (data.isArchived !== undefined) {
+      assertMemberPermission(project.members, 'canArchive');
       updateData.isArchived = data.isArchived;
     }
     if (data.startDate !== undefined) {
@@ -1641,7 +1710,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }
 ```
 
-判定を `!== undefined` にしてあるのは、`null` を素通りさせるためです。`if (data.description)` と書くと、`null` と空文字がどちらも偽として扱われ、説明を消す指示が消えます。日付だけ `? ... : null` の三項演算子が入っているのは、届く値が文字列なので `new Date(...)` へ通す必要があり、`null` はそのまま `null` として書き込むためです。
+判定を `!== undefined` にしてあるのは`null` を素通りさせるためです。`if (data.description)` と書くと `null` と空文字がどちらも偽として扱われて説明を消す指示が消えます。日付だけ `? ... : null` の三項演算子が入っているのは届く値が文字列なので `new Date(...)` へ通す必要があり、`null` はそのまま `null` として書き込むためです。
 
 **update の保存と戻り値**:
 
@@ -1664,7 +1733,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
   }),
 ```
 
-`tasks` を取っていないのは、更新の返り値を使う場面が一覧の再取得ではないからです。画面側は `onSuccess` で `invalidate()` を呼び、一覧を別の通信で取り直します。更新の返り値までタスク付きで運ぶと、使われないデータを毎回送ることになります。
+`tasks` を取っていないのは更新の返り値を使う場面が一覧の再取得ではないからです。画面側は `onSuccess` で `invalidate()` を呼び、一覧を別の通信で取り直します。更新の返り値までタスク付きで運ぶと使われないデータを毎回送ることになります。
 
 **delete の入口と存在チェック**:
 
@@ -1691,14 +1760,15 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
       }
 ```
 
-入力が `id` の1項目だけなので、スキーマを外へ出さずその場に書いてあります。使う場所が1か所なら、名前を付けて離れた場所へ置くより近くにあるほうが読みやすいためです。`.cuid()` を付けてあるので、`id` の形をしていない文字列は手続きの中へ入る前に弾かれます。
+入力が `id` の1項目だけなのでスキーマを外へ出さずその場に書いてあります。使う場所が1か所なら名前を付けて離れた場所へ置くより近くにあるほうが読みやすいためです。`.cuid()` を付けてあるので`id` の形をしていない文字列は手続きの中へ入る前に弾かれます。
 
 **delete の権限チェックと実行**:
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
 // 完成版: delete の権限チェックと実行
-      // canDeleteはタスク削除の権限でADMINにも付与されているため、プロジェクト削除はOWNER限定で明示チェック
+      // canDeleteはタスク削除の権限でADMINにも付与されているため、
+      // プロジェクト削除はOWNER限定で明示チェック
       const userMember = project.members[0];
       if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
         throw new TRPCError({
@@ -1714,7 +1784,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }),
 ```
 
-`!userMember` の判定を先に置いてあるのは、メンバーではない相手が `project.members[0]` で `undefined` を受けるからです。この確認を飛ばして `userMember.role` を読むと、権限の判定へ進む前に実行が止まります。戻り値を `{ success: true }` にしてあるのは、消えたデータそのものを返せないためです。
+`!userMember` の判定を先に置いてあるのはメンバーではない相手が `project.members[0]` で `undefined` を受けるからです。この確認を飛ばして `userMember.role` を読むと権限の判定へ進む前に実行が止まります。戻り値を `{ success: true }` にしてあるのは消えたデータそのものを返せないためです。
 
 **archive と unarchive**:
 
@@ -1732,10 +1802,63 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     .mutation(async ({ ctx, input }) => {
       return await setArchiveStatus(ctx.session.userId, input.id, false);
     }),
+```
+
+2つを1つの手続きにまとめず、名前を分けてあるのは画面側から見て何をするのかがはっきりするからです。`setArchive({ id, value: true })` の形にすると呼ぶ側が毎回 `true` か `false` を書くことになり、書き間違いが起きます。
+
+**getById**:
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getById の取得
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { ...USER_SELECT, role: true },
+              },
+            },
+          },
+          tasks: {
+            include: {
+              assignee: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+          },
+        },
+      });
+```
+
+`members` と `tasks` を `include` で一緒に取るのは画面がメンバー一覧とタスクの両方を同時に描くためです。続けて存在確認と権限の判定です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: getById の存在確認と権限判定
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+
+      assertMemberPermission(
+        project.members.filter((m) => m.userId === ctx.session.userId),
+        'canView',
+      );
+
+      return project;
+    }),
 });
 ```
 
-2つを1つの手続きにまとめず、名前を分けてあるのは、画面側から見て何をするのかがはっきりするからです。`setArchive({ id, value: true })` の形にすると、呼ぶ側が毎回 `true` か `false` を書くことになり、書き間違いが起きます。最後の `});` で `projectRouter` 全体を閉じます。
+1件だけを取る読み取り専用の手続きなので `.query` を使います。見つからない `id` には `NOT_FOUND` を返し、メンバー以外が直指定しても `canView` の権限チェックで弾きます。最後の `});` で `projectRouter` 全体を閉じます。
 
 ### `src/app/project/page.tsx`
 
@@ -1766,7 +1889,7 @@ import {
   '@/component/project/project-dialog';
 ```
 
-今日足したのは `useRouter`、`useSearchParams`、`useEffect`、`ProjectDetailView` の4つです。`useRouter` と `useSearchParams` を `next/navigation` から取っているのは、URL を読む側と書き換える側で担当が分かれているためです。読むのが `useSearchParams`、書き換えるのが `useRouter` です。
+今日足したのは `useRouter`、`useSearchParams`、`useEffect`、`ProjectDetailView` の4つです。`useRouter` と `useSearchParams` を `next/navigation` から取っているのはURL を読む側と書き換える側で担当が分かれているためです。読むのが `useSearchParams`、書き換えるのが `useRouter` です。
 
 **UI部品と定数の import**:
 
@@ -1792,7 +1915,7 @@ import {
 import { api } from '@/trpc/react';
 ```
 
-`@/lib/date` から2つ取り込んでいるのは、日付を運ぶ向きが今日から2方向になったからです。`dateOnlyFromValue` は保存済みの値を入力欄が読める形へ戻す向き、`dateOnlyToUtcStartIso` は入力欄の値を保存できる形へ送る向きです。片方だけだと、編集ダイアログの日付欄が空のまま開きます。
+`@/lib/date` から2つ取り込んでいるのは日付を運ぶ向きが今日から2方向になったからです。`dateOnlyFromValue` は保存済みの値を入力欄が読める形へ戻す向き、`dateOnlyToUtcStartIso` は入力欄の値を保存できる形へ送る向きです。片方だけだと編集ダイアログの日付欄が空のまま開きます。
 
 **画面が覚えておく値**:
 
@@ -1816,7 +1939,7 @@ function ProjectPageContent() {
     );
 ```
 
-削除の状態を `deleteDialogOpen` と `deleteTargetId` の2つに分けてあるのは、確認ダイアログを開くことと、どれを消すかを覚えることが別の話だからです。1つにまとめて `deleteTargetId` の有無で開閉を決めると、削除が終わって `null` へ戻した瞬間にダイアログが消え、処理中の表示を出せません。
+削除の状態を `deleteDialogOpen` と `deleteTargetId` の2つに分けてあるのは確認ダイアログを開くこととどれを消すかを覚えることが別の話だからです。1つにまとめて `deleteTargetId` の有無で開閉を決めると削除が終わって `null` へ戻した瞬間にダイアログが消え、処理中の表示を出せません。
 
 **URL の値と選択状態の対応**:
 
@@ -1837,7 +1960,7 @@ function ProjectPageContent() {
   }, [projectIdParam]);
 ```
 
-`else` で `null` を入れ直しているのは、詳細から一覧へ戻ったときに選択を消すためです。`projectId` が消えても `selectedProject` が残っていると、一覧に戻ったつもりで詳細が出たままになります。依存配列に `projectIdParam` だけを置いてあるので、URL が変わった瞬間だけこの処理が動きます。
+`else` で `null` を入れ直しているのは詳細から一覧へ戻ったときに選択を消すためです。`projectId` が消えても `selectedProject` が残っていると一覧に戻ったつもりで詳細が出たままになります。依存配列に `projectIdParam` だけを置いてあるのでURL が変わった瞬間だけこの処理が動きます。
 
 **一覧とログインユーザーの取得**:
 
@@ -1857,7 +1980,7 @@ function ProjectPageContent() {
   const utils = api.useUtils();
 ```
 
-`currentUser` を取っているのは、送信ハンドラーの新規作成側で足止めに使うためです。この値は画面の判断にだけ使い、持ち主を決めるのには使いません。持ち主を決めるのはサーバー側の `ctx.session.userId` で、画面から書き換えられない場所にあります。
+`currentUser` を取っているのは送信ハンドラーの新規作成側で足止めに使うためです。この値は画面の判断にだけ使い、持ち主を決めるのには使いません。持ち主を決めるのはサーバー側の `ctx.session.userId` で、画面から書き換えられない場所にあります。
 
 **作成と更新の mutation**:
 
@@ -1876,12 +1999,13 @@ function ProjectPageContent() {
     api.project.update.useMutation({
       onSuccess: () => {
         utils.project.getAll.invalidate();
+        utils.project.getById.invalidate();
         setDialogOpen(false);
       },
     });
 ```
 
-2つの `onSuccess` が同じ中身なのは、作成と更新で起こしたいことがそろっているからです。どちらも一覧を取り直し、ダイアログを閉じます。1つの mutation にまとめられないのは、呼ぶサーバー側の手続きが別で、送る項目の形も違うためです。
+`createMutation` との違いは `getById` の取り直しです。Step 9 で出す詳細画面が更新結果で描かれるため、一覧（`getAll`）だけ取り直すと開いている詳細に古い名前が残ります。1つの mutation にまとめられないのは呼ぶサーバー側の手続きが別で送る項目の形も違うためです。
 
 **削除とアーカイブの mutation**:
 
@@ -1913,27 +2037,32 @@ function ProjectPageContent() {
     });
 ```
 
-この3つが `setDialogOpen(false)` ではなく `router.push('/project')` を呼ぶのは、操作の起点が詳細画面だからです。削除とアーカイブは、対象のプロジェクトを開いた状態から実行します。`?projectId=...` を付けたまま残ると、もう見られないプロジェクトの詳細を開こうとします。一覧の URL へ戻せば、その状態を作らずに済みます。
+この3つが `setDialogOpen(false)` ではなく `router.push('/project')` を呼ぶのは操作の起点が詳細画面だからです。削除とアーカイブは対象のプロジェクトを開いた状態から実行します。`?projectId=...` を付けたまま残るともう見られないプロジェクトの詳細を開こうとします。一覧の URL へ戻せばその状態を作らずに済みます。
 
-**Day 12 で本実装する仮定義**:
+**詳細画面のハンドラーとクエリ**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: Day 12 で本実装する仮定義
-  const projectDetail = undefined;
+// 完成版: 詳細画面のハンドラーとクエリ
+  const handleProjectClick = (
+    projectId: string
+  ) => {
+    router.push(
+      `/project?projectId=${projectId}`
+    );
+  };
   const handleDetailClose = () => {
     router.push('/project');
   };
-  const [memberDialogOpen, setMemberDialogOpen] =
-    useState(false);
-  const handleRemoveMember = (
-    _userId: string
-  ) => {
-    // Day 12 Step 6 で本実装に置き換える
-  };
+
+  const { data: projectDetail } =
+    api.project.getById.useQuery(
+      { id: selectedProject ?? '' },
+      { enabled: !!selectedProject },
+    );
 ```
 
-この4つは Day 12 で本実装に差し替えます。中身を空にしてあるのは、動くように見せないためです。半端に動く仮の処理を置くと、差し替えを忘れても画面が動いてしまい、忘れたことに気付けません。`projectDetail` が `undefined` のままなら、詳細画面を開いた時点で中身の無さが目に見えます。
+`handleProjectClick` は一覧のカードから詳細URLへ進む入口、`handleDetailClose` はその逆です。`projectDetail` のクエリは `enabled` で未選択時の通信を止めています。
 
 **編集開始のハンドラー**:
 
@@ -1953,7 +2082,7 @@ function ProjectPageContent() {
       : undefined;
 ```
 
-`handleEdit` が `find` で手元の配列を探しているので、押した瞬間の通信は起きません。Day 09 で置いた受け皿と同じ場所にあり、中身だけが入れ替わっています。
+`handleEdit` が `find` で手元の配列を探しているので押した瞬間の通信は起きません。Day 09 で置いた受け皿と同じ場所にあり、中身だけが入れ替わっています。
 
 **編集ダイアログへ渡す値の組み立て**:
 
@@ -1977,24 +2106,20 @@ function ProjectPageContent() {
   };
 ```
 
-`description` に `|| ''` を付けているのは、データベースの `null` をそのまま入力欄へ渡せないからです。日付の2つを条件付きスプレッドで足しているのは、`editingProject` へ入れる値を「値があるか、項目が無いか」のどちらかにそろえるためです。`handleDelete` が state を置くだけなのは、実際の削除を確認ダイアログの `onConfirm` に任せるからです。
+`description` に `|| ''` を付けているのはデータベースの `null` をそのまま入力欄へ渡せないからです。日付の2つを条件付きスプレッドで足しているのは`editingProject` へ入れる値を「値があるか、項目が無いか」のどちらかにそろえるためです。`handleDelete` が state を置くだけなのは実際の削除を確認ダイアログの `onConfirm` に任せるからです。
 
-**詳細表示の受け皿と新規作成のハンドラー**:
+**新規作成のハンドラー**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: 詳細表示の受け皿と新規作成のハンドラー
-  const handleProjectClick = (id: string) => {
-    void id;
-  };
-
+// 完成版: 新規作成のハンドラー
   const handleCreate = () => {
     setEditingProject(undefined);
     setDialogOpen(true);
   };
 ```
 
-`handleProjectClick` が空のままなのは、行き先の詳細画面を Day 12 で作るからです。Day 09 で置いた受け皿を、そのままの場所に残してあります。`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは、直前に編集を開いていた場合の値を捨てるためです。この1行が無いと、編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき、前のプロジェクトの名前が入ったまま開きます。
+`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは直前に編集を開いていた場合の値を捨てるためです。この1行が無いと編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき前のプロジェクトの名前が入ったまま開きます。
 
 **送信ハンドラーの更新側**:
 
@@ -2024,7 +2149,7 @@ function ProjectPageContent() {
       });
 ```
 
-分岐の目印を `data.id` にしてあるのは、保存済みのデータだけが ID を持つからです。ダイアログの側は自分が作成なのか編集なのかを知らず、預かった値をそのまま返してきます。空欄に `null` を送っているので、説明や日付を消す操作もサーバーへ届きます。
+分岐の目印を `data.id` にしてあるのは保存済みのデータだけが ID を持つからです。ダイアログの側は自分が作成なのか編集なのかを知らず、預かった値をそのまま返してきます。空欄に `null` を送っているので説明や日付を消す操作もサーバーへ届きます。
 
 **送信ハンドラーの新規作成側**:
 
@@ -2052,7 +2177,7 @@ function ProjectPageContent() {
   };
 ```
 
-こちらが `undefined` を渡しているのは、作成用スキーマの日付に `.nullable()` を付けていないからです。`null` を送ると検証で落ちて、作成そのものが断られます。同じ「空」を表す値でも、手続きごとに受け取れる形が違います。
+こちらが `undefined` を渡しているのは作成用スキーマの日付に `.nullable()` を付けていないからです。`null` を送ると検証で落ちて作成そのものが断られます。同じ「空」を表す値でも、手続きごとに受け取れる形が違います。
 
 **アーカイブのハンドラーと読み込み中の表示**:
 
@@ -2078,7 +2203,7 @@ function ProjectPageContent() {
   }
 ```
 
-引数の `isArchived` は「今アーカイブされているか」を表します。すでにアーカイブ済みなら押したときの意味は解除なので、`unarchiveMutation` を選びます。mutation そのものを変数へ入れてから `mutate` を呼ぶ形にしてあるので、送る値を書くのは1回で済みます。
+引数の `isArchived` は「今アーカイブされているか」を表します。すでにアーカイブ済みなら押したときの意味は解除なので`unarchiveMutation` を選びます。mutation そのものを変数へ入れてから `mutate` を呼ぶ形にしてあるので送る値を書くのは1回で済みます。
 
 **詳細表示への分岐**:
 
@@ -2091,10 +2216,8 @@ function ProjectPageContent() {
         <ProjectDetailView
           projectDetail={projectDetail}
           onBack={handleDetailClose}
-          onAddMemberClick={
-            () => setMemberDialogOpen(true)
-          }
-          onRemoveMember={handleRemoveMember}
+          onAddMemberClick={() => {}}
+          onRemoveMember={() => {}}
           onUpdateMemberRole={() => {}}
           onArchive={handleArchive}
           canManageMembers={false}
@@ -2105,7 +2228,7 @@ function ProjectPageContent() {
   }
 ```
 
-条件を2つ並べてあるのは、URL の値が `selectedProject` へ写るまでに描画が1回はさまるからです。`projectIdParam` だけで判定すると、`/project?projectId=...` を直接開いた1回目に中身の無い詳細が出ます。この分岐を一覧の `return` より前へ置いてあるので、詳細を出すときに一覧を組み立てずに済みます。
+条件を2つ並べてあるのはURL の値が `selectedProject` へ写るまでに描画が1回はさまるからです。`projectIdParam` だけで判定すると`/project?projectId=...` を直接開いた1回目に中身の無い詳細が出ます。この分岐を一覧の `return` より前へ置いてあるので詳細を出すときに一覧を組み立てずに済みます。
 
 **ページ見出しと操作エリア**:
 
@@ -2137,7 +2260,7 @@ function ProjectPageContent() {
             </div>
 ```
 
-Day 09 で作った部分です。今日は変更していません。このスイッチが今日から意味を持ちます。アーカイブしたプロジェクトを見たいときは、ここを入れて一覧を取り直します。スイッチを `showArchived` につないであるので、切り替えるだけで `getAll` の条件が変わります。
+Day 09 で作った部分です。今日は変更していません。このスイッチが今日から意味を持ちます。アーカイブしたプロジェクトを見たいときはここを入れて一覧を取り直します。スイッチを `showArchived` につないであるので切り替えるだけで `getAll` の条件が変わります。
 
 **新規作成ボタンとグリッドの開始**:
 
@@ -2157,16 +2280,19 @@ Day 09 で作った部分です。今日は変更していません。このス�
           xl:grid-cols-4">
           {projects && projects.length > 0
             ? (projects.map((project) => {
-              const taskCount =
-                project.tasks?.length ?? 0;
-              const doneCount =
-                project.tasks?.filter(
-                  (t) => t.status ===
-                    TASK_STATUS.DONE
-                ).length ?? 0;
+              // キャンセル済みは進捗の母数に含めない
+              let taskCount = 0;
+              let doneCount = 0;
+              for (const t of project.tasks ?? []) {
+                if (t.status === TASK_STATUS.CANCELLED)
+                  continue;
+                taskCount++;
+                if (t.status === TASK_STATUS.DONE)
+                  doneCount++;
+              }
 ```
 
-`handleCreate` の中身が今日変わったので、このボタンの動きも変わります。押すと編集用の値を捨ててからダイアログを開くため、必ず空のフォームが出ます。グリッドの中身は Day 09 のままで、件数の数え方にも手を入れていません。
+`handleCreate` の中身が今日変わったのでこのボタンの動きも変わります。押すと編集用の値を捨ててからダイアログを開くため必ず空のフォームが出ます。グリッドの中身は Day 09 のままで件数の数え方にも手を入れていません。
 
 **プロジェクトカードの描画**:
 
@@ -2197,7 +2323,7 @@ Day 09 で作った部分です。今日は変更していません。このス�
             })
 ```
 
-`onEdit` と `onDelete` に渡す関数の中身が、今日から本物になりました。Day 09 では `void projectId` と書いた受け皿だったので、押しても何も起きませんでした。カードの側は渡された関数を呼ぶだけなので、この部分のコードは1文字も変えずに動きが変わります。
+`onEdit` と `onDelete` に渡す関数の中身が今日から本物になりました。Day 09 では `void projectId` と書いた受け皿だったので押しても何も起きませんでした。カードの側は渡された関数を呼ぶだけなのでこの部分のコードは1文字も変えずに動きが変わります。
 
 **空状態と2つのダイアログ**:
 
@@ -2225,7 +2351,7 @@ Day 09 で作った部分です。今日は変更していません。このス�
       </div>
 ```
 
-`initialData={editingProject}` の1行が、今日ダイアログへ足した唯一の変更です。`editingProject` が `undefined` なら空のフォーム、値が入っていれば埋まったフォームになります。ダイアログの中身を書き換えずに編集へ使い回せるのは、Day 10 の時点で `initialData` を受け取れる形にしておいたからです。
+`initialData={editingProject}` の1行が今日ダイアログへ足した唯一の変更です。`editingProject` が `undefined` なら空のフォーム、値が入っていれば埋まったフォームになります。ダイアログの中身を書き換えずに編集へ使い回せるのはDay 10 の時点で `initialData` を受け取れる形にしておいたからです。
 
 **削除確認ダイアログと閉じタグ**:
 
@@ -2250,7 +2376,7 @@ Day 09 で作った部分です。今日は変更していません。このス�
 }
 ```
 
-`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは、`id` の無いリクエストをサーバーへ送らないためです。`isPending` を渡してあるので、削除中はボタンが押せなくなります。この指定が無いと、通信が終わる前に何度も押せて、同じ削除が重なって飛びます。
+`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは`id` の無いリクエストをサーバーへ送らないためです。`isPending` を渡してあるので削除中はボタンが押せなくなります。この指定が無いと通信が終わる前に何度も押せて同じ削除が重なって飛びます。
 
 **ページのエクスポート**:
 
@@ -2267,7 +2393,7 @@ export default function ProjectPage() {
 }
 ```
 
-`Suspense` で包む形は Day 09 から変わっていません。今日 `useSearchParams` を使ったので、この包みがいっそう要ります。Next.js はこのフックを使う部分を `Suspense` の中に置くよう求めており、外へ出すとビルドの時点で警告が出ます。
+`Suspense` で包む形は Day 09 から変わっていません。今日 `useSearchParams` を使ったのでこの包みがいっそう要ります。Next.js はこのフックを使う部分を `Suspense` の中に置くよう求めており外へ出すとビルドの時点で警告が出ます。
 
 ## 今日のまとめ
 
@@ -2290,13 +2416,15 @@ export default function ProjectPage() {
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
 | アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailView` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
-| Step 9 追加後に TypeScript エラーが出る | 仮定義の変数名が重複している | 同名の `const` を2つ定義していないか確認します。仮定義ブロックをまとめて1か所に配置する |
+| Step 9 追加後に `getById` が無いというエラーが出る | Step 0 の `getById` がルーターの外に貼られている | `project.ts` の最後の `});` の1行上に `getById` があるか確認します |
+| `npm run build` で型エラーが出る | Step 0 の手続きが未追加か、ルーターの外に出ている | エラー文に出ているファイル名と行で、どの手続きが欠けているかを特定します |
 | `ProjectDetailView` が表示されない | `projectIdParam && selectedProject` の条件が false になっている | URLに `?projectId=xxx` が付いているか、`selectedProject` の state が正しく更新されているか確認 |
 
-表の3行目と4行目は、サーバーが `この操作を実行する権限がありません` を返しています。
-ただし今日の時点では、そのエラーは画面に何も出しません。
-エラーを受け取って知らせる仕組みは Day 15 で追加します。
-「押しても何も起きない」ときは、権限で弾かれている場合があると覚えておいてください。
+表の3行目と4行目はサーバーが `この操作を実行する権限がありません` を返しています。
+ただし今日の時点ではそのエラーは画面に何も出しません。
+この操作のエラー表示は今日のコードには含まれていません。
+失敗した理由は DevTools の Network タブで対象の通信を選んで Response のメッセージを確認してください。
+「押しても何も起きない」ときは権限で弾かれている場合があると覚えておいてください。
 
 ## 今日学んだ用語
 
@@ -2314,21 +2442,35 @@ export default function ProjectPage() {
 
 今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
 
-**Q1. `update` の `updateData` を空のオブジェクトから始めて、`if (data.name !== undefined)` で1つずつ足しているのは、何をしている処理ですか。**
+**Q1. `update` の `updateData` を空のオブジェクトから始めて `if (data.name !== undefined)` で1つずつ足しているのは何をしている処理ですか。**
 
-A. 送られてきた項目だけを更新の対象にしています。送られなかった項目は `updateData` に入りません。Prisma は受け取ったオブジェクトに書いてある列しか触らないので、残りの列は元の値のままになります。全項目をまとめて渡す書き方だと、変えるつもりのない列まで上書きしてしまいます。
+A. 送られてきた項目だけを更新の対象にしています。送られなかった項目は `updateData` に入りません。Prisma は受け取ったオブジェクトに書いてある列しか触らないので残りの列は元の値のままになります。全項目をまとめて渡す書き方だと変えるつもりのない列まで上書きしてしまいます。
 
-**Q2. `delete` の権限チェックを `assertMemberPermission(project.members, 'canDelete')` に書き換えると、何が起きますか。**
+**Q2. `delete` の権限チェックを `assertMemberPermission(project.members, 'canDelete')` に書き換えると何が起きますか。**
 
-A. ADMIN のメンバーが、プロジェクトごと削除できるようになります。`canDelete` はタスクを削除するための権限で、ADMIN にも与えてあるからです。プロジェクトの削除は中のタスクとコメントまで消える操作です。だから `delete` だけは共通の関数を使わず、OWNER かどうかを直接比べています。
+A. ADMIN のメンバーがプロジェクトごと削除できるようになります。`canDelete` はタスクを削除するための権限で、ADMIN にも与えてあるからです。プロジェクトの削除は中のタスクとコメントまで消える操作です。だから `delete` だけは共通の関数を使わず、OWNER かどうかを直接比べています。
 
-**Q3. `handleDelete` が `deleteMutation.mutate` を直接呼ばないのは、なぜですか。**
+**Q3. `handleDelete` が `deleteMutation.mutate` を直接呼ばないのはなぜですか。**
 
-A. 削除は取り消せない操作だからです。押した瞬間に消えると、間違えた人に打つ手が残りません。そこで `deleteTargetId` にどれを消すかだけ控えて、確認ダイアログを開きます。実際に実行する合図は `onConfirm` に預けます。押す動作を2回に分けることで、1回目と2回目のあいだに考え直す余地が生まれます。
+A. 削除は取り消せない操作だからです。押した瞬間に消えると間違えた人に打つ手が残りません。そこで `deleteTargetId` にどれを消すかだけ控えて確認ダイアログを開きます。実際に実行する合図は `onConfirm` に預けます。押す動作を2回に分けることで、1回目と2回目のあいだに考え直す余地が生まれます。
+
+## 追加課題：削除前に対象の名前を表示する
+
+削除するプロジェクトを名前で確かめられるようにしましょう。理解チェック Q3 の確認ダイアログを応用します。
+
+前提は今日の Step 10 まで終わり、プロジェクト一覧を開けることです。Day 10 の作成操作で名前の違う課題用プロジェクトを2件用意してください。
+
+`src/app/project/page.tsx` の `DeleteConfirmDialog` に対象の名前を含む `description` を渡してください。Step 1 の `projects?.find` と `deleteTargetId` を使って対象を探します。見つからない場合は元の「この操作は取り消せません。」を表示します。
+
+1件目のゴミ箱を押して説明にその名前が出るか確かめてキャンセルします。2件目でも名前が切り替わるか確認してください。
+
+画面を再読み込みしてキャンセルした2件が残っていれば成功です。名前が違う場合は比較している ID が `deleteTargetId` かを確認します。
+
+確認後は追加した `description` を外します。課題用の2件は今日の削除操作で1件ずつ消してください。確認の表示と実際の削除がどのタイミングで分かれるかも説明してみましょう。
 
 ## 次回予告
 
-Day 12 では、プロジェクトにメンバーを追加・管理する機能を実装します。複数のユーザーが同じプロジェクトで共同作業できるようにします。
+Day 12 ではプロジェクトにメンバーを追加・管理する機能を実装します。複数のユーザーが同じプロジェクトで共同作業できるようにします。
 
 ---
 

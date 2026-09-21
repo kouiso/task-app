@@ -141,6 +141,23 @@ describe('projectRouter', () => {
   });
 
   describe('update（更新）', () => {
+    it.each([true, false])('ADMINは更新経由でもisArchived=%sを設定できない', async (isArchived) => {
+      const { project, caller } = await setupProjectWithActor('ADMIN');
+      await prisma.project.update({ where: { id: project.id }, data: { isArchived: !isArchived } });
+
+      await expect(caller.project.update({ id: project.id, isArchived })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      const stored = await prisma.project.findUniqueOrThrow({ where: { id: project.id } });
+      expect(stored.isArchived).toBe(!isArchived);
+    });
+
+    it.each([true, false])('OWNERは更新経由でisArchived=%sを設定できる', async (isArchived) => {
+      const { project, caller } = await setupProjectWithActor('OWNER');
+      const result = await caller.project.update({ id: project.id, isArchived });
+      expect(result.isArchived).toBe(isArchived);
+    });
+
     it('OWNERは更新できる', async () => {
       const { project, caller } = await setupProjectWithActor('OWNER');
       const result = await caller.project.update({ id: project.id, name: '更新後' });
@@ -433,6 +450,78 @@ describe('projectRouter', () => {
       await expect(caller.project.getAvailableUsers({ projectId: project.id })).rejects.toThrow(
         'この操作を実行する権限がありません',
       );
+    });
+  });
+
+  describe('OWNER保護の同時実行（直列化）', () => {
+    // FOR UPDATE でプロジェクト行を直列化する設計の実測。2人の OWNER が
+    // 同時に互いを削除/降格しても、最終的に OWNER が1人残ることを確認する。
+    async function setupTwoOwners() {
+      const ownerA = await createTestUser({ email: `ownA-${Date.now()}-${Math.random()}@example.com` });
+      const ownerB = await createTestUser({ email: `ownB-${Date.now()}-${Math.random()}@example.com` });
+      const project = await createTestProject(ownerA.id);
+      await addMember(project.id, ownerB.id, 'OWNER');
+      const callerA = await createAuthenticatedCaller(ownerA.id, ownerA.email, ownerA.role);
+      const callerB = await createAuthenticatedCaller(ownerB.id, ownerB.email, ownerB.role);
+      return { ownerA, ownerB, project, callerA, callerB };
+    }
+
+    const ownerCount = (projectId: string) =>
+      prisma.projectMember.count({ where: { projectId, role: 'OWNER' } });
+
+    it('2人のOWNERが同時に互いを削除しても、成功は1本だけで最終OWNERは1人', async () => {
+      const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+
+      const results = await Promise.allSettled([
+        callerA.project.removeMember({ projectId: project.id, userId: ownerB.id }),
+        callerB.project.removeMember({ projectId: project.id, userId: ownerA.id }),
+      ]);
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      expect(succeeded).toHaveLength(1);
+      expect(await ownerCount(project.id)).toBe(1);
+    });
+
+    it('2人のOWNERが同時に互いを降格しても、成功は1本だけで最終OWNERは1人', async () => {
+      const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+
+      const results = await Promise.allSettled([
+        callerA.project.updateMemberRole({ projectId: project.id, userId: ownerB.id, role: 'MEMBER' }),
+        callerB.project.updateMemberRole({ projectId: project.id, userId: ownerA.id, role: 'MEMBER' }),
+      ]);
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      expect(succeeded).toHaveLength(1);
+      expect(await ownerCount(project.id)).toBe(1);
+    });
+
+    it('一方が削除・他方が降格を同時に仕掛けても、成功は1本だけで最終OWNERは1人', async () => {
+      const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+
+      // 削除と降格は別経路だが、プロジェクト行の FOR UPDATE で同じ
+      // 直列化点を通る。混合でも「両方成功して OWNER=0」にはならない。
+      const results = await Promise.allSettled([
+        callerA.project.removeMember({ projectId: project.id, userId: ownerB.id }),
+        callerB.project.updateMemberRole({ projectId: project.id, userId: ownerA.id, role: 'MEMBER' }),
+      ]);
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      expect(succeeded).toHaveLength(1);
+      expect(await ownerCount(project.id)).toBe(1);
+    });
+
+    it('混合競合を繰り返しても常に最終OWNERは1人', async () => {
+      // タイミング依存の窓を確率的に拾うため、セットアップごとやり直して反復する
+      for (let i = 0; i < 8; i += 1) {
+        const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+        const results = await Promise.allSettled([
+          callerA.project.removeMember({ projectId: project.id, userId: ownerB.id }),
+          callerB.project.updateMemberRole({ projectId: project.id, userId: ownerA.id, role: 'VIEWER' }),
+        ]);
+        const succeeded = results.filter((r) => r.status === 'fulfilled');
+        expect(succeeded).toHaveLength(1);
+        expect(await ownerCount(project.id)).toBe(1);
+      }
     });
   });
 

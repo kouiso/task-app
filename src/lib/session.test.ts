@@ -1,7 +1,7 @@
 import type { RequestCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 import { cookies } from 'next/headers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createSession, decrypt, encrypt, type SessionPayload, verifySession } from './session';
+import { createSession, verifySessionToken, signSessionToken, type SessionPayload, verifySession } from './session';
 
 describe('session', () => {
   const mockedCookies = vi.mocked(cookies);
@@ -10,7 +10,7 @@ describe('session', () => {
     vi.clearAllMocks();
   });
 
-  it('encrypt/decrypt でセッションを往復できる', async () => {
+  it('signSessionToken/verifySessionToken でセッションを往復できる', async () => {
     const payload: SessionPayload = {
       userId: 'user_123',
       email: 'user@example.com',
@@ -18,8 +18,8 @@ describe('session', () => {
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     };
 
-    const token = await encrypt(payload);
-    const decrypted = await decrypt(token);
+    const token = await signSessionToken(payload);
+    const decrypted = await verifySessionToken(token);
 
     expect(decrypted).toMatchObject({
       userId: payload.userId,
@@ -32,9 +32,9 @@ describe('session', () => {
   it('不正なトークンは null を返し、詳細情報をログに出さない', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await expect(decrypt('invalid-token')).resolves.toBeNull();
+    await expect(verifySessionToken('invalid-token')).resolves.toBeNull();
 
-    expect(errorSpy).toHaveBeenCalledWith('Failed to decrypt token');
+    expect(errorSpy).toHaveBeenCalledWith('Failed to verify session token');
   });
 
   it('createSession は安全な cookie 属性で保存する', async () => {
@@ -76,7 +76,7 @@ describe('session', () => {
       role: 'USER',
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     };
-    const token = await encrypt(payload);
+    const token = await signSessionToken(payload);
 
     mockedCookies.mockResolvedValue({
       [Symbol.iterator]: vi.fn(),
