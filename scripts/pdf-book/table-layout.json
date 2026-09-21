@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "overrides": [
+    {
+      "document_id": "day02-af6ad2",
+      "source_sha256": "c1c662fd20191b66f93873df3b6de390c330deb9bab8c8e64bcee7f7e7a9c455",
+      "table_source_order": 0,
+      "table_id": "pdf-table-b61a54718a98-00000",
+      "table_sha256": "ff2b3838fd3377902300dc22d84dd346b49eaf67e2868cef4b1a70e5022f27b9",
+      "column_percentages": [20, 15, 37, 28],
+      "evidence_pdf_sha256": "a3c0cb89b2d22ce13f79b76c449ca3075fc626de979277b6f716a1eef4f088ab",
+      "review": "Day02 p6-7: root and inline_code_layout visually confirmed readable prose with no one-character trailing line."
+    }
+  ]
+}

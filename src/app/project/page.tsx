@@ -2,7 +2,7 @@
 
 import { Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
 import { ProjectDetailView } from '@/component/project/project-detail-view';
@@ -36,12 +36,15 @@ import {
 } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { dateOnlyFromValue, dateOnlyToUtcStartIso } from '@/lib/date';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
+
+const shouldRetryProjectQuery = (failureCount: number, error: unknown) =>
+  httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
 function ProjectPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectFormData | undefined>(undefined);
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>(PROJECT_MEMBER_ROLE.MEMBER);
@@ -53,30 +56,64 @@ function ProjectPageContent() {
 
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
+  const selectedProject = projectIdParam;
   const router = useRouter();
-
-  useEffect(() => {
-    if (projectIdParam) {
-      setSelectedProject(projectIdParam);
-    } else {
-      setSelectedProject(null);
-    }
-  }, [projectIdParam]);
 
   const utils = api.useUtils();
 
-  const { data: currentUser } = api.auth.getCurrentUser.useQuery();
-  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
-    // showArchived が true のとき isArchived フィルターを外して進行中・アーカイブ両方を取得する
-    isArchived: showArchived ? undefined : false,
-  });
+  const {
+    data: currentUser,
+    isLoading: currentUserLoading,
+    isError: currentUserError,
+    isFetching: currentUserFetching,
+    error: currentUserQueryError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryProjectQuery });
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+    isError: projectsError,
+    isFetching: projectsFetching,
+    error: projectsQueryError,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(
+    {
+      // showArchived が true のとき isArchived フィルターを外して
+      // 進行中・アーカイブ両方を取得する
+      isArchived: showArchived ? undefined : false,
+    },
+    { enabled: !selectedProject, retry: shouldRetryProjectQuery },
+  );
+  const {
+    data: projectDetail,
+    isLoading: projectDetailLoading,
+    isError: projectDetailError,
+    isFetching: projectDetailFetching,
+    error: projectDetailQueryError,
+    refetch: refetchProjectDetail,
+  } = api.project.getById.useQuery(
+    { id: selectedProject ?? '' },
+    { enabled: !!selectedProject, retry: shouldRetryProjectQuery },
+  );
+
+  // 詳細画面で操作ボタンの表示可否を決めるため、
+  // ログインユーザー自身のプロジェクト内ロールから権限を求める
+  const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
+  const currentMemberRole =
+    currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
+  const canManageMembers = currentMemberRole
+    ? hasPermission(currentMemberRole, 'canManageMembers')
+    : false;
+  const canArchiveProject = currentMemberRole
+    ? hasPermission(currentMemberRole, 'canArchive')
+    : false;
+
   const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
     { projectId: selectedProject ?? '' },
-    { enabled: !!selectedProject },
-  );
-  const { data: projectDetail } = api.project.getById.useQuery(
-    { id: selectedProject ?? '' },
-    { enabled: !!selectedProject },
+    {
+      enabled: !!selectedProject && canManageMembers,
+      retry: shouldRetryProjectQuery,
+    },
   );
 
   const createMutation = api.project.create.useMutation({
@@ -105,6 +142,7 @@ function ProjectPageContent() {
 
   const addMemberMutation = api.project.addMember.useMutation({
     onSuccess: () => {
+      utils.project.getAll.invalidate();
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
       }
@@ -116,6 +154,7 @@ function ProjectPageContent() {
 
   const removeMemberMutation = api.project.removeMember.useMutation({
     onSuccess: () => {
+      utils.project.getAll.invalidate();
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
       }
@@ -133,6 +172,7 @@ function ProjectPageContent() {
   const archiveMutation = api.project.archive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      utils.project.getById.invalidate();
       router.push('/project');
     },
   });
@@ -140,6 +180,7 @@ function ProjectPageContent() {
   const unarchiveMutation = api.project.unarchive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      utils.project.getById.invalidate();
       router.push('/project');
     },
   });
@@ -234,7 +275,40 @@ function ProjectPageContent() {
     mutation.mutate({ id: projectId });
   };
 
-  if (projectsLoading) {
+  const viewingDetail = Boolean(selectedProject);
+  const queryErrors = viewingDetail
+    ? [
+        currentUserError ? currentUserQueryError : null,
+        projectDetailError ? projectDetailQueryError : null,
+      ]
+    : [currentUserError ? currentUserQueryError : null, projectsError ? projectsQueryError : null];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const notFound =
+    viewingDetail && projectDetailError && httpStatusOf(projectDetailQueryError) === 404;
+  const hasFetchError = viewingDetail
+    ? currentUserError || projectDetailError
+    : currentUserError || projectsError;
+  const hasRequiredData =
+    (!currentUserError || currentUser != null) &&
+    (viewingDetail
+      ? !projectDetailError || projectDetail != null
+      : !projectsError || projects != null);
+  const requiredLoading =
+    currentUserLoading || (viewingDetail ? projectDetailLoading : projectsLoading);
+  const requiredFetching =
+    currentUserFetching || (viewingDetail ? projectDetailFetching : projectsFetching);
+
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    if (viewingDetail) {
+      void refetchProjectDetail();
+      return;
+    }
+    void refetchProjects();
+  };
+
+  if (requiredLoading && !authFailed && !forbidden && !notFound) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
@@ -242,31 +316,89 @@ function ProjectPageContent() {
     );
   }
 
-  // 詳細画面で操作ボタンの表示可否を決めるため、ログインユーザー自身のプロジェクト内ロールから権限を求める
-  const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
-  const currentMemberRole =
-    currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
-  const canManageMembers = currentMemberRole
-    ? hasPermission(currentMemberRole, 'canManageMembers')
-    : false;
-  const canArchiveProject = currentMemberRole
-    ? hasPermission(currentMemberRole, 'canArchive')
-    : false;
-
-  // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
-  if (projectIdParam && selectedProject) {
+  if (authFailed || forbidden || notFound || (hasFetchError && !hasRequiredData)) {
     return (
       <AppLayout>
-        <ProjectDetailView
-          projectDetail={projectDetail}
-          onBack={handleDetailClose}
-          onAddMemberClick={() => setMemberDialogOpen(true)}
-          onRemoveMember={handleRemoveMember}
-          onUpdateMemberRole={handleUpdateMemberRole}
-          onArchive={handleArchive}
-          canManageMembers={canManageMembers}
-          canArchive={canArchiveProject}
-        />
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このプロジェクトを見る権限がありません'
+                : notFound
+                  ? 'プロジェクトが見つかりません'
+                  : 'プロジェクトを取得できませんでした'}
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '権限が必要です。プロジェクトの管理者に確認してください。'
+                : notFound
+                  ? '削除されたか、URLが正しくない可能性があります。'
+                  : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden || notFound) {
+                router.push('/project');
+                return;
+              }
+              refetchRequiredData();
+            }}
+            disabled={requiredFetching}
+          >
+            {authFailed
+              ? 'ログイン画面へ'
+              : forbidden || notFound
+                ? 'プロジェクト一覧へ'
+                : '再読み込み'}
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const staleDataWarning = hasFetchError ? (
+    <div
+      role="alert"
+      className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+    >
+      <span>最新のプロジェクト情報を取得できませんでした。前回取得時の内容です。</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={refetchRequiredData}
+        disabled={requiredFetching}
+      >
+        再試行
+      </Button>
+    </div>
+  ) : null;
+
+  // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
+  if (viewingDetail) {
+    return (
+      <AppLayout>
+        <div className="space-y-4">
+          {staleDataWarning}
+          <ProjectDetailView
+            projectDetail={projectDetail}
+            onBack={handleDetailClose}
+            onAddMemberClick={() => setMemberDialogOpen(true)}
+            onRemoveMember={handleRemoveMember}
+            onUpdateMemberRole={handleUpdateMemberRole}
+            onArchive={handleArchive}
+            canManageMembers={canManageMembers}
+            canArchive={canArchiveProject}
+          />
+        </div>
 
         <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
@@ -345,6 +477,7 @@ function ProjectPageContent() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
+        {staleDataWarning}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="shrink-0 whitespace-nowrap text-3xl font-bold tracking-tight">
             プロジェクト
@@ -365,7 +498,8 @@ function ProjectPageContent() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
-              // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）。
+              // キャンセル済みは進捗の母数に含めない
+              // （アクティブな4ステータスのみを総数とする）。
               // 総数と完了数を1回のループで同時に集計する。
               let taskCount = 0;
               let doneCount = 0;

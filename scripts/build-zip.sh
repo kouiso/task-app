@@ -9,19 +9,27 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BUILD_PARENT="/tmp/task-app-curriculum-package"
+BUILD_PARENT="$(mktemp -d "${TMPDIR:-/tmp}/task-app-curriculum-package.XXXXXX")"
 BUILD_DIR="${BUILD_PARENT}/task-app"
 ZIP_NAME="task-app-curriculum-v1.1.zip"
 OUTPUT_ZIP="${PROJECT_ROOT}/${ZIP_NAME}"
+CANDIDATE_PARENT="$(mktemp -d "${PROJECT_ROOT}/.${ZIP_NAME}.XXXXXX")"
+CANDIDATE_ZIP="${CANDIDATE_PARENT}/${ZIP_NAME}"
+
+cleanup() {
+  rm -rf "${BUILD_PARENT}"
+  rm -rf "${CANDIDATE_PARENT}"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 echo "=== task-app 販売用ZIP ビルド開始 ==="
 echo "プロジェクトルート: ${PROJECT_ROOT}"
 echo "ビルド一時ディレクトリ: ${BUILD_DIR}"
 
-# 前回のビルド残骸を掃除してからやり直す（冪等性の担保）
-rm -rf "${BUILD_PARENT}"
 mkdir -p "${BUILD_DIR}"
-trap 'rm -rf "${BUILD_PARENT}"' EXIT
 
 # ---- scaffold 補助ファイル ----
 # 完成アプリの package.json / src / prisma は入れない。
@@ -34,6 +42,7 @@ required_files=(
   ".node-version"
   "doc/SUPPORTED_ENVIRONMENTS.md"
   "scripts/scaffold-from-scratch.sh"
+  "scripts/verify-scaffold-database.cjs"
 )
 
 for relative_path in "${required_files[@]}"; do
@@ -88,17 +97,19 @@ for directory in "${support_directories[@]}"; do
   fi
 done
 
-# ---- ZIP 作成（前回の残骸があれば上書き） ----
-rm -f "${OUTPUT_ZIP}"
+# ---- ZIP 作成 ----
+# 既存の販売用 ZIP は、新しい候補が検査に通るまで残す。途中で必要ファイルが
+# 欠けたり割り込まれたりしても、直前の正常な成果物を失わないためである。
 cd "${BUILD_PARENT}"
 # 除外を足すときは、必ずこの zip 側に書く。sale_package.py が、このファイル全文から
 # rsync の除外指定を正規表現で拾って「読者が自分で書くルーター」の一覧を組み立てて
 # いるため、上の rsync に除外を足すとその一覧に紛れ込んで検査が壊れる。
 # 同じ理由で、このコメントにも rsync の除外指定の書式を書いてはいけない。
-zip -qr "${OUTPUT_ZIP}" "task-app" \
+zip -qr "${CANDIDATE_ZIP}" "task-app" \
   -x "*.DS_Store"
 
-bash "${PROJECT_ROOT}/scripts/curriculum-qa/check-sale-package.sh" "${OUTPUT_ZIP}"
+bash "${PROJECT_ROOT}/scripts/curriculum-qa/check-sale-package.sh" "${CANDIDATE_ZIP}"
+mv -f "${CANDIDATE_ZIP}" "${OUTPUT_ZIP}"
 
 ZIP_SIZE=$(du -sh "${OUTPUT_ZIP}" | cut -f1)
 # 数える対象を zip の除外条件に揃える。揃えんと表示だけが実際の同梱数とずれる

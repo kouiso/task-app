@@ -85,7 +85,7 @@ export default function ProfileEditPage() {
             <CardTitle>プロフィール編集</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <form noValidate onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="flex justify-center mb-6">
                 <Avatar className="w-24 h-24">
                   {form.watch('avatar') && <AvatarImage src={form.watch('avatar')} alt="" />}
@@ -137,11 +137,15 @@ export default function ProfileEditPage() {
                 <Input
                   id="avatar"
                   type="url"
+                  aria-invalid={form.formState.errors.avatar ? 'true' : 'false'}
                   {...form.register('avatar')}
                   disabled={updateProfile.isPending}
                   placeholder="https://example.com/avatar.png"
                 />
                 <p className="text-sm text-muted-foreground">画像のURLを入力してください</p>
+                {form.formState.errors.avatar && (
+                  <p className="text-sm text-destructive">{form.formState.errors.avatar.message}</p>
+                )}
               </div>
 
               {updateProfile.error && (

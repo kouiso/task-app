@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
@@ -240,6 +240,7 @@ export const projectRouter = createTRPCRouter({
       updateData.color = data.color;
     }
     if (data.isArchived !== undefined) {
+      assertMemberPermission(project.members, 'canArchive');
       updateData.isArchived = data.isArchived;
     }
     if (data.startDate !== undefined) {
@@ -283,7 +284,8 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
-      // canDeleteはタスク削除の権限でADMINにも付与されているため、プロジェクト削除はOWNER限定で明示チェック
+      // canDeleteはタスク削除の権限でADMINにも付与されているため、
+      // プロジェクト削除はOWNER限定で明示チェック
       const userMember = project.members[0];
       if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
         throw new TRPCError({
@@ -310,7 +312,8 @@ export const projectRouter = createTRPCRouter({
 
     assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 
-    // OWNERロールの付与はOWNERのみに限定する。canManageMembersを持つADMINによる権限昇格を防ぐため。
+    // OWNERロールの付与はOWNERのみに限定する。
+    // canManageMembersを持つADMINによる権限昇格を防ぐため。
     if (
       input.role === PROJECT_MEMBER_ROLE.OWNER &&
       userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
@@ -355,70 +358,79 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
+      return await prisma.$transaction(async (tx) => {
+        // プロジェクト行をロックして、OWNERの削除・降格を同じプロジェクト内で直列化する。
+        // ロックなしだとOWNERが2人のときに双方の削除が人数2を見て通り、OWNERが0人になる経路がある。
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
 
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
-
-      const member = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      if (!member) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'メンバーが見つかりません',
-        });
-      }
-
-      // OWNERメンバーの削除はOWNERのみに限定する。ADMINによるオーナー排除を防ぐため。
-      if (
-        member.role === PROJECT_MEMBER_ROLE.OWNER &&
-        userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'オーナーの削除はオーナーのみ可能です',
-        });
-      }
-
-      if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
-        const ownerCount = await prisma.projectMember.count({
+        const userMember = await tx.projectMember.findUnique({
           where: {
-            projectId: input.projectId,
-            role: PROJECT_MEMBER_ROLE.OWNER,
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
           },
         });
 
-        if (ownerCount === 1) {
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+
+        const member = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        if (!member) {
           throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'プロジェクト唯一のオーナーは削除できません',
+            code: 'NOT_FOUND',
+            message: 'メンバーが見つかりません',
           });
         }
-      }
 
-      await prisma.projectMember.delete({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
+        // OWNERメンバーの削除はOWNERのみに限定する。
+        // ADMINによるオーナー排除を防ぐため。
+        if (
+          member.role === PROJECT_MEMBER_ROLE.OWNER &&
+          userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'オーナーの削除はオーナーのみ可能です',
+          });
+        }
+
+        if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
+          const ownerCount = await tx.projectMember.count({
+            where: {
+              projectId: input.projectId,
+              role: PROJECT_MEMBER_ROLE.OWNER,
+            },
+          });
+
+          if (ownerCount === 1) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'プロジェクト唯一のオーナーは削除できません',
+            });
+          }
+        }
+
+        await tx.projectMember.delete({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
           },
-        },
-      });
+        });
 
-      return { success: true };
+        return { success: true };
+      });
     }),
 
   updateMemberRole: protectedProcedure
@@ -430,18 +442,24 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
-
       return await prisma.$transaction(async (tx) => {
+        // removeMember と同じくプロジェクト行をロックして、OWNER人数の確認と更新を直列化する。
+        // 異なる経路（削除・降格）が同じロックを取ることで、どの順でも最後のOWNERが残る。
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
+
+        const userMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+
         const targetMember = await tx.projectMember.findUnique({
           where: {
             userId_projectId: {
@@ -458,7 +476,8 @@ export const projectRouter = createTRPCRouter({
           });
         }
 
-        // OWNERロールの付与・剥奪はOWNERのみに限定する。ADMINによる権限昇格・オーナー降格を防ぐため。
+        // OWNERロールの付与・剥奪はOWNERのみに限定する。
+        // ADMINによる権限昇格・オーナー降格を防ぐため。
         if (
           (input.role === PROJECT_MEMBER_ROLE.OWNER ||
             targetMember.role === PROJECT_MEMBER_ROLE.OWNER) &&

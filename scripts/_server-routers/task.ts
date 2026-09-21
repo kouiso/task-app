@@ -250,6 +250,7 @@ export const taskRouter = createTRPCRouter({
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
+        completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         position: await getNextTaskPosition(tx, input.projectId),
@@ -304,7 +305,7 @@ export const taskRouter = createTRPCRouter({
     }
     if (data.status !== undefined) {
       updateData.status = data.status;
-      if (data.completedAt === undefined) {
+      if (data.completedAt === undefined && data.status !== existingTask.status) {
         if (data.status === TASK_STATUS.DONE) {
           updateData.completedAt = new Date();
         } else {
@@ -380,7 +381,11 @@ export const taskRouter = createTRPCRouter({
         }
 
         return await tx.task.update({
-          where: expectedUpdatedAt ? { id, updatedAt: new Date(expectedUpdatedAt) } : { id },
+          where: {
+            id,
+            // 完了日時を判断した状態が変わっていないことを、クライアントの日時指定がなくても確認する。
+            updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt,
+          },
           data: updateData,
           include: {
             project: true,
@@ -441,12 +446,20 @@ export const taskRouter = createTRPCRouter({
 
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.updateMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 完了日時を保ち、全対象の権限を再確認するため、
+        // 完了済みの行を先に更新・ロックする。
+        const unchanged = await tx.task.updateMany({
+          where: { ...where, status: TASK_STATUS.DONE },
+          data: { status: TASK_STATUS.DONE },
+        });
+        const changed = await tx.task.updateMany({
+          where: { ...where, status: { not: TASK_STATUS.DONE } },
           data: { status: TASK_STATUS.DONE, completedAt },
         });
-        assertBulkWriteCount(result.count, input.ids.length);
-        return result;
+        const count = unchanged.count + changed.count;
+        assertBulkWriteCount(count, input.ids.length);
+        return { count };
       });
     }),
 
@@ -491,12 +504,25 @@ export const taskRouter = createTRPCRouter({
       }
 
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.updateMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES),
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
+        const unchanged =
+          input.status === TASK_STATUS.DONE
+            ? await tx.task.updateMany({
+                where: { ...where, status: TASK_STATUS.DONE },
+                data: { status: TASK_STATUS.DONE },
+              })
+            : { count: 0 };
+        const changed = await tx.task.updateMany({
+          where:
+            input.status === TASK_STATUS.DONE
+              ? { ...where, status: { not: TASK_STATUS.DONE } }
+              : where,
           data,
         });
-        assertBulkWriteCount(result.count, input.ids.length);
-        return result;
+        const count = unchanged.count + changed.count;
+        assertBulkWriteCount(count, input.ids.length);
+        return { count };
       });
     }),
 });

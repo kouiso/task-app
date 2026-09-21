@@ -7,7 +7,7 @@ applyTo: "material/**"
 ## Absolute Rule
 <!-- 絶対ルール -->
 
-**Before writing any curriculum content, invoke `/material-writing` and complete the 6-step thinking process (guide 04: 偏愛語スキャン → 実体判定 → 具体化 → 構文修正 → 語選択修正 → 重言除去).**
+**Before writing any curriculum content, read `.claude/skills/material-writing/SKILL.md` and complete the 6-step thinking process (guide 04: 偏愛語スキャン → 実体判定 → 具体化 → 構文修正 → 語選択修正 → 重言除去).**
 
 **NEVER report curriculum work as "complete" or "done" without running ALL quality check scripts and achieving ZERO failures.**
 <!-- 品質チェックスクリプトを全て実行し、失敗ゼロを達成するまで、教材作業を「完了」「完成」と報告することは絶対禁止 -->
@@ -20,7 +20,7 @@ Before declaring any curriculum task complete, run ALL three gates in order:
 
 ```bash
 # Gate 1: 文章衛生チェック（textlint — AI臭・文体ブレ・誇張表現）
-npx textlint material/30days-curriculum/dayXX_xxx.md
+npx textlint "material/**/*.md"
 # 自動修正: npx textlint --fix material/30days-curriculum/dayXX_xxx.md
 
 # Gate 2: 統合品質チェック（単一ファイルまたはディレクトリ両対応）
@@ -30,7 +30,7 @@ bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/   # デ�
 # 個別チェック（デバッグ用）
 python3 scripts/curriculum-qa/check_visualization.py <day_file>     # テーブル≥4、スクショ≥3、Mermaid
 python3 scripts/curriculum-qa/check_no_skip.py <day_file>           # 各Stepに確認ポイント(✅)とコードブロック
-python3 scripts/curriculum-qa/check_step_length.py <day_file>       # コードブロック≤25行
+python3 scripts/curriculum-qa/check_step_length.py <day_file>       # 原則25行以下。理由付きの完全コピー単位例外はSKILL.mdに従う
 python3 scripts/curriculum-qa/check_code_completeness.py <day_file> # // filepath: コメント必須
 python3 scripts/curriculum-qa/check_tech_stack.py <day_file>        # MUI禁止、shadcn/ui必須
 python3 scripts/curriculum-qa/check_tone.py <day_file>              # 敬体一貫・AI構文ゼロ・関西弁混入ゼロ
@@ -44,10 +44,14 @@ python3 scripts/curriculum-qa/check_comprehension.py <day_file>     # 注釈な�
 |---|---|
 | check_visualization.py | Tables ≥ 4, Screenshots ≥ 3, Mermaid ≥ 1 (if applicable) |
 | check_no_skip.py | Every Step has: code block + ✅ confirmation point + filepath comment |
-| check_step_length.py | All code blocks ≤ 25 lines |
-| check_code_completeness.py | All TypeScript code blocks have `// filepath:` comment |
+| check_step_length.py | At most 25 lines, except complete-copy units with the explicit marker and rationale required by material-writing |
+| check_code_completeness.py | Code blocks identify their destination with a syntactically valid `filepath:` marker; JSX children use JSX comments |
 | check_tech_stack.py | Zero MUI imports, shadcn/ui patterns present |
 | check_tone.py | 敬体一貫・AI構文ゼロ・関西弁混入ゼロ・英語直訳調ゼロ |
+
+## Independent Reader Review
+
+After the two automated gates, use a separate reviewer to read every section and report concrete observations under material-writing Gate 3. Zero findings is valid when coverage is evidenced; there is no minimum finding quota. Source review does not prove PDF readability or successful learner execution.
 
 ## Code-Curriculum Consistency Check (実コード照合)
 <!-- コードと教材の一致確認 -->

@@ -11,7 +11,31 @@ const DEFAULT_VALUES = {
   dateTo: '',
 };
 
+const PROJECT_ID = 'clh12345678901234567890123';
+const USER_ID = 'ck12345678901234567890123';
+
 describe('search filter helpers', () => {
+  it.each([
+    'bad',
+    '2026-02-30',
+    '2026-13-01',
+    '2026-2-01',
+  ])('不正な日付%sを検索条件から除く', (date) => {
+    const params = new URLSearchParams({ dateFrom: date, dateTo: date, keyword: 'api' });
+    const values = applySearchParamsToValues(params, DEFAULT_VALUES);
+    expect(values).toEqual({ ...DEFAULT_VALUES, keyword: 'api' });
+    expect(
+      buildSearchParamsFromValues({ ...DEFAULT_VALUES, dateFrom: date, dateTo: date }).toString(),
+    ).toBe('');
+  });
+
+  it('有効なうるう日と日付範囲を維持する', () => {
+    const values = { ...DEFAULT_VALUES, dateFrom: '2024-02-29', dateTo: '2024-03-01' };
+    expect(applySearchParamsToValues(buildSearchParamsFromValues(values), DEFAULT_VALUES)).toEqual(
+      values,
+    );
+  });
+
   it('URLから削除されたパラメータを既定値へ戻す', () => {
     const prev = {
       ...DEFAULT_VALUES,
@@ -19,11 +43,11 @@ describe('search filter helpers', () => {
       status: 'DONE',
     };
 
-    const next = applySearchParamsToValues(new URLSearchParams('projectId=p1'), prev);
+    const next = applySearchParamsToValues(new URLSearchParams(`projectId=${PROJECT_ID}`), prev);
 
     expect(next).toEqual({
       ...DEFAULT_VALUES,
-      projectId: 'p1',
+      projectId: PROJECT_ID,
     });
   });
 
@@ -43,10 +67,10 @@ describe('search filter helpers', () => {
     const params = buildSearchParamsFromValues({
       ...DEFAULT_VALUES,
       keyword: 'api',
-      assignedTo: 'user-1',
+      assignedTo: USER_ID,
     });
 
-    expect(params.toString()).toBe('keyword=api&assignedTo=user-1');
+    expect(params.toString()).toBe(`keyword=api&assignedTo=${USER_ID}`);
   });
 
   it('検索パラメータ構築時も不正なステータスと優先度を除外する', () => {
@@ -54,9 +78,24 @@ describe('search filter helpers', () => {
       ...DEFAULT_VALUES,
       status: 'ARCHIVED',
       priority: 'CRITICAL',
-      projectId: 'p1',
+      projectId: PROJECT_ID,
     });
 
-    expect(params.toString()).toBe('projectId=p1');
+    expect(params.toString()).toBe(`projectId=${PROJECT_ID}`);
+  });
+
+  it.each(['abc', 'project-1', 'c!', '123'])('不正なCUIDフィルター%sをallへ戻す', (id) => {
+    const values = applySearchParamsToValues(
+      new URLSearchParams({ projectId: id, assignedTo: id, keyword: 'api' }),
+      DEFAULT_VALUES,
+    );
+    expect(values).toEqual({ ...DEFAULT_VALUES, keyword: 'api' });
+    expect(
+      buildSearchParamsFromValues({
+        ...DEFAULT_VALUES,
+        projectId: id,
+        assignedTo: id,
+      }).toString(),
+    ).toBe('');
   });
 });

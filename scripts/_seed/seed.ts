@@ -1,3 +1,4 @@
+import { createInterface } from 'node:readline/promises';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -33,11 +34,55 @@ class Seed {
         ? `${process.env['_DEVELOPER_LASTNAME']} ${process.env['_DEVELOPER_FIRSTNAME']}`
         : '管理者';
 
+    await this.confirmDestructiveScope();
+
     await this.createUsers(developerEmail, developerName);
     await this.cleanupSeedData();
     const projectIds = await this.createProjects(developerEmail);
     await this.createTasks(developerEmail, projectIds.project1Id, projectIds.project2Id);
     await this.createComments(developerEmail);
+  }
+
+  // 破壊的リセットの対象を実行前に明示する。教材の読者はこのコマンドを
+  // 「データが増える操作」と思って実行しがちで、サンプルプロジェクト内に
+  // 自分で追加したタスク・コメントまで消えることに気づかない。
+  // 対話端末では確認を求め、パイプ実行（自動化）では警告表示のみで進める。
+  async confirmDestructiveScope(): Promise<void> {
+    const targets = Object.values(SEED_PROJECTS)
+      .map((project) => `  - ${project.name} (id: ${project.id})`)
+      .join('\n');
+    const dbUrl = process.env['DATABASE_URL'] ?? '(DATABASE_URL 未設定)';
+    const maskedDbUrl = dbUrl.replace(/\/\/([^:/@]+):[^@]*@/, '//$1:****@');
+    console.warn('⚠️  このコマンドは次のサンプルプロジェクトを削除して作り直します:');
+    console.warn(targets);
+    console.warn('   プロジェクト内のタスク・コメント・メンバー設定も一緒に消えます。');
+    console.warn('   それ以外のプロジェクトとユーザーは対象外です。');
+    console.warn(`   対象DB: ${maskedDbUrl}`);
+
+    // 非対話（パイプ・CI）では確認を求められないため、--yes か SEED_YES=1 の明示がなければ中止する。
+    // 警告を出して実行を続ける形だと、一番事故りやすい自動化経路が確認を迂回する。
+    if (!process.stdin.isTTY) {
+      if (!process.argv.includes('--yes') && process.env['SEED_YES'] !== '1') {
+        console.warn(
+          '対話確認ができない環境では中止します。実行するには --yes または SEED_YES=1 を付けてください。',
+        );
+        await this.prisma.$disconnect();
+        process.exit(1);
+      }
+      return;
+    }
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      const answer = await rl.question('続行しますか？ [y/N]: ');
+      if (answer.trim().toLowerCase() !== 'y') {
+        console.warn('中止しました。データは変更されていません。');
+        await this.prisma.$disconnect();
+        process.exit(0);
+      }
+    } finally {
+      rl.close();
+    }
   }
 
   async cleanupSeedData(): Promise<void> {

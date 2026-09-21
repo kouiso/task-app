@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
@@ -141,6 +141,23 @@ describe('projectRouter', () => {
   });
 
   describe('update（更新）', () => {
+    it.each([true, false])('ADMINは更新経由でもisArchived=%sを設定できない', async (isArchived) => {
+      const { project, caller } = await setupProjectWithActor('ADMIN');
+      await prisma.project.update({ where: { id: project.id }, data: { isArchived: !isArchived } });
+
+      await expect(caller.project.update({ id: project.id, isArchived })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      const stored = await prisma.project.findUniqueOrThrow({ where: { id: project.id } });
+      expect(stored.isArchived).toBe(!isArchived);
+    });
+
+    it.each([true, false])('OWNERは更新経由でisArchived=%sを設定できる', async (isArchived) => {
+      const { project, caller } = await setupProjectWithActor('OWNER');
+      const result = await caller.project.update({ id: project.id, isArchived });
+      expect(result.isArchived).toBe(isArchived);
+    });
+
     it('OWNERは更新できる', async () => {
       const { project, caller } = await setupProjectWithActor('OWNER');
       const result = await caller.project.update({ id: project.id, name: '更新後' });
@@ -431,6 +448,158 @@ describe('projectRouter', () => {
     it('MEMBERは取得を拒否される(manageMembers権限が必要)', async () => {
       const { project, caller } = await setupProjectWithActor('MEMBER');
       await expect(caller.project.getAvailableUsers({ projectId: project.id })).rejects.toThrow(
+        'この操作を実行する権限がありません',
+      );
+    });
+  });
+
+  describe('OWNER保護の同時実行（直列化）', () => {
+    // FOR UPDATE でプロジェクト行を直列化する設計の実測。2人の OWNER が
+    // 同時に互いを削除/降格しても、最終的に OWNER が1人残ることを確認する。
+    async function setupTwoOwners() {
+      const ownerA = await createTestUser({
+        email: `ownA-${Date.now()}-${Math.random()}@example.com`,
+      });
+      const ownerB = await createTestUser({
+        email: `ownB-${Date.now()}-${Math.random()}@example.com`,
+      });
+      const project = await createTestProject(ownerA.id);
+      await addMember(project.id, ownerB.id, 'OWNER');
+      const callerA = await createAuthenticatedCaller(ownerA.id, ownerA.email, ownerA.role);
+      const callerB = await createAuthenticatedCaller(ownerB.id, ownerB.email, ownerB.role);
+      return { ownerA, ownerB, project, callerA, callerB };
+    }
+
+    const ownerCount = (projectId: string) =>
+      prisma.projectMember.count({ where: { projectId, role: 'OWNER' } });
+
+    it('2人のOWNERが同時に互いを削除しても、成功は1本だけで最終OWNERは1人', async () => {
+      const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+
+      const results = await Promise.allSettled([
+        callerA.project.removeMember({ projectId: project.id, userId: ownerB.id }),
+        callerB.project.removeMember({ projectId: project.id, userId: ownerA.id }),
+      ]);
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      expect(succeeded).toHaveLength(1);
+      expect(await ownerCount(project.id)).toBe(1);
+    });
+
+    it('2人のOWNERが同時に互いを降格しても、成功は1本だけで最終OWNERは1人', async () => {
+      const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+
+      const results = await Promise.allSettled([
+        callerA.project.updateMemberRole({
+          projectId: project.id,
+          userId: ownerB.id,
+          role: 'MEMBER',
+        }),
+        callerB.project.updateMemberRole({
+          projectId: project.id,
+          userId: ownerA.id,
+          role: 'MEMBER',
+        }),
+      ]);
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      expect(succeeded).toHaveLength(1);
+      expect(await ownerCount(project.id)).toBe(1);
+    });
+
+    it('一方が削除・他方が降格を同時に仕掛けても、成功は1本だけで最終OWNERは1人', async () => {
+      const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+
+      // 削除と降格は別経路だが、プロジェクト行の FOR UPDATE で同じ
+      // 直列化点を通る。混合でも「両方成功して OWNER=0」にはならない。
+      const results = await Promise.allSettled([
+        callerA.project.removeMember({ projectId: project.id, userId: ownerB.id }),
+        callerB.project.updateMemberRole({
+          projectId: project.id,
+          userId: ownerA.id,
+          role: 'MEMBER',
+        }),
+      ]);
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      expect(succeeded).toHaveLength(1);
+      expect(await ownerCount(project.id)).toBe(1);
+    });
+
+    it.each([
+      ['remove', 'remove'],
+      ['demote', 'demote'],
+      ['remove', 'demote'],
+      ['demote', 'remove'],
+    ] as const)('%sと%sの実際のロック待機後もOWNERを残し、失った権限で更新しない', async (first, second) => {
+      const { ownerA, ownerB, project, callerA, callerB } = await setupTwoOwners();
+      let release = () => {};
+      let ready = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const locked = new Promise<void>((resolve) => {
+        ready = resolve;
+      });
+      const holder = prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`;
+          ready();
+          await released;
+        },
+        { timeout: 10000 },
+      );
+      // ロックを取得できない場合も待機を終わらせ、失敗を後段へ伝えるためです。
+      const observedHolder = holder.then(
+        () => undefined,
+        (error: unknown) => {
+          ready();
+          return error;
+        },
+      );
+      await locked;
+      const operations = Promise.allSettled([
+        first === 'remove'
+          ? callerA.project.removeMember({ projectId: project.id, userId: ownerB.id })
+          : callerA.project.updateMemberRole({
+              projectId: project.id,
+              userId: ownerB.id,
+              role: 'MEMBER',
+            }),
+        second === 'remove'
+          ? callerB.project.removeMember({ projectId: project.id, userId: ownerA.id })
+          : callerB.project.updateMemberRole({
+              projectId: project.id,
+              userId: ownerA.id,
+              role: 'MEMBER',
+            }),
+      ]);
+      try {
+        await vi.waitFor(
+          async () => {
+            const waiting = await prisma.$queryRaw<Array<{ count: bigint }>>`
+            SELECT count(*) FROM pg_stat_activity
+            WHERE datname = current_database()
+              AND wait_event_type = 'Lock'
+              AND query LIKE '%FOR UPDATE%'
+              AND cardinality(pg_blocking_pids(pid)) > 0
+          `;
+            expect(Number(waiting[0]?.count)).toBe(2);
+          },
+          { timeout: 3000, interval: 25 },
+        );
+      } finally {
+        release();
+        await observedHolder;
+        await operations;
+      }
+      const holderError = await observedHolder;
+      if (holderError !== undefined) throw holderError;
+      const results = await operations;
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(await ownerCount(project.id)).toBe(1);
+      const rejection = results.find((result) => result.status === 'rejected');
+      expect(rejection?.status === 'rejected' && rejection.reason.message).toBe(
         'この操作を実行する権限がありません',
       );
     });

@@ -1,7 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
 import { Download } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -19,6 +17,7 @@ import {
   YAxis,
 } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
@@ -29,7 +28,8 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { TASK_PRIORITY, TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
-import { TASK_STATUS, TASK_STATUS_COLORS } from '@/lib/constant/status';
+import { formatDateOnly } from '@/lib/date';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { buildWeeklyReportExportPath, normalizeReportWeeksParam } from '@/lib/report-path';
 import { api } from '@/trpc/react';
 
@@ -40,12 +40,64 @@ export default function WeeklyReportPage() {
   const searchParams = useSearchParams();
   const [weeks, setWeeks] = useState(() => normalizeReportWeeksParam(searchParams.get('weeks')));
 
-  const { data: reportData, isLoading } = api.report.getWeeklyReport.useQuery({
-    weeks: Number.parseInt(weeks, 10),
-  });
+  const {
+    data: reportData,
+    isLoading,
+    isError,
+    isFetching,
+    error,
+    refetch,
+  } = api.report.getWeeklyReport.useQuery(
+    { weeks: Number.parseInt(weeks, 10) },
+    {
+      retry: shouldRetryQuery,
+    },
+  );
+  const authFailed = isError && isAuthError(error);
+  const forbidden = isError && isForbiddenError(error);
 
-  if (isLoading) {
+  if (isLoading && !authFailed && !forbidden) {
     return <PageLoadingSpinner />;
+  }
+
+  if (authFailed || forbidden || (isError && reportData == null)) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-base font-semibold text-foreground mb-2">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このレポートを見る権限がありません'
+                : '週次レポートを取得できませんでした'}
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '権限が必要です。管理者に確認してください。'
+                : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/project');
+                return;
+              }
+              void refetch();
+            }}
+            disabled={isFetching}
+          >
+            {authFailed ? 'ログイン画面へ' : forbidden ? 'プロジェクト一覧へ' : '再読み込み'}
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 
   const handleWeeksChange = (value: string) => {
@@ -64,16 +116,31 @@ export default function WeeklyReportPage() {
     urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
   }));
 
-  const statusData = reportData?.weeklyData.map((week) => ({
+  const priorityData = reportData?.weeklyData.map((week) => ({
     name: week.week,
-    done: week.byStatus[TASK_STATUS.DONE] ?? 0,
-    inProgress: week.byStatus[TASK_STATUS.IN_PROGRESS] ?? 0,
-    inReview: week.byStatus[TASK_STATUS.IN_REVIEW] ?? 0,
+    low: week.byPriority[TASK_PRIORITY.LOW] ?? 0,
+    medium: week.byPriority[TASK_PRIORITY.MEDIUM] ?? 0,
+    high: week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+    urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
   }));
 
   return (
     <AppLayout>
       <div className="space-y-6">
+        {isError && reportData != null ? (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+            <span>最新の週次レポートを取得できませんでした。表示は前回取得時の内容です。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        ) : null}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">週次レポート</h1>
@@ -119,10 +186,10 @@ export default function WeeklyReportPage() {
           </Card>
           <Card>
             <CardContent className="pt-6 sm:pt-6">
-              <p className="text-sm text-muted-foreground mb-1">対象期間</p>
+              <p className="text-sm text-muted-foreground mb-1">対象期間（UTC）</p>
               <p className="text-lg font-semibold">
                 {reportData?.startDate && reportData?.endDate
-                  ? `${format(new Date(reportData.startDate), 'yyyy/MM/dd', { locale: ja })} - ${format(new Date(reportData.endDate), 'yyyy/MM/dd', { locale: ja })}`
+                  ? `${formatDateOnly(reportData.startDate)} - ${formatDateOnly(reportData.endDate)}`
                   : '-'}
               </p>
             </CardContent>
@@ -158,7 +225,7 @@ export default function WeeklyReportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>優先度別分布</CardTitle>
+              <CardTitle>高・緊急の完了タスク数</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -179,34 +246,40 @@ export default function WeeklyReportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>ステータス別内訳</CardTitle>
+              <CardTitle>完了タスクの優先度別内訳</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statusData ?? []}>
+                  <BarChart data={priorityData ?? []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
                     <Bar
-                      dataKey="done"
-                      fill={TASK_STATUS_COLORS.DONE}
-                      name="完了"
-                      stackId="status"
+                      dataKey="low"
+                      fill={TASK_PRIORITY_COLORS.LOW}
+                      name="低"
+                      stackId="priority"
                     />
                     <Bar
-                      dataKey="inProgress"
-                      fill={TASK_STATUS_COLORS.IN_PROGRESS}
-                      name="進行中"
-                      stackId="status"
+                      dataKey="medium"
+                      fill={TASK_PRIORITY_COLORS.MEDIUM}
+                      name="中"
+                      stackId="priority"
                     />
                     <Bar
-                      dataKey="inReview"
-                      fill={TASK_STATUS_COLORS.IN_REVIEW}
-                      name="レビュー中"
-                      stackId="status"
+                      dataKey="high"
+                      fill={TASK_PRIORITY_COLORS.HIGH}
+                      name="高"
+                      stackId="priority"
+                    />
+                    <Bar
+                      dataKey="urgent"
+                      fill={TASK_PRIORITY_COLORS.URGENT}
+                      name="緊急"
+                      stackId="priority"
                     />
                   </BarChart>
                 </ResponsiveContainer>

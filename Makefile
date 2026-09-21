@@ -38,8 +38,9 @@ ifndef FILE
 endif
 	@python3 scripts/pdf-book/build_pdf_book.py "$(FILE)"
 
-# 検査の判定境界を固定する退行テスト（PDF も poppler も要らない）
+# 検査とリンク変換の退行テスト（npm install済み。PDFとpopplerは不要）
 book-pdf-test:
+	@python3 -m unittest discover -s scripts/pdf-book -p test_book_links.py
 	@python3 scripts/pdf-book/test_check_pdf_book.py
 	@python3 scripts/pdf-book/test_check_page_layout.py
 

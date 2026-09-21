@@ -5,7 +5,7 @@
 組み方の境界が1つずれると、通ったツリーは読者の手元と別物になり、緑が何も
 保証しなくなる。ずれやすいのは次の4つで、ここで固定する。
 
-  - 写経の対象になるのは `src/` `prisma/` `scripts/` 配下の書き込み先だけである。
+  - 写経の対象になるのは `src/` `prisma/` `scripts/` 配下と明示許可したルート設定である。
     「読み比べ用サンプル」や「ターミナル」は実ファイルを持たない。
   - scaffold が配るファイルは上書きしない。教材のブロックはその中の断片であり、
     丸ごと置き換えると読者の手元より壊れた状態になる。
@@ -89,12 +89,22 @@ def check_apply_blocks() -> list[str]:
         make_material(root)
         dest = Path(d) / "tree"
         dest.mkdir()
+        config = "export default { test: { setupFiles: ['./src/test/setup.ts'] } };"
+        (root / "day26_設定.md").write_text(
+            block("vitest.config.ts", config)
+            + block("unknown.config.ts", "export default {};")
+            + block("../vitest.config.ts", "export default {};"),
+            encoding="utf-8",
+        )
         written = target.apply_blocks(dest, sorted(root.glob("day*.md")))
+        config_path = dest / "vitest.config.ts"
+        if not config_path.exists() or config_path.read_text().strip() != config:
+            fails.append("❌ 教材のVitest設定が生成ツリーへ再現されていない")
 
         placed = sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file())
-        if placed != ["src/app/page.tsx"]:
+        if placed != ["src/app/page.tsx", "vitest.config.ts"]:
             fails.append(f"❌ ツリーへ置かれたファイルが違う: {placed}")
-        if written != 1:
+        if written != 2:
             fails.append(f"❌ 書いたファイル数が違う: {written}")
 
         body = (dest / "src/app/page.tsx").read_text(encoding="utf-8")
@@ -219,18 +229,21 @@ def check_day_range() -> list[str]:
     return fails
 
 
-EXPECTED_TABLE = """| Day | ツリー構築 | tsc | build | 最初のエラー3行 |
-| --- | --- | --- | --- | --- |
-| day01 | OK（73 ファイル） | OK | OK | - |
-| day02 | OK（74 ファイル） | NG | NG | src/app/page.tsx(1,1): error TS2304 |
-| day03 | NG | 未実行 | 未実行 | OSError: 置けません |"""
+EXPECTED_TABLE = """| Day | ツリー構築 | Prisma生成 | tsc | build | 最初のエラー3行 |
+| --- | --- | --- | --- | --- | --- |
+| day01 | OK（73 ファイル） | OK | OK | OK | - |
+| day02 | OK（74 ファイル） | OK | NG | NG | src/app/page.tsx(1,1): error TS2304 |
+| day03 | NG | 未実行 | 未実行 | 未実行 | OSError: 置けません |"""
 
 
 def check_result_table() -> list[str]:
     """表の形を固定する。"""
     results = [
-        target.DayResult(1, 73, True, "OK", "OK", ()),
-        target.DayResult(2, 74, True, "NG", "NG", ("src/app/page.tsx(1,1): error TS2304",)),
+        target.DayResult(1, 73, True, "OK", "OK", (), generation="OK"),
+        target.DayResult(
+            2, 74, True, "NG", "NG", ("src/app/page.tsx(1,1): error TS2304",),
+            generation="OK",
+        ),
         target.DayResult(3, 0, False, target.NOT_RUN, target.NOT_RUN, ("OSError: 置けません",)),
     ]
     got = target.result_table(results)
@@ -238,7 +251,9 @@ def check_result_table() -> list[str]:
         return [f"❌ 表の形が違う:\n{got}"]
 
     # `|` はセルの区切りなので、そのまま入れると列がずれる。
-    piped = target.result_table([target.DayResult(1, 1, True, "NG", "NG", ("a | b",))])
+    piped = target.result_table([
+        target.DayResult(1, 1, True, "NG", "NG", ("a | b",), generation="OK")
+    ])
     if "a \\| b" not in piped:
         return [f"❌ エラー行の `|` を潰していない: {piped}"]
     return []
@@ -572,7 +587,8 @@ def check_provenance() -> list[str]:
         fails.append("❌ 再現できるコマンド文字列になっていない")
 
     full = [
-        target.DayResult(d, 80, True, "OK", "OK", ()) for d in target.available_days()
+        target.DayResult(d, 80, True, "OK", "OK", (), generation="OK")
+        for d in target.available_days()
     ]
     original = target.RESULT_DOC
     try:
@@ -591,32 +607,240 @@ def check_provenance() -> list[str]:
         fails.append("❌ いつ出したかが書かれていない")
     if "⚠" in whole:
         fails.append("❌ 通し走行なのに部分走行の警告が出ている")
+    if "対象範囲: 全件実行" not in whole:
+        fails.append("❌ 通し走行が全件実行と明記されていない")
+    if "初心者が教材だけで完走できたことの証明ではない" not in whole:
+        fails.append("❌ 静的スナップショットをクリーンルーム完走の証明と区別していない")
 
     # 単日の走行は、通しの実測を上書きしたかもしれんことが一目で分かること。
     if "⚠" not in partial:
         fails.append(f"❌ 部分走行に警告が出ていない: {partial[:200]!r}")
     if "1 日ぶん" not in partial:
         fails.append("❌ 何日ぶんかが書かれていない")
+    if "対象範囲: 部分実行" not in partial:
+        fails.append("❌ 単日の結果が部分実行と明記されていない")
     return fails
 
 
-def documented_day11_errors() -> tuple[str, ...]:
-    """断り書きの現物（`EXPECTED_RED_SIGNATURE[11]["diagnostics"]`）から tsc の行を組む。
-
-    位置を手で並べると、断り書きを更新した時にここだけ古いまま緑になる。
-    `getById` は本文が名指ししとる識別子なので、TS2339 の行にだけ載せる。
-    """
-    signature = target.EXPECTED_RED_SIGNATURE[11]
-    lines = []
-    for head in signature["diagnostics"]:
-        where, code = head.rsplit(":", 1)
-        tail = (
-            f"Property '{signature['marker']}' does not exist"
-            if code == "TS2339"
-            else "Parameter implicitly has an 'any' type"
+def check_immutable_run_records() -> list[str]:
+    """全30日の記録を単日実行が消さず、SKIPをPASSに数えないこと。"""
+    fails = []
+    days = target.available_days()
+    full = [
+        target.DayResult(
+            day,
+            80,
+            True,
+            "OK",
+            "OK",
+            (),
+            source_input_hash=f"sha256-day{day:02d}",
+            source_input_hash_after=f"sha256-day{day:02d}",
+            generation="OK",
         )
-        lines.append(f"{where}: error {code}: {tail}")
-    return tuple(lines)
+        for day in days
+    ]
+    blocked = target.DayResult(
+        days[-1],
+        80,
+        True,
+        "OK",
+        target.BUILD_SKIPPED,
+        ("Can't reach database server",),
+        ("Can't reach database server",),
+        source_input_hash=f"sha256-day{days[-1]:02d}",
+        source_input_hash_after=f"sha256-day{days[-1]:02d}",
+        generation="OK",
+    )
+    original_root = target.SNAPSHOT_ROOT
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            target.SNAPSHOT_ROOT = Path(directory) / "day-snapshots"
+            full_path = target.write_run_record(full, True, "python3 x --all --verify")
+            full_before = full_path.read_bytes()
+            partial_path = target.write_run_record(
+                [blocked], True, f"python3 x --day {days[-1]} --verify"
+            )
+            records = sorted((target.SNAPSHOT_ROOT / "result").glob("*.json"))
+            full_record = json.loads(full_path.read_text(encoding="utf-8"))
+            partial_record = json.loads(partial_path.read_text(encoding="utf-8"))
+            if len(records) != 2:
+                fails.append(f"❌ 全件→単日の2回で不変記録が {len(records)} 本しかない")
+            if not full_path.exists() or full_path.read_bytes() != full_before:
+                fails.append("❌ 後の単日実行が先の全件記録を書き換えた")
+            if full_record["coverage"] != "full" or full_record["targetDays"] != days:
+                fails.append("❌ 全件記録の実対象日が保存されていない")
+            if partial_record["coverage"] != "partial" or partial_record["targetDays"] != [days[-1]]:
+                fails.append("❌ 単日記録が部分実行として保存されていない")
+            result = partial_record["days"][0]
+            if result["status"] != "BLOCKED_ENV":
+                fails.append(f"❌ DBで未判定の日が {result['status']} として保存された")
+            if result["sourceInputHash"] != f"sha256-day{days[-1]:02d}":
+                fails.append("❌ 証拠記録にソース入力ハッシュが無い")
+            if not result["sourceInputStable"]:
+                fails.append("❌ 前後一致したソース入力を変更ありとして保存した")
+            if "errors" not in result["evidence"] or "buildErrors" not in result["evidence"]:
+                fails.append("❌ 証拠記録にエラーの実体が無い")
+            if result["generation"] != "OK" or "generationErrors" not in result["evidence"]:
+                fails.append("❌ 証拠記録にPrisma生成の状態とエラー欄が無い")
+    finally:
+        target.SNAPSHOT_ROOT = original_root
+
+    original_repo = target.REPO_ROOT
+    original_inputs = target.tree_inputs
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            target.REPO_ROOT = Path(directory)
+            source = target.REPO_ROOT / "source.md"
+            source.write_text("first\n", encoding="utf-8")
+            target.tree_inputs = lambda _day: [source]
+            generated = target.REPO_ROOT / "dist"
+            target.tree_inputs = lambda _day: [source, target.REPO_ROOT]
+            first_hash = target.source_input_hash(1)
+            generated.mkdir()
+            (generated / "build-result.json").write_text("{}", encoding="utf-8")
+            if target.source_input_hash(1) != first_hash:
+                fails.append("❌ 生成物が親ディレクトリ経由で入力ハッシュを変えた")
+            source.write_text("second\n", encoding="utf-8")
+            if target.source_input_hash(1) == first_hash:
+                fails.append("❌ ソース入力が変わってもハッシュが変わらない")
+    finally:
+        target.REPO_ROOT = original_repo
+        target.tree_inputs = original_inputs
+
+    if target.result_status(blocked, True) == "PASS":
+        fails.append("❌ DBで未判定の日をPASSに数えている")
+    not_run = blocked._replace(tsc=target.NOT_RUN, build=target.NOT_RUN)
+    if target.result_status(not_run, False) != "NOT_RUN":
+        fails.append("❌ --verifyなしをNOT_RUNとして保存していない")
+    failed = blocked._replace(tree_ok=False, tsc=target.NOT_RUN, build=target.NOT_RUN)
+    if target.result_status(failed, True) != "FAIL":
+        fails.append("❌ ツリー構築失敗をFAILとして保存していない")
+    return fails
+
+
+def check_source_input_stability() -> list[str]:
+    """再構築中の入力変更とハッシュ失敗をPASSにしないこと。"""
+    fails: list[str] = []
+    original_repo = target.REPO_ROOT
+    original_inputs = target.tree_inputs
+    original_build = target.build_tree
+    original_verify = target.verify_tree
+    original_hash = target.source_input_hash
+    original_days = target.available_days
+    original_snapshot_root = target.SNAPSHOT_ROOT
+    original_result_doc = target.RESULT_DOC
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            target.REPO_ROOT = Path(directory)
+            source = target.REPO_ROOT / "source.md"
+            watched = target.REPO_ROOT / "watched"
+            added = watched / "added.md"
+            removed = watched / "removed.md"
+            watched.mkdir()
+            source.write_text("first\n", encoding="utf-8")
+            inputs = [source, watched]
+            target.tree_inputs = lambda _day: list(inputs)
+
+            def assert_rejected(label: str, mutate: object) -> None:
+                def fake_build(_day: int) -> tuple[Path, int]:
+                    assert callable(mutate)
+                    mutate()
+                    return target.REPO_ROOT / "day01", 1
+
+                target.build_tree = fake_build
+                result = target.snapshot_day(1, False)
+                if target.result_status(result, False) != "FAIL":
+                    fails.append(f"❌ 再構築中の{label}をFAILにしていない")
+                if result.source_input_stable:
+                    fails.append(f"❌ 再構築中の{label}を入力一致として記録した")
+                if result.source_input_hash == result.source_input_hash_after:
+                    fails.append(f"❌ 再構築中の{label}で前後ハッシュが同じ")
+                if not any("ソース入力が変更" in error for error in result.errors):
+                    fails.append(f"❌ 再構築中の{label}に変更理由が残っていない")
+
+            assert_rejected(
+                "内容変更",
+                lambda: source.write_text("second\n", encoding="utf-8"),
+            )
+            source.write_text("first\n", encoding="utf-8")
+            assert_rejected(
+                "ファイル追加",
+                lambda: added.write_text("new\n", encoding="utf-8"),
+            )
+            added.unlink()
+            removed.write_text("remove me\n", encoding="utf-8")
+            assert_rejected(
+                "ファイル削除",
+                removed.unlink,
+            )
+
+            target.available_days = lambda: [1]
+            target.SNAPSHOT_ROOT = target.REPO_ROOT / "snapshots"
+            target.RESULT_DOC = target.REPO_ROOT / "result.md"
+            target.build_tree = lambda _day: (target.REPO_ROOT / "day01", 1)
+
+            def mutate_during_verify(_dest: Path) -> target.TreeVerification:
+                source.write_text("changed in verify\n", encoding="utf-8")
+                return target.TreeVerification("OK", "OK", "OK")
+
+            target.verify_tree = mutate_during_verify
+            if target.main(["build_day_snapshots.py", "--day", "1", "--verify"]) != 1:
+                fails.append("❌ 検証中に入力が変わってもコマンドが終了コード1にならない")
+            records = set((target.SNAPSHOT_ROOT / "result").glob("*.json"))
+            recorded = json.loads(next(iter(records)).read_text(encoding="utf-8"))["days"][0]
+            if recorded["status"] != "FAIL":
+                fails.append("❌ 検証中の入力変更を不変記録へFAILで残していない")
+            if recorded["sourceInputHash"] == recorded["sourceInputHashAfter"]:
+                fails.append("❌ 不変記録が検査前後の異なる入力を区別していない")
+
+            def assert_main_failure_record(label: str) -> None:
+                before = set((target.SNAPSHOT_ROOT / "result").glob("*.json"))
+                exit_code = target.main(["build_day_snapshots.py", "--day", "1"])
+                after = set((target.SNAPSHOT_ROOT / "result").glob("*.json"))
+                if exit_code != 1:
+                    fails.append(f"❌ {label}でもコマンドが終了コード1にならない")
+                if len(after - before) != 1:
+                    fails.append(f"❌ {label}の不変記録が1件残らない")
+                elif json.loads(next(iter(after - before)).read_text(encoding="utf-8"))["days"][0]["status"] != "FAIL":
+                    fails.append(f"❌ {label}を不変記録へFAILで残していない")
+
+            target.verify_tree = original_verify
+            target.source_input_hash = lambda _day: (_ for _ in ()).throw(OSError("before"))
+            assert_main_failure_record("事前ハッシュ失敗")
+            before_failure = target.snapshot_day(1, False)
+            if target.result_status(before_failure, False) != "FAIL":
+                fails.append("❌ 事前ハッシュ失敗をFAILにしていない")
+
+            calls = 0
+
+            def fail_after(_day: int) -> str:
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise OSError("after")
+                return "stable-before"
+
+            target.source_input_hash = fail_after
+            after_failure = target.snapshot_day(1, False)
+            if target.result_status(after_failure, False) != "FAIL":
+                fails.append("❌ 事後ハッシュ失敗をFAILにしていない")
+            if after_failure.source_input_hash != "stable-before":
+                fails.append("❌ 事後ハッシュ失敗時に検査対象の事前ハッシュを失った")
+
+            target.source_input_hash = original_hash
+            target.build_tree = lambda _day: (_ for _ in ()).throw(OSError("build"))
+            assert_main_failure_record("ツリー構築失敗")
+    finally:
+        target.REPO_ROOT = original_repo
+        target.tree_inputs = original_inputs
+        target.build_tree = original_build
+        target.verify_tree = original_verify
+        target.source_input_hash = original_hash
+        target.available_days = original_days
+        target.SNAPSHOT_ROOT = original_snapshot_root
+        target.RESULT_DOC = original_result_doc
+    return fails
 
 
 def check_triage_section() -> list[str]:
@@ -632,42 +856,6 @@ def check_triage_section() -> list[str]:
     if "day09" not in section or "判定不能（未調査）" not in section:
         fails.append(f"❌ 未調査の日が「判定不能（未調査）」になっていない: {section!r}")
 
-    # 教材が先に断っとる赤を「教材の欠陥」と書かない。day11 で一度やって覆された。
-    expected_day = next(iter(target.EXPECTED_RED), None)
-    if expected_day is None:
-        fails.append("❌ EXPECTED_RED が空で、想定内の赤の扱いを確かめられない")
-    else:
-        signature = target.EXPECTED_RED_SIGNATURE[expected_day]
-        documented_errors = documented_day11_errors()
-        documented = target.DayResult(
-            expected_day, 80, True, "NG", "OK",
-            errors=documented_errors[:3], tsc_errors=documented_errors,
-        )
-        section = target.triage_section([documented])
-        row = next(
-            (l for l in section.split("\n") if l.startswith(f"| day{expected_day:02d} ")), ""
-        )
-        if "想定内" not in row:
-            fails.append(f"❌ 想定内の赤が想定内として出ていない: {row!r}")
-        if "教材の欠陥" in row or "判定不能" in row:
-            fails.append(f"❌ 想定内の赤を欠陥や未調査として出している: {row!r}")
-
-        # 断り書きと合わん赤まで「想定内」と書いたら、走行は exit 1 やのに成果物だけが
-        # 「想定どおり」と言い張る状態になる。走行の判定と文書の判定を同じ線で動かす。
-        unrelated = documented._replace(
-            tsc_errors=documented.tsc_errors + (
-                "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
-            ),
-        )
-        unrelated_row = next(
-            (l for l in target.triage_section([unrelated]).split("\n")
-             if l.startswith(f"| day{expected_day:02d} ")), ""
-        )
-        if "想定内" in unrelated_row:
-            fails.append(f"❌ 断り書きと合わん赤まで成果物が想定内と書いている: {unrelated_row!r}")
-        if not target.broken_days([unrelated]):
-            fails.append("❌ 断り書きと合わん赤を異常日に数えていない（文書との食い違いの元）")
-
     original = dict(target.TRIAGE)
     try:
         target.TRIAGE[9] = ("ツールの限界", "day13 と同じ、完成版が抜粋")
@@ -680,32 +868,6 @@ def check_triage_section() -> list[str]:
 
     if not target.triage_section([target.DayResult(1, 70, True, "OK", "OK", ())]) == "":
         fails.append("❌ NG が無いのに切り分けの節を書いている")
-    return fails
-
-
-def check_expected_red_is_grounded() -> list[str]:
-    """EXPECTED_RED に挙げた日が、本当に教材で断られているかを確かめる。
-
-    ここを台帳だけで持つと、あとから「落ちるから」という理由で日を足して
-    赤を隠す抜け道になる。教材の本文に断りがある日だけを許す。
-    """
-    from build_day_snapshots import EXPECTED_RED, MATERIAL_DIR
-
-    fails = []
-    if not EXPECTED_RED:
-        return ["EXPECTED_RED が空です。day11 の断りが本文から消えたのなら別途確認が要ります"]
-    for day in EXPECTED_RED:
-        found = sorted(MATERIAL_DIR.glob(f"day{day:02d}_*.md"))
-        if not found:
-            fails.append(f"❌ EXPECTED_RED の day{day:02d} に対応する教材がありません")
-            continue
-        text = found[0].read_text(encoding="utf-8")
-        # 「読者の画面でも同じことが起きる」と本文が言っているかどうか。
-        if "写し間違いではありません" not in text:
-            fails.append(
-                f"❌ day{day:02d} の本文に型エラーの断りが見つかりません。"
-                "断りが無い日を EXPECTED_RED に置くと、教材の欠陥を隠すことになります"
-            )
     return fails
 
 
@@ -1190,124 +1352,10 @@ def check_build_failure_triage() -> list[str]:
     tail = source.split("if skipped:", 1)
     if len(tail) != 2:
         fails.append("❌ 判定できんかった日があっても、成功の行に何も出していない")
-    elif "検証していません" not in tail[1].split("return 0", 1)[0]:
+    elif "検証していません" not in tail[1].split("return 1", 1)[0]:
         fails.append("❌ 判定してへん日があるのに「検証していない」と書いていない")
-    return fails
-
-
-def check_expected_red_build_exemption() -> list[str]:
-    """EXPECTED_RED の日の build 免除が、断り書きの範囲に収まっとること。
-
-    day 番号だけで build を丸ごと免除すると、断ってへん失敗（prerender や
-    server/client 境界）がその日に紛れても exit 0 で出ていく。断ってあるのは
-    型エラーだけなので、免除もそこまで。
-    """
-    fails = []
-    known = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
-        errors=("src/x.tsx(29,47): error TS2339: Property 'getById' does not exist",),
-        build_errors=(
-            "Failed to compile.",
-            "Type error: Property 'getById' does not exist on type ...",
-        ),
-    )
-    tree_failed = known._replace(tree_ok=False, tsc=target.NOT_RUN, build=target.NOT_RUN)
-    if target.expected_red_holds(tree_failed):
-        fails.append("❌ ツリー構築に失敗した day11 を想定内の赤として扱っている")
-    if not target.build_failure_is_expected(known):
-        fails.append("❌ 断り書きどおりの型エラーによる build 落ちまで異常扱いしている")
-
-    extra = known._replace(build_errors=known.build_errors + (
-        "Error: Unauthorized while prerendering /project",
-    ))
-    if target.build_failure_is_expected(extra):
-        fails.append("❌ 断り書きに無い失敗が day11 に紛れても免除している")
-
-    # prerender の見出しは DB の問いでだけ包み紙。免除の問いでは「型エラーやない行」
-    # なので、これが混ざったら免除せんこと。
-    wrapped = known._replace(build_errors=known.build_errors + (
-        "Error occurred prerendering page \"/project\"",
-    ))
-    if target.build_failure_is_expected(wrapped):
-        fails.append("❌ prerender の見出しが混ざった day11 を免除している")
-
-    silent = known._replace(build_errors=("Failed to compile.",))
-    if target.build_failure_is_expected(silent):
-        fails.append("❌ 型エラーの証拠が1行も無いのに断り書きで説明できたことにしている")
-
-    other = known._replace(day=12)
-    if target.build_failure_is_expected(other):
-        fails.append("❌ EXPECTED_RED に無い日まで免除している")
-
-    # tsc の側も、日付やのうて断り書きの中身と突き合わせること。本文は識別子・件数・場所まで
-    # 書いとるので、そこが合わん赤は「別の欠陥が紛れた」と見なす。
-    documented = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="OK",
-        errors=(),
-        tsc_errors=documented_day11_errors(),
-    )
-    if not target.tsc_failure_is_expected(documented):
-        fails.append("❌ 断り書きどおりの型エラー5件まで異常扱いしている")
-
-    # 件数が増えたら、断り書きで説明でけへん赤が混ざっとる。
-    if target.tsc_failure_is_expected(
-        documented._replace(tsc_errors=documented.tsc_errors + (
-            "src/component/project/project-detail-view.tsx(200,4): error TS2345: "
-            "Argument of type 'string' is not assignable",
-        ))
-    ):
-        fails.append("❌ 断り書きの件数を超える型エラーまで想定内にしている")
-
-    # 名指しされた識別子に1行も触れてへん赤は、別の欠陥。
-    unrelated = documented._replace(tsc_errors=tuple(
-        line.replace("Property 'getById' does not exist", "Type 'number' is not assignable to type 'string'")
-        for line in documented.tsc_errors
-    ))
-    if target.tsc_failure_is_expected(unrelated):
-        fails.append("❌ `getById` と無関係な型エラー5件を day11 の想定内として通している")
-
-    # 場所が広がったら、配布物1ファイルに閉じるという前提が崩れとる。
-    spread = documented._replace(tsc_errors=documented.tsc_errors[:-1] + (
-        "src/app/project/page.tsx(10,4): error TS2322: Type 'string' is not assignable",
-    ))
-    if target.tsc_failure_is_expected(spread):
-        fails.append("❌ 断り書きの場所を外れた型エラーまで想定内にしている")
-
-    if target.tsc_failure_is_expected(documented._replace(day=12)):
-        fails.append("❌ EXPECTED_RED に無い日の型エラーまで免除している")
-
-    # build 側も、名指しされた識別子に触れてへん型エラーは免除せん。
-    other_type_error = known._replace(build_errors=(
-        "Failed to compile.",
-        "Type error: Type 'number' is not assignable to type 'string'.",
-    ))
-    if target.build_failure_is_expected(other_type_error):
-        fails.append("❌ 断り書きと無関係な型エラーによる build 落ちを免除している")
-
-    # 根っこの getById が残っていても、追加の型エラーまで同居したら免除せん。
-    mixed_type_errors = known._replace(build_errors=known.build_errors + (
-        "Type error: Type 'number' is not assignable to type 'string'.",
-    ))
-    if target.build_failure_is_expected(mixed_type_errors):
-        fails.append("❌ getById と別の型エラーが同居した build を免除している")
-
-    # 免除の判断が異常日の判定に効いとること。関数だけ足しても意味が無いので、
-    # 実際に `broken_days` を通して数える。
-    healthy = target.DayResult(
-        day=9, files=80, tree_ok=True, tsc="OK", build="OK", errors=(), build_errors=(),
-    )
-    exempt = documented._replace(build="NG", build_errors=known.build_errors)
-    unrelated_day11 = unrelated._replace(build="NG", build_errors=(
-        "Failed to compile.",
-        "Error occurred prerendering page \"/project\"",
-    ))
-    broken = target.broken_days([healthy, exempt, unrelated_day11])
-    if any(r is healthy for r in broken):
-        fails.append("❌ 通った日を異常日に数えている")
-    if any(r is exempt for r in broken):
-        fails.append("❌ 断り書きどおりの day11 を異常日に数えている")
-    if not any(r is unrelated_day11 for r in broken):
-        fails.append("❌ 断り書きと無関係な赤が紛れた day11 を異常日に数えていない")
+    elif "return 1" not in tail[1]:
+        fails.append("❌ --verify で判定不能が残るのに終了コード0で通している")
     return fails
 
 
@@ -1315,7 +1363,7 @@ def check_both_red_shows_both() -> list[str]:
     """tsc と build が両方赤い日は、画面と成果物に両方の行を出すこと。
 
     `tsc_shown or build_shown` にすると tsc が赤い時点で build の行が丸ごと消える。
-    day11 のように tsc の赤が想定内の日で build 側に別の欠陥が入ると、走行は exit 1 なのに
+    tsc が赤い日に build 側へ別の欠陥が入ると、走行は exit 1 なのに
     出とるのは「知っとる型エラー」だけになり、落ちた本当の理由が読めん。
     """
     fails = []
@@ -1325,7 +1373,9 @@ def check_both_red_shows_both() -> list[str]:
 
     def fake_run_step(cmd, dest):
         calls.append(cmd)
-        if "tsc" in " ".join(cmd):
+        if cmd[-1] == "generate":
+            return True, (), ()
+        if cmd[-1] == "--noEmit":
             return False, tsc_lines, tsc_lines
         return False, build_lines, build_lines + ("Failed to compile.",)
 
@@ -1334,21 +1384,134 @@ def check_both_red_shows_both() -> list[str]:
     try:
         target.run_step = fake_run_step
         target.link_node_modules = lambda dest: None
-        tsc, build, shown, build_all, tsc_all = target.verify_tree(Path("/nonexistent"))
+        with tempfile.TemporaryDirectory() as directory:
+            dest = Path(directory)
+            cli = dest / "node_modules" / ".bin"
+            cli.mkdir(parents=True)
+            (cli / "prisma").touch()
+            (cli / "tsc").touch()
+            result = target.verify_tree(dest)
     finally:
         target.run_step = original_run_step
         target.link_node_modules = original_link
 
-    if (tsc, build) != ("NG", "NG"):
-        fails.append(f"❌ 両方赤い日の状態が ({tsc}, {build}) になっている")
-    if not any("getById" in line for line in shown):
-        fails.append(f"❌ 表示用のエラーから tsc の行が落ちている: {shown!r}")
-    if not any("prerendering" in line for line in shown):
-        fails.append(f"❌ 表示用のエラーから build の行が落ちている（落ちた本当の理由が読めん）: {shown!r}")
-    if "Failed to compile." not in build_all:
+    if (result.generation, result.tsc, result.build) != ("OK", "NG", "NG"):
+        fails.append(
+            "❌ 両方赤い日の状態が "
+            f"({result.generation}, {result.tsc}, {result.build}) になっている"
+        )
+    if not any("getById" in line for line in result.errors):
+        fails.append(f"❌ 表示用のエラーから tsc の行が落ちている: {result.errors!r}")
+    if not any("prerendering" in line for line in result.errors):
+        fails.append(
+            "❌ 表示用のエラーから build の行が落ちている"
+            f"（落ちた本当の理由が読めん）: {result.errors!r}"
+        )
+    if "Failed to compile." not in result.build_errors:
         fails.append("❌ 判定用の build エラーが表示用に差し替わっている")
-    if tsc_all != tsc_lines:
+    if result.tsc_errors != tsc_lines:
         fails.append("❌ 判定用の tsc エラーが取れていない")
+    return fails
+
+
+def check_verification_stage_provenance() -> list[str]:
+    """生成失敗を未実行のtsc/buildへ転記せず、ローカルCLIだけを使うこと。"""
+    fails = []
+    calls = []
+    generation_error = ("Error: Prisma schema validation failed",)
+
+    def fake_run_step(cmd, _dest):
+        calls.append(cmd)
+        return False, generation_error, generation_error
+
+    original_run_step = target.run_step
+    original_link = target.link_node_modules
+    original_snapshot_root = target.SNAPSHOT_ROOT
+    original_hash = target.source_input_hash
+    original_build = target.build_tree
+    try:
+        target.run_step = fake_run_step
+        target.link_node_modules = lambda _dest: None
+        with tempfile.TemporaryDirectory() as directory:
+            dest = Path(directory)
+            cli = dest / "node_modules" / ".bin"
+            cli.mkdir(parents=True)
+            (cli / "prisma").touch()
+            (cli / "tsc").touch()
+            result = target.verify_tree(dest)
+            if len(calls) != 1 or calls[0] != [str(cli / "prisma"), "generate"]:
+                fails.append(f"❌ 生成失敗後も処理したか、固定CLI以外を使っている: {calls!r}")
+            if (result.generation, result.tsc, result.build) != (
+                "NG", target.NOT_RUN, target.NOT_RUN
+            ):
+                fails.append(
+                    "❌ 生成失敗を未実行のtsc/buildと区別していない: "
+                    f"{result!r}"
+                )
+            if result.generation_errors != generation_error:
+                fails.append("❌ 生成エラーが専用欄に保存されていない")
+            if result.tsc_errors or result.build_errors:
+                fails.append("❌ 生成エラーをtsc/buildのエラーとして重複保存している")
+
+            day = target.DayResult(
+                1, 1, True, result.tsc, result.build, result.errors,
+                generation=result.generation,
+                generation_errors=result.generation_errors,
+            )
+            target.SNAPSHOT_ROOT = dest / "snapshots"
+            record = json.loads(
+                target.write_run_record([day], True).read_text(encoding="utf-8")
+            )
+            recorded = record["days"][0]
+            if record["schemaVersion"] != 3 or recorded["status"] != "FAIL":
+                fails.append("❌ 生成失敗をschema v3のFAILとして保存していない")
+            if recorded["generation"] != "NG":
+                fails.append("❌ JSONにPrisma生成の失敗状態が無い")
+            evidence = recorded["evidence"]
+            if evidence["generationErrors"] != list(generation_error):
+                fails.append("❌ JSONの生成エラーが実際の診断と一致しない")
+            if evidence["tscErrors"] or evidence["buildErrors"]:
+                fails.append("❌ JSONが未実行段階へ生成エラーを転記している")
+
+            calls.clear()
+            (cli / "prisma").unlink()
+            missing = target.verify_tree(dest)
+            if calls:
+                fails.append("❌ ローカルPrisma CLI不在時に別コマンドへフォールバックした")
+            if missing.verification_error is None or missing.generation != target.NOT_RUN:
+                fails.append("❌ ローカルCLI不在を未実行の環境失敗として記録していない")
+
+            def broken_link(_dest):
+                raise OSError("node_modules unavailable")
+
+            target.link_node_modules = broken_link
+            unavailable = target.verify_tree(dest)
+            if unavailable.verification_error is None:
+                fails.append("❌ 依存準備のOSErrorが耐久記録へ渡らない")
+            unavailable_day = target.DayResult(
+                1, 1, True, unavailable.tsc, unavailable.build, unavailable.errors,
+                generation=unavailable.generation,
+                verification_error=unavailable.verification_error,
+            )
+            if target.result_status(unavailable_day, True) != "FAIL":
+                fails.append("❌ 依存準備のOSErrorをFAILにしていない")
+
+            target.source_input_hash = lambda _day: "stable-input"
+            target.build_tree = lambda _day: (dest, 1)
+            snap = target.snapshot_day(1, True)
+            if snap.verification_error is None or target.result_status(snap, True) != "FAIL":
+                fails.append("❌ 検証環境のOSErrorが日別FAILへ引き継がれていない")
+            durable = json.loads(
+                target.write_run_record([snap], True).read_text(encoding="utf-8")
+            )["days"][0]
+            if durable["evidence"]["verificationError"] is None:
+                fails.append("❌ 検証環境のOSErrorが不変JSONへ保存されていない")
+    finally:
+        target.run_step = original_run_step
+        target.link_node_modules = original_link
+        target.SNAPSHOT_ROOT = original_snapshot_root
+        target.source_input_hash = original_hash
+        target.build_tree = original_build
     return fails
 
 
@@ -1420,25 +1583,20 @@ def check_boundary_error_survives_db_noise() -> list[str]:
 
 
 def check_tree_failure_is_never_expected() -> list[str]:
-    """ツリーを組めてへん日を「想定内」と書かんこと。
+    """ツリーを組めてへん日を成果物へ「通った」とは書かんこと。
 
-    tsc も build も走っとらんので `== "NG"` の枝は素通りする。tree_ok を見んかったら、
-    走行は broken_days() で exit 1 になるのに、成果物だけ「想定内」と書く。十三巡目に
-    潰したのと同じ「文書だけが言い張る」型。
+    tsc も build も走っとらんので tree_ok を見んかったら、走行は broken_days() で
+    exit 1 になるのに成果物だけ別の顔をする。文書だけが言い張る型の事故を塞ぐ。
     """
-    day = sorted(target.EXPECTED_RED)[0]
     broken = target.DayResult(
-        day, 0, False, target.NOT_RUN, target.NOT_RUN, ("OSError: 置けません",)
+        11, 0, False, target.NOT_RUN, target.NOT_RUN, ("OSError: 置けません",)
     )
-    if target.expected_red_holds(broken):
-        return ["❌ ツリーを組めてへん日を想定内として扱っている"]
     if broken not in target.broken_days([broken]):
         return ["❌ ツリー失敗が異常として数えられていない"]
     doc = target.triage_section([broken])
-    if "想定内" in doc:
-        return [f"❌ 成果物がツリー失敗を想定内と書いている:\n{doc}"]
+    if "判定不能（未調査）" not in doc:
+        return [f"❌ 未調査のツリー失敗が切り分けに出ていない:\n{doc}"]
     return []
-
 
 def check_unclassified_error_blocks_skip() -> list[str]:
     """説明の付かんエラー行が DB の赤に紛れとったら SKIP にせんこと。
@@ -1478,31 +1636,6 @@ def check_unclassified_error_blocks_skip() -> list[str]:
     return fails
 
 
-def check_expected_red_rejects_unknown_error() -> list[str]:
-    """免除の判定でも、説明の付かん行を捨てんこと。
-
-    マーカーで絞ってから見ると `REAL_BUILD_FAILURE_MARKERS` に載ってへん失敗が
-    黙って消え、断り書きどおりの型エラーだけが残って day11 が免除される。
-    SKIP 側で潰したのと同じ「絞ってから判定する」型が、免除の側にも残っとった。
-    """
-    known = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="NG",
-        errors=(),
-        build_errors=(
-            "Failed to compile.",
-            "Type error: Property 'getById' does not exist on type ...",
-        ),
-    )
-    if not target.build_failure_is_expected(known):
-        return ["❌ 断り書きどおりの型エラーまで免除せんようになっている"]
-    mixed = known._replace(
-        build_errors=known.build_errors + ("Error: Unauthorized while prerendering /admin",)
-    )
-    if target.build_failure_is_expected(mixed):
-        return ["❌ 説明の付かん失敗が混ざった day11 を免除している"]
-    return []
-
-
 def check_econnrefused_alone_is_not_database() -> list[str]:
     """`ECONNREFUSED` 単独を DB の不在と見なさんこと。
 
@@ -1526,32 +1659,6 @@ def check_econnrefused_alone_is_not_database() -> list[str]:
     if not target.build_failure_is_database_only(postgres):
         fails.append("❌ Prisma の印つきの ECONNREFUSED まで本物の失敗にしている")
     return fails
-
-
-def check_expected_red_rejects_unknown_code() -> list[str]:
-    """件数と場所が合っても、断り書きに無いコードが混ざったら免除せんこと。
-
-    識別子は波及行に載らんので `any` でしか見られん。件数と場所だけを見とると、
-    同じファイルの無関係な型エラー4件＋想定内の1件で「想定内」が成立してまう。
-    """
-    path = "src/component/project/project-detail-view.tsx"
-    documented = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
-        tsc_errors=documented_day11_errors(),
-    )
-    if not target.tsc_failure_is_expected(documented):
-        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
-    smuggled = documented._replace(
-        tsc_errors=(documented.tsc_errors[0],)
-        + tuple(
-            f"{path}({n},4): error TS2322: Type 'string' is not assignable"
-            for n in (41, 42, 43, 44)
-        )
-    )
-    if target.tsc_failure_is_expected(smuggled):
-        return ["❌ 断り書きに無いコードが混ざった day11 を免除している"]
-
-    return []
 
 
 def check_stack_frames_do_not_block_skip() -> list[str]:
@@ -1625,9 +1732,9 @@ def check_prerender_wrapper_does_not_hide_db() -> list[str]:
     if target.build_failure_is_database_only(with_cause):
         fails.append("❌ prerender の原因の行まで包み紙に数えている")
 
-    # 想定内の赤の免除は別の問い。見出しが混ざったら day11 でも免除せんこと。
+    # 見出しが混ざったら DB の判定からも外す（原因の行でしか判断しない）。
     if "Error occurred prerendering page" in target.BUILD_NOISE_MARKERS:
-        fails.append("❌ 免除の判定まで prerender の見出しを見逃す一覧へ入れている")
+        fails.append("❌ DB の判定まで prerender の見出しを見逃す一覧へ入れている")
     return fails
 
 
@@ -1662,38 +1769,41 @@ def check_reachable_server_failure_is_not_db_absence() -> list[str]:
     return fails
 
 
-def check_expected_red_rejects_swapped_diagnostic() -> list[str]:
-    """件数もコードも場所も揃うたまま**入れ替わった**診断を免除せんこと。
-
-    断り書きの1件が消えて、同じファイルの別の場所に同じコードの別の欠陥が入ると、
-    件数（5）・場所（1ファイル）・コード（許された3種）・識別子（`getById`）が
-    全部そのまま揃う。所属だけを見とると、新しい欠陥が想定内で通って `--verify` が
-    exit 0 になる。位置まで名指しした多重集合の一致で初めて弾ける。
-    """
-    documented = target.DayResult(
-        day=11, files=92, tree_ok=True, tsc="NG", build="OK", errors=(),
-        tsc_errors=documented_day11_errors(),
-    )
-    if not target.tsc_failure_is_expected(documented):
-        return ["❌ 断り書きどおりの day11 まで免除せんようになっている"]
-
-    # 断り書きの TS7006 を1件落として、同じファイルの別の行の TS7006 を1件足す。
-    dropped = [ln for ln in documented.tsc_errors if "(144,44)" not in ln]
-    swapped = documented._replace(
-        tsc_errors=tuple(dropped)
-        + (
-            "src/component/project/project-detail-view.tsx(311,12): error TS7006: "
-            "Parameter implicitly has an 'any' type",
-        )
-    )
-    if len(swapped.tsc_errors) != len(documented.tsc_errors):
-        return ["❌ 入れ替えの fixture が件数を変えてしまっている（検査が成立せん）"]
-    if target.tsc_failure_is_expected(swapped):
-        return ["❌ 入れ替わった診断の day11 を想定内として免除している"]
-    return []
+def check_prisma_dependency_isolation() -> list[str]:
+    fails = []
+    original_root = target.REPO_ROOT
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        source = root / "node_modules"
+        (source / "@prisma" / "client").mkdir(parents=True)
+        (source / "@prisma" / "client" / "default.js").write_text("original")
+        (source / ".prisma" / "client").mkdir(parents=True)
+        (source / ".prisma" / "client" / "schema.prisma").write_text("root-schema")
+        (source / "typescript").mkdir()
+        dest = root / "snapshot"
+        dest.mkdir()
+        (dest / "node_modules").symlink_to(source, target_is_directory=True)
+        try:
+            target.REPO_ROOT = root
+            target.link_node_modules(dest)
+            local = dest / "node_modules"
+            (local / "@prisma" / "client" / "default.js").write_text("changed")
+            if (source / "@prisma" / "client" / "default.js").read_text() != "original":
+                fails.append("Prisma package writes leaked into root")
+            if (local / ".prisma").exists():
+                fails.append("Root generated client was reused")
+            if not (local / "typescript").is_symlink():
+                fails.append("Unchanged dependency is not shared")
+            target.link_node_modules(dest)
+            if (source / ".prisma" / "client" / "schema.prisma").read_text() != "root-schema":
+                fails.append("Reinitialization modified root generated client")
+        finally:
+            target.REPO_ROOT = original_root
+    return fails
 
 
 CHECKS = (
+    ("Prisma生成物の隔離", check_prisma_dependency_isolation),
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
     ("置き換えと追記の境界", check_version_boundary),
@@ -1705,9 +1815,10 @@ CHECKS = (
     ("day の範囲", check_day_range),
     ("結果表の形", check_result_table),
     ("結果の出どころ", check_provenance),
+    ("上書きしない実行記録", check_immutable_run_records),
+    ("検査中のソース入力固定", check_source_input_stability),
     ("NG の切り分け", check_triage_section),
     ("tsconfig の exclude", check_tsconfig_excludes),
-    ("想定内の赤は教材の断りが根拠", check_expected_red_is_grounded),
     ("まだ無い宣言を足す", check_new_declaration),
     ("自分で束ねる名前と欄名", check_local_binding_names),
     ("文字列で指した要素の書き換え", check_rewrite_element),
@@ -1717,18 +1828,15 @@ CHECKS = (
     ("ゲートの対象一覧が材料を覆っとるか", check_gate_scope_covers_inputs),
     ("ビルドの赤の切り分け", check_build_failure_triage),
     ("両方赤い日の表示", check_both_red_shows_both),
+    ("検証段階の出どころ", check_verification_stage_provenance),
     ("成果物への SKIP の記録", check_result_doc_records_skip),
-    ("想定内の日の build 免除", check_expected_red_build_exemption),
     ("DB の赤に紛れた境界エラー", check_boundary_error_survives_db_noise),
-    ("ツリー失敗は想定内やない", check_tree_failure_is_never_expected),
+    ("ツリー失敗は異常として止まる", check_tree_failure_is_never_expected),
     ("説明の付かん赤は SKIP にせん", check_unclassified_error_blocks_skip),
-    ("免除でも説明の付かん赤を捨てん", check_expected_red_rejects_unknown_error),
     ("ECONNREFUSED 単独は DB やない", check_econnrefused_alone_is_not_database),
     ("stack frame は SKIP を塞がん", check_stack_frames_do_not_block_skip),
     ("prerender の見出しは DB を隠さん", check_prerender_wrapper_does_not_hide_db),
     ("届いた上での失敗は DB 不在やない", check_reachable_server_failure_is_not_db_absence),
-    ("入れ替わった診断は免除せん", check_expected_red_rejects_swapped_diagnostic),
-    ("断り書きに無いコードは免除せん", check_expected_red_rejects_unknown_code),
 )
 
 

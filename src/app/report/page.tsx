@@ -2,8 +2,10 @@
 
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
@@ -20,12 +22,25 @@ import {
   TASK_PRIORITY_LABELS,
 } from '@/lib/constant/priority';
 import { isTaskStatus, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
 const CHART_FALLBACK_COLOR = '#9e9e9e';
 
 export default function ReportPage() {
-  const { data: overview, isLoading } = api.report.getOverview.useQuery();
+  const router = useRouter();
+  const {
+    data: overview,
+    isLoading,
+    isError,
+    isFetching,
+    error,
+    refetch,
+  } = api.report.getOverview.useQuery(undefined, {
+    retry: shouldRetryQuery,
+  });
+  const authFailed = isError && isAuthError(error);
+  const forbidden = isError && isForbiddenError(error);
 
   const statusData =
     overview?.statusData.map((entry) => ({
@@ -39,13 +54,67 @@ export default function ReportPage() {
       name: isTaskPriority(entry.key) ? TASK_PRIORITY_LABELS[entry.key] : entry.key,
     })) ?? [];
 
-  if (isLoading) {
+  if (isLoading && !authFailed && !forbidden) {
     return <PageLoadingSpinner />;
+  }
+
+  if (authFailed || forbidden || (isError && overview == null)) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-base font-semibold text-foreground mb-2">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このレポートを見る権限がありません'
+                : 'レポートを取得できませんでした'}
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '権限が必要です。管理者に確認してください。'
+                : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/project');
+                return;
+              }
+              void refetch();
+            }}
+            disabled={isFetching}
+          >
+            {authFailed ? 'ログイン画面へ' : forbidden ? 'プロジェクト一覧へ' : '再読み込み'}
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
     <AppLayout>
       <div className="space-y-6">
+        {isError && overview != null ? (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+            <span>最新のレポートを取得できませんでした。表示は前回取得時の内容です。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-4 items-start sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">レポート・統計</h1>

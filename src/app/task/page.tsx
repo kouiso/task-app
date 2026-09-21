@@ -3,6 +3,7 @@
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
@@ -29,6 +30,7 @@ import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/c
 import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
+import { isUnknownResult } from '@/lib/query-error';
 import {
   buildTaskFiltersQueryString,
   parseTaskFiltersFromSearchParams,
@@ -199,6 +201,14 @@ function TaskPageContent() {
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
+    },
+    onError: (error) => {
+      if (isUnknownResult(error)) {
+        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
+        void utils.task.getAll.invalidate();
+        return;
+      }
+      toast.error(error.message || 'タスクの削除に失敗しました');
     },
   });
 

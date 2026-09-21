@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const res = await page.goto('https://task-app-day04-verify.vercel.app/dashboard', { waitUntil: 'networkidle', timeout: 60000 });
+console.log('status:', res.status());
+console.log('url:', page.url());
+console.log('title:', await page.title());
+const text = (await page.locator('body').innerText()).slice(0, 400);
+console.log('body:', text);
+await page.screenshot({ path: '/tmp/deploy-dashboard.png' });
+await browser.close();

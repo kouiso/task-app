@@ -11,6 +11,37 @@
 
 読者は PDF を見ながら、この ZIP を展開して写経します。
 
+## PDFの章間リンクを設定する
+
+章間リンクがある原稿では、生成前に配布先のJSONを用意します。
+`PDF_BOOK_LINK_MAP` に、そのファイルの絶対パスを指定してください。
+
+```sh
+PDF_BOOK_LINK_MAP=/absolute/path/pdf-link-map.json make book-pdf
+```
+
+JSONのキーは出力するPDF名、値は購入者が開くHTTPS URLです。
+URLは先に確定した配布先を使います。原稿へDrive IDを書く必要はありません。
+
+```json
+{
+  "day01_開発環境を整えて、初めてのアプリを動かそう.pdf": "https://drive.google.com/file/d/EXISTING_FILE_ID/view"
+}
+```
+
+`name` と `url` を持つオブジェクトの配列も受け付けます。
+既存Driveファイルのメタデータを使えば、同じIDへのリンクを維持できます。
+生成処理はDriveの内容や公開権限を変更しません。
+
+未登録の章リンクや未知のローカル参照がある場合は、生成前に停止します。
+別冊への `#見出し` 指定も、PDF側の移動先を保証できないため停止します。
+同冊の `#見出し` と外部HTTPリンク、画像、コード内の例は変更しません。
+章間リンクがない原稿は、環境変数を指定せず生成できます。
+
+相対パスを `.pdf` に変えるだけでは、組版時にlocalhostへ絶対化されます。
+この経路では可搬性のある相対PDFリンクを保証しません。
+生成後は `make book-pdf-verify` で、中間URLが残っていないことも検査します。
+
 ## この ZIP に入るもの
 
 `build-zip.sh` は**許可リスト方式**です。下に挙げたものだけを集めて固めます。
@@ -24,6 +55,7 @@
 - `.node-version`
 - `doc/SUPPORTED_ENVIRONMENTS.md`
 - `scripts/scaffold-from-scratch.sh`
+- `scripts/verify-scaffold-database.cjs`
 
 1つでも欠けると `build-zip.sh` は途中で止まります。
 
