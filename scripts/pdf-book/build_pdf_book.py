@@ -35,6 +35,8 @@ import shutil
 import subprocess
 import sys
 from functools import cache
+from html.parser import HTMLParser
+from urllib.parse import unquote, urlsplit
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -100,6 +102,146 @@ ANCHOR_SUFFIX_RE = re.compile(r"\s*\{#[^}]*\}\s*$")
 DAY_RE = re.compile(r"^(Day\s*\d+)\s*[:：]\s*(.+)$")
 # 目次の見出し文字列から、行内マークダウンの記号だけ落とす
 INLINE_MD_RE = re.compile(r"`([^`]*)`|\*\*([^*]*)\*\*|\[([^\]]*)\]\([^)]*\)")
+
+
+LINK_MAP_HELP = (
+    'PDF_BOOK_LINK_MAP に配布先JSONを指定してください。'
+    '例: PDF_BOOK_LINK_MAP=/absolute/path/metadata.json make book-pdf '
+    '（PDFファイル名→HTTPS URLの辞書、またはname/urlを持つ配列）'
+)
+
+
+def load_link_map(filename: str | None) -> dict[str, str]:
+    """IDを原稿へ埋めず、配布時に確定したURLだけを受け取る。"""
+    if not filename:
+        return {}
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f'リンクマップJSONのキーが重複しています: {key}')
+            result[key] = value
+        return result
+
+    with Path(filename).open(encoding='utf-8') as stream:
+        data = json.load(stream, object_pairs_hook=unique_object)
+    if isinstance(data, dict):
+        entries = list(data.items())
+    elif isinstance(data, list):
+        entries = [(entry.get('name'), entry.get('url')) for entry in data
+                   if isinstance(entry, dict)]
+        if len(entries) != len(data):
+            raise ValueError('リンクマップの各要素にはname/urlが必要です')
+    else:
+        raise ValueError('リンクマップは辞書またはname/urlを持つ配列にしてください')
+    mapping: dict[str, str] = {}
+    for name, url in entries:
+        if not isinstance(name, str) or Path(name).name != name or not name.endswith('.pdf'):
+            raise ValueError(f'リンクマップのキーはPDFファイル名にしてください: {name!r}')
+        if name in mapping:
+            raise ValueError(f'リンクマップに重複があります: {name}')
+        if not isinstance(url, str):
+            raise ValueError(f'リンク先URLが文字列ではありません: {name}')
+        parsed = urlsplit(url)
+        if (parsed.scheme != 'https' or not parsed.hostname
+                or parsed.hostname in {'localhost', '127.0.0.1', '::1'}
+                or parsed.username or parsed.password or parsed.fragment
+                or unquote(parsed.path).lower().endswith('.md')
+                or '/vivliostyle/' in unquote(parsed.path)
+                or any(char.isspace() or char in '<>"' for char in url)):
+            raise ValueError(f'配布用HTTPS URLではありません: {name}: {url}')
+        mapping[name] = url
+    return mapping
+
+
+# 既存のtextlintパーサーで実リンクだけを拾う。コードや画像を正規表現で巻き込まない。
+# rangeはUTF-16なので、Pythonへ渡す前にUnicodeコードポイント数へ換算する。
+LINK_SCAN_JS = r'''
+const fs = require('node:fs');
+const { parse } = require('@textlint/markdown-to-ast');
+const text = fs.readFileSync(0, 'utf8');
+const ast = parse(text);
+const definitions = new Map();
+const walk = (node, visit) => {
+  visit(node);
+  for (const child of node.children || []) walk(child, visit);
+};
+walk(ast, node => {
+  if (node.type === 'Definition' && !definitions.has(node.identifier)) {
+    definitions.set(node.identifier, node);
+  }
+});
+const links = [];
+const offset = index => Array.from(text.slice(0, index)).length;
+walk(ast, node => {
+  if (node.type === 'Html' || node.type === 'HtmlBlock') {
+    links.push({ html: node.raw });
+  }
+  if (node.type !== 'Link' && node.type !== 'LinkReference') return;
+  const definition = node.type === 'Link' ? node : definitions.get(node.identifier);
+  if (!definition) throw new Error(`未定義のリンク参照: ${node.identifier}`);
+  const children = node.children || [];
+  const label = children.length
+    ? text.slice(children[0].range[0], children[children.length - 1].range[1]) : '';
+  links.push({start: offset(node.range[0]), end: offset(node.range[1]),
+    label, url: definition.url, title: definition.title});
+});
+process.stdout.write(JSON.stringify(links));
+'''
+
+
+class HtmlLinks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == 'a':
+            self.links += [value for key, value in attrs if key == 'href' and value is not None]
+
+
+def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
+    """実在する同梱原稿へのリンクを、明示された配布先へ解決する。"""
+    result = subprocess.run(
+        ['node', '-e', LINK_SCAN_JS], input=text, text=True, capture_output=True,
+        cwd=REPO_ROOT, timeout=60,
+    )
+    if result.returncode:
+        raise ValueError(f'リンクを解析できません。npm installを確認してください: {result.stderr[-300:]}')
+    edits = []
+    for link in json.loads(result.stdout):
+        if 'html' in link:
+            parser = HtmlLinks()
+            parser.feed(link['html'])
+            for url in parser.links:
+                if not url.startswith('#') and urlsplit(url).scheme not in {'http', 'https', 'mailto', 'tel'}:
+                    raise ValueError(f'HTMLのローカルリンクはMarkdownリンクへ変更してください: {url}')
+            continue
+        url = link['url']
+        parsed = urlsplit(url)
+        if url.startswith('#') or parsed.scheme in {'https', 'http', 'mailto', 'tel'}:
+            continue
+        if parsed.scheme or parsed.netloc or not parsed.path or parsed.query:
+            raise ValueError(f'未対応のローカルリンクです: {url}')
+        target = (source.parent / unquote(parsed.path)).resolve()
+        if target.parent != source.parent.resolve() or target.suffix != '.md' or not target.is_file():
+            raise ValueError(f'配布対象の原稿に解決できません: {url}')
+        if target == source.resolve() and parsed.fragment:
+            destination = '#' + parsed.fragment
+        else:
+            if parsed.fragment:
+                raise ValueError(f'別冊の見出し位置はPDF配布先で保証できません: {url}')
+            filename = target.with_suffix('.pdf').name
+            if filename not in mapping:
+                raise ValueError(f'配布先が未登録です: {filename}。{LINK_MAP_HELP}')
+            destination = mapping[filename]
+        title = ''
+        if link.get('title') is not None:
+            title = ' "' + link['title'].replace('\\', '\\\\').replace('"', '\\"') + '"'
+        edits.append((link['start'], link['end'], f'[{link["label"]}](<{destination}>{title})'))
+    for start, end, replacement in sorted(edits, reverse=True):
+        text = text[:start] + replacement + text[end:]
+    return text
 
 
 def find_browser() -> str | None:
@@ -406,16 +548,19 @@ def work_slug(stem: str) -> str:
     return f"{head}-{hashlib.sha256(stem.encode('utf-8')).hexdigest()[:6]}"
 
 
-def build_one(path: Path, browser: str | None, env: dict[str, str]) -> list[str]:
+def build_one(path: Path, browser: str | None, env: dict[str, str],
+              link_map: dict[str, str] | None = None) -> list[str]:
     """1本を PDF にする。問題があれば説明の一覧を返す（空なら成功）。"""
     stem = path.stem
     slug = work_slug(stem)
     # U+FE0F（異体字セレクタ16）は「絵文字として描け」という指定。付いていると
     # Chromium が単色の Noto Emoji を無視してシステムのカラー絵文字フォントを呼び、
     # 生成機械に依存する上に Type 3 で埋め込まれる。紙面では単色でよいので外す。
-    title, body, toc = parse_source(
-        path.read_text(encoding="utf-8").replace(EMOJI_VARIATION_SELECTOR, "")
-    )
+    try:
+        source = rewrite_book_links(path.read_text(encoding="utf-8"), path, link_map or {})
+    except (ValueError, OSError, subprocess.TimeoutExpired) as error:
+        return [f"{path.name}: {error}"]
+    title, body, toc = parse_source(source.replace(EMOJI_VARIATION_SELECTOR, ""))
     if not title:
         return [f"{path.name}: H1 が無い"]
 
@@ -488,8 +633,18 @@ def main(argv: list[str]) -> int:
     if missing:
         print("見つからない: " + ", ".join(str(m) for m in missing), file=sys.stderr)
         return 2
+    try:
+        link_map = load_link_map(os.environ.get('PDF_BOOK_LINK_MAP'))
+        # 1冊の未解決リンクで既存の全作業領域を消さないよう、準備前に全対象を検査する。
+        for target in targets:
+            rewrite_book_links(target.read_text(encoding='utf-8'), target, link_map)
+    except (ValueError, OSError, subprocess.TimeoutExpired) as error:
+        print(f'リンクを解決できません: {error}', file=sys.stderr)
+        return 2
     browser = find_browser()
     env = dict(os.environ)
+    # mermaid-cliはpuppeteerをpeer dependencyとして要求する。アプリ用npm設定で省略させない。
+    env['npm_config_legacy_peer_deps'] = 'false'
     if browser:
         # 手元の Chromium を使い回す。指定しないと mermaid-cli の puppeteer が
         # 約650MB の Chrome を毎回取りに行く。
@@ -507,7 +662,7 @@ def main(argv: list[str]) -> int:
 
     problems: list[str] = []
     for path in targets:
-        problems += build_one(path, browser, env)
+        problems += build_one(path, browser, env, link_map)
 
     if problems:
         print("\n以下が未解決:", file=sys.stderr)

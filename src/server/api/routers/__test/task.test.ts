@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
@@ -7,6 +7,7 @@ import {
   createTestTask,
   createTestUser,
 } from '../../../../test/helpers';
+import * as permission from '../_helpers/permission';
 
 // タスク仕様(task.ts / doc/09_task_create_edit.md / doc/10_task_delete_search.md)を起点に検証する。
 // 編集系は canEdit(OWNER/ADMIN/MEMBER)、削除系は canDelete(OWNER/ADMIN)、閲覧はメンバーであること。
@@ -89,6 +90,19 @@ describe('taskRouter', () => {
   });
 
   describe('create（作成）', () => {
+    it('DONEで作成したタスクには完了日時が記録される', async () => {
+      const { project, caller } = await setup('MEMBER');
+      const before = Date.now();
+      const task = await caller.task.create({
+        title: '完了した作業',
+        projectId: project.id,
+        status: 'DONE',
+      });
+      expect(task.completedAt).toBeInstanceOf(Date);
+      expect(task.completedAt?.getTime()).toBeGreaterThanOrEqual(before);
+      expect(task.completedAt?.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
     it('MEMBER(canEdit)はタスクを作成できる', async () => {
       const { project, caller } = await setup('MEMBER');
       const task = await caller.task.create({ title: '新タスク', projectId: project.id });
@@ -148,6 +162,66 @@ describe('taskRouter', () => {
   });
 
   describe('update（更新）', () => {
+    it.each([
+      'DONE',
+      'TODO',
+    ] as const)('expectedUpdatedAtがなくても%sの読み取り後に状態が変われば競合になる', async (status) => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const task = await createTestTask(project.id, actor.id, { status });
+      const completedAt = new Date('2026-01-01T00:00:00.000Z');
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { completedAt: status === 'DONE' ? completedAt : null },
+      });
+      const concurrentStatus = status === 'DONE' ? 'TODO' : 'DONE';
+      const concurrentCompletedAt = concurrentStatus === 'DONE' ? completedAt : null;
+      const originalFindTask = permission.findTaskWithPermission;
+      const findTaskSpy = vi.spyOn(permission, 'findTaskWithPermission');
+      findTaskSpy.mockImplementationOnce(async (...args) => {
+        const snapshot = await originalFindTask(...args);
+        await prisma.task.update({
+          where: { id: task.id },
+          data: {
+            status: concurrentStatus,
+            completedAt: concurrentCompletedAt,
+            updatedAt: new Date(snapshot.updatedAt.getTime() + 1000),
+          },
+        });
+        return snapshot;
+      });
+
+      try {
+        await expect(caller.task.update({ id: task.id, status })).rejects.toMatchObject({
+          code: 'CONFLICT',
+        });
+        const stored = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+        expect(stored.status).toBe(concurrentStatus);
+        expect(stored.completedAt).toEqual(concurrentCompletedAt);
+      } finally {
+        findTaskSpy.mockRestore();
+      }
+    });
+
+    it('完了済みタスクをDONEのまま編集しても完了日時を維持する', async () => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const task = await createTestTask(project.id, actor.id, { status: 'DONE' });
+      const completedAt = new Date('2026-01-01T00:00:00.000Z');
+      await prisma.task.update({ where: { id: task.id }, data: { completedAt } });
+
+      const result = await caller.task.update({ id: task.id, title: '編集後', status: 'DONE' });
+      expect(result.title).toBe('編集後');
+      expect(result.completedAt).toEqual(completedAt);
+    });
+
+    it('完了を取り消すと完了日時を消す', async () => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const task = await createTestTask(project.id, actor.id, { status: 'DONE' });
+      await prisma.task.update({ where: { id: task.id }, data: { completedAt: new Date() } });
+
+      const result = await caller.task.update({ id: task.id, status: 'TODO' });
+      expect(result.completedAt).toBeNull();
+    });
+
     it('MEMBERはタスクを更新できる', async () => {
       const { actor, project, caller } = await setup('MEMBER');
       const task = await createTestTask(project.id, actor.id);
@@ -236,6 +310,37 @@ describe('taskRouter', () => {
   });
 
   describe('bulkComplete / bulkDelete / bulkUpdateStatus（一括操作）', () => {
+    it.each([
+      'bulkComplete',
+      'bulkUpdateStatus',
+    ] as const)('%s: 完了済みの日時を保持し、再実行でも変更しない', async (operation) => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const done = await createTestTask(project.id, actor.id, { status: 'DONE' });
+      const todo = await createTestTask(project.id, actor.id, { status: 'TODO' });
+      const historicalDate = new Date('2026-01-01T00:00:00.000Z');
+      await prisma.task.update({ where: { id: done.id }, data: { completedAt: historicalDate } });
+      const ids = [done.id, todo.id];
+      const complete = () =>
+        operation === 'bulkComplete'
+          ? caller.task.bulkComplete({ ids })
+          : caller.task.bulkUpdateStatus({ ids, status: 'DONE' });
+
+      const before = Date.now();
+      expect(await complete()).toEqual({ count: 2 });
+      const firstDone = await prisma.task.findUniqueOrThrow({ where: { id: done.id } });
+      const firstTodo = await prisma.task.findUniqueOrThrow({ where: { id: todo.id } });
+      expect(firstDone.completedAt).toEqual(historicalDate);
+      expect(firstTodo.status).toBe('DONE');
+      expect(firstTodo.completedAt?.getTime()).toBeGreaterThanOrEqual(before);
+      expect(firstTodo.completedAt?.getTime()).toBeLessThanOrEqual(Date.now());
+
+      expect(await complete()).toEqual({ count: 2 });
+      const secondDone = await prisma.task.findUniqueOrThrow({ where: { id: done.id } });
+      const secondTodo = await prisma.task.findUniqueOrThrow({ where: { id: todo.id } });
+      expect(secondDone.completedAt).toEqual(historicalDate);
+      expect(secondTodo.completedAt).toEqual(firstTodo.completedAt);
+    });
+
     it('bulkComplete: 対象タスクを完了にする', async () => {
       const { actor, project, caller } = await setup('OWNER');
       const t1 = await createTestTask(project.id, actor.id, { status: 'TODO' });

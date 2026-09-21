@@ -141,6 +141,23 @@ describe('projectRouter', () => {
   });
 
   describe('update（更新）', () => {
+    it.each([true, false])('ADMINは更新経由でもisArchived=%sを設定できない', async (isArchived) => {
+      const { project, caller } = await setupProjectWithActor('ADMIN');
+      await prisma.project.update({ where: { id: project.id }, data: { isArchived: !isArchived } });
+
+      await expect(caller.project.update({ id: project.id, isArchived })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      const stored = await prisma.project.findUniqueOrThrow({ where: { id: project.id } });
+      expect(stored.isArchived).toBe(!isArchived);
+    });
+
+    it.each([true, false])('OWNERは更新経由でisArchived=%sを設定できる', async (isArchived) => {
+      const { project, caller } = await setupProjectWithActor('OWNER');
+      const result = await caller.project.update({ id: project.id, isArchived });
+      expect(result.isArchived).toBe(isArchived);
+    });
+
     it('OWNERは更新できる', async () => {
       const { project, caller } = await setupProjectWithActor('OWNER');
       const result = await caller.project.update({ id: project.id, name: '更新後' });

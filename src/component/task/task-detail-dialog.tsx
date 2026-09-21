@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -23,6 +23,7 @@ import { Separator } from '@/component/ui/separator';
 import { Textarea } from '@/component/ui/textarea';
 import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole } from '@/lib/constant/roles';
 import { formatDateOnly } from '@/lib/date';
 import { api } from '@/trpc/react';
 import { StatusBadge } from './status-badge';
@@ -66,6 +67,25 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
     { enabled: !!taskId },
   );
 
+  const memberRole = taskDetail?.project.members.find(
+    (member) => member.userId === session?.user?.id,
+  )?.role;
+  const canEditComments = isProjectMemberRole(memberRole) && hasPermission(memberRole, 'canEdit');
+  const canModifyComment = (commentId: string) =>
+    canEditComments &&
+    taskDetail?.comments.some(
+      (comment) => comment.id === commentId && comment.userId === session?.user?.id,
+    );
+
+  useEffect(() => {
+    if (!canEditComments) {
+      setEditingCommentId(null);
+      setDeleteCommentDialogOpen(false);
+      setDeleteCommentTargetId(null);
+      editCommentForm.reset();
+    }
+  }, [canEditComments, editCommentForm]);
+
   const createCommentMutation = api.comment.create.useMutation({
     onSuccess: () => {
       if (taskId) {
@@ -103,7 +123,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
   };
 
   const handleCommentSubmit = (values: CommentFormValues) => {
-    if (!taskId) return;
+    if (!taskId || !canEditComments) return;
     createCommentMutation.mutate({
       content: values.content,
       taskId,
@@ -111,6 +131,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
   };
 
   const handleStartEdit = (comment: { id: string; content: string }) => {
+    if (!canModifyComment(comment.id)) return;
     setEditingCommentId(comment.id);
     editCommentForm.setValue('content', comment.content);
   };
@@ -122,7 +143,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
 
   const handleSaveEdit = (commentId: string) => {
     const content = editCommentForm.getValues('content').trim();
-    if (!content) return;
+    if (!content || !canModifyComment(commentId)) return;
     updateCommentMutation.mutate({
       id: commentId,
       content,
@@ -130,6 +151,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
   };
 
   const handleDeleteComment = (commentId: string) => {
+    if (!canModifyComment(commentId)) return;
     setDeleteCommentTargetId(commentId);
     setDeleteCommentDialogOpen(true);
   };
@@ -230,12 +252,13 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                                 locale: ja,
                               })}
                             </span>
-                            {comment.userId === session?.user?.id && (
+                            {canModifyComment(comment.id) && (
                               <div className="flex gap-1">
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-6 w-6"
+                                  aria-label="コメントを編集"
                                   onClick={() => handleStartEdit(comment)}
                                 >
                                   <Pencil className="h-3 w-3" />
@@ -244,6 +267,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                                   variant="ghost"
                                   size="icon"
                                   className="h-6 w-6 text-destructive hover:text-destructive"
+                                  aria-label="コメントを削除"
                                   onClick={() => handleDeleteComment(comment.id)}
                                 >
                                   <Trash2 className="h-3 w-3" />
@@ -252,7 +276,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                             )}
                           </div>
                         </div>
-                        {editingCommentId === comment.id ? (
+                        {editingCommentId === comment.id && canModifyComment(comment.id) ? (
                           <div className="space-y-2">
                             <Textarea
                               {...editCommentForm.register('content')}
@@ -283,28 +307,30 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                   ))}
                 </div>
 
-                <form
-                  onSubmit={commentForm.handleSubmit(handleCommentSubmit)}
-                  className="space-y-2"
-                >
-                  <Textarea
-                    placeholder="コメントを追加..."
-                    {...commentForm.register('content')}
-                    className="resize-none"
-                    rows={2}
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={
-                        !commentForm.watch('content').trim() || createCommentMutation.isPending
-                      }
-                    >
-                      {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
-                    </Button>
-                  </div>
-                </form>
+                {canEditComments && (
+                  <form
+                    onSubmit={commentForm.handleSubmit(handleCommentSubmit)}
+                    className="space-y-2"
+                  >
+                    <Textarea
+                      placeholder="コメントを追加..."
+                      {...commentForm.register('content')}
+                      className="resize-none"
+                      rows={2}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={
+                          !commentForm.watch('content').trim() || createCommentMutation.isPending
+                        }
+                      >
+                        {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           )}
@@ -316,10 +342,14 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       </Dialog>
 
       <DeleteConfirmDialog
-        open={deleteCommentDialogOpen}
+        open={
+          deleteCommentDialogOpen &&
+          !!deleteCommentTargetId &&
+          !!canModifyComment(deleteCommentTargetId)
+        }
         onOpenChange={setDeleteCommentDialogOpen}
         onConfirm={() => {
-          if (deleteCommentTargetId) {
+          if (deleteCommentTargetId && canModifyComment(deleteCommentTargetId)) {
             deleteCommentMutation.mutate({ id: deleteCommentTargetId });
           }
         }}

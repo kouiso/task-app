@@ -12,6 +12,27 @@ const DEFAULT_VALUES = {
 };
 
 describe('search filter helpers', () => {
+  it.each([
+    'bad',
+    '2026-02-30',
+    '2026-13-01',
+    '2026-2-01',
+  ])('不正な日付%sを検索条件から除く', (date) => {
+    const params = new URLSearchParams({ dateFrom: date, dateTo: date, keyword: 'api' });
+    const values = applySearchParamsToValues(params, DEFAULT_VALUES);
+    expect(values).toEqual({ ...DEFAULT_VALUES, keyword: 'api' });
+    expect(
+      buildSearchParamsFromValues({ ...DEFAULT_VALUES, dateFrom: date, dateTo: date }).toString(),
+    ).toBe('');
+  });
+
+  it('有効なうるう日と日付範囲を維持する', () => {
+    const values = { ...DEFAULT_VALUES, dateFrom: '2024-02-29', dateTo: '2024-03-01' };
+    expect(applySearchParamsToValues(buildSearchParamsFromValues(values), DEFAULT_VALUES)).toEqual(
+      values,
+    );
+  });
+
   it('URLから削除されたパラメータを既定値へ戻す', () => {
     const prev = {
       ...DEFAULT_VALUES,

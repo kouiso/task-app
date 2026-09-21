@@ -1,7 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
 import { Download } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -30,6 +28,7 @@ import {
 } from '@/component/ui/select';
 import { TASK_PRIORITY, TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
 import { TASK_STATUS, TASK_STATUS_COLORS } from '@/lib/constant/status';
+import { formatDateOnly } from '@/lib/date';
 import { buildWeeklyReportExportPath, normalizeReportWeeksParam } from '@/lib/report-path';
 import { api } from '@/trpc/react';
 
@@ -119,10 +118,10 @@ export default function WeeklyReportPage() {
           </Card>
           <Card>
             <CardContent className="pt-6 sm:pt-6">
-              <p className="text-sm text-muted-foreground mb-1">対象期間</p>
+              <p className="text-sm text-muted-foreground mb-1">対象期間（UTC）</p>
               <p className="text-lg font-semibold">
                 {reportData?.startDate && reportData?.endDate
-                  ? `${format(new Date(reportData.startDate), 'yyyy/MM/dd', { locale: ja })} - ${format(new Date(reportData.endDate), 'yyyy/MM/dd', { locale: ja })}`
+                  ? `${formatDateOnly(reportData.startDate)} - ${formatDateOnly(reportData.endDate)}`
                   : '-'}
               </p>
             </CardContent>
