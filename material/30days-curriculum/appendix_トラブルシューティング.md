@@ -16,8 +16,8 @@
 
 | エラー | 原因 | 解決方法 |
 |--------|------|----------|
-| `node: command not found` | Node.jsがインストールされていない | Day 01のOS別手順でNode.js 22以上をインストール。mise利用時は`task-app`フォルダで`mise trust && mise install`を実行 |
-| `npm install`でエラー | Node.jsのバージョンが古い可能性がある | `node -v`で確認し、22未満ならDay 01のOS別手順で更新。mise利用時は`mise trust && mise install`を実行 |
+| `node: command not found` | Node.jsがインストールされていない | Day 01のOS別手順でNode.js 22.xをインストール。mise利用時は`task-app`フォルダで`mise trust && mise install`を実行 |
+| `npm install`でエラー | Node.jsのバージョンが古い可能性がある | `node -v`で確認し、22.x以外ならDay 01のOS別手順で22.xに揃える。mise利用時は`mise trust && mise install`を実行 |
 | `prisma generate`でエラー | `DATABASE_URL`が設定されていない | `.env`ファイルに`DATABASE_URL`を設定 |
 | PostgreSQLに接続できない | DockerまたはPostgreSQLが起動していない | `docker compose up -d`でコンテナを起動 |
 
@@ -54,7 +54,7 @@
 |--------|------|----------|
 | タスクが表示されない | プロジェクトのメンバーでない | プロジェクトメンバーに追加してもらう |
 | タスクの担当者を設定できない | 担当者がプロジェクトメンバーでない | まずメンバーとして追加してから担当者に設定 |
-| ステータス変更が反映されない | `onSuccess` での `invalidate()` 呼び忘れで、一覧の控えが古いまま | ステータス変更の `useMutation` の `onSuccess` に `utils.task.getAll.invalidate()` があるか確認します。リロード（Windows と Linux は Ctrl+Shift+R、Mac は Cmd+Shift+R）で直る場合も、原因はこの呼び忘れです |
+| ステータス変更が反映されない | `onSuccess` での `invalidate()` 呼び忘れで、一覧の控えが古いまま | ステータス変更の `useMutation` の `onSuccess` に `utils.task.getAll.invalidate()` があるか確認します。リロード（Windows と Linux は Ctrl+Shift+R、Mac は Cmd+Shift+R）で直る場合は、キャッシュ更新の漏れが候補です。通信の失敗も Network タブで確認します |
 
 ### Day 17-25: 応用機能
 
@@ -100,8 +100,8 @@ Error: Hydration failed because the initial UI does not match what was rendered 
 
 ### ``Prisma: Invalid `prisma.xxx.findMany()` invocation``
 
-**原因**: Prismaクライアントとスキーマが不一致
-**解決**: `npx prisma generate`を実行してクライアントを再生成します。
+**原因**: この見出しだけでは原因を特定できません。後続のメッセージに、引数の誤り、接続失敗、存在しないテーブルなどの原因が表示されます。
+**解決**: まずエラーの末尾まで読みます。クライアントとスキーマの不一致なら `npx prisma generate`、接続失敗なら Docker と接続先を確認します。知らない引数の指摘なら、該当箇所を教材のコードと見比べます。
 
 ### `Port 3000 is in use ... using available port 3001 instead.`
 

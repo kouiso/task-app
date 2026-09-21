@@ -181,7 +181,7 @@ npm list recharts
 > 色・ラベルの定数を追加します。
 
 **実装**: Day 21 のインポート部分に、以下の
-3ブロックを追加してください。
+4ブロックを追加してください。
 
 ```typescript
 // filepath: src/app/report/page.tsx
@@ -194,7 +194,7 @@ import {
 
 6つをまとめて取り込みますが、役割は3つに分かれます。`PieChart` は扇を並べる座標の土台、`Pie` と `Cell` は扇そのものと1切れずつの色、`Tooltip` と `Legend` は読み手向けの補助表示です。`ResponsiveContainer` だけは何も描かず、親要素の幅と高さをグラフへ伝える係を務めます。取り込みを1つでも落とすと、その部品を書いた行で「定義されていない名前を使っている」というエラーになり、レポートページ全体が真っ白になります。Day 21 で `Card` を取り込んだときと同じ書き方なので、既存の import の並びに足すだけで済みます。
 
-この取り込みで、レポートページの初期表示は少し重くなります。グラフの部品はブラウザ側で動くため、ページを開いた時点で描画用のコードが一式届きます。Day 21 の「Pro パターンで書こう」で触れた分け方を実際に行うと、グラフの部分だけを別ファイルへ切り出し、必要になってから読み込む形にできます。今日はまず1枚のページで動かすところまで進めます。
+グラフを追加すると、ブラウザへ送る描画用コードも増えます。Day 21 の部品分割だけでは、読み込む時期は遅くなりません。必要になるまで読み込みを待つには、動的インポート（実行時にコードを読み込む書き方）などの追加実装が必要です。今日は既存のページに円グラフを追加するところまで進めます。
 
 **確認ポイント**:
 - Recharts のインポートが追加された
@@ -595,7 +595,7 @@ Card 枠と `Pie` の設定です。
 ```bash
 # filepath: ターミナル（確認用）
 # 開発サーバーを起動してグラフを確認する
-PORT=3001 npm run dev
+npm run dev -- --port 3001
 # http://localhost:3001/report にアクセス
 ```
 
@@ -688,6 +688,7 @@ import {
   ResponsiveContainer, Tooltip,
 } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
@@ -729,7 +730,7 @@ const CHART_FALLBACK_COLOR = '#9e9e9e';
 // filepath: src/app/report/page.tsx
 // 完成版: 取得と表示用の値づくり
 export default function ReportPage() {
-  const { data: overview, isLoading } =
+  const { data: overview, isLoading, isError, isFetching, refetch } =
     api.report.getOverview.useQuery();
 
   const totalTasks = overview?.totalTasks ?? 0;
@@ -768,6 +769,24 @@ export default function ReportPage() {
 
   if (isLoading) {
     return <PageLoadingSpinner />;
+  }
+```
+
+読み込み中と取得失敗を分けます。失敗したときは集計値を表示せず、再試行するボタンを出します。
+
+```typescript
+// filepath: src/app/report/page.tsx（読み込み判定の直後）
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 ```
 

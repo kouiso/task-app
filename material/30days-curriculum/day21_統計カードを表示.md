@@ -108,7 +108,7 @@ flowchart TD
 
 **ゴール**: `src/server/api/routers/report.ts` を新規作成し、`getOverview` を写経して `api.report.getOverview` を自分で生やします。Day 09 の `project.getAll` や Day 13 の `task.getAll` と同じで、今日は「統計カードに渡す集計の入口」を1つ作ります。
 
-統計カードは、一覧データをクライアントで数え直しているわけではありません。完成版のコードは `count`・`aggregate`・`groupBy` を server 側にまとめ、画面には「計算済みの答え」だけを返します。件数が増えても、カードとテーブルの数字がぶれないようにするためです。
+統計カードは、一覧データをクライアントで数え直しているわけではありません。完成版のコードは `count`・`aggregate`・`groupBy` を server 側にまとめ、画面には「計算済みの答え」だけを返します。一覧の取得上限で集計対象が欠けるのを防ぐためです。集計中にデータが更新される場合の一貫性までは、`Promise.all` だけでは保証しません。
 
 #### 0-1. import を並べる
 
@@ -523,6 +523,7 @@ import {
 
 import { AppLayout }
   from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 ```
 
 `'use client'` は、このファイルをブラウザ側で動かすという宣言です。レポートページは Step 4 で `useQuery` を使いますが、フックはブラウザ側でしか動きません。この1行が無いまま `useQuery` を書くと、保存した瞬間にサーバーコンポーネントではフックを使えないというエラーが出て、画面が真っ白になります。`AppLayout` は Day 08 で仕上げた共通の枠で、これで囲んだページにはサイドバーとヘッダーが自動で付きます。
@@ -651,7 +652,7 @@ export default function ReportPage() {
 ```typescript
 // filepath: src/app/report/page.tsx
 // ReportPage 内、return 文の前に追加
-const { data: overview, isLoading } =
+const { data: overview, isLoading, isError, isFetching, refetch } =
   api.report.getOverview.useQuery();
 ```
 
@@ -691,7 +692,7 @@ const averageTimeHours =
 
 4つとも `?? 0` で受け止めているのは、`overview` が `undefined` になる場面があるからです。`undefined / 60` の答えは `NaN` で、`toFixed(1)` を通しても `NaN` のままです。画面には数字ではなく「NaNh」という文字が出ます。
 
-この4行は、Step 6 の読み込み判定より前に置きます。だから読み込み中でも計算そのものは走り、`?? 0` が効いて 0 になります。それでも画面へは出ません。Step 6 が先に読み込み中の表示を返すためです。`?? 0` の結果が実際に画面へ出るのは、取得そのものが失敗したときです。ただしその場合、画面には失敗した事実ではなく「0」が並びます。本当に0件なのか取得に失敗したのかを読者が見分けられないので、実務では `error` も受け取って、失敗したときだけ別の案内を出す形にします。`totalTasks` と `completionRate` は server が出した答えをそのまま受け取るだけで、画面側では足し算や割り算を一切していません。
+この4行は Step 6 の読み込み判定より前に置くので、取得中も計算されます。`?? 0` で計算中の未定義値を受け止め、画面にはスピナーを返します。取得失敗時もカードは表示せず、Step 6 の `isError` で別の案内を出します。0件という結果と通信の失敗を分けるためです。
 
 > 完成版のコードでは、
 > `overview.totalTimeSpent` と
@@ -731,6 +732,24 @@ const averageTimeHours =
 if (isLoading) {
   return <PageLoadingSpinner />;
 }
+```
+
+読み込み中と取得失敗を分けます。失敗したときは集計値を表示せず、再試行するボタンを出します。
+
+```typescript
+// filepath: src/app/report/page.tsx（読み込み判定の直後）
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 ```
 
 > **early return** とは、条件を満たしたら
@@ -799,7 +818,7 @@ if (isLoading) {
   </Card>
 ```
 
-`completionRate` は server 側で `Math.round` を通した整数なので、画面では `%` を付けるだけで済みます。丸めを server に置いたのは、このカードと Day 22 で足すグラフが必ず同じ数字を出すようにするためです。片方が71、片方が71.4と出ると、読者は集計が壊れたと考えます。分子は `DONE` のタスク数、分母は中止を除いた件数です。中止したタスクが `DONE` になることはないので、分子には最初から入りません。分母からだけ消えます。
+`completionRate` は server 側で `Math.round` を通した整数なので、画面では `%` を付けるだけで済みます。このカードは整数で表示するので、server 側で丸めます。Day 22 の円グラフは件数を使い、プロジェクト統計の進捗率は小数第1位まで表示します。表示する桁数は用途ごとに異なります。分子は `DONE` のタスク数、分母は中止を除いた件数です。中止したタスクが `DONE` になることはないので、分子には最初から入りません。分母からだけ消えます。
 
 **確認ポイント**:
 - 完了率がパーセント表示される
@@ -995,11 +1014,11 @@ if (isLoading) {
 
 ```bash
 # filepath: ターミナル（確認用）
-PORT=3001 npm run dev
+npm run dev -- --port 3001
 # http://localhost:3001/report にアクセス
 ```
 
-`PORT=3001` を付けているのは、他に動かしている開発サーバーと番号を取り合わないためです。起動したら、まずカードの数字がシードデータと合っているかを確かめます。総タスク数が初期データの5件より少なくても正常です。ログイン中のユーザーが参加しているプロジェクトのタスクだけを数えるためです。管理者アカウントは2つあるプロジェクトのうち1つにしか参加していないので、3件と表示されます。この3件は、初期データを触っていない場合の数です。Day 14 で自分がタスクを作っていれば、その分だけ増えます。数が違っても実装の誤りではありません。ただし、参加していないプロジェクトのタスクまで数に入っているようなら、Step 0-3 の `activeTasksFilter` をどこかの `count` で使い忘れています。4枚とも 0 で、テーブルも空のときは、参加しているプロジェクトをアーカイブしたままです。`/project` でアーカイブ表示を ON にして解除すると数字が戻ります。
+`--port 3001` を付けているのは、他に動かしている開発サーバーと番号を取り合わないためです。起動したら、まずカードの数字がシードデータと合っているかを確かめます。総タスク数が初期データの5件より少なくても正常です。ログイン中のユーザーが参加しているプロジェクトのタスクだけを数えるためです。管理者アカウントは2つあるプロジェクトのうち1つにしか参加していないので、3件と表示されます。この3件は、初期データを触っていない場合の数です。Day 14 で自分がタスクを作っていれば、その分だけ増えます。数が違っても実装の誤りではありません。ただし、参加していないプロジェクトのタスクまで数に入っているようなら、Step 0-3 の `activeTasksFilter` をどこかの `count` で使い忘れています。4枚とも 0 で、テーブルも空のときは、参加しているプロジェクトをアーカイブしたままです。`/project` でアーカイブ表示を ON にして解除すると数字が戻ります。
 
 ブラウザの DevTools を開き（`F12` キー）、
 画面幅を変更してカードの並びを確認します。
@@ -1055,12 +1074,12 @@ export default function ReportPage() {
 }
 ```
 
-この書き方でも画面は出ます。引っかかるのは、`"use client"` がファイルの先頭に1つあるだけで、その下の全部がブラウザ側の担当になる点です。数字と関係のない見出しやレイアウトまで巻き込まれます。手元では一瞬なので気付きにくいのですが、読者の回線では、枠が出るまでに JavaScript の読み込みを待つ時間が挟まります。
+この書き方でも画面は出ます。Client Component（ブラウザで状態管理やイベント処理を使える部品）も、最初の表示ではサーバーで HTML を生成します。したがって、`"use client"` があるだけで見出しの表示が JavaScript 待ちになるわけではありません。分割を考える理由は、ブラウザへ送るコードの範囲を小さくするためです。
 
 **このコードの問題点**:
 
-- ページ全体が Client Component。見出しやレイアウトまで JS で描画する必要がある
-- SEO に不利（検索エンジンが中身を読めない可能性）
+- ページから読み込む部品も、ブラウザへ送るコードの対象になる
+- 状態管理が必要な範囲と、固定の見出しを返す範囲が分かれていない
 
 ### After（プロが書くコード）
 
@@ -1089,21 +1108,21 @@ export function ReportContent() {
 }
 ```
 
-分けたあとの `page.tsx` には `"use client"` がありません。見出しと `AppLayout` はサーバー側で文字へ変えてから届くので、読者は JavaScript の到着を待たずに枠を見られます。`useQuery` を使う `ReportContent` だけがブラウザ側で動きます。境界がファイル単位なので、どこで切り出すかが、そのまま「どこまでサーバーで描くか」の線引きになります。
+分けたあとの `page.tsx` は Server Component（サーバーで実行する部品）です。固定の見出しをサーバー側に残し、`useQuery` を使う `ReportContent` を Client Component に分けています。ただし、`AppLayout` 自体には `"use client"` があるため、分割後も Client Component のままです。親を変えても、読み込む部品の宣言は変わりません。
 
 **このコードの強み**:
 
-- 見出しとレイアウトはサーバーで事前描画
-- Client Component はデータ取得部分だけ
-- 初期表示が速く、SEO にも有利
+- 固定の見出しをサーバー側に残せる
+- データ取得と状態管理の場所を明確にできる
+- 実際に送る JavaScript の量や表示時間は、変更前後で測定して判断する
 
 #### 覚えておきたいエッセンス
 
-ページコンポーネントはなるべく Server Component にして、データ取得する部分だけを "use client" の子コンポーネントに切り出します。
+状態管理が必要な部品に `"use client"` を付け、その外側に固定の内容を置けるか考えます。分割だけで高速化を保証するものではありません。初期表示の扱いは [Next.js 15 の公式説明](https://nextjs.org/docs/15/app/getting-started/server-and-client-components)でも確認できます。
 
 ## 完成コード全体
 
-今日は4つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は4つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けてください。`report.ts`・`root.ts`・`report/page.tsx` は全文を置き換えます。`app-layout.tsx` は掲載した2か所だけを書き換えます。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1157,7 +1176,7 @@ export const reportRouter = createTRPCRouter({
     }
 ```
 
-参加しているプロジェクトが0件のときに、13項目すべてを埋めて返しています。ここを `return null` や `return {}` にすると、画面側は `overview.totalTasks` を読めず、登録した直後のユーザーだけ画面が落ちます。項目の形をそろえておけば、画面は分岐を1本も増やさずに済みます。
+参加しているプロジェクトが0件のときに、14項目すべてを埋めて返しています。ここを `return null` や `return {}` にすると、画面側は `overview.totalTasks` を読めず、登録した直後のユーザーだけ画面が落ちます。項目の形をそろえておけば、画面は分岐を1本も増やさずに済みます。
 
 `recentTasks` などの配列を `[]` にしているのも同じ理由です。`undefined` を返すと、画面の `.map()` がそこで止まります。
 
@@ -1330,7 +1349,7 @@ export const reportRouter = createTRPCRouter({
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 ```
 
-3行すべてに `?? 0` か `totalTasks > 0` の確認が入っています。`_sum` は対象が1件も無いとき `null` を返し、割り算は分母が0のとき `NaN` になります。どちらも画面には「null」や「NaN」という文字として出るので、サーバー側で0に寄せています。
+3行すべてに `?? 0` か `totalTasks > 0` の確認が入っています。`_sum` は対象が1件も無いとき `null` を返し、`0 / 0` は `NaN` になります。合計は0、タスクが無いときの平均と完了率も0と決め、数値で返します。
 
 `Math.round` で整数に丸めているのは、完了率をパーセントの整数として見せるためです。丸める場所を画面側にすると、他の画面で違う桁数になります。
 
@@ -1468,6 +1487,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 import { AppLayout }
   from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
@@ -1491,7 +1511,7 @@ import { api } from '@/trpc/react';
 // filepath: src/app/report/page.tsx（同じファイルの続き）
 // 完成版: データ取得と表示用の値
 export default function ReportPage() {
-  const { data: overview, isLoading } =
+  const { data: overview, isLoading, isError, isFetching, refetch } =
     api.report.getOverview.useQuery();
 
   const totalTasks = overview?.totalTasks ?? 0;
@@ -1506,6 +1526,24 @@ export default function ReportPage() {
 
   if (isLoading) {
     return <PageLoadingSpinner />;
+  }
+```
+
+読み込み中と取得失敗を分けます。失敗したときは集計値を表示せず、再試行するボタンを出します。
+
+```typescript
+// filepath: src/app/report/page.tsx（読み込み判定の直後）
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 ```
 
@@ -1653,7 +1691,7 @@ export default function ReportPage() {
                     </TableCell>
 ```
 
-`overview?.` の `?.` が、データが届く前の状態を受け止めています。`isLoading` の判定を通っているので通常はここへ `undefined` が来ませんが、通信が失敗した場合は `overview` が `undefined` のまま描画されます。この1文字が無いと、その場面で画面が落ちます。
+`overview?.` は未定義の値へのアクセスを避けます。取得失敗は先に `isError` で判定しているので、その場合はこの表を表示しません。成功して0件だったときにだけ、空の表になります。
 
 `key={stat.id}` は React が行を見分けるための目印です。プロジェクトの id を渡しているので、並び順が変わっても行の中身が入れ替わりません。
 
@@ -1687,7 +1725,7 @@ export default function ReportPage() {
 
 ### `src/component/layout/app-layout.tsx`
 
-Day 08 で作った長いファイルなので、今日触った2か所だけを載せます。それ以外の行は Day 08 のまま残してください。
+Day 08 で作った長いファイルなので、今日触った2か所だけを載せます。それ以外の行は Day 20 の終了時点のまま残してください。
 
 **アイコンの取り込み**:
 
@@ -1795,7 +1833,7 @@ A. `NOT: { status: TASK_STATUS.CANCELLED }`、つまり中止したタスクを�
 
 A. 中止したタスクが分母に入るので、完了率は下がります。中止したタスクが `DONE` になることはなく、分子は変わらないまま分母だけが増えるためです。10件のうち5件を終えて3件を中止したプロジェクトなら、母数7件なら71%、母数10件なら50%になります。
 
-**Q3. 参加しているプロジェクトが0件のときに、`null` や `{}` ではなく13項目すべてを `0` と `[]` で埋めて返すのは、なぜですか。**
+**Q3. 参加しているプロジェクトが0件のときに、`null` や `{}` ではなく14項目すべてを `0` と `[]` で埋めて返すのは、なぜですか。**
 
 A. 画面側が `overview.totalTasks` や `.map()` を、分岐を書かずそのまま読めるようにするためです。`null` を返すと、登録した直後でプロジェクトが1つも無いユーザーの画面だけが落ちます。配列を `[]` にしているのも同じ理由です。`undefined` を返すと `.map()` がそこで止まります。
 

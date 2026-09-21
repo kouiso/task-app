@@ -520,7 +520,7 @@ Step 1 との違いは、`<article>` の入れ物と `className` を1つも触�
   const greeting = getGreetingByHour('9');
 ```
 
-赤い線とともに `Argument of type 'string' is not assignable to parameter of type 'number'.` と出ます。「`string` の値を `number` の引数（関数へ渡す値）には渡せません」という意味です。`getGreetingByHour(hour: number): string` のうち、いま見ているのは前のコロンです。この `: number` が、この関数へ渡してよいのは数だけだと宣言しているためです。`'9'` は見た目こそ数字ですが、引用符で囲むと文字になります。文字のままでは `hour < 12` の大小比較が意図どおりに働かないので、TypeScript は画面を開く前に止めます。
+赤い線とともに `Argument of type 'string' is not assignable to parameter of type 'number'.` と出ます。「`string` の値を `number` の引数（関数へ渡す値）には渡せません」という意味です。`getGreetingByHour(hour: number): string` のうち、いま見ているのは前のコロンです。この `: number` が、この関数へ渡してよいのは数だけだと宣言しているためです。`'9'` は見た目こそ数字ですが、引用符で囲むと文字になります。JavaScript では文字を数へ変換して比較する場合もありますが、どんな文字でも時刻として扱えるわけではありません。TypeScript は、宣言した `number` と渡した `string` が違うことをエディタで知らせます。
 
 確かめたら `getGreetingByHour(hour)` に戻してください。赤い線が消えて、あいさつが元どおり表示されれば大丈夫です。
 
@@ -1317,7 +1317,7 @@ export default function DashboardPage() {
 | テンプレートリテラル | バッククオートで囲んだ文字列。`${ }` の中身が値に置き換わる |
 | 配列 | 同じ形のものを順番に並べて持つ入れ物。`focusCards` がその例 |
 | `map` | 配列の要素1つずつから別のものを作って、新しい並びを返す書き方 |
-| Server Component | ブラウザへ JavaScript を送らず、サーバー側だけで組み立てる部品。React の既定はこちら |
+| Server Component | ブラウザへ JavaScript を送らず、サーバー側だけで組み立てる部品。この教材の Next.js App Router では、ページは既定でこちら |
 
 ## 理解チェック
 

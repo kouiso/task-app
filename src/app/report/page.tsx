@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
@@ -25,7 +26,7 @@ import { api } from '@/trpc/react';
 const CHART_FALLBACK_COLOR = '#9e9e9e';
 
 export default function ReportPage() {
-  const { data: overview, isLoading } = api.report.getOverview.useQuery();
+  const { data: overview, isLoading, isError, isFetching, refetch } = api.report.getOverview.useQuery();
 
   const statusData =
     overview?.statusData.map((entry) => ({
@@ -41,6 +42,19 @@ export default function ReportPage() {
 
   if (isLoading) {
     return <PageLoadingSpinner />;
+  }
+
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (

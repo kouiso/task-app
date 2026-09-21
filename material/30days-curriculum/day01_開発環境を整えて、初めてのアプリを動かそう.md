@@ -516,7 +516,17 @@ Next.js のロゴと、
 
 #### 編集を始める前に、VS Code でプロジェクトを開く
 
-ファイルの編集にはエディタを使います。VS Code を起動して、メニューの「ファイル」から「フォルダを開く...」を選び、`workspace` の中の `task-app` フォルダを選んで開いてください。左側のファイル一覧（エクスプローラー）に `src` や `package.json` が並んでいれば準備完了です。以降「`src/app/globals.css` を開く」と書いてあったら、このファイル一覧で `src` フォルダ、`app` フォルダの順にクリックして中のファイルを開く、という意味です。
+ファイルの編集にはエディタを使います。macOS と Ubuntu では、VS Code を起動して、メニューの「ファイル」から「フォルダを開く...」を選び、`workspace` の中の `task-app` フォルダを選んで開いてください。左側のファイル一覧（エクスプローラー）に `src` や `package.json` が並んでいれば準備完了です。以降「`src/app/globals.css` を開く」と書いてあったら、このファイル一覧で `src` フォルダ、`app` フォルダの順にクリックして中のファイルを開く、という意味です。
+
+Windows では、Windows 側の VS Code に Microsoft の [WSL 拡張機能](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl)を入れます。次に Ubuntu の新しいターミナルで、次を実行してください。
+
+```bash
+cd ~/workspace/task-app
+code .
+```
+
+`code .` は、今いる Ubuntu 側のフォルダを VS Code で開くコマンドです。左下に `WSL: Ubuntu` と表示され、左の一覧に `src` があれば、編集先と実行先が揃っています。
+`code: command not found` と出たら Ubuntu のターミナルを開き直します。直らない場合は、VS Code で `F1` を押し、`WSL: Connect to WSL` を選びます。接続後に「フォルダを開く...」から `/home/Ubuntuのユーザー名/workspace/task-app` を開いてください。
 
 `npm run dev` を動かしているターミナルは、そのまま動かし続けて大丈夫です。ファイルを保存するたびに、ブラウザの画面が自動で更新されます。
 

@@ -10,7 +10,7 @@ Day 10 では react-hook-form・zod・tRPC の `useMutation`（データ変更AP
 
 Day 10 で作った ProjectDialog を「編集モード」で再利用し、プロジェクトの更新と削除を実装します。既存データをフォームに反映する方法と、削除前の確認ダイアログも学びます。
 
-この日は、まずサーバー側の `update` / `delete` / `archive` / `unarchive` の4つを自分で書きます。そのあと画面をつなぎます。
+この日は、まずサーバー側の `update` / `delete` / `archive` / `unarchive` と詳細取得の `getById` を自分で書きます。そのあと画面をつなぎます。
 
 スクリーンショット: 編集モードの ProjectDialog の表示を確認してください。
 
@@ -84,7 +84,7 @@ src/
 └── server/
     └── api/
         └── routers/
-            └── project.ts    ← Step 0 で手続きを4本追加
+            └── project.ts    ← Step 0 で手続きを5本追加
 ```
 
 今日コードを書き足すのは `project.ts` と `page.tsx` の2つだけです。`delete-confirm-dialog.tsx` は配布済みで、中身には手を入れません。
@@ -95,7 +95,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | project.ts に update/delete/archive/unarchive を自分で書く | 15分 |
+| Step 0 | project.ts に update/delete/archive/unarchive/getById を自分で書く | 15分 |
 | Step 1 | インポートと編集ボタンのハンドラーを作る | 7分 |
 | Step 2 | 削除の state と mutation を実装する | 5分 |
 | Step 3 | 送信ハンドラーを作る | 7分 |
@@ -113,9 +113,9 @@ src/
 
 ---
 
-### Step 0: project.ts に update/delete/archive/unarchive を自分で書く（15分）
+### Step 0: project.ts に update/delete/archive/unarchive/getById を自分で書く（15分）
 
-**ゴール**: プロジェクトの更新・削除・アーカイブ・アーカイブ解除の4つの手続きを追加します。`api.project.update` / `api.project.delete` / `api.project.archive` / `api.project.unarchive` を呼べる状態にします。
+**ゴール**: プロジェクトの更新・削除・アーカイブ・アーカイブ解除・詳細取得の5つの手続きを追加します。`api.project.update` / `api.project.delete` / `api.project.archive` / `api.project.unarchive` を呼べる状態にします。
 
 #### 0-1. update（送られてきた項目だけ更新する）
 
@@ -231,7 +231,7 @@ const projectUpdateSchema = z.object({
   }),
 ```
 
-`include`（関連データを一緒に取る指定）のうち、メンバー情報を `user` 付きで取る部分は `getAll` / `create` と共通です。`getAll` は一覧表示用にタスクの `id` と `status` も取りますが、`update` の返り値では不要なので付けていません。`getById` を呼ぶ手続きは Day 12 で `getAll` の下に追加するので、今日はまだ追加しません。
+`include`（関連データを一緒に取る指定）のうち、メンバー情報を `user` 付きで取る部分は `getAll` / `create` と共通です。`getAll` は一覧表示用にタスクの `id` と `status` も取りますが、`update` の返り値では不要なので付けていません。詳細取得の `getById` は、この Step の最後に追加します。
 
 #### 0-2. delete（ここが一番のヤマ場、削除だけは OWNER 限定）
 
@@ -345,6 +345,76 @@ Step 0 では権限まわりの書き方が3パターン出てきました。表
 - `projectUpdateSchema` と `update` / `delete` / `setArchiveStatus` / `archive` / `unarchive` を追加した
 - `delete` の権限チェックが `assertMemberPermission` ではなく `role !== PROJECT_MEMBER_ROLE.OWNER` の直接比較になっている
 - `npm run dev` で型エラーが出ていない
+
+---
+
+#### 0-4. getById（アーカイブする対象を詳細画面へ返す）
+
+`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。貼り先はこのすぐ下に書いてあります。
+
+先頭の `protectedProcedure`（ログイン必須の入口）に `.query`（読み取り用の手続き）をつなげて、ログイン済みの人だけが呼べる読み取りAPIにします。データを書き換えるときは `.query` の代わりに `.mutation`（書き込み用の手続き）を使い分けます。入力の `id` は `.cuid()`（cuid形式のID検証）で、決まった形式のIDだけを受け付けます。
+
+まず `findUnique` で1件検索します。詳細画面はタスクの担当者（`assignee`）も表示するので、`include`（関連データも一緒に取る指定）で `tasks` に紐づく `assignee` も一緒に取ります。
+
+ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { ...USER_SELECT, role: true },
+              },
+            },
+          },
+          tasks: {
+            include: {
+              assignee: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+          },
+        },
+      });
+```
+
+`include` に `members` と `tasks` を並べているのは、詳細画面がこの2つを同じ画面に出すからです。別々のAPIで取ると通信が2回になり、片方だけ古い内容のまま表示される瞬間ができます。`members` の中でさらに `user` を `include` しているのは、`ProjectMember` の行が持っているのは `userId` だけで、画面に出す名前やアイコンはユーザー側にあるためです。ここを省くと、メンバー一覧に並ぶのは名前ではなく英数字のIDになります。
+
+続けて、見つからなかったときのチェックです。`TRPCError`（tRPCのエラーを返す仕組み）を使い、該当がなければ処理を止めてエラーを呼び出し側へ返します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+```
+
+`getAll` は一覧なので「見つからない」というケースがありませんでした。`getById` は違います。指定した `id` のプロジェクトは存在しないこともあるため、`NOT_FOUND` チェックが必要です。
+
+続けて権限チェックと戻り値です。`ctx.session`（サーバーが持つログイン情報）には、いまログインしているユーザーの `userId` が入っています。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+      assertMemberPermission(
+        project.members.filter((m) => m.userId === ctx.session.userId),
+        'canView',
+      );
+
+      return project;
+    }),
+```
+
+`getAll` では `where` で「自分がメンバーのものだけ」を絞り込んでいましたが、`getById` は先にプロジェクトを取得してから、取得した `members` の中に自分がいるかを `filter` で確認しています。他人のプロジェクトの `id` を直接指定されても、メンバーでなければ `canView` の権限チェックで弾かれます。
 
 ---
 
@@ -941,65 +1011,62 @@ const handleArchive = (
 
 ### Step 9: ProjectDetailView にアーカイブを渡す（4分）
 
-**ゴール**: `ProjectDetailView` に `onArchive` props を渡して、アーカイブ機能を有効にします。Day 12 で追加するメンバー管理の土台も、この Step でプレースホルダーとして用意します。
+**ゴール**: 詳細データを取得してアーカイブボタンを表示します。メンバー管理のボタンは Day 12 まで非表示にします。
 
-**実装**:
-
-まず、Day 12 で本実装するハンドラー・state・クエリのプレースホルダーを追加します。これらは **Day 12 の Step 1・3・6 で本実装に置き換えます**。`ProjectDetailView` に渡す値の置き場所を先に作っておくための一時定義です。なお、この仮定義を置いても Day 11 は型エラーが残ったまま終わります。理由はこの Step の後半で説明します。
-
-> **Day 12 で置き換えるコードです。** Day 12 の Step 1 で `handleDetailClose` を、Step 3 で `memberDialogOpen` state を、Step 6 で `handleRemoveMember` を本実装したときに、それぞれこの仮定義を削除してください。`handleProjectClick` は Day 09 で置いた受け皿がそのまま残っているので、Day 12 の Step 1 ではその受け皿を書き換えます。
+まず、配布済みの詳細表示コンポーネントをインポートします。型が参照する `project.getById` は Step 0 で追加済みです。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ── Day 12 で本実装する仮定義（Day 12 完了後に削除） ──
-const projectDetail = undefined; // Day 12 Step 1 で useQuery に置き換え
-const handleDetailClose = () => {
-  router.push('/project'); // Day 12 Step 1 で本実装に置き換え
-};
-const [memberDialogOpen, setMemberDialogOpen] =
-  useState(false); // Day 12 Step 3 で本実装に置き換え
-const handleRemoveMember = (_userId: string) => {
-  // Day 12 Step 6 で本実装に置き換え
-};
-// ── ここまで Day 12 仮定義 ──
-```
-
-ここで仮の定義を置くのは、`ProjectDetailView` が要求する Props を今日の時点でそろえるためです。この部品は Day 12 の機能まで含んだ形で配布されているので、渡す値が足りないと型エラーになり、`npm run dev` が通りません。今日の学習内容は編集と削除なので、詳細表示に必要な値は箱だけ用意して先へ進みます。
-
-`const projectDetail = undefined;` のように中身を空にしてあるのは、動くように見せないためです。中途半端に動く仮実装を置くと、Day 12 で本実装に差し替えるのを忘れても気付けません。
-
-**確認ポイント**:
-- 仮定義を4つとも書いた
-- これらは仮定義なので、Day 12 で削除することを覚えておく
-
-次に、`ProjectDetailView` コンポーネントのインポートを追加します。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// ProjectDetailViewのインポートを追加
 import { ProjectDetailView } from
   '@/component/project/project-detail-view';
 ```
 
-この部品の型は `project.getById` の戻り値を参照しています。その手続きを書くのは Day 12 なので、
-この時点ではエディタに `getById` が無いという型エラーが出ます。写し間違いではありません。
+この部品に対象のデータとアーカイブ用の関数を渡すと、詳細画面から操作できます。
 
-**ここで出るエラーは1件にとどまりません。** 実際に数えると5件出ます。
-直接の原因は `getById` が無いことの1件だけです。残りの4件は、そこから連鎖して起きます。
-`getById` の戻り値が決まらないと `projectDetail` の型も決まらず、
-`project-detail-view.tsx` の中でその値を受けている箇所の型が芋づる式に決まらなくなるからです。
-5件とも Day 12 Step 0 で `getById` を足した時点でまとめて消えます。
+Day 09 の `handleProjectClick` を次の関数で置き換えてください。`handleDetailClose` はその直下に追加します。
 
-もう1つ、今日のうちに知っておいてほしいことがあります。
-**Day 11 を終えた時点で `npm run build` は通りません。** `npm run dev` は型を検査しないので
-画面は動きますが、`build` は型を見るのでここで止まります。Day 04 で「公開する前に必ず
-`npm run build`」と決めたので、今日ここで試すと失敗します。今日は失敗して正常です。
-`build` が通る状態に戻るのは Day 12 です。
+```typescript
+// filepath: src/app/project/page.tsx
+const handleProjectClick = (projectId: string) => {
+  router.push(`/project?projectId=${projectId}`);
+};
+const handleDetailClose = () => {
+  router.push('/project');
+};
+```
+
+カードを押すと URL に対象の ID が入り、Step 1 の `useEffect` が `selectedProject` を更新します。戻る操作では URL から ID を外します。
+
+既存の `useQuery` 群の末尾に、詳細取得を追加してください。
+
+```typescript
+// filepath: src/app/project/page.tsx
+const { data: projectDetail } =
+  api.project.getById.useQuery(
+    { id: selectedProject ?? '' },
+    { enabled: !!selectedProject },
+  );
+```
+
+`enabled` は取得を実行する条件です。未選択のときは `false` になり、空の ID をサーバーへ送りません。
+
+メンバーの操作は翌日作るため、次の state と仮の関数をハンドラー群の前に追加します。Day 12 の Step 3 と Step 6 で置き換えます。
+
+```typescript
+// filepath: src/app/project/page.tsx
+const [memberDialogOpen, setMemberDialogOpen] =
+  useState(false);
+const handleRemoveMember = (_userId: string) => {
+  // Day 12 Step 6 で本実装に置き換える
+};
+```
+
+この2つはまだ使いません。`canManageMembers={false}` でメンバー操作を非表示にし、未実装の処理を読者が押せないようにします。
 
 **確認ポイント**:
-- `@/component/project/project-detail-view` からインポートしている
-- 型エラーが5件出ても、そのまま次へ進む
-- `npm run build` が今日は落ちることを知っている
+- `getById` の型エラーが出ていない
+- `handleProjectClick` と `handleDetailClose` が1つずつある
+- `projectDetail` は `useQuery` の結果を受け取っている
 
 プロジェクト詳細はダイアログではなく、URLパラメータ `?projectId=xxx` でページ内にインライン表示します。`ProjectPageContent` 関数の return 直前（`if` 分岐の形）に以下を追加してください。
 
@@ -1028,7 +1095,7 @@ if (projectIdParam && selectedProject) {
 
 `ProjectDetailView` が求める props は8つで、どれも省略できません。今日の主役は
 `onArchive` です。ただし、ほかの props も値を渡さないと型が合いません。
-その状態では `npm run dev` が止まります。そこで今日の時点では、次のように仮の値を置いています。
+メンバー管理用の props には、次の仮の値を渡します。
 
 `onUpdateMemberRole={() => {}}` は、何も引数を受け取らず何もしない関数です。ロールを
 変える処理を書くのは Day 12 なので、今日は「呼ばれても何も起きない」形にしておきます。
@@ -1044,7 +1111,7 @@ TypeScript が受け付けるからです。おかげで `ProjectMemberRole` 型
 プロジェクトの OWNER なので、計算しても結果は `true` になります。だから今日は答えを
 直接書いておき、Day 12 で計算に置き換えます。
 
-条件が `projectIdParam && selectedProject` の2つになっているのは、URL の値が `selectedProject` に写るまでに描画が1回はさまるからです。`/project?projectId=...` を直接開いた1回目では `useEffect` がまだ走っておらず、`selectedProject` は `null` のままです。`projectIdParam` だけで判定すると、この1回だけ中身の無い詳細画面が出ます。なお、この2つの条件は id のプロジェクトが実在するかまでは見ていません。存在しない id を開いたときの扱いは、Day 12 で `getById` が `NOT_FOUND` を返す形で決めます。
+条件が `projectIdParam && selectedProject` の2つになっているのは、URL の値が `selectedProject` に写るまでに描画が1回はさまるからです。`/project?projectId=...` を直接開いた1回目では `useEffect` がまだ走っておらず、`selectedProject` は `null` のままです。`projectIdParam` だけで判定すると、この1回だけ中身の無い詳細画面が出ます。なお、この2つの条件は id のプロジェクトが実在するかまでは見ていません。存在しない id には、Step 0 の `getById` が `NOT_FOUND` を返します。
 
 この分岐を一覧の `return` 文の直前に置くのは、詳細を表示するときは一覧を描かないためです。あとに置くと、一覧を組み立ててから捨てることになります。
 
@@ -1057,8 +1124,8 @@ TypeScript が受け付けるからです。おかげで `ProjectMemberRole` 型
 
 | prop | 由来 | Day 11 時点 | Day 12 で本実装 |
 |------|------|-------------|----------------|
-| `projectDetail` | `api.project.getById.useQuery` | `undefined`（仮） | Step 1 で `useQuery` に置換 |
-| `onBack` | `handleDetailClose` | `/project` に戻るだけ（仮） | Step 1 で本実装に置換 |
+| `projectDetail` | `api.project.getById.useQuery` | 詳細データ | 変更なし |
+| `onBack` | `handleDetailClose` | 一覧に戻る | 変更なし |
 | `onAddMemberClick` | `setMemberDialogOpen(true)` | state は仮定義済み | Step 3 で本実装に置換 |
 | `onRemoveMember` | `handleRemoveMember` | 何もしない（仮） | Step 6 で本実装に置換 |
 | `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleUpdateMemberRole` に置換 |
@@ -1097,21 +1164,16 @@ PORT=3001 npm run dev
 >
 > ![プロジェクト編集ダイアログ。赤枠の中のボタンが、作成モードの「作成」ではなく「更新」になっている](./screenshots/day11/project-edit-dialog-update.png)
 
-#### アーカイブの確認は Day 12 で行います
+#### アーカイブと解除の確認
 
-`handleArchive` を今日で書き終えましたが、**押すボタンはまだ画面に出ません**。
-アーカイブボタンは `ProjectDetailView` の中にあります。この部品は `projectDetail` が
-`undefined` のあいだ「プロジェクトが見つかりません。」だけを返します。
-上の表のとおり、今日の `projectDetail` は仮の `undefined` です。Day 12 の Step 1 で
-`useQuery` に置き換わります。詳細画面が出るのはそこからです。
+Day 10 で作った練習用のプロジェクトを使います。初期データの「Webサイトリニューアル」は、この先のタスク作成でも使うため変更しません。
 
-そのため、アーカイブと解除の動きは Day 12 の動作確認でまとめて確かめます。
-今日はロジックが書けていれば十分です。押しても何も起きないのではなく、
-押す場所そのものがまだ出ていない、という状態です。
+1. 練習用のカードを開き、「アーカイブ」をクリックします。一覧へ戻り、そのカードが消えることを確認します。
+2. 「アーカイブ表示」を ON にします。練習用のカードだけが表示されることを確認します。
+3. そのカードを開き、「アーカイブ解除」をクリックします。
+4. 「アーカイブ表示」を OFF に戻します。練習用のカードが一覧へ戻れば成功です。
 
-一覧の右上にある「アーカイブ表示」スイッチは Day 09 で作ってあるので、今日も押せます。
-ただしアーカイブしたプロジェクトが1つも無いので、ONにすると一覧は空になります。
-これで正常です。
+このスイッチは、ON のときにアーカイブ済みだけを取得します。解除した直後に一覧が空でも、OFF に戻せば進行中のプロジェクトが表示されます。
 
 #### 削除フローの確認
 
@@ -1142,7 +1204,7 @@ Step 9 で置いた仮定義がそろっていれば正解です。完成版の 
 Day 12 と Day 27 まで書き足したあとの姿なので、いまの時点で揃えてはいけません。
 先に写すと Step 9 の仮定義が消え、翌日の「仮定義を削除してから書く」手順が通らなくなります。
 
-`src/server/api/routers/project.ts` は、Day 11 終了時点で `getAll` / `create` / `update` / `delete` / `archive` / `unarchive` が揃った状態です。`getById` / `addMember` / `removeMember` は Day 12 で追加するので、まだ存在しません。
+`src/server/api/routers/project.ts` は、Day 11 終了時点で `getAll` / `create` / `update` / `delete` / `archive` / `unarchive` が揃った状態です。`getById` も今日追加済みです。`addMember` / `removeMember` は Day 12 で追加します。
 
 
 ---
@@ -1586,6 +1648,75 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
 
 説明文を値があるときだけ足す書き方も Day 10 のままです。今日の `update` では、この判定が `if (data.description !== undefined)` という別の形になります。作成では「空欄なら入れない」で足りますが、更新では「空欄にした」という指示そのものを届ける必要があるためです。
 
+**getById の詳細取得**:
+
+`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。貼り先はこのすぐ下に書いてあります。
+
+先頭の `protectedProcedure`（ログイン必須の入口）に `.query`（読み取り用の手続き）をつなげて、ログイン済みの人だけが呼べる読み取りAPIにします。データを書き換えるときは `.query` の代わりに `.mutation`（書き込み用の手続き）を使い分けます。入力の `id` は `.cuid()`（cuid形式のID検証）で、決まった形式のIDだけを受け付けます。
+
+まず `findUnique` で1件検索します。詳細画面はタスクの担当者（`assignee`）も表示するので、`include`（関連データも一緒に取る指定）で `tasks` に紐づく `assignee` も一緒に取ります。
+
+ここから先の「」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const project = await prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { ...USER_SELECT, role: true },
+              },
+            },
+          },
+          tasks: {
+            include: {
+              assignee: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+          },
+        },
+      });
+```
+
+`include` に `members` と `tasks` を並べているのは、詳細画面がこの2つを同じ画面に出すからです。別々のAPIで取ると通信が2回になり、片方だけ古い内容のまま表示される瞬間ができます。`members` の中でさらに `user` を `include` しているのは、`ProjectMember` の行が持っているのは `userId` だけで、画面に出す名前やアイコンはユーザー側にあるためです。ここを省くと、メンバー一覧に並ぶのは名前ではなく英数字のIDになります。
+
+続けて、見つからなかったときのチェックです。`TRPCError`（tRPCのエラーを返す仕組み）を使い、該当がなければ処理を止めてエラーを呼び出し側へ返します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+```
+
+`getAll` は一覧なので「見つからない」というケースがありませんでした。`getById` は違います。指定した `id` のプロジェクトは存在しないこともあるため、`NOT_FOUND` チェックが必要です。
+
+続けて権限チェックと戻り値です。`ctx.session`（サーバーが持つログイン情報）には、いまログインしているユーザーの `userId` が入っています。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+      assertMemberPermission(
+        project.members.filter((m) => m.userId === ctx.session.userId),
+        'canView',
+      );
+
+      return project;
+    }),
+```
+
+`getAll` では `where` で「自分がメンバーのものだけ」を絞り込んでいましたが、`getById` は先にプロジェクトを取得してから、取得した `members` の中に自分がいるかを `filter` で確認しています。他人のプロジェクトの `id` を直接指定されても、メンバーでなければ `canView` の権限チェックで弾かれます。
+
+
 **update の入口と存在チェック**:
 
 ```typescript
@@ -1920,7 +2051,11 @@ function ProjectPageContent() {
 ```typescript
 // filepath: src/app/project/page.tsx
 // 完成版: Day 12 で本実装する仮定義
-  const projectDetail = undefined;
+  const { data: projectDetail } =
+    api.project.getById.useQuery(
+      { id: selectedProject ?? '' },
+      { enabled: !!selectedProject },
+    );
   const handleDetailClose = () => {
     router.push('/project');
   };
@@ -1933,7 +2068,7 @@ function ProjectPageContent() {
   };
 ```
 
-この4つは Day 12 で本実装に差し替えます。中身を空にしてあるのは、動くように見せないためです。半端に動く仮の処理を置くと、差し替えを忘れても画面が動いてしまい、忘れたことに気付けません。`projectDetail` が `undefined` のままなら、詳細画面を開いた時点で中身の無さが目に見えます。
+詳細取得と戻る操作は今日使います。メンバー追加の state と削除の関数は Day 12 で置き換えます。
 
 **編集開始のハンドラー**:
 
@@ -1985,7 +2120,7 @@ function ProjectPageContent() {
 // filepath: src/app/project/page.tsx
 // 完成版: 詳細表示の受け皿と新規作成のハンドラー
   const handleProjectClick = (id: string) => {
-    void id;
+    router.push(`/project?projectId=${id}`);
   };
 
   const handleCreate = () => {
@@ -1994,7 +2129,7 @@ function ProjectPageContent() {
   };
 ```
 
-`handleProjectClick` が空のままなのは、行き先の詳細画面を Day 12 で作るからです。Day 09 で置いた受け皿を、そのままの場所に残してあります。`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは、直前に編集を開いていた場合の値を捨てるためです。この1行が無いと、編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき、前のプロジェクトの名前が入ったまま開きます。
+`handleProjectClick` は URL に ID を付け、詳細データの取得を始めます。`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは、直前に編集を開いていた場合の値を捨てるためです。この1行が無いと、編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき、前のプロジェクトの名前が入ったまま開きます。
 
 **送信ハンドラーの更新側**:
 

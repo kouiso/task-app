@@ -10,7 +10,7 @@ Day 11 ではプロジェクトの編集・削除機能を実装しました。`
 
 プロジェクトにメンバーを追加・削除できる機能を実装します。`ProjectDetailView` コンポーネントでメンバー一覧を表示し、`page.tsx` からprops経由で操作を制御します。
 
-この日は、まずサーバー側の `getById` / `getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` の5つを自分で書きます。そのあと画面をつなぎます。
+この日は、まずサーバー側の `getById` / `getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` のうち、Day 11 で作った `getById` を確認し、残る4つを自分で書きます。そのあと画面をつなぎます。
 
 スクリーンショット: メンバー管理画面（プロジェクト詳細ページ内）
 
@@ -124,75 +124,13 @@ src/
 
 ### Step 0: project.ts に getById/getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く（25分）
 
-**ゴール**: プロジェクト詳細取得・追加可能ユーザー取得・メンバー追加・メンバー削除・メンバー権限変更の5つの手続きを追加します。
+**ゴール**: 詳細取得の権限チェックを確認し、追加可能ユーザー取得・メンバー追加・メンバー削除・メンバー権限変更の4つの手続きを追加します。
 
-#### 0-1. getById（1件だけ取得する）
+#### 0-1. getById（Day 11 の実装を確認する）
 
-`getAll` は複数件を `findMany` で取っていましたが、`getById` は1件だけを `findUnique` で取ります。貼り先はこのすぐ下に書いてあります。
+`getById` は Day 11 Step 0 で追加済みです。ここでは追加しません。`src/server/api/routers/project.ts` を開き、対象のプロジェクトを取得した後に `canView` の権限を確認していることを確かめます。
 
-先頭の `protectedProcedure`（ログイン必須の入口）に `.query`（読み取り用の手続き）をつなげて、ログイン済みの人だけが呼べる読み取りAPIにします。データを書き換えるときは `.query` の代わりに `.mutation`（書き込み用の手続き）を使い分けます。入力の `id` は `.cuid()`（cuid形式のID検証）で、決まった形式のIDだけを受け付けます。
-
-まず `findUnique` で1件検索します。詳細画面はタスクの担当者（`assignee`）も表示するので、`include`（関連データも一緒に取る指定）で `tasks` に紐づく `assignee` も一緒に取ります。
-
-ここから先の「（続き）」のブロックは、`project.ts` の**末尾にある `});` の1行上**へ貼ります。ファイルの一番下に足すとルーターの外に出てしまい、英語のエラーで止まります。`});` は増やしません。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-  getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
-    .query(async ({ ctx, input }) => {
-      const project = await prisma.project.findUnique({
-        where: { id: input.id },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: { ...USER_SELECT, role: true },
-              },
-            },
-          },
-          tasks: {
-            include: {
-              assignee: {
-                select: USER_SELECT,
-              },
-            },
-            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
-          },
-        },
-      });
-```
-
-`include` に `members` と `tasks` を並べているのは、詳細画面がこの2つを同じ画面に出すからです。別々のAPIで取ると通信が2回になり、片方だけ古い内容のまま表示される瞬間ができます。`members` の中でさらに `user` を `include` しているのは、`ProjectMember` の行が持っているのは `userId` だけで、画面に出す名前やアイコンはユーザー側にあるためです。ここを省くと、メンバー一覧に並ぶのは名前ではなく英数字のIDになります。
-
-続けて、見つからなかったときのチェックです。`TRPCError`（tRPCのエラーを返す仕組み）を使い、該当がなければ処理を止めてエラーを呼び出し側へ返します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      if (!project) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'プロジェクトが見つかりません',
-        });
-      }
-```
-
-`getAll` は一覧なので「見つからない」というケースがありませんでした。`getById` は違います。指定した `id` のプロジェクトは存在しないこともあるため、`NOT_FOUND` チェックが必要です。
-
-続けて権限チェックと戻り値です。`ctx.session`（サーバーが持つログイン情報）には、いまログインしているユーザーの `userId` が入っています。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      assertMemberPermission(
-        project.members.filter((m) => m.userId === ctx.session.userId),
-        'canView',
-      );
-
-      return project;
-    }),
-```
-
-`getAll` では `where` で「自分がメンバーのものだけ」を絞り込んでいましたが、`getById` は先にプロジェクトを取得してから、取得した `members` の中に自分がいるかを `filter` で確認しています。他人のプロジェクトの `id` を直接指定されても、メンバーでなければ `canView` の権限チェックで弾かれます。
+詳細画面はメンバーの名前とロールを表示するので、`members.user` の取得には `USER_SELECT` と `role: true` が必要です。この後に追加するメンバー管理も、そのデータを使います。
 
 #### 0-2. getAvailableUsers（まだ参加していないユーザーを探す）
 
@@ -615,30 +553,7 @@ import { ProjectDetailView } from
 
 > プロジェクト詳細はダイアログではなく、URLパラメータ（`?projectId=xxx`）によるページ内表示です。`useSearchParams` で URLから選択IDを取得します。
 
-ハンドラーを追加します。Day 11 Step 9 で仮定義した `handleDetailClose` を **削除して**、`handleArchive` の下に本実装を書いてください。あわせて、Day 09 で置いた受け皿の `handleProjectClick` も **削除して** 本実装に書き換えてください。
-
-> Day 11 の仮定義（`// Day 12 Step 1 で本実装に置き換え` とコメントされた箇所）と、Day 09 で書いた `handleProjectClick` の受け皿を、先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// handleArchiveの下に追加
-// （Day 11 の handleDetailClose と Day 09 の handleProjectClick を削除してからここに書く）
-const handleProjectClick = (
-  projectId: string
-) => {
-  router.push(
-    `/project?projectId=${projectId}`
-  );
-};
-const handleDetailClose = () => {
-  router.push('/project');
-};
-```
-
-**確認ポイント**:
-- `handleProjectClick` は `router.push` でURL遷移する
-- `handleDetailClose` は `/project` に戻る（URLパラメータなし）
-- Day 11 の仮定義 `handleDetailClose` を削除した
+Day 11 Step 9 で `handleProjectClick` と `handleDetailClose` を実装済みです。追加や削除はせず、カードを押すと URL に `?projectId=...` が付き、戻る操作で `/project` へ戻ることを確認します。
 
 プロジェクトカードの `onClick` に `handleProjectClick` を接続します。`ProjectCard` は個別のpropsでデータを受け取ります。
 
@@ -668,27 +583,7 @@ const handleDetailClose = () => {
 - `ProjectCard` に個別のprops（`id`, `name`, `color` 等）を渡している
 - `onClick` で `handleProjectClick` を渡している
 
-選択中のプロジェクトデータを取得するクエリを追加します。Day 11 Step 9 で仮定義した `const projectDetail = undefined;` を **削除して**、既存の `useQuery` 群の末尾に本実装を書いてください。
-
-> Day 11 の仮定義（`// Day 12 Step 1 で useQuery に置き換え` とコメントされた行）を先に削除してから書いてください。同名の `const` が2つあるとエラーになります。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 既存のuseQuery群の末尾に追加
-// （Day 11 の仮定義 `const projectDetail = undefined` を削除してからここに書く）
-const { data: projectDetail } =
-  api.project.getById.useQuery(
-    { id: selectedProject ?? '' },
-    { enabled: !!selectedProject },
-  );
-```
-
-**確認ポイント**:
-- `useQuery` に `enabled` オプションを設定した
-- 未選択時はAPIを呼ばない設定になっている
-- Day 11 の仮定義 `const projectDetail = undefined` を削除した
-
-> `enabled: !!selectedProject` は「`selectedProject` がある場合だけAPIを呼ぶ」という設定です。未選択時に不要なリクエストを防ぎます。
+詳細取得の `api.project.getById.useQuery` も Day 11 Step 9 で追加済みです。`enabled: !!selectedProject` によって、未選択時は取得しないことを確認してください。同名の `projectDetail` を追加する必要はありません。
 
 プロジェクトカードをクリックして詳細ページが表示されることを確認しましょう。
 
@@ -1398,8 +1293,7 @@ PORT=3001 npm run dev
 
 #### テストシナリオ 3: アーカイブと解除
 
-Day 11 で書いた `handleArchive` を、ここで初めて実際に押せます。Step 1 で
-`projectDetail` が本物のデータに変わり、詳細画面が出るようになったからです。
+Day 11 で確認したアーカイブを、メンバー管理を加えた画面でも試します。
 
 **練習用のプロジェクトを1つ作ってから始めてください。**「新規プロジェクト」から、
 名前は「アーカイブの練習」などで構いません。作り方は Day 10 でやったとおりです。
@@ -2959,26 +2853,20 @@ export default function ProjectPage() {
 
 `useSearchParams` を使う部品は `Suspense` の内側に置く決まりがあります。外へ出すと、境界が無いというエラーでビルドが止まります。`export default` を付けたこの関数が、`/project` を開いたときに読まれるページ本体です。
 
-### Day 11 に残した型エラーの後始末
+### 公開前のビルド確認
 
-Day 11 は型エラーを5件残したまま終わりました。今日 Step 0 で `getById` を書き、
-Step 2 で `ProjectDetailView` に8つの props をそろえたので、5件とも消えているはずです。
-最後にそれを確かめます。
+メンバー管理を追加した状態で、型検査を含むビルドを確認します。
 
 ```bash
 # filepath: ターミナル
 npm run build
 ```
 
-`Compiled successfully` と出れば、Day 11 から持ち越した型エラーは全部片づいています。
-Day 11 で `build` が落ちたのは、まだ書いていない `getById` を参照していたからでした。
-参照される側を書いた今日、その理由が無くなりました。
-まだエラーが残る場合は、Day 11 Step 9 で置いた仮定義の消し忘れを疑ってください。
-同じ名前の `const` が2つあると、この段階でまとめて表に出ます。
+途中の `Compiled successfully` だけでは成功と判断しません。型検査とページ生成まで終わり、エラーなく入力待ちに戻ることを確認します。同名の `const` が重複していたら、今日置き換えた仮定義が残っていないか確認します。
 
 **確認ポイント**:
-- `npm run build` が成功する
-- Day 11 で見た5件の型エラーが消えている
+- `npm run build` が最後まで成功する
+- `handleRemoveMember` と `memberDialogOpen` が1つずつ定義されている
 
 ## 今日のまとめ
 

@@ -51,7 +51,7 @@ flowchart TD
     D --> E[サマリーカード 3枚]
     D --> F[週別完了タスク折れ線グラフ]
     D --> G[優先度別棒グラフ]
-    D --> H[ステータス別積み上げ棒グラフ]
+    D --> H[優先度別積み上げ棒グラフ]
 
     style A fill:#e3f2fd
     style B fill:#fff3e0
@@ -72,7 +72,7 @@ flowchart TD
 | プロジェクト別統計テーブル | `/report` 側で `task.getAll` を再集計する実装 |
 | 週次レポートAPI呼び出し | ユーザー別フィルターUI |
 | 折れ線グラフで完了推移表示 | カスタムテーブル作成 |
-| 棒グラフで優先度・ステータス表示 | 新規グラフライブラリ導入 |
+| 棒グラフで完了タスクの優先度を比較 | 新規グラフライブラリ導入 |
 | | 週次レポートの出力ページ（`/report/weekly/export`） |
 
 ### 新しく学ぶ概念
@@ -109,7 +109,7 @@ flowchart TD
 
 週次レポートは「今の合計」ではなく「7日ごとの推移」を返します。だから Day 21 の `count` 中心の集計とは違い、今回は **期間を切る**・**週ごとに配列を作る**・**各週の中で status / priority を数える**、という3段階になります。
 
-最初に、Day 21 の import 群を次の完成形へ置き換えます。今日から使う `TRPCError`・`z`・`USER_ROLE` が加わります。
+最初に、Day 21 の import 群を次の完成形へ置き換えます。今日から使う `TRPCError`・`z`・`TASK_PRIORITY`・`USER_ROLE` が加わります。
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（import 群の完成形）
@@ -125,7 +125,7 @@ import { getUserProjectIds } from './_helpers/permission';
 
 `z` は入力検証、`USER_ROLE` と `TRPCError` は他人のレポートを一般ユーザーから守る認可エラーに使います。
 
-置き換えと書いたのは、Day 21 では使わなかった3つが今日から加わるためです。取り込みを忘れたまま先へ進むと、`z.object` を書いた行で「z が定義されていない」というエラーが出ます。エラーの文言はファイルの後ろのほうを指しますが、直す場所はこの先頭の数行です。Day 21 で書いた `getOverview` の中身はそのまま残してください。今日はその下に足すだけで、既存の集計には触りません。
+置き換えと書いたのは、Day 21 では使わなかった4つが今日から加わるためです。取り込みを忘れたまま先へ進むと、`z.object` を書いた行で「z が定義されていない」というエラーが出ます。エラーの文言はファイルの後ろのほうを指しますが、直す場所はこの先頭の数行です。Day 21 で書いた `getOverview` の中身はそのまま残してください。今日はその下に足すだけで、既存の集計には触りません。
 
 #### 0-1. getOverview の直後に input を足す
 
@@ -265,7 +265,7 @@ import { getUserProjectIds } from './_helpers/permission';
       });
 ```
 
-`byPriority` も考え方は同じです。Day 23 のグラフは、この `weeklyData` をクライアント側で `chartData` と `statusData` に組み替えて使います。server 側の役目は「週ごとの集計済み材料を返すところ」までです。
+`byPriority` も考え方は同じです。Day 23 のグラフは、この `weeklyData` をクライアント側で `chartData` と `priorityBreakdown` に組み替えて使います。server 側の役目は「週ごとの集計済み材料を返すところ」までです。
 
 #### 0-6. 最後に返して閉じる
 
@@ -326,11 +326,11 @@ import { getUserProjectIds } from './_helpers/permission';
 ```typescript
 // filepath: src/app/report/page.tsx
 // Day 21 で追加済みの overview 取得
-const { data: overview, isLoading } =
+const { data: overview, isLoading, isError, isFetching, refetch } =
   api.report.getOverview.useQuery();
 ```
 
-> 上記は Day 21 で追加済みのインポートです。まだ追加していない場合は追加してください。
+> 上記は Day 21 で追加済みのデータ取得処理です。ここでは読み比べるだけで、追加しません。
 >
 > `useQuery`（データ取得のフック）は、サーバーから届いた値を `data` に、取得中かどうかを `isLoading` に入れてくれます。
 > 画面はこの2つを見て、表示を切り替えます。
@@ -548,6 +548,7 @@ import { ja } from 'date-fns/locale';
 import { useState } from 'react';
 import { AppLayout }
   from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
@@ -580,15 +581,12 @@ import {
 import {
   TASK_PRIORITY, TASK_PRIORITY_COLORS,
 } from '@/lib/constant/priority';
-import {
-  TASK_STATUS, TASK_STATUS_COLORS,
-} from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 ```
 
 **確認ポイント**:
-- Recharts の6種類のコンポーネントをインポートした
-- `TASK_PRIORITY_COLORS` と `TASK_STATUS_COLORS` をインポートした
+- Recharts の10種類のコンポーネントをインポートした
+- `TASK_PRIORITY` と `TASK_PRIORITY_COLORS` をインポートした
 
 > 今日初めて使う Recharts の部品を先に紹介します。
 > `CartesianGrid` はグラフ背景の目盛り線を引きます。
@@ -606,13 +604,31 @@ export default function WeeklyReportPage() {
 
   const {
     data: reportData,
-    isLoading,
+    isLoading, isError, isFetching, refetch,
   } = api.report.getWeeklyReport.useQuery({
     weeks: Number.parseInt(weeks, 10),
   });
 
   if (isLoading) {
     return <PageLoadingSpinner />;
+  }
+```
+
+読み込み中と取得失敗を分けます。失敗したときは集計値を表示せず、再試行するボタンを出します。
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（読み込み判定の直後）
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 ```
 
@@ -768,7 +784,7 @@ import Link from 'next/link';
 
 `{reportData?.totalCompleted ?? 0}` の `?? 0` が何をしているかは、3つの状態に分けると見えてきます。1つ目は読み込み中で、`isLoading` が真の間はスピナーを返すため、この行までは来ません。2つ目は通信が失敗したときで、`reportData` は `undefined` のまま残ります。3つ目は通信に成功して、完了タスクが1件も無かったときです。0 と表示してよいのは3つ目だけです。
 
-`?? 0` は失敗を見分けません。2つ目でも `0` と出るので、読者には「今週は完了0件」との区別が付きません。`useQuery` は取得に失敗した理由を `error` にも入れて返すので、失敗は本来そちらを見て「読み込みに失敗しました」と別に伝えます。この画面ではまだ `error` を受け取っていないため、失敗を伝える表示がありません。`?? 0` がしているのは、数字の場所が空欄になるのを防ぐことだけです。
+`?? 0` は失敗を見分けません。そのため Step 4 で `isError` を確認し、失敗したときはカードを表示せず、再試行ボタンを出しています。取得に成功したうえで `totalCompleted` が0なら、ここで0件と表示します。
 
 **確認ポイント**:
 - `grid-cols-3` で3列レイアウトになっている
@@ -795,7 +811,7 @@ import Link from 'next/link';
   </Card>
 ```
 
-週平均の分母は、API が数えた週数ではなく画面が持っている `weeks` です。2つがずれると、合計は正しいのに平均だけが嘘になります。ずれないのは、Step 0 で最終週を「今日を含む7日間」に固定したからです。もし最終週が「今日の0時から今まで」の途中の週だったら、4週間と表示しながら実際は3週間と数時間ぶんしか集めておらず、4 で割った平均が本当より低く出ます。ラベルの週数と集計範囲をそろえてあるから、ここで安心して割り算できます。
+週平均は、選択した週数で完了数を割った値です。`weeks` を `useQuery` に渡して同じ週数のデータを取得するため、分母と対象の週数が対応します。ただし最後の週には今日のまだ過ぎていない時間が含まれます。過去の週と比べるときは、最終週が集計途中である点も考えてください。
 
 `Number.parseInt(weeks, 10)` が 0 になることはありません。`Select` が返す値は `4` `8` `12` の3つだけなので、0 で割ってしまう心配は要らないという理屈です。
 
@@ -879,18 +895,14 @@ const chartData =
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// グラフ用データの変換処理（ステータス別）
-const statusData =
+// グラフ用データの変換処理（全優先度）
+const priorityBreakdown =
   reportData?.weeklyData.map((week) => ({
     name: week.week,
-    done:
-      week.byStatus[TASK_STATUS.DONE] ?? 0,
-    inProgress:
-      week.byStatus[TASK_STATUS.IN_PROGRESS]
-      ?? 0,
-    inReview:
-      week.byStatus[TASK_STATUS.IN_REVIEW]
-      ?? 0,
+    low: week.byPriority[TASK_PRIORITY.LOW] ?? 0,
+    medium: week.byPriority[TASK_PRIORITY.MEDIUM] ?? 0,
+    high: week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+    urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
   }));
 ```
 
@@ -900,17 +912,17 @@ const statusData =
 flowchart LR
     W["weeklyData の1週分<br/>week / totalCompleted<br/>byPriority と byStatus は入れ子"]
     W --> C["chartData の1週分<br/>name / completed / high / urgent"]
-    W --> S["statusData の1週分<br/>name / done / inProgress / inReview"]
+    W --> S["priorityBreakdown の1週分<br/>name / low / medium / high / urgent"]
 ```
 
 左は入れ子、右は入れ子のないひと並びです。Recharts に渡すときは右の形がいちばん素直なので、同じ材料から2種類のひと並びを作ります。グラフの棒が出ないときは、`dataKey` に書いた名前が右側の列名と合っているかを見てください。
 
-そのため、積み上げ棒の「進行中」と「レビュー中」は、普段 0 のまま伸びません。Day 15 で書いた更新処理が、ステータスを完了へ変えた瞬間に完了日時を入れ、完了から戻すと `null` へ戻すからです。棒が伸びるのは、完了日時が残ったまま別のステータスへ動かされた行だけになります。グラフが平らでも壊れてはいないので、驚かなくて大丈夫です。
+積み上げ棒には、完了したタスクを優先度ごとに分けて表示します。完了タスクをステータスで分けても、通常はすべて「完了」になり、積み上げの違いを確かめられません。優先度なら、低・中・高・緊急の内訳と合計を1本の棒で比較できます。
 
-`done` / `inProgress` / `inReview` の3つに絞ったのは、Recharts へ渡すキーと画面に出す系列をそろえるためです。`TODO` と `CANCELLED` の件数も API は返していますが、この棒グラフでは読み飛ばします。
+`low`・`medium`・`high`・`urgent` は4段階すべてを含みます。各週の4つの値を足すと、その週の `totalCompleted` と一致します。
 
 **確認ポイント**:
-- `statusData` はステータス別データを持つ
+- `priorityBreakdown` は完了タスクを4つの優先度に分けた件数を持つ
 
 **実装**: Step 4 の骨格に置いた `{/* Step 6: グラフ3枚のグリッド */}` の行を、
 次の外枠と置き換えます。3枚のカードはこの `<div>` の中に入ります。
@@ -965,10 +977,10 @@ flowchart LR
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
-{/* 優先度別分布の棒グラフ */}
+{/* 高・緊急の完了タスク数の棒グラフ */}
   <Card>
     <CardHeader>
-      <CardTitle>優先度別分布</CardTitle>
+      <CardTitle>高・緊急の完了タスク数</CardTitle>
     </CardHeader>
     <CardContent>
       <div className="h-[300px]">
@@ -999,40 +1011,43 @@ flowchart LR
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
-{/* ステータス別積み上げ棒グラフのCard部分 */}
+{/* 優先度別積み上げ棒グラフのCard部分 */}
   <Card>
     <CardHeader>
-      <CardTitle>ステータス別内訳</CardTitle>
+      <CardTitle>完了タスクの優先度別内訳</CardTitle>
     </CardHeader>
     <CardContent>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%"
           height="100%">
-          <BarChart data={statusData ?? []}>
+          <BarChart data={priorityBreakdown ?? []}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis /><Tooltip /><Legend />
 ```
 
-外側の作りは優先度グラフとそろえてありますが、`data` に渡すのが `chartData` から `statusData` へ変わっています。`XAxis` の `dataKey="name"` を書き換えずに済むのは、2つの配列のどちらも `name` に「1週目」のような週ラベルを入れてあるからです。Step 6 の冒頭で形をそろえておいた効き目が、ここで出ます。
+外側の作りは直前の棒グラフとそろえ、`data` に渡す配列を `priorityBreakdown` に変えます。2つの配列にはどちらも `name` があるので、横軸の指定は変えずに使えます。
 
 このコードブロックはカードの前半だけで、`</BarChart>` から先の閉じ括弧は次のブロックにあります。途中で保存するとエラー表示が出ますが、続きを書けば消えるので手を止めないでください。
 
 **確認ポイント**:
-- `statusData` を `BarChart` に渡している
+- `priorityBreakdown` を `BarChart` に渡している
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
-{/* 3つのBarで積み上げ表示 */}
-            <Bar dataKey="done"
-              stackId="status" name="完了"
-              fill={TASK_STATUS_COLORS.DONE} />
-            <Bar dataKey="inProgress"
-              stackId="status" name="進行中"
-              fill={TASK_STATUS_COLORS.IN_PROGRESS} />
-            <Bar dataKey="inReview"
-              stackId="status" name="レビュー中"
-              fill={TASK_STATUS_COLORS.IN_REVIEW} />
+{/* 4つのBarで積み上げ表示 */}
+            <Bar dataKey="low"
+              stackId="priority" name="低"
+              fill={TASK_PRIORITY_COLORS.LOW} />
+            <Bar dataKey="medium"
+              stackId="priority" name="中"
+              fill={TASK_PRIORITY_COLORS.MEDIUM} />
+            <Bar dataKey="high"
+              stackId="priority" name="高"
+              fill={TASK_PRIORITY_COLORS.HIGH} />
+            <Bar dataKey="urgent"
+              stackId="priority" name="緊急"
+              fill={TASK_PRIORITY_COLORS.URGENT} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -1042,8 +1057,8 @@ flowchart LR
 ```
 
 **確認ポイント**:
-- `stackId="status"` で積み上げ棒グラフになっている
-- 3つのステータスが色分けで表示される
+- `stackId="priority"` で積み上げ棒グラフになっている
+- 低・中・高・緊急の件数が色分けで表示される
 - 3枚のグラフが `lg` 幅で2列に並び、折れ線グラフだけが横2つぶんを占める
 
 > `stackId` は今日初登場の指定です。同じ `stackId` を持つ
@@ -1056,7 +1071,7 @@ flowchart LR
 
 スクリーンショット: 3つのグラフが並びます。
 
-![週次レポート。赤枠の中に、週別完了タスク数の折れ線グラフ、優先度別分布とステータス別内訳の棒グラフが並んでいる](./screenshots/day23/report-weekly-charts.png)
+![週次レポート。赤枠の中に、週別完了タスク数の折れ線グラフ、高・緊急の完了タスク数と完了タスクの優先度別内訳の棒グラフが並んでいる](./screenshots/day23/report-weekly-charts.png)
 
 ---
 
@@ -1067,7 +1082,7 @@ flowchart LR
 ```bash
 # filepath: ターミナル
 # 開発サーバーを起動して確認
-PORT=3001 npm run dev
+npm run dev -- --port 3001
 ```
 
 **確認ポイント**:
@@ -1081,13 +1096,13 @@ PORT=3001 npm run dev
 6. `/report/weekly` にアクセス
 7. 3枚のサマリーカードが表示される
 8. 折れ線グラフが表示される
-9. 優先度別・ステータス別棒グラフが表示される
+9. 優先度別の比較・積み上げ棒グラフが表示される
 
 スクリーンショット: 週次レポートページの全体です。
 
 ![週次レポートページ。サマリーカードの下に、週別完了タスク数の折れ線グラフと2つの棒グラフが縦に並んでいる](./screenshots/day23/report-weekly.png)
 
-グラフの数字は、前提の手順で自分が完了にしたタスクのぶんです。件数が違っても実装の誤りではありません。写真では「優先度別分布」だけが空になっています。この棒グラフは `high` と `urgent` の2系列しか描かず、タスク作成ダイアログの既定は「中」だからです。優先度を「高」か「緊急」にしたタスクを完了にすると、ここにも棒が立ちます。
+グラフの数字は、前提の手順で自分が完了にしたタスクのぶんです。件数が違っても実装の誤りではありません。写真では「高・緊急の完了タスク数」だけが空になっています。この棒グラフは `high` と `urgent` の2系列しか描かず、タスク作成ダイアログの既定は「中」だからです。優先度を「高」か「緊急」にしたタスクを完了にすると、ここにも棒が立ちます。
 
 
 ---
@@ -1266,7 +1281,7 @@ import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { getUserProjectIds } from './_helpers/permission';
 ```
 
-Day 21 の時点では上の5行しかありませんでした。今日足したのは `TRPCError`・`z`・`USER_ROLE` の3つで、どれも `getWeeklyReport` だけが使います。使う予定の無い import を先に書かないのは、Biome が未使用の名前をエラーとして報告するからです。実際に使う日まで待って足せば、警告を抱えたまま次の日へ進まずに済みます。
+Day 21 の時点では4つの import がありました。今日足したのは `TRPCError`・`z`・`TASK_PRIORITY`・`USER_ROLE` の4つで、どれも `getWeeklyReport` だけが使います。使う予定の無い import を先に書かないのは、Biome が未使用の名前をエラーとして報告するからです。実際に使う日まで待って足せば、警告を抱えたまま次の日へ進まずに済みます。
 
 **プロジェクトが無いときの戻り値**:
 
@@ -1574,7 +1589,7 @@ export const reportRouter = createTRPCRouter({
       startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
 ```
 
-上端を明日の 0 時に固定してから、そこから週数ぶん遡って下端を決めます。今この瞬間を上端にすると最後の週だけが数時間ぶんになり、「4週間」と書いてある画面が3週間と少ししか集めていない状態になります。長いコメントを残してあるのは、この境界がいちど間違えて直された箇所だからです。理由を消すと、次の人が元の書き方へ戻します。
+上端を明日の 0 時に固定してから、週数ぶん遡って下端を決めます。週の区切りが UTC の日付境界にそろうため、何時に開いてもその日の週ラベルが変わりません。実データの取得は `now` までなので、最終週の今日の分は集計途中です。
 
 **絞り込み条件と1回の取得**:
 
@@ -1669,6 +1684,7 @@ import { ja } from 'date-fns/locale';
 import { useState } from 'react';
 import { AppLayout }
   from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
@@ -1698,15 +1714,12 @@ import {
 import {
   TASK_PRIORITY, TASK_PRIORITY_COLORS,
 } from '@/lib/constant/priority';
-import {
-  TASK_STATUS, TASK_STATUS_COLORS,
-} from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 const CHART_PRIMARY_COLOR = '#8884d8';
 ```
 
-Recharts から取り込む10個のうち、`CartesianGrid`・`XAxis`・`YAxis` は今日が初登場です。円グラフには軸が無かったので、Day 22 では要りませんでした。優先度とステータスの定数を色つきで取り込むのは、Day 22 の円グラフと同じ色で棒を塗るためです。`CHART_PRIMARY_COLOR` だけは対応表を持たない折れ線1本ぶんの色なので、この画面の定数として1か所に置きます。
+Recharts から取り込む10個のうち、`CartesianGrid`・`XAxis`・`YAxis` は今日が初登場です。円グラフには軸が無かったので、Day 22 では要りませんでした。優先度の定数を色つきで取り込むのは、Day 22 の円グラフと同じ色で棒を塗るためです。`CHART_PRIMARY_COLOR` だけは対応表を持たない折れ線1本ぶんの色なので、この画面の定数として1か所に置きます。
 
 **関数の入口とデータ取得**:
 
@@ -1718,13 +1731,31 @@ export default function WeeklyReportPage() {
 
   const {
     data: reportData,
-    isLoading,
+    isLoading, isError, isFetching, refetch,
   } = api.report.getWeeklyReport.useQuery({
     weeks: Number.parseInt(weeks, 10),
   });
 
   if (isLoading) {
     return <PageLoadingSpinner />;
+  }
+```
+
+読み込み中と取得失敗を分けます。失敗したときは集計値を表示せず、再試行するボタンを出します。
+
+```typescript
+// filepath: src/app/report/weekly/page.tsx（読み込み判定の直後）
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 ```
 
@@ -1746,17 +1777,13 @@ export default function WeeklyReportPage() {
         ?? 0,
     }));
 
-  const statusData =
+  const priorityBreakdown =
     reportData?.weeklyData.map((week) => ({
       name: week.week,
-      done:
-        week.byStatus[TASK_STATUS.DONE] ?? 0,
-      inProgress:
-        week.byStatus[TASK_STATUS.IN_PROGRESS]
-        ?? 0,
-      inReview:
-        week.byStatus[TASK_STATUS.IN_REVIEW]
-        ?? 0,
+      low: week.byPriority[TASK_PRIORITY.LOW] ?? 0,
+      medium: week.byPriority[TASK_PRIORITY.MEDIUM] ?? 0,
+      high: week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+      urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
     }));
 ```
 
@@ -1829,7 +1856,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
           </Card>
 ```
 
-`?? 0` は、数字の場所が空欄になるのを防ぐだけの守りです。取得が失敗したときもここは 0 と表示されるので、「完了0件」との区別は付きません。区別を付けたい場合は `useQuery` から `error` も受け取り、失敗したときだけ別の文言を出す形にします。
+`?? 0` は未定義の値を0で受け止めます。取得失敗は前の `isError` の分岐で表示を切り替えるので、失敗を完了0件として表示しません。
 
 **週平均のカード**:
 
@@ -1854,7 +1881,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
           </Card>
 ```
 
-割る数に使っているのは、API が返した週数ではなく画面が持っている `weeks` です。2つがずれると、合計は正しいのに平均だけが違う数字になります。ずれないのは、Step 0 で最終週を「今日を含む7日間」に固定したからです。`Math.round` で丸めているのは、`3.6666` のような値をカードに出さないためです。
+週平均は完了数を選択した週数で割り、`Math.round` で整数に丸めます。最後の週は今日の途中までの実績なので、集計が終わった週と同じ条件で比較できるとは限りません。
 
 **対象期間のカード**:
 
@@ -1916,14 +1943,14 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 
 このカードだけ `lg:col-span-2` で2列ぶんの幅を取っています。折れ線で見せたいのは件数そのものではなく増減の向きなので、横に長いほうが向きを読み取りやすくなります。`chartData ?? []` の `?? []` は、`chartData` が `undefined` のときに `LineChart` へ何も渡らない状態を避けるための既定値です。
 
-**優先度別分布の棒グラフ**:
+**高・緊急の完了タスク数の棒グラフ**:
 
 ```typescript
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 優先度別分布の棒グラフ */}
+          {/* 完成版: 高・緊急の完了タスク数の棒グラフ */}
           <Card>
             <CardHeader>
-              <CardTitle>優先度別分布</CardTitle>
+              <CardTitle>高・緊急の完了タスク数</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -1945,40 +1972,43 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 
 `Bar` が2本だけなのは、`chartData` に `urgent` と `high` しか入れていないからです。週次レポートで確かめたいのは急ぎの仕事の片づき方なので、低と中の件数は落としてあります。4段階すべての内訳は、Day 22 の円グラフのほうで見られます。`fill` を定数から引くのは、色を1か所で管理するためです。
 
-**ステータス別内訳の枠**:
+**完了タスクの優先度別内訳の枠**:
 
 ```typescript
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-          {/* 完成版: ステータス別内訳の枠 */}
+          {/* 完成版: 完了タスクの優先度別内訳の枠 */}
           <Card>
             <CardHeader>
-              <CardTitle>ステータス別内訳</CardTitle>
+              <CardTitle>完了タスクの優先度別内訳</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statusData ?? []}>
+                  <BarChart data={priorityBreakdown ?? []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis /><Tooltip /><Legend />
 ```
 
-外側の作りは優先度グラフとそろえ、`data` だけを `statusData` に変えます。2つの配列はどちらも週ラベルを `name` へ入れてあります。だから `XAxis` の指定は書き換えずに済みます。`h-[300px]` は3枚とも同じ値です。3枚を横へ並べても高さがそろいます。
+外側の作りは直前の棒グラフとそろえ、`data` には4段階を含む `priorityBreakdown` を渡します。各週の内訳を積み上げるので、棒全体の高さがその週の完了数になります。
 
-**ステータス別内訳の積み上げと閉じタグ**:
+**完了タスクの優先度別内訳の積み上げと閉じタグ**:
 
 ```typescript
                     {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-                    {/* 完成版: 積み上げの3本と閉じタグ */}
-                    <Bar dataKey="done"
-                      stackId="status" name="完了"
-                      fill={TASK_STATUS_COLORS.DONE} />
-                    <Bar dataKey="inProgress"
-                      stackId="status" name="進行中"
-                      fill={TASK_STATUS_COLORS.IN_PROGRESS} />
-                    <Bar dataKey="inReview"
-                      stackId="status" name="レビュー中"
-                      fill={TASK_STATUS_COLORS.IN_REVIEW} />
+                    {/* 完成版: 積み上げの4本と閉じタグ */}
+                    <Bar dataKey="low"
+                      stackId="priority" name="低"
+                      fill={TASK_PRIORITY_COLORS.LOW} />
+                    <Bar dataKey="medium"
+                      stackId="priority" name="中"
+                      fill={TASK_PRIORITY_COLORS.MEDIUM} />
+                    <Bar dataKey="high"
+                      stackId="priority" name="高"
+                      fill={TASK_PRIORITY_COLORS.HIGH} />
+                    <Bar dataKey="urgent"
+                      stackId="priority" name="緊急"
+                      fill={TASK_PRIORITY_COLORS.URGENT} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1991,7 +2021,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 }
 ```
 
-3本の `Bar` に同じ `stackId` を付けると、横に並ばず1本の棒として積み上がります。週ごとの合計と内訳を同時に読ませたいので、並べるのではなく積みます。`stackId` を1つでも書き忘れると、その系列だけが隣に独立した棒として立ちます。最後の閉じタグは `BarChart` から `AppLayout` まで、開いた順の逆にたどります。
+4本の `Bar` に同じ `stackId` を付けると、横に並ばず1本の棒として積み上がります。週ごとの合計と内訳を同時に読ませたいので、並べるのではなく積みます。`stackId` を1つでも書き忘れると、その系列だけが隣に独立した棒として立ちます。最後の閉じタグは `BarChart` から `AppLayout` まで、開いた順の逆にたどります。
 
 ### `src/app/report/page.tsx`
 
@@ -2011,6 +2041,7 @@ import {
   ResponsiveContainer, Tooltip,
 } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import {
   Card, CardContent,
   CardHeader, CardTitle,
@@ -2052,7 +2083,7 @@ const CHART_FALLBACK_COLOR = '#9e9e9e';
 // filepath: src/app/report/page.tsx
 // 完成版: 取得と表示用の値づくり
 export default function ReportPage() {
-  const { data: overview, isLoading } =
+  const { data: overview, isLoading, isError, isFetching, refetch } =
     api.report.getOverview.useQuery();
 
   const totalTasks = overview?.totalTasks ?? 0;
@@ -2094,7 +2125,25 @@ export default function ReportPage() {
   }
 ```
 
-この2つも Day 22 のままです。週次ページの `chartData` とは形が違います。こちらは1件が1つのステータス、あちらは1件が1週を表します。同じ `statusData` という名前が両方の画面に出てきますが、中身が違うことを頭に入れておくと、グラフが空のときにどちらの組み替えを見ればよいか迷いません。
+読み込み中と取得失敗を分けます。失敗したときは集計値を表示せず、再試行するボタンを出します。
+
+```typescript
+// filepath: src/app/report/page.tsx（読み込み判定の直後）
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+```
+
+この2つも Day 22 のままです。週次ページの `chartData` とは形が違います。こちらは1件が1つのステータス、あちらは1件が1週を表します。週次ページの `priorityBreakdown` は週ごとの内訳です。配列の1件が何を表すかを確かめてからグラフへ渡します。
 
 **見出しとリンクの行**:
 
@@ -2239,7 +2288,7 @@ export default function ReportPage() {
           </Card>
 ```
 
-型ガードを挟んでから対応表を引く形は、週次ページの `fill={TASK_STATUS_COLORS.DONE}` とは書き方が違います。あちらは書く時点でステータスが決まっているので、確認が要りません。こちらはサーバーから届いた文字列で引くため、その文字列が対応表のキーだと確かめる手順が入ります。
+型ガードを挟んでから対応表を引く形は、週次ページの `fill={TASK_PRIORITY_COLORS.HIGH}` とは書き方が違います。あちらは書く時点で優先度が決まっているので、確認が要りません。こちらはサーバーから届いた文字列で引くため、その文字列が対応表のキーだと確かめる手順が入ります。
 
 **優先度円グラフの枠**:
 
@@ -2374,7 +2423,7 @@ Step 2 で読んだ見出しの定義は、この5列と同じ形です。あち
 - [ ] 週次レポートAPIを呼び出せた
 - [ ] サマリーカードを表示した
 - [ ] 折れ線グラフで完了推移を表示した
-- [ ] 棒グラフで優先度・ステータス別分布を表示した
+- [ ] 棒グラフで完了タスクの優先度別分布を表示した
 
 ## つまずきポイント
 
@@ -2407,7 +2456,7 @@ A. 1つ目は `completedAt` が `null` の行で、まだ終わっていない�
 
 **Q2. `rangeEnd` を「明日の 00:00 UTC」ではなく「今この瞬間」にすると、週平均カードの数字はどう変わりますか。**
 
-A. 本当より低く出ます。最終週が「今日の0時から現在まで」という途中の週になるためです。4週間と表示しながら、実際に集まるのは3週間と数時間ぶんしかありません。それを 4 で割ることになります。
+A. このコードでは開始日も上端から週数ぶん遡るので、区切りが現在時刻を基準とした7日間に変わります。3週間と数時間になるわけではありません。対象に入るタスクが変わるため、週平均が上がるか下がるかはデータ次第です。UTC の日付境界にそろえる目的は、週の開始時刻を毎日0時に固定することです。
 
 **Q3. 週の範囲判定を `>= weekStart && < weekEnd` と書き、終了側だけ「未満」にしているのはなぜですか。**
 

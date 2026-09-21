@@ -56,24 +56,25 @@ Task-Appで学んだ技術スタックを使って、ゼロから新しいアプ
 ```bash
 # 1. Next.jsプロジェクトの作成
 npx create-next-app@15.5.21 my-new-app --typescript --tailwind --app --src-dir --import-alias "@/*" --yes
+cd my-new-app
 
 # 2. 必要なパッケージの追加
-npm install @trpc/server @trpc/client @trpc/react-query
-npm install prisma @prisma/client
-npm install zod
+npm install @trpc/server@11 @trpc/client@11 @trpc/react-query@11 @tanstack/react-query@5
+npm install -D prisma@6.19.3
+npm install @prisma/client@6.19.3 zod@3
 
 # 3. Prismaの初期化
-npx prisma init
+npx prisma init --datasource-provider postgresql
 
 # 4. 開発開始！
 npm run dev
 ```
 
-この4手順の順番には理由があります。1番の `create-next-app` が土台のフォルダと設定ファイルを作るので、これより先に何かを入れる場所がありません。2番で入れる3つは、この教材で毎日使ってきた道具です。画面とサーバーを型でつなぐ tRPC、データベースを読み書きする Prisma、入力の中身を確かめる zod の3つがそろって、Day 09 以降でやってきた「画面から呼ぶと型が合っている」状態になります。
+この4手順の順番には理由があります。1番の `create-next-app` が土台のフォルダと設定ファイルを作るので、これより先に何かを入れる場所がありません。2番で入れる3つは、この教材で毎日使ってきた道具です。tRPC は画面とサーバーの間で型を共有し、Prisma はデータベースを読み書きし、zod は入力を検査します。教材と同じ世代を使うため、バージョンを指定しています。インストールだけでは API は呼べません。Day 07〜09 を参考にルーターと Provider を実装してから接続します。
 
-3番の `prisma init` は `schema.prisma` と `.env` を作ります。この2つが無いと `npx prisma migrate` がテーブルを作れません。Day 01 で走らせたセットアップ用のスクリプトは、ここまでをまとめて済ませてくれていました。今回は自分の手で1つずつ通すことになります。
+3番の `prisma init` は `schema.prisma` と `.env` を作ります。この段階ではデータベースもテーブルも作られません。Prisma 6 のこのコマンドが生成した `.env` の接続先を、自分の PostgreSQL に合わせる必要があります。モデルを定義してから `npx prisma migrate dev --name init` を実行すると、テーブルが作られます。Day 01 で走らせたセットアップ用のスクリプトは、ここまでをまとめて済ませてくれていました。今回は自分の手で1つずつ通すことになります。
 
-4番まで進むと `http://localhost:3000` に初期画面が出ます。ここが Day 01 と同じ地点です。違うのは、何が入っていて何がまだ無いかを自分で把握している点です。
+4番まで進むと `http://localhost:3000` に初期画面が出ます。これは Next.js の初期画面です。Day 01 の配布コードにあるログインやデータベース接続は、まだ実装されていません。`cd my-new-app` は、以後の操作対象を新しいアプリのフォルダへ切り替えるために必要です。
 
 ---
 

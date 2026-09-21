@@ -19,6 +19,7 @@ import {
   YAxis,
 } from 'recharts';
 import { AppLayout } from '@/component/layout/app-layout';
+import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
@@ -29,7 +30,6 @@ import {
   SelectValue,
 } from '@/component/ui/select';
 import { TASK_PRIORITY, TASK_PRIORITY_COLORS } from '@/lib/constant/priority';
-import { TASK_STATUS, TASK_STATUS_COLORS } from '@/lib/constant/status';
 import { buildWeeklyReportExportPath, normalizeReportWeeksParam } from '@/lib/report-path';
 import { api } from '@/trpc/react';
 
@@ -40,12 +40,25 @@ export default function WeeklyReportPage() {
   const searchParams = useSearchParams();
   const [weeks, setWeeks] = useState(() => normalizeReportWeeksParam(searchParams.get('weeks')));
 
-  const { data: reportData, isLoading } = api.report.getWeeklyReport.useQuery({
+  const { data: reportData, isLoading, isError, isFetching, refetch } = api.report.getWeeklyReport.useQuery({
     weeks: Number.parseInt(weeks, 10),
   });
 
   if (isLoading) {
     return <PageLoadingSpinner />;
+  }
+
+  if (isError) {
+    return (
+      <AppLayout>
+        <div role="alert" className="space-y-4">
+          <p>レポートの読み込みに失敗しました。</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 
   const handleWeeksChange = (value: string) => {
@@ -64,11 +77,12 @@ export default function WeeklyReportPage() {
     urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
   }));
 
-  const statusData = reportData?.weeklyData.map((week) => ({
+  const priorityData = reportData?.weeklyData.map((week) => ({
     name: week.week,
-    done: week.byStatus[TASK_STATUS.DONE] ?? 0,
-    inProgress: week.byStatus[TASK_STATUS.IN_PROGRESS] ?? 0,
-    inReview: week.byStatus[TASK_STATUS.IN_REVIEW] ?? 0,
+    low: week.byPriority[TASK_PRIORITY.LOW] ?? 0,
+    medium: week.byPriority[TASK_PRIORITY.MEDIUM] ?? 0,
+    high: week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+    urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
   }));
 
   return (
@@ -158,7 +172,7 @@ export default function WeeklyReportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>優先度別分布</CardTitle>
+              <CardTitle>高・緊急の完了タスク数</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -179,34 +193,40 @@ export default function WeeklyReportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>ステータス別内訳</CardTitle>
+              <CardTitle>完了タスクの優先度別内訳</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statusData ?? []}>
+                  <BarChart data={priorityData ?? []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
                     <Bar
-                      dataKey="done"
-                      fill={TASK_STATUS_COLORS.DONE}
-                      name="完了"
-                      stackId="status"
+                      dataKey="low"
+                      fill={TASK_PRIORITY_COLORS.LOW}
+                      name="低"
+                      stackId="priority"
                     />
                     <Bar
-                      dataKey="inProgress"
-                      fill={TASK_STATUS_COLORS.IN_PROGRESS}
-                      name="進行中"
-                      stackId="status"
+                      dataKey="medium"
+                      fill={TASK_PRIORITY_COLORS.MEDIUM}
+                      name="中"
+                      stackId="priority"
                     />
                     <Bar
-                      dataKey="inReview"
-                      fill={TASK_STATUS_COLORS.IN_REVIEW}
-                      name="レビュー中"
-                      stackId="status"
+                      dataKey="high"
+                      fill={TASK_PRIORITY_COLORS.HIGH}
+                      name="高"
+                      stackId="priority"
+                    />
+                    <Bar
+                      dataKey="urgent"
+                      fill={TASK_PRIORITY_COLORS.URGENT}
+                      name="緊急"
+                      stackId="priority"
                     />
                   </BarChart>
                 </ResponsiveContainer>
