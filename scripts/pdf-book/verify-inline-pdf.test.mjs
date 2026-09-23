@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import test, { before } from 'node:test';
+import test, { after, before } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
@@ -22,9 +22,8 @@ const PDF_VERIFIER = path.join(HERE, 'verify-inline-pdf.mjs');
 const TOOLCHAIN = path.join(REPO, 'dist', '.pdf-book-toolchain');
 const BROWSER = ['/usr/bin/google-chrome', '/usr/bin/chromium'].find(fs.existsSync);
 const CAN_INTEGRATE = Boolean(BROWSER) && fs.existsSync(path.join(TOOLCHAIN, 'node_modules'));
-const SCRATCH_ROOT = fs.existsSync('/home/kouiso/.codex/scratch')
-  ? '/home/kouiso/.codex/scratch'
-  : os.tmpdir();
+// 個人の作業場所を決め打ちせん。置き場所を変えたい時だけ環境変数で渡す
+const SCRATCH_ROOT = process.env.PDF_BOOK_TEST_SCRATCH_DIR ?? os.tmpdir();
 
 let directory;
 let manifest;
@@ -124,6 +123,10 @@ function syntheticSuffixLine(text, template, left, topShift = 0) {
     }),
   };
 }
+
+after(() => {
+  if (directory) fs.rmSync(directory, { recursive: true, force: true });
+});
 
 before(() => {
   if (!CAN_INTEGRATE) return;

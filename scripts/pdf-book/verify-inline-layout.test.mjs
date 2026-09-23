@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -22,9 +22,21 @@ const TOOLCHAIN =
 const BROWSER =
   process.env.PDF_BOOK_TEST_BROWSER ??
   ['/usr/bin/google-chrome', '/usr/bin/chromium'].find(fs.existsSync);
-const SCRATCH_ROOT = fs.existsSync('/home/kouiso/.codex/scratch')
-  ? '/home/kouiso/.codex/scratch'
-  : os.tmpdir();
+// 個人の作業場所を決め打ちせん。置き場所を変えたい時だけ環境変数で渡す
+const SCRATCH_ROOT = process.env.PDF_BOOK_TEST_SCRATCH_DIR ?? os.tmpdir();
+const scratchDirectories = [];
+
+function makeScratch(prefix) {
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, prefix));
+  scratchDirectories.push(directory);
+  return directory;
+}
+
+after(() => {
+  for (const directory of scratchDirectories) {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 function manifest(entries, tables) {
   return {
@@ -104,7 +116,7 @@ test('manifest schema rejects duplicate ids and weakened font floors', () => {
 });
 
 test('toolchain version and hash mismatches fail before browser launch', () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-pin-test-'));
+  const directory = makeScratch('inline-layout-pin-test-');
   fs.mkdirSync(path.join(directory, 'node_modules', 'example'), { recursive: true });
   const file = path.join(directory, 'node_modules', 'example', 'file.js');
   fs.writeFileSync(file, '{"version":"1.0.0"}\n');
@@ -135,7 +147,7 @@ const canIntegrate = Boolean(BROWSER) && fs.existsSync(path.join(TOOLCHAIN, 'nod
 test('normal inline code passes DOM scope while release remains blocked for post-PDF audit', {
   skip: !canIntegrate,
 }, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-normal-test-'));
+  const directory = makeScratch('inline-layout-normal-test-');
   writeFixture(directory, {
     html: `<!doctype html><html lang="ja"><body>
       <section class="page">
@@ -240,7 +252,7 @@ test('normal inline code passes DOM scope while release remains blocked for post
 test('wrap, cell overflow, page-content overflow and sub-8pt text fail before PDF', {
   skip: !canIntegrate,
 }, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-adversarial-test-'));
+  const directory = makeScratch('inline-layout-adversarial-test-');
   writeFixture(directory, {
     html: `<!doctype html><html lang="ja"><body>
       <section class="page"><div class="narrow">before <code data-pdf-inline-id="wrapped">WRAP-ME-ABCDEFGHIJKLMN</code> after</div></section>
@@ -300,7 +312,7 @@ test('wrap, cell overflow, page-content overflow and sub-8pt text fail before PD
 test('reordered inline entries fail before PDF despite matching ids and text', {
   skip: !canIntegrate,
 }, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-order-test-'));
+  const directory = makeScratch('inline-layout-order-test-');
   writeFixture(directory, {
     html: '<!doctype html><html lang="ja"><body><p><code data-pdf-inline-id="second">SECOND</code> <code data-pdf-inline-id="first">FIRST</code></p></body></html>',
     css: '@page{size:A4;margin:20mm} code{font:12pt monospace;white-space:nowrap}',
@@ -318,7 +330,7 @@ test('reordered inline entries fail before PDF despite matching ids and text', {
 test('fixed letter spacing cannot bypass the final flow width gate after font shrink', {
   skip: !canIntegrate,
 }, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-spacing-test-'));
+  const directory = makeScratch('inline-layout-spacing-test-');
   writeFixture(directory, {
     html: '<!doctype html><html lang="ja"><body><p class="flow">before<br><code data-pdf-inline-id="spacing">ABCDEFGHIJKLMNOPQRST</code><br>after</p></body></html>',
     css: '@page{size:A4;margin:20mm}html,body{margin:0;padding:0}body{font:12pt sans-serif}.flow{width:200px;margin:0;padding:0;overflow:visible}code{display:inline-block;box-sizing:content-box;white-space:nowrap;font:10.834pt monospace;letter-spacing:1px;padding:0 4px}',
@@ -334,7 +346,7 @@ test('fixed letter spacing cannot bypass the final flow width gate after font sh
 });
 
 test('missing expected id fails before PDF', { skip: !canIntegrate }, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-missing-test-'));
+  const directory = makeScratch('inline-layout-missing-test-');
   writeFixture(directory, {
     html: '<!doctype html><html lang="ja"><body><p>no marked inline code</p></body></html>',
     css: '@page{size:A4;margin:20mm}',
@@ -353,7 +365,7 @@ test('missing expected id fails before PDF', { skip: !canIntegrate }, () => {
 test('unmarked inline code fails before PDF even with an otherwise complete manifest', {
   skip: !canIntegrate,
 }, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-unmarked-test-'));
+  const directory = makeScratch('inline-layout-unmarked-test-');
   writeFixture(directory, {
     html: `<!doctype html><html lang="ja"><body>
       <p><code data-pdf-inline-id="marked">MARKED</code> <code>UNMARKED</code></p>

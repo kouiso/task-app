@@ -21,6 +21,7 @@ Prism の <span class="token"> は貫通して扱う。タグをまたぐ空白�
 
 from __future__ import annotations
 
+import html
 import re
 import unicodedata
 
@@ -106,7 +107,9 @@ def atoms(text: str) -> list[str]:
     i = 0
     while i < len(text):
         entity = ENTITY_RE.match(text, i)
-        if entity:
+        # 1文字に解決できん名前（未定義や複数文字になるもの）はブラウザも字面のまま
+        # 描くので、実体参照として1桁に数えると幅を読み違える
+        if entity and len(html.unescape(entity.group(0))) == 1:
             out.append(entity.group(0))
             i = entity.end()
         else:
@@ -116,13 +119,14 @@ def atoms(text: str) -> list[str]:
 
 
 def atom_char(atom: str) -> str:
-    """原子単位が表す1文字。実体参照は & < > " ' のみ対応すれば足りる。"""
+    """原子単位が表す1文字。名前付き実体参照は &nbsp; なども含めて解決する。"""
     if atom.startswith("&#x"):
         return chr(int(atom[3:-1], 16))
     if atom.startswith("&#"):
         return chr(int(atom[2:-1], 10))
-    return {"&amp;": "&", "&lt;": "<", "&gt;": ">",
-            "&quot;": '"', "&#x27;": "'", "&apos;": "'"}.get(atom, atom)
+    if atom.startswith("&") and atom.endswith(";"):
+        return html.unescape(atom)
+    return atom
 
 
 def classify(atom: str) -> str:

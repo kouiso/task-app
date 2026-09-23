@@ -47,6 +47,12 @@ class DedentSemanticsTest(unittest.TestCase):
             with self.subTest(entity=entity):
                 self.check_semantics(f'const view = <p>\n                  {entity}{TEXT}\n</p>;')
 
+    def test_named_entity_in_long_line_is_measured_as_one_character(self):
+        # 6種以外の名前付き実体参照が長い行にあると、1文字として測れず組版ごと落ちとった
+        source = 'const label = "' + 'a' * 40 + '&nbsp;' + 'b' * 40 + '";'
+        rendered = wrap_code_in_html(pre(source), [])
+        self.assertIn('&nbsp;', rendered)
+
     def test_template_indentation_remains_part_of_literal(self):
         source = f'const text = `\n                  {TEXT}\n`;'
         copied, residuals = self.check_semantics(source)
