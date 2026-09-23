@@ -63,7 +63,9 @@ class Seed {
     // 警告を出して実行を続ける形だと、一番事故りやすい自動化経路が確認を迂回する。
     if (!process.stdin.isTTY) {
       if (!process.argv.includes('--yes') && process.env['SEED_YES'] !== '1') {
-        console.warn('対話確認ができない環境では中止します。実行するには --yes または SEED_YES=1 を付けてください。');
+        console.warn(
+          '対話確認ができない環境では中止します。実行するには --yes または SEED_YES=1 を付けてください。',
+        );
         await this.prisma.$disconnect();
         process.exit(1);
       }

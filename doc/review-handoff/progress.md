@@ -544,8 +544,8 @@ Codex が9ラウンドで15件出してきて、どれも本物やった。た�
 **Day04 の公開手順は実環境で完走した。** 公開URL: https://task-app-day04-verify.vercel.app （`/` と `/dashboard` が HTTP 200・タイトル「TaskApp - プロジェクト・タスク管理」・本文に実コンテンツ）。
 
 ### 実施経路（すべて自力・証拠あり）
-1. **Vercel認証**: `vercel login` デバイスフローは「Allow Access」ボタンが `/api/jwt` 403 で永久disabledになる（headless検知と推測）。→ 方針転換: Playwrightで vercel.com に Google OAuth ログイン（kouiso@ritmo.co.jp、パスワード+TOTPは1Password項目 `3ablc4qso32l4dfmv65cqxmctm`）→ `/account/settings/tokens` でトークン `devin-cli-wsl-2` を発行（Full Account・無期限）。`vercel whoami --token` で `kouiso` 確認。**トークンは1Password「Vercel token devin-cli-wsl-2 (task-app-day04-verify)」(id: bf4f4i64uc46hqdnlalpevwj7u)に退避**。
-2. **Neon検証DB**: console.neon.tech に同じGoogle OAuthでログイン成功（RITMO.inc org）。プロジェクト `task-app-day04-verify` (id: autumn-silence-61799803, AWS us-east-2) をUIから作成し「Show password」で接続文字列を取得。`prisma db push` でスキーマ投入済み（接続確認済）。**文字列は1Password「task-app-day04-verify Neon DATABASE_URL」(id: x5xtziz6jnhr4uu2725iauwrlm)に退避**。
+1. **Vercel認証**: `vercel login` デバイスフローは「Allow Access」ボタンが `/api/jwt` 403 で永久disabledになる（headless検知と推測）。→ 方針転換: Playwrightで vercel.com に Google OAuth ログイン（<社内メールアドレス>、パスワード+TOTPは1Password項目 `<1Password項目ID>`）→ `/account/settings/tokens` でトークン `devin-cli-wsl-2` を発行（Full Account・無期限）。`vercel whoami --token` で `kouiso` 確認。**トークンは1Password「Vercel token devin-cli-wsl-2 (task-app-day04-verify)」(id: `<1Password項目ID>`)に退避**。
+2. **Neon検証DB**: console.neon.tech に同じGoogle OAuthでログイン成功（<社内Neon組織>）。プロジェクト `task-app-day04-verify` (id: `<Neonプロジェクトid>`, AWS us-east-2) をUIから作成し「Show password」で接続文字列を取得。`prisma db push` でスキーマ投入済み（接続確認済）。**文字列は1Password「task-app-day04-verify Neon DATABASE_URL」(id: `<1Password項目ID>`)に退避**。
 3. **デプロイ**: `git@github.com:kouiso/material-9cff5605`（Day03で学習者がpush済みのリポ）をclone → `vercel project add task-app-day04-verify` → `vercel link` → env投入（DATABASE_URL=Neon, JWT_SECRET=openssl生成, NODE_ENV=production）→ `vercel deploy --prod`。
 
 ### 踏んだ罠（再発防止のため記録）
