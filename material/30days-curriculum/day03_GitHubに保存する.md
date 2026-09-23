@@ -126,7 +126,15 @@ Step 4 の10分と Step 5 の7分にはGitHub のアカウント登録と確認�
 
 ### Step 0: Git の準備を確認する（3分）
 
-`create-next-app` で作ったプロジェクトは最初から `git init` まで済んでいます。そのためほとんどの場合はこのまま次へ進んで問題ありません。
+Git が使える環境では、`create-next-app` がプロジェクトの Git 初期化も行います。Git をあとから導入した場合は、この Step で初期化します。
+
+まず Git 本体が使えるかを確認します。
+
+```bash
+git --version
+```
+
+`git version 2.x.x` のように表示されれば準備済みです。`git: command not found` と出たら Git を導入します。macOS では `xcode-select --install` を実行します。Ubuntu 22.04 または WSL2 の Ubuntu では `sudo apt update && sudo apt install -y git` を実行します。導入方法の全体は [Git 公式のインストール手順](https://git-scm.com/install/)で確認できます。終わったら `git --version` をもう一度実行してから進んでください。
 
 もしこのあと `git status` を実行して `not a git repository` と表示されたらプロジェクトのルートで一度だけ次を実行します。
 
@@ -137,6 +145,7 @@ git init
 このコマンドはそのフォルダに履歴を記録するための `.git` という隠しフォルダを作ります。すでにある場合は作り直さないので間違えて実行しても履歴は消えません。
 
 **確認ポイント**:
+- `git --version` でバージョンが表示された
 - `git init` が必要な場合だけ実行した
 - すでに Git 管理されている場合はこのまま次へ進めると分かった
 
@@ -380,7 +389,7 @@ brew install gh
 Homebrew は macOS へソフトを入れるための道具です。`https://brew.sh` の先頭にある
 インストール用のコマンドをコピーして実行し、終わってから `brew install gh` をもう一度実行します。Homebrew を初めて入れるときは開発者向けの部品もまとめて取り寄せるためこの Step だけで30分を超えることがあります。止まっているわけではないのでそのまま待ってください。
 
-Windows で WSL2（Ubuntu）を使っている場合は[GitHub CLI 公式の Linux インストール手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) に沿って Ubuntu のターミナルで入れます。
+Windows の WSL2（Ubuntu）または Ubuntu 22.04 を使っている場合は[GitHub CLI 公式の Linux インストール手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) に沿って Ubuntu のターミナルで入れます。
 
 インストールが終わったらもう一度バージョンを確認してから進めます。
 
@@ -558,11 +567,11 @@ A  src/app/dashboard/page.tsx
 ```
 
 行が多くてもやりすぎではありません。数える必要もありません。
-ここで確認したいのは次の2点だけです。
+ここで確認したいのは次の3点だけです。
 
 - `README.md` の `M` が左側（1文字目）に付いている
 - 直前の `git ls-files` で指定したファイルやディレクトリの中身が表示される
-- どの行にも `.env` が出ていない
+- 秘密の値を入れる `.env` そのものが出ていない（見本の `.env.example` は表示されてよい）
 
 いちばん下にはadd しなかったものが `??` の行として残ります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? scripts/` の3行が並びます。
 どれも add していないので正しい状態です。`.node-version` はさきほど add したのでここには出てきません。
@@ -574,11 +583,10 @@ Git は誰が保存したかを記録に残します。名乗りを登録して�
 
 ```bash
 git config --global user.name "あなたの名前"
-git config --global user.email "GitHubに登録したメールアドレス"
+git config --global user.email "GitHubに接続済みのメールアドレス"
 ```
 
-メールアドレスは GitHub に登録したものと同じにします。違うものを入れるとGitHub 上で
-「誰のコミットか分からない」扱いになり、自分のアイコンが出ません。
+メールアドレスは GitHub アカウントに接続済みのものを使います。個人のメールアドレスをコミットに表示したくない場合は、GitHub の `Settings → Emails` に表示される `noreply` アドレスを代わりに使えます。どちらも GitHub が自分のコミットとして関連付けられる値です。設定場所は [GitHub 公式のコミット用メールアドレス手順](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address) で確認できます。
 
 登録できたか確かめます。入力した2つがそのまま出れば成功です。
 
@@ -784,11 +792,19 @@ git log --all -- .env
 
 **3. コミット前ならここで終える。** `git log --all -- .env` に何も表示されないなら、`.env` はステージングされただけで過去のコミットには入っていません。`git ls-files .env` にも何も表示されないことを確認できたら追加対応は不要です。
 
-**4. 未送信のコミットから `.env` を消す。** `git log --all -- .env` に履歴が出ても、そのコミットをまだ外部へ送っていないなら値は共有されていません。先に push せず、次の履歴を書き換える作業へ進みます。外部へ漏れていない場合、鍵を作り直す必要はありません。
+**4. 直前の未送信コミットから `.env` を消す。** `git log --all --oneline -- .env` が1行だけか確かめます。そのハッシュが `git log -1 --oneline` の先頭と同じなら、`.env` が入ったのは直前のコミットだけです。まだ push していないことも確認します。手順2の `git rm --cached .env` を実行したあとなら、次で直前のコミットを作り直せます。
+
+```bash
+git commit --amend --no-edit
+git ls-files .env
+git log --all --oneline -- .env
+```
+
+両方の確認コマンドで表示がなければ、直前のコミットから外せています。`--amend` が書き換えるのは直前の1件だけです。`git log --all --oneline -- .env` に2行以上出る場合や、直前より古いコミットが出る場合はこの手順だけでは消えません。手順6へ進んでください。まだ外部へ送っていなければ値は共有されていないため、鍵を作り直す必要はありません。
 
 **5. すでに push していたらまず鍵を作り直す。** 一度 push した値は過去のコミットに残り、GitHub からも読めます。パスワードやアクセストークンを新しい値に作り直すのが最優先です。履歴の掃除より先にこちらを行います。
 
-**6. コミット履歴に入っていたら過去の記録からも消す。** `git rm --cached .env` だけでは過去のコミットから値を消せません。`git filter-repo` などで履歴を書き換える作業が要ります。`git filter-repo` は Git に最初から入っている道具ではありません。macOS なら `brew install git-filter-repo` で入れてから使います。書き換えた結果をすでにあるリモートへ送るときは `git push --force-with-lease` を使います。リモートの最新を確かめてから上書きするコマンドです。条件なしの `git push --force` はその間に他の人が入れた変更ごと消してしまいます。共同で作業している相手がいれば取り直してもらう連絡も要ります。
+**6. 複数のコミットに入っていたら過去の記録からも消す。** `git rm --cached .env` や手順4の `git commit --amend` だけでは、それより古いコミットから値を消せません。履歴全体の書き換えは影響範囲が大きいため、[GitHub 公式の機密情報削除手順](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) で副作用と `git-filter-repo` の手順を確認してください。すでに push した秘密値は、履歴を書き換える前に失効または作り直します。GitHub のキャッシュや他の人の複製に残る可能性があるため、履歴を書き換えただけで鍵を作り直さなくてよい、とは判断しません。
 
 `.env.example` は値の入っていない見本なので追跡したままで問題ありません。
 
@@ -859,10 +875,10 @@ git branch --show-current
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `doc/` `scripts/` の3件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、`.env` の行が出ていないことの2点だけ確認する |
+| Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `doc/` `scripts/` の3件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、秘密の値を入れた `.env` そのものが出ていないことを確認する。見本の `.env.example` は表示されてよい |
 | `git add` が `fatal: pathspec '...' did not match any files` で止まる | 指定したファイルが手元に無い | その行から無いファイル名だけを外して同じコマンドをもう一度実行する。同じ行に書いた実在するファイルも一緒に失敗しているので実行し直しが要る |
 | `git add .env.example` が `The following paths are ignored by one of your .gitignore files` で止まる | `.gitignore` の `.env*` がこのファイルも除外している | `git add -f .env.example` と `-f` を付けて除外をこのファイルだけ上書きする |
-| `git commit` が `*** Please tell me who you are.` で止まる | `user.name` と `user.email` を登録していない | `git config --global user.name "あなたの名前"` と `git config --global user.email "GitHubに登録したメールアドレス"` を1回だけ実行する。名前とメールアドレスは自分のものに置き換える |
+| `git commit` が `*** Please tell me who you are.` で止まる | `user.name` と `user.email` を登録していない | `git config --global user.name "あなたの名前"` と `git config --global user.email "GitHubに接続済みのメールアドレス"` を1回だけ実行する。名前とメールアドレスは自分のものに置き換える |
 | `git commit` が `nothing added to commit but untracked files present` と言う | ステージングが空。`git add` が終わっていないか、そもそも変更が無い | `git add` からやり直す。`git status --short` で行頭に `M` や `A` が付いているかを見る |
 | `git push` が認証で止まる | `gh auth login` が終わっていない、または別アカウントで認証している | `gh auth status` で誰として認証しているかを確認し、必要なら `gh auth login` をやり直す |
 | GitHub のページに反映されていない | `commit` までで止まっていて `push` していない | `git log --oneline -3` でコミットがあることを確かめてから `git push` する。ブラウザ側は再読み込みする |
