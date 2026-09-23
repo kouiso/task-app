@@ -12,9 +12,7 @@
     {
       "name": "00-1_学びのロードマップ.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/00-1_学びのロードマップ.md",
@@ -65,9 +63,7 @@
     {
       "name": "00_カリキュラム目次.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/00_カリキュラム目次.md",
@@ -118,9 +114,7 @@
     {
       "name": "appendix_トラブルシューティング.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_トラブルシューティング.md",
@@ -171,9 +165,7 @@
     {
       "name": "appendix_参考資料.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_参考資料.md",
@@ -224,9 +216,7 @@
     {
       "name": "appendix_次のステップ.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_次のステップ.md",
@@ -277,9 +267,7 @@
     {
       "name": "appendix_用語集.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_用語集.md",
@@ -330,9 +318,7 @@
     {
       "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md",
@@ -383,9 +369,7 @@
     {
       "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day02_ダッシュボードに自分だけのメッセージを追加しよう.md",
@@ -436,9 +420,7 @@
     {
       "name": "day03_GitHubに保存する.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day03_GitHubに保存する.md",
@@ -489,9 +471,7 @@
     {
       "name": "day04_ネットに公開.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day04_ネットに公開.md",
@@ -542,9 +522,7 @@
     {
       "name": "day05_ログイン画面のUI.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day05_ログイン画面のUI.md",
@@ -595,9 +573,7 @@
     {
       "name": "day06_ユーザー登録画面.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day06_ユーザー登録画面.md",
@@ -648,9 +624,7 @@
     {
       "name": "day07_認証バックエンドを作ろう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day07_認証バックエンドを作ろう.md",
@@ -701,9 +675,7 @@
     {
       "name": "day08_サイドバーを完成させよう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day08_サイドバーを完成させよう.md",
@@ -754,9 +726,7 @@
     {
       "name": "day09_プロジェクト一覧画面.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day09_プロジェクト一覧画面.md",
@@ -807,9 +777,7 @@
     {
       "name": "day10_プロジェクト新規作成.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day10_プロジェクト新規作成.md",
@@ -860,9 +828,7 @@
     {
       "name": "day11_プロジェクト編集・削除.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day11_プロジェクト編集・削除.md",
@@ -913,9 +879,7 @@
     {
       "name": "day12_メンバー追加.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day12_メンバー追加.md",
@@ -966,9 +930,7 @@
     {
       "name": "day13_タスク一覧画面.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day13_タスク一覧画面.md",
@@ -1019,9 +981,7 @@
     {
       "name": "day14_タスク新規作成.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day14_タスク新規作成.md",
@@ -1072,9 +1032,7 @@
     {
       "name": "day15_タスク編集・削除.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day15_タスク編集・削除.md",
@@ -1125,9 +1083,7 @@
     {
       "name": "day16_ステータス変更・時間記録.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day16_ステータス変更・時間記録.md",
@@ -1178,9 +1134,7 @@
     {
       "name": "day17_自分のタスクページ.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day17_自分のタスクページ.md",
@@ -1231,9 +1185,7 @@
     {
       "name": "day18_コメント投稿.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day18_コメント投稿.md",
@@ -1284,9 +1236,7 @@
     {
       "name": "day19_コメント編集・削除.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day19_コメント編集・削除.md",
@@ -1337,9 +1287,7 @@
     {
       "name": "day20_タスク検索機能.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day20_タスク検索機能.md",
@@ -1390,9 +1338,7 @@
     {
       "name": "day21_統計カードを表示.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day21_統計カードを表示.md",
@@ -1443,9 +1389,7 @@
     {
       "name": "day22_グラフを表示.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day22_グラフを表示.md",
@@ -1496,9 +1440,7 @@
     {
       "name": "day23_週次レポート.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day23_週次レポート.md",
@@ -1549,9 +1491,7 @@
     {
       "name": "day24_ユーザー一覧（管理者用）.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day24_ユーザー一覧（管理者用）.md",
@@ -1602,9 +1542,7 @@
     {
       "name": "day25_プロフィール編集.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day25_プロフィール編集.md",
@@ -1655,9 +1593,7 @@
     {
       "name": "day26_エラーページを作って、バグを退治しよう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day26_エラーページを作って、バグを退治しよう.md",
@@ -1708,9 +1644,7 @@
     {
       "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day27_プロジェクト詳細・アーカイブを実装しよう.md",
@@ -1761,9 +1695,7 @@
     {
       "name": "day28_タスク一括操作を実装しよう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day28_タスク一括操作を実装しよう.md",
@@ -1814,9 +1746,7 @@
     {
       "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day29_ユーザー詳細・編集ページを作ろう.md",
@@ -1867,9 +1797,7 @@
     {
       "name": "day30_完成版を公開！.pdf",
       "status": "fail",
-      "issues": [
-        "DOM audit not fully supported/pass"
-      ],
+      "issues": ["DOM audit not fully supported/pass"],
       "artifacts": {
         "source": {
           "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day30_完成版を公開！.md",

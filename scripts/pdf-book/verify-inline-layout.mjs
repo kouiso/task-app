@@ -380,7 +380,9 @@ function auditPaginatedDom(manifest, constants) {
           font_size_px: px(getComputedStyle(currentCell).fontSize),
           has_prose: (() => {
             const prose = currentCell.cloneNode(true);
-            prose.querySelectorAll('code,pre').forEach((node) => node.remove());
+            for (const node of prose.querySelectorAll('code,pre')) {
+              node.remove();
+            }
             return Boolean(prose.textContent.trim());
           })(),
           prose_lines: proseLayout(currentCell),
@@ -803,7 +805,10 @@ function auditPaginatedDom(manifest, constants) {
     page_geometry: pageGeometry,
     checks,
     observed: [...observed.entries()].map(([id, items]) => ({ id, items })),
-    stacked_inventory: [...stackedInventory.entries()].map(([source_order, fragments]) => ({ source_order, fragments })),
+    stacked_inventory: [...stackedInventory.entries()].map(([source_order, fragments]) => ({
+      source_order,
+      fragments,
+    })),
     table_inventory: {
       scope: 'measurement_only_requires_layout_and_readability_review',
       expected_count: expectedTableIds?.length ?? null,

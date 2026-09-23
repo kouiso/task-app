@@ -56,11 +56,7 @@ function connection(config, serviceName) {
     fail('教材の PostgreSQL 公開ポートを特定できません。docker-compose.yml を確認してください。');
   }
   const port = Number(ports[0].published);
-  if (
-    port < 1 ||
-    port > 65535 ||
-    !['', '0.0.0.0', '127.0.0.1'].includes(ports[0].host_ip ?? '')
-  ) {
+  if (port < 1 || port > 65535 || !['', '0.0.0.0', '127.0.0.1'].includes(ports[0].host_ip ?? '')) {
     fail('教材の PostgreSQL はこのパソコンのポートで起動してください。');
   }
   return { port, service };
@@ -273,8 +269,7 @@ function validateRunning(config, containers) {
     databases.length !== 1 ||
     !databases[0].State?.Running ||
     !databases[0].NetworkSettings?.Ports?.['5432/tcp']?.some(
-      (item) =>
-        Number(item.HostPort) === port && ['0.0.0.0', '127.0.0.1'].includes(item.HostIp),
+      (item) => Number(item.HostPort) === port && ['0.0.0.0', '127.0.0.1'].includes(item.HostIp),
     )
   ) {
     fail(

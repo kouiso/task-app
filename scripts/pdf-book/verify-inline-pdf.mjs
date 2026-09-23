@@ -124,8 +124,7 @@ function compareCharacterOrder(a, b) {
   const dy = a.bbox[1] - b.bbox[1];
   if (Math.abs(dy) > BOX_EPSILON_PT) return dy;
   return (
-    a.source_line_index - b.source_line_index ||
-    a.source_character_index - b.source_character_index
+    a.source_line_index - b.source_line_index || a.source_character_index - b.source_character_index
   );
 }
 

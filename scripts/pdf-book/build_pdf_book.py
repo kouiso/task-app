@@ -1033,53 +1033,6 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     except ValueError as error:
         return [f"{path.name}: HTML組版準備に失敗: {error}"]
 
-    # Vivliostyle は行長だけで pre を割るため、空白があっても語の途中で折れる。
-    # 先に vfm で HTML へ変換し、長いコード行のトークン境界へ <wbr> を挿入してから
-    # 組版へ渡す。<wbr> は折返し候補であって強制ではない（実測済み）。
-    try:
-        vfm_command = (
-            [env["PDF_BOOK_VFM_BIN"]]
-            if "PDF_BOOK_VFM_BIN" in env
-            else ["npx", "--yes", VFM_CLI]
-        )
-        converted = subprocess.run(
-            [*vfm_command, "--language", "ja", "--title", title, document.name],
-            capture_output=True, text=True, cwd=WORK_DIR, env=env,
-            timeout=VFM_TIMEOUT,
-        )
-    except subprocess.TimeoutExpired:
-        problems.append(f"{path.name}: HTML変換が{VFM_TIMEOUT}秒を超えました")
-        return problems
-    except OSError as error:
-        problems.append(f"{path.name}: HTML変換コマンドを起動できません: {error}")
-        return problems
-    if converted.returncode != 0 or not converted.stdout.strip():
-        problems.append(
-            f"{path.name}: HTML変換に失敗: "
-            f"{(converted.stderr or converted.stdout).strip()[-300:]}"
-        )
-        return problems
-
-    residuals: list[str] = []
-    markup = wrap_code_in_html(converted.stdout, residuals)
-    if residuals:
-        # フォント縮小の下限も割る行＝コピー安全な見た目を作れない行。
-        # 出さずに止める。材料側のコード整形で対処する。
-        problems.append(
-            f"{path.name}: コピー安全に組版できないコード行: {residuals[0][:80]}"
-        )
-        return problems
-    unsafe = unsafe_runs(markup)
-    if unsafe:
-        # 折返し候補を作れなかった行が残る＝語の途中で切れる可能性が残る。
-        # 出さずに止める。材料のコードを変えずに済む範囲の限界。
-        problems.append(
-            f"{path.name}: コード行に折返し候補を作れません: {unsafe[0][:80]}"
-        )
-        return problems
-    html_doc = WORK_DIR / f"{slug}.html"
-    html_doc.write_text(markup, encoding="utf-8")
-
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     # HTMLの直接入力ではテーマの準備経路を通らないため、原稿として登録する。
     config_file = WORK_DIR / f"{slug}.config.cjs"
