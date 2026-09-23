@@ -21,12 +21,20 @@ const SEARCH_PARAM_KEYS: Array<keyof SearchFormValues> = [
   'dateTo',
 ];
 
+const normalizeDate = (value: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : '';
+};
+
 const normalizeSearchFormValues = (values: SearchFormValues): SearchFormValues => ({
   ...values,
   projectId: values.projectId || 'all',
   status: isTaskStatus(values.status) ? values.status : 'all',
   priority: isTaskPriority(values.priority) ? values.priority : 'all',
   assignedTo: values.assignedTo || 'all',
+  dateFrom: normalizeDate(values.dateFrom),
+  dateTo: normalizeDate(values.dateTo),
 });
 
 export const applySearchParamsToValues = (

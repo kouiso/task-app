@@ -7,7 +7,7 @@ set -euo pipefail
 PROJECT_DIR="$(pwd)"
 
 RUNTIME_DEPS=(
-  next@15.5.21
+  next@15.5.24
   react@^18.3.1
   react-dom@^18.3.1
   @trpc/client@^11.8.0
@@ -83,7 +83,7 @@ version_major() {
 }
 
 check_node() {
-  require_command "node" "Node.js が見つかりません。Node.js 22 以上を入れてから再実行してください: https://nodejs.org/"
+  require_command "node" "Node.js が見つかりません。Node.js 22 系を入れてから再実行してください: https://nodejs.org/"
   local node_version
   if ! node_version="$(node -v 2>&1)"; then
     print_error "Node.js の確認に失敗しました: ${node_version}"
@@ -94,18 +94,18 @@ check_node() {
   fi
   local major
   major="$(version_major "$node_version")"
-  if [ "${major:-0}" -lt 22 ]; then
-    print_error "Node.js ${node_version} は非対応です。Node.js 22 以上が必要です: https://nodejs.org/"
+  if [ "${major:-0}" -ne 22 ]; then
+    print_error "Node.js ${node_version} は非対応です。Node.js 22 系が必要です: https://nodejs.org/"
     exit 1
   fi
 }
 
 check_npm() {
-  require_command "npm" "npm が見つかりません。Node.js 22 系と一緒に npm 10 以上を入れてください: https://nodejs.org/"
+  require_command "npm" "npm が見つかりません。Node.js 22 系と一緒に npm 10 系を入れてください: https://nodejs.org/"
   local major
   major="$(version_major "$(npm -v)")"
-  if [ "${major:-0}" -lt 10 ]; then
-    print_error "npm $(npm -v) は非対応です。npm 10 以上が必要です。Node.js の更新後に再実行してください。"
+  if [ "${major:-0}" -ne 10 ]; then
+    print_error "npm $(npm -v) は非対応です。npm 10 系が必要です。Node.js の更新後に再実行してください。"
     exit 1
   fi
 }
@@ -151,7 +151,7 @@ ensure_empty_or_existing_next_app() {
 
   # 教材との差分を減らすため、Next.js 15 系に固定する。
   # npx 自身が初回に確認を出して入力待ちで止まるため、--yes を npx へも渡す。
-  npx --yes create-next-app@15.5.21 "$create_dir" \
+  npx --yes create-next-app@15.5.24 "$create_dir" \
     --typescript \
     --tailwind \
     --app \
@@ -182,7 +182,7 @@ configure_security_overrides() {
   # install より先に設定し、package-lock.json と node_modules の両方へ反映させる。
   npm pkg set \
     overrides.postcss="8.5.23" \
-    overrides.sharp="0.35.3"
+    overrides.sharp="0.35.4"
 }
 
 install_dependencies() {

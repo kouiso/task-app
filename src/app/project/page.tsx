@@ -133,6 +133,7 @@ function ProjectPageContent() {
   const archiveMutation = api.project.archive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      utils.project.getById.invalidate();
       router.push('/project');
     },
   });
@@ -140,6 +141,7 @@ function ProjectPageContent() {
   const unarchiveMutation = api.project.unarchive.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      utils.project.getById.invalidate();
       router.push('/project');
     },
   });
