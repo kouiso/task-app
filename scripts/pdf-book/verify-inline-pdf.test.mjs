@@ -509,7 +509,8 @@ function syntheticLigatureLine(text, ligatureIndex, drift) {
 }
 
 test('zero-width ligature glyph keeps source order when x differs below the box epsilon', () => {
-  for (const drift of [-1e-5, 0, 1e-5]) {
+  // ±0.00116 は Linux の Chromium で day25 の `refine` が実際に出したずれ
+  for (const drift of [-0.005, -0.00116, -1e-5, 0, 1e-5, 0.00116, 0.005]) {
     const page = { page_index: 0, lines: [syntheticLigatureLine('updateProfile', 9, drift)] };
     const found = exactOccurrences(page, 'updateProfile');
     assert.equal(found.length, 1, `drift ${drift}`);

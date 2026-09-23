@@ -11,6 +11,10 @@ const MATCH_TOLERANCE_PT = 2;
 const BOUNDS_TOLERANCE_PT = 0.2;
 const MINIMUM_GLYPH_FONT_PT = 7.99;
 const BOX_EPSILON_PT = 0.001;
+// 合字を分解した幅0の字と次の字の x のずれ。Linux の Chromium では実測で最大 0.00116pt
+// (day25 の見出し `refine` の fi)、macOS では 0.0004pt。紙面で最も細い字でも幅は約1pt
+// あるので、0.01pt 未満の差を同じ位置とみなしても別の字を取り違えることはない
+const CHARACTER_ORDER_EPSILON_PT = 0.01;
 const DOM_EPSILON_PX = 0.01;
 const SUPPORTED_MUPDF_VERSION = '1.28.0';
 const MAX_VISUAL_FRAGMENT_GAP_PT = 1;
@@ -116,13 +120,13 @@ export function extractPdfModel(document) {
 }
 
 // 同じ視覚行の文字順は x 座標で決めるが、合字(fi 等)を MuPDF が分解すると 2 文字目は幅 0 で
-// 次の字と同じ x に置かれ、1e-5pt の浮動小数の揺れで前後が入れ替わって完全一致に落ちる。
-// そこで BOX_EPSILON_PT 未満の差は同座標とみなし、PDF 内の文字順(出典順)を保つ。
+// 次の字と同じ x に置かれ、浮動小数の揺れで前後が入れ替わって完全一致に落ちる。
+// そこで CHARACTER_ORDER_EPSILON_PT 未満の差は同座標とみなし、PDF 内の文字順(出典順)を保つ。
 function compareCharacterOrder(a, b) {
   const dx = a.bbox[0] - b.bbox[0];
-  if (Math.abs(dx) > BOX_EPSILON_PT) return dx;
+  if (Math.abs(dx) > CHARACTER_ORDER_EPSILON_PT) return dx;
   const dy = a.bbox[1] - b.bbox[1];
-  if (Math.abs(dy) > BOX_EPSILON_PT) return dy;
+  if (Math.abs(dy) > CHARACTER_ORDER_EPSILON_PT) return dy;
   return (
     a.source_line_index - b.source_line_index || a.source_character_index - b.source_character_index
   );
