@@ -34,7 +34,7 @@ function handleUnexpectedError(context: string, error: unknown): never {
   console.error('[auth] unexpected error', { context, error });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `${context}中にエラーが発生しました。しばらくしてから再度お試しください。`,
+    message: `${context}中にエラーが発生しました。時間をおいてお試しください。`,
     cause: error,
   });
 }
@@ -56,7 +56,8 @@ export const authRouter = createTRPCRouter({
       });
 
       if (!user?.password) {
-        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、
+        // ここでは追加記録しない
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'メールアドレスまたはパスワードが正しくありません',
@@ -66,7 +67,8 @@ export const authRouter = createTRPCRouter({
       const isPasswordValid = await bcrypt.compare(input.password, user.password);
 
       if (!isPasswordValid) {
-        // 失敗は checkLoginRateLimit が先取りで記録済みのため、ここでは追加記録しない
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、
+        // ここでは追加記録しない
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'メールアドレスまたはパスワードが正しくありません',
@@ -74,8 +76,10 @@ export const authRouter = createTRPCRouter({
       }
 
       if (!user.isActive) {
-        // 無効判定はパスワード照合が通ったあとに行う。先に判定すると、正しいパスワードを
-        // 知らなくても「無効化されたアカウントが存在する」ことを列挙できてしまうため。
+        // 無効判定はパスワード照合が通ったあとに行う。
+        // 先に判定すると、正しいパスワードを知らなくても
+        // 「無効化されたアカウントが存在する」ことを
+        // 列挙できてしまうため。
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'このアカウントは無効化されています',
@@ -88,7 +92,8 @@ export const authRouter = createTRPCRouter({
         role: user.role,
       };
 
-      // セッション発行の前に成功記録を確定させる。順序が逆だと、記録の失敗で 500 を返す一方で
+      // セッション発行の前に成功記録を確定させる。
+      // 順序が逆だと、記録の失敗で 500 を返す一方で
       // 認証済みセッションだけが残るため。
       await recordLoginSuccess(input.email, ip);
       await createSession(sessionUser);

@@ -1,7 +1,13 @@
 import '@testing-library/jest-dom/vitest';
 import { execSync } from 'node:child_process';
-import { afterAll, afterEach, beforeAll, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import { prisma } from '../lib/prisma';
+import { createDatabaseCleanupGuard } from './database-cleanup-guard';
+
+const DATABASE_STATEMENT_TIMEOUT_MS = 60_000;
+const DATABASE_TRANSACTION_TIMEOUT_MS = 70_000;
+const DATABASE_HOOK_TIMEOUT_MS = 90_000;
+const databaseCleanupGuard = createDatabaseCleanupGuard();
 
 // Mock Next.js cookies API
 vi.mock('next/headers', () => ({
@@ -27,6 +33,7 @@ beforeAll(async () => {
     try {
       execSync('npx prisma db push --skip-generate', {
         stdio: 'pipe',
+        timeout: DATABASE_TRANSACTION_TIMEOUT_MS,
         env: {
           ...process.env,
           DATABASE_URL:
@@ -43,7 +50,14 @@ beforeAll(async () => {
           (error as Error & { stderr?: { toString: () => string } }).stderr?.toString(),
         );
       }
+      throw error;
     }
+  }
+}, DATABASE_HOOK_TIMEOUT_MS);
+
+beforeEach(() => {
+  if (typeof window === 'undefined') {
+    databaseCleanupGuard.assertReady();
   }
 });
 
@@ -51,21 +65,30 @@ afterEach(async () => {
   // Skip database cleanup for jsdom environment (component tests)
   // Only cleanup for node environment (API tests)
   if (typeof window === 'undefined') {
-    const tables = [
-      'comments',
-      'tasks',
-      'project_members',
-      'projects',
-      'accounts',
-      'sessions',
-      'users',
-    ];
-
-    for (const table of tables) {
-      // テスト環境専用: $executeRawUnsafeは直接SQL実行のため本番コードでは使用禁止
-      // テーブル名は上記の内部定数から取得するためSQLインジェクションリスクはない
-      await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
+    databaseCleanupGuard.begin();
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT set_config(
+            'statement_timeout',
+            ${`${DATABASE_STATEMENT_TIMEOUT_MS}ms`},
+            true
+          )`;
+          // テスト環境専用: 固定したテーブルだけを1文で消し、次のfixture開始前に完了させるためです。
+          await tx.$executeRawUnsafe(
+            'TRUNCATE TABLE "comments", "tasks", "project_members", "projects", "accounts", "sessions", "users" CASCADE',
+          );
+        },
+        {
+          maxWait: 10_000,
+          timeout: DATABASE_TRANSACTION_TIMEOUT_MS,
+        },
+      );
+    } catch (error) {
+      databaseCleanupGuard.fail(error);
+      throw error;
     }
+    databaseCleanupGuard.succeed();
   } else {
     // jsdom環境（コンポーネントテスト）では、各テスト後にReactツリーをアンマウントする。
     // singleForkで複数テストファイルを同一プロセス実行する際、自動クリーンアップが
@@ -73,7 +96,7 @@ afterEach(async () => {
     const { cleanup } = await import('@testing-library/react');
     cleanup();
   }
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
   if (typeof window === 'undefined') {

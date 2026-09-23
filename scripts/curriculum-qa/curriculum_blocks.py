@@ -130,6 +130,8 @@ def has_filepath_marker(code: str) -> bool:
 # 値の末尾に付く注記1つ。入れ子は取らない（注記は `（続き）` 程度の平坦な語）。
 TRAILING_NOTE = re.compile(r"^(.*?)\s*([（(][^（()）]*[）)])\s*$")
 REAL_PREFIXES = ("src/", "prisma/", "scripts/")
+# 教材で作成するルート設定だけを許可し、説明用の名前を実ファイルにしない。
+REAL_ROOT_FILES = frozenset({"vitest.config.ts"})
 # 写経対象として扱う言語。bash は同じ `# filepath:` の書式を使うが、
 # 波括弧の意味が違う（`${VAR}` や関数定義）ので構文の収支検査には載せない。
 CODE_LANGS = frozenset({"typescript", "ts", "tsx", "javascript", "js", "jsx"})
@@ -162,7 +164,7 @@ class Block(NamedTuple):
     @property
     def is_writing_target(self) -> bool:
         """読者が実ファイルへ書き込むブロックか。"""
-        return self.target.startswith(REAL_PREFIXES)
+        return self.target.startswith(REAL_PREFIXES) or self.target in REAL_ROOT_FILES
 
 
 def day_number(name: str) -> int:

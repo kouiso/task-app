@@ -29,6 +29,7 @@ CHECKER = Path(__file__).parent / 'check_step_length.py'
 
 # チェッカーが定めている上限。下の BOUNDARY がこの値を境に挙動を固定する。
 LIMIT = 25
+EXCEPTION_MARKER = '<!-- code-block-length-exception: complete-copy-unit -->'
 
 
 def body(count: int) -> str:
@@ -38,6 +39,11 @@ def body(count: int) -> str:
 
 def fence(count: int, info: str = '') -> str:
     return f'```{info}\n{body(count)}\n```\n'
+
+
+def complete_copy_unit(lines: int, *, marker: str = EXCEPTION_MARKER) -> str:
+    code = '// filepath: src/example.ts\n' + body(lines - 1)
+    return f'{marker}\n```ts\n{code}\n```\n'
 
 
 def run(text: str) -> tuple[int, str]:
@@ -133,6 +139,38 @@ CASES: list[tuple[str, str, int, int | None, list[str], list[str]]] = [
         None,
         ['const v1 = 1;', 'const v3 = 3;', '...', 'const v24 = 24;', 'const v26 = 26;'],
         ['const v10 = 10;'],
+    ),
+    (
+        '完全なコピー単位は明示した場合だけ25行を超えられる',
+        complete_copy_unit(LIMIT + 1),
+        0,
+        1,
+        [],
+        [],
+    ),
+    (
+        '25行以下のブロックに例外を付けたら落とす',
+        complete_copy_unit(LIMIT),
+        1,
+        None,
+        ['長さ例外は不要'],
+        [],
+    ),
+    (
+        'filepathが無い長いブロックは例外を付けても落とす',
+        EXCEPTION_MARKER + '\n' + fence(LIMIT + 1, 'ts'),
+        1,
+        None,
+        ['filepath: コメントが必要'],
+        [],
+    ),
+    (
+        '例外表記とコードブロックの間に本文があれば落とす',
+        EXCEPTION_MARKER + '\n理由の無い空白ではない行です。\n' + complete_copy_unit(LIMIT + 1, marker=''),
+        1,
+        None,
+        ['対象コードブロックの直前'],
+        [],
     ),
 ]
 

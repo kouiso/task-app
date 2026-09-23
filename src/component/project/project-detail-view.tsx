@@ -61,7 +61,8 @@ export function ProjectDetailView({
     );
   }
 
-  // 総数はアクティブな4ステータスのみで数え、キャンセル済みは別表記にする（進捗指標との整合のため）。
+  // 総数はアクティブな4ステータスのみで数え、
+  // キャンセル済みは別表記にする（進捗指標との整合のため）。
   // アクティブ数とキャンセル数を1回のループで同時に集計する。
   let activeTaskCount = 0;
   let cancelledTaskCount = 0;
@@ -156,8 +157,10 @@ export function ProjectDetailView({
                         {member.user?.name || member.user?.email || '不明'}
                       </p>
                       {member.role === PROJECT_MEMBER_ROLE.OWNER || !canManageMembers ? (
-                        // オーナーは権限変更対象外。加えて、メンバー管理権限を持たないユーザーには
-                        // 読み取り専用で表示する（操作してもバックエンドで弾かれるため誤操作を防ぐ）
+                        // オーナーは権限変更対象外。加えて、
+                        // メンバー管理権限を持たないユーザーは
+                        // 読み取り専用で表示する
+                        // （操作してもバックエンドで弾かれるため誤操作を防ぐ）
                         <Badge variant="outline" className="text-xs">
                           {isProjectMemberRole(member.role)
                             ? PROJECT_MEMBER_ROLE_LABELS[member.role]

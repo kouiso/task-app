@@ -10,7 +10,7 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 | OS | macOS 13 以上 | Day01 setup E2E の対象 | `sw_vers` |
 | OS | Windows 11 + WSL2 | Day01 setup E2E の対象 | `wsl.exe --version` / `lsb_release -a` |
 | OS | Ubuntu 22.04 LTS | Day01 setup E2E の対象 | `lsb_release -a` |
-| Node.js | 22.x | `.mise.toml` の `node = "22.22.2"` / `package.json` の `engines.node >=22` | `node -v` |
+| Node.js | 22.x | `.mise.toml` の `node = "22.22.2"` / `package.json` の `engines.node = "22.x"` | `node -v` |
 | npm | 10.x | Node.js 22 同梱 npm を基準 | `npm -v` |
 | PostgreSQL | 16-alpine | `docker-compose.yml` の `postgres:16-alpine` | `docker compose ps` |
 | Docker runtime | Docker Desktop / OrbStack / Docker Engine | ローカル PostgreSQL 起動に使用 | `docker -v` / `docker compose version` |

@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import {
   BarChart,
   ClipboardList,
@@ -63,6 +64,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: session, isLoading } = api.auth.getSession.useQuery();
 
   useEffect(() => {
@@ -76,7 +78,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [hasMounted, isLoading, session, router]);
 
   const logoutMutation = api.auth.logout.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      // セッション破棄後に古い認証付きレスポンスが戻ると、次の利用者へ
+      // 前の利用者のキャッシュが見える。進行中の取得を止めてから全て消す。
+      await queryClient.cancelQueries();
+      queryClient.clear();
       router.push('/login');
       router.refresh();
     },
@@ -129,7 +135,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
                       pathname === item.path
                         ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+                        : 'text-sidebar-foreground/60 ' +
+                            'hover:text-sidebar-foreground ' +
+                            'hover:bg-sidebar-accent',
                     )}
                   >
                     {item.icon}
@@ -196,7 +204,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         'mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2',
                         pathname === item.path
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+                          : 'text-sidebar-foreground/60 ' +
+                              'hover:text-sidebar-foreground ' +
+                              'hover:bg-sidebar-accent',
                       )}
                     >
                       {item.icon}

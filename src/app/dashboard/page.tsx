@@ -14,20 +14,92 @@ import { AppLayout } from '@/component/layout/app-layout';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { TASK_STATUS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/lib/constant/status';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
   const router = useRouter();
   // ダッシュボードはアクティブな状況の概要のため、アーカイブ済みプロジェクトは除外する
-  const { data: projects, isLoading: projectsLoading } = api.project.getAll.useQuery({
-    isArchived: false,
-  });
-  const { data: overview, isLoading: overviewLoading } = api.report.getOverview.useQuery();
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+    isError: projectsError,
+    error: projectsQueryError,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(
+    {
+      isArchived: false,
+    },
+    { retry: shouldRetryQuery },
+  );
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    isError: overviewError,
+    error: overviewQueryError,
+    refetch: refetchOverview,
+  } = api.report.getOverview.useQuery(undefined, { retry: shouldRetryQuery });
 
-  if (projectsLoading || overviewLoading) {
+  const queryErrors = [
+    projectsError ? projectsQueryError : null,
+    overviewError ? overviewQueryError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const hasFetchError = projectsError || overviewError;
+  // React Query は再取得に失敗しても前回のデータを保持する。
+  // 失敗したクエリ自身に前回値が残っている時だけバナーに留め、
+  // 一度も取れていないクエリがある場合は全面エラーにする。
+  const hasData = (!projectsError || projects != null) && (!overviewError || overview != null);
+
+  if ((projectsLoading || overviewLoading) && !authFailed && !forbidden) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  // 取得失敗は「0件・0%」と区別できる表示にする。失敗を空の成功として
+  // 見せると、利用者はデータが消えたのか障害なのか判断できない。
+  if (authFailed || forbidden || (hasFetchError && !hasData)) {
+    // 401/403 はリトライでは解決しないため、導線を分ける。
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-base font-semibold text-foreground mb-2">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このデータを見る権限がありません'
+                : 'データを取得できませんでした'}
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '権限が必要です。管理者に確認してください。'
+                : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <button
+            type="button"
+            className="rounded-lg border border-border/50 bg-card px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/project');
+                return;
+              }
+              void refetchProjects();
+              void refetchOverview();
+            }}
+          >
+            {authFailed ? 'ログイン画面へ' : forbidden ? 'プロジェクト一覧へ' : '再読み込み'}
+          </button>
+        </div>
       </AppLayout>
     );
   }
@@ -44,6 +116,29 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="space-y-10">
+        {hasFetchError && hasData ? (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+            <span>
+              {authFailed
+                ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
+                : '最新の情報を取得できませんでした。表示は前回取得時の内容です。'}
+            </span>
+            <button
+              type="button"
+              className="shrink-0 rounded-md border border-amber-400/60 px-3 py-1 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40"
+              onClick={() => {
+                if (authFailed) {
+                  router.push('/login');
+                  return;
+                }
+                void refetchProjects();
+                void refetchOverview();
+              }}
+            >
+              {authFailed ? 'ログイン画面へ' : '再試行'}
+            </button>
+          </div>
+        ) : null}
         {/* ヒーローセクション — 完了率が主役 */}
         <div className="rounded-2xl border border-border/50 bg-card p-8">
           <p className="text-sm font-medium text-muted-foreground mb-1">全体の進捗</p>
@@ -155,7 +250,8 @@ export default function DashboardPage() {
             {projects && projects.length > 0 ? (
               <div className="space-y-1">
                 {projects.slice(0, 5).map((project) => {
-                  // キャンセル済みは進捗の母数に含めない（アクティブな4ステータスのみを総数とする）。
+                  // キャンセル済みは進捗の母数に含めない
+                  // （アクティブな4ステータスのみを総数とする）。
                   // 総数と完了数を1回のループで同時に集計する。
                   let taskCount = 0;
                   let doneCount = 0;

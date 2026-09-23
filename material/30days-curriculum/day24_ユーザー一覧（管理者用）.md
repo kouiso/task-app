@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 23 ではプロジェクト別統計テーブルの表示と、週次レポートAPIの呼び出し・データ表示を実装しました。Table コンポーネントでデータを一覧表示するパターンを学んだので、今日は管理者専用のユーザー一覧ページに取り組みます。
+Day 23 では週次レポートAPIの呼び出し・データ表示を実装し、プロジェクト統計ページへのリンクを付けました。Table コンポーネントでデータを一覧表示するパターンを学んだので今日は管理者専用のユーザー一覧ページに取り組みます。
 
 ---
 
@@ -11,7 +11,7 @@ Day 23 ではプロジェクト別統計テーブルの表示と、週次レポ�
 管理者だけがアクセスできるユーザー管理ページを実装します。
 ユーザー一覧をテーブルで表示し、詳細画面や編集画面へ遷移できるようにします。
 
-この日は、まずサーバー側のユーザー一覧 API（`getAll`）を自分で書きます。そのあと画面をつなぎます。
+この日はまずサーバー側のユーザー一覧 API（`getAll`）を自分で書きます。そのあと画面をつなぎます。
 
 完成イメージ: 管理者がユーザーを一覧管理できるページです。
 
@@ -19,17 +19,17 @@ Day 23 ではプロジェクト別統計テーブルの表示と、週次レポ�
 
 ## なぜこれを作るのか
 
-メンバーが増えるほど、「誰がどの権限を持っているか」「無効にしたアカウントはどれか」が把握しづらくなります。管理者が全ユーザーを一覧で見渡し、権限や状態を確認できる画面を用意します。
+メンバーが増えるほど「誰がどの権限を持っているか」「無効にしたアカウントはどれか」が把握しづらくなります。管理者が全ユーザーを一覧で見渡し、権限や状態を確認できる画面を用意します。
 
 > **例え話**: ユーザー管理は「学校の出席簿」です。
-> 先生（管理者）だけが出席簿を開いて、
+> 先生（管理者）だけが出席簿を開いて
 > 生徒（ユーザー）の名前や出席状況を確認できます。
 
 ## 始める前の前提
 
 - 管理者ユーザーでログインできる
 - 一般ユーザーも1人以上登録済みで、一覧に表示する対象がある
-- `src/server/api/root.ts` を開いて、いま登録されているルーターを確認できる（user は今日追加する）
+- `src/server/api/root.ts` を開いて、今登録されているルーターを確認できる（user は今日追加する）
 - 管理者以外で開いたときのアクセス拒否も確認する
 
 ### ユーザー管理ページのフロー
@@ -54,7 +54,7 @@ flowchart TD
     style G fill:#f3e5f5
 ```
 
-この図でいちばん大事なのは、最初のひし形にある管理者かどうかの分岐です。ここで「いいえ」へ進んだ人は、`api.user.getAll` を呼ぶ矢印まで届きません。一般ユーザーのブラウザからは、ユーザー一覧のリクエストがそもそも送信されないという意味です。一本道に見えて、実際には右半分を通れるのが管理者だけになっています。分岐の先ではもう一度、ユーザーが0件かどうかで道が分かれます。テーブルと空状態メッセージは、どちらか片方だけが画面に出ます。今日やるのは、この2つの分岐を画面とサーバーの両方に置く作業です。
+この図でいちばん大事なのは最初のひし形にある管理者かどうかの分岐です。ここで「いいえ」へ進んだ人は`api.user.getAll` を呼ぶ矢印まで届きません。一般ユーザーのブラウザからはユーザー一覧のリクエストがそもそも送信されないという意味です。一本道に見えて実際には右半分を通れるのが管理者だけになっています。分岐の先ではもう一度、ユーザーが0件かどうかで道が分かれます。テーブルと空状態メッセージはどちらか片方だけが画面に出ます。今日やるのはこの2つの分岐を画面とサーバーの両方に置く作業です。
 
 ### やること / やらないこと
 
@@ -81,7 +81,7 @@ flowchart TD
 ### ページ構造の全体像
 
 まず完成形のページ構造を確認しましょう。
-この骨格に沿って、各Stepで中身を埋めていきます。
+この骨格に沿って各Stepで中身を埋めていきます。
 
 | 層 | 内容 | 担当Step |
 |----|------|---------|
@@ -99,14 +99,14 @@ flowchart TD
 | Step 1 | 使用するAPIの確認 | 3分 |
 | Step 2 | インポート文（外部ライブラリ） | 3分 |
 | Step 3 | インポート文（プロジェクト内） | 3分 |
-| Step 4 | データ取得とエラー処理 | 5分 |
-| Step 5 | ローディングと権限チェック | 5分 |
+| Step 4 | データ取得とエラー処理 | 7分 |
+| Step 5 | 取得状態と権限チェック | 8分 |
 | Step 6 | ページヘッダーとテーブル枠 | 4分 |
 | Step 7 | アバターとバッジの表示 | 5分 |
 | Step 8 | アクションボタンの追加 | 4分 |
 | Step 9 | 空状態UIと動作確認 | 3分 |
 
-**合計時間**: 約49分です。
+**合計時間**: 約54分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
@@ -116,7 +116,7 @@ flowchart TD
 
 **ゴール**: `src/server/api/routers/user.ts` を新規作成し、まず `getAll` を写経して `api.user.getAll` を自分で生やします。管理者一覧ページの入口はここです。Day 21 の `report.ts` と同じく、ファイルを「登録するだけ」ではなく、最初の procedure から自分で作ります。
 
-一覧ページが必要としているのは、全ユーザーの詳細全部ではありません。名前・メール・ロール・状態・登録日など、表示に使う項目だけです。そこで完成版のコードでは、`USER_DETAIL_SELECT` を再利用しつつ `createdAt` と `updatedAt` を足して返します。
+一覧ページが必要としているのは全ユーザーの詳細全部ではありません。名前・メール・ロール・状態・登録日など、表示に使う項目だけです。そこで完成版のコードでは`USER_DETAIL_SELECT` を再利用しつつ `createdAt` と `updatedAt` を足して返します。
 
 #### 0-1. import を並べる
 
@@ -132,14 +132,14 @@ import { adminProcedure, createTRPCRouter } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
-今日は `getAll` に必要な import だけを書きます。Day 25 と Day 29 で初めて使う認可・パスワード・詳細取得の道具は、その procedure を追加する日に足します。こうすると、各 Day の終了時点で未使用 import が残りません。
+今日は `getAll` に必要な import だけを書きます。Day 25 と Day 29 で初めて使う認可・パスワード・詳細取得の道具はその procedure を追加する日に足します。こうすると各 Day の終了時点で未使用 import が残りません。
 
 #### 0-2. 管理者専用の getAll を書く
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
 export const userRouter = createTRPCRouter({
-  // adminProcedureによりセッションのroleを参照してADMIN判定するためDBクエリ不要
+  // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
   getAll: adminProcedure
     .input(
       z
@@ -153,7 +153,7 @@ export const userRouter = createTRPCRouter({
       const where: Prisma.UserWhereInput = {};
 ```
 
-ここで大事なのは `protectedProcedure` ではなく **`adminProcedure`** を使っている点です。今日のページは管理者専用なので、入口で `ADMIN` 判定まで済ませます。コメントにもあるとおり、ここでは「管理者かどうか」を確認する追加 DB クエリは不要です。セッションに入っている `role` をそのまま使います。
+今日のページは管理者専用なので、入口に **`adminProcedure`** を使います。共通の認証処理がDBから最新の `role` と `isActive` を取得し、有効なユーザーか確かめます。その `role` で `ADMIN` 判定まで済ませるため、`getAll` の中で管理者かどうかを調べ直す必要はありません。ログイン後に権限が変更された場合も、次のAPI呼び出しにはDBの最新状態が使われます。
 
 #### 0-3. 条件があるときだけ where に足す
 
@@ -168,7 +168,7 @@ export const userRouter = createTRPCRouter({
       }
 ```
 
-一覧画面の最初の版では絞り込み UI をまだ作りませんが、API は先に対応済みです。条件が渡されたときだけ `where` に足し、未指定なら全件のままにします。`isActive` は `false` が有効な値なので、`if (input?.isActive)` ではなく `!== undefined` で判定しているのがポイントです。
+一覧画面の最初の版では絞り込み UI をまだ作りませんがAPI は先に対応済みです。条件が渡されたときだけ `where` に足し、未指定なら全件のままにします。`isActive` は `false` が有効な値なので`if (input?.isActive)` ではなく `!== undefined` で判定しているのがポイントです。
 
 #### 0-4. 表示に使う項目だけ返す
 
@@ -187,7 +187,7 @@ export const userRouter = createTRPCRouter({
 });
 ```
 
-`USER_DETAIL_SELECT` は共有の select 定義で、名前・メール・ロール・アバターなど「返してよいユーザー項目」をまとめたものです。そこへ `createdAt` と `updatedAt` だけ足しているので、Day 24 の一覧画面に必要な列をそのまま返せます。
+`USER_DETAIL_SELECT` は共有の select 定義で、名前・メール・ロール・アバターなど「返してよいユーザー項目」をまとめたものです。そこへ `createdAt` と `updatedAt` だけ足しているのでDay 24 の一覧画面に必要な列をそのまま返せます。
 
 #### 0-5. root.ts に時系列順で登録する
 
@@ -205,9 +205,9 @@ import { userRouter } from './routers/user';
 import { createCallerFactory, createTRPCRouter } from './trpc';
 ```
 
-import の並び順と、次に書く登録の並び順は別物です。import 側はファイル名のアルファベット順で、保存すると整形ツールが自動でこの順に直します。登録側は教材で作った時系列を保つので、`user` が最後に来ます。どちらの順番でも動作は変わりませんが、`root.ts` を開いたときにどの Day で何を足したのかが追えなくなります。
+import の並び順と、次に書く登録の並び順は別物です。import 側はファイル名のアルファベット順で、保存すると整形ツールが自動でこの順に直します。登録側は教材で作った時系列を保つので`user` が最後に来ます。どちらの順番でも動作は変わりませんが`root.ts` を開いたときにどの Day で何を足したのかが追えなくなります。
 
-2つのうち片方だけ忘れたときの出方も違います。import を書き忘れると `userRouter` が見つからないという型エラーがその場で出ます。登録を忘れると、`api.user.getAll` と書いた行で「そんなプロパティは無い」という型エラーが出ます。動かす前に気づける形です。後者のほうが原因を見つけにくいので、2か所そろっているかを必ず確かめてください。
+2つのうち片方だけ忘れたときの出方も違います。import を書き忘れると `userRouter` が見つからないという型エラーがその場で出ます。登録を忘れると`api.user.getAll` と書いた行で「そんなプロパティは無い」という型エラーが出ます。動かす前に気づける形です。後者のほうが原因を見つけにくいので2か所そろっているかを必ず確かめてください。
 
 ```typescript
 // filepath: src/server/api/root.ts（続き）
@@ -228,7 +228,7 @@ Day 21 でも触れたとおり、root の順番は教材で作った時系列�
 - `src/server/api/routers/user.ts` を新規作成し、今日使う import と `getAll` を書けた
 - `getAll` が `adminProcedure` になっている
 - `root.ts` に `userRouter` を import / registration の両方で追加し、最後尾に置けた
-- `npm run dev` で型エラーが出ていない
+- `npx tsc --noEmit` で型エラーが出ていない
 
 ---
 
@@ -248,7 +248,7 @@ Day 21 でも触れたとおり、root の順番は教材で作った時系列�
 | プロパティ | 型 | 用途 |
 |-----------|-----|------|
 | id | string | ユーザーID |
-| name | string | 表示名 |
+| name | string \| null | 表示名（未設定のときは null） |
 | role | "ADMIN" / "USER" | ロール判定に使用 |
 | isActive | boolean | アカウント有効/無効 |
 
@@ -282,15 +282,13 @@ import { ja } from 'date-fns/locale';
 import { Eye, Pencil } from 'lucide-react';
 import { useRouter }
   from 'next/navigation';
-import { useEffect } from 'react';
-import toast from 'react-hot-toast';
 ```
 
 > `'use client'` はこのファイルが
 > クライアントコンポーネントであることを示します。
-> `useRouter` や `useEffect` を使うために必須です。
+> `useRouter` を使うために必須です。
 
-`useRouter` と `useEffect` はブラウザの中でしか動きません。Next.js のページは何もしなければサーバー側で組み立てられるため、この宣言が無いと2つを呼んだ時点でエラーになります。Day 09 のプロジェクト一覧でも、先頭に同じ1行を置きました。今日はそこへ、日付を整える道具とアイコンが加わります。
+`useRouter` はブラウザの中で画面を切り替えるhookです。Next.js のページは何もしなければサーバー側で組み立てられるため、この宣言が無いと呼び出した時点でエラーになります。Day 09 のプロジェクト一覧でも、先頭に同じ1行を置きました。今日はそこへ、日付を整える道具とアイコンが加わります。
 
 #### インポートしたライブラリの役割
 
@@ -299,8 +297,6 @@ import toast from 'react-hot-toast';
 | date-fns / ja | 日付フォーマット（日本語） |
 | Eye, Pencil | 詳細・編集ボタンのアイコン |
 | useRouter | ページ遷移 |
-| useEffect | 副作用処理（エラー検知） |
-| react-hot-toast | トースト通知 |
 
 **確認ポイント**:
 - `'use client'` がファイル先頭にある
@@ -311,6 +307,8 @@ import toast from 'react-hot-toast';
 ### Step 3: インポート文（プロジェクト内）（3分）
 
 **ゴール**: プロジェクト内のコンポーネントと定数をインポートします。
+
+`UserRoleBadge` と `ActiveStatusBadge` はスターターの `src/component/ui/user-badges.tsx` に同梱済みです。今日はその部品を一覧に配置します。
 
 ```typescript
 // filepath: src/app/user/page.tsx
@@ -326,7 +324,7 @@ import {
 } from '@/component/ui/card';
 ```
 
-ここで取り込むのは、ページの外枠を作る部品です。`AppLayout` はサイドバーとヘッダーを持つ共通の枠、`Card` と `CardContent` はテーブルを収める箱、`Button` はアクション列に置くボタンです。`Avatar` だけ3つまとめて取り込むのは、外枠・画像・代わりの表示という3部品を組み合わせて1つのアイコンにするからです。画像URLがあるときは `AvatarImage` が出て、無いときは `AvatarFallback` が出ます。どちらを出すかの判定は Step 7 で書きます。
+ここで取り込むのはページの外枠を作る部品です。`AppLayout` はサイドバーとヘッダーを持つ共通の枠、`Card` と `CardContent` はテーブルを収める箱、`Button` はアクション列に置くボタンです。`Avatar` だけ3つまとめて取り込むのは外枠・画像・代わりの表示という3部品を組み合わせて1つのアイコンにするからです。画像URLがあるときは `AvatarImage` が出て無いときは `AvatarFallback` が出ます。どちらを出すかの判定は Step 7 で書きます。
 
 **確認ポイント**:
 - `AppLayout` はページ全体のレイアウト
@@ -345,6 +343,10 @@ import {
 } from '@/component/ui/user-badges';
 import { USER_ROLE }
   from '@/lib/constant/roles';
+import {
+  isAuthError, isForbiddenError,
+  shouldRetryQuery,
+} from '@/lib/query-error';
 import { api } from '@/trpc/react';
 ```
 
@@ -356,15 +358,16 @@ import { api } from '@/trpc/react';
 **確認ポイント**:
 - `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` になっている
 - `USER_ROLE` 定数を `@/lib/constant/roles` からインポートしている
+- エラーの種類と再試行を判定する3つの関数をインポートしている
 - `UserRoleBadge` と `ActiveStatusBadge` をインポートしている
 
 ---
 
-### Step 4: データ取得とエラー処理（5分）
+### Step 4: データ取得とエラー処理（7分）
 
 **ゴール**: APIからデータを取得し、エラー時の処理を追加します。
 
-Step 4 から Step 8 までは `src/app/user/page.tsx` を上から書き足す途中で、関数はまだ閉じていません。保存するたびにエラー表示が出ますが、Step 9 の最後のコードブロックで `</AppLayout>`、`);`、`}` を書けば消えます。それまで `/user` は開けないので、画面で見た目を確かめるのは Step 9 で `</AppLayout>` まで書き終えてからにしてください。Step 8 までの確認ポイントは、書いたコードの上で確かめられることだけを挙げています。
+Step 4 から Step 8 までは `src/app/user/page.tsx` を上から書き足す途中で、関数はまだ閉じていません。保存するたびにエラー表示が出ますがStep 9 の最後のコードブロックで `</AppLayout>`、`);`、`}` を書けば消えます。それまで `/user` は開けないので画面で見た目を確かめるのは Step 9 で `</AppLayout>` まで書き終えてからにしてください。Step 8 までの確認ポイントは書いたコードの上で確かめられることだけを挙げています。
 
 **実装**:
 
@@ -376,65 +379,88 @@ export default function UsersPage() {
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
-  } =
-    api.auth.getCurrentUser.useQuery();
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(
+    undefined,
+    { retry: shouldRetryQuery },
+  );
   const isAdmin =
     currentUser?.role === USER_ROLE.ADMIN;
+```
 
+`isLoading` は最初の取得中、`isFetching` は再取得も含めて通信中であることを表します。`isError` と `error` は分けて受け取ります。前者で失敗の有無を判定し、後者で401・403・それ以外を区別するためです。
+
+```typescript
+// filepath: src/app/user/page.tsx（続き）
   const {
     data: users,
-    isLoading,
-    error,
+    isLoading: isUsersLoading,
+    isError: isUsersError,
+    isFetching: isUsersFetching,
+    error: usersError,
+    refetch: refetchUsers,
   } = api.user.getAll.useQuery(
     undefined,
-    { enabled: isAdmin },
+    {
+      enabled: isAdmin,
+      retry: shouldRetryQuery,
+    },
   );
 ```
 
 > `useQuery` はデータ取得用のhookです。
-> `data`, `isLoading`, `error` の3つの状態を返します。
+> `data`, `isLoading`, `isError` などの状態を返します。
 > これらを使い分けて画面表示を切り替えます。
 
 **確認ポイント**:
 - ADMIN のときだけ `getAll` を呼んでいる
-- `isLoading` と `error` を取得している
+- 2つのqueryから読み込み・エラー・再取得の状態を取得している
+- 401と403を自動再試行しない `retry` を渡している
 
-#### `||` 演算子によるフォールバック
+#### 2つのqueryをまとめて判定する
 
-エラーメッセージが空のとき、代わりのメッセージを表示します。
-
-| 演算子 | 名前 | falsy扱いする値 |
-|--------|------|----------------|
-| `\|\|` | OR演算子 | `false`, `0`, `""`, `null`, `undefined` |
-| `??` | Null合体演算子 | `null`, `undefined` のみ |
+ユーザー情報の取得と一覧の取得は、どちらが失敗しても正常な一覧を保証できません。2つのエラーを配列へ集め、ログイン切れと権限不足を先に判定します。
 
 ```typescript
-// filepath: src/app/user/page.tsx
-  useEffect(() => {
-    if (error) {
-      toast.error(
-        error.message
-        || 'ユーザー一覧の取得に失敗しました'
-      );
-    }
-  }, [error]);
+// filepath: src/app/user/page.tsx（続き）
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUsersError ? usersError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden =
+    queryErrors.some(isForbiddenError);
+  const hasFetchError =
+    isCurrentUserError || isUsersError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null)
+    && (!isUsersError || users != null);
 ```
 
-> `||` は falsy な値のとき右辺を使います。
-> `if (error)` の中なので error オブジェクトの
-> 存在は保証されています。権限がない場合は
-> query 自体を無効にするため、この error は
-> ADMIN の取得失敗だけを扱います。
+`hasRequiredData` は失敗したqueryに表示可能なキャッシュが残っているかを確かめます。500でキャッシュがあれば前回の一覧を残せます。一方、401や403では古いデータが残っていても一覧を隠します。認証状態や権限が変わった後に、以前取得したメールアドレスを表示し続けないためです。
 
-このあと Day 29 では、同じ場面で `??` を使う箇所も出てきます。`error.message` が空文字だったときの扱いが違うだけで、どちらでも動きます。空文字を「メッセージ無し」として代わりの文を出したいなら `||`、空文字もそのまま出したいなら `??` です。教材の中でも日によって `||` と `??` の両方が出てくるので、どちらを見ても迷わないよう覚えておいてください。
+```typescript
+// filepath: src/app/user/page.tsx（続き）
+  const requiredLoading =
+    isCurrentUserLoading
+    || (isAdmin && isUsersLoading);
+  const requiredFetching =
+    isCurrentUserFetching || isUsersFetching;
 
-**確認ポイント**:
-- `useEffect` の中で `toast.error` を呼んでいる
-- `getAll` の第2引数に `{ enabled: isAdmin }` を渡している
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    if (isAdmin) void refetchUsers();
+  };
+```
+
+再試行ではユーザー情報を必ず取り直し、管理者だと分かっている場合だけ一覧も取り直します。`void` は Promise（非同期処理の結果）をこの場では待たないと明示する書き方です。ボタンは `requiredFetching` を使って通信中の連打を防ぎます。
 
 ---
 
-### Step 5: ローディングと権限チェック（5分）
+### Step 5: 取得状態と権限チェック（8分）
 
 **ゴール**: ローディング表示とADMIN以外のアクセス拒否画面を実装します。
 
@@ -442,48 +468,97 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx
-  if (isCurrentUserLoading) {
-    return <PageLoadingSpinner />;
+  if (requiredLoading
+    && !authFailed
+    && !forbidden) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 ```
 
-このスピナーは、自分が誰なのかを確かめている間の表示です。ロールが届く前にテーブルを描いてしまうと、管理者でない人の画面にも一瞬だけユーザー名とメールアドレスが見えます。判定材料がそろうまでは、画面に何も出さないほうが安全です。なお `PageLoadingSpinner` は回る円だけを返す部品なので、待っている間はサイドバーとヘッダーが出ません。判定が終わって本体を描くところで、あらためて `AppLayout` で囲みます。
+このスピナーは自分の情報または一覧の初回取得を待つ表示です。エラーが判明している場合はスピナーを優先せず、次に書くエラー表示へ進みます。`AppLayout` で囲むため待っている間もサイドバーから別のページへ移れます。
 
 **確認ポイント**:
-- `isCurrentUserLoading` が `true` のとき `PageLoadingSpinner` を返している
+- 初回取得中は `AppLayout` の内側に `PageLoadingSpinner` を表示している
 
-次に権限チェックを書きます。
-一般ユーザーが開いたときは、ユーザー一覧ではなく
-権限エラーのカードを返す形にします。
+次に、表示に必要なデータが無い取得失敗を判定します。401と403はこの分岐の後ろで専用の案内を出すため、ここでは除きます。
 
 ```typescript
 // filepath: src/app/user/page.tsx
-  if (!isAdmin) {
+  if (hasFetchError
+    && !hasRequiredData
+    && !authFailed
+    && !forbidden) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center
+          justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold">
+            ユーザー一覧を取得できませんでした
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            通信状況を確認して、再読み込みしてください。
+          </p>
+```
+
+初回取得では表示できる一覧が無いため、原因と次の操作を画面の中央に出します。ここで通常の一覧へ進ませないことが、取得失敗を0件と取り違えないための境目です。
+
+```typescript
+          {/* filepath: src/app/user/page.tsx */}
+          <Button onClick={refetchRequiredData}
+            disabled={requiredFetching}>
+            再読み込み
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+```
+
+この分岐はユーザー情報の初回500を権限不足と区別し、一覧の初回500を0件の成功と区別します。失敗を無視して空のテーブルを出すと、閲覧者には「登録ユーザーが0人」と見えてしまいます。
+
+続いて認証・権限チェックを書きます。一般ユーザーが開いたときも、401や403が返ったときも、ユーザー一覧を隠します。
+
+```typescript
+// filepath: src/app/user/page.tsx（続き）
+  if (authFailed || forbidden || !isAdmin) {
     return (
       <AppLayout>
         <div className="container mx-auto
           max-w-6xl mt-8">
           <Card>
             <CardContent className="pt-6">
-              <h1 className="text-2xl
-                font-bold mb-2">
-                アクセス権限がありません
+              <h1 className="text-2xl font-bold mb-2">
+                {authFailed
+                  ? 'ログインの有効期限が切れました'
+                  : 'アクセス権限がありません'}
               </h1>
 ```
 
-`if (!isAdmin)` は早期リターンです。`return` に達した時点で、この下に書くテーブルの組み立ては1行も実行されません。一般ユーザーが `/user` をURL入力で直接開くと、ユーザー一覧の代わりにこのカードだけが表示されます。`AppLayout` で囲んでいるのはサイドバーを残すためで、行き止まりにせず他のページへ戻れるようにしています。
+取得失敗を先に分けたので、ここでは `!isAdmin` をそのまま使えます。401や403は、キャッシュに管理者情報が残っていてもこの早期リターンに入るため、下の一覧を表示しません。
 
-ただし、この判定は画面側の親切にすぎません。本当の防波堤は Step 0 で書いた `adminProcedure` のほうです。ブラウザの JavaScript は読者の手元で動くので、書き換えればこの `if` は通り抜けられます。それでも `api.user.getAll` はサーバーで `管理者権限が必要です` と弾かれるため、他人のメールアドレスは1件も返りません。画面の判定は表示を整えるため、サーバーの判定は情報を守るためにあります。
+ただしこの判定は画面側の親切にすぎません。本当の防波堤は Step 0 で書いた `adminProcedure` のほうです。ブラウザの JavaScript は読者の手元で動くので書き換えればこの `if` は通り抜けられます。それでも `api.user.getAll` はサーバーで `管理者権限が必要です` と弾かれるため他人のメールアドレスは1件も返りません。画面の判定は表示を整えるためサーバーの判定は情報を守るためにあります。
 
 **確認ポイント**:
 - `USER_ROLE.ADMIN` を使っている（文字列 `'ADMIN'` ではない）
 
 ```typescript
               {/* filepath: src/app/user/page.tsx */}
-              <p className=
-                "text-muted-foreground">
-                この機能は管理者のみ利用できます
+              <p className="text-muted-foreground mb-4">
+                {authFailed
+                  ? 'もう一度ログインしてください。'
+                  : 'この機能は管理者のみ利用できます'}
               </p>
+              {authFailed && (
+                <Button
+                  onClick={() => router.push('/login')}
+                >
+                  ログイン画面へ
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -492,21 +567,29 @@ export default function UsersPage() {
   }
 ```
 
-エラーメッセージには、何が起きたかと誰なら使えるかの2つを書きます。「エラーが発生しました」とだけ出すと、読者は自分の操作を疑って同じ手順を何度も繰り返します。管理者専用だと書いてあれば、管理者に依頼するという次の行動がその場で分かります。閉じタグは開いた順の逆にたどり、`CardContent` から `Card`、`div`、`AppLayout` の順で閉じます。1つでも閉じ忘れると括弧の対応が関数の外までずれて、書いた場所から離れた行に構文エラーが出ます。
+エラーメッセージには何が起きたかと誰なら使えるかの2つを書きます。「エラーが発生しました」とだけ出すと読者は自分の操作を疑って同じ手順を何度も繰り返します。管理者専用だと書いてあれば管理者に依頼するという次の行動がその場で分かります。閉じタグは開いた順の逆にたどり、`CardContent` から `Card`、`div`、`AppLayout` の順で閉じます。1つでも閉じ忘れると括弧の対応が関数の外までずれて書いた場所から離れた行に構文エラーが出ます。
 
-権限を通過した後で、一覧のローディングを
-判定します。
+キャッシュが残っている500では早期リターンしません。ページ本体の先頭に警告を置きます。
 
 ```typescript
-// filepath: src/app/user/page.tsx
-  if (isLoading) {
-    return <PageLoadingSpinner />;
-  }
+{/* filepath: src/app/user/page.tsx（return直後） */}
+{hasFetchError && (
+  <div role="alert" className="mb-4 flex items-center
+    justify-between gap-4 rounded-lg border px-4 py-3">
+    <span>
+      最新のユーザー一覧を取得できませんでした。
+      前回取得時の内容です。
+    </span>
+    <Button variant="outline" size="sm"
+      onClick={refetchRequiredData}
+      disabled={requiredFetching}>
+      再試行
+    </Button>
+  </div>
+)}
 ```
 
-スピナーの判定が2か所に分かれているのには理由があります。上の `isCurrentUserLoading` は `currentUser` の到着待ちです。`isAdmin` はその `currentUser` から作られる値です。到着前の `currentUser` は `undefined` です。そのため `isAdmin` も `false` になります。上のスピナーを外すと、管理者がページを開いた一瞬だけ「アクセス権限がありません」のカードが出て、そのあと一覧に切り替わります。
-
-こちらの `isLoading` はユーザー一覧そのものの取得待ちです。取得は `enabled: isAdmin` によって管理者のときしか始まらないので、権限チェックを通り抜けた後ろに置きます。リクエストを送っていない人のためにスピナーを回す必要はありません。判定の順番は、その判定に必要な材料がそろう順番と一致させます。
+警告と一覧を同時に見せることで、通信に失敗した事実と手元に残っている内容を区別できます。`role="alert"` は支援技術にも警告として伝えるための属性です。
 
 #### 権限チェックの判定ロジック
 
@@ -515,14 +598,17 @@ export default function UsersPage() {
 | role === USER_ROLE.ADMIN | アクセス許可 | ユーザー一覧 |
 | role === USER_ROLE.USER | アクセス拒否 | エラーカード |
 | currentUser が null | アクセス拒否 | エラーカード |
+| 初回取得が500 | 取得失敗 | 再読み込み画面 |
+| キャッシュありで500 | 一時的な取得失敗 | 前回の一覧と警告 |
+| 401 / 403 | 認証・認可失敗 | 一覧を隠す |
 
 > `USER_ROLE.ADMIN` は `@/lib/constant/roles` で
 > 定義された定数です。文字列 `'ADMIN'` を直接書かず、
 > 定数を使うことでタイプミスを防げます。
 
 **確認ポイント**:
-- `if (!isAdmin)` の早期リターンを、テーブル本体より前に書いている
-- `if (isLoading)` の判定を、権限チェックの後ろに置いている
+- 認証・認可エラーの早期リターンを、テーブル本体より前に書いている
+- 初回500とキャッシュが残る500を分けている
 - 早期リターンの `<AppLayout>` を `</AppLayout>` まで閉じている
 
 ---
@@ -549,9 +635,9 @@ export default function UsersPage() {
         </div>
 ```
 
-ここから下は、ログイン中の人が管理者だと確定したあとのコードです。上の2つの早期リターンを通り抜けた場合しか、この `return` には届きません。だから以降では `isAdmin` を確かめ直さずに書けます。早期リターンを先に並べておくと、本体のコードから条件分岐が消えて読みやすくなります。
+ここから下はログイン中の人が管理者だと確定したあとのコードです。上の2つの早期リターンを通り抜けた場合しか、この `return` には届きません。だから以降では `isAdmin` を確かめ直さずに書けます。早期リターンを先に並べておくと本体のコードから条件分岐が消えて読みやすくなります。
 
-`max-w-6xl` は横幅の上限です。この表は6列あるので、Day 09 のカード一覧より広い枠を使います。上限を付けないと、ワイドモニターで名前と右端のボタンが離れすぎて、どの行のボタンなのかを目で追えなくなります。
+`max-w-6xl` は横幅の上限です。この表は6列あるのでDay 09 のカード一覧より広い枠を使います。上限を付けないとワイドモニターで名前と右端のボタンが離れすぎてどの行のボタンなのかを目で追えなくなります。
 
 **確認ポイント**:
 - `<AppLayout>` の中に `<h1>` で「ユーザー管理」を書けた
@@ -574,9 +660,9 @@ export default function UsersPage() {
                   </TableHead>
 ```
 
-`CardContent` に `className="p-0"` を付けているのは、テーブル側が各セルに余白を持っているからです。カードの初期余白を残すと枠線とセルの間に余白が二重にでき、行の区切り線がカードの内側で途切れて見えます。
+`CardContent` に `className="p-0"` を付けているのはテーブル側が各セルに余白を持っているからです。カードの初期余白を残すと枠線とセルの間に余白が二重にでき、行の区切り線がカードの内側で途切れて見えます。
 
-`TableHead` はこの表の列そのものの定義です。ここに並べた個数と、Step 7 以降で書く `TableCell` の個数はそろえます。片方だけ増やすと、その行から下の列がすべて1つずつ横にずれます。エラーは1件も表示されないので、見た目のずれで気づくしかありません。列を足したくなったときは、ヘッダーと本体の両方を必ず同時に直してください。
+`TableHead` はこの表の列そのものの定義です。ここに並べた個数と、Step 7 以降で書く `TableCell` の個数はそろえます。片方だけ増やすとその行から下の列がすべて1つずつ横にずれます。エラーは1件も表示されないので見た目のずれで気づくしかありません。列を足したくなったときはヘッダーと本体の両方を必ず同時に直してください。
 
 **確認ポイント**:
 - `<TableHeader>` の中に `<TableHead>` を3つ書けた
@@ -660,7 +746,7 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-`user.name?.[0]?.toUpperCase()` は、名前の1文字目を取り出して大文字にする式です。`?.` を2回はさむのは、名前が未設定の場合と、名前はあっても空文字の場合の両方で途中停止できるようにするためです。`?.` を外すと、名前が `null` のユーザーが1人いるだけでこの式が例外を投げ、一覧全体が真っ白になります。1件のデータ欠けで残り全員の行まで巻き添えにしないための書き方です。
+`user.name?.[0]?.toUpperCase()` は名前の1文字目を取り出して大文字にする式です。`?.` を2回はさむのは名前が未設定の場合と、名前はあっても空文字の場合の両方で途中停止できるようにするためです。`?.` を外すと名前が `null` のユーザーが1人いるだけでこの式が例外を投げ、一覧全体が真っ白になります。1件のデータ欠けで残り全員の行まで巻き添えにしないための書き方です。
 
 **確認ポイント**:
 - `<Avatar>` の中に `AvatarImage` と `AvatarFallback` の両方を書けた
@@ -679,9 +765,9 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-`user.role` をそのまま置けば、画面には `ADMIN` という文字が出ます。意味は通じますが、管理者を探すたびに文字を1行ずつ読む作業が発生します。`UserRoleBadge` に渡すとアイコンと色の付いた札に変わるので、一覧を上から眺めるだけで管理者の行が目に飛び込みます。
+`user.role` をそのまま置けば画面には `ADMIN` という文字が出ます。意味は通じますが管理者を探すたびに文字を1行ずつ読む作業が発生します。`UserRoleBadge` に渡すとアイコンと色の付いた札に変わるので一覧を上から眺めるだけで管理者の行が目に飛び込みます。
 
-`ActiveStatusBadge` の考え方も共通です。`isActive` の中身は `true` か `false` ですが、画面に `false` と出ても読者には何のことか伝わりません。値を見た目へ翻訳する仕事を専用の部品へ閉じ込めておくと、色や文言を変えたくなったときの直し先がその部品1つで済みます。Day 09 で `'DONE'` と直接書かず `TASK_STATUS.DONE` を使ったのと、根っこは共通の考え方です。
+`ActiveStatusBadge` の考え方も共通です。`isActive` の中身は `true` か `false` ですが画面に `false` と出ても読者には何のことか伝わりません。値を見た目へ翻訳する仕事を専用の部品へ閉じ込めておくと色や文言を変えたくなったときの直し先がその部品1つで済みます。Day 09 で `'DONE'` と直接書かず `TASK_STATUS.DONE` を使ったのと、根っこは共通の考え方です。
 
 #### バッジコンポーネントの仕様
 
@@ -695,7 +781,7 @@ export default function UsersPage() {
 | アクティブ | green-500/10 | green-700 | アクティブ |
 | 無効 | gray-500/10 | gray-700 | 無効 |
 
-初期データのユーザーは全員アクティブなので、グレーのバッジは Day 29 でアカウントを無効にしてから確かめます。
+初期データのユーザーは全員アクティブなのでグレーのバッジは Day 29 でアカウントを無効にしてから確かめます。
 
 > `AvatarFallback` にはユーザー名の頭文字を
 > 大文字で表示します。画像がないユーザーでも
@@ -748,6 +834,7 @@ export default function UsersPage() {
                             router.push(
                               `/user/${
                                 user.id}`)}
+                          aria-label="詳細"
                           title="詳細">
                           <Eye
                             className=
@@ -755,9 +842,9 @@ export default function UsersPage() {
                         </Button>
 ```
 
-`onClick` の中で `router.push` を呼ぶと、ページ全体を読み込み直さずに `/user/{id}` へ移ります。`<a href>` で書くとブラウザがページを丸ごと取り直すので、サイドバーの描画やログイン状態の確認までやり直しになり、画面が一度白くなります。Day 08 で置いたサイドバーのリンクと共通の仕組みです。
+`onClick` の中で `router.push` を呼ぶとページ全体を読み込み直さずに `/user/{id}` へ移ります。`<a href>` で書くとブラウザがページを丸ごと取り直すのでサイドバーの描画やログイン状態の確認までやり直しになり、画面が一度白くなります。Day 08 で置いたサイドバーのリンクと共通の仕組みです。
 
-`title="詳細"` は、アイコンだけのボタンに名前を与える指定です。マウスを載せると吹き出しで名前が出ます。画像しか置いていないボタンにこの指定が無いと、読み上げソフトを使う人には名前のないボタンとして届き、押してよいものかどうかが判断できません。
+`title="詳細"` はマウスを載せたときの吹き出しに使います。`aria-label="詳細"` は読み上げソフトへボタンの名前を伝える指定です。アイコンだけでも操作の目的が分かるよう、両方を付けます。
 
 **確認ポイント**:
 - 詳細ボタンの中に `<Eye />` を置き、`title="詳細"` を付けている
@@ -772,6 +859,7 @@ export default function UsersPage() {
                               `/user/${
                                 user.id
                               }/edit`)}
+                          aria-label="編集"
                           title="編集">
                           <Pencil
                             className=
@@ -781,9 +869,9 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-編集ボタンは詳細ボタンと共通の形で、行き先の末尾に `/edit` が付くだけです。テンプレートリテラルの中へ `user.id` を挟むと、行ごとに違うURLができます。一覧のどの行から押しても、その行のユーザーの編集画面に着きます。
+編集ボタンは詳細ボタンと共通の形で、行き先の末尾に `/edit` が付くだけです。テンプレートリテラルの中へ `user.id` を挟むと行ごとに違うURLができます。一覧のどの行から押してもその行のユーザーの編集画面に着きます。
 
-このボタンが用意しているのは移動の入口だけで、権限を守る役目は持っていません。`/user/{id}/edit` はURLを手で打っても開けます。編集画面が安全なのは、Day 29 で書く保存処理がサーバー側でロールを確かめ、管理者でなければ `管理者権限が必要です` を返すからです。ボタンを隠すことと、操作を禁じることは別の話だと覚えておいてください。
+このボタンが用意しているのは移動の入口だけで、権限を守る役目は持っていません。`/user/{id}/edit` はURLを手で打っても開けます。編集画面が安全なのはDay 29 で書く保存処理がサーバー側でロールを確かめ、管理者でなければ `管理者権限が必要です` を返すからです。ボタンを隠すことと、操作を禁じることは別の話だと覚えておいてください。
 
 **確認ポイント**:
 - 1つの `<TableCell>` の中に `<Button>` を2つ書けた
@@ -799,9 +887,9 @@ export default function UsersPage() {
         </Card>
 ```
 
-`))}` の3文字は、それぞれ別のものを閉じています。内側の丸括弧は `map` に渡した関数が返す JSX の囲み、外側の丸括弧は `map` の呼び出し、波括弧は JSX の中に JavaScript を書くための入れ物です。開いたのは Step 7 の `{users?.map((user) => (` という1行なので、そこと縦に見比べると対応がつかめます。
+`))}` の3文字はそれぞれ別のものを閉じています。内側の丸括弧は `map` に渡した関数が返す JSX の囲み、外側の丸括弧は `map` の呼び出し、波括弧は JSX の中に JavaScript を書くための入れ物です。開いたのは Step 7 の `{users?.map((user) => (` という1行なのでそこと縦に見比べると対応がつかめます。
 
-括弧を1つ多く閉じたり足りなかったりすると、エラーが指す行番号はこの近くではなくファイルの末尾になりがちです。対応の破綻は、書いた場所ではなく最後まで読んだところで初めて発覚するからです。閉じるときは開いた順の逆にたどると、数え間違いが減ります。
+括弧を1つ多く閉じたり足りなかったりするとエラーが指す行番号はこの近くではなくファイルの末尾になりがちです。対応の破綻は書いた場所ではなく最後まで読んだところで初めて発覚するからです。閉じるときは開いた順の逆にたどると数え間違いが減ります。
 
 #### アクションボタンの仕様
 
@@ -834,7 +922,7 @@ import { USER_ROLE }
   from '@/lib/constant/roles';
 ```
 
-`/user` はサイドバーのどこにも出てこないので、いまはURLを手で打たないとたどり着けません。管理者にだけリンクを出して、通常の操作で開けるようにします。`app-layout.tsx` はログイン中のセッションをすでに読んでいるため、足すのはこの2つだけで済みます。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。ここでも文字列の `'ADMIN'` は書かず、Step 5 と共通の `USER_ROLE.ADMIN` を使います。比べる側と比べられる側で書き方をそろえておけば、綴りを間違えた瞬間に型エラーで気づけます。
+`/user` はサイドバーのどこにも出てこないのでいまはURLを手で打たないとたどり着けません。管理者にだけリンクを出して通常の操作で開けるようにします。`app-layout.tsx` はログイン中のセッションをすでに読んでいるため足すのはこの2つだけで済みます。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。ここでも文字列の `'ADMIN'` は書かず、Step 5 と共通の `USER_ROLE.ADMIN` を使います。比べる側と比べられる側で書き方をそろえておけば綴りを間違えた瞬間に型エラーで気づけます。
 
 Day 08 のデスクトップ用のナビゲーション内で、
 `menuItems.map(...)` の直後へ追加します。
@@ -853,7 +941,9 @@ Day 08 のデスクトップ用のナビゲーション内で、
         'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
         pathname === '/user'
           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+          : 'text-sidebar-foreground/60 ' +
+            'hover:text-sidebar-foreground ' +
+            'hover:bg-sidebar-accent',
       )}
     >
       <Users className="h-5 w-5" />
@@ -863,7 +953,7 @@ Day 08 のデスクトップ用のナビゲーション内で、
 )}
 ```
 
-`session.user.role === USER_ROLE.ADMIN && (...)` は、条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないときは式の値が `false` になり、React は `false` を何も描かない値として扱います。だから一般ユーザーのサイドバーには、空の行すら残りません。
+`session.user.role === USER_ROLE.ADMIN && (...)` は条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないときは式の値が `false` になり、React は `false` を何も描かない値として扱います。だから一般ユーザーのサイドバーには空の行すら残りません。
 
 これで今日の守りは3枚になりました。いちばん外側がこのリンクの出し分けで、次が Step 5 の画面側の権限チェック、いちばん内側が Step 0 の `adminProcedure` です。外側の2枚は迷わせないための案内で、情報を守っているのは内側の1枚だけです。リンクを消しても `/user` 自体は開ける点を、もう一度確かめておいてください。
 
@@ -875,13 +965,13 @@ flowchart TB
     S --> E["管理者権限が必要です<br/>他人のメールアドレスは1件も返らない"]
 ```
 
-上の2枚には「越える」と書いた矢印が付いています。この2枚は迷わせないための案内で、情報を止めているのはいちばん下の1枚だけです。画面の判定を消しても他人のデータは漏れませんが、サーバーの判定を消すと漏れます。
+上の2枚には「越える」と書いた矢印が付いています。この2枚は迷わせないための案内で、情報を止めているのはいちばん下の1枚だけです。画面の判定を消しても他人のデータは漏れませんがサーバーの判定を消すと漏れます。
 
 **確認ポイント**:
 - `menuItems.map(...)` の直後に、`session.user.role === USER_ROLE.ADMIN &&` で囲んだ `<li>` を置けた
 - 文字列の `'ADMIN'` ではなく `USER_ROLE.ADMIN` を使っている
 
-このリンクが実際に出るかどうかは、`page.tsx` を閉じ切ってから下のチェックリストで確かめます。
+このリンクが実際に出るかどうかは`page.tsx` を閉じ切ってから下のチェックリストで確かめます。
 
 **実装**:
 
@@ -899,7 +989,7 @@ flowchart TB
 }
 ```
 
-> データが0件のとき何も表示しないと、
+> データが0件のとき何も表示しないと
 > ユーザーは混乱します。
 > 空状態メッセージを表示して安心させましょう。
 
@@ -910,7 +1000,7 @@ flowchart TB
 
 ![ユーザー管理ページ。赤枠①がロールのバッジが並ぶ列、赤枠②が右端のアクション列](./screenshots/day24/user-list-table.png)
 
-初期データのユーザーはアバター画像を持っていないので、いちばん左の丸には名前の頭文字だけが出ます。ロールのバッジは管理者が1人、それ以外が一般ユーザーになります。人数が違っても実装の誤りではありません。
+初期データのユーザーはアバター画像を持っていないのでいちばん左の丸には名前の頭文字だけが出ます。ロールのバッジは管理者が1人、それ以外が一般ユーザーになります。人数が違っても実装の誤りではありません。
 
 ```bash
 # filepath: ターミナル
@@ -928,11 +1018,12 @@ PORT=3001 npm run dev
 7. ステータスバッジが正しい（初期データは全員アクティブなので緑だけが並ぶ）
 8. 登録日が `yyyy/MM/dd` 形式で並ぶ
 9. 各行の右端に詳細・編集のボタンが2つ並び、マウスを載せると背景色が変わる
-10. 詳細ボタンで URL が `/user/{id}` に変わる（ページは Day 29 で作るため、この時点では 404 表示）
-11. 一度ログアウトし、一般ユーザー（`user1@example.com`）でログインし直す
-12. サイドバーに「ユーザー管理」が出ていない
-13. `/user` をURL入力で開くと「アクセス権限がありません」が表示される
-14. 確認できたら `admin@example.com` でログインし直す（Day 25 以降も管理者アカウントを使う）
+10. 詳細ボタンで URL が `/user/{id}` に変わる（ページは Day 29 で作るためこの時点では 404 表示）
+11. 編集ボタンで URL が `/user/{id}/edit` に変わる（ページは Day 29 で作るため、この時点では 404 表示）
+12. 一度ログアウトし、一般ユーザー（`user1@example.com`）でログインし直す
+13. サイドバーに「ユーザー管理」が出ていない
+14. `/user` をURL入力で開くと「アクセス権限がありません」が表示される
+15. 確認できたら `admin@example.com` でログインし直す（Day 25 以降も管理者アカウントを使う）
 
 #### 遷移先のURL構造
 
@@ -951,8 +1042,8 @@ PORT=3001 npm run dev
 
 ### Pro パターンで書こう（ユーザー一覧カードの Props は Pick で切り出す）
 
-ユーザー一覧カードは、ユーザー情報の一部だけを使います。
-`User` 型を丸ごと渡すより、使う列だけを `Pick` すると、
+ユーザー一覧カードはユーザー情報の一部だけを使います。
+`User` 型を丸ごと渡すより使う列だけを `Pick` すると
 カードの責務が読みやすくなります。
 
 | 書き方 | 特徴 |
@@ -964,7 +1055,7 @@ PORT=3001 npm run dev
 
 ## 完成コード全体
 
-今日は4つのファイルを触りました。断片を貼り重ねる作業が続いたので、途中でどこへ貼ったか分からなくなった場合は、以下のコードを上から順に貼り付けて、各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合は、そのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば、Step 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は4つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めばStep 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -973,7 +1064,7 @@ PORT=3001 npm run dev
 | `src/app/user/page.tsx` | ユーザー管理の画面 | Step 2 から Step 9 |
 | `src/component/layout/app-layout.tsx` | 管理者だけに出すサイドバーのリンク | Step 9 |
 
-最後の `app-layout.tsx` は Day 08 で作った長いファイルなので、今日足した2か所だけを載せます。それ以外の行は Day 08 のまま触りません。
+最後の `app-layout.tsx` は Day 08 で作った長いファイルなので今日足した2か所だけを載せます。それ以外の行は Day 08 のまま触りません。
 
 ### `src/server/api/routers/user.ts`
 
@@ -990,7 +1081,7 @@ import { adminProcedure, createTRPCRouter } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
-取り込むのは今日の `getAll` が使う6つだけです。手元のファイルに `bcrypt` や `protectedProcedure` が並んでいたら、それは先の Day で足す道具を早く書きすぎています。使っていない取り込みが残っていると、保存のたびに未使用の警告が出続け、本当に直すべき警告が混ざって見えなくなります。
+取り込むのは今日の `getAll` が使う6つだけです。手元のファイルに `bcrypt` や `protectedProcedure` が並んでいたらそれは先の Day で足す道具を早く書きすぎています。使っていない取り込みが残っていると保存のたびに未使用の警告が出続け、本当に直すべき警告が混ざって見えなくなります。
 
 **getAll の入口と入力の定義**:
 
@@ -998,7 +1089,7 @@ import { USER_DETAIL_SELECT } from './_helpers/select';
 // filepath: src/server/api/routers/user.ts
 // 完成版: getAll の入口と入力の定義
 export const userRouter = createTRPCRouter({
-  // adminProcedureによりセッションのroleを参照してADMIN判定するためDBクエリ不要
+  // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
   getAll: adminProcedure
     .input(
       z
@@ -1012,7 +1103,7 @@ export const userRouter = createTRPCRouter({
       const where: Prisma.UserWhereInput = {};
 ```
 
-`adminProcedure` で始まっているかを最初に確かめてください。ここが `protectedProcedure` になっていると、ログインさえしていれば誰でも全員のメールアドレスを受け取れます。画面側の `if (!isAdmin)` は書き換えられる場所で動くので、他人の情報を守っているのはこの1語だけです。`.optional()` が2つ付いているのは、絞り込みの条件をまだ画面から渡していないためです。
+`adminProcedure` で始まっているかを最初に確かめてください。ここが `protectedProcedure` になっているとログインさえしていれば誰でも全員のメールアドレスを受け取れます。画面側の `if (!isAdmin)` は書き換えられる場所で動くので他人の情報を守っているのはこの1語だけです。`.optional()` が2つ付いているのは絞り込みの条件をまだ画面から渡していないためです。
 
 **絞り込みと取得**:
 
@@ -1040,7 +1131,7 @@ export const userRouter = createTRPCRouter({
 });
 ```
 
-`isActive` の判定だけ `!== undefined` になっているのは、`false` が意味を持つ値だからです。`if (input?.isActive)` と書くと、無効なアカウントだけを見たいという指定が「指定なし」として捨てられます。`select` を書かずに `findMany` を呼ぶと、パスワードのハッシュまで画面へ送られます。返してよい列を並べておけば、テーブルに列を足したときも勝手に外へ出ません。
+`isActive` の判定だけ `!== undefined` になっているのは`false` が意味を持つ値だからです。`if (input?.isActive)` と書くと無効なアカウントだけを見たいという指定が「指定なし」として捨てられます。`select` を書かずに `findMany` を呼ぶとパスワードのハッシュまで画面へ送られます。返してよい列を並べておけばテーブルに列を足したときも勝手に外へ出ません。
 
 ### `src/server/api/root.ts`
 
@@ -1059,7 +1150,7 @@ import { userRouter } from './routers/user';
 import { createCallerFactory, createTRPCRouter } from './trpc';
 ```
 
-この並びはファイル名のアルファベット順で、保存すると整形ツールが自動でこの形へ直します。手で並べ替える必要はありません。`userRouter` の1行が抜けていると、次のブロックの `user: userRouter` で名前が見つからないという型エラーが出ます。
+この並びはファイル名のアルファベット順で、保存すると整形ツールが自動でこの形へ直します。手で並べ替える必要はありません。`userRouter` の1行が抜けていると次のブロックの `user: userRouter` で名前が見つからないという型エラーが出ます。
 
 **ルーターの登録と書き出し**:
 
@@ -1081,7 +1172,7 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-こちらの並びは教材で作った時系列に従い、`user` が最後に来ます。上の import 側と順番が違って見えますが、動作は変わりません。時系列を保っておくと、`root.ts` を開いたときにどの Day で何が増えたのかを上から順にたどれます。下2行は前の Day から置いてあるもので、今日は触りません。
+こちらの並びは教材で作った時系列に従い、`user` が最後に来ます。上の import 側と順番が違って見えますが動作は変わりません。時系列を保っておくと`root.ts` を開いたときにどの Day で何が増えたのかを上から順にたどれます。下2行は前の Day から置いてあるもので今日は触りません。
 
 ### `src/app/user/page.tsx`
 
@@ -1096,11 +1187,9 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import toast from 'react-hot-toast';
 ```
 
-先頭の `'use client'` は、`useRouter` と `useEffect` をこのページで使うための宣言です。この1行が無いと、Next.js はページをサーバー側で組み立てようとして、ブラウザにしか無い仕組みを呼んだところで止まります。並びがアルファベット順になっているのは、保存すると整形ツールが並べ替えるからです。書いた順番と違っていても、手で直す必要はありません。
+先頭の `'use client'` は`useRouter` をこのページで使うための宣言です。この1行が無いとNext.js はページをサーバー側で組み立てようとしてブラウザにしか無い仕組みを呼んだところで止まります。並びがアルファベット順になっているのは保存すると整形ツールが並べ替えるからです。書いた順番と違っていても手で直す必要はありません。
 
 **プロジェクト内の import**:
 
@@ -1122,78 +1211,176 @@ import {
 } from '@/component/ui/table';
 import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
 import { USER_ROLE } from '@/lib/constant/roles';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 ```
 
-`@/component/ui/...` が単数形になっている点は Step 3 の注意書きのとおりで、複数形で書くとファイルが見つからないというエラーが起動時に出ます。`Table` の6つをまとめて取り込んでいるのは、表の外枠・見出し行・本体・行・セルがそれぞれ別の部品として分かれているからです。1つでも欠けると、その部分だけタグが見つからないと言われます。
+`@/component/ui/...` が単数形になっている点は Step 3 の注意書きのとおりで、複数形で書くとファイルが見つからないというエラーが起動時に出ます。`Table` の6つをまとめて取り込んでいるのは表の外枠・見出し行・本体・行・セルがそれぞれ別の部品として分かれているからです。1つでも欠けるとその部分だけタグが見つからないと言われます。
 
-**データ取得とエラー処理**:
+**ユーザー情報の取得**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 完成版: データ取得とエラー処理
+// 完成版: ユーザー情報の取得
 export default function UsersPage() {
   const router = useRouter();
 
-  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
-  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
-
   const {
-    data: users,
-    isLoading,
-    error,
-  } = api.user.getAll.useQuery(undefined, {
-    enabled: isAdmin,
-  });
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error.message || 'ユーザー一覧の取得に失敗しました');
-    }
-  }, [error]);
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
 ```
 
-`enabled: isAdmin` が抜けやすい部分です。これが無いと、一般ユーザーがページを開いた瞬間にも `getAll` へリクエストが飛びます。サーバーは管理者権限が必要ですと返すため情報は漏れませんが、開くたびに赤いトーストが出て、画面が壊れているように見えます。`isAdmin` は `currentUser` から作る値なので、取得の開始そのものを後ろへずらせます。
+ユーザー情報ではロールだけでなく、読み込み・失敗・再取得の状態も受け取ります。401や403を繰り返し送らないため、共通の `shouldRetryQuery` をqueryへ渡します。
 
-**ローディングと権限チェック**:
+**ユーザー一覧の取得**:
+
+```typescript
+// filepath: src/app/user/page.tsx（続き）
+// 完成版: ユーザー一覧の取得
+  const {
+    data: users,
+    isLoading: isUsersLoading,
+    isError: isUsersError,
+    isFetching: isUsersFetching,
+    error: usersError,
+    refetch: refetchUsers,
+  } = api.user.getAll.useQuery(undefined, {
+    enabled: isAdmin,
+    retry: shouldRetryQuery,
+  });
+```
+
+`enabled: isAdmin` が抜けると一般ユーザーがページを開いた瞬間にも `getAll` へリクエストが飛びます。サーバーは管理者権限が必要ですと返すため情報は漏れませんが、不要な通信が発生します。`retry` は401と403を繰り返し送らず、500だけを最大3回まで再試行します。
+
+**取得状態の判定**:
+
+```typescript
+// filepath: src/app/user/page.tsx（続き）
+// 完成版: 取得状態の判定
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUsersError ? usersError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const hasFetchError = isCurrentUserError || isUsersError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null) && (!isUsersError || users != null);
+  const requiredLoading = isCurrentUserLoading || (isAdmin && isUsersLoading);
+  const requiredFetching = isCurrentUserFetching || isUsersFetching;
+
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    if (isAdmin) void refetchUsers();
+  };
+```
+
+401・403はキャッシュがあっても一覧を隠します。500でデータが残っている場合だけ、前回取得した内容と警告を一緒に表示します。
+
+**ローディング**:
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 完成版: ローディングと権限チェック
-  if (isCurrentUserLoading) {
-    return <PageLoadingSpinner />;
+// 完成版: ローディング
+  if (requiredLoading && !authFailed && !forbidden) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
+```
 
-  if (!isAdmin) {
+読み込み中は権限カードを先に出しません。ユーザー情報が届く前の `isAdmin` は `false` なので、順番を逆にすると管理者にも権限不足が一瞬表示されるためです。
+
+**初回取得エラー**:
+
+```typescript
+// filepath: src/app/user/page.tsx（続き）
+// 完成版: 初回取得エラー
+  if (hasFetchError && !hasRequiredData && !authFailed && !forbidden) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            ユーザー一覧を取得できませんでした
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            通信状況を確認して、再読み込みしてください。
+          </p>
+          <Button onClick={refetchRequiredData} disabled={requiredFetching}>
+            再読み込み
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+```
+
+初回500をここで返すため、その後の `!isAdmin` は通信失敗を権限不足として誤表示しません。取得失敗と0件の成功も区別できます。
+
+**認証・権限エラー**:
+
+```typescript
+// filepath: src/app/user/page.tsx（続き）
+// 完成版: 認証・権限エラー
+  if (authFailed || forbidden || !isAdmin) {
     return (
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
             <CardContent className="pt-6">
-              <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
-              <p className="text-muted-foreground">この機能は管理者のみ利用できます</p>
+              <h1 className="text-2xl font-bold mb-2">
+                {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
+              </h1>
+              <p className="text-muted-foreground mb-4">
+                {authFailed ? 'もう一度ログインしてください。' : 'この機能は管理者のみ利用できます'}
+              </p>
+              {authFailed && <Button onClick={() => router.push('/login')}>ログイン画面へ</Button>}
             </CardContent>
           </Card>
         </div>
       </AppLayout>
     );
   }
-
-  if (isLoading) {
-    return <PageLoadingSpinner />;
-  }
 ```
 
-3つの判定は、この順番でなければ正しく動きません。`isAdmin` は `currentUser` から作られるので、届く前は必ず `false` です。1つ目のスピナーを外すと、管理者がページを開いた一瞬だけアクセス権限がありませんのカードが出て、そのあと一覧へ切り替わります。3つ目の `isLoading` を権限チェックより後ろに置いているのは、リクエストを送っていない人のためにスピナーを回す必要が無いからです。
+認証・認可エラーでは一覧の有無を調べる前に返します。キャッシュにユーザー情報が残っていても、現在の権限で読めない内容は画面へ出しません。
+
+**前回の一覧を示す警告**:
+
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: 前回の一覧を示す警告
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-6xl py-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー一覧を取得できませんでした。前回取得時の内容です。</span>
+            <Button type="button" variant="outline" size="sm" onClick={refetchRequiredData} disabled={requiredFetching}>
+              再試行
+            </Button>
+          </div>
+        )}
+```
+
+この警告へ進むのは、500が発生しても表示可能なキャッシュが残っている場合だけです。再試行中はボタンを無効にし、同じqueryを重ねて送らないようにします。
 
 **ページヘッダーと列の定義**:
 
 ```typescript
-// filepath: src/app/user/page.tsx
-// 完成版: ページヘッダーと列の定義
-  return (
-    <AppLayout>
-      <div className="container mx-auto max-w-6xl py-8">
+        {/* filepath: src/app/user/page.tsx（続き） */}
+        {/* 完成版: ページヘッダーと列の定義 */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold tracking-tight">ユーザー管理</h1>
         </div>
@@ -1213,7 +1400,7 @@ export default function UsersPage() {
               </TableHeader>
 ```
 
-ここまで届くのは、上の3つの判定を通り抜けた場合だけです。だから本体では `isAdmin` を確かめ直しません。`TableHead` の個数と、次のブロックから並べる `TableCell` の個数はそろえます。片方だけ増やすと、その行から下の列がすべて1つずつ横にずれます。エラーは出ないので、見た目のずれで気づくしかありません。
+ここまで届くのは上の3つの判定を通り抜けた場合だけです。だから本体では `isAdmin` を確かめ直しません。`TableHead` の個数と、次のブロックから並べる `TableCell` の個数はそろえます。片方だけ増やすとその行から下の列がすべて1つずつ横にずれます。エラーは出ないので見た目のずれで気づくしかありません。
 
 **行の描画とバッジ**:
 
@@ -1241,7 +1428,7 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-`user.name?.[0]?.toUpperCase()` の `?.` を2回はさむのは、名前が未設定のユーザーが1人いるだけで式が例外を投げ、一覧全体が真っ白になるのを防ぐためです。バッジの2つは値を見た目へ翻訳する仕事を引き受ける部品です。`user.role` をそのまま置くと画面には `ADMIN` という文字が出るので、管理者を探すたびに1行ずつ読む作業が発生します。
+`user.name?.[0]?.toUpperCase()` の `?.` を2回はさむのは名前が未設定のユーザーが1人いるだけで式が例外を投げ、一覧全体が真っ白になるのを防ぐためです。バッジの2つは値を見た目へ翻訳する仕事を引き受ける部品です。`user.role` をそのまま置くと画面には `ADMIN` という文字が出るので管理者を探すたびに1行ずつ読む作業が発生します。
 
 **登録日と詳細ボタン**:
 
@@ -1261,13 +1448,14 @@ export default function UsersPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`/user/${user.id}`)}
+                          aria-label="詳細"
                           title="詳細"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
 ```
 
-`user.createdAt ? ... : '-'` の分岐は、値が無いまま `format` を呼んで例外が起きるのを防ぐためのものです。`title="詳細"` は、アイコンしか置いていないボタンに名前を与える指定です。この指定が無いと、読み上げソフトを使う人には名前のないボタンとして届き、押してよいものかどうかを判断できません。
+`user.createdAt ? ... : '-'` の分岐は値が無いまま `format` を呼んで例外が起きるのを防ぐためのものです。`aria-label="詳細"` で読み上げ用の名前を付け、`title="詳細"` でマウスを載せたときにも名前を表示します。
 
 **編集ボタンとテーブルの閉じタグ**:
 
@@ -1278,6 +1466,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`/user/${user.id}/edit`)}
+                          aria-label="編集"
                           title="編集"
                         >
                           <Pencil className="h-4 w-4" />
@@ -1292,7 +1481,7 @@ export default function UsersPage() {
         </Card>
 ```
 
-`))}` の3文字は別のものを閉じています。内側の丸括弧は `map` に渡した関数が返す JSX の囲み、外側の丸括弧は `map` の呼び出し、波括弧は JSX の中に JavaScript を書くための入れ物です。数が合わないとエラーの行番号はこの近くではなくファイルの末尾を指すので、開いた順の逆にたどって数えてください。
+`))}` の3文字は別のものを閉じています。内側の丸括弧は `map` に渡した関数が返す JSX の囲み、外側の丸括弧は `map` の呼び出し、波括弧は JSX の中に JavaScript を書くための入れ物です。数が合わないとエラーの行番号はこの近くではなくファイルの末尾を指すので開いた順の逆にたどって数えてください。
 
 **空状態と最後の閉じタグ**:
 
@@ -1310,7 +1499,7 @@ export default function UsersPage() {
 }
 ```
 
-条件を `users.length === 0` だけにせず `users &&` を前に置いているのは、取得前の `users` が `undefined` だからです。前置きが無いと、読み込み中にも0件のメッセージが一瞬出ます。件数が0のときに何も描かないと、読者は表が壊れたのかデータが無いのかを区別できません。
+条件を `users.length === 0` だけにせず `users &&` を前に置いているのは取得前の `users` が `undefined` だからです。前置きが無いと読み込み中にも0件のメッセージが一瞬出ます。件数が0のときに何も描かないと読者は表が壊れたのかデータが無いのかを区別できません。
 
 ### `src/component/layout/app-layout.tsx`
 
@@ -1323,7 +1512,7 @@ import { Users } from 'lucide-react';
 import { USER_ROLE } from '@/lib/constant/roles';
 ```
 
-今日足すのはこの2つです。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。文字列の `'ADMIN'` を直接書かないのは、綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと、間違いが画面の表示ではなく保存の時点で分かります。
+今日足すのはこの2つです。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。文字列の `'ADMIN'` を直接書かないのは綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと間違いが画面の表示ではなく保存の時点で分かります。
 
 **管理者だけに出すリンク**:
 
@@ -1338,7 +1527,9 @@ import { USER_ROLE } from '@/lib/constant/roles';
         'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
         pathname === '/user'
           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+          : 'text-sidebar-foreground/60 ' +
+            'hover:text-sidebar-foreground ' +
+            'hover:bg-sidebar-accent',
       )}
     >
       <Users className="h-5 w-5" />
@@ -1348,7 +1539,7 @@ import { USER_ROLE } from '@/lib/constant/roles';
 )}
 ```
 
-`条件 && (...)` は、条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないと式の値は `false` になり、React は `false` を何も描かない値として扱います。一般ユーザーのサイドバーには空の行すら残りません。ただしこのリンクを消しても `/user` は開けます。他人のメールアドレスを守っているのは、`user.ts` の `adminProcedure` のほうです。
+`条件 && (...)` は条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないと式の値は `false` になり、React は `false` を何も描かない値として扱います。一般ユーザーのサイドバーには空の行すら残りません。ただしこのリンクを消しても `/user` は開けます。他人のメールアドレスを守っているのは`user.ts` の `adminProcedure` のほうです。
 
 ## 今日のまとめ
 
@@ -1362,7 +1553,7 @@ import { USER_ROLE } from '@/lib/constant/roles';
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 一般ユーザーで表示される | 権限チェック漏れ | `role !== USER_ROLE.ADMIN` を追加 |
+| 一般ユーザーで表示される | 権限チェック漏れ | `if (!isAdmin)` の早期リターンをテーブルより前に置く |
 | アバターが空白 | avatar が null | AvatarFallback で頭文字表示 |
 | 日付がInvalid Date | createdAt が undefined | 三項演算子で '-' を表示 |
 | ボタンが押せない | onClick 未設定 | router.push を追加 |
@@ -1374,9 +1565,10 @@ import { USER_ROLE } from '@/lib/constant/roles';
 |------|------|
 | getCurrentUser | ログイン中ユーザーの情報取得 |
 | USER_ROLE.ADMIN | 管理者ロールを表す定数 |
-| \|\| (OR演算子) | falsy値のとき代替値を使う演算子 |
 | && (条件付きレンダリング) | 条件がtrueのときだけ要素を表示するパターン |
 | `?.` (オプショナルチェーン) | プロパティがnull/undefinedでもエラーにならない |
+| キャッシュ | 前回取得したデータをブラウザ内に一時保存したもの |
+| retry | 取得失敗時に同じqueryを再試行する設定 |
 | UserRoleBadge | ロール表示用の専用バッジコンポーネント |
 | variant="ghost" | 背景なしの控えめなボタンスタイル |
 
@@ -1384,23 +1576,35 @@ import { USER_ROLE } from '@/lib/constant/roles';
 
 今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
 
-**Q1. `api.user.getAll.useQuery(undefined, { enabled: isAdmin })` の `enabled: isAdmin` は何をしていますか。**
+**Q1. `api.user.getAll.useQuery` の `enabled: isAdmin` は何をしていますか。**
 
-A. 管理者のときだけ、ユーザー一覧を取りに行くリクエストを送ります。これが無いと一般ユーザーがページを開いた瞬間にもリクエストが飛び、サーバーに「管理者権限が必要です」と弾かれて赤いトーストが出ます。情報は漏れませんが、画面が壊れているように見えます。
+A. 管理者のときだけ、ユーザー一覧を取りに行くリクエストを送ります。これが無いと一般ユーザーがページを開いた瞬間にも不要なリクエストが飛び、サーバーに「管理者権限が必要です」と弾かれます。情報は漏れません。
 
-**Q2. 1つ目の `if (isCurrentUserLoading)` による early return を消すと、管理者がページを開いたとき何が起きますか。**
+**Q2. `!isAdmin` だけで早期リターンすると、ユーザー情報の初回取得が500で失敗した場合に何が起きますか。**
 
-A. 管理者なのに一瞬だけ「アクセス権限がありません」のカードが出て、そのあと一覧へ切り替わります。`currentUser` が届く前は `undefined` なので、`isAdmin` も `false` になるためです。
+A. `currentUser` が無いため `isAdmin` は `false` になり、本当の原因が通信失敗でも「アクセス権限がありません」と誤表示します。`hasFetchError && !hasRequiredData` を先に判定し、取得失敗は再読み込み画面へ分けます。
 
-**Q3. `getAll` を `protectedProcedure` ではなく `adminProcedure` で書くのはなぜですか。画面側に `if (!isAdmin)` があるのに、サーバー側でも判定するのはなぜですか。**
+**Q3. `getAll` を `protectedProcedure` ではなく `adminProcedure` で書くのはなぜですか。画面側に `if (!isAdmin)` があるのにサーバー側でも判定するのはなぜですか。**
 
-A. 画面側の JavaScript は読者の手元で動くので、書き換えれば `if (!isAdmin)` は通り抜けられます。`protectedProcedure` にすると、ログインさえしていれば誰でも全員のメールアドレスを受け取れます。他人の情報を守っているのは `adminProcedure` の1語だけで、画面の判定は表示を整えるためにあります。
+A. 画面側の JavaScript は読者の手元で動くので書き換えれば `if (!isAdmin)` は通り抜けられます。`protectedProcedure` にするとログインさえしていれば誰でも全員のメールアドレスを受け取れます。他人の情報を守っているのは `adminProcedure` の1語だけで、画面の判定は表示を整えるためにあります。
 
 ---
 
+## 追加課題：管理者だけを一覧に表示する
+
+ユーザー一覧 API の条件を1つ使ってみましょう。理解チェック Q1 の権限確認を保ちながら、返すユーザーを絞ります。
+
+前提は管理者でログインし、今日の `/user` を開けることです。
+
+`src/app/user/page.tsx` の `api.user.getAll.useQuery` を探します。第1引数を、ロールが `USER_ROLE.ADMIN` のユーザーを選ぶオブジェクトへ変えてください。第2引数の `enabled: isAdmin` は残します。入力項目名は Step 0 のスキーマで確認できます。
+
+再読み込みし、一覧の全行が管理者になっていれば成功です。元の一覧に一般ユーザーがいればその行が消えたことも確かめます。これは検索条件なのでユーザーの権限は変わりません。
+
+全員が出る場合は条件を `getCurrentUser` へ渡していないか確認してください。確認後は第1引数を元の `undefined` へ戻し、再読み込みします。条件を渡す操作と管理者だけが API を呼べる条件の違いも、理解チェック Q3 を使って説明してみましょう。
+
 ## 次回予告
 
-Day 25 では、プロフィールページとパスワード変更機能を実装します。
+Day 25 ではプロフィールページとパスワード変更機能を実装します。
 自分の情報を確認・変更できるようにします。
 
 ---

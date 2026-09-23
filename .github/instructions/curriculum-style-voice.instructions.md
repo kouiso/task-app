@@ -1,1 +1,0 @@
-../../prompt/instructions/curriculum-style-voice.instructions.md

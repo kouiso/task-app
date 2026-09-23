@@ -4,8 +4,6 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Button } from '@/component/ui/button';
@@ -21,40 +19,90 @@ import {
 } from '@/component/ui/table';
 import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
 import { USER_ROLE } from '@/lib/constant/roles';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
 export default function UsersPage() {
   const router = useRouter();
 
-  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
 
   const {
     data: users,
-    isLoading,
-    error,
+    isLoading: isUsersLoading,
+    isError: isUsersError,
+    isFetching: isUsersFetching,
+    error: usersError,
+    refetch: refetchUsers,
   } = api.user.getAll.useQuery(undefined, {
     enabled: isAdmin,
+    retry: shouldRetryQuery,
   });
 
-  useEffect(() => {
-    if (error) {
-      toast.error(error.message || 'ユーザー一覧の取得に失敗しました');
-    }
-  }, [error]);
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUsersError ? usersError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const hasFetchError = isCurrentUserError || isUsersError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null) && (!isUsersError || users != null);
+  const requiredLoading = isCurrentUserLoading || (isAdmin && isUsersLoading);
+  const requiredFetching = isCurrentUserFetching || isUsersFetching;
 
-  if (isCurrentUserLoading) {
-    return <PageLoadingSpinner />;
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    if (isAdmin) void refetchUsers();
+  };
+
+  if (requiredLoading && !authFailed && !forbidden) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
   }
 
-  if (!isAdmin) {
+  if (hasFetchError && !hasRequiredData && !authFailed && !forbidden) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            ユーザー一覧を取得できませんでした
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            通信状況を確認して、再読み込みしてください。
+          </p>
+          <Button onClick={refetchRequiredData} disabled={requiredFetching}>
+            再読み込み
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (authFailed || forbidden || !isAdmin) {
     return (
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
             <CardContent className="pt-6">
-              <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
-              <p className="text-muted-foreground">この機能は管理者のみ利用できます</p>
+              <h1 className="text-2xl font-bold mb-2">
+                {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
+              </h1>
+              <p className="text-muted-foreground mb-4">
+                {authFailed ? 'もう一度ログインしてください。' : 'この機能は管理者のみ利用できます'}
+              </p>
+              {authFailed && <Button onClick={() => router.push('/login')}>ログイン画面へ</Button>}
             </CardContent>
           </Card>
         </div>
@@ -62,13 +110,26 @@ export default function UsersPage() {
     );
   }
 
-  if (isLoading) {
-    return <PageLoadingSpinner />;
-  }
-
   return (
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー一覧を取得できませんでした。前回取得時の内容です。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold tracking-tight">ユーザー管理</h1>
         </div>
@@ -118,6 +179,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`/user/${user.id}`)}
+                          aria-label="詳細"
                           title="詳細"
                         >
                           <Eye className="h-4 w-4" />
@@ -126,6 +188,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`/user/${user.id}/edit`)}
+                          aria-label="編集"
                           title="編集"
                         >
                           <Pencil className="h-4 w-4" />

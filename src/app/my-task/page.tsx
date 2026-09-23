@@ -1,6 +1,8 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
 import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
@@ -23,6 +25,12 @@ import {
   type TaskStatus,
 } from '@/lib/constant/status';
 import { dateOnlyFromValue, dateOnlyToUtcStartIso, localDateOnly } from '@/lib/date';
+import {
+  isAuthError,
+  isForbiddenError,
+  isUnknownResult,
+  shouldRetryQuery,
+} from '@/lib/query-error';
 import { taskToFormData } from '@/lib/task-form';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
@@ -104,6 +112,7 @@ const TaskGroupSection = ({
 };
 
 export default function MyTasksPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TaskStatus | 'all'>('all');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,15 +120,33 @@ export default function MyTasksPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const { data: currentUser, isLoading: isCurrentUserLoading } = api.auth.getCurrentUser.useQuery();
-  const { data: projects } = api.project.getAll.useQuery();
-  const { data: tasks, isLoading } = api.task.getAll.useQuery(
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    error: currentUserQueryError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
+  const {
+    data: projects,
+    isLoading: isProjectsLoading,
+    isError: isProjectsError,
+    error: projectsQueryError,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(undefined, { retry: shouldRetryQuery });
+  const {
+    data: tasks,
+    isLoading,
+    isError: isTasksError,
+    error: tasksQueryError,
+    refetch: refetchTasks,
+  } = api.task.getAll.useQuery(
     {
       assigneeId: currentUser?.id,
       status: activeTab === 'all' ? undefined : activeTab,
       projectId: filterProject === 'all' ? undefined : filterProject,
     },
-    { enabled: !!currentUser },
+    { enabled: !!currentUser, retry: shouldRetryQuery },
   );
 
   // プロジェクトごとのログインユーザー自身のロールを引けるようにする
@@ -165,11 +192,34 @@ export default function MyTasksPage() {
       utils.task.getAll.invalidate();
       setDialogOpen(false);
     },
+    // 失敗時はダイアログを閉じず入力を残す。閉じてしまうと利用者は
+    // 成功したのか失敗したのか分からず、再入力を強いられる。
+    onError: (error) => {
+      // 応答そのものが届かなかった場合、サーバー側では処理が
+      // 成功している可能性がある。「失敗しました」と断定せず、
+      // 一覧を再取得して実際の結果を確認できるようにする。
+      if (isUnknownResult(error)) {
+        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
+        void utils.task.getAll.invalidate();
+        return;
+      }
+      toast.error(error.message || 'タスクの更新に失敗しました');
+    },
   });
 
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+    },
+    onError: (error) => {
+      if (isUnknownResult(error)) {
+        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
+        void utils.task.getAll.invalidate();
+        return;
+      }
+      toast.error(error.message || 'タスクの削除に失敗しました');
     },
   });
 
@@ -230,12 +280,88 @@ export default function MyTasksPage() {
     return { overdue, today, upcoming, noDueDate };
   }, [tasks]);
 
+  const queryErrors = [
+    isCurrentUserError ? currentUserQueryError : null,
+    isTasksError ? tasksQueryError : null,
+    isProjectsError ? projectsQueryError : null,
+  ];
+  const hasFetchError = isCurrentUserError || isTasksError || isProjectsError;
+  // React Query は再取得に失敗しても前回のデータを保持する。
+  // 失敗したクエリ自身に前回値が残っている時だけバナーに留め、
+  // 一度も取れていないクエリがある場合は全面エラーにする。
+  const hasData =
+    (!isCurrentUserError || currentUser != null) &&
+    (!isTasksError || tasks != null) &&
+    (!isProjectsError || projects != null);
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+
   return (
     <AppLayout>
-      {isCurrentUserLoading || isLoading ? (
+      {(isCurrentUserLoading || isProjectsLoading || isLoading) && !authFailed && !forbidden ? (
         <PageLoadingSpinner />
+      ) : authFailed || forbidden || (hasFetchError && !hasData) ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-base font-semibold text-foreground mb-2">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このデータを見る権限がありません'
+                : 'タスクを取得できませんでした'}
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '権限が必要です。管理者に確認してください。'
+                : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <button
+            type="button"
+            className="rounded-lg border border-border/50 bg-card px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/project');
+                return;
+              }
+              void refetchCurrentUser();
+              void refetchTasks();
+              void refetchProjects();
+            }}
+          >
+            {authFailed ? 'ログイン画面へ' : forbidden ? 'プロジェクト一覧へ' : '再読み込み'}
+          </button>
+        </div>
       ) : (
         <div className="flex flex-col gap-6">
+          {hasFetchError ? (
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+              <span>
+                {authFailed
+                  ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
+                  : '最新の情報を取得できませんでした。表示は前回取得時の内容です。'}
+              </span>
+              <button
+                type="button"
+                className="shrink-0 rounded-md border border-amber-400/60 px-3 py-1 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                onClick={() => {
+                  if (authFailed) {
+                    router.push('/login');
+                    return;
+                  }
+                  void refetchCurrentUser();
+                  void refetchTasks();
+                  void refetchProjects();
+                }}
+              >
+                {authFailed ? 'ログイン画面へ' : '再試行'}
+              </button>
+            </div>
+          ) : null}
           <h1 className="text-3xl font-bold tracking-tight">マイタスク</h1>
 
           <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -315,8 +441,8 @@ export default function MyTasksPage() {
           />
 
           {tasks && tasks.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>あなたに割り当てられたタスクはありません</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>条件に合うタスクはありません</p>
             </div>
           )}
 

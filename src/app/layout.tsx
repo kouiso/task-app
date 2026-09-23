@@ -25,7 +25,8 @@ const notoSansJP = Noto_Sans_JP({
 export const metadata: Metadata = {
   title: 'TaskApp - プロジェクト・タスク管理',
   description:
-    'チームで使えるプロジェクト・タスク管理アプリケーション。プロジェクト管理、タスクトラッキング、進捗レポート機能を提供します。',
+    'チームで使えるプロジェクト・タスク管理アプリケーション。' +
+    'プロジェクト管理、タスクトラッキング、進捗レポート機能を提供します。',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

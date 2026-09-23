@@ -69,6 +69,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Node.js を用意
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 依存をインストール
+        # rewrite_book_links が node -e で @textlint/markdown-to-ast を require するため、
+        # node_modules 無しだと MODULE_NOT_FOUND でこのジョブ自体が落ちる（PR#419で発覚）。
+        run: npm ci
+
       - name: 判定境界の退行テスト（44ケース）
         run: |
           make book-pdf-test | tee "$RUNNER_TEMP/selftest.log"

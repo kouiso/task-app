@@ -82,6 +82,17 @@ def check_missing_summary() -> tuple[int, int]:
     return failed, len(cases)
 
 
+HEAD = "| Step 2 | 作業 | 30分 |\n\n**合計時間**: 約30分です。\n"
+
+HEADING_CASES: list[tuple[str, str, object]] = [
+    ("見出しと表が合っていれば差なし", HEAD + "\n### Step 2: 作業する（30分）\n", []),
+    ("見出しだけ古ければ拾う", HEAD + "\n### Step 2: 作業する（8分）\n", [("2", 8, 30)]),
+    ("半角括弧の見出しも拾う", HEAD + "\n### Step 2: 作業する (8分)\n", [("2", 8, 30)]),
+    ("表に無い Step の見出しは拾う", HEAD + "\n### Step 9: 幽霊（5分）\n", [("9", 5, -1)]),
+    ("コードブロックの中の見出しは見ない", HEAD + "\n```md\n### Step 2: 作業する（8分）\n```\n", []),
+]
+
+
 def main() -> int:
     failed = 0
     for name, text, expected in CASES:
@@ -89,9 +100,14 @@ def main() -> int:
         if got != expected:
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
+    for name, text, expected in HEADING_CASES:
+        got = check_step_time.heading_mismatches(text)
+        if got != expected:
+            failed += 1
+            print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
     missing_failed, missing_total = check_missing_summary()
     failed += missing_failed
-    total = len(CASES) + missing_total
+    total = len(CASES) + len(HEADING_CASES) + missing_total
     if failed:
         print(f"❌ check_step_time 自己テスト {failed}/{total} 失敗")
         return 1

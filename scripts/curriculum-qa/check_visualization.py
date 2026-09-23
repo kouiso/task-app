@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """視覚化チェックスクリプト
-- 表が4つ以上あるか
+- 表のデータ行、または構造化したトラブル項目が4つ以上あるか
 - スクショ位置が3箇所以上あるか
 - 同一ファイル内で同じ画像を貼り回していないか
 - Mermaid図が適切か（該当Dayのみ）
@@ -42,6 +42,9 @@ SCREENSHOT_IMAGE_PATTERNS = (
     r'screenshot',
 )
 
+MIN_STRUCTURED_ITEMS = 4
+TROUBLESHOOTING_SECTION_HEADING = 'よくあるエラー'
+
 
 def normalize_image_target(target):
     """同じファイルを指すリンクを1つの綴りへ寄せる。
@@ -72,6 +75,59 @@ def find_duplicate_images(content):
     for path in collect_screenshot_images(content):
         counts[path] = counts.get(path, 0) + 1
     return sorted((path, n) for path, n in counts.items() if n > 1)
+
+
+def without_fenced_code(content):
+    """コード例の見出しやラベルを教材本文の構造として数えない。"""
+    return re.sub(r'(?ms)^(`{3,}|~{3,}).*?^\1\s*$', '', content)
+
+
+def troubleshooting_entries(content):
+    """「よくあるエラー」節の全幅項目数と構造エラーを返す。
+
+    表を使わない場合も、各項目を見出し・原因・解決方法に分ければ読み手は
+    エラーから対処へたどれる。ラベルの数だけでは空欄や別項目への混入を見逃すため、
+    各 H4 の中で原因と解決方法がこの順に1つずつあり、本文も空でないことを確かめる。
+    """
+    visible = without_fenced_code(content)
+    section_match = re.search(
+        rf'(?ms)^##\s+{re.escape(TROUBLESHOOTING_SECTION_HEADING)}\s*$\n(.*?)(?=^##\s|\Z)',
+        visible,
+    )
+    if not section_match:
+        return 0, []
+
+    section = section_match.group(1)
+    heading_matches = list(re.finditer(r'(?m)^####\s+(.+?)\s*$', section))
+    label_pattern = re.compile(r'(?m)^\*\*(原因|解決方法)\*\*\s*:\s*(.*)$')
+    errors = []
+    entry_spans = []
+
+    for heading in heading_matches:
+        next_heading = re.search(r'(?m)^#{1,4}\s+', section[heading.end():])
+        block_end = heading.end() + next_heading.start() if next_heading else len(section)
+        entry_spans.append((heading.end(), block_end))
+        block = section[heading.end():block_end]
+        labels = list(label_pattern.finditer(block))
+        name = heading.group(1)
+        if [match.group(1) for match in labels] != ['原因', '解決方法']:
+            errors.append(f'{name}: 原因と解決方法をこの順に1つずつ書いてください')
+            continue
+        for label_index, label in enumerate(labels):
+            value_end = labels[label_index + 1].start() if label_index + 1 < len(labels) else len(block)
+            value = label.group(2) + block[label.end():value_end]
+            # Markdown の装飾と句読点だけでは実体とみなさない。
+            if not re.search(r'[A-Za-z0-9\u3040-\u30ff\u3400-\u9fff]', value):
+                errors.append(f'{name}: {label.group(1)}が空です')
+
+    # H4 に属さないラベルも欠けた見出しとして扱う。単純な件数下限だけでは、
+    # 見出しを消して原因と解決方法だけ残した退行が通ってしまう。
+    for label in label_pattern.finditer(section):
+        if not any(start <= label.start() < end for start, end in entry_spans):
+            errors.append('見出しのない原因・解決方法があります')
+            break
+
+    return len(heading_matches), errors
 
 
 # 画面写真を3箇所そろえられん日と、その理由。
@@ -141,8 +197,20 @@ def check_visualization(filepath, fail_on_duplicate_image=True):
 
     errors = []
 
-    if table_count < 4:
-        errors.append(f"❌ 表が不足（{table_count}/4以上）")
+    structured_count, structured_errors = troubleshooting_entries(content)
+    print(f"全幅トラブル項目: {structured_count}")
+
+    if structured_errors:
+        errors.extend(f"❌ 全幅トラブル項目の構造が不正: {error}" for error in structured_errors)
+
+    if table_count < MIN_STRUCTURED_ITEMS and structured_count < MIN_STRUCTURED_ITEMS:
+        errors.append(
+            f"❌ 表のデータ行または全幅トラブル項目が不足"
+            f"（表 {table_count} / 全幅 {structured_count}、{MIN_STRUCTURED_ITEMS}以上）"
+        )
+    elif table_count < MIN_STRUCTURED_ITEMS:
+        if not structured_errors:
+            print("✅ 全幅トラブル項目の構造OK")
     else:
         print("✅ 表の数OK")
 

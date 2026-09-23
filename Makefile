@@ -1,5 +1,10 @@
 .PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-test book-pdf-verify book-pdf-clean snapshot-verify snapshot-test
 
+# 商品PDFの章間リンクが指す配布先（PDF名→Drive URL）。リポジトリ管理下の
+# 正本を既定にして、CI や clone 直後でも make book-pdf がそのまま組めるようにする。
+# 環境変数で上書きすれば別の配布先JSONにも切り替えられる。
+export PDF_BOOK_LINK_MAP ?= scripts/pdf-book/pdf-link-map.json
+
 # ============================================
 # 写経ビルド検査（読者がその日まで写した手元を組み直す）
 # ============================================
@@ -38,16 +43,21 @@ ifndef FILE
 endif
 	@python3 scripts/pdf-book/build_pdf_book.py "$(FILE)"
 
-# 検査の判定境界を固定する退行テスト（PDF も poppler も要らない）
+# 検査とリンク変換の退行テスト（npm install済み。PDFとpopplerは不要）
 book-pdf-test:
+	@python3 -m unittest discover -s scripts/pdf-book -p test_book_links.py
 	@python3 scripts/pdf-book/test_check_pdf_book.py
 	@python3 scripts/pdf-book/test_check_page_layout.py
+	@python3 scripts/pdf-book/test_code_wrap.py
+	@python3 scripts/pdf-book/test_build_receipt.py
+	@python3 scripts/pdf-book/test_release_manifest.py
 
 # 出力が商品として出せる状態かを見る
-# 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）
+# 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）→ コードの写経安全性（長行の折り返しで文字が失われないか）
 book-pdf-verify: book-pdf-test
 	@python3 scripts/pdf-book/check_pdf_book.py
 	@python3 scripts/pdf-book/check_page_layout.py
+	@python3 scripts/pdf-book/verify_pdf_copy.py
 
 book-pdf-clean:
 	rm -rf dist/pdf/ dist/.pdf-book-build/

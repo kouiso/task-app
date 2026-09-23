@@ -219,8 +219,11 @@ export const reportRouter = createTRPCRouter({
       startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
 
       const where = {
+        status: TASK_STATUS.DONE,
         completedAt: { gte: startDate, lte: now },
         assigneeId: targetUserId,
+        // 担当者が退会したプロジェクトの情報を集計経由で見せないためです。
+        project: { members: { some: { userId: targetUserId } } },
       };
 
       const tasks = await prisma.task.findMany({

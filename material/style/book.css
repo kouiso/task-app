@@ -12,8 +12,8 @@
  *   - 目次       #toc / [role=doc-toc] に leader('.') と target-counter
  *   - コード折返し --vs--pre-white-space-on-print: pre-wrap / --vs--pre-word-break: break-all
  *
- * 使い方: -T を並べて渡す。@import でテーマを読むと解決されず、@page 定義ごと失われる。
- *   -T @vivliostyle/theme-techbook -T material/style/book.css -T <1冊分の生成CSS>
+ * HTML入力には生成した設定ファイルの theme 配列で、テーマ・本CSS・冊別CSSの順に渡す。
+ * HTMLを直接渡す -T 指定ではテーマが適用されないため、ビルダーが設定ファイルを生成する。
  *
  * 配色・級数の出典は Claude Design「教材 紙面デザイン 3案」の 2a（1b 可読性向上版）。
  */
@@ -44,6 +44,11 @@
      元の級数のまま取り残されて縦のリズムが崩れる。root ごと動かす。 */
   --vs-font-size-on-print: 12.75pt;
   --vs-line-height: 2.05;
+
+  /* URL脚注を本文と同じ行間にすると、脚注だけが次ページへ押し出される。
+     本文とは独立した級数と行間で、長いURLも読める大きさを保つ。 */
+  --vs-footnote--font-size: 10.5pt;
+  --vs-footnote--line-height: 1.6;
 
   /* 段落やリストの間隔は既定で calc(--vs-line-height * 1rem) になる。
      2a の 2.05 は「行間」の指定であって「段落の間隔」ではない。そのまま連動させると
@@ -124,14 +129,10 @@ h1 {
   padding-bottom: 0.4em;
 }
 
-/* 和文の行末を整える */
+/* 長いコードを次行へ送る際に、直前の和文の字間を引き伸ばさない。 */
 p {
+  text-align: start;
   text-wrap: pretty;
-}
-
-/* インラインコードは教材に12,595回出る最頻出の装飾要素 */
-:not(pre) > code {
-  border-radius: 2px;
 }
 
 /* JetBrains Mono は合字を持ち、`=>` を1グリフの `⇒` に合成して描く。教材は写経が
@@ -140,6 +141,11 @@ p {
 pre,
 code {
   font-variant-ligatures: none;
+}
+
+/* インラインコードは教材に12,595回出る最頻出の装飾要素 */
+:not(pre) > code {
+  border-radius: 2px;
 }
 
 /* 端切れ（行末に1〜3文字だけ残る折返し）を「折返し方の指定」で直そうとしても効かない。
@@ -336,4 +342,11 @@ figure img[src$=".png"] {
 
 #toc a::after {
   color: var(--book-muted);
+}
+
+/* 脚注番号の桁が表の狭い列で分断されないようにする。 */
+@media print {
+  :not(.footnote) > a[href^="http"]::after {
+    white-space: nowrap;
+  }
 }

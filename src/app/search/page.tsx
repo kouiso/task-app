@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { type KeyboardEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -27,6 +27,7 @@ import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { applySearchParamsToValues, buildSearchParamsFromValues } from '@/lib/search-filters';
 import { api } from '@/trpc/react';
 
@@ -135,7 +136,14 @@ function SearchPageContent() {
     },
     [myRoleByProject],
   );
-  const { data: searchResults, isLoading } = api.search.search.useQuery(
+  const {
+    data: searchResults,
+    isLoading,
+    isError: searchErrorPresent,
+    isFetching: searchFetching,
+    error: searchError,
+    refetch: refetchSearch,
+  } = api.search.search.useQuery(
     {
       keyword: searchValues.keyword || undefined,
       projectId: searchValues.projectId !== 'all' ? searchValues.projectId : undefined,
@@ -148,6 +156,7 @@ function SearchPageContent() {
     {
       enabled: shouldSearch,
       refetchOnWindowFocus: false,
+      retry: shouldRetryQuery,
     },
   );
 
@@ -240,6 +249,28 @@ function SearchPageContent() {
     router.push(`/project?projectId=${projectId}`);
   };
 
+  const authFailed = isAuthError(searchError);
+  const forbidden = isForbiddenError(searchError);
+  const protectedSearchError = searchErrorPresent && (authFailed || forbidden);
+
+  const handleSearchErrorAction = () => {
+    if (authFailed) {
+      router.push('/login');
+      return;
+    }
+    if (forbidden) {
+      handleClear();
+      return;
+    }
+    void refetchSearch();
+  };
+
+  const handleKeywordKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    setDebouncedKeyword(form.getValues('keyword'));
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -260,6 +291,7 @@ function SearchPageContent() {
                     placeholder="タスク名、説明で検索..."
                     className="pl-8"
                     {...form.register('keyword')}
+                    onKeyDown={handleKeywordKeyDown}
                   />
                 </div>
               </div>
@@ -379,8 +411,43 @@ function SearchPageContent() {
 
         {isLoading ? (
           <PageLoadingSpinner />
+        ) : shouldSearch && searchErrorPresent && (!searchResults || protectedSearchError) ? (
+          <div className="space-y-4 rounded-lg border border-destructive/40 p-6 text-center">
+            <p className="font-medium">
+              {authFailed
+                ? 'ログインの有効期限が切れました'
+                : forbidden
+                  ? 'この検索結果を見る権限がありません'
+                  : '検索に失敗しました'}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSearchErrorAction}
+              disabled={searchFetching}
+            >
+              {authFailed ? 'ログイン画面へ' : forbidden ? '検索条件をクリア' : '再試行'}
+            </Button>
+          </div>
         ) : shouldSearch && searchResults ? (
           <div className="space-y-6">
+            {searchErrorPresent ? (
+              <div
+                role="alert"
+                className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+              >
+                <span>最新の検索結果を取得できませんでした。前回取得時の内容です。</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void refetchSearch()}
+                  disabled={searchFetching}
+                >
+                  再試行
+                </Button>
+              </div>
+            ) : null}
             <h2 className="text-xl font-semibold flex items-center gap-2">
               検索結果: {searchResults.totalCount}件
               {searchResults.tasks.length > 0 && (

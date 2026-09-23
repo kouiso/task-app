@@ -11,6 +11,13 @@ Markdown のテキストだけを見ており、組版した結果は誰も見�
 判定は poppler（pdftotext / pdfinfo / pdffonts）だけで行う。追加の依存を増やすと、
 検査を動かすほうが面倒になって回されなくなる。
 
+見ないもの: 注釈リンクが Drive のどのファイルを指すか（配布先IDの照合は
+release_manifest.py の remote_check がやる）、本文の一字一句の再現性
+（長いコード行の折り返し破壊だけ verify_pdf_copy.py が見る）、
+画像そのものの見た目（check_page_layout.py は座標と比率だけ見る）。
+また冊数は「見つかった dayNN の範囲内の抜け」しか見ない。先頭や末尾の
+まるごと欠落は release_manifest.py の verify_pdf_inventory 側の責務。
+
 `material-gate.yml` の Gate 4 には**入れない**。この検査は先に PDF を組む必要があり、
 Chromium と10分前後のビルド時間を要求する。教材の文章を1行直すたびにそれを回すのは
 割に合わない。CI に載せるかどうかは別途判断する（だからこのファイルは
@@ -24,6 +31,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -334,9 +342,28 @@ def read_fonts(pdf: Path) -> list[tuple[str, str, str]]:
     return parse_font_table(run_tool(["pdffonts", str(pdf)]))
 
 
+def find_link_problems(output: str) -> list[str]:
+    """pdfinfo -url の注釈から、ビルド機械にしかないリンクを見つける。"""
+    problems: list[str] = []
+    for line in output.splitlines():
+        match = re.match(r"\s*(\d+)\s+Annotation\s+(\S+)", line)
+        if not match:
+            continue
+        page, url = match.groups()
+        parsed = urlsplit(url)
+        path = unquote(parsed.path)
+        if ('/vivliostyle/' in path
+                or (parsed.hostname in {'localhost', '127.0.0.1', '::1'}
+                    and (parsed.port == 13000 or path.lower().endswith('.md')))
+                or (not parsed.scheme and path.lower().endswith('.md'))):
+            problems.append(f'p{page}: 配布先で開けないリンク: {url}')
+    return sorted(set(problems))
+
+
 def check_one(pdf: Path) -> list[str]:
     """1冊を見て、見つかった問題を並べる。"""
     problems: list[str] = []
+    problems += find_link_problems(run_tool(['pdfinfo', '-url', str(pdf)]))
     info = read_info(pdf)
     total = int(info.get("Pages", "0"))
     if total == 0:
@@ -401,6 +428,17 @@ def main(argv: list[str]) -> int:
         return 2
 
     problems: list[str] = []
+
+    # dayNN の内側の抜けを見る。glob で見つかった分しか検査しないので、
+    # day07 だけ消えても今までは静かに緑だった。両端の欠落はここでは
+    # 見つけられない（冊数の保証は release_manifest.py の側でやる）。
+    day_numbers = {
+        int(m.group(1)) for p in pdfs
+        if (m := re.match(r"day(\d{2})_", p.name))
+    }
+    if day_numbers:
+        for d in sorted(set(range(min(day_numbers), max(day_numbers) + 1)) - day_numbers):
+            problems.append(f"day{d:02d} の PDF がありません")
     for pdf in pdfs:
         try:
             problems += check_one(pdf)

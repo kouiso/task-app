@@ -240,6 +240,7 @@ export const projectRouter = createTRPCRouter({
       updateData.color = data.color;
     }
     if (data.isArchived !== undefined) {
+      assertMemberPermission(project.members, 'canArchive');
       updateData.isArchived = data.isArchived;
     }
     if (data.startDate !== undefined) {

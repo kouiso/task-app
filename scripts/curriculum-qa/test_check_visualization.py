@@ -5,7 +5,7 @@
 「正規表現が日本語では成立せず一度も検出していなかった」が起きたのと同じ穴が
 ここにも空いている。中核は次の3つで、どれも黙って空振りしうる。
 
-  1. 表の数（3本以上のパイプを含む行を数え、'---' を含む行は除く / 4以上）
+  1. 表のデータ行、または見出し・原因・解決方法がそろった全幅トラブル項目（4以上）
   2. スクショ位置（5パターンのどれかに当たる行を数える / 3以上）
   3. Mermaid 図（Day 4,7,9,13,16,21,27 だけ必須）
   4. 同一ファイル内の画像重複（既定は FAIL、フラグ/環境変数で WARNING へ落とせる）
@@ -35,6 +35,7 @@ from check_visualization import (  # noqa: E402
     WARN_ON_DUPLICATE_IMAGE_ENV,
     check_visualization,
     duplicate_image_is_fatal,
+    troubleshooting_entries,
 )
 
 REQUIRED_MERMAID_DAYS = {4, 7, 9, 13, 16, 21, 27}
@@ -54,6 +55,22 @@ def camera_lines(count: int) -> str:
 
 
 BASE = table_rows(4) + camera_lines(3)
+
+
+def troubleshooting_entry(
+    number: int,
+    cause: str = '原因があります。',
+    solution: str = '設定を確認します。',
+) -> str:
+    return (
+        f'#### エラー{number}\n\n'
+        f'**原因**: {cause}\n\n'
+        f'**解決方法**: {solution}\n\n'
+    )
+
+
+def troubleshooting_section(entries: str) -> str:
+    return f'## よくあるエラー\n\n### Day 01-02: 環境構築\n\n{entries}\n## 次の節\n\n'
 
 
 def make_tempdir() -> str:
@@ -369,6 +386,110 @@ DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]
 ]
 
 
+# 表を全幅項目へ置き換えた付録も、見出し・原因・解決方法の実体を検査して通す。
+# (テスト名, 本文, 期待終了コード, 期待項目数, 構造エラーの有無)
+STRUCTURED_CASES: list[tuple[str, str, int, int, bool]] = [
+    (
+        '全幅トラブル項目が4件そろえば表なしで通る',
+        troubleshooting_section(''.join(troubleshooting_entry(i) for i in range(4)))
+        + camera_lines(3),
+        0,
+        4,
+        False,
+    ),
+    (
+        '全幅トラブル項目が3件だと落ちる',
+        troubleshooting_section(''.join(troubleshooting_entry(i) for i in range(3)))
+        + camera_lines(3),
+        1,
+        3,
+        False,
+    ),
+    (
+        '原因がない項目を混ぜると件数を満たしても落ちる',
+        troubleshooting_section(
+            ''.join(troubleshooting_entry(i) for i in range(4))
+            + '#### 原因なし\n\n**解決方法**: 設定を確認します。\n'
+        ) + camera_lines(3),
+        1,
+        5,
+        True,
+    ),
+    (
+        '解決方法がない項目を混ぜると件数を満たしても落ちる',
+        troubleshooting_section(
+            ''.join(troubleshooting_entry(i) for i in range(4))
+            + '#### 解決方法なし\n\n**原因**: 原因があります。\n'
+        ) + camera_lines(3),
+        1,
+        5,
+        True,
+    ),
+    (
+        '原因のラベルだけでは実体とみなさない',
+        troubleshooting_section(
+            ''.join(troubleshooting_entry(i) for i in range(4))
+            + '#### 原因が空\n\n**原因**:\n\n**解決方法**: 設定を確認します。\n'
+        ) + camera_lines(3),
+        1,
+        5,
+        True,
+    ),
+    (
+        '解決方法のラベルだけでは実体とみなさない',
+        troubleshooting_section(
+            ''.join(troubleshooting_entry(i) for i in range(4))
+            + '#### 解決方法が空\n\n**原因**: 原因があります。\n\n**解決方法**:\n'
+        ) + camera_lines(3),
+        1,
+        5,
+        True,
+    ),
+    (
+        '解決方法は次の段落に実体があれば通る',
+        troubleshooting_section(
+            ''.join(troubleshooting_entry(i) for i in range(3))
+            + '#### 複数手順\n\n**原因**: 原因があります。\n\n'
+            + '**解決方法**:\n\n1）設定を確認します。\n\n2）再実行します。\n'
+        ) + camera_lines(3),
+        0,
+        4,
+        False,
+    ),
+    (
+        '見出しのない原因と解決方法を混ぜると落ちる',
+        troubleshooting_section(
+            '**原因**: 見出しがありません。\n\n**解決方法**: 設定を確認します。\n\n'
+            + ''.join(troubleshooting_entry(i) for i in range(4))
+        ) + camera_lines(3),
+        1,
+        4,
+        True,
+    ),
+    (
+        'コードフェンス内の見本は全幅項目に数えない',
+        troubleshooting_section(
+            ''.join(troubleshooting_entry(i) for i in range(3))
+            + '```markdown\n#### 偽の項目\n**原因**: 見本です。\n**解決方法**: 見本です。\n```\n'
+        ) + camera_lines(3),
+        1,
+        3,
+        False,
+    ),
+    (
+        '表の行数を満たしても壊れた全幅項目は通さない',
+        table_rows(4)
+        + troubleshooting_section(
+            '#### 原因なし\n\n**解決方法**: 設定を確認します。\n'
+        )
+        + camera_lines(3),
+        1,
+        1,
+        True,
+    ),
+]
+
+
 def default_is_fatal() -> bool:
     """本体の既定が「重複は FAIL」のままかを見る。
 
@@ -483,6 +604,24 @@ def main() -> int:
                 f'重複{expected_dup} / 実際 exit={code} {counts} 重複{duplicates}'
             )
 
+    for name, content, expected_code, expected_count, expect_errors in STRUCTURED_CASES:
+        code, counts, duplicates = run_checker('appendix_troubleshooting.md', content)
+        count, errors = troubleshooting_entries(content)
+        expected_table_count = 4 if content.startswith(TABLE_SEPARATOR) else 0
+        if (
+            code != expected_code
+            or counts != (expected_table_count, 3, 0)
+            or duplicates != 0
+            or count != expected_count
+            or bool(errors) != expect_errors
+        ):
+            failed += 1
+            print(
+                f'  ❌ {name}: 期待 exit={expected_code} 項目={expected_count} '
+                f'構造エラー={expect_errors} / 実際 exit={code} counts={counts} '
+                f'重複={duplicates} 項目={count} 構造エラー={errors}'
+            )
+
     if not default_is_fatal():
         failed += 1
         print('  ❌ 重複判定の既定が FAIL でない、または警告へ落とす切り替えが壊れています')
@@ -497,7 +636,7 @@ def main() -> int:
         failed += 1
         print(f'  {message}')
 
-    total = len(CASES) + len(DUPLICATE_CASES) + 3
+    total = len(CASES) + len(DUPLICATE_CASES) + len(STRUCTURED_CASES) + 3
     if failed:
         print(f'❌ check_visualization 自己テスト {failed}/{total} 失敗')
         return 1
