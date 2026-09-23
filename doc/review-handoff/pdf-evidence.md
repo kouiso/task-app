@@ -18,11 +18,14 @@ Claudeの別検査はトークン1,203件、分断0件です。
 
 ```sh
 /usr/bin/python3 -m unittest discover -s doc/review-handoff -p test_pdf_evidence.py
-/usr/bin/python3 doc/review-handoff/check_pdf_evidence.py --pdftotext /opt/homebrew/bin/pdftotext --report doc/review-handoff/pdf-evidence-round-3.json
+/usr/bin/python3 doc/review-handoff/check_pdf_evidence.py --pdftotext /opt/homebrew/bin/pdftotext \
+  --report dist/review-round-3/pdf-evidence-full.json \
+  --summary doc/review-handoff/pdf-evidence-round-3.json
 ```
 
 このMacではHomebrew Pythonのpyexpat読み込みに失敗しました。
-上記のシステムPythonでは28テストと36冊の実検査が成功しています。
+上記のシステムPythonで単体テストと36冊の実検査が成功しています（単体テストは2026-09-24時点で38件）。
+全件の観測は約5MBあるため `dist/` に置き、`doc/` には要約だけを残します。
 ほかの環境では、XMLを読めるPython 3とPopplerのpdftotextを指定してください。
 
 ## 検査内容

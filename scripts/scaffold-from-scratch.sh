@@ -645,6 +645,7 @@ setup_database() {
   app_db_port="$(node "$database_guard" port db)"
   if ! compose up -d db; then
     print_error "アプリ用 DB の起動に失敗しました。Docker の状態と ${app_db_port} 番ポートの競合を確認してください。"
+    print_error "ポートが競合している場合は、付録「トラブルシューティング」の「別フォルダの DB と衝突した場合」の手順で使う番号を変えてください。"
     exit 1
   fi
 

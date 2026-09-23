@@ -58,6 +58,9 @@ PARSE_LANGS = JS_LANGS | MARKUP_LANGS | STRICT_LANGS
 # `return; expr` に、`throw\nx` は構文エラー、`break\nlabel` はラベル喪失
 # になる。これらの直後の空白位置では折れない（JS/TS のコード領域のみ）
 ASI_KEYWORDS = {"return", "throw", "break", "continue", "yield", "async"}
+# 直後の `<` が型引数やなく式（JSX）の開始になるキーワード。
+# _js_regex_positions が正規表現リテラルの開始判定に使うものと同じ集合
+EXPRESSION_KEYWORDS = {"return", "throw", "case", "yield", "await"}
 
 # 言語ごとの行コメント・ブロックコメント構文
 SLASH_COMMENT_LANGS = JS_LANGS | {"prisma", "java", "go", "rust", "csharp"}
@@ -177,6 +180,9 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
     str_tol = False
     in_tag = False
     prev_sig = ""
+    # 直前の識別子。return <p> の `<` を JSX 開始と見分けるために持つ
+    prev_word = ""
+    prev_was_word_char = False
     prev_atom_ch = ""
     comment_line = False
     comment_block = False
@@ -292,7 +298,9 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
                         # 識別子直後の `<T>` は型引数でありJSXタグではない。
                         # JSX開始になり得る式境界の `<` だけをタグとして追う。
                         if ch == "<" and (
-                            not prev_sig or prev_sig not in ALNUM + "_$)]'\"`"
+                            not prev_sig
+                            or prev_sig not in ALNUM + "_$)]'\"`"
+                            or prev_word in EXPRESSION_KEYWORDS
                         ):
                             in_tag = True
                             tag_buffer = "<"
@@ -342,6 +350,11 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
                     states.append("tolerant" if str_tol else "strict")
             if not ch.isspace():
                 prev_sig = ch
+            if ch in ALNUM or ch in "_$":
+                prev_word = prev_word + ch if prev_was_word_char else ch
+            elif not ch.isspace():
+                prev_word = ""
+            prev_was_word_char = ch in ALNUM or ch in "_$"
             previous_literal_char_was_escaped = (
                 was_escaped if mode == "tpl" else False
             )
