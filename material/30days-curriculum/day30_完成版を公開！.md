@@ -52,9 +52,10 @@ flowchart TD
 
 > **ローカル DB と本番 DB の違い**:
 > Docker の PostgreSQL はローカル開発専用です。
-> 本番では Neon や Supabase（PostgreSQL をクラウド上で提供してくれるサービス。読み方: ネオン、スパベース）などの
-> マネージド DB を、Vercel の Marketplace 連携から追加します。連携すると本番 DB の接続文字列が
-> `DATABASE_URL` として Vercel に自動で設定されます。
+> 本番では Neon（ネオン。PostgreSQL をクラウド上で提供するサービス）などの
+> マネージド DB を使います。Vercel Marketplace から Neon を連携すると、本番 DB の
+> 接続文字列が `DATABASE_URL` として自動で設定されます。連携時に変数名の接頭辞を追加した場合や、
+> Supabase などの別サービスを使う場合は、発行された接続文字列をこのアプリの `DATABASE_URL` に設定します。
 
 ### 新しく学ぶ概念
 
@@ -102,14 +103,11 @@ flowchart TD
 > 手動設定は不要です。
 >
 > 本番用の `DATABASE_URL` はクラウド DB
-> サービスで用意します。Vercel なら管理画面で
-> 対象プロジェクトを開きます。Storage タブから
-> Postgres データベースを作成すると接続文字列が
-> 発行されます。この文字列は環境変数にも自動で
-> 追加されます。Supabase など外部サービスで作る
-> 場合は発行された接続文字列をこの `DATABASE_URL`
-> に設定します。Day 04 の初回デプロイ時に設定済み
-> ならその接続文字列をそのまま使います。
+> サービスで用意します。Vercel Marketplace で Neon を選び、
+> データベースを対象プロジェクトに接続すると `DATABASE_URL` が自動で追加されます。
+> Supabase などの別サービスで作る場合は、発行された接続文字列を
+> このアプリ用の `DATABASE_URL` に設定します。Day 04 の初回デプロイ時に
+> 設定済みなら、その接続文字列をそのまま使います。
 >
 > 環境変数はまず公開先の Production に登録します。
 > ブランチの Preview デプロイも使う場合は Preview
@@ -253,11 +251,11 @@ npm run db:push
 ```
 
 **確認ポイント**:
-- `docker compose ps` で db が Running (healthy)
+- `docker compose ps` の db の STATUS に `(healthy)` が表示された
 - `npm run db:push` が成功した
 
 確認メモ: `docker compose ps` の `db` 行で
-`running (healthy)` と `25532->5432/tcp` が見えればOKです。
+STATUS の `(healthy)` と PORTS の `25532->5432/tcp` が見えればOKです。
 > `npm run db:push` はローカル確認用です。
 > 本番では `prisma migrate deploy` を使うのが
 > 一般的です。ただしこの30日教材では migration
@@ -311,7 +309,7 @@ npm run db:push
           { key: 'X-DNS-Prefetch-Control', value: 'off' },
 ```
 
-`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`Permissions-Policy` はカメラ・マイク・位置情報と、閲覧履歴から興味を推定する `browsing-topics` を一切使わないと宣言するものです。このアプリはどれも使わないので閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` はリンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
+`Strict-Transport-Security` は「次からは必ず暗号化した通信で来てください」という指示です。`max-age` は覚えておく秒数で、63072000 は2年ぶんにあたります。`includeSubDomains` はそのホストより下のサブドメインにも同じ指示を適用します。別の `*.vercel.app` にまで広がる指定ではありません。`preload` は HSTS プリロード一覧へ登録するときの必要条件です。この文字をヘッダーに書くだけで一覧へ登録されるわけではありません。今回の `vercel.app` の URL では、まず `max-age` によるそのホストの HTTPS 固定が効きます。`Permissions-Policy` はカメラ・マイク・位置情報と、閲覧履歴から興味を推定する `browsing-topics` を一切使わないと宣言するものです。このアプリはどれも使わないので閉じておけば万一の乗っ取りでも悪用されません。`X-DNS-Prefetch-Control` はリンク先の住所をあらかじめ引いておく動きを止めます。ここでいう住所引きは DNS（ドメイン名から通信先の番号を調べる仕組み）のことです。
 
 **確認ポイント**:
 - `next.config.ts` に `async headers()` を追加した
@@ -396,6 +394,10 @@ Day 04 で Vercel 連携済みの場合は
 |------|------|
 | Vercel アカウント | [vercel.com](https://vercel.com) で GitHub 登録 |
 | プロジェクト Import | 「Add New → Project」→ リポジトリ選択 |
+
+Vercel の Settings → Environments で Production を開きます。Branch Tracking に表示される本番用のブランチ名を確認してください。
+
+Production の環境変数が使われるのは Production Branch のデプロイです。現在のブランチが異なると Preview デプロイになり、Production だけに登録した値は読み込まれません。Step 3 でコミットしたブランチ名と、Vercel の Production Branch が一致していることを確認してください。
 
 **Vercel で環境変数を設定**:
 
@@ -944,6 +946,7 @@ App Router では Server Component を標準にして
 
 - [ ] 環境変数を Vercel に設定した
 - [ ] Docker で DB を起動できた
+- [ ] セキュリティヘッダーを追加して応答で確認した
 - [ ] Git にプッシュした
 - [ ] Vercel にデプロイできた
 - [ ] 本番環境で全機能が動作した

@@ -23,6 +23,7 @@ REQUIRED_FILES = (
     ".node-version",
     "doc/SUPPORTED_ENVIRONMENTS.md",
     "scripts/scaffold-from-scratch.sh",
+    "scripts/verify-scaffold-database.cjs",
 )
 SUPPORT_DIRECTORIES = (
     "_app-api-trpc",

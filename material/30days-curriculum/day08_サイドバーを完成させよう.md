@@ -1393,7 +1393,7 @@ export default function DashboardPage() {
 | `Cannot find module '@/component/ui/alert-dialog'` | UI コンポーネント未配置 | `src/component/ui/alert-dialog.tsx` が存在するか確認 |
 | サイドバーが表示されない | `dashboard/page.tsx` を `AppLayout` で囲んでいない | Step 4 の import と return を確認 |
 | ログイン後に白い画面 | `AppLayout` の `if (!session?.user) { return null; }` に入ったまま。セッションが取れていない | Step 3 の `getSession` の呼び出しと、ログインが済んでいるかを確認する |
-| `useQuery` でエラー | tRPC サーバー側が動いていない | Day 07 の `src/server/api/root.ts` が存在するか確認 |
+| `useQuery` でエラー | `auth` ルーターの登録、tRPC の Route Handler、または開発サーバーでエラーが発生している | Day 07 の Step 4 で `root.ts` の `auth: authRouter` と `src/app/api/trpc/[trpc]/route.ts` を確認する。両方が合っていれば、`npm run dev` のターミナルで最初のエラーを確認する |
 | ログアウトしてもリダイレクトされない | `onSuccess` 内の `router.push('/login')` の書き漏れ | `onSuccess` 内に `router.push('/login'); router.refresh();` の2行があるか確認する。`refresh()` だけを忘れた場合は移動はするのに古いユーザー名が残る |
 
 ## 今日学んだ用語

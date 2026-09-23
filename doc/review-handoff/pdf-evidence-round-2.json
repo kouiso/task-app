@@ -1,0 +1,1921 @@
+{
+  "schema_version": 1,
+  "scope": "bound-inline-integrity-and-column-measurements-not-full-visual-audit",
+  "status": "incomplete_or_failed",
+  "expected_books": 36,
+  "available_pdfs": 36,
+  "passed_books": 0,
+  "missing_pdfs": [],
+  "unexpected_pdfs": [],
+  "issues": [],
+  "books": [
+    {
+      "name": "00-1_学びのロードマップ.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/00-1_学びのロードマップ.md",
+          "sha256": "6dab6a2adbd77539590cd3d05233b751e18cdd2bd0dd5cb2b0a5898d52a05569"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/00-1_学びのロードマップ.pdf",
+          "sha256": "5d44ccfc7629e97dcac09a6108021ef1b2732e9a803bf778b5d3488362ebb20a"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-1-240c1d.html",
+          "sha256": "c73ae577af4a7b4fabed23b4dec684f1a9a1210593948a16adaf99c73c497c62"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-1-240c1d.inline-manifest.json",
+          "sha256": "8d45951546f45cc5a0de80e59557de885aab9bbeda62585ca5032dfb6afb5c3f"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-1-240c1d.inline-layout.json",
+          "sha256": "f41653993d1da6a28005d185b94d0e70a60d3b49e8e8a9935bf5568f3710699f"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-1-240c1d.inline-pdf.json",
+          "sha256": "b1a3305ecff35f326de358d966eb2d3360b785a8dbe364cd530d52a80c920b21"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-1-240c1d.table-structure.json",
+          "sha256": "cf25cca538814dd96e0e059e89f77588962d90e4d1d950834a3d46dd8ae5e119"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-1-240c1d.css",
+          "sha256": "5d0f0ef55d227e2916073e025951fb3c26d608a9698bc03f4283567c0a602260"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-1-240c1d.config.cjs",
+          "sha256": "d4c33319b9359eb759111f85c134bc197a8050c1fcec357032f1bb5f6bf841d1"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "00_カリキュラム目次.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/00_カリキュラム目次.md",
+          "sha256": "05615427e2870027cba80d7697132e090cf82ac028de23892bcff5ece6a95057"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/00_カリキュラム目次.pdf",
+          "sha256": "84a183c928a405c6e42646f451861f7bbed0356d52a41dde4001fe169039a829"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-0d0b08.html",
+          "sha256": "119d88670114cd43b0ad281421d118952f08ee3bfeb2424fb923ce11f838be66"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-0d0b08.inline-manifest.json",
+          "sha256": "47c1bbaf14088806bd213bec43bf4eba2c510662d0574c2d3baec36c105c16ab"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-0d0b08.inline-layout.json",
+          "sha256": "3bdf8cc9c78fade9eddc6826047a18bd9f8961cc96403660085d60bd35a4187e"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-0d0b08.inline-pdf.json",
+          "sha256": "12724bb43d041b1d1c4d6cf1021c0efe0b039004a9c20cb960e27c2953b6b152"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-0d0b08.table-structure.json",
+          "sha256": "496a73b12cf174b3affc04e1bbb9222a5970f4f471a33efe6f8eb5292209fb98"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-0d0b08.css",
+          "sha256": "82004f52d2e1ebbe4fcb1b31652192dfc3d21ae9b4c9bbf28f92633c5de9cbcf"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/00-0d0b08.config.cjs",
+          "sha256": "9433a8ea18c50f78bd98f4a3831c0b97937f9e9f8c822d6ebfcb7e5690a38db5"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "appendix_トラブルシューティング.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_トラブルシューティング.md",
+          "sha256": "bcdf827fbd402963119573ab1859ac78f0df0739558a11ccf9677951dfd67755"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/appendix_トラブルシューティング.pdf",
+          "sha256": "e8ced4fa7b96838ab62a8dfd14e470fe193a7218119a0c75dda3772394e8f231"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-cdcdf0.html",
+          "sha256": "f28472dbc3406ffa6459dc9b1aa4b7b4b93c58911b61e835b96df99818c39188"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-cdcdf0.inline-manifest.json",
+          "sha256": "8e728ffc12d484b071ebdb23405a7a81a52f337802ab0f99fcc0b21c2b1a1a7b"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-cdcdf0.inline-layout.json",
+          "sha256": "3b46e5efeb3683f891c2609f9a419612c76d9921d6a44ece09dad439be4fe150"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-cdcdf0.inline-pdf.json",
+          "sha256": "a209a82d1abcaddb41aea27d0d9fa493644a794e1536becf48b7dd7a4f117fc1"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-cdcdf0.table-structure.json",
+          "sha256": "944a399dd6178ce817e110cfe699cc9fa53f403fa17415b95996cc26da0af71c"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-cdcdf0.css",
+          "sha256": "7b083dd054b01acbec4dc8dcfcab7b215588c5e7a6512d6688f586b1edd2984e"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-cdcdf0.config.cjs",
+          "sha256": "0822f2fad379183300517d13b5cdbbfcd7e9406d6485e9b85f3c79083f076dbc"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "appendix_参考資料.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_参考資料.md",
+          "sha256": "d79820c71899b8b71251c9ec75d246a05bdb9a24b0795e30a93ea4ef8fc1d68b"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/appendix_参考資料.pdf",
+          "sha256": "ae3b813df3af9b118e98fe031c378a1df2b033aca49d7458ae8e5fa3c953e238"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-7f35ce.html",
+          "sha256": "be538d99ec8d785259469950744d43c4cf451301095aac2bec53ba0b07ef083f"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-7f35ce.inline-manifest.json",
+          "sha256": "778b73943ecb9ed9c0755339bf7db3f62e2dda0e60bf93fa328cca7cca319748"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-7f35ce.inline-layout.json",
+          "sha256": "9c638f0ffccdec2fd094f906768056651cdafda8e7b73325f409b825d3b756f2"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-7f35ce.inline-pdf.json",
+          "sha256": "7d08c7be66df7aef549e1db2c7185ffc8a2ca9916d1a5e8b513e3edbf2c68180"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-7f35ce.table-structure.json",
+          "sha256": "9420e1a6bed27e528565b09fdbc0acd884e74df81870500a02f54c2e1ac27e3c"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-7f35ce.css",
+          "sha256": "53545f242030ca72aad160b64d5b91c0d3ab5e8903d5eca7e6a65687d1665a2f"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-7f35ce.config.cjs",
+          "sha256": "a87f5a73c43704ff248c066d8c5296fba9e84548395c6d91666c20bc1dd18f4d"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "appendix_次のステップ.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_次のステップ.md",
+          "sha256": "3753322925efd8f363b3b913100bf8144ccc1000f59479896e1e2086c28e6b1f"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/appendix_次のステップ.pdf",
+          "sha256": "6950c4332dde891cd2c00663716346015a55058e64308587f1e86b838d66136e"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-dd9273.html",
+          "sha256": "426326a9efb04a26c016369ead965bee7412d9432c411af5ddee07ec73a47685"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-dd9273.inline-manifest.json",
+          "sha256": "ef112ee06c2ace3afe5312c48195cdcf92a4f2bccae402d1cf2b5f8baf720d98"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-dd9273.inline-layout.json",
+          "sha256": "b550e90fcc555bb4a3ddecf0d03466d5f1dece5614620c23960ee7de24cd33a6"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-dd9273.inline-pdf.json",
+          "sha256": "627ddca73a24be252dc73606aefd47d3bd733a7a9a3ecc0975fa0c406964121f"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-dd9273.table-structure.json",
+          "sha256": "0e3d860f20a3f91309e63b6a8c4a6a13a9be8c0e61d48f0cb4bb293c2529db53"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-dd9273.css",
+          "sha256": "24253edb08ea67c4752266b32a97fa61f42dd4f0f9729ecf57449eaa9377ac7f"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-dd9273.config.cjs",
+          "sha256": "bd25c7ea0eee430a27494f2915690a13b32c5b797794f72acb26a8230dbfb11d"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "appendix_用語集.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/appendix_用語集.md",
+          "sha256": "436bf5ec0f0cf8da5c07ea6e313d4bec4ba957e866490c7d3c9ca47cb265a927"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/appendix_用語集.pdf",
+          "sha256": "c16d44ce7463b9e03dc913755250174695325426458c7ae299572c2b5b5431cf"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-938b1b.html",
+          "sha256": "00cfe20d07ba1c17fb9eb371432287660a4f4c5766b447bbf36f9a449918314a"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-938b1b.inline-manifest.json",
+          "sha256": "d54202b7f49072b31090feabb6949c450368dc569e30f388101acac9ba0c51ce"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-938b1b.inline-layout.json",
+          "sha256": "e5a2cde159375d7d2fc6ef3a9a6cbe05d9b018824f5b277c7ed14371b996e2f6"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-938b1b.inline-pdf.json",
+          "sha256": "9935ecd1a465a5405f377d702aa2539379e788e4b876c956663723463e4c2ba1"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-938b1b.table-structure.json",
+          "sha256": "5fc320052e24615a334c41896d7c5b0216eae480e6c3a1b195217f10c66516ff"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-938b1b.css",
+          "sha256": "5fc20db5c708043a0ce34c979cb1a0a138090367216efd549d963a572307432f"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/append-938b1b.config.cjs",
+          "sha256": "8bb0fdd0ab843bce54a8d4efade277961a53b9a7e7791c43928a44bbf1480b92"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md",
+          "sha256": "e155438d1a82921fa9fca7b345091efd9fb1fa7660dcf2e564854de2c51c6ca0"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+          "sha256": "701491e7f1df46505141fe8c41354b5bd46bbef8ca5ac234780a12d5e2f4e331"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day01-bf910a.html",
+          "sha256": "1a03a0493635094a6b89dd3ccc19fedd998abd58c19c70f4e517f870e226fc2f"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day01-bf910a.inline-manifest.json",
+          "sha256": "f84c2d0cfc61961e9f7bd23ba1366c8c785ac36bb4b71ef35105d662eb99df52"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day01-bf910a.inline-layout.json",
+          "sha256": "8ee2e2b678081ef210391c10934fb695c45aeb0e0eca088f94f741defd670a56"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day01-bf910a.inline-pdf.json",
+          "sha256": "df0efccb1bbc109a2fcd21da58d0f0754f6911f8f61d5613daa07b4f6b18b401"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day01-bf910a.table-structure.json",
+          "sha256": "ec8d4512b70af8619872b2565a24cc2c5177ee6a5413f5c401bb2c7faa4aba40"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day01-bf910a.css",
+          "sha256": "839e2da5213161aedbb6c8d10b926ad0c6db13aa7a67456ae0977849dd98a0de"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day01-bf910a.config.cjs",
+          "sha256": "e8d87135e539efd48cfac51c08479e0dbd0f56365072c4bce2fbad223764e229"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day02_ダッシュボードに自分だけのメッセージを追加しよう.md",
+          "sha256": "247a07cae32c9c864abcd5a12d19d2de59f05e6b0edbc1b9a18e6dcd38ed04d6"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
+          "sha256": "7ee29e33be88f53768d09cc10c93a2487c8e8d20fe949ae0dcc73b96ba4eb0db"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day02-af6ad2.html",
+          "sha256": "de158cb831e2ae2160e0fc7234494d1b7fe4a2fa1544cc073eaaf1d85c792331"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day02-af6ad2.inline-manifest.json",
+          "sha256": "c5e625799df8ba8f51180f3cdfdf9428e913469069b3104029043f2ec09f3a7c"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day02-af6ad2.inline-layout.json",
+          "sha256": "c1403ebea4d6b2e62063f8e7b418ab0b14663695d64402f2f83d6a0a85d81cfa"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day02-af6ad2.inline-pdf.json",
+          "sha256": "6b4026bc4795ce389904f0c2671daa5655de078669dcc4de71c2a0baec82175f"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day02-af6ad2.table-structure.json",
+          "sha256": "c00212b6af226742fa51d941f83c307811d5eca5f87fe24dad3a7aedc3d94fe8"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day02-af6ad2.css",
+          "sha256": "a96d8e9b50c075adb62e75c2580fabba2eba7c68f7d869f12cff0f153c839302"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day02-af6ad2.config.cjs",
+          "sha256": "f2cb41589f711d2b6b154b8ea97e473ac061f49fa88428fefca4f2ed02e7021b"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day03_GitHubに保存する.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day03_GitHubに保存する.md",
+          "sha256": "6d07164459af77a105fca82af7c081d796988a2cca59cb4997acd1d5ce51f6f2"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day03_GitHubに保存する.pdf",
+          "sha256": "8e8bff72342ff9787fe33e161da6db17e36c413c608017cce236a1b149be4014"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day03-43d581.html",
+          "sha256": "994053f713c841e31ad7e337ac2ca0fa578668052c8a2f75a271a4475c80a55e"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day03-43d581.inline-manifest.json",
+          "sha256": "4031cbb91e1d73b8c034168f01c4664e21ae816a7c9cf6b2059b3e935b7fc871"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day03-43d581.inline-layout.json",
+          "sha256": "afca4a9594c78c66523031e6cac426081622aa6c745ebcbf6e212819bb10cfd2"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day03-43d581.inline-pdf.json",
+          "sha256": "b3249998e2c6c20e243eac21afc5550d61c29130c64b8c4da0b9c0f2f163e466"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day03-43d581.table-structure.json",
+          "sha256": "5a7676537619e6e5ae566f6c28a6cfaa0e9310b112ecc6dc7a49d9844bdc70f0"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day03-43d581.css",
+          "sha256": "df5594c39d8b904a7ac8277e78d780d54fa603420fd0bae65ba3afa7194b23a9"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day03-43d581.config.cjs",
+          "sha256": "ee675782cc0cd29b87f2477b25a6b6398472f5c00a6333948cf4f26b45dc5cc5"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day04_ネットに公開.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day04_ネットに公開.md",
+          "sha256": "dc7614d414bd14fd62c4455d3383982c174bf9d9655f81ea803c3ec088fcf5a6"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day04_ネットに公開.pdf",
+          "sha256": "f414ea89837bb7a16060ce57cf9a1b4c99902e109d3f2c57a9212d7cc1329c57"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day04-0cf6a5.html",
+          "sha256": "1c8035fe019cd1eacbc66b6e6d675bd6f674bc7dadaac9a2c58c70b723cb6f69"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day04-0cf6a5.inline-manifest.json",
+          "sha256": "b5ab63dc987eb60d5f7e37bd4c55496dfaa8b2b99d5b68b5d6d57e0bd9f9bc8e"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day04-0cf6a5.inline-layout.json",
+          "sha256": "964708a4d7bae6be72b87f8ad20f5fc67464bc6e956fae8660d4e8e9e6bbe63b"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day04-0cf6a5.inline-pdf.json",
+          "sha256": "0a1bacb91da46a9e686546976f059e7a82eb3aa796805f2fcbda34ff8b81270f"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day04-0cf6a5.table-structure.json",
+          "sha256": "60ac10ec0d820028e042a927e612339f6f733ebc8ab03785cbbbf3f80cb1b107"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day04-0cf6a5.css",
+          "sha256": "2d90d7785e081eb74eb67546765b5b2f0500d14f068c856287723e694ae7abec"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day04-0cf6a5.config.cjs",
+          "sha256": "ccdfc8f0cf08300562cc5d34085c6d68ded45f26b7f7e4a86b85e11d908934be"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day05_ログイン画面のUI.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day05_ログイン画面のUI.md",
+          "sha256": "be0c608eba878a4a50d332a5e1f6757c4b3c09e9994753295cace2314e215565"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day05_ログイン画面のUI.pdf",
+          "sha256": "9cc0cb19dd630e409f5700913095b3771e48b38070c15614bb872809f0e09085"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day05-bd9c42.html",
+          "sha256": "c979998c3e2e12ee22c04625d43dd7608967ba39752306dfd3caca9d5a6ed0ce"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day05-bd9c42.inline-manifest.json",
+          "sha256": "e309e179913a0a003677952a2e550f28cf76ade85dc690b70eb2d4280ba6d73b"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day05-bd9c42.inline-layout.json",
+          "sha256": "b4c6c6faa494b118c27ddbc3a1aeafb1c23dcb2610d43ee515815d1c718594ff"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day05-bd9c42.inline-pdf.json",
+          "sha256": "1223ca29aecce03f83766453249cb1357c0d3a069184c256034e94b1c8eab12f"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day05-bd9c42.table-structure.json",
+          "sha256": "dda67c41a91a2a04bd72998a69871553f3bb8ac6a4dafa8df7f8fab77f7dc4ee"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day05-bd9c42.css",
+          "sha256": "1ba09194c2ba66c02cd1abcfe8965569e7676ac92ee2b45a45ed23db954aa342"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day05-bd9c42.config.cjs",
+          "sha256": "b6183058dc2cda19ebacb9613128a486d4cf4269b5686cf4ee3da33a0a4476b8"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day06_ユーザー登録画面.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day06_ユーザー登録画面.md",
+          "sha256": "4685d2e09e47d621514ba92a0088c2d5c9a6ccf1a09d18166618903dd2ae3bf0"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day06_ユーザー登録画面.pdf",
+          "sha256": "673add4d0e11147bf6875d0975e12187af4e2d082cc35abb0217536e33808de0"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day06-c425aa.html",
+          "sha256": "3730dea6e6f5b6d302d38efb7af1aef5c4f0f457b82b803aab9c67cf188b9b6b"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day06-c425aa.inline-manifest.json",
+          "sha256": "31b618fc1312a19cbf3222914738f2c2522a5d08a117c8a1d8c821dd07626fad"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day06-c425aa.inline-layout.json",
+          "sha256": "36ad5265393c3396c82761824062d9c04e4e449ccfb8ea2d3f91861f26354a0e"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day06-c425aa.inline-pdf.json",
+          "sha256": "e6e40a696149f175a566a34ba0f0294aa1092c2529f3fd2dc9547e52ebbeb0fa"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day06-c425aa.table-structure.json",
+          "sha256": "61a94fb50c9b3cb4d8ad10fbc7a58e5d08d3de0d57eab6914a94306fd2a244b0"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day06-c425aa.css",
+          "sha256": "e7cce694cb41f2b7b52912ef4fe88b7355ff69106af86514b893f8037aa6e9d9"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day06-c425aa.config.cjs",
+          "sha256": "9f22f597974b158a310eed4663cdcd6e87073ef0bb49dc08468991020901bd85"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day07_認証バックエンドを作ろう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day07_認証バックエンドを作ろう.md",
+          "sha256": "c685e5a763835cc2f05c9c4b7512667e06d5bb09176052627ad419329d7d1b47"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day07_認証バックエンドを作ろう.pdf",
+          "sha256": "83ce0c61823e139d3608b1e18bf39f79fb30e1c2f8f0033ed6cf9c57e6d34a42"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day07-8f4bcd.html",
+          "sha256": "caa49b2c2ba0e9afd7825c728000923e37030a3d023649ddf3f39d988d0433d5"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day07-8f4bcd.inline-manifest.json",
+          "sha256": "db4188223a07243711a3a4015c944ac9f49f069bd0d0f5f246d0d5b09fe198c5"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day07-8f4bcd.inline-layout.json",
+          "sha256": "4e1165d106a8958e743de029a7e00a4eee9564b9feb29b5ef56643f068345b6d"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day07-8f4bcd.inline-pdf.json",
+          "sha256": "e4d549ab03770cb703003898fb0f419a76c03453e974a70c80da82e253bed572"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day07-8f4bcd.table-structure.json",
+          "sha256": "2ac2f847c0a8419abc71bdc02ee32499c9e9a927a8344c0ab54bd972e8a5aa29"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day07-8f4bcd.css",
+          "sha256": "25fe7318714004bff4ff4c5643b742ad40a0aae81cf033fc3eb5f3c2a1ee95aa"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day07-8f4bcd.config.cjs",
+          "sha256": "0d0de0f2441c12f5c20364b2359f73b90863b2c47dab32b497b356fc468e9b73"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day08_サイドバーを完成させよう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day08_サイドバーを完成させよう.md",
+          "sha256": "6fe94971941d1d3d234a00115bb3b49399f1908a4f1dd5cd8b60c6f0d72b26d9"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day08_サイドバーを完成させよう.pdf",
+          "sha256": "32a9bd2a84c034f6fb3c81df614883072ffc6197fdfc639dde3daac4baf56472"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day08-d42e7e.html",
+          "sha256": "6b2bb7328a80931e23945ee3aab1e7279464184e1f3e99795a278a5a98098511"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day08-d42e7e.inline-manifest.json",
+          "sha256": "783002bd32fe61d8b0d6ab163ffe5db91293a585e2d94ce20a16c78e3e468a0b"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day08-d42e7e.inline-layout.json",
+          "sha256": "efa5fe338b06dca2af0a6fd980746ed41cfd0d51f95a2d5d736656b333036075"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day08-d42e7e.inline-pdf.json",
+          "sha256": "66060ad8bfb977dc4a2d2387bcbd75e6c8692764e2693dafa7b90d8bdf5431e7"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day08-d42e7e.table-structure.json",
+          "sha256": "b7a364fb1adbb62b83cec031487b9553aefc550a558e5d52473519b258ef70ae"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day08-d42e7e.css",
+          "sha256": "b1adb220aae8ff8b55fada8b3d9c5cfe1cb47467b6d6065770ee436abd600f9f"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day08-d42e7e.config.cjs",
+          "sha256": "7d237d329f363aa46f1ceff5b94a8bb6d739a38e65fb6896cc9cf0261fff30fe"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day09_プロジェクト一覧画面.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day09_プロジェクト一覧画面.md",
+          "sha256": "7d91e19486c487e9687062602fab1b579107b492151e0c593c521148713296ee"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day09_プロジェクト一覧画面.pdf",
+          "sha256": "401d21cfdf0fed3e056b55e3c5aefe6a042496d4ac20cd39ebb7e7f48df9c18e"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day09-d3dbb5.html",
+          "sha256": "fcc1f0bfd7a0b5933077a63e6efa3e7b563aa1c2dc4027f9ad8b78703b4ce6f5"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day09-d3dbb5.inline-manifest.json",
+          "sha256": "7fb72ba3c2712f2cf99dd959d2d930b94215082467eeff5e6addbc28c37ff0a0"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day09-d3dbb5.inline-layout.json",
+          "sha256": "0ee658a6a825360ca25c40cbb4b85dbbfd936b259b5d090e880c0df51f302bed"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day09-d3dbb5.inline-pdf.json",
+          "sha256": "3eb056eb15c45a56e39cf6079c8525604e0315c6e5fdd3d6c732bba1617e6e2a"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day09-d3dbb5.table-structure.json",
+          "sha256": "085d0de3522c9cb5bcf309ddc1b08bd46888a9c1feead572a945961d9e15074a"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day09-d3dbb5.css",
+          "sha256": "fc71cab395613ea78e6fe191fa6c655a0886462b572bc9d997cf57e882c1fb98"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day09-d3dbb5.config.cjs",
+          "sha256": "bc866da64e0d279b06dc72cdb6db7d3fe3a4dfb68fde87804158029842a83c95"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day10_プロジェクト新規作成.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day10_プロジェクト新規作成.md",
+          "sha256": "c0071eb25b98ff18ef550fef0fc5f89a1070442a90b80ca528b3ecc3d0a41573"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day10_プロジェクト新規作成.pdf",
+          "sha256": "2242d96e28b8924022415a8d248cf6a20740d774a885f2bc5b1139d39d239910"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day10-5fa125.html",
+          "sha256": "19eaf95d7414eeded983c7dc370510962cb1d1167bafdc7d252f0b8da4a10f53"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day10-5fa125.inline-manifest.json",
+          "sha256": "ecfc752d84cc2c66e9cd2c62507f081513ff14514482bb3d3b09c114c7b56896"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day10-5fa125.inline-layout.json",
+          "sha256": "470aa2f4d0db13a6e1674f63252982ad44ad2bb166797da895e1116813189614"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day10-5fa125.inline-pdf.json",
+          "sha256": "f8ca178363ec5e13664101b54bda467fe46c8826da6df701794cde62b33ca8f0"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day10-5fa125.table-structure.json",
+          "sha256": "1739788f14185bfdc211321a0c904c09610d5573b01825ea8362b2274e190d7e"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day10-5fa125.css",
+          "sha256": "0489a56f1ecb5b736e793748fac7ab2d677fc6f49be2fbcdb5c5434078610f0d"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day10-5fa125.config.cjs",
+          "sha256": "4eba783009ae69a80d1fc963e0bcf513d40785c1bc47b729f56515ded1c6ae60"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day11_プロジェクト編集・削除.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day11_プロジェクト編集・削除.md",
+          "sha256": "e307edc9ea9c1685eb36b0e949980ef74152f11d7b4f42a27c962841215be7f1"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day11_プロジェクト編集・削除.pdf",
+          "sha256": "470c9db525649f87b1d70bf29bd82470f061b2ade4b1ba336c0a0950eab576ef"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day11-58e2cb.html",
+          "sha256": "b997ce6c7b0e445710fceae1123c589ed0824720c803edd110b2afbbfece11dd"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day11-58e2cb.inline-manifest.json",
+          "sha256": "f2a04903afa8d17801b0b6c4bf1e1aae84f3898e9529dd082058c00cf4739981"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day11-58e2cb.inline-layout.json",
+          "sha256": "6d43226e2434641a695ec95c9f01608c62b65ff7c847fc285235e59a20ed4056"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day11-58e2cb.inline-pdf.json",
+          "sha256": "25198c391beea52cf121f85fb61d674e4881a2558288c2d4245daf2ff16eb264"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day11-58e2cb.table-structure.json",
+          "sha256": "7e532ebe001b14b0cf2349615dde50408e98ff40d46e5c9c9c9e874c654fd502"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day11-58e2cb.css",
+          "sha256": "a73fa1a648b66ebb6c936bf25db2b317f9eba967dd92fa4f3eb7946b536d20dd"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day11-58e2cb.config.cjs",
+          "sha256": "58ef2acd0ae2c7030010a641f5952b2af93e5c4f11f72e5b1f562de9e196c9ee"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day12_メンバー追加.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day12_メンバー追加.md",
+          "sha256": "968107fa0c2da3ff3461fa867a9e1875b794f0b84955cf323b5c5024ad7a2d79"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day12_メンバー追加.pdf",
+          "sha256": "e38bf985ed500a5d5e37c753d315f1b859503cdddd4185b8f6d1185bb738ac68"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day12-b65f21.html",
+          "sha256": "395efa5e3578e42b97582ee8bdfcd7bc50aa32e85b05ce0835e355db782a0540"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day12-b65f21.inline-manifest.json",
+          "sha256": "14c463376a52ac5316bf49264d6218590155a4dedc5a6b80df99da697bd6c35b"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day12-b65f21.inline-layout.json",
+          "sha256": "24afb8fe55c6ce2d15611b27841e83beb13db709a65a6e11e43088b59feca492"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day12-b65f21.inline-pdf.json",
+          "sha256": "cf5aae0ddd4bdeac7c0ac4d85cad7b01d39d062734eac8e68ace605139a165d3"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day12-b65f21.table-structure.json",
+          "sha256": "ea6eb27f2dac227cc3e7de7f47a5257fded31162951e7cb1453d25b7eaf4bc32"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day12-b65f21.css",
+          "sha256": "b93ac0b38210e47b29ca67917595b9dfdbc0ced541a7e9f65ea0fc42c63cf1d7"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day12-b65f21.config.cjs",
+          "sha256": "c1fd1b11fd8da4406d23f707b7264234b7d7736db2f1f37eabe4cfa363a81f32"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day13_タスク一覧画面.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day13_タスク一覧画面.md",
+          "sha256": "aea05d2ee1d8618aa7b7ff51b03b591117397adcce56a3573fe10cc8b033a612"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day13_タスク一覧画面.pdf",
+          "sha256": "72d13f1251993fcc073240a98497151027404fa0da19bd3453f4c18d8631a77e"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day13-a869aa.html",
+          "sha256": "9e8992c896ba031addd84840a2d3d8ea6f665362d57130c1427a7c4cd6f2c64d"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day13-a869aa.inline-manifest.json",
+          "sha256": "cf2096408a2c93be7fc8f348591812aa2c85b754c55154b1e74148da0e1ad992"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day13-a869aa.inline-layout.json",
+          "sha256": "f6dc61cb42f23c1ca964860280f5bd7c3bc47cdf495ac4e88a6ce572b2f603a4"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day13-a869aa.inline-pdf.json",
+          "sha256": "0d1631d7052632fb5af6618d23c781a4ade555ce7d297af59639aa3203f80086"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day13-a869aa.table-structure.json",
+          "sha256": "5a474e9ed537d8250898b566b9f37155912def34fa6a672c28735951b19e668b"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day13-a869aa.css",
+          "sha256": "01780e19814b2b39ad926729db05b7d817bd7aaa9f2801b567c2117d64f86288"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day13-a869aa.config.cjs",
+          "sha256": "ae72f03bb64c509652ec38ef257acb5c04520f0862f39aab00c4d1cc8be77809"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day14_タスク新規作成.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day14_タスク新規作成.md",
+          "sha256": "822e682f52b636a088756546ba330cce0c850c4582f2f83dcef2afa9cf0bec22"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day14_タスク新規作成.pdf",
+          "sha256": "6c340c7dfb42b31f4b0acaf72b1396f89b124b3b68ed7f85c7a2cd43538c27e3"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day14-82e9c8.html",
+          "sha256": "5cf66e20f72ff3e91aa85bac143b6fe51e7ebb8b283a5748cea6226ecb9c1974"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day14-82e9c8.inline-manifest.json",
+          "sha256": "2d1f1c1f418e1479683151dd733a4ff420999e75ba37409caa726ecff32ab08a"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day14-82e9c8.inline-layout.json",
+          "sha256": "0d6ef2d65c4ea1313a819966af0a4f31eea0a5f63bbc9385eae63ce4a6082539"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day14-82e9c8.inline-pdf.json",
+          "sha256": "e268fd7dc457b42909a40e8f1012aff95df613357509390e406c93e818e99e66"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day14-82e9c8.table-structure.json",
+          "sha256": "afe52486938e9d3cdb7a899063ffe90e8f0c94a95d9848c34e659120c3021243"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day14-82e9c8.css",
+          "sha256": "49d923e09575dbf01d70c3239d8254d483b8b6ec662dbaad958bbe2ee66995cf"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day14-82e9c8.config.cjs",
+          "sha256": "f23e0486b6da1c6d5a671d67c1d2b025ce814becf893e261049e27e1e3b86a84"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day15_タスク編集・削除.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day15_タスク編集・削除.md",
+          "sha256": "9b2e5181834ecf7664e98326099077d0b5f6c38c4a7034cc79d0bfa8efa410d8"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day15_タスク編集・削除.pdf",
+          "sha256": "4334fa665f84877c18e24b836a8571cbb641d2def8038b8587c1f21ca6aa0e5f"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day15-1b9352.html",
+          "sha256": "c45ef5f201175e811cc223fd0c99505b9c4157746710067cb75c75c276f64dda"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day15-1b9352.inline-manifest.json",
+          "sha256": "e265fe9a5b28285c68434e312f7af011c80ba935f44f7bb2f188ee2fcbe3da37"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day15-1b9352.inline-layout.json",
+          "sha256": "975405c75915082a071bd37bc3e9c8eb6b5506d6b5ac3f248f52c9e6df2dec01"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day15-1b9352.inline-pdf.json",
+          "sha256": "3a1e50ce820a9277fc144cfc14f925e506fe3986ec5ac7380d0c5793955bea32"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day15-1b9352.table-structure.json",
+          "sha256": "83ea2155a086ba0d6562741525ae1ab4290f6dc0fa6f03cd034d9ce40c566d4b"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day15-1b9352.css",
+          "sha256": "98c3dcb8f523b03db872a9d4c8539e4861b70cd482811f3c7b14645683391483"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day15-1b9352.config.cjs",
+          "sha256": "20d28a8f995d08cb9d11489b21c87b092039b22ec50c8c84c12221e90fcc9765"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day16_ステータス変更・時間記録.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day16_ステータス変更・時間記録.md",
+          "sha256": "d4a154c13a07ed0c949282e85cb7cb870808b4e2676ade6e9c5577ceaee12b14"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day16_ステータス変更・時間記録.pdf",
+          "sha256": "713805b23d14e8b1a40c971335ac171dbb8a5ab9bd81e8e927fd4e1cae50386a"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day16-80b2b4.html",
+          "sha256": "997e35bc8688bd08321e88b5b78c935b8c5e1f89bacf5445e5a820617bc22b12"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day16-80b2b4.inline-manifest.json",
+          "sha256": "c06f8580114c0321b62f0768b1d5293091e899213c8c507949974e1ab02680f6"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day16-80b2b4.inline-layout.json",
+          "sha256": "a4c273b5b2f82fbf72078c174af165f4b0684bd166f576b0e6e40b2fceb1a308"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day16-80b2b4.inline-pdf.json",
+          "sha256": "b3435432d8df368c7fe6999d22d0d9e3f30ec459f5bd541065b2bfa8f3af223d"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day16-80b2b4.table-structure.json",
+          "sha256": "d59f11e5e618a3151f423d07e3bccae1433e659a4e67ca5857fdaaff501fb37b"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day16-80b2b4.css",
+          "sha256": "7bb1bd5cc2866fdc7c460ecd25898b1afb13a76fe3986e3da103feeae04760aa"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day16-80b2b4.config.cjs",
+          "sha256": "3bc0ca34c0e6ce397a29148f925fe9b4a185408675eef1d5a4fdaf8e738c893d"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day17_自分のタスクページ.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day17_自分のタスクページ.md",
+          "sha256": "1fdde4c3588d6afdde20290a3f6af453a3e5cd85258f806a06c2fdcfe2107a4e"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day17_自分のタスクページ.pdf",
+          "sha256": "bfe0eef500583a5c0da0213325cdf23bdfd8a688a62258a4e4508856a4f4d809"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day17-00a436.html",
+          "sha256": "d93b082a0392a46736b2a0d0bf7e67b4521a48fc6274684ee0bcc69175f43853"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day17-00a436.inline-manifest.json",
+          "sha256": "51ff00899188450d4abb9b20306e8e8c8fcefef6754b6aaae7fd4890e96adad7"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day17-00a436.inline-layout.json",
+          "sha256": "ff8537c7aff12c4675c5066bdda492c1c1a8f3356e10a2bf5f6c3366434e2b69"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day17-00a436.inline-pdf.json",
+          "sha256": "f49141b773ab1226574d50e942d3863166fd12153f06e271a4707eeebc540341"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day17-00a436.table-structure.json",
+          "sha256": "b63e011d41cc2a1f39311e7122f57ab6be475d7b2a04936419f409ea8b834d22"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day17-00a436.css",
+          "sha256": "3ba5b40f9b1d83b53448e08108fbbaf645ace3b71620bcbcdb5b425e388fc95d"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day17-00a436.config.cjs",
+          "sha256": "15e0e4f3b92f778390d00bfa841411e8b0219eacedbd3a1a79055b35627f7e7e"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day18_コメント投稿.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day18_コメント投稿.md",
+          "sha256": "1990c81f199b8f4d4a01045fc622439303562e278f40901a5970093f47952a2d"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day18_コメント投稿.pdf",
+          "sha256": "1785f0b3b2eaf203d3bb65e50c75d2042b6f798640048f7bc2a587fb26ab84e4"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day18-5a6a02.html",
+          "sha256": "cf7d92f9cc5e73829236ca028e5825627b1ead09b86fd7bff10e187375b961ef"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day18-5a6a02.inline-manifest.json",
+          "sha256": "e0a8ad4f8d76ac6bb3e037b76ecd0ebe7d80a4ec60a7f312eb3093a0d2b65e0f"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day18-5a6a02.inline-layout.json",
+          "sha256": "1b8dbbedb59d004ee96ebd4dbc3b253f0a6e61be3f9f0ebace9e29f81fb3d830"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day18-5a6a02.inline-pdf.json",
+          "sha256": "1aa455499c860a96520341d1737ff3be52ee2550c640e15d8cdeed6c8cbab44f"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day18-5a6a02.table-structure.json",
+          "sha256": "ae63fd0d430aee1f96c0710187716f85a2efd1c5490020bfd32f743ad38f5704"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day18-5a6a02.css",
+          "sha256": "d7e3c299f9009ea3a1f5095a766ed62c52bdee9c25ae3c0a528cabcb9bbcec8e"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day18-5a6a02.config.cjs",
+          "sha256": "05ff4b196216f01f0041838f039873a5c1649ffa60f323b185e669b4259aa787"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day19_コメント編集・削除.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day19_コメント編集・削除.md",
+          "sha256": "8acdf7a8a647af9a085c8270899dd0b8e4dbcb4bf6434032148f6041e751fcae"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day19_コメント編集・削除.pdf",
+          "sha256": "c843728a77ac3cda5797ac98376c8db32798ea65926ee3f75983beaa03a5435f"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day19-3b9165.html",
+          "sha256": "e902b59ef58d5eb6413691cc0cb8b24ac11b9ca28bf4e7a69c3089fab84bea9b"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day19-3b9165.inline-manifest.json",
+          "sha256": "df7ff074dc026941832a54ab5c2b8b4f4e8aaad5696947f877bb587ad0c627a4"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day19-3b9165.inline-layout.json",
+          "sha256": "0af5a3de1d24af7751ee6087da5daf8487f551db85ef7dc8520e696704958c5a"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day19-3b9165.inline-pdf.json",
+          "sha256": "36f869262444f396f5a26a476377a34371efa38f0c134f7d755fa2ebb9429792"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day19-3b9165.table-structure.json",
+          "sha256": "6a2a8dd6450510f7b58e93b8f2bb06cb08567261faaf7967d634c371bbb5739a"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day19-3b9165.css",
+          "sha256": "0454024f3533b803d01c46a6c43cc81f60bc1d1ab2d4610462fed998a3ee4b18"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day19-3b9165.config.cjs",
+          "sha256": "e061e58518f28d88da7414907174b1be023b0bec9dca0005629008e277436beb"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day20_タスク検索機能.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day20_タスク検索機能.md",
+          "sha256": "dcc973a3bb5f0de158e656610e0079378993bf03b5156cb919f16be75c75ff5d"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day20_タスク検索機能.pdf",
+          "sha256": "3855af512b82b90a4bb33fac75d10ca0682c82dacf447767fb6aa01ce30ece88"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day20-f25fe5.html",
+          "sha256": "0d3377cf57ef7ef04f66128558a96d0956609c8c06e07716c5d9c814cc69530d"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day20-f25fe5.inline-manifest.json",
+          "sha256": "1fe598f2611c9392117e60577702636db94777354b9d7422ca1c96806459e4d1"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day20-f25fe5.inline-layout.json",
+          "sha256": "1782fb65fbd763298fee7454ac8d4a41efc26f46466259dd73c541a098d3d52b"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day20-f25fe5.inline-pdf.json",
+          "sha256": "e39891dacab3c13ef86e82bb51479b738317b7aa974111afb3df22b6bf041b7b"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day20-f25fe5.table-structure.json",
+          "sha256": "cc28dea8769edd939489f7963db14fb9d81fa23105611e4cd0d7999ce2681988"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day20-f25fe5.css",
+          "sha256": "368f9b45e312115050442541df765b18bd0fea0c908c5181886dbfb911d3900a"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day20-f25fe5.config.cjs",
+          "sha256": "4c25b04d08c96e0b8345905244b0e2342947b70ce68c20cd4115f48b1668d9ea"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day21_統計カードを表示.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day21_統計カードを表示.md",
+          "sha256": "3df200e7f4abc76d49691b4555fbeef38716451171883f5acd47e1d7cd69e370"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day21_統計カードを表示.pdf",
+          "sha256": "cd40549a61063f4bc468dacbd2245dcb821ec0d461938bb934c858814207c49d"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day21-e0a631.html",
+          "sha256": "7fba57fa992228a02d1780c703bd61d8b3bd162de76d9238be96af69ba27fef6"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day21-e0a631.inline-manifest.json",
+          "sha256": "7fecb6dd87ed74eceff6a909eee51f65e0404316d1d5926491d1591febaeabba"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day21-e0a631.inline-layout.json",
+          "sha256": "d28dc193db58a87435b1e757b46743ec4a1c7d511f456b389537d190dfbef438"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day21-e0a631.inline-pdf.json",
+          "sha256": "7fb8b0e77164f8790c7d0185cb3975080b5e02250d5a4382c68c8e1480b1819c"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day21-e0a631.table-structure.json",
+          "sha256": "50d23e49ea33444dbb6e2958e39655ec144fc9042ce2159eb90057c9b8851588"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day21-e0a631.css",
+          "sha256": "8d4f7c1430c29c3ce00444f7f09e360898dc7dd0a1412109b93dfab01b8b21bd"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day21-e0a631.config.cjs",
+          "sha256": "5fcb6906fa033def280d823dc6ae6fc3ebf7abcfb8611908dbaa24d892106387"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day22_グラフを表示.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day22_グラフを表示.md",
+          "sha256": "23593b44cadb49cf9f40054f8fe0b24c8f474c32d118369fdd05fae23f622922"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day22_グラフを表示.pdf",
+          "sha256": "570fa13c40870d938cbd86721193c4772f4b0245f805ddeb33a4c2aadfd38c9a"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day22-a21d31.html",
+          "sha256": "e5c72774b25fdc423821c6e3cb2b8db909731f1d160172eee2952d0946c18378"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day22-a21d31.inline-manifest.json",
+          "sha256": "197820beab51cab0861d57e8c1dde963c0702468ea984b98d2300ec1ea2cdd59"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day22-a21d31.inline-layout.json",
+          "sha256": "fbc296bf7f218970e89a10c7fa09921db44b494c5e92ed85f30d603ca6757c94"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day22-a21d31.inline-pdf.json",
+          "sha256": "5658940ac59928b119f5df9a5b1dc98fa18856639ebed6e20f81cee85235e2c5"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day22-a21d31.table-structure.json",
+          "sha256": "59cf4ca09a35d49069105ca6b78ad999382f9c0664bc493a0979fb00f474cf0c"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day22-a21d31.css",
+          "sha256": "9ac9f5042b87b387c27bb75e201f6c27f6d1e25c68682ebe389c02c1964f2307"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day22-a21d31.config.cjs",
+          "sha256": "daa9cf92cc0d64d26fdf580972e9cdeff0750233164ff2f74e47b5fd701a63ef"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day23_週次レポート.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day23_週次レポート.md",
+          "sha256": "22ac1bc3f4490d233ce10da786338e3e5c508773ca74159821c6dbdc7b8cd5d5"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day23_週次レポート.pdf",
+          "sha256": "b20c34c94a055e4a053f0ba1130362a6a0a9a8b285d9ff5f393027534fd0e9e4"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day23-87cb73.html",
+          "sha256": "eb0a6079b892d09609ba11a97a2ce5c88531826842955b53eda5c2983b1e6940"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day23-87cb73.inline-manifest.json",
+          "sha256": "b4627fa70d4f76b42342258a664762a780f8afecf874082bb081e01653ccf720"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day23-87cb73.inline-layout.json",
+          "sha256": "1cc870c7bff6ef900b767f2c00286cc8e77d46bfef853cdf08b11daf44188899"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day23-87cb73.inline-pdf.json",
+          "sha256": "e032a70c370cd31b4bd8156982bcf99e6afc22a6eb95581bf3a6aea16e55a64c"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day23-87cb73.table-structure.json",
+          "sha256": "88e568e932ccf82d92c0cdff2bc64614958e2ca7152f008af1102d7407fb6a26"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day23-87cb73.css",
+          "sha256": "1f9e2f77c65d6421a14f56f40db6aa58c14b1d90bd1bec9d4ad45627748bd4ef"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day23-87cb73.config.cjs",
+          "sha256": "294fabf758ffc270c6909095e06f4695e35e0574734f13e30dd0eca83ccdd7d2"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day24_ユーザー一覧（管理者用）.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day24_ユーザー一覧（管理者用）.md",
+          "sha256": "9d5d79342899375f6d1093086eddd9dda5e4bf5e3424b848efde3a6286ad5b54"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day24_ユーザー一覧（管理者用）.pdf",
+          "sha256": "bc59881451304ce5e545c95330f04c2583480e0a832867dff884e54913f165d9"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day24-850975.html",
+          "sha256": "1b1e0d103655cb4ebad9d358ea353aa3f6a36616225ac6fbd1645c6e37cca544"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day24-850975.inline-manifest.json",
+          "sha256": "077a8db163f4755839f5d5907cdd79eab0523f61d668fbb429bec60a59df6ab5"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day24-850975.inline-layout.json",
+          "sha256": "0d9e5defc0367a147f74c19db337456fa1d33fee257d07ec818ec11b03061c1d"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day24-850975.inline-pdf.json",
+          "sha256": "d805fdddf27f1f1103816cb75ffe569dd6c60a1795bed07284c212c13a012b08"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day24-850975.table-structure.json",
+          "sha256": "64df8374da8bda88a648db606846270f697845fa0fa709a343a22ebd78a58a35"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day24-850975.css",
+          "sha256": "e73f94226e0a6e5a0ff1f65ed07713e4b858d4c78bd3d07320b6db790ddb9b18"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day24-850975.config.cjs",
+          "sha256": "0376808f52737f8afeb0621ac423b923385248d1a491ceee498664f7e375d80b"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day25_プロフィール編集.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day25_プロフィール編集.md",
+          "sha256": "8b15fb3ffe946a98bdfd3b0a304b90e9e5a7c2ec83fe6ae67d52029c71aae222"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day25_プロフィール編集.pdf",
+          "sha256": "c545f6b2942e9bb0e45dc12cc28d394e9519c098178d39a6d2a467b84a8ccff4"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day25-710608.html",
+          "sha256": "b265cb836fbb7b1e2899e5db4b49cd7ba0e9eca5b6a42c7f6310405bb28b9bf1"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day25-710608.inline-manifest.json",
+          "sha256": "b57976d58f1a6dcc9c24b1136f6036c9e79d2902721109efc33ec8f8c01f9451"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day25-710608.inline-layout.json",
+          "sha256": "7771f94ac1ccf996916e06e0b0a501247d698fef696be8477c9c8768c50826aa"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day25-710608.inline-pdf.json",
+          "sha256": "e7466848d60a3b2284fcc133d8cf6231e16f108f6626ab59b50045e894ac8ba5"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day25-710608.table-structure.json",
+          "sha256": "eea92297638903e8a05883b89356ec15aa2863946daf082f63927600f74cda67"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day25-710608.css",
+          "sha256": "7dbdbd51312ada35795da7f81a0df7b20f41aa94483a1b0a91273bbca20038a2"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day25-710608.config.cjs",
+          "sha256": "42d34f93b14c78be7a958dded9811481750374f8fc6f221a3a682e08f5b5fae7"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day26_エラーページを作って、バグを退治しよう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day26_エラーページを作って、バグを退治しよう.md",
+          "sha256": "48cd2aee43e4a8c11bbeab4d9e9f1b7e306ebb2a0d5b5532ccbd9a1a862b4e92"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day26_エラーページを作って、バグを退治しよう.pdf",
+          "sha256": "5f716cf0ebbb1c252ede61fbd6523efe1e6418fb81a2ae336dd9908c5efa045b"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day26-2e6bde.html",
+          "sha256": "e44c4b8d49a8d14db153aa34a71e37b3e5f7838e17f0bf33a0f8ba431042894e"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day26-2e6bde.inline-manifest.json",
+          "sha256": "78abe16b13a9b147dc34b9d197473c5ee1f11931a96d6b6a76f023bdeb0a30c6"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day26-2e6bde.inline-layout.json",
+          "sha256": "ea22f304b825796a14fc25bf982f77bffd1df0efad2c777a52f76346511e03d4"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day26-2e6bde.inline-pdf.json",
+          "sha256": "e3a2f0f8223d6504a47bf2fc40116525129e901bfc297eadf81146f80d47b06e"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day26-2e6bde.table-structure.json",
+          "sha256": "8e94d09930f0b408e8a6de6658a9dff56e51d58514fbe80415cfc559b500f695"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day26-2e6bde.css",
+          "sha256": "b73dafed94d227deb8570d47588ab2156e7dd71a8f2ec98ab3d6853c5b9bd4f3"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day26-2e6bde.config.cjs",
+          "sha256": "900fe6fa5c8033ef7a0d493a7560397a273cf770237fbbd0b15313b08f89cfc2"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day27_プロジェクト詳細・アーカイブを実装しよう.md",
+          "sha256": "608c30ae95238f226131f14dff846ad815f5429f87ab743e855b35e8b0a9464c"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+          "sha256": "340cde1f4394501ef02ce6d868b46d6de29b478347fa28349086111d5d3cc878"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day27-6bffba.html",
+          "sha256": "9f2ad4c75452c757e735bf66c25cba42d74dc2db95d0be60851f77bbfb366ab5"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day27-6bffba.inline-manifest.json",
+          "sha256": "3c4ffa9ef3337c75c3814da04019c828523e1195f7b9ecde29e3bda9eea604a4"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day27-6bffba.inline-layout.json",
+          "sha256": "382d7ca3f1bff34acbe2350e9b788bb239e782148f236198e5f422129949e910"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day27-6bffba.inline-pdf.json",
+          "sha256": "d83285920f330be9526bc6bcfcc3d09467efaa977ec5f7c86f3027ecc88d5340"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day27-6bffba.table-structure.json",
+          "sha256": "cbc2da14e177c9405e61951a29d45aab2ce9ba5cecf838b11dc4a57c78c63622"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day27-6bffba.css",
+          "sha256": "812ba183aaa68f90d64718208ec3ae3d6a614e4f75380177d602499014500da3"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day27-6bffba.config.cjs",
+          "sha256": "b1b1e9f4bc0fbfdd9da23848ecda03d60375087bd0e3ce97ba8de9874fddfd35"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day28_タスク一括操作を実装しよう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day28_タスク一括操作を実装しよう.md",
+          "sha256": "5be0620128fa3ce899b6e882a3cb7f065e5af35d0da6c93d34709f776b4dcf86"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day28_タスク一括操作を実装しよう.pdf",
+          "sha256": "4ba536a6a502e5ad3f13435ee557e82337e284c8f1c15797845f8cfea207a770"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day28-6ccdd8.html",
+          "sha256": "38ddf4d2d9c83be7396faa34a6c58794bfd2f9c2d3c0823e6db61b70e923f42c"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day28-6ccdd8.inline-manifest.json",
+          "sha256": "b55f21762cd6e7f2fef02abfcfcbde3358fda8e767f8abc442543c8379ca63d5"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day28-6ccdd8.inline-layout.json",
+          "sha256": "c201b26139786b775bfe3677c113bc8418cc41462bc2b478f92be766970b454d"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day28-6ccdd8.inline-pdf.json",
+          "sha256": "983421caaa811cf78d467fc7f9a19e60ff1ac1643b163fe95eedf894df23a8c1"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day28-6ccdd8.table-structure.json",
+          "sha256": "40f80833978f59f2d5cacfa83e76b62b196e42841886900c704acdf2d1d318bf"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day28-6ccdd8.css",
+          "sha256": "21aea1e93845693b99d3c56a49db5975ef3220142465957581490a58e2f08d07"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day28-6ccdd8.config.cjs",
+          "sha256": "fe5122a9f0f85b8827f8b773eece6cb491a7c7ed57cdc22ac9cfa79b8607926f"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day29_ユーザー詳細・編集ページを作ろう.md",
+          "sha256": "b03210c448b99cccab3214aba1521fa2a3b0c8ee927989f8565e2523f7cb61fa"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "sha256": "a0c723d7c6f7fc2caea1823853f90abd7672b08af3a4c432be7d4e056b658be8"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day29-a78910.html",
+          "sha256": "9159b2e17b59a2ef1301a2fcc9c9e4de9f6c922b63850d642a49494f784ef655"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day29-a78910.inline-manifest.json",
+          "sha256": "3ad24a9796ce6cc142f5c28e4efff6cef4e82c63cd070a6c16333520e49fbf80"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day29-a78910.inline-layout.json",
+          "sha256": "e1500f532cedd658cccf6878c47b0d578d1d59c910bf4e2de3c67d902933f7ea"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day29-a78910.inline-pdf.json",
+          "sha256": "1d04e182cfeb41fcf786b225a61de1e40361a3288e798f017b37d6710e8c934b"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day29-a78910.table-structure.json",
+          "sha256": "c83393eb71aa346ce5efbdbfd468cea9d01f8dba5d43af43a07fba9c24d2bcdf"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day29-a78910.css",
+          "sha256": "251a829f7cf381a70513d30ba92b0aaac947d49b5cea75e746b76a510d58c7de"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day29-a78910.config.cjs",
+          "sha256": "bae34eab26217762152e058a31e95ca6d9bab9ac02a18d308d6d7c472c1e473c"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    },
+    {
+      "name": "day30_完成版を公開！.pdf",
+      "status": "fail",
+      "issues": [
+        "DOM audit not fully supported/pass"
+      ],
+      "artifacts": {
+        "source": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/30days-curriculum/day30_完成版を公開！.md",
+          "sha256": "1d3e0cebf337da5251d918629f04e587fadf806827e2240c7c59f1e55d18d8b1"
+        },
+        "pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/pdf/day30_完成版を公開！.pdf",
+          "sha256": "0a00c8651f6e122c9ecaf681e8954370607a6778eef7c0a37d659f80a350ceab"
+        },
+        "html": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day30-5187a4.html",
+          "sha256": "946c0ff7410eb7faf12bb42b66744c7425340c815452646c328fe6b218254b2b"
+        },
+        "inline_manifest": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day30-5187a4.inline-manifest.json",
+          "sha256": "e72ef260004bfd405333c444603add2d621509abb598b997e8214343fa17d539"
+        },
+        "inline_layout": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day30-5187a4.inline-layout.json",
+          "sha256": "ce6c8e4a12c310b26c816676bd19b585fdbdcfb89d01698e839b32be973ac357"
+        },
+        "inline_pdf": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day30-5187a4.inline-pdf.json",
+          "sha256": "a4bb0213ae7ead4a0eecd8d6e75b3f5f7c57674de779f9360bc1b4056088b47e"
+        },
+        "table_structure": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day30-5187a4.table-structure.json",
+          "sha256": "0050008e766dc95614401a162caf6599955e1362ce08f805f41458052885bd4e"
+        },
+        "per_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day30-5187a4.css",
+          "sha256": "cf35fd8fcfeaa77b8912cc257ca45ef7a728ae38895ad24f5e05cb4ee892bbb2"
+        },
+        "config": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/day30-5187a4.config.cjs",
+          "sha256": "ef180568aaba00c07c032fe9d6fd8e54f18fe57fcdbce2cda3308b0a78bf9e63"
+        },
+        "book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/dist/.pdf-book-build/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        },
+        "source_book_css": {
+          "path": "/Users/kouiso/ghq/kouiso/task-app/.worktrees/material-final-20260921/material/style/book.css",
+          "sha256": "dd71ff4a2d7a9cc583092d43fb4969e75108e560bbbc8d1e236235cb76d6d732"
+        }
+      }
+    }
+  ]
+}

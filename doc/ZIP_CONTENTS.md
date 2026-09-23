@@ -56,6 +56,7 @@ URLは先に確定した配布先を使います。原稿へDrive IDを書く必
 - `.node-version`
 - `doc/SUPPORTED_ENVIRONMENTS.md`
 - `scripts/scaffold-from-scratch.sh`
+- `scripts/verify-scaffold-database.cjs`
 
 1つでも欠けると `build-zip.sh` は途中で止まります。
 

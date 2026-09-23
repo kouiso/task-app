@@ -1,35 +1,79 @@
 #!/usr/bin/env python3
-"""code_wrap の退行テスト。
-
-- SAFE_COLS 以下の行は一字も触らない（実改行を増やさない）
-- 長い行は「非英数字→英数字」の境界のうち貪欲に選んだ位置だけ実改行が入る
-- Prism の <span> をまたぐ境界でも改行が入る
-- 文字列リテラル・URL・長い英数ラン・日本語コメントも拾う
-- 変換後は unsafe_runs が必ず空になる（語の途中折れが起き得ない）
-"""
+"""code_wrap の強制境界・縮小・意味保存の退行テスト。"""
 
 from __future__ import annotations
 
+import html
+import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from code_wrap import (  # noqa: E402
     SAFE_COLS,
+    PRE_FONT_PT,
+    SHRINK_MIN_PT,
     atoms,
     classify,
     unsafe_runs,
     wrap_code_in_html,
 )
+from inline_layout import annotate_inline_code  # noqa: E402
 
 
 def pre(inner: str) -> str:
     return f'<pre class="language-tsx"><code>{inner}</code></pre>'
 
 
-def count_breaks(html: str, base: str) -> int:
-    return html.count("\n") - base.count("\n")
+def copied_code(rendered: str) -> str:
+    """生成HTMLをPDFでコピーした時の改行を模したコード文字列へ戻す。"""
+    inner = rendered[rendered.index(">") + 1 : -len("</pre>")]
+    inner = re.sub(r'<br class="cw-force">', "\n", inner)
+    inner = inner.replace("<wbr>", "")
+    return html.unescape(re.sub(r"<[^>]+>", "", inner))
+
+
+def eval_js(source: str, expression: str):
+    script = source + "\nprocess.stdout.write(JSON.stringify(" + expression + "));"
+    result = subprocess.run(
+        ["node", "-e", script], capture_output=True, text=True, check=True
+    )
+    return json.loads(result.stdout)
+
+
+def ts_syntax_errors(source: str) -> list[str]:
+    script = r"""
+const ts = require('typescript');
+const result = ts.transpileModule(process.argv[1], {
+  reportDiagnostics: true,
+  compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+});
+const errors = (result.diagnostics ?? [])
+  .filter((item) => item.category === ts.DiagnosticCategory.Error)
+  .map((item) => ts.flattenDiagnosticMessageText(item.messageText, '\n'));
+process.stdout.write(JSON.stringify(errors));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, source], capture_output=True, text=True, check=True
+    )
+    return json.loads(result.stdout)
+
+
+def ts_emit(source: str) -> str:
+    """JSX子テキストを含むTypeScriptの出力値を比較する。"""
+    script = r"""
+const ts = require('typescript');
+const result = ts.transpileModule(process.argv[1], {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+});
+process.stdout.write(result.outputText);
+"""
+    result = subprocess.run(
+        ["node", "-e", script, source], capture_output=True, text=True, check=True
+    )
+    return result.stdout
 
 
 def main() -> int:
@@ -40,43 +84,77 @@ def main() -> int:
     if wrap_code_in_html(short) != short:
         failures.append("短い行を書き換えてしまった")
 
-    # 2. 長い行に実改行が入る。JSX属性値の中では空白直後のみが候補
+    # 2. 長いJSX属性はclass語の間へ強制境界を入れる
     #    （vfm 出力では < は &lt; なのでテストも実体参照で書く）
     long_cls = ('&lt;div x' + 'x' * 30) + ' className="mx-auto flex ' \
         'min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10"'
     out = wrap_code_in_html(pre(long_cls))
-    if count_breaks(out, pre(long_cls)) == 0:
-        failures.append("長い className 行に実改行が入っていない")
+    if '<br class="cw-force">' not in out:
+        failures.append("長い className 行に折返し境界が入っていない")
     if unsafe_runs(out):
         failures.append(f"className 行に折返せないランが残る: {unsafe_runs(out)}")
-    # 語の途中には入らない: "flex" の前後で折れてはいけない
-    if 'f\nlex' in out or 'fle\nx' in out:
-        failures.append("語の途中に改行が入った")
-    # 属性値の中で空白以外の位置に入っていない（mx-auto の途中等）
-    if 'mx\n-auto' in out or 'min\n-h-screen' in out:
-        failures.append("属性値内の語の途中に改行が入った")
+    if 'f<br class="cw-force">lex' in out or 'mx<br class="cw-force">-auto' in out:
+        failures.append("属性値内のclass語を分断した")
 
-    # 3. TSのプレーン文字列は strict — 内側に改行を入れず行ごと縮小する
+    # 3. TSのプレーン文字列は strict — 内側に強制境界を入れず縮小する
     url = 'DATABASE_URL="postgresql://user:password@localhost:25532/' \
         'taskapp?schema=public"'
     out = wrap_code_in_html(pre(url))
-    if count_breaks(out, pre(url)) > 0:
-        failures.append("strict な文字列の中に改行が入った")
+    if '<br class="cw-force">' in out:
+        failures.append("strict な文字列の中に強制境界を入れた")
     if "cw-shrink" not in out:
         failures.append("strict な長行がフォント縮小されていない")
     if unsafe_runs(out):
         failures.append(f"URL 行に折返せないランが残る: {unsafe_runs(out)}")
 
-    # 4. <span> 境界をまたぐ識別子（utils.projectX…）。`.` は GLUE_PUNCTS
-    #    なので直後に改行は入らず、収まらない行は縮小で1行に収める
+    # .env は行単位ではなくブロック全体を最長行と同じ率で縮小する。
+    # font-sizeが行ごとに変わるPDFではChromeコピー時に改行が消えた実測がある。
+    env_source = (
+        "TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/taskapp_test\n"
+        "JWT_SECRET=test-secret\n"
+        "NODE_ENV=test"
+    )
+    env_html = (
+        '<pre class="language-env"><code>' + env_source + "</code></pre>"
+    )
+    env_out = wrap_code_in_html(env_html)
+    if env_out.count("cw-block-shrink") != 1 or env_out.count("font-size:") != 1:
+        failures.append("envブロックが最長行基準の単一font-sizeになっていない")
+    if copied_code(env_out) != env_source:
+        failures.append("envブロックの元改行が変化した")
+    if unsafe_runs(env_out):
+        failures.append(f"envブロック統一縮小をunsafeと誤判定した: {unsafe_runs(env_out)}")
+    try:
+        annotate_inline_code(env_out, "env-post-wrap")
+    except ValueError as error:
+        failures.append(f"envブロックの縮小タグが不正な入れ子になった: {error}")
+
+    # Prism spanが改行を跨ぎ、その先頭行だけを縮小してもタグを交差させない。
+    multiline_token_source = "x" * 70 + "\nshort"
+    multiline_token = pre(
+        '<span class="token string">' + multiline_token_source + "</span>"
+    )
+    multiline_out = wrap_code_in_html(multiline_token)
+    if copied_code(multiline_out) != multiline_token_source:
+        failures.append("複数行token spanの元textまたは改行が変化した")
+    if 'class="cw-shrink" style="font-size:82%"' not in multiline_out:
+        failures.append("複数行token spanの縮小率が変化した")
+    if "</span>\n<span class=\"token string\">" not in multiline_out:
+        failures.append("改行を跨ぐtoken spanを行境界で開き直していない")
+    try:
+        annotate_inline_code(multiline_out, "multiline-post-wrap")
+    except ValueError as error:
+        failures.append(f"複数行token spanの縮小タグが不正な入れ子になった: {error}")
+
+    # 4. <span> 境界をまたぐ長い識別子は分断せず縮小する
     spanned = (
         '<span class="token">utils</span>'
         '<span class="token punctuation">.</span>'
         '<span class="token">project' + 'x' * 60 + '</span>'
     )
     out = wrap_code_in_html(pre(spanned))
-    if '.\n' in out:
-        failures.append("メンバーアクセスの . 直後に改行が入った")
+    if '.<br class="cw-force">' in out:
+        failures.append("長いメンバー名の途中へ強制境界を入れた")
     if "cw-shrink" not in out:
         failures.append("収まらないメンバーアクセス行が縮小されていない")
 
@@ -84,8 +162,8 @@ def main() -> int:
     run = "a" * (SAFE_COLS + 40)
     res_run: list[str] = []
     out = wrap_code_in_html(pre(run), res_run)
-    if count_breaks(out, pre(run)) > 0:
-        failures.append("英数ランの途中に改行が入った")
+    if '<br class="cw-force">' in out:
+        failures.append("英数ランの途中に強制境界を入れた")
     if not res_run:
         failures.append("縮小下限を割る英数ランが残件に挙がっていない")
     # 縮小で収まる長さなら cw-shrink になる
@@ -96,9 +174,11 @@ def main() -> int:
 
     # 6. 日本語を含む長行（2桁カウント）も unsafe にならない（コード中のWIDE）
     jp = "const x = " + "あ" * 40 + " + " + "b" * 30
-    out = wrap_code_in_html(pre(jp))
-    if unsafe_runs(out):
-        failures.append(f"日本語行に折返せないランが残る: {unsafe_runs(out)}")
+    jp_res: list[str] = []
+    out = wrap_code_in_html(pre(jp), jp_res)
+    # 日本語もJS識別子に使える。演算子の手前で改行し、識別子自体は縮小して保つ。
+    if jp_res or unsafe_runs(out) or "あ<br" in out:
+        failures.append("長い日本語識別子の内部を分断した")
     # // 行コメントは strict：中で折れるとコピー時に尻尾がコード化するため、
     # 収まらなければ残件として報告される
     res: list[str] = []
@@ -130,8 +210,8 @@ def main() -> int:
     out = wrap_code_in_html(body)
     if "cw-shrink" not in out:
         failures.append("pre ブロックの長行が縮小されていない")
-    if "<code>abc" + "d" * 20 + "\n" in out:
-        failures.append("インライン code 内に改行を入れてしまった")
+    if "<code>abc" + "d" * 20 + "<wbr>" in out:
+        failures.append("インライン code 内に <wbr> を入れてしまった")
 
     # 10. 波ダッシュ等の非ASCII記号は境界として扱う
     wave = "x" * 30 + " 〜〜〜〜 " + "y" * 40
@@ -178,41 +258,39 @@ def main() -> int:
     if unsafe_runs(out):
         failures.append(f"ブロックコメントに折返せないランが残る: {unsafe_runs(out)}")
 
-    # 15. テンプレートリテラルの ${} 内はコード領域（区切りで折れる）
+    # 15. テンプレート本文は実改行で値が変わるため、強制改行しない
     tpl = pre(
         "      ? `${formatDateOnly(reportData.startDate)}"
         " - ${formatDateOnly(reportData.endDate)}`"
     )
     res3: list[str] = []
     out = wrap_code_in_html(tpl, res3)
-    if res3:
-        failures.append(f"テンプレート行が残件化した: {res3}")
-    if unsafe_runs(out):
-        failures.append(f"テンプレート行に折返せないランが残る: {unsafe_runs(out)}")
+    if "alpha<br" in out or "formatDateOnly<br" in out:
+        failures.append("テンプレート本文へ強制改行を入れた")
 
-    # 16. bash は行指向：行内に一切改行を入れず、長行は縮小で収める
+    # 16. bash は行指向：行内に強制境界を入れず、長行は縮小で収める
     bash_pre = (
         '<pre class="language-bash"><code>'
         'git remote add origin https://github.com/your-user/task-app.git'
         "</code></pre>"
     )
     out = wrap_code_in_html(bash_pre)
-    if count_breaks(out, bash_pre) > 0:
-        failures.append("bash 行内に改行が入った")
+    if '<br class="cw-force">' in out:
+        failures.append("bash 行内に強制境界を入れた")
     if "cw-shrink" not in out:
         failures.append("bash 長行が縮小されていない")
     if unsafe_runs(out):
         failures.append(f"bash 行に折返せないランが残る: {unsafe_runs(out)}")
 
-    # 17. ASI: `return`・`throw` 直後の空白位置では折れない。
+    # 17. ASI: `return`・`throw` とoperandの間へ強制境界を入れない。
     #    `return\nexpr` は ASI で `return; expr` になり意味が変わる
     asi = pre(
         "      return ctx.db.task.findMany({ where: { id: taskId }, "
         "include: { project: true } });"
     )
     out = wrap_code_in_html(asi)
-    if "return\n" in out or "return \n" in out:
-        failures.append("return 直後で折れた")
+    if 'return <br class="cw-force">' in out:
+        failures.append("return 直後に強制境界が入った")
     if unsafe_runs(out):
         failures.append(f"return 行に折返せないランが残る: {unsafe_runs(out)}")
     thr = pre(
@@ -220,91 +298,293 @@ def main() -> int:
         '"プロジェクトのメンバーではありません" });'
     )
     out = wrap_code_in_html(thr)
-    if "throw\n" in out or "throw \n" in out:
-        failures.append("throw 直後で折れた")
+    if 'throw <br class="cw-force">' in out:
+        failures.append("throw 直後に強制境界が入った")
     if unsafe_runs(out):
         failures.append(f"throw 行に折返せないランが残る: {unsafe_runs(out)}")
     # `foo.return` はメンバーアクセスなので ASI 対象外（折ってよい）
     mem = pre(
-        "      const result = obj.return somethingElse.veryLongProperty"
-        "Name.andEvenMore.toMakeThisLineLongEnoughToWrapAround"
+        "      const result = obj.return + "
+        "somethingElse.veryLongPropertyNameAndMore"
     )
     out = wrap_code_in_html(mem)
-    if "return\n" in out:
-        # メンバー名直後でも ASI 語と誤認して折れ禁止にならないことを確認
-        # （return と空白の間で折れないこと自体はどちらでもよいが、
-        #   行全体が折れ候補を失って unsafe になってはいけない）
-        pass
     if unsafe_runs(out):
         failures.append(f"メンバー return 行に折返せないランが残る: {unsafe_runs(out)}")
 
-    # 18. 正規表現リテラル内では折れない（`/[\nA-Z]/` は構文エラー）。
-    #    折り候補が消えるので行は縮小で収まるか残件になる
-    rgx = pre(
-        "    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')"
+    # 18. break-all は <wbr> を優先しない。CSS と JSX 属性値は実改行しても
+    #     構文・値を保つ空白だけを強制境界にし、58桁超を残さない。
+    css_line = (
+        '<pre class="language-css"><code>'
+        "  --color-destructive-foreground: hsl(var(--destructive-foreground));"
+        "</code></pre>"
     )
-    out = wrap_code_in_html(rgx)
-    if "[\n" in out or "/\n" in out:
-        failures.append("正規表現リテラル内で折れた")
-    # 除算の `/` は正規表現ではない（直後で折れるわけではないが strict に
-    # ならない＝行全体が折れ候補を失わない）
-    div = pre(
-        "      const ratio = completedTasks.length / totalTasks.length"
-        " * percentageFactor + offsetValue"
+    css_out = wrap_code_in_html(css_line)
+    if '<br class="cw-force">' not in css_out or unsafe_runs(css_out):
+        failures.append("CSS宣言が安全な空白で強制改行されていない")
+    jsx_line = pre(
+        '&lt;div className="mx-auto flex min-h-screen max-w-6xl flex-col '
+        'px-6 py-8 lg:px-10 items-center justify-between"&gt;'
     )
-    out = wrap_code_in_html(div)
-    if unsafe_runs(out):
-        failures.append(f"除算行に折返せないランが残る: {unsafe_runs(out)}")
-    # `//` は行コメントであって正規表現ではない（strict 化＝残件対象）
-    res4: list[str] = []
-    cmt2 = "    // " + "あ" * 60
-    out = wrap_code_in_html(pre(cmt2), res4)
-    if not res4:
-        failures.append("regex対応で // コメントが strict でなくなった")
-    # 閉じ引用符の直前で折ると改行がリテラル内に入る（'…あ\n' は構文エラー）。
-    # 折り候補が無い長い文字列行は縮小限界を超えるので残件になる
-    res5: list[str] = []
-    strline = "x = '" + "あ" * 40 + "' + tail"
-    out = wrap_code_in_html(pre(strline), res5)
-    if not res5:
-        failures.append("長い文字列行が残件に挙がっていない")
-    if re.search(r"[^\n']\n'", out):
-        failures.append("閉じ引用符の直前で折れた（リテラル内改行）")
+    jsx_out = wrap_code_in_html(jsx_line)
+    if '<br class="cw-force">' not in jsx_out or unsafe_runs(jsx_out):
+        failures.append("JSX属性がclass語の間で強制改行されていない")
+    if "items-<br" in jsx_out or "center<br" in jsx_out:
+        failures.append("JSX class語の内部へ強制改行を入れた")
 
-    # 19. 三項演算子の文字列は開始引用符の直前で折れる。
-    #     strict ランの先頭（`'`）の手前は文字列の外なので、そこに改行を
-    #     入れても `? 'AAA' : 'BBB'` の構文は保たれる。中身には入れない
-    tern = pre(
-        "                {authFailed ? 'ログインの有効期限が切れました'"
-        " : 'アクセス権限がありません'}"
+    # 19. <wbr> は強制境界ではないため、これだけで gate を通してはいけない。
+    wbr_only = pre("a" * 30 + "<wbr>" + "b" * 30)
+    if not unsafe_runs(wbr_only):
+        failures.append("unsafe_runs が wbr を語中分断防止の保証と誤認した")
+
+    # 20. 実改行で値・制御フローが変わる4反例。生成結果を実際に Node で評価する。
+    value_cases = [
+        (
+            "template",
+            "const s = `alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi`;",
+            "s",
+            "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi",
+        ),
+        (
+            "template-expression",
+            "const header = 'head'; const parts = ['x', 'body']; "
+            "const replacement = 'R'; const signature = 'signature-value'; "
+            "const s = `${header}.${parts[1]}.${replacement}${signature.slice(1)}`;",
+            "s",
+            "head.body.Rignature-value",
+        ),
+        (
+            "regexp",
+            "const r = /alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu/;",
+            'r.test("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu")',
+            True,
+        ),
+        (
+            "return-block-comment",
+            "function f() { return /* alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu */ 7; }",
+            "f()",
+            7,
+        ),
+        (
+            "return-consecutive-block-comments",
+            "function f() { return /* short */ /* alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu */ 7; }",
+            "f()",
+            7,
+        ),
+        (
+            "regexp-after-block-comment",
+            "const r = /* short */ /alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu/;",
+            'r.test("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu")',
+            True,
+        ),
+        (
+            "return-tab",
+            "function f() { return\t" + "x" * 60 + "; } const " + "x" * 60 + " = 7;",
+            "f()",
+            7,
+        ),
+        (
+            "arrow",
+            "const f = (aVeryLongParameterNameThatPushesTheArrowPastTheSafeColumn) "
+            "=> aVeryLongParameterNameThatPushesTheArrowPastTheSafeColumn;",
+            "f(7)",
+            7,
+        ),
+        (
+            "escaped-single",
+            "const value = 'it\\'s alpha beta gamma delta epsilon zeta eta theta';",
+            "value",
+            "it's alpha beta gamma delta epsilon zeta eta theta",
+        ),
+        (
+            "escaped-double",
+            'const value = "a \\"quote\\" alpha beta gamma delta epsilon zeta eta theta";',
+            "value",
+            'a "quote" alpha beta gamma delta epsilon zeta eta theta',
+        ),
+        (
+            "escaped-template",
+            "const value = `a \\`literal\\` alpha beta gamma delta epsilon zeta eta theta`;",
+            "value",
+            "a `literal` alpha beta gamma delta epsilon zeta eta theta",
+        ),
+        (
+            "postfix-increment",
+            "let n = 1;" + " " * 45 + "n ++;",
+            "n",
+            2,
+        ),
+        (
+            "postfix-decrement",
+            "let n = 2;" + " " * 45 + "n --;",
+            "n",
+            1,
+        ),
+        (
+            "return-adjacent-string",
+            'function f() { return"alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"; }',
+            "f()",
+            "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu",
+        ),
+        (
+            "regexp-after-if",
+            "let ok = false; if (true) /alpha beta gamma delta epsilon zeta eta theta iota kappa lambda/.test('x');",
+            "ok",
+            False,
+        ),
+        (
+            "unicode-escaped-identifier",
+            "const prefix = 1; const \\u0061VeryVeryVeryVeryVeryVeryVeryVeryVeryLongName = 7;",
+            "aVeryVeryVeryVeryVeryVeryVeryVeryVeryLongName",
+            7,
+        ),
+        (
+            "postfix-after-comment",
+            "let n = 1; n /* alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu */ ++;",
+            "n",
+            2,
+        ),
+        (
+            "arrow-after-comment",
+            "const f = (value) /* alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu */ => value;",
+            "f(7)",
+            7,
+        ),
+        (
+            "numeric-exponent",
+            "const n = 1e+" + "2" * 45 + ";",
+            "n",
+            None,
+        ),
+        (
+            "hashbang",
+            "#!/usr/bin/env node alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu\nconst n = 7;",
+            "n",
+            7,
+        ),
+    ]
+    for name, source, expression, expected in value_cases:
+        rendered = wrap_code_in_html(pre(source))
+        try:
+            actual = eval_js(copied_code(rendered), expression)
+        except (subprocess.CalledProcessError, json.JSONDecodeError) as error:
+            failures.append(f"{name} のコピー後コードを評価できない: {error}")
+            continue
+        if actual != expected:
+            failures.append(f"{name} の実値が変化した: {actual!r} != {expected!r}")
+
+    # 21. TypeScript固有のno-line-terminator位置を保つ。
+    ts_cases = [
+        "    const targetProjectId = isProjectChanging ? "
+        "(data.projectId as string) : existingTask.projectId;",
+        "const obj = { [field]: { contains: keyword, mode: 'insensitive' "
+        "satisfies Prisma.QueryMode } };",
+        "const n = 1;" + " " * 37 + "const y = n !;",
+        "const n: number | undefined = 1; const y = n "
+        "/* alpha beta gamma delta epsilon zeta eta theta */ !;",
+        "class C { field /* alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu */ !: string; }",
+    ]
+    for source in ts_cases:
+        rendered = wrap_code_in_html(pre(source))
+        errors = ts_syntax_errors(copied_code(rendered))
+        if errors:
+            failures.append(f"TypeScript強制改行で構文が変化した: {errors}")
+
+    # SQLは教材で未使用で、文字列文法を網羅していない。強制改行対象から外し、
+    # E文字列・dollar quoteの値を変えず縮小または残余failへ倒す。
+    for source in [
+        "SELECT E'alpha beta gamma delta epsilon zeta eta theta iota kappa mu';",
+        "SELECT $msg$alpha beta gamma delta epsilon zeta eta theta iota kappa mu$msg$;",
+    ]:
+        sql_html = f'<pre class="language-sql"><code>{html.escape(source)}</code></pre>'
+        rendered = wrap_code_in_html(sql_html)
+        if '<br class="cw-force">' in rendered or copied_code(rendered) != source:
+            failures.append("未対応SQL文字列へ強制改行を入れた")
+
+    # 22. JSX子テキストでは空白・改行が表示文字列を変える。実教材で起きた
+    #     `/> 編集` の先頭空白消失と `URL（任意）` への空白混入を防ぐ。
+    jsx_text_cases = [
+        "                      <Pencil className=\"mr-2 h-4 w-4\" /> 編集",
+        "                      <Label>アバターURL（任意）</Label>",
+        """<Button>
+  {archived ? (
+    <>
+      <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
+    </>
+  ) : null}
+</Button>""",
+    ]
+    for index, source in enumerate(jsx_text_cases):
+        language = "tsx" if index == 0 else "typescript"
+        rendered = wrap_code_in_html(
+            f'<pre class="language-{language}"><code>{html.escape(source)}</code></pre>'
+        )
+        copied = copied_code(rendered)
+        if ts_emit(copied) != ts_emit(source):
+            failures.append(f"JSX子テキストの実値が変化した: {copied!r}")
+
+    strict_attribute = (
+        'const value = <div title="alpha beta gamma delta epsilon zeta eta '
+        'theta iota kappa lambda" />;'
     )
-    res6: list[str] = []
-    out = wrap_code_in_html(tern, res6)
-    if res6:
-        failures.append(f"三項演算子行が残件化した: {res6}")
-    if count_breaks(out, tern) == 0:
-        failures.append("三項演算子行に実改行が入っていない")
-    if "\n'" not in out:
-        failures.append("開始引用符の直前で折れていない")
-    if unsafe_runs(out):
-        failures.append(f"三項演算子行に折返せないランが残る: {unsafe_runs(out)}")
-    # 閉じ引用符の直前では折らない（改行がリテラル内に入る）
-    if re.search(r"しま\n'", out) or re.search(r"せん\n'", out):
-        failures.append("閉じ引用符の直前で折れた（リテラル内改行）")
-    # ASI危険語の直後では開始引用符の前でも折らない（`return\n'x'` は
-    # `return; 'x'` と解釈され意味が変わる）
-    asi2 = pre("      return '" + "あ" * 40 + "';")
-    res7: list[str] = []
-    out = wrap_code_in_html(asi2, res7)
-    if "return\n'" in out or "return \n'" in out:
-        failures.append("return 直後の文字列開始位置で折れた")
+    rendered = wrap_code_in_html(pre(html.escape(strict_attribute)))
+    if ts_emit(copied_code(rendered)) != ts_emit(strict_attribute):
+        failures.append("className以外のJSX属性値へ実改行を入れた")
+
+    # 23. JSX式属性の波括弧やtemplate補間でタグ状態を失わない。型引数の
+    #     `<T,>` もJSX開始と誤認せず、後続classNameの安全な空白で折る。
+    jsx_state = """const identity = <T,>(value: T) => value;
+const view = (
+  <div
+    style={{ borderLeft: `3px solid ${identity(color)}` }}
+  >
+    <span className="flex items-center justify-center rounded-lg transition-colors text-muted-foreground">
+      {identity(label)}
+    </span>
+  </div>
+);"""
+    residuals: list[str] = []
+    rendered = wrap_code_in_html(pre(html.escape(jsx_state)), residuals)
+    if residuals or unsafe_runs(rendered):
+        failures.append(f"JSX属性式の後でタグ状態が漏れた: {residuals}")
+    if (
+        '<br class="cw-force">rounded-lg transition-colors' not in rendered
+    ):
+        failures.append("JSX属性式の後続classNameを安全な空白で折れなかった")
+
+    # Day25 の JSX 本文は、改行後の字下げだけを除いても表示値は変わらない。
+    day25_hint = "8文字以上で、大文字・小文字・数字・特殊文字をそれぞれ1文字以上含めてください"
+    for hint in [html.escape(day25_hint), '<span class="token plain">' + html.escape(day25_hint) + '</span>']:
+        source = '<p>\n                  ' + day25_hint + '\n</p>'
+        residuals = []
+        rendered = wrap_code_in_html(pre('&lt;p&gt;\n                  ' + hint + '\n&lt;/p&gt;'), residuals)
+        if residuals:
+            failures.append(f"Day25 の JSX 本文を8pt以上で組めない: {residuals}")
+        if ts_emit(copied_code(rendered)) != ts_emit(source):
+            failures.append("Day25 の JSX 本文の表示値が変わった")
+        for pct in re.findall(r'font-size:(\d+)%', rendered):
+            if PRE_FONT_PT * int(pct) / 100 < SHRINK_MIN_PT:
+                failures.append("Day25 の JSX 本文が8pt未満になった")
+        if day25_hint not in copied_code(rendered):
+            failures.append("Day25 の JSX 本文の内部へ改行が入った")
+
+    literal_source = "const schema = z.string()\n    .min(8, '新しいパスワードは8文字以上で入力してください');"
+    residuals = []
+    rendered = wrap_code_in_html(pre(html.escape(literal_source)), residuals)
+    if residuals or ts_emit(copied_code(rendered)) != ts_emit(literal_source):
+        failures.append("Day25 の min メッセージ文字列を保持できない")
+
+    # 同じ字下げでもテンプレート本文の空白は値なので削らない。
+    template_source = 'const value = `\n                  ' + day25_hint + '\n`;'
+    rendered = wrap_code_in_html(pre(html.escape(template_source)))
+    if eval_js(copied_code(rendered), 'value') != '\n                  ' + day25_hint + '\n':
+        failures.append("テンプレート本文の字下げを削った")
 
     if failures:
         print(f"❌ {len(failures)} 件失敗")
         for failure in failures:
             print(f"  {failure}")
         return 1
-    print("✅ code_wrap 全19ケース通過")
+    print("✅ code_wrap 全回帰ケース通過")
     return 0
 
 

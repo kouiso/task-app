@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 import build_pdf_book
 
-from build_pdf_book import load_link_map, rewrite_book_links
+from build_pdf_book import load_link_map, number_external_link_footnotes, rewrite_book_links
 from check_pdf_book import find_link_problems
 
 
@@ -38,6 +38,35 @@ class BookLinksTest(unittest.TestCase):
         source = '[外](https://example.com/a.md#x) [内](#section)'
         self.assertEqual(self.rewrite(source, {}), source)
         self.assertEqual(self.rewrite('[内](day01.md#section)', {}), '[内](<#section>)')
+
+    def test_print_footnotes_preserve_markup_and_number_only_eligible_external_links(self):
+        source = '''<p class="lead"><a class="cta" title="A &gt; B"
+ href="https://example.com/?a=1&amp;b=2"><span>装飾</span></a></p>
+<p><a href='http://example.net/x'>外部</a></p>
+<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
+<a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
+<div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
+<pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>'''
+        expected = '''<p class="lead"><a data-pdf-footnote="1" class="cta" title="A &gt; B"
+ href="https://example.com/?a=1&amp;b=2"><span>装飾</span></a></p>
+<p><a data-pdf-footnote="2" href='http://example.net/x'>外部</a></p>
+<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
+<a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
+<div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
+<pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>'''
+        self.assertEqual(number_external_link_footnotes(source), expected)
+
+    def test_print_footnote_numbers_restart_for_each_book_and_survive_void_elements(self):
+        source = '<p><br><a href="https://example.com">外部</a><img src="x"></p>'
+        expected = ('<p><br><a data-pdf-footnote="1" href="https://example.com">外部</a>'
+                    '<img src="x"></p>')
+        self.assertEqual(number_external_link_footnotes(source), expected)
+        self.assertEqual(number_external_link_footnotes(source), expected)
+
+    def test_print_footnote_reserved_attribute_is_rejected(self):
+        source = '<p><a data-pdf-footnote="99" href="https://example.com">外部</a></p>'
+        with self.assertRaisesRegex(ValueError, '予約属性'):
+            number_external_link_footnotes(source)
 
     def test_unknown_unmapped_and_cross_book_fragments_fail(self):
         for target in ('missing.md', '../other.md', 'day02.md#section', 'notes.txt', '/guide'):
@@ -76,9 +105,16 @@ class BookLinksTest(unittest.TestCase):
     def test_generator_overrides_application_legacy_peer_deps_only_in_child_env(self):
         with patch.dict('os.environ', {'PDF_BOOK_LINK_MAP': '', 'npm_config_legacy_peer_deps': 'true'}), \
                 patch.object(build_pdf_book, 'prepare_work_dir'), \
+                patch.object(build_pdf_book, 'prepare_release_toolchain', return_value={
+                    'vivliostyle_bin': '/fixture/vivliostyle',
+                    'vfm_bin': '/fixture/vfm',
+                    'mermaid_bin': '/fixture/mmdc',
+                    'theme_path': '/fixture/theme',
+                }) as prepare_toolchain, \
                 patch.object(build_pdf_book, 'find_browser', return_value=None), \
                 patch.object(build_pdf_book, 'build_one', return_value=[]) as build:
             self.assertEqual(build_pdf_book.main(['build_pdf_book.py', str(self.source)]), 0)
+            self.assertEqual(prepare_toolchain.call_args.args[0]['npm_config_legacy_peer_deps'], 'false')
             self.assertEqual(build.call_args.args[2]['npm_config_legacy_peer_deps'], 'false')
             self.assertEqual(build_pdf_book.os.environ['npm_config_legacy_peer_deps'], 'true')
 
