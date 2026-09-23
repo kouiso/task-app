@@ -1,7 +1,13 @@
 import type { RequestCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 import { cookies } from 'next/headers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createSession, verifySessionToken, signSessionToken, type SessionPayload, verifySession } from './session';
+import {
+  createSession,
+  type SessionPayload,
+  signSessionToken,
+  verifySession,
+  verifySessionToken,
+} from './session';
 
 describe('session', () => {
   const mockedCookies = vi.mocked(cookies);

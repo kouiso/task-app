@@ -804,7 +804,7 @@ git log --all --oneline -- .env
 
 **5. すでに push していたらまず鍵を作り直す。** 一度 push した値は過去のコミットに残り、GitHub からも読めます。パスワードやアクセストークンを新しい値に作り直すのが最優先です。履歴の掃除より先にこちらを行います。
 
-**6. 複数のコミットに入っていたら過去の記録からも消す。** `git rm --cached .env` や手順4の `git commit --amend` だけでは、それより古いコミットから値を消せません。履歴全体の書き換えは影響範囲が大きいため、[GitHub 公式の機密情報削除手順](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) で副作用と `git-filter-repo` の手順を確認してください。すでに push した秘密値は、履歴を書き換える前に失効または作り直します。GitHub のキャッシュや他の人の複製に残る可能性があるため、履歴を書き換えただけで鍵を作り直さなくてよい、とは判断しません。
+**6. 複数のコミットに入っていたら過去の記録からも消す。** `git rm --cached .env` や手順4の `git commit --amend` だけでは、それより古いコミットから値を消せません。履歴全体の書き換えは影響範囲が大きいため、[GitHub 公式の機密情報削除手順](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) で副作用を確認したうえで `git filter-repo` を使います。`git filter-repo` は Git に最初から入っている道具ではありません。macOS なら `brew install git-filter-repo` で入れてから使います。書き換えた結果をすでにあるリモートへ送るときは `git push --force-with-lease` を使います。リモートの最新を確かめてから上書きするコマンドです。条件なしの `git push --force` はその間に他の人が入れた変更ごと消してしまいます。共同で作業している相手がいれば取り直してもらう連絡も要ります。すでに push した秘密値は、履歴を書き換える前に失効または作り直します。GitHub のキャッシュや他の人の複製に残る可能性があるため、履歴を書き換えただけで鍵を作り直さなくてよい、とは判断しません。
 
 `.env.example` は値の入っていない見本なので追跡したままで問題ありません。
 

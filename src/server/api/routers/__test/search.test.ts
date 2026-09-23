@@ -172,9 +172,7 @@ describe('searchRouter', () => {
         select: { id: true },
       });
 
-      expect(new Set(forward.map((t) => t.id))).toEqual(
-        new Set(reversed.map((t) => t.id)),
-      );
+      expect(new Set(forward.map((t) => t.id))).toEqual(new Set(reversed.map((t) => t.id)));
       expect(forward.map((t) => t.id).sort()).toEqual([t1.id, t2.id].sort());
     });
 
