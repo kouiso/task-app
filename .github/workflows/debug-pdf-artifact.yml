@@ -1,0 +1,103 @@
+name: debug-pdf-artifact
+
+on:
+  push:
+    branches: [debug/pr420-pdf-artifact]
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
+
+jobs:
+  full:
+    name: debug shard ${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    # 判定が描画環境に依存するので、PRゲートと同じイメージに固定する
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Node.js を用意
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 依存をインストール
+        run: npm ci
+
+      - name: poppler を用意
+        # 既定の apt は dpkg のロックを無期限に待つので、待ち上限を切らんと
+        # runner 起動直後のロック競合でジョブの持ち時間を丸ごと食う
+        timeout-minutes: 10
+        run: |
+          # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
+          # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
+          # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
+          # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる
+          echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
+          sudo apt-get install -y -qq poppler-utils \
+            || { sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils; }
+          pdftotext -v
+
+      - name: Chromium をキャッシュから復元
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
+
+      - name: Chromium を用意
+        # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る
+        timeout-minutes: 15
+        run: |
+          # --with-deps も内部で apt を叩く。ロック競合は上の設定で上限が付いとるが、
+          # 掴み損ねた時のために1回だけやり直す
+          npx playwright install --with-deps chromium \
+            || npx playwright install --with-deps chromium
+          # Ubuntu 24.04 は AppArmor で非特権 user namespace を止めとる。
+          # build_pdf_book.py は非rootではサンドボックスを外さん方針なので、
+          # これが有効なままやと mermaid の puppeteer が起動直後に死んで図が全滅する。
+          # サンドボックスを外すのやのうて、張れるようにする
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          # find_browser() は見つからんかったら黙って None を返し、mermaid が図ごとに
+          # 約650MBの Chrome を取りに行く。実体を突き止めて PDF_BOOK_BROWSER に渡す
+          browser="$(find "$PLAYWRIGHT_BROWSERS_PATH" -type f -regextype posix-extended \
+            -regex '.*/chromium-[0-9]+/chrome-linux(64)?/chrome' 2>/dev/null \
+            | sort -V | tail -n 1 || true)"
+          if [ -z "$browser" ]; then
+            echo "::error::Chromium が $PLAYWRIGHT_BROWSERS_PATH に見つからん"
+            find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 2 -type d 2>/dev/null || true
+            exit 1
+          fi
+          echo "PDF_BOOK_BROWSER=$browser" >> "$GITHUB_ENV"
+          echo "Chromium: $browser"
+
+      - name: shard を組む
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          mapfile -t all < <(ls material/30days-curriculum/*.md | sort)
+          targets=()
+          for i in "${!all[@]}"; do
+            if [ $((i % 4)) -eq "$SHARD" ]; then targets+=("${all[$i]}"); fi
+          done
+          printf '%s\n' "${targets[@]}"
+          python3 scripts/pdf-book/build_pdf_book.py "${targets[@]}" || python3 scripts/pdf-book/build_pdf_book.py "${targets[@]}"
+
+      - name: PDF を成果物に上げる
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pdf-shard-${{ matrix.shard }}
+          path: dist/pdf/*.pdf
+          retention-days: 3
