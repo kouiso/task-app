@@ -85,6 +85,7 @@ jobs:
       - name: shard を組む
         env:
           SHARD: ${{ matrix.shard }}
+          PDF_BOOK_LINK_MAP: scripts/pdf-book/pdf-link-map.json
         run: |
           mapfile -t all < <(ls material/30days-curriculum/*.md | sort)
           targets=()
