@@ -85,6 +85,96 @@ def main() -> int:
         f"{long_a}\n",
     )
 
+    # 改ページを跨ぐブロック: ノンブルと柱が断片の間に挟まっても一致する
+    furnished = (
+        "Day 01: 開発環境\n本文\n"
+        f"{long_a}\n\n51\n\f"
+        "Day 01: 開発環境\n"
+        f"{long_b}\n\n52\n\f"
+        "Day 01: 開発環境\n本文\n"
+    )
+    stripped = target.strip_page_furniture(furnished)
+    if "51" in stripped or "52" in stripped or stripped.count("Day 01: 開発環境") != 1:
+        failures.append(f"page furniture was not stripped: {stripped!r}")
+    checked, total, found, _, _ = target.verify_document(
+        [block(long_a, long_b)], stripped
+    )
+    if found or (checked, total) != (2, 2):
+        failures.append(f"block across a page break failed: {found}")
+    expect_failure(
+        failures,
+        "furniture left in place still breaks the block",
+        [block(long_a, long_b)],
+        furnished,
+    )
+    if "only_once_first_line" not in target.strip_page_furniture(
+        "x\n\fonly_once_first_line\ncode\n\fDay\n\fDay\n"
+    ):
+        failures.append("a first line seen on one page only was stripped as a header")
+
+    # 異体字セレクタ: pdftotext は VS16/VS15 を落とすので、原稿側も除いて照合する
+    for name, source_line in (
+        ("VS16", "// ⚠️ 注意: この行は消さない"),
+        ("VS15", "// ⚠︎ 注意: この行は消さない"),
+    ):
+        checked, total, found, _, _ = target.verify_document(
+            [block(source_line)], "// ⚠ 注意: この行は消さない\n"
+        )
+        if found or (checked, total) != (1, 1):
+            failures.append(f"{name} on the source side was not stripped: {found}")
+    if target.strip_variation_selectors("a️b︎c") != "abc":
+        failures.append("strip_variation_selectors left a selector behind")
+
+    # 組版の強制改行: JSX 子テキストの開始タグ直後は code_wrap が <br> を入れる
+    jsx_line = " " * 16 + '<h3 className="font-semibold">コメント</h3>'
+    if target.line_width(target.atoms(jsx_line)) <= target.SAFE_COLS:
+        failures.append("JSX fixture no longer exceeds SAFE_COLS")
+    checked, total, found, _, _ = target.verify_document(
+        [block(jsx_line, lang="tsx")],
+        '<h3 className="font-semibold">\nコメント</h3>\n',
+    )
+    if found or (checked, total) != (1, 1):
+        failures.append(f"renderer forced break after a JSX open tag was rejected: {found}")
+    expect_failure(
+        failures,
+        "break inside a JSX attribute string",
+        [block(jsx_line, lang="tsx")],
+        '<h3 className="font-\nsemibold">コメント</h3>\n',
+    )
+    expect_failure(
+        failures,
+        "break after a JSX open tag on a line that fits",
+        [block("<h3>コメント</h3>", lang="tsx")],
+        "<h3>\nコメント</h3>\n",
+    )
+
+    # -layout: 桁揃えした列の抽出順を保つため Poppler を -layout で呼ぶ
+    original_run = target.subprocess.run
+    calls: list[list[str]] = []
+
+    class Completed:
+        stdout = "a️b\n".encode("utf-8")
+
+    def fake_run(args, **_kwargs):
+        calls.append(list(args))
+        return Completed()
+
+    target.subprocess.run = fake_run
+    try:
+        text = target.pdf_text(Path("sample.pdf"))
+    finally:
+        target.subprocess.run = original_run
+    if not calls or "-layout" not in calls[0]:
+        failures.append(f"pdftotext was not called with -layout: {calls}")
+    if text != "ab\n":
+        failures.append(f"pdf_text kept a variation selector: {text!r}")
+    checked, total, found, _, _ = target.verify_document(
+        [block("  id        String    @id @default(cuid())", lang="prisma")],
+        "  id        String    @id @default(cuid())\n",
+    )
+    if found or (checked, total) != (1, 1):
+        failures.append(f"layout-aligned columns were rejected: {found}")
+
     with tempfile.TemporaryDirectory() as directory:
         md = Path(directory) / "sample.md"
         md.write_text(

@@ -8,8 +8,9 @@
 
 この診断はブラウザや PDF ビューアのクリップボードを操作しません。
 したがって、実ビューアからコピーした結果との同一性は証明しません。また、
-Poppler はコードの視覚的な字下げや連続空白を保持しないため、空白の個数は
-検証対象外です。コードブロックの外枠も抽出されないため、同じ文字列が本文に
+Poppler の -layout 出力は字下げや連続空白を紙面の桁位置から再構成するため、
+空白の個数は検証対象外です。照合前にノンブルと柱を除き、異体字セレクタは
+原稿側と抽出側の両方から除きます。コードブロックの外枠も抽出されないため、同じ文字列が本文に
 ある場合の出所、ブロック境界、空行、ブロック間や最終行の次に独立して増えた
 行は判定できません。実ビューアでのコピー確認は別の出荷要件として残ります。
 """
@@ -24,7 +25,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "scripts" / "pdf-book"))
-from code_wrap import atoms, break_before, classify_block  # noqa: E402
+from code_wrap import (  # noqa: E402
+    SAFE_COLS,
+    atoms,
+    break_before,
+    classify_block,
+    forced_breaks,
+    line_width,
+)
 
 PDF_DIR = ROOT / "dist" / "pdf"
 SRC_DIR = ROOT / "material" / "30days-curriculum"
@@ -97,13 +105,62 @@ def fenced_code_blocks(md_path: Path) -> list[CodeBlock]:
     return blocks
 
 
+VARIATION_SELECTORS = ("️", "︎")
+
+
+def strip_variation_selectors(text: str) -> str:
+    """pdftotext は異体字セレクタ（VS16/VS15）を落とすため、照合は両側から除いて行う。"""
+    for selector in VARIATION_SELECTORS:
+        text = text.replace(selector, "")
+    return text
+
+
 def pdf_text(pdf_path: Path) -> str:
+    # -layout なしだと桁揃えした列（ツリー図・Prisma の列・行末コメント）の
+    # 抽出順が入れ替わり、原稿どおりの行が読めない
     out = subprocess.run(
-        ["pdftotext", "-enc", "UTF-8", str(pdf_path), "-"],
+        ["pdftotext", "-layout", "-enc", "UTF-8", str(pdf_path), "-"],
         capture_output=True,
         check=True,
     )
-    return out.stdout.decode("utf-8")
+    return strip_variation_selectors(out.stdout.decode("utf-8"))
+
+
+def strip_page_furniture(text: str) -> str:
+    """抽出テキストからノンブルと柱（走り見出し）を取り除く。
+
+    コードブロックが改ページを跨ぐと、断片の間にページ番号と柱の行が
+    抽出順で挟まり、正本との照合がそこで切れる。家具は検査対象のコード
+    行ではないので、照合前に取り除く。
+    ページ番号は \\f 直前の数字だけの行、柱は \\f 直後の最初の非空行で、
+    各冊子で同一文字列（書名）が繰り返されることを利用して同定する。
+    """
+    pages = text.split("\f")
+    # 1回だけの先頭行は本文なので残し、複数ページで繰り返す先頭行だけを柱とみなす
+    first_lines: dict[str, int] = {}
+    for page in pages[1:]:
+        for line in page.split("\n"):
+            if line.strip():
+                key = line.strip()
+                first_lines[key] = first_lines.get(key, 0) + 1
+                break
+    headers = {key for key, count in first_lines.items() if count >= 2}
+    cleaned = []
+    for page_index, page in enumerate(pages):
+        lines = page.split("\n")
+        for index in range(len(lines) - 1, -1, -1):
+            if lines[index].strip():
+                if re.fullmatch(r"\s*\d{1,4}\s*", lines[index]):
+                    lines[index] = ""
+                break
+        if page_index > 0:
+            for index in range(len(lines)):
+                if lines[index].strip():
+                    if lines[index].strip() in headers:
+                        lines[index] = ""
+                    break
+        cleaned.append("\n".join(lines))
+    return "\n".join(cleaned)
 
 
 def _is_extracted_line_start(pdf: str, idx: int) -> bool:
@@ -193,12 +250,26 @@ def _candidate_offsets(head: str, pdf: str, start: int):
         cursor = idx + 1
 
 
+def _allowed_breaks(text_atoms: list[str], states: list[str], lang: str) -> set[int]:
+    """PDF 上で折れてよい位置。code_wrap の折返し候補と、組版が入れる強制改行。
+
+    code_wrap._emit_line は SAFE_COLS を超える行にだけ forced_breaks の位置へ
+    <br> を入れる（JSX 子テキストの開始タグ直後など、break_before には無い位置を含む）。
+    """
+    marks = break_before(text_atoms, states, lang)
+    if line_width(text_atoms) > SAFE_COLS:
+        marks |= forced_breaks(text_atoms, states, marks, lang)
+    return marks
+
+
 def _block_line_data(block: CodeBlock):
-    line_atoms = [atoms(line) for line in block.lines]
+    # 原稿側も異体字セレクタを除いてから原子化し、PDF 側とオフセットを揃える
+    lines = [strip_variation_selectors(line) for line in block.lines]
+    line_atoms = [atoms(line) for line in lines]
     states_per_line = classify_block(line_atoms, block.lang)
     return [
-        (line.rstrip(), break_before(line_atoms[index], states, block.lang))
-        for index, (line, states) in enumerate(zip(block.lines, states_per_line))
+        (line.rstrip(), _allowed_breaks(line_atoms[index], states, block.lang))
+        for index, (line, states) in enumerate(zip(lines, states_per_line))
         if line.rstrip()
     ]
 
@@ -293,7 +364,9 @@ def main() -> int:
         except SourceFenceError as error:
             failures.append(str(error))
             continue
-        result = verify_document(blocks, pdf_text(pdf_by_stem[stem]))
+        result = verify_document(
+            blocks, strip_page_furniture(pdf_text(pdf_by_stem[stem]))
+        )
         document_checked, document_total, document_failures, mb, ml = result
         checked_lines += document_checked
         total_lines += document_total
