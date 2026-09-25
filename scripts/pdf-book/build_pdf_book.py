@@ -799,6 +799,13 @@ def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
 def find_browser() -> str | None:
     """Chromium の実行ファイルを探す。見つからなければ None。
 
+    探索は次の順で、最初に見つかった実体を返す:
+      1. PDF_BOOK_BROWSER（明示指定。CI はこれで使う実体を固定している）
+      2. Playwright のキャッシュ（PLAYWRIGHT_BROWSERS_PATH → OS 既定の ms-playwright）
+      3. OS に入った Chrome/Chromium（macOS の .app → PATH のコマンド）
+
+    2 を 3 より先に見るのは、CI が Playwright 同梱の Chromium で組んでいるため。
+    手元がシステムの Chrome を選ぶと、合字や行送りが CI の検査結果とずれ得る。
     見つからない場合は Vivliostyle が自前で取得するので、失敗にはしない。
     """
     explicit = os.environ.get("PDF_BOOK_BROWSER")
@@ -808,8 +815,13 @@ def find_browser() -> str | None:
         # 黙って別のブラウザへ落ちると、指定したつもりの環境と別の字形で組まれる
         print(f"⚠️  PDF_BOOK_BROWSER のパスが見つかりません: {explicit}", file=sys.stderr)
         print("   指定を無視して探索を続けます", file=sys.stderr)
-    roots = [Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers"))]
-    roots.append(Path.home() / "Library" / "Caches" / "ms-playwright")
+    roots = [
+        Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")),
+        # PLAYWRIGHT_BROWSERS_PATH を立てずに `playwright install` した Linux・WSL は
+        # こちらへ入る。後者だけ見ると手元のキャッシュが空振りしてシステムの Chrome まで落ちる
+        Path.home() / ".cache" / "ms-playwright",
+        Path.home() / "Library" / "Caches" / "ms-playwright",
+    ]
     for root in roots:
         # 近年の Playwright が入れる Chrome for Testing は chrome-linux64 に置かれる。
         # 旧レイアウト(chrome-linux)も残るので両方見る
@@ -827,6 +839,19 @@ def find_browser() -> str | None:
         if executable:
             return executable
     return None
+
+
+def browser_version(executable: str) -> str:
+    """ブラウザの --version 出力を1行で返す。取れなければ「版不明」。"""
+    try:
+        result = subprocess.run(
+            [executable, "--version"], capture_output=True, text=True, timeout=30
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "版不明"
+    if result.returncode != 0:
+        return "版不明"
+    return result.stdout.strip() or "版不明"
 
 
 def strip_inline_markdown(text: str) -> str:
@@ -1423,6 +1448,12 @@ def main(argv: list[str]) -> int:
         print(f'表幅設定を正本冊子と照合できません: {error}', file=sys.stderr)
         return 2
     browser = find_browser()
+    # 使う実体と版を毎回ログに残す。Chrome と Playwright 同梱の Chromium では
+    # 合字など描画が変わり得るので、どちらで組んだかは検査結果を読む前提になる
+    if browser:
+        print(f"組版ブラウザ: {browser}（{browser_version(browser)}）", flush=True)
+    else:
+        print("組版ブラウザ: 見つからない（Vivliostyle が自前で取得する）", flush=True)
     # symlink 越しの別名を正本36冊の指定と認めると、別名PDFだけを生成したあとに
     # 古い正本PDFへ証跡を発行できる。正本パスそのものだけを全冊ビルドとする。
     release_source_paths = {path.absolute() for path in all_sources}
