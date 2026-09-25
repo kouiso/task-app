@@ -527,7 +527,7 @@ if (!projectDetail) {
 
 Props の型が `ProjectDetail | null | undefined` なので、この `if` は部品を単独で使ったときの防御になります。ただし現在の `page.tsx` は、この部品を呼ぶ前に取得状態を判定します。取得中はスピナー、初回500は再読み込み、401・403は権限案内、404は不在案内を親が返すため、通常の画面操作で `undefined` のままこの部品へ進みません。ここを通り抜けた先ではTypeScript が「`projectDetail` には必ず中身がある」と判断します。だからこの後に出てくる `projectDetail.color` や `projectDetail.name` を、`?.` を付けずにそのまま書けます。逆にこの `if` を消すと以降の参照で型エラーが出ます。
 
-詳細ビュー本体の骨格はこうなります。
+詳細ビュー本体の骨格はこうなります。ヘッダーは説明のため1段に削った形で載せています。手元のファイルは「戻る・アーカイブ操作」の行と「色丸・名前・アーカイブ済みバッジ」の行の2段で、`className` も一部違います。全文は「完成コード全体」で確かめます。
 
 ```tsx
 // filepath: src/component/project/project-detail-view.tsx
@@ -699,7 +699,7 @@ Day 12 で実装済みなら以下は読み比べだけ行います。
 </Card>
 ```
 
-優先度の札だけは専用の部品にせず、共通の `Badge` に `variant` を渡す形にしています。色を決める役目は `getPriorityBadgeVariant` が持っていて`URGENT` なら `destructive`、`HIGH` なら `default`、`MEDIUM` なら `secondary`、残りは `outline` を返します。ここで `task.priority === 'URGENT' ? ... : ...` と書き始めると同じ優先度がタスク一覧と詳細で違う色になっていきます。文字のほうは `TASK_PRIORITY_LABELS[task.priority]` を通して「緊急」「高」「中」「低」の日本語にします。`?? task.priority` を添えてあるのは対応表で見つからない値が届いても札を空にしないためです。
+優先度の札だけは専用の部品にせず、共通の `Badge` に `variant` を渡す形にしています。色を決める役目は `getPriorityBadgeVariant` が持っていて`URGENT` なら `destructive`、`HIGH` なら `secondary`、残り（`MEDIUM` と `LOW`）は `outline` を返します。ここで `task.priority === 'URGENT' ? ... : ...` と書き始めると同じ優先度がタスク一覧と詳細で違う色になっていきます。文字のほうは `TASK_PRIORITY_LABELS[task.priority]` を通して「緊急」「高」「中」「低」の日本語にします。`?? task.priority` を添えてあるのは対応表で見つからない値が届いても札を空にしないためです。
 
 **確認ポイント**
 
@@ -2090,7 +2090,7 @@ export default function ProjectPage() {
 
 ### `src/component/project/project-detail-view.tsx`
 
-このファイルは Day 01 の配布物に完成した形で入っています。Step 3 と Step 4 では説明のために一部を削った形を載せたのでここで完成状態を確かめてください。主な差分はロールを変える `Select`、権限による出し分け、キャンセル済みタスクの数え分けです。完成版にはヘッダーの2段構成、長い名前の折り返し、アーカイブ済みバッジ、アーカイブボタンの権限判定も含まれます。
+このファイルは Day 01 の配布物に入っています。配布物とこの完成形の違いは、ロールを変える `Select` まわりの2か所だけです。配布物には `|| !onUpdateMemberRole` の条件と `onUpdateMemberRole?.(...)` の `?.` が残っています。props はすべて必須なので、この2か所が残っていても動きは同じです。Step 3 と Step 4 では説明のために一部を削った形を載せたのでここで完成状態を確かめてください。主な差分はロールを変える `Select`、権限による出し分け、キャンセル済みタスクの数え分けです。完成版にはヘッダーの2段構成、長い名前の折り返し、アーカイブ済みバッジ、アーカイブボタンの権限判定も含まれます。
 
 **画面部品の import**:
 
@@ -2386,7 +2386,7 @@ Step 4 では常に出していたメンバー追加ボタンが完成版では 
 
 条件が2つ並んでいてどちらかに当たれば読み取り専用の札になります。相手がオーナーのときと、見ている自分にメンバー管理の権限が無いときです。
 
-`isProjectMemberRole(member.role)` で確かめてから対応表を引いているのは`member.role` の型がデータベース由来の文字列で、4つの名前に限られていないためです。確かめずに `PROJECT_MEMBER_ROLE_LABELS[member.role]` と書くと型エラーになります。当てはまらない値が来たときは変換せずそのまま出します。
+`isProjectMemberRole(member.role)` で確かめてから対応表を引いているのは、実行時に届く値を守るためです。型の上では `member.role` は Prisma の enum と同じ4つの文字列に決まっているので、確かめずに `PROJECT_MEMBER_ROLE_LABELS[member.role]` と書いても型エラーは出ません。それでも挟むのは、型検査が働くのはビルドの時点までで、実行時にデータベースから届いた値までは確かめないからです。当てはまらない値が来たときは変換せずそのまま出します。
 
 **役割を変える Select**:
 
