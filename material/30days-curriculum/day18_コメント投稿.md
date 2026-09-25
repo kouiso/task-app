@@ -286,6 +286,8 @@ Day 09 の `getAll` で使ったのと同じ道具です。
 
 router だけ書いても `api.comment.create` はまだ呼べません。
 最後に appRouter へ登録します。
+Day 14 で書いた `root.ts` を開き、import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。
+増えるのは `commentRouter` の import 1行と `comment: commentRouter,` の1行だけで、ほかの行は貼り足さずにそのまま残します。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -768,6 +770,8 @@ Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り�
 - Day 14 と同じ `zodResolver` パターンを使っている
 
 フォームを書く前に、props を1つ増やします。
+配布ファイルにある `type TaskDetailDialogProps` と関数の先頭行を次の形に書き換えます。
+増えるのは `canEditProject` の行だけで、型と関数を新しく足すのではありません。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
@@ -790,7 +794,8 @@ Step 0 で書いた `comment.create` は編集できる役割かどうかをサ�
 閲覧者（VIEWER）が投稿ボタンを押すとサーバーに弾かれるので押せる見た目のまま残すと理由の分からない無反応に見えます。
 Day 13 で作った `canEditProject` をそのまま受け取り、投稿できる人にだけフォームを出します。
 
-呼び出し側の `/task` ページにも同じ名前で渡します。
+呼び出し側の `/task` ページでは、Day 13 で書いた `<TaskDetailDialog />` に `canEditProject={canEditProject}` の1行を足して次の形にします。
+要素を新しく足すのではなく、既存の要素を書き換えます。
 
 ```typescript
 {/* filepath: src/app/task/page.tsx */}
