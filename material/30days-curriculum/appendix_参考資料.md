@@ -101,3 +101,21 @@
 
 - 目次: [カリキュラム目次](./00_カリキュラム目次.md)
 - 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
+
+<!-- textlint-disable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
+
+---
+
+## 奥付
+
+| | |
+|---|---|
+| タイトル | 参考資料リンク集 |
+| 著者 | 磯貝光佑 |
+| 版 | 第1版（2026年9月19日） |
+
+© 2026 磯貝光佑
+
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+
+<!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
