@@ -620,8 +620,12 @@ function auditPaginatedDom(manifest, constants) {
         table_geometry: tableGeometry,
       };
       const items = observed.get(id) ?? [];
-      items.push(item);
-      observed.set(id, items);
+      // thead は表が改ページを跨ぐと続きのページへ複写される（book.css の
+      // table-header-group）。複写側は同じ要素なので、最初の出現だけを数える
+      if (!(items.length > 0 && code.closest('thead'))) {
+        items.push(item);
+        observed.set(id, items);
+      }
 
       if (!entry) violations.push({ check: 'manifest_coverage', id, reason: 'unknown_id' });
       if (entry && code.textContent !== entry.expected_text) {
