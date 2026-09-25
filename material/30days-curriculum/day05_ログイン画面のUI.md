@@ -32,7 +32,7 @@ react-hook-form と zod を使ってバリデーション付きのログイン�
 ### フォーム管理の仕組み
 
 ```mermaid
-flowchart LR
+flowchart TB
     A[ユーザーが入力] --> B[react-hook-formが値を管理]
     B --> C{送信ボタンを押す}
     C --> D[zodスキーマでバリデーション]
