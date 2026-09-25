@@ -234,7 +234,9 @@ pwd
 > `unzip /mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1.zip`
 > `unzip: command not found` と出たら先に `sudo apt-get update && sudo apt-get install -y unzip` を実行します。
 >
-> ZIP の名前は手元のファイルと違うことがあります。バージョン番号の違いやブラウザが付けた末尾の `(1)` を確かめます。`unzip` で `cannot find` と出たら `ls ~/Downloads` で実際のファイル名を確認してください。その名前で実行し直します。
+> ZIP の名前は手元のファイルと違うことがあります。バージョン番号の違いやブラウザが付けた末尾の `(1)` を確かめます。`unzip` で `cannot find` と出たら `ls ~/Downloads` で実際のファイル名を確認してください。WSL2 では `ls /mnt/c/Users/<Windowsのユーザー名>/Downloads` で確認します。その名前で実行し直します。
+>
+> 空白や括弧を含む名前は `"` で囲みます。末尾に ` (1)` が付いた場合の例は `unzip "$HOME/Downloads/task-app-curriculum-v1.1 (1).zip"` です。`$HOME` はホームフォルダを表します。WSL2 では `unzip "/mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1 (1).zip"` のように書きます。
 >
 > `cd task-app` は配布 ZIP が `task-app` フォルダに展開される前提のコマンドです。
 > `cd task-app` で `No such file or directory` と出たら展開先のフォルダ名が違います。
@@ -518,7 +520,26 @@ Next.js のロゴと
 
 #### 編集前に VS Code でプロジェクトを開く
 
-編集にはエディタを使います。VS Code の「ファイル」から「フォルダを開く...」を選びます。`workspace` の中の `task-app` を開いてください。左側のファイル一覧に `src` や `package.json` があれば準備完了です。`src/app/globals.css` を開く場合は `src`、`app` の順でフォルダをクリックします。その中の `globals.css` を選びます。
+編集にはエディタを使います。開き方は OS によって違います。
+
+**macOS / Ubuntu の場合**
+
+VS Code の「ファイル」から「フォルダを開く...」を選びます。`workspace` の中の `task-app` を開いてください。
+
+**Windows (WSL2) の場合**
+
+`task-app` は Ubuntu の中にあります。`npm run dev` のターミナルは残したまま、スタートメニューからもう1つ Ubuntu のターミナルを開き、次を1行ずつ実行します。
+
+```bash
+cd ~/workspace/task-app
+code .
+```
+
+VS Code の左下に `WSL: Ubuntu` など、使っている Ubuntu の名前が出ていれば開けています。`code: command not found` と出る場合や左下に WSL の表示がない場合は、[付録のトラブルシューティング](./appendix_トラブルシューティング.md)の「別フォルダの DB と衝突した場合」の手順1で、`Add to PATH` と WSL 拡張機能を確認してください。
+
+**共通の確認**
+
+左側のファイル一覧に `src` や `package.json` があれば準備完了です。`src/app/globals.css` を開く場合は `src`、`app` の順でフォルダをクリックします。その中の `globals.css` を選びます。
 
 `npm run dev` のターミナルは起動したまま使います。ファイルを保存するとブラウザの画面が更新されます。
 
