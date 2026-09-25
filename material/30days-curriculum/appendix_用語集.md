@@ -124,7 +124,7 @@ react-hook-form に zod のルールを渡すための部品です。
 | Middleware | 前処理 | ビル入り口の警備員 |
 | Router | API束ね | API目次 |
 
-![tRPC経由でタスク一覧を取得して表示した画面](./screenshots/task-list.png)
+![tRPC経由でタスク一覧を取得して表示した画面](./screenshots/day30/task-list.png)
 
 ### API（Application Programming Interface）
 
@@ -164,7 +164,7 @@ APIの窓口（エンドポイント）をまとめたもの。`projectRouter`�
 
 ### Recharts
 
-Reactでグラフを描くためのライブラリです。Day 22では集計データをグラフ用のコンポーネントへ渡し、棒グラフや円グラフで表示します。
+Reactでグラフを描くためのライブラリです。Day 22では集計データをグラフ用のコンポーネントへ渡して円グラフで表示し、Day 23では週ごとの完了数を棒グラフで表示します。
 
 ---
 

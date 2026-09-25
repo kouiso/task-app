@@ -8,7 +8,7 @@
 
 ![正常起動時のダッシュボード画面](./screenshots/day30/dashboard.png)
 
-![正常起動時のタスク一覧画面](./screenshots/task-list.png)
+![正常起動時のタスク一覧画面](./screenshots/day30/task-list.png)
 
 ---
 
@@ -149,9 +149,9 @@ VS Code で今回の `task-app` フォルダの `.env` を開きます。開き�
 
 #### `git push`で認証エラー
 
-**原因**: GitHubの認証設定が不足しています。
+**原因**: Day 03 で行った `gh auth login` の認証が終わっていないか、途中で切れています。
 
-**解決方法**: SSH鍵またはPersonal Access Tokenを設定します。
+**解決方法**: `gh auth status` を実行して状態を読みます。`You are not logged into any GitHub hosts` と出たら `gh auth login` からやり直します。3番目の質問 `Authenticate Git with your GitHub credentials?` は `Yes` にします（Day 03 Step 5 と同じ手順です）。教材では SSH 鍵や Personal Access Token は使いません。
 
 #### Vercelデプロイでビルドエラー
 
