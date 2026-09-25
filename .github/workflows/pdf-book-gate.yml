@@ -285,6 +285,9 @@ jobs:
         if: steps.select.outputs.scope != 'none'
         env:
           SCOPE: ${{ steps.select.outputs.scope }}
+          # 部分組版は make を通さず build_pdf_book.py を直接呼ぶので、
+          # Makefile が export しとる配布先マップが届かん。同じ正本をここで渡す
+          PDF_BOOK_LINK_MAP: scripts/pdf-book/pdf-link-map.json
         run: |
           targets=()
           if [ "$SCOPE" != "all" ]; then
