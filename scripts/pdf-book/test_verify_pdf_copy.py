@@ -148,6 +148,20 @@ def main() -> int:
         "<h3>\nコメント</h3>\n",
     )
 
+    # 実体参照を含む行: `&amp;` は1原子だが原稿では5文字。参照以降の折れ候補は
+    # 文字オフセットで後ろへずれるため、原子番号のままだと安全な折れを unsafe-break と誤る。
+    checked, total, found, _, _ = target.verify_document(
+        [block("x &amp;y", lang="text")], "x &amp;\ny\n"
+    )
+    if found or (checked, total) != (1, 1):
+        failures.append(f"permitted break after an entity was rejected: {found}")
+    expect_failure(
+        failures,
+        "break inside an entity reference",
+        [block("x &amp;y", lang="text")],
+        "x &am\np;y\n",
+    )
+
     # -layout: 桁揃えした列の抽出順を保つため Poppler を -layout で呼ぶ
     original_run = target.subprocess.run
     calls: list[list[str]] = []

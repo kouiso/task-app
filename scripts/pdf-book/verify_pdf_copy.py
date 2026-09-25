@@ -262,16 +262,33 @@ def _allowed_breaks(text_atoms: list[str], states: list[str], lang: str) -> set[
     return marks
 
 
+def _to_source_offsets(text_atoms: list[str], marks: set[int]) -> set[int]:
+    """原子番号の折れ候補を原稿行の文字オフセットへ直す。
+
+    `&amp;` のような実体参照は1原子だが原稿行では複数文字を占めるため、
+    実体参照以降の候補は文字オフセットでは後ろへずれる。
+    """
+    offsets = []
+    position = 0
+    for atom in text_atoms:
+        offsets.append(position)
+        position += len(atom)
+    return {offsets[mark] for mark in marks}
+
+
 def _block_line_data(block: CodeBlock):
     # 原稿側も異体字セレクタを除いてから原子化し、PDF 側とオフセットを揃える
     lines = [strip_variation_selectors(line) for line in block.lines]
     line_atoms = [atoms(line) for line in lines]
     states_per_line = classify_block(line_atoms, block.lang)
-    return [
-        (line.rstrip(), _allowed_breaks(line_atoms[index], states, block.lang))
-        for index, (line, states) in enumerate(zip(lines, states_per_line))
-        if line.rstrip()
-    ]
+    out = []
+    for line, text_atoms, states in zip(lines, line_atoms, states_per_line):
+        probe = line.rstrip()
+        if not probe:
+            continue
+        marks = _allowed_breaks(text_atoms, states, block.lang)
+        out.append((probe, _to_source_offsets(text_atoms, marks)))
+    return out
 
 
 def try_match_block(
