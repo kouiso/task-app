@@ -591,18 +591,29 @@ export function verifyAuditModel(manifest, domReport, pdfModel) {
     }
   }
 
-  const keys = new Map();
+  // 2つの一致が列の一部だけ共有しても抽出文字の使い回しになるため、
+  // 列全体のキーではなく字1つずつへ持ち主を記録する。
+  const owners = new Map();
   for (const match of selected) {
-    const prior = keys.get(match.candidate.key);
-    if (prior) {
+    let overlap = null;
+    for (const character of match.candidate.characters) {
+      const glyphKey = `${match.candidate.page_index}:${character.glyph_key}`;
+      const prior = owners.get(glyphKey);
+      if (prior) {
+        // 共有が続く列でも報告は最初の1件。持ち主の記録は最後まで続けて、
+        // 後ろの字だけを共有する別の一致も見逃さない。
+        overlap ??= { prior, glyphKey };
+      } else {
+        owners.set(glyphKey, match);
+      }
+    }
+    if (overlap) {
       issues.push(
         issue('glyph_reuse', 'glyph_sequence_reused', {
-          ids: [prior.entry.id, match.entry.id],
-          key: match.candidate.key,
+          ids: [overlap.prior.entry.id, match.entry.id],
+          key: overlap.glyphKey,
         }),
       );
-    } else {
-      keys.set(match.candidate.key, match);
     }
   }
   const selectedOrder = selected.map((match) => ({

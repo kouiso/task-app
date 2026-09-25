@@ -525,3 +525,137 @@ test('a real horizontal gap beyond the box epsilon still orders by x, not by sou
   assert.equal(exactOccurrences(page, 'updateProfile').length, 1);
   assert.equal(exactOccurrences(page, 'eliforPetadpu').length, 0);
 });
+
+// 字の持ち主検査: 2つの一致が列の一部だけ共有しても抽出文字の使い回しになる。
+// ブラウザ不要の単体検査として、DOM/PDF を合成して verifyAuditModel を通す。
+function syntheticReusePage(text) {
+  const characters = [...text].map((character, index) => {
+    const left = index * 10;
+    return {
+      character,
+      origin: [left, 10],
+      font: 'SyntheticMono',
+      size: 12,
+      quad: [left, 0, left + 8, 0, left, 10, left + 8, 10],
+      bbox: [left, 0, left + 8, 10],
+    };
+  });
+  return {
+    page_index: 0,
+    media_box: [0, 0, 300, 300],
+    crop_box: [0, 0, 300, 300],
+    rotation: 0,
+    lines: [{ bbox: [0, 0, text.length * 10, 10], characters }],
+  };
+}
+
+function reuseFixture(pageText, selections) {
+  const pageRect = { left: 0, top: 0, right: 300, bottom: 300 };
+  const checks = Object.fromEntries(
+    [
+      'renderer_ready',
+      'page_content_selector',
+      'manifest_coverage',
+      'measurement_support',
+      'physical_page_box_selector',
+      'single_line',
+      'minimum_font_size',
+      'cell_content_bounds',
+      'page_content_bounds',
+      'sibling_cell_overlap',
+      'clipping_ancestors',
+    ].map((name) => [name, { status: 'pass' }]),
+  );
+  checks.post_pdf_text_and_geometry = { status: 'unsupported' };
+  const manifest = {
+    schema_version: 1,
+    document_id: 'glyph-reuse-test',
+    minimum_font_size_pt: 8,
+    entries: selections.map(({ id, start, end }, order) => ({
+      id,
+      expected_text: pageText.slice(start, end),
+      source_order: order,
+      context: 'flow',
+    })),
+  };
+  const domReport = {
+    result: 'dom_pass_post_pdf_pending',
+    document_id: 'glyph-reuse-test',
+    dom_audit: {
+      ready_state: 'complete',
+      violations: [],
+      checks,
+      page_count: 1,
+      page_geometry: [
+        { status: 'observed_uncalibrated', page_index: 0, rect: pageRect },
+      ],
+      observed: selections.map(({ id, start, end }) => {
+        const codeRect = {
+          left: start * 10,
+          top: 0,
+          right: (end - 1) * 10 + 8,
+          bottom: 10,
+        };
+        return {
+          id,
+          items: [
+            {
+              page_index: 0,
+              text: pageText.slice(start, end),
+              line_rects: [codeRect],
+              font_size_pt: 12,
+              code_rect: codeRect,
+              code_box: {
+                padding_left: 0,
+                padding_right: 0,
+                border_left: 0,
+                border_right: 0,
+                border_box_rect: codeRect,
+              },
+              page_content_rect: pageRect,
+              physical_page_box: {
+                status: 'observed_uncalibrated',
+                page_index: 0,
+                rect: pageRect,
+              },
+            },
+          ],
+        };
+      }),
+    },
+  };
+  return { manifest, domReport, pdfModel: { pages: [syntheticReusePage(pageText)] } };
+}
+
+test('two matches sharing only some glyphs fail as reused', () => {
+  const { manifest, domReport, pdfModel } = reuseFixture('ABC', [
+    { id: 'reuse-a', start: 0, end: 2 },
+    { id: 'reuse-b', start: 1, end: 3 },
+  ]);
+  const result = verifyAuditModel(manifest, domReport, pdfModel);
+  assert.equal(result.result, 'fail');
+  const reuse = result.issues.find((entry) => entry.reason === 'glyph_sequence_reused');
+  assert.deepEqual(reuse.ids, ['reuse-a', 'reuse-b']);
+  assert.equal(reuse.key, '0:0:1');
+});
+
+test('two matches on disjoint glyph sequences pass', () => {
+  const { manifest, domReport, pdfModel } = reuseFixture('ABCD', [
+    { id: 'reuse-a', start: 0, end: 2 },
+    { id: 'reuse-b', start: 2, end: 4 },
+  ]);
+  const result = verifyAuditModel(manifest, domReport, pdfModel);
+  assert.equal(result.result, 'pass');
+  assert.deepEqual(result.issues, []);
+});
+
+test('two matches on the identical glyph sequence still fail as reused', () => {
+  const { manifest, domReport, pdfModel } = reuseFixture('AB', [
+    { id: 'reuse-a', start: 0, end: 2 },
+    { id: 'reuse-b', start: 0, end: 2 },
+  ]);
+  const result = verifyAuditModel(manifest, domReport, pdfModel);
+  assert.equal(result.result, 'fail');
+  const reuse = result.issues.find((entry) => entry.reason === 'glyph_sequence_reused');
+  assert.deepEqual(reuse.ids, ['reuse-a', 'reuse-b']);
+});
