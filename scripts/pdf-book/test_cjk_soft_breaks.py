@@ -28,6 +28,21 @@ class JoinCjkSoftBreaksTest(unittest.TestCase):
             join('<p><a href="https://example.com">漢字</a>\n漢字</p>'),
             '<p><a href="https://example.com">漢字</a>漢字</p>')
 
+    def test_removes_break_in_list_item_without_p(self):
+        # vfm は箇条書き項目を <p> で包まず <li> に直接流す
+        self.assertEqual(
+            join('<ul>\n<li>コピーする\n（欄がないとき）</li>\n</ul>'),
+            '<ul>\n<li>コピーする（欄がないとき）</li>\n</ul>')
+        self.assertEqual(
+            join('<ol>\n<li>\n  漢字\n  漢字\n</li>\n<li>漢字</li>\n</ol>'),
+            '<ol>\n<li>\n  漢字漢字\n</li>\n<li>漢字</li>\n</ol>')
+
+    def test_removes_break_in_heading_and_table_cell(self):
+        self.assertEqual(join('<h2>漢\n字</h2>'), '<h2>漢字</h2>')
+        self.assertEqual(
+            join('<table><tr><td>漢\n字</td></tr></table>'),
+            '<table><tr><td>漢字</td></tr></table>')
+
     def test_removes_run_with_leading_whitespace(self):
         # vfm は段落内の行をインデントして出すので、改行の直後に空白が来る
         self.assertEqual(
@@ -43,10 +58,18 @@ class JoinCjkSoftBreaksTest(unittest.TestCase):
         # 原稿で打たれた半角空白は消すと字がくっつくので残す
         self.assertEqual(join('<p>漢字 漢字</p>'), '<p>漢字 漢字</p>')
 
-    def test_keeps_break_outside_paragraph(self):
-        self.assertEqual(join('漢字\n漢字'), '漢字\n漢字')
+    def test_joins_break_in_bare_text(self):
+        # タグの外側に流れた本文も同じ欠陥を持つ
+        self.assertEqual(join('漢字\n漢字'), '漢字漢字')
+
+    def test_keeps_break_between_block_siblings(self):
         self.assertEqual(join('<p>漢字</p>\n<p>漢字</p>'),
                          '<p>漢字</p>\n<p>漢字</p>')
+        self.assertEqual(join('<li>漢字</li>\n<li>漢字</li>'),
+                         '<li>漢字</li>\n<li>漢字</li>')
+        # ブロック要素が区切るテキスト区間はまたがない
+        self.assertEqual(join('<li>漢\n<ul><li>字</li></ul>漢</li>'),
+                         '<li>漢\n<ul><li>字</li></ul>漢</li>')
 
     def test_keeps_break_inside_raw_text_elements(self):
         self.assertEqual(
