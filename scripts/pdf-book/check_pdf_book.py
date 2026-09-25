@@ -166,6 +166,8 @@ def find_furniture_problems(pages: list[str], header: str) -> list[str]:
 
 TOC_ENTRY = re.compile(r"\.{3,}\s*(\d+)\s*$", re.M)
 H2 = re.compile(r"^##\s+(?!#)(.+)$")
+# 目次の2段目に出る `### Step N:`。build_pdf_book.py の H3_STEP_RE と同じ形。
+H3_STEP = re.compile(r"^###\s+(Step\s+[\d.]+\s*[:：].+)$")
 
 
 def toc_entries(pages: list[str]) -> tuple[list[int], int]:
@@ -394,7 +396,10 @@ def check_one(pdf: Path) -> list[str]:
         # コードブロックの中にも `## ` で始まる行があるので、地の文だけを拾う
         headings = [
             matched.group(1).strip()
-            for matched in (H2.match(line) for _, line in iter_prose(text))
+            for matched in (
+                (H2.match(line) or H3_STEP.match(line))
+                for _, line in iter_prose(text)
+            )
             if matched
         ]
         problems += find_toc_problems(pages, total, headings)
