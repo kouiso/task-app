@@ -871,6 +871,49 @@ def check_triage_section() -> list[str]:
     return fails
 
 
+def check_result_doc_triage_sentence() -> list[str]:
+    """結果ドキュメントが、無い切り分けの表を指す文を出さないことを確かめる。"""
+    fails = []
+    days = target.available_days()
+    all_ok = [
+        target.DayResult(d, 80, True, "OK", "OK", (), generation="OK") for d in days
+    ]
+    one_ng = [
+        target.DayResult(
+            d, 80, True, "OK", "OK", (), generation="OK"
+        )
+        if d != days[0]
+        else target.DayResult(
+            d, 80, True, "NG", "NG", ("x.ts(1,1): error TS1005",), generation="OK"
+        )
+        for d in days
+    ]
+    original = target.RESULT_DOC
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            target.RESULT_DOC = Path(directory) / "out.md"
+            target.write_result_doc(all_ok, True, "python3 x --all --verify")
+            ok_doc = target.RESULT_DOC.read_text(encoding="utf-8")
+            target.write_result_doc(one_ng, True, "python3 x --all --verify")
+            ng_doc = target.RESULT_DOC.read_text(encoding="utf-8")
+    finally:
+        target.RESULT_DOC = original
+
+    if "下の切り分けの表を見ること" in ok_doc:
+        fails.append("❌ 全件 OK なのに無い切り分けの表を指している")
+    if "NG の日は無いため切り分けの表はありません。" not in ok_doc:
+        fails.append("❌ 全件 OK の代替文が出ていない")
+    if "## NG の日の切り分け" in ok_doc:
+        fails.append("❌ 全件 OK なのに切り分けの表が出ている")
+    if "下の切り分けの表を見ること" not in ng_doc:
+        fails.append("❌ NG があるのに切り分けの表を指す文が出ていない")
+    if "## NG の日の切り分け" not in ng_doc:
+        fails.append("❌ NG があるのに切り分けの表が無い")
+    if "NG の日は無いため切り分けの表はありません。" in ng_doc:
+        fails.append("❌ NG があるのに全件 OK の文が出ている")
+    return fails
+
+
 def check_new_declaration() -> list[str]:
     """まだ無い宣言を足す道と、その置き場の決め方。"""
     fails: list[str] = []
@@ -1818,6 +1861,7 @@ CHECKS = (
     ("上書きしない実行記録", check_immutable_run_records),
     ("検査中のソース入力固定", check_source_input_stability),
     ("NG の切り分け", check_triage_section),
+    ("結果文書の切り分け案内", check_result_doc_triage_sentence),
     ("tsconfig の exclude", check_tsconfig_excludes),
     ("まだ無い宣言を足す", check_new_declaration),
     ("自分で束ねる名前と欄名", check_local_binding_names),

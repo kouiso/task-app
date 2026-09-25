@@ -1539,6 +1539,13 @@ def write_result_doc(
         for r in results
     )
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    triage = triage_section(results)
+    # 全件 OK の時は切り分けの表が無いので、表を指す文を出したら読み手を迷わせる。
+    triage_hint = (
+        "下の切り分けの表を見ること。"
+        if triage
+        else "NG の日は無いため切り分けの表はありません。"
+    )
     all_days = available_days()
     total = len(all_days)
     target_days = [result.day for result in results]
@@ -1575,12 +1582,12 @@ def write_result_doc(
         ),
         "- tsc の NG は教材の欠陥とは限らない。教材がその日の `完成版` として",
         "  変更箇所の抜粋だけを出す日があり、道具はそれを丸ごとの書き直しとして扱う。",
-        "  1件ずつ現物と突き合わせてから判断すること。下の切り分けの表を見ること。",
+        f"  1件ずつ現物と突き合わせてから判断すること。{triage_hint}",
         "",
         "",
     ]
     body = "\n".join(head) + result_table(results) + "\n"
-    RESULT_DOC.write_text(body + triage_section(results), encoding="utf-8")
+    RESULT_DOC.write_text(body + triage, encoding="utf-8")
 
 
 
