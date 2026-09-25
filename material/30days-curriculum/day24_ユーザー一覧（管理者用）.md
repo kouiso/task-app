@@ -569,18 +569,18 @@ export default function UsersPage() {
 
 エラーメッセージには何が起きたかと誰なら使えるかの2つを書きます。「エラーが発生しました」とだけ出すと読者は自分の操作を疑って同じ手順を何度も繰り返します。管理者専用だと書いてあれば管理者に依頼するという次の行動がその場で分かります。閉じタグは開いた順の逆にたどり、`CardContent` から `Card`、`div`、`AppLayout` の順で閉じます。1つでも閉じ忘れると括弧の対応が関数の外までずれて書いた場所から離れた行に構文エラーが出ます。
 
-キャッシュが残っている500では早期リターンしません。ページ本体の先頭に警告を置きます。
+キャッシュが残っている500では早期リターンしません。代わりにページ本体の先頭へ警告を置きます。ページ本体の `return (` は次の Step 6 で書くので、このブロックはまだ貼りません。Step 6 で `container` の `<div>` を開いた直後、見出しの `<div>` の前に貼ります。
 
 ```typescript
-{/* filepath: src/app/user/page.tsx（return直後） */}
+{/* filepath: src/app/user/page.tsx（Step 6 の container の div 直後に貼る） */}
 {hasFetchError && (
   <div role="alert" className="mb-4 flex items-center
-    justify-between gap-4 rounded-lg border px-4 py-3">
-    <span>
-      最新のユーザー一覧を取得できませんでした。
-      前回取得時の内容です。
-    </span>
-    <Button variant="outline" size="sm"
+    justify-between gap-4 rounded-lg border
+    border-amber-300/60 bg-amber-50 px-4 py-3 text-sm
+    text-amber-900 dark:border-amber-500/40
+    dark:bg-amber-950/40 dark:text-amber-200">
+    <span>最新のユーザー一覧を取得できませんでした。前回取得時の内容です。</span>
+    <Button type="button" variant="outline" size="sm"
       onClick={refetchRequiredData}
       disabled={requiredFetching}>
       再試行
@@ -634,6 +634,8 @@ export default function UsersPage() {
           </h1>
         </div>
 ```
+
+`container` の `<div>` を開いた直後に、Step 5 の最後で確かめた `{hasFetchError && (...)}` の警告ブロックを貼ります。見出しの `<div>` はその下に続きます。
 
 ここから下はログイン中の人が管理者だと確定したあとのコードです。上の2つの早期リターンを通り抜けた場合しか、この `return` には届きません。だから以降では `isAdmin` を確かめ直さずに書けます。早期リターンを先に並べておくと本体のコードから条件分岐が消えて読みやすくなります。
 
@@ -938,12 +940,14 @@ Day 08 のデスクトップ用のナビゲーション内で、
     <Link
       href="/user"
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+        'flex items-center gap-3 rounded-md ' +
+          'px-3 py-2 text-sm transition-colors',
         pathname === '/user'
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'text-sidebar-foreground/60 ' +
-            'hover:text-sidebar-foreground ' +
-            'hover:bg-sidebar-accent',
+          ? 'bg-sidebar-accent ' +
+            'text-sidebar-accent-foreground font-medium'
+          : 'text-sidebar-foreground/70 ' +
+            'hover:bg-sidebar-accent/50 ' +
+            'hover:text-sidebar-foreground',
       )}
     >
       <Users className="h-5 w-5" />
@@ -1215,7 +1219,7 @@ import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-err
 import { api } from '@/trpc/react';
 ```
 
-`@/component/ui/...` が単数形になっている点は Step 3 の注意書きのとおりで、複数形で書くとファイルが見つからないというエラーが起動時に出ます。`Table` の6つをまとめて取り込んでいるのは表の外枠・見出し行・本体・行・セルがそれぞれ別の部品として分かれているからです。1つでも欠けるとその部分だけタグが見つからないと言われます。
+`@/component/ui/...` が単数形になっている点はこれまでの Day と同じで、複数形で書くとファイルが見つからないというエラーが起動時に出ます。`Table` の6つをまとめて取り込んでいるのは表の外枠・見出し行・本体・行・セルがそれぞれ別の部品として分かれているからです。1つでも欠けるとその部分だけタグが見つからないと言われます。
 
 **ユーザー情報の取得**:
 
@@ -1524,12 +1528,14 @@ import { USER_ROLE } from '@/lib/constant/roles';
     <Link
       href="/user"
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+        'flex items-center gap-3 rounded-md ' +
+          'px-3 py-2 text-sm transition-colors',
         pathname === '/user'
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'text-sidebar-foreground/60 ' +
-            'hover:text-sidebar-foreground ' +
-            'hover:bg-sidebar-accent',
+          ? 'bg-sidebar-accent ' +
+            'text-sidebar-accent-foreground font-medium'
+          : 'text-sidebar-foreground/70 ' +
+            'hover:bg-sidebar-accent/50 ' +
+            'hover:text-sidebar-foreground',
       )}
     >
       <Users className="h-5 w-5" />
