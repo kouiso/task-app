@@ -535,7 +535,7 @@ cd ~/workspace/task-app
 code .
 ```
 
-VS Code の左下に `WSL: Ubuntu` など、使っている Ubuntu の名前が出ていれば開けています。`code: command not found` と出る場合や左下に WSL の表示がない場合は、[付録のトラブルシューティング](./appendix_トラブルシューティング.md)の「別フォルダの DB と衝突した場合」の手順1で、`Add to PATH` と WSL 拡張機能を確認してください。
+VS Code の左下に `WSL: Ubuntu` など、使っている Ubuntu の名前が出ていれば開けています。`code: command not found` と出る場合や左下に WSL の表示がない場合は、[付録のトラブルシューティング](./appendix_トラブルシューティング.md)の「別フォルダの DB と衝突した場合」の手順1で、`Add to PATH` と WSL 拡張機能を確認してください。`Add to PATH` はターミナルから `code` を呼び出すための設定です。WSL 拡張機能は、Ubuntu 内のファイルを VS Code で編集するための拡張機能です。
 
 **共通の確認**
 
