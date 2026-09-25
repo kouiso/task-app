@@ -299,6 +299,10 @@ function main(action, serviceName) {
     commands.push(['npm', ['run', 'db:seed', '--', '--yes']]);
   for (const [executable, args] of commands) {
     // 初期導入だけを自動化し、seed の --yes を非対話経路で明示的に使う。
+    if (args[1] === 'db:seed')
+      // stdout が pipe だと process.stdout.write は非同期で子プロセスの出力と
+      // 入れ替わり得るため、fd へ直接書いて「投入しています」の先行を保証する。
+      fs.writeSync(1, 'シードデータを投入しています...\n');
     const result = spawnSync(executable, args, { env, stdio: ['ignore', 'inherit', 'inherit'] });
     if (result.error || result.status !== 0)
       fail('DB セットアップに失敗しました。直前のエラーを確認してください。');

@@ -213,7 +213,10 @@ else: sys.exit(58)
         docker.chmod(0o755)
         for name in ("npx", "npm"):
             executable = binaries / name
-            executable.write_text('#!/bin/sh\nprintf "%s|%s\\n" "$*" "$DATABASE_URL" >> "$WRITE_LOG"\n')
+            executable.write_text(
+                '#!/bin/sh\nprintf "%s|%s\\n" "$*" "$DATABASE_URL" >> "$WRITE_LOG"\n'
+                f'printf "{name} %s\\n" "$*"\n'
+            )
             executable.chmod(0o755)
         (self.directory / ".env").write_text("DATABASE_URL=postgresql://user:password@localhost:25532/taskapp\n" + f"{OWNER_KEY}={self.owner}\n")
         (self.directory / "src/command").mkdir(parents=True, exist_ok=True)
@@ -233,6 +236,16 @@ else: sys.exit(58)
         self.assertEqual(len(writes.splitlines()), 3)
         self.assertIn("db:seed -- --yes", writes)
         self.assertTrue(all(line.endswith("@127.0.0.1:25532/taskapp?schema=public") for line in writes.splitlines()))
+
+    def test_cli_announces_seed_before_running_it(self):
+        result, _ = self.run_guard()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        self.assertIn("シードデータを投入しています...", lines)
+        self.assertLess(
+            lines.index("シードデータを投入しています..."),
+            lines.index("npm run db:seed -- --yes"),
+        )
 
     def test_cli_rejects_ipv6_only_compose_binding_before_any_write(self):
         self.config["services"]["db"]["ports"][0]["host_ip"] = "::1"
