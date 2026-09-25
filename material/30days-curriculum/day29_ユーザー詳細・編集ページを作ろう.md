@@ -77,19 +77,19 @@ flowchart TD
 
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
-|---------|---------|---------|-------------|---------|
-| Step 0 | user.ts に getById / update を追記する | 16分 | `src/server/api/routers/user.ts` | 詳細取得と更新APIが生える |
-| Step 1 | 動的ルーティングの仕組みを理解する | 5分 | 概念説明のみ | 仕組みが頭に入る |
-| Step 2 | ユーザー詳細ページのファイルを作成 | 5分 | `src/app/user/[id]/page.tsx` | server wrapper のファイルが存在する |
-| Step 3 | URLからユーザーIDを取得してデータを取得 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | ユーザー名が表示される |
-| Step 4 | グリッドレイアウトで詳細情報を表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | 2カラムレイアウトで表示 |
-| Step 5 | プロジェクト一覧とタスクテーブルを表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | バッジとテーブルが表示される |
-| Step 6 | 権限チェックで編集ボタンを出し分ける | 5分 | `src/app/user/[id]/user-detail-client.tsx` | 管理者・本人のみ編集ボタンが見える |
-| Step 7 | 編集ページのファイルを作成 | 5分 | `src/app/user/[id]/edit/page.tsx` と `edit/user-edit-client.tsx` | 2ファイルが存在する |
-| Step 8 | zodスキーマとuseFormでデータを同期する | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | フォームにデータが入る |
-| Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | ドロップダウンとチェックボックスが動く |
-| Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/user-edit-client.tsx` | 保存ボタンでDBが更新される |
+| ステップ | 作業内容・触るファイル・成功状態 | 所要時間 |
+|---------|-------------------------------------|---------|
+| Step 0 | **作業内容**: user.ts に getById / update を追記する<br>**触るファイル**: `src/server/api/routers/user.ts`<br>**成功状態**: 詳細取得と更新APIが生える | 16分 |
+| Step 1 | **作業内容**: 動的ルーティングの仕組みを理解する<br>**触るファイル**: 概念説明のみ<br>**成功状態**: 仕組みが頭に入る | 5分 |
+| Step 2 | **作業内容**: ユーザー詳細ページのファイルを作成<br>**触るファイル**: `src/app/user/[id]/page.tsx`<br>**成功状態**: server wrapper のファイルが存在する | 5分 |
+| Step 3 | **作業内容**: URLからユーザーIDを取得してデータを取得<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: ユーザー名が表示される | 7分 |
+| Step 4 | **作業内容**: グリッドレイアウトで詳細情報を表示<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: 2カラムレイアウトで表示 | 7分 |
+| Step 5 | **作業内容**: プロジェクト一覧とタスクテーブルを表示<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: バッジとテーブルが表示される | 7分 |
+| Step 6 | **作業内容**: 権限チェックで編集ボタンを出し分ける<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: 管理者・本人のみ編集ボタンが見える | 5分 |
+| Step 7 | **作業内容**: 編集ページのファイルを作成<br>**触るファイル**: `src/app/user/[id]/edit/page.tsx` と `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: 2ファイルが存在する | 5分 |
+| Step 8 | **作業内容**: zodスキーマとuseFormでデータを同期する<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: フォームにデータが入る | 7分 |
+| Step 9 | **作業内容**: ロール選択・アクティブ状態の切り替え<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: ドロップダウンとチェックボックスが動く | 7分 |
+| Step 10 | **作業内容**: 保存機能を実装して完成<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: 保存ボタンでDBが更新される | 5分 |
 
 表の Step 3 以降が `page.tsx` ではなく `user-detail-client.tsx` を指しているのは
 `page.tsx` を server wrapper（サーバー側で動く入口）にしてあるためです。
@@ -731,12 +731,14 @@ import { ja } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Mail } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage }
   from '@/component/ui/avatar';
-import { Button } from '@/component/ui/button';
+import { Card, CardContent } from '@/component/ui/card';
 import { Separator } from '@/component/ui/separator';
 import { ActiveStatusBadge, UserRoleBadge }
   from '@/component/ui/user-badges';
 import { formatDateOnly } from '@/lib/date';
 ```
+
+`Button` はこの Step でも使いますが、Step 3 で取り込み済みなので行を増やしません。同じ名前の `import` が2行あると `Duplicate identifier 'Button'` で型検査が止まります。
 
 日付の道具が2種類あることに気付いたでしょうか。`format` は時刻まで持っている値を日本語の表記に直すもので登録日と最終更新日に使います。`formatDateOnly` は期限のように「日付だけ」の値に使います。期限は時刻を持たない約束で保存してあるため時刻として読み直すと表示が1日ずれます。混ぜて使わないよう、最初から両方を取り込んでおきます。`ActiveStatusBadge` と `UserRoleBadge` を自作せず取り込むのは一覧ページと同じ色と文言をそのまま使うためです。
 
@@ -747,6 +749,31 @@ import { formatDateOnly } from '@/lib/date';
   return (
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー情報を取得できませんでした。前回取得時の内容です。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
+```
+
+`{hasFetchError && (...)}` が Step 3 で予告した警告です。再取得だけが失敗して前回のデータが残っている場合は、Step 3 の早期リターンを通らずここへ来ます。内容を消さずに「前回取得時の内容です」と断り、`refetchRequiredData` で取り直す入口を添えます。`requiredFetching` の間はボタンを押せなくして二重の再取得を防ぎます。Step 3 で定義したこの2つの値の使い道はここです。
+
+続けて戻るボタンと、左右のカラムを入れる枠を書きます。
+
+```tsx
+        {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
@@ -909,7 +936,8 @@ import { formatDateOnly } from '@/lib/date';
 // filepath: src/app/user/[id]/user-detail-client.tsx
 import { StatusBadge } from '@/component/task/status-badge';
 import { Badge } from '@/component/ui/badge';
-import { CardHeader, CardTitle } from '@/component/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+// Step 4 の card の行に CardHeader, CardTitle を足す
 import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow,
@@ -917,6 +945,8 @@ import {
 import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 ```
+
+`card` の行は Step 4 で書いた行に `CardHeader` と `CardTitle` を足して1行にします。行を増やすと `Card` の取り込みが2回になります。
 
 ステータス表示は `StatusBadge` に任せます。このコンポーネントが status に応じたラベルと色を内部で決めるため、この画面でバッジの見た目を組み立てる必要はありません。優先度は `getPriorityBadgeVariant` で色の種類だけを選び、ラベルは `TASK_PRIORITY_LABELS` から引きます。
 
@@ -1117,7 +1147,7 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 **確認ポイント**:
 - 管理者でログインするとどのユーザーページにも「編集」ボタンが表示される
 - 一般ユーザーで自分のページを見るとボタンが表示される
-- 一般ユーザーで他人のIDにアクセスするとエラートーストが表示され、データが表示されない
+- 一般ユーザーで他人のIDにアクセスすると「このユーザーを見る権限がありません」のカード（Step 2 の server wrapper）が出て、データが表示されない
 
 ---
 
@@ -1824,6 +1854,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
+  const utils = api.useUtils();
   const updateUser =
     api.user.update.useMutation({
       onSuccess: async () => {
@@ -1847,7 +1878,7 @@ import { Alert, AlertDescription, AlertTitle }
     });
 ```
 
-`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
+先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具で、その中の `invalidate` が「覚えている結果を古いものとして捨てる」命令です。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
