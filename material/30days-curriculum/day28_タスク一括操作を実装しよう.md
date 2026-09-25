@@ -564,7 +564,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 `aria-label` にタスク名を入れているのは同じ形のチェックボックスがカードの数だけ並ぶためです。名前が無いと読み上げでは「チェックボックス」が何個も続くだけになり、どのタスクを選んでいるのか分かりません。まとめて削除する操作なので取り違えると戻せません。
 
-上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
+上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合の表示は Day 15 で書いた2行のメッセージをそのまま残します。
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
@@ -781,7 +781,7 @@ JSX 側の `checked` に渡す値を差し替えます。
 ![Step 8 まで終えた状態。1件だけ選ぶと見出しに「(1件選択中)」が出て右側に一括操作ボタンが並ぶ](./screenshots/day28/bulk-operation-header.png)
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（className="text-3xl font-bold から onClick={handleCreate}> までを書き直す） */}
+{/* filepath: src/app/task/page.tsx（<h1 className="text-3xl font-bold から「新規タスク」の </Button> までを書き直す） */}
 {/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}
 <div className="flex items-center justify-between">
   <div className="flex items-center gap-3">
@@ -872,7 +872,7 @@ const handleBulkComplete = () => {
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
+{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
 {/* 一括操作ボタン領域に「完了にする」ボタンを追加 */}
 {canCompleteSelected && (
   <Button
@@ -959,7 +959,7 @@ import { CheckSquare, Plus, Trash2 }
 ヘッダーにボタンとダイアログを追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
+{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
 {/* 削除ボタン（赤色のテキスト） */}
 {canDeleteSelected && (
   <Button
@@ -1073,7 +1073,7 @@ const handleBulkUpdateStatus = (
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
+{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
 {/* ステータス変更ドロップダウン */}
 {canCompleteSelected && (
   <DropdownMenu>
@@ -1429,7 +1429,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-`DONE` 以外へ動かす場合は `where` を分けず、全対象の `completedAt` を `null` へ戻します。完了から進行中へ差し戻したタスクに日時が残ると、Day 23 の週次レポートが未完了のタスクを完了件数に数え続けるためです。
+`DONE` 以外へ動かす場合は `where` を分けず、全対象の `completedAt` を `null` へ戻します。「`completedAt` に値があるのは `status` が `DONE` のときだけ」という約束をデータベースの中で守るためです。差し戻したタスクに古い日時が残ると、`completedAt` だけを見て完了を数える集計や画面を書いた時点で、完了していないタスクが完了扱いになります。Day 23 の週次レポートは念のため `status` も一緒に見ているので今は数えませんが、日時を消しておけば見る側がどちらを使っても同じ答えになります。
 
 ### `src/app/task/page.tsx`
 
