@@ -46,6 +46,105 @@
 
 **解決方法**: `task-app`フォルダで`docker compose up -d`を実行してコンテナを起動します。
 
+#### 別フォルダの DB と衝突した場合
+
+Day 01 の初期セットアップで「同じ Compose project 名を別のフォルダが使用しています」または「既存 volume がこの作業フォルダの DB に属することを確認できません」と表示された場合の手順です。「DATABASE_URL が今回起動する教材用 DB と一致しません」と表示された場合も、接続先を確認します。同じポート番号を別の DB やアプリが使っている状態をポート競合と呼びます。「アプリ用 DB の起動に失敗しました」と表示された場合はポート競合のことが多いため、この場合も次の手順で使う番号を分けます。
+
+**原因**: Docker Compose は関連するコンテナを **project（プロジェクト）** という名前でまとめます。通常はフォルダ名がその名前になります。別の場所にある2つの `task-app` も同じ名前になるため、既存の DB を使い回さないように初期セットアップを停止しています。Ubuntu を再インストールしたあとに以前の DB が残っている場合も停止します。volume（DB のデータを保存する Docker の領域）も project ごとに分けて使います。
+
+**解決方法**: 今回使う project 名とポート番号を、次の手順で分けます。
+
+**1. 今回展開したフォルダを VS Code で開きます。**
+
+macOS と直接利用の Ubuntu では VS Code を起動し、`File`（`ファイル`）→`Open Folder...`（`フォルダーを開く...`）から、ホームフォルダ内の `workspace/task-app` を開きます。Windows では Ubuntu のターミナルで次を実行します。左下に `WSL: Ubuntu` など、自分が使っている Ubuntu の名前が表示されることを確認してください。
+
+```bash
+cd ~/workspace/task-app
+code .
+```
+
+Windows で `code: command not found` が出る場合や、左下に WSL の表示がない場合は、次を確認します。
+
+Windows 側に [VS Code](https://code.visualstudio.com/download) をインストールします。インストーラの `Add to PATH` にチェックを入れます。これはターミナルから `code` を呼び出すための設定です。すでにインストール済みでも、設定を忘れた場合はインストーラを開き直します。
+
+Windows の VS Code で `Ctrl + Shift + X` を押して拡張機能の一覧を開きます。検索欄に `@id:ms-vscode-remote.remote-wsl` と入力します。Microsoft の `WSL` を選び、`Install`（インストール）を押します。この拡張機能で Ubuntu 内のファイルを編集できます。`Enable`（有効にする）が出ている場合は、それを押します。
+
+Ubuntu のターミナルを閉じ、Windows のスタートメニューから開き直します。次の2行を再実行します。
+
+```bash
+cd ~/workspace/task-app
+code .
+```
+
+初回は必要な部品のダウンロードを待ちます。左下に `WSL: Ubuntu` などの表示が出たら次へ進みます。表示されない場合は [VS Code 公式の WSL 手順](https://code.visualstudio.com/docs/remote/wsl)の「From VS Code」を使います。VS Code で `F1` を押し、`WSL: Connect to WSL using Distro` を選びます。使っている Ubuntu を選び、`File` → `Open Folder...` から `~/workspace/task-app` を開いてください。
+
+**2. 左側のファイル一覧で `.env` を開きます。**
+
+初期セットアップは DB の確認前に `.env` を作成します。名前が似ている `.env.example` は設定の見本です。ここで編集するのは `.env` です。
+
+**3. `.env` の次の5つの設定をそろえます。**
+
+すでにある項目はその行を置き換え、まだない `COMPOSE_PROJECT_NAME` は1行追加します。ほかの設定は残します。自動で追加された `_TASKAPP_SCAFFOLD_DB_OWNER` は今回の DB を区別する印なので、変更せず残してください。
+
+```env
+COMPOSE_PROJECT_NAME=taskapp-study-01
+_DOCKER_COMPOSE_HOST_PORT_DB=36532
+_DOCKER_COMPOSE_HOST_PORT_TEST_DB=36533
+DATABASE_URL="postgresql://user:password@localhost:36532/taskapp"
+TEST_DATABASE_URL="postgresql://user:password@localhost:36533/taskapp_test"
+```
+
+`COMPOSE_PROJECT_NAME` は今回のコンテナと volume に付ける project 名です。`36532` はアプリ用 DB、`36533` はテスト用 DB のポート番号です。接続先 URL にも対応する番号を入れます。名前だけを変えても、同じポートを2つの DB で使うことはできません。
+
+**4. 保存して、ターミナルの古い設定を解除します。**
+
+macOS では `Command + S`、Windows と Ubuntu では `Ctrl + S` で保存します。次のコマンドを Day 01 の作業用ターミナルで実行します。
+
+```bash
+unset COMPOSE_PROJECT_NAME
+unset _DOCKER_COMPOSE_HOST_PORT_DB _DOCKER_COMPOSE_HOST_PORT_TEST_DB
+unset DATABASE_URL TEST_DATABASE_URL
+```
+
+`unset` は現在のターミナルで設定した環境変数を解除するコマンドです。ターミナル側に古い設定があると `.env` より優先されるため、今回編集したファイルを使える状態にします。`.env` の内容は消えません。エラーが表示されず入力待ちに戻ったら、次へ進みます。
+
+**5. Day 01 の初期セットアップを再実行します。**
+
+```bash
+cd ~/workspace/task-app
+bash scripts/scaffold-from-scratch.sh
+```
+
+`DB セットアップが完了しました。` と表示されたら Day 01 の Step 3 へ戻ります。新しい DB が作られ、以前の project のコンテナとデータは残ります。この再実行は Day 01 の初期セットアップを中断した場合の手順です。Day 02 以降の自分のコードやデータを残す用途では使いません。
+
+同じ project 名のエラーが続く場合は、`.env` の `taskapp-study-01` を `taskapp-study-02` へ変えて保存します。ポート競合が続く場合は、`_DOCKER_COMPOSE_HOST_PORT_DB` と `DATABASE_URL` のポートを `36534` にそろえます。`_DOCKER_COMPOSE_HOST_PORT_TEST_DB` と `TEST_DATABASE_URL` のポートは `36535` にそろえてから再実行します。
+
+その番号も使用中なら、既存の DB やアプリはそのままにして、今回の番号を `36536` と `36537` へ変えます。使用中の番号が続く場合は2ずつ増やして試します。番号を変えるたびに、対応する URL のポートも変えて保存してください。ポート競合以外のエラーは番号を変えても解決しないため、表示された内容に対応する項目をこの付録から探します。初期セットアップが完了したあとは、後続手順でも自分の `.env` の番号を使います。
+
+#### DB 所有印が複数ありますと表示された場合
+
+**原因**: 初回セットアップを複数のターミナルで同時に実行すると、`.env` に DB を区別する印を重複して保存する場合があります。どの印を使うか自動では判断せず、DB を変更する前に停止します。
+
+**解決方法**: 同時に実行したセットアップを止め、今回の DB を新しい project 名で作り直します。以前の DB は削除しません。
+
+**1. 実行中のセットアップを止めます。**
+
+セットアップを実行した各ターミナルを確認します。まだ処理が続いている場合は `Ctrl + C` で止めます。入力待ちに戻っている場合は、そのままで構いません。
+
+**2. `.env` を開きます。**
+
+VS Code で今回の `task-app` フォルダの `.env` を開きます。開き方は直前の「別フォルダの DB と衝突した場合」の手順1・2を参照してください。
+
+**3. 重複した印を削除して保存します。**
+
+`_TASKAPP_SCAFFOLD_DB_OWNER=` で始まる行をすべて削除します。ほかの設定は残します。macOS は `Command + S`、Windows と Ubuntu は `Ctrl + S` で保存します。
+
+**4. 新しい project 名で1回だけ実行します。**
+
+直前の「別フォルダの DB と衝突した場合」の手順3〜5を実行します。project 名は今回まだ使っていない名前にします。`taskapp-study-01` を使った場合は `taskapp-study-02` にします。セットアップは1つのターミナルだけで実行してください。
+
+セットアップが新しい印を自動で保存します。`DB セットアップが完了しました。` と表示されたら、Day 01 の Step 3 へ戻ります。
+
 ### Day 03-04: Git・デプロイ
 
 #### `git push`で認証エラー

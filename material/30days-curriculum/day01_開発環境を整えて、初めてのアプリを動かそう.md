@@ -234,7 +234,9 @@ pwd
 > `unzip /mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1.zip`
 > `unzip: command not found` と出たら先に `sudo apt-get update && sudo apt-get install -y unzip` を実行します。
 >
-> ZIP の名前は手元のファイルと違うことがあります。バージョン番号の違いやブラウザが付けた末尾の `(1)` を確かめます。`unzip` で `cannot find` と出たら `ls ~/Downloads` で実際のファイル名を確認してください。その名前で実行し直します。
+> ZIP の名前は手元のファイルと違うことがあります。バージョン番号の違いやブラウザが付けた末尾の `(1)` を確かめます。`unzip` で `cannot find` と出たら `ls ~/Downloads` で実際のファイル名を確認してください。WSL2 では `ls /mnt/c/Users/<Windowsのユーザー名>/Downloads` で確認します。その名前で実行し直します。
+>
+> 空白や括弧を含む名前は `"` で囲みます。末尾に ` (1)` が付いた場合の例は `unzip "$HOME/Downloads/task-app-curriculum-v1.1 (1).zip"` です。`$HOME` はホームフォルダを表します。WSL2 では `unzip "/mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1 (1).zip"` のように書きます。
 >
 > `cd task-app` は配布 ZIP が `task-app` フォルダに展開される前提のコマンドです。
 > `cd task-app` で `No such file or directory` と出たら展開先のフォルダ名が違います。
@@ -294,7 +296,7 @@ Next.js アプリは通常 `npx create-next-app` で設定を選びながら作�
 7. 配布物の `.env.example` を確認
 8. shadcn/ui（ボタンなどの画面部品集）の部品とアプリ共通の `layout.tsx` などを配置
 9. Prisma（データベースを TypeScript から扱うための道具）のスキーマ（データベースにどんな表と項目を作るかを書いた設計図）と Docker Compose を配置
-10. Docker で PostgreSQL を起動し、`.env` の作成、DB へのスキーマ反映、Prisma Client の生成、初期データの投入を順番に実行
+10. `.env` を作成し、DB の所属と接続先を確認してから PostgreSQL の起動、DB へのスキーマ反映、Prisma Client の生成、初期データの投入を順番に実行
 
 設定の作成はスクリプトで行います。
 初日は作成されたファイルを確認したあとで
@@ -311,6 +313,8 @@ bash scripts/scaffold-from-scratch.sh
 ```
 
 このスクリプトを使うのは Day 01 の初期セットアップ時だけです。Day 02 以降に実行すると `src/component/` に自分で書いたファイルが配布版で上書きされます。初期データのプロジェクトとその中に自分で作ったタスクやコメントも消えます。問題が起きた場合は先に付録のトラブルシューティングを読んでください。
+
+別のフォルダで作った DB と名前が重なる場合や、接続先が教材用 DB と異なる場合は、スクリプトが既存の DB を変更せずにエラー終了します。既存の DB は起動状態とデータを保ったままにします。[付録のトラブルシューティング](./appendix_トラブルシューティング.md)を開き、「別フォルダの DB と衝突した場合」で今回の名前とポートを分けてから再実行してください。
 
 実行すると `package.json` や `src` が作られます。データベース用のコンテナも起動します。部品をダウンロードするため数分かかることがあります。`Permission denied` が出たら実行したコマンドを確認してください。`./scripts/...` の形で直接実行する場合は実行権限が必要です。`bash scripts/scaffold-from-scratch.sh` なら実行権限は不要です。それでも出る場合は作業場所への書き込み権限を確かめます。`pwd` で `~/workspace/task-app` にいるか確認してください。`Cannot connect to the Docker daemon` が出たら Docker Desktop を起動してから実行し直します。
 
@@ -424,7 +428,7 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 NODE_ENV="development"
 ```
 
-`DATABASE_URL` はアプリが使うデータベースの接続先です。`localhost:25532` の数字はポート番号（1台のパソコンの中で通信の入口を区別する番号）です。スクリプトが起動する PostgreSQL と同じ番号にしています。今日は変更せずに進めます。後の Day で接続エラーが出た場合もこの値を確かめます。
+`DATABASE_URL` はアプリが使うデータベースの接続先です。`localhost:25532` の数字はポート番号(1台のパソコンの中で通信の入口を区別する番号)です。スクリプトが起動する PostgreSQL と同じ番号にしています。通常はこの値で進めます。付録の手順で別の DB とポートを分けた場合は、自分の `.env` に設定した番号を使います。後の Day で接続エラーが出た場合もこの値を確かめます。
 
 #### 危ないアンチパターン
 
@@ -516,7 +520,26 @@ Next.js のロゴと
 
 #### 編集前に VS Code でプロジェクトを開く
 
-編集にはエディタを使います。VS Code の「ファイル」から「フォルダを開く...」を選びます。`workspace` の中の `task-app` を開いてください。左側のファイル一覧に `src` や `package.json` があれば準備完了です。`src/app/globals.css` を開く場合は `src`、`app` の順でフォルダをクリックします。その中の `globals.css` を選びます。
+編集にはエディタを使います。開き方は OS によって違います。
+
+**macOS / Ubuntu の場合**
+
+VS Code の「ファイル」から「フォルダを開く...」を選びます。`workspace` の中の `task-app` を開いてください。
+
+**Windows (WSL2) の場合**
+
+`task-app` は Ubuntu の中にあります。`npm run dev` のターミナルは残したまま、スタートメニューからもう1つ Ubuntu のターミナルを開き、次を1行ずつ実行します。
+
+```bash
+cd ~/workspace/task-app
+code .
+```
+
+VS Code の左下に `WSL: Ubuntu` など、使っている Ubuntu の名前が出ていれば開けています。`code: command not found` と出る場合や左下に WSL の表示がない場合は、[付録のトラブルシューティング](./appendix_トラブルシューティング.md)の「別フォルダの DB と衝突した場合」の手順1で、`Add to PATH` と WSL 拡張機能を確認してください。`Add to PATH` はターミナルから `code` を呼び出すための設定です。WSL 拡張機能は、Ubuntu 内のファイルを VS Code で編集するための拡張機能です。
+
+**共通の確認**
+
+左側のファイル一覧に `src` や `package.json` があれば準備完了です。`src/app/globals.css` を開く場合は `src`、`app` の順でフォルダをクリックします。その中の `globals.css` を選びます。
 
 `npm run dev` のターミナルは起動したまま使います。ファイルを保存するとブラウザの画面が更新されます。
 

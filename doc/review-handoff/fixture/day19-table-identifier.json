@@ -1,0 +1,76 @@
+{
+  "provenance": {
+    "pdf": "dist/pdf/day19_コメント編集・削除.pdf",
+    "page": 91,
+    "sha256": "c843728a77ac3cda5797ac98376c8db32798ea65926ee3f75983beaa03a5435f"
+  },
+  "source": "| 原因 | 解決方法 |\n|---|---|\n| DeleteConfirmDialog | task.getById.invalidate |",
+  "manifest": {
+    "tables": [
+      {
+        "id": "t"
+      }
+    ]
+  },
+  "structure": {
+    "tables": [
+      {
+        "source_order": 0,
+        "layout": "table"
+      }
+    ]
+  },
+  "dom": {
+    "dom_audit": {
+      "page_geometry": [
+        {
+          "page_index": 0,
+          "rect": {
+            "left": 0,
+            "top": 0,
+            "width": 595.27575,
+            "height": 841.89
+          }
+        }
+      ],
+      "table_inventory": {
+        "tables": [
+          {
+            "id": "t",
+            "fragments": [
+              {
+                "page_index": 0,
+                "geometry": {
+                  "cells": [
+                    {
+                      "tag": "TD",
+                      "text": "task.getById.invalidate",
+                      "content_rect": {
+                        "left": 383.72068382991245,
+                        "top": 107.60366718038797,
+                        "right": 528.4714133274412,
+                        "bottom": 160.38585760355056
+                      }
+                    },
+                    {
+                      "tag": "TD",
+                      "text": "DeleteConfirmDialog",
+                      "content_rect": {
+                        "left": 226.21989007612478,
+                        "top": 258.473355233853,
+                        "right": 370.97061957365344,
+                        "bottom": 311.2555456570156
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "stacked_inventory": []
+    }
+  },
+  "bbox_xml": "<doc><page width=\"595.275750\" height=\"841.890000\"><line><word xMin=\"383.718734\" yMin=\"114.689390\" xMax=\"522.796528\" yMax=\"127.437514\">task.getById.invalid</word>\n        </line><line><word xMin=\"383.718734\" yMin=\"140.845638\" xMax=\"406.793585\" yMax=\"153.593762\">ate</word>\n        </line><line><word xMin=\"226.218741\" yMin=\"265.345633\" xMax=\"364.257010\" yMax=\"278.093757\">DeleteConfirmDialo</word>\n        </line><line><word xMin=\"226.218741\" yMin=\"291.408132\" xMax=\"234.758988\" yMax=\"304.156256\">g</word>\n          <word xMin=\"239.010435\" yMin=\"291.408132\" xMax=\"277.254804\" yMax=\"304.156256\">未配置</word>\n        </line></page></doc>"
+}

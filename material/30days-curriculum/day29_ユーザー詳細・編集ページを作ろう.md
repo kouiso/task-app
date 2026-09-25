@@ -570,7 +570,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   }
 ```
 
-読み込み中だけスピナーを表示します。`hasRequiredData` で2本のデータの有無を分けて見るのは、片方だけ失敗したときに残っている側の情報まで隠さないためです。取得済みデータがないまま失敗した場合は次の分岐へ進み、失敗の理由とあわせて操作ボタンを表示します。
+読み込み中だけスピナーを表示します。`hasRequiredData` は、失敗した問い合わせに前回のデータが残っているかを確かめます。片方でも失敗してデータがなければ `false` になります。取得済みデータがないまま失敗した場合は次の分岐へ進み、失敗の理由とあわせて操作ボタンを表示します。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
@@ -1694,7 +1694,9 @@ import { isUserRole, USER_ROLE_LABELS }
 
 次の `useMutation` は `UserEditClient` 関数内の、3つの早期リターンより前へ追加します。読み込み中にも同じ順番でフックを呼ぶ必要があるためです。
 
-ロール選択のドロップダウンを追加します。
+`useMutation` は Step 10 で追加します。
+
+アバターURL入力欄の直後に、ロール選択とアクティブ切り替えを追加します。ここがフォームの末尾になります。
 
 次のロール選択とアクティブ切り替えは
 `canManageAccount` が `true` の場合だけ表示します。
@@ -1805,6 +1807,8 @@ import { isUserRole, USER_ROLE_LABELS }
 **ゴール**: 保存ボタンを押すとtRPCでDBが更新され、詳細ページに戻るところまで作ります。
 
 Day 25 で学んだ `useMutation` パターンを使い、保存処理を実装します。
+
+`useMutation` は `UserEditClient` 関数内の早期リターンより前へ追加します。読み込み中や取得失敗時も、フックは毎回同じ順番で呼ぶ必要があるためです。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
@@ -2017,18 +2021,21 @@ submitUserEditForm(
 - `as UserEditFormValues` は「そういう型だと信じる」だけで、実際の値は検証していない
 - `role: 'OWNER'` や `isActive: 'yes'` のような値でも、クライアント側では通ってしまう
 - フォーム項目が増えると型と実行時チェックのズレに気づきにくい
+- `isAdmin` だけで分岐すると、管理者が自分を編集するときも `role` と `isActive` を送り、サーバーから `FORBIDDEN` が返る
 
 #### After（プロが書くコード）
 
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
-import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
+import type { UserRole } from '@/lib/constant/roles';
+
+const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
 
 const userEditSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),
   avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
-  role: z.enum([USER_ROLE.USER, USER_ROLE.ADMIN]),
+  role: z.enum(USER_ROLE_VALUES),
   isActive: z.boolean(),
 });
 
@@ -2037,11 +2044,17 @@ type UserEditFormValues = z.infer<typeof userEditSchema>;
 type UpdateUserInput = {
   id: string;
   name: string;
-  avatar?: string;
+  avatar?: string | null;
   role?: UserRole;
   isActive?: boolean;
 };
 
+```
+
+`UpdateUserInput` の `avatar` は `null` を受け取れるようにします。空欄を `undefined` にすると既存画像を更新しない意味になるため、画像を削除するリクエストには `null` が必要です。
+
+```typescript
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 type UpdateUserMutation = {
   mutate: (input: UpdateUserInput) => void;
 };
@@ -2065,7 +2078,7 @@ export function submitUserEditForm(
   updateUser.mutate({
     id: userId,
     name: values.name,
-    avatar: values.avatar || undefined,
+    avatar: values.avatar || null,
     ...(canManageAccount
       ? {
           role: values.role,
@@ -2524,7 +2537,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```
 
-`queryErrors` に2本の失敗をまとめるのは、どちらが401や403でも画面を閉じるためです。`authFailed`・`forbidden`・`notFound` の3つに分けることで「ログインし直せばよい」「権限が無い」「存在しない」を出し分けられます。`hasRequiredData` は片方だけ失敗したとき残っている側の情報まで隠さないための判定です。前回取得済みのデータがあれば、警告を出しながら表示を続けます。
+`queryErrors` に2本の失敗をまとめるのは、どちらが401や403でも画面を閉じるためです。`authFailed`・`forbidden`・`notFound` の3つに分けることで「ログインし直せばよい」「権限が無い」「存在しない」を出し分けられます。`hasRequiredData` は、失敗した問い合わせに前回のデータが残っているかを確かめます。片方でも失敗してデータがなければ `false` になります。後続の `!currentUser` と `!user` でも確認するため、両方のデータがそろったときだけ詳細を表示します。
 
 **再取得と読み込み中の早期リターン**:
 
@@ -3711,28 +3724,32 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 ```mermaid
 sequenceDiagram
     participant URL as ブラウザURL
-    participant Comp as Reactコンポーネント
-    participant tRPC as tRPCクライアント
+    participant Server as server page.tsx
+    participant Client as client component
+    participant tRPC as user.getById / update
     participant DB as PostgreSQL
 
-    URL->>Comp: /user/abc123/edit にアクセス
-    Comp->>Comp: await params → id = "abc123"
-    Comp->>tRPC: getById({ id: "abc123" })
-    tRPC->>DB: SELECT * FROM users WHERE id = 'abc123'
-    DB-->>tRPC: ユーザーデータ
-    tRPC-->>Comp: user オブジェクト
-    Comp->>Comp: useEffect → form.reset(userのデータ)
-    Note over Comp: フォームに自動入力
-    Comp->>Comp: ユーザーが編集（register / watch）
-    Comp->>tRPC: update({ id, name, role, ... })
+    URL->>Server: /user/abc123/edit にアクセス
+    Server->>Server: await params → id = "abc123"
+    Server->>tRPC: getById({ id })（先行認可）
+    tRPC->>DB: 本人か管理者か確認後、必要列を取得
+    DB-->>tRPC: ユーザーデータ / 未発見
+    tRPC-->>Server: 成功 / FORBIDDEN / NOT_FOUND
+    Server->>Client: 成功時だけ userId を渡す
+    Client->>tRPC: getById({ id })（表示用の再取得）
+    tRPC-->>Client: user オブジェクト
+    Client->>Client: useEffect → form.reset(userのデータ)
+    Note over Client: フォームに自動入力
+    Client->>Client: ユーザーが編集（register / watch）
+    Client->>tRPC: update({ id, name, role, ... })
     Note over tRPC: 権限チェック（本人はrole/isActive変更不可）
     tRPC->>DB: UPDATE users SET ...
     DB-->>tRPC: 更新完了
-    tRPC-->>Comp: onSuccess 発火
-    Comp->>URL: /user/abc123 に遷移
+    tRPC-->>Client: onSuccess 発火
+    Client->>URL: /user/abc123 に遷移
 ```
 
-この図を上から下へたどると今日書いたコードが1本の線でつながります。URLの文字列が `id` になり、`id` が SQL の `WHERE` に入り、返ってきたユーザーが `form.reset` でフォームの初期値になります。戻りも同じ線です。フォームの値が `update` に乗り、`UPDATE` 文になって DB に届き、`onSuccess` が画面を詳細ページへ送り返します。表示が変わらないときはこの線のどこで値が止まっているかを探すと原因に近づけます。
+この図を上から下へたどると今日書いたコードが1本の線でつながります。server wrapper が最初の `getById` でログイン・権限・未発見を分け、通過したときだけ client が表示用データを再取得します。戻りはフォームの値が `update` に乗り、DB の更新後に `onSuccess` が詳細ページへ遷移させる経路です。表示が変わらないときは、先行認可、再取得、フォーム同期、更新のどこで値が止まったかを確かめます。
 
 ---
 

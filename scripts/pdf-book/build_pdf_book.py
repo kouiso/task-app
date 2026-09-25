@@ -50,9 +50,24 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
 from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
+from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
+from table_latin import protect_table_latin
+from table_structure import restructure_tables, measured_tables_to_stack  # noqa: E402
+from inline_layout_css import (  # noqa: E402
+    HEADING_INLINE_CSS,
+    NOWRAP_CSS,
+    derive_flow_css,
+    derive_table_css,
+)
+from table_layout_override import (  # noqa: E402
+    derive_reviewed_table_css,
+    load_table_layout_overrides,
+    validate_override_document_catalog,
+)
 
 SRC_DIR = REPO_ROOT / "material" / "30days-curriculum"
 BOOK_CSS = REPO_ROOT / "material" / "style" / "book.css"
+TABLE_LAYOUT_OVERRIDES = Path(__file__).with_name("table-layout.json")
 OUT_DIR = REPO_ROOT / "dist" / "pdf"
 WORK_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 RELEASE_RECEIPT = REPO_ROOT / "dist" / "release-build-receipt.json"
@@ -275,6 +290,14 @@ def release_input_snapshot(
     fixed = [
         Path(__file__).resolve(),
         Path(__file__).with_name("code_wrap.py").resolve(),
+        Path(__file__).with_name("inline_layout.py").resolve(),
+        Path(__file__).with_name("table_structure.py").resolve(),
+        Path(__file__).with_name("table_latin.py").resolve(),
+        Path(__file__).with_name("inline_layout_css.py").resolve(),
+        Path(__file__).with_name("table_layout_override.py").resolve(),
+        TABLE_LAYOUT_OVERRIDES.resolve(),
+        Path(__file__).with_name("verify-inline-layout.mjs").resolve(),
+        Path(__file__).with_name("verify-inline-pdf.mjs").resolve(),
         (REPO_ROOT / "scripts" / "curriculum-qa" / "markdown_scan.py").resolve(),
         BOOK_CSS.resolve(),
         (REPO_ROOT / "package-lock.json").resolve(),
@@ -487,6 +510,67 @@ class HtmlLinks(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag.lower() == 'a':
             self.links += [value for key, value in attrs if key == 'href' and value is not None]
+
+
+PDF_FOOTNOTE_ATTRIBUTE = 'data-pdf-footnote'
+HTML_VOID_ELEMENTS = {
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
+    'param', 'source', 'track', 'wbr',
+}
+
+
+class ExternalLinkFootnotes(HTMLParser):
+    """外部リンクの開始タグを変えず、印刷用の通し番号だけ差し込む。"""
+
+    def __init__(self, markup: str):
+        super().__init__(convert_charrefs=False)
+        self.line_starts = [0]
+        for index, character in enumerate(markup):
+            if character == '\n':
+                self.line_starts.append(index + 1)
+        self.parent_classes: list[set[str]] = []
+        self.edits: list[tuple[int, str]] = []
+        self.number = 0
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        parent_classes = self.parent_classes[-1] if self.parent_classes else set()
+        href = attributes.get('href')
+        if tag == 'a' and href and href.startswith(('http://', 'https://')):
+            if PDF_FOOTNOTE_ATTRIBUTE in attributes:
+                raise ValueError(
+                    f'予約属性 {PDF_FOOTNOTE_ATTRIBUTE} は原稿で使用できません'
+                )
+            # theme-base の `:not(.footnote) > a[href^="http"]` と対象をそろえる。
+            # 明示脚注の中のリンクまで数えると、紙面に出ない欠番が生じる。
+            if 'footnote' not in parent_classes:
+                self.number += 1
+                line, column = self.getpos()
+                insertion = self.line_starts[line - 1] + column + 2
+                self.edits.append(
+                    (insertion, f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"')
+                )
+        if tag not in HTML_VOID_ELEMENTS:
+            self.parent_classes.append(set((attributes.get('class') or '').split()))
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag not in HTML_VOID_ELEMENTS:
+            self.parent_classes.pop()
+
+    def handle_endtag(self, tag):
+        if tag not in HTML_VOID_ELEMENTS and self.parent_classes:
+            self.parent_classes.pop()
+
+
+def number_external_link_footnotes(markup: str) -> str:
+    """自動印刷脚注になる外部リンクへ、1冊内で安定した通し番号を付ける。"""
+    parser = ExternalLinkFootnotes(markup)
+    parser.feed(markup)
+    parser.close()
+    for offset, attribute in reversed(parser.edits):
+        markup = markup[:offset] + attribute + markup[offset:]
+    return markup
 
 
 def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
@@ -867,6 +951,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     # 前段の変換失敗でも、前回のPDFを今回の生成物に見せない。
     output.unlink(missing_ok=True)
     slug = work_slug(stem)
+    binding_file = WORK_DIR / f"{slug}.evidence-binding.json"
+    binding_file.unlink(missing_ok=True)
+    source_sha256 = sha256_file(path)
     # U+FE0F（異体字セレクタ16）は「絵文字として描け」という指定。付いていると
     # Chromium が単色の Noto Emoji を無視してシステムのカラー絵文字フォントを呼び、
     # 生成機械に依存する上に Type 3 で埋め込まれる。紙面では単色でよいので外す。
@@ -885,11 +972,12 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         build_front_matter(title, toc) + "\n".join(body), encoding="utf-8"
     )
     per_book_css = WORK_DIR / f"{slug}.css"
-    per_book_css.write_text(build_book_css(title), encoding="utf-8")
+    base_css = build_book_css(title) + "\n" + HEADING_INLINE_CSS
+    per_book_css.write_text(base_css + NOWRAP_CSS, encoding="utf-8")
 
     # Vivliostyle は行長だけで pre を割るため、空白があっても語の途中で折れる。
-    # 先に vfm で HTML へ変換し、長いコード行のトークン境界へ <wbr> を挿入してから
-    # 組版へ渡す。<wbr> は折返し候補であって強制ではない（実測済み）。
+    # 先に vfm で HTML へ変換し、構文を保てる位置で明示改行してから組版へ渡す。
+    # 改行できない行は8ptを下回らない範囲で縮小し、収まらなければ生成を止める。
     try:
         vfm_command = (
             [env["PDF_BOOK_VFM_BIN"]]
@@ -914,25 +1002,36 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         )
         return problems
 
-    residuals: list[str] = []
-    markup = wrap_code_in_html(converted.stdout, residuals)
-    if residuals:
-        # フォント縮小の下限も割る行＝コピー安全な見た目を作れない行。
-        # 出さずに止める。材料側のコード整形で対処する。
-        problems.append(
-            f"{path.name}: コピー安全に組版できないコード行: {residuals[0][:80]}"
-        )
-        return problems
-    unsafe = unsafe_runs(markup)
-    if unsafe:
-        # 折返し候補を作れなかった行が残る＝語の途中で切れる可能性が残る。
-        # 出さずに止める。材料のコードを変えずに済む範囲の限界。
-        problems.append(
-            f"{path.name}: コード行に折返し候補を作れません: {unsafe[0][:80]}"
-        )
-        return problems
     html_doc = WORK_DIR / f"{slug}.html"
-    html_doc.write_text(markup, encoding="utf-8")
+    structure_file = WORK_DIR / f"{slug}.table-structure.json"
+    forced_tables: dict[int, str] = {}
+
+    def prepare_html():
+        structured, table_structure = restructure_tables(protect_table_latin(converted.stdout), forced_tables)
+        annotated, manifest = annotate_inline_code(structured, slug)
+        residuals: list[str] = []
+        markup = wrap_code_in_html(annotated, residuals)
+        if residuals:
+            raise ValueError(f"コピー安全に組版できないコード行: {residuals[0][:80]}")
+        unsafe = unsafe_runs(markup)
+        if unsafe:
+            raise ValueError(f"コード行に折返し候補を作れません: {unsafe[0][:80]}")
+        markup = number_external_link_footnotes(markup)
+        validate_annotated_html(markup, manifest)
+        html_doc.write_text(markup, encoding="utf-8")
+        (WORK_DIR / f"{slug}.inline-manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        structure_file.write_text(json.dumps({
+            "schema_version": 1, "document_id": slug,
+            "source_sha256": source_sha256, "tables": table_structure,
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return manifest, table_structure
+
+    try:
+        inline_manifest, table_structure = prepare_html()
+    except ValueError as error:
+        return [f"{path.name}: HTML組版準備に失敗: {error}"]
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     # HTMLの直接入力ではテーマの準備経路を通らないため、原稿として登録する。
@@ -949,11 +1048,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         "module.exports = " + json.dumps(config, ensure_ascii=False) + ";\n",
         encoding="utf-8",
     )
-    vivliostyle_command = (
-        [env["PDF_BOOK_VIVLIOSTYLE_BIN"]]
-        if "PDF_BOOK_VIVLIOSTYLE_BIN" in env
-        else ["npx", "--yes", VIVLIOSTYLE_CLI]
-    )
+    vivliostyle_command = [
+        "node", str(Path(__file__).with_name("verify-inline-layout.mjs"))
+    ]
     command = [
         *vivliostyle_command, "build", "-c", config_file.name,
         "-s", "A4",
@@ -967,11 +1064,84 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     if browser:
         command += ["--executable-browser", browser]
 
+    manifest_file = WORK_DIR / f"{slug}.inline-manifest.json"
+    measurement_file = WORK_DIR / f"{slug}.inline-measurement.json"
+    measurement_pdf = WORK_DIR / f"{slug}.inline-measurement.pdf"
+    audit_env = {
+        **env,
+        "PDF_BOOK_TOOLCHAIN_DIR": str(TOOLCHAIN_DIR),
+        "PDF_BOOK_INLINE_LAYOUT_MANIFEST": str(manifest_file),
+        "PDF_BOOK_INLINE_LAYOUT_REPORT": str(measurement_file),
+    }
+    measurement_file.unlink(missing_ok=True)
+    measure_command = command.copy()
+    measure_command[measure_command.index("-o") + 1] = str(measurement_pdf)
+    try:
+        # 変換後は同じHTMLを再計測し、古い表の寸法を最終PDFへ流用しない。
+        for attempt in range(len(table_structure) + 1):
+            measurement_file.unlink(missing_ok=True)
+            subprocess.run(
+                measure_command, capture_output=True, text=True, cwd=WORK_DIR,
+                env=audit_env, timeout=BUILD_TIMEOUT,
+            )
+            measured = json.loads(measurement_file.read_text(encoding="utf-8"))
+            remaining_orders = [t["source_order"] for t in table_structure if t["layout"] == "table"]
+            to_stack = measured_tables_to_stack(inline_manifest, measured, remaining_orders)
+            if to_stack:
+                table_css, table_changes, unresolved_tables = '', [], []
+            else:
+                table_css, table_changes, unresolved_tables = derive_table_css(inline_manifest, measured)
+            (WORK_DIR / f"{slug}.table-adjustment.json").write_text(json.dumps({
+                "adjustments": table_changes, "unresolved": unresolved_tables,
+                "restructure_requested": to_stack,
+            }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            id_to_order = {t["id"]: order for t, order in zip(inline_manifest["tables"], remaining_orders)}
+            # 別の列から幅を奪う配分案は使わず、行ごとの全幅表示へ変える。
+            for change in table_changes:
+                to_stack[id_to_order[change["table_id"]]] = "measured_inline_code_needs_more_width"
+            for unresolved in unresolved_tables:
+                if unresolved["reason"] not in {"minimum_width_sum_exceeds_table", "code_free_column_width_not_proven", "no_width_change_derived"}:
+                    raise ValueError(f"表の寸法を証明できません: {unresolved}")
+                to_stack[id_to_order[unresolved["table_id"]]] = unresolved["reason"]
+            if to_stack:
+                forced_tables.update(to_stack)
+                inline_manifest, table_structure = prepare_html()
+                per_book_css.write_text(base_css + NOWRAP_CSS, encoding="utf-8")
+                continue
+            candidate_css, changes = derive_flow_css(inline_manifest, measured)
+            break
+        else:
+            raise ValueError("表の自動変換が収束しません")
+        per_book_css.write_text(base_css + candidate_css + table_css, encoding="utf-8")
+        (WORK_DIR / f"{slug}.inline-adjustment.json").write_text(
+            json.dumps(changes, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        reviewed_css, reviewed_tables = derive_reviewed_table_css(
+            load_table_layout_overrides(TABLE_LAYOUT_OVERRIDES),
+            path, inline_manifest, measured,
+        )
+        per_book_css.write_text(base_css + candidate_css + table_css + reviewed_css, encoding="utf-8")
+        (WORK_DIR / f"{slug}.table-adjustment.json").write_text(
+            json.dumps(
+                {
+                    "adjustments": table_changes,
+                    "unresolved": unresolved_tables,
+                    "reviewed_overrides": reviewed_tables,
+                },
+                ensure_ascii=False, indent=2,
+            ) + "\n", encoding="utf-8"
+        )
+    except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        problems.append(f"{path.name}: 行内コードの実測または縮小候補の計算に失敗: {error}")
+        return problems
+    finally:
+        measurement_pdf.unlink(missing_ok=True)
+    audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"] = str(WORK_DIR / f"{slug}.inline-layout.json")
     if output.exists():
         output.unlink()
     try:
         result = subprocess.run(
-            command, capture_output=True, text=True, cwd=WORK_DIR, env=env,
+            command, capture_output=True, text=True, cwd=WORK_DIR, env=audit_env,
             timeout=BUILD_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
@@ -988,6 +1158,41 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         if output.exists():
             output.unlink()
         return problems
+
+    pdf_audit_file = WORK_DIR / f"{slug}.inline-pdf.json"
+    pdf_audit_file.unlink(missing_ok=True)
+    try:
+        audited = subprocess.run(
+            ["node", str(Path(__file__).with_name("verify-inline-pdf.mjs")),
+             "--manifest", str(manifest_file),
+             "--dom-report", audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"],
+             "--pdf", str(output), "--toolchain", str(TOOLCHAIN_DIR),
+             "--report", str(pdf_audit_file)],
+            capture_output=True, text=True, cwd=WORK_DIR, env=env, timeout=BUILD_TIMEOUT,
+        )
+        pdf_audit = json.loads(pdf_audit_file.read_text(encoding="utf-8"))
+        if audited.returncode != 0 or pdf_audit.get("result") != "pass":
+            raise ValueError("生成PDFと行内コードの文字・配置が一致しません")
+    except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        problems.append(f"{path.name}: PDF生成後の行内コード検査に失敗: {error}")
+        output.unlink(missing_ok=True)
+        return problems
+
+    if sha256_file(path) != source_sha256:
+        output.unlink(missing_ok=True)
+        return [f"{path.name}: 組版中に原稿が変更されました"]
+    artifacts = {
+        "source": path, "html": html_doc, "inline_manifest": manifest_file,
+        "inline_layout": Path(audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"]),
+        "inline_pdf": pdf_audit_file, "pdf": output, "table_structure": structure_file,
+        "per_book_css": per_book_css, "config": config_file,
+        "book_css": WORK_DIR / "book.css", "source_book_css": BOOK_CSS,
+    }
+    binding_file.write_text(json.dumps({
+        "schema_version": 1, "document_id": slug,
+        "artifacts": {name: {"path": str(file.resolve()), "sha256": sha256_file(file)}
+                      for name, file in artifacts.items()},
+    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     # ページ数は進捗表示のためだけに読む。poppler が無い環境でも組版は続ける
     try:
@@ -1020,6 +1225,14 @@ def main(argv: list[str]) -> int:
     except (ValueError, OSError, subprocess.TimeoutExpired) as error:
         print(f'リンクを解決できません: {error}', file=sys.stderr)
         return 2
+    try:
+        validate_override_document_catalog(
+            load_table_layout_overrides(TABLE_LAYOUT_OVERRIDES),
+            [work_slug(path.stem) for path in all_sources],
+        )
+    except (ValueError, OSError) as error:
+        print(f'表幅設定を正本冊子と照合できません: {error}', file=sys.stderr)
+        return 2
     browser = find_browser()
     # symlink 越しの別名を正本36冊の指定と認めると、別名PDFだけを生成したあとに
     # 古い正本PDFへ証跡を発行できる。正本パスそのものだけを全冊ビルドとする。
@@ -1044,25 +1257,25 @@ def main(argv: list[str]) -> int:
 
     before_inputs = None
     toolchain = None
-    if full_release_build:
-        if browser is None:
-            print(
-                "全冊ビルド証跡にはハッシュ可能なChrome/Chromiumが必要です",
-                file=sys.stderr,
-            )
-            return 2
-        try:
-            toolchain = prepare_release_toolchain(env)
-            env["PDF_BOOK_VIVLIOSTYLE_BIN"] = toolchain["vivliostyle_bin"]
-            env["PDF_BOOK_VFM_BIN"] = toolchain["vfm_bin"]
-            env["PDF_BOOK_MERMAID_BIN"] = toolchain["mermaid_bin"]
-            env["PDF_BOOK_THEME_PATH"] = toolchain["theme_path"]
+    if full_release_build and browser is None:
+        print(
+            "全冊ビルド証跡にはハッシュ可能なChrome/Chromiumが必要です",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        toolchain = prepare_release_toolchain(env)
+        env["PDF_BOOK_VIVLIOSTYLE_BIN"] = toolchain["vivliostyle_bin"]
+        env["PDF_BOOK_VFM_BIN"] = toolchain["vfm_bin"]
+        env["PDF_BOOK_MERMAID_BIN"] = toolchain["mermaid_bin"]
+        env["PDF_BOOK_THEME_PATH"] = toolchain["theme_path"]
+        if full_release_build:
             before_inputs = release_input_snapshot(
                 all_sources, link_map_filename, browser, toolchain
             )
-        except (OSError, ValueError) as error:
-            print(f"リリース入力を固定できません: {error}", file=sys.stderr)
-            return 2
+    except (OSError, ValueError) as error:
+        print(f"PDF生成ツールと入力を固定できません: {error}", file=sys.stderr)
+        return 2
 
     # この先はPDFを上書きし得る。部分ビルドや失敗のあとに、過去の全冊証跡を
     # 現在の出力へ流用させないため、実行直前に失効させる。

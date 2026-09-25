@@ -51,6 +51,14 @@ book-pdf-test:
 	@python3 scripts/pdf-book/test_code_wrap.py
 	@python3 scripts/pdf-book/test_build_receipt.py
 	@python3 scripts/pdf-book/test_release_manifest.py
+	@python3 scripts/pdf-book/test_code_wrap_dedent.py
+	@python3 scripts/pdf-book/test_inline_layout.py
+	@python3 scripts/pdf-book/test_inline_layout_css.py
+	@python3 scripts/pdf-book/test_table_latin.py
+	@python3 scripts/pdf-book/test_table_structure.py
+	@python3 scripts/pdf-book/test_table_layout_override.py
+	@python3 scripts/pdf-book/test_table_build.py
+	@python3 scripts/pdf-book/test_verify_pdf_copy.py
 
 # 出力が商品として出せる状態かを見る
 # 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）→ コードの写経安全性（長行の折り返しで文字が失われないか）

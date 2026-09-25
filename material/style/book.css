@@ -182,22 +182,50 @@ table {
   width: 100%;
 }
 
+/* 長い識別子と説明の幅を奪い合わないよう、生成器が選んだ表だけ縦に展開する。 */
+.pdf-stacked-table {
+  margin-block: 1.2em;
+}
+.pdf-stacked-row {
+  border-block-start: 1px solid var(--book-rule);
+  padding-block: 0.6em;
+}
+.pdf-stacked-row dl {
+  margin: 0;
+}
+.pdf-stacked-row dt {
+  color: var(--book-accent);
+  font-weight: bold;
+  margin-block-start: 0.55em;
+  break-after: avoid;
+}
+.pdf-stacked-row dd {
+  margin: 0.2em 0 0.7em;
+  text-align: start;
+  orphans: 2;
+  widows: 2;
+}
+.pdf-table-caption {
+  font-weight: bold;
+  break-after: avoid;
+}
+
 td,
 th {
   overflow-wrap: anywhere;
+  /* セル直下の文章でも、末尾の不自然な一文字行を減らす。 */
+  text-wrap: pretty;
 }
 
 /* 表の中のインラインコードは、折返し先が無いと隣の列へ突き抜ける。
    実測（36冊）では `src/server/api/routers/project.ts` のようなパスが
    「触るファイル」列から「成功状態」列の文字に重なり、版面の右へ最大 24mm 出ていた。
-   セルへの overflow-wrap だけでは1行目が止まらんかったので、
-   セルの中の code に word-break を直接当てる。
-   コードブロック（pre）側では word-break が効かんことが分かっているが、
-   ここは表のセルの中の inline で、別の場面である。効いたかどうかは
-   check_page_layout.py の実測で確かめること。 */
+   code 自体へ overflow-wrap を当て、通常の空白や `/` を先に折返し候補にする。
+   break-all では行末の1文字幅へ `function` の `f` だけが入り、読みにくかった。 */
 td code,
 th code {
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: anywhere;
   /* 語の途中で切れる回数は、入る文字数で決まる。実測で効いたのは級数だけなので
      （下の端切れの覚え書きと同じ結論）、セルの中だけ少し落として切れ目を減らす。 */
   font-size: 0.85em;
@@ -346,7 +374,28 @@ figure img[src$=".png"] {
 
 /* 脚注番号の桁が表の狭い列で分断されないようにする。 */
 @media print {
-  :not(.footnote) > a[href^="http"]::after {
+  :not(.footnote) > a[data-pdf-footnote][href^="http"] {
+    counter-increment: none;
+  }
+
+  :not(.footnote) > a[data-pdf-footnote][href^="http"]::before {
+    content: attr(data-pdf-footnote) ". " attr(href);
+    clear: both;
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+
+  :not(.footnote) > a[data-pdf-footnote][href^="http"]::after {
+    content: "*" attr(data-pdf-footnote);
     white-space: nowrap;
   }
+}
+
+/* 表の識別子は本文の書体を保ち、狭い列ではHTML変換側で行を展開する。 */
+.pdf-table-latin {
+  font: inherit;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }

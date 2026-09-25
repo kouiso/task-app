@@ -4,7 +4,7 @@ set -euo pipefail
 # このスクリプトは「空ディレクトリから教材を始める人」が最初に迷わんように、
 # 必要な前提確認と最小限の土台づくりを 1 回で揃えるために置いている。
 
-PROJECT_DIR="$(pwd)"
+PROJECT_DIR="$(pwd -P)"
 
 RUNTIME_DEPS=(
   next@15.5.24
@@ -126,7 +126,7 @@ check_postgres() {
   exit 1
 }
 
-ensure_empty_or_existing_next_app() {
+ensure_empty_or_existing_next_app() (
   if [ -f "package.json" ] || [ -d "src/app" ]; then
     echo "既存の Next.js 土台があるため create-next-app はスキップします。"
     return 0
@@ -134,8 +134,49 @@ ensure_empty_or_existing_next_app() {
 
   # create-next-app は空ディレクトリを要求するため、
   # README.md / material / scripts などの配布物を一時退避して実行後に戻す。
+  local original_dir="$PWD"
+  # 同じファイルシステム内で退避し、容量不足による途中コピーを避ける。
   local stash_dir
-  stash_dir="$(mktemp -d)"
+  stash_dir="$(mktemp -d "$original_dir/.task-app-stash.XXXXXX")"
+  local create_dir=""
+  local generated_outputs=()
+  local generation_committed=0
+
+  restore_scaffold_inputs() {
+    local original_status=$?
+    local cleanup_status=0
+    trap - EXIT INT TERM
+    if [ "$generation_committed" -eq 0 ]; then
+      for item in ${generated_outputs[@]+"${generated_outputs[@]}"}; do
+        rm -rf "$item" || cleanup_status=1
+      done
+    fi
+    shopt -s dotglob nullglob
+    for item in "$stash_dir"/*; do
+      if ! mv "$item" "$original_dir/"; then
+        print_error "配布物の復元に失敗しました。退避先を保持します: $stash_dir"
+        cleanup_status=1
+      fi
+    done
+    if [ -n "$create_dir" ]; then
+      rm -rf "$create_dir" || cleanup_status=1
+    fi
+    if ! rmdir "$stash_dir"; then
+      print_error "退避先を削除できませんでした: $stash_dir"
+      cleanup_status=1
+    fi
+    if [ "$original_status" -ne 0 ]; then
+      exit "$original_status"
+    fi
+    exit "$cleanup_status"
+  }
+
+  # 退避中や生成物の移動中の失敗でも元の配布物を戻す。
+  # subshell 内の trap に限定し、呼び出し元の終了処理を変更しない。
+  # SIGKILL や電源断は捕捉できないため、復元を保証する対象に含めない。
+  trap restore_scaffold_inputs EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   for item in README.md .env .env.example material scripts "$(basename "$0")" _ui-components _lib-utils _lib-base _constants _trpc-base _server-routers _server-base _app-api-trpc _prisma _docker _seed _app-components; do
     if [ -e "$item" ]; then
       mv "$item" "$stash_dir/"
@@ -145,7 +186,6 @@ ensure_empty_or_existing_next_app() {
   # create-next-app はカレントディレクトリ名を npm package name として検証する。
   # 配布 ZIP を置いた親フォルダに大文字が含まれても詰まらないよう、
   # 常に安全な小文字名の一時ディレクトリで生成してから中身を戻す。
-  local create_dir
   create_dir="/tmp/task-app-scaffold-$$-$(date +%s)"
   mkdir -p "$create_dir"
 
@@ -162,20 +202,20 @@ ensure_empty_or_existing_next_app() {
     --yes
 
   shopt -s dotglob nullglob
+  # 元からある資材へ生成物を混ぜない。失敗時に消すのは今回作るものだけにする。
   for item in "$create_dir"/*; do
-    [ -e "$item" ] && mv "$item" .
+    if [ -e "$original_dir/$(basename "$item")" ] || [ -L "$original_dir/$(basename "$item")" ]; then
+      print_error "生成先に既存のファイルがあります。別の空フォルダへ配布ZIPを展開してください: $(basename "$item")"
+      return 1
+    fi
   done
-  shopt -u dotglob nullglob
-  rm -rf "$create_dir"
-
-  # 退避した配布物を元の位置に戻す
-  shopt -s dotglob nullglob
-  for item in "$stash_dir"/*; do
-    [ -e "$item" ] && mv "$item" .
+  for item in "$create_dir"/*; do
+    generated_outputs+=("$original_dir/$(basename "$item")")
+    mv "$item" "$original_dir/"
   done
+  generation_committed=1
   shopt -u dotglob nullglob
-  rmdir "$stash_dir" 2>/dev/null || true
-}
+)
 
 configure_security_overrides() {
   # Next.js が内部で固定している脆弱な推移依存を、互換性を検証した修正版へ揃える。
@@ -569,38 +609,8 @@ copy_prisma_files() {
 }
 
 compose() {
-  if docker compose "$@"; then
-    return 0
-  fi
-
-  if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
-    return $?
-  fi
-
-  return 1
-}
-
-env_value() {
-  local key="$1"
-  local default_value="$2"
-
-  if [ -f ".env" ]; then
-    local value
-    value="$(grep -E "^${key}=" .env | tail -n 1 | cut -d= -f2- | tr -d '"' || true)"
-    if [ -n "$value" ]; then
-      echo "$value"
-      return 0
-    fi
-  fi
-
-  echo "$default_value"
-}
-
-postgres_ready_on_port() {
-  local port="$1"
-  local database="$2"
-  pg_isready -h localhost -p "$port" -U user -d "$database" >/dev/null 2>&1
+  # 検査した構成と起動する構成をそろえ、親フォルダや COMPOSE_FILE の別設定を拾わない。
+  docker compose --project-directory "$PROJECT_DIR" -f "$PROJECT_DIR/docker-compose.yml" "$@"
 }
 
 setup_database() {
@@ -626,48 +636,50 @@ setup_database() {
     return 0
   fi
 
+  local database_guard
+  database_guard="$(cd "$(dirname "$0")" && pwd)/verify-scaffold-database.cjs"
+  node "$database_guard" preflight
+
   echo "Docker で PostgreSQL を起動しています..."
   local app_db_port
-  app_db_port="$(env_value "_DOCKER_COMPOSE_HOST_PORT_DB" "25532")"
-  if postgres_ready_on_port "$app_db_port" "taskapp"; then
-    echo "localhost:${app_db_port} の PostgreSQL が既に応答しているため、アプリ用 DB 起動はスキップします。"
-  elif ! compose up -d db; then
-    print_error "アプリ用 DB の起動に失敗しました。Docker の状態と 25532 番ポートの競合を確認してください。"
+  app_db_port="$(node "$database_guard" port db)"
+  if ! compose up -d db; then
+    print_error "アプリ用 DB の起動に失敗しました。Docker の状態と ${app_db_port} 番ポートの競合を確認してください。"
+    print_error "ポートが競合している場合は、付録「トラブルシューティング」の「別フォルダの DB と衝突した場合」の手順で使う番号を変えてください。"
     exit 1
   fi
 
   local test_db_log
   test_db_log="$(mktemp)"
   local test_db_port
-  test_db_port="$(env_value "_DOCKER_COMPOSE_HOST_PORT_TEST_DB" "25533")"
-  if postgres_ready_on_port "$test_db_port" "taskapp_test"; then
-    echo "localhost:${test_db_port} の PostgreSQL が既に応答しているため、テスト用 DB 起動はスキップします。"
-  elif ! compose up -d test-db >"$test_db_log" 2>&1; then
+  test_db_port="$(node "$database_guard" port test-db)"
+  if ! compose up -d test-db >"$test_db_log" 2>&1; then
     print_error "テスト用 DB の起動に失敗しました。${test_db_port} 番ポートが使用中の可能性があります。"
-    echo "Day 01 のアプリ起動は続行できますが、後でテストを実行する前に .env の _DOCKER_COMPOSE_HOST_PORT_TEST_DB を空いているポートへ変更してください。" >&2
+    echo "Day 01 のアプリ起動は続行できますが、後でテストを実行する前に .env の _DOCKER_COMPOSE_HOST_PORT_TEST_DB と TEST_DATABASE_URL のポートを同じ空き番号へ変更してください。" >&2
     echo "Docker の詳細:" >&2
     cat "$test_db_log" >&2
   fi
   rm -f "$test_db_log"
 
-  # DB の準備ができるまで少し待つ
+  # Docker だけを導入した読者のPCには pg_isready がないため、対象コンテナ内で確認する。
   echo "DB の起動を待っています..."
+  local database_ready=0
   for _ in {1..30}; do
-    if postgres_ready_on_port "$app_db_port" "taskapp"; then
+    if compose exec -T db pg_isready -U user -d taskapp >/dev/null 2>&1; then
+      database_ready=1
       break
     fi
     sleep 1
   done
+  if [ "$database_ready" -ne 1 ]; then
+    print_error "教材用 DB が起動待ちのままです。Docker の状態を確認してから再実行してください。"
+    exit 1
+  fi
 
   # Prisma スキーマ反映 + クライアント生成
   if [ -f "prisma/schema.prisma" ]; then
     echo "Prisma スキーマをDBに反映しています..."
-    npx prisma db push
-    npx prisma generate
-    if [ -f "src/command/seed.ts" ]; then
-      echo "シードデータを投入しています..."
-      npm run db:seed -- --yes
-    fi
+    node "$database_guard" initialize
     echo "DB セットアップが完了しました。"
   fi
 }

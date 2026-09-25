@@ -1,6 +1,9 @@
 services:
   db:
     image: postgres:16-alpine
+    labels:
+      io.taskapp.scaffold.wsl-distro: "${WSL_DISTRO_NAME:-}"
+      io.taskapp.scaffold.owner: "${_TASKAPP_SCAFFOLD_DB_OWNER:-}"
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -17,6 +20,9 @@ services:
 
   test-db:
     image: postgres:16-alpine
+    labels:
+      io.taskapp.scaffold.wsl-distro: "${WSL_DISTRO_NAME:-}"
+      io.taskapp.scaffold.owner: "${_TASKAPP_SCAFFOLD_DB_OWNER:-}"
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -31,3 +37,6 @@ services:
 
 volumes:
   postgres-data:
+    labels:
+      io.taskapp.scaffold.wsl-distro: "${WSL_DISTRO_NAME:-}"
+      io.taskapp.scaffold.owner: "${_TASKAPP_SCAFFOLD_DB_OWNER:-}"

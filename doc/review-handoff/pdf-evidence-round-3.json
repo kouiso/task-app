@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "scope": "round-3-inline-only; plain table identifiers were not checked",
+  "status": "pass",
+  "expected_books": 36,
+  "available_pdfs": 36,
+  "passed_books": 36,
+  "full_report": {
+    "path": "dist/review-round-3/pdf-evidence-full.json",
+    "sha256": "f51a9b9a9ed32a79a317e191c13c2b1d05c47ec5f8ebdc9d7260dc791e305b76"
+  },
+  "books": [
+    {
+      "name": "00-1_学びのロードマップ.pdf",
+      "status": "pass",
+      "pdf_sha256": "5d44ccfc7629e97dcac09a6108021ef1b2732e9a803bf778b5d3488362ebb20a"
+    },
+    {
+      "name": "00_カリキュラム目次.pdf",
+      "status": "pass",
+      "pdf_sha256": "84a183c928a405c6e42646f451861f7bbed0356d52a41dde4001fe169039a829"
+    },
+    {
+      "name": "appendix_トラブルシューティング.pdf",
+      "status": "pass",
+      "pdf_sha256": "e8ced4fa7b96838ab62a8dfd14e470fe193a7218119a0c75dda3772394e8f231"
+    },
+    {
+      "name": "appendix_参考資料.pdf",
+      "status": "pass",
+      "pdf_sha256": "ae3b813df3af9b118e98fe031c378a1df2b033aca49d7458ae8e5fa3c953e238"
+    },
+    {
+      "name": "appendix_次のステップ.pdf",
+      "status": "pass",
+      "pdf_sha256": "6950c4332dde891cd2c00663716346015a55058e64308587f1e86b838d66136e"
+    },
+    {
+      "name": "appendix_用語集.pdf",
+      "status": "pass",
+      "pdf_sha256": "c16d44ce7463b9e03dc913755250174695325426458c7ae299572c2b5b5431cf"
+    },
+    {
+      "name": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+      "status": "pass",
+      "pdf_sha256": "701491e7f1df46505141fe8c41354b5bd46bbef8ca5ac234780a12d5e2f4e331"
+    },
+    {
+      "name": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
+      "status": "pass",
+      "pdf_sha256": "7ee29e33be88f53768d09cc10c93a2487c8e8d20fe949ae0dcc73b96ba4eb0db"
+    },
+    {
+      "name": "day03_GitHubに保存する.pdf",
+      "status": "pass",
+      "pdf_sha256": "8e8bff72342ff9787fe33e161da6db17e36c413c608017cce236a1b149be4014"
+    },
+    {
+      "name": "day04_ネットに公開.pdf",
+      "status": "pass",
+      "pdf_sha256": "f414ea89837bb7a16060ce57cf9a1b4c99902e109d3f2c57a9212d7cc1329c57"
+    },
+    {
+      "name": "day05_ログイン画面のUI.pdf",
+      "status": "pass",
+      "pdf_sha256": "9cc0cb19dd630e409f5700913095b3771e48b38070c15614bb872809f0e09085"
+    },
+    {
+      "name": "day06_ユーザー登録画面.pdf",
+      "status": "pass",
+      "pdf_sha256": "673add4d0e11147bf6875d0975e12187af4e2d082cc35abb0217536e33808de0"
+    },
+    {
+      "name": "day07_認証バックエンドを作ろう.pdf",
+      "status": "pass",
+      "pdf_sha256": "83ce0c61823e139d3608b1e18bf39f79fb30e1c2f8f0033ed6cf9c57e6d34a42"
+    },
+    {
+      "name": "day08_サイドバーを完成させよう.pdf",
+      "status": "pass",
+      "pdf_sha256": "32a9bd2a84c034f6fb3c81df614883072ffc6197fdfc639dde3daac4baf56472"
+    },
+    {
+      "name": "day09_プロジェクト一覧画面.pdf",
+      "status": "pass",
+      "pdf_sha256": "401d21cfdf0fed3e056b55e3c5aefe6a042496d4ac20cd39ebb7e7f48df9c18e"
+    },
+    {
+      "name": "day10_プロジェクト新規作成.pdf",
+      "status": "pass",
+      "pdf_sha256": "2242d96e28b8924022415a8d248cf6a20740d774a885f2bc5b1139d39d239910"
+    },
+    {
+      "name": "day11_プロジェクト編集・削除.pdf",
+      "status": "pass",
+      "pdf_sha256": "470c9db525649f87b1d70bf29bd82470f061b2ade4b1ba336c0a0950eab576ef"
+    },
+    {
+      "name": "day12_メンバー追加.pdf",
+      "status": "pass",
+      "pdf_sha256": "e38bf985ed500a5d5e37c753d315f1b859503cdddd4185b8f6d1185bb738ac68"
+    },
+    {
+      "name": "day13_タスク一覧画面.pdf",
+      "status": "pass",
+      "pdf_sha256": "72d13f1251993fcc073240a98497151027404fa0da19bd3453f4c18d8631a77e"
+    },
+    {
+      "name": "day14_タスク新規作成.pdf",
+      "status": "pass",
+      "pdf_sha256": "6c340c7dfb42b31f4b0acaf72b1396f89b124b3b68ed7f85c7a2cd43538c27e3"
+    },
+    {
+      "name": "day15_タスク編集・削除.pdf",
+      "status": "pass",
+      "pdf_sha256": "4334fa665f84877c18e24b836a8571cbb641d2def8038b8587c1f21ca6aa0e5f"
+    },
+    {
+      "name": "day16_ステータス変更・時間記録.pdf",
+      "status": "pass",
+      "pdf_sha256": "713805b23d14e8b1a40c971335ac171dbb8a5ab9bd81e8e927fd4e1cae50386a"
+    },
+    {
+      "name": "day17_自分のタスクページ.pdf",
+      "status": "pass",
+      "pdf_sha256": "bfe0eef500583a5c0da0213325cdf23bdfd8a688a62258a4e4508856a4f4d809"
+    },
+    {
+      "name": "day18_コメント投稿.pdf",
+      "status": "pass",
+      "pdf_sha256": "1785f0b3b2eaf203d3bb65e50c75d2042b6f798640048f7bc2a587fb26ab84e4"
+    },
+    {
+      "name": "day19_コメント編集・削除.pdf",
+      "status": "pass",
+      "pdf_sha256": "c843728a77ac3cda5797ac98376c8db32798ea65926ee3f75983beaa03a5435f"
+    },
+    {
+      "name": "day20_タスク検索機能.pdf",
+      "status": "pass",
+      "pdf_sha256": "3855af512b82b90a4bb33fac75d10ca0682c82dacf447767fb6aa01ce30ece88"
+    },
+    {
+      "name": "day21_統計カードを表示.pdf",
+      "status": "pass",
+      "pdf_sha256": "cd40549a61063f4bc468dacbd2245dcb821ec0d461938bb934c858814207c49d"
+    },
+    {
+      "name": "day22_グラフを表示.pdf",
+      "status": "pass",
+      "pdf_sha256": "570fa13c40870d938cbd86721193c4772f4b0245f805ddeb33a4c2aadfd38c9a"
+    },
+    {
+      "name": "day23_週次レポート.pdf",
+      "status": "pass",
+      "pdf_sha256": "b20c34c94a055e4a053f0ba1130362a6a0a9a8b285d9ff5f393027534fd0e9e4"
+    },
+    {
+      "name": "day24_ユーザー一覧（管理者用）.pdf",
+      "status": "pass",
+      "pdf_sha256": "bc59881451304ce5e545c95330f04c2583480e0a832867dff884e54913f165d9"
+    },
+    {
+      "name": "day25_プロフィール編集.pdf",
+      "status": "pass",
+      "pdf_sha256": "c545f6b2942e9bb0e45dc12cc28d394e9519c098178d39a6d2a467b84a8ccff4"
+    },
+    {
+      "name": "day26_エラーページを作って、バグを退治しよう.pdf",
+      "status": "pass",
+      "pdf_sha256": "5f716cf0ebbb1c252ede61fbd6523efe1e6418fb81a2ae336dd9908c5efa045b"
+    },
+    {
+      "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+      "status": "pass",
+      "pdf_sha256": "340cde1f4394501ef02ce6d868b46d6de29b478347fa28349086111d5d3cc878"
+    },
+    {
+      "name": "day28_タスク一括操作を実装しよう.pdf",
+      "status": "pass",
+      "pdf_sha256": "4ba536a6a502e5ad3f13435ee557e82337e284c8f1c15797845f8cfea207a770"
+    },
+    {
+      "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+      "status": "pass",
+      "pdf_sha256": "a0c723d7c6f7fc2caea1823853f90abd7672b08af3a4c432be7d4e056b658be8"
+    },
+    {
+      "name": "day30_完成版を公開！.pdf",
+      "status": "pass",
+      "pdf_sha256": "0a00c8651f6e122c9ecaf681e8954370607a6778eef7c0a37d659f80a350ceab"
+    }
+  ]
+}

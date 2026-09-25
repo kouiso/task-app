@@ -42,6 +42,7 @@ required_files=(
   ".node-version"
   "doc/SUPPORTED_ENVIRONMENTS.md"
   "scripts/scaffold-from-scratch.sh"
+  "scripts/verify-scaffold-database.cjs"
 )
 
 for relative_path in "${required_files[@]}"; do

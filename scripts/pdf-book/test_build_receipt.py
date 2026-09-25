@@ -41,6 +41,9 @@ class BuildReceiptTest(unittest.TestCase):
         def run(command, **kwargs):
             if command[0] == "pdfinfo":
                 return build_pdf_book.subprocess.CompletedProcess(command, 0, "Pages: 1", "")
+            if "--dom-report" in command:
+                Path(command[command.index("--report") + 1]).write_text('{"result":"pass"}')
+                return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
             if build_pdf_book.VFM_CLI in command:
                 return build_pdf_book.subprocess.CompletedProcess(
                     command, 0, "<html><head></head><body><p>Fixture</p></body></html>", ""
@@ -59,6 +62,7 @@ class BuildReceiptTest(unittest.TestCase):
             output = Path(command[command.index("-o") + 1])
             self.assertTrue(output.is_absolute())
             output.write_bytes(b"fixture-pdf")
+            self.write_empty_dom_report(kwargs["env"])
             configs.append(config)
             return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
 
@@ -74,9 +78,81 @@ class BuildReceiptTest(unittest.TestCase):
                 source = self.sources / f"{name}.md"
                 source.write_text(f"# {title}\n\n本文\n", encoding="utf-8")
                 self.assertEqual(build_pdf_book.build_one(source, None, {}), [])
-        self.assertEqual(len(configs), 2)
-        self.assertNotEqual(configs[0]["workspaceDir"], configs[1]["workspaceDir"])
-        self.assertNotEqual(configs[0]["title"], configs[1]["title"])
+        self.assertEqual(len(configs), 4)
+        self.assertEqual(configs[0], configs[1])
+        self.assertEqual(configs[2], configs[3])
+        self.assertNotEqual(configs[0]["workspaceDir"], configs[2]["workspaceDir"])
+        self.assertNotEqual(configs[0]["title"], configs[2]["title"])
+
+    def write_empty_dom_report(self, env):
+        manifest = json.loads(Path(env["PDF_BOOK_INLINE_LAYOUT_MANIFEST"]).read_text())
+        self.assertEqual(manifest["entries"], [])
+        Path(env["PDF_BOOK_INLINE_LAYOUT_REPORT"]).write_text(json.dumps({
+            "document_id": manifest["document_id"],
+            "result": "dom_pass_post_pdf_pending",
+            "dom_audit": {"ready_state": "complete", "observed": []},
+        }))
+
+    def test_inline_gate_failures_never_leave_a_successful_pdf(self):
+        derive_tables = build_pdf_book.derive_table_css
+        load_overrides = build_pdf_book.load_table_layout_overrides
+        for failure in ["measurement_missing", "table_unresolved", "invalid_override", "final_dom", "pdf_fail", "pdf_missing"]:
+            with self.subTest(failure=failure):
+                work = self.root / failure
+                work.mkdir()
+                source = self.sources / f"{failure}.md"
+                source.write_text("# Fixture\n\nBody\n")
+                calls = []
+
+                def table_candidate(manifest, report):
+                    if failure == "table_unresolved":
+                        return "", [], [{"table_id": "fixture-table", "reason": "width_exceeded"}]
+                    return derive_tables(manifest, report)
+
+                def reviewed_config(path):
+                    if failure == "invalid_override":
+                        raise ValueError("reviewed table override is stale")
+                    return load_overrides(path)
+
+                def run(command, **kwargs):
+                    calls.append(command)
+                    if build_pdf_book.VFM_CLI in command:
+                        return build_pdf_book.subprocess.CompletedProcess(
+                            command, 0, "<html><body><p>Body</p></body></html>", ""
+                        )
+                    if "--dom-report" in command:
+                        if failure != "pdf_missing":
+                            Path(command[command.index("--report") + 1]).write_text('{"result":"fail"}')
+                        return build_pdf_book.subprocess.CompletedProcess(command, 1, "", "rejected")
+                    self.assertIn("-o", command)
+                    measure = kwargs["env"]["PDF_BOOK_INLINE_LAYOUT_REPORT"].endswith(".inline-measurement.json")
+                    Path(command[command.index("-o") + 1]).write_bytes(b"unverified-pdf")
+                    if failure == "measurement_missing" and measure:
+                        return build_pdf_book.subprocess.CompletedProcess(command, 1, "", "no report")
+                    self.write_empty_dom_report(kwargs["env"])
+                    return build_pdf_book.subprocess.CompletedProcess(
+                        command, 1 if failure == "final_dom" and not measure else 0, "", ""
+                    )
+
+                with (
+                    patch.object(build_pdf_book, "OUT_DIR", self.outputs),
+                    patch.object(build_pdf_book, "WORK_DIR", work),
+                    patch.object(build_pdf_book, "rewrite_book_links", side_effect=lambda text, *_: text),
+                    patch.object(build_pdf_book, "derive_table_css", side_effect=table_candidate),
+                    patch.object(build_pdf_book, "load_table_layout_overrides", side_effect=reviewed_config),
+                    patch.object(build_pdf_book.subprocess, "run", side_effect=run),
+                ):
+                    self.assertTrue(build_pdf_book.build_one(source, None, {}))
+                self.assertFalse((self.outputs / f"{failure}.pdf").exists())
+                self.assertFalse(list(work.glob("*.inline-measurement.pdf")))
+                if failure in ["measurement_missing", "table_unresolved", "invalid_override", "final_dom"]:
+                    self.assertFalse(any("--dom-report" in call for call in calls))
+                if failure == "invalid_override":
+                    self.assertEqual(len(calls), 2)
+                if failure == "table_unresolved":
+                    self.assertEqual(len(calls), 2)
+                    receipt = json.loads(next(work.glob("*.table-adjustment.json")).read_text())
+                    self.assertEqual(receipt["unresolved"][0]["reason"], "width_exceeded")
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -93,7 +169,8 @@ class BuildReceiptTest(unittest.TestCase):
             )
 
     def run_main(
-        self, snapshot_side_effect, targets=None, failure=False, after_build=None
+        self, snapshot_side_effect, targets=None, failure=False, after_build=None,
+        override_config=None,
     ):
         built = []
 
@@ -130,12 +207,48 @@ class BuildReceiptTest(unittest.TestCase):
             patch.object(build_pdf_book, "rewrite_book_links", side_effect=lambda text, *_: text),
             patch.object(
                 build_pdf_book,
+                "load_table_layout_overrides",
+                return_value=(
+                    {"schema_version": 1, "overrides": []}
+                    if override_config is None
+                    else override_config
+                ),
+            ),
+            patch.object(
+                build_pdf_book,
                 "release_input_snapshot",
                 side_effect=snapshot_side_effect,
             ),
             patch.object(build_pdf_book, "build_one", side_effect=build),
         ):
             return build_pdf_book.main(args)
+
+    @staticmethod
+    def override_for(document_id):
+        return {
+            "schema_version": 1,
+            "overrides": [{
+                "document_id": document_id,
+                "source_sha256": "a" * 64,
+                "table_source_order": 0,
+                "table_id": "table-0",
+                "table_sha256": "b" * 64,
+                "column_percentages": [40, 60],
+                "evidence_pdf_sha256": "c" * 64,
+                "review": "Reviewed fixture.",
+            }],
+        }
+
+    def test_override_catalog_rejects_unknown_id_but_allows_other_book_in_subset(self):
+        unknown = self.override_for("missing-book")
+        self.assertEqual(self.run_main([], override_config=unknown), 2)
+        self.assertFalse(list(self.outputs.glob("*.pdf")))
+
+        target = self.sources / "book-00.md"
+        other_book = self.override_for(build_pdf_book.work_slug("book-01"))
+        self.assertEqual(
+            self.run_main([], targets=[target], override_config=other_book), 0
+        )
 
     def test_successful_full_build_mints_receipt_for_exact_outputs(self):
         snapshot = {
@@ -241,12 +354,17 @@ class BuildReceiptTest(unittest.TestCase):
             "PDF_BOOK_THEME_PATH": "/resolved/theme-techbook",
         }
 
-        def run(command, **_kwargs):
+        def run(command, **kwargs):
             if command[0] == "/resolved/bin/vfm":
                 return build_pdf_book.subprocess.CompletedProcess(
                     command, 0, "<html><head></head><body><p>Fixture</p></body></html>", ""
                 )
-            if command[0] == "/resolved/bin/vivliostyle":
+            if "--dom-report" in command:
+                Path(command[command.index("--report") + 1]).write_text('{"result":"pass"}')
+                return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
+            if command[0] == "node":
+                self.assertEqual(Path(command[1]).name, "verify-inline-layout.mjs")
+                self.assertEqual(kwargs["env"]["PDF_BOOK_TOOLCHAIN_DIR"], str(build_pdf_book.TOOLCHAIN_DIR))
                 config_path = work / command[command.index("-c") + 1]
                 config = json.loads(
                     config_path.read_text(encoding="utf-8")
@@ -255,6 +373,7 @@ class BuildReceiptTest(unittest.TestCase):
                 )
                 self.assertEqual(config["theme"][0], "/resolved/theme-techbook")
                 Path(command[command.index("-o") + 1]).write_bytes(b"fixture-pdf")
+                self.write_empty_dom_report(kwargs["env"])
                 return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
             return build_pdf_book.subprocess.CompletedProcess(command, 0, "Pages: 1", "")
 
