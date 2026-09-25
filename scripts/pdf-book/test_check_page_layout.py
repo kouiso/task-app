@@ -375,18 +375,20 @@ def _rule_page(at_bottom: bool) -> tuple[int, int, bytes]:
     return width, height, bytes(buf)
 
 
-# (説明, 上端に濃い帯, 下端に濃い帯, 期待する (starts, ends))
+# (説明, 上端に濃い帯, 下端に濃い帯, 期待する (上端の帯の厚み, 下端の帯の厚み))
+# _page が描く帯の厚みに合わせる。上端は thick 行、下端は thick+1 行。
+_BAND_THICK = int(3.0 * 72 / 25.4) + 2
 CODE_BAND_CASES = [
-    ("上下とも白なら接していない", False, False, (False, False)),
-    ("下端に濃い帯があれば ends", False, True, (False, True)),
-    ("上端に濃い帯があれば starts", True, False, (True, False)),
-    ("上下とも濃ければ両方", True, True, (True, True)),
+    ("上下とも白なら接していない", False, False, (0, 0)),
+    ("下端に濃い帯があれば ends", False, True, (0, _BAND_THICK + 1)),
+    ("上端に濃い帯があれば starts", True, False, (_BAND_THICK, 0)),
+    ("上下とも濃ければ両方", True, True, (_BAND_THICK, _BAND_THICK + 1)),
 ]
 
 # 実測の誤報。day28 p55 の表の下罫（1本の線）がコードの地色として拾われていた。
 RULE_CASES = [
-    ("表の罫線1本は地色ではない（下）", True, (False, False)),
-    ("表の罫線1本は地色ではない（上）", False, (False, False)),
+    ("表の罫線1本は地色ではない（下）", True, (0, 0)),
+    ("表の罫線1本は地色ではない（上）", False, (0, 0)),
 ]
 
 
