@@ -524,7 +524,7 @@ Step 1 の `findCommentAndAssertOwnership` が届いたリクエストごとに�
 スクリーンショット: 下の画像は Step 6 まで書き終えた完成後の画面です。赤枠の中がこの Step で足したペンとゴミ箱のボタンです。初期データの「デザインモックアップ作成」には自分のコメントが1件入っているのでその行にだけ2つが並びます。
 
 ![完成後のタスク詳細ダイアログ。赤枠の中に、自分のコメントの日時の右へ並んだペンとゴミ箱のボタンが出ている](./screenshots/day19/own-comment-actions.png)
-> `comment.userId` は Day 18 Step 1 の
+> `comment.userId` は Day 18 Step 2 の
 > 構造テーブルで確認したフィールドです。
 > Prisma のリレーションで取得されます。
 
@@ -563,6 +563,9 @@ const handleCancelEdit = () => {
 三項演算子で「編集中のコメントか」を判定し、
 編集中はテキストエリアとボタン、通常時はテキストを
 表示します。`? (` から `)}` までが 1 つの式です。
+貼る場所は Day 18 Step 3 の最後に書いたコメント本文の
+`<p className="text-muted-foreground">` から `</p>` までの3行です。
+その3行をこの式で置き換えます。残したまま下へ足すと本文が2回出ます。
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
