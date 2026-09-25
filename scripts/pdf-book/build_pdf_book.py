@@ -725,6 +725,9 @@ def join_cjk_soft_breaks(markup: str) -> str:
         else:
             merged.append((start, end))
     for start, end in reversed(merged):
+        # ずれた位置を消すと HTML が壊れるので、空白だけを消すことを保証する
+        if markup[start:end].strip(" \t\n\r"):
+            continue
         markup = markup[:start] + markup[end:]
     return markup
 
