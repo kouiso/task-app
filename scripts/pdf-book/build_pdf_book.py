@@ -51,7 +51,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
 from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
 from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
-from table_latin import protect_table_latin
+from table_latin import keep_block_tails, protect_prose_latin, protect_table_latin
 from table_structure import restructure_tables, measured_tables_to_stack  # noqa: E402
 from inline_layout_css import (  # noqa: E402
     HEADING_INLINE_CSS,
@@ -513,10 +513,38 @@ class HtmlLinks(HTMLParser):
 
 
 PDF_FOOTNOTE_ATTRIBUTE = 'data-pdf-footnote'
+PDF_FOOTNOTE_DISPLAY_ATTRIBUTE = 'data-pdf-footnote-display'
 HTML_VOID_ELEMENTS = {
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
     'param', 'source', 'track', 'wbr',
 }
+
+
+def footnote_display_url(href: str) -> str:
+    """脚注に印刷する表示用のURLを作る。リンク先（href）自体は変えない。
+
+    共有パラメータ `usp` は紙面で読む価値が無いので表示から外す。
+    折り返しは `/` `?` `&` `=` の直後だけに許し、それ以外の区切り記号
+    （`.` `-` `:` など）は行継ぎ禁止文字で接着する。テーマ側の
+    `word-break: break-all` がどこでも切るため、単語の途中で折れていた。
+    """
+    head, _, fragment = href.partition('#')
+    base, _, query = head.partition('?')
+    params = [param for param in query.split('&')
+              if param and param.split('=', 1)[0] != 'usp']
+    display = base + (('?' + '&'.join(params)) if params else '')
+    display += '#' + fragment if fragment else ''
+    pieces = []
+    for character in display:
+        if character in '/?&=':
+            pieces.append(character + '\u200b')
+        elif character.isascii() and character.isalnum():
+            pieces.append(character)
+        else:
+            # CJK やパーセント記号は isalnum では素通りできない。CJK はどこでも
+            # 折れてしまうので、ハイフン等の区切りと同じくこちらで接着する
+            pieces.append('\u2060' + character + '\u2060')
+    return html.escape(''.join(pieces))
 
 
 class ExternalLinkFootnotes(HTMLParser):
@@ -537,9 +565,10 @@ class ExternalLinkFootnotes(HTMLParser):
         parent_classes = self.parent_classes[-1] if self.parent_classes else set()
         href = attributes.get('href')
         if tag == 'a' and href and href.startswith(('http://', 'https://')):
-            if PDF_FOOTNOTE_ATTRIBUTE in attributes:
+            if PDF_FOOTNOTE_ATTRIBUTE in attributes or PDF_FOOTNOTE_DISPLAY_ATTRIBUTE in attributes:
                 raise ValueError(
-                    f'予約属性 {PDF_FOOTNOTE_ATTRIBUTE} は原稿で使用できません'
+                    f'予約属性 {PDF_FOOTNOTE_ATTRIBUTE} / {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}'
+                    ' は原稿で使用できません'
                 )
             # theme-base の `:not(.footnote) > a[href^="http"]` と対象をそろえる。
             # 明示脚注の中のリンクまで数えると、紙面に出ない欠番が生じる。
@@ -548,7 +577,9 @@ class ExternalLinkFootnotes(HTMLParser):
                 line, column = self.getpos()
                 insertion = self.line_starts[line - 1] + column + 2
                 self.edits.append(
-                    (insertion, f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"')
+                    (insertion,
+                     f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
+                     f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
                 )
         if tag not in HTML_VOID_ELEMENTS:
             self.parent_classes.append(set((attributes.get('class') or '').split()))
@@ -1007,7 +1038,10 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     forced_tables: dict[int, str] = {}
 
     def prepare_html():
-        structured, table_structure = restructure_tables(protect_table_latin(converted.stdout), forced_tables)
+        protected = protect_prose_latin(protect_table_latin(converted.stdout))
+        structured, table_structure = restructure_tables(protected, forced_tables)
+        # 縦展開で生まれた dd/dt も含めて、全ブロックの末尾を接着してから監査へ渡す
+        structured = keep_block_tails(structured)
         annotated, manifest = annotate_inline_code(structured, slug)
         residuals: list[str] = []
         markup = wrap_code_in_html(annotated, residuals)

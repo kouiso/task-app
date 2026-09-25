@@ -791,6 +791,8 @@ function auditPaginatedDom(manifest, constants) {
         page_index: pageIndex,
         cells: [...section.querySelectorAll('dt,dd')].map((cell) => ({
           role: cell.tagName.toLowerCase(),
+          // 同じ行に属するセルが別ページへ散らばっていないか、後から照合するための行番号
+          row: cell.closest('[data-pdf-stacked-row]')?.dataset.pdfStackedRow ?? null,
           content_rect: rectJson(contentRect(cell)),
           font_size_px: px(getComputedStyle(cell).fontSize),
           text: cell.textContent,

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -106,7 +107,8 @@ class TableBuildTest(unittest.TestCase):
         self.assertEqual(remeasured[0]['entries'][0]['context'], 'flow')
         self.assertEqual(remeasured, final)
         self.assertIn('pdf-stacked-table', final[1])
-        self.assertIn('入力の説明です', final[1])
+        # 語尾接着のスパンが差し込まれるので、タグを外して本文を照合する
+        self.assertIn('入力の説明です', re.sub(r'<[^>]+>', '', final[1]))
         self.assertEqual([x['expected_text'] for x in before[0]['entries']],
                          [x['expected_text'] for x in final[0]['entries']])
         binding = json.loads(next(self.work.glob('*.evidence-binding.json')).read_text())
@@ -169,7 +171,7 @@ class TableBuildTest(unittest.TestCase):
         self.assertEqual(self.build(), [])
         self.assertEqual(len(self.rendered), 2)
         self.assertEqual(self.rendered[0][0]['tables'], [])
-        self.assertIn('最後の列も保持', self.rendered[0][1])
+        self.assertIn('最後の列も保持', re.sub(r'<[^>]+>', '', self.rendered[0][1]))
         self.assertEqual(self.rendered[0], self.rendered[1])
 
     def test_failed_final_render_removes_old_output_and_binding(self):

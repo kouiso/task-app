@@ -13,6 +13,9 @@ class TableStructureTest(unittest.TestCase):
             self.assertEqual(markup.count(value), 1)
         self.assertEqual(markup.count('<dt>'), 4)
         self.assertEqual(report[0]['layout'], 'stacked-definition-list')
+        # 縦並び化した1行がページを跨いでいないか照合できるよう、行番号を属性で残す
+        self.assertEqual(markup.count('data-pdf-stacked-row'), 1)
+        self.assertIn('data-pdf-stacked-row="0-0"', markup)
 
     def test_small_comparison_is_retained_until_measured(self):
         source = '<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>x</code></td><td>説明</td></tr></tbody></table>'

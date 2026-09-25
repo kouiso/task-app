@@ -189,6 +189,8 @@ table {
 .pdf-stacked-row {
   border-block-start: 1px solid var(--book-rule);
   padding-block: 0.6em;
+  /* 縦に並べ直した行がページの境で二つに割けると、見出しと説明が行き違いになる */
+  break-inside: avoid;
 }
 .pdf-stacked-row dl {
   margin: 0;
@@ -204,6 +206,8 @@ table {
   text-align: start;
   orphans: 2;
   widows: 2;
+  /* 本文と同じく、末尾の不自然な一文字行を減らす */
+  text-wrap: pretty;
 }
 .pdf-table-caption {
   font-weight: bold;
@@ -379,16 +383,28 @@ figure img[src$=".png"] {
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::before {
-    content: attr(data-pdf-footnote) ". " attr(href);
+    /* 表示は生成器が作る data-pdf-footnote-display を使う。href には共有
+       パラメータ ?usp= や改行可能位置の制限が無く、テーマの break-all が
+       語の途中で切っていた。表示URLは `/ ? & =` の直後だけで折れる。 */
+    content: attr(data-pdf-footnote) ". " attr(data-pdf-footnote-display);
     clear: both;
     inline-size: 100%;
     max-inline-size: 100%;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::after {
     content: "*" attr(data-pdf-footnote);
     white-space: nowrap;
   }
+}
+
+/* 段落末尾の数文字を一体にする。Vivliostyle の行分割は行長しか見ないので、
+   折れない塊にすると「末尾だけ1文字残る」切れ目が作れなくなる。
+   不可視文字だと pdftotext の語の結合が壊れるため、スパンで包む方式を取る。 */
+.pdf-tail {
+  white-space: nowrap;
 }
 
 /* 表の識別子は本文の書体を保ち、狭い列ではHTML変換側で行を展開する。 */

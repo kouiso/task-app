@@ -129,6 +129,8 @@ def restructure_tables(markup: str, forced: dict[int, str] | None = None) -> tup
         for row_index, row in enumerate(rows[1:]):
             row_attrs = dict(row.attrs)
             row_attrs['class'] = (row_attrs.get('class', '') + ' pdf-stacked-row').strip()
+            # 組版後に「行がページを跨いでいないか」を照合するための冊内の行番号
+            row_attrs['data-pdf-stacked-row'] = f'{order}-{row_index}'
             parts.append('<div' + _attribute_text(row_attrs) + '><dl>')
             for header, cell in zip(headers, row.children):
                 label = _inner(markup, header)

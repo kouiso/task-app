@@ -47,21 +47,35 @@ class BookLinksTest(unittest.TestCase):
 <a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
 <div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
 <pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>'''
-        expected = '''<p class="lead"><a data-pdf-footnote="1" class="cta" title="A &gt; B"
+        expected = ('''<p class="lead"><a data-pdf-footnote="1" '''
+                    + 'data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200b?\u200ba=\u200b1&amp;\u200bb=\u200b2"'
+                    + ''' class="cta" title="A &gt; B"
  href="https://example.com/?a=1&amp;b=2"><span>装飾</span></a></p>
-<p><a data-pdf-footnote="2" href='http://example.net/x'>外部</a></p>
-<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
+<p><a data-pdf-footnote="2" '''
+                    + 'data-pdf-footnote-display="http\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060net/\u200bx"'
+                    + " href='http://example.net/x'>外部</a></p>\n"
+                    + '''<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
 <a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
 <div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
-<pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>'''
+<pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>''')
         self.assertEqual(number_external_link_footnotes(source), expected)
 
     def test_print_footnote_numbers_restart_for_each_book_and_survive_void_elements(self):
         source = '<p><br><a href="https://example.com">外部</a><img src="x"></p>'
-        expected = ('<p><br><a data-pdf-footnote="1" href="https://example.com">外部</a>'
+        expected = ('<p><br><a data-pdf-footnote="1" '
+                    'data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com"'
+                    ' href="https://example.com">外部</a>'
                     '<img src="x"></p>')
         self.assertEqual(number_external_link_footnotes(source), expected)
         self.assertEqual(number_external_link_footnotes(source), expected)
+
+    def test_print_footnote_display_strips_usp_and_keeps_other_query(self):
+        source = ('<p><a href="https://drive.google.com/file/d/ID/view?usp=drivesdk">共有</a>'
+                  '<a href="https://example.com/?a=1&usp=sharing&b=2#sec">両方</a></p>')
+        result = number_external_link_footnotes(source)
+        self.assertIn('data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bdrive\u2060.\u2060google\u2060.\u2060com/\u200bfile/\u200bd/\u200bID/\u200bview"', result)
+        self.assertIn('data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200b?\u200ba=\u200b1&amp;\u200bb=\u200b2\u2060#\u2060sec"', result)
+        self.assertIn('href="https://drive.google.com/file/d/ID/view?usp=drivesdk"', result)
 
     def test_print_footnote_reserved_attribute_is_rejected(self):
         source = '<p><a data-pdf-footnote="99" href="https://example.com">外部</a></p>'
