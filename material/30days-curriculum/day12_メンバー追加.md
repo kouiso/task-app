@@ -43,7 +43,7 @@ flowchart TD
     style I fill:#ffebee
 ```
 
-図の中で `page.tsx` から下へ伸びる矢印は props、下から戻る矢印はコールバックです。メンバー一覧やボタンを描くのは `ProjectDetailView` ですがダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
+図の中で `page.tsx` から下へ伸びる矢印は props、下から戻る矢印はコールバック（親が子に渡しておき、子の中で押されたときに呼び戻される関数）です。メンバー一覧やボタンを描くのは `ProjectDetailView` ですがダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
 
 ### やること / やらないこと
 
@@ -106,7 +106,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | project.ts に getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く | 20分 |
+| Step 0 | メンバー管理APIを `project.ts` に追加する | 20分 |
 | Step 1 | プロジェクト詳細ビューの接続を確認する | 6分 |
 | Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
 | Step 3 | メンバー追加用のstateを準備する | 6分 |
@@ -122,7 +122,9 @@ src/
 
 ---
 
-### Step 0: project.ts に getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く（20分）
+### Step 0: メンバー管理APIを `project.ts` に追加する（20分）
+
+追加するのは `getAvailableUsers`、`addMember`、`removeMember`、`updateMemberRole` の4つです。
 
 **ゴール**: 追加可能ユーザー取得・メンバー追加・メンバー削除・メンバー権限変更の4つの手続きを追加します。詳細取得の `getById` は Day 11 で追加済みです。
 
@@ -186,7 +188,7 @@ flowchart TB
 
 内側の枠が `some` で取れる人、内側を外した残りが `none` で取れる人です。追加の候補として出したいのは外側の残りなので`none` を使います。`some` と書き間違えるとすでに参加している人だけが候補に並びます。
 
-#### 0-2. addMember（ここが一番のヤマ場、重複チェック）
+#### 0-2. addMember（オーナー付与の制限と重複チェック）
 
 `addMember` に使う入力スキーマをまず定義します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行は**書き換え**ます。`projectMemberRoleSchema` も一緒に取り込む形へ直してください。新しい行を足すのではありません。
 
@@ -269,7 +271,7 @@ const projectMemberSchema = z.object({
     }
 ```
 
-`findUnique` が行を返してきたらそのユーザーはすでにこのプロジェクトのメンバーです。`CONFLICT` は「入力の書式ではなく、いまのデータの状態とぶつかっている」ことを表すコードなので`BAD_REQUEST` とは分けています。呼び出し側はコードを見て入力を直させるのか一覧を取り直させるのかを選べます。ここで止めなければ次の `create` が `userId_projectId` の一意制約に当たり、Prisma の例外がそのまま外へ出ます。利用者の画面には日本語の説明が付かないデータベースのエラーが表示されます。
+`findUnique` が行を返してきたらそのユーザーはすでにこのプロジェクトのメンバーです。`CONFLICT` は「入力の書式ではなく、いまのデータの状態とぶつかっている」ことを表すコードなので`BAD_REQUEST` とは分けています。呼び出し側はコードを見て入力を直させるのか一覧を取り直させるのかを選べます。ここで止めなければ次の `create` が `userId_projectId` の一意制約に当たります。一意制約はデータベース側の決まりで、同じ組の行を2つ作ろうとした書き込みを拒否します。拒否されると Prisma は例外（処理を途中で打ち切って呼び出し元へ投げ返すエラー）を投げ、それがそのまま外へ出ます。利用者の画面には日本語の説明が付かないデータベースのエラーが表示されます。
 
 重複していなければ実際にメンバーとして追加します。
 
@@ -604,10 +606,10 @@ const {
 
 ### Step 2: ProjectDetailViewのpropsを作る（4分）
 
-**ゴール**: `ProjectDetailView` がどのようなpropsを受け取るか決めます。
+**ゴール**: `ProjectDetailView` が受け取る props を確認し、それを渡すための import・関数・state を `page.tsx` に書き足します。
 
-`ProjectDetailView` は独立したコンポーネントとして作ります。
-まず props の型定義を決めて親ページから渡す値の形をそろえます。
+`ProjectDetailView` は配布済みの部品なので、今日は中身を書きません。
+まず props の型を確認して親ページから渡す値の形をそろえます。
 型を先に決めておくとこのあとハンドラーを足すときにどの引数が来るのかを毎回さかのぼって確認せずに済みます。
 
 | props | 型 | 役割 |
@@ -626,7 +628,7 @@ const {
 - `onRemoveMember` は `userId` を引数に取る
 - `canManageMembers` / `canArchive` はボタンの表示可否をコンポーネントに伝える
 
-Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**ここでは確認するだけで、コードの追加は不要です。**
+Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**表の確認はここまでです。この下からは `page.tsx` へのコード追加が6か所続きます。**
 
 **確認ポイント**:
 - `onRemoveMember={() => {}}` が Step 6 で `handleRemoveMember` に変わることを覚えておく
