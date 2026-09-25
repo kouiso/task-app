@@ -25,6 +25,7 @@ Claudeの別検査はトークン1,203件、分断0件です。
 
 このMacではHomebrew Pythonのpyexpat読み込みに失敗しました。
 上記のシステムPythonで単体テストと36冊の実検査が成功しています（単体テストは2026-09-24時点で38件）。
+2026-09-25 JST にコミット f90afeabdb35d8308bcd0e80e2dc73f8de730467 で `/usr/bin/python3 -m unittest discover -s doc/review-handoff -p test_pdf_evidence.py` を実行し、`Ran 38 tests in 0.064s` / `OK` を確認しました。
 全件の観測は約5MBあるため `dist/` に置き、`doc/` には要約だけを残します。
 ほかの環境では、XMLを読めるPython 3とPopplerのpdftotextを指定してください。
 
