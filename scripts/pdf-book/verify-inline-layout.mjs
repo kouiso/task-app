@@ -607,9 +607,7 @@ function auditPaginatedDom(manifest, constants) {
     const pages = new Set(items.map((item) => item.page_index));
     return (
       pages.size === items.length &&
-      signatures.every(
-        (signature) => signature !== null && signature === signatures[0],
-      )
+      signatures.every((signature) => signature !== null && signature === signatures[0])
     );
   };
 
