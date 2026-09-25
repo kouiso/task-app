@@ -1127,7 +1127,7 @@ const {
 
 `enabled: !!selectedProject` は詳細を開いた場合だけAPIを呼ぶ設定です。`isLoading` と `isError` を別に受け取るため、応答待ちを「見つかりません」と誤表示しません。`retry` は 401・403・404 を繰り返さず、通信失敗だけを再試行します。
 
-一覧・詳細・ログインユーザーの各クエリでも `isLoading` / `isError` / `isFetching` / `error` / `refetch` を受け取り、次の表示分岐を `handleArchive` の後へ追加します。
+ログインユーザーと一覧のクエリでも `isLoading` / `isError` / `isFetching` / `error` / `refetch` を受け取ります。Step 1 で書いた `currentUser` のクエリと Day 09 で書いた `projects` のクエリを、それぞれ次の形に**書き換えて**ください。同じ場所で置き換えます。元の行を残したまま貼ると同じ名前の `const` が2回宣言されてコンパイルエラーになります。その後の「表示に必要な取得状態」の分岐は `handleArchive` の後へ追加します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -1399,9 +1399,9 @@ if (viewingDetail) {
 |------|------|-------------|----------------|
 | `projectDetail` | `api.project.getById.useQuery` | ✅ 今日完成 | 変更なし |
 | `onBack` | `handleDetailClose` | ✅ 今日完成 | 変更なし |
-| `onAddMemberClick` | その場に書いた空の関数 | 何もしない（仮） | Step 3 で `setMemberDialogOpen(true)` に置換 |
+| `onAddMemberClick` | その場に書いた空の関数 | 何もしない（仮） | Step 2 で `setMemberDialogOpen(true)` に置換 |
 | `onRemoveMember` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleRemoveMember` に置換 |
-| `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleUpdateMemberRole` に置換 |
+| `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 2 で `handleUpdateMemberRole` に置換 |
 | `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
 | `canManageMembers` | `false` を直接指定（仮） | ボタンを出さない | Step 2 で `hasPermission` の計算に置換 |
 | `canArchive` | `true` を直接指定（仮） | ボタンを出す | Step 2 で `hasPermission` の計算に置換 |
@@ -2952,7 +2952,7 @@ export default function ProjectPage() {
 |--------------|------|---------|
 | 編集ダイアログに古いデータが残る | `initialData` がフォームへ反映されていない | `ProjectDialog` 側で `defaultValues` と `useEffect` の `reset(...)` が `initialData` を見ているか確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `void utils.project.getAll.invalidate()` を呼ぶ |
-| 削除ボタンを押しても消えない | OWNER 以外で削除操作 | OWNER アカウントで操作する |
+| 削除ボタンを押しても消えない | OWNER・ADMIN 以外のロールで削除操作（`canDelete` を持つのはこの2つ） | OWNER アカウントで操作する |
 | アーカイブボタンを押しても変わらない | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する |
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
@@ -2961,7 +2961,7 @@ export default function ProjectPage() {
 | `npm run build` で型エラーが出る | Step 0 の手続きが未追加か、ルーターの外に出ている | エラー文に出ているファイル名と行で、どの手続きが欠けているかを特定します |
 | `ProjectDetailView` が表示されない | URL に `projectId` が無い | URLに `?projectId=xxx` が付いているか確認 |
 
-表の3行目と4行目はサーバーが `この操作を実行する権限がありません` を返しています。
+「削除ボタンを押しても消えない」と「アーカイブボタンを押しても変わらない」の2つは、サーバーが `この操作を実行する権限がありません` を返しています。
 ただし今日の時点ではそのエラーは画面に何も出しません。
 この操作のエラー表示は今日のコードには含まれていません。
 失敗した理由は DevTools の Network タブで対象の通信を選んで Response のメッセージを確認してください。
