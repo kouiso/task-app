@@ -255,6 +255,53 @@ function issue(check, reason, details = {}, status = 'fail') {
   return { check, status, reason, ...details };
 }
 
+// ページ分割で thead が複写されると、同じ識別子の観測が断片ごとに現れる。
+// 表・セル位置・文字列が一致する観測は同一論理セルの複写なので、
+// 一意の観測として代表の1件に畳む。
+function isRepeatedTableCellObservation(items) {
+  const signatures = items.map((item) => {
+    const geometry = item?.table_geometry;
+    const identity = geometry?.identity;
+    const target = geometry?.target;
+    const columns = geometry?.columns;
+    if (
+      identity?.status !== 'supported' ||
+      typeof identity.kind !== 'string' ||
+      typeof identity.value !== 'string' ||
+      !target ||
+      !Array.isArray(columns) ||
+      columns.some((column) => !column || typeof column !== 'object')
+    ) {
+      return null;
+    }
+    return JSON.stringify([
+      item.text,
+      identity.kind,
+      identity.value,
+      target.row_index,
+      target.cell_index,
+      target.column_index,
+      target.row_span,
+      target.column_span,
+      columns.map((column) => [column.column_index, column.width]),
+      item.code_rect?.width,
+    ]);
+  });
+  const pages = new Set(items.map((item) => item.page_index));
+  return (
+    pages.size === items.length &&
+    signatures.every(
+      (signature) => signature !== null && signature === signatures[0],
+    )
+  );
+}
+
+function canonicalObservationItem(items) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  if (items.length === 1) return items[0];
+  return isRepeatedTableCellObservation(items) ? items[0] : null;
+}
+
 function validateInputs(manifest, domReport) {
   const issues = [];
   const requiredDomChecks = [
@@ -329,12 +376,11 @@ function validateInputs(manifest, domReport) {
   }
   const observedById = new Map(observed.map((entry) => [entry.id, entry]));
   for (const entry of manifest.entries) {
-    const observation = observedById.get(entry.id);
-    if (!observation || observation.items?.length !== 1) {
+    const item = canonicalObservationItem(observedById.get(entry.id)?.items);
+    if (!item) {
       issues.push(issue('input_contract', 'dom_item_not_unique', { id: entry.id }));
       continue;
     }
-    const item = observation.items[0];
     if (item.text !== entry.expected_text) {
       issues.push(issue('exact_text', 'manifest_dom_text_mismatch', { id: entry.id }));
     }
