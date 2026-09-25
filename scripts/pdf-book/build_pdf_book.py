@@ -604,6 +604,131 @@ def number_external_link_footnotes(markup: str) -> str:
     return markup
 
 
+def _is_cjk(char: str) -> bool:
+    """日本語の組版で、改行を半角スペースへ化けさせたくない文字か。"""
+    code = ord(char)
+    return (
+        0x3000 <= code <= 0x30FF      # CJK句読点・ひらがな・カタカナ・ー・々
+        or 0x3400 <= code <= 0x4DBF   # CJK統合漢字 拡張A
+        or 0x4E00 <= code <= 0x9FFF   # CJK統合漢字
+        or 0xF900 <= code <= 0xFAFF   # CJK互換漢字
+        or 0xFF00 <= code <= 0xFFEF   # 全角英数・全角記号
+        or 0x2013 <= code <= 0x2015   # – — ―
+        or 0x2025 <= code <= 0x2026   # ‥ …
+        or 0x20000 <= code <= 0x2FA1F  # CJK統合漢字 拡張B以降
+    )
+
+
+class CjkSoftBreaks(HTMLParser):
+    """<p> 内の可視テキスト区間を集める。タグは区間に含めない。
+
+    <strong> や <a> のような行内タグはタグとしてしか出てこないので、
+    「漢字\n<strong>漢字</strong>」では改行の両隣がどちらも漢字と分かる。
+    テキスト区間だけを並べれば、タグを挟んだソフト改行も拾える。
+    """
+
+    # <p> 内でも中身の改行が印字結果そのものになる要素。中の改行は消さない。
+    RAW_TEXT_TAGS = {"pre", "script", "style", "textarea"}
+
+    def __init__(self, markup: str):
+        super().__init__(convert_charrefs=False)
+        self.line_starts = [0]
+        for index, char in enumerate(markup):
+            if char == "\n":
+                self.line_starts.append(index + 1)
+        self.in_paragraph = 0
+        self.in_raw_text = 0
+        # <p> ごとの (開始オフセット, 終了オフセット) の並び
+        self.paragraphs: list[list[tuple[int, int]]] = []
+
+    def _offset(self) -> int:
+        line, column = self.getpos()
+        return self.line_starts[line - 1] + column
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "p":
+            self.in_paragraph += 1
+            self.paragraphs.append([])
+        elif tag in self.RAW_TEXT_TAGS:
+            self.in_raw_text += 1
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag == "p":
+            self.in_paragraph -= 1
+        elif tag in self.RAW_TEXT_TAGS:
+            self.in_raw_text -= 1
+
+    def handle_endtag(self, tag):
+        if tag == "p" and self.in_paragraph:
+            self.in_paragraph -= 1
+        elif tag in self.RAW_TEXT_TAGS and self.in_raw_text:
+            self.in_raw_text -= 1
+
+    def _record(self, length: int) -> None:
+        if self.in_paragraph and not self.in_raw_text:
+            start = self._offset()
+            self.paragraphs[-1].append((start, start + length))
+
+    def handle_data(self, data):
+        self._record(len(data))
+
+    def handle_entityref(self, name):
+        # &amp; のような実体参照も画面上は1文字。隣の改行の両側判定から外さない。
+        self._record(len(name) + 2)
+
+    def handle_charref(self, name):
+        self._record(len(name) + 3)
+
+
+def join_cjk_soft_breaks(markup: str) -> str:
+    """<p> 内で CJK 同士に挟まれた改行を取り除く。
+
+    vfm は段落中のソフト改行をそのまま改行文字として残し、組版の Chromium が
+    それを U+0020（半角スペース）へ置き換える。「仕上げたら\nブラウザで」が
+    「仕上げたら ブラウザで」と文が分断されるので、組版へ渡す前に詰める。
+    CJK でない文字が片側にある改行は残す（英語側は空白が要る）。
+    """
+    parser = CjkSoftBreaks(markup)
+    parser.feed(markup)
+    parser.close()
+    edits: list[tuple[int, int]] = []
+    for spans in parser.paragraphs:
+        visible: list[tuple[str, int]] = []
+        for start, end in spans:
+            visible.extend((markup[pos], pos) for pos in range(start, end))
+        index = 0
+        while index < len(visible):
+            if visible[index][0] not in " \t\n\r":
+                index += 1
+                continue
+            run_start = index
+            while index < len(visible) and visible[index][0] in " \t\n\r":
+                index += 1
+            run = visible[run_start:index]
+            # 改行を含まない空白は原稿で打たれたもの。消すと字がくっつくので残す
+            if not any(char == "\n" for char, _ in run):
+                continue
+            # 段落の先頭・末尾にある整形用の空白も対象外
+            if run_start == 0 or index >= len(visible):
+                continue
+            if _is_cjk(visible[run_start - 1][0]) and _is_cjk(visible[index][0]):
+                # タグを挟む空白かたまりはバイト列では連続していない。
+                # タグを消さないよう、空白の文字位置だけを1つずつ消す
+                edits.extend((pos, pos + 1) for _, pos in run)
+    # 連続する文字位置をまとめてから適用する
+    edits.sort()
+    merged: list[tuple[int, int]] = []
+    for start, end in edits:
+        if merged and merged[-1][1] == start:
+            merged[-1] = (merged[-1][0], end)
+        else:
+            merged.append((start, end))
+    for start, end in reversed(merged):
+        markup = markup[:start] + markup[end:]
+    return markup
+
+
 def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
     """実在する同梱原稿へのリンクを、明示された配布先へ解決する。"""
     result = subprocess.run(
@@ -1038,7 +1163,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     forced_tables: dict[int, str] = {}
 
     def prepare_html():
-        protected = protect_prose_latin(protect_table_latin(converted.stdout))
+        protected = protect_prose_latin(
+            protect_table_latin(join_cjk_soft_breaks(converted.stdout))
+        )
         structured, table_structure = restructure_tables(protected, forced_tables)
         # 縦展開で生まれた dd/dt も含めて、全ブロックの末尾を接着してから監査へ渡す
         structured = keep_block_tails(structured)
