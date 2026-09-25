@@ -586,9 +586,7 @@ function reuseFixture(pageText, selections) {
       violations: [],
       checks,
       page_count: 1,
-      page_geometry: [
-        { status: 'observed_uncalibrated', page_index: 0, rect: pageRect },
-      ],
+      page_geometry: [{ status: 'observed_uncalibrated', page_index: 0, rect: pageRect }],
       observed: selections.map(({ id, start, end }) => {
         const codeRect = {
           left: start * 10,
