@@ -159,6 +159,48 @@ def _record_file(path: Path, label: str, digest) -> dict:
     return {"file": label, "size": size, "sha256": file_sha}
 
 
+_BINARY_MAGIC = (b"\x7fELF", b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe")
+# /opt/google/chrome/google-chrome の最終行 `exec -a "$0" "$HERE/chrome" "$@"` を読む。
+# $HERE はスクリプト自身の置き場所なので、相対で本体へたどり着ける。
+_LAUNCHER_EXEC_RE = re.compile(
+    r'^\s*exec\s+(?:-a\s+(?:"[^"]*"|\S+)\s+)?"?\$(?:HERE|\{HERE\})/(?P<name>[\w.+-]+)"?',
+    re.MULTILINE,
+)
+
+
+def resolve_browser_executable(path: Path) -> tuple[Path, Path | None]:
+    """起動スクリプトを渡されたら、実際に exec される本体を返す。
+
+    `/usr/bin/google-chrome` は 1585 バイトのシェルスクリプトで、組版した本体は
+    同じ場所にある 250MB の `chrome` のほう。証跡にスクリプトのハッシュを載せても
+    「どの Chrome が組んだか」を何も示さないので、本体まで降りてから記録する。
+
+    戻り値は (記録すべき実体, 経由した起動スクリプト or None)。本体をたどれない
+    ときはスクリプトのまま返し、呼び出し側が未解決と分かる形にする。
+    """
+    try:
+        with path.open("rb") as handle:
+            head = handle.read(4)
+    except OSError:
+        return path, None
+    if head in _BINARY_MAGIC:
+        return path, None
+    try:
+        script = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return path, None
+    matched = _LAUNCHER_EXEC_RE.search(script)
+    if not matched:
+        return path, None
+    target = (path.parent / matched.group("name")).resolve()
+    if not target.is_file() or target == path:
+        return path, None
+    with target.open("rb") as handle:
+        if handle.read(4) not in _BINARY_MAGIC:
+            return path, None
+    return target, path
+
+
 def _hash_tree_stably(root: Path) -> dict:
     """実行時に解決した npm パッケージ群の名前・リンク先・実バイトを固定する。"""
     if not root.is_dir():
@@ -356,8 +398,13 @@ def release_input_snapshot(
     browser_record = None
     if browser:
         browser_path = Path(browser).resolve()
-        browser_record = _record_file(browser_path, "tool:browser", digest)
-        browser_record["path"] = str(browser_path)
+        executable_path, launcher_path = resolve_browser_executable(browser_path)
+        browser_record = _record_file(executable_path, "tool:browser", digest)
+        browser_record["path"] = str(executable_path)
+        if launcher_path is not None:
+            launcher_record = _record_file(launcher_path, "tool:browser-launcher", digest)
+            launcher_record["path"] = str(launcher_path)
+            browser_record["launcher"] = launcher_record
 
     return {
         "source_count": len(sources),

@@ -486,6 +486,49 @@ class BuildReceiptTest(unittest.TestCase):
         self.assertEqual(self.run_main([], targets=targets), 0)
         self.assertFalse(self.receipt.exists())
 
+    def test_launcher_script_resolves_to_the_browser_that_actually_renders(self):
+        """1585バイトの起動スクリプトを証跡の「ブラウザ」にしない。
+
+        /usr/bin/google-chrome は同じ場所の chrome を exec するシェルスクリプトで、
+        そのハッシュはどの Chrome が組版したかを示さない。
+        """
+        chrome_dir = self.root / "opt-chrome"
+        chrome_dir.mkdir()
+        real = chrome_dir / "chrome"
+        real.write_bytes(b"\x7fELF" + b"rendering-binary")
+        launcher = chrome_dir / "google-chrome"
+        launcher.write_text(
+            '#!/bin/sh\nHERE="`dirname "$0"`"\nexec -a "$0" "$HERE/chrome" "$@"\n',
+            encoding="utf-8",
+        )
+
+        resolved, via = build_pdf_book.resolve_browser_executable(launcher)
+
+        self.assertEqual(resolved, real.resolve())
+        self.assertEqual(via, launcher)
+
+    def test_a_real_binary_is_recorded_without_a_launcher(self):
+        binary = self.root / "chromium"
+        binary.write_bytes(b"\x7fELF" + b"standalone")
+
+        resolved, via = build_pdf_book.resolve_browser_executable(binary)
+
+        self.assertEqual(resolved, binary)
+        self.assertIsNone(via)
+
+    def test_an_unreadable_launcher_target_keeps_the_script_unresolved(self):
+        """本体へたどり着けんときに、たどれたふりをせん。"""
+        launcher = self.root / "google-chrome"
+        launcher.write_text(
+            '#!/bin/sh\nHERE="`dirname "$0"`"\nexec -a "$0" "$HERE/chrome" "$@"\n',
+            encoding="utf-8",
+        )
+
+        resolved, via = build_pdf_book.resolve_browser_executable(launcher)
+
+        self.assertEqual(resolved, launcher)
+        self.assertIsNone(via)
+
     def test_pdf_changed_after_its_build_prevents_receipt(self):
         first_output = self.outputs / "book-00.pdf"
 
