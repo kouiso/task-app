@@ -49,6 +49,8 @@ CSS の値だけを信じると、テーマが余白を変えたときに検査�
 
 from __future__ import annotations
 
+import json
+import re
 import shutil
 import statistics
 import sys
@@ -58,9 +60,12 @@ from xml.etree import ElementTree
 
 sys.path.insert(0, str(Path(__file__).parent))
 from check_pdf_book import ToolFailure, run_tool  # noqa: E402
+from build_pdf_book import work_slug  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
+# 組版計測の記録。縦並び表の行がページを跨いでいないかの照合に使う
+BUILD_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 
 REQUIRED_TOOLS = ("pdftoppm", "pdfimages", "pdftotext", "pdfinfo")
 
@@ -119,6 +124,22 @@ COLLAPSED_MIN_DISTINCT = 4
 # 端切れとして数える塊の条件。表のセルを外すためのもの。
 ORPHAN_BLOCK_MIN_RATIO = 0.6
 ORPHAN_PREV_MIN_RATIO = 0.9
+
+# ── 脚注URLと欧文の折返し ──────────────────────────────────
+# 脚注の表示URLは生成側で「/ ? & =」の直後だけに折り返しを許している。
+# それ以外の位置（語の途中）で切れていたら、表示URLの接着が効いていない証拠。
+URL_BREAK_ALLOWED_AFTER = "/?&="
+FOOTNOTE_URL_START = re.compile(r"^\s*\d+\.\s*https?://")
+# URLの続きとしてあり得る行（空白を含まずURL文字だけ）
+URL_CONTINUATION = re.compile(r"^[A-Za-z0-9_?&=./:%#~+@()\[\],!*;'\-]+$")
+# 生成器が差し込む改行制御用の不可視文字（ZWSP・WJ・BOM・SOFT HYPHEN）。
+# 行の端の判定は見えない文字を取り除いてから行う
+INVISIBLE_BREAK_MARKS = "\u200b\u2060\ufeff\u00ad"
+INVISIBLE_TABLE = str.maketrans("", "", INVISIBLE_BREAK_MARKS)
+
+
+def visible_text(text: str) -> str:
+    return text.translate(INVISIBLE_TABLE)
 
 # ── 重なり ──────────────────────────────────────────────────
 # 別々のブロックの行同士が重なったら組版の事故。同じブロックの中の行は
@@ -438,11 +459,8 @@ def find_collapsed_columns(lines: list[Line]) -> list[str]:
     return problems
 
 
-def count_orphan_lines(lines: list[Line]) -> tuple[int, int, list[tuple[int, int]]]:
-    """端切れ（折返しの結果、行末に1〜3文字だけ残った行）を数える。
-
-    返すのは (端切れの行数, 版面の中の行数, ページごとの多い順)。柱とノンブルは
-    版面の外なので数えない。ノンブルを入れると全ページが1件ずつ端切れになる。
+def _orphan_details(lines: list[Line]) -> tuple[list[Line], int]:
+    """端切れ（折返しの結果、行末に1〜3文字だけ残った行）の一覧と総行数を返す。
 
     数える相手は「折返しの結果」に限る。短いだけの行は端切れではない。
     実測（day12 p8）では、5列の権限表に並ぶ `✅` `✖` のセルが1文字の行として
@@ -456,8 +474,7 @@ def count_orphan_lines(lines: list[Line]) -> tuple[int, int, list[tuple[int, int
            直前の行も短いことがあり、そこは数えない
     """
     total = 0
-    orphans = 0
-    per_page: dict[int, int] = {}
+    orphan_lines: list[Line] = []
 
     inside = [
         line for line in lines
@@ -475,16 +492,32 @@ def count_orphan_lines(lines: list[Line]) -> tuple[int, int, list[tuple[int, int
         wide_enough = widest >= text_width * ORPHAN_BLOCK_MIN_RATIO
         for index, line in enumerate(block_lines):
             total += 1
-            if len(line.text.strip()) > ORPHAN_MAX_CHARS or not wide_enough:
+            if len(visible_text(line.text).strip()) > ORPHAN_MAX_CHARS or not wide_enough:
                 continue
             if index == 0:
                 continue
             if block_lines[index - 1].width < widest * ORPHAN_PREV_MIN_RATIO:
                 continue
-            orphans += 1
-            per_page[line.page] = per_page.get(line.page, 0) + 1
+            # 図の中のラベル（mermaid）は中央寄せなので、段落の折返しと違って
+            # 左端が揃わない。折返しの端切れだけを数えるため、左端が違う行は除く
+            if abs(block_lines[index - 1].left - line.left) > 1.0:
+                continue
+            orphan_lines.append(line)
+    return orphan_lines, total
+
+
+def count_orphan_lines(lines: list[Line]) -> tuple[int, int, list[tuple[int, int]]]:
+    """端切れを数える。返すのは (端切れの行数, 版面の中の行数, ページごとの多い順)。
+
+    柱とノンブルは版面の外なので数えない。ノンブルを入れると全ページが
+    1件ずつ端切れになる。
+    """
+    orphan_lines, total = _orphan_details(lines)
+    per_page: dict[int, int] = {}
+    for line in orphan_lines:
+        per_page[line.page] = per_page.get(line.page, 0) + 1
     worst = sorted(per_page.items(), key=lambda item: (-item[1], item[0]))
-    return orphans, total, worst
+    return len(orphan_lines), total, worst
 
 
 def find_orphan_problems(lines: list[Line]) -> list[str]:
@@ -496,6 +529,102 @@ def find_orphan_problems(lines: list[Line]) -> list[str]:
     return [
         f"端切れが {orphans}/{total} 行（{orphans / total * 100:.1f}%）で"
         f" {ORPHAN_RATE_LIMIT * 100:.0f}% を超える。多い順: {pages}"
+    ]
+
+
+def find_single_orphan_problems(lines: list[Line]) -> list[str]:
+    """1文字だけ次の行へ残った端切れを挙げる。
+
+    率ではなく1件でも出たら組版の事故として報告する（issue #425 で
+    目次に「…を呼び出」→「す」が実際に出ていた）。
+    """
+    orphan_lines, _ = _orphan_details(lines)
+    singles = [line for line in orphan_lines if len(visible_text(line.text).strip()) == 1]
+    return [
+        f"p{line.page}: 1文字だけの行「{visible_text(line.text).strip()}」"
+        f"が残っている（y={line.top:.1f}mm）"
+        for line in singles[:5]
+    ]
+
+
+def find_url_wrap_problems(lines: list[Line]) -> list[str]:
+    """脚注の表示URLが、許した区切り（/ ? & =）以外の位置で折れている箇所を挙げる。
+
+    `1. https://…` で始まる行を見つけ、同じ塊の中で続くURLだけの行までを
+    折返しとみなす。続き行に進む直前の行の末尾が許可した区切りでなければ、
+    語の途中で切れたということ。
+    """
+    blocks: dict[tuple[int, int], list[Line]] = {}
+    for line in lines:
+        blocks.setdefault((line.page, line.block), []).append(line)
+    problems: list[str] = []
+    for block_lines in blocks.values():
+        block_lines.sort(key=lambda line: line.top)
+        for index, line in enumerate(block_lines):
+            if not FOOTNOTE_URL_START.match(visible_text(line.text)):
+                continue
+            previous = line
+            for continuation in block_lines[index + 1:]:
+                text = visible_text(continuation.text).strip()
+                if not text or not URL_CONTINUATION.match(text):
+                    break
+                tail = visible_text(previous.text).rstrip()
+                if tail[-1:] not in URL_BREAK_ALLOWED_AFTER:
+                    problems.append(
+                        f"p{previous.page}: 脚注URLが区切り以外で折れている"
+                        f"（「{tail[-24:]}」の次が「{text[:16]}」）"
+                    )
+                previous = continuation
+    return problems
+
+
+def find_hyphen_break_problems(lines: list[Line]) -> list[str]:
+    """欧文の語がハイフンの所で次の行へ折れている箇所を挙げる（react-hook-form 型）。"""
+    blocks: dict[tuple[int, int], list[Line]] = {}
+    for line in lines:
+        blocks.setdefault((line.page, line.block), []).append(line)
+    problems: list[str] = []
+    for block_lines in blocks.values():
+        block_lines.sort(key=lambda line: line.top)
+        for first, second in zip(block_lines, block_lines[1:]):
+            before = visible_text(first.text).rstrip()
+            after = visible_text(second.text).lstrip()
+            if not before or not after:
+                continue
+            # 図の中のラベル（mermaid）は中央寄せで箱の幅に合わせて折れる。
+            # 左端が揃っていない2行は段落の折返しではないので、組版の割れとは扱わない
+            if abs(first.left - second.left) > 1.0:
+                continue
+            split = (re.search(r'[A-Za-z0-9]-$', before) and re.match(r'[A-Za-z]', after)) \
+                or (re.search(r'[A-Za-z0-9]$', before) and re.match(r'-[A-Za-z]', after))
+            if split:
+                problems.append(
+                    f"p{first.page}: 欧文の語がハイフンの所で折れている"
+                    f"（「{before[-24:]}」の次が「{after[:16]}」）"
+                )
+    return problems
+
+
+def find_stacked_split_problems(report: dict) -> list[str]:
+    """組版計測の記録から、縦並び表の1行がページを跨いでいる箇所を挙げる。
+
+    `verify-inline-layout.mjs` が各ページの断片に記録した行番号を集計し、
+    同じ行が2ページ以上に散らばっていたら分割されている。
+    """
+    rows: dict[str, set] = {}
+    audit = report.get('dom_audit', {})
+    for table in audit.get('stacked_inventory', []):
+        for fragment in table.get('fragments', []):
+            page = fragment.get('page_index')
+            for cell in fragment.get('cells', []):
+                row = cell.get('row')
+                if row is None or not isinstance(page, int):
+                    continue
+                rows.setdefault(row, set()).add(page)
+    return [
+        f"縦並びの表の行「{row}」がページ {sorted(pages)} に分かれている"
+        for row, pages in sorted(rows.items())
+        if len(pages) > 1
     ]
 
 
@@ -623,6 +752,17 @@ def check_one(pdf: Path) -> list[str]:
     problems += find_overlaps(lines)
     problems += find_collapsed_columns(lines)
     problems += find_orphan_problems(lines)
+    problems += find_single_orphan_problems(lines)
+    problems += find_url_wrap_problems(lines)
+    problems += find_hyphen_break_problems(lines)
+
+    # 組んだ冊と同じ内容で残った計測記録があれば、縦並び表の行の分割も照合する。
+    # 作業名は日本語を外した slug になるので、PDF の名前と同じ規則で復元する
+    layout_reports = sorted(BUILD_DIR.glob(f"{work_slug(pdf.stem)}.inline-layout.json"),
+                            key=lambda path: path.stat().st_mtime)
+    if layout_reports:
+        problems += find_stacked_split_problems(
+            json.loads(layout_reports[-1].read_text(encoding="utf-8")))
 
     problems += find_image_problems(parse_image_table(
         run_tool(["pdfimages", "-list", str(pdf)])

@@ -86,11 +86,23 @@ class BuildReceiptTest(unittest.TestCase):
 
     def write_empty_dom_report(self, env):
         manifest = json.loads(Path(env["PDF_BOOK_INLINE_LAYOUT_MANIFEST"]).read_text())
-        self.assertEqual(manifest["entries"], [])
+        # 行内保護で生じるエントリ分だけ「収まっている」計測を返す。
+        # 順序とIDがmanifestと一致しないと derive_flow_css が弾くので、複製する。
+        observed = [{
+            "id": entry["id"],
+            "items": [{
+                "text": entry["expected_text"],
+                "line_rects": [{"x": 0, "y": 0, "width": 1, "height": 1}],
+                "code_rect": {"width": 1},
+                "code_box": {"content_width": 1},
+                "font_size_pt": 12,
+                "flow_geometry": {"status": "supported", "available_width": 1000},
+            }],
+        } for entry in manifest["entries"]]
         Path(env["PDF_BOOK_INLINE_LAYOUT_REPORT"]).write_text(json.dumps({
             "document_id": manifest["document_id"],
             "result": "dom_pass_post_pdf_pending",
-            "dom_audit": {"ready_state": "complete", "observed": []},
+            "dom_audit": {"ready_state": "complete", "observed": observed},
         }))
 
     def test_inline_gate_failures_never_leave_a_successful_pdf(self):

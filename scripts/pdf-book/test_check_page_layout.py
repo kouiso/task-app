@@ -33,8 +33,12 @@ from check_page_layout import (  # noqa: E402
     find_collapsed_columns,
     find_image_problems,
     find_ink_overflow,
+    find_hyphen_break_problems,
     find_orphan_problems,
     find_overlaps,
+    find_single_orphan_problems,
+    find_stacked_split_problems,
+    find_url_wrap_problems,
     HANGING_MAX_MM,
     code_band_at_edges,
     find_text_overflow,
@@ -207,6 +211,74 @@ ORPHAN_CASES: list[tuple[str, list[Line], int]] = [
      [*FULL_LINES, *TABLE_CELL_MARKS], 0),
 ]
 
+# 率の検査とは別に、末尾だけ1文字で残った行は必ず引っかける（issue #425 の実測型）
+SINGLE_ORPHAN_CASES: list[tuple[str, list[Line], int]] = [
+    ("塊の終わりだけ1文字で残ったら問題",
+     [line(2, 0, 22.0, 110.0, 120.0, "あいうえおかきくけこさしすせ"),
+      line(2, 0, 22.0, 119.2, 4.5, "す")], 1),
+    ("見出しなど1文字だけの短い塊は折返しではないので問題にしない",
+     [line(2, 0, 22.0, 40.0, 4.5, "序")], 0),
+    ("柱やノンブルなど版面の外の1文字は数えない",
+     [line(2, 9, 22.0, 282.0, 4.0, "5")], 0),
+    ("2文字残りは率の検査の担当でここでは問題にしない",
+     [line(2, 0, 22.0, 110.0, 120.0, "あいうえおかきくけこさしすせ"),
+      line(2, 0, 22.0, 119.2, 8.0, "せた")], 0),
+]
+
+# 脚注の表示URLは / ? & = の直後に限って折れる。語の途中で切れたら問題
+URL_WRAP_CASES: list[tuple[str, list[Line], int]] = [
+    ("区切りの直後で折れていれば問題なし",
+     [line(2, 0, 22.0, 40.0, 120.0, "1. https://example.com/file/d/ID/"),
+      line(2, 0, 22.0, 49.2, 60.0, "view?x=1&y=2")], 0),
+    ("語の途中で切れたら問題（vie / w に割れた実測）",
+     [line(2, 0, 22.0, 40.0, 120.0, "2. https://drive.google.com/file/d/vie"),
+      line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 1),
+    ("次の行がURLでなければ折返しではないので問題にしない",
+     [line(2, 0, 22.0, 40.0, 120.0, "1. https://example.com/x"),
+      line(2, 0, 22.0, 49.2, 100.0, "普通の日本語の行です")], 0),
+    ("URLで始まらない行からの切れは脚注ではないので数えない",
+     [line(2, 0, 22.0, 40.0, 120.0, "本文の行 vie"),
+      line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 0),
+    ("ページ境を跨いだURL折れは塊が分かれるので対象外",
+     [line(2, 0, 22.0, 260.0, 120.0, "1. https://drive.google.com/file/d/vie"),
+      line(3, 0, 22.0, 30.0, 60.0, "w?x=1")], 0),
+]
+
+# 欧文の語はハイフンの所で折れない（react-hook-form の実測型）
+HYPHEN_BREAK_CASES: list[tuple[str, list[Line], int]] = [
+    ("行末のハイフンで折れたら問題",
+     [line(2, 0, 22.0, 40.0, 120.0, "フォームには react-hook-"),
+      line(2, 0, 22.0, 49.2, 60.0, "form を使います")], 1),
+    ("次の行の頭がハイフンでも問題（同じ割れ方）",
+     [line(2, 0, 22.0, 40.0, 120.0, "フォームには react"),
+      line(2, 0, 22.0, 49.2, 60.0, "-hook-form を使います")], 1),
+    ("ハイフンを含む語がそのまま乗っていれば問題なし",
+     [line(2, 0, 22.0, 40.0, 120.0, "react-hook-form は"),
+      line(2, 0, 22.0, 49.2, 60.0, "そのまま一行に乗る")], 0),
+    ("和文だけの折返しは対象外",
+     [line(2, 0, 22.0, 40.0, 120.0, "長い日本語の文の折り返しで"),
+      line(2, 0, 22.0, 49.2, 60.0, "次の行へ続く")], 0),
+    ("図内の中央寄せラベル（左端が揃わない）は対象外",
+     [line(2, 0, 60.0, 40.0, 90.0, "le/change-"),
+      line(2, 0, 66.0, 49.2, 80.0, "password")], 0),
+]
+
+# 縦並び表の1行は2ページ以上に分かれない
+STACKED_SPLIT_CASES: list[tuple[str, dict, int]] = [
+    ("同じ行が2ページに分かれていたら問題",
+     {'dom_audit': {'stacked_inventory': [{'fragments': [
+         {'page_index': 2, 'cells': [{'row': '0-1', 'text': '上'}]},
+         {'page_index': 3, 'cells': [{'row': '0-1', 'text': '下'},
+                                   {'row': '0-2', 'text': '次'}]},
+     ]}]}}, 1),
+    ("それぞれ1ページに収まっていれば問題なし",
+     {'dom_audit': {'stacked_inventory': [{'fragments': [
+         {'page_index': 2, 'cells': [{'row': '0-0', 'text': 'A'},
+                                   {'row': '0-1', 'text': 'B'}]},
+     ]}]}}, 0),
+    ("計測記録が空なら問題にしない", {'dom_audit': {'stacked_inventory': []}}, 0),
+]
+
 POPPLER_IMAGE_TABLE = (
     "page   num  type   width height color comp bpc  enc interp"
     "  object ID x-ppi y-ppi size ratio\n"
@@ -356,6 +428,26 @@ def main() -> int:
         if len(got) != expected:
             failures.append(f"端切れ／{label}: 期待 {expected}件 実際 {got}")
 
+    for label, lines, expected in SINGLE_ORPHAN_CASES:
+        got = find_single_orphan_problems(lines)
+        if len(got) != expected:
+            failures.append(f"1文字残り／{label}: 期待 {expected}件 実際 {got}")
+
+    for label, lines, expected in URL_WRAP_CASES:
+        got = find_url_wrap_problems(lines)
+        if len(got) != expected:
+            failures.append(f"脚注URL／{label}: 期待 {expected}件 実際 {got}")
+
+    for label, lines, expected in HYPHEN_BREAK_CASES:
+        got = find_hyphen_break_problems(lines)
+        if len(got) != expected:
+            failures.append(f"ハイフン折れ／{label}: 期待 {expected}件 実際 {got}")
+
+    for label, report, expected in STACKED_SPLIT_CASES:
+        got = find_stacked_split_problems(report)
+        if len(got) != expected:
+            failures.append(f"縦並びの分割／{label}: 期待 {expected}件 実際 {got}")
+
     for label, rows, expected in IMAGE_CASES:
         got = find_image_problems(rows)
         if len(got) != expected:
@@ -449,7 +541,9 @@ def main() -> int:
         return 1
 
     total_cases = (len(CODE_BAND_CASES) + len(RULE_CASES) + len(INK_CASES) + len(TEXT_OVERFLOW_CASES) + len(OVERLAP_CASES)
-                   + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES) + 14)
+                   + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES)
+                   + len(SINGLE_ORPHAN_CASES) + len(URL_WRAP_CASES) + len(HYPHEN_BREAK_CASES)
+                   + len(STACKED_SPLIT_CASES) + 14)
     print(f"✅ {total_cases} ケースすべて通過")
     return 0
 
