@@ -4,6 +4,7 @@
 - スクショ位置が3箇所以上あるか
 - 同一ファイル内で同じ画像を貼り回していないか
 - Mermaid図が適切か（該当Dayのみ）
+- 旧式のスクリーンショット目印が残っていないか
 
 ## 同一日での画像重複について（既定は FAIL）
 
@@ -44,6 +45,11 @@ SCREENSHOT_IMAGE_PATTERNS = (
 
 MIN_STRUCTURED_ITEMS = 4
 TROUBLESHOOTING_SECTION_HEADING = 'よくあるエラー'
+
+# 旧式の作業目印。執筆時の「ここにスクショ」という置き場所で、撤去済みのはずが
+# 本文へ残るとそのまま PDF に印字される。スクショ位置の一部として数えていた検知は、
+# 目印が無い前提の今、出現そのものを FAIL とする検査へ置き換えた（issue #415）。
+LEGACY_SCREENSHOT_MARKER = re.compile(r'【スクリーンショット[^】]*】')
 
 
 def normalize_image_target(target):
@@ -150,6 +156,9 @@ def troubleshooting_entries(content):
 # そもそも存在しないため。
 SCREENSHOT_EXEMPT = {
     'day04_ネットに公開.md': 'デプロイの日。主役は Vercel の管理画面で撮れず、アプリの画面は Day 02 から変わらん',
+    'day24_ユーザー一覧（管理者用）.md': '管理者用の画面はユーザー一覧の1ページだけ。撮れるのは一覧とその説明の2枚',
+    'day26_エラーページを作って、バグを退治しよう.md': '作るのは404ページの1画面だけ。完成形と説明用の2枚で足りる',
+    'day30_完成版を公開！.md': '公開の日。新規の画面は完成版ダッシュボードだけで、ログイン画面は Day 05 の使い回し',
     '00_カリキュラム目次.md': 'カリキュラム全体の目次。画面操作の手順を持たない索引の本で、撮る画面が存在しない',
     '00-1_学びのロードマップ.md': '学びの進め方を示すロードマップ。画面操作の手順を持たない索引の本で、撮る画面が存在しない',
 }
@@ -173,11 +182,11 @@ def check_visualization(filepath, fail_on_duplicate_image=True):
     table_count = len([t for t in tables if '---' not in t])  # ヘッダー行を除く
 
     # スクショ位置をカウント（複数パターンに対応）
-    # 1. 旧形式: 【スクリーンショット:...】
-    # 2. 絵文字マーカー: 📸
-    # 3. Markdown画像リンク: ![...](./screenshots/...)
+    # 1. 絵文字マーカー: 📸
+    # 2. Markdown画像リンク: ![...](./screenshots/...)
+    # 旧形式の【スクリーンショット】はここでは数えない。位置ではなく残存禁止の目印で、
+    # 下の LEGACY_SCREENSHOT_MARKER 検査が出現を FAIL にする。
     screenshot_patterns = [
-        r'【スクリーンショット[^】]*】',  # 旧形式: コロンあり・なし両対応
         r'📸',
         r'!\[.*?\]\(.*?\.png\)',
         r'!\[.*?\]\(.*?\.jpg\)',
@@ -208,6 +217,19 @@ def check_visualization(filepath, fail_on_duplicate_image=True):
 
     structured_count, structured_errors = troubleshooting_entries(content)
     print(f"全幅トラブル項目: {structured_count}")
+
+    legacy_marker_lines = [
+        i + 1
+        for i, line in enumerate(content.splitlines())
+        if LEGACY_SCREENSHOT_MARKER.search(line)
+    ]
+    if legacy_marker_lines:
+        errors.append(
+            f"❌ 旧式のスクリーンショット目印が残っています"
+            f"（{len(legacy_marker_lines)}箇所: 行 {', '.join(map(str, legacy_marker_lines))}）"
+        )
+    else:
+        print("✅ 旧式のスクリーンショット目印なし")
 
     if structured_errors:
         errors.extend(f"❌ 全幅トラブル項目の構造が不正: {error}" for error in structured_errors)

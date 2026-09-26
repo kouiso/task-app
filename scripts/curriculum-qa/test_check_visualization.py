@@ -158,12 +158,10 @@ CASES: list[tuple[str, str, str, int, tuple[int, int, int]]] = [
         (0, 3, 0),
     ),
     (
-        '旧形式【スクリーンショット】もコロン有無どちらも数える',
+        '1行に複数マーカーが並んでも1件として数える',
         'day01_setup.md',
         table_rows(4)
-        + '【スクリーンショット: 一覧画面】\n'
-        + '【スクリーンショット】\n'
-        + '【スクリーンショット:詳細画面】\n',
+        + ''.join(f'📸 ![一覧](./shots/list{i}.png) 📸\n' for i in range(3)),
         0,
         (4, 3, 0),
     ),
@@ -196,11 +194,17 @@ CASES: list[tuple[str, str, str, int, tuple[int, int, int]]] = [
         (4, 0, 0),
     ),
     (
-        '1行に複数マーカーが並んでも1件として数える',
+        '旧式の目印【スクリーンショット】が残っていると落ちる',
         'day01_setup.md',
-        table_rows(4)
-        + ''.join(f'📸 ![一覧](./shots/list{i}.png) 【スクリーンショット】\n' for i in range(3)),
-        0,
+        BASE + '【スクリーンショット】\n',
+        1,
+        (4, 3, 0),
+    ),
+    (
+        '旧式の目印はコロンありの書き方でも落ちる',
+        'day01_setup.md',
+        BASE + '【スクリーンショット: 一覧画面】\n',
+        1,
         (4, 3, 0),
     ),
     (
@@ -366,7 +370,7 @@ DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]
         0,
     ),
     (
-        '📸 や【スクリーンショット】だけの日は画像パスが無いので重複ゼロ',
+        '📸 だけの日は画像パスが無いので重複ゼロ',
         'day01_setup.md',
         BASE,
         True,
