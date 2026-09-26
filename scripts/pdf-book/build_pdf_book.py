@@ -412,6 +412,15 @@ H1_RE = re.compile(r"^#\s+(.+?)\s*$")
 H2_RE = re.compile(r"^##\s+(?!#)(.+?)\s*$")
 HEADING_RE = re.compile(r"^#{2,6}\s+(.+?)\s*$")
 ANCHOR_SUFFIX_RE = re.compile(r"\s*\{#[^}]*\}\s*$")
+# Step 見出しの末尾に付く所要時間の目安「（ルート保護・8分）」「（5分）」。
+# 作業時間は手順の説明であって図の説明ではないので、キャプションへは入れない。
+DURATION_SUFFIX_RE = re.compile(r"\s*（[^（）]*[0-9０-９]+\s*分）\s*$")
+# どの見出しよりも前に置かれた図は、引ける見出しが無く一律「図解」になっていた。
+# 該当する図だけここで個別に決める。キーは（冊のファイル名の拡張子除いたもの, 図の通し番号）。
+PRE_HEADING_CAPTION_OVERRIDES: dict[tuple[str, int], str] = {
+    # 冒頭の「ローカルの task-app → GitHub → Vercel → 公開URL」の流れ図
+    ("day04_ネットに公開", 1): "ローカルから公開URLまでの道筋",
+}
 DAY_RE = re.compile(r"^(Day\s*\d+)\s*[:：]\s*(.+)$")
 # 目次の見出し文字列から、行内マークダウンの記号だけ落とす
 INLINE_MD_RE = re.compile(r"`([^`]*)`|\*\*([^*]*)\*\*|\[([^\]]*)\]\([^)]*\)")
@@ -734,7 +743,8 @@ def parse_source(text: str) -> tuple[str, list[str], list[tuple[str, str]]]:
 
 
 def convert_mermaid(body: list[str], stem: str, work: Path,
-                    env: dict[str, str]) -> tuple[list[str], int, list[str]]:
+                    env: dict[str, str],
+                    source_stem: str = "") -> tuple[list[str], int, list[str]]:
     """```mermaid ブロックを SVG に焼いて画像参照へ置き換える。
 
     SVG は work（dist 配下）へ出す。material/ 配下に置くと
@@ -747,7 +757,8 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
     count = 0
     # 図のキャプションには直前の見出しを使う。テーマが付ける「図N: 」の後ろに
     # 何を置くかであり、ここに「図1」と書くと「図 1: 図1」と二重になる。
-    caption = "図解"
+    # 空は「まだ見出しを見ていない」の意味で、あとの代入が追跡に使う。
+    caption = ""
 
     for _, line, state, fence in fence_states("\n".join(body)):
         if state == "outside":
@@ -755,6 +766,7 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
             if heading:
                 # parse_source が H2 に付けた {#sN} は見出し文ではないので落とす
                 text = ANCHOR_SUFFIX_RE.sub("", heading.group(1))
+                text = DURATION_SUFFIX_RE.sub("", text)
                 caption = strip_inline_markdown(text).replace("[", "").replace("]", "")
             out.append(line)
             continue
@@ -806,7 +818,9 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
             )
         if svg.exists():
             embed_font(svg)
-            out += ["", f"![{caption}]({svg.name})", ""]
+            figure_caption = caption or PRE_HEADING_CAPTION_OVERRIDES.get(
+                (source_stem, count), "図解")
+            out += ["", f"![{figure_caption}]({svg.name})", ""]
         else:
             errors.append(
                 f"図{count} の描画に失敗: "
@@ -997,7 +1011,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     if not title:
         return [f"{path.name}: H1 が無い"]
 
-    body, figures, problems = convert_mermaid(body, slug, WORK_DIR, env)
+    body, figures, problems = convert_mermaid(body, slug, WORK_DIR, env, stem)
 
     document = WORK_DIR / f"{slug}.md"
     document.write_text(

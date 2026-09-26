@@ -140,9 +140,18 @@ def troubleshooting_entries(content):
 # 書いてあるのに本文は「実際の URL で公開します」で、真っ向から食い違っていた。
 # モックをやめて図2枚へ置き換え、代わりにこの表へ理由つきで登録する。
 #
+# 索引・ロードマップのような「日」ではない本も、この表で扱う。画面操作の手順を
+# 持たない本はスクショが無いのが仕様であって欠陥ではない。実際に FAIL したもの
+# だけを登録する（appendix 4冊は画像リンクを既に持つため対象外）。
+#
 # 免除しても図の下限（2枚）は課す。視覚化そのものを免除するわけやない。
+# ただしこの図の下限は「その日の教材が写真を撮れない」場合の代替要件なので、
+# 日次教材（dayNN）以外の本には課さない。図解の対象になる「今日の画面」が
+# そもそも存在しないため。
 SCREENSHOT_EXEMPT = {
     'day04_ネットに公開.md': 'デプロイの日。主役は Vercel の管理画面で撮れず、アプリの画面は Day 02 から変わらん',
+    '00_カリキュラム目次.md': 'カリキュラム全体の目次。画面操作の手順を持たない索引の本で、撮る画面が存在しない',
+    '00-1_学びのロードマップ.md': '学びの進め方を示すロードマップ。画面操作の手順を持たない索引の本で、撮る画面が存在しない',
 }
 MIN_MERMAID_WHEN_EXEMPT = 2
 
@@ -216,7 +225,8 @@ def check_visualization(filepath, fail_on_duplicate_image=True):
 
     exempt_reason = SCREENSHOT_EXEMPT.get(os.path.basename(filepath))
     if exempt_reason:
-        if mermaid_count < MIN_MERMAID_WHEN_EXEMPT:
+        is_day_book = re.search(r'day\d+', os.path.basename(filepath).lower()) is not None
+        if is_day_book and mermaid_count < MIN_MERMAID_WHEN_EXEMPT:
             errors.append(
                 f"❌ 写真の下限を免除しとる日やのに図が不足（{mermaid_count}/{MIN_MERMAID_WHEN_EXEMPT}以上）"
             )

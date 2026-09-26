@@ -158,7 +158,7 @@ redmine-clone（Flask/Python実装）の完全リプレイス版として、最�
 ## 技術スタック（変更禁止）
 
 ### フロントエンド
-- **Next.js 15.3.6** - App Router必須（Pages Router禁止）
+- **Next.js 15.5.24** - App Router必須（Pages Router禁止）
 - **React 18.3.1** - UIライブラリ
 - **TypeScript 5.6.3** - 厳格モード完全対応
 - **shadcn/ui** - Radix UIベースのコンポーネントライブラリ

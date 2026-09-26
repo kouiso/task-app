@@ -59,6 +59,7 @@ book-pdf-test:
 	@python3 scripts/pdf-book/test_table_layout_override.py
 	@python3 scripts/pdf-book/test_table_build.py
 	@python3 scripts/pdf-book/test_verify_pdf_copy.py
+	@python3 scripts/pdf-book/test_mermaid_caption.py
 	@python3 scripts/pdf-book/test_breakable_code.py
 
 # 出力が商品として出せる状態かを見る
