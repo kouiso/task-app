@@ -577,6 +577,16 @@ def check_screenshot_exemption() -> list[str]:
     code, _, _ = run_checker(target, f'{tables}\n\n```mermaid\nflowchart LR\n  A --> B\n```\n')
     if code == 0:
         fails.append('❌ 図が足りんのに免除だけで通している')
+    # 図の下限は日次教材（dayNN）にだけ課す。索引・付録など画面操作を持たない
+    # 本には課さない — 表だけの本文で通るのが仕様。dayNN とそうでない本を
+    # 混同すると、どちらかの側が黙って骨抜きになる。
+    for name in SCREENSHOT_EXEMPT:
+        code, _, _ = run_checker(name, f'{tables}\n')
+        if re.search(r'day\d+', name.lower()):
+            if code == 0:
+                fails.append(f'❌ {name}: 図が無いのに日次教材の免除で通している')
+        elif code != 0:
+            fails.append(f'❌ {name}: 日次教材でない本に図の下限を課している')
     # 登録の無い日は、これまでどおり写真3箇所を要求する。
     code, _, _ = run_checker('day99_未登録.md', f'{tables}\n\n{figures}\n\n![a](./screenshots/x.png)\n')
     if code == 0:

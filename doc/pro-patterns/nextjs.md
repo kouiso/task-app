@@ -1,6 +1,6 @@
 # Next.js Pro Patterns
 
-- target version: `next` `15.3.6`（App Router）
+- target version: `next` `15.5.24`（App Router）
 - last updated: `2026-04-19`
 - purpose: `30日カリキュラム Before/After セクションで使う Pro パターン参照資料`
 
