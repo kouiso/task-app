@@ -95,8 +95,10 @@ jobs:
     # pdffonts の列レイアウトも poppler の版で変わる）。イメージが転がると無関係に赤くなるので固定する。
     runs-on: ubuntu-24.04
     # 全36冊を組む経路が入るので長め。provisioning のハングがビルドの持ち時間を
-    # 食わんよう、各ステップ側にも上限を置いとる
-    timeout-minutes: 60
+    # 食わんよう、各ステップ側にも上限を置いとる。
+    # 全冊組版は runner 次第で60分をわずかに超えることがあり、境目で中止されると
+    # 検査 step に届かず緑にも赤にもならんので余裕を持たせる
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

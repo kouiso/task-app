@@ -256,6 +256,38 @@ class TableCssTest(unittest.TestCase):
         self.report["dom_audit"]["violations"] = []
         self.assertEqual(derive_table_css(self.manifest, self.report), ("", [], []))
 
+    def test_thead_code_duplicated_across_pages_is_folded_to_one(self):
+        # ページ分割で複写される thead セルは、同じ識別子で断片ごとに観測される。
+        self.report["dom_audit"]["observed"][1]["items"] = [
+            self._item(1, 150, 1, self._geometry(1)),
+            self._item(1, 150, 2, self._geometry(2)),
+        ]
+        self.report["dom_audit"]["table_inventory"]["tables"][0][
+            "fragments"
+        ].append({
+            "page_index": 2,
+            "page_content_rect": {"left": 0, "right": 300, "width": 300},
+            "geometry": self._geometry(2),
+        })
+
+        css, adjustments, unresolved = derive_table_css(self.manifest, self.report)
+        self.assertEqual(unresolved, [])
+        self.assertEqual(adjustments[0]["minimum_widths"], [50, 160, 70])
+        self.assertNotIn("font-size", css)
+        self.assertEqual(derive_flow_css(self.manifest, self.report), (NOWRAP_CSS, []))
+
+    def test_conflicting_duplicate_observations_still_raise(self):
+        conflicting = self._item(1, 150, 2)
+        conflicting["table_geometry"]["target"]["column_index"] = 2
+        self.report["dom_audit"]["observed"][1]["items"] = [
+            self._item(1, 150, 1),
+            conflicting,
+        ]
+        with self.assertRaisesRegex(ValueError, "1つのコード"):
+            derive_table_css(self.manifest, self.report)
+        with self.assertRaisesRegex(ValueError, "1つのコード"):
+            derive_flow_css(self.manifest, self.report)
+
     def test_all_fragments_must_have_the_same_simple_grid(self):
         second = self._item(1, 150, 2, self._geometry(2, widths=[90, 110, 100]))
         self.report["dom_audit"]["observed"][1]["items"] = [second]
