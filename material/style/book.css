@@ -318,6 +318,9 @@ figure img[src$=".png"] {
 .cover {
   border-top: 6px solid var(--book-accent);
   padding-block-start: 55mm;
+  /* 表紙ブロックの最終行がページ枠の下辺まで届くと、行ボックスが
+     下端で切られてディセンダ(y・p・j)が欠ける。逃がしを確保する */
+  padding-block-end: 8mm;
 }
 
 .cover .series {
@@ -346,6 +349,10 @@ figure img[src$=".png"] {
 
 .cover .meta {
   font-size: 0.72em;
+  /* 行ボックスの高さはテーマ全体の --vs-line-height ではなくここで決める。
+     継承値に乗せると、行間を詰める変更でベースライン直下の余白が
+     ディセンダ(y・p・j)の深さを下回り、枠内に収まらなくなる */
+  line-height: 1.8;
   color: var(--book-muted);
   margin-top: 2.5em;
   border-top: 1px solid var(--book-rule);
