@@ -953,12 +953,12 @@ const canDeleteProject = useCallback(
 
 `tasks && tasks.length > 0` で先に件数を確かめ、1件以上あるときだけ `.map()` へ進みます。`tasks` は読み込み中だと `undefined` なのでこの確認が無いと `undefined` に対して `.map()` を呼んでしまいます。`key={task.id}` はReact がどのカードがどれかを見分けるための印です。`grid` の後ろに並ぶ `sm:` `lg:` `xl:` は画面幅ごとの列数で、狭い画面では1列、広い画面では4列に増えます。else 側をいったん `<div />` にしているのは0件のときの表示をこの節の最後で差し替えるからです。
 
-TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` を以下に**置き換えて**ください。
+TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` を以下に**置き換えて**ください。コメントも開始タグの内側にあるので、ブロック全体をコピーできます。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* TaskCardに権限フラグを追加 */}
 <TaskCard
+  // filepath: src/app/task/page.tsx
+  // TaskCardに権限フラグを追加
   key={task.id}
   id={task.id}
   title={task.title}

@@ -1812,9 +1812,9 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
 
 ```typescript
-{/* filepath: src/app/search/page.tsx */}
-{/* TaskCardに権限フラグと作業時間を追加 */}
 <TaskCard key={task.id}
+  // filepath: src/app/search/page.tsx
+  // TaskCardに権限フラグと作業時間を追加
   id={task.id}
   title={task.title}
   description={
