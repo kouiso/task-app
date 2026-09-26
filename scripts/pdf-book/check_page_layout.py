@@ -61,6 +61,7 @@ from xml.etree import ElementTree
 sys.path.insert(0, str(Path(__file__).parent))
 from check_pdf_book import ToolFailure, run_tool  # noqa: E402
 from build_pdf_book import work_slug  # noqa: E402
+from breakable_code import BREAKABLE_MIN_LINES  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
@@ -108,10 +109,11 @@ CODE_BAND_EDGE_MM = 3.0
 CODE_BAND_MIN_THICK_MM = 3.0
 
 # ページの境を跨いだコードの断片がこの厚み未満なら端切れとして咎める。
-# pre は境で流し込む場合でも orphans / widows が両側4行を保つ
-# （コード1行は約8.3mm、4行で約33mm）。その下限を少し下回る位置に置くと、
-# 保証が効いた分割は通し、1〜3行だけが残る端切れだけを拾える。
-CODE_SPLIT_MIN_MM = 28.0
+# 断片の帯には塊の外側のパディング（pre の 1em ≒ 4mm）も入るので、
+# orphans / widows が保つ4行ぶんの断片は約37mm、3行の端切れは約29mmになる
+# （コード1行は約8.3mm）。その間に置くと、保証が効いた分割は通し、
+# 1〜3行だけが残る端切れだけを拾える。
+CODE_SPLIT_MIN_MM = 33.0
 
 # ── 表の潰れ ────────────────────────────────────────────────
 # 潰れた列は「1文字だけの行」が行送りの間隔でびっしり縦に積まれる。
@@ -181,6 +183,23 @@ ORPHAN_MAX_CHARS = 3
 ORPHAN_RATE_LIMIT = 0.15
 
 MM_PER_PT = 25.4 / 72.0
+
+# コードの行送り。book.css: 本文 12.75pt、行高 2.05、pre の級数はその 90%。
+# 表示1行 = 12.75 × 0.9 × 2.05 ≒ 23.5pt ≒ 8.3mm
+CODE_LINE_PITCH_MM = 12.75 * 0.9 * 2.05 * MM_PER_PT
+# 境で切れた断片の帯には、塊の外側に残る pre のパディング（1em ≒ 4.05mm）が
+# 1つぶん入る（切れ目の内側のパディングはスライスで落ちる）
+PRE_FRAGMENT_PAD_MM = 12.75 * 0.9 * MM_PER_PT
+
+# 分割してよいのは生成器が pdf-breakable を付けた塊（表示
+# BREAKABLE_MIN_LINES 行以上）だけ。境の断片の合計（前ページ下端＋
+# 次ページ上端）は、その塊の高さ ≒ 18行×8.3mm＋両断片のパディング
+# ≒ 157mm を必ず超える。一方、丸送りのはずの塊（17行以下）が切れた
+# ときの合計は高々 149mm。その間に下限を置くと、keep-together が
+# 掛け忘れやテーマ更新で効かなくなった塊の分割を拾える。
+CODE_SPLIT_BLOCK_MIN_MM = (
+    BREAKABLE_MIN_LINES * CODE_LINE_PITCH_MM + PRE_FRAGMENT_PAD_MM
+)
 
 
 def mm_from_px(value: int) -> float:
@@ -733,6 +752,28 @@ def page_count(pdf: Path) -> int:
     raise ToolFailure("pdfinfo がページ数を返さない")
 
 
+def code_split_problem(tail_px: int, head_px: int) -> str:
+    """ページ境を跨いだコード帯の断片（前ページ下端・次ページ上端の画素厚み）
+    から、咎めるべき切れ方だけを文言にして返す。問題なければ空文字。
+
+    分割してよいのは pdf-breakable の塊（表示 BREAKABLE_MIN_LINES 行
+    以上）だけで、分割は orphans / widows が両側4行を保つ。
+    境で拾えた断片がそのどちらの形にも合わないとき、keep-together が
+    効くはずの塊が掛け忘れやテーマ更新で静かに切れている証拠になる。
+    """
+    fragment_mm = mm_from_px(min(tail_px, head_px))
+    if fragment_mm < CODE_SPLIT_MIN_MM:
+        return (f"コードブロックがページの境で薄く切れている"
+                f"（境の断片 {fragment_mm:.1f}mm）。"
+                "写経しながら紙をめくることになる")
+    total_mm = mm_from_px(tail_px + head_px)
+    if total_mm < CODE_SPLIT_BLOCK_MIN_MM:
+        return (f"keep-together の効くはずのコードブロックがページの境で"
+                f"切れている（境の断片の合計 {total_mm:.1f}mm は"
+                f" {BREAKABLE_MIN_LINES} 行の塊の高さに足りない）")
+    return ""
+
+
 def render_problems(pdf: Path, total: int) -> list[str]:
     """全ページを描画して、版面からはみ出した墨を挙げる。"""
     with tempfile.TemporaryDirectory() as work:
@@ -749,13 +790,9 @@ def render_problems(pdf: Path, total: int) -> list[str]:
                 problems.append(f"p{number}: {problem}")
             starts, ends = code_band_at_edges(width, height, pixels)
             if previous_code_tail and starts:
-                fragment_mm = mm_from_px(min(previous_code_tail, starts))
-                if fragment_mm < CODE_SPLIT_MIN_MM:
-                    problems.append(
-                        f"p{number - 1}〜p{number}: コードブロックがページの境で"
-                        f"薄く切れている（境の断片 {fragment_mm:.1f}mm）。"
-                        "写経しながら紙をめくることになる"
-                    )
+                problem = code_split_problem(previous_code_tail, starts)
+                if problem:
+                    problems.append(f"p{number - 1}〜p{number}: {problem}")
             previous_code_tail = ends
         return problems
 
