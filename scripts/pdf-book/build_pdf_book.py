@@ -14,7 +14,7 @@ Google Docs に手で貼り付けて体裁を整えてから書き出してい�
 組版は Vivliostyle（CSS組版）に任せる。このスクリプトの仕事は、素の Markdown を
 「本」にするために足りない部分だけを補うこと:
   1. H1 から表紙を起こす
-  2. H2 を拾って、ページ番号付きの目次を作る
+  2. H2（とその下の `### Step N:`）を拾って、ページ番号付きの目次を作る
   3. mermaid を SVG へ焼く（Vivliostyle は mermaid を解釈しない）
   4. 柱の文字列と、埋め込みフォントの @font-face を1冊ぶんのCSSとして書き出す
 
@@ -409,6 +409,11 @@ COLOPHON = "Next.js 15 / TypeScript / Prisma / tRPC"
 
 H1_RE = re.compile(r"^#\s+(.+?)\s*$")
 H2_RE = re.compile(r"^##\s+(?!#)(.+?)\s*$")
+# 目次の2段目に出す h3 は `### Step N:` だけ。`### \`file.ts\`` や
+# `### Before` のような節の中の小見出しまで拾うと目次が探しにくくなる。
+# 形は curriculum-qa の Step 見出しの定義（check_step_ref.py 等の
+# `Step\s*[\d.]+\s*[:：]`）に揃える。
+H3_STEP_RE = re.compile(r"^###\s+(Step\s+[\d.]+\s*[:：].+?)\s*$")
 HEADING_RE = re.compile(r"^#{2,6}\s+(.+?)\s*$")
 ANCHOR_SUFFIX_RE = re.compile(r"\s*\{#[^}]*\}\s*$")
 DAY_RE = re.compile(r"^(Day\s*\d+)\s*[:：]\s*(.+)$")
@@ -698,8 +703,13 @@ def split_title(title: str) -> tuple[str, str]:
     return "", title
 
 
-def parse_source(text: str) -> tuple[str, list[str], list[tuple[str, str]]]:
+def parse_source(
+    text: str,
+) -> tuple[str, list[str], list[tuple[str, str, list[tuple[str, str]]]]]:
     """本文を1度なめて、H1・本文行・目次項目を取り出す。
+
+    目次項目は (アンカー, 見出し文, Step子項目) の組。h2 のあとに来た
+    `### Step N:` はその h2 の子として入れる。
 
     フェンスの開閉は markdown_scan に任せる。教材には `## ` で始まる行を含む
     コードブロックがあり、素の正規表現では拾ってしまう。チルダのフェンスや
@@ -707,7 +717,8 @@ def parse_source(text: str) -> tuple[str, list[str], list[tuple[str, str]]]:
     """
     title = ""
     body: list[str] = []
-    toc: list[tuple[str, str]] = []
+    toc: list[tuple[str, str, list[tuple[str, str]]]] = []
+    seq = 0
 
     for _, line, state, _ in fence_states(text):
         if state != "outside":
@@ -722,9 +733,22 @@ def parse_source(text: str) -> tuple[str, list[str], list[tuple[str, str]]]:
 
         h2 = H2_RE.match(line)
         if h2:
-            anchor = f"s{len(toc) + 1}"
-            toc.append((anchor, strip_inline_markdown(h2.group(1))))
+            seq += 1
+            anchor = f"s{seq}"
+            toc.append((anchor, strip_inline_markdown(h2.group(1)), []))
             body.append(f"## {h2.group(1)} {{#{anchor}}}")
+            continue
+
+        h3_step = H3_STEP_RE.match(line)
+        if h3_step:
+            seq += 1
+            anchor = f"s{seq}"
+            text = strip_inline_markdown(h3_step.group(1))
+            if toc:
+                toc[-1][2].append((anchor, text))
+            else:
+                toc.append((anchor, text, []))
+            body.append(f"### {h3_step.group(1)} {{#{anchor}}}")
             continue
 
         body.append(line)
@@ -862,17 +886,28 @@ def embed_font(svg: Path) -> None:
     )
 
 
-def build_front_matter(title: str, toc: list[tuple[str, str]]) -> str:
+def build_front_matter(
+    title: str, toc: list[tuple[str, str, list[tuple[str, str]]]]
+) -> str:
     """表紙と目次を組み立てる。
 
     目次は id="toc" role="doc-toc" を付ける。theme-base がこのセレクタに対して
     リーダー点とページ番号（target-counter）を実装しており、自前で書くより正確。
+    入れ子の ol にも同じ規則が効くので、Step は h2 の下に ol を重ねて出す。
     """
     day, subtitle = split_title(title)
     day_line = f'<p class="day">{html.escape(day)}</p>\n' if day else ""
-    items = "\n".join(
-        f'<li><a href="#{anchor}">{html.escape(text)}</a></li>' for anchor, text in toc
-    )
+
+    def toc_item(anchor: str, text: str, children: list[tuple[str, str]]) -> str:
+        nested = ""
+        if children:
+            entries = "\n".join(
+                f'<li><a href="#{a}">{html.escape(t)}</a></li>' for a, t in children
+            )
+            nested = f"\n<ol>\n{entries}\n</ol>"
+        return f'<li><a href="#{anchor}">{html.escape(text)}</a>{nested}</li>'
+
+    items = "\n".join(toc_item(anchor, text, children) for anchor, text, children in toc)
     return (
         '<div class="cover">\n'
         f'<p class="series">{html.escape(SERIES_NAME)}</p>\n'
@@ -1236,7 +1271,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pages = ""
     page_count = pages.split("Pages:")[1].split()[0] if "Pages:" in pages else "?"
-    print(f"  {stem}  {page_count}ページ / 見出し{len(toc)} / 図{figures}", flush=True)
+    toc_count = len(toc) + sum(len(children) for _, _, children in toc)
+    print(f"  {stem}  {page_count}ページ / 見出し{toc_count} / 図{figures}", flush=True)
     return problems
 
 
