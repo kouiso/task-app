@@ -572,6 +572,45 @@ function auditPaginatedDom(manifest, constants) {
     },
   };
 
+  // ページ分割で thead が複写されると、同じ識別子の観測が断片ごとに現れる。
+  // 表・セル位置・文字列が一致する観測は同一論理セルの複写なので、
+  // ページ分割による断片化とは区別して数える。
+  const isRepeatedTableCellObservation = (items) => {
+    const signatures = items.map((item) => {
+      const geometry = item?.table_geometry;
+      const identity = geometry?.identity;
+      const target = geometry?.target;
+      const columns = geometry?.columns;
+      if (
+        identity?.status !== 'supported' ||
+        typeof identity.kind !== 'string' ||
+        typeof identity.value !== 'string' ||
+        !target ||
+        !Array.isArray(columns) ||
+        columns.some((column) => !column || typeof column !== 'object')
+      ) {
+        return null;
+      }
+      return JSON.stringify([
+        item.text,
+        identity.kind,
+        identity.value,
+        target.row_index,
+        target.cell_index,
+        target.column_index,
+        target.row_span,
+        target.column_span,
+        columns.map((column) => [column.column_index, column.width]),
+        item.code_rect?.width,
+      ]);
+    });
+    const pages = new Set(items.map((item) => item.page_index));
+    return (
+      pages.size === items.length &&
+      signatures.every((signature) => signature !== null && signature === signatures[0])
+    );
+  };
+
   for (const [pageIndex, page] of pages.entries()) {
     for (const code of page.querySelectorAll('code,span.pdf-table-latin')) {
       if (code.closest('pre')) {
@@ -722,7 +761,7 @@ function auditPaginatedDom(manifest, constants) {
     const items = observed.get(entry.id) ?? [];
     if (items.length === 0)
       violations.push({ check: 'manifest_coverage', id: entry.id, reason: 'missing_id' });
-    if (items.length > 1) {
+    if (items.length > 1 && !isRepeatedTableCellObservation(items)) {
       violations.push({
         check: 'single_line',
         id: entry.id,
