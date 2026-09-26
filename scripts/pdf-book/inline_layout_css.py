@@ -19,6 +19,13 @@ TABLE_OVERFLOW_CHECKS = {
     "page_content_bounds",
     "sibling_cell_overlap",
 }
+_FRAGMENT_TARGET_KEYS = (
+    "row_index",
+    "cell_index",
+    "column_index",
+    "row_span",
+    "column_span",
+)
 
 
 def _positive(value: object, label: str) -> float:
@@ -35,6 +42,57 @@ def _nonnegative(value: object, label: str) -> float:
     if not math.isfinite(value) or value < 0:
         raise ValueError(f"{label}: 0以上の有限値が必要です")
     return float(value)
+
+
+def _fragment_signature(item: object) -> tuple | None:
+    """同一セルが断片へ複写された観測だけが一致する手がかりを返す。"""
+    if not isinstance(item, dict):
+        return None
+    geometry = item.get("table_geometry")
+    if not isinstance(geometry, dict):
+        return None
+    identity = geometry.get("identity")
+    target = geometry.get("target")
+    columns = geometry.get("columns")
+    if (
+        not isinstance(identity, dict)
+        or identity.get("status") != "supported"
+        or not isinstance(target, dict)
+        or not isinstance(columns, list)
+        or not all(isinstance(column, dict) for column in columns)
+    ):
+        return None
+    code_rect = item.get("code_rect")
+    return (
+        item.get("text"),
+        identity.get("kind"),
+        identity.get("value"),
+        *(target.get(key) for key in _FRAGMENT_TARGET_KEYS),
+        tuple((column.get("column_index"), column.get("width")) for column in columns),
+        code_rect.get("width") if isinstance(code_rect, dict) else None,
+    )
+
+
+def _measured_item(identifier: str, group: dict) -> dict:
+    """一意の観測を返す。ページ分割で複写された見出しセルの重複は1件に畳む。"""
+    items = group.get("items")
+    if not isinstance(items, list):
+        raise ValueError(f"{identifier}: 1つのコードを一意に測定できません")
+    if len(items) == 1:
+        return items[0]
+    # theadが断片へ複写されると、同じ表・セル位置・文字列を持つ同一論理セルの
+    # 観測が断片ごとに現れる。ページが重ならず手がかりが一致する重複だけ畳む。
+    if len(items) > 1:
+        pages = [item.get("page_index") for item in items if isinstance(item, dict)]
+        signatures = {_fragment_signature(item) for item in items}
+        if (
+            len(pages) == len(items)
+            and len(set(pages)) == len(items)
+            and len(signatures) == 1
+            and None not in signatures
+        ):
+            return items[0]
+    raise ValueError(f"{identifier}: 1つのコードを一意に測定できません")
 
 
 def derive_flow_css(manifest: dict, report: dict) -> tuple[str, list[dict]]:
@@ -57,9 +115,7 @@ def derive_flow_css(manifest: dict, report: dict) -> tuple[str, list[dict]]:
         identifier = entry["id"]
         if not SAFE_ID.fullmatch(identifier):
             raise ValueError("生成属性ではないIDです")
-        if len(group.get("items", [])) != 1:
-            raise ValueError(f"{identifier}: 1つのコードを一意に測定できません")
-        item = group["items"][0]
+        item = _measured_item(identifier, group)
         if item.get("text") != entry["expected_text"] or len(item.get("line_rects", [])) != 1:
             raise ValueError(f"{identifier}: nowrapで本文を測定してください")
         if entry["context"] == "table":
@@ -160,10 +216,7 @@ def derive_table_css(manifest: dict, report: dict) -> tuple[str, list[dict], lis
         identifier = entry.get("id")
         if not isinstance(identifier, str) or not SAFE_ID.fullmatch(identifier):
             raise ValueError("生成属性ではないIDです")
-        items = group.get("items", [])
-        if len(items) != 1:
-            raise ValueError(f"{identifier}: 1つのコードを一意に測定できません")
-        item = items[0]
+        item = _measured_item(identifier, group)
         if item.get("text") != entry.get("expected_text") or len(item.get("line_rects", [])) != 1:
             raise ValueError(f"{identifier}: nowrapで本文を測定してください")
         if entry.get("context") != "table":
