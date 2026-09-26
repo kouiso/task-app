@@ -187,10 +187,11 @@ export default function MyTasksPage() {
     utils.task.getAll.invalidate();
   }, [utils.task.getAll]);
 
+  // ダイアログを閉じる判断は TaskDialog 側が持つ（送信後に下書きが
+  // 書き足されていた場合は閉じずに警告を出すため）
   const updateMutation = api.task.update.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-      setDialogOpen(false);
     },
     // 失敗時はダイアログを閉じず入力を残す。閉じてしまうと利用者は
     // 成功したのか失敗したのか分からず、再入力を強いられる。
@@ -236,9 +237,9 @@ export default function MyTasksPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = (data: TaskFormData) => {
+  const handleSubmit = (data: TaskFormData): Promise<unknown> => {
     if (data.id) {
-      updateMutation.mutate({
+      return updateMutation.mutateAsync({
         id: data.id,
         title: data.title,
         description: data.description || null,
@@ -253,6 +254,7 @@ export default function MyTasksPage() {
         }),
       });
     }
+    return Promise.reject(new Error('更新対象のタスクがありません'));
   };
 
   const groupedTasks = useMemo(() => {

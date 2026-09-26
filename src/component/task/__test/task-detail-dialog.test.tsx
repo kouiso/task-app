@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import toast from 'react-hot-toast';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaskDetailDialog } from '../task-detail-dialog';
 
@@ -10,6 +11,11 @@ const mutations = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
+}));
+const mutationOptions = vi.hoisted(() => ({
+  create: {} as { onSuccess?: () => void },
+  update: {} as { onSuccess?: () => void },
+  delete: {} as { onSuccess?: () => void },
 }));
 vi.mock('@/trpc/react', () => ({
   api: {
@@ -39,11 +45,30 @@ vi.mock('@/trpc/react', () => ({
       },
     },
     comment: {
-      create: { useMutation: () => ({ mutate: mutations.create, isPending: false }) },
-      update: { useMutation: () => ({ mutate: mutations.update, isPending: false }) },
-      delete: { useMutation: () => ({ mutate: mutations.delete, isPending: false }) },
+      create: {
+        useMutation: (options?: { onSuccess?: () => void }) => {
+          mutationOptions.create = options ?? {};
+          return { mutate: mutations.create, isPending: false };
+        },
+      },
+      update: {
+        useMutation: (options?: { onSuccess?: () => void }) => {
+          mutationOptions.update = options ?? {};
+          return { mutate: mutations.update, isPending: false };
+        },
+      },
+      delete: {
+        useMutation: (options?: { onSuccess?: () => void }) => {
+          mutationOptions.delete = options ?? {};
+          return { mutate: mutations.delete, isPending: false };
+        },
+      },
     },
   },
+}));
+
+vi.mock('react-hot-toast', () => ({
+  default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }));
 
 const dialog = <TaskDetailDialog open taskId="task-1" onClose={() => {}} />;
@@ -54,6 +79,8 @@ beforeEach(() => {
   mutations.create.mockClear();
   mutations.update.mockClear();
   mutations.delete.mockClear();
+  vi.mocked(toast).mockClear();
+  vi.mocked(toast.success).mockClear();
 });
 
 describe('コメント操作の権限', () => {
@@ -65,7 +92,7 @@ describe('コメント操作の権限', () => {
     await user.click(screen.getByRole('button', { name: '更新' }));
     expect(mutations.update).toHaveBeenCalledWith({ id: 'comment-1', content: '元のコメント' });
     await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
-    await user.click(screen.getByRole('button', { name: '削除', exact: true }));
+    await user.click(screen.getByRole('button', { name: '削除' }));
     expect(mutations.delete).toHaveBeenCalledWith({ id: 'comment-1' });
   });
 
@@ -147,5 +174,153 @@ describe('コメント操作の権限', () => {
       id: 'comment-1',
       content: '更新したコメント',
     });
+  });
+});
+
+describe('送信後の下書きと成功通知', () => {
+  it('投稿の送信後に書き足すと、成功しても下書きを残して警告を出す', async () => {
+    const user = userEvent.setup();
+    render(dialog);
+    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
+
+    await user.type(textbox, '最初の本文');
+    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
+    expect(mutations.create).toHaveBeenCalledWith({
+      content: '最初の本文',
+      taskId: 'task-1',
+    });
+
+    // 送信待ちの間に書き足す
+    await user.type(textbox, '追記');
+
+    act(() => mutationOptions.create.onSuccess?.());
+
+    expect(toast.success).toHaveBeenCalledWith('コメントを投稿しました');
+    expect(toast).toHaveBeenCalledWith(
+      '送信後の変更は保存されていません。このまま投稿すると別のコメントになります',
+    );
+    expect(textbox).toHaveValue('最初の本文追記');
+  });
+
+  it('編集を始めても、進行中の投稿成功は作成フォームをリセットする', async () => {
+    // 作成と編集の世代が分離されていることの確認。
+    // 共有だと編集開始で世代が進み、投稿成功時に reset が呼ばれず下書きが残る。
+    const user = userEvent.setup();
+    render(dialog);
+    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
+
+    await user.type(textbox, '投稿中の下書き');
+    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
+    expect(mutations.create).toHaveBeenCalledTimes(1);
+
+    // 投稿が返る前に別コメントの編集を始める（編集用の世代だけが進む）
+    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
+    expect(screen.getByDisplayValue('元のコメント')).toBeInTheDocument();
+
+    act(() => mutationOptions.create.onSuccess?.());
+
+    expect(toast.success).toHaveBeenCalledWith('コメントを投稿しました');
+    expect(textbox).toHaveValue('');
+    // 編集中のフォームはそのまま残る
+    expect(screen.getByDisplayValue('元のコメント')).toBeInTheDocument();
+  });
+
+  it('投稿を閉じて開き直すと、古い投稿成功は新しい下書きを消さない', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { rerender } = render(<TaskDetailDialog open taskId="task-1" onClose={onClose} />);
+    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
+
+    await user.type(textbox, '最初の下書き');
+    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
+    expect(mutations.create).toHaveBeenCalledTimes(1);
+
+    // 閉じる操作で下書きは一度リセットされ、開き直して別の下書きを書く
+    // （作成用の世代が進む）
+    await user.click(screen.getByRole('button', { name: '閉じる' }));
+    rerender(<TaskDetailDialog open={false} taskId="task-1" onClose={onClose} />);
+    rerender(<TaskDetailDialog open taskId="task-1" onClose={onClose} />);
+    const reopenedTextbox = screen.getByRole('textbox', { name: 'コメント本文' });
+    await user.type(reopenedTextbox, '別の下書き');
+
+    act(() => mutationOptions.create.onSuccess?.());
+
+    expect(toast.success).toHaveBeenCalledWith('コメントを投稿しました');
+    expect(toast).not.toHaveBeenCalled();
+    expect(reopenedTextbox).toHaveValue('別の下書き');
+  });
+
+  it('更新の送信後に書き足すと、編集を閉じずに警告を出す', async () => {
+    const user = userEvent.setup();
+    render(dialog);
+
+    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
+    const editTextbox = screen.getByDisplayValue('元のコメント');
+    await user.click(screen.getByRole('button', { name: '更新' }));
+    expect(mutations.update).toHaveBeenCalledWith({
+      id: 'comment-1',
+      content: '元のコメント',
+    });
+
+    // 送信待ちの間に書き足す
+    await user.type(editTextbox, '追記');
+
+    act(() => mutationOptions.update.onSuccess?.());
+
+    expect(toast.success).toHaveBeenCalledWith('コメントを更新しました');
+    expect(toast).toHaveBeenCalledWith(
+      '送信後の変更は保存されていません。もう一度更新すると反映されます',
+    );
+    expect(editTextbox).toHaveValue('元のコメント追記');
+    expect(screen.getByRole('button', { name: '更新' })).toBeInTheDocument();
+  });
+
+  it('更新の送信後に変更がなければ編集を閉じて成功トーストを出す', async () => {
+    const user = userEvent.setup();
+    render(dialog);
+
+    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
+    await user.click(screen.getByRole('button', { name: '更新' }));
+
+    act(() => mutationOptions.update.onSuccess?.());
+
+    expect(toast.success).toHaveBeenCalledWith('コメントを更新しました');
+    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByDisplayValue('元のコメント')).not.toBeInTheDocument();
+  });
+
+  it('編集をやり直した後の古い更新成功は、新しい編集を閉じない', async () => {
+    const user = userEvent.setup();
+    render(dialog);
+
+    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
+    await user.click(screen.getByRole('button', { name: '更新' }));
+    expect(mutations.update).toHaveBeenCalledTimes(1);
+
+    // 取り消して編集し直す（編集用の世代が2回進む）
+    await user.click(screen.getByRole('button', { name: 'キャンセル' }));
+    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
+    const editTextbox = screen.getByDisplayValue('元のコメント');
+    await user.type(editTextbox, '書き直し');
+
+    act(() => mutationOptions.update.onSuccess?.());
+
+    // 成功通知は出るが、新しい編集セッションには触れない
+    expect(toast.success).toHaveBeenCalledWith('コメントを更新しました');
+    expect(editTextbox).toHaveValue('元のコメント書き直し');
+    expect(screen.getByRole('button', { name: '更新' })).toBeInTheDocument();
+  });
+
+  it('削除の成功時に成功トーストを出す', async () => {
+    const user = userEvent.setup();
+    render(dialog);
+
+    await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
+    await user.click(screen.getByRole('button', { name: '削除' }));
+    expect(mutations.delete).toHaveBeenCalledWith({ id: 'comment-1' });
+
+    act(() => mutationOptions.delete.onSuccess?.());
+
+    expect(toast.success).toHaveBeenCalledWith('コメントを削除しました');
   });
 });

@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 import {
@@ -45,7 +46,9 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 interface TaskDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: TaskFormData) => void;
+  // 非同期で送信する場合は Promise を返す。Promise が reject した時は失敗として扱い、
+  // ダイアログを閉じずに下書きを残す
+  onSubmit: (data: TaskFormData) => unknown;
   initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
 }
@@ -91,11 +94,25 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     watch,
     reset,
     setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: buildTaskFormValues(initialData, projects),
   });
+
+  // 送信応答が返る頃には下書きが変わっている可能性があるため、送信時点の
+  // 状態を世代（generation）と編集回数（revision）で記録して成功時に照合する。
+  // 世代はダイアログの開閉と編集対象の切り替わりで進め、revision は下書きの
+  // 変更ごとに進める。世代がずれた成功は別セッションのものとして触れない。
+  const generationRef = useRef(0);
+  const draftRevisionRef = useRef(0);
+
+  useEffect(() => {
+    const subscription = watch(() => {
+      draftRevisionRef.current += 1;
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
   const selectedProjectId = watch('projectId');
   const projectsRef = useRef(projects);
   const { data: projectMembers } = api.search.getMembersByProject.useQuery(
@@ -109,6 +126,9 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
   }, [projects]);
 
   useEffect(() => {
+    // 開閉や編集対象の切り替わりは別セッションなので世代を進める
+    generationRef.current += 1;
+    draftRevisionRef.current = 0;
     if (!open) {
       return;
     }
@@ -130,7 +150,7 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     onClose();
   };
 
-  const handleFormSubmit = (data: TaskFormValues) => {
+  const handleFormSubmit = async (data: TaskFormValues) => {
     const submitData: TaskFormData = {
       ...(data.id !== undefined && { id: data.id }),
       title: data.title,
@@ -145,7 +165,29 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
       ...(data.id !== undefined &&
         data.expectedUpdatedAt !== undefined && { expectedUpdatedAt: data.expectedUpdatedAt }),
     };
-    onSubmit(submitData);
+    const submitGeneration = generationRef.current;
+    const submitRevision = draftRevisionRef.current;
+    try {
+      await onSubmit(submitData);
+    } catch {
+      // 失敗時はダイアログを閉じず下書きを残す。エラー通知は呼び出し側の責務
+      return;
+    }
+    // 成功通知はダイアログを閉じる・閉じないに関係なく必ず出す
+    toast.success(submitData.id ? 'タスクを更新しました' : 'タスクを作成しました');
+    if (submitGeneration !== generationRef.current) {
+      return;
+    }
+    if (submitRevision !== draftRevisionRef.current) {
+      // 送信後に書き足された下書きは保存されていないので、閉じずに理由を伝える
+      toast(
+        submitData.id
+          ? '送信後の変更は保存されていません。閉じて開き直してから保存してください'
+          : '送信後の変更は保存されていません。このまま作成すると別のタスクになります',
+      );
+      return;
+    }
+    handleClose();
   };
 
   return (
@@ -338,7 +380,9 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
             <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="submit">{initialData?.id ? '更新' : '作成'}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? '送信中...' : initialData?.id ? '更新' : '作成'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

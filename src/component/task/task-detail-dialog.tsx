@@ -4,8 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
@@ -77,8 +78,41 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       (comment) => comment.id === commentId && comment.userId === session?.user?.id,
     );
 
+  // 送信応答が返る頃には下書きや操作状態が変わっている可能性があるため、
+  // 送信時点の状態を世代（generation）と編集回数（revision）で記録して成功時に照合する。
+  // 作成と編集で世代を分け、別々の下書きが互いの成功応答に巻き込まれないようにする。
+  // 作成世代は開閉・taskId変化・権限喪失で、編集世代は編集の開始・取り消し・
+  // 削除確認の開閉で進める。世代がずれた成功は別セッションのものとして触れない。
+  const createGenerationRef = useRef(0);
+  const editGenerationRef = useRef(0);
+  const createRevisionRef = useRef(0);
+  const editRevisionRef = useRef(0);
+  const createSubmitRef = useRef<{ generation: number; revision: number } | null>(null);
+  const updateSubmitRef = useRef<{ generation: number; revision: number } | null>(null);
+  const deleteSubmitRef = useRef<{ generation: number } | null>(null);
+
+  // open/taskId が変わるたびに別のコメントセッションとみなし、作成世代を進める
+  const prevCreateSessionRef = useRef({ open, taskId });
+  if (
+    prevCreateSessionRef.current.open !== open ||
+    prevCreateSessionRef.current.taskId !== taskId
+  ) {
+    prevCreateSessionRef.current = { open, taskId };
+    createGenerationRef.current += 1;
+    createRevisionRef.current = 0;
+  }
+
+  // 削除確認ダイアログの開閉は編集世代を進める
+  const prevDeleteDialogOpenRef = useRef(deleteCommentDialogOpen);
+  if (prevDeleteDialogOpenRef.current !== deleteCommentDialogOpen) {
+    prevDeleteDialogOpenRef.current = deleteCommentDialogOpen;
+    editGenerationRef.current += 1;
+  }
+
   useEffect(() => {
     if (!canEditComments) {
+      // 権限を失った時点の下書きと送信の帰属を切り離す
+      createGenerationRef.current += 1;
       setEditingCommentId(null);
       setDeleteCommentDialogOpen(false);
       setDeleteCommentTargetId(null);
@@ -91,6 +125,17 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       if (taskId) {
         utils.task.getById.invalidate({ id: taskId });
       }
+      // 成功通知はフォームをリセットする・しないに関係なく必ず出す
+      toast.success('コメントを投稿しました');
+      const snapshot = createSubmitRef.current;
+      if (!snapshot || snapshot.generation !== createGenerationRef.current) {
+        return;
+      }
+      if (snapshot.revision !== createRevisionRef.current) {
+        // 送信後に書き足された下書きは投稿内容と違うので残して理由を伝える
+        toast('送信後の変更は保存されていません。このまま投稿すると別のコメントになります');
+        return;
+      }
       commentForm.reset();
     },
   });
@@ -99,6 +144,15 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
     onSuccess: () => {
       if (taskId) {
         utils.task.getById.invalidate({ id: taskId });
+      }
+      toast.success('コメントを更新しました');
+      const snapshot = updateSubmitRef.current;
+      if (!snapshot || snapshot.generation !== editGenerationRef.current) {
+        return;
+      }
+      if (snapshot.revision !== editRevisionRef.current) {
+        toast('送信後の変更は保存されていません。もう一度更新すると反映されます');
+        return;
       }
       setEditingCommentId(null);
       editCommentForm.reset();
@@ -110,6 +164,13 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       if (taskId) {
         utils.task.getById.invalidate({ id: taskId });
       }
+      toast.success('コメントを削除しました');
+      const snapshot = deleteSubmitRef.current;
+      if (!snapshot || snapshot.generation !== editGenerationRef.current) {
+        return;
+      }
+      setDeleteCommentDialogOpen(false);
+      setDeleteCommentTargetId(null);
     },
   });
 
@@ -124,6 +185,10 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
 
   const handleCommentSubmit = (values: CommentFormValues) => {
     if (!taskId || !canEditComments) return;
+    createSubmitRef.current = {
+      generation: createGenerationRef.current,
+      revision: createRevisionRef.current,
+    };
     createCommentMutation.mutate({
       content: values.content,
       taskId,
@@ -132,11 +197,14 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
 
   const handleStartEdit = (comment: { id: string; content: string }) => {
     if (!canModifyComment(comment.id)) return;
+    editGenerationRef.current += 1;
+    editRevisionRef.current = 0;
     setEditingCommentId(comment.id);
     editCommentForm.setValue('content', comment.content);
   };
 
   const handleCancelEdit = () => {
+    editGenerationRef.current += 1;
     setEditingCommentId(null);
     editCommentForm.reset();
   };
@@ -144,6 +212,10 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
   const handleSaveEdit = (commentId: string) => {
     const content = editCommentForm.getValues('content').trim();
     if (!content || !canModifyComment(commentId)) return;
+    updateSubmitRef.current = {
+      generation: editGenerationRef.current,
+      revision: editRevisionRef.current,
+    };
     updateCommentMutation.mutate({
       id: commentId,
       content,
@@ -279,7 +351,11 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                         {editingCommentId === comment.id && canModifyComment(comment.id) ? (
                           <div className="space-y-2">
                             <Textarea
-                              {...editCommentForm.register('content')}
+                              {...editCommentForm.register('content', {
+                                onChange: () => {
+                                  editRevisionRef.current += 1;
+                                },
+                              })}
                               className="resize-none"
                               rows={2}
                             />
@@ -315,7 +391,11 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                     <Textarea
                       placeholder="コメントを追加..."
                       aria-label="コメント本文"
-                      {...commentForm.register('content')}
+                      {...commentForm.register('content', {
+                        onChange: () => {
+                          createRevisionRef.current += 1;
+                        },
+                      })}
                       className="resize-none"
                       rows={2}
                     />
@@ -351,6 +431,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
         onOpenChange={setDeleteCommentDialogOpen}
         onConfirm={() => {
           if (deleteCommentTargetId && canModifyComment(deleteCommentTargetId)) {
+            deleteSubmitRef.current = { generation: editGenerationRef.current };
             deleteCommentMutation.mutate({ id: deleteCommentTargetId });
           }
         }}
