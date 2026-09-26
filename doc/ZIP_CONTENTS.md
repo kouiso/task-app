@@ -14,10 +14,7 @@ ZIP の共有権限は PDF と同じフォルダ内で継承されるため、�
 
 ## Drive 配布の認証方式
 
-配布フォルダへの書き込みは **OAuth 経路のみ**で行います。サービスアカウントの新設・GCP プロジェクトの設定変更・外部プログラムへの申請は行いません。OAuth で詰まったらユーザーに聞きます。
-
-- アップロード本体は `upload_drive.py`（rclone の `gdrive:` リモート = OAuth）。Devin 等の作業環境にトークンが無い場合は `rclone authorize "drive"` でユーザーが1回同意するか、org シークレット `GDRIVE_RCLONE_TOKEN`（未作成ならユーザーに依頼）を使います。
-- 読み取り・件数照合・ダウンロード検証だけなら、OAuth 接続済みの Google Drive MCP でも実行できます（同一ID上書きと generateIds は MCP に存在しないため、アップロード本体は rclone 側です）。
+配布フォルダへの書き込みは **OAuth 経路のみ**で行います。`upload_drive.py` が使う rclone の `gdrive:` リモートが正規の方式で、サービスアカウントは使いません。作業環境に rclone の認証情報が無い場合は `rclone authorize "drive"` でユーザーが1回同意してトークンを取得し、永続化の方法は作業者と相談してください。
 
 ## PDFの章間リンクを設定する
 
