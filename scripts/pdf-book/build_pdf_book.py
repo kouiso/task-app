@@ -796,6 +796,51 @@ def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
     return text
 
 
+# 並びは同じリビジョンが複数レイアウトに残っている時の優先順で、
+# 新しい置き方を先にする。近年の Playwright が入れる Chrome for Testing は
+# Linux は chrome-linux64、macOS は chrome-mac-{arm64,x64}/Google Chrome for Testing.app。
+# 旧レイアウト（chrome-linux、chrome-mac/Chromium.app）も残るので後ろに置く
+_CACHE_LAYOUT_PATTERNS = (
+    "chromium-*/chrome-linux64/chrome",
+    "chromium-*/chrome-linux/chrome",
+    "chromium-*/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+    "chromium-*/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+    "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium",
+)
+
+_CHROMIUM_DIR_RE = re.compile(r"chromium-(\d+)")
+
+
+def _cache_revision(hit: Path) -> int | None:
+    """キャッシュ内のヒットパスから chromium-<番号> のリビジョンを取る。"""
+    for part in hit.parts:
+        matched = _CHROMIUM_DIR_RE.fullmatch(part)
+        if matched:
+            return int(matched.group(1))
+    return None
+
+
+def _pinned_chromium_revision() -> int | None:
+    """playwright-core が要求する Chromium のリビジョン。読めなければ None。
+
+    CI は package-lock の playwright が落とす実体（この版）で組んでいる。
+    キャッシュには playwright の更新履歴ぶん古い版も並ぶので、機械的に
+    最新を取ると手元と CI でエンジンがずれる。
+    """
+    manifest = REPO_ROOT / "node_modules" / "playwright-core" / "browsers.json"
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    for entry in data.get("browsers", []):
+        if entry.get("name") == "chromium":
+            try:
+                return int(entry["revision"])
+            except (KeyError, TypeError, ValueError):
+                return None
+    return None
+
+
 def find_browser() -> str | None:
     """Chromium の実行ファイルを探す。見つからなければ None。
 
@@ -806,6 +851,7 @@ def find_browser() -> str | None:
 
     2 を 3 より先に見るのは、CI が Playwright 同梱の Chromium で組んでいるため。
     手元がシステムの Chrome を選ぶと、合字や行送りが CI の検査結果とずれ得る。
+    キャッシュ内の版の決め方は _pinned_chromium_revision() の docstring の通り。
     見つからない場合は Vivliostyle が自前で取得するので、失敗にはしない。
     """
     explicit = os.environ.get("PDF_BOOK_BROWSER")
@@ -822,15 +868,31 @@ def find_browser() -> str | None:
         Path.home() / ".cache" / "ms-playwright",
         Path.home() / "Library" / "Caches" / "ms-playwright",
     ]
-    for root in roots:
-        # 近年の Playwright が入れる Chrome for Testing は chrome-linux64 に置かれる。
-        # 旧レイアウト(chrome-linux)も残るので両方見る
-        for pattern in ("chromium-*/chrome-linux/chrome",
-                        "chromium-*/chrome-linux64/chrome",
-                        "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium"):
-            hits = sorted(root.glob(pattern)) if root.is_dir() else []
-            if hits:
-                return str(hits[-1])
+    # (キャッシュの順位, リビジョン, レイアウトの優先位, パス) で全部の実体を集める。
+    # パターンごとに早期 return すると旧レイアウトの古い版が新しい版を潰すので、
+    # レイアウトをまたいでリビジョンの大小を見る
+    found: list[tuple[int, int, int, str]] = []
+    for root_index, root in enumerate(roots):
+        if not root.is_dir():
+            continue
+        for layout_rank, pattern in enumerate(_CACHE_LAYOUT_PATTERNS):
+            for hit in root.glob(pattern):
+                revision = _cache_revision(hit)
+                if revision is not None:
+                    found.append((root_index, revision, layout_rank, str(hit)))
+    if found:
+        # CI が組む実体と揃えるのが目的なので、package-lock の playwright が指す
+        # リビジョンはキャッシュ間の順位より先に効かせる
+        pinned = _pinned_chromium_revision()
+        if pinned is not None:
+            pinned_hits = [c for c in found if c[1] == pinned]
+            if pinned_hits:
+                return min(pinned_hits, key=lambda c: (c[0], c[2]))[3]
+        # 指す版が無ければ、キャッシュの順位を保ってその中の最大リビジョンを取る
+        for root_index in range(len(roots)):
+            in_root = [c for c in found if c[0] == root_index]
+            if in_root:
+                return max(in_root, key=lambda c: (c[1], -c[2]))[3]
     for mac in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",):
         if Path(mac).exists():
             return mac
