@@ -30,6 +30,7 @@ from check_page_layout import (  # noqa: E402
     Line,
     ToolFailure,
     count_orphan_lines,
+    code_split_problem,
     find_collapsed_columns,
     find_image_problems,
     find_ink_overflow,
@@ -375,18 +376,49 @@ def _rule_page(at_bottom: bool) -> tuple[int, int, bytes]:
     return width, height, bytes(buf)
 
 
-# (説明, 上端に濃い帯, 下端に濃い帯, 期待する (starts, ends))
+# (説明, 上端に濃い帯, 下端に濃い帯, 期待する (上端の帯の厚み, 下端の帯の厚み))
+# _page が描く帯の厚みに合わせる。上端は thick 行、下端は thick+1 行。
+_BAND_THICK = int(3.0 * 72 / 25.4) + 2
 CODE_BAND_CASES = [
-    ("上下とも白なら接していない", False, False, (False, False)),
-    ("下端に濃い帯があれば ends", False, True, (False, True)),
-    ("上端に濃い帯があれば starts", True, False, (True, False)),
-    ("上下とも濃ければ両方", True, True, (True, True)),
+    ("上下とも白なら接していない", False, False, (0, 0)),
+    ("下端に濃い帯があれば ends", False, True, (0, _BAND_THICK + 1)),
+    ("上端に濃い帯があれば starts", True, False, (_BAND_THICK, 0)),
+    ("上下とも濃ければ両方", True, True, (_BAND_THICK, _BAND_THICK + 1)),
 ]
 
 # 実測の誤報。day28 p55 の表の下罫（1本の線）がコードの地色として拾われていた。
 RULE_CASES = [
-    ("表の罫線1本は地色ではない（下）", True, (False, False)),
-    ("表の罫線1本は地色ではない（上）", False, (False, False)),
+    ("表の罫線1本は地色ではない（下）", True, (0, 0)),
+    ("表の罫線1本は地色ではない（上）", False, (0, 0)),
+]
+
+
+def _fragment_px(lines: int) -> int:
+    """境で切れたコードの断片の帯の厚み（画素）。
+
+    帯は「行数 × 行送り + 断片の外側のパディング」になる。
+    行送りはコード1行 8.3mm、パディングは pre の 1em ≒ 4.05mm
+    （check_page_layout の CODE_LINE_PITCH_MM / PRE_FRAGMENT_PAD_MM）。
+    """
+    return px(lines * 8.3 + 4.05)
+
+
+# ページ境で拾えたコードの断片の裁き（前ページ下端, 次ページ上端の厚み）
+# keep-together が効くはずの塊（18行未満）が切れていたら、両断片が十分に
+# あっても咎める。分割を許すのは pdf-breakable の塊だけ。
+CODE_SPLIT_CASES: list[tuple[str, int, int, bool]] = [
+    ("4行+4行に割れた8行の塊は、keep-together の効くはずの塊なので問題",
+     _fragment_px(4), _fragment_px(4), True),
+    ("8行+9行に割れた17行の塊も同じ",
+     _fragment_px(8), _fragment_px(9), True),
+    ("9行+10行に割れた19行の塊は pdf-breakable の分割なので問題にしない",
+     _fragment_px(9), _fragment_px(10), False),
+    ("18行の塊が境で割れるのも pdf-breakable の分割なので問題にしない",
+     _fragment_px(4), _fragment_px(14), False),
+    ("断片が3行しかない端切れは、合計が足りていても問題",
+     _fragment_px(3), _fragment_px(20), True),
+    ("2行の端切れも同じ",
+     _fragment_px(20), _fragment_px(2), True),
 ]
 
 
@@ -402,6 +434,14 @@ def main() -> int:
         got = code_band_at_edges(*_rule_page(at_bottom))
         if got != expected:
             failures.append(f"コードの帯／{label}: 期待 {expected} 実際 {got}")
+
+    for label, tail, head, expected in CODE_SPLIT_CASES:
+        flagged = bool(code_split_problem(tail, head))
+        if flagged != expected:
+            failures.append(
+                f"ページ境のコード分割／{label}: "
+                f"期待 {'指摘あり' if expected else '問題なし'} 実際 {flagged}"
+            )
 
     for label, rows, expected in INK_CASES:
         got = find_ink_overflow(ink(rows))

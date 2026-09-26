@@ -49,6 +49,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
+from breakable_code import mark_breakable_pres  # noqa: E402
 from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
 from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
 from table_latin import keep_block_tails, protect_prose_latin, protect_table_latin
@@ -1205,6 +1206,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         unsafe = unsafe_runs(markup)
         if unsafe:
             raise ValueError(f"コード行に折返し候補を作れません: {unsafe[0][:80]}")
+        # 折返しが確定してから高さを数える。大きい塊だけ分割を許す
+        markup = mark_breakable_pres(markup)
         markup = number_external_link_footnotes(markup)
         validate_annotated_html(markup, manifest)
         html_doc.write_text(markup, encoding="utf-8")
