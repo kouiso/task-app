@@ -511,7 +511,7 @@ import { TASK_STATUS }
 |------|-----|------|
 | `id` | `string` | プロジェクトID |
 | `name` | `string` | プロジェクト名 |
-| `description` | `string \| null` | 説明文（任意） |
+| `description` | <code>string &#124; null</code> | 説明文（任意） |
 | `color` | `string` | カラーコード（例: `#1976d2`） |
 | `memberCount` | `number` | メンバー数 |
 | `taskStats` | `{total, done}` | タスク進捗 |

@@ -65,31 +65,31 @@ flowchart TD
 
 ### 新しく学ぶ概念
 
-| 概念 | 読み方 | 役割 | 例え |
-|------|--------|------|------|
-| 動的ルーティング `[id]` | どうてきルーティング | URLのID部分を変数として受け取る | 「社員番号001の名簿ページ」→ URLの001が変数 |
-| `notFound()` | ノットファウンド | そのIDが存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
-| server wrapper | — | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
-| `await params` | アウェイト パラムズ | URLのパラメータ（変数）を server 側で受け取る | 受付で渡された整理番号を開いて読む |
-| `useEffect` | ユーズエフェクト | コンポーネント外部の変化に反応して副作用を実行するフック | 荷物が届いたら自動で棚に並べる係 |
-| useForm + zod（復習） | — | フォーム管理＋バリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
-| 権限チェック | けんげんチェック | ユーザーの役割によって表示を変える | 社員証の種類によって入れる部屋を変える |
+| 概念・読み方 | 役割 | 例え |
+|-------------|------|------|
+| 動的ルーティング `[id]`<br>**読み方**:<br>どうてきルーティング | URLのID部分を変数として受け取る | 「社員番号001の名簿ページ」→ URLの001が変数 |
+| `notFound()`<br>**読み方**:<br>ノットファウンド | そのIDが存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
+| server wrapper<br>**読み方**:<br>— | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
+| `await params`<br>**読み方**:<br>アウェイト パラムズ | URLのパラメータ（変数）を server 側で受け取る | 受付で渡された整理番号を開いて読む |
+| `useEffect`<br>**読み方**:<br>ユーズエフェクト | コンポーネント外部の変化に反応して副作用を実行するフック | 荷物が届いたら自動で棚に並べる係 |
+| useForm + zod（復習）<br>**読み方**:<br>— | フォーム管理＋バリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
+| 権限チェック<br>**読み方**:<br>けんげんチェック | ユーザーの役割によって表示を変える | 社員証の種類によって入れる部屋を変える |
 
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
-|---------|---------|---------|-------------|---------|
-| Step 0 | user.ts に getById / update を追記する | 16分 | `src/server/api/routers/user.ts` | 詳細取得と更新APIが生える |
-| Step 1 | 動的ルーティングの仕組みを理解する | 5分 | 概念説明のみ | 仕組みが頭に入る |
-| Step 2 | ユーザー詳細ページのファイルを作成 | 5分 | `src/app/user/[id]/page.tsx` | server wrapper のファイルが存在する |
-| Step 3 | URLからユーザーIDを取得してデータを取得 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | ユーザー名が表示される |
-| Step 4 | グリッドレイアウトで詳細情報を表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | 2カラムレイアウトで表示 |
-| Step 5 | プロジェクト一覧とタスクテーブルを表示 | 7分 | `src/app/user/[id]/user-detail-client.tsx` | バッジとテーブルが表示される |
-| Step 6 | 権限チェックで編集ボタンを出し分ける | 5分 | `src/app/user/[id]/user-detail-client.tsx` | 管理者・本人のみ編集ボタンが見える |
-| Step 7 | 編集ページのファイルを作成 | 5分 | `src/app/user/[id]/edit/page.tsx` と `edit/user-edit-client.tsx` | 2ファイルが存在する |
-| Step 8 | zodスキーマとuseFormでデータを同期する | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | フォームにデータが入る |
-| Step 9 | ロール選択・アクティブ状態の切り替え | 7分 | `src/app/user/[id]/edit/user-edit-client.tsx` | ドロップダウンとチェックボックスが動く |
-| Step 10 | 保存機能を実装して完成 | 5分 | `src/app/user/[id]/edit/user-edit-client.tsx` | 保存ボタンでDBが更新される |
+| ステップ | 作業内容・触るファイル・成功状態 | 所要時間 |
+|---------|-------------------------------------|---------|
+| Step 0 | **作業内容**: user.ts に getById / update を追記する<br>**触るファイル**: `src/server/api/routers/user.ts`<br>**成功状態**: ユーザーを取得・更新できる | 16分 |
+| Step 1 | **作業内容**: 動的ルーティングの仕組みを理解する<br>**触るファイル**: 概念説明のみ<br>**成功状態**: URLのIDと表示するユーザーの対応を説明できる | 5分 |
+| Step 2 | **作業内容**: ユーザー詳細ページのファイルを作成<br>**触るファイル**: `src/app/user/[id]/page.tsx`<br>**成功状態**: server wrapper のファイルが存在する | 5分 |
+| Step 3 | **作業内容**: URLからユーザーIDを取得してデータを取得<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: ユーザー名が表示される | 7分 |
+| Step 4 | **作業内容**: グリッドレイアウトで詳細情報を表示<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: 2カラムレイアウトで表示 | 7分 |
+| Step 5 | **作業内容**: プロジェクト一覧とタスクテーブルを表示<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: バッジとテーブルが表示される | 7分 |
+| Step 6 | **作業内容**: 権限チェックで編集ボタンを出し分ける<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: 管理者・本人のみ編集ボタンが見える | 5分 |
+| Step 7 | **作業内容**: 編集ページのファイルを作成<br>**触るファイル**: `src/app/user/[id]/edit/page.tsx` と `edit/user-edit-client.tsx`<br>**成功状態**: 2ファイルが存在する | 5分 |
+| Step 8 | **作業内容**: zodスキーマとuseFormでデータを同期する<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: フォームにデータが入る | 7分 |
+| Step 9 | **作業内容**: ロール選択・アクティブ状態の切り替え<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: ドロップダウンとチェックボックスが動く | 7分 |
+| Step 10 | **作業内容**: 保存機能を実装して完成<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: 保存ボタンでDBが更新される | 5分 |
 
 表の Step 3 以降が `page.tsx` ではなく `user-detail-client.tsx` を指しているのは
 `page.tsx` を server wrapper（サーバー側で動く入口）にしてあるためです。

@@ -835,8 +835,7 @@ const handleDelete = (_taskId: string) => {};
 
 > `const` は同一スコープで再宣言できません。Step 9・10 では上の2つの仮関数を**削除してから**本実装を書いてください。
 
-**確認ポイント**:
-- `npm run dev` でTypeScript エラーが出ていない
+**確認ポイント**: `npm run dev` でTypeScript エラーが出ていないことを確認します。
 
 Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つのグループを順番に追加します。
 
