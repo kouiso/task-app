@@ -2628,3 +2628,21 @@ Day 27 全 Step 完了後の状態は完成版の `src/app/project/page.tsx` と
 - 目次: [カリキュラム目次](./00_カリキュラム目次.md)
 - 詰まったとき: [トラブルシューティング](./appendix_トラブルシューティング.md)
 - 言葉の意味: [用語集](./appendix_用語集.md)
+
+<!-- textlint-disable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
+
+---
+
+## 奥付
+
+| | |
+|---|---|
+| タイトル | Day 27: プロジェクト詳細・アーカイブを実装しよう |
+| 著者 | 磯貝光佑 |
+| 版 | 第1版（2026年9月19日） |
+
+© 2026 磯貝光佑
+
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+
+<!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
