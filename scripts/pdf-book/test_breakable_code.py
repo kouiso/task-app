@@ -27,6 +27,14 @@ class BreakableCodeTest(unittest.TestCase):
         source = f'<pre class="language-ts"><code>{body}\n</code></pre>'
         self.assertEqual(mark_breakable_pres(source), source)
 
+    def test_trailing_newline_wrapped_in_span_is_not_a_rendered_line(self):
+        # 実際の生成物では末尾の改行が <span class="token plain-text">\n</span>
+        # のように包まれて出る。包みのタグは行を作らないので外して数える
+        body = "\n".join(f"line{i}" for i in range(BREAKABLE_MIN_LINES - 1))
+        tail = '<span class="token plain-text">\n</span>'
+        source = f'<pre class="language-ts"><code>{body}{tail}</code></pre>'
+        self.assertEqual(mark_breakable_pres(source), source)
+
     def test_block_without_class_attribute_gets_one(self):
         source = pre([f"line{i}" for i in range(BREAKABLE_MIN_LINES + 5)], attrs="")
         self.assertIn('<pre class="pdf-breakable">', mark_breakable_pres(source))

@@ -34,13 +34,22 @@ CLASS_RE = re.compile(r'class="([^"]*)"')
 CLOSE_TAIL_RE = re.compile(r"</code\s*>\s*</pre\s*>$|</pre\s*>$", re.IGNORECASE)
 
 
+TAG_RE = re.compile(r"<[^>]+>")
+
+
 def rendered_line_count(inner: str) -> int:
     """pre の中身の表示行数（原文の改行 + 強制改行 + 1）を返す。
 
-    生成 HTML はコードの末尾を改行で閉じる（`...\n</code></pre>`）。
-    その末尾の改行は新しい行を作らないので、数える前に1個だけ落とす。
+    生成 HTML はコードの末尾を改行で閉じる。その改行は新しい行を
+    作らないので数える前に1個だけ落とす。`<span>\n</span>` のように
+    タグで包まれた格好で出てくることがあるので、行を作らないタグは
+    全部外してから判定する（`<br>` は行を足すので残す）。
     """
     body = CLOSE_TAIL_RE.sub("", inner)
+    body = TAG_RE.sub(
+        lambda m: m.group(0) if m.group(0).lower().startswith("<br") else "",
+        body,
+    )
     if body.endswith("\n"):
         body = body[:-1]
     return body.count("\n") + len(BR_RE.findall(body)) + 1
