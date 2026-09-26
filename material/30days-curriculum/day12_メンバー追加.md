@@ -612,7 +612,7 @@ const {
 
 | props | 型 | 役割 |
 |-------|-----|------|
-| `projectDetail` | `ProjectDetail \| null \| undefined` | 表示するプロジェクトデータ |
+| `projectDetail` | <code>ProjectDetail \| null \| undefined</code> | 表示するプロジェクトデータ |
 | `onBack` | `() => void` | 一覧画面に戻る |
 | `onAddMemberClick` | `() => void` | メンバー追加ダイアログを開く |
 | `onRemoveMember` | `(userId: string) => void` | メンバー削除処理を実行 |

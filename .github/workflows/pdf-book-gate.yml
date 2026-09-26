@@ -57,6 +57,9 @@ env:
   # find_browser() が既定で見る PLAYWRIGHT_BROWSERS_PATH をここへ寄せる。
   # 揃えておかんと Chromium が見つからず、mermaid 1図ごとに約650MBの Chrome を取りに行く。
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
+  # Makefile の既定と同じ配布先マップ。subset 経路は build_pdf_book.py を直接叩くため、
+  # ここで渡さんと冊またぎのリンク（前の日/次の日）が「配布先が未登録」で組版前に落ちる
+  PDF_BOOK_LINK_MAP: ${{ github.workspace }}/scripts/pdf-book/pdf-link-map.json
 
 jobs:
   pdf-check-selftest:
@@ -285,6 +288,11 @@ jobs:
         if: steps.select.outputs.scope != 'none'
         env:
           SCOPE: ${{ steps.select.outputs.scope }}
+          # subset では make を通らず build_pdf_book.py を直接叩くので、
+          # Makefile の export が効かずリンクマップが空になる。
+          # すると冊またぎリンクが全部「配布先が未登録」で落ちる。
+          # Makefile の既定と同じ値をここでも明示する
+          PDF_BOOK_LINK_MAP: scripts/pdf-book/pdf-link-map.json
         run: |
           targets=()
           if [ "$SCOPE" != "all" ]; then
