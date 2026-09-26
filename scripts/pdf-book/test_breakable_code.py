@@ -20,6 +20,13 @@ class BreakableCodeTest(unittest.TestCase):
         source = pre([f"line{i}" for i in range(BREAKABLE_MIN_LINES - 1)])
         self.assertEqual(mark_breakable_pres(source), source)
 
+    def test_trailing_newline_is_not_a_rendered_line(self):
+        # 生成 HTML はコードの末尾を改行で閉じる（`...\n</code></pre>`）。
+        # その改行は行を増やさないので、しきい値ちょうどの判定に入れない
+        body = "\n".join(f"line{i}" for i in range(BREAKABLE_MIN_LINES - 1))
+        source = f'<pre class="language-ts"><code>{body}\n</code></pre>'
+        self.assertEqual(mark_breakable_pres(source), source)
+
     def test_block_without_class_attribute_gets_one(self):
         source = pre([f"line{i}" for i in range(BREAKABLE_MIN_LINES + 5)], attrs="")
         self.assertIn('<pre class="pdf-breakable">', mark_breakable_pres(source))

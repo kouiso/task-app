@@ -2,8 +2,9 @@
 
 issue #407。book.css の `pre { break-inside: avoid }` は写経向けに
 コードブロックを丸ごと次ページへ送る。送られる塊が版面の大半を
-占めると、手前のページは説明文だけの薄いページになる（36冊で
-34ページ、空白換算38ページ分が実測された）。
+占めると、手前のページは説明文だけの薄いページになる（36冊・
+3410ページのうち本文35%未満の薄いページが695ページ、
+空白ページ換算537ページ分が実測された）。
 
 分割できるのは表示行数がしきい値以上の塊だけにする。行数は
 code_wrap が <br class="cw-force"> で入れた強制改行と原文の
@@ -29,11 +30,20 @@ BREAKABLE_CLASS = "pdf-breakable"
 
 BR_RE = re.compile(r"<br\b", re.IGNORECASE)
 CLASS_RE = re.compile(r'class="([^"]*)"')
+# inner は `</code></pre>` まで含む。数えるのはコード本文だけにする
+CLOSE_TAIL_RE = re.compile(r"</code\s*>\s*</pre\s*>$|</pre\s*>$", re.IGNORECASE)
 
 
 def rendered_line_count(inner: str) -> int:
-    """pre の中身の表示行数（原文の改行 + 強制改行 + 1）を返す。"""
-    return inner.count("\n") + len(BR_RE.findall(inner)) + 1
+    """pre の中身の表示行数（原文の改行 + 強制改行 + 1）を返す。
+
+    生成 HTML はコードの末尾を改行で閉じる（`...\n</code></pre>`）。
+    その末尾の改行は新しい行を作らないので、数える前に1個だけ落とす。
+    """
+    body = CLOSE_TAIL_RE.sub("", inner)
+    if body.endswith("\n"):
+        body = body[:-1]
+    return body.count("\n") + len(BR_RE.findall(body)) + 1
 
 
 def mark_breakable_pres(html_text: str) -> str:
