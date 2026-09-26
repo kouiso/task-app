@@ -285,6 +285,11 @@ jobs:
         if: steps.select.outputs.scope != 'none'
         env:
           SCOPE: ${{ steps.select.outputs.scope }}
+          # subset では make を通らず build_pdf_book.py を直接叩くので、
+          # Makefile の export が効かずリンクマップが空になる。
+          # すると冊またぎリンクが全部「配布先が未登録」で落ちる。
+          # Makefile の既定と同じ値をここでも明示する
+          PDF_BOOK_LINK_MAP: scripts/pdf-book/pdf-link-map.json
         run: |
           targets=()
           if [ "$SCOPE" != "all" ]; then
