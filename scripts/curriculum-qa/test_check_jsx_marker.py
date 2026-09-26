@@ -186,6 +186,134 @@ OK_CALL_SHAPED_LINE = """```tsx
 ```
 """
 
+# 同じファイルの直前ブロックで三項演算子の else 側を開いている。
+# 次の `<Select>` は JSX の子ではなく、まだ閉じていない JavaScript 式の続きなので、
+# `//` が正しい。JSX コメントへ変えると `{式` の直下にコメント要素が来て構文エラーになる。
+OK_SAME_FILE_TERNARY_CONTINUATION = """```tsx
+{/* filepath: src/component/member-row.tsx */}
+{readonly ? (
+  <Badge>閲覧のみ</Badge>
+) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+// 完成版: 役割の変更
+<Select value={role} />
+```
+"""
+
+# 見た目が同じ `) : (` でも書き込み先が違えば、式の文脈は引き継がない。
+BAD_DIFFERENT_FILE_TERNARY = """```tsx
+{/* filepath: src/component/member-row.tsx */}
+{readonly ? (
+  <Badge>閲覧のみ</Badge>
+) : (
+```
+
+```tsx
+// filepath: src/component/role-select.tsx
+// 完成版: 役割の変更
+<Select value={role} />
+```
+"""
+
+# JSX を書けないフェンスは、同じ filepath と `) : (` を含んでも文脈の証拠にしない。
+BAD_NON_JSX_TERNARY = """```text
+// filepath: src/component/member-row.tsx
+{readonly ? (
+) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Select value={role} />
+```
+"""
+
+# 三項演算子を閉じたブロックからは JavaScript 式の文脈を引き継がない。
+BAD_CLOSED_TERNARY = """```tsx
+{/* filepath: src/component/member-row.tsx */}
+{readonly ? (
+  <Badge>閲覧のみ</Badge>
+) : (
+  <Select value={role} />
+)}
+<p>
+  ) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Select value={role} />
+```
+"""
+
+# JSX の画面文字に同じ記号列があっても、三項演算子を開いた証拠にはならない。
+BAD_TERNARY_TEXT = """```tsx
+{/* filepath: src/component/member-row.tsx */}
+<p>
+  ) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Select value={role} />
+```
+"""
+
+# JavaScript コメント中の `// {条件 ? (` は式を開始しない。その後の JSX 内に
+# `) : (` が文字としてあっても、2ブロックの生結合は正しいTSXになる。
+BAD_COMMENT_FAKE_TERNARY = """```tsx
+// filepath: src/component/member-row.tsx
+// {readonly ? (
+const view = (
+  <p>
+    ) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Span />
+</p>
+);
+```
+"""
+
+BAD_STRING_FAKE_TERNARY = """```tsx
+// filepath: src/component/member-row.tsx
+const note = "{readonly ? (";
+const view = (
+  <p>
+    ) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Span />
+</p>
+);
+```
+"""
+
+BAD_MULTILINE_COMMENT_FAKE_TERNARY = """```tsx
+// filepath: src/component/member-row.tsx
+/*
+{readonly ? (
+*/
+const view = (
+  <p>
+    ) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Span />
+</p>
+);
+```
+"""
+
 CASES = [
     ("イベントハンドラ内の関数呼び出し", OK_CALLBACK_TAIL, 0),
     ("関数呼び出しで始まる継続断片", OK_CALL_SHAPED_LINE, 0),
@@ -206,6 +334,14 @@ CASES = [
     ("断片の短縮形で閉じる", BAD_FRAGMENT_CLOSE, 1),
     ("同名の自己終了タグを含む", BAD_SELF_CLOSING_SAME_NAME, 1),
     ("チルダの囲い", BAD_TILDE_FENCE, 1),
+    ("同一fileの三項演算子else継続", OK_SAME_FILE_TERNARY_CONTINUATION, 0),
+    ("異なるfileの三項演算子", BAD_DIFFERENT_FILE_TERNARY, 2),
+    ("非JSXフェンスの三項演算子", BAD_NON_JSX_TERNARY, 1),
+    ("閉じた三項演算子", BAD_CLOSED_TERNARY, 1),
+    ("JSXテキスト中の三項演算子風文字列", BAD_TERNARY_TEXT, 1),
+    ("JSXテキスト中のコメント風opener", BAD_COMMENT_FAKE_TERNARY, 1),
+    ("文字列中の偽opener", BAD_STRING_FAKE_TERNARY, 1),
+    ("複数行コメント中の偽opener", BAD_MULTILINE_COMMENT_FAKE_TERNARY, 1),
 ]
 
 
