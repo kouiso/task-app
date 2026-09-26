@@ -105,7 +105,11 @@ EXPECTED_DIFFERENT: dict[str, str] = {
 # 処置は「教材を src/ に追従させる（PDF 再生成が要る）」か
 # 「src/ を教材に合わせる」か「意図的として EXPECTED_DIFFERENT へ昇格」かの
 # 3択で、解決したものから順にこの表を空にする。
-KNOWN_DRIFT: dict[str, str] = {}
+KNOWN_DRIFT: dict[str, str] = {
+    # issue #446 対応で src/ のみ送信世代の照合・成功トースト・送信中の
+    # ボタン無効化を持つ。教材側は未追従（PDF 再生成が要る）
+    "src/app/my-task/page.tsx": "src/ は issue #446 の送信中書き足し対策済み。教材の完成版は旧実装のまま",
+}
 
 
 class FileReport(NamedTuple):
