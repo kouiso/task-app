@@ -77,7 +77,7 @@ async function slackApi(cfg, method, params) {
   return resp.json();
 }
 
-// threadTs があればスレッド返信、なければ新規トップレベル投稿。
+// threadTs があればスレッド返信。なければ新規トップレベル投稿。
 // スレッド返信に失敗した場合は新規スレッドにフォールバックする。
 async function postToSlack(cfg, text, threadTs) {
   let data;
@@ -287,7 +287,7 @@ async function dispatch({ github, context, core }) {
   }
 
   const marker = await getMarkerEntry(github, repo, issue.number);
-  // triggered のみスキップ（queued は手動で即実行へ昇格可能、pending は手動再試行）
+  // triggered のみスキップ（queued は手動で即実行へ昇格可能。pending は手動再試行）
   if (marker && marker.status === 'triggered') {
     core.info('already triggered; skipping');
     core.setOutput('skipped', 'true');
@@ -317,8 +317,8 @@ async function dispatch({ github, context, core }) {
   core.setOutput('thread_ts', res.ts);
 }
 
-// 投稿後に Devin のスレッド返信を確認。失敗返信なら pending 化、
-// セッション URL があれば done 化してリンクを記録する。
+// 投稿後に Devin のスレッド返信を確認する。
+// 失敗返信なら pending 化。セッション URL があれば done 化してリンクを記録する。
 async function verify({ github, context, core }) {
   const cfg = env();
   const issue = context.payload.issue;
@@ -356,7 +356,7 @@ async function verify({ github, context, core }) {
 
 // ---- 定期実行側 ----
 
-// キュー済み issue の起動、triggered の遅延失敗検出、pending の再投稿を一括処理する。
+// キュー済み issue の起動と triggered の遅延失敗検出と pending の再投稿を一括処理する。
 async function sweep({ github, context, core }) {
   const cfg = env();
   const repo = context.repo;
@@ -389,7 +389,7 @@ async function sweep({ github, context, core }) {
     }
 
     if (labels.includes(cfg.triggerLabel) && marker && marker.status === 'triggered' && marker.ts) {
-      // 遅延する Devin 応答の回収: 失敗→pending、セッションURL→done
+      // 遅延する Devin 応答を回収する。失敗なら pending。セッションURLなら done。
       const r = await slackReplies(cfg, marker.ts);
       if (!r.ok) continue;
       const { sessionUrl, failureText } = inspectReplies(r.messages);
@@ -428,7 +428,7 @@ async function sweep({ github, context, core }) {
         await finalize(github, context, core, issue, { ts: marker && marker.ts, status: 'failed', tries }, cfg, '再試行回数の上限に達しました');
         continue;
       }
-      // 再投稿: 既存スレッド優先、失敗時は新スレッド
+      // 再投稿する。既存スレッド優先で失敗時は新スレッドへ。
       const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker && marker.ts);
       const next = { ts: (res.ok && res.ts) || (marker && marker.ts), status: 'pending', tries: tries + 1 };
       if (res.ok) next.permalink = res.permalink;
