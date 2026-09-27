@@ -741,7 +741,7 @@ Day 11 で作った mutation と handler があれば
 
 このボタンは `archive` と `unarchive` のどちらを呼ぶかを決めていません。親に渡しているのは `projectDetail.isArchived`、つまり今どちらの状態なのかという事実だけです。判断を親に預けておくとあとで「アーカイブ前に確認ダイアログを挟む」と決めても直すのは `page.tsx` の1か所で済みます。表示のほうは `isArchived` を見て文字とアイコンを入れ替えるのでアーカイブが成功して詳細のデータが取り直されるとラベルも自動で反対側へ変わります。押すたびに文字を書き換える処理を自分で持つ必要はありません。
 
-親の `page.tsx` では2つの mutation を持ちます。Day 12で追加した `getById.invalidate()` も残してください。これが詳細の古いアーカイブ状態を更新対象にします。
+親の `page.tsx` では2つの mutation を持ちます。Day 11 Step 7 で追加した `getById.invalidate()` も残してください。これが詳細の古いアーカイブ状態を更新対象にします。
 
 ```ts
 // filepath: src/app/project/page.tsx
