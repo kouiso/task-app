@@ -116,6 +116,7 @@ async function slackReplies(cfg, ts) {
   const url = `https://slack.com/api/conversations.replies?${new URLSearchParams({
     channel: cfg.slackChannel,
     ts,
+    limit: '200',
   })}`;
   const resp = await fetch(url, {
     headers: { Authorization: `Bearer ${cfg.slackToken}` },
