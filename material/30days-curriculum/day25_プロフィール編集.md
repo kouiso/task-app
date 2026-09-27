@@ -1476,7 +1476,7 @@ PORT=3001 npm run dev
 #### 編集ページのデータフロー
 
 ```mermaid
-flowchart LR
+flowchart TB
     A[getCurrentUser] --> B[useEffect]
     B --> C[form.reset で初期値セット]
     C --> D[フォーム入力 register]
