@@ -1,3 +1,4 @@
+/* global process, fetch, URLSearchParams, setTimeout, module */
 // Devin Slack 起動リレーの共通ロジック。
 // devin-slack-trigger.yml (issues:labeled) と devin-slack-retry.yml (schedule) の両方から呼ばれる。
 //
@@ -128,7 +129,7 @@ async function ensureLabel(github, repo, name, color, description) {
       color,
       description,
     });
-  } catch {
+  } catch (e) {
     if (e.status !== 422) throw e; // 既存なら 422
   }
 }
@@ -266,7 +267,7 @@ async function mirrorProjectField(github, context, core, issueNumber, status, cf
       `mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){ updateProjectV2ItemFieldValue(input:{ projectId:$p itemId:$i fieldId:$f value:{ singleSelectOptionId:$o } }){ projectV2Item { id } } }`,
       { p: project.id, i: item.id, f: field.id, o: opt.id },
     );
-  } catch {
+  } catch (e) {
     core.warning(`project field mirror failed: ${e.message}`);
   }
 }
