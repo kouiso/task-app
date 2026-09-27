@@ -738,7 +738,7 @@ import { ActiveStatusBadge, UserRoleBadge }
 import { formatDateOnly } from '@/lib/date';
 ```
 
-`Button` はこの Step でも使いますが、Step 3 で取り込み済みなので行を増やしません。同じ名前の `import` が2行あると `Duplicate identifier 'Button'` で型検査が止まります。
+`Button` はこの Step でも使います。Step 3 で取り込み済みなので行を増やしません。同じ名前の `import` が2行あると `Duplicate identifier 'Button'` で型検査が止まります。
 
 日付の道具が2種類あることに気付いたでしょうか。`format` は時刻まで持っている値を日本語の表記に直すもので登録日と最終更新日に使います。`formatDateOnly` は期限のように「日付だけ」の値に使います。期限は時刻を持たない約束で保存してあるため時刻として読み直すと表示が1日ずれます。混ぜて使わないよう、最初から両方を取り込んでおきます。`ActiveStatusBadge` と `UserRoleBadge` を自作せず取り込むのは一覧ページと同じ色と文言をそのまま使うためです。
 
@@ -768,7 +768,7 @@ import { formatDateOnly } from '@/lib/date';
         )}
 ```
 
-`{hasFetchError && (...)}` が Step 3 で予告した警告です。再取得だけが失敗して前回のデータが残っている場合は、Step 3 の早期リターンを通らずここへ来ます。内容を消さずに「前回取得時の内容です」と断り、`refetchRequiredData` で取り直す入口を添えます。`requiredFetching` の間はボタンを押せなくして二重の再取得を防ぎます。Step 3 で定義したこの2つの値の使い道はここです。
+`{hasFetchError && (...)}` が Step 3 で予告した警告です。再取得だけが失敗して前回のデータが残っている場合は Step 3 の早期リターンを通らずここへ来ます。内容は消さずに「前回取得時の内容です」と断ります。`refetchRequiredData` で取り直す入口も添えます。`requiredFetching` の間はボタンを押せなくして二重の再取得を防ぎます。Step 3 で定義したこの2つの値の使い道はここです。
 
 続けて戻るボタンと、左右のカラムを入れる枠を書きます。
 
@@ -1149,7 +1149,7 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 **確認ポイント**:
 - 管理者でログインするとどのユーザーページにも「編集」ボタンが表示される
 - 一般ユーザーで自分のページを見るとボタンが表示される
-- 一般ユーザーで他人のIDにアクセスすると「このユーザーを見る権限がありません」のカード（Step 2 の server wrapper）が出て、データが表示されない
+- 一般ユーザーで他人のIDにアクセスすると「このユーザーを見る権限がありません」のカード（Step 2 の server wrapper）が出てデータが表示されない
 
 ---
 
@@ -1880,7 +1880,7 @@ import { Alert, AlertDescription, AlertTitle }
     });
 ```
 
-先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具で、その中の `invalidate` が「覚えている結果を古いものとして捨てる」命令です。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
+先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具です。その中の `invalidate` が「覚えている結果を古いものとして捨てる」命令です。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
