@@ -1452,6 +1452,18 @@
       "full_page": true
     },
     {
+      "name": "day24/user-access-denied.png",
+      "day": 24,
+      "path": "/user",
+      "login": {
+        "email": "user1@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=アクセス権限がありません",
+      "note": "Step 9 のチェック14『一般ユーザーで /user を開くと「アクセス権限がありません」』。user1 は一般ユーザーなので画面側の isAdmin 判定がこの表示を出す。",
+      "full_page": true
+    },
+    {
       "name": "day25/profile.png",
       "day": 25,
       "path": "/profile",
@@ -1539,6 +1551,18 @@
       },
       "wait_for": "text=ページが見つかりません",
       "note": "冒頭のゴール。既存の error-page.png は同じ日に2回。Day 26 のツリーで `not-found.tsx` が返す画面を撮る。",
+      "full_page": true
+    },
+    {
+      "name": "day26/error-fallback.png",
+      "day": 26,
+      "path": "/dashboard",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "text=エラーが発生しました",
+      "note": "Step 2 の手順3『ダッシュボードへ一時的にエラーを追加する』の直後に見える error.tsx の画面。dashboard/page.tsx へ練習用の throw を入れた状態で撮る（撮るだけの注入なので教材へは残さない）。",
       "full_page": true
     },
     {
