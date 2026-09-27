@@ -108,7 +108,7 @@ src/
 |---------|---------|---------|
 | Step 0 | メンバー管理APIを `project.ts` に追加する | 20分 |
 | Step 1 | プロジェクト詳細ビューの接続を確認する | 6分 |
-| Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
+| Step 2 | ProjectDetailViewに渡す値を `page.tsx` に用意する | 7分 |
 | Step 3 | メンバー追加用のstateを準備する | 6分 |
 | Step 4 | メンバー追加ダイアログのUIを作る | 7分 |
 | Step 5 | メンバー追加APIを呼ぶ | 5分 |
@@ -116,7 +116,7 @@ src/
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
 
-**合計時間**: 約66分です。
+**合計時間**: 約69分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
@@ -604,13 +604,13 @@ const {
 
 ---
 
-### Step 2: ProjectDetailViewのpropsを作る（4分）
+### Step 2: ProjectDetailViewに渡す値を `page.tsx` に用意する（7分）
 
-**ゴール**: `ProjectDetailView` が受け取る props を確認し、それを渡すための import・関数・state を `page.tsx` に書き足します。
+**ゴール**: `ProjectDetailView` が受け取る props を確認して渡す値を `page.tsx` に用意します。書き足すのは import・ロール変更の mutation とハンドラー・権限の計算・state の4つです。既存のコードでは `updateMutation` の `onSuccess` と `<ProjectDetailView>` タグを書き換えます。
 
 `ProjectDetailView` は配布済みの部品なので、今日は中身を書きません。
 まず props の型を確認して親ページから渡す値の形をそろえます。
-型を先に決めておくとこのあとハンドラーを足すときにどの引数が来るのかを毎回さかのぼって確認せずに済みます。
+型を先に確かめておくとこのあとハンドラーを足すときにどの引数が来るのかを毎回さかのぼって確認せずに済みます。
 
 | props | 型 | 役割 |
 |-------|-----|------|
@@ -628,7 +628,7 @@ const {
 - `onRemoveMember` は `userId` を引数に取る
 - `canManageMembers` / `canArchive` はボタンの表示可否をコンポーネントに伝える
 
-Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**表の確認はここまでです。この下からは `page.tsx` へのコード追加が6か所続きます。**
+Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**表の確認はここまでです。この下からは `page.tsx` の6か所を編集します。4か所は書き足し、残りの2か所は既存コードの書き換えです。**
 
 **確認ポイント**:
 - `onRemoveMember={() => {}}` が Step 6 で `handleRemoveMember` に変わることを覚えておく
@@ -668,15 +668,9 @@ onSuccess: () => {
 プロジェクト名を変えたときに一覧だけでなく開いている詳細画面の表示も入れ替わります。
 この1行が無いと詳細画面には古い名前が残ったままになります。
 
-アーカイブの状態も詳細画面に保存されています。Day 11で書いた `archiveMutation` と `unarchiveMutation` の `onSuccess` にある `utils.project.getAll.invalidate();` の直後へ次の1行を追加してください。
+アーカイブ済みかどうかも詳細画面が持っている値です。そのため Day 11 Step 7 の `archiveMutation` と `unarchiveMutation` は `onSuccess` で `getAll` と `getById` の両方をすでに取り直しています。ここで書き換えるものはありません。
 
-```typescript
-utils.project.getById.invalidate();
-```
-
-この呼び出しで詳細のキャッシュ（取得済みデータ）を更新対象にします。追加しないと同じプロジェクトを開き直したときに古いアーカイブ状態が残ります。成功後は一覧へ戻るため、ここでは対象IDを絞らず詳細の取得結果すべてに古いという印を付けています。
-
-確認はStep 8のアーカイブ操作で行います。アーカイブ後に同じプロジェクトを開き直して解除できれば成功です。ボタンが切り替わらない場合は両方の `onSuccess` に追加したかを確認してください。
+確認はStep 8のアーカイブ操作で行います。アーカイブ後に同じプロジェクトを開き直して解除できれば成功です。ボタンが切り替わらない場合は Day 11 Step 7 の両方の `onSuccess` に `utils.project.getById.invalidate()` があるかを確認してください。
 
 続いてロール変更の mutation とハンドラーを `handleArchive` の並びに追加します。
 
