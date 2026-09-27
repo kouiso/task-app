@@ -91,8 +91,10 @@ const GONE_ERRORS = new Set([
 
 async function postToSlack(cfg, text, threadTs) {
   let data;
+  let usedThread = null;
   if (threadTs) {
     data = await slackApi(cfg, 'chat.postMessage', { text, thread_ts: threadTs });
+    if (data.ok) usedThread = threadTs;
     if (!data.ok && GONE_ERRORS.has(data.error))
       data = await slackApi(cfg, 'chat.postMessage', { text });
   } else {
@@ -100,7 +102,14 @@ async function postToSlack(cfg, text, threadTs) {
   }
   if (!data.ok) return { ok: false, error: data.error || 'unknown' };
   const pl = await slackApi(cfg, 'chat.getPermalink', { message_ts: data.ts });
-  return { ok: true, ts: data.ts, permalink: pl.ok ? pl.permalink : '' };
+  // threadTs は「スレッドの親 ts」を返す。返信投稿時は res.ts が返信自身の ts になる。
+  // マーカーには返信元のスレッド親 ts を残す（conversations.replies は親 ts で引く）。
+  return {
+    ok: true,
+    ts: data.ts,
+    threadTs: usedThread || data.ts,
+    permalink: pl.ok ? pl.permalink : '',
+  };
 }
 
 async function slackReplies(cfg, ts) {
@@ -365,10 +374,10 @@ async function dispatch({ github, context, core }) {
     context,
     core,
     issue,
-    { ts: res.ts, permalink: res.permalink, status: 'triggered', tries: 0 },
+    { ts: res.threadTs, permalink: res.permalink, status: 'triggered', tries: 0 },
     cfg,
   );
-  core.setOutput('thread_ts', res.ts);
+  core.setOutput('thread_ts', res.threadTs);
 }
 
 // 投稿後に Devin のスレッド返信を確認する。
@@ -444,7 +453,7 @@ async function sweep({ github, context, core }) {
       !labels.includes(cfg.triggerLabel)
     )
       continue;
-    const marker = await getMarkerEntry(github, repo, issue.number);
+    let marker = await getMarkerEntry(github, repo, issue.number);
 
     if (labels.includes(cfg.queueLabel)) {
       // 起動済み(triggered)ならキューはスルー
@@ -457,7 +466,7 @@ async function sweep({ github, context, core }) {
           context,
           core,
           issue,
-          { ts: res.ts, permalink: res.permalink, status: 'triggered', tries: 0 },
+          { ts: res.threadTs, permalink: res.permalink, status: 'triggered', tries: 0 },
           cfg,
         );
         try {
@@ -487,7 +496,30 @@ async function sweep({ github, context, core }) {
       // 遅延する Devin 応答を回収する。URLなら done。失敗なら pending。
       // どちらも無い無応答が続く場合は tries を進めて上限で pending へ降格し再投稿に委ねる。
       const r = await slackReplies(cfg, marker.ts);
-      if (!r.ok) continue;
+      if (!r.ok) {
+        // スレッドが消えているなら pending へ降格して次回新スレッドで再投稿させる
+        if (GONE_ERRORS.has(r.error)) {
+          await finalize(
+            github,
+            context,
+            core,
+            issue,
+            { ts: null, status: 'pending', tries: marker.tries },
+            cfg,
+            `Slack スレッド消失 (${r.error})`,
+          );
+          try {
+            await github.rest.issues.removeLabel({
+              ...repo,
+              issue_number: issue.number,
+              name: cfg.triggerLabel,
+            });
+          } catch {
+            /* ignore */
+          }
+        }
+        continue;
+      }
       const { sessionUrl, failureText } = inspectReplies(r.messages);
       if (sessionUrl) {
         await finalize(
@@ -570,6 +602,9 @@ async function sweep({ github, context, core }) {
             );
             continue;
           }
+        } else if (GONE_ERRORS.has(r.error)) {
+          // 元スレッドが消えた。ts を空にして新スレッド再投稿へ
+          marker = { ...marker, ts: null };
         }
       }
       if (tries >= MAX_TRIES) {
@@ -587,7 +622,7 @@ async function sweep({ github, context, core }) {
       // 再投稿する。既存スレッド優先で失敗時は新スレッドへ。
       const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
       const next = {
-        ts: (res.ok ? res.ts : undefined) || marker?.ts,
+        ts: (res.ok ? res.threadTs : undefined) || marker?.ts,
         status: 'pending',
         tries: tries + 1,
       };
