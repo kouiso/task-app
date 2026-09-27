@@ -783,7 +783,7 @@ JSX 側の `checked` に渡す値を差し替えます。
 ```typescript
 {/* filepath: src/app/task/page.tsx（<h1 className="text-3xl font-bold から「新規タスク」の </Button> までを書き直す） */}
 {/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}
-<div className="flex items-center justify-between">
+<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
   <div className="flex items-center gap-3">
     <h1 className="text-3xl font-bold tracking-tight">
       タスク
@@ -794,7 +794,7 @@ JSX 側の `checked` に渡す値を差し替えます。
       </span>
     )}
   </div>
-  <div className="flex items-center gap-2">
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
     {selectedTaskList.length > 0 && (
       <>
         {/* ここにStep 6〜8でボタンを追加していく */}
@@ -806,6 +806,12 @@ JSX 側の `checked` に渡す値を差し替えます。
   </div>
 </div>
 ```
+
+**`flex-col` から始める理由**
+
+外側の `<div>` は `flex-col` で見出しとボタンの列を縦に積みます。横幅が 1024px 以上の画面では `lg:flex-row` が効いて横並びになります。ボタンが見出しの右側へ並ぶのはこのときです。ボタンの列にも `flex-col` と `sm:flex-row` を付けてあるので 640px 未満の画面ではボタン同士も縦に積まれます。Day 27 のプロジェクト一覧の見出し行と同じ考え方です。
+
+`Button` には `whitespace-nowrap` が入っているのでボタンの文字は折り返しません。1件以上選ぶとボタンは最大で4つに増えます。横1列のままでは4つの合計の幅がスマートフォンの画面に収まりません。はみ出した「新規タスク」ボタンは横へスクロールしないと押せなくなります。横1列の中では Day 14 で付けた `w-full` が効かないため「新規タスク」は文字の幅に縮んだままです。縦に積めば4つのボタンがどれもページの横幅いっぱいに広がります。
 
 **なぜ固定バーではなくヘッダーに配置するのか**
 
@@ -826,6 +832,7 @@ React で「条件が真のときだけ描画する」
 
 **確認ポイント**:
 - タスクを 1 件も選択していないとき「新規タスク」ボタンだけが表示される
+- ブラウザの横幅を 640px より狭めると「新規タスク」ボタンが見出しの下で横幅いっぱいに広がる
 - タスクを 1 件以上選択すると「(N 件選択中)」の文字が現れる
 - 一括操作ボタンが追加される領域（`<>...</>` の中）が確保されている
 - `npm run dev` でエラーが出ない
@@ -1643,7 +1650,7 @@ const handleBulkUpdateStatus = (
 ```typescript
 {/* filepath: src/app/task/page.tsx */}
 {/* 完成版: ページ見出しと選択件数の表示 */}
-<div className="flex items-center justify-between">
+<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
   <div className="flex items-center gap-3">
     <h1 className="text-3xl font-bold tracking-tight">
       タスク
@@ -1654,7 +1661,7 @@ const handleBulkUpdateStatus = (
       </span>
     )}
   </div>
-  <div className="flex items-center gap-2">
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
     {selectedTaskList.length > 0 && (
       <>
 ```
