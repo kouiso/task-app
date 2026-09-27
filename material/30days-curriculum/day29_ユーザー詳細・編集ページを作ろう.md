@@ -930,14 +930,19 @@ import { formatDateOnly } from '@/lib/date';
 
 **ゴール**: 参加プロジェクトをバッジで、担当タスクをテーブルで表示します。
 
-必要なコンポーネントをインポートします。ファイル先頭のインポート部分に追加してください。
+必要なコンポーネントをインポートします。最初に Step 4 で書いた `card` の行を次の1行に置き換えてください。`CardHeader` と `CardTitle` を足すだけなので行は増やしません。
+
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+```
+
+置き換えずに新しい行として足すと `Card` と `CardContent` の取り込みが2回になります。`Duplicate identifier 'Card'` で型検査が止まります。次のブロックはどれもこのファイルで初めて使う部品です。ファイル先頭のインポート部分に追加してください。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
 import { StatusBadge } from '@/component/task/status-badge';
 import { Badge } from '@/component/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
-// Step 4 の card の行に CardHeader, CardTitle を足す
 import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow,
@@ -945,8 +950,6 @@ import {
 import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 ```
-
-`card` の行は Step 4 で書いた行に `CardHeader` と `CardTitle` を足して1行にします。行を増やすと `Card` の取り込みが2回になります。
 
 ステータス表示は `StatusBadge` に任せます。このコンポーネントが status に応じたラベルと色を内部で決めるため、この画面でバッジの見た目を組み立てる必要はありません。優先度は `getPriorityBadgeVariant` で色の種類だけを選び、ラベルは `TASK_PRIORITY_LABELS` から引きます。
 
@@ -1108,15 +1111,14 @@ Tailwind CSS では動的な色をクラスで指定できないため`style={{ 
 
 **ゴール**: 管理者または本人のみに編集ボタンを表示します。
 
-まずインポートを追加します。
+まずインポートを直します。Step 4 で書いた `lucide-react` の行を次の1行に置き換えてください。`Pencil` を足すだけなので行は増やしません。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
 import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
-// Pencil を追加（ArrowLeft, Calendar, Mail は Step 4 で追加済み）
 ```
 
-アイコンはすべて `lucide-react` から取り込むので行を増やさず Step 4 で書いた行へ `Pencil` を足します。まとめて1行にしておくとこのファイルが使うアイコンを1か所で見渡せます。ボタンを置く場所は左カラムの下端です。プロフィールを読んでから操作へ進む順番になります。
+置き換えずに新しい行として足すと `ArrowLeft` などの取り込みが2回になります。`Duplicate identifier 'ArrowLeft'` で型検査が止まります。アイコンはすべて `lucide-react` から取り込むので1行にまとめておくとこのファイルが使うアイコンを1か所で見渡せます。ボタンを置く場所は左カラムの下端です。プロフィールを読んでから操作へ進む順番になります。
 
 ```tsx
                 {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
