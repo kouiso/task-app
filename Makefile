@@ -60,6 +60,7 @@ book-pdf-test:
 	@python3 scripts/pdf-book/test_table_build.py
 	@python3 scripts/pdf-book/test_verify_pdf_copy.py
 	@python3 scripts/pdf-book/test_mermaid_caption.py
+	@python3 scripts/pdf-book/test_cjk_soft_breaks.py
 
 # 出力が商品として出せる状態かを見る
 # 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）→ コードの写経安全性（長行の折り返しで文字が失われないか）
