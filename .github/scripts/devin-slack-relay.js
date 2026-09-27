@@ -287,8 +287,9 @@ async function dispatch({ github, context, core }) {
   }
 
   const marker = await getMarkerEntry(github, repo, issue.number);
-  if (marker && (marker.status === 'triggered' || marker.status === 'queued')) {
-    core.info('already triggered or queued; skipping');
+  // triggered のみスキップ（queued は手動で即実行へ昇格可能、pending は手動再試行）
+  if (marker && marker.status === 'triggered') {
+    core.info('already triggered; skipping');
     core.setOutput('skipped', 'true');
     return;
   }
