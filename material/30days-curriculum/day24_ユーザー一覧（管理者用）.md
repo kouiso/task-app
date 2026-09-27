@@ -569,27 +569,7 @@ export default function UsersPage() {
 
 エラーメッセージには何が起きたかと誰なら使えるかの2つを書きます。「エラーが発生しました」とだけ出すと読者は自分の操作を疑って同じ手順を何度も繰り返します。管理者専用だと書いてあれば管理者に依頼するという次の行動がその場で分かります。閉じタグは開いた順の逆にたどり、`CardContent` から `Card`、`div`、`AppLayout` の順で閉じます。1つでも閉じ忘れると括弧の対応が関数の外までずれて書いた場所から離れた行に構文エラーが出ます。
 
-キャッシュが残っている500では早期リターンしません。代わりにページ本体の先頭へ警告を置きます。ページ本体の `return (` は次の Step 6 で書くので、このブロックはまだ貼りません。Step 6 で `container` の `<div>` を開いた直後、見出しの `<div>` の前に貼ります。
-
-```typescript
-{/* filepath: src/app/user/page.tsx（Step 6 の container の div 直後に貼る） */}
-{hasFetchError && (
-  <div role="alert" className="mb-4 flex items-center
-    justify-between gap-4 rounded-lg border
-    border-amber-300/60 bg-amber-50 px-4 py-3 text-sm
-    text-amber-900 dark:border-amber-500/40
-    dark:bg-amber-950/40 dark:text-amber-200">
-    <span>最新のユーザー一覧を取得できませんでした。前回取得時の内容です。</span>
-    <Button type="button" variant="outline" size="sm"
-      onClick={refetchRequiredData}
-      disabled={requiredFetching}>
-      再試行
-    </Button>
-  </div>
-)}
-```
-
-警告と一覧を同時に見せることで、通信に失敗した事実と手元に残っている内容を区別できます。`role="alert"` は支援技術にも警告として伝えるための属性です。
+キャッシュが残っている500では早期リターンしません。前回取得した一覧はそのまま表示します。ページ本体の先頭には警告を1つ足します。警告を置く場所はページ本体の `return (` の中です。そのため次の Step 6 で `return (` と一緒に書きます。
 
 #### 権限チェックの判定ロジック
 
@@ -625,6 +605,33 @@ export default function UsersPage() {
     <AppLayout>
       <div className="container mx-auto
         max-w-6xl py-8">
+        {hasFetchError && (
+          <div role="alert" className="mb-4 flex items-center
+            justify-between gap-4 rounded-lg border
+            border-amber-300/60 bg-amber-50 px-4 py-3 text-sm
+            text-amber-900 dark:border-amber-500/40
+            dark:bg-amber-950/40 dark:text-amber-200">
+            <span>最新のユーザー一覧を取得できませんでした。前回取得時の内容です。</span>
+            <Button type="button" variant="outline" size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}>
+              再試行
+            </Button>
+          </div>
+        )}
+```
+
+ここから下はログイン中の人が管理者だと確定したあとのコードです。上の2つの早期リターンを通り抜けた場合しか、この `return` には届きません。だから以降では `isAdmin` を確かめ直さずに書けます。早期リターンを先に並べておくと本体のコードから条件分岐が消えて読みやすくなります。
+
+`{hasFetchError && (...)}` は Step 5 で決めた「キャッシュが残っている500」のための警告です。表示に使うデータが無い500は Step 5 の早期リターンで先に返しています。そのためここで `hasFetchError` が `true` になるのは前回取得したデータが手元に残っている場合だけです。警告と一覧を同時に見せることで、通信に失敗した事実と手元に残っている内容を区別できます。`role="alert"` は支援技術（画面読み上げソフトなど）にも警告として伝えるための属性です。
+
+`max-w-6xl` は横幅の上限です。この表は6列あるのでDay 09 のカード一覧より広い枠を使います。上限を付けないとワイドモニターで名前と右端のボタンが離れすぎてどの行のボタンなのかを目で追えなくなります。
+
+**確認ポイント**:
+- `container` の `<div>` を開いた直後に `{hasFetchError && (` から `)}` までの警告を書けた
+
+```typescript
+        {/* filepath: src/app/user/page.tsx */}
         <div className="flex
           justify-between items-center
           mb-6">
@@ -635,11 +642,7 @@ export default function UsersPage() {
         </div>
 ```
 
-`container` の `<div>` を開いた直後に、Step 5 の最後で確かめた `{hasFetchError && (...)}` の警告ブロックを貼ります。見出しの `<div>` はその下に続きます。
-
-ここから下はログイン中の人が管理者だと確定したあとのコードです。上の2つの早期リターンを通り抜けた場合しか、この `return` には届きません。だから以降では `isAdmin` を確かめ直さずに書けます。早期リターンを先に並べておくと本体のコードから条件分岐が消えて読みやすくなります。
-
-`max-w-6xl` は横幅の上限です。この表は6列あるのでDay 09 のカード一覧より広い枠を使います。上限を付けないとワイドモニターで名前と右端のボタンが離れすぎてどの行のボタンなのかを目で追えなくなります。
+見出しは警告の下に置きます。警告が先にあると画面を開いた人は一覧を読む前に警告を目にします。表示中の内容が前回取得したものだと先に分かります。
 
 **確認ポイント**:
 - `<AppLayout>` の中に `<h1>` で「ユーザー管理」を書けた
