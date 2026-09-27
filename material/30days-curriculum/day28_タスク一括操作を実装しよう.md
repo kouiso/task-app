@@ -539,7 +539,7 @@ Set に詰め、`false` なら空の Set で上書きします。
 // filepath: src/app/task/page.tsx（className="grid gap-6 の要素を書き直す）
 import { Checkbox } from '@/component/ui/checkbox';
 
-// タスク一覧の grid レイアウト
+{/* タスク一覧の grid レイアウト */}
 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
   {tasks && tasks.length > 0 ? (
     tasks.map((task) => {
@@ -668,7 +668,7 @@ const isAllSelected =
 // filepath: src/app/task/page.tsx（className="flex gap-2 w-full の前に追加）
 import { Label } from '@/component/ui/label';
 
-// フィルター行の先頭に配置
+{/* フィルター行の先頭に配置 */}
 <div className="flex items-center space-x-2">
   <Checkbox
     id="select-all"
@@ -800,7 +800,7 @@ JSX 側の `checked` に渡す値を差し替えます。
         {/* ここにStep 6〜8でボタンを追加していく */}
       </>
     )}
-    <Button onClick={handleCreate}>
+    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
       <Plus className="mr-2 h-4 w-4" /> 新規タスク
     </Button>
   </div>
@@ -1738,7 +1738,7 @@ const handleBulkUpdateStatus = (
 {/* 完成版: ヘッダー行の閉じ側 */}
       </>
     )}
-    <Button onClick={handleCreate}>
+    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
       <Plus className="mr-2 h-4 w-4" /> 新規タスク
     </Button>
   </div>
