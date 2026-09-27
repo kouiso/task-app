@@ -114,7 +114,12 @@ async function slackReplies(cfg, ts) {
   const resp = await fetch(url, {
     headers: { Authorization: `Bearer ${cfg.slackToken}` },
   });
-  const data = await resp.json();
+  let data;
+  try {
+    data = await resp.json();
+  } catch (e) {
+    return { ok: false, error: `http_${resp.status}` };
+  }
   if (!data.ok) return { ok: false, error: data.error };
   return { ok: true, messages: (data.messages || []).slice(1) };
 }
