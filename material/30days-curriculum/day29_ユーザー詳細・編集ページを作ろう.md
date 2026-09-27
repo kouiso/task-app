@@ -1842,12 +1842,19 @@ Day 25 で学んだ `useMutation` パターンを使い、保存処理を実装�
 
 `useMutation` は `UserEditClient` 関数内の早期リターンより前へ追加します。読み込み中や取得失敗時も、フックは毎回同じ順番で呼ぶ必要があるためです。
 
+まずインポートを直します。Step 7 で書いた `lucide-react` の行を次の1行に置き換えてください。`AlertCircle` を足すだけなので行は増やしません。
+
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
+```
+
+置き換えずに新しい行として足すと `ArrowLeft` の取り込みが2回になります。型検査で `Duplicate identifier 'ArrowLeft'` のエラーが出ます。アイコンの取り込みは Step 6 と同じく1行にまとめます。次のブロックはこのファイルで初めて使う部品です。ファイル先頭のインポート部分に追加してください。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
 import { Alert, AlertDescription, AlertTitle }
   from '@/component/ui/alert';
-// ArrowLeft は既にインポート済みなので AlertCircle を追加
 ```
 
 `Alert` を足すのは保存に失敗した理由を画面に残すためです。この後に書く `onError` のトーストは数秒で消えるので目を離している間に失敗すると読者は何が起きたか分かりません。消えない場所にも同じ内容を出しておきます。
