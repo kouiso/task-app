@@ -706,7 +706,7 @@ import {
 } from '@/lib/constant/priority';
 ```
 
-`Select` は shadcn/ui の部品で、4つがそろって1つのプルダウンになります。`SelectTrigger` が閉じているときのボタン、`SelectContent` が開いたときの一覧、`SelectItem` が選択肢1つ分、`SelectValue` が今選ばれている値の表示です。`TASK_PRIORITY_LABELS` は `HIGH` のような内部の値を「高」という日本語へ変える対応表で、Day 13 から使っている scaffold 配布の定数を使い回します。`isTaskPriority` は受け取った文字列がその4つのどれかに当たるかを確かめる関数です。
+`Select` は shadcn/ui の部品で、4つがそろって1つのプルダウンになります。`SelectTrigger` が閉じているときのボタン、`SelectContent` が開いたときの一覧、`SelectItem` が選択肢1つ分、`SelectValue` が今選ばれている値の表示です。`TASK_PRIORITY_LABELS` は `HIGH` のような内部の値を「高」という日本語へ変える対応表で、Day 14 のタスク作成ダイアログで読み込んだ scaffold 配布の定数を使い回します。`isTaskPriority` は受け取った文字列がその4つのどれかに当たるかを確かめる関数です。
 
 続けてロール判定用と検索条件用のインポートを追加します。
 
@@ -1711,7 +1711,7 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 401と403は以前の結果も隠し、押すべきボタンを1つだけ表示します。続けて、一時的な失敗で以前の結果が残っている場合の警告を書きます。
 
 ```typescript
-{/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+// filepath: src/app/search/page.tsx（同じファイルの続き）
 ) : shouldSearch && searchResults ? (
   <div className="space-y-6">
     {searchErrorPresent ? (
@@ -1809,33 +1809,34 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 
 検索結果でも `TaskCard` をそのまま使い回しているのはタスク一覧と見た目をそろえるためです。カードを別々に作ると片方だけ表示が古いまま取り残されます。
 
-TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
+TaskCardに権限フラグと作業時間を渡します。上のブロックの `{searchResults.tasks` から `))}` までを次のブロックで**置き換えて**ください。`.map` の中の `<TaskCard>` に渡す props が4つ増えます。
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
-{/* TaskCardに権限フラグと作業時間を追加 */}
-<TaskCard key={task.id}
-  id={task.id}
-  title={task.title}
-  description={
-    task.description}
-  status={task.status}
-  priority={task.priority}
-  dueDate={task.dueDate}
-  assignee={task.assignee}
-  timeSpentMinutes={
-    task.timeSpentMinutes}
-  onEdit={handleTaskEdit}
-  onDelete={handleTaskDelete}
-  onClick={
-    handleTaskClick}
-  onTimeLogSuccess={() =>
-    utils.search.search
-      .invalidate()}
-  canEdit={canEditProject(
-    task.projectId)}
-  canDelete={canDeleteProject(
-    task.projectId)} />
+          {searchResults.tasks
+            .map((task) => (
+            <TaskCard key={task.id}
+              id={task.id}
+              title={task.title}
+              description={
+                task.description}
+              status={task.status}
+              priority={task.priority}
+              dueDate={task.dueDate}
+              assignee={task.assignee}
+              timeSpentMinutes={
+                task.timeSpentMinutes}
+              onEdit={handleTaskEdit}
+              onDelete={handleTaskDelete}
+              onClick={handleTaskClick}
+              onTimeLogSuccess={() =>
+                utils.search.search
+                  .invalidate()}
+              canEdit={canEditProject(
+                task.projectId)}
+              canDelete={canDeleteProject(
+                task.projectId)} />
+          ))}
 ```
 
 > `canEdit` / `canDelete` を渡さないとTaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため`task.projectId` ごとに個別に権限を判定します。
@@ -3414,7 +3415,7 @@ const {
 401と403では以前の結果も隠し、現在の状態に合う操作だけを表示します。次は、一時的な失敗で以前の結果が残っている場合の警告です。
 
 ```typescript
-        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        // filepath: src/app/search/page.tsx（同じファイルの続き）
         ) : shouldSearch && searchResults ? (
           <div className="space-y-6">
             {searchErrorPresent ? (
