@@ -181,10 +181,11 @@ function TaskPageContent() {
     }
   }, [isEditLink, pathname, router, searchParams]);
 
+  // ダイアログを閉じる判断は TaskDialog 側が持つ（送信後に下書きが
+  // 書き足されていた場合は閉じずに警告を出すため）
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-      closeTaskDialog();
     },
   });
 
@@ -194,7 +195,6 @@ function TaskPageContent() {
       if (selectedTask) {
         utils.task.getById.invalidate({ id: selectedTask });
       }
-      closeTaskDialog();
     },
   });
 
@@ -251,9 +251,9 @@ function TaskPageContent() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = (data: TaskFormData) => {
+  const handleSubmit = (data: TaskFormData): Promise<unknown> => {
     if (data.id) {
-      updateMutation.mutate({
+      return updateMutation.mutateAsync({
         id: data.id,
         title: data.title,
         description: data.description || null,
@@ -267,21 +267,20 @@ function TaskPageContent() {
           expectedUpdatedAt: data.expectedUpdatedAt,
         }),
       });
-    } else {
-      if (!session?.user?.id) {
-        return;
-      }
-      createMutation.mutate({
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : undefined,
-        estimatedHours: data.estimatedHours,
-        projectId: data.projectId,
-        assigneeId: data.assigneeId || undefined,
-      });
     }
+    if (!session?.user?.id) {
+      return Promise.reject(new Error('セッションがありません'));
+    }
+    return createMutation.mutateAsync({
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      priority: data.priority,
+      dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : undefined,
+      estimatedHours: data.estimatedHours,
+      projectId: data.projectId,
+      assigneeId: data.assigneeId || undefined,
+    });
   };
 
   const handleTaskClick = (taskId: string) => {
