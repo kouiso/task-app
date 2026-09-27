@@ -564,6 +564,8 @@ function auditPaginatedDom(manifest, constants) {
     flow_content_bounds: { status: 'pass', dimensions: 'horizontal' },
     cell_content_bounds: { status: 'pass' },
     page_content_bounds: { status: 'pass' },
+    table_prose_cell_bounds: { status: 'pass' },
+    table_prose_page_bounds: { status: 'pass' },
     sibling_cell_overlap: { status: 'pass' },
     clipping_ancestors: { status: 'pass' },
     post_pdf_text_and_geometry: {
@@ -809,6 +811,51 @@ function auditPaginatedDom(manifest, constants) {
         cell && pageArea
           ? tableMeasurement(cell, pageArea)
           : { status: 'unsupported', reason: 'table_cell_or_page_area_missing' };
+      if (!cell || !pageArea || !Array.isArray(geometry.cells)) {
+        checks.table_prose_cell_bounds.status = 'unsupported';
+        checks.table_prose_page_bounds.status = 'unsupported';
+        violations.push({
+          check: 'table_prose_cell_bounds',
+          table_id: id,
+          page_index: pageIndex,
+          reason: 'table_cell_or_page_area_missing',
+        });
+      } else {
+        for (const measuredCell of geometry.cells) {
+          const characters = measuredCell.prose_lines.flatMap((line) => line.characters);
+          const outsideCell = characters.filter((character) =>
+            outside(character.rect, measuredCell.content_rect, geometryEpsilonPx),
+          );
+          if (outsideCell.length > 0) {
+            checks.table_prose_cell_bounds.status = 'fail';
+            violations.push({
+              check: 'table_prose_cell_bounds',
+              table_id: id,
+              page_index: pageIndex,
+              row_index: measuredCell.row_index,
+              cell_index: measuredCell.cell_index,
+              cell_content_rect: measuredCell.content_rect,
+              characters: outsideCell,
+            });
+          }
+          const pageContentRect = rectJson(contentRect(pageArea));
+          const outsidePage = characters.filter((character) =>
+            outside(character.rect, pageContentRect, geometryEpsilonPx),
+          );
+          if (outsidePage.length > 0) {
+            checks.table_prose_page_bounds.status = 'fail';
+            violations.push({
+              check: 'table_prose_page_bounds',
+              table_id: id,
+              page_index: pageIndex,
+              row_index: measuredCell.row_index,
+              cell_index: measuredCell.cell_index,
+              page_content_rect: pageContentRect,
+              characters: outsidePage,
+            });
+          }
+        }
+      }
       const fragments = tableInventory.get(id) ?? [];
       fragments.push({
         page_index: pageIndex,
@@ -821,6 +868,18 @@ function auditPaginatedDom(manifest, constants) {
   const expectedTableIds = Array.isArray(manifest.tables)
     ? manifest.tables.map((table) => table.id)
     : null;
+  const missingTableIds = expectedTableIds?.filter((id) => !tableInventory.has(id)) ?? null;
+  if (missingTableIds?.length) {
+    checks.table_prose_cell_bounds.status = 'unsupported';
+    checks.table_prose_page_bounds.status = 'unsupported';
+    for (const id of missingTableIds) {
+      violations.push({
+        check: 'table_prose_cell_bounds',
+        table_id: id,
+        reason: 'expected_table_missing',
+      });
+    }
+  }
   const stackedInventory = new Map();
   for (const [pageIndex, page] of pages.entries()) {
     for (const section of page.querySelectorAll('section[data-pdf-source-table]')) {
@@ -854,7 +913,7 @@ function auditPaginatedDom(manifest, constants) {
       scope: 'measurement_only_requires_layout_and_readability_review',
       expected_count: expectedTableIds?.length ?? null,
       observed_count: tableInventory.size,
-      missing_ids: expectedTableIds?.filter((id) => !tableInventory.has(id)) ?? null,
+      missing_ids: missingTableIds,
       unexpected_ids: expectedTableIds
         ? [...tableInventory.keys()].filter((id) => !expectedTableIds.includes(id))
         : null,

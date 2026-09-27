@@ -195,6 +195,8 @@ test('normal inline code passes DOM scope while release remains blocked for post
   assert.equal(result.report.dom_audit.checks.single_line.status, 'pass');
   assert.equal(result.report.dom_audit.checks.cell_content_bounds.status, 'pass');
   assert.equal(result.report.dom_audit.checks.page_content_bounds.status, 'pass');
+  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'pass');
+  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'pass');
   assert.equal(result.report.dom_audit.checks.measurement_support.status, 'pass');
   assert.equal(result.report.dom_audit.checks.physical_page_box_selector.status, 'pass');
   assert.equal(result.report.dom_audit.checks.post_pdf_text_and_geometry.status, 'unsupported');
@@ -247,6 +249,38 @@ test('normal inline code passes DOM scope while release remains blocked for post
   assert.ok(table.physical_page_box.rect.width > 0);
   assert.ok(table.physical_page_box.rect.height > 0);
   assert.equal(fs.existsSync(result.output), true);
+});
+
+test('table prose glyphs outside cell or page content fail before PDF', {
+  skip: !canIntegrate,
+}, () => {
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'table-prose-bounds-test-'));
+  writeFixture(directory, {
+    html: `<!doctype html><html lang="ja"><body>
+      <table class="narrow" data-pdf-table-id="narrow-table"><tr><td>一文字でも収まらない</td></tr></table>
+      <div class="past-page"><table data-pdf-table-id="past-page-table"><tr><td>版面外</td></tr></table></div>
+    </body></html>`,
+    css: `@page{size:A4;margin:20mm}body{font:12pt sans-serif}.narrow{table-layout:fixed;width:20px}.narrow td{padding:4px;white-space:nowrap}.past-page{position:relative;left:700px;width:100px}.past-page table{width:100px}.past-page td{padding:4px;white-space:nowrap}`,
+    expected: manifest([], [{ id: 'narrow-table' }, { id: 'past-page-table' }]),
+  });
+  const result = runFixture(directory);
+  assert.notEqual(result.status, 0);
+  assert.equal(result.report.result, 'dom_fail');
+  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'fail');
+  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'fail');
+  assert.ok(
+    result.report.dom_audit.violations.some(
+      (violation) =>
+        violation.check === 'table_prose_cell_bounds' && violation.table_id === 'narrow-table',
+    ),
+  );
+  assert.ok(
+    result.report.dom_audit.violations.some(
+      (violation) =>
+        violation.check === 'table_prose_page_bounds' && violation.table_id === 'past-page-table',
+    ),
+  );
+  assert.equal(fs.existsSync(result.output), false);
 });
 
 test('wrap, cell overflow, page-content overflow and sub-8pt text fail before PDF', {
