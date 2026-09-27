@@ -408,7 +408,7 @@ const [filterProject, setFilterProject] =
   useState<string>('all');
 ```
 
-ここまで上に置くのはこの Step の後半で書き換える tasks の `useQuery` が `filterProject` を読むからです。`const` で作った名前は宣言した行より上では使えません。hooks の最後（`utils` の下）に置くと書き換えた `useQuery` の行で `Block-scoped variable 'filterProject' used before its declaration` という型エラーが出ます。ブラウザで開くと `Cannot access 'filterProject' before initialization` というエラーが出てページが表示されません。
+ここまで上に置くのはこの Step の後半で書き換える tasks の `useQuery` が `filterProject` を読むからです。`const` で作った名前は宣言した行より上では使えません。この state を hooks の最後（`utils` の下）に置いたとします。書き換えた `useQuery` の行はそれより上にあるので `Block-scoped variable 'filterProject' used before its declaration` という型エラーが出ます。ブラウザで開くと `Cannot access 'filterProject' before initialization` というエラーが出てページが表示されません。
 
 プロジェクト一覧の取得は Step 2 で追加した `currentUser` の取得の**すぐ下**に追加します。tasks の取得よりも上です。
 
@@ -736,7 +736,7 @@ import {
 } from '@/lib/date';
 ```
 
-Step 5 で置き換えた tasks の `useQuery` の**下に**以下を追加します。`useMemo` の中の処理も最後に書く依存配列 `[tasks]` も `tasks` を読むからです。Step 5 の `filterProject` と同じで `tasks` も宣言した行より上では使えません。`currentUser` や `projects` の取得の下に置くと `Block-scoped variable 'tasks' used before its declaration` という型エラーが出ます。
+Step 5 で置き換えた tasks の `useQuery` の**下に**以下を追加します。`useMemo` の中の処理も最後に書く依存配列 `[tasks]` も `tasks` を読むからです。Step 5 の `filterProject` と同じで `tasks` も宣言した行より上では使えません。tasks の取得より上に置くと `Block-scoped variable 'tasks' used before its declaration` という型エラーが出ます。`currentUser` や `projects` の取得のすぐ下もこの範囲に入ります。
 
 この日のまとめに載せる完成コードでは同じ `groupedTasks` がハンドラーより後ろに置かれています。置いてよいのは tasks の `useQuery` より下でローディング判定の `if` より上の範囲です。`if` より下に置けないのは Step 3 で見た hooks のルールがあるためです。この範囲の中なら位置が違っても動きは変わりません。並びが違っても写し間違いではありません。
 
