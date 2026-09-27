@@ -289,7 +289,9 @@ router だけ書いても `api.comment.create` はまだ呼べません。
 Day 14 で書いた `root.ts` を開きます。import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。
 増えるのは `commentRouter` の import 1行と `comment: commentRouter,` の1行だけです。ほかの行は貼り足しません。
 `appRouter` の中は Day 07 から router を足した順（`auth` → `project` → `task` → `search` → `comment`）に並べます。
-Day 14 の完成コードは `search` → `task` の順です。手元の `search` が `task` より上にあるときは2行を入れ替えてください。
+手元の `appRouter` の中で `search: searchRouter,` が `task: taskRouter,` より上にある場合はこの2行を入れ替えてください。
+`searchRouter` と `taskRouter` の import 行は入れ替えません。
+import の並びは Biome（コード整形ツール）がアルファベット順にそろえます。`searchRouter` が `taskRouter` より上のままで正しい形です。
 並びを入れ替えても `api.task` や `api.search` の呼び名は変わりません。Day 20 と Day 21 はこの並びを前提に `root.ts` を説明するのでそろえておきます。
 
 ```typescript
@@ -608,15 +610,15 @@ import { ja } from 'date-fns/locale';
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* .map ループ内: 名前と日時を包む2つの箱を開く */}
+{/* .map ループ内: 外側にアイコンの右側の箱、内側に名前と日時の箱を開く */}
 <div className="flex-1 space-y-1">
   <div className="flex items-center
     justify-between">
 ```
 
-外側の `flex-1` はアイコンの右側の残り幅をすべて使うための指定です。
-内側の `justify-between` は名前を左端、日時を右端へ寄せるための指定です。
-2つとも開いたままにしておきます。内側の箱は次のブロックの最後で、外側の箱は本文を書いたあとで閉じます。
+外側の箱は `flex-1` でアイコンの右側の残り幅をすべて使います。これを「アイコンの右側の箱」と呼びます。
+内側の箱は `justify-between` で名前を左端、日時を右端へ寄せます。これを「名前と日時の箱」と呼びます。
+2つとも開いたままにしておきます。名前と日時の箱は次のブロックの最後で、アイコンの右側の箱は本文を書いたあとで閉じます。
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
@@ -639,7 +641,9 @@ import { ja } from 'date-fns/locale';
 
 最後の `</div>` で名前と日時の箱を閉じます。
 この箱は `flex` で中身を横一列に並べます。
-閉じずに本文まで入れると本文も日時の右隣に並びます。本文が長いと名前や日時が折り返して縦に伸びます。
+閉じずに本文まで入れると名前・日時・本文の3つが横一列に並びます。
+日時は右端を離れて名前と本文のあいだへ移ります。
+本文が長いと名前や日時が折り返して縦に伸びます。
 本文を名前の下に置きたいので日時を書いたらすぐ閉じます。
 
 表示名の `||` は`AvatarFallback` に渡す頭文字と同じ順でたどります。
