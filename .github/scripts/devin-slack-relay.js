@@ -79,12 +79,20 @@ async function slackApi(cfg, method, params) {
 }
 
 // threadTs があればスレッド返信。なければ新規トップレベル投稿。
-// スレッド返信に失敗した場合は新規スレッドにフォールバックする。
+// 新スレッド化は元スレッドが消えた時だけ。それ以外の失敗は次の定期実行で同じスレッドへ再試行する。
+const GONE_ERRORS = new Set([
+  'thread_not_found',
+  'message_not_found',
+  'channel_not_found',
+  'not_in_channel',
+]);
+
 async function postToSlack(cfg, text, threadTs) {
   let data;
   if (threadTs) {
     data = await slackApi(cfg, 'chat.postMessage', { text, thread_ts: threadTs });
-    if (!data.ok) data = await slackApi(cfg, 'chat.postMessage', { text });
+    if (!data.ok && GONE_ERRORS.has(data.error))
+      data = await slackApi(cfg, 'chat.postMessage', { text });
   } else {
     data = await slackApi(cfg, 'chat.postMessage', { text });
   }
