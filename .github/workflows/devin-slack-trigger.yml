@@ -48,11 +48,20 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
           DEVIN_USER_ID: ${{ vars.SLACK_DEVIN_USER_ID }}
+          DEVIN_MODE: ${{ vars.DEVIN_MODE }}
         with:
           script: |
             const issue = context.payload.issue;
 
-            const message = `<@${process.env.DEVIN_USER_ID}>\n!swe\n${issue.title}\n${issue.html_url}\nPlease handle this issue. First, create a plan and share it before implementing. Think in English, respond in Japanese.`;
+            // DEVIN_MODE を設定するとそのモードで起動（例: ultra, swe）。
+            // 未設定なら Devin 側のデフォルトエージェントが使われる。
+            const modeCmds = (process.env.DEVIN_MODE || '')
+              .trim()
+              .split(/\s+/)
+              .filter(Boolean)
+              .map(t => `!${t.replace(/^!+/, '')}`);
+            const modeLine = modeCmds.length ? `\n${modeCmds.join(' ')}` : '';
+            const message = `<@${process.env.DEVIN_USER_ID}>\n!megaplan${modeLine}\n${issue.title}\n${issue.html_url}\nPlease handle this issue. First, create a plan and share it before implementing. Think in English, respond in Japanese.`;
 
             const resp = await fetch('https://slack.com/api/chat.postMessage', {
               method: 'POST',
