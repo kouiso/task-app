@@ -117,7 +117,7 @@ async function slackReplies(cfg, ts) {
   let data;
   try {
     data = await resp.json();
-  } catch (e) {
+  } catch {
     return { ok: false, error: `http_${resp.status}` };
   }
   if (!data.ok) return { ok: false, error: data.error };
