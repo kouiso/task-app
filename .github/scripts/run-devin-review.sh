@@ -6,7 +6,7 @@ set -euo pipefail
 : "${DEVIN_PROMPT:?DEVIN_PROMPT is required}"
 OUTPUT_FILE="${DEVIN_OUTPUT_FILE:-devin-review.md}"
 # DEVIN_MODEL を設定するとそのモデルで起動（例: swe-2-max）。
-# 未設定なら --model を付けず、Devin 側（org/plan）のデフォルトが使われる。
+# 未設定なら --model を付けない。Devin 側（org/plan）のデフォルトが使われる。
 MODEL_ARGS=()
 if [ -n "${DEVIN_MODEL:-}" ]; then
   MODEL_ARGS+=(--model "${DEVIN_MODEL}")
