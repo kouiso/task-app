@@ -606,7 +606,7 @@ const {
 
 ### Step 2: ProjectDetailViewに渡す値を `page.tsx` に用意する（7分）
 
-**ゴール**: `ProjectDetailView` が受け取る props を確認して渡す値を `page.tsx` に用意します。書き足すのは import・ロール変更の mutation とハンドラー・権限の計算・state の4つです。既存のコードでは `updateMutation` の `onSuccess` と `<ProjectDetailView>` タグを書き換えます。
+**ゴール**: `ProjectDetailView` が受け取る props を確認して渡す値を `page.tsx` に用意します。書き足すのは import・ロール変更の mutation とハンドラー・権限の計算・state の4つです。既存のコードでは `<ProjectDetailView>` タグだけを書き換えます。
 
 `ProjectDetailView` は配布済みの部品なので今日は中身を書きません。
 まず props の型を確認して親ページから渡す値の形をそろえます。
@@ -628,7 +628,7 @@ const {
 - `onRemoveMember` は `userId` を引数に取る
 - `canManageMembers` / `canArchive` はボタンの表示可否をコンポーネントに伝える
 
-Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**表の確認はここまでです。この下からは `page.tsx` の6か所を編集します。4か所は書き足し、残りの2か所は既存コードの書き換えです。**
+Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**表の確認はここまでです。この下からは `page.tsx` の5か所を編集します。4か所は書き足し、最後の1か所は既存コードの書き換えです。**
 
 **確認ポイント**:
 - `onRemoveMember={() => {}}` が Step 6 で `handleRemoveMember` に変わることを覚えておく
@@ -649,26 +649,7 @@ import {
 
 `hasPermission` は「そのロールがこの操作を許されているか」を返す関数、`isProjectMemberRole` は文字列が正しいロールかを確かめる型ガードです。どちらもサーバーと同じ `@/lib/constant/roles` から取り込むのでフロントとサーバーで判定基準がずれません。
 
-Day 11 では `updateMutation` で `utils.project.getById.invalidate()` と引数なしで呼んでいました。開いているプロジェクトのキャッシュだけを取り直す形へ絞ります。`src/app/project/page.tsx` の `updateMutation` の `onSuccess` を、次の形にしてください。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// updateMutation の onSuccess を差し替える
-onSuccess: () => {
-  utils.project.getAll.invalidate();
-  if (selectedProject) {
-    utils.project.getById.invalidate(
-      { id: selectedProject },
-    );
-  }
-  setDialogOpen(false);
-},
-```
-
-プロジェクト名を変えたときに一覧だけでなく開いている詳細画面の表示も入れ替わります。
-この1行が無いと詳細画面には古い名前が残ったままになります。
-
-アーカイブ済みかどうかも詳細画面が持っている値です。そのため Day 11 Step 7 の `archiveMutation` と `unarchiveMutation` は `onSuccess` で `getAll` と `getById` の両方をすでに取り直しています。ここで書き換えるものはありません。
+プロジェクト名とアーカイブ済みかどうかは詳細画面にも出る値です。そのため Day 11 Step 3 の `updateMutation` は `onSuccess` で `getAll` に加えて `getById` も取り直しています。Day 11 Step 7 の `archiveMutation` と `unarchiveMutation` も同じです。ここで書き換えるものはありません。
 
 確認はStep 8のアーカイブ操作で行います。アーカイブ後に同じプロジェクトを開き直して解除できれば成功です。ボタンが切り替わらない場合は Day 11 Step 7 の両方の `onSuccess` に `utils.project.getById.invalidate()` があるかを確認してください。
 
@@ -2428,15 +2409,13 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
   const updateMutation = api.project.update.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
+      utils.project.getById.invalidate();
       setDialogOpen(false);
     },
   });
 ```
 
-Step 2 で `updateMutation` の `onSuccess` に `getById.invalidate` を足しました。この1行が無いと名前を変えても詳細画面には古い名前が残ります。一覧と詳細でデータの出どころが違うので書き換えたら両方に印を付ける必要があります。
+`updateMutation` は Day 11 Step 3 のまま `getById.invalidate()` を引数なしで呼びます。編集ダイアログは一覧画面にしか無いので保存した時点では詳細画面を開いていません。引数なしで呼ぶと前に開いたプロジェクトの詳細キャッシュすべてに古いという印が付きます。配布した `src/trpc/react.tsx` の設定では取得から30秒のあいだ印の無いキャッシュをそのまま使います。この1行が無いと詳細を見てから30秒以内に名前を変えて開き直したとき古い名前が出ます。一覧と詳細でデータの出どころが違うので書き換えたら両方に印を付ける必要があります。
 
 **削除の mutation**:
 
