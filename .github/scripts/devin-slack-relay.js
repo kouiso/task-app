@@ -8,9 +8,8 @@
 // シングルセレクトフィールド `Devin` にも状態をミラーする。
 
 const MARKER_RE = /<!-- devin-slack-triggered([^>]*)-->/;
-const SESSION_URL_RE = /https:\/\/[\w.-]*devin\.ai\/sessions\/[0-9a-f]+/;
-const FAILURE_RE =
-  /Failed to create Devin|Failed to start|Failed to launch|couldn'?t start|could not start|unable to start|error creating session/i;
+const SESSION_URL_RE = /https:\/\/(?:[\w-]+\.)*devin\.ai\/sessions\/[0-9a-f]+/;
+const FAILURE_RE = /Failed to create Devin|Failed to start|Failed to launch|couldn'?t start|could not start|unable to start|error creating session/i;
 const MAX_TRIES = 36; // 10分間隔で約6時間
 const STALE_TRIGGER_TRIES = 6; // 起動要求後に Devin の返信が無いまま許容する sweep 回数(約1時間)
 
@@ -86,12 +85,7 @@ async function slackApi(cfg, method, params) {
 
 // threadTs があればスレッド返信。なければ新規トップレベル投稿。
 // 新スレッド化は元スレッドが消えた時だけ。それ以外の失敗は次の定期実行で同じスレッドへ再試行する。
-const GONE_ERRORS = new Set([
-  'thread_not_found',
-  'message_not_found',
-  'channel_not_found',
-  'not_in_channel',
-]);
+const GONE_ERRORS = new Set(['thread_not_found', 'message_not_found', 'channel_not_found', 'not_in_channel']);
 
 async function postToSlack(cfg, text, threadTs) {
   let data;
@@ -99,8 +93,7 @@ async function postToSlack(cfg, text, threadTs) {
   if (threadTs) {
     data = await slackApi(cfg, 'chat.postMessage', { text, thread_ts: threadTs });
     if (data.ok) usedThread = threadTs;
-    if (!data.ok && GONE_ERRORS.has(data.error))
-      data = await slackApi(cfg, 'chat.postMessage', { text });
+    if (!data.ok && GONE_ERRORS.has(data.error)) data = await slackApi(cfg, 'chat.postMessage', { text });
   } else {
     data = await slackApi(cfg, 'chat.postMessage', { text });
   }
@@ -109,12 +102,7 @@ async function postToSlack(cfg, text, threadTs) {
   const pl = await slackApi(cfg, 'chat.getPermalink', { message_ts: data.ts });
   // threadTs は「スレッドの親 ts」を返す。返信投稿時は res.ts が返信自身の ts になる。
   // マーカーには返信元のスレッド親 ts を残す（conversations.replies は親 ts で引く）。
-  return {
-    ok: true,
-    ts: data.ts,
-    threadTs: usedThread || data.ts,
-    permalink: pl.ok ? pl.permalink : '',
-  };
+  return { ok: true, ts: data.ts, threadTs: usedThread || data.ts, permalink: pl.ok ? pl.permalink : '' };
 }
 
 async function slackReplies(cfg, ts) {
@@ -172,22 +160,11 @@ const LABEL_DEFS = {
 
 async function syncLabels(github, repo, issueNumber, status, cfg) {
   const active =
-    status === 'queued'
-      ? cfg.queueLabel
-      : status === 'pending'
-        ? cfg.waitingLabel
-        : status === 'failed'
-          ? cfg.failedLabel
-          : null;
+    status === 'queued' ? cfg.queueLabel : status === 'pending' ? cfg.waitingLabel : status === 'failed' ? cfg.failedLabel : null;
   for (const name of [cfg.queueLabel, cfg.waitingLabel, cfg.failedLabel]) {
     if (name === active) continue;
     try {
-      await github.rest.issues.removeLabel({
-        owner: repo.owner,
-        repo: repo.repo,
-        issue_number: issueNumber,
-        name,
-      });
+      await github.rest.issues.removeLabel({ owner: repo.owner, repo: repo.repo, issue_number: issueNumber, name });
     } catch {
       /* ラベル未付与なら無視 */
     }
@@ -196,12 +173,7 @@ async function syncLabels(github, repo, issueNumber, status, cfg) {
     const def = LABEL_DEFS[active];
     if (def) await ensureLabel(github, repo, active, def.color, def.desc);
     try {
-      await github.rest.issues.addLabels({
-        owner: repo.owner,
-        repo: repo.repo,
-        issue_number: issueNumber,
-        labels: [active],
-      });
+      await github.rest.issues.addLabels({ owner: repo.owner, repo: repo.repo, issue_number: issueNumber, labels: [active] });
     } catch {
       /* ignore */
     }
@@ -238,19 +210,9 @@ async function upsertStatusComment(github, repo, issueNumber, body) {
   const isTrustedMarker = (c) => MARKER_RE.test(c.body || '') && c.user?.type === 'Bot';
   const existing = comments.find(isTrustedMarker);
   if (existing) {
-    await github.rest.issues.updateComment({
-      owner: repo.owner,
-      repo: repo.repo,
-      comment_id: existing.id,
-      body,
-    });
+    await github.rest.issues.updateComment({ owner: repo.owner, repo: repo.repo, comment_id: existing.id, body });
   } else {
-    await github.rest.issues.createComment({
-      owner: repo.owner,
-      repo: repo.repo,
-      issue_number: issueNumber,
-      body,
-    });
+    await github.rest.issues.createComment({ owner: repo.owner, repo: repo.repo, issue_number: issueNumber, body });
   }
 }
 
@@ -298,7 +260,7 @@ async function mirrorProjectField(github, context, core, issueNumber, status, cf
     if (!opt) return;
     await github.graphql(
       `mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){ updateProjectV2ItemFieldValue(input:{ projectId:$p itemId:$i fieldId:$f value:{ singleSelectOptionId:$o } }){ projectV2Item { id } } }`,
-      { p: project.id, i: item.id, f: field.id, o: opt.id },
+      { p: project.id, i: item.id, f: field.id, o: opt.id }
     );
   } catch (e) {
     core.warning(`project field mirror failed: ${e.message}`);
@@ -316,12 +278,7 @@ async function finalize(github, context, core, issue, state, cfg, note) {
     tries: state.tries,
   };
   await syncLabels(github, context.repo, issue.number, merged.status, cfg);
-  await upsertStatusComment(
-    github,
-    context.repo,
-    issue.number,
-    statusCommentBody({ ...merged, note }),
-  );
+  await upsertStatusComment(github, context.repo, issue.number, statusCommentBody({ ...merged, note }));
   await mirrorProjectField(github, context, core, issue.number, merged.status, cfg);
 }
 
@@ -364,28 +321,17 @@ async function dispatch({ github, context, core }) {
       issue,
       { ts: marker?.ts, status: 'pending', tries: marker?.tries || 0 },
       cfg,
-      `Slack 投稿失敗 (${res.error})`,
+      `Slack 投稿失敗 (${res.error})`
     );
     try {
-      await github.rest.issues.removeLabel({
-        ...repo,
-        issue_number: issue.number,
-        name: cfg.triggerLabel,
-      });
+      await github.rest.issues.removeLabel({ ...repo, issue_number: issue.number, name: cfg.triggerLabel });
     } catch {
       /* ignore */
     }
     core.setOutput('thread_ts', '');
     return;
   }
-  await finalize(
-    github,
-    context,
-    core,
-    issue,
-    { ts: res.threadTs, permalink: res.permalink, status: 'triggered', tries: 0 },
-    cfg,
-  );
+  await finalize(github, context, core, issue, { ts: res.threadTs, permalink: res.permalink, status: 'triggered', tries: 0 }, cfg);
   core.setOutput('thread_ts', res.threadTs);
 }
 
@@ -406,21 +352,10 @@ async function verify({ github, context, core }) {
   // セッション URL があれば成功優先(古い失敗文と混在しても done にする)
   const { sessionUrl, failureText } = inspectReplies(r.messages);
   if (sessionUrl) {
-    await finalize(
-      github,
-      context,
-      core,
-      issue,
-      { ts: marker.ts, sessionUrl, status: 'done', tries: marker.tries },
-      cfg,
-    );
+    await finalize(github, context, core, issue, { ts: marker.ts, sessionUrl, status: 'done', tries: marker.tries }, cfg);
     // done 確定後はトリガーラベルを外して sweep の巡回対象からも外す
     try {
-      await github.rest.issues.removeLabel({
-        ...repo,
-        issue_number: issue.number,
-        name: cfg.triggerLabel,
-      });
+      await github.rest.issues.removeLabel({ ...repo, issue_number: issue.number, name: cfg.triggerLabel });
     } catch {
       /* ignore */
     }
@@ -434,14 +369,10 @@ async function verify({ github, context, core }) {
       issue,
       { ts: marker.ts, status: 'pending', tries: marker.tries },
       cfg,
-      `Devin 起動失敗: ${failureText}`,
+      `Devin 起動失敗: ${failureText}`
     );
     try {
-      await github.rest.issues.removeLabel({
-        ...repo,
-        issue_number: issue.number,
-        name: cfg.triggerLabel,
-      });
+      await github.rest.issues.removeLabel({ ...repo, issue_number: issue.number, name: cfg.triggerLabel });
     } catch {
       /* ignore */
     }
@@ -464,11 +395,7 @@ async function sweep({ github, context, core }) {
 
   const removeTriggerLabel = async (issueNumber) => {
     try {
-      await github.rest.issues.removeLabel({
-        ...repo,
-        issue_number: issueNumber,
-        name: cfg.triggerLabel,
-      });
+      await github.rest.issues.removeLabel({ ...repo, issue_number: issueNumber, name: cfg.triggerLabel });
     } catch {
       /* ignore */
     }
@@ -478,12 +405,7 @@ async function sweep({ github, context, core }) {
     if (issue.pull_request) continue;
     const labels = issue.labels.map((l) => (typeof l === 'string' ? l : l.name));
     // 対象ラベルが無い issue ではコメント取得を省略する(API 節約)
-    if (
-      !labels.includes(cfg.queueLabel) &&
-      !labels.includes(cfg.waitingLabel) &&
-      !labels.includes(cfg.triggerLabel)
-    )
-      continue;
+    if (!labels.includes(cfg.queueLabel) && !labels.includes(cfg.waitingLabel) && !labels.includes(cfg.triggerLabel)) continue;
     // 1件の失敗で残りの issue を巻き込まないよう個別に catch する
     try {
       await sweepIssue(github, context, core, cfg, issue, labels, removeTriggerLabel, sleep);
@@ -497,196 +419,100 @@ async function sweepIssue(github, context, core, cfg, issue, labels, removeTrigg
   const repo = context.repo;
   let marker = await getMarkerEntry(github, repo, issue.number);
 
-  if (labels.includes(cfg.queueLabel)) {
-    // 起動済み(triggered)ならキューはスルー
-    if (marker?.status === 'triggered' && marker?.ts) return;
-    // キューから起動: 新規スレッドへ投稿
-    const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
-    if (res.ok) {
-      await finalize(
-        github,
-        context,
-        core,
-        issue,
-        { ts: res.threadTs, permalink: res.permalink, status: 'triggered', tries: 0 },
-        cfg,
-      );
+    if (labels.includes(cfg.queueLabel)) {
+      // 起動済み(triggered)ならキューはスルー
+      if (marker?.status === 'triggered' && marker?.ts) return;
+      // キューから起動: 新規スレッドへ投稿
+      const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
+      if (res.ok) {
+        await finalize(github, context, core, issue, { ts: res.threadTs, permalink: res.permalink, status: 'triggered', tries: 0 }, cfg);
+        try {
+          await github.rest.issues.addLabels({ ...repo, issue_number: issue.number, labels: [cfg.triggerLabel] });
+        } catch {
+          /* ignore */
+        }
+        await sleep(1000); // Slack レート対策
+      } else {
+        await finalize(github, context, core, issue, { ts: marker?.ts, status: 'pending', tries: 0 }, cfg, `Slack 投稿失敗 (${res.error})`);
+      }
+      return;
+    }
+
+    // トリガーラベルだけ残ってマーカーが無い(コメント削除等)ケースは pending に正規化して回収
+    if (labels.includes(cfg.triggerLabel) && !marker) {
+      await finalize(github, context, core, issue, { ts: null, status: 'pending', tries: 0 }, cfg, 'マーカー未検出。定期実行で再投稿します');
       try {
-        await github.rest.issues.addLabels({
-          ...repo,
-          issue_number: issue.number,
-          labels: [cfg.triggerLabel],
-        });
+        await github.rest.issues.removeLabel({ ...repo, issue_number: issue.number, name: cfg.triggerLabel });
       } catch {
         /* ignore */
       }
-      await sleep(1000); // Slack レート対策
-    } else {
-      await finalize(
-        github,
-        context,
-        core,
-        issue,
-        { ts: marker?.ts, status: 'pending', tries: 0 },
-        cfg,
-        `Slack 投稿失敗 (${res.error})`,
-      );
-    }
-    return;
-  }
-
-  // トリガーラベルだけ残ってマーカーが無い(コメント削除等)ケースは pending に正規化して回収
-  if (labels.includes(cfg.triggerLabel) && !marker) {
-    await finalize(
-      github,
-      context,
-      core,
-      issue,
-      { ts: null, status: 'pending', tries: 0 },
-      cfg,
-      'マーカー未検出。定期実行で再投稿します',
-    );
-    try {
-      await github.rest.issues.removeLabel({
-        ...repo,
-        issue_number: issue.number,
-        name: cfg.triggerLabel,
-      });
-    } catch {
-      /* ignore */
-    }
-    return;
-  }
-
-  if (marker?.status === 'triggered' && marker?.ts) {
-    // 遅延する Devin 応答を回収する。URLなら done。失敗なら pending。
-    // どちらも無い無応答が続く場合は tries を進めて上限で pending へ降格し再投稿に委ねる。
-    const r = await slackReplies(cfg, marker.ts);
-    if (!r.ok) {
-      // スレッドが消えているなら pending へ降格して次回新スレッドで再投稿させる
-      if (GONE_ERRORS.has(r.error)) {
-        await finalize(
-          github,
-          context,
-          core,
-          issue,
-          { ts: null, status: 'pending', tries: marker.tries },
-          cfg,
-          `Slack スレッド消失 (${r.error})`,
-        );
-        await removeTriggerLabel(issue.number);
-      }
       return;
     }
-    const { sessionUrl, failureText } = inspectReplies(r.messages);
-    if (sessionUrl) {
-      await finalize(
-        github,
-        context,
-        core,
-        issue,
-        { ts: marker.ts, sessionUrl, status: 'done', tries: marker.tries },
-        cfg,
-      );
-      await removeTriggerLabel(issue.number);
-    } else if (failureText) {
-      await finalize(
-        github,
-        context,
-        core,
-        issue,
-        { ts: marker.ts, status: 'pending', tries: marker.tries },
-        cfg,
-        `Devin 起動失敗: ${failureText}`,
-      );
-      await removeTriggerLabel(issue.number);
-    } else {
-      const tries = (marker.tries || 0) + 1;
-      if (tries >= STALE_TRIGGER_TRIES) {
-        await finalize(
-          github,
-          context,
-          core,
-          issue,
-          { ts: marker.ts, status: 'pending', tries },
-          cfg,
-          'Devin 応答なし。定期実行で再投稿します',
-        );
+
+    if (marker?.status === 'triggered' && marker?.ts) {
+      // 遅延する Devin 応答を回収する。URLなら done。失敗なら pending。
+      // どちらも無い無応答が続く場合は tries を進めて上限で pending へ降格し再投稿に委ねる。
+      const r = await slackReplies(cfg, marker.ts);
+      if (!r.ok) {
+        // スレッドが消えているなら pending へ降格して次回新スレッドで再投稿させる
+        if (GONE_ERRORS.has(r.error)) {
+          await finalize(github, context, core, issue, { ts: null, status: 'pending', tries: marker.tries }, cfg, `Slack スレッド消失 (${r.error})`);
+          await removeTriggerLabel(issue.number);
+        }
+        return;
+      }
+      const { sessionUrl, failureText } = inspectReplies(r.messages);
+      if (sessionUrl) {
+        await finalize(github, context, core, issue, { ts: marker.ts, sessionUrl, status: 'done', tries: marker.tries }, cfg);
+        await removeTriggerLabel(issue.number);
+      } else if (failureText) {
+        await finalize(github, context, core, issue, { ts: marker.ts, status: 'pending', tries: marker.tries }, cfg, `Devin 起動失敗: ${failureText}`);
         await removeTriggerLabel(issue.number);
       } else {
-        await finalize(
-          github,
-          context,
-          core,
-          issue,
-          { ts: marker.ts, status: 'triggered', tries },
-          cfg,
-        );
-      }
-    }
-    return;
-  }
-
-  if (labels.includes(cfg.waitingLabel)) {
-    const tries = marker?.tries || 0;
-    // まず既存スレッドの返信を見る（再投稿前に Devin が応答済みかも）
-    if (marker?.ts) {
-      const r = await slackReplies(cfg, marker.ts);
-      if (r.ok) {
-        const { sessionUrl } = inspectReplies(r.messages);
-        if (sessionUrl) {
-          await finalize(
-            github,
-            context,
-            core,
-            issue,
-            { ts: marker.ts, sessionUrl, status: 'done', tries },
-            cfg,
-          );
+        const tries = (marker.tries || 0) + 1;
+        if (tries >= STALE_TRIGGER_TRIES) {
+          await finalize(github, context, core, issue, { ts: marker.ts, status: 'pending', tries }, cfg, 'Devin 応答なし。定期実行で再投稿します');
           await removeTriggerLabel(issue.number);
-          return;
+        } else {
+          await finalize(github, context, core, issue, { ts: marker.ts, status: 'triggered', tries }, cfg);
         }
-      } else if (GONE_ERRORS.has(r.error)) {
-        // 元スレッドが消えた。ts を空にして新スレッド再投稿へ
-        marker = { ...marker, ts: null };
       }
-    }
-    if (tries >= MAX_TRIES) {
-      await finalize(
-        github,
-        context,
-        core,
-        issue,
-        { ts: marker?.ts, status: 'failed', tries },
-        cfg,
-        '再試行回数の上限に達しました',
-      );
       return;
     }
-    // 再投稿直前にラベルを再読みする。手動で trigger ラベルを付け直されたなら
-    // labeled イベント側の dispatch が担当するので二重投稿を避ける。
-    const fresh = await github.rest.issues.get({ ...repo, issue_number: issue.number });
-    const freshLabels = fresh.data.labels.map((l) => (typeof l === 'string' ? l : l.name));
-    if (freshLabels.includes(cfg.triggerLabel)) return;
-    // 再投稿する。既存スレッド優先で失敗時は新スレッドへ。
-    const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
-    const next = {
-      ts: (res.ok ? res.threadTs : undefined) || marker?.ts,
-      status: 'pending',
-      tries: tries + 1,
-    };
-    if (res.ok) next.permalink = res.permalink;
-    await finalize(
-      github,
-      context,
-      core,
-      issue,
-      next,
-      cfg,
-      res.ok ? undefined : `Slack 再投稿失敗 (${res.error})`,
-    );
-    await sleep(1000); // Slack レート対策
-  }
+
+    if (labels.includes(cfg.waitingLabel)) {
+      const tries = marker?.tries || 0;
+      // まず既存スレッドの返信を見る（再投稿前に Devin が応答済みかも）
+      if (marker?.ts) {
+        const r = await slackReplies(cfg, marker.ts);
+        if (r.ok) {
+          const { sessionUrl } = inspectReplies(r.messages);
+          if (sessionUrl) {
+            await finalize(github, context, core, issue, { ts: marker.ts, sessionUrl, status: 'done', tries }, cfg);
+            await removeTriggerLabel(issue.number);
+            return;
+          }
+        } else if (GONE_ERRORS.has(r.error)) {
+          // 元スレッドが消えた。ts を空にして新スレッド再投稿へ
+          marker = { ...marker, ts: null };
+        }
+      }
+      if (tries >= MAX_TRIES) {
+        await finalize(github, context, core, issue, { ts: marker?.ts, status: 'failed', tries }, cfg, '再試行回数の上限に達しました');
+        return;
+      }
+      // 再投稿直前にラベルを再読みする。手動で trigger ラベルを付け直されたなら
+      // labeled イベント側の dispatch が担当するので二重投稿を避ける。
+      const fresh = await github.rest.issues.get({ ...repo, issue_number: issue.number });
+      const freshLabels = fresh.data.labels.map((l) => (typeof l === 'string' ? l : l.name));
+      if (freshLabels.includes(cfg.triggerLabel)) return;
+      // 再投稿する。既存スレッド優先で失敗時は新スレッドへ。
+      const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
+      const next = { ts: (res.ok ? res.threadTs : undefined) || marker?.ts, status: 'pending', tries: tries + 1 };
+      if (res.ok) next.permalink = res.permalink;
+      await finalize(github, context, core, issue, next, cfg, res.ok ? undefined : `Slack 再投稿失敗 (${res.error})`);
+      await sleep(1000); // Slack レート対策
+    }
 }
 
 module.exports = { dispatch, verify, sweep };
