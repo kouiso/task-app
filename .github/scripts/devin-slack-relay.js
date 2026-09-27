@@ -492,6 +492,29 @@ async function sweep({ github, context, core }) {
       continue;
     }
 
+    // トリガーラベルだけ残ってマーカーが無い(コメント削除等)ケースは pending に正規化して回収
+    if (labels.includes(cfg.triggerLabel) && !marker) {
+      await finalize(
+        github,
+        context,
+        core,
+        issue,
+        { ts: null, status: 'pending', tries: 0 },
+        cfg,
+        'マーカー未検出。定期実行で再投稿します',
+      );
+      try {
+        await github.rest.issues.removeLabel({
+          ...repo,
+          issue_number: issue.number,
+          name: cfg.triggerLabel,
+        });
+      } catch {
+        /* ignore */
+      }
+      continue;
+    }
+
     if (labels.includes(cfg.triggerLabel) && marker?.status === 'triggered' && marker?.ts) {
       // 遅延する Devin 応答を回収する。URLなら done。失敗なら pending。
       // どちらも無い無応答が続く場合は tries を進めて上限で pending へ降格し再投稿に委ねる。
