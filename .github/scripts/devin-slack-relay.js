@@ -41,7 +41,7 @@ function parseMarker(body) {
   const attrs = {};
   for (const kv of m[1].matchAll(/(\w+)=(\S+)/g)) attrs[kv[1]] = kv[2];
   return {
-    ts: attrs.ts && attrs.ts !== '-' ? attrs.ts : null,
+    ts: attrs.ts !== undefined && attrs.ts !== '-' ? attrs.ts : null,
     status: attrs.status || 'triggered',
     tries: parseInt(attrs.tries || '0', 10),
   };
@@ -230,8 +230,8 @@ async function mirrorProjectField(github, context, core, issueNumber, status, cf
       }}
     }`;
     const data = await github.graphql(q, { owner, repo, num: issueNumber });
-    const project = data.organization && data.organization.projectV2;
-    const field = project && project.field;
+    const project = data.organization?.projectV2;
+    const field = project?.field;
     const item = data.repository.issue.projectItems.nodes.find((n) => n.project.id === project.id);
     if (!project || !field || !item) return; // プロジェクト非参加ならラベルのみ
     const opt = field.options.find((o) => o.name === option);
@@ -249,9 +249,9 @@ async function mirrorProjectField(github, context, core, issueNumber, status, cf
 async function finalize(github, context, core, issue, state, cfg, note) {
   const prev = await getMarkerEntry(github, context.repo, issue.number);
   const merged = {
-    permalink: state.permalink || (prev && prev.permalink),
-    sessionUrl: state.sessionUrl || (prev && prev.sessionUrl),
-    ts: state.ts !== undefined ? state.ts : prev && prev.ts,
+    permalink: state.permalink || prev?.permalink,
+    sessionUrl: state.sessionUrl || prev?.sessionUrl,
+    ts: state.ts !== undefined ? state.ts : prev?.ts,
     status: state.status,
     tries: state.tries,
   };
@@ -279,7 +279,7 @@ async function dispatch({ github, context, core }) {
       context,
       core,
       issue,
-      { ts: prev && prev.ts, status: 'queued', tries: 0 },
+      { ts: prev?.ts, status: 'queued', tries: 0 },
       cfg
     );
     core.setOutput('queued', 'true');
@@ -288,20 +288,20 @@ async function dispatch({ github, context, core }) {
 
   const marker = await getMarkerEntry(github, repo, issue.number);
   // triggered のみスキップ（queued は手動で即実行へ昇格可能。pending は手動再試行）
-  if (marker && marker.status === 'triggered') {
+  if (marker?.status === 'triggered') {
     core.info('already triggered; skipping');
     core.setOutput('skipped', 'true');
     return;
   }
 
-  const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker && marker.ts);
+  const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
   if (!res.ok) {
     await finalize(
       github,
       context,
       core,
       issue,
-      { ts: marker && marker.ts, status: 'pending', tries: (marker && marker.tries) || 0 },
+      { ts: marker?.ts, status: 'pending', tries: marker?.tries || 0 },
       cfg,
       `Slack 投稿失敗 (${res.error})`
     );
@@ -374,7 +374,7 @@ async function sweep({ github, context, core }) {
 
     if (labels.includes(cfg.queueLabel)) {
       // キューから起動: 新規スレッドへ投稿
-      const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker && marker.ts);
+      const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
       if (res.ok) {
         await finalize(github, context, core, issue, { ts: res.ts, permalink: res.permalink, status: 'triggered', tries: 0 }, cfg);
         try {
@@ -383,12 +383,12 @@ async function sweep({ github, context, core }) {
           /* ignore */
         }
       } else {
-        await finalize(github, context, core, issue, { ts: marker && marker.ts, status: 'pending', tries: 0 }, cfg, `Slack 投稿失敗 (${res.error})`);
+        await finalize(github, context, core, issue, { ts: marker?.ts, status: 'pending', tries: 0 }, cfg, `Slack 投稿失敗 (${res.error})`);
       }
       continue;
     }
 
-    if (labels.includes(cfg.triggerLabel) && marker && marker.status === 'triggered' && marker.ts) {
+    if (labels.includes(cfg.triggerLabel) && marker?.status === 'triggered' && marker?.ts) {
       // 遅延する Devin 応答を回収する。失敗なら pending。セッションURLなら done。
       const r = await slackReplies(cfg, marker.ts);
       if (!r.ok) continue;
@@ -407,9 +407,9 @@ async function sweep({ github, context, core }) {
     }
 
     if (labels.includes(cfg.waitingLabel)) {
-      const tries = (marker && marker.tries) || 0;
+      const tries = marker?.tries || 0;
       // まず既存スレッドの返信を見る（再投稿前に Devin が応答済みかも）
-      if (marker && marker.ts) {
+      if (marker?.ts) {
         const r = await slackReplies(cfg, marker.ts);
         if (r.ok) {
           const { sessionUrl } = inspectReplies(r.messages);
@@ -425,12 +425,12 @@ async function sweep({ github, context, core }) {
         }
       }
       if (tries >= MAX_TRIES) {
-        await finalize(github, context, core, issue, { ts: marker && marker.ts, status: 'failed', tries }, cfg, '再試行回数の上限に達しました');
+        await finalize(github, context, core, issue, { ts: marker?.ts, status: 'failed', tries }, cfg, '再試行回数の上限に達しました');
         continue;
       }
       // 再投稿する。既存スレッド優先で失敗時は新スレッドへ。
-      const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker && marker.ts);
-      const next = { ts: (res.ok && res.ts) || (marker && marker.ts), status: 'pending', tries: tries + 1 };
+      const res = await postToSlack(cfg, buildSlackMessage(cfg, issue), marker?.ts);
+      const next = { ts: (res.ok ? res.ts : undefined) || marker?.ts, status: 'pending', tries: tries + 1 };
       if (res.ok) next.permalink = res.permalink;
       await finalize(github, context, core, issue, next, cfg, res.ok ? undefined : `Slack 再投稿失敗 (${res.error})`);
       await sleep(1000); // Slack レート対策
