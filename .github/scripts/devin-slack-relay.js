@@ -1,4 +1,4 @@
-/* global process, fetch, URLSearchParams, setTimeout, module */
+/* eslint-disable no-undef -- github-script execution environment provides process/fetch/module globals */
 // Devin Slack 起動リレーの共通ロジック。
 // devin-slack-trigger.yml (issues:labeled) と devin-slack-retry.yml (schedule) の両方から呼ばれる。
 //
