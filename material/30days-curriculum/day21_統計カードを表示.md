@@ -386,7 +386,7 @@ flowchart TB
 
 #### 0-6. root.ts に時系列順で登録する
 
-ルーターを書いただけではまだ `api.report.getOverview` とは呼べません。`src/server/api/root.ts` に追加して初めてフロントから呼べる名前になります。Day 18 で書いた `root.ts` を開き、import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。増えるのは `reportRouter` の import 1行と `report: reportRouter,` の1行だけで、ほかの行は貼り足さずにそのまま残します。
+ルーターを書いただけではまだ `api.report.getOverview` とは呼べません。`src/server/api/root.ts` に追加して初めてフロントから呼べる名前になります。Day 18 で書いた `root.ts` を開きます。import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。増えるのは `reportRouter` の import 1行と `report: reportRouter,` の1行だけです。ほかの行は貼り足さずにそのまま残します。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -804,7 +804,7 @@ if (isLoading) {
 
 **確認ポイント**:
 - 2枚目に `completionRate` と `%` を書いた
-- まだ `</div>` を閉じていないので、表示の確認は4ブロック目のあとに回す
+- まだ `</div>` を閉じていないので表示の確認は4ブロック目のあとに回す
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
