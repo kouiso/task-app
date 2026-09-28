@@ -21,7 +21,12 @@ Devin からの操作は、Devin の org に登録済みの **Google Drive Remot
 - 参照・検証: `search_files`（`parentId = '1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU'` で一覧）、`get_file_metadata`、`get_file_permissions`、`download_file_content`
 - 新規ファイルの作成: `create_file` に `title`・`parentId`・`contentMimeType` を指定し、バイナリは `base64Content` で渡します
 
-Remote MCP には既存ファイルの内容を更新する手段がありません。**同名上書き（＝同一ファイルIDの維持）が必要な再配布**だけは `scripts/pdf-book/upload_drive.py`（rclone `gdrive:` リモート = OAuth）で行います。`create_file` で同名ファイルを作ると別 ID になり、配布済み PDF 内の章間リンクと `pdf-link-map.json` が古い ID を指して壊れます。rclone 側の認証は作業者のローカル環境で `rclone authorize "drive"` のブラウザ同意で通し、リモート作成（`rclone config create gdrive drive`）とトークンの永続化方法は作業者と相談してください。
+Remote MCP には既存ファイルの内容を更新する手段がありません。**同名上書き（＝同一ファイルIDの維持）が必要な再配布**だけは rclone `gdrive:` リモート（OAuth）で行います。`create_file` で同名ファイルを作ると別 ID になり、配布済み PDF 内の章間リンクと `pdf-link-map.json` が古い ID を指して壊れます。
+
+- 教材PDF は `scripts/pdf-book/upload_drive.py` が `dist/pdf/*.pdf` をまとめて `rclone copyto` します（PDF 専用で、ZIP は対象外）。
+- 写経用 ZIP の更新は1本だけ直接実行します: `rclone copyto --drive-root-folder-id=1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU task-app-curriculum-v1.1.zip gdrive:task-app-curriculum-v1.1.zip`
+
+rclone 側の認証は作業者のローカル環境で `rclone authorize "drive"` のブラウザ同意で通し、リモート作成（`rclone config create gdrive drive`）とトークンの永続化方法は作業者と相談してください。
 
 ## PDFの章間リンクを設定する
 
