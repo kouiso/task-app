@@ -713,7 +713,7 @@ import { Label } from '@/component/ui/label';
 Step 3 で書いた `isAllSelected`（boolean）を、3 状態を返す `selectAllState` に置き換えます。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（isAllSelected の宣言を書き直す）
 // isAllSelected を削除して、以下に置き換える
 const selectAllState =
   selectableTasks.length > 0
@@ -739,7 +739,7 @@ const selectAllState =
 JSX 側の `checked` に渡す値を差し替えます。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（id="select-all" の要素を書き直す） */}
 {/* Step 3 で書いた Checkbox の checked を差し替える */}
 <Checkbox
   id="select-all"
@@ -987,10 +987,10 @@ import { CheckSquare, Plus, Trash2 }
 **確認ポイント**:
 - 「削除」ボタンが赤色で表示される
 
-ページの JSX 末尾に `DeleteConfirmDialog` を配置します。
+Day 15 で置いた1件削除用の `DeleteConfirmDialog` はそのまま残します。一括削除用の2つ目はそのすぐ下に置きます。1つ目を書き換えるとカードの削除ボタンを押しても確認ダイアログが開かなくなります。2つのダイアログは開くかどうかを別々の state で持つので同じ画面に並べられます。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（open={deleteDialogOpen} の要素の直後に追加） */}
 {/* 確認ダイアログ（JSXの末尾に配置） */}
 <DeleteConfirmDialog
   open={bulkDeleteDialogOpen}
