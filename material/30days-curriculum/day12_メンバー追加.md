@@ -43,7 +43,7 @@ flowchart TD
     style I fill:#ffebee
 ```
 
-図の中で `page.tsx` から下へ伸びる矢印は props、下から戻る矢印はコールバックです。メンバー一覧やボタンを描くのは `ProjectDetailView` ですがダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
+図の中で `page.tsx` から下へ伸びる矢印は props、下から戻る矢印はコールバック（親から子へ渡しておいて子の中で押されたときに呼び戻される関数）です。メンバー一覧やボタンを描くのは `ProjectDetailView` ですがダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
 
 ### やること / やらないこと
 
@@ -106,9 +106,9 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | project.ts に getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く | 20分 |
+| Step 0 | メンバー管理APIを `project.ts` に追加する | 20分 |
 | Step 1 | プロジェクト詳細ビューの接続を確認する | 6分 |
-| Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
+| Step 2 | ProjectDetailViewに渡す値を `page.tsx` に用意する | 7分 |
 | Step 3 | メンバー追加用のstateを準備する | 6分 |
 | Step 4 | メンバー追加ダイアログのUIを作る | 7分 |
 | Step 5 | メンバー追加APIを呼ぶ | 5分 |
@@ -116,13 +116,15 @@ src/
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
 
-**合計時間**: 約66分です。
+**合計時間**: 約69分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
 ---
 
-### Step 0: project.ts に getAvailableUsers/addMember/removeMember/updateMemberRole を自分で書く（20分）
+### Step 0: メンバー管理APIを `project.ts` に追加する（20分）
+
+追加するのは `getAvailableUsers`、`addMember`、`removeMember`、`updateMemberRole` の4つです。
 
 **ゴール**: 追加可能ユーザー取得・メンバー追加・メンバー削除・メンバー権限変更の4つの手続きを追加します。詳細取得の `getById` は Day 11 で追加済みです。
 
@@ -186,7 +188,7 @@ flowchart TB
 
 内側の枠が `some` で取れる人、内側を外した残りが `none` で取れる人です。追加の候補として出したいのは外側の残りなので`none` を使います。`some` と書き間違えるとすでに参加している人だけが候補に並びます。
 
-#### 0-2. addMember（ここが一番のヤマ場、重複チェック）
+#### 0-2. addMember（オーナー付与の制限と重複チェック）
 
 `addMember` に使う入力スキーマをまず定義します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行は**書き換え**ます。`projectMemberRoleSchema` も一緒に取り込む形へ直してください。新しい行を足すのではありません。
 
@@ -269,7 +271,7 @@ const projectMemberSchema = z.object({
     }
 ```
 
-`findUnique` が行を返してきたらそのユーザーはすでにこのプロジェクトのメンバーです。`CONFLICT` は「入力の書式ではなく、いまのデータの状態とぶつかっている」ことを表すコードなので`BAD_REQUEST` とは分けています。呼び出し側はコードを見て入力を直させるのか一覧を取り直させるのかを選べます。ここで止めなければ次の `create` が `userId_projectId` の一意制約に当たり、Prisma の例外がそのまま外へ出ます。利用者の画面には日本語の説明が付かないデータベースのエラーが表示されます。
+`findUnique` が行を返してきたらそのユーザーはすでにこのプロジェクトのメンバーです。`CONFLICT` は「入力の書式ではなく、いまのデータの状態とぶつかっている」ことを表すコードなので`BAD_REQUEST` とは分けています。呼び出し側はコードを見て入力を直させるのか一覧を取り直させるのかを選べます。ここで止めなければ次の `create` が `userId_projectId` の一意制約に当たります。一意制約はデータベース側の決まりです。同じ組の行を2つ作ろうとした書き込みを拒否します。拒否されると Prisma は例外（処理を途中で打ち切って呼び出し元へ投げ返すエラー）を投げます。その例外は tRPC のエラーとして画面側へ返ります。ただし Day 12 の画面にはこのエラーを表示する処理がありません。追加のダイアログは開いたまま残ります。利用者には何が起きたのか分かりません。
 
 重複していなければ実際にメンバーとして追加します。
 
@@ -602,13 +604,13 @@ const {
 
 ---
 
-### Step 2: ProjectDetailViewのpropsを作る（4分）
+### Step 2: ProjectDetailViewに渡す値を `page.tsx` に用意する（7分）
 
-**ゴール**: `ProjectDetailView` がどのようなpropsを受け取るか決めます。
+**ゴール**: `ProjectDetailView` が受け取る props を確認して渡す値を `page.tsx` に用意します。書き足すのは import・ロール変更の mutation とハンドラー・権限の計算・state の4つです。既存のコードでは `<ProjectDetailView>` タグだけを書き換えます。
 
-`ProjectDetailView` は独立したコンポーネントとして作ります。
-まず props の型定義を決めて親ページから渡す値の形をそろえます。
-型を先に決めておくとこのあとハンドラーを足すときにどの引数が来るのかを毎回さかのぼって確認せずに済みます。
+`ProjectDetailView` は配布済みの部品なので今日は中身を書きません。
+まず props の型を確認して親ページから渡す値の形をそろえます。
+型を先に確かめておくとこのあとハンドラーを足すときにどの引数が来るのかを毎回さかのぼって確認せずに済みます。
 
 | props | 型 | 役割 |
 |-------|-----|------|
@@ -626,7 +628,7 @@ const {
 - `onRemoveMember` は `userId` を引数に取る
 - `canManageMembers` / `canArchive` はボタンの表示可否をコンポーネントに伝える
 
-Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**ここでは確認するだけで、コードの追加は不要です。**
+Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**表の確認はここまでです。この下からは `page.tsx` の5か所を編集します。4か所は書き足し、最後の1か所は既存コードの書き換えです。**
 
 **確認ポイント**:
 - `onRemoveMember={() => {}}` が Step 6 で `handleRemoveMember` に変わることを覚えておく
@@ -647,34 +649,9 @@ import {
 
 `hasPermission` は「そのロールがこの操作を許されているか」を返す関数、`isProjectMemberRole` は文字列が正しいロールかを確かめる型ガードです。どちらもサーバーと同じ `@/lib/constant/roles` から取り込むのでフロントとサーバーで判定基準がずれません。
 
-Day 11 では `updateMutation` で `utils.project.getById.invalidate()` と引数なしで呼んでいました。開いているプロジェクトのキャッシュだけを取り直す形へ絞ります。`src/app/project/page.tsx` の `updateMutation` の `onSuccess` を、次の形にしてください。
+プロジェクト名とアーカイブ済みかどうかは詳細画面にも出る値です。そのため Day 11 Step 3 の `updateMutation` は `onSuccess` で `getAll` に加えて `getById` も取り直しています。Day 11 Step 7 の `archiveMutation` と `unarchiveMutation` も同じです。ここで書き換えるものはありません。
 
-```typescript
-// filepath: src/app/project/page.tsx
-// updateMutation の onSuccess を差し替える
-onSuccess: () => {
-  utils.project.getAll.invalidate();
-  if (selectedProject) {
-    utils.project.getById.invalidate(
-      { id: selectedProject },
-    );
-  }
-  setDialogOpen(false);
-},
-```
-
-プロジェクト名を変えたときに一覧だけでなく開いている詳細画面の表示も入れ替わります。
-この1行が無いと詳細画面には古い名前が残ったままになります。
-
-アーカイブの状態も詳細画面に保存されています。Day 11で書いた `archiveMutation` と `unarchiveMutation` の `onSuccess` にある `utils.project.getAll.invalidate();` の直後へ次の1行を追加してください。
-
-```typescript
-utils.project.getById.invalidate();
-```
-
-この呼び出しで詳細のキャッシュ（取得済みデータ）を更新対象にします。追加しないと同じプロジェクトを開き直したときに古いアーカイブ状態が残ります。成功後は一覧へ戻るため、ここでは対象IDを絞らず詳細の取得結果すべてに古いという印を付けています。
-
-確認はStep 8のアーカイブ操作で行います。アーカイブ後に同じプロジェクトを開き直して解除できれば成功です。ボタンが切り替わらない場合は両方の `onSuccess` に追加したかを確認してください。
+確認はStep 8のアーカイブ操作で行います。アーカイブ後に同じプロジェクトを開き直して解除できれば成功です。ボタンが切り替わらない場合は Day 11 Step 7 の両方の `onSuccess` に `utils.project.getById.invalidate()` があるかを確認してください。
 
 続いてロール変更の mutation とハンドラーを `handleArchive` の並びに追加します。
 
@@ -2432,15 +2409,13 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
   const updateMutation = api.project.update.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
+      utils.project.getById.invalidate();
       setDialogOpen(false);
     },
   });
 ```
 
-Step 2 で `updateMutation` の `onSuccess` に `getById.invalidate` を足しました。この1行が無いと名前を変えても詳細画面には古い名前が残ります。一覧と詳細でデータの出どころが違うので書き換えたら両方に印を付ける必要があります。
+`updateMutation` は Day 11 Step 3 のまま `getById.invalidate()` を引数なしで呼びます。編集ダイアログは一覧画面にしか無いので保存した時点では詳細画面を開いていません。引数なしで呼ぶと前に開いたプロジェクトの詳細キャッシュすべてに古いという印が付きます。配布した `src/trpc/react.tsx` の設定では取得から30秒のあいだ印の無いキャッシュをそのまま使います。この1行が無いと詳細を見てから30秒以内に名前を変えて開き直したとき古い名前が出ます。一覧と詳細でデータの出どころが違うので書き換えたら両方に印を付ける必要があります。
 
 **削除の mutation**:
 

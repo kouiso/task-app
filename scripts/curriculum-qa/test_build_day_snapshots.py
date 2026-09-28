@@ -422,6 +422,346 @@ def check_insertion() -> list[str]:
     return fails
 
 
+def expect_placement_error(label: str, run: object, wants: tuple[str, ...]) -> list[str]:
+    """run() が注記どおりに貼れんことを理由に止まり、その文に wants が全部出ることを確かめる。
+
+    ValueError で受ける。止まらん古い道具ではここへ来ず、else の側で落ちる。
+    """
+    assert callable(run)
+    try:
+        got = run()
+    except ValueError as error:
+        message = str(error)
+        return [f"❌ {label}: 止めた理由に {want} が無い: {message}" for want in wants if want not in message]
+    return [f"❌ {label}: 黙って飛ばした: {got!r}"]
+
+
+def check_placement_note_failure() -> list[str]:
+    """貼る位置の注記どおりに当てられんブロックを飛ばさず、本・見出し・注記を名指しして止まる。
+
+    飛ばすとツリーは前の日のコードのまま型検査と build を通る。写経の再現検査は緑のまま、
+    その日の変更を1行も見なくなる（day28 の見出し行とボタン4ブロックがこれで、
+    Day 28〜30 のツリーは Day 15 の見出しのまま通っとった）。
+    """
+    fails: list[str] = []
+    base = blk(15, "", "export const taskRouter = createTRPCRouter({", "  delete: x,", "});")
+    unreadable = blk(28, "（ボタンの並びの右端に追加）", "  bulkDelete: z,")
+    fails += expect_placement_error(
+        "読めない注記",
+        lambda: target.apply_insertions(target.render([base]), [base, unreadable], 15),
+        ("（ボタンの並びの右端に追加）", "day28_x.md"),
+    )
+    # 読める注記でも、指す場所が今のファイルに無ければ止まる。
+    missing = blk(28, "（notThere の直後に追加）", "  bulkDelete: z,")
+    fails += expect_placement_error(
+        "指す場所の無い注記",
+        lambda: target.apply_insertions(target.render([base]), [base, missing], 15),
+        ("（notThere の直後に追加）",),
+    )
+
+    # 続きの注記は先頭と一緒に当たる。写させん注記は当てずに通す。どちらでも止めない。
+    quiet = [
+        base,
+        blk(28, "（delete の直後に追加）", "  bulkComplete: protectedProcedure"),
+        blk(28, "（同じファイルの続き）", "    .mutation(async () => {}),"),
+        blk(28, "（一時的に足す行）", "console.log('確認用');"),
+    ]
+    try:
+        merged = target.apply_insertions(target.render([base]), quiet, 15)
+    except ValueError as error:
+        fails.append(f"❌ 続きの注記か写させん注記で止まっている: {error}")
+    else:
+        if ".mutation(async () => {})," not in merged:
+            fails.append(f"❌ 続きの注記が先頭と一緒に当たっていない: {merged!r}")
+        if "console.log" in merged:
+            fails.append(f"❌ 一時的な行まで当てている: {merged!r}")
+
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d) / "material"
+        root.mkdir()
+        (root / "day15_基準.md").write_text(
+            block("src/server/api/routers/task.ts", "\n".join(base.lines)), encoding="utf-8"
+        )
+        dest = Path(d) / "tree"
+        dest.mkdir()
+        # ツリーを組む経路では、本と直前の見出しまで名指しする。
+        day28 = root / "day28_一括操作.md"
+        day28.write_text(
+            "## 今日の流れ\n\n### Step 6: 一括完了を実装する\n\n"
+            + block("src/server/api/routers/task.ts（ボタンの並びの右端に追加）", "  bulkDelete: z,"),
+            encoding="utf-8",
+        )
+        fails += expect_placement_error(
+            "ツリーを組む経路",
+            lambda: target.apply_blocks(dest, sorted(root.glob("day*.md"))),
+            ("day28_一括操作.md", "Step 6: 一括完了を実装する", "（ボタンの並びの右端に追加）"),
+        )
+        # 注記を書き込み先から切り離せんと、注記ごとの名前の別ファイルへ入って本来の
+        # ファイルには何も入らん。ASCII の括弧の中の `/` がこれになる。
+        day28.write_text(
+            "### Step 5: 見出しを書き直す\n\n"
+            + block("src/server/api/routers/task.ts(</Button> の前に追加)", "  bulkDelete: z,"),
+            encoding="utf-8",
+        )
+        fails += expect_placement_error(
+            "書き込み先に残った注記",
+            lambda: target.apply_blocks(dest, sorted(root.glob("day*.md"))),
+            ("day28_一括操作.md", "Step 5: 見出しを書き直す", "</Button> の前に追加"),
+        )
+        if any(p.name.endswith(")") for p in dest.rglob("*")):
+            fails.append("❌ 注記ごとの名前の別ファイルをツリーへ置いている")
+
+    fails += check_placement_failure_exits_nonzero()
+    return fails
+
+
+def check_placement_failure_exits_nonzero() -> list[str]:
+    """貼れんブロックのある日は、ツリー NG として exit 1 で終わり、理由を1行ずつ出す。"""
+    fails: list[str] = []
+    saved = {
+        name: getattr(target, name)
+        for name in (
+            "REPO_ROOT", "SNAPSHOT_ROOT", "RESULT_DOC",
+            "available_days", "build_tree", "source_input_hash",
+        )
+    }
+    problem_block = target.Block(28, "day28_x.md", 881, "src/app/task/page.tsx", "（右端に追加）", "tsx", ())
+    placement_error = getattr(target, "PlacementError", None)
+    if placement_error is None:
+        return ["❌ 貼れんブロックを知らせる PlacementError が無い"]
+
+    def fake_build(_day: int) -> tuple[Path, int]:
+        raise placement_error([target.PlacementProblem(problem_block, "読めません")])
+
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            target.REPO_ROOT = Path(directory)
+            target.SNAPSHOT_ROOT = target.REPO_ROOT / "dist" / "day-snapshots"
+            target.RESULT_DOC = target.REPO_ROOT / "doc" / "result.md"
+            target.available_days = lambda: [28]
+            target.build_tree = fake_build
+            target.source_input_hash = lambda _day: "hash"
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = target.main(["build_day_snapshots.py", "--day", "28"])
+            if code != 1:
+                fails.append(f"❌ 貼れんブロックのある日で exit {code} を返した")
+            if "day28_x.md 881行目 src/app/task/page.tsx（右端に追加）: 読めません" not in out.getvalue():
+                fails.append(f"❌ 画面に本・行・注記・理由が出ていない:\n{out.getvalue()}")
+    finally:
+        for name, value in saved.items():
+            setattr(target, name, value)
+    return fails
+
+
+# Day 27 を終えた読者の一覧画面の見出しまわり。day15 の形のまま、見出しと新規タスクボタンが
+# 縦に並ぶ列の直下にある。ボタンの開始タグは3行に折り返してある。
+PAGE_BEFORE_HEADER = """export default function TaskPage() {
+  return (
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold
+          tracking-tight">
+          タスク
+        </h1>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          新規タスク
+        </Button>
+        <div className="flex gap-2 w-full">
+          <Button onClick={handleReset}>リセット</Button>
+        </div>
+      </div>
+  );
+}"""
+
+# day28 Step 5 の書き直し。見出しとボタンを1つの行へ包み、Step 6〜8 用の目印を置く。
+HEADER_REWRITE = (
+    '<div className="flex flex-col gap-3 lg:flex-row">',
+    '  <h1 className="text-3xl font-bold tracking-tight">タスク</h1>',
+    '  <div className="flex flex-col gap-2 sm:flex-row">',
+    "    {selectedTaskList.length > 0 && (",
+    "      <>",
+    "        {/* ここにStep 6〜8でボタンを追加していく */}",
+    "      </>",
+    "    )}",
+    '    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>',
+    '      <Plus className="mr-2 h-4 w-4" /> 新規タスク',
+    "    </Button>",
+    "  </div>",
+    "</div>",
+)
+SPAN_TO_CLOSING = "（<h1 className=\"text-3xl font-bold から「新規タスク」の </Button> までを書き直す）"
+AT_PLACEHOLDER = "（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加）"
+
+
+def check_quoted_note_forms() -> list[str]:
+    """day28 の2つの注記の形を読んで当てる。
+
+    どちらも読者が画面とコードで見つけられる目印を「」で名指しする。
+    - Step 5: `A から「新規タスク」の </Button> までを書き直す`。終わりを開始タグの行の
+      文字列（`onClick={handleCreate}>`）で指すと、読者はそこで切って `</Button>` を残す。
+    - Step 6〜8: `…「ここにStep 6〜8でボタンを追加していく」の位置に追加`。Step 5 が置いた
+      目印のコメントの位置へ足す。
+    """
+    fails: list[str] = []
+
+    # 注記の中の `</Button>` の `/` で、書き込み先から切り離せなくならない。
+    with tempfile.TemporaryDirectory() as d:
+        book = Path(d) / "day28_x.md"
+        book.write_text(block(f"src/app/task/page.tsx{SPAN_TO_CLOSING}", "<div />"), encoding="utf-8")
+        by_file = concat_by_file([book])
+        got = [(t, [b.note for b in bs]) for t, bs in by_file.items()]
+        if got != [("src/app/task/page.tsx", [SPAN_TO_CLOSING])]:
+            fails.append(f"❌ 全角の括弧の中の / で注記を切り離せていない: {got}")
+
+    span = target.REWRITE_SPAN_NOTE.match(SPAN_TO_CLOSING)
+    if span is None:
+        return fails + ["❌ 範囲の書き直しの注記として読めていない"]
+    out = target.rewrite_span(PAGE_BEFORE_HEADER, span.group(1), span.group(2), "\n".join(HEADER_REWRITE))
+    if out is None:
+        fails.append("❌ 「新規タスク」の </Button> までを書き直せていない")
+    else:
+        if "tracking-tight\">\n" in out or out.count("新規タスク") != 1:
+            fails.append(f"❌ 書き直す前の見出しかボタンが残っている: {out!r}")
+        if "handleReset" not in out or out.count("</Button>") != 2:
+            fails.append(f"❌ 書き直しが後ろの要素まで飲み込んでいる: {out!r}")
+    # 範囲の中に同じ文字が2つあると、どちらのボタンか決められないので触らない。
+    doubled = PAGE_BEFORE_HEADER.replace("リセット", "新規タスク")
+    if target.rewrite_span(doubled, span.group(1), span.group(2), "x") is not None:
+        fails.append("❌ 「」の文字が2つ当たるのに書き直している")
+
+    position_note = getattr(target, "POSITION_NOTE", None)
+    if position_note is None or position_note.match(AT_PLACEHOLDER) is None:
+        fails.append("❌ 目印の位置へ足す注記として読めていない")
+    elif position_note.match("（同じファイルの続き）"):
+        fails.append("❌ 続きの注記を目印の位置へ足す注記として読んでいる")
+
+    # Day 27 の版へ Step 5〜7 を順に当てる。ボタンは Step の順で目印の上へ積み、目印は残す。
+    blocks = [
+        blk(15, "", *PAGE_BEFORE_HEADER.split("\n")),
+        blk(28, SPAN_TO_CLOSING, *HEADER_REWRITE),
+        blk(28, AT_PLACEHOLDER, "{/* 完了にする */}", "<Button onClick={handleBulkComplete}>完了にする</Button>"),
+        blk(28, AT_PLACEHOLDER, "<Button onClick={handleBulkDelete}>削除</Button>"),
+    ]
+    blocks = [b._replace(lineno=n) for n, b in enumerate(blocks, 1)]
+    try:
+        merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
+    except ValueError as error:
+        return fails + [f"❌ day28 の注記の形で止まっている: {error}"]
+    order = [merged.find(s) for s in ("完了にする</Button>", "削除</Button>", "ここにStep 6〜8で", "新規タスク")]
+    if -1 in order or order != sorted(order):
+        fails.append(f"❌ ボタンが Step の順で目印の上に並んでいない: {merged!r}")
+
+    # 目印が無ければ（Step 5 を当てられんかった等）、足さずに止まる。
+    orphan = [blocks[0], blocks[2]]
+    fails += expect_placement_error(
+        "目印の無い位置へ足す注記",
+        lambda: target.apply_insertions(target.render(orphan[:1]), orphan, 15),
+        (AT_PLACEHOLDER,),
+    )
+    return fails
+
+
+PAGE_BEFORE_SELECT_ALL = """export default function TaskPage() {
+const isAllSelected =
+  selectableTasks.length > 0
+  && selectedTaskList.length
+    === selectableTasks.length;
+  return (
+    <div>
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="select-all"
+    checked={isAllSelected}
+    onCheckedChange={(checked) =>
+      handleSelectAll(checked === true)
+    }
+  />
+</div>
+          <Checkbox
+            checked={selectedTasks.has(task.id)}
+          />
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          isPending={deleteMutation.isPending}
+        />
+    </div>
+  );
+}"""
+SELECT_ALL_STATE = (
+    "// isAllSelected を削除して、以下に置き換える",
+    "const selectAllState =",
+    "  selectedTaskList.length === 0 ? false : 'indeterminate';",
+)
+SELECT_ALL_CHECKBOX = (
+    "{/* Step 3 で書いた Checkbox の checked を差し替える */}",
+    "<Checkbox",
+    '  id="select-all"',
+    "  checked={selectAllState}",
+    "/>",
+)
+BULK_DIALOG = (
+    "{/* 確認ダイアログ（JSXの末尾に配置） */}",
+    "<DeleteConfirmDialog",
+    "  open={bulkDeleteDialogOpen}",
+    "  onOpenChange={setBulkDeleteDialogOpen}",
+    "/>",
+)
+DECL_REWRITE = "（isAllSelected の宣言を書き直す）"
+INNER_MARK_REWRITE = '（id="select-all" の要素を書き直す）'
+AFTER_ELEMENT = "（open={deleteDialogOpen} の要素の直後に追加）"
+
+
+def check_element_anchored_notes() -> list[str]:
+    """day28 Step 4 と Step 7 の3つの注記を読んで当てる。
+
+    どれも注記が無いと、組み立て側が別の物を書き換えるか黙って飛ばす。
+    - Step 4 の `selectAllState`: 名前が変わるので宣言の書き直しに当たらず、新しい宣言として
+      足されて `isAllSelected` が残る。Biome の noUnusedVariables で赤になる。
+    - Step 4 の全選択チェックボックス: `<Checkbox` が一覧の側にもあるので名前では決まらず、
+      黙って飛ばされて `checked={isAllSelected}` のまま残る。目印の `id="select-all"` は
+      開始タグの2行目にあるので、そこからタグの頭まで遡らんと要素を指せん。
+    - Step 7 の一括削除ダイアログ: `<DeleteConfirmDialog` が1つしか無いので、注記が無いと
+      Day 15 の1件削除のダイアログを書き換えてまう。1件削除のボタンを押しても何も開かん画面になる。
+    """
+    fails: list[str] = []
+    decl = getattr(target, "REWRITE_DECL_NOTE", None)
+    if decl is None or decl.match(DECL_REWRITE) is None:
+        fails.append("❌ 宣言の書き直しの注記として読めていない")
+    blocks = [
+        blk(15, "", *PAGE_BEFORE_SELECT_ALL.split("\n")),
+        blk(28, DECL_REWRITE, *SELECT_ALL_STATE),
+        blk(28, INNER_MARK_REWRITE, *SELECT_ALL_CHECKBOX),
+        blk(28, AFTER_ELEMENT, *BULK_DIALOG),
+        # `完成版` 側の同じダイアログ。ダイアログが2つになった後は名前で決まらんので当てない。
+        blk(28, "", "{/* 完成版: 削除確認ダイアログ */}", *BULK_DIALOG[1:]),
+    ]
+    blocks = [b._replace(lineno=n) for n, b in enumerate(blocks, 1)]
+    try:
+        merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
+    except ValueError as error:
+        return fails + [f"❌ day28 Step 4・7 の注記で止まっている: {error}"]
+    if "const isAllSelected" in merged or merged.count("const selectAllState") != 1:
+        fails.append(f"❌ isAllSelected の宣言が selectAllState へ書き直されていない: {merged!r}")
+    if "checked={selectAllState}" not in merged or "checked={selectedTasks.has(task.id)}" not in merged:
+        fails.append(f"❌ 全選択のチェックボックスだけを書き直せていない: {merged!r}")
+    order = [merged.find(s) for s in ("open={deleteDialogOpen}", "open={bulkDeleteDialogOpen}", "    </div>\n  );")]
+    if -1 in order or order != sorted(order) or merged.count("<DeleteConfirmDialog") != 2:
+        fails.append(f"❌ 一括削除のダイアログが1件削除のダイアログの後ろに足されていない: {merged!r}")
+
+    # 目印が開始タグのどの行にも無ければ、足さずに止まる。
+    orphan = [blocks[0], blk(28, "（open={missing} の要素の直後に追加）", *BULK_DIALOG)._replace(lineno=9)]
+    fails += expect_placement_error(
+        "目印の無い要素の後ろへ足す注記",
+        lambda: target.apply_insertions(target.render(orphan[:1]), orphan, 15),
+        ("（open={missing} の要素の直後に追加）",),
+    )
+    return fails
+
+
 PAGE_WITH_DIALOG = """export default function TaskPage() {
   const canEditProject = () => true;
   return (
@@ -1852,6 +2192,9 @@ CHECKS = (
     ("置き換えと追記の境界", check_version_boundary),
     ("まるごとか抜粋か", check_complete_file),
     ("差し込みの適用", check_insertion),
+    ("注記どおりに貼れんブロックで止まる", check_placement_note_failure),
+    ("「」で目印を名指しする注記", check_quoted_note_forms),
+    ("宣言と要素の中の目印を名指しする注記", check_element_anchored_notes),
     ("要素の書き換え", check_element_replacement),
     ("import の足し合わせ", check_import_merge),
     ("配布物の置き換え", check_scaffold_replacement),

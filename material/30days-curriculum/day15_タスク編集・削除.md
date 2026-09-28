@@ -784,7 +784,7 @@ import { DeleteConfirmDialog } from
 
 削除の確認はブラウザ標準の `window.confirm()` でも出せますが見た目はブラウザ任せになり、通信中にボタンを押せなくする指定もできません。Day 11 のプロジェクト削除で使った `DeleteConfirmDialog` は同じ用途の共通部品なのでタスク側でも取り込むだけで済みます。新しく作る必要はありません。
 
-state は `ProjectPageContent` の先頭にある他の `useState` と並べます。`deleteMutation` は `updateMutation` の直後に追加してください。これが完成コードと同じ配置です。
+state は `TaskPageContent` の先頭にある他の `useState` と並べます。`deleteMutation` は `updateMutation` の直後に追加してください。これが完成コードと同じ配置です。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1025,7 +1025,7 @@ const handleCreate = () => {
 PORT=3001 npm run dev
 ```
 
-`PORT=3001` を付けるのはDay 09 からの動作確認と同じ入口にそろえるためです。起動したら `http://localhost:3001/task` を開き、編集と削除を1回ずつ通してみてください。編集の直後に一覧のカードが新しい内容へ変わればStep 3 の `invalidate` が効いています。削除してもカードが残る場合はStep 6 の `deleteMutation` で `utils.task.getAll.invalidate()` を呼び忘れています。DB からは消えているので再読み込みすると一覧から消えます。
+`PORT=3001` を付けるのはDay 10 からの動作確認と同じ入口にそろえるためです。起動したら `http://localhost:3001/task` を開き、編集と削除を1回ずつ通してみてください。編集の直後に一覧のカードが新しい内容へ変わればStep 3 の `invalidate` が効いています。削除してもカードが残る場合はStep 6 の `deleteMutation` で `utils.task.getAll.invalidate()` を呼び忘れています。DB からは消えているので再読み込みすると一覧から消えます。
 
 ---
 
@@ -2181,7 +2181,9 @@ function TaskPageContent() {
           tracking-tight">
           タスク
         </h1>
-        <Button onClick={handleCreate}>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
           新規タスク
         </Button>

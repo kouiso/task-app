@@ -176,7 +176,7 @@ Day 15 の `handleSubmit` は `api.task.update` を
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// Day 15 で作成済みの updateMutation
+// Day 15 で作成済みの updateMutation（抜粋）
 const updateMutation =
   api.task.update.useMutation({
     onSuccess: () => {
@@ -185,6 +185,8 @@ const updateMutation =
     },
   });
 ```
+
+このブロックは抜粋です。Day 15 で書いた `getById.invalidate` の分岐は手元のファイルにそのまま残しておいてください。
 
 `onSuccess` の中で `getAll.invalidate()` を呼ぶのが
 このコードの肝です。`invalidate` はキャッシュを
@@ -862,7 +864,7 @@ const handleTimeLogSuccess = useCallback(() => {
 }, [utils.task.getAll]);
 ```
 
-先頭の `void` は「この関数の戻り値は使いません」と読み手へ示す書き方です。`invalidate` は待つこともできる関数ですがここでは待たずに先へ進みます。付けた場合と付けない場合で動きは変わりません。この教材ではこの1か所と Day 10 の読み比べ用のコードにだけ出てきます。ほかの日では付けていません。
+先頭の `void` は「この関数の戻り値は使いません」と読み手へ示す書き方です。`invalidate` は待つこともできる関数ですがここでは待たずに先へ進みます。付けた場合と付けない場合で動きは変わりません。Day 10 の Step 7 と Day 11 の `invalidate` でも同じ書き方をしました。
 
 `invalidate` はキャッシュに「古い」という印を付けます。画面で表示中のクエリはこの印を見つけると自動で取り直されます。そのため `refetch` を重ねて呼ぶ必要はなく、`invalidate` の1回だけで記録した分がその場で合計作業時間へ反映されます。
 
@@ -1828,7 +1830,7 @@ export function TaskCard({
                       />
 ```
 
-Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 と Day 13 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると記録は保存されているのに数字が `0m` のまま止まります。
+Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると記録は保存されているのに数字が `0m` のまま止まります。
 
 ## 今日のまとめ
 

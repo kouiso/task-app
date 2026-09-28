@@ -685,7 +685,7 @@ import { Label }
   from '@/component/ui/label';
 ```
 
-ここで取り込む部品はすべて Day 09 から Day 19 までに使ってきたものです。`TaskCard` は Day 13 のタスク一覧で、`DeleteConfirmDialog` は Day 11 の削除確認で初めて呼び出した、用意済みの共通部品です。どちらも中身を自分で書いたことはありません。検索画面でも表示用の部品を新しく作らず、すでにあるカードとダイアログを並べ替えて使います。見た目がタスク一覧とそろうので読者にとっても「検索したあとの操作は今まで通り」になります。
+ここで取り込む部品はすべて Day 09 から Day 19 までに使ってきたものです。`TaskCard` は Day 13 のタスク一覧で、`DeleteConfirmDialog` は Day 11 の削除確認で初めて呼び出した、用意済みの共通部品です。`TaskCard` は Day 16 で時間記録のボタンを足しただけです。どちらも一から書いたものではありません。検索画面でも表示用の部品を新しく作らず、すでにあるカードとダイアログを並べ替えて使います。見た目がタスク一覧とそろうので読者にとっても「検索したあとの操作は今まで通り」になります。
 
 **確認ポイント**:
 - レイアウト・UIコンポーネントが揃っている
@@ -706,7 +706,7 @@ import {
 } from '@/lib/constant/priority';
 ```
 
-`Select` は shadcn/ui の部品で、4つがそろって1つのプルダウンになります。`SelectTrigger` が閉じているときのボタン、`SelectContent` が開いたときの一覧、`SelectItem` が選択肢1つ分、`SelectValue` が今選ばれている値の表示です。`TASK_PRIORITY_LABELS` は `HIGH` のような内部の値を「高」という日本語へ変える対応表で、Day 13 で作ったものを使い回します。`isTaskPriority` は受け取った文字列がその4つのどれかに当たるかを確かめる関数です。
+`Select` は shadcn/ui の部品で、4つがそろって1つのプルダウンになります。`SelectTrigger` が閉じているときのボタン、`SelectContent` が開いたときの一覧、`SelectItem` が選択肢1つ分、`SelectValue` が今選ばれている値の表示です。`TASK_PRIORITY_LABELS` は `HIGH` のような内部の値を「高」という日本語へ変える対応表で、Day 14 のタスク作成ダイアログで読み込んだ scaffold 配布の定数を使い回します。`isTaskPriority` は受け取った文字列がその4つのどれかに当たるかを確かめる関数です。
 
 続けてロール判定用と検索条件用のインポートを追加します。
 
@@ -1623,11 +1623,7 @@ useEffect(() => {
 
 `linkedTask` が届くまでこの処理は何もしません。先頭の `if` で `linkedTask` が無いときに戻しているからです。取得が終わってから `taskToFormData` で入力用の形へ変え、詳細ダイアログを閉じてから編集ダイアログを開きます。`setDetailOpen` と `setDialogOpen` は別々の値なのでこの2行は順番を入れ替えても結果は変わりません。
 
-ダイアログを閉じたあとに再び開かないよう、
-URL の編集指定も取り除きます。この関数を
-`createMutation` / `updateMutation` より前へ追加します。
-
-先に `task/page.tsx` の import を書き換えます。Day 13 で
+まず `task/page.tsx` の import を書き換えます。Day 13 で
 `useSearchParams` だけを読み込んだ行を、次の形にします。
 
 ```typescript
@@ -1651,6 +1647,10 @@ const router = useRouter();
 
 この2つが無いと次の `router.replace` で
 `router is not defined` というエラーで止まります。
+
+ダイアログを閉じたあとに再び開かないよう、
+URL の編集指定も取り除きます。次の関数を
+`createMutation` / `updateMutation` より前へ追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx（続き）
@@ -1711,7 +1711,7 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 401と403は以前の結果も隠し、押すべきボタンを1つだけ表示します。続けて、一時的な失敗で以前の結果が残っている場合の警告を書きます。
 
 ```typescript
-{/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+// filepath: src/app/search/page.tsx（同じファイルの続き）
 ) : shouldSearch && searchResults ? (
   <div className="space-y-6">
     {searchErrorPresent ? (
@@ -1809,33 +1809,34 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 
 検索結果でも `TaskCard` をそのまま使い回しているのはタスク一覧と見た目をそろえるためです。カードを別々に作ると片方だけ表示が古いまま取り残されます。
 
-TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
+TaskCardに権限フラグと作業時間を渡します。上のブロックの `{searchResults.tasks` から `))}` までを次のブロックで**置き換えて**ください。`.map` の中の `<TaskCard>` に渡す props が4つ増えます。
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
-{/* TaskCardに権限フラグと作業時間を追加 */}
-<TaskCard key={task.id}
-  id={task.id}
-  title={task.title}
-  description={
-    task.description}
-  status={task.status}
-  priority={task.priority}
-  dueDate={task.dueDate}
-  assignee={task.assignee}
-  timeSpentMinutes={
-    task.timeSpentMinutes}
-  onEdit={handleTaskEdit}
-  onDelete={handleTaskDelete}
-  onClick={
-    handleTaskClick}
-  onTimeLogSuccess={() =>
-    utils.search.search
-      .invalidate()}
-  canEdit={canEditProject(
-    task.projectId)}
-  canDelete={canDeleteProject(
-    task.projectId)} />
+          {searchResults.tasks
+            .map((task) => (
+            <TaskCard key={task.id}
+              id={task.id}
+              title={task.title}
+              description={
+                task.description}
+              status={task.status}
+              priority={task.priority}
+              dueDate={task.dueDate}
+              assignee={task.assignee}
+              timeSpentMinutes={
+                task.timeSpentMinutes}
+              onEdit={handleTaskEdit}
+              onDelete={handleTaskDelete}
+              onClick={handleTaskClick}
+              onTimeLogSuccess={() =>
+                utils.search.search
+                  .invalidate()}
+              canEdit={canEditProject(
+                task.projectId)}
+              canDelete={canDeleteProject(
+                task.projectId)} />
+          ))}
 ```
 
 > `canEdit` / `canDelete` を渡さないとTaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため`task.projectId` ごとに個別に権限を判定します。
@@ -1843,7 +1844,7 @@ TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key
 `timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に足した2つです。前者を渡さないと既定値の 0 が使われ、すでに時間を記録したタスクでも `0m` と出ます。後者を渡さないとこの画面から時間を記録しても検索結果に古いという印が付きません。合計は前の数字のまま止まります。
 
 **確認ポイント**:
-- Day 13 で作った `TaskCard` をそのまま再利用している
+- Day 13 から使っている `TaskCard` をそのまま再利用している
 - `handleTaskDelete` が未定義という型エラーが出る（Step 9 で書くのでこの時点では正常）
 - 3つの操作が動くかどうかは Step 9 を終えてから確かめる
 
@@ -3414,7 +3415,7 @@ const {
 401と403では以前の結果も隠し、現在の状態に合う操作だけを表示します。次は、一時的な失敗で以前の結果が残っている場合の警告です。
 
 ```typescript
-        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        // filepath: src/app/search/page.tsx（同じファイルの続き）
         ) : shouldSearch && searchResults ? (
           <div className="space-y-6">
             {searchErrorPresent ? (
@@ -3806,6 +3807,28 @@ const createMutation =
 保存できたあとの後片付けを `closeTaskDialog` の1か所へ寄せたので閉じ方が増えても直す場所は1つで済みます。
 
 ```typescript
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: updateMutation の成功時も同じ関数で閉じる
+const updateMutation =
+  api.task.update.useMutation({
+    onSuccess: () => {
+      utils.task.getAll.invalidate();
+      if (selectedTask) {
+        utils.task.getById.invalidate(
+          { id: selectedTask }
+        );
+      }
+      closeTaskDialog();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+```
+
+Day 15 で書いた `updateMutation` の `setDialogOpen(false)` を `closeTaskDialog()` へ替えた形です。`getById` の無効化はそのまま残します。
+
+```typescript
 {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
 {/* 完成版: 編集ダイアログの onClose */}
 <TaskDialog
@@ -3817,7 +3840,7 @@ const createMutation =
 />
 ```
 
-Day 15 で書いた `setDialogOpen(false)` を `closeTaskDialog()` へ替えた箇所です。`updateMutation` の `onSuccess` にある `setDialogOpen(false)` も `closeTaskDialog()` へ替えます。
+Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTaskDialog}` へ替えた箇所です。
 
 ## 今日のまとめ
 

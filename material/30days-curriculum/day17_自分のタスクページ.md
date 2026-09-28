@@ -398,19 +398,31 @@ import {
 
 `Select` は Day 13 のタスク一覧でも使った shadcn/ui のドロップダウンです。5つの名前を一度に取り込むのはこの部品が入れ物・引き金・中身・項目・表示文字と、役割ごとに分かれているためです。ブラウザ標準の `<select>` タグ1つで済ませない代わりに、開いたときの見た目や項目の並びを細かく作り込めます。
 
-`MyTasksPage` 内にstateとクエリを追加します。
+選んだプロジェクトを覚える state を追加します。置き場所は Step 4 で追加した `activeTab` の `useState` の**すぐ下**です。`currentUser` の取得よりも上になります。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
+// activeTab の useState のすぐ下に追加
 // プロジェクトフィルターの状態管理
 const [filterProject, setFilterProject] =
   useState<string>('all');
+```
+
+ここまで上に置くのはこの Step の後半で書き換える tasks の `useQuery` が `filterProject` を読むからです。`const` で作った名前は宣言した行より上では使えません。この state を hooks の最後（`utils` の下）に置いたとします。書き換えた `useQuery` の行はそれより上にあるので `Block-scoped variable 'filterProject' used before its declaration` という型エラーが出ます。ブラウザで開くと `Cannot access 'filterProject' before initialization` というエラーが出てページが表示されません。
+
+プロジェクト一覧の取得は Step 2 で追加した `currentUser` の取得の**すぐ下**に追加します。tasks の取得よりも上です。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// currentUser の取得のすぐ下に追加
 // プロジェクト一覧を取得
 const { data: projects } =
   api.project.getAll.useQuery();
 ```
 
-TaskCardの編集・削除ボタンの表示可否はログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。プロジェクトごとのロールを引けるようにしておきます。
+`projects` はドロップダウンの選択肢と次に作るロールの対応表の両方で使います。サーバーから取るものを上にまとめておくと下の計算がどのデータを使っているかを追いやすくなります。
+
+TaskCardの編集・削除ボタンの表示可否はログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。プロジェクトごとのロールを引けるようにしておきます。置き場所は `const utils = api.useUtils();` の**下**です。ローディング判定の `if` よりは上になります。中で `currentUser` と `projects` の両方を読むのでこの2つより下に置きます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -435,7 +447,7 @@ const myRoleByProject = useMemo(() => {
 
 ここで作っているのはプロジェクトIDを渡すと自分のロールが返ってくる対応表です。マイタスクは複数のプロジェクトのタスクが混ざりうる画面です。初期データでは1プロジェクト分しか並びませんがプロジェクトを増やすとこの対応表が効いてきます。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きます。先に `Map` へ入れておけばあとは1件ずつ引くだけで済みます。`useMemo` で包んであるのはこの対応表を再描画のたびに作り直させないためです。第2引数の `[projects, currentUser?.id]` に挙げた2つが変わったときだけ、中の処理がもう一度走ります。`isProjectMemberRole(me.role)` を通してから `Map` へ入れているのはデータベースから来た文字列を `as` で型に押し込まず、実行時に確かめてから使うためです。
 
-続けてそのロールから編集・削除の権限を判定する関数を追加します。
+続けてそのロールから編集・削除の権限を判定する関数を `myRoleByProject` の**下に**追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -463,7 +475,7 @@ const canDeleteProject = useCallback(
 - `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できた
 - `npm run dev` でエラーが出ていない
 
-Step 4 の `useQuery` を以下に**置き換えて**ください。プロジェクトフィルターを追加します。
+Step 4 の `useQuery` を以下に**置き換えて**ください。場所はそのままで中身だけを入れ替えます。プロジェクトフィルターを追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -724,7 +736,9 @@ import {
 } from '@/lib/date';
 ```
 
-`MyTasksPage` 内の `useQuery` の**下に**以下を追加します。この日のまとめに載せる完成コードでは同じ `groupedTasks` がハンドラーより後ろに置かれています。`useMemo` はコンポーネントの本体にあれば順番を問わないのでどちらの位置でも動きは変わりません。並びが違っても写し間違いではありません。
+Step 5 で置き換えた tasks の `useQuery` の**下に**以下を追加します。`useMemo` の中の処理も最後に書く依存配列 `[tasks]` も `tasks` を読むからです。Step 5 の `filterProject` と同じで `tasks` も宣言した行より上では使えません。tasks の取得より上に置くと `Block-scoped variable 'tasks' used before its declaration` という型エラーが出ます。`currentUser` や `projects` の取得のすぐ下もこの範囲に入ります。
+
+この日のまとめに載せる完成コードでは同じ `groupedTasks` がハンドラーより後ろに置かれています。置いてよいのは tasks の `useQuery` より下でローディング判定の `if` より上の範囲です。`if` より下に置けないのは Step 3 で見た hooks のルールがあるためです。この範囲の中なら位置が違っても動きは変わりません。並びが違っても写し間違いではありません。
 
 `useMemo` で4グループに分類するロジックを追加します。比較に使う「今日」のキーも、この中で作ります。
 
@@ -807,12 +821,12 @@ flowchart TB
 
 #### 4つのグループ
 
-| グループ | 条件 | 色 | 意味 |
-|---------|------|-----|------|
-| 期限切れ | 期限 < 今日 | 赤 | 期限切れ。すぐ対応 |
-| 今日が期限 | `dateOnlyFromValue(期限) === localDateOnly(今日)` | オレンジ | 今日中にやること |
-| 今後の予定 | 期限 > 今日 | 通常 | 今後の予定 |
-| 期限なし | 期限なし | 通常 | 期限未設定 |
+| グループ・表示 | 条件 |
+|---------------|------|
+| **期限切れ**<br>色: 赤<br>意味: 期限切れ。すぐ対応 | 期限 < 今日 |
+| **今日が期限**<br>色: オレンジ<br>意味: 今日中にやること | `dateOnlyFromValue(期限) === localDateOnly(今日)` |
+| **今後の予定**<br>色: 通常<br>意味: 今後の予定 | 期限 > 今日 |
+| **期限なし**<br>色: 通常<br>意味: 期限未設定 | 期限なし |
 
 ---
 
@@ -943,7 +957,7 @@ import { taskToFormData }
   from '@/lib/task-form';
 ```
 
-編集ダイアログは Day 15 で作った `TaskDialog` をそのまま使い、マイタスク専用の編集画面は作りません。同じ形のダイアログが画面の数だけ増えると入力欄を1つ足すたびに全部を直す作業が発生します。`taskToFormData` はサーバーから来たタスクを `TaskDialog` が受け取れる形へ変える関数です。期限は `Date` 型のままでは入力欄に入らないのでその詰め替えをこの関数へ任せます。
+編集ダイアログは Day 14 で作り Day 15 で編集に対応させた `TaskDialog` をそのまま使い、マイタスク専用の編集画面は作りません。同じ形のダイアログが画面の数だけ増えると入力欄を1つ足すたびに全部を直す作業が発生します。`taskToFormData` はサーバーから来たタスクを `TaskDialog` が受け取れる形へ変える関数です。期限は `Date` 型のままでは入力欄に入らないのでその詰め替えをこの関数へ任せます。
 
 `MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
 
@@ -1159,7 +1173,7 @@ JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskD
 PORT=3001 npm run dev
 ```
 
-`PORT=3001` を付けるのはDay 09 からの動作確認と同じ入口にそろえるためです。3000番で起動したままなら止める必要はありません。その場合は `http://localhost:3000/my-task` を開いてください。
+`PORT=3001` を付けるのはDay 10 からの動作確認と同じ入口にそろえるためです。3000番で起動したままなら止める必要はありません。その場合は `http://localhost:3000/my-task` を開いてください。
 
 以下の項目を順番に確認してください。
 
@@ -1402,7 +1416,7 @@ import {
 } from '@/component/ui/tabs';
 ```
 
-`TaskCard` は Day 13、`TaskDialog` は Day 15 で作った部品をそのまま呼んでいます。`DeleteConfirmDialog` は scaffold で配布された共通部品です。マイタスク専用のカードや編集画面を新しく作らないのは入力欄を1つ足すたびに画面の数だけ直す作業が生まれるためです。並び順が手元と違っていても `npm run fix` が並べ替えます。
+`TaskCard` は scaffold が配布した部品（Day 13 で使ってから Day 16 で時間記録のボタンを足したもの）です。`TaskDialog` は Day 14 で作り Day 15 で編集に対応させた部品です。どちらもそのまま呼んでいます。`DeleteConfirmDialog` は scaffold で配布された共通部品です。マイタスク専用のカードや編集画面を新しく作らないのは入力欄を1つ足すたびに画面の数だけ直す作業が生まれるためです。並び順が手元と違っていても `npm run fix` が並べ替えます。
 
 **判定と変換のインポート**:
 
@@ -1725,7 +1739,7 @@ export default function MyTasksPage() {
   };
 ```
 
-削除は押した時点では消さず、IDを控えてダイアログを開くだけにしています。取り消せない操作では対象を覚える処理と実行する処理を分けます。編集側の `taskToFormData` は`Date` 型の期限を入力欄が受け取れる形へ詰め替える関数で、Day 15 で作ったものを使い回しています。
+削除は押した時点では消さず、IDを控えてダイアログを開くだけにしています。取り消せない操作では対象を覚える処理と実行する処理を分けます。編集側の `taskToFormData` は`Date` 型の期限を入力欄が受け取れる形へ詰め替える関数で、Day 15 で使ったもの（scaffold が配布済みの `src/lib/task-form.ts`）を使い回しています。
 
 **保存の中身**:
 

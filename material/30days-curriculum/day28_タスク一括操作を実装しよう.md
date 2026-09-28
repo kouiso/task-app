@@ -539,7 +539,7 @@ Set に詰め、`false` なら空の Set で上書きします。
 // filepath: src/app/task/page.tsx（className="grid gap-6 の要素を書き直す）
 import { Checkbox } from '@/component/ui/checkbox';
 
-// タスク一覧の grid レイアウト
+{/* タスク一覧の grid レイアウト */}
 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
   {tasks && tasks.length > 0 ? (
     tasks.map((task) => {
@@ -564,7 +564,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 `aria-label` にタスク名を入れているのは同じ形のチェックボックスがカードの数だけ並ぶためです。名前が無いと読み上げでは「チェックボックス」が何個も続くだけになり、どのタスクを選んでいるのか分かりません。まとめて削除する操作なので取り違えると戻せません。
 
-上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
+上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合の表示は Day 15 で書いた2行のメッセージをそのまま残します。
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
@@ -668,7 +668,7 @@ const isAllSelected =
 // filepath: src/app/task/page.tsx（className="flex gap-2 w-full の前に追加）
 import { Label } from '@/component/ui/label';
 
-// フィルター行の先頭に配置
+{/* フィルター行の先頭に配置 */}
 <div className="flex items-center space-x-2">
   <Checkbox
     id="select-all"
@@ -713,7 +713,7 @@ import { Label } from '@/component/ui/label';
 Step 3 で書いた `isAllSelected`（boolean）を、3 状態を返す `selectAllState` に置き換えます。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（isAllSelected の宣言を書き直す）
 // isAllSelected を削除して、以下に置き換える
 const selectAllState =
   selectableTasks.length > 0
@@ -739,7 +739,7 @@ const selectAllState =
 JSX 側の `checked` に渡す値を差し替えます。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（id="select-all" の要素を書き直す） */}
 {/* Step 3 で書いた Checkbox の checked を差し替える */}
 <Checkbox
   id="select-all"
@@ -781,9 +781,9 @@ JSX 側の `checked` に渡す値を差し替えます。
 ![Step 8 まで終えた状態。1件だけ選ぶと見出しに「(1件選択中)」が出て右側に一括操作ボタンが並ぶ](./screenshots/day28/bulk-operation-header.png)
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（className="text-3xl font-bold から onClick={handleCreate}> までを書き直す） */}
+{/* filepath: src/app/task/page.tsx（<h1 className="text-3xl font-bold から「新規タスク」の </Button> までを書き直す） */}
 {/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}
-<div className="flex items-center justify-between">
+<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
   <div className="flex items-center gap-3">
     <h1 className="text-3xl font-bold tracking-tight">
       タスク
@@ -794,18 +794,24 @@ JSX 側の `checked` に渡す値を差し替えます。
       </span>
     )}
   </div>
-  <div className="flex items-center gap-2">
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
     {selectedTaskList.length > 0 && (
       <>
         {/* ここにStep 6〜8でボタンを追加していく */}
       </>
     )}
-    <Button onClick={handleCreate}>
+    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
       <Plus className="mr-2 h-4 w-4" /> 新規タスク
     </Button>
   </div>
 </div>
 ```
+
+**`flex-col` から始める理由**
+
+外側の `<div>` は `flex-col` で見出しとボタンの列を縦に積みます。横幅が 1024px 以上の画面では `lg:flex-row` が効いて横並びになります。ボタンが見出しの右側へ並ぶのはこのときです。ボタンの列にも `flex-col` と `sm:flex-row` を付けてあるので 640px 未満の画面ではボタン同士も縦に積まれます。Day 27 のプロジェクト一覧の見出し行と同じ考え方です。
+
+`Button` には `whitespace-nowrap` が入っているのでボタンの文字は折り返しません。1件以上選ぶとボタンは最大で4つに増えます。横1列のままでは4つの合計の幅がスマートフォンの画面に収まりません。はみ出した「新規タスク」ボタンは横へスクロールしないと押せなくなります。横1列の中では Day 14 で付けた `w-full` が効かないため「新規タスク」は文字の幅に縮んだままです。縦に積めば4つのボタンがどれもページの横幅いっぱいに広がります。
 
 **なぜ固定バーではなくヘッダーに配置するのか**
 
@@ -826,6 +832,7 @@ React で「条件が真のときだけ描画する」
 
 **確認ポイント**:
 - タスクを 1 件も選択していないとき「新規タスク」ボタンだけが表示される
+- ブラウザの横幅を 640px より狭めると「新規タスク」ボタンが見出しの下で横幅いっぱいに広がる
 - タスクを 1 件以上選択すると「(N 件選択中)」の文字が現れる
 - 一括操作ボタンが追加される領域（`<>...</>` の中）が確保されている
 - `npm run dev` でエラーが出ない
@@ -872,7 +879,7 @@ const handleBulkComplete = () => {
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
+{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
 {/* 一括操作ボタン領域に「完了にする」ボタンを追加 */}
 {canCompleteSelected && (
   <Button
@@ -959,7 +966,7 @@ import { CheckSquare, Plus, Trash2 }
 ヘッダーにボタンとダイアログを追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
+{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
 {/* 削除ボタン（赤色のテキスト） */}
 {canDeleteSelected && (
   <Button
@@ -980,10 +987,10 @@ import { CheckSquare, Plus, Trash2 }
 **確認ポイント**:
 - 「削除」ボタンが赤色で表示される
 
-ページの JSX 末尾に `DeleteConfirmDialog` を配置します。
+Day 15 で置いた1件削除用の `DeleteConfirmDialog` はそのまま残します。一括削除用の2つ目はそのすぐ下に置きます。1つ目を書き換えるとカードの削除ボタンを押しても確認ダイアログが開かなくなります。2つのダイアログは開くかどうかを別々の state で持つので同じ画面に並べられます。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
+{/* filepath: src/app/task/page.tsx（open={deleteDialogOpen} の要素の直後に追加） */}
 {/* 確認ダイアログ（JSXの末尾に配置） */}
 <DeleteConfirmDialog
   open={bulkDeleteDialogOpen}
@@ -1073,7 +1080,7 @@ const handleBulkUpdateStatus = (
 ヘッダーの一括操作ボタン領域に追加します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（onClick={handleCreate}> の前に追加） */}
+{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
 {/* ステータス変更ドロップダウン */}
 {canCompleteSelected && (
   <DropdownMenu>
@@ -1429,7 +1436,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-`DONE` 以外へ動かす場合は `where` を分けず、全対象の `completedAt` を `null` へ戻します。完了から進行中へ差し戻したタスクに日時が残ると、Day 23 の週次レポートが未完了のタスクを完了件数に数え続けるためです。
+`DONE` 以外へ動かす場合は `where` を分けず、全対象の `completedAt` を `null` へ戻します。「`completedAt` に値があるのは `status` が `DONE` のときだけ」という約束をデータベースの中で守るためです。差し戻したタスクに古い日時が残ったとします。`completedAt` だけを見て完了を数える集計や画面を書くとその時点で完了していないタスクが完了扱いになります。Day 23 の週次レポートは念のため `status` も一緒に見ているので今は数えません。日時を消しておけば見る側がどちらを使っても同じ答えになります。
 
 ### `src/app/task/page.tsx`
 
@@ -1643,7 +1650,7 @@ const handleBulkUpdateStatus = (
 ```typescript
 {/* filepath: src/app/task/page.tsx */}
 {/* 完成版: ページ見出しと選択件数の表示 */}
-<div className="flex items-center justify-between">
+<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
   <div className="flex items-center gap-3">
     <h1 className="text-3xl font-bold tracking-tight">
       タスク
@@ -1654,7 +1661,7 @@ const handleBulkUpdateStatus = (
       </span>
     )}
   </div>
-  <div className="flex items-center gap-2">
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
     {selectedTaskList.length > 0 && (
       <>
 ```
@@ -1738,7 +1745,7 @@ const handleBulkUpdateStatus = (
 {/* 完成版: ヘッダー行の閉じ側 */}
       </>
     )}
-    <Button onClick={handleCreate}>
+    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
       <Plus className="mr-2 h-4 w-4" /> 新規タスク
     </Button>
   </div>
