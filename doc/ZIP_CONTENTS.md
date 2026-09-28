@@ -6,7 +6,7 @@
 
 | # | 中身 | 置き場所 |
 |---|---|---|
-| 1 | **教材PDF 36冊** | `make book-pdf` で `dist/pdf/` に出力。**ZIP には入れません**。Drive フォルダ `1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU` に `scripts/pdf-book/upload_drive.py` で届けます（同名上書き＝同一IDを維持。`scripts/pdf-book/pdf-link-map.json` が現行の配布IDを指します） |
+| 1 | **教材PDF 36冊** | `make book-pdf` で `dist/pdf/` に出力。**ZIP には入れません**。Drive フォルダ `1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU` に届けます（同名上書き＝同一IDを維持。`scripts/pdf-book/pdf-link-map.json` が現行の配布IDを指します。認証経路は下の「Drive 配布の認証方式」を参照） |
 | 2 | **写経用の土台コード（この ZIP）** | `task-app-curriculum-v1.1.zip`。同じ Drive フォルダへ `task-app-curriculum-v1.1.zip` としてアップロード済み（ファイル ID: `1JGcp9mhde-MOD97CcIjKacHgcD38OLkr`） |
 
 読者は PDF を見ながら、この ZIP を展開して写経します。
@@ -14,7 +14,14 @@ ZIP の共有権限は PDF と同じフォルダ内で継承されるため、�
 
 ## Drive 配布の認証方式
 
-配布フォルダへの書き込みは **OAuth 経路のみ**で行います。`upload_drive.py` が使う rclone の `gdrive:` リモートが正規の方式で、サービスアカウントは使いません。新しい作業環境では `gdrive:` リモート自体の作成から必要です。`rclone authorize "drive"` はブラウザ同意でトークンを出すだけなので、作業環境側では `rclone config create gdrive drive` でリモートを作り（ブラウザが無い環境では `rclone authorize` の出力トークンを渡す）かたちで認証を通し、トークンの永続化方法は作業者と相談してください。
+配布フォルダへの操作は **OAuth 経路のみ**で行います。サービスアカウントは使いません。サービスアカウントの新規発行・GCP プロジェクトでの API 有効化・外部プログラム（Developer Preview 等）への申請も禁止です。
+
+Devin からの操作は、Devin の org に登録済みの **Google Drive Remote MCP**（`google-drive` サーバー）が正規の経路です。org 側で接続済みの OAuth をそのまま使うため、作業環境側での認証情報の準備は不要です。
+
+- 参照・検証: `search_files`（`parentId = '1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU'` で一覧）、`get_file_metadata`、`get_file_permissions`、`download_file_content`
+- 新規ファイルの作成: `create_file` に `title`・`parentId`・`contentMimeType` を指定し、バイナリは `base64Content` で渡します
+
+Remote MCP には既存ファイルの内容を更新する手段がありません。**同名上書き（＝同一ファイルIDの維持）が必要な再配布**だけは `scripts/pdf-book/upload_drive.py`（rclone `gdrive:` リモート = OAuth）で行います。`create_file` で同名ファイルを作ると別 ID になり、配布済み PDF 内の章間リンクと `pdf-link-map.json` が古い ID を指して壊れます。rclone 側の認証は作業者のローカル環境で `rclone authorize "drive"` のブラウザ同意で通し、リモート作成（`rclone config create gdrive drive`）とトークンの永続化方法は作業者と相談してください。
 
 ## PDFの章間リンクを設定する
 
