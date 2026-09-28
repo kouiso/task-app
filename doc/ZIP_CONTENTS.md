@@ -14,7 +14,7 @@ ZIP の共有権限は PDF と同じフォルダ内で継承されるため、�
 
 ## Drive 配布の認証方式
 
-配布フォルダへの書き込みは **OAuth 経路のみ**で行います。`upload_drive.py` が使う rclone の `gdrive:` リモートが正規の方式で、サービスアカウントは使いません。作業環境に rclone の認証情報が無い場合は `rclone authorize "drive"` でユーザーが1回同意してトークンを取得し、永続化の方法は作業者と相談してください。
+配布フォルダへの書き込みは **OAuth 経路のみ**で行います。`upload_drive.py` が使う rclone の `gdrive:` リモートが正規の方式で、サービスアカウントは使いません。新しい作業環境では `gdrive:` リモート自体の作成から必要です。`rclone authorize "drive"` はブラウザ同意でトークンを出すだけなので、作業環境側では `rclone config create gdrive drive` でリモートを作り（ブラウザが無い環境では `rclone authorize` の出力トークンを渡す）かたちで認証を通し、トークンの永続化方法は作業者と相談してください。
 
 ## PDFの章間リンクを設定する
 
