@@ -8,19 +8,17 @@
   `git diff` と未追跡ファイルのハッシュも残し、ツリー全体を一意にできる。
 - 成果物ごとに SHA256（PDF 36冊・配布 ZIP・スクショ束の集約ハッシュ）。
 - 組版に使った道具とフォントの版・ハッシュ。
-- Drive のファイル ID と共有リンク。
-- --remote-check で Drive から再取得して SHA256 を照合する。
-  1件でも違えば終了コード1で落ちる（そのまま出荷させない）。
+- 配布記録（metadata.json が残す Drive のファイル ID と共有リンク）。
+  Drive へのアクセスは持たない。
 
 使い方:
     python3 release_manifest.py --write dist/release-manifest.json
-    python3 release_manifest.py --remote-check   # Drive 照合まで
 """
 
 from __future__ import annotations
 
 import argparse
-from collections import Counter, defaultdict
+from collections import Counter
 import hashlib
 import json
 import os
@@ -28,7 +26,6 @@ import re
 import stat
 import subprocess
 import sys
-import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -573,87 +570,6 @@ def verify_correspondence(
     return problems
 
 
-DRIVE_FOLDER_ID = "1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU"
-
-
-def remote_check(manifest: dict) -> list[dict]:
-    """Drive から1件ずつ再取得して SHA256 を照合する。
-
-    rclone はファイルIDで直接取得できないので、フォルダを root 扱いにして
-    名前で取る。先に lsjson で現在の 名前→ID 対応を取り、metadata.json が
-    記録したIDと今のDrive実体が一致することもあわせて検査する
-    （同名の別ファイルを掴まないため）。
-    """
-    local = {p["name"]: p for p in manifest["artifacts"]["pdfs"]}
-    # ZIPも同じ規則で照合する（ID一致・再取得sha一致）
-    zip_item = manifest["artifacts"].get("zip")
-    if zip_item:
-        local[zip_item["name"]] = zip_item
-    listing = run([
-        "rclone", "lsjson",
-        f"--drive-root-folder-id={DRIVE_FOLDER_ID}", "gdrive:",
-    ])
-    live_by_name: dict[str, list[str]] = defaultdict(list)
-    for item in json.loads(listing):
-        if isinstance(item, dict) and item.get("Name") and item.get("ID"):
-            live_by_name[item["Name"]].append(item["ID"])
-
-    metadata_by_name: dict[str, list[dict]] = defaultdict(list)
-    for entry in manifest["drive"]:
-        metadata_by_name[entry.get("name")].append(entry)
-
-    results = []
-    with tempfile.TemporaryDirectory() as tmp:
-        for name, local_entry in sorted(local.items()):
-            metadata_entries = metadata_by_name.get(name, [])
-            live_ids = live_by_name.get(name, [])
-            if len(metadata_entries) != 1:
-                results.append({
-                    "name": name,
-                    "ok": False,
-                    "error": f"metadata の件数が {len(metadata_entries)}",
-                })
-                continue
-            entry = metadata_entries[0]
-            downloaded = Path(tmp) / name
-            record = {"id": entry["id"], "name": name}
-            if len(live_ids) != 1:
-                record.update({
-                    "ok": False,
-                    "error": f"Drive上の同名ファイルが {len(live_ids)} 件",
-                })
-                results.append(record)
-                continue
-            if live_ids[0] != entry["id"]:
-                record.update({
-                    "ok": False,
-                    "error": f"Drive上のIDが記録と違う: {live_ids[0]}",
-                })
-                results.append(record)
-                continue
-            try:
-                run([
-                    "rclone", "copyto",
-                    f"--drive-root-folder-id={DRIVE_FOLDER_ID}",
-                    f"gdrive:{name}", str(downloaded),
-                ])
-            except (RuntimeError, FileNotFoundError) as error:
-                record.update({"ok": False, "error": str(error)[:200]})
-                results.append(record)
-                continue
-            remote_sha = sha256_file(downloaded)
-            local_sha = local_entry["sha256"]
-            uploaded_sha = entry.get("uploaded_sha256")
-            record.update({
-                "ok": remote_sha == local_sha == uploaded_sha,
-                "remote_sha256": remote_sha,
-                "local_sha256": local_sha,
-                "uploaded_sha256": uploaded_sha,
-            })
-            results.append(record)
-    return results
-
-
 def preupload_failures(manifest: dict, require_clean: bool = False) -> list[str]:
     """ローカル成果物をアップロード前に止める条件。"""
     failures: list[str] = []
@@ -688,82 +604,6 @@ def preupload_failures(manifest: dict, require_clean: bool = False) -> list[str]
     return failures
 
 
-def postupload_failures(manifest: dict, results: list[dict]) -> list[str]:
-    """アップロード後の全PDF再取得を止める条件。"""
-    failures: list[str] = []
-    failures += verify_correspondence(
-        manifest["correspondence"], {"drive-delivery"}
-    )
-    expected = [item["name"] for item in manifest["artifacts"]["pdfs"]]
-    zip_item = manifest["artifacts"].get("zip")
-    if zip_item:
-        expected.append(zip_item["name"])
-    drive = manifest.get("drive", [])
-    drive_names = [item.get("name") for item in drive]
-    drive_ids = [item.get("id") for item in drive]
-    duplicate_drive_names = sorted(
-        name for name, count in Counter(drive_names).items()
-        if name is not None and count > 1
-    )
-    duplicate_drive_ids = sorted(
-        item_id for item_id, count in Counter(drive_ids).items()
-        if item_id is not None and count > 1
-    )
-    if duplicate_drive_names:
-        failures.append(
-            "Drive metadata の名前が重複: " + ", ".join(duplicate_drive_names[:5])
-        )
-    if duplicate_drive_ids:
-        failures.append(
-            "Drive metadata のIDが重複: " + ", ".join(duplicate_drive_ids[:5])
-        )
-    missing_metadata = sorted(set(expected) - set(drive_names))
-    unexpected_metadata = sorted(
-        name for name in set(drive_names) - set(expected) if name
-    )
-    if missing_metadata:
-        failures.append("Drive metadata が不足: " + ", ".join(missing_metadata[:5]))
-    if unexpected_metadata:
-        failures.append(
-            "Drive metadata に想定外の名前: " + ", ".join(unexpected_metadata[:5])
-        )
-    local_by_name = {
-        item["name"]: item["sha256"] for item in manifest["artifacts"]["pdfs"]
-    }
-    if zip_item:
-        local_by_name[zip_item["name"]] = zip_item["sha256"]
-    for entry in drive:
-        if not entry.get("id") or not entry.get("url"):
-            failures.append(f"Drive metadata のIDまたはURLが無い: {entry.get('name')}")
-        local_sha = local_by_name.get(entry.get("name"))
-        if local_sha and entry.get("uploaded_sha256") != local_sha:
-            failures.append(
-                f"Drive metadata の記録ハッシュがローカルと違う: {entry.get('name')}"
-            )
-    result_names = [item.get("name") for item in results]
-    if not results:
-        failures.append("Drive 照合結果が空")
-    duplicates = sorted(
-        name for name, count in Counter(result_names).items()
-        if name is not None and count > 1
-    )
-    if duplicates:
-        failures.append("Drive 照合結果の名前が重複: " + ", ".join(duplicates[:5]))
-    missing = sorted(set(expected) - set(result_names))
-    unexpected = sorted(name for name in set(result_names) - set(expected) if name)
-    if missing:
-        failures.append("Drive 照合結果が不足: " + ", ".join(missing[:5]))
-    if unexpected:
-        failures.append("Drive 照合結果に想定外の名前: " + ", ".join(unexpected[:5]))
-    mismatched = [item.get("name", "?") for item in results if not item.get("ok")]
-    if mismatched:
-        failures.append(
-            f"Drive とのIDまたはハッシュ不一致 {len(mismatched)} 件: "
-            + ", ".join(mismatched[:5])
-        )
-    return failures
-
-
 def build_manifest() -> dict:
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -779,10 +619,8 @@ def build_manifest() -> dict:
         },
         "drive": drive_inventory(),
         "correspondence": correspondence_section(),
-        "remote_verification": None,
         "verification": {
             "preupload": None,
-            "postupload": None,
         },
     }
     return manifest
@@ -793,8 +631,6 @@ def main() -> int:
     parser.add_argument("--write", type=Path, help="出力先 JSON")
     parser.add_argument("--require-clean", action="store_true",
                         help="git ツリーが dirty なら失敗にする")
-    parser.add_argument("--remote-check", action="store_true",
-                        help="Drive から再取得して SHA256 を照合する")
     args = parser.parse_args()
 
     manifest = build_manifest()
@@ -804,19 +640,6 @@ def main() -> int:
         "scope": "release-ready-with-full-build-receipt",
         "failures": failures.copy(),
     }
-
-    if args.remote_check:
-        results = remote_check(manifest)
-        manifest["remote_verification"] = {
-            "checked_at": datetime.now(timezone.utc).isoformat(),
-            "results": results,
-        }
-        remote_failures = postupload_failures(manifest, results)
-        manifest["verification"]["postupload"] = {
-            "ok": not remote_failures,
-            "failures": remote_failures,
-        }
-        failures += remote_failures
 
     if args.write:
         args.write.parent.mkdir(parents=True, exist_ok=True)
