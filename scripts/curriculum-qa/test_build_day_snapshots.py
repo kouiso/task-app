@@ -554,6 +554,116 @@ def check_placement_failure_exits_nonzero() -> list[str]:
     return fails
 
 
+# Day 27 を終えた読者の一覧画面の見出しまわり。day15 の形のまま、見出しと新規タスクボタンが
+# 縦に並ぶ列の直下にある。ボタンの開始タグは3行に折り返してある。
+PAGE_BEFORE_HEADER = """export default function TaskPage() {
+  return (
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold
+          tracking-tight">
+          タスク
+        </h1>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          新規タスク
+        </Button>
+        <div className="flex gap-2 w-full">
+          <Button onClick={handleReset}>リセット</Button>
+        </div>
+      </div>
+  );
+}"""
+
+# day28 Step 5 の書き直し。見出しとボタンを1つの行へ包み、Step 6〜8 用の目印を置く。
+HEADER_REWRITE = (
+    '<div className="flex flex-col gap-3 lg:flex-row">',
+    '  <h1 className="text-3xl font-bold tracking-tight">タスク</h1>',
+    '  <div className="flex flex-col gap-2 sm:flex-row">',
+    "    {selectedTaskList.length > 0 && (",
+    "      <>",
+    "        {/* ここにStep 6〜8でボタンを追加していく */}",
+    "      </>",
+    "    )}",
+    '    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>',
+    '      <Plus className="mr-2 h-4 w-4" /> 新規タスク',
+    "    </Button>",
+    "  </div>",
+    "</div>",
+)
+SPAN_TO_CLOSING = "（<h1 className=\"text-3xl font-bold から「新規タスク」の </Button> までを書き直す）"
+AT_PLACEHOLDER = "（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加）"
+
+
+def check_quoted_note_forms() -> list[str]:
+    """day28 の2つの注記の形を読んで当てる。
+
+    どちらも読者が画面とコードで見つけられる目印を「」で名指しする。
+    - Step 5: `A から「新規タスク」の </Button> までを書き直す`。終わりを開始タグの行の
+      文字列（`onClick={handleCreate}>`）で指すと、読者はそこで切って `</Button>` を残す。
+    - Step 6〜8: `…「ここにStep 6〜8でボタンを追加していく」の位置に追加`。Step 5 が置いた
+      目印のコメントの位置へ足す。
+    """
+    fails: list[str] = []
+
+    # 注記の中の `</Button>` の `/` で、書き込み先から切り離せなくならない。
+    with tempfile.TemporaryDirectory() as d:
+        book = Path(d) / "day28_x.md"
+        book.write_text(block(f"src/app/task/page.tsx{SPAN_TO_CLOSING}", "<div />"), encoding="utf-8")
+        by_file = concat_by_file([book])
+        got = [(t, [b.note for b in bs]) for t, bs in by_file.items()]
+        if got != [("src/app/task/page.tsx", [SPAN_TO_CLOSING])]:
+            fails.append(f"❌ 全角の括弧の中の / で注記を切り離せていない: {got}")
+
+    span = target.REWRITE_SPAN_NOTE.match(SPAN_TO_CLOSING)
+    if span is None:
+        return fails + ["❌ 範囲の書き直しの注記として読めていない"]
+    out = target.rewrite_span(PAGE_BEFORE_HEADER, span.group(1), span.group(2), "\n".join(HEADER_REWRITE))
+    if out is None:
+        fails.append("❌ 「新規タスク」の </Button> までを書き直せていない")
+    else:
+        if "tracking-tight\">\n" in out or out.count("新規タスク") != 1:
+            fails.append(f"❌ 書き直す前の見出しかボタンが残っている: {out!r}")
+        if "handleReset" not in out or out.count("</Button>") != 2:
+            fails.append(f"❌ 書き直しが後ろの要素まで飲み込んでいる: {out!r}")
+    # 範囲の中に同じ文字が2つあると、どちらのボタンか決められないので触らない。
+    doubled = PAGE_BEFORE_HEADER.replace("リセット", "新規タスク")
+    if target.rewrite_span(doubled, span.group(1), span.group(2), "x") is not None:
+        fails.append("❌ 「」の文字が2つ当たるのに書き直している")
+
+    position_note = getattr(target, "POSITION_NOTE", None)
+    if position_note is None or position_note.match(AT_PLACEHOLDER) is None:
+        fails.append("❌ 目印の位置へ足す注記として読めていない")
+    elif position_note.match("（同じファイルの続き）"):
+        fails.append("❌ 続きの注記を目印の位置へ足す注記として読んでいる")
+
+    # Day 27 の版へ Step 5〜7 を順に当てる。ボタンは Step の順で目印の上へ積み、目印は残す。
+    blocks = [
+        blk(15, "", *PAGE_BEFORE_HEADER.split("\n")),
+        blk(28, SPAN_TO_CLOSING, *HEADER_REWRITE),
+        blk(28, AT_PLACEHOLDER, "{/* 完了にする */}", "<Button onClick={handleBulkComplete}>完了にする</Button>"),
+        blk(28, AT_PLACEHOLDER, "<Button onClick={handleBulkDelete}>削除</Button>"),
+    ]
+    blocks = [b._replace(lineno=n) for n, b in enumerate(blocks, 1)]
+    try:
+        merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
+    except ValueError as error:
+        return fails + [f"❌ day28 の注記の形で止まっている: {error}"]
+    order = [merged.find(s) for s in ("完了にする</Button>", "削除</Button>", "ここにStep 6〜8で", "新規タスク")]
+    if -1 in order or order != sorted(order):
+        fails.append(f"❌ ボタンが Step の順で目印の上に並んでいない: {merged!r}")
+
+    # 目印が無ければ（Step 5 を当てられんかった等）、足さずに止まる。
+    orphan = [blocks[0], blocks[2]]
+    fails += expect_placement_error(
+        "目印の無い位置へ足す注記",
+        lambda: target.apply_insertions(target.render(orphan[:1]), orphan, 15),
+        (AT_PLACEHOLDER,),
+    )
+    return fails
+
+
 PAGE_WITH_DIALOG = """export default function TaskPage() {
   const canEditProject = () => true;
   return (
@@ -1985,6 +2095,7 @@ CHECKS = (
     ("まるごとか抜粋か", check_complete_file),
     ("差し込みの適用", check_insertion),
     ("注記どおりに貼れんブロックで止まる", check_placement_note_failure),
+    ("「」で目印を名指しする注記", check_quoted_note_forms),
     ("要素の書き換え", check_element_replacement),
     ("import の足し合わせ", check_import_merge),
     ("配布物の置き換え", check_scaffold_replacement),

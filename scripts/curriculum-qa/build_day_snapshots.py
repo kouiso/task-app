@@ -181,6 +181,14 @@ REWRITE_NOTE = re.compile(r"^[（(](.+?)\s*の要素を書き直す[）)]$")
 # 片方だけを書き直すと、もう片方が二重に残る（day28 の見出しと「新規タスク」ボタンを
 # `justify-between` の1行へ包む書き直しがこれ）。
 REWRITE_SPAN_NOTE = re.compile(r"^[（(](.+?)\s*から\s*(.+?)\s*までを書き直す[）)]$")
+# 範囲の終わりを `「新規タスク」の </Button>` と書く形。「」の中は画面に出る文字で、
+# それを中に持つ `<Button>` 要素の閉じタグまでを指す。開始タグの行の文字列
+# （`onClick={handleCreate}>`）で終わりを指すと、読者はそこで切って `</Button>` を残す。
+CLOSING_OF_QUOTED = re.compile(r"^「([^「」]+)」の\s*</([A-Za-z][\w.]*)\s*>$")
+# `（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加）` の形。
+# 前の Step が置いた目印のコメントの位置へ足す。「」の中が目印の行の文字列で、
+# 「」の外（`Step 5 のプレースホルダー`）は読者向けの説明なので見ない。
+POSITION_NOTE = re.compile(r"^[（(].*「([^「」]+)」の位置に追加[）)]$")
 TAG_NAME = re.compile(r"<([A-Za-z][\w.]*)")
 # 抜粋の先頭がトップレベルの宣言なら、それは「その宣言をこの形へ書き直す」という指示である。
 # day13 と day20 の `app-layout.tsx` は `const menuItems: MenuItem[] = [...]` を、項目を1つ
@@ -247,7 +255,7 @@ HEADING = re.compile(r"^#{2,4}\s+(.+?)\s*$")
 # 注記どおりに貼れん理由。PlacementError の各行に出る。
 UNREADABLE_NOTE = (
     "注記を貼る位置の指示として読めません。読める形は「X の直後に追加」「X の前に追加」"
-    "「X の要素を書き直す」「A から B までを書き直す」です"
+    "「X の要素を書き直す」「A から B までを書き直す」「…「X」の位置に追加」です"
 )
 ANCHOR_NOT_FOUND = "注記が指す場所が今のファイルに無いか、1つに決まりません"
 NOTE_IN_TARGET = (
@@ -773,22 +781,64 @@ def rewrite_span(text: str, start_mark: str, end_mark: str, fragment: str) -> st
 
     並んだ2つの要素を1つの入れ物へ包み直す書き直しに使う。片方だけを対象にすると、
     もう片方が新しい入れ物の外に残って二重になる。どちらの目印も1つに決まらなければ触らない。
+
+    `end_mark` が `「新規タスク」の </Button>` の形なら、その文字を中に持つ `<Button>` 要素の
+    閉じタグまでを範囲にする（`CLOSING_OF_QUOTED`）。
     """
     lines = text.split("\n")
     starts = [i for i, line in enumerate(lines) if start_mark in line]
     if len(starts) != 1:
         return None
     start = starts[0]
-    ends = [i for i, line in enumerate(lines) if i >= start and end_mark in line]
-    if len(ends) != 1:
-        return None
-    name = TAG_NAME.search(lines[ends[0]])
-    if name is None:
-        return None
-    end = _element_end(lines, ends[0], name.group(1))
+    closing = CLOSING_OF_QUOTED.match(end_mark)
+    if closing is not None:
+        end = _enclosing_element_end(lines, start, closing.group(1), closing.group(2))
+    else:
+        ends = [i for i, line in enumerate(lines) if i >= start and end_mark in line]
+        if len(ends) != 1:
+            return None
+        name = TAG_NAME.search(lines[ends[0]])
+        if name is None:
+            return None
+        end = _element_end(lines, ends[0], name.group(1))
     if end is None:
         return None
     return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def _enclosing_element_end(lines: list[str], start: int, inner: str, tag: str) -> int | None:
+    """start 行より後ろで `inner` を中に持つ `<tag>` 要素が終わる行の次を返す。
+
+    `inner` の行は1つに決まらんとアカン。決まったら、そこから上へ `<tag` の開始を探し、
+    その要素が `inner` の行を囲んどるものを採る。いちばん内側の要素が先に当たる。
+    """
+    hits = [k for k in range(start, len(lines)) if inner in lines[k]]
+    if len(hits) != 1:
+        return None
+    inner_at = hits[0]
+    opening = re.compile(rf"^\s*<{re.escape(tag)}\b")
+    for j in range(inner_at, start - 1, -1):
+        if not opening.match(lines[j]):
+            continue
+        end = _element_end(lines, j, tag)
+        if end is not None and end > inner_at:
+            return end
+    return None
+
+
+def insert_at_mark(text: str, mark: str, fragment: str) -> str | None:
+    """`mark` を含む行の位置へ fragment を入れる。1つに決まらなければ None。
+
+    目印の行は fragment の下へ残す。Step 6〜8 が同じプレースホルダーの位置へボタンを
+    1つずつ足すので、1つ目で目印を消すと2つ目から貼る先が無くなる。目印の上へ積むので
+    ボタンは Step の順に並ぶ。目印はコメントの中にあることが多いので、コメントを潰さずに探す。
+    """
+    lines = text.split("\n")
+    hits = [i for i, line in enumerate(lines) if mark in line]
+    if len(hits) != 1:
+        return None
+    at = hits[0]
+    return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
 
 
 def split_leading_imports(lines: tuple[str, ...]) -> tuple[list[str], list[str]]:
@@ -1113,6 +1163,9 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         m = INSERT_NOTE.match(b.note)
         rewrite = None if m else REWRITE_NOTE.match(b.note)
         span = None if (m or rewrite) else REWRITE_SPAN_NOTE.match(b.note)
+        position = None if (m or rewrite or span) else POSITION_NOTE.match(b.note)
+        # 注記が貼る位置を言い切っとるブロック。当てられんかったら止める側。
+        noted_op = bool(m or rewrite or span or position)
         imports = merge_imports(text, render([b]))
         if imports is not None:
             # import だけのチャンクは、差し込み先の指示が無くても置き場所が決まる。
@@ -1126,29 +1179,27 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
                 text = partial
             b = b._replace(lines=tuple(rest))
         head = operation_head(b.lines)
-        element = None if (m or rewrite or span) else ELEMENT_HEAD.match(head)
+        element = None if noted_op else ELEMENT_HEAD.match(head)
         # 要素の書き換え・宣言の書き直し・配列への1要素追加は、`完成版` の目印が付いていても
         # 当てる。要素だけを外していたが、Step の節が省略記号（`// ...` の類）を含む日は
         # そちらが落ち、全文が `完成版` の側にしか無い（day16 の `<TaskCard>`）。
         # ここまで来た時点で「採った版の日より後」に絞れており、採られなかった `完成版` は
         # その日の全文ではなく抜粋である。抜粋なら当てるのが実物に近い
         # （day20 の `menuItems` は `完成版` の側にしか全文が無い）。
-        declaration = None if (m or rewrite or span or element) else DECL_HEAD.match(head)
-        is_new_binding = not (m or rewrite or span or element or declaration) and bool(
+        declaration = None if (noted_op or element) else DECL_HEAD.match(head)
+        is_new_binding = not (noted_op or element or declaration) and bool(
             DESTRUCTURE_HEAD.match(head)
         )
         is_element_add = not (
-            m or rewrite or span or element or declaration or is_new_binding
+            noted_op or element or declaration or is_new_binding
         ) and bool(OBJECT_ELEMENT_HEAD.match(head))
-        if not (m or rewrite or span) and b.note:
+        if not noted_op and b.note:
             # 続きの注記は先頭のブロックと一緒に当てる（下の piece）。先頭が当たらんかった
             # ときは先頭の側で止まる。それ以外の注記は、貼る位置を言うとるのに読めん。
             if is_placement_note(b.note):
                 problems.append(PlacementProblem(noted, UNREADABLE_NOTE))
             continue
-        if not (m or rewrite or span) and not (
-            element or declaration or is_new_binding or is_element_add
-        ):
+        if not noted_op and not (element or declaration or is_new_binding or is_element_add):
             continue
         # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
         # 続きは `（同じファイルの続き）` になる。続きを落とすと手続きが途中で切れる
@@ -1164,7 +1215,7 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         # 管理者リンク）。2度入れるとリンクが2本並ぶので、既に入っていれば飛ばす。
         if body.strip() and body in text:
             continue
-        if not (m or rewrite or span) and (
+        if not noted_op and (
             any(ELISION.match(line) for line in body.split("\n"))
             or introduces_unknown_names(text, body)
         ):
@@ -1175,6 +1226,8 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             merged = rewrite_element(text, rewrite.group(1), body)
         elif span is not None:
             merged = rewrite_span(text, span.group(1), span.group(2), body)
+        elif position is not None:
+            merged = insert_at_mark(text, position.group(1), body)
         elif element is not None:
             merged = replace_element(text, element.group(1), body)
         elif declaration is not None:
@@ -1193,7 +1246,7 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             merged = append_array_element(text, body)
         if merged is not None:
             text = merged
-        elif m or rewrite or span:
+        elif noted_op:
             problems.append(PlacementProblem(noted, ANCHOR_NOT_FOUND))
     if problems:
         raise PlacementError(problems, text)
