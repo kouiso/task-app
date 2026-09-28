@@ -3,12 +3,12 @@
 `scripts/curriculum-qa/build_day_snapshots.py` の出力。Day N を終えた読者の
 手元を組み直して、型検査とビルドが通るかを見た結果である。
 
-- 出どころ: `python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify`（2026-09-21 14:37 UTC / 30 日ぶん）
+- 出どころ: `python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify`（2026-09-28 04:25 UTC / 30 日ぶん）
 - 対象範囲: 全件実行
 - 検証: 要求した（各段階の実行結果は表を参照）
 - Prisma生成・tsc・build がすべて OK: 30 / 30 日
 - ツリーの置き場: `dist/day-snapshots/dayNN/`
-- 上書きしない実行記録: `dist/day-snapshots/result/20260921T143703.479054Z-5fc31341ae63.json`
+- 上書きしない実行記録: `dist/day-snapshots/result/20260928T042508.225787Z-98cee188bd1a.json`
 - これは教材から静的に復元したスナップショットの検査であり、
   初心者が教材だけで完走できたことの証明ではない。
 - tsc の NG は教材の欠陥とは限らない。教材がその日の `完成版` として
