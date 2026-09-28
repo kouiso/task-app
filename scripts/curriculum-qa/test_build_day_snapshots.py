@@ -664,6 +664,104 @@ def check_quoted_note_forms() -> list[str]:
     return fails
 
 
+PAGE_BEFORE_SELECT_ALL = """export default function TaskPage() {
+const isAllSelected =
+  selectableTasks.length > 0
+  && selectedTaskList.length
+    === selectableTasks.length;
+  return (
+    <div>
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="select-all"
+    checked={isAllSelected}
+    onCheckedChange={(checked) =>
+      handleSelectAll(checked === true)
+    }
+  />
+</div>
+          <Checkbox
+            checked={selectedTasks.has(task.id)}
+          />
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          isPending={deleteMutation.isPending}
+        />
+    </div>
+  );
+}"""
+SELECT_ALL_STATE = (
+    "// isAllSelected を削除して、以下に置き換える",
+    "const selectAllState =",
+    "  selectedTaskList.length === 0 ? false : 'indeterminate';",
+)
+SELECT_ALL_CHECKBOX = (
+    "{/* Step 3 で書いた Checkbox の checked を差し替える */}",
+    "<Checkbox",
+    '  id="select-all"',
+    "  checked={selectAllState}",
+    "/>",
+)
+BULK_DIALOG = (
+    "{/* 確認ダイアログ（JSXの末尾に配置） */}",
+    "<DeleteConfirmDialog",
+    "  open={bulkDeleteDialogOpen}",
+    "  onOpenChange={setBulkDeleteDialogOpen}",
+    "/>",
+)
+DECL_REWRITE = "（isAllSelected の宣言を書き直す）"
+INNER_MARK_REWRITE = '（id="select-all" の要素を書き直す）'
+AFTER_ELEMENT = "（open={deleteDialogOpen} の要素の直後に追加）"
+
+
+def check_element_anchored_notes() -> list[str]:
+    """day28 Step 4 と Step 7 の3つの注記を読んで当てる。
+
+    どれも注記が無いと、組み立て側が別の物を書き換えるか黙って飛ばす。
+    - Step 4 の `selectAllState`: 名前が変わるので宣言の書き直しに当たらず、新しい宣言として
+      足されて `isAllSelected` が残る。Biome の noUnusedVariables で赤になる。
+    - Step 4 の全選択チェックボックス: `<Checkbox` が一覧の側にもあるので名前では決まらず、
+      黙って飛ばされて `checked={isAllSelected}` のまま残る。目印の `id="select-all"` は
+      開始タグの2行目にあるので、そこからタグの頭まで遡らんと要素を指せん。
+    - Step 7 の一括削除ダイアログ: `<DeleteConfirmDialog` が1つしか無いので、注記が無いと
+      Day 15 の1件削除のダイアログを書き換えてまう。1件削除のボタンを押しても何も開かん画面になる。
+    """
+    fails: list[str] = []
+    decl = getattr(target, "REWRITE_DECL_NOTE", None)
+    if decl is None or decl.match(DECL_REWRITE) is None:
+        fails.append("❌ 宣言の書き直しの注記として読めていない")
+    blocks = [
+        blk(15, "", *PAGE_BEFORE_SELECT_ALL.split("\n")),
+        blk(28, DECL_REWRITE, *SELECT_ALL_STATE),
+        blk(28, INNER_MARK_REWRITE, *SELECT_ALL_CHECKBOX),
+        blk(28, AFTER_ELEMENT, *BULK_DIALOG),
+        # `完成版` 側の同じダイアログ。ダイアログが2つになった後は名前で決まらんので当てない。
+        blk(28, "", "{/* 完成版: 削除確認ダイアログ */}", *BULK_DIALOG[1:]),
+    ]
+    blocks = [b._replace(lineno=n) for n, b in enumerate(blocks, 1)]
+    try:
+        merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
+    except ValueError as error:
+        return fails + [f"❌ day28 Step 4・7 の注記で止まっている: {error}"]
+    if "const isAllSelected" in merged or merged.count("const selectAllState") != 1:
+        fails.append(f"❌ isAllSelected の宣言が selectAllState へ書き直されていない: {merged!r}")
+    if "checked={selectAllState}" not in merged or "checked={selectedTasks.has(task.id)}" not in merged:
+        fails.append(f"❌ 全選択のチェックボックスだけを書き直せていない: {merged!r}")
+    order = [merged.find(s) for s in ("open={deleteDialogOpen}", "open={bulkDeleteDialogOpen}", "    </div>\n  );")]
+    if -1 in order or order != sorted(order) or merged.count("<DeleteConfirmDialog") != 2:
+        fails.append(f"❌ 一括削除のダイアログが1件削除のダイアログの後ろに足されていない: {merged!r}")
+
+    # 目印が開始タグのどの行にも無ければ、足さずに止まる。
+    orphan = [blocks[0], blk(28, "（open={missing} の要素の直後に追加）", *BULK_DIALOG)._replace(lineno=9)]
+    fails += expect_placement_error(
+        "目印の無い要素の後ろへ足す注記",
+        lambda: target.apply_insertions(target.render(orphan[:1]), orphan, 15),
+        ("（open={missing} の要素の直後に追加）",),
+    )
+    return fails
+
+
 PAGE_WITH_DIALOG = """export default function TaskPage() {
   const canEditProject = () => true;
   return (
@@ -2096,6 +2194,7 @@ CHECKS = (
     ("差し込みの適用", check_insertion),
     ("注記どおりに貼れんブロックで止まる", check_placement_note_failure),
     ("「」で目印を名指しする注記", check_quoted_note_forms),
+    ("宣言と要素の中の目印を名指しする注記", check_element_anchored_notes),
     ("要素の書き換え", check_element_replacement),
     ("import の足し合わせ", check_import_merge),
     ("配布物の置き換え", check_scaffold_replacement),

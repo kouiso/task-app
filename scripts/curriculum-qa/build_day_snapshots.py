@@ -177,6 +177,15 @@ INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[�
 # 指すため、タグ名やのうて行の中の文字列で1つに絞る。`<div>` の書き直しは名前では
 # 決められん（day28 の一覧グリッドと見出し行がどちらも `<div>` から始まる）。
 REWRITE_NOTE = re.compile(r"^[（(](.+?)\s*の要素を書き直す[）)]$")
+# `（isAllSelected の宣言を書き直す）` の形。書き直した宣言が別の名前になるときに使う。
+# 名前が変わると先頭の宣言名では前の宣言に当たらず、新しい宣言として足されて前の宣言が
+# 残る（day28 Step 4 の `selectAllState` が `isAllSelected` を残し、Biome の
+# noUnusedVariables で赤になっとった）。
+REWRITE_DECL_NOTE = re.compile(r"^[（(]([A-Za-z_$][\w$]*)\s*の宣言を書き直す[）)]$")
+# 差し込み先の名前が `open={deleteDialogOpen} の要素` の形なら、その文字列を開始タグに持つ
+# JSX 要素の後ろ（前）を指す。day28 Step 7 の一括削除ダイアログがこれで、Day 15 の1件削除の
+# ダイアログを残したまま、その下へ2つ目として置く。
+ELEMENT_ANCHOR_SUFFIX = "の要素"
 # `（A から B までを書き直す）` の形。並んだ2つの要素をまとめて1つへ包み直すときに使う。
 # 片方だけを書き直すと、もう片方が二重に残る（day28 の見出しと「新規タスク」ボタンを
 # `justify-between` の1行へ包む書き直しがこれ）。
@@ -255,7 +264,8 @@ HEADING = re.compile(r"^#{2,4}\s+(.+?)\s*$")
 # 注記どおりに貼れん理由。PlacementError の各行に出る。
 UNREADABLE_NOTE = (
     "注記を貼る位置の指示として読めません。読める形は「X の直後に追加」「X の前に追加」"
-    "「X の要素を書き直す」「A から B までを書き直す」「…「X」の位置に追加」です"
+    "「X の要素の直後に追加」「X の要素を書き直す」「X の宣言を書き直す」"
+    "「A から B までを書き直す」「…「X」の位置に追加」です"
 )
 ANCHOR_NOT_FOUND = "注記が指す場所が今のファイルに無いか、1つに決まりません"
 NOTE_IN_TARGET = (
@@ -703,6 +713,13 @@ def insert_fragment(text: str, name: str, where: str, fragment: str) -> str | No
     要素を切る `_member_end` では次の宣言まで飲み込んでしまう。
     """
     lines = text.split("\n")
+    if name.endswith(ELEMENT_ANCHOR_SUFFIX):
+        # 行の区切りで切ると開始タグの途中へ入る。要素の終わり（前）で切る。
+        span = _element_at_mark(lines, name[: -len(ELEMENT_ANCHOR_SUFFIX)].strip())
+        if span is None:
+            return None
+        at = span[0] if where == "前に追加" else span[1]
+        return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
     if IDENTIFIER_ONLY.match(name):
         pattern = re.compile(ANCHOR.format(name=re.escape(name)))
         for i, line in enumerate(lines):
@@ -763,17 +780,41 @@ def rewrite_element(text: str, mark: str, fragment: str) -> str | None:
     こちらは行の中の文字列で1つに絞ってから、同じ要素の終わりの見つけ方を借りる。
     """
     lines = text.split("\n")
+    span = _element_at_mark(lines, mark)
+    if span is None:
+        return None
+    start, end = span
+    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+
+
+def _element_at_mark(lines: list[str], mark: str) -> tuple[int, int] | None:
+    """`mark` を含む行の要素が始まる行と、終わる行の次。1つに決まらなければ None。
+
+    `mark` が開始タグの2行目以降にあるときは、その開始タグの頭まで遡る。
+    `<Checkbox` が一覧の側にもある画面では、`id="select-all"` のような属性でしか
+    1つに絞れず、その属性は開始タグを折り返した2行目に来る（day28 Step 4）。
+    遡った先の開始タグが `mark` の行まで届いてへんなら、`mark` は要素の中身の側にあるので使わん。
+    """
     hits = [i for i, line in enumerate(lines) if mark in line]
     if len(hits) != 1:
         return None
-    start = hits[0]
+    at = hits[0]
+    start = at
+    if TAG_NAME.search(lines[at]) is None:
+        heads = [j for j in range(at - 1, -1, -1) if re.match(r"^\s*<[A-Za-z]", lines[j])]
+        if not heads:
+            return None
+        opened, _ = _tag_open_end(lines, heads[0])
+        if opened is None or opened < at:
+            return None
+        start = heads[0]
     name = TAG_NAME.search(lines[start])
     if name is None:
         return None
     end = _element_end(lines, start, name.group(1))
     if end is None:
         return None
-    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
+    return start, end
 
 
 def rewrite_span(text: str, start_mark: str, end_mark: str, fragment: str) -> str | None:
@@ -876,15 +917,32 @@ def _declaration_end(lines: list[str], start: int) -> int:
     `,` か `;` で終わっているかを見る。関数宣言の終わりは `}` だけなので当たらず、次に来る
     空行まで走る。空行が無ければ次の宣言まで飲み込む（`buildTaskFormValues` の置き換えが
     後ろの `export function TaskDialog` ごと消して、day15 以降が丸ごとビルドできなくなった）。
-    宣言は括弧の収支が0へ戻ったところで終わる。見るのはそれだけでよい。
+    宣言は括弧の収支が0へ戻ったところで終わる。
+
+    ただし式がまだ続いとる行では終わらせん。`const isAllSelected =` のように `=` で折り返した
+    宣言は1行目で収支が0のままなので、そこで切ると2行目以降（`&& selectedTaskList.length`）が
+    宙に浮いて残る（day28 Step 4 の書き直しがこれ）。行末が演算子で終わるか、次の行が演算子で
+    始まるときは、同じ式の続きと見る。
     """
     depth = 0
     for i in range(start, len(lines)):
         masked = mask_code(lines[i])
         depth += sum(masked.count(c) for c in "{([") - sum(masked.count(c) for c in "})]")
-        if depth <= 0:
-            return i + 1
+        if depth > 0:
+            continue
+        if EXPRESSION_CONTINUES_AFTER.search(masked):
+            continue
+        following = next((mask_code(x) for x in lines[i + 1 :] if x.strip()), "")
+        if EXPRESSION_CONTINUES_BEFORE.match(following):
+            continue
+        return i + 1
     return len(lines)
+
+
+# 行末がこれで終わる行は、式が次の行へ続いとる。
+EXPRESSION_CONTINUES_AFTER = re.compile(r"(?:=>|[=?:+,]|&&|\|\||\?\?)\s*$")
+# 次の行がこれで始まるなら、前の行の式の続き。文の頭にこれが来ることは無い。
+EXPRESSION_CONTINUES_BEFORE = re.compile(r"^\s*(?:&&|\|\||\?\?|[?:.+]|===|!==)")
 
 
 def replace_declaration(text: str, name: str, fragment: str) -> str | None:
@@ -1164,8 +1222,9 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         rewrite = None if m else REWRITE_NOTE.match(b.note)
         span = None if (m or rewrite) else REWRITE_SPAN_NOTE.match(b.note)
         position = None if (m or rewrite or span) else POSITION_NOTE.match(b.note)
+        renamed = None if (m or rewrite or span or position) else REWRITE_DECL_NOTE.match(b.note)
         # 注記が貼る位置を言い切っとるブロック。当てられんかったら止める側。
-        noted_op = bool(m or rewrite or span or position)
+        noted_op = bool(m or rewrite or span or position or renamed)
         imports = merge_imports(text, render([b]))
         if imports is not None:
             # import だけのチャンクは、差し込み先の指示が無くても置き場所が決まる。
@@ -1228,6 +1287,8 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             merged = rewrite_span(text, span.group(1), span.group(2), body)
         elif position is not None:
             merged = insert_at_mark(text, position.group(1), body)
+        elif renamed is not None:
+            merged = replace_declaration(text, renamed.group(1), body)
         elif element is not None:
             merged = replace_element(text, element.group(1), body)
         elif declaration is not None:
