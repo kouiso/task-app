@@ -306,6 +306,40 @@ test('missing expected table blocks the prose bounds gate', { skip: !canIntegrat
   assert.equal(fs.existsSync(result.output), false);
 });
 
+// 別の表で見つけたはみ出しを、欠けた表の「未対応」で上書きしない。上書きすると
+// summary.failed_checks が 0 に数えられ、はみ出しが集計から消える
+test('missing expected table keeps a prose overflow found in another table as fail', {
+  skip: !canIntegrate,
+}, () => {
+  const directory = makeScratch('table-prose-missing-keeps-fail-test-');
+  writeFixture(directory, {
+    html: `<!doctype html><html lang="ja"><body>
+      <table class="narrow" data-pdf-table-id="narrow-table"><tr><td>一文字でも収まらない</td></tr></table>
+    </body></html>`,
+    css: `@page{size:A4;margin:20mm}body{font:12pt sans-serif}.narrow{table-layout:fixed;width:20px}.narrow td{padding:4px;white-space:nowrap}`,
+    expected: manifest([], [{ id: 'narrow-table' }, { id: 'missing-table' }]),
+  });
+  const result = runFixture(directory);
+  assert.notEqual(result.status, 0);
+  assert.equal(result.report.result, 'dom_fail');
+  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'fail');
+  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'unsupported');
+  assert.ok(result.report.summary.failed_checks >= 1);
+  assert.ok(
+    result.report.dom_audit.violations.some(
+      (violation) =>
+        violation.check === 'table_prose_cell_bounds' && violation.table_id === 'narrow-table',
+    ),
+  );
+  assert.ok(
+    result.report.dom_audit.violations.some(
+      (violation) =>
+        violation.table_id === 'missing-table' && violation.reason === 'expected_table_missing',
+    ),
+  );
+  assert.equal(fs.existsSync(result.output), false);
+});
+
 test('wrap, cell overflow, page-content overflow and sub-8pt text fail before PDF', {
   skip: !canIntegrate,
 }, () => {

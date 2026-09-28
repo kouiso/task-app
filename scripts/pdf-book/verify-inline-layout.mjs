@@ -889,8 +889,11 @@ function auditPaginatedDom(manifest, constants) {
   }
   const missingTableIds = expectedTableIds?.filter((id) => !tableInventory.has(id)) ?? null;
   if (missingTableIds?.length) {
-    checks.table_prose_cell_bounds.status = 'unsupported';
-    checks.table_prose_page_bounds.status = 'unsupported';
+    // 欠けた表は測れんので未対応にする。ただし別の表で見つけたはみ出しの fail は残す。
+    // 上書きすると summary.failed_checks が 0 に数えられ、はみ出しが集計から消える
+    for (const check of [checks.table_prose_cell_bounds, checks.table_prose_page_bounds]) {
+      if (check.status !== 'fail') check.status = 'unsupported';
+    }
     for (const id of missingTableIds) {
       violations.push({
         check: 'table_prose_cell_bounds',
