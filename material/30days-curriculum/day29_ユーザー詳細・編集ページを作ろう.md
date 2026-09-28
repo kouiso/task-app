@@ -1887,7 +1887,7 @@ import { Alert, AlertDescription, AlertTitle }
     });
 ```
 
-先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具です。その中の `invalidate` が「覚えている結果を古いものとして捨てる」命令です。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
+先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具です。その中の `invalidate` は覚えている結果に「古い」という印を付ける命令です。いま画面に出ている分はすぐ取り直されます。取り直しが終わるまでは前の結果がそのまま表示されます。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
