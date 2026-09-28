@@ -422,6 +422,138 @@ def check_insertion() -> list[str]:
     return fails
 
 
+def expect_placement_error(label: str, run: object, wants: tuple[str, ...]) -> list[str]:
+    """run() が注記どおりに貼れんことを理由に止まり、その文に wants が全部出ることを確かめる。
+
+    ValueError で受ける。止まらん古い道具ではここへ来ず、else の側で落ちる。
+    """
+    assert callable(run)
+    try:
+        got = run()
+    except ValueError as error:
+        message = str(error)
+        return [f"❌ {label}: 止めた理由に {want} が無い: {message}" for want in wants if want not in message]
+    return [f"❌ {label}: 黙って飛ばした: {got!r}"]
+
+
+def check_placement_note_failure() -> list[str]:
+    """貼る位置の注記どおりに当てられんブロックを飛ばさず、本・見出し・注記を名指しして止まる。
+
+    飛ばすとツリーは前の日のコードのまま型検査と build を通る。写経の再現検査は緑のまま、
+    その日の変更を1行も見なくなる（day28 の見出し行とボタン4ブロックがこれで、
+    Day 28〜30 のツリーは Day 15 の見出しのまま通っとった）。
+    """
+    fails: list[str] = []
+    base = blk(15, "", "export const taskRouter = createTRPCRouter({", "  delete: x,", "});")
+    unreadable = blk(28, "（ボタンの並びの右端に追加）", "  bulkDelete: z,")
+    fails += expect_placement_error(
+        "読めない注記",
+        lambda: target.apply_insertions(target.render([base]), [base, unreadable], 15),
+        ("（ボタンの並びの右端に追加）", "day28_x.md"),
+    )
+    # 読める注記でも、指す場所が今のファイルに無ければ止まる。
+    missing = blk(28, "（notThere の直後に追加）", "  bulkDelete: z,")
+    fails += expect_placement_error(
+        "指す場所の無い注記",
+        lambda: target.apply_insertions(target.render([base]), [base, missing], 15),
+        ("（notThere の直後に追加）",),
+    )
+
+    # 続きの注記は先頭と一緒に当たる。写させん注記は当てずに通す。どちらでも止めない。
+    quiet = [
+        base,
+        blk(28, "（delete の直後に追加）", "  bulkComplete: protectedProcedure"),
+        blk(28, "（同じファイルの続き）", "    .mutation(async () => {}),"),
+        blk(28, "（一時的に足す行）", "console.log('確認用');"),
+    ]
+    try:
+        merged = target.apply_insertions(target.render([base]), quiet, 15)
+    except ValueError as error:
+        fails.append(f"❌ 続きの注記か写させん注記で止まっている: {error}")
+    else:
+        if ".mutation(async () => {})," not in merged:
+            fails.append(f"❌ 続きの注記が先頭と一緒に当たっていない: {merged!r}")
+        if "console.log" in merged:
+            fails.append(f"❌ 一時的な行まで当てている: {merged!r}")
+
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d) / "material"
+        root.mkdir()
+        (root / "day15_基準.md").write_text(
+            block("src/server/api/routers/task.ts", "\n".join(base.lines)), encoding="utf-8"
+        )
+        dest = Path(d) / "tree"
+        dest.mkdir()
+        # ツリーを組む経路では、本と直前の見出しまで名指しする。
+        day28 = root / "day28_一括操作.md"
+        day28.write_text(
+            "## 今日の流れ\n\n### Step 6: 一括完了を実装する\n\n"
+            + block("src/server/api/routers/task.ts（ボタンの並びの右端に追加）", "  bulkDelete: z,"),
+            encoding="utf-8",
+        )
+        fails += expect_placement_error(
+            "ツリーを組む経路",
+            lambda: target.apply_blocks(dest, sorted(root.glob("day*.md"))),
+            ("day28_一括操作.md", "Step 6: 一括完了を実装する", "（ボタンの並びの右端に追加）"),
+        )
+        # 注記を書き込み先から切り離せんと、注記ごとの名前の別ファイルへ入って本来の
+        # ファイルには何も入らん。ASCII の括弧の中の `/` がこれになる。
+        day28.write_text(
+            "### Step 5: 見出しを書き直す\n\n"
+            + block("src/server/api/routers/task.ts(</Button> の前に追加)", "  bulkDelete: z,"),
+            encoding="utf-8",
+        )
+        fails += expect_placement_error(
+            "書き込み先に残った注記",
+            lambda: target.apply_blocks(dest, sorted(root.glob("day*.md"))),
+            ("day28_一括操作.md", "Step 5: 見出しを書き直す", "</Button> の前に追加"),
+        )
+        if any(p.name.endswith(")") for p in dest.rglob("*")):
+            fails.append("❌ 注記ごとの名前の別ファイルをツリーへ置いている")
+
+    fails += check_placement_failure_exits_nonzero()
+    return fails
+
+
+def check_placement_failure_exits_nonzero() -> list[str]:
+    """貼れんブロックのある日は、ツリー NG として exit 1 で終わり、理由を1行ずつ出す。"""
+    fails: list[str] = []
+    saved = {
+        name: getattr(target, name)
+        for name in (
+            "REPO_ROOT", "SNAPSHOT_ROOT", "RESULT_DOC",
+            "available_days", "build_tree", "source_input_hash",
+        )
+    }
+    problem_block = target.Block(28, "day28_x.md", 881, "src/app/task/page.tsx", "（右端に追加）", "tsx", ())
+    placement_error = getattr(target, "PlacementError", None)
+    if placement_error is None:
+        return ["❌ 貼れんブロックを知らせる PlacementError が無い"]
+
+    def fake_build(_day: int) -> tuple[Path, int]:
+        raise placement_error([target.PlacementProblem(problem_block, "読めません")])
+
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            target.REPO_ROOT = Path(directory)
+            target.SNAPSHOT_ROOT = target.REPO_ROOT / "dist" / "day-snapshots"
+            target.RESULT_DOC = target.REPO_ROOT / "doc" / "result.md"
+            target.available_days = lambda: [28]
+            target.build_tree = fake_build
+            target.source_input_hash = lambda _day: "hash"
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = target.main(["build_day_snapshots.py", "--day", "28"])
+            if code != 1:
+                fails.append(f"❌ 貼れんブロックのある日で exit {code} を返した")
+            if "day28_x.md 881行目 src/app/task/page.tsx（右端に追加）: 読めません" not in out.getvalue():
+                fails.append(f"❌ 画面に本・行・注記・理由が出ていない:\n{out.getvalue()}")
+    finally:
+        for name, value in saved.items():
+            setattr(target, name, value)
+    return fails
+
+
 PAGE_WITH_DIALOG = """export default function TaskPage() {
   const canEditProject = () => true;
   return (
@@ -1852,6 +1984,7 @@ CHECKS = (
     ("置き換えと追記の境界", check_version_boundary),
     ("まるごとか抜粋か", check_complete_file),
     ("差し込みの適用", check_insertion),
+    ("注記どおりに貼れんブロックで止まる", check_placement_note_failure),
     ("要素の書き換え", check_element_replacement),
     ("import の足し合わせ", check_import_merge),
     ("配布物の置き換え", check_scaffold_replacement),

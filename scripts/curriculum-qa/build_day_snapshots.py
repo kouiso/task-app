@@ -47,6 +47,10 @@ day N までの写経ブロックを `concat_by_file` で書き込み先ごと�
 `npx tsc --noEmit` は必須。`npm run build` は DB 接続を要求することがあり、DB の
 無い機械で赤くしても教材の欠陥を指していない。失敗したら理由を記録して続行する。
 握り潰しではない。表に NG として残す。
+
+貼る位置の注記（`（delete の直後に追加）` 等）を読めない・指す場所が無いブロックは
+飛ばさずにその日のツリーを NG にする（`PlacementError`）。飛ばすとツリーは前の日の
+コードのまま型検査と build を通り、その日の変更を1行も見ないまま緑になる。
 """
 
 from __future__ import annotations
@@ -65,7 +69,13 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from curriculum_blocks import Block, concat_by_file, day_number, mask_code  # noqa: E402
+from curriculum_blocks import (  # noqa: E402
+    Block,
+    concat_by_file,
+    day_number,
+    heading_scan_view,
+    mask_code,
+)
 from sale_package import scaffold_copies, scaffold_src_paths  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -228,6 +238,26 @@ LEAD_COMMENT = re.compile(r"^\s*(?://|\{/\*)")
 
 # 差し込む1本が複数チャンクに割れたときの、2つ目以降の注記。
 CONTINUATION = re.compile(r"続き")
+# 読者に写させない・あとで消させるブロックの注記。`（一時的に足す行）` `（配布済み・写経しません）`。
+# 当てないのが正しいので、読めない注記として止めない。
+TRANSIENT_NOTE = re.compile(r"一時的|写経しません")
+# ブロックの直前の見出し。注記どおりに貼れんときに、どの Step かを名指しするのに使う。
+HEADING = re.compile(r"^#{2,4}\s+(.+?)\s*$")
+
+# 注記どおりに貼れん理由。PlacementError の各行に出る。
+UNREADABLE_NOTE = (
+    "注記を貼る位置の指示として読めません。読める形は「X の直後に追加」「X の前に追加」"
+    "「X の要素を書き直す」「A から B までを書き直す」です"
+)
+ANCHOR_NOT_FOUND = "注記が指す場所が今のファイルに無いか、1つに決まりません"
+NOTE_IN_TARGET = (
+    "注記を書き込み先から切り離せません。注記ごと別のファイル名として読まれ、"
+    "このブロックはどのファイルにも入りません"
+)
+PROVIDED_FILE = (
+    "配布物のファイルへの貼り付けは当てられません。配布物は教材がファイル全体を"
+    "書き直した日にだけ置き換えます"
+)
 # 差し込み先の目印になる行。オブジェクトの要素（`delete: protectedProcedure`）と
 # トップレベルの宣言（`export const taskRouter`）の両方を受ける。
 ANCHOR = "^(\\s*)(?:{name}\\s*:|(?:export\\s+)?(?:const|let|function|async\\s+function)\\s+{name}\\b)"
@@ -284,6 +314,68 @@ class TreeVerification(NamedTuple):
     build_errors: tuple[str, ...] = ()
     tsc_errors: tuple[str, ...] = ()
     verification_error: str | None = None
+
+
+class PlacementProblem(NamedTuple):
+    """注記どおりに貼れんかったブロック1つと、その理由。"""
+
+    block: Block
+    reason: str
+
+
+def block_heading(block: Block, paths: tuple[Path, ...] = ()) -> str:
+    """ブロックの直前の見出し（`Step 5: …`）。本が読めなければ空文字。
+
+    本の置き場は `paths` から名前で探し、無ければ教材の置き場を見る。
+    自己テストは一時ディレクトリに本を置くので、教材の置き場だけを見ると見出しが取れん。
+    """
+    source = next((p for p in paths if p.name == block.source), MATERIAL_DIR / block.source)
+    if not source.is_file():
+        return ""
+    # コードフェンスの中の `## main`（git status の出力）を見出しに数えない。
+    view = heading_scan_view(source.read_text(encoding="utf-8")).split("\n")
+    for line in reversed(view[: block.lineno - 1]):
+        m = HEADING.match(line)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def describe_problem(problem: PlacementProblem, paths: tuple[Path, ...] = ()) -> str:
+    """本・見出し・書き込み先と注記・理由を1行にする。直す人がそのまま本を開けるように。"""
+    b = problem.block
+    heading = block_heading(b, paths)
+    where = f"{b.source} {b.lineno}行目" + (f"（{heading}）" if heading else "")
+    return f"{where} {b.target}{b.note}: {problem.reason}"
+
+
+class PlacementError(ValueError):
+    """貼る位置の注記どおりに当てられんブロックがあった。
+
+    黙って飛ばすと、組んだツリーは前の日のコードのまま型検査と build を通る。
+    写経の再現検査は緑のまま、その日の変更を1行も見ていない状態になる
+    （day28 の見出し行と一括操作のボタン4ブロックがこれで、Day 28〜30 のツリーは
+    Day 15 の見出しのまま通っとった）。
+
+    `text` は当てられた分だけを当てたファイルの中身。呼び出し側はそれを書き出してから
+    問題をまとめて投げ直す。
+    """
+
+    def __init__(
+        self,
+        problems: list[PlacementProblem] | tuple[PlacementProblem, ...],
+        text: str = "",
+        paths: tuple[Path, ...] = (),
+    ) -> None:
+        self.problems = tuple(problems)
+        self.text = text
+        self.lines = tuple(describe_problem(p, paths) for p in self.problems)
+        super().__init__("\n".join(self.lines))
+
+
+def is_placement_note(note: str) -> bool:
+    """当てるべき位置を言うとる注記か。続きの注記と、写させん注記は違う。"""
+    return bool(note) and not CONTINUATION.search(note) and not TRANSIENT_NOTE.search(note)
 
 
 def available_days() -> list[int]:
@@ -1007,11 +1099,17 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
 
     採った版が day15 で day21 を組むとき、day16〜21 が足した手続きはどの版にも入っていない。
     注記が差し込み先を名指ししているものだけを、日の順に入れる。
+
+    貼る位置の注記が付いとるのに当てられんブロックは、全部当て終えてから
+    `PlacementError` でまとめて止める。読めない注記と、指す場所が無い注記の2通り。
+    注記の無いブロックは従来どおり、当てられるものだけ当てる。
     """
+    problems: list[PlacementProblem] = []
     ordered = sorted(blocks, key=lambda x: (x.day, x.lineno))
     for i, b in enumerate(ordered):
         if b.day <= after_day:
             continue
+        noted = b
         m = INSERT_NOTE.match(b.note)
         rewrite = None if m else REWRITE_NOTE.match(b.note)
         span = None if (m or rewrite) else REWRITE_SPAN_NOTE.match(b.note)
@@ -1042,8 +1140,14 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         is_element_add = not (
             m or rewrite or span or element or declaration or is_new_binding
         ) and bool(OBJECT_ELEMENT_HEAD.match(head))
-        if not (m or rewrite or span) and (
-            b.note or not (element or declaration or is_new_binding or is_element_add)
+        if not (m or rewrite or span) and b.note:
+            # 続きの注記は先頭のブロックと一緒に当てる（下の piece）。先頭が当たらんかった
+            # ときは先頭の側で止まる。それ以外の注記は、貼る位置を言うとるのに読めん。
+            if is_placement_note(b.note):
+                problems.append(PlacementProblem(noted, UNREADABLE_NOTE))
+            continue
+        if not (m or rewrite or span) and not (
+            element or declaration or is_new_binding or is_element_add
         ):
             continue
         # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
@@ -1089,6 +1193,10 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             merged = append_array_element(text, body)
         if merged is not None:
             text = merged
+        elif m or rewrite or span:
+            problems.append(PlacementProblem(noted, ANCHOR_NOT_FOUND))
+    if problems:
+        raise PlacementError(problems, text)
     return text
 
 
@@ -1136,22 +1244,41 @@ def apply_blocks(dest: Path, paths: list[Path]) -> int:
     `api.project` が無い版のまま残り、day10 以降の画面が軒並み型検査で落ちる。
     逆に抜粋しか無いファイル（`src/lib/utils.ts` 等）は配布物のままが正しい。
     読者が写経していない行がそこに在るためである。
+
+    貼る位置の注記どおりに当てられんブロックがあれば、全部のファイルを書き終えてから
+    `PlacementError` で止める。1本目で止めると、直す人が1件ずつしか知れん。
     """
     provided = scaffold_src_paths()
+    problems: list[PlacementProblem] = []
     count = 0
     for target, blocks in sorted(concat_by_file(paths).items()):
+        # 実在のファイル名は括弧で終わらん。末尾の括弧は切り離せんかった注記で、
+        # このまま置くと注記ごとの名前の別ファイルができ、本来のファイルには入らん
+        # （day28 の `（<h1 … から「新規タスク」の </Button> までを書き直す）`）。
+        if target.endswith(("）", ")")):
+            problems.extend(PlacementProblem(b, NOTE_IN_TARGET) for b in blocks)
+            continue
         version = latest_version(blocks)
         body = render(version)
         if target in provided and not (
             is_complete_file(version) and replaces_scaffold_file(target, body)
         ):
+            problems.extend(
+                PlacementProblem(b, PROVIDED_FILE) for b in blocks if is_placement_note(b.note)
+            )
             continue
         out = dest / target
         out.parent.mkdir(parents=True, exist_ok=True)
         if version:
-            body = apply_insertions(body, blocks, version[-1].day)
+            try:
+                body = apply_insertions(body, blocks, version[-1].day)
+            except PlacementError as error:
+                problems.extend(error.problems)
+                body = error.text
         out.write_text(f"{body}\n", encoding="utf-8")
         count += 1
+    if problems:
+        raise PlacementError(problems, paths=tuple(paths))
     return count
 
 
@@ -1318,6 +1445,12 @@ def snapshot_day(day: int, verify: bool) -> DayResult:
         )
     try:
         dest, files = build_tree(day)
+    except PlacementError as e:
+        # 1ブロック1行で出す。まとめて1行にすると、画面と結果表で本と見出しが読みにくい。
+        return DayResult(
+            day, 0, False, NOT_RUN, NOT_RUN, e.lines,
+            source_input_hash=input_hash,
+        )
     except (OSError, ValueError) as e:
         return DayResult(
             day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",),
