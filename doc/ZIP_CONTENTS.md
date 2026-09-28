@@ -6,7 +6,7 @@
 
 | # | 中身 | 置き場所 |
 |---|---|---|
-| 1 | **教材PDF 36冊** | `make book-pdf` で `dist/pdf/` に出力。**ZIP には入れません**。Drive フォルダ `1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU` に `scripts/pdf-book/upload_drive.py` で届けます（既定は同名上書き＝同一ID。2026-09-25 以降の現フォルダは新世代36冊＋旧版36冊が同居しており、`scripts/pdf-book/pdf-link-map.json` が最新IDを指します） |
+| 1 | **教材PDF 36冊** | `make book-pdf` で `dist/pdf/` に出力。**ZIP には入れません**。Drive フォルダ `1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU` に `scripts/pdf-book/upload_drive.py` で届けます（同名上書き＝同一IDを維持。`scripts/pdf-book/pdf-link-map.json` が現行の配布IDを指します） |
 | 2 | **写経用の土台コード（この ZIP）** | `task-app-curriculum-v1.1.zip`。同じ Drive フォルダへ `task-app-curriculum-v1.1.zip` としてアップロード済み（ファイル ID: `1JGcp9mhde-MOD97CcIjKacHgcD38OLkr`） |
 
 読者は PDF を見ながら、この ZIP を展開して写経します。
