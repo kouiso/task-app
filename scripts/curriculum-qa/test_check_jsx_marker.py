@@ -314,7 +314,33 @@ const view = (
 ```
 """
 
+BAD_OPEN_ELEMENT_FAKE_ELSE = """```tsx
+{/* filepath: src/component/member-row.tsx */}
+{readonly ? (
+  <p>
+    ) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Span />
+</p>
+) : null}
+```
+"""
+
+BAD_OPEN_FRAGMENT_FAKE_ELSE = BAD_OPEN_ELEMENT_FAKE_ELSE.replace(
+    "<p>", "<>"
+).replace("</p>", "</>")
+
+BAD_OPEN_ELEMENT_WITH_SELF_CLOSING = BAD_OPEN_ELEMENT_FAKE_ELSE.replace(
+    "<p>", "<p><p />"
+)
+
 CASES = [
+    ("開いた要素内のelse風文字列", BAD_OPEN_ELEMENT_FAKE_ELSE, 1),
+    ("開いたFragment内のelse風文字列", BAD_OPEN_FRAGMENT_FAKE_ELSE, 1),
+    ("同名の自己終了タグがあっても外側は未閉鎖", BAD_OPEN_ELEMENT_WITH_SELF_CLOSING, 1),
     ("イベントハンドラ内の関数呼び出し", OK_CALLBACK_TAIL, 0),
     ("関数呼び出しで始まる継続断片", OK_CALL_SHAPED_LINE, 0),
     ("tsx の JSX 断片", BAD_TSX, 1),

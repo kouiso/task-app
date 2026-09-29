@@ -93,7 +93,21 @@ def opens_ternary_else(lang: str, body: list[tuple[int, str]]) -> bool:
     if not TERNARY_OPEN.match(lines[first]):
         return False
 
-    return not any(TERNARY_CLOSE.match(line) for line in lines[first + 1 : -1])
+    arm = lines[first + 1 : -1]
+    if any(TERNARY_CLOSE.match(line) for line in arm):
+        return False
+
+    # 要素を開いたままなら末尾の記号は表示文字の可能性があるため除外しない。
+    opened: list[str] = []
+    for tag in re.finditer(r"</?([A-Za-z][\w.]*)\b[^<>]*>|</?>", "\n".join(arm)):
+        text = tag.group(0)
+        name = tag.group(1) or "<>"
+        if text.startswith("</"):
+            if not opened or opened.pop() != name:
+                return False
+        elif not text.endswith("/>"):
+            opened.append(name)
+    return not opened
 
 
 def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
