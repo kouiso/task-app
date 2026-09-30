@@ -794,7 +794,7 @@ const handleSubmit = (
 
 ```typescript
 {/* filepath: src/app/project/page.tsx */}
-{/* JSX内（AppLayoutの閉じタグの前） */}
+{/* グリッドの閉じタグ直後、外側の div を閉じる前 */}
 <ProjectDialog
   open={dialogOpen}
   onClose={() => setDialogOpen(false)}
@@ -1567,7 +1567,7 @@ function ProjectPageContent() {
   };
 ```
 
-ダイアログを閉じる処理を `onSuccess` の中に置いてあるのは保存が通ったときだけ閉じたいからです。`mutate` の直後に閉じるとサーバーが断った場合でも閉じてしまい、保存できていないのに終わったように見えます。`handleEdit` から下の3つは Day 09 で置いた受け皿で、中身は Day 11 と Day 12 で埋めます。
+ダイアログを閉じる処理を `onSuccess` の中に置いてあるのは保存が通ったときだけ閉じたいからです。`mutate` の直後に閉じるとサーバーが断った場合でも閉じてしまい、保存できていないのに終わったように見えます。`handleEdit` から下の3つは Day 09 で置いた受け皿で、中身は Day 11 で埋めます。
 
 **送信ハンドラーと読み込み中の表示**:
 

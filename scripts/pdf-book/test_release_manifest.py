@@ -188,7 +188,7 @@ class ReleaseManifestTest(unittest.TestCase):
             any("PDFが変わ" in problem for problem in release_manifest.preupload_failures(manifest))
         )
 
-    def test_preupload_does_not_require_remote_results(self):
+    def test_preupload_does_not_require_drive_delivery(self):
         manifest = self.valid_manifest()
         manifest["correspondence"]["ledger_content"]["combinations"] = [
             item
@@ -196,51 +196,6 @@ class ReleaseManifestTest(unittest.TestCase):
             if item["id"] != "drive-delivery"
         ]
         self.assertEqual(release_manifest.preupload_failures(manifest), [])
-
-    def test_remote_results_reject_empty_duplicate_missing_and_mismatch(self):
-        manifest = self.valid_manifest(pdf_names=("a.pdf", "b.pdf"))
-        cases = (
-            [],
-            [
-                {"name": "a.pdf", "ok": True},
-                {"name": "a.pdf", "ok": True},
-                {"name": "b.pdf", "ok": True},
-            ],
-            [{"name": "a.pdf", "ok": True}],
-            [
-                {"name": "a.pdf", "ok": True},
-                {"name": "b.pdf", "ok": False, "error": "hash mismatch"},
-            ],
-        )
-        for results in cases:
-            with self.subTest(results=results):
-                self.assertTrue(release_manifest.postupload_failures(manifest, results))
-
-    def test_complete_remote_results_are_accepted(self):
-        manifest = self.valid_manifest(pdf_names=("a.pdf", "b.pdf"))
-        shipped = manifest["artifacts"]["pdfs"] + [manifest["artifacts"]["zip"]]
-        manifest["drive"] = [
-            {
-                "id": f"id-{index}",
-                "name": item["name"],
-                "url": f"https://example.test/{index}",
-                "uploaded_sha256": item["sha256"],
-            }
-            for index, item in enumerate(shipped)
-        ]
-        results = [
-            {"name": item["name"], "ok": True}
-            for item in shipped
-        ]
-        self.assertEqual(release_manifest.postupload_failures(manifest, results), [])
-
-        manifest["drive"][1]["id"] = manifest["drive"][0]["id"]
-        self.assertTrue(
-            any(
-                "IDが重複" in problem
-                for problem in release_manifest.postupload_failures(manifest, results)
-            )
-        )
 
     def valid_manifest(self, pdf_names=None):
         if pdf_names is None:
@@ -318,7 +273,6 @@ class ReleaseManifestTest(unittest.TestCase):
                 },
                 "derived": {"pdfs": [], "screenshots": []},
             },
-            "remote_verification": None,
         }
 
 

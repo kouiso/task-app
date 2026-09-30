@@ -1779,6 +1779,18 @@
       "full_page": true
     },
     {
+      "name": "day30/task-list.png",
+      "day": 30,
+      "path": "/task",
+      "login": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "wait_for": "h1:text-is('タスク')",
+      "note": "appendix_トラブルシューティング と appendix_用語集 が『正常起動時のタスク一覧』として貼っていた screenshots/task-list.png（ルート直下）は完成版 src の画面で、ロゴ「Task App」・上部検索バー・シードに無いタスクが写る。読者の Day 30 のツリーと初期データで撮り直す。",
+      "full_page": true
+    },
+    {
       "name": "day05/login-card.png",
       "day": 5,
       "path": "/login",
@@ -2292,7 +2304,7 @@
         }
       ],
       "wait_for": "button:has-text('完了にする')",
-      "note": "Step 9 の動作確認。すべて選択した状態で、操作ボタンが揃っていることを見せる。選択件数の表示は Day 28 の再構成ツリーには入らん（見出し行の書き直しだけ当てられていない）ので、件数ではなくボタンの出現を待つ。",
+      "note": "Step 9 の動作確認。すべて選択した状態で、操作ボタンが揃っていることを見せる。見出しの「(6件選択中)」はシードの件数で文字が変わるので、件数ではなくボタンの出現を待つ。",
       "full_page": true
     }
   ]

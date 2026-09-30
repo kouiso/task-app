@@ -386,7 +386,7 @@ flowchart TB
 
 #### 0-6. root.ts に時系列順で登録する
 
-ルーターを書いただけではまだ `api.report.getOverview` とは呼べません。`src/server/api/root.ts` に追加して初めてフロントから呼べる名前になります。
+ルーターを書いただけではまだ `api.report.getOverview` とは呼べません。`src/server/api/root.ts` に追加して初めてフロントから呼べる名前になります。Day 18 で書いた `root.ts` を開きます。import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。増えるのは `reportRouter` の import 1行と `report: reportRouter,` の1行だけです。ほかの行は貼り足さずにそのまま残します。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -413,7 +413,7 @@ export const appRouter = createTRPCRouter({
 });
 ```
 
-import と `appRouter` の順番は教材で作ってきた時系列に揃えます。Day 21 の時点では `report` が `comment` の次にある最後の router です。`user` は Day 24 でファイルを作ってから追加します。
+`appRouter` の中の順番は教材で作ってきた時系列に揃えます。Day 21 の時点では `report` が `comment` の次にある最後の router です。`user` は Day 24 でファイルを作ってから追加します。
 
 **確認ポイント**:
 - `src/server/api/routers/report.ts` を新規作成し、`getOverview` を最後の `});` まで書いた
@@ -784,7 +784,7 @@ if (isLoading) {
 
 **確認ポイント**:
 - グリッドの開始タグを書いた
-- 1枚目のカードが表示される
+- 1枚目のカードを書いた（表示の確認は4ブロック目で `</div>` を閉じてから。開始タグだけの状態で保存すると構文エラー）
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -803,8 +803,8 @@ if (isLoading) {
 `completionRate` は server 側で `Math.round` を通した整数なので画面では `%` を付けるだけで済みます。丸めを server に置いたのはこのカードと Day 22 で足すグラフが必ず同じ数字を出すようにするためです。片方が71、片方が71.4と出ると読者は集計が壊れたと考えます。分子は `DONE` のタスク数、分母は中止を除いた件数です。中止したタスクが `DONE` になることはないので分子には最初から入りません。分母からだけ消えます。
 
 **確認ポイント**:
-- 完了率がパーセント表示される
-- 保存してエラーが出ないこと
+- 2枚目に `completionRate` と `%` を書いた
+- まだ `</div>` を閉じていないので表示の確認は4ブロック目のあとに回す
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -1760,7 +1760,7 @@ const menuItems: MenuItem[] = [
 
 末尾の「レポート」1件が今日の追加です。前の5件は Day 08・Day 13・Day 20 で足したものがそのまま残ります。並べた順がそのまま画面の上から下の順になるので途中へ差し込むとメニューの並びが教材の画面と変わります。`path` の `/report` は `src/app/report/page.tsx` の置き場所と対応していて綴りがずれるとメニューは出るのに押した先が404になります。
 
-> **完成形の参考コード**: 完成版には `src/app/report/page.tsx` と `src/server/api/routers/report.ts` があります。ただし今日書いたコードとは一部が異なります。違いは3つです。1つ目は完成版の画面に円グラフと棒グラフが並んでいる点です。これは Day 22 で足します。2つ目は完成版の画面に週次レポートへのリンクがある点です。これは Day 23 で足します。3つ目は完成版の `report.ts` に `getOverview` 以外の手続きも入っていて`root.ts` には Day 24 で追加する `user` も登録されている点です。この3か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
+> **完成形の参考コード**: 完成版には `src/app/report/page.tsx` と `src/server/api/routers/report.ts` があります。ただし今日書いたコードとは一部が異なります。違いは3つです。1つ目は完成版の画面に円グラフが2枚並んでいる点です。これは Day 22 で足します。2つ目は完成版の画面に週次レポートへのリンクがある点です。これは Day 23 で足します。3つ目は完成版の `report.ts` に `getOverview` 以外の手続きも入っていて`root.ts` には Day 24 で追加する `user` も登録されている点です。この3か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ## 今日のまとめ
 

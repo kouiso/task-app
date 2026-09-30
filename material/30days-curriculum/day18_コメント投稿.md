@@ -286,6 +286,13 @@ Day 09 の `getAll` で使ったのと同じ道具です。
 
 router だけ書いても `api.comment.create` はまだ呼べません。
 最後に appRouter へ登録します。
+Day 14 で書いた `root.ts` を開きます。import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。
+増えるのは `commentRouter` の import 1行と `comment: commentRouter,` の1行だけです。ほかの行は貼り足しません。
+`appRouter` の中は Day 07 から router を足した順（`auth` → `project` → `task` → `search` → `comment`）に並べます。
+手元の `appRouter` の中で `search: searchRouter,` が `task: taskRouter,` より上にある場合はこの2行を入れ替えてください。
+`searchRouter` と `taskRouter` の import 行は入れ替えません。
+import の並びは Biome（コード整形ツール）がアルファベット順にそろえます。`searchRouter` が `taskRouter` より上のままで正しい形です。
+並びを入れ替えても `api.task` や `api.search` の呼び名は変わりません。Day 20 と Day 21 はこの並びを前提に `root.ts` を説明するのでそろえておきます。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -322,6 +329,7 @@ export const appRouter = createTRPCRouter({
 - Day 13 で追加した `task.getById` が残っている
 - `comment.ts` を新規作成し、`getByTaskId` と `create` を書いた
 - `root.ts` に `commentRouter` を登録した
+- `appRouter` の中が `auth` → `project` → `task` → `search` → `comment` の順に並んでいる
 - `npx tsc --noEmit` で型エラーが出ていない
 
 ---
@@ -602,19 +610,19 @@ import { ja } from 'date-fns/locale';
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* .map ループ内: 名前と日時を包む2つの箱を開く */}
+{/* .map ループ内: 外側にアイコンの右側の箱、内側に名前と日時の箱を開く */}
 <div className="flex-1 space-y-1">
   <div className="flex items-center
     justify-between">
 ```
 
-外側の `flex-1` はアイコンの右側の残り幅をすべて使うための指定です。
-内側の `justify-between` は名前を左端、日時を右端へ寄せるための指定です。
-この2つはあとで閉じるのでいまは開いたままにしておきます。
+外側の箱は `flex-1` でアイコンの右側の残り幅をすべて使います。これを「アイコンの右側の箱」と呼びます。
+内側の箱は `justify-between` で名前を左端、日時を右端へ寄せます。これを「名前と日時の箱」と呼びます。
+2つとも開いたままにしておきます。名前と日時の箱は次のブロックの最後で、アイコンの右側の箱は本文を書いたあとで閉じます。
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* .map ループ内: ユーザー名と投稿日時 */}
+{/* .map ループ内: ユーザー名と投稿日時。最後の行で名前と日時の箱を閉じる */}
 <span className="font-medium">
   {comment.user.name
     || comment.user.email
@@ -628,7 +636,15 @@ import { ja } from 'date-fns/locale';
     { locale: ja },
   )}
 </span>
+</div>
 ```
+
+最後の `</div>` で名前と日時の箱を閉じます。
+この箱は `flex` で中身を横一列に並べます。
+閉じずに本文まで入れると名前・日時・本文の3つが横一列に並びます。
+日時は右端を離れて名前と本文のあいだへ移ります。
+本文が長いと名前や日時が折り返して縦に伸びます。
+本文を名前の下に置きたいので日時を書いたらすぐ閉じます。
 
 表示名の `||` は`AvatarFallback` に渡す頭文字と同じ順でたどります。
 順番をそろえてあるのでアイコンの頭文字が「T」なのに名前が別人、という食い違いは起きません。
@@ -643,10 +659,11 @@ import { ja } from 'date-fns/locale';
 - `date-fns` の `format` と `ja` ロケールを使用
 
 最後にコメント本文の表示部分です。
+名前と日時の箱を閉じた `</div>` の下へ続けます。
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* .map ループ内: コメント本文 */}
+{/* .map ループ内: 名前と日時の箱の下にコメント本文 */}
 <p className="text-muted-foreground">
   {comment.content}
 </p>
@@ -656,21 +673,22 @@ import { ja } from 'date-fns/locale';
 `{comment.content}` の `</p>` の下へ続けてください。
 
 ```typescript
-      {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-      </div>
+    {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
     </div>
   </div>
 ))}
 </div>
 ```
 
-`</div>` の3つは内側から順に「名前と日時の箱」「アイコンの右側の箱」「1件分の箱」を閉じます。
+`</div>` の2つは内側から順に「アイコンの右側の箱」「1件分の箱」を閉じます。
+「名前と日時の箱」は日時の下ですでに閉じたのでここには入りません。
 `))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じます。
 いちばん下の `</div>` は0 件の案内の前で開いた外側の箱を閉じます。これでコメント一覧は閉じ切ります。
 
 **確認ポイント**:
 - `.map` の中身を、閉じるところまで書けた
-- `</div>` が3つ、`))}` が1つ、いちばん下にもう1つ `</div>` が並んでいる
+- 本文の `<p>` が名前と日時の箱の外、閉じた `</div>` の下にある
+- `</div>` が2つ、`))}` が1つ、いちばん下にもう1つ `</div>` が並んでいる
 - コメント欄全体の div はまだ開いている。Step 4 で閉じ、Step 5 の処理を書いてから画面を確認する
 
 スクリーンショット: 下の画像は Step 5 まで書き終えた完成後の画面です。赤枠の中がこの Step で足したコメント一覧です。投稿フォームは Step 4 で足します。今は外側の div が開いたままなのでまだ画面で確認できません。
@@ -768,6 +786,8 @@ Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り�
 - Day 14 と同じ `zodResolver` パターンを使っている
 
 フォームを書く前に、props を1つ増やします。
+配布ファイルにある `type TaskDetailDialogProps` と関数の先頭行を次の形に書き換えます。
+増えるのは `canEditProject` の行だけです。型と関数を新しく足すのではありません。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
@@ -790,7 +810,8 @@ Step 0 で書いた `comment.create` は編集できる役割かどうかをサ�
 閲覧者（VIEWER）が投稿ボタンを押すとサーバーに弾かれるので押せる見た目のまま残すと理由の分からない無反応に見えます。
 Day 13 で作った `canEditProject` をそのまま受け取り、投稿できる人にだけフォームを出します。
 
-呼び出し側の `/task` ページにも同じ名前で渡します。
+呼び出し側の `/task` ページでは Day 13 で書いた `<TaskDetailDialog />` に `canEditProject={canEditProject}` の1行を足して次の形にします。
+既存の要素を書き換えます。`<TaskDetailDialog />` をもう1つ足すのではありません。
 
 ```typescript
 {/* filepath: src/app/task/page.tsx */}

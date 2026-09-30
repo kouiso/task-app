@@ -91,11 +91,11 @@ flowchart TD
 
 `getOverview` が返す `statusData` は`key`（ステータス名）と `value`（件数）だけを持つ配列です。日本語ラベルの `name` と色はフロント側で `key` から引いて足します。
 
-| 段階 | データの形 | 例 |
-|-----|-----------|-----|
-| サーバーが返す | `{ key, value }` | `{ key: 'TODO', value: 3 }` |
-| フロントで name を足す | `{ key, value, name }` | `{ key: 'TODO', value: 3, name: '未対応' }` |
-| 色は key から引く | `TASK_STATUS_COLORS[key]` | `'#5f6777'` |
+| 段階 | データの形と例 |
+|-----|---------------|
+| サーバーが返す | **形**: `{ key, value }`<br>**例**: `{ key: 'TODO', value: 3 }` |
+| フロントで `name` を足す | **形**: `{ key, value, name }`<br>**例**: `{ key: 'TODO', value: 3, name: '未対応' }` |
+| 色は `key` から引く | **形**: `TASK_STATUS_COLORS[key]`<br>**例**: `'#5f6777'` |
 
 > `key` は `'TODO'` のような英字のステータス名です。人が読む見出しには使いにくいので`name` に日本語ラベルを入れて凡例やツールチップに出します。
 
@@ -164,6 +164,22 @@ npm list recharts
 > Day 01 で実行した `scripts/scaffold-from-scratch.sh` が
 > 入れているのであらためて入れる必要はありません。
 
+バージョンではなく `(empty)` と表示された場合は
+入っていません。Day 01 のスクリプトを
+途中で止めたときなどに起こります。
+次のコマンドで入れてから Step 2 へ進んでください。
+
+```bash
+# filepath: ターミナル（(empty) と出たときだけ）
+# Recharts を入れる
+npm install recharts
+```
+
+入っていないまま Step 2 以降を写経すると
+`Module not found: Can't resolve 'recharts'` が出て
+画面が真っ白になります。先に入れておけば
+このエラーは出ません。
+
 **確認ポイント**:
 - recharts がpackage.jsonにある
 - バージョンが `3.x.x` と表示された
@@ -209,7 +225,7 @@ import {
 } from '@/lib/constant/priority';
 ```
 
-ここで取り込む3つは優先度の `key` を人が読める形へ変換するための道具です。`TASK_PRIORITY_LABELS` は `'HIGH'` から `'高'` を、`TASK_PRIORITY_COLORS` は同じ `'HIGH'` から扇の色を引く対応表になっています。`isTaskPriority` はサーバーから届いた文字列が本当に優先度の値かどうかを確かめる関数（型ガード）です。この確認を挟まずに対応表を引くとTypeScript は「どんな文字列が来るか保証できない」と判断して型エラーを出します。
+ここで取り込む3つは優先度の `key` を人が読める形へ変換するための道具です。`TASK_PRIORITY_LABELS` は `'HIGH'` から `'高'` を、`TASK_PRIORITY_COLORS` は同じ `'HIGH'` から扇の色を引く対応表になっています。`isTaskPriority` はサーバーから届いた値が本当に優先度の4種類のどれかを実行時に確かめる関数（型ガード）です。型の上では `entry.key` は Prisma の enum と同じ4つの文字列に決まっています。この確認を外しても型エラーは出ません。それでも挟むのは型検査がビルドの時点までしか働かないからです。実行時に届いた値までは確かめません。対応表に無い値が来たときに `undefined` を色に渡さず代わりの色へ逃がす分岐を書くための確認です。
 
 **確認ポイント**:
 - `isTaskPriority` と色・ラベル定数をインポートした
@@ -249,8 +265,8 @@ const CHART_FALLBACK_COLOR = '#9e9e9e';
 | ステータス | 色 | HEXコード |
 |-----------|-----|----------|
 | TODO | グレー | `#5f6777` |
-| IN_PROGRESS | ブルー | `#1e9cb8` |
-| IN_REVIEW | イエロー | `#f69e23` |
+| IN_PROGRESS | ブルーグリーン | `#1e9cb8` |
+| IN_REVIEW | オレンジ | `#f69e23` |
 | DONE | グリーン | `#26ab7a` |
 | CANCELLED | レッド | `#dc3848` |
 
@@ -905,7 +921,7 @@ export default function ReportPage() {
           </Card>
 ```
 
-`Cell` はデータ1件につき1つ作り、その扇の色だけを受け持ちます。`isTaskStatus` を挟んでから対応表を引いているのはサーバーから届く `key` の中身を TypeScript が文字列としてしか知らないからです。型ガードを通さずに `TASK_STATUS_COLORS[entry.key]` と書くとどの文字列でも引ける保証が無いという型エラーになります。`Tooltip` と `Legend` を `Pie` の外に置くのはこの2つが扇そのものではなくグラフ全体に付く表示だからです。
+`Cell` はデータ1件につき1つ作り、その扇の色だけを受け持ちます。`isTaskStatus` を挟んでから対応表を引いているのは実行時の `key` が対応表に無い値だったとき `undefined` を `fill` へ渡さないためです。型の上では `entry.key` はステータスの5つの文字列に決まっています。型ガードを外しても型エラーは出ません。型検査はビルドの時点の約束です。実行時に届く値までは確かめないので画面側に1つ確認を置きます。`Tooltip` と `Legend` を `Pie` の外に置くのはこの2つが扇そのものではなくグラフ全体に付く表示だからです。
 
 **優先度円グラフの枠**:
 
@@ -1075,7 +1091,7 @@ A. 扇が1枚も描かれず、カードの中は空のままになります。`
 
 **Q3. `TASK_STATUS_COLORS[entry.key]` を引く前に `isTaskStatus(entry.key)` を通すのはなぜですか。`as` で押し込まないのはなぜですか。**
 
-A. サーバーから届く `key` を TypeScript は「ただの文字列」としか知らないので型ガードを通さずに対応表を引くと型エラーになります。`as` で押し込むと型検査は黙りますが対応表に無い値が来たときに `undefined` が `fill` へ渡り、SVG はその扇を黒く塗ります。型ガードなら外れた値を `CHART_FALLBACK_COLOR` へ逃がす道が残ります。
+A. 型エラーを避けるためではありません。`entry.key` の型は Prisma の enum と同じ5つの文字列です。型ガード無しでも型検査は通ります。型ガードを置くのは実行時の守りです。型検査はビルドの時点までしか働きません。実行時に届く値は確かめません。対応表に無い値が来ると `undefined` が `fill` へ渡り、SVG はその扇を黒く塗ります。型ガードならその値を `CHART_FALLBACK_COLOR` へ逃がせます。`as` で押し込む必要は元々ありません。押し込んでも外れた値を逃がす分岐は書けません。
 
 ---
 

@@ -486,6 +486,104 @@ class BuildReceiptTest(unittest.TestCase):
         self.assertEqual(self.run_main([], targets=targets), 0)
         self.assertFalse(self.receipt.exists())
 
+    def test_launcher_script_resolves_to_the_browser_that_actually_renders(self):
+        """1585バイトの起動スクリプトを証跡の「ブラウザ」にしない。
+
+        /usr/bin/google-chrome は同じ場所の chrome を exec するシェルスクリプトで、
+        そのハッシュはどの Chrome が組版したかを示さない。
+        """
+        chrome_dir = self.root / "opt-chrome"
+        chrome_dir.mkdir()
+        real = chrome_dir / "chrome"
+        real.write_bytes(b"\x7fELF" + b"rendering-binary")
+        launcher = chrome_dir / "google-chrome"
+        launcher.write_text(
+            '#!/bin/sh\nHERE="`dirname "$0"`"\nexec -a "$0" "$HERE/chrome" "$@"\n',
+            encoding="utf-8",
+        )
+
+        resolved, via = build_pdf_book.resolve_browser_executable(launcher)
+
+        self.assertEqual(resolved, real.resolve())
+        self.assertEqual(via, launcher)
+
+    def test_a_real_binary_is_recorded_without_a_launcher(self):
+        binary = self.root / "chromium"
+        binary.write_bytes(b"\x7fELF" + b"standalone")
+
+        resolved, via = build_pdf_book.resolve_browser_executable(binary)
+
+        self.assertEqual(resolved, binary)
+        self.assertIsNone(via)
+
+    def test_an_unreadable_launcher_target_keeps_the_script_unresolved(self):
+        """本体へたどり着けんときに、たどれたふりをせん。"""
+        launcher = self.root / "google-chrome"
+        launcher.write_text(
+            '#!/bin/sh\nHERE="`dirname "$0"`"\nexec -a "$0" "$HERE/chrome" "$@"\n',
+            encoding="utf-8",
+        )
+
+        resolved, via = build_pdf_book.resolve_browser_executable(launcher)
+
+        self.assertEqual(resolved, launcher)
+        self.assertIsNone(via)
+
+    def test_input_snapshot_records_the_binary_and_the_launcher_separately(self):
+        """証跡の組み立てまで通して、本体と起動スクリプトの両方が残ることを確かめる。
+
+        本体だけ、起動スクリプトだけを変えたときも aggregate_sha256 が変わる。
+        片方しか集計に入っとらんと、もう片方を差し替えても証跡が同じになる。
+        """
+        source = self.sources / "book-00.md"
+        css = self.root / "book.css"
+        css.write_text("body {}", encoding="utf-8")
+        (self.root / "package-lock.json").write_text("{}", encoding="utf-8")
+        markdown_scan = self.root / "scripts" / "curriculum-qa" / "markdown_scan.py"
+        markdown_scan.parent.mkdir(parents=True)
+        markdown_scan.write_text("# helper", encoding="utf-8")
+        font = self.root / "node_modules" / "font-package" / "font.ttf"
+        font.parent.mkdir(parents=True)
+        font.write_bytes(b"font")
+        chrome_dir = self.root / "opt-chrome"
+        chrome_dir.mkdir()
+        real = chrome_dir / "chrome"
+        real.write_bytes(b"\x7fELF" + b"rendering-binary-v1")
+        launcher = chrome_dir / "google-chrome"
+        script = '#!/bin/sh\nHERE="`dirname "$0"`"\nexec -a "$0" "$HERE/chrome" "$@"\n'
+        launcher.write_text(script, encoding="utf-8")
+
+        with (
+            patch.object(build_pdf_book, "REPO_ROOT", self.root),
+            patch.object(build_pdf_book, "SRC_DIR", self.sources),
+            patch.object(build_pdf_book, "BOOK_CSS", css),
+            patch.object(build_pdf_book, "TOOLCHAIN_DIR", self.root / "no-toolchain"),
+            patch.object(
+                build_pdf_book,
+                "FONT_SOURCES",
+                (("font-package", "font.ttf", "Font", 400, "truetype"),),
+            ),
+        ):
+            first = build_pdf_book.release_input_snapshot([source], None, str(launcher))
+            real.write_bytes(b"\x7fELF" + b"rendering-binary-v2")
+            binary_changed = build_pdf_book.release_input_snapshot(
+                [source], None, str(launcher)
+            )
+            launcher.write_text("# launcher v2\n" + script, encoding="utf-8")
+            launcher_changed = build_pdf_book.release_input_snapshot(
+                [source], None, str(launcher)
+            )
+
+        browser = first["browser"]
+        self.assertEqual(browser["file"], "tool:browser")
+        self.assertEqual(browser["path"], str(real.resolve()))
+        self.assertEqual(browser["launcher"]["file"], "tool:browser-launcher")
+        self.assertEqual(browser["launcher"]["path"], str(launcher.resolve()))
+        self.assertNotEqual(first["aggregate_sha256"], binary_changed["aggregate_sha256"])
+        self.assertNotEqual(
+            binary_changed["aggregate_sha256"], launcher_changed["aggregate_sha256"]
+        )
+
     def test_pdf_changed_after_its_build_prevents_receipt(self):
         first_output = self.outputs / "book-00.pdf"
 
