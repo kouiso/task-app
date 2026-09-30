@@ -424,6 +424,11 @@ def main(argv: list[str]) -> int:
         return 2
 
     args = argv[1:] or [str(DEFAULT_PDF_DIR)]
+    # subset 組版では「抜け」は仕様（変更のあった冊だけ dist/pdf にある）なので、
+    # pdf-book-gate の subset 経路から渡される --allow-gaps で連続性検査を退ける。
+    # 全冊経路（make book-pdf-verify）では従来どおり抜けを検出する。
+    allow_gaps = "--allow-gaps" in args
+    args = [a for a in args if a != "--allow-gaps"]
     if len(args) != 1 or not Path(args[0]).is_dir():
         print("❌ PDF のディレクトリを1つ指定してください", file=sys.stderr)
         return 2
@@ -441,7 +446,7 @@ def main(argv: list[str]) -> int:
         int(m.group(1)) for p in pdfs
         if (m := re.match(r"day(\d{2})_", p.name))
     }
-    if day_numbers:
+    if day_numbers and not allow_gaps:
         for d in sorted(set(range(min(day_numbers), max(day_numbers) + 1)) - day_numbers):
             problems.append(f"day{d:02d} の PDF がありません")
     for pdf in pdfs:
