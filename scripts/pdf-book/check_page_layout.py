@@ -61,6 +61,7 @@ from xml.etree import ElementTree
 sys.path.insert(0, str(Path(__file__).parent))
 from check_pdf_book import ToolFailure, run_tool  # noqa: E402
 from build_pdf_book import work_slug  # noqa: E402
+from breakable_code import BREAKABLE_MIN_LINES  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
@@ -106,6 +107,13 @@ CODE_BAND_EDGE_MM = 3.0
 # 区別が付かない（実測: day28 p55 の表の下罫が拾われた）。地色は必ず厚みを持つので、
 # 端から内側へこの厚みぶん濃い行が続いていることを条件にする。
 CODE_BAND_MIN_THICK_MM = 3.0
+
+# ページの境を跨いだコードの断片がこの厚み未満なら端切れとして咎める。
+# 断片の帯には塊の外側のパディング（pre の 1em ≒ 4mm）も入るので、
+# orphans / widows が保つ4行ぶんの断片は約37mm、3行の端切れは約29mmになる
+# （コード1行は約8.3mm）。その間に置くと、保証が効いた分割は通し、
+# 1〜3行だけが残る端切れだけを拾える。
+CODE_SPLIT_MIN_MM = 33.0
 
 # ── 表の潰れ ────────────────────────────────────────────────
 # 潰れた列は「1文字だけの行」が行送りの間隔でびっしり縦に積まれる。
@@ -176,6 +184,23 @@ ORPHAN_RATE_LIMIT = 0.15
 
 MM_PER_PT = 25.4 / 72.0
 
+# コードの行送り。book.css: 本文 12.75pt、行高 2.05、pre の級数はその 90%。
+# 表示1行 = 12.75 × 0.9 × 2.05 ≒ 23.5pt ≒ 8.3mm
+CODE_LINE_PITCH_MM = 12.75 * 0.9 * 2.05 * MM_PER_PT
+# 境で切れた断片の帯には、塊の外側に残る pre のパディング（1em ≒ 4.05mm）が
+# 1つぶん入る（切れ目の内側のパディングはスライスで落ちる）
+PRE_FRAGMENT_PAD_MM = 12.75 * 0.9 * MM_PER_PT
+
+# 分割してよいのは生成器が pdf-breakable を付けた塊（表示
+# BREAKABLE_MIN_LINES 行以上）だけ。境の断片の合計（前ページ下端＋
+# 次ページ上端）は、その塊の高さ ≒ 18行×8.3mm＋両断片のパディング
+# ≒ 157mm を必ず超える。一方、丸送りのはずの塊（17行以下）が切れた
+# ときの合計は高々 149mm。その間に下限を置くと、keep-together が
+# 掛け忘れやテーマ更新で効かなくなった塊の分割を拾える。
+CODE_SPLIT_BLOCK_MIN_MM = (
+    BREAKABLE_MIN_LINES * CODE_LINE_PITCH_MM + PRE_FRAGMENT_PAD_MM
+)
+
 
 def mm_from_px(value: int) -> float:
     """描画した画素の位置を mm に直す。"""
@@ -218,16 +243,17 @@ def ink_rows(width: int, height: int, pixels: bytes) -> list[tuple[int, int, int
     return rows
 
 
-def code_band_at_edges(width: int, height: int, pixels: bytes) -> tuple[bool, bool]:
-    """コードブロックの濃い帯が版面の上端・下端に接しているかを返す。
+def code_band_at_edges(width: int, height: int, pixels: bytes) -> tuple[int, int]:
+    """コードブロックの濃い帯が版面の上端・下端で持つ厚み（画素）を返す。
 
-    写経が前提の教材で、1つのコードブロックがページの境で切れると、読者は
-    打ちながら紙をめくることになる。`book.css` は pre に break-inside: avoid を
-    掛けてこれを防いでいるが、掛け忘れや theme の更新で戻ることがあるので、
-    出来上がった紙面の側から見張る。
+    写経が前提の教材で、コードブロックがページの境で切れると、読者は
+    打ちながら紙をめくることになる。版面いっぱいを占める大きな塊は
+    book.css の `pdf-breakable` で境での流し込みを許すが、分割は
+    orphans / widows が両側4行を保つ。帯の厚みは断片の行数に比例するので、
+    出来上がった紙面の側から「薄い切れ端」を見張れる。
 
-    返すのは (上端に接している, 下端に接している)。前のページの下端と
-    次のページの上端が両方 True なら、そこで1つの塊が切れている。
+    返すのは (上端の帯の厚み, 下端の帯の厚み)。帯が端に接していないか
+    罫線程度に薄いときは 0。
     """
     marked = pixels.translate(INK_TABLE)
     left_px = int(TEXT_LEFT_MM * RENDER_DPI / 25.4)
@@ -240,12 +266,27 @@ def code_band_at_edges(width: int, height: int, pixels: bytes) -> tuple[bool, bo
         row = marked[y * width + left_px:y * width + right_px]
         return sum(row) >= span * CODE_BAND_DARK_RATIO
 
+    def band_length(y_probe: int) -> int:
+        """y_probe を含む連続した濃い帯の厚み（画素）。"""
+        if not is_code_row(y_probe):
+            return 0
+        start = y_probe
+        while is_code_row(start - 1):
+            start -= 1
+        end = y_probe
+        while is_code_row(end + 1):
+            end += 1
+        return end - start + 1
+
     thick_px = max(1, int(CODE_BAND_MIN_THICK_MM * RENDER_DPI / 25.4))
     top_y = int((TEXT_TOP_MM + CODE_BAND_EDGE_MM / 2) * RENDER_DPI / 25.4)
     bottom_y = int((TEXT_BOTTOM_MM - CODE_BAND_EDGE_MM / 2) * RENDER_DPI / 25.4)
-    starts = all(is_code_row(top_y + n) for n in range(thick_px))
-    ends = all(is_code_row(bottom_y - n) for n in range(thick_px))
-    return starts, ends
+    starts = band_length(top_y)
+    ends = band_length(bottom_y)
+    return (
+        starts if starts >= thick_px else 0,
+        ends if ends >= thick_px else 0,
+    )
 
 
 def find_ink_overflow(rows: list[tuple[int, int, int]]) -> list[str]:
@@ -711,6 +752,28 @@ def page_count(pdf: Path) -> int:
     raise ToolFailure("pdfinfo がページ数を返さない")
 
 
+def code_split_problem(tail_px: int, head_px: int) -> str:
+    """ページ境を跨いだコード帯の断片（前ページ下端・次ページ上端の画素厚み）
+    から、咎めるべき切れ方だけを文言にして返す。問題なければ空文字。
+
+    分割してよいのは pdf-breakable の塊（表示 BREAKABLE_MIN_LINES 行
+    以上）だけで、分割は orphans / widows が両側4行を保つ。
+    境で拾えた断片がそのどちらの形にも合わないとき、keep-together が
+    効くはずの塊が掛け忘れやテーマ更新で静かに切れている証拠になる。
+    """
+    fragment_mm = mm_from_px(min(tail_px, head_px))
+    if fragment_mm < CODE_SPLIT_MIN_MM:
+        return (f"コードブロックがページの境で薄く切れている"
+                f"（境の断片 {fragment_mm:.1f}mm）。"
+                "写経しながら紙をめくることになる")
+    total_mm = mm_from_px(tail_px + head_px)
+    if total_mm < CODE_SPLIT_BLOCK_MIN_MM:
+        return (f"keep-together の効くはずのコードブロックがページの境で"
+                f"切れている（境の断片の合計 {total_mm:.1f}mm は"
+                f" {BREAKABLE_MIN_LINES} 行の塊の高さに足りない）")
+    return ""
+
+
 def render_problems(pdf: Path, total: int) -> list[str]:
     """全ページを描画して、版面からはみ出した墨を挙げる。"""
     with tempfile.TemporaryDirectory() as work:
@@ -720,18 +783,17 @@ def render_problems(pdf: Path, total: int) -> list[str]:
         if len(images) != total:
             raise ToolFailure(f"{total} ページ中 {len(images)} ページしか描画できない")
         problems: list[str] = []
-        previous_ends_in_code = False
+        previous_code_tail = 0
         for number, image in enumerate(images, start=1):
             width, height, pixels = read_pgm(image.read_bytes())
             for problem in find_ink_overflow(ink_rows(width, height, pixels)):
                 problems.append(f"p{number}: {problem}")
             starts, ends = code_band_at_edges(width, height, pixels)
-            if previous_ends_in_code and starts:
-                problems.append(
-                    f"p{number - 1}〜p{number}: コードブロックがページの境で切れている。"
-                    "写経しながら紙をめくることになる"
-                )
-            previous_ends_in_code = ends
+            if previous_code_tail and starts:
+                problem = code_split_problem(previous_code_tail, starts)
+                if problem:
+                    problems.append(f"p{number - 1}〜p{number}: {problem}")
+            previous_code_tail = ends
         return problems
 
 
