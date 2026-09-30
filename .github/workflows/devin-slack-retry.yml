@@ -1,0 +1,39 @@
+# Devin 起動リクエストの定期リトライ。
+# - devin-queued ラベルの issue を定期実行で起動（容量制限時のキュー）
+# - Slack 投稿/Devin 起動が失敗した issue (devin-waiting) を同じスレッドに再投稿
+#   元スレッドへの返信が失敗した場合は新規スレッドで再投稿する
+name: Devin Slack Retry
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: devin-slack-retry
+  cancel-in-progress: false
+
+jobs:
+  retry-devin:
+    name: Retry pending Devin triggers
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Sweep queued and pending triggers
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          DEVIN_USER_ID: ${{ vars.SLACK_DEVIN_USER_ID }}
+          DEVIN_MODE: ${{ vars.DEVIN_MODE }}
+          TRIGGER_LABEL: devin
+        with:
+          script: |
+            const relay = require('./.github/scripts/devin-slack-relay.js');
+            await relay.sweep({ github, context, core });

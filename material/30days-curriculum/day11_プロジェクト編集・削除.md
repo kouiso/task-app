@@ -481,7 +481,8 @@ const [editingProject, setEditingProject] =
 - 保存時にエラーが出ていない
 
 URL の `?projectId=...` を詳細表示の対象として読むコードも追加します。
-`utils = api.useUtils()` より前に置くと読みやすいです。
+`const utils = api.useUtils();` の直前に置いてください。
+Step 9 では一覧のクエリをこの下へ移して `selectedProject` を読ませます。そのためここで位置を決めておきます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -499,7 +500,7 @@ const selectedProject = projectIdParam;
 - `router.push(...)` を使う準備ができている
 - URL に `projectId` があると `selectedProject` に入る
 
-ログイン中のユーザー情報も取得しておきます。この後の作成分岐でユーザーIDを確認するのに使います。`utils` の並びに追加してください。
+ログイン中のユーザー情報も取得しておきます。この後の作成分岐でユーザーIDを確認するのに使います。`const utils = api.useUtils();` の直下に追加してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -941,16 +942,19 @@ const archiveMutation =
   api.project.archive.useMutation({
     onSuccess: () => {
       void utils.project.getAll.invalidate();
+      void utils.project.getById.invalidate();
       router.push('/project');
     },
   });
 ```
 
-`onSuccess` で `invalidate()` を呼ぶと一覧のキャッシュが無効になって最新の状態を取得します。`router.push('/project')` で詳細画面から一覧へ戻ります。アーカイブ表示がOFFならそのプロジェクトは一覧に表示されません。
+`onSuccess` で `getAll` の `invalidate()` を呼ぶと一覧のキャッシュが無効になって最新の状態を取得します。`router.push('/project')` で詳細画面から一覧へ戻ります。アーカイブ表示がOFFならそのプロジェクトは一覧に表示されません。
+
+`getById` も取り直すのは Step 9 で出す詳細画面もアーカイブ済みかどうかを `isArchived` として持っているためです。一覧だけを取り直すと取得済みの古い詳細が残ります。すぐに同じプロジェクトを開き直すとその古い詳細が表示されます。「アーカイブ解除」ボタンの代わりに「アーカイブ」ボタンが出たままになります。
 
 **確認ポイント**:
 - `archiveMutation` が定義できた
-- 成功時に `invalidate()` と `router.push('/project')` で一覧画面に戻る
+- 成功時に `getAll` と `getById` の `invalidate()` を呼んでから `router.push('/project')` で一覧画面に戻る
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -959,12 +963,13 @@ const unarchiveMutation =
   api.project.unarchive.useMutation({
     onSuccess: () => {
       void utils.project.getAll.invalidate();
+      void utils.project.getById.invalidate();
       router.push('/project');
     },
   });
 ```
 
-解除も成功後に `invalidate()` で一覧を取り直します。アーカイブとは呼び出すAPIが異なります。成功時にはどちらも一覧を更新して詳細画面から戻ります。
+解除も成功後に `invalidate()` で一覧と詳細を取り直します。詳細を取り直さないと古い詳細が残ります。解除してすぐ同じプロジェクトを開き直すとその古い詳細が表示されます。「アーカイブ」ボタンの代わりに「アーカイブ解除」ボタンが出たままになります。アーカイブとは呼び出すAPIが異なります。成功時にはどちらも一覧と詳細を更新して詳細画面から戻ります。
 
 **確認ポイント**:
 - `unarchiveMutation` が定義できた
@@ -1127,10 +1132,11 @@ const {
 
 `enabled: !!selectedProject` は詳細を開いた場合だけAPIを呼ぶ設定です。`isLoading` と `isError` を別に受け取るため、応答待ちを「見つかりません」と誤表示しません。`retry` は 401・403・404 を繰り返さず、通信失敗だけを再試行します。
 
-一覧・詳細・ログインユーザーの各クエリでも `isLoading` / `isError` / `isFetching` / `error` / `refetch` を受け取り、次の表示分岐を `handleArchive` の後へ追加します。
+ログインユーザーと一覧のクエリでも `isLoading` / `isError` / `isFetching` / `error` / `refetch` を受け取ります。Step 1 で書いた `currentUser` のクエリは同じ場所で次の形に**書き換えて**ください。Day 09 で書いた `projects` のクエリは元の場所から**消します**。書き換えた `currentUser` のクエリの直下へ次の形で貼り直してください。元の行を残したまま貼ると同じ名前の `const` が2回宣言されてコンパイルエラーになります。その後の「表示に必要な取得状態」の分岐は `handleArchive` の後へ追加します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
+// Step 1 の currentUser のクエリと同じ場所で書き換える
 const {
   data: currentUser,
   isLoading: currentUserLoading,
@@ -1148,6 +1154,7 @@ const {
 
 ```typescript
 // filepath: src/app/project/page.tsx
+// Day 09 の位置から currentUser のクエリの直下へ移す
 const {
   data: projects,
   isLoading: projectsLoading,
@@ -1165,6 +1172,8 @@ const {
 ```
 
 一覧の取得状態をデータと分けて受け取ります。0件と通信待ちを区別し、失敗時には空の一覧ではなく再読み込みの入口を示すためです。
+
+一覧のクエリだけ場所を移すのは `enabled: !selectedProject` が `selectedProject` を読むからです。一覧のクエリの元の位置は Step 1 で書いた `const selectedProject` より上にあります。`const` は宣言した行より前では読めません。元の場所で書き換えると `Block-scoped variable 'selectedProject' used before its declaration` という型エラーになります。
 
 **表示に必要な取得状態**
 
@@ -1322,6 +1331,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
 - `handleDetailClose` は `/project` に戻る（URLパラメータなし）
 - `useQuery` に `enabled` オプションを設定した
 - 未選択時はAPIを呼ばない設定になっている
+- 一覧の `getAll` のクエリが `const selectedProject` と `currentUser` のクエリより下にある
 
 カードを押して詳細画面へ進む入口も今日のうちに本実装します。Day 09 で置いた受け皿 `const handleProjectClick = (id: string) => { void id; };` をまるごと消し、mutation 群の下かつ `handleEdit` の直前へ次を書いてください。直後には上で説明した `handleDetailClose` と `projectDetail` のクエリが続きます。
 
@@ -1399,9 +1409,9 @@ if (viewingDetail) {
 |------|------|-------------|----------------|
 | `projectDetail` | `api.project.getById.useQuery` | ✅ 今日完成 | 変更なし |
 | `onBack` | `handleDetailClose` | ✅ 今日完成 | 変更なし |
-| `onAddMemberClick` | その場に書いた空の関数 | 何もしない（仮） | Step 3 で `setMemberDialogOpen(true)` に置換 |
+| `onAddMemberClick` | その場に書いた空の関数 | 何もしない（仮） | Step 2 で `setMemberDialogOpen(true)` に置換 |
 | `onRemoveMember` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleRemoveMember` に置換 |
-| `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleUpdateMemberRole` に置換 |
+| `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 2 で `handleUpdateMemberRole` に置換 |
 | `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
 | `canManageMembers` | `false` を直接指定（仮） | ボタンを出さない | Step 2 で `hasPermission` の計算に置換 |
 | `canArchive` | `true` を直接指定（仮） | ボタンを出す | Step 2 で `hasPermission` の計算に置換 |
@@ -2397,11 +2407,17 @@ function ProjectPageContent() {
         router.push('/project');
       },
     });
+```
 
+削除は成功したら一覧を取り直して一覧の URL へ戻ります。取り直した一覧には消したプロジェクトのカードがもう出ません。
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
   const archiveMutation =
     api.project.archive.useMutation({
       onSuccess: () => {
         void utils.project.getAll.invalidate();
+        void utils.project.getById.invalidate();
         router.push('/project');
       },
     });
@@ -2410,12 +2426,15 @@ function ProjectPageContent() {
     api.project.unarchive.useMutation({
       onSuccess: () => {
         void utils.project.getAll.invalidate();
+        void utils.project.getById.invalidate();
         router.push('/project');
       },
     });
 ```
 
-この3つが `setDialogOpen(false)` ではなく `router.push('/project')` を呼ぶのは操作の起点が詳細画面だからです。削除とアーカイブは対象のプロジェクトを開いた状態から実行します。`?projectId=...` を付けたまま残るともう見られないプロジェクトの詳細を開こうとします。一覧の URL へ戻せばその状態を作らずに済みます。
+3つの mutation が `setDialogOpen(false)` ではなく `router.push('/project')` を呼ぶのは操作の起点が詳細画面だからです。削除とアーカイブは対象のプロジェクトを開いた状態から実行します。`?projectId=...` を付けたまま残るともう見られないプロジェクトの詳細を開こうとします。一覧の URL へ戻せばその状態を作らずに済みます。
+
+この3つのうちアーカイブの2つだけ `getById` も取り直すのは一覧へ戻ったあとに同じプロジェクトを開き直せるからです。詳細のキャッシュに古い `isArchived` が残っているとすぐに開き直したときのボタンが操作前のままになります。`getById` を取り直さなければアーカイブした直後は「アーカイブ解除」が出ず、解除した直後は「アーカイブ解除」が残ります。
 
 **詳細画面のハンドラーとクエリ**:
 
@@ -2952,7 +2971,7 @@ export default function ProjectPage() {
 |--------------|------|---------|
 | 編集ダイアログに古いデータが残る | `initialData` がフォームへ反映されていない | `ProjectDialog` 側で `defaultValues` と `useEffect` の `reset(...)` が `initialData` を見ているか確認 |
 | 更新後に一覧が変わらない | `invalidate()` の呼び忘れ | `onSuccess` で `void utils.project.getAll.invalidate()` を呼ぶ |
-| 削除ボタンを押しても消えない | OWNER 以外で削除操作 | OWNER アカウントで操作する |
+| 削除ボタンを押しても消えない | OWNER 以外（ADMIN も含む）で削除操作 | OWNER アカウントで操作する |
 | アーカイブボタンを押しても変わらない | OWNER 以外でアーカイブ操作 | OWNER アカウントで操作する |
 | 削除後にエラーが残る | 詳細画面が表示されたまま | 削除の `onSuccess` で `router.push('/project')` を呼んで一覧に戻る |
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
@@ -2961,7 +2980,7 @@ export default function ProjectPage() {
 | `npm run build` で型エラーが出る | Step 0 の手続きが未追加か、ルーターの外に出ている | エラー文に出ているファイル名と行で、どの手続きが欠けているかを特定します |
 | `ProjectDetailView` が表示されない | URL に `projectId` が無い | URLに `?projectId=xxx` が付いているか確認 |
 
-表の3行目と4行目はサーバーが `この操作を実行する権限がありません` を返しています。
+「削除ボタンを押しても消えない」と「アーカイブボタンを押しても変わらない」の2つはサーバーが `この操作を実行する権限がありません` を返しています。
 ただし今日の時点ではそのエラーは画面に何も出しません。
 この操作のエラー表示は今日のコードには含まれていません。
 失敗した理由は DevTools の Network タブで対象の通信を選んで Response のメッセージを確認してください。

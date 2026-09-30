@@ -2555,7 +2555,7 @@ export const config = {
 | ログインしてもトーストが出ない | auth ルーターが root.ts に登録されていない | root.ts で `auth: authRouter` を確認 |
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
-| `The table \`public.users\` does not exist in the current database.` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
+| ``The table `public.users` does not exist in the current database.`` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |
 | `ログイン試行回数が上限に達しました` | 同じメールを同じ回線から5回、同じメールで回線を変えながら10回、または同じ回線から合計20回失敗したための一時ロック | 15分待つ。メールも回線も変えずに待つのがいちばん早い。コードの問題ではない |
 | middleware.ts が効かない | ファイルの置き場所が違う | `src/middleware.ts`（`src/app/` ではなく `src/` 直下） |
 

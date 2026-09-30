@@ -190,7 +190,11 @@ def _split_target(value: str) -> tuple[str, str]:
         head, note = m.group(1).strip(), m.group(2)
         # 括弧を剥がした残りがパスの途中で終わるなら、それは注記ではなく
         # ルートグループそのもの（`src/app/(auth)`）。剥がさずに置く。
-        if "/" in note or head.endswith("/") or not head:
+        # 半角の括弧の中に `/` があるときもパスの一部と見て剥がさない。全角の括弧はパスに
+        # 出てこないので、中に `/` があっても注記として剥がす。剥がさないと
+        # `（<h1 … から「新規タスク」の </Button> までを書き直す）` が注記ごと別の書き込み先になる。
+        slash_in_path = "/" in note and not note.startswith("（")
+        if slash_in_path or head.endswith("/") or not head:
             break
         base = head
         notes.insert(0, note)
