@@ -325,6 +325,18 @@ jobs:
 
       - name: 出力を検査
         if: steps.select.outputs.scope != 'none'
+        env:
+          SCOPE: ${{ steps.select.outputs.scope }}
         # dist は gitignore なので、dist/pdf にはこの実行で組んだ分しか入らん。
-        # check_pdf_book.py は1冊単位の検査だけで冊をまたがんため、部分的でも成立する
-        run: make book-pdf-verify
+        # check_pdf_book.py は1冊単位の検査だけで冊をまたがんため、部分的でも成立する。
+        # ただし day の連続性検査は全冊揃いが前提で、subset では抜けが仕様どおり
+        # 存在するため --allow-gaps で退ける（抜けの担保は全冊経路と release_manifest の側）。
+        run: |
+          if [ "$SCOPE" = "all" ]; then
+            make book-pdf-verify
+          else
+            make book-pdf-test
+            python3 scripts/pdf-book/check_pdf_book.py --allow-gaps
+            python3 scripts/pdf-book/check_page_layout.py
+            python3 scripts/pdf-book/verify_pdf_copy.py
+          fi
