@@ -34,7 +34,6 @@ const taskUpdateSchema = z.object({
   status: taskStatusSchema.optional(),
   priority: taskPrioritySchema.optional(),
   dueDate: z.string().datetime().optional().nullable(),
-  completedAt: z.string().datetime().optional().nullable(),
   estimatedHours: z.number().min(0).optional().nullable(),
   actualHours: z.number().min(0).optional(),
   projectId: z.string().cuid().optional(),
@@ -305,7 +304,9 @@ export const taskRouter = createTRPCRouter({
     }
     if (data.status !== undefined) {
       updateData.status = data.status;
-      if (data.completedAt === undefined && data.status !== existingTask.status) {
+      // completedAt は入力スキーマに存在せず、ステータス遷移からだけ決まる。
+      // 画面から直接指定できると DONE のまま日時を書き換えられ、週次集計の週が動いてしまう。
+      if (data.status !== existingTask.status) {
         if (data.status === TASK_STATUS.DONE) {
           updateData.completedAt = new Date();
         } else {
@@ -324,9 +325,6 @@ export const taskRouter = createTRPCRouter({
     }
     if (data.dueDate !== undefined) {
       updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
-    }
-    if (data.completedAt !== undefined) {
-      updateData.completedAt = data.completedAt ? new Date(data.completedAt) : null;
     }
 
     const isProjectChanging =
@@ -372,7 +370,8 @@ export const taskRouter = createTRPCRouter({
 
     try {
       // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
-      // updatedAt を where に含めた単一の update で比較と更新を 1 回のクエリにまとめる。
+      // updatedAt を where に含めた単一の update で
+      // 比較と更新を 1 回のクエリにまとめる。
       // 条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
       // 投げる P2025 を捕捉して CONFLICT に変換する。
       return await prisma.$transaction(async (tx) => {
@@ -404,7 +403,7 @@ export const taskRouter = createTRPCRouter({
           code: 'CONFLICT',
           // 自分自身の別操作（時間記録の追加など）による更新でも起こり得るため、
           // 「他のユーザー」と断定しない文言にする
-          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+          message: 'タスクの内容が更新されています。' + '最新の内容を再読み込みしてください',
         });
       }
       throw err;
