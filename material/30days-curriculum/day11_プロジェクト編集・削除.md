@@ -93,7 +93,7 @@ src/
             └── project.ts    ← Step 0 で手続きを5本追加
 ```
 
-今日コードを書き足すのは `project.ts`、`page.tsx`、`query-error.ts` の3つです。`delete-confirm-dialog.tsx` は配布済みです。中身には手を入れません。
+今日コードを書き足すのは `project.ts` と `page.tsx` の2つです。配布済みの `query-error.ts` は掲載した抜粋と照合します。`delete-confirm-dialog.tsx` は配布済みです。中身には手を入れません。
 
 作業はサーバー側の `project.ts` から始めます。カードの編集ボタンと削除ボタンはプロジェクトを見られる人全員の画面に表示されます。操作する権限があるかをサーバー側で確認してから画面をつなぎます。ボタンを表示する条件だけでは不正なAPI呼び出しを防げないためです。
 
@@ -406,12 +406,12 @@ Step 9 で詳細画面を出すときに使う「1件だけ取得する」手続
 
 Step 0 では4つの操作群に権限チェックを入れました。表にすると選び方が見えます。
 
-| 操作 | 権限チェックの書き方 | 選んだ理由 |
-|------|---------------------|-----------|
-| `update` | `assertMemberPermission(..., 'canManageMembers')` | 権限名を指定して共通の判定関数を使う |
-| `delete` | `role !== PROJECT_MEMBER_ROLE.OWNER` を直接比較 | ADMIN にも付与された `canDelete` では OWNER 限定の条件を表せないため |
-| `archive` / `unarchive` | `setArchiveStatus` にまとめて`assertMemberPermission(..., 'canArchive')`を1か所に | まったく同じ処理を2つの手続きが呼ぶので関数化して重複を消す |
-| `getById` | `assertMemberPermission(..., 'canView')` | URLへ他人のプロジェクトIDを直接入れられても、メンバーでなければ詳細を返さないため |
+| 操作 | 権限チェックの書き方・選んだ理由 |
+|------|----------------------------------|
+| `update` | **権限チェックの書き方**: `assertMemberPermission(..., 'canManageMembers')`。**選んだ理由**: 権限名を指定して共通の判定関数を使う |
+| `delete` | **権限チェックの書き方**: `role !== PROJECT_MEMBER_ROLE.OWNER` を直接比較。**選んだ理由**: ADMIN にも付与された `canDelete` では OWNER 限定の条件を表せないため |
+| `archive` / `unarchive` | **権限チェックの書き方**: `setArchiveStatus` にまとめて`assertMemberPermission(..., 'canArchive')`を1か所に。**選んだ理由**: まったく同じ処理を2つの手続きが呼ぶので関数化して重複を消す |
+| `getById` | **権限チェックの書き方**: `assertMemberPermission(..., 'canView')`。**選んだ理由**: URLへ他人のプロジェクトIDを直接入れられてもメンバーでなければ詳細を返さないため |
 
 権限名で条件を表せる操作には `assertMemberPermission` を使います。プロジェクト削除は OWNER かどうかを直接比較します。同じ処理を2手続き以上が呼ぶ場合は関数にまとめます。この判断は Day 12 の `addMember` / `removeMember` でも使います。
 
@@ -559,10 +559,10 @@ const handleEdit = (projectId: string) => {
 
 `...(startDate && { startDate })` という書き方は「値が存在する場合のみオブジェクトに追加する」パターンです。`startDate: startDate` とそのまま書かない理由を見ていきます。
 
-| 書き方 | `startDate` が `undefined` の場合 | 結果 |
-|--------|----------------------------------|------|
-| ❌ `{ startDate: startDate }` | `{ startDate: undefined }` | `undefined` がオブジェクトに入る |
-| ✅ `...(startDate && { startDate })` | `{}` | プロパティ自体が存在しない |
+| 書き方 | `startDate` が `undefined` の場合・結果 |
+|--------|-----------------------------------------|
+| ❌ `{ startDate: startDate }` | `{ startDate: undefined }`。`undefined` がオブジェクトに入る |
+| ✅ `...(startDate && { startDate })` | `{}`。プロパティ自体が存在しない |
 
 `{ startDate: undefined }` と書くとキーは残ったまま中身が `undefined` になります。Day 01 で生成される `tsconfig.json` は `exactOptionalPropertyTypes` を有効にしていません。そのため `startDate?: string` は3つの形を受け取ります。「キーが無い」「文字列が入っている」「キーはあって中身が `undefined`」の3つです。この書き方でも型エラーは出ません。
 
@@ -755,7 +755,7 @@ flowchart LR
 
 | 式 | `description` が `''`（空文字）の場合 | このアプリでの結果 |
 |-----|--------------------------------------|------|
-| `description \|\| null` | `null`（空文字もfalsyとして扱う） | ✅ 説明を消したことが DB に残る |
+| <code>description &#124;&#124; null</code> | `null`（空文字もfalsyとして扱う） | ✅ 説明を消したことが DB に残る |
 | `description ?? null` | `''`（空文字をそのまま返す） | 空文字が保存されるため今回の「説明なし」を表す `null` とは異なる |
 
 `??` は `null` と `undefined` だけを判定します。`||` は `''`・`0`・`false` もfalsyとして扱います。ここでは空欄を「説明なし」として保存したいので `||` を使います。空文字そのものを意味のある値として残したい場面なら`??` の方が合います。
@@ -1014,7 +1014,7 @@ const handleArchive = (
 
 **実装**:
 
-取得エラーを表示へ変える前に、エラーのHTTP状態を読む小さな共通ファイルを作ります。`src/lib/query-error.ts` を新規作成し、まず値がオブジェクトかを確かめてから状態番号を取り出します。
+取得エラーを表示へ変える前に配布済みの `src/lib/query-error.ts` を開きます。次の3ブロックを手元の関数と照合してください。まず値がオブジェクトかを確かめてからHTTPの状態番号を取り出しています。必要な関数は配布済みなのでファイル全体は置き換えません。
 
 ```typescript
 // filepath: src/lib/query-error.ts
@@ -1405,16 +1405,16 @@ if (viewingDetail) {
 
 #### ProjectDetailView に渡している props
 
-| prop | 由来 | Day 11 時点 | Day 12 で本実装 |
-|------|------|-------------|----------------|
-| `projectDetail` | `api.project.getById.useQuery` | ✅ 今日完成 | 変更なし |
-| `onBack` | `handleDetailClose` | ✅ 今日完成 | 変更なし |
-| `onAddMemberClick` | その場に書いた空の関数 | 何もしない（仮） | Step 2 で `setMemberDialogOpen(true)` に置換 |
-| `onRemoveMember` | その場に書いた空の関数 | 何もしない（仮） | Step 6 で `handleRemoveMember` に置換 |
-| `onUpdateMemberRole` | その場に書いた空の関数 | 何もしない（仮） | Step 2 で `handleUpdateMemberRole` に置換 |
-| `onArchive` | `handleArchive` | ✅ 今日完成 | 変更なし |
-| `canManageMembers` | `false` を直接指定（仮） | ボタンを出さない | Step 2 で `hasPermission` の計算に置換 |
-| `canArchive` | `true` を直接指定（仮） | ボタンを出す | Step 2 で `hasPermission` の計算に置換 |
+| prop | 由来・Day 11 時点・Day 12 で本実装 |
+|------|----------------------------------------|
+| `projectDetail` | **由来**: `api.project.getById.useQuery`。**Day 11 時点**: ✅ 今日完成。**Day 12 で本実装**: 変更なし |
+| `onBack` | **由来**: `handleDetailClose`。**Day 11 時点**: ✅ 今日完成。**Day 12 で本実装**: 変更なし |
+| `onAddMemberClick` | **由来**: その場に書いた空の関数。**Day 11 時点**: 何もしない（仮）。**Day 12 で本実装**: Step 2 で `setMemberDialogOpen(true)` に置換 |
+| `onRemoveMember` | **由来**: その場に書いた空の関数。**Day 11 時点**: 何もしない（仮）。**Day 12 で本実装**: Step 6 で `handleRemoveMember` に置換 |
+| `onUpdateMemberRole` | **由来**: その場に書いた空の関数。**Day 11 時点**: 何もしない（仮）。**Day 12 で本実装**: Step 2 で `handleUpdateMemberRole` に置換 |
+| `onArchive` | **由来**: `handleArchive`。**Day 11 時点**: ✅ 今日完成。**Day 12 で本実装**: 変更なし |
+| `canManageMembers` | **由来**: `false` を直接指定（仮）。**Day 11 時点**: ボタンを出さない。**Day 12 で本実装**: Step 2 で `hasPermission` の計算に置換 |
+| `canArchive` | **由来**: `true` を直接指定（仮）。**Day 11 時点**: ボタンを出す。**Day 12 で本実装**: Step 2 で `hasPermission` の計算に置換 |
 
 ---
 
@@ -1726,7 +1726,9 @@ console.log(
 
 ## 完成コード全体
 
-今日は3つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを出てくる順につなげたものが全文です。どちらも Day 09 と Day 10 で書き始めたファイルなので前の日に書いた部分もあわせて載せています。`delete-confirm-dialog.tsx` は配布済みで中身に手を入れていないためここには載せていません。
+今日は `project.ts` と `page.tsx` にコードを追加しました。貼り付ける位置が分からなくなった場合は各見出しのコードを上から順につなげて対象のファイルを置き換えてください。どちらも Day 09 と Day 10 で書き始めたファイルなので前の日に書いた部分も載せています。
+
+`query-error.ts` は配布済みの関数との照合用に抜粋を載せています。ファイル全体は置き換えません。`delete-confirm-dialog.tsx` も配布済みで中身に手を入れていないためここには載せていません。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2151,7 +2153,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
 
 ### `src/lib/query-error.ts`
 
-表示と再試行の判断で使う共通関数です。Step 9で作成した3ブロックを順につなげたものが全文です。
+表示と再試行の判断で使う共通関数です。Step 9 で照合した3ブロックを再掲します。配布済みの6つの関数を確認するための掲載なので書き換える必要はありません。
 
 ```typescript
 // filepath: src/lib/query-error.ts
@@ -2936,7 +2938,7 @@ Day 09 で作った部分です。今日は変更していません。このス�
 }
 ```
 
-`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは`id` の無いリクエストをサーバーへ送らないためです。`isPending` を渡してあるので削除中はボタンが押せなくなります。この指定が無いと通信が終わる前に何度も押せて同じ削除が重なって飛びます。
+`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは`id` の無いリクエストをサーバーへ送らないためです。`isPending` は処理中かどうかをボタンへ伝えます。ただし確認ダイアログはクリック直後に閉じるため閉じたことだけでは削除の成功を確認できません。一覧を再読み込みし対象が消えたかを確かめてください。
 
 **ページのエクスポート**:
 

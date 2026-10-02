@@ -21,6 +21,7 @@ import re
 import sys
 from pathlib import Path
 
+from curriculum_blocks import _split_target, filepath_value, first_filepath_match
 from markdown_scan import code_blocks
 
 # JSX を書きうる言語表記。ここに無い表記（bash, json 等）は最初から対象外。
@@ -51,6 +52,62 @@ OPEN_TAG = re.compile(r"<([A-Za-z][\w.]*)(?![^>]*/>)")
 SELF_CLOSING = re.compile(r"<([A-Za-z][\w.]*)[^>]*/>")
 # 断片の短縮形 `</>` も閉じタグである。名前が無いので別に拾う。
 CLOSE_TAG = re.compile(r"</([A-Za-z][\w.]*)?\s*>")
+# 教材で実際に分割されている JSX 三項演算子の形。文字列や別の波括弧を含む行は
+# 式の開始だと推測せず、誤検知を残す側へ倒す。
+TERNARY_OPEN = re.compile(
+    r"^\s*(?:"
+    r"\{(?![/*])"
+    r"|(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*<[A-Za-z][\w.]*>\{"
+    r")[^{}\"'`]+\?[^{}\"'`]*\(\s*$"
+)
+TERNARY_ELSE_OPEN = re.compile(r"^\s*\)\s*:\s*\(\s*$")
+TERNARY_CLOSE = re.compile(r"^\s*\)\}\s*[,;]?\s*$")
+JSX_COMMENT = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
+
+
+def block_target(body: list[tuple[int, str]]) -> str | None:
+    """filepath の末尾注記を除いた、写経先の同一性を返す。"""
+    match = first_filepath_match("\n".join(line for _, line in body))
+    if match is None:
+        return None
+    return _split_target(filepath_value(match))[0]
+
+
+def opens_ternary_else(lang: str, body: list[tuple[int, str]]) -> bool:
+    """ブロック末尾が、JSX 内の三項演算子の else 式を開いた状態か。"""
+    if lang not in JSX_LANGS:
+        return False
+
+    lines = [line for _, line in body if line.strip()]
+    if not lines or not TERNARY_ELSE_OPEN.match(lines[-1]):
+        return False
+
+    # filepath と完成版の目印を除いた最初の実体行だけを式の開始として認める。
+    # 後続行まで検索すると、JS コメントや JSX の画面文字にある同じ記号列を
+    # JavaScript 式だと誤認してしまう。
+    first = 0
+    while first < len(lines) - 1 and (
+        SLASH.match(lines[first]) or JSX_COMMENT.match(lines[first])
+    ):
+        first += 1
+    if not TERNARY_OPEN.match(lines[first]):
+        return False
+
+    arm = lines[first + 1 : -1]
+    if any(TERNARY_CLOSE.match(line) for line in arm):
+        return False
+
+    # 要素を開いたままなら末尾の記号は表示文字の可能性があるため除外しない。
+    opened: list[str] = []
+    for tag in re.finditer(r"</?([A-Za-z][\w.]*)\b[^<>]*>|</?>", "\n".join(arm)):
+        text = tag.group(0)
+        name = tag.group(1) or "<>"
+        if text.startswith("</"):
+            if not opened or opened.pop() != name:
+                return False
+        elif not text.endswith("/>"):
+            opened.append(name)
+    return not opened
 
 
 def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
@@ -58,8 +115,11 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
     scanned = 0
 
     for path in sorted(root.rglob("*.md")):
+        previous: tuple[str, list[tuple[int, str]], str | None] | None = None
         for lang, body in code_blocks(path.read_text(encoding="utf-8")):
+            target = block_target(body)
             if lang not in JSX_LANGS:
+                previous = (lang, body, target)
                 continue
 
             scanned += 1
@@ -107,9 +167,17 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
                 or (first.startswith("{") and first != "{")
                 or text_child
             )
-            if in_jsx:
+            continues_expression = (
+                previous is not None
+                and target is not None
+                and previous[2] == target
+                and opens_ternary_else(previous[0], previous[1])
+            )
+            if in_jsx and not continues_expression:
                 for lineno, line in lead:
                     hits.append((str(path.relative_to(root)), lineno, line.strip()))
+
+            previous = (lang, body, target)
 
     return hits, scanned
 
