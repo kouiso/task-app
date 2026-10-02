@@ -433,7 +433,7 @@ export function ProjectDialog({
 
 **実装**:
 
-まずダイアログを閉じるハンドラーと送信ハンドラーを作ります。
+まずダイアログを閉じるハンドラーと送信ハンドラーを作ります。`ProjectDialog` 関数の中で Step 3 の `useEffect` の後ろに書き足します。
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -471,7 +471,7 @@ const handleFormSubmit =
 - `handleClose` でフォームのリセットとダイアログの閉じが両方行われる
 - `...(data.description && { description: data.description })` は「description が入力されている場合だけプロパティを含める」条件付きスプレッド。`&&` はこの場面で null/undefined を埋める働きとは違い、「真なら含める」という意味で使う。`??` とは用途が異なる
 
-続いてJSX を返します。Dialog の中にフォームを配置します。
+続いてJSX を返します。`handleFormSubmit` の後ろに続けて書きます。Dialog の中にフォームを配置します。
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
