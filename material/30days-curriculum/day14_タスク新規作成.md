@@ -826,7 +826,7 @@ const handleClose = () => {
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// useFormの直後に追加: 送信処理
+// handleClose の後ろに追加: 送信処理
 const handleFormSubmit =
   (data: TaskFormValues) => {
     const submitData: TaskFormData = {
@@ -881,7 +881,7 @@ const handleFormSubmit =
 
 > `expectedUpdatedAt` は今日の新規作成では使いません。編集機能（Day 15）で「他の人が先に更新していないか」をサーバーが見分けるために送る値です。今は型と送信処理だけ用意しておきます。
 
-JSXのダイアログ構造とタイトル入力欄を書きます。
+JSXのダイアログ構造とタイトル入力欄を書きます。`handleFormSubmit` の後ろに続けて書きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
