@@ -137,6 +137,14 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
   }, [initialData, open, reset]);
 
   useEffect(() => {
+    return () => {
+      // アンマウント（StrictMode の疑似再マウントを含む）も別セッションとみなす。
+      // 遅れて届く成功応答が、畳まれたフォームや親の状態に触れないようにする
+      generationRef.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
     const firstProjectId = projects[0]?.id;
     if (!open || initialData || selectedProjectId || !firstProjectId) {
       return;
@@ -167,6 +175,10 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     };
     const submitGeneration = generationRef.current;
     const submitRevision = draftRevisionRef.current;
+    // この送信が「現在のセッションで、送信時点の下書きのまま」かを
+    // 応答時点に照合する
+    const isCurrent = () =>
+      submitGeneration === generationRef.current && submitRevision === draftRevisionRef.current;
     try {
       await onSubmit(submitData);
     } catch {
@@ -178,7 +190,7 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     if (submitGeneration !== generationRef.current) {
       return;
     }
-    if (submitRevision !== draftRevisionRef.current) {
+    if (!isCurrent()) {
       // 送信後に書き足された下書きは保存されていないので、閉じずに理由を伝える
       toast(
         submitData.id

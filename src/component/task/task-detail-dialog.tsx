@@ -26,6 +26,7 @@ import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { hasPermission, isProjectMemberRole } from '@/lib/constant/roles';
 import { formatDateOnly } from '@/lib/date';
+import { isAuthError, isUnknownResult } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 import { StatusBadge } from './status-badge';
 
@@ -97,9 +98,21 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
     prevCreateSessionRef.current.open !== open ||
     prevCreateSessionRef.current.taskId !== taskId
   ) {
+    const taskChanged = prevCreateSessionRef.current.taskId !== taskId;
     prevCreateSessionRef.current = { open, taskId };
     createGenerationRef.current += 1;
     createRevisionRef.current = 0;
+    if (taskChanged) {
+      // 別タスクへ切り替わったら、前タスク宛ての下書き・編集・削除確認を
+      // 持ち越さない。遅れて届く編集系の成功応答も別世代として無効化する
+      editGenerationRef.current += 1;
+      editRevisionRef.current = 0;
+      setEditingCommentId(null);
+      setDeleteCommentDialogOpen(false);
+      setDeleteCommentTargetId(null);
+      commentForm.reset();
+      editCommentForm.reset();
+    }
   }
 
   // 削除確認ダイアログの開閉は編集世代を進める
@@ -120,6 +133,24 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
     }
   }, [canEditComments, editCommentForm]);
 
+  // コメント操作の失敗を利用者へ伝える。401 は再ログインが必要なので
+  // 通常の失敗と区別し、応答自体が届かなかった場合は結果不明として
+  // 断定せず再取得して実際の状態を表示する
+  const notifyCommentError = (error: { message?: string }, fallback: string) => {
+    if (isAuthError(error)) {
+      toast.error('ログインの有効期限が切れました');
+      return;
+    }
+    if (isUnknownResult(error)) {
+      toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
+      if (taskId) {
+        void utils.task.getById.invalidate({ id: taskId });
+      }
+      return;
+    }
+    toast.error(error.message || fallback);
+  };
+
   const createCommentMutation = api.comment.create.useMutation({
     onSuccess: () => {
       if (taskId) {
@@ -138,6 +169,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       }
       commentForm.reset();
     },
+    onError: (error) => notifyCommentError(error, 'コメントの投稿に失敗しました'),
   });
 
   const updateCommentMutation = api.comment.update.useMutation({
@@ -157,6 +189,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       setEditingCommentId(null);
       editCommentForm.reset();
     },
+    onError: (error) => notifyCommentError(error, 'コメントの更新に失敗しました'),
   });
 
   const deleteCommentMutation = api.comment.delete.useMutation({
@@ -172,7 +205,15 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
       setDeleteCommentDialogOpen(false);
       setDeleteCommentTargetId(null);
     },
+    onError: (error) => notifyCommentError(error, 'コメントの削除に失敗しました'),
   });
+
+  // コメント操作は同時に1つだけ受け付ける。並行させると成功応答の戻る順が
+  // 世代チェックとずれて下書きを壊すため、3操作で送信中ロックを共有する
+  const isCommentMutating =
+    createCommentMutation.isPending ||
+    updateCommentMutation.isPending ||
+    deleteCommentMutation.isPending;
 
   const handleClose = () => {
     commentForm.reset();
@@ -367,8 +408,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                                 size="sm"
                                 onClick={() => handleSaveEdit(comment.id)}
                                 disabled={
-                                  !editCommentForm.watch('content').trim() ||
-                                  updateCommentMutation.isPending
+                                  !editCommentForm.watch('content').trim() || isCommentMutating
                                 }
                               >
                                 {updateCommentMutation.isPending ? '更新中...' : '更新'}
@@ -403,9 +443,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
                       <Button
                         type="submit"
                         size="sm"
-                        disabled={
-                          !commentForm.watch('content').trim() || createCommentMutation.isPending
-                        }
+                        disabled={!commentForm.watch('content').trim() || isCommentMutating}
                       >
                         {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
                       </Button>
@@ -435,7 +473,7 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
             deleteCommentMutation.mutate({ id: deleteCommentTargetId });
           }
         }}
-        isPending={deleteCommentMutation.isPending}
+        isPending={isCommentMutating}
         title="コメントを削除しますか？"
       />
     </>

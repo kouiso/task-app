@@ -27,7 +27,12 @@ import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
-import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import {
+  isAuthError,
+  isForbiddenError,
+  isUnknownResult,
+  shouldRetryQuery,
+} from '@/lib/query-error';
 import { applySearchParamsToValues, buildSearchParamsFromValues } from '@/lib/search-filters';
 import { api } from '@/trpc/react';
 
@@ -235,8 +240,19 @@ function SearchPageContent() {
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.search.search.invalidate();
+      // 確認ダイアログは成功するまで開いたままにするため、閉じるのはここ
+      setDeleteTaskConfirm({ open: false, taskId: null });
     },
     onError: (error) => {
+      if (isAuthError(error)) {
+        toast.error('ログインの有効期限が切れました');
+        return;
+      }
+      if (isUnknownResult(error)) {
+        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
+        void utils.search.search.invalidate();
+        return;
+      }
       toast.error(error.message ?? 'タスクの削除に失敗しました');
     },
   });
@@ -539,7 +555,6 @@ function SearchPageContent() {
           onConfirm={() => {
             if (deleteTaskConfirm.taskId) {
               deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
-              setDeleteTaskConfirm({ open: false, taskId: null });
             }
           }}
           isPending={deleteMutation.isPending}
