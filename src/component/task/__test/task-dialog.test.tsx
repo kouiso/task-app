@@ -4,6 +4,7 @@
 import '@testing-library/jest-dom/vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import toast from 'react-hot-toast';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaskDialog } from '../task-dialog';
@@ -275,6 +276,55 @@ describe('TaskDialog', () => {
       expect(toast).not.toHaveBeenCalled();
       expect(onClose).toHaveBeenCalledTimes(1);
       expect(screen.getByPlaceholderText('タスクのタイトルを入力')).toHaveValue('別のタスク');
+    });
+
+    it('アンマウント後に返ってきた成功応答は、閉じる処理で死んだセッションに触れない', async () => {
+      const user = userEvent.setup();
+      const { onSubmit, resolveSubmit } = deferredOnSubmit();
+      const onClose = vi.fn();
+      const { unmount } = render(
+        <TaskDialog open onClose={onClose} onSubmit={onSubmit} projects={projects} />,
+      );
+
+      await user.type(screen.getByPlaceholderText('タスクのタイトルを入力'), '送信するタスク');
+      await user.click(screen.getByRole('button', { name: '作成' }));
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+
+      // 応答を待たずにアンマウント（別画面へ遷移した場合など）。
+      // 世代が進まないと、遅れて届いた成功応答が閉じる処理で
+      // 既に畳まれたフォームや親の状態を触ってしまう
+      unmount();
+
+      await act(async () => {
+        resolveSubmit();
+      });
+
+      // 成功通知は出るが、閉じる処理は呼ばれない
+      expect(toast.success).toHaveBeenCalledWith('タスクを作成しました');
+      expect(toast).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('StrictMode での再マウントを経ても、送信の世代照合は正しく動く', async () => {
+      const user = userEvent.setup();
+      const { onSubmit, resolveSubmit } = deferredOnSubmit();
+      const onClose = vi.fn();
+      render(
+        <StrictMode>
+          <TaskDialog open onClose={onClose} onSubmit={onSubmit} projects={projects} />
+        </StrictMode>,
+      );
+
+      await user.type(screen.getByPlaceholderText('タスクのタイトルを入力'), '新しいタスク');
+      await user.click(screen.getByRole('button', { name: '作成' }));
+
+      await act(async () => {
+        resolveSubmit();
+      });
+
+      expect(toast.success).toHaveBeenCalledWith('タスクを作成しました');
+      expect(toast).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });
