@@ -12,11 +12,16 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import sys
+import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 from check_pdf_book import ToolFailure  # noqa: E402
+from check_pdf_book import main as check_pdf_book_main  # noqa: E402
 from check_pdf_book import (  # noqa: E402
     find_blank_pages,
     find_font_problems,
@@ -221,6 +226,30 @@ def main() -> int:
     if page_residue(f"{spaced}\n\n5\n", exact, 5) != "":
         failures.append("空白入りの柱を引き切れていない")
 
+    # pdf-book-gate の subset 経路は check_pdf_book.py --allow-gaps をディレクトリ
+    # 指定なしで呼ぶ。フラグだけを取り除くと引数が空になるので、空のときは
+    # 既定の dist/pdf へ落ちることを固定する。落ちないと「ディレクトリを1つ
+    # 指定してください」で検査ごと止まる。
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf_dir = Path(tmp)
+        (pdf_dir / "day01_sample.pdf").write_bytes(b"%PDF-1.4\n")
+        for label, argv in (
+            ("--allow-gaps 単体", ["check_pdf_book.py", "--allow-gaps"]),
+            ("--allow-gaps + ディレクトリ",
+             ["check_pdf_book.py", "--allow-gaps", str(pdf_dir)]),
+        ):
+            err = io.StringIO()
+            with (patch("shutil.which", return_value="/usr/bin/x"),
+                    patch("check_pdf_book.DEFAULT_PDF_DIR", pdf_dir),
+                    patch("check_pdf_book.check_one", return_value=[]),
+                    contextlib.redirect_stderr(err)):
+                code = check_pdf_book_main(argv)
+            if "ディレクトリを1つ指定" in err.getvalue():
+                failures.append(
+                    f"引数の解釈({label}): 既定ディレクトリへ落ちていない")
+            elif code != 0:
+                failures.append(f"引数の解釈({label}): 戻り値が {code}")
+
     if failures:
         print(f"❌ {len(failures)} 件失敗")
         for failure in failures:
@@ -228,7 +257,7 @@ def main() -> int:
         return 1
 
     total = (len(BLANK_CASES) + len(MERMAID_CASES) + len(FONT_CASES)
-             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES) + 11)
+             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES) + 13)
     print(f"✅ {total} ケースすべて通過")
     return 0
 
