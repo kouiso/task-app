@@ -611,8 +611,6 @@ https://task-app-kouiso.vercel.app
 - 「ダッシュボードへ入る」を押すとDay 02 で作った自分用メッセージが見える
 - GitHub 上の最新状態とズレていない
 
-【スクリーンショット】Day 02 で作ったダッシュボード（ローカル本番モードでも見た目は変わりません）
-
 ![Day 02 で作ったダッシュボード。ヘッダーに My Dashboard、本文に自分あてのメッセージ、右側に3つのカードが並んでいる](./screenshots/day02/dashboard-message.png)
 
 次のデプロイからは手元で `npm run build` を実行してから `npm start` で立ち上げるとビルド済みのアプリを本番と同じモードで動かせます。`npm run dev` が開発中の確認用なのに対して`npm start` は「ビルドが通るか、ビルド後も動くか」を先に確かめる予行演習です。ここで動けばVercel 上のビルドエラーの多くを事前に潰せます。`npm start` は `npm run dev` と同じ 3000 番を使うので先に `npm run dev` を Ctrl+C で止めてから実行します。
