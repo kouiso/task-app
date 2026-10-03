@@ -147,16 +147,31 @@ def _inner_text(element: _Element) -> str:
 
 
 def _bold_text(element: _Element) -> str:
-    """<strong> の内側にある可視テキストだけをつなぐ。"""
+    """<strong> の内側にある可視テキストだけをつなぐ。
+
+    strong の中に pdf-tail や行内コードの span が入れ子になっていても
+    文の順を保つ必要がある。ずれると「太字だけの段落」の比較が必ず
+    不一致になり、太字のラベルに印が付かなくなる。
+    """
     parts: list[str] = []
-    stack = [(element, False)]
+    # ('el', 要素, strongの中か) と ('text', 文, strongの中か) を文の順に
+    # 積み直す。深さ優先なので子は逆順に積む
+    stack: list[tuple[str, object, bool]] = [
+        (kind, value, False) for kind, value in reversed(element.children)
+        if kind != "comment"
+    ]
     while stack:
-        node, inside = stack.pop()
-        for kind, value in reversed(node.children):
-            if kind == "el":
-                stack.append((value, inside or value.tag == "strong"))
-            elif kind == "text" and inside:
+        kind, value, inside = stack.pop()
+        if kind == "text":
+            if inside:
                 parts.append(value)
+        else:
+            nested = inside or value.tag == "strong"
+            stack.extend(
+                (kind, value, nested)
+                for kind, value in reversed(value.children)
+                if kind != "comment"
+            )
     return "".join(parts)
 
 

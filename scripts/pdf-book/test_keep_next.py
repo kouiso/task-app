@@ -43,6 +43,19 @@ class MarkKeepNextTest(unittest.TestCase):
         )
         self.assertFalse(marked(source))
 
+    def test_bold_paragraph_with_nested_spans_gets_marked(self):
+        # strong の中に pdf-tail や行内コードの span が入れ子になっても
+        # 「太字だけ」と読む。実際の生成 HTML は常にこの形を取る
+        source = (
+            '<p><strong><span class="pdf-tail">1.</span> '
+            '今回展開したフォルダを '
+            '<span class="pdf-table-latin">VS</span> '
+            '<span class="pdf-table-latin">Code</span> '
+            'で開<span class="pdf-tail">きます。</span></strong></p>'
+            "<p>説明です。</p>"
+        )
+        self.assertTrue(marked(source))
+
     def test_screenshot_lead_gets_marked(self):
         source = "<p>スクリーンショット：画面です。</p><p>説明です。</p>"
         self.assertTrue(marked(source))
