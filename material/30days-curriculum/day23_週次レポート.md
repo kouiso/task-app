@@ -1960,13 +1960,13 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
                     {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
                     {/* 完成版: 積み上げの4本と閉じタグ */}
                     <Bar dataKey="low" stackId="priority" name="低"
-              fill={TASK_PRIORITY_COLORS.LOW} />
-            <Bar dataKey="medium" stackId="priority" name="中"
-              fill={TASK_PRIORITY_COLORS.MEDIUM} />
-            <Bar dataKey="high" stackId="priority" name="高"
-              fill={TASK_PRIORITY_COLORS.HIGH} />
-            <Bar dataKey="urgent" stackId="priority" name="緊急"
-              fill={TASK_PRIORITY_COLORS.URGENT} />
+                      fill={TASK_PRIORITY_COLORS.LOW} />
+                    <Bar dataKey="medium" stackId="priority" name="中"
+                      fill={TASK_PRIORITY_COLORS.MEDIUM} />
+                    <Bar dataKey="high" stackId="priority" name="高"
+                      fill={TASK_PRIORITY_COLORS.HIGH} />
+                    <Bar dataKey="urgent" stackId="priority" name="緊急"
+                      fill={TASK_PRIORITY_COLORS.URGENT} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

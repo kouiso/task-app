@@ -30,8 +30,8 @@ from code_wrap import (  # noqa: E402
     atoms,
     break_before,
     classify_block,
-    forced_breaks,
     line_width,
+    wrap_layout,
 )
 
 PDF_DIR = ROOT / "dist" / "pdf"
@@ -253,12 +253,14 @@ def _candidate_offsets(head: str, pdf: str, start: int):
 def _allowed_breaks(text_atoms: list[str], states: list[str], lang: str) -> set[int]:
     """PDF 上で折れてよい位置。code_wrap の折返し候補と、組版が入れる強制改行。
 
-    code_wrap._emit_line は SAFE_COLS を超える行にだけ forced_breaks の位置へ
-    <br> を入れる（JSX 子テキストの開始タグ直後など、break_before には無い位置を含む）。
+    code_wrap._emit_line は SAFE_COLS を超える行にだけ wrap_layout の位置へ
+    <br> を入れる（JSX 子テキストの開始タグ直後など、break_before には無い
+    位置を含む）。続き行の頭には空き（cw-hang）が乗るため、区切りの選定は
+    組版と同じ空き込み・字下げ込みの wrap_layout で行う。
     """
     marks = break_before(text_atoms, states, lang)
     if line_width(text_atoms) > SAFE_COLS:
-        marks |= forced_breaks(text_atoms, states, marks, lang)
+        marks |= wrap_layout(text_atoms, states, lang)[0]
     return marks
 
 
