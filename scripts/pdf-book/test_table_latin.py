@@ -163,6 +163,35 @@ class OrphanTailGlueTest(unittest.TestCase):
         stripped = result.replace('<span class="pdf-tail">', '').replace('</span>', '')
         self.assertEqual(''.join(Text(stripped).parts), 'あい&うえ')
 
+    def test_tail_is_not_wrapped_right_before_inline_code(self):
+        # #472: code の直前を包むとコードごと次の行へ送られ、手前の行が短く残る
+        result = keep_block_tails(
+            '<p>空の項目を落としてから渡します。<code>data.x</code> に渡します</p>')
+        self.assertNotIn('</span><code', result)
+        # ブロック末尾の接着は変わらない
+        self.assertIn('<span class="pdf-tail">渡します</span></p>', result)
+
+    def test_tail_inside_inline_element_at_block_end_is_still_wrapped(self):
+        # #425 の回帰: ブロックが行内要素で終わる形では、その内側の末尾が
+        # ブロックの末尾になる（目次の1文字残りを防いでいた位置）
+        result = keep_block_tails(
+            '<li><a>アプリの全体像と学びのロードマップ</a></li>')
+        self.assertIn('ロー<span class="pdf-tail">ドマップ</span></a>', result)
+
+    def test_tail_inside_inline_element_before_more_text_is_not_wrapped(self):
+        # 行内要素の後ろに文が続くなら、その要素の内側はブロックの末尾ではない
+        result = keep_block_tails(
+            '<p>参照は<a>ロードマップのページ</a>を見てください</p>')
+        self.assertIn('ロードマップのページ</a>', result)
+        self.assertNotIn('pdf-tail', result.split('を見て')[0])
+        self.assertIn('<span class="pdf-tail">ください</span>', result)
+
+    def test_inline_chain_reaching_block_end_is_wrapped(self):
+        # `</a></em></li>` のように行内終了タグが連なってブロックが終わる形
+        result = keep_block_tails(
+            '<li><em><a>アプリの全体像と学びのロードマップ</a></em></li>')
+        self.assertIn('ロー<span class="pdf-tail">ドマップ</span></a>', result)
+
 
 if __name__ == '__main__':
     unittest.main()
