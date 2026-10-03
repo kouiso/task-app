@@ -62,6 +62,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from check_pdf_book import ToolFailure, run_tool  # noqa: E402
 from build_pdf_book import work_slug  # noqa: E402
 from breakable_code import BREAKABLE_MIN_LINES  # noqa: E402
+from keep_next import collect_paragraphs, normalize_text  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
@@ -646,6 +647,105 @@ def find_hyphen_break_problems(lines: list[Line]) -> list[str]:
     return problems
 
 
+def _footnote_marker_re(markup: str) -> "re.Pattern[str]":
+    """外部リンクの脚注番号を PDF の文から外すための正規表現を作る。
+
+    脚注番号は生成器が <a> へ付けた data-pdf-footnote から CSS の
+    ::after が「*12」の形で描く。HTML の文には無く PDF 側にだけ入るので、
+    このまま探すと脚注を含む段落が突き合わせられない。冊の中に実在する
+    番号だけを外す（任意の `*数字` まで外すと、本文にたまたまある
+    同じ形まで消して位置がずれる）。
+    """
+    numbers = sorted({int(n) for n in
+                      re.findall(r'data-pdf-footnote="(\d+)"', markup)},
+                     reverse=True)
+    if not numbers:
+        return re.compile(r"x^")  # 何にも当たらない
+    return re.compile(r"\*(?:" + "|".join(map(str, numbers)) + r")(?!\d)")
+
+
+def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int]]:
+    """本文の行をページ順に1本の文字列へつなぎ、各ページ末尾の位置を返す。
+
+    柱とノンブルは版面の外（天 0〜20mm・地 278mm 以降）なので除く。
+    URL脚注の行（`N. https://…` とその折返し行）も本文ではないので除く。
+    残った行の文は keep_next.py と同じ方法でそろえてからつなぐ。
+    脚注番号（*N）は PDF 側にだけ出るので先に外す。
+
+    返すのは (つないだ文字列, {そのページの文字列が終わる位置: ページ番号})。
+    """
+    marker = _footnote_marker_re(markup)
+    blocks: dict[tuple[int, int], list[Line]] = {}
+    for line in lines:
+        blocks.setdefault((line.page, line.block), []).append(line)
+    texts: dict[int, str] = {}
+    for (page, _), block_lines in sorted(blocks.items()):
+        block_lines.sort(key=lambda line: line.top)
+        footnote = False
+        for line in block_lines:
+            text = visible_text(line.text).strip()
+            if FOOTNOTE_URL_START.match(visible_text(line.text)):
+                footnote = True
+            elif not (footnote and text and URL_CONTINUATION.match(text)):
+                footnote = False
+            if footnote:
+                continue
+            # 柱（天 0〜20mm）とノンブル（地 278mm〜）は版面の外なので除く
+            if line.bottom <= HEAD_BAND_BOTTOM_MM or line.top >= FOLIO_BAND_TOP_MM:
+                continue
+            texts[page] = texts.get(page, "") + normalize_text(
+                marker.sub("", line.text))
+    parts: list[str] = []
+    page_ends: dict[int, int] = {}
+    cursor = 0
+    for page in sorted(texts):
+        cursor += len(texts[page])
+        page_ends.setdefault(cursor, page)
+        parts.append(texts[page])
+    return "".join(parts), page_ends
+
+
+def find_keep_next_problems(lines: list[Line], markup: str) -> tuple[list[str], int]:
+    """印付き段落（pdf-keep-next）がページ本文の最終行に来た箇所を挙げる。
+
+    issue #475 の検査。生成 HTML の段落と pdftotext -bbox-layout の行を
+    突き合わせる。段落の文も本文と同じ方法でそろえ、つないだ文字列を
+    前から順に探す（同じ文が何度も出るので、見つかった所から先だけを見る）。
+    段落の最後の文字がそのページの最後の文字と重なれば、その段落は
+    ページ末尾に残っている。箇条書きや引用の中の段落も数える。
+
+    印付き段落が突き合わせられないときも問題にする。黙って飛ばすと
+    ページ末尾に残っていても0件と出てしまう。印の無い段落が
+    突き合わせられないのは許し、その数だけ返す。
+
+    返すのは (問題の一覧, 突き合わせられなかった印なし段落の数)。
+    """
+    haystack, page_ends = _body_page_texts(lines, markup)
+    problems: list[str] = []
+    unmatched_unmarked = 0
+    cursor = 0
+    for paragraph in collect_paragraphs(markup):
+        if not paragraph.norm:
+            continue
+        position = haystack.find(paragraph.norm, cursor)
+        if position < 0:
+            if paragraph.marked:
+                problems.append(
+                    "印付き段落がPDFの行と突き合わせられない"
+                    f"（「{paragraph.text.strip()[:40]}」）"
+                )
+            else:
+                unmatched_unmarked += 1
+            continue
+        cursor = position + len(paragraph.norm)
+        if paragraph.marked and cursor in page_ends:
+            problems.append(
+                f"p{page_ends[cursor]}: 印付き段落がページの末尾に残っている"
+                f"（「{paragraph.text.strip()[:40]}」）"
+            )
+    return problems, unmatched_unmarked
+
+
 def find_stacked_split_problems(report: dict) -> list[str]:
     """組版計測の記録から、縦並び表の1行がページを跨いでいる箇所を挙げる。
 
@@ -825,6 +925,17 @@ def check_one(pdf: Path) -> list[str]:
     if layout_reports:
         problems += find_stacked_split_problems(
             json.loads(layout_reports[-1].read_text(encoding="utf-8")))
+
+    # 印付き段落がページ末尾に残っていないかを、組んだ冊と同じ内容の
+    # 生成 HTML と照合する。作業名は PDF の名前と同じ規則で復元する
+    html_files = sorted(BUILD_DIR.glob(f"{work_slug(pdf.stem)}.html"),
+                        key=lambda path: path.stat().st_mtime)
+    if html_files:
+        keep_next_problems, unmatched = find_keep_next_problems(
+            lines, html_files[-1].read_text(encoding="utf-8"))
+        problems += keep_next_problems
+        if unmatched:
+            print(f"  {pdf.name}: 突き合わせられなかった印なし段落 {unmatched} 個")
 
     problems += find_image_problems(parse_image_table(
         run_tool(["pdfimages", "-list", str(pdf)])

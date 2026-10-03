@@ -214,6 +214,15 @@ table {
   break-after: avoid;
 }
 
+/* ラベルや導入文が指すコード・箇条書き・図・表は break-inside: avoid で
+   丸ごと次ページへ送られる。そのままだと導入文だけが前のページの末尾に
+   残り、読者はページをめくるまで何を写すのか分からない（issue #475）。
+   見出しにテーマが掛けている指定と同じ「次と同じページに置く」を、
+   生成器が印を付けた段落へ掛ける。 */
+.pdf-keep-next {
+  break-after: avoid;
+}
+
 td,
 th {
   overflow-wrap: anywhere;

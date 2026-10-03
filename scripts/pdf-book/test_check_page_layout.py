@@ -39,6 +39,8 @@ from check_page_layout import (  # noqa: E402
     find_overlaps,
     find_single_orphan_problems,
     find_stacked_split_problems,
+    find_keep_next_problems,
+    _body_page_texts,
     find_url_wrap_problems,
     HANGING_MAX_MM,
     code_band_at_edges,
@@ -262,6 +264,52 @@ HYPHEN_BREAK_CASES: list[tuple[str, list[Line], int]] = [
     ("図内の中央寄せラベル（左端が揃わない）は対象外",
      [line(2, 0, 60.0, 40.0, 90.0, "le/change-"),
       line(2, 0, 66.0, 49.2, 80.0, "password")], 0),
+]
+
+# 印付き段落（pdf-keep-next）がページ本文の最終行に来るかの裁き（issue #475）
+KEEP_NEXT_MARKUP = (
+    "<p>前の文です。</p>"
+    '<p class="pdf-keep-next">導入します。</p>'
+    "<p>本文です。</p>"
+)
+
+# (説明, 行の並び, 生成HTML, 期待する問題の件数, 期待する突き合わせ不可の印なし段落数)
+KEEP_NEXT_CASES: list[tuple[str, list[Line], str, int, int]] = [
+    ("印付き段落がページの最終行なら問題",
+     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
+      line(2, 1, 22.0, 260.0, 80.0, "導入します。"),
+      line(2, 9, 22.0, 282.0, 4.0, "7")],          # ノンブルは本文に数えない
+     KEEP_NEXT_MARKUP, 1, 1),
+    ("印付き段落がページの途中なら問題にしない",
+     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
+      line(2, 0, 22.0, 50.0, 80.0, "導入します。"),
+      line(2, 1, 22.0, 60.0, 120.0, "本文です。")],
+     KEEP_NEXT_MARKUP, 0, 0),
+    ("印付き段落がPDFの行と突き合わせられなければ問題",
+     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
+      line(2, 1, 22.0, 50.0, 120.0, "本文です。")],
+     "<p>前の文です。</p>"
+     '<p class="pdf-keep-next">存在しない文です。</p>'
+     "<p>本文です。</p>", 1, 0),
+    ("印なし段落が突き合わせられなくても問題にしない（件数だけ出す）",
+     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
+      line(2, 0, 22.0, 50.0, 80.0, "導入します。"),
+      line(2, 1, 22.0, 60.0, 120.0, "本文です。")],
+     "<p>前の文です。</p><p>無い段落です。</p>"
+     '<p class="pdf-keep-next">導入します。</p><p>本文です。</p>',
+     0, 1),
+    ("柱とノンブルは本文の行に数えない",
+     [line(2, 0, 22.0, 12.0, 100.0, "柱の見出し"),
+      line(2, 1, 22.0, 40.0, 120.0, "前の文です。"),
+      line(2, 1, 22.0, 50.0, 80.0, "導入します。"),
+      line(2, 1, 22.0, 60.0, 120.0, "本文です。"),
+      line(2, 9, 22.0, 282.0, 4.0, "7")],
+     KEEP_NEXT_MARKUP, 0, 0),
+    ("脚注番号（*N）はPDFの文から外して照合する",
+     [line(2, 0, 22.0, 40.0, 120.0, "リンクサイト*3です。"),
+      line(2, 8, 22.0, 255.0, 120.0, "3. https://example.com")],
+     '<p>リンク<a data-pdf-footnote="3" href="https://example.com">サイト</a>です。</p>',
+     0, 0),
 ]
 
 # 縦並び表の1行は2ページ以上に分かれない
@@ -488,6 +536,29 @@ def main() -> int:
         if len(got) != expected:
             failures.append(f"縦並びの分割／{label}: 期待 {expected}件 実際 {got}")
 
+    for label, lines, markup, expected, expected_unmatched in KEEP_NEXT_CASES:
+        problems, unmatched = find_keep_next_problems(lines, markup)
+        if len(problems) != expected or unmatched != expected_unmatched:
+            failures.append(
+                f"印付き段落／{label}: 期待 {expected}件・不可{expected_unmatched}件"
+                f" 実際 {problems}・{unmatched}")
+
+    # URL脚注と柱・ノンブルは本文に入れない。入れると印付き段落が
+    # 「ページの最後の行」にあるかの判定が壊れる
+    haystack, page_ends = _body_page_texts([
+        line(2, 0, 22.0, 12.0, 100.0, "柱の見出し"),
+        line(2, 1, 22.0, 40.0, 120.0, "本文です。"),
+        line(2, 8, 22.0, 255.0, 120.0, "1. https://example.com/file/d/"),
+        line(2, 8, 22.0, 264.0, 60.0, "view?x=1"),
+        line(2, 9, 22.0, 282.0, 4.0, "7"),
+    ], "")
+    if "柱" in haystack or "https" in haystack or "7" in haystack:
+        failures.append(f"本文の抽出: 除くべき行が残っている {haystack!r}")
+    if "本文です。" not in haystack:
+        failures.append(f"本文の抽出: 本文が取れていない {haystack!r}")
+    if page_ends != {len("本文です。"): 2}:
+        failures.append(f"本文の抽出: ページ末尾の位置が違う {page_ends}")
+
     for label, rows, expected in IMAGE_CASES:
         got = find_image_problems(rows)
         if len(got) != expected:
@@ -583,7 +654,7 @@ def main() -> int:
     total_cases = (len(CODE_BAND_CASES) + len(RULE_CASES) + len(INK_CASES) + len(TEXT_OVERFLOW_CASES) + len(OVERLAP_CASES)
                    + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES)
                    + len(SINGLE_ORPHAN_CASES) + len(URL_WRAP_CASES) + len(HYPHEN_BREAK_CASES)
-                   + len(STACKED_SPLIT_CASES) + 14)
+                   + len(STACKED_SPLIT_CASES) + len(KEEP_NEXT_CASES) + 17)
     print(f"✅ {total_cases} ケースすべて通過")
     return 0
 
