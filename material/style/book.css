@@ -164,6 +164,15 @@ code {
 
    実際に減らせたのは上の --vs--pre-font-size だけ。 */
 
+/* 強制改行（br.cw-force）の直後に置く空き要素。続き行の頭に
+   元の行の字下げ＋2桁ぶんの幅を持たせ、続き行が字下げを失って
+   左端に落ちる（外側の行に見えて入れ子を読み違える）のを防ぐ。
+   空の span は inline のままでは幅を持たないので inline-block にする。
+   空白文字で字下げしないのは、コピー時の文字列を変えないため。 */
+.cw-hang {
+  display: inline-block;
+}
+
 /* 囲み記事。blockquote は教材に812回出る */
 blockquote {
   border: 1px solid var(--book-rule);

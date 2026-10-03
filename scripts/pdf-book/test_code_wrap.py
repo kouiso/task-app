@@ -17,6 +17,7 @@ from code_wrap import (  # noqa: E402
     SHRINK_MIN_PT,
     atoms,
     classify,
+    line_width,
     unsafe_runs,
     wrap_code_in_html,
 )
@@ -547,7 +548,9 @@ const view = (
     if residuals or unsafe_runs(rendered):
         failures.append(f"JSX属性式の後でタグ状態が漏れた: {residuals}")
     if (
-        '<br class="cw-force">rounded-lg transition-colors' not in rendered
+        '<br class="cw-force">'
+        '<span class="cw-hang" style="width:6ch"></span>'
+        'rounded-lg transition-colors' not in rendered
     ):
         failures.append("JSX属性式の後続classNameを安全な空白で折れなかった")
 
@@ -578,6 +581,104 @@ const view = (
     rendered = wrap_code_in_html(pre(html.escape(template_source)))
     if eval_js(copied_code(rendered), 'value') != '\n                  ' + day25_hint + '\n':
         failures.append("テンプレート本文の字下げを削った")
+
+    # ── 続き行の空き（cw-hang）─────────────────────────────
+    # 強制改行の直後には「字下げ＋2桁」の空き要素が乗り、続き行が
+    # 字下げを失って左端に落ちないようにする（issue #458）
+
+    # 24. 強制改行の直後に「字下げ＋2桁」の空き要素が入る。
+    #     字下げ6桁の行なら width:8ch
+    hang_source = (
+        '      <div className="mx-auto flex min-h-screen max-w-6xl '
+        'flex-col px-6 py-8">'
+    )
+    out = wrap_code_in_html(pre(html.escape(hang_source)))
+    if (
+        '<br class="cw-force">'
+        '<span class="cw-hang" style="width:8ch"></span>' not in out
+    ):
+        failures.append("強制改行の直後に字下げ＋2桁の空きが入っていない")
+    if unsafe_runs(out):
+        failures.append(f"空き付き行に折返せないランが残る: {unsafe_runs(out)}")
+
+    # 空き要素は文字を持たないため、コピー後の文字列は変わらない
+    copied_hang = copied_code(out)
+    if copied_hang.replace("\n", "") != hang_source:
+        failures.append("空き要素がコピー後の文字列を変えた")
+    if "\n " in copied_hang:
+        failures.append("続き行のコピーに空白が混入した")
+
+    # 25. 字下げの直後（`//` の前）では強制改行しない。1行目が空白だけに
+    #     なってコメント本体が左端に出る形を防ぐ。区切り候補が尽きた行は
+    #     縮小の経路へ回る
+    comment_source = '    // アーカイブ済みプロジェクトのタスクは集計対象外にし、'
+    out = wrap_code_in_html(pre(html.escape(comment_source)))
+    if '<br class="cw-force">' in out:
+        failures.append("字下げの直後（// の前）で強制改行した")
+    if 'cw-shrink' not in out:
+        failures.append("区切り候補の尽きた行が縮小へ回っていない")
+
+    # 26. 2本目以降の区切りは「空き＋区切り」が58桁以内になるよう選ぶ。
+    #     空きを無視すると59桁に出る2本目の区切りを、空き込みでは手前へ
+    #     倒して収める（空き4桁＋区切り51桁）
+    wrap_source = (
+        '  call(alpha(x), beta(x), gamma(x), alpha(y), beta(y), gamma(y), '
+        'delta(y), eps(y), zeta(y), eta(y), theta(y), tail);'
+    )
+    out = wrap_code_in_html(pre(html.escape(wrap_source)))
+    if unsafe_runs(out):
+        failures.append(f"空き込み58桁を超える続き行が残る: {unsafe_runs(out)}")
+    if 'cw-shrink' in out:
+        failures.append("区切りの候補が残る行を縮小に回してしまった")
+    for row in out.split('<br class="cw-force">')[1:]:
+        hang_m = re.match(
+            r'<span class="cw-hang" style="width:(\d+)ch"></span>', row
+        )
+        if not hang_m:
+            failures.append("続き行の先頭に空き要素が無い")
+            continue
+        row_text = html.unescape(re.sub(r'<[^>]+>', '', row))
+        if int(hang_m.group(1)) + line_width(atoms(row_text)) > SAFE_COLS:
+            failures.append("空き込みで58桁を超える続き行がある")
+
+    # 27. 空き込みで8ptを割る行は空きを1桁ずつ減らす。day24 の <span> 行
+    #     （字下げ12桁）は空き14桁だと70%を割るため、11桁まで減る
+    span_source = (
+        '            <span>最新のユーザー一覧を取得できませんでした。'
+        '前回取得時の内容です。</span>'
+    )
+    res_span: list[str] = []
+    out = wrap_code_in_html(pre(html.escape(span_source)), res_span)
+    if res_span:
+        failures.append(f"空きを減らせば8ptで組める行が残件化した: {res_span}")
+    if 'width:11ch' not in out:
+        failures.append("8ptを割る行の空きが減っていない")
+    if unsafe_runs(out):
+        failures.append(f"空きを減らした行に超過が残る: {unsafe_runs(out)}")
+
+    # 28. unsafe_runs は続き行の空き込みで58桁を超えた行を見つける。
+    #     cw-shrink で縮めた行も率を掛けて比べる（飛ばさない）
+    bad_hang = pre(
+        'xxxxxxxxxx'
+        '<br class="cw-force"><span class="cw-hang" style="width:10ch"></span>'
+        + 'y' * 55
+    )
+    if not unsafe_runs(bad_hang):
+        failures.append("unsafe_runs が空き込みの58桁超えを見逃した")
+    bad_shrink = pre(
+        '<span class="cw-shrink" style="font-size:80%">zzzzzzzzzz'
+        '<br class="cw-force"><span class="cw-hang" style="width:8ch"></span>'
+        + 'w' * 66 + '</span>'
+    )
+    if not unsafe_runs(bad_shrink):
+        failures.append("unsafe_runs が縮小行の空き込み58桁超えを見逃した")
+    ok_shrink = pre(
+        '<span class="cw-shrink" style="font-size:80%">zzzzzzzzzz'
+        '<br class="cw-force"><span class="cw-hang" style="width:8ch"></span>'
+        + 'w' * 60 + '</span>'
+    )
+    if unsafe_runs(ok_shrink):
+        failures.append("unsafe_runs が縮小済みの安全な行を誤検出した")
 
     if failures:
         print(f"❌ {len(failures)} 件失敗")
