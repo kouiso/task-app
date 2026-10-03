@@ -38,6 +38,7 @@ from check_page_layout import (  # noqa: E402
     find_orphan_problems,
     find_overlaps,
     find_single_orphan_problems,
+    find_single_row_fragment_problems,
     find_stacked_split_problems,
     find_url_wrap_problems,
     HANGING_MAX_MM,
@@ -280,6 +281,94 @@ STACKED_SPLIT_CASES: list[tuple[str, dict, int]] = [
     ("計測記録が空なら問題にしない", {'dom_audit': {'stacked_inventory': []}}, 0),
 ]
 
+
+def _fragment(page_index: int, td_rows: list[int], th_rows: list[int] | None = None,
+              omit_geometry: bool = False) -> dict:
+    """表の断片1つ。行番号ごとに1セルずつ持つ形で十分（検査が見るのは tag と
+    row_index だけ）。TH は見出し行の繰り返しなので本文の行数に入らない。"""
+    if omit_geometry:
+        return {'page_index': page_index}
+    cells = [
+        {'row_index': n, 'cell_index': 0, 'tag': 'TH', 'text': f'見出し{n}'}
+        for n in (th_rows or [0])
+    ]
+    cells += [
+        {'row_index': n, 'cell_index': n, 'tag': 'TD', 'text': f'本文{n}'}
+        for n in td_rows
+    ]
+    return {'page_index': page_index, 'geometry': {'cells': cells}}
+
+
+# ページを跨いだ表で、本文（TD）1行だけの断片は1行のためにページをめくる形（issue #469）
+SINGLE_ROW_FRAGMENT_CASES: list[tuple[str, dict, int]] = [
+    ("見出し行と1行目だけが残る断片は問題",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             _fragment(2, [1]),
+             _fragment(3, [2, 3, 4]),
+         ]},
+     ]}}}, 1),
+    ("最後の1行だけが次のページへ出る断片も問題",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             _fragment(2, [1, 2, 3]),
+             _fragment(3, [4]),
+         ]},
+     ]}}}, 1),
+    ("途中のページに1行だけが載る断片も同じ形なので挙げる",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             _fragment(2, [1, 2]),
+             _fragment(3, [3]),
+             _fragment(4, [4, 5]),
+         ]},
+     ]}}}, 1),
+    ("両側が1行だけの2行の表は断片ごとに挙げる",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             _fragment(2, [1]),
+             _fragment(3, [2]),
+         ]},
+     ]}}}, 2),
+    ("どの断片も2行以上なら問題なし",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             _fragment(2, [1, 2]),
+             _fragment(3, [3, 4]),
+         ]},
+     ]}}}, 0),
+    ("ページを跨がない表は1行でも対象外",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [_fragment(2, [1])]},
+     ]}}}, 0),
+    # 境の直後に見出し行だけが載る断片は別の崩れ方で、ここの担当は
+    # 「本文1行」だけ。混ぜると件数が実測とずれる
+    ("本文の行が無い断片（見出し行だけ）は対象外",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             _fragment(2, [1, 2, 3]),
+             _fragment(3, [], [0]),
+         ]},
+     ]}}}, 0),
+    ("断片に geometry が無くても落ちない",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             _fragment(2, [1, 2]),
+             _fragment(3, [], omit_geometry=True),
+         ]},
+     ]}}}, 0),
+    ("page_index が無い断片は数えない",
+     {'dom_audit': {'table_inventory': {'tables': [
+         {'id': 't1', 'fragments': [
+             {'geometry': {'cells': [{'row_index': 1, 'tag': 'TD'}]}},
+             _fragment(3, [2, 3]),
+         ]},
+     ]}}}, 0),
+    ("計測記録に表が無ければ問題なし",
+     {'dom_audit': {'table_inventory': {'tables': []}}}, 0),
+    ("計測記録自体が空でも問題なし", {}, 0),
+]
+
 POPPLER_IMAGE_TABLE = (
     "page   num  type   width height color comp bpc  enc interp"
     "  object ID x-ppi y-ppi size ratio\n"
@@ -488,6 +577,11 @@ def main() -> int:
         if len(got) != expected:
             failures.append(f"縦並びの分割／{label}: 期待 {expected}件 実際 {got}")
 
+    for label, report, expected in SINGLE_ROW_FRAGMENT_CASES:
+        got = find_single_row_fragment_problems(report)
+        if len(got) != expected:
+            failures.append(f"1行だけの表断片／{label}: 期待 {expected}件 実際 {got}")
+
     for label, rows, expected in IMAGE_CASES:
         got = find_image_problems(rows)
         if len(got) != expected:
@@ -583,7 +677,7 @@ def main() -> int:
     total_cases = (len(CODE_BAND_CASES) + len(RULE_CASES) + len(INK_CASES) + len(TEXT_OVERFLOW_CASES) + len(OVERLAP_CASES)
                    + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES)
                    + len(SINGLE_ORPHAN_CASES) + len(URL_WRAP_CASES) + len(HYPHEN_BREAK_CASES)
-                   + len(STACKED_SPLIT_CASES) + 14)
+                   + len(STACKED_SPLIT_CASES) + len(SINGLE_ROW_FRAGMENT_CASES) + 14)
     print(f"✅ {total_cases} ケースすべて通過")
     return 0
 
