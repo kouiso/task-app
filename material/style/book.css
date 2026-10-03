@@ -296,6 +296,19 @@ pre.pdf-breakable {
   break-inside: auto;
 }
 
+/* filepath 行はコード枠の1行目から枠の直前へ出す（build_pdf_book.py の
+   hoist_code_filepath）。中身はコメント記号を外したファイル名で、コードでは
+   なく「この枠がどのファイルか」の見出し。等幅で pre と同じ級数にし、
+   折返せないコメント行として縮まないよう枠の外に置く。長いファイル名は
+   ふつうに折り返す。break-after: avoid で直後のコード枠と同じページに留める。 */
+.code-filepath {
+  font-family: var(--vs--monospace-font-family);
+  font-size: var(--vs--pre-font-size);
+  color: var(--book-muted);
+  margin-block-end: 0.25em;
+  break-after: avoid;
+}
+
 /* ── 図 ─────────────────────────────────────────────────
    テーマは figure の中身に max-inline-size: 100% しか掛けず、高さは無制限。
    さらに techbook の image-resolution: 300dpi はラスタ拡張子のみを対象にするため、

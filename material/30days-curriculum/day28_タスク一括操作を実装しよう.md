@@ -134,7 +134,8 @@ Day 13〜16 で `task.ts` に、1件ずつ扱う手続きを積み上げてき�
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// （permission の import に findTasksWithPermission を足した完成形）
+// （permission の import に
+// findTasksWithPermission を足した完成形）
 import {
   assertMemberPermission,
   findTasksWithPermission,

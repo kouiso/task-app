@@ -840,7 +840,8 @@ Step 9・10 でハンドラーを本実装しますが先にJSXを書くため�
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 仮実装（Step 9 で handleEdit、Step 10 で handleDelete を本実装に置換する）
+// 仮実装（Step 9 で handleEdit、
+// Step 10 で handleDelete を本実装に置換する）
 const handleEdit = (taskId: string) => {
   void taskId;
 };
@@ -963,7 +964,8 @@ import { taskToFormData }
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 編集ダイアログの状態管理（early return より前のhook定義ブロックに追加）
+// 編集ダイアログの状態管理
+// （early return より前のhook定義ブロックに追加）
 const [dialogOpen, setDialogOpen] =
   useState(false);
 const [editingTask, setEditingTask] =

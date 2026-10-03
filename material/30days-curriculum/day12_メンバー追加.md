@@ -194,7 +194,8 @@ flowchart TB
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// （既存の import { USER_SELECT } from './_helpers/select'; を
+// （既存の import { USER_SELECT }
+// from './_helpers/select'; を
 // この行に置き換える）
 import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
 ```
