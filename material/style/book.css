@@ -227,6 +227,27 @@ table {
   break-after: avoid;
   break-inside: avoid;
 }
+/* theme-base は figure に display: flex を掛ける。flex コンテナは
+   ページ分割で「割れない箱」として別経路で置かれるため、手前の段落の
+   break-after: avoid も figure 側の break-before: avoid も効かず、
+   36冊の実測で3か所の取り残しが残った（Day 03/06/08 の図の直前の段落）。
+   直前が印付き段落の figure だけ display: block に倒して改ページ規則が
+   通る箱に戻す。flex の column + align-items: center と同じ見え方に
+   なるよう、画像は margin で中央寄せ、figcaption は display: table +
+   margin で中身の幅に縮めて中央に置く。 */
+.pdf-keep-next + figure {
+  display: block;
+  text-align: center;
+}
+.pdf-keep-next + figure img {
+  display: block;
+  margin-inline: auto;
+}
+.pdf-keep-next + figure figcaption {
+  display: table;
+  margin-inline: auto;
+  text-align: start;
+}
 
 td,
 th {
