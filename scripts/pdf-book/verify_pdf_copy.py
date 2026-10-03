@@ -30,6 +30,7 @@ from code_wrap import (  # noqa: E402
     atoms,
     break_before,
     classify_block,
+    code_filepath_label,
     forced_breaks,
     line_width,
 )
@@ -91,6 +92,11 @@ def fenced_code_blocks(md_path: Path) -> list[CodeBlock]:
 
         char, minimum, lang, start_line = opener
         if re.fullmatch(rf"[ \t]{{0,3}}{re.escape(char)}{{{minimum},}}[ \t]*", line):
+            # filepath 見出しは組版でコード枠の外へ出る。出た側はコメント記号を
+            # 外した文字になるので原稿行とは一致せず、照合の対象から外す。
+            # 対象は1行目だけ（枠の途中にある同名の行はコードとして残る）
+            if body and code_filepath_label(body[0]) is not None:
+                body = body[1:]
             blocks.append(CodeBlock(lang, tuple(body), start_line, char * minimum))
             opener = None
             body = []

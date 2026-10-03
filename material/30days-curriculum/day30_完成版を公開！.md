@@ -147,7 +147,8 @@ DATABASE_URL="postgresql://user:password@localhost:25532/taskapp"
 JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 
 # 本番URL（完成版の robots.txt 生成で使います。
-# このカリキュラムでは robots.txt を作らないため、空のままで構いません）
+# このカリキュラムでは robots.txt を作らないため
+# 空のままで構いません）
 # NEXT_PUBLIC_BASE_URL="https://your-app.vercel.app"
 ```
 
@@ -474,8 +475,10 @@ Vercel CLI で現在のフォルダを既存プロジェクトへ
 # 初回だけ、画面の案内に従って既存 Vercel プロジェクトを選ぶ
 npx vercel link
 
-# Production の接続情報を一時ファイルへ取り出し、教材用の新規 DB へ反映する
-npx vercel env pull .env.production.local --environment=production
+# Production の接続情報を一時ファイルへ取り出し
+# 教材用の新規 DB へ反映する
+npx vercel env pull .env.production.local \
+  --environment=production
 
 # 括弧の中だけで読み込んでから実行する
 (

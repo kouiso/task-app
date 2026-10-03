@@ -125,7 +125,8 @@ Day 13 で `getAll`、Day 14 で `create` を書きました。今日はそこ�
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// （permission の import に findTaskWithPermission を足した完成形）
+// （permission の import に
+// findTaskWithPermission を足した完成形）
 import {
   assertMemberPermission,
   findTaskWithPermission,

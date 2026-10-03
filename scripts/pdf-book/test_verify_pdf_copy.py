@@ -126,7 +126,8 @@ def main() -> int:
         failures.append("strip_variation_selectors left a selector behind")
 
     # 組版の強制改行: JSX 子テキストの開始タグ直後は code_wrap が <br> を入れる
-    jsx_line = " " * 16 + '<h3 className="font-semibold">コメント</h3>'
+    # （字幅は実フォントの送り幅で数える。この行が SAFE_COLS を超えることが前提）
+    jsx_line = " " * 24 + '<h3 className="font-semibold">コメント</h3>'
     if target.line_width(target.atoms(jsx_line)) <= target.SAFE_COLS:
         failures.append("JSX fixture no longer exceeds SAFE_COLS")
     checked, total, found, _, _ = target.verify_document(

@@ -412,7 +412,8 @@ Day 13 の Step 7 で配置した `TaskDetailDialog`
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// TaskDetailDialog 内でタスク詳細データを取得（配布済み・書き足し不要）
+// TaskDetailDialog 内でタスク詳細データを取得
+// （配布済み・書き足し不要）
 const { data: taskDetail } =
   api.task.getById.useQuery(
     { id: taskId ?? '' },

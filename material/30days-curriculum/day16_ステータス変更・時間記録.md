@@ -858,7 +858,8 @@ Reactは複数の要素を並べて返せないので
 
 ```typescript
 // filepath: src/app/task/page.tsx（const utils の直後に追加）
-// 時間記録の成功後に一覧を取り直す（useCallback は react から import）
+// 時間記録の成功後に一覧を取り直す
+// （useCallback は react から import）
 const handleTimeLogSuccess = useCallback(() => {
   void utils.task.getAll.invalidate();
 }, [utils.task.getAll]);
