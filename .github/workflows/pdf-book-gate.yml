@@ -83,11 +83,11 @@ jobs:
         # node_modules 無しだと MODULE_NOT_FOUND でこのジョブ自体が落ちる（PR#419で発覚）。
         run: npm ci
 
-      - name: 判定境界の退行テスト（44ケース）
+      - name: 判定境界の退行テスト（46ケース）
         run: |
           make book-pdf-test | tee "$RUNNER_TEMP/selftest.log"
           # 件数はスクリプト側で動的に算出しとる。減った時に緑で通さんよう突き合わせる
-          grep -q '✅ 44 ケースすべて通過' "$RUNNER_TEMP/selftest.log"
+          grep -q '✅ 46 ケースすべて通過' "$RUNNER_TEMP/selftest.log"
 
   pdf-book-inspection:
     name: 教材PDF検査
