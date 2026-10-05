@@ -233,7 +233,7 @@ def main() -> int:
             target.PDF_DIR = Path(pdf_dir)
             target.SRC_DIR = Path(src_dir)
             with contextlib.redirect_stdout(io.StringIO()) as output:
-                exit_code = target.main()
+                exit_code = target.main([])
             if exit_code == 0 or "PDF not found" not in output.getvalue():
                 failures.append("empty PDF directory did not fail closed")
 
@@ -246,7 +246,7 @@ def main() -> int:
             )
             target.pdf_text = lambda _: "npm install\n"
             with contextlib.redirect_stdout(io.StringIO()) as output:
-                exit_code = target.main()
+                exit_code = target.main([])
             report = output.getvalue()
             if exit_code != 0:
                 failures.append(f"valid diagnostic failed: {report}")
@@ -258,6 +258,51 @@ def main() -> int:
                 failures.append("text-provenance limitation is missing from success output")
             if "ALL LINES COPY-SAFE" in report or "viewer copy verification passed" in report:
                 failures.append("success output overclaims actual viewer copy safety")
+
+        # subset 経路: 組んだ冊だけが dist/pdf にある。旗なしでは欠けとして落ち、
+        # 旗ありでは組んだ冊だけを照合して通る。組んだ冊の照合失敗は旗があっても落ちる
+        with tempfile.TemporaryDirectory() as pdf_dir, tempfile.TemporaryDirectory() as src_dir:
+            target.PDF_DIR = Path(pdf_dir)
+            target.SRC_DIR = Path(src_dir)
+            (target.PDF_DIR / "built.pdf").touch()
+            (target.SRC_DIR / "built.md").write_text(
+                "```bash\nnpm install\n```\n", encoding="utf-8"
+            )
+            (target.SRC_DIR / "not-built.md").write_text(
+                "```bash\nnpm run dev\n```\n", encoding="utf-8"
+            )
+            target.pdf_text = lambda _: "npm install\n"
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                exit_code = target.main([])
+            if exit_code == 0 or "missing PDF for source: not-built" not in output.getvalue():
+                failures.append("missing PDF passed without --allow-missing")
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                exit_code = target.main(["--allow-missing"])
+            report = output.getvalue()
+            if exit_code != 0:
+                failures.append(f"--allow-missing subset failed: {report}")
+            if "Not built in this run (not checked): 1 sources" not in report:
+                failures.append(f"--allow-missing did not report skipped sources: {report}")
+            target.pdf_text = lambda _: "npm uninstall\n"
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                exit_code = target.main(["--allow-missing"])
+            if exit_code == 0:
+                failures.append("--allow-missing hid a mismatch in a built PDF")
+
+        with tempfile.TemporaryDirectory() as pdf_dir, tempfile.TemporaryDirectory() as src_dir:
+            target.PDF_DIR = Path(pdf_dir)
+            target.SRC_DIR = Path(src_dir)
+            (target.SRC_DIR / "sample.md").write_text(
+                "```bash\nnpm install\n```\n", encoding="utf-8"
+            )
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                exit_code = target.main(["--allow-missing"])
+            if exit_code == 0 or "PDF not found" not in output.getvalue():
+                failures.append("--allow-missing with no PDF did not fail closed")
+
+        with contextlib.redirect_stderr(io.StringIO()):
+            if target.main(["--allow-gaps"]) != 2:
+                failures.append("unknown argument was not rejected")
     finally:
         target.PDF_DIR = original_pdf_dir
         target.SRC_DIR = original_src_dir
