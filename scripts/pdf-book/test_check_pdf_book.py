@@ -230,25 +230,37 @@ def main() -> int:
     # 指定なしで呼ぶ。フラグだけを取り除くと引数が空になるので、空のときは
     # 既定の dist/pdf へ落ちることを固定する。落ちないと「ディレクトリを1つ
     # 指定してください」で検査ごと止まる。
+    # 既定と明示を別ディレクトリに分けるのは、明示した引数を無視して既定へ
+    # 落ちる退行も見分けるため。同じ場所だとどちらを見ても通ってしまう。
     with tempfile.TemporaryDirectory() as tmp:
-        pdf_dir = Path(tmp)
-        (pdf_dir / "day01_sample.pdf").write_bytes(b"%PDF-1.4\n")
-        for label, argv in (
-            ("--allow-gaps 単体", ["check_pdf_book.py", "--allow-gaps"]),
+        default_dir = Path(tmp) / "default"
+        explicit_dir = Path(tmp) / "explicit"
+        default_dir.mkdir()
+        explicit_dir.mkdir()
+        default_pdf = default_dir / "day01_default.pdf"
+        explicit_pdf = explicit_dir / "day01_explicit.pdf"
+        default_pdf.write_bytes(b"%PDF-1.4\n")
+        explicit_pdf.write_bytes(b"%PDF-1.4\n")
+        for label, argv, expected in (
+            ("--allow-gaps 単体", ["check_pdf_book.py", "--allow-gaps"], default_pdf),
             ("--allow-gaps + ディレクトリ",
-             ["check_pdf_book.py", "--allow-gaps", str(pdf_dir)]),
+             ["check_pdf_book.py", "--allow-gaps", str(explicit_dir)], explicit_pdf),
         ):
             err = io.StringIO()
             with (patch("shutil.which", return_value="/usr/bin/x"),
-                    patch("check_pdf_book.DEFAULT_PDF_DIR", pdf_dir),
-                    patch("check_pdf_book.check_one", return_value=[]),
+                    patch("check_pdf_book.DEFAULT_PDF_DIR", default_dir),
+                    patch("check_pdf_book.check_one", return_value=[]) as check_one,
                     contextlib.redirect_stderr(err)):
                 code = check_pdf_book_main(argv)
+            checked = [c.args[0] for c in check_one.call_args_list]
             if "ディレクトリを1つ指定" in err.getvalue():
                 failures.append(
                     f"引数の解釈({label}): 既定ディレクトリへ落ちていない")
             elif code != 0:
                 failures.append(f"引数の解釈({label}): 戻り値が {code}")
+            elif checked != [expected]:
+                failures.append(
+                    f"引数の解釈({label}): 検査した PDF が {checked}（期待は {expected}）")
 
     if failures:
         print(f"❌ {len(failures)} 件失敗")
