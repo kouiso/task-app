@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from sale_package import scaffold_copies  # noqa: E402
+from sale_package import excluded_routers, scaffold_copies  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -81,8 +81,33 @@ def observe() -> list[tuple[str, str, bool]]:
     return out
 
 
+def observe_excluded_routers(
+    scripts_dir: Path, routers_dir: Path
+) -> list[tuple[str, str, bool]]:
+    """読者に配らない `_server-routers` の写しも本体と突き合わせる。
+
+    scaffold_copies() は配らない6本を外すので、observe() だけではこの写しの
+    ズレを誰も見ていない。ZIP にも scaffold にも入らなくても、リポジトリに
+    残っている写しは次に「正本」と取り違えられる。置き場の表示名は
+    observe() と同じ形（src/ 側のパス, scripts/ 側のパス, 中身が同じか）に
+    そろえ、そのまま classify() へ流せるようにする。
+    """
+    out: list[tuple[str, str, bool]] = []
+    for name in sorted(excluded_routers()):
+        copy = scripts_dir / name
+        source = routers_dir / name
+        same = source.is_file() and copy.is_file() and digest(source) == digest(copy)
+        out.append(
+            (f"src/server/api/routers/{name}", f"scripts/_server-routers/{name}", same)
+        )
+    return out
+
+
 def main() -> int:
-    observations = observe()
+    observations = observe() + observe_excluded_routers(
+        REPO_ROOT / "scripts" / "_server-routers",
+        REPO_ROOT / "src" / "server" / "api" / "routers",
+    )
     checked = len(observations)
     drifted, stale = classify(observations, EXPECTED_DIFFERENT)
 

@@ -348,6 +348,7 @@ EOF
 configure_package_json() {
   npm pkg set \
     name="task-app" \
+    engines.node="22.x" \
     scripts.dev="next dev" \
     scripts.build="prisma generate && next build" \
     scripts.vercel-build="prisma generate && next build" \
