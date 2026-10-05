@@ -331,6 +331,8 @@ jobs:
         # check_pdf_book.py は1冊単位の検査だけで冊をまたがんため、部分的でも成立する。
         # ただし day の連続性検査は全冊揃いが前提で、subset では抜けが仕様どおり
         # 存在するため --allow-gaps で退ける（抜けの担保は全冊経路と release_manifest の側）。
+        # verify_pdf_copy.py も原稿36冊ぶんの PDF が揃う前提で、組んでいない冊を
+        # 「missing PDF for source」として落とす。--allow-missing で組んだ冊だけを照合する。
         run: |
           if [ "$SCOPE" = "all" ]; then
             make book-pdf-verify
@@ -338,5 +340,5 @@ jobs:
             make book-pdf-test
             python3 scripts/pdf-book/check_pdf_book.py --allow-gaps
             python3 scripts/pdf-book/check_page_layout.py
-            python3 scripts/pdf-book/verify_pdf_copy.py
+            python3 scripts/pdf-book/verify_pdf_copy.py --allow-missing
           fi
