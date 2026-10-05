@@ -98,7 +98,28 @@ def main() -> int:
     if by_day.get(10) != {"src/app/task/page.tsx"}:
         fails.append(f"❌ 先頭行以外の目印を読めていない: {by_day.get(10)}")
 
-    total = 6
+    # scaffold が engines.node="22.x" を書く契約。本物のスクリプトで True、
+    # その行を消した文字列で False になる両方を見ないと、契約の行が
+    # 形だけ置かれて判定が常に True になる壊れ方を取りこぼす。
+    scaffold_script = (target.SCRIPTS_DIR / "scaffold-from-scratch.sh").read_text(
+        encoding="utf-8"
+    )
+    if not target.scaffold_pins_node(scaffold_script):
+        fails.append("❌ 本物の scaffold-from-scratch.sh が engines.node を pin していない")
+    without_engines = "\n".join(
+        line for line in scaffold_script.splitlines() if 'engines.node="22.x"' not in line
+    )
+    if target.scaffold_pins_node(without_engines):
+        fails.append("❌ engines.node の行を消した scaffold でも True を返している")
+    commented_out = scaffold_script.replace(
+        '    engines.node="22.x" \\\n', '    # engines.node="22.x" \\\n'
+    )
+    if commented_out == scaffold_script:
+        fails.append("❌ engines.node の継続行が見つからず、コメントアウトの検査を組めない")
+    elif target.scaffold_pins_node(commented_out):
+        fails.append("❌ engines.node の行をコメントアウトした scaffold でも True を返している")
+
+    total = 9
     if fails:
         for msg in fails:
             print(msg)

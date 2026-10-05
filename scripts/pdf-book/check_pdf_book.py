@@ -428,7 +428,9 @@ def main(argv: list[str]) -> int:
     # pdf-book-gate の subset 経路から渡される --allow-gaps で連続性検査を退ける。
     # 全冊経路（make book-pdf-verify）では従来どおり抜けを検出する。
     allow_gaps = "--allow-gaps" in args
-    args = [a for a in args if a != "--allow-gaps"]
+    # フラグだけを取り除くと subset 経路（引数なし）で空になる。既定の
+    # dist/pdf を見るのが意図なので、空のときはそこへ戻す
+    args = [a for a in args if a != "--allow-gaps"] or [str(DEFAULT_PDF_DIR)]
     if len(args) != 1 or not Path(args[0]).is_dir():
         print("❌ PDF のディレクトリを1つ指定してください", file=sys.stderr)
         return 2
