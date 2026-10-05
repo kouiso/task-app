@@ -83,11 +83,11 @@ jobs:
         # node_modules 無しだと MODULE_NOT_FOUND でこのジョブ自体が落ちる（PR#419で発覚）。
         run: npm ci
 
-      - name: 判定境界の退行テスト（44ケース）
+      - name: 判定境界の退行テスト（46ケース）
         run: |
           make book-pdf-test | tee "$RUNNER_TEMP/selftest.log"
           # 件数はスクリプト側で動的に算出しとる。減った時に緑で通さんよう突き合わせる
-          grep -q '✅ 44 ケースすべて通過' "$RUNNER_TEMP/selftest.log"
+          grep -q '✅ 46 ケースすべて通過' "$RUNNER_TEMP/selftest.log"
 
   pdf-book-inspection:
     name: 教材PDF検査
@@ -331,6 +331,8 @@ jobs:
         # check_pdf_book.py は1冊単位の検査だけで冊をまたがんため、部分的でも成立する。
         # ただし day の連続性検査は全冊揃いが前提で、subset では抜けが仕様どおり
         # 存在するため --allow-gaps で退ける（抜けの担保は全冊経路と release_manifest の側）。
+        # verify_pdf_copy.py も原稿36冊ぶんの PDF が揃う前提で、組んでいない冊を
+        # 「missing PDF for source」として落とす。--allow-missing で組んだ冊だけを照合する。
         run: |
           if [ "$SCOPE" = "all" ]; then
             make book-pdf-verify
@@ -338,5 +340,5 @@ jobs:
             make book-pdf-test
             python3 scripts/pdf-book/check_pdf_book.py --allow-gaps
             python3 scripts/pdf-book/check_page_layout.py
-            python3 scripts/pdf-book/verify_pdf_copy.py
+            python3 scripts/pdf-book/verify_pdf_copy.py --allow-missing
           fi

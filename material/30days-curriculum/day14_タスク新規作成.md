@@ -102,6 +102,8 @@ graph TD
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ---
 
 ### Step 0: タスク作成 API（create）と search ルーターを自分で書く（25分）
@@ -826,7 +828,7 @@ const handleClose = () => {
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
-// useFormの直後に追加: 送信処理
+// handleClose の後ろに追加: 送信処理
 const handleFormSubmit =
   (data: TaskFormValues) => {
     const submitData: TaskFormData = {
@@ -881,7 +883,7 @@ const handleFormSubmit =
 
 > `expectedUpdatedAt` は今日の新規作成では使いません。編集機能（Day 15）で「他の人が先に更新していないか」をサーバーが見分けるために送る値です。今は型と送信処理だけ用意しておきます。
 
-JSXのダイアログ構造とタイトル入力欄を書きます。
+JSXのダイアログ構造とタイトル入力欄を書きます。`handleFormSubmit` の後ろに続けて書きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -1498,6 +1500,14 @@ const handleSubmit =
 **ゴール**: タスク作成の全体フローを確認
 します。
 
+開発サーバーが動いていればそのまま使います。止めてあるときだけ次のコマンドで起動します。
+
+```bash
+# filepath: ターミナル
+# 停止している場合だけ起動する
+npm run dev
+```
+
 1. 「新規タスク」ボタンをクリック
 2. タイトルを入力し、プロジェクトを選択
 3. 優先度・ステータス・担当者を設定
@@ -1509,15 +1519,7 @@ const handleSubmit =
 - 一覧が自動で更新される
 - タイトル未入力で送信するとエラーが表示される
 
----
-
-```bash
-# filepath: ターミナル
-# 開発サーバーを起動して動作確認
-PORT=3001 npm run dev
-```
-
-ここまでで、入力 → 検証 → 保存 → 一覧の更新が1本につながりました。`PORT=3001` を付けるのは他の作業でポート 3000 がふさがっていても起動できるようにするためです。作ったタスクが一覧に出てこないときはまず `onSuccess` の `invalidate()` が書けているかを見てください。保存自体は成功していて画面だけが古い、という詰まり方がいちばん多いところです。
+ここまでで、入力 → 検証 → 保存 → 一覧の更新が1本につながりました。作ったタスクが一覧に出てこないときはまず `onSuccess` の `invalidate()` が書けているかを見てください。保存自体は成功していて画面だけが古い、という詰まり方がいちばん多いところです。
 
 ---
 
