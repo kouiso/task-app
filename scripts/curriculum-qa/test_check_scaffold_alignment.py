@@ -111,8 +111,15 @@ def main() -> int:
     )
     if target.scaffold_pins_node(without_engines):
         fails.append("❌ engines.node の行を消した scaffold でも True を返している")
+    commented_out = scaffold_script.replace(
+        '    engines.node="22.x" \\\n', '    # engines.node="22.x" \\\n'
+    )
+    if commented_out == scaffold_script:
+        fails.append("❌ engines.node の継続行が見つからず、コメントアウトの検査を組めない")
+    elif target.scaffold_pins_node(commented_out):
+        fails.append("❌ engines.node の行をコメントアウトした scaffold でも True を返している")
 
-    total = 8
+    total = 9
     if fails:
         for msg in fails:
             print(msg)
