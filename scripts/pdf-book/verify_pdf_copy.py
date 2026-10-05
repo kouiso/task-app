@@ -354,7 +354,20 @@ def verify_document(
     return checked_lines, total_lines, failures, mermaid_blocks, mermaid_lines
 
 
-def main() -> int:
+ALLOW_MISSING_FLAG = "--allow-missing"
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    # pdf-book-gate の subset 経路は変更のあった冊だけを組む。dist/pdf に無い冊は
+    # 組んでいないだけで欠けではないので、この旗があるときは欠けを失敗にしない。
+    # 全冊経路（make book-pdf-verify）は旗を渡さず、従来どおり欠けを検出する
+    allow_missing = ALLOW_MISSING_FLAG in args
+    unknown = [arg for arg in args if arg != ALLOW_MISSING_FLAG]
+    if unknown:
+        print(f"unknown argument: {' '.join(unknown)}", file=sys.stderr)
+        return 2
+
     pdfs = sorted(PDF_DIR.glob("*.pdf"))
     sources = sorted(SRC_DIR.glob("*.md"))
     pdf_by_stem = {path.stem: path for path in pdfs}
@@ -367,7 +380,8 @@ def main() -> int:
         failures.append(f"source markdown not found: {SRC_DIR}")
     missing_pdfs = sorted(set(source_by_stem) - set(pdf_by_stem))
     extra_pdfs = sorted(set(pdf_by_stem) - set(source_by_stem))
-    failures.extend(f"missing PDF for source: {stem}" for stem in missing_pdfs)
+    if not allow_missing:
+        failures.extend(f"missing PDF for source: {stem}" for stem in missing_pdfs)
     failures.extend(f"PDF has no source markdown: {stem}" for stem in extra_pdfs)
 
     checked_lines = 0
@@ -402,6 +416,8 @@ def main() -> int:
         f"Poppler extraction coverage: {checked_lines}/{total_lines} nonblank "
         f"fenced-code lines across {len(set(source_by_stem) & set(pdf_by_stem))} PDFs"
     )
+    if allow_missing and missing_pdfs:
+        print(f"Not built in this run (not checked): {len(missing_pdfs)} sources")
     print(
         f"Explicit exclusion: Mermaid {mermaid_blocks} blocks / {mermaid_lines} lines "
         "(rendered diagrams, not copyable code)"
