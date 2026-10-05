@@ -61,8 +61,11 @@ TERNARY_OPEN = re.compile(
     r")[^{}\"'`]+\?[^{}\"'`]*\(\s*$"
 )
 TERNARY_ELSE_OPEN = re.compile(r"^\s*\)\s*:\s*\(\s*$")
-TERNARY_CLOSE = re.compile(r"^\s*\)\}\s*[,;]?\s*$")
 JSX_COMMENT = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
+# 枝の中で括弧を数える前に消すもの。JSX コメントと文字列の中の括弧やタグは
+# 式の入れ子に関係しない。`'` は画面文字の「Don't」にも出るので消さない。
+# 文字列は1行に限る。閉じ忘れた `"` が後ろの行まで飲み込むと、括弧を数え損ねる。
+NOT_NESTING = re.compile(r"(?s:\{/\*.*?\*/\})|\"(?:\\.|[^\"\\\n])*\"|`(?:\\.|[^`\\\n])*`")
 
 
 def block_target(body: list[tuple[int, str]]) -> str | None:
@@ -93,13 +96,21 @@ def opens_ternary_else(lang: str, body: list[tuple[int, str]]) -> bool:
     if not TERNARY_OPEN.match(lines[first]):
         return False
 
-    arm = lines[first + 1 : -1]
-    if any(TERNARY_CLOSE.match(line) for line in arm):
-        return False
+    arm = NOT_NESTING.sub("", "\n".join(lines[first + 1 : -1]))
+
+    # 開始行の `(` から数えて括弧が負になれば、外側の三項演算子は枝の途中で
+    # 閉じている。`)}` の行を見るだけだと、枝の中の `{loading && (` を閉じる
+    # `)}` まで外側の終わりと取り違える。行末ごとに見るのは、`) : (` のように
+    # 1行の中で閉じて開き直す形を途中の負で弾かないためである。
+    depth = 0
+    for line in arm.splitlines():
+        depth += line.count("(") - line.count(")")
+        if depth < 0:
+            return False
 
     # 要素を開いたままなら末尾の記号は表示文字の可能性があるため除外しない。
     opened: list[str] = []
-    for tag in re.finditer(r"</?([A-Za-z][\w.]*)\b[^<>]*>|</?>", "\n".join(arm)):
+    for tag in re.finditer(r"</?([A-Za-z][\w.]*)\b[^<>]*>|</?>", arm):
         text = tag.group(0)
         name = tag.group(1) or "<>"
         if text.startswith("</"):

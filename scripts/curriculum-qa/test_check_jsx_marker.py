@@ -337,6 +337,52 @@ BAD_OPEN_ELEMENT_WITH_SELF_CLOSING = BAD_OPEN_ELEMENT_FAKE_ELSE.replace(
     "<p>", "<p><p />"
 )
 
+# 枝の中の `{loading && (` は `)}` で閉じるが、外側の三項演算子はまだ開いている。
+# 次のブロックは else 側の続きなので `//` が正しい。
+OK_NESTED_LOGICAL_IN_ARM = """```tsx
+{/* filepath: src/component/member-row.tsx */}
+{ready ? (
+  <div>
+    {loading && (
+      <Spinner />
+    )}
+  </div>
+) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+// 完成版: 役割の変更
+<Select value={role} />
+```
+"""
+
+# JSX コメントの中のタグは開きタグではない。数えると `</Badge>` と食い違い、
+# 次のブロックの正しい `//` を違反に数えてしまう。
+OK_TAG_IN_JSX_COMMENT_IN_ARM = OK_SAME_FILE_TERNARY_CONTINUATION.replace(
+    "<Badge>閲覧のみ</Badge>", "<Badge>{/* <Hint> */}閲覧のみ</Badge>"
+)
+
+# 入れ子の `)}` の後で外側も閉じていれば、続きのブロックは JSX の子に戻る。
+BAD_NESTED_THEN_CLOSED = """```tsx
+{/* filepath: src/component/member-row.tsx */}
+{ready ? (
+  <div>
+    {loading && (
+      <Spinner />
+    )}
+  </div>
+)}
+<p>
+  ) : (
+```
+
+```tsx
+// filepath: src/component/member-row.tsx（同じファイルの続き）
+<Select value={role} />
+```
+"""
+
 CASES = [
     ("開いた要素内のelse風文字列", BAD_OPEN_ELEMENT_FAKE_ELSE, 1),
     ("開いたFragment内のelse風文字列", BAD_OPEN_FRAGMENT_FAKE_ELSE, 1),
@@ -368,6 +414,9 @@ CASES = [
     ("JSXテキスト中のコメント風opener", BAD_COMMENT_FAKE_TERNARY, 1),
     ("文字列中の偽opener", BAD_STRING_FAKE_TERNARY, 1),
     ("複数行コメント中の偽opener", BAD_MULTILINE_COMMENT_FAKE_TERNARY, 1),
+    ("枝の中で閉じた入れ子の式", OK_NESTED_LOGICAL_IN_ARM, 0),
+    ("枝の中のJSXコメントにあるタグ", OK_TAG_IN_JSX_COMMENT_IN_ARM, 0),
+    ("入れ子の後で外側も閉じた式", BAD_NESTED_THEN_CLOSED, 1),
 ]
 
 
