@@ -107,6 +107,10 @@ src/
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
+同じフォルダで開発サーバーを2つ起動しないでください。2つとも同じ `.next` フォルダに書き込むため開いていたページが 404 になります。
+
 ---
 
 ### Step 0: プロジェクト作成 API（create）を自分で書く（12分）
@@ -433,7 +437,7 @@ export function ProjectDialog({
 
 **実装**:
 
-まずダイアログを閉じるハンドラーと送信ハンドラーを作ります。
+まずダイアログを閉じるハンドラーと送信ハンドラーを作ります。`ProjectDialog` 関数の中で Step 3 の `useEffect` の後ろに書き足します。
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -471,7 +475,7 @@ const handleFormSubmit =
 - `handleClose` でフォームのリセットとダイアログの閉じが両方行われる
 - `...(data.description && { description: data.description })` は「description が入力されている場合だけプロパティを含める」条件付きスプレッド。`&&` はこの場面で null/undefined を埋める働きとは違い、「真なら含める」という意味で使う。`??` とは用途が異なる
 
-続いてJSX を返します。Dialog の中にフォームを配置します。
+続いてJSX を返します。`handleFormSubmit` の後ろに続けて書きます。Dialog の中にフォームを配置します。
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -833,16 +837,16 @@ flowchart TB
 
 **ゴール**: プロジェクト作成の全体フローを確認します。
 
-開発サーバーを起動します。
+開発サーバーが動いていればそのまま使います。止めてあるときだけ次のコマンドで起動します。
 
 ```bash
 # filepath: ターミナル
-# 開発サーバーを起動
-PORT=3001 npm run dev
+# 停止している場合だけ起動する
+npm run dev
 ```
 
 **確認ポイント**:
-- `http://localhost:3001` にアクセスできる
+- `http://localhost:3000` にアクセスできる
 
 以下の手順で動作を確認してください。
 
