@@ -378,7 +378,7 @@ DevTools を開いて Console タブを見てください。
 
 401 と 403 で前回値を隠すのは、いま表示する権利が確認できないデータを画面に残さないためです。500 は権限が変わった証拠ではないので、取得済みの値があれば作業を続けられるように残します。
 
-`src/lib/query-error.ts` は scaffold に入っています。開いて、HTTP ステータスの取り出し方と再試行の条件を確認します。
+`src/lib/query-error.ts` は Day 11 で作りました。本書の後半「通信エラー対応後の完成コード」に載せたコメント付きの完成形で丸ごと置き換えます。処理は Day 11 と同じです。分類の理由をコメントで足しています。開いて、HTTP ステータスの取り出し方と再試行の条件を確認します。
 
 ```typescript
 // filepath: src/lib/query-error.ts
@@ -1358,7 +1358,7 @@ Day 05 で断ったとおり、この教材のコードは Biome の整形前の
 
 ## 完成コード全体
 
-今日作る画面は `src/app/error.tsx` と `src/app/not-found.tsx` の2つです。Step 2.5 では3画面を更新し、テストに必要な5ファイルも作ります。scaffold に入っている `src/lib/query-error.ts` を含め、次の11ファイルが今日の確認対象です。
+今日作る画面は `src/app/error.tsx` と `src/app/not-found.tsx` の2つです。Step 2.5 では3画面を更新し、テストに必要な5ファイルも作ります。Day 11 で作った `src/lib/query-error.ts` も含めて次の11ファイルが今日の確認対象です。
 
 バグAとバグBは教材内で修正版を読むため、アプリのファイルは増えません。バグCで足した `console.log` と、Step 2 で足した `throw` は削除済みです。
 
@@ -1369,7 +1369,7 @@ Day 05 で断ったとおり、この教材のコードは Biome の整形前の
 | `src/app/dashboard/page.tsx` | 通信エラー表示を更新する | Step 2.5 |
 | `src/app/my-task/page.tsx` | 通信エラー表示と更新失敗時の処理を更新する | Step 2.5 |
 | `src/app/report/page.tsx` | 通信エラー表示を更新する | Step 2.5 |
-| `src/lib/query-error.ts` | scaffold の内容を確認する | Step 2.5 |
+| `src/lib/query-error.ts` | コメント付きの完成形で置き換える | Step 2.5 |
 | `vitest.config.ts` | 新しく作る | Step 2.5 |
 | `src/test/setup.ts` | 新しく作る | Step 2.5 |
 | `src/app/dashboard/page.test.tsx` | 新しく作る | Step 2.5 |
@@ -1472,7 +1472,7 @@ export default function NotFound() {
 
 ## 通信エラー対応後の完成コード
 
-Step 2.5 では次の3ファイルをここに載せた完成形で丸ごと置き換えます（4つ目の `query-error.ts` は scaffold が配布済みなので中身を読んで確認するだけです）。長いページを部分ごとに置換すると、古い import や条件分岐が残って型検査を通っても誤った表示になる場合があります。ここでは状態と表示を切り離せないファイルだけを、完全なコピー単位として載せます。
+Step 2.5 では次の4ファイルをここに載せた完成形で丸ごと置き換えます。長いページを部分ごとに置換すると、古い import や条件分岐が残って型検査を通っても誤った表示になる場合があります。ここでは状態と表示を切り離せないファイルだけを、完全なコピー単位として載せます。
 
 ### `src/app/dashboard/page.tsx`（ダッシュボード）
 
@@ -2645,7 +2645,7 @@ export default function ReportPage() {
 
 ### `src/lib/query-error.ts`（エラー判定）
 
-各ページと更新処理が同じ分類関数を使います。コメントに分類理由も残した配布ファイルと照合できるよう、短いファイル全体を1つのコピー単位にします。
+各ページと更新処理が同じ分類関数を使います。Day 11 で書いたファイルと処理は同じです。分類の理由をコメントに残した形を短いファイル全体で1つのコピー単位にします。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2691,7 +2691,7 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 
 401 と 403 の再試行を止め、応答が無い更新を結果不明として分ける基準が1か所にまとまりました。ページごとに別の判定を書かないため、同じ通信状態なら同じ案内になります。
 
-3ファイルを置き換えて `query-error.ts` の中身を確認したら、Step 2.5 のテストを実行します。テストが通れば、通常表示が出ることだけでなく、保護データを隠す条件と入力を残す条件も確認できます。
+4ファイルを置き換えたら Step 2.5 のテストを実行します。テストが通れば、通常表示が出ることだけでなく、保護データを隠す条件と入力を残す条件も確認できます。
 
 ## 今日のまとめ
 
