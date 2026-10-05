@@ -135,6 +135,20 @@ def with_stems(paths: set[str]) -> set[str]:
     return paths | {Path(p).with_suffix("").as_posix() for p in paths}
 
 
+def scaffold_pins_node(scaffold_script: str) -> bool:
+    """scaffold が作る package.json に engines.node="22.x" が入るか。
+
+    Day 03 は「公開先の Vercel が使う Node の版は package.json の engines.node
+    （このプロジェクトでは "22.x"）で決まる」と教える。scaffold が engines を
+    書かないと Vercel 既定の版が選ばれ、手元（22系）と公開先が食い違う。
+
+    文字列が含まれるかだけで判定すると、コメントアウトした行や説明文の中の
+    同じ文字列でも True になる。`npm pkg set` へ渡す継続行の形で書かれた
+    行だけを数える。
+    """
+    return re.search(r'^[ \t]+engines\.node="22\.x" \\$', scaffold_script, re.M) is not None
+
+
 def main() -> int:
     provided = scaffold_provided()
     creates_by_day = curriculum_creates_by_day()
@@ -236,6 +250,7 @@ def main() -> int:
         "Day 08 route continuity": (
             "src/app/dashboard/page.tsx" in day08_text and "src/app/(app)" not in day08_text
         ),
+        'scaffold engines.node="22.x"': scaffold_pins_node(scaffold_script),
         'scaffold scripts.vercel-build="prisma generate && next build"': (
             'scripts.vercel-build="prisma generate && next build"' in scaffold_script
         ),
