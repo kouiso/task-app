@@ -494,3 +494,27 @@ figure img[src$=".png"] {
   word-break: normal;
   hyphens: none;
 }
+
+/* #472: 空白を含む長い行内コードを語ごとの code に分けたとき、
+   間の空白だけが素の本文になると背景が切れて2つのコードに見える。
+   空白は code と同じ背景・書体の span に入れ、繋がる側の端は
+   余白と角丸を取って1本のコードに見せる。
+   組版前に scripts/pdf-book/inline_break.py が挿入する。 */
+:not(pre) > code.pdf-code-more {
+  padding-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+:not(pre) > code.pdf-code-cont {
+  padding-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+:not(pre) > .pdf-code-gap {
+  color: var(--vs-theme--inline-code-color-body);
+  background-color: var(--vs-theme--inline-code-color-bg);
+  /* 角丸は上の :not(pre) > code と同じ 2px（変数ではなく直接指定に合わせる） */
+  border-radius: 2px;
+  /* 空白も等幅でないと分けた片どうしの字面がずれる */
+  font-family: var(--vs--monospace-font-family);
+}

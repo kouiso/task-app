@@ -57,6 +57,7 @@ from code_wrap import (  # noqa: E402
     wrap_code_in_html,
 )
 from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
+from inline_break import insert_wbr_before_code, split_long_inline_code  # noqa: E402
 from table_latin import keep_block_tails, protect_prose_latin, protect_table_latin
 from table_structure import restructure_tables, measured_tables_to_stack  # noqa: E402
 from inline_layout_css import (  # noqa: E402
@@ -1396,6 +1397,12 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         protected = protect_prose_latin(
             protect_table_latin(join_cjk_soft_breaks(converted.stdout))
         )
+        # 空白を含む長い行内コードを空白の位置で分けてから、前で改行できない字で
+        # 始まるコード（分けた後の先頭の片を含む）の直前へ <wbr> を置く。
+        # restructure_tables は一部の表のセルを dt/dd へ変えるため、
+        # 「表のセルか」で対象を分けるこの2つはその前に掛ける
+        protected = split_long_inline_code(protected)
+        protected = insert_wbr_before_code(protected)
         structured, table_structure = restructure_tables(protected, forced_tables)
         # 縦展開で生まれた dd/dt も含めて、全ブロックの末尾を接着してから監査へ渡す
         structured = keep_block_tails(structured)

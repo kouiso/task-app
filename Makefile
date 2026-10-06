@@ -55,6 +55,8 @@ book-pdf-test:
 	@python3 scripts/pdf-book/test_inline_layout.py
 	@python3 scripts/pdf-book/test_inline_layout_css.py
 	@python3 scripts/pdf-book/test_table_latin.py
+	@python3 scripts/pdf-book/test_inline_break.py
+	@python3 scripts/pdf-book/test_check_inline_break.py
 	@python3 scripts/pdf-book/test_table_structure.py
 	@python3 scripts/pdf-book/test_table_layout_override.py
 	@python3 scripts/pdf-book/test_table_build.py
@@ -70,6 +72,7 @@ book-pdf-test:
 book-pdf-verify: book-pdf-test
 	@python3 scripts/pdf-book/check_pdf_book.py
 	@python3 scripts/pdf-book/check_page_layout.py
+	@python3 scripts/pdf-book/check_inline_break.py
 	@python3 scripts/pdf-book/verify_pdf_copy.py
 
 book-pdf-clean:
