@@ -149,6 +149,25 @@ def main() -> int:
         "<h3>\nコメント</h3>\n",
     )
 
+    # 組版の強制改行は続き行の空き（cw-hang）込みで選ばれる。検査側が同じ
+    # 空き・字下げで区切りを再現しないと、組版が実際に入れた折れを
+    # unsafe-break と誤る。day24 の `{authFailed && …}` 行（字下げ14桁）は
+    # 空き16桁込みで「`>` の後」と「`ロ` の前」に折れる
+    auth_line = (
+        "              {authFailed && <Button onClick={() => "
+        "router.push('/login')}>ログイン画面へ</Button>}"
+    )
+    checked, total, found, _, _ = target.verify_document(
+        [block(auth_line, lang="tsx")],
+        "              {authFailed && <Button onClick={() =>\n"
+        "                router.push('/login')}>\n"
+        "                ログイン画面へ</Button>}\n",
+    )
+    if found or (checked, total) != (1, 1):
+        failures.append(
+            f"layout's own hang-aware breaks were rejected: {found}"
+        )
+
     # 実体参照を含む行: `&amp;` は1原子だが原稿では5文字。参照以降の折れ候補は
     # 文字オフセットで後ろへずれるため、原子番号のままだと安全な折れを unsafe-break と誤る。
     checked, total, found, _, _ = target.verify_document(
