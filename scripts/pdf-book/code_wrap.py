@@ -88,6 +88,15 @@ SHRINK_MIN_PCT = int(SHRINK_MIN_PT * 100 / PRE_FONT_PT) + 1  # ≒70
 SHRINK_CLASS = "cw-shrink"
 BLOCK_SHRINK_CLASS = "cw-block-shrink"
 FORCE_BREAK_CLASS = "cw-force"
+# 強制改行の直後に置く空き要素。幅は元の行の字下げ＋2桁で、続き行が
+# 字下げを失って左端に落ちる（字下げの浅い外側の行に見える）のを防ぐ。
+# 空白文字ではなく空要素にするのは、コピー時の文字列を変えないため。
+HANG_CLASS = "cw-hang"
+HANG_EXTRA_COLS = 2
+HANG_RE = re.compile(
+    r'<span class="' + HANG_CLASS + r'" style="width:(\d+(?:\.\d+)?)ch"></span>'
+)
+SHRINK_PCT_RE = re.compile(rf'{SHRINK_CLASS}[^>]*font-size:(\d+)%')
 BLOCK_UNIFORM_LANGS = {"env", "dotenv"}
 
 # 実改行を空白として解釈できることを確認した文法だけを対象にする。
@@ -609,6 +618,23 @@ def line_width(text_atoms: list[str]) -> float:
     return sum(char_width(atom_char(a)) for a in text_atoms)
 
 
+def _leading_indent(text_atoms: list[str]) -> tuple[int, int]:
+    """行頭の字下げを (空白原子の数, 表示桁数) で返す。
+
+    原子数は区切り候補の下限（字下げの中と直後を外す境界）に、
+    桁数は続き行の頭へ置く空きの幅に使う。
+    """
+    count = 0
+    cols = 0
+    for atom in text_atoms:
+        ch = atom_char(atom)
+        if ch not in {" ", "\t"}:
+            break
+        count += 1
+        cols += char_width(ch)
+    return count, cols
+
+
 def _without_block_comments(prefix: str) -> str:
     """同じ論理行の block comment を空白へ置き換え、直前の構文tokenを見えるようにする。"""
     return re.sub(r"/\*.*?\*/", " ", prefix).rstrip()
@@ -710,6 +736,12 @@ def forced_breaks(
     みなさない。`.` 後の候補は optional chain や数値リテラルを壊し得るため
     強制しない。テンプレート本文・通常文字列・行コメントは classify_block が
     strict にしているため対象外になる。
+
+    続き行の頭には字下げ＋2桁の空き（cw-hang）が乗る。1本目の区切りは
+    58桁以内で選び、2本目以降は「空き＋区切り」が58桁以内になるよう選ぶ。
+    字下げの中と直後は区切り候補にしない（1行目が空白だけの行になり、
+    コメント等の本体が左端へ出るため）。候補が尽きた行は呼び出し側の
+    縮小経路へ回る。
     """
     if lang not in FORCE_BREAK_LANGS:
         return set()
@@ -791,14 +823,22 @@ def forced_breaks(
             )
         )
     ]
+    # 字下げの中と直後は区切りにしない。直後で折ると1行目が空白だけに
+    # なり、続きの本体が字下げを失って左端に出る
+    indent_atoms, indent_cols = _leading_indent(text_atoms)
+    candidates = [index for index in candidates if index > indent_atoms]
+    # 続き行の頭に乗る空き（cw-hang の width）。2本目以降の区切りは
+    # 空き込みの幅で58桁と比べる
+    hang = indent_cols + HANG_EXTRA_COLS
     selected: set[int] = set()
     start = 0
-    while line_width(text_atoms[start:]) > SAFE_COLS:
+    while line_width(text_atoms[start:]) + (hang if start else 0) > SAFE_COLS:
+        reserve = hang if start else 0
         fitting = [
             index
             for index in candidates
             if index > start
-            and line_width(text_atoms[start:index]) <= SAFE_COLS
+            and line_width(text_atoms[start:index]) <= SAFE_COLS - reserve
         ]
         if not fitting:
             later = [index for index in candidates if index > start]
@@ -810,6 +850,45 @@ def forced_breaks(
         selected.add(boundary)
         start = boundary
     return selected
+
+
+def _shrink_pct(
+    text_atoms: list[str], hard_marks: set[int], hang: int
+) -> int:
+    """行を1行分の高さへ収める縮小率(%)。続き行は空き込みの実効幅で最大を取る。
+
+    空きを足さないと縮小率が実際より大きくなり、縮めた続き行が58桁を
+    超えて Vivliostyle に語中で折られる。
+    """
+    if not text_atoms:
+        return 100
+    bounds = [0] + sorted(hard_marks) + [len(text_atoms)]
+    max_row = max(
+        line_width(text_atoms[b1:b2]) + (hang if index else 0)
+        for index, (b1, b2) in enumerate(zip(bounds, bounds[1:]))
+    )
+    return min(100, int(SAFE_COLS * 100 / max_row))
+
+
+def wrap_layout(
+    text_atoms: list[str], states: list[str], lang: str
+) -> tuple[set[int], int, int]:
+    """1論理行の組版計画: (強制改行する原子index, 続き行の空き桁数, 縮小率%)。
+
+    _emit_line（組版）と verify_pdf_copy._allowed_breaks（写経検査）の
+    両方がここから区切りを取り、二箇所で選び方がずれないようにする。
+    空きは字下げ＋2桁。空きを足したことで縮小率が8pt相当を割る行は、
+    割らなくなるまで空きを1桁ずつ減らす。
+    """
+    marks = break_before(text_atoms, states, lang)
+    hard_marks = forced_breaks(text_atoms, states, marks, lang)
+    _, indent_cols = _leading_indent(text_atoms)
+    hang = indent_cols + HANG_EXTRA_COLS
+    pct = _shrink_pct(text_atoms, hard_marks, hang)
+    while hard_marks and hang > 0 and pct < SHRINK_MIN_PCT:
+        hang -= 1
+        pct = _shrink_pct(text_atoms, hard_marks, hang)
+    return hard_marks, hang, pct
 
 
 def _emit_line(
@@ -839,14 +918,7 @@ def _emit_line(
     width = line_width(text_atoms)
     if width <= SAFE_COLS:
         return "".join(body for _, body in chunks)
-    marks = break_before(text_atoms, states, lang)
-    hard_marks = forced_breaks(text_atoms, states, marks, lang)
-    hard_bounds = [0] + sorted(hard_marks) + [len(text_atoms)]
-    max_segment = max(
-        line_width(text_atoms[b1:b2])
-        for b1, b2 in zip(hard_bounds, hard_bounds[1:])
-    )
-    pct = min(100, int(SAFE_COLS * 100 / max_segment))
+    hard_marks, hang, pct = wrap_layout(text_atoms, states, lang)
     if pct < SHRINK_MIN_PCT and lang in JS_LANGS and all(
         state == "jsx-text" for state in states
     ):
@@ -884,12 +956,17 @@ def _emit_line(
             continue
         piece_atoms = atoms(body)
         forced_in_piece = insert_at[ci]
-        rebuilt = "".join(
-            (f'<br class="{FORCE_BREAK_CLASS}">' if ai in forced_in_piece else "")
-            + atom
-            for ai, atom in enumerate(piece_atoms)
-        )
-        out.append(rebuilt)
+        pieces: list[str] = []
+        for ai, atom in enumerate(piece_atoms):
+            if ai in forced_in_piece:
+                # 強制改行の直後に空きを置き、続き行を元の行の字下げより
+                # 2桁深い位置から始める
+                pieces.append(
+                    f'<br class="{FORCE_BREAK_CLASS}">'
+                    f'<span class="{HANG_CLASS}" style="width:{hang:g}ch"></span>'
+                )
+            pieces.append(atom)
+        out.append("".join(pieces))
     joined = "".join(out)
     if pct < 100:
         code_open = re.search(r"<code\b[^>]*>", joined, re.IGNORECASE)
@@ -1119,7 +1196,9 @@ def unsafe_runs(html_text: str) -> list[str]:
 
     Vivliostyle の break-all は <wbr> を無視して語中で折り得るため、<wbr> は
     境界として数えない。cw-force または元の論理改行だけを境界として扱う。
-    フォント縮小（cw-shrink）で1行に収めた行は意図的に無折れなので除外する。
+    続き行の先頭には cw-hang の空きが乗るため、区切りごとの幅に直前の
+    空きを足して58桁と比べる。cw-shrink で縮めた行は率を掛けて比べる
+    （掛けないと縮小で収めた行まで超過と誤る）。
     """
     bad: list[str] = []
     for match in PRE_RE.finditer(html_text):
@@ -1132,14 +1211,15 @@ def unsafe_runs(html_text: str) -> list[str]:
             rf'<br class="{FORCE_BREAK_CLASS}">', "\u0000", inner
         ).replace("<wbr>", "")
         for raw_line in inner.split("\n"):
-            if SHRINK_CLASS in raw_line:
-                continue
-            text = TAG_RE.sub("", raw_line)
-            text = text.replace("&amp;", "&").replace("&#x27;", "'")
-            for entity in ENTITY_RE.findall(text):
-                text = text.replace(entity, "x", 1)
-            for run in text.split("\u0000"):
-                if sum(char_width(c) for c in run) > SAFE_COLS:
-                    bad.append(text.strip()[:80])
+            pct_m = SHRINK_PCT_RE.search(raw_line)
+            pct = int(pct_m.group(1)) if pct_m else 100
+            line_text = html.unescape(TAG_RE.sub("", raw_line))
+            for run in raw_line.split("\u0000"):
+                hang_m = HANG_RE.match(run)
+                hang = float(hang_m.group(1)) if hang_m else 0
+                text = html.unescape(TAG_RE.sub("", run))
+                run_width = line_width(atoms(text))
+                if (hang + run_width) * pct / 100 > SAFE_COLS:
+                    bad.append(line_text.strip()[:80])
                     break
     return bad
