@@ -531,7 +531,8 @@ git status --short
 ```bash
 git add README.md
 git add package.json package-lock.json
-git add tsconfig.json next.config.ts postcss.config.mjs biome.json
+git add tsconfig.json next.config.ts
+git add postcss.config.mjs biome.json
 git add prisma prisma.config.ts
 git add public src
 git add docker-compose.yml
@@ -539,7 +540,8 @@ git add .node-version
 git add -f .env.example
 git status --short
 git ls-files package.json package-lock.json
-git ls-files tsconfig.json next.config.ts postcss.config.mjs biome.json
+git ls-files tsconfig.json next.config.ts
+git ls-files postcss.config.mjs biome.json
 git ls-files prisma prisma.config.ts public src
 git ls-files docker-compose.yml .node-version .env.example
 ```
