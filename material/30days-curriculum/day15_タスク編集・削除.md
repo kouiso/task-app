@@ -926,9 +926,9 @@ const handleCreate = () => {
 **実装**:
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* TaskCardにハンドラーを接続 */}
 <TaskCard
+  // filepath: src/app/task/page.tsx
+  // TaskCardにハンドラーを接続
   key={task.id}
   id={task.id}
   title={task.title}
