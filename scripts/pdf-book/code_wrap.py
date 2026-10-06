@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import html
 import re
-import unicodedata
+import struct
+from pathlib import Path
 
 # 実測の折れ桁は65。それより短い行は触らない。
 # 強制境界間の上限もこれで検査する。余裕はフォントの個体差ぶん。
@@ -93,7 +94,7 @@ FORCE_BREAK_CLASS = "cw-force"
 HANG_CLASS = "cw-hang"
 HANG_EXTRA_COLS = 2
 HANG_RE = re.compile(
-    r'<span class="' + HANG_CLASS + r'" style="width:(\d+)ch"></span>'
+    r'<span class="' + HANG_CLASS + r'" style="width:(\d+(?:\.\d+)?)ch"></span>'
 )
 SHRINK_PCT_RE = re.compile(rf'{SHRINK_CLASS}[^>]*font-size:(\d+)%')
 BLOCK_UNIFORM_LANGS = {"env", "dotenv"}
@@ -108,9 +109,156 @@ FORCE_OUT_LANGS = JS_LANGS | {
 }
 
 
-def char_width(char: str) -> int:
-    """East Asian の W/F を2桁、その他を1桁として数える。"""
-    return 2 if unicodedata.east_asian_width(char) in ("W", "F") else 1
+# ── 1字の幅を実フォントの送り幅で数える ──────────────────────
+#
+# コードの字は book.css の --vs--monospace-font-family の順（JetBrains Mono →
+# BIZ UDPGothic → Noto Emoji → DejaVu Sans）で描かれる。字幅を「全角2桁・
+# 半角1桁」で数えると、実際は漢字が約1.67桁・かなが約1.5桁・括弧が約0.8桁の
+# ところを全部2桁と読み、収まる行まで縮小していた。描画側と同じ書体の送り幅で
+# 数えるため、前の2書体の TTF を読む。実体は build_pdf_book.py の FONT_SOURCES
+# と同じ node_modules のファイルを指す（FONT_SOURCES 側を変えたらここも追従する）。
+# pdf-book の Python は標準ライブラリだけで動く方針なので、TTF の読み取りは
+# struct で必要な4表（cmap・head・hhea・hmtx）だけを行う。
+REPO_ROOT = Path(__file__).resolve().parents[2]
+_CODE_FONT_FILES = (
+    REPO_ROOT / "node_modules" / "@expo-google-fonts" / "jetbrains-mono"
+        / "400Regular" / "JetBrainsMono_400Regular.ttf",
+    REPO_ROOT / "node_modules" / "@expo-google-fonts" / "biz-udpgothic"
+        / "400Regular" / "BIZUDPGothic_400Regular.ttf",
+)
+# 桁の単位は JetBrains Mono の送り幅 0.6em（等幅書体の1字ぶん）。
+_MONO_ADVANCE_EM = 0.6
+
+
+def _sfnt_tables(data: bytes) -> dict[str, bytes]:
+    """TTF の表ディレクトリを読み、表名→表のバイト列の辞書を返す。"""
+    table_count = struct.unpack_from(">H", data, 4)[0]
+    tables: dict[str, bytes] = {}
+    for i in range(table_count):
+        tag, _checksum, offset, length = struct.unpack_from(
+            ">4sIII", data, 12 + i * 16
+        )
+        tables[tag.decode("latin-1")] = data[offset : offset + length]
+    return tables
+
+
+def _cmap_format4(subtable: bytes) -> dict[int, int]:
+    """format 4（BMP 用の区間写像）から 字コード→グリフ番号 の辞書を返す。"""
+    seg_count = struct.unpack_from(">H", subtable, 6)[0] // 2
+    end_at = 14
+    end_codes = struct.unpack_from(f">{seg_count}H", subtable, end_at)
+    start_at = end_at + 2 * seg_count + 2  # reservedPad を跨ぐ
+    start_codes = struct.unpack_from(f">{seg_count}H", subtable, start_at)
+    delta_at = start_at + 2 * seg_count
+    deltas = struct.unpack_from(f">{seg_count}h", subtable, delta_at)
+    offset_at = delta_at + 2 * seg_count
+    range_offsets = struct.unpack_from(f">{seg_count}H", subtable, offset_at)
+    mapping: dict[int, int] = {}
+    for i in range(seg_count):
+        start, end = start_codes[i], end_codes[i]
+        if start > end or start == 0xFFFF:
+            continue  # 末尾の番兵区間（0xFFFF→0xFFFF）
+        delta, range_offset = deltas[i], range_offsets[i]
+        for code in range(start, end + 1):
+            if range_offset == 0:
+                mapping[code] = (code + delta) & 0xFFFF
+                continue
+            # idRangeOffset は「この uint16 の位置」を基点にした相対オフセット
+            glyph_at = offset_at + 2 * i + range_offset + 2 * (code - start)
+            if glyph_at + 2 > len(subtable):
+                continue
+            glyph = struct.unpack_from(">H", subtable, glyph_at)[0]
+            mapping[code] = (glyph + delta) & 0xFFFF if glyph else 0
+    return mapping
+
+
+def _cmap_format12(subtable: bytes) -> dict[int, int]:
+    """format 12（全 plane の連続グループ写像）から 字コード→グリフ番号 を返す。"""
+    group_count = struct.unpack_from(">I", subtable, 12)[0]
+    mapping: dict[int, int] = {}
+    offset = 16
+    for _ in range(group_count):
+        start, end, first_glyph = struct.unpack_from(">III", subtable, offset)
+        offset += 12
+        if start > end:
+            continue
+        for code in range(start, end + 1):
+            mapping[code] = first_glyph + code - start
+    return mapping
+
+
+def _cmap_lookup_table(cmap: bytes) -> dict[int, int]:
+    """cmap 表の全サブテーブルを1つの辞書へまとめる。"""
+    count = struct.unpack_from(">H", cmap, 2)[0]
+    mapping: dict[int, int] = {}
+    format12: dict[int, int] = {}
+    for i in range(count):
+        _platform, _encoding, offset = struct.unpack_from(">HHI", cmap, 4 + i * 8)
+        sub_format = struct.unpack_from(">H", cmap, offset)[0]
+        if sub_format == 4:
+            mapping.update(_cmap_format4(cmap[offset:]))
+        elif sub_format == 12:
+            format12.update(_cmap_format12(cmap[offset:]))
+    # format 12 は BMP 外（絵文字等）も届く。重なった BMP の字は同じ番号を指す
+    # のが普通なので、format 4 の写像を format 12 で上書きして合流させる
+    mapping.update(format12)
+    return mapping
+
+
+class _FontMetrics:
+    """TTF1本ぶんの 字コード→送り幅（em） の引き当て。"""
+
+    def __init__(self, path: Path) -> None:
+        data = path.read_bytes()
+        tables = _sfnt_tables(data)
+        self.units_per_em = struct.unpack_from(">H", tables["head"], 18)[0]
+        metric_count = struct.unpack_from(">H", tables["hhea"], 34)[0]
+        hmtx = tables["hmtx"]
+        self.advances = [
+            record[0]
+            for record in struct.iter_unpack(">Hh", hmtx[: 4 * metric_count])
+        ]
+        self.mapping = _cmap_lookup_table(tables["cmap"])
+
+    def advance_em(self, code: int) -> float | None:
+        """その字の送り幅を em で返す。書体が字を持たなければ None。"""
+        glyph = self.mapping.get(code, 0)
+        if glyph == 0:
+            return None
+        # グリフ番号が numberOfHMetrics を超える字は最後の送り幅を使う決まり
+        if glyph < len(self.advances):
+            advance = self.advances[glyph]
+        else:
+            advance = self.advances[-1] if self.advances else 0
+        return advance / self.units_per_em
+
+
+_font_metrics: list[_FontMetrics] | None = None
+
+
+def _code_fonts() -> list[_FontMetrics]:
+    global _font_metrics
+    if _font_metrics is None:
+        _font_metrics = [_FontMetrics(path) for path in _CODE_FONT_FILES]
+    return _font_metrics
+
+
+def char_width(char: str) -> float:
+    """1字の表示桁。実際に描く等幅書体の送り幅を JetBrains Mono の1桁で数える。
+
+    JetBrains Mono → BIZ UDPGothic の順に字を引き、見つかった書体の
+    「送り幅 ÷ unitsPerEm ÷ 0.6」を桁とする。どちらにも無い字（絵文字など）は
+    2桁と数える。Noto Emoji と DejaVu Sans は woff2 のため標準ライブラリでは
+    読めないが、1em は約1.67桁なので 2桁は多めに見積もる側（縮めすぎない側）。
+    """
+    if len(char) != 1:
+        return sum(char_width(part) for part in char)
+    code = ord(char)
+    for font in _code_fonts():
+        advance = font.advance_em(code)
+        if advance is not None:
+            return advance / _MONO_ADVANCE_EM
+    return 2.0
 
 
 def atoms(text: str) -> list[str]:
@@ -466,7 +614,7 @@ def break_before(
     return marks
 
 
-def line_width(text_atoms: list[str]) -> int:
+def line_width(text_atoms: list[str]) -> float:
     return sum(char_width(atom_char(a)) for a in text_atoms)
 
 
@@ -815,7 +963,7 @@ def _emit_line(
                 # 2桁深い位置から始める
                 pieces.append(
                     f'<br class="{FORCE_BREAK_CLASS}">'
-                    f'<span class="{HANG_CLASS}" style="width:{hang}ch"></span>'
+                    f'<span class="{HANG_CLASS}" style="width:{hang:g}ch"></span>'
                 )
             pieces.append(atom)
         out.append("".join(pieces))
@@ -972,6 +1120,77 @@ def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str
     return PRE_RE.sub(repl, html_text)
 
 
+# ── filepath 見出しをコード枠の外へ出す ──────────────────────
+#
+# コード枠の1行目にある `// filepath: …` のような行は、どのファイルへの
+# 書き込みかを示す見出しであってコードではない。`//` や `#` の行コメントは
+# 途中で改行するとコピーした後半がコードとして読まれて壊れるため、長い
+# filepath 行は行ごと小さな字に縮んでいた。組版ではこの行を pre の直前へ
+# <p class="code-filepath"> として出し、縮小とコピー照合の対象から外す。
+FILEPATH_LABEL_CLASS = "code-filepath"
+_FILEPATH_LINE_RE = re.compile(
+    r"^[ \t]*(//|#|/\*|\{/\*)[ \t]*filepath:[ \t]*(.*?)[ \t]*$"
+)
+_FILEPATH_TAIL_RE = re.compile(r"[ \t]*\*/[ \t]*\}?[ \t]*$")
+
+
+def code_filepath_label(line: str) -> str | None:
+    """行が filepath 見出しなら、コメント記号と `filepath:` を外した表示文字を返す。
+
+    `// filepath:`・`# filepath:`・`/* filepath: … */`・`{/* filepath: … */}`
+    の4形を受ける。先頭の字下げは「ファイル内のどの位置の続きか」を示す
+    目印で、見出し化したときは要らないので落とす。
+    """
+    match = _FILEPATH_LINE_RE.match(line)
+    if not match:
+        return None
+    marker, body = match.group(1), match.group(2)
+    if marker in ("/*", "{/*"):
+        body = _FILEPATH_TAIL_RE.sub("", body)
+    return body
+
+
+def hoist_code_filepath(html_text: str) -> str:
+    """<pre> の1行目が filepath 見出しなら、pre の直前へ見出し段落として出す。
+
+    対象は1行目だけ。枠の途中にある filepath 行は「ファイル内のどの位置か」を
+    字下げで示す役割を持つので、コード枠の中に残す。
+    """
+    def repl(match: re.Match[str]) -> str:
+        block = match.group(0)
+        open_end = block.index(">") + 1
+        inner = block[open_end : -len("</pre>")]
+        first, newline, rest = inner.partition("\n")
+        if not newline:
+            return block
+        # 先頭の <code …> 開始タグは pre 側に残す。枠の中身だけを見て判定する
+        keep = ""
+        code_open = re.match(r"<code\b[^>]*>", first)
+        text_part = first
+        if code_open:
+            keep = code_open.group(0)
+            text_part = first[code_open.end() :]
+        label = code_filepath_label(html.unescape(TAG_RE.sub("", text_part)))
+        if label is None:
+            return block
+        # 1行目の span が行を跨いで閉じる形（Prism が複数行にまたぐ token を
+        # 出した場合）に断片を抜くとタグの対応が崩れる。その形だけは従来どおり
+        # 枠の中に残す
+        opens = len(re.findall(r"<span\b", text_part))
+        closes = text_part.count("</span>")
+        if opens != closes:
+            return block
+        return (
+            f'<p class="{FILEPATH_LABEL_CLASS}">{html.escape(label)}</p>\n'
+            + block[:open_end]
+            + keep
+            + rest
+            + "</pre>"
+        )
+
+    return PRE_RE.sub(repl, html_text)
+
+
 def unsafe_runs(html_text: str) -> list[str]:
     """強制改行間の表示桁が SAFE_COLS を超える論理行を返す（検査用）。
 
@@ -997,7 +1216,7 @@ def unsafe_runs(html_text: str) -> list[str]:
             line_text = html.unescape(TAG_RE.sub("", raw_line))
             for run in raw_line.split("\u0000"):
                 hang_m = HANG_RE.match(run)
-                hang = int(hang_m.group(1)) if hang_m else 0
+                hang = float(hang_m.group(1)) if hang_m else 0
                 text = html.unescape(TAG_RE.sub("", run))
                 run_width = line_width(atoms(text))
                 if (hang + run_width) * pct / 100 > SAFE_COLS:
