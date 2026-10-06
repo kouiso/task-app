@@ -119,6 +119,31 @@ FONT_SOURCES = (
 
 IMAGE_RE = re.compile(r"!\[[^\]]*\]\(\s*<?([^\s)>]+)>?")
 
+# issue #469: レビューで指摘された「まとまりの最後の1件だけが別のページに出る」3か所。
+# book.css の tbody tr の規則は通常の表にしか効かず、縦並びの表（.pdf-stacked-row）
+# 全体やすべての箇条書きへ同じ考えの規則を掛けると、#425 で直した割れ方が戻り
+# ページ数も増える（Day 09 で実測）ため、指摘のあった要素へ冊ごとに絞って当てる。
+# data-pdf-source-table は原稿中の表の順番（0始まり）で、restructure_tables が付ける。
+PAGE_BREAK_HINTS: dict[str, str] = {
+    # day19_コメント編集・削除.md
+    #   表3「comment.update の入力パラメータ」（縦並び2件。最後の content だけ次のページ）
+    #   表6「state の役割」（縦並び4件。最後の deleteCommentTargetId だけ次のページ）
+    "day19-3b9165": (
+        "section[data-pdf-source-table='3'] .pdf-stacked-row:last-child,\n"
+        "section[data-pdf-source-table='6'] .pdf-stacked-row:last-child {\n"
+        "  break-before: avoid;\n"
+        "}\n"
+    ),
+    # day29_ユーザー詳細・編集ページを作ろう.md
+    #   「今日のまとめ」のチェックリスト（この冊唯一の task list 5項目。
+    #   最後の1項目だけ次のページ）
+    "day29-a78910": (
+        "ul.contains-task-list li.task-list-item:last-child {\n"
+        "  break-before: avoid;\n"
+        "}\n"
+    ),
+}
+
 
 def _hash_file_stably(path: Path) -> tuple[str, int]:
     digest = hashlib.sha256()
@@ -1327,6 +1352,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     )
     per_book_css = WORK_DIR / f"{slug}.css"
     base_css = build_book_css(title) + "\n" + HEADING_INLINE_CSS
+    # 幅の計測も本番と同じ改ページ条件で行うため、冊ごとの指定は base_css 側に入れる
+    base_css += PAGE_BREAK_HINTS.get(slug, "")
     per_book_css.write_text(base_css + NOWRAP_CSS, encoding="utf-8")
 
     # Vivliostyle は行長だけで pre を割るため、空白があっても語の途中で折れる。
