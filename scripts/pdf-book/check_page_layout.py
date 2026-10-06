@@ -769,6 +769,50 @@ def find_stacked_split_problems(report: dict) -> list[str]:
     ]
 
 
+def find_single_row_fragment_problems(report: dict) -> list[str]:
+    """組版計測の記録から、ページを跨いだ表で本文1行だけの断片を挙げる。
+
+    表がページの境で分かれたとき、片側の断片に本文の行が1行しか載らないと、
+    読者は1行のためにページをめくり、めくった先で同じ見出し行を読み直す
+    （issue #469）。見出し行（TH）は断片ごとに繰り返されるので、行を数えるのは
+    TD のセルを持つ row_index だけ。境の途中に1行だけが残る断片も同じ形なので
+    先頭・末尾と分けずに拾う。
+    """
+    problems: list[str] = []
+    inventory = report.get('dom_audit', {}).get('table_inventory', {})
+    for table in inventory.get('tables', []):
+        fragments = table.get('fragments', [])
+        if len(fragments) < 2:
+            continue
+        for fragment in fragments:
+            page = fragment.get('page_index')
+            if not isinstance(page, int):
+                continue
+            cells = (fragment.get('geometry') or {}).get('cells') or []
+            body_rows = {
+                cell.get('row_index')
+                for cell in cells
+                if cell.get('tag') == 'TD'
+            }
+            body_rows.discard(None)
+            if len(body_rows) != 1:
+                continue
+            row = next(iter(body_rows))
+            label = next(
+                (
+                    (cell.get('text') or '').strip()
+                    for cell in cells
+                    if cell.get('tag') == 'TD' and cell.get('row_index') == row
+                ),
+                "",
+            )
+            problems.append(
+                f"表（{table.get('id')}）の断片が p{page + 1} に本文の行を"
+                f"1行だけ載せている（「{label[:20]}」の行）"
+            )
+    return problems
+
+
 def parse_image_table(output: str) -> list[dict[str, float | int | str]]:
     """`pdfimages -list` の表をほどく。
 
@@ -897,11 +941,19 @@ def render_problems(pdf: Path, total: int) -> list[str]:
         return problems
 
 
-def check_one(pdf: Path) -> list[str]:
-    """1冊の紙面を見て、見つかった問題を並べる。"""
+def check_one(pdf: Path) -> tuple[list[str], bool | None]:
+    """1冊の紙面を見て、見つかった問題を並べる。
+
+    返すのは (問題の一覧, 表の断片の計測記録の読み取り結果)。記録が無い冊を
+    「断片の問題0件」と見分けられないと、記録の欠けた冊がそのまま合格に
+    見えてしまうため、次の3つを区別して返す。
+      True  … 記録を読んで断片の検査まで流した
+      False … 検査には進んだが記録が無い
+      None  … 手前の検査で落ちて記録まで辿り着かなかった（読めたか不明）
+    """
     total = page_count(pdf)
     if total == 0:
-        return [f"{pdf.name}: ページが無い"]
+        return [f"{pdf.name}: ページが無い"], None
 
     problems = render_problems(pdf, total)
 
@@ -909,7 +961,7 @@ def check_one(pdf: Path) -> list[str]:
     if not lines:
         # 1行も取れないのは「文字が無い」のではなく取り出しに失敗した形。
         # 空のまま次の検査へ渡すと、全部が「問題なし」になって通ってしまう
-        return [f"{pdf.name}: 行の座標を1件も取り出せない"]
+        return [f"{pdf.name}: 行の座標を1件も取り出せない"], None
     problems += find_text_overflow(lines)
     problems += find_overlaps(lines)
     problems += find_collapsed_columns(lines)
@@ -918,13 +970,16 @@ def check_one(pdf: Path) -> list[str]:
     problems += find_url_wrap_problems(lines)
     problems += find_hyphen_break_problems(lines)
 
-    # 組んだ冊と同じ内容で残った計測記録があれば、縦並び表の行の分割も照合する。
+    # 組んだ冊と同じ内容で残った計測記録があれば、縦並び表の行の分割と
+    # 本文1行だけの表の断片を照合する。
     # 作業名は日本語を外した slug になるので、PDF の名前と同じ規則で復元する
     layout_reports = sorted(BUILD_DIR.glob(f"{work_slug(pdf.stem)}.inline-layout.json"),
                             key=lambda path: path.stat().st_mtime)
+    has_layout_record = bool(layout_reports)
     if layout_reports:
-        problems += find_stacked_split_problems(
-            json.loads(layout_reports[-1].read_text(encoding="utf-8")))
+        report = json.loads(layout_reports[-1].read_text(encoding="utf-8"))
+        problems += find_stacked_split_problems(report)
+        problems += find_single_row_fragment_problems(report)
 
     # 印付き段落がページ末尾に残っていないかを、組んだ冊と同じ内容の
     # 生成 HTML と照合する。作業名は PDF の名前と同じ規則で復元する
@@ -941,7 +996,7 @@ def check_one(pdf: Path) -> list[str]:
         run_tool(["pdfimages", "-list", str(pdf)])
     ))
 
-    return [f"{pdf.name}: {problem}" for problem in problems]
+    return [f"{pdf.name}: {problem}" for problem in problems], has_layout_record
 
 
 def main(argv: list[str]) -> int:
@@ -962,12 +1017,28 @@ def main(argv: list[str]) -> int:
         return 2
 
     problems: list[str] = []
+    books_with_record = 0
     for pdf in pdfs:
         try:
-            problems += check_one(pdf)
+            found, has_record = check_one(pdf)
+            problems += found
+            if has_record is True:
+                books_with_record += 1
+            elif has_record is False:
+                # 記録が無いと「1行だけの表断片」が見えない。0件ではなく
+                # 検査できていない冊として挙げる
+                problems.append(
+                    f"{pdf.name}: 表の断片の計測記録"
+                    f"（{work_slug(pdf.stem)}.inline-layout.json）が無い"
+                )
+            # None は手前の検査で既に落ちている冊。記録の有無は追わない
         except ToolFailure as failure:
             # 1冊が読めんかっただけで残りの検査ごと落とさない
             problems.append(f"{pdf.name}: 検査できない: {failure}")
+
+    # 「1行だけの表断片」の検査が実際に何冊ぶん動いたかを必ず残す。
+    # 記録が無い冊があっても、ここが36と一致すれば全冊を見たことになる
+    print(f"📏 表の断片の計測記録は {books_with_record}/{len(pdfs)} 冊から読めた")
 
     if problems:
         print(f"❌ {len(pdfs)}冊の紙面に {len(problems)} 件の問題があります")
