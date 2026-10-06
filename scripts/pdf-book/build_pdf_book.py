@@ -50,7 +50,11 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
 from breakable_code import mark_breakable_pres  # noqa: E402
-from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
+from code_wrap import (  # noqa: E402
+    hoist_code_filepath,
+    unsafe_runs,
+    wrap_code_in_html,
+)
 from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
 from table_latin import keep_block_tails, protect_prose_latin, protect_table_latin
 from table_structure import restructure_tables, measured_tables_to_stack  # noqa: E402
@@ -1395,6 +1399,10 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         # 縦展開で生まれた dd/dt も含めて、全ブロックの末尾を接着してから監査へ渡す
         structured = keep_block_tails(structured)
         annotated, manifest = annotate_inline_code(structured, slug)
+        # filepath 見出しは行コメントのため途中で改行できず、枠内に置くと
+        # 行ごと縮小される。コードではなく「この枠の書き込み先」を示す行なので、
+        # 折返し・縮小の処理へ渡す前に枠の外へ出す
+        annotated = hoist_code_filepath(annotated)
         residuals: list[str] = []
         markup = wrap_code_in_html(annotated, residuals)
         if residuals:

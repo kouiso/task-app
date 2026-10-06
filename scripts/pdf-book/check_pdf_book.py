@@ -36,7 +36,9 @@ from urllib.parse import unquote, urlsplit
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import code_blocks, iter_prose  # noqa: E402
+from code_wrap import code_filepath_label  # noqa: E402
 
 SRC_DIR = REPO_ROOT / "material" / "30days-curriculum"
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
@@ -223,12 +225,20 @@ def find_toc_problems(pages: list[str], total_pages: int,
 
 
 def long_code_lines(source: str) -> list[str]:
-    """原稿から、折り返しが要る長さのコード行を集める。"""
+    """原稿から、折り返しが要る長さのコード行を集める。
+
+    1行目の filepath 見出しは組版でコード枠の外へ出る。紙面にはコメント記号を
+    外した文字が出るため原稿行とは一致せず、欠落判定の対象から外す。
+    """
     lines: list[str] = []
     for lang, block in code_blocks(source):
         if lang in NON_TEXT_LANGS:
             continue
-        lines += [line for _, line in block if len(line) > LONG_CODE]
+        for index, (_lineno, line) in enumerate(block):
+            if index == 0 and code_filepath_label(line) is not None:
+                continue
+            if len(line) > LONG_CODE:
+                lines.append(line)
     return lines
 
 

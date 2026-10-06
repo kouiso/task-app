@@ -723,7 +723,8 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 ### After（プロが書くコード）
 
 ```tsx
-// app-layout.tsx から 'use client' を外す（Server Component に）
+// app-layout.tsx から 'use client' を外す
+// （Server Component に）
 // ログアウトボタンだけ別ファイルに分離して 'use client'
 ```
 
