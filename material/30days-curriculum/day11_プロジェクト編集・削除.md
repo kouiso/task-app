@@ -669,7 +669,8 @@ const updateMutation =
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 消した handleSubmit と同じ場所: Day 10 から書き換えた送信ハンドラー
+// 消した handleSubmit と同じ場所:
+// Day 10 から書き換えた送信ハンドラー
 const handleSubmit = (
   data: ProjectFormData
 ) => {

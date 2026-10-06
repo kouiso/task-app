@@ -219,6 +219,9 @@ def main() -> int:
     day30_text = (
         day30_candidates[0].read_text(encoding="utf-8") if len(day30_candidates) == 1 else ""
     )
+    # Day 30 のコマンドは行末 `\` で続き行へ割る書き方を使う。契約はコマンドが
+    # 1行で書かれていることを見ているので、照合前に継続行をつなぎ直す
+    day30_text = re.sub(r"[ \t]*\\\n[ \t]*", " ", day30_text)
     deployment_contract = {
         "source/scaffold seed byte parity": (
             REPO_ROOT / "src" / "command" / "seed.ts"
