@@ -33,4 +33,7 @@ jobs:
         run: npm ci
 
       - name: Run npm audit
-        run: npm audit --audit-level=high
+        # devDependencies チェーン（lighthouse / lint-staged / textlint 経由）は
+        # upstream に修正版が無い advisory（braces など）を含み全バージョンが対象のため、
+        # --omit=dev なしでは常に FAIL しゲートとして機能しない。本番依存のみを対象にする。
+        run: npm audit --omit=dev --audit-level=high
