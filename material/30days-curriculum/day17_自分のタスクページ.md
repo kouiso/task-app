@@ -842,7 +842,8 @@ Step 9・10 でハンドラーを本実装しますが先にJSXを書くため�
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 仮実装（Step 9 で handleEdit、Step 10 で handleDelete を本実装に置換する）
+// 仮実装（Step 9 で handleEdit、
+// Step 10 で handleDelete を本実装に置換する）
 const handleEdit = (taskId: string) => {
   void taskId;
 };
@@ -851,8 +852,7 @@ const handleDelete = (_taskId: string) => {};
 
 > `const` は同一スコープで再宣言できません。Step 9・10 では上の2つの仮関数を**削除してから**本実装を書いてください。
 
-**確認ポイント**:
-- `npm run dev` でTypeScript エラーが出ていない
+**確認ポイント**: `npm run dev` でTypeScript エラーが出ていないことを確認します。
 
 Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つのグループを順番に追加します。
 
@@ -965,7 +965,8 @@ import { taskToFormData }
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 編集ダイアログの状態管理（early return より前のhook定義ブロックに追加）
+// 編集ダイアログの状態管理
+// （early return より前のhook定義ブロックに追加）
 const [dialogOpen, setDialogOpen] =
   useState(false);
 const [editingTask, setEditingTask] =

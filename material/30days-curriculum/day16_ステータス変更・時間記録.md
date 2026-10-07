@@ -860,7 +860,8 @@ Reactは複数の要素を並べて返せないので
 
 ```typescript
 // filepath: src/app/task/page.tsx（const utils の直後に追加）
-// 時間記録の成功後に一覧を取り直す（useCallback は react から import）
+// 時間記録の成功後に一覧を取り直す
+// （useCallback は react から import）
 const handleTimeLogSuccess = useCallback(() => {
   void utils.task.getAll.invalidate();
 }, [utils.task.getAll]);
@@ -876,15 +877,27 @@ const handleTimeLogSuccess = useCallback(() => {
 
 なおこの関数を作っただけでは何も起きません。次のブロックで `TaskCard` へ渡してはじめてダイアログの `onSuccess?.()` がこの中身につながります。渡し忘れると `onSuccess` は `undefined` のままで記録は保存されるのに合計は古い値で止まります。
 
-次にDay 15 で置いた `<TaskCard>` に2つの props を足します。
+次にDay 15 で置いた `<TaskCard ... />` 全体を次のコードに置き換えます。既存の props は残します。作業時間の表示と記録後の再取得に使う2つを足します。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* Day 15 の <TaskCard> に2つの props を追加 */}
 <TaskCard
-  // ...Day 15 で渡した props...
+  // filepath: src/app/task/page.tsx
+  // Day 15 の TaskCard に作業時間の2つの props を追加
+  key={task.id}
+  id={task.id}
+  title={task.title}
+  description={task.description}
+  status={task.status}
+  priority={task.priority}
+  dueDate={task.dueDate}
+  assignee={task.assignee}
   timeSpentMinutes={task.timeSpentMinutes}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+  onClick={handleTaskClick}
   onTimeLogSuccess={handleTimeLogSuccess}
+  canEdit={canEditProject(task.projectId)}
+  canDelete={canDeleteProject(task.projectId)}
 />
 ```
 
@@ -1808,9 +1821,9 @@ export function TaskCard({
 **TaskCard へ渡す2つの props**:
 
 ```typescript
-                      {/* filepath: src/app/task/page.tsx */}
-                      {/* 完成版: TaskCard へ渡す2つの props */}
                       <TaskCard
+                        // filepath: src/app/task/page.tsx
+                        // 完成版: TaskCard へ渡す2つの props
                         key={task.id}
                         id={task.id}
                         title={task.title}

@@ -127,7 +127,8 @@ Day 13 で `getAll`、Day 14 で `create` を書きました。今日はそこ�
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// （permission の import に findTaskWithPermission を足した完成形）
+// （permission の import に
+// findTaskWithPermission を足した完成形）
 import {
   assertMemberPermission,
   findTaskWithPermission,
@@ -925,9 +926,9 @@ const handleCreate = () => {
 **実装**:
 
 ```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* TaskCardにハンドラーを接続 */}
 <TaskCard
+  // filepath: src/app/task/page.tsx
+  // TaskCardにハンドラーを接続
   key={task.id}
   id={task.id}
   title={task.title}

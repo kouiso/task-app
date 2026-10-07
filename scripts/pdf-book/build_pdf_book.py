@@ -50,8 +50,14 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
 from breakable_code import mark_breakable_pres  # noqa: E402
-from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
+from keep_next import mark_keep_next  # noqa: E402
+from code_wrap import (  # noqa: E402
+    hoist_code_filepath,
+    unsafe_runs,
+    wrap_code_in_html,
+)
 from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
+from inline_break import insert_wbr_before_code, split_long_inline_code  # noqa: E402
 from table_latin import keep_block_tails, protect_prose_latin, protect_table_latin
 from table_structure import restructure_tables, measured_tables_to_stack  # noqa: E402
 from inline_layout_css import (  # noqa: E402
@@ -118,6 +124,31 @@ FONT_SOURCES = (
 )
 
 IMAGE_RE = re.compile(r"!\[[^\]]*\]\(\s*<?([^\s)>]+)>?")
+
+# issue #469: レビューで指摘された「まとまりの最後の1件だけが別のページに出る」3か所。
+# book.css の tbody tr の規則は通常の表にしか効かず、縦並びの表（.pdf-stacked-row）
+# 全体やすべての箇条書きへ同じ考えの規則を掛けると、#425 で直した割れ方が戻り
+# ページ数も増える（Day 09 で実測）ため、指摘のあった要素へ冊ごとに絞って当てる。
+# data-pdf-source-table は原稿中の表の順番（0始まり）で、restructure_tables が付ける。
+PAGE_BREAK_HINTS: dict[str, str] = {
+    # day19_コメント編集・削除.md
+    #   表3「comment.update の入力パラメータ」（縦並び2件。最後の content だけ次のページ）
+    #   表6「state の役割」（縦並び4件。最後の deleteCommentTargetId だけ次のページ）
+    "day19-3b9165": (
+        "section[data-pdf-source-table='3'] .pdf-stacked-row:last-child,\n"
+        "section[data-pdf-source-table='6'] .pdf-stacked-row:last-child {\n"
+        "  break-before: avoid;\n"
+        "}\n"
+    ),
+    # day29_ユーザー詳細・編集ページを作ろう.md
+    #   「今日のまとめ」のチェックリスト（この冊唯一の task list 5項目。
+    #   最後の1項目だけ次のページ）
+    "day29-a78910": (
+        "ul.contains-task-list li.task-list-item:last-child {\n"
+        "  break-before: avoid;\n"
+        "}\n"
+    ),
+}
 
 
 def _hash_file_stably(path: Path) -> tuple[str, int]:
@@ -1327,6 +1358,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     )
     per_book_css = WORK_DIR / f"{slug}.css"
     base_css = build_book_css(title) + "\n" + HEADING_INLINE_CSS
+    # 幅の計測も本番と同じ改ページ条件で行うため、冊ごとの指定は base_css 側に入れる
+    base_css += PAGE_BREAK_HINTS.get(slug, "")
     per_book_css.write_text(base_css + NOWRAP_CSS, encoding="utf-8")
 
     # Vivliostyle は行長だけで pre を割るため、空白があっても語の途中で折れる。
@@ -1364,10 +1397,20 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         protected = protect_prose_latin(
             protect_table_latin(join_cjk_soft_breaks(converted.stdout))
         )
+        # 空白を含む長い行内コードを空白の位置で分けてから、前で改行できない字で
+        # 始まるコード（分けた後の先頭の片を含む）の直前へ <wbr> を置く。
+        # restructure_tables は一部の表のセルを dt/dd へ変えるため、
+        # 「表のセルか」で対象を分けるこの2つはその前に掛ける
+        protected = split_long_inline_code(protected)
+        protected = insert_wbr_before_code(protected)
         structured, table_structure = restructure_tables(protected, forced_tables)
         # 縦展開で生まれた dd/dt も含めて、全ブロックの末尾を接着してから監査へ渡す
         structured = keep_block_tails(structured)
         annotated, manifest = annotate_inline_code(structured, slug)
+        # filepath 見出しは行コメントのため途中で改行できず、枠内に置くと
+        # 行ごと縮小される。コードではなく「この枠の書き込み先」を示す行なので、
+        # 折返し・縮小の処理へ渡す前に枠の外へ出す
+        annotated = hoist_code_filepath(annotated)
         residuals: list[str] = []
         markup = wrap_code_in_html(annotated, residuals)
         if residuals:
@@ -1377,6 +1420,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             raise ValueError(f"コード行に折返し候補を作れません: {unsafe[0][:80]}")
         # 折返しが確定してから高さを数える。大きい塊だけ分割を許す
         markup = mark_breakable_pres(markup)
+        # 丸ごと送られる塊の直前にあるラベルや導入文に、次と同じページへ
+        # 置く印を付ける（issue #475）。脚注の番号付けより先に付ける
+        markup = mark_keep_next(markup)
         markup = number_external_link_footnotes(markup)
         validate_annotated_html(markup, manifest)
         html_doc.write_text(markup, encoding="utf-8")

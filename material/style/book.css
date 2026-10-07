@@ -164,6 +164,15 @@ code {
 
    実際に減らせたのは上の --vs--pre-font-size だけ。 */
 
+/* 強制改行（br.cw-force）の直後に置く空き要素。続き行の頭に
+   元の行の字下げ＋2桁ぶんの幅を持たせ、続き行が字下げを失って
+   左端に落ちる（外側の行に見えて入れ子を読み違える）のを防ぐ。
+   空の span は inline のままでは幅を持たないので inline-block にする。
+   空白文字で字下げしないのは、コピー時の文字列を変えないため。 */
+.cw-hang {
+  display: inline-block;
+}
+
 /* 囲み記事。blockquote は教材に812回出る */
 blockquote {
   border: 1px solid var(--book-rule);
@@ -212,6 +221,41 @@ table {
 .pdf-table-caption {
   font-weight: bold;
   break-after: avoid;
+}
+
+/* ラベルや導入文が指すコード・箇条書き・図・表は break-inside: avoid で
+   丸ごと次ページへ送られる。そのままだと導入文だけが前のページの末尾に
+   残り、読者はページをめくるまで何を写すのか分からない（issue #475）。
+   見出しにテーマが掛けている指定と同じ「次と同じページに置く」を、
+   生成器が印を付けた段落へ掛ける。
+   break-inside: avoid は段落自身の途中改ページも防ぐ。付ける段落は
+   正規化して 90 字以下（3〜4行）しかないので、必ずページに収まる。
+   これが無いと2行に割れた段落の先頭行だけがページ末尾に取り残されて、
+   ラベルの断片が残るのと同じ見た目になる。 */
+.pdf-keep-next {
+  break-after: avoid;
+  break-inside: avoid;
+}
+/* theme-base は figure に display: flex を掛ける。flex コンテナは
+   ページ分割で「割れない箱」として別経路で置かれるため、手前の段落の
+   break-after: avoid も figure 側の break-before: avoid も効かず、
+   36冊の実測で3か所の取り残しが残った（Day 03/06/08 の図の直前の段落）。
+   直前が印付き段落の figure だけ display: block に倒して改ページ規則が
+   通る箱に戻す。flex の column + align-items: center と同じ見え方に
+   なるよう、画像は margin で中央寄せ、figcaption は display: table +
+   margin で中身の幅に縮めて中央に置く。 */
+.pdf-keep-next + figure {
+  display: block;
+  text-align: center;
+}
+.pdf-keep-next + figure img {
+  display: block;
+  margin-inline: auto;
+}
+.pdf-keep-next + figure figcaption {
+  display: table;
+  margin-inline: auto;
+  text-align: start;
 }
 
 td,
@@ -269,6 +313,18 @@ tr {
   break-inside: avoid;
 }
 
+/* 行単位の分割を許しても、表の端には1行だけ残させない。
+   1行目だけがページ末尾に残ると、読者は1行のためにページをめくり、
+   めくった先で同じ見出し行を読み直すことになる（issue #469）。
+   1行目と2行目の間・最後から2行目と最後の行の間では切らせないため、
+   2行・3行の表はこの規則でページをまたがなくなる。 */
+tbody tr:first-child {
+  break-after: avoid;
+}
+tbody tr:last-child {
+  break-before: avoid;
+}
+
 /* ── コードブロックの改ページ ─────────────────────────────
    この教材は写経が前提なので、1つのコードブロックがページの境で切れると
    読者は打ちながら紙をめくることになる。実測では day13 p12 の
@@ -294,6 +350,19 @@ pre {
 }
 pre.pdf-breakable {
   break-inside: auto;
+}
+
+/* filepath 行はコード枠の1行目から枠の直前へ出す（build_pdf_book.py の
+   hoist_code_filepath）。中身はコメント記号を外したファイル名で、コードでは
+   なく「この枠がどのファイルか」の見出し。等幅で pre と同じ級数にし、
+   折返せないコメント行として縮まないよう枠の外に置く。長いファイル名は
+   ふつうに折り返す。break-after: avoid で直後のコード枠と同じページに留める。 */
+.code-filepath {
+  font-family: var(--vs--monospace-font-family);
+  font-size: var(--vs--pre-font-size);
+  color: var(--book-muted);
+  margin-block-end: 0.25em;
+  break-after: avoid;
 }
 
 /* ── 図 ─────────────────────────────────────────────────
@@ -424,4 +493,28 @@ figure img[src$=".png"] {
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
+}
+
+/* #472: 空白を含む長い行内コードを語ごとの code に分けたとき、
+   間の空白だけが素の本文になると背景が切れて2つのコードに見える。
+   空白は code と同じ背景・書体の span に入れ、繋がる側の端は
+   余白と角丸を取って1本のコードに見せる。
+   組版前に scripts/pdf-book/inline_break.py が挿入する。 */
+:not(pre) > code.pdf-code-more {
+  padding-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+:not(pre) > code.pdf-code-cont {
+  padding-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+:not(pre) > .pdf-code-gap {
+  color: var(--vs-theme--inline-code-color-body);
+  background-color: var(--vs-theme--inline-code-color-bg);
+  /* 角丸は上の :not(pre) > code と同じ 2px（変数ではなく直接指定に合わせる） */
+  border-radius: 2px;
+  /* 空白も等幅でないと分けた片どうしの字面がずれる */
+  font-family: var(--vs--monospace-font-family);
 }

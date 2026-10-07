@@ -1483,6 +1483,8 @@ npm run dev
 
 #### 編集ページのデータフロー
 
+図は `getCurrentUser` から下へ読みます。取得したデータをフォームへ入れる処理から保存後に戻る処理までを順に並べています。
+
 ```mermaid
 flowchart TB
     A[getCurrentUser] --> B[useEffect]

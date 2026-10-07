@@ -138,6 +138,8 @@ TAIL_SPAN_OPEN = '<span class="pdf-tail">'
 # 「1つのコードを一意に測定できません」で止まる。中に含む親要素も同じ。
 AUDITED_TAIL_TAGS = {'code'}
 AUDITED_TAIL_CLASSES = {'pdf-table-latin', 'pdf-tail'}
+# 行内要素の終了タグを読み飛ばして、ブロックの終了タグだけを探すための形
+_END_TAG_RE = re.compile(r'</([A-Za-z][\w:-]*)[^>]*>')
 
 
 class OrphanTailGlue(HTMLParser):
@@ -164,8 +166,11 @@ class OrphanTailGlue(HTMLParser):
         row, col = self.getpos()
         return self.starts[row - 1] + col
 
-    def flush(self):
-        if self.pending:
+    def flush(self, block_end: bool = False):
+        # 末尾4字の接着はブロック要素の終了タグの直前だけで行う。
+        # 行内要素のタグで区切られた途中の文に包むと、直後に来る行内コードが
+        # 「折れない塊の一部」のように次の行へ送られ、手前の行が短く残る
+        if block_end and self.pending:
             start, end = self.pending[0][0], self.pending[-1][1]
             skipped = any(
                 tag in EXCLUDED_TAGS or 'pdf-table-latin' in classes
@@ -174,6 +179,40 @@ class OrphanTailGlue(HTMLParser):
             if not skipped:
                 self.glue_tail(start, end)
         self.pending = []
+
+    def _followed_by_block_end(self) -> bool:
+        """今読んでいる行内終了タグの直後がブロックの終わりかを原文で確かめる。
+
+        `<a>…を呼び出す</a></li>` のようにブロックが行内要素で終わる形では、
+        行内要素の内側の末尾がブロックの末尾そのもの（#425 の目次の1文字残り
+        を防いでいた位置）。間に空白・コメント・行内終了タグだけを挟んで
+        ブロック終了タグが来るなら、末尾を包んでよい。
+        """
+        cursor = self.markup.find('>', self.position()) + 1
+        if cursor <= 0:
+            return False
+        while cursor < len(self.markup):
+            character = self.markup[cursor]
+            if character.isspace():
+                cursor += 1
+                continue
+            if character != '<':
+                return False
+            if self.markup.startswith('<!--', cursor):
+                close = self.markup.find('-->', cursor + 4)
+                if close < 0:
+                    return False
+                cursor = close + 3
+                continue
+            match = _END_TAG_RE.match(self.markup, cursor)
+            if match is None:
+                # 開始タグ・宣言・処理命令など、文が続くものが来た
+                return False
+            if match.group(1).lower() in INLINE_TAIL_SIBLINGS:
+                cursor = match.end()
+                continue
+            return True
+        return False
 
     def glue_tail(self, start: int, end: int):
         # 末尾の空白は接着対象に含めない（閉じタグ直前の改行・インデントで誤判定しないため）
@@ -232,7 +271,12 @@ class OrphanTailGlue(HTMLParser):
             self.position(), tag, self._audited(tag, classes)]
 
     def handle_endtag(self, tag):
-        self.flush()
+        # 行内要素の終了タグは「途中の文」が普通だが、直後にブロック終了タグが
+        # 続くならその要素の内側の末尾がブロックの末尾になる
+        self.flush(
+            block_end=tag not in INLINE_TAIL_SIBLINGS
+            or self._followed_by_block_end()
+        )
         if not self.stack or self.stack[-1][0] != tag:
             raise ValueError('語尾保護前のHTMLタグが対応していません')
         _, classes, audited = self.stack.pop()
