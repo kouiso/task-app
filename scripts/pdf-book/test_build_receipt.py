@@ -400,6 +400,13 @@ class BuildReceiptTest(unittest.TestCase):
 
     def test_prepare_release_toolchain_validates_exact_resolved_packages(self):
         destination = self.root / "resolved-toolchain"
+        toolchain_src = self.root / "toolchain-src"
+        toolchain_src.mkdir()
+        (toolchain_src / "package.json").write_text(
+            json.dumps({"dependencies": {"@vivliostyle/cli": "11.1.0"}}),
+            encoding="utf-8",
+        )
+        (toolchain_src / "package-lock.json").write_text("{}", encoding="utf-8")
         commands = []
 
         def install(command, **kwargs):
@@ -432,16 +439,18 @@ class BuildReceiptTest(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text("fixture", encoding="utf-8")
                 (bins / name).symlink_to(relative_target)
-            (staging / "package-lock.json").write_text("{}", encoding="utf-8")
             return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
 
         with (
             patch.object(build_pdf_book, "TOOLCHAIN_DIR", destination),
+            patch.object(build_pdf_book, "TOOLCHAIN_SRC_DIR", toolchain_src),
             patch.object(build_pdf_book.subprocess, "run", side_effect=install),
         ):
             resolved = build_pdf_book.prepare_release_toolchain({})
 
-        self.assertEqual(commands[0][:2], ["npm", "install"])
+        # npm install は推移的依存を実行ごとに解決し直すので #501 の再現不可
+        # ハングを生む。lockfile 厳守の npm ci であることを固定する。
+        self.assertEqual(commands[0][:2], ["npm", "ci"])
         self.assertEqual(resolved["root"], str(destination))
         self.assertTrue(Path(resolved["vivliostyle_bin"]).is_file())
         self.assertTrue(Path(resolved["theme_path"]).is_dir())

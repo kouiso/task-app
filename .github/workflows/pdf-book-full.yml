@@ -95,8 +95,23 @@ jobs:
 
       - name: 全36冊を組む
         run: |
-          # npx 経由のレジストリ解決はリトライを持たんので、1回だけやり直す
-          make book-pdf || { echo "::warning::組版に失敗したので1回だけやり直す"; make book-pdf; }
+          # 組版ログをファイルにも残す。runner 上だけで止まる組版（#501）は
+          # job が殺されると job ログごと消えるので、artifact で回収できる
+          # 形にする（下の upload-artifact が dist/.pdf-book-build/logs を拾う）
+          make book-pdf 2>&1 | tee dist/.pdf-book-build.log || \
+            { echo "::warning::組版に失敗したので1回だけやり直す"; make book-pdf 2>&1 | tee -a dist/.pdf-book-build.log; }
+
+      - name: 組版ログを残す
+        # 失敗しても落ちたままの中間成果を拾う。固まった冊の特定と、
+        # どの外部プロセスが返らんかったかの切り分けに使う（#501）
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pdf-book-build-logs
+          path: |
+            dist/.pdf-book-build/logs/
+            dist/.pdf-book-build.log
+          if-no-files-found: ignore
 
       - name: 出力を検査
         run: make book-pdf-verify

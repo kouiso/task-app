@@ -79,6 +79,10 @@ OUT_DIR = REPO_ROOT / "dist" / "pdf"
 WORK_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 RELEASE_RECEIPT = REPO_ROOT / "dist" / "release-build-receipt.json"
 TOOLCHAIN_DIR = REPO_ROOT / "dist" / ".pdf-book-toolchain"
+# package-lock.json まで置いた正本。npm install で都度解決すると推移的依存が
+# 実行ごとに浮動し、runner 上だけ再現する組版ハングを追えなくなる（#501）。
+# npm ci は lockfile 厳守なので、解決結果は全実行で同一になる。
+TOOLCHAIN_SRC_DIR = Path(__file__).resolve().parent / "toolchain"
 EXPECTED_RELEASE_BOOKS = 36
 
 # 組版と作図の道具は devDependencies に入れず、バージョンを固定して npx で都度呼ぶ。
@@ -233,6 +237,33 @@ def resolve_browser_executable(path: Path) -> tuple[Path, Path | None]:
     return target, path
 
 
+def _append_build_log(slug: str, heading: str, body: str) -> None:
+    """冊ごとの組版ログを WORK_DIR/logs に残す。
+
+    runner 上だけで止まる組版は job のログしか証跡が無いので、子プロセスが
+    出した出力を artifact 経由で取り出せる形にする（#501）。
+    """
+    try:
+        log_dir = WORK_DIR / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with (log_dir / f"{slug}.log").open("a", encoding="utf-8") as handle:
+            handle.write(f"=== {heading} ===\n{body[-8000:]}\n")
+    except OSError:
+        # ログが書けなくても組版自体は進める。本筋の問題報告を上書きせん
+        pass
+
+
+def _expired_output(error: subprocess.TimeoutExpired) -> str:
+    """TimeoutExpired が持つ途中出力を取り出す（capture 中の部分出力）。"""
+    parts = []
+    for chunk in (error.output, error.stderr):
+        if isinstance(chunk, bytes):
+            parts.append(chunk.decode("utf-8", errors="replace"))
+        elif chunk:
+            parts.append(chunk)
+    return "\n".join(parts)
+
+
 def _hash_tree_stably(root: Path) -> dict:
     """実行時に解決した npm パッケージ群の名前・リンク先・実バイトを固定する。"""
     if not root.is_dir():
@@ -278,15 +309,16 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
     identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
-    dependencies = {identifier.rsplit("@", 1)[0]: identifier.rsplit("@", 1)[1]
-                    for identifier in identifiers}
-    (staging / "package.json").write_text(
-        json.dumps({"private": True, "dependencies": dependencies}) + "\n",
-        encoding="utf-8",
-    )
+    # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
+    # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+    for name in ("package.json", "package-lock.json"):
+        source = TOOLCHAIN_SRC_DIR / name
+        if not source.exists():
+            raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
+        shutil.copyfile(source, staging / name)
     try:
         result = subprocess.run(
-            ["npm", "install", "--ignore-scripts", "--package-lock=true"],
+            ["npm", "ci", "--ignore-scripts"],
             cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
         )
         if result.returncode != 0:
@@ -1563,6 +1595,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             ) + "\n", encoding="utf-8"
         )
     except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        if isinstance(error, subprocess.TimeoutExpired):
+            _append_build_log(slug, f"measurement timeout {BUILD_TIMEOUT}s", _expired_output(error))
         problems.append(f"{path.name}: 行内コードの実測または縮小候補の計算に失敗: {error}")
         return problems
     finally:
@@ -1575,14 +1609,19 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             command, capture_output=True, text=True, cwd=WORK_DIR, env=audit_env,
             timeout=BUILD_TIMEOUT,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as error:
         # 例外のまま抜けると、ここまでに集めた他の冊の問題ごと落ちる
+        _append_build_log(slug, f"vivliostyle timeout {BUILD_TIMEOUT}s", _expired_output(error))
         problems.append(f"{path.name}: 組版が{BUILD_TIMEOUT}秒を超えました")
         return problems
     except OSError as error:
         problems.append(f"{path.name}: 組版コマンドを起動できません: {error}")
         return problems
     if result.returncode != 0 or not output.exists() or output.stat().st_size <= 0:
+        _append_build_log(
+            slug, f"vivliostyle exit {result.returncode}",
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+        )
         problems.append(
             f"{path.name}: 組版に失敗: {(result.stderr or result.stdout).strip()[-300:]}"
         )
@@ -1729,7 +1768,9 @@ def main(argv: list[str]) -> int:
 
     problems: list[str] = []
     built_outputs: list[dict] = []
-    for path in targets:
+    for index, path in enumerate(targets, start=1):
+        # 完了時だけ出すと、固まった冊が分からないまま job timeout まで沈黙する（#501）。
+        print(f"[{index}/{len(targets)}] 組み始め: {path.name}", flush=True)
         book_problems = build_one(path, browser, env, link_map)
         problems += book_problems
         if full_release_build and not book_problems:
