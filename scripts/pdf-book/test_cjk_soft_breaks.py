@@ -49,6 +49,23 @@ class JoinCjkSoftBreaksTest(unittest.TestCase):
             join('<p>\n  漢字\n  漢字\n</p>'),
             '<p>\n  漢字漢字\n</p>')
 
+    def test_removes_break_after_period_or_comma(self):
+        self.assertEqual(join('<p>配置します。\n<code>x</code> で</p>'),
+                         '<p>配置します。<code>x</code> で</p>')
+        self.assertEqual(join('<p>開けるよう、\nDay 08 の</p>'),
+                         '<p>開けるよう、Day 08 の</p>')
+
+    def test_removes_break_before_digit(self):
+        self.assertEqual(join('<p>ハンドラーと\n3つの</p>'),
+                         '<p>ハンドラーと3つの</p>')
+
+    def test_keeps_break_before_code_digit_or_spaced_number(self):
+        # 行内コードの数字と後ろに空白を打った数字は、書き手の空白を残す
+        self.assertEqual(join('<p>漢字\n<code>3000</code> 番</p>'),
+                         '<p>漢字\n<code>3000</code> 番</p>')
+        self.assertEqual(join('<p>対象に\n1 つの関数</p>'),
+                         '<p>対象に\n1 つの関数</p>')
+
     def test_keeps_break_next_to_latin(self):
         # 英語側は単語の区切りとして空白が要るので消さない
         self.assertEqual(join('<p>漢字\nabc</p>'), '<p>漢字\nabc</p>')

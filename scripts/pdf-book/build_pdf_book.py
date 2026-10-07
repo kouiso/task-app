@@ -785,13 +785,37 @@ class CjkSoftBreaks(HTMLParser):
         self._record(len(name) + 3)
 
 
+def _joins_soft_break(markup: str, visible: list[tuple[str, int]],
+                      run_start: int, index: int) -> bool:
+    """改行を詰めるか。詰めないと Chromium が半角空白として印字する。"""
+    left, right = visible[run_start - 1][0], visible[index][0]
+    if _is_cjk(left) and _is_cjk(right):
+        return True
+    # 本文は「。」「、」の後を詰めて書く。右が英字・行内コード・数字でも詰める
+    if left in "。、":
+        return True
+    # 和文の後の半角数字も詰める（「3つ」）
+    # 行内コードの数字と「1 つ」のように後ろへ空白を打った数字は残す
+    if _is_cjk(left) and right.isascii() and right.isdigit():
+        if "<code" in markup[visible[run_start - 1][1] + 1:visible[index][1]]:
+            return False
+        end = index
+        while end < len(visible) and visible[end][0].isascii() \
+                and visible[end][0].isdigit():
+            end += 1
+        return end >= len(visible) or visible[end][0] not in " \t\n\r"
+    return False
+
+
 def join_cjk_soft_breaks(markup: str) -> str:
     """テキストが流れる領域で CJK 同士に挟まれた改行を取り除く。
 
     vfm は段落中のソフト改行をそのまま改行文字として残し、組版の Chromium が
     それを U+0020（半角スペース）へ置き換える。「仕上げたら\nブラウザで」が
     「仕上げたら ブラウザで」と文が分断されるので、組版へ渡す前に詰める。
-    CJK でない文字が片側にある改行は残す（英語側は空白が要る）。
+    和文どうし・「。」「、」の後・和文の後の数字の前の改行を消す。
+    行内コードの数字と後ろに空白を打った数字の前は残す
+    （英語側は単語の区切りとして空白が要る）。
     """
     parser = CjkSoftBreaks(markup)
     parser.feed(markup)
@@ -816,7 +840,7 @@ def join_cjk_soft_breaks(markup: str) -> str:
             # 段落の先頭・末尾にある整形用の空白も対象外
             if run_start == 0 or index >= len(visible):
                 continue
-            if _is_cjk(visible[run_start - 1][0]) and _is_cjk(visible[index][0]):
+            if _joins_soft_break(markup, visible, run_start, index):
                 # タグを挟む空白かたまりはバイト列では連続していない。
                 # タグを消さないよう、空白の文字位置だけを1つずつ消す
                 edits.extend((pos, pos + 1) for _, pos in run)
