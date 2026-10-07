@@ -11,7 +11,12 @@ interface ErrorShape {
 }
 
 const mocks = vi.hoisted(() => ({
-  deleteOptions: null as null | { onError?: (error: ErrorShape) => void },
+  createOptions: null as null | { onError?: (error: ErrorShape) => void },
+  updateOptions: null as null | { onError?: (error: ErrorShape) => void },
+  deleteOptions: null as null | {
+    onSuccess?: () => void;
+    onError?: (error: ErrorShape) => void;
+  },
   deleteTask: vi.fn(),
   invalidateTasks: vi.fn(),
   replace: vi.fn(),
@@ -109,10 +114,23 @@ vi.mock('@/trpc/react', () => ({
           isLoading: false,
         }),
       },
-      create: { useMutation: () => ({ mutate: vi.fn() }) },
-      update: { useMutation: () => ({ mutate: vi.fn() }) },
-      delete: {
+      create: {
         useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
+          mocks.createOptions = options;
+          return { mutate: vi.fn() };
+        },
+      },
+      update: {
+        useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
+          mocks.updateOptions = options;
+          return { mutate: vi.fn() };
+        },
+      },
+      delete: {
+        useMutation: (options: {
+          onSuccess?: () => void;
+          onError?: (error: ErrorShape) => void;
+        }) => {
           mocks.deleteOptions = options;
           return { mutate: mocks.deleteTask, isPending: false };
         },
@@ -126,6 +144,8 @@ vi.mock('@/trpc/react', () => ({
 }));
 
 beforeEach(() => {
+  mocks.createOptions = null;
+  mocks.updateOptions = null;
   mocks.deleteOptions = null;
   mocks.deleteTask.mockReset();
   mocks.invalidateTasks.mockReset();
@@ -161,5 +181,59 @@ describe('タスク削除の失敗表示', () => {
       '応答を確認できませんでした。一覧を更新して結果を確認してください。',
     );
     expect(mocks.invalidateTasks).toHaveBeenCalledOnce();
+  });
+
+  it('401 の失敗は通常の失敗と区別して再ログインが必要と伝える', () => {
+    render(<TaskPage />);
+
+    act(() => {
+      mocks.deleteOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' });
+    });
+
+    expect(mocks.toastError).toHaveBeenCalledWith('ログインの有効期限が切れました');
+  });
+
+  it('削除が成功するまで確認ダイアログは開いたままにする', () => {
+    render(<TaskPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'タスクを削除' }));
+    fireEvent.click(screen.getByRole('button', { name: '削除を確定' }));
+    expect(mocks.deleteTask).toHaveBeenCalledWith({ id: 'task-1' });
+
+    // ダイアログを閉じるのは成功の確認後。失敗時に消えたように見せない
+    act(() => {
+      mocks.deleteOptions?.onSuccess?.();
+    });
+    expect(screen.queryByRole('button', { name: '削除を確定' })).not.toBeInTheDocument();
+  });
+});
+
+describe('タスク保存の失敗表示', () => {
+  it('作成・更新の失敗は失敗トーストを出す', () => {
+    render(<TaskPage />);
+
+    act(() => {
+      mocks.createOptions?.onError?.({ data: { httpStatus: 500 }, message: '作成エラー' });
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith('作成エラー');
+
+    act(() => {
+      mocks.updateOptions?.onError?.({ data: { httpStatus: 500 }, message: '更新エラー' });
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith('更新エラー');
+  });
+
+  it('401 の失敗は通常の失敗と区別して再ログインが必要と伝える', () => {
+    render(<TaskPage />);
+
+    act(() => {
+      mocks.createOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' });
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith('ログインの有効期限が切れました');
+
+    act(() => {
+      mocks.updateOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' });
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith('ログインの有効期限が切れました');
   });
 });
