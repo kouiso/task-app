@@ -264,7 +264,7 @@ def main() -> int:
             dependencies.get("next") == "^15.5.24"
             and dev_dependencies.get("postcss") == "8.5.23"
             and overrides.get("postcss") == "8.5.23"
-            and overrides.get("sharp") == "0.35.4"
+            and overrides.get("sharp") == "0.35.5"
         ),
         "scaffold production dependency audit overrides": (
             all(
@@ -273,7 +273,7 @@ def main() -> int:
                     "next@15.5.24",
                     "create-next-app@15.5.24",
                     'overrides.postcss="8.5.23"',
-                    'overrides.sharp="0.35.4"',
+                    'overrides.sharp="0.35.5"',
                 )
             )
             and 0

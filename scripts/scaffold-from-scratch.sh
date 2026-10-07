@@ -222,7 +222,7 @@ configure_security_overrides() {
   # install より先に設定し、package-lock.json と node_modules の両方へ反映させる。
   npm pkg set \
     overrides.postcss="8.5.23" \
-    overrides.sharp="0.35.4"
+    overrides.sharp="0.35.5"
 }
 
 install_dependencies() {
