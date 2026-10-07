@@ -199,6 +199,10 @@ export default function MyTasksPage() {
       // 応答そのものが届かなかった場合、サーバー側では処理が
       // 成功している可能性がある。「失敗しました」と断定せず、
       // 一覧を再取得して実際の結果を確認できるようにする。
+      if (isAuthError(error)) {
+        toast.error('ログインの有効期限が切れました');
+        return;
+      }
       if (isUnknownResult(error)) {
         toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
         void utils.task.getAll.invalidate();
@@ -215,6 +219,10 @@ export default function MyTasksPage() {
       setDeleteTargetId(null);
     },
     onError: (error) => {
+      if (isAuthError(error)) {
+        toast.error('ログインの有効期限が切れました');
+        return;
+      }
       if (isUnknownResult(error)) {
         toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
         void utils.task.getAll.invalidate();

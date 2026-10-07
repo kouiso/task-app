@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SearchPage from './page';
@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   searchQuery: vi.fn(),
   refetch: vi.fn(),
+  deleteTask: vi.fn(),
+  deleteOptions: null as null | {
+    onSuccess?: () => void;
+    onError?: (error: { data?: { httpStatus?: number }; message?: string }) => void;
+  },
+  toastError: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -21,9 +27,32 @@ vi.mock('@/component/layout/app-layout', () => ({
   AppLayout: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('@/component/task/task-card', () => ({
-  TaskCard: ({ title }: { title: string }) => <p>{title}</p>,
+  TaskCard: ({
+    id,
+    title,
+    onDelete,
+  }: {
+    id: string;
+    title: string;
+    onDelete: (id: string) => void;
+  }) => (
+    <div>
+      <p>{title}</p>
+      <button type="button" onClick={() => onDelete(id)}>
+        タスクを削除
+      </button>
+    </div>
+  ),
 }));
-vi.mock('@/component/ui/delete-confirm-dialog', () => ({ DeleteConfirmDialog: () => null }));
+vi.mock('@/component/ui/delete-confirm-dialog', () => ({
+  DeleteConfirmDialog: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
+    open ? (
+      <button type="button" onClick={onConfirm}>
+        削除を確定
+      </button>
+    ) : null,
+}));
+vi.mock('react-hot-toast', () => ({ default: { error: mocks.toastError } }));
 vi.mock('@/component/ui/loading-spinner', () => ({
   PageLoadingSpinner: () => <p>読み込み中</p>,
 }));
@@ -37,7 +66,17 @@ vi.mock('@/trpc/react', () => ({
       search: { useQuery: mocks.searchQuery },
     },
     project: { getAll: { useQuery: () => ({ data: [] }) } },
-    task: { delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) } },
+    task: {
+      delete: {
+        useMutation: (options: {
+          onSuccess?: () => void;
+          onError?: (error: { data?: { httpStatus?: number }; message?: string }) => void;
+        }) => {
+          mocks.deleteOptions = options;
+          return { mutate: mocks.deleteTask, isPending: false };
+        },
+      },
+    },
   },
 }));
 
@@ -71,6 +110,9 @@ beforeEach(() => {
   mocks.push.mockReset();
   mocks.replace.mockReset();
   mocks.refetch.mockReset();
+  mocks.deleteTask.mockReset();
+  mocks.deleteOptions = null;
+  mocks.toastError.mockReset();
   mocks.searchQuery.mockReset().mockReturnValue(queryResult());
 });
 
@@ -142,5 +184,47 @@ describe('キーワード入力', () => {
         scroll: false,
       }),
     );
+  });
+});
+
+describe('タスク削除', () => {
+  const taskResult = {
+    id: 'task-1',
+    title: '削除対象のタスク',
+    description: null,
+    status: 'TODO',
+    priority: 'MEDIUM',
+    dueDate: null,
+    assignee: null,
+    projectId: 'project-1',
+  };
+
+  it('削除が成功するまで確認ダイアログは開いたままにする', () => {
+    mocks.searchQuery.mockReturnValue(
+      queryResult(undefined, { totalCount: 1, projects: [], tasks: [taskResult] as never[] }),
+    );
+    render(<SearchPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'タスクを削除' }));
+    fireEvent.click(screen.getByRole('button', { name: '削除を確定' }));
+    expect(mocks.deleteTask).toHaveBeenCalledWith({ id: 'task-1' });
+
+    // 失敗時に「消えたように見える」のを防ぐため、成功するまで閉じない
+    expect(screen.getByRole('button', { name: '削除を確定' })).toBeInTheDocument();
+
+    act(() => mocks.deleteOptions?.onSuccess?.());
+    expect(screen.queryByRole('button', { name: '削除を確定' })).not.toBeInTheDocument();
+  });
+
+  it('削除の失敗は失敗トーストを出し、401は再ログインを促す', () => {
+    render(<SearchPage />);
+
+    act(() => mocks.deleteOptions?.onError?.({ data: { httpStatus: 500 }, message: '削除エラー' }));
+    expect(mocks.toastError).toHaveBeenCalledWith('削除エラー');
+
+    act(() =>
+      mocks.deleteOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' }),
+    );
+    expect(mocks.toastError).toHaveBeenCalledWith('ログインの有効期限が切れました');
   });
 });

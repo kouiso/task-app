@@ -30,7 +30,7 @@ import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/c
 import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
-import { isUnknownResult } from '@/lib/query-error';
+import { isAuthError, isUnknownResult } from '@/lib/query-error';
 import {
   buildTaskFiltersQueryString,
   parseTaskFiltersFromSearchParams,
@@ -181,12 +181,31 @@ function TaskPageContent() {
     }
   }, [isEditLink, pathname, router, searchParams]);
 
+  // タスク操作の失敗を利用者へ伝える。401 は再ログインが必要なので通常の
+  // 失敗と区別し、応答自体が届かなかった場合は結果不明として断定せず
+  // 再取得して実際の状態を表示する
+  const notifyMutationError = (error: { message?: string }, fallback: string) => {
+    if (isAuthError(error)) {
+      toast.error('ログインの有効期限が切れました');
+      return;
+    }
+    if (isUnknownResult(error)) {
+      toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
+      void utils.task.getAll.invalidate();
+      return;
+    }
+    toast.error(error.message || fallback);
+  };
+
   // ダイアログを閉じる判断は TaskDialog 側が持つ（送信後に下書きが
   // 書き足されていた場合は閉じずに警告を出すため）
   const createMutation = api.task.create.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
     },
+    // 失敗時はダイアログを閉じず入力を残す。閉じてしまうと利用者は
+    // 成功したのか失敗したのか分からず、再入力を強いられる。
+    onError: (error) => notifyMutationError(error, 'タスクの作成に失敗しました'),
   });
 
   const updateMutation = api.task.update.useMutation({
@@ -196,20 +215,16 @@ function TaskPageContent() {
         utils.task.getById.invalidate({ id: selectedTask });
       }
     },
+    onError: (error) => notifyMutationError(error, 'タスクの更新に失敗しました'),
   });
 
   const deleteMutation = api.task.delete.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
     },
-    onError: (error) => {
-      if (isUnknownResult(error)) {
-        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
-        void utils.task.getAll.invalidate();
-        return;
-      }
-      toast.error(error.message || 'タスクの削除に失敗しました');
-    },
+    onError: (error) => notifyMutationError(error, 'タスクの削除に失敗しました'),
   });
 
   const bulkCompleteMutation = api.task.bulkComplete.useMutation({
@@ -223,7 +238,9 @@ function TaskPageContent() {
     onSuccess: () => {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
+      setBulkDeleteDialogOpen(false);
     },
+    onError: (error) => notifyMutationError(error, 'タスクの一括削除に失敗しました'),
   });
 
   const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
