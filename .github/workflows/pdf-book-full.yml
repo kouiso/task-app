@@ -99,13 +99,14 @@ jobs:
 
       - name: 全36冊を組む
         env:
-          # build_pdf_book.py が冊別ログを書く先。WORK_DIR(dist/)は再試行の
-          # rmtree で消えるので、job 中ずっと残る RUNNER_TEMP 配下に出す
+          # build_pdf_book.py が冊別ログを書く先。WORK_DIR(dist/.pdf-book-build)は
+          # 再試行の rmtree で消えるので、job 中ずっと残る RUNNER_TEMP 配下に出す
           PDF_BOOK_BUILD_LOG_DIR: ${{ runner.temp }}/pdf-book-logs
         run: |
-          # 組版ログをファイルにも残す。runner 上だけで止まる組版（#501）は
-          # job が殺されると job ログごと消えるので、artifact で回収できる
-          # 形にする（下の upload-artifact がこのディレクトリを拾う）
+          # 組版ログをファイルにも残す。#501 の正体は組版時間が当時の 60 分
+          # 上限に届いたタイムアウト。job ログ自体は残るが、どの冊のどの外部
+          # プロセスが返らんかったかは job ログだけでは分からんので、冊別ログを
+          # artifact で回収できる形にする（下の upload-artifact がこの dir を拾う）
           # ログ dir は tee がファイルを開くより先に作る。無いままだと tee が
           # ENOENT で exit 1 して pipefail 経由で組版成功も失敗扱いになる
           mkdir -p "$PDF_BOOK_BUILD_LOG_DIR"
