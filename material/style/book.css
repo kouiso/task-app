@@ -124,6 +124,13 @@ h6 {
   color: var(--book-head);
 }
 
+/* 見出しの直下の行内コードは帯を消して見出し色にそろえる（issue #474 直し1）。
+   等幅の書体は残す。 */
+h1 > code, h2 > code, h3 > code, h4 > code, h5 > code, h6 > code {
+  --vs-prism--background: transparent;
+  --vs-prism--color: var(--book-head);
+}
+
 h1 {
   border-bottom: 1px solid var(--book-head);
   padding-bottom: 0.4em;
@@ -176,6 +183,10 @@ code {
 /* 囲み記事。blockquote は教材に812回出る */
 blockquote {
   border: 1px solid var(--book-rule);
+  /* 1ページに収まる囲みは割らずに次のページへ送り、それより長い囲みは
+     割れた両側に四辺の枠を付ける（issue #474 直し2）。 */
+  break-inside: avoid;
+  box-decoration-break: clone;
 }
 
 /* ── 表 ─────────────────────────────────────────────────
@@ -476,6 +487,48 @@ figure img[src$=".png"] {
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::after {
     content: "*" attr(data-pdf-footnote);
     white-space: nowrap;
+  }
+}
+
+/* 箇条書きの中のリンクは脚注がそのページに入らないとき、呼び出しの行ごと
+   次のページへ送る（issue #474 直し4）。段落の中のリンクへ当てると
+   Day 04 の組版が止まるので箇条書きに限る。 */
+@media print {
+  li > a[data-pdf-footnote][href^="http"]::before {
+    footnote-policy: line;
+  }
+}
+
+/* 見出しの中のリンクは脚注にせず、表示用のURLを見出しの下の1行に出す
+   （issue #474 直し4）。 */
+@media print {
+  :not(.footnote) > a[data-pdf-heading-url][href^="http"] {
+    counter-increment: none;
+  }
+  :not(.footnote) > a[data-pdf-heading-url][href^="http"]::before {
+    content: none;
+    float: none;
+  }
+  :not(.footnote) > a[data-pdf-heading-url][href^="http"]::after {
+    content: attr(data-pdf-heading-url);
+    display: block;
+    color: var(--book-muted);
+    font-size: 0.6em;
+    font-weight: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
+/* リンクの文字列がURLそのものなら脚注にしない（issue #474 直し5）。 */
+@media print {
+  :not(.footnote) > a[data-pdf-bare-url][href^="http"] {
+    counter-increment: none;
+  }
+  :not(.footnote) > a[data-pdf-bare-url][href^="http"]::before,
+  :not(.footnote) > a[data-pdf-bare-url][href^="http"]::after {
+    content: none;
+    float: none;
   }
 }
 
