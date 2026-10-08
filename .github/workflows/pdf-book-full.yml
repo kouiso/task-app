@@ -31,7 +31,9 @@ jobs:
     name: 教材PDF全36冊検査
     # 判定が描画環境に依存するので、PRゲートと同じイメージに固定する
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # PRゲート(pdf-book-gate.yml)と同じ上限に揃える。同じ36冊を組む仕事で
+    # 実測約45分。60分だと組版そのもの＋再試行1回で必ず超える
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -98,6 +100,10 @@ jobs:
           # 組版ログをファイルにも残す。runner 上だけで止まる組版（#501）は
           # job が殺されると job ログごと消えるので、artifact で回収できる
           # 形にする（下の upload-artifact が dist/.pdf-book-build/logs を拾う）
+          # dist/ は .gitignore 対象で checkout 直後は存在せん。tee が ENOENT で
+          # exit 1 すると pipefail で組版成功も失敗扱いになり36冊を二度組むので、
+          # パイプの前に作る。再試行は tee -a で初回分のログも残す
+          mkdir -p dist
           make book-pdf 2>&1 | tee dist/.pdf-book-build.log || \
             { echo "::warning::組版に失敗したので1回だけやり直す"; make book-pdf 2>&1 | tee -a dist/.pdf-book-build.log; }
 

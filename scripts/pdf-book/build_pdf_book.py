@@ -248,9 +248,10 @@ def _append_build_log(slug: str, heading: str, body: str) -> None:
         log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / f"{slug}.log").open("a", encoding="utf-8") as handle:
             handle.write(f"=== {heading} ===\n{body[-8000:]}\n")
-    except OSError:
-        # ログが書けなくても組版自体は進める。本筋の問題報告を上書きせん
-        pass
+    except OSError as error:
+        # ログが書けなくても組版自体は進める。本筋の問題報告を上書きせんが、
+        # 失敗した事実だけは stderr に残す
+        print(f"組版ログを書けない: {error}", file=sys.stderr)
 
 
 def _expired_output(error: subprocess.TimeoutExpired) -> str:
