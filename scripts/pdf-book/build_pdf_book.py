@@ -244,7 +244,11 @@ def _append_build_log(slug: str, heading: str, body: str) -> None:
     出した出力を artifact 経由で取り出せる形にする（#501）。
     """
     try:
-        log_dir = WORK_DIR / "logs"
+        # CI は WORK_DIR 外（RUNNER_TEMP 配下）を env で差してくる。WORK_DIR は
+        # prepare_work_dir の rmtree で再試行ごとに消えるので、外に出さんと
+        # 一番要る初回分のログが残らん（#501）。
+        log_dir = Path(os.environ["PDF_BOOK_BUILD_LOG_DIR"]) \
+            if os.environ.get("PDF_BOOK_BUILD_LOG_DIR") else WORK_DIR / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / f"{slug}.log").open("a", encoding="utf-8") as handle:
             handle.write(f"=== {heading} ===\n{body[-8000:]}\n")
@@ -312,12 +316,14 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
     # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
     # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
-    for name in ("package.json", "package-lock.json"):
-        source = TOOLCHAIN_SRC_DIR / name
-        if not source.exists():
-            raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
-        shutil.copyfile(source, staging / name)
     try:
+        # コピーも try の内側に入れる。ここで raise すると except の rmtree が
+        # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
+        for name in ("package.json", "package-lock.json"):
+            source = TOOLCHAIN_SRC_DIR / name
+            if not source.exists():
+                raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
+            shutil.copyfile(source, staging / name)
         result = subprocess.run(
             ["npm", "ci", "--ignore-scripts"],
             cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
