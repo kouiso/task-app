@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "dependencies": {
+    "@vivliostyle/cli": "11.1.0",
+    "@vivliostyle/vfm": "2.7.0",
+    "@vivliostyle/theme-techbook": "2.0.2",
+    "@mermaid-js/mermaid-cli": "11.16.0"
+  }
+}

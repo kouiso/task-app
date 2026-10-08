@@ -400,11 +400,24 @@ class BuildReceiptTest(unittest.TestCase):
 
     def test_prepare_release_toolchain_validates_exact_resolved_packages(self):
         destination = self.root / "resolved-toolchain"
+        toolchain_src = self.root / "toolchain-src"
+        toolchain_src.mkdir()
+        (toolchain_src / "package.json").write_text(
+            json.dumps({"dependencies": {"@vivliostyle/cli": "11.1.0"}}),
+            encoding="utf-8",
+        )
+        (toolchain_src / "package-lock.json").write_text("{}", encoding="utf-8")
         commands = []
 
         def install(command, **kwargs):
             commands.append(command)
             staging = Path(kwargs["cwd"])
+            # package-lock.json が staging へコピーされていることを拘束する。
+            # これが無いと npm ci は lockfile を読めず推移的依存が浮動する（#501）
+            self.assertTrue(
+                (staging / "package-lock.json").is_file(),
+                "package-lock.json が staging へコピーされていない",
+            )
             modules = staging / "node_modules"
             for identifier in (
                 build_pdf_book.VIVLIOSTYLE_CLI,
@@ -432,16 +445,18 @@ class BuildReceiptTest(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text("fixture", encoding="utf-8")
                 (bins / name).symlink_to(relative_target)
-            (staging / "package-lock.json").write_text("{}", encoding="utf-8")
             return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
 
         with (
             patch.object(build_pdf_book, "TOOLCHAIN_DIR", destination),
+            patch.object(build_pdf_book, "TOOLCHAIN_SRC_DIR", toolchain_src),
             patch.object(build_pdf_book.subprocess, "run", side_effect=install),
         ):
             resolved = build_pdf_book.prepare_release_toolchain({})
 
-        self.assertEqual(commands[0][:2], ["npm", "install"])
+        # npm install は推移的依存を実行ごとに解決し直すので #501 の再現不可
+        # ハングを生む。lockfile 厳守の npm ci であることを固定する。
+        self.assertEqual(commands[0][:2], ["npm", "ci"])
         self.assertEqual(resolved["root"], str(destination))
         self.assertTrue(Path(resolved["vivliostyle_bin"]).is_file())
         self.assertTrue(Path(resolved["theme_path"]).is_dir())
@@ -594,6 +609,33 @@ class BuildReceiptTest(unittest.TestCase):
         snapshot = {"aggregate_sha256": "a" * 64}
         self.assertEqual(self.run_main([snapshot, snapshot], after_build=replace_first), 1)
         self.assertFalse(self.receipt.exists())
+
+
+    def test_append_build_log_writes_to_env_dir_when_set(self):
+        override = self.root / "runner-temp-logs"
+        work = self.root / "work"
+        work.mkdir()
+        with (
+            patch.object(build_pdf_book, "WORK_DIR", work),
+            patch.dict(
+                build_pdf_book.os.environ,
+                {"PDF_BOOK_BUILD_LOG_DIR": str(override)},
+            ),
+        ):
+            build_pdf_book._append_build_log("day01", "heading", "body")
+        self.assertTrue((override / "day01.log").is_file())
+        self.assertFalse((work / "logs").exists())
+
+    def test_append_build_log_defaults_under_work_dir(self):
+        work = self.root / "work"
+        work.mkdir()
+        with (
+            patch.object(build_pdf_book, "WORK_DIR", work),
+            patch.dict(build_pdf_book.os.environ, {}, clear=False),
+        ):
+            build_pdf_book.os.environ.pop("PDF_BOOK_BUILD_LOG_DIR", None)
+            build_pdf_book._append_build_log("day02", "heading", "body")
+        self.assertTrue((work / "logs" / "day02.log").is_file())
 
 
 if __name__ == "__main__":

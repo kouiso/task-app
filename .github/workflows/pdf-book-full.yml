@@ -1,10 +1,10 @@
 # 全36冊を組んで検査する。Issue #385。
 #
 # PRゲート(pdf-book-gate.yml)は、36冊全部の見た目が変わりうる変更を見つけたら
-# その場で全冊組む。こっちの役目は、どのパス指定でも表せんドリフトを拾うこと:
-#  - npx で都度取る @vivliostyle/cli / @mermaid-js/mermaid-cli の推移的依存
-#  - runner イメージ側の poppler / Chromium の更新
-# どちらもリポジトリの差分に現れんので、週次で組んで初めて分かる。
+# その場で全冊組む。こっちの役目は、どのパス指定でも表せんドリフトを拾うこと。
+# ツールチェーン自体は scripts/pdf-book/toolchain/package-lock.json で固定済みなので、
+# 残る外部変動は runner イメージ側の poppler / Chromium / OS 更新だけ。
+# リポジトリの差分に現れんので、週次で組んで初めて分かる。
 name: 教材PDF全36冊検査
 
 on:
@@ -31,7 +31,11 @@ jobs:
     name: 教材PDF全36冊検査
     # 判定が描画環境に依存するので、PRゲートと同じイメージに固定する
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # PRゲート(pdf-book-gate.yml)と同じ上限に揃える。全36冊の組版はゲートの
+    # 各runで実測59〜67分かかるので、60分では1回分さえ収まらない。90分で
+    # 組版本体＋余裕20分ほどが確保できる。再試行に入れるのは序盤で落ちた
+    # 場合（npm ci の取得失敗など）だけで、組版途中の失敗を二度組む余裕はない
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -94,9 +98,35 @@ jobs:
           echo "Chromium: $browser"
 
       - name: 全36冊を組む
+        env:
+          # build_pdf_book.py が冊別ログを書く先。WORK_DIR(dist/.pdf-book-build)は
+          # 再試行の rmtree で消えるので、job 中ずっと残る RUNNER_TEMP 配下に出す
+          PDF_BOOK_BUILD_LOG_DIR: ${{ runner.temp }}/pdf-book-logs
         run: |
-          # npx 経由のレジストリ解決はリトライを持たんので、1回だけやり直す
-          make book-pdf || { echo "::warning::組版に失敗したので1回だけやり直す"; make book-pdf; }
+          # 組版ログをファイルにも残す。#501 の正体は組版時間が当時の 60 分
+          # 上限に届いたタイムアウト。job ログ自体は残るが、どの冊のどの外部
+          # プロセスが返らんかったかは job ログだけでは分からんので、冊別ログを
+          # artifact で回収できる形にする（下の upload-artifact がこの dir を拾う）
+          # ログ dir は tee がファイルを開くより先に作る。無いままだと tee が
+          # ENOENT で exit 1 して pipefail 経由で組版成功も失敗扱いになる
+          mkdir -p "$PDF_BOOK_BUILD_LOG_DIR"
+          make book-pdf 2>&1 | tee "$PDF_BOOK_BUILD_LOG_DIR/.pdf-book-build.log" || \
+            { echo "::warning::組版に失敗したので1回だけやり直す"; make book-pdf 2>&1 | tee -a "$PDF_BOOK_BUILD_LOG_DIR/.pdf-book-build.log"; }
+
+      - name: 組版ログを残す
+        # 失敗しても落ちたままの中間成果を拾う。固まった冊の特定と、
+        # どの外部プロセスが返らんかったかの切り分けに使う（#501）
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pdf-book-build-logs
+          # v4.6.2 の既定は隠し名のファイルを拾わん（include-hidden-files: false）。
+          # tee 側のログは `.pdf-book-build.log` とドット始まりなので明示して拾う
+          include-hidden-files: true
+          path: ${{ runner.temp }}/pdf-book-logs/
+          # 拾う対象が 0 件でも黙って緑になると、artifact を取りこぼしたことに
+          # 気付かん。snapshot-gate.yml と同じく warn にして空振りを見えるようにする
+          if-no-files-found: warn
 
       - name: 出力を検査
         run: make book-pdf-verify
