@@ -139,6 +139,18 @@ ORPHAN_PREV_MIN_RATIO = 0.9
 # それ以外の位置（語の途中）で切れていたら、表示URLの接着が効いていない証拠。
 URL_BREAK_ALLOWED_AFTER = "/?&="
 FOOTNOTE_URL_START = re.compile(r"^\s*\d+\.\s*https?://")
+
+
+def generated_footnote_line(raw_text: str) -> bool:
+    """生成器が出した脚注の行なら True。
+
+    生成器（build_pdf_book.py の footnote_display_url）は脚注の表示URLに
+    折返し用の不可視文字（U+200B・U+2060）を必ず挟む。原稿の番号付き
+    リストの行頭がたまたま `N. https://…` の形（インラインコードのURL）を
+    していても不可視文字は無いので、この印で脚注と取り違えない
+    （issue #474 直し6）。
+    """
+    return "\u200b" in raw_text or "\u2060" in raw_text
 # URLの続きとしてあり得る行（空白を含まずURL文字だけ）
 URL_CONTINUATION = re.compile(r"^[A-Za-z0-9_?&=./:%#~+@()\[\],!*;'\-]+$")
 # 生成器が差し込む改行制御用の不可視文字（ZWSP・WJ・BOM・SOFT HYPHEN）。
@@ -603,7 +615,10 @@ def find_url_wrap_problems(lines: list[Line]) -> list[str]:
     for block_lines in blocks.values():
         block_lines.sort(key=lambda line: line.top)
         for index, line in enumerate(block_lines):
-            if not FOOTNOTE_URL_START.match(visible_text(line.text)):
+            if not (
+                FOOTNOTE_URL_START.match(visible_text(line.text))
+                and generated_footnote_line(line.text)
+            ):
                 continue
             previous = line
             for continuation in block_lines[index + 1:]:
@@ -666,7 +681,7 @@ def find_footnote_separation_problems(lines: list[Line]) -> list[str]:
         footnote = False
         for line in sorted(page_lines, key=lambda ln: (ln.block, ln.top)):
             text = visible_text(line.text)
-            if FOOTNOTE_URL_START.match(text):
+            if FOOTNOTE_URL_START.match(text) and generated_footnote_line(line.text):
                 footnote = True
                 number = re.match(r"^\s*(\d+)\.", text)
                 numbers.append(int(number.group(1)))
@@ -727,7 +742,8 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
         footnote = False
         for line in block_lines:
             text = visible_text(line.text).strip()
-            if FOOTNOTE_URL_START.match(visible_text(line.text)):
+            if FOOTNOTE_URL_START.match(visible_text(
+                    line.text)) and generated_footnote_line(line.text):
                 footnote = True
             elif not (footnote and text and URL_CONTINUATION.match(text)):
                 footnote = False
