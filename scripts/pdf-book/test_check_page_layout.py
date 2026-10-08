@@ -35,6 +35,7 @@ from check_page_layout import (  # noqa: E402
     find_image_problems,
     find_ink_overflow,
     find_hyphen_break_problems,
+    find_footnote_separation_problems,
     find_orphan_problems,
     find_overlaps,
     find_single_orphan_problems,
@@ -314,6 +315,33 @@ KEEP_NEXT_CASES: list[tuple[str, list[Line], str, int, int]] = [
 ]
 
 # 縦並び表の1行は2ページ以上に分かれない
+# 脚注と呼び出しは同じページにいる（issue #474 直し6）
+FOOTNOTE_SEPARATION_CASES: list[tuple[str, list[Line], int]] = [
+    ("呼び出しと脚注が同じページなら問題なし",
+     [line(2, 0, 22.0, 40.0, 120.0, "詳しくは公式ドキュメント*3を見よう"),
+      line(2, 1, 22.0, 260.0, 120.0, "3. https://example.com/docs")], 0),
+    ("脚注だけが次のページに回ったら問題",
+     [line(2, 0, 22.0, 40.0, 120.0, "詳しくは公式ドキュメント*3を見よう"),
+      line(3, 1, 22.0, 30.0, 120.0, "3. https://example.com/docs")], 1),
+    ("呼び出しの無い脚注が2件あれば2件挙げる",
+     [line(3, 1, 22.0, 30.0, 120.0, "3. https://example.com/a"),
+      line(3, 1, 22.0, 35.0, 120.0, "4. https://example.com/b")], 2),
+    ("番号の途中まで一致する呼び出しは別物（*3 と脚注 30）",
+     [line(2, 0, 22.0, 40.0, 120.0, "別の節*3も参照"),
+      line(3, 1, 22.0, 30.0, 120.0, "30. https://example.com/x")], 1),
+    ("折り返し用の不可視文字をまたぐ呼び出しも同じページとみなす",
+     [line(2, 0, 22.0, 40.0, 120.0, "ドキュメント\u2060*3を見よう"),
+      line(2, 1, 22.0, 260.0, 120.0, "3. https://example.com/docs")], 0),
+    ("脚注の折返し行は呼び出しの判定から外す",
+     [line(2, 0, 22.0, 40.0, 120.0, "本文だけのページ"),
+      line(2, 1, 22.0, 255.0, 120.0, "3. https://example.com/file/d/"),
+      line(2, 1, 22.0, 260.0, 60.0, "view*3")], 1),
+    ("柱とノンブルは呼び出しに数えない",
+     [line(2, 0, 22.0, 10.3, 100.0, "柱*3"),
+      line(2, 9, 22.0, 282.3, 4.0, "*3"),
+      line(2, 1, 22.0, 260.0, 120.0, "3. https://example.com/docs")], 1),
+]
+
 STACKED_SPLIT_CASES: list[tuple[str, dict, int]] = [
     ("同じ行が2ページに分かれていたら問題",
      {'dom_audit': {'stacked_inventory': [{'fragments': [
@@ -620,6 +648,11 @@ def main() -> int:
         if len(got) != expected:
             failures.append(f"ハイフン折れ／{label}: 期待 {expected}件 実際 {got}")
 
+    for label, lines, expected in FOOTNOTE_SEPARATION_CASES:
+        got = find_footnote_separation_problems(lines)
+        if len(got) != expected:
+            failures.append(f"脚注の分離／{label}: 期待 {expected}件 実際 {got}")
+
     for label, report, expected in STACKED_SPLIT_CASES:
         got = find_stacked_split_problems(report)
         if len(got) != expected:
@@ -748,7 +781,8 @@ def main() -> int:
     total_cases = (len(CODE_BAND_CASES) + len(RULE_CASES) + len(INK_CASES) + len(TEXT_OVERFLOW_CASES) + len(OVERLAP_CASES)
                    + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES)
                    + len(SINGLE_ORPHAN_CASES) + len(URL_WRAP_CASES) + len(HYPHEN_BREAK_CASES)
-                   + len(STACKED_SPLIT_CASES) + len(KEEP_NEXT_CASES) + len(SINGLE_ROW_FRAGMENT_CASES) + 17)
+                   + len(STACKED_SPLIT_CASES) + len(KEEP_NEXT_CASES) + len(SINGLE_ROW_FRAGMENT_CASES)
+                   + len(FOOTNOTE_SEPARATION_CASES) + 17)
     print(f"✅ {total_cases} ケースすべて通過")
     return 0
 
