@@ -117,8 +117,8 @@ $PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレク
 | 00_カリキュラム目次 | f3bebae0d6d0 | 1-20 | 0 | 脚注裸URL(suggest,pp.3/8-19)・脚注次頁送り(note,pp.11/14)・奥付紺帯(note) |
 | appendix_トラブルシューティング | e0d6402d18c3 | 1-21 | 0 | 脚注裸URL(suggest)・脚注次頁送り(note,p21)・奥付紺帯 |
 | appendix_参考資料 | 2869cb1b3ce8 | 1-10 | 0 | 脚注裸URL(suggest,pp.4-10・表内inline重複) |
-| appendix_次のステップ | (S01JSON参照) | 1-16 | 0 | 同上パターン |
-| appendix_用語集 | (S01JSON参照) | 1-16 | 0 | 同上パターン |
+| appendix_次のステップ | (S01 JSON) | 1-16 | 0 | 脚注裸URL・p7大きな空白（統括転記・改頁不可ブロック由来の可能性） |
+| appendix_用語集 | (S01 JSON) | 1-16 | 0 | 脚注裸URL・p15孤立hr（統括転記） |
 
-採否: must=0。脚注裸URLは全冊共通のendnote式デザインの可能性が高く「suggest・様式統一確認」として記録（本文側リンクテキストあり・情報欠落なし）。脚注次頁送りはpaged-media脚注溢れの挙動・「note」で記録のみ。奥付紺帯は意図的装飾と認定（全冊共通）。
+採否: must=0。脚注裸URLは全冊共通のendnote式デザインの可能性が高く「suggest・様式統一確認」として記録（本文側リンクテキストあり・情報欠落なし）。脚注次頁送りはpaged-media脚注溢れの挙動・「note」で記録のみ。奥付紺帯は意図的装飾と認定（全冊共通）。次のステップp7大空白は「note・改頁不可ブロック由来と思われるが頁構成として残」、用語集p15孤立hrは「note・区切り線だけの孤立配置」と記録。全 suggest/note は元JSONの言い回しを台帳へ保全した。
 運用変更（統括）: 以後のレンジは新規セッション作成せず本セッション（devin-6f57aed9296946fc8f5efedfe102e429）へ逐次再送。入力hash固定・担当範囲は各回で明記。
