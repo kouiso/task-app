@@ -11,16 +11,18 @@ day01〜day30 を順に `apply_day.py <md> app --tag dayNN --ledger ledger.jsonl
 
 ## 結果サマリ
 
-- 30日分すべて end-to-end で完走（exit=0、途中停止なし）
-- 記録されたギャップは2件のみ:
-  - `src/app/task/page.tsx` (day28) — `splice-result-failed-parse; baseline kept`。
-    指示フェンスと完成版フェンスが同一 JSX 領域を二重に記述する教材側の重複パターンで、
-    機械マージの結果が構造不整合になったため安全側に reject（baseline は壊れない = day28型耐性）。
-  - `.env.example` — 空行配置のみの差異で reject（内容に実害なし）。
+- 30日分すべて end-to-end で完走（exit=0、途中停止なし）し、reject 0 件。
+  全断片が「適用成功」。
 - day16（「taskRouter の前に追加」型）は task.ts / page.tsx とも全断片適用成功。
   宣言の先頭行アンカーにより宣言内部への誤挿入と use-before-declare 連鎖は解消。
-- day28 で reject されたファイルは baseline を保持したまま day29・day30 へ進み、
-  連鎖失敗は発生しない。
+- day28 の `src/app/task/page.tsx` は、教材側の完成版フェンスを完成版オラクルに
+  沿った単一記述（全ファイル listing）へ統合し、WRITE 適用でオラクルと一致。
+  二重記述（指示フェンスと完成版フェンスが同一 JSX 領域を再度記述する教材側の
+  実欠陥）は解消済み。個別ブロックの `完成版:` マーカーは外し、
+  ファイル全体の listing だけを完成版の権威とした（スナップショット照合の
+  二重計上防止）。
+- `.env.example` はクリーンな baseline（`git clean -fdxq` 後）で空行配置差異なく
+  適用成功（以前の差分はサンドボックスの未追跡ファイル混入による測定汚染だった）。
 
 ## ファイル
 
