@@ -13,20 +13,60 @@ import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { Separator } from '@/component/ui/separator';
 import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
 import { USER_ROLE } from '@/lib/constant/roles';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
+  const {
+    data: currentUser,
+    isLoading,
+    isError,
+    isFetching,
+    error,
+    refetch,
+  } = api.auth.getCurrentUser.useQuery(undefined, {
+    retry: shouldRetryQuery,
+  });
+  const authFailed = isError && isAuthError(error);
+  const forbidden = isError && isForbiddenError(error);
+  const profileRefreshFailed = isError && !authFailed && !forbidden;
 
   useEffect(() => {
-    if (!isLoading && !currentUser) {
+    if (!isLoading && (authFailed || (!isError && !currentUser))) {
       router.push('/login');
     }
-  }, [currentUser, isLoading, router]);
+  }, [authFailed, currentUser, isError, isLoading, router]);
 
-  if (isLoading) {
+  if (isLoading && !authFailed && !forbidden) {
     return <PageLoadingSpinner />;
+  }
+
+  if (forbidden) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p className="font-semibold">プロフィールを表示する権限がありません</p>
+          <p className="text-sm text-muted-foreground">管理者に確認してください。</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (profileRefreshFailed && !currentUser) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p className="font-semibold">プロフィールを取得できませんでした</p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            通信状況を確認して、再読み込みしてください。
+          </p>
+          <Button type="button" onClick={() => void refetch()} disabled={isFetching}>
+            再読み込み
+          </Button>
+        </div>
+      </AppLayout>
+    );
   }
 
   if (!currentUser) {
@@ -36,6 +76,25 @@ export default function ProfilePage() {
   return (
     <AppLayout>
       <div className="container mx-auto max-w-2xl space-y-6 py-8">
+        {profileRefreshFailed ? (
+          <div
+            role="alert"
+            className="rounded-lg border
+    border-amber-300/60 bg-amber-50 px-4 py-3 text-sm
+    text-amber-900"
+          >
+            <p>最新のプロフィールを取得できませんでした。 表示は前回取得時の内容です。</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        ) : null}
         <Card>
           <CardHeader>
             <CardTitle>プロフィール</CardTitle>
