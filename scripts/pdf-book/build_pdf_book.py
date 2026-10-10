@@ -1832,6 +1832,64 @@ def prepare_work_dir() -> None:
         shutil.copy2(WORK_DIR / "fonts" / name, xdg_fonts / name)
 
 
+def register_macos_fonts(font_dir: Path) -> None:
+    """mermaid-cliのChromium計測用に macOS へフォントを session 登録する。
+
+    Linux の fontconfig は $XDG_DATA_HOME/fonts を見るが、macOS の Chromium は
+    CoreText 経路だけを見る。そこに登録しないと、計測は代替書体の細い実寸で
+    箱を決め、あとから embed_font が太い本物を差し込んで文字が切れる
+    （実測: Docker の箱 47.09px のまま → 本物 62.88px で右端欠け）。
+    kCTFontManagerScopeSession ならログアウトで自動解除されるので、
+    ユーザーのフォント環境を恒久的に汚さない。
+    """
+    if sys.platform != "darwin":
+        return
+    import ctypes
+
+    coretext = ctypes.CDLL(
+        "/System/Library/Frameworks/CoreText.framework/CoreText"
+    )
+    corefoundation = ctypes.CDLL(
+        "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation"
+    )
+    corefoundation.CFStringCreateWithCString.restype = ctypes.c_void_p
+    corefoundation.CFStringCreateWithCString.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint,
+    ]
+    corefoundation.CFURLCreateWithFileSystemPath.restype = ctypes.c_void_p
+    corefoundation.CFURLCreateWithFileSystemPath.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_bool,
+    ]
+    coretext.CTFontManagerRegisterFontsForURL.argtypes = [
+        ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p,
+    ]
+    coretext.CTFontManagerRegisterFontsForURL.restype = ctypes.c_bool
+    coretext.CTFontManagerUnregisterFontsForURL.argtypes = [
+        ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p,
+    ]
+    coretext.CTFontManagerUnregisterFontsForURL.restype = ctypes.c_bool
+    utf8 = 0x08000100
+    failures: list[str] = []
+    for ttf in sorted(font_dir.glob("*.ttf")):
+        cfstr = corefoundation.CFStringCreateWithCString(
+            None, str(ttf).encode(), utf8
+        )
+        url = corefoundation.CFURLCreateWithFileSystemPath(
+            None, cfstr, 0, False
+        )
+        if coretext.CTFontManagerRegisterFontsForURL(url, 3, None):
+            continue
+        # 同一session内での二重登録は False を返す。解除して再登録すれば
+        # 未登録だったケースと既登録だったケースの両方で True に揃う。
+        coretext.CTFontManagerUnregisterFontsForURL(url, 3, None)
+        if not coretext.CTFontManagerRegisterFontsForURL(url, 3, None):
+            failures.append(ttf.name)
+    if failures:
+        raise OSError(
+            "macOSへのフォントsession登録に失敗: " + ", ".join(failures)
+        )
+
+
 def _stage_local_theme() -> None:
     """相対 import を保ったテーマ実体を組版入力と同じ場所へ複製する。"""
     package_root = TOOLCHAIN_DIR / "node_modules" / "@vivliostyle"
@@ -2410,6 +2468,7 @@ def main(argv: list[str]) -> int:
 
     try:
         prepare_work_dir()
+        register_macos_fonts(WORK_DIR / "fonts")
     except OSError as error:
         print(f"作業ディレクトリを用意できない: {error}", file=sys.stderr)
         return 2
