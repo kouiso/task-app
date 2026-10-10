@@ -1,8 +1,8 @@
 === day01 day01_開発環境を整えて、初めてのアプリを動かそう.md
-{"day": "day01", "md": "day01_開発環境を整えて、初めてのアプリを動かそう.md", "applied": [{"path": ".env.example", "n": 1, "mode": "full-listing"}, {"path": "src/app/globals.css", "n": 3, "mode": "full-listing"}], "gaps": [{"day": "day01", "path": "src/app/page.tsx", "reason": "fragment-not-in-baseline", "head": "import Link from 'next/link';"}, {"day": "day01", "path": "src/app/dashboard/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+{"day": "day01", "md": "day01_開発環境を整えて、初めてのアプリを動かそう.md", "applied": [{"path": ".env.example", "n": 1, "mode": "full-listing"}, {"path": "src/app/globals.css", "n": 3, "mode": "full-listing"}, {"path": "src/app/page.tsx", "n": 8, "mode": "full-listing"}, {"path": "src/app/dashboard/page.tsx", "n": 1, "mode": "full-listing"}], "gaps": []}
 TSC_day01 exit=0 errors=0
 === day02 day02_ダッシュボードに自分だけのメッセージを追加しよう.md
-{"day": "day02", "md": "day02_ダッシュボードに自分だけのメッセージを追加しよう.md", "applied": [], "gaps": [{"day": "day02", "path": "src/app/dashboard/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+{"day": "day02", "md": "day02_ダッシュボードに自分だけのメッセージを追加しよう.md", "applied": [{"path": "src/app/dashboard/page.tsx", "n": 21, "mode": "full-listing"}], "gaps": []}
 TSC_day02 exit=0 errors=0
 === day03 day03_GitHubに保存する.md
 {"day": "day03", "md": "day03_GitHubに保存する.md", "applied": [], "gaps": []}
@@ -11,441 +11,263 @@ TSC_day03 exit=0 errors=0
 {"day": "day04", "md": "day04_ネットに公開.md", "applied": [], "gaps": []}
 TSC_day04 exit=0 errors=0
 === day05 day05_ログイン画面のUI.md
-{"day": "day05", "md": "day05_ログイン画面のUI.md", "applied": [], "gaps": [{"day": "day05", "path": "src/app/login/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day05", "path": "src/lib/redirect.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+{"day": "day05", "md": "day05_ログイン画面のUI.md", "applied": [{"path": "src/app/login/page.tsx", "n": 36, "mode": "full-listing"}, {"path": "src/lib/redirect.ts", "n": 2, "mode": "full-listing"}], "gaps": []}
 TSC_day05 exit=0 errors=0
 === day06 day06_ユーザー登録画面.md
-{"day": "day06", "md": "day06_ユーザー登録画面.md", "applied": [], "gaps": [{"day": "day06", "path": "src/app/register/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day06", "path": "src/app/login/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+{"day": "day06", "md": "day06_ユーザー登録画面.md", "applied": [{"path": "src/app/register/page.tsx", "n": 29, "mode": "full-listing"}], "gaps": [{"day": "day06", "path": "src/app/login/page.tsx", "reason": "fragment-not-in-baseline", "head": "const registrationCompleted ="}]}
 TSC_day06 exit=0 errors=0
 === day07 day07_ログイン体験を改善しよう.md
-{"day": "day07", "md": "day07_ログイン体験を改善しよう.md", "applied": [{"path": "src/lib/password.ts", "n": 2, "mode": "oracle-splice(existing)"}, {"path": "src/server/api/routers/_helpers/user-email-conflict.ts", "n": 2, "mode": "oracle-splice(existing)"}], "gaps": [{"day": "day07", "path": "src/lib/session.ts", "reason": "fragment-not-in-baseline", "head": "import { type JWTPayload, jwtVerify, SignJWT } from 'jose';"}, {"day": "day07", "path": "src/server/api/trpc.ts", "reason": "fragment-not-in-baseline", "head": "import { initTRPC, TRPCError } from '@trpc/server';"}, {"day": "day07", "path": "src/server/api/routers/_helpers/select.ts", "reason": "fragment-not-in-baseline", "head": "import { z } from 'zod';"}, {"day": "day07", "path": "src/server/api/routers/auth.ts", "reason": "fragment-not-in-ba
-TSC_day07 exit=2 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day07", "md": "day07_ログイン体験を改善しよう.md", "applied": [{"path": "src/lib/password.ts", "n": 2, "mode": "full-listing"}, {"path": "src/server/api/routers/_helpers/user-email-conflict.ts", "n": 2, "mode": "full-listing"}, {"path": "src/lib/session.ts", "n": 18, "mode": "full-listing"}, {"path": "src/server/api/routers/_helpers/select.ts", "n": 2, "mode": "full-listing"}, {"path": "src/server/api/root.ts", "n": 2, "mode": "full-listing"}, {"path": "src/middleware.ts", "n": 12, "mode": "full-listing"}], "gaps": [{"day": "day07", "path": "src/server/api/trpc.ts", "reason": "fragment-not-in-baseline", "head": "import { initTRPC, TRPCError } from '@trpc/server';"}, {"day": "day07", "path": "src/server/api/routers/auth.ts", "reason": "fragment-not-in-baseline", "head": "export const authRoute
+TSC_day07 exit=0 errors=0
 === day08 day08_サイドバーを完成させよう.md
-{"day": "day08", "md": "day08_サイドバーを完成させよう.md", "applied": [], "gaps": [{"day": "day08", "path": "src/app/providers.tsx", "reason": "fragment-not-in-baseline", "head": "// 完成版: Provider の本体"}, {"day": "day08", "path": "src/app/layout.tsx", "reason": "fragment-not-in-baseline", "head": "export default function RootLayout({"}, {"day": "day08", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day08", "path": "src/app/dashboard/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day08 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day08", "md": "day08_サイドバーを完成させよう.md", "applied": [{"path": "src/app/providers.tsx", "n": 2, "mode": "full-listing"}, {"path": "src/app/layout.tsx", "n": 4, "mode": "full-listing"}, {"path": "src/app/dashboard/page.tsx", "n": 12, "mode": "full-listing"}], "gaps": [{"day": "day08", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+TSC_day08 exit=2 errors=1
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day09 day09_プロジェクト一覧画面.md
-{"day": "day09", "md": "day09_プロジェクト一覧画面.md", "applied": [], "gaps": [{"day": "day09", "path": "src/server/api/routers/project.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day09", "path": "src/server/api/root.ts", "reason": "fragment-not-in-baseline", "head": "import { authRouter } from './routers/auth';"}, {"day": "day09", "path": "src/app/project/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day09", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day09 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day09", "md": "day09_プロジェクト一覧画面.md", "applied": [{"path": "src/server/api/routers/project.ts", "n": 10, "mode": "full-listing"}, {"path": "src/server/api/root.ts", "n": 3, "mode": "full-listing"}, {"path": "src/app/project/page.tsx", "n": 34, "mode": "full-listing"}], "gaps": [{"day": "day09", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+TSC_day09 exit=2 errors=2
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day10 day10_プロジェクト新規作成.md
-{"day": "day10", "md": "day10_プロジェクト新規作成.md", "applied": [], "gaps": [{"day": "day10", "path": "src/server/api/routers/project.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day10", "path": "src/component/project/project-dialog.tsx", "reason": "fragment-not-in-baseline", "head": "'use client';"}, {"day": "day10", "path": "src/app/project/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day10 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day10", "md": "day10_プロジェクト新規作成.md", "applied": [{"path": "src/server/api/routers/project.ts", "n": 10, "mode": "full-listing"}], "gaps": [{"day": "day10", "path": "src/component/project/project-dialog.tsx", "reason": "fragment-not-in-baseline", "head": "'use client';"}, {"day": "day10", "path": "src/app/project/page.tsx", "reason": "fragment-not-in-baseline", "head": "'use client';"}]}
+TSC_day10 exit=2 errors=2
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day11 day11_プロジェクト編集・削除.md
-{"day": "day11", "md": "day11_プロジェクト編集・削除.md", "applied": [], "gaps": [{"day": "day11", "path": "src/server/api/routers/project.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day11", "path": "src/app/project/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day11", "path": "src/lib/query-error.ts", "reason": "fragment-not-in-baseline", "head": "function isRecord("}]}
-TSC_day11 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day11", "md": "day11_プロジェクト編集・削除.md", "applied": [{"path": "src/server/api/routers/project.ts", "n": 32, "mode": "full-listing"}, {"path": "src/lib/query-error.ts", "n": 6, "mode": "full-listing"}], "gaps": [{"day": "day11", "path": "src/app/project/page.tsx", "reason": "fragment-not-in-baseline", "head": "'use client';"}]}
+TSC_day11 exit=2 errors=2
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day12 day12_メンバー追加.md
-{"day": "day12", "md": "day12_メンバー追加.md", "applied": [], "gaps": [{"day": "day12", "path": "src/server/api/routers/project.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day12", "path": "src/app/project/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day12 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day12", "md": "day12_メンバー追加.md", "applied": [{"path": "src/server/api/routers/project.ts", "n": 52, "mode": "full-listing"}], "gaps": [{"day": "day12", "path": "src/app/project/page.tsx", "reason": "fragment-not-in-baseline", "head": "// Day 11 で追加済み。書き足さず、在ることを確認する"}]}
+TSC_day12 exit=2 errors=2
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day13 day13_タスク一覧画面.md
-{"day": "day13", "md": "day13_タスク一覧画面.md", "applied": [], "gaps": [{"day": "day13", "path": "src/server/api/routers/task.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day13", "path": "src/server/api/root.ts", "reason": "fragment-not-in-baseline", "head": "import { authRouter } from './routers/auth';"}, {"day": "day13", "path": "src/app/task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day13", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day13 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day13", "md": "day13_タスク一覧画面.md", "applied": [{"path": "src/server/api/routers/task.ts", "n": 17, "mode": "full-listing"}, {"path": "src/server/api/root.ts", "n": 2, "mode": "full-listing"}, {"path": "src/app/task/page.tsx", "n": 39, "mode": "full-listing"}], "gaps": [{"day": "day13", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+TSC_day13 exit=2 errors=3
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day14 day14_タスク新規作成.md
-{"day": "day14", "md": "day14_タスク新規作成.md", "applied": [], "gaps": [{"day": "day14", "path": "src/server/api/routers/task.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day14", "path": "src/server/api/routers/search.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day14", "path": "src/server/api/root.ts", "reason": "fragment-not-in-baseline", "head": "import { searchRouter } from './routers/search';"}, {"day": "day14", "path": "src/component/task/task-dialog.tsx", "reason": "fragment-not-in-baseline", "head": "'use client';"}, {"day": "day14", "path": "src/app/task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day14 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day14", "md": "day14_タスク新規作成.md", "applied": [{"path": "src/server/api/routers/task.ts", "n": 24, "mode": "full-listing"}, {"path": "src/server/api/routers/search.ts", "n": 9, "mode": "full-listing"}, {"path": "src/server/api/root.ts", "n": 2, "mode": "full-listing"}], "gaps": [{"day": "day14", "path": "src/component/task/task-dialog.tsx", "reason": "fragment-not-in-baseline", "head": "'use client';"}, {"day": "day14", "path": "src/app/task/page.tsx", "reason": "fragment-not-in-baseline", "head": "import { useRouter, useSearchParams }"}]}
+TSC_day14 exit=2 errors=3
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day15 day15_タスク編集・削除.md
-{"day": "day15", "md": "day15_タスク編集・削除.md", "applied": [], "gaps": [{"day": "day15", "path": "src/server/api/routers/task.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day15", "path": "src/component/task/task-dialog.tsx", "reason": "fragment-not-in-baseline", "head": "function buildTaskFormValues("}, {"day": "day15", "path": "src/app/task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day15 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day15", "md": "day15_タスク編集・削除.md", "applied": [{"path": "src/server/api/routers/task.ts", "n": 38, "mode": "full-listing"}], "gaps": [{"day": "day15", "path": "src/component/task/task-dialog.tsx", "reason": "fragment-not-in-baseline", "head": "function buildTaskFormValues("}, {"day": "day15", "path": "src/app/task/page.tsx", "reason": "fragment-not-in-baseline", "head": "// taskToFormDataのインポートを追加"}]}
+TSC_day15 exit=2 errors=3
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day16 day16_ステータス変更・時間記録.md
-{"day": "day16", "md": "day16_ステータス変更・時間記録.md", "applied": [], "gaps": [{"day": "day16", "path": "src/server/api/routers/task.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day16", "path": "src/app/task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day16", "path": "src/component/task/time-log-dialog.tsx", "reason": "fragment-not-in-baseline", "head": "'use client';"}, {"day": "day16", "path": "src/component/task/task-card.tsx", "reason": "fragment-not-in-baseline", "head": "// TimeLogDialogとClockアイコンのインポート"}]}
-TSC_day16 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day16", "md": "day16_ステータス変更・時間記録.md", "applied": [{"path": "src/server/api/routers/task.ts", "n": 8, "mode": "oracle-splice(existing)"}, {"path": "src/component/task/time-log-dialog.tsx", "n": 22, "mode": "full-listing"}, {"path": "src/component/task/task-card.tsx", "n": 21, "mode": "full-listing"}], "gaps": [{"day": "day16", "path": "src/app/task/page.tsx", "reason": "fragment-not-in-baseline", "head": "// Day 15 で作成済みの updateMutation（抜粋）"}]}
+TSC_day16 exit=2 errors=5
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day17 day17_自分のタスクページ.md
-{"day": "day17", "md": "day17_自分のタスクページ.md", "applied": [], "gaps": [{"day": "day17", "path": "src/app/my-task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day17", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day17 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day17", "md": "day17_自分のタスクページ.md", "applied": [{"path": "src/app/my-task/page.tsx", "n": 113, "mode": "full-listing"}], "gaps": [{"day": "day17", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+TSC_day17 exit=2 errors=6
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day18 day18_コメント投稿.md
-{"day": "day18", "md": "day18_コメント投稿.md", "applied": [], "gaps": [{"day": "day18", "path": "src/server/api/routers/comment.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day18", "path": "src/server/api/root.ts", "reason": "fragment-not-in-baseline", "head": "comment: commentRouter,"}, {"day": "day18", "path": "src/component/task/task-detail-dialog.tsx", "reason": "anchor-not-found", "anchor": "  });"}]}
-TSC_day18 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day18", "md": "day18_コメント投稿.md", "applied": [{"path": "src/server/api/routers/comment.ts", "n": 14, "mode": "full-listing"}, {"path": "src/server/api/root.ts", "n": 4, "mode": "full-listing"}, {"path": "src/component/task/task-detail-dialog.tsx", "n": 61, "mode": "full-listing"}], "gaps": []}
+TSC_day18 exit=2 errors=6
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day19 day19_コメント編集・削除.md
-{"day": "day19", "md": "day19_コメント編集・削除.md", "applied": [], "gaps": [{"day": "day19", "path": "src/server/api/routers/comment.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day19", "path": "src/component/task/task-detail-dialog.tsx", "reason": "anchor-not-found", "anchor": "import { ja } from 'date-fns/locale';"}]}
-TSC_day19 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day19", "md": "day19_コメント編集・削除.md", "applied": [{"path": "src/server/api/routers/comment.ts", "n": 22, "mode": "full-listing"}, {"path": "src/component/task/task-detail-dialog.tsx", "n": 75, "mode": "full-listing"}], "gaps": []}
+TSC_day19 exit=2 errors=6
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day20 day20_タスク検索機能.md
-{"day": "day20", "md": "day20_タスク検索機能.md", "applied": [], "gaps": [{"day": "day20", "path": "src/server/api/routers/search.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day20", "path": "src/app/search/loading.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day20", "path": "src/app/search/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day20", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day20", "path": "src/lib/task-filter-query.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day20", "path": "src/app/task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day20 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day20", "md": "day20_タスク検索機能.md", "applied": [{"path": "src/server/api/routers/search.ts", "n": 38, "mode": "full-listing"}, {"path": "src/app/search/loading.tsx", "n": 2, "mode": "full-listing"}, {"path": "src/lib/task-filter-query.ts", "n": 2, "mode": "full-listing"}], "gaps": [{"day": "day20", "path": "src/app/search/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day20", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day20", "path": "src/app/task/page.tsx", "reason": "fragment-not-in-baseline", "head": "import {"}]}
+TSC_day20 exit=2 errors=6
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day21 day21_統計カードを表示.md
-{"day": "day21", "md": "day21_統計カードを表示.md", "applied": [], "gaps": [{"day": "day21", "path": "src/server/api/routers/report.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day21", "path": "src/server/api/root.ts", "reason": "fragment-not-in-baseline", "head": "import { authRouter } from './routers/auth';"}, {"day": "day21", "path": "src/app/report/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day21", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day21 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day21", "md": "day21_統計カードを表示.md", "applied": [{"path": "src/server/api/root.ts", "n": 4, "mode": "full-listing"}, {"path": "src/app/report/page.tsx", "n": 26, "mode": "full-listing"}], "gaps": [{"day": "day21", "path": "src/server/api/routers/report.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day21", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+TSC_day21 exit=2 errors=9
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/root.ts(5,30): error TS2307: Cannot find module './routers/report' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day22 day22_グラフを表示.md
-{"day": "day22", "md": "day22_グラフを表示.md", "applied": [], "gaps": [{"day": "day22", "path": "src/app/report/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day22 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day22", "md": "day22_グラフを表示.md", "applied": [], "gaps": [{"day": "day22", "path": "src/app/report/page.tsx", "reason": "fragment-not-in-baseline", "head": "// Rechartsのグラフ描画コンポーネントを追加"}]}
+TSC_day22 exit=1 errors=9
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/root.ts(5,30): error TS2307: Cannot find module './routers/report' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day23 day23_週次レポート.md
-{"day": "day23", "md": "day23_週次レポート.md", "applied": [], "gaps": [{"day": "day23", "path": "src/server/api/routers/report.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day23", "path": "src/app/report/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day23", "path": "src/app/report/weekly/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day23 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day23", "md": "day23_週次レポート.md", "applied": [{"path": "src/app/report/weekly/page.tsx", "n": 29, "mode": "full-listing"}], "gaps": [{"day": "day23", "path": "src/server/api/routers/report.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day23", "path": "src/app/report/page.tsx", "reason": "fragment-not-in-baseline", "head": "// Day 21 で追加済みの overview 取得"}]}
+TSC_day23 exit=2 errors=12
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/weekly/page.tsx(50,33): error TS7006: Parameter 'week' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(60,52): error TS7006: Parameter 'week' implicitly has an 'any' type.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/server/api/root.ts(5,30): error TS2307: Cannot find module './routers/report' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day24 day24_ユーザー一覧（管理者用）.md
-{"day": "day24", "md": "day24_ユーザー一覧（管理者用）.md", "applied": [], "gaps": [{"day": "day24", "path": "src/server/api/routers/user.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day24", "path": "src/server/api/root.ts", "reason": "fragment-not-in-baseline", "head": "// 完成版: import"}, {"day": "day24", "path": "src/app/user/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day24", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day24 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day24", "md": "day24_ユーザー一覧（管理者用）.md", "applied": [{"path": "src/server/api/root.ts", "n": 4, "mode": "full-listing"}, {"path": "src/app/user/page.tsx", "n": 39, "mode": "full-listing"}], "gaps": [{"day": "day24", "path": "src/server/api/routers/user.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day24", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+TSC_day24 exit=2 errors=15
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/weekly/page.tsx(50,33): error TS7006: Parameter 'week' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(60,52): error TS7006: Parameter 'week' implicitly has an 'any' type.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/user/page.tsx(10,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/user/page.tsx(159,30): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/server/api/root.ts(5,30): error TS2307: Cannot find module './routers/report' or its corresponding type declarations.
+src/server/api/root.ts(8,28): error TS2307: Cannot find module './routers/user' or its corresponding type declarations.
+src/server/api/routers/task.ts(420,37): error TS2448: Block-scoped variable 'taskTimeUpdateSchema' used before its declaration.
+src/server/api/routers/task.ts(420,37): error TS2454: Variable 'taskTimeUpdateSchema' is used before being assigned.
 === day25 day25_プロフィール編集.md
-{"day": "day25", "md": "day25_プロフィール編集.md", "applied": [], "gaps": [{"day": "day25", "path": "src/server/api/routers/user.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day25", "path": "src/app/profile/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day25", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day25", "path": "src/app/profile/change-password/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day25", "path": "src/app/profile/edit/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day25 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day25", "md": "day25_プロフィール編集.md", "applied": [{"path": "src/app/profile/page.tsx", "n": 23, "mode": "full-listing"}, {"path": "src/app/profile/change-password/page.tsx", "n": 33, "mode": "full-listing"}], "gaps": [{"day": "day25", "path": "src/server/api/routers/user.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day25", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day25", "path": "src/app/profile/edit/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
+TSC_day25 exit=2 errors=19
+src/app/dashboard/page.tsx(2,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(13,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(74,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/app/profile/change-password/page.tsx(89,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/app/profile/page.tsx(11,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/weekly/page.tsx(50,33): error TS7006: Parameter 'week' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(60,52): error TS7006: Parameter 'week' implicitly has an 'any' type.
+src/app/task/page.tsx(5,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/user/page.tsx(10,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/user/page.tsx(159,30): error TS7006: Parameter 'user' implicitly has an 'any' type.
 === day26 day26_エラーページを作って、バグを退治しよう.md
-{"day": "day26", "md": "day26_エラーページを作って、バグを退治しよう.md", "applied": [{"path": "src/app/globals.css", "n": 1, "mode": "full-listing"}], "gaps": [{"day": "day26", "path": "src/app/error.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day26", "path": "src/app/not-found.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day26", "path": "src/app/dashboard/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day26", "path": "src/lib/query-error.ts", "reason": "fragment-not-in-baseline", "head": "// 完成版: エラー判定"}, {"day": "day26", "path": "src/app/my-task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day26", "path": "src/component/layout/app-layout.tsx", "reason": "diff
-TSC_day26 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day26", "md": "day26_エラーページを作って、バグを退治しよう.md", "applied": [{"path": "src/app/error.tsx", "n": 4, "mode": "full-listing"}, {"path": "src/app/not-found.tsx", "n": 3, "mode": "full-listing"}, {"path": "src/app/dashboard/page.tsx", "n": 3, "mode": "full-listing"}, {"path": "src/lib/query-error.ts", "n": 3, "mode": "full-listing"}, {"path": "vitest.config.ts", "n": 1, "mode": "full-listing"}], "gaps": [{"day": "day26", "path": "src/app/my-task/page.tsx", "reason": "fragment-not-in-baseline", "head": "const queryErrors = ["}, {"day": "day26", "path": "src/component/layout/app-layout.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day26", "path": "src/app/profile/page.tsx", "reason": "fragment-not-in-baseline", "head": "import {"}, {"day": "day26", "path": 
+TSC_day26 exit=2 errors=24
+src/app/dashboard/page.tsx(14,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/dashboard/page.tsx(337,35): error TS7006: Parameter 'task' implicitly has an 'any' type.
+src/app/dashboard/page.tsx(350,42): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(351,47): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(360,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(364,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskPriority, string>'.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(13,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(74,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/app/profile/change-password/page.tsx(89,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/app/profile/page.tsx(11,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day27 day27_プロジェクト詳細・アーカイブを実装しよう.md
-{"day": "day27", "md": "day27_プロジェクト詳細・アーカイブを実装しよう.md", "applied": [], "gaps": [{"day": "day27", "path": "src/server/api/routers/project.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day27", "path": "src/app/project/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day27", "path": "src/component/project/project-detail-view.tsx", "reason": "fragment-not-in-baseline", "head": "import type { inferRouterOutputs } from '@trpc/server';"}]}
-TSC_day27 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day27", "md": "day27_プロジェクト詳細・アーカイブを実装しよう.md", "applied": [{"path": "src/component/project/project-detail-view.tsx", "n": 27, "mode": "full-listing"}], "gaps": [{"day": "day27", "path": "src/server/api/routers/project.ts", "reason": "fragment-not-in-baseline", "head": "archive: protectedProcedure"}, {"day": "day27", "path": "src/app/project/page.tsx", "reason": "fragment-not-in-baseline", "head": "const searchParams = useSearchParams();"}]}
+TSC_day27 exit=1 errors=24
+src/app/dashboard/page.tsx(14,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/dashboard/page.tsx(337,35): error TS7006: Parameter 'task' implicitly has an 'any' type.
+src/app/dashboard/page.tsx(350,42): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(351,47): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(360,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(364,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskPriority, string>'.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(13,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(74,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/app/profile/change-password/page.tsx(89,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/app/profile/page.tsx(11,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day28 day28_タスク一括操作を実装しよう.md
-{"day": "day28", "md": "day28_タスク一括操作を実装しよう.md", "applied": [{"path": "src/app/globals.css", "n": 1, "mode": "full-listing"}], "gaps": [{"day": "day28", "path": "src/server/api/routers/task.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}, {"day": "day28", "path": "src/app/task/page.tsx", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day28 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+{"day": "day28", "md": "day28_タスク一括操作を実装しよう.md", "applied": [], "gaps": [{"day": "day28", "path": "src/server/api/routers/task.ts", "reason": "fragment-not-in-baseline", "head": "// （permission の import に findTasksWithPermission を足した完成形）"}, {"day": "day28", "path": "src/app/task/page.tsx", "reason": "fragment-not-in-baseline", "head": "const MAX_BULK_TASKS = 100;"}, {"day": "day28", "path": "src/app/globals.css", "reason": "anchor-not-found", "anchor": "   (Tailwind の任意値が当環境のビルドで生成されないため生CSSで定義する) */"}]}
+TSC_day28 exit=1 errors=24
+src/app/dashboard/page.tsx(14,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/dashboard/page.tsx(337,35): error TS7006: Parameter 'task' implicitly has an 'any' type.
+src/app/dashboard/page.tsx(350,42): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(351,47): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(360,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(364,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskPriority, string>'.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(13,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(74,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/app/profile/change-password/page.tsx(89,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/app/profile/page.tsx(11,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day29 day29_ユーザー詳細・編集ページを作ろう.md
 {"day": "day29", "md": "day29_ユーザー詳細・編集ページを作ろう.md", "applied": [], "gaps": [{"day": "day29", "path": "src/server/api/routers/user.ts", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day29 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+TSC_day29 exit=1 errors=24
+src/app/dashboard/page.tsx(14,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/dashboard/page.tsx(337,35): error TS7006: Parameter 'task' implicitly has an 'any' type.
+src/app/dashboard/page.tsx(350,42): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(351,47): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(360,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(364,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskPriority, string>'.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(13,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(74,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/app/profile/change-password/page.tsx(89,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/app/profile/page.tsx(11,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 === day30 day30_完成版を公開！.md
 {"day": "day30", "md": "day30_完成版を公開！.md", "applied": [{"path": ".env.example", "n": 1, "mode": "full-listing"}, {"path": "docker-compose.yml", "n": 1, "mode": "full-listing"}], "gaps": [{"day": "day30", "path": "next.config.ts", "reason": "fragment-not-in-baseline", "head": "// nextConfig の中に追加"}, {"day": "day30", "path": "scripts/apply-production-schema.mjs", "reason": "diff-fragments-for-nonexistent-file; cannot create"}]}
-TSC_day30 exit=1 errors=18
-src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
-src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
-src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
-src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
-src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
-src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
-src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+TSC_day30 exit=1 errors=24
+src/app/dashboard/page.tsx(14,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/dashboard/page.tsx(337,35): error TS7006: Parameter 'task' implicitly has an 'any' type.
+src/app/dashboard/page.tsx(350,42): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(351,47): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(360,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskStatus, string>'.
+src/app/dashboard/page.tsx(364,28): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<TaskPriority, string>'.
+src/app/my-task/page.tsx(3,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(13,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/profile/change-password/page.tsx(74,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/app/profile/change-password/page.tsx(89,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/app/profile/page.tsx(11,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/project/page.tsx(6,27): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(5,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
+src/app/report/page.tsx(121,46): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+src/app/report/weekly/page.tsx(6,8): error TS2307: Cannot find module '@/component/layout/app-layout' or its corresponding type declarations.
 ALL_DAYS_DONE

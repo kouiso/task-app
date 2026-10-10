@@ -1,0 +1,4 @@
+ZIP sha256: 6b328c634f2cf0969a430fdfb7e06d78505fe2636ccad11e04deba66fe8cbe0e
+node: v22.22.2
+snapshot files(src+prisma): 75
+snapshot taken: 2026-10-10T12:39:05Z

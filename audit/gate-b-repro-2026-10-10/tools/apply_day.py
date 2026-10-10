@@ -31,7 +31,8 @@ def fragments(md_path):
         body = '\n'.join(l for l in code.split('\n') if 'filepath:' not in l)
         if not body.strip():
             continue
-        frags.append((path, CONT in code, body))
+        head = '\n'.join(code.split('\n')[:2])
+        frags.append((path, CONT in code, body, '完成版' in head))
     return frags
 
 def norm(lines):
@@ -84,11 +85,11 @@ def find_in(hay_lines, frag_lines, start=0):
 def apply_day(md_path, tag):
     frags = fragments(md_path)
     order, per = [], {}
-    for path, cont, body in frags:
+    for path, cont, body, kansei in frags:
         if path not in per:
             per[path] = []
             order.append(path)
-        per[path].append((cont, body))
+        per[path].append((cont, body, kansei))
     applied, gaps = [], []
     for path in order:
         chunks = per[path]
@@ -98,17 +99,46 @@ def apply_day(md_path, tag):
         # case 1: split into listing segments (fresh marker = new segment);
         # take the LAST segment that parses as a complete file
         dest.parent.mkdir(parents=True, exist_ok=True)
+        KANSEI = re.compile(r'^\s*(//|\{/\*)\s*完成版')
         segs = []
-        for cont, body in chunks:
-            if cont and segs:
+        seg_kansei = []
+        prev_kansei = False
+        for cont, body, kansei in chunks:
+            first_line = body.split('\n', 1)[0] if body else ''
+            is_kansei = kansei or bool(KANSEI.match(first_line))
+            if (cont or (is_kansei and prev_kansei)) and segs:
                 segs[-1].append(body)
             else:
                 segs.append([body])
+                seg_kansei.append(is_kansei)
+            prev_kansei = is_kansei
+        # 完成版ランの断片を全結合（途中にcont=Trueで無印の部品が混ざる材料由来の実態に対応。
+        # ランの先頭が完成版印なら、そのラン全体を完成版とみなす）
+        kansei_join = ''
+        if any(seg_kansei):
+            kansei_join = '\n'.join(b
+                                    for seg, ks in zip(segs, seg_kansei) if ks
+                                    for b in seg)
+        # import必須条件: 当日断片がimportを示すか、既存ファイルがimportを持つ場合
+        # （後日の増分断片がimportなしJSX/関数だけの説明ブロックとして誤って全置換されるのを防ぐ）
+        dest_text = dest.read_text(encoding='utf-8') if dest.exists() else ''
+        any_import = any('import ' in b for _c, b, _k in chunks) or \
+            (dest.exists() and 'import ' in dest_text)
+        # 候補0: 完成版ランの順序結合（分割リスティングは完成版=最終版なので最優先）
+        # 候補1: 最終パース可セグメント（後方から・Before/Afterで最新版を取る）
+        candidates = ([kansei_join] if kansei_join else []) + \
+                     ['\n'.join(s) for s in reversed(segs) if s]
+        # 候補2: 全断片の順序結合（セグメントが一つも採用できない場合のフォールバック）
+        candidates.append('\n'.join(b for _c, b, _k in chunks))
+        is_ts_family = path.rsplit('.', 1)[-1].lower() in ('ts', 'tsx', 'js', 'mjs', 'jsx')
         picked = None
-        for seg in reversed(segs):
-            if not seg:
+        for joined in candidates:
+            # 教材がimportを示すファイルでは import 行を含むもののみ完全リスティングと認める
+            if any_import and 'import ' not in joined:
                 continue
-            joined = '\n'.join(seg)
+            # TS系でexportを持たない断片（import文のみ等）は部品断片なので完全リスティングと認めない
+            if is_ts_family and 'export ' not in joined:
+                continue
             if parses_as_file(path, joined):
                 picked = joined
                 break
@@ -124,7 +154,7 @@ def apply_day(md_path, tag):
             cur = norm(dest.read_text(encoding='utf-8').split('\n'))
             seeded = 'existing'
             ok = True
-            for cont, body in chunks:
+            for cont, body, _k in chunks:
                 fl = norm(body.split('\n'))
                 if find_in(cur, fl) >= 0:
                     continue  # idempotent: fragment already present in file

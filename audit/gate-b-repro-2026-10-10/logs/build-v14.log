@@ -1,0 +1,48 @@
+
+> task-app@0.1.0 build
+> prisma generate && next build
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma config detected, skipping environment variable loading.
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 54ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+   ▲ Next.js 15.5.24
+   - Environments: .env
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./src/app/dashboard/page.tsx
+Module not found: Can't resolve '@/component/layout/app-layout'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/my-task/page.tsx
+Module not found: Can't resolve '@/component/layout/app-layout'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/profile/change-password/page.tsx
+Module not found: Can't resolve '@/component/layout/app-layout'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/profile/page.tsx
+Module not found: Can't resolve '@/component/layout/app-layout'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/project/page.tsx
+Module not found: Can't resolve '@/component/layout/app-layout'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors

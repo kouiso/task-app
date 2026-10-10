@@ -1,0 +1,44 @@
+
+> task-app@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.24
+   - Local:        http://localhost:3000
+   - Network:      http://172.16.4.2:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 886ms
+ ✓ Compiled /middleware in 283ms (126 modules)
+ ○ Compiling /login ...
+ ⨯ ./src/app/globals.css:7:1
+Syntax error: /Users/devin/gate-b-repro/repro/src/app/globals.css Unclosed block
+
+  5 | @custom-variant dark (&:is(.dark *));
+  6 | 
+> 7 | @theme inline {
+    | ^
+  8 |   --font-sans:
+  9 |     var(--font-inter),
+ ⨯ ./src/app/globals.css:7:1
+Syntax error: /Users/devin/gate-b-repro/repro/src/app/globals.css Unclosed block
+
+  5 | @custom-variant dark (&:is(.dark *));
+  6 | 
+> 7 | @theme inline {
+    | ^
+  8 |   --font-sans:
+  9 |     var(--font-inter),
+ GET /login 500 in 4061ms
+ ⨯ ./src/app/globals.css:7:1
+Syntax error: /Users/devin/gate-b-repro/repro/src/app/globals.css Unclosed block
+
+  5 | @custom-variant dark (&:is(.dark *));
+  6 | 
+> 7 | @theme inline {
+    | ^
+  8 |   --font-sans:
+  9 |     var(--font-inter),
+ GET /register 500 in 252ms
+<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|/Users/devin/gate-b-repro/repro/node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!/Users/devin/gate-b-repro/repro/node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!/Users/devin/gate-b-repro/repro/src/app/globals.css': No serializer registered for PostCSSSyntaxError
+<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> webpack/lib/ModuleBuildError -> PostCSSSyntaxError
