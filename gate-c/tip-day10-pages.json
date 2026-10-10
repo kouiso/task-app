@@ -1,0 +1,818 @@
+{
+  "book": "day10",
+  "pdf_file": "day10_プロジェクト新規作成.pdf",
+  "pdf_sha256_head12": "3c99e8d846a8",
+  "pdf_pages_total": 120,
+  "pages_inspected": 120,
+  "inspection": {
+    "method": "pdftoppm -r 100 PNG + manual per-page visual check (poppler 26.10.0); mermaid p6 figure verified label-by-label",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+    "inspector": "devin-8fcefb2b353645f4a4411adc9e263f8a",
+    "inspected_at": "2026-10-10",
+    "note": "Fresh re-inspection at tip 5881e2f7 (rebuild after macOS mermaid font-measure fix). Old-build ledger e39a1ce9 is stale."
+  },
+  "verdicts": {
+    "must": 0,
+    "suggest": 15,
+    "ok": 105
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": [
+        "cover"
+      ]
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": [
+        "目次"
+      ]
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": [
+        "図1ダイアログスクショ完全"
+      ]
+    },
+    {
+      "page": 5,
+      "verdict": "suggest",
+      "findings": [
+        "例え話boxのみ・下部約80%白紙"
+      ]
+    },
+    {
+      "page": 6,
+      "verdict": "ok",
+      "findings": [
+        "図2Mermaid全ラベル完全(新規作成ボタン/ProjectDialogが開く/zodバリデーション/api.project.create.mutate/一覧に新プロジェクト表示)"
+      ]
+    },
+    {
+      "page": 7,
+      "verdict": "ok",
+      "findings": [
+        "やること表"
+      ]
+    },
+    {
+      "page": 8,
+      "verdict": "ok",
+      "findings": [
+        "ファイルツリー注記行頭割れ×2(Step1〜6→で中身を書き直す・create→を追加)"
+      ]
+    },
+    {
+      "page": 9,
+      "verdict": "suggest",
+      "findings": [
+        "表セル内でzodResolve|r語中分割(旧build同型)"
+      ]
+    },
+    {
+      "page": 10,
+      "verdict": "ok",
+      "findings": [
+        "ステップ表完全"
+      ]
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": [
+        "下部約55%余白"
+      ]
+    },
+    {
+      "page": 12,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(from→path行頭割れ)"
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 14,
+      "verdict": "suggest",
+      "findings": [
+        "下部約72%白紙(0-2見出し+2段落のみ)"
+      ]
+    },
+    {
+      "page": 15,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(input(→schema)・Date(→input.startDate)・Date(→input.endDate)行頭割れ)"
+      ]
+    },
+    {
+      "page": 16,
+      "verdict": "ok",
+      "findings": [
+        "下部約62%余白"
+      ]
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": [
+        "下部約30%余白"
+      ]
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": [
+        "下部約35%余白"
+      ]
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": [
+        "from→path継続行はインデント正常"
+      ]
+    },
+    {
+      "page": 21,
+      "verdict": "ok",
+      "findings": [
+        "下部約60%余白"
+      ]
+    },
+    {
+      "page": 22,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(onSubmit型注釈→Promise<void>;行頭割れ)"
+      ]
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": [
+        "下部約40%余白"
+      ]
+    },
+    {
+      "page": 24,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(data.startDate→> data.endDate)行頭割れ)"
+      ]
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": [
+        "zodフィールド表完全"
+      ]
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": [
+        "下部約60%余白"
+      ]
+    },
+    {
+      "page": 28,
+      "verdict": "ok",
+      "findings": [
+        "zodResolver(→projectFormSchema)継続行は浅インデント付き正常折返し"
+      ]
+    },
+    {
+      "page": 29,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 30,
+      "verdict": "ok",
+      "findings": [
+        "filepathコメント(続→き)行頭割れ"
+      ]
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": [
+        "useForm設定表完全"
+      ]
+    },
+    {
+      "page": 32,
+      "verdict": "ok",
+      "findings": [
+        "下部約50%余白"
+      ]
+    },
+    {
+      "page": 33,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2((data:→ProjectFormValues)・{description:→data.description}))"
+      ]
+    },
+    {
+      "page": 34,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 36,
+      "verdict": "ok",
+      "findings": [
+        "filepathコメント行頭割れ・下部約55%余白"
+      ]
+    },
+    {
+      "page": 37,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(filepathコメント・?→'name-error'・className=→\"text-sm…\")"
+      ]
+    },
+    {
+      "page": 38,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 39,
+      "verdict": "ok",
+      "findings": [
+        "filepathコメント行頭割れ"
+      ]
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 41,
+      "verdict": "ok",
+      "findings": [
+        "filepathコメント行頭割れ"
+      ]
+    },
+    {
+      "page": 42,
+      "verdict": "ok",
+      "findings": [
+        "filepathコメント行頭割れ"
+      ]
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": [
+        "下部約40%余白"
+      ]
+    },
+    {
+      "page": 44,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(filepath・?→'end-date-error'・text-sm→text-destructive)"
+      ]
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": [
+        "図3完成ダイアログスクショ完全"
+      ]
+    },
+    {
+      "page": 46,
+      "verdict": "ok",
+      "findings": [
+        "filepathコメント行頭割れ"
+      ]
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": [
+        "ボタンの役割表完全"
+      ]
+    },
+    {
+      "page": 48,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 49,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(from→'react'/from→project-dialog path)"
+      ]
+    },
+    {
+      "page": 50,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(from→project-write-error/query-error path)"
+      ]
+    },
+    {
+      "page": 51,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(target:→null…・generation:→formSession.current…)"
+      ]
+    },
+    {
+      "page": 52,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(isLoading:→error: projectsError)"
+      ]
+    },
+    {
+      "page": 53,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×4(('none'as→const)・invalidate(→undefined・console.error→error);・toast+演算子行頭孤立)"
+      ]
+    },
+    {
+      "page": 54,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(classifyProjectWriteError(error,→'create');)"
+      ]
+    },
+    {
+      "page": 55,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×4(generation:→formSession…・&&→generation===・Iso(→data.startDate)・Iso(→data.endDate))"
+      ]
+    },
+    {
+      "page": 56,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(generation===→session.generation・delete(error))→throw error;)"
+      ]
+    },
+    {
+      "page": 57,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(push('/login')}>→ログイン画面へ</Button>)"
+      ]
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": [
+        "図4スクショ完全"
+      ]
+    },
+    {
+      "page": 60,
+      "verdict": "suggest",
+      "findings": [
+        "確認表セル内語中分割(ダイア|ログが閉じる・反映されて|いる)"
+      ]
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": [
+        "図5エラーダイアログ完全"
+      ]
+    },
+    {
+      "page": 62,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 63,
+      "verdict": "suggest",
+      "findings": [
+        "下部約70%白紙(Pro節見出し+4段落のみ)"
+      ]
+    },
+    {
+      "page": 64,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(onClose:()=>→void){)"
+      ]
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 66,
+      "verdict": "suggest",
+      "findings": [
+        "下部約73%白紙(本文3段落のみ)"
+      ]
+    },
+    {
+      "page": 67,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(onClose:()=>→void){)"
+      ]
+    },
+    {
+      "page": 68,
+      "verdict": "ok",
+      "findings": [
+        "節見出し「このコードの強み:」が頁最下部に残る(箇条書きは次頁)"
+      ]
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": [
+        "下部約45%余白"
+      ]
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": [
+        "ファイル対応表・下部約55%余白"
+      ]
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(from→'@/lib/constant/project'・'@/lib/constant/roles'・'../trpc'行頭割れ)"
+      ]
+    },
+    {
+      "page": 72,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(startDate:Date|null,→endDate…行頭割れ)+節見出しが頁末尾残り"
+      ]
+    },
+    {
+      "page": 73,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(input.userId!==→ctx.session.userId))"
+      ]
+    },
+    {
+      "page": 74,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 75,
+      "verdict": "suggest",
+      "findings": [
+        "節見出し+1段落のみ・下部約72%白紙"
+      ]
+    },
+    {
+      "page": 76,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 77,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(.input(→schema)・Date(→input.startDate)・Date(→input.endDate))"
+      ]
+    },
+    {
+      "page": 78,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 79,
+      "verdict": "suggest",
+      "findings": [
+        "1段落のみ・下部約75%白紙"
+      ]
+    },
+    {
+      "page": 80,
+      "verdict": "ok",
+      "findings": [
+        "import継続行はインデント正常"
+      ]
+    },
+    {
+      "page": 81,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(=>void|→Promise<void>;)"
+      ]
+    },
+    {
+      "page": 82,
+      "verdict": "ok",
+      "findings": [
+        "下部約50%余白"
+      ]
+    },
+    {
+      "page": 83,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(data.startDate→>data.endDate)・infer行折返し)"
+      ]
+    },
+    {
+      "page": 84,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 85,
+      "verdict": "ok",
+      "findings": [
+        "zodResolver継続行はインデント正常"
+      ]
+    },
+    {
+      "page": 86,
+      "verdict": "suggest",
+      "findings": [
+        "本文2段落のみ・下部約82%白紙"
+      ]
+    },
+    {
+      "page": 87,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(async(data:→ProjectFormValues)・description:→data.description}))"
+      ]
+    },
+    {
+      "page": 88,
+      "verdict": "suggest",
+      "findings": [
+        "本文2段落のみ・下部約85%白紙"
+      ]
+    },
+    {
+      "page": 89,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(aria-hidden→className・id=\"name\"→placeholder)"
+      ]
+    },
+    {
+      "page": 90,
+      "verdict": "suggest",
+      "findings": [
+        "本文2段落のみ・下部約85%白紙"
+      ]
+    },
+    {
+      "page": 91,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(?→'name-error':undefined})"
+      ]
+    },
+    {
+      "page": 92,
+      "verdict": "suggest",
+      "findings": [
+        "本文3行のみ・下部約80%白紙"
+      ]
+    },
+    {
+      "page": 93,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 94,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(?→'end-date-error'・<p→className行頭割れ)"
+      ]
+    },
+    {
+      "page": 95,
+      "verdict": "suggest",
+      "findings": [
+        "filepathコメント語中分割((同→じファイルの続き))"
+      ]
+    },
+    {
+      "page": 96,
+      "verdict": "suggest",
+      "findings": [
+        "本文+見出しのみ・下部約75%白紙"
+      ]
+    },
+    {
+      "page": 97,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(from→'react'行頭割れ・他from→pathは浅インデント正常)"
+      ]
+    },
+    {
+      "page": 98,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(from→project-write-error/query-error・target:→null…)"
+      ]
+    },
+    {
+      "page": 99,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(generation:→formSession…・projectsLoading,→error:…)"
+      ]
+    },
+    {
+      "page": 100,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(('none'as→const))+下部約50%余白"
+      ]
+    },
+    {
+      "page": 101,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(invalidate(→undefined・console.error→error);・toast+孤立)"
+      ]
+    },
+    {
+      "page": 102,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(WriteError(error,→'create');)+下部約50%余白"
+      ]
+    },
+    {
+      "page": 103,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(generation:→formSession…)"
+      ]
+    },
+    {
+      "page": 104,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×4(||formSubmitting→return;・Iso(→data.startDate)・Iso(→data.endDate)・delete(error))→throw error;)"
+      ]
+    },
+    {
+      "page": 105,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(===→session.generation)+下部約65%余白"
+      ]
+    },
+    {
+      "page": 106,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(push('/login')}>→ログイン画面へ)"
+      ]
+    },
+    {
+      "page": 107,
+      "verdict": "ok",
+      "findings": [
+        "下部約40%余白"
+      ]
+    },
+    {
+      "page": 108,
+      "verdict": "ok",
+      "findings": [
+        "className継続行はインデント正常"
+      ]
+    },
+    {
+      "page": 109,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 110,
+      "verdict": "ok",
+      "findings": [
+        "CANCELLEDループ継続行はインデント正常(旧build割れ解消)"
+      ]
+    },
+    {
+      "page": 111,
+      "verdict": "ok",
+      "findings": [
+        "memberCount={→??0}継続行はインデント正常"
+      ]
+    },
+    {
+      "page": 112,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(showArchived?→'アーカイブ…'・:→'進行中…')"
+      ]
+    },
+    {
+      "page": 113,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 114,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 115,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 116,
+      "verdict": "ok",
+      "findings": [
+        "用語表完全(Dialog/useMutation/invalidate/useUtils/zodResolver/register)"
+      ]
+    },
+    {
+      "page": 117,
+      "verdict": "ok",
+      "findings": [
+        "理解チェック"
+      ]
+    },
+    {
+      "page": 118,
+      "verdict": "ok",
+      "findings": [
+        "終了時点の状態"
+      ]
+    },
+    {
+      "page": 119,
+      "verdict": "suggest",
+      "findings": [
+        "脚注1-6が裸URL(6件・drive.google.com・各URL語途中折返し)"
+      ]
+    },
+    {
+      "page": 120,
+      "verdict": "ok",
+      "findings": [
+        "奥付"
+      ]
+    }
+  ]
+}
