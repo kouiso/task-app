@@ -1,0 +1,823 @@
+[
+  {
+    "page": 1,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 2,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 3,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 4,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "figure",
+        "detail": "図1 タスクカード3枚グリッド（ステータス・優先度・担当者・期限・期限切れバッジ）完全描画"
+      }
+    ]
+  },
+  {
+    "page": 5,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "mermaid-clip",
+        "detail": "図2 Mermaid構成図で軽微な右端欠け: `ステータスBadg`・`優先度Badg`(e欠落)・`TaskCard コンポーネン`(ト欠落)。day09 p29系と同型だが意味は読取れる軽度"
+      }
+    ]
+  },
+  {
+    "page": 6,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "mermaid-clip",
+        "detail": "図3 Mermaidフローで軽微欠け: `state更`(新欠落)・`useQueryが再実行され`(る欠落)。同型パイプライン共通問題の軽度版"
+      }
+    ]
+  },
+  {
+    "page": 7,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 8,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "layout",
+        "detail": "file-tree注釈 `タスク詳細ダイアログ(既存)`・`ステータス定義・型ガード(既存)` が行頭へ孤立wrap(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 9,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 10,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 11,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 12,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "import `from`→`'@/lib/constant/query';`・`'../trpc';` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 13,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "layout",
+        "detail": "本文のみ約80%白紙"
+      }
+    ]
+  },
+  {
+    "page": 14,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`.default(`→`100),` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 15,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`ctx.session.userId);`・`'このプロジェクトへのアクセス権限がありません',` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 16,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "figure",
+        "detail": "図4 Mermaidフローチャート（絞り込み2段構成・無い/有る・一覧に含まれる/一覧に無い→FORBIDDEN）全ラベル完全描画"
+      }
+    ]
+  },
+  {
+    "page": 17,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`input.priority;`・`input.assigneeId;` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 18,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 19,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 20,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 21,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約55%白紙"
+      }
+    ]
+  },
+  {
+    "page": 22,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 23,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`from`→`'./trpc';`・`createCallerFactory(`→`appRouter);` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 24,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`from '@component/layout/app-layout';`・`from '@component/ui/loading-spinner';` がwrap(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 25,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約55%白紙"
+      }
+    ]
+  },
+  {
+    "page": 26,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`tracking-tight\">` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 27,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 28,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約65%白紙"
+      }
+    ]
+  },
+  {
+    "page": 29,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "layout",
+        "detail": "ページ最下部に孤立hr(区切り線のみ)"
+      }
+    ]
+  },
+  {
+    "page": 30,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 31,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 32,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 33,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 34,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約50%白紙"
+      }
+    ]
+  },
+  {
+    "page": 35,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 36,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 37,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 38,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 39,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 40,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 41,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 42,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 43,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`from '@component/task/task-card';` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 44,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 45,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`from 'react';` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 46,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 47,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約60%白紙"
+      }
+    ]
+  },
+  {
+    "page": 48,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`hasPermission(role, 'canDelete') :`→`false;` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 49,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "layout",
+        "detail": "下部約75%白紙"
+      }
+    ]
+  },
+  {
+    "page": 50,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 51,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "layout",
+        "detail": "下部約65%白紙"
+      }
+    ]
+  },
+  {
+    "page": 52,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 53,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 54,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "figure",
+        "detail": "図5 ステータス完了絞り込み一覧（データベース設計1枚のみ+完了バッジ）完全描画"
+      }
+    ]
+  },
+  {
+    "page": 55,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 56,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`from '@component/task/task-detail-dialog';`・`from 'next/navigation';` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 57,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 58,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 59,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 60,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 61,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "figure",
+        "detail": "図6 タスク詳細ダイアログ（プロジェクト名・説明・ステータス・優先度・担当者・期限）完全描画"
+      }
+    ]
+  },
+  {
+    "page": 62,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 63,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 64,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`setPagination({ context: pageContext, index: nextPage`→`});` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 65,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 66,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 67,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`text-muted-foreground\">` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 68,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`&&`→`(`・`*/}` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 69,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 70,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 71,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 72,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約55%白紙"
+      }
+    ]
+  },
+  {
+    "page": 73,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 74,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`color:`→`bg-...-800\" },` が行頭へ割れる(3箇所)"
+      }
+    ]
+  },
+  {
+    "page": 75,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 76,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`from`→`'@/lib/constant/query';`・`'../trpc';` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 77,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`.default(`→`100),` が行頭へ割れる"
+      }
+    ]
+  },
+  {
+    "page": 78,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`ctx.session.userId);`・`'このプロジェクトへのアクセス権限がありません',`・`input.priority;`・`input.assigneeId;` が行頭へ割れる(4箇所)"
+      }
+    ]
+  },
+  {
+    "page": 79,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 80,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約45%白紙"
+      }
+    ]
+  },
+  {
+    "page": 81,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 82,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約50%白紙"
+      }
+    ]
+  },
+  {
+    "page": 83,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 84,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`from`→`'./trpc';`・`createCallerFactory(`→`appRouter);` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 85,
+    "verdict": "ok",
+    "findings": [
+      {
+        "severity": "note",
+        "category": "layout",
+        "detail": "下部約45%白紙"
+      }
+    ]
+  },
+  {
+    "page": 86,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 87,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`useState } from 'react';`・`'@/component/task/task-detail-dialog';`・`'@/component/ui/loading-spinner';` が行頭へ割れる(3箇所)"
+      }
+    ]
+  },
+  {
+    "page": 88,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`useState<string>('all');`等の宣言継続行が行頭へ割れる(6箇所)"
+      }
+    ]
+  },
+  {
+    "page": 89,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`api.auth.getSession.useQuery();`・`filterProject,`・`filterStatus,`・`api.project.getAll.useQuery();`等が行頭へ割れる(5箇所)"
+      }
+    ]
+  },
+  {
+    "page": 90,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`member.userId === userId);`・`false;`(x2) が行頭へ割れる(3箇所)"
+      }
+    ]
+  },
+  {
+    "page": 91,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`nextPage ===`→`pageIndex) return;`・`index: nextPage`→`});` が行頭へ割れる(2箇所)"
+      }
+    ]
+  },
+  {
+    "page": 92,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`tracking-tight\">`→`タスク</h1>`・`sm:w-auto`→`ml-auto\">`・`aria-label=...\">` が行頭へ割れる(3箇所)"
+      }
+    ]
+  },
+  {
+    "page": 93,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`すべてのプロジェクト</SelectItem>`・`value)) && ...`・`aria-label=...\">`・`placeholder=...` が行頭へ割れる(4箇所)"
+      }
+    ]
+  },
+  {
+    "page": 94,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`すべてのステータス</SelectItem>`・`value, label]) => (`・`lg:grid-cols-3 ...\">` が行頭へ割れる(3箇所)"
+      }
+    ]
+  },
+  {
+    "page": 95,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`task.projectId)}`・`items-center...\">`(x2)・`*/}`・`=== 'all' && (`・`PAGE_SIZE) && (` が行頭へ割れる(6箇所)"
+      }
+    ]
+  },
+  {
+    "page": 96,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "code-wrap",
+        "detail": "`gap-3\"`・`text-muted-foreground\">{pageIndex+1}ページ目</span>`・`?? 0) < PAGE_SIZE}`・`selectedTask} onClose=...` が行頭へ割れる(4箇所)"
+      }
+    ]
+  },
+  {
+    "page": 97,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 98,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 99,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 100,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 101,
+    "verdict": "ok",
+    "findings": []
+  },
+  {
+    "page": 102,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "bare-url",
+        "detail": "裸URL脚注2件(Drive長URLが文中に直接置かれwrap)"
+      }
+    ]
+  },
+  {
+    "page": 103,
+    "verdict": "suggest",
+    "findings": [
+      {
+        "severity": "suggest",
+        "category": "bare-url",
+        "detail": "裸URL脚注4件(Drive長URL)"
+      }
+    ]
+  }
+]
