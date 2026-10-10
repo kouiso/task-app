@@ -1,0 +1,190 @@
+{
+  "pack_branch": "devin/source40-input-pack",
+  "pack_commit": "08d631e8b93e70f3f2d672cf72c2200959f5310f",
+  "manifest_sha256": "346b9f898aef",
+  "manifest_files_verified": "1110/1110 sha256 ok",
+  "distribution_zip_verified": "85/85 byte ok",
+  "note": "36 curriculum md are NOT inside manifest (intentional) — pinned here by content sha256 at pack commit",
+  "books": [
+    {
+      "stem": "00-1_学びのロードマップ",
+      "path": "material/30days-curriculum/00-1_学びのロードマップ.md",
+      "sha256": "8bd349ed7bc962c4e71293d4d62eab47aa7b801638d7f34169ec19dbaa9b71a6"
+    },
+    {
+      "stem": "00_カリキュラム目次",
+      "path": "material/30days-curriculum/00_カリキュラム目次.md",
+      "sha256": "fadedb04d72a0ddbb34d2f9a718a28f60b6d2978b4933d413fdaed106996888e"
+    },
+    {
+      "stem": "appendix_トラブルシューティング",
+      "path": "material/30days-curriculum/appendix_トラブルシューティング.md",
+      "sha256": "0865ac0146ebc8958734f6e36cc77ddd333cfd957b6be5f47d1be166ba24c344"
+    },
+    {
+      "stem": "appendix_参考資料",
+      "path": "material/30days-curriculum/appendix_参考資料.md",
+      "sha256": "68d4ab3b32efd042781440e8d7811d77aa387238b30882292284e770bae9c1cc"
+    },
+    {
+      "stem": "appendix_次のステップ",
+      "path": "material/30days-curriculum/appendix_次のステップ.md",
+      "sha256": "fabeb1b6a820e30cf2a8df4e5c4e8439ec6a406128339afdd081dafb4212ad9f"
+    },
+    {
+      "stem": "appendix_用語集",
+      "path": "material/30days-curriculum/appendix_用語集.md",
+      "sha256": "a47847a5d887358648e3fc11813b2f606c9b16cdc1ec4df589cebb2bf52cd0f7"
+    },
+    {
+      "stem": "day01_開発環境を整えて、初めてのアプリを動かそう",
+      "path": "material/30days-curriculum/day01_開発環境を整えて、初めてのアプリを動かそう.md",
+      "sha256": "dcc268aacb28351e2b279e51e082a068b996098a39cc92ca0ac1f6a1552304f7"
+    },
+    {
+      "stem": "day02_ダッシュボードに自分だけのメッセージを追加しよう",
+      "path": "material/30days-curriculum/day02_ダッシュボードに自分だけのメッセージを追加しよう.md",
+      "sha256": "7394d8c218cf3018a2c9fc153f7debf25c6e8950064cf8d2a2ac7c4c0fff046d"
+    },
+    {
+      "stem": "day03_GitHubに保存する",
+      "path": "material/30days-curriculum/day03_GitHubに保存する.md",
+      "sha256": "f083816f377f3548234a53771c333135f0db875825455accd82e3db1b32bae23"
+    },
+    {
+      "stem": "day04_ネットに公開",
+      "path": "material/30days-curriculum/day04_ネットに公開.md",
+      "sha256": "1df5d15047065acdba722ce6b147aaa9532c341b1fdcb3d9d38ccab1874a18e0"
+    },
+    {
+      "stem": "day05_ログイン画面のUI",
+      "path": "material/30days-curriculum/day05_ログイン画面のUI.md",
+      "sha256": "b1e169627e567817bdbcfd41cf02bc0733765327802e96140fbbef4c54c49942"
+    },
+    {
+      "stem": "day06_ユーザー登録画面",
+      "path": "material/30days-curriculum/day06_ユーザー登録画面.md",
+      "sha256": "cce883290502cf2ab586f8b84b7417b985880df860f53de988e953d1256e96e2"
+    },
+    {
+      "stem": "day07_ログイン体験を改善しよう",
+      "path": "material/30days-curriculum/day07_ログイン体験を改善しよう.md",
+      "sha256": "d0255667c618150965078a5199f07432e108a19eaeb93aff5b96a8efe66c9349"
+    },
+    {
+      "stem": "day08_サイドバーを完成させよう",
+      "path": "material/30days-curriculum/day08_サイドバーを完成させよう.md",
+      "sha256": "e1ac9093bb513655617d702b62bce070976aec65509f0ee6f2ed3faa080015fa"
+    },
+    {
+      "stem": "day09_プロジェクト一覧画面",
+      "path": "material/30days-curriculum/day09_プロジェクト一覧画面.md",
+      "sha256": "476ecea5ff2d2950031721bf39e79b6010c0c102377c7dae5ca65f9f528047b3"
+    },
+    {
+      "stem": "day10_プロジェクト新規作成",
+      "path": "material/30days-curriculum/day10_プロジェクト新規作成.md",
+      "sha256": "b190d2dd00559695315d58387ada0918a5f81642f0968f3f4f082337d2affa55"
+    },
+    {
+      "stem": "day11_プロジェクト編集・削除",
+      "path": "material/30days-curriculum/day11_プロジェクト編集・削除.md",
+      "sha256": "1b28e36e71217664f4dfa383cd4d9f9d1aa19719244c595923fedb4c74af5fa0"
+    },
+    {
+      "stem": "day12_メンバー追加",
+      "path": "material/30days-curriculum/day12_メンバー追加.md",
+      "sha256": "cd9c659a1fa6416dd92c4505ad27df5e70af2c51082b6b3812f5bbf2e62cd193"
+    },
+    {
+      "stem": "day13_タスク一覧画面",
+      "path": "material/30days-curriculum/day13_タスク一覧画面.md",
+      "sha256": "5c1a9b8481a00f5cb0c4503a110108ebb27c02b60aa6624d9d6e46029ba62453"
+    },
+    {
+      "stem": "day14_タスク新規作成",
+      "path": "material/30days-curriculum/day14_タスク新規作成.md",
+      "sha256": "08507cdcb6bfeb12f87df65454690a1b57f754db058b6bbc742ccf3c5db6f201"
+    },
+    {
+      "stem": "day15_タスク編集・削除",
+      "path": "material/30days-curriculum/day15_タスク編集・削除.md",
+      "sha256": "9558e3dc03f3c43ad250e96e3c4cb1572bb2ee46d5e6241a73658bd8ba7cede6"
+    },
+    {
+      "stem": "day16_ステータス変更・時間記録",
+      "path": "material/30days-curriculum/day16_ステータス変更・時間記録.md",
+      "sha256": "dd519fe31d67d10bd3acc6f9022cc44617bfbab233e2195a37c49cbd2506caab"
+    },
+    {
+      "stem": "day17_自分のタスクページ",
+      "path": "material/30days-curriculum/day17_自分のタスクページ.md",
+      "sha256": "2ed751ead24d35efee2ab383fc3d0c127b9766f7a7bf9b227206022d2c3d4e3b"
+    },
+    {
+      "stem": "day18_コメント投稿",
+      "path": "material/30days-curriculum/day18_コメント投稿.md",
+      "sha256": "8021236ed149624149b7dcfdb3c08b3cf2f97c4fbd632c118a12f750fdfc1716"
+    },
+    {
+      "stem": "day19_コメント編集・削除",
+      "path": "material/30days-curriculum/day19_コメント編集・削除.md",
+      "sha256": "da4c94b52e3976a5da0a6663cfbb6c3c0d3f1041787dbcc500f1d2a89c1a7fd2"
+    },
+    {
+      "stem": "day20_タスク検索機能",
+      "path": "material/30days-curriculum/day20_タスク検索機能.md",
+      "sha256": "bceee5e7351e9100496aa9eb543d40014158f22c07a8471e91526a62702c52e7"
+    },
+    {
+      "stem": "day21_統計カードを表示",
+      "path": "material/30days-curriculum/day21_統計カードを表示.md",
+      "sha256": "ab3803a1f285f351a59eeb4a66c4762f915873e0c973f54c1c992a63eede6a4a"
+    },
+    {
+      "stem": "day22_グラフを表示",
+      "path": "material/30days-curriculum/day22_グラフを表示.md",
+      "sha256": "7899ae6bf39f37bbb750e52042967a4dea9b6cd4b5738eacbeec279f4784f245"
+    },
+    {
+      "stem": "day23_週次レポート",
+      "path": "material/30days-curriculum/day23_週次レポート.md",
+      "sha256": "99643922c4e6ea658dd458d18a4045d4f311536d0de08fc7b23987fbd4600121"
+    },
+    {
+      "stem": "day24_ユーザー一覧（管理者用）",
+      "path": "material/30days-curriculum/day24_ユーザー一覧（管理者用）.md",
+      "sha256": "17078826fcffd502132361c6067b11d2e613373cbb80b19cf720d4cfd719840b"
+    },
+    {
+      "stem": "day25_プロフィール編集",
+      "path": "material/30days-curriculum/day25_プロフィール編集.md",
+      "sha256": "192cf5d0f54dafa7e952e03b3c0108e5456c9e587411f8991edda96a557c48c0"
+    },
+    {
+      "stem": "day26_エラーページを作って、バグを退治しよう",
+      "path": "material/30days-curriculum/day26_エラーページを作って、バグを退治しよう.md",
+      "sha256": "c1dd6f612135609505a6ff34b302c77dd78d90e9778cecf874512768ce5ce5b3"
+    },
+    {
+      "stem": "day27_プロジェクト詳細・アーカイブを実装しよう",
+      "path": "material/30days-curriculum/day27_プロジェクト詳細・アーカイブを実装しよう.md",
+      "sha256": "21270018bf7630347af46d9f0313f333c2f4b78e2b186cf7b638df8ef980e541"
+    },
+    {
+      "stem": "day28_タスク一括操作を実装しよう",
+      "path": "material/30days-curriculum/day28_タスク一括操作を実装しよう.md",
+      "sha256": "cf043db6fb97bf77054447486e88abfffd9c88c6011ae8a5bc7da9b90ab5deb6"
+    },
+    {
+      "stem": "day29_ユーザー詳細・編集ページを作ろう",
+      "path": "material/30days-curriculum/day29_ユーザー詳細・編集ページを作ろう.md",
+      "sha256": "c6169f6eb5409dcd72b4f1a6218107110e4596c830fca39da75e920771b31f51"
+    },
+    {
+      "stem": "day30_完成版を公開！",
+      "path": "material/30days-curriculum/day30_完成版を公開！.md",
+      "sha256": "5bedd55830c21a07954d264cfabb5a4ce9714d97640cf97078c361603a991e45"
+    }
+  ]
+}
