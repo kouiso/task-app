@@ -4086,8 +4086,8 @@
     },
     {
       "path": "scripts/pdf-book/build_pdf_book.py",
-      "sha256": "5546f47f7a9000b5913006e843b0d081697056798f4c993c9c228f0554a2aaf2",
-      "bytes": 112227
+      "sha256": "86e6d72d985cf49eea0476092f5a1eed89b3f943cb64d73327238559881452c4",
+      "bytes": 114941
     },
     {
       "path": "scripts/pdf-book/check_inline_break.py",
@@ -4246,8 +4246,8 @@
     },
     {
       "path": "scripts/pdf-book/test_check_pdf_book.py",
-      "sha256": "954a8038eac113e1604a78962a97e689c83edf508fe64371889c7434c1a4eead",
-      "bytes": 32640
+      "sha256": "93aa9bae337af87c7990d4f73f10a4eca38657cf6815ac373dbd65e75e7c79e3",
+      "bytes": 37739
     },
     {
       "path": "scripts/pdf-book/test_cjk_soft_breaks.py",
