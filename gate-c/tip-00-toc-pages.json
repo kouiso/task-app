@@ -1,0 +1,67 @@
+{
+ "book": "00_カリキュラム目次.pdf",
+ "pdf_sha256_head12": "41b6d9b19931",
+ "pages_total": 20,
+ "pages_inspected": 20,
+ "inspection": {
+  "method": "poppler(pdftoppm)で全20頁を100dpi PNG化→1頁ずつ実画像を目視(20頁×1チャンク)。疑義箇所は原稿mdと照合。",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-fc85e1e5e2e749e2a7aaa1c0f4dbc94a",
+  "inspected_at": "2026-10-10",
+  "note": "tip 5881e2f7 初回目視検査(旧build e39a1ce9 では非day冊は未検査だったためtip初検査)"
+ },
+ "verdicts": {
+  "must": 0,
+  "suggest": 12,
+  "ok": 8
+ },
+ "pages": [
+  {"page": 1, "verdict": "ok", "findings": []},
+  {"page": 2, "verdict": "ok", "findings": []},
+  {"page": 3, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注1が裸URLのみ(Google Drive・`view?u`/`sp=drivesdk`語途中改行)。endnote式組版共通問題"}
+  ]},
+  {"page": 4, "verdict": "ok", "findings": []},
+  {"page": 5, "verdict": "ok", "findings": []},
+  {"page": 6, "verdict": "ok", "findings": [
+   {"severity": "info", "detail": "言葉表が頁途中で終了し下半分が余白(節切れの自然な半白。欠落なし)"}
+  ]},
+  {"page": 7, "verdict": "ok", "findings": []},
+  {"page": 8, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注2が裸URLのみ(Google Drive・`u`/`sp=drivesdk`語途中改行)"}
+  ]},
+  {"page": 9, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注3-5が裸URLのみ(Google Drive・`vie`/`w?usp=drivesdk`語途中改行)"}
+  ]},
+  {"page": 10, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注6-8が裸URLのみ(同型)"}
+  ]},
+  {"page": 11, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注9-12が裸URLのみ(同型)"}
+  ]},
+  {"page": 12, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注13-15が裸URLのみ(同型)"}
+  ]},
+  {"page": 13, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注16-18が裸URLのみ(同型)"}
+  ]},
+  {"page": 14, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注19-22が裸URLのみ(同型)"}
+  ]},
+  {"page": 15, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注23-25が裸URLのみ(同型)"}
+  ]},
+  {"page": 16, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注26-28が裸URLのみ(同型)"}
+  ]},
+  {"page": 17, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注29-31が裸URLのみ(同型)"}
+  ]},
+  {"page": 18, "verdict": "ok", "findings": []},
+  {"page": 19, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注32-36が裸URLのみ(同型・5件)"}
+  ]},
+  {"page": 20, "verdict": "ok", "findings": []}
+ ]
+}
