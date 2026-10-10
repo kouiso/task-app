@@ -42,7 +42,7 @@
 | 6 | appendix_用語集 | `a47847a5d887` | | `eea5748f0a9b`| 16 | ⬜ | ⬜ | |
 | 7 | day01_開発環境を整えて、初めてのアプリを動かそう | `dcc268aacb28` | | `7885999f22b9`| 82 | ⬜ | ⬜ | |
 | 8 | day02_ダッシュボードに自分だけのメッセージを追加しよう | `7394d8c218cf` | | `b2f6d4969716`| 70 | ⬜ | ⬜ | |
-| 9 | day03_GitHubに保存する | `f083816f377f` | | `d4ffcaec4b17`| 60 | ⬜ | ⬜ | |
+| 9 | day03_GitHubに保存する | `f083816f377f` | | `d4ffcaec4b17`| 60 | ⬜ | ✅ | must1(p30図2ラベル切れ)+suggest12 → `gate-c/day03-ledger.md` (3d804a) |
 | 10 | day04_ネットに公開 | `1df5d1504706` | | `57e06cdc379c`| 50 | ⬜ | ⬜ | |
 | 11 | day05_ログイン画面のUI | `b1e169627e56` | | `944b9a74fa53`| 81 | ⬜ | ⬜ | |
 | 12 | day06_ユーザー登録画面 | `cce883290502` | | `79fdb8402378`| 77 | ⬜ | ⬜ | |
@@ -142,7 +142,7 @@ suggest/note: 脚注裸URL×19（endnote式・情報欠落なし）、p23約7割
 | S01 | 付録4+ロードマップ+目次 | 90 | (各冊台帳参照) | 6f57ae | ✅集約済・must0 |
 | S02 | day01 | 82 | 7885999f22b9 | 6f57ae | ✅集約済・must2→3a7a修正割付 |
 | S03 | day02 | 70 | b2f6d4969716 | 6f57ae | 🚧目視中 |
-| S04 | day03 | 60 | d4ffcaec4b17 | devin-3d804a54 (7c7509cb子) | 🚧投入済 |
+| S04 | day03 | 60 | d4ffcaec4b17 | devin-3d804a54 (7c7509cb子) | ✅集約済・must1+suggest12 → day03-ledger.md |
 | S05 | day04+day05 | 131 | (manifest参照) | devin-daea5be3 (7c7509cb子) | 🚧投入済 |
 | S06 | day06 | 77 | 〃 | devin-daea5be3 〃 | 🚧投入済 |
 | S07 | day07 | 146 | 〃 | devin-daea5be3 〃 | 🚧投入済 |
@@ -182,7 +182,7 @@ suggest/note: 脚注裸URL×19（endnote式・情報欠落なし）、p23約7割
 | appendix_用語集.pdf | eea5748f0a9b | 1-16 | ✅集約済 |
 | day01_開発環境を整えて、初めてのアプリを動かそう.pdf | 7885999f22b9 | 1-82 | ✅集約済 |
 | day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf | b2f6d4969716 | 1-70 | 🚧目視中(6f57ae) |
-| day03_GitHubに保存する.pdf | d4ffcaec4b17 | 1-60 | キュー待ち |
+| day03_GitHubに保存する.pdf | d4ffcaec4b17 | 1-60 | ✅集約済・must1+suggest12 (3d804a) |
 | day04_ネットに公開.pdf | 57e06cdc379c | 1-50 | キュー待ち |
 | day05_ログイン画面のUI.pdf | 944b9a74fa53 | 1-81 | キュー待ち |
 | day06_ユーザー登録画面.pdf | 79fdb8402378 | 1-77 | キュー待ち |
