@@ -97,10 +97,16 @@ export function loadMarginOutlineAssets(glyphMapPath, fontPath, sourcePath, expe
   if (path.basename(fontPath) !== map.font.filename || fontSha256 !== map.font.sha256) {
     throw new Error(`margin source font不一致: ${fontSha256}`);
   }
-  const source = map.supported_titles.find((entry) => entry.title === expectedTitle);
+  // 同一題名・同一配置の照合はUnicode等価（NFC）で比較する。展開先の
+  // ファイルシステム（macOSはNFD）や原稿の正規化形に左右されず、
+  // 意味の異なる題名は引き続き弾ける。
+  const normalizedExpectedTitle = expectedTitle.normalize('NFC');
+  const source = map.supported_titles.find(
+    (entry) => entry.title.normalize('NFC') === normalizedExpectedTitle,
+  );
   const sourceSha256 = sha256(sourcePath);
-  const normalizedSourcePath = path.normalize(sourcePath);
-  const normalizedRelativePath = path.normalize(source?.path ?? '');
+  const normalizedSourcePath = path.normalize(sourcePath).normalize('NFC');
+  const normalizedRelativePath = path.normalize(source?.path ?? '').normalize('NFC');
   if (
     !source ||
     !normalizedSourcePath.endsWith(`${path.sep}${normalizedRelativePath}`) ||
@@ -269,8 +275,11 @@ export async function outlineDecorativeMargins(map, expectedTitle) {
   if (!map?.font || !Array.isArray(map.supported_titles) || !map.glyphs) {
     throw new Error('margin glyph map browser payloadが不正です');
   }
-  const supportedTitles = new Set(map.supported_titles.map((source) => source.title));
-  if (!supportedTitles.has(expectedTitle))
+  const normalizedTitle = expectedTitle.normalize('NFC');
+  const supportedTitles = new Set(
+    map.supported_titles.map((source) => source.title.normalize('NFC')),
+  );
+  if (!supportedTitles.has(normalizedTitle))
     throw new Error(`未登録のmargin titleです: ${expectedTitle}`);
   await document.fonts.ready;
   const matchingFontFaces = [];
@@ -341,7 +350,7 @@ export async function outlineDecorativeMargins(map, expectedTitle) {
       {
         box: topBoxes[0],
         role: 'title',
-        text: expectedTitle,
+        text: normalizedTitle,
         name: `top-${expectedSide}`,
       },
       {
@@ -353,7 +362,7 @@ export async function outlineDecorativeMargins(map, expectedTitle) {
     ];
     for (const item of expected) {
       const name = item.box.getAttribute('data-vivliostyle-page-margin-box');
-      const actualText = item.box.textContent.trim();
+      const actualText = item.box.textContent.trim().normalize('NFC');
       if (name !== item.name || actualText !== item.text) {
         throw new Error(
           `page ${pageIndex + 1} margin ${item.role}不一致: ${name}:${JSON.stringify(actualText)}`,

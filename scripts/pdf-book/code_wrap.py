@@ -586,7 +586,8 @@ def _restricted_comment_positions(
 
 
 def forced_breaks(
-    text_atoms: list[str], states: list[str], marks: set[int], lang: str
+    text_atoms: list[str], states: list[str], marks: set[int], lang: str,
+    continuation_columns: int = 0,
 ) -> set[int]:
     """実改行しても意味が変わらない境界を、58桁以内になるよう選ぶ。
 
@@ -679,12 +680,12 @@ def forced_breaks(
     ]
     selected: set[int] = set()
     start = 0
-    while line_width(text_atoms[start:]) > SAFE_COLS:
+    while line_width(([" "] * continuation_columns if start else []) + text_atoms[start:]) > SAFE_COLS:
         fitting = [
             index
             for index in candidates
             if index > start
-            and line_width(text_atoms[start:index]) <= SAFE_COLS
+            and line_width(([" "] * continuation_columns if start else []) + text_atoms[start:index]) <= SAFE_COLS
         ]
         if not fitting:
             later = [index for index in candidates if index > start]
@@ -703,6 +704,7 @@ def _emit_line(
     states: list[str],
     residuals: list[str],
     lang: str = "",
+    hanging_continuation: bool = False,
 ) -> str:
     """(断片, その断片中の論理文字列) の列へ安全な強制境界を入れる。
 
@@ -726,10 +728,14 @@ def _emit_line(
     if width <= SAFE_COLS:
         return "".join(body for _, body in chunks)
     marks = break_before(text_atoms, states, lang)
-    hard_marks = forced_breaks(text_atoms, states, marks, lang)
+    leading = 0
+    while leading < len(text_atoms) and atom_char(text_atoms[leading]) in {" ", "\t"}:
+        leading += 1
+    hang = line_width(text_atoms[:leading]) + 2 if hanging_continuation else 0
+    hard_marks = forced_breaks(text_atoms, states, marks, lang, hang)
     hard_bounds = [0] + sorted(hard_marks) + [len(text_atoms)]
     max_segment = max(
-        line_width(text_atoms[b1:b2])
+        line_width(([" "] * hang if b1 else []) + text_atoms[b1:b2])
         for b1, b2 in zip(hard_bounds, hard_bounds[1:])
     )
     pct = min(100, int(SAFE_COLS * 100 / max_segment))
@@ -753,7 +759,7 @@ def _emit_line(
                 removed = min(remaining, len(body_atoms))
                 remaining -= removed
                 trimmed.append((kind, "".join(body_atoms[removed:])))
-            return _emit_line(trimmed, states[indent:], residuals, lang)
+            return _emit_line(trimmed, states[indent:], residuals, lang, hanging_continuation)
     if pct < SHRINK_MIN_PCT:
         residuals.append(
             "".join(atom_char(a) for a in text_atoms)[:80]
@@ -777,6 +783,16 @@ def _emit_line(
         )
         out.append(rebuilt)
     joined = "".join(out)
+    if hang and hard_marks:
+        code_open = re.search(r"<code\b[^>]*>", joined, re.IGNORECASE)
+        code_close = joined.lower().rfind("</code>")
+        start = code_open.end() if code_open else 0
+        end = code_close if code_close >= start else len(joined)
+        joined = (
+            joined[:start]
+            + f'<span class="cw-logical-line" style="--cw-hang:{hang}ch">'
+            + joined[start:end] + "</span>" + joined[end:]
+        )
     if pct < 100:
         code_open = re.search(r"<code\b[^>]*>", joined, re.IGNORECASE)
         code_close = joined.lower().rfind("</code>")
@@ -827,9 +843,17 @@ def _balance_multiline_spans(inner: str) -> tuple[str, bool]:
 
 
 def rewrite_pre_inner(
-    inner: str, lang: str, residuals: list[str], spans_balanced: bool = False
+    inner: str, lang: str, residuals: list[str], spans_balanced: bool = False,
+    hanging_continuation: bool = False,
 ) -> str:
     """<pre> 内を論理行に切り、長い行だけ _emit_line で処理する。"""
+    if hanging_continuation and not spans_balanced:
+        _, invalid = _measure_hanging_rows("<pre>" + inner + "</pre>")
+        if invalid:
+            residuals.extend(invalid)
+            return inner
+        inner, _ = _balance_multiline_spans(inner)
+        spans_balanced = True
     chunks: list[tuple[str, str]] = []  # ("tag"|"text", 断片)
     pos = 0
     for match in TAG_RE.finditer(inner):
@@ -886,7 +910,7 @@ def rewrite_pre_inner(
     line_residuals: list[str] = []
     out: list[str] = []
     for line, states in zip(lines, states_per_line):
-        out.append(_emit_line(line, states, line_residuals, lang))
+        out.append(_emit_line(line, states, line_residuals, lang, hanging_continuation))
         out.append("\n")
     if out:
         out.pop()  # 最終行の改行を除く
@@ -894,7 +918,7 @@ def rewrite_pre_inner(
     if not spans_balanced and f'class="{SHRINK_CLASS}"' in rendered:
         balanced, changed = _balance_multiline_spans(inner)
         if changed:
-            return rewrite_pre_inner(balanced, lang, residuals, spans_balanced=True)
+            return rewrite_pre_inner(balanced, lang, residuals, spans_balanced=True, hanging_continuation=hanging_continuation)
     residuals.extend(line_residuals)
     percentages = [
         int(value)
@@ -935,23 +959,116 @@ def rewrite_pre_inner(
 LANG_RE = re.compile(r"language-([a-zA-Z0-9]+)")
 
 
-def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str:
+def wrap_code_in_html(html_text: str, residuals: list[str] | None = None, *, hanging_continuation: bool = False, hanging_pre_indices: frozenset[int] = frozenset()) -> str:
     """HTML全体の <pre> を走査して安全な折返しを入れた文字列を返す。
 
     residuals にリストを渡すと、縮小でも救えない行が記録される。
     """
     if residuals is None:
         residuals = []
+    if not isinstance(hanging_pre_indices, frozenset) or any(
+        type(index) is not int or index < 0 for index in hanging_pre_indices
+    ):
+        raise ValueError("hanging pre selection must be a frozenset of nonnegative integers")
+    if hanging_continuation and hanging_pre_indices:
+        raise ValueError("global and selective hanging modes cannot be combined")
+    pre_count = len(PRE_RE.findall(html_text))
+    if any(index >= pre_count for index in hanging_pre_indices):
+        raise ValueError("hanging pre selection is outside this document")
+    pre_index = 0
 
     def repl(match: re.Match[str]) -> str:
+        nonlocal pre_index
+        selected = hanging_continuation or pre_index in hanging_pre_indices
+        pre_index += 1
         block = match.group(0)
         open_end = block.index(">") + 1
         open_tag = block[:open_end]
         lang_m = LANG_RE.search(open_tag)
         lang = lang_m.group(1).lower() if lang_m else ""
         inner = block[open_end:-len("</pre>")]
-        return open_tag + rewrite_pre_inner(inner, lang, residuals) + "</pre>"
+        return open_tag + rewrite_pre_inner(inner, lang, residuals, hanging_continuation=selected) + "</pre>"
     return PRE_RE.sub(repl, html_text)
+
+
+def _measure_hanging_rows(block: str) -> tuple[list[tuple[int, list[str]]], list[str]]:
+    """Prism の入れ子を追い、論理行ラッパー全体の文字を検査します。"""
+    from html.parser import HTMLParser
+
+    class Walker(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=True)
+            self.stack: list[str] = []
+            self.rows: list[tuple[int, list[str]]] = []
+            self.errors: list[str] = []
+            self.active: tuple[int, int, list[str]] | None = None
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            fields = dict(attrs)
+            if len(fields) != len(attrs):
+                self.errors.append("duplicate hanging HTML attributes")
+            if tag in {"wbr", "br"}:
+                if tag == "wbr" and attrs:
+                    self.errors.append("unknown hanging wbr attributes")
+                if tag == "br":
+                    if fields != {"class": FORCE_BREAK_CLASS}:
+                        self.errors.append("unknown hanging break")
+                    elif self.active:
+                        self.active[2].append("")
+                return
+            if tag not in {"pre", "code", "span"}:
+                self.errors.append("unknown hanging HTML element")
+            if tag == "pre" and self.stack or tag == "code" and self.stack != ["pre"]:
+                self.errors.append("invalid hanging pre/code nesting")
+            if tag == "span" and "code" not in self.stack:
+                self.errors.append("hanging span outside code")
+            self.stack.append(tag)
+            if "cw-logical-line" in (fields.get("class") or "").split():
+                value = re.fullmatch(r"--cw-hang:(\d+)ch", fields.get("style") or "")
+                if self.active or fields.keys() != {"class", "style"} or fields.get("class") != "cw-logical-line" or not value:
+                    self.errors.append("hanging continuation wrapper cannot be measured")
+                    return
+                hang = int(value.group(1))
+                if not 2 <= hang <= SAFE_COLS:
+                    self.errors.append("hanging continuation inset is outside safe columns")
+                self.active = (len(self.stack), hang, [""])
+
+        def handle_endtag(self, tag: str) -> None:
+            if not self.stack or self.stack[-1] != tag:
+                self.errors.append("unbalanced hanging HTML element")
+                return
+            if self.active and self.active[0] == len(self.stack):
+                self.rows.append((self.active[1], self.active[2]))
+                self.active = None
+            self.stack.pop()
+
+        def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            if tag not in {"br", "wbr"}:
+                self.errors.append("unknown hanging self-closing element")
+            else:
+                self.handle_starttag(tag, attrs)
+
+        def handle_data(self, data: str) -> None:
+            if self.active:
+                if "\n" in data or "\r" in data:
+                    self.errors.append("hanging wrapper crosses original logical line")
+                self.active[2][-1] += data
+
+        def handle_comment(self, data: str) -> None:
+            self.errors.append("unknown hanging HTML comment")
+
+        def handle_decl(self, decl: str) -> None:
+            self.errors.append("unknown hanging HTML declaration")
+
+    walker = Walker()
+    try:
+        walker.feed(block)
+        walker.close()
+    except (ValueError, AssertionError):
+        walker.errors.append("hanging continuation HTML parse failure")
+    if walker.stack or walker.active:
+        walker.errors.append("unclosed hanging HTML element")
+    return walker.rows, walker.errors
 
 
 def unsafe_runs(html_text: str) -> list[str]:
@@ -964,6 +1081,22 @@ def unsafe_runs(html_text: str) -> list[str]:
     bad: list[str] = []
     for match in PRE_RE.finditer(html_text):
         block = match.group(0)
+        if "cw-logical-line" in block:
+            hanging_rows, invalid = _measure_hanging_rows(block)
+            if invalid:
+                bad.extend(invalid)
+                continue
+            percentages = re.findall(
+                rf'<span class="{SHRINK_CLASS} {BLOCK_SHRINK_CLASS}" style="font-size:(\d+)%">', block
+            )
+            pct = int(percentages[0]) if len(percentages) == 1 else 100
+            for hang, segments in hanging_rows:
+                for index, segment in enumerate(segments):
+                    # tab stop は継続行の視覚的な開始桁から計算します。
+                    prefix = " " * hang if index else ""
+                    width = line_width(atoms(html.escape(prefix + segment)))
+                    if width * pct > SAFE_COLS * 100:
+                        bad.append("hanging continuation exceeds safe columns")
         block_percentages = re.findall(
             rf'<span class="{SHRINK_CLASS} {BLOCK_SHRINK_CLASS}" '
             r'style="font-size:(\d+)%">', block

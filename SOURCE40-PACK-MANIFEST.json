@@ -4086,8 +4086,8 @@
   },
   {
    "path": "scripts/pdf-book/build_pdf_book.py",
-   "sha256": "36ad7a5907ec5feae13ba1cf6053ac1722b527495e0f8a37a346a5b7d78380f8",
-   "bytes": 111024
+   "sha256": "5546f47f7a9000b5913006e843b0d081697056798f4c993c9c228f0554a2aaf2",
+   "bytes": 112227
   },
   {
    "path": "scripts/pdf-book/check_inline_break.py",
@@ -4106,8 +4106,8 @@
   },
   {
    "path": "scripts/pdf-book/code_wrap.py",
-   "sha256": "8c30ae69e5689e09ceb98f3b14b45616eab56f8a99cfb17073a3765354d1e14a",
-   "bytes": 45695
+   "sha256": "86e92ee1cd476b0fe4d4d8dfdc86eb61b93e0939d50d42d11f858967677594a3",
+   "bytes": 52490
   },
   {
    "path": "scripts/pdf-book/decorative-margin-glyph-map.json",
@@ -4116,18 +4116,23 @@
   },
   {
    "path": "scripts/pdf-book/decorative-margin-outline.mjs",
-   "sha256": "dfef6b11e195f63ece7ae75175999e33ed423738c0996a923ea92d1a98e2a1f0",
-   "bytes": 32467
+   "sha256": "f94f4d5b90979961e5ee21f4426a287071674cca00c66be9a4d3da1a282482c9",
+   "bytes": 32954
   },
   {
    "path": "scripts/pdf-book/decorative-margin-outline.test.mjs",
-   "sha256": "3ffeae3b13f6ff32b68aa0e9139d32f5948824ac5a0bdbe4bce7f311386a10d8",
-   "bytes": 15403
+   "sha256": "210bb35bbd26d8b90f1c99e0e8469eaab81e709ed4cacecef0a45afddf4efe02",
+   "bytes": 17253
   },
   {
    "path": "scripts/pdf-book/fixture/unit-12.txt",
    "sha256": "805dce9c33ba18f8239b085480ec64205368dc5756cfba9081333fb8c50cf8e1",
    "bytes": 1771
+  },
+  {
+   "path": "scripts/pdf-book/hanging_scope.py",
+   "sha256": "738203dadb232277142636859c754b02ad810ea14fac9648f71e8499e108e823",
+   "bytes": 11310
   },
   {
    "path": "scripts/pdf-book/inline_break.py",
@@ -4183,6 +4188,11 @@
    "path": "scripts/pdf-book/release_manifest.py",
    "sha256": "7c1971257a5007c452e5e5b6f0c7456323c8e4f1c1c3ee664d532e609ac7df9b",
    "bytes": 41086
+  },
+  {
+   "path": "scripts/pdf-book/selective-hanging-scope-current40.json",
+   "sha256": "4857258f3178ccbb13149be7a5837cc4e69c8b99ed9dff2a90017cb6b53c67a8",
+   "bytes": 32248
   },
   {
    "path": "scripts/pdf-book/table-layout.json",
@@ -4263,6 +4273,11 @@
    "path": "scripts/pdf-book/test_find_browser.py",
    "sha256": "bebe9a81a120269c150b09e8194ca5bb490e513a24b3f53d046b04c0e3d00275",
    "bytes": 9460
+  },
+  {
+   "path": "scripts/pdf-book/test_hanging_scope.py",
+   "sha256": "43e663db4218fed57449c1d139afa6215ad738e6a0e0e5e5e5716ccdea91ceac",
+   "bytes": 13402
   },
   {
    "path": "scripts/pdf-book/test_image_mermaid_safety.py",
@@ -4373,6 +4388,11 @@
    "path": "scripts/pdf-book/test_verify_pdf_copy.py",
    "sha256": "95d07c90065d459b6edad685993f80aa45b0a71b37aeb8418d203b0b34569307",
    "bytes": 12685
+  },
+  {
+   "path": "scripts/pdf-book/test_work_slug_normalization.py",
+   "sha256": "e3e1cd0755d7016c3f35c934a2b380738f836b2485119148a88548f5004f1dc2",
+   "bytes": 1838
   },
   {
    "path": "scripts/pdf-book/test_workflow_scope.py",
@@ -5555,5 +5575,7 @@
    "bytes": 1777
   }
  ],
- "file_count": 1110
+ "file_count": 1110,
+ "updated_by": "devin-3a7a21ddd08c4092a23b91d3cae6cef9",
+ "note": "selective40 integration + NFC/NFD normalization fixes (work_slug, margin outline binding, regression tests)"
 }

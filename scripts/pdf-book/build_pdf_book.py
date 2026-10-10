@@ -35,6 +35,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -57,6 +58,7 @@ from breakable_code import (  # noqa: E402
 )
 from keep_next import mark_keep_next  # noqa: E402
 from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
+from hanging_scope import HangingScope, load_hanging_scope  # noqa: E402
 from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
 from inline_layout_css import (  # noqa: E402
     HEADING_INLINE_CSS,
@@ -1882,11 +1884,16 @@ def work_slug(stem: str) -> str:
     見出しアンカーで約110バイトが先に埋まっており、名前に使えるのは残りだけになる。
     """
     head = re.match(r"[A-Za-z0-9_-]*", stem).group(0)[:6].strip("_-") or "book"
-    return f"{head}-{hashlib.sha256(stem.encode('utf-8')).hexdigest()[:6]}"
+    # ファイル名の正規化形（NFD/NFC）は展開先のファイルシステムで変わる。
+    # NFCに揃えてからハッシュしないと、表幅オーバーライドの document_id が
+    # 環境によってずれる。
+    normalized = unicodedata.normalize("NFC", stem)
+    return f"{head}-{hashlib.sha256(normalized.encode('utf-8')).hexdigest()[:6]}"
 
 
 def build_one(path: Path, browser: str | None, env: dict[str, str],
-              link_map: dict[str, str] | None = None) -> list[str]:
+              link_map: dict[str, str] | None = None,
+              hanging_scope: HangingScope | None = None) -> list[str]:
     """1本を PDF にする。問題があれば説明の一覧を返す（空なら成功）。"""
     stem = path.stem
     output = OUT_DIR / f"{stem}.pdf"
@@ -1897,7 +1904,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     # Chromium が単色の Noto Emoji を無視してシステムのカラー絵文字フォントを呼び、
     # 生成機械に依存する上に Type 3 で埋め込まれる。紙面では単色でよいので外す。
     try:
-        source = rewrite_book_links(path.read_text(encoding="utf-8"), path, link_map or {})
+        original_source = path.read_text(encoding="utf-8")
+        source = rewrite_book_links(original_source, path, link_map or {})
     except (ValueError, OSError, subprocess.TimeoutExpired) as error:
         return [f"{path.name}: {error}"]
     title, body, toc = parse_source(source.replace(EMOJI_VARIATION_SELECTOR, ""))
@@ -1942,17 +1950,29 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         return problems
 
     try:
-        validate_vfm_code_fences(document.read_text(encoding="utf-8"), converted.stdout)
+        prepared_markdown = document.read_text(encoding="utf-8")
+        validate_vfm_code_fences(prepared_markdown, converted.stdout)
+        hanging_indices = (hanging_scope or HangingScope(REPO_ROOT, None)).indices(
+            path, original_source, prepared_markdown, converted.stdout,
+            validate_vfm_code_fences,
+        )
         converted_markup = join_cjk_soft_breaks(converted.stdout)
         annotated, inline_manifest = annotate_inline_code(converted_markup, slug)
     except ValueError as error:
-        problems.append(f"{path.name}: 行内コードを監査用に識別できません: {error}")
+        problems.append(f"{path.name}: VFMコード出力を安全に識別できません: {error}")
         return problems
     (WORK_DIR / f"{slug}.inline-manifest.json").write_text(
         json.dumps(inline_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     residuals: list[str] = []
-    markup = wrap_code_in_html(annotated, residuals)
+    if hanging_scope is not None and hanging_scope.enabled:
+        markup = wrap_code_in_html(
+            annotated, residuals, hanging_pre_indices=hanging_indices,
+        )
+    else:
+        # Keep the default producer call byte-for-byte equivalent when no
+        # explicit scope is configured.
+        markup = wrap_code_in_html(annotated, residuals)
     if residuals:
         # フォント縮小の下限も割る行＝コピー安全な見た目を作れない行。
         # 出さずに止める。材料側のコード整形で対処する。
@@ -2306,6 +2326,9 @@ def main(argv: list[str]) -> int:
         print("見つからない: " + ", ".join(str(m) for m in missing), file=sys.stderr)
         return 2
     try:
+        hanging_scope = load_hanging_scope(
+            REPO_ROOT, os.environ.get("PDF_BOOK_HANGING_SCOPE"),
+        )
         link_map_filename = os.environ.get('PDF_BOOK_LINK_MAP')
         link_map = load_link_map(link_map_filename)
         # 1冊の未解決リンクで既存の全作業領域を消さないよう、準備前に全対象を検査する。
@@ -2395,7 +2418,9 @@ def main(argv: list[str]) -> int:
     problems: list[str] = []
     built_outputs: list[dict] = []
     for path in targets:
-        book_problems = build_one(path, browser, env, link_map)
+        book_problems = build_one(
+            path, browser, env, link_map, hanging_scope,
+        )
         problems += book_problems
         if full_release_build and not book_problems:
             try:

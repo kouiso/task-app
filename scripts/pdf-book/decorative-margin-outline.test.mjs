@@ -62,6 +62,65 @@ test('static glyph asset binds all current 36 sources and stable titles', () => 
   fs.rmSync(staleDirectory, { recursive: true });
 });
 
+test('NFC/NFD equivalent titles and source paths bind to the same catalog entry', () => {
+  const source = map.supported_titles.find((entry) =>
+    entry.path.includes('day01'),
+  );
+  assert.ok(source, 'day01 entry must exist in the glyph map');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'margin-outline-nfd-'));
+  try {
+    const nfdName = path.basename(source.path).normalize('NFD');
+    const nfdSource = path.join(
+      directory,
+      'material',
+      '30days-curriculum',
+      nfdName,
+    );
+    fs.mkdirSync(path.dirname(nfdSource), { recursive: true });
+    fs.copyFileSync(path.join(TEST_REPO, source.path), nfdSource);
+    // 正例: 同一題名のNFD表記・同一配置のNFDパスは正規化比較で通る。
+    const viaNfd = loadMarginOutlineAssets(
+      MAP_PATH,
+      FONT_PATH,
+      nfdSource,
+      source.title.normalize('NFD'),
+    );
+    assert.equal(viaNfd.provenance.source_sha256, source.sha256);
+    // 負例: 意味の異なる題名は正規化しても一致せず、引き続き弾く。
+    assert.throws(
+      () =>
+        loadMarginOutlineAssets(
+          MAP_PATH,
+          FONT_PATH,
+          nfdSource,
+          `${source.title}（別物）`,
+        ),
+      /title source不一致/,
+    );
+    // 負例: 同一題名でも配置が違う（別ディレクトリ由来）パスは弾く。
+    const misplaced = path.join(
+      directory,
+      'material',
+      'other-dir',
+      nfdName,
+    );
+    fs.mkdirSync(path.dirname(misplaced), { recursive: true });
+    fs.copyFileSync(nfdSource, misplaced);
+    assert.throws(
+      () =>
+        loadMarginOutlineAssets(
+          MAP_PATH,
+          FONT_PATH,
+          misplaced,
+          source.title,
+        ),
+      /title source不一致/,
+    );
+  } finally {
+    fs.rmSync(directory, { recursive: true });
+  }
+});
+
 test('Vivliostyle title arguments are single and explicit', () => {
   assert.equal(
     titleFromVivliostyleArgs(['build', '--title', 'さらなる学習のために']),
