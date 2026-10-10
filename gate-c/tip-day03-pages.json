@@ -1,0 +1,371 @@
+{
+ "book": "day03_GitHubに保存する.pdf",
+ "pdf_sha256_head12": "2e3726d03802",
+ "pages_total": 60,
+ "pages_inspected": 60,
+ "inspection": {
+  "method": "poppler(pdftoppm)で全60頁を100dpi PNG化→1頁ずつ実画像を目視(30頁×2の2チャンク)。脚注所在はpdftotextで全頁洗い出し確認",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-87c010e81da1437aa9ceebcd1cb441df",
+  "inspected_at": "2026-10-10",
+  "note": "tip 5881e2f7 再検証(旧build must p30の解消を画像上で確認)"
+ },
+ "verdicts": {
+  "must": 0,
+  "suggest": 7,
+  "ok": 53
+ },
+ "pages": [
+  {
+   "page": 1,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 2,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 3,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 4,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 5,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 6,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 7,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 8,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 9,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 10,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 11,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注1 `https://git-scm.com/install/` が裸URLのみ(参照名なし、endnote式同型)"
+    }
+   ]
+  },
+  {
+   "page": 12,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 13,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 14,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 15,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 16,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 17,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "「編集アンカー」節直後に約75%空白(改頁不可ブロック由来の大余白・day01 p23/day02 p30同型)"
+    }
+   ]
+  },
+  {
+   "page": 18,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 19,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 20,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 21,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 22,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 23,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 24,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注2 `https://brew.sh` が裸URLのみ"
+    }
+   ]
+  },
+  {
+   "page": 25,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注3 `docs.brew.sh`・脚注4 `cli/cli` install手順URLが裸URLのみ"
+    }
+   ]
+  },
+  {
+   "page": 26,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 27,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 28,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 29,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 30,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 31,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 32,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 33,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "下部約60%余白"
+    }
+   ]
+  },
+  {
+   "page": 34,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 35,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 36,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 37,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注5 GitHub commit-email 設定URL(長・`/`区切りで改行)が裸URLのみ"
+    }
+   ]
+  },
+  {
+   "page": 38,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "下部約45%余白"
+    }
+   ]
+  },
+  {
+   "page": 39,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "下部約60%余白"
+    }
+   ]
+  },
+  {
+   "page": 40,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 41,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 42,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 43,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 44,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 45,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 46,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 47,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 48,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 49,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 50,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注6 GitHub機密削除ドキュメントURL(長・`/account-and-data-s`/`ecure/`語途中改行)が裸URLのみ"
+    }
+   ]
+  },
+  {
+   "page": 51,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 52,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 53,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 54,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 55,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 56,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 57,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 58,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 59,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注7〜12が全て裸Google Drive URLのみ・`usp=drivesdk`/`vie`/`w?usp`語途中改行(次に読むもの節)"
+    }
+   ]
+  },
+  {
+   "page": 60,
+   "verdict": "ok",
+   "findings": []
+  }
+ ]
+}
