@@ -1,0 +1,301 @@
+{
+ "book": "day04_ネットに公開.pdf",
+ "pdf_sha256_head12": "427c6a1057e6",
+ "pages_total": 50,
+ "pages_inspected": 50,
+ "inspection": {
+  "method": "poppler(pdftoppm)で全50頁を100dpi PNG化→1頁ずつ実画像を目視(28+22頁の2チャンク)。脚注所在はpdftotextで全頁洗い出し確認",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-87c010e81da1437aa9ceebcd1cb441df",
+  "inspected_at": "2026-10-10",
+  "note": "tip 5881e2f7 再検証(旧build must p4/p5/p23の解消を画像上で確認)"
+ },
+ "verdicts": {
+  "must": 0,
+  "suggest": 4,
+  "ok": 46
+ },
+ "pages": [
+  {
+   "page": 1,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 2,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 3,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 4,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 5,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 6,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 7,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 8,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 9,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 10,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 11,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 12,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 13,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 14,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 15,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注1 GitHub機密情報削除ドキュメントURLが裸URLのみ(`/account-and-data-s`/`ecure/`で語途中改行)"
+    }
+   ]
+  },
+  {
+   "page": 16,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 17,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 18,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 19,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 20,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 21,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 22,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "下部約40%余白"
+    }
+   ]
+  },
+  {
+   "page": 23,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 24,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注2 `https://neon.tech`・脚注3 `https://supabase.com` が裸URLのみ"
+    }
+   ]
+  },
+  {
+   "page": 25,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 26,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 27,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 28,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 29,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "下部約60%余白"
+    }
+   ]
+  },
+  {
+   "page": 30,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 31,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 32,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 33,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 34,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注4 Vercel project削除ドキュメントURLが裸URLのみ"
+    }
+   ]
+  },
+  {
+   "page": 35,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 36,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 37,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 38,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 39,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 40,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 41,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 42,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 43,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 44,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 45,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 46,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 47,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 48,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 49,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注5〜10が全て裸Google Drive URLのみ・`vie`/`w?usp=drivesdk`語途中改行(次に読むもの節)"
+    }
+   ]
+  },
+  {
+   "page": 50,
+   "verdict": "ok",
+   "findings": []
+  }
+ ]
+}
