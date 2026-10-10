@@ -80,7 +80,14 @@ $PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレク
 - 前提ツール: poppler（pdftotext/pdfinfo/pdffonts）。本boxは `brew install poppler` 26.10.0 導入済・`/opt/homebrew/bin` に存在確認済
 - **チェッカー版一致ルール（統括追加）**: `check_pdf_book.py` にNFC等価修正が入る。最終PDF受領時は**生成子が使った修正後チェッカーと同一commit/版のもので再検査**する。受領sha256・機検結果は修正後チェッカーの出力を基準に固定し、使用したチェッカーのgit commitを `gate-c/logs/` の実行ログに記録する
 
+## 並行開始ルール（統括指示）
+
+- 生成子が **candidate版36PDF** を専用成果物ブランチへ先置きする（『candidate/機検未完了』明記・Drive未書込み）。**受領次第、全頁目視を機械検査修正と並行で開始**
+- 後続hash差分が来た冊のみ再目視。**checker側修正のみでPDF同一なら目視やり直し不要**
+- **最終判断時に「最終受領hash」と「対象checker版」の一致を必ず確認する**
+- candidate receipt は `gate-c/logs/candidate-receipt.md` に記録（ブランチcommit・各冊sha256・頁数・生成基準commit）
+
 ## 目視手順（要poppler・導入済）
 
-- `pdftoppm -r 60 -png`（poppler 26.10.0）で全ページPNG化→1頁ずつ目視
+- `bash gate-c/render_pages.sh <pdf_dir> gate-c/pages/` で全冊PNG化＋頁数/sha256一覧（`page-inventory.md`）を自動生成（poppler 26.10.0・pdftoppm）
 - 観点: 文字化け・フォント欠落 / コードブロック枠外はみ出し / 見出しリンクURL行欠落 / footnote裸URL / 画像・スクショ欠落 / ページ送り崩れ / 白ページ / 目次頁番号ずれ
