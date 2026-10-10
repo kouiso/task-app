@@ -1,10 +1,10 @@
 {
   "pack_branch": "devin/source40-input-pack",
-  "pack_commit": "08d631e8b93e70f3f2d672cf72c2200959f5310f",
+  "pack_commit": "e338032211198e00f9cffcc2f40e1822717bd9b7",
   "manifest_sha256": "346b9f898aef",
   "manifest_files_verified": "1110/1110 sha256 ok",
   "distribution_zip_verified": "85/85 byte ok",
-  "note": "36 curriculum md are NOT inside manifest (intentional) — pinned here by content sha256 at pack commit",
+  "note": "36 curriculum md NOT inside manifest — pinned by content sha256; unchanged between 08d631e8..e3380322 (verified), baseline sha256 remains valid. Final acceptance compares against generator final manuscript hash.",
   "books": [
     {
       "stem": "00-1_学びのロードマップ",
@@ -186,5 +186,11 @@
       "path": "material/30days-curriculum/day30_完成版を公開！.md",
       "sha256": "5bedd55830c21a07954d264cfabb5a4ce9714d97640cf97078c361603a991e45"
     }
-  ]
+  ],
+  "pack_head_history": [
+    "40a5ac34",
+    "08d631e8 (manifest+zip追加)",
+    "e3380322 (共通組版変更+manifest1114)"
+  ],
+  "manifest_verified_e3380322": "1114/1114 sha256 ok (file_count欄=1110は名残)"
 }

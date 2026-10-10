@@ -1,7 +1,7 @@
 # Gate C 台帳 — 36冊全ページ目視 + 機械検査
 
 担当: devin-3b59b953（目視/機械検査） / 生成: devin-3a7a21dd（release実行中）
-入力パック: `kouiso/task-app` `devin/source40-input-pack` HEAD `08d631e8b93e70f3f2d672cf72c2200959f5310f`
+入力パック: `kouiso/task-app` `devin/source40-input-pack` HEAD `e338032211198e00f9cffcc2f40e1822717bd9b7`（旧base 08d631e8 → e3380322 で共通組版変更が入った。教材md36本は無変更のため下表 baseline sha256 は引き続き有効・実測確認済）
 本ファイル: `devin/gate-c-evidence` ブランチ `gate-c/ledger.md`（生成側・他AI共有用）
 
 ## 受領形態（確定 — ブランチ経由）
@@ -10,7 +10,7 @@
 受領側(本台帳)がブランチから取得して照合する項目:
 1. 各PDF実バイナリ → sha256（この台帳の「受領sha256」欄へ記録）
 2. 各PDFページ数（pdfinfo/mutool 実測）
-3. ビルド commit — 原稿hashがどの版で組版されたか。**A担当の修正確定後の原稿hash＋dirty差分で固定した版が正**
+3. ビルド commit — 原稿hashがどの版で組版されたか。**A担当の修正確定後の原稿hash＋dirty差分で固定した版が正**。receipt には e3380322 ベース確定差分への対応を残す
 4. `write_release_receipt` の receipt JSON（inputs→outputs、EXPECTED_PDFS=36契約）
 
 ## A修正・再生成の受領ルール（統括指示を固定）
@@ -18,10 +18,12 @@
 - 生成PDFにA修正が未反映の冊 → **再生成→その最終hashを受領して検査**
 - 原稿hashの照合基準: 検査対象PDFの入力md sha256 ≠ 下表 baseline の場合、差分を「A修正後hash」欄に記録し、receiptのinput hashと一致することを確認
 - **共通組版（build_pdf_book.py/book.css/フォント等）の変更が入った場合は全36冊を再検査対象とする**
+- ⚠ e3380322 で共通組版が実際に変更済（`build_pdf_book.py`・`code_wrap.py`・`decorative-margin-outline.mjs`・新規 `hanging_scope.py`+`selective-hanging-scope-current40.json`+`test_hanging_scope.py`）。**e3380322 以前に生成されたPDFは旧組版 → 再生成後のものだけを受領対象とし、受領時に receipt のビルド基準が e3380322 以降であることを確認する**
 
-## manifest 照合（実測済 2026-10-10, devin-3b59b953）
+## manifest 照合（実測済, devin-3b59b953）
 
-- manifest sha256 = `346b9f898aef…` / 1110件 sha256 全一致・欠落0
+- @08d631e8: manifest sha256=`346b9f898aef…` / 1110件 sha256 全一致・欠落0
+- @e3380322（現HEAD）: manifest 1114エントリ sha256 全一致・欠落0（file_count欄=1110・commit欄=40a5ac34 は旧ベース名残。記録は実HEAD e3380322 基準）
 - 配布ZIP 85/85件 byte 一致
 - manifest対象外40件 = 教材md36 + sample PDF2 + manifest自身 + edu-creator(サブモジュール)
 
@@ -69,12 +71,15 @@
 ## 機械検査（受領後に本worktreeで実行）
 
 ```bash
-python3 scripts/pdf-book/release_manifest.py --write dist/release-manifest.json
-python3 -m unittest discover -s scripts/pdf-book -p test_book_links.py
-python3 scripts/pdf-book/check_pdf_book.py dist/pdf/<book>.pdf
+PY=/opt/homebrew/bin/python3.12    # Homebrew Python 3.12.14（検証済）。/usr/bin/python3=3.9.6 は失敗するので使わない
+$PY scripts/pdf-book/release_manifest.py --write dist/release-manifest.json
+$PY -m unittest discover -s scripts/pdf-book -p test_book_links.py
+$PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレクトリ1つ」必須（mainが1dir要求・単一ファイル不可）。--allow-gaps は付けない（全冊inventory+dayNN連続性検査を有効にする）
 ```
+- 実行ログは `gate-c/logs/` 配下に残して本ブランチへ push する（exit code も記録）
+- 前提ツール: poppler（pdftotext/pdfinfo/pdffonts）。本boxは `brew install poppler` 26.10.0 導入済・`/opt/homebrew/bin` に存在確認済
 
-## 目視手順
+## 目視手順（要poppler・導入済）
 
-- `pdftoppm -r 60 -png` で全ページPNG化→1頁ずつ目視
+- `pdftoppm -r 60 -png`（poppler 26.10.0）で全ページPNG化→1頁ずつ目視
 - 観点: 文字化け・フォント欠落 / コードブロック枠外はみ出し / 見出しリンクURL行欠落 / footnote裸URL / 画像・スクショ欠落 / ページ送り崩れ / 白ページ / 目次頁番号ずれ
