@@ -102,3 +102,10 @@ $PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレク
 |---|---|
 | S01 付録4+ロードマップ+目次 | devin-6f57aed9296946fc8f5efedfe102e429 |
 | S02–S38（day01–day30、>150頁は頁範囲分割） | 作成キュー待ち（SWE-2プロモ7並列上限・org全体で使用中。子settle毎に1件ずつ順次投入・notify_on_responseで自動再開） |
+
+## candidate機検プリチェック（実測・devin-3b59b953・2026-10-10）
+- sha256: 36/36 manifest一致・頁数: 36/36一致・合計3743頁
+- フォント: 全36冊・非埋め込みフォント0（文字化けリスク低）[pdffonts]
+- 白頁: 全冊・テキスト15字未満の頁なし（空白頁なし）[pdftotext]
+- 画像: pdfimages -list で各冊1〜7枚確認（冊毎の枚数は既記録）
+- ※本項は機検のみ。細部の判読は子セッション分担の全頁目視で判定する
