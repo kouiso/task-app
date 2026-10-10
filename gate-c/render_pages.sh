@@ -14,6 +14,6 @@ for pdf in "$PDF_DIR"/*.pdf; do
   sha=$(shasum -a 256 "$pdf" | cut -d' ' -f1)
   printf '| %s | %s | %s | %s |\n' "$name" "$pages" "$bytes" "$sha" >> "$OUT/page-inventory.md"
   mkdir -p "$OUT/$stem"
-  pdftoppm -r 60 -png "$pdf" "$OUT/$stem/page"
+  pdftoppm -r 100 -png "$pdf" "$OUT/$stem/page"
 done
 echo "done -> $OUT/page-inventory.md"
