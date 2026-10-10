@@ -4391,8 +4391,8 @@
   },
   {
    "path": "scripts/pdf-book/test_work_slug_normalization.py",
-   "sha256": "e3e1cd0755d7016c3f35c934a2b380738f836b2485119148a88548f5004f1dc2",
-   "bytes": 1838
+   "sha256": "2d15275441171f56b34f8b60b5269efc9639e67ed54dad1c761c089125af8b20",
+   "bytes": 2141
   },
   {
    "path": "scripts/pdf-book/test_workflow_scope.py",

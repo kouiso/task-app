@@ -23,8 +23,11 @@ class WorkSlugNormalizationTest(unittest.TestCase):
 
     def test_nfc_nfd_same_document_id(self):
         for path in sorted(SRC_DIR.glob("*.md")):
-            stem_nfd = path.stem
-            stem_nfc = unicodedata.normalize("NFC", stem_nfd)
+            # 展開先のファイルシステムの正規化形に左右されないよう、
+            # 両形式を明示的に組み立てて比較する（Linux では stem が
+            # NFC のまま届くため、NFD 経路が未検査になり得る）。
+            stem_nfc = unicodedata.normalize("NFC", path.stem)
+            stem_nfd = unicodedata.normalize("NFD", path.stem)
             with self.subTest(stem=stem_nfc):
                 self.assertEqual(
                     builder.work_slug(stem_nfd),
