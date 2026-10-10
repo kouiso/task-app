@@ -1,0 +1,340 @@
+{
+ "book": "day04_ネットに公開.pdf",
+ "pdf_sha256": "57e06cdc379c2be0c278596ae2a74e3cc6067dffead013d0c308c065f42a9702",
+ "pdf_sha256_head12": "57e06cdc379c",
+ "pages_total": 50,
+ "pages_inspected": 50,
+ "inspection": {
+  "method": "poppler(pdftoppm)で全頁120dpi PNG化→1頁ずつ実画像を目視。p4/p5/p6は200dpiで再描画拡大確認+原稿mdでラベル原文照合。抽出テキスト確認は不使用",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+  "inspector": "devin-71307ed510084c57ba42511370fd4760",
+  "inspected_at": "2026-10-10"
+ },
+ "verdicts": {
+  "must": 3,
+  "suggest": 6,
+  "ok": 41
+ },
+ "pages": [
+  {
+   "page": 1,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 2,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 3,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "目次末尾で残り約6割白紙（章末の自然な空白）"
+    }
+   ]
+  },
+  {
+   "page": 4,
+   "verdict": "must",
+   "findings": [
+    {
+     "severity": "must",
+     "detail": "図1(flowchart LR)のノードラベルが右端クリップ: 『ローカルの task-a』(task-appのpp欠落),『GitHu』(GitHub),『Verc』(Vercel)。D『公開URL』のみ完全。図の主目的である遷移先名が判読不能。day01 p13/p67・day03 p30と同型のMermaid右端クリップ(組版パイプライン共通問題)"
+    }
+   ]
+  },
+  {
+   "page": 5,
+   "verdict": "must",
+   "findings": [
+    {
+     "severity": "must",
+     "detail": "図2(flowchart LR)のノードラベルが右端クリップ: 『GitHub に push :』(原文push 済み→済み欠落),『npm run buil』(buildのd欠落+『 が』欠落),『Vercel が Deρ』(Deployのploy欠落)。同型Mermaidクリップ。C『環境変数 2本 DATABASE_URL と JWT_SECRET』・E『公開 URL が発行される』は完全"
+    }
+   ]
+  },
+  {
+   "page": 6,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "図3(flowchart LR)の語尾1字クリップ: 『Step 5 で自分が決め』(原文 決める),『Vercel が付け』(原文 付ける)。同型だが語義は判読可能"
+    }
+   ]
+  },
+  {
+   "page": 7,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 8,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 9,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 10,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 11,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 12,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "頁末尾に孤立hr(次節Step1見出しが次頁送りで区切り線だけが最下部に残る。day03 p58同型)"
+    },
+    {
+     "severity": "note",
+     "detail": "表Step10セル『デプロイ文脈で見る Pro/パターン』が語途中で折返し"
+    }
+   ]
+  },
+  {
+   "page": 13,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 14,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 15,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注1が裸URLのみで語途中改行(data-s/ecure)。day03 p37/p50同型のendnote式"
+    }
+   ]
+  },
+  {
+   "page": 16,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 17,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 18,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 19,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 20,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 21,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 22,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "下部約4割強白紙(図4が次頁送りの改頁不可ブロック)"
+    }
+   ]
+  },
+  {
+   "page": 23,
+   "verdict": "must",
+   "findings": [
+    {
+     "severity": "must",
+     "detail": "図4(flowchart TB)のラベル右端クリップ: ENVノード『GitHub へは送らな』(原文 送らない→い欠落)、エッジラベル『DATABASE_UR』(DATABASE_URL→L欠落)、NEONノード『Neon の Postgre』(PostgreSQL→SQL欠落)。図の目的である接続先名が判読不能。同型Mermaidクリップ(共通問題)"
+    }
+   ]
+  },
+  {
+   "page": 24,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注2・3が裸URLのみ(https://neon.tech / https://supabase.com)。説明文なし・endnote式"
+    }
+   ]
+  },
+  {
+   "page": 25,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 26,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 27,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 28,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 29,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "下部約5割白紙(確認ポイント末尾・次セクションが次頁)"
+    }
+   ]
+  },
+  {
+   "page": 30,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 31,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 32,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 33,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 34,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注4が裸URLのみ(https://vercel.com/docs/projects/managing-projects#deleting-a-project)。endnote式"
+    }
+   ]
+  },
+  {
+   "page": 35,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 36,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 37,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 38,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 39,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 40,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 41,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 42,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 43,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 44,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 45,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 46,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 47,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 48,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 49,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "detail": "脚注5〜10が全て裸URL(Google Drive)のみ、各URLが view?/usp=drivesdk で語途中改行。day03 p59同型"
+    }
+   ]
+  },
+  {
+   "page": 50,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "detail": "版権頁・残り約8割白紙(書籍末の自然な構成)"
+    }
+   ]
+  }
+ ]
+}
