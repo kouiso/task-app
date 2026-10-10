@@ -101,4 +101,4 @@ $PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレク
 | 担当 | セッション |
 |---|---|
 | S01 付録4+ロードマップ+目次 | devin-6f57aed9296946fc8f5efedfe102e429 |
-| S02–S38（day01–day30、>150頁は頁範囲分割） | 作成キュー待ち（SWE-2無料枠7並列上限により順次投入） |
+| S02–S38（day01–day30、>150頁は頁範囲分割） | 作成キュー待ち（SWE-2プロモ7並列上限・org全体で使用中。子settle毎に1件ずつ順次投入・notify_on_responseで自動再開） |
